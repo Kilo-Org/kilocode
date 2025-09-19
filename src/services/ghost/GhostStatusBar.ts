@@ -31,15 +31,15 @@ export class GhostStatusBar {
 	private init() {
 		this.statusBar.text = t("kilocode:ghost.statusBar.enabled")
 		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.basic")
-		this.show()
-	}
-
-	public show() {
 		this.statusBar.show()
 	}
 
-	public hide() {
-		this.statusBar.hide()
+	public updateVisible(enabled: boolean) {
+		if (enabled) {
+			this.statusBar.show()
+		} else {
+			this.statusBar.hide()
+		}
 	}
 
 	public dispose() {
@@ -59,13 +59,16 @@ export class GhostStatusBar {
 		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
 		this.lastCompletionCost =
 			params.lastCompletionCost !== undefined ? params.lastCompletionCost : this.lastCompletionCost
-		this.render()
+
+		this.updateVisible(this.enabled)
+		if (this.enabled) this.render()
 	}
 
-	private renderDisabled() {
-		this.statusBar.text = t("kilocode:ghost.statusBar.disabled")
-		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.disabled")
-	}
+	// TODO: Bring back paused state in the future
+	// private renderPaused() {
+	// 	this.statusBar.text = t("kilocode:ghost.statusBar.disabled")
+	// 	this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.disabled")
+	// }
 
 	private renderTokenError() {
 		this.statusBar.text = t("kilocode:ghost.statusBar.warning")
@@ -85,9 +88,6 @@ ${t("kilocode:ghost.statusBar.tooltip.basic")}
 	}
 
 	public render() {
-		if (!this.enabled) {
-			return this.renderDisabled()
-		}
 		if (!this.hasValidToken) {
 			return this.renderTokenError()
 		}

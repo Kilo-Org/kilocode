@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Bylo dosaženo maximálního počtu completion tokenů."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Checkpointy nejsou k dispozici, protože byly ve workspace detekované vnořené Git repozitáře. Prosím odstraňte nebo přemístěte vnořené Git repozitáře pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",
+		"nestedGitRepos": "Checkpointy nejsou k dispozici, protože byl detekován vnořený Git repozitář na: {{path}}. Prosím odstraňte nebo přemístěte vnořené Git repozitáře pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",
 		"protectedPaths": "Checkpointy nejsou k dispozici v {{workspaceDir}}. Prosím otevřete podsložku jako workspace pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",
 		"dismissWarning": "Zavřít"
 	},

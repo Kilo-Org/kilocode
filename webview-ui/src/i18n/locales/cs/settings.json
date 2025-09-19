@@ -839,7 +839,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Povolit slash příkazy iniciované modelem",
-			"description": "Když je povoleno, Roo může spouštět vaše slash příkazy k provedení pracovních toků."
+			"description": "Když je povoleno, Kilo Code může spouštět vaše slash příkazy k provedení pracovních toků."
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",

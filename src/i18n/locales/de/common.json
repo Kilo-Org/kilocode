@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Zeitüberschreitung beim Versuch, den Checkpoint wiederherzustellen.",
 		"checkpoint_failed": "Fehler beim Wiederherstellen des Checkpoints.",
 		"git_not_installed": "Git ist für die Checkpoint-Funktion erforderlich. Bitte installiere Git, um Checkpoints zu aktivieren.",
+		"nested_git_repos_warning": "Checkpoints sind deaktiviert, da ein verschachteltes Git-Repository erkannt wurde unter: {{path}}. Um Checkpoints zu verwenden, entferne oder verschiebe bitte dieses verschachtelte Git-Repository.",
 		"no_workspace": "Bitte öffne zuerst einen Projektordner",
 		"update_support_prompt": "Fehler beim Aktualisieren der Support-Nachricht",
 		"reset_support_prompt": "Fehler beim Zurücksetzen der Support-Nachricht",
@@ -105,6 +106,15 @@
 			"apiError": "Gemini CLI API-Fehler: {{error}}",
 			"completionError": "Gemini CLI Vervollständigungsfehler: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Keine aktive Aufgabe, aus der Nachrichten gelöscht werden können",
+			"invalid_timestamp_for_deletion": "Ungültiger Nachrichten-Zeitstempel zum Löschen",
+			"cannot_delete_missing_timestamp": "Nachricht kann nicht gelöscht werden: fehlender Zeitstempel",
+			"cannot_delete_invalid_timestamp": "Nachricht kann nicht gelöscht werden: ungültiger Zeitstempel",
+			"message_not_found": "Nachricht mit Zeitstempel {{messageTs}} nicht gefunden",
+			"error_deleting_message": "Fehler beim Löschen der Nachricht: {{error}}",
+			"error_editing_message": "Fehler beim Bearbeiten der Nachricht: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Fehler beim Generieren des Kontext-Streams von Gemini: {{error}}",
 			"generate_complete_prompt": "Fehler bei der Vervollständigung durch Gemini: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "API-Schlüssel enthält ungültige Zeichen."
-		}
+		},
+		"manual_url_empty": "Bitte gib eine gültige Callback-URL ein",
+		"manual_url_no_query": "Ungültige Callback-URL: Query-Parameter fehlen",
+		"manual_url_missing_params": "Ungültige Callback-URL: erforderliche Parameter (code und state) fehlen",
+		"manual_url_auth_failed": "Manuelle URL-Authentifizierung fehlgeschlagen",
+		"manual_url_auth_error": "Authentifizierung fehlgeschlagen"
 	},
 	"warnings": {
 		"no_terminal_content": "Kein Terminal-Inhalt ausgewählt",

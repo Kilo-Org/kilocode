@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Die maximale Anzahl an Completion-Tokens wurde erreicht."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Checkpoints sind nicht verfügbar, da verschachtelte Git-Repositories im Arbeitsbereich erkannt wurden. Bitte entferne oder verschiebe verschachtelte Git-Repositories, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",
+		"nestedGitRepos": "Checkpoints sind nicht verfügbar, da ein verschachteltes Git-Repository erkannt wurde unter: {{path}}. Bitte entferne oder verschiebe verschachtelte Git-Repositories, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",
 		"protectedPaths": "Checkpoints sind in {{workspaceDir}} nicht verfügbar. Bitte öffne einen Unterordner als Arbeitsbereich, um die Checkpoint-Funktion zu nutzen, oder deaktiviere Checkpoints in den Einstellungen, um diese Warnung zu unterdrücken.",
 		"dismissWarning": "Schließen"
 	},

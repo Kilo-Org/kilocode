@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Time-out bij het herstellen van checkpoint.",
 		"checkpoint_failed": "Herstellen van checkpoint mislukt.",
 		"git_not_installed": "Git is vereist voor de checkpoint-functie. Installeer Git om checkpoints in te schakelen.",
+		"nested_git_repos_warning": "Checkpoints zijn uitgeschakeld omdat een geneste git-repository is gedetecteerd op: {{path}}. Om checkpoints te gebruiken, verwijder of verplaats deze geneste git-repository.",
 		"no_workspace": "Open eerst een projectmap",
 		"update_support_prompt": "Bijwerken van ondersteuningsprompt mislukt",
 		"reset_support_prompt": "Resetten van ondersteuningsprompt mislukt",
@@ -108,6 +109,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "Kan OAuth-referenties niet laden. Authenticeer eerst: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Geen actieve taak om berichten uit te verwijderen",
+			"invalid_timestamp_for_deletion": "Ongeldig bericht tijdstempel voor verwijdering",
+			"cannot_delete_missing_timestamp": "Kan bericht niet verwijderen: tijdstempel ontbreekt",
+			"cannot_delete_invalid_timestamp": "Kan bericht niet verwijderen: ongeldig tijdstempel",
+			"message_not_found": "Bericht met tijdstempel {{messageTs}} niet gevonden",
+			"error_deleting_message": "Fout bij verwijderen van bericht: {{error}}",
+			"error_editing_message": "Fout bij bewerken van bericht: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Fout bij het genereren van contextstream door Gemini: {{error}}",
 			"generate_complete_prompt": "Fout bij het voltooien door Gemini: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "API-sleutel bevat ongeldige karakters."
-		}
+		},
+		"manual_url_empty": "Voer een geldige callback-URL in",
+		"manual_url_no_query": "Ongeldige callback-URL: query-parameters ontbreken",
+		"manual_url_missing_params": "Ongeldige callback-URL: vereiste parameters ontbreken (code en state)",
+		"manual_url_auth_failed": "Handmatige URL-authenticatie mislukt",
+		"manual_url_auth_error": "Authenticatie mislukt"
 	},
 	"warnings": {
 		"no_terminal_content": "Geen terminalinhoud geselecteerd",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Je organisatie vereist Kilo Code Cloud-authenticatie. Log in om door te gaan.",
-			"organization_mismatch": "Je moet geauthenticeerd zijn met het Kilo Code Cloud-account van je organisatie.",
+			"cloud_auth_required": "Je organisatie vereist Roo Code Cloud-authenticatie. Log in om door te gaan.",
+			"organization_mismatch": "Je moet geauthenticeerd zijn met het Roo Code Cloud-account van je organisatie.",
+			"manual_url_empty": "Voer een geldige callback-URL in",
+			"manual_url_no_query": "Ongeldige callback-URL: query-parameters ontbreken",
+			"manual_url_missing_params": "Ongeldige callback-URL: vereiste parameters ontbreken (code en state)",
+			"manual_url_auth_failed": "Handmatige URL-authenticatie mislukt",
+			"manual_url_auth_error": "Authenticatie mislukt",
 			"verification_failed": "Kan organisatie-authenticatie niet verifiëren."
 		},
 		"info": {

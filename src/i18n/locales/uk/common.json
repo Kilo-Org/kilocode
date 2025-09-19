@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "Час очікування вичерпано під час спроби відновити checkpoint.",
 		"checkpoint_failed": "Не вдалося відновити checkpoint.",
 		"git_not_installed": "Git потрібен для функції checkpoint. Будь ласка, встанови Git, щоб увімкнути checkpoint.",
+		"nested_git_repos_warning": "Попередження: Знайдено вкладені git репозиторії за цими шляхами. Це може спричинити неочікувану поведінку з контрольними точками: {{paths}}",
 		"no_workspace": "Будь ласка, спочатку відкрий папку проекту",
 		"update_support_prompt": "Не вдалося оновити support prompt",
 		"reset_support_prompt": "Не вдалося скинути support prompt",
@@ -130,6 +131,20 @@
 		"roo": {
 			"authenticationRequired": "Провайдер Roo вимагає автентифікації в хмарі. Будь ласка, увійди в Roo Code Cloud."
 		},
+		"message": {
+			"no_active_task_to_delete": "Не знайдено активного завдання. Неможливо видалити повідомлення.",
+			"invalid_timestamp_for_deletion": "Надано недійсний timestamp для видалення.",
+			"cannot_delete_missing_timestamp": "Неможливо видалити повідомлення: відсутній timestamp.",
+			"cannot_delete_invalid_timestamp": "Неможливо видалити повідомлення: недійсний timestamp.",
+			"message_not_found": "Повідомлення не знайдено.",
+			"error_deleting_message": "Помилка видалення повідомлення.",
+			"error_editing_message": "Помилка редагування повідомлення."
+		},
+		"manual_url_empty": "URL не може бути порожнім",
+		"manual_url_no_query": "URL повинен містити параметри запиту",
+		"manual_url_missing_params": "URL відсутні необхідні параметри",
+		"manual_url_auth_failed": "Автентифікація не вдалася",
+		"manual_url_auth_error": "Сталася помилка автентифікації",
 		"api": {
 			"invalidKeyInvalidChars": "API ключ містить недопустимі символи."
 		}

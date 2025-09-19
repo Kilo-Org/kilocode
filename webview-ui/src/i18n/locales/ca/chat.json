@@ -24,7 +24,9 @@
 		"connectToCloudDescription": "Inicia sessió a Kilo Code Cloud per compartir tasques",
 		"sharingDisabledByOrganization": "Compartició deshabilitada per l'organització",
 		"shareSuccessOrganization": "Enllaç d'organització copiat al porta-retalls",
-		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls"
+		"shareSuccessPublic": "Enllaç públic copiat al porta-retalls",
+		"openInCloud": "Obrir tasca a Roo Code Cloud",
+		"openInCloudIntro": "Continua monitoritzant o interactuant amb Roo des de qualsevol lloc. Escaneja, fes clic o copia per obrir."
 	},
 	"history": {
 		"title": "Historial"
@@ -252,12 +254,18 @@
 		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
 	},
 	"autoApprove": {
-		"title": "Aprovació automàtica:",
+		"tooltip": "Gestiona la configuració d'aprovació automàtica",
+		"title": "Aprovació automàtica",
+		"all": "Totes",
 		"none": "Cap",
-		"description": "L'aprovació automàtica permet a Kilo Code realitzar accions sense demanar permís. Activa-la només per a accions en les que confies plenament. Configuració més detallada disponible a la <settingsLink>Configuració</settingsLink>.",
-		"selectOptionsFirst": "Selecciona almenys una opció a continuació per activar l'aprovació automàtica",
+		"description": "Executeu aquestes accions sense demanar permís. Activeu-ho només per a les accions en què confieu plenament.",
+		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica",
 		"toggleAriaLabel": "Commuta l'aprovació automàtica",
-		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions"
+		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions",
+		"triggerLabel_zero": "Sense aprovació automàtica",
+		"triggerLabel_one": "1 aprovació automàtica",
+		"triggerLabel_other": "{{count}} aprovacions automàtiques",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "Pensant",
@@ -276,19 +284,12 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Llançat",
-		"stealthModel": {
-			"feature": "El model stealth Sonic ara és <bold>Grok Code Fast</bold>! Aquest model de raonament d'alt rendiment està disponible com a <code>grok-code-fast-1</code> sota el proveïdor <bold>xAI (Grok)</bold>.",
-			"note": "Com a agraïment per tots els comentaris útils sobre Sonic, xAI està ampliant l'accés gratuït a <code>grok-code-fast-1</code> durant una setmana més a través del proveïdor <bold>Roo Code Cloud</bold>.",
-			"connectButton": "Connectar amb Roo Code Cloud",
-			"selectModel": "Visita la <settingsLink>Configuració</settingsLink> per actualitzar la configuració del proveïdor."
-		},
-		"description": "Roo Code {{version}} porta noves funcions potents i millores significatives per millorar el vostre flux de treball de desenvolupament.",
-		"whatsNew": "Novetats",
-		"feature1": "<bold>Cua de Missatges</bold>: Posa en cua múltiples missatges mentre Roo està treballant, permetent-te continuar planificant el teu flux de treball sense interrupcions.",
-		"feature2": "<bold>Comandaments de Barra Personalitzats</bold>: Crea comandaments de barra personalitzats per a accés ràpid a prompts i fluxos de treball utilitzats freqüentment, amb gestió completa de la interfície d'usuari.",
-		"feature3": "<bold>Eines Gemini Millorades</bold>: Noves capacitats de context d'URL i fonamentació de cerca de Google proporcionen als models Gemini informació web en temps real i capacitats de recerca millorades.",
-		"hideButton": "Amaga l'anunci",
-		"detailsDiscussLinks": "Obtén més detalls i uneix-te a les discussions a <discordLink>Discord</discordLink> i <redditLink>Reddit</redditLink> 🚀"
+		"description": "Presentem <bold>Roo Code Cloud:</bold> Portant el poder de Roo més enllà de l'IDE",
+		"feature1": "<bold>Segueix el progrés de les tasques des de qualsevol lloc (Gratuït):</bold> Obté actualitzacions en temps real de tasques de llarga durada sense quedar-te atrapat a la teva IDE",
+		"feature2": "<bold>Controla l'Extensió Roo remotament (Pro):</bold> Inicia, atura i interactua amb tasques des d'una interfície de navegador basada en xat.",
+		"learnMore": "Llest per prendre el control? Aprèn més <learnMoreLink>aquí</learnMoreLink>.",
+		"visitCloudButton": "Visita Roo Code Cloud",
+		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink>"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code vol utilitzar el navegador:",

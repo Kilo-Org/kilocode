@@ -2,6 +2,10 @@
 
 ## Overview
 
+<YouTubeEmbed
+  url="https://youtu.be/FwAYGslfB6Y"
+/>
+
 <figure style={{ float: 'right', width: '40%', maxWidth: '350px', margin: '0 0 10px 20px' }}>
   <img src="/docs/img/memory-bank/at-work.png" alt="Executing task with the memory bank" style={{ border: '1px solid grey', borderRadius: '5px', width: '100%' }} />
   <figcaption style={{ fontSize: '0.9rem', color: '#666', marginTop: '8px', textAlign: 'center' }}>

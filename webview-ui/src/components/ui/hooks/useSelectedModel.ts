@@ -85,11 +85,15 @@ export const useModelProviders = (kilocodeDefaultModel: string, apiConfiguration
 	)
 }
 // kilocode_change end
+import { useOllamaModels } from "./useOllamaModels"
 
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	// kilocode_change start
 	const { kilocodeDefaultModel } = useExtensionState()
+	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
+	const ollamaModelId = provider === "ollama" ? apiConfiguration?.ollamaModelId : undefined
+
 	const routerModels = useRouterModels({
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey, // kilocode_change
@@ -97,12 +101,13 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	})
 	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration)
 	// kilocode_change end
-	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
 	const lmStudioModels = useLmStudioModels(lmStudioModelId)
+	const ollamaModels = useOllamaModels(ollamaModelId)
 
 	const { id, info } =
 		apiConfiguration &&
 		(typeof lmStudioModelId === "undefined" || typeof lmStudioModels.data !== "undefined") &&
+		(typeof ollamaModelId === "undefined" || typeof ollamaModels.data !== "undefined") &&
 		typeof routerModels.data !== "undefined" &&
 		typeof openRouterModelProviders.data !== "undefined"
 			? getSelectedModel({
@@ -112,6 +117,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					openRouterModelProviders: openRouterModelProviders.data,
 					lmStudioModels: lmStudioModels.data,
 					kilocodeDefaultModel,
+					ollamaModels: ollamaModels.data,
 				})
 			: { id: anthropicDefaultModelId, info: undefined }
 
@@ -137,6 +143,7 @@ function getSelectedModel({
 	openRouterModelProviders,
 	lmStudioModels,
 	kilocodeDefaultModel,
+	ollamaModels,
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
@@ -144,6 +151,7 @@ function getSelectedModel({
 	openRouterModelProviders: Record<string, ModelInfo>
 	lmStudioModels: ModelRecord | undefined
 	kilocodeDefaultModel: string
+	ollamaModels: ModelRecord | undefined
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -289,7 +297,7 @@ function getSelectedModel({
 		}
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
-			const info = routerModels.ollama && routerModels.ollama[id]
+			const info = ollamaModels && ollamaModels[apiConfiguration.ollamaModelId!]
 			return {
 				id,
 				info: info || undefined,

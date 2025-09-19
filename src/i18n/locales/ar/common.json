@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "انتهى الوقت أثناء محاولة استرجاع الحالة.",
 		"checkpoint_failed": "فشل في استرجاع الحالة.",
 		"git_not_installed": "Git مطلوب لميزة نقاط الحفظ. رجاءً ثبت Git لتفعيل نقاط الحفظ.",
+		"nested_git_repos_warning": "تحذير: تم العثور على مستودعات git متداخلة في هذه المسارات. قد يسبب هذا سلوك غير متوقع مع نقاط الحفظ: {{paths}}",
 		"no_workspace": "افتح مجلد مشروع أولاً",
 		"update_support_prompt": "فشل تحديث الرسالة المساعدة",
 		"reset_support_prompt": "فشل إعادة تعيين الرسالة المساعدة",
@@ -130,6 +131,20 @@
 		"roo": {
 			"authenticationRequired": "يتطلب موفر Roo المصادقة السحابية. يرجى تسجيل الدخول إلى Roo Code Cloud."
 		},
+		"message": {
+			"no_active_task_to_delete": "لم يتم العثور على مهمة نشطة. لا يمكن حذف الرسائل.",
+			"invalid_timestamp_for_deletion": "طابع زمني غير صحيح مقدم للحذف.",
+			"cannot_delete_missing_timestamp": "لا يمكن حذف الرسالة: الطابع الزمني مفقود.",
+			"cannot_delete_invalid_timestamp": "لا يمكن حذف الرسالة: الطابع الزمني غير صحيح.",
+			"message_not_found": "الرسالة غير موجودة.",
+			"error_deleting_message": "خطأ في حذف الرسالة.",
+			"error_editing_message": "خطأ في تعديل الرسالة."
+		},
+		"manual_url_empty": "الرابط لا يمكن أن يكون فارغاً",
+		"manual_url_no_query": "الرابط يجب أن يحتوي على معاملات استعلام",
+		"manual_url_missing_params": "الرابط يفتقد للمعاملات المطلوبة",
+		"manual_url_auth_failed": "فشل في المصادقة",
+		"manual_url_auth_error": "حدث خطأ في المصادقة",
 		"api": {
 			"invalidKeyInvalidChars": "مفتاح API يحتوي على رموز غير صالحة."
 		}

@@ -817,7 +817,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "เปิดใช้งานคำสั่ง slash ที่เริ่มต้นโดยโมเดล",
-			"description": "เมื่อเปิดใช้งาน Roo สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",

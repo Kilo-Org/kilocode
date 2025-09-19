@@ -24,7 +24,9 @@
 		"connectToCloudDescription": "タスクを共有するためにKilo Code Cloudにサインイン",
 		"sharingDisabledByOrganization": "組織により共有が無効化されています",
 		"shareSuccessOrganization": "組織リンクをクリップボードにコピーしました",
-		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました"
+		"shareSuccessPublic": "公開リンクをクリップボードにコピーしました",
+		"openInCloud": "Roo Code Cloudでタスクを開く",
+		"openInCloudIntro": "どこからでもRooの監視や操作を続けられます。スキャン、クリック、またはコピーして開いてください。"
 	},
 	"history": {
 		"title": "履歴"
@@ -252,12 +254,18 @@
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
 	},
 	"autoApprove": {
-		"title": "自動承認:",
+		"tooltip": "自動承認設定を管理",
+		"title": "自動承認",
+		"all": "すべて",
 		"none": "なし",
-		"description": "自動承認はKilo Codeに許可を求めずに操作を実行する権限を与えます。完全に信頼できる操作のみ有効にしてください。より詳細な設定は<settingsLink>設定</settingsLink>で利用できます。",
+		"description": "許可を求めずにこれらのアクションを実行します。完全に信頼できるアクションに対してのみ有効にしてください。",
 		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
 		"toggleAriaLabel": "自動承認の切り替え",
-		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください"
+		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
+		"triggerLabel_zero": "自動承認なし",
+		"triggerLabel_one": "1件自動承認済み",
+		"triggerLabel_other": "{{count}}件自動承認済み",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "考え中",
@@ -276,19 +284,12 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} リリース",
-		"stealthModel": {
-			"feature": "Sonicステルスモデルが今、<bold>Grok Code Fast</bold>に！この高性能推論モデルが<bold>xAI (Grok)</bold>プロバイダーの下で<code>grok-code-fast-1</code>として利用できるようになりました。",
-			"note": "Sonicに関するすべての有用なフィードバックに感謝して、xAIは<bold>Roo Code Cloud</bold>プロバイダーを通じて<code>grok-code-fast-1</code>への無料アクセスをもう1週間延長しています。",
-			"connectButton": "Roo Code Cloudに接続",
-			"selectModel": "プロバイダー設定を更新するために<settingsLink>設定</settingsLink>にアクセスしてください。"
-		},
-		"description": "Roo Code {{version}}は、開発ワークフローを向上させる強力な新機能と重要な改善をもたらします。",
-		"whatsNew": "新機能",
-		"feature1": "<bold>メッセージキュー</bold>: Rooが作業中に複数のメッセージをキューに入れ、ワークフローの計画を中断することなく続行できます。",
-		"feature2": "<bold>カスタムスラッシュコマンド</bold>: よく使用するプロンプトやワークフローへの迅速なアクセスのために、パーソナライズされたスラッシュコマンドを作成し、完全なUI管理を提供します。",
-		"feature3": "<bold>強化されたGeminiツール</bold>: 新しいURLコンテキストとGoogle検索グラウンディング機能により、Geminiモデルにリアルタイムのウェブ情報と強化された研究能力を提供します。",
-		"hideButton": "通知を非表示",
-		"detailsDiscussLinks": "詳細は<discordLink>Discord</discordLink>と<redditLink>Reddit</redditLink>でご確認・ディスカッションください 🚀"
+		"description": "<bold>Roo Code Cloud</bold>のご紹介：RooのパワーをIDEを超えて",
+		"feature1": "<bold>どこからでもタスクの進行状況を追跡（無料）：</bold>IDEに縛られることなく、長時間実行タスクのリアルタイム更新を取得",
+		"feature2": "<bold>Roo拡張機能をリモート制御（Pro）：</bold>チャットベースのブラウザインターフェースからタスクを開始、停止、操作。",
+		"learnMore": "制御を取る準備はできましたか？詳細は<learnMoreLink>こちら</learnMoreLink>。",
+		"visitCloudButton": "Roo Code Cloudを訪問",
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Codeはブラウザを使用したい:",

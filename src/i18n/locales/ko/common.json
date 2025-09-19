@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "체크포인트 복원을 시도하는 중 시간 초과되었습니다.",
 		"checkpoint_failed": "체크포인트 복원에 실패했습니다.",
 		"git_not_installed": "체크포인트 기능을 사용하려면 Git이 필요합니다. 체크포인트를 활성화하려면 Git을 설치하세요.",
+		"nested_git_repos_warning": "{{path}}에서 중첩된 git 저장소가 감지되어 체크포인트가 비활성화되었습니다. 체크포인트를 사용하려면 이 중첩된 git 저장소를 제거하거나 이동해주세요.",
 		"no_workspace": "먼저 프로젝트 폴더를 열어주세요",
 		"update_support_prompt": "지원 프롬프트 업데이트에 실패했습니다",
 		"reset_support_prompt": "지원 프롬프트 재설정에 실패했습니다",
@@ -108,6 +109,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "메시지를 삭제할 활성 작업이 없습니다",
+			"invalid_timestamp_for_deletion": "삭제를 위한 메시지 타임스탬프가 유효하지 않습니다",
+			"cannot_delete_missing_timestamp": "메시지를 삭제할 수 없습니다: 타임스탬프가 없습니다",
+			"cannot_delete_invalid_timestamp": "메시지를 삭제할 수 없습니다: 타임스탬프가 유효하지 않습니다",
+			"message_not_found": "타임스탬프 {{messageTs}}인 메시지를 찾을 수 없습니다",
+			"error_deleting_message": "메시지 삭제 오류: {{error}}",
+			"error_editing_message": "메시지 편집 오류: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
 			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "API 키에 유효하지 않은 문자가 포함되어 있습니다."
-		}
+		},
+		"manual_url_empty": "유효한 콜백 URL을 입력하세요",
+		"manual_url_no_query": "유효하지 않은 콜백 URL: 쿼리 매개변수 누락",
+		"manual_url_missing_params": "유효하지 않은 콜백 URL: 필요한 매개변수 누락 (code와 state)",
+		"manual_url_auth_failed": "수동 URL 인증 실패",
+		"manual_url_auth_error": "인증 실패"
 	},
 	"warnings": {
 		"no_terminal_content": "선택된 터미널 내용이 없습니다",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "조직에서 Kilo Code Cloud 인증이 필요합니다. 계속하려면 로그인하세요.",
-			"organization_mismatch": "조직의 Kilo Code Cloud 계정으로 인증해야 합니다.",
+			"cloud_auth_required": "조직에서 Roo Code Cloud 인증이 필요합니다. 계속하려면 로그인하세요.",
+			"organization_mismatch": "조직의 Roo Code Cloud 계정으로 인증해야 합니다.",
+			"manual_url_empty": "유효한 콜백 URL을 입력하세요",
+			"manual_url_no_query": "유효하지 않은 콜백 URL: 쿼리 매개변수 누락",
+			"manual_url_missing_params": "유효하지 않은 콜백 URL: 필요한 매개변수 누락 (code와 state)",
+			"manual_url_auth_failed": "수동 URL 인증 실패",
+			"manual_url_auth_error": "인증 실패",
 			"verification_failed": "조직 인증을 확인할 수 없습니다."
 		},
 		"info": {

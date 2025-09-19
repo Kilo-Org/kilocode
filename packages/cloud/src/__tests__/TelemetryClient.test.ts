@@ -36,6 +36,14 @@ describe.skip("TelemetryClient", () => {
 					recordTaskMessages: true,
 				},
 			}),
+			getUserSettings: vi.fn().mockReturnValue({
+				features: {},
+				settings: {
+					taskSyncEnabled: true,
+				},
+				version: 1,
+			}),
+			isTaskSyncEnabled: vi.fn().mockReturnValue(true),
 		}
 
 		mockFetch.mockResolvedValue({
@@ -77,12 +85,8 @@ describe.skip("TelemetryClient", () => {
 			expect(isEventCapturable(TelemetryEventName.TASK_CONVERSATION_MESSAGE)).toBe(false)
 		})
 
-		it("should return true for TASK_MESSAGE events when recordTaskMessages is true", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: true,
-				},
-			})
+		it("should return true for TASK_MESSAGE events when isTaskSyncEnabled returns true", () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(true)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -92,14 +96,11 @@ describe.skip("TelemetryClient", () => {
 			).bind(client)
 
 			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(true)
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 
-		it("should return false for TASK_MESSAGE events when recordTaskMessages is false", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: false,
-				},
-			})
+		it("should return false for TASK_MESSAGE events when isTaskSyncEnabled returns false", () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(false)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -109,47 +110,7 @@ describe.skip("TelemetryClient", () => {
 			).bind(client)
 
 			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when recordTaskMessages is undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {},
-			})
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when cloudSettings is undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue({})
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when getSettings returns undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue(undefined)
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 	})
 
@@ -274,10 +235,8 @@ describe.skip("TelemetryClient", () => {
 			expect(mockFetch).not.toHaveBeenCalled()
 		})
 
-		it("should not capture TASK_MESSAGE events when recordTaskMessages is undefined", async () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {},
-			})
+		it("should not capture TASK_MESSAGE events when isTaskSyncEnabled returns false", async () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(false)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -295,6 +254,7 @@ describe.skip("TelemetryClient", () => {
 			})
 
 			expect(mockFetch).not.toHaveBeenCalled()
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 
 		it("should not send request when schema validation fails", async () => {
@@ -354,12 +314,8 @@ describe.skip("TelemetryClient", () => {
 			)
 		})
 
-		it("should attempt to capture TASK_MESSAGE events when recordTaskMessages is true", async () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: true,
-				},
-			})
+		it("should attempt to capture TASK_MESSAGE events when isTaskSyncEnabled returns true", async () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(true)
 
 			const eventProperties = {
 				appName: "roo-code",
@@ -390,6 +346,7 @@ describe.skip("TelemetryClient", () => {
 				properties: eventProperties,
 			})
 
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 			expect(mockFetch).toHaveBeenCalledWith(
 				"https://app.roocode.com/api/events",
 				expect.objectContaining({

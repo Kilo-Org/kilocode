@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Jumlah maksimum token penyelesaian telah tercapai."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Checkpoint tidak tersedia karena terdeteksi repositori Git bersarang di ruang kerja. Silakan hapus atau pindahkan repositori Git bersarang untuk menggunakan fitur checkpoint atau nonaktifkan checkpoint di pengaturan untuk menyembunyikan peringatan ini.",
+		"nestedGitRepos": "Checkpoint tidak tersedia karena terdeteksi repositori Git bersarang di: {{path}}. Silakan hapus atau pindahkan repositori Git bersarang untuk menggunakan fitur checkpoint atau nonaktifkan checkpoint di pengaturan untuk menyembunyikan peringatan ini.",
 		"protectedPaths": "Checkpoint tidak tersedia di {{workspaceDir}}. Silakan buka subfolder sebagai ruang kerja untuk menggunakan fitur checkpoint atau nonaktifkan checkpoint di pengaturan untuk menyembunyikan peringatan ini.",
 		"dismissWarning": "Tutup"
 	},

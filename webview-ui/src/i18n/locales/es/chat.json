@@ -24,7 +24,9 @@
 		"connectToCloudDescription": "Inicia sesión en Kilo Code Cloud para compartir tareas",
 		"sharingDisabledByOrganization": "Compartir deshabilitado por la organización",
 		"shareSuccessOrganization": "Enlace de organización copiado al portapapeles",
-		"shareSuccessPublic": "Enlace público copiado al portapapeles"
+		"shareSuccessPublic": "Enlace público copiado al portapapeles",
+		"openInCloud": "Abrir tarea en Roo Code Cloud",
+		"openInCloudIntro": "Continúa monitoreando o interactuando con Roo desde cualquier lugar. Escanea, haz clic o copia para abrir."
 	},
 	"history": {
 		"title": "Historial"
@@ -252,12 +254,18 @@
 		"issues": "Parece que estás teniendo problemas con Windows PowerShell, por favor consulta esta"
 	},
 	"autoApprove": {
-		"title": "Auto-aprobar:",
+		"tooltip": "Gestionar la configuración de aprobación automática",
+		"title": "Aprobación automática",
+		"all": "Todo",
 		"none": "Ninguno",
-		"description": "Auto-aprobar permite a Kilo Code realizar acciones sin pedir permiso. Habilita solo para acciones en las que confíes plenamente. Configuración más detallada disponible en <settingsLink>Configuración</settingsLink>.",
+		"description": "Ejecuta estas acciones sin pedir permiso. Habilita esto solo para acciones en las que confíes plenamente.",
 		"selectOptionsFirst": "Selecciona al menos una opción a continuación para habilitar la aprobación automática",
 		"toggleAriaLabel": "Alternar aprobación automática",
-		"disabledAriaLabel": "Aprobación automática desactivada: seleccione primero las opciones"
+		"disabledAriaLabel": "Aprobación automática deshabilitada - selecciona primero las opciones",
+		"triggerLabel_zero": "Sin aprobación automática",
+		"triggerLabel_one": "1 aprobado automáticamente",
+		"triggerLabel_other": "{{count}} aprobados automáticamente",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "Pensando",
@@ -276,19 +284,12 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} publicado",
-		"stealthModel": {
-			"feature": "¡El modelo stealth Sonic ahora es <bold>Grok Code Fast</bold>! Este modelo de razonamiento de alto rendimiento está disponible como <code>grok-code-fast-1</code> bajo el proveedor <bold>xAI (Grok)</bold>.",
-			"note": "Como agradecimiento por todos los comentarios útiles sobre Sonic, xAI está extendiendo el acceso gratuito a <code>grok-code-fast-1</code> por una semana más a través del proveedor <bold>Roo Code Cloud</bold>.",
-			"connectButton": "Conectar con Roo Code Cloud",
-			"selectModel": "Visita <settingsLink>Configuración</settingsLink> para actualizar tu configuración de proveedor."
-		},
-		"description": "Roo Code {{version}} trae poderosas nuevas funcionalidades y mejoras significativas para mejorar tu flujo de trabajo de desarrollo.",
-		"whatsNew": "Novedades",
-		"feature1": "<bold>Cola de Mensajes</bold>: Pon en cola múltiples mensajes mientras Roo está trabajando, permitiéndote continuar planificando tu flujo de trabajo sin interrupciones.",
-		"feature2": "<bold>Comandos de Barra Personalizados</bold>: Crea comandos de barra personalizados para acceso rápido a prompts y flujos de trabajo utilizados frecuentemente, con gestión completa de la interfaz de usuario.",
-		"feature3": "<bold>Herramientas Gemini Mejoradas</bold>: Nuevas capacidades de contexto de URL y fundamentación de búsqueda de Google proporcionan a los modelos Gemini información web en tiempo real y capacidades de investigación mejoradas.",
-		"hideButton": "Ocultar anuncio",
-		"detailsDiscussLinks": "Obtén más detalles y participa en <discordLink>Discord</discordLink> y <redditLink>Reddit</redditLink> 🚀"
+		"description": "Presentamos <bold>Roo Code Cloud:</bold> Llevando el poder de Roo más allá del IDE",
+		"feature1": "<bold>Seguir el progreso de las tareas desde cualquier lugar (Gratis):</bold> Obtén actualizaciones en tiempo real de tareas de larga duración sin estar atrapado en tu IDE",
+		"feature2": "<bold>Controlar la extensión Roo remotamente (Pro):</bold> Inicia, detén e interactúa con tareas desde una interfaz de navegador basada en chat.",
+		"learnMore": "¿Listo para tomar el control? Aprende más <learnMoreLink>aquí</learnMoreLink>.",
+		"visitCloudButton": "Visitar Roo Code Cloud",
+		"socialLinks": "Únete a nosotros en <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink>"
 	},
 	"browser": {
 		"rooWantsToUse": "Kilo Code quiere usar el navegador:",

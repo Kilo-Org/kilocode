@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Os pontos de verificação não estão disponíveis porque foram detectados repositórios Git aninhados no workspace. Remova ou realoque os repositórios Git aninhados para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
+		"nestedGitRepos": "Os pontos de verificação não estão disponíveis porque foi detectado um repositório Git aninhado em: {{path}}. Remova ou realoque os repositórios Git aninhados para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
 		"protectedPaths": "Os pontos de verificação não estão disponíveis em {{workspaceDir}}. Abra uma subpasta como workspace para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
 		"dismissWarning": "Dispensar"
 	},

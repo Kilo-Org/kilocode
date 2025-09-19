@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Timed out when attempting to restore checkpoint.",
 		"checkpoint_failed": "Failed to restore checkpoint.",
 		"git_not_installed": "Git is required for the checkpoints feature. Please install Git to enable checkpoints.",
+		"nested_git_repos_warning": "Checkpoints are disabled because a nested git repository was detected at: {{path}}. To use checkpoints, please remove or relocate this nested git repository.",
 		"no_workspace": "Please open a project folder first",
 		"update_support_prompt": "Failed to update support prompt",
 		"reset_support_prompt": "Failed to reset support prompt",
@@ -108,6 +109,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "No active task to delete messages from",
+			"invalid_timestamp_for_deletion": "Invalid message timestamp for deletion",
+			"cannot_delete_missing_timestamp": "Cannot delete message: missing timestamp",
+			"cannot_delete_invalid_timestamp": "Cannot delete message: invalid timestamp",
+			"message_not_found": "Message with timestamp {{messageTs}} not found",
+			"error_deleting_message": "Error deleting message: {{error}}",
+			"error_editing_message": "Error editing message: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Gemini generate context stream error: {{error}}",
 			"generate_complete_prompt": "Gemini completion error: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "API key contains invalid characters."
-		}
+		},
+		"manual_url_empty": "Please enter a valid callback URL",
+		"manual_url_no_query": "Invalid callback URL: missing query parameters",
+		"manual_url_missing_params": "Invalid callback URL: missing required parameters (code and state)",
+		"manual_url_auth_failed": "Manual URL authentication failed",
+		"manual_url_auth_error": "Authentication failed"
 	},
 	"warnings": {
 		"no_terminal_content": "No terminal content selected",

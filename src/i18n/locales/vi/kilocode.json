@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Đã đạt đến số lượng token hoàn thành tối đa."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Điểm kiểm tra không khả dụng vì phát hiện các kho lưu trữ Git lồng nhau trong không gian làm việc. Vui lòng xóa hoặc di chuyển các kho lưu trữ Git lồng nhau để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
+		"nestedGitRepos": "Điểm kiểm tra không khả dụng vì phát hiện kho lưu trữ Git lồng nhau tại: {{path}}. Vui lòng xóa hoặc di chuyển các kho lưu trữ Git lồng nhau để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
 		"protectedPaths": "Điểm kiểm tra không khả dụng trong {{workspaceDir}}. Vui lòng mở một thư mục con làm không gian làm việc để sử dụng tính năng điểm kiểm tra hoặc tắt điểm kiểm tra trong cài đặt để loại bỏ cảnh báo này.",
 		"dismissWarning": "Bỏ qua"
 	},

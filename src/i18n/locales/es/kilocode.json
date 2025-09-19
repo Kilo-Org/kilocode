@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Se alcanzó el número máximo de tokens de finalización."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectaron repositorios Git anidados en el espacio de trabajo. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectó un repositorio Git anidado en: {{path}}. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
 		"protectedPaths": "Los puntos de control no están disponibles en {{workspaceDir}}. Por favor, abra una subcarpeta como espacio de trabajo para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
 		"dismissWarning": "Descartar"
 	},

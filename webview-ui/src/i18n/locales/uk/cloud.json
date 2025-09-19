@@ -13,5 +13,19 @@
 	"visitCloudWebsite": "Відвідати Kilo Code Cloud",
 	"remoteControl": "Kilo remote Control",
 	"remoteControlDescription": "Увімкнути відстеження та взаємодію з завданнями в цьому робочому просторі за допомогою Kilo Code Cloud",
-	"cloudUrlPillLabel": "URL Kilo Code Cloud"
+	"cloudUrlPillLabel": "URL Kilo Code Cloud",
+	"taskSync": "Синхронізація завдань",
+	"taskSyncDescription": "Синхронізувати завдання з хмарою для моніторингу та співпраці",
+	"remoteControlRequiresTaskSync": "Віддалене керування вимагає увімкнути синхронізацію завдань",
+	"taskSyncManagedByOrganization": "Синхронізація завдань керується вашою організацією",
+	"usageMetricsAlwaysReported": "Метрики використання завжди повідомляються при використанні хмарних функцій",
+	"authWaiting": "Очікування автентифікації...",
+	"havingTrouble": "Маєте проблеми?",
+	"pasteCallbackUrl": "Вставте callback URL тут",
+	"startOver": "Почати спочатку",
+	"upsell": {
+		"autoApprovePowerUser": "Досвідчені користувачі люблять автосхвалення. Оновіться до хмари для розширених функцій.",
+		"longRunningTask": "Тривале завдання? Стежте за прогресом у хмарі.",
+		"taskList": "Бачте всі ваші завдання в одному місці. Спробуйте хмарне керування завданнями."
+	}
 }

@@ -17,8 +17,8 @@
 		"maxCompletionTokens": "The maximum number of completion tokens was reached."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Checkpoints are unavailable, because nested Git repositories were detected in the workspace. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",
-		"protectedPaths": "Checkpoints are unavailable in {{workspaceDir}}. Please open a subfolder as workspace to use the checkpoints feature or disable checkpoints in the settings to supress this warning.",
+		"nestedGitRepos": "Checkpoints are unavailable, because a nested Git repository was detected at: {{path}}. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to suppress this warning.",
+		"protectedPaths": "Checkpoints are unavailable in {{workspaceDir}}. Please open a subfolder as workspace to use the checkpoints feature or disable checkpoints in the settings to suppress this warning.",
 		"dismissWarning": "Dismiss"
 	},
 	"rules": {

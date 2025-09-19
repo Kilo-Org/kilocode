@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Expiration du délai lors de la tentative de rétablissement du checkpoint.",
 		"checkpoint_failed": "Échec du rétablissement du checkpoint.",
 		"git_not_installed": "Git est requis pour la fonctionnalité des points de contrôle. Veuillez installer Git pour activer les points de contrôle.",
+		"nested_git_repos_warning": "Les points de contrôle sont désactivés car un dépôt git imbriqué a été détecté à : {{path}}. Pour utiliser les points de contrôle, veuillez supprimer ou déplacer ce dépôt git imbriqué.",
 		"no_workspace": "Veuillez d'abord ouvrir un espace de travail",
 		"update_support_prompt": "Erreur lors de la mise à jour du prompt de support",
 		"reset_support_prompt": "Erreur lors de la réinitialisation du prompt de support",
@@ -108,6 +109,15 @@
 		"qwenCode": {
 			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Aucune tâche active pour supprimer des messages",
+			"invalid_timestamp_for_deletion": "Horodatage du message invalide pour la suppression",
+			"cannot_delete_missing_timestamp": "Impossible de supprimer le message : horodatage manquant",
+			"cannot_delete_invalid_timestamp": "Impossible de supprimer le message : horodatage invalide",
+			"message_not_found": "Message avec horodatage {{messageTs}} introuvable",
+			"error_deleting_message": "Erreur lors de la suppression du message : {{error}}",
+			"error_editing_message": "Erreur lors de la modification du message : {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
 			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "La clé API contient des caractères invalides."
-		}
+		},
+		"manual_url_empty": "Veuillez entrer une URL de callback valide",
+		"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
+		"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
+		"manual_url_auth_failed": "Authentification par URL manuelle échouée",
+		"manual_url_auth_error": "Échec de l'authentification"
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Votre organisation nécessite une authentification Kilo Code Cloud. Veuillez vous connecter pour continuer.",
-			"organization_mismatch": "Vous devez être authentifié avec le compte Kilo Code Cloud de votre organisation.",
+			"cloud_auth_required": "Votre organisation nécessite une authentification Roo Code Cloud. Veuillez vous connecter pour continuer.",
+			"organization_mismatch": "Vous devez être authentifié avec le compte Roo Code Cloud de votre organisation.",
+			"manual_url_empty": "Veuillez entrer une URL de callback valide",
+			"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
+			"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
+			"manual_url_auth_failed": "Authentification par URL manuelle échouée",
+			"manual_url_auth_error": "Échec de l'authentification",
 			"verification_failed": "Impossible de vérifier l'authentification de l'organisation."
 		},
 		"info": {

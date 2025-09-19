@@ -22,6 +22,7 @@ import {
 	type TelemetrySetting,
 	TelemetryEventName,
 	ghostServiceSettingsSchema, // kilocode_change
+	UserSettingsConfig,
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -104,6 +105,17 @@ export const webviewMessageHandler = async (
 	}
 
 	/**
+	 * Fallback: find first API history index at or after a timestamp.
+	 * Used when the exact user message isn't present in apiConversationHistory (e.g., after condense).
+	 */
+	const findFirstApiIndexAtOrAfter = (ts: number, currentCline: any) => {
+		if (typeof ts !== "number") return -1
+		return currentCline.apiConversationHistory.findIndex(
+			(msg: ApiMessage) => typeof msg?.ts === "number" && (msg.ts as number) >= ts,
+		)
+	}
+
+	/**
 	 * Removes the target message and all subsequent messages
 	 */
 	const removeMessagesThisAndSubsequent = async (
@@ -128,18 +140,20 @@ export const webviewMessageHandler = async (
 		// Check if there's a checkpoint before this message
 		const currentCline = provider.getCurrentTask()
 		let hasCheckpoint = false
-		if (currentCline) {
-			const { messageIndex } = findMessageIndices(messageTs, currentCline)
-			if (messageIndex !== -1) {
-				// Find the last checkpoint before this message
-				const checkpoints = currentCline.clineMessages.filter(
-					(msg) => msg.say === "checkpoint_saved" && msg.ts > messageTs,
-				)
 
-				hasCheckpoint = checkpoints.length > 0
-			} else {
-				console.log("[webviewMessageHandler] Message not found! Looking for ts:", messageTs)
-			}
+		if (!currentCline) {
+			await vscode.window.showErrorMessage(t("common:errors.message.no_active_task_to_delete"))
+			return
+		}
+
+		const { messageIndex } = findMessageIndices(messageTs, currentCline)
+
+		if (messageIndex !== -1) {
+			// Find the last checkpoint before this message
+			const checkpoints = currentCline.clineMessages.filter(
+				(msg) => msg.say === "checkpoint_saved" && msg.ts > messageTs,
+			)
+			hasCheckpoint = checkpoints.length > 0
 		}
 
 		// Send message to webview to show delete confirmation dialog
@@ -161,11 +175,15 @@ export const webviewMessageHandler = async (
 		}
 
 		const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
+		// Determine API truncation index with timestamp fallback if exact match not found
+		let apiIndexToUse = apiConversationHistoryIndex
+		const tsThreshold = currentCline.clineMessages[messageIndex]?.ts
+		if (apiIndexToUse === -1 && typeof tsThreshold === "number") {
+			apiIndexToUse = findFirstApiIndexAtOrAfter(tsThreshold, currentCline)
+		}
 
 		if (messageIndex === -1) {
-			const errorMessage = `Message with timestamp ${messageTs} not found`
-			console.error("[handleDeleteMessageConfirm]", errorMessage)
-			await vscode.window.showErrorMessage(errorMessage)
+			await vscode.window.showErrorMessage(t("common:errors.message.message_not_found", { messageTs }))
 			return
 		}
 
@@ -207,7 +225,7 @@ export const webviewMessageHandler = async (
 				}
 
 				// Delete this message and all subsequent messages
-				await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+				await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiIndexToUse)
 
 				// Restore checkpoint associations for preserved messages
 				for (const [ts, checkpoint] of preservedCheckpoints) {
@@ -223,11 +241,16 @@ export const webviewMessageHandler = async (
 					taskId: currentCline.taskId,
 					globalStoragePath: provider.contextProxy.globalStorageUri.fsPath,
 				})
+
+				// Update the UI to reflect the deletion
+				await provider.postStateToWebview()
 			}
 		} catch (error) {
 			console.error("Error in delete message:", error)
 			vscode.window.showErrorMessage(
-				`Error deleting message: ${error instanceof Error ? error.message : String(error)}`,
+				t("common:errors.message.error_deleting_message", {
+					error: error instanceof Error ? error.message : String(error),
+				}),
 			)
 		}
 	}
@@ -284,7 +307,7 @@ export const webviewMessageHandler = async (
 		const { messageIndex, apiConversationHistoryIndex } = findMessageIndices(messageTs, currentCline)
 
 		if (messageIndex === -1) {
-			const errorMessage = `Message with timestamp ${messageTs} not found`
+			const errorMessage = t("common:errors.message.message_not_found", { messageTs })
 			console.error("[handleEditMessageConfirm]", errorMessage)
 			await vscode.window.showErrorMessage(errorMessage)
 			return
@@ -327,18 +350,49 @@ export const webviewMessageHandler = async (
 				}
 			}
 
-			// For non-checkpoint edits, preserve checkpoint associations for remaining messages
+			// For non-checkpoint edits, remove the ORIGINAL user message being edited and all subsequent messages
+			// Determine the correct starting index to delete from (prefer the last preceding user_feedback message)
+			let deleteFromMessageIndex = messageIndex
+			let deleteFromApiIndex = apiConversationHistoryIndex
+
+			// Find the nearest preceding user message to ensure we replace the original, not just the assistant reply
+			for (let i = messageIndex; i >= 0; i--) {
+				const m = currentCline.clineMessages[i]
+				if (m?.say === "user_feedback") {
+					deleteFromMessageIndex = i
+					// Align API history truncation to the same user message timestamp if present
+					const userTs = m.ts
+					if (typeof userTs === "number") {
+						const apiIdx = currentCline.apiConversationHistory.findIndex(
+							(am: ApiMessage) => am.ts === userTs,
+						)
+						if (apiIdx !== -1) {
+							deleteFromApiIndex = apiIdx
+						}
+					}
+					break
+				}
+			}
+
+			// Timestamp fallback for API history when exact user message isn't present
+			if (deleteFromApiIndex === -1) {
+				const tsThresholdForEdit = currentCline.clineMessages[deleteFromMessageIndex]?.ts
+				if (typeof tsThresholdForEdit === "number") {
+					deleteFromApiIndex = findFirstApiIndexAtOrAfter(tsThresholdForEdit, currentCline)
+				}
+			}
+
 			// Store checkpoints from messages that will be preserved
 			const preservedCheckpoints = new Map<number, any>()
-			for (let i = 0; i < messageIndex; i++) {
+			for (let i = 0; i < deleteFromMessageIndex; i++) {
 				const msg = currentCline.clineMessages[i]
 				if (msg?.checkpoint && msg.ts) {
 					preservedCheckpoints.set(msg.ts, msg.checkpoint)
 				}
 			}
 
-			// Edit this message and delete subsequent
-			await removeMessagesThisAndSubsequent(currentCline, messageIndex, apiConversationHistoryIndex)
+			// Delete the original (user) message and all subsequent messages
+			await removeMessagesThisAndSubsequent(currentCline, deleteFromMessageIndex, deleteFromApiIndex)
 
 			// Restore checkpoint associations for preserved messages
 			for (const [ts, checkpoint] of preservedCheckpoints) {
@@ -355,20 +409,16 @@ export const webviewMessageHandler = async (
 				globalStoragePath: provider.contextProxy.globalStorageUri.fsPath,
 			})
 
-			// Process the edited message as a regular user message
-			webviewMessageHandler(provider, {
-				type: "askResponse",
-				askResponse: "messageResponse",
-				text: editedContent,
-				images,
-			})
+			// Update the UI to reflect the deletion
+			await provider.postStateToWebview()
 
-			// Don't initialize with history item for edit operations
-			// The webviewMessageHandler will handle the conversation state
+			await currentCline.submitUserMessage(editedContent, images)
 		} catch (error) {
 			console.error("Error in edit message:", error)
 			vscode.window.showErrorMessage(
-				`Error editing message: ${error instanceof Error ? error.message : String(error)}`,
+				t("common:errors.message.error_editing_message", {
+					error: error instanceof Error ? error.message : String(error),
+				}),
 			)
 		}
 	}
@@ -467,7 +517,7 @@ export const webviewMessageHandler = async (
 			// If user already opted in to telemetry, enable telemetry service
 			provider.getStateToPostToWebview().then(async (/*kilocode_change*/ state) => {
 				const { telemetrySetting } = state
-				const isOptedIn = telemetrySetting === "enabled"
+				const isOptedIn = telemetrySetting !== "disabled"
 				TelemetryService.instance.updateTelemetryState(isOptedIn)
 				await TelemetryService.instance.updateIdentity(state.apiConfiguration.kilocodeToken ?? "") // kilocode_change
 			})
@@ -845,7 +895,7 @@ export const webviewMessageHandler = async (
 					if (routerName === "ollama" && Object.keys(result.value.models).length > 0) {
 						provider.postMessageToWebview({
 							type: "ollamaModels",
-							ollamaModels: Object.keys(result.value.models),
+							ollamaModels: result.value.models,
 						})
 					} else if (routerName === "lmstudio" && Object.keys(result.value.models).length > 0) {
 						provider.postMessageToWebview({
@@ -885,12 +935,13 @@ export const webviewMessageHandler = async (
 				const ollamaModels = await getModels({
 					provider: "ollama",
 					baseUrl: ollamaApiConfig.ollamaBaseUrl,
+					apiKey: ollamaApiConfig.ollamaApiKey,
 				})
 
 				if (Object.keys(ollamaModels).length > 0) {
 					provider.postMessageToWebview({
 						type: "ollamaModels",
-						ollamaModels: Object.keys(ollamaModels),
+						ollamaModels: ollamaModels,
 					})
 				}
 			} catch (error) {
@@ -1241,16 +1292,21 @@ export const webviewMessageHandler = async (
 					`CloudService#updateUserSettings failed: ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
-
-			try {
-				await provider.remoteControlEnabled(message.bool ?? false)
-			} catch (error) {
-				provider.log(
-					`ClineProvider#remoteControlEnabled failed: ${error instanceof Error ? error.message : String(error)}`,
-				)
+			break
+		case "taskSyncEnabled":
+			const enabled = message.bool ?? false
+			const updatedSettings: Partial<UserSettingsConfig> = {
+				taskSyncEnabled: enabled,
 			}
-
-			await provider.postStateToWebview()
+			// If disabling task sync, also disable remote control
+			if (!enabled) {
+				updatedSettings.extensionBridgeEnabled = false
+			}
+			try {
+				await CloudService.instance.updateUserSettings(updatedSettings)
+			} catch (error) {
+				provider.log(`Failed to update cloud settings for task sync: ${error}`)
+			}
 			break
 		case "refreshAllMcpServers": {
 			const mcpHub = provider.getMcpHub()
@@ -1559,9 +1615,17 @@ export const webviewMessageHandler = async (
 			}
 			break
 		case "deleteMessage": {
-			if (provider.getCurrentTask() && typeof message.value === "number" && message.value) {
-				await handleMessageModificationsOperation(message.value, "delete")
+			if (!provider.getCurrentTask()) {
+				await vscode.window.showErrorMessage(t("common:errors.message.no_active_task_to_delete"))
+				break
 			}
+
+			if (typeof message.value !== "number" || !message.value) {
+				await vscode.window.showErrorMessage(t("common:errors.message.invalid_timestamp_for_deletion"))
+				break
+			}
+
+			await handleMessageModificationsOperation(message.value, "delete")
 			break
 		}
 		case "submitEditedMessage": {
@@ -2047,9 +2111,17 @@ export const webviewMessageHandler = async (
 			}
 			break
 		case "deleteMessageConfirm":
-			if (message.messageTs) {
-				await handleDeleteMessageConfirm(message.messageTs, message.restoreCheckpoint)
+			if (!message.messageTs) {
+				await vscode.window.showErrorMessage(t("common:errors.message.cannot_delete_missing_timestamp"))
+				break
 			}
+
+			if (typeof message.messageTs !== "number") {
+				await vscode.window.showErrorMessage(t("common:errors.message.cannot_delete_invalid_timestamp"))
+				break
+			}
+
+			await handleDeleteMessageConfirm(message.messageTs, message.restoreCheckpoint)
 			break
 		case "editMessageConfirm":
 			if (message.messageTs && message.text) {
@@ -2424,7 +2496,7 @@ export const webviewMessageHandler = async (
 		// kilocode_change_start
 		case "fetchProfileDataRequest":
 			try {
-				const { apiConfiguration } = await provider.getState()
+				const { apiConfiguration, currentApiConfigName } = await provider.getState()
 				const kilocodeToken = apiConfiguration?.kilocodeToken
 
 				if (!kilocodeToken) {
@@ -2437,13 +2509,23 @@ export const webviewMessageHandler = async (
 				}
 
 				// Changed to /api/profile
+				const headers: Record<string, string> = {
+					Authorization: `Bearer ${kilocodeToken}`,
+					"Content-Type": "application/json",
+				}
+
+				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+				if (
+					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
+					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
+				) {
+					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+				}
+
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
 					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
 					{
-						headers: {
-							Authorization: `Bearer ${kilocodeToken}`,
-							"Content-Type": "application/json",
-						},
+						headers,
 					},
 				)
 
@@ -2452,7 +2534,7 @@ export const webviewMessageHandler = async (
 					({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
 				)
 				if (apiConfiguration?.kilocodeOrganizationId && !organizationExists) {
-					provider.upsertProviderProfile(provider.providerSettingsManager.activateProfile.name, {
+					provider.upsertProviderProfile(currentApiConfigName ?? "default", {
 						...apiConfiguration,
 						kilocodeOrganizationId: undefined,
 					})
@@ -2495,6 +2577,14 @@ export const webviewMessageHandler = async (
 
 				if (kilocodeOrganizationId) {
 					headers["X-KiloCode-OrganizationId"] = kilocodeOrganizationId
+				}
+
+				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+				if (
+					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
+					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
+				) {
+					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
 				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile/balance`, {
@@ -2672,6 +2762,48 @@ export const webviewMessageHandler = async (
 			} catch (error) {
 				provider.log(`AuthService#logout failed: ${error}`)
 				vscode.window.showErrorMessage("Sign out failed.")
+			}
+
+			break
+		}
+		case "rooCloudManualUrl": {
+			try {
+				if (!message.text) {
+					vscode.window.showErrorMessage(t("common:errors.manual_url_empty"))
+					break
+				}
+
+				// Parse the callback URL to extract parameters
+				const callbackUrl = message.text.trim()
+				const uri = vscode.Uri.parse(callbackUrl)
+
+				if (!uri.query) {
+					throw new Error(t("common:errors.manual_url_no_query"))
+				}
+
+				const query = new URLSearchParams(uri.query)
+				const code = query.get("code")
+				const state = query.get("state")
+				const organizationId = query.get("organizationId")
+
+				if (!code || !state) {
+					throw new Error(t("common:errors.manual_url_missing_params"))
+				}
+
+				// Reuse the existing authentication flow
+				await CloudService.instance.handleAuthCallback(
+					code,
+					state,
+					organizationId === "null" ? null : organizationId,
+				)
+
+				await provider.postStateToWebview()
+			} catch (error) {
+				provider.log(`ManualUrl#handleAuthCallback failed: ${error}`)
+				const errorMessage = error instanceof Error ? error.message : t("common:errors.manual_url_auth_failed")
+
+				// Show error message through VS Code UI
+				vscode.window.showErrorMessage(`${t("common:errors.manual_url_auth_error")}: ${errorMessage}`)
 			}
 
 			break
@@ -3417,6 +3549,40 @@ export const webviewMessageHandler = async (
 				provider.getCurrentTask()?.messageQueueService.updateMessage(id, text, images)
 			}
 
+			break
+		}
+		case "dismissUpsell": {
+			if (message.upsellId) {
+				try {
+					// Get current list of dismissed upsells
+					const dismissedUpsells = getGlobalState("dismissedUpsells") || []
+
+					// Add the new upsell ID if not already present
+					let updatedList = dismissedUpsells
+					if (!dismissedUpsells.includes(message.upsellId)) {
+						updatedList = [...dismissedUpsells, message.upsellId]
+						await updateGlobalState("dismissedUpsells", updatedList)
+					}
+
+					// Send updated list back to webview (use the already computed updatedList)
+					await provider.postMessageToWebview({
+						type: "dismissedUpsells",
+						list: updatedList,
+					})
+				} catch (error) {
+					// Fail silently as per Bruno's comment - it's OK to fail silently in this case
+					provider.log(`Failed to dismiss upsell: ${error instanceof Error ? error.message : String(error)}`)
+				}
+			}
+			break
+		}
+		case "getDismissedUpsells": {
+			// Send the current list of dismissed upsells to the webview
+			const dismissedUpsells = getGlobalState("dismissedUpsells") || []
+			await provider.postMessageToWebview({
+				type: "dismissedUpsells",
+				list: dismissedUpsells,
+			})
 			break
 		}
 	}

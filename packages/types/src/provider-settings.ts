@@ -331,6 +331,7 @@ const kilocodeSchema = baseProviderSettingsSchema.extend({
 	openRouterSpecificProvider: z.string().optional(),
 	openRouterProviderDataCollection: openRouterProviderDataCollectionSchema.optional(),
 	openRouterProviderSort: openRouterProviderSortSchema.optional(),
+	kilocodeTesterWarningsDisabledUntil: z.number().optional(), // Timestamp for disabling KILOCODE-TESTER warnings
 })
 
 export const virtualQuotaFallbackProfileDataSchema = z.object({

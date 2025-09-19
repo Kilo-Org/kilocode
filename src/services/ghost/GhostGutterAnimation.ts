@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 
-export class GhostCursorAnimation {
+export class GhostGutterAnimation {
 	private state: "hide" | "wait" | "active" = "hide"
 	private decorationWait: vscode.TextEditorDecorationType
 	private decorationActive: vscode.TextEditorDecorationType
@@ -58,5 +58,13 @@ export class GhostCursorAnimation {
 	public hide() {
 		this.state = "hide"
 		this.update()
+	}
+
+	public dispose() {
+		const editor = vscode.window.activeTextEditor
+		editor?.setDecorations(this.decorationActive, [])
+		editor?.setDecorations(this.decorationWait, [])
+		this.decorationWait.dispose()
+		this.decorationActive.dispose()
 	}
 }

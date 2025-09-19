@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Đã hết thời gian khi cố gắng khôi phục điểm kiểm tra.",
 		"checkpoint_failed": "Không thể khôi phục điểm kiểm tra.",
 		"git_not_installed": "Yêu cầu Git cho tính năng điểm kiểm tra. Vui lòng cài đặt Git để bật điểm kiểm tra.",
+		"nested_git_repos_warning": "Điểm kiểm tra bị vô hiệu hóa vì phát hiện kho git lồng nhau tại: {{path}}. Để sử dụng điểm kiểm tra, vui lòng xóa hoặc di chuyển kho git lồng nhau này.",
 		"no_workspace": "Vui lòng mở thư mục dự án trước",
 		"update_support_prompt": "Không thể cập nhật lời nhắc hỗ trợ",
 		"reset_support_prompt": "Không thể đặt lại lời nhắc hỗ trợ",
@@ -105,6 +106,15 @@
 			"apiError": "Lỗi API Gemini CLI: {{error}}",
 			"completionError": "Lỗi hoàn thành Gemini CLI: {{error}}"
 		},
+		"message": {
+			"no_active_task_to_delete": "Không có nhiệm vụ hoạt động để xóa tin nhắn",
+			"invalid_timestamp_for_deletion": "Dấu thời gian tin nhắn không hợp lệ để xóa",
+			"cannot_delete_missing_timestamp": "Không thể xóa tin nhắn: thiếu dấu thời gian",
+			"cannot_delete_invalid_timestamp": "Không thể xóa tin nhắn: dấu thời gian không hợp lệ",
+			"message_not_found": "Không tìm thấy tin nhắn có dấu thời gian {{messageTs}}",
+			"error_deleting_message": "Lỗi xóa tin nhắn: {{error}}",
+			"error_editing_message": "Lỗi chỉnh sửa tin nhắn: {{error}}"
+		},
 		"gemini": {
 			"generate_stream": "Lỗi luồng ngữ cảnh tạo Gemini: {{error}}",
 			"generate_complete_prompt": "Lỗi hoàn thành Gemini: {{error}}",
@@ -127,7 +137,12 @@
 		},
 		"api": {
 			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ."
-		}
+		},
+		"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
+		"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
+		"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
+		"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
+		"manual_url_auth_error": "Xác thực thất bại"
 	},
 	"warnings": {
 		"no_terminal_content": "Không có nội dung terminal được chọn",
@@ -212,8 +227,13 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Tổ chức của bạn yêu cầu xác thực Kilo Code Cloud. Vui lòng đăng nhập để tiếp tục.",
-			"organization_mismatch": "Bạn phải được xác thực bằng tài khoản Kilo Code Cloud của tổ chức.",
+			"cloud_auth_required": "Tổ chức của bạn yêu cầu xác thực Roo Code Cloud. Vui lòng đăng nhập để tiếp tục.",
+			"organization_mismatch": "Bạn phải được xác thực bằng tài khoản Roo Code Cloud của tổ chức.",
+			"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
+			"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
+			"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
+			"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
+			"manual_url_auth_error": "Xác thực thất bại",
 			"verification_failed": "Không thể xác minh xác thực tổ chức."
 		},
 		"info": {

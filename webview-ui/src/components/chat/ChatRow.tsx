@@ -132,7 +132,6 @@ export const ChatRowContent = ({
 	const { t } = useTranslation()
 
 	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
-	const [reasoningCollapsed, setReasoningCollapsed] = useState(true)
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const { copyWithFeedback } = useCopyToClipboard()
@@ -1060,9 +1059,10 @@ export const ChatRowContent = ({
 					return (
 						<ReasoningBlock
 							content={message.text || ""}
-							elapsed={isLast && isStreaming ? Date.now() - message.ts : undefined}
-							isCollapsed={reasoningCollapsed}
-							onToggleCollapse={() => setReasoningCollapsed(!reasoningCollapsed)}
+							ts={message.ts}
+							isStreaming={isStreaming}
+							isLast={isLast}
+							metadata={message.metadata as any}
 						/>
 					)
 				case "api_req_started":
