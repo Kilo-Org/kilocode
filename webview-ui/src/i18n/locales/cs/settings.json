@@ -580,6 +580,13 @@
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Zobrazit animaci v okraji při automatickém dokončování",
+			"description": "Zobrazit animovaný indikátor v okraji editoru, když běží automatické dokončování",
+			"preview": "Náhled animace"
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Povolit zvukové efekty",

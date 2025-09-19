@@ -925,6 +925,13 @@
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Tampilkan animasi gutter saat autocomplete",
+			"description": "Tampilkan indikator animasi di gutter editor saat autocompletion sedang berjalan",
+			"preview": "Pratinjau animasi"
+		}
+	},
 	"includeMaxOutputTokens": "Sertakan token output maksimum",
 	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
 	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",

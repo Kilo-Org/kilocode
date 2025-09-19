@@ -903,6 +903,13 @@
 			"description": "Mostra una línia de temps visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i desplaçar-te cap enrere a punts específics de l'historial de la tasca."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra l'animació al marge quan s'autocompleta",
+			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",
+			"preview": "Previsualització de l'animació"
+		}
+	},
 	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
 	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això.",
 	"limitMaxTokensDescription": "Limitar el nombre màxim de tokens en la resposta",

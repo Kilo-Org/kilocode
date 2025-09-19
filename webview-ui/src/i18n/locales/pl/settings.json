@@ -904,6 +904,13 @@
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Pokaż animację marginesu podczas autouzupełniania",
+			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",
+			"preview": "Podgląd animacji"
+		}
+	},
 	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",
 	"includeMaxOutputTokensDescription": "Wyślij parametr maksymalnych tokenów wyjściowych w żądaniach API. Niektórzy dostawcy mogą tego nie obsługiwać.",
 	"limitMaxTokensDescription": "Ogranicz maksymalną liczbę tokenów w odpowiedzi",

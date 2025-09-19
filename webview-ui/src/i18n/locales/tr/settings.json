@@ -32,7 +32,8 @@
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"display": "Göster"
+		"display": "Göster",
+		"ghost": "Ghost"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -902,6 +903,13 @@
 		"taskTimeline": {
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
+			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",
+			"preview": "Animasyon önizlemesi"
 		}
 	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",

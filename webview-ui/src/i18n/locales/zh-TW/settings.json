@@ -32,7 +32,8 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "顯示"
+		"display": "顯示",
+		"ghost": "Ghost"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -902,6 +903,13 @@
 		"taskTimeline": {
 			"label": "顯示任務時間軸",
 			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自動完成時顯示編輯器邊欄動畫",
+			"description": "在自動完成執行時於編輯器邊欄顯示動畫指示",
+			"preview": "動畫預覽"
 		}
 	},
 	"contextWindow": {

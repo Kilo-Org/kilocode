@@ -909,6 +909,13 @@
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自动完成时显示边栏动画",
+			"description": "自动完成运行时在编辑器边栏显示动画指示器",
+			"preview": "动画预览"
+		}
+	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
 	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。",
 	"limitMaxTokensDescription": "限制响应中的最大 Token 数量",

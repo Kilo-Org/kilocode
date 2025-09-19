@@ -903,6 +903,13 @@
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostrar animación en el margen al autocompletar",
+			"description": "Muestra un indicador animado en el margen del editor cuando se ejecuta el autocompletado",
+			"preview": "Vista previa de animación"
+		}
+	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de salida",
 	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto.",
 	"limitMaxTokensDescription": "Limitar el número máximo de tokens en la respuesta",

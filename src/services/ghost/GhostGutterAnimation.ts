@@ -1,9 +1,11 @@
 import * as vscode from "vscode"
+import type { GhostServiceSettings } from "@roo-code/types"
 
 export class GhostGutterAnimation {
 	private state: "hide" | "wait" | "active" = "hide"
 	private decorationWait: vscode.TextEditorDecorationType
 	private decorationActive: vscode.TextEditorDecorationType
+	private isEnabled: boolean = true
 
 	public constructor(context: vscode.ExtensionContext) {
 		this.decorationWait = vscode.window.createTextEditorDecorationType({
@@ -18,6 +20,21 @@ export class GhostGutterAnimation {
 		})
 	}
 
+	public updateSettings(settings: GhostServiceSettings | undefined) {
+		this.isEnabled = settings?.showGutterAnimation !== false
+		if (!this.isEnabled) {
+			this.clearDecorations()
+		}
+	}
+
+	private clearDecorations() {
+		const editor = vscode.window.activeTextEditor
+		if (editor) {
+			editor.setDecorations(this.decorationActive, [])
+			editor.setDecorations(this.decorationWait, [])
+		}
+	}
+
 	private getPosition(editor: vscode.TextEditor): vscode.Range {
 		const position = editor.selection.active
 		const document = editor.document
@@ -30,11 +47,12 @@ export class GhostGutterAnimation {
 		if (!editor) {
 			return
 		}
-		if (this.state == "hide") {
-			editor.setDecorations(this.decorationActive, [])
-			editor.setDecorations(this.decorationWait, [])
+
+		if (!this.isEnabled || this.state == "hide") {
+			this.clearDecorations()
 			return
 		}
+
 		const position = this.getPosition(editor)
 		if (this.state == "wait") {
 			editor.setDecorations(this.decorationActive, [])

@@ -899,6 +899,13 @@
 			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass du den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen kannst."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Randanimation bei Autovervollständigung anzeigen",
+			"description": "Zeigt eine animierte Anzeige im Editor-Rand an, wenn die Autovervollständigung läuft",
+			"preview": "Animationsvorschau"
+		}
+	},
 	"includeMaxOutputTokens": "Maximale Ausgabe-Tokens einbeziehen",
 	"includeMaxOutputTokensDescription": "Sende den Parameter für maximale Ausgabe-Tokens in API-Anfragen. Einige Anbieter unterstützen dies möglicherweise nicht.",
 	"limitMaxTokensDescription": "Begrenze die maximale Anzahl von Tokens in der Antwort",

@@ -540,6 +540,13 @@
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Show gutter animation when autocompleting",
+			"description": "Display animated indicator in the editor gutter when autocompletion is running",
+			"preview": "Animation preview"
+		}
+	},
 	"notifications": {
 		"sound": {
 			"label": "Enable sound effects",

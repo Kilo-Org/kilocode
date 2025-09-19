@@ -82,6 +82,9 @@ export class GhostProvider {
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
 
 		void this.load()
+
+		// Initialize cursor animation with settings after load
+		this.cursorAnimation.updateSettings(this.settings || undefined)
 	}
 
 	// Singleton Management
@@ -117,6 +120,7 @@ export class GhostProvider {
 	public async load() {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
+		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 	}
@@ -127,6 +131,7 @@ export class GhostProvider {
 			enableAutoTrigger: false,
 			enableSmartInlineTaskKeybinding: false,
 			enableQuickInlineTaskKeybinding: false,
+			showGutterAnimation: true,
 		}
 		await this.saveSettings()
 		await this.load()
@@ -138,6 +143,7 @@ export class GhostProvider {
 			enableAutoTrigger: true,
 			enableSmartInlineTaskKeybinding: true,
 			enableQuickInlineTaskKeybinding: true,
+			showGutterAnimation: true,
 		}
 		await this.saveSettings()
 		await this.load()

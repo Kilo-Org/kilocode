@@ -904,6 +904,13 @@
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
+			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",
+			"preview": "Xem trước hoạt ảnh"
+		}
+	},
 	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",
 	"includeMaxOutputTokensDescription": "Gửi tham số token đầu ra tối đa trong các yêu cầu API. Một số nhà cung cấp có thể không hỗ trợ điều này.",
 	"limitMaxTokensDescription": "Giới hạn số lượng token tối đa trong phản hồi",

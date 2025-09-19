@@ -811,6 +811,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{activeTab === "display" && (
 						<DisplaySettings
 							showTaskTimeline={showTaskTimeline}
+							ghostServiceSettings={ghostServiceSettings}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}

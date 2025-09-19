@@ -32,7 +32,8 @@
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"display": "Mostra"
+		"display": "Mostra",
+		"ghost": "Ghost"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Kilo Code a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -902,6 +903,13 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra animazione gutter durante l'autocompletamento",
+			"description": "Visualizza indicatore animato nel gutter dell'editor quando l'autocompletamento è in esecuzione",
+			"preview": "Anteprima animazione"
 		}
 	},
 	"includeMaxOutputTokens": "Includi token di output massimi",
