@@ -3,6 +3,8 @@
 
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 
+import { DISCORD_URL } from '@site/src/constants.ts'
+
 # 常见问题解答
 
 本页面解答关于Kilo Code的一些常见问题。
