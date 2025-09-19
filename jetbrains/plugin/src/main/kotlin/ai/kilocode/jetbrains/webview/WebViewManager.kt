@@ -81,6 +81,9 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
     // Current theme type
     private var isDarkTheme: Boolean = true
     
+    // Current body theme class
+    private var bodyThemeClass: String = "vscode-dark"
+    
     // Prevent repeated dispose
     private var isDisposed = false
     private var themeInitialized = false
@@ -105,6 +108,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
     override fun onThemeChanged(themeConfig: JsonObject, isDarkTheme: Boolean) {
         logger.info("Received theme change event, isDarkTheme: $isDarkTheme, config: ${themeConfig.size()}")
         this.currentThemeConfig = themeConfig
+        this.bodyThemeClass = if (isDarkTheme) "vscode-dark" else "vscode-light"
         this.isDarkTheme = isDarkTheme
         
         // Send theme config to all WebView instances
@@ -119,7 +123,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
 
 //        getAllWebViews().forEach { webView ->
             try {
-                getLatestWebView()?.sendThemeConfigToWebView(themeConfig)
+                getLatestWebView()?.sendThemeConfigToWebView(themeConfig, this.bodyThemeClass)
             } catch (e: Exception) {
                 logger.error("Failed to send theme config to WebView", e)
             }
@@ -398,7 +402,7 @@ class WebViewManager(var project: Project) : Disposable, ThemeChangeListener {
                     // Delay sending theme config to ensure HTML is loaded
                     ApplicationManager.getApplication().invokeLater {
                         try {
-                            webView.sendThemeConfigToWebView(currentThemeConfig!!)
+                            webView.sendThemeConfigToWebView(currentThemeConfig!!, this.bodyThemeClass)
                         } catch (e: Exception) {
                             logger.error("Failed to send theme config to WebView", e)
                         }
@@ -517,6 +521,9 @@ class WebViewInstance(
     // JSON serialization
     private val gson = Gson()
 
+    // Body theme class (e.g., "vscode-dark" or "vscode-light")
+    private var bodyThemeClass: String = "vscode-dark"
+
     // Coroutine scope
     private val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -536,8 +543,9 @@ class WebViewInstance(
     /**
      * Send theme config to the specified WebView instance
      */
-    fun sendThemeConfigToWebView(themeConfig: JsonObject) {
+    fun sendThemeConfigToWebView(themeConfig: JsonObject, bodyThemeClass: String) {
         currentThemeConfig = themeConfig
+        this.bodyThemeClass = bodyThemeClass
         if(isDisposed or !isPageLoaded) {
             logger.warn("WebView has been disposed or not loaded, cannot send theme config:${isDisposed},${isPageLoaded}")
             return
@@ -608,8 +616,18 @@ class WebViewInstance(
                                         // Set as style attribute of html tag
                                         document.documentElement.setAttribute('style', styleAttrValue);
                                         console.log("CSS variables set as style attribute of HTML tag");
+                                        
+                                        // Add theme class to body element for styled-components compatibility
+                                        if (document.body) {
+                                            // Remove existing theme classes
+                                            document.body.classList.remove('vscode-dark', 'vscode-light');
+                                            
+                                            // Add appropriate theme class based on current theme
+                                            document.body.classList.add('$bodyThemeClass');
+                                            console.log("Added theme class to body: " + themeClass);
+                                        }
                                     } catch (error) {
-                                        console.error("Error processing CSS variables:", error);
+                                        console.error("Error processing CSS variables and theme classes:", error);
                                     }
                                     
                                     // Keep original default style injection logic
