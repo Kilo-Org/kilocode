@@ -78,6 +78,7 @@ Kilo Code支持多种API提供商，包括：
 - [Unbound](/providers/unbound)
 - [Requesty](/providers/requesty)
 - [VS Code Language Model API](/providers/vscode-lm)
+- [SubModel](/providers/submodel)
 
 ### 如何获取API密钥？
 

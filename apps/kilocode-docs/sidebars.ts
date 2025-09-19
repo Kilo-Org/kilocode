@@ -68,6 +68,7 @@ const sidebars: SidebarsConfig = {
 								"providers/openai-compatible",
 								"providers/openrouter",
 								"providers/requesty",
+                "providers/submodel",
 								"providers/unbound",
 								"providers/v0",
 								"providers/vercel-ai-gateway",
