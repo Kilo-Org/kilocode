@@ -12,6 +12,9 @@ import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
+
+const OPENAICOMPATIBLE_TIMEOUT_MS = 3_600_000
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -61,6 +64,8 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			baseURL,
 			apiKey: this.options.apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
+			timeout: OPENAICOMPATIBLE_TIMEOUT_MS, // kilocode_change
+			fetch: fetchWithTimeout(OPENAICOMPATIBLE_TIMEOUT_MS), // kilocode_change
 		})
 	}
 
