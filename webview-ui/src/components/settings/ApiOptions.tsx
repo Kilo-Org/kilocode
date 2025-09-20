@@ -259,6 +259,21 @@ const ApiOptions = ({
 				vscode.postMessage({ type: "requestLmStudioModels" })
 			} else if (selectedProvider === "vscode-lm") {
 				vscode.postMessage({ type: "requestVsCodeLmModels" })
+				// kilocode_change start
+			} else if (selectedProvider === "openrouter") {
+				const headerObject = convertHeadersToObject(customHeaders)
+				vscode.postMessage({
+					type: "requestRouterModels",
+					values: {
+						openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
+						openRouterApiKey: apiConfiguration?.openRouterApiKey,
+						customHeaders: {},
+						openAiHeaders: headerObject,
+						source: "ApiOptions.debounce.openrouter",
+					},
+				})
+				refetchRouterModels()
+				// kilocode_change end
 			} else if (selectedProvider === "litellm") {
 				vscode.postMessage({ type: "requestRouterModels" })
 			} else if (selectedProvider === "deepinfra") {
@@ -278,6 +293,7 @@ const ApiOptions = ({
 			apiConfiguration?.deepInfraApiKey,
 			apiConfiguration?.deepInfraBaseUrl,
 			customHeaders,
+			refetchRouterModels, // kilocode_change
 		],
 	)
 
@@ -289,6 +305,19 @@ const ApiOptions = ({
 		)
 		setErrorMessage(apiValidationResult)
 	}, [apiConfiguration, routerModels, organizationAllowList, setErrorMessage])
+
+	// kilocode_change start
+	// This will trigger whenever the baseUrl for OpenRouter changes.
+	useEffect(() => {
+		// We only want to do this if the selected provider is actually OpenRouter.
+		if (apiConfiguration.apiProvider === "openrouter") {
+			// 1. Flush the server-side cache for openrouter.
+			vscode.postMessage({ type: "flushRouterModels", text: "openrouter" })
+			// 2. Trigger a client-side refetch using the new configuration.
+			refetchRouterModels()
+		}
+	}, [apiConfiguration.openRouterBaseUrl, apiConfiguration.apiProvider, refetchRouterModels])
+	// kilocode_change end
 
 	const selectedProviderModels = useMemo(() => {
 		const models = MODELS_BY_PROVIDER[selectedProvider]
