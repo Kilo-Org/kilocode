@@ -363,7 +363,7 @@
 			"step3": "3. Ou créer un compte de service avec des identifiants."
 		},
 		"googleCloudCredentials": "Identifiants Google Cloud",
-		"googleCloudKeyFile": "Chemin du fichier de clé Google Cloud",
+		"googleCloudKeyFile": "Repertoire du fichier de clé Google Cloud",
 		"googleCloudProjectId": "ID du projet Google Cloud",
 		"googleCloudRegion": "Région Google Cloud",
 		"lmStudio": {
@@ -472,16 +472,16 @@
 		},
 		"setReasoningLevel": "Activer l'effort de raisonnement",
 		"claudeCode": {
-			"pathLabel": "Chemin du code Claude",
-			"description": "Chemin facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
+			"pathLabel": "Repertoire de Claude Code",
+			"description": "Repertoire facultatif vers votre CLI Claude Code. La valeur par défaut est 'claude' si non défini.",
 			"placeholder": "Défaut : claude",
 			"maxTokensLabel": "Jetons de sortie max",
 			"maxTokensDescription": "Nombre maximum de jetons de sortie pour les réponses de Claude Code. La valeur par défaut est 8000."
 		},
 		"geminiCli": {
 			"description": "Ce fournisseur utilise l'authentification OAuth de l'outil Gemini CLI et ne nécessite pas de clés API.",
-			"oauthPath": "Chemin des Identifiants OAuth (optionnel)",
-			"oauthPathDescription": "Chemin vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.gemini/oauth_creds.json).",
+			"oauthPath": "Repertoire des Identifiants OAuth (optionnel)",
+			"oauthPathDescription": "Repertoire vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.gemini/oauth_creds.json).",
 			"instructions": "Si vous ne vous êtes pas encore authentifié, veuillez exécuter",
 			"instructionsContinued": "dans votre terminal d'abord.",
 			"setupLink": "Instructions de Configuration Gemini CLI",
@@ -494,10 +494,10 @@
 			"freeAccess": "Accès gratuit via l'authentification OAuth"
 		},
 		"qwenCode": {
-			"oauthPath": "Chemin des identifiants OAuth (optionnel)",
-			"oauthPathDescription": "Chemin vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.qwen/oauth_creds.json).",
+			"oauthPath": "Repertoire des identifiants OAuth (optionnel)",
+			"oauthPathDescription": "Repertoire vers le fichier d'identifiants OAuth. Laissez vide pour utiliser l'emplacement par défaut (~/.qwen/oauth_creds.json).",
 			"description": "Ce fournisseur utilise l'authentification OAuth du service Qwen et ne nécessite pas de clés API.",
-			"instructions": "Veuillez suivre la documentation officielle pour obtenir le fichier d'autorisation et le placer dans le chemin spécifié.",
+			"instructions": "Veuillez suivre la documentation officielle pour obtenir le fichier d'autorisation et le placer dans le Repertoire spécifié.",
 			"setupLink": "Documentation officielle Qwen"
 		}
 	},
@@ -862,7 +862,7 @@
 		"providerNotAllowed": "Le fournisseur '{{provider}}' n'est pas autorisé par votre organisation",
 		"modelNotAllowed": "Le modèle '{{model}}' n'est pas autorisé pour le fournisseur '{{provider}}' par votre organisation",
 		"profileInvalid": "Ce profil contient un fournisseur ou un modèle qui n'est pas autorisé par votre organisation",
-		"qwenCodeOauthPath": "Tu dois fournir un chemin valide pour les identifiants OAuth"
+		"qwenCodeOauthPath": "Tu dois fournir un Repertoire valide pour les identifiants OAuth"
 	},
 	"placeholders": {
 		"apiKey": "Saisissez la clé API...",
@@ -871,7 +871,7 @@
 		"secretKey": "Saisissez la clé secrète...",
 		"sessionToken": "Saisissez le jeton de session...",
 		"credentialsJson": "Saisissez le JSON des identifiants...",
-		"keyFilePath": "Saisissez le chemin du fichier de clé...",
+		"keyFilePath": "Saisissez le Repertoire du fichier de clé...",
 		"projectId": "Saisissez l'ID du projet...",
 		"customArn": "Saisissez l'ARN (ex. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
 		"baseUrl": "Saisissez l'URL de base...",

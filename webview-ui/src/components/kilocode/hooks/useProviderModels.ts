@@ -31,7 +31,6 @@ import {
 	qwenCodeModels,
 	qwenCodeDefaultModelId,
 	geminiCliModels,
-	claudeCodeModels,
 	claudeCodeDefaultModelId,
 	doubaoModels,
 	doubaoDefaultModelId,
@@ -189,10 +188,21 @@ export const getModelsByProvider = ({
 			}
 		}
 		case "claude-code": {
+			// kilocode_change start: Special handling for claude-code provider to use dynamic models from backend
+			// For claude-code provider, models are fetched from the backend
+			// which reads Claude Code's configuration files and detects
+			// the actual provider (Z.ai, Qwen, DeepSeek, or Claude)
+			const claudeCodeModels = routerModels["claude-code"] || {}
+			const availableModels = Object.keys(claudeCodeModels)
+
+			// Use the first available model as default, or fallback to claude default
+			const defaultModel = availableModels.length > 0 ? availableModels[0] : claudeCodeDefaultModelId
+
 			return {
 				models: claudeCodeModels,
-				defaultModel: claudeCodeDefaultModelId,
+				defaultModel,
 			}
+			// kilocode_change end
 		}
 		case "qwen-code": {
 			return {

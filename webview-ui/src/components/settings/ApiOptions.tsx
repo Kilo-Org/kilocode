@@ -291,6 +291,18 @@ const ApiOptions = ({
 	}, [apiConfiguration, routerModels, organizationAllowList, setErrorMessage])
 
 	const selectedProviderModels = useMemo(() => {
+		// kilocode_change start : Special handling for claude-code provider to use dynamic models from backend
+		if (selectedProvider === "claude-code") {
+			const claudeCodeModels = routerModels?.["claude-code"] || {}
+
+			const modelOptions = Object.keys(claudeCodeModels).map((modelId) => ({
+				value: modelId,
+				label: modelId,
+			}))
+			return modelOptions
+		}
+		// kilocode_change end
+
 		const models = MODELS_BY_PROVIDER[selectedProvider]
 		if (!models) return []
 
@@ -304,7 +316,7 @@ const ApiOptions = ({
 			: []
 
 		return modelOptions
-	}, [selectedProvider, organizationAllowList])
+	}, [selectedProvider, organizationAllowList, routerModels]) // kilocode_change: added routerModels to deps
 
 	const onProviderChange = useCallback(
 		(value: ProviderName) => {
