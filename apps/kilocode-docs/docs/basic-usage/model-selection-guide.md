@@ -14,7 +14,7 @@ The AI model landscape evolves rapidly, so this guide focuses on what's deliveri
 | -------------------- | -------------- | ------------------ | ---------- | ------------- | ------------- | -------------- | ------------------------------------------- |
 | **GPT-5**            | 400K tokens    | 74.9%              | 96.3%      | 68.2%         | $1.25         | $10            | Latest capabilities, multi-modal coding     |
 | **Claude Sonnet 4**  | 1M tokens      | 72.7%              | 94.8%      | 65.9%         | $3-6          | $15-22.50      | Enterprise code generation, complex systems |
-| **Grok Code Fast 1** | 256K tokens    | 70.8%              | 92.1%      | 63.4%         | $0.75         | $3.50          | Rapid development, cost-performance balance |
+| **Grok Code Fast 1** | 256K tokens    | 70.8%              | 92.1%      | 63.4%         | $0.20         | $1.50          | Rapid development, cost-performance balance |
 | **Qwen3 Coder**      | 256K tokens    | 68.4%              | 91.7%      | 61.8%         | $0.20         | $0.80          | Pure coding tasks, rapid prototyping        |
 | **Gemini 2.5 Pro**   | 1M+ tokens     | 67.2%              | 89.9%      | 59.3%         | TBD           | TBD            | Massive codebases, architectural planning   |
 

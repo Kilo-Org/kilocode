@@ -1,11 +1,21 @@
+// kilocode_change start
+import { getSupportedBinaryFormats } from "../../../integrations/misc/extract-text"
+import { SUPPORTED_IMAGE_FORMATS } from "../../tools/helpers/imageHelpers"
+// kilocode_change end
+
 import { ToolArgs } from "./types"
 
 export function getReadFileDescription(args: ToolArgs): string {
 	const maxConcurrentReads = args.settings?.maxConcurrentFileReads ?? 5
 	const isMultipleReadsEnabled = maxConcurrentReads > 1
+	const supportsImages = args.supportsComputerUse // kilocode_change: supportsComputerUse==supportsImages in kilo
 
 	return `## read_file
-Description: Request to read the contents of ${isMultipleReadsEnabled ? "one or more files" : "a file"}. The tool outputs line-numbered content (e.g. "1 | const x = 1") for easy reference when creating diffs or discussing code.${args.partialReadsEnabled ? " Use line ranges to efficiently read specific portions of large files." : ""} Supports text extraction from PDF and DOCX files, but may not handle other binary files properly.
+Description: Request to read the contents of ${isMultipleReadsEnabled ? "one or more files" : "a file"}. The tool outputs line-numbered content (e.g. "1 | const x = 1") for easy reference when creating diffs or discussing code.${args.partialReadsEnabled ? " Use line ranges to efficiently read specific portions of large files." : ""} Supports text extraction from ${
+		getSupportedBinaryFormats()
+			.concat(supportsImages ? SUPPORTED_IMAGE_FORMATS : [])
+			.join(" and ") /*kilocode_change*/
+	} files, but may not handle other binary files properly.
 
 ${isMultipleReadsEnabled ? `**IMPORTANT: You can read a maximum of ${maxConcurrentReads} files in a single request.** If you need to read more files, use multiple sequential read_file requests.` : "**IMPORTANT: Multiple file reads are currently disabled. You can only read one file at a time.**"}
 
