@@ -71,7 +71,6 @@ export class ProfileValidator {
 			case "chutes":
 			case "fireworks":
 			case "featherless":
-			case "ovhcloud":
 				return profile.apiModelId
 			case "litellm":
 				return profile.litellmModelId
@@ -94,6 +93,8 @@ export class ProfileValidator {
 				return profile.ioIntelligenceModelId
 			case "deepinfra":
 				return profile.deepInfraModelId
+			case "ovhcloud":
+				return profile.ovhCloudAiEndpointsModelId
 			case "human-relay":
 			case "fake-ai":
 			default:

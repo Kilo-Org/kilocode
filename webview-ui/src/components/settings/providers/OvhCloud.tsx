@@ -1,19 +1,30 @@
 import { useCallback } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import type { ProviderSettings } from "@roo-code/types"
+import { OrganizationAllowList, ovhCloudAiEndpointsDefaultModelId, type ProviderSettings } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 
 import { inputEventTransform } from "../transforms"
+import { ModelPicker } from "../ModelPicker"
+import { RouterModels } from "@roo/api"
 
 type OvhCloudAiEndpointsProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	routerModels?: RouterModels
+	organizationAllowList: OrganizationAllowList
+	modelValidationError?: string
 }
 
-export const OvhCloudAiEndpoints = ({ apiConfiguration, setApiConfigurationField }: OvhCloudAiEndpointsProps) => {
+export const OvhCloudAiEndpoints = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	routerModels,
+	organizationAllowList,
+	modelValidationError,
+}: OvhCloudAiEndpointsProps) => {
 	const { t } = useAppTranslation()
 
 	const handleInputChange = useCallback(
@@ -45,6 +56,17 @@ export const OvhCloudAiEndpoints = ({ apiConfiguration, setApiConfigurationField
 					{t("settings:providers.getOvhCloudAiEndpointsApiKey")}
 				</VSCodeButtonLink>
 			)}
+			<ModelPicker
+				apiConfiguration={apiConfiguration}
+				setApiConfigurationField={setApiConfigurationField}
+				defaultModelId={ovhCloudAiEndpointsDefaultModelId}
+				models={routerModels?.ovhcloud ?? {}}
+				modelIdKey="ovhCloudAiEndpointsModelId"
+				serviceName="OVHCloud AI Endpoints"
+				serviceUrl="https://endpoints.ai.cloud.ovh.net/catalog"
+				organizationAllowList={organizationAllowList}
+				errorMessage={modelValidationError}
+			/>
 		</>
 	)
 }

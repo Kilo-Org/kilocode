@@ -6,13 +6,9 @@ vitest.mock("vscode", () => ({}))
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import {
-	type OVHCloudAiEndpointsModelId,
-	ovhCloudAiEndpointsDefaultModelId,
-	ovhCloudAiEndpointsModels,
-} from "@roo-code/types"
-
 import { OVHCloudAIEndpointsHandler } from "../ovhcloud"
+import { ovhCloudAiEndpointsDefaultModelId } from "@roo-code/types"
+import { calculateApiCostOpenAI } from "../../../shared/cost"
 
 vitest.mock("openai", () => {
 	const createMock = vitest.fn()
@@ -53,7 +49,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		})
 
 		it("should accept custom model configuration during initialization", () => {
-			const customModelId: OVHCloudAiEndpointsModelId = "Meta-Llama-3_3-70B-Instruct"
+			const customModelId = "Meta-Llama-3_3-70B-Instruct"
 			const customHandler = new OVHCloudAIEndpointsHandler({
 				apiModelId: customModelId,
 				ovhCloudAiEndpointsApiKey,
@@ -66,18 +62,16 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		it("should retrieve default model configuration when none specified", () => {
 			const model = handler.getModel()
 			expect(model.id).toBe(ovhCloudAiEndpointsDefaultModelId)
-			expect(model.info).toEqual(ovhCloudAiEndpointsModels[ovhCloudAiEndpointsDefaultModelId])
 		})
 
 		it("should retrieve specific model configuration when provided", () => {
-			const targetModelId: OVHCloudAiEndpointsModelId = "Meta-Llama-3_3-70B-Instruct"
+			const targetModelId = "Meta-Llama-3_3-70B-Instruct"
 			const handlerWithModel = new OVHCloudAIEndpointsHandler({
 				apiModelId: targetModelId,
 				ovhCloudAiEndpointsApiKey,
 			})
 			const model = handlerWithModel.getModel()
 			expect(model.id).toBe(targetModelId)
-			expect(model.info).toEqual(ovhCloudAiEndpointsModels[targetModelId])
 		})
 
 		it("should provide access to model metadata", () => {
@@ -168,14 +162,20 @@ describe("OVHCloudAIEndpointsHandler", () => {
 
 			const messageStream = handler.createMessage("system prompt", [])
 			const chunk = await messageStream.next()
+			const info = handler.getModel().info
 
 			expect(chunk.done).toBe(false)
-			expect(chunk.value).toEqual({ type: "usage", inputTokens: 15, outputTokens: 25 })
+			expect(chunk.value).toEqual({
+				type: "usage",
+				inputTokens: 15,
+				outputTokens: 25,
+				totalCost: calculateApiCostOpenAI(info, 15, 25),
+			})
 		})
 
 		it("should configure streaming with appropriate OVHCloud parameters", async () => {
-			const modelId: OVHCloudAiEndpointsModelId = "Meta-Llama-3_3-70B-Instruct"
-			const modelInfo = ovhCloudAiEndpointsModels[modelId]
+			const modelId = "Meta-Llama-3_3-70B-Instruct"
+			const modelInfo = handler.getModel().info
 			const customHandler = new OVHCloudAIEndpointsHandler({
 				apiModelId: modelId,
 				ovhCloudAiEndpointsApiKey,

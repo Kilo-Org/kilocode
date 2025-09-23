@@ -13,7 +13,6 @@ import {
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
-	ovhCloudAiEndpointsModels,
 	qwenCodeModels,
 	vertexModels,
 	xaiModels,
@@ -41,7 +40,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,
-	ovhcloud: ovhCloudAiEndpointsModels,
 	"qwen-code": qwenCodeModels,
 	vertex: vertexModels,
 	xai: xaiModels,

@@ -43,6 +43,7 @@ type ModelIdKey = keyof Pick<
 	| "deepInfraModelId"
 	| "ioIntelligenceModelId"
 	| "vercelAiGatewayModelId"
+	| "ovhCloudAiEndpointsModelId"
 >
 
 interface ModelPickerProps {

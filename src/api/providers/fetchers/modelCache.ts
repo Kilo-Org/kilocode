@@ -20,6 +20,7 @@ import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
+import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 
 // kilocode_change start
 import { cerebrasModels } from "@roo-code/types"
@@ -114,6 +115,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "vercel-ai-gateway":
 				models = await getVercelAiGatewayModels()
+				break
+			case "ovhcloud":
+				models = await getOvhCloudAiEndpointsModels()
 				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union

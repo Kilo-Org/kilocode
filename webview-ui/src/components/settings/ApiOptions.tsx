@@ -377,7 +377,7 @@ const ApiOptions = ({
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
 				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
-				ovhcloud: { field: "apiModelId", default: ovhCloudAiEndpointsDefaultModelId },
+				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId },
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
@@ -577,6 +577,9 @@ const ApiOptions = ({
 				<OvhCloudAiEndpoints
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
 				/>
 			)}
 

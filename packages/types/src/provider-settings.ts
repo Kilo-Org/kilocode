@@ -18,7 +18,6 @@ import {
 	mistralModels,
 	moonshotModels,
 	openAiNativeModels,
-	ovhCloudAiEndpointsModels,
 	qwenCodeModels,
 	rooModels,
 	sambaNovaModels,
@@ -325,8 +324,9 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
-const ovhcloudSchema = apiModelIdProviderModelSchema.extend({
+const ovhcloudSchema = baseProviderSettingsSchema.extend({
 	ovhCloudAiEndpointsApiKey: z.string().optional(),
+	ovhCloudAiEndpointsModelId: z.string().optional(),
 })
 
 // kilocode_change start
@@ -517,6 +517,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"ioIntelligenceModelId",
 	"vercelAiGatewayModelId",
 	"deepInfraModelId",
+	"ovhCloudAiEndpointsModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -614,7 +615,7 @@ export const MODELS_BY_PROVIDER: Record<
 	ovhcloud: {
 		id: "ovhcloud",
 		label: "OVHcloud AI Endpoints",
-		models: Object.keys(ovhCloudAiEndpointsModels),
+		models: [],
 	},
 	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: Object.keys(qwenCodeModels) },
 	roo: { id: "roo", label: "Roo", models: Object.keys(rooModels) },
@@ -665,6 +666,7 @@ export const dynamicProviders = [
 	// kilocode_change end
 	"deepinfra",
 	"vercel-ai-gateway",
+	"ovhcloud",
 ] as const satisfies readonly ProviderName[]
 
 export type DynamicProvider = (typeof dynamicProviders)[number]

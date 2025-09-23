@@ -157,6 +157,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "ovhcloud":
+			if (!apiConfiguration.ovhCloudAiEndpointsApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 	}
 
 	return undefined
@@ -229,6 +234,8 @@ function getModelIdForProvider(apiConfiguration: ProviderSettings, provider: str
 			return apiConfiguration.ioIntelligenceModelId
 		case "vercel-ai-gateway":
 			return apiConfiguration.vercelAiGatewayModelId
+		case "ovhcloud":
+			return apiConfiguration.ovhCloudAiEndpointsModelId
 		default:
 			return apiConfiguration.apiModelId
 	}
@@ -307,6 +314,9 @@ export function validateModelId(apiConfiguration: ProviderSettings, routerModels
 			break
 		case "vercel-ai-gateway":
 			modelId = apiConfiguration.vercelAiGatewayModelId
+			break
+		case "ovhcloud":
+			modelId = apiConfiguration.ovhCloudAiEndpointsModelId
 			break
 	}
 

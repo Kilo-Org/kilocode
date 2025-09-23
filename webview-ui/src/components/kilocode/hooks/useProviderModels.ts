@@ -47,7 +47,6 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
-	ovhCloudAiEndpointsModels,
 	ovhCloudAiEndpointsDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -258,7 +257,7 @@ export const getModelsByProvider = ({
 		}
 		case "ovhcloud": {
 			return {
-				models: ovhCloudAiEndpointsModels,
+				models: routerModels.ovhcloud,
 				defaultModel: ovhCloudAiEndpointsDefaultModelId,
 			}
 		}
