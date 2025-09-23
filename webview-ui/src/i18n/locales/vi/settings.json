@@ -902,6 +902,10 @@
 		"taskTimeline": {
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		},
+		"showTimestamps": {
+			"label": "Hiển thị dấu thời gian sự kiện",
+			"description": "Hiển thị dấu thời gian theo cài đặt vùng lân cận (locale) cạnh thông báo Tác vụ và Yêu cầu API."
 		}
 	},
 	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",

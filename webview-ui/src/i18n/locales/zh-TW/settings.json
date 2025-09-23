@@ -902,6 +902,10 @@
 		"taskTimeline": {
 			"label": "顯示任務時間軸",
 			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
+		},
+		"showTimestamps": {
+			"label": "顯示事件時間戳記",
+			"description": "在工作與 API 請求通知旁顯示符合本地格式的時間戳記。"
 		}
 	},
 	"contextWindow": {

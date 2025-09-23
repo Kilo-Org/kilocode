@@ -902,6 +902,10 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"showTimestamps": {
+			"label": "Mostra timestamp degli eventi",
+			"description": "Visualizza i timestamp in base alla localizzazione accanto alle notifiche di Attività e alle Richieste API."
 		}
 	},
 	"includeMaxOutputTokens": "Includi token di output massimi",

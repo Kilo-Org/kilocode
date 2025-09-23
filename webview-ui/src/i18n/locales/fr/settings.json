@@ -901,6 +901,10 @@
 		"taskTimeline": {
 			"label": "Afficher la chronologie des tâches",
 			"description": "Afficher une chronologie visuelle des messages de tâches, colorés selon leur type, permettant de voir rapidement la progression des tâches et de revenir à des points spécifiques dans l'historique de la tâche."
+		},
+		"showTimestamps": {
+			"label": "Afficher les horodatages des événements",
+			"description": "Affiche des horodatages adaptés à la locale à côté des notifications de Tâche et des requêtes d'API."
 		}
 	},
 	"includeMaxOutputTokens": "Inclure les tokens de sortie maximum",

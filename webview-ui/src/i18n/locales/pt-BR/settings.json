@@ -902,6 +902,10 @@
 		"taskTimeline": {
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		},
+		"showTimestamps": {
+			"label": "Mostrar carimbos de data/hora de eventos",
+			"description": "Exibir carimbos de data/hora no formato local ao lado das notificações de Tarefa e de Requisição de API."
 		}
 	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de saída",

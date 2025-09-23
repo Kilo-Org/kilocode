@@ -11,10 +11,17 @@ import { generateSampleTimelineData } from "../../utils/timeline/mockData"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
-	setCachedStateField: SetCachedStateField<"showTaskTimeline">
+	showTimestamps?: boolean //kilocode_change
+	setCachedStateField: SetCachedStateField<"showTaskTimeline" | "showTimestamps"> //kilocode_change
 }
 
-export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...props }: DisplaySettingsProps) => {
+export const DisplaySettings = ({
+	showTaskTimeline,
+	showTimestamps,
+	setCachedStateField,
+	...props
+}: DisplaySettingsProps) => {
+	//kilocode_change
 	const { t } = useAppTranslation()
 
 	const sampleTimelineData = useMemo(() => generateSampleTimelineData(), [])
@@ -46,6 +53,20 @@ export const DisplaySettings = ({ showTaskTimeline, setCachedStateField, ...prop
 						<div className="font-medium text-vscode-foreground text-xs mb-4">Preview</div>
 						<div className="opacity-60">
 							<TaskTimeline groupedMessages={sampleTimelineData} isTaskActive={false} />
+						</div>
+					</div>
+
+					{/* Show Timestamps checkbox */}
+					<div className="mt-3">
+						<VSCodeCheckbox
+							checked={showTimestamps}
+							onChange={(e: any) => {
+								setCachedStateField("showTimestamps", e.target.checked)
+							}}>
+							<span className="font-medium">{t("settings:display.showTimestamps.label")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:display.showTimestamps.description")}
 						</div>
 					</div>
 				</div>

@@ -538,6 +538,10 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		},
+		"showTimestamps": {
+			"label": "Show event timestamps",
+			"description": "Display locale-aware timestamps along side Task and API Request notices."
 		}
 	},
 	"notifications": {

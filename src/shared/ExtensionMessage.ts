@@ -151,6 +151,7 @@ export interface ExtensionMessage {
 		| "commands"
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
+		| "showTimestamps" // kilocode_change
 	text?: string
 	// kilocode_change start
 	payload?:
@@ -429,6 +430,7 @@ export type ExtensionState = Pick<
 	remoteControlEnabled: boolean
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
+	showTimestamps?: boolean // kilocode_change: Show timestamps in chat mes
 }
 
 export interface ClineSayTool {

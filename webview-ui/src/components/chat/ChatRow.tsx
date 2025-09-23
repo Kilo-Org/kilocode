@@ -131,7 +131,7 @@ export const ChatRowContent = ({
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint, showTimestamps } = useExtensionState()
 	const [isDiffErrorExpanded, setIsDiffErrorExpanded] = useState(false)
 	const [showCopySuccess, setShowCopySuccess] = useState(false)
 	const { copyWithFeedback } = useCopyToClipboard()
@@ -1086,7 +1086,23 @@ export const ChatRowContent = ({
 								onClick={handleToggleExpand}>
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
-									{title}
+									<div style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
+										{title}
+
+										{showTimestamps && (
+											<span
+												style={{
+													fontSize: "11px",
+													color: "var(--vscode-descriptionForeground)",
+													fontWeight: "normal",
+												}}>
+												{new Date(message.ts).toLocaleTimeString([], {
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
+											</span>
+										)}
+									</div>
 									{
 										// kilocode_change start
 										!cost && usageMissing && (
@@ -1196,7 +1212,22 @@ export const ChatRowContent = ({
 						<>
 							<div style={headerStyle}>
 								{icon}
-								{title}
+								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+									{title}
+									{showTimestamps && (
+										<span
+											style={{
+												fontSize: "11px",
+												color: "var(--vscode-descriptionForeground)",
+												fontWeight: "normal",
+											}}>
+											{new Date(message.ts).toLocaleTimeString([], {
+												hour: "2-digit",
+												minute: "2-digit",
+											})}
+										</span>
+									)}
+								</div>
 							</div>
 							<div style={{ color: "var(--vscode-charts-green)", paddingTop: 10 }}>
 								<Markdown markdown={message.text} />

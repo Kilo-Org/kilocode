@@ -901,6 +901,10 @@
 		"taskTimeline": {
 			"label": "Mostrar cronología de tareas",
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		},
+		"showTimestamps": {
+			"label": "Mostrar marcas de tiempo de eventos",
+			"description": "Mostrar marcas de tiempo adaptadas a la configuración regional junto a los avisos de Tarea y de Solicitud de API."
 		}
 	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de salida",

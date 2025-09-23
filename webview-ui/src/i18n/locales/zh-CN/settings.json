@@ -907,6 +907,10 @@
 		"taskTimeline": {
 			"label": "显示任务时间轴",
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
+		},
+		"showTimestamps": {
+			"label": "显示事件时间戳",
+			"description": "在任务和 API 请求通知旁显示符合本地格式的时间戳。"
 		}
 	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",

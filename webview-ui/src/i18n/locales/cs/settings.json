@@ -578,6 +578,10 @@
 		"taskTimeline": {
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
+		},
+		"showTimestamps": {
+			"label": "Zobrazit časová razítka událostí",
+			"description": "Zobrazí časová razítka podle místního nastavení vedle upozornění úloh a požadavků API."
 		}
 	},
 	"notifications": {
