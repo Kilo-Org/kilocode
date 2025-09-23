@@ -590,6 +590,9 @@ class WebViewInstance(
                     val injectThemeScript = """
                         (function() {
                             function injectCSSVariables() {
+                                if (window.__cssVariablesInjected) {
+                                    return;
+                                }
                                 if(document.documentElement) {
                                     // Convert cssContent to style attribute of html tag
                                     try {
@@ -737,6 +740,7 @@ class WebViewInstance(
                                             }
                                         `;
                                         console.log("Default style injected to id=_defaultStyles");
+                                        window.__cssVariablesInjected = true;
                                     }
                                 } else {
                                     // If html tag does not exist yet, wait for DOM to load and try again
