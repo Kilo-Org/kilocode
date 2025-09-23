@@ -41,7 +41,7 @@ import { condenseTool } from "../tools/condenseTool" // kilocode_change
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
-import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
+import { yieldPromise } from "../kilocode"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -61,8 +61,6 @@ import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
  */
 
 export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
-	reportExcessiveRecursion("presentAssistantMessage", recursionDepth) // kilocode_change
-
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}

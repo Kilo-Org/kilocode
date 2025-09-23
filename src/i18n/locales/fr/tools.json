@@ -6,7 +6,7 @@
 		"imageTooLarge": "Le fichier image est trop volumineux ({{size}} MB). La taille maximale autorisée est {{max}} MB.",
 		"imageWithSize": "Fichier image ({{size}} Ko)"
 	},
-	"toolRepetitionLimitReached": "Kilo Code semble être bloqué dans une boucle, tentant la même action ({{toolName}}) de façon répétée. Cela pourrait indiquer un problème avec sa stratégie actuelle. Envisage de reformuler la tâche, de fournir des instructions plus spécifiques ou de le guider vers une approche différente.",
+	"toolRepetitionLimitReached": "Le modèle semble être bloqué dans une boucle, tentant la même action ({{toolName}}) de façon répétée. Cela pourrait indiquer un problème avec sa stratégie actuelle. Envisage de reformuler la tâche, de fournir des instructions plus spécifiques ou de le guider vers une approche différente.",
 	"codebaseSearch": {
 		"approval": "Recherche de '{{query}}' dans la base de code..."
 	},

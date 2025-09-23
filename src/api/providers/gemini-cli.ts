@@ -142,7 +142,9 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 		// Lookup for the project id from the env variable
 		// with a fallback to a default project ID (can be anything for personal OAuth)
-		const envPath = this.options.geminiCliOAuthPath || path.join(os.homedir(), ".gemini", ".env")
+		const envPath = this.options.geminiCliOAuthPath
+			? path.join(path.dirname(this.options.geminiCliOAuthPath), ".env")
+			: path.join(os.homedir(), ".gemini", ".env")
 
 		const { parsed, error } = dotenvx.config({ path: envPath })
 
