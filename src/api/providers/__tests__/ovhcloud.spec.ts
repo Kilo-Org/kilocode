@@ -49,7 +49,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		})
 
 		it("should accept custom model configuration during initialization", () => {
-			const customModelId = "Meta-Llama-3_3-70B-Instruct"
+			const customModelId = "gpt-oss-120b"
 			const customHandler = new OVHCloudAIEndpointsHandler({
 				apiModelId: customModelId,
 				ovhCloudAiEndpointsApiKey,
@@ -65,7 +65,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		})
 
 		it("should retrieve specific model configuration when provided", () => {
-			const targetModelId = "Meta-Llama-3_3-70B-Instruct"
+			const targetModelId = "gpt-oss-120b"
 			const handlerWithModel = new OVHCloudAIEndpointsHandler({
 				apiModelId: targetModelId,
 				ovhCloudAiEndpointsApiKey,
@@ -174,7 +174,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		})
 
 		it("should configure streaming with appropriate OVHCloud parameters", async () => {
-			const modelId = "Meta-Llama-3_3-70B-Instruct"
+			const modelId = "gpt-oss-120b"
 			const modelInfo = handler.getModel().info
 			const customHandler = new OVHCloudAIEndpointsHandler({
 				apiModelId: modelId,
@@ -191,25 +191,21 @@ describe("OVHCloudAIEndpointsHandler", () => {
 				}
 			})
 
-			const systemPrompt = "System configuration for OVHCloud AI"
+			const systemPrompt = "System configuration for OVHCloud AI Endpoints"
 			const userMessages: Anthropic.Messages.MessageParam[] = [
-				{ role: "user", content: "User query for OVHCloud AI processing" },
+				{ role: "user", content: "User query for OVHCloud AI Endpoints processing" },
 			]
 
 			const streamGenerator = customHandler.createMessage(systemPrompt, userMessages)
 			await streamGenerator.next()
 
-			expect(mockCreate).toHaveBeenCalledWith(
-				expect.objectContaining({
-					model: modelId,
-					max_tokens: modelInfo.maxTokens,
-					temperature: 0.7,
-					messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
-					stream: true,
-					stream_options: { include_usage: true },
-				}),
-				undefined,
-			)
+			expect(mockCreate).toHaveBeenCalledWith({
+				model: modelId,
+				max_tokens: modelInfo.maxTokens,
+				messages: [{ role: "system", content: systemPrompt }, userMessages[0]],
+				stream: true,
+				stream_options: { include_usage: true },
+			})
 		})
 	})
 

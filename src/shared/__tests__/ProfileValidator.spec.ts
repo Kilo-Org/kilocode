@@ -195,7 +195,6 @@ describe("ProfileValidator", () => {
 			"sambanova",
 			"fireworks",
 			"featherless",
-			"ovhcloud",
 		]
 
 		apiModelProviders.forEach((provider) => {
@@ -332,6 +331,21 @@ describe("ProfileValidator", () => {
 			const profile: ProviderSettings = {
 				apiProvider: "requesty",
 				requestyModelId: "requesty-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+
+		it("should extract ovhCloudAiEndpointsModelId for ovhcloud provider", () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					ovhcloud: { allowAll: false, models: ["ovhcloud-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "ovhcloud",
+				ovhCloudAiEndpointsModelId: "ovhcloud-model",
 			}
 
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)

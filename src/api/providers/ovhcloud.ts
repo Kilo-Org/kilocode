@@ -37,8 +37,7 @@ export class OVHCloudAIEndpointsHandler extends RouterProvider implements Single
 		const body: OpenAI.Chat.ChatCompletionCreateParams = {
 			model: modelId,
 			messages: openAiMessages,
-			temperature: this.supportsTemperature(modelId) ? (this.options.modelTemperature ?? 0) : undefined,
-			max_completion_tokens: info.maxTokens,
+			max_tokens: info.maxTokens,
 			stream: true,
 			stream_options: { include_usage: true },
 		}
@@ -76,7 +75,7 @@ export class OVHCloudAIEndpointsHandler extends RouterProvider implements Single
 			}
 
 			if (this.supportsTemperature(modelId)) {
-				requestOptions.temperature = this.options.modelTemperature
+				requestOptions.temperature = this.options.modelTemperature ?? 0.7
 			}
 
 			const response = await this.client.chat.completions.create(requestOptions)
