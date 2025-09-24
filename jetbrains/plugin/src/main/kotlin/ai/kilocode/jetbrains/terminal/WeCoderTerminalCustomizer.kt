@@ -160,7 +160,7 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
     }
   }
 
-   /**
+  /**
    * Inject VSCode integration script for Zsh (safe with JetBrains shell integration)
    */
   private fun injectZshScript(
