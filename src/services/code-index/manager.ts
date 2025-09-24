@@ -340,13 +340,20 @@ export class CodeIndexManager {
 			rooIgnoreController,
 		)
 
-		// Validate embedder configuration before proceeding
-		const validationResult = await this._serviceFactory.validateEmbedder(embedder)
-		if (!validationResult.valid) {
-			const errorMessage = validationResult.error || "Embedder configuration validation failed"
-			this._stateManager.setSystemState("Error", errorMessage)
-			throw new Error(errorMessage)
+		// kilocode_change start
+		// Only validate the embedder if it matches the currently configured provider
+		const config = this._configManager!.getConfig()
+		const shouldValidate = embedder.embedderInfo.name === config.embedderProvider
+
+		if (shouldValidate) {
+			const validationResult = await this._serviceFactory.validateEmbedder(embedder)
+			if (!validationResult.valid) {
+				const errorMessage = validationResult.error || "Embedder configuration validation failed"
+				this._stateManager.setSystemState("Error", errorMessage)
+				throw new Error(errorMessage)
+			}
 		}
+		// kilocode_change end
 
 		// (Re)Initialize orchestrator
 		this._orchestrator = new CodeIndexOrchestrator(
