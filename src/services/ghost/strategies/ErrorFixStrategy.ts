@@ -1,4 +1,4 @@
-import * as vscode from "vscode"
+import { Diagnostic, DiagnosticSeverity, TextDocument } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
@@ -84,7 +84,7 @@ Important:
 			})
 
 			// Group diagnostics by line for better context
-			const diagnosticsByLine = new Map<number, vscode.Diagnostic[]>()
+			const diagnosticsByLine = new Map<number, Diagnostic[]>()
 			sorted.forEach((d) => {
 				const line = d.range.start.line
 				if (!diagnosticsByLine.has(line)) {
@@ -106,7 +106,7 @@ Important:
 
 				// List all diagnostics for this line
 				diagnostics.forEach((d) => {
-					const severity = vscode.DiagnosticSeverity[d.severity]
+					const severity = DiagnosticSeverity[d.severity]
 					prompt += `- **${severity}**: ${d.message}`
 
 					// Add diagnostic code if available (helps identify the type of error)
@@ -151,10 +151,8 @@ Important:
 		}
 
 		// Count errors vs warnings
-		const errorCount =
-			context.diagnostics?.filter((d) => d.severity === vscode.DiagnosticSeverity.Error).length || 0
-		const warningCount =
-			context.diagnostics?.filter((d) => d.severity === vscode.DiagnosticSeverity.Warning).length || 0
+		const errorCount = context.diagnostics?.filter((d) => d.severity === DiagnosticSeverity.Error).length || 0
+		const warningCount = context.diagnostics?.filter((d) => d.severity === DiagnosticSeverity.Warning).length || 0
 
 		if (errorCount > 0) {
 			prompt += `\nYou have ${errorCount} error${errorCount > 1 ? "s" : ""} that must be fixed.\n`
@@ -185,8 +183,8 @@ Important:
 	/**
 	 * Helper to check if all diagnostics are just warnings
 	 */
-	private hasOnlyWarnings(diagnostics: vscode.Diagnostic[]): boolean {
-		return diagnostics.every((d) => d.severity === vscode.DiagnosticSeverity.Warning)
+	private hasOnlyWarnings(diagnostics: Diagnostic[]): boolean {
+		return diagnostics.every((d) => d.severity === DiagnosticSeverity.Warning)
 	}
 
 	/**
@@ -194,7 +192,7 @@ Important:
 	 */
 	canHandle(context: GhostSuggestionContext): boolean {
 		// Primary: handle if there are errors
-		const hasErrors = context.diagnostics?.some((d) => d.severity === vscode.DiagnosticSeverity.Error) || false
+		const hasErrors = context.diagnostics?.some((d) => d.severity === DiagnosticSeverity.Error) || false
 
 		if (hasErrors) {
 			return true
