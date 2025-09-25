@@ -10,6 +10,7 @@ interface TestResult {
 	completion: string
 	error?: string
 	matchedPattern?: string
+	actualValue?: string
 }
 
 class TestRunner {
@@ -33,9 +34,17 @@ class TestRunner {
 			// Check if any change matches our expected patterns
 			let passed = false
 			let matchedPattern: string | undefined
+			let actualValue: string | undefined
 
 			if (changes.length > 0) {
+				// Extract what was actually added/changed (the value we're testing)
 				const replacementText = changes[0].replace.replace(testCase.input, "").trim()
+				actualValue = replacementText
+
+				// If no addition was made, show the full replacement
+				if (!actualValue) {
+					actualValue = changes[0].replace
+				}
 
 				for (const pattern of testCase.expectedPatterns) {
 					const regex = new RegExp(pattern)
@@ -45,6 +54,8 @@ class TestRunner {
 						break
 					}
 				}
+			} else {
+				actualValue = "(no changes parsed)"
 			}
 
 			return {
@@ -52,6 +63,7 @@ class TestRunner {
 				passed,
 				completion,
 				matchedPattern,
+				actualValue,
 			}
 		} catch (error) {
 			return {
@@ -93,9 +105,13 @@ class TestRunner {
 					if (result.error) {
 						console.log(`    Error: ${result.error}`)
 					} else {
+						// Show what we expected and what we got
+						console.log(`    Input: "${testCase.input.replace(/\n/g, "\\n")}"`)
 						console.log(`    Expected: ${testCase.expectedPatterns.join(" or ")}`)
+						console.log(`    Got: "${result.actualValue?.replace(/\n/g, "\\n")}"`)
+
 						if (this.verbose && result.completion) {
-							console.log("    Response:")
+							console.log("    Full XML Response:")
 							console.log(
 								result.completion
 									.split("\n")
@@ -187,13 +203,13 @@ class TestRunner {
 			console.log("\n✗ TEST FAILED")
 			if (result.error) {
 				console.log(`Error: ${result.error}`)
+			} else {
+				console.log("\nExtracted value being tested:")
+				console.log(`  "${result.actualValue}"`)
 			}
 		}
 
 		if (result.completion) {
-			console.log("\nLLM Response:")
-			console.log(result.completion)
-
 			const changes = this.strategyTester.parseCompletion(result.completion)
 			if (changes.length > 0) {
 				console.log("\nParsed Changes:")
@@ -201,8 +217,17 @@ class TestRunner {
 					console.log(`Change ${i + 1}:`)
 					console.log("  Search:", change.search.replace(/\n/g, "\\n"))
 					console.log("  Replace:", change.replace.replace(/\n/g, "\\n"))
+
+					// Show what was extracted for testing
+					const extracted = change.replace.replace(testCase.input, "").trim()
+					console.log("  Extracted for test:", extracted || "(full replacement)")
 				})
+			} else {
+				console.log("\nNo changes were parsed from the response")
 			}
+
+			console.log("\nFull LLM Response:")
+			console.log(result.completion)
 		}
 
 		process.exit(result.passed ? 0 : 1)
