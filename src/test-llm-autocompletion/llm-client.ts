@@ -1,8 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
-import * as dotenv from "dotenv"
-
-dotenv.config()
+import "dotenv/config"
 
 export interface LLMResponse {
 	content: string

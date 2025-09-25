@@ -1,7 +1,7 @@
 import { LLMClient } from "./llm-client.js"
-import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
-import { GhostSuggestionContext } from "../services/ghost/types.js"
-import * as vscode from "vscode"
+import { AutoTriggerStrategy } from "./auto-trigger-strategy-standalone.js"
+import { GhostSuggestionContext } from "./types.js"
+import * as vscode from "./mock-vscode.js"
 
 const CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
 
@@ -57,7 +57,7 @@ class MockTextDocument implements vscode.TextDocument {
 		return "utf8"
 	}
 
-	save(): Thenable<boolean> {
+	save(): Promise<boolean> {
 		return Promise.resolve(true)
 	}
 
