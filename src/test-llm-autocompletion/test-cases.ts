@@ -39,7 +39,7 @@ export const testCases: TestCase[] = [
 		category: "Basic Syntax",
 		input: `console.log('test'<<<AUTOCOMPLETE_HERE>>>`,
 		cursorPosition: { line: 0, character: 18 },
-		expectedPatterns: [")"],
+		expectedPatterns: ["\\)"],
 		description: "Should complete closing parenthesis for function call",
 	},
 
@@ -95,7 +95,7 @@ str.<<<AUTOCOMPLETE_HERE>>>`,
 		input: `function greet(name) { return 'Hello ' + name; }
 greet(<<<AUTOCOMPLETE_HERE>>>`,
 		cursorPosition: { line: 1, character: 6 },
-		expectedPatterns: [")", "'", '"'],
+		expectedPatterns: ["\\)", "'", '"'],
 		description: "Should suggest function call argument completion",
 	},
 
