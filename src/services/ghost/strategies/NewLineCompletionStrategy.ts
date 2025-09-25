@@ -1,4 +1,4 @@
-import { TextDocument, Range } from "vscode"
+import type { TextDocument, Range } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"

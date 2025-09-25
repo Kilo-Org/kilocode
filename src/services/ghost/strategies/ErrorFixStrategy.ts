@@ -1,8 +1,24 @@
-import { Diagnostic, DiagnosticSeverity, TextDocument } from "vscode"
+import type { Diagnostic } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+
+// Local constants for DiagnosticSeverity values since we're using type-only imports
+const DiagnosticSeverityValues = {
+	Error: 0,
+	Warning: 1,
+	Information: 2,
+	Hint: 3,
+} as const
+
+// Mapping for getting severity names from values
+const DiagnosticSeverityNames: Record<number, string> = {
+	0: "Error",
+	1: "Warning",
+	2: "Information",
+	3: "Hint",
+}
 
 /**
  * Strategy for fixing compilation errors and warnings
@@ -106,7 +122,7 @@ Important:
 
 				// List all diagnostics for this line
 				diagnostics.forEach((d) => {
-					const severity = DiagnosticSeverity[d.severity]
+					const severity = DiagnosticSeverityNames[d.severity] || "Unknown"
 					prompt += `- **${severity}**: ${d.message}`
 
 					// Add diagnostic code if available (helps identify the type of error)
@@ -151,8 +167,9 @@ Important:
 		}
 
 		// Count errors vs warnings
-		const errorCount = context.diagnostics?.filter((d) => d.severity === DiagnosticSeverity.Error).length || 0
-		const warningCount = context.diagnostics?.filter((d) => d.severity === DiagnosticSeverity.Warning).length || 0
+		const errorCount = context.diagnostics?.filter((d) => d.severity === DiagnosticSeverityValues.Error).length || 0
+		const warningCount =
+			context.diagnostics?.filter((d) => d.severity === DiagnosticSeverityValues.Warning).length || 0
 
 		if (errorCount > 0) {
 			prompt += `\nYou have ${errorCount} error${errorCount > 1 ? "s" : ""} that must be fixed.\n`
@@ -184,7 +201,7 @@ Important:
 	 * Helper to check if all diagnostics are just warnings
 	 */
 	private hasOnlyWarnings(diagnostics: Diagnostic[]): boolean {
-		return diagnostics.every((d) => d.severity === DiagnosticSeverity.Warning)
+		return diagnostics.every((d) => d.severity === DiagnosticSeverityValues.Warning)
 	}
 
 	/**
@@ -192,7 +209,7 @@ Important:
 	 */
 	canHandle(context: GhostSuggestionContext): boolean {
 		// Primary: handle if there are errors
-		const hasErrors = context.diagnostics?.some((d) => d.severity === DiagnosticSeverity.Error) || false
+		const hasErrors = context.diagnostics?.some((d) => d.severity === DiagnosticSeverityValues.Error) || false
 
 		if (hasErrors) {
 			return true

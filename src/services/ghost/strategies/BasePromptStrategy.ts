@@ -1,7 +1,15 @@
-import { TextDocument, Range, Diagnostic, DiagnosticSeverity } from "vscode"
+import type { TextDocument, Range, Diagnostic } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+
+// Local mapping for DiagnosticSeverity since we're using type-only imports
+const DiagnosticSeverityNames: Record<number, string> = {
+	0: "Error",
+	1: "Warning",
+	2: "Information",
+	3: "Hint",
+}
 
 /**
  * Abstract base class for all prompt strategies
@@ -126,7 +134,7 @@ EXAMPLE:
 		const sorted = [...diagnostics].sort((a, b) => a.severity - b.severity)
 
 		sorted.forEach((d) => {
-			const severity = DiagnosticSeverity[d.severity]
+			const severity = DiagnosticSeverityNames[d.severity] || "Unknown"
 			const line = d.range.start.line + 1
 			result += `- **${severity}** at line ${line}: ${d.message}\n`
 		})
