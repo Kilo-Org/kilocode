@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Jetbrains - Fix .gitignore error
+Fix error logging behavior in JetBrains plugin by updating console bridge log levels
