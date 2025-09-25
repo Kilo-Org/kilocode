@@ -1,6 +1,8 @@
-import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 import "dotenv/config"
+
+// Import the version from package.json
+const packageVersion = "4.97.1" // From src/package.json
 
 export interface LLMResponse {
 	content: string
@@ -9,91 +11,72 @@ export interface LLMResponse {
 	tokensUsed?: number
 }
 
+function getKiloBaseUriFromToken(kilocodeToken?: string): string {
+	if (kilocodeToken) {
+		try {
+			const payload_string = kilocodeToken.split(".")[1]
+			const payload_json = Buffer.from(payload_string, "base64").toString()
+			const payload = JSON.parse(payload_json)
+			// Note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker
+			if (payload.env === "development") return "http://localhost:3000"
+		} catch (_error) {
+			console.warn("Failed to get base URL from Kilo Code token")
+		}
+	}
+	return "https://api.kilocode.ai"
+}
+
 export class LLMClient {
 	private provider: string
 	private model: string
-	private anthropic?: Anthropic
-	private openai?: OpenAI
+	private openai: OpenAI
 
 	constructor() {
-		this.provider = process.env.LLM_PROVIDER || "anthropic"
-		this.model = process.env.LLM_MODEL || "claude-3-haiku-20240307"
+		this.provider = process.env.LLM_PROVIDER || "kilocode"
+		this.model = process.env.LLM_MODEL || "mistralai/codestral-latest"
 
-		switch (this.provider) {
-			case "anthropic":
-				if (!process.env.ANTHROPIC_API_KEY) {
-					throw new Error("ANTHROPIC_API_KEY is required for Anthropic provider")
-				}
-				this.anthropic = new Anthropic({
-					apiKey: process.env.ANTHROPIC_API_KEY,
-				})
-				break
-
-			case "openai":
-				if (!process.env.OPENAI_API_KEY) {
-					throw new Error("OPENAI_API_KEY is required for OpenAI provider")
-				}
-				this.openai = new OpenAI({
-					apiKey: process.env.OPENAI_API_KEY,
-				})
-				break
-
-			case "openrouter":
-				if (!process.env.OPENROUTER_API_KEY) {
-					throw new Error("OPENROUTER_API_KEY is required for OpenRouter provider")
-				}
-				this.openai = new OpenAI({
-					baseURL: "https://openrouter.ai/api/v1",
-					apiKey: process.env.OPENROUTER_API_KEY,
-					defaultHeaders: {
-						"HTTP-Referer": "https://github.com/kilocode/test-suite",
-						"X-Title": "Kilo Code Autocompletion Tests",
-					},
-				})
-				break
-
-			default:
-				throw new Error(`Unsupported provider: ${this.provider}`)
+		if (this.provider !== "kilocode") {
+			throw new Error(`Only kilocode provider is supported. Got: ${this.provider}`)
 		}
+
+		if (!process.env.KILOCODE_API_KEY) {
+			throw new Error("KILOCODE_API_KEY is required for Kilocode provider")
+		}
+
+		// Extract base URL from token (same logic as kilocode-openrouter.ts)
+		const baseUrl = getKiloBaseUriFromToken(process.env.KILOCODE_API_KEY)
+
+		// Use the same headers as the main Kilocode extension
+		this.openai = new OpenAI({
+			baseURL: `${baseUrl}/api/openrouter/`,
+			apiKey: process.env.KILOCODE_API_KEY,
+			defaultHeaders: {
+				"HTTP-Referer": "https://kilocode.ai",
+				"X-Title": "Kilo Code",
+				"X-KILOCODE-VERSION": packageVersion,
+				"User-Agent": `Kilo-Code/${packageVersion}`,
+				"X-KILOCODE-TESTER": "SUPPRESS",
+			},
+		})
 	}
 
 	async sendPrompt(systemPrompt: string, userPrompt: string): Promise<LLMResponse> {
 		try {
-			if (this.provider === "anthropic" && this.anthropic) {
-				const response = await this.anthropic.messages.create({
-					model: this.model,
-					max_tokens: 1024,
-					messages: [{ role: "user", content: userPrompt }],
-					system: systemPrompt,
-				})
+			const response = await this.openai.chat.completions.create({
+				model: this.model,
+				messages: [
+					{ role: "system", content: systemPrompt },
+					{ role: "user", content: userPrompt },
+				],
+				max_tokens: 1024,
+			})
 
-				return {
-					content: response.content[0].type === "text" ? response.content[0].text : "",
-					provider: this.provider,
-					model: this.model,
-					tokensUsed: response.usage?.output_tokens,
-				}
+			return {
+				content: response.choices[0].message.content || "",
+				provider: this.provider,
+				model: this.model,
+				tokensUsed: response.usage?.total_tokens,
 			}
-
-			if ((this.provider === "openai" || this.provider === "openrouter") && this.openai) {
-				const response = await this.openai.chat.completions.create({
-					model: this.model,
-					messages: [
-						{ role: "system", content: systemPrompt },
-						{ role: "user", content: userPrompt },
-					],
-					max_tokens: 1024,
-				})
-
-				return {
-					content: response.choices[0].message.content || "",
-					provider: this.provider,
-					model: this.model,
-					tokensUsed: response.usage?.total_tokens,
-				}
-			}
-
-			throw new Error("No LLM client configured")
 		} catch (error) {
 			console.error("LLM API Error:", error)
 			throw error

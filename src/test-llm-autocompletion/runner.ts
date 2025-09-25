@@ -231,19 +231,17 @@ async function main() {
 
 // Check for required environment variables
 function checkEnvironment() {
-	const provider = process.env.LLM_PROVIDER || "anthropic"
+	const provider = process.env.LLM_PROVIDER || "kilocode"
 
-	const requiredVars: Record<string, string> = {
-		anthropic: "ANTHROPIC_API_KEY",
-		openai: "OPENAI_API_KEY",
-		openrouter: "OPENROUTER_API_KEY",
+	if (provider !== "kilocode") {
+		console.error(`\n❌ Error: Only kilocode provider is supported. Got: ${provider}`)
+		process.exit(1)
 	}
 
-	const requiredVar = requiredVars[provider]
-	if (requiredVar && !process.env[requiredVar]) {
-		console.error(`\n❌ Error: ${requiredVar} is not set`)
+	if (!process.env.KILOCODE_API_KEY) {
+		console.error(`\n❌ Error: KILOCODE_API_KEY is not set`)
 		console.log("\nPlease create a .env file with your API credentials.")
-		console.log("See .env.example for configuration options.\n")
+		console.log("Example: KILOCODE_API_KEY=your-api-key-here\n")
 		process.exit(1)
 	}
 }
