@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import chalk from "chalk"
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategyTester } from "./auto-trigger-strategy.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
@@ -65,52 +64,50 @@ class TestRunner {
 	}
 
 	async runAllTests(): Promise<void> {
-		console.log(chalk.bold.blue("\n🚀 Starting AutoTriggerStrategy LLM Tests\n"))
-		console.log(chalk.gray("Provider:"), this.llmClient["provider"])
-		console.log(chalk.gray("Model:"), this.llmClient["model"])
-		console.log(chalk.gray("Total tests:"), testCases.length)
-		console.log(chalk.gray("Categories:"), getCategories().join(", "))
-		console.log("\n" + chalk.gray("─".repeat(80)) + "\n")
+		console.log("\n🚀 Starting AutoTriggerStrategy LLM Tests\n")
+		console.log("Provider:", this.llmClient["provider"])
+		console.log("Model:", this.llmClient["model"])
+		console.log("Total tests:", testCases.length)
+		console.log("Categories:", getCategories().join(", "))
+		console.log("\n" + "─".repeat(80) + "\n")
 
 		for (const category of getCategories()) {
-			console.log(chalk.bold.cyan(`\n📁 ${category}`))
-			console.log(chalk.gray("─".repeat(40)))
+			console.log(`\n📁 ${category}`)
+			console.log("─".repeat(40))
 
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				process.stdout.write(chalk.gray(`  Running ${testCase.name}... `))
+				process.stdout.write(`  Running ${testCase.name}... `)
 
 				const result = await this.runTest(testCase)
 				this.results.push(result)
 
 				if (result.passed) {
-					console.log(chalk.green("✓ PASSED"))
+					console.log("✓ PASSED")
 					if (this.verbose && result.matchedPattern) {
-						console.log(chalk.gray(`    Matched pattern: ${result.matchedPattern}`))
+						console.log(`    Matched pattern: ${result.matchedPattern}`)
 					}
 				} else {
-					console.log(chalk.red("✗ FAILED"))
+					console.log("✗ FAILED")
 					if (result.error) {
-						console.log(chalk.red(`    Error: ${result.error}`))
+						console.log(`    Error: ${result.error}`)
 					} else {
-						console.log(chalk.yellow(`    Expected: ${testCase.expectedPatterns.join(" or ")}`))
+						console.log(`    Expected: ${testCase.expectedPatterns.join(" or ")}`)
 						if (this.verbose && result.completion) {
-							console.log(chalk.gray("    Response:"))
+							console.log("    Response:")
 							console.log(
-								chalk.gray(
-									result.completion
-										.split("\n")
-										.map((l) => "      " + l)
-										.join("\n"),
-								),
+								result.completion
+									.split("\n")
+									.map((l) => "      " + l)
+									.join("\n"),
 							)
 						}
 					}
 				}
 
 				if (this.verbose) {
-					console.log(chalk.gray(`    Description: ${testCase.description}`))
+					console.log(`    Description: ${testCase.description}`)
 				}
 			}
 		}
@@ -119,43 +116,43 @@ class TestRunner {
 	}
 
 	private printSummary(): void {
-		console.log("\n" + chalk.gray("═".repeat(80)))
-		console.log(chalk.bold.blue("\n📊 Test Summary\n"))
+		console.log("\n" + "═".repeat(80))
+		console.log("\n📊 Test Summary\n")
 
 		const passed = this.results.filter((r) => r.passed).length
 		const failed = this.results.filter((r) => !r.passed).length
 		const passRate = ((passed / this.results.length) * 100).toFixed(1)
 
-		console.log(chalk.green(`  ✓ Passed: ${passed}`))
-		console.log(chalk.red(`  ✗ Failed: ${failed}`))
-		console.log(chalk.yellow(`  📈 Pass Rate: ${passRate}%`))
+		console.log(`  ✓ Passed: ${passed}`)
+		console.log(`  ✗ Failed: ${failed}`)
+		console.log(`  📈 Pass Rate: ${passRate}%`)
 
 		// Category breakdown
-		console.log(chalk.bold.cyan("\n📁 Category Breakdown:"))
+		console.log("\n📁 Category Breakdown:")
 		for (const category of getCategories()) {
 			const categoryResults = this.results.filter((r) => r.testCase.category === category)
 			const categoryPassed = categoryResults.filter((r) => r.passed).length
 			const categoryTotal = categoryResults.length
 			const categoryRate = ((categoryPassed / categoryTotal) * 100).toFixed(0)
 
-			const color = categoryRate === "100" ? chalk.green : categoryRate >= "75" ? chalk.yellow : chalk.red
+			const statusIndicator = categoryRate === "100" ? "✓" : categoryRate >= "75" ? "⚠" : "✗"
 
-			console.log(`  ${category}: ${color(`${categoryPassed}/${categoryTotal} (${categoryRate}%)`)}`)
+			console.log(`  ${category}: ${statusIndicator} ${categoryPassed}/${categoryTotal} (${categoryRate}%)`)
 		}
 
 		// Failed tests details
 		const failedResults = this.results.filter((r) => !r.passed)
 		if (failedResults.length > 0) {
-			console.log(chalk.bold.red("\n❌ Failed Tests:"))
+			console.log("\n❌ Failed Tests:")
 			for (const result of failedResults) {
-				console.log(chalk.red(`  • ${result.testCase.name} (${result.testCase.category})`))
+				console.log(`  • ${result.testCase.name} (${result.testCase.category})`)
 				if (result.error) {
-					console.log(chalk.gray(`    Error: ${result.error}`))
+					console.log(`    Error: ${result.error}`)
 				}
 			}
 		}
 
-		console.log("\n" + chalk.gray("═".repeat(80)) + "\n")
+		console.log("\n" + "═".repeat(80) + "\n")
 
 		// Exit with appropriate code
 		process.exit(failed > 0 ? 1 : 0)
@@ -164,46 +161,46 @@ class TestRunner {
 	async runSingleTest(testName: string): Promise<void> {
 		const testCase = testCases.find((tc) => tc.name === testName)
 		if (!testCase) {
-			console.error(chalk.red(`Test "${testName}" not found`))
-			console.log(chalk.yellow("\nAvailable tests:"))
+			console.error(`Test "${testName}" not found`)
+			console.log("\nAvailable tests:")
 			testCases.forEach((tc) => console.log(`  - ${tc.name}`))
 			process.exit(1)
 		}
 
-		console.log(chalk.bold.blue(`\n🧪 Running Single Test: ${testName}\n`))
-		console.log(chalk.gray("Category:"), testCase.category)
-		console.log(chalk.gray("Description:"), testCase.description)
-		console.log(chalk.gray("\nInput Code:"))
-		console.log(chalk.cyan(testCase.input))
-		console.log(chalk.gray("\nExpected Patterns:"), testCase.expectedPatterns.join(" or "))
+		console.log(`\n🧪 Running Single Test: ${testName}\n`)
+		console.log("Category:", testCase.category)
+		console.log("Description:", testCase.description)
+		console.log("\nInput Code:")
+		console.log(testCase.input)
+		console.log("\nExpected Patterns:", testCase.expectedPatterns.join(" or "))
 
 		const result = await this.runTest(testCase)
 
-		console.log(chalk.gray("\n─".repeat(40)))
+		console.log("\n" + "─".repeat(40))
 
 		if (result.passed) {
-			console.log(chalk.green("\n✓ TEST PASSED"))
+			console.log("\n✓ TEST PASSED")
 			if (result.matchedPattern) {
-				console.log(chalk.green(`Matched pattern: ${result.matchedPattern}`))
+				console.log(`Matched pattern: ${result.matchedPattern}`)
 			}
 		} else {
-			console.log(chalk.red("\n✗ TEST FAILED"))
+			console.log("\n✗ TEST FAILED")
 			if (result.error) {
-				console.log(chalk.red(`Error: ${result.error}`))
+				console.log(`Error: ${result.error}`)
 			}
 		}
 
 		if (result.completion) {
-			console.log(chalk.gray("\nLLM Response:"))
+			console.log("\nLLM Response:")
 			console.log(result.completion)
 
 			const changes = this.strategyTester.parseCompletion(result.completion)
 			if (changes.length > 0) {
-				console.log(chalk.gray("\nParsed Changes:"))
+				console.log("\nParsed Changes:")
 				changes.forEach((change, i) => {
-					console.log(chalk.yellow(`Change ${i + 1}:`))
-					console.log(chalk.gray("  Search:"), change.search.replace(/\n/g, "\\n"))
-					console.log(chalk.gray("  Replace:"), change.replace.replace(/\n/g, "\\n"))
+					console.log(`Change ${i + 1}:`)
+					console.log("  Search:", change.search.replace(/\n/g, "\\n"))
+					console.log("  Replace:", change.replace.replace(/\n/g, "\\n"))
 				})
 			}
 		}
@@ -227,7 +224,7 @@ async function main() {
 			await runner.runAllTests()
 		}
 	} catch (error) {
-		console.error(chalk.red("\n❌ Fatal Error:"), error)
+		console.error("\n❌ Fatal Error:", error)
 		process.exit(1)
 	}
 }
@@ -244,9 +241,9 @@ function checkEnvironment() {
 
 	const requiredVar = requiredVars[provider]
 	if (requiredVar && !process.env[requiredVar]) {
-		console.error(chalk.red(`\n❌ Error: ${requiredVar} is not set`))
-		console.log(chalk.yellow("\nPlease create a .env file with your API credentials."))
-		console.log(chalk.gray("See .env.example for configuration options.\n"))
+		console.error(`\n❌ Error: ${requiredVar} is not set`)
+		console.log("\nPlease create a .env file with your API credentials.")
+		console.log("See .env.example for configuration options.\n")
 		process.exit(1)
 	}
 }

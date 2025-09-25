@@ -10,7 +10,6 @@
 	"dependencies": {
 		"@anthropic-ai/sdk": "^0.51.0",
 		"openai": "^5.12.2",
-		"chalk": "^5.3.0",
 		"dotenv": "^16.4.5"
 	},
 	"devDependencies": {

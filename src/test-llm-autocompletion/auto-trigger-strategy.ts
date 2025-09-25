@@ -1,143 +1,185 @@
 import { LLMClient } from "./llm-client.js"
+import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
+import { GhostSuggestionContext } from "../services/ghost/types.js"
+import * as vscode from "vscode"
 
 const CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
 
+/**
+ * Mock TextDocument implementation for testing
+ */
+class MockTextDocument implements vscode.TextDocument {
+	private _text: string
+	private _languageId: string
+
+	constructor(text: string, languageId: string = "javascript") {
+		this._text = text
+		this._languageId = languageId
+	}
+
+	get uri(): vscode.Uri {
+		return vscode.Uri.parse("file:///test.js")
+	}
+
+	get fileName(): string {
+		return "test.js"
+	}
+
+	get isUntitled(): boolean {
+		return false
+	}
+
+	get languageId(): string {
+		return this._languageId
+	}
+
+	get version(): number {
+		return 1
+	}
+
+	get isDirty(): boolean {
+		return false
+	}
+
+	get isClosed(): boolean {
+		return false
+	}
+
+	get eol(): vscode.EndOfLine {
+		return vscode.EndOfLine.LF
+	}
+
+	get lineCount(): number {
+		return this._text.split("\n").length
+	}
+
+	get encoding(): string {
+		return "utf8"
+	}
+
+	save(): Thenable<boolean> {
+		return Promise.resolve(true)
+	}
+
+	lineAt(lineOrPosition: number | vscode.Position): vscode.TextLine {
+		const lineNumber = typeof lineOrPosition === "number" ? lineOrPosition : lineOrPosition.line
+		const lines = this._text.split("\n")
+		const text = lines[lineNumber] || ""
+
+		return {
+			lineNumber,
+			text,
+			range: new vscode.Range(lineNumber, 0, lineNumber, text.length),
+			rangeIncludingLineBreak: new vscode.Range(lineNumber, 0, lineNumber + 1, 0),
+			firstNonWhitespaceCharacterIndex: text.search(/\S/),
+			isEmptyOrWhitespace: text.trim().length === 0,
+		}
+	}
+
+	offsetAt(position: vscode.Position): number {
+		const lines = this._text.split("\n")
+		let offset = 0
+
+		for (let i = 0; i < position.line; i++) {
+			offset += lines[i].length + 1 // +1 for newline
+		}
+
+		offset += position.character
+		return offset
+	}
+
+	positionAt(offset: number): vscode.Position {
+		const lines = this._text.split("\n")
+		let currentOffset = 0
+
+		for (let i = 0; i < lines.length; i++) {
+			const lineLength = lines[i].length + 1
+			if (currentOffset + lineLength > offset) {
+				return new vscode.Position(i, offset - currentOffset)
+			}
+			currentOffset += lineLength
+		}
+
+		return new vscode.Position(lines.length - 1, lines[lines.length - 1].length)
+	}
+
+	getText(range?: vscode.Range): string {
+		if (!range) return this._text
+
+		const startOffset = this.offsetAt(range.start)
+		const endOffset = this.offsetAt(range.end)
+		return this._text.substring(startOffset, endOffset)
+	}
+
+	getWordRangeAtPosition(position: vscode.Position, regex?: RegExp): vscode.Range | undefined {
+		const line = this.lineAt(position).text
+		const wordPattern = regex || /\b\w+\b/g
+
+		let match
+		while ((match = wordPattern.exec(line)) !== null) {
+			const start = match.index
+			const end = start + match[0].length
+
+			if (position.character >= start && position.character <= end) {
+				return new vscode.Range(position.line, start, position.line, end)
+			}
+		}
+
+		return undefined
+	}
+
+	validateRange(range: vscode.Range): vscode.Range {
+		return range
+	}
+
+	validatePosition(position: vscode.Position): vscode.Position {
+		return position
+	}
+}
+
 export class AutoTriggerStrategyTester {
 	private llmClient: LLMClient
+	private strategy: AutoTriggerStrategy
 
 	constructor(llmClient: LLMClient) {
 		this.llmClient = llmClient
+		this.strategy = new AutoTriggerStrategy()
+	}
+
+	/**
+	 * Converts test input to GhostSuggestionContext
+	 */
+	private createContext(code: string, cursorPosition: { line: number; character: number }): GhostSuggestionContext {
+		// Insert cursor marker into the code at the specified position
+		const lines = code.split("\n")
+		const line = lines[cursorPosition.line]
+		lines[cursorPosition.line] =
+			line.slice(0, cursorPosition.character) + CURSOR_MARKER + line.slice(cursorPosition.character)
+		const codeWithMarker = lines.join("\n")
+
+		const document = new MockTextDocument(codeWithMarker)
+		const position = new vscode.Position(cursorPosition.line, cursorPosition.character)
+		const range = new vscode.Range(position, position)
+
+		return {
+			document,
+			range,
+			recentOperations: [],
+			diagnostics: [],
+			openFiles: [],
+			userInput: undefined,
+			rangeASTNode: undefined,
+		}
 	}
 
 	getSystemInstructions(): string {
-		return `CRITICAL OUTPUT FORMAT:
-You must respond with XML-formatted changes ONLY. No explanations or text outside XML tags.
-
-Format: <change><search><![CDATA[exact_code]]></search><replace><![CDATA[new_code]]></replace></change>
-
-MANDATORY XML STRUCTURE RULES:
-- Every <change> tag MUST have a closing </change> tag
-- Every <search> tag MUST have a closing </search> tag
-- Every <replace> tag MUST have a closing </replace> tag
-- Every <![CDATA[ MUST have a closing ]]>
-- XML tags should be properly formatted and nested
-- Multiple <change> blocks allowed for different modifications
-
-Task: Subtle Auto-Completion
-Provide non-intrusive completions after a typing pause. Be conservative and helpful.
-
-Auto-Complete Rules:
-- Small, obvious completions only
-- Single line preferred (max 2-3 lines)
-- Complete the current thought based on context
-- Don't be creative or add new features
-- Match exactly what seems to be typed
-- Only suggest if there's a clear, obvious completion
-
-Common Completions:
-- Closing brackets, parentheses, or braces
-- Semicolons at end of statements
-- Simple property or method access
-- Variable assignments after declaration
-- Return statements in functions
-- Import statements completion
-- Simple loop or conditional bodies
-
-Avoid:
-- Multi-line complex suggestions
-- New functionality or features
-- Refactoring existing code
-- Complex logic or algorithms
-- Anything that changes program behavior significantly
-
-## CRITICAL: Cursor Marker Usage
-- The cursor position is marked with ${CURSOR_MARKER}
-- Your <search> block MUST include the cursor marker to avoid conflicts
-- When creating <search> content, include text around the cursor marker
-- This ensures you target the exact location, not similar text elsewhere
-
-Important:
-- If nothing obvious to complete, provide NO suggestion
-- Respect the user's coding style
-- Keep suggestions minimal and predictable
-- Focus on helping finish what's being typed`
+		// Use the actual strategy's system instructions
+		return this.strategy.getSystemInstructions()
 	}
 
 	buildUserPrompt(code: string, cursorPosition: { line: number; character: number }): string {
-		const lines = code.split("\n")
-		const currentLine = lines[cursorPosition.line]
-		const cursorChar = cursorPosition.character
-
-		let prompt = ""
-
-		// Analyze what might need completion
-		const beforeCursor = currentLine.substring(0, cursorChar).trim()
-		const afterCursor = currentLine.substring(cursorChar).trim()
-
-		prompt += "## Completion Context\n"
-
-		// Check for incomplete patterns
-		if (beforeCursor.endsWith(".")) {
-			prompt += "- Property or method access started\n"
-		}
-		if (beforeCursor.endsWith("(")) {
-			prompt += "- Function call or declaration started\n"
-		}
-		if (beforeCursor.endsWith("{")) {
-			prompt += "- Block or object literal started\n"
-		}
-		if (beforeCursor.endsWith("[")) {
-			prompt += "- Array or index access started\n"
-		}
-		if (beforeCursor.match(/=\s*$/)) {
-			prompt += "- Assignment started\n"
-		}
-		if (beforeCursor.match(/return\s*$/)) {
-			prompt += "- Return statement started\n"
-		}
-		if (beforeCursor.match(/import\s+.*\s+from\s*$/)) {
-			prompt += "- Import statement needs module\n"
-		}
-		if (beforeCursor.match(/^\s*(const|let|var)\s+\w+\s*$/)) {
-			prompt += "- Variable declaration needs initialization\n"
-		}
-
-		// Check for missing closures
-		const openParens = (beforeCursor.match(/\(/g) || []).length
-		const closeParens = (beforeCursor.match(/\)/g) || []).length
-		if (openParens > closeParens) {
-			prompt += `- ${openParens - closeParens} unclosed parenthesis\n`
-		}
-
-		const openBrackets = (beforeCursor.match(/\[/g) || []).length
-		const closeBrackets = (beforeCursor.match(/\]/g) || []).length
-		if (openBrackets > closeBrackets) {
-			prompt += `- ${openBrackets - closeBrackets} unclosed bracket\n`
-		}
-
-		const openBraces = (beforeCursor.match(/\{/g) || []).length
-		const closeBraces = (beforeCursor.match(/\}/g) || []).length
-		if (openBraces > closeBraces && !afterCursor.startsWith("}")) {
-			prompt += `- ${openBraces - closeBraces} unclosed brace\n`
-		}
-
-		prompt += "\n## Current Position\n"
-		prompt += `Line ${cursorPosition.line + 1}, Character ${cursorPosition.character + 1}\n\n`
-
-		prompt += "## Full Code\n"
-		prompt += "```javascript\n"
-		prompt += code
-		prompt += "\n```\n\n"
-
-		prompt += "## Instructions\n"
-		prompt += `Provide a minimal, obvious completion at the cursor position (${CURSOR_MARKER}).\n`
-		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${CURSOR_MARKER} to target the exact location.\n`
-		prompt += "Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n"
-		prompt += "Complete only what the user appears to be typing.\n"
-		prompt += "Single line preferred, no new features.\n"
-		prompt += "If nothing obvious to complete, provide NO suggestion.\n"
-
-		return prompt
+		const context = this.createContext(code, cursorPosition)
+		return this.strategy.getUserPrompt(context)
 	}
 
 	async getCompletion(code: string, cursorPosition: { line: number; character: number }): Promise<string> {
