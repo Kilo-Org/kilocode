@@ -1,0 +1,112 @@
+{
+	"errorBoundary": {
+		"title": "Något gick fel",
+		"reportText": "Hjälp oss att bli bättre genom att rapportera detta fel på",
+		"githubText": "vår GitHub Issues-sida",
+		"copyInstructions": "Kopiera och klistra in följande felmeddelande för att inkludera det i din rapport:",
+		"errorStack": "Felstack:",
+		"componentStack": "Komponentstack:"
+	},
+	"answers": {
+		"yes": "Ja",
+		"no": "Nej",
+		"cancel": "Avbryt",
+		"remove": "Ta bort",
+		"keep": "Behåll"
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Vi vill gärna höra din feedback eller hjälpa dig med eventuella problem du upplever.",
+		"githubIssues": "Rapportera ett ärende på GitHub",
+		"githubDiscussions": "Gå med i GitHub-diskussioner",
+		"discord": "Gå med i vårt Discord-community",
+		"customerSupport": "Kundsupport"
+	},
+	"ui": {
+		"search_placeholder": "Sök...",
+		"no_results": "Inga resultat hittades"
+	},
+	"mermaid": {
+		"loading": "Genererar mermaid-diagram...",
+		"render_error": "Kan inte rendera diagram",
+		"fixing_syntax": "Rättar Mermaid-syntax...",
+		"fix_syntax_button": "Fixa syntax med AI",
+		"original_code": "Ursprunglig kod:",
+		"errors": {
+			"unknown_syntax": "Okänt syntaxfel",
+			"fix_timeout": "LLM-åtgärdsbegäran överskred tidsgränsen",
+			"fix_failed": "LLM-åtgärd misslyckades",
+			"fix_attempts": "Misslyckades att rätta syntax efter {{attempts}} försök. Sista fel: {{error}}",
+			"no_fix_provided": "LLM tillhandahöll ingen fix",
+			"fix_request_failed": "Åtgärdsbegäran misslyckades"
+		},
+		"buttons": {
+			"zoom": "Zooma",
+			"zoomIn": "Zooma in",
+			"zoomOut": "Zooma ut",
+			"copy": "Kopiera",
+			"save": "Spara bild",
+			"viewCode": "Visa kod",
+			"viewDiagram": "Visa diagram",
+			"close": "Stäng"
+		},
+		"modal": {
+			"codeTitle": "Mermaid-kod"
+		},
+		"tabs": {
+			"diagram": "Diagram",
+			"code": "Kod"
+		},
+		"feedback": {
+			"imageCopied": "Bild kopierad till urklipp",
+			"copyError": "Fel vid kopiering av bild"
+		}
+	},
+	"image": {
+		"tabs": {
+			"view": "Bild"
+		},
+		"noData": "Ingen bilddata"
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "Ogiltigt data-URI-format",
+			"copyingImage": "Fel vid kopiering av bild: {{error}}",
+			"openingImage": "Fel vid öppning av bild: {{error}}",
+			"pathNotExists": "Sökvägen finns inte: {{path}}",
+			"couldNotOpen": "Kunde inte öppna fil: {{error}}",
+			"couldNotOpenGeneric": "Kunde inte öppna fil!"
+		},
+		"success": {
+			"imageDataUriCopied": "Bildens data-URI kopierad till urklipp"
+		}
+	},
+	"confirmation": {
+		"deleteMessage": "Ta bort meddelande",
+		"deleteWarning": "Att ta bort detta meddelande tar bort alla efterföljande meddelanden i konversationen. Vill du fortsätta?",
+		"editMessage": "Redigera meddelande",
+		"editWarning": "Att redigera detta meddelande tar bort alla efterföljande meddelanden i konversationen. Vill du fortsätta?",
+		"proceed": "Fortsätt"
+	},
+	"time_ago": {
+		"just_now": "nyss",
+		"seconds_ago": "{{count}} sekunder sedan",
+		"minute_ago": "en minut sedan",
+		"minutes_ago": "{{count}} minuter sedan",
+		"hour_ago": "en timme sedan",
+		"hours_ago": "{{count}} timmar sedan",
+		"day_ago": "en dag sedan",
+		"days_ago": "{{count}} dagar sedan",
+		"week_ago": "en vecka sedan",
+		"weeks_ago": "{{count}} veckor sedan",
+		"month_ago": "en månad sedan",
+		"months_ago": "{{count}} månader sedan",
+		"year_ago": "ett år sedan",
+		"years_ago": "{{count}} år sedan"
+	}
+}

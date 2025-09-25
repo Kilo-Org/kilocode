@@ -1,0 +1,222 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "AI-kodassistent med öppen källkod för att planera, bygga och fixa kod."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Feedback",
+		"description": "Vi vill gärna höra din feedback eller hjälpa dig med eventuella problem du upplever.",
+		"githubIssues": "Rapportera ett ärende på GitHub",
+		"githubDiscussions": "Gå med i GitHub-diskussioner",
+		"discord": "Gå med i vårt Discord-community",
+		"customerSupport": "Kundsupport"
+	},
+	"welcome": "Välkommen, {{name}}! Du har {{count}} aviseringar.",
+	"items": {
+		"zero": "Inga objekt",
+		"one": "Ett objekt",
+		"other": "{{count}} objekt"
+	},
+	"confirmation": {
+		"reset_state": "Är du säker på att du vill återställa allt tillstånd och hemligt lagrat innehåll i tillägget? Detta kan inte ångras.",
+		"delete_config_profile": "Är du säker på att du vill ta bort den här konfigurationsprofilen?",
+		"delete_custom_mode_with_rules": "Är du säker på att du vill ta bort detta {scope}-läge?\n\nDetta tar också bort den associerade regelmappen på:\n{rulesFolderPath}"
+	},
+	"errors": {
+		"invalid_data_uri": "Ogiltigt data-URI-format",
+		"error_copying_image": "Fel vid kopiering av bild: {{errorMessage}}",
+		"error_opening_image": "Fel vid öppning av bild: {{error}}",
+		"error_saving_image": "Fel vid sparande av bild: {{errorMessage}}",
+		"could_not_open_file": "Kunde inte öppna fil: {{errorMessage}}",
+		"could_not_open_file_generic": "Kunde inte öppna fil!",
+		"checkpoint_timeout": "Tidsgränsen överskreds vid försök att återställa kontrollpunkt.",
+		"checkpoint_failed": "Misslyckades med att återställa kontrollpunkt.",
+		"git_not_installed": "Git krävs för kontrollpunktsfunktionen. Installera Git för att aktivera kontrollpunkter.",
+		"no_workspace": "Öppna först en projektmapp",
+		"update_support_prompt": "Misslyckades med att uppdatera support-prompt",
+		"reset_support_prompt": "Misslyckades med att återställa support-prompt",
+		"enhance_prompt": "Misslyckades med att förbättra prompt",
+		"get_system_prompt": "Misslyckades med att hämta systemprompt",
+		"search_commits": "Misslyckades med att söka commits",
+		"save_api_config": "Misslyckades med att spara API-konfiguration",
+		"create_api_config": "Misslyckades med att skapa API-konfiguration",
+		"rename_api_config": "Misslyckades med att byta namn på API-konfiguration",
+		"load_api_config": "Misslyckades med att läsa in API-konfiguration",
+		"delete_api_config": "Misslyckades med att ta bort API-konfiguration",
+		"list_api_config": "Misslyckades med att hämta lista över API-konfigurationer",
+		"update_server_timeout": "Misslyckades med att uppdatera servertimeout",
+		"hmr_not_running": "Lokal utvecklingsserver körs inte, HMR kommer inte att fungera. Kör 'npm run dev' innan du startar tillägget för att aktivera HMR.",
+		"retrieve_current_mode": "Fel: kunde inte hämta aktuellt läge från tillstånd.",
+		"failed_delete_repo": "Misslyckades med att ta bort associerat skuggrepo eller gren: {{error}}",
+		"failed_remove_directory": "Misslyckades med att ta bort uppgiftskatalog: {{error}}",
+		"custom_storage_path_unusable": "Anpassad lagringssökväg \"{{path}}\" kan inte användas, använder standardsökväg",
+		"cannot_access_path": "Kan inte komma åt sökvägen {{path}}: {{error}}",
+		"settings_import_failed": "Import av inställningar misslyckades: {{error}}.",
+		"mistake_limit_guidance": "Detta kan indikera ett fel i modellens tankegång eller oförmåga att använda ett verktyg korrekt, vilket kan avhjälpas med viss vägledning (t.ex. \"Försök att dela upp uppgiften i mindre steg\").",
+		"violated_organization_allowlist": "Misslyckades med att köra uppgift: den aktuella profilen är inte kompatibel med din organisations inställningar",
+		"condense_failed": "Misslyckades med att kondensera kontext",
+		"condense_not_enough_messages": "Inte tillräckligt många meddelanden för att kondensera kontext på {{prevContextTokens}} token. Minst {{minimumMessageCount}} meddelanden krävs, men endast {{messageCount}} finns tillgängliga.",
+		"condensed_recently": "Kontext kondenserades nyligen; hoppar över detta försök",
+		"condense_handler_invalid": "API-hanterare för kondensering är ogiltig",
+		"condense_context_grew": "Kontextstorleken ökade från {{prevContextTokens}} till {{newContextTokens}} under kondensering; hoppar över detta försök",
+		"url_timeout": "Webbplatsen tog för lång tid att ladda (timeout). Detta kan bero på en långsam anslutning, tung webbplats eller att sidan tillfälligt inte är tillgänglig. Du kan försöka igen senare eller kontrollera att URL:en är korrekt.",
+		"url_not_found": "Webbadressen kunde inte hittas. Kontrollera att URL:en är korrekt och försök igen.",
+		"no_internet": "Ingen internetanslutning. Kontrollera din nätverksanslutning och försök igen.",
+		"url_forbidden": "Åtkomst till denna webbplats är förbjuden. Webbplatsen kan blockera automatiserad åtkomst eller kräva autentisering.",
+		"url_page_not_found": "Sidan hittades inte. Kontrollera att URL:en är korrekt.",
+		"url_request_aborted": "Begäran att hämta URL:en avbröts. Detta kan inträffa om webbplatsen blockerar automatiserad åtkomst, kräver autentisering eller om det finns ett nätverksproblem. Försök igen eller kontrollera om URL:en är åtkomlig i en vanlig webbläsare.",
+		"url_fetch_failed": "Det gick inte att hämta URL-innehåll: {{error}}",
+		"url_fetch_error_with_url": "Fel vid hämtning av innehåll för {{url}}: {{error}}",
+		"command_timeout": "Kommandotiden överskreds efter {{seconds}} sekunder",
+		"share_task_failed": "Misslyckades med att dela uppgift. Försök igen.",
+		"share_no_active_task": "Ingen aktiv uppgift att dela",
+		"share_auth_required": "Autentisering krävs. Logga in för att dela uppgifter.",
+		"share_not_enabled": "Delning av uppgifter är inte aktiverad för denna organisation.",
+		"share_task_not_found": "Uppgiften hittades inte eller åtkomst nekades.",
+		"mode_import_failed": "Misslyckades med att importera läge: {{error}}",
+		"delete_rules_folder_failed": "Misslyckades med att ta bort regelmappen: {{rulesFolderPath}}. Fel: {{error}}",
+		"command_not_found": "Kommandot '{{name}}' hittades inte",
+		"open_command_file": "Misslyckades med att öppna kommandofil",
+		"delete_command": "Misslyckades med att ta bort kommando",
+		"no_workspace_for_project_command": "Ingen arbetsyta hittades för projektspecifikt läge",
+		"command_already_exists": "Kommandot \"{{commandName}}\" finns redan",
+		"create_command_failed": "Misslyckades med att skapa kommando",
+		"command_template_content": "---\ndescription: \"Kort beskrivning av vad detta kommando gör\"\n---\n\nDetta är ett nytt snedstreckskommando. Redigera denna fil för att anpassa kommandobeteendet.",
+		"claudeCode": {
+			"processExited": "Claude Code-processen avslutades med kod {{exitCode}}.",
+			"errorOutput": "Felutdata: {{output}}",
+			"processExitedWithError": "Claude Code-processen avslutades med kod {{exitCode}}. Felutdata: {{output}}",
+			"stoppedWithReason": "Claude Code stoppades med anledning: {{reason}}",
+			"apiKeyModelPlanMismatch": "API-nycklar och prenumerationsplaner tillåter olika modeller. Säkerställ att den valda modellen ingår i din plan.",
+			"notFound": "Körbar fil för Claude Code '{{claudePath}}' hittades inte.\n\nInstallera Claude Code CLI:\n1. Besök {{installationUrl}} för att hämta Claude Code\n2. Följ installationsinstruktionerna för ditt operativsystem\n3. Säkerställ att kommandot 'claude' finns i din PATH\n4. Alternativt kan du konfigurera en anpassad sökväg i Kilo Code-inställningarna under 'Claude Code-sökväg'\n\nUrsprungligt fel: {{originalError}}"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Det gick inte att läsa in OAuth-uppgifter. Autentisera först: {{error}}",
+			"tokenRefreshFailed": "Det gick inte att uppdatera OAuth-token: {{error}}",
+			"onboardingTimeout": "Introduktionsåtgärden överskred tidsgränsen efter 60 sekunder. Försök igen senare.",
+			"projectDiscoveryFailed": "Kunde inte hitta projekt-ID. Se till att du är autentiserad med 'gemini auth'.",
+			"rateLimitExceeded": "Hastighetsgräns överskriden. Gränserna för gratistjänsten har uppnåtts.",
+			"badRequest": "Felaktig begäran: {{details}}",
+			"apiError": "Gemini CLI API-fel: {{error}}",
+			"completionError": "Gemini CLI-kompletteringsfel: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Det gick inte att läsa in OAuth-uppgifter. Autentisera först: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Fel vid generering av kontextström i Gemini: {{error}}",
+			"generate_complete_prompt": "Kompletteringsfel i Gemini: {{error}}",
+			"sources": "Källor:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API-autentisering misslyckades. Kontrollera att din API-nyckel är giltig och inte har löpt ut.",
+			"accessForbidden": "Åtkomst till Cerebras API är förbjuden. Din API-nyckel kanske inte har åtkomst till den begärda modellen eller funktionen.",
+			"rateLimitExceeded": "Hastighetsgräns för Cerebras API överskriden. Vänta innan du gör en ny begäran.",
+			"serverError": "Serverfel från Cerebras API ({{status}}). Försök igen senare.",
+			"genericError": "Cerebras API-fel ({{status}}): {{message}}",
+			"noResponseBody": "Cerebras API-fel: Ingen svarsbody",
+			"completionError": "Cerebras kompletteringsfel: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo-leverantören kräver autentisering mot molnet. Logga in på Roo Code Cloud."
+		}
+	},
+	"warnings": {
+		"no_terminal_content": "Inget terminalinnehåll valt",
+		"missing_task_files": "Den här uppgiftens filer saknas. Vill du ta bort den från uppgiftslistan?",
+		"auto_import_failed": "Misslyckades med att auto-importera Kilo Code-inställningar: {{error}}"
+	},
+	"info": {
+		"no_changes": "Inga ändringar hittades.",
+		"clipboard_copy": "Systemprompt kopierad till urklipp",
+		"history_cleanup": "Rensade {{count}} uppgift(er) med saknade filer från historiken.",
+		"custom_storage_path_set": "Anpassad lagringssökväg angiven: {{path}}",
+		"default_storage_path": "Återgick till att använda standardsökväg",
+		"settings_imported": "Inställningar importerade.",
+		"auto_import_success": "Kilo Code-inställningar importerades automatiskt från {{filename}}",
+		"share_link_copied": "Delningslänk kopierad till urklipp",
+		"organization_share_link_copied": "Organisationens delningslänk kopierad till urklipp!",
+		"public_share_link_copied": "Offentlig delningslänk kopierad till urklipp!",
+		"image_copied_to_clipboard": "Bildens data-URI kopierad till urklipp",
+		"image_saved": "Bild sparad till {{path}}",
+		"mode_exported": "Läget '{{mode}}' exporterades",
+		"mode_imported": "Läge importerades"
+	},
+	"answers": {
+		"yes": "Ja",
+		"no": "Nej",
+		"remove": "Ta bort",
+		"keep": "Behåll"
+	},
+	"buttons": {
+		"save": "Spara",
+		"edit": "Redigera",
+		"learn_more": "Läs mer"
+	},
+	"tasks": {
+		"canceled": "Uppgiftsfel: Den stoppades och avbröts av användaren.",
+		"deleted": "Uppgiften misslyckades: Den stoppades och togs bort av användaren.",
+		"incomplete": "Uppgift #{{taskNumber}} (Ofullständig)",
+		"no_messages": "Uppgift #{{taskNumber}} (Inga meddelanden)"
+	},
+	"storage": {
+		"prompt_custom_path": "Ange anpassad lagringssökväg för konversationshistorik, lämna tomt för standardplats",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Ange en absolut sökväg (t.ex. D:\\KiloCodeStorage eller /home/user/storage)",
+		"enter_valid_path": "Ange en giltig sökväg"
+	},
+	"input": {
+		"task_prompt": "Vad ska Kilo Code göra?",
+		"task_placeholder": "Bygg, hitta, fråga något"
+	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "Ogiltig YAML i .kilocodemodes på rad {{line}}. Kontrollera:\n• Korrekt indrag (använd mellanslag, inte tabbar)\n• Matchande citattecken och parenteser\n• Giltig YAML-syntax",
+			"schemaValidationError": "Ogiltigt format för anpassade lägen i .kilocodemodes:\n{{issues}}",
+			"invalidFormat": "Ogiltigt format för anpassade lägen. Säkerställ att dina inställningar följer korrekt YAML-format.",
+			"updateFailed": "Misslyckades med att uppdatera anpassat läge: {{error}}",
+			"deleteFailed": "Misslyckades med att ta bort anpassat läge: {{error}}",
+			"resetFailed": "Misslyckades med att återställa anpassade lägen: {{error}}",
+			"modeNotFound": "Skrivfel: Läge hittades inte",
+			"noWorkspaceForProject": "Ingen arbetsyta hittades för projektspecifikt läge",
+			"rulesCleanupFailed": "Läge togs bort, men det gick inte att ta bort regelmappen på {{rulesFolderPath}}. Du kan behöva ta bort den manuellt."
+		},
+		"scope": {
+			"project": "projekt",
+			"global": "global"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Läge togs bort, men det gick inte att ta bort regelmappen på {{rulesFolderPath}}. Du kan behöva ta bort den manuellt."
+		}
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Din organisation kräver autentisering mot Kilo Code Cloud. Logga in för att fortsätta.",
+			"organization_mismatch": "Du måste vara autentiserad med din organisations Kilo Code Cloud-konto.",
+			"verification_failed": "Det går inte att verifiera organisationsautentisering."
+		},
+		"info": {
+			"organization_requires_auth": "Din organisation kräver autentisering."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Ta bort anpassat läge",
+			"description": "Är du säker på att du vill ta bort detta {{scope}}-läge? Detta kommer också att ta bort den associerade regelmappen på: {{rulesFolderPath}}",
+			"descriptionNoRules": "Är du säker på att du vill ta bort detta anpassade läge?",
+			"confirm": "Ta bort"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Hindra att uppgiften slutförs när det finns ofullständiga att-göra-poster i att-göra-listan"
+		}
+	}
+}
