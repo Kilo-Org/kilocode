@@ -14,15 +14,6 @@ export interface VscGenerationRequest {
 }
 
 /**
- * VSCode-specific progress location mapping.
- */
-export const VSCodeProgressLocationMap = {
-	SourceControl: vscode.ProgressLocation.SourceControl,
-	Notification: vscode.ProgressLocation.Notification,
-	Window: vscode.ProgressLocation.Window,
-} as const
-
-/**
  * VSCode-specific message type mapping.
  */
 export const VSCodeMessageTypeMap = {

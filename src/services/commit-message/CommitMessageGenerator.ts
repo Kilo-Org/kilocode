@@ -21,18 +21,10 @@ export class CommitMessageGenerator {
 		this.providerSettingsManager = providerSettingsManager
 	}
 
-	/**
-	 * Generate a commit message using AI based on the provided parameters.
-	 */
 	async generateMessage(params: GenerateMessageParams): Promise<string> {
 		const { gitContext, onProgress } = params
 
 		try {
-			console.log("🔧 CommitMessageGenerator.generateMessage: Starting generation")
-			console.log("🔧 CommitMessageGenerator.generateMessage: Git context length:", gitContext.length)
-
-			console.log("🔧 CommitMessageGenerator.generateMessage: Selected files count:", params.selectedFiles.length)
-
 			// Report progress: starting AI generation
 			onProgress?.({
 				stage: "ai-generation",
@@ -40,11 +32,7 @@ export class CommitMessageGenerator {
 				percentage: 75,
 			})
 
-			console.log("🔧 CommitMessageGenerator.generateMessage: Calling AI for commit message...")
-			const startTime = Date.now()
 			const generatedMessage = await this.callAIForCommitMessage(gitContext, onProgress)
-			const endTime = Date.now()
-			console.log(`🔧 CommitMessageGenerator.generateMessage: AI call completed in ${endTime - startTime}ms`)
 
 			// Store context for potential regeneration requests
 			this.previousGitContext = gitContext
@@ -67,9 +55,6 @@ export class CommitMessageGenerator {
 		}
 	}
 
-	/**
-	 * Build an AI prompt from git context and options.
-	 */
 	async buildPrompt(gitContext: string, options: PromptOptions): Promise<string> {
 		const { customSupportPrompts = {}, previousContext, previousMessage } = options
 
@@ -139,21 +124,12 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 		}
 	}
 
-	/**
-	 * Call AI service to generate commit message from git context.
-	 */
 	private async callAIForCommitMessage(
 		gitContextString: string,
 		onProgress?: (progress: ProgressUpdate) => void,
 	): Promise<string> {
-		console.log("🔧 CommitMessageGenerator.callAIForCommitMessage: Starting AI call...")
-
 		const contextProxy = ContextProxy.instance
 		const apiConfiguration = contextProxy.getProviderSettings()
-		console.log(
-			"🔧 CommitMessageGenerator.callAIForCommitMessage: Default API config provider:",
-			apiConfiguration.apiProvider,
-		)
 
 		const commitMessageApiConfigId = contextProxy.getValue("commitMessageApiConfigId")
 		const listApiConfigMeta = contextProxy.getValue("listApiConfigMeta") || []
@@ -161,10 +137,6 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 
 		// Try to get commit message config first, fall back to current config.
 		let configToUse: ProviderSettings = apiConfiguration
-		console.log(
-			"🔧 CommitMessageGenerator.callAIForCommitMessage: Commit message API config ID:",
-			commitMessageApiConfigId,
-		)
 
 		if (
 			commitMessageApiConfigId &&
@@ -200,14 +172,7 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 			increment: 10,
 		})
 
-		console.log("🔧 CommitMessageGenerator.callAIForCommitMessage: Final config provider:", configToUse.apiProvider)
-		console.log("🔧 CommitMessageGenerator.callAIForCommitMessage: Making AI request...")
-		const aiStartTime = Date.now()
 		const response = await singleCompletionHandler(configToUse, prompt)
-		const aiEndTime = Date.now()
-		console.log(
-			`🔧 CommitMessageGenerator.callAIForCommitMessage: AI request completed in ${aiEndTime - aiStartTime}ms`,
-		)
 
 		// Report progress after AI call
 		onProgress?.({
@@ -216,16 +181,11 @@ FINAL REMINDER: Your message MUST be COMPLETELY DIFFERENT from the previous mess
 			increment: 10,
 		})
 
-		console.log("🔧 CommitMessageGenerator.callAIForCommitMessage: Extracting commit message...")
 		const result = this.extractCommitMessage(response)
-		console.log("🔧 CommitMessageGenerator.callAIForCommitMessage: Generated message length:", result.length)
 
 		return result
 	}
 
-	/**
-	 * Extract and clean commit message from AI response.
-	 */
 	private extractCommitMessage(response: string): string {
 		// Clean up the response by removing any extra whitespace or formatting
 		const cleaned = response.trim()
