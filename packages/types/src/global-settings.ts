@@ -224,6 +224,7 @@ export const SECRET_STATE_KEYS = [
 	"fireworksApiKey",
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
+	"submodelApiKey",
 	"vercelAiGatewayApiKey",
 ] as const
 

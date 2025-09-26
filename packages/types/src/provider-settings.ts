@@ -71,6 +71,7 @@ export const providerNames = [
 	"featherless",
 	"io-intelligence",
 	"roo",
+	"submodel",
 	"vercel-ai-gateway",
 ] as const
 
@@ -376,6 +377,11 @@ const ioIntelligenceSchema = apiModelIdProviderModelSchema.extend({
 	ioIntelligenceApiKey: z.string().optional(),
 })
 
+const submodelSchema = apiModelIdProviderModelSchema.extend({
+	submodelModelId: z.string().optional(),
+	submodelApiKey: z.string().optional(),
+})
+
 const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
 	qwenCodeOauthPath: z.string().optional(),
 })
@@ -431,6 +437,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	featherlessSchema.merge(z.object({ apiProvider: z.literal("featherless") })),
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
+	submodelSchema.merge(z.object({ apiProvider: z.literal("submodel") })),
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
@@ -476,6 +483,7 @@ export const providerSettingsSchema = z.object({
 	...fireworksSchema.shape,
 	...featherlessSchema.shape,
 	...ioIntelligenceSchema.shape,
+	...submodelSchema.shape,
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
@@ -509,6 +517,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"ioIntelligenceModelId",
 	"vercelAiGatewayModelId",
 	"deepInfraModelId",
+	"submodelModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -630,6 +639,7 @@ export const MODELS_BY_PROVIDER: Record<
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	submodel: { id: "submodel", label: "SubModel", models: [] },
 
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
@@ -646,6 +656,7 @@ export const dynamicProviders = [
 	"openrouter",
 	"requesty",
 	"unbound",
+	"submodel",
 	// kilocode_change start
 	"kilocode",
 	"virtual-quota-fallback",
