@@ -37,6 +37,18 @@ export const vertexModels = {
 		maxThinkingTokens: 24_576,
 		supportsReasoningBudget: true,
 	},
+	"gemini-2.5-flash-latest": {
+		maxTokens: 64_000,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 0.3,
+		outputPrice: 2.5,
+		cacheReadsPrice: 0.075,
+		cacheWritesPrice: 1.0,
+		maxThinkingTokens: 24_576,
+		supportsReasoningBudget: true,
+	},
 	"gemini-2.5-flash-preview-04-17:thinking": {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
