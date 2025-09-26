@@ -13,3 +13,7 @@
 - 使用 Debug 模式时，要求 Kilo "在 Debug 模式下启动一个新任务，包含解决 X 所需的所有必要上下文"，以便调试过程使用其自己的上下文窗口，而不会污染主任务。
 - 点击下方的"编辑此页面"添加你自己的技巧！
 - 为了管理大文件并减少上下文/资源使用，请调整`File read auto-truncate threshold`设置。此设置控制一次读取文件的行数。较低的值可以提高处理非常大文件时的性能，但可能需要更多的读取操作。你可以在 Kilo Code 设置的"高级设置"中找到此设置。
+
+| 浏览器标签页                                                                                                                          | 自动批准标签页                                                                                                                        | 显示标签页                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [![KiloCode Demo 1](https://img.youtube.com/vi/VMPKXt8k050/maxresdefault.jpg)](https://youtube.com/shorts/VMPKXt8k050?feature=shared) | [![KiloCode Demo 2](https://img.youtube.com/vi/NBccFnYDQ-k/maxresdefault.jpg)](https://youtube.com/shorts/NBccFnYDQ-k?feature=shared) | [![KiloCode Demo 3](https://img.youtube.com/vi/qYrT2pbfS7E/maxresdefault.jpg)](https://youtube.com/shorts/qYrT2pbfS7E?feature=shared) |
