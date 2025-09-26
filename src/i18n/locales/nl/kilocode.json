@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Fout bij het genereren van commit bericht: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Bericht genereren met niet-gestage wijzigingen",
 		"activationFailed": "Kilo: Fout bij het activeren van berichtgenerator: {{error}}",
-		"providerRegistered": "Kilo: Commit bericht provider geregistreerd"
+		"providerRegistered": "Kilo: Commit bericht provider geregistreerd",
+		"errors": {
+			"noProject": "Geen project beschikbaar",
+			"timeout": "Verzoek is verlopen na 30 seconden",
+			"connectionFailed": "Verbinding maken met Kilo Code-extensie mislukt",
+			"invalidResponse": "Ongeldig responsformaat ontvangen van extensie",
+			"missingMessage": "Geen commit-bericht ontvangen van extensie",
+			"noChanges": "Geen wijzigingen gevonden om te committen",
+			"noWorkspacePath": "Kon het werkruimtepad voor de Git-repository niet bepalen",
+			"processingError": "Fout bij het verwerken van het genereren van het commit-bericht: {{error}}",
+			"workspaceNotFound": "Kon geen werkruimtepad bepalen voor Git-repository"
+		},
+		"error": {
+			"title": "Fout",
+			"workspacePathNotFound": "Kon het werkruimtepad voor de Git-repository niet bepalen",
+			"processingFailed": "Fout bij het verwerken van commit-berichtgeneratie: {{error}}",
+			"generationFailed": "Genereren van commit-bericht mislukt: {{error}}",
+			"unknown": "Onbekende fout"
+		},
+		"dialogs": {
+			"info": "AI Commit-Bericht",
+			"error": "Fout",
+			"success": "Succes",
+			"title": "AI Commit Bericht"
+		},
+		"progress": {
+			"title": "Commit-bericht genereren",
+			"analyzing": "Wijzigingen analyseren...",
+			"generating": "Commit-bericht genereren...",
+			"connecting": "Verbinding maken met Kilo Code..."
+		},
+		"ui": {
+			"generateButton": "Commit Bericht Genereren",
+			"generateButtonTooltip": "Genereert commit-berichten met behulp van AI om je codewijzigingen te analyseren"
+		}
 	},
 	"ghost": {
 		"statusBar": {

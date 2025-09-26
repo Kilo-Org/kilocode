@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Error al generar mensaje de confirmación: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generando mensaje usando cambios no preparados",
 		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado",
-		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}"
+		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}",
+		"errors": {
+			"noProject": "Ningún proyecto disponible",
+			"connectionFailed": "Error al conectar con la extensión de Kilo Code",
+			"missingMessage": "No se recibió mensaje de confirmación desde la extensión",
+			"invalidResponse": "Formato de respuesta inválido recibido de la extensión",
+			"noChanges": "No se encontraron cambios para confirmar",
+			"timeout": "La solicitud agotó el tiempo de espera después de 30 segundos",
+			"noWorkspacePath": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"processingError": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"workspaceNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git"
+		},
+		"error": {
+			"title": "Error",
+			"workspacePathNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"unknown": "Error desconocido",
+			"processingFailed": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"generationFailed": "Fallo al generar mensaje de confirmación: {{error}}"
+		},
+		"dialogs": {
+			"info": "Mensaje de Commit de IA",
+			"error": "Error",
+			"success": "Éxito",
+			"title": "Mensaje de Commit de IA"
+		},
+		"progress": {
+			"analyzing": "Analizando cambios...",
+			"title": "Generando Mensaje de Commit",
+			"connecting": "Conectando con Kilo Code...",
+			"generating": "Generando mensaje de commit..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Genera mensaje de commit usando IA para analizar tus cambios en el código",
+			"generateButton": "Generar Mensaje de Commit"
+		}
 	},
 	"ghost": {
 		"statusBar": {

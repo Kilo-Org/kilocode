@@ -45,10 +45,10 @@ const mockSpawnSync = spawnSync as Mock
 
 describe("GitExtensionService", () => {
 	let service: GitExtensionService
+	const mockWorkspaceRoot = "/test/workspace"
 
 	beforeEach(() => {
-		service = new GitExtensionService()
-		service.configureRepositoryContext()
+		service = new GitExtensionService(mockWorkspaceRoot)
 		mockSpawnSync.mockClear()
 	})
 
@@ -227,7 +227,7 @@ describe("GitExtensionService", () => {
 
 	describe("getCommitContext", () => {
 		it("should generate context for staged changes by default", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+			const mockChanges = [{ filePath: "file1.ts", status: "M" as const, staged: true }]
 
 			mockSpawnSync
 				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })
@@ -243,7 +243,7 @@ describe("GitExtensionService", () => {
 		})
 
 		it("should generate context for unstaged changes when specified", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+			const mockChanges = [{ filePath: "file1.ts", status: "M" as const, staged: false }]
 
 			mockSpawnSync
 				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })

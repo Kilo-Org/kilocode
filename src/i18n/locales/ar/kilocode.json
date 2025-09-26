@@ -62,7 +62,41 @@
 		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
 		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
-		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
+		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد",
+		"errors": {
+			"noProject": "لا يوجد مشروع متاح",
+			"connectionFailed": "فشل الاتصال بملحق Kilo Code",
+			"invalidResponse": "تم استلام صيغة استجابة غير صالحة من الملحق",
+			"noChanges": "لا توجد تغييرات للإرسال",
+			"timeout": "انتهت مهلة الطلب بعد 30 ثانية",
+			"missingMessage": "لم يتم استلام رسالة الالتزام من الإضافة",
+			"noWorkspacePath": "تعذر تحديد مسار مساحة العمل لمستودع Git",
+			"workspaceNotFound": "تعذر تحديد مسار مساحة العمل لمستودع Git",
+			"processingError": "خطأ في معالجة إنشاء رسالة الالتزام: {{error}}"
+		},
+		"error": {
+			"title": "خطأ",
+			"workspacePathNotFound": "تعذّر تحديد مسار مساحة العمل لمستودع Git",
+			"generationFailed": "فشل في إنشاء رسالة الالتزام: {{error}}",
+			"processingFailed": "خطأ في معالجة إنشاء رسالة الالتزام: {{error}}",
+			"unknown": "خطأ غير معروف"
+		},
+		"dialogs": {
+			"info": "رسالة التزام الذكاء الاصطناعي",
+			"error": "خطأ",
+			"success": "نجاح",
+			"title": "رسالة التزام الذكاء الاصطناعي"
+		},
+		"progress": {
+			"title": "إنشاء رسالة الالتزام",
+			"analyzing": "جاري تحليل التغييرات...",
+			"connecting": "جاري الاتصال بكيلو كود...",
+			"generating": "جاري إنشاء رسالة الالتزام..."
+		},
+		"ui": {
+			"generateButton": "توليد رسالة الالتزام",
+			"generateButtonTooltip": "ينشئ رسالة الالتزام (commit message) باستخدام الذكاء الاصطناعي لتحليل تغييرات الكود الخاصة بك"
+		}
 	},
 	"ghost": {
 		"statusBar": {

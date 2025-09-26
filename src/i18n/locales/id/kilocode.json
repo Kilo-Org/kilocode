@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Gagal menghasilkan pesan komit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Menghasilkan pesan menggunakan perubahan yang belum ditahapkan",
 		"activationFailed": "Kilo: Gagal mengaktifkan generator pesan: {{error}}",
-		"providerRegistered": "Kilo: Penyedia pesan komit terdaftar"
+		"providerRegistered": "Kilo: Penyedia pesan komit terdaftar",
+		"errors": {
+			"noProject": "Tidak ada proyek yang tersedia",
+			"connectionFailed": "Gagal terhubung ke ekstensi Kilo Code",
+			"timeout": "Permintaan waktu habis setelah 30 detik",
+			"invalidResponse": "Format respons tidak valid diterima dari ekstensi",
+			"noChanges": "Tidak ada perubahan ditemukan untuk di-commit",
+			"workspaceNotFound": "Tidak dapat menentukan jalur ruang kerja untuk repositori Git",
+			"missingMessage": "Tidak ada pesan commit yang diterima dari ekstensi",
+			"noWorkspacePath": "Tidak dapat menentukan jalur ruang kerja untuk repositori Git",
+			"processingError": "Kesalahan memproses pembuatan pesan commit: {{error}}"
+		},
+		"error": {
+			"title": "Kesalahan",
+			"workspacePathNotFound": "Tidak dapat menentukan jalur ruang kerja untuk repositori Git",
+			"generationFailed": "Gagal membuat pesan commit: {{error}}",
+			"processingFailed": "Kesalahan saat memproses pembuatan pesan commit: {{error}}",
+			"unknown": "Terjadi kesalahan"
+		},
+		"dialogs": {
+			"info": "Pesan Commit AI",
+			"error": "Kesalahan",
+			"success": "Sukses",
+			"title": "Pesan Commit AI"
+		},
+		"progress": {
+			"title": "Membuat Pesan Commit",
+			"analyzing": "Menganalisis perubahan...",
+			"connecting": "Menghubungkan ke Kilo Code...",
+			"generating": "Menghasilkan pesan commit..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Membuat pesan commit menggunakan AI untuk menganalisis perubahan kode Anda",
+			"generateButton": "Buat Pesan Commit"
+		}
 	},
 	"ghost": {
 		"statusBar": {

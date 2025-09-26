@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: コミットメッセージの生成に失敗しました: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: ステージされていない変更を使用してメッセージを生成中",
 		"activationFailed": "Kilo: メッセージジェネレーターのアクティブ化に失敗しました: {{error}}",
-		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました"
+		"providerRegistered": "Kilo: コミットメッセージプロバイダーが登録されました",
+		"errors": {
+			"noProject": "利用可能なプロジェクトがありません",
+			"timeout": "リクエストが30秒後にタイムアウトしました",
+			"connectionFailed": "Kilo Code拡張機能への接続に失敗しました",
+			"invalidResponse": "拡張機能から無効な応答フォーマットを受信しました",
+			"missingMessage": "拡張機能からコミットメッセージを受信できませんでした",
+			"noChanges": "コミットする変更が見つかりません",
+			"noWorkspacePath": "Gitリポジトリのワークスペースパスを特定できませんでした",
+			"processingError": "コミットメッセージ生成の処理エラー: {{error}}",
+			"workspaceNotFound": "Gitリポジトリのワークスペースパスを特定できませんでした"
+		},
+		"error": {
+			"title": "エラー",
+			"workspacePathNotFound": "Gitリポジトリのワークスペースパスを特定できませんでした",
+			"generationFailed": "コミットメッセージの生成に失敗しました: {{error}}",
+			"processingFailed": "コミットメッセージ生成の処理エラー: {{error}}",
+			"unknown": "不明なエラー"
+		},
+		"dialogs": {
+			"info": "AIコミットメッセージ",
+			"error": "エラー",
+			"success": "成功",
+			"title": "AIコミットメッセージ"
+		},
+		"progress": {
+			"analyzing": "変更を分析中...",
+			"title": "コミットメッセージの生成中",
+			"connecting": "Kilo Codeに接続しています...",
+			"generating": "コミットメッセージを生成中..."
+		},
+		"ui": {
+			"generateButton": "コミットメッセージを生成する",
+			"generateButtonTooltip": "AIを使用してコード変更を分析し、コミットメッセージを生成します"
+		}
 	},
 	"ghost": {
 		"statusBar": {

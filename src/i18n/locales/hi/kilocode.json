@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: कमिट संदेश उत्पन्न करने में विफल: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: अनस्टेज किए गए परिवर्तनों का उपयोग करके संदेश उत्पन्न कर रहा है",
 		"activationFailed": "Kilo: संदेश जनरेटर सक्रिय करने में विफल: {{error}}",
-		"providerRegistered": "Kilo: कमिट संदेश प्रदाता पंजीकृत"
+		"providerRegistered": "Kilo: कमिट संदेश प्रदाता पंजीकृत",
+		"errors": {
+			"noProject": "कोई प्रोजेक्ट उपलब्ध नहीं है",
+			"timeout": "30 सेकंड के बाद अनुरोध का समय समाप्त हो गया",
+			"connectionFailed": "Kilo Code एक्सटेंशन से कनेक्ट करने में विफल",
+			"invalidResponse": "एक्सटेंशन से अमान्य प्रतिक्रिया प्रारूप प्राप्त हुआ",
+			"missingMessage": "एक्सटेंशन से कोई कमिट संदेश प्राप्त नहीं हुआ",
+			"noChanges": "कमिट करने के लिए कोई परिवर्तन नहीं मिला",
+			"noWorkspacePath": "Git रिपॉजिटरी के लिए वर्कस्पेस पथ निर्धारित नहीं किया जा सका",
+			"processingError": "कमिट संदेश जनरेशन प्रोसेसिंग में त्रुटि: {{error}}",
+			"workspaceNotFound": "Git रिपॉजिटरी के लिए वर्कस्पेस पथ निर्धारित नहीं किया जा सका"
+		},
+		"error": {
+			"title": "त्रुटि",
+			"generationFailed": "कमिट संदेश जेनरेट करने में विफल: {{error}}",
+			"processingFailed": "कमिट संदेश उत्पादन के प्रसंस्करण में त्रुटि: {{error}}",
+			"workspacePathNotFound": "Git रिपॉजिटरी के लिए वर्कस्पेस पथ निर्धारित नहीं किया जा सका",
+			"unknown": "अज्ञात त्रुटि"
+		},
+		"dialogs": {
+			"info": "एआई कमिट मैसेज",
+			"error": "त्रुटि",
+			"title": "AI कमिट मैसेज",
+			"success": "सफलता"
+		},
+		"progress": {
+			"title": "कमिट संदेश जनरेट कर रहा है",
+			"analyzing": "बदलावों का विश्लेषण किया जा रहा है...",
+			"connecting": "Kilo Code से कनेक्ट हो रहा है...",
+			"generating": "कमिट संदेश जनरेट हो रहा है..."
+		},
+		"ui": {
+			"generateButtonTooltip": "AI का उपयोग करके आपके कोड परिवर्तनों का विश्लेषण करने के लिए कमिट संदेश उत्पन्न करता है",
+			"generateButton": "कमिट मैसेज उत्पन्न करें"
+		}
 	},
 	"seeNewChanges": {
 		"title": "नए परिवर्तन दिखाए जा रहे हैं",

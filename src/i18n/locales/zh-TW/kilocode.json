@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo：產生 Commit 訊息失敗：{{errorMessage}}",
 		"generatingFromUnstaged": "Kilo：使用未暫存的變更產生訊息",
 		"activationFailed": "Kilo：啟用訊息產生器失敗：{{error}}",
-		"providerRegistered": "Kilo：Commit 訊息提供者已註冊"
+		"providerRegistered": "Kilo：Commit 訊息提供者已註冊",
+		"errors": {
+			"noProject": "无可用项目",
+			"connectionFailed": "无法连接到 Kilo Code 扩展",
+			"timeout": "请求在 30 秒后超时",
+			"noChanges": "没有发现可提交的更改",
+			"invalidResponse": "收到来自扩展程序的无效响应格式",
+			"missingMessage": "未从扩展程序收到提交信息",
+			"noWorkspacePath": "无法确定 Git 仓库的工作区路径",
+			"processingError": "处理提交消息生成时出错：{{error}}",
+			"workspaceNotFound": "无法确定 Git 存储库的工作区路径"
+		},
+		"error": {
+			"title": "错误",
+			"workspacePathNotFound": "无法确定 Git 存储库的工作区路径",
+			"generationFailed": "无法生成提交消息：{{error}}",
+			"processingFailed": "提交消息生成处理错误：{{error}}",
+			"unknown": "未知错误"
+		},
+		"dialogs": {
+			"error": "错误",
+			"info": "AI 提交信息",
+			"success": "成功",
+			"title": "AI 提交信息"
+		},
+		"progress": {
+			"title": "生成提交消息",
+			"analyzing": "正在分析更改...",
+			"connecting": "连接至 Kilo Code...",
+			"generating": "正在生成提交消息..."
+		},
+		"ui": {
+			"generateButton": "生成提交信息",
+			"generateButtonTooltip": "使用AI分析您的代码变更并生成提交信息"
+		}
 	},
 	"ghost": {
 		"statusBar": {

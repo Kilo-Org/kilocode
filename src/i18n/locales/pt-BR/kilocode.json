@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
 		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
-		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado"
+		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado",
+		"errors": {
+			"noProject": "Nenhum projeto disponível",
+			"connectionFailed": "Falha ao conectar com a extensão Kilo Code",
+			"invalidResponse": "Formato de resposta inválido recebido da extensão",
+			"missingMessage": "Nenhuma mensagem de commit recebida da extensão",
+			"timeout": "Solicitação excedeu o tempo limite após 30 segundos",
+			"noChanges": "Nenhuma alteração encontrada para confirmar",
+			"noWorkspacePath": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"workspaceNotFound": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"processingError": "Erro ao processar a geração da mensagem de commit: {{error}}"
+		},
+		"error": {
+			"title": "Erro",
+			"workspacePathNotFound": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"generationFailed": "Falha ao gerar mensagem de commit: {{error}}",
+			"processingFailed": "Erro ao processar a geração de mensagem de commit: {{error}}",
+			"unknown": "Erro desconhecido"
+		},
+		"dialogs": {
+			"info": "Mensagem de Commit de IA",
+			"error": "Erro",
+			"success": "Sucesso",
+			"title": "Mensagem de Commit IA"
+		},
+		"progress": {
+			"analyzing": "Analisando mudanças...",
+			"title": "Gerando Mensagem de Commit",
+			"connecting": "Conectando ao Kilo Code...",
+			"generating": "Gerando mensagem de commit..."
+		},
+		"ui": {
+			"generateButton": "Gerar Mensagem de Commit",
+			"generateButtonTooltip": "Gera mensagem de commit usando IA para analisar suas alterações de código"
+		}
 	},
 	"ghost": {
 		"statusBar": {

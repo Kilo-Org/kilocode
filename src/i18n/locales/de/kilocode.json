@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Fehler beim Generieren der Commit-Nachricht: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Nachricht mit nicht bereitgestellten Änderungen generieren",
 		"activationFailed": "Kilo: Der Nachrichtengenerator konnte nicht aktiviert werden: {{error}}",
-		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert"
+		"providerRegistered": "Kilo: Commit-Nachrichtenanbieter registriert",
+		"errors": {
+			"noProject": "Kein Projekt verfügbar",
+			"connectionFailed": "Verbindung zur Kilo Code-Erweiterung fehlgeschlagen",
+			"missingMessage": "Keine Commit-Nachricht von der Erweiterung erhalten",
+			"timeout": "Anfrage nach 30 Sekunden abgelaufen",
+			"invalidResponse": "Ungültiges Antwortformat vom Erweiterung erhalten",
+			"noChanges": "Keine Änderungen zum Committen gefunden",
+			"noWorkspacePath": "Konnte Arbeitsbereichspfad für Git-Repository nicht ermitteln",
+			"workspaceNotFound": "Konnte den Arbeitsbereichspfad für das Git-Repository nicht ermitteln",
+			"processingError": "Fehler bei der Verarbeitung der Commit-Nachrichtengenerierung: {{error}}"
+		},
+		"error": {
+			"title": "Fehler",
+			"workspacePathNotFound": "Workspace-Pfad für Git-Repository konnte nicht ermittelt werden",
+			"unknown": "Unbekannter Fehler",
+			"processingFailed": "Fehler bei der Verarbeitung der Commit-Nachrichtengenerierung: {{error}}",
+			"generationFailed": "Fehler beim Generieren der Commit-Nachricht: {{error}}"
+		},
+		"dialogs": {
+			"info": "KI-Commit-Nachricht",
+			"success": "Erfolg",
+			"title": "KI-Commit-Nachricht",
+			"error": "Fehler"
+		},
+		"progress": {
+			"title": "Commit-Nachricht generieren",
+			"analyzing": "Änderungen werden analysiert...",
+			"connecting": "Verbindung mit Kilo Code wird hergestellt...",
+			"generating": "Commit-Nachricht wird generiert..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Generiert Commit-Nachrichten mittels KI zur Analyse Ihrer Code-Änderungen",
+			"generateButton": "Commit-Nachricht generieren"
+		}
 	},
 	"ghost": {
 		"statusBar": {

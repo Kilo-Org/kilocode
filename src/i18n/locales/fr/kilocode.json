@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo : Échec de la génération du message de commit : {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo : Génération du message à partir des modifications non préparées",
 		"activationFailed": "Kilo : Échec de l'activation du générateur de messages : {{error}}",
-		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré"
+		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré",
+		"errors": {
+			"noProject": "Aucun projet disponible",
+			"timeout": "La requête a expiré après 30 secondes",
+			"connectionFailed": "Échec de connexion à l'extension Kilo Code",
+			"invalidResponse": "Format de réponse invalide reçu de l'extension",
+			"missingMessage": "Aucun message de commit reçu de l'extension",
+			"noWorkspacePath": "Impossible de déterminer le chemin d'espace de travail pour le dépôt Git",
+			"workspaceNotFound": "Impossible de déterminer le chemin d'espace de travail pour le dépôt Git",
+			"noChanges": "Aucun changement trouvé à valider",
+			"processingError": "Erreur lors du traitement de la génération du message de commit : {{error}}"
+		},
+		"error": {
+			"title": "Erreur",
+			"workspacePathNotFound": "Impossible de déterminer le chemin de l'espace de travail pour le dépôt Git",
+			"processingFailed": "Erreur lors du traitement de la génération du message de commit : {{error}}",
+			"unknown": "Erreur inconnue",
+			"generationFailed": "Échec de la génération du message de commit : {{error}}"
+		},
+		"dialogs": {
+			"error": "Erreur",
+			"success": "Succès",
+			"info": "Message de Commit IA",
+			"title": "Message de Commit IA"
+		},
+		"progress": {
+			"title": "Génération du Message de Commit",
+			"connecting": "Connexion à Kilo Code...",
+			"analyzing": "Analyse des changements en cours...",
+			"generating": "Génération du message de commit..."
+		},
+		"ui": {
+			"generateButton": "Générer un Message de Commit",
+			"generateButtonTooltip": "Génère un message de commit en utilisant l'IA pour analyser vos changements de code"
+		}
 	},
 	"ghost": {
 		"statusBar": {

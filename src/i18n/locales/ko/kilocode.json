@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: 커밋 메시지 생성 실패: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: 스테이징되지 않은 변경 사항으로 메시지 생성 중",
 		"activationFailed": "Kilo: 메시지 생성기 활성화 실패: {{error}}",
-		"providerRegistered": "Kilo: 커밋 메시지 공급자 등록됨"
+		"providerRegistered": "Kilo: 커밋 메시지 공급자 등록됨",
+		"errors": {
+			"noProject": "이용 가능한 프로젝트 없음",
+			"connectionFailed": "Kilo Code 확장 프로그램에 연결하지 못했습니다",
+			"timeout": "30초 후 요청 시간이 초과되었습니다",
+			"invalidResponse": "확장 프로그램으로부터 잘못된 응답 형식을 받았습니다",
+			"noChanges": "커밋할 변경 사항 없음",
+			"missingMessage": "확장 프로그램에서 커밋 메시지를 받지 못했습니다",
+			"noWorkspacePath": "Git 저장소의 작업 공간 경로를 확인할 수 없습니다",
+			"workspaceNotFound": "Git 저장소의 워크스페이스 경로를 확인할 수 없습니다",
+			"processingError": "커밋 메시지 생성 처리 오류: {{error}}"
+		},
+		"error": {
+			"title": "오류",
+			"workspacePathNotFound": "Git 저장소에 대한 작업 공간 경로를 확인할 수 없습니다",
+			"generationFailed": "커밋 메시지 생성 실패: {{error}}",
+			"unknown": "알 수 없는 오류",
+			"processingFailed": "커밋 메시지 생성 처리 중 오류: {{error}}"
+		},
+		"dialogs": {
+			"info": "AI 커밋 메시지",
+			"error": "오류",
+			"success": "성공",
+			"title": "AI 커밋 메시지"
+		},
+		"progress": {
+			"analyzing": "변경사항 분석 중...",
+			"title": "커밋 메시지 생성 중",
+			"connecting": "Kilo Code에 연결 중...",
+			"generating": "커밋 메시지 생성 중..."
+		},
+		"ui": {
+			"generateButtonTooltip": "AI를 사용하여 코드 변경 사항을 분석하고 커밋 메시지를 생성합니다",
+			"generateButton": "커밋 메시지 생성"
+		}
 	},
 	"ghost": {
 		"statusBar": {

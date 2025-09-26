@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: No s'ha pogut generar el missatge de confirmació: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generant missatge utilitzant canvis no preparats",
 		"providerRegistered": "Kilo: Proveïdor de missatges de «commit» registrat",
-		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}"
+		"activationFailed": "Kilo: No s'ha pogut activar el generador de missatges: {{error}}",
+		"errors": {
+			"noProject": "Cap projecte disponible",
+			"connectionFailed": "No s'ha pogut connectar a l'extensió de Kilo Code",
+			"invalidResponse": "Format de resposta invàlid rebut de l'extensió",
+			"timeout": "La sol·licitud ha esgotat el temps d'espera després de 30 segons",
+			"missingMessage": "No s'ha rebut cap missatge de comissió des de l'extensió",
+			"noChanges": "No s'han trobat canvis per confirmar",
+			"workspaceNotFound": "No s'ha pogut determinar la ruta de l'espai de treball pel repositori Git",
+			"noWorkspacePath": "No s'ha pogut determinar el camí de l'espai de treball per al repositori Git",
+			"processingError": "Error en processar la generació del missatge de commit: {{error}}"
+		},
+		"error": {
+			"title": "Error",
+			"unknown": "Error desconegut",
+			"workspacePathNotFound": "No s'ha pogut determinar el camí de l'espai de treball per al repositori Git",
+			"processingFailed": "Error en processar la generació del missatge de commit: {{error}}",
+			"generationFailed": "No s'ha pogut generar el missatge de confirmació: {{error}}"
+		},
+		"dialogs": {
+			"error": "Error",
+			"title": "Missatge de Commit d'IA",
+			"info": "Missatge de Commit d'IA",
+			"success": "Èxit"
+		},
+		"progress": {
+			"title": "Generant Missatge de Commit",
+			"connecting": "Connectant amb Kilo Code...",
+			"analyzing": "Analitzant canvis...",
+			"generating": "Generant missatge de commit..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Genera missatges de commit utilitzant IA per analitzar els teus canvis de codi",
+			"generateButton": "Genera Missatge de Commit"
+		}
 	},
 	"ghost": {
 		"statusBar": {

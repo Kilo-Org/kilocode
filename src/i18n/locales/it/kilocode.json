@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Errore durante la generazione del messaggio di commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generazione messaggio utilizzando modifiche non preparate",
 		"activationFailed": "Kilo: Impossibile attivare il generatore di messaggi: {{error}}",
-		"providerRegistered": "Kilo: Provider di messaggi di commit registrato"
+		"providerRegistered": "Kilo: Provider di messaggi di commit registrato",
+		"errors": {
+			"noProject": "Nessun progetto disponibile",
+			"connectionFailed": "Impossibile connettersi all'estensione Kilo Code",
+			"invalidResponse": "Formato di risposta non valido ricevuto dall'estensione",
+			"timeout": "Richiesta scaduta dopo 30 secondi",
+			"noChanges": "Nessuna modifica da confermare",
+			"missingMessage": "Nessun messaggio di commit ricevuto dall'estensione",
+			"workspaceNotFound": "Impossibile determinare il percorso dell'area di lavoro per il repository Git",
+			"processingError": "Errore durante l'elaborazione della generazione del messaggio di commit: {{error}}",
+			"noWorkspacePath": "Impossibile determinare il percorso di lavoro per il repository Git"
+		},
+		"error": {
+			"title": "Errore",
+			"workspacePathNotFound": "Impossibile determinare il percorso di lavoro per il repository Git",
+			"unknown": "Errore sconosciuto",
+			"generationFailed": "Impossibile generare il messaggio di commit: {{error}}",
+			"processingFailed": "Errore durante l'elaborazione della generazione del messaggio di commit: {{error}}"
+		},
+		"dialogs": {
+			"info": "Messaggio di Commit AI",
+			"error": "Errore",
+			"success": "Successo",
+			"title": "Messaggio di Commit AI"
+		},
+		"progress": {
+			"connecting": "Connessione a Kilo Code in corso...",
+			"title": "Generazione del messaggio di commit",
+			"analyzing": "Analizzando le modifiche...",
+			"generating": "Generazione del messaggio di commit..."
+		},
+		"ui": {
+			"generateButton": "Genera Messaggio di Commit",
+			"generateButtonTooltip": "Genera messaggi di commit utilizzando l'IA per analizzare le modifiche al tuo codice"
+		}
 	},
 	"ghost": {
 		"statusBar": {
