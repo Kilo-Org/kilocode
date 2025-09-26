@@ -16,6 +16,7 @@ export const getModelIdKey = ({
 	| "ollamaModelId"
 	| "lmStudioModelId"
 	| "vsCodeLmModelSelector"
+	| "ovhCloudAiEndpointsModelId"
 	| "apiModelId"
 > => {
 	switch (provider) {
@@ -48,6 +49,9 @@ export const getModelIdKey = ({
 		}
 		case "kilocode": {
 			return "kilocodeModel"
+		}
+		case "ovhcloud": {
+			return "ovhCloudAiEndpointsModelId"
 		}
 		default: {
 			return "apiModelId"

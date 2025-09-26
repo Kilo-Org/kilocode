@@ -44,6 +44,7 @@ export const providerNames = [
 	"lmstudio",
 	"gemini",
 	"openai-native",
+	"ovhcloud",
 	"mistral",
 	"moonshot",
 	"deepseek",
@@ -323,6 +324,11 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
+const ovhcloudSchema = baseProviderSettingsSchema.extend({
+	ovhCloudAiEndpointsApiKey: z.string().optional(),
+	ovhCloudAiEndpointsModelId: z.string().optional(),
+})
+
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
@@ -406,6 +412,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
+	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
 	deepInfraSchema.merge(z.object({ apiProvider: z.literal("deepinfra") })),
@@ -480,6 +487,7 @@ export const providerSettingsSchema = z.object({
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
 	...codebaseIndexProviderSchema.shape,
+	...ovhcloudSchema.shape,
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -509,6 +517,7 @@ export const MODEL_ID_KEYS: Partial<keyof ProviderSettings>[] = [
 	"ioIntelligenceModelId",
 	"vercelAiGatewayModelId",
 	"deepInfraModelId",
+	"ovhCloudAiEndpointsModelId",
 ]
 
 export const getModelId = (settings: ProviderSettings): string | undefined => {
@@ -603,6 +612,11 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "OpenAI",
 		models: Object.keys(openAiNativeModels),
 	},
+	ovhcloud: {
+		id: "ovhcloud",
+		label: "OVHcloud AI Endpoints",
+		models: [],
+	},
 	"qwen-code": { id: "qwen-code", label: "Qwen Code", models: Object.keys(qwenCodeModels) },
 	roo: { id: "roo", label: "Roo", models: Object.keys(rooModels) },
 	sambanova: {
@@ -652,6 +666,7 @@ export const dynamicProviders = [
 	// kilocode_change end
 	"deepinfra",
 	"vercel-ai-gateway",
+	"ovhcloud",
 ] as const satisfies readonly ProviderName[]
 
 export type DynamicProvider = (typeof dynamicProviders)[number]

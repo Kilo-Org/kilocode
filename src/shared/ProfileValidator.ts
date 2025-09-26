@@ -93,6 +93,8 @@ export class ProfileValidator {
 				return profile.ioIntelligenceModelId
 			case "deepinfra":
 				return profile.deepInfraModelId
+			case "ovhcloud":
+				return profile.ovhCloudAiEndpointsModelId
 			case "human-relay":
 			case "fake-ai":
 			default:

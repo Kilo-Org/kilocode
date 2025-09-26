@@ -2703,6 +2703,7 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 			},
 		} as any)
 
@@ -2752,6 +2753,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels,
 			},
 		})
 	})
@@ -2768,6 +2770,7 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 			},
 		} as any)
 
@@ -2787,6 +2790,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
 			.mockResolvedValueOnce(mockModels) // deepinfra success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
+			.mockResolvedValueOnce(mockModels) // ovhcloud
 
 		await messageHandler({ type: "requestRouterModels" })
 
@@ -2804,6 +2808,7 @@ describe("ClineProvider - Router Models", () => {
 				litellm: {},
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels,
 			},
 		})
 
@@ -2855,6 +2860,7 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				// No litellm config
 			},
 		} as any)
@@ -2891,6 +2897,7 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				// No litellm config
 			},
 		} as any)
@@ -2924,6 +2931,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels,
 			},
 		})
 	})
