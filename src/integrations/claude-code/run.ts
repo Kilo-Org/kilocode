@@ -24,6 +24,7 @@ type ClaudeCodeOptions = {
 	messages: Anthropic.Messages.MessageParam[]
 	path?: string
 	modelId?: string
+	envVars?: Record<string, string> // kilocode_change Custom environment variables for provider overrides
 }
 
 type ProcessState = {
@@ -184,6 +185,7 @@ function runProcess({
 	path,
 	modelId,
 	maxOutputTokens,
+	envVars, // kilocode_change Custom environment variables for provider overrides
 }: ClaudeCodeOptions & { maxOutputTokens?: number }) {
 	const claudePath = path || "claude"
 	// const isWindows = os.platform() === "win32" kilocode_change
@@ -221,6 +223,7 @@ function runProcess({
 		stderr: "pipe",
 		env: {
 			...process.env,
+			...envVars, // kilocode_change Custom environment variables for provider overrides
 			// Use the configured value, or the environment variable, or default to CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS
 			CLAUDE_CODE_MAX_OUTPUT_TOKENS:
 				maxOutputTokens?.toString() ||
