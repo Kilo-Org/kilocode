@@ -37,6 +37,8 @@ import {
 	doubaoDefaultModelId,
 	fireworksModels,
 	fireworksDefaultModelId,
+	syntheticModels,
+	syntheticDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	moonshotModels,
 	moonshotDefaultModelId,
@@ -229,6 +231,12 @@ export const getModelsByProvider = ({
 			return {
 				models: fireworksModels,
 				defaultModel: fireworksDefaultModelId,
+			}
+		}
+		case "synthetic": {
+			return {
+				models: syntheticModels,
+				defaultModel: syntheticDefaultModelId,
 			}
 		}
 		case "io-intelligence": {

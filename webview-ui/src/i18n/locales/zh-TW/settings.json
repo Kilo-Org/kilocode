@@ -289,6 +289,8 @@
 		"getChutesApiKey": "取得 Chutes API 金鑰",
 		"fireworksApiKey": "Fireworks API 金鑰",
 		"getFireworksApiKey": "取得 Fireworks API 金鑰",
+		"syntheticApiKey": "Synthetic API 金鑰",
+		"getSyntheticApiKey": "取得 Synthetic API 金鑰",
 		"featherlessApiKey": "Featherless API 金鑰",
 		"getFeatherlessApiKey": "取得 Featherless API 金鑰",
 		"ioIntelligenceApiKey": "IO Intelligence API 金鑰",

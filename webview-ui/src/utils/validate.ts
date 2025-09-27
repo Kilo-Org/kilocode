@@ -148,6 +148,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "synthetic":
+			if (!apiConfiguration.syntheticApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 		case "io-intelligence":
 			if (!apiConfiguration.ioIntelligenceApiKey) {
 				return i18next.t("settings:validation.apiKey")
