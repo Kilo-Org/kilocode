@@ -29,16 +29,10 @@ public @interface TestAnnotationDefinition {
 // Interface declaration test - at least 4 lines long
 public interface TestInterfaceDefinition<T extends Comparable<T>> {
     // Interface method declarations
-    void testInterfaceMethod(
-        String message,
-        T data
-    );
+    void testInterfaceMethod(String message, T data);
     
-    // Default method in interface - 4+ lines
-    default String testInterfaceDefaultMethod(
-        String input,
-        T data
-    ) {
+    // Default method in interface
+    default String testInterfaceDefaultMethod(String input,T data) {
         return String.format("%s: %s", input, data.toString());
     }
 }
@@ -89,12 +83,17 @@ public class TestClassDefinition<T extends Comparable<T>>
         instanceCount++;
     }
 
-    // Method implementation - at least 4 lines long
+    // Method implementation
     @Override
-    public void testInterfaceMethod(
-        String message,
-        T data
-    ) {
+    public void testInterfaceMethod(String message, T data) {
+        System.out.println(testInterfaceDefaultMethod(message, data));
+    }
+
+    @TestAnnotationDefinition(
+        value="test"
+    )
+    
+    void testMultipleAnnotationMethod(String message, T data) {
         System.out.println(testInterfaceDefaultMethod(message, data));
     }
 
