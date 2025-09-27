@@ -21,7 +21,7 @@ Kilo Code支持以下Gemini模型：
 
 ### 聊天模型
 
-- `gemini-2.5-flash-latest`
+- `gemini-flash-latest`
 - `gemini-2.5-flash`
 - `gemini-2.5-pro-exp-03-25`
 - `gemini-2.0-flash-001`

@@ -57,7 +57,7 @@ export const VERCEL_AI_GATEWAY_VISION_AND_TOOLS_MODELS = new Set([
 	"google/gemini-2.0-flash-lite",
 	"google/gemini-2.0-pro",
 	"google/gemini-2.5-flash",
-	"google/gemini-2.5-flash-latest",
+	"google/gemini-flash-latest",
 	"google/gemini-2.5-flash-lite",
 	"google/gemini-2.5-pro",
 	"google/gemini-exp",

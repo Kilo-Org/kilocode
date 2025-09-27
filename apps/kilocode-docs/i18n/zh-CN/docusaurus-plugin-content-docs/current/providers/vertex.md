@@ -24,7 +24,7 @@ Kilo Code 通过 Vertex AI 支持以下模型（基于源代码）：
 
 - **Google Gemini 模型：**
     - `gemini-2.5-flash-preview-05-20`
-    - `gemini-2.5-flash-latest`
+    - `gemini-flash-latest`
     - `gemini-2.0-flash-001`
     - `gemini-2.5-pro-exp-03-25`
     - `gemini-2.0-pro-exp-02-05`

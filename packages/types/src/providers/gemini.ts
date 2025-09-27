@@ -60,7 +60,7 @@ export const geminiModels = {
 		maxThinkingTokens: 24_576,
 		supportsReasoningBudget: true,
 	},
-	"gemini-2.5-flash-latest": {
+	"gemini-flash-latest": {
 		maxTokens: 64_000,
 		contextWindow: 1_048_576,
 		supportsImages: true,
