@@ -23,6 +23,7 @@ import { Package } from "./shared/package"
 import { formatLanguage } from "./shared/language"
 import { ContextProxy } from "./core/config/ContextProxy"
 import { ClineProvider } from "./core/webview/ClineProvider"
+import { CreditsStatusBar } from "./core/CreditsStatusBar"
 import { DIFF_VIEW_URI_SCHEME } from "./integrations/editor/DiffViewProvider"
 import { TerminalRegistry } from "./integrations/terminal/TerminalRegistry"
 import { McpServerManager } from "./services/mcp/McpServerManager"
@@ -236,6 +237,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Finish initializing the provider.
 	TelemetryService.instance.setProvider(provider)
+
+	// Initialize credits status bar
+	const creditsStatusBar = new CreditsStatusBar(context, provider)
+	await creditsStatusBar.initialize()
+	context.subscriptions.push(creditsStatusBar)
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
