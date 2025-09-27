@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { kiloCodeMetaDataSchema } from "./kilocode.js"
+import { kiloCodeClineMessageMetaDataSchema } from "./kilocode.js"
 
 /**
  * ClineAsk
@@ -232,7 +232,7 @@ export const clineMessageSchema = z.object({
 					reasoning_summary: z.string().optional(),
 				})
 				.optional(),
-			kiloCode: kiloCodeMetaDataSchema.optional(),
+			kiloCode: kiloCodeClineMessageMetaDataSchema.optional(),
 		})
 		.optional(),
 })

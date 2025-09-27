@@ -201,9 +201,9 @@ export const ModelPicker = ({
 								<CommandGroup>
 									{/* kilocode_change start */}
 									{modelIds.map((model, i) => {
-										const isPreferred = Number.isInteger(models?.[model]?.preferredIndex)
+										const isPreferred = Number.isInteger(models?.[model]?.kiloCode?.preferredIndex)
 										const previousModelWasPreferred = Number.isInteger(
-											models?.[modelIds[i - 1]]?.preferredIndex,
+											models?.[modelIds[i - 1]]?.kiloCode?.preferredIndex,
 										)
 										return (
 											<Fragment key={model}>
@@ -248,6 +248,7 @@ export const ModelPicker = ({
 					(apiConfiguration.apiProvider === "kilocode" || apiConfiguration.apiProvider === "openrouter" ? (
 						<KiloModelInfoView
 							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
 							modelId={selectedModelId}
 							model={selectedModelInfo}
 							isDescriptionExpanded={isDescriptionExpanded}

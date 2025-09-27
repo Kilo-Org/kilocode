@@ -21,8 +21,24 @@ export const commitRangeSchema = z.object({
 
 export type CommitRange = z.infer<typeof commitRangeSchema>
 
-export const kiloCodeMetaDataSchema = z.object({
+export const kiloCodeClineMessageMetaDataSchema = z.object({
 	commitRange: commitRangeSchema.optional(),
 })
 
-export type KiloCodeMetaData = z.infer<typeof kiloCodeMetaDataSchema>
+export type KiloCodeClineMessageMetaData = z.infer<typeof kiloCodeClineMessageMetaDataSchema>
+
+const toggleSchema = z.enum(["enabled", "disabled"])
+
+const recommendationsSchema = z.object({
+	diff: toggleSchema.optional(),
+	todoList: toggleSchema.optional(),
+})
+
+export type Recommendations = z.infer<typeof recommendationsSchema>
+
+export const kiloCodeModelMetaDataSchema = z.object({
+	preferredIndex: z.number().optional(),
+	recommendations: recommendationsSchema.optional(),
+})
+
+export type KiloCodeModelMetaData = z.infer<typeof kiloCodeModelMetaDataSchema>

@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { kiloCodeModelMetaDataSchema } from "./kilocode.js"
 
 /**
  * ReasoningEffort
@@ -77,8 +78,8 @@ export const modelInfoSchema = z.object({
 	maxCachePoints: z.number().optional(),
 	cachableFields: z.array(z.string()).optional(),
 	// kilocode_change start
-	displayName: z.string().nullish(),
-	preferredIndex: z.number().nullish(),
+	displayName: z.string().optional(),
+	kiloCode: kiloCodeModelMetaDataSchema.optional(),
 	// kilocode_change end
 	/**
 	 * Service tiers with pricing information.
