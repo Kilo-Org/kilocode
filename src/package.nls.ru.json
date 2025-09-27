@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (форк Roo / Cline)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Целая команда ИИ-разработчиков в вашем редакторе.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

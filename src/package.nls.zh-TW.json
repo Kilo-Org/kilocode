@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI 代理 (Roo / Cline 分支)",
+	"extension.displayName": "Kilo Code AI 代理",
 	"extension.description": "用於規劃、建置和修復程式碼的開源 AI 開發助理。",
 	"command.newTask.title": "新建任務",
 	"command.explainCode.title": "解釋程式碼",

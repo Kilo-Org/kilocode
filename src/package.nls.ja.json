@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AIエージェント (Roo / Cline フォーク)",
+	"extension.displayName": "Kilo Code AIエージェント",
 	"extension.description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
