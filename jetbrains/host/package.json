@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"deps:check": "node ../../jetbrains/scripts/check-dependencies.js",
-		"deps:patch": "npm run deps:check && cd ../../deps/vscode && git reset --hard HEAD && git clean -fd && git apply ../patches/vscode/jetbrains.patch",
 		"deps:clean": "rm -rf ./deps/vscode/* || true",
 		"deps:copy": "npm run deps:check && npx cpy '../../deps/vscode/src/**' './deps/vscode' --parents",
 		"clean": "del-cli ./dist",
