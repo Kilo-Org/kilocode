@@ -79,6 +79,7 @@ import {
 	HuggingFace,
 	IOIntelligence,
 	LMStudio,
+	ProviderDefined,
 	LiteLLM,
 	Mistral,
 	Moonshot,
@@ -607,6 +608,13 @@ const ApiOptions = ({
 
 			{selectedProvider === "lmstudio" && (
 				<LMStudio apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "provider-defined" && (
+				<ProviderDefined
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+				/>
 			)}
 
 			{selectedProvider === "deepseek" && (

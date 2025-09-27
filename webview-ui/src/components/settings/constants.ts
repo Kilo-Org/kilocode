@@ -75,6 +75,7 @@ export const PROVIDERS = [
 	{ value: "vscode-lm", label: "VS Code LM API" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
+	{ value: "provider-defined", label: "Provider Defined" },
 	{ value: "ollama", label: "Ollama" },
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },

@@ -156,6 +156,27 @@
 			"problemMatcher": [],
 			"label": "docs: build",
 			"detail": "Build the Docusaurus site for production"
+		},
+		{
+			"label": "Launch OpenAI Test Endpoint",
+			"type": "shell",
+			"command": "pnpm tsx scripts/kilocode/server/openai-test-server.ts",
+			"isBackground": true,
+			"problemMatcher": {
+				"owner": "custom",
+				"pattern": {
+					"regexp": "^$"
+				},
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "OpenAI Compatible Test Server running on port",
+					"endsPattern": "Endpoints available:"
+				}
+			},
+			"presentation": {
+				"reveal": "always",
+				"panel": "new"
+			}
 		}
 	]
 }

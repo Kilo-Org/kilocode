@@ -7,7 +7,7 @@ import { IncomingMessage, ServerResponse } from "http"
 
 // Parse command line arguments
 const args = process.argv.slice(2)
-let errorRate = 0.1 // Default to 10% error rate
+let errorRate = 0.0 // Default to 0% error rate
 
 for (let i = 0; i < args.length; i++) {
 	if (args[i] === "--error-rate" && args[i + 1]) {
@@ -186,6 +186,60 @@ const server = http.createServer((req: IncomingMessage, res: ServerResponse) => 
 
 	// Handle models endpoint
 	if (parsedUrl.pathname === "/v1/models" && req.method === "GET") {
+		const { provider, extended } = parsedUrl.query
+
+		if (provider === "true") {
+			const providerResponse = {
+				name: "Synthetic",
+				baseUrl: `http://localhost:${PORT}/v1`,
+				models_data_source: "endpoint",
+				//models_data_source: "models_dev",
+				models_dev_provider_id: "test",
+			}
+			res.writeHead(200, { "Content-Type": "application/json" })
+			res.end(JSON.stringify(providerResponse))
+			console.log(`[${new Date().toISOString()}] GET ${req.url} -> 200 OK (${Date.now() - requestStartTime}ms)`)
+			return
+		}
+
+		if (extended === "true") {
+			const extendedModelsResponse = {
+				models: {
+					"provider/model-name-v1": {
+						id: "provider/model-name-v1",
+						name: "Model Name V1",
+						attachment: false,
+						reasoning: true,
+						temperature: true,
+						tool_call: true,
+						release_date: "2025-08-21",
+						last_updated: "2025-08-21",
+						modalities: {
+							input: ["text", "image"],
+							output: ["text"],
+						},
+						open_weights: false,
+						cost: {
+							input: 0.5,
+							output: 1.5,
+						},
+						limit: {
+							context: 128000,
+							output: 4096,
+						},
+					},
+					"provider/another-model-v2": {
+						id: "provider/another-model-v2",
+						name: "Another Model V2",
+					},
+				},
+			}
+			res.writeHead(200, { "Content-Type": "application/json" })
+			res.end(JSON.stringify(extendedModelsResponse))
+			console.log(`[${new Date().toISOString()}] GET ${req.url} -> 200 OK (${Date.now() - requestStartTime}ms)`)
+			return
+		}
+
 		const modelsResponse: ModelResponse = {
 			object: "list",
 			data: [
@@ -227,5 +281,7 @@ server.listen(PORT, () => {
 	console.log(`Endpoints available:`)
 	console.log(`  GET  / - Server status`)
 	console.log(`  GET  /v1/models - List models`)
+	console.log(`  GET  /v1/models?provider=true - Provider manifest`)
+	console.log(`  GET  /v1/models?extended=true - Extended models list`)
 	console.log(`  POST /v1/chat/completions - Chat completions (with streaming support)`)
 })

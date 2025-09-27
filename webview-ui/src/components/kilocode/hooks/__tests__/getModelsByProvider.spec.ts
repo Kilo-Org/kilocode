@@ -36,6 +36,7 @@ describe("getModelsByProvider", () => {
 			"openai", // not implemented
 			"roo", // don't care
 			"virtual-quota-fallback", // no models
+			"provider-defined", // no models
 			"zai", // has weird mainland/international distiction
 			"vercel-ai-gateway", // different structure
 		]
