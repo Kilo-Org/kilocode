@@ -5,7 +5,7 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { vscode } from "@src/utils/vscode"
 
-const getRouterModels = async () =>
+const getRouterModels = async (queryKey: RouterModelsQueryKey) =>
 	new Promise<RouterModels>((resolve, reject) => {
 		const cleanup = () => {
 			window.removeEventListener("message", handler)
@@ -32,6 +32,7 @@ const getRouterModels = async () =>
 		}
 
 		window.addEventListener("message", handler)
+		console.debug("[useRouterModels] posting requestRouterModels", queryKey)
 		vscode.postMessage({ type: "requestRouterModels" })
 	})
 
@@ -43,9 +44,11 @@ type RouterModelsQueryKey = {
 	ollamaBaseUrl?: string
 	kilocodeOrganizationId?: string
 	deepInfraApiKey?: string
+	geminiApiKey?: string
+	googleGeminiBaseUrl?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 
 export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
-	useQuery({ queryKey: ["routerModels", queryKey], queryFn: getRouterModels })
+	useQuery({ queryKey: ["routerModels", queryKey], queryFn: () => getRouterModels(queryKey) })
 // kilocode_change end

@@ -2,20 +2,33 @@ import { useCallback, useState } from "react"
 import { Checkbox } from "vscrui"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import type { ProviderSettings } from "@roo-code/types"
+import type { OrganizationAllowList, ProviderSettings } from "@roo-code/types"
+import { geminiDefaultModelId } from "@roo-code/types"
+import type { RouterModels } from "@roo/api"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 
 import { inputEventTransform } from "../transforms"
+import { ModelPicker } from "../ModelPicker"
 
 type GeminiProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 	fromWelcomeView?: boolean
+	routerModels?: RouterModels
+	organizationAllowList?: OrganizationAllowList
+	modelValidationError?: string
 }
 
-export const Gemini = ({ apiConfiguration, setApiConfigurationField, fromWelcomeView }: GeminiProps) => {
+export const Gemini = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	fromWelcomeView,
+	routerModels,
+	organizationAllowList,
+	modelValidationError,
+}: GeminiProps) => {
 	const { t } = useAppTranslation()
 
 	const [googleGeminiBaseUrlSelected, setGoogleGeminiBaseUrlSelected] = useState(
@@ -32,6 +45,8 @@ export const Gemini = ({ apiConfiguration, setApiConfigurationField, fromWelcome
 			},
 		[setApiConfigurationField],
 	)
+
+	const allowList = organizationAllowList ?? { allowAll: true, providers: {} }
 
 	return (
 		<>
@@ -98,6 +113,18 @@ export const Gemini = ({ apiConfiguration, setApiConfigurationField, fromWelcome
 						</div>
 					</>
 				)}
+
+				<ModelPicker
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					defaultModelId={geminiDefaultModelId}
+					models={routerModels?.gemini ?? {}}
+					modelIdKey="apiModelId"
+					serviceName="Google Gemini"
+					serviceUrl="https://ai.google.dev/gemini-api/docs/models/gemini"
+					organizationAllowList={allowList}
+					errorMessage={modelValidationError}
+				/>
 			</div>
 		</>
 	)

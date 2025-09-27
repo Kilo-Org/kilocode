@@ -786,8 +786,15 @@ export const webviewMessageHandler = async (
 		case "requestRouterModels":
 			const { apiConfiguration } = await provider.getState()
 
+			console.debug("[webviewMessageHandler] requestRouterModels", {
+				hasOpenRouterKey: !!apiConfiguration.openRouterApiKey,
+				hasGeminiKey: !!apiConfiguration.geminiApiKey,
+				hasKilocodeToken: !!apiConfiguration.kilocodeToken,
+			})
+
 			const routerModels: Record<RouterName, ModelRecord> = {
 				openrouter: {},
+				gemini: {},
 				"vercel-ai-gateway": {},
 				huggingface: {},
 				litellm: {},
@@ -822,6 +829,14 @@ export const webviewMessageHandler = async (
 				{
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
+				},
+				{
+					key: "gemini",
+					options: {
+						provider: "gemini",
+						apiKey: apiConfiguration.geminiApiKey,
+						baseUrl: apiConfiguration.googleGeminiBaseUrl,
+					},
 				},
 				{
 					key: "requesty",

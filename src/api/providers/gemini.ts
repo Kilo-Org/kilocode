@@ -9,9 +9,9 @@ import {
 } from "@google/genai"
 import type { JWTInput } from "google-auth-library"
 
-import { type ModelInfo, type GeminiModelId, geminiDefaultModelId, geminiModels } from "@roo-code/types"
+import { type ModelInfo, geminiDefaultModelId, geminiModels } from "@roo-code/types"
 
-import type { ApiHandlerOptions } from "../../shared/api"
+import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { safeJsonParse } from "../../shared/safeJsonParse"
 
 import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from "../transform/gemini-format"
@@ -22,6 +22,7 @@ import { getModelParams } from "../transform/model-params"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
 import { throwMaxCompletionTokensReachedError } from "./kilocode/verifyFinishReason"
+import { getGeminiModels } from "./fetchers/gemini"
 
 type GeminiHandlerOptions = ApiHandlerOptions & {
 	isVertex?: boolean
@@ -31,11 +32,16 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 	protected options: ApiHandlerOptions
 
 	private client: GoogleGenAI
+	private models: ModelRecord = { ...geminiModels }
+	private modelsLoaded = false
+	private modelsLoading?: Promise<void>
+	private readonly isVertex: boolean
 
 	constructor({ isVertex, ...options }: GeminiHandlerOptions) {
 		super()
 
 		this.options = options
+		this.isVertex = !!isVertex
 
 		const project = this.options.vertexProjectId ?? "not-provided"
 		const location = this.options.vertexRegion ?? "not-provided"
@@ -62,11 +68,43 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 					: new GoogleGenAI({ apiKey })
 	}
 
+	private async ensureModelsLoaded() {
+		if (this.isVertex) {
+			return
+		}
+
+		if (this.modelsLoaded) {
+			return
+		}
+
+		if (!this.modelsLoading) {
+			this.modelsLoading = this.loadModels().finally(() => {
+				this.modelsLoaded = true
+				this.modelsLoading = undefined
+			})
+		}
+
+		await this.modelsLoading
+	}
+
+	private async loadModels() {
+		try {
+			this.models = await getGeminiModels({
+				apiKey: this.options.geminiApiKey,
+				baseUrl: this.options.googleGeminiBaseUrl,
+			})
+		} catch (error) {
+			console.error("[GeminiHandler] Failed to fetch Gemini models", error)
+			this.models = { ...geminiModels }
+		}
+	}
+
 	async *createMessage(
 		systemInstruction: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
+		await this.ensureModelsLoaded()
 		const { id: model, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
 
 		const contents = messages.map(convertAnthropicMessageToGemini)
@@ -171,16 +209,23 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	override getModel() {
-		const modelId = this.options.apiModelId
-		let id = modelId && modelId in geminiModels ? (modelId as GeminiModelId) : geminiDefaultModelId
-		let info: ModelInfo = geminiModels[id]
+		const requestedId = this.options.apiModelId
+		const availableModels = this.models
+		const staticModels = geminiModels as Record<string, ModelInfo>
+
+		let id = requestedId && requestedId in availableModels ? requestedId : geminiDefaultModelId
+
+		let info: ModelInfo =
+			availableModels[id] ??
+			staticModels[id] ??
+			availableModels[geminiDefaultModelId] ??
+			staticModels[geminiDefaultModelId]
+
 		const params = getModelParams({ format: "gemini", modelId: id, model: info, settings: this.options })
 
-		// The `:thinking` suffix indicates that the model is a "Hybrid"
-		// reasoning model and that reasoning is required to be enabled.
-		// The actual model ID honored by Gemini's API does not have this
-		// suffix.
-		return { id: id.endsWith(":thinking") ? id.replace(":thinking", "") : id, info, ...params }
+		const apiModelId = id.endsWith(":thinking") ? id.replace(":thinking", "") : id
+
+		return { id: apiModelId, info, ...params }
 	}
 
 	private extractGroundingSources(groundingMetadata?: GroundingMetadata): GroundingSource[] {
@@ -219,6 +264,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 	async completePrompt(prompt: string): Promise<string> {
 		try {
+			await this.ensureModelsLoaded()
 			const { id: model } = this.getModel()
 
 			const tools: GenerateContentConfig["tools"] = []
@@ -264,6 +310,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 	override async countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number> {
 		try {
+			await this.ensureModelsLoaded()
 			const { id: model } = this.getModel()
 
 			const response = await this.client.models.countTokens({
