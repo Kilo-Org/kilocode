@@ -4,6 +4,14 @@ import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
 import { DiagnosticSeverityNames } from "./diagnostics"
 
+// Local mapping for DiagnosticSeverity since we're using type-only imports
+const DiagnosticSeverityNames: Record<number, string> = {
+	0: "Error",
+	1: "Warning",
+	2: "Information",
+	3: "Hint",
+}
+
 /**
  * Abstract base class for all prompt strategies
  * Provides common functionality and enforces consistent structure
