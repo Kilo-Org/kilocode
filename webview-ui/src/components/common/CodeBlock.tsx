@@ -184,6 +184,7 @@ const CodeBlock = memo(
 		const codeBlockRef = useRef<HTMLDivElement>(null)
 		const preRef = useRef<HTMLDivElement>(null)
 		const copyButtonWrapperRef = useRef<HTMLDivElement>(null)
+		// Copy button ref no longer needed since we're using onClick
 		const { showCopyFeedback, copyWithFeedback } = useCopyToClipboard()
 		const { t } = useAppTranslation()
 		const isMountedRef = useRef(true)
@@ -588,38 +589,23 @@ const CodeBlock = memo(
 		const [isSelecting, setIsSelecting] = useState(false)
 
 		useEffect(() => {
-			if (!preRef.current) return
-
-			const handleMouseDown = (e: MouseEvent) => {
-				// Only trigger if clicking the pre element directly
-				if (e.currentTarget === preRef.current) {
-					setIsSelecting(true)
-				}
+			const handleSelectionChange = () => {
+				const selection = window.getSelection()
+				const newIsSelecting = selection ? !selection.isCollapsed : false
+				console.log("Selection changed, isSelecting:", newIsSelecting)
+				setIsSelecting(newIsSelecting)
 			}
 
-			const handleMouseUp = () => {
-				setIsSelecting(false)
-			}
-
-			const preElement = preRef.current
-			preElement.addEventListener("mousedown", handleMouseDown)
-			document.addEventListener("mouseup", handleMouseUp)
+			document.addEventListener("selectionchange", handleSelectionChange)
 
 			return () => {
-				preElement.removeEventListener("mousedown", handleMouseDown)
-				document.removeEventListener("mouseup", handleMouseUp)
+				document.removeEventListener("selectionchange", handleSelectionChange)
 			}
 		}, [])
 
 		const handleCopy = useCallback(
 			(e: React.MouseEvent) => {
 				e.stopPropagation()
-
-				// Check if code block is partially visible before allowing copy
-				const codeBlock = codeBlockRef.current
-				if (!codeBlock || codeBlock.getAttribute("data-partially-visible") !== "true") {
-					return
-				}
 				const textToCopy = rawSource !== undefined ? rawSource : source || ""
 				if (textToCopy) {
 					copyWithFeedback(textToCopy, e)
@@ -632,6 +618,7 @@ const CodeBlock = memo(
 			return null
 		}
 
+		console.log("Rendering CodeBlock, isSelecting:", isSelecting)
 		return (
 			<CodeBlockContainer ref={codeBlockRef}>
 				<MemoizedStyledPre
@@ -687,7 +674,7 @@ const CodeBlock = memo(
 							</StandardTooltip>
 						)}
 						<StandardTooltip content={t("chat:codeblock.tooltips.copy_code")} side="top">
-							<CodeBlockButton onClick={handleCopy}>
+							<CodeBlockButton onClick={handleCopy} data-testid="codeblock-copy-button">
 								{showCopyFeedback ? <Check size={16} /> : <Copy size={16} />}
 							</CodeBlockButton>
 						</StandardTooltip>
