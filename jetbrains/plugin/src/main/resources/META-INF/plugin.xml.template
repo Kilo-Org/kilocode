@@ -36,6 +36,8 @@ SPDX-License-Identifier: Apache-2.0
     <!-- Product and plugin compatibility requirements.
          Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.vcs</depends>
+    <depends optional="true">Git4Idea</depends>
     <depends>org.jetbrains.plugins.terminal</depends>
     
     <!-- Extension points defined by the plugin.
@@ -54,6 +56,12 @@ SPDX-License-Identifier: Apache-2.0
                     id="kilocode"
                     displayType="BALLOON"
         />
+        
+        <!-- Git commit message generation -->
+        <checkinHandlerFactory
+            implementation="ai.kilocode.jetbrains.git.CommitMessageHandlerFactory"/>
+        <applicationService
+            serviceImplementation="ai.kilocode.jetbrains.git.CommitMessageService"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
@@ -99,6 +107,20 @@ SPDX-License-Identifier: Apache-2.0
                 text="Settings"
                 description="Setting">
             <override-text place="GoToAction" text="Setting" />
+        </action>
+
+        <!-- Git commit message generation standalone action -->
+        <action id="ai.kilocode.generateCommitMessage"
+                class="ai.kilocode.jetbrains.actions.GitCommitMessageAction"
+                text="Generate AI Commit Message"
+                description="Generate commit message using AI"
+                icon="/icons/kilo-dark-small.svg">
+            <!-- Primary placement in commit message toolbar (works for all modes) -->
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
+            
+            <!-- Keyboard shortcut -->
+            <keyboard-shortcut keymap="$default" first-keystroke="meta shift G"/>
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl shift G"/>
         </action>
 
         <group id="WecoderToolbarGroup">

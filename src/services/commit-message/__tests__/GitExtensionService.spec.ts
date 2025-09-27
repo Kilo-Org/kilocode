@@ -45,10 +45,10 @@ const mockSpawnSync = spawnSync as Mock
 
 describe("GitExtensionService", () => {
 	let service: GitExtensionService
+	const mockWorkspaceRoot = "/test/workspace"
 
 	beforeEach(() => {
-		service = new GitExtensionService()
-		service.configureRepositoryContext()
+		service = new GitExtensionService(mockWorkspaceRoot)
 		mockSpawnSync.mockClear()
 	})
 
@@ -144,17 +144,17 @@ describe("GitExtensionService", () => {
 
 	describe("gatherChanges", () => {
 		it("should gather unstaged changes correctly", async () => {
-			const mockStatusOutput = "M\tfile1.ts\nA\tfile2.ts\nD\tfile3.ts"
+			const mockStatusOutput = " M file1.ts\n A file2.ts\n D file3.ts"
 			mockSpawnSync.mockReturnValue({ status: 0, stdout: mockStatusOutput, stderr: "", error: null })
 
 			const result = await service.gatherChanges({ staged: false })
 
-			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--name-status"], expect.any(Object))
+			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["status", "--porcelain"], expect.any(Object))
 
 			expect(result).toEqual([
-				{ filePath: path.join("/test/workspace/file1.ts"), status: "Modified" },
-				{ filePath: path.join("/test/workspace/file2.ts"), status: "Added" },
-				{ filePath: path.join("/test/workspace/file3.ts"), status: "Deleted" },
+				{ filePath: path.join("/test/workspace", "file1.ts"), status: "M", staged: false },
+				{ filePath: path.join("/test/workspace", "file2.ts"), status: "A", staged: false },
+				{ filePath: path.join("/test/workspace", "file3.ts"), status: "D", staged: false },
 			])
 		})
 
@@ -167,9 +167,9 @@ describe("GitExtensionService", () => {
 			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--name-status", "--cached"], expect.any(Object))
 
 			expect(result).toEqual([
-				{ filePath: path.join("/test/workspace/file1.ts"), status: "Modified" },
-				{ filePath: path.join("/test/workspace/file2.ts"), status: "Added" },
-				{ filePath: path.join("/test/workspace/file3.ts"), status: "Deleted" },
+				{ filePath: path.join("/test/workspace", "file1.ts"), status: "M", staged: true },
+				{ filePath: path.join("/test/workspace", "file2.ts"), status: "A", staged: true },
+				{ filePath: path.join("/test/workspace", "file3.ts"), status: "D", staged: true },
 			])
 		})
 
@@ -227,7 +227,7 @@ describe("GitExtensionService", () => {
 
 	describe("getCommitContext", () => {
 		it("should generate context for staged changes by default", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+			const mockChanges = [{ filePath: "file1.ts", status: "M" as const, staged: true }]
 
 			mockSpawnSync
 				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })
@@ -243,7 +243,7 @@ describe("GitExtensionService", () => {
 		})
 
 		it("should generate context for unstaged changes when specified", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+			const mockChanges = [{ filePath: "file1.ts", status: "M" as const, staged: false }]
 
 			mockSpawnSync
 				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })

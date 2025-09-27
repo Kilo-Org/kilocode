@@ -18,7 +18,6 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.8.10"
     id("org.jetbrains.intellij") version "1.17.4"
     id("org.jlleitschuh.gradle.ktlint") version "11.6.1"
-    id("io.gitlab.arturbosch.detekt") version "1.23.4"
 }
 
 apply("genPlatform.gradle")
@@ -144,7 +143,6 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     implementation("com.google.code.gson:gson:2.10.1")
     testImplementation("junit:junit:4.13.2")
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.23.4")
 }
 
 // Configure Java toolchain to force Java 17
@@ -210,10 +208,23 @@ tasks {
         targetCompatibility = "17"
     }
 
+    // Add task to generate plugin.xml from template
+    register<Exec>("updatePluginXml") {
+        description = "Update plugin.xml from template with change notes"
+        group = "build"
+        
+        workingDir = projectDir
+        commandLine("node", "scripts/update_change_notes.js")
+        
+        inputs.files("src/main/resources/META-INF/plugin.xml.template", "gradle.properties", "../../../CHANGELOG.md")
+        outputs.file("src/main/resources/META-INF/plugin.xml")
+    }
+
     patchPluginXml {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set("")
+        dependsOn("updatePluginXml")
     }
 
     signPlugin {
@@ -361,18 +372,3 @@ ktlint {
     }
 }
 
-// Configure detekt
-detekt {
-    toolVersion = "1.23.4"
-    config.setFrom(file("detekt.yml"))
-    buildUponDefaultConfig = true
-    allRules = false
-    
-    reports {
-        html.required.set(true)
-        xml.required.set(true)
-        txt.required.set(true)
-        sarif.required.set(true)
-        md.required.set(true)
-    }
-}

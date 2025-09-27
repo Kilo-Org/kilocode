@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Nepodařilo se vygenerovat zprávu commitu: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn",
 		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
-		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
+		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován",
+		"errors": {
+			"noProject": "Žádný projekt k dispozici",
+			"connectionFailed": "Nepodařilo se připojit k rozšíření Kilo Code",
+			"timeout": "Časový limit požadavku vypršel po 30 sekundách",
+			"invalidResponse": "Neplatný formát odpovědi obdržen od rozšíření",
+			"missingMessage": "Z rozšíření nebyla přijata žádná zpráva o commitu",
+			"noChanges": "Nenalezeny žádné změny k zapsání",
+			"noWorkspacePath": "Nebylo možné určit cestu pracovního prostoru pro Git repozitář",
+			"workspaceNotFound": "Nelze určit cestu k pracovnímu prostoru pro Git repozitář",
+			"processingError": "Chyba při zpracování generování zprávy o commitu: {{error}}"
+		},
+		"error": {
+			"title": "Chyba",
+			"workspacePathNotFound": "Nelze určit cestu pracovního prostoru pro Git repozitář",
+			"generationFailed": "Nepodařilo se vygenerovat zprávu o commitu: {{error}}",
+			"processingFailed": "Chyba při zpracování generování zprávy o commitu: {{error}}",
+			"unknown": "Neznámá chyba"
+		},
+		"dialogs": {
+			"info": "Zpráva commitu AI",
+			"success": "Úspěch",
+			"error": "Chyba",
+			"title": "Commit zpráva AI"
+		},
+		"progress": {
+			"title": "Generování Commit Message",
+			"connecting": "Připojování k Kilo Code...",
+			"analyzing": "Analyzuji změny...",
+			"generating": "Generuji zprávu commitu..."
+		},
+		"ui": {
+			"generateButton": "Vygenerovat zprávu pro commit",
+			"generateButtonTooltip": "Generuje zprávy pro commit pomocí umělé inteligence pro analýzu změn ve vašem kódu"
+		}
 	},
 	"seeNewChanges": {
 		"title": "Zobrazování nových změn",

@@ -53,7 +53,41 @@
 		"generationFailed": "Kilo: Commit mesajı oluşturulamadı: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Hazırlanmamış değişikliklerle mesaj oluşturuluyor",
 		"activationFailed": "Kilo: Mesaj oluşturucu etkinleştirilemedi: {{error}}",
-		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi"
+		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi",
+		"errors": {
+			"noProject": "Proje mevcut değil",
+			"connectionFailed": "Kilo Code uzantısına bağlanılamadı",
+			"timeout": "İstek 30 saniye sonra zaman aşımına uğradı",
+			"noChanges": "Kaydedilecek değişiklik bulunamadı",
+			"missingMessage": "Uzantıdan taahhüt mesajı alınmadı",
+			"noWorkspacePath": "Git deposu için çalışma alanı yolu belirlenemedi",
+			"invalidResponse": "Eklentiden geçersiz yanıt formatı alındı",
+			"processingError": "İleti oluşturma işleminde hata: {{error}}",
+			"workspaceNotFound": "Git deposu için çalışma alanı yolu belirlenemedi"
+		},
+		"error": {
+			"title": "Hata",
+			"generationFailed": "Commit mesajı oluşturulamadı: {{error}}",
+			"processingFailed": "Commit mesajı oluşturulurken hata oluştu: {{error}}",
+			"unknown": "Bilinmeyen hata",
+			"workspacePathNotFound": "Git deposu için çalışma alanı yolu belirlenemedi"
+		},
+		"dialogs": {
+			"info": "Yapay Zeka Commit Mesajı",
+			"error": "Hata",
+			"success": "Başarılı",
+			"title": "Yapay Zeka Taahhüt Mesajı"
+		},
+		"progress": {
+			"title": "Commit Mesajı Oluşturuluyor",
+			"analyzing": "Değişiklikler inceleniyor...",
+			"generating": "Taahhüt mesajı oluşturuluyor...",
+			"connecting": "Kilo Code'a bağlanıyor..."
+		},
+		"ui": {
+			"generateButton": "Commit Mesajı Oluştur",
+			"generateButtonTooltip": "AI kullanarak kod değişikliklerinizi analiz eden commit mesajı oluşturur"
+		}
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Kontrol noktaları kullanılamaz, çünkü şu konumda iç içe Git deposu tespit edildi: {{path}}. Kontrol noktaları özelliğini kullanmak için iç içe Git depolarını kaldırın veya taşıyın ya da bu uyarıyı gizlemek için ayarlarda kontrol noktalarını devre dışı bırakın.",

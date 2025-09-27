@@ -58,7 +58,41 @@
 		"generationFailed": "Kilo: Tạo thông báo commit không thành công: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Đang tạo thông báo bằng các thay đổi chưa được chuẩn bị",
 		"activationFailed": "Kilo: Kích hoạt trình tạo thông báo không thành công: {{error}}",
-		"providerRegistered": "Kilo: Nhà cung cấp thông báo commit đã được đăng ký"
+		"providerRegistered": "Kilo: Nhà cung cấp thông báo commit đã được đăng ký",
+		"errors": {
+			"noProject": "Không có dự án nào",
+			"connectionFailed": "Không thể kết nối với tiện ích mở rộng Kilo Code",
+			"timeout": "Yêu cầu đã hết thời gian sau 30 giây",
+			"invalidResponse": "Nhận được định dạng phản hồi không hợp lệ từ tiện ích mở rộng",
+			"noChanges": "Không tìm thấy thay đổi nào để commit",
+			"missingMessage": "Không nhận được thông báo commit từ tiện ích mở rộng",
+			"workspaceNotFound": "Không thể xác định đường dẫn không gian làm việc cho kho Git",
+			"noWorkspacePath": "Không thể xác định đường dẫn không gian làm việc cho kho Git",
+			"processingError": "Lỗi khi xử lý quá trình tạo nội dung commit: {{error}}"
+		},
+		"error": {
+			"workspacePathNotFound": "Không thể xác định đường dẫn không gian làm việc cho kho Git",
+			"title": "Lỗi",
+			"generationFailed": "Không thể tạo thông điệp commit: {{error}}",
+			"processingFailed": "Lỗi xử lý quá trình tạo tin nhắn commit: {{error}}",
+			"unknown": "Lỗi không xác định"
+		},
+		"dialogs": {
+			"info": "Thông Điệp Commit AI",
+			"success": "Thành công",
+			"error": "Lỗi",
+			"title": "Tin Nhắn Commit AI"
+		},
+		"progress": {
+			"title": "Tạo Message Cam Kết",
+			"generating": "Đang tạo thông điệp commit...",
+			"connecting": "Đang kết nối tới Kilo Code...",
+			"analyzing": "Đang phân tích các thay đổi..."
+		},
+		"ui": {
+			"generateButton": "Tạo Thông Điệp Commit",
+			"generateButtonTooltip": "Tạo ra thông điệp commit bằng trí tuệ nhân tạo để phân tích những thay đổi code của bạn"
+		}
 	},
 	"ghost": {
 		"statusBar": {

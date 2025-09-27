@@ -251,7 +251,7 @@
 				"category": "%configuration.title%"
 			},
 			{
-				"command": "kilo-code.generateCommitMessage",
+				"command": "kilo-code.vsc.generateCommitMessage",
 				"title": "%command.generateCommitMessage.title%",
 				"icon": {
 					"light": "assets/icons/kilo-light.svg",
@@ -416,13 +416,13 @@
 			],
 			"scm/input": [
 				{
-					"command": "kilo-code.generateCommitMessage",
+					"command": "kilo-code.vsc.generateCommitMessage",
 					"group": "navigation"
 				}
 			],
 			"scm/title": [
 				{
-					"command": "kilo-code.generateCommitMessage",
+					"command": "kilo-code.vsc.generateCommitMessage",
 					"when": "scmProvider == git",
 					"group": "navigation"
 				}

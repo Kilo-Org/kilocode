@@ -4,6 +4,7 @@ import * as path from "path"
 import { listFiles } from "../../services/glob/list-files"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { toRelativePath, getWorkspacePath } from "../../utils/path"
+import { isPathInIgnoredDirectory } from "../../services/glob/ignore-utils"
 
 const MAX_INITIAL_FILES = 1_000
 
@@ -43,6 +44,9 @@ class WorkspaceTracker {
 		this.prevWorkSpacePath = this.cwd
 		this.disposables.push(
 			watcher.onDidCreate(async (uri) => {
+				if (isPathInIgnoredDirectory(uri.fsPath)) {
+					return // Skip processing ignored files
+				}
 				await this.addFilePath(uri.fsPath)
 				this.workspaceDidUpdate()
 			}),
@@ -51,6 +55,9 @@ class WorkspaceTracker {
 		// Renaming files triggers a delete and create event
 		this.disposables.push(
 			watcher.onDidDelete(async (uri) => {
+				if (isPathInIgnoredDirectory(uri.fsPath)) {
+					return // Skip processing ignored files
+				}
 				if (await this.removeFilePath(uri.fsPath)) {
 					this.workspaceDidUpdate()
 				}
