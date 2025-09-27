@@ -31,6 +31,13 @@ export const DisplaySettings = ({
 
 	const sampleTimelineData = useMemo(() => generateSampleTimelineData(), [])
 
+	const onSendMessageOnEnterChange = (newValue: boolean) => {
+		setCachedStateField("ghostServiceSettings", {
+			...(ghostServiceSettings || {}),
+			sendMessageOnEnter: newValue,
+		})
+	}
+
 	const onShowGutterAnimationChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
 			...(ghostServiceSettings || {}),
@@ -69,8 +76,21 @@ export const DisplaySettings = ({
 					</div>
 				</div>
 
-				{/* Gutter Animation Setting */}
-				<div className="mt-6 pt-6 border-t border-vscode-panel-border">
+				{/* Additional display toggles */}
+				<div className="mt-6 pt-6 border-t border-vscode-panel-border space-y-6">
+					<div className="flex flex-col gap-1">
+						<VSCodeCheckbox
+							checked={ghostServiceSettings?.sendMessageOnEnter !== false}
+							onChange={(e) => {
+								onSendMessageOnEnterChange((e as any).target?.checked || false)
+							}}>
+							<span className="font-medium">{t("settings:display.sendMessageOnEnter.label")}</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:display.sendMessageOnEnter.description")}
+						</div>
+					</div>
+
 					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox
 							checked={ghostServiceSettings?.showGutterAnimation !== false}
