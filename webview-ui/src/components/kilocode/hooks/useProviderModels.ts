@@ -135,7 +135,10 @@ export const getModelsByProvider = ({
 		}
 		case "gemini": {
 			return {
-				models: geminiModels,
+				models:
+					routerModels.gemini && Object.keys(routerModels.gemini).length > 0
+						? routerModels.gemini
+						: geminiModels,
 				defaultModel: geminiDefaultModelId,
 			}
 		}
@@ -278,6 +281,8 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		geminiApiKey: apiConfiguration?.geminiApiKey,
+		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 	})
 
 	const { models, defaultModel } =

@@ -2703,6 +2703,8 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
 			},
 		} as any)
 
@@ -2728,6 +2730,11 @@ describe("ClineProvider - Router Models", () => {
 
 		// Verify getModels was called for each provider with correct options
 		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
+		expect(getModels).toHaveBeenCalledWith({
+			provider: "gemini",
+			apiKey: "gemini-key",
+			baseUrl: "https://gemini.example.com",
+		})
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
@@ -2744,6 +2751,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
@@ -2770,6 +2778,8 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
 			},
 		} as any)
 
@@ -2781,6 +2791,7 @@ describe("ClineProvider - Router Models", () => {
 		// Mock some providers to succeed and others to fail
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
+			.mockResolvedValueOnce(mockModels) // gemini success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
@@ -2798,6 +2809,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels,
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
@@ -2920,6 +2932,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,

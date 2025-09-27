@@ -13,6 +13,7 @@ import type { RouterName, ModelRecord } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
+import { getGeminiModels } from "./gemini"
 import { getVercelAiGatewayModels } from "./vercel-ai-gateway"
 import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
@@ -65,6 +66,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 
 	try {
 		switch (provider) {
+			case "gemini":
+				models = await getGeminiModels({
+					apiKey: options.apiKey,
+					baseUrl: options.baseUrl,
+				})
+				break
 			case "openrouter":
 				// kilocode_change start: base url and bearer token
 				models = await getOpenRouterModels({

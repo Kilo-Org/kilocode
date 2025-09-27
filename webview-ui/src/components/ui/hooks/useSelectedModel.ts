@@ -98,6 +98,8 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey, // kilocode_change
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId, // kilocode_change
+		geminiApiKey: apiConfiguration?.geminiApiKey,
+		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 	})
 	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration)
 	// kilocode_change end
@@ -254,8 +256,9 @@ function getSelectedModel({
 		}
 		case "gemini": {
 			const id = apiConfiguration.apiModelId ?? geminiDefaultModelId
-			const info = geminiModels[id as keyof typeof geminiModels]
-			return { id, info }
+			const remoteInfo = routerModels.gemini?.[id]
+			const staticInfo = geminiModels[id as keyof typeof geminiModels]
+			return { id, info: remoteInfo ?? staticInfo }
 		}
 		case "deepseek": {
 			const id = apiConfiguration.apiModelId ?? deepSeekDefaultModelId
