@@ -29,6 +29,7 @@ export type ChutesModelId =
 	| "Qwen/Qwen3-30B-A3B"
 	| "Qwen/Qwen3-14B"
 	| "Qwen/Qwen3-8B"
+	| "Qwen/Qwen3-VL-235B-A22B-Thinking"
 	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
@@ -197,7 +198,7 @@ export const chutesModels = {
 	},
 	// kilocode_change start
 	"deepseek-ai/DeepSeek-V3.1-Terminus": {
-		maxTokens: 32768,
+		maxTokens: 163840,
 		contextWindow: 163840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -278,6 +279,15 @@ export const chutesModels = {
 		outputPrice: 0,
 		description: "Qwen3 8B model.",
 	},
+	"Qwen/Qwen3-VL-235B-A22B-Thinking": {
+		maxTokens: 262144,
+		contextWindow: 262144,
+		supportsImages: true,
+		supportsPromptCache: false,
+		inputPrice: 0.1600,
+		outputPrice: 0.6500,
+		description: "Qwen3-VL-235B-A22B-Thinking.",
+	},
 	"microsoft/MAI-DS-R1-FP8": {
 		maxTokens: 32768,
 		contextWindow: 163840,
@@ -329,7 +339,7 @@ export const chutesModels = {
 	"zai-org/GLM-4.5V": {
 		maxTokens: 32768,
 		contextWindow: 131072,
-		supportsImages: false,
+		supportsImages: true,
 		supportsPromptCache: false,
 		inputPrice: 0.08,
 		outputPrice: 0.33,
