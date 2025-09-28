@@ -28,11 +28,16 @@
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
+		"slashCommands": "Perintah Slash",
 		"prompts": "Prompt",
+		"ui": "UI",
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code",
 		"display": "Tampilkan"
+	},
+	"slashCommands": {
+		"description": "Kelola perintah slash kamu untuk mengeksekusi alur kerja dan tindakan kustom dengan cepat. <DocsLink>Pelajari lebih lanjut</DocsLink>"
 	},
 	"prompts": {
 		"description": "Konfigurasi support prompt yang digunakan untuk aksi cepat seperti meningkatkan prompt, menjelaskan kode, dan memperbaiki masalah. Prompt ini membantu Kilo Code memberikan bantuan yang lebih baik untuk tugas pengembangan umum."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Reset ke nilai default (0.4)",
 		"searchMaxResultsLabel": "Hasil Pencarian Maksimum",
 		"searchMaxResultsDescription": "Jumlah maksimum hasil pencarian yang dikembalikan saat melakukan query indeks basis kode. Nilai yang lebih tinggi memberikan lebih banyak konteks tetapi mungkin menyertakan hasil yang kurang relevan.",
-		"resetToDefault": "Reset ke default"
+		"resetToDefault": "Reset ke default",
+		"cancelling": "Membatalkan...",
+		"cancelIndexingButton": "Batalkan pengindeksan"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Anda dapat mengonfigurasi pintasan global untuk pengaturan ini <SettingsLink>di preferensi IDE Anda</SettingsLink>.",
 		"description": "Izinkan Kilo Code untuk secara otomatis melakukan operasi tanpa memerlukan persetujuan. Aktifkan pengaturan ini hanya jika kamu sepenuhnya mempercayai AI dan memahami risiko keamanan yang terkait.",
 		"enabled": "Auto-Approve Diaktifkan",
 		"toggleAriaLabel": "Beralih persetujuan otomatis",
@@ -379,9 +387,11 @@
 		"ollama": {
 			"baseUrl": "Base URL (opsional)",
 			"modelId": "Model ID",
-			"apiKey": "API Key",
+			"apiKey": "Ollama API Key",
 			"apiKeyPlaceholder": "Masukkan API key Anda",
-			"apiKeyInfo": "API key akan dikirim sebagai Authorization header",
+			"apiKeyHelp": "API key opsional untuk instance Ollama yang terautentikasi atau layanan cloud. Biarkan kosong untuk instalasi lokal.",
+			"numCtx": "Ukuran Jendela Konteks (num_ctx)",
+			"numCtxHelp": "Ganti ukuran jendela konteks default model. Biarkan kosong untuk menggunakan konfigurasi Modelfile model. Nilai minimum adalah 128.",
 			"description": "Ollama memungkinkan kamu menjalankan model secara lokal di komputer. Untuk instruksi cara memulai, lihat panduan quickstart mereka.",
 			"warning": "Catatan: Kilo Code menggunakan prompt kompleks dan bekerja terbaik dengan model Claude. Model yang kurang mampu mungkin tidak bekerja seperti yang diharapkan."
 		},
@@ -925,6 +935,13 @@
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Tampilkan animasi gutter saat autocomplete",
+			"description": "Tampilkan indikator animasi di gutter editor saat autocompletion sedang berjalan",
+			"preview": "Pratinjau animasi"
+		}
+	},
 	"includeMaxOutputTokens": "Sertakan token output maksimum",
 	"includeMaxOutputTokensDescription": "Kirim parameter token output maksimum dalam permintaan API. Beberapa provider mungkin tidak mendukung ini.",
 	"limitMaxTokensDescription": "Batasi jumlah maksimum token dalam respons",
@@ -942,6 +959,12 @@
 			"input": "Input",
 			"output": "Output",
 			"cacheReads": "Pembacaan cache"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Ciutkan pesan Berpikir secara default",
+			"description": "Jika diaktifkan, blok berpikir akan diciutkan secara default sampai Anda berinteraksi dengannya"
 		}
 	}
 }

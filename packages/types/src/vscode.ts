@@ -62,6 +62,7 @@ export const commandIds = [
 	"generateTerminalCommand", // kilocode_change
 	"handleExternalUri", // kilocode_change - for JetBrains plugin URL forwarding
 	"focusPanel",
+	"toggleAutoApprove",
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

@@ -109,12 +109,17 @@ jobs:
 
     publish-jetbrains:
         runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                submodules: recursive
-                lfs: true
+                  submodules: recursive
+                  lfs: true
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
@@ -126,17 +131,17 @@ jobs:
                   cache: "pnpm"
             - uses: actions/setup-java@v4
               with:
-                  distribution: 'jetbrains'
-                  java-version: '17'
+                  distribution: "jetbrains"
+                  java-version: "17"
             - name: Install system dependencies
               run: |
-                sudo apt-get update
-                sudo apt-get install -y \
-                  libx11-dev \
-                  libxkbfile-dev \
-                  pkg-config \
-                  build-essential \
-                  python3
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    libx11-dev \
+                    libxkbfile-dev \
+                    pkg-config \
+                    build-essential \
+                    python3
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
@@ -146,6 +151,8 @@ jobs:
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
             - name: Build
               run: pnpm run jetbrains:bundle
               shell: bash
@@ -158,12 +165,12 @@ jobs:
                   name: ${{ env.BUNDLE_NAME }}
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
             - name: JetBrains Marketplace Publisher
-              run: | 
-                curl \
-                -X POST \
-                -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
-                -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
-                -F "pluginId=28350" \
-                -F "channel=stable" \
-                -F "isHidden=false" \
-                https://plugins.jetbrains.com/plugin/uploadPlugin
+              run: |
+                  curl \
+                  -X POST \
+                  -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
+                  -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
+                  -F "pluginId=28350" \
+                  -F "channel=stable" \
+                  -F "isHidden=false" \
+                  https://plugins.jetbrains.com/plugin/uploadPlugin

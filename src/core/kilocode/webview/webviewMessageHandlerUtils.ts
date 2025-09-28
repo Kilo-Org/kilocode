@@ -82,11 +82,21 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			return
 		}
 
+		const headers: Record<string, string> = {
+			Authorization: `Bearer ${kilocodeToken}`,
+			"Content-Type": "application/json",
+		}
+
+		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+		if (
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
+		) {
+			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+		}
+
 		const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/users/notifications`, {
-			headers: {
-				Authorization: `Bearer ${kilocodeToken}`,
-				"Content-Type": "application/json",
-			},
+			headers,
 			timeout: 5000,
 		})
 

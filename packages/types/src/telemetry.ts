@@ -25,7 +25,8 @@ export enum TelemetryEventName {
 	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
 	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
-	EXCESSIVE_RECURSION = "Excessive Recursion",
+	TOOL_ERROR = "Tool Error",
+	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
@@ -139,6 +140,10 @@ export const taskPropertiesSchema = z.object({
 			pending: z.number(),
 		})
 		.optional(),
+	// kilocode_change start
+	currentTaskSize: z.number().optional(),
+	taskHistorySize: z.number().optional(),
+	// kilocode_change end
 })
 
 export type TaskProperties = z.infer<typeof taskPropertiesSchema>
@@ -272,11 +277,11 @@ export interface TelemetryClient {
 
 	setProvider(provider: TelemetryPropertiesProvider): void
 	capture(options: TelemetryEvent): Promise<void>
-	updateTelemetryState(didUserOptIn: boolean): void
 	// kilocode_change start
 	captureException(error: Error, properties?: Record<string | number, unknown>): void
 	updateIdentity(kilocodeToken: string): Promise<void>
 	// kilocode_change end
+	updateTelemetryState(isOptedIn: boolean): void
 	isTelemetryEnabled(): boolean
 	shutdown(): Promise<void>
 }

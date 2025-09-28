@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "已達到完成 Token 數量上限。"
 	},
 	"checkpoints": {
-		"nestedGitRepos": "無法使用存檔點功能，因為工作區中偵測到巢狀 Git 儲存庫。請移除或重新配置巢狀 Git 儲存庫以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
+		"nestedGitRepos": "無法使用存檔點功能，因為在 {{path}} 偵測到巢狀 Git 儲存庫。請移除或重新配置巢狀 Git 儲存庫以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
 		"protectedPaths": "無法在 {{workspaceDir}} 中使用存檔點功能。請開啟子資料夾作為工作區以使用存檔點功能，或在設定中停用存檔點以隱藏此警告。",
 		"dismissWarning": "關閉"
 	},

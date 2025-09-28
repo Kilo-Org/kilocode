@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Het maximum aantal completion tokens is bereikt."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Controlepunten zijn niet beschikbaar omdat geneste Git-repositories zijn gedetecteerd in de werkruimte. Verwijder of verplaats geneste Git-repositories om de controlepuntfunctie te gebruiken of schakel controlepunten uit in de instellingen om deze waarschuwing te onderdrukken.",
+		"nestedGitRepos": "Controlepunten zijn niet beschikbaar omdat een geneste Git-repository is gedetecteerd op: {{path}}. Verwijder of verplaats geneste Git-repositories om de controlepuntfunctie te gebruiken of schakel controlepunten uit in de instellingen om deze waarschuwing te onderdrukken.",
 		"protectedPaths": "Controlepunten zijn niet beschikbaar in {{workspaceDir}}. Open een submap als werkruimte om de controlepuntfunctie te gebruiken of schakel controlepunten uit in de instellingen om deze waarschuwing te onderdrukken.",
 		"dismissWarning": "Sluiten"
 	},

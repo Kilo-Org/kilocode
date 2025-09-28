@@ -42,99 +42,105 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					<DialogTitle>{t("chat:announcement.title", { version: Package.version })}</DialogTitle>
 				</DialogHeader>
 				<div>
-					<div className="space-y-2">
-						<div>
-							<Trans
-								i18nKey="chat:announcement.stealthModel.feature"
-								components={{
-									bold: <b />,
-									code: <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded" />,
-								}}
-							/>
-						</div>
-					</div>
-
-					<div className="mt-4">
+					<div className="mb-3">
 						<Trans
-							i18nKey="chat:announcement.stealthModel.note"
+							i18nKey="chat:announcement.stealthModel.feature"
 							components={{
 								bold: <b />,
-								code: <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded" />,
 							}}
 						/>
 					</div>
 
+					<p className="mt-3 text-sm text-vscode-descriptionForeground">
+						{t("chat:announcement.stealthModel.note")}
+					</p>
+
 					<div className="mt-4">
 						{!cloudIsAuthenticated ? (
-							<div className="space-y-3">
-								<div className="text-sm w-full">
+							<Button
+								onClick={() => {
+									vscode.postMessage({
+										type: "cloudLandingPageSignIn",
+										text: "supernova",
+									})
+								}}
+								className="w-full">
+								{t("chat:announcement.stealthModel.connectButton")}
+							</Button>
+						) : (
+							<>
+								<p className="mb-3">
 									<Trans
 										i18nKey="chat:announcement.stealthModel.selectModel"
 										components={{
-											code: <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded" />,
-											settingsLink: (
-												<VSCodeLink
-													href="#"
-													onClick={(e) => {
-														e.preventDefault()
-														setOpen(false)
-														hideAnnouncement()
-														window.postMessage(
-															{
-																type: "action",
-																action: "settingsButtonClicked",
-																values: { section: "provider" },
-															},
-															"*",
-														)
-													}}
-												/>
-											),
+											code: <code />,
 										}}
 									/>
-								</div>
+								</p>
 								<Button
 									onClick={() => {
-										vscode.postMessage({ type: "rooCloudSignIn" })
+										setOpen(false)
+										hideAnnouncement()
+										vscode.postMessage({
+											type: "switchTab",
+											tab: "settings",
+										})
 									}}
 									className="w-full">
-									{t("chat:announcement.stealthModel.connectButton")}
+									{t("chat:announcement.stealthModel.goToSettingsButton")}
 								</Button>
-							</div>
-						) : (
-							<div className="text-sm w-full">
-								<Trans
-									i18nKey="chat:announcement.stealthModel.selectModel"
-									components={{
-										code: <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded" />,
-										settingsLink: (
-											<VSCodeLink
-												href="#"
-												onClick={(e) => {
-													e.preventDefault()
-													setOpen(false)
-													hideAnnouncement()
-													window.postMessage(
-														{
-															type: "action",
-															action: "settingsButtonClicked",
-															values: { section: "provider" },
-														},
-														"*",
-													)
-												}}
-											/>
-										),
-									}}
-								/>
-							</div>
+							</>
 						)}
+					</div>
+
+					<div className="mt-4 text-sm text-center">
+						<Trans
+							i18nKey="chat:announcement.socialLinks"
+							components={{
+								xLink: <XLink />,
+								discordLink: <DiscordLink />,
+								redditLink: <RedditLink />,
+							}}
+						/>
 					</div>
 				</div>
 			</DialogContent>
 		</Dialog>
 	)
 }
+
+const XLink = () => (
+	<VSCodeLink
+		href="https://x.com/roo_code"
+		onClick={(e) => {
+			e.preventDefault()
+			vscode.postMessage({ type: "openExternal", url: "https://x.com/roo_code" })
+		}}>
+		X
+	</VSCodeLink>
+)
+
+const DiscordLink = () => (
+	<VSCodeLink
+		href="https://discord.gg/rCQcvT7Fnt"
+		onClick={(e) => {
+			e.preventDefault()
+			vscode.postMessage({ type: "openExternal", url: "https://discord.gg/rCQcvT7Fnt" })
+		}}>
+		Discord
+	</VSCodeLink>
+)
+
+const RedditLink = () => (
+	<VSCodeLink
+		href="https://www.reddit.com/r/RooCode/"
+		onClick={(e) => {
+			e.preventDefault()
+			vscode.postMessage({ type: "openExternal", url: "https://www.reddit.com/r/RooCode/" })
+		}}>
+		r/RooCode
+	</VSCodeLink>
+)
 
 export default memo(Announcement)
 // kilocode_change: file unused, no need to touch anything

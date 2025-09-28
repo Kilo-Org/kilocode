@@ -4,6 +4,10 @@ sidebar_label: Your First Task
 
 # Starting Your First Task with Kilo Code
 
+<YouTubeEmbed
+  url="https://www.youtube.com/watch?v=pO7zRLQS-p0"
+/>
+
 This quick tour shows how Kilo Code handles a simple request from start to finish.
 
 After you [set up Kilo Code](/getting-started/setting-up), follow these steps:

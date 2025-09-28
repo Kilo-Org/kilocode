@@ -10,6 +10,7 @@ export type OpenRouterReasoningParams = {
 	effort?: ReasoningEffortWithMinimal
 	max_tokens?: number
 	exclude?: boolean
+	enabled?: boolean // kilocode_change
 }
 
 export type AnthropicReasoningParams = BetaThinkingConfigParam

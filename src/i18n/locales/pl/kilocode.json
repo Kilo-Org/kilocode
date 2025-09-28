@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytoria Git w obszarze roboczym. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
+		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytorium Git w: {{path}}. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
 		"protectedPaths": "Punkty kontrolne są niedostępne w {{workspaceDir}}. Otwórz podfolder jako obszar roboczy, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
 		"dismissWarning": "Odrzuć"
 	},

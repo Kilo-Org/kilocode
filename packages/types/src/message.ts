@@ -96,6 +96,7 @@ export function isResumableAsk(ask: ClineAsk): ask is ResumableAsk {
  */
 
 export const interactiveAsks = [
+	"followup",
 	"command",
 	"tool",
 	"browser_action_launch",

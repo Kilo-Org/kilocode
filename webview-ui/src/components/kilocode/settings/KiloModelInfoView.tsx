@@ -11,8 +11,8 @@ import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 
 type ModelStats = {
 	model: string
-	cost?: Intl.StringNumericLiteral
-	costPerRequest?: Intl.StringNumericLiteral
+	cost?: number
+	costPerRequest?: number
 }
 
 export const formatPrice = (price: number | Intl.StringNumericLiteral, digits: number = 2) => {

@@ -100,7 +100,11 @@ export async function summarizeConversation(
 	)
 
 	const response: SummarizeResponse = { messages, cost: 0, summary: "" }
-	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(0, -N_MESSAGES_TO_KEEP))
+
+	// Always preserve the first message (which may contain slash command content)
+	const firstMessage = messages[0]
+	// Get messages to summarize, excluding the first message and last N messages
+	const messagesToSummarize = getMessagesSinceLastSummary(messages.slice(1, -N_MESSAGES_TO_KEEP))
 
 	if (messagesToSummarize.length <= 1) {
 		// kilocode_change start
@@ -190,7 +194,8 @@ export async function summarizeConversation(
 		isSummary: true,
 	}
 
-	const newMessages = [...messages.slice(0, -N_MESSAGES_TO_KEEP), summaryMessage, ...keepMessages]
+	// Reconstruct messages: [first message, summary, last N messages]
+	const newMessages = [firstMessage, summaryMessage, ...keepMessages]
 
 	// Count the tokens in the context for the next API request
 	// We only estimate the tokens in summaryMesage if outputTokens is 0, otherwise we use outputTokens
@@ -225,11 +230,24 @@ export function getMessagesSinceLastSummary(messages: ApiMessage[]): ApiMessage[
 	const messagesSinceSummary = messages.slice(lastSummaryIndex)
 
 	// Bedrock requires the first message to be a user message.
+	// We preserve the original first message to maintain context.
 	// See https://github.com/RooCodeInc/Roo-Code/issues/4147
-	const userMessage: ApiMessage = {
-		role: "user",
-		content: "Please continue from the following summary:",
-		ts: messages[0]?.ts ? messages[0].ts - 1 : Date.now(),
+	if (messagesSinceSummary.length > 0 && messagesSinceSummary[0].role !== "user") {
+		// Get the original first message (should always be a user message with the task)
+		const originalFirstMessage = messages[0]
+		if (originalFirstMessage && originalFirstMessage.role === "user") {
+			// Use the original first message unchanged to maintain full context
+			return [originalFirstMessage, ...messagesSinceSummary]
+		} else {
+			// Fallback to generic message if no original first message exists (shouldn't happen)
+			const userMessage: ApiMessage = {
+				role: "user",
+				content: "Please continue from the following summary:",
+				ts: messages[0]?.ts ? messages[0].ts - 1 : Date.now(),
+			}
+			return [userMessage, ...messagesSinceSummary]
+		}
 	}
-	return [userMessage, ...messagesSinceSummary]
+
+	return messagesSinceSummary
 }

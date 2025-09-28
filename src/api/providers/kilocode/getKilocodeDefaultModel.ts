@@ -1,4 +1,4 @@
-import { openRouterDefaultModelId } from "@roo-code/types"
+import { openRouterDefaultModelId, type ProviderSettings } from "@roo-code/types"
 import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
@@ -20,16 +20,26 @@ const fetcher = fetchWithTimeout(5000)
 async function fetchKilocodeDefaultModel(
 	kilocodeToken: KilocodeToken,
 	organizationId?: OrganizationId,
+	providerSettings?: ProviderSettings,
 ): Promise<string> {
 	try {
 		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
 		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api${path}`
-		const response = await fetcher(url, {
-			headers: {
-				...DEFAULT_HEADERS,
-				Authorization: `Bearer ${kilocodeToken}`,
-			},
-		})
+
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+			Authorization: `Bearer ${kilocodeToken}`,
+		}
+
+		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+		if (
+			providerSettings?.kilocodeTesterWarningsDisabledUntil &&
+			providerSettings.kilocodeTesterWarningsDisabledUntil > Date.now()
+		) {
+			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+		}
+
+		const response = await fetcher(url, { headers })
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
 		}
@@ -49,14 +59,19 @@ async function fetchKilocodeDefaultModel(
 export async function getKilocodeDefaultModel(
 	kilocodeToken?: KilocodeToken,
 	organizationId?: OrganizationId,
+	providerSettings?: ProviderSettings,
 ): Promise<string> {
 	if (!kilocodeToken) {
 		return openRouterDefaultModelId
 	}
-	const key = JSON.stringify({ kilocodeToken, organizationId })
+	const key = JSON.stringify({
+		kilocodeToken,
+		organizationId,
+		testerSuppressed: providerSettings?.kilocodeTesterWarningsDisabledUntil,
+	})
 	let defaultModelPromise = cache.get(key)
 	if (!defaultModelPromise) {
-		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId)
+		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId, providerSettings)
 		cache.set(key, defaultModelPromise)
 	}
 	return await defaultModelPromise

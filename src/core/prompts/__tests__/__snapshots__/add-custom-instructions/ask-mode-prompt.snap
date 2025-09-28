@@ -27,7 +27,7 @@ Always use the actual tool name as the XML tag name for proper parsing and execu
 # Tools
 
 ## read_file
-Description: Request to read the contents of one or more files. The tool outputs line-numbered content (e.g. "1 | const x = 1") for easy reference when creating diffs or discussing code. Supports text extraction from PDF and DOCX files, but may not handle other binary files properly.
+Description: Request to read the contents of one or more files. The tool outputs line-numbered content (e.g. "1 | const x = 1") for easy reference when creating diffs or discussing code. Supports text extraction from .pdf and .docx and .ipynb and .xlsx files, but may not handle other binary files properly.
 
 **IMPORTANT: You can read a maximum of 5 files in a single request.** If you need to read more files, use multiple sequential read_file requests.
 
@@ -164,7 +164,7 @@ Description: Ask the user a question to gather additional information needed to 
 
 Parameters:
 - question: (required) A clear, specific question addressing the information needed
-- follow_up: (required) A list of 2-4 suggested answers, each in its own <suggest> tag. Suggestions must be complete, actionable answers without placeholders. Optionally include mode attribute to switch modes (code/architect/etc.)
+- follow_up: (optional) A list of 2-4 suggested answers, each in its own <suggest> tag. Suggestions must be complete, actionable answers without placeholders. Optionally include mode attribute to switch modes (code/architect/etc.)
 
 Usage:
 <ask_followup_question>

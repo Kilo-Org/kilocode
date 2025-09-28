@@ -28,11 +28,16 @@
 		"notifications": "Notificaciones",
 		"contextManagement": "Contexto",
 		"terminal": "Terminal",
+		"slashCommands": "Comandos de Barra",
 		"prompts": "Indicaciones",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Acerca de Kilo Code",
 		"display": "Mostrar"
+	},
+	"slashCommands": {
+		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Kilo Code a brindar mejor asistencia para tareas comunes de desarrollo."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Restablecer al valor predeterminado (0.4)",
 		"searchMaxResultsLabel": "Resultados máximos de búsqueda",
 		"searchMaxResultsDescription": "Número máximo de resultados de búsqueda a devolver al consultar el índice de código. Valores más altos proporcionan más contexto pero pueden incluir resultados menos relevantes.",
-		"resetToDefault": "Restablecer al valor predeterminado"
+		"resetToDefault": "Restablecer al valor predeterminado",
+		"cancelling": "Cancelando...",
+		"cancelIndexingButton": "Cancelar la indexación"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Puedes configurar un atajo global para esta configuración <SettingsLink>en las preferencias de tu IDE</SettingsLink>.",
 		"description": "Permitir que Kilo Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
 		"enabled": "Auto-aprobación habilitada",
 		"toggleAriaLabel": "Alternar aprobación automática",
@@ -379,9 +387,11 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del modelo",
-			"apiKey": "Clave API",
-			"apiKeyPlaceholder": "Introduce tu clave de API",
-			"apiKeyInfo": "La clave API se enviará como encabezado de autorización",
+			"apiKey": "Clave API de Ollama",
+			"apiKeyPlaceholder": "Introduce tu clave API",
+			"apiKeyHelp": "Clave API opcional para instancias de Ollama autenticadas o servicios en la nube. Deja vacío para instalaciones locales.",
+			"numCtx": "Tamaño de la ventana de contexto (num_ctx)",
+			"numCtxHelp": "Sobrescribe el tamaño de la ventana de contexto predeterminado del modelo. Déjelo vacío para usar la configuración del Modelfile del modelo. El valor mínimo es 128.",
 			"description": "Ollama le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte la guía de inicio rápido.",
 			"warning": "Nota: Kilo Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
 		},
@@ -903,6 +913,13 @@
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostrar animación en el margen al autocompletar",
+			"description": "Muestra un indicador animado en el margen del editor cuando se ejecuta el autocompletado",
+			"preview": "Vista previa de animación"
+		}
+	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de salida",
 	"includeMaxOutputTokensDescription": "Enviar parámetro de tokens máximos de salida en solicitudes API. Algunos proveedores pueden no soportar esto.",
 	"limitMaxTokensDescription": "Limitar el número máximo de tokens en la respuesta",
@@ -920,6 +937,12 @@
 			"input": "Entrada",
 			"output": "Salida",
 			"cacheReads": "Lecturas de caché"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Colapsar mensajes de pensamiento por defecto",
+			"description": "Cuando está activado, los bloques de pensamiento se colapsarán por defecto hasta que interactúes con ellos"
 		}
 	}
 }

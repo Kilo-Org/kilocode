@@ -90,33 +90,52 @@ class ExtensionSocketServer() : ISocketServer {
         if (!isRunning) {
             return
         }
-        
-        isRunning = false
+
         logger.info("Stopping socket server")
-        
-        // Close all client managers
-        clientManagers.forEach { (_, manager) ->
+        isRunning = false
+
+        // First, interrupt the server thread to stop accepting new connections
+        serverThread?.interrupt()
+
+        // Wait for the server thread to finish
+        try {
+            serverThread?.join(5000) // Wait up to 5 seconds
+        } catch (e: InterruptedException) {
+            logger.warn("Interrupted while waiting for server thread to finish")
+            Thread.currentThread().interrupt()
+        }
+
+        // Close all client managers and wait for them to finish
+        clientManagers.forEach { (socket, manager) ->
             try {
+                logger.info("Disposing client manager for socket: ${socket.inetAddress}")
                 manager.dispose()
+                logger.info("Client manager disposed for socket: ${socket.inetAddress}")
             } catch (e: Exception) {
                 logger.warn("Failed to dispose client manager", e)
             }
         }
         clientManagers.clear()
-        
-        // Close the server
+
+        // Wait a bit for all client connections to be properly closed
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
+        // Close the server socket
         try {
             serverSocket?.close()
         } catch (e: IOException) {
             logger.warn("Failed to close server socket", e)
         }
-        
-        // Interrupt the server thread
-        serverThread?.interrupt()
+
+        // Clean up references
         serverThread = null
         serverSocket = null
-        
-        logger.info("Socket server stopped")
+
+        logger.info("Socket server stopped completely")
     }
     
     /**

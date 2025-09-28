@@ -29,10 +29,21 @@
 		"notifications": "Notifications",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Slash Commands",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code"
+	},
+	"slashCommands": {
+		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Collapse Thinking messages by default",
+			"description": "When enabled, thinking blocks will be collapsed by default until you interact with them"
+		}
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Kilo Code provide better assistance for common development tasks."
@@ -128,10 +139,13 @@
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
-		}
+		},
+		"cancelling": "Cancelling...",
+		"cancelIndexingButton": "Cancel Indexing"
 	},
 	"autoApprove": {
-		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",
+		"description": "Run these actions without asking for permission. Only enable for actions you fully trust and if you understand the security risks.",
+		"toggleShortcut": "You can configure a keyboard shortcut for this setting <SettingsLink>in your IDE preferences</SettingsLink>.",
 		"enabled": "Auto-Approve Enabled",
 		"readOnly": {
 			"label": "Read",
@@ -378,9 +392,11 @@
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
 			"modelId": "Model ID",
-			"apiKey": "API Key",
+			"apiKey": "Ollama API Key",
 			"apiKeyPlaceholder": "Enter your API key",
-			"apiKeyInfo": "API key will be sent as Authorization header",
+			"apiKeyHelp": "Optional API key for authenticated Ollama instances or cloud services. Leave empty for local installations.",
+			"numCtx": "Context Window Size (num_ctx)",
+			"numCtxHelp": "Override the model's default context window size. Leave empty to use the model's Modelfile configuration. Minimum value is 128.",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
 			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
@@ -538,6 +554,13 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Show gutter animation when autocompleting",
+			"description": "Display animated indicator in the editor gutter when autocompletion is running",
+			"preview": "Animation preview"
 		}
 	},
 	"notifications": {
@@ -788,7 +811,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Enable model-initiated slash commands",
-			"description": "When enabled, Roo can run your slash commands to execute workflows."
+			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {

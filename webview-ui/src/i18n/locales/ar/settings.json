@@ -29,10 +29,21 @@
 		"notifications": "الإشعارات",
 		"contextManagement": "السياق",
 		"terminal": "الطرفية",
+		"slashCommands": "أوامر الشرطة المائلة",
 		"prompts": "الموجهات",
+		"ui": "واجهة المستخدم",
 		"experimental": "تجريبي",
 		"language": "اللغة",
 		"about": "عن Kilo Code"
+	},
+	"slashCommands": {
+		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "طوي رسائل التفكير افتراضياً",
+			"description": "عند التفعيل، ستكون كتل التفكير مطوية افتراضياً حتى تتفاعل معها"
+		}
 	},
 	"prompts": {
 		"description": "اضبط الموجهات المساعدة لعمليات مثل تحسين الموجه وشرح الكود وإصلاح المشاكل. هذي الموجهات تساعد Kilo Code يقدّم دعم أفضل للمهام المتكررة."
@@ -128,7 +139,9 @@
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
-		}
+		},
+		"cancelling": "جارٍ الإلغاء...",
+		"cancelIndexingButton": "إلغاء الفهرسة"
 	},
 	"autoApproval": {
 		"title": "الموافقة التلقائية",
@@ -136,6 +149,7 @@
 	},
 	"autoApprove": {
 		"description": "خلّ Kilo Code ينفذ العمليات تلقائيًا بدون موافقة. فعّلها فقط إذا كنت واثق من الأمان.",
+		"toggleShortcut": "تقدر تضبط اختصار لوحة مفاتيح لهذا الإعداد <SettingsLink>في تفضيلات IDE</SettingsLink>.",
 		"enabled": "الموافقة التلقائية مفعلة",
 		"readOnly": {
 			"label": "قراءة",
@@ -395,6 +409,9 @@
 			"baseUrl": "الرابط الأساسي (اختياري)",
 			"modelId": "معرّف النموذج",
 			"apiKey": "مفتاح API",
+			"apiKeyHelp": "مفتاح API اختياري لحالات Ollama المُصدَّقة أو الخدمات السحابية. اتركه فارغاً للتثبيتات المحلية.",
+			"numCtx": "حجم نافذة السياق (num_ctx)",
+			"numCtxHelp": "تجاوز حجم نافذة السياق الافتراضي للنموذج. اتركه فارغاً لاستخدام إعدادات Modelfile. الحد الأدنى 128.",
 			"apiKeyPlaceholder": "أدخل مفتاح API",
 			"apiKeyInfo": "سيتم إرسال مفتاح API في ترويسة Authorization",
 			"description": "Ollama يشغّل نماذج محليًا. راجع دليلهم.",
@@ -578,6 +595,13 @@
 		"taskTimeline": {
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "إظهار الحركة في الهامش عند الإكمال التلقائي",
+			"description": "عرض مؤشر متحرك في هامش المحرر عند تشغيل الإكمال التلقائي",
+			"preview": "معاينة الحركة"
 		}
 	},
 	"notifications": {
@@ -828,7 +852,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "تمكين أوامر الشرطة المدفوعة بالنموذج",
-			"description": "عند التمكين، يمكن لـ Roo تشغيل أوامر الشرطة الخاصة بك لتنفيذ سير العمل."
+			"description": "عند التمكين، يمكن لـ Kilo Code تشغيل أوامر الشرطة الخاصة بك لتنفيذ سير العمل."
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",

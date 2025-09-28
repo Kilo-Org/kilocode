@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.95.0",
+	"version": "4.97.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -295,78 +295,6 @@
 				"category": "%configuration.title%"
 			}
 		],
-		"keybindings": [
-			{
-				"command": "kilo-code.focusChatInput",
-				"key": "ctrl+shift+a",
-				"mac": "cmd+shift+a",
-				"when": "true"
-			},
-			{
-				"command": "editor.action.inlineSuggest.commit",
-				"key": "tab",
-				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
-			},
-			{
-				"command": "kilo-code.ghost.applyAllSuggestions",
-				"key": "shift+tab",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.applyCurrentSuggestions",
-				"key": "tab",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.cancelRequest",
-				"key": "escape",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.isProcessing"
-			},
-			{
-				"command": "kilo-code.ghost.cancelSuggestions",
-				"key": "escape",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.goToNextSuggestion",
-				"key": "down",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.goToPreviousSuggestion",
-				"key": "up",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.promptCodeSuggestion",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && !github.copilot.completions.enabled"
-			},
-			{
-				"command": "kilo-code.ghost.generateSuggestions",
-				"key": "ctrl+l",
-				"mac": "cmd+l",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
-			},
-			{
-				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
-				"key": "ctrl+l",
-				"mac": "cmd+l",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
-			},
-			{
-				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
-				"key": "ctrl+i",
-				"mac": "cmd+i",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && github.copilot.completions.enabled"
-			},
-			{
-				"command": "kilo-code.generateTerminalCommand",
-				"key": "ctrl+shift+g",
-				"mac": "cmd+shift+g"
-			}
-		],
 		"menus": {
 			"editor/context": [
 				{
@@ -500,6 +428,93 @@
 				}
 			]
 		},
+		"keybindings": [
+			{
+				"command": "kilo-code.focusChatInput",
+				"key": "ctrl+shift+a",
+				"mac": "cmd+shift+a",
+				"when": "true"
+			},
+			{
+				"command": "editor.action.inlineSuggest.commit",
+				"key": "tab",
+				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+			},
+			{
+				"command": "kilo-code.ghost.applyAllSuggestions",
+				"key": "shift+tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.applyCurrentSuggestions",
+				"key": "tab",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.cancelRequest",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.isProcessing"
+			},
+			{
+				"command": "kilo-code.ghost.cancelSuggestions",
+				"key": "escape",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.goToNextSuggestion",
+				"key": "down",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.goToPreviousSuggestion",
+				"key": "up",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+			},
+			{
+				"command": "kilo-code.ghost.promptCodeSuggestion",
+				"key": "ctrl+i",
+				"mac": "cmd+i",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && !github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.ghost.generateSuggestions",
+				"key": "ctrl+l",
+				"mac": "cmd+l",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
+				"key": "ctrl+l",
+				"mac": "cmd+l",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.ghost.showIncompatibilityExtensionPopup",
+				"key": "ctrl+i",
+				"mac": "cmd+i",
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableQuickInlineTaskKeybinding && github.copilot.completions.enabled"
+			},
+			{
+				"command": "kilo-code.generateTerminalCommand",
+				"key": "ctrl+shift+g",
+				"mac": "cmd+shift+g"
+			},
+			{
+				"command": "kilo-code.addToContext",
+				"key": "cmd+y",
+				"mac": "cmd+y",
+				"win": "ctrl+y",
+				"linux": "ctrl+y",
+				"when": "editorTextFocus && editorHasSelection"
+			},
+			{
+				"command": "kilo-code.toggleAutoApprove",
+				"key": "cmd+alt+a",
+				"mac": "cmd+alt+a",
+				"win": "ctrl+alt+a",
+				"linux": "ctrl+alt+a"
+			}
+		],
 		"submenus": [
 			{
 				"id": "kilo-code.contextMenu",
@@ -640,7 +655,7 @@
 		"@roo-code/types": "workspace:^",
 		"@vscode/codicons": "^0.0.36",
 		"async-mutex": "^0.5.0",
-		"axios": "^1.7.4",
+		"axios": "^1.12.0",
 		"cheerio": "^1.0.0",
 		"chokidar": "^4.0.1",
 		"clone-deep": "^4.0.1",

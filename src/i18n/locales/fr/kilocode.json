@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "Le nombre maximum de jetons de complétion a été atteint."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Les points de contrôle ne sont pas disponibles car des dépôts Git imbriqués ont été détectés dans l'espace de travail. Veuillez supprimer ou déplacer les dépôts Git imbriqués pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
+		"nestedGitRepos": "Les points de contrôle ne sont pas disponibles car un dépôt Git imbriqué a été détecté à : {{path}}. Veuillez supprimer ou déplacer les dépôts Git imbriqués pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
 		"protectedPaths": "Les points de contrôle ne sont pas disponibles dans {{workspaceDir}}. Veuillez ouvrir un sous-dossier comme espace de travail pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
 		"dismissWarning": "Ignorer"
 	},

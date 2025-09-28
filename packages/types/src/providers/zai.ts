@@ -1,5 +1,5 @@
 import type { ModelInfo } from "../model.js"
-import { ZaiApiLine } from "../provider-settings.js" // kilocode_change
+import { ZaiApiLine } from "../provider-settings.js"
 
 // Z AI
 // https://docs.z.ai/guides/llm/glm-4.5
@@ -127,7 +127,6 @@ export const mainlandZAiModels = {
 
 export const ZAI_DEFAULT_TEMPERATURE = 0
 
-// kilocode_change start
 export const zaiApiLineConfigs = {
 	international_coding: {
 		name: "International Coding Plan",
@@ -138,4 +137,3 @@ export const zaiApiLineConfigs = {
 	china_coding: { name: "China Coding Plan", baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4", isChina: true },
 	china: { name: "China Standard", baseUrl: "https://open.bigmodel.cn/api/paas/v4", isChina: true },
 } satisfies Record<ZaiApiLine, { name: string; baseUrl: string; isChina: boolean }>
-// kilocode_change end

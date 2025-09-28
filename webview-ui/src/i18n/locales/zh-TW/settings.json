@@ -28,11 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
+		"slashCommands": "斜線命令",
 		"prompts": "提示詞",
+		"ui": "UI",
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "顯示"
+		"display": "顯示",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "重設為預設值 (0.4)",
 		"searchMaxResultsLabel": "最大搜尋結果數",
 		"searchMaxResultsDescription": "查詢程式碼庫索引時傳回的最大搜尋結果數。較高的值提供更多上下文，但可能包含相關性較低的結果。",
-		"resetToDefault": "重設為預設值"
+		"resetToDefault": "重設為預設值",
+		"cancelling": "正在取消...",
+		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
+		"toggleShortcut": "您可以<SettingsLink>在 IDE 偏好設定中</SettingsLink>為此設定設定全域快捷鍵。",
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
 		"enabled": "自動核准已啟用",
 		"toggleAriaLabel": "切換自動核准",
@@ -379,9 +388,11 @@
 		"ollama": {
 			"baseUrl": "基礎 URL（選用）",
 			"modelId": "模型 ID",
-			"apiKey": "API 金鑰",
+			"apiKey": "Ollama API 金鑰",
 			"apiKeyPlaceholder": "輸入您的 API 金鑰",
-			"apiKeyInfo": "API 金鑰將作為 Authorization 標頭傳送",
+			"apiKeyHelp": "用於已認證 Ollama 執行個體或雲端服務的選用 API 金鑰。本機安裝請留空。",
+			"numCtx": "上下文視窗大小 (num_ctx)",
+			"numCtxHelp": "覆寫模型的預設上下文視窗大小。留空以使用模型的 Modelfile 設定。最小值為 128。",
 			"description": "Ollama 允許您在本機電腦執行模型。請參閱快速入門指南。",
 			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
@@ -904,6 +915,13 @@
 			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自動完成時顯示編輯器邊欄動畫",
+			"description": "在自動完成執行時於編輯器邊欄顯示動畫指示",
+			"preview": "動畫預覽"
+		}
+	},
 	"contextWindow": {
 		"description": "最大對話內容",
 		"oneMillion": "1M"
@@ -928,6 +946,12 @@
 			"input": "輸入",
 			"output": "輸出",
 			"cacheReads": "快取讀取"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "預設折疊“思考”訊息",
+			"description": "啟用後，“思考”塊將預設折疊，直到您與其互動"
 		}
 	}
 }

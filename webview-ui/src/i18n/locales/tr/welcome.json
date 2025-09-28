@@ -16,12 +16,8 @@
 	"startRouter": "Bir LLM yönlendiricisi kullanmanı öneririz:",
 	"startCustom": "Veya kendi API anahtarını kullanabilirsin:",
 	"telemetry": {
-		"title": "Kilo Code'u Geliştirmeye Yardım Et",
-		"anonymousTelemetry": "Hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri gönder. Hiçbir zaman kod, prompts veya kişisel bilgi gönderilmez.",
-		"changeSettings": "Bunu her zaman <settingsLink>ayarlar</settingsLink>ın altından değiştirebilirsin",
-		"settings": "ayarlar",
-		"allow": "İzin Ver",
-		"deny": "Reddet"
+		"helpImprove": "Kilo Code'u Geliştirmeye Yardım Et",
+		"helpImproveMessage": "Kilo Code, hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri toplar. Bu telemetri kod, prompts veya kişisel bilgi toplamaz. Bunu <settingsLink>ayarlar</settingsLink>da kapatabilirsin."
 	},
 	"importSettings": "Ayarları İçe Aktar"
 }

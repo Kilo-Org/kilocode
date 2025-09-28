@@ -17,7 +17,7 @@
 		"maxCompletionTokens": "S'ha arribat al nombre màxim de tokens de compleció."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Els punts de control no estan disponibles perquè s'han detectat repositoris Git imbricats a l'espai de treball. Si us plau, elimineu o reubiqueu els repositoris Git imbricats per utilitzar la funcionalitat de punts de control o desactiveu els punts de control a la configuració per suprimir aquest avís.",
+		"nestedGitRepos": "Els punts de control no estan disponibles perquè s'ha detectat un repositori Git imbricat a: {{path}}. Si us plau, elimineu o reubiqueu els repositoris Git imbricats per utilitzar la funcionalitat de punts de control o desactiveu els punts de control a la configuració per suprimir aquest avís.",
 		"protectedPaths": "Els punts de control no estan disponibles a {{workspaceDir}}. Si us plau, obriu una subcarpeta com a espai de treball per utilitzar la funcionalitat de punts de control o desactiveu els punts de control a la configuració per suprimir aquest avís.",
 		"dismissWarning": "Descartar"
 	},

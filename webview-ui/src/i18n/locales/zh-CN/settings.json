@@ -28,12 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
+		"slashCommands": "斜杠命令",
 		"prompts": "提示词",
+		"ui": "UI",
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
 		"display": "显示"
+	},
+	"slashCommands": {
+		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
@@ -129,9 +134,12 @@
 		"searchMinScoreResetTooltip": "恢复默认值 (0.4)",
 		"searchMaxResultsLabel": "最大搜索结果数",
 		"searchMaxResultsDescription": "查询代码库索引时返回的最大搜索结果数。较高的值提供更多上下文，但可能包含相关性较低的结果。",
-		"resetToDefault": "恢复默认值"
+		"resetToDefault": "恢复默认值",
+		"cancelling": "正在取消...",
+		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
+		"toggleShortcut": "您可以<SettingsLink>在 IDE 首选项中</SettingsLink>为此设置配置全局快捷方式。",
 		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
 		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
@@ -380,9 +388,11 @@
 		"ollama": {
 			"baseUrl": "基础 URL（可选）",
 			"modelId": "模型 ID",
-			"apiKey": "API 密钥",
+			"apiKey": "Ollama API 密钥",
 			"apiKeyPlaceholder": "输入您的 API 密钥",
-			"apiKeyInfo": "API 密钥将作为 Authorization 标头发送",
+			"apiKeyHelp": "用于已认证 Ollama 实例或云服务的可选 API 密钥。本地安装请留空。",
+			"numCtx": "上下文窗口大小 (num_ctx)",
+			"numCtxHelp": "覆盖模型的默认上下文窗口大小。留空以使用模型的 Modelfile 配置。最小值为 128。",
 			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
 			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
 		},
@@ -909,6 +919,13 @@
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自动完成时显示边栏动画",
+			"description": "自动完成运行时在编辑器边栏显示动画指示器",
+			"preview": "动画预览"
+		}
+	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
 	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。",
 	"limitMaxTokensDescription": "限制响应中的最大 Token 数量",
@@ -926,6 +943,12 @@
 			"input": "输入",
 			"output": "输出",
 			"cacheReads": "缓存读取"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "默认折叠“思考”消息",
+			"description": "启用后，“思考”块将默认折叠，直到您与其交互"
 		}
 	}
 }

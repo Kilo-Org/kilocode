@@ -1,3 +1,5 @@
+// npx vitest core/webview/__tests__/webviewMessageHandler.spec.ts
+
 import type { Mock } from "vitest"
 
 // Mock dependencies - must come before imports
@@ -137,6 +139,48 @@ describe("webviewMessageHandler - requestLmStudioModels", () => {
 	})
 })
 
+describe("webviewMessageHandler - requestOllamaModels", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+		mockClineProvider.getState = vi.fn().mockResolvedValue({
+			apiConfiguration: {
+				ollamaModelId: "model-1",
+				ollamaBaseUrl: "http://localhost:1234",
+			},
+		})
+	})
+
+	it("successfully fetches models from Ollama", async () => {
+		const mockModels: ModelRecord = {
+			"model-1": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "Test model 1",
+			},
+			"model-2": {
+				maxTokens: 8192,
+				contextWindow: 16384,
+				supportsPromptCache: false,
+				description: "Test model 2",
+			},
+		}
+
+		mockGetModels.mockResolvedValue(mockModels)
+
+		await webviewMessageHandler(mockClineProvider, {
+			type: "requestOllamaModels",
+		})
+
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "ollama", baseUrl: "http://localhost:1234" })
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "ollamaModels",
+			ollamaModels: mockModels,
+		})
+	})
+})
+
 describe("webviewMessageHandler - requestRouterModels", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -186,6 +230,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
+		// Note: huggingface is not fetched in requestRouterModels - it has its own handler
+		// Note: io-intelligence is not fetched because no API key is provided in the mock state
 
 		// Verify response was sent
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -201,6 +247,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})
@@ -291,6 +339,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})
@@ -335,6 +385,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: {},
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 

@@ -71,33 +71,59 @@ class ExtensionUnixDomainSocketServer : ISocketServer {
     // Stop UDS server, release resources
     override fun stop() {
         if (!isRunning) return
-        isRunning = false
         logger.info("Stopping UDS socket server")
-        // Close all client connections
-        clientManagers.forEach { (_, manager) ->
+        isRunning = false
+
+        // First, interrupt the server thread to stop accepting new connections
+        serverThread?.interrupt()
+
+        // Wait for the server thread to finish
+        try {
+            serverThread?.join(5000) // Wait up to 5 seconds
+        } catch (e: InterruptedException) {
+            logger.warn("[UDS] Interrupted while waiting for server thread to finish")
+            Thread.currentThread().interrupt()
+        }
+
+        // Close all client connections and wait for them to finish
+        clientManagers.forEach { (channel, manager) ->
             try {
+                logger.info("[UDS] Disposing client manager for channel")
                 manager.dispose()
+                logger.info("[UDS] Client manager disposed")
             } catch (e: Exception) {
-                logger.warn("Failed to dispose client manager", e)
+                logger.warn("[UDS] Failed to dispose client manager", e)
             }
         }
         clientManagers.clear()
+
+        // Wait a bit for all client connections to be properly closed
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
+        // Close the server channel
         try {
             udsServerChannel?.close()
         } catch (e: Exception) {
-            logger.warn("Failed to close UDS server channel", e)
+            logger.warn("[UDS] Failed to close UDS server channel", e)
         }
+
+        // Delete the socket file
         try {
             udsSocketPath?.let { Files.deleteIfExists(it) }
         } catch (e: Exception) {
-            logger.warn("Failed to delete UDS socket file", e)
+            logger.warn("[UDS] Failed to delete UDS socket file", e)
         }
-        // Thread and channel cleanup
-        serverThread?.interrupt()
+
+        // Clean up references
         serverThread = null
         udsServerChannel = null
         udsSocketPath = null
-        logger.info("UDS socket server stopped")
+
+        logger.info("UDS socket server stopped completely")
     }
 
     override fun isRunning(): Boolean = isRunning

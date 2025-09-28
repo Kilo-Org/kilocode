@@ -28,11 +28,16 @@
 		"notifications": "Powiadomienia",
 		"contextManagement": "Kontekst",
 		"terminal": "Terminal",
+		"slashCommands": "Polecenia Slash",
 		"prompts": "Podpowiedzi",
+		"ui": "UI",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
 		"display": "Wyświetl"
+	},
+	"slashCommands": {
+		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Zresetuj do wartości domyślnej (0.4)",
 		"searchMaxResultsLabel": "Maksymalna liczba wyników wyszukiwania",
 		"searchMaxResultsDescription": "Maksymalna liczba wyników wyszukiwania zwracanych podczas zapytania do indeksu bazy kodu. Wyższe wartości zapewniają więcej kontekstu, ale mogą zawierać mniej istotne wyniki.",
-		"resetToDefault": "Przywróć domyślne"
+		"resetToDefault": "Przywróć domyślne",
+		"cancelling": "Anulowanie...",
+		"cancelIndexingButton": "Anuluj indeksowanie"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Możesz skonfigurować globalny skrót dla tego ustawienia <SettingsLink>w preferencjach swojego IDE</SettingsLink>.",
 		"description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
 		"enabled": "Auto-zatwierdzanie włączone",
 		"toggleAriaLabel": "Przełącz automatyczne zatwierdzanie",
@@ -379,9 +387,11 @@
 		"ollama": {
 			"baseUrl": "URL bazowy (opcjonalnie)",
 			"modelId": "ID modelu",
-			"apiKey": "Klucz API",
+			"apiKey": "Klucz API Ollama",
 			"apiKeyPlaceholder": "Wprowadź swój klucz API",
-			"apiKeyInfo": "Klucz API będzie wysłany jako nagłówek Authorization",
+			"apiKeyHelp": "Opcjonalny klucz API dla uwierzytelnionych instancji Ollama lub usług chmurowych. Pozostaw puste dla instalacji lokalnych.",
+			"numCtx": "Rozmiar okna kontekstu (num_ctx)",
+			"numCtxHelp": "Zastępuje domyślny rozmiar okna kontekstu modelu. Pozostaw puste, aby użyć konfiguracji Modelfile modelu. Minimalna wartość to 128.",
 			"description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
 			"warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
 		},
@@ -904,6 +914,13 @@
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Pokaż animację marginesu podczas autouzupełniania",
+			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",
+			"preview": "Podgląd animacji"
+		}
+	},
 	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",
 	"includeMaxOutputTokensDescription": "Wyślij parametr maksymalnych tokenów wyjściowych w żądaniach API. Niektórzy dostawcy mogą tego nie obsługiwać.",
 	"limitMaxTokensDescription": "Ogranicz maksymalną liczbę tokenów w odpowiedzi",
@@ -921,6 +938,12 @@
 			"input": "Wejście",
 			"output": "Wyjście",
 			"cacheReads": "Odczyty z pamięci podręcznej"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Domyślnie zwijaj komunikaty o myśleniu",
+			"description": "Gdy włączone, bloki myślenia będą domyślnie zwinięte, dopóki nie wejdziesz z nimi w interakcję"
 		}
 	}
 }

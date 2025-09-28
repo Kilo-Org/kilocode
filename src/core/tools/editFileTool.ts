@@ -14,7 +14,7 @@ import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
 import { type ClineProviderState } from "../webview/ClineProvider"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
-import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID } from "../../shared/kilocode/headers"
+import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
 
 // Morph model pricing per 1M tokens
 const MORPH_MODEL_PRICING = {
@@ -193,6 +193,9 @@ export async function editFileTool(
 		pushToolResult(message)
 
 		await cline.diffViewProvider.reset()
+
+		// Process any queued messages after file edit completes
+		cline.processQueuedMessages()
 	} catch (error) {
 		TelemetryService.instance.captureException(error, { context: "editFileTool" })
 		await handleError("editing file with Morph", error as Error)
@@ -249,6 +252,9 @@ async function applyMorphEdit(
 			`Original Content: ${originalContent.length} characters`,
 		].join("\n")
 
+		const kiloTesterSuppressUntil = state.apiConfiguration.kilocodeTesterWarningsDisabledUntil
+		const kiloTesterSuppress =
+			kiloTesterSuppressUntil && kiloTesterSuppressUntil > Date.now() ? { [X_KILOCODE_TESTER]: "SUPPRESS" } : {}
 		// Create OpenAI client for Morph API
 		const client = new OpenAI({
 			apiKey: morphConfig.apiKey,
@@ -258,6 +264,7 @@ async function applyMorphEdit(
 				...(morphConfig.kiloCodeOrganizationId
 					? { [X_KILOCODE_ORGANIZATIONID]: morphConfig.kiloCodeOrganizationId }
 					: {}),
+				...kiloTesterSuppress,
 				[X_KILOCODE_TASKID]: cline.taskId,
 			},
 		})
