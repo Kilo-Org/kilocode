@@ -7,6 +7,7 @@ import { ApiHandlerOptions } from "../../shared/api"
 
 import { convertToMistralMessages } from "../transform/mistral-format"
 import { ApiStream } from "../transform/stream"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -95,7 +96,10 @@ export class MistralHandler extends BaseProvider implements SingleCompletionHand
 
 	override getModel() {
 		const id = this.options.apiModelId ?? mistralDefaultModelId
-		const info = mistralModels[id as MistralModelId] ?? mistralModels[mistralDefaultModelId]
+		let info = mistralModels[id as MistralModelId] ?? mistralModels[mistralDefaultModelId]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
 
 		// @TODO: Move this to the `getModelParams` function.
 		const maxTokens = this.options.includeMaxTokens ? info.maxTokens : undefined

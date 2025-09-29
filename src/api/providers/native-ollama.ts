@@ -6,6 +6,7 @@ import { BaseProvider } from "./base-provider"
 import type { ApiHandlerOptions } from "../../shared/api"
 import { getOllamaModels } from "./fetchers/ollama"
 import { XmlMatcher } from "../../utils/xml-matcher"
+import { mergeModelInfo } from "./utils/model-info-merger"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 // kilocode_change start
@@ -323,7 +324,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		const modelId = this.options.ollamaModelId || ""
 
 		// kilocode_change start
-		const modelInfo = this.models[modelId]
+		let modelInfo = this.models[modelId]
 		if (!modelInfo) {
 			const availableModels = Object.keys(this.models)
 			const errorMessage =
@@ -333,6 +334,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			throw new Error(errorMessage)
 		}
 		// kilocode_change end
+		modelInfo = mergeModelInfo(modelInfo, this.options)
 
 		return {
 			id: modelId,

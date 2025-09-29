@@ -3,6 +3,7 @@ import type { ApiHandlerOptions } from "../../shared/api"
 import { DOUBAO_API_BASE_URL, doubaoDefaultModelId, doubaoModels } from "@roo-code/types"
 import { getModelParams } from "../transform/model-params"
 import { ApiStreamUsageChunk } from "../transform/stream"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 // Core types for Doubao API
 interface ChatCompletionMessageParam {
@@ -63,7 +64,11 @@ export class DoubaoHandler extends OpenAiHandler {
 
 	override getModel() {
 		const id = this.options.apiModelId ?? doubaoDefaultModelId
-		const info = doubaoModels[id as keyof typeof doubaoModels] || doubaoModels[doubaoDefaultModelId]
+		let info = doubaoModels[id as keyof typeof doubaoModels] || doubaoModels[doubaoDefaultModelId]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
 		return { id, info, ...params }
 	}

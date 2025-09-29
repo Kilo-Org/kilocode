@@ -13,6 +13,7 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { RouterProvider } from "./router-provider"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 export class DeepInfraHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -40,7 +41,10 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 
 	override getModel() {
 		const id = this.options.deepInfraModelId ?? deepInfraDefaultModelId
-		const info = this.models[id] ?? deepInfraDefaultModelInfo
+		let info = this.models[id] ?? deepInfraDefaultModelInfo
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
 
 		const params = getModelParams({
 			format: "openai",

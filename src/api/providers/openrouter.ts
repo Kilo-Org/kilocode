@@ -18,6 +18,7 @@ import { addCacheBreakpoints as addAnthropicCacheBreakpoints } from "../transfor
 import { addCacheBreakpoints as addGeminiCacheBreakpoints } from "../transform/caching/gemini"
 import type { OpenRouterReasoningParams } from "../transform/reasoning"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
@@ -307,6 +308,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
 			info = this.endpoints[this.options.openRouterSpecificProvider]
 		}
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
 
 		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
 

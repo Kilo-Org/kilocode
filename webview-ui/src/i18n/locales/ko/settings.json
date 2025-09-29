@@ -230,6 +230,7 @@
 		"description": "다양한 API 구성을 저장하여 제공자와 설정 간에 빠르게 전환할 수 있습니다.",
 		"apiProvider": "API 제공자",
 		"model": "모델",
+		"customModelParameters": "모델 매개변수 사용자 지정",
 		"nameEmpty": "이름은 비워둘 수 없습니다",
 		"nameExists": "이 이름의 프로필이 이미 존재합니다",
 		"deleteProfile": "프로필 삭제",

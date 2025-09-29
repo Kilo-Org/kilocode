@@ -230,6 +230,7 @@
 		"description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
 		"apiProvider": "Dostawca API",
 		"model": "Model",
+		"customModelParameters": "Dostosuj parametry modelu",
 		"nameEmpty": "Nazwa nie może być pusta",
 		"nameExists": "Profil o tej nazwie już istnieje",
 		"deleteProfile": "Usuń profil",

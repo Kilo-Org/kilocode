@@ -18,6 +18,7 @@ import { convertAnthropicContentToGemini, convertAnthropicMessageToGemini } from
 import { t } from "i18next"
 import type { ApiStream, GroundingSource } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
@@ -174,6 +175,10 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		const modelId = this.options.apiModelId
 		let id = modelId && modelId in geminiModels ? (modelId as GeminiModelId) : geminiDefaultModelId
 		let info: ModelInfo = geminiModels[id]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		const params = getModelParams({ format: "gemini", modelId: id, model: info, settings: this.options })
 
 		// The `:thinking` suffix indicates that the model is a "Hybrid"

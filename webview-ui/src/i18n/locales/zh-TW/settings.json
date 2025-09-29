@@ -231,6 +231,7 @@
 		"description": "儲存不同的 API 設定以快速切換供應商和設定。",
 		"apiProvider": "API 供應商",
 		"model": "模型",
+		"customModelParameters": "自訂模型參數",
 		"nameEmpty": "名稱不能為空",
 		"nameExists": "已存在同名的設定檔",
 		"deleteProfile": "刪除設定檔",

@@ -230,6 +230,7 @@
 		"description": "Sla verschillende API-configuraties op om snel te wisselen tussen providers en instellingen.",
 		"apiProvider": "API-provider",
 		"model": "Model",
+		"customModelParameters": "Modelparameters aanpassen",
 		"nameEmpty": "Naam mag niet leeg zijn",
 		"nameExists": "Er bestaat al een profiel met deze naam",
 		"deleteProfile": "Profiel verwijderen",

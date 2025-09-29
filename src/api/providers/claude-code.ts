@@ -11,6 +11,7 @@ import { ApiStreamUsageChunk, type ApiStream } from "../transform/stream"
 import { runClaudeCode } from "../../integrations/claude-code/run"
 import { filterMessagesForClaudeCode } from "../../integrations/claude-code/message-filter"
 import { BaseProvider } from "./base-provider"
+import { mergeModelInfo } from "./utils/model-info-merger"
 import { t } from "../../i18n"
 import { ApiHandlerOptions } from "../../shared/api"
 
@@ -142,22 +143,28 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 		const modelId = this.options.apiModelId
 		if (modelId && modelId in claudeCodeModels) {
 			const id = modelId as ClaudeCodeModelId
-			const modelInfo: ModelInfo = { ...claudeCodeModels[id] }
+			let modelInfo: ModelInfo = { ...claudeCodeModels[id] }
 
 			// Override maxTokens with the configured value if provided
 			if (this.options.claudeCodeMaxOutputTokens !== undefined) {
 				modelInfo.maxTokens = this.options.claudeCodeMaxOutputTokens
 			}
 
+			// Merge with custom model info if provided
+			modelInfo = mergeModelInfo(modelInfo, this.options)
+
 			return { id, info: modelInfo }
 		}
 
-		const defaultModelInfo: ModelInfo = { ...claudeCodeModels[claudeCodeDefaultModelId] }
+		let defaultModelInfo: ModelInfo = { ...claudeCodeModels[claudeCodeDefaultModelId] }
 
 		// Override maxTokens with the configured value if provided
 		if (this.options.claudeCodeMaxOutputTokens !== undefined) {
 			defaultModelInfo.maxTokens = this.options.claudeCodeMaxOutputTokens
 		}
+
+		// Merge with custom model info if provided
+		defaultModelInfo = mergeModelInfo(defaultModelInfo, this.options)
 
 		return {
 			id: claudeCodeDefaultModelId,

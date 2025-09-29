@@ -231,6 +231,7 @@
 		"description": "Salva diverse configurazioni API per passare rapidamente tra fornitori e impostazioni.",
 		"apiProvider": "Fornitore API",
 		"model": "Modello",
+		"customModelParameters": "Personalizza parametri del modello",
 		"nameEmpty": "Il nome non può essere vuoto",
 		"nameExists": "Esiste già un profilo con questo nome",
 		"deleteProfile": "Elimina profilo",

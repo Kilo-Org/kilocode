@@ -4,6 +4,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { mergeModelInfo } from "./utils/model-info-merger"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
@@ -112,24 +113,24 @@ export class HuggingFaceHandler extends BaseProvider implements SingleCompletion
 		const modelId = this.options.huggingFaceModelId || "meta-llama/Llama-3.3-70B-Instruct"
 
 		// Try to get model info from cache
-		const modelInfo = this.modelCache?.[modelId]
+		let modelInfo = this.modelCache?.[modelId]
 
-		if (modelInfo) {
-			return {
-				id: modelId,
-				info: modelInfo,
-			}
-		}
-
-		// Fallback to default values if model not found in cache
-		return {
-			id: modelId,
-			info: {
+		if (!modelInfo) {
+			// Fallback to default values if model not found in cache
+			modelInfo = {
 				maxTokens: 8192,
 				contextWindow: 131072,
 				supportsImages: false,
 				supportsPromptCache: false,
-			},
+			}
+		}
+
+		// Merge with custom model info if provided
+		modelInfo = mergeModelInfo(modelInfo, this.options)
+
+		return {
+			id: modelId,
+			info: modelInfo,
 		}
 	}
 }

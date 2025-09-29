@@ -175,7 +175,7 @@ describe("OpenAiHandler", () => {
 			const reasoningOptions: ApiHandlerOptions = {
 				...mockOptions,
 				enableReasoningEffort: true,
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					supportsPromptCache: false,
 					supportsReasoningEffort: true,
@@ -197,7 +197,7 @@ describe("OpenAiHandler", () => {
 			const noReasoningOptions: ApiHandlerOptions = {
 				...mockOptions,
 				enableReasoningEffort: false,
-				openAiCustomModelInfo: { contextWindow: 128_000, supportsPromptCache: false },
+				customModelInfo: { contextWindow: 128_000, supportsPromptCache: false },
 			}
 			const noReasoningHandler = new OpenAiHandler(noReasoningOptions)
 			const stream = noReasoningHandler.createMessage(systemPrompt, messages)
@@ -214,7 +214,7 @@ describe("OpenAiHandler", () => {
 			const optionsWithMaxTokens: ApiHandlerOptions = {
 				...mockOptions,
 				includeMaxTokens: true,
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096,
 					supportsPromptCache: false,
@@ -235,7 +235,7 @@ describe("OpenAiHandler", () => {
 			const optionsWithoutMaxTokens: ApiHandlerOptions = {
 				...mockOptions,
 				includeMaxTokens: false,
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096,
 					supportsPromptCache: false,
@@ -256,7 +256,7 @@ describe("OpenAiHandler", () => {
 			const optionsWithUndefinedMaxTokens: ApiHandlerOptions = {
 				...mockOptions,
 				// includeMaxTokens is not set, should not include max_tokens
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096,
 					supportsPromptCache: false,
@@ -278,7 +278,7 @@ describe("OpenAiHandler", () => {
 				...mockOptions,
 				includeMaxTokens: true,
 				modelMaxTokens: 32000, // User-configured value
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096, // Model's default value (should not be used)
 					supportsPromptCache: false,
@@ -300,7 +300,7 @@ describe("OpenAiHandler", () => {
 				...mockOptions,
 				includeMaxTokens: true,
 				// modelMaxTokens is not set
-				openAiCustomModelInfo: {
+				customModelInfo: {
 					contextWindow: 128_000,
 					maxTokens: 4096, // Model's default value (should be used as fallback)
 					supportsPromptCache: false,
@@ -569,7 +569,7 @@ describe("OpenAiHandler", () => {
 		const o3Options = {
 			...mockOptions,
 			openAiModelId: "o3-mini",
-			openAiCustomModelInfo: {
+			customModelInfo: {
 				contextWindow: 128_000,
 				maxTokens: 65536,
 				supportsPromptCache: false,

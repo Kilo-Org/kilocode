@@ -19,6 +19,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
@@ -267,7 +268,11 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 	override getModel() {
 		const id = this.options.openAiModelId ?? ""
-		const info = this.options.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults
+		let info = openAiModelInfoSaneDefaults
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
 		return { id, info, ...params }
 	}

@@ -32,6 +32,7 @@ import { MultiPointStrategy } from "../transform/cache-strategy/multi-point-stra
 import { ModelInfo as CacheModelInfo } from "../transform/cache-strategy/types"
 import { convertToBedrockConverseMessages as sharedConverter } from "../transform/bedrock-converse-format"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 import { shouldUseReasoningBudget } from "../../shared/api"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
@@ -942,15 +943,18 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		reasoningBudget?: number
 	} {
 		if (this.costModelConfig?.id?.trim().length > 0) {
+			// Merge with custom model info if provided
+			const mergedInfo = mergeModelInfo(this.costModelConfig.info, this.options)
+
 			// Get model params for cost model config
 			const params = getModelParams({
 				format: "anthropic",
 				modelId: this.costModelConfig.id,
-				model: this.costModelConfig.info,
+				model: mergedInfo,
 				settings: this.options,
 				defaultTemperature: BEDROCK_DEFAULT_TEMPERATURE,
 			})
-			return { ...this.costModelConfig, ...params }
+			return { ...this.costModelConfig, info: mergedInfo, ...params }
 		}
 
 		let modelConfig = undefined
@@ -986,6 +990,9 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 				contextWindow: 1_000_000,
 			}
 		}
+
+		// Merge with custom model info if provided
+		modelConfig.info = mergeModelInfo(modelConfig.info, this.options)
 
 		// Get model params including reasoning configuration
 		const params = getModelParams({

@@ -48,6 +48,7 @@ export const providerProfilesSchema = z.object({
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
 			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
+			customModelInfoMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -72,6 +73,7 @@ export class ProviderSettingsManager {
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			customModelInfoMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -145,6 +147,7 @@ export class ProviderSettingsManager {
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
 						morphApiKeyMigrated: false, // kilocode_change: Morph API key migration
+						customModelInfoMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -176,6 +179,12 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.todoListEnabledMigrated) {
 					await this.migrateTodoListEnabled(providerProfiles)
 					providerProfiles.migrations.todoListEnabledMigrated = true
+					isDirty = true
+				}
+
+				if (!providerProfiles.migrations.customModelInfoMigrated) {
+					await this.migrateCustomModelInfo(providerProfiles)
+					providerProfiles.migrations.customModelInfoMigrated = true
 					isDirty = true
 				}
 
@@ -304,6 +313,25 @@ export class ProviderSettingsManager {
 		}
 	}
 
+	private async migrateCustomModelInfo(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				// Use type assertion to access the deprecated property safely
+				const configAny = apiConfig as any
+
+				// Migrate openAiCustomModelInfo to generic customModelInfo if it exists
+				if (configAny.openAiCustomModelInfo && !apiConfig.customModelInfo) {
+					apiConfig.customModelInfo = configAny.openAiCustomModelInfo
+
+					// Delete the old property to prevent it from persisting
+					configAny.openAiCustomModelInfo = undefined
+				}
+			}
+		} catch (error) {
+			console.error(`[MigrateCustomModelInfo] Failed to migrate custom model info:`, error)
+		}
+	}
+
 	/**
 	 * Apply model migrations for all providers
 	 * Returns true if any migrations were applied
@@ -389,8 +417,19 @@ export class ProviderSettingsManager {
 				const existingId = providerProfiles.apiConfigs[name]?.id
 				const id = config.id || existingId || this.generateId()
 
+				// Clean up customModelInfo to prevent validation errors
+				const cleanedConfig = { ...config }
+				if (cleanedConfig.customModelInfo && typeof cleanedConfig.customModelInfo === "object") {
+					const cleanedModelInfo = { ...cleanedConfig.customModelInfo }
+					// Remove tiers field since it's only for predefined models and can contain null values
+					if ("tiers" in cleanedModelInfo) {
+						delete cleanedModelInfo.tiers
+					}
+					cleanedConfig.customModelInfo = cleanedModelInfo
+				}
+
 				// Filter out settings from other providers.
-				const filteredConfig = discriminatedProviderSettingsWithIdSchema.parse(config)
+				const filteredConfig = discriminatedProviderSettingsWithIdSchema.parse(cleanedConfig)
 				providerProfiles.apiConfigs[name] = { ...filteredConfig, id }
 				await this.store(providerProfiles)
 				return id

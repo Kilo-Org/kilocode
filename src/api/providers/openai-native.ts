@@ -20,6 +20,7 @@ import { calculateApiCostOpenAI } from "../../shared/cost"
 
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -1242,7 +1243,10 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		let id =
 			modelId && modelId in openAiNativeModels ? (modelId as OpenAiNativeModelId) : openAiNativeDefaultModelId
 
-		const info: ModelInfo = openAiNativeModels[id]
+		let info: ModelInfo = openAiNativeModels[id]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
 
 		const params = getModelParams({
 			format: "openai",

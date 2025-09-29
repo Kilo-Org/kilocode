@@ -10,6 +10,7 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { convertToR1Format } from "../transform/r1-format"
 import { ApiStream } from "../transform/stream"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -103,9 +104,14 @@ export class OllamaHandler extends BaseProvider implements SingleCompletionHandl
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
+		let info = openAiModelInfoSaneDefaults
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		return {
 			id: this.options.ollamaModelId || "",
-			info: openAiModelInfoSaneDefaults,
+			info,
 		}
 	}
 

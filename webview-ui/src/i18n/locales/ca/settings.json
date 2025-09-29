@@ -230,6 +230,7 @@
 		"description": "Deseu diferents configuracions d'API per canviar ràpidament entre proveïdors i configuracions.",
 		"apiProvider": "Proveïdor d'API",
 		"model": "Model",
+		"customModelParameters": "Personalitzar paràmetres del model",
 		"nameEmpty": "El nom no pot estar buit",
 		"nameExists": "Ja existeix un perfil amb aquest nom",
 		"deleteProfile": "Esborrar perfil",

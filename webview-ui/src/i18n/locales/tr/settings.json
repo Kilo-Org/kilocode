@@ -231,6 +231,7 @@
 		"description": "Sağlayıcılar ve ayarlar arasında hızlıca geçiş yapmak için farklı API yapılandırmalarını kaydedin.",
 		"apiProvider": "API Sağlayıcı",
 		"model": "Model",
+		"customModelParameters": "Model parametrelerini özelleştir",
 		"nameEmpty": "İsim boş olamaz",
 		"nameExists": "Bu isme sahip bir profil zaten mevcut",
 		"deleteProfile": "Profili sil",
