@@ -1,5 +1,13 @@
 # kilo-code
 
+## [v4.98.2]
+
+- [#2704](https://github.com/Kilo-Org/kilocode/pull/2704) [`6b6af0a`](https://github.com/Kilo-Org/kilocode/commit/6b6af0a2113cd106f08b1538172d5ba5d19a80ff) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed duplicated cost display
+
+- [#2705](https://github.com/Kilo-Org/kilocode/pull/2705) [`e65557d`](https://github.com/Kilo-Org/kilocode/commit/e65557dcfb880f70c6d18a6f511454c234b70ee4) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Added "Command Timeout Allowlist" and "Prevent Completion with Open Todos" to Extension Settings.
+
+- [#2707](https://github.com/Kilo-Org/kilocode/pull/2707) [`55ff2dc`](https://github.com/Kilo-Org/kilocode/commit/55ff2dcf6bccfcc9d70ba631ba57c99269ebe716) Thanks [@Ed4ward](https://github.com/Ed4ward)! - Added GLM 4.6 support to the Z.AI provider
+
 ## [v4.98.1]
 
 - [#2695](https://github.com/Kilo-Org/kilocode/pull/2695) [`ab49c14`](https://github.com/Kilo-Org/kilocode/commit/ab49c141ca397a0af985341a1cfe907d586430ef) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add Claude 4.5 Sonnet to all supported providers (thanks Roo Code)
