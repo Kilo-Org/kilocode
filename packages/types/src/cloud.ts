@@ -134,6 +134,16 @@ export const organizationCloudSettingsSchema = z.object({
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
 
 /**
+ * OrganizationFeatures
+ */
+
+export const organizationFeaturesSchema = z.object({
+	roomoteControlEnabled: z.boolean().optional(),
+})
+
+export type OrganizationFeatures = z.infer<typeof organizationFeaturesSchema>
+
+/**
  * OrganizationSettings
  */
 
@@ -142,6 +152,7 @@ export const organizationSettingsSchema = z.object({
 	cloudSettings: organizationCloudSettingsSchema.optional(),
 	defaultSettings: organizationDefaultSettingsSchema,
 	allowList: organizationAllowListSchema,
+	features: organizationFeaturesSchema.optional(),
 	hiddenMcps: z.array(z.string()).optional(),
 	hideMarketplaceMcps: z.boolean().optional(),
 	mcps: z.array(mcpMarketplaceItemSchema).optional(),
@@ -228,9 +239,10 @@ export interface AuthService extends EventEmitter<AuthServiceEvents> {
 	broadcast(): void
 
 	// Authentication methods
-	login(): Promise<void>
+	login(landingPageSlug?: string): Promise<void>
 	logout(): Promise<void>
 	handleCallback(code: string | null, state: string | null, organizationId?: string | null): Promise<void>
+	switchOrganization(organizationId: string | null): Promise<void>
 
 	// State methods
 	getState(): AuthState
@@ -242,6 +254,9 @@ export interface AuthService extends EventEmitter<AuthServiceEvents> {
 	getSessionToken(): string | undefined
 	getUserInfo(): CloudUserInfo | null
 	getStoredOrganizationId(): string | null
+
+	// Organization management
+	getOrganizationMemberships(): Promise<CloudOrganizationMembership[]>
 }
 
 /**

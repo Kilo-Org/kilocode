@@ -508,6 +508,9 @@ importers:
       react:
         specifier: ^18.3.1
         version: 18.3.1
+      react-cookie-consent:
+        specifier: ^9.0.0
+        version: 9.0.0(react@18.3.1)
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
@@ -523,6 +526,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17(ts-node@10.9.2(@swc/core@1.13.5)(@types/node@20.17.57)(typescript@5.8.3)))
+      tldts:
+        specifier: ^6.1.86
+        version: 6.1.86
       zod:
         specifier: ^3.25.61
         version: 3.25.61
@@ -1305,8 +1311,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0
       axios:
-        specifier: ^1.7.4
-        version: 1.9.0
+        specifier: ^1.12.0
+        version: 1.12.2
       cheerio:
         specifier: ^1.0.0
         version: 1.0.0
@@ -1684,8 +1690,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0(react@18.3.1)
       axios:
-        specifier: ^1.7.4
-        version: 1.9.0
+        specifier: ^1.12.0
+        version: 1.12.2
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -8062,8 +8068,8 @@ packages:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
 
-  axios@1.9.0:
-    resolution: {integrity: sha512-re4CqKTJaURpzbLHtIi6XpDv20/CnpXOtjRY5/CU32L8gU8ek9UIivcfvSWvmKEngmVbrUtPpdDwWDWL7DNHvg==}
+  axios@1.12.2:
+    resolution: {integrity: sha512-vMJzPewAlRyOgxV2dU0Cuz2O8zzzx9VYtbJOaBgXFeLc4IV/Eg50n4LowmehOOR61S8ZMpc2K5Sa7g6A4jfkUw==}
 
   azure-devops-node-api@12.5.0:
     resolution: {integrity: sha512-R5eFskGvOm3U/GzeAuxRkUsAl0hrAwGgWn6zAd2KrZmrEhWZVqLew4OOupbQlXUuojUzpGtq62SmdhJ06N88og==}
@@ -15281,6 +15287,12 @@ packages:
   rcedit@4.0.1:
     resolution: {integrity: sha512-bZdaQi34krFWhrDn+O53ccBDw0MkAT2Vhu75SqhtvhQu4OPyFM4RoVheyYiVQYdjhUi6EJMVWQ0tR6bCIYVkUg==}
     engines: {node: '>= 14.0.0'}
+
+  react-cookie-consent@9.0.0:
+    resolution: {integrity: sha512-Blyj+m+Zz7SFHYqT18p16EANgnSg2sIyU6Yp3vk83AnOnSW7qnehPkUe4+8+qxztJrNmCH5GP+VHsWzAKVOoZA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=16'
 
   react-countup@6.5.3:
     resolution: {integrity: sha512-udnqVQitxC7QWADSPDOxVWULkLvKUWrDapn5i53HE4DPRVgs+Y5rr4bo25qEl8jSh+0l2cToJgGMx+clxPM3+w==}
@@ -26524,7 +26536,7 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
-  axios@1.9.0:
+  axios@1.12.2:
     dependencies:
       follow-redirects: 1.15.9(debug@4.4.1)
       form-data: 4.0.4
@@ -35308,6 +35320,11 @@ snapshots:
     dependencies:
       cross-spawn-windows-exe: 1.2.0
 
+  react-cookie-consent@9.0.0(react@18.3.1):
+    dependencies:
+      js-cookie: 2.2.1
+      react: 18.3.1
+
   react-countup@6.5.3(react@18.3.1):
     dependencies:
       countup.js: 2.9.0
@@ -38488,7 +38505,7 @@ snapshots:
 
   wait-on@7.2.0:
     dependencies:
-      axios: 1.9.0
+      axios: 1.12.2
       joi: 17.13.3
       lodash: 4.17.21
       minimist: 1.2.8

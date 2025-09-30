@@ -2,11 +2,14 @@ import * as path from "path"
 import fs from "fs/promises"
 
 import NodeCache from "node-cache"
+
+import type { ProviderName } from "@roo-code/types"
+
 import { safeWriteJson } from "../../../utils/safeWriteJson"
 
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import { getCacheDirectoryPath } from "../../../utils/storage"
-import { RouterName, ModelRecord } from "../../../shared/api"
+import type { RouterName, ModelRecord } from "../../../shared/api"
 import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
@@ -21,11 +24,9 @@ import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
 
-// kilocode_change start
-import { cerebrasModels } from "@roo-code/types"
-// kilocode_change end
-
 import { getDeepInfraModels } from "./deepinfra"
+import { getHuggingFaceModels } from "./huggingface"
+
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
 export /*kilocode_change*/ async function writeModels(router: RouterName, data: ModelRecord) {
@@ -55,7 +56,9 @@ export /*kilocode_change*/ async function readModels(router: RouterName): Promis
  */
 export const getModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 	const { provider } = options
+
 	let models = getModelsFromCache(provider)
+
 	if (models) {
 		return models
 	}
@@ -71,18 +74,18 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				// kilocode_change end
 				break
 			case "requesty":
-				// Requesty models endpoint requires an API key for per-user custom policies
+				// Requesty models endpoint requires an API key for per-user custom policies.
 				models = await getRequestyModels(options.baseUrl, options.apiKey)
 				break
 			case "glama":
 				models = await getGlamaModels()
 				break
 			case "unbound":
-				// Unbound models endpoint requires an API key to fetch application specific models
+				// Unbound models endpoint requires an API key to fetch application specific models.
 				models = await getUnboundModels(options.apiKey)
 				break
 			case "litellm":
-				// Type safety ensures apiKey and baseUrl are always provided for litellm
+				// Type safety ensures apiKey and baseUrl are always provided for LiteLLM.
 				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change start
@@ -97,11 +100,8 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				})
 				break
 			// kilocode_change end
-			case "cerebras":
-				models = cerebrasModels
-				break
 			case "ollama":
-				models = await getOllamaModels(options.baseUrl, options.apiKey)
+				models = await getOllamaModels(options.baseUrl, options.apiKey, options.numCtx /*kilocode_change*/)
 				break
 			case "lmstudio":
 				models = await getLMStudioModels(options.baseUrl)
@@ -115,14 +115,17 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "vercel-ai-gateway":
 				models = await getVercelAiGatewayModels()
 				break
+			case "huggingface":
+				models = await getHuggingFaceModels()
+				break
 			default: {
-				// Ensures router is exhaustively checked if RouterName is a strict union
+				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider
 				throw new Error(`Unknown provider: ${exhaustiveCheck}`)
 			}
 		}
 
-		// Cache the fetched models (even if empty, to signify a successful fetch with no models)
+		// Cache the fetched models (even if empty, to signify a successful fetch with no models).
 		memoryCache.set(provider, models)
 
 		/* kilocode_change: skip useless file IO
@@ -132,7 +135,6 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 
 		try {
 			models = await readModels(provider)
-			// console.log(`[getModels] read ${router} models from file cache`)
 		} catch (error) {
 			console.error(`[getModels] error reading ${provider} models from file cache`, error)
 		}
@@ -147,13 +149,14 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 }
 
 /**
- * Flush models memory cache for a specific router
+ * Flush models memory cache for a specific router.
+ *
  * @param router - The router to flush models for.
  */
 export const flushModels = async (router: RouterName) => {
 	memoryCache.del(router)
 }
 
-export function getModelsFromCache(provider: string) {
+export function getModelsFromCache(provider: ProviderName) {
 	return memoryCache.get<ModelRecord>(provider)
 }

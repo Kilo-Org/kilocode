@@ -238,9 +238,25 @@
 			"confirm": "احذف"
 		}
 	},
+	"interruption": {
+		"responseInterruptedByUser": "تم مقاطعة الاستجابة من قبل المستخدم",
+		"responseInterruptedByApiError": "تم مقاطعة الاستجابة بسبب خطأ في واجهة برمجة التطبيقات"
+	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
 			"description": "منع إكمال المهمة عند وجود مهام غير مكتملة في قائمة المهام"
 		}
+	},
+	"docsLink": {
+		"label": "مستندات",
+		"url": "https://docs.roocode.com"
+	},
+	"errorBoundary": {
+		"title": "خطأ",
+		"reportText": "يرجى الإبلاغ عن هذا الخطأ لمساعدتنا في تحسين التطبيق.",
+		"githubText": "إبلاغ على GitHub",
+		"copyInstructions": "انسخ تفاصيل الخطأ أدناه:",
+		"errorStack": "مجموعة الأخطاء",
+		"componentStack": "مجموعة المكونات"
 	}
 }

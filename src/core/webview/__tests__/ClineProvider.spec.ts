@@ -2752,6 +2752,8 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})
@@ -2804,6 +2806,8 @@ describe("ClineProvider - Router Models", () => {
 				litellm: {},
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 
@@ -2924,6 +2928,8 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})

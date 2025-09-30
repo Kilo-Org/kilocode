@@ -1,7 +1,8 @@
-import * as vscode from "vscode"
+import type { TextDocument, Range, Diagnostic } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+import { DiagnosticSeverityNames } from "./diagnostics"
 
 /**
  * Abstract base class for all prompt strategies
@@ -103,7 +104,7 @@ EXAMPLE:
 	/**
 	 * Adds the cursor marker to the document text at the specified position
 	 */
-	protected addCursorMarker(document: vscode.TextDocument, range?: vscode.Range): string {
+	protected addCursorMarker(document: TextDocument, range?: Range): string {
 		if (!range) return document.getText()
 
 		const fullText = document.getText()
@@ -117,7 +118,7 @@ EXAMPLE:
 	/**
 	 * Formats diagnostics for inclusion in prompts
 	 */
-	protected formatDiagnostics(diagnostics: vscode.Diagnostic[]): string {
+	protected formatDiagnostics(diagnostics: Diagnostic[]): string {
 		if (!diagnostics || diagnostics.length === 0) return ""
 
 		let result = "## Active Issues\n"
@@ -126,7 +127,7 @@ EXAMPLE:
 		const sorted = [...diagnostics].sort((a, b) => a.severity - b.severity)
 
 		sorted.forEach((d) => {
-			const severity = vscode.DiagnosticSeverity[d.severity]
+			const severity = DiagnosticSeverityNames[d.severity] || "Unknown"
 			const line = d.range.start.line + 1
 			result += `- **${severity}** at line ${line}: ${d.message}\n`
 		})
@@ -138,8 +139,8 @@ EXAMPLE:
 	 * Gets surrounding code context (lines before and after cursor)
 	 */
 	protected getSurroundingCode(
-		document: vscode.TextDocument,
-		range: vscode.Range,
+		document: TextDocument,
+		range: Range,
 		linesBefore: number = 10,
 		linesAfter: number = 10,
 	): { before: string; after: string; currentLine: string } {
@@ -167,11 +168,7 @@ EXAMPLE:
 	/**
 	 * Formats the document with cursor marker for the prompt
 	 */
-	protected formatDocumentWithCursor(
-		document: vscode.TextDocument,
-		range?: vscode.Range,
-		languageId?: string,
-	): string {
+	protected formatDocumentWithCursor(document: TextDocument, range?: Range, languageId?: string): string {
 		const lang = languageId || document.languageId
 		const codeWithCursor = this.addCursorMarker(document, range)
 
@@ -183,14 +180,14 @@ ${codeWithCursor}
 	/**
 	 * Gets the file path from the document
 	 */
-	protected getFilePath(document: vscode.TextDocument): string {
+	protected getFilePath(document: TextDocument): string {
 		return document.uri.toString()
 	}
 
 	/**
 	 * Formats selected text for inclusion in prompts
 	 */
-	protected formatSelectedText(document: vscode.TextDocument, range: vscode.Range): string {
+	protected formatSelectedText(document: TextDocument, range: Range): string {
 		if (range.isEmpty) return ""
 
 		const selectedText = document.getText(range)

@@ -140,6 +140,10 @@ export const taskPropertiesSchema = z.object({
 			pending: z.number(),
 		})
 		.optional(),
+	// kilocode_change start
+	currentTaskSize: z.number().optional(),
+	taskHistorySize: z.number().optional(),
+	// kilocode_change end
 })
 
 export type TaskProperties = z.infer<typeof taskPropertiesSchema>

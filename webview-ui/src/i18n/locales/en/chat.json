@@ -75,7 +75,7 @@
 		}
 	},
 	"runCommand": {
-		"title": "Run Command",
+		"title": "Run",
 		"tooltip": "Execute this command"
 	},
 	"proceedWhileRunning": {
@@ -143,7 +143,7 @@
 	"addContext": "@ to add context, / for commands",
 	"dragFiles": "hold shift to drag in files",
 	"dragFilesImages": "hold shift to drag in files/images",
-	"errorReadingFile": "Error reading file:",
+	"errorReadingFile": "Error reading file",
 	"noValidImages": "No valid images were processed",
 	"separator": "Separator",
 	"edit": "Edit...",
@@ -182,58 +182,58 @@
 		"wantsToFetch": "Kilo Code wants to fetch detailed instructions to assist with the current task"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code wants to read this file:",
-		"wantsToReadMultiple": "Kilo Code wants to read multiple files:",
-		"wantsToReadAndXMore": "Kilo Code wants to read this file and {{count}} more:",
-		"wantsToReadOutsideWorkspace": "Kilo Code wants to read this file outside of the workspace:",
-		"didRead": "Kilo Code read this file:",
-		"wantsToEdit": "Kilo Code wants to edit this file:",
-		"wantsToEditOutsideWorkspace": "Kilo Code wants to edit this file outside of the workspace:",
-		"wantsToEditProtected": "Kilo Code wants to edit a protected configuration file:",
-		"wantsToApplyBatchChanges": "Kilo Code wants to apply changes to multiple files:",
-		"wantsToGenerateImage": "Kilo Code wants to generate an image:",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wants to generate an image outside of the workspace:",
-		"wantsToGenerateImageProtected": "Kilo Code wants to generate an image in a protected location:",
-		"didGenerateImage": "Kilo Code generated an image:",
-		"wantsToCreate": "Kilo Code wants to create a new file:",
-		"wantsToSearchReplace": "Kilo Code wants to search and replace in this file:",
-		"didSearchReplace": "Kilo Code performed search and replace on this file:",
-		"wantsToInsert": "Kilo Code wants to insert content into this file:",
-		"wantsToInsertWithLineNumber": "Kilo Code wants to insert content into this file at line {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file:"
+		"wantsToRead": "Kilo Code wants to read this file",
+		"wantsToReadMultiple": "Kilo Code wants to read multiple files",
+		"wantsToReadAndXMore": "Kilo Code wants to read this file and {{count}} more",
+		"wantsToReadOutsideWorkspace": "Kilo Code wants to read this file outside of the workspace",
+		"didRead": "Kilo Code read this file",
+		"wantsToEdit": "Kilo Code wants to edit this file",
+		"wantsToEditOutsideWorkspace": "Kilo Code wants to edit this file outside of the workspace",
+		"wantsToEditProtected": "Kilo Code wants to edit a protected configuration file",
+		"wantsToApplyBatchChanges": "Kilo Code wants to apply changes to multiple files",
+		"wantsToGenerateImage": "Kilo Code wants to generate an image",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wants to generate an image outside of the workspace",
+		"wantsToGenerateImageProtected": "Kilo Code wants to generate an image in a protected location",
+		"didGenerateImage": "Kilo Code generated an image",
+		"wantsToCreate": "Kilo Code wants to create a new file",
+		"wantsToSearchReplace": "Kilo Code wants to search and replace in this file",
+		"didSearchReplace": "Kilo Code performed search and replace on this file",
+		"wantsToInsert": "Kilo Code wants to insert content into this file",
+		"wantsToInsertWithLineNumber": "Kilo Code wants to insert content into this file at line {{lineNumber}}",
+		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory:",
-		"didViewTopLevel": "Kilo Code viewed the top level files in this directory:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wants to view the top level files in this directory (outside workspace):",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code viewed the top level files in this directory (outside workspace):",
-		"wantsToViewRecursive": "Kilo Code wants to recursively view all files in this directory:",
-		"didViewRecursive": "Kilo Code recursively viewed all files in this directory:",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wants to recursively view all files in this directory (outside workspace):",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code recursively viewed all files in this directory (outside workspace):",
-		"wantsToViewDefinitions": "Kilo Code wants to view source code definition names used in this directory:",
-		"didViewDefinitions": "Kilo Code viewed source code definition names used in this directory:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wants to view source code definition names used in this directory (outside workspace):",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code viewed source code definition names used in this directory (outside workspace):",
-		"wantsToSearch": "Kilo Code wants to search this directory for <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>:",
-		"wantsToSearchOutsideWorkspace": "Kilo Code wants to search this directory (outside workspace) for <code>{{regex}}</code>:",
-		"didSearchOutsideWorkspace": "Kilo Code searched this directory (outside workspace) for <code>{{regex}}</code>:"
+		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory",
+		"didViewTopLevel": "Kilo Code viewed the top level files in this directory",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wants to view the top level files in this directory (outside workspace)",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code viewed the top level files in this directory (outside workspace)",
+		"wantsToViewRecursive": "Kilo Code wants to recursively view all files in this directory",
+		"didViewRecursive": "Kilo Code recursively viewed all files in this directory",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wants to recursively view all files in this directory (outside workspace)",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code recursively viewed all files in this directory (outside workspace)",
+		"wantsToViewDefinitions": "Kilo Code wants to view source code definition names used in this directory",
+		"didViewDefinitions": "Kilo Code viewed source code definition names used in this directory",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wants to view source code definition names used in this directory (outside workspace)",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code viewed source code definition names used in this directory (outside workspace)",
+		"wantsToSearch": "Kilo Code wants to search this directory for <code>{{regex}}</code>",
+		"didSearch": "Kilo Code searched this directory for <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code wants to search this directory (outside workspace) for <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code searched this directory (outside workspace) for <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code wants to search the codebase for <code>{{query}}</code>:",
-		"wantsToSearchWithPath": "Kilo Code wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>:",
+		"wantsToSearch": "Kilo Code wants to search the codebase for <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "Found 1 result",
 		"didSearch_other": "Found {{count}} results",
 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
 	},
 	"commandOutput": "Command Output",
 	"commandExecution": {
+		"abort": "Abort",
 		"running": "Running",
 		"pid": "PID: {{pid}}",
-		"exited": "Exited ({{exitCode}})",
-		"manageCommands": "Manage Command Permissions",
-		"commandManagementDescription": "Manage command permissions: Click ✓ to allow auto-execution, ✗ to deny execution. Patterns can be toggled on/off or removed from lists. <settingsLink>View all settings</settingsLink>",
+		"exitStatus": "Exited with status {{exitCode}}",
+		"manageCommands": "Auto-approved commands",
 		"addToAllowed": "Add to allowed list",
 		"removeFromAllowed": "Remove from allowed list",
 		"addToDenied": "Add to denied list",
@@ -246,9 +246,15 @@
 	},
 	"response": "Response",
 	"arguments": "Arguments",
+	"text": {
+		"rooSaid": "Kilo said"
+	},
+	"feedback": {
+		"youSaid": "You said"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code wants to use a tool on the {{serverName}} MCP server:",
-		"wantsToAccessResource": "Kilo Code wants to access a resource on the {{serverName}} MCP server:"
+		"wantsToUseTool": "Kilo Code wants to use a tool on the {{serverName}} MCP server",
+		"wantsToAccessResource": "Kilo Code wants to access a resource on the {{serverName}} MCP server"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Code wants to switch to {{mode}} mode",
@@ -257,7 +263,7 @@
 		"didSwitchWithReason": "Kilo Code switched to {{mode}} mode because: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code wants to create a new subtask in {{mode}} mode:",
+		"wantsToCreate": "Kilo Code wants to create a new subtask in {{mode}} mode",
 		"wantsToFinish": "Kilo Code wants to finish this subtask",
 		"newTaskContent": "Subtask Instructions",
 		"completionContent": "Subtask Completed",
@@ -266,7 +272,7 @@
 		"completionInstructions": "Subtask completed! You can review the results and suggest any corrections or next steps. If everything looks good, confirm to return the result to the parent task."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code has a question:"
+		"hasQuestion": "Kilo Code has a question"
 	},
 	"taskCompleted": "Task Completed",
 	"error": "Error",
@@ -278,7 +284,8 @@
 		"issues": "It seems like you're having Windows PowerShell issues, please see this"
 	},
 	"autoApprove": {
-		"tooltip": "Manage auto-approval settings",
+		"tooltipManage": "Manage auto-approval settings",
+		"tooltipStatus": "Auto-approval enabled for: {{toggles}}",
 		"title": "Auto-approve",
 		"all": "All",
 		"none": "None",
@@ -286,19 +293,22 @@
 		"selectOptionsFirst": "Select at least one option below to enable auto-approval",
 		"toggleAriaLabel": "Toggle auto-approval",
 		"disabledAriaLabel": "Auto-approval disabled - select options first",
-		"triggerLabel_zero": "No auto-approve",
+		"triggerLabelOff": "Auto-approve off",
+		"triggerLabel_zero": "0 auto-approve",
 		"triggerLabel_one": "1 auto-approved",
 		"triggerLabel_other": "{{count}} auto-approved",
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Released",
-		"description": "Introducing <bold>Roo Code Cloud:</bold> Bringing the power of Roo beyond the IDE",
-		"feature1": "<bold>Track task progress from anywhere (Free):</bold> Get real-time updates on long-running tasks without being stuck in your IDE",
-		"feature2": "<bold>Control the Roo Extension remotely (Pro):</bold> Start, stop, and interact with tasks from a chat-based browser interface.",
-		"learnMore": "Ready to take control? Learn more <learnMoreLink>here</learnMoreLink>.",
-		"visitCloudButton": "Visit Roo Code Cloud",
-		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink>"
+		"stealthModel": {
+			"feature": "<bold>Limited-time FREE stealth model</bold> - Code Supernova: A versatile agentic coding model that supports image inputs, accessible through Roo Code Cloud.",
+			"note": "(Note: prompts and completions are logged by the model creator and used to improve the model)",
+			"connectButton": "Connect to Roo Code Cloud",
+			"selectModel": "Select <code>roo/code-supernova</code> from the Roo Code Cloud provider in Settings to get started.",
+			"goToSettingsButton": "Go to Settings"
+		},
+		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Thinking",
@@ -310,7 +320,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code wants to use the browser:",
+		"rooWantsToUse": "Kilo Code wants to use the browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",
 		"screenshot": "Browser screenshot",
@@ -335,8 +345,6 @@
 		"tooltips": {
 			"expand": "Expand code block",
 			"collapse": "Collapse code block",
-			"enable_wrap": "Enable word wrap",
-			"disable_wrap": "Disable word wrap",
 			"copy_code": "Copy code"
 		}
 	},
@@ -376,6 +384,7 @@
 		"tooltip": "Manage slash commands",
 		"title": "Slash Commands",
 		"description": "Use built-in slash commands or create custom ones for quick access to frequently used prompts and workflows. <DocsLink>Docs</DocsLink>",
+		"manageCommands": "Manage slash commands in settings",
 		"builtInCommands": "Built-in Commands",
 		"globalCommands": "Global Commands",
 		"workspaceCommands": "Workspace Commands",
@@ -392,11 +401,17 @@
 		}
 	},
 	"slashCommand": {
-		"wantsToRun": "Roo wants to run a slash command:",
-		"didRun": "Roo ran a slash command:"
+		"wantsToRun": "Kilo Code wants to run a slash command",
+		"didRun": "Kilo Code ran a slash command"
 	},
 	"queuedMessages": {
-		"title": "Queued Messages:",
+		"title": "Queued Messages",
 		"clickToEdit": "Click to edit message"
+	},
+	"contextMenu": {
+		"noResults": "No results",
+		"problems": "Problems",
+		"terminal": "Terminal",
+		"url": "Paste URL to fetch contents"
 	}
 }

@@ -11,6 +11,29 @@ The following features, available in the VS Code version of Kilo Code, are not c
 
 We're actively working on bringing feature parity between the VS Code and JetBrains versions. Check our [GitHub repository](https://github.com/Kilo-Org/kilocode) for updates on development progress.
 
+## Node.js Requirements
+
+### Why Node.js is Required
+
+The JetBrains Kilo Extension requires Node.js to be installed on your system. Node.js is used to run the extension's backend services and handle communication between the IDE and Kilo Code's AI features.
+
+### Installing Node.js
+
+Visit the official Node.js website for installation instructions for your platform: [https://nodejs.org/en/download](https://nodejs.org/en/download)
+
+We recommend downloading the **LTS (Long Term Support)** version for stability.
+
+### Verifying Node.js Installation
+
+After installation, verify that Node.js is properly installed by opening a terminal and running:
+
+```bash
+node --version
+npm --version
+```
+
+Both commands should return version numbers.
+
 ## JCEF (Java Chromium Embedded Framework) Issues
 
 ### What is JCEF?

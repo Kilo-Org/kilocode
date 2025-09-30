@@ -182,6 +182,10 @@
 		"incomplete": "टास्क #{{taskNumber}} (अधूरा)",
 		"no_messages": "टास्क #{{taskNumber}} (कोई संदेश नहीं)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "उपयोगकर्ता द्वारा प्रतिक्रिया बाधित",
+		"responseInterruptedByApiError": "API त्रुटि द्वारा प्रतिक्रिया बाधित"
+	},
 	"storage": {
 		"prompt_custom_path": "वार्तालाप इतिहास के लिए कस्टम स्टोरेज पाथ दर्ज करें, डिफ़ॉल्ट स्थान का उपयोग करने के लिए खाली छोड़ दें",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "जब टूडू सूची में अधूरे टूडू हों तो कार्य पूर्ण होने से रोकें"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "त्रुटि",
+		"reportText": "कृपया इस त्रुटि की रिपोर्ट करें ताकि हम एप्लिकेशन को बेहतर बना सकें।",
+		"githubText": "GitHub पर रिपोर्ट करें",
+		"copyInstructions": "नीचे त्रुटि विवरण कॉपी करें:",
+		"errorStack": "त्रुटि स्टैक",
+		"componentStack": "कॉम्पोनेंट स्टैक"
 	}
 }

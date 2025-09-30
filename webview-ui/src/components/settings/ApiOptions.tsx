@@ -249,7 +249,7 @@ const ApiOptions = ({
 					values: {
 						baseUrl: apiConfiguration?.openAiBaseUrl,
 						apiKey: apiConfiguration?.openAiApiKey,
-						customHeaders: {}, // Reserved for any additional headers
+						customHeaders: {}, // Reserved for any additional headers.
 						openAiHeaders: headerObject,
 					},
 				})
@@ -274,9 +274,7 @@ const ApiOptions = ({
 				})
 				refetchRouterModels()
 				// kilocode_change end
-			} else if (selectedProvider === "litellm") {
-				vscode.postMessage({ type: "requestRouterModels" })
-			} else if (selectedProvider === "deepinfra") {
+			} else if (selectedProvider === "litellm" || selectedProvider === "deepinfra") {
 				vscode.postMessage({ type: "requestRouterModels" })
 			}
 		},
@@ -292,6 +290,8 @@ const ApiOptions = ({
 			apiConfiguration?.litellmApiKey,
 			apiConfiguration?.deepInfraApiKey,
 			apiConfiguration?.deepInfraBaseUrl,
+			apiConfiguration?.openRouterBaseUrl, // kilocode_change
+			apiConfiguration?.openRouterApiKey, // kilocode_change
 			customHeaders,
 			refetchRouterModels, // kilocode_change
 		],

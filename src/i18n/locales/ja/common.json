@@ -182,6 +182,10 @@
 		"incomplete": "タスク #{{taskNumber}} (未完了)",
 		"no_messages": "タスク #{{taskNumber}} (メッセージなし)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "ユーザーによって応答が中断されました",
+		"responseInterruptedByApiError": "APIエラーによって応答が中断されました"
+	},
 	"storage": {
 		"prompt_custom_path": "会話履歴のカスタムストレージパスを入力してください。デフォルトの場所を使用する場合は空のままにしてください",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Todoリストに未完了のTodoがある場合、タスクの完了を防ぐ"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "エラー",
+		"reportText": "アプリケーションの改善にご協力いただくため、このエラーを報告してください。",
+		"githubText": "GitHubで報告",
+		"copyInstructions": "以下のエラーの詳細をコピーしてください：",
+		"errorStack": "エラースタック",
+		"componentStack": "コンポーネントスタック"
 	}
 }

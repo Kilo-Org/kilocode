@@ -226,7 +226,9 @@
 	},
 	"commandOutput": "Výstup příkazu",
 	"commandExecution": {
+		"abort": "Přerušit",
 		"running": "Běží",
+		"exitStatus": "Ukončen se stavem {{exitCode}}",
 		"pid": "PID: {{pid}}",
 		"exited": "Ukončeno ({{exitCode}})",
 		"manageCommands": "Spravovat oprávnění příkazů",
@@ -243,6 +245,12 @@
 	},
 	"response": "Odpověď",
 	"arguments": "Argumenty",
+	"text": {
+		"rooSaid": "Kilo řekl"
+	},
+	"feedback": {
+		"youSaid": "Řekl jsi"
+	},
 	"mcp": {
 		"wantsToUseTool": "Kilo Code chce použít nástroj na MCP serveru {{serverName}}:",
 		"wantsToAccessResource": "Kilo Code chce přistupovat k prostředku na MCP serveru {{serverName}}:"
@@ -282,11 +290,14 @@
 		"toggleAriaLabel": "Přepnout automatické schvalování",
 		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti",
 		"tooltip": "Automaticky schválit požadavky na použití nástrojů",
+		"tooltipManage": "Spravovat nastavení automatického schvalování",
+		"tooltipStatus": "Automatické schvalování povoleno pro: {{toggles}}",
 		"all": "Vše",
 		"triggerLabel_zero": "Automatické schválení: vypnuto",
 		"triggerLabel_one": "Automatické schválení: 1",
 		"triggerLabel_other": "Automatické schválení: {{count}}",
-		"triggerLabelAll": "Automatické schválení: YOLO"
+		"triggerLabelAll": "Automatické schválení: YOLO",
+		"triggerLabelOff": "Automatické schvalování vypnuto"
 	},
 	"modeSelector": {
 		"title": "Režimy",
@@ -312,7 +323,8 @@
 			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Bleskurychle rychlý rozumový model, který vyniká v agentním kódování s kontextovým oknem 262k, dostupný prostřednictvím Roo Code Cloud.",
 			"note": "(Poznámka: prompty a dokončení jsou zaznamenávány tvůrcem modelu za účelem vylepšení modelu)",
 			"connectButton": "Připojit se k Roo Code Cloud",
-			"selectModel": "Vyber <code>roo/sonic</code> z poskytovatele Roo Code Cloud v<br/><settingsLink>Nastaveních</settingsLink> pro začátek"
+			"selectModel": "Vyber <code>roo/sonic</code> z poskytovatele Roo Code Cloud v<br/><settingsLink>Nastaveních</settingsLink> pro začátek",
+			"goToSettingsButton": "Jít do Nastavení"
 		}
 	},
 	"reasoning": {
@@ -394,6 +406,7 @@
 	},
 	"slashCommands": {
 		"tooltip": "Spravovat slash příkazy",
+		"manageCommands": "Spravovat slash příkazy v nastavení",
 		"title": "Slash příkazy",
 		"description": "Vytvoř vlastní slash příkazy pro rychlý přístup k často používaným promptům a pracovním postupům. <DocsLink>Dokumentace</DocsLink>",
 		"builtInCommands": "Vestavěné příkazy",
@@ -422,5 +435,11 @@
 	"slashCommand": {
 		"wantsToRun": "Kilo Code chce spustit slash příkaz:",
 		"didRun": "Kilo Code spustil slash příkaz:"
+	},
+	"contextMenu": {
+		"noResults": "Žádné výsledky",
+		"problems": "Problémy",
+		"terminal": "Terminál",
+		"url": "Vložit URL pro získání obsahu"
 	}
 }

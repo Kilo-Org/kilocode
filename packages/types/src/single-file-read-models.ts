@@ -11,5 +11,5 @@
  */
 export function shouldUseSingleFileRead(modelId: string): boolean {
 	return false // kilocode_change
-	return modelId.includes("grok-code-fast-1")
+	return modelId.includes("grok-code-fast-1") || modelId.includes("code-supernova")
 }

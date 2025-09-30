@@ -188,6 +188,13 @@ export const getModelsByProvider = ({
 				defaultModel: kilocodeDefaultModel,
 			}
 		}
+		// Temporary weird fix
+		case "kilocode-openrouter": {
+			return {
+				models: routerModels["kilocode-openrouter"],
+				defaultModel: kilocodeDefaultModel,
+			}
+		}
 		case "claude-code": {
 			return {
 				models: claudeCodeModels,

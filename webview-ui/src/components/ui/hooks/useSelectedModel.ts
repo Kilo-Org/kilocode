@@ -298,9 +298,17 @@ function getSelectedModel({
 		case "ollama": {
 			const id = apiConfiguration.ollamaModelId ?? ""
 			const info = ollamaModels && ollamaModels[apiConfiguration.ollamaModelId!]
+
+			const adjustedInfo =
+				info?.contextWindow &&
+				apiConfiguration?.ollamaNumCtx &&
+				apiConfiguration.ollamaNumCtx < info.contextWindow
+					? { ...info, contextWindow: apiConfiguration.ollamaNumCtx }
+					: info
+
 			return {
 				id,
-				info: info || undefined,
+				info: adjustedInfo || undefined,
 			}
 		}
 		case "lmstudio": {
@@ -431,7 +439,13 @@ function getSelectedModel({
 		// case "human-relay":
 		// case "fake-ai":
 		default: {
-			provider satisfies "anthropic" | "gemini-cli" | "qwen-code" | "human-relay" | "fake-ai"
+			provider satisfies
+				| "anthropic"
+				| "gemini-cli"
+				| "qwen-code"
+				| "human-relay"
+				| "fake-ai"
+				| "kilocode-openrouter"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

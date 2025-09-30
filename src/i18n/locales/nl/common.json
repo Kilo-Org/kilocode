@@ -182,6 +182,10 @@
 		"incomplete": "Taak #{{taskNumber}} (Onvolledig)",
 		"no_messages": "Taak #{{taskNumber}} (Geen berichten)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Reactie onderbroken door gebruiker",
+		"responseInterruptedByApiError": "Reactie onderbroken door API-fout"
+	},
 	"storage": {
 		"prompt_custom_path": "Voer een aangepast opslagpad voor gespreksgeschiedenis in, laat leeg voor standaardlocatie",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Voorkom taakafronding wanneer er onvolledige todos in de todolijst staan"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Fout",
+		"reportText": "Meld deze fout om ons te helpen de applicatie te verbeteren.",
+		"githubText": "Melden op GitHub",
+		"copyInstructions": "Kopieer de foutdetails hieronder:",
+		"errorStack": "Foutstack",
+		"componentStack": "Componentenstack"
 	}
 }

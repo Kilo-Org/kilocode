@@ -28,11 +28,16 @@
 		"notifications": "Meldingen",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Slash-opdrachten",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimenteel",
 		"language": "Taal",
 		"about": "Over Kilo Code",
 		"display": "Weergeven"
+	},
+	"slashCommands": {
+		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configureer ondersteuningsprompts die worden gebruikt voor snelle acties zoals het verbeteren van prompts, het uitleggen van code en het oplossen van problemen. Deze prompts helpen Kilo Code om betere ondersteuning te bieden voor veelvoorkomende ontwikkelingstaken."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Reset naar standaardwaarde (0.4)",
 		"searchMaxResultsLabel": "Maximum Zoekresultaten",
 		"searchMaxResultsDescription": "Maximum aantal zoekresultaten dat wordt geretourneerd bij het doorzoeken van de codebase-index. Hogere waarden bieden meer context maar kunnen minder relevante resultaten bevatten.",
-		"resetToDefault": "Reset naar standaard"
+		"resetToDefault": "Reset naar standaard",
+		"cancelling": "Bezig met annuleren...",
+		"cancelIndexingButton": "Indexering annuleren"
 	},
 	"autoApprove": {
+		"toggleShortcut": "U kunt een globale sneltoets voor deze instelling configureren <SettingsLink>in de voorkeuren van uw IDE</SettingsLink>.",
 		"description": "Sta Kilo Code toe om automatisch handelingen uit te voeren zonder goedkeuring. Schakel deze instellingen alleen in als je de AI volledig vertrouwt en de bijbehorende beveiligingsrisico's begrijpt.",
 		"enabled": "Auto-goedkeuren ingeschakeld",
 		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
@@ -379,9 +387,11 @@
 		"ollama": {
 			"baseUrl": "Basis-URL (optioneel)",
 			"modelId": "Model-ID",
-			"apiKey": "API-sleutel",
+			"apiKey": "Ollama API-sleutel",
 			"apiKeyPlaceholder": "Voer je API-sleutel in",
-			"apiKeyInfo": "API-sleutel wordt verzonden als Authorization-header",
+			"apiKeyHelp": "Optionele API-sleutel voor geauthenticeerde Ollama-instanties of cloudservices. Laat leeg voor lokale installaties.",
+			"numCtx": "Contextvenstergrootte (num_ctx)",
+			"numCtxHelp": "Overschrijft de standaard contextvenstergrootte van het model. Laat leeg om de Modelfile-configuratie van het model te gebruiken. De minimumwaarde is 128.",
 			"description": "Ollama laat je modellen lokaal op je computer draaien. Zie hun quickstart-gids voor instructies.",
 			"warning": "Let op: Kilo Code gebruikt complexe prompts en werkt het beste met Claude-modellen. Minder krachtige modellen werken mogelijk niet zoals verwacht."
 		},
@@ -904,6 +914,13 @@
 			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Goot animatie tonen bij automatisch aanvullen",
+			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",
+			"preview": "Animatie voorbeeld"
+		}
+	},
 	"includeMaxOutputTokens": "Maximale output tokens opnemen",
 	"includeMaxOutputTokensDescription": "Stuur maximale output tokens parameter in API-verzoeken. Sommige providers ondersteunen dit mogelijk niet.",
 	"limitMaxTokensDescription": "Beperk het maximale aantal tokens in het antwoord",
@@ -921,6 +938,12 @@
 			"input": "Invoer",
 			"output": "Uitvoer",
 			"cacheReads": "Cache leest"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Denkberichten standaard samenvouwen",
+			"description": "Indien ingeschakeld, worden denkblokken standaard samengevouwen totdat je ermee interageert"
 		}
 	}
 }
