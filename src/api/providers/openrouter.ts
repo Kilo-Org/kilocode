@@ -481,7 +481,9 @@ function makeOpenRouterErrorReadable(error: any) {
 	if (error?.code !== 429 && error?.code !== 418) {
 		return `OpenRouter API Error: ${error?.message || error}`
 	}
-
+	if (error?.message?.includes("429 Provider returned error")) {
+		return `Rate limit exceeded. Please try again later.`
+	}
 	try {
 		const parsedJson = JSON.parse(error.error.metadata?.raw)
 		const retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
