@@ -238,9 +238,25 @@
 			"confirm": "Smazat"
 		}
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Odpověď přerušena uživatelem",
+		"responseInterruptedByApiError": "Odpověď přerušena chybou API"
+	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
 			"description": "Zabránit dokončení úlohy, když jsou v seznamu úkolů neúplné položky"
 		}
+	},
+	"docsLink": {
+		"label": "Dokumentace",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Chyba",
+		"reportText": "Prosím nahlaste tuto chybu, abychom mohli aplikaci vylepšit.",
+		"githubText": "Nahlásit na GitHub",
+		"copyInstructions": "Zkopírujte podrobnosti chyby níže:",
+		"errorStack": "Zásobník chyb",
+		"componentStack": "Zásobník komponent"
 	}
 }

@@ -182,6 +182,10 @@
 		"incomplete": "Задача #{{taskNumber}} (Незавершенная)",
 		"no_messages": "Задача #{{taskNumber}} (Нет сообщений)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Ответ прерван пользователем",
+		"responseInterruptedByApiError": "Ответ прерван ошибкой API"
+	},
 	"storage": {
 		"prompt_custom_path": "Введите пользовательский путь хранения истории разговоров, оставьте пустым для использования расположения по умолчанию",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Предотвратить завершение задач при наличии незавершенных дел в списке дел"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Ошибка",
+		"reportText": "Пожалуйста, сообщите об этой ошибке, чтобы помочь нам улучшить приложение.",
+		"githubText": "Сообщить на GitHub",
+		"copyInstructions": "Скопируйте детали ошибки ниже:",
+		"errorStack": "Стек ошибки",
+		"componentStack": "Стек компонентов"
 	}
 }

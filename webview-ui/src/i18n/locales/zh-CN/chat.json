@@ -67,7 +67,7 @@
 		"tooltip": "批准此操作"
 	},
 	"runCommand": {
-		"title": "运行命令",
+		"title": "命令",
 		"tooltip": "执行此命令"
 	},
 	"proceedWhileRunning": {
@@ -132,7 +132,7 @@
 		"searchPlaceholder": "搜索模式...",
 		"noResults": "未找到结果"
 	},
-	"errorReadingFile": "读取文件时出错:",
+	"errorReadingFile": "读取文件时出错",
 	"noValidImages": "没有处理有效图片",
 	"separator": "分隔符",
 	"edit": "编辑...",
@@ -170,49 +170,50 @@
 		"wantsToFetch": "Kilo Code 想要获取详细指示以协助当前任务"
 	},
 	"fileOperations": {
-		"wantsToRead": "需要读取文件:",
-		"wantsToReadOutsideWorkspace": "请求访问外部文件:",
-		"didRead": "已读取文件:",
-		"wantsToEdit": "需要编辑文件:",
-		"wantsToEditOutsideWorkspace": "需要编辑外部文件:",
-		"wantsToEditProtected": "需要编辑受保护的配置文件:",
-		"wantsToCreate": "需要新建文件:",
-		"wantsToSearchReplace": "需要在此文件中搜索和替换:",
-		"didSearchReplace": "已完成搜索和替换:",
-		"wantsToInsert": "需要在此文件中插入内容:",
-		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容:",
-		"wantsToInsertAtEnd": "需要在文件末尾添加内容:",
-		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件：",
-		"wantsToReadMultiple": "Kilo Code 想要读取多个文件：",
-		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改：",
-		"wantsToGenerateImage": "需要生成图片:",
-		"wantsToGenerateImageOutsideWorkspace": "需要在工作区外生成图片:",
-		"wantsToGenerateImageProtected": "需要在受保护位置生成图片:",
-		"didGenerateImage": "已生成图片:"
+		"wantsToRead": "需要读取文件",
+		"wantsToReadOutsideWorkspace": "请求访问外部文件",
+		"didRead": "已读取文件",
+		"wantsToEdit": "需要编辑文件",
+		"wantsToEditOutsideWorkspace": "需要编辑外部文件",
+		"wantsToEditProtected": "需要编辑受保护的配置文件",
+		"wantsToCreate": "需要新建文件",
+		"wantsToSearchReplace": "需要在此文件中搜索和替换",
+		"didSearchReplace": "已完成搜索和替换",
+		"wantsToInsert": "需要在此文件中插入内容",
+		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容",
+		"wantsToInsertAtEnd": "需要在文件末尾添加内容",
+		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件",
+		"wantsToReadMultiple": "Kilo Code 想要读取多个文件",
+		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改",
+		"wantsToGenerateImage": "需要生成图片",
+		"wantsToGenerateImageOutsideWorkspace": "需要在工作区外生成图片",
+		"wantsToGenerateImageProtected": "需要在受保护位置生成图片",
+		"didGenerateImage": "已生成图片"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "需要查看目录文件列表:",
-		"didViewTopLevel": "已查看目录文件列表:",
-		"wantsToViewRecursive": "需要查看目录所有文件:",
-		"didViewRecursive": "已查看目录所有文件:",
-		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称:",
-		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称:",
+		"wantsToViewTopLevel": "需要查看目录文件列表",
+		"didViewTopLevel": "已查看目录文件列表",
+		"wantsToViewRecursive": "需要查看目录所有文件",
+		"didViewRecursive": "已查看目录所有文件",
+		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称",
+		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称",
 		"wantsToSearch": "需要搜索内容: {{regex}}",
 		"didSearch": "已完成内容搜索: {{regex}}",
 		"wantsToSearchOutsideWorkspace": "需要搜索内容（工作区外）: {{regex}}",
 		"didSearchOutsideWorkspace": "已完成内容搜索（工作区外）: {{regex}}",
-		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）:",
-		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）:",
-		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）:",
-		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）:",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）:"
+		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）",
+		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）",
+		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）",
+		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）"
 	},
 	"commandOutput": "命令输出",
 	"commandExecution": {
 		"running": "正在运行",
+		"abort": "中止",
 		"pid": "PID: {{pid}}",
-		"exited": "已退出 ({{exitCode}})",
+		"exitStatus": "已退出，状态码 {{exitCode}}",
 		"manageCommands": "管理命令权限",
 		"commandManagementDescription": "管理命令权限：点击 ✓ 允许自动执行，点击 ✗ 拒绝执行。可以打开/关闭模式或从列表中删除。<settingsLink>查看所有设置</settingsLink>",
 		"addToAllowed": "添加到允许列表",
@@ -227,9 +228,15 @@
 	},
 	"response": "响应",
 	"arguments": "参数",
+	"text": {
+		"rooSaid": "Kilo 说"
+	},
+	"feedback": {
+		"youSaid": "你说"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP上使用工具:",
-		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务上的资源:"
+		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP上使用工具",
+		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务上的资源"
 	},
 	"modes": {
 		"wantsToSwitch": "即将切换至{{mode}}模式",
@@ -238,7 +245,7 @@
 		"didSwitchWithReason": "已切换至{{mode}}模式（原因：{{reason}}）"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务:",
+		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务",
 		"wantsToFinish": "Kilo Code想完成此子任务",
 		"newTaskContent": "子任务说明",
 		"completionContent": "子任务已完成",
@@ -247,25 +254,28 @@
 		"completionInstructions": "子任务已完成！您可以查看结果并提出修改或下一步建议。如果一切正常，请确认以将结果返回给主任务。"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code有一个问题:"
+		"hasQuestion": "Kilo Code有一个问题"
 	},
 	"taskCompleted": "任务完成",
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
 	},
 	"autoApprove": {
-		"tooltip": "管理自动批准设置",
+		"tooltipManage": "管理自动批准设置",
+		"tooltipStatus": "自动批准已启用：{{toggles}}",
 		"title": "自动批准",
+		"toggle": "切换自动批准",
 		"all": "全部",
 		"none": "无",
 		"description": "无需请求权限即可执行这些操作。仅对您完全信任的操作启用此功能。",
 		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
-		"triggerLabel_zero": "无自动批准",
+		"triggerLabelOff": "自动批准已关闭",
+		"triggerLabel_zero": "0 个自动批准",
 		"triggerLabel_one": "1 个自动批准",
 		"triggerLabel_other": "{{count}} 个自动批准",
-		"triggerLabelAll": "人生只有一次"
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -284,15 +294,17 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} 已发布",
-		"description": "介绍 <bold>Roo Code Cloud：</bold>将 Roo 的强大功能扩展到 IDE 之外",
-		"feature1": "<bold>随时随地跟踪任务进度（免费）：</bold>获取长时间运行任务的实时更新，无需困在 IDE 中",
-		"feature2": "<bold>远程控制 Roo 扩展（Pro）：</bold>通过基于聊天的浏览器界面启动、停止和与任务交互。",
-		"learnMore": "准备掌控一切？在<learnMoreLink>这里</learnMoreLink>了解更多。",
-		"visitCloudButton": "访问 Roo Code Cloud",
-		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们"
+		"stealthModel": {
+			"feature": "<bold>限时免费隐形模型</bold> - Code Supernova：一个支持图像输入的多功能代理编程模型，通过 Roo Code Cloud 提供。",
+			"note": "(注意：提示词和补全内容会被模型创建者记录并用于改进模型)",
+			"connectButton": "连接到 Roo Code Cloud",
+			"selectModel": "在设置中从 Roo Code Cloud 提供商选择 <code>roo/code-supernova</code> 开始使用。",
+			"goToSettingsButton": "前往设置"
+		},
+		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code想使用浏览器:",
+		"rooWantsToUse": "Kilo Code想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
 		"screenshot": "浏览器截图",
@@ -317,8 +329,6 @@
 		"tooltips": {
 			"expand": "展开代码块",
 			"collapse": "收起代码块",
-			"enable_wrap": "启用自动换行",
-			"disable_wrap": "禁用自动换行",
 			"copy_code": "复制代码"
 		}
 	},
@@ -381,6 +391,7 @@
 		"tooltip": "管理斜杠命令",
 		"title": "斜杠命令",
 		"description": "使用内置斜杠命令或创建自定义命令，快速访问常用提示词和工作流程。<DocsLink>文档</DocsLink>",
+		"manageCommands": "在设置中管理斜杠命令",
 		"builtInCommands": "内置命令",
 		"globalCommands": "全局命令",
 		"workspaceCommands": "工作区命令",
@@ -396,12 +407,18 @@
 			"confirm": "删除"
 		}
 	},
+	"contextMenu": {
+		"noResults": "无结果",
+		"problems": "问题",
+		"terminal": "终端",
+		"url": "粘贴URL以获取内容"
+	},
 	"queuedMessages": {
-		"title": "队列消息:",
+		"title": "队列消息",
 		"clickToEdit": "点击编辑消息"
 	},
 	"slashCommand": {
-		"wantsToRun": "Roo 想要运行斜杠命令:",
-		"didRun": "Roo 运行了斜杠命令:"
+		"wantsToRun": "Kilo Code 想要运行斜杠命令",
+		"didRun": "Kilo Code 运行了斜杠命令"
 	}
 }

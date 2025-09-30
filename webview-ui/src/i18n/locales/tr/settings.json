@@ -28,11 +28,17 @@
 		"notifications": "Bildirimler",
 		"contextManagement": "Bağlam",
 		"terminal": "Terminal",
+		"slashCommands": "Eğik Çizgi Komutları",
 		"prompts": "Promptlar",
+		"ui": "UI",
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"display": "Göster"
+		"display": "Göster",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "Varsayılan değere sıfırla (0.4)",
 		"searchMaxResultsLabel": "Maksimum Arama Sonuçları",
 		"searchMaxResultsDescription": "Kod tabanı dizinini sorgularken döndürülecek maksimum arama sonucu sayısı. Daha yüksek değerler daha fazla bağlam sağlar ancak daha az alakalı sonuçlar içerebilir.",
-		"resetToDefault": "Varsayılana sıfırla"
+		"resetToDefault": "Varsayılana sıfırla",
+		"cancelling": "İptal ediliyor...",
+		"cancelIndexingButton": "İndekslemeyi iptal et"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDE tercihlerinizde</SettingsLink> bu ayar için genel bir kısayol yapılandırabilirsiniz.",
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
 		"enabled": "Oto-onay etkinleştirildi",
 		"toggleAriaLabel": "Otomatik onayı değiştir",
@@ -379,9 +388,11 @@
 		"ollama": {
 			"baseUrl": "Temel URL (İsteğe bağlı)",
 			"modelId": "Model Kimliği",
-			"apiKey": "API Anahtarı",
+			"apiKey": "Ollama API Anahtarı",
 			"apiKeyPlaceholder": "API anahtarınızı girin",
-			"apiKeyInfo": "API anahtarı Authorization başlığı olarak gönderilecek",
+			"apiKeyHelp": "Kimlik doğrulamalı Ollama örnekleri veya bulut hizmetleri için isteğe bağlı API anahtarı. Yerel kurulumlar için boş bırakın.",
+			"numCtx": "Bağlam Penceresi Boyutu (num_ctx)",
+			"numCtxHelp": "Modelin varsayılan bağlam penceresi boyutunu geçersiz kılar. Modelin Modelfile yapılandırmasını kullanmak için boş bırakın. Minimum değer 128'dir.",
 			"description": "Ollama, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için hızlı başlangıç kılavuzlarına bakın.",
 			"warning": "Not: Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},
@@ -904,6 +915,13 @@
 			"label": "Görev zaman çizelgesini göster"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
+			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",
+			"preview": "Animasyon önizlemesi"
+		}
+	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",
 	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir.",
 	"limitMaxTokensDescription": "Yanıttaki maksimum token sayısını sınırla",
@@ -921,6 +939,12 @@
 			"input": "Giriş",
 			"output": "Çıkış",
 			"cacheReads": "Önbellek okumaları"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Düşünme mesajlarını varsayılan olarak daralt",
+			"description": "Etkinleştirildiğinde, düşünme blokları siz onlarla etkileşime girene kadar varsayılan olarak daraltılır"
 		}
 	}
 }

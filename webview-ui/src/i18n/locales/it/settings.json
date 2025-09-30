@@ -28,11 +28,17 @@
 		"notifications": "Notifiche",
 		"contextManagement": "Contesto",
 		"terminal": "Terminal",
+		"slashCommands": "Comandi Slash",
 		"prompts": "Prompt",
+		"ui": "UI",
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"display": "Mostra"
+		"display": "Mostra",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Kilo Code a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "Ripristina al valore predefinito (0.4)",
 		"searchMaxResultsLabel": "Risultati di ricerca massimi",
 		"searchMaxResultsDescription": "Numero massimo di risultati di ricerca da restituire quando si interroga l'indice del codice. Valori più alti forniscono più contesto ma possono includere risultati meno pertinenti.",
-		"resetToDefault": "Ripristina al valore predefinito"
+		"resetToDefault": "Ripristina al valore predefinito",
+		"cancelling": "Annullamento...",
+		"cancelIndexingButton": "Annulla indicizzazione"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Puoi configurare una scorciatoia globale per questa impostazione <SettingsLink>nelle preferenze del tuo IDE</SettingsLink>.",
 		"description": "Permetti a Kilo Code di eseguire automaticamente operazioni senza richiedere approvazione. Abilita queste impostazioni solo se ti fidi completamente dell'IA e comprendi i rischi di sicurezza associati.",
 		"enabled": "Auto-approvazione abilitata",
 		"toggleAriaLabel": "Attiva/disattiva approvazione automatica",
@@ -379,11 +388,13 @@
 		"ollama": {
 			"baseUrl": "URL base (opzionale)",
 			"modelId": "ID modello",
-			"apiKey": "Chiave API",
+			"apiKey": "Chiave API Ollama",
 			"apiKeyPlaceholder": "Inserisci la tua chiave API",
-			"apiKeyInfo": "La chiave API verrà inviata come intestazione Authorization",
+			"apiKeyHelp": "Chiave API opzionale per istanze Ollama autenticate o servizi cloud. Lascia vuoto per installazioni locali.",
+			"numCtx": "Dimensione della finestra di contesto (num_ctx)",
+			"numCtxHelp": "Sovrascrive la dimensione predefinita della finestra di contesto del modello. Lasciare vuoto per utilizzare la configurazione del Modelfile del modello. Il valore minimo è 128.",
 			"description": "Ollama ti permette di eseguire modelli localmente sul tuo computer. Per iniziare, consulta la guida rapida.",
-			"warning": "Nota: Kilo Code utilizza prompt complessi e funziona meglio con i modelli Claude. I modelli con capacità inferiori potrebbero non funzionare come previsto."
+			"warning": "Nota: Kilo Code utiliza prompt complessi e funziona meglio con i modelli Claude. I modelli con capacità inferiori potrebbero non funzionare come previsto."
 		},
 		"unboundApiKey": "Chiave API Unbound",
 		"getUnboundApiKey": "Ottieni chiave API Unbound",
@@ -904,6 +915,13 @@
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra animazione gutter durante l'autocompletamento",
+			"description": "Visualizza indicatore animato nel gutter dell'editor quando l'autocompletamento è in esecuzione",
+			"preview": "Anteprima animazione"
+		}
+	},
 	"includeMaxOutputTokens": "Includi token di output massimi",
 	"includeMaxOutputTokensDescription": "Invia il parametro dei token di output massimi nelle richieste API. Alcuni provider potrebbero non supportarlo.",
 	"limitMaxTokensDescription": "Limita il numero massimo di token nella risposta",
@@ -921,6 +939,12 @@
 			"input": "Input",
 			"output": "Output",
 			"cacheReads": "Letture cache"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Comprimi i messaggi di pensiero per impostazione predefinita",
+			"description": "Se abilitato, i blocchi di pensiero verranno compressi per impostazione predefinita finché non interagisci con essi"
 		}
 	}
 }

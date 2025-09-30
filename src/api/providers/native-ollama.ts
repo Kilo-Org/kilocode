@@ -20,6 +20,11 @@ function estimateOllamaTokenCount(messages: Message[]): number {
 }
 // kilocode_change end
 
+interface OllamaChatOptions {
+	temperature: number
+	num_ctx?: number
+}
+
 function convertToOllamaMessages(anthropicMessages: Anthropic.Messages.MessageParam[]): Message[] {
 	const ollamaMessages: Message[] = []
 
@@ -166,7 +171,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			try {
 				// kilocode_change start
 				const headers = this.options.ollamaApiKey
-					? { Authorization: this.options.ollamaApiKey } // Yes, this is weird, its not a Bearer token
+					? { Authorization: `Bearer ${this.options.ollamaApiKey}` }
 					: undefined
 				// kilocode_change end
 
@@ -205,10 +210,12 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		]
 
 		// kilocode_change start
+		// it is tedious we have to check this, but Ollama's quiet prompt-truncating behavior is a support nightmare otherwise
 		const estimatedTokenCount = estimateOllamaTokenCount(ollamaMessages)
-		if (modelInfo.maxTokens && estimatedTokenCount > modelInfo.maxTokens) {
+		const maxTokens = this.options.ollamaNumCtx ?? modelInfo.contextWindow
+		if (estimatedTokenCount > maxTokens) {
 			throw new Error(
-				`Input message is too long for the selected model. Estimated tokens: ${estimatedTokenCount}, Max tokens: ${modelInfo.maxTokens}. To increase the context window size, see: https://kilocode.ai/docs/providers/ollama#configure-the-context-size`,
+				`Prompt is too long (estimated tokens: ${estimatedTokenCount}, max tokens: ${maxTokens}). Increase the Context Window Size in Settings.`,
 			)
 		}
 		// kilocode_change end
@@ -223,14 +230,22 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 		)
 
 		try {
+			// Build options object conditionally
+			const chatOptions: OllamaChatOptions = {
+				temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
+			}
+
+			// Only include num_ctx if explicitly set via ollamaNumCtx
+			if (this.options.ollamaNumCtx !== undefined) {
+				chatOptions.num_ctx = this.options.ollamaNumCtx
+			}
+
 			// Create the actual API request promise
 			const stream = await client.chat({
 				model: modelId,
 				messages: ollamaMessages,
 				stream: true,
-				options: {
-					temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
-				},
+				options: chatOptions,
 			})
 
 			let totalInputTokens = 0
@@ -294,8 +309,14 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 	}
 
 	async fetchModel() {
-		this.models = await getOllamaModels(this.options.ollamaBaseUrl, this.options.ollamaApiKey)
-		return this.models // kilocode_change
+		// kilocode_change start
+		this.models = await getOllamaModels(
+			this.options.ollamaBaseUrl,
+			this.options.ollamaApiKey,
+			this.options.ollamaNumCtx,
+		)
+		return this.models
+		// kilocode_change end
 	}
 
 	override getModel(): { id: string; info: ModelInfo } {
@@ -331,13 +352,21 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			const { id: modelId } = this.getModel() // kilocode_change: fetchModel => getModel
 			const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 
+			// Build options object conditionally
+			const chatOptions: OllamaChatOptions = {
+				temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
+			}
+
+			// Only include num_ctx if explicitly set via ollamaNumCtx
+			if (this.options.ollamaNumCtx !== undefined) {
+				chatOptions.num_ctx = this.options.ollamaNumCtx
+			}
+
 			const response = await client.chat({
 				model: modelId,
 				messages: [{ role: "user", content: prompt }],
 				stream: false,
-				options: {
-					temperature: this.options.modelTemperature ?? (useR1Format ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
-				},
+				options: chatOptions,
 			})
 
 			return response.message?.content || ""

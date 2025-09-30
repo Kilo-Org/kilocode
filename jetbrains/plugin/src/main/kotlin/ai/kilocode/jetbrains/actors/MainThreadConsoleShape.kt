@@ -66,7 +66,7 @@ class MainThreadConsole : MainThreadConsoleShape {
             when (severity) {
                 "log", "info" -> logger.info("[Extension Host] $arguments")
                 "warn" -> logger.warn("[Host] $arguments")
-                "error" -> logger.error("[ERROR]: $arguments")
+                "error" -> logger.warn("[ERROR]: $arguments")
                 "debug" -> logger.debug("[Host] $arguments")
                 else -> logger.info("[Host] $arguments")
             }

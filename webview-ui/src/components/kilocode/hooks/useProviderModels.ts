@@ -187,6 +187,13 @@ export const getModelsByProvider = ({
 				defaultModel: kilocodeDefaultModel,
 			}
 		}
+		// Temporary weird fix
+		case "kilocode-openrouter": {
+			return {
+				models: routerModels["kilocode-openrouter"],
+				defaultModel: kilocodeDefaultModel,
+			}
+		}
 		case "claude-code": {
 			// kilocode_change start: Special handling for claude-code provider to use dynamic models from backend
 			// For claude-code provider, models are fetched from the backend

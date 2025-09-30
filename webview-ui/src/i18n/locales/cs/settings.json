@@ -29,10 +29,21 @@
 		"notifications": "Oznámení",
 		"contextManagement": "Kontext",
 		"terminal": "Terminál",
+		"slashCommands": "Slash příkazy",
 		"prompts": "Výzvy",
+		"ui": "Uživatelské rozhraní",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
 		"about": "O Kilo Code"
+	},
+	"slashCommands": {
+		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Sbalit zprávy Přemýšlení ve výchozím nastavení",
+			"description": "Když je povoleno, bloky přemýšlení budou ve výchozím nastavení sbalené, dokud s nimi neinteragujete"
+		}
 	},
 	"prompts": {
 		"description": "Nakonfigurujte podpůrné výzvy, které se používají pro rychlé akce, jako je vylepšení výzev, vysvětlení kódu a oprava problémů. Tyto výzvy pomáhají Kilo Code poskytovat lepší pomoc při běžných vývojových úkolech."
@@ -128,7 +139,9 @@
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
-		}
+		},
+		"cancelling": "Probíhá rušení...",
+		"cancelIndexingButton": "Zrušit indexování"
 	},
 	"autoApproval": {
 		"title": "Automatické schválení",
@@ -136,6 +149,7 @@
 	},
 	"autoApprove": {
 		"description": "Povolit Kilo Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům.",
+		"toggleShortcut": "Můžete nakonfigurovat klávesovou zkratku pro toto nastavení <SettingsLink>v nastaveních vašeho IDE</SettingsLink>.",
 		"enabled": "Automatické schválení povoleno",
 		"readOnly": {
 			"label": "Číst",
@@ -397,6 +411,9 @@
 			"apiKey": "Klíč API",
 			"apiKeyPlaceholder": "Zadejte svůj klíč API",
 			"apiKeyInfo": "Klíč API bude odeslán jako Authorization hlavička",
+			"apiKeyHelp": "Volitelný klíč API pro autentizované instance Ollama nebo cloudové služby. Ponechte prázdné pro místní instalace.",
+			"numCtx": "Velikost kontextového okna (num_ctx)",
+			"numCtxHelp": "Přepsat výchozí velikost kontextového okna modelu. Ponechte prázdné pro použití konfigurace Modelfile modelu. Minimální hodnota je 128.",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
 			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
@@ -578,6 +595,13 @@
 		"taskTimeline": {
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Zobrazit animaci v okraji při automatickém dokončování",
+			"description": "Zobrazit animovaný indikátor v okraji editoru, když běží automatické dokončování",
+			"preview": "Náhled animace"
 		}
 	},
 	"notifications": {

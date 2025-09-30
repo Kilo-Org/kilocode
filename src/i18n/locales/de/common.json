@@ -182,6 +182,10 @@
 		"incomplete": "Aufgabe #{{taskNumber}} (Unvollständig)",
 		"no_messages": "Aufgabe #{{taskNumber}} (Keine Nachrichten)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Antwort vom Benutzer unterbrochen",
+		"responseInterruptedByApiError": "Antwort durch API-Fehler unterbrochen"
+	},
 	"storage": {
 		"prompt_custom_path": "Gib den benutzerdefinierten Speicherpfad für den Gesprächsverlauf ein, leer lassen für Standardspeicherort",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -247,5 +251,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Aufgabenabschluss verhindern, wenn unvollständige Todos in der Todo-Liste vorhanden sind"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Fehler",
+		"reportText": "Bitte melde diesen Fehler, um uns bei der Verbesserung der Anwendung zu helfen.",
+		"githubText": "Auf GitHub melden",
+		"copyInstructions": "Kopiere die unten stehenden Fehlerdetails:",
+		"errorStack": "Fehler-Stack",
+		"componentStack": "Komponenten-Stack"
 	}
 }

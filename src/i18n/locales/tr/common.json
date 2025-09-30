@@ -182,6 +182,10 @@
 		"incomplete": "Görev #{{taskNumber}} (Tamamlanmamış)",
 		"no_messages": "Görev #{{taskNumber}} (Mesaj yok)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Yanıt kullanıcı tarafından kesildi",
+		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi"
+	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Todo listesinde tamamlanmamış todolar olduğunda görev tamamlanmasını engelle"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Hata",
+		"reportText": "Uygulamayı geliştirmemize yardımcı olmak için lütfen bu hatayı bildirin.",
+		"githubText": "GitHub'da bildir",
+		"copyInstructions": "Aşağıdaki hata ayrıntılarını kopyalayın:",
+		"errorStack": "Hata Stack'i",
+		"componentStack": "Bileşen Stack'i"
 	}
 }

@@ -161,18 +161,40 @@ class WeCoderTerminalCustomizer : LocalTerminalCustomizer() {
   }
 
   /**
-   * Inject VSCode integration script for Zsh
+   * Inject VSCode integration script for Zsh (safe with JetBrains shell integration)
    */
-  private fun injectZshScript(command: Array<String>, envs: MutableMap<String, String>, scriptPath: String): Array<String> {
-    // Save user's original ZDOTDIR environment variable
-    val userZdotdir = envs["ZDOTDIR"]
-      ?: System.getenv("ZDOTDIR")
-      ?: System.getProperty("user.home")
-    
+  private fun injectZshScript(
+    command: Array<String>,
+    envs: MutableMap<String, String>,
+    scriptPath: String
+  ): Array<String> {
+    // 1) If JetBrains' built-in zsh shell integration is already in place, avoid modifying ZDOTDIR to prevent conflicts.
+    val jetbrainsZshDir = envs["JETBRAINS_INTELLIJ_ZSH_DIR"] ?: System.getenv("JETBRAINS_INTELLIJ_ZSH_DIR")
+    val shellExeName = File(command[0]).name
+    val looksLikeJbZsh = command[0].contains("/plugins/terminal/shell-integrations/zsh")
+
+    if (jetbrainsZshDir != null || looksLikeJbZsh) {
+      logger.info("🔒 Detected JetBrains Zsh integration (JETBRAINS_INTELLIJ_ZSH_DIR=$jetbrainsZshDir, looksLikeJbZsh=$looksLikeJbZsh). Skip overriding ZDOTDIR.")
+      // Still retain the user's original ZDOTDIR in the environment for on-demand use within scripts.
+      val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
+      envs["USER_ZDOTDIR"] = userZdotdir
+      return command
+    }
+
+    // 2) Inject only when `scriptPath` appears to be a valid `ZDOTDIR` (at least containing `.zshrc`).
+    val dir = File(scriptPath)
+    val hasZshrc = File(dir, ".zshrc").exists()
+    if (!dir.isDirectory || !hasZshrc) {
+      logger.warn("🚫 Zsh script dir '$scriptPath' is invalid (dir=$dir, hasZshrc=$hasZshrc). Skip overriding ZDOTDIR.")
+      return command
+    }
+
+    // 3) Record and securely overwrite.
+    val userZdotdir = envs["ZDOTDIR"] ?: System.getenv("ZDOTDIR") ?: System.getProperty("user.home")
     envs["USER_ZDOTDIR"] = userZdotdir
     envs["ZDOTDIR"] = scriptPath
-    
-    logger.info("🔧 Saved original ZDOTDIR: $userZdotdir, set new ZDOTDIR: $scriptPath")
+
+    logger.info("🔧 Set ZDOTDIR to '$scriptPath' (saved original as USER_ZDOTDIR='$userZdotdir'), shell=$shellExeName")
     return command
   }
 

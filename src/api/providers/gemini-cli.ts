@@ -19,8 +19,6 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { BaseProvider } from "./base-provider"
 
 // OAuth2 Configuration (from Cline implementation)
-const OAUTH_CLIENT_ID = "681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com"
-const OAUTH_CLIENT_SECRET = "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"
 const OAUTH_REDIRECT_URI = "http://localhost:45289"
 
 // Code Assist API Configuration
@@ -34,22 +32,50 @@ interface OAuthCredentials {
 	expiry_date: number
 }
 
+interface OauthConfig {
+	oauthClientId: string
+	oauthClientSecret: string
+}
+
 export class GeminiCliHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
 	private authClient: OAuth2Client
 	private projectId: string | null = null
 	private credentials: OAuthCredentials | null = null
+	private oauthClientId: string | null = null
+	private oauthClientSecret: string | null = null
 
 	constructor(options: ApiHandlerOptions) {
 		super()
 		this.options = options
 
-		// Initialize OAuth2 client
-		this.authClient = new OAuth2Client(OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, OAUTH_REDIRECT_URI)
+		// Initialize OAuth2 client (will be set up after fetching config)
+		this.authClient = new OAuth2Client("", "", OAUTH_REDIRECT_URI)
+	}
+
+	private async fetchOAuthConfig(): Promise<void> {
+		try {
+			const response = await axios.get<{ geminiCli: OauthConfig }>(
+				"https://api.kilocode.ai/extension-config.json",
+			)
+			const config = response.data
+
+			this.oauthClientId = config.geminiCli.oauthClientId
+			this.oauthClientSecret = config.geminiCli.oauthClientSecret
+
+			this.authClient = new OAuth2Client(this.oauthClientId, this.oauthClientSecret, OAUTH_REDIRECT_URI)
+		} catch (error) {
+			throw new Error("OAuth client credentials not found in config", error)
+		}
 	}
 
 	private async loadOAuthCredentials(): Promise<void> {
 		try {
+			// First, fetch OAuth config if not already fetched
+			if (!this.oauthClientId || !this.oauthClientSecret) {
+				await this.fetchOAuthConfig()
+			}
+
 			const credPath = this.options.geminiCliOAuthPath || path.join(os.homedir(), ".gemini", "oauth_creds.json")
 			const credData = await fs.readFile(credPath, "utf-8")
 			this.credentials = JSON.parse(credData)

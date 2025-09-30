@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "หยุดตัวติดตามไฟล์แล้ว",
 		"failedDuringInitialScan": "ล้มเหลวระหว่างการสแกนเริ่มต้น: {{errorMessage}}",
 		"unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
-		"indexingRequiresWorkspace": "การจัดทำดัชนีต้องการโฟลเดอร์พื้นที่ทำงานที่เปิดอยู่"
+		"indexingRequiresWorkspace": "การจัดทำดัชนีต้องการโฟลเดอร์พื้นที่ทำงานที่เปิดอยู่",
+		"indexingCancelled": "ยกเลิกการจัดทำดัชนีแล้ว"
 	}
 }

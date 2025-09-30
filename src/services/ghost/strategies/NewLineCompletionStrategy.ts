@@ -1,4 +1,4 @@
-import * as vscode from "vscode"
+import type { TextDocument, Range } from "vscode"
 import { GhostSuggestionContext } from "../types"
 import { UseCaseType } from "../types/PromptStrategy"
 import { BasePromptStrategy } from "./BasePromptStrategy"
@@ -201,7 +201,7 @@ Important:
 	/**
 	 * Get contextual hints based on surrounding code
 	 */
-	private getContextualHints(document: vscode.TextDocument, range: vscode.Range): string {
+	private getContextualHints(document: TextDocument, range: Range): string {
 		const lineNum = range.start.line
 		let hints = "### Hints:\n"
 
@@ -249,7 +249,7 @@ Important:
 	/**
 	 * Get the indentation level of a line
 	 */
-	private getIndentationLevel(document: vscode.TextDocument, lineNum: number): number {
+	private getIndentationLevel(document: TextDocument, lineNum: number): number {
 		if (lineNum >= document.lineCount) return 0
 
 		const line = document.lineAt(lineNum).text
@@ -260,7 +260,7 @@ Important:
 	/**
 	 * Check if we're near the end of a function
 	 */
-	private isNearFunctionEnd(document: vscode.TextDocument, lineNum: number): boolean {
+	private isNearFunctionEnd(document: TextDocument, lineNum: number): boolean {
 		// Simple heuristic: check if there's a closing brace within 3 lines
 		for (let i = lineNum + 1; i < Math.min(lineNum + 4, document.lineCount); i++) {
 			const line = document.lineAt(i).text

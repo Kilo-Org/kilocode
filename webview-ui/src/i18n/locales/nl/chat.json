@@ -67,7 +67,7 @@
 		"tooltip": "Deze actie goedkeuren"
 	},
 	"runCommand": {
-		"title": "Commando uitvoeren",
+		"title": "Commando",
 		"tooltip": "Voer dit commando uit"
 	},
 	"proceedWhileRunning": {
@@ -132,7 +132,7 @@
 	"addContext": "@ om context toe te voegen, / voor commando's",
 	"dragFiles": "houd shift ingedrukt om bestanden te slepen",
 	"dragFilesImages": "houd shift ingedrukt om bestanden/afbeeldingen te slepen",
-	"errorReadingFile": "Fout bij het lezen van bestand:",
+	"errorReadingFile": "Fout bij het lezen van bestand",
 	"noValidImages": "Er zijn geen geldige afbeeldingen verwerkt",
 	"separator": "Scheidingsteken",
 	"edit": "Bewerken...",
@@ -165,51 +165,51 @@
 		"wantsToFetch": "Kilo Code wil gedetailleerde instructies ophalen om te helpen met de huidige taak"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code wil dit bestand lezen:",
-		"wantsToReadOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte lezen:",
-		"didRead": "Kilo Code heeft dit bestand gelezen:",
-		"wantsToEdit": "Kilo Code wil dit bestand bewerken:",
-		"wantsToEditOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte bewerken:",
-		"wantsToEditProtected": "Kilo Code wil een beveiligd configuratiebestand bewerken:",
-		"wantsToCreate": "Kilo Code wil een nieuw bestand aanmaken:",
-		"wantsToSearchReplace": "Kilo Code wil zoeken en vervangen in dit bestand:",
-		"didSearchReplace": "Kilo Code heeft zoeken en vervangen uitgevoerd op dit bestand:",
-		"wantsToInsert": "Kilo Code wil inhoud invoegen in dit bestand:",
-		"wantsToInsertWithLineNumber": "Kilo Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand:",
-		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen:",
-		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen:",
-		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden:",
-		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren:",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte:",
-		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie:",
-		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd:"
+		"wantsToRead": "Kilo Code wil dit bestand lezen",
+		"wantsToReadOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte lezen",
+		"didRead": "Kilo Code heeft dit bestand gelezen",
+		"wantsToEdit": "Kilo Code wil dit bestand bewerken",
+		"wantsToEditOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte bewerken",
+		"wantsToEditProtected": "Kilo Code wil een beveiligd configuratiebestand bewerken",
+		"wantsToCreate": "Kilo Code wil een nieuw bestand aanmaken",
+		"wantsToSearchReplace": "Kilo Code wil zoeken en vervangen in dit bestand",
+		"didSearchReplace": "Kilo Code heeft zoeken en vervangen uitgevoerd op dit bestand",
+		"wantsToInsert": "Kilo Code wil inhoud invoegen in dit bestand",
+		"wantsToInsertWithLineNumber": "Kilo Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}",
+		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand",
+		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen",
+		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen",
+		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden",
+		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte",
+		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie",
+		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken:",
-		"didViewTopLevel": "Kilo Code heeft de bovenliggende bestanden in deze map bekeken:",
-		"wantsToViewRecursive": "Kilo Code wil alle bestanden in deze map recursief bekijken:",
-		"didViewRecursive": "Kilo Code heeft alle bestanden in deze map recursief bekeken:",
-		"wantsToViewDefinitions": "Kilo Code wil broncode-definitienamen bekijken die in deze map worden gebruikt:",
-		"didViewDefinitions": "Kilo Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt:",
-		"wantsToSearch": "Kilo Code wil deze map doorzoeken op <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>:",
-		"wantsToSearchOutsideWorkspace": "Kilo Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>:",
-		"didSearchOutsideWorkspace": "Kilo Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken:",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken:",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken:",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt:",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt:"
+		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken",
+		"didViewTopLevel": "Kilo Code heeft de bovenliggende bestanden in deze map bekeken",
+		"wantsToViewRecursive": "Kilo Code wil alle bestanden in deze map recursief bekijken",
+		"didViewRecursive": "Kilo Code heeft alle bestanden in deze map recursief bekeken",
+		"wantsToViewDefinitions": "Kilo Code wil broncode-definitienamen bekijken die in deze map worden gebruikt",
+		"didViewDefinitions": "Kilo Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt",
+		"wantsToSearch": "Kilo Code wil deze map doorzoeken op <code>{{regex}}</code>",
+		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt"
 	},
 	"commandOutput": "Commando-uitvoer",
 	"commandExecution": {
 		"running": "Lopend",
+		"abort": "Afbreken",
 		"pid": "PID: {{pid}}",
-		"exited": "Afgesloten ({{exitCode}})",
-		"manageCommands": "Beheer Commando Toestemmingen",
-		"commandManagementDescription": "Beheer commando toestemmingen: Klik op ✓ om automatische uitvoering toe te staan, ✗ om uitvoering te weigeren. Patronen kunnen worden in- of uitgeschakeld of uit lijsten worden verwijderd. <settingsLink>Bekijk alle instellingen</settingsLink>",
+		"exitStatus": "Afgesloten met status {{exitCode}}",
+		"manageCommands": "Automatisch goedgekeurde commando's",
 		"addToAllowed": "Toevoegen aan toegestane lijst",
 		"removeFromAllowed": "Verwijderen van toegestane lijst",
 		"addToDenied": "Toevoegen aan geweigerde lijst",
@@ -222,9 +222,15 @@
 	},
 	"response": "Antwoord",
 	"arguments": "Argumenten",
+	"text": {
+		"rooSaid": "Kilo zei"
+	},
+	"feedback": {
+		"youSaid": "Jij zei"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code wil een tool gebruiken op de {{serverName}} MCP-server:",
-		"wantsToAccessResource": "Kilo Code wil een bron benaderen op de {{serverName}} MCP-server:"
+		"wantsToUseTool": "Kilo Code wil een tool gebruiken op de {{serverName}} MCP-server",
+		"wantsToAccessResource": "Kilo Code wil een bron benaderen op de {{serverName}} MCP-server"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Code wil overschakelen naar {{mode}} modus",
@@ -233,7 +239,7 @@
 		"didSwitchWithReason": "Kilo Code is overgeschakeld naar {{mode}} modus omdat: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code wil een nieuwe subtaak aanmaken in {{mode}} modus:",
+		"wantsToCreate": "Kilo Code wil een nieuwe subtaak aanmaken in {{mode}} modus",
 		"wantsToFinish": "Kilo Code wil deze subtaak voltooien",
 		"newTaskContent": "Subtaak-instructies",
 		"completionContent": "Subtaak voltooid",
@@ -242,7 +248,7 @@
 		"completionInstructions": "Subtaak voltooid! Je kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles goed is, bevestig dan om het resultaat terug te sturen naar de hoofdtaak."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code heeft een vraag:"
+		"hasQuestion": "Kilo Code heeft een vraag"
 	},
 	"taskCompleted": "Taak voltooid",
 	"error": "Fout",
@@ -254,27 +260,32 @@
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
 	},
 	"autoApprove": {
-		"tooltip": "Beheer instellingen voor automatische goedkeuring",
+		"tooltipManage": "Beheer instellingen voor automatische goedkeuring",
+		"tooltipStatus": "Automatische goedkeuring ingeschakeld voor: {{toggles}}",
 		"title": "Automatisch goedkeuren",
+		"toggle": "Automatisch goedkeuren in-/uitschakelen",
 		"all": "Alles",
 		"none": "Geen",
-		"description": "Voer deze acties uit zonder toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt.",
-		"selectOptionsFirst": "Selecteer hieronder minstens één optie om automatisch goedkeuren in te schakelen",
-		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
-		"disabledAriaLabel": "Automatisch goedkeuren uitgeschakeld - selecteer eerst opties",
-		"triggerLabel_zero": "Geen automatische goedkeuring",
+		"description": "Voer deze acties uit zonder om toestemming te vragen. Schakel dit alleen in voor acties die je volledig vertrouwt.",
+		"selectOptionsFirst": "Selecteer hieronder minstens één optie om automatische goedkeuring in te schakelen",
+		"toggleAriaLabel": "Automatische goedkeuring in-/uitschakelen",
+		"disabledAriaLabel": "Automatische goedkeuring uitgeschakeld - selecteer eerst opties",
+		"triggerLabelOff": "Automatisch goedkeuren uit",
+		"triggerLabel_zero": "0 automatisch goedgekeurd",
 		"triggerLabel_one": "1 automatisch goedgekeurd",
 		"triggerLabel_other": "{{count}} automatisch goedgekeurd",
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} uitgebracht",
-		"description": "Introductie van <bold>Roo Code Cloud:</bold> De kracht van Roo brengen voorbij de IDE",
-		"feature1": "<bold>Volg taakvoortgang overal (Gratis):</bold> Krijg realtime updates van langlopende taken zonder vast te zitten in je IDE",
-		"feature2": "<bold>Bestuur de Roo Extensie op afstand (Pro):</bold> Start, stop en interacteer met taken vanuit een chat-gebaseerde browserinterface.",
-		"learnMore": "Klaar om de controle te nemen? Leer meer <learnMoreLink>hier</learnMoreLink>.",
-		"visitCloudButton": "Bezoek Roo Code Cloud",
-		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink>"
+		"stealthModel": {
+			"feature": "<bold>Beperkt tijd GRATIS stealth model</bold> - Code Supernova: Een veelzijdig agentisch codeermodel dat beeldinvoer ondersteunt, beschikbaar via Roo Code Cloud.",
+			"note": "(Opmerking: prompts en aanvullingen worden gelogd door de modelmaker en gebruikt om het model te verbeteren)",
+			"connectButton": "Verbinden met Roo Code Cloud",
+			"selectModel": "Selecteer <code>roo/code-supernova</code> van de Roo Code Cloud provider in Instellingen om te beginnen.",
+			"goToSettingsButton": "Ga naar Instellingen"
+		},
+		"socialLinks": "Sluit je bij ons aan op <xLink>X</xLink>, <discordLink>Discord</discordLink>, of <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Denkt na",
@@ -292,7 +303,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code wil de browser gebruiken:",
+		"rooWantsToUse": "Kilo Code wil de browser gebruiken",
 		"consoleLogs": "Console-logboeken",
 		"noNewLogs": "(Geen nieuwe logboeken)",
 		"screenshot": "Browserschermopname",
@@ -317,8 +328,6 @@
 		"tooltips": {
 			"expand": "Codeblok uitvouwen",
 			"collapse": "Codeblok samenvouwen",
-			"enable_wrap": "Regelafbreking inschakelen",
-			"disable_wrap": "Regelafbreking uitschakelen",
 			"copy_code": "Code kopiëren"
 		}
 	},
@@ -342,8 +351,8 @@
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code>:",
-		"wantsToSearchWithPath": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>:",
+		"wantsToSearch": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "1 resultaat gevonden",
 		"didSearch_other": "{{count}} resultaten gevonden",
 		"resultTooltip": "Gelijkenisscore: {{score}} (klik om bestand te openen)"
@@ -381,6 +390,7 @@
 		"tooltip": "Slash-opdrachten beheren",
 		"title": "Slash-opdrachten",
 		"description": "Gebruik ingebouwde slash-opdrachten of maak aangepaste voor snelle toegang tot veelgebruikte prompts en workflows. <DocsLink>Documentatie</DocsLink>",
+		"manageCommands": "Beheer slash-opdrachten in instellingen",
 		"builtInCommands": "Ingebouwde Opdrachten",
 		"globalCommands": "Globale Opdrachten",
 		"workspaceCommands": "Werkruimte Opdrachten",
@@ -396,12 +406,18 @@
 			"confirm": "Verwijderen"
 		}
 	},
+	"contextMenu": {
+		"noResults": "Geen resultaten",
+		"problems": "Problemen",
+		"terminal": "Terminal",
+		"url": "Plak URL om inhoud op te halen"
+	},
 	"queuedMessages": {
-		"title": "Berichten in wachtrij:",
+		"title": "Berichten in wachtrij",
 		"clickToEdit": "Klik om bericht te bewerken"
 	},
 	"slashCommand": {
-		"wantsToRun": "Roo wil een slash commando uitvoeren:",
-		"didRun": "Roo heeft een slash commando uitgevoerd:"
+		"wantsToRun": "Kilo Code wil een slash commando uitvoeren",
+		"didRun": "Kilo Code heeft een slash commando uitgevoerd"
 	}
 }

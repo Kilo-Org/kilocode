@@ -28,11 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
+		"slashCommands": "スラッシュコマンド",
 		"prompts": "プロンプト",
+		"ui": "UI",
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"display": "表示"
+		"display": "表示",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "デフォルト値（0.4）にリセット",
 		"searchMaxResultsLabel": "最大検索結果数",
 		"searchMaxResultsDescription": "コードベースインデックスをクエリする際に返される検索結果の最大数。値を高くするとより多くのコンテキストが提供されますが、関連性の低い結果が含まれる可能性があります。",
-		"resetToDefault": "デフォルトにリセット"
+		"resetToDefault": "デフォルトにリセット",
+		"cancelling": "キャンセル中...",
+		"cancelIndexingButton": "インデックス作成をキャンセル"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDEの環境設定</SettingsLink>で、この設定のグローバルショートカットを設定できます。",
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
 		"enabled": "自動承認が有効",
 		"toggleAriaLabel": "自動承認の切り替え",
@@ -379,9 +388,11 @@
 		"ollama": {
 			"baseUrl": "ベースURL（オプション）",
 			"modelId": "モデルID",
-			"apiKey": "APIキー",
+			"apiKey": "Ollama APIキー",
 			"apiKeyPlaceholder": "APIキーを入力してください",
-			"apiKeyInfo": "APIキーはAuthorizationヘッダーとして送信されます",
+			"apiKeyHelp": "認証されたOllamaインスタンスやクラウドサービス用のオプションAPIキー。ローカルインストールの場合は空のままにしてください。",
+			"numCtx": "コンテキストウィンドウサイズ (num_ctx)",
+			"numCtxHelp": "モデルのデフォルトのコンテキストウィンドウサイズを上書きします。モデルのModelfile構成を使用するには、空のままにします。最小値は128です。",
 			"description": "Ollamaを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、クイックスタートガイドをご覧ください。",
 			"warning": "注意：Kilo Codeは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
 		},
@@ -904,6 +915,13 @@
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "オートコンプリート時にガターアニメーションを表示",
+			"description": "オートコンプリートの実行中にエディタガターにアニメーションインジケータを表示",
+			"preview": "アニメーションプレビュー"
+		}
+	},
 	"includeMaxOutputTokens": "最大出力トークンを含める",
 	"includeMaxOutputTokensDescription": "APIリクエストで最大出力トークンパラメータを送信します。一部のプロバイダーはこれをサポートしていない場合があります。",
 	"limitMaxTokensDescription": "レスポンスの最大トークン数を制限する",
@@ -921,6 +939,12 @@
 			"input": "入力",
 			"output": "出力",
 			"cacheReads": "キャッシュ読み取り"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "デフォルトで思考メッセージを折りたたむ",
+			"description": "有効にすると、操作するまで思考ブロックがデフォルトで折りたたまれます"
 		}
 	}
 }

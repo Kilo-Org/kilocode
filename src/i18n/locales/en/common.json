@@ -182,6 +182,10 @@
 		"incomplete": "Task #{{taskNumber}} (Incomplete)",
 		"no_messages": "Task #{{taskNumber}} (No messages)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Response interrupted by user",
+		"responseInterruptedByApiError": "Response interrupted by API error"
+	},
 	"storage": {
 		"prompt_custom_path": "Enter custom conversation history storage path, leave empty to use default location",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -236,5 +240,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Prevent task completion when there are incomplete todos in the todo list"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Error",
+		"reportText": "Please report this error to help us improve the application.",
+		"githubText": "Report on GitHub",
+		"copyInstructions": "Copy the error details below:",
+		"errorStack": "Error Stack",
+		"componentStack": "Component Stack"
 	}
 }

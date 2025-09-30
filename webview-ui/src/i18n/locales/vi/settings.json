@@ -28,11 +28,16 @@
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
+		"slashCommands": "Lệnh Gạch Chéo",
 		"prompts": "Lời nhắc",
+		"ui": "UI",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
 		"display": "Hiển thị"
+	},
+	"slashCommands": {
+		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Đặt lại về giá trị mặc định (0.4)",
 		"searchMaxResultsLabel": "Số Kết Quả Tìm Kiếm Tối Đa",
 		"searchMaxResultsDescription": "Số lượng kết quả tìm kiếm tối đa được trả về khi truy vấn chỉ mục cơ sở mã. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng có thể bao gồm các kết quả ít liên quan hơn.",
-		"resetToDefault": "Đặt lại về mặc định"
+		"resetToDefault": "Đặt lại về mặc định",
+		"cancelling": "Đang hủy...",
+		"cancelIndexingButton": "Hủy lập chỉ mục"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Bạn có thể định cấu hình một phím tắt chung cho cài đặt này <SettingsLink>trong tùy chọn IDE của bạn</SettingsLink>.",
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
 		"enabled": "Phê duyệt tự động đã bật",
 		"toggleAriaLabel": "Chuyển đổi tự động phê duyệt",
@@ -379,9 +387,11 @@
 		"ollama": {
 			"baseUrl": "URL cơ sở (tùy chọn)",
 			"modelId": "ID mô hình",
-			"apiKey": "Khóa API",
+			"apiKey": "Khóa API Ollama",
 			"apiKeyPlaceholder": "Nhập khóa API của bạn",
-			"apiKeyInfo": "Khóa API sẽ được gửi dưới dạng tiêu đề Authorization",
+			"apiKeyHelp": "Khóa API tùy chọn cho các phiên bản Ollama đã xác thực hoặc dịch vụ đám mây. Để trống cho cài đặt cục bộ.",
+			"numCtx": "Kích thước cửa sổ ngữ cảnh (num_ctx)",
+			"numCtxHelp": "Ghi đè kích thước cửa sổ ngữ cảnh mặc định của mô hình. Để trống để sử dụng cấu hình Modelfile của mô hình. Giá trị tối thiểu là 128.",
 			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
 			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},
@@ -904,6 +914,13 @@
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
+			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",
+			"preview": "Xem trước hoạt ảnh"
+		}
+	},
 	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",
 	"includeMaxOutputTokensDescription": "Gửi tham số token đầu ra tối đa trong các yêu cầu API. Một số nhà cung cấp có thể không hỗ trợ điều này.",
 	"limitMaxTokensDescription": "Giới hạn số lượng token tối đa trong phản hồi",
@@ -921,6 +938,12 @@
 			"input": "Đầu vào",
 			"output": "Đầu ra",
 			"cacheReads": "Lượt đọc bộ nhớ đệm"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Thu gọn tin nhắn Suy nghĩ theo mặc định",
+			"description": "Khi được bật, các khối suy nghĩ sẽ được thu gọn theo mặc định cho đến khi bạn tương tác với chúng"
 		}
 	}
 }

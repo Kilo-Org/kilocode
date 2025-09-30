@@ -115,7 +115,7 @@ describe("ZAiHandler", () => {
 			const handlerDefault = new ZAiHandler({ zaiApiKey: "test-zai-api-key" })
 			expect(OpenAI).toHaveBeenCalledWith(
 				expect.objectContaining({
-					baseURL: "https://api.z.ai/api/coding/paas/v4", // kilocode_change, upstream pr pending
+					baseURL: "https://api.z.ai/api/coding/paas/v4",
 				}),
 			)
 

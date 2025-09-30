@@ -182,6 +182,10 @@
 		"incomplete": "작업 #{{taskNumber}} (미완료)",
 		"no_messages": "작업 #{{taskNumber}} (메시지 없음)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "사용자에 의해 응답이 중단됨",
+		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨"
+	},
 	"storage": {
 		"prompt_custom_path": "대화 내역을 위한 사용자 지정 저장 경로를 입력하세요. 기본 위치를 사용하려면 비워두세요",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "할 일 목록에 미완료된 할 일이 있을 때 작업 완료를 방지"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "오류",
+		"reportText": "애플리케이션 개선에 도움을 주시기 위해 이 오류를 신고해 주세요.",
+		"githubText": "GitHub에서 신고",
+		"copyInstructions": "아래 오류 세부 정보를 복사하세요:",
+		"errorStack": "오류 스택",
+		"componentStack": "컴포넌트 스택"
 	}
 }

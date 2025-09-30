@@ -182,6 +182,10 @@
 		"incomplete": "任務 #{{taskNumber}} (未完成)",
 		"no_messages": "任務 #{{taskNumber}} (無訊息)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "回應被使用者中斷",
+		"responseInterruptedByApiError": "回應被 API 錯誤中斷"
+	},
 	"storage": {
 		"prompt_custom_path": "輸入自定義對話記錄儲存路徑，留空以使用預設位置",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "當待辦事項清單中有未完成的待辦事項時阻止任務完成"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "錯誤",
+		"reportText": "請回報此錯誤以協助我們改進應用程式。",
+		"githubText": "在 GitHub 上回報",
+		"copyInstructions": "複製下方的錯誤詳情：",
+		"errorStack": "錯誤堆疊",
+		"componentStack": "元件堆疊"
 	}
 }

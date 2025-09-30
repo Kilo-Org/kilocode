@@ -67,7 +67,7 @@
 		"tooltip": "このアクションを承認"
 	},
 	"runCommand": {
-		"title": "コマンド実行",
+		"title": "コマンド",
 		"tooltip": "このコマンドを実行"
 	},
 	"proceedWhileRunning": {
@@ -132,7 +132,7 @@
 		"searchPlaceholder": "モードを検索...",
 		"noResults": "結果が見つかりません"
 	},
-	"errorReadingFile": "ファイル読み込みエラー:",
+	"errorReadingFile": "ファイル読み込みエラー",
 	"noValidImages": "有効な画像が処理されませんでした",
 	"separator": "区切り",
 	"edit": "編集...",
@@ -170,51 +170,51 @@
 		"wantsToFetch": "Kilo Codeは現在のタスクを支援するための詳細な指示を取得したい"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Codeはこのファイルを読みたい:",
-		"wantsToReadOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを読みたい:",
-		"didRead": "Kilo Codeはこのファイルを読みました:",
-		"wantsToEdit": "Kilo Codeはこのファイルを編集したい:",
-		"wantsToEditOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを編集したい:",
-		"wantsToEditProtected": "Kilo Codeは保護された設定ファイルを編集したい:",
-		"wantsToCreate": "Kilo Codeは新しいファイルを作成したい:",
-		"wantsToSearchReplace": "Kilo Codeはこのファイルで検索と置換を行う:",
-		"didSearchReplace": "Kilo Codeはこのファイルで検索と置換を実行しました:",
-		"wantsToInsert": "Kilo Codeはこのファイルにコンテンツを挿入したい:",
-		"wantsToInsertWithLineNumber": "Kilo Codeはこのファイルの{{lineNumber}}行目にコンテンツを挿入したい:",
-		"wantsToInsertAtEnd": "Kilo Codeはこのファイルの末尾にコンテンツを追加したい:",
-		"wantsToReadAndXMore": "Kilo Code はこのファイルと他に {{count}} 個のファイルを読み込もうとしています:",
-		"wantsToReadMultiple": "Kilo Codeは複数のファイルを読み取ろうとしています：",
-		"wantsToApplyBatchChanges": "Kilo Codeは複数のファイルに変更を適用したい:",
-		"wantsToGenerateImage": "Kilo Codeは画像を生成したい:",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Codeはワークスペース外で画像を生成したい:",
-		"wantsToGenerateImageProtected": "Kilo Codeは保護された場所で画像を生成したい:",
-		"didGenerateImage": "Kilo Codeは画像を生成しました:"
+		"wantsToRead": "Kilo Codeはこのファイルを読みたい",
+		"wantsToReadOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを読みたい",
+		"didRead": "Kilo Codeはこのファイルを読みました",
+		"wantsToEdit": "Kilo Codeはこのファイルを編集したい",
+		"wantsToEditOutsideWorkspace": "Kilo Codeはワークスペース外のこのファイルを編集したい",
+		"wantsToEditProtected": "Kilo Codeは保護された設定ファイルを編集したい",
+		"wantsToCreate": "Kilo Codeは新しいファイルを作成したい",
+		"wantsToSearchReplace": "Kilo Codeはこのファイルで検索と置換を行う",
+		"didSearchReplace": "Kilo Codeはこのファイルで検索と置換を実行しました",
+		"wantsToInsert": "Kilo Codeはこのファイルにコンテンツを挿入したい",
+		"wantsToInsertWithLineNumber": "Kilo Codeはこのファイルの{{lineNumber}}行目にコンテンツを挿入したい",
+		"wantsToInsertAtEnd": "Kilo Codeはこのファイルの末尾にコンテンツを追加したい",
+		"wantsToReadAndXMore": "Kilo Code はこのファイルと他に {{count}} 個のファイルを読み込もうとしています",
+		"wantsToReadMultiple": "Kilo Codeは複数のファイルを読み取ろうとしています",
+		"wantsToApplyBatchChanges": "Kilo Codeは複数のファイルに変更を適用したい",
+		"wantsToGenerateImage": "Kilo Codeは画像を生成したい",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Codeはワークスペース外で画像を生成したい",
+		"wantsToGenerateImageProtected": "Kilo Codeは保護された場所で画像を生成したい",
+		"didGenerateImage": "Kilo Codeは画像を生成しました"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示したい:",
-		"didViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示しました:",
-		"wantsToViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示したい:",
-		"didViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示しました:",
-		"wantsToViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示したい:",
-		"didViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示しました:",
-		"wantsToSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索したい:",
-		"didSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索しました:",
-		"wantsToSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索したい:",
-		"didSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索しました:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示したい:",
-		"didViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示しました:",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示したい:",
-		"didViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示しました:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示したい:",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示しました:"
+		"wantsToViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示したい",
+		"didViewTopLevel": "Kilo Codeはこのディレクトリのトップレベルファイルを表示しました",
+		"wantsToViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示したい",
+		"didViewRecursive": "Kilo Codeはこのディレクトリのすべてのファイルを再帰的に表示しました",
+		"wantsToViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示したい",
+		"didViewDefinitions": "Kilo Codeはこのディレクトリで使用されているソースコード定義名を表示しました",
+		"wantsToSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索したい",
+		"didSearch": "Kilo Codeはこのディレクトリで <code>{{regex}}</code> を検索しました",
+		"wantsToSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索したい",
+		"didSearchOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で <code>{{regex}}</code> を検索しました",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示したい",
+		"didViewTopLevelOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のトップレベルファイルを表示しました",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示したい",
+		"didViewRecursiveOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）のすべてのファイルを再帰的に表示しました",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示したい",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Codeはこのディレクトリ（ワークスペース外）で使用されているソースコード定義名を表示しました"
 	},
 	"commandOutput": "コマンド出力",
 	"commandExecution": {
+		"abort": "中止",
 		"running": "実行中",
 		"pid": "PID: {{pid}}",
-		"exited": "終了しました ({{exitCode}})",
-		"manageCommands": "コマンド権限の管理",
-		"commandManagementDescription": "コマンドの権限を管理します：✓ をクリックして自動実行を許可し、✗ をクリックして実行を拒否します。パターンはオン/オフの切り替えやリストからの削除が可能です。<settingsLink>すべての設定を表示</settingsLink>",
+		"exitStatus": "ステータス {{exitCode}} で終了しました",
+		"manageCommands": "自動承認されたコマンド",
 		"addToAllowed": "許可リストに追加",
 		"removeFromAllowed": "許可リストから削除",
 		"addToDenied": "拒否リストに追加",
@@ -227,9 +227,15 @@
 	},
 	"response": "応答",
 	"arguments": "引数",
+	"text": {
+		"rooSaid": "Rooの発言"
+	},
+	"feedback": {
+		"youSaid": "あなたの発言"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo CodeはMCPサーバー{{serverName}}でツールを使用したい:",
-		"wantsToAccessResource": "Kilo CodeはMCPサーバー{{serverName}}のリソースにアクセスしたい:"
+		"wantsToUseTool": "Kilo Code{{serverName}}でツールを使用したい",
+		"wantsToAccessResource": "Kilo Code{{serverName}}のリソースにアクセスしたい"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Codeは<code>{{mode}}</code>モードに切り替えたい",
@@ -238,7 +244,7 @@
 		"didSwitchWithReason": "Kilo Codeは次の理由で<code>{{mode}}</code>モードに切り替えました: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code<code>{{mode}}</code>モードで新しいサブタスクを作成したい:",
+		"wantsToCreate": "Kilo Code<code>{{mode}}</code>モードで新しいサブタスクを作成したい",
 		"wantsToFinish": "Kilo Codeはこのサブタスクを終了したい",
 		"newTaskContent": "サブタスク指示",
 		"completionContent": "サブタスク完了",
@@ -247,24 +253,27 @@
 		"completionInstructions": "サブタスク完了！結果を確認し、修正や次のステップを提案できます。問題なければ、親タスクに結果を返すために確認してください。"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Codeは質問があります:"
+		"hasQuestion": "Kilo Codeは質問があります"
 	},
 	"taskCompleted": "タスク完了",
 	"powershell": {
 		"issues": "Windows PowerShellに問題があるようです。こちらを参照してください"
 	},
 	"autoApprove": {
-		"tooltip": "自動承認設定を管理",
+		"tooltipManage": "自動承認設定を管理する",
+		"tooltipStatus": "自動承認が有効です: {{toggles}}",
 		"title": "自動承認",
+		"toggle": "自動承認を切り替える",
 		"all": "すべて",
 		"none": "なし",
-		"description": "許可を求めずにこれらのアクションを実行します。完全に信頼できるアクションに対してのみ有効にしてください。",
+		"description": "許可を求めずにこれらのアクションを実行します。完全に信頼するアクションに対してのみ有効にしてください。",
 		"selectOptionsFirst": "自動承認を有効にするには、以下のオプションを少なくとも1つ選択してください",
-		"toggleAriaLabel": "自動承認の切り替え",
+		"toggleAriaLabel": "自動承認を切り替える",
 		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
-		"triggerLabel_zero": "自動承認なし",
-		"triggerLabel_one": "1件自動承認済み",
-		"triggerLabel_other": "{{count}}件自動承認済み",
+		"triggerLabelOff": "自動承認オフ",
+		"triggerLabel_zero": "0個の自動承認",
+		"triggerLabel_one": "1個の自動承認済み",
+		"triggerLabel_other": "{{count}}個の自動承認済み",
 		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
@@ -284,15 +293,17 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} リリース",
-		"description": "<bold>Roo Code Cloud</bold>のご紹介：RooのパワーをIDEを超えて",
-		"feature1": "<bold>どこからでもタスクの進行状況を追跡（無料）：</bold>IDEに縛られることなく、長時間実行タスクのリアルタイム更新を取得",
-		"feature2": "<bold>Roo拡張機能をリモート制御（Pro）：</bold>チャットベースのブラウザインターフェースからタスクを開始、停止、操作。",
-		"learnMore": "制御を取る準備はできましたか？詳細は<learnMoreLink>こちら</learnMoreLink>。",
-		"visitCloudButton": "Roo Code Cloudを訪問",
-		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください"
+		"stealthModel": {
+			"feature": "<bold>期間限定無料ステルスモデル</bold> - Code Supernova：画像入力をサポートする多目的エージェントコーディングモデル、Roo Code Cloud 経由で利用可能。",
+			"note": "(注意：プロンプトと補完はモデル作成者によってログに記録され、モデルの改善に使用されます)",
+			"connectButton": "Roo Code Cloud に接続",
+			"selectModel": "設定で Roo Code Cloud プロバイダーから <code>roo/code-supernova</code> を選択して開始してください。",
+			"goToSettingsButton": "設定に移動"
+		},
+		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Codeはブラウザを使用したい:",
+		"rooWantsToUse": "Kilo Codeはブラウザを使用したい",
 		"consoleLogs": "コンソールログ",
 		"noNewLogs": "(新しいログはありません)",
 		"screenshot": "ブラウザのスクリーンショット",
@@ -317,8 +328,6 @@
 		"tooltips": {
 			"expand": "コードブロックを展開",
 			"collapse": "コードブロックを折りたたむ",
-			"enable_wrap": "折り返しを有効化",
-			"disable_wrap": "折り返しを無効化",
 			"copy_code": "コードをコピー"
 		}
 	},
@@ -342,8 +351,8 @@
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Codeはコードベースで <code>{{query}}</code> を検索したい:",
-		"wantsToSearchWithPath": "Kilo Codeは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい:",
+		"wantsToSearch": "Kilo Codeはコードベースで <code>{{query}}</code> を検索したい",
+		"wantsToSearchWithPath": "Kilo Codeは <code>{{path}}</code> 内のコードベースで <code>{{query}}</code> を検索したい",
 		"didSearch_one": "1件の結果が見つかりました",
 		"didSearch_other": "{{count}}件の結果が見つかりました",
 		"resultTooltip": "類似度スコア: {{score}} (クリックしてファイルを開く)"
@@ -381,6 +390,7 @@
 		"tooltip": "スラッシュコマンドを管理",
 		"title": "スラッシュコマンド",
 		"description": "組み込みスラッシュコマンドを使用するか、よく使用するプロンプトやワークフローに素早くアクセスするためのカスタムスラッシュコマンドを作成します。<DocsLink>ドキュメント</DocsLink>",
+		"manageCommands": "設定でスラッシュコマンドを管理",
 		"builtInCommands": "組み込みコマンド",
 		"globalCommands": "グローバルコマンド",
 		"workspaceCommands": "ワークスペースコマンド",
@@ -396,12 +406,18 @@
 			"confirm": "削除"
 		}
 	},
+	"contextMenu": {
+		"noResults": "結果なし",
+		"problems": "問題",
+		"terminal": "ターミナル",
+		"url": "URLを貼り付けてコンテンツを取得"
+	},
 	"queuedMessages": {
-		"title": "キューメッセージ:",
+		"title": "キューメッセージ",
 		"clickToEdit": "クリックしてメッセージを編集"
 	},
 	"slashCommand": {
-		"wantsToRun": "Rooはスラッシュコマンドを実行したい:",
-		"didRun": "Rooはスラッシュコマンドを実行しました:"
+		"wantsToRun": "Kilo Codeはスラッシュコマンドを実行したい",
+		"didRun": "Kilo Codeはスラッシュコマンドを実行しました"
 	}
 }

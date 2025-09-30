@@ -75,8 +75,8 @@
 		}
 	},
 	"runCommand": {
-		"title": "Jalankan Perintah",
-		"tooltip": "Eksekusi perintah ini"
+		"title": "Perintah",
+		"tooltip": "Jalankan perintah ini"
 	},
 	"proceedWhileRunning": {
 		"title": "Lanjutkan Saat Berjalan",
@@ -140,7 +140,7 @@
 	"addContext": "@ untuk menambah konteks, / untuk perintah",
 	"dragFiles": "tahan shift untuk drag file",
 	"dragFilesImages": "tahan shift untuk drag file/gambar",
-	"errorReadingFile": "Error membaca file:",
+	"errorReadingFile": "Error membaca file",
 	"noValidImages": "Tidak ada gambar valid yang diproses",
 	"separator": "Pemisah",
 	"edit": "Edit...",
@@ -179,73 +179,79 @@
 		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code ingin membaca file ini:",
-		"wantsToReadMultiple": "Kilo Code ingin membaca beberapa file:",
-		"wantsToReadAndXMore": "Kilo Code ingin membaca file ini dan {{count}} lainnya:",
-		"wantsToReadOutsideWorkspace": "Kilo Code ingin membaca file ini di luar workspace:",
-		"didRead": "Kilo Code membaca file ini:",
-		"wantsToEdit": "Kilo Code ingin mengedit file ini:",
-		"wantsToEditOutsideWorkspace": "Kilo Code ingin mengedit file ini di luar workspace:",
-		"wantsToEditProtected": "Kilo Code ingin mengedit file konfigurasi yang dilindungi:",
-		"wantsToApplyBatchChanges": "Kilo Code ingin menerapkan perubahan ke beberapa file:",
-		"wantsToGenerateImage": "Kilo Code ingin menghasilkan gambar:",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code ingin menghasilkan gambar di luar workspace:",
-		"wantsToGenerateImageProtected": "Kilo Code ingin menghasilkan gambar di lokasi yang dilindungi:",
-		"didGenerateImage": "Kilo Code telah menghasilkan gambar:",
-		"wantsToCreate": "Kilo Code ingin membuat file baru:",
-		"wantsToSearchReplace": "Kilo Code ingin mencari dan mengganti di file ini:",
-		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini:",
-		"wantsToInsert": "Kilo Code ingin menyisipkan konten ke file ini:",
-		"wantsToInsertWithLineNumber": "Kilo Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini:"
+		"wantsToRead": "Kilo Code ingin membaca file ini",
+		"wantsToReadMultiple": "Kilo Code ingin membaca beberapa file",
+		"wantsToReadAndXMore": "Kilo Code ingin membaca file ini dan {{count}} lainnya",
+		"wantsToReadOutsideWorkspace": "Kilo Code ingin membaca file ini di luar workspace",
+		"didRead": "Kilo Code membaca file ini",
+		"wantsToEdit": "Kilo Code ingin mengedit file ini",
+		"wantsToEditOutsideWorkspace": "Kilo Code ingin mengedit file ini di luar workspace",
+		"wantsToEditProtected": "Kilo Code ingin mengedit file konfigurasi yang dilindungi",
+		"wantsToApplyBatchChanges": "Kilo Code ingin menerapkan perubahan ke beberapa file",
+		"wantsToGenerateImage": "Kilo Code ingin menghasilkan gambar",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code ingin menghasilkan gambar di luar workspace",
+		"wantsToGenerateImageProtected": "Kilo Code ingin menghasilkan gambar di lokasi yang dilindungi",
+		"didGenerateImage": "Kilo Code telah menghasilkan gambar",
+		"wantsToCreate": "Kilo Code ingin membuat file baru",
+		"wantsToSearchReplace": "Kilo Code ingin mencari dan mengganti di file ini",
+		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini",
+		"wantsToInsert": "Kilo Code ingin menyisipkan konten ke file ini",
+		"wantsToInsertWithLineNumber": "Kilo Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
+		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code ingin melihat file tingkat atas di direktori ini:",
-		"didViewTopLevel": "Kilo Code melihat file tingkat atas di direktori ini:",
-		"wantsToViewRecursive": "Kilo Code ingin melihat semua file secara rekursif di direktori ini:",
-		"didViewRecursive": "Kilo Code melihat semua file secara rekursif di direktori ini:",
-		"wantsToViewDefinitions": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini:",
-		"didViewDefinitions": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini:",
-		"wantsToSearch": "Kilo Code ingin mencari direktori ini untuk <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>:",
-		"wantsToSearchOutsideWorkspace": "Kilo Code ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>:",
-		"didSearchOutsideWorkspace": "Kilo Code mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code ingin melihat file tingkat atas di direktori ini (di luar workspace):",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code melihat file tingkat atas di direktori ini (di luar workspace):",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code ingin melihat semua file secara rekursif di direktori ini (di luar workspace):",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code melihat semua file secara rekursif di direktori ini (di luar workspace):",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini (di luar workspace):",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini (di luar workspace):"
+		"wantsToViewTopLevel": "Kilo Code ingin melihat file tingkat atas di direktori ini",
+		"didViewTopLevel": "Kilo Code melihat file tingkat atas di direktori ini",
+		"wantsToViewRecursive": "Kilo Code ingin melihat semua file secara rekursif di direktori ini",
+		"didViewRecursive": "Kilo Code melihat semua file secara rekursif di direktori ini",
+		"wantsToViewDefinitions": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini",
+		"didViewDefinitions": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini",
+		"wantsToSearch": "Kilo Code ingin mencari direktori ini untuk <code>{{regex}}</code>",
+		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code ingin melihat file tingkat atas di direktori ini (di luar workspace)",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code melihat file tingkat atas di direktori ini (di luar workspace)",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code ingin melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>:",
-		"wantsToSearchWithPath": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>:",
+		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
 		"didSearch_one": "Ditemukan 1 hasil",
 		"didSearch_other": "Ditemukan {{count}} hasil",
 		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
 	},
-	"commandOutput": "Output Perintah",
+	"commandOutput": "Keluaran Perintah",
 	"commandExecution": {
+		"abort": "Batalkan",
 		"running": "Menjalankan",
 		"pid": "PID: {{pid}}",
-		"exited": "Keluar ({{exitCode}})",
-		"manageCommands": "Kelola Izin Perintah",
-		"commandManagementDescription": "Kelola izin perintah: Klik ✓ untuk mengizinkan eksekusi otomatis, ✗ untuk menolak eksekusi. Pola dapat diaktifkan/dinonaktifkan atau dihapus dari daftar. <settingsLink>Lihat semua pengaturan</settingsLink>",
+		"exitStatus": "Keluar dengan status {{exitCode}}",
+		"manageCommands": "Perintah yang disetujui secara otomatis",
 		"addToAllowed": "Tambahkan ke daftar yang diizinkan",
 		"removeFromAllowed": "Hapus dari daftar yang diizinkan",
 		"addToDenied": "Tambahkan ke daftar yang ditolak",
 		"removeFromDenied": "Hapus dari daftar yang ditolak",
 		"abortCommand": "Batalkan eksekusi perintah",
-		"expandOutput": "Perluas output",
-		"collapseOutput": "Ciutkan output",
+		"expandOutput": "Perluas keluaran",
+		"collapseOutput": "Ciutkan keluaran",
 		"expandManagement": "Perluas bagian manajemen perintah",
 		"collapseManagement": "Ciutkan bagian manajemen perintah"
 	},
 	"response": "Respons",
 	"arguments": "Argumen",
+	"text": {
+		"rooSaid": "Kilo berkata"
+	},
+	"feedback": {
+		"youSaid": "Anda bilang"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code ingin menggunakan tool di server MCP {{serverName}}:",
-		"wantsToAccessResource": "Kilo Code ingin mengakses resource di server MCP {{serverName}}:"
+		"wantsToUseTool": "Kilo Code ingin menggunakan tool di server MCP {{serverName}}",
+		"wantsToAccessResource": "Kilo Code ingin mengakses resource di server MCP {{serverName}}"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Code ingin beralih ke mode {{mode}}",
@@ -254,7 +260,7 @@
 		"didSwitchWithReason": "Kilo Code beralih ke mode {{mode}} karena: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code ingin membuat subtugas baru dalam mode {{mode}}:",
+		"wantsToCreate": "Kilo Code ingin membuat subtugas baru dalam mode {{mode}}",
 		"wantsToFinish": "Kilo Code ingin menyelesaikan subtugas ini",
 		"newTaskContent": "Instruksi Subtugas",
 		"completionContent": "Subtugas Selesai",
@@ -263,7 +269,7 @@
 		"completionInstructions": "Subtugas selesai! Kamu bisa meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code punya pertanyaan:"
+		"hasQuestion": "Kilo Code punya pertanyaan"
 	},
 	"taskCompleted": "Tugas Selesai",
 	"error": "Error",
@@ -275,27 +281,32 @@
 		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
 	},
 	"autoApprove": {
-		"tooltip": "Kelola pengaturan persetujuan otomatis",
-		"title": "Persetujuan otomatis",
+		"tooltipManage": "Kelola pengaturan persetujuan otomatis",
+		"tooltipStatus": "Persetujuan otomatis diaktifkan untuk: {{toggles}}",
+		"title": "Setujui Otomatis",
+		"toggle": "Beralih persetujuan otomatis",
 		"all": "Semua",
-		"none": "Tidak Ada",
-		"description": "Jalankan tindakan ini tanpa meminta izin. Aktifkan hanya untuk tindakan yang Anda percayai sepenuhnya.",
-		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah untuk mengaktifkan persetujuan otomatis",
+		"none": "Tidak ada",
+		"description": "Jalankan tindakan ini tanpa meminta izin. Hanya aktifkan untuk tindakan yang Anda percayai sepenuhnya.",
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
 		"toggleAriaLabel": "Beralih persetujuan otomatis",
 		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
-		"triggerLabel_zero": "Tidak ada persetujuan otomatis",
+		"triggerLabelOff": "Persetujuan otomatis mati",
+		"triggerLabel_zero": "0 disetujui otomatis",
 		"triggerLabel_one": "1 disetujui otomatis",
 		"triggerLabel_other": "{{count}} disetujui otomatis",
 		"triggerLabelAll": "YOLO"
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Dirilis",
-		"description": "Memperkenalkan <bold>Roo Code Cloud:</bold> Membawa kekuatan Roo melampaui IDE",
-		"feature1": "<bold>Lacak kemajuan tugas dari mana saja (Gratis):</bold> Dapatkan pembaruan real-time tentang tugas yang berjalan lama tanpa terjebak di IDE Anda",
-		"feature2": "<bold>Kontrol Ekstensi Roo dari jarak jauh (Pro):</bold> Mulai, hentikan, dan berinteraksi dengan tugas dari antarmuka browser berbasis chat.",
-		"learnMore": "Siap mengambil kontrol? Pelajari lebih lanjut <learnMoreLink>di sini</learnMoreLink>.",
-		"visitCloudButton": "Kunjungi Roo Code Cloud",
-		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink>"
+		"stealthModel": {
+			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Code Supernova: Model coding agentik serbaguna yang mendukung input gambar, tersedia melalui Roo Code Cloud.",
+			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
+			"connectButton": "Hubungkan ke Roo Code Cloud",
+			"selectModel": "Pilih <code>roo/code-supernova</code> dari penyedia Roo Code Cloud di Pengaturan untuk memulai.",
+			"goToSettingsButton": "Pergi ke Pengaturan"
+		},
+		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
 		"thinking": "Berpikir",
@@ -307,7 +318,7 @@
 		"countdownDisplay": "{{count}}dtk"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code ingin menggunakan browser:",
+		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
 		"consoleLogs": "Log Konsol",
 		"noNewLogs": "(Tidak ada log baru)",
 		"screenshot": "Screenshot browser",
@@ -332,8 +343,6 @@
 		"tooltips": {
 			"expand": "Perluas blok kode",
 			"collapse": "Tutup blok kode",
-			"enable_wrap": "Aktifkan word wrap",
-			"disable_wrap": "Nonaktifkan word wrap",
 			"copy_code": "Salin kode"
 		}
 	},
@@ -347,13 +356,13 @@
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
-			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah kamu ingin mengatur ulang hitungan dan melanjutkan tugas?",
-			"button": "Atur Ulang dan Lanjutkan"
+			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
+			"button": "Setel Ulang dan Lanjutkan"
 		},
 		"autoApprovedCostLimitReached": {
-			"description": "Kilo Code telah mencapai batas biaya yang disetujui secara otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas ini?",
-			"button": "Reset dan Lanjutkan",
-			"title": "Batas Biaya Otomatis-Disetujui Tercapai"
+			"title": "Batas Biaya yang Disetujui Otomatis Tercapai",
+			"description": "Kilo Code telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas?",
+			"button": "Setel Ulang dan Lanjutkan"
 		}
 	},
 	"indexingStatus": {
@@ -381,6 +390,7 @@
 		"tooltip": "Kelola perintah slash",
 		"title": "Perintah Slash",
 		"description": "Gunakan perintah slash bawaan atau buat kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
+		"manageCommands": "Kelola perintah slash di pengaturan",
 		"builtInCommands": "Perintah Bawaan",
 		"globalCommands": "Perintah Global",
 		"workspaceCommands": "Perintah Workspace",
@@ -396,12 +406,18 @@
 			"confirm": "Hapus"
 		}
 	},
+	"contextMenu": {
+		"noResults": "Tidak ada hasil",
+		"problems": "Masalah",
+		"terminal": "Terminal",
+		"url": "Tempel URL untuk mengambil konten"
+	},
 	"queuedMessages": {
-		"title": "Pesan Antrian:",
+		"title": "Pesan Antrian",
 		"clickToEdit": "Klik untuk mengedit pesan"
 	},
 	"slashCommand": {
-		"wantsToRun": "Roo ingin menjalankan perintah slash:",
-		"didRun": "Roo telah menjalankan perintah slash:"
+		"wantsToRun": "Kilo Code ingin menjalankan perintah slash",
+		"didRun": "Kilo Code telah menjalankan perintah slash"
 	}
 }

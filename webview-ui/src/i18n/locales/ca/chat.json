@@ -67,7 +67,7 @@
 		"tooltip": "Aprova aquesta acció"
 	},
 	"runCommand": {
-		"title": "Executar ordre",
+		"title": "Ordre",
 		"tooltip": "Executa aquesta ordre"
 	},
 	"proceedWhileRunning": {
@@ -132,7 +132,7 @@
 		"searchPlaceholder": "Cerca modes...",
 		"noResults": "No s'han trobat resultats"
 	},
-	"errorReadingFile": "Error en llegir el fitxer:",
+	"errorReadingFile": "Error en llegir el fitxer",
 	"noValidImages": "No s'ha processat cap imatge vàlida",
 	"separator": "Separador",
 	"edit": "Edita...",
@@ -170,66 +170,72 @@
 		"wantsToFetch": "Kilo Code vol obtenir instruccions detallades per ajudar amb la tasca actual."
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code vol llegir aquest fitxer:",
-		"wantsToReadOutsideWorkspace": "Kilo Code vol llegir aquest fitxer fora de l'espai de treball:",
-		"didRead": "Kilo Code ha llegit aquest fitxer:",
-		"wantsToEdit": "Kilo Code vol editar aquest fitxer:",
-		"wantsToEditOutsideWorkspace": "Kilo Code vol editar aquest fitxer fora de l'espai de treball:",
-		"wantsToEditProtected": "Kilo Code vol editar un fitxer de configuració protegit:",
-		"wantsToCreate": "Kilo Code vol crear un nou fitxer:",
-		"wantsToSearchReplace": "Kilo Code vol realitzar cerca i substitució en aquest fitxer:",
-		"didSearchReplace": "Kilo Code ha realitzat cerca i substitució en aquest fitxer:",
-		"wantsToInsert": "Kilo Code vol inserir contingut en aquest fitxer:",
-		"wantsToInsertWithLineNumber": "Kilo Code vol inserir contingut a la línia {{lineNumber}} d'aquest fitxer:",
-		"wantsToInsertAtEnd": "Kilo Code vol afegir contingut al final d'aquest fitxer:",
-		"wantsToReadAndXMore": "En Kilo Code vol llegir aquest fitxer i {{count}} més:",
-		"wantsToReadMultiple": "Kilo Code vol llegir diversos fitxers:",
-		"wantsToApplyBatchChanges": "Kilo Code vol aplicar canvis a múltiples fitxers:",
-		"wantsToGenerateImage": "Kilo Code vol generar una imatge:",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vol generar una imatge fora de l'espai de treball:",
-		"wantsToGenerateImageProtected": "Kilo Code vol generar una imatge en una ubicació protegida:",
-		"didGenerateImage": "Kilo Code ha generat una imatge:"
+		"wantsToRead": "Kilo Code vol llegir aquest fitxer",
+		"wantsToReadOutsideWorkspace": "Kilo Code vol llegir aquest fitxer fora de l'espai de treball",
+		"didRead": "Kilo Code ha llegit aquest fitxer",
+		"wantsToEdit": "Kilo Code vol editar aquest fitxer",
+		"wantsToEditOutsideWorkspace": "Kilo Code vol editar aquest fitxer fora de l'espai de treball",
+		"wantsToEditProtected": "Kilo Code vol editar un fitxer de configuració protegit",
+		"wantsToCreate": "Kilo Code vol crear un nou fitxer",
+		"wantsToSearchReplace": "Kilo Code vol realitzar cerca i substitució en aquest fitxer",
+		"didSearchReplace": "Kilo Code ha realitzat cerca i substitució en aquest fitxer",
+		"wantsToInsert": "Kilo Code vol inserir contingut en aquest fitxer",
+		"wantsToInsertWithLineNumber": "Kilo Code vol inserir contingut a la línia {{lineNumber}} d'aquest fitxer",
+		"wantsToInsertAtEnd": "Kilo Code vol afegir contingut al final d'aquest fitxer",
+		"wantsToReadAndXMore": "En Kilo Code vol llegir aquest fitxer i {{count}} més",
+		"wantsToReadMultiple": "Kilo Code vol llegir diversos fitxers",
+		"wantsToApplyBatchChanges": "Kilo Code vol aplicar canvis a múltiples fitxers",
+		"wantsToGenerateImage": "Kilo Code vol generar una imatge",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vol generar una imatge fora de l'espai de treball",
+		"wantsToGenerateImageProtected": "Kilo Code vol generar una imatge en una ubicació protegida",
+		"didGenerateImage": "Kilo Code ha generat una imatge"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code vol veure els fitxers de nivell superior en aquest directori:",
-		"didViewTopLevel": "Kilo Code ha vist els fitxers de nivell superior en aquest directori:",
-		"wantsToViewRecursive": "Kilo Code vol veure recursivament tots els fitxers en aquest directori:",
-		"didViewRecursive": "Kilo Code ha vist recursivament tots els fitxers en aquest directori:",
-		"wantsToViewDefinitions": "Kilo Code vol veure noms de definicions de codi font utilitzats en aquest directori:",
-		"didViewDefinitions": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori:",
-		"wantsToSearch": "Kilo Code vol cercar en aquest directori <code>{{regex}}</code>:",
-		"didSearch": "Kilo Code ha cercat en aquest directori <code>{{regex}}</code>:",
-		"wantsToSearchOutsideWorkspace": "Kilo Code vol cercar en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>:",
-		"didSearchOutsideWorkspace": "Kilo Code ha cercat en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code vol veure els fitxers de nivell superior en aquest directori (fora de l'espai de treball):",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code ha vist els fitxers de nivell superior en aquest directori (fora de l'espai de treball):",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code vol veure recursivament tots els fitxers en aquest directori (fora de l'espai de treball):",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code ha vist recursivament tots els fitxers en aquest directori (fora de l'espai de treball):",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code vol veure noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball):",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball):"
+		"wantsToViewTopLevel": "Kilo Code vol veure els fitxers de nivell superior en aquest directori",
+		"didViewTopLevel": "Kilo Code ha vist els fitxers de nivell superior en aquest directori",
+		"wantsToViewRecursive": "Kilo Code vol veure recursivament tots els fitxers en aquest directori",
+		"didViewRecursive": "Kilo Code ha vist recursivament tots els fitxers en aquest directori",
+		"wantsToViewDefinitions": "Kilo Code vol veure noms de definicions de codi font utilitzats en aquest directori",
+		"didViewDefinitions": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori",
+		"wantsToSearch": "Kilo Code vol cercar en aquest directori <code>{{regex}}</code>",
+		"didSearch": "Kilo Code ha cercat en aquest directori <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code vol cercar en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code ha cercat en aquest directori (fora de l'espai de treball) <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code vol veure els fitxers de nivell superior en aquest directori (fora de l'espai de treball)",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code ha vist els fitxers de nivell superior en aquest directori (fora de l'espai de treball)",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code vol veure recursivament tots els fitxers en aquest directori (fora de l'espai de treball)",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code ha vist recursivament tots els fitxers en aquest directori (fora de l'espai de treball)",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code vol veure noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code ha vist noms de definicions de codi font utilitzats en aquest directori (fora de l'espai de treball)"
 	},
-	"commandOutput": "Sortida de l'ordre",
+	"commandOutput": "Sortida de la comanda",
 	"commandExecution": {
-		"running": "Executant",
+		"abort": "Avortar",
+		"running": "En execució",
 		"pid": "PID: {{pid}}",
-		"exited": "Finalitzat ({{exitCode}})",
-		"manageCommands": "Gestiona els permisos de les ordres",
-		"commandManagementDescription": "Gestiona els permisos de les ordres: Fes clic a ✓ per permetre l'execució automàtica, ✗ per denegar l'execució. Els patrons es poden activar/desactivar o eliminar de les llistes. <settingsLink>Mostra tots els paràmetres</settingsLink>",
-		"addToAllowed": "Afegeix a la llista de permesos",
-		"removeFromAllowed": "Elimina de la llista de permesos",
-		"addToDenied": "Afegeix a la llista de denegats",
-		"removeFromDenied": "Elimina de la llista de denegats",
-		"abortCommand": "Interromp l'execució de l'ordre",
+		"exitStatus": "S'ha sortit amb l'estat {{exitCode}}",
+		"manageCommands": "Comandes aprovades automàticament",
+		"addToAllowed": "Afegeix a la llista permesa",
+		"removeFromAllowed": "Elimina de la llista permesa",
+		"addToDenied": "Afegeix a la llista denegada",
+		"removeFromDenied": "Elimina de la llista denegada",
+		"abortCommand": "Interrompre l'execució de l'ordre",
 		"expandOutput": "Amplia la sortida",
 		"collapseOutput": "Redueix la sortida",
-		"expandManagement": "Amplia la secció de gestió d'ordres",
-		"collapseManagement": "Redueix la secció de gestió d'ordres"
+		"expandManagement": "Amplia la secció de gestió de comandaments",
+		"collapseManagement": "Redueix la secció de gestió de comandaments"
 	},
 	"response": "Resposta",
 	"arguments": "Arguments",
+	"text": {
+		"rooSaid": "En Kilo ha dit"
+	},
+	"feedback": {
+		"youSaid": "Has dit"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code vol utilitzar una eina al servidor MCP {{serverName}}:",
-		"wantsToAccessResource": "Kilo Code vol accedir a un recurs al servidor MCP {{serverName}}:"
+		"wantsToUseTool": "Kilo Code vol utilitzar una eina al servidor MCP {{serverName}}",
+		"wantsToAccessResource": "Kilo Code vol accedir a un recurs al servidor MCP {{serverName}}"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Code vol canviar a mode <code>{{mode}}</code>",
@@ -238,7 +244,7 @@
 		"didSwitchWithReason": "Kilo Code ha canviat a mode <code>{{mode}}</code> perquè: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code vol crear una nova subtasca en mode <code>{{mode}}</code>:",
+		"wantsToCreate": "Kilo Code vol crear una nova subtasca en mode <code>{{mode}}</code>",
 		"wantsToFinish": "Kilo Code vol finalitzar aquesta subtasca",
 		"newTaskContent": "Instruccions de la subtasca",
 		"completionContent": "Subtasca completada",
@@ -247,22 +253,25 @@
 		"completionInstructions": "Subtasca completada! Pots revisar els resultats i suggerir correccions o següents passos. Si tot sembla correcte, confirma per tornar el resultat a la tasca principal."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code té una pregunta:"
+		"hasQuestion": "Kilo Code té una pregunta"
 	},
 	"taskCompleted": "Tasca completada",
 	"powershell": {
 		"issues": "Sembla que estàs tenint problemes amb Windows PowerShell, si us plau consulta aquesta documentació per a més informació."
 	},
 	"autoApprove": {
-		"tooltip": "Gestiona la configuració d'aprovació automàtica",
+		"tooltipManage": "Gestiona la configuració d'aprovació automàtica",
+		"tooltipStatus": "Aprovació automàtica activada per a: {{toggles}}",
 		"title": "Aprovació automàtica",
-		"all": "Totes",
+		"toggle": "Commuta l'aprovació automàtica",
+		"all": "Tot",
 		"none": "Cap",
-		"description": "Executeu aquestes accions sense demanar permís. Activeu-ho només per a les accions en què confieu plenament.",
-		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica",
+		"description": "Executa aquestes accions sense demanar permís. Activa-ho només per a accions de confiança.",
+		"selectOptionsFirst": "Selecciona almenys una opció a continuació per activar l'aprovació automàtica",
 		"toggleAriaLabel": "Commuta l'aprovació automàtica",
-		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions",
-		"triggerLabel_zero": "Sense aprovació automàtica",
+		"disabledAriaLabel": "Aprovació automàtica desactivada - selecciona primer les opcions",
+		"triggerLabelOff": "Aprovació automàtica desactivada",
+		"triggerLabel_zero": "0 aprovacions automàtiques",
 		"triggerLabel_one": "1 aprovació automàtica",
 		"triggerLabel_other": "{{count}} aprovacions automàtiques",
 		"triggerLabelAll": "YOLO"
@@ -284,15 +293,17 @@
 	},
 	"announcement": {
 		"title": "🎉 Roo Code {{version}} Llançat",
-		"description": "Presentem <bold>Roo Code Cloud:</bold> Portant el poder de Roo més enllà de l'IDE",
-		"feature1": "<bold>Segueix el progrés de les tasques des de qualsevol lloc (Gratuït):</bold> Obté actualitzacions en temps real de tasques de llarga durada sense quedar-te atrapat a la teva IDE",
-		"feature2": "<bold>Controla l'Extensió Roo remotament (Pro):</bold> Inicia, atura i interactua amb tasques des d'una interfície de navegador basada en xat.",
-		"learnMore": "Llest per prendre el control? Aprèn més <learnMoreLink>aquí</learnMoreLink>.",
-		"visitCloudButton": "Visita Roo Code Cloud",
-		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink>"
+		"stealthModel": {
+			"feature": "<bold>Model stealth GRATUÏT per temps limitat</bold> - Code Supernova: Un model de codificació agèntica versàtil que suporta entrades d'imatges, disponible a través de Roo Code Cloud.",
+			"note": "(Nota: els prompts i completacions són registrats pel creador del model i utilitzats per millorar-lo)",
+			"connectButton": "Connectar a Roo Code Cloud",
+			"selectModel": "Selecciona <code>roo/code-supernova</code> del proveïdor Roo Code Cloud a Configuració per començar.",
+			"goToSettingsButton": "Anar a Configuració"
+		},
+		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code vol utilitzar el navegador:",
+		"rooWantsToUse": "Kilo Code vol utilitzar el navegador",
 		"consoleLogs": "Registres de consola",
 		"noNewLogs": "(Cap registre nou)",
 		"screenshot": "Captura de pantalla del navegador",
@@ -317,8 +328,6 @@
 		"tooltips": {
 			"expand": "Expandir bloc de codi",
 			"collapse": "Contraure bloc de codi",
-			"enable_wrap": "Activar ajustament de línia",
-			"disable_wrap": "Desactivar ajustament de línia",
 			"copy_code": "Copiar codi"
 		}
 	},
@@ -342,8 +351,8 @@
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code vol cercar a la base de codi <code>{{query}}</code>:",
-		"wantsToSearchWithPath": "Kilo Code vol cercar a la base de codi <code>{{query}}</code> a <code>{{path}}</code>:",
+		"wantsToSearch": "Kilo Code vol cercar a la base de codi <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code vol cercar a la base de codi <code>{{query}}</code> a <code>{{path}}</code>",
 		"didSearch_one": "S'ha trobat 1 resultat",
 		"didSearch_other": "S'han trobat {{count}} resultats",
 		"resultTooltip": "Puntuació de similitud: {{score}} (fes clic per obrir el fitxer)"
@@ -381,6 +390,7 @@
 		"tooltip": "Gestionar ordres de barra",
 		"title": "Ordres de Barra",
 		"description": "Utilitza ordres de barra integrades o crea personalitzades per accedir ràpidament a indicacions i fluxos de treball utilitzats amb freqüència. <DocsLink>Documentació</DocsLink>",
+		"manageCommands": "Gestiona les ordres de barra a la configuració",
 		"builtInCommands": "Ordres Integrades",
 		"globalCommands": "Ordres Globals",
 		"workspaceCommands": "Ordres de l'Espai de Treball",
@@ -397,11 +407,17 @@
 		}
 	},
 	"queuedMessages": {
-		"title": "Missatges en cua:",
+		"title": "Missatges en cua",
 		"clickToEdit": "Feu clic per editar el missatge"
 	},
 	"slashCommand": {
-		"wantsToRun": "Roo vol executar una comanda slash:",
-		"didRun": "Roo ha executat una comanda slash:"
+		"wantsToRun": "Kilo Code vol executar una comanda slash",
+		"didRun": "Kilo Code ha executat una comanda slash"
+	},
+	"contextMenu": {
+		"noResults": "Sense resultats",
+		"problems": "Problemes",
+		"terminal": "Terminal",
+		"url": "Enganxa la URL per obtenir-ne el contingut"
 	}
 }
