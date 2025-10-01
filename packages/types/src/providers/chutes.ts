@@ -34,8 +34,11 @@ export type ChutesModelId =
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
 	| "zai-org/GLM-4.5-FP8"
+	| "zai-org/GLM-4.5-FP8:THINKING"
+	| "zai-org/GLM-4.6-FP8"
 	// kilocode_change start
 	| "zai-org/GLM-4.5-turbo"
+	| "zai-org/GLM-4.5-turbo:THINKING"
 	| "zai-org/GLM-4.5V"
 	// kilocode_change end
 	| "moonshotai/Kimi-K2-Instruct-75k"
@@ -316,6 +319,25 @@ export const chutesModels = {
 		description:
 			"GLM-4.5-FP8 model with 128k token context window, optimized for agent-based applications with MoE architecture.",
 	},
+	"zai-org/GLM-4.5-FP8:THINKING": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "GLM-4.5-FP8 model with thinking enabled for enhanced reasoning capabilities.",
+	},
+	"zai-org/GLM-4.6-FP8": {
+		maxTokens: 131072,
+		contextWindow: 204800,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.5,
+		outputPrice: 1.75,
+		description:
+			"GLM-4.6-FP8 model with 204.8k token context window and thinking enabled for enhanced reasoning capabilities.",
+	},
 	// kilocode_change start
 	"zai-org/GLM-4.5-turbo": {
 		maxTokens: 32768,
@@ -325,6 +347,15 @@ export const chutesModels = {
 		inputPrice: 1.0,
 		outputPrice: 3.0,
 		description: "GLM-4.5-Turbo model.",
+	},
+	"zai-org/GLM-4.5-turbo:THINKING": {
+		maxTokens: 32768,
+		contextWindow: 131072,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 1.0,
+		outputPrice: 3.0,
+		description: "GLM-4.5-Turbo model with thinking enabled for enhanced reasoning capabilities.",
 	},
 	"zai-org/GLM-4.5V": {
 		maxTokens: 32768,

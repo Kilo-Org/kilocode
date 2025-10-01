@@ -84,6 +84,40 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 			for (const processedChunk of matcher.final()) {
 				yield processedChunk
 			}
+		} else if (model.id.includes(":THINKING") || model.id.includes("GLM-4.6")) {
+			// Handle thinking models via model name suffix or GLM-4.6 models (which have reasoning by default)
+			const stream = await this.client.chat.completions.create({
+				...this.getCompletionParams(systemPrompt, messages),
+				model: model.id, // Use the full model ID
+			})
+
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta
+
+				// Handle reasoning_content field for thinking models
+				if (delta && "reasoning_content" in delta && delta.reasoning_content) {
+					yield {
+						type: "reasoning",
+						text: delta.reasoning_content as string,
+					}
+				}
+
+				// Handle regular content field
+				if (delta?.content) {
+					yield {
+						type: "text",
+						text: delta.content,
+					}
+				}
+
+				if (chunk.usage) {
+					yield {
+						type: "usage",
+						inputTokens: chunk.usage.prompt_tokens || 0,
+						outputTokens: chunk.usage.completion_tokens || 0,
+					}
+				}
+			}
 		} else {
 			yield* super.createMessage(systemPrompt, messages)
 		}
