@@ -21,7 +21,7 @@ export function convertModelNameForVertex(modelName: string): string {
 
 // Claude Code
 export type ClaudeCodeModelId = keyof typeof claudeCodeModels
-export const claudeCodeDefaultModelId: ClaudeCodeModelId = "claude-sonnet-4-20250514"
+export const claudeCodeDefaultModelId: ClaudeCodeModelId = "claude-sonnet-4-5-20250929"
 export const CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS = 16000
 
 /**
@@ -40,8 +40,9 @@ export function getClaudeCodeModelId(baseModelId: ClaudeCodeModelId, useVertex =
 }
 
 export const claudeCodeModels = {
-	"claude-4.5-sonnet": {
-		...anthropicModels["claude-4.5-sonnet"],
+	"claude-sonnet-4-5-20250929": {
+		...anthropicModels["claude-sonnet-4-5-20250929"],
+		maxTokens: 16_000, //Limited based on CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS
 		supportsImages: false,
 		supportsPromptCache: true, // Claude Code does report cache tokens
 		supportsReasoningEffort: false,
