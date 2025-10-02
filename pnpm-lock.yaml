@@ -1581,6 +1581,9 @@ importers:
       '@vscode/vsce':
         specifier: 3.3.2
         version: 3.3.2
+      dotenv:
+        specifier: ^16.4.7
+        version: 16.5.0
       esbuild:
         specifier: '>=0.25.0'
         version: 0.25.9

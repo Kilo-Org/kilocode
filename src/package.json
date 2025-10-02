@@ -740,6 +740,7 @@
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/clone-deep": "^4.0.4",
+		"dotenv": "^16.4.7",
 		"@types/debug": "^4.1.12",
 		"@types/diff": "^5.2.3",
 		"@types/diff-match-patch": "^1.0.36",
