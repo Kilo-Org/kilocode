@@ -761,10 +761,18 @@
 			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "啟用 Morph Fast Apply",
-			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 編輯檔案。需要 Kilo Code API 供應商、OpenRouter 或 Morph API 金鑰。",
+			"name": "啟用快速套用",
+			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行快速套用編輯檔案。需要 Kilo Code API 供應商、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
-			"placeholder": "輸入您的 Morph API 金鑰（選用）"
+			"placeholder": "輸入您的 Morph API 金鑰（選用）",
+			"modelLabel": "模型選擇",
+			"modelDescription": "選擇用於檔案編輯的快速套用模型",
+			"models": {
+				"auto": "自動（預設 - 選擇最佳可用）",
+				"morphFast": "Morph v3 Fast（更快、成本更低）",
+				"morphLarge": "Morph v3 Large（功能更強）",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "背景編輯",

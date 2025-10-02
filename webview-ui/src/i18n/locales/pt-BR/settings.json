@@ -757,13 +757,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar edições de arquivos concorrentes",
-			"description": "Quando habilitado, o Kilo Code pode editar múltiplos arquivos em uma única solicitação. Quando desabilitado, o Kilo Code deve editar arquivos um de cada vez. Desabilitar isso pode ajudar ao trabalhar com modelos menos capazes ou quando você quer mais controle sobre modificações de arquivos."
+			"description": "Quando habilitado, o Kilo Code pode editar múltiplos arquivos em uma única solicitação. Quando desabilitado, o Kilo Code deve editar arquivos um de cada vez. Desabilitar isso pode ajudar ao trabalhar com modelos menos capazes ou quando você quer mais controle sobre modificações de arquivos。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Morph Fast Apply. Requer o Provedor de API Kilo Code, OpenRouter ou uma chave de API Morph.",
+			"name": "Habilitar Fast Apply",
+			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Provedor de API Kilo Code, OpenRouter ou uma chave de API Morph.",
 			"apiKey": "Chave de API Morph (opcional)",
-			"placeholder": "Digite sua chave de API Morph (opcional)"
+			"placeholder": "Digite sua chave de API Morph (opcional)",
+			"modelLabel": "Seleção de Modelo",
+			"modelDescription": "Escolha qual modelo Fast Apply usar para edições de arquivos",
+			"models": {
+				"auto": "Automático (Padrão - escolhe o melhor disponível)",
+				"morphFast": "Morph v3 Fast (Mais rápido, menor custo)",
+				"morphLarge": "Morph v3 Large (Mais capaz)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edição em segundo plano",

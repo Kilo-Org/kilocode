@@ -78,11 +78,17 @@ export enum TelemetryEventName {
 	ACCOUNT_LOGOUT_CLICKED = "Account Logout Clicked",
 	ACCOUNT_LOGOUT_SUCCESS = "Account Logout Success",
 
+	FEATURED_PROVIDER_CLICKED = "Featured Provider Clicked",
+
+	UPSELL_DISMISSED = "Upsell Dismissed",
+	UPSELL_CLICKED = "Upsell Clicked",
+
 	SCHEMA_VALIDATION_ERROR = "Schema Validation Error",
 	DIFF_APPLICATION_ERROR = "Diff Application Error",
 	SHELL_INTEGRATION_ERROR = "Shell Integration Error",
 	CONSECUTIVE_MISTAKE_ERROR = "Consecutive Mistake Error",
 	CODE_INDEX_ERROR = "Code Index Error",
+	TELEMETRY_SETTINGS_CHANGED = "Telemetry Settings Changed",
 }
 
 /**
@@ -216,6 +222,9 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.ACCOUNT_CONNECT_SUCCESS,
 			TelemetryEventName.ACCOUNT_LOGOUT_CLICKED,
 			TelemetryEventName.ACCOUNT_LOGOUT_SUCCESS,
+			TelemetryEventName.FEATURED_PROVIDER_CLICKED,
+			TelemetryEventName.UPSELL_DISMISSED,
+			TelemetryEventName.UPSELL_CLICKED,
 			TelemetryEventName.SCHEMA_VALIDATION_ERROR,
 			TelemetryEventName.DIFF_APPLICATION_ERROR,
 			TelemetryEventName.SHELL_INTEGRATION_ERROR,
@@ -228,6 +237,14 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.CUSTOM_MODE_CREATED,
 		]),
 		properties: telemetryPropertiesSchema,
+	}),
+	z.object({
+		type: z.literal(TelemetryEventName.TELEMETRY_SETTINGS_CHANGED),
+		properties: z.object({
+			...telemetryPropertiesSchema.shape,
+			previousSetting: telemetrySettingsSchema,
+			newSetting: telemetrySettingsSchema,
+		}),
 	}),
 	z.object({
 		type: z.literal(TelemetryEventName.TASK_MESSAGE),

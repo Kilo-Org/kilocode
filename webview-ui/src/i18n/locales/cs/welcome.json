@@ -10,6 +10,10 @@
 		},
 		"openrouter": {
 			"description": "Jednotné rozhraní pro LLM"
+		},
+		"roo": {
+			"description": "Nejlepší bezplatné modely na začátek",
+			"incentive": "Vyzkoušej Roo zdarma"
 		}
 	},
 	"chooseProvider": "Aby mohl dělat svá kouzla, Kilo Code potřebuje API klíč.",

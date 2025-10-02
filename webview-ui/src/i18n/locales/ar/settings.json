@@ -169,12 +169,12 @@
 			},
 			"protected": {
 				"label": "تشمل الملفات المحمية",
-				"description": "اسمح لـ Kilo Code يعدل ملفات إعدادات محمية بدون موافقة."
+				"description": "اسمح لـ Kilo Code يعدل ملفات إعدادات مصغرة بدون موافقة."
 			}
 		},
 		"browser": {
 			"label": "المتصفح",
-			"description": "تنفيذ إجراءات المتصفح تلقائيًا (للنماذج الداعمة)"
+			"description": "تنفيذ إجراءات المتصبح تلقائيًا (للنماذج الداعمة)"
 		},
 		"retry": {
 			"label": "إعادة المحاولة",
@@ -230,7 +230,7 @@
 			"description": "تنفيذ الطلبات تلقائيًا حتى هذه الحدود قبل طلب الموافقة للمتابعة."
 		},
 		"toggleAriaLabel": "تبديل الموافقة التلقائية",
-		"disabledAriaLabel": "الموافقة التلقائية معطلة - اختر الخيارات أولاً",
+		"disabledAriaLabel": "الbaughة التلقائية معطلة - اختر الخيارات أولاً",
 		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
 	},
 	"providers": {
@@ -436,7 +436,7 @@
 			"capabilities": "اضبط قدرات وتسعير النموذج المتوافق مع OpenAI.",
 			"maxTokens": {
 				"label": "أقصى مخرجات التوكينات",
-				"description": "الحد الأقصى للتوكينات في الرد (-1 للسماح للسيرفر يحدد)."
+				"description": "الحد الأقصى للتوكينات في الرد (-1 للسماح للسيرور يحدد)."
 			},
 			"contextWindow": {
 				"label": "حجم نافذة السياق",
@@ -656,7 +656,7 @@
 		},
 		"maxReadFile": {
 			"label": "حد تقديري لقراءة الملف",
-			"description": "عدد الأسطر يُقرأ عند غياب start/end. -1 يقرأ الكل، 0 لا يقرأ ويعرض الفهرس فقط.",
+			"description": "عدد الأسطر يُقرأ عند الغياب start/end. -1 يقرأ الكل، 0 لا يقرأ ويعرض الفهرس فقط.",
 			"lines": "أسطر",
 			"always_full_read": "دومًا اقرأ الملف كامل"
 		},
@@ -699,7 +699,7 @@
 	"terminal": {
 		"basic": {
 			"label": "أساسيات الطرفية",
-			"description": "إعدادات طرفية بسيطة"
+			"description": "إعدادات طrafوردية بسيطة"
 		},
 		"advanced": {
 			"label": "متقدم",
@@ -811,17 +811,25 @@
 		},
 		"MARKETPLACE": {
 			"name": "تفعيل السوق",
-			"description": "تثبيت MCP وأنماط مخصصة من السوق."
+			"description": "تثبيت MCP ونمط مخصصة من السوق."
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "تعديلات ملفات متزامنة",
 			"description": "يحرر عدة ملفات في طلب واحد."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "تفعيل Morph Fast Apply",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تحرير الملفات باستخدام Morph Fast Apply. يتطلب مزوّد Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"name": "تفعيل التطبيق السريع",
+			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
-			"placeholder": "أدخل مفتاح Morph API (اختياري)"
+			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"modelLabel": "اختيار النموذج",
+			"modelDescription": "اختر نموذج التطبيق السريع لتعديل الملفات",
+			"models": {
+				"auto": "تلقائي (افتراضي - يختار الأفضل المتاح)",
+				"morphFast": "Morph v3 السريع (أسرع، تكلفة أقل)",
+				"morphLarge": "Morph v3 الكبير (أكثر قدرة)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "التحرير في الخلفية",

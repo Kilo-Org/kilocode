@@ -78,20 +78,20 @@ function Global:Prompt() {
 		$Global:__VSCodeIsInExecution = $false
 		if ($LastHistoryEntry.Id -eq $Global:__LastHistoryId) {
 			# Don't provide a command line or exit code if there was no history entry (eg. ctrl+c, enter on no command)
-			$Result += $esc + "]633;D" + $bell
+			$Result += $esc + ']633;D' + $bell
 		} else {
 			# Command finished exit code
-			$Result += $esc + "]633;D;" + $FakeCode + $bell
+			$Result += $esc + ']633;D;' + $FakeCode + $bell
 		}
 	}
 
 	# Prompt started
-	$Result += $esc + "]633;A" + $bell
+	$Result += $esc + ']633;A' + $bell
 
 	# Current working directory
 	if ($pwd.Provider.Name -eq 'FileSystem') {
 		$cwdEscaped = __VSCode-Escape-Value $pwd.ProviderPath
-		$Result += $esc + "]633;P;Cwd=" + $cwdEscaped + $bell
+		$Result += $esc + ']633;P;Cwd=' + $cwdEscaped + $bell
 	}
 
 	# Before running the original prompt, put $? back to what it was:
@@ -138,10 +138,10 @@ if (Get-Module -Name PSReadLine) {
 		$Global:__VSCodeIsInExecution = $true
 
 		# Command line
-		$Result = $esc + "]633;E;" + $(__VSCode-Escape-Value $CommandLine) + ";" + $Nonce + $bell
+		$Result = $esc + ']633;E;' + $(__VSCode-Escape-Value $CommandLine) + ';' + $Nonce + $bell
 
 		# Command executed
-		$Result += $esc + "]633;C" + $bell
+		$Result += $esc + ']633;C' + $bell
 
 		# Write command executed sequence directly to Console
 		[Console]::Write($Result)
