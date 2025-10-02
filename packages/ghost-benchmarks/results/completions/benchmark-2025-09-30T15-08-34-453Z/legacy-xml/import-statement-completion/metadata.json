@@ -1,0 +1,12 @@
+{
+  "testCase": "import-statement-completion",
+  "profile": "legacy-xml",
+  "passed": true,
+  "executionTime": 3827,
+  "inputFile": "main.js",
+  "cursorPosition": {
+    "line": 0,
+    "character": 7
+  },
+  "timestamp": "2025-09-30T15:08:34.453Z"
+}

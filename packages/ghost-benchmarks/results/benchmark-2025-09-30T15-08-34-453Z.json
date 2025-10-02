@@ -1,0 +1,764 @@
+{
+  "id": "benchmark-2025-09-30T15-08-34-453Z",
+  "timestamp": "2025-09-30T15:08:34.453Z",
+  "profile": "legacy-xml",
+  "testResults": [
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};"
+        },
+        "activeFile": "main.js",
+        "inputContent": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};",
+        "cursorPosition": {
+          "line": 1,
+          "character": 21
+        },
+        "expectedFiles": {},
+        "expectedContent": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};",
+        "metadata": {
+          "name": "async-await-completion",
+          "description": "Complete async function with await call",
+          "category": "async-completion"
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 4738,
+      "rawResponse": "I'll help complete the fetch call to get user data using the API_BASE constant.\n\n<change>\n<search><![CDATA[const response = ]]></search>\n<replace><![CDATA[const response = await fetch(`${API_BASE}/users/${userId}`);]]></replace>\n</change>\n\nThis completion:\n1. Uses the API_BASE constant defined below\n2. Adds the await keyword since we're in an async function\n3. Makes a GET request to a RESTful users endpoint\n4. Includes the userId parameter in the URL path\n5. Matches common API patterns for fetching user data\n\nThe completed function will fetch user data from the API and parse the JSON response.",
+      "metrics": {
+        "success": true,
+        "responseTime": 4738
+      },
+      "finalFileContent": "async function fetchUserData(userId) {\n    const response = await fetch(`${API_BASE}/users/${userId}`);\n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());"
+        },
+        "activeFile": "main.js",
+        "inputContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());",
+        "cursorPosition": {
+          "line": 7,
+          "character": 8
+        },
+        "expectedFiles": {},
+        "expectedContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());",
+        "metadata": {
+          "name": "class-method-completion",
+          "description": "Complete class method implementation",
+          "category": "class-completion",
+          "expectedPatterns": [
+            "this\\.",
+            "this\\.name",
+            "this\\.age",
+            "return\\s+.*"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 5732,
+      "rawResponse": "I'll help complete the getDisplayName() method. Based on the context, this appears to be a class with name and age properties, so the method should return a formatted display name.\n\n<change>\n<search><![CDATA[    getDisplayName() {\n        ]]></search>\n<replace><![CDATA[    getDisplayName() {\n        return this.name;]]></replace>\n</change>\n\nThis completion:\n1. Returns the name property which is the most common use case for a getDisplayName method\n2. Keeps the implementation simple and straightforward\n3. Uses the class's existing name property\n4. Follows standard JavaScript naming conventions",
+      "metrics": {
+        "success": true,
+        "responseTime": 5732
+      },
+      "finalFileContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        return this.name;\n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));"
+        },
+        "activeFile": "main.js",
+        "inputContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));",
+        "cursorPosition": {
+          "line": 2,
+          "character": 4
+        },
+        "expectedFiles": {},
+        "expectedContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));",
+        "metadata": {
+          "name": "conditional-completion",
+          "description": "Complete if statement condition and body",
+          "category": "conditional-completion",
+          "expectedPatterns": [
+            "if\\s*\\(",
+            "user\\.age",
+            ">=\\s*18",
+            "\\{[\\s\\S]*\\}"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 4309,
+      "rawResponse": "I'll help complete the user access check by adding age verification logic based on the context showing a user object with an age property.\n\n<change>\n<search><![CDATA[    // Check if user is an adult\n]]></search>\n<replace><![CDATA[    // Check if user is an adult\n    if (user && user.age >= 18) {\n        return true;\n    }\n]]></replace>\n</change>\n\nThis completion:\n1. Checks if user object exists\n2. Verifies user's age is 18 or above\n3. Returns true if conditions are met\n4. Falls through to return false (already present) if conditions fail\n5. Matches the context of checking user access and age verification",
+      "metrics": {
+        "success": true,
+        "responseTime": 4309
+      },
+      "finalFileContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    if (user && user.age >= 18) {\n    \n        return true;\n\n    }\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}"
+        },
+        "activeFile": "main.js",
+        "inputContent": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}",
+        "cursorPosition": {
+          "line": 1,
+          "character": 4
+        },
+        "expectedFiles": {},
+        "expectedContent": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}",
+        "metadata": {
+          "name": "function-body-completion",
+          "description": "Complete function body after opening brace - common autocomplete scenario",
+          "category": "function-completion"
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 2527,
+      "rawResponse": "I'll help complete the calculateSum function body with a simple addition operation.\n\n<change>\n<search><![CDATA[function calculateSum(a, b) {\n    ]]></search>\n<replace><![CDATA[function calculateSum(a, b) {\n    return a + b;]]></replace>\n</change>",
+      "metrics": {
+        "success": true,
+        "responseTime": 2527
+      },
+      "finalFileContent": "function calculateSum(a, b) {\n    return a + b;\n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;"
+        },
+        "activeFile": "main.js",
+        "inputContent": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;",
+        "cursorPosition": {
+          "line": 0,
+          "character": 7
+        },
+        "expectedFiles": {},
+        "expectedContent": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;",
+        "metadata": {
+          "name": "import-statement-completion",
+          "description": "Complete import statement with destructuring",
+          "category": "import-completion",
+          "expectedPatterns": [
+            "import\\s*\\{",
+            "useState",
+            "useEffect",
+            "\\}\\s*from\\s*['\"]react['\"]"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 3827,
+      "rawResponse": "I'll help complete the imports needed for this React component that uses hooks.\n\n<change>\n<search><![CDATA[import ]]></search>\n<replace><![CDATA[import { useState, useEffect } from 'react';]]></replace>\n</change>\n\nThis completion:\n1. Imports both useState and useEffect hooks that are being used in the component\n2. Imports them from the 'react' package\n3. Uses destructuring syntax which is the standard way to import React hooks\n4. Matches the existing code style",
+      "metrics": {
+        "success": true,
+        "responseTime": 3827
+      },
+      "finalFileContent": "import { useState, useEffect } from 'react';\n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));"
+        },
+        "activeFile": "main.js",
+        "inputContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));",
+        "cursorPosition": {
+          "line": 4,
+          "character": 4
+        },
+        "expectedFiles": {},
+        "expectedContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));",
+        "metadata": {
+          "name": "loop-completion",
+          "description": "Complete for loop with array iteration",
+          "category": "loop-completion",
+          "expectedPatterns": [
+            "for\\s*\\(",
+            "let\\s+i",
+            "i\\s*<\\s*items\\.length",
+            "i\\+\\+"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 4937,
+      "rawResponse": "I'll help complete the code to process each item in the array and add them to the results array.\n\n<change>\n<search><![CDATA[    // Process each item in the array\n]]></search>\n<replace><![CDATA[    // Process each item in the array\n    for (const item of items) {\n        results.push(item.toUpperCase());\n    }\n]]></replace>\n</change>\n\nThis completion:\n1. Uses a for...of loop to iterate through each item\n2. Processes each item by converting it to uppercase\n3. Adds the processed item to the results array\n4. Matches the context of working with string items as shown in testItems\n5. Follows the function's structure of building and returning results\n\nThe completed function will take strings like 'apple' and convert them to 'APPLE' in the results array.",
+      "metrics": {
+        "success": true,
+        "responseTime": 4937
+      },
+      "finalFileContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    for (const item of items) {\n    \n        results.push(item.toUpperCase());\n\n    }\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25)."
+        },
+        "activeFile": "main.js",
+        "inputContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).",
+        "cursorPosition": {
+          "line": 7,
+          "character": 57
+        },
+        "expectedFiles": {},
+        "expectedContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).",
+        "metadata": {
+          "name": "object-method-completion",
+          "description": "Complete object method call with chaining",
+          "category": "method-completion",
+          "expectedPatterns": [
+            "filter\\(",
+            "\\.filter\\(",
+            "user\\s*=>",
+            "age\\s*>"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 3618,
+      "rawResponse": "I'll help complete the filter chain to get active users over 25.\n\n<change>\n<search><![CDATA[const activeAdults = users.filter(user => user.age > 25).]]></search>\n<replace><![CDATA[const activeAdults = users.filter(user => user.age > 25).filter(user => user.active);]]></replace>\n</change>\n\nThis adds a second filter to check the `active` property, ensuring we get users who are both over 25 AND active. The completed chain will return an array containing only the active users who are older than 25 years old.",
+      "metrics": {
+        "success": true,
+        "responseTime": 3618
+      },
+      "finalFileContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).filter(user => user.active);"
+    },
+    {
+      "testCase": {
+        "inputFiles": {
+          "main.js": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users."
+        },
+        "activeFile": "main.js",
+        "inputContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.",
+        "cursorPosition": {
+          "line": 6,
+          "character": 24
+        },
+        "expectedFiles": {},
+        "expectedContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.",
+        "metadata": {
+          "name": "variable-assignment",
+          "description": "Complete variable assignment with array method call",
+          "category": "variable-completion",
+          "expectedPatterns": [
+            "map\\(",
+            "\\.map\\(",
+            "=>",
+            "item\\s*=>"
+          ],
+          "expectedGroupCount": 1,
+          "shouldCompile": true,
+          "hasLiveModeSupport": true,
+          "supportedProfiles": [
+            "mercury-coder",
+            "gpt4o-mini",
+            "claude-sonnet"
+          ],
+          "isAutocompleteTest": true
+        }
+      },
+      "passed": true,
+      "suggestions": {
+        "files": {},
+        "ghostSuggestionOutcome": null,
+        "promptMetadata": null,
+        "cursorPosition": null,
+        "finalCursorPosition": null
+      },
+      "executionTime": 3565,
+      "rawResponse": "I'll help complete the code to extract the names from the users array using map().\n\n<change>\n<search><![CDATA[const userNames = users.]]></search>\n<replace><![CDATA[const userNames = users.map(user => user.name);]]></replace>\n</change>\n\nThis completion:\n1. Uses the map() array method to transform each user object\n2. Extracts just the name property from each user\n3. Creates a new array containing only the names\n4. Follows common JavaScript conventions for arrow functions\n5. Results in userNames containing ['Alice', 'Bob', 'Charlie']",
+      "metrics": {
+        "success": true,
+        "responseTime": 3565
+      },
+      "finalFileContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.map(user => user.name);"
+    }
+  ],
+  "summary": {
+    "totalTests": 8,
+    "passedTests": 8,
+    "failedTests": 0,
+    "passRate": 100,
+    "totalExecutionTime": 33253,
+    "averageExecutionTime": 4156.625,
+    "averageSemanticSimilarity": 0,
+    "totalTokensUsed": 0,
+    "results": [
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};"
+          },
+          "activeFile": "main.js",
+          "inputContent": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};",
+          "cursorPosition": {
+            "line": 1,
+            "character": 21
+          },
+          "expectedFiles": {},
+          "expectedContent": "async function fetchUserData(userId) {\n    const response = \n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};",
+          "metadata": {
+            "name": "async-await-completion",
+            "description": "Complete async function with await call",
+            "category": "async-completion"
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 4738,
+        "rawResponse": "I'll help complete the fetch call to get user data using the API_BASE constant.\n\n<change>\n<search><![CDATA[const response = ]]></search>\n<replace><![CDATA[const response = await fetch(`${API_BASE}/users/${userId}`);]]></replace>\n</change>\n\nThis completion:\n1. Uses the API_BASE constant defined below\n2. Adds the await keyword since we're in an async function\n3. Makes a GET request to a RESTful users endpoint\n4. Includes the userId parameter in the URL path\n5. Matches common API patterns for fetching user data\n\nThe completed function will fetch user data from the API and parse the JSON response.",
+        "metrics": {
+          "success": true,
+          "responseTime": 4738
+        },
+        "finalFileContent": "async function fetchUserData(userId) {\n    const response = await fetch(`${API_BASE}/users/${userId}`);\n    return response.json();\n}\n\n// Context: API endpoint configuration\nconst API_BASE = 'https://api.example.com';\nconst ENDPOINTS = {\n    users: '/users',\n    posts: '/posts'\n};"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());"
+          },
+          "activeFile": "main.js",
+          "inputContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());",
+          "cursorPosition": {
+            "line": 7,
+            "character": 8
+          },
+          "expectedFiles": {},
+          "expectedContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        \n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());",
+          "metadata": {
+            "name": "class-method-completion",
+            "description": "Complete class method implementation",
+            "category": "class-completion",
+            "expectedPatterns": [
+              "this\\.",
+              "this\\.name",
+              "this\\.age",
+              "return\\s+.*"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 5732,
+        "rawResponse": "I'll help complete the getDisplayName() method. Based on the context, this appears to be a class with name and age properties, so the method should return a formatted display name.\n\n<change>\n<search><![CDATA[    getDisplayName() {\n        ]]></search>\n<replace><![CDATA[    getDisplayName() {\n        return this.name;]]></replace>\n</change>\n\nThis completion:\n1. Returns the name property which is the most common use case for a getDisplayName method\n2. Keeps the implementation simple and straightforward\n3. Uses the class's existing name property\n4. Follows standard JavaScript naming conventions",
+        "metrics": {
+          "success": true,
+          "responseTime": 5732
+        },
+        "finalFileContent": "class User {\n    constructor(name, age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    getDisplayName() {\n        return this.name;\n    }\n\n    isAdult() {\n        return this.age >= 18;\n    }\n}\n\nconst user = new User('Alice', 30);\nconsole.log(user.getDisplayName());"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));"
+          },
+          "activeFile": "main.js",
+          "inputContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));",
+          "cursorPosition": {
+            "line": 2,
+            "character": 4
+          },
+          "expectedFiles": {},
+          "expectedContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    \n\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));",
+          "metadata": {
+            "name": "conditional-completion",
+            "description": "Complete if statement condition and body",
+            "category": "conditional-completion",
+            "expectedPatterns": [
+              "if\\s*\\(",
+              "user\\.age",
+              ">=\\s*18",
+              "\\{[\\s\\S]*\\}"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 4309,
+        "rawResponse": "I'll help complete the user access check by adding age verification logic based on the context showing a user object with an age property.\n\n<change>\n<search><![CDATA[    // Check if user is an adult\n]]></search>\n<replace><![CDATA[    // Check if user is an adult\n    if (user && user.age >= 18) {\n        return true;\n    }\n]]></replace>\n</change>\n\nThis completion:\n1. Checks if user object exists\n2. Verifies user's age is 18 or above\n3. Returns true if conditions are met\n4. Falls through to return false (already present) if conditions fail\n5. Matches the context of checking user access and age verification",
+        "metrics": {
+          "success": true,
+          "responseTime": 4309
+        },
+        "finalFileContent": "function checkUserAccess(user) {\n    // Check if user is an adult\n    if (user && user.age >= 18) {\n    \n        return true;\n\n    }\n    return false;\n}\n\nconst testUser = { name: 'Alice', age: 30, role: 'admin' };\nconsole.log(checkUserAccess(testUser));"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}"
+          },
+          "activeFile": "main.js",
+          "inputContent": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}",
+          "cursorPosition": {
+            "line": 1,
+            "character": 4
+          },
+          "expectedFiles": {},
+          "expectedContent": "function calculateSum(a, b) {\n    \n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}",
+          "metadata": {
+            "name": "function-body-completion",
+            "description": "Complete function body after opening brace - common autocomplete scenario",
+            "category": "function-completion"
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 2527,
+        "rawResponse": "I'll help complete the calculateSum function body with a simple addition operation.\n\n<change>\n<search><![CDATA[function calculateSum(a, b) {\n    ]]></search>\n<replace><![CDATA[function calculateSum(a, b) {\n    return a + b;]]></replace>\n</change>",
+        "metrics": {
+          "success": true,
+          "responseTime": 2527
+        },
+        "finalFileContent": "function calculateSum(a, b) {\n    return a + b;\n}\n\n// Helper function for context\nfunction multiply(x, y) {\n    return x * y;\n}"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;"
+          },
+          "activeFile": "main.js",
+          "inputContent": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;",
+          "cursorPosition": {
+            "line": 0,
+            "character": 7
+          },
+          "expectedFiles": {},
+          "expectedContent": "import \n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;",
+          "metadata": {
+            "name": "import-statement-completion",
+            "description": "Complete import statement with destructuring",
+            "category": "import-completion",
+            "expectedPatterns": [
+              "import\\s*\\{",
+              "useState",
+              "useEffect",
+              "\\}\\s*from\\s*['\"]react['\"]"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 3827,
+        "rawResponse": "I'll help complete the imports needed for this React component that uses hooks.\n\n<change>\n<search><![CDATA[import ]]></search>\n<replace><![CDATA[import { useState, useEffect } from 'react';]]></replace>\n</change>\n\nThis completion:\n1. Imports both useState and useEffect hooks that are being used in the component\n2. Imports them from the 'react' package\n3. Uses destructuring syntax which is the standard way to import React hooks\n4. Matches the existing code style",
+        "metrics": {
+          "success": true,
+          "responseTime": 3827
+        },
+        "finalFileContent": "import { useState, useEffect } from 'react';\n\nfunction MyComponent() {\n    const [count, setCount] = useState(0);\n\n    useEffect(() => {\n        console.log('Component mounted');\n    }, []);\n\n    return <div>Count: {count}</div>;\n}\n\nexport default MyComponent;"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));"
+          },
+          "activeFile": "main.js",
+          "inputContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));",
+          "cursorPosition": {
+            "line": 4,
+            "character": 4
+          },
+          "expectedFiles": {},
+          "expectedContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    \n\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));",
+          "metadata": {
+            "name": "loop-completion",
+            "description": "Complete for loop with array iteration",
+            "category": "loop-completion",
+            "expectedPatterns": [
+              "for\\s*\\(",
+              "let\\s+i",
+              "i\\s*<\\s*items\\.length",
+              "i\\+\\+"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 4937,
+        "rawResponse": "I'll help complete the code to process each item in the array and add them to the results array.\n\n<change>\n<search><![CDATA[    // Process each item in the array\n]]></search>\n<replace><![CDATA[    // Process each item in the array\n    for (const item of items) {\n        results.push(item.toUpperCase());\n    }\n]]></replace>\n</change>\n\nThis completion:\n1. Uses a for...of loop to iterate through each item\n2. Processes each item by converting it to uppercase\n3. Adds the processed item to the results array\n4. Matches the context of working with string items as shown in testItems\n5. Follows the function's structure of building and returning results\n\nThe completed function will take strings like 'apple' and convert them to 'APPLE' in the results array.",
+        "metrics": {
+          "success": true,
+          "responseTime": 4937
+        },
+        "finalFileContent": "function processItems(items) {\n    const results = [];\n\n    // Process each item in the array\n    for (const item of items) {\n    \n        results.push(item.toUpperCase());\n\n    }\n    return results;\n}\n\nconst testItems = ['apple', 'banana', 'cherry'];\nconsole.log(processItems(testItems));"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25)."
+          },
+          "activeFile": "main.js",
+          "inputContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).",
+          "cursorPosition": {
+            "line": 7,
+            "character": 57
+          },
+          "expectedFiles": {},
+          "expectedContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).",
+          "metadata": {
+            "name": "object-method-completion",
+            "description": "Complete object method call with chaining",
+            "category": "method-completion",
+            "expectedPatterns": [
+              "filter\\(",
+              "\\.filter\\(",
+              "user\\s*=>",
+              "age\\s*>"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 3618,
+        "rawResponse": "I'll help complete the filter chain to get active users over 25.\n\n<change>\n<search><![CDATA[const activeAdults = users.filter(user => user.age > 25).]]></search>\n<replace><![CDATA[const activeAdults = users.filter(user => user.age > 25).filter(user => user.active);]]></replace>\n</change>\n\nThis adds a second filter to check the `active` property, ensuring we get users who are both over 25 AND active. The completed chain will return an array containing only the active users who are older than 25 years old.",
+        "metrics": {
+          "success": true,
+          "responseTime": 3618
+        },
+        "finalFileContent": "const users = [\n    { name: 'Alice', age: 30, active: true },\n    { name: 'Bob', age: 25, active: false },\n    { name: 'Charlie', age: 35, active: true }\n];\n\n// Get active users over 25\nconst activeAdults = users.filter(user => user.age > 25).filter(user => user.active);"
+      },
+      {
+        "testCase": {
+          "inputFiles": {
+            "main.js": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users."
+          },
+          "activeFile": "main.js",
+          "inputContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.",
+          "cursorPosition": {
+            "line": 6,
+            "character": 24
+          },
+          "expectedFiles": {},
+          "expectedContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.",
+          "metadata": {
+            "name": "variable-assignment",
+            "description": "Complete variable assignment with array method call",
+            "category": "variable-completion",
+            "expectedPatterns": [
+              "map\\(",
+              "\\.map\\(",
+              "=>",
+              "item\\s*=>"
+            ],
+            "expectedGroupCount": 1,
+            "shouldCompile": true,
+            "hasLiveModeSupport": true,
+            "supportedProfiles": [
+              "mercury-coder",
+              "gpt4o-mini",
+              "claude-sonnet"
+            ],
+            "isAutocompleteTest": true
+          }
+        },
+        "passed": true,
+        "suggestions": {
+          "files": {},
+          "ghostSuggestionOutcome": null,
+          "promptMetadata": null,
+          "cursorPosition": null,
+          "finalCursorPosition": null
+        },
+        "executionTime": 3565,
+        "rawResponse": "I'll help complete the code to extract the names from the users array using map().\n\n<change>\n<search><![CDATA[const userNames = users.]]></search>\n<replace><![CDATA[const userNames = users.map(user => user.name);]]></replace>\n</change>\n\nThis completion:\n1. Uses the map() array method to transform each user object\n2. Extracts just the name property from each user\n3. Creates a new array containing only the names\n4. Follows common JavaScript conventions for arrow functions\n5. Results in userNames containing ['Alice', 'Bob', 'Charlie']",
+        "metrics": {
+          "success": true,
+          "responseTime": 3565
+        },
+        "finalFileContent": "const users = [\n    { name: 'Alice', age: 30 },\n    { name: 'Bob', age: 25 },\n    { name: 'Charlie', age: 35 }\n];\n\nconst userNames = users.map(user => user.name);"
+      }
+    ],
+    "errors": []
+  },
+  "environment": {
+    "kilocodeVersion": "4.97.1",
+    "nodeVersion": "v20.19.2"
+  }
+}

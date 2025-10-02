@@ -1,0 +1,12 @@
+{
+  "testCase": "class-method-completion",
+  "profile": "legacy-xml",
+  "passed": true,
+  "executionTime": 5732,
+  "inputFile": "main.js",
+  "cursorPosition": {
+    "line": 7,
+    "character": 8
+  },
+  "timestamp": "2025-09-30T15:08:34.453Z"
+}
