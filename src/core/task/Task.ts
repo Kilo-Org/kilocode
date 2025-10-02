@@ -1209,11 +1209,21 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	async sayAndCreateMissingParamError(toolName: ToolName, paramName: string, relPath?: string) {
+		const kilocodeExtraText = (() => {
+			switch (toolName) {
+				case "apply_diff":
+					return t("kilocode:task.disableApplyDiff") + " "
+				case "edit_file":
+					return t("kilocode:task.disableEditFile") + " "
+				default:
+					return ""
+			}
+		})()
 		await this.say(
 			"error",
 			`Kilo Code tried to use ${toolName}${
 				relPath ? ` for '${relPath.toPosix()}'` : ""
-			} without value for required parameter '${paramName}'. Retrying...`,
+			} without value for required parameter '${paramName}'. ${kilocodeExtraText}Retrying...`,
 		)
 		return formatResponse.toolError(formatResponse.missingToolParameterError(paramName))
 	}

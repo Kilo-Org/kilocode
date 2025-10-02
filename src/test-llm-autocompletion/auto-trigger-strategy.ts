@@ -4,7 +4,7 @@ import { GhostSuggestionContext } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
 import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
-import * as vscode from "./mock-vscode.js"
+import * as vscode from "vscode"
 
 export class AutoTriggerStrategyTester {
 	private llmClient: LLMClient

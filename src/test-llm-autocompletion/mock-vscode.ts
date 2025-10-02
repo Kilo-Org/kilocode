@@ -1,33 +1,7 @@
-// Mock vscode types for testing outside of VSCode environment
+// Minimal vscode mock for standalone tsx runner
+// This directory doesn't use vitest, so needs its own lightweight mock
 
 export type Thenable<T> = Promise<T>
-
-export enum EndOfLine {
-	LF = 1,
-	CRLF = 2,
-}
-
-export enum DiagnosticSeverity {
-	Error = 0,
-	Warning = 1,
-	Information = 2,
-	Hint = 3,
-}
-
-export interface Diagnostic {
-	range: Range
-	message: string
-	severity: DiagnosticSeverity
-	source?: string
-	code?: string | number
-}
-
-export const workspace = {
-	asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string {
-		const path = typeof pathOrUri === "string" ? pathOrUri : pathOrUri.path
-		return path.split("/").pop() || path
-	},
-}
 
 export class Position {
 	readonly line: number
@@ -58,22 +32,6 @@ export class Position {
 
 	isAfterOrEqual(other: Position): boolean {
 		return this.isAfter(other) || this.isEqual(other)
-	}
-
-	compareTo(other: Position): number {
-		if (this.line < other.line) return -1
-		if (this.line > other.line) return 1
-		if (this.character < other.character) return -1
-		if (this.character > other.character) return 1
-		return 0
-	}
-
-	translate(lineDelta?: number, characterDelta?: number): Position {
-		return new Position(this.line + (lineDelta || 0), this.character + (characterDelta || 0))
-	}
-
-	with(line?: number, character?: number): Position {
-		return new Position(line !== undefined ? line : this.line, character !== undefined ? character : this.character)
 	}
 }
 
@@ -116,25 +74,6 @@ export class Range {
 
 	isEqual(other: Range): boolean {
 		return this.start.isEqual(other.start) && this.end.isEqual(other.end)
-	}
-
-	intersection(range: Range): Range | undefined {
-		const start = this.start.isAfter(range.start) ? this.start : range.start
-		const end = this.end.isBefore(range.end) ? this.end : range.end
-		if (start.isAfter(end)) {
-			return undefined
-		}
-		return new Range(start, end)
-	}
-
-	union(other: Range): Range {
-		const start = this.start.isBefore(other.start) ? this.start : other.start
-		const end = this.end.isAfter(other.end) ? this.end : other.end
-		return new Range(start, end)
-	}
-
-	with(start?: Position, end?: Position): Range {
-		return new Range(start || this.start, end || this.end)
 	}
 }
 
@@ -180,31 +119,62 @@ export class Uri {
 		return result
 	}
 
-	toJSON(): any {
-		return {
-			scheme: this.scheme,
-			authority: this.authority,
-			path: this.path,
-			query: this.query,
-			fragment: this.fragment,
-			fsPath: this.fsPath,
-			external: this.toString(),
-		}
-	}
-
 	get fsPath(): string {
 		return this.path
 	}
+}
 
-	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
-		return new Uri(
-			change.scheme !== undefined ? change.scheme : this.scheme,
-			change.authority !== undefined ? change.authority : this.authority,
-			change.path !== undefined ? change.path : this.path,
-			change.query !== undefined ? change.query : this.query,
-			change.fragment !== undefined ? change.fragment : this.fragment,
-		)
+export class Selection extends Range {
+	readonly anchor: Position
+	readonly active: Position
+
+	constructor(anchor: Position, active: Position)
+	constructor(anchorLine: number, anchorCharacter: number, activeLine: number, activeCharacter: number)
+	constructor(
+		anchorOrAnchorLine: Position | number,
+		activeOrAnchorCharacter: Position | number,
+		activeLine?: number,
+		activeCharacter?: number,
+	) {
+		let anchor: Position
+		let active: Position
+
+		if (typeof anchorOrAnchorLine === "number") {
+			anchor = new Position(anchorOrAnchorLine, activeOrAnchorCharacter as number)
+			active = new Position(activeLine!, activeCharacter!)
+		} else {
+			anchor = anchorOrAnchorLine as Position
+			active = activeOrAnchorCharacter as Position
+		}
+
+		super(anchor, active)
+		this.anchor = anchor
+		this.active = active
 	}
+
+	get isReversed(): boolean {
+		return this.anchor.isAfter(this.active)
+	}
+}
+
+export enum EndOfLine {
+	LF = 1,
+	CRLF = 2,
+}
+
+export enum DiagnosticSeverity {
+	Error = 0,
+	Warning = 1,
+	Information = 2,
+	Hint = 3,
+}
+
+export interface Diagnostic {
+	range: Range
+	message: string
+	severity: DiagnosticSeverity
+	source?: string
+	code?: string | number
 }
 
 export interface TextLine {
@@ -249,35 +219,9 @@ export interface TextEditor {
 	edit(callback: (editBuilder: any) => void): Thenable<boolean>
 }
 
-export class Selection extends Range {
-	readonly anchor: Position
-	readonly active: Position
-
-	constructor(anchor: Position, active: Position)
-	constructor(anchorLine: number, anchorCharacter: number, activeLine: number, activeCharacter: number)
-	constructor(
-		anchorOrAnchorLine: Position | number,
-		activeOrAnchorCharacter: Position | number,
-		activeLine?: number,
-		activeCharacter?: number,
-	) {
-		let anchor: Position
-		let active: Position
-
-		if (typeof anchorOrAnchorLine === "number") {
-			anchor = new Position(anchorOrAnchorLine, activeOrAnchorCharacter as number)
-			active = new Position(activeLine!, activeCharacter!)
-		} else {
-			anchor = anchorOrAnchorLine as Position
-			active = activeOrAnchorCharacter as Position
-		}
-
-		super(anchor, active)
-		this.anchor = anchor
-		this.active = active
-	}
-
-	get isReversed(): boolean {
-		return this.anchor.isAfter(this.active)
-	}
+export const workspace = {
+	asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string {
+		const path = typeof pathOrUri === "string" ? pathOrUri : pathOrUri.path
+		return path.split("/").pop() || path
+	},
 }

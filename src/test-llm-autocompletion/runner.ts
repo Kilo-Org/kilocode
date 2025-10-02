@@ -12,6 +12,7 @@ interface TestResult {
 	error?: string
 	actualValue?: string
 	newOutput?: boolean
+	llmRequestDuration?: number
 }
 
 class TestRunner {
@@ -28,7 +29,9 @@ class TestRunner {
 
 	async runTest(testCase: TestCase): Promise<TestResult> {
 		try {
+			const startTime = performance.now()
 			const completion = await this.strategyTester.getCompletion(testCase.input)
+			const llmRequestDuration = performance.now() - startTime
 
 			const changes = this.strategyTester.parseCompletion(completion)
 
@@ -55,6 +58,7 @@ class TestRunner {
 				completion,
 				actualValue,
 				newOutput,
+				llmRequestDuration,
 			}
 		} catch (error) {
 			return {
@@ -131,6 +135,16 @@ class TestRunner {
 		console.log(`  ✓ Passed: ${passed}`)
 		console.log(`  ✗ Failed: ${failed}`)
 		console.log(`  📈 Pass Rate: ${passRate}%`)
+
+		const requestDurations = this.results
+			.filter((r) => r.llmRequestDuration !== undefined)
+			.map((r) => r.llmRequestDuration!)
+		if (requestDurations.length > 0) {
+			const avgTime = (
+				requestDurations.reduce((sum, duration) => sum + duration, 0) / requestDurations.length
+			).toFixed(0)
+			console.log(`  ⏱️  Avg LLM Request Time: ${avgTime}ms`)
+		}
 
 		// Category breakdown
 		console.log("\n📁 Category Breakdown:")

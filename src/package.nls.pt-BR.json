@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (fork do Roo / Cline)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Assistente de codificação de IA de código aberto para planejamento, construção e correção de código.",
 	"command.newTask.title": "Nova Tarefa",
 	"command.explainCode.title": "Explicar Código",
