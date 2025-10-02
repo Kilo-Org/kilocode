@@ -245,7 +245,7 @@
 		"searchProviderPlaceholder": "Cerca proveïdors",
 		"noProviderMatchFound": "No s'han trobat proveïdors",
 		"noMatchFound": "No s'han trobat perfils coincidents",
-		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi, però no limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi però limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
 		"awsCustomArnUse": "Introduïu un ARN vàlid d'Amazon Bedrock per al model que voleu utilitzar. Exemples de format:",
 		"awsCustomArnDesc": "Assegureu-vos que la regió a l'ARN coincideix amb la regió d'AWS seleccionada anteriorment.",
 		"openRouterApiKey": "Clau API d'OpenRouter",
@@ -758,12 +758,6 @@
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Morph Fast Apply. Requereix el Proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
-			"apiKey": "Clau d'API de Morph (opcional)",
-			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edició en segon pla",
 			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
@@ -794,6 +788,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Habilita les funcionalitats d'Autocomplete per a suggeriments de codi ràpids i millores directament al teu editor. Inclou Tasca Ràpida (Cmd+I) per a canvis específics i Autocomplete per a millores contextuals."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix el proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
+			"apiKey": "Clau d'API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"modelLabel": "Selecció de model",
+			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
+			"models": {
+				"auto": "Automàtic (Per defecte - tria el millor disponible)",
+				"morphFast": "Morph v3 Fast (Més ràpid, cost més baix)",
+				"morphLarge": "Morph v3 Large (Més capaç)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Habilitar comandes de barra diagonal iniciades pel model",

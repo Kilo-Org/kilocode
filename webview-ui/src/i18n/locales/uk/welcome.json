@@ -10,6 +10,10 @@
 		},
 		"openrouter": {
 			"description": "Уніфікований інтерфейс для LLM"
+		},
+		"roo": {
+			"description": "Найкращі безкоштовні моделі для початку",
+			"incentive": "Спробуй Roo безкоштовно"
 		}
 	},
 	"chooseProvider": "Щоб творити магію, Kilo Code потребує API ключ.",

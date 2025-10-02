@@ -764,12 +764,6 @@
 			"name": "启用并发文件编辑",
 			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "启用 Morph Fast Apply",
-			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
-			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
 			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
@@ -800,6 +794,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "启用快速应用",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行快速应用编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
+			"apiKey": "Morph API 密钥（可选）",
+			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"modelLabel": "模型选择",
+			"modelDescription": "选择用于文件编辑的快速应用模型",
+			"models": {
+				"auto": "自动（默认 - 选择最佳可用）",
+				"morphFast": "Morph v3 Fast（更快，成本更低）",
+				"morphLarge": "Morph v3 Large（功能更强）",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "启用模型发起的斜杠命令",

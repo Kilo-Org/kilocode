@@ -1,5 +1,78 @@
 # kilo-code
 
+## [v4.99.0]
+
+- [#2719](https://github.com/Kilo-Org/kilocode/pull/2719) [`345947f`](https://github.com/Kilo-Org/kilocode/commit/345947f29978045209a82687843c28059b339dc0) Thanks [@mcowger](https://github.com/mcowger)! - Prevent race conditions from stopping agent progress during indexing.
+
+- [#2716](https://github.com/Kilo-Org/kilocode/pull/2716) [`41a6dbf`](https://github.com/Kilo-Org/kilocode/commit/41a6dbf1a54a699e358a24ecd167f692f3a2aef5) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.28.8-v3.28.13
+
+    - Fix: Remove topP parameter from Bedrock inference config (#8377 by @ronyblum, PR by @daniel-lxs)
+    - Fix: Correct Vertex AI Sonnet 4.5 model configuration (#8387 by @nickcatal, PR by @mrubens!)
+    - Fix: Correct Anthropic Sonnet 4.5 model ID and add Bedrock 1M context checkbox (thanks @daniel-lxs!)
+    - Fix: Correct AWS Bedrock Claude Sonnet 4.5 model identifier (#8371 by @sunhyung, PR by @app/roomote)
+    - Fix: Correct Claude Sonnet 4.5 model ID format (thanks @daniel-lxs!)
+    - Fix: Make chat icons properly sized with shrink-0 class (thanks @mrubens!)
+    - The free Supernova model now has a 1M token context window (thanks @mrubens!)
+    - Fix: Remove <thinking> tags from prompts for cleaner output and fewer tokens (#8318 by @hannesrudolph, PR by @app/roomote)
+    - Correct tool use suggestion to improve model adherence to suggestion (thanks @hannesrudolph!)
+    - Removing user hint when refreshing models (thanks @requesty-JohnCosta27!)
+    - Fix: Resolve frequent "No tool used" errors by clarifying tool-use rules (thanks @hannesrudolph!)
+    - Fix: Include initial ask in condense summarization (thanks @hannesrudolph!)
+
+- [#2701](https://github.com/Kilo-Org/kilocode/pull/2701) [`0593631`](https://github.com/Kilo-Org/kilocode/commit/05936316c0bedfb62a0c1851dd4abfe1882fe3a4) Thanks [@mcowger](https://github.com/mcowger)! - Added additional supported models to the Fast Apply experimental feature for a total of three: Morph V3 Fast, Morph V3 Large and Relace Apply 3
+
+### Patch Changes
+
+- [#2656](https://github.com/Kilo-Org/kilocode/pull/2656) [`4e1b4ed`](https://github.com/Kilo-Org/kilocode/commit/4e1b4edb06ba3894bba86abd63853c167f1b4eb0) Thanks [@SnHaku](https://github.com/SnHaku)! - Fixed JetBrains PowerShell integration
+
+- [#2725](https://github.com/Kilo-Org/kilocode/pull/2725) [`2ae6a7c`](https://github.com/Kilo-Org/kilocode/commit/2ae6a7c3a9531ad6418cc3858aa43f96fc849072) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed GLM 4.6 always getting stuck in loops with Kilo Code and OpenRouter providers
+
+- [#2659](https://github.com/Kilo-Org/kilocode/pull/2659) [`318edd6`](https://github.com/Kilo-Org/kilocode/commit/318edd639b38f65dfdab0695f481322ea90ce2cc) Thanks [@akhil41](https://github.com/akhil41)! - Update Chutes AI provider model list
+
+## [v4.98.2]
+
+- [#2704](https://github.com/Kilo-Org/kilocode/pull/2704) [`6b6af0a`](https://github.com/Kilo-Org/kilocode/commit/6b6af0a2113cd106f08b1538172d5ba5d19a80ff) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed duplicated cost display
+
+- [#2705](https://github.com/Kilo-Org/kilocode/pull/2705) [`e65557d`](https://github.com/Kilo-Org/kilocode/commit/e65557dcfb880f70c6d18a6f511454c234b70ee4) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Added "Command Timeout Allowlist" and "Prevent Completion with Open Todos" to Extension Settings.
+
+- [#2707](https://github.com/Kilo-Org/kilocode/pull/2707) [`55ff2dc`](https://github.com/Kilo-Org/kilocode/commit/55ff2dcf6bccfcc9d70ba631ba57c99269ebe716) Thanks [@Ed4ward](https://github.com/Ed4ward)! - Added GLM 4.6 support to the Z.AI provider
+
+## [v4.98.1]
+
+- [#2695](https://github.com/Kilo-Org/kilocode/pull/2695) [`ab49c14`](https://github.com/Kilo-Org/kilocode/commit/ab49c141ca397a0af985341a1cfe907d586430ef) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Add Claude 4.5 Sonnet to all supported providers (thanks Roo Code)
+
+## [v4.98.0]
+
+- [#2623](https://github.com/Kilo-Org/kilocode/pull/2623) [`da834dd`](https://github.com/Kilo-Org/kilocode/commit/da834ddcd24ee334ec97c1a5ca398b87d624adc0) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.28.2-v3.28.7
+
+    - UX: Collapse thinking blocks by default with UI settings to always show them (thanks @brunobergher!)
+    - Fix: Resolve checkpoint restore popover positioning issue (#8219 by @NaccOll, PR by @app/roomote)
+    - Add support for zai-org/GLM-4.5-turbo model in Chutes provider (#8155 by @mugnimaestra, PR by @app/roomote)
+    - Fix: Improve reasoning block formatting for better readability (thanks @daniel-lxs!)
+    - Fix: Respect Ollama Modelfile num_ctx configuration (#7797 by @hannesrudolph, PR by @app/roomote)
+    - Fix: Prevent checkpoint text from wrapping in non-English languages (#8206 by @NaccOll, PR by @app/roomote)
+    - Fix: Bare metal evals fixes (thanks @cte!)
+    - Fix: Follow-up questions should trigger the "interactive" state (thanks @cte!)
+    - Fix: Resolve duplicate rehydrate during reasoning; centralize rehydrate and preserve cancel metadata (#8153 by @hannesrudolph, PR by @hannesrudolph)
+    - Fix: Support dash prefix in parseMarkdownChecklist for todo lists (#8054 by @NaccOll, PR by app/roomote)
+    - Fix: Apply tiered pricing for Gemini models via Vertex AI (#8017 by @ikumi3, PR by app/roomote)
+    - Update SambaNova models to latest versions (thanks @snova-jorgep!)
+    - UX: Redesigned Message Feed (thanks @brunobergher!)
+    - UX: Responsive Auto-Approve (thanks @brunobergher!)
+    - Add telemetry retry queue for network resilience (thanks @daniel-lxs!)
+    - Fix: Filter out Claude Code built-in tools (ExitPlanMode, BashOutput, KillBash) (#7817 by @juliettefournier-econ, PR by @roomote)
+    - Fix: Corrected C# tree-sitter query (#5238 by @vadash, PR by @mubeen-zulfiqar)
+    - Add keyboard shortcut for "Add to Context" action (#7907 by @hannesrudolph, PR by @roomote)
+    - Fix: Context menu is obscured when edit message (#7759 by @mini2s, PR by @NaccOll)
+    - Fix: Handle ByteString conversion errors in OpenAI embedders (#7959 by @PavelA85, PR by @daniel-lxs)
+    - Bring back a way to temporarily and globally pause auto-approve without losing your toggle state (thanks @brunobergher!)
+
+- [#2221](https://github.com/Kilo-Org/kilocode/pull/2221) [`bcb4c69`](https://github.com/Kilo-Org/kilocode/commit/bcb4c69f92c833e3c6cfc10d64b80077613386f1) Thanks [@Ffinnis](https://github.com/Ffinnis)! - Add ability to cancel code indexing process
+
+### Patch Changes
+
+- [#2665](https://github.com/Kilo-Org/kilocode/pull/2665) [`7b100d5`](https://github.com/Kilo-Org/kilocode/commit/7b100d5473e28aeafa832bcc3bbca3699c5ad9b1) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The "See New Changes" button is now hidden when checkpoints are disabled.
+
 ## [v4.97.2]
 
 - [#2655](https://github.com/Kilo-Org/kilocode/pull/2655) [`3f83727`](https://github.com/Kilo-Org/kilocode/commit/3f8372708344171f4b379b90ad04693e1f67be39) Thanks [@PierreAncey](https://github.com/PierreAncey)! - Add Grok 4 Fast model to xAI provider

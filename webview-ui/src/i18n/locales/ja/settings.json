@@ -760,12 +760,6 @@
 			"name": "同時ファイル編集を有効にする",
 			"description": "有効にすると、Kilo Codeは単一のリクエストで複数のファイルを編集できます。無効にすると、Kilo Codeはファイルを一つずつ編集する必要があります。これを無効にすることで、能力の低いモデルで作業する場合や、ファイル変更をより細かく制御したい場合に役立ちます。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Applyを有効にする",
-			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "バックグラウンド編集",
 			"description": "有効にすると、エディターのフォーカス中断を防ぎます。ファイル編集は差分ビューを開いたりフォーカスを奪ったりすることなく、バックグラウンドで行われます。Rooが変更を行っている間も中断されることなく作業を続けることができます。ファイルは診断をキャプチャするためにフォーカスなしで開くか、完全に閉じたままにできます。"
@@ -796,6 +790,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "エディター内で直接コードの迅速な提案と改善を行うAutocomplete機能を有効にします。ターゲット変更用のクイックタスク（Cmd+I）とコンテキスト改善用のAutocompleteが含まれます。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Fast Applyを有効化",
+			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
+			"apiKey": "Morph APIキー（オプション）",
+			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"modelLabel": "モデル選択",
+			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
+			"models": {
+				"auto": "自動（デフォルト - 最適なものを選択）",
+				"morphFast": "Morph v3 Fast（高速、低コスト）",
+				"morphLarge": "Morph v3 Large（より高性能）",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "モデル開始スラッシュコマンドを有効にする",

@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.97.2",
+	"version": "4.99.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -555,6 +555,19 @@
 					"maximum": 600,
 					"description": "%commands.commandExecutionTimeout.description%"
 				},
+				"kilo-code.commandTimeoutAllowlist": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					},
+					"default": [],
+					"description": "%commands.commandTimeoutAllowlist.description%"
+				},
+				"kilo-code.preventCompletionWithOpenTodos": {
+					"type": "boolean",
+					"default": false,
+					"description": "%commands.preventCompletionWithOpenTodos.description%"
+				},
 				"kilo-code.vsCodeLmModelSelector": {
 					"type": "object",
 					"properties": {
@@ -727,6 +740,7 @@
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/clone-deep": "^4.0.4",
+		"dotenv": "^16.4.7",
 		"@types/debug": "^4.1.12",
 		"@types/diff": "^5.2.3",
 		"@types/diff-match-patch": "^1.0.36",

@@ -760,10 +760,18 @@
 			"description": "जब सक्षम किया जाता है, तो Kilo Code एक ही अनुरोध में कई फ़ाइलों को संपादित कर सकता है। जब अक्षम किया जाता है, तो Kilo Code को एक समय में एक फ़ाइल संपादित करनी होगी। इसे अक्षम करना तब मदद कर सकता है जब आप कम सक्षम मॉडल के साथ काम कर रहे हों या जब आप फ़ाइल संशोधनों पर अधिक नियंत्रण चाहते हों।"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code फ़ाइलों को Morph Fast Apply का उपयोग करके संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter या Morph API कुंजी की आवश्यकता है।",
+			"name": "Fast Apply सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)"
+			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
+			"modelLabel": "मॉडल चयन",
+			"modelDescription": "फ़ाइल संपादन के लिए किस Fast Apply मॉडल का उपयोग करना है चुनें",
+			"models": {
+				"auto": "स्वचालित (डिफ़ॉल्ट - सर्वोत्तम उपलब्ध चुनता है)",
+				"morphFast": "Morph v3 Fast (तेज़, कम लागत)",
+				"morphLarge": "Morph v3 Large (अधिक सक्षम)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "बैकग्राउंड संपादन",

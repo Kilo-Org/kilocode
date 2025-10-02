@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "La risposta del modello è terminata inaspettatamente (nessun messaggio dell'assistente). Questo potrebbe essere un segno di limitazione del tasso di richieste.",
 		"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}",
-		"maxCompletionTokens": "È stato raggiunto il numero massimo di token di completamento."
+		"maxCompletionTokens": "È stato raggiunto il numero massimo di token di completamento.",
+		"disableApplyDiff": "Se questo errore continua a verificarsi, disabilita Modifica Tramite Diff nelle Impostazioni Avanzate.",
+		"disableEditFile": "Se questo errore continua a verificarsi, disabilita la funzione sperimentale Applicazione Rapida."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "I checkpoint non sono disponibili perché è stato rilevato un repository Git annidato in: {{path}}. Rimuovi o sposta i repository Git annidati per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",

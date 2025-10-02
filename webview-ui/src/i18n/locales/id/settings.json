@@ -781,10 +781,18 @@
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit beberapa file dalam satu permintaan. Ketika dinonaktifkan, Kilo Code harus mengedit file satu per satu. Menonaktifkan ini dapat membantu saat bekerja dengan model yang kurang mampu atau ketika kamu ingin kontrol lebih terhadap modifikasi file."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Aktifkan Morph Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Morph Fast Apply. Memerlukan Kilo Code API Provider, OpenRouter atau kunci API Morph.",
+			"name": "Aktifkan Fast Apply",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph Anda (opsional)"
+			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
+			"modelLabel": "Pemilihan Model",
+			"modelDescription": "Pilih model Fast Apply mana yang akan digunakan untuk edit file",
+			"models": {
+				"auto": "Otomatis (Default - memilih yang terbaik yang tersedia)",
+				"morphFast": "Morph v3 Fast (Lebih cepat, biaya lebih rendah)",
+				"morphLarge": "Morph v3 Large (Lebih mampu)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Pengeditan Latar Belakang",

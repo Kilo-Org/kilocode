@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "A resposta do modelo terminou inesperadamente (nenhuma mensagem do assistente). Isso pode ser um sinal de limitação de taxa.",
 		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
-		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido."
+		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido.",
+		"disableApplyDiff": "Se este erro continuar ocorrendo, desabilite a opção Edição Através de Diffs nas Configurações Avançadas.",
+		"disableEditFile": "Se este erro continuar ocorrendo, desabilite o recurso experimental Fast Apply."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Os pontos de verificação não estão disponíveis porque foi detectado um repositório Git aninhado em: {{path}}. Remova ou realoque os repositórios Git aninhados para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",

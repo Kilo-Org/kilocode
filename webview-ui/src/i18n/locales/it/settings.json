@@ -760,12 +760,6 @@
 			"name": "Abilita modifiche di file concorrenti",
 			"description": "Quando abilitato, Kilo Code può modificare più file in una singola richiesta. Quando disabilitato, Kilo Code deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Abilita Morph Fast Apply",
-			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Morph Fast Apply. Richiede il Fornitore API Kilo Code, OpenRouter o una chiave API Morph.",
-			"apiKey": "Chiave API Morph (opzionale)",
-			"placeholder": "Inserisci la tua chiave API Morph (opzionale)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Modifica in background",
 			"description": "Previene l'interruzione del focus dell'editor quando abilitato. Le modifiche ai file avvengono in background senza aprire viste di differenze o rubare il focus. Puoi continuare a lavorare senza interruzioni mentre Kilo Code effettua modifiche. I file possono essere aperti senza focus per catturare diagnostiche o rimanere completamente chiusi."
@@ -796,6 +790,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Abilita le funzionalità Autocomplete per suggerimenti di codice rapidi e miglioramenti direttamente nel tuo editor. Include Attività Rapida (Cmd+I) per modifiche mirate e Autocomplete per miglioramenti contestuali."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Abilita Fast Apply",
+			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede il provider API Kilo Code, OpenRouter o una chiave API Morph.",
+			"apiKey": "Chiave API Morph (opzionale)",
+			"placeholder": "Inserisci la tua chiave API Morph (opzionale)",
+			"modelLabel": "Selezione modello",
+			"modelDescription": "Scegli quale modello Fast Apply utilizzare per le modifiche ai file",
+			"models": {
+				"auto": "Automatico (Predefinito - sceglie il migliore disponibile)",
+				"morphFast": "Morph v3 Fast (Più veloce, costo inferiore)",
+				"morphLarge": "Morph v3 Large (Più capace)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Abilita comandi slash avviati dal modello",

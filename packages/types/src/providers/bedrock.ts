@@ -13,6 +13,21 @@ export const bedrockDefaultPromptRouterModelId: BedrockModelId = "anthropic.clau
 // of the default prompt routers AWS enabled for GA of the promot router
 // feature.
 export const bedrockModels = {
+	"anthropic.claude-sonnet-4-5-20250929-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		cacheWritesPrice: 3.75,
+		cacheReadsPrice: 0.3,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
 	"amazon.nova-pro-v1:0": {
 		maxTokens: 5000,
 		contextWindow: 300_000,
@@ -443,3 +458,7 @@ export const BEDROCK_REGIONS = [
 ].sort((a, b) => a.value.localeCompare(b.value))
 
 export const BEDROCK_CLAUDE_SONNET_4_MODEL_ID = "anthropic.claude-sonnet-4-20250514-v1:0"
+export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
+	"anthropic.claude-sonnet-4-20250514-v1:0",
+	"anthropic.claude-sonnet-4-5-20250929-v1:0",
+] as const
