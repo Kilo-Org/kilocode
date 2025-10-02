@@ -758,13 +758,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Apply'ı etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir. Kilo Code API Sağlayıcısı, OpenRouter veya bir Morph API anahtarı gerektirir.",
+			"name": "Hızlı Uygulama'yı etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları kod değişiklikleri için optimize edilmiş özel modellerle Hızlı Uygulama kullanarak düzenleyebilir. Kilo Code API Sağlayıcısı, OpenRouter veya bir Morph API anahtarı gerektirir.",
 			"apiKey": "Morph API anahtarı (isteğe bağlı)",
-			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)"
+			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
+			"modelLabel": "Model Seçimi",
+			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
+			"models": {
+				"auto": "Otomatik (Varsayılan - en uygun olanı seçer)",
+				"morphFast": "Morph v3 Fast (Daha hızlı, düşük maliyet)",
+				"morphLarge": "Morph v3 Large (Daha yetenekli)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",

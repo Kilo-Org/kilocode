@@ -4,7 +4,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 
 // kilocode_change start
 import { ClineProviderState } from "../../webview/ClineProvider"
-import { isMorphAvailable } from "../../tools/editFileTool"
+import { isFastApplyAvailable } from "../../tools/editFileTool"
 // kilocode_change end
 
 export function getCapabilitiesSection(
@@ -15,7 +15,7 @@ export function getCapabilitiesSection(
 	codeIndexManager?: CodeIndexManager,
 	clineProviderState?: ClineProviderState, // kilocode_change
 ): string {
-	const kiloCodeUseMorph = isMorphAvailable(clineProviderState)
+	const kiloCodeUseMorph = isFastApplyAvailable(clineProviderState)
 	return `====
 
 CAPABILITIES

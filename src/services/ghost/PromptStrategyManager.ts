@@ -32,7 +32,6 @@ export class PromptStrategyManager {
 			new InlineCompletionStrategy(),
 			new AutoTriggerStrategy(),
 			new ErrorFixStrategy(), // This need to be implemented in background
-			//new ASTAwareStrategy(),
 		]
 	}
 

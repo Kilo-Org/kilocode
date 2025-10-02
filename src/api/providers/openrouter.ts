@@ -252,6 +252,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
+
+				if (delta && (delta.tool_calls?.length ?? 0) > 0) {
+					console.error("Model tried to use native tool calls", delta.tool_calls)
+				}
 				// kilocode_change end
 
 				if (delta?.content) {

@@ -18,7 +18,7 @@ export const FastApplyChatDisplay = ({
 				onClick={() => setIsFastApplyExpanded(!isFastApplyExpanded)}>
 				<div className="flex items-center gap-2">
 					<span className="codicon codicon-rocket text-vscode-badge-foreground" />
-					<span className="font-medium text-vscode-badge-foreground">Morph FastApply</span>
+					<span className="font-medium text-vscode-badge-foreground">Fast Apply</span>
 
 					{/* Token metrics */}
 					<div className="flex items-center gap-1">

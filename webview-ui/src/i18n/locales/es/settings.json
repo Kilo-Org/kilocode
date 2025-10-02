@@ -507,7 +507,7 @@
 			"oauthPath": "Ruta de Credenciales OAuth (opcional)",
 			"oauthPathDescription": "Ruta al archivo de credenciales OAuth. Deja vacío para usar la ubicación predeterminada (~/.qwen/oauth_creds.json).",
 			"description": "Este proveedor usa autenticación OAuth del servicio Qwen y no requiere claves API.",
-			"instructions": "Por favor, sigue la documentación oficial para obtener el archivo de autorización y colócalo en la ruta especificada.",
+			"instructions": "Por favor, siga la documentación oficial para obtener el archivo de autorización y colócalo en la ruta especificada.",
 			"setupLink": "Documentación Oficial de Qwen"
 		}
 	},
@@ -759,10 +759,18 @@
 			"description": "Cuando está habilitado, Kilo Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Morph Fast Apply. Requiere el Proveedor de API de Kilo Code, OpenRouter o una clave API de Morph.",
+			"name": "Habilitar Fast Apply",
+			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Fast Apply con modelos especializados optimizados para modificaciones de código. Requiere el proveedor de API de Kilo Code, OpenRouter o una clave API de Morph.",
 			"apiKey": "Clave API de Morph (opcional)",
-			"placeholder": "Introduce tu clave API de Morph (opcional)"
+			"placeholder": "Introduce tu clave API de Morph (opcional)",
+			"modelLabel": "Selección de modelo",
+			"modelDescription": "Elige qué modelo de Fast Apply usar para ediciones de archivos",
+			"models": {
+				"auto": "Automático (Predeterminado - elige el mejor disponible)",
+				"morphFast": "Morph v3 Fast (Más rápido, menor costo)",
+				"morphLarge": "Morph v3 Large (Más capaz)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edición en segundo plano",

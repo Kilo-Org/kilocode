@@ -807,12 +807,6 @@
 			"name": "เปิดใช้งานการแก้ไขไฟล์พร้อมกัน",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขหลายไฟล์ในคำขอเดียว เมื่อปิดใช้งาน Kilo Code ต้องแก้ไขไฟล์ทีละไฟล์ การปิดใช้งานนี้จะช่วยเมื่อทำงานกับโมเดลที่มีความสามารถน้อยกว่าหรือเมื่อคุณต้องการควบคุมการแก้ไขไฟล์มากขึ้น"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "เปิดใช้งาน Morph Fast Apply",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply ต้องใช้ Kilo Code API Provider, OpenRouter หรือคีย์ API ของ Morph",
-			"apiKey": "คีย์ API ของ Morph (ไม่บังคับ)",
-			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "การแก้ไขเบื้องหลัง",
 			"description": "ป้องกันการรบกวนโฟกัสของตัวแก้ไขเมื่อเปิดใช้งาน การแก้ไขไฟล์จะเกิดขึ้นในเบื้องหลังโดยไม่เปิดมุมมอง diff หรือขโมยโฟกัส คุณสามารถทำงานต่อไปได้โดยไม่ถูกขัดจังหวะขณะที่ Kilo Code ทำการเปลี่ยนแปลง ไฟล์อาจเปิดโดยไม่มีโฟกัสเพื่อจับการวินิจฉัยหรือยังคงปิดอยู่ทั้งหมด"
@@ -843,6 +837,20 @@
 		"RUN_SLASH_COMMAND": {
 			"name": "เปิดใช้งานคำสั่ง slash ที่เริ่มต้นโดยโมเดล",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "เปิดใช้งาน Fast Apply",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Fast Apply กับโมเดลเฉพาะทางที่ปรับแต่งสำหรับการแก้ไขโค้ด ต้องใช้ Kilo Code API Provider, OpenRouter หรือ Morph API key",
+			"apiKey": "Morph API key (ไม่บังคับ)",
+			"placeholder": "ป้อน Morph API key ของคุณ (ไม่บังคับ)",
+			"modelLabel": "การเลือกโมเดล",
+			"modelDescription": "เลือกโมเดล Fast Apply ที่จะใช้สำหรับการแก้ไขไฟล์",
+			"models": {
+				"auto": "อัตโนมัติ (ค่าเริ่มต้น - เลือกที่ดีที่สุดที่มี)",
+				"morphFast": "Morph v3 Fast (เร็วกว่า ค่าใช้จ่ายต่ำกว่า)",
+				"morphLarge": "Morph v3 Large (มีความสามารถมากกว่า)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",

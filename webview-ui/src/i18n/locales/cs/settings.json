@@ -30,7 +30,7 @@
 		"contextManagement": "Kontext",
 		"terminal": "Terminál",
 		"slashCommands": "Slash příkazy",
-		"prompts": "Výzvy",
+		"prompts": "Podpůrné výzvy",
 		"ui": "Uživatelské rozhraní",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
@@ -719,7 +719,7 @@
 		},
 		"shellIntegrationDisabled": {
 			"label": "Zakázat integraci shellu terminálu",
-			"description": "Povolte tuto možnost, pokud příkazy terminálu nefungují správně nebo se zobrazují chyby „Integrace shellu není k dispozici“. Tímto se použije jednodušší metoda spouštění příkazů, která obejde některé pokročilé funkce terminálu. <0>Dozvědět se více</0>"
+			"description": "Povolte tuto možnost, pokud příkazy terminálu nefungují správně nebo se zobrazují chyby „Integrace shellu není k dispozici“. Tím k se použije jednodušší metoda spouštění příkazů, která obejde některé pokročilé funkce terminálu. <0>Dozvědět se více</0>"
 		},
 		"commandDelay": {
 			"label": "Zpoždění příkazu terminálu",
@@ -781,7 +781,7 @@
 				},
 				"descriptions": {
 					"standard": "Standardní strategie diff aplikuje změny na jeden blok kódu najednou.",
-					"unified": "Sjednocená strategie diff používá více přístupů k aplikaci diffů a vybírá ten nejlepší.",
+					"unified": "Sjednocená strategie diff používá více přístupů k aplikace diffů a vybírá ten nejlepší.",
 					"multiBlock": "Strategie diff s více bloky umožňuje aktualizovat více bloků kódu v souboru v jednom požadavku."
 				}
 			},
@@ -799,6 +799,20 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Použít experimentální sjednocenou strategii diff",
 			"description": "Povolit experimentální sjednocenou strategii diff. Tato strategie může snížit počet opakování způsobených chybami modelu, ale může způsobit neočekávané chování nebo nesprávné úpravy. Povolte pouze pokud rozumíte rizikům a jste ochotni pečlivě zkontrolovat všechny změny."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Povolit rychlé aplikování",
+			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí rychlého aplikování se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje poskytovatele Kilo Code API, OpenRouter nebo klíč API Morph.",
+			"apiKey": "Klíč API Morph (volitelné)",
+			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
+			"modelLabel": "Výběr modelu",
+			"modelDescription": "Vyberte, který model rychlého aplikování použít pro úpravy souborů",
+			"models": {
+				"auto": "Automaticky (výchozí - vybere nejlepší dostupný)",
+				"morphFast": "Morph v3 Fast (rychlejší, nižší náklady)",
+				"morphLarge": "Morph v3 Large (schopnější)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Použít experimentální nástroj hledání a nahrazování",
@@ -827,12 +841,6 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Povolit souběžné úpravy souborů",
 			"description": "Pokud je povoleno, Kilo Code může upravovat více souborů v jednom požadavku. Pokud je zakázáno, Kilo Code musí upravovat soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad úpravami souborů."
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Povolit Morph Fast Apply",
-			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Morph Fast Apply. Vyžaduje poskytovatele Kilo Code API, OpenRouter nebo klíč API Morph.",
-			"apiKey": "Klíč API Morph (volitelné)",
-			"placeholder": "Zadejte svůj klíč API Morph (volitelné)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Úpravy na pozadí",

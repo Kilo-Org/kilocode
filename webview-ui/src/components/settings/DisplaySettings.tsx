@@ -2,6 +2,7 @@ import { HTMLAttributes, useMemo, useState } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { Monitor } from "lucide-react"
+import { telemetryClient } from "@/utils/TelemetryClient"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
@@ -12,13 +13,15 @@ import { generateSampleTimelineData } from "../../utils/timeline/mockData"
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
 	ghostServiceSettings?: any
-	setCachedStateField: SetCachedStateField<"showTaskTimeline" | "ghostServiceSettings">
+	reasoningBlockCollapsed: boolean
+	setCachedStateField: SetCachedStateField<"showTaskTimeline" | "ghostServiceSettings" | "reasoningBlockCollapsed">
 }
 
 export const DisplaySettings = ({
 	showTaskTimeline,
 	ghostServiceSettings,
 	setCachedStateField,
+	reasoningBlockCollapsed,
 	...props
 }: DisplaySettingsProps) => {
 	const { t } = useAppTranslation()
@@ -38,6 +41,15 @@ export const DisplaySettings = ({
 		})
 	}
 
+	const handleReasoningBlockCollapsedChange = (value: boolean) => {
+		setCachedStateField("reasoningBlockCollapsed", value)
+
+		// Track telemetry event
+		telemetryClient.capture("ui_settings_collapse_thinking_changed", {
+			enabled: value,
+		})
+	}
+
 	return (
 		<div {...props}>
 			<SectionHeader>
@@ -48,6 +60,17 @@ export const DisplaySettings = ({
 			</SectionHeader>
 
 			<Section>
+				<div className="flex flex-col gap-1">
+					<VSCodeCheckbox
+						checked={reasoningBlockCollapsed}
+						onChange={(e: any) => handleReasoningBlockCollapsedChange(e.target.checked)}
+						data-testid="collapse-thinking-checkbox">
+						<span className="font-medium">{t("settings:ui.collapseThinking.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm ml-5 mt-1">
+						{t("settings:ui.collapseThinking.description")}
+					</div>
+				</div>
 				<div>
 					<VSCodeCheckbox
 						checked={showTaskTimeline}

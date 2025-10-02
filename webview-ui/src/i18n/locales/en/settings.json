@@ -777,10 +777,18 @@
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Enable Morph Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply. Requires the Kilo Code API Provider, OpenRouter or a Morph API key.",
+			"name": "Enable Fast Apply",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Code API Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)"
+			"placeholder": "Enter your Morph API key (optional)",
+			"modelLabel": "Model Selection",
+			"modelDescription": "Choose which Fast Apply model to use for file edits",
+			"models": {
+				"auto": "Auto (Default - chooses best available)",
+				"morphFast": "Morph v3 Fast (Faster, lower cost)",
+				"morphLarge": "Morph v3 Large (More capable)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",

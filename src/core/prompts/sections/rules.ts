@@ -2,9 +2,9 @@ import { DiffStrategy } from "../../../shared/tools"
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
 // kilocode_change start
-import { getMorphEditingInstructions } from "../tools/edit-file"
+import { getFastApplyEditingInstructions } from "../tools/edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
-import { isMorphAvailable } from "../../tools/editFileTool"
+import { getFastApplyModelType, isFastApplyAvailable } from "../../tools/editFileTool"
 // kilocode_change end
 
 function getEditingInstructions(diffStrategy?: DiffStrategy): string {
@@ -68,7 +68,7 @@ export function getRulesSection(
 		? "- **CRITICAL: For ANY exploration of code you haven't examined yet in this conversation, you MUST use the `codebase_search` tool FIRST before using search_files or other file exploration tools.** This requirement applies throughout the entire conversation, not just when starting a task. The codebase_search tool uses semantic search to find relevant code based on meaning, not just keywords, making it much more effective for understanding how features are implemented. Even if you've already explored some parts of the codebase, any new area or functionality you need to understand requires using codebase_search first.\n"
 		: ""
 
-	const kiloCodeUseMorph = isMorphAvailable(clineProviderState)
+	const kiloCodeUseMorph = isFastApplyAvailable(clineProviderState)
 
 	return `====
 
@@ -81,7 +81,7 @@ RULES
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '${cwd.toPosix()}', and if so prepend with \`cd\`'ing into that directory && then executing the command (as one command since you are stuck operating from '${cwd.toPosix()}'). For example, if you needed to run \`npm install\` in a project outside of '${cwd.toPosix()}', you would need to prepend with a \`cd\` i.e. pseudocode for this would be \`cd (path to project) && (command, in this case npm install)\`.
 ${codebaseSearchRule}- When using the search_files tool${isCodebaseSearchAvailable ? " (after codebase_search)" : ""}, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using ${kiloCodeUseMorph ? "edit_file" : diffStrategy ? "apply_diff or write_to_file" : "write_to_file"} to make informed changes.
 - When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the ${kiloCodeUseMorph ? "edit_file" : "write_to_file"} tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
-${kiloCodeUseMorph ? getMorphEditingInstructions() : getEditingInstructions(diffStrategy)}
+${kiloCodeUseMorph ? getFastApplyEditingInstructions(getFastApplyModelType(clineProviderState)) : getEditingInstructions(diffStrategy)}
 - Some modes have restrictions on which files they can edit. If you attempt to edit a restricted file, the operation will be rejected with a FileRestrictionError that will specify which file patterns are allowed for the current mode.
 - Be sure to consider the type of project (e.g. Python, JavaScript, web application) when determining the appropriate structure and files to include. Also consider what files may be most relevant to accomplishing the task, for example looking at a project's manifest file would help you understand the project's dependencies, which you could incorporate into any code you write.
   * For example, in architect mode trying to edit app.js would be rejected because architect mode can only edit files matching "\\.md$"
