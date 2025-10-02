@@ -262,6 +262,25 @@ const ApiOptions = ({
 				// kilocode_change start
 			} else if (selectedProvider === "openrouter") {
 				const headerObject = convertHeadersToObject(customHeaders)
+
+				// Wait for the routerModels message before invalidating cache
+				const modelsPromise = new Promise<void>((resolve) => {
+					const messageHandler = (event: MessageEvent) => {
+						const message = event.data
+						if (message.type === "routerModels") {
+							window.removeEventListener("message", messageHandler)
+							resolve()
+						}
+					}
+					window.addEventListener("message", messageHandler)
+
+					// Add timeout to prevent hanging
+					setTimeout(() => {
+						window.removeEventListener("message", messageHandler)
+						resolve()
+					}, 5000)
+				})
+
 				vscode.postMessage({
 					type: "requestRouterModels",
 					values: {
@@ -272,7 +291,9 @@ const ApiOptions = ({
 						source: "ApiOptions.debounce.openrouter",
 					},
 				})
-				refetchRouterModels()
+
+				// Refetch after message arrives
+				modelsPromise.then(() => refetchRouterModels())
 				// kilocode_change end
 			} else if (selectedProvider === "litellm" || selectedProvider === "deepinfra") {
 				vscode.postMessage({ type: "requestRouterModels" })
