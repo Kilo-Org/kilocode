@@ -147,8 +147,7 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                submodules: recursive
-                lfs: true
+                  lfs: true
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
@@ -160,17 +159,17 @@ jobs:
                   cache: "pnpm"
             - uses: actions/setup-java@v4
               with:
-                  distribution: 'jetbrains'
-                  java-version: '17'
+                  distribution: "jetbrains"
+                  java-version: "17"
             - name: Install system dependencies
               run: |
-                sudo apt-get update
-                sudo apt-get install -y \
-                  libx11-dev \
-                  libxkbfile-dev \
-                  pkg-config \
-                  build-essential \
-                  python3
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    libx11-dev \
+                    libxkbfile-dev \
+                    pkg-config \
+                    build-essential \
+                    python3
             - name: Turbo cache setup
               uses: actions/cache@v4
               with:
