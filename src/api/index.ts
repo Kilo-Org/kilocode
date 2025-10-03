@@ -14,6 +14,7 @@ import {
 	AnthropicVertexHandler,
 	OpenAiHandler,
 	LmStudioHandler,
+	ProviderDefinedHandler,
 	GeminiHandler,
 	OpenAiNativeHandler,
 	DeepSeekHandler,
@@ -128,6 +129,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new NativeOllamaHandler(options)
 		case "lmstudio":
 			return new LmStudioHandler(options)
+		case "provider-defined":
+			return new ProviderDefinedHandler(options)
 		case "gemini":
 			return new GeminiHandler(options)
 		case "openai-native":

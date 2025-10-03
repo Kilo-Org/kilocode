@@ -435,6 +435,10 @@ function getSelectedModel({
 			const info = routerModels["vercel-ai-gateway"]?.[id]
 			return { id, info }
 		}
+		case "provider-defined": {
+			const id = apiConfiguration.providerDefinedModelId || ""
+			return { id, info: openAiModelInfoSaneDefaults }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

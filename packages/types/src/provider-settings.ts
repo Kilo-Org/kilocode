@@ -120,6 +120,11 @@ export const providerNames = [
 	...fauxProviders,
 	"anthropic",
 	"bedrock",
+	"vertex",
+	"openai",
+	"ollama",
+	"vscode-lm",
+	"lmstudio",
 	"cerebras",
 	"chutes",
 	"claude-code",
@@ -133,6 +138,7 @@ export const providerNames = [
 	"mistral",
 	"moonshot",
 	"openai-native",
+	"provider-defined",
 	"qwen-code",
 	"roo",
 	// kilocode_change start
@@ -292,6 +298,15 @@ const lmStudioSchema = baseProviderSettingsSchema.extend({
 	lmStudioBaseUrl: z.string().optional(),
 	lmStudioDraftModelId: z.string().optional(),
 	lmStudioSpeculativeDecodingEnabled: z.boolean().optional(),
+})
+
+const providerDefinedSchema = baseProviderSettingsSchema.extend({
+	providerDefinedManifestUrl: z.string().optional(),
+	providerDefinedModelId: z.string().optional(),
+	providerDefinedApiKey: z.string().optional(),
+	providerDefinedHeaders: z.record(z.string(), z.string()).optional(),
+	providerDefinedEmbeddedJson: z.string().optional(),
+	providerDefinedSource: z.enum(["manifest", "embedded"]).optional(),
 })
 
 const geminiSchema = apiModelIdProviderModelSchema.extend({
@@ -474,6 +489,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	ollamaSchema.merge(z.object({ apiProvider: z.literal("ollama") })),
 	vsCodeLmSchema.merge(z.object({ apiProvider: z.literal("vscode-lm") })),
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
+	providerDefinedSchema.merge(z.object({ apiProvider: z.literal("provider-defined") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
@@ -519,6 +535,7 @@ export const providerSettingsSchema = z.object({
 	...ollamaSchema.shape,
 	...vsCodeLmSchema.shape,
 	...lmStudioSchema.shape,
+	...providerDefinedSchema.shape,
 	...geminiSchema.shape,
 	// kilocode_change start
 	...geminiCliSchema.shape,
@@ -576,6 +593,7 @@ export const modelIdKeys = [
 	"ollamaModelId",
 	"lmStudioModelId",
 	"lmStudioDraftModelId",
+	"providerDefinedModelId",
 	"unboundModelId",
 	"requestyModelId",
 	"litellmModelId",
@@ -638,6 +656,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	kilocode: "kilocodeModel",
 	"virtual-quota-fallback": "apiModelId",
+	"provider-defined": "providerDefinedModelId",
 }
 
 /**
@@ -669,7 +688,10 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	Exclude<
+		ProviderName,
+		"fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama" | "provider-defined"
+	>,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
