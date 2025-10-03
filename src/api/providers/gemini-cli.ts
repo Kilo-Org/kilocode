@@ -172,7 +172,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			? path.join(path.dirname(this.options.geminiCliOAuthPath), ".env")
 			: path.join(os.homedir(), ".gemini", ".env")
 
-		const { parsed, error } = dotenvx.config({ path: envPath })
+		const { parsed, error } = dotenvx.config({ path: envPath, override: true })
 
 		if (error) {
 			console.warn("[GeminiCLI] .env file not found or invalid format, proceeding with default project ID")
