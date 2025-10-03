@@ -21,7 +21,10 @@ import {
 	type ClineMessage,
 	type TelemetrySetting,
 	TelemetryEventName,
-	ghostServiceSettingsSchema, // kilocode_change
+	// kilocode_change start
+	ghostServiceSettingsSchema,
+	fastApplyModelSchema,
+	// kilocode_change end
 	UserSettingsConfig,
 } from "@roo-code/types"
 import { CloudService } from "@roo-code/cloud"
@@ -1429,6 +1432,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("morphApiKey", message.text)
 			await provider.postStateToWebview()
 			break
+		case "fastApplyModel": {
+			const nextModel = fastApplyModelSchema.safeParse(message.text).data ?? "auto"
+			await updateGlobalState("fastApplyModel", nextModel)
+			await provider.postStateToWebview()
+			break
+		}
 		// kilocode_change end
 		case "updateVSCodeSetting": {
 			const { setting, value } = message
@@ -3110,6 +3119,38 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start
+		case "cancelIndexing": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				if (!manager) {
+					provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: {
+							systemStatus: "Error",
+							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
+							processedItems: 0,
+							totalItems: 0,
+							currentItemUnit: "items",
+						},
+					})
+					provider.log("Cannot cancel indexing: No workspace folder open")
+					return
+				}
+				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
+					manager.cancelIndexing()
+					// Immediately reflect updated status to UI
+					provider.postMessageToWebview({
+						type: "indexingStatusUpdate",
+						values: manager.getCurrentStatus(),
+					})
+				}
+			} catch (error) {
+				provider.log(`Error canceling indexing: ${error instanceof Error ? error.message : String(error)}`)
+			}
+			break
+		}
+		// kilocode_change end
 		case "clearIndexData": {
 			try {
 				const manager = provider.getCurrentWorkspaceCodeIndexManager()

@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (Fork dari Roo / Cline)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",

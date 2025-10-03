@@ -1,0 +1,1 @@
+const x = 42<<<AUTOCOMPLETE_HERE>>>

@@ -133,7 +133,9 @@
 		"searchMinScoreResetTooltip": "Zresetuj do wartości domyślnej (0.4)",
 		"searchMaxResultsLabel": "Maksymalna liczba wyników wyszukiwania",
 		"searchMaxResultsDescription": "Maksymalna liczba wyników wyszukiwania zwracanych podczas zapytania do indeksu bazy kodu. Wyższe wartości zapewniają więcej kontekstu, ale mogą zawierać mniej istotne wyniki.",
-		"resetToDefault": "Przywróć domyślne"
+		"resetToDefault": "Przywróć domyślne",
+		"cancelling": "Anulowanie...",
+		"cancelIndexingButton": "Anuluj indeksowanie"
 	},
 	"autoApprove": {
 		"toggleShortcut": "Możesz skonfigurować globalny skrót dla tego ustawienia <SettingsLink>w preferencjach swojego IDE</SettingsLink>.",
@@ -755,13 +757,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Włącz równoczesne edycje plików",
-			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików."
+			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Włącz Morph Fast Apply",
-			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply. Wymaga Dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
-			"apiKey": "Klucz API Morph (opcjonalny)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)"
+			"name": "Włącz szybkie stosowanie",
+			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą szybkiego stosowania ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
+			"apiKey": "Klucz API Morph (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"modelLabel": "Wybór modelu",
+			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
+			"models": {
+				"auto": "Automatyczny (Domyślny - wybiera najlepszy dostępny)",
+				"morphFast": "Morph v3 Fast (Szybszy, niższy koszt)",
+				"morphLarge": "Morph v3 Large (Bardziej zaawansowany)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edycja w tle",

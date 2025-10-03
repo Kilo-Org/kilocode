@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (Roo / Cline çatalı)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı.",
 	"command.newTask.title": "Yeni Görev",
 	"command.explainCode.title": "Kodu Açıkla",

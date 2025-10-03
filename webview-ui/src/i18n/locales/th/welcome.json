@@ -10,6 +10,10 @@
 		},
 		"openrouter": {
 			"description": "อินเทอร์เฟซรวมสำหรับ LLMs"
+		},
+		"roo": {
+			"description": "โมเดลฟรีที่ดีที่สุดเพื่อเริ่มต้น",
+			"incentive": "ลอง Roo ฟรี"
 		}
 	},
 	"chooseProvider": "เพื่อทำสิ่งมหัศจรรย์ Kilo Code ต้องการ API key",

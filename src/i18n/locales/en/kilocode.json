@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
 		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
-		"maxCompletionTokens": "The maximum number of completion tokens was reached."
+		"maxCompletionTokens": "The maximum number of completion tokens was reached.",
+		"disableApplyDiff": "If this error keep reoccuring, please disable Editing Through Diffs in Advanced Settings.",
+		"disableEditFile": "If this error keep reoccuring, please disable the Fast Apply experimental feature."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Checkpoints are unavailable, because a nested Git repository was detected at: {{path}}. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to suppress this warning.",

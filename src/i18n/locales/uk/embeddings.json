@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "Спостерігач файлів зупинено.",
 		"failedDuringInitialScan": "Не вдалося під час початкового сканування: {{errorMessage}}",
 		"unknownError": "Невідома помилка",
-		"indexingRequiresWorkspace": "Індексування вимагає відкритої папки робочого простору"
+		"indexingRequiresWorkspace": "Індексування вимагає відкритої папки робочого простору",
+		"indexingCancelled": "Індексацію скасовано"
 	}
 }

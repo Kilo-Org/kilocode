@@ -25,6 +25,7 @@
 	"startOver": "ابدأ من جديد",
 	"personalAccount": "حساب شخصي",
 	"switchAccount": "تبديل حساب Roo Code Cloud",
+	"createTeamAccount": "إنشاء حساب فريق",
 	"upsell": {
 		"autoApprovePowerUser": "المستخدمون المتقدمون يحبون الموافقة التلقائية. ترقّ للسحابة للحصول على ميزات متقدمة.",
 		"longRunningTask": "مهمة تأخذ وقت طويل؟ راقب التقدم في السحابة.",

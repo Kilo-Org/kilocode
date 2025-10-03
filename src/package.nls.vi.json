@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (nhánh rẽ từ Roo / Cline)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã.",
 	"command.newTask.title": "Tác Vụ Mới",
 	"command.explainCode.title": "Giải Thích Mã",

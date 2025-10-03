@@ -8,21 +8,15 @@ Kilo Code provides its own built-in API provider that gives you access to the la
 
 **Website:** [https://kilocode.ai/](https://kilocode.ai/)
 
-## Getting Started with Free Credits
+## Getting Started
 
-When you sign up for Kilo Code, you may receive free credits to help you get started:
+When you sign up for Kilo Code, you can start immediately with free models, or top up your account for the first time to get bonus credits.
 
-1. **Sign up:** Complete the registration (we might require a hold to verify identity)
-2. **First top-up:**: Add funds to your account (min $5) and get $20 bonus credits
-3. **Start Coding:** Enjoy your free credits
+To claim your bonus credits:
 
-:::note About the temporary hold
-The $0.50 hold is for identity verification only:
-
-- **Not a charge** - This is a temporary authorization that will not be charged
-- **Instant release** - Kilo Code releases the hold immediately after verification
-- **Bank processing** - While we release instantly, it may take a few business days for funds to return (varies by bank)
-  :::
+1. **Sign up:** Complete the registration process
+2. **First top-up:** Add funds to your account and get $20 bonus credits
+3. **Start Coding:** Enjoy your $20 in free credits
 
 ## Registration Process
 

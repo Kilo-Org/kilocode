@@ -14,7 +14,9 @@
 	"task": {
 		"noAssistantMessages": "Odpowiedź modelu zakończyła się nieoczekiwanie (brak komunikatów asystenta). To może być oznaka ograniczenia częstotliwości żądań.",
 		"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}",
-		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia."
+		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia.",
+		"disableApplyDiff": "Jeśli ten błąd będzie się powtarzał, wyłącz Edycję Przez Różnice w Ustawieniach Zaawansowanych.",
+		"disableEditFile": "Jeśli ten błąd będzie się powtarzał, wyłącz eksperymentalną funkcję Szybkiego Zastosowania."
 	},
 	"checkpoints": {
 		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytorium Git w: {{path}}. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
