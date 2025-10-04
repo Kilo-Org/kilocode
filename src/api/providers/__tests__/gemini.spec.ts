@@ -9,10 +9,30 @@ import { GeminiHandler } from "../gemini"
 
 const GEMINI_20_FLASH_THINKING_NAME = "gemini-2.0-flash-thinking-exp-1219"
 
+const getGeminiModelsMock = vi.hoisted(() => vi.fn())
+
+vi.mock("../fetchers/gemini", () => ({
+	getGeminiModels: getGeminiModelsMock,
+}))
+
 describe("GeminiHandler", () => {
 	let handler: GeminiHandler
 
 	beforeEach(() => {
+		getGeminiModelsMock.mockReset()
+		getGeminiModelsMock.mockResolvedValue({
+			[geminiDefaultModelId]: {
+				maxTokens: 8192,
+				contextWindow: 131_072,
+				supportsPromptCache: false,
+			},
+			[GEMINI_20_FLASH_THINKING_NAME]: {
+				maxTokens: 8192,
+				contextWindow: 131_072,
+				supportsPromptCache: false,
+			},
+		})
+
 		// Create mock functions
 		const mockGenerateContentStream = vitest.fn()
 		const mockGenerateContent = vitest.fn()
@@ -148,10 +168,10 @@ describe("GeminiHandler", () => {
 	describe("getModel", () => {
 		it("should return correct model info", () => {
 			const modelInfo = handler.getModel()
-			expect(modelInfo.id).toBe(GEMINI_20_FLASH_THINKING_NAME)
+			expect(modelInfo.id).toBe(geminiDefaultModelId)
 			expect(modelInfo.info).toBeDefined()
 			expect(modelInfo.info.maxTokens).toBe(8192)
-			expect(modelInfo.info.contextWindow).toBe(32_767)
+			expect(modelInfo.info.contextWindow).toBe(1_048_576)
 		})
 
 		it("should return default model if invalid model specified", () => {

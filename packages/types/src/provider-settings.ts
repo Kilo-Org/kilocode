@@ -12,7 +12,6 @@ import {
 	doubaoModels,
 	featherlessModels,
 	fireworksModels,
-	geminiModels,
 	groqModels,
 	ioIntelligenceModels,
 	mistralModels,
@@ -41,6 +40,7 @@ export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 
 export const dynamicProviders = [
 	"openrouter",
+	"gemini",
 	"vercel-ai-gateway",
 	"huggingface",
 	"litellm",
@@ -669,7 +669,7 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
@@ -708,11 +708,6 @@ export const MODELS_BY_PROVIDER: Record<
 		id: "fireworks",
 		label: "Fireworks",
 		models: Object.keys(fireworksModels),
-	},
-	gemini: {
-		id: "gemini",
-		label: "Google Gemini",
-		models: Object.keys(geminiModels),
 	},
 	groq: { id: "groq", label: "Groq", models: Object.keys(groqModels) },
 	"io-intelligence": {
