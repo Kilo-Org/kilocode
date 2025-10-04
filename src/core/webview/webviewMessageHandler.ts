@@ -800,6 +800,7 @@ export const webviewMessageHandler = async (
 				requesty: {},
 				unbound: {},
 				glama: {},
+				chutes: {},
 				ollama: {},
 				lmstudio: {},
 			}
@@ -836,6 +837,7 @@ export const webviewMessageHandler = async (
 				},
 				{ key: "glama", options: { provider: "glama" } },
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
+				{ key: "chutes", options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey } },
 				{
 					key: "kilocode-openrouter",
 					options: {

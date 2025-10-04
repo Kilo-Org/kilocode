@@ -213,6 +213,7 @@ const ApiOptions = ({
 		openRouterApiKey: apiConfiguration?.openRouterApiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
 		deepInfraApiKey: apiConfiguration?.deepInfraApiKey,
+		chutesApiKey: apiConfiguration?.chutesApiKey,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -259,7 +260,11 @@ const ApiOptions = ({
 				vscode.postMessage({ type: "requestLmStudioModels" })
 			} else if (selectedProvider === "vscode-lm") {
 				vscode.postMessage({ type: "requestVsCodeLmModels" })
-			} else if (selectedProvider === "litellm" || selectedProvider === "deepinfra") {
+			} else if (
+				selectedProvider === "litellm" ||
+				selectedProvider === "deepinfra" ||
+				selectedProvider === "chutes"
+			) {
 				vscode.postMessage({ type: "requestRouterModels" })
 			}
 		},
@@ -275,6 +280,7 @@ const ApiOptions = ({
 			apiConfiguration?.litellmApiKey,
 			apiConfiguration?.deepInfraApiKey,
 			apiConfiguration?.deepInfraBaseUrl,
+			apiConfiguration?.chutesApiKey,
 			customHeaders,
 		],
 	)
@@ -650,7 +656,13 @@ const ApiOptions = ({
 			)}
 
 			{selectedProvider === "chutes" && (
-				<Chutes apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+				<Chutes
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
 			)}
 
 			{/* kilocode_change start */}

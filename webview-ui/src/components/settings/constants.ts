@@ -17,7 +17,7 @@ import {
 	vertexModels,
 	xaiModels,
 	groqModels,
-	chutesModels,
+	// chutesModels, // Not needed - Chutes is a dynamic provider
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
@@ -44,7 +44,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	vertex: vertexModels,
 	xai: xaiModels,
 	groq: groqModels,
-	chutes: chutesModels,
+	// chutes: chutesModels, // Removed: Chutes is a dynamic provider with its own ModelPicker
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,

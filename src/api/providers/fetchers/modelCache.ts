@@ -23,6 +23,7 @@ import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
+import { getChutesModels } from "./chutes"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
@@ -117,6 +118,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "huggingface":
 				models = await getHuggingFaceModels()
+				break
+			case "chutes":
+				models = await getChutesModels(options.apiKey)
 				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
