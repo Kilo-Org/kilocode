@@ -6,6 +6,7 @@ import { CloudService } from "@roo-code/cloud"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import type { ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
@@ -105,23 +106,26 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<RooModelId> {
 
 	override getModel() {
 		const modelId = this.options.apiModelId || rooDefaultModelId
-		const modelInfo = this.providerModels[modelId as RooModelId] ?? this.providerModels[rooDefaultModelId]
+		let modelInfo = this.providerModels[modelId as RooModelId] ?? this.providerModels[rooDefaultModelId]
 
-		if (modelInfo) {
-			return { id: modelId as RooModelId, info: modelInfo }
-		}
-
-		// Return the requested model ID even if not found, with fallback info.
-		return {
-			id: modelId as RooModelId,
-			info: {
+		if (!modelInfo) {
+			// Fallback info if model not found
+			modelInfo = {
 				maxTokens: 16_384,
 				contextWindow: 262_144,
 				supportsImages: false,
 				supportsPromptCache: true,
 				inputPrice: 0,
 				outputPrice: 0,
-			},
+			}
+		}
+
+		// Merge with custom model info if provided
+		modelInfo = mergeModelInfo(modelInfo, this.options)
+
+		return {
+			id: modelId as RooModelId,
+			info: modelInfo,
 		}
 	}
 }

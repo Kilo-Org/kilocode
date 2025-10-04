@@ -231,6 +231,7 @@
 		"description": "保存多组API配置便于快速切换",
 		"apiProvider": "API提供商",
 		"model": "模型",
+		"customModelParameters": "自定义模型参数",
 		"nameEmpty": "名称不能为空",
 		"nameExists": "已存在同名的配置文件",
 		"deleteProfile": "删除配置文件",

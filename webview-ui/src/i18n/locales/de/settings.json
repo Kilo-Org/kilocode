@@ -230,6 +230,7 @@
 		"description": "Speicher verschiedene API-Konfigurationen, um schnell zwischen Anbietern und Einstellungen zu wechseln.",
 		"apiProvider": "API-Anbieter",
 		"model": "Modell",
+		"customModelParameters": "Modellparameter anpassen",
 		"nameEmpty": "Name darf nicht leer sein",
 		"nameExists": "Ein Profil mit diesem Namen existiert bereits",
 		"deleteProfile": "Profil löschen",

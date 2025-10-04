@@ -1,13 +1,15 @@
-import React, { Fragment, memo, useCallback, useEffect, useMemo, useState } from "react" // kilocode_change Fragment
+import React, { Fragment, memo, useCallback, useEffect, useMemo, useState, useRef } from "react" // kilocode_change Fragment
 import { convertHeadersToObject } from "./utils/headers"
 import { useDebounce } from "react-use"
 import { VSCodeLink, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 // import { ExternalLinkIcon } from "@radix-ui/react-icons" // kilocode_change
+import { Checkbox } from "vscrui"
 
 import {
 	type ProviderName,
 	type ProviderSettings,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
+	openAiModelInfoSaneDefaults,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
 	glamaDefaultModelId,
@@ -108,6 +110,7 @@ import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
 import { inputEventTransform, noTransform } from "./transforms"
 // import { ModelPicker } from "./ModelPicker" // kilocode_change
 import { ModelInfoView } from "./ModelInfoView"
+import { CustomModelSettings } from "./CustomModelSettings"
 import { ApiErrorMessage } from "./ApiErrorMessage"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { Verbosity } from "./Verbosity"
@@ -189,6 +192,7 @@ const ApiOptions = ({
 
 	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
+	const [useCustomModelSettings, setUseCustomModelSettings] = useState(!!apiConfiguration.customModelInfo)
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -235,6 +239,58 @@ const ApiOptions = ({
 			setApiConfigurationField("apiModelId", selectedModelId)
 		}
 	}, [selectedModelId, setApiConfigurationField, apiConfiguration.apiModelId])
+
+	// Handle custom model settings toggle
+	useEffect(() => {
+		if (useCustomModelSettings) {
+			// If customModelInfo doesn't exist, initialize it with selectedModelInfo or defaults
+			if (!apiConfiguration.customModelInfo) {
+				setApiConfigurationField("customModelInfo", selectedModelInfo || openAiModelInfoSaneDefaults)
+			}
+		} else {
+			// If unchecked, clear the custom configuration
+			if (apiConfiguration.customModelInfo) {
+				setApiConfigurationField("customModelInfo", null)
+			}
+		}
+	}, [useCustomModelSettings, apiConfiguration.customModelInfo, selectedModelInfo, setApiConfigurationField])
+
+	// Track previous model ID to detect changes
+	const prevSelectedModelId = useRef(selectedModelId)
+
+	// Reset custom settings when model changes
+	useEffect(() => {
+		// Only reset if model actually changed and custom settings are enabled
+		if (useCustomModelSettings && selectedModelId && prevSelectedModelId.current !== selectedModelId) {
+			// The key insight: temporarily clear customModelInfo to get pure defaults
+			// First, clear it so selectedModelInfo will reflect pure model defaults
+			setApiConfigurationField("customModelInfo", null)
+		}
+
+		// Update the previous model ID
+		prevSelectedModelId.current = selectedModelId
+	}, [
+		selectedModelId,
+		useCustomModelSettings,
+		setApiConfigurationField,
+		apiConfiguration.customModelInfo,
+		selectedModelInfo,
+	])
+
+	// Re-initialize with pure defaults after clearing
+	useEffect(() => {
+		// When customModelInfo is null and we have custom settings enabled,
+		// selectedModelInfo should now contain the pure model defaults
+		if (useCustomModelSettings && selectedModelId && !apiConfiguration.customModelInfo && selectedModelInfo) {
+			setApiConfigurationField("customModelInfo", selectedModelInfo)
+		}
+	}, [
+		useCustomModelSettings,
+		selectedModelId,
+		apiConfiguration.customModelInfo,
+		selectedModelInfo,
+		setApiConfigurationField,
+	])
 
 	// Debounced refresh model updates, only executed 250ms after the user
 	// stops typing.
@@ -784,13 +840,26 @@ const ApiOptions = ({
 						/>
 					)}
 
-					<ModelInfoView
-						apiProvider={selectedProvider}
-						selectedModelId={selectedModelId}
-						modelInfo={selectedModelInfo}
-						isDescriptionExpanded={isDescriptionExpanded}
-						setIsDescriptionExpanded={setIsDescriptionExpanded}
-					/>
+					<div className="flex items-center gap-2">
+						<Checkbox checked={useCustomModelSettings} onChange={setUseCustomModelSettings} />
+						<span>{t("settings:providers.customModelParameters")}</span>
+					</div>
+
+					{useCustomModelSettings ? (
+						<CustomModelSettings
+							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
+							modelInfo={selectedModelInfo}
+						/>
+					) : (
+						<ModelInfoView
+							apiProvider={selectedProvider}
+							selectedModelId={selectedModelId}
+							modelInfo={selectedModelInfo}
+							isDescriptionExpanded={isDescriptionExpanded}
+							setIsDescriptionExpanded={setIsDescriptionExpanded}
+						/>
+					)}
 				</>
 			)}
 

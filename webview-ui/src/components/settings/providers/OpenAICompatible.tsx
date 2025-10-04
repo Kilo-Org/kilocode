@@ -250,10 +250,10 @@ export const OpenAICompatible = ({
 						setApiConfigurationField("enableReasoningEffort", checked)
 
 						if (!checked) {
-							const { reasoningEffort: _, ...openAiCustomModelInfo } =
-								apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults
+							const { reasoningEffort: _, ...customModelInfo } =
+								apiConfiguration.customModelInfo || openAiModelInfoSaneDefaults
 
-							setApiConfigurationField("openAiCustomModelInfo", openAiCustomModelInfo)
+							setApiConfigurationField("customModelInfo", customModelInfo)
 						}
 					}}>
 					{t("settings:providers.setReasoningLevel")}
@@ -262,21 +262,20 @@ export const OpenAICompatible = ({
 					<ThinkingBudget
 						apiConfiguration={{
 							...apiConfiguration,
-							reasoningEffort: apiConfiguration.openAiCustomModelInfo?.reasoningEffort,
+							reasoningEffort: apiConfiguration.customModelInfo?.reasoningEffort,
 						}}
 						setApiConfigurationField={(field, value) => {
 							if (field === "reasoningEffort") {
-								const openAiCustomModelInfo =
-									apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults
+								const customModelInfo = apiConfiguration.customModelInfo || openAiModelInfoSaneDefaults
 
-								setApiConfigurationField("openAiCustomModelInfo", {
-									...openAiCustomModelInfo,
+								setApiConfigurationField("customModelInfo", {
+									...customModelInfo,
 									reasoningEffort: value as ReasoningEffort,
 								})
 							}
 						}}
 						modelInfo={{
-							...(apiConfiguration.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+							...(apiConfiguration.customModelInfo || openAiModelInfoSaneDefaults),
 							supportsReasoningEffort: true,
 						}}
 					/>
@@ -290,14 +289,14 @@ export const OpenAICompatible = ({
 				<div>
 					<VSCodeTextField
 						value={
-							apiConfiguration?.openAiCustomModelInfo?.maxTokens?.toString() ||
+							apiConfiguration?.customModelInfo?.maxTokens?.toString() ||
 							openAiModelInfoSaneDefaults.maxTokens?.toString() ||
 							""
 						}
 						type="text"
 						style={{
 							borderColor: (() => {
-								const value = apiConfiguration?.openAiCustomModelInfo?.maxTokens
+								const value = apiConfiguration?.customModelInfo?.maxTokens
 
 								if (!value) {
 									return "var(--vscode-input-border)"
@@ -306,11 +305,11 @@ export const OpenAICompatible = ({
 								return value > 0 ? "var(--vscode-charts-green)" : "var(--vscode-errorForeground)"
 							})(),
 						}}
-						onInput={handleInputChange("openAiCustomModelInfo", (e) => {
+						onInput={handleInputChange("customModelInfo", (e) => {
 							const value = parseInt((e.target as HTMLInputElement).value)
 
 							return {
-								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 								maxTokens: isNaN(value) ? undefined : value,
 							}
 						})}
@@ -328,14 +327,14 @@ export const OpenAICompatible = ({
 				<div>
 					<VSCodeTextField
 						value={
-							apiConfiguration?.openAiCustomModelInfo?.contextWindow?.toString() ||
+							apiConfiguration?.customModelInfo?.contextWindow?.toString() ||
 							openAiModelInfoSaneDefaults.contextWindow?.toString() ||
 							""
 						}
 						type="text"
 						style={{
 							borderColor: (() => {
-								const value = apiConfiguration?.openAiCustomModelInfo?.contextWindow
+								const value = apiConfiguration?.customModelInfo?.contextWindow
 
 								if (!value) {
 									return "var(--vscode-input-border)"
@@ -344,12 +343,12 @@ export const OpenAICompatible = ({
 								return value > 0 ? "var(--vscode-charts-green)" : "var(--vscode-errorForeground)"
 							})(),
 						}}
-						onInput={handleInputChange("openAiCustomModelInfo", (e) => {
+						onInput={handleInputChange("customModelInfo", (e) => {
 							const value = (e.target as HTMLInputElement).value
 							const parsed = parseInt(value)
 
 							return {
-								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 								contextWindow: isNaN(parsed) ? openAiModelInfoSaneDefaults.contextWindow : parsed,
 							}
 						})}
@@ -368,12 +367,12 @@ export const OpenAICompatible = ({
 					<div className="flex items-center gap-1">
 						<Checkbox
 							checked={
-								apiConfiguration?.openAiCustomModelInfo?.supportsImages ??
+								apiConfiguration?.customModelInfo?.supportsImages ??
 								openAiModelInfoSaneDefaults.supportsImages
 							}
-							onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
+							onChange={handleInputChange("customModelInfo", (checked) => {
 								return {
-									...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+									...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 									supportsImages: checked,
 								}
 							})}>
@@ -397,10 +396,10 @@ export const OpenAICompatible = ({
 				<div>
 					<div className="flex items-center gap-1">
 						<Checkbox
-							checked={apiConfiguration?.openAiCustomModelInfo?.supportsComputerUse ?? false}
-							onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
+							checked={apiConfiguration?.customModelInfo?.supportsComputerUse ?? false}
+							onChange={handleInputChange("customModelInfo", (checked) => {
 								return {
-									...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+									...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 									supportsComputerUse: checked,
 								}
 							})}>
@@ -422,10 +421,10 @@ export const OpenAICompatible = ({
 				<div>
 					<div className="flex items-center gap-1">
 						<Checkbox
-							checked={apiConfiguration?.openAiCustomModelInfo?.supportsPromptCache ?? false}
-							onChange={handleInputChange("openAiCustomModelInfo", (checked) => {
+							checked={apiConfiguration?.customModelInfo?.supportsPromptCache ?? false}
+							onChange={handleInputChange("customModelInfo", (checked) => {
 								return {
-									...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+									...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 									supportsPromptCache: checked,
 								}
 							})}>
@@ -446,14 +445,14 @@ export const OpenAICompatible = ({
 				<div>
 					<VSCodeTextField
 						value={
-							apiConfiguration?.openAiCustomModelInfo?.inputPrice?.toString() ??
+							apiConfiguration?.customModelInfo?.inputPrice?.toString() ??
 							openAiModelInfoSaneDefaults.inputPrice?.toString() ??
 							""
 						}
 						type="text"
 						style={{
 							borderColor: (() => {
-								const value = apiConfiguration?.openAiCustomModelInfo?.inputPrice
+								const value = apiConfiguration?.customModelInfo?.inputPrice
 
 								if (!value && value !== 0) {
 									return "var(--vscode-input-border)"
@@ -462,12 +461,12 @@ export const OpenAICompatible = ({
 								return value >= 0 ? "var(--vscode-charts-green)" : "var(--vscode-errorForeground)"
 							})(),
 						}}
-						onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+						onChange={handleInputChange("customModelInfo", (e) => {
 							const value = (e.target as HTMLInputElement).value
 							const parsed = parseFloat(value)
 
 							return {
-								...(apiConfiguration?.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults),
+								...(apiConfiguration?.customModelInfo ?? openAiModelInfoSaneDefaults),
 								inputPrice: isNaN(parsed) ? openAiModelInfoSaneDefaults.inputPrice : parsed,
 							}
 						})}
@@ -490,14 +489,14 @@ export const OpenAICompatible = ({
 				<div>
 					<VSCodeTextField
 						value={
-							apiConfiguration?.openAiCustomModelInfo?.outputPrice?.toString() ||
+							apiConfiguration?.customModelInfo?.outputPrice?.toString() ||
 							openAiModelInfoSaneDefaults.outputPrice?.toString() ||
 							""
 						}
 						type="text"
 						style={{
 							borderColor: (() => {
-								const value = apiConfiguration?.openAiCustomModelInfo?.outputPrice
+								const value = apiConfiguration?.customModelInfo?.outputPrice
 
 								if (!value && value !== 0) {
 									return "var(--vscode-input-border)"
@@ -506,12 +505,12 @@ export const OpenAICompatible = ({
 								return value >= 0 ? "var(--vscode-charts-green)" : "var(--vscode-errorForeground)"
 							})(),
 						}}
-						onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+						onChange={handleInputChange("customModelInfo", (e) => {
 							const value = (e.target as HTMLInputElement).value
 							const parsed = parseFloat(value)
 
 							return {
-								...(apiConfiguration?.openAiCustomModelInfo || openAiModelInfoSaneDefaults),
+								...(apiConfiguration?.customModelInfo || openAiModelInfoSaneDefaults),
 								outputPrice: isNaN(parsed) ? openAiModelInfoSaneDefaults.outputPrice : parsed,
 							}
 						})}
@@ -531,15 +530,15 @@ export const OpenAICompatible = ({
 					</VSCodeTextField>
 				</div>
 
-				{apiConfiguration?.openAiCustomModelInfo?.supportsPromptCache && (
+				{apiConfiguration?.customModelInfo?.supportsPromptCache && (
 					<>
 						<div>
 							<VSCodeTextField
-								value={apiConfiguration?.openAiCustomModelInfo?.cacheReadsPrice?.toString() ?? "0"}
+								value={apiConfiguration?.customModelInfo?.cacheReadsPrice?.toString() ?? "0"}
 								type="text"
 								style={{
 									borderColor: (() => {
-										const value = apiConfiguration?.openAiCustomModelInfo?.cacheReadsPrice
+										const value = apiConfiguration?.customModelInfo?.cacheReadsPrice
 
 										if (!value && value !== 0) {
 											return "var(--vscode-input-border)"
@@ -550,12 +549,12 @@ export const OpenAICompatible = ({
 											: "var(--vscode-errorForeground)"
 									})(),
 								}}
-								onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+								onChange={handleInputChange("customModelInfo", (e) => {
 									const value = (e.target as HTMLInputElement).value
 									const parsed = parseFloat(value)
 
 									return {
-										...(apiConfiguration?.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults),
+										...(apiConfiguration?.customModelInfo ?? openAiModelInfoSaneDefaults),
 										cacheReadsPrice: isNaN(parsed) ? 0 : parsed,
 									}
 								})}
@@ -577,11 +576,11 @@ export const OpenAICompatible = ({
 						</div>
 						<div>
 							<VSCodeTextField
-								value={apiConfiguration?.openAiCustomModelInfo?.cacheWritesPrice?.toString() ?? "0"}
+								value={apiConfiguration?.customModelInfo?.cacheWritesPrice?.toString() ?? "0"}
 								type="text"
 								style={{
 									borderColor: (() => {
-										const value = apiConfiguration?.openAiCustomModelInfo?.cacheWritesPrice
+										const value = apiConfiguration?.customModelInfo?.cacheWritesPrice
 
 										if (!value && value !== 0) {
 											return "var(--vscode-input-border)"
@@ -592,12 +591,12 @@ export const OpenAICompatible = ({
 											: "var(--vscode-errorForeground)"
 									})(),
 								}}
-								onChange={handleInputChange("openAiCustomModelInfo", (e) => {
+								onChange={handleInputChange("customModelInfo", (e) => {
 									const value = (e.target as HTMLInputElement).value
 									const parsed = parseFloat(value)
 
 									return {
-										...(apiConfiguration?.openAiCustomModelInfo ?? openAiModelInfoSaneDefaults),
+										...(apiConfiguration?.customModelInfo ?? openAiModelInfoSaneDefaults),
 										cacheWritesPrice: isNaN(parsed) ? 0 : parsed,
 									}
 								})}
@@ -622,7 +621,7 @@ export const OpenAICompatible = ({
 
 				<Button
 					variant="secondary"
-					onClick={() => setApiConfigurationField("openAiCustomModelInfo", openAiModelInfoSaneDefaults)}>
+					onClick={() => setApiConfigurationField("customModelInfo", openAiModelInfoSaneDefaults)}>
 					{t("settings:providers.customModel.resetDefaults")}
 				</Button>
 			</div>

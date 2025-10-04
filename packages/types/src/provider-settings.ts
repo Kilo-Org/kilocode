@@ -187,6 +187,9 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model verbosity.
 	verbosity: verbosityLevelsSchema.optional(),
+
+	// Universal custom model info (replaces provider-specific versions)
+	customModelInfo: modelInfoSchema.nullish(),
 })
 
 // Several of the providers share common model config properties.
@@ -261,7 +264,6 @@ const openAiSchema = baseProviderSettingsSchema.extend({
 	openAiLegacyFormat: z.boolean().optional(),
 	openAiR1FormatEnabled: z.boolean().optional(),
 	openAiModelId: z.string().optional(),
-	openAiCustomModelInfo: modelInfoSchema.nullish(),
 	openAiUseAzure: z.boolean().optional(),
 	azureApiVersion: z.string().optional(),
 	openAiStreamingEnabled: z.boolean().optional(),

@@ -8,6 +8,7 @@ import type { ApiHandlerOptions } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
@@ -41,7 +42,11 @@ export class XAIHandler extends BaseProvider implements SingleCompletionHandler 
 				? (this.options.apiModelId as XAIModelId)
 				: xaiDefaultModelId
 
-		const info = xaiModels[id]
+		let info = xaiModels[id]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
 		return { id, info, ...params }
 	}

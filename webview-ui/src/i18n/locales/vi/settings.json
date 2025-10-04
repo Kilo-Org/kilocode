@@ -230,6 +230,7 @@
 		"description": "Lưu các cấu hình API khác nhau để nhanh chóng chuyển đổi giữa các nhà cung cấp và cài đặt.",
 		"apiProvider": "Nhà cung cấp API",
 		"model": "Mẫu",
+		"customModelParameters": "Tùy chỉnh tham số mô hình",
 		"nameEmpty": "Tên không được để trống",
 		"nameExists": "Đã tồn tại một hồ sơ với tên này",
 		"deleteProfile": "Xóa hồ sơ",

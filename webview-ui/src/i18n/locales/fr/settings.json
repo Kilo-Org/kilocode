@@ -230,6 +230,7 @@
 		"description": "Enregistrez différentes configurations d'API pour basculer rapidement entre les fournisseurs et les paramètres.",
 		"apiProvider": "Fournisseur d'API",
 		"model": "Modèle",
+		"customModelParameters": "Personnaliser les paramètres du modèle",
 		"nameEmpty": "Le nom ne peut pas être vide",
 		"nameExists": "Un profil avec ce nom existe déjà",
 		"deleteProfile": "Supprimer le profil",

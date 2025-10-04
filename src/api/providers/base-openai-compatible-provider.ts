@@ -6,6 +6,7 @@ import type { ModelInfo } from "@roo-code/types"
 import type { ApiHandlerOptions } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { DEFAULT_HEADERS } from "./constants"
@@ -149,6 +150,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				? (this.options.apiModelId as ModelName)
 				: this.defaultProviderModelId
 
-		return { id, info: this.providerModels[id] }
+		let info = this.providerModels[id]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
+		return { id, info }
 	}
 }

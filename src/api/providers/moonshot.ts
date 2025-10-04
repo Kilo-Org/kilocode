@@ -5,6 +5,7 @@ import type { ApiHandlerOptions } from "../../shared/api"
 
 import type { ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { OpenAiHandler } from "./openai"
 
@@ -22,7 +23,11 @@ export class MoonshotHandler extends OpenAiHandler {
 
 	override getModel() {
 		const id = this.options.apiModelId ?? moonshotDefaultModelId
-		const info = moonshotModels[id as keyof typeof moonshotModels] || moonshotModels[moonshotDefaultModelId]
+		let info = moonshotModels[id as keyof typeof moonshotModels] || moonshotModels[moonshotDefaultModelId]
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
+
 		const params = getModelParams({ format: "openai", modelId: id, model: info, settings: this.options })
 		return { id, info, ...params }
 	}

@@ -14,6 +14,7 @@ import type { ApiHandlerOptions } from "../../shared/api"
 
 import { ApiStream } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
+import { mergeModelInfo } from "./utils/model-info-merger"
 
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -263,6 +264,9 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 				}
 			}
 		}
+
+		// Merge with custom model info if provided
+		info = mergeModelInfo(info, this.options)
 
 		const params = getModelParams({
 			format: "anthropic",

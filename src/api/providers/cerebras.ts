@@ -11,6 +11,7 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
 import { BaseProvider } from "./base-provider"
 import { DEFAULT_HEADERS } from "./constants"
+import { mergeModelInfo } from "./utils/model-info-merger"
 import { t } from "../../i18n"
 
 const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1"
@@ -108,9 +109,12 @@ export class CerebrasHandler extends BaseProvider implements SingleCompletionHan
 			apiModelId = "qwen-3-coder-480b"
 		}
 
+		// Merge with custom model info if provided
+		const info = mergeModelInfo(this.providerModels[originalModelId], this.options)
+
 		return {
 			id: apiModelId,
-			info: this.providerModels[originalModelId], // Use original model info for rate limits/descriptions
+			info, // Use merged model info (default + custom overrides)
 		}
 	}
 
