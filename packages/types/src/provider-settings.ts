@@ -50,6 +50,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"ovhcloud",
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -394,6 +395,11 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
+const ovhcloudSchema = baseProviderSettingsSchema.extend({
+	ovhCloudAiEndpointsApiKey: z.string().optional(),
+	ovhCloudAiEndpointsModelId: z.string().optional(),
+})
+
 // kilocode_change start
 const kilocodeSchema = baseProviderSettingsSchema.extend({
 	kilocodeToken: z.string().optional(),
@@ -476,6 +482,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	lmStudioSchema.merge(z.object({ apiProvider: z.literal("lmstudio") })),
 	geminiSchema.merge(z.object({ apiProvider: z.literal("gemini") })),
 	openAiNativeSchema.merge(z.object({ apiProvider: z.literal("openai-native") })),
+	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })),
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
 	deepInfraSchema.merge(z.object({ apiProvider: z.literal("deepinfra") })),
@@ -550,6 +557,7 @@ export const providerSettingsSchema = z.object({
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
 	...codebaseIndexProviderSchema.shape,
+	...ovhcloudSchema.shape,
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -584,6 +592,7 @@ export const modelIdKeys = [
 	"vercelAiGatewayModelId",
 	"deepInfraModelId",
 	"kilocodeModel",
+	"ovhCloudAiEndpointsModelId",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -638,6 +647,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	kilocode: "kilocodeModel",
 	"virtual-quota-fallback": "apiModelId",
+	ovhcloud: "ovhCloudAiEndpointsModelId",
 }
 
 /**
@@ -762,6 +772,7 @@ export const MODELS_BY_PROVIDER: Record<
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] },
 
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },

@@ -311,6 +311,8 @@
 		"sambaNovaApiKey": "Khóa API SambaNova",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Lấy Khóa API OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Khóa API OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID Mô hình",
 		"huggingFaceLoading": "Đang tải...",
 		"huggingFaceModelsCount": "({{count}} mô hình)",

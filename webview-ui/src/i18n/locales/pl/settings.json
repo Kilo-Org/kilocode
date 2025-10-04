@@ -312,6 +312,8 @@
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
 		"huggingFaceApiKey": "Klucz API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Uzyskaj klucz API OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klucz API OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Ładowanie...",
 		"huggingFaceModelsCount": "({{count}} modeli)",

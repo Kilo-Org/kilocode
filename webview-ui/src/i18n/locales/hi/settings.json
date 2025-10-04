@@ -311,6 +311,8 @@
 		"sambaNovaApiKey": "SambaNova API कुंजी",
 		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
 		"huggingFaceApiKey": "Hugging Face API कुंजी",
+		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API कुंजी प्राप्त करें",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API कुंजी",
 		"huggingFaceModelId": "मॉडल ID",
 		"huggingFaceLoading": "लोड हो रहा है...",
 		"huggingFaceModelsCount": "({{count}} मॉडल)",

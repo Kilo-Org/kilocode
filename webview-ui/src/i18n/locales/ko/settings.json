@@ -312,6 +312,8 @@
 		"getGeminiApiKey": "Gemini API 키 받기",
 		"getHuggingFaceApiKey": "Hugging Face API 키 받기",
 		"huggingFaceApiKey": "Hugging Face API 키",
+		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API 키 받기",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API 키",
 		"huggingFaceModelId": "모델 ID",
 		"huggingFaceLoading": "로딩 중...",
 		"huggingFaceModelsCount": "({{count}}개 모델)",

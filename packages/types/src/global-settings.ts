@@ -229,6 +229,7 @@ export const SECRET_STATE_KEYS = [
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
+	"ovhCloudAiEndpointsApiKey",
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)

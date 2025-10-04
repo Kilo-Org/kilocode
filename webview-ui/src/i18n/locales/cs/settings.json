@@ -322,6 +322,8 @@
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
 		"huggingFaceApiKey": "Klíč API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Získat klíč API OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klíč API OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Načítání...",
 		"huggingFaceModelsCount": "({{count}} modelů)",

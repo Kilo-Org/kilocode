@@ -323,6 +323,8 @@
 		"openAiApiKey": "Ключ API OpenAI",
 		"getHuggingFaceApiKey": "Отримати ключ API Hugging Face",
 		"huggingFaceApiKey": "Ключ API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Отримати ключ API OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Ключ API OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID моделі",
 		"huggingFaceLoading": "Завантаження...",
 		"huggingFaceModelsCount": "({{count}} моделей)",

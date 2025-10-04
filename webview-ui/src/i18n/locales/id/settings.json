@@ -311,6 +311,8 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
 		"huggingFaceApiKey": "Kunci API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Dapatkan Kunci API OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Kunci API OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID Model",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
 		"huggingFaceLoading": "Memuat...",

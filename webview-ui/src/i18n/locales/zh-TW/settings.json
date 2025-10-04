@@ -312,6 +312,8 @@
 		"sambaNovaApiKey": "SambaNova API 金鑰",
 		"getHuggingFaceApiKey": "取得 Hugging Face API 金鑰",
 		"huggingFaceApiKey": "Hugging Face API 金鑰",
+		"getOvhCloudAiEndpointsApiKey": "取得 OVHCloud AI Endpoints API 金鑰",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API 金鑰",
 		"huggingFaceModelId": "模型 ID",
 		"huggingFaceLoading": "載入中...",
 		"huggingFaceModelsCount": "({{count}} 個模型)",

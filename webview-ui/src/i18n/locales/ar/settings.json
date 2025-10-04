@@ -322,6 +322,8 @@
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
 		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"getOvhCloudAiEndpointsApiKey": "احصل على مفتاح OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "مفتاح OVHCloud AI Endpoints",
 		"huggingFaceModelId": "معرّف النموذج",
 		"huggingFaceLoading": "جارٍ التحميل...",
 		"huggingFaceModelsCount": "({{count}} نموذج)",

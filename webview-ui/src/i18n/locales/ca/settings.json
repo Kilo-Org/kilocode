@@ -311,6 +311,8 @@
 		"sambaNovaApiKey": "Clau API de SambaNova",
 		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
 		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obtenir clau API de OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clau API de OVHCloud AI Endpoints",
 		"huggingFaceModelId": "ID del model",
 		"huggingFaceLoading": "Carregant...",
 		"huggingFaceModelsCount": "({{count}} models)",

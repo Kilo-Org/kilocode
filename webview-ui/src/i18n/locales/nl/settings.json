@@ -312,6 +312,8 @@
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
 		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API-sleutel ophalen",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API-sleutel",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Laden...",
 		"huggingFaceModelsCount": "({{count}} modellen)",

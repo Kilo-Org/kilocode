@@ -323,6 +323,8 @@
 		"openAiApiKey": "คีย์ API ของ OpenAI",
 		"getHuggingFaceApiKey": "รับคีย์ API ของ Hugging Face",
 		"huggingFaceApiKey": "คีย์ API ของ Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "รับคีย์ API ของ OVHCloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "คีย์ API ของ OVHCloud AI Endpoints",
 		"huggingFaceModelId": "รหัสโมเดล",
 		"huggingFaceLoading": "กำลังโหลด...",
 		"huggingFaceModelsCount": "({{count}} โมเดล)",

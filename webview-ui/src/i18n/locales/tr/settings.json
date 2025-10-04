@@ -312,6 +312,8 @@
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API Anahtarı Al",
+		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API Anahtarı",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Yükleniyor...",
 		"huggingFaceModelsCount": "({{count}} model)",
