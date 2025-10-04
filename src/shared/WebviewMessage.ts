@@ -166,6 +166,7 @@ export interface WebviewMessage {
 		| "commitMessageApiConfigId" // kilocode_change
 		| "terminalCommandApiConfigId" // kilocode_change
 		| "ghostServiceSettings" // kilocode_change
+		| "refreshWorkspaceFiles" // kilocode_change
 		| "includeTaskHistoryInEnhance"
 		| "updateExperimental"
 		| "autoApprovalEnabled"

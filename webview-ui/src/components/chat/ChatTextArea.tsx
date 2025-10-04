@@ -36,6 +36,7 @@ import {
 	WandSparkles,
 	SendHorizontal,
 	Paperclip, // kilocode_change
+	RefreshCw, // kilocode_change
 } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
@@ -280,6 +281,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setInputValue(t("chat:enhancePromptDescription"))
 			}
 		}, [inputValue, setInputValue, t])
+
+		// kilocode_change start: Add refresh workspace files handler
+		const handleRefreshWorkspaceFiles = useCallback(() => {
+			vscode.postMessage({ type: "refreshWorkspaceFiles" as const })
+		}, [])
+		// kilocode_change end
 
 		// kilocode_change start: Image warning handlers
 		const showImageWarning = useCallback((messageKey: string) => {
@@ -1461,6 +1468,24 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				<div className="absolute bottom-2 end-2 z-30">
 					{/* kilocode_change start */}
 					<IndexingStatusBadge className={cn({ hidden: containerWidth < 235 })} />
+					<StandardTooltip content="Refresh Workspace Files">
+						<button
+							aria-label="Refresh Workspace Files"
+							onClick={handleRefreshWorkspaceFiles}
+							className={cn(
+								"relative inline-flex items-center justify-center",
+								"bg-transparent border-none p-1.5",
+								"rounded-md min-w-[28px] min-h-[28px]",
+								"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+								"transition-all duration-150",
+								"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+								"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+								"active:bg-[rgba(255,255,255,0.1)]",
+								"cursor-pointer",
+							)}>
+							<RefreshCw className={cn("w-4", "h-4", { hidden: containerWidth < 235 })} />
+						</button>
+					</StandardTooltip>
 					<StandardTooltip content="Add Context (@)">
 						<button
 							aria-label="Add Context (@)"

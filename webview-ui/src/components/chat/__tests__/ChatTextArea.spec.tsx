@@ -1084,4 +1084,31 @@ describe("ChatTextArea", () => {
 			expect(apiConfigDropdown).toHaveAttribute("disabled")
 		})
 	})
+
+	describe("refresh workspace files button", () => {
+		it("should send refreshWorkspaceFiles message when clicked", () => {
+			render(<ChatTextArea {...defaultProps} />)
+
+			// Find the refresh button by its tooltip content
+			const refreshButton = screen.getByRole("button", { name: "Refresh Workspace Files" })
+			expect(refreshButton).toBeInTheDocument()
+
+			fireEvent.click(refreshButton)
+
+			expect(mockPostMessage).toHaveBeenCalledWith({
+				type: "refreshWorkspaceFiles",
+			})
+		})
+
+		it("should render refresh button with correct icon", () => {
+			render(<ChatTextArea {...defaultProps} />)
+
+			const refreshButton = screen.getByRole("button", { name: "Refresh Workspace Files" })
+			expect(refreshButton).toBeInTheDocument()
+
+			// Check that the button contains the RefreshCw icon
+			const refreshIcon = refreshButton.querySelector(".lucide-refresh-cw")
+			expect(refreshIcon).toBeInTheDocument()
+		})
+	})
 })

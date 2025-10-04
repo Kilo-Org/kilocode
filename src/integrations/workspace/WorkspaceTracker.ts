@@ -8,6 +8,17 @@ import { toRelativePath, getWorkspacePath } from "../../utils/path"
 const MAX_INITIAL_FILES = 1_000
 
 // Note: this is not a drop-in replacement for listFiles at the start of tasks, since that will be done for Desktops when there is no workspace selected
+const DEBOUNCE_MS = 300
+
+/**
+ * WorkspaceTracker maintains a file list for autocomplete WITHOUT using createFileSystemWatcher("**")
+ *
+ * Strategy:
+ * 1. Initial load using existing listFiles() which already respects DIRS_TO_IGNORE
+ * 2. Listen to VS Code's lightweight events (onDidCreateFiles/onDidDeleteFiles) for user actions
+ * 3. Manual refresh triggered by WebView when input box gets focus
+ * 4. Window focus events as backup for external changes
+ */
 class WorkspaceTracker {
 	private providerRef: WeakRef<ClineProvider>
 	private disposables: vscode.Disposable[] = []
@@ -19,6 +30,7 @@ class WorkspaceTracker {
 	get cwd() {
 		return this.providerRef?.deref()?.cwd ?? getWorkspacePath()
 	}
+
 	constructor(provider: ClineProvider) {
 		this.providerRef = new WeakRef(provider)
 		this.registerListeners()
@@ -39,26 +51,39 @@ class WorkspaceTracker {
 		this.workspaceDidUpdate()
 	}
 
+	public async forceRefreshFileList(): Promise<void> {
+		this.filePaths.clear()
+		this.prevWorkSpacePath = undefined
+		await this.initializeFilePaths()
+	}
+
 	private registerListeners() {
-		const watcher = vscode.workspace.createFileSystemWatcher("**")
 		this.prevWorkSpacePath = this.cwd
+
+		// Use VS Code's lightweight events instead of createFileSystemWatcher
+		// These only fire for user-initiated actions in VS Code
+		// (vs external builds that would create/delete lots of files)
 		this.disposables.push(
-			watcher.onDidCreate(async (uri) => {
-				await this.addFilePath(uri.fsPath)
+			vscode.workspace.onDidCreateFiles(async (e) => {
+				for (const file of e.files) {
+					await this.addFilePath(file.fsPath)
+				}
+				this.workspaceDidUpdate()
+			}),
+			vscode.workspace.onDidDeleteFiles(async (e) => {
+				for (const file of e.files) {
+					await this.removeFilePath(file.fsPath)
+				}
+				this.workspaceDidUpdate()
+			}),
+			vscode.workspace.onDidRenameFiles(async (e) => {
+				for (const { oldUri, newUri } of e.files) {
+					await this.removeFilePath(oldUri.fsPath)
+					await this.addFilePath(newUri.fsPath)
+				}
 				this.workspaceDidUpdate()
 			}),
 		)
-
-		// Renaming files triggers a delete and create event
-		this.disposables.push(
-			watcher.onDidDelete(async (uri) => {
-				if (await this.removeFilePath(uri.fsPath)) {
-					this.workspaceDidUpdate()
-				}
-			}),
-		)
-
-		this.disposables.push(watcher)
 
 		// Listen for tab changes and call workspaceDidUpdate directly
 		this.disposables.push(
@@ -69,6 +94,15 @@ class WorkspaceTracker {
 				} else {
 					// Otherwise just update
 					this.workspaceDidUpdate()
+				}
+			}),
+		)
+
+		// Listen for window focus changes to catch external file modifications
+		this.disposables.push(
+			vscode.window.onDidChangeWindowState((state) => {
+				if (state.focused) {
+					void this.initializeFilePaths()
 				}
 			}),
 		)
@@ -107,7 +141,7 @@ class WorkspaceTracker {
 				this.prevWorkSpacePath = this.cwd
 				this.initializeFilePaths()
 			}
-		}, 300) // Debounce for 300ms
+		}, DEBOUNCE_MS)
 	}
 
 	private workspaceDidUpdate() {
@@ -126,7 +160,7 @@ class WorkspaceTracker {
 				openedTabs: this.getOpenedTabsInfo(),
 			})
 			this.updateTimer = null
-		}, 300) // Debounce for 300ms
+		}, DEBOUNCE_MS)
 	}
 
 	private normalizeFilePath(filePath: string): string {
@@ -168,6 +202,8 @@ class WorkspaceTracker {
 			clearTimeout(this.resetTimer)
 			this.resetTimer = null
 		}
+
+		// Dispose VS Code event listeners
 		this.disposables.forEach((d) => d.dispose())
 		this.disposables = [] // Clear the array
 	}
