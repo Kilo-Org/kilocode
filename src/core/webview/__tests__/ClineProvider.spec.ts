@@ -2752,6 +2752,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				"claude-code": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2788,6 +2789,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
 			.mockResolvedValueOnce(mockModels) // deepinfra success
+			.mockResolvedValueOnce(mockModels) // kilocode_change claude-code success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2806,6 +2808,7 @@ describe("ClineProvider - Router Models", () => {
 				litellm: {},
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
+				"claude-code": mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2928,6 +2931,7 @@ describe("ClineProvider - Router Models", () => {
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				"claude-code": mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},

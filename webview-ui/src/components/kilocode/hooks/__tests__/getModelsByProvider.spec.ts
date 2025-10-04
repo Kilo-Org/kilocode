@@ -23,6 +23,7 @@ describe("getModelsByProvider", () => {
 			"kilocode-openrouter": { "test-model": testModel },
 			ollama: { "test-model": testModel },
 			lmstudio: { "test-model": testModel },
+			"claude-code": { "test-model": testModel },
 			"io-intelligence": { "test-model": testModel },
 			deepinfra: { "test-model": testModel },
 			"vercel-ai-gateway": { "test-model": testModel },

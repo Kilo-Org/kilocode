@@ -25,6 +25,7 @@ import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
 
 import { getDeepInfraModels } from "./deepinfra"
+import { ClaudeCodeHandler } from "../claude-code" // kilocode_change
 import { getHuggingFaceModels } from "./huggingface"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
@@ -112,6 +113,22 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "io-intelligence":
 				models = await getIOIntelligenceModels(options.apiKey)
 				break
+			// kilocode_change start : Made claude-code dynamic
+			case "claude-code": {
+				// Always flush cache for claude-code to ensure fresh configuration is read
+				memoryCache.del("claude-code")
+
+				const claudeCodeInfo = await ClaudeCodeHandler.getAvailableModels(options.claudeCodePath)
+				if (claudeCodeInfo) {
+					models = claudeCodeInfo.models
+				} else {
+					// Fallback to default Claude models if no provider detected
+					const { claudeCodeModels } = await import("@roo-code/types")
+					models = claudeCodeModels
+				}
+				break
+			}
+			// kilocode_change end
 			case "vercel-ai-gateway":
 				models = await getVercelAiGatewayModels()
 				break
