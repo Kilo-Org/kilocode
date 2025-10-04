@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.99.1",
+	"version": "4.99.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -33,7 +33,6 @@
 		"Testing"
 	],
 	"keywords": [
-		"cline",
 		"claude",
 		"dev",
 		"mcp",
@@ -46,9 +45,7 @@
 		"ai",
 		"llama",
 		"Kilo Code",
-		"kilocode",
-		"roo code",
-		"roocode"
+		"kilocode"
 	],
 	"activationEvents": [
 		"onLanguage",
