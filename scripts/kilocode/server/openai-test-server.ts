@@ -16,27 +16,6 @@ for (let i = 0; i < args.length; i++) {
 	}
 }
 
-// Define types for our responses
-interface ChatCompletionResponse {
-	id: string
-	object: string
-	created: number
-	model: string
-	choices: Array<{
-		index: number
-		message: {
-			role: string
-			content: string
-		}
-		finish_reason: string
-	}>
-	usage: {
-		prompt_tokens: number
-		completion_tokens: number
-		total_tokens: number
-	}
-}
-
 interface ModelResponse {
 	object: string
 	data: Array<{
@@ -63,39 +42,68 @@ interface StreamChunk {
 }
 
 // Simple chat completion response template
-const chatCompletionResponse: ChatCompletionResponse = {
-	id: "chatcmpl-123",
+const chatCompletionResponse = {
+	id: "chatcmpl-34f4afff-2378-4fd1-a616-7bdd62d39d9f",
 	object: "chat.completion",
-	created: Math.floor(Date.now() / 1000),
-	model: "gpt-3.5-turbo",
+	created: 1759421272,
+	model: "deepseek-v3.1-terminus-thinking",
 	choices: [
 		{
 			index: 0,
 			message: {
 				role: "assistant",
-				content: "This is a test response from the OpenAI compatible server.",
+				content:
+					"I'll calculate 15 × 23 step by step.\n\n## Method: Breaking down into simpler parts\n\n**Step 1:** Break down 23 into easier numbers\n- 23 = 20 + 3\n\n**Step 2:** Apply the distributive property\n- 15 × 23 = 15 × (20 + 3)\n- 15 × 23 = (15 × 20) + (15 × 3)\n\n**Step 3:** Calculate each part\n- 15 × 20 = 300\n- 15 × 3 = 45\n\n**Step 4:** Add the results together\n- 300 + 45 = 345\n\nTherefore, **15 × 23 = 345**",
+				refusal: null,
+				reasoning:
+					"I need to calculate 15 * 23 step by step.\n\nLet me think about different ways to approach this:\n\nMethod 1: Break down one number\n15 * 23 = 15 * (20 + 3)\n= 15 * 20 + 15 * 3\n= 300 + 45\n= 345\n\nMethod 2: Break down the other number\n15 * 23 = (10 + 5) * 23\n= 10 * 23 + 5 * 23\n= 230 + 115\n= 345\n\nMethod 3: Standard multiplication\n    23\n  × 15\n  ----\n   115  (23 × 5)\n  230   (23 × 10)\n  ----\n  345\n\nAll methods give me 345. Let me verify once more:\n15 * 23 = 15 * 20 + 15 * 3 = 300 + 45 = 345\n\nYes, the answer is 345.",
+				reasoning_details: [
+					{
+						type: "reasoning.text",
+						text: "I need to calculate 15 * 23 step by step.\n\nLet me think about different ways to approach this:\n\nMethod 1: Break down one number\n15 * 23 = 15 * (20 + 3)\n= 15 * 20 + 15 * 3\n= 300 + 45\n= 345\n\nMethod 2: Break down the other number\n15 * 23 = (10 + 5) * 23\n= 10 * 23 + 5 * 23\n= 230 + 115\n= 345\n\nMethod 3: Standard multiplication\n    23\n  × 15\n  ----\n   115  (23 × 5)\n  230   (23 × 10)\n  ----\n  345\n\nAll methods give me 345. Let me verify once more:\n15 * 23 = 15 * 20 + 15 * 3 = 300 + 45 = 345\n\nYes, the answer is 345.",
+						format: "unknown",
+						index: 0,
+					},
+				],
 			},
 			finish_reason: "stop",
 		},
 	],
 	usage: {
-		prompt_tokens: 10,
-		completion_tokens: 20,
-		total_tokens: 30,
+		prompt_tokens: 35,
+		completion_tokens: 225,
+		total_tokens: 260,
+		completion_tokens_details: {
+			reasoning_tokens: 127,
+		},
 	},
 }
 
 // SSE stream response template
 const streamResponseTemplate = `
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694616620,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"role":"assistant","content":"This "},"finish_reason":null}]}
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n","reasoning_details":[{"type":"reasoning.text","text":"\n","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694616620,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"is "},"finish_reason":null}]}
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"Okay","reasoning_details":[{"type":"reasoning.text","text":"Okay","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694616620,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"a "},"finish_reason":null}]}
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":", the","reasoning_details":[{"type":"reasoning.text","text":", the","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694616620,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"test "},"finish_reason":null}]}
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":" user asked","reasoning_details":[{"type":"reasoning.text","text":" user asked","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1694616620,"model":"gpt-3.5-turbo","choices":[{"index":0,"delta":{"content":"response."},"finish_reason":"stop"}]}
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":", \"","reasoning_details":[{"type":"reasoning.text","text":", \"","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"What is","reasoning_details":[{"type":"reasoning.text","text":"What is","format":"unknown","index":0}]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":" is","reasoning":null,"reasoning_details":[]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":" uniquely yours","reasoning":null,"reasoning_details":[]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":".","reasoning":null,"reasoning_details":[]},"finish_reason":null,"native_finish_reason":null,"logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":null,"reasoning_details":[]},"finish_reason":"stop","native_finish_reason":"stop","logprobs":null}]}
+
+data: {"id":"gen-1759420128-LjBsuYJf6lKeyy66nQs9","provider":"DeepInfra","model":"z-ai/glm-4.5","object":"chat.completion.chunk","created":1759420128,"choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null,"native_finish_reason":null,"logprobs":null}],"usage":{"prompt_tokens":12,"completion_tokens":1280,"total_tokens":1292,"prompt_tokens_details":null}}
+
+data: [DONE]
 `
 
 const server = http.createServer((req: IncomingMessage, res: ServerResponse) => {

@@ -199,10 +199,17 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					}
 				}
 
-				if ("reasoning_content" in delta && delta.reasoning_content) {
+				// Check for reasoning content in streaming response
+				// Some APIs use 'reasoning_content', others use 'reasoning'
+				const reasoningText =
+					("reasoning_content" in delta && delta.reasoning_content) ||
+					// @ts-ignore - reasoning field exists on some OpenAI-compatible models
+					("reasoning" in delta && delta.reasoning)
+
+				if (reasoningText) {
 					yield {
 						type: "reasoning",
-						text: (delta.reasoning_content as string | undefined) || "",
+						text: reasoningText as string,
 					}
 				}
 				if (chunk.usage) {
@@ -246,9 +253,28 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			yield {
-				type: "text",
-				text: response.choices[0]?.message.content || "",
+			const message = response.choices[0]?.message
+
+			if (message) {
+				// Yield reasoning content FIRST if present (before the main content)
+				// @ts-ignore - reasoning field exists on some OpenAI-compatible models
+				if (message.reasoning) {
+					// Yield reasoning content FIRST if present (before the main content)
+					// @ts-ignore - reasoning field exists on some OpenAI-compatible models
+					yield {
+						type: "reasoning",
+						// @ts-ignore
+						text: message.reasoning as string,
+					}
+				}
+
+				// Then yield the main content
+				if (message.content) {
+					yield {
+						type: "text",
+						text: message.content,
+					}
+				}
 			}
 
 			yield this.processUsageMetrics(response.usage, modelInfo)
