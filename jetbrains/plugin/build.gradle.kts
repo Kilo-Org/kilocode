@@ -210,10 +210,23 @@ tasks {
         targetCompatibility = "17"
     }
 
+    // Add task to generate plugin.xml from template
+    register<Exec>("updatePluginXml") {
+        description = "Update plugin.xml from template with change notes"
+        group = "build"
+        
+        workingDir = projectDir
+        commandLine("node", "scripts/update_change_notes.js")
+        
+        inputs.files("src/main/resources/META-INF/plugin.xml.template", "gradle.properties", "../../../CHANGELOG.md")
+        outputs.file("src/main/resources/META-INF/plugin.xml")
+    }
+
     patchPluginXml {
         version.set(properties("pluginVersion"))
         sinceBuild.set(properties("pluginSinceBuild"))
         untilBuild.set("")
+        dependsOn("updatePluginXml")
     }
 
     signPlugin {

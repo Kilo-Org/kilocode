@@ -1,12 +1,12 @@
 // Mock VSCode API for Vitest tests
 const mockEventEmitter = () => ({
-	event: () => () => {},
-	fire: () => {},
-	dispose: () => {},
+	event: () => () => { },
+	fire: () => { },
+	dispose: () => { },
 })
 
 const mockDisposable = {
-	dispose: () => {},
+	dispose: () => { },
 }
 
 const mockUri = {
@@ -47,7 +47,7 @@ export const workspace = {
 		onDidCreate: () => mockDisposable,
 		onDidChange: () => mockDisposable,
 		onDidDelete: () => mockDisposable,
-		dispose: () => {},
+		dispose: () => { },
 	}),
 	fs: {
 		readFile: () => Promise.resolve(new Uint8Array()),
@@ -68,11 +68,11 @@ export const window = {
 	showWarningMessage: () => Promise.resolve(),
 	showInformationMessage: () => Promise.resolve(),
 	createOutputChannel: () => ({
-		appendLine: () => {},
-		append: () => {},
-		clear: () => {},
-		show: () => {},
-		dispose: () => {},
+		appendLine: () => { },
+		append: () => { },
+		clear: () => { },
+		show: () => { },
+		dispose: () => { },
 	}),
 	createTerminal: () => ({
 		exitStatus: undefined,
@@ -80,13 +80,13 @@ export const window = {
 		processId: Promise.resolve(123),
 		creationOptions: {},
 		state: { isInteractedWith: true },
-		dispose: () => {},
-		hide: () => {},
-		show: () => {},
-		sendText: () => {},
+		dispose: () => { },
+		hide: () => { },
+		show: () => { },
+		sendText: () => { },
 	}),
 	onDidCloseTerminal: () => mockDisposable,
-	createTextEditorDecorationType: () => ({ dispose: () => {} }),
+	createTextEditorDecorationType: () => ({ dispose: () => { } }),
 }
 
 export const commands = {
@@ -96,10 +96,10 @@ export const commands = {
 
 export const languages = {
 	createDiagnosticCollection: () => ({
-		set: () => {},
-		delete: () => {},
-		clear: () => {},
-		dispose: () => {},
+		set: () => { },
+		delete: () => { },
+		clear: () => { },
+		dispose: () => { },
 	}),
 }
 
@@ -117,6 +117,12 @@ export const Position = mockPosition
 export const Selection = mockSelection
 export const Disposable = mockDisposable
 export const ThemeIcon = class {
+	constructor(id) {
+		this.id = id
+	}
+}
+
+export const ThemeColor = class {
 	constructor(id) {
 		this.id = id
 	}
@@ -170,6 +176,7 @@ export default {
 	Selection,
 	Disposable,
 	ThemeIcon,
+	ThemeColor,
 	FileType,
 	DiagnosticSeverity,
 	OverviewRulerLane,

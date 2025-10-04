@@ -6,16 +6,13 @@
 			"dependsOn": ["^build", "@roo-code/vscode-webview#build"],
 			"outputs": ["dist/**"]
 		},
-		"vsix:clean": {
-			"cache": false
-		},
 		"vsix": {
 			"dependsOn": ["bundle"],
 			"inputs": ["dist/**"],
 			"outputs": ["../bin/**"]
 		},
 		"vsix:unpacked": {
-			"dependsOn": ["vsix:clean", "vsix"],
+			"dependsOn": ["vsix"],
 			"inputs": ["dist/**"],
 			"outputs": ["../bin-unpacked/**"]
 		},

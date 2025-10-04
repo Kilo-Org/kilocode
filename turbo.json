@@ -14,6 +14,10 @@
 			"outputs": ["dist/**"],
 			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts"]
 		},
+		"bundle": {
+			"outputs": ["dist/**"],
+			"inputs": ["src/**", "package.json", "tsconfig.json", "esbuild.mjs"]
+		},
 		"watch:tsc": {
 			"cache": false
 		},
@@ -33,10 +37,10 @@
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run:bundle"]
 		},
 		"jetbrains:build": {
-			"dependsOn": ["@kilo-code/jetbrains-plugin#build"]
+			"dependsOn": ["kilo-code#vsix", "@kilo-code/jetbrains-plugin#build"]
 		},
 		"jetbrains:run": {
-			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
+			"dependsOn": ["kilo-code#vsix", "@kilo-code/jetbrains-plugin#run"]
 		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
@@ -44,6 +48,26 @@
 		},
 		"playwright": {
 			"cache": false
+		},
+		"vsix": {
+			"outputs": ["../bin/**"],
+			"inputs": ["src/**", "package.json", "assets/**", "CHANGELOG.md", "LICENSE", "README.md"],
+			"dependsOn": ["bundle"]
+		},
+		"vsix:unpacked": {
+			"outputs": ["../bin-unpacked/**"],
+			"dependsOn": ["kilo-code#vsix"],
+			"cache": false
+		},
+		"vsix:nightly": {
+			"outputs": ["../bin/**"],
+			"inputs": ["src/**", "package.json", "assets/**", "CHANGELOG.md", "LICENSE", "README.md"],
+			"dependsOn": ["bundle"]
+		},
+		"vsix:production": {
+			"outputs": ["../bin/**"],
+			"inputs": ["src/**", "package.json", "assets/**", "CHANGELOG.md", "LICENSE", "README.md"],
+			"dependsOn": ["bundle"]
 		}
 	}
 }
