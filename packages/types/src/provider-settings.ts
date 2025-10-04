@@ -6,7 +6,6 @@ import {
 	anthropicModels,
 	bedrockModels,
 	cerebrasModels,
-	chutesModels,
 	claudeCodeModels,
 	deepSeekModels,
 	doubaoModels,
@@ -50,6 +49,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"chutes",
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -687,11 +687,6 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "Cerebras",
 		models: Object.keys(cerebrasModels),
 	},
-	chutes: {
-		id: "chutes",
-		label: "Chutes AI",
-		models: Object.keys(chutesModels),
-	},
 	"claude-code": { id: "claude-code", label: "Claude Code", models: Object.keys(claudeCodeModels) },
 	deepseek: {
 		id: "deepseek",
@@ -762,6 +757,7 @@ export const MODELS_BY_PROVIDER: Record<
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	chutes: { id: "chutes", label: "Chutes AI", models: [] },
 
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },

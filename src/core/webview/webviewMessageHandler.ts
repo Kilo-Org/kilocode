@@ -800,6 +800,7 @@ export const webviewMessageHandler = async (
 				requesty: {},
 				unbound: {},
 				glama: {},
+				chutes: {},
 				ollama: {},
 				lmstudio: {},
 			}
@@ -854,6 +855,7 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.deepInfraBaseUrl,
 					},
 				},
+				{ key: "chutes", options: { provider: "chutes" } },
 			]
 			// kilocode_change end
 
