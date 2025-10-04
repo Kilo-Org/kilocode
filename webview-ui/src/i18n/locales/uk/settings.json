@@ -307,6 +307,8 @@
 		"getFeatherlessApiKey": "Отримати ключ API Featherless",
 		"fireworksApiKey": "Ключ API Fireworks",
 		"getFireworksApiKey": "Отримати ключ API Fireworks",
+		"syntheticApiKey": "Ключ API Synthetic",
+		"getSyntheticApiKey": "Отримати ключ API Synthetic",
 		"moonshotApiKey": "Ключ API Moonshot",
 		"getMoonshotApiKey": "Отримати ключ API Moonshot",
 		"moonshotBaseUrl": "Точка входу Moonshot",

@@ -194,6 +194,7 @@ describe("ProfileValidator", () => {
 			"chutes",
 			"sambanova",
 			"fireworks",
+			"synthetic",
 			"featherless",
 		]
 

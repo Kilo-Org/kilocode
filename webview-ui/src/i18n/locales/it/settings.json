@@ -289,6 +289,8 @@
 		"getChutesApiKey": "Ottieni chiave API Chutes",
 		"fireworksApiKey": "Chiave API Fireworks",
 		"getFireworksApiKey": "Ottieni chiave API Fireworks",
+		"syntheticApiKey": "Chiave API Synthetic",
+		"getSyntheticApiKey": "Ottieni chiave API Synthetic",
 		"featherlessApiKey": "Chiave API Featherless",
 		"getFeatherlessApiKey": "Ottieni chiave API Featherless",
 		"ioIntelligenceApiKey": "Chiave API IO Intelligence",

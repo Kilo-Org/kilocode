@@ -288,6 +288,8 @@
 		"getChutesApiKey": "Obtenir clau API de Chutes",
 		"fireworksApiKey": "Clau API de Fireworks",
 		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"syntheticApiKey": "Clau API de Synthetic",
+		"getSyntheticApiKey": "Obtenir clau API de Synthetic",
 		"featherlessApiKey": "Clau API de Featherless",
 		"getFeatherlessApiKey": "Obtenir clau API de Featherless",
 		"ioIntelligenceApiKey": "Clau API d'IO Intelligence",

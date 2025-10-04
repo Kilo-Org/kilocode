@@ -306,6 +306,8 @@
 		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
+		"syntheticApiKey": "مفتاح Synthetic API",
+		"getSyntheticApiKey": "احصل على مفتاح Synthetic API",
 		"zaiApiKey": "مفتاح Z.AI",
 		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"moonshotApiKey": "مفتاح Moonshot",

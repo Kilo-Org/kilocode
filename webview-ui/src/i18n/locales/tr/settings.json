@@ -289,6 +289,8 @@
 		"getChutesApiKey": "Chutes API Anahtarı Al",
 		"fireworksApiKey": "Fireworks API Anahtarı",
 		"getFireworksApiKey": "Fireworks API Anahtarı Al",
+		"syntheticApiKey": "Synthetic API Anahtarı",
+		"getSyntheticApiKey": "Synthetic API Anahtarı Al",
 		"featherlessApiKey": "Featherless API Anahtarı",
 		"getFeatherlessApiKey": "Featherless API Anahtarı Al",
 		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
