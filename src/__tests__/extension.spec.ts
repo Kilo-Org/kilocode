@@ -1,5 +1,8 @@
 // npx vitest run __tests__/extension.spec.ts
 
+import { join } from "node:path"
+import { tmpdir } from "node:os"
+
 import type * as vscode from "vscode"
 import type { AuthState } from "@roo-code/types"
 
@@ -7,6 +10,13 @@ vi.mock("vscode", () => ({
 	window: {
 		createOutputChannel: vi.fn().mockReturnValue({
 			appendLine: vi.fn(),
+		}),
+		createStatusBarItem: vi.fn().mockReturnValue({
+			show: vi.fn(),
+			hide: vi.fn(),
+			dispose: vi.fn(),
+			title: "",
+			text: "",
 		}),
 		registerWebviewViewProvider: vi.fn(),
 		registerUriHandler: vi.fn(),
@@ -64,6 +74,10 @@ vi.mock("vscode", () => ({
 		language: "en",
 		appName: "Visual Studio Code",
 	},
+	StatusBarAlignment: {
+		Left: 1,
+		Right: 2,
+	},
 	ExtensionMode: {
 		Production: 1,
 	},
@@ -78,17 +92,24 @@ vi.mock("vscode", () => ({
 		isSingleLine: vi.fn().mockReturnValue(true),
 	})),
 	Uri: {
-		joinPath: vi.fn().mockImplementation((...paths) => ({
-			toString: () => paths.join("/"),
-			path: paths.join("/"),
-		})),
+		joinPath: vi.fn().mockImplementation((base, ...segments) => {
+			const parts = [typeof base === "string" ? base : base.path, ...segments]
+			const path = parts.join("/")
+			return {
+				path,
+				fsPath: path,
+				toString: () => path,
+			}
+		}),
 		parse: vi.fn().mockImplementation((uri) => ({
 			toString: () => uri,
 			path: uri,
+			fsPath: uri,
 		})),
 		file: vi.fn().mockImplementation((path) => ({
 			toString: () => `file://${path}`,
 			path,
+			fsPath: path,
 		})),
 	},
 	CodeActionKind: {
@@ -99,6 +120,17 @@ vi.mock("vscode", () => ({
 		fire: vi.fn(),
 		dispose: vi.fn(),
 	})),
+	Disposable: class {
+		private callback?: () => void
+
+		constructor(callback?: () => void) {
+			this.callback = callback
+		}
+
+		dispose() {
+			this.callback?.()
+		}
+	},
 }))
 
 vi.mock("@dotenvx/dotenvx", () => ({
@@ -286,12 +318,30 @@ describe("extension.ts", () => {
 		vi.clearAllMocks()
 		mockBridgeOrchestratorDisconnect.mockClear()
 
+		const storageRoot = join(tmpdir(), "kilocode-test-storage")
+		const storagePath = join(storageRoot, "global")
+
 		mockContext = {
 			extensionPath: "/test/path",
 			globalState: {
 				get: vi.fn().mockReturnValue(undefined),
 				update: vi.fn(),
 			},
+			workspaceState: {
+				get: vi.fn().mockReturnValue(undefined),
+				update: vi.fn().mockResolvedValue(undefined),
+			},
+			secrets: {
+				get: vi.fn().mockResolvedValue(undefined),
+				store: vi.fn().mockResolvedValue(undefined),
+			},
+			globalStoragePath: storagePath,
+			globalStorageUri: {
+				fsPath: storagePath,
+				path: storagePath,
+				scheme: "file",
+				toString: () => storagePath,
+			} as unknown as vscode.Uri,
 			subscriptions: [],
 		} as unknown as vscode.ExtensionContext
 
