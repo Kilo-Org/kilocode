@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Verbindung zur Qdrant-Vektordatenbank fehlgeschlagen. Stelle sicher, dass Qdrant läuft und unter {{qdrantUrl}} erreichbar ist. Fehler: {{errorMessage}}",
-		"vectorDimensionMismatch": "Aktualisierung des Vektorindex für neues Modell fehlgeschlagen. Bitte versuche, den Index zu löschen und von vorne zu beginnen. Details: {{errorMessage}}"
+		"vectorDimensionMismatch": "Aktualisierung des Vektorindex für neues Modell fehlgeschlagen. Bitte versuche, den Index zu löschen und von vorne zu beginnen. Details: {{errorMessage}}",
+		"lancedbStoreInitFailed": "LanceDB Vektorspeicher konnte nicht initialisiert werden: {{errorMessage}}",
+		"lancedbLoadFailed": "LanceDB-Modul konnte nicht geladen werden: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Authentifizierung fehlgeschlagen. Bitte überprüfe deinen API-Schlüssel in den Einstellungen.",
