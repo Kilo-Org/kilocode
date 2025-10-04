@@ -1,2 +1,2 @@
 # Description: Should suggest import syntax options
-import <<<CURSOR>>> from 'react'
+import <<<AUTOCOMPLETE_HERE>>> from 'react'

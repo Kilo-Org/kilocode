@@ -1,2 +1,2 @@
 # Description: Should suggest array initialization
-const numbers = <<<CURSOR>>>
+const numbers = <<<AUTOCOMPLETE_HERE>>>

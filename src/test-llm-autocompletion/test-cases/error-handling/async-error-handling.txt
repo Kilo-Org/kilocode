@@ -1,0 +1,5 @@
+# Description: Should complete async function error handling
+async function saveUser(userData) {
+	try {
+		const validated = await validateUser(userData);
+		<<<AUTOCOMPLETE_HERE>>>

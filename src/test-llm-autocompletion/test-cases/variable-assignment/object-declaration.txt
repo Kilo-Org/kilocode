@@ -1,2 +1,2 @@
 # Description: Should suggest object initialization
-const config = <<<CURSOR>>>
+const config = <<<AUTOCOMPLETE_HERE>>>

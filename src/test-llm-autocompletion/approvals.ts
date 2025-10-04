@@ -64,9 +64,13 @@ async function askUserApproval(category: string, testName: string, input: string
 		console.log("\n" + "═".repeat(80))
 		console.log(`\n🔍 New output detected for: ${category}/${testName}\n`)
 		console.log("Input:")
-		console.log(input.replace(/\n/g, "\\n"))
+		console.log("─".repeat(80))
+		console.log(input)
+		console.log("─".repeat(80))
 		console.log("\nOutput:")
-		console.log(output.replace(/\n/g, "\\n"))
+		console.log("─".repeat(80))
+		console.log(output)
+		console.log("─".repeat(80))
 		console.log("\n" + "─".repeat(80))
 
 		rl.question("\nIs this acceptable? (y/n): ", (answer) => {

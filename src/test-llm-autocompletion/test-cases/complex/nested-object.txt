@@ -2,4 +2,4 @@
 const config = {
 	server: {
 	  port: 3000,
-	  <<<CURSOR>>>
+	  <<<AUTOCOMPLETE_HERE>>>

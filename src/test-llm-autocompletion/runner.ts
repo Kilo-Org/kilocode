@@ -100,8 +100,24 @@ class TestRunner {
 					if (result.error) {
 						console.log(`    Error: ${result.error}`)
 					} else {
-						console.log(`    Input: "${testCase.input.replace(/\n/g, "\\n")}"`)
-						console.log(`    Got: "${result.actualValue?.replace(/\n/g, "\\n")}"`)
+						console.log(`    Input:`)
+						console.log("    " + "─".repeat(76))
+						console.log(
+							testCase.input
+								.split("\n")
+								.map((l) => "    " + l)
+								.join("\n"),
+						)
+						console.log("    " + "─".repeat(76))
+						console.log(`    Got:`)
+						console.log("    " + "─".repeat(76))
+						console.log(
+							(result.actualValue || "")
+								.split("\n")
+								.map((l) => "    " + l)
+								.join("\n"),
+						)
+						console.log("    " + "─".repeat(76))
 
 						if (this.verbose && result.completion) {
 							console.log("    Full XML Response:")
@@ -217,8 +233,24 @@ class TestRunner {
 				console.log("\nParsed Changes:")
 				changes.forEach((change, i) => {
 					console.log(`Change ${i + 1}:`)
-					console.log("  Search:", change.search.replace(/\n/g, "\\n"))
-					console.log("  Replace:", change.replace.replace(/\n/g, "\\n"))
+					console.log("  Search:")
+					console.log("  " + "─".repeat(78))
+					console.log(
+						change.search
+							.split("\n")
+							.map((l) => "  " + l)
+							.join("\n"),
+					)
+					console.log("  " + "─".repeat(78))
+					console.log("  Replace:")
+					console.log("  " + "─".repeat(78))
+					console.log(
+						change.replace
+							.split("\n")
+							.map((l) => "  " + l)
+							.join("\n"),
+					)
+					console.log("  " + "─".repeat(78))
 
 					// Show what was extracted for testing
 					const extracted = change.replace.replace(testCase.input, "").trim()
