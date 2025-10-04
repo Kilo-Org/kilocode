@@ -113,6 +113,14 @@
 			"message": "Kilo Code Autocomplete, GitHub Copilot ile bir çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısın.",
 			"disableCopilot": "Copilot'u Devre Dışı Bırak",
 			"disableInlineAssist": "Autocomplete'i Devre Dışı Bırak"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Strateji",
+				"placeholder": "Bir strateji seç",
+				"default": "Varsayılan Strateji",
+				"description": "Ghost otomatik tamamlama için kod üretme stratejisini seçin"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

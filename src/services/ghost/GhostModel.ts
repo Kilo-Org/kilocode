@@ -1,101 +1,30 @@
-import { GhostServiceSettings } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
-import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
 import { ApiStreamChunk } from "../../api/transform/stream"
 
-const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
-const MISTRAL_DEFAULT_MODEL = "codestral-latest"
-
-const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
-
 export class GhostModel {
-	private apiHandler: ApiHandler | null = null
-	private apiConfigId: string | null = null
-	public loaded = false
+	private apiHandler: ApiHandler
 
-	constructor(apiHandler: ApiHandler | null = null) {
-		if (apiHandler) {
-			this.apiHandler = apiHandler
-			this.loaded = true
-		}
+	constructor(apiHandler: ApiHandler) {
+		this.apiHandler = apiHandler
 	}
 
-	public getApiConfigId() {
-		return this.apiConfigId
-	}
+	/**
+	 * Factory method to create GhostModel from API config ID
+	 */
+	static async createFromApiConfig(
+		apiConfigId: string,
+		providerSettingsManager: ProviderSettingsManager,
+	): Promise<GhostModel> {
+		const apiProfile = await providerSettingsManager.getProfile({ id: apiConfigId })
+		const apiHandler = buildApiHandler(apiProfile)
 
-	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
-		let enableCustomProvider = settings?.enableCustomProvider || false
-
-		if (!enableCustomProvider) {
-			const profiles = await providerSettingsManager.listConfig()
-			const validProfiles = profiles
-				.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
-				.sort((a, b) => {
-					if (!a.apiProvider) {
-						return 1 // Place undefined providers at the end
-					}
-					if (!b.apiProvider) {
-						return -1 // Place undefined providers at the beginning
-					}
-					return (
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-					)
-				})
-
-			const selectedProfile = validProfiles[0] || null
-			if (selectedProfile) {
-				this.apiConfigId = selectedProfile.id
-				const profile = await providerSettingsManager.getProfile({
-					id: this.apiConfigId,
-				})
-				const profileProvider = profile.apiProvider
-				let modelDefinition = {}
-				if (profileProvider === "kilocode") {
-					modelDefinition = {
-						kilocodeModel: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "openrouter") {
-					modelDefinition = {
-						openRouterModelId: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "mistral") {
-					modelDefinition = {
-						apiModelId: MISTRAL_DEFAULT_MODEL,
-					}
-				}
-				this.apiHandler = buildApiHandler({
-					...profile,
-					...modelDefinition,
-				})
-			} else {
-				enableCustomProvider = true
-			}
+		if (apiHandler instanceof OpenRouterHandler) {
+			await apiHandler.fetchModel()
 		}
 
-		if (enableCustomProvider) {
-			this.apiConfigId = settings?.apiConfigId || null
-			const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
-			const profileQuery = this.apiConfigId
-				? {
-						id: this.apiConfigId,
-					}
-				: {
-						name: defaultApiConfigId,
-					}
-
-			const profile = await providerSettingsManager.getProfile(profileQuery)
-			this.apiHandler = buildApiHandler(profile)
-		}
-
-		if (this.apiHandler instanceof OpenRouterHandler) {
-			await this.apiHandler.fetchModel()
-		}
-
-		this.loaded = true
+		return new GhostModel(apiHandler)
 	}
 
 	/**
@@ -163,9 +92,5 @@ export class GhostModel {
 		}
 		// Extract model name from API handler
 		return this.apiHandler.getModel().id ?? "unknown"
-	}
-
-	public hasValidCredentials(): boolean {
-		return this.apiHandler !== null && this.loaded
 	}
 }

@@ -15,9 +15,16 @@ const mockUri = {
 }
 
 const mockRange = class {
-	constructor(start, end) {
-		this.start = start
-		this.end = end
+	constructor(startLineOrPosition, startCharacterOrEnd, endLine, endCharacter) {
+		if (typeof startLineOrPosition === "number" && typeof startCharacterOrEnd === "number") {
+			// Constructor called with (startLine, startCharacter, endLine, endCharacter)
+			this.start = new mockPosition(startLineOrPosition, startCharacterOrEnd)
+			this.end = new mockPosition(endLine, endCharacter)
+		} else {
+			// Constructor called with (start: Position, end: Position)
+			this.start = startLineOrPosition
+			this.end = startCharacterOrEnd
+		}
 	}
 }
 
@@ -29,10 +36,10 @@ const mockPosition = class {
 }
 
 const mockSelection = class extends mockRange {
-	constructor(start, end) {
-		super(start, end)
-		this.anchor = start
-		this.active = end
+	constructor(startLineOrPosition, startCharacterOrEnd, endLine, endCharacter) {
+		super(startLineOrPosition, startCharacterOrEnd, endLine, endCharacter)
+		this.anchor = this.start
+		this.active = this.end
 	}
 }
 
@@ -59,6 +66,8 @@ export const workspace = {
 		update: vi.fn().mockResolvedValue(undefined),
 		keys: vi.fn().mockReturnValue([]),
 	},
+	openTextDocument: vi.fn(),
+	applyEdit: vi.fn().mockResolvedValue(true),
 }
 
 export const window = {
@@ -155,6 +164,49 @@ export const CodeActionKind = {
 	RefactorRewrite: { value: "refactor.rewrite" },
 }
 
+export const WorkspaceEdit = class {
+	constructor() {
+		this._edits = new Map()
+	}
+
+	entries() {
+		return this._edits.entries()
+	}
+
+	insert(uri, position, newText) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		this._edits.get(key).push({
+			range: new mockRange(position, position),
+			newText: newText,
+		})
+	}
+
+	delete(uri, range) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		this._edits.get(key).push({
+			range: range,
+			newText: "",
+		})
+	}
+
+	replace(uri, range, newText) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		this._edits.get(key).push({
+			range: range,
+			newText: newText,
+		})
+	}
+}
+
 export const EventEmitter = mockEventEmitter
 
 export default {
@@ -176,4 +228,5 @@ export default {
 	EventEmitter,
 	CodeAction,
 	CodeActionKind,
+	WorkspaceEdit,
 }

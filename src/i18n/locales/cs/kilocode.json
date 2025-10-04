@@ -119,6 +119,14 @@
 			"message": "Kilo Code Autocomplete je blokováno konfliktem s GitHub Copilot. Pro vyřešení tohoto problému musíš zakázat inline návrhy Copilot.",
 			"disableCopilot": "Zakázat Copilot",
 			"disableInlineAssist": "Zakázat Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"default": "Výchozí strategie",
+				"label": "Strategie",
+				"placeholder": "Vyberte strategii",
+				"description": "Zvolte strategii generování kódu pro Ghost automatické dokončování"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

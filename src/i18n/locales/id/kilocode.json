@@ -113,6 +113,14 @@
 			"message": "Kilo Code Autocomplete diblokir oleh konflik dengan GitHub Copilot. Untuk memperbaiki ini, Anda harus menonaktifkan saran inline Copilot.",
 			"disableCopilot": "Nonaktifkan Copilot",
 			"disableInlineAssist": "Nonaktifkan Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Strategi",
+				"placeholder": "Pilih strategi",
+				"default": "Strategi Default",
+				"description": "Pilih strategi pembuatan kode untuk Ghost autocomplete"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

@@ -119,6 +119,14 @@
 			"message": "Kilo Code Autocomplete को GitHub Copilot के साथ संघर्ष के कारण ब्लॉक किया जा रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
 			"disableCopilot": "Copilot अक्षम करें",
 			"disableInlineAssist": "Autocomplete अक्षम करें"
+		},
+		"settings": {
+			"strategy": {
+				"placeholder": "एक रणनीति चुनें",
+				"label": "रणनीति",
+				"default": "डिफ़ॉल्ट रणनीति",
+				"description": "Ghost स्वतः पूर्ण के लिए कोड जनरेशन रणनीति चुनें"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

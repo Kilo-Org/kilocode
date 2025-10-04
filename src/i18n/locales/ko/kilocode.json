@@ -113,6 +113,14 @@
 			"message": "Kilo Code Autocomplete가 GitHub Copilot과의 충돌로 인해 차단되고 있습니다. 이를 해결하려면 Copilot의 인라인 제안을 비활성화해야 합니다.",
 			"disableCopilot": "Copilot 비활성화",
 			"disableInlineAssist": "Autocomplete 비활성화"
+		},
+		"settings": {
+			"strategy": {
+				"placeholder": "전략 선택",
+				"default": "기본 전략",
+				"label": "전략",
+				"description": "Ghost 자동 완성을 위한 코드 생성 전략 선택"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

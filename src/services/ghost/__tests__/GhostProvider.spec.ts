@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
-import { GhostStrategy } from "../GhostStrategy"
+import { GhostXmlStrategy } from "../GhostXmlStrategy"
 import { GhostWorkspaceEdit } from "../GhostWorkspaceEdit"
 import { GhostSuggestionContext } from "../types"
 
@@ -68,12 +68,12 @@ vi.mock("vscode", () => ({
 
 describe("GhostProvider", () => {
 	let mockWorkspace: MockWorkspace
-	let strategy: GhostStrategy
+	let strategy: GhostXmlStrategy
 	let workspaceEdit: GhostWorkspaceEdit
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		strategy = new GhostStrategy()
+		strategy = new GhostXmlStrategy()
 		mockWorkspace = new MockWorkspace()
 		workspaceEdit = new GhostWorkspaceEdit()
 

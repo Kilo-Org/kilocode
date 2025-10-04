@@ -108,6 +108,14 @@
 			"message": "Kilo Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
 			"disableCopilot": "Отключить Copilot",
 			"disableInlineAssist": "Отключить Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Стратегия",
+				"default": "Стратегия по умолчанию",
+				"placeholder": "Выберите стратегию",
+				"description": "Выберите стратегию генерации кода для автозаполнения Ghost"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

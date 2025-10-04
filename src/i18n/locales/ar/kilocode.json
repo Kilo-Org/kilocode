@@ -117,6 +117,14 @@
 			"message": "يتم حظر Kilo Code Autocomplete بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
 			"disableCopilot": "تعطيل Copilot",
 			"disableInlineAssist": "تعطيل الإكمال التلقائي"
+		},
+		"settings": {
+			"strategy": {
+				"label": "استراتيجية",
+				"placeholder": "اختر استراتيجية",
+				"default": "الإستراتيجية الافتراضية",
+				"description": "اختر استراتيجية توليد الشيفرة لإكمال Ghost التلقائي"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

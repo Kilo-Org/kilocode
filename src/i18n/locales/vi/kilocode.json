@@ -113,6 +113,14 @@
 			"message": "Kilo Code Autocomplete đang bị chặn do xung đột với GitHub Copilot. Để khắc phục điều này, bạn phải tắt các gợi ý inline của Copilot.",
 			"disableCopilot": "Tắt Copilot",
 			"disableInlineAssist": "Tắt Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Chiến lược",
+				"placeholder": "Chọn một chiến lược",
+				"description": "Chọn chiến lược tạo mã cho Ghost tự động hoàn thành",
+				"default": "Chiến Lược Mặc Định"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

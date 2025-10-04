@@ -113,6 +113,14 @@
 			"message": "Kilo Code AutocompleteがGitHub Copilotとの競合によってブロックされています。これを修正するには、Copilotのインライン提案を無効にする必要があります。",
 			"disableCopilot": "Copilotを無効にする",
 			"disableInlineAssist": "Autocompleteを無効にする"
+		},
+		"settings": {
+			"strategy": {
+				"label": "戦略",
+				"placeholder": "戦略を選択",
+				"default": "デフォルト戦略",
+				"description": "Ghost オートコンプリートのコード生成戦略を選択してください"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

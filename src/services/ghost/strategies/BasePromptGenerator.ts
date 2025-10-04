@@ -1,6 +1,6 @@
 import type { TextDocument, Range, Diagnostic } from "vscode"
 import { GhostSuggestionContext } from "../types"
-import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
+import { PromptGenerator as PromptGenerator, UseCaseType } from "../types/PromptGenerator"
 import { CURSOR_MARKER } from "../ghostConstants"
 import { DiagnosticSeverityNames } from "./diagnostics"
 
@@ -8,7 +8,7 @@ import { DiagnosticSeverityNames } from "./diagnostics"
  * Abstract base class for all prompt strategies
  * Provides common functionality and enforces consistent structure
  */
-export abstract class BasePromptStrategy implements PromptStrategy {
+export abstract class BasePromptGenerator implements PromptGenerator {
 	/**
 	 * Human-readable name of the strategy
 	 */

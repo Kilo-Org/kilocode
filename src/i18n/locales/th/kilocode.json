@@ -119,6 +119,14 @@
 			"message": "Kilo Code Autocomplete ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot เพื่อแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำแบบอินไลน์ของ Copilot",
 			"disableCopilot": "ปิดใช้งาน Copilot",
 			"disableInlineAssist": "ปิดใช้งาน Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"label": "กลยุทธ์",
+				"placeholder": "เลือกกลยุทธ์",
+				"default": "กลยุทธ์เริ่มต้น",
+				"description": "เลือกกลยุทธ์การสร้างโค้ดสำหรับการเติมข้อความอัตโนมัติแบบ Ghost"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

@@ -119,6 +119,14 @@
 			"message": "Kilo Code Autocomplete 被与 GitHub Copilot 的冲突阻止。要解决此问题，你必须禁用 Copilot 的内联建议。",
 			"disableCopilot": "禁用 Copilot",
 			"disableInlineAssist": "禁用 Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"default": "默认策略",
+				"placeholder": "选择策略",
+				"label": "策略",
+				"description": "选择 Ghost 自动补全的代码生成策略"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

@@ -1,5 +1,5 @@
 import { GhostModel } from "../GhostModel"
-import { GhostStrategy } from "../GhostStrategy"
+import { GhostXmlStrategy } from "../GhostXmlStrategy"
 import { GhostSuggestionContext } from "../types"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 
@@ -35,12 +35,12 @@ class MockApiHandler {
 }
 
 describe("Ghost Streaming Integration", () => {
-	let strategy: GhostStrategy
+	let strategy: GhostXmlStrategy
 	let mockDocument: any
 	let context: GhostSuggestionContext
 
 	beforeEach(() => {
-		strategy = new GhostStrategy()
+		strategy = new GhostXmlStrategy()
 
 		// Create mock document
 		mockDocument = {

@@ -5,19 +5,13 @@ import { GhostSuggestionContext } from "../types"
  */
 export enum UseCaseType {
 	USER_REQUEST = "USER_REQUEST",
-	ERROR_FIX = "ERROR_FIX",
-	NEW_LINE = "NEW_LINE",
-	INLINE_COMPLETION = "INLINE_COMPLETION",
-	COMMENT_DRIVEN = "COMMENT_DRIVEN",
-	SELECTION_REFACTOR = "SELECTION_REFACTOR",
 	AUTO_TRIGGER = "AUTO_TRIGGER",
-	AST_AWARE = "AST_AWARE",
 }
 
 /**
  * Interface for prompt strategies that generate context-aware prompts
  */
-export interface PromptStrategy {
+export interface PromptGenerator {
 	/**
 	 * Human-readable name of the strategy
 	 */

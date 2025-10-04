@@ -8,6 +8,7 @@ import { useExtensionState } from "../../../context/ExtensionStateContext"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
+import { AVAILABLE_GHOST_STRATEGIES } from "@roo/ghost-strategies"
 import { SetCachedStateField } from "../../settings/types"
 import {
 	Select,
@@ -41,6 +42,7 @@ export const GhostServiceSettingsView = ({
 		enableAutoTrigger,
 		autoTriggerDelay,
 		apiConfigId,
+		ghostStrategyId,
 		enableQuickInlineTaskKeybinding,
 		enableSmartInlineTaskKeybinding,
 		enableCustomProvider,
@@ -88,6 +90,13 @@ export const GhostServiceSettingsView = ({
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
 			apiConfigId: value === "-" ? "" : value,
+		})
+	}
+
+	const onGhostStrategyIdChange = (value: string) => {
+		setCachedStateField("ghostServiceSettings", {
+			...ghostServiceSettings,
+			ghostStrategyId: value === "-" ? "" : value,
 		})
 	}
 
@@ -265,6 +274,40 @@ export const GhostServiceSettingsView = ({
 											</div>
 										</div>
 									</div>
+
+									{/* Ghost Strategy Selection - only show if multiple strategies exist */}
+									{AVAILABLE_GHOST_STRATEGIES.length > 1 && (
+										<div>
+											<label className="block font-medium mb-1">
+												{t("kilocode:ghost.settings.strategy.label")}
+											</label>
+											<Select
+												value={ghostStrategyId || "-"}
+												onValueChange={onGhostStrategyIdChange}>
+												<SelectTrigger data-testid="ghost-strategy-select" className="w-full">
+													<SelectValue
+														placeholder={t("kilocode:ghost.settings.strategy.placeholder")}
+													/>
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="-">
+														{t("kilocode:ghost.settings.strategy.default")}
+													</SelectItem>
+													{AVAILABLE_GHOST_STRATEGIES.map((strategy) => (
+														<SelectItem
+															key={strategy.id}
+															value={strategy.id}
+															data-testid={`ghost-strategy-${strategy.id}-option`}>
+															{strategy.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<div className="text-sm text-vscode-descriptionForeground mt-1">
+												{t("kilocode:ghost.settings.strategy.description")}
+											</div>
+										</div>
+									)}
 								</div>
 							)}
 						</div>

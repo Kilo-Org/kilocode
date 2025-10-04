@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { GhostSuggestionContext } from "./types"
-import { ContextAnalysis, UseCaseType } from "./types/PromptStrategy"
+import { ContextAnalysis, UseCaseType } from "./types/PromptGenerator"
 
 /**
  * Analyzes GhostSuggestionContext to determine the appropriate use case and context properties
@@ -37,42 +37,10 @@ export class ContextAnalyzer {
 	 * Priority order is important here
 	 */
 	private determineUseCase(analysis: ContextAnalysis): UseCaseType {
-		// Priority 1: User explicit request
 		if (analysis.hasUserInput) {
 			return UseCaseType.USER_REQUEST
 		}
 
-		// Priority 2: Error fixing
-		if (analysis.hasErrors) {
-			return UseCaseType.ERROR_FIX
-		}
-
-		// Priority 3: Selection refactoring
-		if (analysis.hasSelection) {
-			return UseCaseType.SELECTION_REFACTOR
-		}
-
-		// Priority 4: Comment-driven development
-		if (analysis.isInComment) {
-			return UseCaseType.COMMENT_DRIVEN
-		}
-
-		// Priority 5: New line completion
-		if (analysis.isNewLine) {
-			return UseCaseType.NEW_LINE
-		}
-
-		// Priority 6: Inline completion
-		if (analysis.isInlineEdit) {
-			return UseCaseType.INLINE_COMPLETION
-		}
-
-		// Priority 7: AST-aware completion
-		if (analysis.astNodeType) {
-			return UseCaseType.AST_AWARE
-		}
-
-		// Priority 8: Default auto-trigger
 		return UseCaseType.AUTO_TRIGGER
 	}
 

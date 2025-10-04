@@ -1,13 +1,13 @@
 import { GhostSuggestionContext } from "../types"
-import { UseCaseType } from "../types/PromptStrategy"
-import { BasePromptStrategy } from "./BasePromptStrategy"
+import { UseCaseType } from "../types/PromptGenerator"
+import { BasePromptGenerator } from "./BasePromptGenerator"
 import { CURSOR_MARKER } from "../ghostConstants"
 
 /**
- * Strategy for handling explicit user requests
+ * PromptGenerator for handling explicit user requests
  * This has the highest priority as it represents direct user intent
  */
-export class UserRequestStrategy extends BasePromptStrategy {
+export class UserRequestPromptGenerator extends BasePromptGenerator {
 	name = "User Request"
 	type = UseCaseType.USER_REQUEST
 

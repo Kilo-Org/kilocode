@@ -113,6 +113,14 @@
 			"message": "El Kilo Code Autocomplete està sent bloquejat per un conflicte amb GitHub Copilot. Per solucionar això, has de desactivar els suggeriments en línia de Copilot.",
 			"disableCopilot": "Desactivar Copilot",
 			"disableInlineAssist": "Desactivar Autocomplete"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Estratègia",
+				"default": "Estratègia predeterminada",
+				"placeholder": "Seleccioni una estratègia",
+				"description": "Trieu l'estratègia de generació de codi per a l'autocompletat Ghost"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

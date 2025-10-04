@@ -113,6 +113,14 @@
 			"message": "Das Kilo Code Autocomplete wird durch einen Konflikt mit GitHub Copilot blockiert. Um dies zu beheben, musst du Copilots Inline-Vorschläge deaktivieren.",
 			"disableCopilot": "Copilot deaktivieren",
 			"disableInlineAssist": "Autocomplete deaktivieren"
+		},
+		"settings": {
+			"strategy": {
+				"label": "Strategie",
+				"default": "Standardstrategie",
+				"description": "Wählen Sie die Strategie zur Codegenerierung für die Ghost-Autovervollständigung",
+				"placeholder": "Strategie auswählen"
+			}
 		}
 	},
 	"terminalCommandGenerator": {

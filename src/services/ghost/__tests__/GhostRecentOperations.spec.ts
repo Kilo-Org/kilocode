@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { GhostStrategy } from "../GhostStrategy"
+import { GhostXmlStrategy } from "../GhostXmlStrategy"
 import { GhostSuggestionContext } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
@@ -78,13 +78,13 @@ vi.mock("diff", async (importOriginal) => {
 describe("GhostRecentOperations", () => {
 	let documentStore: GhostDocumentStore
 	let context: GhostContext
-	let strategy: GhostStrategy
+	let strategy: GhostXmlStrategy
 	let mockDocument: MockTextDocument
 
 	beforeEach(() => {
 		documentStore = new GhostDocumentStore()
 		context = new GhostContext(documentStore)
-		strategy = new GhostStrategy()
+		strategy = new GhostXmlStrategy()
 
 		// Create a mock document
 		const uri = vscode.Uri.parse("file:///test-file.ts")
@@ -119,8 +119,8 @@ describe("GhostRecentOperations", () => {
 		const prompt = strategy.getSuggestionPrompt(enrichedContext)
 
 		// Verify that the prompt includes the recent operations section
-		// The new strategy system uses "## Recent Typing" format
-		expect(prompt).toContain("## Recent Typing")
+		// The new strategy system uses "## User Request" format
+		expect(prompt).toContain("## User Request")
 	})
 
 	it("should not include recent operations in the prompt when not available", async () => {
