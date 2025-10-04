@@ -18,35 +18,30 @@ export type ChutesModelId =
 	| "deepseek-ai/DeepSeek-V3-Base"
 	| "deepseek-ai/DeepSeek-R1-Zero"
 	| "deepseek-ai/DeepSeek-V3-0324"
-	// kilocode_change start
 	| "deepseek-ai/DeepSeek-V3.1-Terminus"
 	| "deepseek-ai/DeepSeek-V3.1-turbo"
 	| "deepseek-ai/DeepSeek-V3-0324-turbo"
-	// kilocode_change end
 	| "Qwen/Qwen3-235B-A22B"
 	| "Qwen/Qwen3-235B-A22B-Instruct-2507"
 	| "Qwen/Qwen3-32B"
 	| "Qwen/Qwen3-30B-A3B"
 	| "Qwen/Qwen3-14B"
 	| "Qwen/Qwen3-8B"
-	| "Qwen/Qwen3-VL-235B-A22B-Thinking" // kilocode_change
+	| "Qwen/Qwen3-VL-235B-A22B-Thinking"
 	| "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 	| "microsoft/MAI-DS-R1-FP8"
 	| "tngtech/DeepSeek-R1T-Chimera"
 	| "zai-org/GLM-4.5-Air"
 	| "zai-org/GLM-4.5-FP8"
-	| "zai-org/GLM-4.6-FP8" // kilocode_change
-	// kilocode_change start
+	| "zai-org/GLM-4.6-FP8"
 	| "zai-org/GLM-4.5V"
 	| "zai-org/GLM-4.6-turbo"
 	// kilocode_change end
 	| "zai-org/GLM-4.5-turbo"
 	| "moonshotai/Kimi-K2-Instruct-75k"
 	| "moonshotai/Kimi-K2-Instruct-0905"
-	// kilocode_change start
 	| "moonshotai/Kimi-Dev-72B"
 	| "moonshotai/Kimi-VL-A3B-Thinking"
-	// kilocode_change end
 	| "Qwen/Qwen3-235B-A22B-Thinking-2507"
 	| "Qwen/Qwen3-Next-80B-A3B-Instruct"
 	| "Qwen/Qwen3-Next-80B-A3B-Thinking"
@@ -198,9 +193,8 @@ export const chutesModels = {
 		outputPrice: 0,
 		description: "DeepSeek V3 (0324) model.",
 	},
-	// kilocode_change start
 	"deepseek-ai/DeepSeek-V3.1-Terminus": {
-		maxTokens: 163840, // kilocode_change
+		maxTokens: 32768, // kilocode_change
 		contextWindow: 163840,
 		supportsImages: false,
 		supportsPromptCache: false,
@@ -226,7 +220,6 @@ export const chutesModels = {
 		outputPrice: 3.0,
 		description: "DeepSeek V3 (0324) Turbo model.",
 	},
-	// kilocode_change end
 	"Qwen/Qwen3-235B-A22B-Instruct-2507": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -281,9 +274,8 @@ export const chutesModels = {
 		outputPrice: 0,
 		description: "Qwen3 8B model.",
 	},
-	// kilocode_change start
 	"Qwen/Qwen3-VL-235B-A22B-Thinking": {
-		maxTokens: 262144,
+		maxTokens: 32768, // kilocode_change
 		contextWindow: 262144,
 		supportsImages: true,
 		supportsPromptCache: false,
@@ -291,7 +283,6 @@ export const chutesModels = {
 		outputPrice: 0.6500,
 		description: "Qwen3-VL-235B-A22B-Thinking.",
 	},
-	// kilocode_change end
 	"microsoft/MAI-DS-R1-FP8": {
 		maxTokens: 32768,
 		contextWindow: 163840,
@@ -330,7 +321,6 @@ export const chutesModels = {
 		description:
 			"GLM-4.5-FP8 model with 128k token context window, optimized for agent-based applications with MoE architecture.",
 	},
-	// kilocode_change start
 	"zai-org/GLM-4.6-FP8": {
 		maxTokens: 32768,
 		contextWindow: 202752,
@@ -341,7 +331,7 @@ export const chutesModels = {
 		description:
 			"GLM-4.6 introduces major upgrades over GLM-4.5, including a longer 200K-token context window for complex tasks, stronger coding performance in benchmarks and real-world tools (such as Claude Code, Cline, Roo Code, and Kilo Code), improved reasoning with tool use during inference, more capable and efficient agent integration, and refined writing that better matches human style, readability, and natural role-play scenarios.",
 	},
-	// kilocode_change end
+	// kilocode_change start
 	"zai-org/GLM-4.5-turbo": {
 		maxTokens: 32768,
 		contextWindow: 131072,
@@ -364,13 +354,12 @@ export const chutesModels = {
 	"zai-org/GLM-4.5V": {
 		maxTokens: 32768,
 		contextWindow: 131072,
-		supportsImages: true, // kilocode_change
+		supportsImages: true,
 		supportsPromptCache: false,
 		inputPrice: 0.08,
 		outputPrice: 0.33,
 		description: "GLM-4.5V model.",
 	},
-	// kilocode_change end
 	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -398,7 +387,6 @@ export const chutesModels = {
 		outputPrice: 0.8001,
 		description: "Moonshot AI Kimi K2 Instruct 0905 model with 256k context window.",
 	},
-	// kilocode_change start
 	"moonshotai/Kimi-Dev-72B": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -417,7 +405,6 @@ export const chutesModels = {
 		outputPrice: 0.07,
 		description: "Moonshot AI Kimi VL A3B Thinking model.",
 	},
-	// kilocode_change end
 	"Qwen/Qwen3-235B-A22B-Thinking-2507": {
 		maxTokens: 32768,
 		contextWindow: 262144,
