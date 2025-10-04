@@ -682,6 +682,7 @@
 		"get-folder-size": "^5.0.0",
 		"google-auth-library": "^9.15.1",
 		"gray-matter": "^4.0.3",
+		"handlebars": "^4.7.8",
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"is-wsl": "^3.1.0",

@@ -147,7 +147,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 
 		// Process each terminal with output.
 		for (const inactiveTerminal of terminalsWithOutput) {
-			let terminalOutputs: string[] = []
+			const terminalOutputs: string[] = []
 
 			// Get output from completed processes queue.
 			const completedProcesses = inactiveTerminal.getProcessesWithOutput()

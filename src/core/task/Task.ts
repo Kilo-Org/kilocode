@@ -829,7 +829,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const isBlocking = !(this.askResponse !== undefined || this.lastMessageTs !== askTs)
 		const isMessageQueued = !this.messageQueueService.isEmpty()
 		const isStatusMutable = !partial && isBlocking && !isMessageQueued
-		let statusMutationTimeouts: NodeJS.Timeout[] = []
+		const statusMutationTimeouts: NodeJS.Timeout[] = []
 
 		if (isStatusMutable) {
 			console.log(`Task#ask will block -> type: ${type}`)
@@ -1259,7 +1259,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		await this.say("text", task, images)
 		this.isInitialized = true
 
-		let imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
+		const imageBlocks: Anthropic.ImageBlockParam[] = formatResponse.imageBlocks(images)
 
 		// Task starting
 
@@ -1494,7 +1494,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			throw new Error("Unexpected: No existing API conversation history")
 		}
 
-		let newUserContent: Anthropic.Messages.ContentBlockParam[] = [...modifiedOldUserContent]
+		const newUserContent: Anthropic.Messages.ContentBlockParam[] = [...modifiedOldUserContent]
 
 		const agoText = ((): string => {
 			const timestamp = lastClineMessage?.ts ?? Date.now()
@@ -1990,7 +1990,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				const stream = this.attemptApiRequest()
 				let assistantMessage = ""
 				let reasoningMessage = ""
-				let pendingGroundingSources: GroundingSource[] = []
+				const pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
 
 				try {
@@ -2349,7 +2349,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// Need to save assistant responses to file before proceeding to
 				// tool use since user can exit at any moment and we wouldn't be
 				// able to save the assistant's response.
-				let didEndLoop = false
+				const didEndLoop = false
 
 				if (assistantMessage.length > 0) {
 					// Display grounding sources to the user if they exist
@@ -2801,7 +2801,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(this.apiConversationHistory)
-		let cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
+		const cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
 			({ role, content }) => ({ role, content }),
 		)
 

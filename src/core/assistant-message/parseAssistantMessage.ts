@@ -5,7 +5,7 @@ import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../share
 export type AssistantMessageContent = TextContent | ToolUse
 
 export function parseAssistantMessage(assistantMessage: string): AssistantMessageContent[] {
-	let contentBlocks: AssistantMessageContent[] = []
+	const contentBlocks: AssistantMessageContent[] = []
 	let currentTextContent: TextContent | undefined = undefined
 	let currentTextContentStartIndex = 0
 	let currentToolUse: ToolUse | undefined = undefined

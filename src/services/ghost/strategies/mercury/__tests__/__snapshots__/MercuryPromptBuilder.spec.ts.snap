@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MercuryPromptBuilder > buildCurrentFileContentBlock > should build file content with editable region markers and cursor 1`] = `
+"1 #| class User {
+2 #|     constructor(name, age) {
+3 #|         this.name = name;
+4 #|         this.age = age;
+5 #|     }
+6 #| 
+<|code_to_edit|>
+7 #|     getDisplayName() {
+8 #|         <|cursor|>
+9 #|     }
+<|/code_to_edit|>
+10 #| 
+11 #|     isAdult() {
+12 #|         return this.age >= 18;
+13 #|     }
+14 #| }"
+`;
+
+exports[`MercuryPromptBuilder > buildCurrentFileContentBlock > should handle cursor at beginning of file 1`] = `
+"<|code_to_edit|>
+1 #| <|cursor|>class User {
+2 #|     constructor() {}
+3 #| }
+<|/code_to_edit|>"
+`;
+
+exports[`MercuryPromptBuilder > buildRecentlyViewedCodeSnippetsBlock > should format snippets with file paths 1`] = `
+"File: /utils/helper.js
+\`\`\`
+const helper = () => 42;
+\`\`\`
+
+File: /types/user.ts
+\`\`\`
+interface User {
+  name: string;
+}
+\`\`\`"
+`;
+
+exports[`MercuryPromptBuilder > buildRecentlyViewedCodeSnippetsBlock > should handle empty snippets 1`] = `""`;
+
+exports[`MercuryPromptBuilder > buildUserPrompt > should build complete Mercury prompt with all sections 1`] = `
+"<|recently_viewed_code_snippets|>
+File: helper.js
+\`\`\`
+const x = 1;
+\`\`\`
+<|/recently_viewed_code_snippets|>
+
+<|current_file_content|>
+<|code_to_edit|>
+1 #| function test() {
+2 #|     retu<|cursor|>rn 42;
+3 #| }
+<|/code_to_edit|>
+<|/current_file_content|>
+
+<|edit_diff_history|>
+Added function test()
+<|/edit_diff_history|>"
+`;
+
+exports[`MercuryPromptBuilder > buildUserPrompt > should extract editable region for comparison with Mercury response 1`] = `
+"line 1
+line 2
+line 3"
+`;

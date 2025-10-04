@@ -1,0 +1,5 @@
+{
+	"name": "async-await-completion",
+	"description": "Complete async function with await call",
+	"category": "async-completion"
+}

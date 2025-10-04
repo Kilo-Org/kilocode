@@ -69,7 +69,7 @@ export async function accessMcpResourceTool(
 					.join("\n\n") || "(Empty response)"
 
 			// Handle images (image must contain mimetype and blob)
-			let images: string[] = []
+			const images: string[] = []
 
 			resourceResult?.contents.forEach((item) => {
 				if (item.mimeType?.startsWith("image") && item.blob) {

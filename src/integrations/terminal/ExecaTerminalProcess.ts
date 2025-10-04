@@ -223,7 +223,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 	}
 
 	public override getUnretrievedOutput() {
-		let output = this.fullOutput.slice(this.lastRetrievedIndex)
+		const output = this.fullOutput.slice(this.lastRetrievedIndex)
 		let index = output.lastIndexOf("\n")
 
 		if (index === -1) {

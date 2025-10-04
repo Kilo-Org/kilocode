@@ -1,0 +1,11 @@
+{
+	"name": "import-statement-completion",
+	"description": "Complete import statement with destructuring",
+	"category": "import-completion",
+	"expectedPatterns": ["import\\s*\\{", "useState", "useEffect", "\\}\\s*from\\s*['\"]react['\"]"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

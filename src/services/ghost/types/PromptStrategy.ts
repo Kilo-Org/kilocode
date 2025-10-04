@@ -1,21 +1,19 @@
 import { GhostSuggestionContext } from "../types"
+import { StreamingParseResult } from "../GhostStreamingParser"
 
 /**
  * Enum representing different use case types for prompt strategies
  */
 export enum UseCaseType {
 	USER_REQUEST = "USER_REQUEST",
-	ERROR_FIX = "ERROR_FIX",
-	NEW_LINE = "NEW_LINE",
+	MERCURY_CODER = "MERCURY_CODER",
 	INLINE_COMPLETION = "INLINE_COMPLETION",
-	COMMENT_DRIVEN = "COMMENT_DRIVEN",
-	SELECTION_REFACTOR = "SELECTION_REFACTOR",
 	AUTO_TRIGGER = "AUTO_TRIGGER",
-	AST_AWARE = "AST_AWARE",
 }
 
 /**
- * Interface for prompt strategies that generate context-aware prompts
+ * Prompt Strategy interface that combines prompt generation with response parsing.
+ * This eliminates the need for separate parsers and format detection logic.
  */
 export interface PromptStrategy {
 	/**
@@ -30,89 +28,62 @@ export interface PromptStrategy {
 
 	/**
 	 * Determines if this strategy can handle the given context
-	 * @param context The suggestion context to evaluate
-	 * @returns true if this strategy can handle the context
 	 */
 	canHandle(context: GhostSuggestionContext): boolean
 
 	/**
 	 * Filters the context to only include relevant fields for this strategy
-	 * @param context The full suggestion context
-	 * @returns Partial context with only relevant fields
 	 */
 	getRelevantContext(context: GhostSuggestionContext): Partial<GhostSuggestionContext>
 
 	/**
 	 * Generates system instructions for the AI model
-	 * @param customInstructions Optional custom instructions to append
-	 * @returns The complete system prompt
 	 */
 	getSystemInstructions(customInstructions?: string): string
 
 	/**
 	 * Generates the user prompt with context
-	 * @param context The suggestion context
-	 * @returns The user prompt
 	 */
-	getUserPrompt(context: GhostSuggestionContext): string
+	getUserPrompt(context: GhostSuggestionContext): Promise<string>
+
+	/**
+	 * Initialize response processing - all strategies use this interface
+	 */
+	initializeProcessing(context: GhostSuggestionContext): void
+
+	/**
+	 * Process a response chunk - all strategies implement this
+	 * For non-streaming strategies, they emit complete response as single chunk
+	 */
+	processResponseChunk(chunk: string): StreamingParseResult
+
+	/**
+	 * Finish response processing and return final results
+	 */
+	finishProcessing(): StreamingParseResult
+
+	/**
+	 * Reset parser state for a new parsing session
+	 */
+	reset(): void
 }
 
 /**
- * Result of analyzing a suggestion context
+ * Configuration for creating prompt strategies
  */
-export interface ContextAnalysis {
+export interface PromptStrategyConfig {
 	/**
-	 * The primary use case detected
+	 * Strategy name
 	 */
-	useCase: UseCaseType
+	name: string
 
 	/**
-	 * Whether the user provided explicit input
+	 * Strategy type
 	 */
-	hasUserInput: boolean
+	type: UseCaseType
 
 	/**
-	 * Whether there are compilation errors
+	 * Custom system instructions
 	 */
-	hasErrors: boolean
-
-	/**
-	 * Whether there are warnings
-	 */
-	hasWarnings: boolean
-
-	/**
-	 * Whether text is selected
-	 */
-	hasSelection: boolean
-
-	/**
-	 * Whether the cursor is in a comment
-	 */
-	isInComment: boolean
-
-	/**
-	 * Whether the cursor is on a new/empty line
-	 */
-	isNewLine: boolean
-
-	/**
-	 * Whether the cursor is in the middle of a line
-	 */
-	isInlineEdit: boolean
-
-	/**
-	 * The text of the current line
-	 */
-	cursorLine: string
-
-	/**
-	 * The cursor's character position
-	 */
-	cursorPosition: number
-
-	/**
-	 * The AST node type at the cursor position
-	 */
-	astNodeType?: string
+	customInstructions?: string
 }

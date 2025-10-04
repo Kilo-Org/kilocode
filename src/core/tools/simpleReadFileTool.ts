@@ -204,7 +204,7 @@ export async function simpleReadFileTool(
 			try {
 				const defResult = await parseSourceCodeDefinitionsForFile(fullPath, cline.rooIgnoreController)
 				if (defResult) {
-					let xmlInfo = `<notice>Showing only definitions. Use standard read_file if you need to read actual content</notice>\n`
+					const xmlInfo = `<notice>Showing only definitions. Use standard read_file if you need to read actual content</notice>\n`
 					pushToolResult(
 						`<file><path>${relPath}</path>\n<list_code_definition_names>${defResult}</list_code_definition_names>\n${xmlInfo}</file>`,
 					)

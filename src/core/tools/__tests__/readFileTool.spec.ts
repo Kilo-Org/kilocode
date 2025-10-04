@@ -570,7 +570,7 @@ describe("read_file tool XML output structure", () => {
 		mockedIsBinaryFile.mockResolvedValue(isBinary)
 		mockCline.rooIgnoreController.validateAccess = vi.fn().mockReturnValue(validateAccess)
 
-		let argsContent = `<file><path>${testFilePath}</path></file>`
+		const argsContent = `<file><path>${testFilePath}</path></file>`
 
 		// Create a tool use object
 		const toolUse: ReadFileToolUse = {

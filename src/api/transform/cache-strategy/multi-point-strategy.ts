@@ -43,7 +43,7 @@ export class MultiPointStrategy extends CacheStrategy {
 
 		const placements = this.determineMessageCachePoints(minTokensPerPoint, remainingCachePoints)
 		const messages = this.messagesToContentBlocks(this.config.messages)
-		let cacheResult = this.formatResult(systemBlocks, this.applyCachePoints(messages, placements))
+		const cacheResult = this.formatResult(systemBlocks, this.applyCachePoints(messages, placements))
 
 		// Store the placements for future use (to maintain consistency across consecutive messages)
 		// This needs to be handled by the caller by passing these placements back in the next call

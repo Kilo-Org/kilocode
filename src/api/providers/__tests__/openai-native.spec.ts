@@ -731,7 +731,7 @@ describe("OpenAiNativeHandler", () => {
 			}
 
 			// Verify first request doesn't include previous_response_id
-			let firstCallBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+			const firstCallBody = JSON.parse(mockFetch.mock.calls[0][1].body)
 			expect(firstCallBody.previous_response_id).toBeUndefined()
 
 			// Second request with metadata - should include previous_response_id
@@ -745,7 +745,7 @@ describe("OpenAiNativeHandler", () => {
 			}
 
 			// Verify second request includes the provided previous_response_id
-			let secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
+			const secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
 			expect(secondCallBody.previous_response_id).toBe("resp_456")
 		})
 
@@ -855,7 +855,7 @@ describe("OpenAiNativeHandler", () => {
 			}
 
 			// Verify second request uses the stored response ID from first request
-			let secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
+			const secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
 			expect(secondCallBody.previous_response_id).toBe("resp_789")
 		})
 
@@ -1123,7 +1123,7 @@ describe("OpenAiNativeHandler", () => {
 			}
 
 			// Verify first request sends full conversation in structured format
-			let firstCallBody = JSON.parse(mockFetch.mock.calls[0][1].body)
+			const firstCallBody = JSON.parse(mockFetch.mock.calls[0][1].body)
 			expect(firstCallBody.instructions).toBe(systemPrompt)
 			expect(firstCallBody.input).toEqual([
 				{
@@ -1159,7 +1159,7 @@ describe("OpenAiNativeHandler", () => {
 			}
 
 			// Verify second request only sends the latest user message in structured format
-			let secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
+			const secondCallBody = JSON.parse(mockFetch.mock.calls[1][1].body)
 			expect(secondCallBody.input).toEqual([
 				{
 					role: "user",

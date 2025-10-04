@@ -220,7 +220,7 @@ export async function summarizeConversation(
 
 /* Returns the list of all messages since the last summary message, including the summary. Returns all messages if there is no summary. */
 export function getMessagesSinceLastSummary(messages: ApiMessage[]): ApiMessage[] {
-	let lastSummaryIndexReverse = [...messages].reverse().findIndex((message) => message.isSummary)
+	const lastSummaryIndexReverse = [...messages].reverse().findIndex((message) => message.isSummary)
 
 	if (lastSummaryIndexReverse === -1) {
 		return messages

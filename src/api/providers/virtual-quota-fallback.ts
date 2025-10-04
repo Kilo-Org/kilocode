@@ -15,7 +15,18 @@ import { OpenRouterHandler } from "./openrouter"
 import { UsageTracker } from "../../utils/usage-tracker"
 import { type UsageWindow } from "@roo-code/types"
 
-type VirtualQuotaFallbackProfile = z.infer<typeof virtualQuotaFallbackProfileDataSchema>
+interface VirtualQuotaFallbackProfile {
+	profileName?: string
+	profileId?: string
+	profileLimits?: {
+		tokensPerMinute?: number
+		tokensPerHour?: number
+		tokensPerDay?: number
+		requestsPerMinute?: number
+		requestsPerHour?: number
+		requestsPerDay?: number
+	}
+}
 
 interface HandlerConfig {
 	handler: ApiHandler

@@ -4,7 +4,7 @@ import osName from "os-name"
 import { getShell } from "../../../utils/shell"
 
 export function getSystemInfoSection(cwd: string): string {
-	let details = `====
+	const details = `====
 
 SYSTEM INFORMATION
 

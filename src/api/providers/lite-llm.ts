@@ -111,7 +111,7 @@ export class LiteLLMHandler extends RouterProvider implements SingleCompletionHa
 		}
 
 		// Required by some providers; others default to max tokens allowed
-		let maxTokens: number | undefined = info.maxTokens ?? undefined
+		const maxTokens: number | undefined = info.maxTokens ?? undefined
 
 		// Check if this is a GPT-5 model that requires max_completion_tokens instead of max_tokens
 		const isGPT5Model = this.isGpt5(modelId)

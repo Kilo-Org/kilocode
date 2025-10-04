@@ -15,7 +15,7 @@ export function insertGroups(original: string[], insertGroups: InsertGroup[]): s
 	const appendGroups = insertGroups.filter((group) => group.index === -1)
 	const normalGroups = insertGroups.filter((group) => group.index !== -1).sort((a, b) => a.index - b.index)
 
-	let result: string[] = []
+	const result: string[] = []
 	let lastIndex = 0
 
 	normalGroups.forEach(({ index, elements }) => {

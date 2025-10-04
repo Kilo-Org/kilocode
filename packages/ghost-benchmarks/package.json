@@ -1,0 +1,62 @@
+{
+	"name": "@kilocode/ghost-benchmarks",
+	"version": "1.0.0",
+	"description": "Benchmarking system for Ghost autocomplete functionality",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"ghost-benchmark": "./dist/cli/benchmark-cli.cjs"
+	},
+	"scripts": {
+		"build": "node esbuild.config.js",
+		"build:tsc": "tsc",
+		"dev": "node esbuild.config.js --watch",
+		"test": "vitest",
+		"test:watch": "vitest --watch",
+		"benchmark": "dotenvx run node dist/benchmark-cli.cjs",
+		"benchmark:list": "dotenvx run node dist/benchmark-cli.cjs list",
+		"benchmark:matrix": "dotenvx run node dist/benchmark-cli.cjs matrix",
+		"lint": "eslint src/**/*.ts",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"chalk": "^5.3.0",
+		"commander": "^11.1.0",
+		"openai": "^5.12.2",
+		"ora": "^8.0.1",
+		"@roo-code/telemetry": "workspace:^",
+		"@roo-code/types": "workspace:^",
+		"@roo-code/ipc": "workspace:^",
+		"@roo-code/cloud": "workspace:^",
+		"zod": "^3.23.8",
+		"handlebars": "^4.7.8",
+		"node-cache": "^5.1.2",
+		"@anthropic-ai/sdk": "^0.51.0",
+		"axios": "^1.12.0",
+		"diff": "^5.2.0",
+		"fastest-levenshtein": "^1.0.16",
+		"lru-cache": "^11.1.0",
+		"uuid": "^11.1.0",
+		"lodash.debounce": "^4.0.8",
+		"ignore": "^7.0.3",
+		"yaml": "^2.8.0",
+		"json5": "^2.2.3",
+		"tiktoken": "^1.0.21"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@types/node": "^20.0.0",
+		"@dotenvx/dotenvx": "^1.34.0",
+		"esbuild": "^0.25.0",
+		"eslint": "^9.27.0",
+		"typescript": "^5.8.3",
+		"vitest": "^3.2.4"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	}
+}

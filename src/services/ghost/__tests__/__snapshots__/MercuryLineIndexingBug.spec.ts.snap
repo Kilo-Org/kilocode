@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Mercury Line Indexing Bug - Console Log Addition > should create snapshot for regression testing 1`] = `
+{
+  "groupCount": 1,
+  "groups": [
+    {
+      "index": 0,
+      "isInlineSuitable": true,
+      "operations": [
+        {
+          "content": "console.log(cool);",
+          "line": 1,
+          "newLine": 1,
+          "oldLine": 1,
+          "type": "+",
+        },
+      ],
+      "signature": "+@1",
+      "type": "+",
+    },
+  ],
+  "selectedGroup": 0,
+}
+`;

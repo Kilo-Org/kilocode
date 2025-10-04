@@ -1,0 +1,11 @@
+{
+	"name": "object-method-completion",
+	"description": "Complete object method call with chaining",
+	"category": "method-completion",
+	"expectedPatterns": ["filter\\(", "\\.filter\\(", "user\\s*=>", "age\\s*>"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

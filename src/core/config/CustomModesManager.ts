@@ -776,7 +776,7 @@ export class CustomModesManager {
 				? path.join(baseDir, `rules-${slug}`)
 				: path.join(getProjectRooDirectoryForCwd(baseDir) /* kilocode_change */, `rules-${slug}`)
 
-			let rulesFiles: RuleFile[] = []
+			const rulesFiles: RuleFile[] = []
 			try {
 				const stats = await fs.stat(modeRulesDir)
 				if (stats.isDirectory()) {

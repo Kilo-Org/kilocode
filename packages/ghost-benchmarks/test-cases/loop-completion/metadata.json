@@ -1,0 +1,11 @@
+{
+	"name": "loop-completion",
+	"description": "Complete for loop with array iteration",
+	"category": "loop-completion",
+	"expectedPatterns": ["for\\s*\\(", "let\\s+i", "i\\s*<\\s*items\\.length", "i\\+\\+"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

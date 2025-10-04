@@ -79,9 +79,9 @@ export async function applyDiffTool(
 	const legacyDiffContent: string | undefined = block.params.diff
 	const legacyStartLineStr: string | undefined = block.params.start_line
 
-	let operationsMap: Record<string, DiffOperation> = {}
+	const operationsMap: Record<string, DiffOperation> = {}
 	let usingLegacyParams = false
-	let filteredOperationErrors: string[] = []
+	const filteredOperationErrors: string[] = []
 
 	// Handle partial message first
 	if (block.partial) {

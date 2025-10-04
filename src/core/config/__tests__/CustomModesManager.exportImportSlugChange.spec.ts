@@ -901,7 +901,7 @@ describe("CustomModesManager", () => {
 				})
 
 				let roomodesContent: any = null
-				let writtenFiles: Record<string, string> = {}
+				const writtenFiles: Record<string, string> = {}
 				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
 					if (path === mockSettingsPath) {
 						return yaml.stringify({ customModes: [] })
@@ -1064,7 +1064,7 @@ describe("CustomModesManager", () => {
 					],
 				})
 
-				let writtenFiles: string[] = []
+				const writtenFiles: string[] = []
 				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
 					if (path === mockSettingsPath) {
 						return yaml.stringify({ customModes: [] })
@@ -1200,7 +1200,7 @@ describe("CustomModesManager", () => {
 				})
 
 				let roomodesContent: any = null
-				let writtenFiles: Record<string, string> = {}
+				const writtenFiles: Record<string, string> = {}
 				;(fs.readFile as Mock).mockImplementation(async (path: string) => {
 					if (path === mockSettingsPath) {
 						return yaml.stringify({ customModes: [] })

@@ -1,105 +1,110 @@
 import { GhostServiceSettings } from "@roo-code/types"
-import { ApiHandler, buildApiHandler } from "../../api"
-import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
-import { OpenRouterHandler } from "../../api/providers"
 import { ApiStreamChunk } from "../../api/transform/stream"
-
-const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
-const MISTRAL_DEFAULT_MODEL = "codestral-latest"
-
-const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
+import { GhostProfile } from "./profiles/GhostProfile"
+import { MercuryGhostSetup } from "./profiles/MercuryGhostSetup"
 
 export class GhostModel {
-	private apiHandler: ApiHandler | null = null
-	private apiConfigId: string | null = null
+	private currentProfile: GhostProfile | null = null
+	private mercurySetup: MercuryGhostSetup
 	public loaded = false
 
-	constructor(apiHandler: ApiHandler | null = null) {
-		if (apiHandler) {
-			this.apiHandler = apiHandler
-			this.loaded = true
-		}
-	}
-
-	public getApiConfigId() {
-		return this.apiConfigId
-	}
-
-	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
-		let enableCustomProvider = settings?.enableCustomProvider || false
-
-		if (!enableCustomProvider) {
-			const profiles = await providerSettingsManager.listConfig()
-			const validProfiles = profiles
-				.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
-				.sort((a, b) => {
-					if (!a.apiProvider) {
-						return 1 // Place undefined providers at the end
-					}
-					if (!b.apiProvider) {
-						return -1 // Place undefined providers at the beginning
-					}
-					return (
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-					)
-				})
-
-			const selectedProfile = validProfiles[0] || null
-			if (selectedProfile) {
-				this.apiConfigId = selectedProfile.id
-				const profile = await providerSettingsManager.getProfile({
-					id: this.apiConfigId,
-				})
-				const profileProvider = profile.apiProvider
-				let modelDefinition = {}
-				if (profileProvider === "kilocode") {
-					modelDefinition = {
-						kilocodeModel: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "openrouter") {
-					modelDefinition = {
-						openRouterModelId: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "mistral") {
-					modelDefinition = {
-						apiModelId: MISTRAL_DEFAULT_MODEL,
-					}
-				}
-				this.apiHandler = buildApiHandler({
-					...profile,
-					...modelDefinition,
-				})
-			} else {
-				enableCustomProvider = true
-			}
-		}
-
-		if (enableCustomProvider) {
-			this.apiConfigId = settings?.apiConfigId || null
-			const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
-			const profileQuery = this.apiConfigId
-				? {
-						id: this.apiConfigId,
-					}
-				: {
-						name: defaultApiConfigId,
-					}
-
-			const profile = await providerSettingsManager.getProfile(profileQuery)
-			this.apiHandler = buildApiHandler(profile)
-		}
-
-		if (this.apiHandler instanceof OpenRouterHandler) {
-			await this.apiHandler.fetchModel()
-		}
-
-		this.loaded = true
+	constructor(providerSettingsManager: ProviderSettingsManager) {
+		this.mercurySetup = new MercuryGhostSetup(providerSettingsManager)
 	}
 
 	/**
-	 * Generate response with streaming callback support
+	 * Get the current Ghost profile
+	 */
+	public getCurrentProfile(): GhostProfile | null {
+		return this.currentProfile
+	}
+
+	/**
+	 * Get the profile manager
+	 */
+	public getProfileManager() {
+		return this.mercurySetup.getProfileManager()
+	}
+
+	/**
+	 * Check if a valid profile is loaded
+	 */
+	public hasValidProfile(): boolean {
+		return this.currentProfile !== null && this.currentProfile.isInitialized()
+	}
+
+	/**
+	 * Load Ghost configuration
+	 * This is the main integration point - automatically sets up Mercury Coder
+	 * when enableCustomProvider is false
+	 */
+	public async reload(settings: GhostServiceSettings): Promise<void> {
+		try {
+			let selectedProfile: GhostProfile | null = null
+
+			// Check if user has custom provider enabled
+			const enableCustomProvider = settings?.enableCustomProvider || false
+
+			if (!enableCustomProvider) {
+				// Automatically set up Mercury Coder profile
+				console.log("enableCustomProvider is false - setting up Mercury Coder Ghost profile")
+				selectedProfile = (await this.mercurySetup.setupDefaultMercuryProfile(settings)) || null
+			} else {
+				// User has custom provider - try to use existing profiles or create defaults
+				console.log("enableCustomProvider is true - using existing profile system")
+				const profileManager = this.mercurySetup.getProfileManager()
+				const existingProfiles = profileManager.getAllProfiles()
+
+				if (existingProfiles.length === 0) {
+					await profileManager.createDefaultProfiles()
+				}
+
+				selectedProfile = profileManager.getDefaultProfile() || null
+			}
+
+			// Final validation and setup
+			if (selectedProfile && selectedProfile.isInitialized()) {
+				this.currentProfile = selectedProfile
+				this.loaded = true
+				console.log(
+					`Successfully loaded Ghost profile: ${selectedProfile.name} with strategy: ${selectedProfile.getPromptStrategy().name}`,
+				)
+			} else {
+				console.error("No valid Ghost profiles available")
+				this.currentProfile = null
+				this.loaded = false
+			}
+		} catch (error) {
+			console.error("Failed to load Ghost profiles:", error)
+			this.currentProfile = null
+			this.loaded = false
+		}
+	}
+
+	/**
+	 * Switch to a different Ghost profile
+	 */
+	public async switchProfile(profileId: string): Promise<boolean> {
+		try {
+			const profileManager = this.mercurySetup.getProfileManager()
+			const profile = profileManager.getProfile(profileId)
+			if (!profile || !profile.isInitialized()) {
+				console.error(`Invalid profile: ${profileId}`)
+				return false
+			}
+
+			this.currentProfile = profile
+			console.log(`Switched to Ghost profile: ${profile.name}`)
+			return true
+		} catch (error) {
+			console.error(`Failed to switch to profile ${profileId}:`, error)
+			return false
+		}
+	}
+
+	/**
+	 * Generate response with streaming callback support using current profile
 	 */
 	public async generateResponse(
 		systemPrompt: string,
@@ -112,14 +117,13 @@ export class GhostModel {
 		cacheWriteTokens: number
 		cacheReadTokens: number
 	}> {
-		if (!this.apiHandler) {
-			console.error("API handler is not initialized")
-			throw new Error("API handler is not initialized. Please check your configuration.")
+		if (!this.currentProfile || !this.currentProfile.isInitialized()) {
+			throw new Error("No Ghost profile loaded. Please check your configuration.")
 		}
 
-		console.log("USED MODEL", this.apiHandler.getModel())
+		const handler = this.currentProfile.getApiHandler()
 
-		const stream = this.apiHandler.createMessage(systemPrompt, [
+		const stream = handler.createMessage(systemPrompt, [
 			{ role: "user", content: [{ type: "text", text: userPrompt }] },
 		])
 
@@ -158,14 +162,48 @@ export class GhostModel {
 	}
 
 	public getModelName(): string | null {
-		if (!this.apiHandler) {
+		if (!this.currentProfile?.isInitialized()) {
 			return null
 		}
 		// Extract model name from API handler
-		return this.apiHandler.getModel().id ?? "unknown"
+		return this.currentProfile.getApiHandler().getModel().id ?? "unknown"
 	}
 
 	public hasValidCredentials(): boolean {
-		return this.apiHandler !== null && this.loaded
+		return this.hasValidProfile()
+	}
+
+	/**
+	 * Generate complete response (non-streaming) using current profile
+	 */
+	public async generateCompleteResponse(
+		systemPrompt: string,
+		userPrompt: string,
+	): Promise<{
+		content: string
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> {
+		let completeContent = ""
+
+		const result = await this.generateResponse(systemPrompt, userPrompt, (chunk) => {
+			// Collect content chunks
+			if (chunk.type === "text") {
+				completeContent += chunk.text || ""
+			}
+			// Usage info will be captured in the parent method
+		})
+
+		return {
+			content: completeContent,
+			cost: result.cost,
+			inputTokens: result.inputTokens,
+			outputTokens: result.outputTokens,
+			cacheReadTokens: result.cacheReadTokens,
+			cacheWriteTokens: result.cacheWriteTokens,
+		}
 	}
 }

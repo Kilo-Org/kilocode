@@ -28,7 +28,7 @@ export async function askFollowupQuestionTool(
 
 			type Suggest = { answer: string; mode?: string }
 
-			let follow_up_json = {
+			const follow_up_json = {
 				question,
 				suggest: [] as Suggest[],
 			}

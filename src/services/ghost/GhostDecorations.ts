@@ -58,6 +58,13 @@ export class GhostDecorations {
 		const from = Math.min(...lines)
 		const to = Math.max(...lines)
 
+		// Safety check: ensure line numbers are within document bounds
+		const maxLine = editor.document.lineCount - 1
+		if (from < 0 || from > maxLine || to < 0 || to > maxLine) {
+			console.warn(`Invalid line numbers for delete decoration: from=${from}, to=${to}, maxLine=${maxLine}`)
+			return
+		}
+
 		const start = editor.document.lineAt(from).range.start
 		const end = editor.document.lineAt(to).range.end
 		const range = new vscode.Range(start, end)

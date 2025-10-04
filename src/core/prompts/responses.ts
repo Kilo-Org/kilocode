@@ -56,7 +56,7 @@ Otherwise, if you have not completed the task and do not need additional informa
 			`2. Or break your content into smaller chunks - first use write_to_file with the initial chunk\n` +
 			`3. Then use insert_content to append additional chunks\n`
 
-		let existingFileApproaches = [
+		const existingFileApproaches = [
 			`1. Try again with the line_count parameter in your response if you forgot to include it`,
 		]
 

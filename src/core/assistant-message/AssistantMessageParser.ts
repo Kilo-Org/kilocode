@@ -193,7 +193,7 @@ export class AssistantMessageParser {
 					}
 
 					// Immediately push new tool_use block as partial
-					let idx = this.contentBlocks.findIndex((block) => block === this.currentToolUse)
+					const idx = this.contentBlocks.findIndex((block) => block === this.currentToolUse)
 					if (idx === -1) {
 						this.contentBlocks.push(this.currentToolUse)
 					}

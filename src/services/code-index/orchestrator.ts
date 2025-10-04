@@ -144,7 +144,7 @@ export class CodeIndexOrchestrator {
 
 			let cumulativeBlocksIndexed = 0
 			let cumulativeBlocksFoundSoFar = 0
-			let batchErrors: Error[] = []
+			const batchErrors: Error[] = []
 
 			const handleFileParsed = (fileBlockCount: number) => {
 				if (this._cancelRequested) return // kilocode_change

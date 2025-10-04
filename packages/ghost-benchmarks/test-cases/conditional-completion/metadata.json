@@ -1,0 +1,11 @@
+{
+	"name": "conditional-completion",
+	"description": "Complete if statement condition and body",
+	"category": "conditional-completion",
+	"expectedPatterns": ["if\\s*\\(", "user\\.age", ">=\\s*18", "\\{[\\s\\S]*\\}"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

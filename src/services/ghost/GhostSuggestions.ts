@@ -1,7 +1,10 @@
 import * as vscode from "vscode"
 import { GhostSuggestionEditOperation, GhostSuggestionEditOperationsOffset } from "./types"
+import { GhostSuggestionOutcome, PromptMetadata } from "./types/GhostSuggestionOutcome"
+import { DiffGroup, groupDiffLines } from "./utils/diffHelpers"
+import { DiffLine } from "./utils/myers"
 
-class GhostSuggestionFile {
+export class GhostSuggestionFile {
 	public fileUri: vscode.Uri
 	private selectedGroup: number | null = null
 	private groups: Array<GhostSuggestionEditOperation[]> = []
@@ -36,9 +39,19 @@ class GhostSuggestionFile {
 
 			for (const existingOp of group) {
 				// Check if we can form a modification group
-				const canFormModificationGroup =
+				// Original logic: same newLine (replacement on same line)
+				const sameLineModification =
 					(operation.type === "+" && existingOp.type === "-" && existingOp.newLine === operation.newLine) ||
 					(operation.type === "-" && existingOp.type === "+" && operation.newLine === existingOp.newLine)
+
+				// Enhanced logic: delete at line N, add at line N+1 (typical Mercury pattern)
+				const adjacentLineModification =
+					(operation.type === "+" &&
+						existingOp.type === "-" &&
+						existingOp.newLine + 1 === operation.newLine) ||
+					(operation.type === "-" && existingOp.type === "+" && operation.newLine + 1 === existingOp.newLine)
+
+				const canFormModificationGroup = sameLineModification || adjacentLineModification
 
 				if (canFormModificationGroup) {
 					// Remove the existing operation from its current group
@@ -48,6 +61,7 @@ class GhostSuggestionFile {
 					const deleteOp = operation.type === "-" ? operation : existingOp
 					const addOp = operation.type === "+" ? operation : existingOp
 					this.groups.push([deleteOp, addOp])
+
 					return this.groups.length - 1
 				}
 			}
@@ -59,10 +73,21 @@ class GhostSuggestionFile {
 		for (let i = 0; i < this.groups.length; i++) {
 			const group = this.groups[i]
 
-			// Skip modification groups (groups with both + and -)
+			// Check modification groups for consecutive ADD operations
 			const hasDelete = group.some((op) => op.type === "-")
 			const hasAdd = group.some((op) => op.type === "+")
-			if (hasDelete && hasAdd) {
+
+			if (hasDelete && hasAdd && operation.type === "+") {
+				// For modification groups, allow consecutive ADD operations to join
+				const addOperations = group.filter((op) => op.type === "+")
+				const maxAddLine = Math.max(...addOperations.map((op) => op.line))
+
+				if (operation.line === maxAddLine + 1) {
+					return i
+				}
+				continue
+			} else if (hasDelete && hasAdd) {
+				// Skip modification groups for DELETE operations
 				continue
 			}
 
@@ -105,10 +130,16 @@ class GhostSuggestionFile {
 	}
 
 	public getGroupType = (group: GhostSuggestionEditOperation[]) => {
-		const types = group.flatMap((x) => x.type)
-		if (types.length == 2) {
+		const types = group.map((x) => x.type)
+		const hasDelete = types.includes("-")
+		const hasAdd = types.includes("+")
+
+		// Mixed group (both deletes and adds)
+		if (hasDelete && hasAdd) {
 			return "/"
 		}
+
+		// Pure delete or add group
 		return types[0]
 	}
 
@@ -162,6 +193,8 @@ class GhostSuggestionFile {
 				group.sort((a, b) => a.line - b.line)
 			})
 		this.selectedGroup = this.groups.length > 0 ? 0 : null
+
+		// Groups sorted and ready
 	}
 
 	private computeOperationsOffset(group: GhostSuggestionEditOperation[]): GhostSuggestionEditOperationsOffset {
@@ -220,8 +253,6 @@ class GhostSuggestionFile {
 			return
 		}
 
-		console.log("GROUPS", this.groups)
-
 		let bestGroup: { groupIndex: number; distance: number } | null = null
 		const selectionStartLine = selection.start.line
 		const selectionEndLine = selection.end.line
@@ -253,13 +284,18 @@ class GhostSuggestionFile {
 		// Set the closest group as selected
 		if (bestGroup !== null) {
 			this.selectedGroup = bestGroup.groupIndex
-			console.log("BEST GROUP", this.groups[bestGroup.groupIndex])
 		}
 	}
 }
 
 export class GhostSuggestionsState {
 	private files = new Map<string, GhostSuggestionFile>()
+
+	// Ghost suggestion outcome support: Store metadata
+	private ghostSuggestionOutcome: GhostSuggestionOutcome | null = null
+	private promptMetadata: PromptMetadata | null = null
+	private cursorPosition: { line: number; character: number } | null = null
+	private finalCursorPosition: { line: number; character: number } | null = null
 
 	constructor() {}
 
@@ -277,6 +313,11 @@ export class GhostSuggestionsState {
 
 	public clear() {
 		this.files.clear()
+		// Clear ghost suggestion metadata as well
+		this.ghostSuggestionOutcome = null
+		this.promptMetadata = null
+		this.cursorPosition = null
+		this.finalCursorPosition = null
 	}
 
 	public hasSuggestions(): boolean {
@@ -296,5 +337,291 @@ export class GhostSuggestionsState {
 		for (const file of this.files.values()) {
 			file.sortGroups()
 		}
+	}
+
+	// Ghost Support: Create suggestions from GhostSuggestionOutcome and DiffLines
+	public static fromGhostSuggestionOutcome(
+		outcome: GhostSuggestionOutcome,
+		document: vscode.TextDocument,
+	): GhostSuggestionsState {
+		const suggestions = new GhostSuggestionsState()
+		const suggestionFile = suggestions.addFile(document.uri)
+
+		// Store ghost suggestion metadata
+		suggestions.ghostSuggestionOutcome = outcome
+		suggestions.cursorPosition = outcome.cursorPosition
+		suggestions.finalCursorPosition = outcome.finalCursorPosition
+
+		// Group diff lines using Continue's logic
+		const diffGroups = groupDiffLines(outcome.diffLines, outcome.editableRegionStartLine)
+
+		// Convert Continue's DiffGroups to our GhostSuggestionEditOperations
+		for (const group of diffGroups) {
+			for (const diffLine of group.lines) {
+				if (diffLine.type !== "same") {
+					suggestionFile!.addOperation({
+						type: diffLine.type === "new" ? "+" : "-",
+						line: group.startLine,
+						content: diffLine.line,
+						oldLine: group.startLine,
+						newLine: group.startLine,
+					})
+				}
+			}
+		}
+
+		suggestions.sortGroups()
+		return suggestions
+	}
+
+	// Ghost Support: Create suggestions from DiffLines array (direct conversion)
+	public static fromDiffLines(
+		diffLines: DiffLine[],
+		document: vscode.TextDocument,
+		editableRegionStartLine: number = 0,
+	): GhostSuggestionsState {
+		const suggestions = new GhostSuggestionsState()
+		const suggestionFile = suggestions.addFile(document.uri)
+
+		// Convert DiffLines to our format - track line numbers manually
+		let currentLineNumber = editableRegionStartLine
+		for (const diffLine of diffLines) {
+			if (diffLine.type !== "same") {
+				suggestionFile!.addOperation({
+					type: diffLine.type === "new" ? "+" : "-",
+					line: currentLineNumber,
+					content: diffLine.line,
+					oldLine: currentLineNumber,
+					newLine: currentLineNumber,
+				})
+			}
+			// Only increment line number for old/same lines (lines that exist in original)
+			if (diffLine.type !== "new") {
+				currentLineNumber++
+			}
+		}
+
+		suggestions.sortGroups()
+		return suggestions
+	}
+
+	// Ghost Support: Set metadata from suggestion outcomes
+	public setGhostSuggestionMetadata(outcome: GhostSuggestionOutcome | null, metadata: PromptMetadata | null = null) {
+		this.ghostSuggestionOutcome = outcome
+		this.promptMetadata = metadata
+		if (outcome) {
+			this.cursorPosition = outcome.cursorPosition
+			this.finalCursorPosition = outcome.finalCursorPosition
+		}
+	}
+
+	// Ghost Support: Get stored ghost suggestion metadata
+	public getGhostSuggestionOutcome(): GhostSuggestionOutcome | null {
+		return this.ghostSuggestionOutcome
+	}
+
+	public getPromptMetadata(): PromptMetadata | null {
+		return this.promptMetadata
+	}
+
+	public getCursorPosition(): { line: number; character: number } | null {
+		return this.cursorPosition
+	}
+
+	public getFinalCursorPosition(): { line: number; character: number } | null {
+		return this.finalCursorPosition
+	}
+
+	/**
+	 * Get all files with suggestions for external access (e.g., inline completion provider)
+	 */
+	public getFiles(): GhostSuggestionFile[] {
+		return Array.from(this.files.values())
+	}
+
+	/**
+	 * Get the primary file (first file with suggestions) - useful for single-file scenarios
+	 */
+	public getPrimaryFile(): GhostSuggestionFile | null {
+		const files = this.getFiles()
+		return files.length > 0 ? files[0] : null
+	}
+
+	/**
+	 * Apply all suggestions to content (for string-based application)
+	 * Used by StringGhostApplicator for tests/benchmarks
+	 *
+	 * NOTE: This is for string-based testing only. Production uses
+	 * VSCodeGhostApplicator which calls VSCode WorkspaceEdit APIs.
+	 */
+	public applyToContent(originalContent: string, fileUri: string): string {
+		return this.applyAllGroups(originalContent, fileUri)
+	}
+
+	/**
+	 * Apply only the first group (for inline completions)
+	 */
+	public applyFirstGroup(originalContent: string, fileUri: string): string {
+		const file = this.getFileByUriString(fileUri)
+		if (!file) return originalContent
+
+		const groups = file.getGroupsOperations()
+		if (groups.length === 0) return originalContent
+
+		return this.applyOperationsInGroup(originalContent, groups[0])
+	}
+
+	/**
+	 * Apply all groups (for full autocomplete)
+	 */
+	public applyAllGroups(originalContent: string, fileUri: string): string {
+		const file = this.getFileByUriString(fileUri)
+		if (!file) return originalContent
+
+		const allOperations = file.getAllOperations()
+		if (allOperations.length === 0) return originalContent
+
+		// For multiple groups, use the traditional reverse-order approach
+		return this.applyOperations(originalContent, allOperations)
+	}
+
+	/**
+	 * Apply operations within a single group (forward order for consecutive operations)
+	 */
+	private applyOperationsInGroup(originalContent: string, operations: GhostSuggestionEditOperation[]): string {
+		if (operations.length === 0) {
+			return originalContent
+		}
+
+		// Handle empty content case
+		if (originalContent === "") {
+			const addOps = operations.filter((op) => op.type === "+" && op.line === 0)
+			return addOps.map((op) => op.content).join("\n")
+		}
+
+		const lines = originalContent.split("\n")
+
+		// For operations within the same group, apply in forward order with line offset tracking
+		const sortedOps = [...operations].sort((a, b) => a.line - b.line)
+		const lineOffset = 0
+
+		// Group consecutive operations and apply them as blocks
+		const operationBlocks: GhostSuggestionEditOperation[][] = []
+		let currentBlock: GhostSuggestionEditOperation[] = []
+
+		for (let i = 0; i < sortedOps.length; i++) {
+			const op = sortedOps[i]
+
+			if (currentBlock.length === 0) {
+				// Start new block
+				currentBlock = [op]
+			} else {
+				const lastOp = currentBlock[currentBlock.length - 1]
+				if (op.line === lastOp.line + 1 && op.type === lastOp.type) {
+					// Consecutive operation of same type - add to current block
+					currentBlock.push(op)
+				} else {
+					// Non-consecutive or different type - finish current block and start new one
+					operationBlocks.push(currentBlock)
+					currentBlock = [op]
+				}
+			}
+		}
+
+		// Add the last block
+		if (currentBlock.length > 0) {
+			operationBlocks.push(currentBlock)
+		}
+
+		// Apply blocks in reverse order to maintain line numbers
+		const reversedBlocks = [...operationBlocks].reverse()
+
+		for (const block of reversedBlocks) {
+			const firstOp = block[0]
+
+			if (firstOp.type === "+") {
+				// Insert all operations in the block consecutively at the same position
+				const insertionPoint = Math.min(firstOp.line, lines.length)
+				const contentToInsert = block.map((op) => op.content)
+
+				lines.splice(insertionPoint, 0, ...contentToInsert)
+			} else if (firstOp.type === "-") {
+				// Delete operations - apply in reverse order within the block
+				const reversedBlock = [...block].reverse()
+				for (const op of reversedBlock) {
+					if (op.line < lines.length) {
+						lines.splice(op.line, 1)
+					}
+				}
+			}
+		}
+
+		console.log(`DEBUG: Final result:`, lines.join("\\n"))
+		return lines.join("\n")
+	}
+
+	/**
+	 * Core application logic (private helper)
+	 * NOTE: For string-based application only (tests/benchmarks)
+	 * Production uses VSCode WorkspaceEdit APIs via VSCodeGhostApplicator
+	 */
+	private applyOperations(originalContent: string, operations: GhostSuggestionEditOperation[]): string {
+		if (operations.length === 0) {
+			return originalContent
+		}
+
+		// Handle empty content case
+		if (originalContent === "") {
+			const addOps = operations.filter((op) => op.type === "+" && op.line === 0)
+			return addOps.map((op) => op.content).join("\n")
+		}
+
+		const lines = originalContent.split("\n")
+
+		// Sort in reverse order to maintain line numbers during modification
+		const sortedOps = [...operations].sort((a, b) => b.line - a.line)
+
+		for (const op of sortedOps) {
+			if (op.line < 0) {
+				console.warn(`Invalid negative line number ${op.line} for operation ${op.type}`)
+				continue
+			}
+
+			if (op.type === "+") {
+				if (op.line < lines.length) {
+					lines.splice(op.line, 0, op.content)
+				} else if (op.line <= lines.length + 1) {
+					lines.push(op.content)
+				} else {
+					console.warn(`Invalid line number ${op.line} for insertion (max: ${lines.length + 1})`)
+				}
+			} else if (op.type === "-") {
+				if (op.line < lines.length) {
+					lines.splice(op.line, 1)
+				} else {
+					console.warn(`Invalid line number ${op.line} for deletion (max: ${lines.length - 1})`)
+				}
+			}
+		}
+
+		return lines.join("\n")
+	}
+
+	/**
+	 * Helper to get file by URI string (platform-independent)
+	 * Handles both vscode.Uri.toString() and plain string URIs
+	 */
+	private getFileByUriString(uriString: string): GhostSuggestionFile | null {
+		// Direct lookup by string key
+		const file = this.files.get(uriString)
+		if (file) return file
+
+		// Fallback: try matching against file.fileUri.fsPath for compatibility
+		for (const file of this.files.values()) {
+			if (file.fileUri.fsPath === uriString) {
+				return file
+			}
+		}
+		return null
 	}
 }

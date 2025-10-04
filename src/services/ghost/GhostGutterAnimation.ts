@@ -38,7 +38,10 @@ export class GhostGutterAnimation {
 	private getPosition(editor: vscode.TextEditor): vscode.Range {
 		const position = editor.selection.active
 		const document = editor.document
-		const lineEndPosition = new vscode.Position(position.line, document.lineAt(position.line).text.length)
+
+		// Ensure the line number is valid to prevent "Illegal value for `line`" error
+		const validLine = Math.max(0, Math.min(position.line, document.lineCount - 1))
+		const lineEndPosition = new vscode.Position(validLine, document.lineAt(validLine).text.length)
 		return new vscode.Range(lineEndPosition, lineEndPosition)
 	}
 
