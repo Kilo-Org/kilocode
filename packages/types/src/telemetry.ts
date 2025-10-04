@@ -89,6 +89,12 @@ export enum TelemetryEventName {
 	CONSECUTIVE_MISTAKE_ERROR = "Consecutive Mistake Error",
 	CODE_INDEX_ERROR = "Code Index Error",
 	TELEMETRY_SETTINGS_CHANGED = "Telemetry Settings Changed",
+
+	// kilocode_change start: Grok tool call improvements
+	TOOL_VALIDATION_FAILED = "Tool Validation Failed",
+	TOOL_SUCCESS = "Tool Success",
+	FAST_APPLY_ERROR = "Fast Apply Error",
+	// kilocode_change end
 }
 
 /**
