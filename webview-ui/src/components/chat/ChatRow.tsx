@@ -145,7 +145,7 @@ export const ChatRowContent = ({
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint } = useExtensionState()
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint, showTimestamps } = useExtensionState()
 
 	// Memoized callback to prevent re-renders caused by inline arrow functions.
 	const handleToggleExpand = useCallback(() => {
@@ -1042,7 +1042,22 @@ export const ChatRowContent = ({
 								onClick={handleToggleExpand}>
 								<div style={{ display: "flex", alignItems: "center", gap: "10px", flexGrow: 1 }}>
 									{icon}
-									{title}
+									<div style={{ display: "flex", alignItems: "center", gap: "8px", flexGrow: 1 }}>
+										{title}
+										{showTimestamps && (
+											<span
+												style={{
+													fontSize: "11px",
+													color: "var(--vscode-descriptionForeground)",
+													fontWeight: "normal",
+												}}>
+												{new Date(message.ts).toLocaleTimeString([], {
+													hour: "2-digit",
+													minute: "2-digit",
+												})}
+											</span>
+										)}
+									</div>
 								</div>
 								<div
 									className="text-xs text-vscode-dropdown-foreground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
@@ -1149,7 +1164,22 @@ export const ChatRowContent = ({
 						<>
 							<div style={headerStyle}>
 								{icon}
-								{title}
+								<div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+									{title}
+									{showTimestamps && (
+										<span
+											style={{
+												fontSize: "11px",
+												color: "var(--vscode-descriptionForeground)",
+												fontWeight: "normal",
+											}}>
+											{new Date(message.ts).toLocaleTimeString([], {
+												hour: "2-digit",
+												minute: "2-digit",
+											})}
+										</span>
+									)}
+								</div>
 							</div>
 							<div className="border-l border-green-600/30 ml-2 pl-4 pb-1">
 								<Markdown markdown={message.text} />
