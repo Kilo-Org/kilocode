@@ -369,6 +369,7 @@ export interface WebviewMessage {
 			| "vercel-ai-gateway"
 		codebaseIndexEmbedderBaseUrl?: string
 		codebaseIndexEmbedderModelId: string
+		codebaseIndexEmbedderTimeoutMS?: number
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 		codebaseIndexOpenAiCompatibleBaseUrl?: string
 		codebaseIndexSearchMaxResults?: number
