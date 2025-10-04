@@ -109,6 +109,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
 			taskHistoryVersion, // kilocode_change
+			ghostServiceSettings,
 			clineMessages,
 		} = useExtensionState()
 
@@ -122,6 +123,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		}, [listApiConfigMeta, currentApiConfigName])
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
+		const sendMessageOnEnter = ghostServiceSettings?.sendMessageOnEnter !== false
 		const [showDropdown, setShowDropdown] = useState(false)
 		const [fileSearchResults, setFileSearchResults] = useState<SearchResult[]>([])
 
@@ -591,7 +593,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return
 				}
 
-				if (event.key === "Enter" && !event.shiftKey && !isComposing) {
+				const shouldSendMessage =
+					!isComposing &&
+					event.key === "Enter" &&
+					((sendMessageOnEnter && !event.shiftKey) || (!sendMessageOnEnter && event.shiftKey))
+
+				if (shouldSendMessage) {
 					event.preventDefault()
 
 					resetHistoryNavigation()
@@ -665,6 +672,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				queryItems,
 				allModes,
 				fileSearchResults,
+				sendMessageOnEnter,
 				handleHistoryNavigation,
 				resetHistoryNavigation,
 			],

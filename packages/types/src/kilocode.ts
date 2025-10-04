@@ -9,6 +9,7 @@ export const ghostServiceSettingsSchema = z
 		enableCustomProvider: z.boolean().optional(),
 		apiConfigId: z.string().optional(),
 		showGutterAnimation: z.boolean().optional(),
+		sendMessageOnEnter: z.boolean().optional(),
 	})
 	.optional()
 
