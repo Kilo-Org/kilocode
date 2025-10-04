@@ -55,6 +55,7 @@ const sidebars: SidebarsConfig = {
 								"providers/bedrock",
 								"providers/chutes-ai",
 								"providers/claude-code",
+								"providers/cortecs",
 								"providers/deepseek",
 								"providers/fireworks",
 								"providers/vertex",

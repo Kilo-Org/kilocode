@@ -85,6 +85,8 @@ export class ProfileValidator {
 				return profile.openRouterModelId
 			case "glama":
 				return profile.glamaModelId
+			case "cortecs":
+				return profile.cortecsModelId
 			case "ollama":
 				return profile.ollamaModelId
 			case "requesty":

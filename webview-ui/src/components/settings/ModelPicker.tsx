@@ -32,6 +32,7 @@ import { KiloModelInfoView } from "../kilocode/settings/KiloModelInfoView"
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
 	| "glamaModelId"
+	| "cortecsModelId"
 	| "openRouterModelId"
 	| "unboundModelId"
 	| "requestyModelId"

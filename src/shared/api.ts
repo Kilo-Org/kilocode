@@ -161,6 +161,7 @@ const dynamicProviderExtras = {
 	deepinfra: {} as { apiKey?: string; baseUrl?: string },
 	"io-intelligence": {} as { apiKey: string },
 	requesty: {} as { apiKey?: string; baseUrl?: string },
+	cortecs: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ollama: {} as { numCtx?: number }, // kilocode_change

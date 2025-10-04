@@ -274,6 +274,17 @@
 		},
 		"getRequestyApiKey": "Requesty APIキーを取得",
 		"getRequestyBaseUrl": "ベースURL",
+		"cortecsApiKey": "cortecs APIキー",
+		"getCortecsApiKey": "cortecs APIキーを取得",
+		"cortecsRoutingPreference": {
+			"title": "ルーティング優先設定",
+			"options": {
+				"default": "デフォルト",
+				"cost": "コスト",
+				"speed": "速度",
+				"balanced": "バランス"
+			}
+		},
 		"requestyUseCustomBaseUrl": "カスタムベースURLを使用する",
 		"openRouterTransformsText": "プロンプトとメッセージチェーンをコンテキストサイズに圧縮 (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic APIキー",

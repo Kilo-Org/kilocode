@@ -47,6 +47,7 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	cortecsDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -83,6 +84,12 @@ export const getModelsByProvider = ({
 			return {
 				models: routerModels.glama,
 				defaultModel: glamaDefaultModelId,
+			}
+		}
+		case "cortecs": {
+			return {
+				models: routerModels.cortecs,
+				defaultModel: cortecsDefaultModelId,
 			}
 		}
 		case "unbound": {

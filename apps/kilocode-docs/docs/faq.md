@@ -45,7 +45,7 @@ The Kilo Code extension itself is free and open-source. If you're looking to ear
 
 After that, you can add a credit card to buy more tokens (securely processed through Stripe. Our pricing matches Anthropic's API rates exactly. We don't take any cut, either per token or per top-up. In the future we'll add more LLM providers.
 
-Alternatively, you can "Bring Your Own API" (like [Anthropic](providers/anthropic), [OpenAI](providers/openai), [OpenRouter](providers/openrouter), [Requesty](providers/requesty), etc.) for its AI capabilities. These providers typically charge for API usage based on the number of tokens processed. You will need to create an account and obtain an API key from your chosen provider. See [Setting Up Your First AI Provider](getting-started/connecting-api-provider) for details.
+Alternatively, you can "Bring Your Own API" (like [Anthropic](providers/anthropic), [OpenAI](providers/openai), [OpenRouter](providers/openrouter), [Requesty](providers/requesty), [cortecs](providers/cortecs), etc.) for its AI capabilities. These providers typically charge for API usage based on the number of tokens processed. You will need to create an account and obtain an API key from your chosen provider. See [Setting Up Your First AI Provider](getting-started/connecting-api-provider) for details.
 
 ### What are the risks of using Kilo Code?
 
@@ -80,6 +80,7 @@ Kilo Code supports a wide range of API providers, including:
 - [Unbound](/providers/unbound)
 - [Requesty](/providers/requesty)
 - [VS Code Language Model API](/providers/vscode-lm)
+- [cortecs](/providers/cortecs)
 
 ### How do I get an API key?
 

@@ -251,7 +251,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
 	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
-	const { kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey } = extensionState.apiConfiguration ?? {}
+	const { kilocodeToken, openRouterApiKey, glamaApiKey, cortecsApiKey, requestyApiKey } =
+		extensionState.apiConfiguration ?? {}
 	useEffect(() => {
 		setCachedState((prevCachedState) => ({
 			...prevCachedState,
@@ -262,10 +263,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				kilocodeToken,
 				openRouterApiKey,
 				glamaApiKey,
+				cortecsApiKey,
 				requestyApiKey,
 			},
 		}))
-	}, [kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey])
+	}, [kilocodeToken, openRouterApiKey, glamaApiKey, cortecsApiKey, requestyApiKey])
 
 	useEffect(() => {
 		// Only update if we're not already detecting changes

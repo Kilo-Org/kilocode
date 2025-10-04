@@ -36,6 +36,7 @@ import {
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
 	glamaDefaultModelId,
+	cortecsDefaultModelId,
 	unboundDefaultModelId,
 	litellmDefaultModelId,
 	claudeCodeDefaultModelId,
@@ -181,6 +182,11 @@ function getSelectedModel({
 		case "glama": {
 			const id = apiConfiguration.glamaModelId ?? glamaDefaultModelId
 			const info = routerModels.glama[id]
+			return { id, info }
+		}
+		case "cortecs": {
+			const id = apiConfiguration.cortecsModelId ?? cortecsDefaultModelId
+			const info = routerModels.cortecs[id]
 			return { id, info }
 		}
 		case "unbound": {

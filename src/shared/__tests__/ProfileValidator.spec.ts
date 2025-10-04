@@ -321,6 +321,21 @@ describe("ProfileValidator", () => {
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
 		})
 
+		it("should extract cortecsModelId for cortecs provider", () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					cortecs: { allowAll: false, models: ["cortecs-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "cortecs",
+				cortecsModelId: "cortecs-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+
 		it("should extract requestyModelId for requesty provider", () => {
 			const allowList: OrganizationAllowList = {
 				allowAll: false,

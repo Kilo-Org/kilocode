@@ -26,6 +26,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { getCortecsModels } from "./cortecs"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -79,6 +80,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "glama":
 				models = await getGlamaModels()
+				break
+			case "cortecs":
+				models = await getCortecsModels(options.baseUrl, options.apiKey)
 				break
 			case "unbound":
 				// Unbound models endpoint requires an API key to fetch application specific models.

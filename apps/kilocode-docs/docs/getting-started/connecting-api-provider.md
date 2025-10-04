@@ -47,6 +47,15 @@ LLM routers let you access multiple AI models with one API key, simplifying cost
 
 *Requesty API management page with "Create API Key" button. Copy your key immediately - it's shown only once.*
 
+##### cortecs
+
+1. Go to [cortecs.ai](https://cortecs.ai/)
+2. Sign in with your Google account or email
+3. Navigate to the [Settings](https://cortecs.ai/userArea/userProfile) and create a new key
+4. Copy your API key - you'll need this for Kilo Code setup
+
+<img src="/docs/img/connecting-api-provider/connecting-api-provider-8.png" alt="cortecs API management page" width="600" />
+
 #### Option 2: Direct Providers
 
 For direct access to specific models from their original providers, with full access to their features and capabilities:

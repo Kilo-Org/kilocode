@@ -47,6 +47,15 @@ LLM路由器让您可以通过一个API密钥访问多个AI模型，简化了成
 
 *Requesty API管理页面，带有"创建API密钥"按钮。立即复制您的密钥 - 它只会显示一次。*
 
+##### cortecs
+
+1. 访问 [cortecs.ai](https://cortecs.ai/)
+2. 使用Google账号或电子邮件登录
+3. 导航到[设置](https://cortecs.ai/userArea/userProfile)并创建新密钥
+4. 复制您的API密钥 - 您需要它来设置Kilo Code
+
+<img src="/docs/img/connecting-api-provider/connecting-api-provider-8.png" alt="cortecs API管理页面" width="600" />
+
 #### 选项2：直接提供商
 
 直接访问特定模型的原提供商，完全使用其功能和特性：

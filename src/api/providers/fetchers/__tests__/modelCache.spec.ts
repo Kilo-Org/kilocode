@@ -23,6 +23,7 @@ vi.mock("../litellm")
 vi.mock("../openrouter")
 vi.mock("../requesty")
 vi.mock("../glama")
+vi.mock("../cortecs")
 vi.mock("../unbound")
 vi.mock("../io-intelligence")
 
@@ -33,17 +34,19 @@ import { getLiteLLMModels } from "../litellm"
 import { getOpenRouterModels } from "../openrouter"
 import { getRequestyModels } from "../requesty"
 import { getGlamaModels } from "../glama"
+import { getCortecsModels } from "../cortecs"
 import { getUnboundModels } from "../unbound"
 import { getIOIntelligenceModels } from "../io-intelligence"
-
 const mockGetLiteLLMModels = getLiteLLMModels as Mock<typeof getLiteLLMModels>
 const mockGetOpenRouterModels = getOpenRouterModels as Mock<typeof getOpenRouterModels>
 const mockGetRequestyModels = getRequestyModels as Mock<typeof getRequestyModels>
 const mockGetGlamaModels = getGlamaModels as Mock<typeof getGlamaModels>
+const mockGetCortecsModels = getCortecsModels as Mock<typeof getCortecsModels>
 const mockGetUnboundModels = getUnboundModels as Mock<typeof getUnboundModels>
 const mockGetIOIntelligenceModels = getIOIntelligenceModels as Mock<typeof getIOIntelligenceModels>
 
 const DUMMY_REQUESTY_KEY = "requesty-key-for-testing"
+const DUMMY_CORTECS_KEY = "cortecs-key-for-testing"
 const DUMMY_UNBOUND_KEY = "unbound-key-for-testing"
 const DUMMY_IOINTELLIGENCE_KEY = "io-intelligence-key-for-testing"
 
@@ -121,6 +124,23 @@ describe("getModels with new GetModelsOptions", () => {
 		const result = await getModels({ provider: "glama" })
 
 		expect(mockGetGlamaModels).toHaveBeenCalled()
+		expect(result).toEqual(mockModels)
+	})
+
+	it("calls getCortecsModels with optional API key", async () => {
+		const mockModels = {
+			"cortecs/model": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "Cortecs model",
+			},
+		}
+		mockGetCortecsModels.mockResolvedValue(mockModels)
+
+		const result = await getModels({ provider: "cortecs", apiKey: DUMMY_CORTECS_KEY })
+
+		expect(mockGetCortecsModels).toHaveBeenCalledWith(undefined, DUMMY_CORTECS_KEY)
 		expect(result).toEqual(mockModels)
 	})
 
