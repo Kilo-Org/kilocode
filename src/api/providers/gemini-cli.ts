@@ -397,7 +397,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 		const modelId = this.options.apiModelId
 		// Handle :thinking suffix before checking if model exists
 		const baseModelId = modelId?.endsWith(":thinking") ? modelId.replace(":thinking", "") : modelId
-		let id =
+		const id =
 			baseModelId && baseModelId in geminiCliModels ? (baseModelId as GeminiCliModelId) : geminiCliDefaultModelId
 		const info: ModelInfo = geminiCliModels[id]
 		const params = getModelParams({ format: "gemini", modelId: id, model: info, settings: this.options })

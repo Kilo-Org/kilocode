@@ -1,6 +1,66 @@
 import * as vscode from "vscode"
 import { GhostSuggestionContext } from "./types"
-import { ContextAnalysis, UseCaseType } from "./types/PromptStrategy"
+import { UseCaseType } from "./types/PromptStrategy"
+
+/**
+ * Result of analyzing a suggestion context
+ */
+export interface ContextAnalysis {
+	/**
+	 * The primary use case detected
+	 */
+	useCase: UseCaseType
+
+	/**
+	 * Whether the user provided explicit input
+	 */
+	hasUserInput: boolean
+
+	/**
+	 * Whether there are compilation errors
+	 */
+	hasErrors: boolean
+
+	/**
+	 * Whether there are warnings
+	 */
+	hasWarnings: boolean
+
+	/**
+	 * Whether text is selected
+	 */
+	hasSelection: boolean
+
+	/**
+	 * Whether the cursor is in a comment
+	 */
+	isInComment: boolean
+
+	/**
+	 * Whether the cursor is on a new/empty line
+	 */
+	isNewLine: boolean
+
+	/**
+	 * Whether the cursor is in the middle of a line
+	 */
+	isInlineEdit: boolean
+
+	/**
+	 * The text of the current line
+	 */
+	cursorLine: string
+
+	/**
+	 * The cursor's character position
+	 */
+	cursorPosition: number
+
+	/**
+	 * The AST node type at the cursor position
+	 */
+	astNodeType?: string
+}
 
 /**
  * Analyzes GhostSuggestionContext to determine the appropriate use case and context properties
@@ -34,45 +94,33 @@ export class ContextAnalyzer {
 
 	/**
 	 * Determines the primary use case based on context analysis
-	 * Priority order is important here
+	 * Updated for simplified 4-strategy system
 	 */
 	private determineUseCase(analysis: ContextAnalysis): UseCaseType {
+		return UseCaseType.MERCURY_CODER
 		// Priority 1: User explicit request
 		if (analysis.hasUserInput) {
 			return UseCaseType.USER_REQUEST
 		}
 
-		// Priority 2: Error fixing
-		if (analysis.hasErrors) {
-			return UseCaseType.ERROR_FIX
+		// Priority 2: Mercury Coder scenarios (complex cases)
+		// - Multi-line selections (refactoring)
+		// - Comment-driven development
+		// - Error fixing
+		// - Complex editing scenarios
+		if (analysis.hasSelection || analysis.isInComment || analysis.hasErrors) {
+			return UseCaseType.MERCURY_CODER
 		}
 
-		// Priority 3: Selection refactoring
-		if (analysis.hasSelection) {
-			return UseCaseType.SELECTION_REFACTOR
-		}
-
-		// Priority 4: Comment-driven development
-		if (analysis.isInComment) {
-			return UseCaseType.COMMENT_DRIVEN
-		}
-
-		// Priority 5: New line completion
-		if (analysis.isNewLine) {
-			return UseCaseType.NEW_LINE
-		}
-
-		// Priority 6: Inline completion
-		if (analysis.isInlineEdit) {
+		// Priority 3: Inline/NewLine completion
+		// - Mid-line completions
+		// - End-of-line completions
+		// - New line completions
+		if (analysis.isInlineEdit || analysis.isNewLine) {
 			return UseCaseType.INLINE_COMPLETION
 		}
 
-		// Priority 7: AST-aware completion
-		if (analysis.astNodeType) {
-			return UseCaseType.AST_AWARE
-		}
-
-		// Priority 8: Default auto-trigger
+		// Priority 4: Default auto-trigger (fallback)
 		return UseCaseType.AUTO_TRIGGER
 	}
 

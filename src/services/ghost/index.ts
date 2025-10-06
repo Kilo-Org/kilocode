@@ -3,6 +3,29 @@ import * as vscode from "vscode"
 import { GhostProvider } from "./GhostProvider"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 
+// Export platform-independent Ghost types for external use
+export type {
+	GhostPosition,
+	GhostRange,
+	GhostDocument,
+	GhostEngineContext as PlatformIndependentGhostEngineContext,
+	GhostLineInfo,
+	GhostUri,
+} from "./types/platform-independent"
+
+// Export helper namespace (this is a value, not a type)
+export { GhostTypes } from "./types/platform-independent"
+
+// Export engine types and class for external use
+export type { GhostEngineResult } from "./GhostEngine"
+export { GhostEngine } from "./GhostEngine"
+export type { GhostEngineContext } from "./types/platform-independent"
+
+// Export other key Ghost types
+export { GhostSuggestionsState } from "./GhostSuggestions"
+export type { GhostSuggestionContext, GhostSuggestionEditOperation, UserAction } from "./types"
+export { UserActionType } from "./types"
+
 export const registerGhostProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
 	const ghost = GhostProvider.initialize(context, cline)
 	context.subscriptions.push(ghost)
@@ -73,6 +96,14 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 			await ghost.disable()
 		}),
 	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilocode.ghost.acceptInlineCompletion", async (...args) => {
+			// Handle inline completion acceptance
+			// This is triggered when user accepts an inline completion
+			console.log("🚀 Inline completion accepted:", args)
+			// TODO: Add logic to apply the accepted inline completion
+		}),
+	)
 
 	// Register GhostProvider Code Actions
 	context.subscriptions.push(
@@ -83,4 +114,7 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 
 	// Register GhostProvider Code Lens
 	context.subscriptions.push(vscode.languages.registerCodeLensProvider("*", ghost.codeLensProvider))
+
+	// Register GhostProvider Inline Completion
+	context.subscriptions.push(vscode.languages.registerInlineCompletionItemProvider("*", ghost.inlineProvider))
 }

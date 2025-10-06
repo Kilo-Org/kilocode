@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MercuryIncompleteFunctionBug > should group incomplete function completion as single modification > mercury-incomplete-function-fixed 1`] = `
+[
+  [
+    {
+      "content": "const hello<| cursor |>",
+      "line": 6,
+      "newLine": 6,
+      "oldLine": 6,
+      "type": "-",
+    },
+    {
+      "content": "const helloWorld = () => {",
+      "line": 7,
+      "newLine": 7,
+      "oldLine": 8,
+      "type": "+",
+    },
+    {
+      "content": "console.log('Hello, World!');",
+      "line": 8,
+      "newLine": 8,
+      "oldLine": 8,
+      "type": "+",
+    },
+    {
+      "content": "};",
+      "line": 9,
+      "newLine": 9,
+      "oldLine": 8,
+      "type": "+",
+    },
+  ],
+]
+`;

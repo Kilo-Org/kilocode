@@ -1,0 +1,5 @@
+# Test case files with intentional syntax errors and formatting
+test-cases/**
+**/__test_cases__/**
+dist/**
+node_modules/**

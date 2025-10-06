@@ -271,7 +271,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 			}
 		} catch (error) {
-			let errorMessage = makeOpenRouterErrorReadable(error)
+			const errorMessage = makeOpenRouterErrorReadable(error)
 			throw new Error(errorMessage)
 		}
 
@@ -326,7 +326,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	async completePrompt(prompt: string) {
-		let { id: modelId, maxTokens, temperature, reasoning } = await this.fetchModel()
+		const { id: modelId, maxTokens, temperature, reasoning } = await this.fetchModel()
 
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,

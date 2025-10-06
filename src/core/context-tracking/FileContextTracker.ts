@@ -161,7 +161,7 @@ export class FileContextTracker {
 				return relevantEntries.length > 0 ? (relevantEntries[0][field] as number) : null
 			}
 
-			let newEntry: FileMetadataEntry = {
+			const newEntry: FileMetadataEntry = {
 				path: filePath,
 				record_state: "active",
 				record_source: source,

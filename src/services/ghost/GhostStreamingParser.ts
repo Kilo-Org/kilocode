@@ -2,7 +2,7 @@ import * as vscode from "vscode"
 import { structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
-import { CURSOR_MARKER } from "./ghostConstants"
+import { CURSOR_MARKER } from "./utils/ghostConstants"
 
 export interface StreamingParseResult {
 	suggestions: GhostSuggestionsState
@@ -213,7 +213,7 @@ export class GhostStreamingParser {
 		}> = []
 
 		for (const change of filteredChanges) {
-			let searchIndex = this.findBestMatch(modifiedContent, change.search)
+			const searchIndex = this.findBestMatch(modifiedContent, change.search)
 
 			if (searchIndex !== -1) {
 				// Check for overlapping changes before applying
@@ -280,7 +280,7 @@ export class GhostStreamingParser {
 		}
 
 		// Generate diff between original and modified content
-		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
+		const relativePath = vscode.workspace?.asRelativePath?.(document.uri, false) || document.uri.fsPath
 		const patch = structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
 
 		// Create a suggestion file

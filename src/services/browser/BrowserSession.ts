@@ -105,7 +105,7 @@ export class BrowserSession {
 	 * Returns true if connection was successful, false otherwise
 	 */
 	private async connectToRemoteBrowser(): Promise<boolean> {
-		let remoteBrowserHost = this.context.globalState.get("remoteBrowserHost") as string | undefined
+		const remoteBrowserHost = this.context.globalState.get("remoteBrowserHost") as string | undefined
 		let reconnectionAttempted = false
 
 		// Try to connect with cached endpoint first if it exists and is recent (less than 1 hour old)
@@ -260,7 +260,7 @@ export class BrowserSession {
 			interval: 100,
 		}).catch(() => {})
 
-		let options: ScreenshotOptions = {
+		const options: ScreenshotOptions = {
 			encoding: "base64",
 
 			// clip: {
@@ -431,8 +431,8 @@ export class BrowserSession {
 		const minStableSizeIterations = 3
 
 		while (checkCounts++ <= maxChecks) {
-			let html = await page.content()
-			let currentHTMLSize = html.length
+			const html = await page.content()
+			const currentHTMLSize = html.length
 
 			// let bodyHTMLSize = await page.evaluate(() => document.body.innerHTML.length)
 			console.log("last: ", lastHTMLSize, " <> curr: ", currentHTMLSize)

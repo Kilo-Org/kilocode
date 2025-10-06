@@ -346,7 +346,7 @@ export class GhostDocumentStore {
 		// Try to identify what was added
 		let description = "Added code"
 		let affectedSymbol = undefined
-		let scope = undefined
+		const scope = undefined
 
 		// Check for function/method definition
 		const functionMatch = joinedLines.match(/(?:function|method|def)\s+(\w+)\s*\(/)
@@ -410,7 +410,7 @@ export class GhostDocumentStore {
 		// Try to identify what was deleted
 		let description = "Deleted code"
 		let affectedSymbol = undefined
-		let scope = undefined
+		const scope = undefined
 
 		// Check for function/method definition
 		const functionMatch = joinedLines.match(/(?:function|method|def)\s+(\w+)\s*\(/)
@@ -482,7 +482,7 @@ export class GhostDocumentStore {
 		let description = "Modified code"
 		let actionType = UserActionType.MODIFICATION
 		let affectedSymbol = undefined
-		let scope = undefined
+		const scope = undefined
 
 		// Check if this is a rename operation
 		const deletedSymbolMatch = deletedText.match(/\b(\w+)\b/)

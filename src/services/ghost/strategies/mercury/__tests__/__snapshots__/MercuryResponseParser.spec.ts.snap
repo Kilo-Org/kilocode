@@ -1,0 +1,56 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`MercuryResponseParser > isEmpty and debug info > should detect empty vs non-empty responses 1`] = `
+[
+  {
+    "debugInfo": {
+      "extractedLength": 0,
+      "hasCodeBlocks": false,
+      "hasMercuryMarkers": false,
+      "originalLength": 0,
+    },
+    "desc": "empty string",
+    "isEmpty": true,
+  },
+  {
+    "debugInfo": {
+      "extractedLength": 0,
+      "hasCodeBlocks": false,
+      "hasMercuryMarkers": false,
+      "originalLength": 7,
+    },
+    "desc": "whitespace only",
+    "isEmpty": true,
+  },
+  {
+    "debugInfo": {
+      "extractedLength": 0,
+      "hasCodeBlocks": true,
+      "hasMercuryMarkers": false,
+      "originalLength": 8,
+    },
+    "desc": "empty code block",
+    "isEmpty": true,
+  },
+  {
+    "debugInfo": {
+      "extractedLength": 12,
+      "hasCodeBlocks": false,
+      "hasMercuryMarkers": false,
+      "originalLength": 12,
+    },
+    "desc": "plain code",
+    "isEmpty": false,
+  },
+  {
+    "debugInfo": {
+      "extractedLength": 12,
+      "hasCodeBlocks": true,
+      "hasMercuryMarkers": false,
+      "originalLength": 20,
+    },
+    "desc": "code in block",
+    "isEmpty": false,
+  },
+]
+`;

@@ -712,7 +712,7 @@ export class ProviderSettingsManager {
 							existingNames.delete(existingName)
 
 							// Handle name conflict
-							let finalName = cloudName
+							const finalName = cloudName
 							if (existingNames.has(cloudName)) {
 								// There's a conflict - rename the existing non-cloud profile
 								const conflictingProfile = providerProfiles.apiConfigs[cloudName]
@@ -753,7 +753,7 @@ export class ProviderSettingsManager {
 						// If name is the same and profile hasn't changed, do nothing
 					} else {
 						// Step 4: Add new cloud profile
-						let finalName = cloudName
+						const finalName = cloudName
 
 						// Handle name conflict with existing non-cloud profile
 						if (existingNames.has(cloudName)) {

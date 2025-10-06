@@ -14,7 +14,7 @@ export async function readDirectoryRecursive(
 ): Promise<string[]> {
 	try {
 		const entries = await readDirectory(directoryPath, excludedPaths)
-		let results: string[] = []
+		const results: string[] = []
 		for (const entry of entries) {
 			if (allowedFileExtension !== "") {
 				const fileExtension = path.extname(entry)

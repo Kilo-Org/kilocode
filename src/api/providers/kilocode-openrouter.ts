@@ -69,7 +69,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	override getModel() {
-		let id = this.options.kilocodeModel ?? this.defaultModel
+		const id = this.options.kilocodeModel ?? this.defaultModel
 		let info = this.models[id] ?? openRouterDefaultModelInfo
 
 		// If a specific provider is requested, use the endpoint for that provider.

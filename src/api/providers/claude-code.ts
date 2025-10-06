@@ -42,7 +42,7 @@ export class ClaudeCodeHandler extends BaseProvider implements ApiHandler {
 
 		// Usage is included with assistant messages,
 		// but cost is included in the result chunk
-		let usage: ApiStreamUsageChunk = {
+		const usage: ApiStreamUsageChunk = {
 			type: "usage",
 			inputTokens: 0,
 			outputTokens: 0,

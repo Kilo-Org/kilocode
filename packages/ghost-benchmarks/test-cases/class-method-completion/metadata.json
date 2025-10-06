@@ -1,0 +1,11 @@
+{
+	"name": "class-method-completion",
+	"description": "Complete class method implementation",
+	"category": "class-completion",
+	"expectedPatterns": ["this\\.", "this\\.name", "this\\.age", "return\\s+.*"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

@@ -68,4 +68,14 @@ export interface GhostSuggestionContext {
 	userInput?: string
 	recentOperations?: UserAction[] // Stores meaningful user actions instead of raw diff
 	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
+
+	// Mercury Coder specific context
+	mercuryRecentlyViewedSnippets?: Array<{ filepath: string; content: string }>
+	mercuryEditHistory?: string[]
+}
+
+export interface GroupRenderingDecision {
+	groupIndex: number
+	renderingMode: "inline" | "decorator"
+	targetPosition?: vscode.Position // For inline groups - where to position cursor
 }

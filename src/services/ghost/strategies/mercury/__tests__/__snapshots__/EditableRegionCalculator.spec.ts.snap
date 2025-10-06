@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`EditableRegionCalculator > calculateEditableRegion > should expand around cursor with high token limit 1`] = `
+{
+  "editableEnd": 4,
+  "editableStart": 0,
+  "tokensUsed": 18,
+  "totalLines": 5,
+}
+`;
+
+exports[`EditableRegionCalculator > calculateEditableRegion > should handle single line file 1`] = `
+{
+  "editableEnd": 0,
+  "editableStart": 0,
+  "tokensUsed": 2,
+  "totalLines": 1,
+}
+`;
+
+exports[`EditableRegionCalculator > calculateEditableRegion > should respect low token limits 1`] = `
+{
+  "editableEnd": 2,
+  "editableStart": 1,
+  "tokensUsed": 9,
+  "totalLines": 5,
+}
+`;
+
+exports[`EditableRegionCalculator > extractEditableContent > should extract multi-line region content 1`] = `
+"line 1
+line 2
+line 3"
+`;
+
+exports[`EditableRegionCalculator > extractEditableContent > should extract single line region content 1`] = `"target line with special chars & symbols"`;

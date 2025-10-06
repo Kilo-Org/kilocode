@@ -55,7 +55,7 @@ export class MockWorkspace {
 				return b.range.start.character - a.range.start.character
 			})
 
-		let currentContent = document.getText()
+		const currentContent = document.getText()
 		const lines = currentContent.split("\n")
 
 		for (const edit of sortedEdits) {

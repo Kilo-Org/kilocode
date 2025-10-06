@@ -69,7 +69,7 @@ export class SvgRenderer {
 					const colorMatch = style.match(/color:\s*(#[0-9a-fA-F]{6})/)
 					const backgroundColorMatch = style.match(/background-color:\s*(#[0-9a-fA-F]{6,8}|rgba?\([^)]+\))/)
 					const classes = el.getAttribute("class") || ""
-					let fill = colorMatch ? ` fill="${colorMatch[1]}"` : ""
+					const fill = colorMatch ? ` fill="${colorMatch[1]}"` : ""
 
 					const content = el.textContent || ""
 					const estimatedWidth = calculateTextWidth(content, this.options.fontSize)

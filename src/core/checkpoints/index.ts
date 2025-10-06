@@ -304,7 +304,7 @@ export async function checkpointDiff(task: Task, { ts, previousCommitHash, commi
 
 	TelemetryService.instance.captureCheckpointDiffed(task.taskId)
 
-	let prevHash = commitHash
+	const prevHash = commitHash
 	let nextHash: string | undefined = undefined
 
 	if (mode !== "full") {

@@ -1,84 +1,144 @@
 import { GhostSuggestionContext } from "./types"
-import { GhostStreamingParser, StreamingParseResult } from "./GhostStreamingParser"
-import { PromptStrategyManager } from "./PromptStrategyManager"
+import { StreamingParseResult } from "./GhostStreamingParser"
+import { PromptStrategy } from "./types/PromptStrategy"
 
 export class GhostStrategy {
-	private streamingParser: GhostStreamingParser
-	private strategyManager: PromptStrategyManager
+	private currentStrategy: PromptStrategy | null = null
 	private debug: boolean
 
-	constructor(options?: { debug: boolean }) {
-		this.streamingParser = new GhostStreamingParser()
-		this.strategyManager = new PromptStrategyManager(options)
-		this.debug = options?.debug ?? false
+	constructor(_options?: { debug: boolean }) {
+		this.debug = true // Always enable debug for now
 	}
 
 	/**
-	 * Get the system prompt based on context using the new strategy system
-	 * Overloaded to support both new context-based and legacy string-only calls
+	 * Set the current enhanced prompt strategy
 	 */
-	getSystemPrompt(context: GhostSuggestionContext): string {
-		const { systemPrompt, strategy } = this.strategyManager.buildPrompt(context)
-		if (this.debug) {
-			console.log(`[GhostStrategy] Using strategy: ${strategy.name}`)
+	public setStrategy(strategy: PromptStrategy): void {
+		this.currentStrategy = strategy
+	}
+
+	/**
+	 * Get the system prompt using the current strategy
+	 */
+	async getSystemPrompt(_context: GhostSuggestionContext): Promise<string> {
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
 		}
+
+		const systemPrompt = this.currentStrategy.getSystemInstructions()
+
+		if (this.debug && !process.env.GHOST_QUIET_MODE) {
+			console.log(`[GhostStrategy] Using strategy: ${this.currentStrategy.name}`)
+		}
+
 		return systemPrompt
 	}
 
 	/**
-	 * Get the user prompt based on context using the new strategy system
-	 * @param context The suggestion context
-	 * @returns The user prompt
+	 * Get the user prompt using the current strategy
 	 */
-	getSuggestionPrompt(context: GhostSuggestionContext): string {
-		const { userPrompt, strategy } = this.strategyManager.buildPrompt(context)
+	async getSuggestionPrompt(context: GhostSuggestionContext): Promise<string> {
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
+		}
 
-		if (this.debug) {
-			console.log(`[GhostStrategy] Generated prompt with strategy: ${strategy.name}`)
+		const userPrompt = await this.currentStrategy.getUserPrompt(context)
+
+		if (this.debug && !process.env.GHOST_QUIET_MODE) {
+			console.log(`[GhostStrategy] Generated prompt with strategy: ${this.currentStrategy.name}`)
 		}
 
 		return userPrompt
 	}
 
 	/**
-	 * Initialize streaming parser for incremental parsing
+	 * Get complete strategy information
+	 */
+	async getStrategyInfo(context: GhostSuggestionContext): Promise<{
+		systemPrompt: string
+		userPrompt: string
+		strategy: PromptStrategy
+	}> {
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
+		}
+
+		// CRITICAL: Initialize the strategy before getting prompts
+		// This ensures Mercury strategy has its editableRegion calculated
+		this.currentStrategy.initializeProcessing(context)
+
+		const systemPrompt = await this.getSystemPrompt(context)
+		const userPrompt = await this.getSuggestionPrompt(context)
+
+		return {
+			systemPrompt,
+			userPrompt,
+			strategy: this.currentStrategy,
+		}
+	}
+
+	/**
+	 * Initialize streaming parser using current strategy
 	 */
 	public initializeStreamingParser(context: GhostSuggestionContext): void {
-		this.streamingParser.initialize(context)
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
+		}
+
+		this.currentStrategy.initializeProcessing(context)
 	}
 
 	/**
-	 * Process a chunk of streaming response and return any newly completed suggestions
+	 * Process a chunk of streaming response using current strategy
 	 */
 	public processStreamingChunk(chunk: string): StreamingParseResult {
-		return this.streamingParser.processChunk(chunk)
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
+		}
+
+		return this.currentStrategy.processResponseChunk(chunk)
 	}
 
 	/**
-	 * Reset the streaming parser for a new parsing session
+	 * Reset the current strategy parser
 	 */
 	public resetStreamingParser(): void {
-		this.streamingParser.reset()
+		if (this.currentStrategy) {
+			this.currentStrategy.reset()
+		}
 	}
 
 	/**
-	 * Finish the streaming parser and apply sanitization if needed
+	 * Finish streaming using current strategy
 	 */
 	public finishStreamingParser(): StreamingParseResult {
-		return this.streamingParser.finishStream()
+		if (!this.currentStrategy) {
+			throw new Error("No prompt strategy set. Call setStrategy() first.")
+		}
+
+		return this.currentStrategy.finishProcessing()
 	}
 
 	/**
-	 * Get the current buffer content from the streaming parser (for debugging)
+	 * Get current strategy name
+	 */
+	public getCurrentStrategyName(): string {
+		return this.currentStrategy?.name ?? "None"
+	}
+
+	/**
+	 * Get the current buffer content (for debugging compatibility)
 	 */
 	public getStreamingBuffer(): string {
-		return this.streamingParser.getBuffer()
+		// For compatibility with tests - strategies handle their own state
+		return ""
 	}
 
 	/**
-	 * Get completed changes from the streaming parser (for debugging)
+	 * Get completed changes (for debugging compatibility)
 	 */
-	public getStreamingCompletedChanges() {
-		return this.streamingParser.getCompletedChanges()
+	public getStreamingCompletedChanges(): unknown[] {
+		// For compatibility with tests - strategies handle their own state
+		return []
 	}
 }

@@ -19,7 +19,7 @@ export function addCacheBreakpoints(systemPrompt: string, messages: OpenAI.Chat.
 
 		if (Array.isArray(msg.content)) {
 			// Find the last text part in the message content
-			let lastTextPart = msg.content.filter((part) => part.type === "text").pop()
+			const lastTextPart = msg.content.filter((part) => part.type === "text").pop()
 
 			if (lastTextPart && lastTextPart.text && lastTextPart.text.length > 0) {
 				// @ts-ignore-next-line

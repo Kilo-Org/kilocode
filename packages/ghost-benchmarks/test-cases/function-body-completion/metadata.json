@@ -1,0 +1,5 @@
+{
+	"name": "function-body-completion",
+	"description": "Complete function body after opening brace - common autocomplete scenario",
+	"category": "function-completion"
+}

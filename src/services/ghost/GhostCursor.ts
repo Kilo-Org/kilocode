@@ -26,10 +26,19 @@ export class GhostCursor {
 			return
 		}
 		const group = groups[selectedGroupIndex]
+		if (group.length === 0) {
+			console.log("Group is empty, returning")
+			return
+		}
+
 		const groupType = suggestionsFile.getGroupType(group)
+		const documentLineCount = editor.document.lineCount
 
 		if (groupType === "/" || groupType === "-") {
-			const line = Math.min(...group.map((x) => x.oldLine))
+			const calculatedLine = Math.min(...group.map((x) => x.oldLine))
+			const line = this.validateLineNumber(calculatedLine, documentLineCount)
+			if (line === null) return
+
 			const lineText = editor.document.lineAt(line).text
 			const lineLength = lineText.length
 			editor.selection = new vscode.Selection(line, lineLength, line, lineLength)
@@ -38,7 +47,10 @@ export class GhostCursor {
 				vscode.TextEditorRevealType.InCenter,
 			)
 		} else if (groupType === "+") {
-			const line = Math.min(...group.map((x) => x.oldLine)) + group.length
+			const calculatedLine = Math.min(...group.map((x) => x.oldLine)) + group.length
+			const line = this.validateLineNumber(calculatedLine, documentLineCount)
+			if (line === null) return
+
 			const lineText = editor.document.lineAt(line).text
 			const lineLength = lineText.length
 			editor.selection = new vscode.Selection(line, lineLength, line, lineLength)
@@ -47,5 +59,17 @@ export class GhostCursor {
 				vscode.TextEditorRevealType.InCenter,
 			)
 		}
+	}
+
+	private validateLineNumber(line: number, documentLineCount: number): number | null {
+		if (!Number.isFinite(line) || line < 0) {
+			console.warn(`Invalid line number: ${line}, must be >= 0`)
+			return null
+		}
+		if (line >= documentLineCount) {
+			console.warn(`Line number ${line} exceeds document line count ${documentLineCount}`)
+			return Math.max(0, documentLineCount - 1)
+		}
+		return line
 	}
 }

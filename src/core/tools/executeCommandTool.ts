@@ -348,7 +348,7 @@ export async function executeCommand(
 			exitStatus = `Exit code: <undefined, notify user>`
 		}
 
-		let workingDirInfo = ` within working directory '${terminal.getCurrentWorkingDirectory().toPosix()}'`
+		const workingDirInfo = ` within working directory '${terminal.getCurrentWorkingDirectory().toPosix()}'`
 
 		return [false, `Command executed in terminal ${workingDirInfo}. ${exitStatus}\nOutput:\n${result}`]
 	} else {

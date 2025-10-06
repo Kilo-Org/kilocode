@@ -172,8 +172,8 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 
 	override getModel() {
 		const modelId = this.options.apiModelId
-		let id = modelId && modelId in geminiModels ? (modelId as GeminiModelId) : geminiDefaultModelId
-		let info: ModelInfo = geminiModels[id]
+		const id = modelId && modelId in geminiModels ? (modelId as GeminiModelId) : geminiDefaultModelId
+		const info: ModelInfo = geminiModels[id]
 		const params = getModelParams({ format: "gemini", modelId: id, model: info, settings: this.options })
 
 		// The `:thinking` suffix indicates that the model is a "Hybrid"
@@ -324,7 +324,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		// Subtract the cached input tokens from the total input tokens.
 		const uncachedInputTokens = inputTokens - cacheReadTokens
 
-		let cacheReadCost = cacheReadTokens > 0 ? cacheReadsPrice * (cacheReadTokens / 1_000_000) : 0
+		const cacheReadCost = cacheReadTokens > 0 ? cacheReadsPrice * (cacheReadTokens / 1_000_000) : 0
 
 		const inputTokensCost = inputPrice * (uncachedInputTokens / 1_000_000)
 		const outputTokensCost = outputPrice * (outputTokens / 1_000_000)

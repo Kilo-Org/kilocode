@@ -2,50 +2,59 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
-import { GhostStrategy } from "./GhostStrategy"
-import { GhostModel } from "./GhostModel"
-import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
+import { VSCodeGhostApplicator } from "./applicators/VSCodeGhostApplicator"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionContext } from "./types"
+import { GhostSuggestionContext, GroupRenderingDecision, GhostSuggestionEditOperation } from "./types"
+import { GhostSuggestionFile } from "./GhostSuggestions"
 import { GhostStatusBar } from "./GhostStatusBar"
-import { getWorkspacePath } from "../../utils/path"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
-import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { GhostCursor } from "./GhostCursor"
+import { GhostSuggestionPrefetchQueue } from "./GhostSuggestionPrefetchQueue"
+import { GhostSuggestionOutcome, PromptMetadata, createGhostSuggestionOutcome } from "./types/GhostSuggestionOutcome"
+import { calculateFinalCursorPosition } from "./utils/diffHelpers"
+import { myersDiff } from "./utils/myers"
+import { GhostInlineProvider } from "./GhostInlineProvider"
+import { GhostEngine } from "./GhostEngine"
+import { VSCodeGhostAdapter } from "./adapters/VSCodeGhostAdapter"
+import { GhostCancellationError, GhostErrorUtils } from "./errors/GhostErrors"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
 	private decorations: GhostDecorations
 	private documentStore: GhostDocumentStore
-	private model: GhostModel
-	private strategy: GhostStrategy
-	private workspaceEdit: GhostWorkspaceEdit
+	private applicator: VSCodeGhostApplicator
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private context: vscode.ExtensionContext
 	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
-	private ghostContext: GhostContext
 	private cursor: GhostCursor
 	private cursorAnimation: GhostGutterAnimation
+
+	// Core Ghost engine with all business logic
+	private ghostEngine: GhostEngine
 
 	private enabled: boolean = true
 	private taskId: string | null = null
 	private isProcessing: boolean = false
-	private isRequestCancelled: boolean = false
+	private cancellationToken: AbortController | null = null
 
 	// Status bar integration
 	private statusBar: GhostStatusBar | null = null
 	private sessionCost: number = 0
 	private lastCompletionCost: number = 0
+
+	// Ghost suggestion support
+	private currentGhostSuggestionOutcome: GhostSuggestionOutcome | null = null
+	private promptMetadata: PromptMetadata | null = null
 
 	// Auto-trigger timer management
 	private autoTriggerTimer: NodeJS.Timeout | null = null
@@ -54,6 +63,7 @@ export class GhostProvider {
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public codeLensProvider: GhostCodeLensProvider
+	public inlineProvider: GhostInlineProvider
 
 	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
@@ -62,17 +72,18 @@ export class GhostProvider {
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
-		this.strategy = new GhostStrategy({ debug: true })
-		this.workspaceEdit = new GhostWorkspaceEdit()
+		this.applicator = new VSCodeGhostApplicator()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
-		this.model = new GhostModel()
-		this.ghostContext = new GhostContext(this.documentStore)
 		this.cursor = new GhostCursor()
 		this.cursorAnimation = new GhostGutterAnimation(context)
+
+		// Initialize the core Ghost engine
+		this.ghostEngine = new GhostEngine(this.providerSettingsManager, this.documentStore)
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
+		this.inlineProvider = GhostInlineProvider.getInstance()
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -119,7 +130,7 @@ export class GhostProvider {
 
 	public async load() {
 		this.settings = this.loadSettings()
-		await this.model.reload(this.settings, this.providerSettingsManager)
+		await this.ghostEngine.load(this.settings)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
@@ -170,12 +181,21 @@ export class GhostProvider {
 		if (!this.enabled || event.document.uri.scheme !== "file") {
 			return
 		}
-		if (this.workspaceEdit.isLocked()) {
+		if (this.applicator.isLocked()) {
 			return
 		}
-		await this.documentStore.storeDocument({ document: event.document })
-		this.lastTextChangeTime = Date.now()
-		this.handleTypingEvent(event)
+
+		try {
+			await this.documentStore.storeDocument({ document: event.document })
+			this.lastTextChangeTime = Date.now()
+			this.handleTypingEvent(event)
+		} catch (error) {
+			if (error instanceof GhostCancellationError) {
+				// Cancellation is expected, don't log as error
+				return
+			}
+			GhostErrorUtils.logError(GhostErrorUtils.toGhostError(error, "Failed to handle document change"))
+		}
 	}
 
 	private async onDidChangeTextEditorSelection(event: vscode.TextEditorSelectionChangeEvent): Promise<void> {
@@ -250,138 +270,172 @@ export class GhostProvider {
 		// Cancel any ongoing suggestions
 		await this.cancelSuggestions()
 		this.startRequesting()
-		this.isRequestCancelled = false
-
-		const context = await this.ghostContext.generate(initialContext)
-		const systemPrompt = this.strategy.getSystemPrompt(context)
-		const userPrompt = this.strategy.getSuggestionPrompt(context)
-		if (this.isRequestCancelled) {
-			return
-		}
-
-		if (!this.model.loaded) {
-			this.stopProcessing()
-			await this.load()
-		}
-
-		console.log("system", systemPrompt)
-		console.log("userprompt", userPrompt)
-
-		// Initialize the streaming parser
-		this.strategy.initializeStreamingParser(context)
-
-		let hasShownFirstSuggestion = false
-		let cost = 0
-		let inputTokens = 0
-		let outputTokens = 0
-		let cacheWriteTokens = 0
-		let cacheReadTokens = 0
-		let response = ""
-
-		// Create streaming callback
-		const onChunk = (chunk: any) => {
-			if (this.isRequestCancelled) {
-				return
-			}
-
-			if (chunk.type === "text") {
-				response += chunk.text
-
-				// Process the text chunk through our streaming parser
-				const parseResult = this.strategy.processStreamingChunk(chunk.text)
-
-				if (parseResult.hasNewSuggestions) {
-					// Update our suggestions with the new parsed results
-					this.suggestions = parseResult.suggestions
-
-					// If this is the first suggestion, show it immediately
-					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
-						hasShownFirstSuggestion = true
-						this.stopProcessing() // Stop the loading animation
-						this.selectClosestSuggestion()
-						void this.render() // Render asynchronously to not block streaming
-					} else if (hasShownFirstSuggestion) {
-						// Update existing suggestions
-						this.selectClosestSuggestion()
-						void this.render() // Update UI asynchronously
-					}
-				}
-
-				// If the response appears complete, finalize
-				if (parseResult.isComplete && hasShownFirstSuggestion) {
-					this.selectClosestSuggestion()
-					void this.render()
-				}
-			}
-		}
+		this.cancellationToken = new AbortController()
 
 		try {
-			// Start streaming generation
-			const usageInfo = await this.model.generateResponse(systemPrompt, userPrompt, onChunk)
+			// Set task ID for telemetry
+			if (this.taskId) {
+				this.ghostEngine.setTaskId(this.taskId)
+			}
 
-			console.log("response", response)
+			// Check if engine is loaded
+			if (!this.ghostEngine.loaded) {
+				this.stopProcessing()
+				await this.load()
+			}
 
-			// Update cost tracking
-			cost = usageInfo.cost
-			inputTokens = usageInfo.inputTokens
-			outputTokens = usageInfo.outputTokens
-			cacheWriteTokens = usageInfo.cacheWriteTokens
-			cacheReadTokens = usageInfo.cacheReadTokens
+			// Convert VSCode context to platform-independent context using adapter
+			const engineContext = VSCodeGhostAdapter.toGhostEngineContext(initialContext)
 
-			this.updateCostTracking(cost)
+			// Execute completion WITHOUT automatic application
+			// Pass applicator but use 'none' mode (we'll apply manually after rendering)
+			const result = await this.ghostEngine.executeCompletion(
+				engineContext,
+				this.applicator, // REQUIRED parameter
+				"none", // Don't apply yet - we need to render first
+			)
 
-			// Send telemetry
-			TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-				taskId: this.taskId,
-				inputTokens: inputTokens,
-				outputTokens: outputTokens,
-				cacheWriteTokens: cacheWriteTokens,
-				cacheReadTokens: cacheReadTokens,
-				cost: cost,
-				service: "INLINE_ASSIST",
-			})
-
-			if (this.isRequestCancelled) {
+			// Check for cancellation after completion
+			if (this.cancellationToken?.signal.aborted) {
 				this.suggestions.clear()
 				await this.render()
 				return
 			}
 
-			// Finish the streaming parser to apply sanitization if needed
-			const finalParseResult = this.strategy.finishStreamingParser()
-			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
-				// Handle case where sanitization produced suggestions
-				this.suggestions = finalParseResult.suggestions
-				hasShownFirstSuggestion = true
-				this.stopProcessing()
-				this.selectClosestSuggestion()
-				await this.render()
-			} else if (finalParseResult.hasNewSuggestions && hasShownFirstSuggestion) {
-				// Update existing suggestions with sanitized results
-				this.suggestions = finalParseResult.suggestions
-				this.selectClosestSuggestion()
-				await this.render()
-			}
+			// Use the suggestions from the engine
+			this.suggestions = result.suggestions
 
-			// If we never showed any suggestions, there might have been an issue
-			if (!hasShownFirstSuggestion) {
-				console.warn("No suggestions were generated during streaming")
-				this.stopProcessing()
+			// Update cost tracking
+			this.updateCostTracking(result.metadata.cost || 0)
+
+			// Store the Ghost suggestion outcome and metadata
+			if (result.ghostSuggestionOutcome) {
+				this.currentGhostSuggestionOutcome = result.ghostSuggestionOutcome
+			}
+			if (result.promptMetadata) {
+				this.promptMetadata = result.promptMetadata
 			}
 
 			// Final render to ensure everything is up to date
 			this.selectClosestSuggestion()
 			await this.render()
 		} catch (error) {
-			console.error("Error in streaming generation:", error)
+			if (error instanceof GhostCancellationError) {
+				// Cancellation is expected, clean up and return
+				this.suggestions.clear()
+				await this.render()
+				return
+			}
+
+			GhostErrorUtils.logError(GhostErrorUtils.toGhostError(error, "Error in Ghost completion"))
 			this.stopProcessing()
 			throw error
+		} finally {
+			this.stopProcessing()
 		}
+	}
+
+	/**
+	 * Extract code completion from Mercury's markdown-formatted response
+	 */
+	private extractMercuryCompletion(response: string): string {
+		// Mercury typically returns code within markdown code blocks
+		const startMarker = "```"
+		const endMarker = "```"
+
+		const lines = response.split("\n")
+		let inCodeBlock = false
+		const codeLines: string[] = []
+
+		for (let i = 0; i < lines.length; i++) {
+			const line = lines[i].trim()
+
+			if (line.startsWith(startMarker) && !inCodeBlock) {
+				inCodeBlock = true
+				continue
+			}
+
+			if (line === endMarker && inCodeBlock) {
+				break
+			}
+
+			if (inCodeBlock) {
+				codeLines.push(lines[i]) // Keep original indentation
+			}
+		}
+
+		return codeLines.length > 0 ? codeLines.join("\n") : response
+	}
+
+	/**
+	 * Show the first edit group from the prefetch queue
+	 */
+	private async showFirstEditGroupFromQueue(): Promise<void> {
+		const queue = GhostSuggestionPrefetchQueue.getInstance()
+		const firstItem = queue.peekProcessed()
+
+		if (!firstItem) {
+			console.log("No edit groups in prefetch queue to display")
+			this.stopProcessing()
+			return
+		}
+
+		// Convert the queue item to our GhostSuggestions format
+		// This will need to be implemented based on how our existing system works
+		// For now, just log that we have the item
+
+		this.stopProcessing()
+		// TODO: Integrate with GhostSuggestions to display the edit group
 	}
 
 	private async render() {
 		await this.updateGlobalContext()
-		await this.displaySuggestions()
+
+		const editor = vscode.window.activeTextEditor
+		if (!editor || !this.suggestions.hasSuggestions()) {
+			console.log("🚀 GhostProvider: No editor or suggestions")
+			return
+		}
+
+		// Get the currently selected group (single group evaluation)
+		const suggestionsFile = this.suggestions.getFile(editor.document.uri)
+		if (!suggestionsFile) {
+			console.log("🚀 GhostProvider: No suggestions file for current document")
+			return
+		}
+
+		const groups = suggestionsFile.getGroupsOperations()
+		if (groups.length === 0) {
+			console.log("🚀 GhostProvider: No groups to display")
+			return
+		}
+
+		const selectedGroupIndex = suggestionsFile.getSelectedGroup()
+		if (selectedGroupIndex === null || selectedGroupIndex >= groups.length) {
+			console.log("🚀 GhostProvider: No valid selected group")
+			return
+		}
+
+		const selectedGroup = groups[selectedGroupIndex]
+
+		// Move cursor to the selected group BEFORE evaluating inline suitability
+		this.moveToSelectedGroup(editor, suggestionsFile)
+
+		// Check if the selected group is suitable for inline completion
+		// (now that cursor is positioned at the group)
+		const isInlineSuitable = this.inlineProvider.isGroupSuitableForInline(
+			selectedGroup,
+			editor.selection.active,
+			editor.document,
+		)
+
+		if (isInlineSuitable) {
+			console.log(`🚀 GhostProvider: Displaying selected group ${selectedGroupIndex} as inline completion`)
+			await this.displayInlineCompletion()
+		} else {
+			console.log(`🚀 GhostProvider: Displaying selected group ${selectedGroupIndex} as decorator`)
+			await this.displaySuggestions()
+		}
 		// await this.displayCodeLens()
 	}
 
@@ -406,6 +460,84 @@ export class GhostProvider {
 			return
 		}
 		await this.decorations.displaySuggestions(this.suggestions)
+	}
+
+	/**
+	 * Determine if current suggestions should use inline completion instead of decorators.
+	 */
+	private shouldUseInlineCompletion(): boolean {
+		const editor = vscode.window.activeTextEditor
+		if (!editor || !this.suggestions.hasSuggestions()) {
+			return false
+		}
+
+		return this.inlineProvider.isSuitableForInlineCompletion(
+			this.suggestions,
+			editor.selection.active,
+			editor.document,
+		)
+	}
+
+	/**
+	 * Display suggestions using VSCode's inline completion system.
+	 */
+	private async displayInlineCompletion(): Promise<void> {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+
+		// Set the suggestions in the inline provider
+		this.inlineProvider.setSuggestionsForInlineDisplay(this.suggestions, editor.selection.active)
+
+		// Trigger VSCode's inline completion at the current cursor position
+		await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+	}
+
+	/**
+	 * Display suggestions using hybrid rendering (some inline, some decorators)
+	 */
+	private async displayHybridSuggestions(renderingDecisions: GroupRenderingDecision[]): Promise<void> {
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+
+		// First, display decorator groups using the existing decorator system
+		const decoratorDecisions = renderingDecisions.filter((d) => d.renderingMode === "decorator")
+		if (decoratorDecisions.length > 0) {
+			console.log(`🎨 GhostProvider: Displaying ${decoratorDecisions.length} groups as decorators`)
+			await this.displaySuggestions() // This will show all decorator groups
+		}
+
+		// Then, handle inline groups
+		const inlineDecisions = renderingDecisions.filter((d) => d.renderingMode === "inline")
+		if (inlineDecisions.length > 0) {
+			console.log(`⚡ GhostProvider: Displaying ${inlineDecisions.length} groups as inline completions`)
+
+			// For now, use the first inline group for inline completion
+			// TODO: Implement proper multi-group inline handling
+			const firstInlineDecision = inlineDecisions[0]
+
+			// Position cursor at the target position if specified
+			if (firstInlineDecision.targetPosition) {
+				editor.selection = new vscode.Selection(
+					firstInlineDecision.targetPosition,
+					firstInlineDecision.targetPosition,
+				)
+			}
+
+			// Set the suggestions and trigger inline completion
+			this.inlineProvider.setSuggestionsForInlineDisplay(this.suggestions, editor.selection.active)
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+		}
+	}
+
+	/**
+	 * Get current suggestions for external access (used by inline provider)
+	 */
+	public getCurrentSuggestions(): GhostSuggestionsState {
+		return this.suggestions
 	}
 
 	private getSelectedSuggestionLine() {
@@ -462,7 +594,7 @@ export class GhostProvider {
 	}
 
 	public async cancelSuggestions() {
-		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
+		if (!this.hasPendingSuggestions() || this.applicator.isLocked()) {
 			return
 		}
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, {
@@ -479,7 +611,7 @@ export class GhostProvider {
 		if (!this.enabled) {
 			return
 		}
-		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
+		if (!this.hasPendingSuggestions() || this.applicator.isLocked()) {
 			return
 		}
 		const editor = vscode.window.activeTextEditor
@@ -500,27 +632,107 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
+
+		// Use GhostEngine to apply via applicator
+		// Convert vscode.Uri to string for platform-independent interface
+		await this.ghostEngine.apply(
+			this.suggestions,
+			editor.document.uri.toString(), // Convert to string
+			this.applicator, // REQUIRED parameter
+			"selected",
+		)
+
 		this.cursor.moveToAppliedGroup(this.suggestions)
 		suggestionsFile.deleteSelectedGroup()
 		suggestionsFile.selectClosestGroup(editor.selection)
 		this.suggestions.validateFiles()
 		this.clearAutoTriggerTimer()
-		await this.render()
+
+		// Check if we have more edit groups in the prefetch queue
+		const hasMoreGroups = await this.handleGhostSuggestionGroupFromQueue()
+
+		if (!hasMoreGroups) {
+			// No more groups, render normally
+			await this.render()
+		}
+		// If we showed the next group, don't render again as it was already rendered
+	}
+
+	/**
+	 * Handle cycling to next edit group from prefetch queue (Continue's approach)
+	 * Returns true if next group was shown, false if no more groups
+	 */
+	private async handleGhostSuggestionGroupFromQueue(): Promise<boolean> {
+		const queue = GhostSuggestionPrefetchQueue.getInstance()
+
+		// Check if there are more processed items in the queue
+		if (queue.processedCount === 0) {
+			console.log("No more edit groups in prefetch queue")
+			return false
+		}
+
+		// Get the next edit group
+		const nextItem = queue.dequeueProcessed()
+		if (!nextItem) {
+			console.log("No next edit group available")
+			return false
+		}
+
+		try {
+			// Convert queue item to our GhostSuggestions format and display it
+			await this.displayEditGroupFromQueue(nextItem)
+
+			// Render the new suggestion
+			await this.render()
+
+			return true
+		} catch (error) {
+			console.error("Error showing next edit group from queue:", error)
+			return false
+		}
+	}
+
+	/**
+	 * Display an edit group from the prefetch queue
+	 * This converts a Continue-style ProcessedItem to our GhostSuggestions format
+	 */
+	private async displayEditGroupFromQueue(item: any): Promise<void> {
+		// TODO: This needs to be implemented based on how our GhostSuggestions system works
+		// For now, just log the details
+		// The actual implementation would need to:
+		// 1. Convert the queue item's diff lines to our suggestion format
+		// 2. Create appropriate GhostSuggestionEditOperation objects
+		// 3. Update this.suggestions with the new group
+		// 4. Position cursor at the edit location
+		// This is a placeholder - the full integration would require adapting
+		// Continue's DiffGroup format to our GhostSuggestions system
 	}
 
 	public async applyAllSuggestions() {
 		if (!this.enabled) {
 			return
 		}
-		if (!this.hasPendingSuggestions() || this.workspaceEdit.isLocked()) {
+		if (!this.hasPendingSuggestions() || this.applicator.isLocked()) {
 			return
 		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.applySuggestions(this.suggestions)
+
+		// Use GhostEngine to apply via applicator
+		await this.ghostEngine.apply(
+			this.suggestions,
+			editor.document.uri.toString(), // Convert to string
+			this.applicator, // REQUIRED parameter
+			"all",
+		)
+
 		this.suggestions.clear()
 
 		this.clearAutoTriggerTimer()
@@ -545,6 +757,10 @@ export class GhostProvider {
 			return
 		}
 		suggestionsFile.selectNextGroup()
+
+		// Move cursor to the selected group's location
+		this.moveToSelectedGroup(editor, suggestionsFile)
+
 		await this.render()
 	}
 
@@ -566,7 +782,43 @@ export class GhostProvider {
 			return
 		}
 		suggestionsFile.selectPreviousGroup()
+
+		// Move cursor to the selected group's location
+		this.moveToSelectedGroup(editor, suggestionsFile)
+
 		await this.render()
+	}
+
+	/**
+	 * Move cursor to the currently selected group's location for proper inline completion evaluation
+	 */
+	private moveToSelectedGroup(editor: vscode.TextEditor, suggestionsFile: GhostSuggestionFile): void {
+		const groups: GhostSuggestionEditOperation[][] = suggestionsFile.getGroupsOperations()
+		if (groups.length === 0) {
+			return
+		}
+		const selectedGroupIndex = suggestionsFile.getSelectedGroup()
+		if (selectedGroupIndex === null || selectedGroupIndex >= groups.length) {
+			return
+		}
+		const group: GhostSuggestionEditOperation[] = groups[selectedGroupIndex]
+		if (group.length === 0) {
+			return
+		}
+
+		// Find the first operation on the earliest line for cursor positioning
+		const firstOperation = group.reduce(
+			(earliest: GhostSuggestionEditOperation, op: GhostSuggestionEditOperation) =>
+				op.line < earliest.line ? op : earliest,
+		)
+
+		// Position cursor at the beginning of the line containing the first operation
+		const line = Math.max(0, Math.min(firstOperation.line, editor.document.lineCount - 1))
+		const character = 0 // Start of line for now - can be enhanced later
+
+		const position = new vscode.Position(line, character)
+		editor.selection = new vscode.Selection(position, position)
+		editor.revealRange(new vscode.Range(position, position), vscode.TextEditorRevealType.InCenter)
 	}
 
 	private initializeStatusBar() {
@@ -583,14 +835,14 @@ export class GhostProvider {
 	}
 
 	private getCurrentModelName(): string {
-		if (!this.model.loaded) {
+		if (!this.ghostEngine.loaded) {
 			return "loading..."
 		}
-		return this.model.getModelName() ?? "unknown"
+		return "ghost-engine" // GhostEngine abstracts away the specific model
 	}
 
 	private hasValidApiToken(): boolean {
-		return this.model.loaded && this.model.hasValidCredentials()
+		return this.ghostEngine.loaded
 	}
 
 	private updateCostTracking(cost: number) {
@@ -646,12 +898,14 @@ export class GhostProvider {
 
 	public cancelRequest() {
 		this.stopProcessing()
-		this.isRequestCancelled = true
+		if (this.cancellationToken) {
+			this.cancellationToken.abort()
+		}
 		if (this.autoTriggerTimer) {
 			this.clearAutoTriggerTimer()
 		}
-		// Reset streaming parser when cancelling
-		this.strategy.resetStreamingParser()
+		// Cancel request in engine
+		this.ghostEngine.cancelRequest()
 	}
 
 	/**
@@ -719,6 +973,101 @@ export class GhostProvider {
 		await this.codeSuggestion()
 	}
 
+	// Ghost Support: Generate GhostSuggestionOutcome for telemetry and chaining
+	private async generateGhostSuggestionOutcome(
+		context: GhostSuggestionContext,
+		strategyInfo: any,
+		strategy: any,
+		response: string,
+		usageInfo: any,
+		startTime: number,
+	): Promise<GhostSuggestionOutcome | undefined> {
+		if (!context.document || !context.range) {
+			return undefined
+		}
+
+		try {
+			// Extract completion using strategy
+			const completion = strategy.extractCompletion ? strategy.extractCompletion(response) : response
+
+			if (!completion.trim()) {
+				return undefined
+			}
+
+			// Get original file content
+			const originalContent = context.document.getText()
+
+			// Calculate editable region using strategy
+			const { editableStart, editableEnd } = strategy.calculateEditableRegion
+				? strategy.calculateEditableRegion(context.document, context.range)
+				: { editableStart: 0, editableEnd: originalContent.split("\n").length - 1 }
+
+			// Generate diff lines using Myers algorithm
+			const originalRegion = originalContent
+				.split("\n")
+				.slice(editableStart, editableEnd + 1)
+				.join("\n")
+			const diffLines = myersDiff(originalRegion, completion)
+
+			// Calculate final cursor position
+			const finalCursorPos = calculateFinalCursorPosition(
+				context.range.start,
+				editableStart,
+				originalRegion,
+				completion,
+			)
+
+			// Build prompt metadata if strategy supports it
+			if (strategy.buildPromptMetadata) {
+				this.promptMetadata = await strategy.buildPromptMetadata(context)
+			}
+
+			// Create GhostSuggestionOutcome using Continue's structure
+			const outcome = createGhostSuggestionOutcome({
+				completionId: this.taskId || crypto.randomUUID(),
+				fileUri: context.document.uri.toString(),
+				completion,
+				modelProvider: usageInfo.modelProvider || "unknown",
+				modelName: usageInfo.modelName || "unknown",
+				elapsed: Date.now() - startTime,
+				cursorPosition: {
+					line: context.range.start.line,
+					character: context.range.start.character,
+				},
+				editableRegionStartLine: editableStart,
+				editableRegionEndLine: editableEnd,
+				diffLines,
+				prompt: strategyInfo.userPrompt,
+				originalEditableRange: originalRegion,
+				userEdits: this.promptMetadata?.userEdits || "",
+				userExcerpts: this.promptMetadata?.userExcerpts || originalContent,
+			})
+
+			// Update final cursor position
+			outcome.finalCursorPosition = finalCursorPos
+
+			this.currentGhostSuggestionOutcome = outcome
+			return outcome
+		} catch (error) {
+			console.error("Error generating GhostSuggestionOutcome:", error)
+			return undefined
+		}
+	}
+
+	/**
+	 * Get cache performance metrics for monitoring
+	 */
+	public getCacheMetrics() {
+		return this.ghostEngine.getCacheMetrics()
+	}
+
+	/**
+	 * Get cache debug information
+	 */
+	public getCacheDebugInfo() {
+		return this.ghostEngine.getCacheMetrics() // Engine doesn't have debug info method
+	}
+
 	/**
 	 * Dispose of all resources used by the GhostProvider
 	 */
@@ -728,6 +1077,9 @@ export class GhostProvider {
 
 		this.suggestions.clear()
 		this.decorations.clearAll()
+
+		// Clear the cache
+		this.ghostEngine.clearCache()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()

@@ -38,7 +38,7 @@ interface FakeAI {
  *
  * We use the ID to lookup the original FakeAI object in the mapping.
  */
-let fakeAiMap: Map<string, FakeAI> = new Map()
+const fakeAiMap: Map<string, FakeAI> = new Map()
 
 export class FakeAIHandler implements ApiHandler, SingleCompletionHandler {
 	private ai: FakeAI

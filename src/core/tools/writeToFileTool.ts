@@ -27,7 +27,7 @@ export async function writeToFileTool(
 ) {
 	const relPath: string | undefined = block.params.path
 	let newContent: string | undefined = block.params.content
-	let predictedLineCount: number | undefined = parseInt(block.params.line_count ?? "0")
+	const predictedLineCount: number | undefined = parseInt(block.params.line_count ?? "0")
 
 	if (block.partial && (!relPath || newContent === undefined)) {
 		// checking for newContent ensure relPath is complete

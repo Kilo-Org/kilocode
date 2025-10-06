@@ -1,0 +1,11 @@
+{
+	"name": "variable-assignment",
+	"description": "Complete variable assignment with array method call",
+	"category": "variable-completion",
+	"expectedPatterns": ["map\\(", "\\.map\\(", "=>", "item\\s*=>"],
+	"expectedGroupCount": 1,
+	"shouldCompile": true,
+	"hasLiveModeSupport": true,
+	"supportedProfiles": ["mercury-coder", "gpt4o-mini", "claude-sonnet"],
+	"isAutocompleteTest": true
+}

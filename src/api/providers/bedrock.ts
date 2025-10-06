@@ -172,7 +172,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 	constructor(options: ProviderSettings) {
 		super()
 		this.options = options
-		let region = this.options.awsRegion
+		const region = this.options.awsRegion
 
 		// process the various user input options, be opinionated about the intent of the options
 		// and determine the model to use during inference and for cost calculations
@@ -463,8 +463,8 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 						//so that pricing, context window, caching etc have values that can be used
 						//However, we want to keep the id of the model to be the ID for the router for
 						//subsequent requests so they are sent back through the router
-						let invokedArnInfo = this.parseArn(streamEvent.trace.promptRouter.invokedModelId)
-						let invokedModel = this.getModelById(invokedArnInfo.modelId as string, invokedArnInfo.modelType)
+						const invokedArnInfo = this.parseArn(streamEvent.trace.promptRouter.invokedModelId)
+						const invokedModel = this.getModelById(invokedArnInfo.modelId as string, invokedArnInfo.modelType)
 						if (invokedModel) {
 							invokedModel.id = modelConfig.id
 							this.costModelConfig = invokedModel
@@ -764,7 +764,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		// Get cache point placements
-		let strategy = new MultiPointStrategy(config)
+		const strategy = new MultiPointStrategy(config)
 		const cacheResult = strategy.determineOptimalCachePoints()
 
 		// Store cache point placements for future use if conversation ID is provided
@@ -824,7 +824,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 		 */
 
 		const arnRegex = /^arn:aws:(?:bedrock|sagemaker):([^:]+):([^:]*):(?:([^\/]+)\/([\w\.\-:]+)|([^\/]+))$/
-		let match = arn.match(arnRegex)
+		const match = arn.match(arnRegex)
 
 		if (match && match[1] && match[3] && match[4]) {
 			// Create the result object
@@ -851,7 +851,7 @@ export class AwsBedrockHandler extends BaseProvider implements SingleCompletionH
 			// Check if the original model ID had a region prefix
 			if (originalModelId && result.modelId !== originalModelId) {
 				// If the model ID changed after parsing, it had a region prefix
-				let prefix = originalModelId.replace(result.modelId, "")
+				const prefix = originalModelId.replace(result.modelId, "")
 				result.crossRegionInference = AwsBedrockHandler.isSystemInferenceProfile(prefix)
 			}
 

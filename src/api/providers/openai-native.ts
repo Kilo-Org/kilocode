@@ -329,7 +329,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 				this.lastResponseId = undefined
 
 				// Re-prepare the full conversation without previous_response_id
-				let retryRequestBody = { ...requestBody }
+				const retryRequestBody = { ...requestBody }
 				delete retryRequestBody.previous_response_id
 
 				// If we have the original messages, re-prepare the full conversation
@@ -529,7 +529,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 					this.resolveResponseId(undefined)
 
 					// Re-prepare the full conversation without previous_response_id
-					let retryRequestBody = { ...requestBody }
+					const retryRequestBody = { ...requestBody }
 					delete retryRequestBody.previous_response_id
 
 					// If we have the original messages, re-prepare the full conversation
@@ -671,8 +671,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		const decoder = new TextDecoder()
 		let buffer = ""
 		let hasContent = false
-		let totalInputTokens = 0
-		let totalOutputTokens = 0
+		const totalInputTokens = 0
+		const totalOutputTokens = 0
 
 		try {
 			while (true) {
@@ -1239,7 +1239,7 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 	override getModel() {
 		const modelId = this.options.apiModelId
 
-		let id =
+		const id =
 			modelId && modelId in openAiNativeModels ? (modelId as OpenAiNativeModelId) : openAiNativeDefaultModelId
 
 		const info: ModelInfo = openAiNativeModels[id]
