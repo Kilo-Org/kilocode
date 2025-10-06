@@ -29,9 +29,7 @@
 		"costUnknown": "costo sconosciuto",
 		"costUnknownDescription": "Il Provider API non ha fornito dati sui costi o la richiesta è stata annullata.",
 		"freeModelsDescription": "I modelli gratuiti potrebbero avere limiti di utilizzo. Usa il link qui sotto per ottimizzare l'uso dei modelli gratuiti!",
-		"freeModelsLink": "Scopri le opzioni dei modelli gratuiti e a budget",
-		"openRouterMarkup": "Il provider Kilo Code include tutti i modelli OpenRouter, senza ricarichi e con 0% di commissione!",
-		"switchToKiloCode": "Passa a Kilo Code"
+		"freeModelsLink": "Scopri le opzioni dei modelli gratuiti e a budget"
 	},
 	"notifications": {
 		"toolRequest": "Richiesta strumento in attesa di approvazione",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Nessuna politica dati impostata",
-					"allow": "Consenti raccolta dati del provider",
-					"deny": "Nega raccolta dati del provider"
+					"allowFree": "Consenti addestramento prompt (solo gratuito)",
+					"allow": "Consenti addestramento prompt",
+					"deny": "Nega addestramento prompt",
+					"zdr": "Ritenzione dati zero"
 				}
 			}
 		},
@@ -221,16 +221,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Completamento Automatico Manuale ({{keybinding}})",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Usa provider personalizzato",
-				"description": "Autocomplete usa le tue credenziali Kilo Code / OpenRouter / Mistral per utilizzare il modello Codestral di default"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "Configurazione API",
-				"current": "Usa configurazione API attualmente selezionata",
-				"description": "Seleziona una configurazione API da usare per i prompt Autocomplete, o usa semplicemente quella attualmente selezionata"
 			},
 			"keybindingNotFound": "non trovato"
 		}

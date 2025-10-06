@@ -22,9 +22,7 @@
 		"costUnknown": "cost desconegut",
 		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",
 		"freeModelsDescription": "Els models gratuïts poden tenir límits de velocitat. Utilitza l'enllaç de sota per optimitzar l'ús dels models gratuïts!",
-		"freeModelsLink": "Descobreix les opcions de models gratuïts i econòmics",
-		"openRouterMarkup": "El proveïdor de Kilo Code inclou tots els models d'OpenRouter, sense sobrecàrrec i amb 0% de comissió!",
-		"switchToKiloCode": "Canvia a Kilo Code"
+		"freeModelsLink": "Descobreix les opcions de models gratuïts i econòmics"
 	},
 	"notifications": {
 		"toolRequest": "Sol·licitud d'eina pendent d'aprovació",
@@ -53,8 +51,10 @@
 				},
 				"dataCollection": {
 					"default": "No hi ha política de dades establerta",
-					"allow": "Permetre la recol·lecció de dades del proveïdor",
-					"deny": "Denegar la recol·lecció de dades del proveïdor"
+					"allowFree": "Permetre entrenament de prompts (només gratuït)",
+					"allow": "Permetre entrenament de prompts",
+					"deny": "Denegar entrenament de prompts",
+					"zdr": "Retenció zero de dades"
 				}
 			}
 		},
@@ -214,16 +214,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Usar proveïdor personalitzat",
-				"description": "Autocomplete utilitza les teves credencials KiloCode / OpenRouter / Mistral per usar el model Codestral per defecte"
-			},
-			"provider": "Proveïdor",
-			"apiConfigId": {
-				"label": "Configuració d'API",
-				"current": "Usar configuració d'API actualment seleccionada",
-				"description": "Selecciona una configuració d'API per usar als prompts d'Autocomplete, o simplement usa la que està actualment seleccionada"
 			},
 			"keybindingNotFound": "no trobat"
 		}

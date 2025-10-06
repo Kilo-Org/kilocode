@@ -1,0 +1,3 @@
+# Description: Should suggest Ruby string methods
+str = "hello world"
+str.<<<AUTOCOMPLETE_HERE>>>

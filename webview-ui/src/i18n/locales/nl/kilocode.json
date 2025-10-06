@@ -29,9 +29,7 @@
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
 		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
-		"freeModelsLink": "Ontdek gratis en budget modelopties",
-		"openRouterMarkup": "De Kilo Code provider bevat alle OpenRouter modellen, zonder opslag en met 0% commissie!",
-		"switchToKiloCode": "Overstappen naar Kilo Code"
+		"freeModelsLink": "Ontdek gratis en budget modelopties"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Geen databeleid ingesteld",
-					"allow": "Sta dataverzameling door provider toe",
-					"deny": "Weiger dataverzameling door provider"
+					"allowFree": "Sta prompt-training toe (alleen gratis)",
+					"allow": "Sta prompt-training toe",
+					"deny": "Weiger prompt-training",
+					"zdr": "Geen gegevensbewaring"
 				}
 			}
 		},
@@ -221,16 +221,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
 				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Aangepaste provider gebruiken",
-				"description": "Autocomplete gebruikt standaard je Kilo Code / OpenRouter / Mistral-referenties om het Codestral-model te gebruiken"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "API-Configuratie",
-				"current": "Gebruik momenteel geselecteerde API-configuratie",
-				"description": "Selecteer een API-configuratie om te gebruiken voor Autocomplete-prompts, of gebruik gewoon wat er momenteel is geselecteerd"
 			},
 			"keybindingNotFound": "niet gevonden"
 		}

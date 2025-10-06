@@ -16,16 +16,6 @@ vi.mock("react-i18next", () => ({
 	},
 }))
 
-// Mock the context providers
-vi.mock("@/context/ExtensionStateContext", () => ({
-	useExtensionState: () => ({
-		listApiConfigMeta: [
-			{ id: "config1", name: "Config 1", apiProvider: "openai" },
-			{ id: "config2", name: "Config 2", apiProvider: "anthropic" },
-		],
-	}),
-	ExtensionStateProvider: ({ children }: any) => <div>{children}</div>,
-}))
 
 vi.mock("@/i18n/TranslationContext", () => ({
 	useAppTranslation: () => ({
@@ -37,7 +27,6 @@ vi.mock("@/i18n/TranslationContext", () => ({
 // Mock lucide-react icons
 vi.mock("lucide-react", () => ({
 	Bot: ({ className }: any) => <span className={className}>Bot Icon</span>,
-	Webhook: ({ className }: any) => <span className={className}>Webhook Icon</span>,
 	Zap: ({ className }: any) => <span className={className}>Zap Icon</span>,
 }))
 
@@ -65,15 +54,6 @@ vi.mock("../../common/ControlledCheckbox", () => ({
 
 // Mock the UI components
 vi.mock("@src/components/ui", () => ({
-	Select: ({ children, value, onValueChange }: any) => (
-		<div data-testid="select" data-value={value} onClick={() => onValueChange?.("test-value")}>
-			{children}
-		</div>
-	),
-	SelectTrigger: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-	SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-	SelectContent: ({ children }: any) => <div>{children}</div>,
-	SelectItem: ({ children, value }: any) => <div data-value={value}>{children}</div>,
 	Slider: ({ value, onValueChange, disabled }: any) => (
 		<input
 			type="range"
@@ -82,24 +62,6 @@ vi.mock("@src/components/ui", () => ({
 			disabled={disabled}
 		/>
 	),
-	Collapsible: ({ children, open, onOpenChange }: any) => (
-		<div data-testid="collapsible" data-open={open}>
-			{React.Children.map(children, (child) => {
-				if (child?.type?.name === "CollapsibleTrigger") {
-					return React.cloneElement(child, {
-						onClick: () => onOpenChange?.(!open),
-					})
-				}
-				return child
-			})}
-		</div>
-	),
-	CollapsibleTrigger: ({ children, onClick }: any) => (
-		<button data-testid="collapsible-trigger" onClick={onClick}>
-			{children}
-		</button>
-	),
-	CollapsibleContent: ({ children }: any) => <div data-testid="collapsible-content">{children}</div>,
 }))
 
 // Mock the settings components
@@ -114,10 +76,8 @@ vi.mock("../../settings/Section", () => ({
 const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
 	autoTriggerDelay: 3,
-	apiConfigId: "",
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
-	enableCustomProvider: false,
 }
 
 const renderComponent = (props = {}) => {
@@ -158,33 +118,6 @@ describe("GhostServiceSettingsView", () => {
 		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
 	})
 
-	it("shows advanced settings collapsed by default", () => {
-		renderComponent()
-
-		// Check that the collapsible is rendered but closed
-		const collapsible = screen.getByTestId("collapsible")
-		expect(collapsible).toHaveAttribute("data-open", "false")
-
-		// Provider settings should still be in the DOM but inside collapsed content
-		expect(screen.getByText(/kilocode:ghost.settings.provider/)).toBeInTheDocument()
-	})
-
-	it("expands advanced settings when clicked", () => {
-		renderComponent()
-
-		// Find and verify the trigger exists and can be clicked
-		const trigger = screen.getByTestId("collapsible-trigger")
-		expect(trigger).toBeInTheDocument()
-
-		// Verify it has the correct initial text
-		expect(screen.getByText("settings:advancedSettings.title")).toBeInTheDocument()
-
-		// Click the trigger - state changes are handled by the actual Collapsible component
-		fireEvent.click(trigger)
-
-		// The click event should be handled without errors
-		expect(trigger).toBeInTheDocument()
-	})
 
 	it("toggles auto trigger checkbox correctly", () => {
 		const setCachedStateField = vi.fn()
@@ -252,53 +185,6 @@ describe("GhostServiceSettingsView", () => {
 		)
 	})
 
-	it("toggles custom provider checkbox correctly", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({ setCachedStateField })
-
-		// Find and click the custom provider checkbox
-		const checkbox = screen
-			.getByText(/kilocode:ghost.settings.enableCustomProvider.label/)
-			.closest("label")
-			?.querySelector("input[type='checkbox']")
-
-		if (checkbox) {
-			fireEvent.click(checkbox)
-		}
-
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				enableCustomProvider: true,
-			}),
-		)
-	})
-
-	it("shows API config selector when custom provider is enabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableCustomProvider: true,
-			},
-		})
-
-		// Check that the API config selector is visible
-		expect(screen.getByText(/kilocode:ghost.settings.apiConfigId.label/)).toBeInTheDocument()
-		expect(screen.getByTestId("autocomplete-api-config-select")).toBeInTheDocument()
-	})
-
-	it("hides API config selector when custom provider is disabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableCustomProvider: false,
-			},
-		})
-
-		// The label exists in the DOM but the selector should not
-		expect(screen.queryByTestId("autocomplete-api-config-select")).not.toBeInTheDocument()
-	})
-
 	it("shows auto-trigger delay slider when auto-trigger is enabled", () => {
 		renderComponent({
 			ghostServiceSettings: {
@@ -347,37 +233,6 @@ describe("GhostServiceSettingsView", () => {
 		)
 	})
 
-	it("renders with proper chevron icon state", () => {
-		renderComponent()
-
-		const trigger = screen.getByTestId("collapsible-trigger")
-		const chevron = trigger.querySelector(".codicon-chevron-right")
-
-		expect(chevron).toBeInTheDocument()
-
-		// Click to expand
-		fireEvent.click(trigger)
-
-		// After clicking, it should change to chevron-down
-		// Note: This would require re-render in real implementation
-	})
-
-	it("preserves trigger settings visibility when advanced settings are toggled", () => {
-		renderComponent()
-
-		// Trigger settings should always be visible
-		expect(screen.getByText(/kilocode:ghost.settings.triggers/)).toBeInTheDocument()
-		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
-
-		// Toggle advanced settings
-		const trigger = screen.getByTestId("collapsible-trigger")
-		fireEvent.click(trigger)
-
-		// Trigger settings should still be visible
-		expect(screen.getByText(/kilocode:ghost.settings.triggers/)).toBeInTheDocument()
-		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
-	})
-
 	it("renders Trans components with proper structure", () => {
 		renderComponent()
 
@@ -386,53 +241,5 @@ describe("GhostServiceSettingsView", () => {
 
 		// We should have multiple description divs for the different settings
 		expect(descriptionDivs.length).toBeGreaterThan(2)
-	})
-
-	it("handles API config selection correctly", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({
-			setCachedStateField,
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableCustomProvider: true,
-			},
-		})
-
-		// Find and click the API config select
-		const select = screen.getByTestId("autocomplete-api-config-select")
-		fireEvent.click(select)
-
-		// The select should be rendered without errors
-		expect(select).toBeInTheDocument()
-	})
-
-	it("resets API config when custom provider is disabled", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({
-			setCachedStateField,
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableCustomProvider: true,
-				apiConfigId: "config1",
-			},
-		})
-
-		// Find and click the custom provider checkbox to disable it
-		const checkbox = screen
-			.getByText(/kilocode:ghost.settings.enableCustomProvider.label/)
-			.closest("label")
-			?.querySelector("input[type='checkbox']")
-
-		if (checkbox) {
-			fireEvent.click(checkbox)
-		}
-
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				enableCustomProvider: false,
-				apiConfigId: "",
-			}),
-		)
 	})
 })

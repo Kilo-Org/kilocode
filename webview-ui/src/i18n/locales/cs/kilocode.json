@@ -29,9 +29,7 @@
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
 		"freeModelsDescription": "Bezplatné modely mohou mít limity na počet požadavků. Použij odkaz níže pro optimalizaci využití bezplatných modelů!",
-		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů",
-		"openRouterMarkup": "Poskytovatel Kilo Code zahrnuje všechny modely OpenRouter, bez přirážky a s 0% provizí!",
-		"switchToKiloCode": "Přepnout na Kilo Code"
+		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů"
 	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Není nastavena zásada dat",
-					"allow": "Povolit shromažďování dat poskytovateli",
-					"deny": "Zakázat shromažďování dat poskytovateli"
+					"allowFree": "Povolit trénování promptů (pouze zdarma)",
+					"allow": "Povolit trénování promptů",
+					"deny": "Zakázat trénování promptů",
+					"zdr": "Nulové uchovávání dat"
 				}
 			}
 		},
@@ -221,16 +221,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Ruční dokončování ({{keybinding}})",
 				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Použít vlastního poskytovatele",
-				"description": "Autocomplete používá tvé přihlašovací údaje KiloCode / OpenRouter / Mistral k použití modelu Codestral ve výchozím nastavení"
-			},
-			"provider": "Poskytovatel",
-			"apiConfigId": {
-				"label": "Konfigurace API",
-				"current": "Použít aktuálně vybranou konfiguraci API",
-				"description": "Vyber konfiguraci API pro použití v Autocomplete promptech, nebo jen použij tu, která je aktuálně vybraná"
 			},
 			"keybindingNotFound": "nenalezeno"
 		}

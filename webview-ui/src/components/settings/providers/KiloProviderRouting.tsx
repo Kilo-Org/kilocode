@@ -12,12 +12,16 @@ import { safeJsonParse } from "@roo/safeJsonParse"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 import { cn } from "@/lib/utils"
 
+const DEFAULT_VALUE_KEY = "default" as const
+const SPECIFIC_PROVIDER_KEY = "specific" as const
+const ZERO_DATA_RETENTION_KEY = "zdr" as const
+
 type ProviderPreference =
 	| {
-			type: "default" | z.infer<typeof openRouterProviderSortSchema>
+			type: typeof DEFAULT_VALUE_KEY | z.infer<typeof openRouterProviderSortSchema>
 	  }
 	| {
-			type: "specific"
+			type: typeof SPECIFIC_PROVIDER_KEY
 			provider: string
 	  }
 
@@ -28,8 +32,8 @@ const ProviderSelectItem = ({ value, children }: { value: ProviderPreference; ch
 const getProviderPreference = (apiConfiguration: ProviderSettings): ProviderPreference =>
 	apiConfiguration.openRouterSpecificProvider &&
 	apiConfiguration.openRouterSpecificProvider !== OPENROUTER_DEFAULT_PROVIDER_NAME
-		? { type: "specific", provider: apiConfiguration.openRouterSpecificProvider }
-		: { type: apiConfiguration.openRouterProviderSort ?? "default" }
+		? { type: SPECIFIC_PROVIDER_KEY, provider: apiConfiguration.openRouterSpecificProvider }
+		: { type: apiConfiguration.openRouterProviderSort ?? DEFAULT_VALUE_KEY }
 
 interface Props {
 	apiConfiguration: ProviderSettings
@@ -65,7 +69,7 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 		)
 		setApiConfigurationField(
 			"openRouterSpecificProvider",
-			preference?.type === "specific" ? preference.provider : OPENROUTER_DEFAULT_PROVIDER_NAME,
+			preference?.type === SPECIFIC_PROVIDER_KEY ? preference.provider : OPENROUTER_DEFAULT_PROVIDER_NAME,
 		)
 	}
 
@@ -87,7 +91,7 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
-					<ProviderSelectItem value={{ type: "default" }}>
+					<ProviderSelectItem value={{ type: DEFAULT_VALUE_KEY }}>
 						{t("kilocode:settings.provider.providerRouting.sorting.default")}
 					</ProviderSelectItem>
 					<ProviderSelectItem value={{ type: openRouterProviderSortSchema.Values.price }}>
@@ -101,39 +105,49 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 					</ProviderSelectItem>
 					<SelectSeparator />
 					{specificProviderIsInvalid && (
-						<ProviderSelectItem value={{ type: "specific", provider: specficProvider }}>
+						<ProviderSelectItem value={{ type: SPECIFIC_PROVIDER_KEY, provider: specficProvider }}>
 							{specficProvider}
 						</ProviderSelectItem>
 					)}
 					{providers.map((provider) => (
 						<ProviderSelectItem
-							key={`specific:${provider.label}`}
-							value={{ type: "specific", provider: provider.label }}>
+							key={`${SPECIFIC_PROVIDER_KEY}:${provider.label}`}
+							value={{ type: SPECIFIC_PROVIDER_KEY, provider: provider.label }}>
 							{provider.label}
 						</ProviderSelectItem>
 					))}
 				</SelectContent>
 			</Select>
 			<Select
-				value={apiConfiguration.openRouterProviderDataCollection ?? "default"}
+				value={
+					apiConfiguration.openRouterZdr
+						? ZERO_DATA_RETENTION_KEY
+						: (apiConfiguration.openRouterProviderDataCollection ?? DEFAULT_VALUE_KEY)
+				}
 				onValueChange={(value) => {
 					setApiConfigurationField(
 						"openRouterProviderDataCollection",
 						openRouterProviderDataCollectionSchema.safeParse(value).data,
 					)
+					setApiConfigurationField("openRouterZdr", value === ZERO_DATA_RETENTION_KEY || undefined)
 				}}>
 				<SelectTrigger className="w-full">
 					<SelectValue />
 				</SelectTrigger>
 				<SelectContent>
-					<SelectItem value="default">
-						{t("kilocode:settings.provider.providerRouting.dataCollection.default")}
+					<SelectItem value={DEFAULT_VALUE_KEY}>
+						{apiConfiguration.apiProvider === "kilocode"
+							? t("kilocode:settings.provider.providerRouting.dataCollection.allowFree")
+							: t("kilocode:settings.provider.providerRouting.dataCollection.default")}
 					</SelectItem>
 					<SelectItem value={openRouterProviderDataCollectionSchema.Values.allow}>
 						{t("kilocode:settings.provider.providerRouting.dataCollection.allow")}
 					</SelectItem>
 					<SelectItem value={openRouterProviderDataCollectionSchema.Values.deny}>
 						{t("kilocode:settings.provider.providerRouting.dataCollection.deny")}
+					</SelectItem>
+					<SelectItem value={ZERO_DATA_RETENTION_KEY}>
+						{t("kilocode:settings.provider.providerRouting.dataCollection.zdr")}
 					</SelectItem>
 				</SelectContent>
 			</Select>

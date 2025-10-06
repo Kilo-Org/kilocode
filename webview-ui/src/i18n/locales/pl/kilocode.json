@@ -22,9 +22,7 @@
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
 		"freeModelsDescription": "Darmowe modele mogą mieć limity użycia. Użyj poniższego linku, aby zoptymalizować wykorzystanie darmowych modeli!",
-		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych",
-		"openRouterMarkup": "Dostawca Kilo Code zawiera wszystkie modele OpenRouter, bez narzutu i z 0% prowizji!",
-		"switchToKiloCode": "Przełącz na Kilo Code"
+		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych"
 	},
 	"notifications": {
 		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
@@ -52,8 +50,10 @@
 				},
 				"dataCollection": {
 					"default": "Brak ustawionej polityki danych",
-					"allow": "Zezwól na gromadzenie danych przez dostawcę",
-					"deny": "Zabroń gromadzenia danych przez dostawcę"
+					"allowFree": "Zezwól na trening promptów (tylko darmowe)",
+					"allow": "Zezwól na trening promptów",
+					"deny": "Zabroń treningu promptów",
+					"zdr": "Zerowe przechowywanie danych"
 				}
 			},
 			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
@@ -214,16 +214,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Ręczne uzupełnianie ({{keybinding}})",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Użyj niestandardowego dostawcy",
-				"description": "Autocomplete używa domyślnie twoich danych uwierzytelniających KiloCode / OpenRouter / Mistral do korzystania z modelu Codestral"
-			},
-			"provider": "Dostawca",
-			"apiConfigId": {
-				"label": "Konfiguracja API",
-				"current": "Użyj aktualnie wybranej konfiguracji API",
-				"description": "Wybierz konfigurację API do użycia dla promptów Autocomplete, lub po prostu użyj tej, która jest aktualnie wybrana"
 			},
 			"keybindingNotFound": "nie znaleziono"
 		}

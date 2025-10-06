@@ -1,25 +1,14 @@
 //kilocode_change - new file
-import { HTMLAttributes, useState } from "react"
+import { HTMLAttributes } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { Bot, Webhook, Zap } from "lucide-react"
+import { Bot, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useExtensionState } from "../../../context/ExtensionStateContext"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
 import { SetCachedStateField } from "../../settings/types"
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-	Slider,
-	Collapsible,
-	CollapsibleTrigger,
-	CollapsibleContent,
-} from "@src/components/ui"
+import { Slider } from "@src/components/ui"
 import { vscode } from "@/utils/vscode"
 import { ControlledCheckbox } from "../common/ControlledCheckbox"
 import { useKeybindings } from "@/hooks/useKeybindings"
@@ -36,16 +25,12 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
 	const {
 		enableAutoTrigger,
 		autoTriggerDelay,
-		apiConfigId,
 		enableQuickInlineTaskKeybinding,
 		enableSmartInlineTaskKeybinding,
-		enableCustomProvider,
 	} = ghostServiceSettings || {}
-	const { listApiConfigMeta } = useExtensionState()
 	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = (newValue: boolean) => {
@@ -73,21 +58,6 @@ export const GhostServiceSettingsView = ({
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
 			enableSmartInlineTaskKeybinding: newValue,
-		})
-	}
-
-	const onEnableCustomProviderChange = (newValue: boolean) => {
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			enableCustomProvider: newValue,
-			apiConfigId: newValue ? ghostServiceSettings?.apiConfigId : "",
-		})
-	}
-
-	const onApiConfigIdChange = (value: string) => {
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			apiConfigId: value === "-" ? "" : value,
 		})
 	}
 
@@ -200,76 +170,6 @@ export const GhostServiceSettingsView = ({
 					</div>
 				</div>
 
-				{/* Advanced Settings */}
-				<Collapsible open={isAdvancedSettingsOpen} onOpenChange={setIsAdvancedSettingsOpen}>
-					<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mt-4">
-						<span className={`codicon codicon-chevron-${isAdvancedSettingsOpen ? "down" : "right"}`}></span>
-						<span className="font-medium">{t("settings:advancedSettings.title")}</span>
-					</CollapsibleTrigger>
-					<CollapsibleContent className="mt-3">
-						{/* Provider Settings */}
-						<div className="flex flex-col gap-3">
-							<div className="flex flex-col gap-1">
-								<div className="flex items-center gap-2 font-bold">
-									<Webhook className="w-4" />
-									<div>{t("kilocode:ghost.settings.provider")}</div>
-								</div>
-							</div>
-							<div className="flex flex-col gap-1">
-								<ControlledCheckbox
-									checked={enableCustomProvider || false}
-									onChange={onEnableCustomProviderChange}>
-									<span className="font-medium">
-										{t("kilocode:ghost.settings.enableCustomProvider.label")}
-									</span>
-								</ControlledCheckbox>
-								<div className="text-vscode-descriptionForeground text-sm mt-1">
-									<Trans i18nKey="kilocode:ghost.settings.enableCustomProvider.description" />
-								</div>
-							</div>
-							{enableCustomProvider && (
-								<div className="flex flex-col gap-3">
-									<div>
-										<label className="block font-medium mb-1">
-											{t("kilocode:ghost.settings.apiConfigId.label")}
-										</label>
-										<div className="flex items-center gap-2">
-											<div>
-												<Select value={apiConfigId || "-"} onValueChange={onApiConfigIdChange}>
-													<SelectTrigger
-														data-testid="autocomplete-api-config-select"
-														className="w-full">
-														<SelectValue
-															placeholder={t(
-																"kilocode:ghost.settings.apiConfigId.current",
-															)}
-														/>
-													</SelectTrigger>
-													<SelectContent>
-														<SelectItem value="-">
-															{t("kilocode:ghost.settings.apiConfigId.current")}
-														</SelectItem>
-														{(listApiConfigMeta || []).map((config) => (
-															<SelectItem
-																key={config.id}
-																value={config.id}
-																data-testid={`autocomplete-${config.id}-option`}>
-																{config.name} ({config.apiProvider})
-															</SelectItem>
-														))}
-													</SelectContent>
-												</Select>
-												<div className="text-sm text-vscode-descriptionForeground mt-1">
-													{t("kilocode:ghost.settings.apiConfigId.description")}
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							)}
-						</div>
-					</CollapsibleContent>
-				</Collapsible>
 			</Section>
 		</div>
 	)

@@ -12,7 +12,6 @@ const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
-	private apiConfigId: string | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -22,73 +21,47 @@ export class GhostModel {
 		}
 	}
 
-	public getApiConfigId() {
-		return this.apiConfigId
-	}
-
 	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
-		let enableCustomProvider = settings?.enableCustomProvider || false
-
-		if (!enableCustomProvider) {
-			const profiles = await providerSettingsManager.listConfig()
-			const validProfiles = profiles
-				.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
-				.sort((a, b) => {
-					if (!a.apiProvider) {
-						return 1 // Place undefined providers at the end
-					}
-					if (!b.apiProvider) {
-						return -1 // Place undefined providers at the beginning
-					}
-					return (
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-						SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-					)
-				})
-
-			const selectedProfile = validProfiles[0] || null
-			if (selectedProfile) {
-				this.apiConfigId = selectedProfile.id
-				const profile = await providerSettingsManager.getProfile({
-					id: this.apiConfigId,
-				})
-				const profileProvider = profile.apiProvider
-				let modelDefinition = {}
-				if (profileProvider === "kilocode") {
-					modelDefinition = {
-						kilocodeModel: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "openrouter") {
-					modelDefinition = {
-						openRouterModelId: KILOCODE_DEFAULT_MODEL,
-					}
-				} else if (profileProvider === "mistral") {
-					modelDefinition = {
-						apiModelId: MISTRAL_DEFAULT_MODEL,
-					}
+		const profiles = await providerSettingsManager.listConfig()
+		const validProfiles = profiles
+			.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
+			.sort((a, b) => {
+				if (!a.apiProvider) {
+					return 1 // Place undefined providers at the end
 				}
-				this.apiHandler = buildApiHandler({
-					...profile,
-					...modelDefinition,
-				})
-			} else {
-				enableCustomProvider = true
+				if (!b.apiProvider) {
+					return -1 // Place undefined providers at the beginning
+				}
+				return (
+					SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
+					SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
+				)
+			})
+
+		const selectedProfile = validProfiles[0] || null
+		if (selectedProfile) {
+			const profile = await providerSettingsManager.getProfile({
+				id: selectedProfile.id,
+			})
+			const profileProvider = profile.apiProvider
+			let modelDefinition = {}
+			if (profileProvider === "kilocode") {
+				modelDefinition = {
+					kilocodeModel: KILOCODE_DEFAULT_MODEL,
+				}
+			} else if (profileProvider === "openrouter") {
+				modelDefinition = {
+					openRouterModelId: KILOCODE_DEFAULT_MODEL,
+				}
+			} else if (profileProvider === "mistral") {
+				modelDefinition = {
+					apiModelId: MISTRAL_DEFAULT_MODEL,
+				}
 			}
-		}
-
-		if (enableCustomProvider) {
-			this.apiConfigId = settings?.apiConfigId || null
-			const defaultApiConfigId = ContextProxy.instance?.getValues?.()?.currentApiConfigName || ""
-			const profileQuery = this.apiConfigId
-				? {
-						id: this.apiConfigId,
-					}
-				: {
-						name: defaultApiConfigId,
-					}
-
-			const profile = await providerSettingsManager.getProfile(profileQuery)
-			this.apiHandler = buildApiHandler(profile)
+			this.apiHandler = buildApiHandler({
+				...profile,
+				...modelDefinition,
+			})
 		}
 
 		if (this.apiHandler instanceof OpenRouterHandler) {

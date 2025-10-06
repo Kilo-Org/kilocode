@@ -92,7 +92,7 @@ describe("approvals", () => {
 
 			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", output)
 
-			expect(result.approved).toBe(true)
+			expect(result.isApproved).toBe(true)
 			expect(result.newOutput).toBe(false)
 		})
 
@@ -105,7 +105,7 @@ describe("approvals", () => {
 
 			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", output)
 
-			expect(result.approved).toBe(false)
+			expect(result.isApproved).toBe(false)
 			expect(result.newOutput).toBe(false)
 		})
 
@@ -118,7 +118,7 @@ describe("approvals", () => {
 
 			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", output)
 
-			expect(result.approved).toBe(true)
+			expect(result.isApproved).toBe(true)
 			expect(result.newOutput).toBe(false)
 		})
 	})

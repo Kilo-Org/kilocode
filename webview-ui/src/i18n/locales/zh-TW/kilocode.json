@@ -24,9 +24,7 @@
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
 		"freeModelsDescription": "免費模型可能有速率限制。使用下方連結來優化你的免費模型使用！",
-		"freeModelsLink": "探索免費模型選項",
-		"openRouterMarkup": "Kilo Code 供應商包含所有 OpenRouter 模型，無加價且 0% 佣金！",
-		"switchToKiloCode": "切換至 Kilo Code"
+		"freeModelsLink": "探索免費模型選項"
 	},
 	"notifications": {
 		"toolRequest": "工具請求等待核准",
@@ -67,8 +65,10 @@
 				},
 				"dataCollection": {
 					"default": "未設定資料政策",
-					"allow": "允許供應商資料收集",
-					"deny": "拒絕供應商資料收集"
+					"allowFree": "允許提示詞訓練（僅免費）",
+					"allow": "允許提示詞訓練",
+					"deny": "拒絕提示詞訓練",
+					"zdr": "零資料保留"
 				}
 			},
 			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
@@ -216,16 +216,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "手动自动补全 ({{keybinding}})",
 				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "使用自訂提供者",
-				"description": "Autocomplete 預設使用你的 KiloCode / OpenRouter / Mistral 憑證來使用 Codestral 模型"
-			},
-			"provider": "提供者",
-			"apiConfigId": {
-				"label": "API 設定",
-				"current": "使用目前選取的 API 設定",
-				"description": "選取用於 Autocomplete 提示的 API 設定，或直接使用目前選取的設定"
 			},
 			"keybindingNotFound": "未找到"
 		}

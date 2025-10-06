@@ -43,7 +43,7 @@
 	"settings.enableCodeActions.description": "Povolit rychlé opravy Kilo Code",
 	"settings.autoImportSettingsPath.description": "Cesta k konfiguračnímu souboru Kilo Code pro automatický import při spuštění rozšíření. Podporuje absolutní cesty a cesty relativní k domovskému adresáři (např. '~/Documents/kilo-code-settings.json'). Ponechte prázdné pro zakázání automatického importu.",
 	"settings.useAgentRules.description": "Povolit načítání souborů AGENTS.md pro pravidla specifická pro agenty (viz https://agent-rules.org/)",
-	"settings.apiRequestTimeout.description": "Maximální doba v sekundách čekání na odpovědi API (0 = bez časového limitu, 1-3600s, výchozí: 600s). Vyšší hodnoty se doporučují pro lokální poskytovatele jako LM Studio a Ollama, kteří mohou potřebovat více času na zpracování.",
+	"settings.apiRequestTimeout.description": "Maximální doba v sekundách čekání na odpovědi API (0 = bez časového limitu, 1-86400s, výchozí: 600s). Vyšší hodnoty se doporučují pro lokální poskytovatele jako LM Studio a Ollama, kteří mohou potřebovat více času na zpracování.",
 	"settings.newTaskRequireTodos.description": "Vyžadovat parametr todos při vytváření nových úkolů pomocí nástroje new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Velikost dávky pro operace vkládání během indexování kódu. Upravte toto podle limitů vašeho poskytovatele API. Výchozí je 60.",
 	"ghost.input.title": "Stiskněte 'Enter' pro potvrzení nebo 'Escape' pro zrušení",

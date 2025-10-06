@@ -603,7 +603,7 @@
 					"type": "number",
 					"default": 600,
 					"minimum": 0,
-					"maximum": 3600,
+					"maximum": 86400,
 					"description": "%settings.apiRequestTimeout.description%"
 				},
 				"kilo-code.newTaskRequireTodos": {

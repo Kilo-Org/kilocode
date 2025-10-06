@@ -22,9 +22,7 @@
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
 		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
-		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet",
-		"openRouterMarkup": "Kilo Code sağlayıcısı tüm OpenRouter modellerini içerir, sıfır ek ücret ve %0 komisyon ile!",
-		"switchToKiloCode": "Kilo Code'a geç"
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -59,8 +57,10 @@
 				},
 				"dataCollection": {
 					"default": "Veri politikası ayarlanmamış",
-					"allow": "Sağlayıcı veri toplamaya izin ver",
-					"deny": "Sağlayıcı veri toplamayı reddet"
+					"allowFree": "Prompt eğitimine izin ver (sadece ücretsiz)",
+					"allow": "Prompt eğitimine izin ver",
+					"deny": "Prompt eğitimini reddet",
+					"zdr": "Sıfır veri saklama"
 				}
 			}
 		},
@@ -214,16 +214,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Özel sağlayıcı kullan",
-				"description": "Autocomplete varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerini kullanır"
-			},
-			"provider": "Sağlayıcı",
-			"apiConfigId": {
-				"label": "API Yapılandırması",
-				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "Autocomplete istekleri için kullanılacak API yapılandırmasını seç, ya da şu anda seçili olanı kullan"
 			},
 			"keybindingNotFound": "bulunamadı"
 		}

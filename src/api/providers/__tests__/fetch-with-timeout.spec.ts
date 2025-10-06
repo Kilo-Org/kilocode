@@ -1,3 +1,4 @@
+// kilocode_change - file added
 // npx vitest run api/providers/__tests__/fetch-with-timeout.spec.ts
 
 import { vi, describe, it, expect, beforeEach } from "vitest"
@@ -13,6 +14,14 @@ const hoisted = vi.hoisted(() => {
 
 // Mock the undici module used by the implementation
 vi.mock("undici", () => {
+	// Create a mock HeadersTimeoutError class
+	class HeadersTimeoutError extends Error {
+		constructor(message?: string) {
+			super(message)
+			this.name = "HeadersTimeoutError"
+		}
+	}
+
 	return {
 		Agent: vi.fn().mockImplementation((opts: any) => {
 			hoisted.mockAgentConstructor(opts)
@@ -21,6 +30,9 @@ vi.mock("undici", () => {
 			return instance
 		}),
 		fetch: hoisted.mockFetch,
+		errors: {
+			HeadersTimeoutError,
+		},
 	}
 })
 

@@ -29,9 +29,7 @@
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
 		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
-		"freeModelsLink": "Discover free and budget model options",
-		"openRouterMarkup": "The Kilo Code provider includes all of the OpenRouter models, with zero markup and 0% commission!",
-		"switchToKiloCode": "Switch to Kilo Code"
+		"freeModelsLink": "Discover free and budget model options"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -63,8 +61,10 @@
 				},
 				"dataCollection": {
 					"default": "No data policy set",
-					"allow": "Allow provider data collection",
-					"deny": "Deny provider data collection"
+					"allowFree": "Allow prompt training (free only)",
+					"allow": "Allow prompt training",
+					"deny": "Deny prompt training",
+					"zdr": "Zero data retention"
 				}
 			},
 			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
@@ -224,16 +224,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Use custom provider",
-				"description": "Autocomplete uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "API Configuration",
-				"current": "Use currently selected API configuration",
-				"description": "Select an API configuration to use for Autocomplete prompts, or just use whatever is currently selected"
 			},
 			"keybindingNotFound": "not found"
 		}
