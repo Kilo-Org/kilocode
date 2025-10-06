@@ -332,6 +332,8 @@ export type ExtensionState = Pick<
 	| "fuzzyMatchThreshold"
 	| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 	| "fastApplyModel" // kilocode_change: Fast Apply model selection
+	| "fastApplyProviderType" // kilocode_change: Fast Apply provider type selection
+	| "fastApplyProfileId" // kilocode_change: Fast Apply profile ID
 	// | "experiments" // Optional in GlobalSettings, required here.
 	| "language"
 	// | "telemetrySetting" // Optional in GlobalSettings, required here.

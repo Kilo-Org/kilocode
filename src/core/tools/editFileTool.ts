@@ -14,6 +14,7 @@ import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
 import { type ClineProviderState } from "../webview/ClineProvider"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
+import { ProviderSettingsManager } from "../config/ProviderSettingsManager"
 import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
 
 const FAST_APPLY_MODEL_PRICING = {
@@ -225,16 +226,18 @@ async function applyFastApplyEdit(
 	filePath: string,
 ): Promise<MorphApplyResult> {
 	try {
-		// Get the current API configuration
-		const provider = cline.providerRef.deref()
-		if (!provider) {
-			return { success: false, error: "No API provider available for Fast Apply" }
+		const state = await cline.providerRef.deref()?.getState()
+		if (!state) {
+			return { success: false, error: "Unable to get provider state" }
 		}
 
-		const state = await provider.getState()
+		const provider = cline.providerRef.deref()
+		if (!provider) {
+			return { success: false, error: "Unable to get provider reference" }
+		}
 
 		// Check if user has Fast Apply enabled via OpenRouter or direct API
-		const morphConfig = await getFastApplyConfiguration(state)
+		const morphConfig = await getFastApplyConfiguration(state, provider.providerSettingsManager)
 		if (!morphConfig.available) {
 			return { success: false, error: morphConfig.error || "Fast Apply is not available" }
 		}
@@ -328,7 +331,10 @@ interface FastApplyConfiguration {
 	kiloCodeOrganizationId?: string
 }
 
-function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfiguration {
+async function getFastApplyConfiguration(
+	state: ClineProviderState,
+	providerSettingsManager: ProviderSettingsManager,
+): Promise<FastApplyConfiguration> {
 	// Check if Fast Apply is enabled in API configuration
 	if (state.experiments.morphFastApply !== true) {
 		return {
@@ -339,6 +345,9 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 
 	// Read the selected model from state
 	const selectedModel = state.fastApplyModel || "auto"
+	// Get the provider type and profile ID from state
+	const providerType = state.fastApplyProviderType || "morph"
+	const profileId = state.fastApplyProfileId
 
 	// Priority 1: Use direct Morph API key if available
 	// Allow human-relay for debugging
@@ -351,46 +360,51 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 			model: org === "morph" ? model : "auto", // Use selected model instead of hardcoded "auto"
 		}
 	}
+	// Priority 2: Use profile-based configuration if provider type is openrouter or kilocode
+	if ((providerType === "openrouter" || providerType === "kilocode") && profileId) {
+		try {
+			// Get the profile details from the provider settings manager
+			const profile = await providerSettingsManager.getProfile({ id: profileId })
 
-	// Priority 2: Use KiloCode provider
-	if (state.apiConfiguration?.apiProvider === "kilocode") {
-		const token = state.apiConfiguration.kilocodeToken
-		if (!token) {
-			return { available: false, error: "No KiloCode token available to use Fast Apply" }
-		}
-		return {
-			available: true,
-			apiKey: token,
-			baseUrl: `${getKiloBaseUriFromToken(token)}/api/openrouter/`,
-			model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
-			kiloCodeOrganizationId: state.apiConfiguration.kilocodeOrganizationId,
+			if (providerType === "kilocode") {
+				// KiloCode provider
+				const token = profile.kilocodeToken
+				if (!token) {
+					return { available: false, error: "No KiloCode token available in selected profile" }
+				}
+				return {
+					available: true,
+					apiKey: token,
+					baseUrl: `${getKiloBaseUriFromToken(token)}/api/openrouter/`,
+					model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
+					kiloCodeOrganizationId: profile.kilocodeOrganizationId,
+				}
+			} else if (providerType === "openrouter") {
+				// OpenRouter provider
+				const token = profile.openRouterApiKey
+				if (!token) {
+					return { available: false, error: "No OpenRouter API token available in selected profile" }
+				}
+				return {
+					available: true,
+					apiKey: token,
+					baseUrl: profile.openRouterBaseUrl,
+					model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
+				}
+			}
+		} catch (error) {
+			return {
+				available: false,
+				error: `Failed to load profile: ${error instanceof Error ? error.message : "Unknown error"}`,
+			}
 		}
 	}
 
-	// Priority 3: Use OpenRouter provider
-	if (state.apiConfiguration?.apiProvider === "openrouter") {
-		const token = state.apiConfiguration.openRouterApiKey
-		if (!token) {
-			return { available: false, error: "No OpenRouter API token available to use Fast Apply" }
-		}
-		return {
-			available: true,
-			apiKey: token,
-			baseUrl: state.apiConfiguration.openRouterBaseUrl || "https://openrouter.ai/api/v1",
-			model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
-		}
-	}
-
-	return {
-		available: false,
-		error: "Fast Apply configuration error. Please check your settings.",
-	}
+	return { available: false, error: "No valid Fast Apply configuration found" }
 }
 
 export function isFastApplyAvailable(state?: ClineProviderState): boolean {
-	return (state && getFastApplyConfiguration(state).available) || false
-}
-
-export function getFastApplyModelType(state?: ClineProviderState): "Morph" | "Relace" {
-	return state && getFastApplyConfiguration(state).model?.startsWith("relace/") ? "Relace" : "Morph"
+	// For availability check, we only check if morphFastApply is enabled
+	// We don't validate the full configuration since we don't have providerSettingsManager here
+	return state?.experiments?.morphFastApply === true
 }

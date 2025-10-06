@@ -1889,6 +1889,8 @@ export class ClineProvider
 			dismissedNotificationIds, // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel, // kilocode_change: Fast Apply model selection
+			fastApplyProviderType, // kilocode_change: Fast Apply provider type
+			fastApplyProfileId, // kilocode_change: Fast Apply profile ID
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
@@ -2068,6 +2070,8 @@ export class ClineProvider
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel: fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyProviderType, // kilocode_change: Fast Apply provider type
+			fastApplyProfileId, // kilocode_change: Fast Apply profile ID
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
@@ -2282,6 +2286,8 @@ export class ClineProvider
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey: stateValues.morphApiKey, // kilocode_change
 			fastApplyModel: stateValues.fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyProviderType: stateValues.fastApplyProviderType, // kilocode_change: Fast Apply provider type selection
+			fastApplyProfileId: stateValues.fastApplyProfileId, // kilocode_change: Fast Apply profile ID
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			reasoningBlockCollapsed: stateValues.reasoningBlockCollapsed ?? true,
 			cloudUserInfo,

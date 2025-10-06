@@ -182,6 +182,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		experiments,
 		morphApiKey, // kilocode_change
 		fastApplyModel, // kilocode_change: Fast Apply model selection
+		fastApplyProviderType, // kilocode_change: Fast Apply provider type
+		fastApplyProfileId, // kilocode_change: Fast Apply profile ID
 		fuzzyMatchThreshold,
 		maxOpenTabsContext,
 		maxWorkspaceFiles,
@@ -354,7 +356,51 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			return { ...prevState, kiloCodeImageApiKey: apiKey }
 		})
 	}, [])
+	const setMorphApiKey = useCallback((apiKey: string) => {
+		console.log(`[SettingsView] setMorphApiKey called with length: ${apiKey.length}`)
+		setCachedState((prevState) => {
+			console.log(`[SettingsView] setMorphApiKey updating cachedState`)
+			setChangeDetected(true)
+			return { ...prevState, morphApiKey: apiKey }
+		})
+	}, [])
 
+	const setFastApplyModel = useCallback((model: string) => {
+		console.log(`[SettingsView] setFastApplyModel called with: ${model}`)
+		setCachedState((prevState) => {
+			console.log(`[SettingsView] setFastApplyModel updating cachedState`)
+			setChangeDetected(true)
+			return {
+				...prevState,
+				fastApplyModel: model as
+					| "auto"
+					| "morph/morph-v3-fast"
+					| "morph/morph-v3-large"
+					| "relace/relace-apply-3"
+					| undefined,
+			}
+		})
+	}, [])
+
+	const setFastApplyProviderType = useCallback((providerType: "morph" | "openrouter" | "kilocode") => {
+		console.log(`[SettingsView] setFastApplyProviderType called with: ${providerType}`)
+		setCachedState((prevState) => {
+			console.log(
+				`[SettingsView] setFastApplyProviderType updating cachedState, current value: ${prevState.fastApplyProviderType}`,
+			)
+			setChangeDetected(true)
+			return { ...prevState, fastApplyProviderType: providerType }
+		})
+	}, [])
+
+	const setFastApplyProfileId = useCallback((profileId: string) => {
+		console.log(`[SettingsView] setFastApplyProfileId called with: ${profileId}`)
+		setCachedState((prevState) => {
+			console.log(`[SettingsView] setFastApplyProfileId updating cachedState`)
+			setChangeDetected(true)
+			return { ...prevState, fastApplyProfileId: profileId }
+		})
+	}, [])
 	const setImageGenerationSelectedModel = useCallback((model: string) => {
 		setCachedState((prevState) => {
 			setChangeDetected(true)
@@ -454,14 +500,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
 			vscode.postMessage({ type: "morphApiKey", text: morphApiKey }) // kilocode_change
 			vscode.postMessage({ type: "fastApplyModel", text: fastApplyModel }) // kilocode_change: Fast Apply model selection
+			console.log(`[SettingsView.handleSubmit] Sending fastApplyProviderType: ${fastApplyProviderType}`)
+			vscode.postMessage({ type: "fastApplyProviderType", text: fastApplyProviderType }) // kilocode_change: Fast Apply provider type
+			console.log(`[SettingsView.handleSubmit] Sending fastApplyProfileId: ${fastApplyProfileId}`)
+			vscode.postMessage({ type: "fastApplyProfileId", text: fastApplyProfileId }) // kilocode_change: Fast Apply profile ID
 			vscode.postMessage({ type: "openRouterImageApiKey", text: openRouterImageApiKey })
 			vscode.postMessage({ type: "kiloCodeImageApiKey", text: kiloCodeImageApiKey })
 			vscode.postMessage({
 				type: "openRouterImageGenerationSelectedModel",
 				text: openRouterImageGenerationSelectedModel,
 			})
-			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
-			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
+			// CRITICAL: Set this synchronously BEFORE any async operations
+			// This prevents the "overwrite unsaved changes" workaround from firing
 			setChangeDetected(false)
 		}
 	}
@@ -919,9 +969,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
 							// kilocode_change start
-							setCachedStateField={setCachedStateField}
 							morphApiKey={morphApiKey}
 							fastApplyModel={fastApplyModel}
+							fastApplyProviderType={fastApplyProviderType}
+							fastApplyProfileId={fastApplyProfileId}
+							setMorphApiKey={setMorphApiKey}
+							setFastApplyModel={setFastApplyModel}
+							setFastApplyProviderType={setFastApplyProviderType}
+							setFastApplyProfileId={setFastApplyProfileId}
 							// kilocode_change end
 							apiConfiguration={apiConfiguration}
 							setApiConfigurationField={setApiConfigurationField}

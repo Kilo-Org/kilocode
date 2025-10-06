@@ -1438,6 +1438,16 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		}
+		case "fastApplyProviderType":
+			const providerType = message.text as "morph" | "openrouter" | "kilocode" | undefined
+			await updateGlobalState("fastApplyProviderType", providerType)
+			await provider.postStateToWebview()
+			break
+
+		case "fastApplyProfileId":
+			await updateGlobalState("fastApplyProfileId", message.text)
+			await provider.postStateToWebview()
+			break
 		// kilocode_change end
 		case "updateVSCodeSetting": {
 			const { setting, value } = message

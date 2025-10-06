@@ -128,6 +128,8 @@ export interface WebviewMessage {
 		| "fuzzyMatchThreshold"
 		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
 		| "fastApplyModel" // kilocode_change: Fast Apply model selection
+		| "fastApplyProviderType" // kilocode_change: Fast Apply provider type
+		| "fastApplyProfileId" // kilocode_change: Fast Apply profile ID
 		| "writeDelayMs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
