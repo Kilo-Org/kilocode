@@ -20,6 +20,15 @@ import { formatResponse } from "../../prompts/responses"
 import { Task } from "../../task/Task"
 
 vi.mock("vscode", () => ({
+	workspace: {
+		workspaceFolders: [
+			{
+				uri: {
+					fsPath: "/test/workspace",
+				},
+			},
+		],
+	},
 	window: {
 		tabGroups: { all: [], onDidChangeTabs: vi.fn() },
 		visibleTextEditors: [],

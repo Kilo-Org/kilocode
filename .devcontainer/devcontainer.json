@@ -54,5 +54,8 @@
 	"remoteUser": "root",
 	"containerUser": "root",
 
-	"mounts": ["source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached"]
+	"mounts": [
+		"source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached",
+		"source=${localEnv:USERPROFILE}/.claude,target=/root/.claude,type=bind,consistency=cached"
+	]
 }

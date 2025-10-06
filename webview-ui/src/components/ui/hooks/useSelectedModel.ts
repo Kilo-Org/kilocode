@@ -379,9 +379,9 @@ function getSelectedModel({
 		// kilocode_change end
 
 		case "claude-code": {
-			// Claude Code models extend anthropic models but with images and prompt caching disabled
+			// Use dynamic models from routerModels for alternative provider support
 			const id = apiConfiguration.apiModelId ?? claudeCodeDefaultModelId
-			const info = claudeCodeModels[id as keyof typeof claudeCodeModels]
+			const info = routerModels["claude-code"]?.[id] || claudeCodeModels[id as keyof typeof claudeCodeModels] // kilocode_change Dynamic for manage model list
 			return { id, info: { ...openAiModelInfoSaneDefaults, ...info } }
 		}
 		case "cerebras": {
