@@ -50,6 +50,8 @@ import {
 	mainlandZAiModels,
 	fireworksModels,
 	fireworksDefaultModelId,
+	syntheticModels, // kilocode_change
+	syntheticDefaultModelId, // kilocode_change
 	featherlessModels,
 	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
@@ -397,6 +399,13 @@ function getSelectedModel({
 			const info = fireworksModels[id as keyof typeof fireworksModels]
 			return { id, info }
 		}
+		// kilocode_change start
+		case "synthetic": {
+			const id = apiConfiguration.apiModelId ?? syntheticDefaultModelId
+			const info = syntheticModels[id as keyof typeof syntheticModels]
+			return { id, info }
+		}
+		// kilocode_change end
 		case "featherless": {
 			const id = apiConfiguration.apiModelId ?? featherlessDefaultModelId
 			const info = featherlessModels[id as keyof typeof featherlessModels]

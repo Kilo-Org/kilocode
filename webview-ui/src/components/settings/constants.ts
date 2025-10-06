@@ -22,6 +22,7 @@ import {
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
+	syntheticModels, // kilocode_change
 	rooModels,
 	featherlessModels,
 } from "@roo-code/types"
@@ -48,6 +49,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
+	synthetic: syntheticModels, // kilocode_change
 	roo: rooModels,
 	featherless: featherlessModels,
 }
@@ -87,6 +89,7 @@ export const PROVIDERS = [
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
+	{ value: "synthetic", label: "Synthetic" }, // kilocode_change
 	{ value: "featherless", label: "Featherless AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
 	// kilocode_change start

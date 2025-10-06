@@ -293,6 +293,8 @@
 		"getChutesApiKey": "Get Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Get Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Get Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Get Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",

@@ -57,6 +57,7 @@ const sidebars: SidebarsConfig = {
 								"providers/claude-code",
 								"providers/deepseek",
 								"providers/fireworks",
+								"providers/synthetic", // kilocode_change
 								"providers/vertex",
 								"providers/glama",
 								"providers/gemini",

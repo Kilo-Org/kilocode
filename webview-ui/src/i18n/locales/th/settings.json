@@ -301,6 +301,8 @@
 		"getFeatherlessApiKey": "รับคีย์ API ของ Featherless",
 		"fireworksApiKey": "คีย์ API ของ Fireworks",
 		"getFireworksApiKey": "รับคีย์ API ของ Fireworks",
+		"syntheticApiKey": "คีย์ API ของ Synthetic",
+		"getSyntheticApiKey": "รับคีย์ API ของ Synthetic",
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
 		"getMoonshotApiKey": "รับคีย์ API ของ Moonshot",
 		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",

@@ -288,6 +288,8 @@
 		"getChutesApiKey": "Dapatkan Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Dapatkan Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Dapatkan Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Dapatkan Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",

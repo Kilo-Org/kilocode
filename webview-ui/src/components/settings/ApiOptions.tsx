@@ -33,6 +33,7 @@ import {
 	internationalZAiDefaultModelId,
 	mainlandZAiDefaultModelId,
 	fireworksDefaultModelId,
+	syntheticDefaultModelId, // kilocode_change
 	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	rooDefaultModelId,
@@ -96,6 +97,7 @@ import {
 	// kilocode_change start
 	GeminiCli,
 	VirtualQuotaFallbackProvider,
+	Synthetic,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -372,6 +374,7 @@ const ApiOptions = ({
 							: internationalZAiDefaultModelId,
 				},
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
+				synthetic: { field: "apiModelId", default: syntheticDefaultModelId }, // kilocode_change
 				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
@@ -717,6 +720,16 @@ const ApiOptions = ({
 			{selectedProvider === "fireworks" && (
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
+			{
+				// kilocode_change start
+				selectedProvider === "synthetic" && (
+					<Synthetic
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+					/>
+				)
+				// kilocode_change end
+			}
 
 			{selectedProvider === "roo" && (
 				<div className="flex flex-col gap-3">
