@@ -194,9 +194,7 @@ export const FastApplySettings = ({
 					className="w-full">
 					{FAST_APPLY_MODELS.map((model) => (
 						<VSCodeOption key={model.value} value={model.value}>
-							{t(
-								`settings:experimental.MORPH_FAST_APPLY.models.${model.value === "auto" ? "auto" : model.value.replace("/", "_").replace("-", "_")}`,
-							)}
+							{model.label}
 						</VSCodeOption>
 					))}
 				</VSCodeDropdown>
