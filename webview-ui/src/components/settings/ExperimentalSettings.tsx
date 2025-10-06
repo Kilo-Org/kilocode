@@ -8,10 +8,7 @@ import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
 
-import {
-	SetCachedStateField, // kilocode_change
-	SetExperimentEnabled,
-} from "./types"
+import { SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
