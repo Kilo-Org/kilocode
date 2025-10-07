@@ -1,7 +1,8 @@
 {
 	"compilerOptions": {
-		"module": "CommonJS",
-		"moduleResolution": "Node",
+		"composite": true,
+		"module": "ESNext",
+		"moduleResolution": "bundler",
 		"esModuleInterop": true,
 		"target": "ES2022",
 		"lib": ["ES2022", "ESNext.Disposable", "DOM"],

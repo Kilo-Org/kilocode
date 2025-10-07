@@ -1,5 +1,5 @@
 import React from "react"
-import { render, RenderOptions } from "@testing-library/react"
+import { render, RenderOptions, RenderResult } from "@testing-library/react"
 
 import { TooltipProvider } from "@src/components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "@src/components/ui/standard-tooltip"
@@ -12,7 +12,7 @@ const AllTheProviders = ({ children }: AllTheProvidersProps) => {
 	return <TooltipProvider delayDuration={STANDARD_TOOLTIP_DELAY}>{children}</TooltipProvider>
 }
 
-const customRender = (ui: React.ReactElement, options?: Omit<RenderOptions, "wrapper">) =>
+const customRender = (ui: React.ReactElement, options?: Omit<RenderOptions, "wrapper">): RenderResult =>
 	render(ui, { wrapper: AllTheProviders, ...options })
 
 // re-export everything

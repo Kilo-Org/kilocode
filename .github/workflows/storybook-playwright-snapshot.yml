@@ -53,11 +53,6 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Type check Playwright E2E
-              run: |
-                  cd apps/playwright-e2e
-                  pnpm check-types
-
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
 
@@ -68,20 +63,12 @@ jobs:
                   key: ${{ runner.os }}-buildx-${{ hashFiles('apps/playwright-e2e/Dockerfile.playwright-ci') }}
                   restore-keys: ${{ runner.os }}-buildx-
 
-            - name: Run Playwright E2E tests
+            - name: Build Storybook with Dependencies (includes Playwright tests)
               if: ${{ env.SECRETS_SET == 'true' }}
-              run: |
-                  cd apps/playwright-e2e
-                  node run-docker-playwright.js
+              run: pnpm turbo run storybook:ci
               env:
                   OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
                   WORKSPACE_ROOT: ${{ github.workspace }}
-
-            - name: Generate Stories from Playwright Screenshots
-              run: pnpm --filter @roo-code/storybook generate-screenshot-stories
-
-            - name: Build Storybook
-              run: pnpm --filter @roo-code/storybook build-storybook
 
             - name: Run Chromatic
               id: chromatic

@@ -17,10 +17,10 @@
 		"lint": "eslint src --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
 		"test": "vitest run",
-		"build": "tsup",
+		"build": "tsc",
 		"build:watch": "tsup --watch --outDir npm/dist --onSuccess 'echo ✅ Types rebuilt to npm/dist'",
 		"npm:publish": "node scripts/publish-npm.cjs",
-		"clean": "rimraf dist .turbo"
+		"clean": "rimraf dist .turbo *.tsbuildinfo"
 	},
 	"dependencies": {
 		"zod": "^3.25.61"

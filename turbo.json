@@ -2,7 +2,19 @@
 	"$schema": "https://turbo.build/schema.json",
 	"tasks": {
 		"lint": {},
-		"check-types": {},
+		"check-types": {
+			"dependsOn": ["@roo-code/types#build", "@roo-code/build#build", "kilo-code#build"],
+			"outputs": [],
+			"inputs": [
+				"src/**/*.ts",
+				"src/**/*.tsx",
+				"**/*.ts",
+				"**/*.tsx",
+				"tsconfig.json",
+				"tsconfig.*.json",
+				"package.json"
+			]
+		},
 		"test": {
 			"dependsOn": ["@roo-code/types#build"]
 		},
@@ -11,8 +23,13 @@
 			"cache": false
 		},
 		"build": {
+			"outputs": ["dist/**", "**/*.tsbuildinfo"],
+			"inputs": ["src/**", "package.json", "tsconfig.json", "tsconfig.*.json", "tsup.config.ts", "vite.config.ts"]
+		},
+		"bundle": {
+			"dependsOn": ["@roo-code/build#build"],
 			"outputs": ["dist/**"],
-			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts"]
+			"inputs": ["src/**", "package.json", "esbuild.mjs"]
 		},
 		"watch:tsc": {
 			"cache": false
@@ -22,21 +39,16 @@
 			"persistent": true
 		},
 		"storybook:build": {
+			"dependsOn": ["@roo-code/types#build", "kilo-code#build"],
 			"outputs": ["storybook-static/**"]
 		},
-		"jetbrains:bundle": {
-			"cache": false,
-			"dependsOn": ["@kilo-code/jetbrains-plugin#bundle"]
+		"build-storybook": {
+			"dependsOn": ["@roo-code/types#build", "kilo-code#build"],
+			"outputs": ["storybook-static/**"]
 		},
-		"jetbrains:run-bundle": {
-			"cache": false,
-			"dependsOn": ["@kilo-code/jetbrains-plugin#run:bundle"]
-		},
-		"jetbrains:build": {
-			"dependsOn": ["@kilo-code/jetbrains-plugin#build"]
-		},
-		"jetbrains:run": {
-			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
+		"generate-screenshot-stories": {
+			"dependsOn": ["@roo-code/types#build", "kilo-code#build"],
+			"outputs": ["stories/generated/**", "public/screenshots/**"]
 		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
@@ -44,6 +56,25 @@
 		},
 		"playwright": {
 			"cache": false
+		},
+		"storybook:ci": {
+			"dependsOn": [
+				"@roo-code/types#build",
+				"kilo-code#build",
+				"@roo-code/playwright-e2e#playwright:docker",
+				"@roo-code/storybook#generate-screenshot-stories",
+				"@roo-code/storybook#build-storybook"
+			],
+			"outputs": [
+				"apps/storybook/storybook-static/**",
+				"apps/storybook/stories/generated/**",
+				"apps/storybook/public/screenshots/**"
+			],
+			"cache": false
+		},
+		"playwright:docker": {
+			"cache": false,
+			"outputs": ["apps/playwright-e2e/test-results/**", "apps/playwright-e2e/playwright-report/**"]
 		}
 	}
 }

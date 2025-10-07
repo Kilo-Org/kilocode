@@ -1,6 +1,10 @@
 {
 	"compilerOptions": {
 		"types": ["vitest/globals"],
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"incremental": true,
 		"esModuleInterop": true,
 		"experimentalDecorators": true,
 		"forceConsistentCasingInFileNames": true,
@@ -18,10 +22,32 @@
 		"strict": true,
 		"target": "ES2022",
 		"useDefineForClassFields": true,
-		"useUnknownInCatchVariables": false
+		"useUnknownInCatchVariables": false,
+		"outDir": "dist",
+		"assumeChangesOnlyAffectDirectDependencies": true,
+		"disableSourceOfProjectReferenceRedirect": true,
+		"maxNodeModuleJsDepth": 0,
+		"preserveWatchOutput": true,
+		"pretty": false
 	},
-	"include": ["."],
-	"exclude": ["node_modules"],
+	"include": ["./**/*.ts", "./**/*.tsx", "./**/*.json"],
+	"exclude": [
+		"node_modules",
+		"**/node_modules",
+		"dist",
+		"**/dist",
+		"**/.turbo",
+		"**/build",
+		"**/coverage",
+		"**/*.d.ts",
+		"assets/vscode-material-icons/**",
+		".turbo/**",
+		"**/*.map",
+		"**/*.log",
+		"**/.vscode/**",
+		"**/.git/**"
+	],
+	"references": [{ "path": "../packages/types" }, { "path": "../packages/ipc" }, { "path": "../packages/telemetry" }],
 	"watchOptions": {
 		"watchFile": "useFsEvents",
 		"watchDirectory": "useFsEvents",

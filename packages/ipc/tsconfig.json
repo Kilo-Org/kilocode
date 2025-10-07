@@ -1,8 +1,18 @@
 {
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
-		"types": ["vitest/globals"]
+		"types": ["vitest/globals", "node"],
+		"composite": true,
+		"emitDeclarationOnly": true,
+		"outDir": "dist",
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"moduleResolution": "bundler",
+		"module": "ESNext",
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"downlevelIteration": true
 	},
 	"include": ["src"],
-	"exclude": ["node_modules"]
+	"exclude": ["node_modules", "dist"]
 }

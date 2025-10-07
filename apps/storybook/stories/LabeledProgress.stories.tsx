@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { LabeledProgress } from "@/components/ui/labeled-progress"
 import { createTableStory } from "../src/utils/createTableStory"
 
-const meta = {
+const meta: Meta<typeof LabeledProgress> = {
 	title: "Components/LabeledProgress",
 	component: LabeledProgress,
 	parameters: {

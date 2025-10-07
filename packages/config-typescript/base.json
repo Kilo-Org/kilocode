@@ -4,7 +4,7 @@
 		"declaration": true,
 		"declarationMap": true,
 		"esModuleInterop": true,
-		"incremental": false,
+		"incremental": true,
 		"isolatedModules": true,
 		"lib": ["es2022", "DOM", "DOM.Iterable"],
 		"module": "NodeNext",
@@ -15,6 +15,23 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"target": "ES2022",
-		"types": ["node"]
-	}
+		"types": ["node"],
+		"assumeChangesOnlyAffectDirectDependencies": true,
+		"disableSourceOfProjectReferenceRedirect": true
+	},
+	"exclude": [
+		"node_modules",
+		"**/node_modules",
+		"dist",
+		"**/dist",
+		"**/.turbo",
+		"**/.next",
+		"**/build",
+		"**/coverage",
+		"**/*.d.ts",
+		"**/test-results/**",
+		"**/playwright-report/**",
+		"**/.vscode-test/**",
+		"**/storybook-static/**"
+	]
 }

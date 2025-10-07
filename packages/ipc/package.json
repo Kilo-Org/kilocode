@@ -7,7 +7,7 @@
 	"scripts": {
 		"lint": "eslint src --ext=ts --max-warnings=0",
 		"check-types": "tsc --noEmit",
-		"clean": "rimraf .turbo"
+		"clean": "rimraf dist .turbo *.tsbuildinfo"
 	},
 	"dependencies": {
 		"@roo-code/types": "workspace:^",

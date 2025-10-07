@@ -1,6 +1,7 @@
 {
 	"extends": "@roo-code/config-typescript/nextjs.json",
 	"compilerOptions": {
+		"composite": true,
 		"paths": { "@/*": ["./src/*"] }
 	},
 	"include": ["next-env.d.ts", "src/**/*.ts", "src/**/*.tsx", ".next/types/**/*.ts", "drizzle.config.ts"],

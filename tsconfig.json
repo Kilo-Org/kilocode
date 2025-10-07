@@ -1,8 +1,26 @@
 {
-	"extends": "@roo-code/config-typescript/base.json",
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"files": [],
+	"references": [
+		{ "path": "./packages/types" },
+		{ "path": "./packages/ipc" },
+		{ "path": "./packages/telemetry" },
+		{ "path": "./src" },
+		{ "path": "./webview-ui" },
+		{ "path": "./packages/evals" },
+		{ "path": "./packages/build" },
+		{ "path": "./apps/web-evals" },
+		{ "path": "./apps/web-roo-code" },
+		{ "path": "./apps/storybook" },
+		{ "path": "./apps/vscode-e2e" },
+		{ "path": "./apps/playwright-e2e" }
+	],
 	"compilerOptions": {
-		"types": ["node"]
-	},
-	"exclude": ["node_modules"],
-	"include": ["scripts/*.ts"]
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"incremental": true,
+		"assumeChangesOnlyAffectDirectDependencies": true,
+		"disableSourceOfProjectReferenceRedirect": true
+	}
 }

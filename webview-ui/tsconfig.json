@@ -1,6 +1,6 @@
 {
 	"compilerOptions": {
-		"types": ["vitest/globals"],
+		"types": ["vitest/globals", "vite/client"],
 		"target": "ES2022",
 		"lib": ["dom", "dom.iterable", "esnext"],
 		"allowJs": true,
@@ -16,14 +16,43 @@
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
-		"noEmit": true,
+		"noEmit": false,
+		"emitDeclarationOnly": true,
 		"jsx": "react-jsx",
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
 			"@src/*": ["./src/*"],
-			"@roo/*": ["../src/shared/*"]
-		}
+			"@roo/*": ["../src/dist/shared/*", "../src/shared/*"],
+			"@roo-code/*": ["../packages/*"]
+		},
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "dist",
+		"incremental": true,
+		"assumeChangesOnlyAffectDirectDependencies": true
 	},
-	"include": ["src", "../src/shared", "vitest.setup.ts"]
+	"include": ["./src/**/*", "./vitest.setup.ts"],
+	"references": [{ "path": "../src" }],
+	"exclude": [
+		"node_modules",
+		"**/node_modules/**",
+		"dist",
+		"**/dist/**",
+		"**/.turbo/**",
+		"**/build/**",
+		"**/coverage/**",
+		"**/.git/**",
+		"**/.vscode/**",
+		"**/*.map",
+		"**/*.log"
+	],
+	"watchOptions": {
+		"watchFile": "useFsEvents",
+		"watchDirectory": "useFsEvents",
+		"fallbackPolling": "dynamicPriority",
+		"synchronousWatchDirectory": true,
+		"excludeDirectories": ["**/node_modules", "**/dist", "**/.turbo", "**/coverage"]
+	}
 }

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ContextWindowProgress } from "../../../webview-ui/src/components/chat/ContextWindowProgress"
 import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"
 
-const meta = {
+const meta: Meta<typeof ContextWindowProgress> = {
 	title: "Chat/ContextWindowProgress",
 	component: ContextWindowProgress,
 	decorators: [

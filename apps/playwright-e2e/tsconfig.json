@@ -1,6 +1,7 @@
 {
 	"extends": "@roo-code/config-typescript/base.json",
 	"compilerOptions": {
+		"composite": true,
 		"module": "ESNext",
 		"moduleResolution": "Bundler",
 		"target": "ES2022",
@@ -12,9 +13,13 @@
 		"useUnknownInCatchVariables": false,
 		"noUncheckedIndexedAccess": false,
 		"types": ["node", "@playwright/test"],
-		"declaration": false,
-		"declarationMap": false,
-		"noEmit": true
+		"outDir": "dist",
+		"noEmit": false,
+		"baseUrl": ".",
+		"paths": {
+			"@roo/*": ["../../src/dist/shared/*", "../../src/shared/*"],
+			"@roo-code/*": ["../../packages/*"]
+		}
 	},
 	"include": [
 		"tests/**/*",
@@ -24,5 +29,6 @@
 		"helpers/**/*",
 		"scripts/theme-extraction-script.test.ts"
 	],
-	"exclude": ["node_modules", "test-results", "tests/**/__tests__/**/*"]
+	"exclude": ["node_modules", "test-results", "playwright-report", "dist"],
+	"references": [{ "path": "../../src" }]
 }
