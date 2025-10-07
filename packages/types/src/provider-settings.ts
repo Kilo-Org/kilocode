@@ -51,6 +51,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"chutes", // kilocode_change
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -427,6 +428,7 @@ export const virtualQuotaFallbackProfileDataSchema = z.object({
 const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 	profiles: z.array(virtualQuotaFallbackProfileDataSchema).optional(),
 })
+// kilocode_change end
 
 export const zaiApiLineSchema = z.enum(["international_coding", "international", "china_coding", "china"])
 

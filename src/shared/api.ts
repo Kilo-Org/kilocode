@@ -165,6 +165,7 @@ const dynamicProviderExtras = {
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	chutes: {} as { apiKey?: string }, // kilocode_change
 } as const satisfies Record<RouterName, object>
 
 // Build the dynamic options union from the map, intersected with CommonFetchParams

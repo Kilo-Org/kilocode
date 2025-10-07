@@ -102,7 +102,10 @@
 			"wantsToCondense": "Kilo Code 想要壓縮你的對話",
 			"condenseConversation": "壓縮對話"
 		},
-		"seeNewChanges": "顯示新變更"
+		"seeNewChanges": "顯示新變更",
+		"revertNewChanges": "還原新變更",
+		"confirmRevertChanges": "確認還原變更",
+		"cancelRevertChanges": "取消還原變更"
 	},
 	"newTaskPreview": {
 		"task": "任務"

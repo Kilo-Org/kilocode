@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Codeは会話を要約したいと思っています",
 			"condenseConversation": "会話を要約する"
 		},
-		"seeNewChanges": "新しい変更を表示"
+		"seeNewChanges": "新しい変更を表示",
+		"revertNewChanges": "新しい変更を元に戻す",
+		"confirmRevertChanges": "変更を元に戻すことを確認",
+		"cancelRevertChanges": "変更を元に戻すことをキャンセル"
 	},
 	"newTaskPreview": {
 		"task": "タスク"

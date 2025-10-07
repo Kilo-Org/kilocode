@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
 		},
-		"seeNewChanges": "Toon Nieuwe Wijzigingen"
+		"seeNewChanges": "Toon Nieuwe Wijzigingen",
+		"revertNewChanges": "Herstel Nieuwe Wijzigingen",
+		"confirmRevertChanges": "Bevestig Wijzigingen Herstellen",
+		"cancelRevertChanges": "Annuleer Wijzigingen Herstellen"
 	},
 	"newTaskPreview": {
 		"task": "Taak"

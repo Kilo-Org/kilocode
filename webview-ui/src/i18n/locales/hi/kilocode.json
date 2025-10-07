@@ -100,7 +100,10 @@
 			"wantsToCondense": "Kilo Code तुम्हारी बातचीत को संक्षिप्त करना चाहता है",
 			"condenseConversation": "बातचीत संक्षिप्त करें"
 		},
-		"seeNewChanges": "नए परिवर्तन देखें"
+		"seeNewChanges": "नए परिवर्तन देखें",
+		"revertNewChanges": "नए परिवर्तन वापस लें",
+		"confirmRevertChanges": "परिवर्तन वापस लेने की पुष्टि करें",
+		"cancelRevertChanges": "परिवर्तन वापस लेना रद्द करें"
 	},
 	"newTaskPreview": {
 		"task": "कार्य"

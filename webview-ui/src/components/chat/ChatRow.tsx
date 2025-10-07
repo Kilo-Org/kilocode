@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef } from "react"
 import { useSize } from "react-use"
 import { useTranslation, Trans } from "react-i18next"
 import deepEqual from "fast-deep-equal"
-import { VSCodeBadge, VSCodeButton } from "@vscode/webview-ui-toolkit/react" // kilocode_change: add VSCodeButton
+import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
 
 import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
 
@@ -64,6 +64,7 @@ import {
 	MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -1157,21 +1158,7 @@ export const ChatRowContent = ({
 							{
 								// kilocode_change start
 								!message.partial && enableCheckpoints !== false && commitRange ? (
-									<div>
-										<VSCodeButton
-											className="w-full mt-2"
-											appearance="secondary"
-											onClick={() => {
-												vscode.postMessage({
-													type: "seeNewChanges",
-													payload: {
-														commitRange,
-													},
-												})
-											}}>
-											{t("kilocode:chat.seeNewChanges")}
-										</VSCodeButton>
-									</div>
+									<SeeNewChangesButtons commitRange={commitRange} />
 								) : (
 									<></>
 								)

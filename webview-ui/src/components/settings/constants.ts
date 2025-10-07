@@ -17,7 +17,7 @@ import {
 	vertexModels,
 	xaiModels,
 	groqModels,
-	chutesModels,
+	// chutesModels, // kilocode_change
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
@@ -45,7 +45,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	vertex: vertexModels,
 	xai: xaiModels,
 	groq: groqModels,
-	chutes: chutesModels,
+	// chutes: chutesModels, // kilocode_change
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,

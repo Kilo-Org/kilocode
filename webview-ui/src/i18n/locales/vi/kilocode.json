@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
 		},
-		"seeNewChanges": "Hiển thị thay đổi mới"
+		"seeNewChanges": "Hiển thị thay đổi mới",
+		"revertNewChanges": "Hoàn tác thay đổi mới",
+		"confirmRevertChanges": "Xác nhận hoàn tác thay đổi",
+		"cancelRevertChanges": "Hủy hoàn tác thay đổi"
 	},
 	"newTaskPreview": {
 		"task": "Nhiệm vụ"

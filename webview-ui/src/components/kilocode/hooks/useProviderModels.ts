@@ -19,7 +19,7 @@ import {
 	xaiModels,
 	groqModels,
 	groqDefaultModelId,
-	chutesModels,
+	// chutesModels, // kilocode_change
 	chutesDefaultModelId,
 	vscodeLlmModels,
 	vscodeLlmDefaultModelId,
@@ -113,7 +113,7 @@ export const getModelsByProvider = ({
 		}
 		case "chutes": {
 			return {
-				models: chutesModels,
+				models: routerModels.chutes, // kilocode_change
 				defaultModel: chutesDefaultModelId,
 			}
 		}
@@ -288,6 +288,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		chutesApiKey: apiConfiguration?.chutesApiKey, // kilocode_change
 	})
 
 	const { models, defaultModel } =

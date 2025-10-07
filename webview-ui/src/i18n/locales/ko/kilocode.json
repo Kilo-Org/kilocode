@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
 			"condenseConversation": "대화 요약하기"
 		},
-		"seeNewChanges": "새 변경사항 보기"
+		"seeNewChanges": "새 변경사항 보기",
+		"revertNewChanges": "새 변경사항 되돌리기",
+		"confirmRevertChanges": "변경사항 되돌리기 확인",
+		"cancelRevertChanges": "변경사항 되돌리기 취소"
 	},
 	"newTaskPreview": {
 		"task": "작업"

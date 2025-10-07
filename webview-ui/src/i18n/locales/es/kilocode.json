@@ -100,7 +100,10 @@
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
 			"condenseConversation": "Condensar Conversación"
 		},
-		"seeNewChanges": "Mostrar Nuevos Cambios"
+		"seeNewChanges": "Mostrar Nuevos Cambios",
+		"revertNewChanges": "Revertir Nuevos Cambios",
+		"confirmRevertChanges": "Confirmar Revertir Cambios",
+		"cancelRevertChanges": "Cancelar Revertir Cambios"
 	},
 	"newTaskPreview": {
 		"task": "Tarea"

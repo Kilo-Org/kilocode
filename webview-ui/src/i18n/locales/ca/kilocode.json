@@ -116,7 +116,10 @@
 			"wantsToCondense": "Kilo Code vol condensar la teva conversa",
 			"condenseConversation": "Condensar Conversa"
 		},
-		"seeNewChanges": "Mostrar Nous Canvis"
+		"seeNewChanges": "Mostrar Nous Canvis",
+		"revertNewChanges": "Revertir Nous Canvis",
+		"confirmRevertChanges": "Confirmar Revertir Canvis",
+		"cancelRevertChanges": "Cancel·lar Revertir Canvis"
 	},
 	"newTaskPreview": {
 		"task": "Tasca"

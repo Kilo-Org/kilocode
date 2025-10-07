@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code vuole condensare la tua conversazione",
 			"condenseConversation": "Condensa Conversazione"
 		},
-		"seeNewChanges": "Mostra Nuove Modifiche"
+		"seeNewChanges": "Mostra Nuove Modifiche",
+		"revertNewChanges": "Ripristina Nuove Modifiche",
+		"confirmRevertChanges": "Conferma Ripristino Modifiche",
+		"cancelRevertChanges": "Annulla Ripristino Modifiche"
 	},
 	"newTaskPreview": {
 		"task": "Attività"

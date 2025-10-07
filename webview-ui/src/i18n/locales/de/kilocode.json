@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code möchte deine Unterhaltung zusammenfassen",
 			"condenseConversation": "Unterhaltung zusammenfassen"
 		},
-		"seeNewChanges": "Neue Änderungen anzeigen"
+		"seeNewChanges": "Neue Änderungen anzeigen",
+		"revertNewChanges": "Neue Änderungen rückgängig machen",
+		"confirmRevertChanges": "Änderungen rückgängig machen bestätigen",
+		"cancelRevertChanges": "Änderungen rückgängig machen abbrechen"
 	},
 	"newTaskPreview": {
 		"task": "Aufgabe"

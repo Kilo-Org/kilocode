@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code 想要压缩你的对话",
 			"condenseConversation": "压缩对话"
 		},
-		"seeNewChanges": "查看新更改"
+		"seeNewChanges": "查看新更改",
+		"revertNewChanges": "撤销新更改",
+		"confirmRevertChanges": "确认撤销更改",
+		"cancelRevertChanges": "取消撤销更改"
 	},
 	"newTaskPreview": {
 		"task": "任务"
