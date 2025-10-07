@@ -28,6 +28,13 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
+		case "/tetrate-agent-router-service": {
+			const code = query.get("code")
+			if (code) {
+				await visibleProvider.handleTarsCallback(code)
+			}
+			break
+		}
 		case "/kilocode": {
 			const token = query.get("token")
 			if (token) {

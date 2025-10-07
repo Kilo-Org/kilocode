@@ -15,3 +15,8 @@ export function getOpenRouterAuthUrl(uriScheme?: string) {
 export function getRequestyAuthUrl(uriScheme?: string) {
 	return `https://app.requesty.ai/oauth/authorize?callback_url=${getCallbackUrl("requesty", uriScheme)}`
 }
+
+export function getTarsAuthUrl(codeChallenge: string, uriScheme?: string) {
+	const callback = getCallbackUrl("tetrate-agent-router-service", uriScheme)
+	return `https://router.tetrate.ai/auth?code_challenge=${codeChallenge}&callback=${callback}&client=Kilocode`
+}

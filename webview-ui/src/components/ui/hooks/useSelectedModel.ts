@@ -63,6 +63,7 @@ import {
 	vercelAiGatewayDefaultModelId,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
+	tarsDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -198,6 +199,11 @@ function getSelectedModel({
 		case "deepinfra": {
 			const id = apiConfiguration.deepInfraModelId ?? deepInfraDefaultModelId
 			const info = routerModels.deepinfra[id]
+			return { id, info }
+		}
+		case "tars": {
+			const id = apiConfiguration.tarsModelId ?? tarsDefaultModelId
+			const info = routerModels.tars[id]
 			return { id, info }
 		}
 		case "xai": {

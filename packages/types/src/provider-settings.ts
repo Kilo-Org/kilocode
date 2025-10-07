@@ -42,6 +42,7 @@ export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 
 export const dynamicProviders = [
 	"openrouter",
+	"tars",
 	"vercel-ai-gateway",
 	"huggingface",
 	"litellm",
@@ -230,6 +231,12 @@ const openRouterSchema = baseProviderSettingsSchema.extend({
 	openRouterProviderSort: openRouterProviderSortSchema.optional(),
 	openRouterZdr: z.boolean().optional(),
 	// kilocode_change end
+})
+
+const tarsSchema = baseProviderSettingsSchema.extend({
+	tarsApiKey: z.string().optional(),
+	tarsModelId: z.string().optional(),
+	tarsBaseUrl: z.string().optional(),
 })
 
 const bedrockSchema = apiModelIdProviderModelSchema.extend({
@@ -480,6 +487,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	claudeCodeSchema.merge(z.object({ apiProvider: z.literal("claude-code") })),
 	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })),
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
+	tarsSchema.merge(z.object({ apiProvider: z.literal("tars") })),
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
 	vertexSchema.merge(z.object({ apiProvider: z.literal("vertex") })),
 	openAiSchema.merge(z.object({ apiProvider: z.literal("openai") })),
@@ -526,6 +534,7 @@ export const providerSettingsSchema = z.object({
 	...claudeCodeSchema.shape,
 	...glamaSchema.shape,
 	...openRouterSchema.shape,
+	...tarsSchema.shape,
 	...bedrockSchema.shape,
 	...vertexSchema.shape,
 	...openAiSchema.shape,
@@ -586,6 +595,7 @@ export const modelIdKeys = [
 	"apiModelId",
 	"glamaModelId",
 	"openRouterModelId",
+	"tarsModelId",
 	"openAiModelId",
 	"ollamaModelId",
 	"lmStudioModelId",
@@ -621,6 +631,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	"claude-code": "apiModelId",
 	glama: "glamaModelId",
 	openrouter: "openRouterModelId",
+	tars: "tarsModelId",
 	"kilocode-openrouter": "openRouterModelId",
 	bedrock: "apiModelId",
 	vertex: "apiModelId",
@@ -782,6 +793,7 @@ export const MODELS_BY_PROVIDER: Record<
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
+	tars: { id: "tars", label: "TARS", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
 

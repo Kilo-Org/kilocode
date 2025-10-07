@@ -42,6 +42,7 @@ describe("Model Validation Functions", () => {
 				outputPrice: 5.0,
 			},
 		},
+		tars: {},
 		glama: {
 			"valid-model": {
 				maxTokens: 8192,

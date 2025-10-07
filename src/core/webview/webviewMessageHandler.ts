@@ -779,6 +779,11 @@ export const webviewMessageHandler = async (
 			})
 
 			break
+		case "storeTarsPKCEVerifier":
+			if (message.verifier) {
+				await provider.context.globalState.update("tars_pkce_verifier", message.verifier)
+			}
+			break
 		case "resetState":
 			await provider.resetState()
 			break
@@ -791,6 +796,7 @@ export const webviewMessageHandler = async (
 
 			const routerModels: Record<RouterName, ModelRecord> = {
 				openrouter: {},
+				tars: {},
 				"vercel-ai-gateway": {},
 				huggingface: {},
 				litellm: {},
@@ -826,6 +832,14 @@ export const webviewMessageHandler = async (
 				{
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
+				},
+				{
+					key: "tars",
+					options: {
+						provider: "tars",
+						apiKey: apiConfiguration.tarsApiKey,
+						baseUrl: apiConfiguration.tarsBaseUrl || "https://api.router.tetrate.ai/v1",
+					},
 				},
 				{
 					key: "requesty",
