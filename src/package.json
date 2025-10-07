@@ -1,6 +1,6 @@
 {
-	"name": "kilo-code-alpha",
-	"displayName": "%extension.displayName%-Alpha",
+	"name": "kilo-code",
+	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
 	"version": "5.99.2",

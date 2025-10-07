@@ -15,7 +15,7 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
-const TESTING_TOOLS_DEFAULT_TEMPERATURE = 0.6
+const TESTING_TOOLS_DEFAULT_TEMPERATURE = 1.0
 
 export class TestingToolsHandler extends BaseProvider implements SingleCompletionHandler {
 	protected options: ApiHandlerOptions
