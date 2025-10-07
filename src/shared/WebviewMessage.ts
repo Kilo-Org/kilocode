@@ -78,6 +78,7 @@ export interface WebviewMessage {
 		| "checkIsImageUrl"
 		| "exportSettings"
 		| "resetState"
+		| "storeTarsPKCEVerifier"
 		| "flushRouterModels"
 		| "requestRouterModels"
 		| "requestOpenAiModels"
@@ -332,6 +333,7 @@ export interface WebviewMessage {
 	values?: Record<string, any>
 	query?: string
 	setting?: string
+	verifier?: string
 	slug?: string
 	modeConfig?: ModeConfig
 	timeout?: number

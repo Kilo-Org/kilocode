@@ -16,6 +16,7 @@ describe("getModelsByProvider", () => {
 
 		const routerModels: RouterModels = {
 			openrouter: { "test-model": testModel },
+			tars: { "test-model": testModel },
 			requesty: { "test-model": testModel },
 			glama: { "test-model": testModel },
 			unbound: { "test-model": testModel },

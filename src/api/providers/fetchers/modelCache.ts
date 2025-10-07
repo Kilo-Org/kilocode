@@ -16,6 +16,7 @@ import { getOpenRouterModels } from "./openrouter"
 import { getVercelAiGatewayModels } from "./vercel-ai-gateway"
 import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
+import { getTarsModels } from "./tars"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
 import { GetModelsOptions } from "../../../shared/api"
@@ -80,6 +81,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "glama":
 				models = await getGlamaModels()
+				break
+			case "tars":
+				models = await getTarsModels(options.apiKey, options.baseUrl)
 				break
 			case "unbound":
 				// Unbound models endpoint requires an API key to fetch application specific models.

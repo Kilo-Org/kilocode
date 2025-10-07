@@ -36,6 +36,7 @@ import {
 	RooCodeEventName,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,
+	tarsDefaultModelId,
 	glamaDefaultModelId,
 	DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 	DEFAULT_WRITE_DELAY_MS,
@@ -1446,6 +1447,68 @@ export class ClineProvider
 		}
 
 		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+	}
+
+	// TARS
+
+	async handleTarsCallback(code: string) {
+		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+
+		let apiKey: string
+
+		try {
+			const codeVerifier = await this.context.globalState.get<string>("tars_pkce_verifier")
+
+			if (!codeVerifier) {
+				throw new Error("PKCE code verifier not found. Please try logging in again.")
+			}
+
+			const baseUrl = apiConfiguration.tarsBaseUrl || "https://router.tetrate.ai"
+			const response = await axios.post(
+				`${baseUrl}/api/api-keys/verify`,
+				{
+					code,
+					code_verifier: codeVerifier,
+				},
+				{
+					headers: {
+						"Content-Type": "application/json",
+					},
+				},
+			)
+
+			if (response.data && response.data.key) {
+				apiKey = response.data.key
+				// Clear the verifier after successful exchange
+				await this.context.globalState.update("tars_pkce_verifier", undefined)
+			} else {
+				throw new Error("Invalid response from TARS API")
+			}
+		} catch (error) {
+			this.log(
+				`Error exchanging code for API key: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+			)
+
+			// Show error notification to user
+			const errorMessage = error instanceof Error ? error.message : "Unknown error occurred"
+			vscode.window.showErrorMessage(`TARS authentication failed: ${errorMessage}`)
+
+			throw error
+		}
+
+		const newConfiguration: ProviderSettings = {
+			...apiConfiguration,
+			apiProvider: "tars",
+			tarsApiKey: apiKey,
+			tarsModelId: apiConfiguration?.tarsModelId || tarsDefaultModelId,
+		}
+
+		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+
+		// Show success notification
+		vscode.window.showInformationMessage(
+			"Successfully authenticated with Tetrate Agent Router Service! You can now close the authorization tab.",
+		)
 	}
 
 	// Glama

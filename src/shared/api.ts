@@ -163,6 +163,7 @@ const dynamicProviderExtras = {
 	requesty: {} as { apiKey?: string; baseUrl?: string },
 	unbound: {} as { apiKey?: string },
 	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	tars: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ollama: {} as { numCtx?: number }, // kilocode_change
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	chutes: {} as { apiKey?: string }, // kilocode_change
