@@ -799,12 +799,18 @@
 			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
 			"modelLabel": "Lựa chọn mô hình",
 			"modelDescription": "Chọn mô hình Fast Apply nào để sử dụng cho việc chỉnh sửa tệp",
-			"models": {
-				"auto": "Tự động (Mặc định - chọn tốt nhất có sẵn)",
-				"morphFast": "Morph v3 Fast (Nhanh hơn, chi phí thấp hơn)",
-				"morphLarge": "Morph v3 Large (Khả năng cao hơn)",
-				"relace": "Relace Apply v3"
-			}
+			"providerTypeLabel": "Loại nhà cung cấp",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Hồ sơ API",
+			"selectProfile": "Chọn một hồ sơ",
+			"noOpenRouterProfiles": "Chưa cấu hình hồ sơ OpenRouter nào. Vui lòng thêm hồ sơ OpenRouter trong phần Nhà cung cấp.",
+			"noKiloCodeProfiles": "Chưa cấu hình hồ sơ Kilocode nào. Vui lòng thêm hồ sơ Kilocode trong phần Nhà cung cấp.",
+			"warningInvalidConfig": "Cấu hình chưa hoàn tất. Vui lòng chọn nhà cung cấp và cấu hình các cài đặt bắt buộc ở trên.",
+			"successConfigured": "Fast Apply đã được cấu hình và sẵn sàng sử dụng"
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Bật lệnh slash do mô hình khởi tạo",

@@ -34,8 +34,7 @@
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"display": "Mostra",
-		"ghost": "Ghost"
+		"display": "Mostra"
 	},
 	"slashCommands": {
 		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
@@ -805,7 +804,19 @@
 				"morphFast": "Morph v3 Fast (Più veloce, costo inferiore)",
 				"morphLarge": "Morph v3 Large (Più capace)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Tipo di Provider",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Profilo API",
+			"selectProfile": "Seleziona un profilo",
+			"noOpenRouterProfiles": "Nessun profilo OpenRouter configurato. Aggiungi un profilo OpenRouter nella sezione Provider.",
+			"noKiloCodeProfiles": "Nessun profilo Kilocode configurato. Aggiungi un profilo Kilocode nella sezione Provider.",
+			"warningInvalidConfig": "Configurazione incompleta. Seleziona un provider e configura le impostazioni richieste sopra.",
+			"successConfigured": "Fast Apply è configurato e pronto all'uso"
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Abilita comandi slash avviati dal modello",

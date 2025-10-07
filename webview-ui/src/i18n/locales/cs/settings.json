@@ -814,7 +814,19 @@
 				"morphFast": "Morph v3 Fast (rychlejší, nižší náklady)",
 				"morphLarge": "Morph v3 Large (schopnější)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Typ poskytovatele",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "API profil",
+			"selectProfile": "Vyberte profil",
+			"noOpenRouterProfiles": "Nenakonfigurovány žádné profily OpenRouter. Přidejte prosím profil OpenRouter v sekci Poskytovatelé.",
+			"noKiloCodeProfiles": "Nenakonfigurovány žádné profily Kilocode. Přidejte prosím profil Kilocode v sekci Poskytovatelé.",
+			"warningInvalidConfig": "Konfigurace neúplná. Vyberte prosím poskytovatele a nakonfigurujte požadovaná nastavení výše.",
+			"successConfigured": "Rychlé aplikování je nakonfigurováno a připraveno k použití"
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Použít experimentální nástroj hledání a nahrazování",

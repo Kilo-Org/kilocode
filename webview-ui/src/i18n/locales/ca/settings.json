@@ -803,7 +803,19 @@
 				"morphFast": "Morph v3 Fast (Més ràpid, cost més baix)",
 				"morphLarge": "Morph v3 Large (Més capaç)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Tipus de proveïdor",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Perfil d'API",
+			"selectProfile": "Selecciona un perfil",
+			"noOpenRouterProfiles": "No hi ha perfils d'OpenRouter configurats. Si us plau, afegiu un perfil d'OpenRouter a la secció de Proveïdors.",
+			"noKiloCodeProfiles": "No hi ha perfils de Kilocode configurats. Si us plau, afegiu un perfil de Kilocode a la secció de Proveïdors.",
+			"warningInvalidConfig": "Configuració incompleta. Si us plau, seleccioneu un proveïdor i configureu els ajustos requerits a dalt.",
+			"successConfigured": "Fast Apply està configurat i llest per utilitzar"
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Habilitar comandes de barra diagonal iniciades pel model",

@@ -773,7 +773,19 @@
 				"morphFast": "Morph v3 Fast (Mais rápido, menor custo)",
 				"morphLarge": "Morph v3 Large (Mais capaz)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Tipo de Provedor",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Perfil da API",
+			"selectProfile": "Selecionar um perfil",
+			"noOpenRouterProfiles": "Nenhum perfil OpenRouter configurado. Por favor, adicione um perfil OpenRouter na seção Provedores.",
+			"noKiloCodeProfiles": "Nenhum perfil Kilocode configurado. Por favor, adicione um perfil Kilocode na seção Provedores.",
+			"warningInvalidConfig": "Configuração incompleta. Por favor, selecione um provedor e configure as configurações necessárias acima.",
+			"successConfigured": "Fast Apply está configurado e pronto para usar"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edição em segundo plano",

@@ -785,6 +785,18 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
+			"providerTypeLabel": "Jenis Provider",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Profil API",
+			"selectProfile": "Pilih profil",
+			"noOpenRouterProfiles": "Tidak ada profil OpenRouter yang dikonfigurasi. Harap tambahkan profil OpenRouter di bagian Provider.",
+			"noKiloCodeProfiles": "Tidak ada profil Kilocode yang dikonfigurasi. Harap tambahkan profil Kilocode di bagian Provider.",
+			"warningInvalidConfig": "Konfigurasi tidak lengkap. Harap pilih provider dan konfigurasikan pengaturan yang diperlukan di atas.",
+			"successConfigured": "Fast Apply telah dikonfigurasi dan siap digunakan",
 			"apiKey": "Kunci API Morph (opsional)",
 			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
 			"modelLabel": "Pemilihan Model",

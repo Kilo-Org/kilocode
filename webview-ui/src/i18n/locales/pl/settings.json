@@ -773,7 +773,19 @@
 				"morphFast": "Morph v3 Fast (Szybszy, niższy koszt)",
 				"morphLarge": "Morph v3 Large (Bardziej zaawansowany)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Typ dostawcy",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Profil API",
+			"selectProfile": "Wybierz profil",
+			"noOpenRouterProfiles": "Brak skonfigurowanych profili OpenRouter. Dodaj profil OpenRouter w sekcji Dostawcy.",
+			"noKiloCodeProfiles": "Brak skonfigurowanych profili Kilocode. Dodaj profil Kilocode w sekcji Dostawcy.",
+			"warningInvalidConfig": "Konfiguracja niekompletna. Wybierz dostawcę i skonfiguruj wymagane ustawienia powyżej.",
+			"successConfigured": "Szybkie stosowanie jest skonfigurowane i gotowe do użycia"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edycja w tle",

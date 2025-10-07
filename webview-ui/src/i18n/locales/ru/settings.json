@@ -773,7 +773,19 @@
 				"morphFast": "Morph v3 Fast (быстрее, ниже стоимость)",
 				"morphLarge": "Morph v3 Large (более мощная)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "Тип провайдера",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Профиль API",
+			"selectProfile": "Выберите профиль",
+			"noOpenRouterProfiles": "Профили OpenRouter не настроены. Пожалуйста, добавьте профиль OpenRouter в разделе «Провайдеры».",
+			"noKiloCodeProfiles": "Профили Kilocode не настроены. Пожалуйста, добавьте профиль Kilocode в разделе «Провайдеры».",
+			"warningInvalidConfig": "Конфигурация неполная. Пожалуйста, выберите провайдера и настройте необходимые параметры выше.",
+			"successConfigured": "Fast Apply настроен и готов к использованию"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Фоновое редактирование",

@@ -804,12 +804,18 @@
 			"placeholder": "输入您的 Morph API 密钥（可选）",
 			"modelLabel": "模型选择",
 			"modelDescription": "选择用于文件编辑的快速应用模型",
-			"models": {
-				"auto": "自动（默认 - 选择最佳可用）",
-				"morphFast": "Morph v3 Fast（更快，成本更低）",
-				"morphLarge": "Morph v3 Large（功能更强）",
-				"relace": "Relace Apply v3"
-			}
+			"providerTypeLabel": "提供商类型",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "API 配置文件",
+			"selectProfile": "选择配置文件",
+			"noOpenRouterProfiles": "未配置 OpenRouter 配置文件。请在“提供商”部分添加 OpenRouter 配置文件。",
+			"noKiloCodeProfiles": "未配置 Kilocode 配置文件。请在“提供商”部分添加 Kilocode 配置文件。",
+			"warningInvalidConfig": "配置不完整。请选择提供商并在上方配置所需设置。",
+			"successConfigured": "快速应用已配置完成，可以使用"
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "启用模型发起的斜杠命令",

@@ -780,32 +780,23 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Code API Provider, OpenRouter, or a Morph API key.",
+			"description": "When enabled, Kilocode edits files with Fast Apply using code-optimized models. Requires one configured Kilocode API provider, OpenRouter, or Morph API key.",
 			"providerTypeLabel": "Provider Type",
 			"providerTypes": {
 				"morph": "Morph",
 				"openrouter": "OpenRouter",
-				"kilocode": "Kilo Code"
+				"kilocode": "Kilocode"
 			},
-			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)",
+			"apiKey": "Morph API key",
+			"placeholder": "Enter your Morph API key",
 			"profileLabel": "API Profile",
 			"selectProfile": "Select a profile",
 			"noOpenRouterProfiles": "No OpenRouter profiles configured. Please add an OpenRouter profile in the Providers section.",
-			"noKiloCodeProfiles": "No Kilo Code profiles configured. Please add a Kilo Code profile in the Providers section.",
+			"noKiloCodeProfiles": "No Kilocode profiles configured. Please add a Kilocode profile in the Providers section.",
 			"modelLabel": "Model Selection",
 			"modelDescription": "Choose which Fast Apply model to use for file edits",
-			"models": {
-				"auto": "Auto (Default - chooses best available)",
-				"morphFast": "Morph v3 Fast (Faster, lower cost)",
-				"morphLarge": "Morph v3 Large (More capable)",
-				"relace": "Relace Apply v3",
-				"morph_morph_v3_fast": "Morph v3 Fast",
-				"morph_morph_v3_large": "Morph v3 Large",
-				"relace_relace_apply_3": "Relace Apply 3"
-			},
-			"warningInvalidConfig": "⚠️ Configuration incomplete. Please select a provider and configure the required settings above.",
-			"successConfigured": "✓ Fast Apply is configured and ready to use"
+			"warningInvalidConfig": "Configuration incomplete. Please select a provider and configure the required settings above.",
+			"successConfigured": "Fast Apply is configured and ready to use"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",

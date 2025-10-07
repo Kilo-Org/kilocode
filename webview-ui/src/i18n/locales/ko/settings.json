@@ -773,7 +773,19 @@
 				"morphFast": "Morph v3 Fast (더 빠르고 저렴한 비용)",
 				"morphLarge": "Morph v3 Large (더 강력함)",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"warningInvalidConfig": "구성이 불완전합니다. 제공자를 선택하고 위에 필요한 설정을 구성하세요.",
+			"successConfigured": "Fast Apply가 구성되었으며 사용할 준비가 되었습니다.",
+			"providerTypeLabel": "제공자 유형",
+			"providerTypes": {
+				"morph": "모프",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "API 프로필",
+			"selectProfile": "프로필 선택",
+			"noOpenRouterProfiles": "OpenRouter 프로필이 구성되지 않았습니다. 공급자 섹션에서 OpenRouter 프로필을 추가하세요.",
+			"noKiloCodeProfiles": "Kilocode 프로필이 구성되지 않았습니다. 공급자 섹션에서 Kilocode 프로필을 추가하세요."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "백그라운드 편집",

@@ -769,12 +769,18 @@
 			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
 			"modelLabel": "Model Seçimi",
 			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
-			"models": {
-				"auto": "Otomatik (Varsayılan - en uygun olanı seçer)",
-				"morphFast": "Morph v3 Fast (Daha hızlı, düşük maliyet)",
-				"morphLarge": "Morph v3 Large (Daha yetenekli)",
-				"relace": "Relace Apply v3"
-			}
+			"providerTypeLabel": "Sağlayıcı Türü",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "API Profili",
+			"selectProfile": "Bir profil seçin",
+			"noOpenRouterProfiles": "OpenRouter profili yapılandırılmamış. Lütfen Sağlayıcılar bölümünde bir OpenRouter profili ekleyin.",
+			"noKiloCodeProfiles": "Kilocode profili yapılandırılmamış. Lütfen Sağlayıcılar bölümünde bir Kilocode profili ekleyin.",
+			"warningInvalidConfig": "Yapılandırma eksik. Lütfen bir sağlayıcı seçin ve yukarıdaki gerekli ayarları yapılandırın.",
+			"successConfigured": "Hızlı Uygulama yapılandırıldı ve kullanıma hazır"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",

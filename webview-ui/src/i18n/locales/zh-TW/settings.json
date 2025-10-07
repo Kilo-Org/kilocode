@@ -774,7 +774,19 @@
 				"morphFast": "Morph v3 Fast（更快、成本更低）",
 				"morphLarge": "Morph v3 Large（功能更強）",
 				"relace": "Relace Apply v3"
-			}
+			},
+			"providerTypeLabel": "供應商類型",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "API 設定檔",
+			"selectProfile": "選擇設定檔",
+			"noOpenRouterProfiles": "未設定 OpenRouter 設定檔。請在「供應商」區段新增 OpenRouter 設定檔。",
+			"noKiloCodeProfiles": "未設定 Kilocode 設定檔。請在「供應商」區段新增 Kilocode 設定檔。",
+			"warningInvalidConfig": "設定不完整。請選擇供應商並設定上方所需的設定。",
+			"successConfigured": "快速套用已設定完成並準備使用"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "背景編輯",

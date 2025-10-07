@@ -862,12 +862,24 @@
 				"morphFast": "Morph v3 Fast (Швидше, нижча вартість)",
 				"morphLarge": "Morph v3 Large (Більш здатна)",
 				"relace": "Relace Apply v3"
-			}
-		},
-		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "Увімкни функції Autocomplete для швидких пропозицій коду та покращень безпосередньо у твоєму редакторі. Включає Швидке Завдання (Cmd+I) для цільових змін та Autocomplete для контекстуальних покращень."
+			},
+			"providerTypeLabel": "Тип провайдера",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"profileLabel": "Профіль API",
+			"selectProfile": "Виберіть профіль",
+			"noOpenRouterProfiles": "Профілі OpenRouter не налаштовані. Будь ласка, додайте профіль OpenRouter у розділі «Провайдери».",
+			"noKiloCodeProfiles": "Профілі Kilocode не налаштовані. Будь ласка, додайте профіль Kilocode у розділі «Провайдери».",
+			"warningInvalidConfig": "Конфігурація неповна. Будь ласка, виберіть провайдера та налаштуйте необхідні параметри вище.",
+			"successConfigured": "Швидке застосування налаштовано та готове до використання"
 		}
+	},
+	"INLINE_ASSIST": {
+		"name": "Autocomplete",
+		"description": "Увімкни функції Autocomplete для швидких пропозицій коду та покращень безпосередньо у твоєму редакторі. Включає Швидке Завдання (Cmd+I) для цільових змін та Autocomplete для контекстуальних покращень."
 	},
 	"promptCaching": {
 		"label": "Вимкнути кешування підказок",

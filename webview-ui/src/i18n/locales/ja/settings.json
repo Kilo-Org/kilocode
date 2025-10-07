@@ -796,16 +796,22 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Applyを有効化",
 			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
+			"providerTypeLabel": "プロバイダータイプ",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
 			"apiKey": "Morph APIキー（オプション）",
 			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"profileLabel": "APIプロファイル",
+			"selectProfile": "プロファイルを選択",
+			"noOpenRouterProfiles": "OpenRouterプロファイルが設定されていません。プロバイダーセクションでOpenRouterプロファイルを追加してください。",
+			"noKiloCodeProfiles": "Kilocodeプロファイルが設定されていません。プロバイダーセクションでKilocodeプロファイルを追加してください。",
 			"modelLabel": "モデル選択",
 			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
-			"models": {
-				"auto": "自動（デフォルト - 最適なものを選択）",
-				"morphFast": "Morph v3 Fast（高速、低コスト）",
-				"morphLarge": "Morph v3 Large（より高性能）",
-				"relace": "Relace Apply v3"
-			}
+			"warningInvalidConfig": "設定が不完全です。プロバイダーを選択し、上記の必要な設定を構成してください。",
+			"successConfigured": "Fast Applyが設定され、使用準備完了です"
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "モデル開始スラッシュコマンドを有効にする",

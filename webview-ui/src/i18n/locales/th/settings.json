@@ -847,12 +847,18 @@
 			"placeholder": "ป้อน Morph API key ของคุณ (ไม่บังคับ)",
 			"modelLabel": "การเลือกโมเดล",
 			"modelDescription": "เลือกโมเดล Fast Apply ที่จะใช้สำหรับการแก้ไขไฟล์",
-			"models": {
-				"auto": "อัตโนมัติ (ค่าเริ่มต้น - เลือกที่ดีที่สุดที่มี)",
-				"morphFast": "Morph v3 Fast (เร็วกว่า ค่าใช้จ่ายต่ำกว่า)",
-				"morphLarge": "Morph v3 Large (มีความสามารถมากกว่า)",
-				"relace": "Relace Apply v3"
-			}
+			"providerTypeLabel": "ประเภทผู้ให้บริการ",
+			"profileLabel": "โปรไฟล์ API",
+			"providerTypes": {
+				"morph": "Morph",
+				"openrouter": "OpenRouter",
+				"kilocode": "Kilocode"
+			},
+			"selectProfile": "เลือกโปรไฟล์",
+			"noOpenRouterProfiles": "ไม่มีโปรไฟล์ OpenRouter ที่กำหนดค่าไว้ โปรดเพิ่มโปรไฟล์ OpenRouter ในส่วนผู้ให้บริการ",
+			"noKiloCodeProfiles": "ไม่มีโปรไฟล์ Kilocode ที่กำหนดค่าไว้ โปรดเพิ่มโปรไฟล์ Kilocode ในส่วนผู้ให้บริการ",
+			"warningInvalidConfig": "การกำหนดค่าไม่สมบูรณ์ โปรดเลือกผู้ให้บริการและกำหนดค่าการตั้งค่าที่จำเป็นด้านบน",
+			"successConfigured": "Fast Apply ได้รับการกำหนดค่าและพร้อมใช้งาน"
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
