@@ -1,9 +1,9 @@
 {
-	"name": "kilo-code",
-	"displayName": "%extension.displayName%",
+	"name": "kilo-code-alpha",
+	"displayName": "%extension.displayName%-Alpha",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.99.2",
+	"version": "5.99.2",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
