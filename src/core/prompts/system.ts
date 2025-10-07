@@ -70,6 +70,7 @@ async function generatePrompt(
 	todoList?: TodoItem[],
 	modelId?: string,
 	clineProviderState?: ClineProviderState, // kilocode_change
+	includeXmlTools: boolean = true, // New parameter to control tool inclusion
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -100,28 +101,32 @@ async function generatePrompt(
 
 ${markdownFormattingSection()}
 
-${getSharedToolUseSection()}
+${includeXmlTools ? getSharedToolUseSection() : ""}
 
-${getToolDescriptionsForMode(
-	mode,
-	cwd,
-	supportsComputerUse,
-	codeIndexManager,
-	effectiveDiffStrategy,
-	browserViewportSize,
-	shouldIncludeMcp ? mcpHub : undefined,
-	customModeConfigs,
-	experiments,
-	partialReadsEnabled,
-	settings,
-	enableMcpServerCreation,
-	modelId,
-	clineProviderState, // kilocode_change
-)}
+${
+	includeXmlTools
+		? getToolDescriptionsForMode(
+				mode,
+				cwd,
+				supportsComputerUse,
+				codeIndexManager,
+				effectiveDiffStrategy,
+				browserViewportSize,
+				shouldIncludeMcp ? mcpHub : undefined,
+				customModeConfigs,
+				experiments,
+				partialReadsEnabled,
+				settings,
+				enableMcpServerCreation,
+				modelId,
+				clineProviderState, // kilocode_change
+			)
+		: ""
+}
 
-${getToolUseGuidelinesSection(codeIndexManager)}
+${includeXmlTools ? getToolUseGuidelinesSection(codeIndexManager) : ""}
 
-${mcpServersSection}
+${includeXmlTools ? mcpServersSection : ""}
 
 ${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
 
@@ -165,6 +170,7 @@ export const SYSTEM_PROMPT = async (
 	todoList?: TodoItem[],
 	modelId?: string,
 	clineProviderState?: ClineProviderState, // kilocode_change
+	includeXmlTools: boolean = true, // New parameter to control tool inclusion
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -241,5 +247,6 @@ ${customInstructions}`
 		todoList,
 		modelId,
 		clineProviderState, // kilocode_change
+		includeXmlTools, // Pass through the includeXmlTools parameter
 	)
 }

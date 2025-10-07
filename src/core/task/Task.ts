@@ -2929,6 +2929,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(previousResponseId && !this.skipPrevResponseIdOnce ? { previousResponseId } : {}),
 			// If a condense just occurred, explicitly suppress continuity fallback for the next call
 			...(this.skipPrevResponseIdOnce ? { suppressPreviousResponseId: true } : {}),
+			// Include provider reference for providers that need to generate system prompts
+			clineProvider: this.providerRef.deref(),
 		}
 
 		// Reset skip flag after applying (it only affects the immediate next call)

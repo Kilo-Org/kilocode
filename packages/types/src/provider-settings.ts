@@ -379,6 +379,7 @@ const testingToolsSchema = apiModelIdProviderModelSchema.extend({
 	testingToolsMaxTokens: z.number().int().min(1).optional(),
 	testingToolsSystemPromptOverride: z.string().optional(),
 	testingToolsToolsJson: z.string().optional(),
+	testingToolsUseFullSystemPrompt: z.boolean().optional(),
 })
 
 const groqSchema = apiModelIdProviderModelSchema.extend({

@@ -1,5 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
+import * as vscode from "vscode"
 
 import { type TestingToolsModelId, testingToolsDefaultModelId, testingToolsModels } from "@roo-code/types"
 
@@ -14,6 +15,7 @@ import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import { SYSTEM_PROMPT } from "../../core/prompts/system"
 
 const TESTING_TOOLS_DEFAULT_TEMPERATURE = 1.0
 
@@ -50,7 +52,7 @@ export class TestingToolsHandler extends BaseProvider implements SingleCompletio
 	override async *createMessage(
 		_systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		_metadata?: ApiHandlerCreateMessageMetadata,
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
 		const { id: modelId, info: modelInfo, reasoning } = this.getModel()
 
@@ -60,9 +62,75 @@ export class TestingToolsHandler extends BaseProvider implements SingleCompletio
 		// Override model info with custom values if provided
 		const effectiveMaxTokens = this.options.testingToolsMaxTokens || modelInfo.maxTokens
 
-		// Use system prompt override if provided, otherwise use empty string
-		// IMPORTANT: We completely ignore the systemPrompt parameter passed in
-		const effectiveSystemPrompt = this.options.testingToolsSystemPromptOverride || ""
+		console.debug("[TestingTools] createMessage called", {
+			useFullSystemPrompt: this.options.testingToolsUseFullSystemPrompt,
+			hasOverride: !!this.options.testingToolsSystemPromptOverride,
+			hasMetadata: !!metadata,
+		})
+
+		// Determine the system prompt to use
+		let effectiveSystemPrompt: string
+
+		if (this.options.testingToolsUseFullSystemPrompt) {
+			// Generate the full system prompt without XML tools
+			console.debug("[TestingTools] Generating full system prompt without XML tools")
+
+			// We need context from metadata to generate the system prompt properly
+			if (!metadata?.clineProvider) {
+				console.warn("[TestingTools] No clineProvider in metadata, using empty system prompt")
+				effectiveSystemPrompt = ""
+			} else {
+				try {
+					const provider = metadata.clineProvider
+					const context = provider.context
+					const cwd = provider.cwd
+					const state = await provider.getState()
+					const mode = metadata.mode || "code"
+
+					// Generate system prompt with includeXmlTools = false
+					effectiveSystemPrompt = await SYSTEM_PROMPT(
+						context,
+						cwd,
+						modelInfo.supportsImages ?? false,
+						state.mcpEnabled ? provider.getMcpHub() : undefined,
+						undefined, // diffStrategy - not relevant without tools
+						state.browserViewportSize ?? "900x600",
+						mode,
+						state.customModePrompts,
+						await provider.customModesManager.getCustomModes(),
+						state.customInstructions,
+						state.diffEnabled,
+						state.experiments,
+						state.enableMcpServerCreation,
+						state.language,
+						provider.getCurrentTask()?.rooIgnoreController?.getInstructions(),
+						state.maxReadFileLine !== -1,
+						{
+							maxConcurrentFileReads: state.maxConcurrentFileReads ?? 5,
+							todoListEnabled: this.options.todoListEnabled ?? true,
+							useAgentRules:
+								vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
+							newTaskRequireTodos: vscode.workspace
+								.getConfiguration("kilo-code")
+								.get<boolean>("newTaskRequireTodos", false),
+						},
+						undefined, // todoList
+						modelId,
+						state,
+						false, // includeXmlTools = false
+					)
+
+					console.debug("[TestingTools] Generated system prompt length:", effectiveSystemPrompt.length)
+				} catch (error) {
+					console.error("[TestingTools] Error generating system prompt:", error)
+					effectiveSystemPrompt = ""
+				}
+			}
+		} else {
+			// Use system prompt override if provided, otherwise use empty string
+			effectiveSystemPrompt = this.options.testingToolsSystemPromptOverride || ""
+			console.debug("[TestingTools] Using override/empty system prompt, length:", effectiveSystemPrompt.length)
+		}
 
 		// Parse tools JSON if provided
 		// IMPORTANT: We ONLY use tools from testingToolsToolsJson, never from metadata

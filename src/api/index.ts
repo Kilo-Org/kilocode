@@ -74,6 +74,11 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * @default true
 	 */
 	store?: boolean
+	/**
+	 * Reference to the ClineProvider for accessing state and context.
+	 * Used by providers that need to generate custom system prompts.
+	 */
+	clineProvider?: any // Using any to avoid circular dependency
 }
 
 export interface ApiHandler {

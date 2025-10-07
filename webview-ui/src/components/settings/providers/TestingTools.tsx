@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { VSCodeTextField, VSCodeTextArea } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeTextArea, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 
 import type { ProviderSettings } from "@roo-code/types"
 
@@ -125,16 +125,28 @@ export const TestingTools = ({ apiConfiguration, setApiConfigurationField }: Tes
 			<div className="border-t border-vscode-panel-border pt-3 mt-2">
 				<h3 className="font-medium mb-3">Testing Configuration</h3>
 
+				<VSCodeCheckbox
+					checked={apiConfiguration?.testingToolsUseFullSystemPrompt ?? false}
+					onChange={handleInputChange("testingToolsUseFullSystemPrompt", (e: any) => e.target.checked)}>
+					Use Full System Prompt (without XML tools)
+				</VSCodeCheckbox>
+				<div className="text-sm text-vscode-descriptionForeground mb-3">
+					When enabled, generates the full system prompt (with environment details, capabilities, rules, etc.)
+					but without XML tool definitions. When disabled, uses the override below if provided.
+				</div>
+
 				<VSCodeTextArea
 					value={apiConfiguration?.testingToolsSystemPromptOverride || ""}
 					onInput={handleInputChange("testingToolsSystemPromptOverride")}
 					rows={10}
 					placeholder="Leave empty to use default system prompt"
-					className="w-full">
+					className="w-full"
+					disabled={apiConfiguration?.testingToolsUseFullSystemPrompt ?? false}>
 					<label className="block font-medium mb-1">System Prompt Override</label>
 				</VSCodeTextArea>
 				<div className="text-sm text-vscode-descriptionForeground -mt-2 mb-3">
-					Override the system prompt for all requests. Leave empty to use the default mode prompt.
+					Override the system prompt for all requests. Leave empty to use the default mode prompt. Disabled
+					when "Use Full System Prompt" is enabled.
 				</div>
 
 				<VSCodeTextArea
