@@ -22,6 +22,7 @@ import { McpServer } from "./mcp"
 import { McpMarketplaceCatalog, McpDownloadResponse } from "./kilocode/mcp"
 import { Mode } from "./modes"
 import { ModelRecord, RouterModels } from "./api"
+import type { ProviderManifest } from "../api/providers/fetchers/provider-defined"
 // kilocode_change start
 import {
 	ProfileDataResponsePayload,
@@ -90,6 +91,7 @@ export interface ExtensionMessage {
 		| "openAiModels"
 		| "ollamaModels"
 		| "lmStudioModels"
+		| "providerDefinedModels"
 		| "vsCodeLmModels"
 		| "huggingFaceModels"
 		| "vsCodeLmApiAvailable"
@@ -189,6 +191,8 @@ export interface ExtensionMessage {
 	openAiModels?: string[]
 	ollamaModels?: ModelRecord
 	lmStudioModels?: ModelRecord
+	providerDefinedModels?: ModelRecord
+	providerDefinedManifest?: ProviderManifest
 	vsCodeLmModels?: { vendor?: string; family?: string; version?: string; id?: string }[]
 	huggingFaceModels?: Array<{
 		id: string

@@ -69,6 +69,7 @@ const sidebars: SidebarsConfig = {
 								"providers/openai",
 								"providers/openai-compatible",
 								"providers/openrouter",
+								"providers/provider-defined",
 								"providers/requesty",
 								"providers/unbound",
 								"providers/v0",
