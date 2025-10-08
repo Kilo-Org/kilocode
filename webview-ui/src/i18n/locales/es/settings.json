@@ -923,6 +923,10 @@
 		"taskTimeline": {
 			"label": "Mostrar cronología de tareas",
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		},
+		"sendMessageOnEnter": {
+			"label": "Enviar mensaje con Enter",
+			"description": "Cuando esté habilitado, presiona Enter para enviar y Shift+Enter para una nueva línea. Desactívalo para usar Shift+Enter para enviar en su lugar."
 		}
 	},
 	"ghost": {

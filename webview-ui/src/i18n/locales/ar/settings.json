@@ -599,6 +599,10 @@
 		"taskTimeline": {
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		},
+		"sendMessageOnEnter": {
+			"label": "إرسال رسالة باستخدام Enter",
+			"description": "عند التمكين، اضغط على Enter للإرسال و Shift+Enter لسطر جديد. قم بإيقاف التشغيل لاستخدام Shift+Enter للإرسال بدلاً من ذلك."
 		}
 	},
 	"ghost": {
