@@ -945,6 +945,11 @@
 		"taskTimeline": {
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		},
+		"costThreshold": {
+			"label": "Sembunyikan biaya di bawah ambang batas",
+			"currentValue": "Ambang batas saat ini: ${{value}}",
+			"description": "Hanya tampilkan biaya permintaan di atas jumlah ini. Biaya selalu terlihat saat panel detail terbuka."
 		}
 	},
 	"ghost": {

@@ -924,6 +924,11 @@
 		"taskTimeline": {
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		},
+		"costThreshold": {
+			"label": "Ocultar custo abaixo do limite",
+			"currentValue": "Limiar atual: ${{value}}",
+			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
 		}
 	},
 	"ghost": {

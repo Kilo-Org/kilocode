@@ -923,6 +923,11 @@
 		"taskTimeline": {
 			"label": "Afficher la chronologie des tâches",
 			"description": "Afficher une chronologie visuelle des messages de tâches, colorés selon leur type, permettant de voir rapidement la progression des tâches et de revenir à des points spécifiques dans l'historique de la tâche."
+		},
+		"costThreshold": {
+			"label": "Masquer le coût en dessous du seuil",
+			"currentValue": "Seuil actuel : ${{value}}",
+			"description": "N'afficher que les coûts de requête supérieurs à ce montant. Les coûts sont toujours visibles lorsque le volet de détails est ouvert."
 		}
 	},
 	"ghost": {

@@ -924,6 +924,11 @@
 		"taskTimeline": {
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		},
+		"costThreshold": {
+			"label": "Ẩn chi phí dưới ngưỡng",
+			"description": "Chỉ hiển thị chi phí yêu cầu trên mức này. Chi phí luôn được hiển thị khi khung thông tin chi tiết được mở.",
+			"currentValue": "Ngưỡng hiện tại: ${{value}}"
 		}
 	},
 	"ghost": {

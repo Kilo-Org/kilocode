@@ -925,6 +925,11 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"costThreshold": {
+			"label": "Nascondi costo sotto la soglia",
+			"currentValue": "Soglia attuale: ${{value}}",
+			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
 		}
 	},
 	"ghost": {

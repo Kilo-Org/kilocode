@@ -925,6 +925,11 @@
 		"taskTimeline": {
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
+		},
+		"costThreshold": {
+			"label": "Eşik değerin altındaki maliyeti gizle",
+			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",
+			"currentValue": "Mevcut eşik: ${{value}}"
 		}
 	},
 	"ghost": {

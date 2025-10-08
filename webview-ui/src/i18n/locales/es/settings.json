@@ -923,6 +923,11 @@
 		"taskTimeline": {
 			"label": "Mostrar cronología de tareas",
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		},
+		"costThreshold": {
+			"label": "Ocultar costo por debajo del umbral",
+			"description": "Solo mostrar los costos de solicitud superiores a este monto. Los costos siempre son visibles cuando el panel de detalles está abierto.",
+			"currentValue": "Umbral actual: ${{value}}"
 		}
 	},
 	"ghost": {

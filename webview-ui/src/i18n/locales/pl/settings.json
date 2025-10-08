@@ -924,6 +924,11 @@
 		"taskTimeline": {
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"costThreshold": {
+			"currentValue": "Aktualny próg: ${{value}}",
+			"label": "Ukryj koszt poniżej progu",
+			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
 		}
 	},
 	"ghost": {
