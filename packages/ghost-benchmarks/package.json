@@ -1,0 +1,41 @@
+{
+	"name": "@kilocode/ghost-benchmarks",
+	"version": "1.0.0",
+	"description": "Benchmarking system for Ghost autocomplete functionality",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"ghost-benchmark": "./dist/cli/benchmark-cli.cjs"
+	},
+	"scripts": {
+		"build": "node esbuild.config.js",
+		"dev": "node esbuild.config.js --watch",
+		"test": "npm run build && node dist/runner.js",
+		"test:verbose": "npm run build && node dist/runner.js --verbose",
+		"test:watch": "vitest --watch",
+		"lint": "eslint *.ts",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@anthropic-ai/sdk": "^0.51.0",
+		"openai": "^5.12.2",
+		"dotenv": "^16.4.5",
+		"diff": "^5.1.0",
+		"web-tree-sitter": "^0.20.8"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@types/node": "^20.0.0",
+		"esbuild": "^0.25.0",
+		"eslint": "^9.27.0",
+		"typescript": "^5.8.3",
+		"vitest": "^3.2.4"
+	},
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	}
+}

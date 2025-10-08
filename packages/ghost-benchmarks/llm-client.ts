@@ -1,6 +1,6 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
-import { DEFAULT_HEADERS } from "../api/providers/constants.js"
+import { DEFAULT_HEADERS } from "../../src/api/providers/constants.js"
 
 config()
 
@@ -35,24 +35,40 @@ export class LLMClient {
 		this.provider = process.env.LLM_PROVIDER || "kilocode"
 		this.model = process.env.LLM_MODEL || "mistralai/codestral-2508"
 
-		if (this.provider !== "kilocode") {
-			throw new Error(`Only kilocode provider is supported. Got: ${this.provider}`)
+		if (this.provider !== "kilocode" && this.provider !== "openrouter") {
+			throw new Error(`Only kilocode and openrouter providers are supported. Got: ${this.provider}`)
 		}
 
-		if (!process.env.KILOCODE_API_KEY) {
+		// Validate API keys based on provider
+		if (this.provider === "kilocode" && !process.env.KILOCODE_API_KEY) {
 			throw new Error("KILOCODE_API_KEY is required for Kilocode provider")
 		}
 
-		const baseUrl = getKiloBaseUriFromToken(process.env.KILOCODE_API_KEY)
+		if (this.provider === "openrouter" && !process.env.OPENROUTER_API_KEY) {
+			throw new Error("OPENROUTER_API_KEY is required for OpenRouter provider")
+		}
 
-		this.openai = new OpenAI({
-			baseURL: `${baseUrl}/api/openrouter/`,
-			apiKey: process.env.KILOCODE_API_KEY,
-			defaultHeaders: {
-				...DEFAULT_HEADERS,
-				"X-KILOCODE-TESTER": "SUPPRESS",
-			},
-		})
+		// Configure OpenAI client based on provider
+		if (this.provider === "kilocode") {
+			const baseUrl = getKiloBaseUriFromToken(process.env.KILOCODE_API_KEY)
+			this.openai = new OpenAI({
+				baseURL: `${baseUrl}/api/openrouter/`,
+				apiKey: process.env.KILOCODE_API_KEY,
+				defaultHeaders: {
+					...DEFAULT_HEADERS,
+					"X-KILOCODE-TESTER": "SUPPRESS",
+				},
+			})
+		} else if (this.provider === "openrouter") {
+			this.openai = new OpenAI({
+				baseURL: "https://openrouter.ai/api/v1",
+				apiKey: process.env.OPENROUTER_API_KEY,
+				defaultHeaders: {
+					...DEFAULT_HEADERS,
+					"HTTP-Referer": "https://kilocode.ai",
+				},
+			})
+		}
 	}
 
 	async sendPrompt(systemPrompt: string, userPrompt: string): Promise<LLMResponse> {

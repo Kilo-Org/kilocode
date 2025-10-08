@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
-import { AutoTriggerStrategyTester } from "./auto-trigger-strategy.js"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
+import { AutoTriggerStrategyTester } from "../../src/test-llm-autocompletion/auto-trigger-strategy.js"
+import { CURSOR_MARKER } from "../../src/services/ghost/ghostConstants.js"
 
 // Mock LLMClient to avoid needing API keys in tests
 vi.mock("./llm-client.js", () => ({

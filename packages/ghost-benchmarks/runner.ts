@@ -324,22 +324,4 @@ async function main() {
 	}
 }
 
-// Check for required environment variables
-function checkEnvironment() {
-	const provider = process.env.LLM_PROVIDER || "kilocode"
-
-	if (provider !== "kilocode") {
-		console.error(`\n❌ Error: Only kilocode provider is supported. Got: ${provider}`)
-		process.exit(1)
-	}
-
-	if (!process.env.KILOCODE_API_KEY) {
-		console.error(`\n❌ Error: KILOCODE_API_KEY is not set`)
-		console.log("\nPlease create a .env file with your API credentials.")
-		console.log("Example: KILOCODE_API_KEY=your-api-key-here\n")
-		process.exit(1)
-	}
-}
-
-checkEnvironment()
 main().catch(console.error)

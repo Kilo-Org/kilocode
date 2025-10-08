@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
+import { CURSOR_MARKER } from "../../src/services/ghost/ghostConstants.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -44,20 +44,27 @@ function parseTestCaseFile(filePath: string): { description: string; input: stri
 }
 
 function loadTestCases(): Category[] {
-	if (!fs.existsSync(TEST_CASES_DIR)) {
+	// Use the correct test cases directory for bundled execution
+	const testCasesPath = fs.existsSync(TEST_CASES_DIR) ? TEST_CASES_DIR : path.join(process.cwd(), "test-cases")
+
+	if (!fs.existsSync(testCasesPath)) {
+		console.error("Error: Test cases directory not found at:", testCasesPath)
 		return []
 	}
 
+	return loadFromDirectory(testCasesPath)
+}
+
+function loadFromDirectory(testCasesDir: string): Category[] {
 	const categories: Category[] = []
-	const categoryDirs = fs.readdirSync(TEST_CASES_DIR, { withFileTypes: true })
+	const categoryDirs = fs.readdirSync(testCasesDir, { withFileTypes: true })
 
 	for (const categoryDir of categoryDirs) {
 		if (!categoryDir.isDirectory()) continue
 
 		const categoryName = categoryDir.name
-		const categoryPath = path.join(TEST_CASES_DIR, categoryName)
+		const categoryPath = path.join(testCasesDir, categoryName)
 		const testCaseFiles = fs.readdirSync(categoryPath).filter((f) => f.endsWith(".txt"))
-
 		const testCases: CategoryTestCase[] = []
 
 		for (const testCaseFile of testCaseFiles) {

@@ -122,6 +122,26 @@ export class Uri {
 	get fsPath(): string {
 		return this.path
 	}
+
+	with(change: { scheme?: string; authority?: string; path?: string; query?: string; fragment?: string }): Uri {
+		return new Uri(
+			change.scheme !== undefined ? change.scheme : this.scheme,
+			change.authority !== undefined ? change.authority : this.authority,
+			change.path !== undefined ? change.path : this.path,
+			change.query !== undefined ? change.query : this.query,
+			change.fragment !== undefined ? change.fragment : this.fragment,
+		)
+	}
+
+	toJSON(): any {
+		return {
+			scheme: this.scheme,
+			authority: this.authority,
+			path: this.path,
+			query: this.query,
+			fragment: this.fragment,
+		}
+	}
 }
 
 export class Selection extends Range {
