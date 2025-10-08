@@ -182,6 +182,10 @@
 	body {
 		--vscode-input-border: var(--border);
 	}
+
+	a {
+		color: var(--vscode-textLink-foreground);
+	}
 }
 
 @layer components {
