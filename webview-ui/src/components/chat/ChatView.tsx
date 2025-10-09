@@ -875,6 +875,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "focusInput":
 							textAreaRef.current?.focus()
 							break
+						// kilocode_change start: support adding mentions directly to the pills bar
+						case "addContextMentions":
+							if (Array.isArray(message.values?.mentions)) {
+								const mentions: string[] = message.values?.mentions as string[];
+								// Add each mention via the existing handler to ensure validation/deduping
+								mentions.forEach((m) => handleAddMention(m));
+							}
+							break;
+						// kilocode_change end
 					}
 					break
 				case "selectedImages":
@@ -929,6 +938,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleSetChatBoxMessage,
 			handlePrimaryButtonClick,
 			handleSecondaryButtonClick,
+			handleAddMention, // kilocode_change
 		],
 	)
 

@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import * as path from "path" // kilocode_change
 import delay from "delay"
 
 import type { CommandId } from "@roo-code/types"
@@ -288,6 +289,86 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 			type: "action",
 			action: "toggleAutoApprove",
 		})
+	},
+	// kilocode_change: Add files/folders to context from Explorer context menu
+	addFileToContext: async (...args: any[]) => {
+		// Helper to extract URIs from many possible shapes passed by VS Code
+		const tryExtractUris = (val: any): vscode.Uri[] => {
+			const out: vscode.Uri[] = []
+			if (!val) return out
+			// Direct Uri
+			if (val instanceof vscode.Uri) {
+				out.push(val)
+				return out
+			}
+			// Arrays
+			if (Array.isArray(val)) {
+				for (const item of val) out.push(...tryExtractUris(item))
+				return out
+			}
+			// Explorer items
+			if (val.resourceUri instanceof vscode.Uri) out.push(val.resourceUri)
+			if (val.uri instanceof vscode.Uri) out.push(val.uri)
+			if (val.resource instanceof vscode.Uri) out.push(val.resource)
+			return out
+		}
+
+		const uris: vscode.Uri[] = []
+		// VS Code commonly passes (resource, allSelectedResources) for Explorer multi-select
+		if (args.length > 0) uris.push(...tryExtractUris(args[0]))
+		if (args.length > 1) uris.push(...tryExtractUris(args[1]))
+
+		// Fallback: active editor if nothing extracted
+		if (uris.length === 0) {
+			const activeEditor = vscode.window.activeTextEditor
+			if (activeEditor?.document?.uri) {
+				uris.push(activeEditor.document.uri)
+			}
+		}
+
+		if (uris.length === 0) {
+			vscode.window.showInformationMessage("No file or folder selected.")
+			return
+		}
+
+		// Convert to mention strings for context pills (use workspace-relative with leading '@/')
+		const workspaceFolders = vscode.workspace.workspaceFolders ?? []
+		const asMention = async (uri: vscode.Uri) => {
+			const folder = workspaceFolders.find((f) => uri.fsPath.startsWith(f.uri.fsPath))
+			let isFolder = false
+			try {
+				const stat = await vscode.workspace.fs.stat(uri)
+				isFolder = stat.type === vscode.FileType.Directory
+			} catch {
+				// ignore stat errors; fall back to heuristics
+				isFolder = uri.path.endsWith("/") || uri.fsPath.endsWith(path.sep)
+			}
+			if (folder) {
+				// Compute relative path and normalize
+				let rel = uri.fsPath.substring(folder.uri.fsPath.length).replace(/\\/g, "/")
+				// Remove any leading slashes from rel to avoid double slashes
+				rel = rel.replace(/^\/+/, "")
+				return `@/${rel}${isFolder ? "/" : ""}`
+			}
+			// Fall back to basename with '@/'
+			const base = path.basename(uri.fsPath)
+			return `@/${base}${isFolder ? "/" : ""}`
+		}
+
+		const mentionList = await Promise.all(uris.map(asMention))
+		const mentions = Array.from(new Set(mentionList))
+
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) return
+
+		// Add mentions directly to pills bar in the webview
+		await visibleProvider.postMessageToWebview({
+			type: "action",
+			action: "addContextMentions",
+			values: { mentions },
+		})
+
+		vscode.window.setStatusBarMessage(`Added ${mentions.length} item(s) to Kilo context`, 2000)
 	},
 })
 

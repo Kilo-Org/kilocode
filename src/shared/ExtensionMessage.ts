@@ -174,6 +174,7 @@ export interface ExtensionMessage {
 		| "focusInput"
 		| "switchTab"
 		| "focusChatInput" // kilocode_change
+		| "addContextMentions" // kilocode_change: add mentions directly to pills bar
 		| "toggleAutoApprove"
 	invoke?: "newChat" | "sendMessage" | "primaryButtonClick" | "secondaryButtonClick" | "setChatBoxMessage"
 	state?: ExtensionState
