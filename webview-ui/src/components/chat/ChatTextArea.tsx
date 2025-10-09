@@ -406,7 +406,8 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					if (openedTabs && openedTabs.length > 0) {
 						for (const tab of openedTabs) {
 							// Skip tabs with invalid paths
-							if (!tab.path || tab.path.trim() === "" || tab.path.trim() === "/") {
+							const trimmedPath = tab.path ? tab.path.trim() : "";
+							if (!tab.path || trimmedPath === "" || trimmedPath === "/") {
 								continue;
 							}
 
