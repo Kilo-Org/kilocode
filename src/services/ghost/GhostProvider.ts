@@ -20,7 +20,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { GhostCursor } from "./GhostCursor"
-import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController" //kilocode_change
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -56,7 +56,7 @@ export class GhostProvider {
 	public codeActionProvider: GhostCodeActionProvider
 	public codeLensProvider: GhostCodeLensProvider
 
-	private ignoreController?: Promise<RooIgnoreController>
+	private ignoreController?: Promise<RooIgnoreController> //kilocode_change
 
 	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
 		this.context = context
@@ -81,7 +81,7 @@ export class GhostProvider {
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
 		vscode.workspace.onDidOpenTextDocument(this.onDidOpenTextDocument, this, context.subscriptions)
 		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
-		vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders, this, context.subscriptions)
+		vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders, this, context.subscriptions) //kilocode_change
 		vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions)
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
 
@@ -253,9 +253,11 @@ export class GhostProvider {
 		await this.provideCodeSuggestions({ document, range, userInput })
 	}
 
+	//kilocode_change start
 	private async hasAccess(document: vscode.TextDocument) {
 		return document.isUntitled || (await this.initializeIgnoreController()).validateAccess(document.fileName)
 	}
+	//kilocode_change end
 
 	public async codeSuggestion() {
 		if (!this.enabled) {
@@ -272,9 +274,11 @@ export class GhostProvider {
 		})
 
 		const document = editor.document
+		//kilocode_change start
 		if (!(await this.hasAccess(document))) {
 			return
 		}
+		//kilocode_change end
 
 		const range = editor.selection.isEmpty ? undefined : editor.selection
 
@@ -766,7 +770,7 @@ export class GhostProvider {
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()
 
-		this.disposeIgnoreController()
+		this.disposeIgnoreController() //kilocode_change
 
 		GhostProvider.instance = null // Reset singleton
 	}

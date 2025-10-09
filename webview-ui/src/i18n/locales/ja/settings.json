@@ -310,6 +310,14 @@
 		"geminiApiKey": "Gemini APIキー",
 		"getGroqApiKey": "Groq APIキーを取得",
 		"groqApiKey": "Groq APIキー",
+		"nanoGptApiKey": "Nano-GPT APIキー",
+		"getNanoGptApiKey": "Nano-GPT APIキーを取得",
+		"nanoGptModelList": "モデルリスト",
+		"nanoGptModelListOptions": {
+			"all": "すべてのモデル",
+			"personalized": "パーソナライズされたモデル",
+			"subscription": "サブスクリプションモデル"
+		},
 		"getSambaNovaApiKey": "SambaNova APIキーを取得",
 		"sambaNovaApiKey": "SambaNova APIキー",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",

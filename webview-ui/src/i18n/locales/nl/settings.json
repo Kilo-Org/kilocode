@@ -309,6 +309,14 @@
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
+		"nanoGptApiKey": "Nano-GPT API-sleutel",
+		"getNanoGptApiKey": "Nano-GPT API-sleutel ophalen",
+		"nanoGptModelList": "Modellijst",
+		"nanoGptModelListOptions": {
+			"all": "Alle modellen",
+			"personalized": "Gepersonaliseerde modellen",
+			"subscription": "Abonnementsmodellen"
+		},
 		"getSambaNovaApiKey": "SambaNova API-sleutel ophalen",
 		"sambaNovaApiKey": "SambaNova API-sleutel",
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",

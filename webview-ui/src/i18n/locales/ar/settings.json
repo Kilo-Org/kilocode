@@ -318,6 +318,14 @@
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
+		"nanoGptApiKey": "مفتاح Nano-GPT",
+		"getNanoGptApiKey": "احصل على مفتاح Nano-GPT",
+		"nanoGptModelList": "قائمة النماذج",
+		"nanoGptModelListOptions": {
+			"all": "جميع النماذج",
+			"personalized": "النماذج الشخصية",
+			"subscription": "نماذج الاشتراك"
+		},
 		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
 		"sambaNovaApiKey": "مفتاح SambaNova",
 		"getGeminiApiKey": "احصل على مفتاح Gemini",

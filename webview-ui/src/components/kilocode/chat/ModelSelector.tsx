@@ -4,7 +4,6 @@ import { OPENROUTER_DEFAULT_PROVIDER_NAME, type ProviderSettings } from "@roo-co
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
-import { prettyModelName } from "../../../utils/prettyModelName"
 import { useProviderModels } from "../hooks/useProviderModels"
 import { getModelIdKey, getSelectedModelId } from "../hooks/useSelectedModel"
 import { usePreferredModels } from "@/components/ui/hooks/kilocode/usePreferredModels"
@@ -30,10 +29,10 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		const missingModelIds = modelsIds.indexOf(selectedModelId) >= 0 ? [] : [selectedModelId]
 		return missingModelIds.concat(modelsIds).map((modelId) => ({
 			value: modelId,
-			label: providerModels[modelId]?.displayName ?? prettyModelName(modelId),
+			label: modelId,
 			type: DropdownOptionType.ITEM,
 		}))
-	}, [modelsIds, providerModels, selectedModelId])
+	}, [modelsIds, selectedModelId])
 
 	const disabled = isLoading || isError
 
