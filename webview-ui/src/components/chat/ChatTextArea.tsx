@@ -955,7 +955,13 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setIsMouseDownOnMenu(true)
 		}, [])
 
-		// Highlight overlay removed - mentions are now shown in ContextPillsBar instead
+		// The visual highlight overlay for mentions within the textarea was removed.
+		// Previously, mentions were visually highlighted directly in the textarea as users typed.
+		// This functionality was removed to simplify the input UI and improve maintainability.
+		// Mentions are now visually represented in the ContextPillsBar component above the textarea,
+		// providing a clearer and more accessible way to view and manage mentions in the message.
+		// If visual highlighting in the textarea is needed in the future, refer to previous implementations
+		// prior to this change for guidance.
 
 		const updateCursorPosition = useCallback(() => {
 			if (textAreaRef.current) {
