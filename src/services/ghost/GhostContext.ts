@@ -13,10 +13,18 @@ export class GhostContext {
 		if (!context.document) {
 			return context
 		}
+		// Add operations from current document
 		const recentOperations = this.documentStore.getRecentOperations(context.document)
 		if (recentOperations) {
 			context.recentOperations = recentOperations
 		}
+
+		// Add global operations from all files (excluding current document)
+		const globalOperations = this.documentStore.getGlobalRecentOperations(context.document.uri.toString())
+		if (globalOperations && globalOperations.length > 0) {
+			context.globalRecentOperations = globalOperations
+		}
+
 		return context
 	}
 

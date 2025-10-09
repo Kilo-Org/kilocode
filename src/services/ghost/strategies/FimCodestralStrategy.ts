@@ -1,6 +1,7 @@
 import { GhostSuggestionContext } from "../types"
 import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+import { rankSnippets } from "../context/ContextRanking"
 import { getBaseSystemInstructions } from "./StrategyHelpers"
 
 /**
@@ -54,17 +55,110 @@ Generate code to fill in at the cursor position. The code should:
 		if (!context.document || !context.range) {
 			return "No context available for completion."
 		}
+    
+    // Get recent operations for additional context (from existing system)
+		const recentOpsContext = this.getRecentOperationsContext(context)
 
 		const document = context.document
 		const position = context.range.start
 
-		// FIXME: use addCursorMarker from StrategyHelpers.ts
+ 		// FIXME: use addCursorMarker from StrategyHelpers.ts
 		// Get the code before and after the cursor
 		const fullText = document.getText()
 		const offset = document.offsetAt(position)
 		const textBeforeCursor = fullText.substring(0, offset)
 		const textAfterCursor = fullText.substring(offset)
 
-		return `[SUFFIX]${textAfterCursor}[PREFIX]${textBeforeCursor}${CURSOR_MARKER}`
+		return `[SUFFIX]${textAfterCursor}[PREFIX]${recentOpsContext}${textBeforeCursor}${CURSOR_MARKER}`
+	}
+
+	/**
+	 * Get recent operations as context string from existing GhostDocumentStore
+	 * Uses Jaccard similarity ranking to prioritize most relevant operations
+	 */
+	private getRecentOperationsContext(context: GhostSuggestionContext): string {
+		if (!context.document || !context.range) {
+			return ""
+		}
+
+		// Get window around cursor for similarity comparison
+		const position = context.range.start
+		const windowSize = 500 // characters before and after cursor
+
+		const textBeforeCursor = context.document.getText(
+			new (context.range.constructor as any)(
+				new (position.constructor as any)(Math.max(0, position.line - 5), 0),
+				position,
+			),
+		)
+		const textAfterCursor = context.document.getText(
+			new (context.range.constructor as any)(
+				position,
+				new (position.constructor as any)(Math.min(position.line + 5, context.document.lineCount), 0),
+			),
+		)
+		const windowAroundCursor = textBeforeCursor + textAfterCursor
+
+		// Collect all operations with their content
+		const allOperations: Array<{ content: string; filepath: string; description: string; isGlobal: boolean }> = []
+
+		// Add current file operations
+		if (context.recentOperations && context.recentOperations.length > 0) {
+			context.recentOperations.forEach((op) => {
+				if (op.content) {
+					allOperations.push({
+						content: op.content,
+						filepath: context.document!.uri.toString(),
+						description: op.description,
+						isGlobal: false,
+					})
+				}
+			})
+		}
+
+		// Add global operations from other files
+		if (context.globalRecentOperations && context.globalRecentOperations.length > 0) {
+			context.globalRecentOperations.forEach((op) => {
+				if (op.content) {
+					allOperations.push({
+						content: op.content,
+						filepath: op.filepath,
+						description: op.description,
+						isGlobal: true,
+					})
+				}
+			})
+		}
+
+		if (allOperations.length === 0) {
+			return ""
+		}
+
+		// Rank operations by similarity to code around cursor
+		const rankedOps = rankSnippets(
+			allOperations.map((op) => ({
+				content: op.content,
+				filepath: op.filepath,
+			})),
+			windowAroundCursor,
+		)
+
+		// Take top 3 most relevant operations
+		const topOperations = rankedOps.slice(0, 3)
+
+		// Format with descriptions
+		const contextParts = topOperations.map((ranked) => {
+			const op = allOperations.find((o) => o.content === ranked.content && o.filepath === ranked.filepath)
+			if (!op) return ""
+
+			if (op.isGlobal) {
+				const filename = op.filepath.split("/").pop() || op.filepath
+				return `// Recent in ${filename}: ${op.description} (relevance: ${(ranked.score * 100).toFixed(0)}%)\n${ranked.content}`
+			} else {
+				return `// Recent: ${op.description} (relevance: ${(ranked.score * 100).toFixed(0)}%)\n${ranked.content}`
+			}
+		})
+
+		return contextParts.length > 0 ? `${contextParts.filter(Boolean).join("\n\n")}\n\n` : ""
 	}
 }

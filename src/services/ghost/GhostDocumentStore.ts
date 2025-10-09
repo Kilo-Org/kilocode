@@ -14,6 +14,10 @@ export class GhostDocumentStore {
 	private documentStore: Map<string, GhostDocumentStoreItem> = new Map()
 	private parserInitialized: boolean = false
 
+	// Global recent operations across all files
+	private globalRecentOperations: Array<UserAction & { filepath: string }> = []
+	private readonly maxGlobalOperations = 10
+
 	/**
 	 * Store a document in the document store
 	 * @param document The document to store
@@ -44,6 +48,19 @@ export class GhostDocumentStore {
 			item.history.push(document.getText())
 			if (item.history.length > this.historyLimit) {
 				item.history.shift() // Remove the oldest snapshot if we exceed the limit
+			}
+
+			// Analyze and track global operations if we have enough history
+			if (item.history.length >= 2) {
+				const oldContent = item.history[item.history.length - 2]
+				const newContent = item.history[item.history.length - 1]
+				const filePath = vscode.workspace.asRelativePath(document.uri)
+				const operations = this.analyzeDocumentChanges(oldContent, newContent, filePath)
+
+				// Add to global operations with filepath
+				for (const op of operations) {
+					this.addGlobalOperation(op, uri)
+				}
 			}
 
 			// Once executed, remove the timer from the map.
@@ -457,5 +474,41 @@ export class GhostDocumentStore {
 		}
 
 		return []
+	}
+
+	/**
+	 * Add an operation to the global recent operations list
+	 * @param operation The operation to add
+	 * @param filepath The file where the operation occurred
+	 */
+	private addGlobalOperation(operation: UserAction, filepath: string): void {
+		this.globalRecentOperations.unshift({
+			...operation,
+			filepath,
+		})
+
+		// Keep only the most recent operations
+		if (this.globalRecentOperations.length > this.maxGlobalOperations) {
+			this.globalRecentOperations = this.globalRecentOperations.slice(0, this.maxGlobalOperations)
+		}
+	}
+
+	/**
+	 * Get global recent operations from all files
+	 * @param excludeFilepath Optional filepath to exclude from results
+	 * @returns Array of recent operations with their source files
+	 */
+	public getGlobalRecentOperations(excludeFilepath?: string): Array<UserAction & { filepath: string }> {
+		if (excludeFilepath) {
+			return this.globalRecentOperations.filter((op) => op.filepath !== excludeFilepath)
+		}
+		return [...this.globalRecentOperations]
+	}
+
+	/**
+	 * Clear all global recent operations
+	 */
+	public clearGlobalRecentOperations(): void {
+		this.globalRecentOperations = []
 	}
 }

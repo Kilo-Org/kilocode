@@ -57,6 +57,7 @@ export interface GhostSuggestionContext {
 	openFiles?: vscode.TextDocument[]
 	range?: vscode.Range | vscode.Selection
 	userInput?: string
-	recentOperations?: UserAction[] // Stores meaningful user actions instead of raw diff
+	recentOperations?: UserAction[] // Stores meaningful user actions from current document
+	globalRecentOperations?: Array<UserAction & { filepath: string }> // Recent operations from all workspace files
 	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
 }
