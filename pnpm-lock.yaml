@@ -2942,10 +2942,6 @@ packages:
     resolution: {integrity: sha512-t3yaEOuGu9NlIZ+hIeGbBjFtZT7j2cb2tg0fuaJKeGotchRjjLfrBA9Kwf8quhpP1EUuxModQg04q/mBwyg8uA==}
     engines: {node: '>=6.9.0'}
 
-  '@babel/runtime@7.28.3':
-    resolution: {integrity: sha512-9uIQ10o0WGdpP6GDhXcdOJPJuDgFtIDtN/9+ArJQ2NAfAmiuhTQdzkaTGR33v43GYS2UrSA0eX2pPPHoFVvpxA==}
-    engines: {node: '>=6.9.0'}
-
   '@babel/runtime@7.28.4':
     resolution: {integrity: sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ==}
     engines: {node: '>=6.9.0'}
@@ -20003,8 +19999,6 @@ snapshots:
 
   '@babel/runtime@7.27.4': {}
 
-  '@babel/runtime@7.28.3': {}
-
   '@babel/runtime@7.28.4': {}
 
   '@babel/template@7.27.2':
@@ -20578,7 +20572,7 @@ snapshots:
       '@babel/preset-env': 7.28.3(@babel/core@7.28.3)
       '@babel/preset-react': 7.27.1(@babel/core@7.28.3)
       '@babel/preset-typescript': 7.27.1(@babel/core@7.28.3)
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       '@babel/runtime-corejs3': 7.28.3
       '@babel/traverse': 7.28.3
       '@docusaurus/logger': 3.8.1
@@ -35410,7 +35404,7 @@ snapshots:
 
   react-loadable-ssr-addon-v5-slorber@1.0.1(@docusaurus/react-loadable@6.0.0(react@19.1.1))(webpack@5.101.3(esbuild@0.25.9)):
     dependencies:
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       react-loadable: '@docusaurus/react-loadable@6.0.0(react@19.1.1)'
       webpack: 5.101.3(esbuild@0.25.9)
 
@@ -35465,13 +35459,13 @@ snapshots:
 
   react-router-config@5.1.1(react-router@5.3.4(react@19.1.1))(react@19.1.1):
     dependencies:
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       react: 19.1.1
       react-router: 5.3.4(react@19.1.1)
 
   react-router-dom@5.3.4(react@19.1.1):
     dependencies:
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       history: 4.10.1
       loose-envify: 1.4.0
       prop-types: 15.8.1
@@ -35482,7 +35476,7 @@ snapshots:
 
   react-router@5.3.4(react@19.1.1):
     dependencies:
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       history: 4.10.1
       hoist-non-react-statics: 3.3.2
       loose-envify: 1.4.0
