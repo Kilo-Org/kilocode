@@ -20,7 +20,7 @@ export async function getCortecsModels(baseUrl?: string, apiKey?: string): Promi
 
 		for (const rawModel of rawModels) {
 			const modelInfo: ModelInfo = {
-				maxTokens: rawModel.context_size,
+				maxTokens: 8192,
 				contextWindow: rawModel.context_size,
 				supportsPromptCache: false,
 				supportsImages: rawModel.tags.includes("Image"),
