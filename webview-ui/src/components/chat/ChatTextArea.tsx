@@ -18,7 +18,7 @@ import {
 	shouldShowContextMenu,
 	SearchResult,
 } from "@src/utils/context-mentions"
-import { convertToMentionPath } from "@/utils/path-mentions"
+import { convertToMentionPath, escapeSpaces } from "@/utils/path-mentions"
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
@@ -62,6 +62,7 @@ interface ChatTextAreaProps {
 	selectedImages: string[]
 	setSelectedImages: React.Dispatch<React.SetStateAction<string[]>>
 	onSend: () => void
+	onMentionAdd?: (mention: string) => void
 	onSelectImages: () => void
 	shouldDisableImages: boolean
 	onHeightChange?: (height: number) => void
@@ -84,6 +85,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			selectedImages,
 			setSelectedImages,
 			onSend,
+			onMentionAdd,
 			onSelectImages,
 			shouldDisableImages,
 			onHeightChange,
@@ -240,7 +242,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [searchQuery, setSearchQuery] = useState("")
 		const textAreaRef = useRef<HTMLTextAreaElement | null>(null)
 		const [isMouseDownOnMenu, setIsMouseDownOnMenu] = useState(false)
-		const highlightLayerRef = useRef<HTMLDivElement>(null)
 		const [selectedMenuIndex, setSelectedMenuIndex] = useState(-1)
 		const [selectedType, setSelectedType] = useState<ContextMenuOptionType | null>(null)
 		const [justDeletedSpaceAfterMention, setJustDeletedSpaceAfterMention] = useState(false)
@@ -311,17 +312,30 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				{ type: ContextMenuOptionType.Terminal, value: "terminal" },
 				...gitCommits,
 				...openedTabs
-					.filter((tab) => tab.path)
-					.map((tab) => ({
-						type: ContextMenuOptionType.OpenedFile,
-						value: "/" + tab.path,
-					})),
+					.filter((tab) => tab.path && tab.path.trim() !== "" && tab.path.trim() !== "/")
+					.map((tab) => {
+						// tab.path is already a relative path (e.g., "src/file.ts")
+						// Format it directly as a mention path with @/ prefix
+						// Escape spaces in the path if present
+						const relativePath = tab.path || "";
+						const pathWithEscapedSpaces = relativePath.includes(" ") ? escapeSpaces(relativePath) : relativePath;
+						const mentionPath = `@/${pathWithEscapedSpaces}`;
+						return {
+							type: ContextMenuOptionType.OpenedFile,
+							value: mentionPath,
+						};
+					}),
 				...filePaths
-					.map((file) => "/" + file)
-					.filter((path) => !openedTabs.some((tab) => tab.path && "/" + tab.path === path)) // Filter out paths that are already in openedTabs
-					.map((path) => ({
-						type: path.endsWith("/") ? ContextMenuOptionType.Folder : ContextMenuOptionType.File,
-						value: path,
+					.filter((file) => file && file.trim() !== "" && file.trim() !== "/")
+					.map((file) => `@/${file}`)
+					.filter((mentionPath) => mentionPath !== "@/") // Exclude root
+					.filter((mentionPath) => {
+						// Deduplicate with openedTabs
+						return !openedTabs.some((tab) => tab.path && `@/${tab.path}` === mentionPath);
+					})
+					.map((mentionPath) => ({
+						type: mentionPath.endsWith("/") ? ContextMenuOptionType.Folder : ContextMenuOptionType.File,
+						value: mentionPath,
 					})),
 			]
 		}, [filePaths, gitCommits, openedTabs])
@@ -383,7 +397,29 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return
 				}
 
-				if (
+				if (type === ContextMenuOptionType.AllOpenEditors) {
+					// Add all open files as context pills
+					if (openedTabs && openedTabs.length > 0) {
+						for (const tab of openedTabs) {
+							// Skip tabs with invalid paths
+							if (!tab.path || tab.path.trim() === "" || tab.path.trim() === "/") {
+								continue;
+							}
+
+							// tab.path is already a relative path (e.g., "src/file.ts")
+							// Format it directly as a mention path with @/ prefix
+							// Escape spaces in the path if present
+							const pathWithEscapedSpaces = tab.path.includes(" ") ? escapeSpaces(tab.path) : tab.path;
+							const mentionPath = `@/${pathWithEscapedSpaces}`;
+
+							if (onMentionAdd) {
+								onMentionAdd(mentionPath);
+							}
+						}
+					}
+					setShowContextMenu(false);
+					setSelectedType(null);
+				} else if (
 					type === ContextMenuOptionType.File ||
 					type === ContextMenuOptionType.Folder ||
 					type === ContextMenuOptionType.Git
@@ -399,43 +435,72 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setShowContextMenu(false)
 				setSelectedType(null)
 
-				if (textAreaRef.current) {
-					let insertValue = value || ""
+				// Determine the mention value
+				let insertValue = value || ""
 
-					if (type === ContextMenuOptionType.URL) {
-						insertValue = value || ""
-					} else if (type === ContextMenuOptionType.File || type === ContextMenuOptionType.Folder) {
-						insertValue = value || ""
-					} else if (type === ContextMenuOptionType.Problems) {
-						insertValue = "problems"
-					} else if (type === ContextMenuOptionType.Terminal) {
-						insertValue = "terminal"
-					} else if (type === ContextMenuOptionType.Git) {
-						insertValue = value || ""
+				if (type === ContextMenuOptionType.URL) {
+					insertValue = value || "";
+				} else if (type === ContextMenuOptionType.File || type === ContextMenuOptionType.Folder) {
+					insertValue = value || "";
+				} else if (type === ContextMenuOptionType.Problems) {
+					insertValue = "problems";
+				} else if (type === ContextMenuOptionType.Terminal) {
+					insertValue = "terminal";
+				} else if (type === ContextMenuOptionType.Git) {
+					insertValue = value || "";
+				}
+
+				// If onMentionAdd callback is provided, use it (new behavior - add to pills)
+				if (onMentionAdd) {
+					// Remove the @ character from textarea
+					if (textAreaRef.current) {
+						const beforeCursor = textAreaRef.current.value.slice(0, cursorPosition);
+						const afterCursor = textAreaRef.current.value.slice(cursorPosition);
+						const lastAtIndex = beforeCursor.lastIndexOf("@");
+
+						if (lastAtIndex !== -1) {
+							const newValue = beforeCursor.slice(0, lastAtIndex) + afterCursor;
+							setInputValue(newValue);
+							setCursorPosition(lastAtIndex);
+							setIntendedCursorPosition(lastAtIndex);
+						}
 					}
 
-					const { newValue, mentionIndex } = insertMention(
-						textAreaRef.current.value,
-						cursorPosition,
-						insertValue,
-					)
+					// Add to context pills
+					onMentionAdd(insertValue);
 
-					setInputValue(newValue)
-					const newCursorPosition = newValue.indexOf(" ", mentionIndex + insertValue.length) + 1
-					setCursorPosition(newCursorPosition)
-					setIntendedCursorPosition(newCursorPosition)
-
-					// Scroll to cursor.
+					// Focus textarea
 					setTimeout(() => {
 						if (textAreaRef.current) {
-							textAreaRef.current.blur()
-							textAreaRef.current.focus()
+							textAreaRef.current.focus();
 						}
-					}, 0)
+					}, 0);
+				} else {
+					// Old behavior - insert into textarea (for backwards compatibility)
+					if (textAreaRef.current) {
+						const { newValue, mentionIndex } = insertMention(
+							textAreaRef.current.value,
+							cursorPosition,
+							insertValue,
+						)
+
+						setInputValue(newValue);
+						const newCursorPosition = newValue.indexOf(" ", mentionIndex + insertValue.length) + 1;
+						setCursorPosition(newCursorPosition);
+						setIntendedCursorPosition(newCursorPosition)
+
+						// Scroll to cursor.
+						setTimeout(() => {
+							if (textAreaRef.current) {
+								textAreaRef.current.blur();
+								textAreaRef.current.focus();
+							}
+						}, 0);
+					}
 				}
 			},
 			// eslint-disable-next-line react-hooks/exhaustive-deps
-			[setInputValue, cursorPosition],
+			[setInputValue, cursorPosition, onMentionAdd],
 		)
 
 		// kilocode_change start: pull slash commands from Cline
@@ -890,47 +955,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			setIsMouseDownOnMenu(true)
 		}, [])
 
-		const updateHighlights = useCallback(() => {
-			if (!textAreaRef.current || !highlightLayerRef.current) return
-
-			// kilocode_change start: pull slash commands from Cline
-			let processedText = textAreaRef.current.value
-
-			processedText = processedText
-				.replace(/\n$/, "\n\n")
-				.replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c] || c)
-				.replace(mentionRegexGlobal, '<mark class="mention-context-textarea-highlight">$&</mark>')
-
-			// check for highlighting /slash-commands
-			if (/^\s*\//.test(processedText)) {
-				const slashIndex = processedText.indexOf("/")
-
-				// end of command is end of text or first whitespace
-				const spaceIndex = processedText.indexOf(" ", slashIndex)
-				const endIndex = spaceIndex > -1 ? spaceIndex : processedText.length
-
-				// extract and validate the exact command text
-				const commandText = processedText.substring(slashIndex + 1, endIndex)
-				const isValidCommand = validateSlashCommand(commandText, customModes)
-
-				if (isValidCommand) {
-					const fullCommand = processedText.substring(slashIndex, endIndex) // includes slash
-
-					const highlighted = `<mark class="slash-command-match-textarea-highlight">${fullCommand}</mark>`
-					processedText =
-						processedText.substring(0, slashIndex) + highlighted + processedText.substring(endIndex)
-				}
-			}
-			// kilocode_change end
-
-			highlightLayerRef.current.innerHTML = processedText
-			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
-			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes])
-
-		useLayoutEffect(() => {
-			updateHighlights()
-		}, [inputValue, updateHighlights])
+		// Highlight overlay removed - mentions are now shown in ContextPillsBar instead
 
 		const updateCursorPosition = useCallback(() => {
 			if (textAreaRef.current) {
@@ -961,7 +986,17 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					const lines = text.split(/\r?\n/).filter((line) => line.trim() !== "")
 
 					if (lines.length > 0) {
-						// Process each line as a separate file path
+						// Check if Shift key is pressed for context attachment
+						if (e.shiftKey && onMentionAdd) {
+							// Add files to context pills instead of textarea
+							for (const line of lines) {
+								const mentionText = convertToMentionPath(line, cwd || "");
+								onMentionAdd(mentionText);
+							}
+							return;
+						}
+
+						// Process each line as a separate file path (original behavior)
 						let newValue = inputValue.slice(0, cursorPosition)
 						let totalLength = 0
 
@@ -969,7 +1004,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						for (let i = 0; i < lines.length; i++) {
 							const line = lines[i]
 							// Convert each path to a mention-friendly format
-							const mentionText = convertToMentionPath(line, cwd)
+							const mentionText = convertToMentionPath(line, cwd || "")
 							newValue += mentionText
 							totalLength += mentionText.length
 
@@ -1058,6 +1093,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				setCursorPosition,
 				setIntendedCursorPosition,
 				shouldDisableImages,
+				onMentionAdd,
 				setSelectedImages,
 				t,
 				selectedImages.length, // kilocode_change - added selectedImages.length
@@ -1321,35 +1357,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					"overflow-hidden",
 					"rounded",
 				)}>
-				<div
-					ref={highlightLayerRef}
-					className={cn(
-						"absolute",
-						"inset-0",
-						"pointer-events-none",
-						"whitespace-pre-wrap",
-						"break-words",
-						"text-transparent",
-						"overflow-hidden",
-						"font-vscode-font-family",
-						"text-vscode-editor-font-size",
-						"leading-vscode-editor-line-height",
-						isFocused
-							? "border border-vscode-focusBorder outline outline-vscode-focusBorder"
-							: isDraggingOver
-								? "border-2 border-dashed border-vscode-focusBorder"
-								: "border border-transparent",
-						isEditMode ? "pt-1.5 pb-10 px-2" : "py-1.5 px-2",
-						"px-[8px]",
-						"pr-9",
-						"z-10",
-						"forced-color-adjust-none",
-						"pb-16", // kilocode_change
-					)}
-					style={{
-						color: "transparent",
-					}}
-				/>
 				<DynamicTextArea
 					ref={(el) => {
 						if (typeof ref === "function") {
@@ -1360,10 +1367,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						textAreaRef.current = el
 					}}
 					value={inputValue}
-					onChange={(e) => {
-						handleInputChange(e)
-						updateHighlights()
-					}}
+					onChange={handleInputChange}
 					onFocus={() => setIsFocused(true)}
 					onKeyDown={handleKeyDown}
 					onKeyUp={handleKeyUp}
@@ -1414,7 +1418,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"scrollbar-hide",
 						"pb-16", // kilocode_change: Increased padding to prevent overlap with control bar
 					)}
-					onScroll={() => updateHighlights()}
 				/>
 				{/* kilocode_change {Transparent overlay at bottom of textArea to avoid text overlap } */}
 				<div
@@ -1558,15 +1561,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						className={cn("chat-text-area", "relative", "flex", "flex-col", "outline-none")}
 						onDrop={handleDrop}
 						onDragOver={(e) => {
-							// Only allowed to drop images/files on shift key pressed.
-							if (!e.shiftKey) {
-								setIsDraggingOver(false)
-								return
-							}
-
+							// Allow drag over to show visual feedback, but only accept with Shift key
 							e.preventDefault()
-							setIsDraggingOver(true)
 							e.dataTransfer.dropEffect = "copy"
+
+							// Set dragging state based on Shift key
+							setIsDraggingOver(e.shiftKey)
 						}}
 						onDragLeave={(e) => {
 							e.preventDefault()

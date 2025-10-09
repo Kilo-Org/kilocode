@@ -398,6 +398,66 @@ vscode-dropdown::part(listbox) {
 	border-radius: 3px;
 	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
 }
+/* Context Pills Bar */
+.context-pills-bar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 8px 12px;
+	background-color: var(--vscode-editor-background);
+	border-bottom: 1px solid color-mix(in srgb, var(--vscode-panel-border) 50%, transparent);
+	min-height: 40px;
+	align-items: center;
+}
+
+.context-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 4px 4px 8px;
+	background-color: color-mix(in srgb, var(--vscode-badge-background) 85%, transparent);
+	border: 1px solid color-mix(in srgb, var(--vscode-badge-background) 40%, transparent);
+	border-radius: 4px;
+	font-size: calc(var(--vscode-font-size) * 0.9);
+	color: var(--vscode-badge-foreground);
+	transition: all 0.15s ease;
+}
+
+.context-pill:hover {
+	background-color: var(--vscode-badge-background);
+	border-color: color-mix(in srgb, var(--vscode-badge-background) 60%, transparent);
+}
+
+.context-pill-name {
+	white-space: nowrap;
+	max-width: 200px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.context-pill-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	background: transparent;
+	border: none;
+	border-radius: 2px;
+	cursor: pointer;
+	opacity: 0.6;
+	transition: all 0.1s ease;
+	color: currentColor;
+}
+
+.context-pill-remove:hover {
+	opacity: 1;
+	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 15%, transparent);
+}
+
+.context-pill-remove:active {
+	transform: scale(0.9);
+}
+
 
 /**
  * vscrui Overrides / Hacks

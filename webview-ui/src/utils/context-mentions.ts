@@ -110,6 +110,7 @@ export enum ContextMenuOptionType {
 	Image = "image", // kilocode_change
 	Command = "command", // Add command type
 	SectionHeader = "sectionHeader", // Add section header type
+	AllOpenEditors = "allOpenEditors", // Add all open editors type
 }
 
 export interface ContextMenuQueryItem {
@@ -254,6 +255,7 @@ export function getContextMenuOptions(
 			{ type: ContextMenuOptionType.Problems },
 			{ type: ContextMenuOptionType.Terminal },
 			{ type: ContextMenuOptionType.URL },
+			{ type: ContextMenuOptionType.AllOpenEditors },
 			{ type: ContextMenuOptionType.Folder },
 			{ type: ContextMenuOptionType.File },
 			{ type: ContextMenuOptionType.Image }, // kilocode_change
@@ -283,6 +285,13 @@ export function getContextMenuOptions(
 	}
 	if (query.startsWith("http")) {
 		suggestions.push({ type: ContextMenuOptionType.URL, value: query })
+	}
+	if ("all open editors".startsWith(lowerQuery) || "opened".startsWith(lowerQuery)) {
+		suggestions.push({
+			type: ContextMenuOptionType.AllOpenEditors,
+			label: "All Open Editors",
+			description: "Add all open files to context",
+		})
 	}
 
 	// Add exact SHA matches to suggestions
