@@ -274,6 +274,17 @@
 		},
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
 		"getRequestyBaseUrl": "Temel URL",
+		"cortecsApiKey": "cortecs API Anahtarı",
+		"getCortecsApiKey": "cortecs API Anahtarı Al",
+		"cortecsRoutingPreference": {
+			"title": "Yönlendirme Tercihi",
+			"options": {
+				"default": "Varsayılan",
+				"cost": "Maliyet",
+				"speed": "Hız",
+				"balanced": "Dengeli"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
 		"openRouterTransformsText": "İstem ve mesaj zincirlerini bağlam boyutuna sıkıştır (<a>OpenRouter Dönüşümleri</a>)",
 		"anthropicApiKey": "Anthropic API Anahtarı",

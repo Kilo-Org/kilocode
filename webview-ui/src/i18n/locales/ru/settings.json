@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Получить Requesty API-ключ",
 		"getRequestyBaseUrl": "Базовый URL",
+		"cortecsApiKey": "cortecs API-ключ",
+		"getCortecsApiKey": "Получить cortecs API-ключ",
+		"cortecsRoutingPreference": {
+			"title": "Предпочтение маршрутизации",
+			"options": {
+				"default": "По умолчанию",
+				"cost": "Стоимость",
+				"speed": "Скорость",
+				"balanced": "Сбалансированный"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Использовать пользовательский базовый URL",
 		"openRouterTransformsText": "Сжимать подсказки и цепочки сообщений до размера контекста (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API-ключ",

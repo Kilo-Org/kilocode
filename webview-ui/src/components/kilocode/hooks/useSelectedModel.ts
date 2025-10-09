@@ -7,6 +7,7 @@ export const getModelIdKey = ({
 }): keyof Pick<
 	ProviderSettings,
 	| "glamaModelId"
+	| "cortecsModelId"
 	| "openRouterModelId"
 	| "unboundModelId"
 	| "requestyModelId"
@@ -28,6 +29,9 @@ export const getModelIdKey = ({
 		}
 		case "glama": {
 			return "glamaModelId"
+		}
+		case "cortecs": {
+			return "cortecsModelId"
 		}
 		case "unbound": {
 			return "unboundModelId"

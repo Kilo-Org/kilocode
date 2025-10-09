@@ -189,6 +189,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
@@ -225,6 +226,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "cortecs", apiKey: "cortecs-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
@@ -244,6 +246,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
@@ -264,6 +267,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 				// Missing litellm config
@@ -303,6 +307,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
@@ -343,6 +348,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: {},
@@ -372,6 +378,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // openrouter
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
+			.mockResolvedValueOnce(mockModels) // cortecs
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
@@ -393,6 +400,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				requesty: {},
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
 				litellm: {},
@@ -444,6 +452,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
+			.mockRejectedValueOnce(new Error("cortecs API error")) // cortecs
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
@@ -477,6 +486,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			success: false,
 			error: "Glama API error",
 			values: { provider: "glama" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "cortecs API error",
+			values: { provider: "cortecs" },
 		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({

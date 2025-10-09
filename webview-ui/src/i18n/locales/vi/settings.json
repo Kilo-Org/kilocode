@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Lấy khóa API Requesty",
 		"getRequestyBaseUrl": "URL cơ sở",
+		"cortecsApiKey": "Khóa API cortecs",
+		"getCortecsApiKey": "Lấy khóa API cortecs",
+		"cortecsRoutingPreference": {
+			"title": "Tùy chọn định tuyến",
+			"options": {
+				"default": "Mặc định",
+				"cost": "Chi phí",
+				"speed": "Tốc độ",
+				"balanced": "Cân bằng"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Khóa API Anthropic",

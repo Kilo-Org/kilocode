@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
 		"getRequestyBaseUrl": "बेस URL",
+		"cortecsApiKey": "cortecs API कुंजी",
+		"getCortecsApiKey": "cortecs API कुंजी प्राप्त करें",
+		"cortecsRoutingPreference": {
+			"title": "रूटिंग प्राथमिकता",
+			"options": {
+				"default": "डिफ़ॉल्ट",
+				"cost": "लागत",
+				"speed": "गति",
+				"balanced": "संतुलित"
+			}
+		},
 		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
 		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
 		"anthropicApiKey": "Anthropic API कुंजी",

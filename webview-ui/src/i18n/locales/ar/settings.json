@@ -282,6 +282,17 @@
 		},
 		"getRequestyApiKey": "احصل على مفتاح Requesty",
 		"getRequestyBaseUrl": "رابط الأساس",
+		"cortecsApiKey": "مفتاح cortecs",
+		"getCortecsApiKey": "احصل على مفتاح cortecs",
+		"cortecsRoutingPreference": {
+			"title": "تفضيل التوجيه",
+			"options": {
+				"default": "افتراضي",
+				"cost": "التكلفة",
+				"speed": "السرعة",
+				"balanced": "متوازن"
+			}
+		},
 		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
 		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "مفتاح Anthropic",

@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
 		"getRequestyBaseUrl": "Bazowy URL",
+		"cortecsApiKey": "Klucz API cortecs",
+		"getCortecsApiKey": "Uzyskaj klucz API cortecs",
+		"cortecsRoutingPreference": {
+			"title": "Preferencje routingu",
+			"options": {
+				"default": "Domyślne",
+				"cost": "Koszt",
+				"speed": "Prędkość",
+				"balanced": "Zrównoważony"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
 		"openRouterTransformsText": "Kompresuj podpowiedzi i łańcuchy wiadomości do rozmiaru kontekstu (<a>Transformacje OpenRouter</a>)",
 		"anthropicApiKey": "Klucz API Anthropic",

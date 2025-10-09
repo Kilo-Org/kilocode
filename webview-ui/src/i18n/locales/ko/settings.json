@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Requesty API 키 받기",
 		"getRequestyBaseUrl": "기본 URL",
+		"cortecsApiKey": "cortecs API 키",
+		"getCortecsApiKey": "cortecs API 키 받기",
+		"cortecsRoutingPreference": {
+			"title": "라우팅 기본 설정",
+			"options": {
+				"default": "기본값",
+				"cost": "비용",
+				"speed": "속도",
+				"balanced": "균형"
+			}
+		},
 		"requestyUseCustomBaseUrl": "사용자 정의 기본 URL 사용",
 		"openRouterTransformsText": "프롬프트와 메시지 체인을 컨텍스트 크기로 압축 (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API 키",

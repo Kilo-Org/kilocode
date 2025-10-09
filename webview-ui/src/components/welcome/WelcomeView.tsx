@@ -82,6 +82,12 @@ const WelcomeView = () => {
 							// Provider card configuration
 							const baseProviders = [
 								{
+									slug: "cortecs",
+									name: "cortecs",
+									description: t("welcome:routers.cortecs.description"),
+									incentive: t("welcome:routers.cortecs.incentive"),
+								},
+								{
 									slug: "requesty",
 									name: "Requesty",
 									description: t("welcome:routers.requesty.description"),

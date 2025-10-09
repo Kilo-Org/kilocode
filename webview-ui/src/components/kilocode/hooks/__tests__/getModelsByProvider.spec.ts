@@ -18,6 +18,7 @@ describe("getModelsByProvider", () => {
 			openrouter: { "test-model": testModel },
 			requesty: { "test-model": testModel },
 			glama: { "test-model": testModel },
+			cortecs: { "test-model": testModel },
 			unbound: { "test-model": testModel },
 			litellm: { "test-model": testModel },
 			"kilocode-openrouter": { "test-model": testModel },

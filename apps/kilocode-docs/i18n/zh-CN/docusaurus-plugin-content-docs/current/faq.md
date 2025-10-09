@@ -43,7 +43,7 @@ Kilo Code扩展本身是免费开源的。
 
 之后，你可以添加信用卡购买更多tokens（通过Stripe安全处理）。我们的定价与Anthropic的API费率完全一致。我们不会从每个token或每次充值中抽取任何费用。未来我们将添加更多LLM提供商。
 
-或者，你可以"自带API"（如[Anthropic](providers/anthropic)、[OpenAI](providers/openai)、[OpenRouter](providers/openrouter)、[Requesty](providers/requesty)等）来使用其AI功能。这些提供商通常根据处理的tokens数量收取API使用费用。你需要创建账户并从所选提供商处获取API密钥。详情请参见[设置首个AI提供商](getting-started/connecting-api-provider)。
+或者，你可以"自带API"（如[Anthropic](providers/anthropic)、[OpenAI](providers/openai)、[OpenRouter](providers/openrouter)、[Requesty](providers/requesty)、[cortecs](providers/cortecs)等）来使用其AI功能。这些提供商通常根据处理的tokens数量收取API使用费用。你需要创建账户并从所选提供商处获取API密钥。详情请参见[设置首个AI提供商](getting-started/connecting-api-provider)。
 
 ### 使用Kilo Code有哪些风险？
 
@@ -78,6 +78,7 @@ Kilo Code支持多种API提供商，包括：
 - [Unbound](/providers/unbound)
 - [Requesty](/providers/requesty)
 - [VS Code Language Model API](/providers/vscode-lm)
+- [cortecs](/providers/cortecs)
 
 ### 如何获取API密钥？
 

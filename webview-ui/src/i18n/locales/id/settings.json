@@ -273,6 +273,17 @@
 		},
 		"getRequestyApiKey": "Dapatkan Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
+		"cortecsApiKey": "cortecs API Key",
+		"getCortecsApiKey": "Dapatkan cortecs API Key",
+		"cortecsRoutingPreference": {
+			"title": "Preferensi Routing",
+			"options": {
+				"default": "Default",
+				"cost": "Biaya",
+				"speed": "Kecepatan",
+				"balanced": "Seimbang"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Gunakan URL dasar khusus",
 		"openRouterTransformsText": "Kompres prompt dan rantai pesan ke ukuran konteks (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",

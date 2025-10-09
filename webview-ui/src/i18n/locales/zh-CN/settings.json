@@ -274,6 +274,17 @@
 		},
 		"getRequestyApiKey": "获取 Requesty API 密钥",
 		"getRequestyBaseUrl": "基础 URL",
+		"cortecsApiKey": "cortecs API 密钥",
+		"getCortecsApiKey": "获取 cortecs API 密钥",
+		"cortecsRoutingPreference": {
+			"title": "路由偏好",
+			"options": {
+				"default": "默认",
+				"cost": "成本",
+				"speed": "速度",
+				"balanced": "平衡"
+			}
+		},
 		"requestyUseCustomBaseUrl": "使用自定义基础 URL",
 		"openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
 		"anthropicApiKey": "Anthropic API 密钥",
