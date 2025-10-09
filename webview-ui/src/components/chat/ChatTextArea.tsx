@@ -312,7 +312,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				{ type: ContextMenuOptionType.Terminal, value: "terminal" },
 				...gitCommits,
 				...openedTabs
-					.filter((tab) => tab.path && tab.path.trim() !== "" && tab.path.trim() !== "/")
+					.filter((tab) => {
+						if (!tab.path) return false;
+						const trimmedPath = tab.path.trim();
+						return trimmedPath !== "" && trimmedPath !== "/";
+					})
 					.map((tab) => {
 						// tab.path is already a relative path (e.g., "src/file.ts")
 						// Format it directly as a mention path with @/ prefix
