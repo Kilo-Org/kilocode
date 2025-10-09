@@ -50,7 +50,6 @@ export const ContextPillsBar = ({ mentions, onRemove }: ContextPillsBarProps) =>
 				return (
 					<StandardTooltip key={`${mention}-${index}`} content={displayPath} side="top">
 						<div className="context-pill">
-							<span className="context-pill-name">{displayName}</span>
 							<button
 								className="context-pill-remove"
 								onClick={() => onRemove(mention)}
@@ -58,6 +57,7 @@ export const ContextPillsBar = ({ mentions, onRemove }: ContextPillsBarProps) =>
 								type="button">
 								<X className="h-3 w-3" />
 							</button>
+							<span className="context-pill-name">{displayName}</span>
 						</div>
 					</StandardTooltip>
 				)

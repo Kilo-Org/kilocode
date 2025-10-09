@@ -414,7 +414,7 @@ vscode-dropdown::part(listbox) {
 	display: inline-flex;
 	align-items: center;
 	gap: 4px;
-	padding: 4px 4px 4px 8px;
+	padding: 4px 8px 4px 4px;
 	background-color: color-mix(in srgb, var(--vscode-badge-background) 85%, transparent);
 	border: 1px solid color-mix(in srgb, var(--vscode-badge-background) 40%, transparent);
 	border-radius: 4px;
