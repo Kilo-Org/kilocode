@@ -183,9 +183,11 @@
 		--vscode-input-border: var(--border);
 	}
 
+	/* kilocode_change start */
 	a {
 		color: var(--vscode-textLink-foreground);
 	}
+	/* kilocode_change end */
 }
 
 @layer components {
