@@ -1,50 +1,67 @@
 // kilocode_change: Morph fast apply - file added
 
-export function getFastApplyEditingInstructions(modelType: "Morph" | "Relace"): string {
-	return `- **${modelType} FastApply is enabled.** You have access to the \`edit_file\` tool which uses a specialized model optimized for intelligent code understanding and modification.
-- **ONLY use the edit_file tool for file modifications.** Traditional editing tools (apply_diff, write_to_file, insert_content, search_and_replace) are disabled in ${modelType} mode.
-- **Focus on clear instructions and precise code edits** using the edit_file format with \`// ... existing code ...\` placeholders to represent unchanged sections.
-- **The edit_file tool requires three parameters:**
-  - \`target_file\`: Full path to the file to modify
-  - \`instructions\`: Single sentence describing what you're doing (use first person)
-  - \`code_edit\`: Only the lines you want to change, using \`// ... existing code ...\` for unchanged sections
-- **Always make all edits to a file in a single edit_file call** rather than multiple calls to the same file.`
+import { getGrokToolCallGuidance, shouldUseGrokToolHandling } from "../../../core/tools/grokUtils"
+import { type ClineProviderState } from "../../webview/ClineProvider"
+
+export function getMorphEditingInstructions(): string {
+	return `- **You are using specialized \`edit_file\` tool for rapid and reliable code editing.** You MUST ONLY use the \`edit_file\` tool for all file modifications. All other file editing tools are disabled.
+- **Follow the formatting rules** in the tool description to ensure your edits are applied correctly.
+- When planning to make the edit, briefly think about unchanged sections.
+- **USE ELLIPSIS COMMENTS (e.g., \`// ... existing code ...\`) TO CLEARLY MARK UNCHANGED SECTIONS.**`
 }
 
-export function getEditFileDescription(): string {
+export function getFastApplyEditingInstructions(modelType: "Morph" | "Relace"): string {
+	return getMorphEditingInstructions()
+}
+
+export function getEditFileDescription(state?: ClineProviderState): string {
+	const useGrokGuidance = shouldUseGrokToolHandling(state)
+	const grokGuidance = useGrokGuidance ? getGrokToolCallGuidance() : ""
+
 	return `## edit_file
 
-**Description**: Use this tool to make an edit to a file.
+**Purpose**: The ONLY tool for ALL file modifications
+**Description**: This tool is highly optimized for speed and accuracy. To ensure your changes are applied both quickly and correctly, it is essential that you follow the formatting rules with precision.
 
-This will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.
+###  CRITICAL Formatting Rules for \`code_edit\`
 
-When writing the edit, you should specify each edit in sequence, with the special comment \`// ... existing code ...\` to represent unchanged code in between edited lines.
+- 1. **Consolidate Your Edits:** Before using this tool, think through all the changes you need to make to the file. Your \`code_edit\` submission must contain all modifications in a single, complete snippet rather than making small, incremental edits.
+- 2. **Use Placeholder Comments:** Represent unchanged code with a placeholder comment (e.g., \`// ... existing code ...\`, \`# ... unchanged code ...\`).
+- 3. **Provide Clear Context:** Include 1-3 lines of original, unchanged code to anchor the edit. Be as length-efficient as possible, but always provide enough context to make the edit's location unambiguous.
+- 4. **Maintain Exact Formatting:** Ensure your code snippet precisely matches the final desired indentation and structure. The edit should appear exactly as it will in the final version of the file.
+- 5. **Handle Deletions:** To remove a block of code, show the lines immediately before and after it.
 
-**Example Format**:
+### REQUIRED Parameters
+**target_file:** (string, required) The absolute path to the file to be modified.
+**instructions:** (string, required) A brief, first-person sentence describing the intent of your change (e.g., "I will add error handling to the database connection logic").
+**code_edit:** (string, required) The code snippet for the edit, following all the formatting rules listed above.
+
+### Example of \`edit_file\` Usage
+To update a constant, add a new log to a function, and delete an obsolete function (\`oldFunction\`), your edit should look like this:
 \`\`\`
+<edit_file>
+<target_file>/path/to/file.js</target_file>
+<instructions>I will update the MAX_ITEMS constant, add logging to processItems, and remove oldFunction</instructions>
+<code_edit>
+// ... existing imports ...
+const MAX_ITEMS = 100;  // Updated from 50
 // ... existing code ...
-FIRST_EDIT
+
+function processItems() {
+  // ... no changes ...
+  validateInput();
+  console.log("Processing items...");  // Added logging
+  for (let i = 0; i < MAX_ITEMS; i++) {
+    // ... existing code ...
+  }
+}
+// oldFunction removed - was here between processItems and newFunction
+
+function newFunction() {
+  // ... unchanged code ...
+}
 // ... existing code ...
-SECOND_EDIT
-// ... existing code ...
-THIRD_EDIT
-// ... existing code ...
-\`\`\`
-
-You should still bias towards repeating as few lines of the original file as possible to convey the change.
-But, each edit should contain sufficient context of unchanged lines around the code you're editing to resolve ambiguity.
-DO NOT omit spans of pre-existing code (or comments) without using the \`// ... existing code ...\` comment to indicate its absence. If you omit the existing code comment, the model may inadvertently delete these lines.
-If you plan on deleting a section, you must provide context before and after to delete it. If the initial code is \`\`\`code \\n Block 1 \\n Block 2 \\n Block 3 \\n code\`\`\`, and you want to remove Block 2, you would output \`\`\`// ... existing code ... \\n Block 1 \\n  Block 3 \\n // ... existing code ...\`\`\`.
-Make sure it is clear what the edit should be, and where it should be applied.
-ALWAYS make all edits to a file in a single edit_file instead of multiple edit_file calls to the same file. The apply model can handle many distinct edits at once.
-
-**REQUIRED Parameters**:
-
-1. **target_file** (string): The target file to modify. Always specify the full path to the file you want to edit.
-
-2. **instructions** (string): A single sentence instruction describing what you are going to do for the sketched edit. This is used to assist the less intelligent model in applying the edit. Use the first person to describe what you are going to do. Use it to disambiguate uncertainty in the edit.
-
-3. **code_edit** (string): Specify ONLY the precise lines of code that you wish to edit. NEVER specify or write out unchanged code. Instead, represent all unchanged code using the comment of the language you're editing in - example: \`// ... existing code ...\`
-
-**ALL THREE PARAMETERS (target_file, instructions, code_edit) ARE MANDATORY**`
+</code_edit>
+</edit_file>
+\`\`\`${grokGuidance}`
 }

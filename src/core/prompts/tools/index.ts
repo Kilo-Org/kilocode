@@ -33,6 +33,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
+import { ExtensionState } from "../../../shared/ExtensionMessage"
 // kilocode_change end
 
 // Map of tool names to their description functions
@@ -61,7 +62,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	new_task: (args) => getNewTaskDescription(args),
 	insert_content: (args) => getInsertContentDescription(args),
 	search_and_replace: (args) => getSearchAndReplaceDescription(args),
-	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
+	edit_file: (args) => getEditFileDescription(args.clineProviderState), // kilocode_change: Morph fast apply
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
 	update_todo_list: (args) => getUpdateTodoListDescription(args),
@@ -99,6 +100,7 @@ export function getToolDescriptionsForMode(
 			modelId,
 		},
 		experiments,
+		clineProviderState, // kilocode_change: Pass state for Grok detection
 	}
 
 	const tools = new Set<string>()

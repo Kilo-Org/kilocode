@@ -12,9 +12,11 @@ import { getReadablePath } from "../../utils/path"
 import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
 import { type ClineProviderState } from "../webview/ClineProvider"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
+import { shouldUseGrokToolHandling, validateEditFileParams, getModelIdFromState } from "./grokUtils"
 
 const FAST_APPLY_MODEL_PRICING = {
 	"morph-v3-fast": {
@@ -111,8 +113,66 @@ export async function editFileTool(
 			return
 		}
 
-		// Validate required parameters
+		// Get provider state for Grok detection
+		const provider = cline.providerRef.deref()
+		const state = provider ? await provider.getState() : undefined
+		const isGrok = shouldUseGrokToolHandling(state)
+		const modelId = getModelIdFromState(state)
+
+		// Enhanced validation for Grok models
+		if (isGrok) {
+			const validation = validateEditFileParams({
+				target_file,
+				instructions,
+				code_edit,
+			})
+
+			if (!validation.isValid) {
+				cline.consecutiveMistakeCount++
+				cline.recordToolError("edit_file", validation.error)
+
+				// Capture telemetry for Grok validation failure
+				TelemetryService.instance.captureEvent(TelemetryEventName.TOOL_VALIDATION_FAILED, {
+					tool: "edit_file",
+					model: modelId || "unknown",
+					flow: "grok-xml-validation",
+					missingParams: validation.missingParams.join(","),
+					error: validation.error,
+				})
+
+				// Provide detailed error with fallback suggestion
+				const errorMessage = `edit_file validation failed: ${validation.error}
+
+Missing parameters: ${validation.missingParams.join(", ")}
+
+**Please try again using apply_diff instead**, which is more reliable for your current model. Example:
+
+<apply_diff>
+<path>path/to/file.ts</path>
+<diff>
+--- a/path/to/file.ts
++++ b/path/to/file.ts
+@@ -10,5 +10,6 @@
+ existing line
++new line to add
+ existing line
+</diff>
+</apply_diff>`
+
+				await cline.say("error", errorMessage)
+				pushToolResult(formatResponse.toolError(errorMessage))
+				return
+			}
+		}
+
+		// Validate required parameters (standard validation)
 		if (!(await validateParams(cline, target_file, instructions, code_edit, pushToolResult))) {
+			// Track standard validation failure
+			TelemetryService.instance.captureEvent(TelemetryEventName.TOOL_VALIDATION_FAILED, {
+				tool: "edit_file",
+				model: modelId || "unknown",
+				flow: isGrok ? "grok-standard-validation" : "standard-validation",
+			})
 			return
 		}
 
@@ -143,8 +203,17 @@ export async function editFileTool(
 
 		if (morphApplyResult && !morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
-			cline.recordToolError("edit_file")
-			pushToolResult(formatResponse.toolError(`Failed to apply edit using Morph: ${morphApplyResult.error}`))
+			cline.recordToolError("edit_file", morphApplyResult.error)
+
+			// Track Fast Apply backend failure
+			TelemetryService.instance.captureEvent(TelemetryEventName.FAST_APPLY_ERROR, {
+				tool: "edit_file",
+				model: modelId || "unknown",
+				flow: isGrok ? "grok-fast-apply-backend-error" : "fast-apply-backend-error",
+				error: morphApplyResult.error,
+			})
+
+			pushToolResult(formatResponse.toolError(`Failed to apply edit using Fast Apply: ${morphApplyResult.error}`))
 			return
 		}
 
@@ -191,6 +260,16 @@ export async function editFileTool(
 		await cline.fileContextTracker.trackFileContext(relPath, "roo_edited")
 		cline.didEditFile = true
 		cline.consecutiveMistakeCount = 0
+
+		// Capture success telemetry for Grok
+		if (isGrok) {
+			TelemetryService.instance.captureEvent(TelemetryEventName.TOOL_SUCCESS, {
+				tool: "edit_file",
+				model: modelId || "unknown",
+				flow: morphApplyResult ? "grok-fast-apply-success" : "grok-without-fast-apply",
+				usedFastApply: !!morphApplyResult,
+			})
+		}
 
 		// Get the formatted response message
 		const message = await cline.diffViewProvider.pushToolWriteResult(cline, cline.cwd, false)
