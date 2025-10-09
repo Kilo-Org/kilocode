@@ -631,6 +631,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const handleAddMention = useCallback((mention: string) => {
 		// Validate mention before adding - skip empty or invalid mentions
 		if (!isValidMention(mention)) {
+			return; // kilocode_change: return early if mention is invalid
 		}
 		// Check for duplicates before adding
 		setContextMentions((prev) => {
