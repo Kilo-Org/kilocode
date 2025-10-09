@@ -622,11 +622,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		disableAutoScrollRef.current = false
 	}, [])
 
+	// Utility function to validate mentions
+	const isValidMention = (mention: string): boolean => {
+		const trimmed = mention?.trim() || "";
+		return !!trimmed && trimmed !== "@" && trimmed !== "@/";
+	};
+
 	const handleAddMention = useCallback((mention: string) => {
 		// Validate mention before adding - skip empty or invalid mentions
-		const trimmed = mention?.trim() || "";
-		if (!trimmed || trimmed === "@" || trimmed === "@/") {
-			return;
+		if (!isValidMention(mention)) {
 		}
 		// Check for duplicates before adding
 		setContextMentions((prev) => {
@@ -651,11 +655,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			text = text.trim()
 
 			// Inject context mentions into the text
-			// Filter out invalid mentions and ensure proper formatting
+			// Use isValidMention to filter out invalid mentions and ensure proper formatting
 			const validMentions = contextMentions
-				.filter((m) => m && m.trim() !== "" && m.trim() !== "@" && m.trim() !== "@/")
-				.map((m) => m.trim())
-				.map((m) => m.startsWith("@") ? m : `@${m}`);
+								.filter(isValidMention)
+								.map((m) => m.trim())
+								.map((m) => m.startsWith("@") ? m : `@${m}`);
 
 			const mentionsText = validMentions.join(" ");
 			const fullText = mentionsText ? `${mentionsText} ${text}` : text;
