@@ -83,6 +83,13 @@ export const MAX_IMAGES_PER_MESSAGE = 20 // This is the Anthropic limit.
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
 
+
+// Utility function to validate mentions
+const isValidMention = (mention: string): boolean => {
+	const trimmed = mention?.trim() || "";
+	return !!trimmed && trimmed !== "@" && trimmed !== "@/";
+};
+
 const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewProps> = (
 	{ isHidden, showAnnouncement, hideAnnouncement },
 	ref,
@@ -621,12 +628,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// setSecondaryButtonText(undefined)
 		disableAutoScrollRef.current = false
 	}, [])
-
-	// Utility function to validate mentions
-	const isValidMention = (mention: string): boolean => {
-		const trimmed = mention?.trim() || "";
-		return !!trimmed && trimmed !== "@" && trimmed !== "@/";
-	};
 
 	const handleAddMention = useCallback((mention: string) => {
 		// Validate mention before adding - skip empty or invalid mentions
