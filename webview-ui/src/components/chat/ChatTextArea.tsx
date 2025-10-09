@@ -330,7 +330,11 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						};
 					}),
 				...filePaths
-					.filter((file) => file && file.trim() !== "" && file.trim() !== "/")
+					.filter((file) => {
+						if (!file) return false;
+						const trimmed = file.trim();
+						return trimmed !== "" && trimmed !== "/";
+					})
 					.map((file) => `@/${file}`)
 					.filter((mentionPath) => mentionPath !== "@/") // Exclude root
 					.filter((mentionPath) => {
