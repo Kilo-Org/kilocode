@@ -14,30 +14,16 @@ export class GhostStrategy {
 	}
 
 	/**
-	 * Get the system prompt based on context using the new strategy system
-	 * Overloaded to support both new context-based and legacy string-only calls
+	 * Get both system and user prompts based on context
+	 * @param context The suggestion context
+	 * @returns Object containing systemPrompt and userPrompt
 	 */
-	getSystemPrompt(context: GhostSuggestionContext): string {
-		const { systemPrompt, strategy } = this.strategyManager.buildPrompt(context)
+	getPrompts(context: GhostSuggestionContext): { systemPrompt: string; userPrompt: string } {
+		const { systemPrompt, userPrompt, strategy } = this.strategyManager.buildPrompt(context)
 		if (this.debug) {
 			console.log(`[GhostStrategy] Using strategy: ${strategy.name}`)
 		}
-		return systemPrompt
-	}
-
-	/**
-	 * Get the user prompt based on context using the new strategy system
-	 * @param context The suggestion context
-	 * @returns The user prompt
-	 */
-	getSuggestionPrompt(context: GhostSuggestionContext): string {
-		const { userPrompt, strategy } = this.strategyManager.buildPrompt(context)
-
-		if (this.debug) {
-			console.log(`[GhostStrategy] Generated prompt with strategy: ${strategy.name}`)
-		}
-
-		return userPrompt
+		return { systemPrompt, userPrompt }
 	}
 
 	/**

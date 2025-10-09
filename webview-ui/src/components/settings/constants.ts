@@ -78,6 +78,7 @@ export const PROVIDERS = [
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" }, // kilocode_change
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },

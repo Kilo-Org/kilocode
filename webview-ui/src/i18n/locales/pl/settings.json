@@ -314,6 +314,10 @@
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
 		"huggingFaceApiKey": "Klucz API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Uzyskaj klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Bazowy URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Użyj niestandardowego bazowego URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Ładowanie...",
 		"huggingFaceModelsCount": "({{count}} modeli)",
@@ -892,6 +896,7 @@
 			"regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
 		},
 		"modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model.",
+		"modelDeprecated": "Ten model nie jest już dostępny. Wybierz inny model.",
 		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
 		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
 		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
@@ -934,6 +939,11 @@
 		"taskTimeline": {
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"costThreshold": {
+			"currentValue": "Aktualny próg: ${{value}}",
+			"label": "Ukryj koszt poniżej progu",
+			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
 		}
 	},
 	"ghost": {

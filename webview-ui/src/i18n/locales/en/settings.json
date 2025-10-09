@@ -318,6 +318,10 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Get Hugging Face API Key",
 		"huggingFaceApiKey": "Hugging Face API Key",
+		"getOvhCloudAiEndpointsApiKey": "Get OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsBaseUrl": "Base URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Use a custom base URL",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Loading...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -556,6 +560,11 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		},
+		"costThreshold": {
+			"label": "Hide cost below threshold",
+			"description": "Only show request costs above this amount. Costs are always visible when the details pane is open.",
+			"currentValue": "Current threshold: ${{value}}"
 		}
 	},
 	"ghost": {
@@ -899,6 +908,7 @@
 			"regionMismatch": "Warning: The region in your ARN ({{arnRegion}}) does not match your selected region ({{region}}). This may cause access issues. The provider will use the region from the ARN."
 		},
 		"modelAvailability": "The model ID ({{modelId}}) you provided is not available. Please choose a different model.",
+		"modelDeprecated": "This model is no longer available. Please select a different model.",
 		"providerNotAllowed": "Provider '{{provider}}' is not allowed by your organization",
 		"modelNotAllowed": "Model '{{model}}' is not allowed for provider '{{provider}}' by your organization",
 		"profileInvalid": "This profile contains a provider or model that is not allowed by your organization",

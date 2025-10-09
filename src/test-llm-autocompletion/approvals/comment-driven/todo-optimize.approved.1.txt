@@ -1,0 +1,4 @@
+for (let i = 0; i < input; i++) {
+  // Optimized by using multiplication instead of Math.pow
+  result += i * i;
+}

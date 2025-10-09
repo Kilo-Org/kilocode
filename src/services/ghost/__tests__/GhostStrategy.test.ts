@@ -3,8 +3,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { GhostStrategy } from "../GhostStrategy"
 import { GhostSuggestionContext } from "../types"
 import { PromptStrategyManager } from "../PromptStrategyManager"
-import { UseCaseType } from "../types/PromptStrategy"
-import { skip } from "node:test"
 
 describe("GhostStrategy", () => {
 	let strategy: GhostStrategy
@@ -13,8 +11,8 @@ describe("GhostStrategy", () => {
 		strategy = new GhostStrategy()
 	})
 
-	describe("getSystemPrompt", () => {
-		it("should use PromptStrategyManager to generate system prompt", () => {
+	describe("getPrompts", () => {
+		it("should use PromptStrategyManager to generate prompts", () => {
 			const mockDocument = {
 				languageId: "typescript",
 				getText: () => "const x = 1;",
@@ -27,10 +25,10 @@ describe("GhostStrategy", () => {
 				userInput: "Complete this function",
 			}
 
-			const prompt = strategy.getSystemPrompt(context)
+			const { systemPrompt } = strategy.getPrompts(context)
 
 			// Should contain base instructions from strategy system
-			expect(prompt).toContain("CRITICAL OUTPUT FORMAT")
+			expect(systemPrompt).toContain("CRITICAL OUTPUT FORMAT")
 		})
 
 		it("should select UserRequestStrategy when user input is provided", () => {
@@ -47,65 +45,11 @@ describe("GhostStrategy", () => {
 				userInput: "Add a function to calculate sum",
 			}
 
-			const systemPrompt = strategy.getSystemPrompt(context)
-			const userPrompt = strategy.getSuggestionPrompt(context)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
 
 			// UserRequestStrategy should be selected
 			expect(systemPrompt).toContain("Execute User's Explicit Request")
 			expect(userPrompt).toContain("Add a function to calculate sum")
-		})
-
-		skip("should select ErrorFixStrategy when diagnostics are present", () => {
-			const mockDocument = {
-				languageId: "typescript",
-				getText: () => "const x = 1",
-				lineAt: (line: number) => ({ text: "const x = 1" }),
-				uri: { toString: () => "file:///test.ts" },
-				offsetAt: (position: vscode.Position) => 11,
-			} as vscode.TextDocument
-
-			const mockRange = {
-				start: { line: 0, character: 11 } as vscode.Position,
-				end: { line: 0, character: 11 } as vscode.Position,
-			} as vscode.Range
-
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-				diagnostics: [
-					{
-						severity: vscode.DiagnosticSeverity.Error,
-						message: "Missing semicolon",
-						range: mockRange,
-					} as vscode.Diagnostic,
-				],
-			}
-
-			const systemPrompt = strategy.getSystemPrompt(context)
-
-			// ErrorFixStrategy should be selected
-			expect(systemPrompt).toContain("Fix Compilation Errors and Warnings")
-		})
-	})
-
-	describe("getSuggestionPrompt", () => {
-		it("should delegate to PromptStrategyManager", () => {
-			const mockDocument = {
-				languageId: "typescript",
-				getText: () => "const x = 1;",
-				lineAt: (line: number) => ({ text: "const x = 1;" }),
-				uri: { toString: () => "file:///test.ts" },
-				offsetAt: (position: vscode.Position) => 13,
-			} as vscode.TextDocument
-
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-			}
-
-			const prompt = strategy.getSuggestionPrompt(context)
-
-			// Should return a structured prompt
-			expect(prompt).toBeDefined()
-			expect(prompt.length).toBeGreaterThan(0)
 		})
 	})
 
@@ -124,8 +68,7 @@ describe("GhostStrategy", () => {
 				userInput: "Complete this function",
 			}
 
-			const systemPrompt = strategy.getSystemPrompt(context)
-			const userPrompt = strategy.getSuggestionPrompt(context)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
 
 			// System prompt should contain format instructions
 			expect(systemPrompt).toContain("CRITICAL OUTPUT FORMAT")
@@ -139,20 +82,6 @@ describe("GhostStrategy", () => {
 
 		beforeEach(() => {
 			manager = new PromptStrategyManager()
-		})
-
-		it("should have all 7 strategies registered", () => {
-			const strategies = manager.getStrategies()
-			expect(strategies).toHaveLength(7)
-
-			const strategyNames = strategies.map((s) => s.name)
-			expect(strategyNames).toContain("User Request")
-			expect(strategyNames).toContain("Error Fix")
-			expect(strategyNames).toContain("Selection Refactor")
-			expect(strategyNames).toContain("Comment Driven")
-			expect(strategyNames).toContain("New Line Completion")
-			expect(strategyNames).toContain("Inline Completion")
-			expect(strategyNames).toContain("Auto Trigger")
 		})
 
 		it("should select appropriate strategy based on context", () => {
@@ -220,8 +149,7 @@ describe("GhostStrategy", () => {
 				document: mockDocument,
 			}
 
-			const systemPrompt = strategy.getSystemPrompt(context)
-			const userPrompt = strategy.getSuggestionPrompt(context)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
 
 			expect(systemPrompt).toBeDefined()
 			expect(systemPrompt.length).toBeGreaterThan(0)
@@ -279,8 +207,7 @@ describe("GhostStrategy", () => {
 			]
 
 			contexts.forEach((context) => {
-				const systemPrompt = strategy.getSystemPrompt(context as GhostSuggestionContext)
-				const userPrompt = strategy.getSuggestionPrompt(context as GhostSuggestionContext)
+				const { systemPrompt, userPrompt } = strategy.getPrompts(context as GhostSuggestionContext)
 
 				expect(systemPrompt).toBeDefined()
 				expect(systemPrompt.length).toBeGreaterThan(0)

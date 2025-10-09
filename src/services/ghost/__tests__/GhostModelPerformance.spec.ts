@@ -25,10 +25,9 @@ describe("GhostModelPerformance", () => {
 			document: document,
 		}
 
-		const systemPrompt = strategy.getSystemPrompt(context)
-		const suggestionPrompt = strategy.getSuggestionPrompt(context)
+		const { systemPrompt, userPrompt } = strategy.getPrompts(context)
 
-		return { systemPrompt, suggestionPrompt }
+		return { systemPrompt, suggestionPrompt: userPrompt }
 	}
 
 	const performTest = async (apiHandler: ApiHandler, prompt: { systemPrompt: string; suggestionPrompt: string }) => {

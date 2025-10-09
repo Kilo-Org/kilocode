@@ -325,6 +325,10 @@
 		"openAiApiKey": "คีย์ API ของ OpenAI",
 		"getHuggingFaceApiKey": "รับคีย์ API ของ Hugging Face",
 		"huggingFaceApiKey": "คีย์ API ของ Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "รับคีย์ API ของ OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "คีย์ API ของ OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL ฐาน",
+		"getOvhCloudAiEndpointsBaseUrl": "ใช้ URL ฐานแบบกำหนดเอง",
 		"huggingFaceModelId": "รหัสโมเดล",
 		"huggingFaceLoading": "กำลังโหลด...",
 		"huggingFaceModelsCount": "({{count}} โมเดล)",
@@ -582,6 +586,11 @@
 		"taskTimeline": {
 			"label": "แสดงไทม์ไลน์ของงาน",
 			"description": "แสดงไทม์ไลน์ภาพของข้อความงาน โดยมีสีตามประเภท ช่วยให้คุณสามารถดูความคืบหน้าของงานได้อย่างรวดเร็วและเลื่อนกลับไปยังจุดเฉพาะในประวัติของงาน"
+		},
+		"costThreshold": {
+			"label": "ซ่อนต้นทุนที่ต่ำกว่าเกณฑ์",
+			"currentValue": "เกณฑ์ปัจจุบัน: ${{value}}",
+			"description": "แสดงค่าใช้จ่ายคำขอเฉพาะที่เกินกว่าจำนวนนี้ ค่าใช้จ่ายจะมองเห็นได้เสมอเมื่อเปิดบานหน้าต่างรายละเอียด"
 		}
 	},
 	"ghost": {
@@ -937,7 +946,8 @@
 		"providerNotAllowed": "ผู้ให้บริการ '{{provider}}' ไม่ได้รับอนุญาตจากองค์กรของคุณ",
 		"modelNotAllowed": "โมเดล '{{model}}' ไม่ได้รับอนุญาตสำหรับผู้ให้บริการ '{{provider}}' จากองค์กรของคุณ",
 		"profileInvalid": "โปรไฟล์นี้มีผู้ให้บริการหรือโมเดลที่ไม่ได้รับอนุญาตจากองค์กรของคุณ",
-		"qwenCodeOauthPath": "คุณต้องระบุเส้นทางข้อมูลประจำตัว OAuth ที่ถูกต้อง"
+		"qwenCodeOauthPath": "คุณต้องระบุเส้นทางข้อมูลประจำตัว OAuth ที่ถูกต้อง",
+		"modelDeprecated": "โมเดลนี้ไม่สามารถใช้งานได้อีกต่อไป โปรดเลือกโมเดลอื่น"
 	},
 	"placeholders": {
 		"apiKey": "ป้อนคีย์ API...",

@@ -116,11 +116,11 @@ describe("GhostRecentOperations", () => {
 		expect(enrichedContext.recentOperations?.length).toBeGreaterThan(0)
 
 		// Generate prompt
-		const prompt = strategy.getSuggestionPrompt(enrichedContext)
+		const { userPrompt } = strategy.getPrompts(enrichedContext)
 
 		// Verify that the prompt includes the recent operations section
 		// The new strategy system uses "## Recent Typing" format
-		expect(prompt).toContain("## Recent Typing")
+		expect(userPrompt).toContain("## Recent Typing")
 	})
 
 	it("should not include recent operations in the prompt when not available", async () => {
@@ -133,11 +133,11 @@ describe("GhostRecentOperations", () => {
 		const enrichedContext = await context.generate(suggestionContext)
 
 		// Generate prompt
-		const prompt = strategy.getSuggestionPrompt(enrichedContext)
+		const { userPrompt } = strategy.getPrompts(enrichedContext)
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check
 		// that the "**Recent Changes (Diff):**" section is not present
-		expect(prompt.includes("**Recent Changes (Diff):**")).toBe(false)
+		expect(userPrompt.includes("**Recent Changes (Diff):**")).toBe(false)
 	})
 })

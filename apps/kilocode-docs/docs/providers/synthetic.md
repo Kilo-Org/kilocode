@@ -29,6 +29,6 @@ Kilo Code supports all "always on" Synthetic AI models. The available models inc
 
 ## Tips and Notes
 
-* **Pricing Options:** Synthetic offers both subscriptions and pay-as-you-go usage-based [pricing](https://synthetic.new/pricing).
-* **Privacy:** Strong privacy policy with no training on user data and automatic deletion of API data within 14 days.
-* **OpenAI Compatibility:** Synthetic models work with any OpenAI-compatible tools and applications.
+- **Pricing Options:** Synthetic offers both subscriptions and pay-as-you-go usage-based [pricing](https://synthetic.new/pricing).
+- **Privacy:** Strong privacy policy with no training on user data and automatic deletion of API data within 14 days.
+- **OpenAI Compatibility:** Synthetic models work with any OpenAI-compatible tools and applications.

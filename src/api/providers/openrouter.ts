@@ -230,6 +230,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
+		let inferenceProvider: string | undefined // kilocode_change
 
 		try {
 			for await (const chunk of stream) {
@@ -239,6 +240,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
 					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
 				}
+
+				// kilocode_change start
+				if ("provider" in chunk && typeof chunk.provider === "string") {
+					inferenceProvider = chunk.provider
+				}
+				// kilocode_change end
 
 				verifyFinishReason(chunk.choices[0]) // kilocode_change
 				const delta = chunk.choices[0]?.delta
@@ -282,7 +289,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				outputTokens: lastUsage.completion_tokens || 0,
 				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: this.getTotalCost(lastUsage), // kilocode_change
+				// kilocode_change start
+				totalCost: this.getTotalCost(lastUsage),
+				inferenceProvider,
+				// kilocode_change end
 			}
 		}
 	}

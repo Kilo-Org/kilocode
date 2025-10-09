@@ -314,6 +314,10 @@
 		"getGeminiApiKey": "Obter chave de API Gemini",
 		"getHuggingFaceApiKey": "Obter chave de API Hugging Face",
 		"huggingFaceApiKey": "Chave de API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obter chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usar uma URL base personalizada",
 		"huggingFaceModelId": "ID do modelo",
 		"huggingFaceLoading": "Carregando...",
 		"huggingFaceModelsCount": "({{count}} modelos)",
@@ -892,6 +896,7 @@
 			"regionMismatch": "Aviso: A região em seu ARN ({{arnRegion}}) não corresponde à região selecionada ({{region}}). Isso pode causar problemas de acesso. O provedor usará a região do ARN."
 		},
 		"modelAvailability": "O ID do modelo ({{modelId}}) que você forneceu não está disponível. Por favor, escolha outro modelo.",
+		"modelDeprecated": "Este modelo não está mais disponível. Por favor, selecione um modelo diferente.",
 		"providerNotAllowed": "O provedor '{{provider}}' não é permitido pela sua organização",
 		"modelNotAllowed": "O modelo '{{model}}' não é permitido para o provedor '{{provider}}' pela sua organização",
 		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização",
@@ -934,6 +939,11 @@
 		"taskTimeline": {
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		},
+		"costThreshold": {
+			"label": "Ocultar custo abaixo do limite",
+			"currentValue": "Limiar atual: ${{value}}",
+			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
 		}
 	},
 	"ghost": {

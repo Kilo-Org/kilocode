@@ -1,5 +1,35 @@
 # kilo-code
 
+## [v4.101.0]
+
+- [#2518](https://github.com/Kilo-Org/kilocode/pull/2518) [`01106a8`](https://github.com/Kilo-Org/kilocode/commit/01106a8d35159ccea34e290a2174d44d83fecd64) Thanks [@eliasto](https://github.com/eliasto)! - OVHcloud AI Endpoints provider added
+
+### Patch Changes
+
+- [#2852](https://github.com/Kilo-Org/kilocode/pull/2852) [`a707e1d`](https://github.com/Kilo-Org/kilocode/commit/a707e1db5b4f8ee3ca80f259217f521a02ddbd50) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Autocomplete now honors .kilocodeignore
+
+- [#2829](https://github.com/Kilo-Org/kilocode/pull/2829) [`75acbab`](https://github.com/Kilo-Org/kilocode/commit/75acbabd1f0d39488bc252e8559e39a4b8daed19) Thanks [@hassoncs](https://github.com/hassoncs)! - Potentially fix missing Kilo Code icon by removing 'when' condition from the extension's activitybar config
+
+- [#2831](https://github.com/Kilo-Org/kilocode/pull/2831) [`9d457f0`](https://github.com/Kilo-Org/kilocode/commit/9d457f0bc3eef1c1f07eb80070e0ecf69355b38a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - When using Kilo Code or OpenRouter, the inference provider used is now shown in a tooltip on "API Request"
+
+## [v4.100.0]
+
+- [#2787](https://github.com/Kilo-Org/kilocode/pull/2787) [`9c16d14`](https://github.com/Kilo-Org/kilocode/commit/9c16d14c4b8455041b16e5ffa0787014d5154d19) Thanks [@b3nw](https://github.com/b3nw)! - Chutes model list is now dynamically loaded
+
+- [#2806](https://github.com/Kilo-Org/kilocode/pull/2806) [`5d1cda9`](https://github.com/Kilo-Org/kilocode/commit/5d1cda99a5c3872dae526db9b3c8cefbabe69de0) Thanks [@EamonNerbonne](https://github.com/EamonNerbonne)! - Removed the option to use custom provider for autocomplete.
+
+    Using a custom provider defaults to using a your globally configured provider without any context-window cap, and using a custom provider with no further restrictions like that means that per-autocomplete request costs are sometimes extremely high and responses very slow.
+
+- [#2790](https://github.com/Kilo-Org/kilocode/pull/2790) [`d0f6fa0`](https://github.com/Kilo-Org/kilocode/commit/d0f6fa0531e5abfb39f2e99c7a637ead54bfe8be) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Zero Data Retention can now be enabled for Kilo Code and OpenRouter under the Provider Routing settings.
+
+- [#2567](https://github.com/Kilo-Org/kilocode/pull/2567) [`68ea97f`](https://github.com/Kilo-Org/kilocode/commit/68ea97fc02861e932cf0357d60d73a3204ed19ef) Thanks [@billycao](https://github.com/billycao)! - Add provider support for Synthetic (https://synthetic.new)
+
+- [#2807](https://github.com/Kilo-Org/kilocode/pull/2807) [`3375470`](https://github.com/Kilo-Org/kilocode/commit/337547095ff64fbdd1294a22b19c7dd6b41e37bb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The See All Changes button when a task completes is now accompanied by a Revert All Changes button to be able to easily revert all changes.
+
+### Patch Changes
+
+- [#2798](https://github.com/Kilo-Org/kilocode/pull/2798) [`bb3baca`](https://github.com/Kilo-Org/kilocode/commit/bb3baca433ce77419abd8d3f4814278a05f8c631) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The API Request timeout for Ollama and LM Studio is now configurable (VS Code Extensions panel -> Kilo Code gear menu -> Settings -> API Request Timeout)
+
 ## [v4.99.2]
 
 - [#2729](https://github.com/Kilo-Org/kilocode/pull/2729) [`bda1ef4`](https://github.com/Kilo-Org/kilocode/commit/bda1ef4a6ece7532db4e07359cfae640b1080d3c) Thanks [@ivanarifin](https://github.com/ivanarifin)! - Update the environment variables of Gemini CLI when OAuth path changes

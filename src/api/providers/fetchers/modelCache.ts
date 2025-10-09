@@ -23,7 +23,10 @@ import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
-import { getChutesModels } from "./chutes" // kilocode_change
+// kilocode_change start
+import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
+import { getChutesModels } from "./chutes"
+// kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
@@ -122,6 +125,11 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "huggingface":
 				models = await getHuggingFaceModels()
 				break
+			// kilocode_change start
+			case "ovhcloud":
+				models = await getOvhCloudAiEndpointsModels()
+				break
+			// kilocode_change end
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider

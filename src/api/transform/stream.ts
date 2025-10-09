@@ -31,6 +31,7 @@ export interface ApiStreamUsageChunk {
 	cacheReadTokens?: number
 	reasoningTokens?: number
 	totalCost?: number
+	inferenceProvider?: string // kilocode_change
 }
 
 export interface ApiStreamGroundingChunk {

@@ -313,6 +313,10 @@
 		"sambaNovaApiKey": "SambaNova API कुंजी",
 		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
 		"huggingFaceApiKey": "Hugging Face API कुंजी",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी प्राप्त करें",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी",
+		"ovhCloudAiEndpointsBaseUrl": "आधार URL",
+		"getOvhCloudAiEndpointsBaseUrl": "कस्टम आधार URL का उपयोग करें",
 		"huggingFaceModelId": "मॉडल ID",
 		"huggingFaceLoading": "लोड हो रहा है...",
 		"huggingFaceModelsCount": "({{count}} मॉडल)",
@@ -886,6 +890,7 @@
 			"regionMismatch": "चेतावनी: आपके ARN में क्षेत्र ({{arnRegion}}) आपके चयनित क्षेत्र ({{region}}) से मेल नहीं खाता। इससे पहुंच संबंधी समस्याएं हो सकती हैं। प्रदाता ARN से क्षेत्र का उपयोग करेगा।"
 		},
 		"modelAvailability": "आपके द्वारा प्रदान की गई मॉडल ID ({{modelId}}) उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
+		"modelDeprecated": "यह मॉडल अब उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
 		"providerNotAllowed": "प्रदाता '{{provider}}' आपके संगठन द्वारा अनुमत नहीं है",
 		"modelNotAllowed": "मॉडल '{{model}}' प्रदाता '{{provider}}' के लिए आपके संगठन द्वारा अनुमत नहीं है",
 		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है",
@@ -928,6 +933,11 @@
 		"taskTimeline": {
 			"label": "कार्य टाइमलाइन दिखाएँ",
 			"description": "कार्य संदेशों की एक दृश्य समयरेखा प्रदर्शित करें, जो प्रकार के अनुसार रंगीन हैं, जिससे आप कार्य की प्रगति को जल्दी से देख सकें और कार्य के इतिहास में विशिष्ट बिंदुओं पर वापस स्क्रॉल कर सकें।"
+		},
+		"costThreshold": {
+			"label": "थ्रेशोल्ड से नीचे की लागत छिपाएं",
+			"currentValue": "वर्तमान थ्रेशोल्ड: ${{value}}",
+			"description": "केवल इस राशि से अधिक के अनुरोध की लागतों को दिखाएं। जब विवरण पेन खुला होता है, तो लागतें हमेशा दिखाई देती हैं।"
 		}
 	},
 	"ghost": {

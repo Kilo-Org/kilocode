@@ -1,0 +1,6 @@
+# Description: Should fix race condition in async code
+async function updateCounter() {
+  // FIXME: Race condition when multiple updates happen simultaneously<<<CURSOR>>>
+  const current = await getCounter();
+  await setCounter(current + 1);
+}

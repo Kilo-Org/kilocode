@@ -324,6 +324,10 @@
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
 		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"getOvhCloudAiEndpointsApiKey": "احصل على مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL الأساسي",
+		"getOvhCloudAiEndpointsBaseUrl": "استخدام URL أساسي مخصص",
 		"huggingFaceModelId": "معرّف النموذج",
 		"huggingFaceLoading": "جارٍ التحميل...",
 		"huggingFaceModelsCount": "({{count}} نموذج)",
@@ -597,6 +601,11 @@
 		"taskTimeline": {
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		},
+		"costThreshold": {
+			"label": "إخفاء التكلفة أقل من الحد الأدنى",
+			"currentValue": "الحد الحالي: ${{value}}",
+			"description": "إظهار تكاليف الطلب فقط عندما تتجاوز هذا المبلغ. التكاليف تكون مرئية دائمًا عندما تكون لوحة التفاصيل مفتوحة."
 		}
 	},
 	"ghost": {
@@ -953,7 +962,8 @@
 		"providerNotAllowed": "المزوّد '{{provider}}' غير مسموح به.",
 		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
 		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
-		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth."
+		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth.",
+		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر."
 	},
 	"placeholders": {
 		"apiKey": "اكتب مفتاح API...",

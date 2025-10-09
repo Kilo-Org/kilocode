@@ -1,0 +1,7 @@
+for (let i = 0; i < input; i++) {
+  // TODO: Optimize this function for performance
+  // Optimize this function for performance
+  // Consider using memoization or caching for repeated calculations
+  // Or precompute values if possible
+  result += Math.pow(i, 2);
+}

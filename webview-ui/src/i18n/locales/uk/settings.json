@@ -325,6 +325,10 @@
 		"openAiApiKey": "Ключ API OpenAI",
 		"getHuggingFaceApiKey": "Отримати ключ API Hugging Face",
 		"huggingFaceApiKey": "Ключ API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Отримати ключ API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Ключ API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Базовий URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Використовувати користувацький базовий URL",
 		"huggingFaceModelId": "ID моделі",
 		"huggingFaceLoading": "Завантаження...",
 		"huggingFaceModelsCount": "({{count}} моделей)",
@@ -599,6 +603,11 @@
 		"taskTimeline": {
 			"label": "Показувати хронологію завдань",
 			"description": "Відображати візуальну хронологію повідомлень завдання, розфарбовану за типом, що дозволяє швидко переглядати хід виконання завдання та повертатися до певних моментів у історії завдання."
+		},
+		"costThreshold": {
+			"label": "Сховати вартість нижче порогового значення",
+			"currentValue": "Поточний поріг: ${{value}}",
+			"description": "Показувати лише витрати на запити, що перевищують цю суму. Витрати завжди видно, коли відкрита панель деталей."
 		}
 	},
 	"notifications": {
@@ -950,6 +959,7 @@
 			"regionMismatch": "Попередження: регіон у твоєму ARN ({{arnRegion}}) не відповідає вибраному регіону ({{region}}). Це може спричинити проблеми з доступом. Провайдер використовуватиме регіон з ARN."
 		},
 		"modelAvailability": "Ідентифікатор моделі ({{modelId}}), який ти надав, недоступний. Будь ласка, вибери іншу модель.",
+		"modelDeprecated": "Ця модель більше недоступна. Будь ласка, вибери іншу модель.",
 		"providerNotAllowed": "Провайдер '{{provider}}' не дозволений твоєю організацією",
 		"modelNotAllowed": "Модель '{{model}}' не дозволена для провайдера '{{provider}}' твоєю організацією",
 		"profileInvalid": "Цей профіль містить провайдера або модель, які не дозволені твоєю організацією",

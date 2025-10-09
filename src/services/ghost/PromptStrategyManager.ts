@@ -1,27 +1,27 @@
 import { GhostSuggestionContext } from "./types"
 import { PromptStrategy } from "./types/PromptStrategy"
-import { ContextAnalyzer } from "./ContextAnalyzer"
 
 // Import all strategies
 import { UserRequestStrategy } from "./strategies/UserRequestStrategy"
-import { ErrorFixStrategy } from "./strategies/ErrorFixStrategy"
 import { SelectionRefactorStrategy } from "./strategies/SelectionRefactorStrategy"
 import { CommentDrivenStrategy } from "./strategies/CommentDrivenStrategy"
 import { NewLineCompletionStrategy } from "./strategies/NewLineCompletionStrategy"
 import { InlineCompletionStrategy } from "./strategies/InlineCompletionStrategy"
 import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
+import { FimCodestralStrategy } from "./strategies/FimCodestralStrategy"
 
 /**
  * Manages prompt strategies and selects the appropriate one based on context
  */
 export class PromptStrategyManager {
 	private strategies: PromptStrategy[]
-	private contextAnalyzer: ContextAnalyzer
+	private autoTriggerStrategy: AutoTriggerStrategy
 	private debug: boolean
+	private overrideStrategy?: string
 
-	constructor(options?: { debug: boolean }) {
+	constructor(options?: { debug?: boolean; overrideStrategy?: string }) {
 		this.debug = options?.debug ?? false
-		this.contextAnalyzer = new ContextAnalyzer()
+		this.overrideStrategy = options?.overrideStrategy
 
 		// Register all strategies in priority order
 		this.strategies = [
@@ -30,9 +30,9 @@ export class PromptStrategyManager {
 			new NewLineCompletionStrategy(),
 			new CommentDrivenStrategy(),
 			new InlineCompletionStrategy(),
-			new AutoTriggerStrategy(),
-			new ErrorFixStrategy(), // This need to be implemented in background
+			new FimCodestralStrategy(),
 		]
+		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
 
 	/**
@@ -41,39 +41,31 @@ export class PromptStrategyManager {
 	 * @returns The selected strategy
 	 */
 	selectStrategy(context: GhostSuggestionContext): PromptStrategy {
-		// Analyze context to understand the situation
-		const analysis = this.contextAnalyzer.analyze(context)
-
-		if (this.debug) {
-			console.log("[PromptStrategyManager] Context analysis:", {
-				useCase: analysis.useCase,
-				hasUserInput: analysis.hasUserInput,
-				hasErrors: analysis.hasErrors,
-				hasSelection: analysis.hasSelection,
-				isNewLine: analysis.isNewLine,
-				isInComment: analysis.isInComment,
-				isInlineEdit: analysis.isInlineEdit,
-			})
-		}
-
-		// Find the first strategy that can handle this context
-		for (const strategy of this.strategies) {
-			if (strategy.canHandle(context)) {
+		// If an override strategy is specified, use that
+		if (this.overrideStrategy) {
+			const overrideStrat = this.strategies.find((s) => s.name === this.overrideStrategy)
+			if (overrideStrat) {
 				if (this.debug) {
-					console.log(
-						`[PromptStrategyManager] Selected strategy: ${strategy.name} for use case: ${analysis.useCase}`,
-					)
+					console.log(`[PromptStrategyManager] Using override strategy: ${overrideStrat.name}`)
 				}
-				return strategy
+				return overrideStrat
 			}
 		}
 
-		// Fallback: return the last strategy (AutoTriggerStrategy)
-		const fallback = this.strategies[this.strategies.length - 1]
+		const strategy = this.strategies.find((s) => s.canHandle(context)) ?? this.autoTriggerStrategy
+
 		if (this.debug) {
-			console.log(`[PromptStrategyManager] Falling back to: ${fallback.name}`)
+			console.log(`[PromptStrategyManager] Selected strategy: ${strategy.name}`)
 		}
-		return fallback
+
+		return strategy
+	}
+
+	/**
+	 * Get all available strategy names
+	 */
+	getAvailableStrategies(): string[] {
+		return [...this.strategies.map((s) => s.name), this.autoTriggerStrategy.name]
 	}
 
 	/**
@@ -105,13 +97,5 @@ export class PromptStrategyManager {
 			userPrompt,
 			strategy,
 		}
-	}
-
-	/**
-	 * Gets all registered strategies (for testing/debugging)
-	 * @returns Array of all strategies
-	 */
-	getStrategies(): PromptStrategy[] {
-		return [...this.strategies]
 	}
 }

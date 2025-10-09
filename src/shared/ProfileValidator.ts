@@ -94,6 +94,10 @@ export class ProfileValidator {
 				return profile.ioIntelligenceModelId
 			case "deepinfra":
 				return profile.deepInfraModelId
+			// kilocode_change start
+			case "ovhcloud":
+				return profile.ovhCloudAiEndpointsModelId
+			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":
 			default:

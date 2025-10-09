@@ -16,7 +16,6 @@ vi.mock("react-i18next", () => ({
 	},
 }))
 
-
 vi.mock("@/i18n/TranslationContext", () => ({
 	useAppTranslation: () => ({
 		t: (key: string) => key,
@@ -117,7 +116,6 @@ describe("GhostServiceSettingsView", () => {
 		expect(screen.getByText(/kilocode:ghost.settings.triggers/)).toBeInTheDocument()
 		expect(screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)).toBeInTheDocument()
 	})
-
 
 	it("toggles auto trigger checkbox correctly", () => {
 		const setCachedStateField = vi.fn()

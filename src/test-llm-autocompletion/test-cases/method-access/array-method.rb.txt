@@ -1,3 +1,0 @@
-# Description: Should suggest Ruby array methods
-arr = [1, 2, 3]
-arr.<<<AUTOCOMPLETE_HERE>>>

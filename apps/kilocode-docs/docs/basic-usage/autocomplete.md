@@ -64,6 +64,19 @@ This is ideal for:
 
 You can customize this keyboard shortcut as well in your VS Code settings.
 
+## Disable Rival Autocomplete
+
+We recommend disabling rival autocompletes to optimize your experience with Kilo Code. To disable Github Copilot autocomplete in VSCode, go to **Settings** and navigate to **Github** > **Copilot: Advanced** (or search for 'copilot'). Then, toggle to 'disabled':
+
+<img width="2370" height="858" alt="Disable Github Copilot in VSCode" src="https://github.com/user-attachments/assets/60c69417-1d1c-4a48-9820-5390c30ae25c" />
+
+
+
+If using Cursor, go to **Settings** > **Cursor Settings** > **Tab**, and toggle off 'Cursor Tab':
+
+<img width="1366" height="486" alt="Disable Cursor autocomplete" src="https://github.com/user-attachments/assets/fd2eeae2-f770-40ca-8a72-a9d5a1c17d47" />
+
+
 ## Advanced Settings
 
 ### Provider Configuration

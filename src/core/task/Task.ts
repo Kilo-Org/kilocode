@@ -1906,6 +1906,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				let totalCost: number | undefined
 
 				// kilocode_change start
+				let inferenceProvider: string | undefined
 				let usageMissing = false
 				const apiRequestStartTime = performance.now()
 				// kilocode_change end
@@ -1938,7 +1939,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								cacheWriteTokens,
 								cacheReadTokens,
 							),
-						usageMissing, // kilocode_change
+						// kilocode_change start
+						usageMissing,
+						inferenceProvider,
+						// kilocode_change end
 						cancelReason,
 						streamingFailedMessage,
 					} satisfies ClineApiReqInfo)
@@ -2028,6 +2032,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								cacheWriteTokens += chunk.cacheWriteTokens ?? 0
 								cacheReadTokens += chunk.cacheReadTokens ?? 0
 								totalCost = chunk.totalCost
+								inferenceProvider = chunk.inferenceProvider // kilocode_change
 								break
 							case "grounding":
 								// Handle grounding sources separately from regular content
@@ -2171,7 +2176,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 											tokens.cacheWrite,
 											tokens.cacheRead,
 										),
-									completionTime: performance.now() - apiRequestStartTime, // kilocode_change
+									// kilocode_change start
+									completionTime: performance.now() - apiRequestStartTime,
+									inferenceProvider,
+									// kilocode_change end
 								})
 							}
 						}
@@ -2206,6 +2214,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									bgCacheWriteTokens += chunk.cacheWriteTokens ?? 0
 									bgCacheReadTokens += chunk.cacheReadTokens ?? 0
 									bgTotalCost = chunk.totalCost
+									inferenceProvider = chunk.inferenceProvider // kilocode_change
 								}
 							}
 
@@ -2338,6 +2347,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// Note: updateApiReqMsg() is now called from within drainStreamInBackgroundToFindAllUsage
 				// to ensure usage data is captured even when the stream is interrupted. The background task
 				// uses local variables to accumulate usage data before atomically updating the shared state.
+
+				// Complete the reasoning message if it exists
+				// We can't use say() here because the reasoning message may not be the last message
+				// (other messages like text blocks or tool uses may have been added after it during streaming)
+				if (reasoningMessage) {
+					const lastReasoningIndex = findLastIndex(
+						this.clineMessages,
+						(m) => m.type === "say" && m.say === "reasoning",
+					)
+
+					if (lastReasoningIndex !== -1 && this.clineMessages[lastReasoningIndex].partial) {
+						this.clineMessages[lastReasoningIndex].partial = false
+						await this.updateClineMessage(this.clineMessages[lastReasoningIndex])
+					}
+				}
+
 				await this.persistGpt5Metadata(reasoningMessage)
 				await this.saveClineMessages()
 				await this.providerRef.deref()?.postStateToWebview()

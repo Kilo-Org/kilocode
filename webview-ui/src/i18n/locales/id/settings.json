@@ -313,6 +313,10 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Dapatkan Kunci API Hugging Face",
 		"huggingFaceApiKey": "Kunci API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Dapatkan Kunci API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Kunci API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL Dasar",
+		"getOvhCloudAiEndpointsBaseUrl": "Gunakan URL dasar kustom",
 		"huggingFaceModelId": "ID Model",
 		"getGeminiApiKey": "Dapatkan Gemini API Key",
 		"huggingFaceLoading": "Memuat...",
@@ -913,6 +917,7 @@
 			"regionMismatch": "Peringatan: Region di ARN kamu ({{arnRegion}}) tidak cocok dengan region yang kamu pilih ({{region}}). Ini dapat menyebabkan masalah akses. Provider akan menggunakan region dari ARN."
 		},
 		"modelAvailability": "Model ID ({{modelId}}) yang kamu berikan tidak tersedia. Silakan pilih model yang berbeda.",
+		"modelDeprecated": "Model ini tidak lagi tersedia. Silakan pilih model yang berbeda.",
 		"providerNotAllowed": "Provider '{{provider}}' tidak diizinkan oleh organisasi kamu",
 		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
 		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu",
@@ -955,6 +960,11 @@
 		"taskTimeline": {
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		},
+		"costThreshold": {
+			"label": "Sembunyikan biaya di bawah ambang batas",
+			"currentValue": "Ambang batas saat ini: ${{value}}",
+			"description": "Hanya tampilkan biaya permintaan di atas jumlah ini. Biaya selalu terlihat saat panel detail terbuka."
 		}
 	},
 	"ghost": {

@@ -1,13 +1,9 @@
 import { GhostSuggestionContext } from "../types"
-import { BasePromptStrategy } from "./BasePromptStrategy"
-import { UseCaseType } from "../types/PromptStrategy"
+import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+import { formatDiagnostics, formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
-/**
- * Strategy for refactoring selected code
- * High priority for explicit selection actions
- */
-export class SelectionRefactorStrategy extends BasePromptStrategy {
+export class SelectionRefactorStrategy implements PromptStrategy {
 	name = "Selection Refactor"
 	type = UseCaseType.SELECTION_REFACTOR
 
@@ -17,18 +13,10 @@ export class SelectionRefactorStrategy extends BasePromptStrategy {
 		return !!(context.range && !context.range.isEmpty && !context.userInput)
 	}
 
-	getRelevantContext(context: GhostSuggestionContext): Partial<GhostSuggestionContext> {
-		return {
-			document: context.document,
-			range: context.range,
-			diagnostics: context.diagnostics,
-			documentAST: context.documentAST,
-			rangeASTNode: context.rangeASTNode,
-		}
-	}
-
-	protected getSpecificSystemInstructions(): string {
-		return `You are an expert code refactoring assistant. Your task is to improve selected code while maintaining its functionality.
+	getSystemInstructions(customInstructions?: string): string {
+		return (
+			getBaseSystemInstructions() +
+			`You are an expert code refactoring assistant. Your task is to improve selected code while maintaining its functionality.
 
 ## Core Responsibilities:
 1. Analyze the selected code for improvement opportunities
@@ -54,9 +42,10 @@ export class SelectionRefactorStrategy extends BasePromptStrategy {
 - Do not include explanations outside the code
 
 Remember: The goal is to improve the code quality while keeping the exact same behavior.`
+		)
 	}
 
-	protected buildUserPrompt(context: Partial<GhostSuggestionContext>): string {
+	getUserPrompt(context: GhostSuggestionContext): string {
 		if (!context.document || !context.range) {
 			return "No selection available for refactoring."
 		}
@@ -73,19 +62,14 @@ Remember: The goal is to improve the code quality while keeping the exact same b
 		prompt += `- Refactoring Suggestions: ${refactoringSuggestions.slice(0, 3).join(", ")}\n\n`
 
 		if (context.diagnostics && context.diagnostics.length > 0) {
-			prompt += this.formatDiagnostics(context.diagnostics)
-			prompt += "\n"
-		}
-
-		if (context.rangeASTNode) {
-			prompt += this.formatASTContext(context.rangeASTNode)
+			prompt += formatDiagnostics(context.diagnostics)
 			prompt += "\n"
 		}
 
 		// Add the full document with cursor marker
 		if (context.document) {
 			prompt += "## Full Code\n"
-			prompt += this.formatDocumentWithCursor(context.document, context.range)
+			prompt += formatDocumentWithCursor(context.document, context.range)
 			prompt += "\n\n"
 		}
 

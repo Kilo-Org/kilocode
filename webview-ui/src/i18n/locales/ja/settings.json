@@ -314,6 +314,10 @@
 		"sambaNovaApiKey": "SambaNova APIキー",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",
 		"huggingFaceApiKey": "Hugging Face APIキー",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints APIキーを取得",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints APIキー",
+		"ovhCloudAiEndpointsBaseUrl": "ベースURL",
+		"getOvhCloudAiEndpointsBaseUrl": "カスタムベースURLを使用",
 		"huggingFaceModelId": "モデルID",
 		"huggingFaceLoading": "読み込み中...",
 		"huggingFaceModelsCount": "({{count}}個のモデル)",
@@ -887,6 +891,7 @@
 			"regionMismatch": "警告：ARN内のリージョン（{{arnRegion}}）が選択したリージョン（{{region}}）と一致しません。これによりアクセスの問題が発生する可能性があります。プロバイダーはARNのリージョンを使用します。"
 		},
 		"modelAvailability": "指定されたモデルID（{{modelId}}）は利用できません。別のモデルを選択してください。",
+		"modelDeprecated": "このモデルは利用できなくなりました。別のモデルを選択してください。",
 		"providerNotAllowed": "プロバイダー「{{provider}}」は組織によって許可されていません",
 		"modelNotAllowed": "モデル「{{model}}」はプロバイダー「{{provider}}」に対して組織によって許可されていません",
 		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています",
@@ -929,6 +934,11 @@
 		"taskTimeline": {
 			"label": "タスクのタイムラインを表示",
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
+		},
+		"costThreshold": {
+			"label": "しきい値以下のコストを非表示にする",
+			"currentValue": "現在のしきい値: ${{value}}",
+			"description": "この金額を超えるリクエストコストのみを表示します。詳細パネルが開いている場合、コストは常に表示されます。"
 		}
 	},
 	"ghost": {

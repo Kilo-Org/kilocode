@@ -1,0 +1,6 @@
+class EventEmitter {
+  // FIXME: Memory leak - listeners not being cleaned up<<<AUTOCOMPLETE_HERE>>>
+  on(event, callback) {
+    this.listeners.push({ event, callback });
+  }
+}

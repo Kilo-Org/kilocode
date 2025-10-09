@@ -27,7 +27,10 @@ describe("getModelsByProvider", () => {
 			deepinfra: { "test-model": testModel },
 			"vercel-ai-gateway": { "test-model": testModel },
 			huggingface: { "test-model": testModel },
-			chutes: { "test-model": testModel }, // kilocode_change
+			// kilocode_change start
+			ovhcloud: { "test-model": testModel },
+			chutes: { "test-model": testModel },
+			// kilocode_change end
 		}
 
 		const exceptions = [

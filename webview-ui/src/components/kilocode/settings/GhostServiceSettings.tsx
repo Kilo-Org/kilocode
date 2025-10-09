@@ -25,12 +25,8 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const {
-		enableAutoTrigger,
-		autoTriggerDelay,
-		enableQuickInlineTaskKeybinding,
-		enableSmartInlineTaskKeybinding,
-	} = ghostServiceSettings || {}
+	const { enableAutoTrigger, autoTriggerDelay, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding } =
+		ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = (newValue: boolean) => {
@@ -169,7 +165,6 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 				</div>
-
 			</Section>
 		</div>
 	)

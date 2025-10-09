@@ -153,15 +153,31 @@ export const ChatRowContent = ({
 		onToggleExpand(message.ts)
 	}, [onToggleExpand, message.ts])
 
-	// kilocode_change: usageMissing
-	const [cost, usageMissing, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
+	// kilocode_change: usageMissing, inferenceProvider
+	const [cost, usageMissing, inferenceProvider, apiReqCancelReason, apiReqStreamingFailedMessage] = useMemo(() => {
 		if (message.text !== null && message.text !== undefined && message.say === "api_req_started") {
 			const info = safeJsonParse<ClineApiReqInfo>(message.text)
-			return [info?.cost, info?.usageMissing, info?.cancelReason, info?.streamingFailedMessage]
+			return [
+				info?.cost,
+				info?.usageMissing,
+				info?.inferenceProvider,
+				info?.cancelReason,
+				info?.streamingFailedMessage,
+			]
 		}
 
 		return [undefined, undefined, undefined]
 	}, [message.text, message.say])
+
+	// kilocode_change start: hide cost display check
+	const { hideCostBelowThreshold } = useExtensionState()
+	const shouldShowCost = useMemo(() => {
+		if (cost === undefined || cost === null || cost <= 0) return false
+		if (isExpanded) return true
+		const threshold = hideCostBelowThreshold ?? 0
+		return cost >= threshold
+	}, [cost, isExpanded, hideCostBelowThreshold])
+	// kilocode_change end: hide cost display check
 
 	// When resuming task, last wont be api_req_failed but a resume_task
 	// message, so api_req_started will show loading spinner. That's why we just
@@ -272,8 +288,12 @@ export const ChatRowContent = ({
 							</span>
 						)
 					) : cost !== null && cost !== undefined ? (
-						<span style={{ color: normalColor }}>{t("chat:apiRequest.title")}</span>
-					) : apiRequestFailedMessage ? (
+						// kilocode_change start: tooltip
+						<StandardTooltip content={inferenceProvider && `Inference Provider: ${inferenceProvider}`}>
+							<span style={{ color: normalColor }}>{t("chat:apiRequest.title")}</span>
+						</StandardTooltip>
+					) : // kilocode_change end
+					apiRequestFailedMessage ? (
 						<span style={{ color: errorColor }}>{t("chat:apiRequest.failed")}</span>
 					) : (
 						<span style={{ color: normalColor }}>{t("chat:apiRequest.streaming")}</span>
@@ -297,6 +317,7 @@ export const ChatRowContent = ({
 		apiRequestFailedMessage,
 		t,
 		isExpanded,
+		inferenceProvider, // kilocode_change
 	])
 
 	const headerStyle: React.CSSProperties = {
@@ -1047,7 +1068,7 @@ export const ChatRowContent = ({
 								</div>
 								<div
 									className="text-xs text-vscode-dropdown-foreground border-vscode-dropdown-border/50 border px-1.5 py-0.5 rounded-lg"
-									style={{ opacity: cost !== null && cost !== undefined && cost > 0 ? 1 : 0 }}>
+									style={{ opacity: shouldShowCost ? 1 : 0 }}>
 									${Number(cost || 0)?.toFixed(4)}
 								</div>
 								{

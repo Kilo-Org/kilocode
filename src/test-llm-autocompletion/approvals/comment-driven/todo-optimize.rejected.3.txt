@@ -1,0 +1,5 @@
+for (let i = 0; i < input; i++) {
+  // Calculate the square of the current number and add it to the result
+  result += Math.pow(i, 2);
+  result += Math.pow(i, 2);
+}

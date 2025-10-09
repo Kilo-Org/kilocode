@@ -30,9 +30,11 @@ import { convertTextMateToHljs } from "@src/utils/textMateToHljs"
 import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 
 export interface ExtensionStateContextType extends ExtensionState {
-	historyPreviewCollapsed?: boolean // Add the new state property
+	historyPreviewCollapsed?: boolean
 	showTaskTimeline?: boolean // kilocode_change
 	setShowTaskTimeline: (value: boolean) => void // kilocode_change
+	hideCostBelowThreshold?: number // kilocode_change
+	setHideCostBelowThreshold: (value: number) => void // kilocode_change
 	hoveringTaskTimeline?: boolean // kilocode_change
 	setHoveringTaskTimeline: (value: boolean) => void // kilocode_change
 	systemNotificationsEnabled?: boolean // kilocode_change
@@ -582,6 +584,8 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
 		setShowAutoApproveMenu: (value) => setState((prevState) => ({ ...prevState, showAutoApproveMenu: value })),
 		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })),
+		setHideCostBelowThreshold: (value) =>
+			setState((prevState) => ({ ...prevState, hideCostBelowThreshold: value })),
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 		// kilocode_change end
 		setAutoApprovalEnabled: (value) => setState((prevState) => ({ ...prevState, autoApprovalEnabled: value })),

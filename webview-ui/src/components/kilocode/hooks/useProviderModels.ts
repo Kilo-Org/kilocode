@@ -49,6 +49,7 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -271,6 +272,14 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		// kilocode_change start
+		case "ovhcloud": {
+			return {
+				models: routerModels.ovhcloud,
+				defaultModel: ovhCloudAiEndpointsDefaultModelId,
+			}
+		}
+		// kilocode_change end
 		default:
 			return {
 				models: {},

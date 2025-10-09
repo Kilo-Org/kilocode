@@ -1,87 +1,9 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostStrategy } from "../GhostStrategy"
-import { GhostSuggestionContext, ASTContext } from "../types"
+import { GhostSuggestionContext } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 import { StreamingParseResult } from "../GhostStreamingParser"
-
-// Create a mock Node class for testing
-class MockNode {
-	id: number = 1
-	startIndex: number = 0
-	endIndex: number = 0
-	startPosition: { row: number; column: number } = { row: 0, column: 0 }
-	endPosition: { row: number; column: number } = { row: 0, column: 0 }
-	type: string = ""
-	text: string = ""
-	isNamed: boolean = true
-	tree: any = {}
-	parent: any = null
-	childCount: number = 0
-	namedChildCount: number = 0
-	firstChild: any = null
-	lastChild: any = null
-	firstNamedChild: any = null
-	lastNamedChild: any = null
-	nextSibling: any = null
-	previousSibling: any = null
-	nextNamedSibling: any = null
-	previousNamedSibling: any = null
-	_childFunction: ((index: number) => any) | null = null
-	descendantForPosition: ((startPosition: any, endPosition?: any) => any) | null = null
-
-	constructor(props: Partial<MockNode> = {}) {
-		Object.assign(this, props)
-	}
-
-	child(index: number): any {
-		if (this._childFunction) {
-			return this._childFunction(index)
-		}
-		return null
-	}
-
-	namedChild(index: number): any {
-		return null
-	}
-
-	childForFieldName(fieldName: string): any {
-		return null
-	}
-
-	childForFieldId(fieldId: number): any {
-		return null
-	}
-
-	descendantForIndex(startIndex: number, endIndex?: number): any {
-		return null
-	}
-
-	toString(): string {
-		return this.text
-	}
-
-	walk(): any {
-		return {}
-	}
-
-	namedDescendantForIndex(startIndex: number, endIndex?: number): any {
-		return null
-	}
-
-	namedDescendantForPosition(startPosition: any, endPosition?: any): any {
-		return null
-	}
-
-	descendantsOfType(type: string | string[], startPosition?: any, endPosition?: any): any[] {
-		return []
-	}
-}
-
-// Mock web-tree-sitter
-vi.mock("web-tree-sitter", () => ({
-	Node: vi.fn().mockImplementation(() => ({})),
-}))
 
 // Mock vscode
 vi.mock("vscode", () => ({
@@ -171,60 +93,10 @@ vi.mock("diff", () => ({
 describe("GhostStrategy", () => {
 	let strategy: GhostStrategy
 	let mockDocument: MockTextDocument
-	let mockASTContext: ASTContext
-	let mockRangeASTNode: MockNode
 
 	beforeEach(() => {
 		strategy = new GhostStrategy()
 		mockDocument = new MockTextDocument(vscode.Uri.parse("file:///test.js"), "function test() {\n  return true;\n}")
-
-		// Create child node
-		const childNode = new MockNode({
-			type: "return_statement",
-			text: "return true;",
-		})
-
-		// Create parent node
-		const parentNode = new MockNode({
-			type: "function_declaration",
-			text: "function test() { return true; }",
-		})
-
-		// Create previous sibling
-		const prevSibling = new MockNode({
-			type: "keyword",
-			text: "function",
-		})
-
-		// Create next sibling
-		const nextSibling = new MockNode({
-			type: "parameters",
-			text: "()",
-		})
-
-		// Create the main node with a proper child function
-		mockRangeASTNode = new MockNode({
-			type: "identifier",
-			text: "test",
-			parent: parentNode,
-			previousSibling: prevSibling,
-			nextSibling: nextSibling,
-			childCount: 1,
-			_childFunction: (index: number) => (index === 0 ? childNode : null),
-		})
-
-		// Create mock root node
-		const mockRootNode = new MockNode({
-			type: "program",
-			text: "function test() { return true; }",
-		})
-		mockRootNode.descendantForPosition = vi.fn().mockReturnValue(mockRangeASTNode)
-
-		// Create mock AST context
-		mockASTContext = {
-			rootNode: mockRootNode as any,
-			language: "javascript",
-		}
 	})
 
 	afterEach(() => {
@@ -360,25 +232,39 @@ describe("GhostStrategy", () => {
 	})
 
 	describe("prompt generation", () => {
-		it("should generate system prompt", () => {
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-			}
-			const systemPrompt = strategy.getSystemPrompt(context)
-			expect(systemPrompt).toContain("CRITICAL OUTPUT FORMAT")
-			expect(systemPrompt).toContain("XML-formatted changes")
-		})
-
-		it("should generate suggestion prompt with context", () => {
+		it("should generate both prompts efficiently with getPrompts", () => {
 			const context: GhostSuggestionContext = {
 				document: mockDocument,
 				userInput: "Add a comment",
 				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
 			}
 
-			const suggestionPrompt = strategy.getSuggestionPrompt(context)
-			expect(suggestionPrompt).toContain("Add a comment")
-			expect(suggestionPrompt).toContain("<<<AUTOCOMPLETE_HERE>>>")
+			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
+			expect(systemPrompt).toContain("CRITICAL OUTPUT FORMAT")
+			expect(systemPrompt).toContain("XML-formatted changes")
+			expect(userPrompt).toContain("Add a comment")
+			expect(userPrompt).toContain("<<<AUTOCOMPLETE_HERE>>>")
+		})
+
+		it("should generate system prompt via getPrompts", () => {
+			const context: GhostSuggestionContext = {
+				document: mockDocument,
+			}
+			const { systemPrompt } = strategy.getPrompts(context)
+			expect(systemPrompt).toContain("CRITICAL OUTPUT FORMAT")
+			expect(systemPrompt).toContain("XML-formatted changes")
+		})
+
+		it("should generate suggestion prompt with context via getPrompts", () => {
+			const context: GhostSuggestionContext = {
+				document: mockDocument,
+				userInput: "Add a comment",
+				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+			}
+
+			const { userPrompt } = strategy.getPrompts(context)
+			expect(userPrompt).toContain("Add a comment")
+			expect(userPrompt).toContain("<<<AUTOCOMPLETE_HERE>>>")
 		})
 	})
 })

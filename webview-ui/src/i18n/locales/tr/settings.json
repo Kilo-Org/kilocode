@@ -314,6 +314,10 @@
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı Al",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı",
+		"ovhCloudAiEndpointsBaseUrl": "Temel URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Özel temel URL kullan",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Yükleniyor...",
 		"huggingFaceModelsCount": "({{count}} model)",
@@ -887,6 +891,7 @@
 			"regionMismatch": "Uyarı: ARN'nizdeki bölge ({{arnRegion}}) seçtiğiniz bölge ({{region}}) ile eşleşmiyor. Bu erişim sorunlarına neden olabilir. Sağlayıcı, ARN'deki bölgeyi kullanacak."
 		},
 		"modelAvailability": "Sağladığınız model kimliği ({{modelId}}) kullanılamıyor. Lütfen başka bir model seçin.",
+		"modelDeprecated": "Bu model artık kullanılamıyor. Lütfen farklı bir model seçin.",
 		"providerNotAllowed": "Sağlayıcı '{{provider}}' kuruluşunuz tarafından izin verilmiyor",
 		"modelNotAllowed": "Model '{{model}}' sağlayıcı '{{provider}}' için kuruluşunuz tarafından izin verilmiyor",
 		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor",
@@ -929,6 +934,11 @@
 		"taskTimeline": {
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
+		},
+		"costThreshold": {
+			"label": "Eşik değerin altındaki maliyeti gizle",
+			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",
+			"currentValue": "Mevcut eşik: ${{value}}"
 		}
 	},
 	"ghost": {

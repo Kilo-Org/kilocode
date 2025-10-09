@@ -314,6 +314,10 @@
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
 		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel ophalen",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel",
+		"ovhCloudAiEndpointsBaseUrl": "Basis-URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Aangepaste basis-URL gebruiken",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Laden...",
 		"huggingFaceModelsCount": "({{count}} modellen)",
@@ -892,6 +896,7 @@
 			"regionMismatch": "Waarschuwing: De regio in je ARN ({{arnRegion}}) komt niet overeen met je geselecteerde regio ({{region}}). Dit kan toegangsfouten veroorzaken. De provider gebruikt de regio uit de ARN."
 		},
 		"modelAvailability": "Het opgegeven model-ID ({{modelId}}) is niet beschikbaar. Kies een ander model.",
+		"modelDeprecated": "Dit model is niet meer beschikbaar. Kies een ander model.",
 		"providerNotAllowed": "Provider '{{provider}}' is niet toegestaan door je organisatie",
 		"modelNotAllowed": "Model '{{model}}' is niet toegestaan voor provider '{{provider}}' door je organisatie",
 		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie",
@@ -934,6 +939,11 @@
 		"taskTimeline": {
 			"label": "Taaktijdlijn weergeven",
 			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
+		},
+		"costThreshold": {
+			"label": "Kosten onder drempel verbergen",
+			"currentValue": "Huidige drempelwaarde: ${{value}}",
+			"description": "Toon alleen aanvraagkosten hoger dan dit bedrag. Kosten zijn altijd zichtbaar wanneer het detailpaneel is geopend."
 		}
 	},
 	"ghost": {

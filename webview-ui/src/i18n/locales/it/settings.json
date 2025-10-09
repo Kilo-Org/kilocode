@@ -313,6 +313,10 @@
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL di base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usa un URL di base personalizzato",
 		"huggingFaceModelId": "ID modello",
 		"huggingFaceLoading": "Caricamento...",
 		"huggingFaceModelsCount": "({{count}} modelli)",
@@ -892,6 +896,7 @@
 			"regionMismatch": "Attenzione: La regione nel tuo ARN ({{arnRegion}}) non corrisponde alla regione selezionata ({{region}}). Questo potrebbe causare problemi di accesso. Il provider utilizzerà la regione dall'ARN."
 		},
 		"modelAvailability": "L'ID modello ({{modelId}}) fornito non è disponibile. Seleziona un modello diverso.",
+		"modelDeprecated": "Questo modello non è più disponibile. Seleziona un modello diverso.",
 		"providerNotAllowed": "Il fornitore '{{provider}}' non è consentito dalla tua organizzazione",
 		"modelNotAllowed": "Il modello '{{model}}' non è consentito per il fornitore '{{provider}}' dalla tua organizzazione.",
 		"profileInvalid": "Questo profilo contiene un fornitore o un modello non consentito dalla tua organizzazione.",
@@ -934,6 +939,11 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"costThreshold": {
+			"label": "Nascondi costo sotto la soglia",
+			"currentValue": "Soglia attuale: ${{value}}",
+			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
 		}
 	},
 	"ghost": {

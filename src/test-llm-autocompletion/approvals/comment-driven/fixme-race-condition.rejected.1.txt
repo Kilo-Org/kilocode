@@ -1,0 +1,8 @@
+async function updateCounter() {
+  // FIXME: Race condition when multiple updates happen simultaneously
+  const lock = await acquireLock('counter');
+  try {
+
+  const current = await getCounter();
+  await setCounter(current + 1);
+}

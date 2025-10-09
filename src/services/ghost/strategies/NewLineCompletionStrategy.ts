@@ -1,20 +1,13 @@
 import type { TextDocument, Range } from "vscode"
 import { GhostSuggestionContext } from "../types"
-import { UseCaseType } from "../types/PromptStrategy"
-import { BasePromptStrategy } from "./BasePromptStrategy"
+import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
-/**
- * Strategy for proactive code completion on new/empty lines
- * suggests logical next code when user creates a new line
- */
-export class NewLineCompletionStrategy extends BasePromptStrategy {
+export class NewLineCompletionStrategy implements PromptStrategy {
 	name = "New Line Completion"
 	type = UseCaseType.NEW_LINE
 
-	/**
-	 * Can handle when cursor is on an empty line
-	 */
 	canHandle(context: GhostSuggestionContext): boolean {
 		if (!context.document || !context.range) return false
 
@@ -22,28 +15,10 @@ export class NewLineCompletionStrategy extends BasePromptStrategy {
 		return line.trim() === ""
 	}
 
-	/**
-	 * Focus on surrounding code and recent actions
-	 * Exclude diagnostics and user input
-	 */
-	getRelevantContext(context: GhostSuggestionContext): Partial<GhostSuggestionContext> {
-		return {
-			document: context.document,
-			range: context.range,
-			rangeASTNode: context.rangeASTNode,
-			recentOperations: context.recentOperations,
-			// Exclude:
-			// - userInput (no explicit request)
-			// - diagnostics (not relevant for new line)
-			// - openFiles (reduces tokens)
-		}
-	}
-
-	/**
-	 * System instructions for new line completion
-	 */
-	protected getSpecificSystemInstructions(): string {
-		return `Task: Proactive Code Completion for New Lines
+	getSystemInstructions(customInstructions?: string): string {
+		return (
+			getBaseSystemInstructions() +
+			`Task: Proactive Code Completion for New Lines
 The user has created a new line. Suggest the most logical next code based on context.
 
 Completion Guidelines:
@@ -76,12 +51,13 @@ Important:
 - Respect existing code patterns and comments
 - Maintain consistent style
 - Consider the most likely next step`
+		)
 	}
 
 	/**
 	 * Build prompt focused on surrounding context
 	 */
-	protected buildUserPrompt(context: Partial<GhostSuggestionContext>): string {
+	getUserPrompt(context: GhostSuggestionContext): string {
 		let prompt = ""
 
 		// Start with cursor context
@@ -97,16 +73,10 @@ Important:
 			prompt += "\n"
 		}
 
-		// Add AST context if available
-		if (context.rangeASTNode) {
-			prompt += this.formatASTContext(context.rangeASTNode)
-			prompt += "\n"
-		}
-
 		// Add the full document with cursor marker
 		if (context.document) {
 			prompt += "## Full Code\n"
-			prompt += this.formatDocumentWithCursor(context.document, context.range)
+			prompt += formatDocumentWithCursor(context.document, context.range)
 			prompt += "\n\n"
 		}
 
@@ -276,5 +246,72 @@ Important:
 			}
 		}
 		return false
+	}
+
+	/**
+	 * Formats recent operations for inclusion in prompts
+	 */
+	private formatRecentOperations(operations: any[]): string {
+		if (!operations || operations.length === 0) return ""
+
+		let result = "## Recent Actions\n"
+		operations.slice(0, 5).forEach((op, index) => {
+			result += `${index + 1}. ${op.description}\n`
+			if (op.content) {
+				result += `   \`\`\`\n   ${op.content}\n   \`\`\`\n`
+			}
+		})
+
+		return result
+	}
+
+	/**
+	 * Helper to check if a line appears to be incomplete
+	 */
+	private isIncompleteStatement(line: string): boolean {
+		const trimmed = line.trim()
+
+		// Check for common incomplete patterns
+		const incompletePatterns = [
+			/^(if|else if|while|for|switch|try|catch)\s*\(.*\)\s*$/, // Control structures without body
+			/^(function|class|interface|type|enum)\s+\w+.*[^{]$/, // Declarations without body
+			/[,\+\-\*\/\=\|\&]\s*$/, // Operators at end
+			/^(const|let|var)\s+\w+\s*=\s*$/, // Variable declaration without value
+			/\.\s*$/, // Property access incomplete
+			/\(\s*$/, // Opening parenthesis
+			/^\s*\.\w*$/, // Method chaining incomplete
+		]
+
+		return incompletePatterns.some((pattern) => pattern.test(trimmed))
+	}
+
+	/**
+	 * Gets surrounding code context (lines before and after cursor)
+	 */
+	private getSurroundingCode(
+		document: TextDocument,
+		range: Range,
+		linesBefore: number = 10,
+		linesAfter: number = 10,
+	): { before: string; after: string; currentLine: string } {
+		const currentLineNum = range.start.line
+		const startLine = Math.max(0, currentLineNum - linesBefore)
+		const endLine = Math.min(document.lineCount - 1, currentLineNum + linesAfter)
+
+		let before = ""
+		let after = ""
+		const currentLine = document.lineAt(currentLineNum).text
+
+		// Get lines before cursor
+		for (let i = startLine; i < currentLineNum; i++) {
+			before += document.lineAt(i).text + "\n"
+		}
+
+		// Get lines after cursor
+		for (let i = currentLineNum + 1; i <= endLine; i++) {
+			after += document.lineAt(i).text + "\n"
+		}
+
+		return { before, after, currentLine }
 	}
 }

@@ -80,6 +80,8 @@ export const modelInfoSchema = z.object({
 	displayName: z.string().nullish(),
 	preferredIndex: z.number().nullish(),
 	// kilocode_change end
+	// Flag to indicate if the model is deprecated and should not be used
+	deprecated: z.boolean().optional(),
 	/**
 	 * Service tiers with pricing information.
 	 * Each tier can have a name (for OpenAI service tiers) and pricing overrides.

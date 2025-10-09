@@ -324,6 +324,10 @@
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
 		"huggingFaceApiKey": "Klíč API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Získat klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Základní URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Použít vlastní základní URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Načítání...",
 		"huggingFaceModelsCount": "({{count}} modelů)",
@@ -597,6 +601,11 @@
 		"taskTimeline": {
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
+		},
+		"costThreshold": {
+			"label": "Skrýt cenu pod prahem",
+			"currentValue": "Aktuální práh: ${{value}}",
+			"description": "Zobrazovat pouze náklady na požadavky převyšující tuto částku. Náklady jsou vždy viditelné, když je panel podrobností otevřený."
 		}
 	},
 	"ghost": {
@@ -964,6 +973,7 @@
 		"providerNotAllowed": "Poskytovatel '{{provider}}' není povolen vaší organizací",
 		"modelNotAllowed": "Model '{{model}}' není povolen pro poskytovatele '{{provider}}' vaší organizací",
 		"profileInvalid": "Tento profil obsahuje poskytovatele nebo model, který není povolen vaší organizací",
+		"modelDeprecated": "Tento model již není dostupný. Prosím vyberte jiný model.",
 		"qwenCodeOauthPath": "Musíte poskytnout platnou cestu k OAuth pověřením."
 	},
 	"placeholders": {

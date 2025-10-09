@@ -175,6 +175,13 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		// kilocode_change start
+		case "ovhcloud":
+			if (!apiConfiguration.ovhCloudAiEndpointsApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
+		// kilocode_change end
 	}
 
 	return undefined

@@ -170,4 +170,39 @@ describe("approvals", () => {
 			expect(result.newOutput).toBe(false)
 		})
 	})
+
+	describe("skip-approval mode", () => {
+		it("should mark new outputs as unknown with newOutput=true", async () => {
+			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", "output", true)
+
+			expect(result.isApproved).toBe(false)
+			expect(result.newOutput).toBe(true)
+		})
+
+		it("should still pass for previously approved outputs", async () => {
+			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
+			fs.mkdirSync(categoryDir, { recursive: true })
+
+			const output = "test output"
+			fs.writeFileSync(path.join(categoryDir, `${TEST_NAME}.approved.1.txt`), output, "utf-8")
+
+			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", output, true)
+
+			expect(result.isApproved).toBe(true)
+			expect(result.newOutput).toBe(false)
+		})
+
+		it("should still fail for previously rejected outputs", async () => {
+			const categoryDir = path.join(TEST_APPROVALS_DIR, TEST_CATEGORY)
+			fs.mkdirSync(categoryDir, { recursive: true })
+
+			const output = "test output"
+			fs.writeFileSync(path.join(categoryDir, `${TEST_NAME}.rejected.1.txt`), output, "utf-8")
+
+			const result = await checkApproval(TEST_CATEGORY, TEST_NAME, "input", output, true)
+
+			expect(result.isApproved).toBe(false)
+			expect(result.newOutput).toBe(false)
+		})
+	})
 })

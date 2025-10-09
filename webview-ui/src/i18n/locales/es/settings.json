@@ -313,6 +313,10 @@
 		"sambaNovaApiKey": "Clave API de SambaNova",
 		"getHuggingFaceApiKey": "Obtener clave API de Hugging Face",
 		"huggingFaceApiKey": "Clave API de Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obtener clave API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clave API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usar una URL base personalizada",
 		"huggingFaceModelId": "ID del modelo",
 		"huggingFaceLoading": "Cargando...",
 		"huggingFaceModelsCount": "({{count}} modelos)",
@@ -891,6 +895,7 @@
 			"regionMismatch": "Advertencia: La región en su ARN ({{arnRegion}}) no coincide con su región seleccionada ({{region}}). Esto puede causar problemas de acceso. El proveedor usará la región del ARN."
 		},
 		"modelAvailability": "El ID de modelo ({{modelId}}) que proporcionó no está disponible. Por favor, elija un modelo diferente.",
+		"modelDeprecated": "Este modelo ya no está disponible. Por favor, elija un modelo diferente.",
 		"providerNotAllowed": "El proveedor '{{provider}}' no está permitido por su organización",
 		"modelNotAllowed": "El modelo '{{model}}' no está permitido para el proveedor '{{provider}}' por su organización",
 		"profileInvalid": "Este perfil contiene un proveedor o modelo que no está permitido por su organización",
@@ -933,6 +938,11 @@
 		"taskTimeline": {
 			"label": "Mostrar cronología de tareas",
 			"description": "Muestra una línea de tiempo visual de los mensajes de tareas, colorizados por tipo, permitiéndote ver rápidamente el progreso de la tarea y desplazarte hacia atrás hasta puntos específicos en el historial de la tarea."
+		},
+		"costThreshold": {
+			"label": "Ocultar costo por debajo del umbral",
+			"description": "Solo mostrar los costos de solicitud superiores a este monto. Los costos siempre son visibles cuando el panel de detalles está abierto.",
+			"currentValue": "Umbral actual: ${{value}}"
 		}
 	},
 	"ghost": {

@@ -1,0 +1,11 @@
+class EventEmitter {
+  // FIXME: Memory leak - listeners not being cleaned up
+  private listeners = [];
+
+  constructor() {
+    this.listeners = [];
+  }
+  on(event, callback) {
+    this.listeners.push({ event, callback });
+  }
+}

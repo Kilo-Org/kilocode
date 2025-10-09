@@ -1,2 +1,0 @@
-str = "hello world"
-str.toUpperCase()<<<AUTOCOMPLETE_HERE>>>
