@@ -170,6 +170,13 @@ export async function activate(context: vscode.ExtensionContext) {
 					`[authStateChangedHandler] remoteControlEnabled(false) failed: ${error instanceof Error ? error.message : String(error)}`,
 				)
 			}
+			try {
+				await BridgeOrchestrator.disconnect()
+			} catch (error) {
+				cloudLogger(
+					`[authStateChangedHandler] BridgeOrchestrator.disconnect() failed: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
 		}
 	}
 
