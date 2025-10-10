@@ -61,6 +61,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexEmbedderProvider: EmbedderProvider
 	codebaseIndexEmbedderBaseUrl?: string
 	codebaseIndexEmbedderModelId: string
+	codebaseIndexEmbedderTimeoutMS?: number // Ollama embedder timeout ms
 	codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 	codebaseIndexSearchMaxResults?: number
 	codebaseIndexSearchMinScore?: number
@@ -102,6 +103,10 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.ollamaBaseUrlRequired"))
 					.url(t("settings:codeIndex.validation.invalidOllamaUrl")),
 				codebaseIndexEmbedderModelId: z.string().min(1, t("settings:codeIndex.validation.modelIdRequired")),
+				codebaseIndexEmbedderTimeoutMS: z
+					.number()
+					.min(1, t('settings:codeIndex.validation.embedderTimeoutMSRequired'))
+					.optional(),
 				codebaseIndexEmbedderModelDimension: z
 					.number()
 					.min(1, t("settings:codeIndex.validation.modelDimensionRequired"))
@@ -184,6 +189,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEmbedderProvider: "openai",
 		codebaseIndexEmbedderBaseUrl: "",
 		codebaseIndexEmbedderModelId: "",
+		codebaseIndexEmbedderTimeoutMS: undefined,
 		codebaseIndexEmbedderModelDimension: undefined,
 		codebaseIndexSearchMaxResults: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
@@ -216,6 +222,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexEmbedderProvider: codebaseIndexConfig.codebaseIndexEmbedderProvider || "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig.codebaseIndexEmbedderBaseUrl || "",
 				codebaseIndexEmbedderModelId: codebaseIndexConfig.codebaseIndexEmbedderModelId || "",
+				codebaseIndexEmbedderTimeoutMS: codebaseIndexConfig.codebaseIndexEmbedderTimeoutMS || undefined,
 				codebaseIndexEmbedderModelDimension:
 					codebaseIndexConfig.codebaseIndexEmbedderModelDimension || undefined,
 				codebaseIndexSearchMaxResults:
@@ -800,6 +807,34 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												{formErrors.codebaseIndexEmbedderModelId && (
 													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
 														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.embedderTimeoutLabel")}
+												</label>
+												<VSCodeTextField
+													value={
+														currentSettings.codebaseIndexEmbedderTimeoutMS?.toString() ||
+														""
+													}
+													onInput={(e: any) => {
+														const value = e.target.value
+															? parseInt(e.target.value, 10) || undefined
+															: undefined
+														updateSetting("codebaseIndexEmbedderTimeoutMS", value)
+													}}
+													placeholder={t("settings:codeIndex.codebaseIndexEmbedderTimeoutPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500":
+															formErrors.codebaseIndexEmbedderTimeoutMS,
+													})}
+												/>
+												{formErrors.codebaseIndexEmbedderTimeoutMS && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderTimeoutMS}
 													</p>
 												)}
 											</div>

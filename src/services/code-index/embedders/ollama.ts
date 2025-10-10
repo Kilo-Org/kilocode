@@ -16,6 +16,7 @@ const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
  */
 export class CodeIndexOllamaEmbedder implements IEmbedder {
 	private readonly baseUrl: string
+	private readonly embedderTimeoutMS: number
 	private readonly defaultModelId: string
 
 	constructor(options: ApiHandlerOptions) {
@@ -26,6 +27,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 		baseUrl = baseUrl.replace(/\/+$/, "")
 
 		this.baseUrl = baseUrl
+		this.embedderTimeoutMS = options?.codebaseIndexEmbedderTimeoutMS || OLLAMA_EMBEDDING_TIMEOUT_MS
 		this.defaultModelId = options.ollamaModelId || "nomic-embed-text:latest"
 	}
 
@@ -70,7 +72,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 			// Add timeout to prevent indefinite hanging
 			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
+			const timeoutId = setTimeout(() => controller.abort(), this.embedderTimeoutMS)
 
 			const response = await fetch(url, {
 				method: "POST",

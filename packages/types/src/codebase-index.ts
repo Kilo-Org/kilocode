@@ -26,6 +26,7 @@ export const codebaseIndexConfigSchema = z.object({
 		.optional(),
 	codebaseIndexEmbedderBaseUrl: z.string().optional(),
 	codebaseIndexEmbedderModelId: z.string().optional(),
+	codebaseIndexEmbedderTimeoutMS: z.number().optional(),
 	codebaseIndexEmbedderModelDimension: z.number().optional(),
 	codebaseIndexSearchMinScore: z.number().min(0).max(1).optional(),
 	codebaseIndexSearchMaxResults: z

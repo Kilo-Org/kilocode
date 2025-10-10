@@ -24,6 +24,7 @@ export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
 	 * When undefined, Ollama will use the model's default num_ctx from the Modelfile.
 	 */
 	ollamaNumCtx?: number
+	codebaseIndexEmbedderTimeoutMS?: number
 }
 
 // RouterName
