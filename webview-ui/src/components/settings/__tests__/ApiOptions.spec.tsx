@@ -573,4 +573,46 @@ describe("ApiOptions", () => {
 			expect(screen.queryByTestId("litellm-provider")).not.toBeInTheDocument()
 		})
 	})
+
+	describe("Autocomplete provider warning", () => {
+		it("shows warning for unsupported providers", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "anthropic",
+				},
+			})
+
+			expect(screen.getByText("settings:providers.autocompleteNotSupported")).toBeInTheDocument()
+		})
+
+		it("does not show warning for supported providers - mistral", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "mistral",
+				},
+			})
+
+			expect(screen.queryByText("settings:providers.autocompleteNotSupported")).not.toBeInTheDocument()
+		})
+
+		it("does not show warning for supported providers - kilocode", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "kilocode",
+				},
+			})
+
+			expect(screen.queryByText("settings:providers.autocompleteNotSupported")).not.toBeInTheDocument()
+		})
+
+		it("does not show warning for supported providers - openrouter", () => {
+			renderApiOptions({
+				apiConfiguration: {
+					apiProvider: "openrouter",
+				},
+			})
+
+			expect(screen.queryByText("settings:providers.autocompleteNotSupported")).not.toBeInTheDocument()
+		})
+	})
 })

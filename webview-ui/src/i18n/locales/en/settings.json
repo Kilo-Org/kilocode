@@ -235,6 +235,7 @@
 		"description": "Save different API configurations to quickly switch between providers and settings.",
 		"apiProvider": "API Provider",
 		"model": "Model",
+		"autocompleteNotSupported": "⚠️ Autocomplete is only supported with the following providers: {{providers}}",
 		"nameEmpty": "Name cannot be empty",
 		"nameExists": "A profile with this name already exists",
 		"deleteProfile": "Delete Profile",

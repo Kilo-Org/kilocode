@@ -124,7 +124,7 @@ export class GhostProvider {
 
 	public async load() {
 		this.settings = this.loadSettings()
-		await this.model.reload(this.settings, this.providerSettingsManager)
+		await this.model.reload(this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()

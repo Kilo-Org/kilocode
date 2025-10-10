@@ -159,6 +159,12 @@ export type ProviderName = z.infer<typeof providerNamesSchema>
 export const isProviderName = (key: unknown): key is ProviderName =>
 	typeof key === "string" && providerNames.includes(key as ProviderName)
 
+export const AUTOCOMPLETE_PROVIDER_MODELS = {
+	mistral: "codestral-latest",
+	kilocode: "mistralai/codestral-2508",
+	openrouter: "mistralai/codestral-2508",
+} as const satisfies Record<Extract<ProviderName, "mistral" | "kilocode" | "openrouter">, string>
+
 /**
  * ProviderSettingsEntry
  */

@@ -1,14 +1,8 @@
-import { GhostServiceSettings } from "@roo-code/types"
+import { AUTOCOMPLETE_PROVIDER_MODELS } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
-import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
 import { ApiStreamChunk } from "../../api/transform/stream"
-
-const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
-const MISTRAL_DEFAULT_MODEL = "codestral-latest"
-
-const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
@@ -21,21 +15,19 @@ export class GhostModel {
 		}
 	}
 
-	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
+	public async reload(providerSettingsManager: ProviderSettingsManager) {
 		const profiles = await providerSettingsManager.listConfig()
+		const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
 		const validProfiles = profiles
-			.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
+			.filter((x) => x.apiProvider && x.apiProvider in AUTOCOMPLETE_PROVIDER_MODELS)
 			.sort((a, b) => {
 				if (!a.apiProvider) {
-					return 1 // Place undefined providers at the end
+					return 1
 				}
 				if (!b.apiProvider) {
-					return -1 // Place undefined providers at the beginning
+					return -1
 				}
-				return (
-					SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-					SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-				)
+				return supportedProviders.indexOf(a.apiProvider) - supportedProviders.indexOf(b.apiProvider)
 			})
 
 		const selectedProfile = validProfiles[0] || null
@@ -47,15 +39,15 @@ export class GhostModel {
 			let modelDefinition = {}
 			if (profileProvider === "kilocode") {
 				modelDefinition = {
-					kilocodeModel: KILOCODE_DEFAULT_MODEL,
+					kilocodeModel: AUTOCOMPLETE_PROVIDER_MODELS.kilocode,
 				}
 			} else if (profileProvider === "openrouter") {
 				modelDefinition = {
-					openRouterModelId: KILOCODE_DEFAULT_MODEL,
+					openRouterModelId: AUTOCOMPLETE_PROVIDER_MODELS.openrouter,
 				}
 			} else if (profileProvider === "mistral") {
 				modelDefinition = {
-					apiModelId: MISTRAL_DEFAULT_MODEL,
+					apiModelId: AUTOCOMPLETE_PROVIDER_MODELS.mistral,
 				}
 			}
 			this.apiHandler = buildApiHandler({
