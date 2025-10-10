@@ -38,6 +38,9 @@
 		"jetbrains:run": {
 			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
 		},
+		"cli:build": {
+			"dependsOn": ["@kilocode/cli#build"]
+		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
 			"cache": false

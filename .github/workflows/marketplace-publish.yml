@@ -174,3 +174,45 @@ jobs:
                   -F "channel=stable" \
                   -F "isHidden=false" \
                   https://plugins.jetbrains.com/plugin/uploadPlugin
+
+    build-cli:
+        runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
+            - name: Install dependencies
+              run: pnpm install
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Build
+              run: pnpm run cli:bundle
+              shell: bash
+            - name: NPM Pack
+              run: npm pack
+              working-directory: cli/dist
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: tarball
+                  path: cli/dist/*.tgz
