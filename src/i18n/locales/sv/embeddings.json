@@ -1,0 +1,66 @@
+{
+	"unknownError": "Okänt fel",
+	"authenticationFailed": "Misslyckades med att skapa inbäddningar: Autentisering misslyckades. Kontrollera din API-nyckel.",
+	"failedWithStatus": "Misslyckades med att skapa inbäddningar efter {{attempts}} försök: HTTP {{statusCode}} - {{errorMessage}}",
+	"failedWithError": "Misslyckades med att skapa inbäddningar efter {{attempts}} försök: {{errorMessage}}",
+	"failedMaxAttempts": "Misslyckades med att skapa inbäddningar efter {{attempts}} försök",
+	"textExceedsTokenLimit": "Text vid index {{index}} överskrider högsta token-gräns ({{itemTokens}} > {{maxTokens}}). Hoppar över.",
+	"rateLimitRetry": "Hastighetsgräns nådd, försöker igen om {{delayMs}} ms (försök {{attempt}}/{{maxRetries}})",
+	"ollama": {
+		"couldNotReadErrorBody": "Kunde inte läsa felmeddelandets innehåll",
+		"requestFailed": "Ollama-API-begäran misslyckades med status {{status}} {{statusText}}: {{errorBody}}",
+		"invalidResponseStructure": "Ogiltig svarstruktur från Ollama API: \"embeddings\"-array saknas eller är inte en array.",
+		"embeddingFailed": "Inbäddning med Ollama misslyckades: {{message}}",
+		"serviceNotRunning": "Ollama-tjänsten körs inte på {{baseUrl}}",
+		"serviceUnavailable": "Ollama-tjänsten är otillgänglig (status: {{status}})",
+		"modelNotFound": "Ollama-modell hittades inte: {{modelId}}",
+		"modelNotEmbeddingCapable": "Ollama-modellen kan inte skapa inbäddningar: {{modelId}}",
+		"hostNotFound": "Ollama-värd hittades inte: {{baseUrl}}"
+	},
+	"scanner": {
+		"unknownErrorProcessingFile": "Okänt fel vid bearbetning av fil {{filePath}}",
+		"unknownErrorDeletingPoints": "Okänt fel vid borttagning av punkter för {{filePath}}",
+		"failedToProcessBatchWithError": "Misslyckades med att bearbeta batch efter {{maxRetries}} försök: {{errorMessage}}"
+	},
+	"vectorStore": {
+		"qdrantConnectionFailed": "Misslyckades med att ansluta till Qdrant-vektordatabas. Se till att Qdrant körs och är åtkomlig på {{qdrantUrl}}. Fel: {{errorMessage}}",
+		"vectorDimensionMismatch": "Misslyckades med att uppdatera vektorindex för ny modell. Försök rensa indexet och starta om. Detaljer: {{errorMessage}}"
+	},
+	"validation": {
+		"authenticationFailed": "Autentisering misslyckades. Kontrollera din API-nyckel i inställningarna.",
+		"connectionFailed": "Misslyckades med att ansluta till inbäddningstjänsten. Kontrollera anslutningsinställningarna och att tjänsten körs.",
+		"modelNotAvailable": "Den angivna modellen är inte tillgänglig. Kontrollera din modellkonfiguration.",
+		"configurationError": "Ogiltig inbäddningskonfiguration. Granska dina inställningar.",
+		"serviceUnavailable": "Inbäddningstjänsten är inte tillgänglig. Säkerställ att den körs och är åtkomlig.",
+		"invalidEndpoint": "Ogiltig API-slutpunkt. Kontrollera din URL-konfiguration.",
+		"invalidEmbedderConfig": "Ogiltig inbäddarkonfiguration. Kontrollera dina inställningar.",
+		"invalidApiKey": "Ogiltig API-nyckel. Kontrollera din API-nyckelkonfiguration.",
+		"invalidBaseUrl": "Ogiltig bas-URL. Kontrollera din URL-konfiguration.",
+		"invalidModel": "Ogiltig modell. Kontrollera din modellkonfiguration.",
+		"invalidResponse": "Ogiltigt svar från inbäddningstjänsten. Kontrollera din konfiguration.",
+		"apiKeyRequired": "API-nyckel krävs för denna inbäddare",
+		"baseUrlRequired": "Bas-URL krävs för denna inbäddare"
+	},
+	"serviceFactory": {
+		"openAiConfigMissing": "OpenAI-konfiguration saknas för att skapa inbäddare",
+		"ollamaConfigMissing": "Ollama-konfiguration saknas för att skapa inbäddare",
+		"openAiCompatibleConfigMissing": "OpenAI-kompatibel konfiguration saknas för att skapa inbäddare",
+		"geminiConfigMissing": "Gemini-konfiguration saknas för att skapa inbäddare",
+		"mistralConfigMissing": "Mistral-konfiguration saknas för att skapa inbäddare",
+		"vercelAiGatewayConfigMissing": "Vercel AI Gateway-konfiguration saknas för att skapa inbäddare",
+		"invalidEmbedderType": "Ogiltig inbäddartyp konfigurerad: {{embedderProvider}}",
+		"vectorDimensionNotDeterminedOpenAiCompatible": "Kunde inte fastställa vektordimension för modellen '{{modelId}}' med leverantören '{{provider}}'. Säkerställ att 'Embedding Dimension' är korrekt satt i inställningarna för OpenAI-kompatibel leverantör.",
+		"vectorDimensionNotDetermined": "Kunde inte fastställa vektordimension för modellen '{{modelId}}' med leverantören '{{provider}}'. Kontrollera modellprofiler eller konfiguration.",
+		"qdrantUrlMissing": "Qdrant-URL saknas för att skapa vektorlagring",
+		"codeIndexingNotConfigured": "Kan inte skapa tjänster: Kodindexering är inte korrekt konfigurerad"
+	},
+	"orchestrator": {
+		"indexingFailedNoBlocks": "Indexering misslyckades: Inga kodblock indexerades. Detta indikerar oftast ett problem med inbäddarkonfigurationen.",
+		"indexingFailedCritical": "Indexering misslyckades: Inga kodblock indexerades trots att filer hittades. Detta indikerar ett kritiskt fel i inbäddaren.",
+		"fileWatcherStarted": "Filövervakare startad.",
+		"fileWatcherStopped": "Filövervakare stoppad.",
+		"failedDuringInitialScan": "Misslyckades under initial skanning: {{errorMessage}}",
+		"unknownError": "Okänt fel",
+		"indexingRequiresWorkspace": "Indexering kräver en öppen arbetsyta"
+	}
+}
