@@ -1,9 +1,17 @@
 name: Storybook Playwright Snapshot
 
 on:
-    workflow_dispatch:
     push:
         branches: [main]
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
+        inputs:
+            should_run:
+                description: "Run the full Storybook Playwright snapshot workflow"
+                required: false
+                default: false
+                type: boolean
 
 # Cancel in-progress jobs when new workflow is triggered
 concurrency:
@@ -23,6 +31,13 @@ jobs:
     storybook-playwright-snapshot:
         runs-on: ubuntu-latest
         timeout-minutes: 45
+        if: |
+            ${{
+              inputs.should_run == true ||
+              contains(github.event.head_commit.message, '[storybook]') ||
+              contains(github.event.head_commit.message, '[chromatic]') ||
+              contains(github.event.head_commit.message, '[screnshot')
+            }}
 
         steps:
             - name: Checkout repository

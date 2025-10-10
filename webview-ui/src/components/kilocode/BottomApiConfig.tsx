@@ -12,7 +12,7 @@ export const BottomApiConfig = () => {
 
 	return (
 		<>
-			<div className="w-auto overflow-hidden">
+			<div className="w-auto overflow-hidden" data-testid="model-selector">
 				<ModelSelector
 					currentApiConfigName={currentApiConfigName}
 					apiConfiguration={apiConfiguration}
