@@ -15,6 +15,11 @@ export async function singleCompletionHandler(apiConfiguration: ProviderSettings
 
 	const handler = buildApiHandler(apiConfiguration)
 
+	// Initialize handler if it has an initialize method
+	if ("initialize" in handler && typeof handler.initialize === "function") {
+		await handler.initialize()
+	}
+
 	// Check if handler supports single completions
 	if (!("completePrompt" in handler)) {
 		// kilocode_change start - stream responses for handlers without completePrompt
