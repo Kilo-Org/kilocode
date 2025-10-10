@@ -65,6 +65,7 @@ describe("Model Validation Functions", () => {
 		ovhcloud: {},
 		chutes: {},
 		// kilocode_change end
+		"sap-ai-core": {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

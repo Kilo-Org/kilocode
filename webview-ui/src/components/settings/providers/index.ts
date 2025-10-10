@@ -36,3 +36,4 @@ export { Synthetic } from "./Synthetic" // kilocode_change
 export { Featherless } from "./Featherless"
 export { VercelAiGateway } from "./VercelAiGateway"
 export { DeepInfra } from "./DeepInfra"
+export { default as SapAiCore } from "./SapAiCore"

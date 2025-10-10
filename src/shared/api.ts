@@ -167,6 +167,11 @@ const dynamicProviderExtras = {
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ovhcloud: {} as { apiKey?: string }, // kilocode_change
 	chutes: {} as { apiKey?: string }, // kilocode_change
+	"sap-ai-core": {} as {
+		sapAiCoreServiceKey?: string
+		sapAiCoreResourceGroup?: string
+		sapAiCoreUseOrchestration?: boolean
+	},
 } as const satisfies Record<RouterName, object>
 
 // Build the dynamic options union from the map, intersected with CommonFetchParams
