@@ -27,6 +27,7 @@ import { DeleteMessageDialog, EditMessageDialog } from "./components/chat/Messag
 import ErrorBoundary from "./components/ErrorBoundary"
 // import { AccountView } from "./components/account/AccountView" // kilocode_change: we have our own profile view
 // import { CloudView } from "./components/cloud/CloudView" // kilocode_change: not rendering this
+import { AnimatedTabContainer } from "./components/ui/AnimatedTabContainer" // kilocode_change
 import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonInteractiveClick"
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
@@ -278,7 +279,8 @@ const App = () => {
 	return showWelcome ? (
 		<WelcomeView />
 	) : (
-		<>
+		// kilocode_change- wrap tabs in AnimatedTabContainer
+		<AnimatedTabContainer tabKey={tab}>
 			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
 			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
@@ -389,7 +391,7 @@ const App = () => {
 					<BottomControls />
 				</div>
 			)}
-		</>
+		</AnimatedTabContainer>
 	)
 }
 
