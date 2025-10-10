@@ -9,14 +9,9 @@
 		"deps:clean": {
 			"cache": false
 		},
-		"deps:patch": {
-			"cache": false,
-			"dependsOn": ["deps:check", "deps:clean"],
-			"env": ["DEVENV"]
-		},
 		"deps:copy": {
 			"cache": false,
-			"dependsOn": ["deps:check", "deps:patch"],
+			"dependsOn": ["deps:check"],
 			"env": ["DEVENV"]
 		},
 		"prop:deps": {
@@ -25,7 +20,7 @@
 		"bundle:build": {
 			"outputs": ["dist/**"],
 			"inputs": ["package.json", "tsconfig.json", "src/**", "deps/vscode/**"],
-			"dependsOn": ["clean", "deps:clean", "deps:patch", "deps:copy"]
+			"dependsOn": ["clean", "deps:clean", "deps:check", "deps:copy"]
 		},
 		"bundle:package": {
 			"cache": false,
@@ -38,7 +33,7 @@
 		"build": {
 			"outputs": ["dist/**"],
 			"inputs": ["package.json", "tsconfig.json", "src/**", "deps/vscode/**"],
-			"dependsOn": ["clean", "deps:clean", "deps:patch", "deps:copy"]
+			"dependsOn": ["clean", "deps:clean", "deps:check", "deps:copy"]
 		}
 	}
 }
