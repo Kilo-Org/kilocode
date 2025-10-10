@@ -400,6 +400,7 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					type: "usage",
 					inputTokens: chunk.usage.prompt_tokens || 0,
 					outputTokens: chunk.usage.completion_tokens || 0,
+					cacheReadTokens: chunk.usage.prompt_tokens_details?.cached_tokens, // kilocode_change
 				}
 			}
 		}
