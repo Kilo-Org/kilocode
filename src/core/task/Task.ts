@@ -596,8 +596,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	// API Messages
-
-	private async getSavedApiConversationHistory(): Promise<ApiMessage[]> {
+	// kilocode_change start
+	public async getSavedApiConversationHistory(): Promise<ApiMessage[]> {
+		// kilocode_change end
 		return readApiMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 
@@ -627,7 +628,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Cline Messages
 
-	private async getSavedClineMessages(): Promise<ClineMessage[]> {
+	// kilocode_change start
+	public async getSavedClineMessages(): Promise<ClineMessage[]> {
+		// kilocode_change end
 		return readTaskMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 

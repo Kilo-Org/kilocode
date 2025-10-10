@@ -500,7 +500,7 @@ export class ClineProvider
 		await this.removeClineFromStack()
 		// Resume the last cline instance in the stack (if it exists - this is
 		// the 'parent' calling task).
-		await this.getCurrentTask()?.completeSubtask(lastMessage)
+		await this.continueParentTask(lastMessage) // kilocode_change
 	}
 	// Pending Edit Operations Management
 
@@ -1567,11 +1567,213 @@ export class ClineProvider
 		if (id !== this.getCurrentTask()?.taskId) {
 			// Non-current task.
 			const { historyItem } = await this.getTaskWithId(id)
-			await this.createTaskWithHistoryItem(historyItem) // Clears existing task.
+			// kilocode_change start
+			// If this is a subtask, we need to reconstruct the entire task stack
+			if (historyItem.parentTaskId || historyItem.rootTaskId) {
+				await this.reconstructTaskStack(historyItem)
+			} else {
+				// For standalone tasks, use the normal flow
+				await this.createTaskWithHistoryItem(historyItem)
+			}
+			// kilocode_change end
 		}
 
 		await this.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
 	}
+
+	// kilocode_change start
+	private async continueParentTask(lastMessage: string): Promise<void> {
+		const parentTask = this.getCurrentTask()
+		if (parentTask) {
+			this.log(`[continueParentTask] Found parent task ${parentTask.taskId}, isPaused: ${parentTask.isPaused}`)
+			this.log(`[continueParentTask] Parent task isInitialized: ${parentTask.isInitialized}`)
+
+			try {
+				// If the parent task is not initialized, we need to initialize it properly
+				if (!parentTask.isInitialized) {
+					this.log(`[continueParentTask] Initializing parent task from history`)
+					// Load the parent task's saved messages and API conversation
+					parentTask.clineMessages = await parentTask.getSavedClineMessages()
+					parentTask.apiConversationHistory = await parentTask.getSavedApiConversationHistory()
+					parentTask.isInitialized = true
+					this.log(
+						`[continueParentTask] Parent task initialized with ${parentTask.clineMessages.length} messages`,
+					)
+				}
+
+				// Complete the subtask on the existing parent task
+				// This will add the subtask result to the parent's conversation and unpause it
+				await parentTask.completeSubtask(lastMessage)
+				this.log(`[continueParentTask] Parent task ${parentTask.taskId} subtask completed`)
+
+				// Check if the parent task needs to continue its execution
+				// If the parent task was created from history reconstruction, it may not have
+				// an active execution loop running, so we need to continue it manually
+				if (!parentTask.isPaused && parentTask.isInitialized) {
+					this.log(`[continueParentTask] Parent task is unpaused and initialized, continuing execution`)
+
+					// Continue the parent task's execution with the subtask result
+					// The subtask result has already been added to the conversation by completeSubtask
+					// Now we need to continue the execution loop
+					const continueExecution = async () => {
+						try {
+							// Continue the task loop with an empty user content since the subtask result
+							// has already been added to the API conversation history
+							await parentTask.recursivelyMakeClineRequests([], false)
+						} catch (error) {
+							this.log(
+								`[continueParentTask] Error continuing parent task execution: ${error instanceof Error ? error.message : String(error)}`,
+							)
+						}
+					}
+					// Start the continuation in the background to avoid blocking
+					continueExecution()
+				}
+
+				// Update the webview to show the parent task
+				this.log(`[continueParentTask] Updating webview state`)
+				await this.postStateToWebview()
+				this.log(`[continueParentTask] Webview state updated`)
+			} catch (error) {
+				this.log(
+					`[continueParentTask] Error during parent task resumption: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				throw error
+			}
+		} else {
+			this.log(`[continueParentTask] No parent task found in stack`)
+		}
+	}
+
+	/**
+	 * Reconstructs the entire task stack for a subtask by loading and adding
+	 * all parent tasks to the stack in the correct order, then adding the target subtask.
+	 * This ensures that when the subtask finishes, control returns to the parent task.
+	 */
+	private async reconstructTaskStack(targetHistoryItem: HistoryItem): Promise<void> {
+		// Clear the current stack
+		await this.removeClineFromStack()
+
+		// Build the task hierarchy from root to target
+		const taskHierarchy = await this.buildTaskHierarchy(targetHistoryItem)
+
+		this.log(`[reconstructTaskStack] Reconstructing stack with ${taskHierarchy.length} tasks`)
+
+		const createdTasks: Task[] = []
+
+		// Create all tasks in the hierarchy with proper parent/root references
+		for (let i = 0; i < taskHierarchy.length; i++) {
+			const historyItem = taskHierarchy[i]
+			const isTargetTask = i === taskHierarchy.length - 1
+
+			// Determine parent and root task references
+			const parentTask = i > 0 ? createdTasks[i - 1] : undefined
+			const rootTask = createdTasks[0] || undefined
+
+			// Create the task with proper parent/root references
+			const task = await this.createTaskFromHistoryItem(historyItem, isTargetTask, parentTask, rootTask)
+
+			// Pause parent tasks so only the target runs
+			if (!isTargetTask) {
+				task.isPaused = true
+				this.log(`[reconstructTaskStack] Added paused parent task ${task.taskId}`)
+			} else {
+				this.log(`[reconstructTaskStack] Added and started target task ${task.taskId}`)
+			}
+
+			createdTasks.push(task)
+			await this.addClineToStack(task)
+		}
+
+		// Establish parent-child relationships after all tasks are created
+		for (let i = 0; i < createdTasks.length - 1; i++) {
+			const parentTask = createdTasks[i]
+			const childTask = createdTasks[i + 1]
+
+			// Set the childTaskId on the parent to point to the child
+			parentTask.childTaskId = childTask.taskId
+			this.log(`[reconstructTaskStack] Linked parent ${parentTask.taskId} to child ${childTask.taskId}`)
+		}
+	}
+
+	/**
+	 * Builds the complete task hierarchy from root to target task.
+	 * Returns an array of HistoryItems in execution order (root first, target last).
+	 */
+	private async buildTaskHierarchy(targetHistoryItem: HistoryItem): Promise<HistoryItem[]> {
+		const hierarchy: HistoryItem[] = []
+		const visited = new Set<string>()
+
+		// Recursive function to build hierarchy
+		const addToHierarchy = async (historyItem: HistoryItem): Promise<void> => {
+			// Prevent infinite loops
+			if (visited.has(historyItem.id)) {
+				return
+			}
+			visited.add(historyItem.id)
+
+			// If this task has a parent, add the parent first
+			if (historyItem.parentTaskId) {
+				try {
+					const { historyItem: parentHistoryItem } = await this.getTaskWithId(historyItem.parentTaskId)
+					await addToHierarchy(parentHistoryItem)
+				} catch (error) {
+					this.log(
+						`[buildTaskHierarchy] Failed to load parent task ${historyItem.parentTaskId}: ${error instanceof Error ? error.message : String(error)}`,
+					)
+				}
+			}
+
+			// Add this task to the hierarchy
+			hierarchy.push(historyItem)
+		}
+
+		await addToHierarchy(targetHistoryItem)
+		return hierarchy
+	}
+
+	/**
+	 * Creates a Task instance from a HistoryItem.
+	 * Used for reconstructing the task stack.
+	 */
+	private async createTaskFromHistoryItem(
+		historyItem: HistoryItem,
+		shouldStart: boolean = false,
+		parentTask?: Task,
+		rootTask?: Task,
+	): Promise<Task> {
+		const {
+			apiConfiguration,
+			diffEnabled: enableDiff,
+			enableCheckpoints,
+			fuzzyMatchThreshold,
+			experiments,
+			cloudUserInfo,
+			remoteControlEnabled,
+		} = await this.getState()
+
+		const task = new Task({
+			context: this.context,
+			provider: this,
+			apiConfiguration,
+			enableDiff,
+			enableCheckpoints,
+			fuzzyMatchThreshold,
+			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
+			historyItem,
+			experiments,
+			parentTask, // Pass the actual parent Task object
+			rootTask, // Pass the actual root Task object
+			taskNumber: historyItem.number,
+			workspacePath: historyItem.workspace,
+			onCreated: this.taskCreationCallback,
+			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, remoteControlEnabled),
+			startTask: shouldStart, // Only start the target task
+		})
+
+		return task
+	}
+	// kilocode_change end
 
 	async exportTaskWithId(id: string) {
 		const { historyItem, apiConversationHistory } = await this.getTaskWithId(id)
