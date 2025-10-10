@@ -238,11 +238,12 @@ describe("getContextMenuOptions", () => {
 
 	it("should return all option types for empty query", () => {
 		const result = getContextMenuOptions("", null, [])
-		expect(result).toHaveLength(7) // kilocode_change: added image option
+		expect(result).toHaveLength(8) // kilocode_change: added image and allOpenEditors options
 		expect(result.map((item) => item.type)).toEqual([
 			ContextMenuOptionType.Problems,
 			ContextMenuOptionType.Terminal,
 			ContextMenuOptionType.URL,
+			ContextMenuOptionType.AllOpenEditors,
 			ContextMenuOptionType.Folder,
 			ContextMenuOptionType.File,
 			ContextMenuOptionType.Image, // kilocode_change

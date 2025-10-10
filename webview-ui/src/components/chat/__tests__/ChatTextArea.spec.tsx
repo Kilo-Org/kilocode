@@ -506,6 +506,66 @@ describe("ChatTextArea", () => {
 			expect(setInputValue).not.toHaveBeenCalled()
 		})
 
+		it("should add files to context pills when Shift is pressed during drag and drop", () => {
+			const onMentionAdd = vi.fn()
+
+			const { container } = render(
+				<ChatTextArea {...defaultProps} onMentionAdd={onMentionAdd} inputValue="Initial text" />,
+			)
+
+			// Create a mock dataTransfer object with text data containing multiple file paths
+			const dataTransfer = {
+				getData: vi.fn().mockReturnValue("/Users/test/project/file1.js\n/Users/test/project/file2.js"),
+				files: [],
+			}
+
+			// Create a custom drop event with Shift key
+			const dropEvent = new Event('drop', { bubbles: true, cancelable: true }) as any
+			dropEvent.dataTransfer = dataTransfer
+			dropEvent.preventDefault = vi.fn()
+			dropEvent.shiftKey = true
+
+			// Simulate drop event with Shift key pressed
+			container.querySelector(".chat-text-area")!.dispatchEvent(dropEvent)
+
+			// Verify onMentionAdd was called for each file path
+			expect(onMentionAdd).toHaveBeenCalledTimes(2)
+			expect(onMentionAdd).toHaveBeenCalledWith("@/file1.js")
+			expect(onMentionAdd).toHaveBeenCalledWith("@/file2.js")
+
+			// Verify setInputValue was NOT called (files should go to context pills, not textarea)
+			expect(defaultProps.setInputValue).not.toHaveBeenCalled()
+		})
+
+		it("should add files to textarea when Shift is NOT pressed during drag and drop", () => {
+			const onMentionAdd = vi.fn()
+
+			const { container } = render(
+				<ChatTextArea {...defaultProps} onMentionAdd={onMentionAdd} inputValue="Initial text" />,
+			)
+
+			// Create a mock dataTransfer object with text data containing multiple file paths
+			const dataTransfer = {
+				getData: vi.fn().mockReturnValue("/Users/test/project/file1.js\n/Users/test/project/file2.js"),
+				files: [],
+			}
+
+			// Create a custom drop event without Shift key
+			const dropEvent = new Event('drop', { bubbles: true, cancelable: true }) as any
+			dropEvent.dataTransfer = dataTransfer
+			dropEvent.preventDefault = vi.fn()
+			dropEvent.shiftKey = false
+
+			// Simulate drop event without Shift key
+			container.querySelector(".chat-text-area")!.dispatchEvent(dropEvent)
+
+			// Verify onMentionAdd was NOT called
+			expect(onMentionAdd).not.toHaveBeenCalled()
+
+			// Verify setInputValue was called with the correct value (original behavior)
+			expect(defaultProps.setInputValue).toHaveBeenCalledWith("@/file1.js @/file2.js Initial text")
+		})
+
 		describe("prompt history navigation", () => {
 			const mockClineMessages = [
 				{ type: "say", say: "user_feedback", text: "First prompt", ts: 1000 },
