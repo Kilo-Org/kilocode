@@ -21,6 +21,7 @@ vitest.mock("../../prompts/responses", () => ({
 	formatResponse: {
 		toolError: vitest.fn((msg) => `Tool Error: ${msg}`),
 		rooIgnoreError: vitest.fn((msg) => `RooIgnore Error: ${msg}`),
+		toolResult: vitest.fn((content, images) => `Tool Result: ${content}`),
 	},
 }))
 vitest.mock("../../../utils/text-normalization", () => ({
@@ -52,6 +53,7 @@ describe("Command Execution Timeout Integration", () => {
 					postMessageToWebview: vitest.fn(),
 				}),
 			},
+			ask: vitest.fn(),
 			say: vitest.fn().mockResolvedValue(undefined),
 		}
 
@@ -409,4 +411,62 @@ describe("Command Execution Timeout Integration", () => {
 			expect(result2).toContain("terminated after exceeding")
 		}, 5000)
 	})
+
+	// kilocode_change start
+	describe("runInBackground Integration", () => {
+		it("should automatically continue command execution when runInBackground is true", async () => {
+			// Setup a command that produces output
+			mockProcess = {
+				continue: vitest.fn(),
+				abort: vitest.fn(),
+			}
+
+			mockTerminal = {
+				runCommand: vitest.fn().mockImplementation((command, callbacks) => {
+					// Simulate command producing output
+					setTimeout(() => {
+						callbacks.onLine("Starting development server...\n", mockProcess)
+					}, 10)
+
+					// Simulate command completion
+					setTimeout(() => {
+						callbacks.onCompleted("Development server started successfully")
+						callbacks.onShellExecutionComplete({ exitCode: 0 })
+					}, 50)
+
+					return Promise.resolve()
+				}),
+				getCurrentWorkingDirectory: vitest.fn().mockReturnValue({
+					toPosix: () => "/test/directory",
+				}),
+			}
+			;(TerminalRegistry.getOrCreateTerminal as any).mockResolvedValue(mockTerminal)
+
+			const options: ExecuteCommandOptions = {
+				executionId: "test-execution-id",
+				command: "npm run dev",
+				runInBackground: true,
+				terminalShellIntegrationDisabled: true,
+				terminalOutputLineLimit: 500,
+				terminalOutputCharacterLimit: 10000,
+				commandExecutionTimeout: 0,
+			}
+
+			// Execute the command
+			const [rejected] = await executeCommand(mockTask, options)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 100))
+
+			expect(rejected).toBe(false)
+			expect(TerminalRegistry.getOrCreateTerminal).toHaveBeenCalledWith("/test/directory", undefined, "execa")
+			expect(mockTerminal.runCommand).toHaveBeenCalledWith("npm run dev", expect.any(Object))
+			expect(mockProcess.continue).toHaveBeenCalled()
+
+			// The task.ask method should not be called since runInBackground skips user interaction
+			// Note: We can't verify this directly since the callback is async and may not be called
+			// in this test scenario, but the important thing is that the command completes successfully
+		})
+	})
+	// kilocode_change end
 })

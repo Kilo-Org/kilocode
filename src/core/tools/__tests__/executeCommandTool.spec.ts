@@ -66,8 +66,8 @@ beforeEach(() => {
 
 		// Get the custom working directory if provided
 		const customCwd = block.params.cwd
-
-		const [userRejected, result] = await mockExecuteCommand(cline, block.params.command, customCwd)
+		const runInBackground = block.params.runInBackground === "true" // kilocode_change
+		const [userRejected, result] = await mockExecuteCommand(cline, block.params.command, customCwd, runInBackground) // kilocode_change - add runInBackground
 
 		if (userRejected) {
 			cline.didRejectTool = true
@@ -309,4 +309,43 @@ describe("executeCommandTool", () => {
 			expect(mockOptions.commandExecutionTimeout).toBeDefined()
 		})
 	})
+
+	// kilocode_change start
+	describe("runInBackground parameter", () => {
+		it("should extract runInBackground parameter when set to 'true'", async () => {
+			mockToolUse.params.command = "npm run dev"
+			mockToolUse.params.runInBackground = "true"
+
+			await executeCommandTool(
+				mockCline as unknown as Task,
+				mockToolUse,
+				mockAskApproval as unknown as AskApproval,
+				mockHandleError as unknown as HandleError,
+				mockPushToolResult as unknown as PushToolResult,
+				mockRemoveClosingTag as unknown as RemoveClosingTag,
+			)
+
+			expect(mockExecuteCommand).toHaveBeenCalled()
+			const lastCall = mockExecuteCommand.mock.calls[mockExecuteCommand.mock.calls.length - 1]
+			expect(lastCall[3]).toBe(true) // runInBackground parameter should be true
+		})
+
+		it("should default runInBackground to false when parameter is missing", async () => {
+			mockToolUse.params.command = "echo test"
+
+			await executeCommandTool(
+				mockCline as unknown as Task,
+				mockToolUse,
+				mockAskApproval as unknown as AskApproval,
+				mockHandleError as unknown as HandleError,
+				mockPushToolResult as unknown as PushToolResult,
+				mockRemoveClosingTag as unknown as RemoveClosingTag,
+			)
+
+			expect(mockExecuteCommand).toHaveBeenCalled()
+			const lastCall = mockExecuteCommand.mock.calls[mockExecuteCommand.mock.calls.length - 1]
+			expect(lastCall[3]).toBe(false) // runInBackground parameter should be false
+		})
+	})
+	// kilocode_change end
 })
