@@ -267,4 +267,15 @@ console.log('test');]]></replace></change>`
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 	})
+
+	describe("Auto-trigger behavior", () => {
+		it("should clear auto-trigger timer on save", async () => {
+			const initialContent = `console.log('test');`
+			const { context } = await setupTestDocument("save-test.js", initialContent)
+
+			strategy.initializeStreamingParser(context)
+			const result = strategy.processStreamingChunk("")
+			expect(result.suggestions.hasSuggestions()).toBe(false)
+		})
+	})
 })

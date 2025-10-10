@@ -82,6 +82,7 @@ export class GhostProvider {
 		vscode.workspace.onDidOpenTextDocument(this.onDidOpenTextDocument, this, context.subscriptions)
 		vscode.workspace.onDidCloseTextDocument(this.onDidCloseTextDocument, this, context.subscriptions)
 		vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders, this, context.subscriptions)
+		vscode.workspace.onWillSaveTextDocument(this.onWillSaveTextDocument, this, context.subscriptions)
 		vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions)
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
 
@@ -182,6 +183,10 @@ export class GhostProvider {
 
 	private onDidChangeWorkspaceFolders() {
 		this.disposeIgnoreController()
+	}
+
+	private onWillSaveTextDocument(): void {
+		this.clearAutoTriggerTimer()
 	}
 
 	private async onDidOpenTextDocument(document: vscode.TextDocument): Promise<void> {
