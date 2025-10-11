@@ -124,6 +124,7 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting, KiloProviderRoutingManagedByOrganization } from "./providers/KiloProviderRouting"
+import { RateLimitAfterControl } from "./RateLimitAfterSettings" // kilocode_change
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -900,6 +901,10 @@ const ApiOptions = ({
 								maxValue={2}
 							/>
 						)}
+						<RateLimitAfterControl
+							rateLimitAfterEnabled={apiConfiguration.rateLimitAfter}
+							onChange={(field, value) => setApiConfigurationField(field, value)}
+						/>
 						<RateLimitSecondsControl
 							value={apiConfiguration.rateLimitSeconds || 0}
 							onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}
