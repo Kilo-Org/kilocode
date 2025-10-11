@@ -134,6 +134,7 @@
 			"modelIdRequired": "معرّف النموذج مطلوب",
 			"modelDimensionRequired": "بُعد النموذج مطلوب",
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
+			"invalidGeminiUrl": "رابط Gemini غير صالح",
 			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",

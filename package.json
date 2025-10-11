@@ -72,5 +72,9 @@
 			"form-data": ">=4.0.4",
 			"bluebird": ">=3.7.2"
 		}
+	},
+	"dependencies": {
+		"@types/node-fetch": "2",
+		"node-fetch": "2"
 	}
 }

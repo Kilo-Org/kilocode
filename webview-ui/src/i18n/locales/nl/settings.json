@@ -121,6 +121,7 @@
 			"modelIdRequired": "Model-ID is vereist",
 			"modelDimensionRequired": "Modelafmeting is vereist",
 			"geminiApiKeyRequired": "Gemini API-sleutel is vereist",
+			"invalidGeminiUrl": "Ongeldige Gemini URL",
 			"mistralApiKeyRequired": "Mistral API-sleutel is vereist",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API-sleutel is vereist",
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",

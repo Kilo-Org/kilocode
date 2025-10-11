@@ -121,6 +121,7 @@
 			"modelIdRequired": "Cal un ID de model",
 			"modelDimensionRequired": "Cal una dimensió de model",
 			"geminiApiKeyRequired": "Cal una clau d'API de Gemini",
+			"invalidGeminiUrl": "URL de Gemini no vàlida",
 			"mistralApiKeyRequired": "La clau de l'API de Mistral és requerida",
 			"vercelAiGatewayApiKeyRequired": "Es requereix la clau API de Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",

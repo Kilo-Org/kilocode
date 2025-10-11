@@ -121,6 +121,7 @@
 			"modelIdRequired": "मॉडल आईडी आवश्यक है",
 			"modelDimensionRequired": "मॉडल आयाम आवश्यक है",
 			"geminiApiKeyRequired": "Gemini API कुंजी आवश्यक है",
+			"invalidGeminiUrl": "अमान्य Gemini URL",
 			"mistralApiKeyRequired": "मिस्ट्रल एपीआई कुंजी आवश्यक है",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API कुंजी आवश्यक है",
 			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
