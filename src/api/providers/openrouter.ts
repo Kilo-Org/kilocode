@@ -29,6 +29,7 @@ import type {
 	SingleCompletionHandler,
 } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
@@ -205,7 +206,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
-		// https://openrouter.ai/docs/transforms
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
 			...(maxTokens && maxTokens > 0 && { max_tokens: maxTokens }),
@@ -218,6 +218,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
 		}
+
+		// kilocode_change start: Add native tool call support when toolStyle is "json"
+		addNativeToolCallsToParams(completionParams, this.options, metadata)
+		// kilocode_change end
 
 		let stream
 		try {
@@ -264,9 +268,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
 
-				if (delta && (delta.tool_calls?.length ?? 0) > 0) {
-					console.error("Model tried to use native tool calls", delta.tool_calls)
-				}
+				// Handle native tool calls when toolStyle is "json"
+				yield* processNativeToolCallsFromDelta(delta, this.options.toolStyle)
 				// kilocode_change end
 
 				if (delta?.content) {

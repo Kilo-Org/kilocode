@@ -33,6 +33,7 @@ import {
 	type CloudOrganizationMembership,
 	type CreateTaskOptions,
 	type TokenUsage,
+	type ToolUseStyle,
 	RooCodeEventName,
 	requestyDefaultModelId,
 	openRouterDefaultModelId,

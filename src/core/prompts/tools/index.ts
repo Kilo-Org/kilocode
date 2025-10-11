@@ -1,10 +1,12 @@
-import type { ToolName, ModeConfig } from "@roo-code/types"
+import type { ToolName, ModeConfig, ToolUseStyle } from "@roo-code/types"
+import type OpenAI from "openai"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
 import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
 
 import { ToolArgs } from "./types"
+import { nativeTools } from "./native-tools"
 import { getExecuteCommandDescription } from "./execute-command"
 import { getReadFileDescription } from "./read-file"
 import { getSimpleReadFileDescription } from "./simple-read-file"
@@ -33,6 +35,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
+import { get } from "http"
 // kilocode_change end
 
 // Map of tool names to their description functions
@@ -69,7 +72,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	generate_image: (args) => getGenerateImageDescription(args),
 }
 
-export function getToolDescriptionsForMode(
+export function getXMLToolDescriptionsForMode(
 	mode: Mode,
 	cwd: string,
 	supportsComputerUse: boolean,
@@ -83,6 +86,7 @@ export function getToolDescriptionsForMode(
 	settings?: Record<string, any>,
 	enableMcpServerCreation?: boolean,
 	modelId?: string,
+	toolUseStyle?: ToolUseStyle,
 	clineProviderState?: ClineProviderState, // kilocode_change
 ): string {
 	const config = getModeConfig(mode, customModes)
@@ -175,6 +179,94 @@ export function getToolDescriptionsForMode(
 	})
 
 	return `# Tools\n\n${descriptions.filter(Boolean).join("\n\n")}`
+}
+
+export function getAllowedJSONToolsForMode(
+	mode: Mode,
+	codeIndexManager?: CodeIndexManager,
+	customModes?: ModeConfig[],
+	experiments?: Record<string, boolean>,
+	settings?: Record<string, any>,
+	clineProviderState?: ClineProviderState,
+): OpenAI.Chat.ChatCompletionTool[] {
+	const config = getModeConfig(mode, customModes)
+
+	const tools = new Set<string>()
+
+	// Add tools from mode's groups
+	config.groups.forEach((groupEntry) => {
+		const groupName = getGroupName(groupEntry)
+		const toolGroup = TOOL_GROUPS[groupName]
+		if (toolGroup) {
+			toolGroup.tools.forEach((tool) => {
+				if (
+					isToolAllowedForMode(
+						tool as ToolName,
+						mode,
+						customModes ?? [],
+						undefined,
+						undefined,
+						experiments ?? {},
+					)
+				) {
+					tools.add(tool)
+				}
+			})
+		}
+	})
+
+	// Add always available tools
+	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
+
+	// Conditionally exclude codebase_search if feature is disabled or not configured
+	if (
+		!codeIndexManager ||
+		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
+	) {
+		tools.delete("codebase_search")
+	}
+
+	// kilocode_change start: Morph fast apply
+	if (isFastApplyAvailable(clineProviderState)) {
+		// When Morph is enabled, disable traditional editing tools
+		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		traditionalEditingTools.forEach((tool) => tools.delete(tool))
+	} else {
+		tools.delete("edit_file")
+	}
+	// kilocode_change end
+
+	// Conditionally exclude update_todo_list if disabled in settings
+	if (settings?.todoListEnabled === false) {
+		tools.delete("update_todo_list")
+	}
+
+	// Conditionally exclude generate_image if experiment is not enabled
+	if (!experiments?.imageGeneration) {
+		tools.delete("generate_image")
+	}
+
+	// Conditionally exclude run_slash_command if experiment is not enabled
+	if (!experiments?.runSlashCommand) {
+		tools.delete("run_slash_command")
+	}
+
+	// Create a map of tool names to native tool definitions for quick lookup
+	const nativeToolsMap = new Map<string, OpenAI.Chat.ChatCompletionTool>()
+	nativeTools.forEach((tool) => {
+		nativeToolsMap.set(tool.function.name, tool)
+	})
+
+	// Map allowed tools to their native definitions
+	const allowedTools: OpenAI.Chat.ChatCompletionTool[] = []
+	tools.forEach((toolName) => {
+		const nativeTool = nativeToolsMap.get(toolName)
+		if (nativeTool) {
+			allowedTools.push(nativeTool)
+		}
+	})
+
+	return allowedTools
 }
 
 // Export individual description functions for backward compatibility

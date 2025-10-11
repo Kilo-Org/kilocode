@@ -92,6 +92,8 @@ export async function readFileTool(
 	const legacyPath: string | undefined = block.params.path
 	const legacyStartLineStr: string | undefined = block.params.start_line
 	const legacyEndLineStr: string | undefined = block.params.end_line
+	// Native JSON format from OpenAI-style tool calls
+	const nativeFiles: any[] | undefined = (block.params as any).files
 
 	// Check if the current model supports images at the beginning
 	const modelInfo = cline.api.getModel().info
@@ -126,7 +128,31 @@ export async function readFileTool(
 
 	const fileEntries: FileEntry[] = []
 
-	if (argsXmlTag) {
+	// Handle native JSON format first (from OpenAI-style tool calls)
+	if (nativeFiles && Array.isArray(nativeFiles)) {
+		for (const file of nativeFiles) {
+			if (!file.path) continue
+
+			const fileEntry: FileEntry = {
+				path: file.path,
+				lineRanges: [],
+			}
+
+			// Handle line_ranges array from native format
+			if (file.line_ranges && Array.isArray(file.line_ranges)) {
+				for (const range of file.line_ranges) {
+					const match = String(range).match(/(\d+)-(\d+)/)
+					if (match) {
+						const [, start, end] = match.map(Number)
+						if (!isNaN(start) && !isNaN(end)) {
+							fileEntry.lineRanges?.push({ start, end })
+						}
+					}
+				}
+			}
+			fileEntries.push(fileEntry)
+		}
+	} else if (argsXmlTag) {
 		// Parse file entries from XML (new multi-file format)
 		try {
 			const parsed = parseXml(argsXmlTag) as any

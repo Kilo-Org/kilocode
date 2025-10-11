@@ -3,7 +3,7 @@ import { WebviewMessage } from "../../shared/WebviewMessage"
 import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { buildApiHandler } from "../../api"
 import { experiments as experimentsModule, EXPERIMENT_IDS } from "../../shared/experiments"
-
+import { ToolUseStyle } from "../../../packages/types/src"
 import { SYSTEM_PROMPT } from "../prompts/system"
 import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-replace"
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
@@ -28,6 +28,11 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		maxReadFileLine,
 		maxConcurrentFileReads,
 	} = state // kilocode_change
+
+	// kilocode_change start
+	// Get the tool use style up front
+	const toolUseStyle: ToolUseStyle = state.apiConfiguration.toolStyle || "xml"
+	// kilocode_change end
 
 	// Check experiment to determine which diff strategy to use
 	const isMultiFileApplyDiffEnabled = experimentsModule.isEnabled(
@@ -95,6 +100,7 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 		// kilocode_change start
 		undefined,
 		undefined,
+		toolUseStyle,
 		state,
 		// kilocode_change end
 	)

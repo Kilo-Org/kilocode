@@ -1,6 +1,12 @@
 import { z } from "zod"
 
-import { modelInfoSchema, reasoningEffortWithMinimalSchema, verbosityLevelsSchema, serviceTierSchema } from "./model.js"
+import {
+	modelInfoSchema,
+	reasoningEffortWithMinimalSchema,
+	verbosityLevelsSchema,
+	serviceTierSchema,
+	toolUseStylesSchema,
+} from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
 import {
 	anthropicModels,
@@ -193,6 +199,12 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model verbosity.
 	verbosity: verbosityLevelsSchema.optional(),
+
+	// kilocode_change start
+	// Tool style - xml (legacy) or json (modern).
+	// Default to XML for anywhere not specified.
+	toolStyle: toolUseStylesSchema.optional(),
+	// kilocode_change end
 })
 
 // Several of the providers share common model config properties.

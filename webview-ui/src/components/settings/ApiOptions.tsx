@@ -40,6 +40,7 @@ import {
 	vercelAiGatewayDefaultModelId,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	nativeFunctionCallingProviders, // Added import for native function calling providers
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -120,6 +121,7 @@ import { TodoListSettingsControl } from "./TodoListSettingsControl"
 import { TemperatureControl } from "./TemperatureControl"
 import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
 import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
+import { ToolUseControl } from "./ToolUseControl"
 import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
@@ -888,6 +890,12 @@ const ApiOptions = ({
 							todoListEnabled={apiConfiguration.todoListEnabled}
 							onChange={(field, value) => setApiConfigurationField(field, value)}
 						/>
+						{nativeFunctionCallingProviders.includes(selectedProvider) && (
+							<ToolUseControl
+								toolStyle={apiConfiguration.toolStyle}
+								onChange={(field, value) => setApiConfigurationField(field, value)}
+							/>
+						)}
 						<DiffSettingsControl
 							diffEnabled={apiConfiguration.diffEnabled}
 							fuzzyMatchThreshold={apiConfiguration.fuzzyMatchThreshold}

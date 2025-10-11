@@ -26,3 +26,4 @@ export * from "./kilocode.js" // kilocode_change
 export * from "./usage-tracker.js" // kilocode_change
 
 export * from "./providers/index.js"
+export * from "./native-function-calling.js"

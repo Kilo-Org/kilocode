@@ -27,6 +27,17 @@ export const verbosityLevels = ["low", "medium", "high"] as const
 export const verbosityLevelsSchema = z.enum(verbosityLevels)
 
 export type VerbosityLevel = z.infer<typeof verbosityLevelsSchema>
+// kilocode_change start
+/**
+ * Tool Use Style
+ */
+
+export const toolUseStyles = ["xml", "json"] as const
+
+export const toolUseStylesSchema = z.enum(toolUseStyles)
+
+export type ToolUseStyle = z.infer<typeof toolUseStylesSchema>
+// kilocode_change end
 
 /**
  * Service tiers (OpenAI Responses API)

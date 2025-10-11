@@ -32,8 +32,8 @@ export async function listFilesTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	const relDirPath: string | undefined = block.params.path
-	const recursiveRaw: string | undefined = block.params.recursive
-	const recursive = recursiveRaw?.toLowerCase() === "true"
+	const recursiveRaw: string | boolean | null | undefined = block.params.recursive
+	const recursive = typeof recursiveRaw === "boolean" ? recursiveRaw : recursiveRaw?.toLowerCase() === "true"
 
 	// Calculate if the path is outside workspace
 	const absolutePath = relDirPath ? path.resolve(cline.cwd, relDirPath) : cline.cwd

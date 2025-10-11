@@ -24,6 +24,11 @@ export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
 	 * When undefined, Ollama will use the model's default num_ctx from the Modelfile.
 	 */
 	ollamaNumCtx?: number
+	/**
+	 * Tool style for formatting tool calls - either "xml" (legacy) or "json" (modern).
+	 * When set to "json", tools will be passed as native OpenAI tool format.
+	 */
+	toolStyle?: "xml" | "json" // kilocode_change
 }
 
 // RouterName
