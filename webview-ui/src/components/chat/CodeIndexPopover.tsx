@@ -48,6 +48,7 @@ import { useEscapeKey } from "@src/hooks/useEscapeKey"
 // Default URLs for providers
 const DEFAULT_QDRANT_URL = "http://localhost:6333"
 const DEFAULT_OLLAMA_URL = "http://localhost:11434"
+const DEFAULT_GEMINI_URL = "https://generativelanguage.googleapis.com"
 
 interface CodeIndexPopoverProps {
 	children: React.ReactNode
@@ -125,6 +126,10 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 
 		case "gemini":
 			return baseSchema.extend({
+				codebaseIndexEmbedderBaseUrl: z
+					.string()
+					.url(t("settings:codeIndex.validation.invalidGeminiUrl"))
+					.optional(),
 				codebaseIndexGeminiApiKey: z.string().min(1, t("settings:codeIndex.validation.geminiApiKeyRequired")),
 				codebaseIndexEmbedderModelId: z
 					.string()
@@ -392,7 +397,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	}, [currentSettings, initialSettings])
 
 	const updateSetting = (key: keyof LocalCodeIndexSettings, value: any) => {
-		setCurrentSettings((prev) => ({ ...prev, [key]: value }))
+		setCurrentSettings((prev) => {
+			const updated = { ...prev, [key]: value }
+			return updated
+		})
 		// Clear validation error for this field when user starts typing
 		if (formErrors[key]) {
 			setFormErrors((prev) => {
@@ -944,6 +952,36 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 									{currentSettings.codebaseIndexEmbedderProvider === "gemini" && (
 										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.geminiBaseUrlLabel")}
+												</label>
+												<VSCodeTextField
+													value={currentSettings.codebaseIndexEmbedderBaseUrl || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexEmbedderBaseUrl", e.target.value)
+													}
+													onBlur={(e: any) => {
+														// Set default Gemini URL if field is empty
+														if (!e.target.value.trim()) {
+															updateSetting(
+																"codebaseIndexEmbedderBaseUrl",
+																DEFAULT_GEMINI_URL,
+															)
+														}
+													}}
+													placeholder={t("settings:codeIndex.geminiBaseUrlPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderBaseUrl,
+													})}
+												/>
+												{formErrors.codebaseIndexEmbedderBaseUrl && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderBaseUrl}
+													</p>
+												)}
+											</div>
+
 											<div className="space-y-2">
 												<label className="text-sm font-medium">
 													{t("settings:codeIndex.geminiApiKeyLabel")}

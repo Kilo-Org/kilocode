@@ -550,13 +550,11 @@ const CodeBlock = memo(
 			const handleMouseDown = (e: MouseEvent) => {
 				// Only trigger if clicking the pre element directly
 				if (e.currentTarget === preRef.current) {
-					console.log("[DEBUG] Mouse down on pre element, setting isSelecting=true")
 					setIsSelecting(true)
 				}
 			}
 
 			const handleMouseUp = () => {
-				console.log("[DEBUG] Mouse up, setting isSelecting=false")
 				setIsSelecting(false)
 			}
 

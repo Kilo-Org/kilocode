@@ -36,7 +36,6 @@ export function createBashCommandStream(command: string): CommandStream {
 				exitCode = 128 + signalNum // Signal exit codes are 128 + signal number
 			} else {
 				// Log error and default to 1 if signal not recognized
-				console.log(`[DEBUG] Unrecognized signal '${error.signal}' from command '${command}'`)
 				exitCode = 1
 			}
 		} else {
