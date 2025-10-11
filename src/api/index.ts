@@ -94,6 +94,8 @@ export interface ApiHandler {
 	 * @returns A promise resolving to the token count
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
+
+	contextWindow?: number
 }
 
 export function buildApiHandler(configuration: ProviderSettings): ApiHandler {

@@ -526,8 +526,8 @@ describe("VirtualQuotaFallbackProvider", () => {
 				expect(result).toEqual({
 					id: "unknown",
 					info: {
-						maxTokens: 100000,
-						contextWindow: 100000,
+						maxTokens: 1,
+						contextWindow: 1,
 						supportsPromptCache: false,
 					},
 				})

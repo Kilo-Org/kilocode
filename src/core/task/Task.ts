@@ -43,6 +43,7 @@ import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
 import { ApiStream, GroundingSource } from "../../api/transform/stream"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { VirtualQuotaFallbackHandler } from "../../api/providers/virtual-quota-fallback"
 
 // shared
 import { findLastIndex } from "../../shared/array"
@@ -366,6 +367,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.apiConfiguration = apiConfiguration
 		this.api = buildApiHandler(apiConfiguration)
+		if (this.api instanceof VirtualQuotaFallbackHandler) {
+			this.api.on("handlerChanged", () => {
+				this.emit("modelChanged")
+			})
+		}
 		this.autoApprovalHandler = new AutoApprovalHandler()
 
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
@@ -403,7 +409,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.messageQueueStateChangedHandler = () => {
 			this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
-			this.providerRef.deref()?.postStateToWebview()
+			this.emit("modelChanged")
 		}
 
 		this.messageQueueService.on("stateChanged", this.messageQueueStateChangedHandler)
@@ -2640,6 +2646,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const { profileThresholds = {} } = state ?? {}
 
 		const { contextTokens } = this.getTokenUsage()
+		if (this.api instanceof VirtualQuotaFallbackHandler) {
+			await this.api.initialize()
+		}
 		const modelInfo = this.api.getModel().info
 
 		const maxTokens = getModelMaxOutputTokens({
@@ -2648,7 +2657,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			settings: this.apiConfiguration,
 		})
 
-		const contextWindow = modelInfo.contextWindow
+		const contextWindow = this.api.contextWindow ?? modelInfo.contextWindow
 
 		// Get the current profile ID using the helper method
 		const currentProfileId = this.getCurrentProfileId(state)
@@ -2772,6 +2781,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const { contextTokens } = this.getTokenUsage()
 
 		if (contextTokens) {
+			if (this.api instanceof VirtualQuotaFallbackHandler) {
+				await this.api.initialize()
+				await this.api.adjustActiveHandler("Pre-Request Adjustment")
+			}
 			const modelInfo = this.api.getModel().info
 
 			const maxTokens = getModelMaxOutputTokens({
@@ -2780,7 +2793,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				settings: this.apiConfiguration,
 			})
 
-			const contextWindow = modelInfo.contextWindow
+			const contextWindow = this.api.contextWindow ?? modelInfo.contextWindow
 
 			// Get the current profile ID using the helper method
 			const currentProfileId = this.getCurrentProfileId(state)

@@ -253,6 +253,7 @@ export class ClineProvider
 			const onTaskUserMessage = (taskId: string) => this.emit(RooCodeEventName.TaskUserMessage, taskId)
 			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage) =>
 				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage)
+			const onModelChanged = () => this.postStateToWebview()
 
 			// Attach the listeners.
 			instance.on(RooCodeEventName.TaskStarted, onTaskStarted)
@@ -269,6 +270,7 @@ export class ClineProvider
 			instance.on(RooCodeEventName.TaskSpawned, onTaskSpawned)
 			instance.on(RooCodeEventName.TaskUserMessage, onTaskUserMessage)
 			instance.on(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated)
+			instance.on("modelChanged", onModelChanged)
 
 			// Store the cleanup functions for later removal.
 			this.taskEventListeners.set(instance, [
@@ -286,6 +288,7 @@ export class ClineProvider
 				() => instance.off(RooCodeEventName.TaskUnpaused, onTaskUnpaused),
 				() => instance.off(RooCodeEventName.TaskSpawned, onTaskSpawned),
 				() => instance.off(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated),
+				() => instance.off("modelChanged", onModelChanged),
 			])
 		}
 
@@ -1905,6 +1908,11 @@ export class ClineProvider
 			featureRoomoteControlEnabled,
 		} = await this.getState()
 
+		const virtualQuotaActiveModel =
+			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
+				: undefined
+
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
 		try {
@@ -2084,6 +2092,7 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			virtualQuotaActiveModel,
 		}
 	}
 
