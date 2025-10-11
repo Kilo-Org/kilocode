@@ -141,6 +141,7 @@
 			"modelIdRequired": "ID моделі є обов'язковим",
 			"modelDimensionRequired": "Розмірність моделі є обов'язковою",
 			"geminiApiKeyRequired": "Ключ API Gemini є обов'язковим",
+			"invalidGeminiUrl": "Недійсна URL-адреса Gemini",
 			"mistralApiKeyRequired": "Ключ API Mistral є обов'язковим",
 			"ollamaBaseUrlRequired": "Базовий URL Ollama є обов'язковим",
 			"baseUrlRequired": "Базовий URL є обов'язковим",

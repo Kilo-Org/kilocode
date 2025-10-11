@@ -121,6 +121,7 @@
 			"modelIdRequired": "Требуется идентификатор модели",
 			"modelDimensionRequired": "Требуется размерность модели",
 			"geminiApiKeyRequired": "Требуется ключ API Gemini",
+			"invalidGeminiUrl": "Неверный URL Gemini",
 			"mistralApiKeyRequired": "Требуется API-ключ Mistral",
 			"vercelAiGatewayApiKeyRequired": "Требуется API-ключ Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Требуется базовый URL Ollama",

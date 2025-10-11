@@ -121,6 +121,7 @@
 			"modelIdRequired": "모델 ID가 필요합니다",
 			"modelDimensionRequired": "모델 차원이 필요합니다",
 			"geminiApiKeyRequired": "Gemini API 키가 필요합니다",
+			"invalidGeminiUrl": "유효하지 않은 Gemini URL",
 			"mistralApiKeyRequired": "Mistral API 키가 필요합니다",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API 키가 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",

@@ -121,6 +121,7 @@
 			"modelIdRequired": "ID Model diperlukan",
 			"modelDimensionRequired": "Dimensi model diperlukan",
 			"geminiApiKeyRequired": "Kunci API Gemini diperlukan",
+			"invalidGeminiUrl": "URL Gemini tidak valid",
 			"mistralApiKeyRequired": "Kunci API Mistral diperlukan",
 			"vercelAiGatewayApiKeyRequired": "Kunci API Vercel AI Gateway diperlukan",
 			"ollamaBaseUrlRequired": "URL dasar Ollama diperlukan",

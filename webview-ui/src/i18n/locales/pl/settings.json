@@ -121,6 +121,7 @@
 			"modelIdRequired": "Wymagane jest ID modelu",
 			"modelDimensionRequired": "Wymagany jest wymiar modelu",
 			"geminiApiKeyRequired": "Wymagany jest klucz API Gemini",
+			"invalidGeminiUrl": "Nieprawidłowy adres URL Gemini",
 			"mistralApiKeyRequired": "Klucz API Mistral jest wymagany",
 			"vercelAiGatewayApiKeyRequired": "Klucz API Vercel AI Gateway jest wymagany",
 			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
