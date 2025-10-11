@@ -5,7 +5,7 @@ import type { ToolName, ClineAsk, ToolProgressStatus } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
-import type { ToolParamName, ToolResponse } from "../../shared/tools"
+import type { ToolParamName, ToolResponse, ToolUse } from "../../shared/tools"
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
@@ -42,6 +42,7 @@ import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 import { yieldPromise } from "../kilocode"
+import Anthropic from "@anthropic-ai/sdk"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -70,6 +71,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 		return
 	}
 
+	const toolCallEnabled = cline.apiConfiguration?.toolCallEnabled
 	cline.presentAssistantMessageLocked = true
 	cline.presentAssistantMessageHasPendingUpdates = false
 
@@ -266,22 +268,72 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			}
 
 			if (cline.didAlreadyUseTool) {
-				// Ignore any content after a tool has already been used.
-				cline.userMessageContent.push({
+				const rejectMessage: Anthropic.TextBlockParam = {
 					type: "text",
 					text: `Tool [${block.name}] was not executed because a tool has already been used in this message. Only one tool may be used per message. You must assess the first tool's result before proceeding to use the next tool.`,
-				})
+				}
+				if (!block.toolUseId) {
+					// Ignore any content after a tool has already been used.
+					cline.userMessageContent.push(rejectMessage)
+				} else {
+					cline.userMessageContent.push({
+						type: "tool_result",
+						tool_use_id: block.toolUseId,
+						content: [rejectMessage],
+					})
+				}
 
 				break
 			}
 
 			const pushToolResult = (content: ToolResponse) => {
-				cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
-
+				const newUserMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = [
+					{ type: "text", text: `${toolDescription()} Result:` },
+				]
 				if (typeof content === "string") {
-					cline.userMessageContent.push({ type: "text", text: content || "(tool did not return anything)" })
+					newUserMessages.push({ type: "text", text: content || "(tool did not return anything)" })
 				} else {
-					cline.userMessageContent.push(...content)
+					newUserMessages.push(...content)
+				}
+
+				let hasSet = false
+				if (toolCallEnabled) {
+					const lastToolUseMessage = cline.assistantMessageContent.find(
+						(msg) => msg.type === "tool_use" && block.toolUseId && msg.toolUseId === block.toolUseId,
+					) as ToolUse
+					if (lastToolUseMessage) {
+						const toolUseId = block.toolUseId!
+						let toolResultMessage = cline.userMessageContent.find(
+							(msg) => msg.type === "tool_result" && msg.tool_use_id === toolUseId,
+						)
+						if (toolResultMessage !== undefined && toolResultMessage.type === "tool_result") {
+							const content = toolResultMessage.content
+							const updateMessages: Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam> = []
+							if (typeof content === "string") {
+								updateMessages.push({ type: "text", text: content })
+							} else if (Array.isArray(content)) {
+								updateMessages.push(...content)
+							} else {
+								throw new Error(
+									"Unexpected tool result content type: " + JSON.stringify(toolResultMessage),
+								)
+							}
+							updateMessages.push(...newUserMessages)
+							toolResultMessage.content = updateMessages
+						} else {
+							const toolMessage: Anthropic.ToolResultBlockParam = {
+								tool_use_id: toolUseId,
+								type: "tool_result",
+								content: newUserMessages,
+							}
+							cline.userMessageContent.push(toolMessage)
+						}
+						hasSet = true
+					}
+				}
+
+				if (!hasSet) {
+					cline.userMessageContent.push(...newUserMessages)
 				}
 
 				// Once a tool result has been collected, ignore all other tool
@@ -493,7 +545,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				case "read_file":
 					// Check if this model should use the simplified single-file read tool
 					const modelId = cline.api.getModel().id
-					if (shouldUseSingleFileRead(modelId)) {
+					if (shouldUseSingleFileRead(modelId) && toolCallEnabled !== true) {
 						await simpleReadFileTool(
 							cline,
 							block,

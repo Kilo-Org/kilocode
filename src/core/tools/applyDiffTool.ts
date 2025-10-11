@@ -25,6 +25,47 @@ export async function applyDiffToolLegacy(
 	const relPath: string | undefined = block.params.path
 	let diffContent: string | undefined = block.params.diff
 
+	if (block.toolUseId && block.toolUseParam?.input) {
+		const input = block.toolUseParam?.input as any
+		const diffs = Array.isArray(input?.diff) ? input?.diff : undefined
+		if (diffs && diffs.length > 0) {
+			let tmpDiff = ""
+			if (block.partial) {
+				for (let i = 0; i < diffs.length; i++) {
+					const diff = diffs[i]
+					const startLine = diff?.start_line
+					const search = diff?.search
+					const replace = diff?.replace
+
+					if (startLine !== undefined) {
+						if (i > 0) {
+							tmpDiff += "\n>>>>>>> REPLACE\n\n"
+						}
+						tmpDiff += `<<<<<<< SEARCH\n:start_line:${startLine}`
+					}
+					if (startLine !== undefined && search !== undefined) {
+						tmpDiff += `\n-------\n${search}`
+					}
+					if (startLine !== undefined && search != undefined && replace !== undefined) {
+						tmpDiff += `\n=======\n${replace}`
+					}
+				}
+			} else {
+				for (let i = 0; i < diffs.length; i++) {
+					const diff = diffs[i]
+					const startLine = diff?.start_line
+					const search = diff?.search
+					const replace = diff?.replace
+					if (startLine !== undefined && search != undefined && replace !== undefined) {
+						tmpDiff += `<<<<<<< SEARCH\n:start_line:${startLine}\n-------\n${search}\n=======\n${replace}\n>>>>>>> REPLACE\n\n`
+					}
+				}
+			}
+			diffContent = tmpDiff
+			block.params.diff = diffContent
+		}
+	}
+
 	if (diffContent && !cline.api.getModel().id.includes("claude")) {
 		diffContent = unescapeHtmlEntities(diffContent)
 	}

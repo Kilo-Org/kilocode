@@ -164,4 +164,115 @@ describe("LmStudioHandler", () => {
 			expect(modelInfo.info.contextWindow).toBe(128_000)
 		})
 	})
+	describe("LmStudioHandler Tool Calling", () => {
+		let handler: LmStudioHandler
+		let mockOptions: ApiHandlerOptions
+
+		beforeEach(() => {
+			mockOptions = {
+				apiModelId: "local-model",
+				lmStudioModelId: "local-model",
+				lmStudioBaseUrl: "http://localhost:1234",
+			}
+			handler = new LmStudioHandler(mockOptions)
+			mockCreate.mockClear()
+		})
+
+		describe("createMessage with tool calls", () => {
+			const systemPrompt = "You are a helpful assistant."
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: "Hello!",
+				},
+			]
+
+			it("should include tool call parameters when tools are provided", async () => {
+				mockCreate.mockImplementation(async function* () {
+					yield {
+						choices: [
+							{
+								delta: { content: "Test response" },
+								index: 0,
+							},
+						],
+						usage: null,
+					}
+				})
+
+				const stream = handler.createMessage(systemPrompt, messages, {
+					tools: ["test_tool" as any],
+					taskId: "test-task-id",
+				})
+
+				// Consume the stream
+				for await (const _ of stream) {
+					//
+				}
+
+				expect(mockCreate).toHaveBeenCalledWith(
+					expect.objectContaining({
+						tools: expect.any(Array),
+						tool_choice: "auto",
+					}),
+				)
+			})
+
+			it("should yield tool_call chunks when model returns tool calls", async () => {
+				const toolCallChunk = {
+					choices: [
+						{
+							delta: {
+								tool_calls: [
+									{
+										index: 0,
+										id: "tool-call-1",
+										type: "function",
+										function: {
+											name: "test_tool",
+											arguments: '{"param1":"value1"}',
+										},
+									},
+								],
+							},
+							index: 0,
+						},
+					],
+				}
+				const finalChunk = {
+					choices: [
+						{
+							delta: {},
+							finish_reason: "tool_calls",
+						},
+					],
+					usage: {
+						prompt_tokens: 10,
+						completion_tokens: 5,
+						total_tokens: 15,
+					},
+				}
+
+				mockCreate.mockImplementation(async function* () {
+					yield toolCallChunk
+					yield finalChunk
+				})
+
+				const stream = handler.createMessage(systemPrompt, messages, {
+					tools: ["test_tool" as any],
+					taskId: "test-task-id",
+				})
+
+				const chunks: any[] = []
+				for await (const chunk of stream) {
+					chunks.push(chunk)
+				}
+
+				const toolCallChunks = chunks.filter((c) => c.type === "tool_call")
+				expect(toolCallChunks.length).toBe(1)
+				expect(toolCallChunks[0].toolCalls).toEqual(toolCallChunk.choices[0].delta.tool_calls)
+				expect(toolCallChunks[0].toolCallType).toBe("openai")
+			})
+		})
+	})
 })

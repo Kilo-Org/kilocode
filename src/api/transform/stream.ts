@@ -1,3 +1,5 @@
+import { ToolCallProviderType } from "../../shared/tools"
+
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
 export type ApiStreamChunk =
@@ -6,6 +8,7 @@ export type ApiStreamChunk =
 	| ApiStreamReasoningChunk
 	| ApiStreamGroundingChunk
 	| ApiStreamError
+	| ApiStreamToolCallChunk
 
 export interface ApiStreamError {
 	type: "error"
@@ -43,4 +46,10 @@ export interface GroundingSource {
 	title: string
 	url: string
 	snippet?: string
+}
+
+export interface ApiStreamToolCallChunk {
+	type: "tool_call"
+	toolCalls: any
+	toolCallType: ToolCallProviderType
 }

@@ -31,9 +31,13 @@ export async function listFilesTool(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
-	const relDirPath: string | undefined = block.params.path
+	let relDirPath: string | undefined = block.params.path
 	const recursiveRaw: string | undefined = block.params.recursive
 	const recursive = recursiveRaw?.toLowerCase() === "true"
+
+	if (block.toolUseId && relDirPath === "") {
+		relDirPath = "."
+	}
 
 	// Calculate if the path is outside workspace
 	const absolutePath = relDirPath ? path.resolve(cline.cwd, relDirPath) : cline.cwd

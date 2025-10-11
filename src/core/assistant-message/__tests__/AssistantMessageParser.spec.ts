@@ -392,3 +392,90 @@ describe("AssistantMessageParser (streaming)", () => {
 		})
 	})
 })
+
+describe("AssistantMessageParser (tool-call)", () => {
+	let parser: AssistantMessageParser
+
+	beforeEach(() => {
+		parser = new AssistantMessageParser()
+	})
+
+	it("should handle a tool use with toolCallParam providing a toolUseId", () => {
+		const message = "<read_file><path>src/file.ts</path></read_file>"
+		const toolCallParam: any = {
+			providerType: "openai",
+			toolName: "read_file",
+			toolUserId: "tool-use-id-123",
+			chunkContent: "",
+			originContent: [],
+		}
+		const result = parser.processChunk(message, toolCallParam)
+		const toolUse = result.find((block) => block.type === "tool_use") as ToolUse
+		expect(toolUse).toBeDefined()
+		expect(toolUse.toolUseId).toBe("tool-use-id-123")
+		expect(toolUse.name).toBe("read_file")
+		expect(toolUse.params.path).toBe("src/file.ts")
+	})
+
+	it("should handle a tool use with toolCallParam providing anthropicContent", () => {
+		const message = "<read_file><path>src/file.ts</path></read_file>"
+		const anthropicContent: any = {
+			id: "tool-use-id-456",
+			name: "read_file",
+			input: { path: "src/file.ts" },
+			type: "tool_use",
+		}
+		const toolCallParam: any = {
+			providerType: "openai",
+			toolName: "read_file",
+			toolUserId: "tool-use-id-456",
+			chunkContent: "",
+			originContent: [],
+			anthropicContent: anthropicContent,
+		}
+		const result = parser.processChunk(message, toolCallParam)
+		const toolUse = result.find((block) => block.type === "tool_use") as ToolUse
+		expect(toolUse).toBeDefined()
+		expect(toolUse.toolUseId).toBe("tool-use-id-456")
+		expect(toolUse.toolUseParam).toEqual(anthropicContent)
+		expect(toolUse.name).toBe("read_file")
+		expect(toolUse.params.path).toBe("src/file.ts")
+	})
+
+	it("should update toolUseParam when anthropicContent is provided mid-stream", () => {
+		const toolCallParam: any = {
+			providerType: "openai",
+			toolName: "read_file",
+			toolUserId: "tool-use-id-789",
+			chunkContent: "",
+			originContent: [],
+		}
+		parser.processChunk("<read_file>", toolCallParam)
+		const anthropicContent: any = {
+			id: "tool-use-id-789",
+			name: "read_file",
+			input: { path: "src/file.ts" },
+			type: "tool_use",
+		}
+		const result = parser.processChunk("<path>src/file.ts</path>", {
+			...toolCallParam,
+			anthropicContent: anthropicContent,
+		})
+		const toolUse = result.find((block) => block.type === "tool_use") as ToolUse
+		expect(toolUse).toBeDefined()
+		expect(toolUse.toolUseId).toBe("tool-use-id-789")
+		expect(toolUse.toolUseParam).toEqual(anthropicContent)
+		expect(toolUse.params.path).toBe("src/file.ts")
+	})
+
+	it("should parse a tool use without toolCallParam", () => {
+		const message = "<read_file><path>src/file.ts</path></read_file>"
+		const result = parser.processChunk(message)
+		const toolUse = result.find((block) => block.type === "tool_use") as ToolUse
+		expect(toolUse).toBeDefined()
+		expect(toolUse.toolUseId).toBeUndefined()
+		expect(toolUse.toolUseParam).toBeUndefined()
+		expect(toolUse.name).toBe("read_file")
+		expect(toolUse.params.path).toBe("src/file.ts")
+	})
+})

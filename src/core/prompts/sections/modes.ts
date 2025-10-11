@@ -5,8 +5,12 @@ import { promises as fs } from "fs"
 import type { ModeConfig } from "@roo-code/types"
 
 import { getAllModesWithPrompts } from "../../../shared/modes"
+import { SystemPromptSettings } from "../types"
 
-export async function getModesSection(context: vscode.ExtensionContext): Promise<string> {
+export async function getModesSection(
+	context: vscode.ExtensionContext,
+	settings?: SystemPromptSettings,
+): Promise<string> {
 	const settingsDir = path.join(context.globalStorageUri.fsPath, "settings")
 	await fs.mkdir(settingsDir, { recursive: true })
 
@@ -33,11 +37,14 @@ ${allModes
 	.join("\n")}`
 
 	modesContent += `
-If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool, like this:
+If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool`
+	if (settings?.toolCallEnabled !== true) {
+		modesContent += `, like this:
 <fetch_instructions>
 <task>create_mode</task>
 </fetch_instructions>
 `
+	}
 
 	return modesContent
 }

@@ -730,6 +730,10 @@
 		"todoList": {
 			"label": "Włącz narzędzie listy zadań",
 			"description": "Po włączeniu Kilo Code może tworzyć i zarządzać listami zadań do śledzenia postępu zadań. Pomaga to organizować złożone zadania w łatwe do zarządzania kroki."
+		},
+		"toolCall": {
+			"label": "Włącz wywołania narzędzi",
+			"description": "Po włączeniu Kilo Code może używać wywołań narzędzi zamiast opartych na XML promptów wywołania narzędzi. Funkcja eksperymentalna!!!"
 		}
 	},
 	"experimental": {

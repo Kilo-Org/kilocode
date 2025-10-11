@@ -12,7 +12,7 @@ import { formatResponse } from "../prompts/responses"
 import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
-import { parseXmlForDiff } from "../../utils/xml"
+import { parseXml, parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "./applyDiffTool"
 
@@ -105,14 +105,21 @@ export async function applyDiffTool(
 		return
 	}
 
-	if (argsXmlTag) {
+	if (argsXmlTag || block.toolUseId) {
 		// Parse file entries from XML (new way)
 		try {
-			// IMPORTANT: We use parseXmlForDiff here instead of parseXml to prevent HTML entity decoding
-			// This ensures exact character matching when comparing parsed content against original file content
-			// Without this, special characters like & would be decoded to &amp; causing diff mismatches
-			const parsed = parseXmlForDiff(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
-			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
+			let files = [] as any[]
+			if (argsXmlTag && !block.toolUseId) {
+				// IMPORTANT: We use parseXmlForDiff here instead of parseXml to prevent HTML entity decoding
+				// This ensures exact character matching when comparing parsed content against original file content
+				// Without this, special characters like & would be decoded to &amp; causing diff mismatches
+				const parsed = parseXmlForDiff(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
+				files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
+			} else {
+				const input = block.toolUseParam?.input as any
+				const args = input
+				files = Array.isArray(args?.file) ? args?.file : [args?.file].filter(Boolean)
+			}
 
 			for (const file of files) {
 				if (!file.path || !file.diff) continue
@@ -135,8 +142,33 @@ export async function applyDiffTool(
 					let diffContent: string
 					let startLine: number | undefined
 
-					// Ensure content is a string before storing it
-					diffContent = typeof diff.content === "string" ? diff.content : ""
+					if (block.toolUseId) {
+						if (!diff.content) {
+							const search = diff?.search
+							const replace = diff?.replace
+							diffContent = ""
+							if (block.partial) {
+								if (search !== undefined) {
+									diffContent += `<![CDATA[\n<<<<<<< SEARCH\n${search}\n`
+								}
+								if (search !== undefined && replace !== undefined) {
+									diffContent += `=======\n${replace}\n>>>>>>> REPLACE\n]]>`
+								}
+							} else {
+								if (search !== undefined && replace !== undefined) {
+									diffContent += `<![CDATA[\n<<<<<<< SEARCH\n${search}\n=======\n${replace}\n>>>>>>> REPLACE\n]]>`
+								} else {
+									continue
+								}
+							}
+						} else {
+							const content = diff.content
+							diffContent = `<![CDATA[\n${content}\n]]>`
+						}
+					} else {
+						// Ensure content is a string before storing it
+						diffContent = typeof diff.content === "string" ? diff.content : ""
+					}
 					startLine = diff.start_line ? parseInt(diff.start_line) : undefined
 
 					// Only add to operations if we have valid content

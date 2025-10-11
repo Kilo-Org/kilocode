@@ -15,9 +15,13 @@ export async function searchFilesTool(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
-	const relDirPath: string | undefined = block.params.path
+	let relDirPath: string | undefined = block.params.path
 	const regex: string | undefined = block.params.regex
 	const filePattern: string | undefined = block.params.file_pattern
+
+	if (block.toolUseId && relDirPath === "") {
+		relDirPath = "."
+	}
 
 	const absolutePath = relDirPath ? path.resolve(cline.cwd, relDirPath) : cline.cwd
 	const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)

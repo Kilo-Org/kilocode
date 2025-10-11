@@ -729,6 +729,10 @@
 		"todoList": {
 			"label": "Habilitar herramienta de lista de tareas",
 			"description": "Cuando está habilitado, Kilo Code puede crear y gestionar listas de tareas para hacer seguimiento del progreso. Esto ayuda a organizar tareas complejas en pasos manejables."
+		},
+		"toolCall": {
+			"label": "Habilitar llamadas de herramientas",
+			"description": "Cuando está habilitado, Kilo Code puede usar llamadas de herramientas en lugar de prompts de llamada de herramientas basados en XML. ¡¡¡Función experimental!!!"
 		}
 	},
 	"experimental": {

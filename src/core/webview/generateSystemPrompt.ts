@@ -9,6 +9,7 @@ import { MultiSearchReplaceDiffStrategy } from "../diff/strategies/multi-search-
 import { MultiFileSearchReplaceDiffStrategy } from "../diff/strategies/multi-file-search-replace"
 
 import { ClineProvider } from "./ClineProvider"
+import { supportToolCall } from "../../shared/tools"
 
 export const generateSystemPrompt = async (provider: ClineProvider, message: WebviewMessage) => {
 	const state = await provider.getState() // kilocode_change
@@ -88,6 +89,8 @@ export const generateSystemPrompt = async (provider: ClineProvider, message: Web
 			maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 			todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
 			useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
+			toolCallEnabled:
+				(apiConfiguration?.toolCallEnabled ?? false) && supportToolCall(apiConfiguration.apiProvider),
 			newTaskRequireTodos: vscode.workspace
 				.getConfiguration("kilo-code")
 				.get<boolean>("newTaskRequireTodos", false),

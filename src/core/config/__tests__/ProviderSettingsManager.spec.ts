@@ -68,6 +68,7 @@ describe("ProviderSettingsManager", () => {
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
+						toolCallEnabledMigrated: true,
 					},
 				}),
 			)

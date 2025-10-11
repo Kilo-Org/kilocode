@@ -126,11 +126,17 @@ export async function readFileTool(
 
 	const fileEntries: FileEntry[] = []
 
-	if (argsXmlTag) {
+	if (argsXmlTag || block.toolUseId) {
 		// Parse file entries from XML (new multi-file format)
 		try {
-			const parsed = parseXml(argsXmlTag) as any
-			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
+			let files: any[] = []
+			if (argsXmlTag && !block.toolUseId) {
+				const parsed = parseXml(argsXmlTag) as any
+				files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
+			} else {
+				const params: any = block.toolUseParam?.input
+				files = params?.file || []
+			}
 
 			for (const file of files) {
 				if (!file.path) continue // Skip if no path in a file entry

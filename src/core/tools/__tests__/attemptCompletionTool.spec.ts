@@ -6,6 +6,7 @@ import { AttemptCompletionToolUse } from "../../../shared/tools"
 vi.mock("../../prompts/responses", () => ({
 	formatResponse: {
 		toolError: vi.fn((msg: string) => `Error: ${msg}`),
+		imageBlocks: vi.fn(() => []),
 	},
 }))
 
@@ -30,9 +31,18 @@ vi.mock("../../../shared/package", () => ({
 	},
 }))
 
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureTaskCompleted: vi.fn(),
+		},
+	},
+}))
+
 import { attemptCompletionTool } from "../attemptCompletionTool"
 import { Task } from "../../task/Task"
 import * as vscode from "vscode"
+import { TelemetryService } from "@roo-code/telemetry"
 
 describe("attemptCompletionTool", () => {
 	let mockTask: Partial<Task>
@@ -412,6 +422,58 @@ describe("attemptCompletionTool", () => {
 			expect(mockPushToolResult).not.toHaveBeenCalledWith(
 				expect.stringContaining("Cannot complete task while there are incomplete todos"),
 			)
+		})
+	})
+
+	describe("when toolCallEnabled is true", () => {
+		it('should push a "tool_result" message when toolCallEnabled is true and toolUseId is present', async () => {
+			mockTask = {
+				consecutiveMistakeCount: 0,
+				recordToolError: vi.fn(),
+				todoList: undefined,
+				apiConfiguration: {
+					toolCallEnabled: true,
+				},
+				userMessageContent: [],
+				clineMessages: [],
+				say: vi.fn(),
+				getTokenUsage: vi.fn(),
+				emit: vi.fn(),
+			}
+			mockTask.ask = vi.fn().mockResolvedValue({ response: "", text: "success", images: [] })
+			const block: AttemptCompletionToolUse = {
+				type: "tool_use",
+				name: "attempt_completion",
+				params: { result: "Task completed successfully" },
+				partial: false,
+				toolUseId: "tool-use-id-123",
+			}
+			mockToolDescription.mockReturnValue("ToolDescription")
+
+			await attemptCompletionTool(
+				mockTask as Task,
+				block,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+				mockToolDescription,
+				mockAskFinishSubTaskApproval,
+			)
+
+			expect(mockTask.userMessageContent).toEqual([
+				{
+					type: "tool_result",
+					tool_use_id: "tool-use-id-123",
+					content: [
+						{ type: "text", text: "ToolDescription Result:" },
+						{
+							type: "text",
+							text: "The user has provided feedback on the results. Consider their input to continue the task, and then attempt completion again.\n<feedback>\nsuccess\n</feedback>",
+						},
+					],
+				},
+			])
 		})
 	})
 })

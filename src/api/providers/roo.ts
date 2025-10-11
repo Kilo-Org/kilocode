@@ -85,6 +85,10 @@ export class RooHandler extends BaseOpenAiCompatibleProvider<RooModelId> {
 					}
 				}
 
+				if (delta?.tool_calls) {
+					yield { type: "tool_call", toolCalls: delta.tool_calls, toolCallType: "openai" }
+				}
+
 				if ("reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield {
 						type: "reasoning",

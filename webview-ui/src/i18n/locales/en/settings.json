@@ -756,6 +756,10 @@
 		"todoList": {
 			"label": "Enable todo list tool",
 			"description": "When enabled, Kilo Code can create and manage todo lists to track task progress. This helps organize complex tasks into manageable steps."
+		},
+		"toolCall": {
+			"label": "Enable tool calling",
+			"description": "When enabled, Kilo Code can use tool call instead of XML-based tool calling prompt. Experimental!!!"
 		}
 	},
 	"experimental": {

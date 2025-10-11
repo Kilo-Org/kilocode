@@ -1,6 +1,7 @@
 import { type ToolName, toolNames } from "@roo-code/types"
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
+import { ToolCallParam } from "../task/tool-call-helper"
 
 /**
  * Parser for assistant messages. Maintains state between chunks
@@ -51,7 +52,7 @@ export class AssistantMessageParser {
 	 * Process a new chunk of text and update the parser state.
 	 * @param chunk The new chunk of text to process.
 	 */
-	public processChunk(chunk: string): AssistantMessageContent[] {
+	public processChunk(chunk: string, toolCallParam?: ToolCallParam): AssistantMessageContent[] {
 		if (this.accumulator.length + chunk.length > this.MAX_ACCUMULATOR_SIZE) {
 			throw new Error("Assistant message exceeds maximum allowed size")
 		}
@@ -62,6 +63,9 @@ export class AssistantMessageParser {
 			const char = chunk[i]
 			this.accumulator += char
 			const currentPosition = accumulatorStartLength + i
+			if (this.currentToolUse && toolCallParam?.anthropicContent) {
+				this.currentToolUse.toolUseParam = toolCallParam.anthropicContent
+			}
 
 			// There should not be a param without a tool use.
 			if (this.currentToolUse && this.currentParamName) {
@@ -174,6 +178,11 @@ export class AssistantMessageParser {
 						name: extractedToolName as ToolName,
 						params: {},
 						partial: true,
+						toolUseId: toolCallParam && toolCallParam.toolUserId ? toolCallParam.toolUserId : undefined,
+						toolUseParam:
+							toolCallParam && toolCallParam?.anthropicContent
+								? toolCallParam?.anthropicContent
+								: undefined,
 					}
 
 					this.currentToolUseStartIndex = this.accumulator.length

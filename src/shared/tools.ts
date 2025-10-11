@@ -84,7 +84,18 @@ export interface ToolUse {
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
+	toolUseId?: string // only toolCallEnabled=true
+	toolUseParam?: Anthropic.ToolUseBlockParam
 }
+
+export const supportToolCall = (provider: string | null | undefined) => {
+	if (provider === null || provider === undefined) {
+		return false
+	}
+	return ["openrouter", "openai", "deepseek", "lmstudio", "roo", "kilocode"].includes(provider)
+}
+
+export type ToolCallProviderType = "openai" | "anthropic"
 
 export interface ExecuteCommandToolUse extends ToolUse {
 	name: "execute_command"

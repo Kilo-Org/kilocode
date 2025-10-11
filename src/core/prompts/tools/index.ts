@@ -1,8 +1,8 @@
 import type { ToolName, ModeConfig } from "@roo-code/types"
 
-import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
+import { DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
-import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../shared/modes"
+import { Mode } from "../../../shared/modes"
 
 import { ToolArgs } from "./types"
 import { getExecuteCommandDescription } from "./execute-command"
@@ -28,6 +28,8 @@ import { getUpdateTodoListDescription } from "./update-todo-list"
 import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
 import { CodeIndexManager } from "../../../services/code-index/manager"
+import { getToolRegistry } from "./schemas/tool-registry"
+import { getToolAvailability, type ToolAvailabilityArgs } from "./tool-availability"
 
 // kilocode_change start: Morph fast apply
 import { isFastApplyAvailable } from "../../tools/editFileTool"
@@ -85,13 +87,15 @@ export function getToolDescriptionsForMode(
 	modelId?: string,
 	clineProviderState?: ClineProviderState, // kilocode_change
 ): string {
-	const config = getModeConfig(mode, customModes)
-	const args: ToolArgs = {
+	const toolAvailabilityArgs: ToolAvailabilityArgs = {
+		mode,
 		cwd,
 		supportsComputerUse,
+		codeIndexManager,
 		diffStrategy,
 		browserViewportSize,
 		mcpHub,
+		customModes,
 		partialReadsEnabled,
 		settings: {
 			...settings,
@@ -99,77 +103,24 @@ export function getToolDescriptionsForMode(
 			modelId,
 		},
 		experiments,
+		clineProviderState: clineProviderState!, // kilocode_change
 	}
 
-	const tools = new Set<string>()
+	const { xmlTools } = getToolAvailability(toolAvailabilityArgs)
 
-	// Add tools from mode's groups
-	config.groups.forEach((groupEntry) => {
-		const groupName = getGroupName(groupEntry)
-		const toolGroup = TOOL_GROUPS[groupName]
-		if (toolGroup) {
-			toolGroup.tools.forEach((tool) => {
-				if (
-					isToolAllowedForMode(
-						tool as ToolName,
-						mode,
-						customModes ?? [],
-						undefined,
-						undefined,
-						experiments ?? {},
-					)
-				) {
-					tools.add(tool)
-				}
-			})
-		}
-	})
-
-	// Add always available tools
-	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
-
-	// Conditionally exclude codebase_search if feature is disabled or not configured
-	if (
-		!codeIndexManager ||
-		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
-	) {
-		tools.delete("codebase_search")
+	if (xmlTools.length === 0) {
+		return ""
 	}
 
-	// kilocode_change start: Morph fast apply
-	if (isFastApplyAvailable(clineProviderState)) {
-		// When Morph is enabled, disable traditional editing tools
-		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
-		traditionalEditingTools.forEach((tool) => tools.delete(tool))
-	} else {
-		tools.delete("edit_file")
-	}
-	// kilocode_change end
-
-	// Conditionally exclude update_todo_list if disabled in settings
-	if (settings?.todoListEnabled === false) {
-		tools.delete("update_todo_list")
-	}
-
-	// Conditionally exclude generate_image if experiment is not enabled
-	if (!experiments?.imageGeneration) {
-		tools.delete("generate_image")
-	}
-
-	// Conditionally exclude run_slash_command if experiment is not enabled
-	if (!experiments?.runSlashCommand) {
-		tools.delete("run_slash_command")
-	}
-
-	// Map tool descriptions for allowed tools
-	const descriptions = Array.from(tools).map((toolName) => {
+	// Map tool descriptions for XML tools only
+	const descriptions = xmlTools.map((toolName) => {
 		const descriptionFn = toolDescriptionMap[toolName]
 		if (!descriptionFn) {
 			return undefined
 		}
 
 		return descriptionFn({
-			...args,
+			...toolAvailabilityArgs,
 			toolOptions: undefined, // No tool options in group-based approach
 		})
 	})

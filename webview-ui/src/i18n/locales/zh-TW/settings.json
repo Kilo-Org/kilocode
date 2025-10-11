@@ -731,6 +731,10 @@
 		"todoList": {
 			"label": "啟用待辦事項清單工具",
 			"description": "啟用後，Kilo Code 可以建立和管理待辦事項清單來追蹤任務進度。這有助於將複雜任務組織成可管理的步驟。"
+		},
+		"toolCall": {
+			"label": "啟用工具呼叫",
+			"description": "啟用後，Kilo Code 可以使用工具呼叫而不是基於 XML 的工具呼叫提示。實驗性功能！！！"
 		}
 	},
 	"experimental": {

@@ -1,5 +1,6 @@
 import { getToolUseGuidelinesSection } from "../tool-use-guidelines"
 import type { CodeIndexManager } from "../../../../services/code-index/manager"
+import type { SystemPromptSettings } from "../../types"
 
 describe("getToolUseGuidelinesSection", () => {
 	// Mock CodeIndexManager with codebase search available
@@ -38,7 +39,25 @@ describe("getToolUseGuidelinesSection", () => {
 			expect(guidelines).toContain("2. **CRITICAL:")
 			expect(guidelines).toContain("3. Choose the most appropriate tool")
 			expect(guidelines).toContain("4. If multiple actions are needed")
-			expect(guidelines).toContain("5. Formulate your tool use")
+			const guidelinesWithToolCall = getToolUseGuidelinesSection(mockCodeIndexManagerEnabled, {
+				toolCallEnabled: true,
+				maxConcurrentFileReads: 5,
+				todoListEnabled: true,
+				useAgentRules: true,
+				newTaskRequireTodos: true,
+			})
+
+			expect(guidelinesWithToolCall).not.toContain("5. Formulate your tool use")
+
+			const guidelinesWithoutToolCall = getToolUseGuidelinesSection(mockCodeIndexManagerEnabled, {
+				toolCallEnabled: false,
+				maxConcurrentFileReads: 5,
+				todoListEnabled: true,
+				useAgentRules: true,
+				newTaskRequireTodos: true,
+			})
+
+			expect(guidelinesWithoutToolCall).toContain("5. Formulate your tool use")
 			expect(guidelines).toContain("6. After each tool use")
 			expect(guidelines).toContain("7. ALWAYS wait for user confirmation")
 		})
@@ -62,7 +81,25 @@ describe("getToolUseGuidelinesSection", () => {
 			expect(guidelines).toContain("1. Assess what information")
 			expect(guidelines).toContain("2. Choose the most appropriate tool")
 			expect(guidelines).toContain("3. If multiple actions are needed")
-			expect(guidelines).toContain("4. Formulate your tool use")
+			const guidelinesWithToolCall = getToolUseGuidelinesSection(mockCodeIndexManagerDisabled, {
+				toolCallEnabled: true,
+				maxConcurrentFileReads: 5,
+				todoListEnabled: true,
+				useAgentRules: true,
+				newTaskRequireTodos: true,
+			})
+
+			expect(guidelinesWithToolCall).not.toContain("4. Formulate your tool use")
+
+			const guidelinesWithoutToolCall = getToolUseGuidelinesSection(mockCodeIndexManagerDisabled, {
+				toolCallEnabled: false,
+				maxConcurrentFileReads: 5,
+				todoListEnabled: true,
+				useAgentRules: true,
+				newTaskRequireTodos: true,
+			})
+
+			expect(guidelinesWithoutToolCall).toContain("4. Formulate your tool use")
 			expect(guidelines).toContain("5. After each tool use")
 			expect(guidelines).toContain("6. ALWAYS wait for user confirmation")
 		})

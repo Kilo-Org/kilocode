@@ -33,7 +33,19 @@ export async function askFollowupQuestionTool(
 				suggest: [] as Suggest[],
 			}
 
-			if (follow_up) {
+			// Handle native tool call format (follow_up is already parsed as an array by native function calling)
+			if (block.toolUseId && block.toolUseParam) {
+				const params = block.toolUseParam?.input as any
+				const followUpArray = params?.follow_up as Array<{ text?: string; mode?: string }>
+
+				follow_up_json.suggest = followUpArray.map((item) => {
+					const result: Suggest = { answer: item.text || "" }
+					if (item.mode) {
+						result.mode = item.mode
+					}
+					return result
+				})
+			} else if (follow_up) {
 				// Define the actual structure returned by the XML parser
 				type ParsedSuggestion = string | { "#text": string; "@_mode"?: string }
 

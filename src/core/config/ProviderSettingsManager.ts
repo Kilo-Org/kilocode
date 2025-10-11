@@ -48,6 +48,7 @@ export const providerProfilesSchema = z.object({
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
 			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
+			toolCallEnabledMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -72,6 +73,7 @@ export class ProviderSettingsManager {
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			toolCallEnabledMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -176,6 +178,11 @@ export class ProviderSettingsManager {
 				if (!providerProfiles.migrations.todoListEnabledMigrated) {
 					await this.migrateTodoListEnabled(providerProfiles)
 					providerProfiles.migrations.todoListEnabledMigrated = true
+					isDirty = true
+				}
+				if (!providerProfiles.migrations.toolCallEnabledMigrated) {
+					await this.migrateToolCallEnabled(providerProfiles)
+					providerProfiles.migrations.toolCallEnabledMigrated = true
 					isDirty = true
 				}
 
@@ -301,6 +308,17 @@ export class ProviderSettingsManager {
 			}
 		} catch (error) {
 			console.error(`[MigrateTodoListEnabled] Failed to migrate todo list enabled setting:`, error)
+		}
+	}
+	private async migrateToolCallEnabled(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				if (apiConfig.toolCallEnabled === undefined) {
+					apiConfig.toolCallEnabled = false
+				}
+			}
+		} catch (error) {
+			console.error(`[migrateToolCallEnabled] Failed to migrate tool call enabled setting:`, error)
 		}
 	}
 

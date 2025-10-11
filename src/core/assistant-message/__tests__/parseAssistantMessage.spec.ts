@@ -4,6 +4,8 @@ import { TextContent, ToolUse } from "../../../shared/tools"
 
 import { AssistantMessageContent, parseAssistantMessage as parseAssistantMessageV1 } from "../parseAssistantMessage"
 import { parseAssistantMessageV2 } from "../parseAssistantMessageV2"
+import { ToolCallParam } from "../../task/tool-call-helper"
+import { parseAssistantMessage } from "../parseAssistantMessage"
 
 const isEmptyTextContent = (block: AssistantMessageContent) =>
 	block.type === "text" && (block as TextContent).content === ""
@@ -336,5 +338,60 @@ const isEmptyTextContent = (block: AssistantMessageContent) =>
 				expect((result[5] as ToolUse).name).toBe("execute_command")
 			})
 		})
+	})
+})
+
+describe("parseAssistantMessage with toolCallParam", () => {
+	it("should assign toolUseId and toolUseParam when toolCallParam is provided", () => {
+		const message = "<read_file><path>src/file.ts</path></read_file>"
+		const toolCallParam: ToolCallParam = {
+			providerType: "anthropic",
+			toolName: "read_file",
+			chunkContent: "",
+			originContent: [],
+			toolUserId: "test-id",
+			anthropicContent: {
+				type: "tool_use",
+				id: "test-id",
+				name: "read_file",
+				input: {
+					path: "src/file.ts",
+				},
+			},
+		}
+
+		const result = parseAssistantMessage(message, toolCallParam)
+		const toolUse = result.find((c) => c.type === "tool_use") as ToolUse
+
+		expect(toolUse).toBeDefined()
+		expect(toolUse.toolUseId).toBe("test-id")
+		expect(toolUse.toolUseParam).toEqual(toolCallParam.anthropicContent)
+	})
+
+	it("should correctly assign toolUseParam during streaming", () => {
+		const message = "<read_file><path>src/file.ts</path>" // Partial message
+		const toolCallParam: ToolCallParam = {
+			providerType: "anthropic",
+			toolName: "read_file",
+			chunkContent: "",
+			originContent: [],
+			toolUserId: "test-id-2",
+			anthropicContent: {
+				type: "tool_use",
+				id: "test-id-2",
+				name: "read_file",
+				input: {
+					path: "src/file.ts",
+				},
+			},
+		}
+
+		const result = parseAssistantMessage(message, toolCallParam)
+		const toolUse = result.find((c) => c.type === "tool_use") as ToolUse
+
+		expect(toolUse).toBeDefined()
+		expect(toolUse.partial).toBe(true)
+		expect(toolUse.toolUseId).toBe("test-id-2")
+		expect(toolUse.toolUseParam).toEqual(toolCallParam.anthropicContent)
 	})
 })

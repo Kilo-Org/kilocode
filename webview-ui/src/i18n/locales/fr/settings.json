@@ -729,6 +729,10 @@
 		"todoList": {
 			"label": "Activer l'outil de liste de tâches",
 			"description": "Lorsqu'activé, Kilo Code peut créer et gérer des listes de tâches pour suivre la progression. Cela aide à organiser les tâches complexes en étapes gérables."
+		},
+		"toolCall": {
+			"label": "Activer l'appel d'outils",
+			"description": "Lorsqu'activé, Kilo Code peut utiliser l'appel d'outils au lieu des invites d'appel d'outils basées sur XML. Fonctionnalité expérimentale !!!"
 		}
 	},
 	"experimental": {

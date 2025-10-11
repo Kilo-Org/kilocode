@@ -399,4 +399,124 @@ new content
 			expect(mockHandleError).not.toHaveBeenCalled()
 		})
 	})
+	describe("when tool call is enabled", () => {
+		beforeEach(() => {
+			mockProvider.getState.mockResolvedValue({
+				experiments: {
+					[EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF]: true,
+				},
+				apiConfiguration: {
+					toolCallEnabled: true,
+				},
+				diagnosticsEnabled: true,
+				writeDelayMs: 0,
+			})
+		})
+		it("should handle diff with content", async () => {
+			mockBlock = {
+				params: {},
+				toolUseParam: {
+					input: {
+						args: {
+							file: [
+								{
+									path: "test.ts",
+									diff: [
+										{
+											content:
+												"<<<<<<< SEARCH\nold content\n=======\nnew content\n>>>>>>> REPLACE",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				partial: false,
+			}
+
+			await applyDiffTool(
+				mockCline,
+				mockBlock,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalled()
+			expect(mockHandleError).not.toHaveBeenCalled()
+		})
+
+		it("should handle diff with search and replace", async () => {
+			mockBlock = {
+				params: {},
+				toolUseParam: {
+					input: {
+						args: {
+							file: [
+								{
+									path: "test.ts",
+									diff: [
+										{
+											search: "old content",
+											replace: "new content",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+				partial: false,
+			}
+
+			await applyDiffTool(
+				mockCline,
+				mockBlock,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalled()
+			expect(mockHandleError).not.toHaveBeenCalled()
+		})
+
+		it("should handle diff with search but no replace", async () => {
+			mockBlock = {
+				params: {},
+				toolUseParam: {
+					input: {
+						args: {
+							file: [
+								{
+									path: "test.ts",
+									diff: [
+										{
+											search: "old content",
+										},
+									],
+								},
+							],
+						},
+					},
+				},
+
+				partial: false,
+			}
+
+			await applyDiffTool(
+				mockCline,
+				mockBlock,
+				mockAskApproval,
+				mockHandleError,
+				mockPushToolResult,
+				mockRemoveClosingTag,
+			)
+
+			expect(mockPushToolResult).toHaveBeenCalled()
+		})
+	})
 })

@@ -730,6 +730,10 @@
 		"todoList": {
 			"label": "Takenlijst-tool inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code takenlijsten maken en beheren om de voortgang van taken bij te houden. Dit helpt complexe taken te organiseren in beheersbare stappen."
+		},
+		"toolCall": {
+			"label": "Tool-aanroepen inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code tool-aanroepen gebruiken in plaats van XML-gebaseerde tool-aanroep prompts. Experimentele functie!!!"
 		}
 	},
 	"experimental": {

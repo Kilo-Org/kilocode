@@ -729,6 +729,10 @@
 		"todoList": {
 			"label": "Habilitar eina de llista de tasques",
 			"description": "Quan està habilitat, Kilo Code pot crear i gestionar llistes de tasques per fer el seguiment del progrés de les tasques. Això ajuda a organitzar tasques complexes en passos manejables."
+		},
+		"toolCall": {
+			"label": "Habilitar crides d'eines",
+			"description": "Quan està habilitat, Kilo Code pot utilitzar crides d'eines en lloc de prompts de crides d'eines basats en XML. Funcionalitat experimental!!!"
 		}
 	},
 	"experimental": {

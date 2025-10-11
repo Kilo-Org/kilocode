@@ -152,7 +152,12 @@ export async function writeToFileTool(
 
 				pushToolResult(
 					formatResponse.toolError(
-						formatResponse.lineCountTruncationError(actualLineCount, isNewFile, diffStrategyEnabled),
+						formatResponse.lineCountTruncationError(
+							actualLineCount,
+							isNewFile,
+							diffStrategyEnabled,
+							cline?.apiConfiguration?.toolCallEnabled === true,
+						),
 					),
 				)
 				await cline.diffViewProvider.revertChanges()

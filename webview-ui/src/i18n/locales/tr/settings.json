@@ -731,6 +731,10 @@
 		"todoList": {
 			"label": "Yapılacaklar listesi aracını etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code görev ilerlemesini takip etmek için yapılacaklar listeleri oluşturabilir ve yönetebilir. Bu, karmaşık görevleri yönetilebilir adımlara organize etmeye yardımcı olur."
+		},
+		"toolCall": {
+			"label": "Araç çağrılarını etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code XML tabanlı araç çağrı komutları yerine araç çağrılarını kullanabilir. Deneysel özellik!!!"
 		}
 	},
 	"experimental": {

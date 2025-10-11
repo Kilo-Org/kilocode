@@ -808,6 +808,10 @@
 		"todoList": {
 			"label": "Povolit nástroj seznamu úkolů",
 			"description": "Pokud je povoleno, Kilo Code může vytvářet a spravovat seznamy úkolů pro sledování průběhu úkolu. To pomáhá organizovat složité úkoly do zvládnutelných kroků."
+		},
+		"toolCall": {
+			"label": "Povolit volání nástrojů",
+			"description": "Pokud je povoleno, Kilo Code může používat volání nástrojů místo XML-based volání. Experimentální!!!"
 		}
 	},
 	"experimental": {

@@ -731,6 +731,10 @@
 		"todoList": {
 			"label": "启用任务清单工具",
 			"description": "启用后，Kilo Code 可以创建和管理任务清单来跟踪任务进度。这有助于将复杂任务组织成可管理的步骤。"
+		},
+		"toolCall": {
+			"label": "启用工具调用",
+			"description": "启用后，Kilo Code 可以使用工具调用而不是基于 XML 的工具调用提示。实验性功能！！！"
 		}
 	},
 	"experimental": {

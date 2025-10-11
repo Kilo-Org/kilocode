@@ -730,6 +730,10 @@
 		"todoList": {
 			"label": "Aktifkan alat daftar tugas",
 			"description": "Saat diaktifkan, Kilo Code dapat membuat dan mengelola daftar tugas untuk melacak kemajuan tugas. Ini membantu mengatur tugas kompleks menjadi langkah-langkah yang dapat dikelola."
+		},
+		"toolCall": {
+			"label": "Aktifkan panggilan alat",
+			"description": "Saat diaktifkan, Kilo Code dapat menggunakan panggilan alat daripada prompt panggilan alat berbasis XML. Fitur eksperimental!!!"
 		}
 	},
 	"experimental": {

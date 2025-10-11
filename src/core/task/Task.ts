@@ -42,6 +42,8 @@ import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 // api
 import { ApiHandler, ApiHandlerCreateMessageMetadata, buildApiHandler } from "../../api"
 import { ApiStream, GroundingSource } from "../../api/transform/stream"
+import { getGroupName } from "../../shared/modes"
+import { getToolAvailability, type ToolAvailabilityArgs } from "../prompts/tools/tool-availability"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
 
 // shared
@@ -52,8 +54,8 @@ import { t } from "../../i18n"
 import { ClineApiReqCancelReason, ClineApiReqInfo } from "../../shared/ExtensionMessage"
 import { getApiMetrics, hasTokenUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
-import { defaultModeSlug } from "../../shared/modes"
-import { DiffStrategy } from "../../shared/tools"
+import { defaultModeSlug, modes, getModeBySlug } from "../../shared/modes"
+import { DiffStrategy, supportToolCall } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
 
@@ -63,6 +65,7 @@ import { BrowserSession } from "../../services/browser/BrowserSession"
 import { McpHub } from "../../services/mcp/McpHub"
 import { McpServerManager } from "../../services/mcp/McpServerManager"
 import { RepoPerTaskCheckpointService } from "../../services/checkpoints"
+import { CodeIndexManager } from "../../services/code-index/manager"
 
 // integrations
 import { DiffViewProvider } from "../../integrations/editor/DiffViewProvider"
@@ -120,6 +123,8 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
+import { StreamingToolCallProcessor, ToolCallParam, handleOpenaiToolCallStreaming } from "./tool-call-helper"
+import { ToolArgs } from "../prompts/tools/types"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -277,6 +282,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	consecutiveMistakeCountForApplyDiff: Map<string, number> = new Map()
 	toolUsage: ToolUsage = {}
 
+	// Streaming Tool Call Processing
+	streamingToolCallProcessor: StreamingToolCallProcessor = new StreamingToolCallProcessor()
+
 	// Checkpoints
 	enableCheckpoints: boolean
 	checkpointService?: RepoPerTaskCheckpointService
@@ -297,7 +305,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = []
+	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam | Anthropic.ToolResultBlockParam)[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -811,7 +819,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.askResponseImages = undefined
 					askTs = Date.now()
 					this.lastMessageTs = askTs
-					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
+					await this.addToClineMessages({
+						ts: askTs,
+						type: "ask",
+						ask: type,
+						text,
+						isProtected,
+						progressStatus,
+					})
 				}
 			}
 		} else {
@@ -821,7 +836,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.askResponseImages = undefined
 			askTs = Date.now()
 			this.lastMessageTs = askTs
-			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
+			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected, progressStatus })
 		}
 
 		// The state is mutable if the message is complete and the task will
@@ -1225,7 +1240,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				relPath ? ` for '${relPath.toPosix()}'` : ""
 			} without value for required parameter '${paramName}'. ${kilocodeExtraText}Retrying...`,
 		)
-		return formatResponse.toolError(formatResponse.missingToolParameterError(paramName))
+		return formatResponse.toolError(
+			formatResponse.missingToolParameterError(paramName, this.apiConfiguration?.toolCallEnabled === true),
+		)
 	}
 
 	// Lifecycle
@@ -1376,41 +1393,41 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Make sure that the api conversation history can be resumed by the API,
 		// even if it goes out of sync with cline messages.
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
-
-		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
-		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
-			if (Array.isArray(message.content)) {
-				const newContent = message.content.map((block) => {
-					if (block.type === "tool_use") {
-						// It's important we convert to the new tool schema
-						// format so the model doesn't get confused about how to
-						// invoke tools.
-						const inputAsXml = Object.entries(block.input as Record<string, string>)
-							.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
-							.join("\n")
-						return {
-							type: "text",
-							text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
-						} as Anthropic.Messages.TextBlockParam
-					} else if (block.type === "tool_result") {
-						// Convert block.content to text block array, removing images
-						const contentAsTextBlocks = Array.isArray(block.content)
-							? block.content.filter((item) => item.type === "text")
-							: [{ type: "text", text: block.content }]
-						const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
-						const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
-						return {
-							type: "text",
-							text: `[${toolName} Result]\n\n${textContent}`,
-						} as Anthropic.Messages.TextBlockParam
-					}
-					return block
-				})
-				return { ...message, content: newContent }
-			}
-			return message
-		})
-		existingApiConversationHistory = conversationWithoutToolBlocks
+		if (this.apiConfiguration.toolCallEnabled !== true) {
+			const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
+				if (Array.isArray(message.content)) {
+					const newContent = message.content.map((block) => {
+						if (block.type === "tool_use") {
+							// It's important we convert to the new tool schema
+							// format so the model doesn't get confused about how to
+							// invoke tools.
+							const inputAsXml = Object.entries(block.input as Record<string, string>)
+								.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
+								.join("\n")
+							return {
+								type: "text",
+								text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
+							} as Anthropic.Messages.TextBlockParam
+						} else if (block.type === "tool_result") {
+							// Convert block.content to text block array, removing images
+							const contentAsTextBlocks = Array.isArray(block.content)
+								? block.content.filter((item) => item.type === "text")
+								: [{ type: "text", text: block.content }]
+							const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
+							const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
+							return {
+								type: "text",
+								text: `[${toolName} Result]\n\n${textContent}`,
+							} as Anthropic.Messages.TextBlockParam
+						}
+						return block
+					})
+					return { ...message, content: newContent }
+				}
+				return message
+			})
+			existingApiConversationHistory = conversationWithoutToolBlocks
+		}
 
 		// FIXME: remove tool use blocks altogether
 
@@ -1753,7 +1770,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
+				nextUserContent = [
+					{ type: "text", text: formatResponse.noToolsUsed(this.apiConfiguration?.toolCallEnabled ?? false) },
+				]
 				this.consecutiveMistakeCount++
 			}
 		}
@@ -1988,6 +2007,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 				await this.diffViewProvider.reset()
 
+				// Reset streaming tool call processor
+				this.streamingToolCallProcessor.reset()
+
 				// Yields only if the first chunk is successful, otherwise will
 				// allow the user to retry the request (most likely due to rate
 				// limit error, which gets thrown on the first chunk).
@@ -2041,12 +2063,29 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									pendingGroundingSources.push(...chunk.sources)
 								}
 								break
-							case "text": {
-								assistantMessage += chunk.text
+							case "text":
+							case "tool_call": {
+								let chunkContent
+								let toolParam: ToolCallParam | undefined
+								if (chunk.type == "tool_call") {
+									toolParam =
+										handleOpenaiToolCallStreaming(
+											this.streamingToolCallProcessor,
+											chunk.toolCalls,
+											chunk.toolCallType,
+										) ?? ""
+									chunkContent = toolParam.chunkContent
+								} else {
+									chunkContent = chunk.text
+								}
+								assistantMessage += chunkContent
 
 								// Parse raw assistant message chunk into content blocks.
 								const prevLength = this.assistantMessageContent.length
-								this.assistantMessageContent = this.assistantMessageParser.processChunk(chunk.text)
+								this.assistantMessageContent = this.assistantMessageParser.processChunk(
+									chunkContent,
+									toolParam,
+								)
 
 								if (this.assistantMessageContent.length > prevLength) {
 									// New content we need to present, reset to
@@ -2334,6 +2373,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// Now that the stream is complete, finalize any remaining partial content blocks
 				this.assistantMessageParser.finalizeContentBlocks()
 				this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
+				this.streamingToolCallProcessor.reset()
 
 				if (partialBlocks.length > 0) {
 					// If there is content to update then it will complete and
@@ -2386,11 +2426,39 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							isNonInteractive: true,
 						})
 					}
-
-					await this.addToApiConversationHistory({
-						role: "assistant",
-						content: [{ type: "text", text: assistantMessage }],
-					})
+					if (this.apiConfiguration.toolCallEnabled !== true) {
+						await this.addToApiConversationHistory({
+							role: "assistant",
+							content: [{ type: "text", text: assistantMessage }],
+						})
+					} else {
+						let addToolIds: Set<string> = new Set()
+						const newAssistantMessageContent: Array<Anthropic.ContentBlockParam> = []
+						for (const block of this.assistantMessageContent) {
+							if (block.type === "text" && block.content) {
+								newAssistantMessageContent.push({ type: "text", text: block.content })
+							}
+							if (block.type === "tool_use" && block.toolUseId && block.toolUseParam) {
+								// ignore same tool id
+								if (addToolIds.has(block.toolUseId)) {
+									continue
+								}
+								newAssistantMessageContent.push({
+									type: "tool_use",
+									id: block.toolUseId,
+									name: block.name,
+									input: block.toolUseParam.input,
+								})
+								addToolIds.add(block.toolUseId)
+							}
+						}
+						if (newAssistantMessageContent.length > 0) {
+							await this.addToApiConversationHistory({
+								role: "assistant",
+								content: newAssistantMessageContent,
+							})
+						}
+					}
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
 
@@ -2417,7 +2485,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
 					if (!didToolUse) {
-						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
+						this.userMessageContent.push({
+							type: "text",
+							text: formatResponse.noToolsUsed(this.apiConfiguration?.toolCallEnabled ?? false),
+						})
 						this.consecutiveMistakeCount++
 					}
 
@@ -2616,6 +2687,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				{
 					maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
 					todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
+					toolCallEnabled:
+						(apiConfiguration?.toolCallEnabled ?? false) && supportToolCall(apiConfiguration?.apiProvider),
 					useAgentRules: vscode.workspace.getConfiguration("kilo-code").get<boolean>("useAgentRules") ?? true,
 					newTaskRequireTodos: vscode.workspace
 						.getConfiguration("kilo-code")
@@ -2869,6 +2942,96 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			// non-fatal
 		}
 
+		// Generate tool schemas if toolCallEnabled is true
+		let tools: ToolName[] | undefined = undefined
+		let toolArgs: ToolArgs | undefined
+		const apiProvider = this.apiConfiguration.apiProvider
+		if (this.apiConfiguration.toolCallEnabled === true && supportToolCall(apiProvider)) {
+			const provider = this.providerRef.deref()
+
+			if (provider) {
+				const {
+					customModes,
+					mcpEnabled,
+					diffEnabled,
+					browserViewportSize,
+					experiments,
+					enableMcpServerCreation,
+					maxConcurrentFileReads,
+					maxReadFileLine,
+					browserToolEnabled,
+				} = state ?? {}
+				// Determine if browser tools can be used based on model support, mode, and user settings
+				let modelSupportsComputerUse = false
+
+				// Create a temporary API handler to check if the model supports computer use
+				// This avoids relying on an active Cline instance which might not exist during preview
+				try {
+					const tempApiHandler = buildApiHandler(apiConfiguration!)
+					modelSupportsComputerUse = tempApiHandler.getModel().info.supportsComputerUse ?? false
+				} catch (error) {
+					console.error("Error checking if model supports computer use:", error)
+				}
+
+				const modeConfig = getModeBySlug(mode!, customModes) || modes.find((m) => m.slug === mode) || modes[0]
+
+				const modeSupportsBrowser =
+					modeConfig?.groups.some((group) => getGroupName(group) === "browser") ?? false
+
+				// Only enable browser tools if the model supports it, the mode includes browser tools,
+				// and browser tools are enabled in settings
+				const canUseBrowserTool =
+					modelSupportsComputerUse && modeSupportsBrowser && (browserToolEnabled ?? true)
+
+				let mcpHub: McpHub | undefined
+				if (mcpEnabled ?? true) {
+					// Wait for MCP hub initialization through McpServerManager
+					mcpHub = await McpServerManager.getInstance(provider.context, provider)
+
+					if (!mcpHub) {
+						throw new Error("Failed to get MCP hub from server manager")
+					}
+
+					// Wait for MCP servers to be connected before generating system prompt
+					await pWaitFor(() => !mcpHub!.isConnecting, { timeout: 10_000 }).catch(() => {
+						console.error("MCP servers failed to connect in time")
+					})
+				}
+				const hasMcpGroup = modeConfig.groups.some((groupEntry) => getGroupName(groupEntry) === "mcp")
+				const hasMcpServers = mcpHub && mcpHub.getServers().length > 0
+				const shouldIncludeMcp = hasMcpGroup && hasMcpServers
+				// Use the unified tool availability method
+				const codeIndexManager = CodeIndexManager.getInstance(provider.context, this.cwd)
+				const toolAvailabilityArgs: ToolAvailabilityArgs = {
+					mode: mode!,
+					cwd: this.cwd,
+					supportsComputerUse: canUseBrowserTool,
+					codeIndexManager,
+					diffStrategy: diffEnabled ? this.diffStrategy : undefined,
+					browserViewportSize,
+					mcpHub: shouldIncludeMcp ? provider.getMcpHub() : undefined,
+					customModes,
+					experiments,
+					partialReadsEnabled: maxReadFileLine !== -1,
+					settings: {
+						maxConcurrentFileReads: maxConcurrentFileReads ?? 5,
+						todoListEnabled: apiConfiguration?.todoListEnabled ?? true,
+						toolCallEnabled:
+							(apiConfiguration?.toolCallEnabled ?? false) &&
+							supportToolCall(apiConfiguration?.apiProvider),
+						useAgentRules:
+							vscode.workspace.getConfiguration("roo-cline").get<boolean>("useAgentRules") ?? true,
+						enableMcpServerCreation,
+					},
+					clineProviderState: await provider.getState(),
+				}
+
+				const { toolCallTools } = getToolAvailability(toolAvailabilityArgs)
+				tools = toolCallTools
+				toolArgs = toolAvailabilityArgs
+			}
+		}
+
 		const metadata: ApiHandlerCreateMessageMetadata = {
 			mode: mode,
 			taskId: this.taskId,
@@ -2876,6 +3039,8 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(previousResponseId && !this.skipPrevResponseIdOnce ? { previousResponseId } : {}),
 			// If a condense just occurred, explicitly suppress continuity fallback for the next call
 			...(this.skipPrevResponseIdOnce ? { suppressPreviousResponseId: true } : {}),
+			tools: tools,
+			toolArgs: toolArgs,
 		}
 
 		// Reset skip flag after applying (it only affects the immediate next call)

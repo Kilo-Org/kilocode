@@ -32,4 +32,34 @@ export abstract class BaseProvider implements ApiHandler {
 
 		return countTokens(content, { useWorker: true })
 	}
+
+	/**
+	 * Convert tool schemas to text format for token counting
+	 */
+	protected convertToolSchemasToText(toolSchemas: Anthropic.ToolUnion[]): string {
+		if (toolSchemas.length === 0) {
+			return ""
+		}
+
+		const toolsDescription = toolSchemas
+			.map((tool) => {
+				// Handle different tool types by accessing properties safely
+				const toolName = tool.name
+				let toolText = `Tool: ${toolName}\n`
+
+				// Try to access description and input_schema properties
+				if ("description" in tool) {
+					toolText += `Description: ${tool.description}\n`
+				}
+
+				if ("input_schema" in tool && tool.input_schema && typeof tool.input_schema === "object") {
+					toolText += `Parameters:\n${JSON.stringify(tool.input_schema, null, 2)}\n`
+				}
+
+				return toolText
+			})
+			.join("\n---\n")
+
+		return `Available Tools:\n${toolsDescription}`
+	}
 }
