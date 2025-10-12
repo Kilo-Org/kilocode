@@ -1,4 +1,4 @@
-# Custom Modes
+<img width="1389" height="808" alt="image" src="https://github.com/user-attachments/assets/cf920f95-15df-41d1-b947-ee3d2dbcccda" /><img width="1389" height="808" alt="image" src="https://github.com/user-attachments/assets/b619cd31-9255-4c19-9abe-a61a2020f82d" /># Custom Modes
 
 Kilo Code allows you to create **custom modes** to tailor Kilo's behavior to specific tasks or workflows. Custom modes can be either **global** (available across all projects) or **project-specific** (defined within a single project).
 
@@ -13,7 +13,7 @@ Each mode—including custom ones—features **Sticky Models**. This means Kilo 
 - **Experimentation:** Safely experiment with different prompts and configurations without affecting other modes
 - **Team Collaboration:** Share custom modes with your team to standardize workflows
 
-<img src="/img/custom-modes/custom-modes.png" alt="Overview of custom modes interface" width="600" />
+<img src="/docs/img/custom-modes/custom-modes.png" alt="Overview of custom modes interface" width="600" />
 
 _Kilo Code's interface for creating and managing custom modes._
 
@@ -89,7 +89,7 @@ Kilo Code will guide you through the process, prompting for necessary informatio
 2. **Create New Mode:** Click the <Codicon name="add" /> button to the right of the Modes heading
 3. **Fill in Fields:**
 
-<img src="/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Prompts tab" width="600" />
+<img src="/docs/img/custom-modes/custom-modes-2.png" alt="Custom mode creation interface in the Prompts tab" width="600" />
 
 _The custom mode creation interface showing fields for name, slug, description, save location, role definition, available tools, custom instructions._
 
