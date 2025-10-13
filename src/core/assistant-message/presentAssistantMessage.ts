@@ -491,6 +491,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				}
 			}
 
+			await checkpointSaveAndMark(cline) // kilocode_change: moved out of switch
 			switch (block.name) {
 				case "write_to_file":
 					await checkpointSaveAndMark(cline)
@@ -538,7 +539,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":
-					await checkpointSaveAndMark(cline)
 					await editFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
@@ -616,7 +616,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await newTaskTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "attempt_completion":
-					await checkpointSaveAndMark(cline) // kilocode_change for "See new changes"
 					await attemptCompletionTool(
 						cline,
 						block,
@@ -646,7 +645,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await generateImageTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 			}
-			// kilocode_change end
 
 			break
 	}

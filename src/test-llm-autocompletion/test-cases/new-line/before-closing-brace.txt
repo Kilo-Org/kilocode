@@ -1,0 +1,5 @@
+# Description: Should add return statement before closing brace
+function calculateTotal(items) {
+  const sum = items.reduce((a, b) => a + b, 0);
+<<<CURSOR>>>
+}

@@ -450,7 +450,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("OVHCloud AI Endpoints error")) // ovhcloud // kilocode_change
+			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -513,7 +513,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "OVHCloud AI Endpoints error",
+			error: "OVHcloud AI Endpoints error",
 			values: { provider: "ovhcloud" },
 		})
 		// kilocode_change end

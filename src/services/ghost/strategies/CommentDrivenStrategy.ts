@@ -1,16 +1,10 @@
 import { GhostSuggestionContext } from "../types"
-import { BasePromptStrategy } from "./BasePromptStrategy"
-import { UseCaseType } from "../types/PromptStrategy"
+import { PromptStrategy } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
-import { formatDocumentWithCursor } from "./StrategyHelpers"
+import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
-/**
- * Strategy for generating code based on comments
- * Medium-high priority for comment-driven development
- */
-export class CommentDrivenStrategy extends BasePromptStrategy {
+export class CommentDrivenStrategy implements PromptStrategy {
 	name = "Comment Driven"
-	type = UseCaseType.COMMENT_DRIVEN
 
 	canHandle(context: GhostSuggestionContext): boolean {
 		if (!context.document || !context.range) return false
@@ -31,9 +25,9 @@ export class CommentDrivenStrategy extends BasePromptStrategy {
 		return isComment && !context.userInput // User input takes precedence
 	}
 
-	getSystemInstructions(): string {
+	getSystemInstructions(customInstructions?: string): string {
 		return (
-			this.getBaseSystemInstructions() +
+			getBaseSystemInstructions() +
 			`You are an expert code generation assistant that implements code based on comments.
 
 ## Core Responsibilities:

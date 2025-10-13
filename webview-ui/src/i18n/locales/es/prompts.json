@@ -16,6 +16,11 @@
 		"title": "Configuración de API",
 		"select": "Selecciona qué configuración de API usar para este modo"
 	},
+	"organizationMode": {
+		"title": "Modo de organización",
+		"description": "Este modo es proporcionado por tu organización y no se puede editar aquí. Para modificar este modo, visita el Kilo Code Dashboard.",
+		"cannotEdit": "Los modos de organización no se pueden editar"
+	},
 	"tools": {
 		"title": "Herramientas disponibles",
 		"builtInModesText": "Las herramientas para modos integrados no se pueden modificar",

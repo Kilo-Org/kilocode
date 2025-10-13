@@ -168,7 +168,7 @@ describe("getModels with new GetModelsOptions", () => {
 				maxTokens: 4096,
 				contextWindow: 8192,
 				supportsPromptCache: false,
-				description: "OVHCloud AI Endpoints Model",
+				description: "OVHcloud AI Endpoints Model",
 			},
 		}
 		mockGetOvhCloudAiEndpointsModels.mockResolvedValue(mockModels)

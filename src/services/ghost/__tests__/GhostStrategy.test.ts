@@ -111,9 +111,8 @@ describe("GhostStrategy", () => {
 
 			const result = manager.buildPrompt(commentContext)
 
-			// Should select NewLineCompletionStrategy when cursor is on empty line
-			// (even if previous line has a comment, empty line takes precedence)
-			expect(result.strategy.name).toBe("New Line Completion")
+			// CommentDrivenStrategy handles empty lines after comments
+			expect(result.strategy.name).toBe("Comment Driven")
 		})
 
 		it("should fallback to AutoTriggerStrategy when no specific strategy matches", () => {

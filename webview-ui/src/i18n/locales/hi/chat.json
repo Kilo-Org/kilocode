@@ -130,7 +130,8 @@
 		"settings": "मोड सेटिंग्स",
 		"description": "विशेष व्यक्तित्व जो Kilo Code के व्यवहार को अनुकूलित करते हैं।",
 		"searchPlaceholder": "मोड खोजें...",
-		"noResults": "कोई परिणाम नहीं मिला"
+		"noResults": "कोई परिणाम नहीं मिला",
+		"organizationModes": "संगठन मोड"
 	},
 	"errorReadingFile": "फ़ाइल पढ़ने में त्रुटि",
 	"noValidImages": "कोई मान्य चित्र प्रोसेस नहीं किया गया",

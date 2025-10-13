@@ -16,6 +16,11 @@
 		"title": "Configuració d'API",
 		"select": "Seleccioneu quina configuració d'API utilitzar per a aquest mode"
 	},
+	"organizationMode": {
+		"title": "Mode d'organització",
+		"description": "Aquest mode és proporcionat per la teva organització i no es pot editar aquí. Per modificar aquest mode, visita el Kilo Code Dashboard.",
+		"cannotEdit": "Els modes d'organització no es poden editar"
+	},
 	"tools": {
 		"title": "Eines disponibles",
 		"builtInModesText": "Les eines per a modes integrats no es poden modificar",

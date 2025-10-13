@@ -69,7 +69,7 @@ export const modeConfigSchema = z.object({
 	description: z.string().optional(),
 	customInstructions: z.string().optional(),
 	groups: groupEntryArraySchema,
-	source: z.enum(["global", "project"]).optional(),
+	source: z.enum(["global", "project", "organization"]).optional(), // kilocode_change: Added "organization" source
 	iconName: z.string().optional(), // kilocode_change
 })
 

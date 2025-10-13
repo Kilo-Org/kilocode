@@ -1,5 +1,44 @@
 # kilo-code
 
+## [v4.103.1]
+
+- [#2962](https://github.com/Kilo-Org/kilocode/pull/2962) [`a424824`](https://github.com/Kilo-Org/kilocode/commit/a424824269b3cafdf58bcdb1acf7ed6151f32e0b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved the error message when an unsupported reasoning effort value is chosen
+
+- [#2960](https://github.com/Kilo-Org/kilocode/pull/2960) [`254e21b`](https://github.com/Kilo-Org/kilocode/commit/254e21b29df46dab3048ecd792625eadc20beafb) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The reasoning effort setting is no longer ignored for GLM 4.6 when using the Kilo Code or OpenRouter providers. Some inference providers on OpenRouter have trouble when reasoning is enabled, but this is now less of a problem, because more providers have come online. Most providers do not expose reasoning tokens for GLM 4.6, regardless of reasoning effort.
+
+## [v4.103.0]
+
+- [#2528](https://github.com/Kilo-Org/kilocode/pull/2528) [`14d5060`](https://github.com/Kilo-Org/kilocode/commit/14d506025a9374f54409768629fc4ebd57f8f628) Thanks [@mcowger](https://github.com/mcowger)! - Add timestamps to Chat view.
+
+### Patch Changes
+
+- [#2861](https://github.com/Kilo-Org/kilocode/pull/2861) [`279d7cf`](https://github.com/Kilo-Org/kilocode/commit/279d7cff9d19ec908681318fbe929b45fbf94393) Thanks [@jrf0110](https://github.com/jrf0110)! - Organization modes selection. This feature allows organizations to create
+  new modes and send them to the KiloCode extension. It also allows for
+  overwriting Kilo Code's built-in modes. Organization modes are readonly
+  from the extension and must be edited from the dashboard.
+
+- [#2858](https://github.com/Kilo-Org/kilocode/pull/2858) [`154722b`](https://github.com/Kilo-Org/kilocode/commit/154722be5a73143231e95ccbc2679b8a4eaaa5ab) Thanks [@hassoncs](https://github.com/hassoncs)! - Make all text-based links the same visual style
+
+## [v4.102.0]
+
+- [#2854](https://github.com/Kilo-Org/kilocode/pull/2854) [`bd5d7fc`](https://github.com/Kilo-Org/kilocode/commit/bd5d7fc5f0c67ac2b040dbdefbd90d0396e0b60e) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.28.14-v3.28.15
+
+    - Fix: properly reset cost limit tracking when user clicks "Reset and Continue" (#6889 by @alecoot, PR by app/roomote)
+    - Fix: improve save button activation in prompts settings (#5780 by @beccare, PR by app/roomote)
+    - Fix: overeager 'there are unsaved changes' dialog in settings (thanks @brunobergher!)
+    - Fix: Claude Sonnet 4.5 compatibility improvements (thanks @mrubens!)
+    - Remove unsupported Gemini 2.5 Flash Image Preview free model (thanks @SannidhyaSah!)
+
+- [#1652](https://github.com/Kilo-Org/kilocode/pull/1652) [`b3caf38`](https://github.com/Kilo-Org/kilocode/commit/b3caf38e44f2f6ccd58f3e92cd68edce48a96844) Thanks [@hassoncs](https://github.com/hassoncs)! - Add a display setting that hides costs below a user-defined threshold
+
+### Patch Changes
+
+- [#2871](https://github.com/Kilo-Org/kilocode/pull/2871) [`0403f82`](https://github.com/Kilo-Org/kilocode/commit/0403f820a8413656eecbe3bbfe252a52c2999e37) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved Fast Apply error messages
+
+- [#2851](https://github.com/Kilo-Org/kilocode/pull/2851) [`9e6a897`](https://github.com/Kilo-Org/kilocode/commit/9e6a89796f04f6215e31ac7950669783387a11de) Thanks [@eliasto](https://github.com/eliasto)! - Add custom base URL support to OVHcloud provider
+
+- [#2870](https://github.com/Kilo-Org/kilocode/pull/2870) [`4730e08`](https://github.com/Kilo-Org/kilocode/commit/4730e080f99bcd414a3eb0a71a04ab5fd6dbcb6e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - A checkpoint is now created before _every_ tool call
+
 ## [v4.101.0]
 
 - [#2518](https://github.com/Kilo-Org/kilocode/pull/2518) [`01106a8`](https://github.com/Kilo-Org/kilocode/commit/01106a8d35159ccea34e290a2174d44d83fecd64) Thanks [@eliasto](https://github.com/eliasto)! - OVHcloud AI Endpoints provider added

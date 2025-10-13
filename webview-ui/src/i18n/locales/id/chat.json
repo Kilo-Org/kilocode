@@ -130,7 +130,8 @@
 		"settings": "Pengaturan Mode",
 		"description": "Persona khusus yang menyesuaikan perilaku Kilo Code.",
 		"searchPlaceholder": "Cari mode...",
-		"noResults": "Tidak ada hasil yang ditemukan"
+		"noResults": "Tidak ada hasil yang ditemukan",
+		"organizationModes": "Mode Organisasi"
 	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",

@@ -1,0 +1,5 @@
+# Description: Should add input validation after TODO comment
+function registerUser(email, password) {
+  // TODO: Add input validation for email and password<<<CURSOR>>>
+  return createUser(email, password);
+}

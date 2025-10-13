@@ -7,7 +7,7 @@ vitest.mock("vscode", () => ({}))
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import { OVHCloudAIEndpointsHandler } from "../ovhcloud"
+import { OVHcloudAIEndpointsHandler } from "../ovhcloud"
 import { ovhCloudAiEndpointsDefaultModelId } from "@roo-code/types"
 import { calculateApiCostOpenAI } from "../../../shared/cost"
 
@@ -20,19 +20,19 @@ vitest.mock("openai", () => {
 
 const ovhCloudAiEndpointsApiKey = "test-ovhcloud-ai-endpoints-api-key"
 
-describe("OVHCloudAIEndpointsHandler", () => {
-	let handler: OVHCloudAIEndpointsHandler
+describe("OVHcloudAIEndpointsHandler", () => {
+	let handler: OVHcloudAIEndpointsHandler
 	let mockCreate: any
 
 	beforeEach(() => {
 		vitest.clearAllMocks()
 		mockCreate = (OpenAI as unknown as any)().chat.completions.create
-		handler = new OVHCloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
+		handler = new OVHcloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
 	})
 
 	describe("Initialization", () => {
-		it("should configure OpenAI client with correct OVHCloud AI Endpoints base URL", () => {
-			new OVHCloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
+		it("should configure OpenAI client with correct OVHcloud AI Endpoints base URL", () => {
+			new OVHcloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
 			expect(OpenAI).toHaveBeenCalledWith(
 				expect.objectContaining({
 					baseURL: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
@@ -40,8 +40,18 @@ describe("OVHCloudAIEndpointsHandler", () => {
 			)
 		})
 
+		it("should override base URL if custom endpoint provided", () => {
+			const customBaseUrl = "https://custom.endpoints.kepler.ai.cloud.ovh.net/v1"
+			new OVHcloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey, ovhCloudAiEndpointsBaseUrl: customBaseUrl })
+			expect(OpenAI).toHaveBeenCalledWith(
+				expect.objectContaining({
+					baseURL: "https://custom.endpoints.kepler.ai.cloud.ovh.net/v1",
+				}),
+			)
+		})
+
 		it("should initialize with the provided API key", () => {
-			new OVHCloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
+			new OVHcloudAIEndpointsHandler({ ovhCloudAiEndpointsApiKey })
 			expect(OpenAI).toHaveBeenCalledWith(
 				expect.objectContaining({
 					apiKey: ovhCloudAiEndpointsApiKey,
@@ -51,7 +61,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 
 		it("should accept custom model configuration during initialization", () => {
 			const customModelId = "gpt-oss-120b"
-			const customHandler = new OVHCloudAIEndpointsHandler({
+			const customHandler = new OVHcloudAIEndpointsHandler({
 				apiModelId: customModelId,
 				ovhCloudAiEndpointsApiKey,
 			})
@@ -67,7 +77,7 @@ describe("OVHCloudAIEndpointsHandler", () => {
 
 		it("should retrieve specific model configuration when provided", () => {
 			const targetModelId = "gpt-oss-120b"
-			const handlerWithModel = new OVHCloudAIEndpointsHandler({
+			const handlerWithModel = new OVHcloudAIEndpointsHandler({
 				apiModelId: targetModelId,
 				ovhCloudAiEndpointsApiKey,
 			})
@@ -83,8 +93,8 @@ describe("OVHCloudAIEndpointsHandler", () => {
 	})
 
 	describe("Prompt Completion", () => {
-		it("should successfully complete a prompt via OVHCloud API", async () => {
-			const mockResponse = "Generated response from OVHCloud AI Endpoints"
+		it("should successfully complete a prompt via OVHcloud API", async () => {
+			const mockResponse = "Generated response from OVHcloud AI Endpoints"
 			mockCreate.mockResolvedValueOnce({
 				choices: [{ message: { content: mockResponse } }],
 			})
@@ -94,11 +104,11 @@ describe("OVHCloudAIEndpointsHandler", () => {
 		})
 
 		it("should handle API errors gracefully during completion", async () => {
-			const errorMessage = "OVHCloud AI Endpoints API error"
+			const errorMessage = "OVHcloud AI Endpoints API error"
 			mockCreate.mockRejectedValueOnce(new Error(errorMessage))
 
 			await expect(handler.completePrompt("test prompt")).rejects.toThrow(
-				`OVHCloud AI Endpoints completion error: ${errorMessage}`,
+				`OVHcloud AI Endpoints completion error: ${errorMessage}`,
 			)
 		})
 
@@ -119,8 +129,8 @@ describe("OVHCloudAIEndpointsHandler", () => {
 	})
 
 	describe("Streaming Message Creation", () => {
-		it("should stream text content from OVHCloud AI response", async () => {
-			const streamContent = "Streaming response from OVHCloud AI Endpoints"
+		it("should stream text content from OVHcloud AI response", async () => {
+			const streamContent = "Streaming response from OVHcloud AI Endpoints"
 
 			mockCreate.mockImplementationOnce(() => {
 				return {
@@ -174,10 +184,10 @@ describe("OVHCloudAIEndpointsHandler", () => {
 			})
 		})
 
-		it("should configure streaming with appropriate OVHCloud parameters", async () => {
+		it("should configure streaming with appropriate OVHcloud parameters", async () => {
 			const modelId = "gpt-oss-120b"
 			const modelInfo = handler.getModel().info
-			const customHandler = new OVHCloudAIEndpointsHandler({
+			const customHandler = new OVHcloudAIEndpointsHandler({
 				apiModelId: modelId,
 				ovhCloudAiEndpointsApiKey,
 			})
@@ -192,9 +202,9 @@ describe("OVHCloudAIEndpointsHandler", () => {
 				}
 			})
 
-			const systemPrompt = "System configuration for OVHCloud AI Endpoints"
+			const systemPrompt = "System configuration for OVHcloud AI Endpoints"
 			const userMessages: Anthropic.Messages.MessageParam[] = [
-				{ role: "user", content: "User query for OVHCloud AI Endpoints processing" },
+				{ role: "user", content: "User query for OVHcloud AI Endpoints processing" },
 			]
 
 			const streamGenerator = customHandler.createMessage(systemPrompt, userMessages)
@@ -202,7 +212,6 @@ describe("OVHCloudAIEndpointsHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith({
 				model: modelId,
-				max_tokens: modelInfo.maxTokens,
 				messages: [{ role: "system", content: systemPrompt }, userMessages[0]],
 				stream: true,
 				stream_options: { include_usage: true },

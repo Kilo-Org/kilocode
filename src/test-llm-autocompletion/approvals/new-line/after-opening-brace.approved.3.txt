@@ -1,0 +1,8 @@
+function processItems(items) {
+    const processedItems = [];
+    for (const item of items) {
+        processedItems.push(item.toUpperCase());
+    }
+    return processedItems;
+}
+}

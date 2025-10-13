@@ -1,0 +1,6 @@
+const config = {
+	server: {
+	  port: 3000,
+	  host: 'localhost',
+	  protocol: 'http',
+	  timeout: 30000

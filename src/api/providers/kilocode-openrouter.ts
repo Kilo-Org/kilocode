@@ -18,7 +18,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	defaultModel: string = openRouterDefaultModelId
 
 	protected override get providerName() {
-		return "KiloCode"
+		return "KiloCode" as const
 	}
 
 	constructor(options: ApiHandlerOptions) {

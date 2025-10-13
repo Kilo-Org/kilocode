@@ -1,31 +1,19 @@
 import type { Range, TextDocument } from "vscode"
 import { GhostSuggestionContext } from "../types"
-import { UseCaseType } from "../types/PromptStrategy"
-import { BasePromptStrategy } from "./BasePromptStrategy"
+import { PromptStrategy } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
-import { formatDiagnostics, formatDocumentWithCursor } from "./StrategyHelpers"
+import { formatDiagnostics, formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
-/**
- * Strategy for handling explicit user requests
- * This has the highest priority as it represents direct user intent
- */
-export class UserRequestStrategy extends BasePromptStrategy {
+export class UserRequestStrategy implements PromptStrategy {
 	name = "User Request"
-	type = UseCaseType.USER_REQUEST
 
-	/**
-	 * Can handle any context that has user input
-	 */
 	canHandle(context: GhostSuggestionContext): boolean {
 		return !!context.userInput && context.userInput.trim().length > 0
 	}
 
-	/**
-	 * System instructions specific to user requests
-	 */
-	getSystemInstructions(): string {
+	getSystemInstructions(customInstructions?: string): string {
 		return (
-			this.getBaseSystemInstructions() +
+			getBaseSystemInstructions() +
 			`Task: Execute User's Explicit Request
 You are responding to a direct user instruction. Your primary goal is to fulfill their specific request accurately.
 

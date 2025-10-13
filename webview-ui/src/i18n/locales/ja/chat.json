@@ -130,7 +130,8 @@
 		"settings": "モード設定",
 		"description": "Kilo Codeの動作をカスタマイズする専門的なペルソナ。",
 		"searchPlaceholder": "モードを検索...",
-		"noResults": "結果が見つかりません"
+		"noResults": "結果が見つかりません",
+		"organizationModes": "組織モード"
 	},
 	"errorReadingFile": "ファイル読み込みエラー",
 	"noValidImages": "有効な画像が処理されませんでした",

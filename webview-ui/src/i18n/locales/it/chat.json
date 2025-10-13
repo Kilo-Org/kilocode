@@ -130,7 +130,8 @@
 		"settings": "Impostazioni Modalità",
 		"description": "Personalità specializzate che adattano il comportamento di Kilo Code.",
 		"searchPlaceholder": "Cerca modalità...",
-		"noResults": "Nessun risultato trovato"
+		"noResults": "Nessun risultato trovato",
+		"organizationModes": "Modalità dell'organizzazione"
 	},
 	"errorReadingFile": "Errore nella lettura del file",
 	"noValidImages": "Nessuna immagine valida è stata elaborata",

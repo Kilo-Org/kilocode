@@ -130,7 +130,8 @@
 		"settings": "Mod Ayarları",
 		"description": "Kilo Code'nun davranışını özelleştiren uzmanlaşmış kişilikler.",
 		"searchPlaceholder": "Modları ara...",
-		"noResults": "Sonuç bulunamadı"
+		"noResults": "Sonuç bulunamadı",
+		"organizationModes": "Kuruluş Modları"
 	},
 	"errorReadingFile": "Dosya okuma hatası",
 	"noValidImages": "Hiçbir geçerli resim işlenmedi",

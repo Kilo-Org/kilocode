@@ -122,7 +122,8 @@
 		"settings": "Modus Instellingen",
 		"description": "Gespecialiseerde persona's die het gedrag van Kilo Code aanpassen.",
 		"searchPlaceholder": "Zoek modi...",
-		"noResults": "Geen resultaten gevonden"
+		"noResults": "Geen resultaten gevonden",
+		"organizationModes": "Organisatiemodi"
 	},
 	"addImages": "Afbeeldingen toevoegen aan bericht",
 	"sendMessage": "Bericht verzenden",

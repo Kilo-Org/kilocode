@@ -226,7 +226,7 @@ describe("GhostServiceSettingsView", () => {
 		expect(setCachedStateField).toHaveBeenCalledWith(
 			"ghostServiceSettings",
 			expect.objectContaining({
-				autoTriggerDelay: 5,
+				autoTriggerDelay: 500,
 			}),
 		)
 	})

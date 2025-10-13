@@ -305,7 +305,8 @@
 		"settings": "Nastavení režimů",
 		"description": "Specializované persony které přizpůsobují chování Kilo Code.",
 		"searchPlaceholder": "Hledat režimy...",
-		"noResults": "Nebyly nalezeny žádné výsledky"
+		"noResults": "Nebyly nalezeny žádné výsledky",
+		"organizationModes": "Režimy organizace"
 	},
 	"announcement": {
 		"title": "🎉 Vydán Kilo Code {{version}}",

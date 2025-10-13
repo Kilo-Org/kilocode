@@ -1,0 +1,5 @@
+function initialize() {
+  const config = loadConfig();
+  console.log(config);
+  return config;
+}

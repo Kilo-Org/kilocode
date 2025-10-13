@@ -12,7 +12,7 @@ import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 
 // Hardcoded list of image generation models for now
-const IMAGE_GENERATION_MODELS = ["google/gemini-2.5-flash-image-preview", "google/gemini-2.5-flash-image-preview:free"]
+const IMAGE_GENERATION_MODELS = ["google/gemini-2.5-flash-image"] // kilocode_change
 
 export async function generateImageTool(
 	cline: Task,

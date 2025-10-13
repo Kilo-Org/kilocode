@@ -50,6 +50,7 @@ import {
 } from "@src/components/ui"
 import { DeleteModeDialog } from "@src/components/modes/DeleteModeDialog"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
+import { OrganizationModeWarning } from "../kilocode/OrganizationModeWarning"
 
 // Get all available groups that should show in prompts view
 const availableGroups = (Object.keys(TOOL_GROUPS) as ToolGroup[]).filter((group) => !TOOL_GROUPS[group].alwaysAvailable)
@@ -210,6 +211,12 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 		const findMode = (m: ModeConfig): boolean => m.slug === visualMode
 		return customModes?.find(findMode) || modes.find(findMode)
 	}, [visualMode, customModes, modes])
+
+	// kilocode_change start
+	const isOrganizationMode = useMemo(() => {
+		return getCurrentMode()?.source === "organization"
+	}, [getCurrentMode])
+	// kilocode_change end
 
 	// Check if the current mode has rules to export
 	const checkRulesDirectory = useCallback((slug: string) => {
@@ -738,8 +745,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 
 				{/* Name section */}
 				<div className="mb-5">
-					{/* Only show name and delete for custom modes */}
-					{visualMode && findModeBySlug(visualMode, customModes) && (
+					{isOrganizationMode && <OrganizationModeWarning />} {/* kilocode_change start */}
+					{/* Only show name and delete for custom modes that are not organization modes */}
+					{/* kilocode_change end */}
+					{visualMode && findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 						<div className="flex gap-3 mb-4">
 							<div className="flex-1">
 								<div className="font-bold mb-1">{t("prompts:createModeDialog.name.label")}</div>
@@ -812,12 +821,12 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							</div>
 						</div>
 					)}
-
 					{/* Role Definition section */}
 					<div className="mb-4">
 						<div className="flex justify-between items-center mb-1">
 							<div className="font-bold">{t("prompts:roleDefinition.title")}</div>
-							{!findModeBySlug(visualMode, customModes) && (
+							{/* kilocode_change: Added !isOrganizationMode check */}
+							{!findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 								<StandardTooltip content={t("prompts:roleDefinition.resetToDefault")}>
 									<Button
 										variant="ghost"
@@ -850,7 +859,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							})()}
 							onChange={(e) => {
 								const value =
-									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									(e as unknown as CustomEvent)?.detail?.target?.value ??
 									((e as any).target as HTMLTextAreaElement).value
 								const customMode = findModeBySlug(visualMode, customModes)
 								if (customMode) {
@@ -870,14 +879,16 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							className="w-full"
 							rows={5}
 							data-testid={`${getCurrentMode()?.slug || "code"}-prompt-textarea`}
+							// kilocode_change disable editing for org modes
+							disabled={isOrganizationMode}
 						/>
 					</div>
-
 					{/* Description section */}
 					<div className="mb-4">
 						<div className="flex justify-between items-center mb-1">
 							<div className="font-bold">{t("prompts:description.title")}</div>
-							{!findModeBySlug(visualMode, customModes) && (
+							{/* kilocode_change don't show for org modes */}
+							{!findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 								<StandardTooltip content={t("prompts:description.resetToDefault")}>
 									<Button
 										variant="ghost"
@@ -905,7 +916,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							})()}
 							onChange={(e) => {
 								const value =
-									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									(e as unknown as CustomEvent)?.detail?.target?.value ??
 									((e as any).target as HTMLTextAreaElement).value
 								const customMode = findModeBySlug(visualMode, customModes)
 								if (customMode) {
@@ -924,14 +935,16 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							}}
 							className="w-full"
 							data-testid={`${getCurrentMode()?.slug || "code"}-description-textfield`}
+							// kilocode_change disable editing for org modes
+							disabled={isOrganizationMode}
 						/>
 					</div>
-
 					{/* When to Use section */}
 					<div className="mb-4">
 						<div className="flex justify-between items-center mb-1">
 							<div className="font-bold">{t("prompts:whenToUse.title")}</div>
-							{!findModeBySlug(visualMode, customModes) && (
+							{/* kilocode_change don't show for org modes */}
+							{!findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 								<StandardTooltip content={t("prompts:whenToUse.resetToDefault")}>
 									<Button
 										variant="ghost"
@@ -960,7 +973,7 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							})()}
 							onChange={(e) => {
 								const value =
-									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									(e as unknown as CustomEvent)?.detail?.target?.value ??
 									((e as any).target as HTMLTextAreaElement).value
 								const customMode = findModeBySlug(visualMode, customModes)
 								if (customMode) {
@@ -980,16 +993,18 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							className="w-full"
 							rows={4}
 							data-testid={`${getCurrentMode()?.slug || "code"}-when-to-use-textarea`}
+							// kilocode_change disable editing for org modes
+							disabled={isOrganizationMode}
 						/>
 					</div>
-
 					{/* Mode settings */}
 					<>
 						{/* Show tools for all modes */}
 						<div className="mb-4">
 							<div className="flex justify-between items-center mb-1">
 								<div className="font-bold">{t("prompts:tools.title")}</div>
-								{findModeBySlug(visualMode, customModes) && (
+								{/* kilocode_change don't show for org modes */}
+								{findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 									<StandardTooltip
 										content={
 											isToolsEditMode
@@ -1006,9 +1021,14 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 									</StandardTooltip>
 								)}
 							</div>
-							{!findModeBySlug(visualMode, customModes) && (
+							{/* kilocode_change */}
+							{(!findModeBySlug(visualMode, customModes) || isOrganizationMode) && (
 								<div className="text-sm text-vscode-descriptionForeground mb-2">
-									{t("prompts:tools.builtInModesText")}
+									{/* kilocode_change start */}
+									{isOrganizationMode
+										? t("prompts:organizationMode.cannotEdit")
+										: t("prompts:tools.builtInModesText")}
+									{/* kilocode_change end */}
 								</div>
 							)}
 							{isToolsEditMode && findModeBySlug(visualMode, customModes) ? (
@@ -1079,12 +1099,12 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							)}
 						</div>
 					</>
-
 					{/* Role definition for both built-in and custom modes */}
 					<div className="mb-2">
 						<div className="flex justify-between items-center mb-1">
 							<div className="font-bold">{t("prompts:customInstructions.title")}</div>
-							{!findModeBySlug(visualMode, customModes) && (
+							{/* kilocode_change don't show for org modes */}
+							{!findModeBySlug(visualMode, customModes) && !isOrganizationMode && (
 								<StandardTooltip content={t("prompts:customInstructions.resetToDefault")}>
 									<Button
 										variant="ghost"
@@ -1119,14 +1139,15 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							})()}
 							onChange={(e) => {
 								const value =
-									(e as unknown as CustomEvent)?.detail?.target?.value ||
+									(e as unknown as CustomEvent)?.detail?.target?.value ??
 									((e as any).target as HTMLTextAreaElement).value
 								const customMode = findModeBySlug(visualMode, customModes)
 								if (customMode) {
 									// For custom modes, update the JSON file
 									updateCustomMode(visualMode, {
 										...customMode,
-										customInstructions: value.trim() || undefined,
+										// Preserve empty string; only treat null/undefined as unset
+										customInstructions: value ?? undefined,
 										source: customMode.source || "global",
 									})
 								} else {
@@ -1141,6 +1162,8 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 							rows={10}
 							className="w-full"
 							data-testid={`${getCurrentMode()?.slug || "code"}-custom-instructions-textarea`}
+							// kilocode_change disable editing for org modes
+							disabled={isOrganizationMode}
 						/>
 						<div className="text-xs text-vscode-descriptionForeground mt-1.5">
 							<Trans
@@ -1336,12 +1359,12 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						value={customInstructions || ""}
 						onChange={(e) => {
 							const value =
-								(e as unknown as CustomEvent)?.detail?.target?.value ||
+								(e as unknown as CustomEvent)?.detail?.target?.value ??
 								((e as any).target as HTMLTextAreaElement).value
-							setCustomInstructions(value || undefined)
+							setCustomInstructions(value ?? undefined)
 							vscode.postMessage({
 								type: "customInstructions",
-								text: value.trim() || undefined,
+								text: value ?? undefined,
 							})
 						}}
 						rows={4}

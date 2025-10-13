@@ -21,6 +21,7 @@ import { ClineProvider } from "../../core/webview/ClineProvider"
 import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { GhostCursor } from "./GhostCursor"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { normalizeAutoTriggerDelayToMs } from "./utils/autocompleteDelayUtils"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
@@ -198,6 +199,9 @@ export class GhostProvider {
 			return
 		}
 		if (this.workspaceEdit.isLocked()) {
+			return
+		}
+		if (event.contentChanges.length === 0) {
 			return
 		}
 		await this.documentStore.storeDocument({ document: event.document })
@@ -706,8 +710,7 @@ export class GhostProvider {
 		// Clear any existing timer
 		this.clearAutoTriggerTimer()
 		this.startProcessing()
-		// Start a new timer
-		const delay = (this.settings?.autoTriggerDelay || 3) * 1000
+		const delay = normalizeAutoTriggerDelayToMs(this.settings?.autoTriggerDelay)
 		this.autoTriggerTimer = setTimeout(() => {
 			this.onAutoTriggerTimeout()
 		}, delay)

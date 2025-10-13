@@ -130,7 +130,8 @@
 		"settings": "Paramètres des Modes",
 		"description": "Personas spécialisés qui adaptent le comportement de Kilo Code.",
 		"searchPlaceholder": "Rechercher des modes...",
-		"noResults": "Aucun résultat trouvé"
+		"noResults": "Aucun résultat trouvé",
+		"organizationModes": "Modes d'organisation"
 	},
 	"errorReadingFile": "Erreur lors de la lecture du fichier",
 	"noValidImages": "Aucune image valide n'a été traitée",

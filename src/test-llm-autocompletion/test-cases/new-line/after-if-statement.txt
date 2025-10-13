@@ -1,0 +1,7 @@
+# Description: Should complete if statement body
+function checkValue(value) {
+  if (value > 0) {
+<<<CURSOR>>>
+  }
+  return false;
+}

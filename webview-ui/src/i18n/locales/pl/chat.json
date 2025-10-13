@@ -130,7 +130,8 @@
 		"settings": "Ustawienia Trybów",
 		"description": "Wyspecjalizowane persony, które dostosowują zachowanie Kilo Code.",
 		"searchPlaceholder": "Szukaj trybów...",
-		"noResults": "Nie znaleziono wyników"
+		"noResults": "Nie znaleziono wyników",
+		"organizationModes": "Tryby organizacji"
 	},
 	"errorReadingFile": "Błąd odczytu pliku",
 	"noValidImages": "Nie przetworzono żadnych prawidłowych obrazów",

@@ -12,6 +12,7 @@ import { Slider } from "@src/components/ui"
 import { vscode } from "@/utils/vscode"
 import { ControlledCheckbox } from "../common/ControlledCheckbox"
 import { useKeybindings } from "@/hooks/useKeybindings"
+import { normalizeAutoTriggerDelay, DELAY_VALUES, formatDelay } from "@/utils/delayUtils"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -29,6 +30,10 @@ export const GhostServiceSettingsView = ({
 		ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
 
+	const normalizedDelay = normalizeAutoTriggerDelay(autoTriggerDelay)
+	const currentDelayIndex = DELAY_VALUES.indexOf(normalizedDelay)
+	const validIndex = currentDelayIndex === -1 ? DELAY_VALUES.indexOf(3000) : currentDelayIndex
+
 	const onEnableAutoTriggerChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
@@ -37,9 +42,10 @@ export const GhostServiceSettingsView = ({
 	}
 
 	const onAutoTriggerDelayChange = (newValue: number[]) => {
+		const delayMs = DELAY_VALUES[newValue[0]]
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
-			autoTriggerDelay: newValue[0],
+			autoTriggerDelay: delayMs,
 		})
 	}
 
@@ -95,16 +101,16 @@ export const GhostServiceSettingsView = ({
 							</label>
 							<div className="flex items-center gap-3">
 								<Slider
-									value={[autoTriggerDelay || 3]}
+									value={[validIndex]}
 									onValueChange={onAutoTriggerDelayChange}
-									min={1}
-									max={30}
+									min={0}
+									max={DELAY_VALUES.length - 1}
 									step={1}
 									className="flex-1"
 									disabled={!enableAutoTrigger}
 								/>
-								<span className="text-sm text-vscode-descriptionForeground w-8 text-right">
-									{autoTriggerDelay || 3}s
+								<span className="text-sm text-vscode-descriptionForeground w-12 text-right">
+									{formatDelay(normalizedDelay)}
 								</span>
 							</div>
 							<div className="text-vscode-descriptionForeground text-xs mt-1">
