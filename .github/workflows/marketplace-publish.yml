@@ -118,7 +118,6 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                  submodules: recursive
                   lfs: true
             - name: Install pnpm
               uses: pnpm/action-setup@v4

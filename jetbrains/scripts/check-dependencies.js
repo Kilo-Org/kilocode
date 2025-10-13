@@ -7,65 +7,53 @@
 
 const fs = require("fs")
 const path = require("path")
-const { execSync, spawn } = require("child_process")
+const { execSync } = require("child_process")
 
-// Colors for output (Windows compatible)
-const colors = {
-	red: "\x1b[31m",
-	green: "\x1b[32m",
-	yellow: "\x1b[33m",
-	blue: "\x1b[34m",
-	reset: "\x1b[0m",
-}
+// Use available npm packages for cleaner code
+const rimraf = require("rimraf")
+const mkdirp = require("mkdirp")
+
+// Constants
+const REQUIRED_JAVA_VERSION = "17"
+const RECOMMENDED_NODE_VERSION = "20"
+const VSCODE_COMMIT = "174af221c9ea2ccdb64abe4aab8e1a805e77beae"
+const VSCODE_REPO_URL = "https://github.com/microsoft/vscode.git"
 
 // Paths
 const scriptDir = __dirname
 const projectRoot = path.resolve(scriptDir, "../..")
 const jetbrainsDir = path.resolve(scriptDir, "..")
+const vscodeDir = path.join(projectRoot, "deps", "vscode")
+const depsDir = path.join(projectRoot, "deps")
 
-console.log(`${colors.blue}🔍 JetBrains Plugin Dependency Check${colors.reset}`)
-console.log(`Project root: ${projectRoot}`)
-console.log(`JetBrains dir: ${jetbrainsDir}`)
-console.log("")
-
-// Track issues
+// Track issues and fixes
 let issuesFound = 0
 let fixesApplied = 0
 
-// Helper functions
+// Simple logging functions
 function printStatus(message) {
-	console.log(`${colors.blue}[CHECK]${colors.reset} ${message}`)
+	console.log(`\x1b[34m[CHECK]\x1b[0m ${message}`)
 }
 
 function printSuccess(message) {
-	console.log(`${colors.green}[✓]${colors.reset} ${message}`)
+	console.log(`\x1b[32m[✓]\x1b[0m ${message}`)
 }
 
 function printWarning(message) {
-	console.log(`${colors.yellow}[⚠]${colors.reset} ${message}`)
+	console.log(`\x1b[33m[⚠]\x1b[0m ${message}`)
 }
 
 function printError(message) {
-	console.log(`${colors.red}[✗]${colors.reset} ${message}`)
+	console.log(`\x1b[31m[✗]\x1b[0m ${message}`)
 	issuesFound++
 }
 
 function printFix(message) {
-	console.log(`${colors.green}[FIX]${colors.reset} ${message}`)
+	console.log(`\x1b[32m[FIX]\x1b[0m ${message}`)
 	fixesApplied++
 }
 
-function commandExists(command) {
-	try {
-		execSync(`${process.platform === "win32" ? "where" : "which"} ${command}`, {
-			stdio: "ignore",
-		})
-		return true
-	} catch {
-		return false
-	}
-}
-
+// Simple utility functions
 function runCommand(command, options = {}) {
 	try {
 		return execSync(command, {
@@ -73,9 +61,19 @@ function runCommand(command, options = {}) {
 			stdio: "pipe",
 			...options,
 		}).trim()
-	} catch (error) {
+	} catch {
 		return null
 	}
+}
+
+function parseJavaVersion(versionOutput) {
+	const newFormatMatch = versionOutput.match(/version "(\d+)\.(\d+)/)
+	const oldFormatMatch = versionOutput.match(/version "1\.(\d+)/)
+	return newFormatMatch?.[1] || oldFormatMatch?.[1] || null
+}
+
+function isCI() {
+	return process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true" || process.env.JENKINS_URL
 }
 
 // Check functions
@@ -87,7 +85,8 @@ function checkJava() {
 		return true
 	}
 
-	if (!commandExists("java")) {
+	const javaCommand = process.platform === "win32" ? "where java" : "which java"
+	if (!runCommand(javaCommand)) {
 		printError("Java is not installed or not in PATH")
 		console.log("  Install Java 17 (recommended):")
 		console.log("  - Windows: Download from https://openjdk.org/projects/jdk/17/")
@@ -96,66 +95,58 @@ function checkJava() {
 		return false
 	}
 
-	const javaVersion = runCommand("java -version 2>&1")
-	if (!javaVersion) {
+	const javaVersionOutput = runCommand("java -version 2>&1")
+	if (!javaVersionOutput) {
 		printError("Could not determine Java version")
 		return false
 	}
 
-	// Parse Java version - handle both old format (1.8.0_xxx) and new format (17.0.x)
-	let majorVersion = null
-	const newFormatMatch = javaVersion.match(/version "(\d+)\.(\d+)/)
-	const oldFormatMatch = javaVersion.match(/version "1\.(\d+)/)
+	const majorVersion = parseJavaVersion(javaVersionOutput)
+	const currentVersion = javaVersionOutput.split("\n")[0]
 
-	if (newFormatMatch) {
-		majorVersion = newFormatMatch[1]
-	} else if (oldFormatMatch) {
-		majorVersion = oldFormatMatch[1]
-	}
+	if (majorVersion !== REQUIRED_JAVA_VERSION) {
+		const isWindows = process.platform === "win32"
 
-	// Check if we're in CI environment
-	const isCI = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true" || process.env.JENKINS_URL
-	const isWindows = process.platform === "win32"
-
-	if (majorVersion !== "17") {
-		if (isCI && isWindows) {
-			printWarning(`Java version is ${majorVersion}, but Java 17 is required for JetBrains plugin development`)
-			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
-			console.log("  Windows CI Environment detected - JetBrains plugin build will be skipped")
-			console.log("  Note: JetBrains plugin requires Java 17, which is not available in this environment")
-			console.log("  This is expected behavior - JetBrains plugin builds are primarily tested on Linux/macOS CI")
-			return true // Allow CI to continue, but JetBrains build will be skipped
-		} else if (isCI) {
-			printWarning(`Java version is ${majorVersion}, but Java 17 is recommended for JetBrains plugin development`)
-			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
-			console.log("  CI Environment detected - continuing with available Java version")
-			console.log(`  Note: Some features may not work correctly with Java ${majorVersion}`)
-			return true // Allow CI to continue with warning
-		} else {
-			printError(`Java version is ${majorVersion}, but Java 17 is required`)
-			console.log(`  Current Java: ${javaVersion.split("\n")[0]}`)
-			console.log("  Recommended fix:")
-			console.log("  - Windows: Download Java 17 from https://openjdk.org/projects/jdk/17/")
-			console.log("  - macOS: brew install openjdk@17 && export JAVA_HOME=$(/usr/libexec/java_home -v 17)")
-			console.log(
-				"  - Linux: sudo apt install openjdk-17-jdk && export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64",
+		if (isCI() && isWindows) {
+			printWarning(
+				`Java version is ${majorVersion}, but Java ${REQUIRED_JAVA_VERSION} is required for JetBrains plugin development`,
 			)
+			console.log(`  Current Java: ${currentVersion}`)
+			console.log("  Windows CI Environment detected - JetBrains plugin build will be skipped")
+			return true
+		} else if (isCI()) {
+			printWarning(
+				`Java version is ${majorVersion}, but Java ${REQUIRED_JAVA_VERSION} is recommended for JetBrains plugin development`,
+			)
+			console.log(`  Current Java: ${currentVersion}`)
+			console.log("  CI Environment detected - continuing with available Java version")
+			return true
+		} else {
+			printError(`Java version is ${majorVersion}, but Java ${REQUIRED_JAVA_VERSION} is required`)
+			console.log(`  Current Java: ${currentVersion}`)
+			console.log("  Recommended fix:")
+			console.log(
+				`  - Windows: Download Java ${REQUIRED_JAVA_VERSION} from https://openjdk.org/projects/jdk/${REQUIRED_JAVA_VERSION}/`,
+			)
+			console.log(`  - macOS: brew install openjdk@${REQUIRED_JAVA_VERSION}`)
+			console.log(`  - Linux: sudo apt install openjdk-${REQUIRED_JAVA_VERSION}-jdk`)
 			return false
 		}
 	}
 
-	printSuccess("Java 17 is installed and active")
-	console.log(`  ${javaVersion.split("\n")[0]}`)
+	printSuccess(`Java ${REQUIRED_JAVA_VERSION} is installed and active`)
+	console.log(`  ${currentVersion}`)
 	return true
 }
 
 function checkNode() {
 	printStatus("Checking Node.js installation...")
 
-	if (!commandExists("node")) {
+	const nodeCommand = process.platform === "win32" ? "where node" : "which node"
+	if (!runCommand(nodeCommand)) {
 		printError("Node.js is not installed")
-		console.log("  Install Node.js 20.x:")
-		console.log("  - Use nvm: nvm install 20 && nvm use 20")
+		console.log(`  Install Node.js ${RECOMMENDED_NODE_VERSION}.x:`)
+		console.log(`  - Use nvm: nvm install ${RECOMMENDED_NODE_VERSION} && nvm use ${RECOMMENDED_NODE_VERSION}`)
 		console.log("  - Or download from: https://nodejs.org/")
 		return false
 	}
@@ -167,11 +158,11 @@ function checkNode() {
 	}
 
 	const majorVersion = nodeVersion.replace("v", "").split(".")[0]
-	if (majorVersion !== "20") {
-		printWarning(`Node.js version is ${majorVersion}, recommended version is 20.x`)
+	if (majorVersion !== RECOMMENDED_NODE_VERSION) {
+		printWarning(`Node.js version is ${majorVersion}, recommended version is ${RECOMMENDED_NODE_VERSION}.x`)
 		console.log(`  Current Node.js: ${nodeVersion}`)
 	} else {
-		printSuccess("Node.js 20.x is installed")
+		printSuccess(`Node.js ${RECOMMENDED_NODE_VERSION}.x is installed`)
 		console.log(`  Version: ${nodeVersion}`)
 	}
 	return true
@@ -180,7 +171,8 @@ function checkNode() {
 function checkPnpm() {
 	printStatus("Checking pnpm installation...")
 
-	if (!commandExists("pnpm")) {
+	const pnpmCommand = process.platform === "win32" ? "where pnpm" : "which pnpm"
+	if (!runCommand(pnpmCommand)) {
 		printError("pnpm is not installed")
 		console.log("  Install pnpm: npm install -g pnpm")
 		return false
@@ -189,47 +181,6 @@ function checkPnpm() {
 	const pnpmVersion = runCommand("pnpm -v")
 	printSuccess("pnpm is installed")
 	console.log(`  Version: ${pnpmVersion}`)
-	return true
-}
-
-function checkVscodeSubmodule() {
-	printStatus("Checking VSCode submodule...")
-
-	const vscodeDir = path.join(projectRoot, "deps", "vscode")
-
-	if (!fs.existsSync(vscodeDir)) {
-		printError(`VSCode submodule directory not found: ${vscodeDir}`)
-		return false
-	}
-
-	const srcDir = path.join(vscodeDir, "src")
-	if (!fs.existsSync(srcDir) || fs.readdirSync(srcDir).length === 0) {
-		printWarning("VSCode submodule is not initialized")
-		console.log("  Initializing VSCode submodule...")
-
-		process.chdir(projectRoot)
-		const result = runCommand("git submodule update --init --recursive")
-		if (result !== null) {
-			printFix("VSCode submodule initialized successfully")
-		} else {
-			printError("Failed to initialize VSCode submodule")
-			return false
-		}
-	} else {
-		printSuccess("VSCode submodule is initialized")
-	}
-
-	// Check if submodule has expected content
-	const expectedFile = path.join(vscodeDir, "src", "vs", "code", "electron-main", "main.ts")
-	if (fs.existsSync(expectedFile)) {
-		printSuccess("VSCode submodule contains expected files")
-	} else {
-		printError("VSCode submodule appears to be incomplete")
-		console.log(`  Expected file: ${expectedFile}`)
-		console.log("  Try: git submodule update --init --recursive --force")
-		return false
-	}
-
 	return true
 }
 
@@ -243,7 +194,7 @@ function checkGradle() {
 		return false
 	}
 
-	// On Unix systems, check if executable
+	// On Unix systems, ensure executable permissions
 	if (process.platform !== "win32") {
 		try {
 			const stats = fs.statSync(gradleWrapper)
@@ -261,27 +212,168 @@ function checkGradle() {
 	return true
 }
 
+function setupVscodeRepository() {
+	printWarning("Setting up VSCode repository...")
+
+	// Check if we're in a worktree environment
+	const gitFile = path.join(vscodeDir, ".git")
+	const isWorktree = fs.existsSync(gitFile) && fs.statSync(gitFile).isFile()
+
+	if (isWorktree) {
+		// In worktree setup, the .git file contains a reference to the actual git directory
+		printWarning("Detected worktree setup, attempting to initialize...")
+
+		const originalDir = process.cwd()
+		try {
+			// In CI environments, worktrees might not be properly initialized
+			// Try to repair the worktree first
+			process.chdir(projectRoot)
+			const worktreeResult = runCommand(`git worktree repair`)
+			if (worktreeResult !== null) {
+				printFix("Worktree repaired successfully")
+			}
+
+			// Check if the VSCode directory is now accessible
+			const expectedFile = path.join(vscodeDir, "src", "vs", "code", "electron-main", "main.ts")
+			if (fs.existsSync(expectedFile)) {
+				printSuccess("VSCode worktree is properly set up")
+				return true
+			}
+
+			// If worktree repair didn't work, try to re-add the worktree
+			// This handles cases where the worktree reference exists but the actual worktree is missing
+			printWarning("Worktree repair insufficient, attempting to re-add worktree...")
+
+			// Remove the broken worktree reference
+			const removeResult = runCommand(`git worktree remove --force deps/vscode`)
+			if (removeResult !== null) {
+				printFix("Removed broken worktree reference")
+			}
+
+			// Re-add the worktree at the specific commit
+			const addResult = runCommand(`git worktree add deps/vscode ${VSCODE_COMMIT}`)
+			if (addResult !== null) {
+				printFix("Re-added VSCode worktree successfully")
+
+				// Verify the worktree is now working
+				if (fs.existsSync(expectedFile)) {
+					printSuccess("VSCode worktree is now properly set up")
+					return true
+				}
+			}
+
+			// If all worktree operations failed, fall back to clone approach
+			printWarning("Worktree operations failed, falling back to clone...")
+		} catch (error) {
+			printWarning(`Worktree operations failed (${error.message}), falling back to clone...`)
+		} finally {
+			process.chdir(originalDir)
+		}
+	}
+
+	// Clean removal and setup using npm packages
+	rimraf.sync(vscodeDir)
+	mkdirp.sync(depsDir)
+
+	// Clone repository
+	const originalDir = process.cwd()
+	try {
+		process.chdir(depsDir)
+		const cloneResult = runCommand(`git clone ${VSCODE_REPO_URL} vscode`)
+		if (!cloneResult) {
+			printError("Failed to clone VSCode repository")
+			return false
+		}
+		printFix("VSCode repository cloned successfully")
+
+		// Checkout specific commit
+		process.chdir(vscodeDir)
+		const checkoutResult = runCommand(`git checkout ${VSCODE_COMMIT}`)
+		if (!checkoutResult) {
+			printWarning("Could not checkout specific commit, using current HEAD")
+		} else {
+			printSuccess("Checked out specific VSCode commit")
+		}
+
+		return true
+	} finally {
+		process.chdir(originalDir)
+	}
+}
+
+function checkVscodeDirectory() {
+	printStatus("Checking VSCode directory...")
+
+	const expectedFile = path.join(vscodeDir, "src", "vs", "code", "electron-main", "main.ts")
+	const patchFile = path.join(projectRoot, "deps", "patches", "vscode", "jetbrains.patch")
+
+	// Setup repository if expected file doesn't exist
+	if (!fs.existsSync(expectedFile)) {
+		if (!setupVscodeRepository()) {
+			return false
+		}
+	}
+
+	// Apply patch (handle case where patch might already be applied)
+	printStatus("Applying JetBrains patch...")
+	const originalDir = process.cwd()
+	try {
+		process.chdir(vscodeDir)
+		const relativePatchPath = path.relative(vscodeDir, patchFile)
+
+		// Try applying the patch, but don't fail if it's already applied
+		const patchResult = runCommand(`git apply ${relativePatchPath}`)
+		if (patchResult === null) {
+			// Check if we have modified files (patch might be already applied)
+			const statusResult = runCommand("git status --porcelain")
+			if (statusResult && statusResult.length > 0) {
+				printSuccess("JetBrains patch already applied")
+			} else {
+				printWarning("Patch may already be applied or failed - continuing anyway")
+			}
+		} else {
+			printSuccess("JetBrains patch applied successfully")
+		}
+
+		// Disable git tracking
+		const gitFile = path.join(vscodeDir, ".git")
+		const gitDisabledFile = path.join(vscodeDir, ".git.disabled")
+		if (fs.existsSync(gitFile) && !fs.existsSync(gitDisabledFile)) {
+			fs.renameSync(gitFile, gitDisabledFile)
+			printFix("Disabled git tracking for VSCode directory")
+		}
+
+		printSuccess("VSCode directory is ready")
+		return true
+	} finally {
+		process.chdir(originalDir)
+	}
+}
+
 function checkProjectDependencies() {
 	printStatus("Checking project dependencies...")
 
-	process.chdir(projectRoot)
+	const originalDir = process.cwd()
+	try {
+		process.chdir(projectRoot)
 
-	if (!fs.existsSync("node_modules") || !fs.existsSync("pnpm-lock.yaml")) {
-		printWarning("Project dependencies not installed")
-		console.log("  Installing dependencies with pnpm...")
+		if (!fs.existsSync("node_modules") || !fs.existsSync("pnpm-lock.yaml")) {
+			printWarning("Project dependencies not installed")
+			console.log("  Installing dependencies with pnpm...")
 
-		const result = runCommand("pnpm install")
-		if (result !== null) {
+			const result = runCommand("pnpm install")
+			if (!result) {
+				printError("Failed to install project dependencies")
+				return false
+			}
 			printFix("Project dependencies installed successfully")
 		} else {
-			printError("Failed to install project dependencies")
-			return false
+			printSuccess("Project dependencies are installed")
 		}
-	} else {
-		printSuccess("Project dependencies are installed")
+		return true
+	} finally {
+		process.chdir(originalDir)
 	}
-
-	return true
 }
 
 function checkJetbrainsHostDeps() {
@@ -293,13 +385,12 @@ function checkJetbrainsHostDeps() {
 
 	if (fs.existsSync(packageJson) && fs.existsSync(tsconfig)) {
 		printSuccess("JetBrains host is configured")
+		return true
 	} else {
 		printError("JetBrains host configuration files are missing")
 		console.log("  Missing files: package.json or tsconfig.json")
 		return false
 	}
-
-	return true
 }
 
 function checkBuildSystem() {
@@ -312,44 +403,58 @@ function checkBuildSystem() {
 
 	if (fs.existsSync(gradlew) && fs.existsSync(buildGradle) && fs.existsSync(gradleProps)) {
 		printSuccess("Gradle build system is configured")
+		return true
 	} else {
 		printError("Gradle build system files are missing")
 		console.log("  Missing files: gradlew, build.gradle.kts, or gradle.properties")
 		return false
 	}
-
-	return true
 }
 
-// Main execution
-function main() {
+function runChecks() {
 	console.log("Starting dependency checks...")
 	console.log("")
 
-	// Run all checks with error handling
+	// Dependency checks in logical order
 	const checks = [
-		checkJava,
-		checkNode,
-		checkPnpm,
-		checkVscodeSubmodule,
-		checkGradle,
-		checkProjectDependencies,
-		checkJetbrainsHostDeps,
-		checkBuildSystem,
+		{ name: "Java", fn: checkJava },
+		{ name: "Node.js", fn: checkNode },
+		{ name: "pnpm", fn: checkPnpm },
+		{ name: "Gradle", fn: checkGradle },
+		{ name: "VSCode Directory", fn: checkVscodeDirectory },
+		{ name: "Project Dependencies", fn: checkProjectDependencies },
+		{ name: "JetBrains Host", fn: checkJetbrainsHostDeps },
+		{ name: "Build System", fn: checkBuildSystem },
 	]
 
-	checks.forEach((check) => {
+	let allPassed = true
+	for (const check of checks) {
 		try {
-			check()
+			const result = check.fn()
+			if (!result) {
+				allPassed = false
+			}
 		} catch (error) {
-			console.log(`Warning: ${check.name} had issues: ${error.message}`)
+			printError(`${check.name} check failed: ${error.message}`)
+			allPassed = false
 		}
-	})
+	}
+
+	return allPassed
+}
+
+function main() {
+	console.log(`\x1b[34m🔍 JetBrains Plugin Dependency Check\x1b[0m`)
+	console.log(`Project root: ${projectRoot}`)
+	console.log(`JetBrains dir: ${jetbrainsDir}`)
+	console.log("")
+
+	const success = runChecks()
 
 	console.log("")
 	console.log("==================================")
 
-	if (issuesFound === 0) {
+	if (success) {
 		printSuccess("All dependencies are properly configured!")
 		console.log("")
 		console.log("You can now build the JetBrains plugin:")
@@ -358,16 +463,18 @@ function main() {
 	} else {
 		printError(`Found ${issuesFound} issue(s) that need to be resolved`)
 		if (fixesApplied > 0) {
-			console.log(`${colors.green}Applied ${fixesApplied} automatic fix(es)${colors.reset}`)
+			console.log(`\x1b[32mApplied ${fixesApplied} automatic fix(es)\x1b[0m`)
 		}
 		console.log("")
 		console.log("Please resolve the issues above and run this script again.")
-		process.exit(1)
 	}
 
 	console.log("")
 	console.log("For more information, see jetbrains/README.md")
+
+	if (!success) {
+		process.exit(1)
+	}
 }
 
-// Run main function
 main()
