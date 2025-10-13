@@ -6,6 +6,7 @@ import { GhostStrategy } from "./GhostStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
+import { GhostInlineCompletionProvider } from "./GhostInlineCompletionProvider"
 import { GhostSuggestionContext } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { getWorkspacePath } from "../../utils/path"
@@ -26,6 +27,8 @@ import { normalizeAutoTriggerDelayToMs } from "./utils/autocompleteDelayUtils"
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
 	private decorations: GhostDecorations
+	private inlineCompletionProvider: GhostInlineCompletionProvider
+	private inlineCompletionDisposable: vscode.Disposable | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private strategy: GhostStrategy
@@ -65,6 +68,7 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions)
 		this.documentStore = new GhostDocumentStore()
 		this.strategy = new GhostStrategy({ debug: true })
 		this.workspaceEdit = new GhostWorkspaceEdit()
@@ -77,6 +81,9 @@ export class GhostProvider {
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
+
+		// Register inline completion provider
+		this.registerInlineCompletionProvider()
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -126,6 +133,10 @@ export class GhostProvider {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.settings, this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
+
+		// Re-register inline completion provider if settings changed
+		this.registerInlineCompletionProvider()
+
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 	}
@@ -332,6 +343,9 @@ export class GhostProvider {
 					// Update our suggestions with the new parsed results
 					this.suggestions = parseResult.suggestions
 
+					// Update inline completion provider with new suggestions
+					this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
 					// If this is the first suggestion, show it immediately
 					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
 						hasShownFirstSuggestion = true
@@ -419,6 +433,11 @@ export class GhostProvider {
 
 	private async render() {
 		await this.updateGlobalContext()
+
+		// Update inline completion provider with current suggestions
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
+		// Keep decorations for deletions or as fallback
 		await this.displaySuggestions()
 		// await this.displayCodeLens()
 	}
@@ -443,7 +462,24 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		await this.decorations.displaySuggestions(this.suggestions)
+
+		// Check if we should use inline completions or decorations
+		const file = this.suggestions.getFile(editor.document.uri)
+		if (file) {
+			const selectedGroup = file.getSelectedGroupOperations()
+			const groupType = file.getGroupType(selectedGroup)
+
+			// Use decorations for deletions, inline completions handle additions/modifications
+			if (groupType === "-") {
+				await this.decorations.displaySuggestions(this.suggestions)
+			} else {
+				// Clear decorations, inline completions will show
+				this.decorations.clearAll()
+			}
+		} else {
+			// No suggestions, clear decorations
+			this.decorations.clearAll()
+		}
 	}
 
 	private getSelectedSuggestionLine() {
@@ -508,6 +544,9 @@ export class GhostProvider {
 		})
 		this.decorations.clearAll()
 		this.suggestions.clear()
+
+		// Update inline completion provider
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
 
 		this.clearAutoTriggerTimer()
 		await this.render()
@@ -757,6 +796,23 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Register or re-register the inline completion provider
+	 */
+	private registerInlineCompletionProvider(): void {
+		// Dispose existing registration
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+
+		// Register inline completion provider for all languages
+		this.inlineCompletionDisposable = vscode.languages.registerInlineCompletionItemProvider(
+			{ pattern: "**" },
+			this.inlineCompletionProvider,
+		)
+	}
+
+	/**
 	 * Dispose of all resources used by the GhostProvider
 	 */
 	public dispose(): void {
@@ -765,6 +821,13 @@ export class GhostProvider {
 
 		this.suggestions.clear()
 		this.decorations.clearAll()
+
+		// Dispose inline completion provider
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+		this.inlineCompletionProvider.dispose()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()

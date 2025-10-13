@@ -73,6 +73,12 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 			await ghost.disable()
 		}),
 	)
+	context.subscriptions.push(
+		vscode.commands.registerCommand("kilocode.ghost.showNavigationHint", async () => {
+			// Show a hint about how to navigate suggestions
+			vscode.window.showInformationMessage("Use Alt+] for next suggestion, Alt+[ for previous suggestion")
+		}),
+	)
 
 	// Register GhostProvider Code Actions
 	context.subscriptions.push(
