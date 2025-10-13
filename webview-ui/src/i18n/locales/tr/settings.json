@@ -933,6 +933,10 @@
 			"label": "Eşik değerin altındaki maliyeti gizle",
 			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",
 			"currentValue": "Mevcut eşik: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zaman damgalarını göster",
+			"description": "Sohbet görünümündeki her mesaj için zaman damgası göster"
 		}
 	},
 	"ghost": {

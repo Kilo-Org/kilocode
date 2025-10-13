@@ -1,12 +1,11 @@
 import type { Range, TextDocument } from "vscode"
 import { GhostSuggestionContext } from "../types"
-import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
+import { PromptStrategy } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
 import { formatDiagnostics, formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
 export class UserRequestStrategy implements PromptStrategy {
 	name = "User Request"
-	type = UseCaseType.USER_REQUEST
 
 	canHandle(context: GhostSuggestionContext): boolean {
 		return !!context.userInput && context.userInput.trim().length > 0

@@ -932,6 +932,10 @@
 			"label": "Kosten onder drempel verbergen",
 			"currentValue": "Huidige drempelwaarde: ${{value}}",
 			"description": "Toon alleen aanvraagkosten hoger dan dit bedrag. Kosten zijn altijd zichtbaar wanneer het detailpaneel is geopend."
+		},
+		"showTimestamps": {
+			"label": "Tijdstempels weergeven",
+			"description": "Toon tijdstempel voor elk bericht in de chatweergave"
 		}
 	},
 	"ghost": {

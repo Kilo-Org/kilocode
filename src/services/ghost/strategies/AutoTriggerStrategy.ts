@@ -1,11 +1,10 @@
 import { GhostSuggestionContext } from "../types"
-import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
+import { PromptStrategy } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
 import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
 export class AutoTriggerStrategy implements PromptStrategy {
 	name = "Auto Trigger"
-	type = UseCaseType.AUTO_TRIGGER
 
 	canHandle(context: GhostSuggestionContext): boolean {
 		// This is the fallback strategy, so it can handle anything

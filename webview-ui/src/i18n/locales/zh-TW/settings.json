@@ -933,6 +933,10 @@
 			"description": "仅显示超过此金额的请求费用。当详细信息面板打开时，费用始终可见。",
 			"label": "隐藏低于阈值的费用",
 			"currentValue": "当前阈值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "顯示時間戳記",
+			"description": "在聊天檢視中顯示每則訊息的時間戳記"
 		}
 	},
 	"ghost": {

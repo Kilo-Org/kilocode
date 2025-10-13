@@ -953,6 +953,10 @@
 			"label": "Sembunyikan biaya di bawah ambang batas",
 			"currentValue": "Ambang batas saat ini: ${{value}}",
 			"description": "Hanya tampilkan biaya permintaan di atas jumlah ini. Biaya selalu terlihat saat panel detail terbuka."
+		},
+		"showTimestamps": {
+			"label": "Tampilkan stempel waktu",
+			"description": "Tampilkan stempel waktu untuk setiap pesan di tampilan obrolan"
 		}
 	},
 	"ghost": {

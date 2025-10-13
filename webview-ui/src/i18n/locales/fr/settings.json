@@ -931,6 +931,10 @@
 			"label": "Masquer le coût en dessous du seuil",
 			"currentValue": "Seuil actuel : ${{value}}",
 			"description": "N'afficher que les coûts de requête supérieurs à ce montant. Les coûts sont toujours visibles lorsque le volet de détails est ouvert."
+		},
+		"showTimestamps": {
+			"label": "Afficher les horodatages",
+			"description": "Afficher l'horodatage pour chaque message dans la vue de discussion"
 		}
 	},
 	"ghost": {

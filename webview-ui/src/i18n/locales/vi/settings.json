@@ -932,6 +932,10 @@
 			"label": "Ẩn chi phí dưới ngưỡng",
 			"description": "Chỉ hiển thị chi phí yêu cầu trên mức này. Chi phí luôn được hiển thị khi khung thông tin chi tiết được mở.",
 			"currentValue": "Ngưỡng hiện tại: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Hiển thị dấu thời gian",
+			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
 		}
 	},
 	"ghost": {

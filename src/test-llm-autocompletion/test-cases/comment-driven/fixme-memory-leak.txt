@@ -1,7 +1,0 @@
-# Description: Should fix memory leak described in FIXME
-class EventEmitter {
-  // FIXME: Memory leak - listeners not being cleaned up<<<CURSOR>>>
-  on(event, callback) {
-    this.listeners.push({ event, callback });
-  }
-}

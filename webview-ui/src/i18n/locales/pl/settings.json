@@ -932,6 +932,10 @@
 			"currentValue": "Aktualny próg: ${{value}}",
 			"label": "Ukryj koszt poniżej progu",
 			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
+		},
+		"showTimestamps": {
+			"label": "Pokaż znaczniki czasu",
+			"description": "Pokaż znacznik czasu dla każdej wiadomości w widoku czatu"
 		}
 	},
 	"ghost": {

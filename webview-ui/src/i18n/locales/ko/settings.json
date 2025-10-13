@@ -932,6 +932,10 @@
 			"description": "해당 금액 이상의 요청비용만 표시합니다. 세부정보 창이 열려있을 때는 항상 비용이 표시됩니다.",
 			"label": "임계값 이하 비용 숨기기",
 			"currentValue": "현재 임계값: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "타임스탬프 표시",
+			"description": "채팅 화면에서 각 메시지의 타임스탬프 표시"
 		}
 	},
 	"ghost": {

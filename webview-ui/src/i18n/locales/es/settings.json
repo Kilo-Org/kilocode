@@ -931,6 +931,10 @@
 			"label": "Ocultar costo por debajo del umbral",
 			"description": "Solo mostrar los costos de solicitud superiores a este monto. Los costos siempre son visibles cuando el panel de detalles está abierto.",
 			"currentValue": "Umbral actual: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Mostrar marcas de tiempo",
+			"description": "Mostrar la marca de tiempo para cada mensaje en la vista del chat"
 		}
 	},
 	"ghost": {

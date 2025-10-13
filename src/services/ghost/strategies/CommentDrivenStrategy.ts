@@ -1,11 +1,10 @@
 import { GhostSuggestionContext } from "../types"
-import { PromptStrategy, UseCaseType } from "../types/PromptStrategy"
+import { PromptStrategy } from "../types/PromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
 import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
 
 export class CommentDrivenStrategy implements PromptStrategy {
 	name = "Comment Driven"
-	type = UseCaseType.COMMENT_DRIVEN
 
 	canHandle(context: GhostSuggestionContext): boolean {
 		if (!context.document || !context.range) return false

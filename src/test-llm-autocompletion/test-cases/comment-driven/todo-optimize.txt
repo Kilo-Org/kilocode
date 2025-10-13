@@ -1,5 +1,0 @@
-# Description: Should implement optimization after TODO comment
-for (let i = 0; i < input; i++) {
-  // TODO: Optimize this function for performance<<<CURSOR>>>
-  result += Math.pow(i, 2);
-}

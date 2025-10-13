@@ -932,6 +932,10 @@
 			"label": "Ocultar custo abaixo do limite",
 			"currentValue": "Limiar atual: ${{value}}",
 			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
+		},
+		"showTimestamps": {
+			"label": "Mostrar carimbos de tempo",
+			"description": "Mostrar carimbo de tempo para cada mensagem na visualização do chat"
 		}
 	},
 	"ghost": {

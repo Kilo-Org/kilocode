@@ -933,6 +933,10 @@
 			"label": "Nascondi costo sotto la soglia",
 			"currentValue": "Soglia attuale: ${{value}}",
 			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
+		},
+		"showTimestamps": {
+			"label": "Mostra timestamp",
+			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
 		}
 	},
 	"ghost": {

@@ -50,9 +50,6 @@ export class PromptStrategyManager {
 		return strategy
 	}
 
-	/**
-	 * Get all available strategy names
-	 */
 	getAvailableStrategies(): string[] {
 		return [...this.strategies.map((s) => s.name), this.autoTriggerStrategy.name]
 	}

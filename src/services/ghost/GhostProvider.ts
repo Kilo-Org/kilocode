@@ -201,6 +201,9 @@ export class GhostProvider {
 		if (this.workspaceEdit.isLocked()) {
 			return
 		}
+		if (event.contentChanges.length === 0) {
+			return
+		}
 		await this.documentStore.storeDocument({ document: event.document })
 		this.lastTextChangeTime = Date.now()
 		this.handleTypingEvent(event)

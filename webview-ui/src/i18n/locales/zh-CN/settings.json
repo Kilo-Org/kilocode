@@ -937,6 +937,10 @@
 			"label": "隐藏低于阈值的费用",
 			"description": "仅显示超过此金额的请求成本。当详情面板打开时，成本始终可见。",
 			"currentValue": "当前阈值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "显示时间戳",
+			"description": "在聊天视图中为每条消息显示时间戳"
 		}
 	},
 	"ghost": {

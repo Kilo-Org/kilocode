@@ -927,6 +927,10 @@
 			"label": "Kosten unter Schwellenwert ausblenden",
 			"description": "Nur Anforderungskosten über diesem Betrag anzeigen. Kosten sind immer sichtbar, wenn der Detailbereich geöffnet ist.",
 			"currentValue": "Aktueller Schwellenwert: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zeitstempel anzeigen",
+			"description": "Zeitstempel für jede Nachricht in der Chat-Ansicht anzeigen"
 		}
 	},
 	"ghost": {

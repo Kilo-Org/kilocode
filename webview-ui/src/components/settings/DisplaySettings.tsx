@@ -14,16 +14,22 @@ import { Slider } from "../ui"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
+	showTimestamps?: boolean
 	ghostServiceSettings?: any
 	reasoningBlockCollapsed: boolean
 	setCachedStateField: SetCachedStateField<
-		"showTaskTimeline" | "ghostServiceSettings" | "reasoningBlockCollapsed" | "hideCostBelowThreshold"
+		| "showTaskTimeline"
+		| "ghostServiceSettings"
+		| "reasoningBlockCollapsed"
+		| "hideCostBelowThreshold"
+		| "showTimestamps"
 	>
 	hideCostBelowThreshold?: number
 }
 
 export const DisplaySettings = ({
 	showTaskTimeline,
+	showTimestamps,
 	ghostServiceSettings,
 	setCachedStateField,
 	reasoningBlockCollapsed,
@@ -97,7 +103,19 @@ export const DisplaySettings = ({
 						</div>
 					</div>
 				</div>
-
+				{/* Show Timestamps checkbox */}
+				<div className="mt-3">
+					<VSCodeCheckbox
+						checked={showTimestamps}
+						onChange={(e: any) => {
+							setCachedStateField("showTimestamps", e.target.checked)
+						}}>
+						<span className="font-medium">{t("settings:display.showTimestamps.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:display.showTimestamps.description")}
+					</div>
+				</div>
 				{/* Gutter Animation Setting */}
 				<div className="mt-6 pt-6 border-t border-vscode-panel-border">
 					<div className="flex flex-col gap-1">

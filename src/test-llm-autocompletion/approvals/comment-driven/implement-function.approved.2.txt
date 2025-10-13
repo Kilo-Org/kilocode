@@ -1,7 +1,0 @@
-// Calculate factorial of a number recursively
-function factorial(n: number): number {
-  if (n < 0) {
-    throw new Error('Factorial is not defined for negative numbers');
-  }
-  return n === 0 ? 1 : n * factorial(n - 1);
-}

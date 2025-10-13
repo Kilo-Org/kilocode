@@ -931,6 +931,10 @@
 			"label": "Amaga el cost per sota del llindar",
 			"description": "Mostra només els costos de sol·licituds superiors a aquesta quantitat. Els costos sempre són visibles quan el panell de detalls està obert.",
 			"currentValue": "Llindar actual: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Mostrar marca de temps",
+			"description": "Mostrar la marca de temps per a cada missatge a la vista del xat"
 		}
 	},
 	"ghost": {

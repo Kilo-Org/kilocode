@@ -1,7 +1,0 @@
-for (let i = 0; i < input; i++) {
-  // TODO: Optimize this function for performance
-  // Optimize performance by precomputing values
-  const squared = i * i;
-  result += squared;
-  result += Math.pow(i, 2);
-}
