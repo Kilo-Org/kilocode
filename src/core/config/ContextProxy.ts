@@ -284,7 +284,9 @@ export class ContextProxy {
 		const values = this.getValues()
 
 		try {
-			return providerSettingsSchema.parse(values)
+			const settings = providerSettingsSchema.parse(values)
+			settings.toolCallEnabled = true
+			return settings
 		} catch (error) {
 			if (error instanceof ZodError) {
 				TelemetryService.instance.captureSchemaValidationError({ schemaName: "ProviderSettings", error })
