@@ -6,7 +6,8 @@ import { GhostSuggestionEditOperation } from "./types"
  * Inline Completion Provider for Ghost Code Suggestions
  *
  * Provides ghost text completions at the cursor position based on
- * the currently selected suggestion group.
+ * the currently selected suggestion group using VS Code's native
+ * inline completion API.
  */
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestions: GhostSuggestionsState
@@ -50,13 +51,35 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const groupType = file.getGroupType(selectedGroup)
 
 		// Only provide inline completions for additions and modifications
-		// Deletions are better handled with decorations
+		// Deletions are handled with decorations
 		if (groupType === "-") {
 			return undefined
 		}
 
+		// Check if suggestion is near cursor - if too far, let decorations handle it
+		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+		const firstOp = selectedGroup[0]
+		let targetLine: number
+
+		if (groupType === "+") {
+			targetLine = firstOp.line + offset.removed
+		} else {
+			const deleteOp = selectedGroup.find((op) => op.type === "-")
+			if (!deleteOp) {
+				return undefined
+			}
+			targetLine = deleteOp.line + offset.added
+		}
+
+		// If suggestion is more than 5 lines away from cursor, don't show inline completion
+		// This allows decorations to handle it instead
+		const distanceFromCursor = Math.abs(position.line - targetLine)
+		if (distanceFromCursor > 5) {
+			return undefined
+		}
+
 		// Convert the selected group to an inline completion item
-		const completionItem = this.createInlineCompletionItem(document, position, selectedGroup, groupType)
+		const completionItem = this.createInlineCompletionItem(document, position, selectedGroup, groupType, targetLine)
 
 		if (!completionItem) {
 			return undefined
@@ -66,53 +89,22 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	/**
-	 * Create an inline completion item from a group of operations
+	 * Create an inline completion item from a group of operations.
+	 * Shows ghost text at the target line.
 	 */
 	private createInlineCompletionItem(
 		document: vscode.TextDocument,
 		position: vscode.Position,
 		group: GhostSuggestionEditOperation[],
 		groupType: "+" | "/" | "-",
+		targetLine: number,
 	): vscode.InlineCompletionItem | undefined {
-		// Get the operations offset to calculate correct line numbers
-		const file = this.suggestions.getFile(document.uri)
-		if (!file) {
-			return undefined
-		}
-
-		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
-
-		// Find the target line for the completion
-		const firstOp = group[0]
-		let targetLine: number
-
-		if (groupType === "+") {
-			// For pure additions, use the line from the operation plus offset
-			targetLine = firstOp.line + offset.removed
-		} else if (groupType === "/") {
-			// For modifications (delete + add), use the delete line
-			const deleteOp = group.find((op) => op.type === "-")
-			if (!deleteOp) {
-				return undefined
-			}
-			targetLine = deleteOp.line + offset.added
-		} else {
-			return undefined
-		}
-
-		// Check if the cursor is near the target line (within 5 lines)
-		const cursorLine = position.line
-		const distance = Math.abs(cursorLine - targetLine)
-
-		if (distance > 5) {
-			// Don't show inline completion if cursor is too far from suggestion
-			return undefined
-		}
-
 		// Build the completion text
+		// Note: We don't strictly check cursor position here because:
+		// 1. The cursor might have moved slightly after the LLM response
+		// 2. VSCode's inline completion API will handle positioning
+		// 3. We want to show the suggestion as long as it's for this document
 		let completionText: string
-		let insertText: string
-		let range: vscode.Range
 
 		if (groupType === "/") {
 			// For modifications, show the new content (additions)
@@ -121,56 +113,30 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				.sort((a, b) => a.line - b.line)
 				.map((op) => op.content)
 				.join("\n")
-
-			// Replace the entire line
-			if (targetLine < document.lineCount) {
-				const line = document.lineAt(targetLine)
-				range = line.range
-				insertText = completionText
-			} else {
-				// Line doesn't exist yet, append at end
-				const lastLine = document.lineAt(document.lineCount - 1)
-				range = new vscode.Range(lastLine.range.end, lastLine.range.end)
-				insertText = "\n" + completionText
-			}
 		} else {
-			// For pure additions, insert new lines
+			// For pure additions, show all new lines
 			completionText = group
 				.sort((a, b) => a.line - b.line)
 				.map((op) => op.content)
 				.join("\n")
-
-			// Determine insertion point
-			if (targetLine < document.lineCount) {
-				// Insert at the beginning of target line
-				const line = document.lineAt(targetLine)
-				range = new vscode.Range(line.range.start, line.range.start)
-				insertText = completionText + "\n"
-			} else {
-				// Append at end of document
-				const lastLine = document.lineAt(document.lineCount - 1)
-				range = new vscode.Range(lastLine.range.end, lastLine.range.end)
-				insertText = "\n" + completionText
-			}
 		}
 
-		// If cursor is on the target line, show inline at cursor
-		// Otherwise, don't show (user will need to navigate)
-		if (cursorLine === targetLine) {
-			// Create inline completion item as plain object for better testability
-			const item: vscode.InlineCompletionItem = {
-				insertText,
-				range,
-				command: {
-					command: "kilocode.ghost.showNavigationHint",
-					title: "Navigate suggestions",
-				},
-			}
+		// Create a range at the target line where the suggestion should be inserted
+		// Use the current character position to maintain cursor placement
+		const targetPosition = new vscode.Position(targetLine, position.character)
+		const range = new vscode.Range(targetPosition, targetPosition)
 
-			return item
+		// Create inline completion item using VS Code's InlineCompletionItem interface
+		const item: vscode.InlineCompletionItem = {
+			insertText: completionText,
+			range,
+			command: {
+				command: "kilo-code.ghost.applyCurrentSuggestions",
+				title: "Accept suggestion",
+			},
 		}
 
-		return undefined
+		return item
 	}
 
 	public dispose(): void {

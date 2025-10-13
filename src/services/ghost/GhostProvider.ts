@@ -437,6 +437,15 @@ export class GhostProvider {
 		// Update inline completion provider with current suggestions
 		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
 
+		// Explicitly trigger inline suggestions to show ghost text
+		if (this.suggestions.hasSuggestions()) {
+			try {
+				await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+			} catch {
+				// Silently fail if command is not available
+			}
+		}
+
 		// Keep decorations for deletions or as fallback
 		await this.displaySuggestions()
 		// await this.displayCodeLens()
@@ -463,22 +472,50 @@ export class GhostProvider {
 			return
 		}
 
-		// Check if we should use inline completions or decorations
 		const file = this.suggestions.getFile(editor.document.uri)
-		if (file) {
-			const selectedGroup = file.getSelectedGroupOperations()
-			const groupType = file.getGroupType(selectedGroup)
-
-			// Use decorations for deletions, inline completions handle additions/modifications
-			if (groupType === "-") {
-				await this.decorations.displaySuggestions(this.suggestions)
-			} else {
-				// Clear decorations, inline completions will show
-				this.decorations.clearAll()
-			}
-		} else {
-			// No suggestions, clear decorations
+		if (!file) {
 			this.decorations.clearAll()
+			return
+		}
+
+		const selectedGroup = file.getSelectedGroupOperations()
+		if (selectedGroup.length === 0) {
+			this.decorations.clearAll()
+			return
+		}
+
+		const groupType = file.getGroupType(selectedGroup)
+
+		// Pure deletions always use decorations (inline completions can't show them)
+		if (groupType === "-") {
+			await this.decorations.displaySuggestions(this.suggestions)
+			return
+		}
+
+		// Calculate distance from cursor to suggestion for additions/modifications
+		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+		const firstOp = selectedGroup[0]
+		let targetLine: number
+
+		if (groupType === "+") {
+			targetLine = firstOp.line + offset.removed
+		} else {
+			// groupType === "/"
+			const deleteOp = selectedGroup.find((op) => op.type === "-")
+			targetLine = deleteOp ? deleteOp.line + offset.added : firstOp.line
+		}
+
+		const distanceFromCursor = Math.abs(editor.selection.active.line - targetLine)
+
+		// Display strategy:
+		// - Near cursor (≤5 lines): Clear decorations, inline completions will show ghost text
+		// - Far from cursor (>5 lines): Use decorations as visual indicator
+		if (distanceFromCursor <= 5) {
+			// Near cursor - rely on inline completions for ghost text
+			this.decorations.clearAll()
+		} else {
+			// Far from cursor - show decorations as fallback
+			await this.decorations.displaySuggestions(this.suggestions)
 		}
 	}
 

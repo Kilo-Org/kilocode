@@ -31,6 +31,16 @@ CONTENT MATCHING RULES:
 - The <search> block must contain exact text that exists in the code
 - If you can't find exact match, don't generate that change
 
+IMPORTANT - Adding New Code (NOT Replacing):
+- When adding code after a comment instruction (like "// implement function"), use ONLY the cursor marker in <search>
+- Example for adding new code:
+  <search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search>
+  <replace><![CDATA[function newCode() {
+    // implementation
+  }]]></replace>
+- This adds code at cursor position WITHOUT replacing existing lines
+- Keep instructional comments, add code after them
+
 EXAMPLE:
 <change><search><![CDATA[function example() {
 	 // old code

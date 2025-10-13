@@ -112,18 +112,33 @@ export class GhostStreamingParser {
 		// Look for complete <change> blocks starting from where we left off
 		const searchText = this.buffer.substring(this.lastProcessedIndex)
 
-		// Updated regex to handle both single-line XML format and traditional format with whitespace
+		// More precise regex that explicitly matches the CDATA sections
+		// and ensures we don't capture partial or corrupted matches
 		const changeRegex =
-			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
+			/<change>\s*<search>\s*<!\[CDATA\[((?:(?!\]\]>)[\s\S])*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[((?:(?!\]\]>)[\s\S])*?)\]\]>\s*<\/replace>\s*<\/change>/g
 
 		let match
 		let lastMatchEnd = 0
 
 		while ((match = changeRegex.exec(searchText)) !== null) {
-			// Preserve cursor marker in search content (LLM includes it when it sees it in document)
 			const searchContent = match[1]
-			// Extract cursor position from replace content
 			const replaceContent = match[2]
+
+			// Validate that we got clean content without XML artifacts
+			const hasXmlArtifacts =
+				searchContent.includes("<![CDATA[") ||
+				searchContent.includes("]]>") ||
+				searchContent.includes("</search>") ||
+				searchContent.includes("</replace>") ||
+				searchContent.includes("</change>") ||
+				replaceContent.includes("<![CDATA[") ||
+				replaceContent.includes("</search>") ||
+				replaceContent.includes("</replace>")
+
+			if (hasXmlArtifacts) {
+				continue
+			}
+
 			const cursorPosition = this.extractCursorPosition(replaceContent)
 
 			newChanges.push({
@@ -226,8 +241,7 @@ export class GhostStreamingParser {
 				})
 
 				if (hasOverlap) {
-					console.warn("Skipping overlapping change:", change.search.substring(0, 50))
-					continue // Skip this change to avoid duplicates
+					continue // Skip overlapping changes to avoid duplicates
 				}
 
 				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
@@ -351,6 +365,50 @@ export class GhostStreamingParser {
 		let index = content.indexOf(searchPattern)
 		if (index !== -1) {
 			return index
+		}
+
+		// Cursor-aware partial match - handles LLM truncation
+		if (searchPattern.includes(CURSOR_MARKER)) {
+			const markerIndex = content.indexOf(CURSOR_MARKER)
+			if (markerIndex !== -1) {
+				const parts = searchPattern.split(CURSOR_MARKER)
+				const searchBefore = parts[0]
+				const searchAfter = parts[1] || ""
+
+				// Get content around marker with buffer for partial matches
+				const bufferSize = Math.max(searchBefore.length * 2, 100)
+				const contentBefore = content.substring(Math.max(0, markerIndex - bufferSize), markerIndex)
+				const contentAfter = content.substring(
+					markerIndex + CURSOR_MARKER.length,
+					Math.min(
+						content.length,
+						markerIndex + CURSOR_MARKER.length + Math.max(searchAfter.length * 2, 100),
+					),
+				)
+
+				// Try to find where searchBefore ends in contentBefore
+				let bestMatchStart = -1
+
+				// Exact suffix match
+				if (contentBefore.endsWith(searchBefore)) {
+					bestMatchStart = markerIndex - searchBefore.length
+				} else if (searchBefore.length > 2) {
+					// Partial suffix match (LLM truncated) - try progressively shorter prefixes
+					for (let len = searchBefore.length - 1; len >= Math.max(3, searchBefore.length - 20); len--) {
+						const searchPrefix = searchBefore.substring(0, len)
+						if (contentBefore.endsWith(searchPrefix)) {
+							// Content continues beyond what LLM wrote
+							bestMatchStart = markerIndex - searchPrefix.length
+							break
+						}
+					}
+				}
+
+				// Verify after-marker content
+				if (bestMatchStart !== -1 && (searchAfter.length === 0 || contentAfter.startsWith(searchAfter))) {
+					return bestMatchStart
+				}
+			}
 		}
 
 		// Handle the case where search pattern has trailing whitespace that might not match exactly

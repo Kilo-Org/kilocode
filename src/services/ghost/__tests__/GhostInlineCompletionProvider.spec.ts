@@ -110,12 +110,13 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(item.insertText).toContain("new line of code")
 		})
 
-		it("should return undefined when cursor is too far from suggestion", async () => {
-			// Add a suggestion far from the cursor
+		it("should return undefined when suggestion is far from cursor", async () => {
+			// Add a suggestion far from the cursor (>5 lines away)
+			// The inline provider returns undefined, decorations will handle it instead
 			const file = suggestions.addFile(mockDocument.uri)
 			const addOp: GhostSuggestionEditOperation = {
 				type: "+",
-				line: 20, // Far from cursor at line 5
+				line: 20, // Far from cursor at line 5 (15 lines away)
 				oldLine: 20,
 				newLine: 20,
 				content: "distant code",
@@ -130,6 +131,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)
 
+			// Provider returns undefined for far suggestions - decorations handle them
 			expect(result).toBeUndefined()
 		})
 

@@ -58,8 +58,12 @@ export class GhostModel {
 					apiModelId: MISTRAL_DEFAULT_MODEL,
 				}
 			}
+
+			// Exclude organization ID for autocomplete to avoid permission issues
+			const { kilocodeOrganizationId, ...profileWithoutOrg } = profile
+
 			this.apiHandler = buildApiHandler({
-				...profile,
+				...profileWithoutOrg,
 				...modelDefinition,
 			})
 		}

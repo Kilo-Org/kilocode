@@ -54,12 +54,19 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
-		prompt += `Provide a minimal, obvious completion at the cursor position (${CURSOR_MARKER}).\n`
-		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${CURSOR_MARKER} to target the exact location.\n`
-		prompt += `Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n`
-		prompt += "Complete only what the user appears to be typing.\n"
-		prompt += "Single line preferred, no new features.\n"
-		prompt += "If nothing obvious to complete, provide NO suggestion.\n"
+		prompt += `Provide a minimal, obvious completion at the cursor position (${CURSOR_MARKER}).\n\n`
+
+		prompt += `CRITICAL - Cursor Marker Placement:\n`
+		prompt += `- Your <search> block must include ONLY the cursor marker ${CURSOR_MARKER} if adding new code\n`
+		prompt += `- DO NOT include existing comment lines in your <search> block\n`
+		prompt += `- If a comment describes what to implement, ADD code AFTER the comment line\n`
+		prompt += `- Example: If line has "// implement function", search for just "${CURSOR_MARKER}" and add the function below\n\n`
+
+		prompt += `General Rules:\n`
+		prompt += "- Complete only what the user appears to be typing\n"
+		prompt += "- Single line preferred, no new features\n"
+		prompt += "- Keep existing comments, add code after them\n"
+		prompt += "- If nothing obvious to complete, provide NO suggestion\n"
 
 		return prompt
 	}
