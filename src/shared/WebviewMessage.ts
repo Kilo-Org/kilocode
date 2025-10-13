@@ -290,6 +290,13 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		| "oca/login"
+		| "oca/logout"
+		| "oca/show-auth-url"
+		| "oca/login-success"
+		| "oca/login-error"
+		| "oca/status"
+		| "oca/logout-success"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -347,6 +354,7 @@ export interface WebviewMessage {
 	filters?: { type?: string; search?: string; tags?: string[] }
 	settings?: any
 	url?: string // For openExternal
+	authenticated?: boolean
 	mpItem?: MarketplaceItem
 	mpInstallOptions?: InstallMarketplaceItemOptions
 	config?: Record<string, any> // Add config to the payload

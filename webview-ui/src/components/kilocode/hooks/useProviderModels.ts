@@ -261,6 +261,12 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		case "oca": {
+			return {
+				models: routerModels.oca,
+				defaultModel: "",
+			}
+		}
 		default:
 			return {
 				models: {},

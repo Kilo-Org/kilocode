@@ -438,6 +438,11 @@ function getSelectedModel({
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
+		case "oca": {
+			const id = apiConfiguration.apiModelId ?? ""
+			const info = undefined
+			return { id, info }
+		}
 		default: {
 			provider satisfies
 				| "anthropic"
@@ -446,6 +451,7 @@ function getSelectedModel({
 				| "human-relay"
 				| "fake-ai"
 				| "kilocode-openrouter"
+				| "oca"
 			const id = apiConfiguration.apiModelId ?? anthropicDefaultModelId
 			const baseInfo = anthropicModels[id as keyof typeof anthropicModels]
 

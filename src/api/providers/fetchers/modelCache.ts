@@ -18,6 +18,7 @@ import { getRequestyModels } from "./requesty"
 import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
+import { getOCAModels } from "./oca"
 import { GetModelsOptions } from "../../../shared/api"
 import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
@@ -26,6 +27,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { DEFAULT_OCA_BASE_URL } from "../oca/constants"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -118,6 +120,20 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "huggingface":
 				models = await getHuggingFaceModels()
 				break
+			case "oca": {
+				const ids = await getOCAModels(options.baseUrl ?? DEFAULT_OCA_BASE_URL, options.apiKey)
+				const record: ModelRecord = {}
+				for (const id of ids) {
+					record[id] = {
+						maxTokens: 8192,
+						contextWindow: 200000,
+						supportsPromptCache: false,
+						description: `${id} via OCA`,
+					}
+				}
+				models = record
+				break
+			}
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider

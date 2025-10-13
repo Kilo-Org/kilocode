@@ -27,6 +27,7 @@ describe("getModelsByProvider", () => {
 			deepinfra: { "test-model": testModel },
 			"vercel-ai-gateway": { "test-model": testModel },
 			huggingface: { "test-model": testModel },
+			oca: { "test-model": testModel },
 		}
 
 		const exceptions = [
