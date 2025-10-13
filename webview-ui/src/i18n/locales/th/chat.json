@@ -133,7 +133,8 @@
 		"settings": "การตั้งค่าโหมด",
 		"description": "บุคลิกพิเศษที่ปรับแต่งพฤติกรรมของ Kilo Code",
 		"searchPlaceholder": "ค้นหาโหมด...",
-		"noResults": "ไม่พบผลลัพธ์"
+		"noResults": "ไม่พบผลลัพธ์",
+		"organizationModes": "โหมดขององค์กร"
 	},
 	"addImages": "เพิ่มรูปภาพในข้อความ",
 	"sendMessage": "ส่งข้อความ",

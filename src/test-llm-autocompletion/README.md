@@ -52,9 +52,27 @@ pnpm run test --skip-approval
 # Run a single test
 pnpm run test closing-brace
 
+# Clean up orphaned approval files
+pnpm run clean
+
 # Combine flags
 pnpm run test --verbose --skip-approval
 ```
+
+### Clean Command
+
+The `clean` command removes approval files for test cases that no longer exist:
+
+```bash
+pnpm run clean
+```
+
+This is useful when you've deleted or renamed test cases and want to clean up the corresponding approval files. The command will:
+
+- Scan all approval files in the `approvals/` directory
+- Check if each approval corresponds to an existing test case
+- Remove approvals for test cases that no longer exist
+- Report how many files were cleaned
 
 ### Skip Approval Mode
 

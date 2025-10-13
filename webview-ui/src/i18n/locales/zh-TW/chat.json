@@ -132,7 +132,8 @@
 		"settings": "模式設定",
 		"description": "專門量身打造 Kilo Code 行為的角色。",
 		"searchPlaceholder": "搜尋模式...",
-		"noResults": "沒有找到結果"
+		"noResults": "沒有找到結果",
+		"organizationModes": "組織模式"
 	},
 	"enhancePromptDescription": "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善您的提示詞。請試著在這裡輸入提示詞，然後再次點選按鈕，以了解其運作方式。",
 	"addImages": "新增圖片到訊息中",

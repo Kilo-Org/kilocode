@@ -606,6 +606,10 @@
 			"label": "Skrýt cenu pod prahem",
 			"currentValue": "Aktuální práh: ${{value}}",
 			"description": "Zobrazovat pouze náklady na požadavky převyšující tuto částku. Náklady jsou vždy viditelné, když je panel podrobností otevřený."
+		},
+		"showTimestamps": {
+			"label": "Zobrazit časová razítka",
+			"description": "Zobrazit časové razítko pro každou zprávu v zobrazení chatu"
 		}
 	},
 	"ghost": {

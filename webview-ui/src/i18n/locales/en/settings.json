@@ -565,6 +565,10 @@
 			"label": "Hide cost below threshold",
 			"description": "Only show request costs above this amount. Costs are always visible when the details pane is open.",
 			"currentValue": "Current threshold: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Show timestamps",
+			"description": "Show timestamp for every message in the chat view"
 		}
 	},
 	"ghost": {

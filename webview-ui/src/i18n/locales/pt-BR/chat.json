@@ -130,7 +130,8 @@
 		"settings": "Configurações de Modos",
 		"description": "Personas especializadas que adaptam o comportamento do Roo.",
 		"searchPlaceholder": "Pesquisar modos...",
-		"noResults": "Nenhum resultado encontrado"
+		"noResults": "Nenhum resultado encontrado",
+		"organizationModes": "Modos da organização"
 	},
 	"errorReadingFile": "Erro ao ler arquivo",
 	"noValidImages": "Nenhuma imagem válida foi processada",

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import fs from "fs"
+import path from "path"
 import { LLMClient } from "./llm-client.js"
 import { StrategyTester } from "./strategy-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
@@ -17,7 +19,7 @@ interface TestResult {
 	strategyName?: string
 }
 
-class TestRunner {
+export class TestRunner {
 	private llmClient: LLMClient
 	private strategyTester: StrategyTester
 	private verbose: boolean
@@ -374,6 +376,61 @@ class TestRunner {
 
 		process.exit(passedRuns === numRuns ? 0 : 1)
 	}
+
+	async cleanApprovals(): Promise<void> {
+		console.log("\n🧹 Cleaning approvals for non-existent test cases...\n")
+
+		// Create a set of existing test case identifiers
+		const existingTestCases = new Set(testCases.map((tc) => `${tc.category}/${tc.name}`))
+
+		const approvalsDir = "approvals"
+		let cleanedCount = 0
+		let totalFiles = 0
+
+		if (!fs.existsSync(approvalsDir)) {
+			console.log("No approvals directory found.")
+			return
+		}
+
+		// Recursively scan approvals directory
+		function scanDirectory(dirPath: string, currentCategory?: string): void {
+			const items = fs.readdirSync(dirPath, { withFileTypes: true })
+
+			for (const item of items) {
+				const fullPath = path.join(dirPath, item.name)
+
+				if (item.isDirectory()) {
+					// Category directory
+					scanDirectory(fullPath, item.name)
+				} else if (item.isFile() && item.name.endsWith(".txt")) {
+					totalFiles++
+
+					// Parse filename: testName.approved.1.txt or testName.rejected.1.txt
+					const match = item.name.match(/^(.+)\.(approved|rejected)\.\d+\.txt$/)
+					if (match) {
+						const testName = match[1]
+						const category = currentCategory || path.basename(path.dirname(fullPath))
+						const testCaseId = `${category}/${testName}`
+
+						if (!existingTestCases.has(testCaseId)) {
+							console.log(`Removing approval for non-existent test case: ${testCaseId}`)
+							fs.unlinkSync(fullPath)
+							cleanedCount++
+						}
+					}
+				}
+			}
+		}
+
+		scanDirectory(approvalsDir)
+
+		console.log(`\n✅ Cleaned ${cleanedCount} approval files out of ${totalFiles} total files.`)
+		if (cleanedCount > 0) {
+			console.log("Removed approvals for test cases that no longer exist.")
+		} else {
+			console.log("No orphaned approval files found.")
+		}
+	}
 }
 
 // Main execution
@@ -410,13 +467,15 @@ async function main() {
 		}
 	}
 
-	const testName = args.find((arg) => !arg.startsWith("-") && arg !== overrideStrategy)
+	const command = args.find((arg) => !arg.startsWith("-") && arg !== overrideStrategy)
 
 	const runner = new TestRunner(verbose, overrideStrategy, skipApproval)
 
 	try {
-		if (testName) {
-			await runner.runSingleTest(testName)
+		if (command === "clean") {
+			await runner.cleanApprovals()
+		} else if (command) {
+			await runner.runSingleTest(command)
 		} else {
 			await runner.runAllTests()
 		}

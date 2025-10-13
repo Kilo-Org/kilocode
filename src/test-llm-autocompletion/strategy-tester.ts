@@ -80,7 +80,7 @@ export class StrategyTester {
 	}
 
 	/**
-	 * Get the name of the strategy that would be selected for the given code
+	 * Get the type of the strategy that would be selected for the given code
 	 */
 	getSelectedStrategyName(code: string): string {
 		const context = this.createContext(code)
