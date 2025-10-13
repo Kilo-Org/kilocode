@@ -39,7 +39,11 @@ type OpenRouterProviderParams = {
 	sort?: "price" | "throughput" | "latency"
 	zdr?: boolean
 }
+
+import { safeJsonParse } from "../../shared/safeJsonParse"
+import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 // kilocode_change end
+
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
 // Image generation types
@@ -106,8 +110,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	protected endpoints: ModelRecord = {}
 
 	// kilocode_change start property
-	protected get providerName() {
-		return "OpenRouter"
+	protected get providerName(): "OpenRouter" | "KiloCode" {
+		return "OpenRouter" as const
 	}
 	// kilocode_change end
 
@@ -226,6 +230,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				this.customRequestOptions(metadata), // kilocode_change
 			)
 		} catch (error) {
+			// kilocode_change start
+			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
+				throw error
+			}
+			const rawError = safeJsonParse(error?.error?.metadata?.raw) as { error?: OpenAI.ErrorObject } | undefined
+			if (rawError?.error?.message) {
+				throw new Error(`${this.providerName} error: ${rawError.error.message}`)
+			}
+			// kilocode_change end
 			throw handleOpenAIError(error, this.providerName)
 		}
 
