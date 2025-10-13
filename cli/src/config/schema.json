@@ -1,0 +1,352 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"title": "Kilo Code CLI Configuration",
+	"description": "Configuration file for Kilo Code CLI",
+	"type": "object",
+	"required": ["version", "mode", "telemetry", "provider", "providers"],
+	"properties": {
+		"version": {
+			"type": "string",
+			"enum": ["1.0.0"],
+			"description": "Configuration schema version"
+		},
+		"mode": {
+			"type": "string",
+			"default": "code",
+			"description": "Default mode for the CLI"
+		},
+		"telemetry": {
+			"type": "boolean",
+			"default": false,
+			"description": "Enable or disable telemetry"
+		},
+		"provider": {
+			"type": "string",
+			"description": "ID of the currently selected provider"
+		},
+		"providers": {
+			"type": "array",
+			"description": "List of configured providers",
+			"items": {
+				"$ref": "#/definitions/provider"
+			}
+		},
+		"autoApproval": {
+			"type": "object",
+			"description": "Auto approval configuration for CLI operations",
+			"properties": {
+				"enabled": {
+					"type": "boolean",
+					"default": false,
+					"description": "Global toggle for auto approval"
+				},
+				"read": {
+					"type": "object",
+					"description": "Auto approval settings for read operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve read operations"
+						},
+						"outside": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve reads outside workspace"
+						}
+					}
+				},
+				"write": {
+					"type": "object",
+					"description": "Auto approval settings for write operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve write operations"
+						},
+						"outside": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve writes outside workspace"
+						},
+						"protected": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve writes to protected files"
+						}
+					}
+				},
+				"browser": {
+					"type": "object",
+					"description": "Auto approval settings for browser operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve browser operations"
+						}
+					}
+				},
+				"retry": {
+					"type": "object",
+					"description": "Auto approval settings for retry operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve retry operations"
+						},
+						"delay": {
+							"type": "number",
+							"minimum": 0,
+							"default": 10,
+							"description": "Delay in seconds before auto-approving retry"
+						}
+					}
+				},
+				"mcp": {
+					"type": "object",
+					"description": "Auto approval settings for MCP operations",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve MCP operations"
+						}
+					}
+				},
+				"mode": {
+					"type": "object",
+					"description": "Auto approval settings for mode switching",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve mode switches"
+						}
+					}
+				},
+				"subtasks": {
+					"type": "object",
+					"description": "Auto approval settings for subtask creation",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve subtask creation"
+						}
+					}
+				},
+				"execute": {
+					"type": "object",
+					"description": "Auto approval settings for command execution",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve command execution"
+						},
+						"allowed": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"default": [],
+							"description": "List of allowed commands (empty means all allowed)"
+						},
+						"denied": {
+							"type": "array",
+							"items": {
+								"type": "string"
+							},
+							"default": [],
+							"description": "List of denied commands"
+						}
+					}
+				},
+				"question": {
+					"type": "object",
+					"description": "Auto approval settings for followup questions",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": false,
+							"description": "Auto approve followup questions"
+						},
+						"timeout": {
+							"type": "number",
+							"minimum": 0,
+							"default": 60,
+							"description": "Timeout in seconds before auto-approving question"
+						}
+					}
+				},
+				"todo": {
+					"type": "object",
+					"description": "Auto approval settings for todo list updates",
+					"properties": {
+						"enabled": {
+							"type": "boolean",
+							"default": true,
+							"description": "Auto approve todo list updates"
+						}
+					}
+				},
+				"limits": {
+					"type": "object",
+					"description": "Auto approval limits",
+					"properties": {
+						"maxRequests": {
+							"type": ["number", "null"],
+							"minimum": 1,
+							"default": null,
+							"description": "Maximum number of auto-approved requests (null for unlimited)"
+						},
+						"maxCost": {
+							"type": ["number", "null"],
+							"minimum": 0,
+							"default": null,
+							"description": "Maximum cost for auto-approved requests (null for unlimited)"
+						}
+					}
+				}
+			}
+		}
+	},
+	"definitions": {
+		"provider": {
+			"type": "object",
+			"required": ["id", "provider"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for this provider configuration"
+				},
+				"provider": {
+					"type": "string",
+					"enum": [
+						"kilocode",
+						"anthropic",
+						"openai-native",
+						"openrouter",
+						"bedrock",
+						"gemini",
+						"vertex",
+						"claude-code",
+						"mistral",
+						"groq",
+						"deepseek",
+						"xai",
+						"cerebras",
+						"ollama",
+						"lmstudio",
+						"vscode-lm",
+						"openai",
+						"glama",
+						"huggingface",
+						"litellm",
+						"moonshot",
+						"doubao",
+						"chutes",
+						"sambanova",
+						"fireworks",
+						"featherless",
+						"deepinfra",
+						"io-intelligence",
+						"qwen-code",
+						"gemini-cli",
+						"zai",
+						"unbound",
+						"requesty",
+						"roo",
+						"vercel-ai-gateway",
+						"virtual-quota-fallback",
+						"human-relay",
+						"fake-ai"
+					]
+				}
+			},
+			"allOf": [
+				{
+					"if": {
+						"properties": { "provider": { "const": "kilocode" } }
+					},
+					"then": {
+						"properties": {
+							"kilocodeToken": { "type": "string" },
+							"kilocodeModel": { "type": "string" },
+							"kilocodeOrganizationId": { "type": "string" }
+						},
+						"required": ["kilocodeToken", "kilocodeModel"]
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "anthropic" } }
+					},
+					"then": {
+						"properties": {
+							"apiKey": { "type": "string" },
+							"apiModelId": { "type": "string" },
+							"anthropicBaseUrl": { "type": "string" }
+						},
+						"required": ["apiKey", "apiModelId"]
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai-native" } }
+					},
+					"then": {
+						"properties": {
+							"openAiNativeApiKey": { "type": "string" },
+							"apiModelId": { "type": "string" },
+							"openAiNativeBaseUrl": { "type": "string" }
+						},
+						"required": ["openAiNativeApiKey", "apiModelId"]
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openrouter" } }
+					},
+					"then": {
+						"properties": {
+							"openRouterApiKey": { "type": "string" },
+							"openRouterModelId": { "type": "string" },
+							"openRouterBaseUrl": { "type": "string" }
+						},
+						"required": ["openRouterApiKey", "openRouterModelId"]
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ollama" } }
+					},
+					"then": {
+						"properties": {
+							"ollamaBaseUrl": { "type": "string" },
+							"ollamaModelId": { "type": "string" },
+							"ollamaApiKey": { "type": "string" }
+						},
+						"required": ["ollamaBaseUrl", "ollamaModelId"]
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "openai" } }
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": { "type": "string" },
+							"openAiBaseUrl": { "type": "string" },
+							"apiModelId": { "type": "string" }
+						},
+						"required": ["openAiApiKey"]
+					}
+				}
+			]
+		}
+	}
+}

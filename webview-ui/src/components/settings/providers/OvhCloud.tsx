@@ -68,7 +68,7 @@ export const OvhCloudAiEndpoints = ({
 
 					setCustomUrlEnabled(isChecked)
 				}}>
-				{t("settings:providers.ovhCloudAiEndpointsBaseUrl")}
+				{t("settings:providers.getOvhCloudAiEndpointsBaseUrl")}
 			</VSCodeCheckbox>
 			{customUrlEnabled && (
 				<VSCodeTextField
@@ -79,7 +79,7 @@ export const OvhCloudAiEndpoints = ({
 					className="w-full">
 					<div className="flex justify-between items-center mb-1">
 						<label className="block font-medium">
-							{t("settings:providers.getOvhCloudAiEndpointsBaseUrl")}
+							{t("settings:providers.ovhCloudAiEndpointsBaseUrl")}
 						</label>
 					</div>
 				</VSCodeTextField>
