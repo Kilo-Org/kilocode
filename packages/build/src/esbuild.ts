@@ -192,10 +192,12 @@ export function setupLocaleWatcher(srcDir: string, distDir: string) {
 	}
 
 	try {
-		// it isn't necessary to watch i18n files here because it's handled much more robustly in the vite watch, just need to configure it
-		// to actually do so
-		debouncedCopy()
-
+		fs.watch(localesDir, { recursive: true }, (_eventType, filename) => {
+			if (filename && filename.endsWith(".json")) {
+				console.log(`Locale file ${filename} changed, triggering copy...`)
+				debouncedCopy()
+			}
+		})
 		console.log("Watcher for locale files is set up")
 	} catch (error) {
 		console.error(
