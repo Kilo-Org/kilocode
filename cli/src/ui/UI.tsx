@@ -108,7 +108,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				}
 			}
 		}
-	}, [options.prompt, executeCommand, sendUserMessage, onExit])
+	}, [options.prompt])
 
 	// Simplified submit handler that delegates to appropriate hook
 	const handleSubmit = useCallback(
