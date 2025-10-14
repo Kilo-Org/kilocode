@@ -403,6 +403,21 @@ export class ExtensionHost extends EventEmitter {
 			const originalResolveFilename = ModuleClass._resolveFilename
 			const originalCompile = ModuleClass.prototype._compile
 
+			// Configure proxy BEFORE loading the extension
+			// This ensures the extension's HTTP clients get the proxy configuration
+			try {
+				// Load axios in the extension's require context to ensure it's the same instance
+				require("axios")
+				const { configureProxy } = await import("../utils/proxy-config.js")
+
+				// Apply proxy configuration to all HTTP clients that will be used by the extension
+				logs.debug("Configuring proxy for extension context", "ExtensionHost")
+				configureProxy()
+				logs.debug("Proxy configured for extension", "ExtensionHost")
+			} catch (error) {
+				logs.warn("Failed to configure proxy for extension", "ExtensionHost", { error })
+			}
+
 			// Set up module resolution interception for vscode
 			ModuleClass._resolveFilename = function (request: string, parent: any, isMain: boolean, options?: any) {
 				if (request === "vscode") {

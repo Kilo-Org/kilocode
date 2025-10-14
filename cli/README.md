@@ -159,6 +159,105 @@ This instructs the AI to proceed without user input.
       echo "Implement the new feature" | kilocode --ci --timeout 600
 ```
 
+## Proxy Configuration
+
+The CLI supports HTTP/HTTPS proxy configuration through environment variables. This is useful when running behind corporate proxies or when you need to route traffic through a proxy server.
+
+The proxy configuration works with all HTTP clients used by the CLI and extension:
+
+- **Axios** - Used for many API calls
+- **Undici** - Used by fetch-based providers
+- **Native fetch** - Node.js built-in fetch
+
+### Supported Environment Variables
+
+- `HTTP_PROXY` / `http_proxy`: Proxy URL for HTTP requests
+- `HTTPS_PROXY` / `https_proxy`: Proxy URL for HTTPS requests
+- `ALL_PROXY` / `all_proxy`: Fallback proxy for all protocols
+- `NO_PROXY` / `no_proxy`: Comma-separated list of domains to bypass proxy
+- `NODE_TLS_REJECT_UNAUTHORIZED`: Set to `0` to disable SSL certificate validation (use with caution)
+
+### Proxy URL Format
+
+```
+http://[username:password@]proxy-host:port
+```
+
+### Examples
+
+#### Basic Proxy Configuration
+
+```bash
+# Set proxy for HTTP and HTTPS
+export HTTP_PROXY=http://localhost:8080
+export HTTPS_PROXY=http://localhost:8080
+
+# Run CLI
+kilocode
+```
+
+#### Proxy with Authentication
+
+```bash
+# Proxy with username and password
+export HTTPS_PROXY=http://username:password@proxy.company.com:8080
+
+kilocode
+```
+
+#### Bypass Proxy for Specific Domains
+
+```bash
+# Set proxy
+export HTTPS_PROXY=http://localhost:8080
+
+# Bypass proxy for localhost and internal domains
+export NO_PROXY=localhost,127.0.0.1,*.internal.company.com,192.168.0.0/16
+
+kilocode
+```
+
+#### Self-Signed Certificates
+
+```bash
+# Disable SSL certificate validation (use with caution in development only)
+export NODE_TLS_REJECT_UNAUTHORIZED=0
+export HTTPS_PROXY=http://localhost:8080
+
+kilocode
+```
+
+#### One-Line Command
+
+```bash
+# Run with proxy settings in a single command
+HTTP_PROXY=http://localhost:8080 HTTPS_PROXY=http://localhost:8080 NODE_TLS_REJECT_UNAUTHORIZED=0 kilocode
+```
+
+### NO_PROXY Patterns
+
+The `NO_PROXY` environment variable supports various patterns:
+
+- **Exact domain**: `example.com`
+- **Wildcard subdomains**: `*.example.com`
+- **IP addresses**: `192.168.1.1`
+- **CIDR ranges**: `192.168.0.0/16`
+- **Port-specific**: `example.com:8080`
+- **Multiple patterns**: `localhost,127.0.0.1,*.internal.com`
+
+### Troubleshooting
+
+If proxy is not working:
+
+1. **Check proxy logs**: The CLI will log proxy configuration on startup
+2. **Verify proxy URL**: Ensure the proxy URL is correct and accessible
+3. **Test proxy**: Use `curl` to test if the proxy is working:
+    ```bash
+    curl -x http://localhost:8080 https://api.kilocode.ai
+    ```
+4. **Check NO_PROXY**: Ensure the target domain is not in NO_PROXY list
+5. **Certificate issues**: If you see SSL errors, you may need to set `NODE_TLS_REJECT_UNAUTHORIZED=0` (development only)
+
 ## Local Development
 
 ### DevTools
