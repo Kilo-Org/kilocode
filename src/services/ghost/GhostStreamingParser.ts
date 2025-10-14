@@ -25,175 +25,72 @@ function removeCursorMarker(content: string): string {
 	return content.replaceAll(CURSOR_MARKER, "")
 }
 
-/**
- * Conservative XML sanitization - only fixes the specific case from user feedback
- */
-function sanitizeXMLConservative(buffer: string): string {
-	let sanitized = buffer
+function sanitizeXML(buffer: string): string {
+	let result = buffer.replace(/<\/!\[CDATA\[/g, "]]>")
 
-	// Fix malformed CDATA sections first - this is the main bug from user logs
-	// Replace </![CDATA[ with ]]> to fix malformed CDATA closures
-	sanitized = sanitized.replace(/<\/!\[CDATA\[/g, "]]>")
-
-	// Only fix the specific case: missing </change> tag when we have complete search/replace pairs
-	const changeOpenCount = (sanitized.match(/<change>/g) || []).length
-	const changeCloseCount = (sanitized.match(/<\/change>/g) || []).length
-
-	// Check if we have an incomplete </change> tag (like "</change" without the final ">")
-	const incompleteChangeClose = sanitized.includes("</change") && !sanitized.includes("</change>")
-
-	// Handle two cases:
-	// 1. Missing </change> tag entirely (changeCloseCount === 0 && !incompleteChangeClose)
-	// 2. Incomplete </change> tag (incompleteChangeClose)
-	if (changeOpenCount === 1 && changeCloseCount === 0) {
-		const searchCloseCount = (sanitized.match(/<\/search>/g) || []).length
-		const replaceCloseCount = (sanitized.match(/<\/replace>/g) || []).length
-
-		// Only fix if we have complete search/replace pairs
-		if (searchCloseCount === 1 && replaceCloseCount === 1) {
-			if (incompleteChangeClose) {
-				// Fix incomplete </change tag by adding the missing ">"
-				sanitized = sanitized.replace("</change", "</change>")
-			} else {
-				// Add missing </change> tag entirely
-				const trimmed = sanitized.trim()
-				// Make sure we're not in the middle of streaming an incomplete tag
-				if (!trimmed.endsWith("<")) {
-					sanitized += "</change>"
-				}
-			}
-		}
+	if (/<change>[\s\S]*<\/search>[\s\S]*<\/replace>\s*$/i.test(result) && !/<\/change>/.test(result)) {
+		result += "</change>"
 	}
 
-	return sanitized
+	return result.replace(/<\/change$/, "</change>")
 }
 
-/**
- * Check if the response appears to be complete
- */
-function isResponseComplete(buffer: string, completedChangesCount: number): boolean {
-	// Simple heuristic: if the buffer doesn't end with an incomplete tag,
-	// consider it complete
-	const trimmedBuffer = buffer.trim()
+function isResponseComplete(buffer: string, hasCompletedChanges: boolean): boolean {
+	if (!buffer.trim()) return true
+	if (!hasCompletedChanges) return false
 
-	// If the buffer is empty or only whitespace, consider it complete
-	if (trimmedBuffer.length === 0) {
-		return true
-	}
+	const hasIncompleteTag =
+		/<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(buffer) ||
+		/<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(buffer) ||
+		/<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(buffer) ||
+		/<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(buffer)
 
-	const incompleteChangeMatch = /<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteSearchMatch = /<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteReplaceMatch = /<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteCDataMatch = /<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(trimmedBuffer)
-
-	// If we have incomplete tags, the response is not complete
-	if (incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch) {
-		return false
-	}
-
-	// If we have at least one complete change and no incomplete tags, likely complete
-	return completedChangesCount > 0
+	return !hasIncompleteTag
 }
 
-/**
- * Find the best match for search content in the document, handling whitespace differences and cursor markers
- * This is a simplified version of the method from GhostStrategy
- */
 export function findBestMatch(content: string, searchPattern: string): number {
-	// Validate inputs
-	if (!content || !searchPattern) {
-		return -1
-	}
+	if (!content || !searchPattern) return -1
 
-	// First try exact match
-	let index = content.indexOf(searchPattern)
-	if (index !== -1) {
-		return index
-	}
+	const exactMatch = content.indexOf(searchPattern)
+	if (exactMatch !== -1) return exactMatch
 
-	// Handle the case where search pattern has trailing whitespace that might not match exactly
 	if (searchPattern.endsWith("\n")) {
-		// Try matching without the trailing newline, then check if we can find it in context
-		const searchWithoutTrailingNewline = searchPattern.slice(0, -1)
-		index = content.indexOf(searchWithoutTrailingNewline)
-		if (index !== -1) {
-			// Check if the character after the match is a newline or end of string
-			const afterMatchIndex = index + searchWithoutTrailingNewline.length
-			if (afterMatchIndex >= content.length || content[afterMatchIndex] === "\n") {
-				return index
-			}
+		const withoutNewline = searchPattern.slice(0, -1)
+		const match = content.indexOf(withoutNewline)
+		if (
+			match !== -1 &&
+			(match + withoutNewline.length >= content.length || content[match + withoutNewline.length] === "\n")
+		) {
+			return match
 		}
 	}
 
-	// Normalize whitespace for both content and search pattern
-	const normalizeWhitespace = (text: string): string => {
-		return text
-			.replace(/\r\n/g, "\n") // Normalize line endings
-			.replace(/\r/g, "\n") // Handle old Mac line endings
-			.replace(/\t/g, "    ") // Convert tabs to spaces
-			.replace(/[ \t]+$/gm, "") // Remove trailing whitespace from each line
-	}
+	const normalizeWhitespace = (text: string) =>
+		text
+			.replace(/\r\n/g, "\n")
+			.replace(/\r/g, "\n")
+			.replace(/\t/g, "    ")
+			.replace(/[ \t]+$/gm, "")
 
-	const normalizedContent = normalizeWhitespace(content)
+	const normalized = normalizeWhitespace(content)
 	const normalizedSearch = normalizeWhitespace(searchPattern)
+	const normalizedMatch = normalized.indexOf(normalizedSearch)
 
-	// Try normalized match
-	index = normalizedContent.indexOf(normalizedSearch)
-	if (index !== -1) {
-		// Map back to original content position
-		return mapNormalizedToOriginalIndex(content, normalizedContent, index)
-	}
-
-	// Try trimmed search (remove leading/trailing whitespace)
-	const trimmedSearch = searchPattern.trim()
-	if (trimmedSearch !== searchPattern) {
-		index = content.indexOf(trimmedSearch)
-		if (index !== -1) {
-			return index
-		}
-	}
-
-	return -1 // No match found
-}
-
-/**
- * Map an index from normalized content back to the original content
- */
-function mapNormalizedToOriginalIndex(
-	originalContent: string,
-	normalizedContent: string,
-	normalizedIndex: number,
-): number {
-	let originalIndex = 0
-	let normalizedPos = 0
-
-	while (normalizedPos < normalizedIndex && originalIndex < originalContent.length) {
-		const originalChar = originalContent[originalIndex]
-		const normalizedChar = normalizedContent[normalizedPos]
-
-		if (originalChar === normalizedChar) {
-			originalIndex++
-			normalizedPos++
-		} else {
-			// Handle whitespace normalization differences
-			if (/\s/.test(originalChar)) {
-				originalIndex++
-				// Skip ahead in original until we find non-whitespace or match normalized
-				while (originalIndex < originalContent.length && /\s/.test(originalContent[originalIndex])) {
-					originalIndex++
-				}
-				if (normalizedPos < normalizedContent.length && /\s/.test(normalizedChar)) {
-					normalizedPos++
-				}
+	if (normalizedMatch !== -1) {
+		let origIndex = 0
+		let normIndex = 0
+		while (normIndex < normalizedMatch && origIndex < content.length) {
+			if (content[origIndex] === normalized[normIndex]) {
+				origIndex++
+				normIndex++
 			} else {
-				// Characters don't match, this shouldn't happen with proper normalization
-				originalIndex++
-				normalizedPos++
+				origIndex++
 			}
 		}
+		return origIndex
 	}
 
-	return originalIndex
+	return -1
 }
 
 /**
@@ -205,6 +102,7 @@ export class GhostStreamingParser {
 	private completedChanges: ParsedChange[] = []
 	private context: GhostSuggestionContext | null = null
 	private streamFinished: boolean = false
+	private lastProcessedIndex: number = 0
 
 	constructor() {}
 
@@ -223,267 +121,142 @@ export class GhostStreamingParser {
 		this.buffer = ""
 		this.completedChanges = []
 		this.streamFinished = false
+		this.lastProcessedIndex = 0
 	}
 
-	/**
-	 * Process a new chunk of text and return any newly completed suggestions
-	 */
 	public processChunk(chunk: string): StreamingParseResult {
 		if (!this.context) {
 			throw new Error("Parser not initialized. Call initialize() first.")
 		}
-
-		// Add chunk to buffer
 		this.buffer += chunk
-		this.generateSuggestions(new Array<ParsedChange>())
+		return this.processResult()
 	}
 
-	/**
-	 * Process a new chunk of text and return any newly completed suggestions
-	 */
-	public processResult(): StreamingParseResult {
-		if (!this.context) {
-			throw new Error("Parser not initialized. Call initialize() first.")
+	public finishStream(): StreamingParseResult {
+		this.streamFinished = true
+		if (this.completedChanges.length === 0 && this.buffer.trim()) {
+			this.buffer = sanitizeXML(this.buffer)
 		}
+		return this.processResult()
+	}
 
-		// Extract any newly completed changes from the current buffer
+	private processResult(): StreamingParseResult {
 		const newChanges = this.extractCompletedChanges()
-
-		let hasNewSuggestions = newChanges.length > 0
-
-		// Add new changes to our completed list
 		this.completedChanges.push(...newChanges)
 
-		// Check if the response appears complete
-		let isComplete = isResponseComplete(this.buffer, this.completedChanges.length)
-
-		// Apply very conservative sanitization only when the stream is finished
-		// and we still have no completed changes but have content in the buffer
-		if (this.completedChanges.length === 0 && this.buffer.trim().length > 0 && this.streamFinished) {
-			const sanitizedBuffer = sanitizeXMLConservative(this.buffer)
-			if (sanitizedBuffer !== this.buffer) {
-				// Re-process with sanitized buffer
-				this.buffer = sanitizedBuffer
-				const sanitizedChanges = this.extractCompletedChanges()
-				if (sanitizedChanges.length > 0) {
-					this.completedChanges.push(...sanitizedChanges)
-					hasNewSuggestions = true
-					isComplete = isResponseComplete(this.buffer, this.completedChanges.length) // Re-check completion after sanitization
-				}
-			}
-		}
-
-		// Generate suggestions from all completed changes
 		const suggestions = this.generateSuggestions(this.completedChanges)
+		const isComplete = isResponseComplete(this.buffer, this.completedChanges.length > 0)
 
 		return {
 			suggestions,
 			isComplete,
-			hasNewSuggestions,
+			hasNewSuggestions: newChanges.length > 0,
 		}
 	}
 
-	/**
-	 * Mark the stream as finished and process any remaining content with sanitization
-	 */
-	public finishStream(): StreamingParseResult {
-		this.streamFinished = true
-		return this.processResult()
-	}
-
-	/**
-	 * Extract completed <change> blocks from the buffer
-	 */
 	private extractCompletedChanges(): ParsedChange[] {
 		const newChanges: ParsedChange[] = []
-
-		// Look for complete <change> blocks starting from where we left off
-		const searchText = this.buffer
-
-		// Updated regex to handle both single-line XML format and traditional format with whitespace
 		const changeRegex =
 			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
 
+		changeRegex.lastIndex = this.lastProcessedIndex
+
 		let match
-		let lastMatchEnd = 0
-
-		while ((match = changeRegex.exec(searchText)) !== null) {
-			// Preserve cursor marker in search content (LLM includes it when it sees it in document)
-			const searchContent = match[1]
-			// Extract cursor position from replace content
-			const replaceContent = match[2]
-			const cursorPosition = extractCursorPosition(replaceContent)
-
+		while ((match = changeRegex.exec(this.buffer)) !== null) {
 			newChanges.push({
-				search: searchContent,
-				replace: replaceContent,
-				cursorPosition,
+				search: match[1],
+				replace: match[2],
+				cursorPosition: extractCursorPosition(match[2]),
 			})
-
-			lastMatchEnd = match.index + match[0].length
+			this.lastProcessedIndex = changeRegex.lastIndex
 		}
-
 		return newChanges
 	}
 
-	/**
-	 * Generate suggestions from completed changes
-	 */
 	private generateSuggestions(changes: ParsedChange[]): GhostSuggestionsState {
 		const suggestions = new GhostSuggestionsState()
-
-		if (!this.context?.document || changes.length === 0) {
-			return suggestions
-		}
+		if (!this.context?.document || changes.length === 0) return suggestions
 
 		const document = this.context.document
-		const currentContent = document.getText()
+		let content = document.getText()
 
-		// Add cursor marker to document content if it's not already there
-		// This ensures that when LLM searches for <<<AUTOCOMPLETE_HERE>>>, it can find it
-		let modifiedContent = currentContent
 		const needsCursorMarker =
-			changes.some((change) => change.search.includes(CURSOR_MARKER)) && !currentContent.includes(CURSOR_MARKER)
+			changes.some((c) => c.search.includes(CURSOR_MARKER)) && !content.includes(CURSOR_MARKER)
 		if (needsCursorMarker && this.context.range) {
-			// Add cursor marker at the specified range position
-			const cursorOffset = document.offsetAt(this.context.range.start)
-			modifiedContent =
-				currentContent.substring(0, cursorOffset) + CURSOR_MARKER + currentContent.substring(cursorOffset)
+			const offset = document.offsetAt(this.context.range.start)
+			content = content.substring(0, offset) + CURSOR_MARKER + content.substring(offset)
 		}
 
-		// Process changes: preserve search content as-is, clean replace content for application
-		const filteredChanges = changes.map((change) => ({
-			search: change.search, // Keep cursor markers for matching against document
-			replace: removeCursorMarker(change.replace), // Clean for content application
-			cursorPosition: change.cursorPosition,
-		}))
+		const appliedChanges: Array<{ startIndex: number; endIndex: number; replace: string }> = []
 
-		// Apply changes in reverse order to maintain line numbers
-		const appliedChanges: Array<{
-			searchContent: string
-			replaceContent: string
-			startIndex: number
-			endIndex: number
-			cursorPosition?: number
-		}> = []
+		for (const change of changes) {
+			const searchIndex = findBestMatch(content, change.search)
+			if (searchIndex === -1) continue
 
-		for (const change of filteredChanges) {
-			let searchIndex = findBestMatch(modifiedContent, change.search)
+			const endIndex = searchIndex + change.search.length
+			const hasOverlap = appliedChanges.some(
+				(existing) => searchIndex < existing.endIndex && endIndex > existing.startIndex,
+			)
+			if (hasOverlap) continue
 
-			if (searchIndex !== -1) {
-				// Check for overlapping changes before applying
-				const endIndex = searchIndex + change.search.length
-				const hasOverlap = appliedChanges.some((existingChange) => {
-					// Check if ranges overlap
-					const existingStart = existingChange.startIndex
-					const existingEnd = existingChange.endIndex
-					return searchIndex < existingEnd && endIndex > existingStart
-				})
-
-				if (hasOverlap) {
-					console.warn("Skipping overlapping change:", change.search.substring(0, 50))
-					continue // Skip this change to avoid duplicates
-				}
-
-				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
-				let adjustedReplaceContent = change.replace
-
-				// If the search pattern ends with a newline, check if there are additional empty lines after it
-				if (change.search.endsWith("\n")) {
-					let nextCharIndex = endIndex
-					let extraNewlines = ""
-
-					// Count consecutive newlines after the search pattern
-					while (nextCharIndex < modifiedContent.length && modifiedContent[nextCharIndex] === "\n") {
-						extraNewlines += "\n"
-						nextCharIndex++
-					}
-
-					// If we found extra newlines, preserve them by adding them to the replacement
-					if (extraNewlines.length > 0) {
-						// Only add the extra newlines if the replacement doesn't already end with enough newlines
-						if (!adjustedReplaceContent.endsWith("\n" + extraNewlines)) {
-							adjustedReplaceContent = adjustedReplaceContent.trimEnd() + "\n" + extraNewlines
-						}
-					}
-				}
-
-				appliedChanges.push({
-					searchContent: change.search,
-					replaceContent: adjustedReplaceContent,
-					startIndex: searchIndex,
-					endIndex: endIndex,
-					cursorPosition: change.cursorPosition, // Preserve cursor position info
-				})
-			}
+			appliedChanges.push({
+				startIndex: searchIndex,
+				endIndex,
+				replace: removeCursorMarker(change.replace),
+			})
 		}
 
-		// Sort by start index in descending order to apply changes from end to beginning
 		appliedChanges.sort((a, b) => b.startIndex - a.startIndex)
 
-		// Apply the changes
 		for (const change of appliedChanges) {
-			modifiedContent =
-				modifiedContent.substring(0, change.startIndex) +
-				change.replaceContent +
-				modifiedContent.substring(change.endIndex)
+			content = content.substring(0, change.startIndex) + change.replace + content.substring(change.endIndex)
 		}
 
-		// Remove cursor marker from the final content if we added it
 		if (needsCursorMarker) {
-			modifiedContent = removeCursorMarker(modifiedContent)
+			content = removeCursorMarker(content)
 		}
 
-		// Generate diff between original and modified content
-		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
-		const patch = structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
+		const originalContent = document.getText()
+		const patch = structuredPatch(
+			vscode.workspace.asRelativePath(document.uri, false),
+			vscode.workspace.asRelativePath(document.uri, false),
+			originalContent,
+			content,
+			"",
+			"",
+		)
 
-		// Create a suggestion file
 		const suggestionFile = suggestions.addFile(document.uri)
 
-		// Process each hunk in the patch
 		for (const hunk of patch.hunks) {
-			let currentOldLineNumber = hunk.oldStart
-			let currentNewLineNumber = hunk.newStart
+			let oldLine = hunk.oldStart
+			let newLine = hunk.newStart
 
-			// Iterate over each line within the hunk
 			for (const line of hunk.lines) {
-				const operationType = line.charAt(0) as GhostSuggestionEditOperationType
-				const content = line.substring(1)
+				const type = line.charAt(0) as GhostSuggestionEditOperationType
+				const lineContent = line.substring(1)
 
-				switch (operationType) {
-					// Case 1: The line is an addition
-					case "+":
-						suggestionFile.addOperation({
-							type: "+",
-							line: currentNewLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the new line counter for additions and context lines
-						currentNewLineNumber++
-						break
-
-					// Case 2: The line is a deletion
-					case "-":
-						suggestionFile.addOperation({
-							type: "-",
-							line: currentOldLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the old line counter for deletions and context lines
-						currentOldLineNumber++
-						break
-
-					// Case 3: The line is unchanged (context)
-					default:
-						// For context lines, we increment both counters
-						currentOldLineNumber++
-						currentNewLineNumber++
-						break
+				if (type === "+") {
+					suggestionFile.addOperation({
+						type: "+",
+						line: newLine - 1,
+						oldLine: oldLine - 1,
+						newLine: newLine - 1,
+						content: lineContent,
+					})
+					newLine++
+				} else if (type === "-") {
+					suggestionFile.addOperation({
+						type: "-",
+						line: oldLine - 1,
+						oldLine: oldLine - 1,
+						newLine: newLine - 1,
+						content: lineContent,
+					})
+					oldLine++
+				} else {
+					oldLine++
+					newLine++
 				}
 			}
 		}
