@@ -33,6 +33,7 @@ import {
 	getModesSection,
 	addCustomInstructions,
 	markdownFormattingSection,
+	getGitLabIntegrationSection,
 } from "./sections"
 import { type ClineProviderState } from "../webview/ClineProvider" // kilocode_change
 
@@ -136,6 +137,8 @@ ${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexMana
 
 ${getSystemInfoSection(cwd)}
 
+${getGitLabIntegrationSection()}
+
 ${getObjectiveSection(codeIndexManager, experiments)}
 
 ${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
@@ -186,6 +189,7 @@ export const SYSTEM_PROMPT = async (
 		language: language ?? formatLanguage(vscode.env.language),
 		shell: vscode.env.shell,
 		operatingSystem: os.type(),
+		gitlabContext: getGitLabIntegrationSection(),
 	}
 	const fileCustomSystemPrompt = await loadSystemPromptFile(cwd, mode, variablesForPrompt)
 

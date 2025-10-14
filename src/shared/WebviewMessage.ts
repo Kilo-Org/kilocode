@@ -304,6 +304,8 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		| "checkGitLabExtension"
+		| "gitlabExtensionStatus"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -341,6 +343,7 @@ export interface WebviewMessage {
 	isEnabled?: boolean
 	mode?: Mode
 	promptMode?: PromptMode
+	isActivated?: boolean // For gitlabExtensionStatus
 	customPrompt?: PromptComponent
 	dataUrls?: string[]
 	values?: Record<string, any>

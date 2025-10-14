@@ -9,6 +9,7 @@ export type PromptVariables = {
 	language?: string
 	shell?: string
 	operatingSystem?: string
+	gitlabContext?: string
 }
 
 function interpolatePromptContent(content: string, variables: PromptVariables): string {

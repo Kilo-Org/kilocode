@@ -3790,5 +3790,15 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
+		case "checkGitLabExtension": {
+			// Import GitLab integration service
+			const { GitLabIntegrationService } = await import("../../integrations/gitlab")
+			const isActivated = GitLabIntegrationService.getInstance().isActive()
+			await provider.postMessageToWebview({
+				type: "gitlabExtensionStatus",
+				value: isActivated,
+			})
+			break
+		}
 	}
 }
