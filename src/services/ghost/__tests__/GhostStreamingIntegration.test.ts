@@ -243,7 +243,7 @@ describe.skip("Ghost Streaming Integration", () => {
 			expect(processedChunks).toBe(3)
 
 			// Verify parser extracted the valid XML block despite earlier malformed content
-			const completedChanges = strategy.getStreamingCompletedChanges()
+			const completedChanges = (strategy as any).streamingParser.getCompletedChanges()
 			expect(completedChanges.length).toBeGreaterThanOrEqual(0) // May be 0 or 1 depending on content match
 		})
 	})
