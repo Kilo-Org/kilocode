@@ -166,9 +166,7 @@ export default defineConfig(({ mode }) => {
 		server: {
 			host: "0.0.0.0", // kilocode_change
 			watch: {
-				// Use polling to reduce file watcher usage
-				usePolling: true,
-				interval: 1000,
+				usePolling: false,
 				ignored: [
 					"**/node_modules/**",
 					"**/dist/**",
@@ -179,12 +177,13 @@ export default defineConfig(({ mode }) => {
 					"**/.nyc_output/**",
 					// Exclude asset directories (static files don't need watching)
 					"../src/assets/**",
-					"../src/i18n/locales/**",
 					// Exclude test utilities and build artifacts
 					"../src/test-llm-autocompletion/**",
 					"../src/walkthrough/**",
 					"../src/__tests__/**",
 					"../src/__mocks__/**",
+					"src/**/__tests__/**",
+					"src/**/__mocks__/**",
 					// Exclude all non-TS/JS files
 					"../**/*.md",
 					"../**/*.json",
@@ -202,6 +201,9 @@ export default defineConfig(({ mode }) => {
 					"../**/*.woff2",
 					"../**/*.ttf",
 					"../**/*.eot",
+					"src/**/*.css",
+					"src/**/*.scss",
+					"src/**/*.less",
 					// Exclude packages directory (build artifacts)
 					"../packages/**/dist/**",
 					"../packages/**/build/**",
