@@ -96,6 +96,11 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 						{t("settings:footer.settings.reset")}
 					</Button>
 				</div>
+
+				<div className="flex flex-wrap items-center gap-2 mt-2">
+					<Button onClick={() => console.log((performance as any).memory)}>Print Memory Stats</Button>
+					<Button onClick={() => new Array(4_294_967_295).fill(0)}>Trigger Grey Screen</Button>
+				</div>
 			</Section>
 		</div>
 	)
