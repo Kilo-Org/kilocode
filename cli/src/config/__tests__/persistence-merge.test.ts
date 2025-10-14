@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import * as fs from "fs/promises"
 import * as path from "path"
-import { loadConfig, saveConfig, setConfigPaths, resetConfigPaths } from "../persistence.js"
+import { loadConfig, setConfigPaths, resetConfigPaths } from "../persistence.js"
 import { DEFAULT_AUTO_APPROVAL } from "../defaults.js"
 import type { CLIConfig } from "../types.js"
 

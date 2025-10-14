@@ -12,7 +12,7 @@ import { useTheme } from "../../../../state/hooks/useTheme.js"
  * Displays a resume task message
  * This appears when a task was interrupted and can be resumed
  */
-export const AskResumeTaskMessage: React.FC<MessageComponentProps> = ({ message }) => {
+export const AskResumeTaskMessage: React.FC<MessageComponentProps> = () => {
 	const theme = useTheme()
 
 	return (

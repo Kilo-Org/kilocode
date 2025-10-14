@@ -1,7 +1,6 @@
 import Ajv from "ajv"
 import * as fs from "fs/promises"
 import * as path from "path"
-import type { CLIConfig } from "./types.js"
 
 // __dirname is provided by the banner in the bundled output
 declare const __dirname: string

@@ -1,15 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
-import { pendingApprovalAtom, shouldAutoApproveAtom, setPendingApprovalAtom } from "../approval.js"
-import {
-	configAtom,
-	autoApprovalEnabledAtom,
-	autoApproveReadAtom,
-	autoApproveWriteAtom,
-	autoApproveExecuteAtom,
-	autoApproveExecuteAllowedAtom,
-	autoApproveExecuteDeniedAtom,
-} from "../config.js"
+import { shouldAutoApproveAtom, setPendingApprovalAtom } from "../approval.js"
+import { configAtom } from "../config.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { CLIConfig } from "../../../config/types.js"
 import { DEFAULT_CONFIG } from "../../../config/defaults.js"

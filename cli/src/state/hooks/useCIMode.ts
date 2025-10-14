@@ -5,13 +5,7 @@
 
 import { useAtomValue, useSetAtom } from "jotai"
 import { useEffect, useState, useCallback, useRef } from "react"
-import {
-	ciModeAtom,
-	ciTimeoutAtom,
-	ciCompletionDetectedAtom,
-	ciCommandFinishedAtom,
-	ciExitReasonAtom,
-} from "../atoms/ci.js"
+import { ciCompletionDetectedAtom, ciCommandFinishedAtom, ciExitReasonAtom } from "../atoms/ci.js"
 import { useExtensionMessage } from "./useExtensionMessage.js"
 import { logs } from "../../services/logs.js"
 
@@ -70,11 +64,8 @@ export interface UseCIModeReturn {
  * ```
  */
 export function useCIMode(options: UseCIModeOptions): UseCIModeReturn {
-	const { enabled, timeout, onExit } = options
+	const { enabled, timeout } = options
 
-	// Read CI state atoms
-	const isCIMode = useAtomValue(ciModeAtom)
-	const ciTimeout = useAtomValue(ciTimeoutAtom)
 	const completionDetected = useAtomValue(ciCompletionDetectedAtom)
 	const commandFinished = useAtomValue(ciCommandFinishedAtom)
 

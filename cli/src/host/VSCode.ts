@@ -12,7 +12,7 @@ export interface IdentityInfo {
 }
 
 // Basic VSCode API types and enums
-export interface Thenable<T> extends Promise<T> {}
+export type Thenable<T> = Promise<T>
 
 // VSCode EventEmitter implementation
 export interface Disposable {
@@ -351,7 +351,7 @@ export class TextEdit {
 		return new TextEdit(range, "")
 	}
 
-	static setEndOfLine(eol: EndOfLine): TextEdit {
+	static setEndOfLine(): TextEdit {
 		// Simplified implementation
 		return new TextEdit(new Range(new Position(0, 0), new Position(0, 0)), "")
 	}
@@ -817,7 +817,7 @@ export class FileSystemAPI {
 				mtime: stats.mtimeMs,
 				size: stats.size,
 			}
-		} catch (error) {
+		} catch {
 			// If file doesn't exist, assume it's a file for CLI purposes
 			return {
 				type: FileType.File,
@@ -832,7 +832,7 @@ export class FileSystemAPI {
 		try {
 			const content = fs.readFileSync(uri.fsPath)
 			return new Uint8Array(content)
-		} catch (error) {
+		} catch {
 			throw new Error(`Failed to read file: ${uri.fsPath}`)
 		}
 	}
@@ -840,7 +840,7 @@ export class FileSystemAPI {
 	async writeFile(uri: Uri, content: Uint8Array): Promise<void> {
 		try {
 			fs.writeFileSync(uri.fsPath, content)
-		} catch (error) {
+		} catch {
 			throw new Error(`Failed to write file: ${uri.fsPath}`)
 		}
 	}
@@ -848,7 +848,7 @@ export class FileSystemAPI {
 	async delete(uri: Uri): Promise<void> {
 		try {
 			fs.unlinkSync(uri.fsPath)
-		} catch (error) {
+		} catch {
 			throw new Error(`Failed to delete file: ${uri.fsPath}`)
 		}
 	}
@@ -856,7 +856,7 @@ export class FileSystemAPI {
 	async createDirectory(uri: Uri): Promise<void> {
 		try {
 			fs.mkdirSync(uri.fsPath, { recursive: true })
-		} catch (error) {
+		} catch {
 			throw new Error(`Failed to create directory: ${uri.fsPath}`)
 		}
 	}
@@ -917,7 +917,7 @@ export class WorkspaceAPI {
 		return new MockWorkspaceConfiguration(section, this.context)
 	}
 
-	findFiles(include: string, exclude?: string): Thenable<Uri[]> {
+	findFiles(_include: string, _exclude?: string): Thenable<Uri[]> {
 		// Basic implementation - could be enhanced with glob patterns
 		return Promise.resolve([])
 	}
@@ -1051,10 +1051,10 @@ export class WorkspaceAPI {
 	}
 
 	createFileSystemWatcher(
-		globPattern: any,
-		ignoreCreateEvents?: boolean,
-		ignoreChangeEvents?: boolean,
-		ignoreDeleteEvents?: boolean,
+		_globPattern: any,
+		_ignoreCreateEvents?: boolean,
+		_ignoreChangeEvents?: boolean,
+		_ignoreDeleteEvents?: boolean,
 	): any {
 		return {
 			onDidChange: () => ({ dispose: () => {} }),
@@ -1064,7 +1064,7 @@ export class WorkspaceAPI {
 		}
 	}
 
-	registerTextDocumentContentProvider(scheme: string, provider: any): Disposable {
+	registerTextDocumentContentProvider(_scheme: string, _provider: any): Disposable {
 		return { dispose: () => {} }
 	}
 }
@@ -1079,7 +1079,7 @@ export interface WorkspaceConfiguration {
 	get<T>(section: string): T | undefined
 	get<T>(section: string, defaultValue: T): T
 	has(section: string): boolean
-	inspect<T>(section: string): any
+	inspect(section: string): any
 	update(section: string, value: any, configurationTarget?: ConfigurationTarget): Thenable<void>
 }
 
@@ -1142,7 +1142,7 @@ export class MockWorkspaceConfiguration implements WorkspaceConfiguration {
 		return this.workspaceMemento.get(fullSection) !== undefined || this.globalMemento.get(fullSection) !== undefined
 	}
 
-	inspect<T>(section: string): any {
+	inspect(section: string): any {
 		const fullSection = this.section ? `${this.section}.${section}` : section
 		const workspaceValue = this.workspaceMemento.get(fullSection)
 		const globalValue = this.globalMemento.get(fullSection)
@@ -1301,36 +1301,36 @@ export class WindowAPI {
 		return new OutputChannel(name)
 	}
 
-	createTextEditorDecorationType(options: any): TextEditorDecorationType {
+	createTextEditorDecorationType(_options: any): TextEditorDecorationType {
 		return new TextEditorDecorationType(`decoration-${Date.now()}`)
 	}
 
-	showInformationMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+	showInformationMessage(message: string, ..._items: string[]): Thenable<string | undefined> {
 		logs.info(message, "VSCode.Window")
 		return Promise.resolve(undefined)
 	}
 
-	showWarningMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+	showWarningMessage(message: string, ..._items: string[]): Thenable<string | undefined> {
 		logs.warn(message, "VSCode.Window")
 		return Promise.resolve(undefined)
 	}
 
-	showErrorMessage(message: string, ...items: string[]): Thenable<string | undefined> {
+	showErrorMessage(message: string, ..._items: string[]): Thenable<string | undefined> {
 		logs.error(message, "VSCode.Window")
 		return Promise.resolve(undefined)
 	}
 
-	showQuickPick(items: string[], options?: any): Thenable<string | undefined> {
+	showQuickPick(items: string[], _options?: any): Thenable<string | undefined> {
 		// Return first item for CLI
 		return Promise.resolve(items[0])
 	}
 
-	showInputBox(options?: any): Thenable<string | undefined> {
+	showInputBox(_options?: any): Thenable<string | undefined> {
 		// Return empty string for CLI
 		return Promise.resolve("")
 	}
 
-	showOpenDialog(options?: any): Thenable<Uri[] | undefined> {
+	showOpenDialog(_options?: any): Thenable<Uri[] | undefined> {
 		// Return empty array for CLI
 		return Promise.resolve([])
 	}
@@ -1338,7 +1338,7 @@ export class WindowAPI {
 	async showTextDocument(
 		documentOrUri: any | Uri,
 		columnOrOptions?: ViewColumn | any,
-		preserveFocus?: boolean,
+		_preserveFocus?: boolean,
 	): Promise<any> {
 		// Mock implementation for CLI
 		// In a real VSCode environment, this would open the document in an editor
@@ -1390,7 +1390,7 @@ export class WindowAPI {
 		return placeholderEditor
 	}
 
-	registerWebviewViewProvider(viewId: string, provider: any, options?: any): Disposable {
+	registerWebviewViewProvider(viewId: string, provider: any, _options?: any): Disposable {
 		// Store the provider for later use by ExtensionHost
 		if ((global as any).__extensionHost) {
 			;(global as any).__extensionHost.registerWebviewProvider(viewId, provider)
@@ -1454,7 +1454,7 @@ export class WindowAPI {
 		}
 	}
 
-	registerUriHandler(handler: any): Disposable {
+	registerUriHandler(_handler: any): Disposable {
 		// Store the URI handler for later use
 		return {
 			dispose: () => {},
@@ -1476,23 +1476,23 @@ export class WindowAPI {
 	}
 
 	// Terminal event handlers
-	onDidCloseTerminal(listener: (terminal: any) => void): Disposable {
+	onDidCloseTerminal(_listener: (terminal: any) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidOpenTerminal(listener: (terminal: any) => void): Disposable {
+	onDidOpenTerminal(_listener: (terminal: any) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidChangeActiveTerminal(listener: (terminal: any) => void): Disposable {
+	onDidChangeActiveTerminal(_listener: (terminal: any) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidChangeTerminalDimensions(listener: (event: any) => void): Disposable {
+	onDidChangeTerminalDimensions(_listener: (event: any) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidWriteTerminalData(listener: (event: any) => void): Disposable {
+	onDidWriteTerminalData(_listener: (event: any) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
@@ -1515,7 +1515,7 @@ export interface WorkspaceConfiguration {
 	get<T>(section: string): T | undefined
 	get<T>(section: string, defaultValue: T): T
 	has(section: string): boolean
-	inspect<T>(section: string): any
+	inspect(_section: string): any
 	update(section: string, value: any, configurationTarget?: ConfigurationTarget): Thenable<void>
 }
 
@@ -1561,7 +1561,7 @@ export class CommandsAPI {
 		}
 	}
 
-	private async handleDiffCommand(originalUri: Uri, modifiedUri: Uri, title?: string, options?: any): Promise<void> {
+	private async handleDiffCommand(originalUri: Uri, modifiedUri: Uri, title?: string, _options?: any): Promise<void> {
 		// The DiffViewProvider is waiting for the modified document to appear in visibleTextEditors
 		// We need to simulate this by opening the document and adding it to visible editors
 
@@ -1616,15 +1616,15 @@ export class CommandsAPI {
 				edit: async (callback: (editBuilder: any) => void) => {
 					// Create a mock edit builder
 					const editBuilder = {
-						replace: (range: Range, text: string) => {
+						replace: (_range: Range, _text: string) => {
 							// In CLI mode, we don't actually edit here
 							// The DiffViewProvider will handle the actual edits
 							logs.debug("Mock edit builder replace called", "VSCode.Commands")
 						},
-						insert: (position: Position, text: string) => {
+						insert: (_position: Position, _text: string) => {
 							logs.debug("Mock edit builder insert called", "VSCode.Commands")
 						},
-						delete: (range: Range) => {
+						delete: (_range: Range) => {
 							logs.debug("Mock edit builder delete called", "VSCode.Commands")
 						},
 					}

@@ -14,7 +14,7 @@ function copyPostBuildFiles() {
 		try {
 			copyFileSync(".env", "dist/.env")
 			copyFileSync(".env", "dist/kilocode/.env")
-		} catch (err) {
+		} catch {
 			// .env might not exist, that's okay
 		}
 

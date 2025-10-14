@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest"
 import { isMessageComplete, splitMessages } from "../messageCompletion.js"
 import type { UnifiedMessage } from "../../../../state/atoms/ui.js"
 import type { CliMessage } from "../../../../types/cli.js"
-import type { ExtensionChatMessage } from "../../../../types/messages.js"
 
 describe("messageCompletion", () => {
 	describe("isMessageComplete", () => {

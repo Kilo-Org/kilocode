@@ -56,7 +56,7 @@ export class ExtensionHost extends EventEmitter {
 	 */
 	private setupGlobalErrorHandlers(): void {
 		// Handle unhandled promise rejections from extension
-		this.unhandledRejectionHandler = (reason: any, promise: Promise<any>) => {
+		this.unhandledRejectionHandler = (reason: any) => {
 			const error = reason instanceof Error ? reason : new Error(String(reason))
 
 			// Check if this is an expected error
@@ -593,9 +593,10 @@ export class ExtensionHost extends EventEmitter {
 							}
 							break
 
-						case "messageUpdated":
+						case "messageUpdated": {
 							// Extension is sending an individual message update
 							// The extension uses 'clineMessage' property (legacy name)
+
 							const chatMessage = message.clineMessage || message.chatMessage
 							if (chatMessage) {
 								// Forward the message update to the CLI
@@ -606,6 +607,7 @@ export class ExtensionHost extends EventEmitter {
 								this.emit("message", emitMessage)
 							}
 							break
+						}
 
 						case "taskHistoryResponse":
 							// Extension is sending task history data

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest"
-import { atom, createStore } from "jotai"
+import { createStore } from "jotai"
 import { extensionServiceAtom, isServiceReadyAtom, serviceErrorAtom, isInitializingAtom } from "../../atoms/service.js"
 import { chatMessagesAtom, currentTaskAtom, taskTodosAtom, apiConfigurationAtom } from "../../atoms/extension.js"
 import { inputValueAtom } from "../../atoms/ui.js"

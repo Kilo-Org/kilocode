@@ -110,7 +110,7 @@ export class KiloCodePaths {
 			if (!fs.existsSync(dirPath)) {
 				fs.mkdirSync(dirPath, { recursive: true })
 			}
-		} catch (error) {
+		} catch {
 			// Silent fail - let the calling code handle errors
 		}
 	}
@@ -132,7 +132,7 @@ export class KiloCodePaths {
 				const content = fs.readFileSync(mapPath, "utf-8")
 				return JSON.parse(content)
 			}
-		} catch (error) {
+		} catch {
 			// Return empty map on error
 		}
 		return {}
@@ -153,7 +153,7 @@ export class KiloCodePaths {
 			// Save updated map
 			const mapPath = this.getWorkspaceMapPath()
 			fs.writeFileSync(mapPath, JSON.stringify(map, null, 2))
-		} catch (error) {
+		} catch {
 			// Silent fail - map is optional
 		}
 	}

@@ -3,7 +3,7 @@
  * Shows status text on the left (e.g., "Thinking...") and available hotkeys on the right
  */
 
-import React, { useCallback, useEffect } from "react"
+import React, { useCallback } from "react"
 import { Box, Text, useInput } from "ink"
 import { useHotkeys } from "../../state/hooks/useHotkeys.js"
 import { useWebviewMessage } from "../../state/hooks/useWebviewMessage.js"
@@ -32,7 +32,7 @@ export interface StatusIndicatorProps {
  */
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = false }) => {
 	const theme = useTheme()
-	const { hotkeys, shouldShow, modifierKey } = useHotkeys()
+	const { hotkeys, shouldShow } = useHotkeys()
 	const { cancelTask, resumeTask } = useWebviewMessage()
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)

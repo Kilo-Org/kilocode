@@ -61,7 +61,7 @@ function getModelDisplayName(apiConfig: ProviderSettings | null, routerModels: R
 		return displayName.length > MAX_MODEL_NAME_LENGTH
 			? displayName.substring(0, MAX_MODEL_NAME_LENGTH - 3) + "..."
 			: displayName
-	} catch (error) {
+	} catch {
 		// Fallback to simple model ID extraction
 		const modelId =
 			apiConfig.apiModelId ||

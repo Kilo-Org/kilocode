@@ -237,7 +237,7 @@ export const openSettingsAtom = atom(null, async (get, set) => {
 /**
  * Action atom to refresh the extension state
  */
-export const refreshStateAtom = atom(null, async (get, set) => {
+export const refreshStateAtom = atom(null, async (get) => {
 	const service = get(extensionServiceAtom)
 	const isReady = get(isServiceReadyAtom)
 

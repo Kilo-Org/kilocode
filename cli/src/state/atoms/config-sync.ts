@@ -14,7 +14,7 @@ import { logs } from "../../services/logs.js"
  * Effect atom to sync CLI configuration to the extension
  * This sends configuration updates to the extension when config changes
  */
-export const syncConfigToExtensionEffectAtom = atom(null, async (get, set) => {
+export const syncConfigToExtensionEffectAtom = atom(null, async (get) => {
 	const service = get(extensionServiceAtom)
 
 	if (!service || !service.isReady()) {

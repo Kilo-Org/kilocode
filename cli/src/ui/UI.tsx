@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useRef } from "react"
-import { Box, Text, useInput, useStdout } from "ink"
+import { Box, Text, useInput } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
@@ -32,7 +32,6 @@ interface UIAppProps {
 }
 
 export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
-	const { stdout } = useStdout()
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const error = useAtomValue(errorAtom)
 	const theme = useTheme()

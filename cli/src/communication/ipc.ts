@@ -19,6 +19,7 @@ export interface IPCOptions {
  * Replicates the webview message passing pattern used in the VSCode extension
  */
 export class IPCChannel extends EventEmitter {
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 	private pendingRequests = new Map<string, { resolve: Function; reject: Function; timeout: NodeJS.Timeout }>()
 	private messageId = 0
 	private options: Required<IPCOptions>
@@ -133,7 +134,7 @@ export class IPCChannel extends EventEmitter {
 
 	dispose(): void {
 		// Clear all pending requests
-		for (const [id, pending] of this.pendingRequests) {
+		for (const [, pending] of this.pendingRequests) {
 			clearTimeout(pending.timeout)
 			pending.reject(new Error("IPC channel disposed"))
 		}

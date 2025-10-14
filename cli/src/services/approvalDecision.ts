@@ -137,7 +137,7 @@ function getToolApprovalDecision(
 			}
 			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 		}
-	} catch (error) {
+	} catch {
 		// If we can't parse the message, don't auto-approve
 		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 	}

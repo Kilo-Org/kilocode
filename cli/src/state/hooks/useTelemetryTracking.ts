@@ -44,7 +44,7 @@ export function useTelemetryTracking() {
 								tool: toolData.tool,
 							})
 						}
-					} catch (error) {
+					} catch {
 						// Ignore parse errors
 					}
 				}

@@ -5,7 +5,7 @@
 import { useMemo } from "react"
 import { useAtomValue } from "jotai"
 import { calculateContextUsage, type ContextUsage } from "../../utils/context.js"
-import type { ExtensionChatMessage, ProviderSettings, RouterModels } from "../../types/messages.js"
+import type { ExtensionChatMessage, ProviderSettings } from "../../types/messages.js"
 import { routerModelsAtom } from "../atoms/index.js"
 
 /**

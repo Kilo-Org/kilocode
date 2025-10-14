@@ -3,7 +3,7 @@
  * Updated to use useCommandInput, useWebviewMessage, useApprovalHandler, and useFollowupSuggestions hooks
  */
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useRef } from "react"
 import { Box, Text, useInput } from "ink"
 import { CustomTextInput } from "./CustomTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
@@ -67,7 +67,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	} = useFollowupSuggestions()
 
 	// Key to force TextInput remount when autocompleting (resets cursor to end)
-	const [inputKey, setInputKey] = React.useState(0)
+	const [, setInputKey] = React.useState(0)
 	// Ref to track if we've already handled the Enter key in autocomplete
 	const autocompleteHandledEnter = useRef(false)
 
