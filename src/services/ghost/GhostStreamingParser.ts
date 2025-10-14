@@ -238,6 +238,11 @@ export class GhostStreamingParser {
 		// Add chunk to buffer
 		this.buffer += chunk
 
+		if (!this.streamFinished) {
+			// do not stream
+			this.generateSuggestions(new Array<ParsedChange>())
+		}
+
 		// Extract any newly completed changes from the current buffer
 		const newChanges = this.extractCompletedChanges()
 
