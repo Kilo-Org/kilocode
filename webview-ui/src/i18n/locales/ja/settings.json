@@ -800,8 +800,8 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Applyを有効化",
 			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"apiKey": "Morph APIキー",
+			"placeholder": "Morph APIキーを入力してください",
 			"modelLabel": "モデル選択",
 			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
 			"models": {

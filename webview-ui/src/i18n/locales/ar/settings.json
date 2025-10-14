@@ -835,8 +835,8 @@
 		"MORPH_FAST_APPLY": {
 			"name": "تفعيل التطبيق السريع",
 			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
-			"apiKey": "مفتاح Morph API (اختياري)",
-			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"apiKey": "مفتاح Morph API",
+			"placeholder": "أدخل مفتاح Morph API",
 			"modelLabel": "اختيار النموذج",
 			"modelDescription": "اختر نموذج التطبيق السريع لتعديل الملفات",
 			"models": {

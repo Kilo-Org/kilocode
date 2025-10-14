@@ -24,7 +24,8 @@ type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	// kilocode_change start
 	morphApiKey?: string
 	fastApplyModel?: string
-	setCachedStateField: SetCachedStateField<"morphApiKey" | "fastApplyModel">
+	fastApplyApiProvider?: string
+	setCachedStateField: SetCachedStateField<"morphApiKey" | "fastApplyModel" | "fastApplyApiProvider">
 	kiloCodeImageApiKey?: string
 	setKiloCodeImageApiKey?: (apiKey: string) => void
 	currentProfileKilocodeToken?: string
@@ -50,6 +51,7 @@ export const ExperimentalSettings = ({
 	// kilocode_change start
 	morphApiKey,
 	fastApplyModel, // kilocode_change: Fast Apply model selection
+	fastApplyApiProvider, // kilocode_change: Fast Apply model api base url
 	setCachedStateField,
 	setKiloCodeImageApiKey,
 	kiloCodeImageApiKey,
@@ -107,6 +109,7 @@ export const ExperimentalSettings = ({
 											setCachedStateField={setCachedStateField}
 											morphApiKey={morphApiKey}
 											fastApplyModel={fastApplyModel}
+											fastApplyApiProvider={fastApplyApiProvider}
 										/>
 									)}
 								</React.Fragment>
