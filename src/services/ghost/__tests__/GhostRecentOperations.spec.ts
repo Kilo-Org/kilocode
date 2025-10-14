@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { GhostStrategy } from "../GhostStrategy"
+import { PromptStrategyManager } from "../PromptStrategyManager"
 import { GhostSuggestionContext } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
@@ -78,13 +78,13 @@ vi.mock("diff", async (importOriginal) => {
 describe("GhostRecentOperations", () => {
 	let documentStore: GhostDocumentStore
 	let context: GhostContext
-	let strategy: GhostStrategy
+	let strategyManager: PromptStrategyManager
 	let mockDocument: MockTextDocument
 
 	beforeEach(() => {
 		documentStore = new GhostDocumentStore()
 		context = new GhostContext(documentStore)
-		strategy = new GhostStrategy()
+		strategyManager = new PromptStrategyManager()
 
 		// Create a mock document
 		const uri = vscode.Uri.parse("file:///test-file.ts")
@@ -116,7 +116,7 @@ describe("GhostRecentOperations", () => {
 		expect(enrichedContext.recentOperations?.length).toBeGreaterThan(0)
 
 		// Generate prompt
-		const { userPrompt } = strategy.getPrompts(enrichedContext)
+		const { userPrompt } = strategyManager.buildPrompt(enrichedContext)
 
 		// Verify that the prompt includes the recent operations section
 		// The new strategy system uses "## Recent Typing" format
@@ -133,7 +133,7 @@ describe("GhostRecentOperations", () => {
 		const enrichedContext = await context.generate(suggestionContext)
 
 		// Generate prompt
-		const { userPrompt } = strategy.getPrompts(enrichedContext)
+		const { userPrompt } = strategyManager.buildPrompt(enrichedContext)
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check

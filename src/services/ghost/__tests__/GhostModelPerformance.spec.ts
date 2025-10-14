@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { describe, it, expect } from "vitest"
-import { GhostStrategy } from "../GhostStrategy"
+import { PromptStrategyManager } from "../PromptStrategyManager"
 import { MockWorkspace } from "./MockWorkspace"
 import { ApiHandler, buildApiHandler } from "../../../api"
 import { GhostModel } from "../GhostModel"
@@ -14,7 +14,7 @@ const KEYS = {
 
 describe("GhostModelPerformance", () => {
 	const generatePrompt = (userInput: string) => {
-		const strategy = new GhostStrategy()
+		const strategyManager = new PromptStrategyManager()
 		const mockWorkspace = new MockWorkspace()
 
 		const testUri = vscode.Uri.parse("file:///example.ts")
@@ -25,7 +25,7 @@ describe("GhostModelPerformance", () => {
 			document: document,
 		}
 
-		const { systemPrompt, userPrompt } = strategy.getPrompts(context)
+		const { systemPrompt, userPrompt } = strategyManager.buildPrompt(context)
 
 		return { systemPrompt, suggestionPrompt: userPrompt }
 	}
