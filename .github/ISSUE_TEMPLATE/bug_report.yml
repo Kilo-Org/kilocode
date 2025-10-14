@@ -16,6 +16,7 @@ body:
           options:
               - VSCode Extension
               - JetBrains Plugin
+              - Kilo Code CLI
           default: 0
       validations:
           required: true

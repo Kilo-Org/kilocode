@@ -212,7 +212,6 @@ describe("OVHcloudAIEndpointsHandler", () => {
 
 			expect(mockCreate).toHaveBeenCalledWith({
 				model: modelId,
-				max_tokens: modelInfo.maxTokens,
 				messages: [{ role: "system", content: systemPrompt }, userMessages[0]],
 				stream: true,
 				stream_options: { include_usage: true },

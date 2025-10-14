@@ -9,6 +9,8 @@ import Anthropic from "@anthropic-ai/sdk"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { calculateApiCostOpenAI } from "../../shared/cost"
+import { convertToR1Format } from "../transform/r1-format"
+import { XmlMatcher } from "../../utils/xml-matcher"
 
 export class OVHcloudAIEndpointsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -30,27 +32,34 @@ export class OVHcloudAIEndpointsHandler extends RouterProvider implements Single
 	): ApiStream {
 		const { id: modelId, info } = await this.fetchModel()
 
+		const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 		const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
+			...(useR1Format ? convertToR1Format(messages) : convertToOpenAiMessages(messages)),
 		]
 
 		const body: OpenAI.Chat.ChatCompletionCreateParams = {
 			model: modelId,
 			messages: openAiMessages,
-			max_tokens: info.maxTokens,
 			stream: true,
 			stream_options: { include_usage: true },
 		}
 
 		const completion = await this.client.chat.completions.create(body)
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
 
 		for await (const chunk of completion) {
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				for (const matcherChunk of matcher.update(delta.content)) {
+					yield matcherChunk
 				}
 			}
 

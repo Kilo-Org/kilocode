@@ -199,12 +199,21 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					}
 				}
 
-				if ("reasoning_content" in delta && delta.reasoning_content) {
+				// kilocode_change start: reasoning
+				const reasoningText =
+					"reasoning_content" in delta && typeof delta.reasoning_content === "string"
+						? delta.reasoning_content
+						: "reasoning" in delta && typeof delta.reasoning === "string"
+							? delta.reasoning
+							: undefined
+				if (reasoningText) {
 					yield {
 						type: "reasoning",
-						text: (delta.reasoning_content as string | undefined) || "",
+						text: reasoningText,
 					}
 				}
+				// kilocode_change end
+
 				if (chunk.usage) {
 					lastUsage = chunk.usage
 				}
@@ -246,10 +255,23 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			yield {
-				type: "text",
-				text: response.choices[0]?.message.content || "",
+			// kilocode_change start: reasoning
+			const message = response.choices[0]?.message
+			if (message) {
+				if ("reasoning" in message && typeof message.reasoning === "string") {
+					yield {
+						type: "reasoning",
+						text: message.reasoning,
+					}
+				}
+				if (message.content) {
+					yield {
+						type: "text",
+						text: message.content,
+					}
+				}
 			}
+			// kilocode_change end
 
 			yield this.processUsageMetrics(response.usage, modelInfo)
 		}
