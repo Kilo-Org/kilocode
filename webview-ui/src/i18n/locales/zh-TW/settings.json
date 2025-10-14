@@ -122,6 +122,7 @@
 			"modelIdRequired": "需要模型 ID",
 			"modelDimensionRequired": "需要模型維度",
 			"geminiApiKeyRequired": "需要 Gemini API 金鑰",
+			"invalidGeminiUrl": "無效的 Gemini URL",
 			"mistralApiKeyRequired": "需要 Mistral API 金鑰",
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 金鑰",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",

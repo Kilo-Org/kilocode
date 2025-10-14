@@ -134,6 +134,7 @@
 			"modelIdRequired": "ID modelu je povinné",
 			"modelDimensionRequired": "Dimenze modelu je povinná",
 			"geminiApiKeyRequired": "Klíč API Gemini je povinný",
+			"invalidGeminiUrl": "Neplatná URL Gemini",
 			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
 			"vercelAiGatewayApiKeyRequired": "Je vyžadován klíč API Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",

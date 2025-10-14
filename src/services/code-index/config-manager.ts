@@ -17,7 +17,7 @@ export class CodeIndexConfigManager {
 	private openAiOptions?: ApiHandlerOptions
 	private ollamaOptions?: ApiHandlerOptions
 	private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
-	private geminiOptions?: { apiKey: string }
+	private geminiOptions?: { apiKey: string; baseUrl?: string }
 	private mistralOptions?: { apiKey: string }
 	private vercelAiGatewayOptions?: { apiKey: string }
 	private qdrantUrl?: string = "http://localhost:6333"
@@ -126,7 +126,14 @@ export class CodeIndexConfigManager {
 					}
 				: undefined
 
-		this.geminiOptions = geminiApiKey ? { apiKey: geminiApiKey } : undefined
+		// For Gemini provider, use the generic baseUrl field from codebaseIndexEmbedderBaseUrl
+		const geminiBaseUrl = codebaseIndexEmbedderProvider === "gemini" ? codebaseIndexEmbedderBaseUrl : ""
+		this.geminiOptions = geminiApiKey
+			? {
+					apiKey: geminiApiKey,
+					baseUrl: geminiBaseUrl || undefined,
+				}
+			: undefined
 		this.mistralOptions = mistralApiKey ? { apiKey: mistralApiKey } : undefined
 		this.vercelAiGatewayOptions = vercelAiGatewayApiKey ? { apiKey: vercelAiGatewayApiKey } : undefined
 	}
@@ -144,7 +151,7 @@ export class CodeIndexConfigManager {
 			openAiOptions?: ApiHandlerOptions
 			ollamaOptions?: ApiHandlerOptions
 			openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
-			geminiOptions?: { apiKey: string }
+			geminiOptions?: { apiKey: string; baseUrl?: string }
 			mistralOptions?: { apiKey: string }
 			vercelAiGatewayOptions?: { apiKey: string }
 			qdrantUrl?: string
@@ -165,6 +172,7 @@ export class CodeIndexConfigManager {
 			openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
 			openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey ?? "",
 			geminiApiKey: this.geminiOptions?.apiKey ?? "",
+			geminiBaseUrl: this.geminiOptions?.baseUrl ?? "",
 			mistralApiKey: this.mistralOptions?.apiKey ?? "",
 			vercelAiGatewayApiKey: this.vercelAiGatewayOptions?.apiKey ?? "",
 			qdrantUrl: this.qdrantUrl ?? "",
@@ -267,6 +275,7 @@ export class CodeIndexConfigManager {
 		const prevOpenAiCompatibleApiKey = prev?.openAiCompatibleApiKey ?? ""
 		const prevModelDimension = prev?.modelDimension
 		const prevGeminiApiKey = prev?.geminiApiKey ?? ""
+		const prevGeminiBaseUrl = prev?.geminiBaseUrl ?? ""
 		const prevMistralApiKey = prev?.mistralApiKey ?? ""
 		const prevVercelAiGatewayApiKey = prev?.vercelAiGatewayApiKey ?? ""
 		const prevQdrantUrl = prev?.qdrantUrl ?? ""
@@ -305,6 +314,7 @@ export class CodeIndexConfigManager {
 		const currentOpenAiCompatibleApiKey = this.openAiCompatibleOptions?.apiKey ?? ""
 		const currentModelDimension = this.modelDimension
 		const currentGeminiApiKey = this.geminiOptions?.apiKey ?? ""
+		const currentGeminiBaseUrl = this.geminiOptions?.baseUrl ?? ""
 		const currentMistralApiKey = this.mistralOptions?.apiKey ?? ""
 		const currentVercelAiGatewayApiKey = this.vercelAiGatewayOptions?.apiKey ?? ""
 		const currentQdrantUrl = this.qdrantUrl ?? ""
@@ -326,6 +336,10 @@ export class CodeIndexConfigManager {
 		}
 
 		if (prevGeminiApiKey !== currentGeminiApiKey) {
+			return true
+		}
+
+		if (prevGeminiBaseUrl !== currentGeminiBaseUrl) {
 			return true
 		}
 
