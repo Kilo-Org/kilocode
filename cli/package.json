@@ -130,7 +130,6 @@
 		"zod": "^3.25.61"
 	},
 	"devDependencies": {
-		"@eslint/js": "^9.22.0",
 		"@roo-code/config-eslint": "workspace:^",
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/fs-extra": "^11.0.4",
@@ -139,8 +138,6 @@
 		"@types/react": "^18.3.23",
 		"cpy-cli": "^5.0.0",
 		"del-cli": "^5.1.0",
-		"eslint": "^9.28.0",
-		"eslint-plugin-react": "^7.37.4",
 		"globals": "^16.4.0",
 		"ink-testing-library": "^4.0.0",
 		"jiti": "^2.6.1",
@@ -149,7 +146,6 @@
 		"rimraf": "^6.0.1",
 		"tsx": "^4.19.3",
 		"typescript": "^5.4.5",
-		"typescript-eslint": "^8.26.0",
 		"vitest": "^3.2.3"
 	},
 	"engines": {

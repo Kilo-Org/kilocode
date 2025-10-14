@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import esbuild from "esbuild"
 import { chmodSync, mkdirSync, copyFileSync } from "fs"
 import { rimrafSync } from "rimraf"
