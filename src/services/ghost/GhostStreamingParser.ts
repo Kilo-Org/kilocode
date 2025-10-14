@@ -291,11 +291,8 @@ export class GhostStreamingParser {
 
 		// Look for complete <change> blocks starting from where we left off
 		const searchText = this.buffer.substring(this.lastProcessedIndex)
-
-		// More precise regex that explicitly matches the CDATA sections
-		// and ensures we don't capture partial or corrupted matches
 		const changeRegex =
-			/<change>\s*<search>\s*<!\[CDATA\[((?:(?!\]\]>)[\s\S])*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[((?:(?!\]\]>)[\s\S])*?)\]\]>\s*<\/replace>\s*<\/change>/g
+			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
 
 		let match
 		let lastMatchEnd = 0
