@@ -2,7 +2,8 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
-import { GhostStrategy } from "./GhostStrategy"
+import { GhostStreamingParser } from "./GhostStreamingParser"
+import { PromptStrategyManager } from "./PromptStrategyManager"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
@@ -30,7 +31,8 @@ export class GhostProvider {
 	private inlineCompletionDisposable: vscode.Disposable | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
-	private strategy: GhostStrategy
+	private streamingParser: GhostStreamingParser
+	private strategyManager: PromptStrategyManager
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private cline: ClineProvider
@@ -67,7 +69,8 @@ export class GhostProvider {
 		this.decorations = new GhostDecorations()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions)
 		this.documentStore = new GhostDocumentStore()
-		this.strategy = new GhostStrategy({ debug: true })
+		this.streamingParser = new GhostStreamingParser()
+		this.strategyManager = new PromptStrategyManager({ debug: true })
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
@@ -300,7 +303,7 @@ export class GhostProvider {
 		this.isRequestCancelled = false
 
 		const context = await this.ghostContext.generate(initialContext)
-		const { systemPrompt, userPrompt } = this.strategy.getPrompts(context)
+		const { systemPrompt, userPrompt } = this.strategyManager.buildPrompt(context)
 		if (this.isRequestCancelled) {
 			return
 		}
@@ -314,7 +317,7 @@ export class GhostProvider {
 		console.log("userprompt", userPrompt)
 
 		// Initialize the streaming parser
-		this.strategy.initializeStreamingParser(context)
+		this.streamingParser.initialize(context)
 
 		let hasShownFirstSuggestion = false
 		let cost = 0
@@ -334,7 +337,7 @@ export class GhostProvider {
 				response += chunk.text
 
 				// Process the text chunk through our streaming parser
-				const parseResult = this.strategy.processStreamingChunk(chunk.text)
+				const parseResult = this.streamingParser.processChunk(chunk.text)
 
 				if (parseResult.hasNewSuggestions) {
 					// Update our suggestions with the new parsed results
@@ -397,7 +400,7 @@ export class GhostProvider {
 			}
 
 			// Finish the streaming parser to apply sanitization if needed
-			const finalParseResult = this.strategy.finishStreamingParser()
+			const finalParseResult = this.streamingParser.finishStream()
 			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
 				// Handle case where sanitization produced suggestions
 				this.suggestions = finalParseResult.suggestions
@@ -761,7 +764,7 @@ export class GhostProvider {
 			this.clearAutoTriggerTimer()
 		}
 		// Reset streaming parser when cancelling
-		this.strategy.resetStreamingParser()
+		this.streamingParser.reset()
 	}
 
 	/**

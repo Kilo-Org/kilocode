@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as path from "node:path"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
-import { GhostStrategy } from "../GhostStrategy"
+import { GhostStreamingParser } from "../GhostStreamingParser"
 import { GhostWorkspaceEdit } from "../GhostWorkspaceEdit"
 import { GhostSuggestionContext } from "../types"
 
@@ -68,12 +68,12 @@ vi.mock("vscode", () => ({
 
 describe("GhostProvider", () => {
 	let mockWorkspace: MockWorkspace
-	let strategy: GhostStrategy
+	let streamingParser: GhostStreamingParser
 	let workspaceEdit: GhostWorkspaceEdit
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		strategy = new GhostStrategy()
+		streamingParser = new GhostStreamingParser()
 		mockWorkspace = new MockWorkspace()
 		workspaceEdit = new GhostWorkspaceEdit()
 
@@ -128,10 +128,10 @@ describe("GhostProvider", () => {
 
 	async function parseAndApplySuggestions(response: string, context: GhostSuggestionContext) {
 		// Initialize streaming parser
-		strategy.initializeStreamingParser(context)
+		streamingParser.initialize(context)
 
 		// Process the response as a single chunk (simulating complete response)
-		const result = strategy.processStreamingChunk(response)
+		const result = streamingParser.processChunk(response)
 
 		// Apply the suggestions
 		await workspaceEdit.applySuggestions(result.suggestions)
@@ -231,8 +231,8 @@ describe("GhostProvider", () => {
 			const { context } = await setupTestDocument("empty.js", initialContent)
 
 			// Test empty response
-			strategy.initializeStreamingParser(context)
-			const result = strategy.processStreamingChunk("")
+			streamingParser.initialize(context)
+			const result = streamingParser.processChunk("")
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -242,8 +242,8 @@ describe("GhostProvider", () => {
 
 			// Test invalid diff format
 			const invalidDiff = "This is not a valid diff format"
-			strategy.initializeStreamingParser(context)
-			const result = strategy.processStreamingChunk(invalidDiff)
+			streamingParser.initialize(context)
+			const result = streamingParser.processChunk(invalidDiff)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -261,8 +261,8 @@ describe("GhostProvider", () => {
 			const xmlResponse = `<change><search><![CDATA[console.log('test');]]></search><replace><![CDATA[// Added comment
 console.log('test');]]></replace></change>`
 
-			strategy.initializeStreamingParser(context)
-			const result = strategy.processStreamingChunk(xmlResponse)
+			streamingParser.initialize(context)
+			const result = streamingParser.processChunk(xmlResponse)
 			// Should work with the XML format
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
