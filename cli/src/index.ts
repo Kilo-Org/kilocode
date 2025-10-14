@@ -146,7 +146,6 @@ program
 			// Spawn the editor process
 			const editorProcess = spawn(editorCommand, editorArgs, {
 				stdio: "inherit",
-				shell: true,
 			})
 
 			editorProcess.on("error", (error) => {
