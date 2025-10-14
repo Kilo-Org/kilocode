@@ -165,6 +165,10 @@ export default defineConfig(({ mode }) => {
 		},
 		server: {
 			host: "0.0.0.0", // kilocode_change
+			fs: {
+				// Allow serving files from parent directories for locale watching
+				allow: ["..", "../src/i18n/locales"],
+			},
 			watch: {
 				usePolling: false,
 				ignored: [
@@ -184,9 +188,8 @@ export default defineConfig(({ mode }) => {
 					"../src/__mocks__/**",
 					"src/**/__tests__/**",
 					"src/**/__mocks__/**",
-					// Exclude all non-TS/JS files
+					// Exclude all non-TS/JS files EXCEPT locale JSON files
 					"../**/*.md",
-					"../**/*.json",
 					"../**/*.yml",
 					"../**/*.yaml",
 					"../**/*.txt",
@@ -204,6 +207,8 @@ export default defineConfig(({ mode }) => {
 					"src/**/*.css",
 					"src/**/*.scss",
 					"src/**/*.less",
+					"src/i18n/locales/**",
+					"!../src/i18n/locales",
 					// Exclude packages directory (build artifacts)
 					"../packages/**/dist/**",
 					"../packages/**/build/**",
