@@ -1135,6 +1135,7 @@ export const ChatRowContent = ({
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
 							</div>
+							{/* kilocode_change: mr */}
 							<div className="pl-6 mr-6">
 								<Markdown markdown={message.text} partial={message.partial} />
 								{message.images && message.images.length > 0 && (
