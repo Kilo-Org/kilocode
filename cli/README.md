@@ -163,12 +163,6 @@ This instructs the AI to proceed without user input.
 
 The CLI supports HTTP/HTTPS proxy configuration through environment variables. This is useful when running behind corporate proxies or when you need to route traffic through a proxy server.
 
-The proxy configuration works with all HTTP clients used by the CLI and extension:
-
-- **Axios** - Used for many API calls
-- **Undici** - Used by fetch-based providers
-- **Native fetch** - Node.js built-in fetch
-
 ### Supported Environment Variables
 
 - `HTTP_PROXY` / `http_proxy`: Proxy URL for HTTP requests
