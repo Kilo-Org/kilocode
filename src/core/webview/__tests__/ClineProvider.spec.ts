@@ -2694,24 +2694,19 @@ describe("ClineProvider - Router Models", () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-		// kilocode_change start: Mock API configuration with keys for all providers to test conditional model fetching
-		// The implementation now only fetches models from providers that have the necessary configuration
-		// This prevents unnecessary network requests to unconfigured providers during CLI initialization
+		// Mock getState to return API configuration
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
-				apiProvider: "openrouter", // Set active provider
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key",
+				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
-				deepInfraApiKey: "deepinfra-key",
-				kilocodeToken: "kilocode-token",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 			},
 		} as any)
-		// kilocode_change end
 
 		const mockModels = {
 			"model-1": {
@@ -2733,121 +2728,100 @@ describe("ClineProvider - Router Models", () => {
 
 		await messageHandler({ type: "requestRouterModels" })
 
-		// kilocode_change start: Verify getModels was called only for providers with API configuration
-		// The implementation now conditionally fetches models based on provider configuration
-		// This optimization prevents unnecessary network requests during initialization
-		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key", baseUrl: undefined })
-		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key", baseUrl: undefined })
+		// Verify getModels was called for each provider with correct options
+		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
+		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key", baseUrl: undefined })
+		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
+		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
 		})
-		expect(getModels).toHaveBeenCalledWith({
-			provider: "deepinfra",
-			apiKey: "deepinfra-key",
-			baseUrl: undefined,
-		})
-		expect(getModels).toHaveBeenCalledWith({
-			provider: "kilocode-openrouter",
-			kilocodeToken: "kilocode-token",
-			kilocodeOrganizationId: undefined,
-		})
-		// Note: glama, ollama, and vercel-ai-gateway are NOT called because they require specific apiProvider values
-		// kilocode_change end
 
-		// kilocode_change start: Verify response includes models only for configured providers
-		// Providers without configuration return empty objects to prevent UI errors
+		// Verify response was sent
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
-				glama: {}, // Empty because apiProvider !== "glama"
+				glama: mockModels,
 				unbound: mockModels,
-				chutes: mockModels,
+				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
-				ollama: {}, // Empty because apiProvider !== "ollama" and no ollamaBaseUrl
+				ollama: mockModels, // kilocode_change
 				lmstudio: {},
-				"vercel-ai-gateway": {}, // Empty because apiProvider !== "vercel-ai-gateway"
-				ovhcloud: mockModels,
+				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
 		})
-		// kilocode_change end
 	})
 
 	test("handles requestRouterModels with individual provider failures", async () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-		// kilocode_change start: Mock API configuration for testing provider failure scenarios
-		// Tests that providers with configuration that fail still return empty objects
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
-				apiProvider: "openrouter",
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key",
+				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
-				deepInfraApiKey: "deepinfra-key",
-				kilocodeToken: "kilocode-token",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 			},
 		} as any)
-		// kilocode_change end
 
 		const mockModels = {
 			"model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model", supportsPromptCache: false },
 		}
 		const { getModels } = await import("../../../api/providers/fetchers/modelCache")
 
-		// kilocode_change start: Mock provider responses in order of execution
-		// Order matches the conditional fetching logic in webviewMessageHandler
+		// Mock some providers to succeed and others to fail
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
+			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
-			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes fail
+			.mockRejectedValueOnce(new Error("Chutes API error")) // kilocode_change: chutes fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
-			.mockResolvedValueOnce(mockModels) // ovhcloud success
+			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
+			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockResolvedValueOnce(mockModels) // deepinfra success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
-		// Note: glama, ollama, vercel-ai-gateway are NOT called due to conditional fetching
-		// kilocode_change end
 
 		await messageHandler({ type: "requestRouterModels" })
 
-		// kilocode_change start: Verify response handles provider failures correctly
-		// Failed providers return empty objects, successful ones return models
+		// Verify main response includes successful providers and empty objects for failed ones
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
-				requesty: {}, // Failed
-				glama: {}, // Not called (apiProvider !== "glama")
-				unbound: {}, // Failed
-				chutes: {}, // Failed
-				ollama: {}, // Not called (apiProvider !== "ollama")
+				requesty: {},
+				glama: mockModels,
+				unbound: {},
+				chutes: {}, // kilocode_change
+				ollama: {},
 				lmstudio: {},
-				litellm: {}, // Failed
-				"kilocode-openrouter": {}, // Failed
-				"vercel-ai-gateway": {}, // Not called (apiProvider !== "vercel-ai-gateway")
-				ovhcloud: mockModels,
+				litellm: {},
+				"kilocode-openrouter": {},
+				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
 		})
-		// kilocode_change end
 
 		// Verify error messages were sent for failed providers
 		expect(mockPostMessage).toHaveBeenCalledWith({
@@ -2864,7 +2838,7 @@ describe("ClineProvider - Router Models", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start: Verify error message for Chutes provider failure
+		// kilocode_change start
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -2899,22 +2873,20 @@ describe("ClineProvider - Router Models", () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-		// kilocode_change start: Mock state without LiteLLM config to test message-based configuration
-		// Tests that LiteLLM can be configured via message values when not in global state
+		// Mock state without LiteLLM config
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
-				apiProvider: "openrouter",
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
-				deepInfraApiKey: "deepinfra-key",
-				kilocodeToken: "kilocode-token",
-				// No litellm config - will be provided via message values
+				// kilocode_change end
+				// No litellm config
 			},
 		} as any)
-		// kilocode_change end
 
 		const mockModels = {
 			"model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model", supportsPromptCache: false },
@@ -2942,22 +2914,19 @@ describe("ClineProvider - Router Models", () => {
 		await provider.resolveWebviewView(mockWebviewView)
 		const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-		// kilocode_change start: Mock state without LiteLLM config to test conditional fetching
-		// Tests that LiteLLM is skipped when no configuration is available (neither in state nor message)
 		vi.spyOn(provider, "getState").mockResolvedValue({
 			apiConfiguration: {
-				apiProvider: "openrouter",
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
+				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
-				deepInfraApiKey: "deepinfra-key",
-				kilocodeToken: "kilocode-token",
-				// No litellm config - should be skipped
+				// kilocode_change end
+				// No litellm config
 			},
 		} as any)
-		// kilocode_change end
 
 		const mockModels = {
 			"model-1": { maxTokens: 4096, contextWindow: 8192, description: "Test model", supportsPromptCache: false },
@@ -2974,29 +2943,26 @@ describe("ClineProvider - Router Models", () => {
 			}),
 		)
 
-		// kilocode_change start: Verify response includes empty object for unconfigured providers
-		// LiteLLM returns empty object because it wasn't configured
-		// Glama, Ollama, and Vercel AI Gateway return empty objects because apiProvider doesn't match
+		// Verify response includes empty object for LiteLLM
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
 				requesty: mockModels,
-				glama: {}, // Not called (apiProvider !== "glama")
+				glama: mockModels,
 				unbound: mockModels,
-				chutes: mockModels,
-				litellm: {}, // Not called (no config provided)
+				chutes: mockModels, // kilocode_change
+				litellm: {},
 				"kilocode-openrouter": mockModels,
-				ollama: {}, // Not called (apiProvider !== "ollama")
+				ollama: mockModels, // kilocode_change
 				lmstudio: {},
-				"vercel-ai-gateway": {}, // Not called (apiProvider !== "vercel-ai-gateway")
-				ovhcloud: mockModels,
+				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
 		})
-		// kilocode_change end
 	})
 
 	test("handles requestLmStudioModels with proper response", async () => {
