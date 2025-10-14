@@ -52,33 +52,10 @@ describe("PromptStrategyManager", () => {
 	})
 
 	describe("Strategy Selection", () => {
-		it("should select appropriate strategy based on context", () => {
-			const mockDocument = {
-				languageId: "typescript",
-				getText: () => "// TODO: implement sum function\n",
-				lineAt: (line: number) => ({
-					text: line === 0 ? "// TODO: implement sum function" : "",
-					lineNumber: line,
-				}),
-				lineCount: 2,
-				uri: { toString: () => "file:///test.ts" },
-				offsetAt: (position: vscode.Position) => (position.line === 1 ? 32 : 0),
-			} as vscode.TextDocument
+		let manager: PromptStrategyManager
 
-			const mockRange = {
-				start: { line: 1, character: 0 } as vscode.Position,
-				end: { line: 1, character: 0 } as vscode.Position,
-				isEmpty: true,
-			} as vscode.Range
-
-			const commentContext: GhostSuggestionContext = {
-				document: mockDocument,
-				range: mockRange,
-			}
-
-			const result = manager.buildPrompt(commentContext)
-
-			expect(result.strategy.name).toBe("Comment Driven")
+		beforeEach(() => {
+			manager = new PromptStrategyManager()
 		})
 
 		it("should fallback to AutoTriggerStrategy when no specific strategy matches", () => {

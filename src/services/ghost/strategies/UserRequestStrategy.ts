@@ -137,4 +137,14 @@ Common Request Patterns:
 ${selectedText}
 \`\`\``
 	}
+
+	getPrompts(context: GhostSuggestionContext): {
+		systemPrompt: string
+		userPrompt: string
+	} {
+		return {
+			systemPrompt: this.getSystemInstructions(),
+			userPrompt: this.getUserPrompt(context),
+		}
+	}
 }
