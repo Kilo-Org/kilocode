@@ -205,30 +205,6 @@ describe("GhostStrategy", () => {
 			// Buffer should contain the chunk
 			expect(strategy.getStreamingBuffer()).toContain("test")
 		})
-
-		it("should provide access to completed changes for debugging", () => {
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-			}
-
-			strategy.initializeStreamingParser(context)
-
-			// Initially no completed changes
-			expect(strategy.getStreamingCompletedChanges()).toEqual([])
-
-			// Process a complete change
-			const documentContent = mockDocument.getText()
-			const completeChange = `<change><search><![CDATA[${documentContent}]]></search><replace><![CDATA[function test() {
-	// Added comment
-	return true;
-}]]></replace></change>`
-
-			strategy.processStreamingChunk(completeChange)
-
-			// Should now have completed changes
-			const completedChanges = strategy.getStreamingCompletedChanges()
-			expect(completedChanges.length).toBeGreaterThan(0)
-		})
 	})
 
 	describe("prompt generation", () => {

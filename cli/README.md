@@ -5,7 +5,7 @@ Terminal User Interface for Kilo Code
 ## Installation
 
 ```bash
-npm install -g @kilocode/cli
+npm install -g @kilocode/cli@alpha
 ```
 
 Then, make sure you place your Kilo Code API token in the CLI config:
@@ -18,9 +18,17 @@ You can find your Kilo Code API token on your profile page at [app.kilocode.ai](
 
 ## Known Issues
 
+### Theme Detection
+
+We don't detect the theme of your terminal, and are aware the the current theme doesn't work well on light mode terminals. Switch to the light theme using using `kilocode config`.
+
 ### Outdated dependency warnings
 
 When installing Kilo Code CLI you'll be greeted by some scary looking dependency deprecation warnings. We're aware of the issue and will resolve it shortly.
+
+### Windows Support
+
+We've only tested the CLI on Mac and Linux, and are aware that there are some issues on Windows. For now, if you can, we advise you to use a WSL environment to run the CLI.
 
 ## Usage
 

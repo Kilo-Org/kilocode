@@ -16,6 +16,7 @@ import {
 	AskReportBugMessage,
 	AskAutoApprovalMaxReachedMessage,
 	AskBrowserActionLaunchMessage,
+	AskResumeTaskMessage,
 } from "./ask/index.js"
 
 /**
@@ -78,6 +79,10 @@ export const AskMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 
 		case "auto_approval_max_req_reached":
 			return <AskAutoApprovalMaxReachedMessage message={message} />
+
+		case "resume_task":
+		case "resume_completed_task":
+			return <AskResumeTaskMessage message={message} />
 
 		default:
 			return <DefaultAskMessage message={message} />

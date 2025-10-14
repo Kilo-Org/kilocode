@@ -83,11 +83,6 @@ const SuggestionsMenu: React.FC<SuggestionsMenuProps> = ({ type, suggestions, se
 					/>
 				)
 			})}
-			<Box marginTop={1}>
-				<Text color={theme.ui.text.dimmed} dimColor>
-					↑↓ Navigate • Tab/Enter Select • Esc Cancel
-				</Text>
-			</Box>
 		</Box>
 	)
 }

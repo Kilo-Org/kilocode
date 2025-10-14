@@ -1,40 +1,86 @@
 /**
- * Tests for useIsProcessingSubscription hook
- * Tests that isProcessing is correctly set to false when ask messages are received
+ * Tests for isStreamingAtom
+ * Tests that isStreaming correctly reflects the streaming state based on messages
  */
 
 import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
-import { isProcessingAtom } from "../../atoms/ui.js"
+import { isStreamingAtom } from "../../atoms/ui.js"
 import { chatMessagesAtom, updateChatMessagesAtom } from "../../atoms/extension.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
-describe("useIsProcessingSubscription Logic", () => {
+describe("isStreamingAtom Logic", () => {
 	let store: ReturnType<typeof createStore>
 
 	beforeEach(() => {
 		store = createStore()
 	})
 
-	describe("isProcessing state management", () => {
-		it("should be false by default", () => {
-			expect(store.get(isProcessingAtom)).toBe(false)
+	describe("isStreaming state management", () => {
+		it("should be false by default (no messages)", () => {
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should be settable to true", () => {
-			store.set(isProcessingAtom, true)
-			expect(store.get(isProcessingAtom)).toBe(true)
+		it("should be true when last message is partial", () => {
+			const partialMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "text",
+				text: "Processing...",
+				partial: true,
+			}
+			store.set(chatMessagesAtom, [partialMessage])
+			expect(store.get(isStreamingAtom)).toBe(true)
 		})
 
-		it("should be settable to false", () => {
-			store.set(isProcessingAtom, true)
-			store.set(isProcessingAtom, false)
-			expect(store.get(isProcessingAtom)).toBe(false)
+		it("should be false when last message is complete", () => {
+			const completeMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "text",
+				text: "Done!",
+				partial: false,
+			}
+			store.set(chatMessagesAtom, [completeMessage])
+			expect(store.get(isStreamingAtom)).toBe(false)
+		})
+
+		it("should be false when tool is asking for approval", () => {
+			const toolMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "ask",
+				ask: "tool",
+				text: JSON.stringify({ tool: "readFile", path: "test.ts" }),
+			}
+			store.set(chatMessagesAtom, [toolMessage])
+			expect(store.get(isStreamingAtom)).toBe(false)
+		})
+
+		it("should be true when API request hasn't finished (no cost)", () => {
+			const apiReqMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({ request: "test" }), // No cost field
+			}
+			store.set(chatMessagesAtom, [apiReqMessage])
+			expect(store.get(isStreamingAtom)).toBe(true)
+		})
+
+		it("should be false when API request has finished (has cost)", () => {
+			const apiReqMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "api_req_started",
+				text: JSON.stringify({ request: "test", cost: 0.01 }),
+			}
+			store.set(chatMessagesAtom, [apiReqMessage])
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 	})
 
 	describe("Message handling scenarios", () => {
-		it("should handle completion_result ask message", () => {
+		it("should not be streaming for completion_result ask message", () => {
 			const completionMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -43,17 +89,10 @@ describe("useIsProcessingSubscription Logic", () => {
 			}
 
 			store.set(chatMessagesAtom, [completionMessage])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(1)
-			expect(messages[0]?.type).toBe("ask")
-			expect(messages[0]?.ask).toBe("completion_result")
-
-			// The hook should set isProcessing to false when it sees this message
-			// In the actual implementation, this happens via useEffect
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should handle followup ask message", () => {
+		it("should not be streaming for followup ask message", () => {
 			const followupMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -62,32 +101,22 @@ describe("useIsProcessingSubscription Logic", () => {
 			}
 
 			store.set(chatMessagesAtom, [followupMessage])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(1)
-			expect(messages[0]?.type).toBe("ask")
-			expect(messages[0]?.ask).toBe("followup")
-
-			// The hook should set isProcessing to false for followup messages too
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should handle tool approval ask message", () => {
+		it("should not be streaming for tool approval ask message", () => {
 			const toolMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
 				ask: "tool",
-				text: "Approve tool usage?",
+				text: JSON.stringify({ tool: "readFile" }),
 			}
 
 			store.set(chatMessagesAtom, [toolMessage])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(1)
-			expect(messages[0]?.type).toBe("ask")
-			expect(messages[0]?.ask).toBe("tool")
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should handle command approval ask message", () => {
+		it("should not be streaming for command approval ask message", () => {
 			const commandMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "ask",
@@ -96,44 +125,50 @@ describe("useIsProcessingSubscription Logic", () => {
 			}
 
 			store.set(chatMessagesAtom, [commandMessage])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(1)
-			expect(messages[0]?.type).toBe("ask")
-			expect(messages[0]?.ask).toBe("command")
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should handle say messages (which should not affect isProcessing)", () => {
+		it("should not be streaming for complete say messages", () => {
 			const sayMessage: ExtensionChatMessage = {
 				ts: Date.now(),
 				type: "say",
 				say: "text",
 				text: "Processing your request...",
+				partial: false,
 			}
 
 			store.set(chatMessagesAtom, [sayMessage])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(1)
-			expect(messages[0]?.type).toBe("say")
-			expect(messages[0]?.say).toBe("text")
-
-			// Say messages should not trigger isProcessing to false
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
-		it("should handle multiple messages with last being ask", () => {
+		it("should be streaming for partial say messages", () => {
+			const sayMessage: ExtensionChatMessage = {
+				ts: Date.now(),
+				type: "say",
+				say: "text",
+				text: "Processing your request...",
+				partial: true,
+			}
+
+			store.set(chatMessagesAtom, [sayMessage])
+			expect(store.get(isStreamingAtom)).toBe(true)
+		})
+
+		it("should handle multiple messages with last being complete", () => {
 			const messages: ExtensionChatMessage[] = [
 				{
 					ts: Date.now(),
 					type: "say",
 					say: "text",
 					text: "Starting task...",
+					partial: false,
 				},
 				{
 					ts: Date.now() + 1000,
 					type: "say",
 					say: "text",
 					text: "Processing...",
+					partial: false,
 				},
 				{
 					ts: Date.now() + 2000,
@@ -144,22 +179,12 @@ describe("useIsProcessingSubscription Logic", () => {
 			]
 
 			store.set(chatMessagesAtom, messages)
-			const storedMessages = store.get(chatMessagesAtom)
-
-			expect(storedMessages).toHaveLength(3)
-			expect(storedMessages[2]?.type).toBe("ask")
-			expect(storedMessages[2]?.ask).toBe("followup")
-
-			// The hook should detect the last message is an ask and set isProcessing to false
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
 		it("should handle empty message list", () => {
 			store.set(chatMessagesAtom, [])
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(0)
-
-			// Empty messages should not crash the hook
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 
 		it("should handle message updates via updateChatMessagesAtom", () => {
@@ -169,10 +194,12 @@ describe("useIsProcessingSubscription Logic", () => {
 					type: "say",
 					say: "text",
 					text: "Initial message",
+					partial: true,
 				},
 			]
 
 			store.set(chatMessagesAtom, initialMessages)
+			expect(store.get(isStreamingAtom)).toBe(true)
 
 			const updatedMessages: ExtensionChatMessage[] = [
 				...initialMessages,
@@ -185,42 +212,7 @@ describe("useIsProcessingSubscription Logic", () => {
 			]
 
 			store.set(updateChatMessagesAtom, updatedMessages)
-			const messages = store.get(chatMessagesAtom)
-
-			expect(messages).toHaveLength(2)
-			expect(messages[1]?.type).toBe("ask")
-			expect(messages[1]?.ask).toBe("completion_result")
-		})
-	})
-
-	describe("Ask message types", () => {
-		const askTypes = [
-			"completion_result",
-			"followup",
-			"tool",
-			"command",
-			"api_req_failed",
-			"resume_task",
-			"resume_completed_task",
-		]
-
-		askTypes.forEach((askType) => {
-			it(`should recognize ${askType} as an ask message`, () => {
-				const message: ExtensionChatMessage = {
-					ts: Date.now(),
-					type: "ask",
-					ask: askType,
-					text: `Test ${askType} message`,
-				}
-
-				store.set(chatMessagesAtom, [message])
-				const messages = store.get(chatMessagesAtom)
-
-				expect(messages[0]?.type).toBe("ask")
-				expect(messages[0]?.ask).toBe(askType)
-
-				// All ask types should trigger isProcessing to false
-			})
+			expect(store.get(isStreamingAtom)).toBe(false)
 		})
 	})
 })

@@ -9,7 +9,6 @@ import { GhostDecorations } from "./GhostDecorations"
 import { GhostInlineCompletionProvider } from "./GhostInlineCompletionProvider"
 import { GhostSuggestionContext } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
-import { getWorkspacePath } from "../../utils/path"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostCodeLensProvider } from "./GhostCodeLensProvider"
@@ -34,7 +33,6 @@ export class GhostProvider {
 	private strategy: GhostStrategy
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
-	private context: vscode.ExtensionContext
 	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
@@ -63,7 +61,6 @@ export class GhostProvider {
 	private ignoreController?: Promise<RooIgnoreController>
 
 	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
-		this.context = context
 		this.cline = cline
 
 		// Register Internal Components
@@ -747,7 +744,6 @@ export class GhostProvider {
 	}
 
 	private startProcessing() {
-		this.cursorAnimation.wait()
 		this.isProcessing = true
 		this.updateGlobalContext()
 	}

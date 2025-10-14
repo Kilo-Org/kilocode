@@ -3,9 +3,9 @@
  * Updated to use useCommandInput, useWebviewMessage, useApprovalHandler, and useFollowupSuggestions hooks
  */
 
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { Box, Text, useInput } from "ink"
-import TextInput from "ink-text-input"
+import { CustomTextInput } from "./CustomTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
 import { useApprovalHandler } from "../../state/hooks/useApprovalHandler.js"
 import { useFollowupSuggestions } from "../../state/hooks/useFollowupSuggestions.js"
@@ -249,11 +249,10 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 				<Text color={isApprovalPending ? theme.actions.pending : theme.ui.border.active} bold>
 					{isApprovalPending ? "[!] " : "> "}
 				</Text>
-				<TextInput
-					key={inputKey}
+				<CustomTextInput
 					value={inputValue}
 					onChange={handleChange}
-					onSubmit={shouldDisableTextInputSubmit ? () => {} : handleSubmit}
+					{...(shouldDisableTextInputSubmit ? {} : { onSubmit: handleSubmit })}
 					placeholder={isApprovalPending ? "Awaiting approval..." : placeholder}
 					showCursor={!isInputDisabled}
 				/>

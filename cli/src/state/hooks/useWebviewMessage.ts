@@ -13,6 +13,7 @@ import {
 	requestRouterModelsAtom,
 	clearTaskAtom,
 	cancelTaskAtom,
+	resumeTaskAtom,
 	switchModeAtom,
 	respondToToolAtom,
 	sendApiConfigurationAtom,
@@ -79,6 +80,8 @@ export interface UseWebviewMessageReturn {
 	clearTask: () => Promise<void>
 	/** Cancel the current task */
 	cancelTask: () => Promise<void>
+	/** Resume a paused task */
+	resumeTask: () => Promise<void>
 	/** Switch to a different mode */
 	switchMode: (mode: string) => Promise<void>
 	/** Respond to a tool use request */
@@ -139,6 +142,7 @@ export function useWebviewMessage(): UseWebviewMessageReturn {
 	const requestRouterModelsAction = useSetAtom(requestRouterModelsAtom)
 	const clearTaskAction = useSetAtom(clearTaskAtom)
 	const cancelTaskAction = useSetAtom(cancelTaskAtom)
+	const resumeTaskAction = useSetAtom(resumeTaskAtom)
 	const switchModeAction = useSetAtom(switchModeAtom)
 	const respondToToolAction = useSetAtom(respondToToolAtom)
 	const sendApiConfigurationAction = useSetAtom(sendApiConfigurationAtom)
@@ -176,6 +180,10 @@ export function useWebviewMessage(): UseWebviewMessageReturn {
 	const cancelTask = useCallback(async () => {
 		await cancelTaskAction()
 	}, [cancelTaskAction])
+
+	const resumeTask = useCallback(async () => {
+		await resumeTaskAction()
+	}, [resumeTaskAction])
 
 	const switchMode = useCallback(
 		async (mode: string) => {
@@ -244,6 +252,7 @@ export function useWebviewMessage(): UseWebviewMessageReturn {
 			requestRouterModels,
 			clearTask,
 			cancelTask,
+			resumeTask,
 			switchMode,
 			respondToTool,
 			sendApiConfiguration,
@@ -262,6 +271,7 @@ export function useWebviewMessage(): UseWebviewMessageReturn {
 			requestRouterModels,
 			clearTask,
 			cancelTask,
+			resumeTask,
 			switchMode,
 			respondToTool,
 			sendApiConfiguration,

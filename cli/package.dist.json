@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.0.2-alpha.1",
+	"version": "0.0.2-alpha.2",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "index.js",

@@ -29,11 +29,6 @@ export const ApprovalMenu: React.FC<ApprovalMenuProps> = ({ options, selectedInd
 			{options.map((option, index) => (
 				<ApprovalOptionRow key={option.action} option={option} isSelected={index === selectedIndex} />
 			))}
-			<Box marginTop={1}>
-				<Text color={theme.ui.text.dimmed} dimColor>
-					↑↓ Navigate • y Approve • n Reject • Enter Select • Esc Cancel
-				</Text>
-			</Box>
 		</Box>
 	)
 }

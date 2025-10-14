@@ -5,7 +5,7 @@
 
 import { useSetAtom } from "jotai"
 import { useCallback, useState } from "react"
-import { addMessageAtom, isProcessingAtom } from "../atoms/ui.js"
+import { addMessageAtom } from "../atoms/ui.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
@@ -58,7 +58,6 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const { ciMode = false } = options
 	const [isSending, setIsSending] = useState(false)
 	const addMessage = useSetAtom(addMessageAtom)
-	const setIsProcessing = useSetAtom(isProcessingAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
 
@@ -73,9 +72,8 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 			// Don't add user message to CLI state - the extension will handle it
 			// This prevents duplicate messages in the UI
 
-			// Set processing state
+			// Set sending state
 			setIsSending(true)
-			setIsProcessing(true)
 
 			try {
 				// Track user message
@@ -117,7 +115,7 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				setIsSending(false)
 			}
 		},
-		[addMessage, setIsProcessing, ciMode, sendMessage, sendAskResponse, hasActiveTask],
+		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask],
 	)
 
 	return {

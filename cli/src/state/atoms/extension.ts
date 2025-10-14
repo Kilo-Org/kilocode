@@ -143,6 +143,15 @@ export const hasActiveTaskAtom = atom<boolean>((get) => {
 })
 
 /**
+ * Derived atom to check if there's a resume_task ask pending
+ * This checks if the last message is a resume_task or resume_completed_task
+ */
+export const hasResumeTaskAtom = atom<boolean>((get) => {
+	const lastMessage = get(lastChatMessageAtom)
+	return lastMessage?.ask === "resume_task" || lastMessage?.ask === "resume_completed_task"
+})
+
+/**
  * Derived atom to get pending todos count
  */
 export const pendingTodosCountAtom = atom<number>((get) => {

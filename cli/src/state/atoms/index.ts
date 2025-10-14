@@ -157,7 +157,7 @@ export {
 	// Core UI state atoms
 	messagesAtom,
 	inputValueAtom,
-	isProcessingAtom,
+	isStreamingAtom,
 	errorAtom,
 
 	// Autocomplete state atoms

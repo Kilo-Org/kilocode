@@ -33,10 +33,149 @@ export class ExtensionHost extends EventEmitter {
 		info: typeof console.info
 	} | null = null
 	private lastWebviewLaunchTime = 0
+	private extensionHealth = {
+		isHealthy: true,
+		errorCount: 0,
+		lastError: null as Error | null,
+		lastErrorTime: 0,
+		maxErrorsBeforeWarning: 10,
+	}
+	private unhandledRejectionHandler: ((reason: any, promise: Promise<any>) => void) | null = null
+	private uncaughtExceptionHandler: ((error: Error) => void) | null = null
 
 	constructor(options: ExtensionHostOptions) {
 		super()
 		this.options = options
+		// Increase max listeners to avoid warnings in tests
+		process.setMaxListeners(20)
+		this.setupGlobalErrorHandlers()
+	}
+
+	/**
+	 * Setup global error handlers to catch unhandled errors from extension
+	 */
+	private setupGlobalErrorHandlers(): void {
+		// Handle unhandled promise rejections from extension
+		this.unhandledRejectionHandler = (reason: any, promise: Promise<any>) => {
+			const error = reason instanceof Error ? reason : new Error(String(reason))
+
+			// Check if this is an expected error
+			if (this.isExpectedError(error)) {
+				logs.debug(`Caught expected unhandled rejection: ${error.message}`, "ExtensionHost")
+				return
+			}
+
+			logs.error("Unhandled promise rejection from extension", "ExtensionHost", { error, reason })
+
+			// Emit non-fatal error event
+			this.emit("extension-error", {
+				context: "unhandledRejection",
+				error,
+				recoverable: true,
+				timestamp: Date.now(),
+			})
+
+			// Update health metrics
+			this.extensionHealth.errorCount++
+			this.extensionHealth.lastError = error
+			this.extensionHealth.lastErrorTime = Date.now()
+		}
+		process.on("unhandledRejection", this.unhandledRejectionHandler)
+
+		// Handle uncaught exceptions from extension
+		this.uncaughtExceptionHandler = (error: Error) => {
+			// Check if this is an expected error
+			if (this.isExpectedError(error)) {
+				logs.debug(`Caught expected uncaught exception: ${error.message}`, "ExtensionHost")
+				return
+			}
+
+			logs.error("Uncaught exception from extension", "ExtensionHost", { error })
+
+			// Emit non-fatal error event
+			this.emit("extension-error", {
+				context: "uncaughtException",
+				error,
+				recoverable: true,
+				timestamp: Date.now(),
+			})
+
+			// Update health metrics
+			this.extensionHealth.errorCount++
+			this.extensionHealth.lastError = error
+			this.extensionHealth.lastErrorTime = Date.now()
+		}
+		process.on("uncaughtException", this.uncaughtExceptionHandler)
+	}
+
+	/**
+	 * Remove global error handlers
+	 */
+	private removeGlobalErrorHandlers(): void {
+		if (this.unhandledRejectionHandler) {
+			process.off("unhandledRejection", this.unhandledRejectionHandler)
+			this.unhandledRejectionHandler = null
+		}
+		if (this.uncaughtExceptionHandler) {
+			process.off("uncaughtException", this.uncaughtExceptionHandler)
+			this.uncaughtExceptionHandler = null
+		}
+	}
+
+	/**
+	 * Safely execute an operation, catching and logging any errors without crashing the CLI
+	 */
+	private async safeExecute<T>(
+		operation: () => T | Promise<T>,
+		context: string,
+		fallback?: T,
+	): Promise<T | undefined> {
+		try {
+			const result = await operation()
+			return result
+		} catch (error) {
+			this.extensionHealth.errorCount++
+			this.extensionHealth.lastError = error as Error
+			this.extensionHealth.lastErrorTime = Date.now()
+
+			// Check if this is an expected error (like task abortion)
+			const isExpectedError = this.isExpectedError(error)
+
+			if (!isExpectedError) {
+				logs.error(`Extension error in ${context}`, "ExtensionHost", {
+					error,
+					errorCount: this.extensionHealth.errorCount,
+				})
+
+				// Emit non-fatal error event
+				this.emit("extension-error", {
+					context,
+					error,
+					recoverable: true,
+					timestamp: Date.now(),
+				})
+			} else {
+				logs.debug(`Expected error in ${context}: ${error}`, "ExtensionHost")
+			}
+
+			return fallback
+		}
+	}
+
+	/**
+	 * Check if an error is expected (e.g., task abortion)
+	 */
+	private isExpectedError(error: any): boolean {
+		if (!error) return false
+		const errorMessage = error.message || error.toString()
+
+		// Task abortion errors are expected
+		if (errorMessage.includes("task") && errorMessage.includes("aborted")) {
+			return true
+		}
+
+		// Add other expected error patterns here
+		return false
 	}
 
 	async activate(): Promise<ExtensionAPI> {
@@ -69,8 +208,14 @@ export class ExtensionHost extends EventEmitter {
 			return this.getAPI()
 		} catch (error) {
 			logs.error("Failed to activate extension", "ExtensionHost", { error })
-			this.emit("error", error)
-			throw error
+			this.emit("extension-error", {
+				context: "activation",
+				error,
+				recoverable: false,
+				timestamp: Date.now(),
+			})
+			// Don't throw - return API with limited functionality
+			return this.getAPI()
 		}
 	}
 
@@ -99,6 +244,9 @@ export class ExtensionHost extends EventEmitter {
 
 			// Restore original console methods
 			this.restoreConsole()
+
+			// Remove global error handlers
+			this.removeGlobalErrorHandlers()
 
 			this.isActivated = false
 			this.currentState = null
@@ -148,7 +296,14 @@ export class ExtensionHost extends EventEmitter {
 			await this.handleLocalStateUpdates(message)
 		} catch (error) {
 			logs.error("Error handling webview message", "ExtensionHost", { error })
-			this.emit("error", error)
+			// Don't emit "error" event - emit non-fatal event instead
+			this.emit("extension-error", {
+				context: `webview-message-${message.type}`,
+				error,
+				recoverable: true,
+				timestamp: Date.now(),
+			})
+			// Don't re-throw - allow CLI to continue
 		}
 	}
 
@@ -337,7 +492,18 @@ export class ExtensionHost extends EventEmitter {
 			logs.info("Calling extension activate function...", "ExtensionHost")
 
 			// Call the extension's activate function with our mocked context
-			this.extensionAPI = await this.extensionModule.activate(this.vscodeAPI.context)
+			this.extensionAPI = await this.safeExecute(
+				async () => await this.extensionModule.activate(this.vscodeAPI.context),
+				"extension.activate",
+				null,
+			)
+
+			if (!this.extensionAPI) {
+				logs.warn(
+					"Extension activation returned null/undefined, continuing with limited functionality",
+					"ExtensionHost",
+				)
+			}
 
 			// Log available API methods for debugging
 			if (this.extensionAPI) {
@@ -378,130 +544,131 @@ export class ExtensionHost extends EventEmitter {
 
 			// Listen for messages from the extension's webview (postMessage calls)
 			this.on("extensionWebviewMessage", (message: any) => {
-				// Create a unique ID for this message to prevent loops
-				const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
+				this.safeExecute(() => {
+					// Create a unique ID for this message to prevent loops
+					const messageId = `${message.type}_${Date.now()}_${JSON.stringify(message).slice(0, 50)}`
 
-				if (processedMessageIds.has(messageId)) {
-					logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
-					return
-				}
+					if (processedMessageIds.has(messageId)) {
+						logs.debug(`Skipping duplicate message: ${message.type}`, "ExtensionHost")
+						return
+					}
 
-				processedMessageIds.add(messageId)
+					processedMessageIds.add(messageId)
 
-				// Clean up old message IDs to prevent memory leaks
-				if (processedMessageIds.size > 100) {
-					const oldestIds = Array.from(processedMessageIds).slice(0, 50)
-					oldestIds.forEach((id) => processedMessageIds.delete(id))
-				}
+					// Clean up old message IDs to prevent memory leaks
+					if (processedMessageIds.size > 100) {
+						const oldestIds = Array.from(processedMessageIds).slice(0, 50)
+						oldestIds.forEach((id) => processedMessageIds.delete(id))
+					}
 
-				// Track extension message received
-				getTelemetryService().trackExtensionMessageReceived(message.type)
+					// Track extension message received
+					getTelemetryService().trackExtensionMessageReceived(message.type)
 
-				// Only forward specific message types that are important for CLI
-				switch (message.type) {
-					case "state":
-						// Extension is sending a full state update
-						if (message.state && this.currentState) {
-							this.currentState = {
-								...this.currentState,
-								...message.state,
-								chatMessages:
-									message.state.clineMessages ||
-									message.state.chatMessages ||
-									this.currentState.chatMessages,
-								apiConfiguration: message.state.apiConfiguration || this.currentState.apiConfiguration,
-								currentApiConfigName:
-									message.state.currentApiConfigName || this.currentState.currentApiConfigName,
-								listApiConfigMeta:
-									message.state.listApiConfigMeta || this.currentState.listApiConfigMeta,
-								routerModels: message.state.routerModels || this.currentState.routerModels,
+					// Only forward specific message types that are important for CLI
+					switch (message.type) {
+						case "state":
+							// Extension is sending a full state update
+							if (message.state && this.currentState) {
+								this.currentState = {
+									...this.currentState,
+									...message.state,
+									chatMessages:
+										message.state.clineMessages ||
+										message.state.chatMessages ||
+										this.currentState.chatMessages,
+									apiConfiguration:
+										message.state.apiConfiguration || this.currentState.apiConfiguration,
+									currentApiConfigName:
+										message.state.currentApiConfigName || this.currentState.currentApiConfigName,
+									listApiConfigMeta:
+										message.state.listApiConfigMeta || this.currentState.listApiConfigMeta,
+									routerModels: message.state.routerModels || this.currentState.routerModels,
+								}
+
+								// Forward the updated state to the CLI
+								this.emit("message", {
+									type: "state",
+									state: this.currentState,
+								})
 							}
+							break
 
-							// Forward the updated state to the CLI
-							this.emit("message", {
-								type: "state",
-								state: this.currentState,
-							})
-						}
-						break
-
-					case "messageUpdated":
-						// Extension is sending an individual message update
-						// The extension uses 'clineMessage' property (legacy name)
-						const chatMessage = message.clineMessage || message.chatMessage
-						if (chatMessage) {
-							// Forward the message update to the CLI
-							const emitMessage = {
-								type: "messageUpdated",
-								chatMessage: chatMessage,
+						case "messageUpdated":
+							// Extension is sending an individual message update
+							// The extension uses 'clineMessage' property (legacy name)
+							const chatMessage = message.clineMessage || message.chatMessage
+							if (chatMessage) {
+								// Forward the message update to the CLI
+								const emitMessage = {
+									type: "messageUpdated",
+									chatMessage: chatMessage,
+								}
+								this.emit("message", emitMessage)
 							}
-							this.emit("message", emitMessage)
-						}
-						break
+							break
 
-					case "taskHistoryResponse":
-						// Extension is sending task history data
-						if (message.payload) {
-							// Forward the task history response to the CLI
-							this.emit("message", {
-								type: "taskHistoryResponse",
-								payload: message.payload,
-							})
-						}
-						break
+						case "taskHistoryResponse":
+							// Extension is sending task history data
+							if (message.payload) {
+								// Forward the task history response to the CLI
+								this.emit("message", {
+									type: "taskHistoryResponse",
+									payload: message.payload,
+								})
+							}
+							break
 
-					// Handle configuration-related messages from extension
-					case "listApiConfig":
-						// Extension is sending updated API configuration list
-						if (message.listApiConfigMeta && this.currentState) {
-							this.currentState.listApiConfigMeta = message.listApiConfigMeta
-							logs.debug("Updated listApiConfigMeta from extension", "ExtensionHost")
-						}
-						break
+						// Handle configuration-related messages from extension
+						case "listApiConfig":
+							// Extension is sending updated API configuration list
+							if (message.listApiConfigMeta && this.currentState) {
+								this.currentState.listApiConfigMeta = message.listApiConfigMeta
+								logs.debug("Updated listApiConfigMeta from extension", "ExtensionHost")
+							}
+							break
 
-					// Don't forward these message types as they can cause loops
-					case "mcpServers":
-					case "theme":
-					case "rulesData":
-						logs.debug(`Ignoring extension message type to prevent loops: ${message.type}`, "ExtensionHost")
-						break
+						// Don't forward these message types as they can cause loops
+						case "mcpServers":
+						case "theme":
+						case "rulesData":
+							logs.debug(
+								`Ignoring extension message type to prevent loops: ${message.type}`,
+								"ExtensionHost",
+							)
+							break
 
-					default:
-						// Only forward other important messages
-						if (message.type && !message.type.startsWith("_")) {
-							logs.debug(`Forwarding extension message: ${message.type}`, "ExtensionHost")
-							this.emit("message", message)
-						}
-						break
-				}
+						default:
+							// Only forward other important messages
+							if (message.type && !message.type.startsWith("_")) {
+								logs.debug(`Forwarding extension message: ${message.type}`, "ExtensionHost")
+								this.emit("message", message)
+							}
+							break
+					}
+				}, `extensionWebviewMessage-${message.type}`)
 			})
 
 			// Set up webview message handler for messages TO the extension
 			this.on("webviewMessage", async (message: any) => {
-				logs.debug(`Forwarding webview message to extension: ${message.type}`, "ExtensionHost")
+				await this.safeExecute(async () => {
+					logs.debug(`Forwarding webview message to extension: ${message.type}`, "ExtensionHost")
 
-				// Find the registered webview provider
-				const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
+					// Find the registered webview provider
+					const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
 
-				if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
-					try {
-						// Call the webview provider's message handler (which should call webviewMessageHandler)
+					if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
 						await webviewProvider.handleCLIMessage(message)
 						logs.debug(
 							`Successfully forwarded message to webview provider: ${message.type}`,
 							"ExtensionHost",
 						)
-					} catch (error) {
-						logs.error(`Error forwarding message to webview provider: ${message.type}`, "ExtensionHost", {
-							error,
-						})
+					} else {
+						logs.warn(
+							`No webview provider found or handleCLIMessage not available for: ${message.type}`,
+							"ExtensionHost",
+						)
 					}
-				} else {
-					logs.warn(
-						`No webview provider found or handleCLIMessage not available for: ${message.type}`,
-						"ExtensionHost",
-					)
-				}
+				}, `webviewMessage-${message.type}`)
 			})
 		}
 	}
@@ -548,7 +715,7 @@ export class ExtensionHost extends EventEmitter {
 		// Sync with extension state when webview launches
 		if (this.extensionAPI && typeof this.extensionAPI.getState === "function") {
 			try {
-				const extensionState = this.extensionAPI.getState()
+				const extensionState = await this.safeExecute(() => this.extensionAPI.getState(), "getState", null)
 				if (extensionState && this.currentState) {
 					// Merge extension state with current state, preserving CLI context
 					this.currentState = {

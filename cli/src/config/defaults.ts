@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG: CLIConfig = {
 			id: "default",
 			provider: "kilocode",
 			kilocodeToken: "",
-			kilocodeModel: "anthropic/claude-sonnet-4",
+			kilocodeModel: "anthropic/claude-sonnet-4.5",
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,

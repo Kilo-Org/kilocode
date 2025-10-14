@@ -39,14 +39,71 @@ export const messageResetCounterAtom = atom<number>(0)
 export const inputValueAtom = atom<string>("")
 
 /**
- * Atom to track if the UI is processing a command or request
- */
-export const isProcessingAtom = atom<boolean>(false)
-
-/**
  * Atom to hold UI error messages
  */
 export const errorAtom = atom<string | null>(null)
+
+/**
+ * Derived atom to check if the extension is currently streaming/processing
+ * This mimics the webview's isStreaming logic from ChatView.tsx (lines 550-592)
+ *
+ * Returns true when:
+ * - The last message is partial (still being streamed)
+ * - There's an active API request that hasn't finished yet (no cost field)
+ *
+ * Returns false when:
+ * - There's a tool currently asking for approval (waiting for user input)
+ * - No messages exist
+ * - All messages are complete
+ */
+export const isStreamingAtom = atom<boolean>((get) => {
+	const messages = get(chatMessagesAtom)
+
+	if (messages.length === 0) {
+		return false
+	}
+
+	const lastMessage = messages[messages.length - 1]
+	if (!lastMessage) {
+		return false
+	}
+
+	// Check if there's a tool currently asking for approval
+	// If so, we're not streaming - we're waiting for user input
+	const isLastAsk = lastMessage.type === "ask"
+
+	if (isLastAsk && lastMessage.ask === "tool") {
+		// Tool is asking for approval, not streaming
+		return false
+	}
+
+	// Check if the last message is partial (still streaming)
+	if (lastMessage.partial === true) {
+		return true
+	}
+
+	// Check if there's an active API request without a cost (not finished)
+	// Find the last api_req_started message
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const msg = messages[i]
+		if (msg?.say === "api_req_started") {
+			try {
+				const data = JSON.parse(msg.text || "{}")
+				// If cost is undefined, the API request hasn't finished yet
+				if (data.cost === undefined) {
+					return true
+				}
+			} catch {
+				// If we can't parse, assume not streaming
+				return false
+			}
+			// Found an api_req_started with cost, so it's finished
+			break
+		}
+	}
+
+	return false
+})
 
 // ============================================================================
 // Autocomplete State Atoms

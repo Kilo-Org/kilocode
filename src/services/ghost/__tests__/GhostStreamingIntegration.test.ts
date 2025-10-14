@@ -162,10 +162,6 @@ describe.skip("Ghost Streaming Integration", () => {
 			expect(suggestionUpdates).toBe(2)
 			expect(finalSuggestions).not.toBeNull()
 			expect(finalSuggestions.hasSuggestions()).toBe(true)
-
-			// Verify we have the expected number of completed changes
-			const completedChanges = strategy.getStreamingCompletedChanges()
-			expect(completedChanges).toHaveLength(2)
 		})
 
 		it("should handle cancellation during streaming", async () => {
@@ -207,7 +203,7 @@ describe.skip("Ghost Streaming Integration", () => {
 			// Reset should clear state
 			strategy.resetStreamingParser()
 			expect(strategy.getStreamingBuffer()).toBe("")
-			expect(strategy.getStreamingCompletedChanges()).toHaveLength(0)
+			expect((strategy as any).streamingParser.getCompletedChanges()).toHaveLength(0)
 		})
 
 		it("should handle malformed streaming data gracefully", async () => {

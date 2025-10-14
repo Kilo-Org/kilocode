@@ -6,18 +6,18 @@
 import React, { useCallback, useEffect, useRef } from "react"
 import { Box, Text, useInput, useStdout } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isProcessingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
+import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
 import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
+import { StatusIndicator } from "./components/StatusIndicator.js"
 import { initializeCommands } from "../commands/index.js"
 import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
 import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
-import useIsProcessingSubscription from "../state/hooks/useIsProcessingSubscription.js"
 import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
@@ -33,7 +33,7 @@ interface UIAppProps {
 
 export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const { stdout } = useStdout()
-	const isProcessing = useAtomValue(isProcessingAtom)
+	const isStreaming = useAtomValue(isStreamingAtom)
 	const error = useAtomValue(errorAtom)
 	const theme = useTheme()
 
@@ -49,8 +49,6 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Followup handler hook for automatic suggestion population
 	useFollowupHandler()
-
-	useIsProcessingSubscription()
 
 	// CI mode hook for automatic exit
 	const { shouldExit, exitReason } = useCIMode({
@@ -132,7 +130,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	)
 
 	// Determine if any operation is in progress
-	const isAnyOperationInProgress = isProcessing || isExecutingCommand || isSendingMessage
+	const isAnyOperationInProgress = isStreaming || isExecutingCommand || isSendingMessage
 
 	// Show welcome message as a CliMessage on first render
 	useEffect(() => {
@@ -163,7 +161,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 			{!options.ci && (
 				<>
-					{isProcessing && <Text color={theme.ui.text.dimmed}>Thinking...</Text>}
+					<StatusIndicator disabled={false} />
 					<CommandInput onSubmit={handleSubmit} disabled={isAnyOperationInProgress} />
 					<StatusBar />
 				</>

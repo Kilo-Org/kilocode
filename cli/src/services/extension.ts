@@ -34,6 +34,8 @@ export interface ExtensionServiceEvents {
 	message: (message: ExtensionMessage) => void
 	/** Emitted when an error occurs */
 	error: (error: Error) => void
+	/** Emitted when a recoverable warning occurs */
+	warning: (warning: { context: string; error: Error }) => void
 	/** Emitted when service is disposed */
 	disposed: () => void
 }
@@ -118,9 +120,25 @@ export class ExtensionService extends EventEmitter {
 			this.emit("ready", api)
 		})
 
+		// Handle new extension-error events (non-fatal errors from extension)
+		this.extensionHost.on("extension-error", (errorEvent: any) => {
+			const { context, error, recoverable } = errorEvent
+
+			if (recoverable) {
+				logs.warn(`Recoverable extension error in ${context}`, "ExtensionService", { error })
+				// Emit warning event instead of error to prevent crashes
+				this.emit("warning", { context, error })
+			} else {
+				logs.error(`Critical extension error in ${context}`, "ExtensionService", { error })
+				// Still emit error but don't crash
+				this.emit("error", error)
+			}
+		})
+
+		// Keep backward compatibility for "error" events but don't propagate to prevent crashes
 		this.extensionHost.on("error", (error: Error) => {
-			logs.error("Extension host error", "ExtensionService", { error })
-			this.emit("error", error)
+			logs.error("Extension host error (legacy)", "ExtensionService", { error })
+			// Don't re-emit to prevent crashes
 		})
 
 		// Forward extension messages to message bridge and emit as events
@@ -286,6 +304,18 @@ export class ExtensionService extends EventEmitter {
 		}
 
 		return this.extensionHost.getAPI()
+	}
+
+	/**
+	 * Get the health status of the extension
+	 *
+	 * @returns The extension health status or null if not available
+	 */
+	getExtensionHealth(): { isHealthy: boolean; errorCount: number; lastError: Error | null } | null {
+		if (!this.extensionHost) {
+			return null
+		}
+		return (this.extensionHost as any).extensionHealth || null
 	}
 
 	/**
