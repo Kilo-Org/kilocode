@@ -194,8 +194,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
-				deepInfraApiKey: "deepinfra-key", // Added for conditional fetching
-				kilocodeToken: "kilocode-token", // Added for conditional fetching
+				deepInfraApiKey: "deepinfra-key",
+				kilocodeToken: "kilocode-token",
 			},
 		})
 		// kilocode_change end
