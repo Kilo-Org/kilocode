@@ -825,55 +825,104 @@ export const webviewMessageHandler = async (
 				}
 			}
 
-			// kilocode_change start: openrouter auth, kilocode provider
+			// kilocode_change start: openrouter auth, kilocode provider, conditional model fetching
 			const openRouterApiKey = apiConfiguration.openRouterApiKey || message?.values?.openRouterApiKey
 			const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || message?.values?.openRouterBaseUrl
 
-			const modelFetchPromises: Array<{ key: RouterName; options: GetModelsOptions }> = [
-				{
+			const modelFetchPromises: Array<{ key: RouterName; options: GetModelsOptions }> = []
+
+			// Only fetch models from providers that have the necessary configuration
+			// This prevents unnecessary network requests to unconfigured providers during CLI initialization
+
+			// OpenRouter - only if API key is provided
+			if (openRouterApiKey) {
+				modelFetchPromises.push({
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
-				},
-				{
+				})
+			}
+
+			// Requesty - only if API key is provided
+			if (apiConfiguration.requestyApiKey) {
+				modelFetchPromises.push({
 					key: "requesty",
 					options: {
 						provider: "requesty",
 						apiKey: apiConfiguration.requestyApiKey,
 						baseUrl: apiConfiguration.requestyBaseUrl,
 					},
-				},
-				{ key: "glama", options: { provider: "glama" } },
-				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
-				{ key: "chutes", options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey } }, // kilocode_change
-				{
+				})
+			}
+
+			// Glama - only if it's the active provider
+			if (apiConfiguration.apiProvider === "glama") {
+				modelFetchPromises.push({ key: "glama", options: { provider: "glama" } })
+			}
+
+			// Unbound - only if API key is provided
+			if (apiConfiguration.unboundApiKey) {
+				modelFetchPromises.push({
+					key: "unbound",
+					options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey },
+				})
+			}
+
+			// Chutes - only if API key is provided
+			if (apiConfiguration.chutesApiKey) {
+				modelFetchPromises.push({
+					key: "chutes",
+					options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey },
+				})
+			}
+
+			// Kilocode OpenRouter - only if token is provided
+			if (apiConfiguration.kilocodeToken) {
+				modelFetchPromises.push({
 					key: "kilocode-openrouter",
 					options: {
 						provider: "kilocode-openrouter",
 						kilocodeToken: apiConfiguration.kilocodeToken,
 						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
-				},
-				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
-				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
-				{
+				})
+			}
+
+			// Ollama - only if it's the active provider or base URL is configured
+			if (apiConfiguration.apiProvider === "ollama" || apiConfiguration.ollamaBaseUrl) {
+				modelFetchPromises.push({
+					key: "ollama",
+					options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl },
+				})
+			}
+
+			// Vercel AI Gateway - only if it's the active provider
+			if (apiConfiguration.apiProvider === "vercel-ai-gateway") {
+				modelFetchPromises.push({ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } })
+			}
+
+			// DeepInfra - only if API key is provided
+			if (apiConfiguration.deepInfraApiKey) {
+				modelFetchPromises.push({
 					key: "deepinfra",
 					options: {
 						provider: "deepinfra",
 						apiKey: apiConfiguration.deepInfraApiKey,
 						baseUrl: apiConfiguration.deepInfraBaseUrl,
 					},
-				},
-				// kilocode_change start
-				{
+				})
+			}
+
+			// OVHCloud - only if API key is provided
+			if (apiConfiguration.ovhCloudAiEndpointsApiKey) {
+				modelFetchPromises.push({
 					key: "ovhcloud",
 					options: {
 						provider: "ovhcloud",
 						apiKey: apiConfiguration.ovhCloudAiEndpointsApiKey,
 						baseUrl: apiConfiguration.ovhCloudAiEndpointsBaseUrl,
 					},
-				},
-				// kilocode_change end
-			]
+				})
+			}
 			// kilocode_change end
 
 			// Add IO Intelligence if API key is provided.
