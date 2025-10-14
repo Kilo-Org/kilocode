@@ -237,10 +237,15 @@ export class GhostStreamingParser {
 
 		// Add chunk to buffer
 		this.buffer += chunk
+		this.generateSuggestions(new Array<ParsedChange>())
+	}
 
-		if (!this.streamFinished) {
-			// do not stream
-			this.generateSuggestions(new Array<ParsedChange>())
+	/**
+	 * Process a new chunk of text and return any newly completed suggestions
+	 */
+	public processResult(): StreamingParseResult {
+		if (!this.context) {
+			throw new Error("Parser not initialized. Call initialize() first.")
 		}
 
 		// Extract any newly completed changes from the current buffer
@@ -285,7 +290,7 @@ export class GhostStreamingParser {
 	 */
 	public finishStream(): StreamingParseResult {
 		this.streamFinished = true
-		return this.processChunk("")
+		return this.processResult()
 	}
 
 	/**
