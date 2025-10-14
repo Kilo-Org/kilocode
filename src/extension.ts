@@ -62,9 +62,13 @@ let authStateChangedHandler: ((data: { state: AuthState; previousState: AuthStat
 let settingsUpdatedHandler: (() => void) | undefined
 let userInfoHandler: ((data: { userInfo: CloudUserInfo }) => Promise<void>) | undefined
 
+const activationTime = new Date() // kilocode_change
+
 // This method is called when your extension is activated.
 // Your extension is activated the very first time the command is executed.
 export async function activate(context: vscode.ExtensionContext) {
+	console.info(`[${activationTime.toLocaleString()}] Activating Kilo Code, process ID: ${process.pid}`) // kilocode_change
+
 	extensionContext = context
 	outputChannel = vscode.window.createOutputChannel("Kilo-Code")
 	context.subscriptions.push(outputChannel)
