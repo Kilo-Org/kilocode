@@ -165,6 +165,57 @@ export default defineConfig(({ mode }) => {
 		},
 		server: {
 			host: "0.0.0.0", // kilocode_change
+			watch: {
+				// Use polling to reduce file watcher usage
+				usePolling: true,
+				interval: 1000,
+				ignored: [
+					"**/node_modules/**",
+					"**/dist/**",
+					"**/.git/**",
+					"**/logs/**",
+					"**/.turbo/**",
+					"**/coverage/**",
+					"**/.nyc_output/**",
+					// Exclude asset directories (static files don't need watching)
+					"../src/assets/**",
+					"../src/i18n/locales/**",
+					// Exclude test utilities and build artifacts
+					"../src/test-llm-autocompletion/**",
+					"../src/walkthrough/**",
+					"../src/__tests__/**",
+					"../src/__mocks__/**",
+					// Exclude all non-TS/JS files
+					"../**/*.md",
+					"../**/*.json",
+					"../**/*.yml",
+					"../**/*.yaml",
+					"../**/*.txt",
+					"../**/*.log",
+					"../**/*.png",
+					"../**/*.jpg",
+					"../**/*.jpeg",
+					"../**/*.gif",
+					"../**/*.svg",
+					"../**/*.ico",
+					"../**/*.woff",
+					"../**/*.woff2",
+					"../**/*.ttf",
+					"../**/*.eot",
+					// Exclude packages directory (build artifacts)
+					"../packages/**/dist/**",
+					"../packages/**/build/**",
+					// Exclude apps directory
+					"../apps/**",
+					// Exclude other non-essential directories
+					"../benchmark/**",
+					"../jetbrains/**",
+					"../launch/**",
+					"../releases/**",
+					"../run/**",
+					"../scripts/**",
+				],
+			},
 			hmr: {
 				// host: "localhost", kilocode_change
 				protocol: "ws",
