@@ -17,6 +17,11 @@ vi.mock("@src/components/ErrorBoundary", () => ({
 	default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
+// Mock AnimatedTabContainer to remove animation delays in tests
+vi.mock("@src/components/ui/AnimatedTabContainer", () => ({
+	AnimatedTabContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 // Mock the telemetry client
 vi.mock("@src/utils/TelemetryClient", () => ({
 	telemetryClient: {
