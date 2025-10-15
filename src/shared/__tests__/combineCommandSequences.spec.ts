@@ -23,6 +23,65 @@ describe("combineCommandSequences", () => {
 				ts: 1625097600000,
 			})
 		})
+
+		it("should deduplicate consecutive command messages with the same command", () => {
+			const messages: ClineMessage[] = [
+				{ type: "ask", ask: "command", text: "mkdir -p core/vscode-test-harness/src/util", ts: 1625097600000 },
+				{ type: "ask", ask: "command", text: "mkdir -p core/vscode-test-harness/src/util", ts: 1625097601000 },
+			]
+
+			const result = combineCommandSequences(messages)
+
+			expect(result).toHaveLength(1)
+			expect(result[0]).toEqual({
+				type: "ask",
+				ask: "command",
+				text: "mkdir -p core/vscode-test-harness/src/util",
+				ts: 1625097601000, // Should keep the second (more recent) one
+			})
+		})
+
+		it("should deduplicate consecutive command messages with same command but different outputs", () => {
+			const messages: ClineMessage[] = [
+				{ type: "ask", ask: "command", text: "ls", ts: 1625097600000 },
+				{ type: "ask", ask: "command_output", text: "file1.txt", ts: 1625097601000 },
+				{ type: "ask", ask: "command", text: "ls", ts: 1625097602000 },
+				{ type: "ask", ask: "command_output", text: "file1.txt\nfile2.txt", ts: 1625097603000 },
+			]
+
+			const result = combineCommandSequences(messages)
+
+			expect(result).toHaveLength(1)
+			expect(result[0]).toEqual({
+				type: "ask",
+				ask: "command",
+				text: "ls\nOutput:file1.txt\nfile2.txt",
+				ts: 1625097602000, // Should keep the second command with more complete output
+			})
+		})
+
+		it("should not deduplicate different commands", () => {
+			const messages: ClineMessage[] = [
+				{ type: "ask", ask: "command", text: "ls", ts: 1625097600000 },
+				{ type: "ask", ask: "command", text: "pwd", ts: 1625097601000 },
+			]
+
+			const result = combineCommandSequences(messages)
+
+			expect(result).toHaveLength(2)
+			expect(result[0]).toEqual({
+				type: "ask",
+				ask: "command",
+				text: "ls",
+				ts: 1625097600000,
+			})
+			expect(result[1]).toEqual({
+				type: "ask",
+				ask: "command",
+				text: "pwd",
+				ts: 1625097601000,
+			})
+		})
 	})
 
 	describe("MCP server responses", () => {

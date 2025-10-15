@@ -142,5 +142,27 @@ export function combineCommandSequences(messages: ClineMessage[]): ClineMessage[
 		}
 	}
 
-	return result
+	// Deduplicate consecutive command messages with the same text
+	// This handles cases where duplicate command asks are sent (e.g., from partial updates)
+	const deduplicated: ClineMessage[] = []
+	for (let i = 0; i < result.length; i++) {
+		const msg = result[i]
+		const nextMsg = result[i + 1]
+
+		// If this is a command message and the next message is also a command with the same text, skip this one
+		if (
+			msg.type === "ask" &&
+			msg.ask === "command" &&
+			nextMsg &&
+			nextMsg.type === "ask" &&
+			nextMsg.ask === "command" &&
+			msg.text?.split("\n")[0] === nextMsg.text?.split("\n")[0] // Compare first line (the command itself)
+		) {
+			continue // Skip this duplicate, keep the next one which may have more complete output
+		}
+
+		deduplicated.push(msg)
+	}
+
+	return deduplicated
 }
