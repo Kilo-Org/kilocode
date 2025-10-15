@@ -79,7 +79,7 @@
 		"pretty-bytes": "^7.0.0",
 		"proper-lockfile": "^4.1.2",
 		"ps-tree": "^1.2.0",
-		"puppeteer-chromium-resolver": "^24.0.0",
+		"puppeteer-chromium-resolver": "npm:@catrielmuller/puppeteer-chromium-resolver@24.0.2",
 		"puppeteer-core": "^23.4.0",
 		"react": "^19.2.0",
 		"react-devtools-core": "^6.1.5",
@@ -113,7 +113,8 @@
 	"overrides": {
 		"exceljs": {
 			"archiver": "^7.0.1",
-			"unzipper": "^0.12.3"
+			"unzipper": "^0.12.3",
+			"fast-csv": "^5.0.5"
 		},
 		"event-pubsub": {
 			"copyfiles": "npm:empty-module@0.0.2"
