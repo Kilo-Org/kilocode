@@ -111,6 +111,15 @@
 		"yaml": "^2.6.1",
 		"zod": "^3.25.61"
 	},
+	"overrides": {
+		"exceljs": {
+			"archiver": "^7.0.1",
+			"unzipper": "^0.12.3"
+		},
+		"event-pubsub": {
+			"copyfiles": "npm:empty-module@0.0.2"
+		}
+	},
 	"engines": {
 		"node": ">=20.19.2"
 	},
