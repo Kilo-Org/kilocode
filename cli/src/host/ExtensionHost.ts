@@ -288,9 +288,18 @@ export class ExtensionHost extends EventEmitter {
 				await this.handleWebviewLaunch()
 			}
 
-			// Forward ALL messages to the extension's webview handler
-			logs.debug(`Forwarding message to extension: ${message.type}`, "ExtensionHost")
-			this.emit("webviewMessage", message)
+			// Forward message directly to the webview provider instead of emitting event
+			// This prevents duplicate handling (event listener + direct call)
+			const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
+
+			if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
+				await webviewProvider.handleCLIMessage(message)
+			} else {
+				logs.warn(
+					`No webview provider found or handleCLIMessage not available for: ${message.type}`,
+					"ExtensionHost",
+				)
+			}
 
 			// Handle local state updates for CLI display after forwarding
 			await this.handleLocalStateUpdates(message)
@@ -648,29 +657,6 @@ export class ExtensionHost extends EventEmitter {
 							break
 					}
 				}, `extensionWebviewMessage-${message.type}`)
-			})
-
-			// Set up webview message handler for messages TO the extension
-			this.on("webviewMessage", async (message: any) => {
-				await this.safeExecute(async () => {
-					logs.debug(`Forwarding webview message to extension: ${message.type}`, "ExtensionHost")
-
-					// Find the registered webview provider
-					const webviewProvider = this.webviewProviders.get("kilo-code.SidebarProvider")
-
-					if (webviewProvider && typeof webviewProvider.handleCLIMessage === "function") {
-						await webviewProvider.handleCLIMessage(message)
-						logs.debug(
-							`Successfully forwarded message to webview provider: ${message.type}`,
-							"ExtensionHost",
-						)
-					} else {
-						logs.warn(
-							`No webview provider found or handleCLIMessage not available for: ${message.type}`,
-							"ExtensionHost",
-						)
-					}
-				}, `webviewMessage-${message.type}`)
 			})
 		}
 	}
