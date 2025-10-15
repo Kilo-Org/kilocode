@@ -4,7 +4,9 @@
  */
 
 import React, { useCallback } from "react"
-import { Box, Text, useInput } from "ink"
+import { Box, Text } from "ink"
+import { useKeyboard } from "../../state/hooks/useKeyboard.js"
+import { HOTKEYS } from "../../constants/keyboard/hotkeys.js"
 import { useHotkeys } from "../../state/hooks/useHotkeys.js"
 import { useWebviewMessage } from "../../state/hooks/useWebviewMessage.js"
 import { useTheme } from "../../state/hooks/useTheme.js"
@@ -68,26 +70,21 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 		}
 	}, [hasResumeTask, disabled, resumeTask])
 
-	// Listen for Ctrl+X / Cmd+X to cancel
-	useInput(
-		(input, key) => {
-			// Check for Ctrl+X (or Cmd+X on Mac)
-			if (key.ctrl && input === "x") {
-				handleCancel()
-			}
+	// Listen for Ctrl+X to cancel and Ctrl+R to resume
+	useKeyboard(
+		{
+			hotkeys: [
+				{
+					hotkey: HOTKEYS.CANCEL_TASK,
+					handler: handleCancel,
+				},
+				{
+					hotkey: HOTKEYS.RESUME_TASK,
+					handler: handleResume,
+				},
+			],
 		},
-		{ isActive: !disabled && isStreaming },
-	)
-
-	// Listen for Ctrl+R / Cmd+R to resume
-	useInput(
-		(input, key) => {
-			// Check for Ctrl+R (or Cmd+R on Mac)
-			if (key.ctrl && input === "r") {
-				handleResume()
-			}
-		},
-		{ isActive: !disabled && hasResumeTask },
+		{ active: !disabled && (isStreaming || hasResumeTask) },
 	)
 
 	// Don't render if no hotkeys to show or disabled
