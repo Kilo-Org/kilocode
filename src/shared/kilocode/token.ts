@@ -30,7 +30,8 @@ export function getKilocodeUrl(options: KilocodeUrlOptions = {}): string {
 		url.searchParams.set(key, value)
 	})
 
-	return url.toString()
+	const finalUrl = url.toString().replace(/\/$/, "") // Remove trailing /s
+	return finalUrl
 }
 
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {
