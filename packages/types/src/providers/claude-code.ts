@@ -48,6 +48,14 @@ export const claudeCodeModels = {
 		supportsReasoningBudget: false,
 		requiredReasoningBudget: false,
 	},
+	"claude-haiku-4-5": {
+		...anthropicModels["claude-haiku-4-5"],
+		supportsImages: false,
+		supportsPromptCache: true, // Claude Code does report cache tokens
+		supportsReasoningEffort: false,
+		supportsReasoningBudget: false,
+		requiredReasoningBudget: false,
+	},
 	"claude-sonnet-4-20250514": {
 		...anthropicModels["claude-sonnet-4-20250514"],
 		supportsImages: false,
