@@ -8,5 +8,3 @@ export const DEFAULT_HEADERS = {
 	[X_KILOCODE_VERSION]: Package.version,
 	"User-Agent": `Kilo-Code/${Package.version}`,
 }
-console.log("🚀 ~ getKilocodeUrl():", getKilocodeUrl())
-console.log("🚀 ~ DEFAULT_HEADERS:", DEFAULT_HEADERS)

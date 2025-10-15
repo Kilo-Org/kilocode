@@ -1,7 +1,8 @@
 export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
 
 const globalKilocodeBackendUrl: string =
-	(typeof window !== "undefined" ? window : (process.env as any))?.KILOCODE_BACKEND_BASE_URL ??
+	(typeof window !== "undefined" ? (window as any).KILOCODE_BACKEND_BASE_URL : undefined) ||
+	process.env.KILOCODE_BACKEND_BASE_URL ||
 	DEFAULT_KILOCODE_BACKEND_URL
 
 export type KilocodeUrlOptions = {
@@ -17,8 +18,8 @@ export type KilocodeUrlOptions = {
  * @returns Fully constructed KiloCode URL
  */
 export function getKilocodeUrl(options: KilocodeUrlOptions = {}): string {
-	const { subdomain = null, path = "", queryParams = {}, baseUrl = globalKilocodeBackendUrl } = options
-	const url = new URL(baseUrl ?? DEFAULT_KILOCODE_BACKEND_URL)
+	const { subdomain = null, path = "", queryParams = {}, baseUrl } = options
+	const url = new URL(baseUrl ?? globalKilocodeBackendUrl)
 
 	if (subdomain) {
 		url.hostname = `${subdomain}.${url.hostname}`
