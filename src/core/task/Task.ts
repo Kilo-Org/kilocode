@@ -770,6 +770,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.updateClineMessage(lastMessage)
 					throw new Error("Current ask promise was ignored (#1)")
 				} else {
+					// Check if there's already a recent partial message of the same type with the same content
+					// This prevents duplicate command asks from being created during streaming
+					const recentPartialWithSameContent = this.clineMessages
+						.slice(-5) // Check last 5 messages
+						.reverse()
+						.find(
+							(msg) =>
+								msg.type === "ask" &&
+								msg.ask === type &&
+								msg.partial &&
+								msg.text === text &&
+								Date.now() - msg.ts < 5000, // Within last 5 seconds
+						)
+
+					if (recentPartialWithSameContent) {
+						// Don't create a duplicate - just update the existing one
+						recentPartialWithSameContent.progressStatus = progressStatus
+						recentPartialWithSameContent.isProtected = isProtected
+						this.updateClineMessage(recentPartialWithSameContent)
+						throw new Error("Current ask promise was ignored (duplicate prevented)")
+					}
+
 					// This is a new partial message, so add it with partial
 					// state.
 					askTs = Date.now()
