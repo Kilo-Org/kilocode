@@ -155,6 +155,7 @@ export interface ExtensionMessage {
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
 		| "gitlabExtensionStatus"
+		| "gitlabRepositoryInfo"
 	text?: string
 	// kilocode_change start
 	payload?:

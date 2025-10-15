@@ -1,8 +1,16 @@
 import React, { useEffect, useState } from "react"
 import { vscode } from "@src/utils/vscode"
 
+interface GitLabRepositoryInfo {
+	remoteUrl: string
+	projectName: string
+	currentBranch: string
+	isGitLabRemote: boolean
+}
+
 export const GitLabStatus: React.FC = () => {
 	const [isActivated, setIsActivated] = useState<boolean>(false)
+	const [repositoryInfo, setRepositoryInfo] = useState<GitLabRepositoryInfo | null>(null)
 
 	useEffect(() => {
 		// Send message to extension to check GitLab extension status
@@ -13,15 +21,21 @@ export const GitLabStatus: React.FC = () => {
 			const message = event.data
 			if (message.type === "gitlabExtensionStatus") {
 				setIsActivated(message.value)
+			} else if (message.type === "gitlabRepositoryInfo") {
+				setRepositoryInfo(message.value)
 			}
 		}
 
 		window.addEventListener("message", handleMessage)
 
-		// Set up polling to check GitLab extension status periodically
+		// Set up polling to check GitLab extension status and repository info periodically
 		const pollInterval = setInterval(() => {
 			vscode.postMessage({ type: "checkGitLabExtension" })
+			vscode.postMessage({ type: "getGitLabRepositoryInfo" })
 		}, 2000)
+
+		// Initial repository info request
+		vscode.postMessage({ type: "getGitLabRepositoryInfo" })
 
 		return () => {
 			window.removeEventListener("message", handleMessage)
@@ -30,7 +44,24 @@ export const GitLabStatus: React.FC = () => {
 	}, [])
 
 	if (isActivated) {
-		return <div className="px-3">GitLab extension is activated</div>
+		return (
+			<div className="px-3 space-y-2">
+				<div className="text-green-600 font-medium">GitLab extension is activated</div>
+				{repositoryInfo && (
+					<div className="text-sm text-gray-600 space-y-1">
+						<div>
+							<strong>Project:</strong> {repositoryInfo.projectName}
+						</div>
+						<div>
+							<strong>Branch:</strong> {repositoryInfo.currentBranch}
+						</div>
+						<div>
+							<strong>Remote:</strong> {repositoryInfo.remoteUrl}
+						</div>
+					</div>
+				)}
+			</div>
+		)
 	}
 
 	return (
