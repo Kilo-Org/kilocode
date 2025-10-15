@@ -74,6 +74,8 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"run_in_background", // kilocode_change
+	"terminal_id", // kilocode_change: for terminal killing
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -89,7 +91,12 @@ export interface ToolUse {
 export interface ExecuteCommandToolUse extends ToolUse {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
-	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd" | "run_in_background">> // kilocode_change - add run_in_background
+}
+
+export interface TerminalCtrlToolUse extends ToolUse {
+	name: "terminal_ctrl"
+	params: Partial<Pick<Record<ToolParamName, string>, "action" | "terminal_id">> // kilocode_change - new terminal control tool
 }
 
 export interface ReadFileToolUse extends ToolUse {
@@ -227,6 +234,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
+	terminal_ctrl: "control terminals", // kilocode_change: new terminal control tool
 } as const
 
 // Define available tool groups.
@@ -256,7 +264,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["browser_action"],
 	},
 	command: {
-		tools: ["execute_command"],
+		tools: ["execute_command", "terminal_ctrl"],
 	},
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],
