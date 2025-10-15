@@ -199,6 +199,12 @@ export class TerminalRegistry {
 
 		terminal.taskId = taskId
 
+		// Mark terminal as busy immediately to prevent race conditions where
+		// another concurrent command might try to use the same terminal before
+		// runCommand() is called. The terminal will be unmarked as busy when
+		// the command completes.
+		terminal.busy = true
+
 		return terminal
 	}
 
@@ -274,6 +280,7 @@ export class TerminalRegistry {
 		ShellIntegrationManager.clear()
 		this.disposables.forEach((disposable) => disposable.dispose())
 		this.disposables = []
+		this.isInitialized = false
 	}
 
 	/**

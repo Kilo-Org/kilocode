@@ -10,7 +10,10 @@ vi.mock("execa", () => ({
 	execa: vi.fn(),
 }))
 
-vi.mock("../../../utils/path", () => ({ getWorkspacePath: vi.fn(() => "/test/workspace") })) // kilocode_change
+vi.mock("../../../utils/path", () => ({
+	getWorkspacePath: vi.fn(() => "/test/workspace"),
+	arePathsEqual: vi.fn((path1, path2) => path1 === path2),
+}))
 
 describe("TerminalRegistry", () => {
 	let mockCreateTerminal: any
@@ -123,6 +126,94 @@ describe("TerminalRegistry", () => {
 			} finally {
 				Terminal.setTerminalZshP10k(false)
 			}
+		})
+	})
+
+	describe("initialize and cleanup", () => {
+		beforeEach(() => {
+			// Reset initialization state before each test
+			TerminalRegistry["isInitialized"] = false
+			TerminalRegistry["disposables"] = []
+		})
+
+		it("should allow re-initialization after cleanup", () => {
+			// First initialization
+			expect(() => TerminalRegistry.initialize()).not.toThrow()
+
+			// Should throw on second call without cleanup
+			expect(() => TerminalRegistry.initialize()).toThrow(
+				"TerminalRegistry.initialize() should only be called once",
+			)
+
+			// Cleanup
+			TerminalRegistry.cleanup()
+
+			// Should allow re-initialization after cleanup
+			expect(() => TerminalRegistry.initialize()).not.toThrow()
+		})
+
+		it("should dispose all event handlers during cleanup", () => {
+			TerminalRegistry.initialize()
+
+			const disposables = TerminalRegistry["disposables"]
+			const disposeSpy = vi.fn()
+
+			// Add spy to existing disposables
+			disposables.forEach((d) => {
+				d.dispose = disposeSpy
+			})
+
+			TerminalRegistry.cleanup()
+
+			// All disposables should have been disposed
+			expect(disposeSpy).toHaveBeenCalledTimes(disposables.length)
+			expect(TerminalRegistry["disposables"]).toHaveLength(0)
+			expect(TerminalRegistry["isInitialized"]).toBe(false)
+		})
+	})
+
+	describe("getOrCreateTerminal race condition prevention", () => {
+		beforeEach(() => {
+			TerminalRegistry["terminals"] = []
+			TerminalRegistry["nextTerminalId"] = 1
+		})
+
+		it("should mark terminal as busy immediately upon return", async () => {
+			const terminal = await TerminalRegistry.getOrCreateTerminal("/test/path", "task-1", "vscode")
+
+			expect(terminal.busy).toBe(true)
+		})
+
+		it("should not return the same terminal for concurrent requests", async () => {
+			const [terminal1, terminal2] = await Promise.all([
+				TerminalRegistry.getOrCreateTerminal("/test/path", "task-1", "vscode"),
+				TerminalRegistry.getOrCreateTerminal("/test/path", "task-2", "vscode"),
+			])
+
+			expect(terminal1.id).not.toBe(terminal2.id)
+			expect(terminal1.busy).toBe(true)
+			expect(terminal2.busy).toBe(true)
+		})
+
+		it("should create new terminal if existing ones are busy", async () => {
+			const terminal1 = await TerminalRegistry.getOrCreateTerminal("/test/path", "task-1", "vscode")
+			expect(terminal1.busy).toBe(true)
+
+			const terminal2 = await TerminalRegistry.getOrCreateTerminal("/test/path", "task-2", "vscode")
+
+			expect(terminal1.id).not.toBe(terminal2.id)
+			expect(terminal2.busy).toBe(true)
+		})
+
+		it("should reuse terminal when marked not busy", async () => {
+			const terminal1 = await TerminalRegistry.getOrCreateTerminal("/test/path", "task-1", "vscode")
+			terminal1.busy = false
+			terminal1.taskId = undefined
+
+			const terminal2 = await TerminalRegistry.getOrCreateTerminal("/test/path", "task-2", "vscode")
+
+			expect(terminal1.id).toBe(terminal2.id)
+			expect(terminal2.busy).toBe(true)
 		})
 	})
 })
