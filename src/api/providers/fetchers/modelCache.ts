@@ -19,7 +19,7 @@ import { getGlamaModels } from "./glama"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
 import { GetModelsOptions } from "../../../shared/api"
-import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
+import { getKiloBaseUriFromToken, getKilocodeUrl } from "../../../shared/kilocode/token"
 import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
@@ -94,16 +94,20 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change start
-			case "kilocode-openrouter":
+			case "kilocode-openrouter": {
+				const baseUrl = getKiloBaseUriFromToken(options.kilocodeToken ?? "")
+				const url = getKilocodeUrl({
+					baseUrl,
+					path: options.kilocodeOrganizationId
+						? `/api/organizations/${options.kilocodeOrganizationId}`
+						: "/api/openrouter",
+				})
 				models = await getOpenRouterModels({
-					openRouterBaseUrl:
-						getKiloBaseUriFromToken(options.kilocodeToken ?? "") +
-						(options.kilocodeOrganizationId
-							? `/api/organizations/${options.kilocodeOrganizationId}`
-							: "/api/openrouter"),
+					openRouterBaseUrl: url,
 					headers: options.kilocodeToken ? { Authorization: `Bearer ${options.kilocodeToken}` } : undefined,
 				})
 				break
+			}
 			case "chutes":
 				models = await getChutesModels(options.apiKey)
 				break

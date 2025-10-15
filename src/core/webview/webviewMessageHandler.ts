@@ -2593,12 +2593,9 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
-					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
-					{
-						headers,
-					},
-				)
+				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+				const url = getKilocodeUrl({ baseUrl, path: "/api/profile" })
+				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
 				const organizationExists = (response.data.organizations ?? []).some(
@@ -2693,10 +2690,9 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile/balance`, {
-					// Original path for balance
-					headers,
-				})
+				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+				const url = getKilocodeUrl({ baseUrl, path: "/api/profile/balance" })
+				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
 					payload: { success: true, data: response.data },
@@ -2725,8 +2721,13 @@ export const webviewMessageHandler = async (
 				const source = uiKind === "Web" ? "web" : uriScheme
 
 				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+				const url = getKilocodeUrl({
+					baseUrl,
+					path: `/payments/topup`,
+					queryParams: { origin: "extension", source, amount: credits },
+				})
 				const response = await axios.post(
-					`${baseUrl}/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					url,
 					{},
 					{
 						headers: {

@@ -1,8 +1,7 @@
 export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
 
-const globalKilocodeBackendUrl: string | null =
-	process.env.KILOCODE_BACKEND_BASE_URL ??
-	(typeof window !== "undefined" && (window as any).KILOCODE_BACKEND_BASE_URL) ??
+const globalKilocodeBackendUrl: string =
+	(typeof window !== "undefined" ? window : (process.env as any))?.KILOCODE_BACKEND_BASE_URL ??
 	DEFAULT_KILOCODE_BACKEND_URL
 
 export type KilocodeUrlOptions = {
