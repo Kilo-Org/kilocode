@@ -437,8 +437,29 @@ export class GhostProvider {
 		// Update inline completion provider with current suggestions
 		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
 
-		// Explicitly trigger inline suggestions to show ghost text
-		if (this.suggestions.hasSuggestions()) {
+		// Determine if we should trigger inline suggestions
+		let shouldTriggerInline = false
+		const editor = vscode.window.activeTextEditor
+		if (editor && this.suggestions.hasSuggestions()) {
+			const file = this.suggestions.getFile(editor.document.uri)
+			if (file) {
+				const selectedGroup = file.getSelectedGroupOperations()
+				if (selectedGroup.length > 0) {
+					const groupType = file.getGroupType(selectedGroup)
+					// Only trigger inline for pure additions near cursor
+					if (groupType === "+") {
+						const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+						const firstOp = selectedGroup[0]
+						const targetLine = firstOp.line + offset.removed
+						const distanceFromCursor = Math.abs(editor.selection.active.line - targetLine)
+						shouldTriggerInline = distanceFromCursor <= 5
+					}
+				}
+			}
+		}
+
+		// Only trigger inline suggestions if selected group should use them
+		if (shouldTriggerInline) {
 			try {
 				await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 			} catch {
@@ -446,7 +467,7 @@ export class GhostProvider {
 			}
 		}
 
-		// Keep decorations for deletions or as fallback
+		// Display decorations for appropriate groups
 		await this.displaySuggestions()
 		// await this.displayCodeLens()
 	}
@@ -478,45 +499,35 @@ export class GhostProvider {
 			return
 		}
 
-		const selectedGroup = file.getSelectedGroupOperations()
-		if (selectedGroup.length === 0) {
+		const groups = file.getGroupsOperations()
+		if (groups.length === 0) {
 			this.decorations.clearAll()
 			return
 		}
 
-		const groupType = file.getGroupType(selectedGroup)
-
-		// Pure deletions always use decorations (inline completions can't show them)
-		if (groupType === "-") {
-			await this.decorations.displaySuggestions(this.suggestions)
+		const selectedGroupIndex = file.getSelectedGroup()
+		if (selectedGroupIndex === null) {
+			this.decorations.clearAll()
 			return
 		}
 
-		// Calculate distance from cursor to suggestion for additions/modifications
-		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
-		const firstOp = selectedGroup[0]
-		let targetLine: number
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
 
-		if (groupType === "+") {
-			targetLine = firstOp.line + offset.removed
-		} else {
-			// groupType === "/"
-			const deleteOp = selectedGroup.find((op) => op.type === "-")
-			targetLine = deleteOp ? deleteOp.line + offset.added : firstOp.line
+		// Determine if selected group will be shown as inline completion
+		let selectedGroupUsesInlineCompletion = false
+
+		if (selectedGroupType === "+") {
+			// Pure addition - check if near cursor
+			const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+			const firstOp = selectedGroup[0]
+			const targetLine = firstOp.line + offset.removed
+			const distanceFromCursor = Math.abs(editor.selection.active.line - targetLine)
+			selectedGroupUsesInlineCompletion = distanceFromCursor <= 5
 		}
 
-		const distanceFromCursor = Math.abs(editor.selection.active.line - targetLine)
-
-		// Display strategy:
-		// - Near cursor (≤5 lines): Clear decorations, inline completions will show ghost text
-		// - Far from cursor (>5 lines): Use decorations as visual indicator
-		if (distanceFromCursor <= 5) {
-			// Near cursor - rely on inline completions for ghost text
-			this.decorations.clearAll()
-		} else {
-			// Far from cursor - show decorations as fallback
-			await this.decorations.displaySuggestions(this.suggestions)
-		}
+		// Always show decorations, but skip selected group if it uses inline completion
+		await this.decorations.displaySuggestions(this.suggestions, selectedGroupUsesInlineCompletion)
 	}
 
 	private getSelectedSuggestionLine() {

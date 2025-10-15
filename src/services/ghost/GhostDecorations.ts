@@ -52,23 +52,28 @@ export class GhostDecorations {
 
 	/**
 	 * Display deletion operations using simple border styling
+	 * Returns the range for accumulation
 	 */
-	private displayDeleteOperationGroup(editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]): void {
+	private createDeleteOperationRange(editor: vscode.TextEditor, group: GhostSuggestionEditOperation[]): vscode.Range {
 		const lines = group.map((x) => x.oldLine)
 		const from = Math.min(...lines)
 		const to = Math.max(...lines)
 
 		const start = editor.document.lineAt(from).range.start
 		const end = editor.document.lineAt(to).range.end
-		const range = new vscode.Range(start, end)
-
-		editor.setDecorations(this.deletionDecorationType, [{ range }])
+		return new vscode.Range(start, end)
 	}
 
 	/**
 	 * Display suggestions using hybrid approach: SVG for edits/additions, simple styling for deletions
+	 * Shows all groups that should use decorations
+	 * @param suggestions - The suggestions state
+	 * @param skipSelectedGroup - If true, skip the selected group (it's shown as inline completion)
 	 */
-	public async displaySuggestions(suggestions: GhostSuggestionsState): Promise<void> {
+	public async displaySuggestions(
+		suggestions: GhostSuggestionsState,
+		skipSelectedGroup: boolean = false,
+	): Promise<void> {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			return
@@ -97,19 +102,40 @@ export class GhostDecorations {
 			this.clearAll()
 			return
 		}
-		const selectedGroup = groups[selectedGroupIndex]
-		const groupType = suggestionsFile.getGroupType(selectedGroup)
 
 		// Clear previous decorations
 		this.clearAll()
 
-		// Route to appropriate display method
-		if (groupType === "/") {
-			await this.displayEditOperationGroup(editor, selectedGroup)
-		} else if (groupType === "-") {
-			this.displayDeleteOperationGroup(editor, selectedGroup)
-		} else if (groupType === "+") {
-			await this.displayAdditionsOperationGroup(editor, selectedGroup)
+		// Accumulate deletion ranges to apply all at once
+		const deletionRanges: vscode.Range[] = []
+
+		// Display each group based on whether it should use decorations
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i]
+			const groupType = suggestionsFile.getGroupType(group)
+			const isSelected = i === selectedGroupIndex
+
+			// Skip selected group if it's using inline completion
+			if (isSelected && skipSelectedGroup) {
+				continue
+			}
+
+			// Show decoration for this group
+			if (groupType === "/") {
+				await this.displayEditOperationGroup(editor, group)
+			} else if (groupType === "-") {
+				deletionRanges.push(this.createDeleteOperationRange(editor, group))
+			} else if (groupType === "+") {
+				await this.displayAdditionsOperationGroup(editor, group)
+			}
+		}
+
+		// Apply all deletion decorations at once
+		if (deletionRanges.length > 0) {
+			editor.setDecorations(
+				this.deletionDecorationType,
+				deletionRanges.map((range) => ({ range })),
+			)
 		}
 	}
 

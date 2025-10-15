@@ -50,26 +50,16 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// Get the type of the selected group
 		const groupType = file.getGroupType(selectedGroup)
 
-		// Only provide inline completions for additions and modifications
-		// Deletions are handled with decorations
-		if (groupType === "-") {
+		// Only provide inline completions for pure additions near the cursor
+		// Deletions and modifications are handled with SVG decorations
+		if (groupType === "-" || groupType === "/") {
 			return undefined
 		}
 
 		// Check if suggestion is near cursor - if too far, let decorations handle it
 		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
 		const firstOp = selectedGroup[0]
-		let targetLine: number
-
-		if (groupType === "+") {
-			targetLine = firstOp.line + offset.removed
-		} else {
-			const deleteOp = selectedGroup.find((op) => op.type === "-")
-			if (!deleteOp) {
-				return undefined
-			}
-			targetLine = deleteOp.line + offset.added
-		}
+		const targetLine = firstOp.line + offset.removed
 
 		// If suggestion is more than 5 lines away from cursor, don't show inline completion
 		// This allows decorations to handle it instead
@@ -90,7 +80,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	/**
 	 * Create an inline completion item from a group of operations.
-	 * Shows ghost text at the target line.
+	 * Shows ghost text at the target line for pure additions.
 	 */
 	private createInlineCompletionItem(
 		document: vscode.TextDocument,
@@ -99,32 +89,38 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		groupType: "+" | "/" | "-",
 		targetLine: number,
 	): vscode.InlineCompletionItem | undefined {
-		// Build the completion text
-		// Note: We don't strictly check cursor position here because:
-		// 1. The cursor might have moved slightly after the LLM response
-		// 2. VSCode's inline completion API will handle positioning
-		// 3. We want to show the suggestion as long as it's for this document
-		let completionText: string
+		// Build the completion text for pure additions
+		let completionText = group
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
 
-		if (groupType === "/") {
-			// For modifications, show the new content (additions)
-			const addOps = group.filter((op) => op.type === "+")
-			completionText = addOps
-				.sort((a, b) => a.line - b.line)
-				.map((op) => op.content)
-				.join("\n")
+		// Determine the insertion position and range
+		let insertPosition: vscode.Position
+		let range: vscode.Range
+
+		if (targetLine === position.line) {
+			// Addition on current line - use cursor position
+			insertPosition = position
+		} else if (targetLine === position.line + 1) {
+			// Addition on next line (e.g., after a comment)
+			// Check if current line has content (likely a comment)
+			const currentLineText = document.lineAt(position.line).text
+			const trimmedLine = currentLineText.trim()
+
+			if (trimmedLine.length > 0) {
+				// Current line has content, insert at start of next line with newline prefix
+				insertPosition = new vscode.Position(position.line, currentLineText.length)
+				completionText = "\n" + completionText
+			} else {
+				// Current line is empty, insert at cursor position
+				insertPosition = position
+			}
 		} else {
-			// For pure additions, show all new lines
-			completionText = group
-				.sort((a, b) => a.line - b.line)
-				.map((op) => op.content)
-				.join("\n")
+			// Addition is far from cursor - insert at column 0 of target line
+			insertPosition = new vscode.Position(targetLine, 0)
 		}
-
-		// Create a range at the target line where the suggestion should be inserted
-		// Use the current character position to maintain cursor placement
-		const targetPosition = new vscode.Position(targetLine, position.character)
-		const range = new vscode.Range(targetPosition, targetPosition)
+		range = new vscode.Range(insertPosition, insertPosition)
 
 		// Create inline completion item using VS Code's InlineCompletionItem interface
 		const item: vscode.InlineCompletionItem = {

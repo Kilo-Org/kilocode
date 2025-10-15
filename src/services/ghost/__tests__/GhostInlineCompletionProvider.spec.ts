@@ -135,7 +135,7 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result).toBeUndefined()
 		})
 
-		it("should handle modification groups (delete + add)", async () => {
+		it("should return undefined for modification groups (delete + add) - decorations handle them", async () => {
 			// Add a modification group at cursor line
 			const file = suggestions.addFile(mockDocument.uri)
 
@@ -165,13 +165,8 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)
 
-			expect(result).toBeDefined()
-			expect(Array.isArray(result)).toBe(true)
-
-			if (Array.isArray(result) && result.length > 0) {
-				const item = result[0]
-				expect(item.insertText).toContain("new code")
-			}
+			// Modifications should return undefined - SVG decorations handle them
+			expect(result).toBeUndefined()
 		})
 
 		it("should handle multi-line additions when grouped", async () => {
