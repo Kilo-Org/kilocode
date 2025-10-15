@@ -72,7 +72,6 @@ const __dirname = __dirname__(__filename);
 		"@anthropic-ai/vertex-sdk",
 		"@aws-sdk/client-bedrock-runtime",
 		"@aws-sdk/credential-providers",
-		"@cerebras/cerebras_cloud_sdk",
 		"@google/genai",
 		"@lmstudio/sdk",
 		"@mistralai/mistralai",
