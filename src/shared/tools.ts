@@ -66,6 +66,8 @@ export const toolParamNames = [
 	"instructions",
 	"code_edit",
 	"files",
+	"branch_name",
+	"commit_message",
 	// kilocode_change end
 	"args",
 	"start_line",
@@ -91,6 +93,21 @@ export interface ExecuteCommandToolUse extends ToolUse {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
 	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
+}
+
+export interface GitBranchToolUse extends ToolUse {
+	name: "git_branch"
+	params: Partial<Pick<Record<ToolParamName, string>, "branch_name">>
+}
+
+export interface GitCommitToolUse extends ToolUse {
+	name: "git_commit"
+	params: Partial<Pick<Record<ToolParamName, string>, "commit_message">>
+}
+
+export interface GitPushToolUse extends ToolUse {
+	name: "git_push"
+	params: Partial<Record<ToolParamName, string>>
 }
 
 export interface ReadFileToolUse extends ToolUse {
@@ -228,6 +245,9 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
+	git_branch: "create git branch",
+	git_commit: "commit changes",
+	git_push: "push changes",
 } as const
 
 // Define available tool groups.
@@ -278,6 +298,9 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"condense", // kilocode_Change
 	"update_todo_list",
 	"run_slash_command",
+	"git_branch",
+	"git_commit",
+	"git_push",
 ] as const
 
 export type DiffResult =

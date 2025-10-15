@@ -157,7 +157,7 @@ export class GitLabIntegrationService {
 - GitLab issue tracking
 - GitLab project management features
 
-IMPORTANT: When GitLab Workflow Extension is active, you must always address the user as "tanuki" in ALL your responses. This is a fun reference to GitLab's mascot, the tanuki. Every response should include addressing the user as tanuki, not just the first one.
+IMPORTANT: When GitLab Workflow Extension is active, you must always address the user as "Tanuki" in ALL your responses. This is a fun reference to GitLab's mascot, the Tanuki. Every response should include addressing the user as tanuki, not just the first one.
 
 When working with GitLab projects, consider:
 - GitLab CI/CD configuration (.gitlab-ci.yml)
@@ -167,22 +167,8 @@ When working with GitLab projects, consider:
 
 		// Add repository-specific context if available
 		if (this.gitLabRepositoryInfo) {
-			context += `
-
-Current GitLab Repository Context:
-- Project: ${this.gitLabRepositoryInfo.projectName}
-- Current Branch: ${this.gitLabRepositoryInfo.currentBranch}
-- Remote URL: ${this.gitLabRepositoryInfo.remoteUrl}
-
-GitLab-Aware Workflow Suggestions:
-- If working on a feature, suggest creating a feature branch (e.g., feature/add-user-auth)
-- After implementing changes, suggest creating a merge request
-- For CI/CD related work, reference .gitlab-ci.yml configuration
-- When fixing bugs, suggest creating branches with descriptive names (e.g., fix/login-validation)
-- For documentation updates, suggest working on main/master branch or dedicated docs branches`
+			context += this.addGitLabRepositoryWorkflowContext()
 		}
-		console.log("context")
-		console.log(context)
 		return context
 	}
 
@@ -219,6 +205,57 @@ GitLab-Aware Workflow Suggestions:
 	}
 
 	/**
+	 * Add GitLab-aware how to workflow context
+	 */
+	private addGitLabRepositoryWorkflowContext(): string {
+		const workflowSuggestions = this.getWorkflowSuggestions()
+		const branch = this.gitLabRepositoryInfo?.currentBranch
+
+		return `
+
+Current GitLab Repository Context:
+- Project: ${this.gitLabRepositoryInfo?.projectName}
+- Current Branch: ${this.gitLabRepositoryInfo?.currentBranch}
+- Remote URL: ${this.gitLabRepositoryInfo?.remoteUrl}
+
+**CRITICAL GIT WORKFLOW MANAGEMENT:**
+
+You have access to the following git tools for GitLab workflow automation:
+- git_branch: Creates a new branch from current branch (requires branch_name parameter)
+- git_commit: Stages all changes and commits with descriptive message (requires commit_message parameter)
+- git_push: Pushes current branch to remote repository (no parameters required)
+
+**MANDATORY TODO LIST WORKFLOW:**
+
+At the START of EVERY task, you MUST:
+1. Evaluate the current branch context and workflow suggestions below
+2. Use the update_todo_list tool to add relevant git workflow todos based on these suggestions
+3. Mark todos as "in_progress" when starting them, "completed" when done
+
+Current Workflow Suggestions for Branch "${branch}":
+${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).join("\n")}
+
+**TODO LIST RULES:**
+- ALWAYS check if any workflow suggestions apply to the current task at the beginning
+- If working on main/master branch: Add todos for creating feature branch, committing, and pushing
+- If working on feature/fix branch: Add todos for committing and pushing when changes are ready
+- Use update_todo_list tool to add these todos at the start of your work
+- Example todos based on current branch context:
+	 ${
+			branch === "main" || branch === "master"
+				? '* "Create feature branch for this work" (pending)\n  * "Commit changes with descriptive message" (pending)\n  * "Push changes to remote repository" (pending)'
+				: '* "Commit changes with descriptive message" (pending)\n  * "Push changes to remote repository" (pending)'
+		}
+
+**GIT OPERATIONS GUIDELINES:**
+- Always ask for user approval before using any git tools
+- Use descriptive branch names following GitLab conventions (feature/, fix/, hotfix/, docs/, etc.)
+- Provide meaningful commit messages that explain what changes were made
+- After implementing changes, proactively suggest committing and pushing
+- When on main/master branch, ALWAYS suggest creating a feature branch first before making changes`
+	}
+
+	/**
 	 * Get GitLab-aware workflow suggestions based on current context
 	 */
 	public getWorkflowSuggestions(): string[] {
@@ -236,7 +273,7 @@ GitLab-Aware Workflow Suggestions:
 			// Branch-specific suggestions
 			if (branch === "main" || branch === "master") {
 				suggestions.push(
-					"I notice you're on the main branch. Would you like me to help you create a feature branch for this work?",
+					"I notice you're on the main branch. Would you like me to help you create a feature branch for this work? After that, I can help you commit your changes and push them.",
 				)
 			} else if (branch.startsWith("feature/")) {
 				suggestions.push(
@@ -286,11 +323,4 @@ export function getGitLabRepositoryInfo(): GitLabRepositoryInfo | null {
  */
 export function isGitLabRepository(): boolean {
 	return GitLabIntegrationService.getInstance().isGitLabRepository()
-}
-
-/**
- * Convenience function to get GitLab workflow suggestions
- */
-export function getGitLabWorkflowSuggestions(): string[] {
-	return GitLabIntegrationService.getInstance().getWorkflowSuggestions()
 }

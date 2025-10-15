@@ -37,6 +37,9 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
+import { getGitBranchDescription } from "./git-branch"
+import { getGitCommitDescription } from "./git-commit"
+import { getGitPushDescription } from "./git-push"
 // kilocode_change end
 
 // Map of tool names to their description functions
@@ -71,6 +74,9 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	update_todo_list: (args) => getUpdateTodoListDescription(args),
 	run_slash_command: () => getRunSlashCommandDescription(),
 	generate_image: (args) => getGenerateImageDescription(args),
+	git_branch: (args) => getGitBranchDescription(),
+	git_commit: (args) => getGitCommitDescription(),
+	git_push: (args) => getGitPushDescription(),
 }
 
 export function getToolDescriptionsForMode(
@@ -203,4 +209,7 @@ export {
 	getCodebaseSearchDescription,
 	getRunSlashCommandDescription,
 	getGenerateImageDescription,
+	getGitBranchDescription,
+	getGitCommitDescription,
+	getGitPushDescription,
 }

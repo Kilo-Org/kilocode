@@ -7,6 +7,12 @@ vi.mock("vscode", () => ({
 	extensions: {
 		getExtension: vi.fn(),
 	},
+	workspace: {
+		workspaceFolders: null,
+	},
+	Uri: {
+		file: vi.fn((path) => ({ fsPath: path, scheme: "file", authority: "", path, query: "", fragment: "" })),
+	},
 }))
 
 describe("GitLabIntegrationService", () => {
@@ -88,6 +94,53 @@ describe("GitLabIntegrationService", () => {
 			const context = service.getGitLabContext()
 
 			expect(context).toBe("")
+		})
+	})
+
+	describe("getWorkflowSuggestions", () => {
+		it("should return workflow suggestions when GitLab is active and on main branch", () => {
+			// Mock vscode.workspace and git extension for repository detection
+			const mockWorkspace = vi.mocked(vscode.workspace)
+			mockWorkspace.workspaceFolders = [
+				{
+					uri: vscode.Uri.file("/test"),
+					name: "test",
+					index: 0,
+				},
+			]
+
+			const mockGitExtension = {
+				exports: {
+					getAPI: vi.fn().mockReturnValue({
+						repositories: [
+							{
+								state: {
+									HEAD: { name: "main" },
+									remotes: [
+										{
+											name: "origin",
+											fetchUrl: "https://gitlab.com/test/repo.git",
+										},
+									],
+								},
+							},
+						],
+					}),
+				},
+			}
+
+			vi.mocked(vscode.extensions.getExtension).mockImplementation((id) => {
+				if (id === "vscode.git") return mockGitExtension as any
+				if (id === "gitlab.gitlab-workflow") return { isActive: true } as any
+				return undefined
+			})
+
+			const service = GitLabIntegrationService.getInstance()
+			const suggestions = service.getWorkflowSuggestions()
+
+			expect(suggestions).toContain(
+				"I notice you're on the main branch. Would you like me to help you create a feature branch for this work? After that, I can help you commit your changes and push them.",
+			)
 		})
 	})
 

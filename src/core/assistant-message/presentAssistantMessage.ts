@@ -31,6 +31,9 @@ import { newTaskTool } from "../tools/newTaskTool"
 import { updateTodoListTool } from "../tools/updateTodoListTool"
 import { runSlashCommandTool } from "../tools/runSlashCommandTool"
 import { generateImageTool } from "../tools/generateImageTool"
+import { gitBranchTool } from "../tools/gitBranchTool" // kilocode_change
+import { gitCommitTool } from "../tools/gitCommitTool" // kilocode_change
+import { gitPushTool } from "../tools/gitPushTool" // kilocode_change
 
 import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
@@ -238,6 +241,12 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					case "report_bug":
 						return `[${block.name}]`
 					case "condense":
+						return `[${block.name}]`
+					case "git_branch":
+						return `[${block.name} for '${block.params.branch_name}']`
+					case "git_commit":
+						return `[${block.name} for '${block.params.commit_message}']`
+					case "git_push":
 						return `[${block.name}]`
 					// kilocode_change end
 					case "run_slash_command":
@@ -584,6 +593,15 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "git_branch":
+					await gitBranchTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "git_commit":
+					await gitCommitTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "git_push":
+					await gitPushTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
 				case "run_slash_command":
