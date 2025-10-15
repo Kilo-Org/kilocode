@@ -58,8 +58,8 @@ Easily share, back up, and template your custom modes. This feature lets you exp
 1. Click the Import Mode button (upload icon) in the Modes view
 2. Select the mode's YAML file
 3. Choose the import level:
-   - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
-   - **Global:** Available in all projects (saved to global settings)
+    - **Project:** Available only in current workspace (saved to `.kilocodemodes` file)
+    - **Global:** Available in all projects (saved to global settings)
 
 ### Changing Slugs on Import
 
@@ -112,45 +112,42 @@ YAML is now the preferred format for defining custom modes due to better readabi
 
 ```yaml
 customModes:
-  - slug: docs-writer
-    name: 📝 Documentation Writer
-    description: A specialized mode for writing and editing technical documentation.
-    roleDefinition: You are a technical writer specializing in clear documentation.
-    whenToUse: Use this mode for writing and editing documentation.
-    customInstructions: Focus on clarity and completeness in documentation.
-    groups:
-      - read
-      - - edit # First element of tuple
-        - fileRegex: \.(md|mdx)$ # Second element is the options object
-          description: Markdown files only
-      - browser
-  - slug: another-mode
-    name: Another Mode
-    # ... other properties
+    - slug: docs-writer
+      name: 📝 Documentation Writer
+      description: A specialized mode for writing and editing technical documentation.
+      roleDefinition: You are a technical writer specializing in clear documentation.
+      whenToUse: Use this mode for writing and editing documentation.
+      customInstructions: Focus on clarity and completeness in documentation.
+      groups:
+          - read
+          - - edit # First element of tuple
+            - fileRegex: \.(md|mdx)$ # Second element is the options object
+              description: Markdown files only
+          - browser
+    - slug: another-mode
+      name: Another Mode
+      # ... other properties
 ```
 
 ### JSON Alternative
 
 ```json
 {
-  "customModes": [
-    {
-      "slug": "docs-writer",
-      "name": "📝 Documentation Writer",
-      "description": "A specialized mode for writing and editing technical documentation.",
-      "roleDefinition": "You are a technical writer specializing in clear documentation.",
-      "whenToUse": "Use this mode for writing and editing documentation.",
-      "customInstructions": "Focus on clarity and completeness in documentation.",
-      "groups": [
-        "read",
-        [
-          "edit",
-          { "fileRegex": "\\.(md|mdx)$", "description": "Markdown files only" }
-        ],
-        "browser"
-      ]
-    }
-  ]
+	"customModes": [
+		{
+			"slug": "docs-writer",
+			"name": "📝 Documentation Writer",
+			"description": "A specialized mode for writing and editing technical documentation.",
+			"roleDefinition": "You are a technical writer specializing in clear documentation.",
+			"whenToUse": "Use this mode for writing and editing documentation.",
+			"customInstructions": "Focus on clarity and completeness in documentation.",
+			"groups": [
+				"read",
+				["edit", { "fileRegex": "\\.(md|mdx)$", "description": "Markdown files only" }],
+				"browser"
+			]
+		}
+	]
 }
 ```
 
@@ -192,9 +189,9 @@ customModes:
 
 ```yaml
 roleDefinition: >-
-  You are a test engineer with expertise in:
-  - Writing comprehensive test suites
-  - Test-driven development
+    You are a test engineer with expertise in:
+    - Writing comprehensive test suites
+    - Test-driven development
 ```
 
 **JSON Example:** `"roleDefinition": "You are a technical writer specializing in clear documentation."`
@@ -204,8 +201,8 @@ roleDefinition: >-
 - **Purpose:** Array/list defining which tool groups the mode can access and any file restrictions
 - **Available Tool Groups:** `"read"`, `"edit"`, `"browser"`, `"command"`, `"mcp"`
 - **Structure:**
-  - Simple string for unrestricted access: `"edit"`
-  - Tuple (two-element array) for restricted access: `["edit", { fileRegex: "pattern", description: "optional" }]`
+    - Simple string for unrestricted access: `"edit"`
+    - Tuple (two-element array) for restricted access: `["edit", { fileRegex: "pattern", description: "optional" }]`
 
 **File Restrictions for "edit" group:**
 
@@ -218,11 +215,11 @@ roleDefinition: >-
 
 ```yaml
 groups:
-  - read
-  - - edit # First element of tuple
-    - fileRegex: \.(js|ts)$ # Second element is the options object
-      description: JS/TS files only
-  - command
+    - read
+    - - edit # First element of tuple
+      - fileRegex: \.(js|ts)$ # Second element is the options object
+        description: JS/TS files only
+    - command
 ```
 
 **JSON Example:**
@@ -253,9 +250,9 @@ groups:
 
 ```yaml
 customInstructions: |-
-  When writing tests:
-  - Use describe/it blocks
-  - Include meaningful descriptions
+    When writing tests:
+    - Use describe/it blocks
+    - Include meaningful descriptions
 ```
 
 **JSON Example:** `"customInstructions": "Focus on explaining concepts and providing examples."`
@@ -339,33 +336,33 @@ You can override Kilo Code's built-in modes (like 💻 Code, 🪲 Debug, ❓ Ask
 
 ```yaml
 customModes:
-  - slug: code # Matches the default 'code' mode slug
-    name: 💻 Code (Global Override)
-    roleDefinition: You are a software engineer with global-specific constraints.
-    whenToUse: This globally overridden code mode is for JS/TS tasks.
-    customInstructions: Focus on project-specific JS/TS development.
-    groups:
-      - read
-      - - edit
-        - fileRegex: \.(js|ts)$
-          description: JS/TS files only
+    - slug: code # Matches the default 'code' mode slug
+      name: 💻 Code (Global Override)
+      roleDefinition: You are a software engineer with global-specific constraints.
+      whenToUse: This globally overridden code mode is for JS/TS tasks.
+      customInstructions: Focus on project-specific JS/TS development.
+      groups:
+          - read
+          - - edit
+            - fileRegex: \.(js|ts)$
+              description: JS/TS files only
 ```
 
 ### Project-Specific Override Example
 
 ```yaml
 customModes:
-  - slug: code # Matches the default 'code' mode slug
-    name: 💻 Code (Project-Specific)
-    roleDefinition: You are a software engineer with project-specific constraints for this project.
-    whenToUse: This project-specific code mode is for Python tasks within this project.
-    customInstructions: Adhere to PEP8 and use type hints.
-    groups:
-      - read
-      - - edit
-        - fileRegex: \.py$
-          description: Python files only
-      - command
+    - slug: code # Matches the default 'code' mode slug
+      name: 💻 Code (Project-Specific)
+      roleDefinition: You are a software engineer with project-specific constraints for this project.
+      whenToUse: This project-specific code mode is for Python tasks within this project.
+      customInstructions: Adhere to PEP8 and use type hints.
+      groups:
+          - read
+          - - edit
+            - fileRegex: \.py$
+              description: Python files only
+          - command
 ```
 
 ## Understanding Regex in Custom Modes
@@ -427,53 +424,53 @@ When a mode attempts to edit a file that doesn't match its `fileRegex` pattern, 
 
 ```yaml
 customModes:
-  - slug: docs-writer
-    name: 📝 Documentation Writer
-    description: Specialized for writing and editing technical documentation
-    roleDefinition: You are a technical writer specializing in clear documentation
-    groups:
-      - read
-      - - edit
-        - fileRegex: \.md$
-          description: Markdown files only
-    customInstructions: Focus on clear explanations and examples
+    - slug: docs-writer
+      name: 📝 Documentation Writer
+      description: Specialized for writing and editing technical documentation
+      roleDefinition: You are a technical writer specializing in clear documentation
+      groups:
+          - read
+          - - edit
+            - fileRegex: \.md$
+              description: Markdown files only
+      customInstructions: Focus on clear explanations and examples
 ```
 
 ### Test Engineer with File Restrictions (YAML)
 
 ```yaml
 customModes:
-  - slug: test-engineer
-    name: 🧪 Test Engineer
-    description: Focused on writing and maintaining test suites
-    roleDefinition: You are a test engineer focused on code quality
-    whenToUse: Use for writing tests, debugging test failures, and improving test coverage
-    groups:
-      - read
-      - - edit
-        - fileRegex: \.(test|spec)\.(js|ts)$
-          description: Test files only
-      - command
+    - slug: test-engineer
+      name: 🧪 Test Engineer
+      description: Focused on writing and maintaining test suites
+      roleDefinition: You are a test engineer focused on code quality
+      whenToUse: Use for writing tests, debugging test failures, and improving test coverage
+      groups:
+          - read
+          - - edit
+            - fileRegex: \.(test|spec)\.(js|ts)$
+              description: Test files only
+          - command
 ```
 
 ### Security Review Mode (YAML)
 
 ```yaml
 customModes:
-  - slug: security-review
-    name: 🔒 Security Reviewer
-    description: Read-only security analysis and vulnerability assessment
-    roleDefinition: You are a security specialist reviewing code for vulnerabilities
-    whenToUse: Use for security reviews and vulnerability assessments
-    customInstructions: |-
-      Focus on:
-      - Input validation issues
-      - Authentication and authorization flaws
-      - Data exposure risks
-      - Injection vulnerabilities
-    groups:
-      - read
-      - browser
+    - slug: security-review
+      name: 🔒 Security Reviewer
+      description: Read-only security analysis and vulnerability assessment
+      roleDefinition: You are a security specialist reviewing code for vulnerabilities
+      whenToUse: Use for security reviews and vulnerability assessments
+      customInstructions: |-
+          Focus on:
+          - Input validation issues
+          - Authentication and authorization flaws
+          - Data exposure risks
+          - Injection vulnerabilities
+      groups:
+          - read
+          - browser
 ```
 
 ## Troubleshooting

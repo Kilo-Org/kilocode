@@ -274,11 +274,44 @@
 					},
 					"then": {
 						"properties": {
-							"kilocodeToken": { "type": "string" },
-							"kilocodeModel": { "type": "string" },
+							"kilocodeToken": {
+								"type": "string",
+								"description": "Kilocode API token"
+							},
+							"kilocodeModel": {
+								"type": "string",
+								"description": "Kilocode model ID"
+							},
 							"kilocodeOrganizationId": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "kilocode" },
+							"kilocodeToken": { "type": "string", "minLength": 1 }
 						},
-						"required": ["kilocodeToken", "kilocodeModel"]
+						"required": ["kilocodeToken"]
+					},
+					"then": {
+						"properties": {
+							"kilocodeToken": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "kilocode" },
+							"kilocodeModel": { "type": "string", "minLength": 1 }
+						},
+						"required": ["kilocodeModel"]
+					},
+					"then": {
+						"properties": {
+							"kilocodeModel": { "minLength": 1 }
+						}
 					}
 				},
 				{
@@ -287,11 +320,44 @@
 					},
 					"then": {
 						"properties": {
-							"apiKey": { "type": "string" },
-							"apiModelId": { "type": "string" },
+							"apiKey": {
+								"type": "string",
+								"description": "Anthropic API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Anthropic model ID"
+							},
 							"anthropicBaseUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "anthropic" },
+							"apiKey": { "type": "string", "minLength": 1 }
 						},
-						"required": ["apiKey", "apiModelId"]
+						"required": ["apiKey"]
+					},
+					"then": {
+						"properties": {
+							"apiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "anthropic" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
 					}
 				},
 				{
@@ -300,11 +366,30 @@
 					},
 					"then": {
 						"properties": {
-							"openAiNativeApiKey": { "type": "string" },
-							"apiModelId": { "type": "string" },
+							"openAiNativeApiKey": {
+								"type": "string",
+								"description": "OpenAI Native API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							},
 							"openAiNativeBaseUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai-native" },
+							"openAiNativeApiKey": { "type": "string", "minLength": 1 }
 						},
-						"required": ["openAiNativeApiKey", "apiModelId"]
+						"required": ["openAiNativeApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openAiNativeApiKey": { "minLength": 10 }
+						}
 					}
 				},
 				{
@@ -313,11 +398,44 @@
 					},
 					"then": {
 						"properties": {
-							"openRouterApiKey": { "type": "string" },
-							"openRouterModelId": { "type": "string" },
+							"openRouterApiKey": {
+								"type": "string",
+								"description": "OpenRouter API key"
+							},
+							"openRouterModelId": {
+								"type": "string",
+								"description": "OpenRouter model ID"
+							},
 							"openRouterBaseUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openrouter" },
+							"openRouterApiKey": { "type": "string", "minLength": 1 }
 						},
-						"required": ["openRouterApiKey", "openRouterModelId"]
+						"required": ["openRouterApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openRouterApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openrouter" },
+							"openRouterModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openRouterModelId"]
+					},
+					"then": {
+						"properties": {
+							"openRouterModelId": { "minLength": 1 }
+						}
 					}
 				},
 				{
@@ -326,11 +444,44 @@
 					},
 					"then": {
 						"properties": {
-							"ollamaBaseUrl": { "type": "string" },
-							"ollamaModelId": { "type": "string" },
+							"ollamaBaseUrl": {
+								"type": "string",
+								"description": "Ollama base URL"
+							},
+							"ollamaModelId": {
+								"type": "string",
+								"description": "Ollama model ID"
+							},
 							"ollamaApiKey": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ollama" },
+							"ollamaBaseUrl": { "type": "string", "minLength": 1 }
 						},
-						"required": ["ollamaBaseUrl", "ollamaModelId"]
+						"required": ["ollamaBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"ollamaBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ollama" },
+							"ollamaModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ollamaModelId"]
+					},
+					"then": {
+						"properties": {
+							"ollamaModelId": { "minLength": 1 }
+						}
 					}
 				},
 				{
@@ -339,11 +490,27 @@
 					},
 					"then": {
 						"properties": {
-							"openAiApiKey": { "type": "string" },
+							"openAiApiKey": {
+								"type": "string",
+								"description": "OpenAI API key"
+							},
 							"openAiBaseUrl": { "type": "string" },
 							"apiModelId": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai" },
+							"openAiApiKey": { "type": "string", "minLength": 1 }
 						},
 						"required": ["openAiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"openAiApiKey": { "minLength": 10 }
+						}
 					}
 				}
 			]

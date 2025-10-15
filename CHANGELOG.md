@@ -1,5 +1,11 @@
 # kilo-code
 
+## [v4.104.0]
+
+- [#2673](https://github.com/Kilo-Org/kilocode/pull/2673) [`cf1aca2`](https://github.com/Kilo-Org/kilocode/commit/cf1aca2fb6c0f16414d42737a4ebf90357f5a796) Thanks [@mcowger](https://github.com/mcowger)! - Update Gemini provider to support dynamic model retrieval.
+
+- [#2749](https://github.com/Kilo-Org/kilocode/pull/2749) [`7e493ec`](https://github.com/Kilo-Org/kilocode/commit/7e493ec35c01687b78cb2fb54b3f92c6b42662aa) Thanks [@mcowger](https://github.com/mcowger)! - Improved OpenAI compatible parser's ability to yield reasoning content
+
 ## [v4.103.1]
 
 - [#2962](https://github.com/Kilo-Org/kilocode/pull/2962) [`a424824`](https://github.com/Kilo-Org/kilocode/commit/a424824269b3cafdf58bcdb1acf7ed6151f32e0b) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved the error message when an unsupported reasoning effort value is chosen

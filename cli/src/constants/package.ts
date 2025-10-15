@@ -1,4 +1,6 @@
+import { version } from "../../package.json"
+
 export const Package = {
 	name: "@kilocode/cli",
-	version: "1.0.0",
+	version,
 }

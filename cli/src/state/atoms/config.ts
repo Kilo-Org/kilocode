@@ -3,11 +3,15 @@ import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import { DEFAULT_CONFIG } from "../../config/defaults.js"
 import { loadConfig, saveConfig } from "../../config/persistence.js"
 import { mapConfigToExtensionState } from "../../config/mapper.js"
+import type { ValidationResult } from "../../config/validation.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
 
 // Core config atom - holds the current configuration
 export const configAtom = atom<CLIConfig>(DEFAULT_CONFIG)
+
+// Validation result atom - holds the validation status of the current config
+export const configValidationAtom = atom<ValidationResult>({ valid: true })
 
 // Loading state atom
 export const configLoadingAtom = atom<boolean>(false)
@@ -43,16 +47,25 @@ export const loadConfigAtom = atom(null, async (get, set, mode?: string) => {
 		set(configLoadingAtom, true)
 		set(configErrorAtom, null)
 
-		const config = await loadConfig()
+		const result = await loadConfig()
+
+		// Store validation result
+		set(configValidationAtom, result.validation)
 
 		// Override mode if provided (e.g., from CLI options)
-		const finalConfig = mode ? { ...config, mode } : config
+		const finalConfig = mode ? { ...result.config, mode } : result.config
 		set(configAtom, finalConfig)
 
-		logs.info("Config loaded successfully", "ConfigAtoms", { mode: finalConfig.mode })
-
-		// Track config loaded
-		getTelemetryService().trackConfigLoaded(finalConfig)
+		if (result.validation.valid) {
+			logs.info("Config loaded successfully", "ConfigAtoms", { mode: finalConfig.mode })
+			// Track config loaded
+			getTelemetryService().trackConfigLoaded(finalConfig)
+		} else {
+			logs.warn("Config loaded with validation errors", "ConfigAtoms", {
+				errors: result.validation.errors,
+				mode: finalConfig.mode,
+			})
+		}
 
 		return finalConfig
 	} catch (error) {

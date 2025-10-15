@@ -12,8 +12,10 @@ import {
 	doubaoModels,
 	featherlessModels,
 	fireworksModels,
-	syntheticModels, // kilocode_change
-	geminiModels,
+	// kilocode_change start
+	syntheticModels,
+	// geminiModels,
+	// kilocode_change end
 	groqModels,
 	ioIntelligenceModels,
 	mistralModels,
@@ -49,6 +51,7 @@ export const dynamicProviders = [
 	"kilocode-openrouter",
 	"ovhcloud",
 	"chutes",
+	"gemini",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -697,7 +700,18 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	Exclude<
+		ProviderName,
+		| "fake-ai"
+		| "human-relay"
+		// kilocode_change start
+		| "gemini"
+		| "gemini-cli"
+		// kilocode_change end
+		| "lmstudio"
+		| "openai"
+		| "ollama"
+	>,
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
@@ -743,12 +757,12 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "Synthetic",
 		models: Object.keys(syntheticModels),
 	},
+	//gemini: {
+	//	id: "gemini",
+	//	label: "Google Gemini",
+	//	models: Object.keys(geminiModels),
+	//},
 	// kilocode_change end
-	gemini: {
-		id: "gemini",
-		label: "Google Gemini",
-		models: Object.keys(geminiModels),
-	},
 	groq: { id: "groq", label: "Groq", models: Object.keys(groqModels) },
 	"io-intelligence": {
 		id: "io-intelligence",

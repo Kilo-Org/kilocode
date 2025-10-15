@@ -56,7 +56,7 @@ describe("Config Persistence - Merge with Defaults", () => {
 				{
 					id: "default",
 					provider: "kilocode",
-					kilocodeToken: "",
+					kilocodeToken: "valid-token-1234567890",
 					kilocodeModel: "anthropic/claude-sonnet-4",
 				},
 			],
@@ -64,10 +64,11 @@ describe("Config Persistence - Merge with Defaults", () => {
 
 		await fs.writeFile(testFile, JSON.stringify(partialConfig, null, 2))
 
-		const loaded = await loadConfig()
+		const result = await loadConfig()
 
-		expect(loaded.autoApproval).toBeDefined()
-		expect(loaded.autoApproval).toEqual(DEFAULT_AUTO_APPROVAL)
+		expect(result.config.autoApproval).toBeDefined()
+		expect(result.config.autoApproval).toEqual(DEFAULT_AUTO_APPROVAL)
+		expect(result.validation.valid).toBe(true)
 	})
 
 	it("should fill missing autoApproval nested keys with defaults", async () => {
@@ -81,7 +82,7 @@ describe("Config Persistence - Merge with Defaults", () => {
 				{
 					id: "default",
 					provider: "kilocode",
-					kilocodeToken: "",
+					kilocodeToken: "valid-token-1234567890",
 					kilocodeModel: "anthropic/claude-sonnet-4",
 				},
 			],
@@ -96,16 +97,17 @@ describe("Config Persistence - Merge with Defaults", () => {
 
 		await fs.writeFile(testFile, JSON.stringify(partialConfig, null, 2))
 
-		const loaded = await loadConfig()
+		const result = await loadConfig()
 
-		expect(loaded.autoApproval?.enabled).toBe(true)
-		expect(loaded.autoApproval?.read?.enabled).toBe(false)
-		expect(loaded.autoApproval?.read?.outside).toBe(DEFAULT_AUTO_APPROVAL.read?.outside)
-		expect(loaded.autoApproval?.write).toEqual(DEFAULT_AUTO_APPROVAL.write)
-		expect(loaded.autoApproval?.browser).toEqual(DEFAULT_AUTO_APPROVAL.browser)
-		expect(loaded.autoApproval?.retry).toEqual(DEFAULT_AUTO_APPROVAL.retry)
-		expect(loaded.autoApproval?.execute).toEqual(DEFAULT_AUTO_APPROVAL.execute)
-		expect(loaded.autoApproval?.question).toEqual(DEFAULT_AUTO_APPROVAL.question)
+		expect(result.config.autoApproval?.enabled).toBe(true)
+		expect(result.config.autoApproval?.read?.enabled).toBe(false)
+		expect(result.config.autoApproval?.read?.outside).toBe(DEFAULT_AUTO_APPROVAL.read?.outside)
+		expect(result.config.autoApproval?.write).toEqual(DEFAULT_AUTO_APPROVAL.write)
+		expect(result.config.autoApproval?.browser).toEqual(DEFAULT_AUTO_APPROVAL.browser)
+		expect(result.config.autoApproval?.retry).toEqual(DEFAULT_AUTO_APPROVAL.retry)
+		expect(result.config.autoApproval?.execute).toEqual(DEFAULT_AUTO_APPROVAL.execute)
+		expect(result.config.autoApproval?.question).toEqual(DEFAULT_AUTO_APPROVAL.question)
+		expect(result.validation.valid).toBe(true)
 	})
 
 	it("should preserve existing values while filling missing ones", async () => {
@@ -119,7 +121,7 @@ describe("Config Persistence - Merge with Defaults", () => {
 				{
 					id: "default",
 					provider: "kilocode",
-					kilocodeToken: "test-token",
+					kilocodeToken: "test-token-1234567890",
 					kilocodeModel: "anthropic/claude-sonnet-4",
 				},
 			],
@@ -135,20 +137,21 @@ describe("Config Persistence - Merge with Defaults", () => {
 
 		await fs.writeFile(testFile, JSON.stringify(partialConfig, null, 2))
 
-		const loaded = await loadConfig()
+		const result = await loadConfig()
 
 		// Custom values should be preserved
-		expect(loaded.mode).toBe("architect")
-		expect(loaded.telemetry).toBe(false)
-		expect(loaded.autoApproval?.enabled).toBe(true)
-		expect(loaded.autoApproval?.execute?.enabled).toBe(true)
-		expect(loaded.autoApproval?.execute?.allowed).toEqual(["npm", "git"])
-		expect(loaded.autoApproval?.execute?.denied).toEqual(["rm -rf"])
+		expect(result.config.mode).toBe("architect")
+		expect(result.config.telemetry).toBe(false)
+		expect(result.config.autoApproval?.enabled).toBe(true)
+		expect(result.config.autoApproval?.execute?.enabled).toBe(true)
+		expect(result.config.autoApproval?.execute?.allowed).toEqual(["npm", "git"])
+		expect(result.config.autoApproval?.execute?.denied).toEqual(["rm -rf"])
 
 		// Missing values should be filled with defaults
-		expect(loaded.autoApproval?.read).toEqual(DEFAULT_AUTO_APPROVAL.read)
-		expect(loaded.autoApproval?.write).toEqual(DEFAULT_AUTO_APPROVAL.write)
-		expect(loaded.autoApproval?.retry).toEqual(DEFAULT_AUTO_APPROVAL.retry)
+		expect(result.config.autoApproval?.read).toEqual(DEFAULT_AUTO_APPROVAL.read)
+		expect(result.config.autoApproval?.write).toEqual(DEFAULT_AUTO_APPROVAL.write)
+		expect(result.config.autoApproval?.retry).toEqual(DEFAULT_AUTO_APPROVAL.retry)
+		expect(result.validation.valid).toBe(true)
 	})
 
 	it("should save merged config back to file", async () => {
@@ -162,7 +165,7 @@ describe("Config Persistence - Merge with Defaults", () => {
 				{
 					id: "default",
 					provider: "kilocode",
-					kilocodeToken: "",
+					kilocodeToken: "valid-token-1234567890",
 					kilocodeModel: "anthropic/claude-sonnet-4",
 				},
 			],
@@ -193,7 +196,7 @@ describe("Config Persistence - Merge with Defaults", () => {
 				{
 					id: "default",
 					provider: "kilocode",
-					kilocodeToken: "",
+					kilocodeToken: "valid-token-1234567890",
 					kilocodeModel: "anthropic/claude-sonnet-4",
 				},
 			],
@@ -211,11 +214,12 @@ describe("Config Persistence - Merge with Defaults", () => {
 
 		await fs.writeFile(testFile, JSON.stringify(partialConfig, null, 2))
 
-		const loaded = await loadConfig()
+		const result = await loadConfig()
 
-		expect(loaded.autoApproval?.retry?.enabled).toBe(true)
-		expect(loaded.autoApproval?.retry?.delay).toBe(DEFAULT_AUTO_APPROVAL.retry?.delay)
-		expect(loaded.autoApproval?.question?.enabled).toBe(DEFAULT_AUTO_APPROVAL.question?.enabled)
-		expect(loaded.autoApproval?.question?.timeout).toBe(DEFAULT_AUTO_APPROVAL.question?.timeout)
+		expect(result.config.autoApproval?.retry?.enabled).toBe(true)
+		expect(result.config.autoApproval?.retry?.delay).toBe(DEFAULT_AUTO_APPROVAL.retry?.delay)
+		expect(result.config.autoApproval?.question?.enabled).toBe(DEFAULT_AUTO_APPROVAL.question?.enabled)
+		expect(result.config.autoApproval?.question?.timeout).toBe(DEFAULT_AUTO_APPROVAL.question?.timeout)
+		expect(result.validation.valid).toBe(true)
 	})
 })
