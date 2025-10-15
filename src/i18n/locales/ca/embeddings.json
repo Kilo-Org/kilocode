@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "No s'ha pogut connectar a la base de dades vectorial Qdrant. Assegura't que Qdrant estigui funcionant i sigui accessible a {{qdrantUrl}}. Error: {{errorMessage}}",
-		"vectorDimensionMismatch": "No s'ha pogut actualitzar l'índex de vectors per al nou model. Prova d'esborrar l'índex i tornar a començar. Detalls: {{errorMessage}}"
+		"vectorDimensionMismatch": "No s'ha pogut actualitzar l'índex de vectors per al nou model. Prova d'esborrar l'índex i tornar a començar. Detalls: {{errorMessage}}",
+		"lancedbStoreInitFailed": "No s'ha pogut inicialitzar l'emmagatzematge vectorial LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "No s'ha pogut carregar el mòdul LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Ha fallat l'autenticació. Comproveu la vostra clau d'API a la configuració.",
