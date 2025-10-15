@@ -82,6 +82,25 @@ describe("combineCommandSequences", () => {
 				ts: 1625097601000,
 			})
 		})
+
+		it("should not duplicate commands when they have the same timestamp", () => {
+			// This reproduces the bug where the refactored code would add the same combined message twice
+			// when two command messages had the same timestamp
+			const messages: ClineMessage[] = [
+				{ type: "ask", ask: "command", text: "mkdir -p core/vscode-test-harness/src/util", ts: 1625097600000 },
+				{ type: "ask", ask: "command", text: "mkdir -p core/vscode-test-harness/src/util", ts: 1625097600000 },
+			]
+
+			const result = combineCommandSequences(messages)
+
+			expect(result).toHaveLength(1)
+			expect(result[0]).toEqual({
+				type: "ask",
+				ask: "command",
+				text: "mkdir -p core/vscode-test-harness/src/util",
+				ts: 1625097600000,
+			})
+		})
 	})
 
 	describe("MCP server responses", () => {

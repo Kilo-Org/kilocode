@@ -121,6 +121,8 @@ export function combineCommandSequences(messages: ClineMessage[]): ClineMessage[
 
 	// Build final result: filter out processed messages and use combined versions
 	const result: ClineMessage[] = []
+	const addedTimestamps = new Set<number>()
+
 	for (let i = 0; i < messages.length; i++) {
 		const msg = messages[i]
 
@@ -136,7 +138,11 @@ export function combineCommandSequences(messages: ClineMessage[]): ClineMessage[
 
 		// Use combined version if available
 		if (combinedMessages.has(msg.ts)) {
-			result.push(combinedMessages.get(msg.ts)!)
+			// Only add if we haven't already added a message with this timestamp
+			if (!addedTimestamps.has(msg.ts)) {
+				result.push(combinedMessages.get(msg.ts)!)
+				addedTimestamps.add(msg.ts)
+			}
 		} else {
 			result.push(msg)
 		}
