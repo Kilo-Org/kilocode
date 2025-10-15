@@ -9,6 +9,7 @@ import * as crypto from "crypto"
 import * as os from "os"
 import { KiloCodePaths } from "../../utils/paths.js"
 import { logs } from "../logs.js"
+import { getKilocodeUrl } from "../../../../src/shared/kilocode/token.js"
 
 /**
  * User identity structure
@@ -107,7 +108,7 @@ export class IdentityManager {
 
 		try {
 			// Fetch user profile from Kilocode API
-			const response = await fetch("https://api.kilocode.ai/api/profile", {
+			const response = await fetch(getKilocodeUrl({ subdomain: "api", path: "/api/profile" }), {
 				headers: {
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",

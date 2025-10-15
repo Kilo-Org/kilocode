@@ -1,7 +1,43 @@
+export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
+
+const globalKilocodeBackendUrl: string | null =
+	process.env.KILOCODE_BACKEND_BASE_URL ??
+	(typeof window !== "undefined" && (window as any).KILOCODE_BACKEND_BASE_URL) ??
+	DEFAULT_KILOCODE_BACKEND_URL
+
+export type KilocodeUrlOptions = {
+	subdomain?: "api" | "app" | null
+	path?: string
+	queryParams?: Record<string, string>
+	baseUrl?: string
+}
+
+/**
+ * Centralized helper function to construct KiloCode URLs with consistent patterns
+ * @param options Configuration for URL construction
+ * @returns Fully constructed KiloCode URL
+ */
+export function getKilocodeUrl(options: KilocodeUrlOptions = {}): string {
+	const { subdomain = null, path = "", queryParams = {}, baseUrl = globalKilocodeBackendUrl } = options
+	const url = new URL(baseUrl ?? DEFAULT_KILOCODE_BACKEND_URL)
+
+	if (subdomain) {
+		url.hostname = `${subdomain}.${url.hostname}`
+	}
+	if (path) {
+		url.pathname = path.startsWith("/") ? path : `/${path}`
+	}
+	Object.entries(queryParams).forEach(([key, value]) => {
+		url.searchParams.set(key, value)
+	})
+
+	return url.toString()
+}
+
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 	if (kilocodeToken) {
 		try {
-			const payload_string = kilocodeToken.split(".")[1]
+			const payload_string = kilocodeToken.split(".")[1] ?? ""
 			const payload_json =
 				typeof atob !== "undefined" ? atob(payload_string) : Buffer.from(payload_string, "base64").toString()
 			const payload = JSON.parse(payload_json)
@@ -11,5 +47,5 @@ export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
-	return "https://api.kilocode.ai"
+	return getKilocodeUrl({ subdomain: "api" })
 }

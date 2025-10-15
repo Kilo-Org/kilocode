@@ -1,6 +1,7 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
 import { DEFAULT_HEADERS } from "../api/providers/constants.js"
+import { getKilocodeUrl } from "../shared/kilocode/token.js"
 
 config()
 
@@ -23,7 +24,7 @@ function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
-	return "https://api.kilocode.ai"
+	return getKilocodeUrl({ subdomain: "api" })
 }
 
 export class LLMClient {

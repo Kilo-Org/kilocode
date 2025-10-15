@@ -25,6 +25,6 @@
 		"jsxImportSource": "react",
 		"types": ["node"]
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "../src/shared/kilocode/token.ts"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

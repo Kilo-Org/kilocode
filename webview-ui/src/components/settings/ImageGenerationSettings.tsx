@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { VSCodeCheckbox, VSCodeTextField, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
+import { getKilocodeUrl } from "@roo/kilocode/token"
 
 interface ImageGenerationSettingsProps {
 	enabled: boolean
@@ -151,11 +152,15 @@ export const ImageGenerationSettings = ({
 									<>
 										{t("settings:experimental.IMAGE_GENERATION.getApiKeyText")}{" "}
 										<a
-											href="https://app.kilocode.ai/profile?personal=true"
+											href={getKilocodeUrl({
+												subdomain: "app",
+												path: "/profile",
+												queryParams: { personal: "true" },
+											})}
 											target="_blank"
 											rel="noopener noreferrer"
 											className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground">
-											app.kilocode.ai/profile
+											{getKilocodeUrl({ subdomain: "app", path: "/profile" })}
 										</a>
 									</>
 								)}
