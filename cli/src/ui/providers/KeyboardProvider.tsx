@@ -9,7 +9,7 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { useStdin } from "ink"
 import readline from "node:readline"
 import { PassThrough } from "node:stream"
-import type { Key, KeyboardProviderConfig } from "../../types/keyboard.js"
+import type { KeyboardProviderConfig } from "../../types/keyboard.js"
 import {
 	broadcastKeyEventAtom,
 	setPasteModeAtom,
@@ -26,7 +26,8 @@ import {
 	debugKeystrokeLoggingAtom,
 	setDebugLoggingAtom,
 	clearBuffersAtom,
-} from "../../state/atoms/keypress.js"
+	setupKeyboardAtom,
+} from "../../state/atoms/keyboard.js"
 import {
 	parseKittySequence,
 	isPasteModeBoundary,
@@ -72,6 +73,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const setKittyProtocol = useSetAtom(setKittyProtocolAtom)
 	const setDebugLogging = useSetAtom(setDebugLoggingAtom)
 	const clearBuffers = useSetAtom(clearBuffersAtom)
+	const setupKeyboard = useSetAtom(setupKeyboardAtom)
 
 	// Jotai getters (for reading current state)
 	const pasteBuffer = useAtomValue(pasteBufferAtom)
@@ -131,6 +133,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		// Save original raw mode state
 		const wasRaw = stdin.isRaw
 		let kittyEnabled = false
+
+		// Setup centralized keyboard handler first
+		const unsubscribeKeyboard = setupKeyboard()
 
 		// Async initialization
 		const init = async () => {
@@ -412,6 +417,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 			rl.close()
 
+			// Cleanup keyboard handler
+			unsubscribeKeyboard()
+
 			// Disable Kitty keyboard protocol if it was enabled
 			const currentKittyState = isKittyEnabled
 			if (currentKittyState) {
@@ -444,6 +452,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		appendToKittyBuffer,
 		clearKittyBuffer,
 		clearBuffers,
+		setKittyProtocol,
 		pasteBuffer,
 		dragBuffer,
 		kittyBuffer,
@@ -453,6 +462,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		completeDrag,
 		clearDragTimer,
 		clearBackslashTimer,
+		setupKeyboard,
 	])
 
 	return <>{children}</>

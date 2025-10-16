@@ -25,7 +25,6 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 
 	// Global state - buffer is the single source of truth
 	const buffer = useAtomValue(textBufferAtom)
-	const cursorPosition = useAtomValue(cursorPositionAtom)
 
 	// Calculate scroll offset to keep cursor in view
 	const scrollOffset = useMemo(() => {

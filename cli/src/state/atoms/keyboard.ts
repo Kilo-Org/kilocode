@@ -20,6 +20,7 @@ import {
 	cursorPositionAtom,
 	inputModeAtom,
 	type InputMode,
+	isStreamingAtom,
 } from "./ui.js"
 import {
 	isApprovalPendingAtom,
@@ -29,6 +30,8 @@ import {
 	rejectAtom,
 	executeSelectedAtom,
 } from "./approval.js"
+import { hasResumeTaskAtom } from "./extension.js"
+import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
 
 // ============================================================================
 // Core State Atoms
@@ -682,16 +685,44 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 	return
 }
 
+function handleGlobalHotkeys(get: any, set: any, key: Key): boolean {
+	switch (key.name) {
+		case "x":
+			if (key.ctrl) {
+				const isStreaming = get(isStreamingAtom)
+				if (isStreaming) {
+					set(cancelTaskAtom)
+				}
+				return true
+			}
+			break
+		case "r":
+			if (key.ctrl) {
+				const hasResumeTask = get(hasResumeTaskAtom)
+				if (hasResumeTask) {
+					set(resumeTaskAtom)
+				}
+				return true
+			}
+			break
+	}
+	return false
+}
+
 /**
  * Main keyboard handler that routes based on mode
  * This is the central keyboard handling atom that all key events go through
  */
-export const keyboardHandlerAtom = atom(null, (get, set, key: Key) => {
-	// Determine current mode
+export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
+	// Priority 1: Handle global hotkeys first (these work in all modes)
+	if (handleGlobalHotkeys(get, set, key)) {
+		return
+	}
+
+	// Priority 2: Determine current mode and route to mode-specific handler
 	const isApprovalPending = get(isApprovalPendingAtom)
 	const isFollowupVisible = get(showFollowupSuggestionsAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
-	const text = get(inputValueAtom)
 
 	// Mode priority: approval > followup > autocomplete > normal
 	let mode: InputMode = "normal"

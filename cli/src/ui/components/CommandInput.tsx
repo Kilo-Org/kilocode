@@ -6,7 +6,7 @@
 import React, { useEffect } from "react"
 import { Box, Text } from "ink"
 import { useSetAtom, useAtomValue } from "jotai"
-import { setupKeyboardAtom, submissionCallbackAtom } from "../../state/atoms/keypress.js"
+import { submissionCallbackAtom } from "../../state/atoms/keyboard.js"
 import { selectedIndexAtom } from "../../state/atoms/ui.js"
 import { MultilineTextInput } from "./MultilineTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
@@ -32,7 +32,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	const theme = useTheme()
 
 	// Use the command input hook for autocomplete functionality
-	const { inputValue, isAutocompleteVisible, commandSuggestions, argumentSuggestions } = useCommandInput()
+	const { isAutocompleteVisible, commandSuggestions, argumentSuggestions } = useCommandInput()
 
 	// Use the approval handler hook for approval functionality
 	// This hook sets up the approval callbacks that the keyboard handler uses
@@ -42,7 +42,6 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	const { suggestions: followupSuggestions, isVisible: isFollowupVisible } = useFollowupSuggestions()
 
 	// Setup centralized keyboard handler
-	const setupKeyboard = useSetAtom(setupKeyboardAtom)
 	const setSubmissionCallback = useSetAtom(submissionCallbackAtom)
 	const sharedSelectedIndex = useAtomValue(selectedIndexAtom)
 
@@ -50,15 +49,6 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	useEffect(() => {
 		setSubmissionCallback({ callback: onSubmit })
 	}, [onSubmit, setSubmissionCallback])
-
-	// Setup keyboard event handling
-	useEffect(() => {
-		if (!disabled) {
-			const cleanup = setupKeyboard()
-			return cleanup
-		}
-		return undefined
-	}, [disabled, setupKeyboard])
 
 	// Determine suggestion type for autocomplete menu
 	const suggestionType =

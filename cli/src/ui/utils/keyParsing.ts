@@ -17,7 +17,6 @@ import {
 	KITTY_KEYCODE_TAB,
 	KITTY_KEYCODE_BACKSPACE,
 	KITTY_KEYCODE_ENTER,
-	KITTY_KEYCODE_NUMPAD_ENTER,
 	KITTY_CSI_U_TERMINATOR,
 	KITTY_CSI_TILDE_TERMINATOR,
 	PASTE_MODE_PREFIX,
@@ -197,7 +196,6 @@ export function parseKittySequence(buffer: string): ParseResult {
 				[KITTY_KEYCODE_TAB]: "tab",
 				[KITTY_KEYCODE_BACKSPACE]: "backspace",
 				[KITTY_KEYCODE_ENTER]: "return",
-				// KITTY_KEYCODE_NUMPAD_ENTER has same value as ENTER, so commented out
 			}
 
 			const name = kittyKeyCodeToName[keyCode]
@@ -282,34 +280,6 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	return { key: null, consumedLength: 0 }
-}
-
-/**
- * Parse legacy ANSI escape sequences
- */
-export function parseLegacySequence(sequence: string): Key | null {
-	// Handle arrow keys
-	if (sequence === `${ESC}[A`) return { name: "up", ctrl: false, meta: false, shift: false, paste: false, sequence }
-	if (sequence === `${ESC}[B`) return { name: "down", ctrl: false, meta: false, shift: false, paste: false, sequence }
-	if (sequence === `${ESC}[C`)
-		return { name: "right", ctrl: false, meta: false, shift: false, paste: false, sequence }
-	if (sequence === `${ESC}[D`) return { name: "left", ctrl: false, meta: false, shift: false, paste: false, sequence }
-
-	// Handle Home/End
-	if (sequence === `${ESC}[H`) return { name: "home", ctrl: false, meta: false, shift: false, paste: false, sequence }
-	if (sequence === `${ESC}[F`) return { name: "end", ctrl: false, meta: false, shift: false, paste: false, sequence }
-
-	// Handle Page Up/Down
-	if (sequence === `${ESC}[5~`)
-		return { name: "pageup", ctrl: false, meta: false, shift: false, paste: false, sequence }
-	if (sequence === `${ESC}[6~`)
-		return { name: "pagedown", ctrl: false, meta: false, shift: false, paste: false, sequence }
-
-	// Handle Delete
-	if (sequence === `${ESC}[3~`)
-		return { name: "delete", ctrl: false, meta: false, shift: false, paste: false, sequence }
-
-	return null
 }
 
 /**

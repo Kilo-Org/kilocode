@@ -59,7 +59,7 @@ vi.mock("../../../state/hooks/useTheme.js", () => ({
 }))
 
 // Mock the keyboard atoms
-vi.mock("../../../state/atoms/keypress.js", () => ({
+vi.mock("../../../state/atoms/keyboard.js", () => ({
 	setupKeyboardAtom: {},
 	submissionCallbackAtom: {},
 }))

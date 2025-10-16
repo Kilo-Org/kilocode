@@ -8,7 +8,7 @@ import {
 	argumentSuggestionsAtom,
 	selectedIndexAtom,
 } from "../ui.js"
-import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keypress.js"
+import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"

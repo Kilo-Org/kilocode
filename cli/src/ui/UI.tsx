@@ -6,7 +6,6 @@
 import React, { useCallback, useEffect, useRef } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { useKeyboard } from "../state/hooks/useKeyboard.js"
 import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
@@ -24,7 +23,6 @@ import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
-import { HOTKEYS } from "../constants/keyboard/hotkeys.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -85,23 +83,6 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			}, 500)
 		}
 	}, [shouldExit, exitReason, options.ci, onExit])
-
-	// In CI mode, we don't use useKeyboard because it tries to enable raw mode on stdin
-	// which fails when stdin is piped. The app stays alive through the message loop instead.
-	useKeyboard(
-		{
-			hotkeys: [
-				{
-					hotkey: HOTKEYS.EXIT,
-					handler: () => {
-						logs.info("Exit hotkey pressed, exiting...", "UI")
-						onExit()
-					},
-				},
-			],
-		},
-		{ active: !options.ci },
-	)
 
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {

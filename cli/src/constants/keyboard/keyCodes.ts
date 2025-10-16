@@ -17,7 +17,6 @@ export const CHAR_CODE_DELETE = 127
 export const KITTY_KEYCODE_TAB = 9
 export const KITTY_KEYCODE_BACKSPACE = 127
 export const KITTY_KEYCODE_ENTER = 13
-export const KITTY_KEYCODE_NUMPAD_ENTER = 13
 export const KITTY_KEYCODE_ESCAPE = 27
 export const KITTY_KEYCODE_INSERT = 2
 export const KITTY_KEYCODE_DELETE = 3
@@ -39,3 +38,34 @@ export const KITTY_KEYCODE_F9 = 20
 export const KITTY_KEYCODE_F10 = 21
 export const KITTY_KEYCODE_F11 = 23
 export const KITTY_KEYCODE_F12 = 24
+
+// Alt key character mapping for macOS
+// These are the characters produced when Alt is held on macOS
+export const ALT_KEY_CHARACTER_MAP: Record<string, string> = {
+	"\u00E5": "a", // å
+	"\u222B": "b", // ∫
+	"\u00E7": "c", // ç
+	"\u2202": "d", // ∂
+	"\u00B4": "e", // ´
+	"\u0192": "f", // ƒ
+	"\u00A9": "g", // ©
+	"\u02D9": "h", // ˙
+	"\u02C6": "i", // ˆ
+	"\u2206": "j", // ∆
+	"\u02DA": "k", // ˚
+	"\u00AC": "l", // ¬
+	"\u00B5": "m", // µ
+	"\u02DC": "n", // ˜
+	"\u00F8": "o", // ø
+	"\u03C0": "p", // π
+	"\u0153": "q", // œ
+	"\u00AE": "r", // ®
+	"\u00DF": "s", // ß
+	"\u2020": "t", // †
+	"\u00A8": "u", // ¨
+	"\u221A": "v", // √
+	"\u2211": "w", // ∑
+	"\u2248": "x", // ≈
+	"\u00A5": "y", // ¥
+	"\u03A9": "z", // Ω
+}
