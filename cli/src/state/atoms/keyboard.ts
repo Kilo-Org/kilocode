@@ -14,15 +14,12 @@ import {
 	followupSuggestionsAtom,
 	showFollowupSuggestionsAtom,
 	clearFollowupSuggestionsAtom,
-	cursorPositionAtom,
 	inputModeAtom,
 	type InputMode,
 	isStreamingAtom,
 } from "./ui.js"
 import {
-	textBufferStateAtom,
 	textBufferStringAtom,
-	textBufferCursorAtom,
 	moveUpAtom,
 	moveDownAtom,
 	moveLeftAtom,

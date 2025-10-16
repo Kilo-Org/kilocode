@@ -3,13 +3,7 @@ import { Box, Text } from "ink"
 import chalk from "chalk"
 import { useAtomValue } from "jotai"
 import { useTheme } from "../../state/hooks/useTheme.js"
-import { cursorPositionAtom } from "../../state/atoms/ui.js"
-import {
-	textBufferStateAtom,
-	textBufferIsEmptyAtom,
-	getVisualLinesAtom,
-	type VisualLine,
-} from "../../state/atoms/textBuffer.js"
+import { textBufferStateAtom, textBufferIsEmptyAtom, getVisualLinesAtom } from "../../state/atoms/textBuffer.js"
 import { useSetAtom } from "jotai"
 
 interface MultilineTextInputProps {
