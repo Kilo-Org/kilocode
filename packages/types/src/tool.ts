@@ -38,11 +38,11 @@ export const toolNames = [
 	"new_rule",
 	"report_bug",
 	"condense",
+	"terminal_ctrl",
 	// kilocode_change end
 	"update_todo_list",
 	"run_slash_command",
 	"generate_image",
-	"terminal_ctrl", // kilocode_change: new terminal control tool
 ] as const
 
 export const toolNamesSchema = z.enum(toolNames)

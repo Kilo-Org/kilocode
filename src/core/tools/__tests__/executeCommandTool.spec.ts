@@ -66,8 +66,10 @@ beforeEach(() => {
 
 		// Get the custom working directory if provided
 		const customCwd = block.params.cwd
-		const runInBackground = block.params.run_in_background === "true" // kilocode_change
-		const [userRejected, result] = await mockExecuteCommand(cline, block.params.command, customCwd, runInBackground) // kilocode_change - add run_in_background
+		// kilocode_change start: Extract run_in_background parameter
+		const runInBackground = block.params.run_in_background === "true"
+		const [userRejected, result] = await mockExecuteCommand(cline, block.params.command, customCwd, runInBackground)
+		// kilocode_change end: Extract run_in_background parameter
 
 		if (userRejected) {
 			cline.didRejectTool = true
@@ -347,5 +349,5 @@ describe("executeCommandTool", () => {
 			expect(lastCall[3]).toBe(false) // run_in_background parameter should be false
 		})
 	})
-	// kilocode_change end
+	// kilocode_change end: Background execution parameter tests
 })

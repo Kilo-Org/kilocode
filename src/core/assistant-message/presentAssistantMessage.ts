@@ -42,7 +42,7 @@ import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 import { yieldPromise } from "../kilocode"
-import { terminalCtrlTool } from "../tools/terminalCtrlTool"
+import { terminalCtrlTool } from "../tools/terminalCtrlTool" // kilocode_change
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -233,7 +233,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 						const modeName = getModeBySlug(mode, customModes)?.name ?? mode
 						return `[${block.name} in ${modeName} mode: '${message}']`
 					}
-					// kilocode_change start
+					// kilocode_change start: Add new tool cases
 					case "new_rule":
 						return `[${block.name} for '${block.params.path}']`
 					case "report_bug":
@@ -242,13 +242,15 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 						return `[${block.name}]`
 					case "terminal_ctrl":
 						return `[${block.name}']`
-					// kilocode_change end
+					// kilocode_change end: Add new tool cases
 					case "run_slash_command":
 						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
 					case "generate_image":
 						return `[${block.name} for '${block.params.path}']`
+					// kilocode_change start: Add default case for new tools
 					default:
 						return `[${block.name}]`
+					// kilocode_change end: Add default case for new tools
 				}
 			}
 
@@ -580,7 +582,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 						askFinishSubTaskApproval,
 					)
 					break
-				// kilocode_change start
+				// kilocode_change start: Add new tool case executions
 				case "new_rule":
 					await newRuleTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
@@ -593,7 +595,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				case "terminal_ctrl":
 					await terminalCtrlTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				// kilocode_change end
+				// kilocode_change end: Add new tool case executions
 				case "run_slash_command":
 					await runSlashCommandTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
