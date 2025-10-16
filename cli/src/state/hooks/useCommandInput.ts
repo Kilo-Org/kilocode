@@ -17,7 +17,7 @@ import {
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
-	selectedSuggestionIndexAtom,
+	selectedIndexAtom,
 	suggestionCountAtom,
 	isCommandInputAtom,
 	commandQueryAtom,
@@ -133,7 +133,7 @@ export function useCommandInput(): UseCommandInputReturn {
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)
-	const selectedIndex = useAtomValue(selectedSuggestionIndexAtom)
+	const selectedIndex = useAtomValue(selectedIndexAtom)
 	const suggestionCount = useAtomValue(suggestionCountAtom)
 	const isCommand = useAtomValue(isCommandInputAtom)
 	const commandQuery = useAtomValue(commandQueryAtom)

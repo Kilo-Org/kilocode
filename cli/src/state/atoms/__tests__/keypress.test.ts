@@ -1,0 +1,496 @@
+import { describe, it, expect, beforeEach, vi } from "vitest"
+import { createStore } from "jotai"
+import {
+	textBufferAtom,
+	cursorPositionAtom,
+	showAutocompleteAtom,
+	suggestionsAtom,
+	argumentSuggestionsAtom,
+	selectedIndexAtom,
+} from "../ui.js"
+import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keypress.js"
+import type { Key } from "../../../types/keyboard.js"
+import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
+import type { Command } from "../../../commands/core/types.js"
+
+describe("keypress atoms", () => {
+	let store: ReturnType<typeof createStore>
+
+	beforeEach(() => {
+		store = createStore()
+	})
+
+	describe("text input handling", () => {
+		it("should update textBufferAtom when typing characters", () => {
+			// Initial state
+			const initialBuffer = store.get(textBufferAtom)
+			expect(initialBuffer.text).toBe("")
+
+			// Simulate typing 'h'
+			const key: Key = {
+				name: "h",
+				sequence: "h",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			store.set(keyboardHandlerAtom, key)
+
+			// Check that buffer was updated
+			const updatedBuffer = store.get(textBufferAtom)
+			expect(updatedBuffer.text).toBe("h")
+		})
+
+		it("should update textBufferAtom when typing multiple characters", () => {
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("hello")
+		})
+
+		it("should update cursor position when typing", () => {
+			// Type 'hi'
+			const chars = ["h", "i"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			const cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(2)
+			expect(cursor.row).toBe(0)
+		})
+
+		it("should handle backspace correctly", () => {
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press backspace
+			const backspaceKey: Key = {
+				name: "backspace",
+				sequence: "\x7f",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, backspaceKey)
+
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("hell")
+		})
+
+		it("should handle newline insertion with Shift+Enter", () => {
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Shift+Enter
+			const shiftEnterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: true,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, shiftEnterKey)
+
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("hello\n")
+			expect(buffer.lineCount).toBe(2)
+		})
+	})
+
+	describe("submission callback", () => {
+		it("should call submission callback when Enter is pressed with text", () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Enter
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, enterKey)
+
+			expect(mockCallback).toHaveBeenCalledWith("hello")
+		})
+
+		it("should not call submission callback when callback is null", () => {
+			// Don't set a callback
+			store.set(submissionCallbackAtom, { callback: null })
+
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Enter - should not throw error
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, enterKey)).not.toThrow()
+		})
+
+		it("should not call submission callback when text is empty", () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			// Press Enter without typing anything
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, enterKey)
+
+			expect(mockCallback).not.toHaveBeenCalled()
+		})
+
+		it("should not call submission callback when text is only whitespace", () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			// Type spaces
+			const spaces = [" ", " ", " "]
+			for (const space of spaces) {
+				const key: Key = {
+					name: "space",
+					sequence: space,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Enter
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, enterKey)
+
+			expect(mockCallback).not.toHaveBeenCalled()
+		})
+
+		it("should handle non-function callback gracefully", () => {
+			// Set callback to a non-function value
+			store.set(submissionCallbackAtom, { callback: "not a function" as any })
+
+			// Type 'hello'
+			const chars = ["h", "e", "l", "l", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press Enter - should not throw error
+			const enterKey: Key = {
+				name: "return",
+				sequence: "\r",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			expect(() => store.set(keyboardHandlerAtom, enterKey)).not.toThrow()
+		})
+
+		it("should convert Buffer to string when submitting", () => {
+			const mockCallback = vi.fn()
+			store.set(submissionCallbackAtom, { callback: mockCallback })
+
+			// Submit a Buffer instead of string
+			const buffer = Buffer.from("/help")
+			store.set(submitInputAtom, buffer as any)
+
+			// Should convert Buffer to string and call callback
+			expect(mockCallback).toHaveBeenCalledWith("/help")
+		})
+	})
+
+	describe("tab autocomplete", () => {
+		it("should complete command by appending only missing part", () => {
+			// Type '/mo'
+			const chars = ["/", "m", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up autocomplete state with 'mode' suggestion
+			store.set(showAutocompleteAtom, true)
+			const mockCommand: Command = {
+				name: "mode",
+				description: "Switch mode",
+				aliases: [],
+				usage: "/mode <mode-name>",
+				examples: ["/mode code"],
+				category: "navigation",
+				handler: vi.fn(),
+			}
+			const mockSuggestion: CommandSuggestion = {
+				command: mockCommand,
+				matchScore: 90,
+				highlightedName: "mode",
+			}
+			store.set(suggestionsAtom, [mockSuggestion])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should append only 'de' to complete '/mode'
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("/mode")
+		})
+
+		it("should complete argument by appending only missing part", () => {
+			// Type '/mode tes'
+			const input = "/mode tes"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up autocomplete state with 'test' suggestion
+			store.set(showAutocompleteAtom, true)
+			const mockArgumentSuggestion: ArgumentSuggestion = {
+				value: "test",
+				description: "Test mode",
+				matchScore: 90,
+				highlightedValue: "test",
+			}
+			store.set(argumentSuggestionsAtom, [mockArgumentSuggestion])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should append only 't' to complete '/mode test'
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("/mode test")
+		})
+
+		it("should handle exact match completion", () => {
+			// Type '/help'
+			const input = "/help"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up autocomplete state with 'help' suggestion (exact match)
+			store.set(showAutocompleteAtom, true)
+			const mockCommand: Command = {
+				name: "help",
+				description: "Show help",
+				aliases: [],
+				usage: "/help",
+				examples: ["/help"],
+				category: "system",
+				handler: vi.fn(),
+			}
+			const mockSuggestion: CommandSuggestion = {
+				command: mockCommand,
+				matchScore: 100,
+				highlightedName: "help",
+			}
+			store.set(suggestionsAtom, [mockSuggestion])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should not add anything (already complete)
+			const buffer = store.get(textBufferAtom)
+			expect(buffer.text).toBe("/help")
+		})
+
+		it("should update cursor position after tab completion", () => {
+			// Type '/mo'
+			const chars = ["/", "m", "o"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up autocomplete state
+			store.set(showAutocompleteAtom, true)
+			const mockCommand: Command = {
+				name: "mode",
+				description: "Switch mode",
+				aliases: [],
+				usage: "/mode <mode-name>",
+				examples: ["/mode code"],
+				category: "navigation",
+				handler: vi.fn(),
+			}
+			const mockSuggestion: CommandSuggestion = {
+				command: mockCommand,
+				matchScore: 90,
+				highlightedName: "mode",
+			}
+			store.set(suggestionsAtom, [mockSuggestion])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Cursor should be at end of completed text
+			const cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(5) // '/mode' has 5 characters
+		})
+	})
+})

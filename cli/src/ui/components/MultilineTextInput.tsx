@@ -1,206 +1,55 @@
-import React, { useState, useEffect, useRef, useMemo } from "react"
+import React, { useMemo } from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
-import { TextBuffer } from "../utils/textBuffer.js"
+import { useAtomValue, useSetAtom } from "jotai"
 import { useTheme } from "../../state/hooks/useTheme.js"
-import { useKeyboard } from "../../state/hooks/useKeyboard.js"
-import { HOTKEYS } from "../../constants/keyboard/hotkeys.js"
+import { textBufferAtom, cursorPositionAtom } from "../../state/atoms/ui.js"
 
 interface MultilineTextInputProps {
-	value: string
-	onChange: (value: string) => void
-	onSubmit?: () => void
 	placeholder?: string
 	showCursor?: boolean
 	maxLines?: number
 	width?: number
 	focus?: boolean
-	disabled?: boolean
 }
 
 export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
-	value,
-	onChange,
-	onSubmit,
 	placeholder = "",
 	showCursor = true,
 	maxLines = 5,
 	width = 50,
 	focus = true,
-	disabled = false,
 }) => {
 	// Theme
 	const theme = useTheme()
 
-	// Create TextBuffer instance
-	const bufferRef = useRef<TextBuffer>(new TextBuffer(value))
-	const buffer = bufferRef.current
+	// Global state - buffer is the single source of truth
+	const buffer = useAtomValue(textBufferAtom)
+	const cursorPosition = useAtomValue(cursorPositionAtom)
 
-	// Track scroll position for viewport
-	const [scrollOffset, setScrollOffset] = useState(0)
-	// Force re-render on cursor movement
-	const [, forceUpdate] = useState({})
+	// Calculate scroll offset to keep cursor in view
+	const scrollOffset = useMemo(() => {
+		const visualLines = buffer.getVisualLines(width)
+		const cursorRow = buffer.cursor.row
 
-	// Update buffer when value changes externally
-	useEffect(() => {
-		if (buffer.text !== value) {
-			buffer.setText(value)
-			// Auto-scroll to cursor when text changes
-			const newScroll = buffer.getScrollToCursor(width, maxLines, scrollOffset)
-			setScrollOffset(newScroll)
-			// Force re-render to reflect the change immediately
-			forceUpdate({})
+		// If content fits in viewport, no scrolling needed
+		if (visualLines.length <= maxLines) {
+			return 0
 		}
-	}, [value, buffer, width, maxLines, scrollOffset])
 
-	// Handle text changes
-	const handleTextChange = () => {
-		onChange(buffer.text)
-		// Auto-scroll to keep cursor in view
-		const newScroll = buffer.getScrollToCursor(width, maxLines, scrollOffset)
-		setScrollOffset(newScroll)
-	}
+		// Calculate scroll to keep cursor in view
+		let offset = 0
+		if (cursorRow >= maxLines) {
+			offset = cursorRow - maxLines + 1
+		}
 
-	// Handle cursor movement
-	const handleCursorMove = () => {
-		const newScroll = buffer.getScrollToCursor(width, maxLines, scrollOffset)
-		setScrollOffset(newScroll)
-		// Force re-render to show new cursor position
-		forceUpdate({})
-	}
+		return offset
+	}, [buffer, width, maxLines])
 
-	// Use the new hotkey-based keyboard hook
-	useKeyboard(
-		{
-			hotkeys: [
-				// New line handling
-				{
-					hotkey: HOTKEYS.NEW_LINE,
-					handler: () => {
-						buffer.insertNewline()
-						handleTextChange()
-					},
-				},
-				// Send/submit handling
-				{
-					hotkey: HOTKEYS.SEND,
-					handler: () => {
-						onSubmit?.()
-					},
-				},
-				// Navigation keys
-				{
-					hotkey: HOTKEYS.ARROW_UP,
-					handler: () => {
-						if (buffer.moveUp()) {
-							handleCursorMove()
-						}
-					},
-				},
-				{
-					hotkey: HOTKEYS.ARROW_DOWN,
-					handler: () => {
-						if (buffer.moveDown()) {
-							handleCursorMove()
-						}
-					},
-				},
-				{
-					hotkey: HOTKEYS.ARROW_LEFT,
-					handler: () => {
-						if (buffer.moveLeft()) {
-							handleCursorMove()
-						}
-					},
-				},
-				{
-					hotkey: HOTKEYS.ARROW_RIGHT,
-					handler: () => {
-						if (buffer.moveRight()) {
-							handleCursorMove()
-						}
-					},
-				},
-				// Text deletion
-				{
-					hotkey: HOTKEYS.BACKSPACE,
-					handler: () => {
-						if (buffer.backspace()) {
-							handleTextChange()
-						}
-					},
-				},
-				{
-					hotkey: HOTKEYS.DELETE,
-					handler: () => {
-						if (buffer.deleteChar()) {
-							handleTextChange()
-						}
-					},
-				},
-				{
-					hotkey: HOTKEYS.DELETE_WORD,
-					handler: () => {
-						buffer.deleteWord()
-						handleTextChange()
-					},
-				},
-				// Line operations
-				{
-					hotkey: HOTKEYS.LINE_START,
-					handler: () => {
-						buffer.moveToLineStart()
-						handleCursorMove()
-					},
-				},
-				{
-					hotkey: HOTKEYS.LINE_END,
-					handler: () => {
-						buffer.moveToLineEnd()
-						handleCursorMove()
-					},
-				},
-				{
-					hotkey: HOTKEYS.KILL_LINE,
-					handler: () => {
-						buffer.killLine()
-						handleTextChange()
-					},
-				},
-				{
-					hotkey: HOTKEYS.KILL_LINE_LEFT,
-					handler: () => {
-						buffer.killLineLeft()
-						handleTextChange()
-					},
-				},
-				// Escape to clear
-				{
-					hotkey: HOTKEYS.ESCAPE,
-					handler: () => {
-						buffer.clear()
-						handleTextChange()
-					},
-				},
-			],
-			// Handle regular character input
-			onInput: (char) => {
-				buffer.insertChar(char)
-				handleTextChange()
-			},
-			// Handle paste events
-			onPaste: (pastedText) => {
-				buffer.insertText(pastedText)
-				handleTextChange()
-			},
-		},
-		{ active: focus && !disabled },
-	)
-
-	// Get viewport for rendering - include buffer state in dependencies
+	// Get viewport for rendering
 	const viewport = useMemo(() => {
 		return buffer.getViewport(width, maxLines, scrollOffset)
-	}, [buffer, width, maxLines, scrollOffset, value, buffer.cursor.row, buffer.cursor.column])
+	}, [buffer, width, maxLines, scrollOffset])
 
 	// Render placeholder if empty
 	if (buffer.isEmpty && placeholder) {

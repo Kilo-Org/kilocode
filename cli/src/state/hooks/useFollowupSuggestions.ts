@@ -9,7 +9,7 @@ import type { FollowupSuggestion } from "../atoms/ui.js"
 import {
 	followupSuggestionsAtom,
 	showFollowupSuggestionsAtom,
-	selectedFollowupIndexAtom,
+	selectedIndexAtom,
 	setFollowupSuggestionsAtom,
 	clearFollowupSuggestionsAtom,
 	selectNextFollowupAtom,
@@ -103,7 +103,7 @@ export function useFollowupSuggestions(): UseFollowupSuggestionsReturn {
 	// Read atoms
 	const suggestions = useAtomValue(followupSuggestionsAtom)
 	const isVisible = useAtomValue(showFollowupSuggestionsAtom)
-	const selectedIndex = useAtomValue(selectedFollowupIndexAtom)
+	const selectedIndex = useAtomValue(selectedIndexAtom)
 	const selectedSuggestion = useAtomValue(getSelectedFollowupAtom)
 	const hasSuggestions = useAtomValue(hasFollowupSuggestionsAtom)
 

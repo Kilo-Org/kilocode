@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom, useStore } from "jotai"
-import { useCallback } from "react"
+import { useCallback, useEffect } from "react"
 import {
 	pendingApprovalAtom,
 	approvalOptionsAtom,
@@ -11,6 +11,9 @@ import {
 	startApprovalProcessingAtom,
 	completeApprovalProcessingAtom,
 	approvalProcessingAtom,
+	approveCallbackAtom,
+	rejectCallbackAtom,
+	executeSelectedCallbackAtom,
 	type ApprovalOption,
 } from "../atoms/approval.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
@@ -87,6 +90,10 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 
 	const selectNext = useSetAtom(selectNextApprovalAtom)
 	const selectPrevious = useSetAtom(selectPreviousApprovalAtom)
+
+	const setApproveCallback = useSetAtom(approveCallbackAtom)
+	const setRejectCallback = useSetAtom(rejectCallbackAtom)
+	const setExecuteSelectedCallback = useSetAtom(executeSelectedCallbackAtom)
 
 	const { sendAskResponse } = useWebviewMessage()
 	const approvalTelemetry = useApprovalTelemetry()
@@ -222,6 +229,13 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 		},
 		[selectedOption, approve, reject],
 	)
+
+	// Set callbacks for keyboard handler to use
+	useEffect(() => {
+		setApproveCallback(() => approve)
+		setRejectCallback(() => reject)
+		setExecuteSelectedCallback(() => executeSelected)
+	}, [approve, reject, executeSelected, setApproveCallback, setRejectCallback, setExecuteSelectedCallback])
 
 	// Note: All auto-approval logic has been moved to useApprovalEffect hook
 	// and the approvalDecision service. This hook now only handles manual

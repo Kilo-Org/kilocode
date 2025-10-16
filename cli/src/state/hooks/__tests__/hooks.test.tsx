@@ -9,7 +9,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import { extensionServiceAtom, isServiceReadyAtom, serviceErrorAtom, isInitializingAtom } from "../../atoms/service.js"
 import { chatMessagesAtom, currentTaskAtom, taskTodosAtom, apiConfigurationAtom } from "../../atoms/extension.js"
-import { inputValueAtom } from "../../atoms/ui.js"
+import { inputValueAtom, setInputValueAtom } from "../../atoms/ui.js"
 import type { ExtensionChatMessage, HistoryItem, TodoItem } from "../../../types/messages.js"
 
 describe("Hook Atoms", () => {
@@ -165,18 +165,18 @@ describe("Hook Atoms", () => {
 
 	describe("Command Input Atoms", () => {
 		it("should store input value", () => {
-			store.set(inputValueAtom, "/mode")
+			store.set(setInputValueAtom, "/mode")
 			expect(store.get(inputValueAtom)).toBe("/mode")
 		})
 
 		it("should detect command input", () => {
-			store.set(inputValueAtom, "/test")
+			store.set(setInputValueAtom, "/test")
 			const input = store.get(inputValueAtom)
 			expect(input.startsWith("/")).toBe(true)
 		})
 
 		it("should extract command query", () => {
-			store.set(inputValueAtom, "/mode code")
+			store.set(setInputValueAtom, "/mode code")
 			const input = store.get(inputValueAtom)
 			const query = input.startsWith("/") ? input.slice(1) : ""
 			expect(query).toBe("mode code")
