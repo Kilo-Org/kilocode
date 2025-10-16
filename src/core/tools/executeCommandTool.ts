@@ -30,7 +30,7 @@ export async function executeCommandTool(
 ) {
 	let command: string | undefined = block.params.command
 	const customCwd: string | undefined = block.params.cwd
-	const runInBackground: boolean = block.params.run_in_background === "true"
+	const runInBackground: boolean = block.params.run_in_background === "true" // kilocode_change
 
 	try {
 		if (block.partial) {
@@ -95,7 +95,7 @@ export async function executeCommandTool(
 				terminalOutputLineLimit,
 				terminalOutputCharacterLimit,
 				commandExecutionTimeout,
-				runInBackground,
+				runInBackground, // kilocode_change
 			}
 
 			try {
@@ -143,7 +143,7 @@ export type ExecuteCommandOptions = {
 	terminalOutputLineLimit?: number
 	terminalOutputCharacterLimit?: number
 	commandExecutionTimeout?: number
-	runInBackground?: boolean
+	runInBackground?: boolean // kilocode_change
 }
 
 export async function executeCommand(

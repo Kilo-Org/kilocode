@@ -1,3 +1,4 @@
+// kilocode_change - new file: Terminal control tool for managing background processes
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { formatResponse } from "../prompts/responses"

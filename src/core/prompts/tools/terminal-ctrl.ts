@@ -1,3 +1,4 @@
+// kilocode_change - new file: Terminal control tool prompt description
 import { ToolArgs } from "./types"
 
 export function getTerminalCtrlDescription(args: ToolArgs): string | undefined {
