@@ -96,7 +96,7 @@ export interface ExecuteCommandToolUse extends ToolUse {
 
 // kilocode_change start: Add terminal control tool interface
 export interface TerminalCtrlToolUse extends ToolUse {
-	name: "terminal_ctrl"
+	name: "terminal_kill"
 	params: Partial<Pick<Record<ToolParamName, string>, "action" | "terminal_id">>
 }
 // kilocode_change end: Add terminal control tool interface
@@ -232,7 +232,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	new_rule: "create new rule",
 	report_bug: "report bug", // kilocode_change
 	condense: "condense the current context window", // kilocode_change
-	terminal_ctrl: "control terminals", // kilocode_change: new terminal control tool
+	terminal_kill: "control terminals", // kilocode_change: new terminal control tool
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
@@ -266,7 +266,7 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 		tools: ["browser_action"],
 	},
 	command: {
-		tools: ["execute_command", "terminal_ctrl"], // kilocode_change add terminal_ctrl
+		tools: ["execute_command", "terminal_kill"], // kilocode_change add terminal_kill
 	},
 	mcp: {
 		tools: ["use_mcp_tool", "access_mcp_resource"],

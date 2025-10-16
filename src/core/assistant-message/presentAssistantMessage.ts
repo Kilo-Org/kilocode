@@ -42,7 +42,7 @@ import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 import { yieldPromise } from "../kilocode"
-import { terminalCtrlTool } from "../tools/terminalCtrlTool" // kilocode_change
+import { terminalKillTool } from "../tools/terminalKillTool" // kilocode_change
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -240,7 +240,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 						return `[${block.name}]`
 					case "condense":
 						return `[${block.name}]`
-					case "terminal_ctrl":
+					case "terminal_kill":
 						return `[${block.name}']`
 					// kilocode_change end: Add new tool cases
 					case "run_slash_command":
@@ -592,8 +592,8 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				case "condense":
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
-				case "terminal_ctrl":
-					await terminalCtrlTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+				case "terminal_kill":
+					await terminalKillTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end: Add new tool case executions
 				case "run_slash_command":

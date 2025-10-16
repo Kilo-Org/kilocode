@@ -5,7 +5,7 @@ import { formatResponse } from "../prompts/responses"
 import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 
-export async function terminalCtrlTool(
+export async function terminalKillTool(
 	task: Task,
 	block: ToolUse,
 	askApproval: AskApproval,
@@ -22,24 +22,17 @@ export async function terminalCtrlTool(
 			return
 		}
 
-		if (!action) {
-			task.consecutiveMistakeCount++
-			task.recordToolError("terminal_ctrl")
-			pushToolResult(await task.sayAndCreateMissingParamError("terminal_ctrl", "action"))
-			return
-		}
-
 		if (!terminalId) {
 			task.consecutiveMistakeCount++
-			task.recordToolError("terminal_ctrl")
-			pushToolResult(await task.sayAndCreateMissingParamError("terminal_ctrl", "terminal_id"))
+			task.recordToolError("terminal_kill")
+			pushToolResult(await task.sayAndCreateMissingParamError("terminal_kill", "terminal_id"))
 			return
 		}
 
 		// Only support kill action for MVP
 		if (action !== "kill") {
 			task.consecutiveMistakeCount++
-			task.recordToolError("terminal_ctrl")
+			task.recordToolError("terminal_kill")
 			pushToolResult(formatResponse.toolError(`Invalid action "${action}". Only "kill" is supported.`))
 			return
 		}
