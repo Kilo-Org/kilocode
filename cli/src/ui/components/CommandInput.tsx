@@ -71,7 +71,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 					placeholder={isApprovalPending ? "Awaiting approval..." : placeholder}
 					showCursor={!isInputDisabled}
 					maxLines={5}
-					width={process.stdout.columns - 6}
+					width={Math.max(10, process.stdout.columns - 6)}
 					focus={!isInputDisabled}
 				/>
 			</Box>
