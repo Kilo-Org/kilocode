@@ -48,6 +48,8 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 			// Auto-scroll to cursor when text changes
 			const newScroll = buffer.getScrollToCursor(width, maxLines, scrollOffset)
 			setScrollOffset(newScroll)
+			// Force re-render to reflect the change immediately
+			forceUpdate({})
 		}
 	}, [value, buffer, width, maxLines, scrollOffset])
 
