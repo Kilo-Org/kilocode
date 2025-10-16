@@ -24,6 +24,225 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	/**
+	 * Find common prefix between two strings
+	 */
+	private findCommonPrefix(str1: string, str2: string): string {
+		let i = 0
+		while (i < str1.length && i < str2.length && str1[i] === str2[i]) {
+			i++
+		}
+		return str1.substring(0, i)
+	}
+
+	/**
+	 * Get effective group for inline completion (handles separated deletion+addition groups)
+	 */
+	private getEffectiveGroup(
+		file: any,
+		groups: GhostSuggestionEditOperation[][],
+		selectedGroupIndex: number,
+	): { group: GhostSuggestionEditOperation[]; type: "+" | "/" | "-" } | null {
+		if (selectedGroupIndex >= groups.length) return null
+
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
+
+		// If selected group is deletion, check if we should use associated addition
+		if (selectedGroupType === "-") {
+			const deleteOps = selectedGroup.filter((op) => op.type === "-")
+			const deletedContent = deleteOps
+				.map((op) => op.content)
+				.join("\n")
+				.trim()
+
+			// Case 1: Placeholder-only deletion
+			if (deletedContent === "<<<AUTOCOMPLETE_HERE>>>") {
+				return this.getNextAdditionGroup(file, groups, selectedGroupIndex)
+			}
+
+			// Case 2: Deletion followed by addition - check what type of handling it needs
+			if (selectedGroupIndex + 1 < groups.length) {
+				const nextGroup = groups[selectedGroupIndex + 1]
+				const nextGroupType = file.getGroupType(nextGroup)
+
+				if (nextGroupType === "+") {
+					const addOps = nextGroup.filter((op) => op.type === "+")
+					const addedContent = addOps
+						.sort((a, b) => a.line - b.line)
+						.map((op) => op.content)
+						.join("\n")
+
+					// Check if added content starts with deleted content (common prefix scenario)
+					if (addedContent.startsWith(deletedContent)) {
+						console.log("[InlineCompletion] Common prefix detected, creating synthetic modification group")
+						console.log("[InlineCompletion] Deleted:", deletedContent.substring(0, 50))
+						console.log("[InlineCompletion] Added:", addedContent.substring(0, 50))
+						// Create synthetic modification group for proper common prefix handling
+						const syntheticGroup = [...selectedGroup, ...nextGroup]
+						return { group: syntheticGroup, type: "/" }
+					}
+
+					// Check if this should be treated as addition after existing content
+					if (this.shouldTreatAsAddition(deletedContent, addedContent)) {
+						return { group: nextGroup, type: "+" }
+					}
+				}
+			}
+
+			return null // Regular deletions use SVG decorations
+		}
+
+		return { group: selectedGroup, type: selectedGroupType }
+	}
+
+	/**
+	 * Get the next addition group if it exists
+	 */
+	private getNextAdditionGroup(
+		file: any,
+		groups: GhostSuggestionEditOperation[][],
+		currentIndex: number,
+	): { group: GhostSuggestionEditOperation[]; type: "+" } | null {
+		if (currentIndex + 1 < groups.length) {
+			const nextGroup = groups[currentIndex + 1]
+			const nextGroupType = file.getGroupType(nextGroup)
+
+			if (nextGroupType === "+") {
+				return { group: nextGroup, type: "+" }
+			}
+		}
+		return null
+	}
+
+	/**
+	 * Check if deletion+addition should be treated as pure addition
+	 */
+	private shouldTreatAsAddition(deletedContent: string, addedContent: string): boolean {
+		// Case 1: Added content starts with deleted content
+		if (addedContent.startsWith(deletedContent)) {
+			// Always return false - let common prefix logic handle this
+			// This ensures proper inline completion with suffix only
+			return false
+		}
+
+		// Case 2: Added content starts with newline - indicates LLM wants to add content after current line
+		return addedContent.startsWith("\n") || addedContent.startsWith("\r\n")
+	}
+
+	/**
+	 * Calculate completion text for different scenarios
+	 */
+	private getCompletionText(
+		groupType: "+" | "/" | "-",
+		group: GhostSuggestionEditOperation[],
+	): { text: string; isAddition: boolean } {
+		if (groupType === "+") {
+			// Pure addition - show entire content
+			const text = group
+				.sort((a, b) => a.line - b.line)
+				.map((op) => op.content)
+				.join("\n")
+			return { text, isAddition: true }
+		}
+
+		// Modification - determine what to show
+		const deleteOps = group.filter((op) => op.type === "-")
+		const addOps = group.filter((op) => op.type === "+")
+
+		if (deleteOps.length === 0 || addOps.length === 0) {
+			return { text: "", isAddition: false }
+		}
+
+		const deletedContent = deleteOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+		const addedContent = addOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+
+		// Check different scenarios for what to show
+		const trimmedDeleted = deletedContent.trim()
+
+		if (trimmedDeleted.length === 0 || trimmedDeleted === "<<<AUTOCOMPLETE_HERE>>>") {
+			// Empty or placeholder deletion - show all added content
+			return { text: addedContent, isAddition: true }
+		}
+
+		if (this.shouldTreatAsAddition(deletedContent, addedContent)) {
+			// Should be treated as addition - show appropriate part
+			if (addedContent.startsWith(deletedContent)) {
+				// Show only new part after existing content
+				return { text: addedContent.substring(deletedContent.length), isAddition: false }
+			} else if (addedContent.startsWith("\n") || addedContent.startsWith("\r\n")) {
+				// Remove leading newline and show rest
+				return { text: addedContent.replace(/^\r?\n/, ""), isAddition: true }
+			}
+		}
+
+		// Regular modification - show suffix after common prefix
+		const commonPrefix = this.findCommonPrefix(deletedContent, addedContent)
+		if (commonPrefix.length === 0) {
+			return { text: "", isAddition: false } // No common prefix - use SVG decoration
+		}
+
+		return { text: addedContent.substring(commonPrefix.length), isAddition: false }
+	}
+
+	/**
+	 * Calculate insertion position and range
+	 */
+	private getInsertionRange(
+		document: vscode.TextDocument,
+		position: vscode.Position,
+		targetLine: number,
+		isAddition: boolean,
+		completionText: string,
+	): vscode.Range {
+		// For pure additions, decide based on whether it's multi-line or single-line
+		if (isAddition) {
+			const hasNewlines = completionText.includes("\n")
+
+			if (hasNewlines) {
+				// Multi-line content should start on next line
+				const nextLine = Math.min(position.line + 1, document.lineCount)
+				const insertPosition = new vscode.Position(nextLine, 0)
+				return new vscode.Range(insertPosition, insertPosition)
+			} else {
+				// Single-line content can continue on current line
+				const currentLineText = document.lineAt(position.line).text
+				const insertPosition = new vscode.Position(position.line, currentLineText.length)
+				return new vscode.Range(insertPosition, insertPosition)
+			}
+		}
+
+		// For modifications (common prefix), check if suffix is multi-line
+		if (targetLine === position.line) {
+			// If completion text is multi-line, start on next line
+			if (completionText.includes("\n")) {
+				const nextLine = Math.min(position.line + 1, document.lineCount)
+				const insertPosition = new vscode.Position(nextLine, 0)
+				return new vscode.Range(insertPosition, insertPosition)
+			} else {
+				// Single-line completion can continue on same line
+				return new vscode.Range(position, position)
+			}
+		}
+
+		// For different lines
+		if (targetLine >= document.lineCount) {
+			const lastLineIndex = Math.max(0, document.lineCount - 1)
+			const lastLineText = document.lineAt(lastLineIndex).text
+			const insertPosition = new vscode.Position(lastLineIndex, lastLineText.length)
+			return new vscode.Range(insertPosition, insertPosition)
+		}
+
+		const insertPosition = new vscode.Position(targetLine, 0)
+		return new vscode.Range(insertPosition, insertPosition)
+	}
+
+	/**
 	 * Provide inline completion items at the given position
 	 */
 	public async provideInlineCompletionItems(
@@ -36,95 +255,60 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return undefined
 		}
 
-		// Check if we have suggestions for this document
+		// Get file suggestions
 		const file = this.suggestions.getFile(document.uri)
 		if (!file) {
 			return undefined
 		}
 
-		const selectedGroup = file.getSelectedGroupOperations()
-		if (selectedGroup.length === 0) {
+		// Get effective group (handles separation of deletion+addition)
+		const groups = file.getGroupsOperations()
+		const selectedGroupIndex = file.getSelectedGroup()
+
+		if (selectedGroupIndex === null) {
 			return undefined
 		}
 
-		// Get the type of the selected group
-		const groupType = file.getGroupType(selectedGroup)
-
-		// Only provide inline completions for pure additions near the cursor
-		// Deletions and modifications are handled with SVG decorations
-		if (groupType === "-" || groupType === "/") {
+		const effectiveGroup = this.getEffectiveGroup(file, groups, selectedGroupIndex)
+		if (!effectiveGroup) {
 			return undefined
 		}
 
-		// Check if suggestion is near cursor - if too far, let decorations handle it
+		// Check distance from cursor
 		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
-		const firstOp = selectedGroup[0]
-		const targetLine = firstOp.line + offset.removed
+		const firstOp = effectiveGroup.group[0]
+		const targetLine =
+			effectiveGroup.type === "+"
+				? firstOp.line + offset.removed
+				: (effectiveGroup.group.find((op) => op.type === "-")?.line || firstOp.line) + offset.added
 
-		// If suggestion is more than 5 lines away from cursor, don't show inline completion
-		// This allows decorations to handle it instead
-		const distanceFromCursor = Math.abs(position.line - targetLine)
-		if (distanceFromCursor > 5) {
+		if (Math.abs(position.line - targetLine) > 5) {
+			return undefined // Too far - let decorations handle it
+		}
+
+		// Get completion text
+		const { text: completionText, isAddition } = this.getCompletionText(effectiveGroup.type, effectiveGroup.group)
+		if (!completionText.trim()) {
 			return undefined
 		}
 
-		// Convert the selected group to an inline completion item
-		const completionItem = this.createInlineCompletionItem(document, position, selectedGroup, groupType, targetLine)
+		// Calculate insertion range
+		let range = this.getInsertionRange(document, position, targetLine, isAddition, completionText)
+		let finalCompletionText = completionText
 
-		if (!completionItem) {
-			return undefined
+		// Add newline prefix only if we're inserting at end of current line
+		if (isAddition && range.start.line === position.line) {
+			finalCompletionText = "\n" + completionText
+		}
+		// For modifications with multi-line suffix starting on next line, no newline prefix needed
+		if (!isAddition && range.start.line > position.line) {
+			// Already positioned on next line, don't add newline prefix
+			finalCompletionText = completionText
 		}
 
-		return [completionItem]
-	}
-
-	/**
-	 * Create an inline completion item from a group of operations.
-	 * Shows ghost text at the target line for pure additions.
-	 */
-	private createInlineCompletionItem(
-		document: vscode.TextDocument,
-		position: vscode.Position,
-		group: GhostSuggestionEditOperation[],
-		groupType: "+" | "/" | "-",
-		targetLine: number,
-	): vscode.InlineCompletionItem | undefined {
-		// Build the completion text for pure additions
-		let completionText = group
-			.sort((a, b) => a.line - b.line)
-			.map((op) => op.content)
-			.join("\n")
-
-		// Determine the insertion position and range
-		let insertPosition: vscode.Position
-		let range: vscode.Range
-
-		if (targetLine === position.line) {
-			// Addition on current line - use cursor position
-			insertPosition = position
-		} else if (targetLine === position.line + 1) {
-			// Addition on next line (e.g., after a comment)
-			// Check if current line has content (likely a comment)
-			const currentLineText = document.lineAt(position.line).text
-			const trimmedLine = currentLineText.trim()
-
-			if (trimmedLine.length > 0) {
-				// Current line has content, insert at start of next line with newline prefix
-				insertPosition = new vscode.Position(position.line, currentLineText.length)
-				completionText = "\n" + completionText
-			} else {
-				// Current line is empty, insert at cursor position
-				insertPosition = position
-			}
-		} else {
-			// Addition is far from cursor - insert at column 0 of target line
-			insertPosition = new vscode.Position(targetLine, 0)
-		}
-		range = new vscode.Range(insertPosition, insertPosition)
-
-		// Create inline completion item using VS Code's InlineCompletionItem interface
+		// Create completion item
 		const item: vscode.InlineCompletionItem = {
-			insertText: completionText,
+			insertText: finalCompletionText,
 			range,
 			command: {
 				command: "kilo-code.ghost.applyCurrentSuggestions",
@@ -132,7 +316,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			},
 		}
 
-		return item
+		return [item]
 	}
 
 	public dispose(): void {

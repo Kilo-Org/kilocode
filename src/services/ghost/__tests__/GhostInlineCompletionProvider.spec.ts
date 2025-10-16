@@ -209,6 +209,302 @@ describe("GhostInlineCompletionProvider", () => {
 			// Just verify it doesn't error and returns expected type
 			expect(result === undefined || Array.isArray(result)).toBe(true)
 		})
+
+		it("should handle comment-driven completions as inline ghost text", async () => {
+			// Mock document with comment line
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "// implement function to add two numbers",
+							range: new vscode.Range(line, 0, line, 40),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			// Simulate the scenario: LLM response creates deletion of comment + addition of function
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Group 1: Deletion of comment line (this happens when context has placeholder appended)
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "// implement function to add two numbers",
+			}
+
+			// Group 2: Addition of function (starts with newline)
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 6,
+				oldLine: 6,
+				newLine: 6,
+				content: "\nfunction addNumbers(a: number, b: number): number {\n    return a + b;\n}",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			// Position cursor at the comment line
+			mockPosition = new vscode.Position(5, 40) // End of comment line
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should return inline completion (not undefined)
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			// Should show the function without the comment part
+			const completionText = items[0].insertText as string
+			expect(completionText).toContain("function addNumbers")
+			expect(completionText).not.toContain("// implement function")
+		})
+
+		it("should handle modifications with common prefix", async () => {
+			// Mock document with existing code
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "const y = ",
+							range: new vscode.Range(line, 0, line, 10),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			// Create modification group with common prefix
+			const file = suggestions.addFile(mockDocument.uri)
+
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "const y = ",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "const y = divideNumbers(4, 2);",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			// Position cursor after "const y = "
+			mockPosition = new vscode.Position(5, 10)
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should return inline completion showing only the suffix
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			expect(completionText).toBe("divideNumbers(4, 2);")
+		})
+
+		it("should return undefined for modifications without common prefix", async () => {
+			// Create modification group without common prefix
+			const file = suggestions.addFile(mockDocument.uri)
+
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "var x = 10",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "const x = 10",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should return undefined - SVG decorations handle this
+			expect(result).toBeUndefined()
+		})
+
+		it("should handle comment with placeholder as inline ghost completion (mutual exclusivity test)", async () => {
+			// This test covers the exact scenario: "// implme<<<AUTOCOMPLETE_HERE>>>"
+			// where both inline and SVG were showing (should only show inline)
+
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "// implme",
+							range: new vscode.Range(line, 0, line, 8),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Simulate LLM response: search "// implme<<<AUTOCOMPLETE_HERE>>>" replace "// implme\nfunction..."
+			// This creates: Group 1 (delete comment), Group 2 (add comment + function)
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "// implme",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 6,
+				oldLine: 6,
+				newLine: 6,
+				content: "\nfunction implementFeature() {\n  console.log('Feature implemented');\n}",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			// Position cursor at end of comment line
+			mockPosition = new vscode.Position(5, 8)
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should return inline completion (ensuring only inline shows, no SVG)
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			// Should show function as ghost text
+			const completionText = items[0].insertText as string
+			expect(completionText).toContain("function implementFeature")
+		})
+
+		it("should handle partial comment completion with common prefix (avoid duplication)", async () => {
+			// Test case: "// now imple" should complete with "ment a function..." not duplicate "// now implement..."
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "// now imple",
+							range: new vscode.Range(line, 0, line, 12),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Simulate: search "// now imple<<<AUTOCOMPLETE_HERE>>>" replace "// now implement a function..."
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "// now imple",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content:
+					"// now implement a function that subtracts two numbers\nfunction subtractNumbers(a: number, b: number): number {\n    return a - b;\n}",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			// Position cursor after "// now imple"
+			mockPosition = new vscode.Position(5, 12)
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should return inline completion with only the suffix (no duplication)
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			// Should show only the completion part, not the existing comment
+			const completionText = items[0].insertText as string
+			expect(completionText).toBe(
+				"ment a function that subtracts two numbers\nfunction subtractNumbers(a: number, b: number): number {\n    return a - b;\n}",
+			)
+			expect(completionText).not.toContain("// now imple") // Should not duplicate existing text
+		})
 	})
 
 	describe("updateSuggestions", () => {

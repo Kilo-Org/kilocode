@@ -68,11 +68,11 @@ export class GhostDecorations {
 	 * Display suggestions using hybrid approach: SVG for edits/additions, simple styling for deletions
 	 * Shows all groups that should use decorations
 	 * @param suggestions - The suggestions state
-	 * @param skipSelectedGroup - If true, skip the selected group (it's shown as inline completion)
+	 * @param skipGroupIndices - Array of group indices to skip (they're shown as inline completion)
 	 */
 	public async displaySuggestions(
 		suggestions: GhostSuggestionsState,
-		skipSelectedGroup: boolean = false,
+		skipGroupIndices: number[] = [],
 	): Promise<void> {
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
@@ -113,10 +113,9 @@ export class GhostDecorations {
 		for (let i = 0; i < groups.length; i++) {
 			const group = groups[i]
 			const groupType = suggestionsFile.getGroupType(group)
-			const isSelected = i === selectedGroupIndex
 
-			// Skip selected group if it's using inline completion
-			if (isSelected && skipSelectedGroup) {
+			// Skip groups that are using inline completion
+			if (skipGroupIndices.includes(i)) {
 				continue
 			}
 
