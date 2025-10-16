@@ -251,8 +251,9 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 - Always ask for user approval before using any git tools
 - Use descriptive branch names following GitLab conventions (feature/, fix/, hotfix/, docs/, etc.)
 - Provide meaningful commit messages that explain what changes were made
-- After implementing changes, proactively suggest committing and pushing
-- When on main/master branch, ALWAYS suggest creating a feature branch first before making changes`
+- After implementing changes, ALWAYS proactively suggest committing and pushing
+- When on main/master branch, ALWAYS suggest creating a feature branch first before making changes
+- When on another branch, ALWAYS suggest creating a new branch first before making changes`
 	}
 
 	/**

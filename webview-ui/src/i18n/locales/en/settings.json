@@ -34,6 +34,7 @@
 		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
+		"gitProviders": "Git Providers",
 		"about": "About Kilo Code"
 	},
 	"slashCommands": {
