@@ -104,7 +104,6 @@
 			"cancelSuggestions": "Zrušit navrhované úpravy",
 			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
 			"applyAllSuggestions": "Použít všechny navrhované úpravy",
-			"promptCodeSuggestion": "Rychlý úkol",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

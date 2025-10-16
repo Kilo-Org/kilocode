@@ -8,7 +8,7 @@
  * - Synchronization issues between components
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import {
 	pendingApprovalAtom,

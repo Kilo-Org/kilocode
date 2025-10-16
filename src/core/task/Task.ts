@@ -2830,6 +2830,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			({ role, content }) => ({ role, content }),
 		)
 
+		// kilocode_change start
+		// Fetch project properties for KiloCode provider tracking
+		const kiloConfig = this.providerRef.deref()?.getKiloConfig()
+		// kilocode_change end
+
 		// Check auto-approval limits
 		const approvalResult = await this.autoApprovalHandler.checkAutoApprovalLimits(
 			state,
@@ -2876,6 +2881,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(previousResponseId && !this.skipPrevResponseIdOnce ? { previousResponseId } : {}),
 			// If a condense just occurred, explicitly suppress continuity fallback for the next call
 			...(this.skipPrevResponseIdOnce ? { suppressPreviousResponseId: true } : {}),
+			// kilocode_change start
+			// KiloCode-specific: pass projectId for backend tracking (ignored by other providers)
+			projectId: (await kiloConfig)?.project?.id,
+			// kilocode_change end
 		}
 
 		// Reset skip flag after applying (it only affects the immediate next call)

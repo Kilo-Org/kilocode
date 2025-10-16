@@ -74,6 +74,14 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * @default true
 	 */
 	store?: boolean
+	// kilocode_change start
+	/**
+	 * KiloCode-specific: The project ID for the current workspace (derived from git origin remote).
+	 * Used by KiloCodeOpenrouterHandler for backend tracking. Ignored by other providers.
+	 * @kilocode-only
+	 */
+	projectId?: string
+	// kilocode_change end
 }
 
 export interface ApiHandler {

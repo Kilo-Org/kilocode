@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
-import { isStreamingAtom, showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
-import { chatMessagesAtom, hasResumeTaskAtom } from "../../../state/atoms/extension.js"
+import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
+import { chatMessagesAtom } from "../../../state/atoms/extension.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 // Mock the hooks

@@ -17,7 +17,8 @@ const DEFAULT_INSTRUCTIONS = [
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) => {
 	const theme = useTheme()
 	const showInstructions = options.showInstructions !== false
-	const instructions = options.instructions || DEFAULT_INSTRUCTIONS
+	const instructions =
+		options.instructions && options.instructions.length > 0 ? options.instructions : DEFAULT_INSTRUCTIONS
 	const contentHeight = 12 + (showInstructions ? instructions.length : 0)
 	const marginTop = options.clearScreen ? Math.max(0, (stdout?.rows || 0) - contentHeight) : 0
 

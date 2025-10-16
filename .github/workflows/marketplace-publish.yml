@@ -166,7 +166,7 @@ jobs:
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
                   gh release upload "v${current_package_version}" \
-                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}"
+                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}#JetBrains Plugin"
                   echo "Successfully attached JetBrains plugin to GitHub Release v${current_package_version}"
             - name: Upload artifact
               uses: actions/upload-artifact@v4

@@ -86,6 +86,10 @@ vi.mock("vscode", () => {
 			QuickFix: { value: "quickfix" },
 			RefactorRewrite: { value: "refactor.rewrite" },
 		},
+		Uri: {
+			file: vi.fn((path) => ({ fsPath: path, toString: () => `file://${path}` })),
+		},
+		RelativePattern: vi.fn((base, pattern) => ({ base, pattern })),
 		window: {
 			createTextEditorDecorationType: vi.fn().mockReturnValue({
 				dispose: vi.fn(),
@@ -116,6 +120,7 @@ vi.mock("vscode", () => {
 				stat: vi.fn().mockResolvedValue({ type: 1 }), // FileType.File = 1
 			},
 			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+			onDidChangeWorkspaceFolders: vi.fn(() => mockDisposable),
 			getConfiguration: vi.fn(() => ({ get: (key: string, defaultValue: any) => defaultValue })),
 		},
 		env: {
@@ -990,6 +995,7 @@ describe("Cline", () => {
 					postStateToWebview: vi.fn().mockResolvedValue(undefined),
 					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
 					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+					getKiloConfig: vi.fn().mockResolvedValue(undefined),
 				}
 
 				// Get the mocked delay function

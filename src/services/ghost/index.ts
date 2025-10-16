@@ -39,11 +39,6 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.promptCodeSuggestion", async () => {
-			await ghost.promptCodeSuggestion()
-		}),
-	)
-	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.goToNextSuggestion", async () => {
 			await ghost.selectNextSuggestion()
 		}),

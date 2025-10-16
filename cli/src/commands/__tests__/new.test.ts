@@ -8,11 +8,9 @@ import type { CommandContext } from "../core/types.js"
 
 describe("/new command", () => {
 	let mockContext: CommandContext
-	let stdoutWriteSpy: any
-
 	beforeEach(() => {
 		// Mock process.stdout.write to capture terminal clearing
-		stdoutWriteSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true)
+		vi.spyOn(process.stdout, "write").mockImplementation(() => true)
 
 		mockContext = {
 			input: "/new",

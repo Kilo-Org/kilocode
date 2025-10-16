@@ -4,10 +4,11 @@
  */
 
 import React, { useCallback, useEffect, useRef } from "react"
-import { Box, Text, useInput, useStdout } from "ink"
+import { Box, Text, useInput } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
+import { configValidationAtom } from "../state/atoms/config.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
 import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
@@ -21,7 +22,7 @@ import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
-import { createWelcomeMessage } from "./utils/welcomeMessage.js"
+import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -32,10 +33,10 @@ interface UIAppProps {
 }
 
 export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
-	const { stdout } = useStdout()
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const error = useAtomValue(errorAtom)
 	const theme = useTheme()
+	const configValidation = useAtomValue(configValidationAtom)
 
 	// Initialize CI mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
@@ -79,7 +80,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Small delay for cleanup and final message display
 			setTimeout(() => {
 				onExit()
-			}, 100)
+			}, 500)
 		}
 	}, [shouldExit, exitReason, options.ci, onExit])
 
@@ -94,7 +95,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {
-		if (options.prompt && !promptExecutedRef.current) {
+		if (options.prompt && !promptExecutedRef.current && configValidation.valid) {
 			promptExecutedRef.current = true
 			const trimmedPrompt = options.prompt.trim()
 
@@ -109,7 +110,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				}
 			}
 		}
-	}, [options.prompt, executeCommand, sendUserMessage, onExit])
+	}, [options.prompt])
 
 	// Simplified submit handler that delegates to appropriate hook
 	const handleSubmit = useCallback(
@@ -136,15 +137,26 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	useEffect(() => {
 		if (!welcomeShownRef.current) {
 			welcomeShownRef.current = true
-
 			addMessage(
 				createWelcomeMessage({
-					clearScreen: !options.ci,
+					clearScreen: !options.ci && configValidation.valid,
 					showInstructions: !options.ci || !options.prompt,
+					instructions: createConfigErrorInstructions(configValidation),
 				}),
 			)
 		}
-	}, [options.ci, options.prompt, addMessage])
+	}, [options.ci, options.prompt, addMessage, configValidation])
+
+	// Exit if provider configuration is invalid
+	useEffect(() => {
+		if (!configValidation.valid) {
+			logs.error("Invalid configuration", "UI", { errors: configValidation.errors })
+			// Give time for the welcome message to render
+			setTimeout(() => {
+				onExit()
+			}, 500)
+		}
+	}, [configValidation])
 
 	return (
 		// Using stdout.rows causes layout shift during renders
@@ -159,7 +171,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				</Box>
 			)}
 
-			{!options.ci && (
+			{!options.ci && configValidation.valid && (
 				<>
 					<StatusIndicator disabled={false} />
 					<CommandInput onSubmit={handleSubmit} disabled={isAnyOperationInProgress} />

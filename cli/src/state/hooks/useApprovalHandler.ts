@@ -8,19 +8,14 @@ import {
 	selectNextApprovalAtom,
 	selectPreviousApprovalAtom,
 	isApprovalPendingAtom,
-	shouldAutoApproveAtom,
-	shouldAutoRejectAtom,
 	startApprovalProcessingAtom,
 	completeApprovalProcessingAtom,
 	approvalProcessingAtom,
 	type ApprovalOption,
 } from "../atoms/approval.js"
-import { autoApproveRetryDelayAtom, autoApproveQuestionTimeoutAtom } from "../atoms/config.js"
-import { ciModeAtom } from "../atoms/ci.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
-import { CI_MODE_MESSAGES } from "../../constants/ci.js"
 import { useApprovalTelemetry } from "./useApprovalTelemetry.js"
 
 /**
@@ -82,26 +77,16 @@ export interface UseApprovalHandlerReturn {
  * }
  * ```
  */
-export function useApprovalHandler(options: UseApprovalHandlerOptions = {}): UseApprovalHandlerReturn {
+export function useApprovalHandler(): UseApprovalHandlerReturn {
 	const store = useStore()
 	const pendingApproval = useAtomValue(pendingApprovalAtom)
 	const approvalOptions = useAtomValue(approvalOptionsAtom)
 	const selectedIndex = useAtomValue(selectedApprovalIndexAtom)
 	const selectedOption = useAtomValue(selectedApprovalOptionAtom)
 	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
-	const shouldAutoApprove = useAtomValue(shouldAutoApproveAtom)
-	const shouldAutoReject = useAtomValue(shouldAutoRejectAtom)
-	const retryDelay = useAtomValue(autoApproveRetryDelayAtom)
-	const questionTimeout = useAtomValue(autoApproveQuestionTimeoutAtom)
-	const ciModeFromAtom = useAtomValue(ciModeAtom)
-
-	// Use CI mode from options if provided, otherwise use atom value
-	const isCIMode = options.ciMode ?? ciModeFromAtom
 
 	const selectNext = useSetAtom(selectNextApprovalAtom)
 	const selectPrevious = useSetAtom(selectPreviousApprovalAtom)
-	const startProcessing = useSetAtom(startApprovalProcessingAtom)
-	const completeProcessing = useSetAtom(completeApprovalProcessingAtom)
 
 	const { sendAskResponse } = useWebviewMessage()
 	const approvalTelemetry = useApprovalTelemetry()
@@ -164,7 +149,7 @@ export function useApprovalHandler(options: UseApprovalHandlerOptions = {}): Use
 				throw error
 			}
 		},
-		[store, sendAskResponse, startApprovalProcessingAtom, completeApprovalProcessingAtom],
+		[store, sendAskResponse, approvalTelemetry],
 	)
 
 	const reject = useCallback(
@@ -219,7 +204,7 @@ export function useApprovalHandler(options: UseApprovalHandlerOptions = {}): Use
 				throw error
 			}
 		},
-		[store, sendAskResponse, startApprovalProcessingAtom, completeApprovalProcessingAtom],
+		[store, sendAskResponse, approvalTelemetry],
 	)
 
 	const executeSelected = useCallback(

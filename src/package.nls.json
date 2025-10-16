@@ -53,7 +53,7 @@
 	"ghost.commands.cancelSuggestions": "Cancel Suggested Edits",
 	"ghost.commands.applyCurrentSuggestion": "Apply Current Suggested Edit",
 	"ghost.commands.applyAllSuggestions": "Apply All Suggested Edits",
-	"ghost.commands.promptCodeSuggestion": "Quick Task",
+
 	"ghost.commands.goToNextSuggestion": "Go To Next Suggestion",
 	"ghost.commands.goToPreviousSuggestion": "Go To Previous Suggestion"
 }

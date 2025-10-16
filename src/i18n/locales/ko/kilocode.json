@@ -98,7 +98,6 @@
 			"cancelSuggestions": "제안된 편집 취소",
 			"applyCurrentSuggestion": "현재 제안된 편집 적용",
 			"applyAllSuggestions": "모든 제안된 편집 적용",
-			"promptCodeSuggestion": "빠른 작업",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

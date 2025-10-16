@@ -26,7 +26,7 @@ export const MarkdownText: React.FC<MarkdownTextProps> = ({ children, ...options
 		// Parse markdown and render with terminal-friendly formatting
 		const rendered = parse(children) as string
 		return <Text>{rendered.trim()}</Text>
-	} catch (error) {
+	} catch {
 		// Fallback to plain text if markdown parsing fails
 		return <Text>{children}</Text>
 	}

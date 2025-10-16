@@ -28,6 +28,7 @@ describe("getModelsByProvider", () => {
 			"vercel-ai-gateway": { "test-model": testModel },
 			huggingface: { "test-model": testModel },
 			// kilocode_change start
+			gemini: { "test-model": testModel },
 			ovhcloud: { "test-model": testModel },
 			chutes: { "test-model": testModel },
 			// kilocode_change end

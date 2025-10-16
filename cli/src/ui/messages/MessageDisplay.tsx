@@ -38,7 +38,7 @@
  */
 
 import React from "react"
-import { Box, Text, Static } from "ink"
+import { Box, Static } from "ink"
 import { useAtomValue } from "jotai"
 import {
 	type UnifiedMessage,
@@ -84,7 +84,7 @@ function getMessageKey(msg: UnifiedMessage, index: number): string {
 	return `${subtypeKey}-${index}`
 }
 
-export const MessageDisplay: React.FC<MessageDisplayProps> = ({ filterType, maxMessages }) => {
+export const MessageDisplay: React.FC<MessageDisplayProps> = () => {
 	const staticMessages = useAtomValue(staticMessagesAtom)
 	const dynamicMessages = useAtomValue(dynamicMessagesAtom)
 	const resetCounter = useAtomValue(messageResetCounterAtom)

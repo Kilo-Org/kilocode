@@ -6,7 +6,6 @@ import { LLMClient } from "./llm-client.js"
 import { StrategyTester } from "./strategy-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
-import { PromptStrategyManager } from "../services/ghost/PromptStrategyManager.js"
 
 interface TestResult {
 	testCase: TestCase
@@ -24,15 +23,13 @@ export class TestRunner {
 	private strategyTester: StrategyTester
 	private verbose: boolean
 	private results: TestResult[] = []
-	private overrideStrategy?: string
 	private skipApproval: boolean
 
-	constructor(verbose: boolean = false, overrideStrategy?: string, skipApproval: boolean = false) {
+	constructor(verbose: boolean = false, skipApproval: boolean = false) {
 		this.verbose = verbose
-		this.overrideStrategy = overrideStrategy
 		this.skipApproval = skipApproval
 		this.llmClient = new LLMClient()
-		this.strategyTester = new StrategyTester(this.llmClient, { overrideStrategy })
+		this.strategyTester = new StrategyTester(this.llmClient)
 	}
 
 	async runTest(testCase: TestCase): Promise<TestResult> {
@@ -94,12 +91,9 @@ export class TestRunner {
 	}
 
 	async runAllTests(): Promise<void> {
-		console.log("\n🚀 Starting PromptStrategyManager LLM Tests\n")
+		console.log("\n🚀 Starting AutoTrigger Strategy LLM Tests\n")
 		console.log("Provider:", this.llmClient["provider"])
 		console.log("Model:", this.llmClient["model"])
-		if (this.overrideStrategy) {
-			console.log("Strategy Override:", this.overrideStrategy)
-		}
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
 		}
@@ -439,37 +433,9 @@ async function main() {
 	const verbose = args.includes("--verbose") || args.includes("-v")
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
 
-	// Check for strategy override
-	const strategyArgIndex = args.findIndex((arg) => arg === "--strategy" || arg === "-s")
-	let overrideStrategy: string | undefined
+	const command = args.find((arg) => !arg.startsWith("-"))
 
-	if (strategyArgIndex !== -1) {
-		const strategyValue = args[strategyArgIndex + 1]
-		if (!strategyValue || strategyValue.startsWith("-")) {
-			console.error("\n❌ Error: --strategy/-s flag requires a strategy name")
-			console.log("\nUsage: --strategy <strategy-name> or -s <strategy-name>\n")
-			process.exit(1)
-		}
-		overrideStrategy = strategyValue
-	}
-
-	// Validate strategy if provided
-	if (overrideStrategy) {
-		const strategyManager = new PromptStrategyManager()
-		const availableStrategies = strategyManager.getAvailableStrategies()
-
-		if (!availableStrategies.includes(overrideStrategy)) {
-			console.error(`\n❌ Error: Strategy "${overrideStrategy}" does not exist`)
-			console.log("\nAvailable strategies:")
-			availableStrategies.forEach((strategy) => console.log(`  - ${strategy}`))
-			console.log()
-			process.exit(1)
-		}
-	}
-
-	const command = args.find((arg) => !arg.startsWith("-") && arg !== overrideStrategy)
-
-	const runner = new TestRunner(verbose, overrideStrategy, skipApproval)
+	const runner = new TestRunner(verbose, skipApproval)
 
 	try {
 		if (command === "clean") {

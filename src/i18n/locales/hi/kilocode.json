@@ -104,7 +104,6 @@
 			"cancelSuggestions": "सुझाए गए संपादन रद्द करें",
 			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन लागू करें",
 			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
-			"promptCodeSuggestion": "त्वरित कार्य",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

@@ -253,5 +253,8 @@
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",
 		"maxImagesReached": "Maximal 20 Bilder pro Nachricht. Entfernen Sie einige Bilder, um weitere hinzuzufügen.",
 		"imagesRemovedNoSupport": "Bilder entfernt, vom Modell nicht unterstützt."
+	},
+	"memoryWarning": {
+		"message": "Speicherauslastung liegt bei {{percentage}}%. Bitte starte deine IDE neu, um Abstürze zu vermeiden."
 	}
 }

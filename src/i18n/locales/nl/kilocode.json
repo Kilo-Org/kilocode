@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Voorgestelde Bewerkingen Annuleren",
 			"applyCurrentSuggestion": "Huidige Voorgestelde Bewerking Toepassen",
 			"applyAllSuggestions": "Alle Voorgestelde Bewerkingen Toepassen",
-			"promptCodeSuggestion": "Snelle Taak",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

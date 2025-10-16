@@ -12,7 +12,6 @@ import type {
 	ProviderSettings,
 	McpServer,
 } from "../../types/messages.js"
-import { logs } from "../../services/logs.js"
 
 /**
  * Atom to hold the complete ExtensionState

@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Annuler les Modifications Suggérées",
 	"ghost.commands.applyCurrentSuggestion": "Appliquer la Modification Suggérée Actuelle",
 	"ghost.commands.applyAllSuggestions": "Appliquer Toutes les Modifications Suggérées",
-	"ghost.commands.promptCodeSuggestion": "Tâche Rapide",
 	"ghost.commands.goToNextSuggestion": "Aller à la Suggestion Suivante",
 	"ghost.commands.goToPreviousSuggestion": "Aller à la Suggestion Précédente"
 }

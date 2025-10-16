@@ -104,7 +104,6 @@
 			"cancelSuggestions": "取消建议编辑",
 			"applyCurrentSuggestion": "应用当前建议编辑",
 			"applyAllSuggestions": "应用所有建议编辑",
-			"promptCodeSuggestion": "快速任务",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

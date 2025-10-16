@@ -81,7 +81,7 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 
 	// Determine button labels based on ask type
 	let approveLabel = "Approve"
-	let rejectLabel = "Reject"
+	const rejectLabel = "Reject"
 
 	if (pendingMessage.ask === "tool") {
 		try {
@@ -404,7 +404,7 @@ export const shouldAutoApproveAtom = atom<boolean>((get) => {
 			default:
 				return false
 		}
-	} catch (error) {
+	} catch {
 		// If we can't parse the message, don't auto-approve
 		return false
 	}

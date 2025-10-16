@@ -6,7 +6,7 @@ import { useTheme } from "../../../../state/hooks/useTheme.js"
 /**
  * Display MCP server request started
  */
-export const SayMcpServerRequestStartedMessage: React.FC<MessageComponentProps> = ({ message }) => {
+export const SayMcpServerRequestStartedMessage: React.FC<MessageComponentProps> = () => {
 	const theme = useTheme()
 	return (
 		<Box marginY={1}>

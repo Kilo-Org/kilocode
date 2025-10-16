@@ -47,7 +47,7 @@ export function useGitInfo(cwd: string | null): UseGitInfoReturn {
 					setGitInfo(info)
 					setLoading(false)
 				}
-			} catch (error) {
+			} catch {
 				if (isMounted) {
 					setGitInfo({
 						branch: null,

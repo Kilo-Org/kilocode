@@ -4,6 +4,7 @@ import { join } from "path"
 import { tmpdir } from "os"
 import { setConfigPaths, resetConfigPaths, saveConfig, configExists, getConfigPath } from "../config/persistence.js"
 import { DEFAULT_CONFIG } from "../config/defaults.js"
+import type { CLIConfig } from "../config/types.js"
 
 // Mock fs/promises to handle schema.json reads
 vi.mock("fs/promises", async () => {
@@ -28,6 +29,7 @@ vi.mock("fs/promises", async () => {
 describe("Config Command", () => {
 	let testDir: string
 	let testConfigFile: string
+	let validConfig: CLIConfig
 
 	beforeEach(() => {
 		// Create a temporary directory for testing
@@ -35,6 +37,19 @@ describe("Config Command", () => {
 		testConfigFile = join(testDir, "config.json")
 		mkdirSync(testDir, { recursive: true })
 		setConfigPaths(testDir, testConfigFile)
+
+		// Create a valid config with non-empty credentials
+		validConfig = {
+			...DEFAULT_CONFIG,
+			providers: [
+				{
+					id: "default",
+					provider: "kilocode",
+					kilocodeToken: "valid-token-1234567890",
+					kilocodeModel: "anthropic/claude-sonnet-4.5",
+				},
+			],
+		}
 	})
 
 	afterEach(() => {
@@ -49,8 +64,8 @@ describe("Config Command", () => {
 		// Verify config doesn't exist
 		expect(await configExists()).toBe(false)
 
-		// Save default config (simulating what the command does)
-		await saveConfig(DEFAULT_CONFIG)
+		// Save valid config (simulating what the command does)
+		await saveConfig(validConfig)
 
 		// Verify config was created
 		expect(await configExists()).toBe(true)
@@ -58,8 +73,8 @@ describe("Config Command", () => {
 	})
 
 	it("should create config with correct default values", async () => {
-		// Save default config
-		await saveConfig(DEFAULT_CONFIG)
+		// Save valid config
+		await saveConfig(validConfig)
 
 		// Read and verify the config
 		const configContent = readFileSync(testConfigFile, "utf-8")
@@ -81,14 +96,14 @@ describe("Config Command", () => {
 
 	it("should detect existing config file", async () => {
 		// Create config
-		await saveConfig(DEFAULT_CONFIG)
+		await saveConfig(validConfig)
 
 		// Verify it's detected
 		expect(await configExists()).toBe(true)
 	})
 
 	it("should format config file with proper indentation", async () => {
-		await saveConfig(DEFAULT_CONFIG)
+		await saveConfig(validConfig)
 
 		const configContent = readFileSync(testConfigFile, "utf-8")
 

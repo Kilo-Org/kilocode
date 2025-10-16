@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import esbuild from "esbuild"
 import { chmodSync, mkdirSync, copyFileSync } from "fs"
 import { rimrafSync } from "rimraf"
@@ -14,7 +15,7 @@ function copyPostBuildFiles() {
 		try {
 			copyFileSync(".env", "dist/.env")
 			copyFileSync(".env", "dist/kilocode/.env")
-		} catch (err) {
+		} catch {
 			// .env might not exist, that's okay
 		}
 
@@ -71,7 +72,6 @@ const __dirname = __dirname__(__filename);
 		"@anthropic-ai/vertex-sdk",
 		"@aws-sdk/client-bedrock-runtime",
 		"@aws-sdk/credential-providers",
-		"@cerebras/cerebras_cloud_sdk",
 		"@google/genai",
 		"@lmstudio/sdk",
 		"@mistralai/mistralai",
@@ -147,7 +147,6 @@ const __dirname = __dirname__(__filename);
 		"socket.io-client",
 		"sound-play",
 		"stream-json",
-		"string-similarity",
 		"strip-ansi",
 		"strip-bom",
 		"tiktoken",

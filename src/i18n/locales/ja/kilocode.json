@@ -98,7 +98,6 @@
 			"cancelSuggestions": "編集提案をキャンセル",
 			"applyCurrentSuggestion": "現在の編集提案を適用",
 			"applyAllSuggestions": "すべての編集提案を適用",
-			"promptCodeSuggestion": "クイックタスク",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

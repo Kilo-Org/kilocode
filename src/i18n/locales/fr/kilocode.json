@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Annuler les Modifications Suggérées",
 			"applyCurrentSuggestion": "Appliquer la Modification Suggérée Actuelle",
 			"applyAllSuggestions": "Appliquer Toutes les Modifications Suggérées",
-			"promptCodeSuggestion": "Tâche Rapide",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

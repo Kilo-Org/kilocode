@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Cancel Suggested Edits",
 			"applyCurrentSuggestion": "Apply Current Suggested Edit",
 			"applyAllSuggestions": "Apply All Suggested Edits",
-			"promptCodeSuggestion": "Quick Task",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

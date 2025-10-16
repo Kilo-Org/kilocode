@@ -254,5 +254,8 @@
 		"maxImagesReached": "每条消息最多 20 张图片。删除一些图片以添加更多。",
 		"modelNoImageSupport": "当前模型不支持图像。",
 		"imagesRemovedNoSupport": "图片已移除，模型不支持。"
+	},
+	"memoryWarning": {
+		"message": "内存使用率已达 {{percentage}}%。请重启 IDE 以防止崩溃。"
 	}
 }

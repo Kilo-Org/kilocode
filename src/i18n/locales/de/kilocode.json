@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Bearbeitungsvorschläge abbrechen",
 			"applyCurrentSuggestion": "Aktuellen Bearbeitungsvorschlag anwenden",
 			"applyAllSuggestions": "Alle Bearbeitungsvorschläge anwenden",
-			"promptCodeSuggestion": "Schnellaufgabe",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

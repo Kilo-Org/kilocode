@@ -36,11 +36,11 @@ import {
 	WandSparkles,
 	SendHorizontal,
 	Paperclip, // kilocode_change
+	MessageSquareX,
 } from "lucide-react"
 import { IndexingStatusBadge } from "./IndexingStatusBadge"
 import { cn } from "@/lib/utils"
 import { usePromptHistory } from "./hooks/usePromptHistory"
-import { EditModeControls } from "./EditModeControls"
 
 // kilocode_change start: pull slash commands from Cline
 import SlashCommandMenu from "@/components/chat/SlashCommandMenu"
@@ -1221,94 +1221,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			[listApiConfigMeta, currentApiConfigName, t, togglePinnedApiConfig],
 		)
 
-		// Helper function to render non-edit mode controls
-		const renderNonEditModeControls = () => (
-			// kilocode_change move thumbnails to bottom
-
-			<div
-				// kilocode_change start
-				style={{
-					marginTop: "-38px",
-					zIndex: 2,
-					paddingLeft: "8px",
-					paddingRight: "8px",
-				}}
-				ref={containerRef}
-				// kilocode_change end
-				className={cn("flex", "justify-between", "items-center", "mt-auto")}>
-				<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
-					<div className="shrink-0">
-						{/* kilocode_change start: KiloModeSelector instead of ModeSelector */}
-						<KiloModeSelector
-							value={mode}
-							onChange={setMode}
-							modeShortcutText={modeShortcutText}
-							customModes={customModes}
-						/>
-						{/* kilocode_change end */}
-					</div>
-
-					<KiloProfileSelector
-						currentConfigId={currentConfigId}
-						currentApiConfigName={currentApiConfigName}
-						displayName={displayName}
-						listApiConfigMeta={listApiConfigMeta}
-						pinnedApiConfigs={pinnedApiConfigs}
-						togglePinnedApiConfig={togglePinnedApiConfig}
-						selectApiConfigDisabled={selectApiConfigDisabled}
-					/>
-				</div>
-
-				{/* kilocode_change: hidden on small containerWidth
-					<div className={cn("flex", "items-center", "gap-0.5", "shrink-0")}>
-						{isTtsPlaying && (
-							<StandardTooltip content={t("chat:stopTts")}>
-								<button
-									aria-label={t("chat:stopTts")}
-									onClick={() => vscode.postMessage({ type: "stopTts" })}
-									className={cn(
-										"relative inline-flex items-center justify-center",
-										"bg-transparent border-none p-1.5",
-										"rounded-md min-w-[28px] min-h-[28px]",
-										"text-vscode-foreground opacity-85",
-										"transition-all duration-150",
-										"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-										"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-										"active:bg-[rgba(255,255,255,0.1)]",
-										"cursor-pointer",
-									)}>
-									<VolumeX className="w-4 h-4" />
-								</button>
-							</StandardTooltip>
-						)}
-						<IndexingStatusBadge />
-						<StandardTooltip content={t("chat:addImages")}>
-							<button
-								aria-label={t("chat:addImages")}
-								disabled={shouldDisableImages}
-								onClick={!shouldDisableImages ? onSelectImages : undefined}
-								className={cn(
-									"relative inline-flex items-center justify-center",
-									"bg-transparent border-none p-1.5",
-									"rounded-md min-w-[28px] min-h-[28px]",
-									"text-vscode-foreground opacity-85",
-									"transition-all duration-150",
-									"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
-									"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
-									"active:bg-[rgba(255,255,255,0.1)]",
-									!shouldDisableImages && "cursor-pointer",
-									shouldDisableImages &&
-										"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
-									"mr-1",
-								)}>
-								<Image className="w-4 h-4" />
-							</button>
-						</StandardTooltip>
-					</div>
-					*/}
-			</div>
-		)
-
 		// Helper function to render the text area section
 		const renderTextAreaSection = () => (
 			<div
@@ -1365,7 +1277,15 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						updateHighlights()
 					}}
 					onFocus={() => setIsFocused(true)}
-					onKeyDown={handleKeyDown}
+					onKeyDown={(e) => {
+						// Handle ESC to cancel in edit mode
+						if (isEditMode && e.key === "Escape" && !e.nativeEvent?.isComposing) {
+							e.preventDefault()
+							onCancel?.()
+							return
+						}
+						handleKeyDown(e)
+					}}
 					onKeyUp={handleKeyUp}
 					onBlur={handleBlur}
 					onPaste={handlePaste}
@@ -1460,7 +1380,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				{/* kilocode_change: position tweaked, rtl support */}
 				<div className="absolute bottom-2 end-2 z-30">
 					{/* kilocode_change start */}
-					<IndexingStatusBadge className={cn({ hidden: containerWidth < 235 })} />
+					{!isEditMode && <IndexingStatusBadge className={cn({ hidden: containerWidth < 235 })} />}
 					<StandardTooltip content="Add Context (@)">
 						<button
 							aria-label="Add Context (@)"
@@ -1493,12 +1413,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							<Paperclip className={cn("w-4", "h-4", { hidden: containerWidth < 235 })} />
 						</button>
 					</StandardTooltip>
-					{!isEditMode && (
-						<StandardTooltip content={t("chat:sendMessage")}>
+					{isEditMode && (
+						<StandardTooltip content={t("chat:cancel.title")}>
 							<button
-								aria-label={t("chat:sendMessage")}
-								disabled={sendingDisabled}
-								onClick={!sendingDisabled ? onSend : undefined}
+								aria-label={t("chat:cancel.title")}
+								disabled={false}
+								onClick={onCancel}
 								className={cn(
 									"relative inline-flex items-center justify-center",
 									"bg-transparent border-none p-1.5",
@@ -1508,15 +1428,34 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
 									"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
 									"active:bg-[rgba(255,255,255,0.1)]",
-									!sendingDisabled && "cursor-pointer",
-									sendingDisabled &&
-										"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
+									"cursor-pointer",
 								)}>
-								{/* kilocode_change: rtl */}
-								<SendHorizontal className="w-4 h-4 rtl:-scale-x-100" />
+								<MessageSquareX className="w-4 h-4" />
 							</button>
 						</StandardTooltip>
 					)}
+					<StandardTooltip content={t("chat:sendMessage")}>
+						<button
+							aria-label={t("chat:sendMessage")}
+							disabled={sendingDisabled}
+							onClick={!sendingDisabled ? onSend : undefined}
+							className={cn(
+								"relative inline-flex items-center justify-center",
+								"bg-transparent border-none p-1.5",
+								"rounded-md min-w-[28px] min-h-[28px]",
+								"opacity-60 hover:opacity-100 text-vscode-descriptionForeground hover:text-vscode-foreground",
+								"transition-all duration-150",
+								"hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+								"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+								"active:bg-[rgba(255,255,255,0.1)]",
+								!sendingDisabled && "cursor-pointer",
+								sendingDisabled &&
+									"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
+							)}>
+							{/* kilocode_change: rtl */}
+							<SendHorizontal className="w-4 h-4 rtl:-scale-x-100" />
+						</button>
+					</StandardTooltip>
 					{/* kilocode_change end */}
 				</div>
 
@@ -1632,24 +1571,91 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						)}
 
 						{renderTextAreaSection()}
-						{/* kilocode_change: renderNonEditModeControls moved */}
-						{!isEditMode && renderNonEditModeControls()}
-					</div>
 
-					{isEditMode && (
-						<EditModeControls
-							mode={mode}
-							onModeChange={handleModeChange}
-							modeShortcutText={modeShortcutText}
-							customModes={customModes}
-							customModePrompts={customModePrompts}
-							onCancel={onCancel}
-							onSend={onSend}
-							onSelectImages={onSelectImages}
-							sendingDisabled={sendingDisabled}
-							shouldDisableImages={shouldDisableImages}
-						/>
-					)}
+						<div
+							// kilocode_change start
+							style={{
+								marginTop: "-38px",
+								zIndex: 2,
+								paddingLeft: "8px",
+								paddingRight: "8px",
+								paddingBottom: isEditMode ? "10px" : "0",
+							}}
+							ref={containerRef}
+							// kilocode_change end
+							className={cn("flex", "justify-between", "items-center", "mt-auto")}>
+							<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
+								<div className="shrink-0">
+									{/* kilocode_change start: KiloModeSelector instead of ModeSelector */}
+									<KiloModeSelector
+										value={mode}
+										onChange={setMode}
+										modeShortcutText={modeShortcutText}
+										customModes={customModes}
+									/>
+									{/* kilocode_change end */}
+								</div>
+
+								<KiloProfileSelector
+									currentConfigId={currentConfigId}
+									currentApiConfigName={currentApiConfigName}
+									displayName={displayName}
+									listApiConfigMeta={listApiConfigMeta}
+									pinnedApiConfigs={pinnedApiConfigs}
+									togglePinnedApiConfig={togglePinnedApiConfig}
+									selectApiConfigDisabled={selectApiConfigDisabled}
+								/>
+							</div>
+
+							{/* kilocode_change: hidden on small containerWidth
+								<div className={cn("flex", "items-center", "gap-0.5", "shrink-0")}>
+									{isTtsPlaying && (
+										<StandardTooltip content={t("chat:stopTts")}>
+											<button
+												aria-label={t("chat:stopTts")}
+												onClick={() => vscode.postMessage({ type: "stopTts" })}
+												className={cn(
+													"relative inline-flex items-center justify-center",
+													"bg-transparent border-none p-1.5",
+													"rounded-md min-w-[28px] min-h-[28px]",
+													"text-vscode-foreground opacity-85",
+													"transition-all duration-150",
+													"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+													"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+													"active:bg-[rgba(255,255,255,0.1)]",
+													"cursor-pointer",
+												)}>
+												<VolumeX className="w-4 h-4" />
+											</button>
+										</StandardTooltip>
+									)}
+									<IndexingStatusBadge />
+									<StandardTooltip content={t("chat:addImages")}>
+										<button
+											aria-label={t("chat:addImages")}
+											disabled={shouldDisableImages}
+											onClick={!shouldDisableImages ? onSelectImages : undefined}
+											className={cn(
+												"relative inline-flex items-center justify-center",
+												"bg-transparent border-none p-1.5",
+												"rounded-md min-w-[28px] min-h-[28px]",
+												"text-vscode-foreground opacity-85",
+												"transition-all duration-150",
+												"hover:opacity-100 hover:bg-[rgba(255,255,255,0.03)] hover:border-[rgba(255,255,255,0.15)]",
+												"focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder",
+												"active:bg-[rgba(255,255,255,0.1)]",
+												!shouldDisableImages && "cursor-pointer",
+												shouldDisableImages &&
+													"opacity-40 cursor-not-allowed grayscale-[30%] hover:bg-transparent hover:border-[rgba(255,255,255,0.08)] active:bg-transparent",
+												"mr-1",
+											)}>
+											<Image className="w-4 h-4" />
+										</button>
+									</StandardTooltip>
+								</div>
+								*/}
+						</div>
+					</div>
 				</div>
 
 				{selectedImages.length > 0 && (
@@ -1664,8 +1670,6 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						}}
 					/>
 				)}
-
-				{/* kilocode_change: renderNonEditModeControls moved */}
 			</div>
 		)
 	},

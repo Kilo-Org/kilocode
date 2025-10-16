@@ -153,6 +153,7 @@ type CommonFetchParams = {
 // If a new dynamic provider is added in packages/types, this will fail to compile
 // until a corresponding entry is added here.
 const dynamicProviderExtras = {
+	gemini: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type

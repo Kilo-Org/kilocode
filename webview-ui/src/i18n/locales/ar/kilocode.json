@@ -13,6 +13,9 @@
 		"addCredit": "شحن الرصيد",
 		"lowBalance": "رصيدك في Kilo Code منخفض"
 	},
+	"memoryWarning": {
+		"message": "استخدام الذاكرة عند {{percentage}}%. يرجى إعادة تشغيل بيئة التطوير لمنع التعطل."
+	},
 	"pagination": {
 		"previous": "السابق",
 		"next": "التالي",

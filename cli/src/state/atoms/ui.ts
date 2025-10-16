@@ -8,7 +8,6 @@ import type { CliMessage } from "../../types/cli.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
-import { logs } from "../../services/logs.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 
 /**

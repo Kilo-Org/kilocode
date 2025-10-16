@@ -254,5 +254,8 @@
 		"modelUnavailable": "⚠️ Model {{model}} jest niedostępny. Zmień na inny model, aby kontynuować.",
 		"continueWith": "Kontynuuj z {{model}}",
 		"continue": "Kontynuuj"
+	},
+	"memoryWarning": {
+		"message": "Użycie pamięci wynosi {{percentage}}%. Uruchom ponownie IDE, aby zapobiec awariom."
 	}
 }

@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
 import { GhostStreamingParser } from "./GhostStreamingParser"
-import { PromptStrategyManager } from "./PromptStrategyManager"
+import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
@@ -32,7 +32,7 @@ export class GhostProvider {
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private streamingParser: GhostStreamingParser
-	private strategyManager: PromptStrategyManager
+	private autoTriggerStrategy: AutoTriggerStrategy
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private cline: ClineProvider
@@ -70,7 +70,7 @@ export class GhostProvider {
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions)
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
-		this.strategyManager = new PromptStrategyManager({ debug: true })
+		this.autoTriggerStrategy = new AutoTriggerStrategy()
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
@@ -240,34 +240,6 @@ export class GhostProvider {
 		await this.render()
 	}
 
-	public async promptCodeSuggestion() {
-		if (!this.enabled) {
-			return
-		}
-
-		this.taskId = crypto.randomUUID()
-		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_QUICK_TASK, {
-			taskId: this.taskId,
-		})
-
-		const userInput = await vscode.window.showInputBox({
-			prompt: t("kilocode:ghost.input.title"),
-			placeHolder: t("kilocode:ghost.input.placeholder"),
-		})
-		if (!userInput) {
-			return
-		}
-
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			return
-		}
-
-		const document = editor.document
-		const range = editor.selection.isEmpty ? undefined : editor.selection
-		await this.provideCodeSuggestions({ document, range, userInput })
-	}
-
 	private async hasAccess(document: vscode.TextDocument) {
 		return document.isUntitled || (await this.initializeIgnoreController()).validateAccess(document.fileName)
 	}
@@ -303,7 +275,7 @@ export class GhostProvider {
 		this.isRequestCancelled = false
 
 		const context = await this.ghostContext.generate(initialContext)
-		const { systemPrompt, userPrompt } = this.strategyManager.buildPrompt(context)
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
 		if (this.isRequestCancelled) {
 			return
 		}

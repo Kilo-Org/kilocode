@@ -104,7 +104,6 @@
 			"cancelSuggestions": "ยกเลิกการแก้ไขที่แนะนำ",
 			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำปัจจุบัน",
 			"applyAllSuggestions": "ใช้การแก้ไขที่แนะนำทั้งหมด",
-			"promptCodeSuggestion": "งานด่วน",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

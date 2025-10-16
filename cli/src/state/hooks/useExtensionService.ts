@@ -77,7 +77,7 @@ export interface UseExtensionServiceReturn {
  */
 export function useExtensionService(): UseExtensionServiceReturn {
 	// Read atoms
-	const [service, setServiceAtom] = useAtom(extensionServiceAtom)
+	const [service] = useAtom(extensionServiceAtom)
 	const isReady = useAtomValue(isServiceReadyAtom)
 	const isInitializing = useAtomValue(isInitializingAtom)
 	const isDisposed = useAtomValue(isServiceDisposedAtom)

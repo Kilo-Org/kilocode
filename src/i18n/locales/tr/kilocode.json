@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
 			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
 			"applyAllSuggestions": "Tüm Önerilen Düzenlemeleri Uygula",
-			"promptCodeSuggestion": "Hızlı Görev",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

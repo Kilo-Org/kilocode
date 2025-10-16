@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Cancelar Ediciones Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edición Sugerida Actual",
 			"applyAllSuggestions": "Aplicar Todas las Ediciones Sugeridas",
-			"promptCodeSuggestion": "Tarea Rápida",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

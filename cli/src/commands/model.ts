@@ -533,10 +533,11 @@ export const modelCommand: Command = {
 				await selectModel(context, args[1])
 				break
 
-			case "list":
+			case "list": {
 				const filter = args.length > 1 ? args[1] : undefined
 				await listModels(context, filter)
 				break
+			}
 
 			default:
 				context.addMessage({

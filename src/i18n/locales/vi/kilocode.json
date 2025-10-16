@@ -98,7 +98,6 @@
 			"cancelSuggestions": "Hủy Các Chỉnh Sửa Được Đề Xuất",
 			"applyCurrentSuggestion": "Áp Dụng Chỉnh Sửa Được Đề Xuất Hiện Tại",
 			"applyAllSuggestions": "Áp Dụng Tất Cả Các Chỉnh Sửa Được Đề Xuất",
-			"promptCodeSuggestion": "Tác Vụ Nhanh",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

@@ -1,5 +1,5 @@
 import { LLMClient } from "./llm-client.js"
-import { PromptStrategyManager } from "../services/ghost/PromptStrategyManager.js"
+import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
 import { GhostSuggestionContext } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
@@ -8,14 +8,11 @@ import * as vscode from "vscode"
 
 export class StrategyTester {
 	private llmClient: LLMClient
-	private strategyManager: PromptStrategyManager
+	private autoTriggerStrategy: AutoTriggerStrategy
 
-	constructor(llmClient: LLMClient, options?: { overrideStrategy?: string }) {
+	constructor(llmClient: LLMClient) {
 		this.llmClient = llmClient
-		this.strategyManager = new PromptStrategyManager({
-			debug: false,
-			overrideStrategy: options?.overrideStrategy,
-		})
+		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
 
 	/**
@@ -58,7 +55,7 @@ export class StrategyTester {
 
 	async getCompletion(code: string): Promise<string> {
 		const context = this.createContext(code)
-		const { systemPrompt, userPrompt, strategy } = this.strategyManager.buildPrompt(context)
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		return response.content
@@ -80,11 +77,9 @@ export class StrategyTester {
 	}
 
 	/**
-	 * Get the type of the strategy that would be selected for the given code
+	 * Get the type of the strategy (always auto-trigger now)
 	 */
 	getSelectedStrategyName(code: string): string {
-		const context = this.createContext(code)
-		const strategy = this.strategyManager.selectStrategy(context)
-		return strategy.name
+		return "auto-trigger"
 	}
 }

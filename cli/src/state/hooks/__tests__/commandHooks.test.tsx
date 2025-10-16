@@ -5,18 +5,13 @@
  * Full integration testing would require @testing-library/react.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest"
+import React from "react"
+import { describe, it, expect, vi } from "vitest"
 import { createStore } from "jotai"
 import { render } from "ink-testing-library"
 import { Provider } from "jotai"
 
 describe("Command Hook Exports", () => {
-	let store: ReturnType<typeof createStore>
-
-	beforeEach(() => {
-		store = createStore()
-	})
-
 	describe("Hook Exports", () => {
 		it("should export useCommandContext", async () => {
 			const { useCommandContext } = await import("../useCommandContext.js")

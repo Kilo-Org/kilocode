@@ -93,7 +93,6 @@
 			"cancelSuggestions": "Отменить Предлагаемые Правки",
 			"applyCurrentSuggestion": "Применить Текущую Предлагаемую Правку",
 			"applyAllSuggestions": "Применить Все Предлагаемые Правки",
-			"promptCodeSuggestion": "Быстрая Задача",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

@@ -674,6 +674,7 @@ export class TelemetryService {
 
 	private anonymizeWorkspace(workspace: string): string {
 		// Return a hash of the workspace path for privacy
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const crypto = require("crypto")
 		return crypto.createHash("sha256").update(workspace).digest("hex").substring(0, 16)
 	}

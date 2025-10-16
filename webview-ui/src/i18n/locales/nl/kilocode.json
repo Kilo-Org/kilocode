@@ -250,6 +250,9 @@
 		"perDay": "Per dag",
 		"requestsLabel": "Verzoeken"
 	},
+	"memoryWarning": {
+		"message": "Geheugengebruik is {{percentage}}%. Start je IDE opnieuw op om crashes te voorkomen."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
 		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",

@@ -254,5 +254,8 @@
 		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",
 		"maxImagesReached": "Tối đa 20 hình ảnh cho mỗi tin nhắn. Hãy xóa một số hình ảnh để thêm được nhiều hơn.",
 		"imagesRemovedNoSupport": "Hình ảnh đã bị xóa, không được mô hình hỗ trợ."
+	},
+	"memoryWarning": {
+		"message": "Mức sử dụng bộ nhớ đang ở {{percentage}}%. Vui lòng khởi động lại IDE của bạn để tránh sự cố."
 	}
 }

@@ -254,5 +254,8 @@
 		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",
 		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais.",
 		"imagesRemovedNoSupport": "Imagens removidas, não suportadas pelo modelo."
+	},
+	"memoryWarning": {
+		"message": "O uso de memória está em {{percentage}}%. Por favor, reinicie seu IDE para evitar travamentos."
 	}
 }

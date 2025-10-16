@@ -28,7 +28,7 @@ export const GhostServiceSettingsView = ({
 	const { t } = useAppTranslation()
 	const { enableAutoTrigger, autoTriggerDelay, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding } =
 		ghostServiceSettings || {}
-	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
+	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const normalizedDelay = normalizeAutoTriggerDelay(autoTriggerDelay)
 	const currentDelayIndex = DELAY_VALUES.indexOf(normalizedDelay)
@@ -125,7 +125,7 @@ export const GhostServiceSettingsView = ({
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
 								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
-									keybinding: keybindings["kilo-code.ghost.promptCodeSuggestion"],
+									keybinding: keybindings["kilo-code.addToContextAndFocus"],
 								})}
 							</span>
 						</ControlledCheckbox>
@@ -136,9 +136,7 @@ export const GhostServiceSettingsView = ({
 									DocsLink: (
 										<a
 											href="#"
-											onClick={() =>
-												openGlobalKeybindings("kilo-code.ghost.promptCodeSuggestion")
-											}
+											onClick={() => openGlobalKeybindings("kilo-code.addToContextAndFocus")}
 											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
 									),
 								}}

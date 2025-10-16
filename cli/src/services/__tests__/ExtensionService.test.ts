@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi, beforeAll, afterAll } 
 import { ExtensionService, createExtensionService } from "../extension.js"
 import type { WebviewMessage } from "../../types/messages.js"
 import * as path from "path"
-import * as fs from "fs"
 
 // Mock the extension-paths module
 vi.mock("../../utils/extension-paths.js", () => ({
@@ -96,7 +95,7 @@ describe("ExtensionService", () => {
 
 		// Create a mock extension module
 		mockExtensionModule = {
-			activate: vi.fn(async (context: any) => {
+			activate: vi.fn(async () => {
 				// Return a mock API
 				return {
 					getState: vi.fn(() => ({
@@ -132,6 +131,7 @@ describe("ExtensionService", () => {
 		}
 
 		// Mock the module loading system
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const Module = require("module")
 		originalRequire = Module.prototype.require
 
@@ -152,6 +152,7 @@ describe("ExtensionService", () => {
 	afterAll(() => {
 		// Restore original require
 		if (originalRequire) {
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
 			const Module = require("module")
 			Module.prototype.require = originalRequire
 		}
@@ -179,7 +180,6 @@ describe("ExtensionService", () => {
 			service = new ExtensionService({
 				workspace: "/custom/workspace",
 				mode: "architect",
-				autoApprove: true,
 				extensionBundlePath: "/mock/extension/dist/extension.js",
 				extensionRootPath: "/mock/extension",
 			})

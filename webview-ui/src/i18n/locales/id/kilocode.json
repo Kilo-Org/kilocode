@@ -254,5 +254,8 @@
 		"modelUnavailable": "⚠️ Model {{model}} tidak tersedia. Ganti ke model lain untuk melanjutkan.",
 		"continueWith": "Lanjutkan dengan {{model}}",
 		"continue": "Lanjutkan"
+	},
+	"memoryWarning": {
+		"message": "Penggunaan memori mencapai {{percentage}}%. Silakan restart IDE Anda untuk mencegah crash."
 	}
 }

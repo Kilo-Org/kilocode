@@ -1,29 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { createExtensionHost, ExtensionHost } from "../ExtensionHost.js"
+import type { ExtensionHost } from "../ExtensionHost.js"
 import { logs } from "../../services/logs.js"
-import * as path from "path"
-import { fileURLToPath } from "url"
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 describe("ExtensionHost Console Interception", () => {
 	let extensionHost: ExtensionHost | undefined
-	let logsSpy: {
-		info: ReturnType<typeof vi.spyOn>
-		error: ReturnType<typeof vi.spyOn>
-		warn: ReturnType<typeof vi.spyOn>
-		debug: ReturnType<typeof vi.spyOn>
-	}
-
 	beforeEach(() => {
 		// Spy on logs service methods
-		logsSpy = {
-			info: vi.spyOn(logs, "info"),
-			error: vi.spyOn(logs, "error"),
-			warn: vi.spyOn(logs, "warn"),
-			debug: vi.spyOn(logs, "debug"),
-		}
+		vi.spyOn(logs, "info")
+		vi.spyOn(logs, "error")
+		vi.spyOn(logs, "warn")
+		vi.spyOn(logs, "debug")
 	})
 
 	afterEach(async () => {
@@ -38,9 +24,6 @@ describe("ExtensionHost Console Interception", () => {
 		// This test verifies that console logs in the main extension file are captured
 		// Note: This requires a real extension bundle to test properly
 		// For now, we'll test the mechanism itself
-
-		const testExtensionPath = path.join(__dirname, "fixtures", "test-extension.js")
-		const testWorkspacePath = path.join(__dirname, "fixtures", "workspace")
 
 		// Create a simple test extension that logs to console
 		// In a real test, this would be a compiled extension bundle

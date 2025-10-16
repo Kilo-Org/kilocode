@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest"
 import { getSelectedModelId } from "../providers.js"
-import type { ProviderName } from "../../types/messages.js"
 
 describe("getSelectedModelId", () => {
 	it("should return 'unknown' when apiConfiguration is undefined", () => {

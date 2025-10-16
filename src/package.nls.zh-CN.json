@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "取消建议编辑",
 	"ghost.commands.applyCurrentSuggestion": "应用当前建议编辑",
 	"ghost.commands.applyAllSuggestions": "应用所有建议编辑",
-	"ghost.commands.promptCodeSuggestion": "快速任务",
 	"ghost.commands.goToNextSuggestion": "转到下一个建议",
 	"ghost.commands.goToPreviousSuggestion": "转到上一个建议"
 }

@@ -29,6 +29,7 @@ export enum TelemetryEventName {
 	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
+	MEMORY_WARNING_SHOWN = "Memory Warning Shown",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",

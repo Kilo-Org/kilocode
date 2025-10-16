@@ -102,7 +102,6 @@
 			"cancelSuggestions": "إلغاء التعديلات المقترحة",
 			"applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
 			"applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
-			"promptCodeSuggestion": "مهمة سريعة",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

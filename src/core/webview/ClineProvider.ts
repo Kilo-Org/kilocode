@@ -104,6 +104,7 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -692,6 +693,39 @@ export class ClineProvider
 			await visibleProvider.postMessageToWebview({ type: "invoke", invoke: "setChatBoxMessage", text: prompt })
 			return
 		}
+
+		//kilocode_change start
+		if (command === "addToContextAndFocus") {
+			let messageText = prompt
+
+			const editor = vscode.window.activeTextEditor
+			if (editor) {
+				const fullContent = editor.document.getText()
+				const filePath = params.filePath as string
+
+				messageText = `
+For context, we are working within this file:
+
+'${filePath}' (see below for file content)
+<file_content path="${filePath}">
+${fullContent}
+</file_content>
+
+Heed this prompt:
+
+${prompt}
+`
+			}
+
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: messageText,
+			})
+			await vscode.commands.executeCommand("kilo-code.focusChatInput")
+			return
+		}
+		// kilocode_change end
 
 		await visibleProvider.createTask(prompt)
 	}
@@ -2950,6 +2984,18 @@ export class ClineProvider
 	public get gitProperties(): GitProperties | undefined {
 		return this._gitProperties
 	}
+
+	// kilocode_change start
+	private _kiloConfig: KilocodeConfig | null = null
+	public async getKiloConfig(): Promise<KilocodeConfig | null> {
+		if (this._kiloConfig === null) {
+			const { repositoryUrl } = await this.getGitProperties()
+			this._kiloConfig = await getKilocodeConfig(this.cwd, repositoryUrl)
+			console.log("getKiloConfig", this._kiloConfig)
+		}
+		return this._kiloConfig
+	}
+	// kilocode_change end
 
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start

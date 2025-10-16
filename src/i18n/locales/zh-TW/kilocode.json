@@ -98,7 +98,6 @@
 			"cancelSuggestions": "取消建議編輯",
 			"applyCurrentSuggestion": "套用目前建議編輯",
 			"applyAllSuggestions": "套用所有建議編輯",
-			"promptCodeSuggestion": "快速工作",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

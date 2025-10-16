@@ -254,5 +254,8 @@
 		"modelNoImageSupport": "Obrázky nejsou podporovány aktuálním modelem.",
 		"maxImagesReached": "Maximálně 20 obrázků na zprávu. Odstraňte některé obrázky, abyste mohli přidat další.",
 		"imagesRemovedNoSupport": "Obrázky odstraněny, nejsou podporovány modelem."
+	},
+	"memoryWarning": {
+		"message": "Využití paměti je na {{percentage}}%. Restartuj prosím své IDE, aby se předešlo pádům."
 	}
 }

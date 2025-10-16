@@ -248,6 +248,9 @@
 		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
 		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
 	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",
 		"notAllowedForTeam": "⚠️ Organizasyonunuz {{model}} modelinin kullanımına izin vermiyor. Devam etmek için farklı bir model seçin.",

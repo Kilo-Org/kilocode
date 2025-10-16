@@ -250,6 +250,9 @@
 		"requestsLabel": "Demandes",
 		"perDay": "Par jour"
 	},
+	"memoryWarning": {
+		"message": "L'utilisation de la mémoire est à {{percentage}}%. Veuillez redémarrer votre IDE pour éviter les plantages."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
 		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",

@@ -26,6 +26,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 // kilocode_change start
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 import { getChutesModels } from "./chutes"
+import { getGeminiModels } from "./gemini"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -105,6 +106,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "chutes":
 				models = await getChutesModels(options.apiKey)
+				break
+			case "gemini":
+				models = await getGeminiModels({
+					apiKey: options.apiKey,
+					baseUrl: options.baseUrl,
+				})
 				break
 			// kilocode_change end
 			case "ollama":
