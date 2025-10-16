@@ -4,7 +4,7 @@
  * Provides functions to match Key events against HotkeyDefinitions
  */
 
-import type { Key } from "../types/keypress.js"
+import type { Key } from "../types/keyboard.js"
 import type { HotkeyDefinition, KeyCombination } from "../constants/keyboard/hotkeys.js"
 
 /**

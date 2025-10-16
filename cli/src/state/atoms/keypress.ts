@@ -3,7 +3,7 @@
  */
 
 import { atom } from "jotai"
-import type { Key, KeypressHandler } from "../../types/keypress.js"
+import type { Key, KeypressHandler } from "../../types/keyboard.js"
 
 // ============================================================================
 // Core State Atoms

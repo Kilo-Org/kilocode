@@ -9,7 +9,7 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { useStdin } from "ink"
 import readline from "node:readline"
 import { PassThrough } from "node:stream"
-import type { Key, KeyboardProviderConfig } from "../../types/keypress.js"
+import type { Key, KeyboardProviderConfig } from "../../types/keyboard.js"
 import {
 	broadcastKeyEventAtom,
 	setPasteModeAtom,
@@ -26,11 +26,9 @@ import {
 	debugKeystrokeLoggingAtom,
 	setDebugLoggingAtom,
 	clearBuffersAtom,
-	waitingForEnterAfterBackslashAtom,
 } from "../../state/atoms/keypress.js"
 import {
 	parseKittySequence,
-	parseLegacySequence,
 	isPasteModeBoundary,
 	isFocusEvent,
 	mapAltKeyCharacter,
@@ -81,7 +79,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
 	const isKittyEnabled = useAtomValue(kittyProtocolEnabledAtom)
 	const isDebugEnabled = useAtomValue(debugKeystrokeLoggingAtom)
-	const waitingForEnter = useAtomValue(waitingForEnterAfterBackslashAtom)
 
 	// Local refs for mutable state
 	const isPasteRef = useRef(false)

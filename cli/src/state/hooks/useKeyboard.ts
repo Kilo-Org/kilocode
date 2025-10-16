@@ -6,7 +6,7 @@
 import { useEffect, useRef } from "react"
 import { useSetAtom } from "jotai"
 import { subscribeToKeyboardAtom } from "../atoms/keypress.js"
-import type { Key, KeypressHandler } from "../../types/keypress.js"
+import type { Key, KeypressHandler } from "../../types/keyboard.js"
 import type { HotkeyDefinition } from "../../constants/keyboard/hotkeys.js"
 import { matchesHotkey, isPrintableInput } from "../../utils/hotkey-matcher.js"
 

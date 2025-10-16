@@ -3,7 +3,7 @@
  * Handles Kitty protocol, legacy ANSI sequences, and special key combinations
  */
 
-import type { Key } from "../../types/keypress.js"
+import type { Key } from "../../types/keyboard.js"
 import {
 	ESC,
 	CSI,
