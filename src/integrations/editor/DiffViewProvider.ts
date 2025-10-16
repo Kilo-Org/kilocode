@@ -522,8 +522,6 @@ export class DiffViewProvider {
 						if (editor) {
 							cleanup()
 							resolve(editor)
-						} else {
-							console.error(`[DiffViewProvider] Failed to find valid editor for ${fileName}`)
 						}
 					}
 				}),
@@ -540,8 +538,6 @@ export class DiffViewProvider {
 					if (editor) {
 						cleanup()
 						resolve(editor)
-					} else {
-						console.error(`[DiffViewProvider] Failed to find valid editor for ${fileName}`)
 					}
 				}),
 			)
