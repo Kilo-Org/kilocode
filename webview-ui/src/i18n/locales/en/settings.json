@@ -37,6 +37,30 @@
 		"gitProviders": "Git Providers",
 		"about": "About Kilo Code"
 	},
+	"gitProviders": {
+		"description": "Configure and monitor your Git provider integrations. Install extensions to enable enhanced features like pull request management, issue tracking, and commit status monitoring.",
+		"status": {
+			"activated": "Extension activated",
+			"notInstalled": "Extension not installed",
+			"notSupported": "Not supported yet"
+		},
+		"repository": {
+			"project": "Project",
+			"branch": "Branch",
+			"remote": "Remote URL"
+		},
+		"install": "Install Extension",
+		"configuration": {
+			"title": "What you can configure",
+			"description": "Once a Git provider extension is installed and activated, you can configure:",
+			"features": {
+				"pr": "Pull request management and reviews",
+				"issues": "Issue tracking and management",
+				"commits": "Commit status and CI/CD monitoring",
+				"status": "Repository status and notifications"
+			}
+		}
+	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
 	},
