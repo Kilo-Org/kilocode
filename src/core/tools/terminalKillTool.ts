@@ -13,12 +13,11 @@ export async function terminalKillTool(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
-	const action: string | undefined = block.params.action
 	const terminalId: string | undefined = block.params.terminal_id
 
 	try {
 		if (block.partial) {
-			await task.ask("command", removeClosingTag("action", action), block.partial).catch(() => {})
+			await task.ask("command", removeClosingTag("terminal_id", terminalId), block.partial).catch(() => {})
 			return
 		}
 
@@ -26,14 +25,6 @@ export async function terminalKillTool(
 			task.consecutiveMistakeCount++
 			task.recordToolError("terminal_kill")
 			pushToolResult(await task.sayAndCreateMissingParamError("terminal_kill", "terminal_id"))
-			return
-		}
-
-		// Only support kill action for MVP
-		if (action !== "kill") {
-			task.consecutiveMistakeCount++
-			task.recordToolError("terminal_kill")
-			pushToolResult(formatResponse.toolError(`Invalid action "${action}". Only "kill" is supported.`))
 			return
 		}
 
