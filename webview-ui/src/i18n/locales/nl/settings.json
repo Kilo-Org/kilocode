@@ -928,6 +928,10 @@
 			"label": "Taaktijdlijn weergeven",
 			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
 		},
+		"sendMessageOnEnter": {
+			"label": "Bericht verzenden met Enter",
+			"description": "Indien ingeschakeld, druk op Enter om te verzenden en Shift+Enter voor een nieuwe regel. Schakel uit om in plaats daarvan Shift+Enter te gebruiken om te verzenden."
+		},
 		"costThreshold": {
 			"label": "Kosten onder drempel verbergen",
 			"currentValue": "Huidige drempelwaarde: ${{value}}",

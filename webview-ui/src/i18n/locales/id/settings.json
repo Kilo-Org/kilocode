@@ -949,6 +949,10 @@
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
 		},
+		"sendMessageOnEnter": {
+			"label": "Kirim pesan dengan Enter",
+			"description": "Saat diaktifkan, tekan Enter untuk mengirim dan Shift+Enter untuk baris baru. Matikan untuk menggunakan Shift+Enter untuk mengirim."
+		},
 		"costThreshold": {
 			"label": "Sembunyikan biaya di bawah ambang batas",
 			"currentValue": "Ambang batas saat ini: ${{value}}",

@@ -928,6 +928,10 @@
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
 		},
+		"sendMessageOnEnter": {
+			"label": "Enviar mensagem com Enter",
+			"description": "Quando ativado, pressione Enter para enviar e Shift+Enter para uma nova linha. Desative para usar Shift+Enter para enviar."
+		},
 		"costThreshold": {
 			"label": "Ocultar custo abaixo do limite",
 			"currentValue": "Limiar atual: ${{value}}",

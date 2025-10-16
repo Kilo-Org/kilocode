@@ -929,6 +929,10 @@
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
 		},
+		"sendMessageOnEnter": {
+			"label": "Enter ile mesaj gönder",
+			"description": "Etkinleştirildiğinde, Enter'a basarak mesaj gönderin ve yeni satır için Shift+Enter kullanın. Kapatmak için Shift+Enter ile göndermek yerine Enter ile göndermeyi kullanın."
+		},
 		"costThreshold": {
 			"label": "Eşik değerin altındaki maliyeti gizle",
 			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",

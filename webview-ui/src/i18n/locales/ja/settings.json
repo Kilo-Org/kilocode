@@ -929,6 +929,10 @@
 			"label": "タスクのタイムラインを表示",
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
 		},
+		"sendMessageOnEnter": {
+			"label": "Enterでメッセージを送信",
+			"description": "有効にすると、Enterキーで送信し、Shift+Enterで改行します。代わりにShift+Enterで送信するにはオフにします。"
+		},
 		"costThreshold": {
 			"label": "しきい値以下のコストを非表示にする",
 			"currentValue": "現在のしきい値: ${{value}}",

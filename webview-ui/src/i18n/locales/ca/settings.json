@@ -927,6 +927,10 @@
 			"label": "Mostra la línia temporal de la tasca",
 			"description": "Mostra una línia de temps visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i desplaçar-te cap enrere a punts específics de l'historial de la tasca."
 		},
+		"sendMessageOnEnter": {
+			"label": "Envia missatge amb Enter",
+			"description": "Quan estigui activat, prem Enter per enviar i Shift+Enter per a una nova línia. Desactiva-ho per utilitzar Shift+Enter per enviar en el seu lloc."
+		},
 		"costThreshold": {
 			"label": "Amaga el cost per sota del llindar",
 			"description": "Mostra només els costos de sol·licituds superiors a aquesta quantitat. Els costos sempre són visibles quan el panell de detalls està obert.",

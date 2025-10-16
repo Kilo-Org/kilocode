@@ -928,6 +928,10 @@
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
 		},
+		"sendMessageOnEnter": {
+			"label": "Wyślij wiadomość klawiszem Enter",
+			"description": "Gdy włączone, naciśnij Enter, aby wysłać i Shift+Enter, aby dodać nową linię. Wyłącz, aby użyć Shift+Enter do wysłania."
+		},
 		"costThreshold": {
 			"currentValue": "Aktualny próg: ${{value}}",
 			"label": "Ukryj koszt poniżej progu",
