@@ -14,7 +14,7 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { ghostServiceSettingsSchema } from "./kilocode.js" // kilocode_change
+import { fastApplyModelSchema, ghostServiceSettingsSchema } from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -96,6 +96,8 @@ export const globalSettingsSchema = z.object({
 	browserViewportSize: z.string().optional(),
 	showAutoApproveMenu: z.boolean().optional(), // kilocode_change
 	showTaskTimeline: z.boolean().optional(), // kilocode_change
+	showTimestamps: z.boolean().optional(), // kilocode_change
+	hideCostBelowThreshold: z.number().min(0).optional(), // kilocode_change
 	localWorkflowToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	globalWorkflowToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	localRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
@@ -139,7 +141,10 @@ export const globalSettingsSchema = z.object({
 	fuzzyMatchThreshold: z.number().optional(),
 	experiments: experimentsSchema.optional(),
 
-	morphApiKey: z.string().optional(), // kilocode_change: Morph fast apply
+	// kilocode_change start: Morph fast apply
+	morphApiKey: z.string().optional(),
+	fastApplyModel: fastApplyModelSchema.optional(),
+	// kilocode_change end
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
 	codebaseIndexConfig: codebaseIndexConfigSchema.optional(),
@@ -162,8 +167,10 @@ export const globalSettingsSchema = z.object({
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
+	reasoningBlockCollapsed: z.boolean().optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
@@ -213,6 +220,7 @@ export const SECRET_STATE_KEYS = [
 	"codeIndexQdrantApiKey",
 	// kilocode_change start
 	"kilocodeToken",
+	"syntheticApiKey",
 	// kilocode_change end
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",
@@ -226,6 +234,7 @@ export const SECRET_STATE_KEYS = [
 	"ioIntelligenceApiKey",
 	"submodelApiKey",
 	"vercelAiGatewayApiKey",
+	"ovhCloudAiEndpointsApiKey", // kilocode_change
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)

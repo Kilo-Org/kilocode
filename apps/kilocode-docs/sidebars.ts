@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
+				"basic-usage/autocomplete",
 				"basic-usage/context-mentions",
 				{
 					type: "category",
@@ -56,6 +57,7 @@ const sidebars: SidebarsConfig = {
 								"providers/claude-code",
 								"providers/deepseek",
 								"providers/fireworks",
+								"providers/synthetic", // kilocode_change
 								"providers/vertex",
 								"providers/glama",
 								"providers/gemini",
@@ -67,6 +69,7 @@ const sidebars: SidebarsConfig = {
 								"providers/openai",
 								"providers/openai-compatible",
 								"providers/openrouter",
+								"providers/ovhcloud", // kilocode_change
 								"providers/requesty",
                 "providers/submodel",
 								"providers/unbound",
@@ -141,6 +144,7 @@ const sidebars: SidebarsConfig = {
 						"features/footgun-prompting",
 					],
 				},
+				"features/auto-launch-configuration",
 				"features/experimental/experimental-features",
 			],
 		},

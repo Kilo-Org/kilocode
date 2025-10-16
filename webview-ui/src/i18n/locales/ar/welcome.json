@@ -10,6 +10,10 @@
 		},
 		"openrouter": {
 			"description": "واجهة موحّدة لنماذج LLM"
+		},
+		"roo": {
+			"description": "أفضل النماذج المجانية للبدء",
+			"incentive": "جرب Roo مجاناً"
 		}
 	},
 	"chooseProvider": "عشان يشتغل سحر Kilo Code، يلزم مفتاح API.",

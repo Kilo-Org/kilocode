@@ -16,6 +16,11 @@
 		"title": "API 設定",
 		"select": "選擇此模式要使用的 API 設定"
 	},
+	"organizationMode": {
+		"title": "組織模式",
+		"description": "此模式由你的組織提供，無法在此編輯。若要修改此模式，請前往 Kilo Code Dashboard。",
+		"cannotEdit": "無法編輯組織模式"
+	},
 	"tools": {
 		"title": "可用工具",
 		"builtInModesText": "內建模式的工具無法修改",

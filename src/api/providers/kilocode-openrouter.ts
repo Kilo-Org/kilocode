@@ -3,11 +3,16 @@ import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
+import { getKiloBaseUriFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
-import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID } from "../../shared/kilocode/headers"
+import {
+	X_KILOCODE_ORGANIZATIONID,
+	X_KILOCODE_TASKID,
+	X_KILOCODE_PROJECTID,
+	X_KILOCODE_TESTER,
+} from "../../shared/kilocode/headers"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -18,7 +23,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	defaultModel: string = openRouterDefaultModelId
 
 	protected override get providerName() {
-		return "KiloCode"
+		return "KiloCode" as const
 	}
 
 	constructor(options: ApiHandlerOptions) {
@@ -43,6 +48,18 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 		if (kilocodeOptions.kilocodeOrganizationId) {
 			headers[X_KILOCODE_ORGANIZATIONID] = kilocodeOptions.kilocodeOrganizationId
+
+			if (metadata?.projectId) {
+				headers[X_KILOCODE_PROJECTID] = metadata.projectId
+			}
+		}
+
+		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+		if (
+			kilocodeOptions.kilocodeTesterWarningsDisabledUntil &&
+			kilocodeOptions.kilocodeTesterWarningsDisabledUntil > Date.now()
+		) {
+			headers[X_KILOCODE_TESTER] = "SUPPRESS"
 		}
 
 		return Object.keys(headers).length > 0 ? { headers } : undefined
@@ -98,7 +115,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 				modelId: this.options.kilocodeModel,
 				endpoint: this.options.openRouterSpecificProvider,
 			}),
-			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId),
+			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId, this.options),
 		])
 
 		this.models = models

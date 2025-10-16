@@ -116,6 +116,7 @@ export interface WebviewMessage {
 		| "browserViewportSize"
 		| "screenshotQuality"
 		| "remoteBrowserHost"
+		| "openKeyboardShortcuts"
 		| "openMcpSettings"
 		| "openProjectMcpSettings"
 		| "restartMcpServer"
@@ -126,6 +127,7 @@ export interface WebviewMessage {
 		| "updateMcpTimeout"
 		| "fuzzyMatchThreshold"
 		| "morphApiKey" // kilocode_change: Morph fast apply - global setting
+		| "fastApplyModel" // kilocode_change: Fast Apply model selection
 		| "writeDelayMs"
 		| "diagnosticsEnabled"
 		| "enhancePrompt"
@@ -222,11 +224,14 @@ export interface WebviewMessage {
 		| "hasOpenedModeSelector"
 		| "cloudButtonClicked"
 		| "rooCloudSignIn"
+		| "cloudLandingPageSignIn"
 		| "rooCloudSignOut"
 		| "rooCloudManualUrl"
+		| "switchOrganization"
 		| "condenseTaskContextRequest"
 		| "requestIndexingStatus"
 		| "startIndexing"
+		| "cancelIndexing" // kilocode_change
 		| "clearIndexData"
 		| "indexingStatusUpdate"
 		| "indexCleared"
@@ -237,11 +242,14 @@ export interface WebviewMessage {
 		| "getUsageData" // kilocode_change
 		| "usageDataResponse" // kilocode_change
 		| "showTaskTimeline" // kilocode_change
+		| "showTimestamps" // kilocode_change
+		| "hideCostBelowThreshold" // kilocode_change
 		| "toggleTaskFavorite" // kilocode_change
 		| "fixMermaidSyntax" // kilocode_change
 		| "mermaidFixResponse" // kilocode_change
 		| "openGlobalKeybindings" // kilocode_change
 		| "getKeybindings" // kilocode_change
+		| "setReasoningBlockCollapsed"
 		| "openExternal"
 		| "filterMarketplaceItems"
 		| "mcpButtonClicked"
@@ -349,6 +357,7 @@ export interface WebviewMessage {
 	checkOnly?: boolean // For deleteCustomMode check
 	upsellId?: string // For dismissUpsell
 	list?: string[] // For dismissedUpsells response
+	organizationId?: string | null // For organization switching
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean

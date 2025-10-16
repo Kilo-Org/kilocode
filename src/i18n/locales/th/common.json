@@ -238,9 +238,25 @@
 			"confirm": "ลบ"
 		}
 	},
+	"interruption": {
+		"responseInterruptedByUser": "การตอบสนองถูกหยุดโดยผู้ใช้",
+		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API"
+	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
 			"description": "ป้องกันการทำงานเสร็จสิ้นเมื่อมี todo ที่ยังไม่เสร็จในรายการ todo"
 		}
+	},
+	"docsLink": {
+		"label": "เอกสาร",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "ข้อผิดพลาด",
+		"reportText": "กรุณารายงานข้อผิดพลาดนี้เพื่อช่วยเราปรับปรุงแอปพลิเคชัน",
+		"githubText": "รายงานบน GitHub",
+		"copyInstructions": "คัดลอกรายละเอียดข้อผิดพลาดด้านล่าง:",
+		"errorStack": "Error Stack",
+		"componentStack": "Component Stack"
 	}
 }

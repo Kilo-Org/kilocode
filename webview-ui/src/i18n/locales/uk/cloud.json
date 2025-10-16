@@ -23,6 +23,9 @@
 	"havingTrouble": "Маєте проблеми?",
 	"pasteCallbackUrl": "Вставте callback URL тут",
 	"startOver": "Почати спочатку",
+	"personalAccount": "Особистий акаунт",
+	"switchAccount": "Перемкнути акаунт Roo Code Cloud",
+	"createTeamAccount": "Створити команду",
 	"upsell": {
 		"autoApprovePowerUser": "Досвідчені користувачі люблять автосхвалення. Оновіться до хмари для розширених функцій.",
 		"longRunningTask": "Тривале завдання? Стежте за прогресом у хмарі.",

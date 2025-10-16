@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "مرحبًا بك في Kilo Code!",
 		"introText1": "Kilo Code وكيل برمجة مدعوم بالذكاء ومفتوح المصدر ومجاني.",
-		"introText2": "يشتغل مع أحدث نماذج الذكاء مثل Claude 4 Sonnet، Gemini 2.5 Pro، GPT-4.1 وأكثر من 450 نموذج آخر.",
-		"introText3": "أنشئ حساب مجاني واحصل على ما يصل إلى 25 دولار من الرموز لاستخدامها مع أي نموذج ذكاء اصطناعي.",
+		"introText2": "يعمل مع أحدث نماذج الذكاء الاصطناعي مثل Claude Sonnet 4.5 وGemini 2.5 Pro وGPT-5 وأكثر من 450 نموذج آخر.",
+		"introText3": "أنشئ حسابًا مجانيًا واحصل على 20 دولارًا كرصيد إضافي عند إضافة رصيد لأول مرة.",
 		"ctaButton": "ابدأ الآن",
 		"manualModeButton": "استخدم مفتاح API الخاص بك",
 		"alreadySignedUp": "مسجل من قبل؟",
@@ -12,6 +12,9 @@
 	"lowCreditWarning": {
 		"addCredit": "شحن الرصيد",
 		"lowBalance": "رصيدك في Kilo Code منخفض"
+	},
+	"memoryWarning": {
+		"message": "استخدام الذاكرة عند {{percentage}}%. يرجى إعادة تشغيل بيئة التطوير لمنع التعطل."
 	},
 	"pagination": {
 		"previous": "السابق",
@@ -22,9 +25,7 @@
 		"costUnknown": "التكلفة غير معروفة",
 		"costUnknownDescription": "لم يقدم مزود واجهة برمجة التطبيقات أي بيانات تكلفة أو تم إلغاء الطلب.",
 		"freeModelsDescription": "النماذج المجانية قد يكون لها حدود على الاستخدام. استخدم الرابط أدناه لتحسين استخدامك للنماذج المجانية!",
-		"freeModelsLink": "اكتشف خيارات النماذج المجانية والاقتصادية",
-		"openRouterMarkup": "يتضمن مزود Kilo Code جميع نماذج OpenRouter، بدون رسوم إضافية وبعمولة 0%!",
-		"switchToKiloCode": "التبديل إلى Kilo Code"
+		"freeModelsLink": "اكتشف خيارات النماذج المجانية والاقتصادية"
 	},
 	"notifications": {
 		"toolRequest": "طلب أداة بانتظار الموافقة",
@@ -52,8 +53,10 @@
 				},
 				"dataCollection": {
 					"default": "لم يتم تعيين سياسة للبيانات",
-					"allow": "السماح بجمع البيانات من المزود",
-					"deny": "منع جمع البيانات من المزود"
+					"allowFree": "السماح بتدريب الأوامر (مجاني فقط)",
+					"allow": "السماح بتدريب الأوامر",
+					"deny": "رفض تدريب الأوامر",
+					"zdr": "عدم الاحتفاظ بالبيانات"
 				}
 			}
 		},
@@ -94,12 +97,19 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "نمط استدعاء الأداة",
+		"description": "اختر كيفية تنسيق استدعاءات الأدوات في موجه النظام. JSON حالياً تجريبي ومخصص بشكل أساسي للمستخدمين المهتمين بالمساهمة في تطويره."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code يقترح تلخيص المحادثة",
 			"condenseConversation": "تلخيص المحادثة"
 		},
-		"seeNewChanges": "عرض التغييرات الجديدة"
+		"seeNewChanges": "عرض التغييرات الجديدة",
+		"revertNewChanges": "التراجع عن التغييرات الجديدة",
+		"confirmRevertChanges": "تأكيد التراجع عن التغييرات",
+		"cancelRevertChanges": "إلغاء التراجع عن التغييرات"
 	},
 	"newTaskPreview": {
 		"task": "مهمة"
@@ -213,16 +223,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "الإكمال التلقائي اليدوي ({{keybinding}})",
 				"description": "تحتاج إصلاحاً سريعاً أو إكمالاً أو إعادة هيكلة؟ سيستخدم Kilo السياق المحيط لتقديم تحسينات فورية، مما يبقيك في التدفق. <DocsLink>عرض الاختصار</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "استخدام مزود مخصص",
-				"description": "يستخدم الإكمال التلقائي بيانات اعتماد KiloCode / OpenRouter / Mistral لاستخدام نموذج Codestral افتراضياً"
-			},
-			"provider": "المزود",
-			"apiConfigId": {
-				"label": "تكوين API",
-				"current": "استخدام تكوين API المحدد حالياً",
-				"description": "حدد تكوين API لاستخدامه في مطالبات الإكمال التلقائي، أو استخدم فقط المحدد حالياً"
 			},
 			"keybindingNotFound": "غير موجود"
 		}

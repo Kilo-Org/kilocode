@@ -23,6 +23,9 @@
 	"havingTrouble": "Máte problémy?",
 	"pasteCallbackUrl": "Vložte zde callback URL",
 	"startOver": "Začít znovu",
+	"personalAccount": "Osobní účet",
+	"switchAccount": "Přepnout účet Roo Code Cloud",
+	"createTeamAccount": "Vytvořit týmový účet",
 	"upsell": {
 		"autoApprovePowerUser": "Pokročilí uživatelé milují automatické schvalování. Upgradujte na cloud pro pokročilé funkce.",
 		"longRunningTask": "Dlouho běžící úkol? Sledujte pokrok v cloudu.",

@@ -6,7 +6,7 @@
 		"imageTooLarge": "Görüntü dosyası çok büyük ({{size}} MB). İzin verilen maksimum boyut {{max}} MB.",
 		"imageWithSize": "Görüntü dosyası ({{size}} KB)"
 	},
-	"toolRepetitionLimitReached": "Kilo Code bir döngüye takılmış gibi görünüyor, aynı eylemi ({{toolName}}) tekrar tekrar deniyor. Bu, mevcut stratejisinde bir sorun olduğunu gösterebilir. Görevi yeniden ifade etmeyi, daha spesifik talimatlar vermeyi veya onu farklı bir yaklaşıma yönlendirmeyi düşünün.",
+	"toolRepetitionLimitReached": "Model bir döngüye takılmış gibi görünüyor, aynı eylemi ({{toolName}}) tekrar tekrar deniyor. Bu, mevcut stratejisinde bir sorun olduğunu gösterebilir. Görevi yeniden ifade etmeyi, daha spesifik talimatlar vermeyi veya onu farklı bir yaklaşıma yönlendirmeyi düşünün.",
 	"codebaseSearch": {
 		"approval": "Kod tabanında '{{query}}' aranıyor..."
 	},

@@ -1,5 +1,7 @@
 import * as undici from "undici"
 
+export const HeadersTimeoutError = undici.errors.HeadersTimeoutError
+
 export function fetchWithTimeout(timeoutMs: number, headers?: Record<string, string>): typeof fetch {
 	const agent = new undici.Agent({ headersTimeout: timeoutMs, bodyTimeout: timeoutMs })
 	return (input, init) => {

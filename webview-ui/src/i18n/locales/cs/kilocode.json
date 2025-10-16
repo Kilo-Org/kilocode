@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Vítej v Kilo Code!",
 		"introText1": "Kilo Code je bezplatný open source AI coding agent.",
-		"introText2": "Funguje s nejnovějšími AI modely jako Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 a více než 450 dalšími.",
-		"introText3": "Vytvoř si bezplatný účet a získej tokeny v hodnotě až $25 pro použití s jakýmkoli AI modelem.",
+		"introText2": "Funguje s nejnovějšími AI modely jako Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 a více než 450 dalšími.",
+		"introText3": "Vytvoř si bezplatný účet a získej $20 bonusových kreditů při prvním dobití.",
 		"ctaButton": "Začít",
 		"manualModeButton": "Použij vlastní API key",
 		"alreadySignedUp": "Už jsi registrovaný?",
@@ -29,9 +29,7 @@
 		"costUnknown": "neznámé náklady",
 		"costUnknownDescription": "Poskytovatel API neposkytl žádné údaje o nákladech nebo byl požadavek zrušen.",
 		"freeModelsDescription": "Bezplatné modely mohou mít limity na počet požadavků. Použij odkaz níže pro optimalizaci využití bezplatných modelů!",
-		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů",
-		"openRouterMarkup": "Poskytovatel Kilo Code zahrnuje všechny modely OpenRouter, bez přirážky a s 0% provizí!",
-		"switchToKiloCode": "Přepnout na Kilo Code"
+		"freeModelsLink": "Objevte možnosti bezplatných a rozpočtových modelů"
 	},
 	"notifications": {
 		"toolRequest": "Požadavek na nástroj čeká na schválení",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Není nastavena zásada dat",
-					"allow": "Povolit shromažďování dat poskytovateli",
-					"deny": "Zakázat shromažďování dat poskytovateli"
+					"allowFree": "Povolit trénování promptů (pouze zdarma)",
+					"allow": "Povolit trénování promptů",
+					"deny": "Zakázat trénování promptů",
+					"zdr": "Nulové uchovávání dat"
 				}
 			}
 		},
@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code chce zkrátit tvou konverzaci",
 			"condenseConversation": "Zkrátit konverzaci"
 		},
-		"seeNewChanges": "Zobrazit nové změny"
+		"seeNewChanges": "Zobrazit nové změny",
+		"revertNewChanges": "Vrátit nové změny",
+		"confirmRevertChanges": "Potvrdit vrácení změn",
+		"cancelRevertChanges": "Zrušit vrácení změn"
 	},
 	"newTaskPreview": {
 		"task": "Úkol"
@@ -201,6 +204,10 @@
 			"idea7": "Vytvoř uklidňující interaktivní hvězdné pole, které se pohybuje s gesty myši"
 		}
 	},
+	"toolCallStyle": {
+		"title": "Styl volání nástrojů",
+		"description": "Vyber, jak jsou volání nástrojů formátována v systémovém promptu. JSON je momentálně experimentální a je určen především pro uživatele, kteří mají zájem přispět k jeho vývoji."
+	},
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
@@ -221,16 +228,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Ruční dokončování ({{keybinding}})",
 				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Použít vlastního poskytovatele",
-				"description": "Autocomplete používá tvé přihlašovací údaje KiloCode / OpenRouter / Mistral k použití modelu Codestral ve výchozím nastavení"
-			},
-			"provider": "Poskytovatel",
-			"apiConfigId": {
-				"label": "Konfigurace API",
-				"current": "Použít aktuálně vybranou konfiguraci API",
-				"description": "Vyber konfiguraci API pro použití v Autocomplete promptech, nebo jen použij tu, která je aktuálně vybraná"
 			},
 			"keybindingNotFound": "nenalezeno"
 		}
@@ -261,5 +258,8 @@
 		"modelNoImageSupport": "Obrázky nejsou podporovány aktuálním modelem.",
 		"maxImagesReached": "Maximálně 20 obrázků na zprávu. Odstraňte některé obrázky, abyste mohli přidat další.",
 		"imagesRemovedNoSupport": "Obrázky odstraněny, nejsou podporovány modelem."
+	},
+	"memoryWarning": {
+		"message": "Využití paměti je na {{percentage}}%. Restartuj prosím své IDE, aby se předešlo pádům."
 	}
 }

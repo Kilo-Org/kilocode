@@ -20,7 +20,7 @@ interface Notification {
 	suggestModelId?: string
 }
 
-const USE_MODEL_BUTTON_LABEL = "Use model"
+const USE_MODEL_BUTTON_LABEL = "Try model"
 
 export const KilocodeNotifications: React.FC = () => {
 	const { dismissedNotificationIds, currentApiConfigName, apiConfiguration } = useExtensionState()
@@ -116,7 +116,7 @@ export const KilocodeNotifications: React.FC = () => {
 		<div className="kilocode-notifications flex flex-col mb-4">
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-3 gap-3">
 				<div className="flex items-center justify-between">
-					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
+					<h3 className="font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
 					<button
 						onClick={() => dismissNotificationId(currentNotification.id)}
 						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
@@ -125,20 +125,17 @@ export const KilocodeNotifications: React.FC = () => {
 					</button>
 				</div>
 
-				<p className="text-sm text-vscode-descriptionForeground">{currentNotification.message}</p>
+				<p className="text-vscode-descriptionForeground">{currentNotification.message}</p>
 
 				{(action || isReadyToSwitchModels) && (
 					<div className="flex items-center justify-end gap-2">
 						{suggestModelId && isReadyToSwitchModels && (
-							<VSCodeButton
-								appearance="primary"
-								onClick={() => switchModel(suggestModelId)}
-								className="text-sm">
+							<VSCodeButton appearance="primary" onClick={() => switchModel(suggestModelId)}>
 								{USE_MODEL_BUTTON_LABEL}
 							</VSCodeButton>
 						)}
 						{action && (
-							<VSCodeButton appearance="primary" onClick={() => handleAction(action)} className="text-sm">
+							<VSCodeButton appearance="primary" onClick={() => handleAction(action)}>
 								{action.actionText}
 							</VSCodeButton>
 						)}

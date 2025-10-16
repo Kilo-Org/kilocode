@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "ยินดีต้อนรับสู่ Kilo Code!",
 		"introText1": "Kilo Code เป็นเอเจนต์เขียนโค้ด AI แบบฟรีและโอเพ่นซอร์ส",
-		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 และอีกกว่า 450 โมเดล",
-		"introText3": "สร้างบัญชีฟรีและรับ tokens มูลค่าสูงสุด $25 เพื่อใช้กับโมเดล AI ใดก็ได้",
+		"introText2": "ทำงานร่วมกับโมเดล AI ล่าสุด เช่น Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 และอีกกว่า 450 โมเดล",
+		"introText3": "สร้างบัญชีฟรีและรับเครดิตโบนัส $20 เมื่อเติมเงินครั้งแรก",
 		"ctaButton": "เริ่มต้น",
 		"manualModeButton": "ใช้ API key ของคุณเอง",
 		"alreadySignedUp": "สมัครแล้ว?",
@@ -29,9 +29,7 @@
 		"costUnknown": "ค่าใช้จ่ายไม่ทราบ",
 		"costUnknownDescription": "ผู้ให้บริการ API ไม่ได้ให้ข้อมูลค่าใช้จ่าย หรือคำขอถูกยกเลิก",
 		"freeModelsDescription": "โมเดลฟรีอาจมีข้อจำกัดอัตราการใช้งาน ใช้ลิงก์ด้านล่างเพื่อเพิ่มประสิทธิภาพการใช้งานโมเดลฟรีของคุณ!",
-		"freeModelsLink": "ค้นพบตัวเลือกโมเดลฟรีและประหยัด",
-		"openRouterMarkup": "ผู้ให้บริการ Kilo Code รวมโมเดล OpenRouter ทั้งหมด โดยไม่มีค่าธรรมเนียมเพิ่มเติมและค่าคอมมิชชั่น 0%!",
-		"switchToKiloCode": "เปลี่ยนไปใช้ Kilo Code"
+		"freeModelsLink": "ค้นพบตัวเลือกโมเดลฟรีและประหยัด"
 	},
 	"notifications": {
 		"toolRequest": "คำขอใช้เครื่องมือรอการอนุมัติ",
@@ -73,8 +71,10 @@
 				},
 				"dataCollection": {
 					"default": "ไม่มีนโยบายข้อมูล",
-					"allow": "อนุญาตให้ผู้ให้บริการเก็บข้อมูล",
-					"deny": "ปฏิเสธการเก็บข้อมูลของผู้ให้บริการ"
+					"allowFree": "อนุญาตการฝึกอบรม prompt (เฉพาะฟรี)",
+					"allow": "อนุญาตการฝึกอบรม prompt",
+					"deny": "ปฏิเสธการฝึกอบรม prompt",
+					"zdr": "ไม่เก็บข้อมูล"
 				}
 			}
 		},
@@ -102,12 +102,19 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "รูปแบบการเรียกใช้เครื่องมือ",
+		"description": "เลือกวิธีการจัดรูปแบบการเรียกใช้เครื่องมือใน system prompt JSON เป็นฟีเจอร์ทดลองและมีไว้สำหรับผู้ใช้ที่สนใจมีส่วนร่วมในการพัฒนา"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code ต้องการย่อการสนทนาของคุณ",
 			"condenseConversation": "ย่อการสนทนา"
 		},
-		"seeNewChanges": "แสดงการเปลี่ยนแปลงใหม่"
+		"seeNewChanges": "แสดงการเปลี่ยนแปลงใหม่",
+		"revertNewChanges": "ย้อนกลับการเปลี่ยนแปลงใหม่",
+		"confirmRevertChanges": "ยืนยันการย้อนกลับการเปลี่ยนแปลง",
+		"cancelRevertChanges": "ยกเลิกการย้อนกลับการเปลี่ยนแปลง"
 	},
 	"newTaskPreview": {
 		"task": "งาน"
@@ -222,16 +229,6 @@
 				"label": "การเติมอัตโนมัติด้วยตัวเอง ({{keybinding}})",
 				"description": "ต้องการการแก้ไขด่วน การเติมเต็ม หรือการปรับโครงสร้างใหม่? Kilo จะใช้บริบทโดยรอบเพื่อเสนอการปรับปรุงทันที ทำให้คุณอยู่ในขั้นตอนการทำงาน <DocsLink>ดูทางลัด</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "ใช้ผู้ให้บริการแบบกำหนดเอง",
-				"description": "Autocomplete ใช้ข้อมูลประจำตัว KiloCode / OpenRouter / Mistral ของคุณเพื่อใช้โมเดล Codestral โดยค่าเริ่มต้น"
-			},
-			"provider": "ผู้ให้บริการ",
-			"apiConfigId": {
-				"label": "การกำหนดค่า API",
-				"current": "ใช้การกำหนดค่า API ที่เลือกในปัจจุบัน",
-				"description": "เลือกการกำหนดค่า API เพื่อใช้สำหรับพรอมต์ Autocomplete หรือเพียงแค่ใช้สิ่งที่เลือกในปัจจุบัน"
-			},
 			"keybindingNotFound": "ไม่พบ"
 		}
 	},
@@ -256,6 +253,9 @@
 		"perDay": "ต่อวัน",
 		"perHour": "ต่อชั่วโมง",
 		"requestsLabel": "คำขอ"
+	},
+	"memoryWarning": {
+		"message": "การใช้หน่วยความจำอยู่ที่ {{percentage}}% โปรดรีสตาร์ท IDE ของคุณเพื่อป้องกันการขัดข้อง"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "รูปภาพไม่ได้รับการสนับสนุนโดยโมเดลปัจจุบัน",

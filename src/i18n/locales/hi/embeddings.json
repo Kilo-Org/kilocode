@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "फाइल वॉचर रुक गया।",
 		"failedDuringInitialScan": "प्रारंभिक स्कैन के दौरान असफल: {{errorMessage}}",
 		"unknownError": "अज्ञात त्रुटि",
-		"indexingRequiresWorkspace": "इंडेक्सिंग के लिए एक खुला वर्कस्पेस फ़ोल्डर आवश्यक है"
+		"indexingRequiresWorkspace": "इंडेक्सिंग के लिए एक खुला वर्कस्पेस फ़ोल्डर आवश्यक है",
+		"indexingCancelled": "इंडेक्सिंग रद्द की गई"
 	}
 }

@@ -1,9 +1,9 @@
 {
 	"errorBoundary": {
 		"title": "Something went wrong",
-		"reportText": "Please help us improve by reporting this error on",
-		"githubText": "our GitHub Issues page",
-		"copyInstructions": "Copy and paste the following error message to include it as part of your submission:",
+		"reportText": "Please report this issue on our GitHub:",
+		"githubText": "Open GitHub Issue",
+		"copyInstructions": "Copy error details below to include in your report:",
 		"errorStack": "Error Stack:",
 		"componentStack": "Component Stack:"
 	},

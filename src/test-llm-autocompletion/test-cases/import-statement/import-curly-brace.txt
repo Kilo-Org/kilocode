@@ -1,0 +1,2 @@
+# Description: Should suggest import syntax options
+import <<<AUTOCOMPLETE_HERE>>> from 'react'

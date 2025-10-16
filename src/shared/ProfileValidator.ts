@@ -70,6 +70,7 @@ export class ProfileValidator {
 			case "sambanova":
 			case "chutes":
 			case "fireworks":
+			case "synthetic": // kilocode_change
 			case "featherless":
 				return profile.apiModelId
 			case "litellm":
@@ -93,8 +94,12 @@ export class ProfileValidator {
 				return profile.ioIntelligenceModelId
 			case "deepinfra":
 				return profile.deepInfraModelId
+			// kilocode_change start
+			case "ovhcloud":
+				return profile.ovhCloudAiEndpointsModelId
 			case "submodel":
 				return profile.submodelModelId
+			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":
 			default:

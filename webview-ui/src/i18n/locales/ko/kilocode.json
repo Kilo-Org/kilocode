@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Kilo Code에 오신 것을 환영합니다!",
 		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
-		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
-		"introText3": "무료 계정을 만들고 모든 AI 모델에서 사용할 수 있는 최대 $25 상당의 토큰을 받으세요.",
+		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
 		"ctaButton": "시작하기",
 		"manualModeButton": "내 API 키 사용하기",
 		"alreadySignedUp": "이미 가입하셨나요?",
@@ -29,9 +29,7 @@
 		"costUnknown": "비용 알 수 없음",
 		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
 		"freeModelsDescription": "무료 모델에는 사용 제한이 있을 수 있습니다. 아래 링크를 사용하여 무료 모델 사용을 최적화하세요!",
-		"freeModelsLink": "무료 및 저비용 모델 옵션 알아보기",
-		"openRouterMarkup": "Kilo Code 제공자는 모든 OpenRouter 모델을 포함하며, 마크업 없이 0% 수수료로 제공합니다!",
-		"switchToKiloCode": "Kilo Code로 전환"
+		"freeModelsLink": "무료 및 저비용 모델 옵션 알아보기"
 	},
 	"notifications": {
 		"toolRequest": "도구 요청 승인 대기 중",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "데이터 정책 설정 없음",
-					"allow": "공급자 데이터 수집 허용",
-					"deny": "공급자 데이터 수집 거부"
+					"allowFree": "프롬프트 훈련 허용 (무료만)",
+					"allow": "프롬프트 훈련 허용",
+					"deny": "프롬프트 훈련 거부",
+					"zdr": "데이터 보존 없음"
 				}
 			}
 		},
@@ -102,12 +102,19 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "도구 호출 스타일",
+		"description": "시스템 프롬프트에서 도구 호출의 형식을 선택하세요. JSON은 현재 실험적이며 주로 개발에 기여하는 데 관심이 있는 사용자를 위한 것입니다."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
 			"condenseConversation": "대화 요약하기"
 		},
-		"seeNewChanges": "새 변경사항 보기"
+		"seeNewChanges": "새 변경사항 보기",
+		"revertNewChanges": "새 변경사항 되돌리기",
+		"confirmRevertChanges": "변경사항 되돌리기 확인",
+		"cancelRevertChanges": "변경사항 되돌리기 취소"
 	},
 	"newTaskPreview": {
 		"task": "작업"
@@ -222,16 +229,6 @@
 				"label": "수동 자동완성({{keybinding}})",
 				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 플로우를 유지합니다. <DocsLink>단축키 보기</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "사용자 정의 공급자 사용",
-				"description": "Autocomplete는 기본적으로 KiloCode / OpenRouter / Mistral 자격 증명을 사용하여 Codestral 모델을 사용합니다"
-			},
-			"provider": "공급자",
-			"apiConfigId": {
-				"label": "API 구성",
-				"current": "현재 선택된 API 구성 사용",
-				"description": "Autocomplete 프롬프트에 사용할 API 구성을 선택하거나 현재 선택된 것을 사용하세요"
-			},
 			"keybindingNotFound": "찾을 수 없음"
 		}
 	},
@@ -261,5 +258,8 @@
 		"modelNoImageSupport": "현재 모델은 이미지를 지원하지 않습니다.",
 		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요.",
 		"imagesRemovedNoSupport": "모델에서 지원되지 않는 이미지가 제거되었습니다."
+	},
+	"memoryWarning": {
+		"message": "메모리 사용량이 {{percentage}}%입니다. 충돌을 방지하려면 IDE를 재시작하세요."
 	}
 }

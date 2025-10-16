@@ -39,7 +39,10 @@ type OllamaModelInfoResponse = z.infer<typeof OllamaModelInfoResponseSchema>
 
 export const parseOllamaModel = (
 	rawModel: OllamaModelInfoResponse,
-	baseUrl?: string, // kilocode_change
+	// kilocode_change start
+	baseUrl?: string,
+	numCtx?: number,
+	// kilocode_change end
 ): ModelInfo => {
 	// kilocode_change start
 	const contextKey = Object.keys(rawModel.model_info).find((k) => k.includes("context_length"))
@@ -54,6 +57,7 @@ export const parseOllamaModel = (
 	const contextLengthFromEnvironment = parseInt(process.env.OLLAMA_CONTEXT_LENGTH ?? "", 10) || undefined
 
 	const contextWindow =
+		numCtx ??
 		(baseUrl?.toLowerCase().startsWith("https://ollama.com") ? contextLengthFromModelInfo : undefined) ??
 		contextLengthFromEnvironment ??
 		(contextLengthFromModelParameters !== 40960 ? contextLengthFromModelParameters : undefined) ?? // Alledgedly Ollama sometimes returns an undefind context as 40960
@@ -75,6 +79,7 @@ export const parseOllamaModel = (
 export async function getOllamaModels(
 	baseUrl = "http://localhost:11434",
 	apiKey?: string,
+	numCtx?: number, // kilocode_change
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
 
@@ -110,7 +115,10 @@ export async function getOllamaModels(
 						.then((ollamaModelInfo) => {
 							models[ollamaModel.name] = parseOllamaModel(
 								ollamaModelInfo.data,
-								baseUrl, // kilocode_change
+								// kilocode_change start
+								baseUrl,
+								numCtx,
+								// kilocode_change end
 							)
 						}),
 				)

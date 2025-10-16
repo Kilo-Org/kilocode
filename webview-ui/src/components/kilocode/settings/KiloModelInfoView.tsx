@@ -5,14 +5,14 @@ import { ModelInfoSupportsItem } from "@/components/settings/ModelInfoView"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, StandardTooltip } from "@/components/ui"
 import { FreeModelsInfoView } from "../FreeModelsLink"
 import { useQuery } from "@tanstack/react-query"
-import { getKiloBaseUriFromToken } from "@roo/kilocode/token"
+import { getKiloBaseUriFromToken } from "@roo-code/types"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 
 type ModelStats = {
 	model: string
-	cost?: Intl.StringNumericLiteral
-	costPerRequest?: Intl.StringNumericLiteral
+	cost?: number
+	costPerRequest?: number
 }
 
 export const formatPrice = (price: number | Intl.StringNumericLiteral, digits: number = 2) => {

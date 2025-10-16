@@ -377,7 +377,7 @@ fi
 
 echo -e "\n🚀 You're ready to rock and roll! \n"
 
-if ! nc -z localhost 3000; then
+if ! nc -z localhost 3446; then
   read -p "🌐 Would you like to start the evals web app? (Y/n): " start_evals
 
   if [[ "$start_evals" =~ ^[Yy]|^$ ]]; then
@@ -386,5 +386,5 @@ if ! nc -z localhost 3000; then
     echo "💡 You can start it anytime with 'pnpm --filter @roo-code/web-evals dev'."
   fi
 else
-  echo "👟 The evals web app is running at http://localhost:3000 (or http://localhost:3446 if using Docker)"
+  echo "👟 The evals web app is running at http://localhost:3446"
 fi

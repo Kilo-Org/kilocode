@@ -1,0 +1,2 @@
+# Description: Should add semicolon after variable declaration
+const x = 42<<<AUTOCOMPLETE_HERE>>>

@@ -53,7 +53,8 @@ let j = 3
 
 ### Kilocode specific file
 
-if the filename or directory name contains kilocode no marking with comments is required
+- if the filename or directory name contains kilocode no marking with comments is required
+- if the file lives inside of the jetbrains/ or cli/ root folder, no marking with comments is required
 
 ### New Files
 

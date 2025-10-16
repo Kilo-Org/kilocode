@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Willkommen bei Kilo Code!",
 		"introText1": "Kilo Code ist ein kostenloser Open-Source-KI-Coding-Agent.",
-		"introText2": "Er funktioniert mit den neuesten KI-Modellen wie Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 und über 450 weiteren.",
-		"introText3": "Erstelle ein kostenloses Konto und erhalte bis zu $25 an Tokens zur Nutzung mit jedem KI-Modell.",
+		"introText2": "Er funktioniert mit den neuesten KI-Modellen wie Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 und über 450 weiteren.",
+		"introText3": "Erstelle ein kostenloses Konto und erhalte $20 Bonusguthaben bei deiner ersten Aufladung.",
 		"ctaButton": "Loslegen",
 		"manualModeButton": "Eigenen API-Schlüssel verwenden",
 		"alreadySignedUp": "Bereits registriert?",
@@ -29,9 +29,7 @@
 		"costUnknown": "Kosten unbekannt",
 		"costUnknownDescription": "Der API-Anbieter hat keine Kostendaten bereitgestellt oder die Anfrage wurde abgebrochen.",
 		"freeModelsDescription": "Kostenlose Modelle können Ratenbeschränkungen haben. Nutze den Link unten, um deine kostenlose Modellnutzung zu optimieren!",
-		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken",
-		"openRouterMarkup": "Der Kilo Code Anbieter umfasst alle OpenRouter-Modelle, ohne Aufschlag und mit 0% Provision!",
-		"switchToKiloCode": "Zu Kilo Code wechseln"
+		"freeModelsLink": "Kostenlose und Budget-Modelloptionen entdecken"
 	},
 	"notifications": {
 		"toolRequest": "Werkzeuganfrage wartet auf Genehmigung",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Keine Datenrichtlinie festgelegt",
-					"allow": "Anbieter-Datensammlung erlauben",
-					"deny": "Anbieter-Datensammlung verweigern"
+					"allowFree": "Prompt-Training erlauben (nur kostenlos)",
+					"allow": "Prompt-Training erlauben",
+					"deny": "Prompt-Training verweigern",
+					"zdr": "Keine Datenspeicherung"
 				}
 			}
 		},
@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code möchte deine Unterhaltung zusammenfassen",
 			"condenseConversation": "Unterhaltung zusammenfassen"
 		},
-		"seeNewChanges": "Neue Änderungen anzeigen"
+		"seeNewChanges": "Neue Änderungen anzeigen",
+		"revertNewChanges": "Neue Änderungen rückgängig machen",
+		"confirmRevertChanges": "Änderungen rückgängig machen bestätigen",
+		"cancelRevertChanges": "Änderungen rückgängig machen abbrechen"
 	},
 	"newTaskPreview": {
 		"task": "Aufgabe"
@@ -221,16 +224,6 @@
 				"label": "Manuelle Autovervollständigung ({{keybinding}})",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Benutzerdefinierten Anbieter verwenden",
-				"description": "Autocomplete verwendet deine KiloCode / OpenRouter / Mistral-Anmeldedaten, um standardmäßig das Codestral-Modell zu verwenden"
-			},
-			"provider": "Anbieter",
-			"apiConfigId": {
-				"label": "API-Konfiguration",
-				"current": "Aktuell ausgewählte API-Konfiguration verwenden",
-				"description": "Wähle eine API-Konfiguration für Autocomplete-Prompts aus oder verwende einfach die aktuell ausgewählte"
-			},
 			"keybindingNotFound": "nicht gefunden"
 		}
 	},
@@ -256,9 +249,16 @@
 		"requestsLabel": "Anfragen",
 		"perDay": "Pro Tag"
 	},
+	"toolCallStyle": {
+		"title": "Tool-Call-Stil",
+		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",
 		"maxImagesReached": "Maximal 20 Bilder pro Nachricht. Entfernen Sie einige Bilder, um weitere hinzuzufügen.",
 		"imagesRemovedNoSupport": "Bilder entfernt, vom Modell nicht unterstützt."
+	},
+	"memoryWarning": {
+		"message": "Speicherauslastung liegt bei {{percentage}}%. Bitte starte deine IDE neu, um Abstürze zu vermeiden."
 	}
 }

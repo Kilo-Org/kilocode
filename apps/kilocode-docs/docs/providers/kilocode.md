@@ -8,21 +8,15 @@ Kilo Code provides its own built-in API provider that gives you access to the la
 
 **Website:** [https://kilocode.ai/](https://kilocode.ai/)
 
-## Getting Started with Free Credits
+## Getting Started
 
-When you sign up for Kilo Code, you may receive free credits to help you get started:
+When you sign up for Kilo Code, you can start immediately with free models, or top up your account for the first time to get bonus credits.
 
-1. **Sign up:** Complete the registration (we might require a hold to verify identity)
-2. **First top-up:**: Add funds to your account (min $5) and get $20 bonus credits
-3. **Start Coding:** Enjoy your free credits
+To claim your bonus credits:
 
-:::note About the temporary hold
-The $0.50 hold is for identity verification only:
-
-- **Not a charge** - This is a temporary authorization that will not be charged
-- **Instant release** - Kilo Code releases the hold immediately after verification
-- **Bank processing** - While we release instantly, it may take a few business days for funds to return (varies by bank)
-  :::
+1. **Sign up:** Complete the registration process
+2. **First top-up:** Add funds to your account and get $20 bonus credits
+3. **Start Coding:** Enjoy your $20 in free credits
 
 ## Registration Process
 
@@ -48,6 +42,25 @@ Once you've completed the registration process, Kilo Code is automatically confi
 1. **Automatic Setup:** After successful registration, Kilo Code is ready to use immediately
 2. **No API Key Management:** Your authentication is handled seamlessly through the registration process
 3. **Model Selection:** Access to frontier models is provided automatically through your Kilo Code account
+
+### Provider Routing
+
+Kilo Code can route to many different inference providers. For personal accounts, provider routing behavior can be controlled in the API Provider settings under Provider Routing.
+
+#### Provider Sorting
+
+- Default provider sorting: at time of writing equivalent to prefer providers with lower latency
+- Prefer providers with lower price
+- Prefer providers with higher throughput (i.e. more tokens per seconds)
+- Prefer providers with lower latency (i.e. shorter time to first token)
+- A specific provider can also be chosen. This is not recommended, because it will result in errors when the provider is facing downtime or enforcing rate limits.
+
+#### Data Policy
+
+- Allow prompt training (free only): providers that may train on your prompts or completions are only allowed for free models.
+- Allow prompt training: providers that may train on your prompts or completions are allowed.
+- Deny prompt training: providers that may train on your prompts or completions are not allowed.
+- Zero data retention: only providers with a strict zero data retention policy are allowed. This option is not recommended, as it will disable many popular providers, such as Anthropic and OpenAI.
 
 ## Connected Accounts
 

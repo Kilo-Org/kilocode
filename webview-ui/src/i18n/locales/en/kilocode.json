@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, and 450+ more.",
-		"introText3": "Create a free account and get up to $25 worth of tokens to use across any AI model.",
+		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
 		"alreadySignedUp": "Already signed up?",
@@ -12,6 +12,9 @@
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
 		"lowBalance": "Your Kilo Code balance is low"
+	},
+	"memoryWarning": {
+		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
 	},
 	"pagination": {
 		"previous": "Previous",
@@ -29,9 +32,7 @@
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
 		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
-		"freeModelsLink": "Discover free and budget model options",
-		"openRouterMarkup": "The Kilo Code provider includes all of the OpenRouter models, with zero markup and 0% commission!",
-		"switchToKiloCode": "Switch to Kilo Code"
+		"freeModelsLink": "Discover free and budget model options"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -63,8 +64,10 @@
 				},
 				"dataCollection": {
 					"default": "No data policy set",
-					"allow": "Allow provider data collection",
-					"deny": "Deny provider data collection"
+					"allowFree": "Allow prompt training (free only)",
+					"allow": "Allow prompt training",
+					"deny": "Deny prompt training",
+					"zdr": "Zero data retention"
 				}
 			},
 			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
@@ -111,7 +114,10 @@
 			"wantsToCondense": "Kilo Code wants to condense your conversation",
 			"condenseConversation": "Condense Conversation"
 		},
-		"seeNewChanges": "See New Changes"
+		"seeNewChanges": "See New Changes",
+		"revertNewChanges": "Revert New Changes",
+		"confirmRevertChanges": "Confirm Revert Changes",
+		"cancelRevertChanges": "Cancel Revert Changes"
 	},
 	"newTaskPreview": {
 		"task": "Task"
@@ -205,6 +211,10 @@
 			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Style",
+		"description": "Choose how tool calls are formatted in the system prompt. JSON is currently experimental and mostly intended for users interested in contributing to its development."
+	},
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
@@ -224,16 +234,6 @@
 			"enableSmartInlineTaskKeybinding": {
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
-			},
-			"enableCustomProvider": {
-				"label": "Use custom provider",
-				"description": "Autocomplete uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "API Configuration",
-				"current": "Use currently selected API configuration",
-				"description": "Select an API configuration to use for Autocomplete prompts, or just use whatever is currently selected"
 			},
 			"keybindingNotFound": "not found"
 		}

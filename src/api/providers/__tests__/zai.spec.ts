@@ -1,7 +1,14 @@
 // npx vitest run src/api/providers/__tests__/zai.spec.ts
 
-// Mock vscode first to avoid import errors
-vitest.mock("vscode", () => ({}))
+// kilocode_change start
+vitest.mock("vscode", () => ({
+	workspace: {
+		getConfiguration: vitest.fn().mockReturnValue({
+			get: vitest.fn().mockReturnValue(600), // Default timeout in seconds
+		}),
+	},
+}))
+// kilocode_change end
 
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
@@ -71,6 +78,19 @@ describe("ZAiHandler", () => {
 			expect(model.id).toBe(testModelId)
 			expect(model.info).toEqual(internationalZAiModels[testModelId])
 		})
+
+		it("should return GLM-4.6 international model with correct configuration", () => {
+			const testModelId: InternationalZAiModelId = "glm-4.6"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "international",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(internationalZAiModels[testModelId])
+			expect(model.info.contextWindow).toBe(204_800)
+		})
 	})
 
 	describe("China Z AI", () => {
@@ -108,6 +128,19 @@ describe("ZAiHandler", () => {
 			expect(model.id).toBe(testModelId)
 			expect(model.info).toEqual(mainlandZAiModels[testModelId])
 		})
+
+		it("should return GLM-4.6 China model with correct configuration", () => {
+			const testModelId: MainlandZAiModelId = "glm-4.6"
+			const handlerWithModel = new ZAiHandler({
+				apiModelId: testModelId,
+				zaiApiKey: "test-zai-api-key",
+				zaiApiLine: "china",
+			})
+			const model = handlerWithModel.getModel()
+			expect(model.id).toBe(testModelId)
+			expect(model.info).toEqual(mainlandZAiModels[testModelId])
+			expect(model.info.contextWindow).toBe(204_800)
+		})
 	})
 
 	describe("Default behavior", () => {
@@ -115,7 +148,7 @@ describe("ZAiHandler", () => {
 			const handlerDefault = new ZAiHandler({ zaiApiKey: "test-zai-api-key" })
 			expect(OpenAI).toHaveBeenCalledWith(
 				expect.objectContaining({
-					baseURL: "https://api.z.ai/api/coding/paas/v4", // kilocode_change, upstream pr pending
+					baseURL: "https://api.z.ai/api/coding/paas/v4",
 				}),
 			)
 

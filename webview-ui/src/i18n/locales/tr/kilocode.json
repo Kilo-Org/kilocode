@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
-		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 ve 450+ diğer en yeni AI modelleri ile çalışır.",
-		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $25 değerinde token alın.",
+		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
 		"alreadySignedUp": "Zaten kaydoldunuz mu?",
@@ -22,9 +22,7 @@
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
 		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
-		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet",
-		"openRouterMarkup": "Kilo Code sağlayıcısı tüm OpenRouter modellerini içerir, sıfır ek ücret ve %0 komisyon ile!",
-		"switchToKiloCode": "Kilo Code'a geç"
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -59,8 +57,10 @@
 				},
 				"dataCollection": {
 					"default": "Veri politikası ayarlanmamış",
-					"allow": "Sağlayıcı veri toplamaya izin ver",
-					"deny": "Sağlayıcı veri toplamayı reddet"
+					"allowFree": "Prompt eğitimine izin ver (sadece ücretsiz)",
+					"allow": "Prompt eğitimine izin ver",
+					"deny": "Prompt eğitimini reddet",
+					"zdr": "Sıfır veri saklama"
 				}
 			}
 		},
@@ -95,12 +95,19 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
 			"condenseConversation": "Konuşmayı Özetle"
 		},
-		"seeNewChanges": "Yeni Değişiklikleri Göster"
+		"seeNewChanges": "Yeni Değişiklikleri Göster",
+		"revertNewChanges": "Yeni Değişiklikleri Geri Al",
+		"confirmRevertChanges": "Değişiklikleri Geri Almayı Onayla",
+		"cancelRevertChanges": "Değişiklikleri Geri Almayı İptal Et"
 	},
 	"newTaskPreview": {
 		"task": "Görev"
@@ -215,16 +222,6 @@
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Özel sağlayıcı kullan",
-				"description": "Autocomplete varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerini kullanır"
-			},
-			"provider": "Sağlayıcı",
-			"apiConfigId": {
-				"label": "API Yapılandırması",
-				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "Autocomplete istekleri için kullanılacak API yapılandırmasını seç, ya da şu anda seçili olanı kullan"
-			},
 			"keybindingNotFound": "bulunamadı"
 		}
 	},
@@ -254,6 +251,9 @@
 		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
 		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
 		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
+	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",

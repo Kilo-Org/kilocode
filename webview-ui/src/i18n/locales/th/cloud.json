@@ -23,6 +23,9 @@
 	"havingTrouble": "มีปัญหาหรือไม่?",
 	"pasteCallbackUrl": "วาง callback URL ที่นี่",
 	"startOver": "เริ่มใหม่",
+	"personalAccount": "บัญชีส่วนตัว",
+	"switchAccount": "เปลี่ยนบัญชี Roo Code Cloud",
+	"createTeamAccount": "สร้างบัญชีทีม",
 	"upsell": {
 		"autoApprovePowerUser": "ผู้ใช้ขั้นสูงชอบการอนุมัติอัตโนมัติ อัปเกรดเป็นคลาวด์เพื่อฟีเจอร์ขั้นสูง",
 		"longRunningTask": "งานที่ใช้เวลานาน? ติดตามความคืบหน้าในคลาวด์",

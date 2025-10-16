@@ -82,6 +82,59 @@ export async function codebaseSearchTool(
 			throw new Error("Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).")
 		}
 
+		// kilocode_change start
+		const status = manager.getCurrentStatus()
+		if (status.systemStatus !== "Indexed") {
+			const defaultStatusMessage = (() => {
+				switch (status.systemStatus) {
+					case "Indexing":
+						return "Code indexing is still running"
+					case "Standby":
+						return "Code indexing has not started"
+					case "Error":
+						return "Code indexing is in an error state"
+					default:
+						return "Code indexing is not ready"
+				}
+			})()
+
+			const normalizedMessage =
+				status.message && status.message.trim() !== "" ? status.message.trim() : defaultStatusMessage
+			const unit =
+				status.currentItemUnit && status.currentItemUnit.trim() !== "" ? status.currentItemUnit : "items"
+			const progress = status.totalItems > 0 ? `${status.processedItems}/${status.totalItems} ${unit}` : undefined
+			const messageWithoutTrailingPeriod = normalizedMessage.endsWith(".")
+				? normalizedMessage.slice(0, -1)
+				: normalizedMessage
+			const friendlyMessage = progress
+				? `${messageWithoutTrailingPeriod} (Progress: ${progress}).`
+				: `${messageWithoutTrailingPeriod}.`
+
+			const payload = {
+				tool: "codebaseSearch",
+				content: {
+					query,
+					results: [] as VectorStoreSearchResult[],
+					status: {
+						systemStatus: status.systemStatus,
+						message: normalizedMessage,
+						processedItems: status.processedItems,
+						totalItems: status.totalItems,
+						currentItemUnit: status.currentItemUnit,
+					},
+				},
+			}
+
+			await cline.say("codebase_search_result", JSON.stringify(payload))
+			pushToolResult(
+				formatResponse.toolError(
+					`${friendlyMessage} Semantic search is unavailable until indexing completes. Please try again later.`,
+				),
+			)
+			return
+		}
+		// kilocode_change end
+
 		const searchResults: VectorStoreSearchResult[] = await manager.searchIndex(query, directoryPrefix)
 
 		// 3. Format and push results

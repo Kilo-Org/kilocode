@@ -131,7 +131,7 @@
 		{
 			"label": "install-dev-extension",
 			"type": "shell",
-			"command": "pnpm i && npm run build && code --install-extension \"$(ls -1v bin/kilo-code-*.vsix | tail -n1)\"",
+			"command": "pnpm i && npm run build && code --force --install-extension \"$(ls -1v bin/kilo-code-*.vsix | tail -n1)\"",
 			"group": "build",
 			"presentation": {
 				"echo": true,

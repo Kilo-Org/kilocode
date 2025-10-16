@@ -186,6 +186,10 @@
 		"incomplete": "Tarefa #{{taskNumber}} (Incompleta)",
 		"no_messages": "Tarefa #{{taskNumber}} (Sem mensagens)"
 	},
+	"interruption": {
+		"responseInterruptedByUser": "Resposta interrompida pelo usuário",
+		"responseInterruptedByApiError": "Resposta interrompida por erro da API"
+	},
 	"storage": {
 		"prompt_custom_path": "Digite o caminho de armazenamento personalizado para o histórico de conversas, deixe em branco para usar o local padrão",
 		"path_placeholder": "D:\\KiloCodeStorage",
@@ -252,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Impedir a conclusão de tarefas quando há todos incompletos na lista de todos"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Erro",
+		"reportText": "Por favor, relate este erro para nos ajudar a melhorar o aplicativo.",
+		"githubText": "Relatar no GitHub",
+		"copyInstructions": "Copie os detalhes do erro abaixo:",
+		"errorStack": "Stack do Erro",
+		"componentStack": "Stack de Componentes"
 	}
 }

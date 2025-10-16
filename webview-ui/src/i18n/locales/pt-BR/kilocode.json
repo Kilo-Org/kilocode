@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Bem-vindo ao Kilo Code!",
 		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
-		"introText2": "Funciona com os mais recentes modelos de IA como Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, e mais de 450 outros.",
-		"introText3": "Crie uma conta gratuita e receba até $25 em tokens para usar em qualquer modelo de IA.",
+		"introText2": "Funciona com os mais recentes modelos de IA como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e mais de 450 outros.",
+		"introText3": "Crie uma conta gratuita e receba $20 em créditos bônus ao recarregar pela primeira vez.",
 		"ctaButton": "Começar",
 		"manualModeButton": "Use sua própria chave de API",
 		"alreadySignedUp": "Já se cadastrou?",
@@ -29,9 +29,7 @@
 		"costUnknown": "custo desconhecido",
 		"costUnknownDescription": "O Provedor de API não forneceu dados de custo ou a solicitação foi cancelada.",
 		"freeModelsDescription": "Modelos gratuitos podem ter limites de taxa. Use o link abaixo para otimizar seu uso de modelos gratuitos!",
-		"freeModelsLink": "Descubra opções de modelos gratuitos e econômicos",
-		"openRouterMarkup": "O provedor Kilo Code inclui todos os modelos do OpenRouter, sem markup e com 0% de comissão!",
-		"switchToKiloCode": "Mudar para Kilo Code"
+		"freeModelsLink": "Descubra opções de modelos gratuitos e econômicos"
 	},
 	"notifications": {
 		"toolRequest": "Solicitação de ferramenta aguardando aprovação",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Nenhuma política de dados definida",
-					"allow": "Permitir coleta de dados do provedor",
-					"deny": "Negar coleta de dados do provedor"
+					"allowFree": "Permitir treinamento de prompts (apenas grátis)",
+					"allow": "Permitir treinamento de prompts",
+					"deny": "Negar treinamento de prompts",
+					"zdr": "Retenção zero de dados"
 				}
 			}
 		},
@@ -107,7 +107,10 @@
 			"wantsToCondense": "Kilo Code quer condensar sua conversa",
 			"condenseConversation": "Condensar Conversa"
 		},
-		"seeNewChanges": "Ver Novas Alterações"
+		"seeNewChanges": "Ver Novas Alterações",
+		"revertNewChanges": "Reverter Novas Alterações",
+		"confirmRevertChanges": "Confirmar Reverter Alterações",
+		"cancelRevertChanges": "Cancelar Reverter Alterações"
 	},
 	"newTaskPreview": {
 		"task": "Tarefa"
@@ -222,16 +225,6 @@
 				"label": "Preenchimento Automático Manual ({{keybinding}})",
 				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Usar provedor personalizado",
-				"description": "O Autocomplete usa suas credenciais KiloCode / OpenRouter / Mistral para usar o modelo Codestral por padrão"
-			},
-			"provider": "Provedor",
-			"apiConfigId": {
-				"label": "Configuração da API",
-				"current": "Usar configuração da API atualmente selecionada",
-				"description": "Selecione uma configuração da API para usar nos prompts do Autocomplete, ou apenas use a que está atualmente selecionada"
-			},
 			"keybindingNotFound": "não encontrado"
 		}
 	},
@@ -257,9 +250,16 @@
 		"perMinute": "Por Minuto",
 		"perHour": "Por Hora"
 	},
+	"toolCallStyle": {
+		"title": "Estilo de Chamada de Ferramenta",
+		"description": "Escolha como as chamadas de ferramentas são formatadas no prompt do sistema. JSON é atualmente experimental e destinado principalmente a usuários interessados em contribuir para seu desenvolvimento."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",
 		"maxImagesReached": "Máximo de 20 imagens por mensagem. Remova algumas imagens para adicionar mais.",
 		"imagesRemovedNoSupport": "Imagens removidas, não suportadas pelo modelo."
+	},
+	"memoryWarning": {
+		"message": "O uso de memória está em {{percentage}}%. Por favor, reinicie seu IDE para evitar travamentos."
 	}
 }

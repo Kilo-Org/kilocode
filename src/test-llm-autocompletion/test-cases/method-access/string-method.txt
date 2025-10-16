@@ -1,0 +1,3 @@
+# Description: Should suggest string methods
+const str = 'hello world';
+str.<<<AUTOCOMPLETE_HERE>>>

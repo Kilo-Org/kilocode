@@ -41,7 +41,7 @@ import { condenseTool } from "../tools/condenseTool" // kilocode_change
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
-import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
+import { yieldPromise } from "../kilocode"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -61,8 +61,6 @@ import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
  */
 
 export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
-	reportExcessiveRecursion("presentAssistantMessage", recursionDepth) // kilocode_change
-
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}
@@ -441,9 +439,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				}
 			}
 
+			await checkpointSaveAndMark(cline) // kilocode_change: moved out of switch
 			switch (block.name) {
 				case "write_to_file":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await writeToFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "update_todo_list":
@@ -463,10 +462,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					}
 
 					if (isMultiFileApplyDiffEnabled) {
-						await checkpointSaveAndMark(cline)
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					} else {
-						await checkpointSaveAndMark(cline)
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffToolLegacy(
 							cline,
 							block,
@@ -479,16 +478,15 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				}
 				case "insert_content":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await insertContentTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "search_and_replace":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":
-					await checkpointSaveAndMark(cline)
 					await editFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
@@ -566,7 +564,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await newTaskTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "attempt_completion":
-					await checkpointSaveAndMark(cline) // kilocode_change for "See new changes"
 					await attemptCompletionTool(
 						cline,
 						block,
@@ -596,7 +593,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await generateImageTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 			}
-			// kilocode_change end
 
 			break
 	}
@@ -666,8 +662,9 @@ async function checkpointSaveAndMark(task: Task) {
 		return
 	}
 	try {
-		await task.checkpointSave(true)
+		// kilocode_change: order changed to prevent second execution while still awaiting the save
 		task.currentStreamingDidCheckpoint = true
+		await task.checkpointSave(true)
 	} catch (error) {
 		console.error(`[Task#presentAssistantMessage] Error saving checkpoint: ${error.message}`, error)
 	}

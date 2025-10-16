@@ -1,93 +1,56 @@
-import * as vscode from "vscode"
 import { GhostSuggestionContext } from "../types"
-import { UseCaseType } from "../types/PromptStrategy"
-import { BasePromptStrategy } from "./BasePromptStrategy"
 import { CURSOR_MARKER } from "../ghostConstants"
+import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
+import { isCommentLine, extractComment, cleanComment } from "./CommentHelpers"
 
-/**
- * Fallback strategy for automatic completions
- * handles all other cases with subtle suggestions
- */
-export class AutoTriggerStrategy extends BasePromptStrategy {
-	name = "Auto Trigger"
-	type = UseCaseType.AUTO_TRIGGER
+export class AutoTriggerStrategy {
+	shouldTreatAsComment(context: GhostSuggestionContext): boolean {
+		if (!context.document || !context.range) return false
 
-	/**
-	 * Can handle any context (fallback strategy)
-	 * Always returns true as this is the catch-all
-	 */
-	canHandle(context: GhostSuggestionContext): boolean {
-		// This is the fallback strategy, so it can handle anything
-		// But we check for basic requirements
-		return !!context.document
-	}
+		const currentLine = context.document.lineAt(context.range.start.line).text
+		const previousLine =
+			context.range.start.line > 0 && context.document.lineAt(context.range.start.line - 1).text.trim()
 
-	/**
-	 * Minimal context for auto-trigger
-	 * Focus on immediate context only
-	 */
-	getRelevantContext(context: GhostSuggestionContext): Partial<GhostSuggestionContext> {
-		return {
-			document: context.document,
-			range: context.range,
-			recentOperations: context.recentOperations?.slice(0, 3), // Only last 3 operations
-			// Exclude:
-			// - userInput (no explicit request)
-			// - diagnostics (not fixing errors)
-			// - openFiles (reduces tokens)
-			// - rangeASTNode (keep it simple)
+		if (isCommentLine(currentLine, context.document.languageId)) {
+			return true
+		} else if (currentLine.trim() === "" && previousLine) {
+			return isCommentLine(previousLine, context.document.languageId)
+		} else {
+			return false
 		}
 	}
 
-	/**
-	 * System instructions for auto-trigger
-	 */
-	protected getSpecificSystemInstructions(): string {
-		return `Task: Subtle Auto-Completion
+	getPrompts(context: GhostSuggestionContext): {
+		systemPrompt: string
+		userPrompt: string
+	} {
+		if (this.shouldTreatAsComment(context)) {
+			return {
+				systemPrompt: this.getCommentsSystemInstructions(),
+				userPrompt: this.getCommentsUserPrompt(context),
+			}
+		} else {
+			return {
+				systemPrompt: this.getSystemInstructions(),
+				userPrompt: this.getUserPrompt(context),
+			}
+		}
+	}
+
+	getSystemInstructions(): string {
+		return (
+			getBaseSystemInstructions() +
+			`Task: Subtle Auto-Completion
 Provide non-intrusive completions after a typing pause. Be conservative and helpful.
 
-Auto-Complete Rules:
-- Small, obvious completions only
-- Single line preferred (max 2-3 lines)
-- Complete the current thought based on context
-- Don't be creative or add new features
-- Match exactly what seems to be typed
-- Only suggest if there's a clear, obvious completion
-
-Common Completions:
-- Closing brackets, parentheses, or braces
-- Semicolons at end of statements
-- Simple property or method access
-- Variable assignments after declaration
-- Return statements in functions
-- Import statements completion
-- Simple loop or conditional bodies
-
-Avoid:
-- Multi-line complex suggestions
-- New functionality or features
-- Refactoring existing code
-- Complex logic or algorithms
-- Anything that changes program behavior significantly
-
-## CRITICAL: Cursor Marker Usage
-- The cursor position is marked with ${CURSOR_MARKER}
-- Your <search> block MUST include the cursor marker to avoid conflicts
-- When creating <search> content, include text around the cursor marker
-- This ensures you target the exact location, not similar text elsewhere
-- Example: If cursor is at "const x = <<<AUTOCOMPLETE_HERE>>>", your <search> should include the marker
-
-Important:
-- If nothing obvious to complete, provide NO suggestion
-- Respect the user's coding style
-- Keep suggestions minimal and predictable
-- Focus on helping finish what's being typed`
+`
+		)
 	}
 
 	/**
 	 * Build minimal prompt for auto-trigger
 	 */
-	protected buildUserPrompt(context: Partial<GhostSuggestionContext>): string {
+	getUserPrompt(context: GhostSuggestionContext): string {
 		let prompt = ""
 
 		// Start with recent typing context
@@ -105,17 +68,12 @@ Important:
 			const char = context.range.start.character + 1
 			prompt += `## Current Position\n`
 			prompt += `Line ${line}, Character ${char}\n\n`
-
-			// Analyze what might need completion
-			const currentLine = context.document.lineAt(context.range.start.line).text
-			const cursorChar = context.range.start.character
-			prompt += this.analyzeCompletionContext(currentLine, cursorChar)
 		}
 
 		// Add the full document with cursor marker
 		if (context.document) {
 			prompt += "## Full Code\n"
-			prompt += this.formatDocumentWithCursor(context.document, context.range)
+			prompt += formatDocumentWithCursor(context.document, context.range)
 			prompt += "\n\n"
 		}
 
@@ -131,96 +89,67 @@ Important:
 		return prompt
 	}
 
-	/**
-	 * Analyze the current line to provide hints about what might need completion
-	 */
-	private analyzeCompletionContext(currentLine: string, cursorPosition: number): string {
-		const beforeCursor = currentLine.substring(0, cursorPosition).trim()
-		const afterCursor = currentLine.substring(cursorPosition).trim()
+	getCommentsSystemInstructions(): string {
+		return (
+			getBaseSystemInstructions() +
+			`You are an expert code generation assistant that implements code based on comments.
 
-		let analysis = "## Completion Context\n"
+## Core Responsibilities:
+1. Read and understand the comment's intent
+2. Generate complete, working code that fulfills the comment's requirements
+3. Follow the existing code style and patterns
+4. Add appropriate error handling
+5. Include necessary imports or dependencies
 
-		// Check for incomplete patterns
-		if (beforeCursor.endsWith(".")) {
-			analysis += "- Property or method access started\n"
-		}
-		if (beforeCursor.endsWith("(")) {
-			analysis += "- Function call or declaration started\n"
-		}
-		if (beforeCursor.endsWith("{")) {
-			analysis += "- Block or object literal started\n"
-		}
-		if (beforeCursor.endsWith("[")) {
-			analysis += "- Array or index access started\n"
-		}
-		if (beforeCursor.match(/=\s*$/)) {
-			analysis += "- Assignment started\n"
-		}
-		if (beforeCursor.match(/return\s*$/)) {
-			analysis += "- Return statement started\n"
-		}
-		if (beforeCursor.match(/import\s+.*\s+from\s*$/)) {
-			analysis += "- Import statement needs module\n"
-		}
-		if (beforeCursor.match(/^\s*(const|let|var)\s+\w+\s*$/)) {
-			analysis += "- Variable declaration needs initialization\n"
-		}
+## Code Generation Guidelines:
+- Generate only the code that directly implements the comment
+- Match the indentation level of the comment
+- Use descriptive variable and function names
+- Follow language-specific best practices
+- Add type annotations where appropriate
+- Consider edge cases mentioned in the comment
+- If the comment describes multiple steps, implement them all
 
-		// Check for missing closures
-		const openParens = (beforeCursor.match(/\(/g) || []).length
-		const closeParens = (beforeCursor.match(/\)/g) || []).length
-		if (openParens > closeParens) {
-			analysis += `- ${openParens - closeParens} unclosed parenthesis\n`
-		}
+## Comment Types to Handle:
+- TODO comments: Implement the described task
+- FIXME comments: Fix the described issue
+- Implementation comments: Generate the described functionality
+- Algorithm descriptions: Implement the described algorithm
+- API/Interface descriptions: Implement the described interface
 
-		const openBrackets = (beforeCursor.match(/\[/g) || []).length
-		const closeBrackets = (beforeCursor.match(/\]/g) || []).length
-		if (openBrackets > closeBrackets) {
-			analysis += `- ${openBrackets - closeBrackets} unclosed bracket\n`
-		}
-
-		const openBraces = (beforeCursor.match(/\{/g) || []).length
-		const closeBraces = (beforeCursor.match(/\}/g) || []).length
-		if (openBraces > closeBraces && !afterCursor.startsWith("}")) {
-			analysis += `- ${openBraces - closeBraces} unclosed brace\n`
-		}
-
-		// Check if line might need semicolon
-		if (
-			!beforeCursor.endsWith(";") &&
-			!beforeCursor.endsWith("{") &&
-			!beforeCursor.endsWith("}") &&
-			beforeCursor.length > 0 &&
-			!afterCursor
-		) {
-			if (this.mightNeedSemicolon(beforeCursor)) {
-				analysis += "- Statement might need semicolon\n"
-			}
-		}
-
-		analysis += "\n"
-		return analysis
+## Output Requirements:
+- Generate ONLY executable code that implements the comment
+- PRESERVE all existing code and comments in the provided context
+- Do not repeat the comment you are implementing in your output
+- Do not add explanatory comments unless necessary for complex logic
+- Ensure the code is production-ready
+- When using search/replace format, include ALL existing code to preserve it`
+		)
 	}
 
-	/**
-	 * Check if a line might need a semicolon
-	 */
-	private mightNeedSemicolon(line: string): boolean {
-		const trimmed = line.trim()
+	getCommentsUserPrompt(context: GhostSuggestionContext): string {
+		if (!context.document || !context.range) {
+			return "No context available for comment-driven generation."
+		}
 
-		// Patterns that typically need semicolons
-		const needsSemicolon = [
-			/^(const|let|var)\s+\w+\s*=\s*.+$/, // Variable declaration with value
-			/^\w+\s*=\s*.+$/, // Assignment
-			/^\w+\.\w+\(.*\)$/, // Method call
-			/^return\s+.+$/, // Return with value
-			/^throw\s+.+$/, // Throw statement
-			/^break$/, // Break statement
-			/^continue$/, // Continue statement
-			/^\w+\+\+$/, // Increment
-			/^\w+--$/, // Decrement
-		]
+		const language = context.document.languageId
+		const comment = cleanComment(extractComment(context.document, context.range.start.line), language)
 
-		return needsSemicolon.some((pattern) => pattern.test(trimmed))
+		let prompt = `## Comment-Driven Development
+- Language: ${language}
+- Comment to Implement:
+\`\`\`
+${comment}
+\`\`\`
+
+## Full Code
+${formatDocumentWithCursor(context.document, context.range)}
+
+## Instructions
+Generate code that implements the functionality described in the comment.
+The code should be placed at the cursor position (${CURSOR_MARKER}).
+Focus on implementing exactly what the comment describes.
+`
+		return prompt
 	}
 }

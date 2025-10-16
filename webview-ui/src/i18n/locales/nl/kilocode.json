@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Welkom bij Kilo Code!",
 		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
-		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, en meer dan 450 andere.",
-		"introText3": "Maak een gratis account aan en krijg tot $25 aan tokens om te gebruiken met elk AI model.",
+		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
+		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
 		"ctaButton": "Aan de slag",
 		"manualModeButton": "Gebruik je eigen API-sleutel",
 		"alreadySignedUp": "Al aangemeld?",
@@ -29,9 +29,7 @@
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
 		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
-		"freeModelsLink": "Ontdek gratis en budget modelopties",
-		"openRouterMarkup": "De Kilo Code provider bevat alle OpenRouter modellen, zonder opslag en met 0% commissie!",
-		"switchToKiloCode": "Overstappen naar Kilo Code"
+		"freeModelsLink": "Ontdek gratis en budget modelopties"
 	},
 	"notifications": {
 		"toolRequest": "Toolverzoek wacht op goedkeuring",
@@ -60,8 +58,10 @@
 				},
 				"dataCollection": {
 					"default": "Geen databeleid ingesteld",
-					"allow": "Sta dataverzameling door provider toe",
-					"deny": "Weiger dataverzameling door provider"
+					"allowFree": "Sta prompt-training toe (alleen gratis)",
+					"allow": "Sta prompt-training toe",
+					"deny": "Weiger prompt-training",
+					"zdr": "Geen gegevensbewaring"
 				}
 			}
 		},
@@ -102,12 +102,19 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Stijl",
+		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
 		},
-		"seeNewChanges": "Toon Nieuwe Wijzigingen"
+		"seeNewChanges": "Toon Nieuwe Wijzigingen",
+		"revertNewChanges": "Herstel Nieuwe Wijzigingen",
+		"confirmRevertChanges": "Bevestig Wijzigingen Herstellen",
+		"cancelRevertChanges": "Annuleer Wijzigingen Herstellen"
 	},
 	"newTaskPreview": {
 		"task": "Taak"
@@ -222,16 +229,6 @@
 				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
 				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Aangepaste provider gebruiken",
-				"description": "Autocomplete gebruikt standaard je Kilo Code / OpenRouter / Mistral-referenties om het Codestral-model te gebruiken"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "API-Configuratie",
-				"current": "Gebruik momenteel geselecteerde API-configuratie",
-				"description": "Selecteer een API-configuratie om te gebruiken voor Autocomplete-prompts, of gebruik gewoon wat er momenteel is geselecteerd"
-			},
 			"keybindingNotFound": "niet gevonden"
 		}
 	},
@@ -256,6 +253,9 @@
 		"perHour": "Per Uur",
 		"perDay": "Per dag",
 		"requestsLabel": "Verzoeken"
+	},
+	"memoryWarning": {
+		"message": "Geheugengebruik is {{percentage}}%. Start je IDE opnieuw op om crashes te voorkomen."
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",

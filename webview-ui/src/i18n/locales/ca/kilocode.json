@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Benvingut a Kilo Code!",
 		"introText1": "Kilo Code és un agent de codificació d'IA gratuït i de codi obert.",
-		"introText2": "Funciona amb els models d'IA més recents com Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, i més de 450 més.",
-		"introText3": "Crea un compte gratuït i obtén fins a $25 en tokens per utilitzar en qualsevol model d'IA.",
+		"introText2": "Funciona amb els models d'IA més recents com Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, i més de 450 més.",
+		"introText3": "Crea un compte gratuït i obtén $20 en crèdits de bonificació quan recarreguis per primera vegada.",
 		"ctaButton": "Comença",
 		"manualModeButton": "Utilitza la teva pròpia clau API",
 		"alreadySignedUp": "Ja t'has registrat?",
@@ -22,9 +22,7 @@
 		"costUnknown": "cost desconegut",
 		"costUnknownDescription": "El proveïdor de l'API no va proporcionar cap dada de cost o la sol·licitud va ser cancel·lada.",
 		"freeModelsDescription": "Els models gratuïts poden tenir límits de velocitat. Utilitza l'enllaç de sota per optimitzar l'ús dels models gratuïts!",
-		"freeModelsLink": "Descobreix les opcions de models gratuïts i econòmics",
-		"openRouterMarkup": "El proveïdor de Kilo Code inclou tots els models d'OpenRouter, sense sobrecàrrec i amb 0% de comissió!",
-		"switchToKiloCode": "Canvia a Kilo Code"
+		"freeModelsLink": "Descobreix les opcions de models gratuïts i econòmics"
 	},
 	"notifications": {
 		"toolRequest": "Sol·licitud d'eina pendent d'aprovació",
@@ -53,8 +51,10 @@
 				},
 				"dataCollection": {
 					"default": "No hi ha política de dades establerta",
-					"allow": "Permetre la recol·lecció de dades del proveïdor",
-					"deny": "Denegar la recol·lecció de dades del proveïdor"
+					"allowFree": "Permetre entrenament de prompts (només gratuït)",
+					"allow": "Permetre entrenament de prompts",
+					"deny": "Denegar entrenament de prompts",
+					"zdr": "Retenció zero de dades"
 				}
 			}
 		},
@@ -116,7 +116,10 @@
 			"wantsToCondense": "Kilo Code vol condensar la teva conversa",
 			"condenseConversation": "Condensar Conversa"
 		},
-		"seeNewChanges": "Mostrar Nous Canvis"
+		"seeNewChanges": "Mostrar Nous Canvis",
+		"revertNewChanges": "Revertir Nous Canvis",
+		"confirmRevertChanges": "Confirmar Revertir Canvis",
+		"cancelRevertChanges": "Cancel·lar Revertir Canvis"
 	},
 	"newTaskPreview": {
 		"task": "Tasca"
@@ -215,16 +218,6 @@
 				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Usar proveïdor personalitzat",
-				"description": "Autocomplete utilitza les teves credencials KiloCode / OpenRouter / Mistral per usar el model Codestral per defecte"
-			},
-			"provider": "Proveïdor",
-			"apiConfigId": {
-				"label": "Configuració d'API",
-				"current": "Usar configuració d'API actualment seleccionada",
-				"description": "Selecciona una configuració d'API per usar als prompts d'Autocomplete, o simplement usa la que està actualment seleccionada"
-			},
 			"keybindingNotFound": "no trobat"
 		}
 	},
@@ -254,6 +247,13 @@
 		"modelNoImageSupport": "Les imatges no són compatibles amb el model actual.",
 		"maxImagesReached": "Màxim de 20 imatges per missatge. Elimineu algunes imatges per afegir-ne més.",
 		"imagesRemovedNoSupport": "Imatges eliminades, no compatibles amb el model."
+	},
+	"memoryWarning": {
+		"message": "L'ús de memòria està al {{percentage}}%. Si us plau, reinicia el teu IDE per evitar fallades."
+	},
+	"toolCallStyle": {
+		"title": "Estil de Crida d'Eina",
+		"description": "Tria com es formaten les crides d'eina al prompt del sistema. JSON és actualment experimental i està principalment destinat a usuaris interessats a contribuir al seu desenvolupament."
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",

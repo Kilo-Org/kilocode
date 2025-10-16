@@ -16,6 +16,11 @@
 		"title": "API-configuratie",
 		"select": "Selecteer welke API-configuratie voor deze modus gebruikt moet worden"
 	},
+	"organizationMode": {
+		"title": "Organisatiemodus",
+		"description": "Deze modus wordt geleverd door je organisatie en kan hier niet worden bewerkt. Om deze modus te wijzigen, bezoek het Kilo Code Dashboard.",
+		"cannotEdit": "Organisatiemodi kunnen niet worden bewerkt"
+	},
 	"tools": {
 		"title": "Beschikbare tools",
 		"builtInModesText": "Tools voor ingebouwde modi kunnen niet worden aangepast",

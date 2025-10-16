@@ -1,5 +1,5 @@
 {
-	"extension.displayName": "Kilo Code AI Agent (Roo / Cline fork)",
+	"extension.displayName": "Kilo Code AI Agent",
 	"extension.description": "Open Source AI coding assistant for planning, building, and fixing code.",
 	"views.contextMenu.label": "Kilo Code",
 	"views.terminalMenu.label": "Kilo Code",
@@ -30,6 +30,7 @@
 	"command.generateCommitMessage.title": "Generate Commit Message with Kilo",
 	"command.profile.title": "Profile",
 	"configuration.title": "Kilo Code",
+	"command.toggleAutoApprove.title": "Toggle Auto-Approve",
 	"commands.allowedCommands.description": "Commands that can be auto-executed when 'Always approve execute operations' is enabled",
 	"commands.deniedCommands.description": "Command prefixes that will be automatically denied without asking for approval. In case of conflicts with allowed commands, the longest prefix match takes precedence. Add * to deny all commands.",
 	"commands.commandExecutionTimeout.description": "Maximum time in seconds to wait for command execution to complete before timing out (0 = no timeout, 1-600s, default: 0s)",
@@ -42,7 +43,7 @@
 	"settings.enableCodeActions.description": "Enable Kilo Code quick fixes",
 	"settings.autoImportSettingsPath.description": "Path to a Kilo Code configuration file to automatically import on extension startup. Supports absolute paths and paths relative to the home directory (e.g. '~/Documents/kilo-code-settings.json'). Leave empty to disable auto-import.",
 	"settings.useAgentRules.description": "Enable loading of AGENTS.md files for agent-specific rules (see https://agent-rules.org/)",
-	"settings.apiRequestTimeout.description": "Maximum time in seconds to wait for API responses (0 = no timeout, 1-3600s, default: 600s). Higher values are recommended for local providers like LM Studio and Ollama that may need more processing time.",
+	"settings.apiRequestTimeout.description": "Maximum time in seconds to wait for API responses (0 = no timeout, 1-86400s, default: 600s). Higher values are recommended for local providers like LM Studio and Ollama that may need more processing time.",
 	"settings.newTaskRequireTodos.description": "Require todos parameter when creating new tasks with the new_task tool",
 	"settings.codeIndex.embeddingBatchSize.description": "The batch size for embedding operations during code indexing. Adjust this based on your API provider's limits. Default is 60.",
 	"ghost.input.title": "Press 'Enter' to confirm or 'Escape' to cancel",
@@ -52,7 +53,7 @@
 	"ghost.commands.cancelSuggestions": "Cancel Suggested Edits",
 	"ghost.commands.applyCurrentSuggestion": "Apply Current Suggested Edit",
 	"ghost.commands.applyAllSuggestions": "Apply All Suggested Edits",
-	"ghost.commands.promptCodeSuggestion": "Quick Task",
+
 	"ghost.commands.goToNextSuggestion": "Go To Next Suggestion",
 	"ghost.commands.goToPreviousSuggestion": "Go To Previous Suggestion"
 }

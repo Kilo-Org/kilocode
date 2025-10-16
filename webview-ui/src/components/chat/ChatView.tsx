@@ -123,6 +123,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		autoApprovalEnabled,
 		alwaysAllowModeSwitch,
 		showAutoApproveMenu, // kilocode_change
+		enableCheckpoints, // kilocode_change
 		alwaysAllowSubtasks,
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
@@ -1640,6 +1641,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
 					onBatchFileResponse={handleBatchFileResponse}
 					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
+					enableCheckpoints={enableCheckpoints} // kilocode_change
 					onFollowUpUnmount={handleFollowUpUnmount}
 					isFollowUpAnswered={messageOrGroup.isAnswered === true || messageOrGroup.ts === currentFollowUpTs}
 					editable={
@@ -1673,6 +1675,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleSuggestionClickInRow,
 			handleBatchFileResponse,
 			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
+			enableCheckpoints, // kilocode_change
 			handleFollowUpUnmount,
 			currentFollowUpTs,
 			alwaysAllowUpdateTodoList,
@@ -2006,7 +2009,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
 							{/* kilocode_change end */}
-							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+							<p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
 									i18nKey="chat:about"
 									components={{

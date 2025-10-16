@@ -99,7 +99,7 @@ class RooToolWindowFactory : ToolWindowFactory {
             val isLinuxArm = osName.lowercase().contains("linux") && (osArch.lowercase().contains("aarch64") || osArch.lowercase().contains("arm"))
             
             return buildString {
-                append("<html><body style='width: 300px;'>")
+                append("<html><body style='width: 300px; padding: 8px;'>")
                 append("<p>Kilo Code is initializing...")
                 append("<h3>System Information</h3>")
                 append("<table>")
@@ -124,7 +124,7 @@ class RooToolWindowFactory : ToolWindowFactory {
                     append("<div style='background-color: #f8d7da; border: 1px solid #f5c6cb; padding: 10px; border-radius: 4px; color: #721c24;'>")
                     append("<b>⚠️ JCEF Not Supported</b><br>")
                     append("Your IDE runtime does not support JCEF. Please use a JCEF-enabled runtime.<br>")
-                    append("See known issues doc for more information.")
+                    append("<a href='https://kilocode.ai/docs/jetbrains-troubleshooting' target='_blank' style='color: #721c24; text-decoration: underline;'>See JetBrains docs for how to enable JCEF in your IDE</a>")
                     append("</div>")
                     append("<br>")
                 }

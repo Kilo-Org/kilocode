@@ -1,0 +1,4 @@
+async function saveUser(userData) {
+	try {
+		const validated = await validateUser(userData);
+		<<<AUTOCOMPLETE_HERE>>>
