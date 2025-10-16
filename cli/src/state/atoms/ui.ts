@@ -34,10 +34,10 @@ export const messagesAtom = atom<CliMessage[]>([])
 export const messageResetCounterAtom = atom<number>(0)
 
 /**
- * Derived atom to get the current input value from the text buffer
- * This replaces the old inputValueAtom to maintain a single source of truth
+ * Derived atom to get the current text value from the text buffer
+ * The textBuffer is the single source of truth for input state
  */
-export const inputValueAtom = atom<string>((get) => {
+export const textBufferValueAtom = atom<string>((get) => {
 	const buffer = get(textBufferAtom)
 	return buffer.text
 })
@@ -213,7 +213,7 @@ export const suggestionCountAtom = atom<number>((get) => {
  * Derived atom to check if input is a command (starts with /)
  */
 export const isCommandInputAtom = atom<boolean>((get) => {
-	const input = get(inputValueAtom)
+	const input = get(textBufferValueAtom)
 	return input.startsWith("/")
 })
 
@@ -221,7 +221,7 @@ export const isCommandInputAtom = atom<boolean>((get) => {
  * Derived atom to get the command query (input without the leading /)
  */
 export const commandQueryAtom = atom<string>((get) => {
-	const input = get(inputValueAtom)
+	const input = get(textBufferValueAtom)
 	return get(isCommandInputAtom) ? input.slice(1) : ""
 })
 
@@ -299,10 +299,10 @@ export const updateLastMessageAtom = atom(null, (get, set, content: string) => {
 })
 
 /**
- * Action atom to set the input value
+ * Action atom to update the text buffer value
  * Also handles autocomplete visibility
  */
-export const setInputValueAtom = atom(null, (get, set, value: string) => {
+export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
 	const buffer = get(textBufferAtom)
 	buffer.setText(value)
 	set(textBufferAtom, buffer)
@@ -321,9 +321,9 @@ export const setInputValueAtom = atom(null, (get, set, value: string) => {
 })
 
 /**
- * Action atom to clear the input
+ * Action atom to clear the text buffer
  */
-export const clearInputAtom = atom(null, (get, set) => {
+export const clearTextBufferAtom = atom(null, (get, set) => {
 	const buffer = get(textBufferAtom)
 	buffer.clear()
 	set(textBufferAtom, buffer)

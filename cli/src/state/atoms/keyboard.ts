@@ -7,8 +7,8 @@ import type { Key, KeypressHandler } from "../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { TextBuffer } from "../../ui/utils/textBuffer.js"
 import {
-	inputValueAtom,
-	clearInputAtom,
+	textBufferValueAtom,
+	clearTextBufferAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
@@ -313,7 +313,7 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 		callback(textStr)
 
 		// Clear input and related state
-		set(clearInputAtom)
+		set(clearTextBufferAtom)
 		set(clearFollowupSuggestionsAtom)
 	}
 })
@@ -464,7 +464,7 @@ function handleFollowupKeys(get: any, set: any, key: Key): void {
 					}
 				} else {
 					// Submit current input
-					set(submitInputAtom, get(inputValueAtom))
+					set(submitInputAtom, get(textBufferValueAtom))
 				}
 				return
 			}
@@ -522,7 +522,7 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 			break
 
 		case "escape":
-			set(clearInputAtom)
+			set(clearTextBufferAtom)
 			return
 	}
 
@@ -612,7 +612,7 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 
 		// Escape
 		case "escape":
-			set(clearInputAtom)
+			set(clearTextBufferAtom)
 			return
 
 		// Emacs-style operations (multiline only)

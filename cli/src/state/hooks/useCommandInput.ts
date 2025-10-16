@@ -13,7 +13,7 @@ import {
 	isCommandInput as checkIsCommandInput,
 } from "../../services/autocomplete.js"
 import {
-	inputValueAtom,
+	textBufferValueAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
@@ -21,8 +21,8 @@ import {
 	suggestionCountAtom,
 	isCommandInputAtom,
 	commandQueryAtom,
-	setInputValueAtom,
-	clearInputAtom,
+	updateTextBufferAtom,
+	clearTextBufferAtom,
 	setSuggestionsAtom,
 	setArgumentSuggestionsAtom,
 	selectNextSuggestionAtom,
@@ -129,7 +129,7 @@ export interface UseCommandInputReturn {
  */
 export function useCommandInput(): UseCommandInputReturn {
 	// Read atoms
-	const inputValue = useAtomValue(inputValueAtom)
+	const inputValue = useAtomValue(textBufferValueAtom)
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)
@@ -146,8 +146,8 @@ export function useCommandInput(): UseCommandInputReturn {
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
 
 	// Write atoms
-	const setInputAction = useSetAtom(setInputValueAtom)
-	const clearInputAction = useSetAtom(clearInputAtom)
+	const setInputAction = useSetAtom(updateTextBufferAtom)
+	const clearInputAction = useSetAtom(clearTextBufferAtom)
 	const setSuggestionsAction = useSetAtom(setSuggestionsAtom)
 	const setArgumentSuggestionsAction = useSetAtom(setArgumentSuggestionsAtom)
 	const selectNextAction = useSetAtom(selectNextSuggestionAtom)
