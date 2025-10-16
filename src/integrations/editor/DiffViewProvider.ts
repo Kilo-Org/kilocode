@@ -509,18 +509,21 @@ export class DiffViewProvider {
 			// Listen for document open events - more efficient than scanning all tabs
 			disposables.push(
 				vscode.workspace.onDidOpenTextDocument(async (document) => {
-					if (arePathsEqual(document.uri.fsPath, uri.fsPath)) {
+					// Only match file:// scheme documents to avoid git diffs
+					if (document.uri.scheme === "file" && arePathsEqual(document.uri.fsPath, uri.fsPath)) {
 						// Wait a tick for the editor to be available
 						await new Promise((r) => setTimeout(r, 0))
 
 						// Find the editor for this document
-						const editor = vscode.window.visibleTextEditors.find((e) =>
-							arePathsEqual(e.document.uri.fsPath, uri.fsPath),
+						const editor = vscode.window.visibleTextEditors.find(
+							(e) => e.document.uri.scheme === "file" && arePathsEqual(e.document.uri.fsPath, uri.fsPath),
 						)
 
 						if (editor) {
 							cleanup()
 							resolve(editor)
+						} else {
+							console.error(`[DiffViewProvider] Failed to find valid editor for ${fileName}`)
 						}
 					}
 				}),
@@ -529,10 +532,16 @@ export class DiffViewProvider {
 			// Also listen for visible editor changes as a fallback
 			disposables.push(
 				vscode.window.onDidChangeVisibleTextEditors((editors) => {
-					const editor = editors.find((e) => arePathsEqual(e.document.uri.fsPath, uri.fsPath))
+					const editor = editors.find((e) => {
+						const isFileScheme = e.document.uri.scheme === "file"
+						const pathMatches = arePathsEqual(e.document.uri.fsPath, uri.fsPath)
+						return isFileScheme && pathMatches
+					})
 					if (editor) {
 						cleanup()
 						resolve(editor)
+					} else {
+						console.error(`[DiffViewProvider] Failed to find valid editor for ${fileName}`)
 					}
 				}),
 			)
