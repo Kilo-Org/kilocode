@@ -147,6 +147,7 @@ const __dirname = __dirname__(__filename);
 		"socket.io-client",
 		"sound-play",
 		"stream-json",
+		"string-width",
 		"strip-ansi",
 		"strip-bom",
 		"tiktoken",

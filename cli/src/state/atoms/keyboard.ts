@@ -35,14 +35,7 @@ import {
 	killLineLeftAtom,
 	setTextAtom,
 } from "./textBuffer.js"
-import {
-	isApprovalPendingAtom,
-	approvalOptionsAtom,
-	selectedApprovalOptionAtom,
-	approveAtom,
-	rejectAtom,
-	executeSelectedAtom,
-} from "./approval.js"
+import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
 import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
 
@@ -629,7 +622,10 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 
 	// Paste
 	if (key.paste) {
-		set(insertTextAtom, key.sequence)
+		// Convert tabs to 2 spaces to prevent border corruption
+		// Tabs have variable display widths in terminals which breaks layout
+		const normalizedText = key.sequence.replace(/\t/g, "  ")
+		set(insertTextAtom, normalizedText)
 		return
 	}
 

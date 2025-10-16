@@ -5,6 +5,7 @@ import { useAtomValue } from "jotai"
 import { useTheme } from "../../state/hooks/useTheme.js"
 import { textBufferStateAtom, textBufferIsEmptyAtom, getVisualLinesAtom } from "../../state/atoms/textBuffer.js"
 import { useSetAtom } from "jotai"
+import stringWidth from "string-width"
 
 interface MultilineTextInputProps {
 	placeholder?: string
@@ -108,6 +109,10 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 					const cursorChar = lineText[col] || " "
 					const after = lineText.slice(col + 1)
 
+					// Calculate actual display width using string-width
+					const displayWidth = stringWidth(before) + stringWidth(cursorChar) + stringWidth(after)
+					const paddingNeeded = Math.max(0, width - displayWidth)
+
 					return (
 						<Box key={index} width={width}>
 							<Text>
@@ -115,19 +120,23 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 								{chalk.inverse(cursorChar)}
 								{after}
 								{/* Pad line to full width for consistent rendering */}
-								{" ".repeat(Math.max(0, width - lineText.length - 1))}
+								{" ".repeat(paddingNeeded)}
 							</Text>
 						</Box>
 					)
 				}
 
 				// Regular line without cursor
+				// Calculate actual display width using string-width
+				const displayWidth = stringWidth(lineText)
+				const paddingNeeded = Math.max(0, width - displayWidth)
+
 				return (
 					<Box key={index} width={width}>
 						<Text>
 							{lineText}
 							{/* Pad line to full width */}
-							{" ".repeat(Math.max(0, width - lineText.length))}
+							{" ".repeat(paddingNeeded)}
 						</Text>
 					</Box>
 				)

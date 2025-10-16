@@ -43,8 +43,6 @@ import {
 	ESC,
 	PASTE_MODE_PREFIX,
 	PASTE_MODE_SUFFIX,
-	FOCUS_IN,
-	FOCUS_OUT,
 	BACKSLASH,
 	BACKSLASH_ENTER_DETECTION_WINDOW_MS,
 	DRAG_COMPLETION_TIMEOUT_MS,
@@ -84,6 +82,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 	// Local refs for mutable state
 	const isPasteRef = useRef(false)
+	const pasteBufferRef = useRef<string>("")
 	const isDraggingRef = useRef(false)
 	const dragTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const backslashTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -112,12 +111,18 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 	// Handle paste completion
 	const completePaste = useCallback(() => {
-		if (isPasteRef.current && pasteBuffer) {
-			broadcastKey(createPasteKey(pasteBuffer))
+		const currentBuffer = pasteBufferRef.current
+		if (isPasteRef.current && currentBuffer) {
+			// Normalize line endings: convert \r\n and \r to \n
+			// This handles different line ending formats from various terminals/platforms
+			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+
+			broadcastKey(createPasteKey(normalizedBuffer))
 			setPasteMode(false)
 			isPasteRef.current = false
+			pasteBufferRef.current = ""
 		}
-	}, [pasteBuffer, broadcastKey, setPasteMode])
+	}, [broadcastKey, setPasteMode])
 
 	// Handle drag completion
 	const completeDrag = useCallback(() => {
@@ -142,6 +147,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			if (!wasRaw) {
 				setRawMode(true)
 			}
+
+			// Enable bracketed paste mode
+			// This tells the terminal to wrap pasted content with ESC[200~ and ESC[201~
+			process.stdout.write("\x1b[?2004h")
 
 			// Auto-detect and enable Kitty protocol if supported
 			kittyEnabled = await autoEnableKittyProtocol()
@@ -194,6 +203,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			const paste = isPasteModeBoundary(parsedKey.sequence)
 			if (paste.isStart) {
 				isPasteRef.current = true
+				pasteBufferRef.current = ""
 				setPasteMode(true)
 				return
 			}
@@ -202,9 +212,13 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				return
 			}
 
-			// Handle paste mode
+			// Handle paste mode - when using passthrough, paste content is handled in handleRawData
+			// When not using passthrough, we still need to accumulate here
 			if (isPasteRef.current) {
-				appendToPasteBuffer(parsedKey.sequence)
+				if (!usePassthrough) {
+					pasteBufferRef.current += parsedKey.sequence
+					appendToPasteBuffer(parsedKey.sequence)
+				}
 				return
 			}
 
@@ -370,34 +384,42 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				}
 
 				if (nextMarkerPos === -1) {
-					// No more markers, write remaining data
-					keypressStream.write(data.slice(pos))
+					// No more markers
+					if (isPasteRef.current) {
+						// We're in paste mode - accumulate the remaining data in paste buffer
+						const chunk = dataStr.slice(pos)
+						pasteBufferRef.current += chunk
+						appendToPasteBuffer(chunk)
+					} else {
+						// Not in paste mode - write remaining data to stream
+						keypressStream.write(data.slice(pos))
+					}
 					break
 				}
 
-				// Write data before marker
+				// Handle data before marker
 				if (nextMarkerPos > pos) {
-					keypressStream.write(data.slice(pos, nextMarkerPos))
+					if (isPasteRef.current) {
+						// We're in paste mode - accumulate data in paste buffer
+						const chunk = dataStr.slice(pos, nextMarkerPos)
+						pasteBufferRef.current += chunk
+						appendToPasteBuffer(chunk)
+					} else {
+						// Not in paste mode - write data to stream
+						keypressStream.write(data.slice(pos, nextMarkerPos))
+					}
 				}
 
 				// Handle marker
 				if (isPrefixNext) {
-					handleKeypress(undefined, {
-						sequence: PASTE_MODE_PREFIX,
-						name: "paste-start",
-						ctrl: false,
-						meta: false,
-						shift: false,
-					})
+					// Start paste mode
+					isPasteRef.current = true
+					pasteBufferRef.current = ""
+					setPasteMode(true)
 					pos = nextMarkerPos + PASTE_MODE_PREFIX.length
 				} else if (isSuffixNext) {
-					handleKeypress(undefined, {
-						sequence: PASTE_MODE_SUFFIX,
-						name: "paste-end",
-						ctrl: false,
-						meta: false,
-						shift: false,
-					})
+					// End paste mode and complete the paste
+					completePaste()
 					pos = nextMarkerPos + PASTE_MODE_SUFFIX.length
 				}
 			}
@@ -419,6 +441,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 			// Cleanup keyboard handler
 			unsubscribeKeyboard()
+
+			// Disable bracketed paste mode
+			process.stdout.write("\x1b[?2004l")
 
 			// Disable Kitty keyboard protocol if it was enabled
 			const currentKittyState = isKittyEnabled
