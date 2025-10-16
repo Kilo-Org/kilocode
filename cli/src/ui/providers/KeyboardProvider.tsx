@@ -10,6 +10,7 @@ import { useStdin } from "ink"
 import readline from "node:readline"
 import { PassThrough } from "node:stream"
 import type { KeyboardProviderConfig } from "../../types/keyboard.js"
+import { logs } from "../../services/logs.js"
 import {
 	broadcastKeyEventAtom,
 	setPasteModeAtom,
@@ -155,7 +156,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Auto-detect and enable Kitty protocol if supported
 			kittyEnabled = await autoEnableKittyProtocol()
 			if (debugKeystrokeLogging) {
-				console.log(`[DEBUG] Kitty protocol: ${kittyEnabled ? "enabled" : "not supported"}`)
+				logs.debug(`Kitty protocol: ${kittyEnabled ? "enabled" : "not supported"}`, "KeyboardProvider")
 			}
 
 			// Update atom with actual state
@@ -190,7 +191,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			const parsedKey = parseReadlineKey(key)
 
 			if (isDebugEnabled) {
-				console.log("[DEBUG] Keypress:", parsedKey)
+				logs.debug("Keypress", "KeyboardProvider", { parsedKey })
 			}
 
 			// Check for focus events
@@ -294,7 +295,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				if (result.key) {
 					// Successfully parsed immediately
 					if (isDebugEnabled) {
-						console.log("[DEBUG] Kitty sequence parsed:", result.key)
+						logs.debug("Kitty sequence parsed", "KeyboardProvider", { key: result.key })
 					}
 					broadcastKey(result.key)
 					return
@@ -314,7 +315,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 						const nextStart = buffer.indexOf(ESC, 1)
 						if (nextStart > 0) {
 							if (isDebugEnabled) {
-								console.log("[DEBUG] Skipping incomplete sequence, looking for next CSI")
+								logs.debug("Skipping incomplete sequence, looking for next CSI", "KeyboardProvider")
 							}
 							buffer = buffer.slice(nextStart)
 							continue
@@ -324,7 +325,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 					// Successfully parsed a key
 					if (isDebugEnabled) {
-						console.log("[DEBUG] Kitty buffer parsed:", bufferResult.key)
+						logs.debug("Kitty buffer parsed", "KeyboardProvider", { key: bufferResult.key })
 					}
 					buffer = buffer.slice(bufferResult.consumedLength)
 					broadcastKey(bufferResult.key)
@@ -342,7 +343,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				// Check for buffer overflow
 				if (kittyBuffer.length > MAX_KITTY_SEQUENCE_LENGTH) {
 					if (isDebugEnabled) {
-						console.warn("[DEBUG] Kitty buffer overflow, clearing:", kittyBuffer)
+						logs.warn("Kitty buffer overflow, clearing", "KeyboardProvider", { kittyBuffer })
 					}
 					clearKittyBuffer()
 				} else {
