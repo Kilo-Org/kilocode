@@ -615,6 +615,9 @@ importers:
       ajv:
         specifier: ^8.12.0
         version: 8.17.1
+      ansi-escapes:
+        specifier: ^7.1.1
+        version: 7.1.1
       async-mutex:
         specifier: ^0.5.0
         version: 0.5.0
@@ -8141,6 +8144,10 @@ packages:
 
   ansi-escapes@7.0.0:
     resolution: {integrity: sha512-GdYO7a61mR0fOlAsvC9/rIHf7L96sBc6dEWzeOu+KAea5bZyQRPIpojrVoI4AXGJS/ycu/fBTdLrUkA4ODrvjw==}
+    engines: {node: '>=18'}
+
+  ansi-escapes@7.1.1:
+    resolution: {integrity: sha512-Zhl0ErHcSRUaVfGUeUdDuLgpkEo8KIFjB4Y9uAc46ScOpdDiU1Dbyplh7qWJeJ/ZHpbyMSM26+X3BySgnIz40Q==}
     engines: {node: '>=18'}
 
   ansi-gray@0.1.1:
@@ -26307,7 +26314,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.2.1)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.8.0)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.17.57)(@vitest/ui@3.2.4)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.1)(terser@5.43.1)(tsx@4.19.4)(yaml@2.8.0)
 
   '@vitest/utils@2.0.5':
     dependencies:
@@ -26869,6 +26876,10 @@ snapshots:
   ansi-escapes@6.2.1: {}
 
   ansi-escapes@7.0.0:
+    dependencies:
+      environment: 1.1.0
+
+  ansi-escapes@7.1.1:
     dependencies:
       environment: 1.1.0
 
@@ -31563,7 +31574,7 @@ snapshots:
   ink@6.3.1(@types/react@18.3.23)(react-devtools-core@6.1.5)(react@19.2.0):
     dependencies:
       '@alcalzone/ansi-tokenize': 0.2.0
-      ansi-escapes: 7.0.0
+      ansi-escapes: 7.1.1
       ansi-styles: 6.2.1
       auto-bind: 5.0.1
       chalk: 5.6.2

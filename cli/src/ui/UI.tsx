@@ -4,9 +4,9 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from "react"
-import { Box, Text, useInput } from "ink"
+import { Box, Text, useInput, useStdout } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
+import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
@@ -24,6 +24,7 @@ import { useTerminalResize } from "../state/hooks/useTerminalResize.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
+import ansiEscapes from "ansi-escapes"
 
 // Initialize commands on module load
 initializeCommands()
@@ -41,12 +42,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Track terminal size and trigger re-renders on resize
 	const { columns: terminalWidth } = useTerminalResize()
-	const [remountKey, setRemountKey] = useState(0)
+	const { stdout } = useStdout()
 	const isInitialMount = useRef(true)
 
 	// Initialize CI mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
+	const setMessageResetCounter = useSetAtom(messageResetCounterAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -153,21 +155,23 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci, options.prompt, addMessage, configValidation])
 
-	// Trigger repaint on terminal resize
+	const refreshStatic = useCallback(() => {
+		stdout.write(ansiEscapes.clearTerminal)
+		setMessageResetCounter((prev) => prev + 1)
+	}, [setMessageResetCounter, stdout])
+
 	useEffect(() => {
-		// Skip the initial mount to avoid unnecessary repaint
 		if (isInitialMount.current) {
 			isInitialMount.current = false
 			return
 		}
 
-		// Debounce the repaint to avoid excessive re-renders during resize
 		const timer = setTimeout(() => {
-			setRemountKey((prev) => prev + 1)
+			refreshStatic()
 		}, 300)
 
 		return () => clearTimeout(timer)
-	}, [terminalWidth])
+	}, [terminalWidth, refreshStatic])
 
 	// Exit if provider configuration is invalid
 	useEffect(() => {
@@ -181,8 +185,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [configValidation])
 
 	return (
-		// Using stdout.rows causes layout shift during renders
-		<Box flexDirection="column" key={remountKey}>
+		<Box flexDirection="column">
 			<Box flexDirection="column" overflow="hidden">
 				<MessageDisplay />
 			</Box>
