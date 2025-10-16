@@ -179,7 +179,6 @@ export async function executeCommand(
 
 	let message: { text?: string; images?: string[] } | undefined
 	let runInBackground = runInBackgroundRequested // kilocode_change
-	let backgroundProcessStarted = false // kilocode_change
 	let completed = false
 	let result: string = ""
 	let exitDetails: ExitCodeDetails | undefined
@@ -199,6 +198,10 @@ export async function executeCommand(
 			)
 			const status: CommandExecutionStatus = { executionId, status: "output", output: compressedOutput }
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+
+			if (runInBackground) {
+				return
+			}
 
 			try {
 				const { response, text, images } = await task.ask("command_output", "")
@@ -225,9 +228,8 @@ export async function executeCommand(
 			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 
-			// kilocode_change start- If run_in_backgroundRequested, automatically continue the process
-			if (runInBackgroundRequested && !backgroundProcessStarted) {
-				backgroundProcessStarted = true
+			// kilocode_change start- automatically continue the process
+			if (runInBackground) {
 				process.continue()
 			}
 			// kilocode_change end
