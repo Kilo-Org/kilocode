@@ -4,10 +4,14 @@ import { render } from "ink-testing-library"
 import { CommandInput } from "../CommandInput.js"
 
 // Mock jotai
-vi.mock("jotai", () => ({
-	useSetAtom: vi.fn(() => vi.fn()),
-	useAtomValue: vi.fn(() => 0),
-}))
+vi.mock("jotai", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("jotai")>()
+	return {
+		...actual,
+		useSetAtom: vi.fn(() => vi.fn()),
+		useAtomValue: vi.fn(() => 0),
+	}
+})
 
 // Mock the hooks
 vi.mock("../../../state/hooks/useCommandInput.js", () => ({

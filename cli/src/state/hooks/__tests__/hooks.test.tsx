@@ -9,7 +9,8 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { createStore } from "jotai"
 import { extensionServiceAtom, isServiceReadyAtom, serviceErrorAtom, isInitializingAtom } from "../../atoms/service.js"
 import { chatMessagesAtom, currentTaskAtom, taskTodosAtom, apiConfigurationAtom } from "../../atoms/extension.js"
-import { textBufferValueAtom, updateTextBufferAtom } from "../../atoms/ui.js"
+import { updateTextBufferAtom } from "../../atoms/ui.js"
+import { textBufferStringAtom } from "../../atoms/textBuffer.js"
 import type { ExtensionChatMessage, HistoryItem, TodoItem } from "../../../types/messages.js"
 
 describe("Hook Atoms", () => {
@@ -166,18 +167,18 @@ describe("Hook Atoms", () => {
 	describe("Command Input Atoms", () => {
 		it("should store input value", () => {
 			store.set(updateTextBufferAtom, "/mode")
-			expect(store.get(textBufferValueAtom)).toBe("/mode")
+			expect(store.get(textBufferStringAtom)).toBe("/mode")
 		})
 
 		it("should detect command input", () => {
 			store.set(updateTextBufferAtom, "/test")
-			const input = store.get(textBufferValueAtom)
+			const input = store.get(textBufferStringAtom)
 			expect(input.startsWith("/")).toBe(true)
 		})
 
 		it("should extract command query", () => {
 			store.set(updateTextBufferAtom, "/mode code")
-			const input = store.get(textBufferValueAtom)
+			const input = store.get(textBufferStringAtom)
 			const query = input.startsWith("/") ? input.slice(1) : ""
 			expect(query).toBe("mode code")
 		})

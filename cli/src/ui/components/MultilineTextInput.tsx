@@ -1,9 +1,16 @@
 import React, { useMemo } from "react"
 import { Box, Text } from "ink"
 import chalk from "chalk"
-import { useAtomValue, useSetAtom } from "jotai"
+import { useAtomValue } from "jotai"
 import { useTheme } from "../../state/hooks/useTheme.js"
-import { textBufferAtom, cursorPositionAtom } from "../../state/atoms/ui.js"
+import { cursorPositionAtom } from "../../state/atoms/ui.js"
+import {
+	textBufferStateAtom,
+	textBufferIsEmptyAtom,
+	getVisualLinesAtom,
+	type VisualLine,
+} from "../../state/atoms/textBuffer.js"
+import { useSetAtom } from "jotai"
 
 interface MultilineTextInputProps {
 	placeholder?: string
@@ -23,13 +30,19 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 	// Theme
 	const theme = useTheme()
 
-	// Global state - buffer is the single source of truth
-	const buffer = useAtomValue(textBufferAtom)
+	// Global state
+	const bufferState = useAtomValue(textBufferStateAtom)
+	const isEmpty = useAtomValue(textBufferIsEmptyAtom)
+	const getVisualLines = useSetAtom(getVisualLinesAtom)
+
+	// Get visual lines
+	const visualLines = useMemo(() => {
+		return getVisualLines({ width })
+	}, [getVisualLines, width, bufferState])
 
 	// Calculate scroll offset to keep cursor in view
 	const scrollOffset = useMemo(() => {
-		const visualLines = buffer.getVisualLines(width)
-		const cursorRow = buffer.cursor.row
+		const cursorRow = bufferState.cursor.row
 
 		// If content fits in viewport, no scrolling needed
 		if (visualLines.length <= maxLines) {
@@ -43,15 +56,41 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 		}
 
 		return offset
-	}, [buffer, width, maxLines])
+	}, [bufferState.cursor.row, visualLines.length, maxLines])
 
 	// Get viewport for rendering
 	const viewport = useMemo(() => {
-		return buffer.getViewport(width, maxLines, scrollOffset)
-	}, [buffer, width, maxLines, scrollOffset])
+		const actualScroll = Math.max(0, Math.min(scrollOffset, visualLines.length - maxLines))
+		const visibleLines = visualLines.slice(actualScroll, actualScroll + maxLines)
+
+		// Calculate visual cursor position
+		let visualRow = 0
+		for (let row = 0; row < bufferState.cursor.row; row++) {
+			const line = bufferState.lines[row]
+			const lineLength = line ? line.length : 1
+			visualRow += Math.ceil(lineLength / width)
+		}
+		const wrappedRows = Math.floor(bufferState.cursor.column / width)
+		visualRow += wrappedRows
+		const visualColumn = bufferState.cursor.column % width
+
+		// Check if cursor is in viewport
+		let cursorInViewport: { row: number; column: number } | null = null
+		if (visualRow >= actualScroll && visualRow < actualScroll + maxLines) {
+			cursorInViewport = {
+				row: visualRow - actualScroll,
+				column: visualColumn,
+			}
+		}
+
+		return {
+			lines: visibleLines,
+			cursorInViewport,
+		}
+	}, [visualLines, scrollOffset, maxLines, bufferState, width])
 
 	// Render placeholder if empty
-	if (buffer.isEmpty && placeholder) {
+	if (isEmpty && placeholder) {
 		return (
 			<Box flexDirection="column" width={width}>
 				<Text color="gray">
@@ -101,11 +140,11 @@ export const MultilineTextInput: React.FC<MultilineTextInputProps> = ({
 			})}
 
 			{/* Scroll indicators - only show when content exceeds maxLines */}
-			{buffer.getVisualLines(width).length > maxLines && (
+			{visualLines.length > maxLines && (
 				<Box>
 					<Text color={theme.ui.border.active}>
 						{scrollOffset > 0 && "↑ "}
-						{scrollOffset + maxLines < buffer.getVisualLines(width).length && "↓"}
+						{scrollOffset + maxLines < visualLines.length && "↓"}
 					</Text>
 				</Box>
 			)}

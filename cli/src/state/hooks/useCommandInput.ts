@@ -13,7 +13,6 @@ import {
 	isCommandInput as checkIsCommandInput,
 } from "../../services/autocomplete.js"
 import {
-	textBufferValueAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
@@ -31,6 +30,7 @@ import {
 	showAutocompleteMenuAtom,
 	getSelectedSuggestionAtom,
 } from "../atoms/ui.js"
+import { textBufferStringAtom } from "../atoms/textBuffer.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
@@ -129,7 +129,7 @@ export interface UseCommandInputReturn {
  */
 export function useCommandInput(): UseCommandInputReturn {
 	// Read atoms
-	const inputValue = useAtomValue(textBufferValueAtom)
+	const inputValue = useAtomValue(textBufferStringAtom)
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)

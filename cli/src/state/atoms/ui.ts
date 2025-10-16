@@ -9,7 +9,7 @@ import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
-import { TextBuffer } from "../../ui/utils/textBuffer.js"
+import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -32,15 +32,6 @@ export const messagesAtom = atom<CliMessage[]>([])
  * Increments each time replaceMessages is called to force Static component re-render
  */
 export const messageResetCounterAtom = atom<number>(0)
-
-/**
- * Derived atom to get the current text value from the text buffer
- * The textBuffer is the single source of truth for input state
- */
-export const textBufferValueAtom = atom<string>((get) => {
-	const buffer = get(textBufferAtom)
-	return buffer.text
-})
 
 /**
  * Atom to hold UI error messages
@@ -128,14 +119,13 @@ export type InputMode =
 export const inputModeAtom = atom<InputMode>("normal")
 
 /**
- * Global TextBuffer (since there's only one input instance)
- */
-export const textBufferAtom = atom<TextBuffer>(new TextBuffer(""))
-
-/**
  * Cursor position for multiline editing
+ * Derived from the text buffer state
  */
-export const cursorPositionAtom = atom<{ row: number; col: number }>({ row: 0, col: 0 })
+export const cursorPositionAtom = atom<{ row: number; col: number }>((get) => {
+	const cursor = get(textBufferCursorAtom)
+	return { row: cursor.row, col: cursor.column }
+})
 
 /**
  * Single selection index used by all modes (replaces multiple separate indexes)
@@ -213,7 +203,7 @@ export const suggestionCountAtom = atom<number>((get) => {
  * Derived atom to check if input is a command (starts with /)
  */
 export const isCommandInputAtom = atom<boolean>((get) => {
-	const input = get(textBufferValueAtom)
+	const input = get(textBufferStringAtom)
 	return input.startsWith("/")
 })
 
@@ -221,7 +211,7 @@ export const isCommandInputAtom = atom<boolean>((get) => {
  * Derived atom to get the command query (input without the leading /)
  */
 export const commandQueryAtom = atom<string>((get) => {
-	const input = get(textBufferValueAtom)
+	const input = get(textBufferStringAtom)
 	return get(isCommandInputAtom) ? input.slice(1) : ""
 })
 
@@ -303,10 +293,7 @@ export const updateLastMessageAtom = atom(null, (get, set, content: string) => {
  * Also handles autocomplete visibility
  */
 export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
-	const buffer = get(textBufferAtom)
-	buffer.setText(value)
-	set(textBufferAtom, buffer)
-	set(cursorPositionAtom, { row: buffer.cursor.row, col: buffer.cursor.column })
+	set(setTextAtom, value)
 
 	// Update autocomplete visibility based on input
 	// Keep showing suggestions even for exact matches (e.g., "/mode")
@@ -324,10 +311,7 @@ export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
  * Action atom to clear the text buffer
  */
 export const clearTextBufferAtom = atom(null, (get, set) => {
-	const buffer = get(textBufferAtom)
-	buffer.clear()
-	set(textBufferAtom, buffer)
-	set(cursorPositionAtom, { row: 0, col: 0 })
+	set(clearTextAtom)
 	set(showAutocompleteAtom, false)
 	set(selectedIndexAtom, 0)
 })

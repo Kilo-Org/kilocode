@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { createStore } from "jotai"
 import {
-	textBufferAtom,
 	cursorPositionAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
 	selectedIndexAtom,
 } from "../ui.js"
+import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
@@ -23,8 +23,8 @@ describe("keypress atoms", () => {
 	describe("text input handling", () => {
 		it("should update textBufferAtom when typing characters", () => {
 			// Initial state
-			const initialBuffer = store.get(textBufferAtom)
-			expect(initialBuffer.text).toBe("")
+			const initialText = store.get(textBufferStringAtom)
+			expect(initialText).toBe("")
 
 			// Simulate typing 'h'
 			const key: Key = {
@@ -39,8 +39,8 @@ describe("keypress atoms", () => {
 			store.set(keyboardHandlerAtom, key)
 
 			// Check that buffer was updated
-			const updatedBuffer = store.get(textBufferAtom)
-			expect(updatedBuffer.text).toBe("h")
+			const updatedText = store.get(textBufferStringAtom)
+			expect(updatedText).toBe("h")
 		})
 
 		it("should update textBufferAtom when typing multiple characters", () => {
@@ -58,8 +58,8 @@ describe("keypress atoms", () => {
 				store.set(keyboardHandlerAtom, key)
 			}
 
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("hello")
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("hello")
 		})
 
 		it("should update cursor position when typing", () => {
@@ -108,8 +108,8 @@ describe("keypress atoms", () => {
 			}
 			store.set(keyboardHandlerAtom, backspaceKey)
 
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("hell")
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("hell")
 		})
 
 		it("should handle newline insertion with Shift+Enter", () => {
@@ -138,9 +138,10 @@ describe("keypress atoms", () => {
 			}
 			store.set(keyboardHandlerAtom, shiftEnterKey)
 
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("hello\n")
-			expect(buffer.lineCount).toBe(2)
+			const text = store.get(textBufferStringAtom)
+			const state = store.get(textBufferStateAtom)
+			expect(text).toBe("hello\n")
+			expect(state.lines.length).toBe(2)
 		})
 	})
 
@@ -347,8 +348,8 @@ describe("keypress atoms", () => {
 			store.set(keyboardHandlerAtom, tabKey)
 
 			// Should append only 'de' to complete '/mode'
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("/mode")
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/mode")
 		})
 
 		it("should complete argument by appending only missing part", () => {
@@ -389,8 +390,8 @@ describe("keypress atoms", () => {
 			store.set(keyboardHandlerAtom, tabKey)
 
 			// Should append only 't' to complete '/mode test'
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("/mode test")
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/mode test")
 		})
 
 		it("should handle exact match completion", () => {
@@ -439,8 +440,8 @@ describe("keypress atoms", () => {
 			store.set(keyboardHandlerAtom, tabKey)
 
 			// Should not add anything (already complete)
-			const buffer = store.get(textBufferAtom)
-			expect(buffer.text).toBe("/help")
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/help")
 		})
 
 		it("should update cursor position after tab completion", () => {

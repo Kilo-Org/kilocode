@@ -5,9 +5,7 @@
 import { atom } from "jotai"
 import type { Key, KeypressHandler } from "../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
-import { TextBuffer } from "../../ui/utils/textBuffer.js"
 import {
-	textBufferValueAtom,
 	clearTextBufferAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
@@ -16,12 +14,30 @@ import {
 	followupSuggestionsAtom,
 	showFollowupSuggestionsAtom,
 	clearFollowupSuggestionsAtom,
-	textBufferAtom,
 	cursorPositionAtom,
 	inputModeAtom,
 	type InputMode,
 	isStreamingAtom,
 } from "./ui.js"
+import {
+	textBufferStateAtom,
+	textBufferStringAtom,
+	textBufferCursorAtom,
+	moveUpAtom,
+	moveDownAtom,
+	moveLeftAtom,
+	moveRightAtom,
+	moveToLineStartAtom,
+	moveToLineEndAtom,
+	insertCharAtom,
+	insertTextAtom,
+	insertNewlineAtom,
+	backspaceAtom,
+	deleteWordAtom,
+	killLineAtom,
+	killLineLeftAtom,
+	setTextAtom,
+} from "./textBuffer.js"
 import {
 	isApprovalPendingAtom,
 	approvalOptionsAtom,
@@ -445,10 +461,7 @@ function handleFollowupKeys(get: any, set: any, key: Key): void {
 			if (selectedIndex >= 0) {
 				const suggestion = suggestions[selectedIndex]
 				if (suggestion) {
-					const buffer = get(textBufferAtom)
-					buffer.setText(suggestion.answer)
-					set(textBufferAtom, buffer)
-					set(cursorPositionAtom, { row: buffer.cursor.row, col: buffer.cursor.column })
+					set(setTextAtom, suggestion.answer)
 					set(selectedIndexAtom, -1)
 				}
 			}
@@ -464,7 +477,7 @@ function handleFollowupKeys(get: any, set: any, key: Key): void {
 					}
 				} else {
 					// Submit current input
-					set(submitInputAtom, get(textBufferValueAtom))
+					set(submitInputAtom, get(textBufferStringAtom))
 				}
 				return
 			}
@@ -496,26 +509,21 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 		case "tab":
 			if (allSuggestions[selectedIndex]) {
 				const suggestion = allSuggestions[selectedIndex]
-				const buffer = get(textBufferAtom)
+				const currentText = get(textBufferStringAtom)
 
 				// Get only the missing part to append
-				const completionText = getCompletionText(buffer.text, suggestion)
+				const completionText = getCompletionText(currentText, suggestion)
 
-				// Create new buffer and append the completion
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.insertText(completionText)
-
-				set(textBufferAtom, newBuffer)
-				set(cursorPositionAtom, { row: newBuffer.cursor.row, col: newBuffer.cursor.column })
+				// Insert the completion text
+				set(insertTextAtom, completionText)
 			}
 			return
 
 		case "return":
 			if (!key.shift && !key.meta && allSuggestions[selectedIndex]) {
 				const suggestion = allSuggestions[selectedIndex]
-				const buffer = get(textBufferAtom)
-				const newText = formatSuggestion(suggestion, buffer.text)
+				const currentText = get(textBufferStringAtom)
+				const newText = formatSuggestion(suggestion, currentText)
 				set(submitInputAtom, newText)
 				return
 			}
@@ -534,81 +542,44 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
  * Handles both normal (single-line) and multiline text input
  */
 function handleTextInputKeys(get: any, set: any, key: Key) {
-	const buffer = get(textBufferAtom)
-
-	// Helper to update buffer state
-	// Create a new TextBuffer instance to ensure Jotai detects the change
-	const updateBuffer = (newBuffer: TextBuffer) => {
-		set(textBufferAtom, newBuffer)
-		set(cursorPositionAtom, { row: newBuffer.cursor.row, col: newBuffer.cursor.column })
-	}
-
 	switch (key.name) {
 		// Navigation keys (multiline only)
-		case "up": {
-			const newBuffer = new TextBuffer(buffer.text)
-			newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-			if (newBuffer.moveUp()) {
-				updateBuffer(newBuffer)
-			}
+		case "up":
+			set(moveUpAtom)
 			return
-		}
 
-		case "down": {
-			const newBuffer = new TextBuffer(buffer.text)
-			newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-			if (newBuffer.moveDown()) {
-				updateBuffer(newBuffer)
-			}
+		case "down":
+			set(moveDownAtom)
 			return
-		}
 
-		case "left": {
-			const newBuffer = new TextBuffer(buffer.text)
-			newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-			if (newBuffer.moveLeft()) {
-				updateBuffer(newBuffer)
-			}
+		case "left":
+			set(moveLeftAtom)
 			return
-		}
 
-		case "right": {
-			const newBuffer = new TextBuffer(buffer.text)
-			newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-			if (newBuffer.moveRight()) {
-				updateBuffer(newBuffer)
-			}
+		case "right":
+			set(moveRightAtom)
 			return
-		}
 
 		// Enter/Return
 		case "return":
 			if (key.shift || key.meta) {
 				// Shift+Enter or Meta+Enter: insert newline
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.insertNewline()
-				updateBuffer(newBuffer)
+				set(insertNewlineAtom)
 			} else {
 				// Plain Enter: submit
-				// Get the current buffer text (not the stale buffer variable)
-				const currentBuffer = get(textBufferAtom)
-				set(submitInputAtom, currentBuffer.text)
+				const currentText = get(textBufferStringAtom)
+				set(submitInputAtom, currentText)
 			}
 			return
 
 		// Backspace
-		case "backspace": {
-			const newBuffer = new TextBuffer(buffer.text)
-			newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
+		case "backspace":
 			if (key.meta) {
-				newBuffer.deleteWord()
+				set(deleteWordAtom)
 			} else {
-				newBuffer.backspace()
+				set(backspaceAtom)
 			}
-			updateBuffer(newBuffer)
 			return
-		}
 
 		// Escape
 		case "escape":
@@ -618,40 +589,28 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 		// Emacs-style operations (multiline only)
 		case "a":
 			if (key.ctrl) {
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.moveToLineStart()
-				updateBuffer(newBuffer)
+				set(moveToLineStartAtom)
 				return
 			}
 			break
 
 		case "e":
 			if (key.ctrl) {
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.moveToLineEnd()
-				updateBuffer(newBuffer)
+				set(moveToLineEndAtom)
 				return
 			}
 			break
 
 		case "k":
 			if (key.ctrl) {
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.killLine()
-				updateBuffer(newBuffer)
+				set(killLineAtom)
 				return
 			}
 			break
 
 		case "u":
 			if (key.ctrl) {
-				const newBuffer = new TextBuffer(buffer.text)
-				newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-				newBuffer.killLineLeft()
-				updateBuffer(newBuffer)
+				set(killLineLeftAtom)
 				return
 			}
 			break
@@ -659,13 +618,11 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 
 	// Character input
 	if (!key.ctrl && !key.meta && key.sequence.length === 1) {
-		const newBuffer = new TextBuffer(buffer.text)
-		newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-		newBuffer.insertChar(key.sequence)
-		updateBuffer(newBuffer)
+		set(insertCharAtom, key.sequence)
 
 		// Auto-detect mode changes
-		if (newBuffer.text.startsWith("/")) {
+		const newText = get(textBufferStringAtom)
+		if (newText.startsWith("/")) {
 			set(showAutocompleteAtom, true)
 			set(inputModeAtom, "autocomplete")
 		}
@@ -675,10 +632,7 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 
 	// Paste
 	if (key.paste) {
-		const newBuffer = new TextBuffer(buffer.text)
-		newBuffer.moveTo(buffer.cursor.row, buffer.cursor.column)
-		newBuffer.insertText(key.sequence)
-		updateBuffer(newBuffer)
+		set(insertTextAtom, key.sequence)
 		return
 	}
 
