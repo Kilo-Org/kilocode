@@ -3,7 +3,7 @@
  * Refactored to use specialized hooks for better maintainability
  */
 
-import React, { useCallback, useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text, useInput } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
@@ -20,6 +20,7 @@ import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
+import { useTerminalResize } from "../state/hooks/useTerminalResize.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
@@ -37,6 +38,11 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const error = useAtomValue(errorAtom)
 	const theme = useTheme()
 	const configValidation = useAtomValue(configValidationAtom)
+
+	// Track terminal size and trigger re-renders on resize
+	const { columns: terminalWidth } = useTerminalResize()
+	const [remountKey, setRemountKey] = useState(0)
+	const isInitialMount = useRef(true)
 
 	// Initialize CI mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
@@ -147,6 +153,22 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci, options.prompt, addMessage, configValidation])
 
+	// Trigger repaint on terminal resize
+	useEffect(() => {
+		// Skip the initial mount to avoid unnecessary repaint
+		if (isInitialMount.current) {
+			isInitialMount.current = false
+			return
+		}
+
+		// Debounce the repaint to avoid excessive re-renders during resize
+		const timer = setTimeout(() => {
+			setRemountKey((prev) => prev + 1)
+		}, 300)
+
+		return () => clearTimeout(timer)
+	}, [terminalWidth])
+
 	// Exit if provider configuration is invalid
 	useEffect(() => {
 		if (!configValidation.valid) {
@@ -160,7 +182,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	return (
 		// Using stdout.rows causes layout shift during renders
-		<Box flexDirection="column">
+		<Box flexDirection="column" key={remountKey}>
 			<Box flexDirection="column" overflow="hidden">
 				<MessageDisplay />
 			</Box>
