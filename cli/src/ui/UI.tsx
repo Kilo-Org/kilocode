@@ -3,10 +3,10 @@
  * Refactored to use specialized hooks for better maintainability
  */
 
-import React, { useCallback, useEffect, useRef } from "react"
-import { Box, Text, useInput } from "ink"
+import React, { useCallback, useEffect, useRef, useState } from "react"
+import { Box, Text, useInput, useStdout } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
-import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
+import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
@@ -20,9 +20,11 @@ import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
+import { useTerminalResize } from "../state/hooks/useTerminalResize.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
+import ansiEscapes from "ansi-escapes"
 
 // Initialize commands on module load
 initializeCommands()
@@ -38,9 +40,15 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const theme = useTheme()
 	const configValidation = useAtomValue(configValidationAtom)
 
+	// Track terminal size and trigger re-renders on resize
+	const { columns: terminalWidth } = useTerminalResize()
+	const { stdout } = useStdout()
+	const isInitialMount = useRef(true)
+
 	// Initialize CI mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
 	const addMessage = useSetAtom(addMessageAtom)
+	const setMessageResetCounter = useSetAtom(messageResetCounterAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -147,6 +155,24 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci, options.prompt, addMessage, configValidation])
 
+	const refreshStatic = useCallback(() => {
+		stdout.write(ansiEscapes.clearTerminal)
+		setMessageResetCounter((prev) => prev + 1)
+	}, [setMessageResetCounter, stdout])
+
+	useEffect(() => {
+		if (isInitialMount.current) {
+			isInitialMount.current = false
+			return
+		}
+
+		const timer = setTimeout(() => {
+			refreshStatic()
+		}, 300)
+
+		return () => clearTimeout(timer)
+	}, [terminalWidth, refreshStatic])
+
 	// Exit if provider configuration is invalid
 	useEffect(() => {
 		if (!configValidation.valid) {
@@ -159,7 +185,6 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	}, [configValidation])
 
 	return (
-		// Using stdout.rows causes layout shift during renders
 		<Box flexDirection="column">
 			<Box flexDirection="column" overflow="hidden">
 				<MessageDisplay />

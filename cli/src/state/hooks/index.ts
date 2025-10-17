@@ -56,6 +56,8 @@ export type { UseConfigReturn } from "./useConfig.js"
 
 // Theme hooks
 export { useTheme } from "./useTheme.js"
+// Terminal resize hooks
+export { useTerminalResize } from "./useTerminalResize.js"
 
 // Approval hooks
 export { useApprovalHandler } from "./useApprovalHandler.js"
