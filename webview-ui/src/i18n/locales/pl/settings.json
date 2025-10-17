@@ -309,6 +309,14 @@
 		"geminiApiKey": "Klucz API Gemini",
 		"getGroqApiKey": "Uzyskaj klucz API Groq",
 		"groqApiKey": "Klucz API Groq",
+		"nanoGptApiKey": "Klucz API Nano-GPT",
+		"getNanoGptApiKey": "Pobierz klucz API Nano-GPT",
+		"nanoGptModelList": "Lista modeli",
+		"nanoGptModelListOptions": {
+			"all": "Wszystkie modele",
+			"personalized": "Spersonalizowane modele",
+			"subscription": "Modele subskrypcji"
+		},
 		"getSambaNovaApiKey": "Uzyskaj klucz API SambaNova",
 		"sambaNovaApiKey": "Klucz API SambaNova",
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",

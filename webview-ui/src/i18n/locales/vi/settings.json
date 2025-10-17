@@ -309,6 +309,14 @@
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
+		"nanoGptApiKey": "Khóa API Nano-GPT",
+		"getNanoGptApiKey": "Lấy khóa API Nano-GPT",
+		"nanoGptModelList": "Danh sách mô hình",
+		"nanoGptModelListOptions": {
+			"all": "Tất cả mô hình",
+			"personalized": "Mô hình cá nhân hóa",
+			"subscription": "Mô hình đăng ký"
+		},
 		"getSambaNovaApiKey": "Lấy khóa API SambaNova",
 		"sambaNovaApiKey": "Khóa API SambaNova",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",

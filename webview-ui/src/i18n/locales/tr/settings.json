@@ -310,6 +310,14 @@
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
+		"nanoGptApiKey": "Nano-GPT API Anahtarı",
+		"getNanoGptApiKey": "Nano-GPT API Anahtarını Al",
+		"nanoGptModelList": "Model Listesi",
+		"nanoGptModelListOptions": {
+			"all": "Tüm Modeller",
+			"personalized": "Kişiselleştirilmiş Modeller",
+			"subscription": "Abonelik Modelleri"
+		},
 		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",

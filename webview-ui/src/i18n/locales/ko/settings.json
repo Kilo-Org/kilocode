@@ -309,6 +309,14 @@
 		"geminiApiKey": "Gemini API 키",
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
+		"nanoGptApiKey": "Nano-GPT API 키",
+		"getNanoGptApiKey": "Nano-GPT API 키 받기",
+		"nanoGptModelList": "모델 목록",
+		"nanoGptModelListOptions": {
+			"all": "모든 모델",
+			"personalized": "개인화된 모델",
+			"subscription": "구독 모델"
+		},
 		"getSambaNovaApiKey": "SambaNova API 키 받기",
 		"sambaNovaApiKey": "SambaNova API 키",
 		"getGeminiApiKey": "Gemini API 키 받기",

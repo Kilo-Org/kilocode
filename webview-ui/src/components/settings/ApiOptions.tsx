@@ -39,6 +39,7 @@ import {
 	rooDefaultModelId,
 	vercelAiGatewayDefaultModelId,
 	deepInfraDefaultModelId,
+	nanoGptDefaultModelId, //kilocode_change
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 	nativeFunctionCallingProviders, // kilocode_change: Added import for native function calling providers
 } from "@roo-code/types"
@@ -85,6 +86,7 @@ import {
 	LiteLLM,
 	Mistral,
 	Moonshot,
+	NanoGpt, //kilocode_change
 	Ollama,
 	OpenAI,
 	OpenAICompatible,
@@ -221,6 +223,10 @@ const ApiOptions = ({
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
+		//kilocode_change start
+		nanoGptApiKey: apiConfiguration?.nanoGptApiKey,
+		nanoGptModelList: apiConfiguration?.nanoGptModelList,
+		//kilocode_change end
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -373,6 +379,7 @@ const ApiOptions = ({
 				unbound: { field: "unboundModelId", default: unboundDefaultModelId },
 				requesty: { field: "requestyModelId", default: requestyDefaultModelId },
 				litellm: { field: "litellmModelId", default: litellmDefaultModelId },
+				"nano-gpt": { field: "nanoGptModelId", default: nanoGptDefaultModelId }, //kilocode_change
 				anthropic: { field: "apiModelId", default: anthropicDefaultModelId },
 				cerebras: { field: "apiModelId", default: cerebrasDefaultModelId },
 				"claude-code": { field: "apiModelId", default: claudeCodeDefaultModelId },
@@ -659,6 +666,19 @@ const ApiOptions = ({
 			{selectedProvider === "moonshot" && (
 				<Moonshot apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "nano-gpt" && (
+				<NanoGpt
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					selectedModelId={selectedModelId}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "vscode-lm" && (
 				<VSCodeLM apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />

@@ -46,6 +46,8 @@ type RouterModelsQueryKey = {
 	geminiApiKey?: string
 	googleGeminiBaseUrl?: string
 	chutesApiKey?: string
+	nanoGptApiKey?: string
+	nanoGptModelList?: "all" | "personalized" | "subscription"
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 
