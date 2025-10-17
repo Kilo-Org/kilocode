@@ -10,3 +10,5 @@ export function updateHostGlobalState<K extends keyof GlobalState>(stateKey: K, 
 	const updatePayload = createGlobalStateUpdate(stateKey, stateValue)
 	vscode.postMessage({ type: "updateGlobalState", ...updatePayload })
 }
+
+updateHostGlobalState("dismissedUpsells", [])
