@@ -73,6 +73,7 @@
 				"tokenError": "Autocomplete를 사용하려면 유효한 토큰을 설정해야 합니다",
 				"lastCompletion": "마지막 제안:",
 				"sessionTotal": "세션 총 비용:",
+				"provider": "제공업체:",
 				"model": "모델:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "새로운 변경사항을 표시할 수 없습니다. 체크포인트를 사용할 수 없습니다.",
 		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
 		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
+	},
+	"creditsstatusbar": {
+		"loading": "로딩 중...",
+		"clickToRefresh": "클릭하여 새로고침",
+		"minute": "분"
 	}
 }

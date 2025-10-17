@@ -225,7 +225,10 @@
 				"label": "Completamento Automatico Manuale ({{keybinding}})",
 				"description": "Hai bisogno di una correzione rapida, completamento o refactoring? Kilo userà il contesto circostante per offrire miglioramenti immediati, mantenendoti nel flusso. <DocsLink>Modifica scorciatoia</DocsLink>"
 			},
-			"keybindingNotFound": "non trovato"
+			"keybindingNotFound": "non trovato",
+			"noModelConfigured": "Nessun modello di autocompletamento adatto trovato. Configura un provider nelle impostazioni API.",
+			"model": "Modello",
+			"provider": "Provider"
 		}
 	},
 	"virtualProvider": {
@@ -257,5 +260,9 @@
 	},
 	"memoryWarning": {
 		"message": "L'utilizzo della memoria è al {{percentage}}%. Riavvia il tuo IDE per evitare crash."
+	},
+	"toolCallStyle": {
+		"title": "Stile Chiamata Strumenti",
+		"description": "Scegli come formattare le chiamate agli strumenti nel prompt di sistema. JSON è attualmente sperimentale e destinato principalmente agli utenti interessati a contribuire al suo sviluppo."
 	}
 }

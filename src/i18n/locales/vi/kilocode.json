@@ -73,6 +73,7 @@
 				"tokenError": "Phải đặt token hợp lệ để sử dụng Autocomplete",
 				"lastCompletion": "Gợi ý cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
+				"provider": "Nhà cung cấp:",
 				"model": "Mô hình:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "Không thể hiển thị các thay đổi mới, điểm kiểm tra không khả dụng.",
 		"noChanges": "Không thể hiển thị các thay đổi mới, không tìm thấy thay đổi nào.",
 		"error": "Không thể hiển thị các thay đổi mới, đã xảy ra lỗi."
+	},
+	"creditsstatusbar": {
+		"loading": "Đang tải...",
+		"clickToRefresh": "Nhấp để làm mới",
+		"minute": "phút"
 	}
 }

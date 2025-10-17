@@ -79,6 +79,7 @@
 				"tokenError": "Aby używać Autocomplete, musi być ustawiony ważny token",
 				"lastCompletion": "Ostatnia sugestia:",
 				"sessionTotal": "Całkowity koszt sesji:",
+				"provider": "Dostawca:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 			"cancelButton": "Anuluj"
 		},
 		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
+	},
+	"creditsstatusbar": {
+		"loading": "Ładowanie...",
+		"clickToRefresh": "Kliknij, aby odświeżyć",
+		"minute": "minuta"
 	}
 }

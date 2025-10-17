@@ -73,6 +73,7 @@
 				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
 				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
+				"provider": "Sağlayıcı:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "Yeni değişiklikler gösterilemiyor, kontrol noktaları kullanılamıyor.",
 		"noChanges": "Yeni değişiklikler gösterilemiyor, hiçbir değişiklik bulunamadı.",
 		"error": "Yeni değişiklikler gösterilemiyor, bir hata oluştu."
+	},
+	"creditsstatusbar": {
+		"loading": "Yükleniyor...",
+		"clickToRefresh": "Yenilemek için tıkla",
+		"minute": "dakika"
 	}
 }

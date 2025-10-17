@@ -73,6 +73,7 @@
 				"tokenError": "Token yang valid harus diatur untuk menggunakan Autocomplete",
 				"lastCompletion": "Saran terakhir:",
 				"sessionTotal": "Total biaya sesi:",
+				"provider": "Penyedia:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "Tidak dapat menampilkan perubahan baru, checkpoint tidak tersedia.",
 		"noChanges": "Tidak dapat menampilkan perubahan baru, tidak ada perubahan yang ditemukan.",
 		"error": "Tidak dapat menampilkan perubahan baru, terjadi kesalahan."
+	},
+	"creditsstatusbar": {
+		"loading": "Memuat...",
+		"clickToRefresh": "Klik untuk menyegarkan",
+		"minute": "menit"
 	}
 }

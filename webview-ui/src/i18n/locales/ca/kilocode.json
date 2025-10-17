@@ -218,7 +218,10 @@
 				"label": "Autocompleció Manual ({{keybinding}})",
 				"description": "Necessites una correcció ràpida, completació o refactorització? Kilo utilitzarà el context circumdant per oferir millores immediates, mantenint-te en el flux. <DocsLink>Veure drecera</DocsLink>"
 			},
-			"keybindingNotFound": "no trobat"
+			"keybindingNotFound": "no trobat",
+			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
+			"model": "Model",
+			"provider": "Proveïdor"
 		}
 	},
 	"virtualProvider": {
@@ -250,6 +253,10 @@
 	},
 	"memoryWarning": {
 		"message": "L'ús de memòria està al {{percentage}}%. Si us plau, reinicia el teu IDE per evitar fallades."
+	},
+	"toolCallStyle": {
+		"title": "Estil de Crida d'Eina",
+		"description": "Tria com es formaten les crides d'eina al prompt del sistema. JSON és actualment experimental i està principalment destinat a usuaris interessats a contribuir al seu desenvolupament."
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",

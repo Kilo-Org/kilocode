@@ -204,6 +204,10 @@
 			"idea7": "Vytvoř uklidňující interaktivní hvězdné pole, které se pohybuje s gesty myši"
 		}
 	},
+	"toolCallStyle": {
+		"title": "Styl volání nástrojů",
+		"description": "Vyber, jak jsou volání nástrojů formátována v systémovém promptu. JSON je momentálně experimentální a je určen především pro uživatele, kteří mají zájem přispět k jeho vývoji."
+	},
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
@@ -225,7 +229,10 @@
 				"label": "Ruční dokončování ({{keybinding}})",
 				"description": "Potřebuješ rychlou opravu, dokončení nebo refaktoring? Kilo použije okolní kontext k nabídnutí okamžitých vylepšení, udržujíc tě v toku. <DocsLink>Zobrazit zkratku</DocsLink>"
 			},
-			"keybindingNotFound": "nenalezeno"
+			"keybindingNotFound": "nenalezeno",
+			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
+			"model": "Model",
+			"provider": "Poskytovatel"
 		}
 	},
 	"virtualProvider": {

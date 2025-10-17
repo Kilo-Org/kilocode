@@ -1,5 +1,23 @@
 # kilo-code
 
+## [v4.106.0]
+
+- [#2833](https://github.com/Kilo-Org/kilocode/pull/2833) [`0b8ef46`](https://github.com/Kilo-Org/kilocode/commit/0b8ef4632cab8cbf1da7a90a2f9b228861b41be8) Thanks [@mcowger](https://github.com/mcowger)! - (also thanks to @NaccOll for paving the way) - Preliminary support for native tool calling (a.k.a native function calling) was added.
+
+    This feature is currently experimental and mostly intended for users interested in contributing to its development.
+    It is so far only supported when using OpenRouter or Kilo Code providers. There are possible issues including, but not limited to:
+
+    - Missing tools (e.g. apply_diff tool)
+    - Tools calls not updating the UI until they are complete
+    - Tools being used even though they are disabled (e.g. browser tool)
+    - MCP servers not working
+    - Errors specific to certain inference providers
+
+    Native tool calling can be enabled in Providers Settings > Advanced Settings > Tool Call Style > JSON.
+    It is enabled by default for Claude Haiku 4.5, because that model does not work at all otherwise.
+
+- [#3050](https://github.com/Kilo-Org/kilocode/pull/3050) [`357d438`](https://github.com/Kilo-Org/kilocode/commit/357d4385c0a5e609a408c5842047c0e6593b8153) Thanks [@markijbema](https://github.com/markijbema)! - CMD-I now invokes the agent so you can give it more complex prompts
+
 ## [v4.105.0]
 
 - [#3005](https://github.com/Kilo-Org/kilocode/pull/3005) [`b87ae9c`](https://github.com/Kilo-Org/kilocode/commit/b87ae9ca29ca632ec0d324dae469a75c8005e876) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Improve the edit chat area to allow context and file drag and drop when editing messages. Align more with upstream edit functionality

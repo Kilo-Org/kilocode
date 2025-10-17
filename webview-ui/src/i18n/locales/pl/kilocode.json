@@ -95,6 +95,10 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Styl Wywołań Narzędzi",
+		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code chce skondensować Twoją rozmowę",
@@ -218,7 +222,10 @@
 				"label": "Ręczne uzupełnianie ({{keybinding}})",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
-			"keybindingNotFound": "nie znaleziono"
+			"keybindingNotFound": "nie znaleziono",
+			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
+			"model": "Model",
+			"provider": "Dostawca"
 		}
 	},
 	"virtualProvider": {

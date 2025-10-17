@@ -95,6 +95,10 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Estilo de Llamada de Herramientas",
+		"description": "Elige cómo se formatean las llamadas de herramientas en el prompt del sistema. JSON es actualmente experimental y está destinado principalmente a usuarios interesados en contribuir a su desarrollo."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
@@ -218,7 +222,10 @@
 				"label": "Autocompletado Manual ({{keybinding}})",
 				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"
 			},
-			"keybindingNotFound": "no encontrado"
+			"keybindingNotFound": "no encontrado",
+			"noModelConfigured": "No se encontró ningún modelo de autocompletado adecuado. Por favor, configura un proveedor en la configuración de API.",
+			"model": "Modelo",
+			"provider": "Proveedor"
 		}
 	},
 	"virtualProvider": {

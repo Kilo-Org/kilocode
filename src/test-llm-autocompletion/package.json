@@ -12,7 +12,7 @@
 		"@anthropic-ai/sdk": "^0.51.0",
 		"openai": "^5.12.2",
 		"dotenv": "^16.4.5",
-		"diff": "^5.1.0",
+		"diff": "^7.0.0",
 		"web-tree-sitter": "^0.20.8"
 	},
 	"devDependencies": {

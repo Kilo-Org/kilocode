@@ -208,6 +208,8 @@
 		"title": "Autocomplete",
 		"settings": {
 			"triggers": "Auslöser",
+			"model": "Modell",
+			"provider": "Provider",
 			"enableAutoTrigger": {
 				"label": "Pausieren zum Vervollständigen",
 				"description": "Wenn aktiviert, löst Kilo Code automatisch Autocomplete aus, wenn du aufhörst zu tippen. Dies kann für schnelle Korrekturen und Vorschläge nützlich sein."
@@ -224,7 +226,8 @@
 				"label": "Manuelle Autovervollständigung ({{keybinding}})",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
 			},
-			"keybindingNotFound": "nicht gefunden"
+			"keybindingNotFound": "nicht gefunden",
+			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen."
 		}
 	},
 	"virtualProvider": {
@@ -248,6 +251,10 @@
 		"perMinute": "Pro Minute",
 		"requestsLabel": "Anfragen",
 		"perDay": "Pro Tag"
+	},
+	"toolCallStyle": {
+		"title": "Tool-Call-Stil",
+		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind."
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",

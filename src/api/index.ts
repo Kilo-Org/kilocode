@@ -1,4 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+import OpenAI from "openai" // kilocode_change
 
 import type { ProviderSettings, ModelInfo } from "@roo-code/types"
 
@@ -75,6 +76,11 @@ export interface ApiHandlerCreateMessageMetadata {
 	 */
 	store?: boolean
 	// kilocode_change start
+	/**
+	 * Array of allowed tools for the current mode when using JSON tool style.
+	 * This contains the full tool definitions (function schemas) that the model can use.
+	 */
+	allowedTools?: OpenAI.Chat.ChatCompletionTool[]
 	/**
 	 * KiloCode-specific: The project ID for the current workspace (derived from git origin remote).
 	 * Used by KiloCodeOpenrouterHandler for backend tracking. Ignored by other providers.

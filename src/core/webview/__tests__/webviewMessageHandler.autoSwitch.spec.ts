@@ -27,6 +27,9 @@ vi.mock("vscode", () => ({
 		uriScheme: "vscode",
 		openExternal: vi.fn(),
 	},
+	commands: {
+		executeCommand: vi.fn(),
+	},
 }))
 
 vi.mock("axios")

@@ -95,6 +95,10 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
@@ -218,7 +222,10 @@
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı"
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"model": "Model",
+			"provider": "Sağlayıcı"
 		}
 	},
 	"virtualProvider": {

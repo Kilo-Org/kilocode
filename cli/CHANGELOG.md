@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.4
+
+### Patch Changes
+
+- [#3066](https://github.com/Kilo-Org/kilocode/pull/3066) [`263741a`](https://github.com/Kilo-Org/kilocode/commit/263741a88054cf57591e5e240dfcafc8bb5c97ee) Thanks [@RSO](https://github.com/RSO)! - Made Logo responsive so that it better fits smaller screens
+
 ## 0.0.3
 
 ### Patch Changes

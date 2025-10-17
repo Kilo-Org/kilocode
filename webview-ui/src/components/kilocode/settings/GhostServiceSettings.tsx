@@ -26,8 +26,14 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, autoTriggerDelay, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding } =
-		ghostServiceSettings || {}
+	const {
+		enableAutoTrigger,
+		autoTriggerDelay,
+		enableQuickInlineTaskKeybinding,
+		enableSmartInlineTaskKeybinding,
+		provider,
+		model,
+	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const normalizedDelay = normalizeAutoTriggerDelay(autoTriggerDelay)
@@ -166,6 +172,34 @@ export const GhostServiceSettingsView = ({
 									),
 								}}
 							/>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-1">
+						<div className="flex items-center gap-2 font-bold">
+							<Bot className="w-4" />
+							<div>{t("kilocode:ghost.settings.model")}</div>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<div className="text-sm">
+							{provider && model ? (
+								<>
+									<div className="text-vscode-descriptionForeground">
+										<span className="font-medium">{t("kilocode:ghost.settings.provider")}:</span>{" "}
+										{provider}
+									</div>
+									<div className="text-vscode-descriptionForeground">
+										<span className="font-medium">{t("kilocode:ghost.settings.model")}:</span>{" "}
+										{model}
+									</div>
+								</>
+							) : (
+								<div className="text-vscode-errorForeground">
+									{t("kilocode:ghost.settings.noModelConfigured")}
+								</div>
+							)}
 						</div>
 					</div>
 				</div>

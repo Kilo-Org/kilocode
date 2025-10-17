@@ -225,7 +225,10 @@
 				"label": "Preenchimento Automático Manual ({{keybinding}})",
 				"description": "Precisa de uma correção rápida, completação ou refatoração? O Kilo usará o contexto ao redor para oferecer melhorias imediatas, mantendo você no fluxo. <DocsLink>Ver atalho</DocsLink>"
 			},
-			"keybindingNotFound": "não encontrado"
+			"keybindingNotFound": "não encontrado",
+			"noModelConfigured": "Nenhum modelo de autocompletar adequado encontrado. Configure um provedor nas configurações da API.",
+			"model": "Modelo",
+			"provider": "Provedor"
 		}
 	},
 	"virtualProvider": {
@@ -249,6 +252,10 @@
 		"requestsLabel": "Solicitações",
 		"perMinute": "Por Minuto",
 		"perHour": "Por Hora"
+	},
+	"toolCallStyle": {
+		"title": "Estilo de Chamada de Ferramenta",
+		"description": "Escolha como as chamadas de ferramentas são formatadas no prompt do sistema. JSON é atualmente experimental e destinado principalmente a usuários interessados em contribuir para seu desenvolvimento."
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",

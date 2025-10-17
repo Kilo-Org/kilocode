@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { kiloLanguages } from "./kiloLanguages.js"
+import { kiloLanguages } from "./kilocode/kiloLanguages.js"
 
 /**
  * CodeAction

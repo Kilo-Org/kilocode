@@ -73,6 +73,7 @@
 				"tokenError": "A valid token must be set to use Autocomplete",
 				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
+				"provider": "Provider:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 			"okButton": "I Understand",
 			"cancelButton": "Cancel"
 		}
+	},
+	"creditsstatusbar": {
+		"loading": "Loading...",
+		"clickToRefresh": "Click to refresh",
+		"minute": "minute"
 	}
 }

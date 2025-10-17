@@ -79,6 +79,7 @@
 				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
 				"lastCompletion": "Poslední návrh:",
 				"sessionTotal": "Celkové náklady relace:",
+				"provider": "Poskytovatel:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 			"cancelButton": "Zrušit"
 		},
 		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
+	},
+	"creditsstatusbar": {
+		"loading": "Načítání...",
+		"clickToRefresh": "Kliknutím aktualizujete",
+		"minute": "minuta"
 	}
 }

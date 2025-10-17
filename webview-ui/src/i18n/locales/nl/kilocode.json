@@ -102,6 +102,10 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Stijl",
+		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
@@ -225,7 +229,10 @@
 				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
 				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
 			},
-			"keybindingNotFound": "niet gevonden"
+			"keybindingNotFound": "niet gevonden",
+			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
+			"model": "Model",
+			"provider": "Provider"
 		}
 	},
 	"virtualProvider": {

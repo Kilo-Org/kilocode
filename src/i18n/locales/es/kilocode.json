@@ -73,6 +73,7 @@
 				"tokenError": "Se debe establecer un token válido para usar Autocomplete",
 				"lastCompletion": "Última sugerencia:",
 				"sessionTotal": "Costo total de la sesión:",
+				"provider": "Proveedor:",
 				"model": "Modelo:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "No se pueden mostrar nuevos cambios, los puntos de control no están disponibles.",
 		"noChanges": "No se pueden mostrar nuevos cambios, no se encontraron cambios.",
 		"error": "No se pueden mostrar nuevos cambios, ocurrió un error."
+	},
+	"creditsstatusbar": {
+		"loading": "Cargando...",
+		"clickToRefresh": "Haz clic para actualizar",
+		"minute": "minuto"
 	}
 }

@@ -218,7 +218,10 @@
 				"label": "Pelengkapan Otomatis Manual ({{keybinding}})",
 				"description": "Perlu perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan langsung, menjaga Anda tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
 			},
-			"keybindingNotFound": "tidak ditemukan"
+			"keybindingNotFound": "tidak ditemukan",
+			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
+			"model": "Model",
+			"provider": "Penyedia"
 		}
 	},
 	"virtualProvider": {
@@ -257,5 +260,9 @@
 	},
 	"memoryWarning": {
 		"message": "Penggunaan memori mencapai {{percentage}}%. Silakan restart IDE Anda untuk mencegah crash."
+	},
+	"toolCallStyle": {
+		"title": "Gaya Panggilan Tool",
+		"description": "Pilih bagaimana panggilan tool diformat dalam prompt sistem. JSON saat ini bersifat eksperimental dan sebagian besar ditujukan untuk pengguna yang tertarik berkontribusi pada pengembangannya."
 	}
 }

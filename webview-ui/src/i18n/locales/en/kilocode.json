@@ -211,10 +211,16 @@
 			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Style",
+		"description": "Choose how tool calls are formatted in the system prompt. JSON is currently experimental and mostly intended for users interested in contributing to its development."
+	},
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
 			"triggers": "Triggers",
+			"model": "Model",
+			"provider": "Provider",
 			"enableAutoTrigger": {
 				"label": "Pause to Complete",
 				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
@@ -231,7 +237,8 @@
 				"label": "Manual Autocomplete ({{keybinding}})",
 				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
 			},
-			"keybindingNotFound": "not found"
+			"keybindingNotFound": "not found",
+			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings."
 		}
 	},
 	"virtualProvider": {

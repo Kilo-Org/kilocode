@@ -73,6 +73,7 @@
 				"tokenError": "必須設定有效 Token 才能使用 Autocomplete",
 				"lastCompletion": "最後建議:",
 				"sessionTotal": "工作階段總費用:",
+				"provider": "提供者:",
 				"model": "模型:"
 			},
 			"cost": {
@@ -134,5 +135,10 @@
 		"checkpointsUnavailable": "無法顯示新變更，檢查點不可用。",
 		"noChanges": "無法顯示新變更，找不到任何變更。",
 		"error": "無法顯示新變更，發生錯誤。"
+	},
+	"creditsstatusbar": {
+		"loading": "載入中...",
+		"clickToRefresh": "點擊重新整理",
+		"minute": "分鐘"
 	}
 }

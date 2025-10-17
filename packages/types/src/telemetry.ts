@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { providerNames } from "./provider-settings.js"
 import { clineMessageSchema } from "./message.js"
+import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
 /**
  * TelemetrySetting
@@ -134,6 +135,7 @@ export type AppProperties = z.infer<typeof appPropertiesSchema>
 
 export const taskPropertiesSchema = z.object({
 	taskId: z.string().optional(),
+	parentTaskId: z.string().optional(),
 	apiProvider: z.enum(providerNames).optional(),
 	modelId: z.string().optional(),
 	diffStrategy: z.string().optional(),
@@ -149,6 +151,7 @@ export const taskPropertiesSchema = z.object({
 	// kilocode_change start
 	currentTaskSize: z.number().optional(),
 	taskHistorySize: z.number().optional(),
+	toolStyle: toolUseStylesSchema.optional(),
 	// kilocode_change end
 })
 
