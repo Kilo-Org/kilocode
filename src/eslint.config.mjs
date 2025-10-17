@@ -37,6 +37,6 @@ export default [
 		},
 	},
 	{
-		ignores: ["webview-ui", "out", "services/continuedev/**"],
+		ignores: ["webview-ui", "out", "services/continuedev/core/llm/llamaTokenizer.js", "**/__fixtures__/**"],
 	},
 ]

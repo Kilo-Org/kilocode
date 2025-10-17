@@ -9,3 +9,4 @@ pnpm-lock.yaml
 *.min.css
 coverage
 .turbo
+**/__fixtures__
