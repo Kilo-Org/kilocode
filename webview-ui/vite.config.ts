@@ -165,6 +165,64 @@ export default defineConfig(({ mode }) => {
 		},
 		server: {
 			host: "0.0.0.0", // kilocode_change
+			fs: {
+				// Allow serving files from parent directories for locale watching
+				allow: ["..", "../src/i18n/locales"],
+			},
+			watch: {
+				usePolling: false,
+				ignored: [
+					"**/node_modules/**",
+					"**/dist/**",
+					"**/.git/**",
+					"**/logs/**",
+					"**/.turbo/**",
+					"**/coverage/**",
+					"**/.nyc_output/**",
+					// Exclude asset directories (static files don't need watching)
+					"../src/assets/**",
+					// Exclude test utilities and build artifacts
+					"../src/test-llm-autocompletion/**",
+					"../src/walkthrough/**",
+					"../src/__tests__/**",
+					"../src/__mocks__/**",
+					"src/**/__tests__/**",
+					"src/**/__mocks__/**",
+					// Exclude all non-TS/JS files EXCEPT locale JSON files
+					"../**/*.md",
+					"../**/*.yml",
+					"../**/*.yaml",
+					"../**/*.txt",
+					"../**/*.log",
+					"../**/*.png",
+					"../**/*.jpg",
+					"../**/*.jpeg",
+					"../**/*.gif",
+					"../**/*.svg",
+					"../**/*.ico",
+					"../**/*.woff",
+					"../**/*.woff2",
+					"../**/*.ttf",
+					"../**/*.eot",
+					"src/**/*.css",
+					"src/**/*.scss",
+					"src/**/*.less",
+					"src/i18n/locales/**",
+					"!../src/i18n/locales",
+					// Exclude packages directory (build artifacts)
+					"../packages/**/dist/**",
+					"../packages/**/build/**",
+					// Exclude apps directory
+					"../apps/**",
+					// Exclude other non-essential directories
+					"../benchmark/**",
+					"../jetbrains/**",
+					"../launch/**",
+					"../releases/**",
+					"../run/**",
+					"../scripts/**",
+				],
+			},
 			hmr: {
 				// host: "localhost", kilocode_change
 				protocol: "ws",
