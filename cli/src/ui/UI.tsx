@@ -174,7 +174,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			</Box>
 
 			{error && (
-				<Box borderStyle="single" borderColor={theme.semantic.error} paddingX={1} marginY={1}>
+				<Box borderStyle="round" borderColor={theme.semantic.error} paddingX={1} marginY={1}>
 					<Text color={theme.semantic.error}>⚠ {error}</Text>
 				</Box>
 			)}

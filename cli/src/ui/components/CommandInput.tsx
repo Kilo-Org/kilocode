@@ -61,7 +61,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 		<Box flexDirection="column">
 			{/* Input field */}
 			<Box
-				borderStyle="single"
+				borderStyle="round"
 				borderColor={isApprovalPending ? theme.actions.pending : theme.ui.border.active}
 				paddingX={1}>
 				<Text color={isApprovalPending ? theme.actions.pending : theme.ui.border.active} bold>
