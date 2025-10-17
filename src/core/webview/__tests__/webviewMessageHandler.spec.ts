@@ -190,12 +190,15 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
-				nanoGptApiKey: "nano-gpt-key", // kilocode_change
-				nanoGptModelList: "all", // kilocode_change
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
+				nanoGptApiKey: "nano-gpt-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		})
 	})
@@ -228,15 +231,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
-		//kilocode_change start
+		// kilocode_change start
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "gemini",
+			apiKey: "gemini-key",
+			baseUrl: "https://gemini.example.com",
+		})
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "nano-gpt",
 			apiKey: "nano-gpt-key",
-			nanoGptModelList: "all",
+			nanoGptModelList: undefined,
 		})
-		//kilocode_change end
+		// kilocode_change end
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -251,19 +259,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 				ovhcloud: mockModels, // kilocode_change
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 	})
@@ -276,10 +285,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
-				//kilocode_change start
-				nanoGptApiKey: "nano-gpt-key",
-				nanoGptModelList: "all",
-				//kilocode_change end
 				// Missing litellm config
 			},
 		})
@@ -321,9 +326,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
-				// kilocode_change end
 				nanoGptApiKey: "nano-gpt-key",
-				nanoGptModelList: "all",
+				// kilocode_change end
 				// Missing litellm config
 			},
 		})
@@ -357,19 +361,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 				ovhcloud: mockModels, // kilocode_change
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 	})
@@ -387,6 +392,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		// Mock some providers to succeed and others to fail
 		mockGetModels
 			.mockResolvedValueOnce(mockModels) // openrouter
+			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
@@ -395,8 +401,8 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
 			.mockResolvedValueOnce(mockModels) // deepinfra
+			.mockResolvedValueOnce(mockModels) // nano-gpt // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
-			.mockResolvedValueOnce(mockModels) // nano-gpt
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -409,19 +415,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: {},
 				ovhcloud: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 
@@ -461,6 +468,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		// Mock providers to fail with different error types
 		mockGetModels
 			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
+			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
@@ -469,7 +477,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt
+			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt // kilocode_change
 			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
@@ -484,6 +492,15 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Structured error message",
 			values: { provider: "openrouter" },
 		})
+
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Gemini API error",
+			values: { provider: "gemini" },
+		})
+		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -513,7 +530,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Chutes API error",
 			values: { provider: "chutes" },
 		})
-		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -528,6 +544,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Vercel AI Gateway error",
 			values: { provider: "vercel-ai-gateway" },
 		})
+		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -536,6 +553,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "deepinfra" },
 		})
 
+		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -543,7 +561,6 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "nano-gpt" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,

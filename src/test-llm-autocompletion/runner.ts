@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
+import fs from "fs"
+import path from "path"
 import { LLMClient } from "./llm-client.js"
 import { StrategyTester } from "./strategy-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
-import { PromptStrategyManager } from "../services/ghost/PromptStrategyManager.js"
 
 interface TestResult {
 	testCase: TestCase
@@ -17,20 +18,18 @@ interface TestResult {
 	strategyName?: string
 }
 
-class TestRunner {
+export class TestRunner {
 	private llmClient: LLMClient
 	private strategyTester: StrategyTester
 	private verbose: boolean
 	private results: TestResult[] = []
-	private overrideStrategy?: string
 	private skipApproval: boolean
 
-	constructor(verbose: boolean = false, overrideStrategy?: string, skipApproval: boolean = false) {
+	constructor(verbose: boolean = false, skipApproval: boolean = false) {
 		this.verbose = verbose
-		this.overrideStrategy = overrideStrategy
 		this.skipApproval = skipApproval
 		this.llmClient = new LLMClient()
-		this.strategyTester = new StrategyTester(this.llmClient, { overrideStrategy })
+		this.strategyTester = new StrategyTester(this.llmClient)
 	}
 
 	async runTest(testCase: TestCase): Promise<TestResult> {
@@ -92,12 +91,9 @@ class TestRunner {
 	}
 
 	async runAllTests(): Promise<void> {
-		console.log("\n🚀 Starting PromptStrategyManager LLM Tests\n")
+		console.log("\n🚀 Starting AutoTrigger Strategy LLM Tests\n")
 		console.log("Provider:", this.llmClient["provider"])
 		console.log("Model:", this.llmClient["model"])
-		if (this.overrideStrategy) {
-			console.log("Strategy Override:", this.overrideStrategy)
-		}
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
 		}
@@ -374,6 +370,61 @@ class TestRunner {
 
 		process.exit(passedRuns === numRuns ? 0 : 1)
 	}
+
+	async cleanApprovals(): Promise<void> {
+		console.log("\n🧹 Cleaning approvals for non-existent test cases...\n")
+
+		// Create a set of existing test case identifiers
+		const existingTestCases = new Set(testCases.map((tc) => `${tc.category}/${tc.name}`))
+
+		const approvalsDir = "approvals"
+		let cleanedCount = 0
+		let totalFiles = 0
+
+		if (!fs.existsSync(approvalsDir)) {
+			console.log("No approvals directory found.")
+			return
+		}
+
+		// Recursively scan approvals directory
+		function scanDirectory(dirPath: string, currentCategory?: string): void {
+			const items = fs.readdirSync(dirPath, { withFileTypes: true })
+
+			for (const item of items) {
+				const fullPath = path.join(dirPath, item.name)
+
+				if (item.isDirectory()) {
+					// Category directory
+					scanDirectory(fullPath, item.name)
+				} else if (item.isFile() && item.name.endsWith(".txt")) {
+					totalFiles++
+
+					// Parse filename: testName.approved.1.txt or testName.rejected.1.txt
+					const match = item.name.match(/^(.+)\.(approved|rejected)\.\d+\.txt$/)
+					if (match) {
+						const testName = match[1]
+						const category = currentCategory || path.basename(path.dirname(fullPath))
+						const testCaseId = `${category}/${testName}`
+
+						if (!existingTestCases.has(testCaseId)) {
+							console.log(`Removing approval for non-existent test case: ${testCaseId}`)
+							fs.unlinkSync(fullPath)
+							cleanedCount++
+						}
+					}
+				}
+			}
+		}
+
+		scanDirectory(approvalsDir)
+
+		console.log(`\n✅ Cleaned ${cleanedCount} approval files out of ${totalFiles} total files.`)
+		if (cleanedCount > 0) {
+			console.log("Removed approvals for test cases that no longer exist.")
+		} else {
+			console.log("No orphaned approval files found.")
+		}
+	}
 }
 
 // Main execution
@@ -382,41 +433,15 @@ async function main() {
 	const verbose = args.includes("--verbose") || args.includes("-v")
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
 
-	// Check for strategy override
-	const strategyArgIndex = args.findIndex((arg) => arg === "--strategy" || arg === "-s")
-	let overrideStrategy: string | undefined
+	const command = args.find((arg) => !arg.startsWith("-"))
 
-	if (strategyArgIndex !== -1) {
-		const strategyValue = args[strategyArgIndex + 1]
-		if (!strategyValue || strategyValue.startsWith("-")) {
-			console.error("\n❌ Error: --strategy/-s flag requires a strategy name")
-			console.log("\nUsage: --strategy <strategy-name> or -s <strategy-name>\n")
-			process.exit(1)
-		}
-		overrideStrategy = strategyValue
-	}
-
-	// Validate strategy if provided
-	if (overrideStrategy) {
-		const strategyManager = new PromptStrategyManager()
-		const availableStrategies = strategyManager.getAvailableStrategies()
-
-		if (!availableStrategies.includes(overrideStrategy)) {
-			console.error(`\n❌ Error: Strategy "${overrideStrategy}" does not exist`)
-			console.log("\nAvailable strategies:")
-			availableStrategies.forEach((strategy) => console.log(`  - ${strategy}`))
-			console.log()
-			process.exit(1)
-		}
-	}
-
-	const testName = args.find((arg) => !arg.startsWith("-") && arg !== overrideStrategy)
-
-	const runner = new TestRunner(verbose, overrideStrategy, skipApproval)
+	const runner = new TestRunner(verbose, skipApproval)
 
 	try {
-		if (testName) {
-			await runner.runSingleTest(testName)
+		if (command === "clean") {
+			await runner.cleanApprovals()
+		} else if (command) {
+			await runner.runSingleTest(command)
 		} else {
 			await runner.runAllTests()
 		}

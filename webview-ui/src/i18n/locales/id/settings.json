@@ -913,6 +913,7 @@
 			"regionMismatch": "Peringatan: Region di ARN kamu ({{arnRegion}}) tidak cocok dengan region yang kamu pilih ({{region}}). Ini dapat menyebabkan masalah akses. Provider akan menggunakan region dari ARN."
 		},
 		"modelAvailability": "Model ID ({{modelId}}) yang kamu berikan tidak tersedia. Silakan pilih model yang berbeda.",
+		"modelDeprecated": "Model ini tidak lagi tersedia. Silakan pilih model yang berbeda.",
 		"providerNotAllowed": "Provider '{{provider}}' tidak diizinkan oleh organisasi kamu",
 		"modelNotAllowed": "Model '{{model}}' tidak diizinkan untuk provider '{{provider}}' oleh organisasi kamu",
 		"profileInvalid": "Profil ini berisi provider atau model yang tidak diizinkan oleh organisasi kamu",
@@ -960,6 +961,10 @@
 			"label": "Sembunyikan biaya di bawah ambang batas",
 			"currentValue": "Ambang batas saat ini: ${{value}}",
 			"description": "Hanya tampilkan biaya permintaan di atas jumlah ini. Biaya selalu terlihat saat panel detail terbuka."
+		},
+		"showTimestamps": {
+			"label": "Tampilkan stempel waktu",
+			"description": "Tampilkan stempel waktu untuk setiap pesan di tampilan obrolan"
 		}
 	},
 	"ghost": {

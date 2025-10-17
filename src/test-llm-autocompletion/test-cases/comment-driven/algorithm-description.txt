@@ -1,5 +1,0 @@
-# Description: Should implement algorithm described in comment
-function quickSort(arr) {
-  // Implement quicksort: pick pivot, partition array, recursively sort partitions<<<CURSOR>>>
-  return arr;
-}

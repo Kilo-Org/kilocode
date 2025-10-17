@@ -63,7 +63,7 @@ describe("GhostStreamingParser - User Issue Fix", () => {
 		expect(change.replace).toBe("function mutliply(a, b) {\n")
 
 		// Verify the buffer was sanitized correctly
-		expect(parser.getBuffer()).toContain("</change>")
+		expect(parser.buffer).toContain("</change>")
 	})
 
 	it("should handle the case where the XML is completely missing the closing > when stream is complete", () => {

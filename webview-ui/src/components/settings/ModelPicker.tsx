@@ -41,11 +41,11 @@ type ModelIdKey = keyof Pick<
 	| "apiModelId"
 	| "kilocodeModel"
 	| "nanoGptModelId"
+	| "ovhCloudAiEndpointsModelId"
 	// kilocode_change end
 	| "deepInfraModelId"
 	| "ioIntelligenceModelId"
 	| "vercelAiGatewayModelId"
-	| "ovhCloudAiEndpointsModelId" // kilocode_change
 >
 
 interface ModelPickerProps {

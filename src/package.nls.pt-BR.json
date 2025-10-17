@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Cancelar Sugestões de Edição",
 	"ghost.commands.applyCurrentSuggestion": "Aplicar Sugestão de Edição Atual",
 	"ghost.commands.applyAllSuggestions": "Aplicar Todas as Sugestões de Edição",
-	"ghost.commands.promptCodeSuggestion": "Tarefa Rápida",
 	"ghost.commands.goToNextSuggestion": "Ir Para a Próxima Sugestão",
 	"ghost.commands.goToPreviousSuggestion": "Ir Para a Sugestão Anterior"
 }

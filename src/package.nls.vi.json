@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Hủy Gợi Ý Chỉnh Sửa",
 	"ghost.commands.applyCurrentSuggestion": "Áp Dụng Gợi Ý Chỉnh Sửa Hiện Tại",
 	"ghost.commands.applyAllSuggestions": "Áp Dụng Tất Cả Gợi Ý Chỉnh Sửa",
-	"ghost.commands.promptCodeSuggestion": "Tác Vụ Nhanh",
 	"ghost.commands.goToNextSuggestion": "Đi Đến Gợi Ý Tiếp Theo",
 	"ghost.commands.goToPreviousSuggestion": "Đi Đến Gợi Ý Trước Đó"
 }

@@ -139,7 +139,12 @@ export const getModelsByProvider = ({
 		}
 		case "gemini": {
 			return {
-				models: geminiModels,
+				// kilocode_change start
+				models:
+					routerModels.gemini && Object.keys(routerModels.gemini).length > 0
+						? routerModels.gemini
+						: geminiModels,
+				// kilocode_change end
 				defaultModel: geminiDefaultModelId,
 			}
 		}
@@ -306,11 +311,15 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
-		chutesApiKey: apiConfiguration?.chutesApiKey, // kilocode_change
+		// kilocode_change start
+		chutesApiKey: apiConfiguration?.chutesApiKey,
+		geminiApiKey: apiConfiguration?.geminiApiKey,
+		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		//kilocode_change start
 		nanoGptApiKey: apiConfiguration?.nanoGptApiKey,
 		nanoGptModelList: apiConfiguration?.nanoGptModelList,
 		//kilocode_change end
+		// kilocode_change end
 	})
 
 	const { models, defaultModel } =

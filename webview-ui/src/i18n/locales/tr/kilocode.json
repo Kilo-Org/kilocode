@@ -95,6 +95,10 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır."
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
@@ -218,7 +222,10 @@
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı"
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"model": "Model",
+			"provider": "Sağlayıcı"
 		}
 	},
 	"virtualProvider": {
@@ -247,6 +254,9 @@
 		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
 		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
 		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
+	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",

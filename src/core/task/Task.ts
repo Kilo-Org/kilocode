@@ -35,6 +35,7 @@ import {
 	isInteractiveAsk,
 	isResumableAsk,
 	QueuedMessage,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
@@ -77,6 +78,7 @@ import { getWorkspacePath } from "../../utils/path"
 // prompts
 import { formatResponse } from "../prompts/responses"
 import { SYSTEM_PROMPT } from "../prompts/system"
+import { getAllowedJSONToolsForMode } from "../prompts/tools/native-tools/getAllowedJSONToolsForMode" // kilocode_change
 
 // core modules
 import { ToolRepetitionDetector } from "../tools/ToolRepetitionDetector"
@@ -1225,7 +1227,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				relPath ? ` for '${relPath.toPosix()}'` : ""
 			} without value for required parameter '${paramName}'. ${kilocodeExtraText}Retrying...`,
 		)
-		return formatResponse.toolError(formatResponse.missingToolParameterError(paramName))
+		return formatResponse.toolError(
+			formatResponse.missingToolParameterError(
+				paramName,
+				getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+			),
+		)
 	}
 
 	// Lifecycle
@@ -1753,7 +1760,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
+				nextUserContent = [
+					{
+						type: "text",
+						text: formatResponse.noToolsUsed(
+							getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+						),
+					},
+				]
 				this.consecutiveMistakeCount++
 			}
 		}
@@ -2041,6 +2055,26 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									pendingGroundingSources.push(...chunk.sources)
 								}
 								break
+							//kilocode_change start
+							case "native_tool_calls": {
+								// Handle native OpenAI-format tool calls
+								// Process native tool calls through the parser
+								this.assistantMessageParser.processNativeToolCalls(chunk.toolCalls)
+
+								// Update content blocks after processing native tool calls
+								const prevLength = this.assistantMessageContent.length
+								this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
+
+								if (this.assistantMessageContent.length > prevLength) {
+									// New content we need to present
+									this.userMessageContentReady = false
+								}
+
+								// Present content to user
+								presentAssistantMessage(this)
+								break
+							}
+							//kilocode_change end
 							case "text": {
 								assistantMessage += chunk.text
 
@@ -2347,6 +2381,22 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// Note: updateApiReqMsg() is now called from within drainStreamInBackgroundToFindAllUsage
 				// to ensure usage data is captured even when the stream is interrupted. The background task
 				// uses local variables to accumulate usage data before atomically updating the shared state.
+
+				// Complete the reasoning message if it exists
+				// We can't use say() here because the reasoning message may not be the last message
+				// (other messages like text blocks or tool uses may have been added after it during streaming)
+				if (reasoningMessage) {
+					const lastReasoningIndex = findLastIndex(
+						this.clineMessages,
+						(m) => m.type === "say" && m.say === "reasoning",
+					)
+
+					if (lastReasoningIndex !== -1 && this.clineMessages[lastReasoningIndex].partial) {
+						this.clineMessages[lastReasoningIndex].partial = false
+						await this.updateClineMessage(this.clineMessages[lastReasoningIndex])
+					}
+				}
+
 				await this.persistGpt5Metadata(reasoningMessage)
 				await this.saveClineMessages()
 				await this.providerRef.deref()?.postStateToWebview()
@@ -2360,7 +2410,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// able to save the assistant's response.
 				let didEndLoop = false
 
-				if (assistantMessage.length > 0) {
+				// kilocode_change start: Check for tool use before determining if response is empty
+				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
+				// kilocode_change end
+
+				if (assistantMessage.length > 0 || didToolUse) {
+					// kilocode_change: also check for tool use
 					// Display grounding sources to the user if they exist
 					if (pendingGroundingSources.length > 0) {
 						const citationLinks = pendingGroundingSources.map((source, i) => `[${i + 1}](${source.url})`)
@@ -2401,7 +2456,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
 					if (!didToolUse) {
-						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
+						this.userMessageContent.push({
+							type: "text",
+							text: formatResponse.noToolsUsed(
+								getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+							),
+						})
 						this.consecutiveMistakeCount++
 					}
 
@@ -2607,7 +2667,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				},
 				undefined, // todoList
 				this.api.getModel().id,
-				await provider.getState(), // kilocode_change
+				// kilocode_change start
+				getActiveToolUseStyle(apiConfiguration),
+				state,
+				// kilocode_change end
 			)
 		})()
 	}
@@ -2814,6 +2877,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			({ role, content }) => ({ role, content }),
 		)
 
+		// kilocode_change start
+		// Fetch project properties for KiloCode provider tracking
+		const kiloConfig = this.providerRef.deref()?.getKiloConfig()
+		// kilocode_change end
+
 		// Check auto-approval limits
 		const approvalResult = await this.autoApprovalHandler.checkAutoApprovalLimits(
 			state,
@@ -2860,7 +2928,33 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(previousResponseId && !this.skipPrevResponseIdOnce ? { previousResponseId } : {}),
 			// If a condense just occurred, explicitly suppress continuity fallback for the next call
 			...(this.skipPrevResponseIdOnce ? { suppressPreviousResponseId: true } : {}),
+			// kilocode_change start
+			// KiloCode-specific: pass projectId for backend tracking (ignored by other providers)
+			projectId: (await kiloConfig)?.project?.id,
+			// kilocode_change end
 		}
+
+		// kilocode_change start
+		// Add allowed tools for JSON tool style
+		if (getActiveToolUseStyle(apiConfiguration) === "json" && mode) {
+			try {
+				const provider = this.providerRef.deref()
+				const providerState = await provider?.getState()
+
+				const allowedTools = getAllowedJSONToolsForMode(
+					mode,
+					undefined, // codeIndexManager is private, not accessible here
+					providerState,
+					this.api?.getModel()?.info?.supportsImages,
+				)
+
+				metadata.allowedTools = allowedTools
+			} catch (error) {
+				console.error("[Task] Error getting allowed tools for mode:", error)
+				// Continue without allowedTools - will fall back to default behavior
+			}
+		}
+		// kilocode_change end
 
 		// Reset skip flag after applying (it only affects the immediate next call)
 		if (this.skipPrevResponseIdOnce) {

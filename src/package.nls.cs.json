@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Zrušit Navrhované Úpravy",
 	"ghost.commands.applyCurrentSuggestion": "Použít Aktuální Navrženou Úpravu",
 	"ghost.commands.applyAllSuggestions": "Použít Všechny Navrhované Úpravy",
-	"ghost.commands.promptCodeSuggestion": "Rychlý Úkol",
 	"ghost.commands.goToNextSuggestion": "Přejít na Další Návrh",
 	"ghost.commands.goToPreviousSuggestion": "Přejít na Předchozí Návrh"
 }

@@ -2701,12 +2701,15 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
-				nanoGptApiKey: "nano-gpt-key", // kilocode_change
-				nanoGptModelList: "all", // kilocode_change
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
+				nanoGptApiKey: "nano-gpt-key",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		} as any)
 
@@ -2732,19 +2735,19 @@ describe("ClineProvider - Router Models", () => {
 
 		// Verify getModels was called for each provider with correct options
 		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
+		// kilocode_change start
+		expect(getModels).toHaveBeenCalledWith({
+			provider: "gemini",
+			apiKey: "gemini-key",
+			baseUrl: "https://gemini.example.com",
+		})
+		// kilocode_change end
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
-		//kilocode_change start
-		expect(getModels).toHaveBeenCalledWith({
-			provider: "nano-gpt",
-			apiKey: "nano-gpt-key",
-			nanoGptModelList: "all",
-		})
-		//kilocode_change end
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -2757,19 +2760,20 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 	})
@@ -2784,14 +2788,15 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
-				//kilocode_change start
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
 				nanoGptApiKey: "nano-gpt-key",
-				nanoGptModelList: "all",
-				//kilocode_change end
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		} as any)
 
@@ -2803,6 +2808,7 @@ describe("ClineProvider - Router Models", () => {
 		// Mock some providers to succeed and others to fail
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
@@ -2810,9 +2816,9 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
-			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
-			.mockResolvedValueOnce(mockModels) // nano-gpt success
 			.mockResolvedValueOnce(mockModels) // deepinfra success
+			.mockResolvedValueOnce(mockModels) // nano-gpt success // kilocode_change
+			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2823,6 +2829,7 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
@@ -2831,11 +2838,11 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				litellm: {},
 				"kilocode-openrouter": {},
+				"nano-gpt": mockModels, // kilocode_change
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 
@@ -2900,10 +2907,6 @@ describe("ClineProvider - Router Models", () => {
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
 				// kilocode_change end
-				//kilocode_change start
-				nanoGptApiKey: "nano-gpt-key",
-				nanoGptModelList: "all",
-				//kilocode_change end
 				// No litellm config
 			},
 		} as any)
@@ -2943,11 +2946,8 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
-				// kilocode_change end
-				//kilocode_change start
 				nanoGptApiKey: "nano-gpt-key",
-				nanoGptModelList: "all",
-				//kilocode_change end
+				// kilocode_change end
 				// No litellm config
 			},
 		} as any)
@@ -2973,19 +2973,20 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
-				"nano-gpt": mockModels, //kilocode_change
 			},
 		})
 	})

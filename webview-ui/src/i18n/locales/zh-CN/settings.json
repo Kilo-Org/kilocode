@@ -897,6 +897,7 @@
 			"regionMismatch": "警告：您的 ARN 中的区域 ({{arnRegion}}) 与您选择的区域 ({{region}}) 不匹配。这可能会导致访问问题。提供程序将使用 ARN 中的区域。"
 		},
 		"modelAvailability": "模型ID {{modelId}} 不可用，请重新选择",
+		"modelDeprecated": "此模型不再可用，请选择其他模型。",
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
 		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
@@ -944,6 +945,10 @@
 			"label": "隐藏低于阈值的费用",
 			"description": "仅显示超过此金额的请求成本。当详情面板打开时，成本始终可见。",
 			"currentValue": "当前阈值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "显示时间戳",
+			"description": "在聊天视图中为每条消息显示时间戳"
 		}
 	},
 	"ghost": {

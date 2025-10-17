@@ -225,7 +225,10 @@
 				"label": "Tự động hoàn thành thủ công ({{keybinding}})",
 				"description": "Cần sửa chữa nhanh, hoàn thành, hoặc tái cấu trúc? Kilo sẽ sử dụng ngữ cảnh xung quanh để cung cấp cải tiến ngay lập tức, giữ bạn trong luồng làm việc. <DocsLink>Xem phím tắt</DocsLink>"
 			},
-			"keybindingNotFound": "không tìm thấy"
+			"keybindingNotFound": "không tìm thấy",
+			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
+			"model": "Mô hình",
+			"provider": "Nhà cung cấp"
 		}
 	},
 	"virtualProvider": {
@@ -250,9 +253,16 @@
 		"perHour": "Một Giờ",
 		"requestsLabel": "Yêu cầu"
 	},
+	"toolCallStyle": {
+		"title": "Kiểu Gọi Công Cụ",
+		"description": "Chọn cách định dạng các lệnh gọi công cụ trong system prompt. JSON hiện đang ở giai đoạn thử nghiệm và chủ yếu dành cho người dùng quan tâm đến việc đóng góp vào phát triển của nó."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",
 		"maxImagesReached": "Tối đa 20 hình ảnh cho mỗi tin nhắn. Hãy xóa một số hình ảnh để thêm được nhiều hơn.",
 		"imagesRemovedNoSupport": "Hình ảnh đã bị xóa, không được mô hình hỗ trợ."
+	},
+	"memoryWarning": {
+		"message": "Mức sử dụng bộ nhớ đang ở {{percentage}}%. Vui lòng khởi động lại IDE của bạn để tránh sự cố."
 	}
 }

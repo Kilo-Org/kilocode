@@ -1,7 +1,7 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { getKiloBaseUriFromToken } from "@roo-code/types" // kilocode_change
 import {
 	type MarketplaceItem,
 	type MarketplaceItemType,

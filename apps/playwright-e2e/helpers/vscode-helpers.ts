@@ -27,14 +27,24 @@ export async function closeAllTabs(page: Page): Promise<void> {
 
 export async function waitForAllExtensionActivation(page: Page): Promise<void> {
 	try {
-		const activatingStatus = page.locator("text=Activating Extensions")
-		const activatingStatusCount = await activatingStatus.count()
-		if (activatingStatusCount > 0) {
-			console.log("⌛️ Waiting for `Activating Extensions` to go away...")
-			await activatingStatus.waitFor({ state: "hidden", timeout: 10000 })
+		console.log("⏳ Waiting for VSCode initialization to complete...")
+
+		// Wait for the status.progress element to disappear
+		const progressElement = page.locator("#status\\.progress")
+		const progressExists = (await progressElement.count()) > 0
+
+		if (progressExists) {
+			const ariaLabel = await progressElement.getAttribute("aria-label").catch(() => "Unknown")
+			console.log(`⌛️ Still initializing: ${ariaLabel}`)
+
+			await progressElement.waitFor({ state: "hidden", timeout: 10000 })
+			console.log("✅ VSCode initialization complete")
+		} else {
+			console.log("✅ VSCode initialization already complete")
 		}
-	} catch {
-		// noop
+	} catch (error) {
+		console.log("⚠️ Error waiting for VSCode initialization:", error)
+		// Don't throw - we don't want to fail tests if initialization check fails
 	}
 }
 
@@ -49,4 +59,15 @@ export async function switchToTheme(page: Page, themeName: string): Promise<void
 
 	await page.keyboard.press("Enter")
 	await page.waitForTimeout(100)
+}
+
+export async function executeVSCodeCommand(page: Page, commandName: string): Promise<void> {
+	// Open command palette
+	await page.keyboard.press(`${modifier}+Shift+P`)
+	await page.waitForTimeout(100)
+
+	// Type the command name
+	await page.keyboard.type(commandName)
+	await page.keyboard.press("Enter")
+	await page.waitForTimeout(300)
 }

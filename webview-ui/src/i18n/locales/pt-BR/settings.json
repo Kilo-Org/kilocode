@@ -892,6 +892,7 @@
 			"regionMismatch": "Aviso: A região em seu ARN ({{arnRegion}}) não corresponde à região selecionada ({{region}}). Isso pode causar problemas de acesso. O provedor usará a região do ARN."
 		},
 		"modelAvailability": "O ID do modelo ({{modelId}}) que você forneceu não está disponível. Por favor, escolha outro modelo.",
+		"modelDeprecated": "Este modelo não está mais disponível. Por favor, selecione um modelo diferente.",
 		"providerNotAllowed": "O provedor '{{provider}}' não é permitido pela sua organização",
 		"modelNotAllowed": "O modelo '{{model}}' não é permitido para o provedor '{{provider}}' pela sua organização",
 		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização",
@@ -939,6 +940,10 @@
 			"label": "Ocultar custo abaixo do limite",
 			"currentValue": "Limiar atual: ${{value}}",
 			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
+		},
+		"showTimestamps": {
+			"label": "Mostrar carimbos de tempo",
+			"description": "Mostrar carimbo de tempo para cada mensagem na visualização do chat"
 		}
 	},
 	"ghost": {

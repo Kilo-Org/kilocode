@@ -73,6 +73,7 @@
 				"tokenError": "Для використання Autocomplete потрібно встановити дійсний токен",
 				"lastCompletion": "Остання пропозиція:",
 				"sessionTotal": "Загальна вартість сесії:",
+				"provider": "Провайдер:",
 				"model": "Модель:"
 			},
 			"cost": {
@@ -98,7 +99,6 @@
 			"cancelSuggestions": "Скасувати Запропоновані Правки",
 			"applyCurrentSuggestion": "Застосувати Поточну Запропоновану Правку",
 			"applyAllSuggestions": "Застосувати Всі Запропоновані Правки",
-			"promptCodeSuggestion": "Швидке Завдання",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -135,5 +135,10 @@
 		"checkpointsUnavailable": "Неможливо показати нові зміни, контрольні точки недоступні.",
 		"noChanges": "Неможливо показати нові зміни, змін не знайдено.",
 		"error": "Неможливо показати нові зміни, сталася помилка."
+	},
+	"creditsstatusbar": {
+		"loading": "Завантаження...",
+		"clickToRefresh": "Натисни для оновлення",
+		"minute": "хвилина"
 	}
 }

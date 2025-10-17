@@ -43,6 +43,8 @@ type RouterModelsQueryKey = {
 	ollamaBaseUrl?: string
 	kilocodeOrganizationId?: string
 	deepInfraApiKey?: string
+	geminiApiKey?: string
+	googleGeminiBaseUrl?: string
 	chutesApiKey?: string
 	nanoGptApiKey?: string
 	nanoGptModelList?: "all" | "personalized" | "subscription"
@@ -50,5 +52,5 @@ type RouterModelsQueryKey = {
 }
 
 export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
-	useQuery({ queryKey: ["routerModels", queryKey], queryFn: getRouterModels })
+	useQuery({ queryKey: ["routerModels", queryKey], queryFn: () => getRouterModels() })
 // kilocode_change end

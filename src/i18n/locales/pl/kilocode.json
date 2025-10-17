@@ -79,6 +79,7 @@
 				"tokenError": "Aby używać Autocomplete, musi być ustawiony ważny token",
 				"lastCompletion": "Ostatnia sugestia:",
 				"sessionTotal": "Całkowity koszt sesji:",
+				"provider": "Dostawca:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -104,7 +105,6 @@
 			"cancelSuggestions": "Anuluj Sugerowane Edycje",
 			"applyCurrentSuggestion": "Zastosuj Bieżącą Sugerowaną Edycję",
 			"applyAllSuggestions": "Zastosuj Wszystkie Sugerowane Edycje",
-			"promptCodeSuggestion": "Szybkie Zadanie",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -135,5 +135,10 @@
 			"cancelButton": "Anuluj"
 		},
 		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
+	},
+	"creditsstatusbar": {
+		"loading": "Ładowanie...",
+		"clickToRefresh": "Kliknij, aby odświeżyć",
+		"minute": "minuta"
 	}
 }

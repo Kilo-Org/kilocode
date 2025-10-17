@@ -6,18 +6,12 @@ import {
 	verifyExtensionInstalled,
 	configureApiKeyThroughUI,
 	getChatInput,
-	closeAllToastNotifications,
 } from "../helpers"
 
 test.describe("E2E Chat Test", () => {
 	test("should configure credentials and send a message", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
 		await verifyExtensionInstalled(page)
 		await waitForWebviewText(page, "Welcome to Kilo Code!")
-
-		await page.waitForTimeout(1000) // Let the page settle to avoid flakes
-
-		await closeAllToastNotifications(page)
-		await takeScreenshot("welcome")
 
 		await configureApiKeyThroughUI(page)
 		await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")

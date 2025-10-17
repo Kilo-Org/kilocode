@@ -130,7 +130,8 @@
 		"settings": "Cài đặt Chế độ",
 		"description": "Các nhân cách chuyên biệt điều chỉnh hành vi của Kilo Code.",
 		"searchPlaceholder": "Tìm kiếm chế độ...",
-		"noResults": "Không tìm thấy kết quả nào"
+		"noResults": "Không tìm thấy kết quả nào",
+		"organizationModes": "Chế độ của tổ chức"
 	},
 	"errorReadingFile": "Lỗi khi đọc tệp",
 	"noValidImages": "Không có hình ảnh hợp lệ nào được xử lý",
