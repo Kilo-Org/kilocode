@@ -1,7 +1,7 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-import { getKiloBaseUriFromToken } from "@roo-code/types" // kilocode_change
+import { getKiloUrl } from "../../shared/kilocode/url"
 import {
 	type MarketplaceItem,
 	type MarketplaceItemType,
@@ -19,13 +19,10 @@ const mcpMarketplaceResponse = z.object({
 })
 
 export class RemoteConfigLoader {
-	private apiBaseUrl: string
 	private cache: Map<string, { data: MarketplaceItem[]; timestamp: number }> = new Map()
 	private cacheDuration = 5 * 60 * 1000 // 5 minutes
 
-	constructor() {
-		this.apiBaseUrl = getKiloBaseUriFromToken()
-	}
+	constructor() {}
 
 	async loadAllItems(hideMarketplaceMcps = false): Promise<MarketplaceItem[]> {
 		const items: MarketplaceItem[] = []
@@ -47,7 +44,8 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const data = await this.fetchWithRetry<string>(`${this.apiBaseUrl}/api/marketplace/modes`)
+		const url = getKiloUrl("https://kilocode.ai/api/marketplace/modes")
+		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
 		const validated = modeMarketplaceResponse.parse(yamlData)
@@ -69,7 +67,8 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const data = await this.fetchWithRetry<string>(`${this.apiBaseUrl}/api/marketplace/mcps`)
+		const url = getKiloUrl("https://kilocode.ai/api/marketplace/mcps")
+		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
 		const validated = mcpMarketplaceResponse.parse(yamlData)

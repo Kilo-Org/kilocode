@@ -98,7 +98,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				const backendUrl = options.kilocodeOrganizationId
 					? `https://api.kilocode.ai/api/organizations/${options.kilocodeOrganizationId}`
 					: "https://api.kilocode.ai/api/openrouter"
-				const openRouterBaseUrl = getKiloUrlFromToken(options.kilocodeToken ?? "", backendUrl)
+				const openRouterBaseUrl = getKiloUrlFromToken(backendUrl, options.kilocodeToken ?? "")
 				models = await getOpenRouterModels({
 					openRouterBaseUrl,
 					headers: options.kilocodeToken ? { Authorization: `Bearer ${options.kilocodeToken}` } : undefined,

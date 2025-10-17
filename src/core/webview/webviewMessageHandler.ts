@@ -2603,7 +2603,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken(kilocodeToken, "https://api.kilocode.ai/api/profile")
+				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken)
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
@@ -2699,7 +2699,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken(kilocodeToken, "https://api.kilocode.ai/api/profile/balance")
+				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", kilocodeToken)
 				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
@@ -2729,8 +2729,8 @@ export const webviewMessageHandler = async (
 				const source = uiKind === "Web" ? "web" : uriScheme
 
 				const url = getKiloUrlFromToken(
-					kilocodeToken,
 					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					kilocodeToken,
 				)
 				const response = await axios.post(
 					url,
