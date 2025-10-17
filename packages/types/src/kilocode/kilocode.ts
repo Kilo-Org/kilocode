@@ -92,9 +92,16 @@ export async function checkKilocodeBalance(kilocodeToken: string, kilocodeOrgani
 }
 
 export const AUTOCOMPLETE_PROVIDER_MODELS = {
+	// Source: https://docs.mistral.ai/capabilities/code_generation/
 	mistral: "codestral-latest",
+	// Source: Internal Kilocode configuration (via OpenRouter)
 	kilocode: "mistralai/codestral-2508",
+	// Source: https://openrouter.ai/api/v1/models
 	openrouter: "mistralai/codestral-2508",
+	// Source: https://docs.mistral.ai/getting-started/models/models_overview/
+	bedrock: "mistral.codestral-2508-v1:0",
+	// Source: https://huggingface.co/mistralai/Codestral-22B-v0.1
+	huggingface: "mistralai/Codestral-22B-v0.1",
 } as const
 export type AutocompleteProviderKey = keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
 
