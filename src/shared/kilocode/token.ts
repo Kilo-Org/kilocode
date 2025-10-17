@@ -7,7 +7,7 @@
  * @param targetUrl The target URL to transform
  * @returns Fully constructed KiloCode URL with proper backend mapping based on token
  */
-export function getKiloUrlFromToken(kilocodeToken: string, targetUrl: string): string {
+export function getKiloUrlFromToken(targetUrl: string, kilocodeToken?: string): string {
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 
 	try {

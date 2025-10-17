@@ -16,8 +16,8 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
+import { getKiloUrl } from "../shared/kilocode/url" // kilocode_change
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
-import { getKiloUrl } from "../shared/kilocode/url"
 
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
