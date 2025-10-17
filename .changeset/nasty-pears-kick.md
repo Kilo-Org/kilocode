@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-CLI - Multiline Text Area
+Added support for multi-line prompts
