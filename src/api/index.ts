@@ -11,6 +11,7 @@ import {
 	AwsBedrockHandler,
 	CerebrasHandler,
 	OpenRouterHandler,
+	CortecsHandler,
 	VertexHandler,
 	AnthropicVertexHandler,
 	OpenAiHandler,
@@ -164,6 +165,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new UnboundHandler(options)
 		case "requesty":
 			return new RequestyHandler(options)
+		case "cortecs":
+			return new CortecsHandler(options)
 		case "human-relay":
 			return new HumanRelayHandler()
 		case "fake-ai":

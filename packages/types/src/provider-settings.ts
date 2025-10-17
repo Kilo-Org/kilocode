@@ -59,6 +59,8 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"cortecs",
+	"chutes", // kilocode_change
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -220,6 +222,13 @@ const anthropicSchema = apiModelIdProviderModelSchema.extend({
 const claudeCodeSchema = apiModelIdProviderModelSchema.extend({
 	claudeCodePath: z.string().optional(),
 	claudeCodeMaxOutputTokens: z.number().int().min(1).max(200000).optional(),
+})
+
+const cortecsSchema = baseProviderSettingsSchema.extend({
+	cortecsBaseUrl: z.string().optional(),
+	cortecsApiKey: z.string().optional(),
+	cortecsModelId: z.string().optional(),
+	cortecsRoutingPreference: z.string().optional(),
 })
 
 const glamaSchema = baseProviderSettingsSchema.extend({
@@ -498,6 +507,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	anthropicSchema.merge(z.object({ apiProvider: z.literal("anthropic") })),
 	claudeCodeSchema.merge(z.object({ apiProvider: z.literal("claude-code") })),
 	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })),
+	cortecsSchema.merge(z.object({ apiProvider: z.literal("cortecs") })),
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
 	vertexSchema.merge(z.object({ apiProvider: z.literal("vertex") })),
@@ -544,6 +554,7 @@ export const providerSettingsSchema = z.object({
 	apiProvider: providerNamesSchema.optional(),
 	...anthropicSchema.shape,
 	...claudeCodeSchema.shape,
+	...cortecsSchema.shape,
 	...glamaSchema.shape,
 	...openRouterSchema.shape,
 	...bedrockSchema.shape,
@@ -605,6 +616,7 @@ export const PROVIDER_SETTINGS_KEYS = providerSettingsSchema.keyof().options
 
 export const modelIdKeys = [
 	"apiModelId",
+	"cortecsModelId",
 	"glamaModelId",
 	"openRouterModelId",
 	"openAiModelId",
@@ -641,6 +653,7 @@ export const isTypicalProvider = (key: unknown): key is TypicalProvider =>
 export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	anthropic: "apiModelId",
 	"claude-code": "apiModelId",
+	cortecs: "cortecsModelId",
 	glama: "glamaModelId",
 	openrouter: "openRouterModelId",
 	"kilocode-openrouter": "openRouterModelId",
@@ -807,6 +820,7 @@ export const MODELS_BY_PROVIDER: Record<
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	cortecs: { id: "cortecs", label: "cortecs", models: [] },
 	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] }, // kilocode_change
 
 	// kilocode_change start

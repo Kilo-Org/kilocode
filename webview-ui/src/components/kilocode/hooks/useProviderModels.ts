@@ -49,6 +49,7 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	cortecsDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -86,6 +87,12 @@ export const getModelsByProvider = ({
 			return {
 				models: routerModels.glama,
 				defaultModel: glamaDefaultModelId,
+			}
+		}
+		case "cortecs": {
+			return {
+				models: routerModels.cortecs,
+				defaultModel: cortecsDefaultModelId,
 			}
 		}
 		case "unbound": {

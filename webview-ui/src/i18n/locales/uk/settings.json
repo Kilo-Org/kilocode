@@ -285,6 +285,17 @@
 		},
 		"getRequestyApiKey": "Отримати ключ API Requesty",
 		"getRequestyBaseUrl": "Базовий URL",
+		"cortecsApiKey": "Ключ API cortecs",
+		"getCortecsApiKey": "Отримати ключ API cortecs",
+		"cortecsRoutingPreference": {
+			"title": "Перевага маршрутизації",
+			"options": {
+				"default": "За замовчуванням",
+				"cost": "Вартість",
+				"speed": "Швидкість",
+				"balanced": "Збалансований"
+			}
+		},
 		"requestyUseCustomBaseUrl": "Використовувати власний базовий URL",
 		"openRouterTransformsText": "Стискати підказки та ланцюжки повідомлень до розміру контексту (<a>Перетворення OpenRouter</a>)",
 		"anthropicApiKey": "Ключ API Anthropic",

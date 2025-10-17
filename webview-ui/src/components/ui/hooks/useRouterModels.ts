@@ -43,6 +43,8 @@ type RouterModelsQueryKey = {
 	ollamaBaseUrl?: string
 	kilocodeOrganizationId?: string
 	deepInfraApiKey?: string
+	cortecsBaseUrl?: string
+	cortecsApiKey?: string
 	geminiApiKey?: string
 	googleGeminiBaseUrl?: string
 	chutesApiKey?: string

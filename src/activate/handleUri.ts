@@ -21,6 +21,13 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
+		case "/cortecs": {
+			const code = query.get("code")
+			if (code) {
+				await visibleProvider.handleCortecsCallback(code)
+			}
+			break
+		}
 		case "/openrouter": {
 			const code = query.get("code")
 			if (code) {

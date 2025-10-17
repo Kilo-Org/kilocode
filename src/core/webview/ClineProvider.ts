@@ -41,6 +41,7 @@ import {
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
+	cortecsDefaultModelId,
 	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -1185,7 +1186,7 @@ ${prompt}
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com to img-src, https://*, http://localhost:3000 to connect-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://api.cortecs.ai https://cortecs.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
@@ -1555,6 +1556,20 @@ ${prompt}
 		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
 	}
 
+	// Cortecs
+
+	async handleCortecsCallback(code: string) {
+		let { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
+
+		const newConfiguration: ProviderSettings = {
+			...apiConfiguration,
+			apiProvider: "cortecs",
+			cortecsApiKey: code,
+			cortecsModelId: apiConfiguration?.cortecsModelId || cortecsDefaultModelId,
+		}
+
+		await this.upsertProviderProfile(currentApiConfigName, newConfiguration)
+	}
 	// Requesty
 
 	async handleRequestyCallback(code: string) {
