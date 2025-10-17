@@ -27,8 +27,8 @@ program
 	.version(Package.version)
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
-	.option("-ci, --auto", "Run in CI mode (non-interactive)", false)
-	.option("-t, --timeout <seconds>", "Timeout in seconds for CI mode (requires --ci)", parseInt)
+	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate mode if provided
@@ -43,9 +43,9 @@ program
 			process.exit(1)
 		}
 
-		// Validate that piped stdin requires CI mode
+		// Validate that piped stdin requires autonomous mode
 		if (!process.stdin.isTTY && !options.auto) {
-			console.error("Error: Piped input requires --ci flag to be enabled")
+			console.error("Error: Piped input requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -60,15 +60,15 @@ program
 			finalPrompt = Buffer.concat(chunks).toString("utf-8").trim()
 		}
 
-		// Validate that CI mode requires a prompt
+		// Validate that autonomous mode requires a prompt
 		if (options.auto && !finalPrompt) {
-			console.error("Error: CI mode (--ci) requires a prompt argument or piped input")
+			console.error("Error: autonomous mode (--auto) requires a prompt argument or piped input")
 			process.exit(1)
 		}
 
-		// Validate that timeout requires CI mode
+		// Validate that timeout requires autonomous mode
 		if (options.timeout && !options.auto) {
-			console.error("Error: --timeout option requires --ci flag to be enabled")
+			console.error("Error: --timeout option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -78,7 +78,7 @@ program
 			process.exit(1)
 		}
 
-		// Track CI mode start if applicable
+		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
 		}
