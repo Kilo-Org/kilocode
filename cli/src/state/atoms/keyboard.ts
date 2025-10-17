@@ -382,6 +382,9 @@ function handleApprovalKeys(get: any, set: any, key: Key) {
 	const selectedIndex = get(selectedIndexAtom)
 	const options = get(approvalOptionsAtom)
 
+	// Guard against empty options array to prevent NaN from modulo 0
+	if (options.length === 0) return
+
 	switch (key.name) {
 		case "down":
 			set(selectedIndexAtom, (selectedIndex + 1) % options.length)
@@ -489,10 +492,14 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 
 	switch (key.name) {
 		case "down":
+			// Guard against empty suggestions array to prevent NaN from modulo 0
+			if (allSuggestions.length === 0) return
 			set(selectedIndexAtom, (selectedIndex + 1) % allSuggestions.length)
 			return
 
 		case "up":
+			// Guard against empty suggestions array to prevent NaN from modulo 0
+			if (allSuggestions.length === 0) return
 			set(selectedIndexAtom, selectedIndex === 0 ? allSuggestions.length - 1 : selectedIndex - 1)
 			return
 

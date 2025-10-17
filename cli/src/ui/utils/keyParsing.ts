@@ -34,6 +34,16 @@ export interface ParseResult {
 }
 
 /**
+ * Cached RegExp patterns for Kitty sequence parsing
+ * These are created once to avoid allocation overhead on every keystroke
+ */
+const REV_TAB_LEGACY = new RegExp(`^${ESC}\\[Z`)
+const REV_TAB_PARAM = new RegExp(`^${ESC}\\[1;(\\d+)Z`)
+const ARROW_PREFIX = new RegExp(`^${ESC}\\[1;(\\d+)([ABCDHFPQRS])`)
+const CSI_U_PREFIX = new RegExp(`^${ESC}\\[(\\d+)(;(\\d+))?([u~])`)
+const LEGACY_FUNC_KEY = new RegExp(`^${ESC}\\[([ABCDHF])`)
+
+/**
  * Parse a single complete Kitty sequence from the buffer
  * Returns the parsed key and number of characters consumed
  */
@@ -49,8 +59,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	// 1) Reverse Tab (legacy): ESC [ Z
-	const revTabLegacy = new RegExp(`^${ESC}\\[Z`)
-	let match = buffer.match(revTabLegacy)
+	let match = buffer.match(REV_TAB_LEGACY)
 	if (match) {
 		return {
 			key: {
@@ -67,8 +76,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	// 2) Reverse Tab (parameterized): ESC [ 1 ; <mods> Z
-	const revTabParam = new RegExp(`^${ESC}\\[1;(\\d+)Z`)
-	match = buffer.match(revTabParam)
+	match = buffer.match(REV_TAB_PARAM)
 	if (match && match[1]) {
 		let mods = parseInt(match[1], 10)
 		if (mods >= KITTY_MODIFIER_EVENT_TYPES_OFFSET) {
@@ -92,8 +100,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	// 3) Parameterized functional keys: ESC [ 1 ; <mods> (A|B|C|D|H|F|P|Q|R|S)
-	const arrowPrefix = new RegExp(`^${ESC}\\[1;(\\d+)([ABCDHFPQRS])`)
-	match = buffer.match(arrowPrefix)
+	match = buffer.match(ARROW_PREFIX)
 	if (match && match[1] && match[2]) {
 		let mods = parseInt(match[1], 10)
 		if (mods >= KITTY_MODIFIER_EVENT_TYPES_OFFSET) {
@@ -136,8 +143,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	// 4) CSI-u and tilde-coded functional keys: ESC [ <code> ; <mods> (u|~)
-	const csiUPrefix = new RegExp(`^${ESC}\\[(\\d+)(;(\\d+))?([u~])`)
-	match = buffer.match(csiUPrefix)
+	match = buffer.match(CSI_U_PREFIX)
 	if (match && match[1]) {
 		const keyCode = parseInt(match[1], 10)
 		let modifiers = match[3] ? parseInt(match[3], 10) : KITTY_MODIFIER_BASE
@@ -250,8 +256,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 	}
 
 	// 5) Legacy function keys (no parameters): ESC [ (A|B|C|D|H|F)
-	const legacyFuncKey = new RegExp(`^${ESC}\\[([ABCDHF])`)
-	match = buffer.match(legacyFuncKey)
+	match = buffer.match(LEGACY_FUNC_KEY)
 	if (match && match[1]) {
 		const sym = match[1]
 		const nameMap: Record<string, string> = {

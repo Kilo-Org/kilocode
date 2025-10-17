@@ -9,6 +9,7 @@ import {
 } from "../ui.js"
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
+import { pendingApprovalAtom } from "../approval.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
@@ -492,6 +493,113 @@ describe("keypress atoms", () => {
 			// Cursor should be at end of completed text
 			const cursor = store.get(cursorPositionAtom)
 			expect(cursor.col).toBe(5) // '/mode' has 5 characters
+		})
+	})
+
+	describe("empty array guards", () => {
+		it("should handle empty approvalOptions array without NaN", () => {
+			// Set up approval mode with a message that produces empty options
+			// (non-ask message type will result in empty approvalOptions)
+			const mockMessage: any = {
+				ts: Date.now(),
+				type: "say", // Not "ask", so approvalOptions will be empty
+				say: "test",
+				text: "test message",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+			store.set(selectedIndexAtom, 0)
+
+			// Press down arrow
+			const downKey: Key = {
+				name: "down",
+				sequence: "\x1b[B",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			// Should not throw and should not produce NaN
+			expect(() => store.set(keyboardHandlerAtom, downKey)).not.toThrow()
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).not.toBeNaN()
+			expect(selectedIndex).toBe(0) // Should remain unchanged
+		})
+
+		it("should handle empty approvalOptions array on up arrow without NaN", () => {
+			// Set up approval mode with a message that produces empty options
+			const mockMessage: any = {
+				ts: Date.now(),
+				type: "say", // Not "ask", so approvalOptions will be empty
+				say: "test",
+				text: "test message",
+			}
+			store.set(pendingApprovalAtom, mockMessage)
+			store.set(selectedIndexAtom, 0)
+
+			// Press up arrow
+			const upKey: Key = {
+				name: "up",
+				sequence: "\x1b[A",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			// Should not throw and should not produce NaN
+			expect(() => store.set(keyboardHandlerAtom, upKey)).not.toThrow()
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).not.toBeNaN()
+			expect(selectedIndex).toBe(0) // Should remain unchanged
+		})
+
+		it("should handle empty suggestions array without NaN", () => {
+			// Set up autocomplete mode with empty suggestions
+			store.set(showAutocompleteAtom, true)
+			store.set(suggestionsAtom, [])
+			store.set(argumentSuggestionsAtom, [])
+			store.set(selectedIndexAtom, 0)
+
+			// Press down arrow
+			const downKey: Key = {
+				name: "down",
+				sequence: "\x1b[B",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			// Should not throw and should not produce NaN
+			expect(() => store.set(keyboardHandlerAtom, downKey)).not.toThrow()
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).not.toBeNaN()
+			expect(selectedIndex).toBe(0) // Should remain unchanged
+		})
+
+		it("should handle empty suggestions array on up arrow without NaN", () => {
+			// Set up autocomplete mode with empty suggestions
+			store.set(showAutocompleteAtom, true)
+			store.set(suggestionsAtom, [])
+			store.set(argumentSuggestionsAtom, [])
+			store.set(selectedIndexAtom, 0)
+
+			// Press up arrow
+			const upKey: Key = {
+				name: "up",
+				sequence: "\x1b[A",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			// Should not throw and should not produce NaN
+			expect(() => store.set(keyboardHandlerAtom, upKey)).not.toThrow()
+			const selectedIndex = store.get(selectedIndexAtom)
+			expect(selectedIndex).not.toBeNaN()
+			expect(selectedIndex).toBe(0) // Should remain unchanged
 		})
 	})
 })
