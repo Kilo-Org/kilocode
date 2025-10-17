@@ -99,7 +99,7 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 	if (loadedConfig.providers && Array.isArray(loadedConfig.providers)) {
 		merged.providers = loadedConfig.providers.map((loadedProvider) => {
 			// Find matching default provider by id
-			const defaultProvider = DEFAULT_CONFIG.providers.find((p) => p.id === loadedProvider.id)
+			const defaultProvider = DEFAULT_CONFIG.providers.find((p) => p.provider === loadedProvider.provider)
 			if (defaultProvider) {
 				// Merge loaded provider with default to fill in missing fields
 				return deepMerge(defaultProvider, loadedProvider)

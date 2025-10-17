@@ -2,6 +2,7 @@ import Ajv from "ajv"
 import * as fs from "fs/promises"
 import * as path from "path"
 import type { CLIConfig, ProviderConfig } from "./types.js"
+import { PROVIDER_REQUIRED_FIELDS } from "../constants/providers/validation.js"
 
 // __dirname is provided by the banner in the bundled output
 declare const __dirname: string
@@ -60,6 +61,58 @@ export async function validateConfig(config: unknown): Promise<ValidationResult>
 }
 
 /**
+ * Helper function to validate a required field
+ */
+function validateRequiredField(provider: ProviderConfig, fieldName: string, errors: string[]): void {
+	if (!provider[fieldName] || provider[fieldName].length === 0) {
+		errors.push(`${fieldName} is required and cannot be empty for selected provider`)
+	}
+}
+
+/**
+ * Handle special validation cases for specific providers
+ */
+function handleSpecialValidations(provider: ProviderConfig, errors: string[]): void {
+	switch (provider.provider) {
+		case "vertex":
+			// At least one of vertexJsonCredentials or vertexKeyFile must be provided
+			const hasJsonCredentials = provider.vertexJsonCredentials && provider.vertexJsonCredentials.length > 0
+			const hasKeyFile = provider.vertexKeyFile && provider.vertexKeyFile.length > 0
+
+			if (!hasJsonCredentials && !hasKeyFile) {
+				errors.push(
+					"Either vertexJsonCredentials or vertexKeyFile is required and cannot be empty for selected provider",
+				)
+			}
+
+			// These fields are always required for vertex
+			validateRequiredField(provider, "vertexProjectId", errors)
+			validateRequiredField(provider, "vertexRegion", errors)
+			validateRequiredField(provider, "apiModelId", errors)
+			break
+
+		case "vscode-lm":
+			if (!provider.vsCodeLmModelSelector) {
+				errors.push("vsCodeLmModelSelector is required for selected provider")
+			} else {
+				if (!provider.vsCodeLmModelSelector.vendor || provider.vsCodeLmModelSelector.vendor.length === 0) {
+					errors.push("vsCodeLmModelSelector.vendor is required and cannot be empty for selected provider")
+				}
+				if (!provider.vsCodeLmModelSelector.family || provider.vsCodeLmModelSelector.family.length === 0) {
+					errors.push("vsCodeLmModelSelector.family is required and cannot be empty for selected provider")
+				}
+			}
+			break
+
+		case "virtual-quota-fallback":
+			if (!provider.profiles || !Array.isArray(provider.profiles) || provider.profiles.length === 0) {
+				errors.push("profiles is required and must be a non-empty array for selected provider")
+			}
+			break
+	}
+}
+
+/**
  * Validates provider-specific configuration based on provider type.
  * Note: Most validations (required fields, types, minLength) are now handled by schema.json.
  * This function validates business logic: selected providers must have non-empty required credentials.
@@ -80,63 +133,16 @@ export function validateProviderConfig(provider: ProviderConfig, isSelected: boo
 
 	const errors: string[] = []
 
-	// Validate selected provider has non-empty required fields
-	switch (provider.provider) {
-		case "kilocode":
-			if (!provider.kilocodeToken || provider.kilocodeToken.length === 0) {
-				errors.push("kilocodeToken is required and cannot be empty for selected provider")
-			}
-			if (!provider.kilocodeModel || provider.kilocodeModel.length === 0) {
-				errors.push("kilocodeModel is required and cannot be empty for selected provider")
-			}
-			break
+	// Get required fields for this provider type
+	const requiredFields = PROVIDER_REQUIRED_FIELDS[provider.provider]
 
-		case "anthropic":
-			if (!provider.apiKey || provider.apiKey.length === 0) {
-				errors.push("apiKey is required and cannot be empty for selected provider")
-			}
-			if (!provider.apiModelId || provider.apiModelId.length === 0) {
-				errors.push("apiModelId is required and cannot be empty for selected provider")
-			}
-			break
-
-		case "openai-native":
-			if (!provider.openAiNativeApiKey || provider.openAiNativeApiKey.length === 0) {
-				errors.push("openAiNativeApiKey is required and cannot be empty for selected provider")
-			}
-			if (!provider.apiModelId || provider.apiModelId.length === 0) {
-				errors.push("apiModelId is required and cannot be empty for selected provider")
-			}
-			break
-
-		case "openrouter":
-			if (!provider.openRouterApiKey || provider.openRouterApiKey.length === 0) {
-				errors.push("openRouterApiKey is required and cannot be empty for selected provider")
-			}
-			if (!provider.openRouterModelId || provider.openRouterModelId.length === 0) {
-				errors.push("openRouterModelId is required and cannot be empty for selected provider")
-			}
-			break
-
-		case "ollama":
-			if (!provider.ollamaBaseUrl || provider.ollamaBaseUrl.length === 0) {
-				errors.push("ollamaBaseUrl is required and cannot be empty for selected provider")
-			}
-			if (!provider.ollamaModelId || provider.ollamaModelId.length === 0) {
-				errors.push("ollamaModelId is required and cannot be empty for selected provider")
-			}
-			break
-
-		case "openai":
-			if (!provider.openAiApiKey || provider.openAiApiKey.length === 0) {
-				errors.push("openAiApiKey is required and cannot be empty for selected provider")
-			}
-			break
-
-		default:
-			// For other providers, no additional validation needed
-			break
+	// Validate all required fields
+	if (requiredFields) {
+		requiredFields.forEach((field) => validateRequiredField(provider, field, errors))
 	}
+
+	// Handle special validation cases
+	handleSpecialValidations(provider, errors)
 
 	if (errors.length > 0) {
 		return { valid: false, errors }

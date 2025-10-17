@@ -440,6 +440,261 @@
 				},
 				{
 					"if": {
+						"properties": { "provider": { "const": "bedrock" } }
+					},
+					"then": {
+						"properties": {
+							"awsAccessKey": {
+								"type": "string",
+								"description": "AWS Access Key"
+							},
+							"awsSecretKey": {
+								"type": "string",
+								"description": "AWS Secret Key"
+							},
+							"awsSessionToken": {
+								"type": "string",
+								"description": "AWS Session Token (optional)"
+							},
+							"awsRegion": {
+								"type": "string",
+								"description": "AWS Region"
+							},
+							"awsUseCrossRegionInference": {
+								"type": "boolean",
+								"description": "Use cross-region inference"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Bedrock model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsAccessKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsAccessKey"]
+					},
+					"then": {
+						"properties": {
+							"awsAccessKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsSecretKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsSecretKey"]
+					},
+					"then": {
+						"properties": {
+							"awsSecretKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"awsRegion": { "type": "string", "minLength": 1 }
+						},
+						"required": ["awsRegion"]
+					},
+					"then": {
+						"properties": {
+							"awsRegion": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "bedrock" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "gemini" } }
+					},
+					"then": {
+						"properties": {
+							"geminiApiKey": {
+								"type": "string",
+								"description": "Gemini API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Gemini model ID"
+							},
+							"googleGeminiBaseUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini" },
+							"geminiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"geminiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vertex" } }
+					},
+					"then": {
+						"properties": {
+							"vertexJsonCredentials": {
+								"type": "string",
+								"description": "Vertex AI JSON credentials"
+							},
+							"vertexKeyFile": {
+								"type": "string",
+								"description": "Vertex AI key file path"
+							},
+							"vertexProjectId": {
+								"type": "string",
+								"description": "Vertex AI project ID"
+							},
+							"vertexRegion": {
+								"type": "string",
+								"description": "Vertex AI region"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Vertex AI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"vertexProjectId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vertexProjectId"]
+					},
+					"then": {
+						"properties": {
+							"vertexProjectId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"vertexRegion": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vertexRegion"]
+					},
+					"then": {
+						"properties": {
+							"vertexRegion": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vertex" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "claude-code" } }
+					},
+					"then": {
+						"properties": {
+							"claudeCodePath": {
+								"type": "string",
+								"description": "Path to Claude Code executable"
+							},
+							"claudeCodeMaxOutputTokens": {
+								"type": "string",
+								"description": "Maximum output tokens for Claude Code"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Claude Code model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "claude-code" },
+							"claudeCodePath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["claudeCodePath"]
+					},
+					"then": {
+						"properties": {
+							"claudeCodePath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "claude-code" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
 						"properties": { "provider": { "const": "ollama" } }
 					},
 					"then": {
@@ -453,6 +708,55 @@
 								"description": "Ollama model ID"
 							},
 							"ollamaApiKey": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "lmstudio" } }
+					},
+					"then": {
+						"properties": {
+							"lmStudioBaseUrl": {
+								"type": "string",
+								"description": "LM Studio base URL"
+							},
+							"lmStudioModelId": {
+								"type": "string",
+								"description": "LM Studio model ID"
+							},
+							"lmStudioSpeculativeDecodingEnabled": {
+								"type": "boolean",
+								"description": "Enable speculative decoding"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "lmstudio" },
+							"lmStudioBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["lmStudioBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"lmStudioBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "lmstudio" },
+							"lmStudioModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["lmStudioModelId"]
+					},
+					"then": {
+						"properties": {
+							"lmStudioModelId": { "minLength": 1 }
 						}
 					}
 				},
@@ -486,6 +790,187 @@
 				},
 				{
 					"if": {
+						"properties": { "provider": { "const": "mistral" } }
+					},
+					"then": {
+						"properties": {
+							"mistralApiKey": {
+								"type": "string",
+								"description": "Mistral API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Mistral model ID"
+							},
+							"mistralCodestralUrl": { "type": "string" }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "mistral" },
+							"mistralApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["mistralApiKey"]
+					},
+					"then": {
+						"properties": {
+							"mistralApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "mistral" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "groq" } }
+					},
+					"then": {
+						"properties": {
+							"groqApiKey": {
+								"type": "string",
+								"description": "Groq API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Groq model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "groq" },
+							"groqApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["groqApiKey"]
+					},
+					"then": {
+						"properties": {
+							"groqApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "groq" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "deepseek" } }
+					},
+					"then": {
+						"properties": {
+							"deepSeekApiKey": {
+								"type": "string",
+								"description": "DeepSeek API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "DeepSeek model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepseek" },
+							"deepSeekApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepSeekApiKey"]
+					},
+					"then": {
+						"properties": {
+							"deepSeekApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepseek" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "xai" } }
+					},
+					"then": {
+						"properties": {
+							"xaiApiKey": {
+								"type": "string",
+								"description": "xAI API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "xAI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "xai" },
+							"xaiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["xaiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"xaiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "xai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
 						"properties": { "provider": { "const": "openai" } }
 					},
 					"then": {
@@ -510,6 +995,1074 @@
 					"then": {
 						"properties": {
 							"openAiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "cerebras" } }
+					},
+					"then": {
+						"properties": {
+							"cerebrasApiKey": {
+								"type": "string",
+								"description": "Cerebras API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Cerebras model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "cerebras" },
+							"cerebrasApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["cerebrasApiKey"]
+					},
+					"then": {
+						"properties": {
+							"cerebrasApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "cerebras" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "glama" } }
+					},
+					"then": {
+						"properties": {
+							"glamaApiKey": {
+								"type": "string",
+								"description": "Glama API key"
+							},
+							"glamaModelId": {
+								"type": "string",
+								"description": "Glama model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "glama" },
+							"glamaApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["glamaApiKey"]
+					},
+					"then": {
+						"properties": {
+							"glamaApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "glama" },
+							"glamaModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["glamaModelId"]
+					},
+					"then": {
+						"properties": {
+							"glamaModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "huggingface" } }
+					},
+					"then": {
+						"properties": {
+							"huggingFaceApiKey": {
+								"type": "string",
+								"description": "HuggingFace API key"
+							},
+							"huggingFaceModelId": {
+								"type": "string",
+								"description": "HuggingFace model ID"
+							},
+							"huggingFaceInferenceProvider": {
+								"type": "string",
+								"description": "HuggingFace inference provider"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "litellm" } }
+					},
+					"then": {
+						"properties": {
+							"litellmBaseUrl": {
+								"type": "string",
+								"description": "LiteLLM base URL"
+							},
+							"litellmApiKey": {
+								"type": "string",
+								"description": "LiteLLM API key"
+							},
+							"litellmModelId": {
+								"type": "string",
+								"description": "LiteLLM model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceApiKey"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceModelId"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "huggingface" },
+							"huggingFaceInferenceProvider": { "type": "string", "minLength": 1 }
+						},
+						"required": ["huggingFaceInferenceProvider"]
+					},
+					"then": {
+						"properties": {
+							"huggingFaceInferenceProvider": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"litellmBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "moonshot" } }
+					},
+					"then": {
+						"properties": {
+							"moonshotBaseUrl": {
+								"type": "string",
+								"description": "Moonshot base URL"
+							},
+							"moonshotApiKey": {
+								"type": "string",
+								"description": "Moonshot API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Moonshot model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "doubao" } }
+					},
+					"then": {
+						"properties": {
+							"doubaoApiKey": {
+								"type": "string",
+								"description": "Doubao API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Doubao model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "doubao" },
+							"doubaoApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["doubaoApiKey"]
+					},
+					"then": {
+						"properties": {
+							"doubaoApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "doubao" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"moonshotBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["moonshotBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"moonshotBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"moonshotApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["moonshotApiKey"]
+					},
+					"then": {
+						"properties": {
+							"moonshotApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "moonshot" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "chutes" } }
+					},
+					"then": {
+						"properties": {
+							"chutesApiKey": {
+								"type": "string",
+								"description": "Chutes API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Chutes model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "chutes" },
+							"chutesApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["chutesApiKey"]
+					},
+					"then": {
+						"properties": {
+							"chutesApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "chutes" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "sambanova" } }
+					},
+					"then": {
+						"properties": {
+							"sambaNovaApiKey": {
+								"type": "string",
+								"description": "SambaNova API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "SambaNova model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "sambanova" },
+							"sambaNovaApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["sambaNovaApiKey"]
+					},
+					"then": {
+						"properties": {
+							"sambaNovaApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "sambanova" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "fireworks" } }
+					},
+					"then": {
+						"properties": {
+							"fireworksApiKey": {
+								"type": "string",
+								"description": "Fireworks API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Fireworks model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fireworks" },
+							"fireworksApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["fireworksApiKey"]
+					},
+					"then": {
+						"properties": {
+							"fireworksApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fireworks" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "featherless" } }
+					},
+					"then": {
+						"properties": {
+							"featherlessApiKey": {
+								"type": "string",
+								"description": "Featherless API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Featherless model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "deepinfra" } }
+					},
+					"then": {
+						"properties": {
+							"deepInfraApiKey": {
+								"type": "string",
+								"description": "DeepInfra API key"
+							},
+							"deepInfraModelId": {
+								"type": "string",
+								"description": "DeepInfra model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "featherless" },
+							"featherlessApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["featherlessApiKey"]
+					},
+					"then": {
+						"properties": {
+							"featherlessApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "featherless" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepinfra" },
+							"deepInfraApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepInfraApiKey"]
+					},
+					"then": {
+						"properties": {
+							"deepInfraApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "deepinfra" },
+							"deepInfraModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["deepInfraModelId"]
+					},
+					"then": {
+						"properties": {
+							"deepInfraModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "io-intelligence" } }
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceApiKey": {
+								"type": "string",
+								"description": "IO Intelligence API key"
+							},
+							"ioIntelligenceModelId": {
+								"type": "string",
+								"description": "IO Intelligence model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "io-intelligence" },
+							"ioIntelligenceApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ioIntelligenceApiKey"]
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "io-intelligence" },
+							"ioIntelligenceModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ioIntelligenceModelId"]
+					},
+					"then": {
+						"properties": {
+							"ioIntelligenceModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmApiKey"]
+					},
+					"then": {
+						"properties": {
+							"litellmApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "litellm" },
+							"litellmModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["litellmModelId"]
+					},
+					"then": {
+						"properties": {
+							"litellmModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "qwen-code" } }
+					},
+					"then": {
+						"properties": {
+							"qwenCodeOauthPath": {
+								"type": "string",
+								"description": "Qwen Code OAuth path"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Qwen Code model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "gemini-cli" } }
+					},
+					"then": {
+						"properties": {
+							"geminiCliOAuthPath": {
+								"type": "string",
+								"description": "Gemini CLI OAuth path"
+							},
+							"geminiCliProjectId": {
+								"type": "string",
+								"description": "Gemini CLI project ID"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Gemini CLI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "qwen-code" },
+							"qwenCodeOauthPath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["qwenCodeOauthPath"]
+					},
+					"then": {
+						"properties": {
+							"qwenCodeOauthPath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "qwen-code" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"geminiCliOAuthPath": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiCliOAuthPath"]
+					},
+					"then": {
+						"properties": {
+							"geminiCliOAuthPath": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"geminiCliProjectId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["geminiCliProjectId"]
+					},
+					"then": {
+						"properties": {
+							"geminiCliProjectId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "gemini-cli" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "zai" } }
+					},
+					"then": {
+						"properties": {
+							"zaiApiKey": {
+								"type": "string",
+								"description": "Zai API key"
+							},
+							"zaiApiLine": {
+								"type": "string",
+								"description": "Zai API line"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Zai model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "unbound" } }
+					},
+					"then": {
+						"properties": {
+							"unboundApiKey": {
+								"type": "string",
+								"description": "Unbound API key"
+							},
+							"unboundModelId": {
+								"type": "string",
+								"description": "Unbound model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"zaiApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["zaiApiKey"]
+					},
+					"then": {
+						"properties": {
+							"zaiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"zaiApiLine": { "type": "string", "minLength": 1 }
+						},
+						"required": ["zaiApiLine"]
+					},
+					"then": {
+						"properties": {
+							"zaiApiLine": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "zai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "unbound" },
+							"unboundApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["unboundApiKey"]
+					},
+					"then": {
+						"properties": {
+							"unboundApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "unbound" },
+							"unboundModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["unboundModelId"]
+					},
+					"then": {
+						"properties": {
+							"unboundModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "requesty" } }
+					},
+					"then": {
+						"properties": {
+							"requestyApiKey": {
+								"type": "string",
+								"description": "Requesty API key"
+							},
+							"requestyBaseUrl": {
+								"type": "string",
+								"description": "Requesty base URL"
+							},
+							"requestyModelId": {
+								"type": "string",
+								"description": "Requesty model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "requesty" },
+							"requestyApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["requestyApiKey"]
+					},
+					"then": {
+						"properties": {
+							"requestyApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "requesty" },
+							"requestyModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["requestyModelId"]
+					},
+					"then": {
+						"properties": {
+							"requestyModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "roo" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Roo model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "roo" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vercel-ai-gateway" } }
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayApiKey": {
+								"type": "string",
+								"description": "Vercel AI Gateway API key"
+							},
+							"vercelAiGatewayModelId": {
+								"type": "string",
+								"description": "Vercel AI Gateway model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vercel-ai-gateway" },
+							"vercelAiGatewayApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vercelAiGatewayApiKey"]
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vercel-ai-gateway" },
+							"vercelAiGatewayModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["vercelAiGatewayModelId"]
+					},
+					"then": {
+						"properties": {
+							"vercelAiGatewayModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "virtual-quota-fallback" } }
+					},
+					"then": {
+						"properties": {
+							"profiles": {
+								"type": "array",
+								"description": "Array of provider profiles for quota fallback",
+								"items": {
+									"type": "object"
+								},
+								"minItems": 1
+							}
+						},
+						"required": ["profiles"]
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "virtual-quota-fallback" },
+							"profiles": { "type": "array", "minItems": 1 }
+						},
+						"required": ["profiles"]
+					},
+					"then": {
+						"properties": {
+							"profiles": {
+								"minItems": 1
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "human-relay" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Human relay model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "human-relay" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "fake-ai" } }
+					},
+					"then": {
+						"properties": {
+							"apiModelId": {
+								"type": "string",
+								"description": "Fake AI model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "fake-ai" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "vscode-lm" } }
+					},
+					"then": {
+						"properties": {
+							"vsCodeLmModelSelector": {
+								"type": "object",
+								"description": "VSCode LM model selector",
+								"properties": {
+									"vendor": {
+										"type": "string",
+										"description": "Model vendor"
+									},
+									"family": {
+										"type": "string",
+										"description": "Model family"
+									}
+								},
+								"required": ["vendor", "family"]
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "vscode-lm" },
+							"vsCodeLmModelSelector": {
+								"type": "object",
+								"properties": {
+									"vendor": { "type": "string", "minLength": 1 },
+									"family": { "type": "string", "minLength": 1 }
+								}
+							}
+						},
+						"required": ["vsCodeLmModelSelector"]
+					},
+					"then": {
+						"properties": {
+							"vsCodeLmModelSelector": {
+								"properties": {
+									"vendor": { "minLength": 1 },
+									"family": { "minLength": 1 }
+								}
+							}
 						}
 					}
 				}
