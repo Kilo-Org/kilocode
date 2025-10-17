@@ -3,11 +3,12 @@ import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
 import { GhostStreamingParser } from "./GhostStreamingParser"
+import { GhostOutcomeTranslator } from "./GhostOutcomeTranslator"
 import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix } from "./types"
+import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix, AutocompleteOutcome } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
@@ -29,6 +30,7 @@ export class GhostProvider {
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private streamingParser: GhostStreamingParser
+	private outcomeTranslator: GhostOutcomeTranslator
 	private autoTriggerStrategy: AutoTriggerStrategy
 	private workspaceEdit: GhostWorkspaceEdit
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
@@ -66,6 +68,7 @@ export class GhostProvider {
 		this.decorations = new GhostDecorations()
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
+		this.outcomeTranslator = new GhostOutcomeTranslator()
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
 		this.workspaceEdit = new GhostWorkspaceEdit()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
@@ -295,8 +298,8 @@ export class GhostProvider {
 		console.log("system", systemPrompt)
 		console.log("userprompt", userPrompt)
 
-		// Initialize the streaming parser
-		this.streamingParser.initialize(context)
+		// Initialize the streaming parser with new signature
+		this.streamingParser.initialize(autocompleteInput, prefix, suffix)
 
 		let hasShownFirstSuggestion = false
 		let cost = 0
@@ -305,6 +308,10 @@ export class GhostProvider {
 		let cacheWriteTokens = 0
 		let cacheReadTokens = 0
 		let response = ""
+		let currentOutcome: AutocompleteOutcome | undefined
+
+		// Store cursor position for translator
+		const cursorPosition = context.range?.start ?? context.document.positionAt(0)
 
 		// Create streaming callback
 		const onChunk = (chunk: any) => {
@@ -318,9 +325,16 @@ export class GhostProvider {
 				// Process the text chunk through our streaming parser
 				const parseResult = this.streamingParser.processChunk(chunk.text)
 
-				if (parseResult.hasNewSuggestions) {
-					// Update our suggestions with the new parsed results
-					this.suggestions = parseResult.suggestions
+				if (parseResult.hasNewContent && parseResult.outcome) {
+					// Store the outcome
+					currentOutcome = parseResult.outcome
+
+					// Translate outcome to suggestions for UI
+					this.suggestions = this.outcomeTranslator.translate(
+						parseResult.outcome,
+						context.document,
+						cursorPosition,
+					)
 
 					// If this is the first suggestion, show it immediately
 					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
@@ -377,18 +391,27 @@ export class GhostProvider {
 
 			// Finish the streaming parser to apply sanitization if needed
 			const finalParseResult = this.streamingParser.finishStream()
-			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
-				// Handle case where sanitization produced suggestions
-				this.suggestions = finalParseResult.suggestions
-				hasShownFirstSuggestion = true
-				this.stopProcessing()
-				this.selectClosestSuggestion()
-				await this.render()
-			} else if (finalParseResult.hasNewSuggestions && hasShownFirstSuggestion) {
-				// Update existing suggestions with sanitized results
-				this.suggestions = finalParseResult.suggestions
-				this.selectClosestSuggestion()
-				await this.render()
+			if (finalParseResult.hasNewContent && finalParseResult.outcome) {
+				currentOutcome = finalParseResult.outcome
+
+				// Translate outcome to suggestions
+				this.suggestions = this.outcomeTranslator.translate(
+					finalParseResult.outcome,
+					context.document,
+					cursorPosition,
+				)
+
+				if (!hasShownFirstSuggestion) {
+					// Handle case where sanitization produced suggestions
+					hasShownFirstSuggestion = true
+					this.stopProcessing()
+					this.selectClosestSuggestion()
+					await this.render()
+				} else {
+					// Update existing suggestions with sanitized results
+					this.selectClosestSuggestion()
+					await this.render()
+				}
 			}
 
 			// If we never showed any suggestions, there might have been an issue

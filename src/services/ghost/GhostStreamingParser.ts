@@ -1,13 +1,11 @@
 import * as vscode from "vscode"
-import { structuredPatch } from "diff"
-import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
-import { GhostSuggestionsState } from "./GhostSuggestions"
+import { AutocompleteInput, AutocompleteOutcome } from "./types"
 import { CURSOR_MARKER } from "./ghostConstants"
 
 export interface StreamingParseResult {
-	suggestions: GhostSuggestionsState
+	outcome: AutocompleteOutcome | undefined
 	isComplete: boolean
-	hasNewSuggestions: boolean
+	hasNewContent: boolean
 }
 
 export interface ParsedChange {
@@ -198,22 +196,28 @@ function mapNormalizedToOriginalIndex(
 
 /**
  * Streaming XML parser for Ghost suggestions that can process incomplete responses
- * and emit suggestions as soon as complete <change> blocks are available
+ * and emit AutocompleteOutcome as soon as complete <change> blocks are available
  */
 export class GhostStreamingParser {
 	public buffer: string = ""
 	private completedChanges: ParsedChange[] = []
 	private lastProcessedIndex: number = 0
-	private context: GhostSuggestionContext | null = null
+	private input: AutocompleteInput | null = null
+	private prefix: string = ""
+	private suffix: string = ""
 	private streamFinished: boolean = false
+	private startTime: number = 0
 
 	constructor() {}
 
 	/**
-	 * Initialize the parser with context
+	 * Initialize the parser with autocomplete input and prefix/suffix
 	 */
-	public initialize(context: GhostSuggestionContext): void {
-		this.context = context
+	public initialize(input: AutocompleteInput, prefix: string, suffix: string): void {
+		this.input = input
+		this.prefix = prefix
+		this.suffix = suffix
+		this.startTime = Date.now()
 		this.reset()
 	}
 
@@ -228,10 +232,10 @@ export class GhostStreamingParser {
 	}
 
 	/**
-	 * Process a new chunk of text and return any newly completed suggestions
+	 * Process a new chunk of text and return AutocompleteOutcome if available
 	 */
 	public processChunk(chunk: string): StreamingParseResult {
-		if (!this.context) {
+		if (!this.input) {
 			throw new Error("Parser not initialized. Call initialize() first.")
 		}
 
@@ -241,7 +245,7 @@ export class GhostStreamingParser {
 		// Extract any newly completed changes from the current buffer
 		const newChanges = this.extractCompletedChanges()
 
-		let hasNewSuggestions = newChanges.length > 0
+		let hasNewContent = newChanges.length > 0
 
 		// Add new changes to our completed list
 		this.completedChanges.push(...newChanges)
@@ -259,19 +263,19 @@ export class GhostStreamingParser {
 				const sanitizedChanges = this.extractCompletedChanges()
 				if (sanitizedChanges.length > 0) {
 					this.completedChanges.push(...sanitizedChanges)
-					hasNewSuggestions = true
-					isComplete = isResponseComplete(this.buffer, this.completedChanges.length) // Re-check completion after sanitization
+					hasNewContent = true
+					isComplete = isResponseComplete(this.buffer, this.completedChanges.length)
 				}
 			}
 		}
 
-		// Generate suggestions from all completed changes
-		const suggestions = this.generateSuggestions(this.completedChanges)
+		// Generate AutocompleteOutcome from completed changes
+		const outcome = this.generateOutcome()
 
 		return {
-			suggestions,
+			outcome,
 			isComplete,
-			hasNewSuggestions,
+			hasNewContent,
 		}
 	}
 
@@ -324,169 +328,83 @@ export class GhostStreamingParser {
 	}
 
 	/**
-	 * Generate suggestions from completed changes
+	 * Generate AutocompleteOutcome from completed changes
 	 */
-	private generateSuggestions(changes: ParsedChange[]): GhostSuggestionsState {
-		const suggestions = new GhostSuggestionsState()
-
-		if (!this.context?.document || changes.length === 0) {
-			return suggestions
+	private generateOutcome(): AutocompleteOutcome | undefined {
+		if (!this.input || this.completedChanges.length === 0) {
+			return undefined
 		}
 
-		const document = this.context.document
-		const currentContent = document.getText()
+		// Generate completion string from the parsed changes
+		const completion = this.generateCompletionString()
 
-		// Add cursor marker to document content if it's not already there
-		// This ensures that when LLM searches for <<<AUTOCOMPLETE_HERE>>>, it can find it
-		let modifiedContent = currentContent
-		const needsCursorMarker =
-			changes.some((change) => change.search.includes(CURSOR_MARKER)) && !currentContent.includes(CURSOR_MARKER)
-		if (needsCursorMarker && this.context.range) {
-			// Add cursor marker at the specified range position
-			const cursorOffset = document.offsetAt(this.context.range.start)
-			modifiedContent =
-				currentContent.substring(0, cursorOffset) + CURSOR_MARKER + currentContent.substring(cursorOffset)
+		// Create AutocompleteOutcome
+		const outcome: AutocompleteOutcome = {
+			time: Date.now() - this.startTime,
+			completion,
+			prefix: this.prefix,
+			suffix: this.suffix,
+			prompt: "", // Will be set by caller
+			modelProvider: "", // Will be set by caller
+			modelName: "", // Will be set by caller
+			completionOptions: {},
+			cacheHit: false,
+			numLines: completion.split("\n").length,
+			filepath: this.input.filepath,
+			completionId: this.input.completionId,
+			uniqueId: "", // Will be set by caller
+			timestamp: new Date().toISOString(),
+			disable: false,
+			maxPromptTokens: 0,
+			debounceDelay: 0,
+			modelTimeout: 0,
+			maxSuffixPercentage: 0,
+			prefixPercentage: 0,
+			multilineCompletions: "auto",
+			slidingWindowPrefixPercentage: 0,
+			slidingWindowSize: 0,
 		}
 
-		// Process changes: preserve search content as-is, clean replace content for application
-		const filteredChanges = changes.map((change) => ({
-			search: change.search, // Keep cursor markers for matching against document
-			replace: removeCursorMarker(change.replace), // Clean for content application
-			cursorPosition: change.cursorPosition,
-		}))
+		return outcome
+	}
 
-		// Apply changes in reverse order to maintain line numbers
-		const appliedChanges: Array<{
-			searchContent: string
-			replaceContent: string
-			startIndex: number
-			endIndex: number
-			cursorPosition?: number
-		}> = []
+	/**
+	 * Generate completion string from parsed changes
+	 * This converts the search/replace operations into a simple completion string
+	 */
+	private generateCompletionString(): string {
+		if (this.completedChanges.length === 0) {
+			return ""
+		}
 
-		for (const change of filteredChanges) {
-			let searchIndex = findBestMatch(modifiedContent, change.search)
+		// For now, we'll use a simple approach: concatenate all replace content
+		// In the future, this could be more sophisticated
+		let completion = ""
 
-			if (searchIndex !== -1) {
-				// Check for overlapping changes before applying
-				const endIndex = searchIndex + change.search.length
-				const hasOverlap = appliedChanges.some((existingChange) => {
-					// Check if ranges overlap
-					const existingStart = existingChange.startIndex
-					const existingEnd = existingChange.endIndex
-					return searchIndex < existingEnd && endIndex > existingStart
-				})
-
-				if (hasOverlap) {
-					console.warn("Skipping overlapping change:", change.search.substring(0, 50))
-					continue // Skip this change to avoid duplicates
+		for (const change of this.completedChanges) {
+			// Remove cursor marker from replace content
+			const cleanReplace = removeCursorMarker(change.replace)
+			
+			// If the search content contains the cursor marker, we're replacing at cursor position
+			if (change.search.includes(CURSOR_MARKER)) {
+				// Extract just the new content (what comes after the cursor marker in replace)
+				const searchParts = change.search.split(CURSOR_MARKER)
+				const beforeCursor = searchParts[0] || ""
+				
+				// The completion is what we're adding after the cursor
+				// We need to remove the "before cursor" part from the replace content
+				if (cleanReplace.startsWith(beforeCursor)) {
+					completion += cleanReplace.substring(beforeCursor.length)
+				} else {
+					completion += cleanReplace
 				}
-
-				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
-				let adjustedReplaceContent = change.replace
-
-				// If the search pattern ends with a newline, check if there are additional empty lines after it
-				if (change.search.endsWith("\n")) {
-					let nextCharIndex = endIndex
-					let extraNewlines = ""
-
-					// Count consecutive newlines after the search pattern
-					while (nextCharIndex < modifiedContent.length && modifiedContent[nextCharIndex] === "\n") {
-						extraNewlines += "\n"
-						nextCharIndex++
-					}
-
-					// If we found extra newlines, preserve them by adding them to the replacement
-					if (extraNewlines.length > 0) {
-						// Only add the extra newlines if the replacement doesn't already end with enough newlines
-						if (!adjustedReplaceContent.endsWith("\n" + extraNewlines)) {
-							adjustedReplaceContent = adjustedReplaceContent.trimEnd() + "\n" + extraNewlines
-						}
-					}
-				}
-
-				appliedChanges.push({
-					searchContent: change.search,
-					replaceContent: adjustedReplaceContent,
-					startIndex: searchIndex,
-					endIndex: endIndex,
-					cursorPosition: change.cursorPosition, // Preserve cursor position info
-				})
+			} else {
+				// If no cursor marker, just use the replace content
+				completion += cleanReplace
 			}
 		}
 
-		// Sort by start index in descending order to apply changes from end to beginning
-		appliedChanges.sort((a, b) => b.startIndex - a.startIndex)
-
-		// Apply the changes
-		for (const change of appliedChanges) {
-			modifiedContent =
-				modifiedContent.substring(0, change.startIndex) +
-				change.replaceContent +
-				modifiedContent.substring(change.endIndex)
-		}
-
-		// Remove cursor marker from the final content if we added it
-		if (needsCursorMarker) {
-			modifiedContent = removeCursorMarker(modifiedContent)
-		}
-
-		// Generate diff between original and modified content
-		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
-		const patch = structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
-
-		// Create a suggestion file
-		const suggestionFile = suggestions.addFile(document.uri)
-
-		// Process each hunk in the patch
-		for (const hunk of patch.hunks) {
-			let currentOldLineNumber = hunk.oldStart
-			let currentNewLineNumber = hunk.newStart
-
-			// Iterate over each line within the hunk
-			for (const line of hunk.lines) {
-				const operationType = line.charAt(0) as GhostSuggestionEditOperationType
-				const content = line.substring(1)
-
-				switch (operationType) {
-					// Case 1: The line is an addition
-					case "+":
-						suggestionFile.addOperation({
-							type: "+",
-							line: currentNewLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the new line counter for additions and context lines
-						currentNewLineNumber++
-						break
-
-					// Case 2: The line is a deletion
-					case "-":
-						suggestionFile.addOperation({
-							type: "-",
-							line: currentOldLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the old line counter for deletions and context lines
-						currentOldLineNumber++
-						break
-
-					// Case 3: The line is unchanged (context)
-					default:
-						// For context lines, we increment both counters
-						currentOldLineNumber++
-						currentNewLineNumber++
-						break
-				}
-			}
-		}
-
-		suggestions.sortGroups()
-		return suggestions
+		return completion
 	}
 
 	/**
