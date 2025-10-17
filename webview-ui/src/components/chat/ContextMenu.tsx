@@ -150,6 +150,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 			case ContextMenuOptionType.Image:
 				return <span>Add Image</span>
 			// kilocode_change end
+			case ContextMenuOptionType.AllOpenEditors:
+				return <span>All Open Editors</span>
 			case ContextMenuOptionType.Git:
 				if (option.value) {
 					return (
@@ -236,6 +238,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 			case ContextMenuOptionType.Image:
 				return "device-camera"
 			// kilocode_change end
+			case ContextMenuOptionType.AllOpenEditors:
+				return "window"
 			case ContextMenuOptionType.Git:
 				return "git-commit"
 			case ContextMenuOptionType.NoResults:

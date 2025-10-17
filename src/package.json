@@ -292,9 +292,20 @@
 				"command": "kilo-code.ghost.goToPreviousSuggestion",
 				"title": "%ghost.commands.goToPreviousSuggestion%",
 				"category": "%configuration.title%"
+			},
+			{
+				"command": "kilo-code.addFileToContext",
+				"title": "%command.addFileToContext.title%",
+				"category": "%configuration.title%"
 			}
 		],
 		"menus": {
+			"explorer/context": [
+				{
+					"command": "kilo-code.addFileToContext",
+					"group": "navigation@9"
+				}
+			],
 			"editor/context": [
 				{
 					"submenu": "kilo-code.contextMenu",

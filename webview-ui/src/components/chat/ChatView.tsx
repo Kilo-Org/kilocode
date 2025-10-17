@@ -51,6 +51,7 @@ import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
 import { ChatTextArea } from "./ChatTextArea"
+import { ContextPillsBar } from "./ContextPillsBar"
 // import TaskHeader from "./TaskHeader"// kilocode_change
 import KiloTaskHeader from "../kilocode/KiloTaskHeader" // kilocode_change
 import AutoApproveMenu from "./AutoApproveMenu"
@@ -81,6 +82,13 @@ export interface ChatViewRef {
 export const MAX_IMAGES_PER_MESSAGE = 20 // This is the Anthropic limit.
 
 const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
+
+
+// Utility function to validate mentions
+const isValidMention = (mention: string): boolean => {
+	const trimmed = mention?.trim() || "";
+	return !!trimmed && trimmed !== "@" && trimmed !== "@/";
+};
 
 const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewProps> = (
 	{ isHidden, showAnnouncement, hideAnnouncement },
@@ -188,6 +196,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const textAreaRef = useRef<HTMLTextAreaElement>(null)
 	const [sendingDisabled, setSendingDisabled] = useState(false)
 	const [selectedImages, setSelectedImages] = useState<string[]>([])
+	const [contextMentions, setContextMentions] = useState<string[]>([])
 
 	// we need to hold on to the ask because useEffect > lastMessage will always let us know when an ask comes in and handle it, but by the time handleMessage is called, the last message might not be the ask anymore (it could be a say that followed)
 	const [clineAsk, setClineAsk] = useState<ClineAsk | undefined>(undefined)
@@ -611,12 +620,31 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		setInputValue("")
 		setSendingDisabled(true)
 		setSelectedImages([])
+		setContextMentions([])
 		setClineAsk(undefined)
 		setEnableButtons(false)
 		// Do not reset mode here as it should persist.
 		// setPrimaryButtonText(undefined)
 		// setSecondaryButtonText(undefined)
 		disableAutoScrollRef.current = false
+	}, [])
+
+	const handleAddMention = useCallback((mention: string) => {
+		// Validate mention before adding - skip empty or invalid mentions
+		if (!isValidMention(mention)) {
+			return; // kilocode_change: return early if mention is invalid
+		}
+		// Check for duplicates before adding
+		setContextMentions((prev) => {
+			if (prev.includes(mention)) {
+				return prev;
+			}
+			return [...prev, mention];
+		});
+	}, []);
+
+	const handleRemoveMention = useCallback((mention: string) => {
+		setContextMentions((prev) => prev.filter((m) => m !== mention));
 	}, [])
 
 	/**
@@ -628,7 +656,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		(text: string, images: string[]) => {
 			text = text.trim()
 
-			if (text || images.length > 0) {
+			// Inject context mentions into the text
+			// Use isValidMention to filter out invalid mentions and ensure proper formatting
+			const validMentions = contextMentions
+								.filter(isValidMention)
+								.map((m) => m.trim())
+								.map((m) => m.startsWith("@") ? m : `@${m}`);
+
+			const mentionsText = validMentions.join(" ");
+			const fullText = mentionsText ? `${mentionsText} ${text}` : text;
+
+			if (fullText || images.length > 0) {
 				if (sendingDisabled) {
 					try {
 						console.log("queueMessage", text, images)
@@ -648,7 +686,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				userRespondedRef.current = true
 
 				if (messagesRef.current.length === 0) {
-					vscode.postMessage({ type: "newTask", text, images })
+					vscode.postMessage({ type: "newTask", text: fullText, images })
 				} else if (clineAskRef.current) {
 					if (clineAskRef.current === "followup") {
 						markFollowUpAsAnswered()
@@ -671,7 +709,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							vscode.postMessage({
 								type: "askResponse",
 								askResponse: "messageResponse",
-								text,
+								text: fullText,
 								images,
 							})
 							break
@@ -679,13 +717,13 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 				} else {
 					// This is a new message in an ongoing task.
-					vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text, images })
+					vscode.postMessage({ type: "askResponse", askResponse: "messageResponse", text: fullText, images })
 				}
 
 				handleChatReset()
 			}
 		},
-		[handleChatReset, markFollowUpAsAnswered, sendingDisabled], // messagesRef and clineAskRef are stable
+		[handleChatReset, markFollowUpAsAnswered, sendingDisabled, contextMentions], // messagesRef and clineAskRef are stable
 	)
 
 	const handleSetChatBoxMessage = useCallback(
@@ -837,6 +875,15 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "focusInput":
 							textAreaRef.current?.focus()
 							break
+						// kilocode_change start: support adding mentions directly to the pills bar
+						case "addContextMentions":
+							if (Array.isArray(message.values?.mentions)) {
+								const mentions: string[] = message.values?.mentions as string[];
+								// Add each mention via the existing handler to ensure validation/deduping
+								mentions.forEach((m) => handleAddMention(m));
+							}
+							break;
+						// kilocode_change end
 					}
 					break
 				case "selectedImages":
@@ -891,6 +938,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleSetChatBoxMessage,
 			handlePrimaryButtonClick,
 			handleSecondaryButtonClick,
+			handleAddMention, // kilocode_change
 		],
 	)
 
@@ -2187,6 +2235,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					}
 				}}
 			/>
+			<ContextPillsBar mentions={contextMentions} onRemove={handleRemoveMention} />
 			<ChatTextArea
 				ref={textAreaRef}
 				inputValue={inputValue}
@@ -2197,6 +2246,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
 				onSend={() => handleSendMessage(inputValue, selectedImages)}
+				onMentionAdd={handleAddMention}
 				onSelectImages={selectImages}
 				shouldDisableImages={shouldDisableImages}
 				onHeightChange={() => {
