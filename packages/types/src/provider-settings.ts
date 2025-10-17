@@ -707,18 +707,7 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<
-		ProviderName,
-		| "fake-ai"
-		| "human-relay"
-		// kilocode_change start
-		| "gemini"
-		| "gemini-cli"
-		// kilocode_change end
-		| "lmstudio"
-		| "openai"
-		| "ollama"
-	>,
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "openai" | "gemini">, // kilocode_change: add gemini
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
@@ -811,7 +800,7 @@ export const MODELS_BY_PROVIDER: Record<
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
 
-	// Dynamic providers; models pulled from the respective APIs.
+	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
@@ -827,4 +816,8 @@ export const MODELS_BY_PROVIDER: Record<
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
+
+	// Local providers; models discovered from localhost endpoints.
+	lmstudio: { id: "lmstudio", label: "LM Studio", models: [] },
+	ollama: { id: "ollama", label: "Ollama", models: [] },
 }

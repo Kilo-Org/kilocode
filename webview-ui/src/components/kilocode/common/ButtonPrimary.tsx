@@ -14,6 +14,7 @@ const StyledButton = styled.button`
 	padding: 14px;
 	transition: all 0.2s;
 	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+	cursor: pointer;
 
 	/* Theme-specific styles */
 	body.vscode-dark & {
