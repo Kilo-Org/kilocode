@@ -93,7 +93,7 @@
 		"socket.io-client": "^4.8.1",
 		"sound-play": "^1.1.0",
 		"stream-json": "^1.8.0",
-		"string-width": "^7.2.0",
+		"string-width": "^8.1.0",
 		"strip-ansi": "^7.1.0",
 		"strip-bom": "^5.0.0",
 		"tiktoken": "^1.0.21",
