@@ -127,18 +127,49 @@ export function containsDangerousSubstitution(source: string): boolean {
  * chaining operators (&&, ||, ;, |, or &) and newlines.
  *
  * Uses shell-quote to properly handle:
- * - Quoted strings (preserves quotes)
+ * - Quoted strings (preserves quotes and newlines within quotes)
  * - Subshell commands ($(cmd), `cmd`, <(cmd), >(cmd))
  * - PowerShell redirections (2>&1)
  * - Chain operators (&&, ||, ;, |, &)
- * - Newlines as command separators
+ * - Newlines as command separators (but not within quotes)
  */
 export function parseCommand(command: string): string[] {
 	if (!command?.trim()) return []
 
-	// Split by newlines first (handle different line ending formats)
+	// First, protect newlines inside quoted strings by replacing them with a placeholder
+	// This prevents splitting multi-line quoted strings (e.g., git commit -m "multi\nline")
+	const quotedStringPlaceholder = "___NEWLINE_IN_QUOTE___"
+	let protectedCommand = command
+
+	// Track quote state and replace newlines inside quotes
+	let inDoubleQuote = false
+	let inSingleQuote = false
+	let result = ""
+
+	for (let i = 0; i < command.length; i++) {
+		const char = command[i]
+		const prevChar = i > 0 ? command[i - 1] : ""
+
+		// Toggle quote state (ignore escaped quotes)
+		if (char === '"' && prevChar !== "\\") {
+			inDoubleQuote = !inDoubleQuote
+			result += char
+		} else if (char === "'" && prevChar !== "\\") {
+			inSingleQuote = !inSingleQuote
+			result += char
+		} else if ((char === "\n" || char === "\r") && (inDoubleQuote || inSingleQuote)) {
+			// Replace newlines inside quotes with placeholder
+			result += quotedStringPlaceholder
+		} else {
+			result += char
+		}
+	}
+
+	protectedCommand = result
+
+	// Split by newlines (handle different line ending formats)
 	// This regex splits on \r\n (Windows), \n (Unix), or \r (old Mac)
-	const lines = command.split(/\r\n|\r|\n/)
+	const lines = protectedCommand.split(/\r\n|\r|\n/)
 	const allCommands: string[] = []
 
 	for (const line of lines) {
@@ -150,7 +181,8 @@ export function parseCommand(command: string): string[] {
 		allCommands.push(...lineCommands)
 	}
 
-	return allCommands
+	// Restore newlines in quoted strings
+	return allCommands.map((cmd) => cmd.replace(new RegExp(quotedStringPlaceholder, "g"), "\n"))
 }
 
 /**
