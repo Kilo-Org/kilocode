@@ -21,7 +21,7 @@
 		"useUnknownInCatchVariables": false
 	},
 	"include": ["."],
-	"exclude": ["node_modules"],
+	"exclude": ["node_modules", "services/continuedev/**"],
 	"watchOptions": {
 		"watchFile": "useFsEvents",
 		"watchDirectory": "useFsEvents",

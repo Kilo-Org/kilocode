@@ -38,7 +38,11 @@
 		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
 		"cli:run": "pnpm --filter @kilocode/cli run start",
 		"docs:start": "pnpm --filter kilocode-docs start",
-		"docs:build": "pnpm --filter kilocode-docs build"
+		"docs:build": "pnpm --filter kilocode-docs build",
+		"continuedev:install": "cd src/services/continuedev && npm install",
+		"continuedev:lint": "cd src/services/continuedev && npm run lint",
+		"continuedev:typecheck": "cd src/services/continuedev && npm run typecheck",
+		"continuedev:test": "cd src/services/continuedev && npm run test"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.5.1",
