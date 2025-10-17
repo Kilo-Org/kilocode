@@ -135,5 +135,10 @@
 			"cancelButton": "ยกเลิก"
 		},
 		"tipMessage": "Kilo: กด {{shortcut}} เพื่อสร้างคำสั่งเทอร์มินัล"
+	},
+	"creditsstatusbar": {
+		"loading": "กำลังโหลด...",
+		"clickToRefresh": "คลิกเพื่อรีเฟรช",
+		"minute": "นาที"
 	}
 }

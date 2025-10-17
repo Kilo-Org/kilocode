@@ -11,7 +11,7 @@ interface WelcomeMessageProps {
 
 const DEFAULT_INSTRUCTIONS = [
 	"Type a message to start chatting, or use /help to see available commands.",
-	"Commands start with / (e.g., /help, /mode, /clear)",
+	"Commands start with / (e.g., /help, /mode, /model)",
 ]
 
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) => {
