@@ -137,9 +137,13 @@ export const selectedIndexAtom = atom<number>(0)
 // ============================================================================
 
 /**
- * Atom to control autocomplete menu visibility
+ * Derived atom to control autocomplete menu visibility
+ * Automatically shows when text starts with "/"
  */
-export const showAutocompleteAtom = atom<boolean>(false)
+export const showAutocompleteAtom = atom<boolean>((get) => {
+	const text = get(textBufferStringAtom)
+	return text.startsWith("/")
+})
 
 /**
  * Atom to hold command suggestions for autocomplete
@@ -290,18 +294,12 @@ export const updateLastMessageAtom = atom(null, (get, set, content: string) => {
 
 /**
  * Action atom to update the text buffer value
- * Also handles autocomplete visibility
  */
 export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
 	set(setTextAtom, value)
 
-	// Update autocomplete visibility based on input
-	// Keep showing suggestions even for exact matches (e.g., "/mode")
-	// This provides visual confirmation that the user has typed a valid command
+	// Reset selected index when input is a command
 	const isCommand = value.startsWith("/")
-	set(showAutocompleteAtom, isCommand)
-
-	// Reset selected index when input changes
 	if (isCommand) {
 		set(selectedIndexAtom, 0)
 	}
@@ -312,7 +310,6 @@ export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
  */
 export const clearTextBufferAtom = atom(null, (get, set) => {
 	set(clearTextAtom)
-	set(showAutocompleteAtom, false)
 	set(selectedIndexAtom, 0)
 })
 
@@ -372,21 +369,24 @@ export const setErrorAtom = atom(null, (get, set, error: string | null) => {
 })
 
 /**
- * Action atom to hide autocomplete
+ * Action atom to hide autocomplete by clearing the text buffer
+ * Note: Autocomplete visibility is now derived from text buffer content
+ * @deprecated This atom is kept for backward compatibility but may be removed
  */
 export const hideAutocompleteAtom = atom(null, (get, set) => {
-	set(showAutocompleteAtom, false)
+	set(clearTextAtom)
 	set(selectedIndexAtom, 0)
 })
 
 /**
  * Action atom to show autocomplete
+ * Note: Autocomplete visibility is now automatically derived from text buffer
+ * This atom is kept for backward compatibility but has no effect
+ * @deprecated This atom is kept for backward compatibility but may be removed
  */
 export const showAutocompleteMenuAtom = atom(null, (get, set) => {
-	const isCommand = get(isCommandInputAtom)
-	if (isCommand) {
-		set(showAutocompleteAtom, true)
-	}
+	// No-op: autocomplete visibility is now derived from text buffer
+	// Kept for backward compatibility
 })
 
 /**

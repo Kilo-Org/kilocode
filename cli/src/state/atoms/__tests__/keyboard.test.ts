@@ -304,7 +304,7 @@ describe("keypress atoms", () => {
 
 	describe("tab autocomplete", () => {
 		it("should complete command by appending only missing part", () => {
-			// Type '/mo'
+			// Type '/mo' - this will automatically trigger autocomplete
 			const chars = ["/", "m", "o"]
 			for (const char of chars) {
 				const key: Key = {
@@ -318,8 +318,10 @@ describe("keypress atoms", () => {
 				store.set(keyboardHandlerAtom, key)
 			}
 
-			// Set up autocomplete state with 'mode' suggestion
-			store.set(showAutocompleteAtom, true)
+			// Autocomplete should now be visible (derived from text starting with "/")
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up autocomplete suggestions
 			const mockCommand: Command = {
 				name: "mode",
 				description: "Switch mode",
@@ -354,7 +356,7 @@ describe("keypress atoms", () => {
 		})
 
 		it("should complete argument by appending only missing part", () => {
-			// Type '/mode tes'
+			// Type '/mode tes' - this will automatically trigger autocomplete
 			const input = "/mode tes"
 			for (const char of input) {
 				const key: Key = {
@@ -368,8 +370,10 @@ describe("keypress atoms", () => {
 				store.set(keyboardHandlerAtom, key)
 			}
 
-			// Set up autocomplete state with 'test' suggestion
-			store.set(showAutocompleteAtom, true)
+			// Autocomplete should now be visible (derived from text starting with "/")
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up autocomplete suggestions
 			const mockArgumentSuggestion: ArgumentSuggestion = {
 				value: "test",
 				description: "Test mode",
@@ -396,7 +400,7 @@ describe("keypress atoms", () => {
 		})
 
 		it("should handle exact match completion", () => {
-			// Type '/help'
+			// Type '/help' - this will automatically trigger autocomplete
 			const input = "/help"
 			for (const char of input) {
 				const key: Key = {
@@ -410,8 +414,10 @@ describe("keypress atoms", () => {
 				store.set(keyboardHandlerAtom, key)
 			}
 
-			// Set up autocomplete state with 'help' suggestion (exact match)
-			store.set(showAutocompleteAtom, true)
+			// Autocomplete should now be visible (derived from text starting with "/")
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up autocomplete suggestions
 			const mockCommand: Command = {
 				name: "help",
 				description: "Show help",
@@ -446,7 +452,7 @@ describe("keypress atoms", () => {
 		})
 
 		it("should update cursor position after tab completion", () => {
-			// Type '/mo'
+			// Type '/mo' - this will automatically trigger autocomplete
 			const chars = ["/", "m", "o"]
 			for (const char of chars) {
 				const key: Key = {
@@ -460,8 +466,10 @@ describe("keypress atoms", () => {
 				store.set(keyboardHandlerAtom, key)
 			}
 
-			// Set up autocomplete state
-			store.set(showAutocompleteAtom, true)
+			// Autocomplete should now be visible (derived from text starting with "/")
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up autocomplete suggestions
 			const mockCommand: Command = {
 				name: "mode",
 				description: "Switch mode",
@@ -555,8 +563,21 @@ describe("keypress atoms", () => {
 		})
 
 		it("should handle empty suggestions array without NaN", () => {
-			// Set up autocomplete mode with empty suggestions
-			store.set(showAutocompleteAtom, true)
+			// Type "/" to trigger autocomplete mode
+			const slashKey: Key = {
+				name: "/",
+				sequence: "/",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, slashKey)
+
+			// Autocomplete should now be visible
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up empty suggestions
 			store.set(suggestionsAtom, [])
 			store.set(argumentSuggestionsAtom, [])
 			store.set(selectedIndexAtom, 0)
@@ -579,8 +600,21 @@ describe("keypress atoms", () => {
 		})
 
 		it("should handle empty suggestions array on up arrow without NaN", () => {
-			// Set up autocomplete mode with empty suggestions
-			store.set(showAutocompleteAtom, true)
+			// Type "/" to trigger autocomplete mode
+			const slashKey: Key = {
+				name: "/",
+				sequence: "/",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, slashKey)
+
+			// Autocomplete should now be visible
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up empty suggestions
 			store.set(suggestionsAtom, [])
 			store.set(argumentSuggestionsAtom, [])
 			store.set(selectedIndexAtom, 0)

@@ -622,14 +622,6 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 	// Character input
 	if (!key.ctrl && !key.meta && key.sequence.length === 1) {
 		set(insertCharAtom, key.sequence)
-
-		// Auto-detect mode changes
-		const newText = get(textBufferStringAtom)
-		if (newText.startsWith("/")) {
-			set(showAutocompleteAtom, true)
-			set(inputModeAtom, "autocomplete")
-		}
-
 		return
 	}
 
