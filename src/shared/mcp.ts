@@ -58,16 +58,19 @@ export type McpToolCallResponse = {
 		| {
 				type: "text"
 				text: string
+				_meta?: Record<string, any>
 		  }
 		| {
 				type: "image"
 				data: string
 				mimeType: string
+				_meta?: Record<string, any>
 		  }
 		| {
 				type: "audio"
 				data: string
 				mimeType: string
+				_meta?: Record<string, any>
 		  }
 		| {
 				type: "resource"
@@ -76,8 +79,19 @@ export type McpToolCallResponse = {
 					mimeType?: string
 					text?: string
 					blob?: string
+					_meta?: Record<string, any>
 				}
+				_meta?: Record<string, any>
+		  }
+		| {
+				type: "resource_link"
+				uri: string
+				name?: string
+				description?: string
+				mimeType?: string
+				_meta?: Record<string, any>
 		  }
 	>
+	structuredContent?: Record<string, any>
 	isError?: boolean
 }
