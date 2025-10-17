@@ -353,6 +353,7 @@ export type ExtensionState = Pick<
 	| "terminalCommandApiConfigId" // kilocode_change
 	| "dismissedNotificationIds" // kilocode_change
 	| "ghostServiceSettings" // kilocode_change
+	| "lastViewedReleaseVersion" // kilocode_change: Track last viewed release version
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"
 	| "codebaseIndexConfig"

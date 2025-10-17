@@ -8,11 +8,13 @@ import * as vscode from "vscode"
 import axios from "axios"
 import { getKiloBaseUriFromToken } from "@roo-code/types"
 import {
+	MaybeTypedWebviewMessage,
 	ProfileData,
 	SeeNewChangesPayload,
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
 } from "../../shared/WebviewMessage"
+import { isValidGlobalStateKey } from "../../shared/GlobalStateTypes"
 // kilocode_change end
 
 import {
@@ -85,7 +87,7 @@ import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } f
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
-	message: WebviewMessage,
+	message: MaybeTypedWebviewMessage,
 	marketplaceManager?: MarketplaceManager,
 ) => {
 	// Utility functions provided for concise get/update of global state via contextProxy API.
@@ -3772,5 +3774,18 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
+		// kilocode_change start: Type-safe global state handler
+		case "updateGlobalState": {
+			if (
+				message.stateKey !== undefined &&
+				message.stateValue !== undefined &&
+				isValidGlobalStateKey(message.stateKey)
+			) {
+				await updateGlobalState(message.stateKey, message.stateValue)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+		// kilocode_change end: Type-safe global state handler
 	}
 }

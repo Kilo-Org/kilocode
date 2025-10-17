@@ -168,6 +168,7 @@ export const globalSettingsSchema = z.object({
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
 	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
+	lastViewedReleaseVersion: z.string().optional(), // kilocode_change: Track last viewed release version
 	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
 	reasoningBlockCollapsed: z.boolean().optional(),
