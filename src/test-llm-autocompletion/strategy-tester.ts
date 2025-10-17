@@ -1,6 +1,6 @@
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
-import { GhostSuggestionContext } from "../services/ghost/types.js"
+import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
 import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
@@ -55,7 +55,17 @@ export class StrategyTester {
 
 	async getCompletion(code: string): Promise<string> {
 		const context = this.createContext(code)
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
+		const input = contextToAutocompleteInput(context)
+		const { prefix, suffix } = extractPrefixSuffix(
+			context.document,
+			context.range?.start ?? context.document.positionAt(0),
+		)
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
+			input,
+			prefix,
+			suffix,
+			context.document.languageId,
+		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		return response.content

@@ -1,39 +1,43 @@
-import { GhostSuggestionContext } from "../types"
+import { AutocompleteInput, PromptResult } from "../types"
 import { CURSOR_MARKER } from "../ghostConstants"
-import { formatDocumentWithCursor, getBaseSystemInstructions } from "./StrategyHelpers"
-import { isCommentLine, extractComment, cleanComment } from "./CommentHelpers"
+import { getBaseSystemInstructions } from "./StrategyHelpers"
+import { isCommentLine } from "./CommentHelpers"
 
 export class AutoTriggerStrategy {
-	shouldTreatAsComment(context: GhostSuggestionContext): boolean {
-		if (!context.document || !context.range) return false
+	/**
+	 * Determine if we should treat the current context as a comment
+	 * by checking if the line at cursor position looks like a comment
+	 */
+	shouldTreatAsComment(input: AutocompleteInput, prefix: string, languageId: string): boolean {
+		// Get the current line from the prefix
+		const lines = prefix.split("\n")
+		const currentLine = lines[lines.length - 1] || ""
+		const previousLine = lines.length > 1 ? lines[lines.length - 2].trim() : ""
 
-		const currentLine = context.document.lineAt(context.range.start.line).text
-		const previousLine =
-			context.range.start.line > 0 && context.document.lineAt(context.range.start.line - 1).text.trim()
-
-		if (isCommentLine(currentLine, context.document.languageId)) {
+		if (isCommentLine(currentLine, languageId)) {
 			return true
 		} else if (currentLine.trim() === "" && previousLine) {
-			return isCommentLine(previousLine, context.document.languageId)
+			return isCommentLine(previousLine, languageId)
 		} else {
 			return false
 		}
 	}
 
-	getPrompts(context: GhostSuggestionContext): {
-		systemPrompt: string
-		userPrompt: string
-	} {
-		if (this.shouldTreatAsComment(context)) {
-			return {
-				systemPrompt: this.getCommentsSystemInstructions(),
-				userPrompt: this.getCommentsUserPrompt(context),
-			}
-		} else {
-			return {
-				systemPrompt: this.getSystemInstructions(),
-				userPrompt: this.getUserPrompt(context),
-			}
+	/**
+	 * Generate prompts for autocomplete request
+	 * Returns PromptResult with system/user prompts and prefix/suffix
+	 */
+	getPrompts(input: AutocompleteInput, prefix: string, suffix: string, languageId: string): PromptResult {
+		const isComment = this.shouldTreatAsComment(input, prefix, languageId)
+
+		return {
+			systemPrompt: isComment ? this.getCommentsSystemInstructions() : this.getSystemInstructions(),
+			userPrompt: isComment
+				? this.getCommentsUserPrompt(input, prefix, suffix, languageId)
+				: this.getUserPrompt(input, prefix, suffix),
+			prefix,
+			suffix,
+			completionId: input.completionId,
 		}
 	}
 
@@ -50,32 +54,27 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 	/**
 	 * Build minimal prompt for auto-trigger
 	 */
-	getUserPrompt(context: GhostSuggestionContext): string {
+	getUserPrompt(input: AutocompleteInput, prefix: string, suffix: string): string {
 		let prompt = ""
 
 		// Start with recent typing context
-		if (context.recentOperations && context.recentOperations.length > 0) {
+		if (input.recentlyEditedRanges && input.recentlyEditedRanges.length > 0) {
 			prompt += "## Recent Typing\n"
-			context.recentOperations.forEach((op, index) => {
-				prompt += `${index + 1}. ${op.description}\n`
+			input.recentlyEditedRanges.forEach((range, index) => {
+				const description = `Edited ${range.filepath} at line ${range.range.start.line}`
+				prompt += `${index + 1}. ${description}\n`
 			})
 			prompt += "\n"
 		}
 
 		// Add current position
-		if (context.range && context.document) {
-			const line = context.range.start.line + 1
-			const char = context.range.start.character + 1
-			prompt += `## Current Position\n`
-			prompt += `Line ${line}, Character ${char}\n\n`
-		}
+		prompt += `## Current Position\n`
+		prompt += `Line ${input.pos.line + 1}, Character ${input.pos.character + 1}\n\n`
 
-		// Add the full document with cursor marker
-		if (context.document) {
-			prompt += "## Full Code\n"
-			prompt += formatDocumentWithCursor(context.document, context.range)
-			prompt += "\n\n"
-		}
+		// Add the full code with cursor marker
+		prompt += "## Full Code\n"
+		prompt += prefix + CURSOR_MARKER + suffix
+		prompt += "\n\n"
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
@@ -127,23 +126,32 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 		)
 	}
 
-	getCommentsUserPrompt(context: GhostSuggestionContext): string {
-		if (!context.document || !context.range) {
-			return "No context available for comment-driven generation."
+	getCommentsUserPrompt(input: AutocompleteInput, prefix: string, suffix: string, languageId: string): string {
+		// Extract the comment from the prefix
+		const lines = prefix.split("\n")
+		const currentLine = lines[lines.length - 1] || ""
+		const previousLine = lines.length > 1 ? lines[lines.length - 2] : ""
+
+		// Get the comment line (either current or previous)
+		let commentLine = ""
+		if (isCommentLine(currentLine, languageId)) {
+			commentLine = currentLine
+		} else if (currentLine.trim() === "" && isCommentLine(previousLine, languageId)) {
+			commentLine = previousLine
 		}
 
-		const language = context.document.languageId
-		const comment = cleanComment(extractComment(context.document, context.range.start.line), language)
+		// Clean the comment (remove comment markers)
+		const comment = this.cleanCommentForLanguage(commentLine, languageId)
 
 		let prompt = `## Comment-Driven Development
-- Language: ${language}
+- Language: ${languageId}
 - Comment to Implement:
 \`\`\`
 ${comment}
 \`\`\`
 
 ## Full Code
-${formatDocumentWithCursor(context.document, context.range)}
+${prefix}${CURSOR_MARKER}${suffix}
 
 ## Instructions
 Generate code that implements the functionality described in the comment.
@@ -151,5 +159,21 @@ The code should be placed at the cursor position (${CURSOR_MARKER}).
 Focus on implementing exactly what the comment describes.
 `
 		return prompt
+	}
+
+	/**
+	 * Clean comment markers from a comment line
+	 */
+	private cleanCommentForLanguage(commentLine: string, languageId: string): string {
+		let cleaned = commentLine.trim()
+
+		// Remove common comment markers
+		const patterns = [/^\/\/\s*/, /^\/\*\s*/, /\s*\*\/$/, /^#\s*/, /^--\s*/, /^<!--\s*/, /\s*-->$/]
+
+		for (const pattern of patterns) {
+			cleaned = cleaned.replace(pattern, "")
+		}
+
+		return cleaned.trim()
 	}
 }

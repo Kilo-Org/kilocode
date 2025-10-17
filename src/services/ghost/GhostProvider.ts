@@ -7,7 +7,7 @@ import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionContext } from "./types"
+import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
@@ -270,7 +270,19 @@ export class GhostProvider {
 		this.isRequestCancelled = false
 
 		const context = await this.ghostContext.generate(initialContext)
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
+
+		// Convert to AutocompleteInput format
+		const autocompleteInput = contextToAutocompleteInput(context)
+		const { prefix, suffix } = extractPrefixSuffix(
+			context.document,
+			context.range?.start ?? context.document.positionAt(0),
+		)
+		const languageId = context.document.languageId
+
+		// Get prompts using new signature
+		const promptResult = this.autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
+		const { systemPrompt, userPrompt } = promptResult
+
 		if (this.isRequestCancelled) {
 			return
 		}
