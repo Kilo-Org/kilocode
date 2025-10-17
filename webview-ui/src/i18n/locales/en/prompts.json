@@ -1,0 +1,223 @@
+{
+	"title": "Modes",
+	"done": "Done",
+	"modes": {
+		"title": "Modes",
+		"createNewMode": "Create new mode",
+		"importMode": "Import Mode",
+		"editModesConfig": "Edit modes configuration",
+		"editGlobalModes": "Edit Global Modes",
+		"editProjectModes": "Edit Project Modes (.kilocodemodes)",
+		"createModeHelpText": "Modes are specialized personas that tailor Kilo Code's behavior. <0>Learn about Using Modes</0> or <1>Customizing Modes.</1>",
+		"selectMode": "Search modes",
+		"noMatchFound": "No modes found"
+	},
+	"apiConfiguration": {
+		"title": "API Configuration",
+		"select": "Select which API configuration to use for this mode"
+	},
+	"organizationMode": {
+		"title": "Organization Mode",
+		"description": "This mode is provided by your organization and cannot be edited here. To modify this mode, please visit the Kilo Code Dashboard.",
+		"cannotEdit": "Organization modes cannot be edited"
+	},
+	"tools": {
+		"title": "Available Tools",
+		"builtInModesText": "Tools for built-in modes cannot be modified",
+		"editTools": "Edit tools",
+		"doneEditing": "Done editing",
+		"allowedFiles": "Allowed files:",
+		"toolNames": {
+			"read": "Read Files",
+			"edit": "Edit Files",
+			"browser": "Use Browser",
+			"command": "Run Commands",
+			"mcp": "Use MCP"
+		},
+		"noTools": "None"
+	},
+	"roleDefinition": {
+		"title": "Role Definition",
+		"resetToDefault": "Reset to default",
+		"description": "Define Kilo Code's expertise and personality for this mode. This description shapes how Kilo Code presents itself and approaches tasks."
+	},
+	"description": {
+		"title": "Short description (for humans)",
+		"resetToDefault": "Reset to default description",
+		"description": "A brief description shown in the mode selector dropdown."
+	},
+	"whenToUse": {
+		"title": "When to Use (optional)",
+		"description": "Guidance for Kilo Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task.",
+		"resetToDefault": "Reset to default 'When to Use' description"
+	},
+	"customInstructions": {
+		"title": "Mode-specific Custom Instructions (optional)",
+		"resetToDefault": "Reset to default",
+		"description": "Add behavioral guidelines specific to {{modeName}} mode.",
+		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.kilocode/rules-{{slug}}/</span> folder in your workspace or from the global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} and .clinerules-{{slug}} are deprecated and will stop working soon)."
+	},
+	"exportMode": {
+		"title": "Export Mode",
+		"description": "Export this mode with rules from the .kilocode/rules-{{slug}}/ folder combined into a shareable YAML file. The original files remain unchanged.",
+		"exporting": "Exporting..."
+	},
+	"importMode": {
+		"selectLevel": "Choose where to import this mode:",
+		"import": "Import",
+		"importing": "Importing...",
+		"global": {
+			"label": "Global Level",
+			"description": "Available across all projects. If the exported mode contained rules files, they will be recreated in the global .kilocode/rules-{slug}/ folder."
+		},
+		"project": {
+			"label": "Project Level",
+			"description": "Only available in this workspace. If the exported mode contained rules files, they will be recreated in .kilocode/rules-{slug}/ folder."
+		}
+	},
+	"advanced": {
+		"title": "Advanced: Override System Prompt"
+	},
+	"globalCustomInstructions": {
+		"title": "Custom Instructions for All Modes",
+		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below. <0>Learn more</0>",
+		"loadFromFile": "Instructions can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace or from the global <0>.kilocode/rules/</0> (.kilocoderules and .clinerules are deprecated and will stop working soon)."
+	},
+	"systemPrompt": {
+		"preview": "Preview System Prompt",
+		"copy": "Copy system prompt to clipboard",
+		"title": "System Prompt ({{modeName}} mode)"
+	},
+	"supportPrompts": {
+		"title": "Support Prompts",
+		"resetPrompt": "Reset {{promptType}} prompt to default",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API Configuration",
+			"apiConfigDescription": "You can select an API configuration to always use for enhancing prompts, or just use whatever is currently selected",
+			"useCurrentConfig": "Use currently selected API configuration",
+			"testPromptPlaceholder": "Enter a prompt to test the enhancement",
+			"previewButton": "Preview Prompt Enhancement",
+			"testEnhancement": "Test Enhancement",
+			"includeTaskHistory": "Include task history as context",
+			"includeTaskHistoryDescription": "When enabled, the last 10 messages from the current conversation will be included as context when enhancing prompts, helping to generate more relevant and context-aware suggestions."
+		},
+		"condense": {
+			"apiConfiguration": "API Configuration for Context Condensing",
+			"apiConfigDescription": "Select which API configuration to use for context condensing operations. Leave unselected to use the current active configuration.",
+			"useCurrentConfig": "Use currently selected API configuration"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Enhance Prompt",
+				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Kilo Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
+			},
+			"CONDENSE": {
+				"label": "Context Condensing",
+				"description": "Configure how conversation context is condensed to manage token limits. This prompt is used for both manual and automatic context condensing operations."
+			},
+			"EXPLAIN": {
+				"label": "Explain Code",
+				"description": "Get detailed explanations of code snippets, functions, or entire files. Useful for understanding complex code or learning new patterns. Available in code actions (lightbulb icon in the editor) and the editor context menu (right-click on selected code)."
+			},
+			"FIX": {
+				"label": "Fix Issues",
+				"description": "Get help identifying and resolving bugs, errors, or code quality issues. Provides step-by-step guidance for fixing problems. Available in code actions (lightbulb icon in the editor) and the editor context menu (right-click on selected code)."
+			},
+			"IMPROVE": {
+				"label": "Improve Code",
+				"description": "Receive suggestions for code optimization, better practices, and architectural improvements while maintaining functionality. Available in code actions (lightbulb icon in the editor) and the editor context menu (right-click on selected code)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Add to Context",
+				"description": "Add context to your current task or conversation. Useful for providing additional information or clarifications. Available in code actions (lightbulb icon in the editor) and the editor context menu (right-click on selected code)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Add Terminal Content to Context",
+				"description": "Add terminal output to your current task or conversation. Useful for providing command outputs or logs. Available in the terminal context menu (right-click on selected terminal content)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Fix Terminal Command",
+				"description": "Get help fixing terminal commands that failed or need improvement. Available in the terminal context menu (right-click on selected terminal content)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Explain Terminal Command",
+				"description": "Get detailed explanations of terminal commands and their outputs. Available in the terminal context menu (right-click on selected terminal content)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generate terminal command",
+				"description": "Help generate terminal commands based on description."
+			},
+			"NEW_TASK": {
+				"label": "Start New Task",
+				"description": "Start a new task with user input. Available in the Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Message Generation",
+				"description": "Generate descriptive commit messages based on your staged git changes. Customize the prompt to generate messages that follow your repository's best practices."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Advanced: Override System Prompt",
+		"description": "<2>⚠️ Warning:</2> This advanced feature bypasses safeguards. <1>READ THIS BEFORE USING!</1>Override the default system prompt by creating a file at <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Create New Mode",
+		"close": "Close",
+		"name": {
+			"label": "Name",
+			"placeholder": "Enter mode name"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "The slug is used in URLs and file names. It should be lowercase and contain only letters, numbers, and hyphens."
+		},
+		"saveLocation": {
+			"label": "Save Location",
+			"description": "Choose where to save this mode. Project-specific modes take precedence over global modes.",
+			"global": {
+				"label": "Global",
+				"description": "Available in all workspaces"
+			},
+			"project": {
+				"label": "Project-specific (.kilocodemodes)",
+				"description": "Only available in this workspace, takes precedence over global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Role Definition",
+			"description": "Define Kilo Code's expertise and personality for this mode."
+		},
+		"description": {
+			"label": "Short description (for humans)",
+			"description": "A brief description shown in the mode selector dropdown."
+		},
+		"whenToUse": {
+			"label": "When to Use (optional)",
+			"description": "Guidance for Kilo Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task."
+		},
+		"tools": {
+			"label": "Available Tools",
+			"description": "Select which tools this mode can use."
+		},
+		"customInstructions": {
+			"label": "Custom Instructions (optional)",
+			"description": "Add behavioral guidelines specific to this mode."
+		},
+		"buttons": {
+			"cancel": "Cancel",
+			"create": "Create Mode"
+		},
+		"deleteMode": "Delete mode"
+	},
+	"allFiles": "all files",
+	"deleteMode": {
+		"title": "Delete Mode",
+		"message": "Are you sure you want to delete the mode \"{{modeName}}\"?",
+		"rulesFolder": "This mode has a rules folder at {{folderPath}} that will also be deleted.",
+		"descriptionNoRules": "Are you sure you want to delete this custom mode?",
+		"confirm": "Delete",
+		"cancel": "Cancel"
+	}
+}

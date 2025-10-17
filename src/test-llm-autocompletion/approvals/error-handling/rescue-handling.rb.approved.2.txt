@@ -1,0 +1,5 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		rescue JSON::ParserError => e
+		<<<AUTOCOMPLETE_HERE>>>

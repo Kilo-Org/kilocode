@@ -1,0 +1,1012 @@
+{
+	"common": {
+		"save": "حفظ",
+		"done": "تم",
+		"cancel": "إلغاء",
+		"reset": "إعادة ضبط",
+		"select": "اختيار",
+		"add": "إضافة رأس",
+		"remove": "إزالة"
+	},
+	"header": {
+		"title": "الإعدادات",
+		"saveButtonTooltip": "حفظ التغييرات",
+		"nothingChangedTooltip": "ما صار أي تغيير",
+		"doneButtonTooltip": "تجاهل التغييرات غير المحفوظة وإغلاق اللوحة"
+	},
+	"unsavedChangesDialog": {
+		"title": "تغييرات غير محفوظة",
+		"description": "تبي تتجاهل التغييرات وتكمل؟",
+		"cancelButton": "إلغاء",
+		"discardButton": "تجاهل التغييرات"
+	},
+	"sections": {
+		"providers": "المزوّدون",
+		"autoApprove": "الموافقة التلقائية",
+		"browser": "المتصفح",
+		"checkpoints": "نقاط الحفظ",
+		"display": "العرض",
+		"notifications": "الإشعارات",
+		"contextManagement": "السياق",
+		"terminal": "الطرفية",
+		"slashCommands": "أوامر الشرطة المائلة",
+		"prompts": "الموجهات",
+		"ui": "واجهة المستخدم",
+		"experimental": "تجريبي",
+		"language": "اللغة",
+		"about": "عن Kilo Code"
+	},
+	"slashCommands": {
+		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "طوي رسائل التفكير افتراضياً",
+			"description": "عند التفعيل، ستكون كتل التفكير مطوية افتراضياً حتى تتفاعل معها"
+		}
+	},
+	"prompts": {
+		"description": "اضبط الموجهات المساعدة لعمليات مثل تحسين الموجه وشرح الكود وإصلاح المشاكل. هذي الموجهات تساعد Kilo Code يقدّم دعم أفضل للمهام المتكررة."
+	},
+	"codeIndex": {
+		"title": "فهرسة قاعدة الكود",
+		"description": "اضبط إعدادات فهرسة الكود لتمكين البحث الدلالي في مشروعك. <0>تعرف أكثر</0>",
+		"statusTitle": "الحالة",
+		"enableLabel": "تفعيل فهرسة الكود",
+		"enableDescription": "تفعيل فهرسة الكود لتحسين البحث وفهم السياق",
+		"settingsTitle": "إعدادات الفهرسة",
+		"disabledMessage": "فهرسة الكود معطلة حاليًا. فعّلها في الإعدادات العامة لضبط خيارات الفهرسة.",
+		"profileLabel": "موفّر التضمين",
+		"embedderProviderLabel": "موفّر التضمين",
+		"selectProfilePlaceholder": "اختر المزوّد",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"geminiProvider": "Gemini",
+		"geminiApiKeyLabel": "مفتاح API:",
+		"geminiApiKeyPlaceholder": "أدخل مفتاح Gemini API",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "مفتاح API:",
+		"mistralApiKeyPlaceholder": "أدخل مفتاح Mistral API",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "مفتاح API",
+		"vercelAiGatewayApiKeyPlaceholder": "أدخل مفتاح Vercel AI Gateway API",
+		"openaiCompatibleProvider": "متوافق مع OpenAI",
+		"openAiKeyLabel": "مفتاح OpenAI API",
+		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
+		"openAiCompatibleBaseUrlLabel": "الرابط الأساسي",
+		"openAiCompatibleApiKeyLabel": "مفتاح API",
+		"openAiCompatibleApiKeyPlaceholder": "أدخل مفتاح API",
+		"openAiCompatibleModelDimensionLabel": "بُعد التضمين:",
+		"modelDimensionLabel": "بُعد النموذج",
+		"openAiCompatibleModelDimensionPlaceholder": "مثال: 1536",
+		"openAiCompatibleModelDimensionDescription": "بُعد التضمين (حجم المخرجات) لنموذجك. راجع توثيق المزوّد لهذه القيمة. القيم الشائعة: 384، 768، 1536، 3072.",
+		"modelLabel": "النموذج",
+		"modelPlaceholder": "أدخل اسم النموذج",
+		"selectModel": "اختر نموذج",
+		"selectModelPlaceholder": "اختر نموذج",
+		"ollamaUrlLabel": "رابط Ollama:",
+		"ollamaBaseUrlLabel": "رابط Ollama الأساسي",
+		"qdrantUrlLabel": "رابط Qdrant",
+		"qdrantKeyLabel": "مفتاح Qdrant:",
+		"qdrantApiKeyLabel": "مفتاح Qdrant API",
+		"qdrantApiKeyPlaceholder": "أدخل مفتاح Qdrant API (اختياري)",
+		"setupConfigLabel": "الإعداد",
+		"advancedConfigLabel": "الإعدادات المتقدمة",
+		"searchMinScoreLabel": "حد نقاط البحث",
+		"searchMinScoreDescription": "أدنى نقاط التشابه (0.0-1.0) المطلوبة للنتائج. القيم الأقل تعطي نتائج أكثر لكن قد تكون أقل صلة. القيم الأعلى تعطي نتائج أقل لكن أكثر صلة.",
+		"searchMinScoreResetTooltip": "إعادة للقيمة الافتراضية (0.4)",
+		"searchMaxResultsLabel": "أقصى نتائج البحث",
+		"searchMaxResultsDescription": "أقصى عدد نتائج البحث المُعادة عند الاستعلام عن فهرس الكود. القيم الأعلى توفر سياق أكثر لكن قد تشمل نتائج أقل صلة.",
+		"resetToDefault": "إعادة للافتراضي",
+		"startIndexingButton": "ابدأ الفهرسة",
+		"clearIndexDataButton": "مسح بيانات الفهرسة",
+		"unsavedSettingsMessage": "احفظ الإعدادات قبل بدء الفهرسة.",
+		"clearDataDialog": {
+			"title": "متأكد؟",
+			"description": "العملية غير قابلة للتراجع. هذا يمسح بيانات الفهرسة نهائيًا.",
+			"cancelButton": "إلغاء",
+			"confirmButton": "مسح البيانات"
+		},
+		"ollamaUrlPlaceholder": "http://localhost:11434",
+		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
+		"modelDimensionPlaceholder": "1536",
+		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"saveError": "فشل في حفظ الإعدادات",
+		"modelDimensions": "({{dimension}} أبعاد)",
+		"saveSuccess": "تم حفظ الإعدادات بنجاح",
+		"saving": "جارٍ الحفظ...",
+		"saveSettings": "حفظ",
+		"indexingStatuses": {
+			"standby": "في الانتظار",
+			"indexing": "جارٍ الفهرسة",
+			"indexed": "مُفهرس",
+			"error": "خطأ"
+		},
+		"close": "إغلاق",
+		"validation": {
+			"qdrantUrlRequired": "رابط Qdrant مطلوب",
+			"invalidQdrantUrl": "رابط Qdrant غير صالح",
+			"invalidOllamaUrl": "رابط Ollama غير صالح",
+			"invalidBaseUrl": "رابط أساسي غير صالح",
+			"openaiApiKeyRequired": "مفتاح OpenAI API مطلوب",
+			"modelSelectionRequired": "اختيار النموذج مطلوب",
+			"apiKeyRequired": "مفتاح API مطلوب",
+			"modelIdRequired": "معرّف النموذج مطلوب",
+			"modelDimensionRequired": "بُعد النموذج مطلوب",
+			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
+			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
+			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
+			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
+			"baseUrlRequired": "الرابط الأساسي مطلوب",
+			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
+		},
+		"cancelling": "جارٍ الإلغاء...",
+		"cancelIndexingButton": "إلغاء الفهرسة"
+	},
+	"autoApproval": {
+		"title": "الموافقة التلقائية",
+		"description": "السماح لـ Kilo Code بتنفيذ العمليات تلقائيًا بدون طلب الموافقة. فعّل هذه الإعدادات فقط إذا كنت تثق بالذكاء الاصطناعي تمامًا وتفهم المخاطر الأمنية المرتبطة."
+	},
+	"autoApprove": {
+		"description": "خلّ Kilo Code ينفذ العمليات تلقائيًا بدون موافقة. فعّلها فقط إذا كنت واثق من الأمان.",
+		"toggleShortcut": "تقدر تضبط اختصار لوحة مفاتيح لهذا الإعداد <SettingsLink>في تفضيلات IDE</SettingsLink>.",
+		"enabled": "الموافقة التلقائية مفعلة",
+		"readOnly": {
+			"label": "قراءة",
+			"description": "يسمح لـ Kilo Code يعرض المجلدات ويقرأ الملفات تلقائي.",
+			"outsideWorkspace": {
+				"label": "تشمل الملفات خارج المشروع",
+				"description": "اسمح لـ Kilo Code يقرأ ملفات برّا مساحة العمل بدون موافقة."
+			}
+		},
+		"write": {
+			"label": "كتابة",
+			"description": "إنشاء وتعديل الملفات تلقائيًا",
+			"delayLabel": "تأخير بعد الكتابة لفحص المشاكل",
+			"outsideWorkspace": {
+				"label": "تشمل الملفات خارج المشروع",
+				"description": "اسمح لـ Kilo Code يعدل ملفات خارج مساحة العمل بدون موافقة."
+			},
+			"protected": {
+				"label": "تشمل الملفات المحمية",
+				"description": "اسمح لـ Kilo Code يعدل ملفات إعدادات مصغرة بدون موافقة."
+			}
+		},
+		"browser": {
+			"label": "المتصفح",
+			"description": "تنفيذ إجراءات المتصبح تلقائيًا (للنماذج الداعمة)"
+		},
+		"retry": {
+			"label": "إعادة المحاولة",
+			"description": "إعادة محاولة طلبات API الفاشلة تلقائيًا",
+			"delayLabel": "تأخير قبل الإعادة"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "الموافقة التلقائية لأدوات MCP الفردية في عرض الخوادم"
+		},
+		"modeSwitch": {
+			"label": "النمط",
+			"description": "تبديل الأنماط تلقائيًا بدون موافقة"
+		},
+		"subtasks": {
+			"label": "المهام الفرعية",
+			"description": "إنشاء وإنهاء المهام الفرعية تلقائيًا"
+		},
+		"followupQuestions": {
+			"label": "الأسئلة",
+			"description": "اختيار الإجابة الأولى المقترحة تلقائيًا بعد المهلة المحددة",
+			"timeoutLabel": "وقت الانتظار قبل الاختيار التلقائي للإجابة الأولى"
+		},
+		"execute": {
+			"label": "تشغيل",
+			"description": "تنفيذ أوامر الطرفية المسموحة تلقائيًا",
+			"allowedCommands": "أوامر التنفيذ التلقائي المسموحة",
+			"allowedCommandsDescription": "بادئات الأوامر المسموح بها عند تفعيل \"الموافقة الدائمة على التنفيذ\". أضف * للسماح بكل الأوامر (بحذر).",
+			"deniedCommands": "الأوامر المرفوضة",
+			"deniedCommandsDescription": "بادئات الأوامر التي سيتم رفضها تلقائيًا بدون طلب الموافقة. في حالة التعارض مع الأوامر المسموحة، تأخذ أطول بادئة مطابقة الأولوية. أضف * لرفض جميع الأوامر.",
+			"commandPlaceholder": "أدخل بادئة الأمر (مثال: 'git ')",
+			"deniedCommandPlaceholder": "أدخل بادئة الأمر المرفوض (مثال: 'rm -rf')",
+			"addButton": "إضافة",
+			"autoDenied": "الأوامر التي تبدأ بـ `{{prefix}}` محظورة من قبل المستخدم. لا تتجاوز هذا القيد بتشغيل أمر آخر."
+		},
+		"showMenu": {
+			"label": "إظهار قائمة الموافقة التلقائية في عرض المحادثة",
+			"description": "عند التفعيل، ستظهر قائمة الموافقة التلقائية في أسفل عرض المحادثة، مما يتيح الوصول السريع لإعدادات الموافقة التلقائية"
+		},
+		"updateTodoList": {
+			"label": "المهام",
+			"description": "تحديث قائمة المهام تلقائيًا بدون موافقة"
+		},
+		"apiRequestLimit": {
+			"title": "أقصى الطلبات",
+			"unlimited": "غير محدود"
+		},
+		"apiCostLimit": {
+			"title": "أقصى تكلفة",
+			"unlimited": "غير محدود"
+		},
+		"maxLimits": {
+			"description": "تنفيذ الطلبات تلقائيًا حتى هذه الحدود قبل طلب الموافقة للمتابعة."
+		},
+		"toggleAriaLabel": "تبديل الموافقة التلقائية",
+		"disabledAriaLabel": "الbaughة التلقائية معطلة - اختر الخيارات أولاً",
+		"selectOptionsFirst": "اختر خيار واحد على الأقل أدناه لتفعيل الموافقة التلقائية"
+	},
+	"providers": {
+		"providerDocumentation": "توثيق {{provider}}",
+		"configProfile": "ملف الإعداد",
+		"description": "احفظ إعدادات متعددة للتبديل السريع بين مزوّدين ونماذج.",
+		"apiProvider": "مزود API",
+		"model": "النموذج",
+		"nameEmpty": "الاسم ما يصير فاضي",
+		"nameExists": "الاسم مستخدم مسبقًا",
+		"deleteProfile": "حذف الملف",
+		"invalidArnFormat": "تنسيق ARN غير صالح.",
+		"enterNewName": "أدخل اسم جديد",
+		"addProfile": "إضافة ملف",
+		"renameProfile": "إعادة تسمية الملف",
+		"newProfile": "ملف إعداد جديد",
+		"enterProfileName": "اكتب اسم الملف",
+		"createProfile": "إنشاء الملف",
+		"cannotDeleteOnlyProfile": "ما تقدر تحذف الملف الوحيد",
+		"searchPlaceholder": "بحث في الملفات",
+		"searchProviderPlaceholder": "بحث في المزوّدين",
+		"noProviderMatchFound": "لم يتم العثور على مزوّدين",
+		"noMatchFound": "ما فيه ملفات مطابقة",
+		"vscodeLmDescription": "واجهة VS Code Language Model تسمح بتشغيل نماذج من إضافات أخرى مثل GitHub Copilot.",
+		"awsCustomArnUse": "أدخل ARN صحيح لنموذج Amazon Bedrock. أمثلة:",
+		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
+		"openRouterApiKey": "مفتاح OpenRouter",
+		"getOpenRouterApiKey": "احصل على المفتاح",
+		"vercelAiGatewayApiKey": "مفتاح Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "احصل على مفتاح Vercel AI Gateway",
+		"apiKeyStorageNotice": "المفاتيح تُحفظ بأمان في مخزن أسرار VSCode",
+		"glamaApiKey": "مفتاح Glama",
+		"getGlamaApiKey": "احصل على مفتاح Glama",
+		"useCustomBaseUrl": "استخدم رابط أساسي مخصص",
+		"useReasoning": "تفعيل الـ Reasoning",
+		"useHostHeader": "استخدم ترويسة Host مخصصة",
+		"useLegacyFormat": "استخدم تنسيق OpenAI القديم",
+		"customHeaders": "ترويسات مخصصة",
+		"headerName": "اسم الترويسة",
+		"headerValue": "قيمة الترويسة",
+		"noCustomHeaders": "ما فيه ترويسات. اضغط + لإضافة واحدة.",
+		"requestyApiKey": "مفتاح Requesty",
+		"refreshModels": {
+			"label": "تحديث النماذج",
+			"hint": "أعد فتح الإعدادات لرؤية النماذج الجديدة.",
+			"loading": "جاري تحديث القائمة...",
+			"success": "تم التحديث!",
+			"error": "فشل التحديث. جرّب مرة ثانية."
+		},
+		"getRequestyApiKey": "احصل على مفتاح Requesty",
+		"getRequestyBaseUrl": "رابط الأساس",
+		"requestyUseCustomBaseUrl": "استخدم رابط أساس مخصص",
+		"openRouterTransformsText": "ضغط الموجهات لتناسب حجم السياق (<a>OpenRouter Transforms</a>)",
+		"anthropicApiKey": "مفتاح Anthropic",
+		"getAnthropicApiKey": "احصل على مفتاح Anthropic",
+		"anthropicUseAuthToken": "إرسال المفتاح في ترويسة Authorization بدل X-Api-Key",
+		"anthropic1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"anthropic1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "تفعيل نافذة السياق 1 مليون (Beta)",
+		"awsBedrock1MContextBetaDescription": "توسيع نافذة السياق إلى مليون رمز لـ Claude Sonnet 4",
+		"cerebrasApiKey": "مفتاح Cerebras API",
+		"getCerebrasApiKey": "احصل على مفتاح Cerebras API",
+		"chutesApiKey": "مفتاح Chutes",
+		"getChutesApiKey": "احصل على مفتاح Chutes",
+		"ioIntelligenceApiKey": "مفتاح IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "أدخل مفتاح IO Intelligence API",
+		"getIoIntelligenceApiKey": "احصل على مفتاح IO Intelligence",
+		"deepSeekApiKey": "مفتاح DeepSeek",
+		"getDeepSeekApiKey": "احصل على مفتاح DeepSeek",
+		"doubaoApiKey": "مفتاح Doubao",
+		"getDoubaoApiKey": "احصل على مفتاح Doubao",
+		"featherlessApiKey": "مفتاح Featherless API",
+		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
+		"fireworksApiKey": "مفتاح Fireworks",
+		"getFireworksApiKey": "احصل على مفتاح Fireworks",
+		"syntheticApiKey": "مفتاح Synthetic API",
+		"getSyntheticApiKey": "احصل على مفتاح Synthetic API",
+		"zaiApiKey": "مفتاح Z.AI",
+		"getZaiApiKey": "احصل على مفتاح Z.AI",
+		"moonshotApiKey": "مفتاح Moonshot",
+		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
+		"moonshotBaseUrl": "نقطة دخول Moonshot",
+		"zaiEntrypoint": "نقطة دخول Z AI",
+		"zaiEntrypointDescription": "يرجى اختيار نقطة دخول API المناسبة حسب موقعك. إذا كنت في الصين، اختر open.bigmodel.cn. وإلا، اختر api.z.ai.",
+		"geminiApiKey": "مفتاح Gemini",
+		"getGroqApiKey": "احصل على مفتاح Groq",
+		"groqApiKey": "مفتاح Groq",
+		"getSambaNovaApiKey": "احصل على مفتاح SambaNova",
+		"sambaNovaApiKey": "مفتاح SambaNova",
+		"getGeminiApiKey": "احصل على مفتاح Gemini",
+		"openAiApiKey": "مفتاح OpenAI",
+		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
+		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"getOvhCloudAiEndpointsApiKey": "احصل على مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL الأساسي",
+		"getOvhCloudAiEndpointsBaseUrl": "استخدام URL أساسي مخصص",
+		"huggingFaceModelId": "معرّف النموذج",
+		"huggingFaceLoading": "جارٍ التحميل...",
+		"huggingFaceModelsCount": "({{count}} نموذج)",
+		"huggingFaceSelectModel": "اختر نموذج...",
+		"huggingFaceSearchModels": "البحث في النماذج...",
+		"huggingFaceNoModelsFound": "لم يتم العثور على نماذج",
+		"huggingFaceProvider": "المزوّد",
+		"huggingFaceProviderAuto": "تلقائي",
+		"huggingFaceSelectProvider": "اختر مزوّد...",
+		"huggingFaceSearchProviders": "البحث في المزوّدين...",
+		"huggingFaceNoProvidersFound": "لم يتم العثور على مزوّدين",
+		"awsApiKey": "مفتاح Amazon Bedrock API",
+		"apiKey": "مفتاح API",
+		"anthropic": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ Anthropic API (اختياري)"
+		},
+		"openai": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenAI API (اختياري)"
+		},
+		"openrouter": {
+			"baseUrl": "الرابط الأساسي",
+			"baseUrlDescription": "رابط أساسي مخصص لـ OpenRouter API (اختياري)"
+		},
+		"openAiBaseUrl": "الرابط الأساسي",
+		"getOpenAiApiKey": "احصل على مفتاح OpenAI",
+		"mistralApiKey": "مفتاح Mistral",
+		"getMistralApiKey": "احصل على مفتاح Mistral/Codestral",
+		"codestralBaseUrl": "رابط Codestral الأساسي (اختياري)",
+		"codestralBaseUrlDesc": "يمكنك تعيين رابط بديل لنموذج Codestral.",
+		"xaiApiKey": "مفتاح xAI",
+		"getXaiApiKey": "احصل على مفتاح xAI",
+		"litellmApiKey": "مفتاح LiteLLM",
+		"litellmBaseUrl": "رابط LiteLLM الأساسي",
+		"awsCredentials": "بيانات اعتماد AWS",
+		"awsProfile": "ملف AWS",
+		"awsProfileName": "اسم ملف AWS",
+		"awsAccessKey": "مفتاح الوصول",
+		"awsSecretKey": "المفتاح السري",
+		"awsSessionToken": "رمز الجلسة",
+		"awsRegion": "منطقة AWS",
+		"awsCrossRegion": "تمكين الاستدلال عبر المناطق",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "استخدام نقطة VPC مخصصة",
+			"vpcEndpointUrlPlaceholder": "اكتب رابط نقطة VPC (اختياري)",
+			"examples": "أمثلة:"
+		},
+		"enablePromptCaching": "تفعيل تخزين الموجهات",
+		"enablePromptCachingTitle": "تسريع الأداء وتقليل التكلفة.",
+		"cacheUsageNote": "إذا ما تشوف استخدام الكاش، اختر نموذج مختلف ثم ارجع.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "تفعيل سياق URL",
+				"description": "يسمح لـ Gemini بقراءة الصفحات المرتبطة لاستخراج ومقارنة وتجميع محتواها في ردود مدروسة."
+			},
+			"groundingSearch": {
+				"title": "تفعيل التأسيس مع بحث Google",
+				"description": "يربط Gemini ببيانات الويب الحية للحصول على إجابات دقيقة ومحدثة مع استشهادات قابلة للتحقق."
+			}
+		},
+		"vscodeLmModel": "نموذج اللغة",
+		"vscodeLmWarning": "الميزة تجريبية جدًا والدعم يختلف حسب المزوّد.",
+		"googleCloudSetup": {
+			"title": "لاستخدام Vertex AI:",
+			"step1": "1. فعل Vertex AI ونماذج Claude بالحساب.",
+			"step2": "2. ثبت Google Cloud CLI واضبط الاعتماد.",
+			"step3": "3. أو أنشئ حساب خدمة بمفاتيح."
+		},
+		"googleCloudCredentials": "بيانات اعتماد Google Cloud",
+		"googleCloudKeyFile": "مسار ملف المفتاح",
+		"googleCloudProjectId": "معرّف المشروع",
+		"googleCloudRegion": "المنطقة",
+		"lmStudio": {
+			"baseUrl": "الرابط الأساسي (اختياري)",
+			"modelId": "معرّف النموذج",
+			"speculativeDecoding": "تفعيل Speculative Decoding",
+			"draftModelId": "معرّف نموذج مسودة",
+			"draftModelDesc": "لازم يكون من نفس العائلة.",
+			"selectDraftModel": "اختر نموذج مسودة",
+			"noModelsFound": "ما فيه نماذج. تأكد LM Studio شغال بوضع السيرفر.",
+			"description": "LM Studio يشغّل نماذج محليًا. اتبع دليل البدء السريع. ملاحظة: أفضل أداء مع Claude."
+		},
+		"ollama": {
+			"baseUrl": "الرابط الأساسي (اختياري)",
+			"modelId": "معرّف النموذج",
+			"apiKey": "مفتاح API",
+			"apiKeyHelp": "مفتاح API اختياري لحالات Ollama المُصدَّقة أو الخدمات السحابية. اتركه فارغاً للتثبيتات المحلية.",
+			"numCtx": "حجم نافذة السياق (num_ctx)",
+			"numCtxHelp": "تجاوز حجم نافذة السياق الافتراضي للنموذج. اتركه فارغاً لاستخدام إعدادات Modelfile. الحد الأدنى 128.",
+			"apiKeyPlaceholder": "أدخل مفتاح API",
+			"apiKeyInfo": "سيتم إرسال مفتاح API في ترويسة Authorization",
+			"description": "Ollama يشغّل نماذج محليًا. راجع دليلهم.",
+			"warning": "ملاحظة: Kilo Code يعمل أفضل مع Claude. النماذج الضعيفة قد لا تؤدي المطلوب."
+		},
+		"unboundApiKey": "مفتاح Unbound",
+		"getUnboundApiKey": "احصل على مفتاح Unbound",
+		"unboundRefreshModelsSuccess": "تم تحديث قائمة النماذج!",
+		"unboundInvalidApiKey": "مفتاح غير صالح.",
+		"humanRelay": {
+			"description": "ما يحتاج مفتاح، لكن عليك تنسخ/تلصق بين المتصفح والإضافة.",
+			"instructions": "يطلع مربع حوار ينسخ الرسالة تلقائي. الصقها في ChatGPT أو Claude ثم انسخ الرد ورجعه."
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "توجيه مزوّد OpenRouter",
+				"description": "OpenRouter يوازن الطلبات على أفضل مزوّد. تقدر تختار مزوّد محدد.",
+				"learnMore": "تعرف أكثر"
+			}
+		},
+		"customModel": {
+			"capabilities": "اضبط قدرات وتسعير النموذج المتوافق مع OpenAI.",
+			"maxTokens": {
+				"label": "أقصى مخرجات التوكينات",
+				"description": "الحد الأقصى للتوكينات في الرد (-1 للسماح للسيرور يحدد)."
+			},
+			"contextWindow": {
+				"label": "حجم نافذة السياق",
+				"description": "إجمالي التوكينات (إدخال + إخراج) المدعومة."
+			},
+			"imageSupport": {
+				"label": "دعم الصور",
+				"description": "هل النموذج يفهم الصور؟"
+			},
+			"computerUse": {
+				"label": "استخدام الكمبيوتر",
+				"description": "هل النموذج يقدر يتفاعل مع المتصفح؟"
+			},
+			"promptCache": {
+				"label": "تخزين الموجهات",
+				"description": "هل النموذج يدعم تخزين الموجهات؟"
+			},
+			"pricing": {
+				"input": {
+					"label": "سعر الإدخال",
+					"description": "تكلفة كل مليون توكين إدخال."
+				},
+				"output": {
+					"label": "سعر المخرجات",
+					"description": "تكلفة كل مليون توكين مخرجات."
+				},
+				"cacheReads": {
+					"label": "سعر قراءة الكاش",
+					"description": "تكلفة قراءة من الكاش."
+				},
+				"cacheWrites": {
+					"label": "سعر كتابة الكاش",
+					"description": "تكلفة كتابة للكاش أول مرة."
+				}
+			},
+			"resetDefaults": "رجع للإعدادات الافتراضية"
+		},
+		"rateLimitSeconds": {
+			"label": "معدل الطلب",
+			"description": "أقل وقت بين طلبات API."
+		},
+		"consecutiveMistakeLimit": {
+			"label": "حد الأخطاء والتكرار",
+			"description": "عدد الأخطاء المتتالية أو الإجراءات المتكررة قبل إظهار حوار 'Kilo Code يواجه مشكلة'",
+			"unlimitedDescription": "إعادة المحاولة غير المحدودة مفعلة (المتابعة التلقائية). لن يظهر الحوار أبداً.",
+			"warning": "⚠️ تعيين القيمة إلى 0 يسمح بإعادة المحاولة غير المحدودة مما قد يستهلك استخدام API كبير"
+		},
+		"reasoningEffort": {
+			"label": "جهد الاستنتاج",
+			"minimal": "الحد الأدنى (الأسرع)",
+			"high": "عالي",
+			"medium": "متوسط",
+			"low": "منخفض"
+		},
+		"verbosity": {
+			"label": "مستوى التفصيل في المخرجات",
+			"high": "عالي",
+			"medium": "متوسط",
+			"low": "منخفض",
+			"description": "يتحكم في مدى تفصيل ردود النموذج. المستوى المنخفض ينتج إجابات مختصرة، بينما المستوى العالي يوفر شروحات شاملة."
+		},
+		"setReasoningLevel": "تفعيل جهد الاستنتاج",
+		"claudeCode": {
+			"pathLabel": "مسار Claude Code",
+			"description": "مسار CLI اختياري (الافتراضي 'claude').",
+			"placeholder": "الافتراضي: claude",
+			"maxTokensLabel": "أقصى توكنات المخرجات",
+			"maxTokensDescription": "الحد الأقصى لعدد توكنات المخرجات لردود Claude Code. الافتراضي هو 8000."
+		},
+		"geminiCli": {
+			"description": "يستخدم OAuth من أداة Gemini CLI ولا يحتاج مفاتيح.",
+			"oauthPath": "مسار بيانات OAuth (اختياري)",
+			"oauthPathDescription": "إذا تركته فاضي يستخدم المسار الافتراضي (~/.gemini/oauth_creds.json).",
+			"instructions": "إذا ما سجلت دخول، شغّل",
+			"instructionsContinued": "في الطرفية أولاً.",
+			"setupLink": "دليل إعداد Gemini CLI",
+			"requirementsTitle": "متطلبات مهمة",
+			"requirement1": "ثبت أداة Gemini CLI",
+			"requirement2": "سجل دخول بـ Google",
+			"requirement3": "يعمل مع حسابات Google الشخصية فقط",
+			"requirement4": "المصادقة تتم عبر OAuth",
+			"requirement5": "الأداة لازم تكون مثبتة ومُسجلة دخول",
+			"freeAccess": "طبقة مجانية عبر OAuth"
+		},
+		"io_intelligence": {
+			"name": "IO Intelligence",
+			"description": "ذكاء ميسور للمهام اليومية"
+		},
+		"requesty": {
+			"name": "Requesty",
+			"description": "مساعد ذكي سريع وموثوق"
+		},
+		"kilo_code_openrouter": {
+			"description": "الوصول لأكثر من 200 نموذج عبر OpenRouter بنافذة سياق 1 مليون"
+		},
+		"qwenCode": {
+			"oauthPath": "مسار بيانات OAuth (اختياري)",
+			"oauthPathDescription": "مسار ملف بيانات OAuth. اتركه فاضي لاستخدام المسار الافتراضي (~/.qwen/oauth_creds.json).",
+			"description": "يستخدم هذا المزوّد مصادقة OAuth من خدمة Qwen ولا يحتاج مفاتيح API.",
+			"instructions": "يرجى اتباع التوثيق الرسمي للحصول على ملف التخويل ووضعه في المسار المحدد.",
+			"setupLink": "توثيق Qwen الرسمي"
+		},
+		"roo": {
+			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
+			"connectButton": "اتصل بـ Roo Code Cloud"
+		}
+	},
+	"contextWindow": {
+		"description": "أقصى سياق محادثة",
+		"oneMillion": "1 مليون"
+	},
+	"maxTokens": {
+		"description": "أقصى طول إجابة"
+	},
+	"topP": {
+		"description": "تحكم في تنوع الإجابات"
+	},
+	"kiloRemoteControl": {
+		"description": "تفعيل التحكم عن بُعد للمهام"
+	},
+	"browser": {
+		"enable": {
+			"label": "تفعيل أداة المتصفح",
+			"description": "إذا تم التفعيل، Kilo Code يقدر يستخدم المتصفح مع النماذج الداعمة. <0>تعرف أكثر</0>"
+		},
+		"viewport": {
+			"label": "حجم العرض",
+			"description": "اختر حجم الشاشة لتفاعلات المتصفح.",
+			"options": {
+				"largeDesktop": "سطح مكتب كبير (1280×800)",
+				"smallDesktop": "سطح مكتب صغير (900×600)",
+				"tablet": "جهاز لوحي (768×1024)",
+				"mobile": "جوال (360×640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "جودة اللقطة",
+			"description": "اضبط جودة WebP للقطات. القيمة الأعلى أوضح لكن تزيد استهلاك التوكن."
+		},
+		"remote": {
+			"label": "استخدام اتصال متصفح بعيد",
+			"description": "اتصال بـ Chrome مع remote debugging.",
+			"urlPlaceholder": "رابط مخصص (مثال http://localhost:9222)",
+			"testButton": "اختبار الاتصال",
+			"testingButton": "جارٍ الاختبار...",
+			"instructions": "أدخل عنوان DevTools أو اتركه فاضي للاكتشاف التلقائي."
+		}
+	},
+	"checkpoints": {
+		"enable": {
+			"label": "تفعيل نقاط الحفظ التلقائية",
+			"description": "ينشئ نقاط حفظ آليًا أثناء التنفيذ. <0>تعرف أكثر</0>"
+		}
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "إظهار خط الزمن للمهمة",
+			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		},
+		"costThreshold": {
+			"label": "إخفاء التكلفة أقل من الحد الأدنى",
+			"currentValue": "الحد الحالي: ${{value}}",
+			"description": "إظهار تكاليف الطلب فقط عندما تتجاوز هذا المبلغ. التكاليف تكون مرئية دائمًا عندما تكون لوحة التفاصيل مفتوحة."
+		},
+		"showTimestamps": {
+			"label": "إظهار الطوابع الزمنية",
+			"description": "إظهار الطابع الزمني لكل رسالة في عرض المحادثة"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "إظهار الحركة في الهامش عند الإكمال التلقائي",
+			"description": "عرض مؤشر متحرك في هامش المحرر عند تشغيل الإكمال التلقائي",
+			"preview": "معاينة الحركة"
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "تفعيل الصوتيات",
+			"description": "يشغّل مؤثرات صوتية.",
+			"volumeLabel": "المستوى"
+		},
+		"tts": {
+			"label": "تفعيل النص إلى كلام",
+			"description": "يقرأ ردود Kilo Code بصوت عالٍ.",
+			"speedLabel": "السرعة"
+		}
+	},
+	"contextManagement": {
+		"description": "تحكّم بالمعلومات المُدرجة في سياق الذكاء.",
+		"autoCondenseContextPercent": {
+			"label": "نسبة تشغيل التلخيص الذكي",
+			"description": "عند الوصول لهذه النسبة، يختصر Kilo Code السياق."
+		},
+		"condensingApiConfiguration": {
+			"label": "إعداد API للتلخيص",
+			"description": "اختر إعداد API للتلخيص أو اترك الحالي.",
+			"useCurrentConfig": "الافتراضي"
+		},
+		"customCondensingPrompt": {
+			"label": "موجه تلخيص مخصص",
+			"description": "اكتب موجه مخصص للتلخيص (أو اتركه فاضي).",
+			"placeholder": "اكتب موجه التلخيص هنا...\n\nنفس هيكل الموجه الافتراضي يمكن استخدامه:",
+			"reset": "رجوع للافتراضي",
+			"hint": "فارغ = الافتراضي"
+		},
+		"autoCondenseContext": {
+			"name": "تشغيل التلخيص الذكي تلقائيًا",
+			"description": "عند التفعيل، يتم التلخيص تلقائيًا. إذا عطّلت، تقدر تشغله يدويًا."
+		},
+		"openTabs": {
+			"label": "حد تبويبات السياق",
+			"description": "أقصى عدد تبويبات VSCode المضافة للسياق."
+		},
+		"workspaceFiles": {
+			"label": "حد ملفات المشروع",
+			"description": "أقصى عدد ملفات تُدرج من المجلد الحالي."
+		},
+		"rooignore": {
+			"label": "إظهار ملفات .kilocodeignore",
+			"description": "عند التفعيل تُعرض مع رمز قفل؛ عند التعطيل تُخفى."
+		},
+		"maxConcurrentFileReads": {
+			"label": "حد قراءة الملفات المتزامنة",
+			"description": "كم ملف يقرأه read_file مع بعض."
+		},
+		"maxReadFile": {
+			"label": "حد تقديري لقراءة الملف",
+			"description": "عدد الأسطر يُقرأ عند الغياب start/end. -1 يقرأ الكل، 0 لا يقرأ ويعرض الفهرس فقط.",
+			"lines": "أسطر",
+			"always_full_read": "دومًا اقرأ الملف كامل"
+		},
+		"maxImageFileSize": {
+			"label": "أقصى حجم ملف صورة",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى لحجم (بالميجابايت) لملفات الصور التي يمكن معالجتها بواسطة أداة قراءة الملفات."
+		},
+		"maxTotalImageSize": {
+			"label": "أقصى حجم إجمالي للصور",
+			"mb": "ميجابايت",
+			"description": "الحد الأقصى التراكمي للحجم (بالميجابايت) لجميع الصور المعالجة في عملية read_file واحدة. عند قراءة صور متعددة، يُضاف حجم كل صورة للإجمالي. إذا كان تضمين صورة أخرى سيتجاوز هذا الحد، فسيتم تخطيها."
+		},
+		"condensingThreshold": {
+			"label": "نسبة التفعيل",
+			"selectProfile": "اضبط النسبة للملف",
+			"defaultProfile": "افتراضي عام",
+			"defaultDescription": "إذا وصل السياق للنسبة يختصر (لكل الملفات).",
+			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
+			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
+			"usesGlobal": "(يستخدم {{threshold}}% عام)"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "تضمين رسائل التشخيص تلقائيًا في السياق",
+				"description": "عند التفعيل، سيتم تضمين رسائل التشخيص (الأخطاء) من الملفات المُحررة تلقائيًا في السياق. يمكنك دائمًا تضمين جميع تشخيصات مساحة العمل يدويًا باستخدام @problems."
+			},
+			"maxMessages": {
+				"label": "أقصى عدد رسائل التشخيص",
+				"description": "يحدد عدد رسائل التشخيص (أخطاء، تحذيرات) المُدرجة في السياق. عند التعيين، سيتم عرض هذا العدد فقط من التشخيصات، مع إعطاء الأولوية للأخطاء على التحذيرات. اضبط على 0 للتشخيصات غير المحدودة.",
+				"resetTooltip": "إعادة للقيمة الافتراضية (50)",
+				"unlimitedLabel": "غير محدود"
+			},
+			"delayAfterWrite": {
+				"label": "تأخير بعد الكتابة للسماح للتشخيصات باكتشاف المشاكل المحتملة",
+				"description": "الوقت للانتظار بعد كتابة الملفات قبل المتابعة، مما يسمح لأدوات التشخيص بمعالجة التغييرات واكتشاف المشاكل."
+			}
+		}
+	},
+	"terminal": {
+		"basic": {
+			"label": "أساسيات الطرفية",
+			"description": "إعدادات طrafوردية بسيطة"
+		},
+		"advanced": {
+			"label": "متقدم",
+			"description": "قد تحتاج إعادة تشغيل الطرفية."
+		},
+		"outputLineLimit": {
+			"label": "حد مخرجات الطرفية",
+			"description": "أقصى الأسطر المُدرجة عند تنفيذ الأوامر."
+		},
+		"outputCharacterLimit": {
+			"label": "حد أحرف الطرفية",
+			"description": "أقصى عدد أحرف في مخرجات الطرفية عند تنفيذ الأوامر. هذا الحد له أولوية على حد الأسطر لمنع مشاكل الذاكرة من الأسطر الطويلة جداً. عند التجاوز، سيتم قطع المخرجات. <0>تعرف أكثر</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "مهلة تكامل الشل",
+			"description": "أقصى انتظار لتكامل الشل قبل التنفيذ."
+		},
+		"shellIntegrationDisabled": {
+			"label": "تعطيل تكامل الشل",
+			"description": "فعّله إذا الأوامر ما تشتغل صح."
+		},
+		"commandDelay": {
+			"label": "تأخير أوامر الطرفية",
+			"description": "تأخير بالمللي ثانية بعد التنفيذ."
+		},
+		"compressProgressBar": {
+			"label": "ضغط شريط التقدم",
+			"description": "يحذف الحالات الوسيطة لتوفير السياق."
+		},
+		"powershellCounter": {
+			"label": "تمكين محول PowerShell",
+			"description": "يضيف عدّاد لضمان التقاط المخرجات."
+		},
+		"zshClearEolMark": {
+			"label": "إزالة علامة نهاية السطر ZSH",
+			"description": "يمسح PROMPT_EOL_MARK لمنع أخطاء."
+		},
+		"zshOhMy": {
+			"label": "دمج Oh My Zsh",
+			"description": "يعيّن ITERM_SHELL_INTEGRATION_INSTALLED=Yes."
+		},
+		"zshP10k": {
+			"label": "دمج Powerlevel10k",
+			"description": "يعيّن POWERLEVEL9K_TERM_SHELL_INTEGRATION=true."
+		},
+		"zdotdir": {
+			"label": "تفعيل ZDOTDIR",
+			"description": "ينشئ مجلد مؤقت لمعالجة zsh."
+		},
+		"inheritEnv": {
+			"label": "وراثة متغيرات البيئة",
+			"description": "تفعيل يورّث متغيرات بيئة نظامك."
+		}
+	},
+	"advancedSettings": {
+		"title": "الإعدادات المتقدمة"
+	},
+	"advanced": {
+		"diff": {
+			"label": "التعديل عبر Diff",
+			"description": "يسرّع التعديلات ويرفض الكتابة الكاملة المقتصرة.",
+			"strategy": {
+				"label": "إستراتيجية Diff",
+				"options": {
+					"standard": "قياسية (كتلة وحدة)",
+					"multiBlock": "تجريبية: عدة كتل",
+					"unified": "تجريبية: موحدة"
+				},
+				"descriptions": {
+					"standard": "تعدّل كتلة كود وحدة.",
+					"unified": "يختار أفضل طريقة تلقائيًا.",
+					"multiBlock": "يحدث عدة كتل دفعة وحدة."
+				}
+			},
+			"matchPrecision": {
+				"label": "دقة المطابقة",
+				"description": "تحكّم في دقة مطابقة الأقسام."
+			}
+		},
+		"todoList": {
+			"label": "تفعيل أداة قائمة المهام",
+			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء وإدارة قوائم المهام لتتبع تقدم المهام. هذا يساعد في تنظيم المهام المعقدة إلى خطوات قابلة للإدارة."
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "استخدم استراتيجية diff الموحدة التجريبية",
+			"description": "قد تقلل من الإعادات لكنها مخاطرة."
+		},
+		"SEARCH_AND_REPLACE": {
+			"name": "أداة بحث واستبدال تجريبية",
+			"description": "تمكّن استبدال متعدد في طلب واحد."
+		},
+		"INSERT_BLOCK": {
+			"name": "أداة إدراج محتوى تجريبية",
+			"description": "تدرج محتوى في أسطر محددة بدون diff."
+		},
+		"POWER_STEERING": {
+			"name": "وضع \"التحكم القوي\" التجريبي",
+			"description": "يذكّر النموذج بتعليمات النمط بشكل أقوى (يستهلك توكنات أكثر)."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "قراءة ملفات متزامنة",
+			"description": "يقرأ عدة ملفات في طلب واحد."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "أداة diff متعددة الكتل",
+			"description": "تحدّث عدة كتل كود بملف واحد."
+		},
+		"MARKETPLACE": {
+			"name": "تفعيل السوق",
+			"description": "تثبيت MCP ونمط مخصصة من السوق."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "تعديلات ملفات متزامنة",
+			"description": "يحرر عدة ملفات في طلب واحد."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "تفعيل التطبيق السريع",
+			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"apiKey": "مفتاح Morph API (اختياري)",
+			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"modelLabel": "اختيار النموذج",
+			"modelDescription": "اختر نموذج التطبيق السريع لتعديل الملفات",
+			"models": {
+				"auto": "تلقائي (افتراضي - يختار الأفضل المتاح)",
+				"morphFast": "Morph v3 السريع (أسرع، تكلفة أقل)",
+				"morphLarge": "Morph v3 الكبير (أكثر قدرة)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "التحرير في الخلفية",
+			"description": "منع تعطيل تركيز المحرر عند التفعيل. تحدث تعديلات الملفات في الخلفية دون فتح عروض diff أو سرقة التركيز. يمكنك الاستمرار في العمل دون انقطاع بينما يقوم Kilo Code بإجراء التغييرات. يمكن فتح الملفات دون تركيز لالتقاط التشخيصات أو إبقاؤها مغلقة تماماً."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "استخدام محلل الرسائل الجديد",
+			"description": "تفعيل محلل الرسائل التجريبي المتدفق الذي يوفر تحسينات كبيرة في الأداء للاستجابات الطويلة من المساعد من خلال معالجة الرسائل بكفاءة أكبر."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "يتطلب قائمة 'مهام' للمهام الجديدة",
+			"description": "عند التفعيل، أداة المهام الجديدة ستتطلب توفير معامل المهام. هذا يضمن أن كل المهام الجديدة تبدأ بقائمة واضحة من الأهداف. عند التعطيل (افتراضي)، يبقى معامل المهام اختياري للتوافق مع النسخة السابقة."
+		},
+		"IMAGE_GENERATION": {
+			"name": "تمكين إنشاء صور بالذكاء الاصطناعي",
+			"description": "عند التفعيل، يمكن لـ Kilo Code إنشاء صور من النصوص. يتطلب مفتاح Kilo Code أو OpenRouter API.",
+			"apiProvider": "مزود API",
+			"openRouterApiKeyLabel": "مفتاح OpenRouter API",
+			"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
+			"kiloCodeApiKeyLabel": "مفتاح Kilo Code API",
+			"kiloCodeApiKeyPlaceholder": "أدخل مفتاح Kilo Code API",
+			"kiloCodeApiKeyPaste": "لصق مفتاح Kilo Code API الحالي",
+			"getApiKeyText": "احصل على مفتاحك من",
+			"modelSelectionLabel": "نموذج إنشاء الصور",
+			"modelSelectionDescription": "اختر النموذج المراد استخدامه لإنشاء الصور",
+			"warningMissingKey": "⚠️ مفتاح API مطلوب لإنشاء الصور، يرجى تكوينه أعلاه.",
+			"successConfigured": "✓ تم تكوين إنشاء الصور وهو جاهز للاستخدام"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "تمكين أوامر الشرطة المدفوعة بالنموذج",
+			"description": "عند التمكين، يمكن لـ Kilo Code تشغيل أوامر الشرطة الخاصة بك لتنفيذ سير العمل."
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "تمكين ميزات الإكمال التلقائي للحصول على اقتراحات كود سريعة وتحسينات مباشرة في محررك. يتضمن المهمة السريعة (Cmd+I) للتغييرات المستهدفة والإكمال التلقائي للتحسينات السياقية."
+		}
+	},
+	"promptCaching": {
+		"label": "تعطيل تخزين الموجهات",
+		"description": "عند التفعيل، ما يستخدم Kilo Code الكاش لهذا النموذج."
+	},
+	"temperature": {
+		"useCustom": "استخدام درجة حرارة مخصصة",
+		"description": "تتحكم في عشوائية الردود.",
+		"rangeDescription": "القيمة الأعلى = مخرجات أكثر تنوع."
+	},
+	"modelInfo": {
+		"supportsImages": "يدعم الصور",
+		"noImages": "لا يدعم الصور",
+		"supportsComputerUse": "يدعم استخدام الكمبيوتر",
+		"noComputerUse": "لا يدعم استخدام الكمبيوتر",
+		"supportsPromptCache": "يدعم تخزين الموجهات",
+		"noPromptCache": "لا يدعم تخزين الموجهات",
+		"contextWindow": "نافذة السياق:",
+		"maxOutput": "أقصى مخرجات",
+		"inputPrice": "سعر الإدخال",
+		"outputPrice": "سعر المخرجات",
+		"cacheReadsPrice": "سعر قراءة الكاش",
+		"cacheWritesPrice": "سعر كتابة الكاش",
+		"enableStreaming": "تفعيل البث",
+		"enableR1Format": "تفعيل بارامترات R1",
+		"enableR1FormatTips": "ضروري مع نماذج R1 لتجنب خطأ 400",
+		"useAzure": "استخدام Azure",
+		"azureApiVersion": "إصدار Azure API",
+		"gemini": {
+			"freeRequests": "* مجانًا حتى {{count}} طلب بالدقيقة.",
+			"pricingDetails": "للمزيد راجع الأسعار.",
+			"billingEstimate": "* التكلفة تقريبية وتعتمد على حجم الموجه."
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "الإضافة تجلب تلقائياً أحدث قائمة بالنماذج المتاحة على <serviceLink>{{serviceName}}</serviceLink>. إذا كنت غير متأكد من النموذج الذي تختاره، فإن Kilo Code يعمل بشكل أفضل مع <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"label": "النموذج",
+		"searchPlaceholder": "بحث",
+		"noMatchFound": "ما فيه تطابق",
+		"useCustomModel": "استخدام مخصص: {{modelId}}"
+	},
+	"footer": {
+		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>kilocode.ai/discord</discordLink>.",
+		"support": "للاستفسارات المالية: <supportLink>https://kilocode.ai/support</supportLink>",
+		"telemetry": {
+			"label": "السماح بتقارير الأخطاء والاستخدام",
+			"description": "ساعد في تحسين Kilo Code بإرسال بيانات الاستخدام وتقارير الأخطاء. لا يتم إرسال أي كود أو مطالبات أو معلومات شخصية أبداً. راجع سياسة الخصوصية لمزيد من التفاصيل."
+		},
+		"settings": {
+			"import": "استيراد",
+			"export": "تصدير",
+			"reset": "إعادة تعيين"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "أقصى توكنات",
+		"maxThinkingTokens": "أقصى توكنات تفكير"
+	},
+	"validation": {
+		"apiKey": "لازم تدخل مفتاح API صالح.",
+		"awsRegion": "اختر منطقة AWS لاستخدام Bedrock.",
+		"googleCloud": "أدخل معرّف مشروع ومنطقة Google Cloud صالحين.",
+		"modelId": "أدخل معرّف نموذج صحيح.",
+		"modelSelector": "أدخل محدد نموذج صالح.",
+		"openAi": "أدخل رابط أساسي ومفتاح API ومعرّف نموذج صحيح.",
+		"arn": {
+			"invalidFormat": "تنسيق ARN غير صالح.",
+			"regionMismatch": "تحذير: منطقة ARN ({{arnRegion}}) تختلف عن المختارة ({{region}})."
+		},
+		"modelAvailability": "النموذج {{modelId}} غير متاح.",
+		"providerNotAllowed": "المزوّد '{{provider}}' غير مسموح به.",
+		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
+		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
+		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth.",
+		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر."
+	},
+	"placeholders": {
+		"apiKey": "اكتب مفتاح API...",
+		"profileName": "اكتب اسم الملف",
+		"accessKey": "اكتب Access Key...",
+		"secretKey": "اكتب Secret Key...",
+		"sessionToken": "اكتب Session Token...",
+		"credentialsJson": "اكتب JSON الاعتماد...",
+		"keyFilePath": "اكتب مسار ملف المفتاح...",
+		"projectId": "اكتب معرّف المشروع...",
+		"customArn": "أدخل ARN (مثال arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "اكتب الرابط الأساسي...",
+		"modelId": {
+			"lmStudio": "مثال meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "مثال lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "مثال llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "مثال 4096",
+			"contextWindow": "مثال 128000",
+			"inputPrice": "مثال 0.0001",
+			"outputPrice": "مثال 0.0002",
+			"cacheWritePrice": "مثال 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "الافتراضي: http://localhost:11434",
+		"lmStudioUrl": "الافتراضي: http://localhost:1234",
+		"geminiUrl": "الافتراضي: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "ARN مخصص",
+		"useCustomArn": "استخدام ARN مخصص..."
+	},
+	"limitMaxTokensDescription": "تحديد أقصى عدد توكنات في الرد",
+	"maxOutputTokensLabel": "أقصى توكنات المخرجات",
+	"maxTokensGenerateDescription": "أقصى عدد توكنات يتم توليدها في الرد",
+	"includeMaxOutputTokens": "إرسال حد المخرجات",
+	"includeMaxOutputTokensDescription": "يُرسل max_output_tokens في الطلب. بعض المزوّدين ما يدعمونه.",
+	"serviceTier": {
+		"label": "طبقة الخدمة",
+		"tooltip": "للمعالجة الأسرع لطلبات API، جرب طبقة معالجة الأولوية. للأسعار المنخفضة مع زمن استجابة أعلى، جرب طبقة المعالجة المرنة.",
+		"standard": "قياسي",
+		"flex": "مرن",
+		"priority": "أولوية",
+		"pricingTableTitle": "التسعير حسب طبقة الخدمة (السعر لكل مليون token)",
+		"columns": {
+			"tier": "الطبقة",
+			"input": "الإدخال",
+			"output": "الإخراج",
+			"cacheReads": "قراءات الذاكرة التخزينية"
+		}
+	}
+}

@@ -1,0 +1,266 @@
+{
+	"welcome": {
+		"greeting": "Welcome to Kilo Code!",
+		"introText1": "Kilo Code is a free, open source AI coding agent.",
+		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
+		"ctaButton": "Get Started",
+		"manualModeButton": "Use your own API key",
+		"alreadySignedUp": "Already signed up?",
+		"loginText": "Log in here"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Add Credit",
+		"lowBalance": "Your Kilo Code balance is low"
+	},
+	"memoryWarning": {
+		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
+	},
+	"pagination": {
+		"previous": "Previous",
+		"next": "Next",
+		"page": "Page {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 The alpha period for {{model}} has ended! Change to a different model to continue.",
+		"notAllowedForTeam": "⚠️ Your organization does not allow use of the {{model}} model. Change to a different model to continue.",
+		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
+		"continueWith": "Continue with {{model}}",
+		"continue": "Continue"
+	},
+	"pricing": {
+		"costUnknown": "cost unknown",
+		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
+		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
+		"freeModelsLink": "Discover free and budget model options"
+	},
+	"notifications": {
+		"toolRequest": "Tool request waiting for approval",
+		"browserAction": "Browser action waiting for approval",
+		"command": "Command waiting for approval"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Images are not supported by the current model.",
+		"maxImagesReached": "Maximum of 20 images per message. Remove some images to add more.",
+		"imagesRemovedNoSupport": "Images removed, unsupported by model."
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Servers"
+		},
+		"provider": {
+			"account": "Kilo Code Account",
+			"apiKey": "Kilo Code API Key",
+			"login": "Log in at Kilo Code",
+			"logout": "Log out from Kilo Code",
+			"providerRouting": {
+				"title": "Provider Routing",
+				"managedByOrganization": "The Provider Routing settings are managed by your organization.",
+				"sorting": {
+					"default": "Default provider sorting",
+					"price": "Prefer providers with lower price",
+					"throughput": "Prefer providers with higher throughput",
+					"latency": "Prefer providers with lower latency"
+				},
+				"dataCollection": {
+					"default": "No data policy set",
+					"allowFree": "Allow prompt training (free only)",
+					"allow": "Allow prompt training",
+					"deny": "Deny prompt training",
+					"zdr": "Zero data retention"
+				}
+			},
+			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+		},
+		"modelInfo": {
+			"contextWindow": "Context window",
+			"providerBreakdown": "Provider Price and Capability Breakdown",
+			"averageKiloCodeCost": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
+			"table": {
+				"provider": "Provider",
+				"context": "The endpoint can process this number of tokens (input + output).",
+				"inputPrice": "Cost per million tokens for the prompt.",
+				"outputPrice": "Cost per million tokens for the completion.",
+				"cacheReadPrice": "Cost per million tokens for reading from the cache.",
+				"cacheWritePrice": "Cost per million tokens for writing to the cache."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Allow very large file reads",
+				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
+			}
+		},
+		"systemNotifications": {
+			"label": "Enable System Notifications",
+			"description": "When enabled, Kilo Code will send system notifications for important events like task completion or errors.",
+			"testButton": "Test Notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "This is a test notification from Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Command Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuration",
+					"description": "Select which API configuration to use for generating terminal commands. Leave as 'Use Current Configuration' to use your default settings.",
+					"current": "Use Current Configuration"
+				}
+			}
+		}
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code wants to condense your conversation",
+			"condenseConversation": "Condense Conversation"
+		},
+		"seeNewChanges": "See New Changes",
+		"revertNewChanges": "Revert New Changes",
+		"confirmRevertChanges": "Confirm Revert Changes",
+		"cancelRevertChanges": "Cancel Revert Changes"
+	},
+	"newTaskPreview": {
+		"task": "Task"
+	},
+	"profile": {
+		"title": "Profile",
+		"dashboard": "Dashboard",
+		"logOut": "Log out",
+		"currentBalance": "CURRENT BALANCE",
+		"loading": "Loading...",
+		"organization": "Organization",
+		"personal": "Personal",
+		"shop": {
+			"title": "Buy Credits",
+			"popular": "Popular",
+			"credits": "credits",
+			"action": "Buy Now",
+			"viewAll": "View all pricing options"
+		}
+	},
+	"docs": "Docs",
+	"rules": {
+		"tooltip": "Manage Kilo Code Rules & Workflows",
+		"ariaLabel": "Kilo Code Rules",
+		"tabs": {
+			"rules": "Rules",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Rules allow you to provide Kilo Code with instructions it should follow in all modes and for all prompts. They are a persistent way to include context and preferences for all conversations in your workspace or globally.",
+			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Kilo Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
+			"workflowsInChat": "in the chat."
+		},
+		"sections": {
+			"globalRules": "Global Rules",
+			"workspaceRules": "Workspace Rules",
+			"globalWorkflows": "Global Workflows",
+			"workspaceWorkflows": "Workspace Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "Only .md, .txt, or no file extension allowed"
+		},
+		"placeholders": {
+			"workflowName": "workflow-name (.md, .txt, or no extension)",
+			"ruleName": "rule-name (.md, .txt, or no extension)"
+		},
+		"newFile": {
+			"newWorkflowFile": "New workflow file...",
+			"newRuleFile": "New rule file..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "View {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_launch": "browser launch",
+				"browser_action_result": "browser action result",
+				"browser_action": "browser action",
+				"checkpoint_saved": "checkpoint saved",
+				"command": "command execution",
+				"command_output": "command output",
+				"completion_result": "completion result",
+				"condense_context": "condense context",
+				"error": "error message",
+				"followup": "followup question",
+				"mcp_server_response": "MCP server response",
+				"reasoning": "AI reasoning",
+				"text": "AI response",
+				"tool": "tool usage",
+				"user": "user feedback",
+				"unknown": "unknown message type",
+				"use_mcp_server": "MCP server usage"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "Cancel",
+		"send": "Send",
+		"restoreAndSend": "Restore & Send"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "New here?",
+		"suggestionText": "<suggestionButton>Click here</suggestionButton> for a cool idea, then tap on <sendIcon /> and watch me do magic!",
+		"ideas": {
+			"idea1": "Make a spinning, glowing 3D sphere that responds to mouse movements. Make the app work in the browser.",
+			"idea2": "Create a portfolio website for a Python software developer",
+			"idea3": "Create a financial app mockup in the browser. Then test if it works",
+			"idea4": "Create a directory website containing the best AI video generation models currently",
+			"idea5": "Create a CSS gradient generator that exports custom stylesheets and shows a live preview",
+			"idea6": "Generate cards that reveal dynamic content beautifully when hovered over",
+			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
+		}
+	},
+	"toolCallStyle": {
+		"title": "Tool Call Style",
+		"description": "Choose how tool calls are formatted in the system prompt. JSON is currently experimental and mostly intended for users interested in contributing to its development."
+	},
+	"ghost": {
+		"title": "Autocomplete",
+		"settings": {
+			"triggers": "Triggers",
+			"model": "Model",
+			"provider": "Provider",
+			"enableAutoTrigger": {
+				"label": "Pause to Complete",
+				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
+			},
+			"autoTriggerDelay": {
+				"label": "Auto Trigger Delay",
+				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Quick Task ({{keybinding}})",
+				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>Edit shortcut</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Manual Autocomplete ({{keybinding}})",
+				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
+			},
+			"keybindingNotFound": "not found",
+			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings."
+		}
+	},
+	"virtualProvider": {
+		"title": "Virtual Quota Fallback Provider Settings",
+		"description": "Configure a list of profiles each with their own quota limits. When one provider's quota limits are reached, the next profile in the list will be used until none remain.",
+		"profileLabel": "Profile {{number}}",
+		"primaryProfileLabel": "Profile {{number}} (Primary)",
+		"moveProfileUp": "Move profile up",
+		"moveProfileDown": "Move profile down",
+		"removeProfile": "Remove profile",
+		"selectProfilePlaceholder": "Select profile...",
+		"addProfile": "Add profile",
+		"noProfilesAvailable": "No profile profiles available. Please configure at least one non-virtual provider profile first.",
+		"tokensLabel": "Tokens",
+		"perMinute": "Per Minute",
+		"perHour": "Per Hour",
+		"perDay": "Per Day",
+		"requestsLabel": "Requests",
+		"dangerZoneTitle": "Danger Zone",
+		"dangerZoneDescription": "These actions are destructive and cannot be undone.",
+		"clearUsageData": "Clear Usage Data",
+		"confirmClearTitle": "Are you sure?",
+		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
+	}
+}

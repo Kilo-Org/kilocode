@@ -1,0 +1,4 @@
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		return result

@@ -1,0 +1,973 @@
+{
+	"common": {
+		"save": "सहेजें",
+		"done": "पूर्ण",
+		"cancel": "रद्द करें",
+		"reset": "रीसेट करें",
+		"select": "चुनें",
+		"add": "हेडर जोड़ें",
+		"remove": "हटाएं"
+	},
+	"header": {
+		"title": "सेटिंग्स",
+		"saveButtonTooltip": "परिवर्तन सहेजें",
+		"nothingChangedTooltip": "कुछ भी नहीं बदला",
+		"doneButtonTooltip": "असहेजे परिवर्तनों को छोड़ें और सेटिंग्स पैनल बंद करें"
+	},
+	"unsavedChangesDialog": {
+		"title": "असहेजे परिवर्तन",
+		"description": "क्या आप परिवर्तनों को छोड़कर जारी रखना चाहते हैं?",
+		"cancelButton": "रद्द करें",
+		"discardButton": "परिवर्तन छोड़ें"
+	},
+	"sections": {
+		"providers": "प्रदाता",
+		"autoApprove": "अनुमोदन",
+		"browser": "ब्राउज़र",
+		"checkpoints": "चेकपॉइंट",
+		"notifications": "सूचनाएँ",
+		"contextManagement": "संदर्भ",
+		"terminal": "टर्मिनल",
+		"slashCommands": "स्लैश कमांड",
+		"prompts": "प्रॉम्प्ट्स",
+		"ui": "UI",
+		"experimental": "प्रायोगिक",
+		"language": "भाषा",
+		"about": "परिचय",
+		"display": "प्रदर्शित करें"
+	},
+	"slashCommands": {
+		"description": "कस्टम वर्कफ़्लो और क्रियाओं को तेज़ी से निष्पादित करने के लिए अपने स्लैश कमांड प्रबंधित करें। <DocsLink>और जानें</DocsLink>"
+	},
+	"prompts": {
+		"description": "प्रॉम्प्ट्स को बेहतर बनाना, कोड की व्याख्या करना और समस्याओं को ठीक करना जैसी त्वरित कार्रवाइयों के लिए उपयोग किए जाने वाले सहायक प्रॉम्प्ट्स को कॉन्फ़िगर करें। ये प्रॉम्प्ट्स Kilo Code को सामान्य विकास कार्यों के लिए बेहतर सहायता प्रदान करने में मदद करते हैं।"
+	},
+	"codeIndex": {
+		"title": "कोडबेस इंडेक्सिंग",
+		"enableLabel": "कोडबेस इंडेक्सिंग सक्षम करें",
+		"enableDescription": "बेहतर खोज और संदर्भ समझने के लिए कोड इंडेक्सिंग सक्षम करें",
+		"profileLabel": "एम्बेडिंग प्रदाता",
+		"selectProfilePlaceholder": "प्रदाता चुनें",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"geminiProvider": "Gemini",
+		"geminiApiKeyLabel": "API कुंजी:",
+		"geminiApiKeyPlaceholder": "अपना जेमिनी एपीआई कुंजी दर्ज करें",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API कुंजी",
+		"vercelAiGatewayApiKeyPlaceholder": "अपनी Vercel AI Gateway API कुंजी दर्ज करें",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "API कुंजी:",
+		"mistralApiKeyPlaceholder": "अपनी मिस्ट्रल एपीआई कुंजी दर्ज करें",
+		"openaiCompatibleProvider": "OpenAI संगत",
+		"openAiKeyLabel": "OpenAI API कुंजी",
+		"openAiKeyPlaceholder": "अपना OpenAI API कुंजी दर्ज करें",
+		"openAiCompatibleBaseUrlLabel": "आधार URL",
+		"openAiCompatibleApiKeyLabel": "API कुंजी",
+		"openAiCompatibleApiKeyPlaceholder": "अपना API कुंजी दर्ज करें",
+		"openAiCompatibleModelDimensionLabel": "एम्बेडिंग आयाम:",
+		"modelDimensionLabel": "मॉडल आयाम",
+		"openAiCompatibleModelDimensionPlaceholder": "उदा., 1536",
+		"openAiCompatibleModelDimensionDescription": "आपके मॉडल के लिए एम्बेडिंग आयाम (आउटपुट साइज)। इस मान के लिए अपने प्रदाता के दस्तावेज़ीकरण की जांच करें। सामान्य मान: 384, 768, 1536, 3072।",
+		"modelLabel": "मॉडल",
+		"selectModelPlaceholder": "मॉडल चुनें",
+		"ollamaUrlLabel": "Ollama URL:",
+		"qdrantUrlLabel": "Qdrant URL",
+		"qdrantKeyLabel": "Qdrant कुंजी:",
+		"startIndexingButton": "शुरू करें",
+		"clearIndexDataButton": "इंडेक्स साफ़ करें",
+		"unsavedSettingsMessage": "इंडेक्सिंग प्रक्रिया शुरू करने से पहले कृपया अपनी सेटिंग्स सहेजें।",
+		"clearDataDialog": {
+			"title": "क्या आप सुनिश्चित हैं?",
+			"description": "यह क्रिया पूर्ववत नहीं की जा सकती। यह आपके कोडबेस इंडेक्स डेटा को स्थायी रूप से हटा देगी।",
+			"cancelButton": "रद्द करें",
+			"confirmButton": "डेटा साफ़ करें"
+		},
+		"description": "अपने प्रोजेक्ट की सिमेंटिक खोज को सक्षम करने के लिए कोडबेस इंडेक्सिंग सेटिंग्स कॉन्फ़िगर करें। <0>और जानें</0>",
+		"statusTitle": "स्थिति",
+		"settingsTitle": "इंडेक्सिंग सेटिंग्स",
+		"disabledMessage": "कोडबेस इंडेक्सिंग वर्तमान में अक्षम है। इंडेक्सिंग विकल्पों को कॉन्फ़िगर करने के लिए इसे ग्लोबल सेटिंग्स में सक्षम करें।",
+		"embedderProviderLabel": "एम्बेडर प्रदाता",
+		"modelPlaceholder": "मॉडल नाम दर्ज करें",
+		"selectModel": "एक मॉडल चुनें",
+		"ollamaBaseUrlLabel": "Ollama आधार URL",
+		"qdrantApiKeyLabel": "Qdrant API कुंजी",
+		"qdrantApiKeyPlaceholder": "अपनी Qdrant API कुंजी दर्ज करें (वैकल्पिक)",
+		"setupConfigLabel": "सेटअप",
+		"ollamaUrlPlaceholder": "http://localhost:11434",
+		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
+		"modelDimensionPlaceholder": "1536",
+		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"saveError": "सेटिंग्स सहेजने में विफल",
+		"modelDimensions": "({{dimension}} आयाम)",
+		"saveSuccess": "सेटिंग्स सफलतापूर्वक सहेजी गईं",
+		"saving": "सहेज रहे हैं...",
+		"saveSettings": "सहेजें",
+		"indexingStatuses": {
+			"standby": "स्टैंडबाई",
+			"indexing": "इंडेक्सिंग",
+			"indexed": "इंडेक्स किया गया",
+			"error": "त्रुटि"
+		},
+		"close": "बंद करें",
+		"validation": {
+			"invalidQdrantUrl": "अमान्य Qdrant URL",
+			"invalidOllamaUrl": "अमान्य Ollama URL",
+			"invalidBaseUrl": "अमान्य बेस URL",
+			"qdrantUrlRequired": "Qdrant URL आवश्यक है",
+			"openaiApiKeyRequired": "OpenAI API कुंजी आवश्यक है",
+			"modelSelectionRequired": "मॉडल चयन आवश्यक है",
+			"apiKeyRequired": "API कुंजी आवश्यक है",
+			"modelIdRequired": "मॉडल आईडी आवश्यक है",
+			"modelDimensionRequired": "मॉडल आयाम आवश्यक है",
+			"geminiApiKeyRequired": "Gemini API कुंजी आवश्यक है",
+			"mistralApiKeyRequired": "मिस्ट्रल एपीआई कुंजी आवश्यक है",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API कुंजी आवश्यक है",
+			"ollamaBaseUrlRequired": "Ollama आधार URL आवश्यक है",
+			"baseUrlRequired": "आधार URL आवश्यक है",
+			"modelDimensionMinValue": "मॉडल आयाम 0 से बड़ा होना चाहिए"
+		},
+		"advancedConfigLabel": "उन्नत कॉन्फ़िगरेशन",
+		"searchMinScoreLabel": "खोज स्कोर थ्रेसहोल्ड",
+		"searchMinScoreDescription": "खोज परिणामों के लिए आवश्यक न्यूनतम समानता स्कोर (0.0-1.0)। कम मान अधिक परिणाम लौटाते हैं लेकिन कम प्रासंगिक हो सकते हैं। उच्च मान कम लेकिन अधिक प्रासंगिक परिणाम लौटाते हैं।",
+		"searchMinScoreResetTooltip": "डिफ़ॉल्ट मान पर रीसेट करें (0.4)",
+		"searchMaxResultsLabel": "अधिकतम खोज परिणाम",
+		"searchMaxResultsDescription": "कोडबेस इंडेक्स को क्वेरी करते समय वापस करने के लिए खोज परिणामों की अधिकतम संख्या। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन कम प्रासंगिक परिणाम शामिल कर सकते हैं।",
+		"resetToDefault": "डिफ़ॉल्ट पर रीसेट करें",
+		"cancelling": "रद्द किया जा रहा है...",
+		"cancelIndexingButton": "इंडेक्सिंग रद्द करें"
+	},
+	"autoApprove": {
+		"toggleShortcut": "आप <SettingsLink>अपनी आईडीई वरीयताओं में</SettingsLink> इस सेटिंग के लिए एक वैश्विक शॉर्टकट कॉन्फ़िगर कर सकते हैं।",
+		"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ऑपरेशन करने की अनुमति दें। इन सेटिंग्स को केवल तभी सक्षम करें जब आप AI पर पूरी तरह से भरोसा करते हों और संबंधित सुरक्षा जोखिमों को समझते हों।",
+		"enabled": "स्वत:-अनुमोदन सक्षम",
+		"toggleAriaLabel": "स्वतः-अनुमोदन टॉगल करें",
+		"disabledAriaLabel": "स्वतः-अनुमोदन अक्षम - पहले विकल्प चुनें",
+		"readOnly": {
+			"label": "पढ़ें",
+			"description": "जब सक्षम होता है, तो Kilo Code आपके अनुमोदित बटन पर क्लिक किए बिना स्वचालित रूप से निर्देशिका सामग्री देखेगा और फाइलें पढ़ेगा।",
+			"outsideWorkspace": {
+				"label": "वर्कस्पेस के बाहर की फाइलें शामिल करें",
+				"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना वर्तमान वर्कस्पेस के बाहर की फाइलें पढ़ने की अनुमति दें।"
+			}
+		},
+		"write": {
+			"label": "लिखें",
+			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से फाइलें बनाएँ और संपादित करें",
+			"delayLabel": "लिखने के बाद विलंब ताकि डायग्नोस्टिक संभावित समस्याओं का पता लगा सकें",
+			"outsideWorkspace": {
+				"label": "वर्कस्पेस के बाहर की फाइलें शामिल करें",
+				"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना वर्तमान वर्कस्पेस के बाहर फाइलें बनाने और संपादित करने की अनुमति दें।"
+			},
+			"protected": {
+				"label": "संरक्षित फाइलें शामिल करें",
+				"description": "Kilo Code को अनुमोदन की आवश्यकता के बिना संरक्षित फाइलें (.kilocodeignore और .kilocode/ कॉन्फ़िगरेशन फाइलें जैसी) बनाने और संपादित करने की अनुमति दें।"
+			}
+		},
+		"browser": {
+			"label": "ब्राउज़र",
+			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से ब्राउज़र क्रियाएँ करें — नोट: केवल तभी लागू होता है जब मॉडल कंप्यूटर उपयोग का समर्थन करता है"
+		},
+		"retry": {
+			"label": "पुनः प्रयास",
+			"description": "जब सर्वर त्रुटि प्रतिक्रिया देता है तो स्वचालित रूप से विफल API अनुरोधों को पुनः प्रयास करें",
+			"delayLabel": "अनुरोध को पुनः प्रयास करने से पहले विलंब"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "MCP सर्वर व्यू में व्यक्तिगत MCP टूल्स के स्वतः अनुमोदन को सक्षम करें (इस सेटिंग और टूल के \"हमेशा अनुमति दें\" चेकबॉक्स दोनों की आवश्यकता है)"
+		},
+		"modeSwitch": {
+			"label": "मोड",
+			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से विभिन्न मोड के बीच स्विच करें"
+		},
+		"subtasks": {
+			"label": "उप-कार्य",
+			"description": "अनुमोदन की आवश्यकता के बिना उप-कार्यों के निर्माण और पूर्णता की अनुमति दें"
+		},
+		"followupQuestions": {
+			"label": "प्रश्न",
+			"description": "कॉन्फ़िगर किए गए टाइमआउट के बाद अनुवर्ती प्रश्नों के लिए पहले सुझाए गए उत्तर को स्वचालित रूप से चुनें",
+			"timeoutLabel": "पहले उत्तर को स्वचालित रूप से चुनने से पहले प्रतीक्षा करने का समय"
+		},
+		"execute": {
+			"label": "निष्पादित करें",
+			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से अनुमत टर्मिनल कमांड निष्पादित करें",
+			"allowedCommands": "अनुमत स्वतः-निष्पादन कमांड",
+			"allowedCommandsDescription": "कमांड प्रीफिक्स जो स्वचालित रूप से निष्पादित किए जा सकते हैं जब \"निष्पादन ऑपरेशन हमेशा अनुमोदित करें\" सक्षम है। सभी कमांड की अनुमति देने के लिए * जोड़ें (सावधानी से उपयोग करें)।",
+			"deniedCommands": "अस्वीकृत कमांड",
+			"deniedCommandsDescription": "कमांड प्रीफिक्स जो स्वचालित रूप से अस्वीकार हो जाएंगे बिना अनुमोदन की आवश्यकता के। अनुमत कमांड के साथ संघर्ष के मामले में, सबसे लंबा प्रीफिक्स मैच प्राथमिकता लेता है। सभी कमांड अस्वीकार करने के लिए * जोड़ें।",
+			"commandPlaceholder": "कमांड प्रीफिक्स दर्ज करें (उदा. 'git ')",
+			"deniedCommandPlaceholder": "अस्वीकार करने के लिए कमांड प्रीफिक्स दर्ज करें (उदा. 'rm -rf')",
+			"addButton": "जोड़ें",
+			"autoDenied": "प्रीफिक्स `{{prefix}}` वाले कमांड उपयोगकर्ता द्वारा प्रतिबंधित किए गए हैं। दूसरा कमांड चलाकर इस प्रतिबंध को दरकिनार न करें।"
+		},
+		"showMenu": {
+			"label": "चैट व्यू में स्वतः अनुमोदन मेनू दिखाएँ",
+			"description": "जब सक्षम होता है, तो स्वतः अनुमोदन मेनू चैट व्यू के निचले भाग में दिखाई देगा, जिससे स्वतः अनुमोदन सेटिंग्स तक त्वरित पहुंच मिलेगी"
+		},
+		"updateTodoList": {
+			"label": "टूडू",
+			"description": "अनुमोदन की आवश्यकता के बिना स्वचालित रूप से टूडू सूची अपडेट करें"
+		},
+		"apiRequestLimit": {
+			"title": "अधिकतम अनुरोध",
+			"description": "कार्य जारी रखने के लिए अनुमति मांगने से पहले स्वचालित रूप से इतने API अनुरोध करें।",
+			"unlimited": "असीमित"
+		},
+		"selectOptionsFirst": "स्वतः-अनुमोदन सक्षम करने के लिए नीचे से कम से कम एक विकल्प चुनें",
+		"apiCostLimit": {
+			"unlimited": "असीमित",
+			"title": "अधिकतम लागत"
+		},
+		"maxLimits": {
+			"description": "स्वचालित रूप से जारी रखने के लिए अनुमोदन माँगने से पहले इन सीमाओं तक अनुरोध करें।"
+		}
+	},
+	"providers": {
+		"providerDocumentation": "{{provider}} दस्तावेज़ीकरण",
+		"configProfile": "कॉन्फिगरेशन प्रोफाइल",
+		"description": "विभिन्न API कॉन्फ़िगरेशन सहेजें ताकि प्रदाताओं और सेटिंग्स के बीच त्वरित रूप से स्विच कर सकें।",
+		"apiProvider": "API प्रदाता",
+		"model": "मॉडल",
+		"nameEmpty": "नाम खाली नहीं हो सकता",
+		"nameExists": "इस नाम वाला प्रोफ़ाइल पहले से मौजूद है",
+		"deleteProfile": "प्रोफ़ाइल हटाएं",
+		"invalidArnFormat": "अमान्य ARN प्रारूप। कृपया ऊपर दिए गए उदाहरण देखें।",
+		"enterNewName": "नया नाम दर्ज करें",
+		"addProfile": "प्रोफ़ाइल जोड़ें",
+		"renameProfile": "प्रोफ़ाइल का नाम बदलें",
+		"newProfile": "नया कॉन्फ़िगरेशन प्रोफ़ाइल",
+		"enterProfileName": "प्रोफ़ाइल नाम दर्ज करें",
+		"createProfile": "प्रोफ़ाइल बनाएं",
+		"cannotDeleteOnlyProfile": "केवल एकमात्र प्रोफ़ाइल को हटाया नहीं जा सकता",
+		"searchPlaceholder": "प्रोफ़ाइल खोजें",
+		"searchProviderPlaceholder": "प्रदाता खोजें",
+		"noProviderMatchFound": "कोई प्रदाता नहीं मिला",
+		"noMatchFound": "कोई मिलान प्रोफ़ाइल नहीं मिला",
+		"vscodeLmDescription": "VS कोड भाषा मॉडल API आपको अन्य VS कोड एक्सटेंशन (जैसे GitHub Copilot) द्वारा प्रदान किए गए मॉडल चलाने की अनुमति देता है। शुरू करने का सबसे आसान तरीका VS कोड मार्केटप्लेस से Copilot और Copilot चैट एक्सटेंशन इंस्टॉल करना है।",
+		"awsCustomArnUse": "आप जिस मॉडल का उपयोग करना चाहते हैं, उसके लिए एक वैध Amazon बेडरॉक ARN दर्ज करें। प्रारूप उदाहरण:",
+		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
+		"openRouterApiKey": "OpenRouter API कुंजी",
+		"getOpenRouterApiKey": "OpenRouter API कुंजी प्राप्त करें",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API कुंजी प्राप्त करें",
+		"apiKeyStorageNotice": "API कुंजियाँ VSCode के सुरक्षित स्टोरेज में सुरक्षित रूप से संग्रहीत हैं",
+		"glamaApiKey": "Glama API कुंजी",
+		"getGlamaApiKey": "Glama API कुंजी प्राप्त करें",
+		"useCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
+		"useReasoning": "तर्क सक्षम करें",
+		"useHostHeader": "कस्टम होस्ट हेडर का उपयोग करें",
+		"useLegacyFormat": "पुराने OpenAI API प्रारूप का उपयोग करें",
+		"customHeaders": "कस्टम हेडर्स",
+		"headerName": "हेडर नाम",
+		"headerValue": "हेडर मूल्य",
+		"noCustomHeaders": "कोई कस्टम हेडर परिभाषित नहीं है। एक जोड़ने के लिए + बटन पर क्लिक करें।",
+		"requestyApiKey": "Requesty API कुंजी",
+		"refreshModels": {
+			"label": "मॉडल रिफ्रेश करें",
+			"hint": "नवीनतम मॉडल देखने के लिए कृपया सेटिंग्स को फिर से खोलें।",
+			"loading": "मॉडल सूची अपडेट हो रही है...",
+			"success": "मॉडल सूची सफलतापूर्वक अपडेट की गई!",
+			"error": "मॉडल सूची अपडेट करने में विफल। कृपया पुनः प्रयास करें।"
+		},
+		"getRequestyApiKey": "Requesty API कुंजी प्राप्त करें",
+		"getRequestyBaseUrl": "बेस URL",
+		"requestyUseCustomBaseUrl": "कस्टम बेस URL का उपयोग करें",
+		"openRouterTransformsText": "संदर्भ आकार के लिए प्रॉम्प्ट और संदेश श्रृंखलाओं को संपीड़ित करें (<a>OpenRouter ट्रांसफॉर्म</a>)",
+		"anthropicApiKey": "Anthropic API कुंजी",
+		"getAnthropicApiKey": "Anthropic API कुंजी प्राप्त करें",
+		"anthropicUseAuthToken": "X-Api-Key के बजाय Anthropic API कुंजी को Authorization हेडर के रूप में पास करें",
+		"anthropic1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"anthropic1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"awsBedrock1MContextBetaLabel": "1M संदर्भ विंडो सक्षम करें (बीटा)",
+		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 के लिए संदर्भ विंडो को 1 मिलियन टोकन तक बढ़ाता है",
+		"cerebrasApiKey": "Cerebras API कुंजी",
+		"getCerebrasApiKey": "Cerebras API कुंजी प्राप्त करें",
+		"chutesApiKey": "Chutes API कुंजी",
+		"getChutesApiKey": "Chutes API कुंजी प्राप्त करें",
+		"fireworksApiKey": "Fireworks API कुंजी",
+		"getFireworksApiKey": "Fireworks API कुंजी प्राप्त करें",
+		"syntheticApiKey": "Synthetic API कुंजी",
+		"getSyntheticApiKey": "Synthetic API कुंजी प्राप्त करें",
+		"featherlessApiKey": "Featherless API कुंजी",
+		"getFeatherlessApiKey": "Featherless API कुंजी प्राप्त करें",
+		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
+		"ioIntelligenceApiKeyPlaceholder": "अपना आईओ इंटेलिजेंस एपीआई कुंजी दर्ज करें",
+		"getIoIntelligenceApiKey": "IO Intelligence API कुंजी प्राप्त करें",
+		"deepSeekApiKey": "DeepSeek API कुंजी",
+		"getDeepSeekApiKey": "DeepSeek API कुंजी प्राप्त करें",
+		"doubaoApiKey": "डौबाओ API कुंजी",
+		"getDoubaoApiKey": "डौबाओ API कुंजी प्राप्त करें",
+		"moonshotApiKey": "Moonshot API कुंजी",
+		"getMoonshotApiKey": "Moonshot API कुंजी प्राप्त करें",
+		"moonshotBaseUrl": "Moonshot प्रवेश बिंदु",
+		"zaiApiKey": "Z AI API कुंजी",
+		"getZaiApiKey": "Z AI API कुंजी प्राप्त करें",
+		"zaiEntrypoint": "Z AI प्रवेश बिंदु",
+		"zaiEntrypointDescription": "कृपया अपने स्थान के आधार पर उपयुक्त API प्रवेश बिंदु का चयन करें। यदि आप चीन में हैं, तो open.bigmodel.cn चुनें। अन्यथा, api.z.ai चुनें।",
+		"geminiApiKey": "Gemini API कुंजी",
+		"getGroqApiKey": "Groq API कुंजी प्राप्त करें",
+		"groqApiKey": "Groq API कुंजी",
+		"getSambaNovaApiKey": "SambaNova API कुंजी प्राप्त करें",
+		"sambaNovaApiKey": "SambaNova API कुंजी",
+		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
+		"huggingFaceApiKey": "Hugging Face API कुंजी",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी प्राप्त करें",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी",
+		"ovhCloudAiEndpointsBaseUrl": "आधार URL",
+		"getOvhCloudAiEndpointsBaseUrl": "कस्टम आधार URL का उपयोग करें",
+		"huggingFaceModelId": "मॉडल ID",
+		"huggingFaceLoading": "लोड हो रहा है...",
+		"huggingFaceModelsCount": "({{count}} मॉडल)",
+		"huggingFaceSelectModel": "एक मॉडल चुनें...",
+		"huggingFaceSearchModels": "मॉडल खोजें...",
+		"huggingFaceNoModelsFound": "कोई मॉडल नहीं मिला",
+		"huggingFaceProvider": "प्रदाता",
+		"huggingFaceProviderAuto": "स्वचालित",
+		"huggingFaceSelectProvider": "एक प्रदाता चुनें...",
+		"huggingFaceSearchProviders": "प्रदाता खोजें...",
+		"huggingFaceNoProvidersFound": "कोई प्रदाता नहीं मिला",
+		"getGeminiApiKey": "Gemini API कुंजी प्राप्त करें",
+		"openAiApiKey": "OpenAI API कुंजी",
+		"apiKey": "API कुंजी",
+		"openAiBaseUrl": "बेस URL",
+		"getOpenAiApiKey": "OpenAI API कुंजी प्राप्त करें",
+		"mistralApiKey": "Mistral API कुंजी",
+		"getMistralApiKey": "Mistral / Codestral API कुंजी प्राप्त करें",
+		"codestralBaseUrl": "Codestral बेस URL (वैकल्पिक)",
+		"codestralBaseUrlDesc": "Codestral मॉडल के लिए वैकल्पिक URL सेट करें।",
+		"xaiApiKey": "xAI API कुंजी",
+		"getXaiApiKey": "xAI API कुंजी प्राप्त करें",
+		"litellmApiKey": "LiteLLM API कुंजी",
+		"litellmBaseUrl": "LiteLLM आधार URL",
+		"awsCredentials": "AWS क्रेडेंशियल्स",
+		"awsProfile": "AWS प्रोफाइल",
+		"awsApiKey": "Amazon बेडरॉक API कुंजी",
+		"awsProfileName": "AWS प्रोफाइल नाम",
+		"awsAccessKey": "AWS एक्सेस कुंजी",
+		"awsSecretKey": "AWS सीक्रेट कुंजी",
+		"awsSessionToken": "AWS सत्र टोकन",
+		"awsRegion": "AWS क्षेत्र",
+		"awsCrossRegion": "क्रॉस-क्षेत्र अनुमान का उपयोग करें",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "कस्टम VPC एंडपॉइंट का उपयोग करें",
+			"vpcEndpointUrlPlaceholder": "VPC एंडपॉइंट URL दर्ज करें (वैकल्पिक)",
+			"examples": "उदाहरण:"
+		},
+		"enablePromptCaching": "प्रॉम्प्ट कैशिंग सक्षम करें",
+		"enablePromptCachingTitle": "समर्थित मॉडल के लिए प्रदर्शन में सुधार और लागत को कम करने के लिए प्रॉम्प्ट कैशिंग सक्षम करें।",
+		"cacheUsageNote": "नोट: यदि आप कैश उपयोग नहीं देखते हैं, तो एक अलग मॉडल चुनने का प्रयास करें और फिर अपने वांछित मॉडल को पुनः चुनें।",
+		"vscodeLmModel": "भाषा मॉडल",
+		"vscodeLmWarning": "नोट: यह एक बहुत ही प्रायोगिक एकीकरण है और प्रदाता समर्थन भिन्न होगा। यदि आपको किसी मॉडल के समर्थित न होने की त्रुटि मिलती है, तो यह प्रदाता की ओर से एक समस्या है।",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "URL संदर्भ सक्षम करें",
+				"description": "जब प्रतिक्रिया उत्पन्न होती है, अतिरिक्त संदर्भ के लिए Gemini को URL तक पहुंचने और संसाधित करने की अनुमति देता है। वेब सामग्री विश्लेषण वाली कार्यों के लिए उपयोगी।"
+			},
+			"groundingSearch": {
+				"title": "Google खोज के साथ ग्राउंडिंग सक्षम करें",
+				"description": "Gemini को वास्तविक समय के डेटा पर आधारित उत्तर प्रदान करने के लिए Google पर जानकारी खोजने और उत्तरों को ग्राउंड करने की अनुमति देता है। अद्यतित जानकारी की आवश्यकता वाली क्वेरीज़ के लिए उपयोगी।"
+			}
+		},
+		"googleCloudSetup": {
+			"title": "Google Cloud Vertex AI का उपयोग करने के लिए, आपको आवश्यकता है:",
+			"step1": "1. Google Cloud खाता बनाएं, Vertex AI API सक्षम करें और वांछित Claude मॉडल सक्षम करें।",
+			"step2": "2. Google Cloud CLI इंस्टॉल करें और एप्लिकेशन डिफ़ॉल्ट क्रेडेंशियल्स कॉन्फ़िगर करें।",
+			"step3": "3. या क्रेडेंशियल्स के साथ एक सर्विस अकाउंट बनाएं।"
+		},
+		"googleCloudCredentials": "Google Cloud क्रेडेंशियल्स",
+		"googleCloudKeyFile": "Google Cloud कुंजी फ़ाइल पथ",
+		"googleCloudProjectId": "Google Cloud प्रोजेक्ट ID",
+		"googleCloudRegion": "Google Cloud क्षेत्र",
+		"lmStudio": {
+			"baseUrl": "बेस URL (वैकल्पिक)",
+			"modelId": "मॉडल ID",
+			"speculativeDecoding": "स्पेक्युलेटिव डिकोडिंग सक्षम करें",
+			"draftModelId": "ड्राफ्ट मॉडल ID",
+			"draftModelDesc": "स्पेक्युलेटिव डिकोडिंग के सही काम करने के लिए ड्राफ्ट मॉडल को समान मॉडल परिवार से होना चाहिए।",
+			"selectDraftModel": "ड्राफ्ट मॉडल चुनें",
+			"noModelsFound": "कोई ड्राफ्ट मॉडल नहीं मिला। कृपया सुनिश्चित करें कि LM Studio सर्वर मोड सक्षम के साथ चल रहा है।",
+			"description": "LM Studio आपको अपने कंप्यूटर पर स्थानीय रूप से मॉडल चलाने की अनुमति देता है। आरंभ करने के निर्देशों के लिए, उनकी <a>क्विकस्टार्ट गाइड</a> देखें। आपको इस एक्सटेंशन के साथ उपयोग करने के लिए LM Studio की <b>स्थानीय सर्वर</b> सुविधा भी शुरू करनी होगी। <span>नोट:</span> Kilo Code जटिल प्रॉम्प्ट्स का उपयोग करता है और Claude मॉडल के साथ सबसे अच्छा काम करता है। कम क्षमता वाले मॉडल अपेक्षित रूप से काम नहीं कर सकते हैं।"
+		},
+		"ollama": {
+			"baseUrl": "बेस URL (वैकल्पिक)",
+			"modelId": "मॉडल ID",
+			"apiKey": "Ollama API Key",
+			"apiKeyPlaceholder": "अपनी API key दर्ज करें",
+			"apiKeyHelp": "प्रमाणित Ollama इंस्टेंसेस या क्लाउड सेवाओं के लिए वैकल्पिक API key। स्थानीय इंस्टॉलेशन के लिए खाली छोड़ें।",
+			"numCtx": "संदर्भ विंडो आकार (num_ctx)",
+			"numCtxHelp": "मॉडल के डिफ़ॉल्ट संदर्भ विंडो आकार को ओवरराइड करें। मॉडल की मॉडलफ़ाइल कॉन्फ़िगरेशन का उपयोग करने के लिए खाली छोड़ दें। न्यूनतम मान 128 है।",
+			"description": "Ollama आपको अपने कंप्यूटर पर स्थानीय रूप से मॉडल चलाने की अनुमति देता है। आरंभ करने के निर्देशों के लिए, उनकी क्विकस्टार्ट गाइड देखें।",
+			"warning": "नोट: Kilo Code जटिल प्रॉम्प्ट्स का उपयोग करता है और Claude मॉडल के साथ सबसे अच्छा काम करता है। कम क्षमता वाले मॉडल अपेक्षित रूप से काम नहीं कर सकते हैं।"
+		},
+		"unboundApiKey": "Unbound API कुंजी",
+		"getUnboundApiKey": "Unbound API कुंजी प्राप्त करें",
+		"unboundRefreshModelsSuccess": "मॉडल सूची अपडेट हो गई है! अब आप नवीनतम मॉडलों में से चुन सकते हैं।",
+		"unboundInvalidApiKey": "अमान्य API कुंजी। कृपया अपनी API कुंजी की जांच करें और पुनः प्रयास करें।",
+		"humanRelay": {
+			"description": "कोई API कुंजी आवश्यक नहीं है, लेकिन उपयोगकर्ता को वेब चैट AI में जानकारी कॉपी और पेस्ट करने में मदद करनी होगी।",
+			"instructions": "उपयोग के दौरान, एक डायलॉग बॉक्स पॉप अप होगा और वर्तमान संदेश स्वचालित रूप से क्लिपबोर्ड पर कॉपी हो जाएगा। आपको इन्हें AI के वेब संस्करणों (जैसे ChatGPT या Claude) में पेस्ट करना होगा, फिर AI की प्रतिक्रिया को डायलॉग बॉक्स में वापस कॉपी करें और पुष्टि बटन पर क्लिक करें।"
+		},
+		"roo": {
+			"authenticatedMessage": "आपके Roo Code Cloud खाते के माध्यम से सुरक्षित रूप से प्रमाणित।",
+			"connectButton": "Roo Code Cloud से कनेक्ट करें"
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "OpenRouter प्रदाता रूटिंग",
+				"description": "OpenRouter आपके मॉडल के लिए सर्वोत्तम उपलब्ध प्रदाताओं को अनुरोध भेजता है। डिफ़ॉल्ट रूप से, अपटाइम को अधिकतम करने के लिए अनुरोधों को शीर्ष प्रदाताओं के बीच संतुलित किया जाता है। हालांकि, आप इस मॉडल के लिए उपयोग करने के लिए एक विशिष्ट प्रदाता चुन सकते हैं।",
+				"learnMore": "प्रदाता रूटिंग के बारे में अधिक जानें"
+			}
+		},
+		"customModel": {
+			"capabilities": "अपने कस्टम OpenAI-संगत मॉडल के लिए क्षमताओं और मूल्य निर्धारण को कॉन्फ़िगर करें। मॉडल क्षमताओं को निर्दिष्ट करते समय सावधान रहें, क्योंकि वे Kilo Code के प्रदर्शन को प्रभावित कर सकती हैं।",
+			"maxTokens": {
+				"label": "अधिकतम आउटपुट टोकन",
+				"description": "मॉडल एक प्रतिक्रिया में अधिकतम कितने टोकन जनरेट कर सकता है। (सर्वर को अधिकतम टोकन सेट करने की अनुमति देने के लिए -1 निर्दिष्ट करें।)"
+			},
+			"contextWindow": {
+				"label": "संदर्भ विंडो आकार",
+				"description": "कुल टोकन (इनपुट + आउटपुट) जो मॉडल प्रोसेस कर सकता है।"
+			},
+			"imageSupport": {
+				"label": "छवि समर्थन",
+				"description": "क्या यह मॉडल छवियों को प्रोसेस और समझने में सक्षम है?"
+			},
+			"computerUse": {
+				"label": "कंप्यूटर उपयोग",
+				"description": "क्या यह मॉडल ब्राउज़र के साथ इंटरैक्ट करने में सक्षम है? (उदा. Claude 3.7 Sonnet)।"
+			},
+			"promptCache": {
+				"label": "प्रॉम्प्ट कैशिंग",
+				"description": "क्या यह मॉडल प्रॉम्प्ट्स को कैश करने में सक्षम है?"
+			},
+			"pricing": {
+				"input": {
+					"label": "इनपुट मूल्य",
+					"description": "इनपुट/प्रॉम्प्ट में प्रति मिलियन टोकन की लागत। यह मॉडल को संदर्भ और निर्देश भेजने की लागत को प्रभावित करता है।"
+				},
+				"output": {
+					"label": "आउटपुट मूल्य",
+					"description": "मॉडल की प्रतिक्रिया में प्रति मिलियन टोकन की लागत। यह जनरेट की गई सामग्री और पूर्णताओं की लागत को प्रभावित करता है।"
+				},
+				"cacheReads": {
+					"label": "कैश रीड्स मूल्य",
+					"description": "कैश से पढ़ने के लिए प्रति मिलियन टोकन की लागत। यह वह मूल्य है जो कैश की गई प्रतिक्रिया प्राप्त करने पर लगाया जाता है।"
+				},
+				"cacheWrites": {
+					"label": "कैश राइट्स मूल्य",
+					"description": "कैश में लिखने के लिए प्रति मिलियन टोकन की लागत। यह वह मूल्य है जो पहली बार प्रॉम्प्ट को कैश करने पर लगाया जाता है।"
+				}
+			},
+			"resetDefaults": "डिफ़ॉल्ट पर रीसेट करें"
+		},
+		"rateLimitSeconds": {
+			"label": "दर सीमा",
+			"description": "API अनुरोधों के बीच न्यूनतम समय।"
+		},
+		"consecutiveMistakeLimit": {
+			"label": "त्रुटि और पुनरावृत्ति सीमा",
+			"description": "'रू को समस्या हो रही है' संवाद दिखाने से पहले लगातार त्रुटियों या दोहराए गए कार्यों की संख्या",
+			"unlimitedDescription": "असीमित पुनः प्रयास सक्षम (स्वतः आगे बढ़ें)। संवाद कभी नहीं दिखाई देगा।",
+			"warning": "⚠️ 0 पर सेट करने से असीमित पुनः प्रयास की अनुमति मिलती है जिससे महत्वपूर्ण एपीआई उपयोग हो सकता है"
+		},
+		"reasoningEffort": {
+			"label": "मॉडल तर्क प्रयास",
+			"minimal": "न्यूनतम (सबसे तेज़)",
+			"high": "उच्च",
+			"medium": "मध्यम",
+			"low": "निम्न"
+		},
+		"verbosity": {
+			"label": "आउटपुट वर्बोसिटी",
+			"high": "उच्च",
+			"medium": "मध्यम",
+			"low": "कम",
+			"description": "मॉडल की प्रतिक्रियाएं कितनी विस्तृत हैं, इसे नियंत्रित करता है। कम वर्बोसिटी संक्षिप्त उत्तर देती है, जबकि उच्च वर्बोसिटी विस्तृत स्पष्टीकरण प्रदान करती है।"
+		},
+		"setReasoningLevel": "तर्क प्रयास सक्षम करें",
+		"claudeCode": {
+			"pathLabel": "क्लाउड कोड पथ",
+			"description": "आपके क्लाउड कोड सीएलआई का वैकल्पिक पथ। यदि सेट नहीं है तो डिफ़ॉल्ट 'claude' है।",
+			"placeholder": "डिफ़ॉल्ट: claude",
+			"maxTokensLabel": "अधिकतम आउटपुट टोकन",
+			"maxTokensDescription": "Claude Code प्रतिक्रियाओं के लिए आउटपुट टोकन की अधिकतम संख्या। डिफ़ॉल्ट 8000 है।"
+		},
+		"geminiCli": {
+			"description": "यह प्रदाता Gemini CLI टूल से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
+			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
+			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.gemini/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
+			"instructions": "यदि आपने अभी तक प्रमाणीकरण नहीं किया है, तो कृपया पहले",
+			"instructionsContinued": "को अपने टर्मिनल में चलाएं।",
+			"setupLink": "Gemini CLI सेटअप निर्देश",
+			"requirementsTitle": "महत्वपूर्ण आवश्यकताएं",
+			"requirement1": "पहले, आपको Gemini CLI टूल इंस्टॉल करना होगा",
+			"requirement2": "फिर, अपने टर्मिनल में gemini चलाएं और सुनिश्चित करें कि आप Google से लॉग इन करें",
+			"requirement3": "केवल व्यक्तिगत Google खातों के साथ काम करता है (Google Workspace खाते नहीं)",
+			"requirement4": "API कुंजियों का उपयोग नहीं करता - प्रमाणीकरण OAuth के माध्यम से संभाला जाता है",
+			"requirement5": "Gemini CLI टूल को पहले इंस्टॉल और प्रमाणित करने की आवश्यकता है",
+			"freeAccess": "OAuth प्रमाणीकरण के माध्यम से मुफ्त पहुंच"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth क्रेडेंशियल पथ (वैकल्पिक)",
+			"oauthPathDescription": "OAuth क्रेडेंशियल फ़ाइल का पथ। डिफ़ॉल्ट स्थान (~/.qwen/oauth_creds.json) का उपयोग करने के लिए खाली छोड़ें।",
+			"description": "यह प्रदाता Qwen सेवा से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
+			"instructions": "कृपया प्राधिकरण फ़ाइल प्राप्त करने और इसे निर्दिष्ट पथ में रखने के लिए आधिकारिक दस्तावेज़ीकरण का पालन करें।",
+			"setupLink": "Qwen आधिकारिक दस्तावेज़ीकरण"
+		}
+	},
+	"browser": {
+		"enable": {
+			"label": "ब्राउज़र टूल सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code कंप्यूटर उपयोग का समर्थन करने वाले मॉडल का उपयोग करते समय वेबसाइटों के साथ बातचीत करने के लिए ब्राउज़र का उपयोग कर सकता है। <0>अधिक जानें</0>"
+		},
+		"viewport": {
+			"label": "व्यूपोर्ट आकार",
+			"description": "ब्राउज़र इंटरैक्शन के लिए व्यूपोर्ट आकार चुनें। यह वेबसाइटों के प्रदर्शन और उनके साथ बातचीत को प्रभावित करता है।",
+			"options": {
+				"largeDesktop": "बड़ा डेस्कटॉप (1280x800)",
+				"smallDesktop": "छोटा डेस्कटॉप (900x600)",
+				"tablet": "टैबलेट (768x1024)",
+				"mobile": "मोबाइल (360x640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "स्क्रीनशॉट गुणवत्ता",
+			"description": "ब्राउज़र स्क्रीनशॉट की WebP गुणवत्ता समायोजित करें। उच्च मान स्पष्ट स्क्रीनशॉट प्रदान करते हैं लेकिन token उपयोग बढ़ाते हैं।"
+		},
+		"remote": {
+			"label": "दूरस्थ ब्राउज़र कनेक्शन का उपयोग करें",
+			"description": "रिमोट डीबगिंग सक्षम के साथ चल रहे Chrome ब्राउज़र से कनेक्ट करें (--remote-debugging-port=9222)।",
+			"urlPlaceholder": "कस्टम URL (उदा. http://localhost:9222)",
+			"testButton": "कनेक्शन का परीक्षण करें",
+			"testingButton": "परीक्षण हो रहा है...",
+			"instructions": "DevTools प्रोटोकॉल होस्ट पता दर्ज करें या Chrome स्थानीय इंस्टेंस स्वतः खोजने के लिए खाली छोड़ दें। टेस्ट कनेक्शन बटन यदि प्रदान किया गया है तो कस्टम URL का प्रयास करेगा, या यदि फ़ील्ड खाली है तो स्वतः खोज करेगा।"
+		}
+	},
+	"checkpoints": {
+		"enable": {
+			"label": "स्वचालित चेकपॉइंट सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code कार्य निष्पादन के दौरान स्वचालित रूप से चेकपॉइंट बनाएगा, जिससे परिवर्तनों की समीक्षा करना या पहले की स्थितियों पर वापस जाना आसान हो जाएगा। <0>अधिक जानें</0>"
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "ध्वनि प्रभाव सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code सूचनाओं और घटनाओं के लिए ध्वनि प्रभाव चलाएगा।",
+			"volumeLabel": "वॉल्यूम"
+		},
+		"tts": {
+			"label": "टेक्स्ट-टू-स्पीच सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code टेक्स्ट-टू-स्पीच का उपयोग करके अपनी प्रतिक्रियाओं को बोलकर पढ़ेगा।",
+			"speedLabel": "गति"
+		}
+	},
+	"contextManagement": {
+		"description": "AI के संदर्भ विंडो में शामिल जानकारी को नियंत्रित करें, जो token उपयोग और प्रतिक्रिया गुणवत्ता को प्रभावित करता है",
+		"autoCondenseContextPercent": {
+			"label": "बुद्धिमान संदर्भ संघनन को ट्रिगर करने की सीमा",
+			"description": "जब संदर्भ विंडो इस सीमा तक पहुंचती है, तो Kilo Code इसे स्वचालित रूप से संघनित कर देगा।"
+		},
+		"condensingApiConfiguration": {
+			"label": "संदर्भ संघनन के लिए API कॉन्फ़िगरेशन",
+			"description": "संदर्भ संघनन कार्यों के लिए किस API कॉन्फ़िगरेशन का उपयोग करना है, यह चुनें। वर्तमान सक्रिय कॉन्फ़िगरेशन का उपयोग करने के लिए अचयनित छोड़ें।",
+			"useCurrentConfig": "डिफ़ॉल्ट"
+		},
+		"customCondensingPrompt": {
+			"label": "कस्टम संदर्भ संघनन प्रॉम्प्ट",
+			"description": "संदर्भ संघनन के लिए कस्टम सिस्टम प्रॉम्प्ट। डिफ़ॉल्ट प्रॉम्प्ट का उपयोग करने के लिए खाली छोड़ें।",
+			"placeholder": "अपना कस्टम संघनन प्रॉम्प्ट यहाँ दर्ज करें...\n\nआप डिफ़ॉल्ट प्रॉम्प्ट जैसी ही संरचना का उपयोग कर सकते हैं:\n- पिछली बातचीत\n- वर्तमान कार्य\n- प्रमुख तकनीकी अवधारणाएँ\n- प्रासंगिक फ़ाइलें और कोड\n- समस्या समाधान\n- लंबित कार्य और अगले चरण",
+			"reset": "डिफ़ॉल्ट पर रीसेट करें",
+			"hint": "खाली = डिफ़ॉल्ट प्रॉम्प्ट का उपयोग करें"
+		},
+		"autoCondenseContext": {
+			"name": "बुद्धिमान संदर्भ संघनन को स्वचालित रूप से ट्रिगर करें",
+			"description": "जब सक्षम हो, तो Kilo Code स्वचालित रूप से संदर्भ को संघनित करेगा जब सीमा पहुंच जाएगी। जब अक्षम हो, तो आप अभी भी मैन्युअल रूप से संदर्भ संघनन को ट्रिगर कर सकते हैं।"
+		},
+		"openTabs": {
+			"label": "खुले टैब संदर्भ सीमा",
+			"description": "संदर्भ में शामिल करने के लिए VSCode खुले टैब की अधिकतम संख्या। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन token उपयोग बढ़ाते हैं।"
+		},
+		"workspaceFiles": {
+			"label": "वर्कस्पेस फाइल संदर्भ सीमा",
+			"description": "वर्तमान कार्य निर्देशिका विवरण में शामिल करने के लिए फाइलों की अधिकतम संख्या। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन token उपयोग बढ़ाते हैं।"
+		},
+		"rooignore": {
+			"label": "सूचियों और खोजों में .kilocodeignore फाइलें दिखाएँ",
+			"description": "जब सक्षम होता है, .kilocodeignore में पैटर्न से मेल खाने वाली फाइलें लॉक प्रतीक के साथ सूचियों में दिखाई जाएंगी। जब अक्षम होता है, ये फाइलें फाइल सूचियों और खोजों से पूरी तरह छिपा दी जाएंगी।"
+		},
+		"maxReadFile": {
+			"label": "फ़ाइल पढ़ने का स्वचालित काटने की सीमा",
+			"description": "जब मॉडल प्रारंभ/अंत मान नहीं देता है, तो Kilo Code इतनी पंक्तियाँ पढ़ता है। यदि यह संख्या फ़ाइल की कुल पंक्तियों से कम है, तो Kilo Code कोड परिभाषाओं का पंक्ति क्रमांक इंडेक्स बनाता है। विशेष मामले: -1 Kilo Code को पूरी फ़ाइल पढ़ने का निर्देश देता है (इंडेक्सिंग के बिना), और 0 कोई पंक्ति न पढ़ने और न्यूनतम संदर्भ के लिए केवल पंक्ति इंडेक्स प्रदान करने का निर्देश देता है। कम मान प्रारंभिक संदर्भ उपयोग को कम करते हैं, जो बाद में सटीक पंक्ति श्रेणी पढ़ने की अनुमति देता है। स्पष्ट प्रारंभ/अंत अनुरोध इस सेटिंग से सीमित नहीं हैं।",
+			"lines": "पंक्तियाँ",
+			"always_full_read": "हमेशा पूरी फ़ाइल पढ़ें"
+		},
+		"maxConcurrentFileReads": {
+			"label": "एक साथ फ़ाइल पढ़ने की सीमा",
+			"description": "'read_file' टूल द्वारा एक साथ प्रोसेस की जा सकने वाली अधिकतम फ़ाइलों की संख्या। उच्च मान कई छोटी फ़ाइलों को पढ़ने की गति बढ़ा सकते हैं लेकिन मेमोरी उपयोग बढ़ा देते हैं।"
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "स्वचालित रूप से संदर्भ में डायग्नोस्टिक शामिल करें",
+				"description": "जब सक्षम होता है, तो संपादित फ़ाइलों से डायग्नोस्टिक संदेश (त्रुटियां) स्वचालित रूप से संदर्भ में शामिल किए जाएंगे। आप हमेशा @problems का उपयोग करके सभी कार्यक्षेत्र डायग्नोस्टिक को मैन्युअल रूप से शामिल कर सकते हैं।"
+			},
+			"maxMessages": {
+				"label": "अधिकतम डायग्नोस्टिक संदेश",
+				"description": "प्रति फ़ाइल शामिल किए जाने वाले डायग्नोस्टिक संदेशों की अधिकतम संख्या। यह सीमा स्वचालित समावेशन (जब चेकबॉक्स सक्षम है) और मैन्युअल @problems उल्लेख दोनों पर लागू होती है। उच्च मान अधिक संदर्भ प्रदान करते हैं लेकिन टोकन उपयोग बढ़ाते हैं।",
+				"resetTooltip": "डिफ़ॉल्ट मान पर रीसेट करें (50)",
+				"unlimited": "असीमित डायग्नोस्टिक संदेश",
+				"unlimitedLabel": "असीमित"
+			},
+			"delayAfterWrite": {
+				"label": "संभावित समस्याओं का पता लगाने के लिए डायग्नोस्टिक्स को अनुमति देने के लिए लिखने के बाद देरी",
+				"description": "फ़ाइल लिखने के बाद आगे बढ़ने से पहले प्रतीक्षा करने का समय, डायग्नोस्टिक टूल को परिवर्तनों को संसाधित करने और समस्याओं का पता लगाने की अनुमति देता है।"
+			}
+		},
+		"condensingThreshold": {
+			"label": "संघनन ट्रिगर सीमा",
+			"selectProfile": "प्रोफ़ाइल के लिए सीमा कॉन्फ़िगर करें",
+			"defaultProfile": "वैश्विक डिफ़ॉल्ट (सभी प्रोफ़ाइल)",
+			"defaultDescription": "जब संदर्भ इस प्रतिशत तक पहुंचता है, तो यह सभी प्रोफ़ाइल के लिए स्वचालित रूप से संघनित हो जाएगा जब तक कि उनकी कस्टम सेटिंग्स न हों",
+			"profileDescription": "केवल इस प्रोफ़ाइल के लिए कस्टम सीमा (वैश्विक डिफ़ॉल्ट को ओवरराइड करता है)",
+			"inheritDescription": "यह प्रोफ़ाइल वैश्विक डिफ़ॉल्ट सीमा को इनहेरिट करता है ({{threshold}}%)",
+			"usesGlobal": "(वैश्विक {{threshold}}% का उपयोग करता है)"
+		},
+		"maxImageFileSize": {
+			"label": "अधिकतम छवि फ़ाइल आकार",
+			"mb": "MB",
+			"description": "छवि फ़ाइलों के लिए अधिकतम आकार (MB में) जो read file tool द्वारा प्रसंस्कृत किया जा सकता है।"
+		},
+		"maxTotalImageSize": {
+			"label": "अधिकतम कुल छवि आकार",
+			"mb": "MB",
+			"description": "एकल read_file ऑपरेशन में संसाधित सभी छवियों के लिए अधिकतम संचयी आकार सीमा (MB में)। कई छवियों को पढ़ते समय, प्रत्येक छवि का आकार कुल में जोड़ा जाता है। यदि किसी अन्य छवि को शामिल करने से यह सीमा पार हो जाएगी, तो उसे छोड़ दिया जाएगा।"
+		}
+	},
+	"terminal": {
+		"basic": {
+			"label": "टर्मिनल सेटिंग्स: मूल",
+			"description": "मूल टर्मिनल सेटिंग्स"
+		},
+		"advanced": {
+			"label": "टर्मिनल सेटिंग्स: उन्नत",
+			"description": "निम्नलिखित विकल्पों को लागू करने के लिए टर्मिनल को पुनरारंभ करने की आवश्यकता हो सकती है"
+		},
+		"outputLineLimit": {
+			"label": "टर्मिनल आउटपुट सीमा",
+			"description": "कमांड निष्पादित करते समय टर्मिनल आउटपुट में शामिल करने के लिए पंक्तियों की अधिकतम संख्या। पार होने पर पंक्तियाँ मध्य से हटा दी जाएंगी, token बचाते हुए। <0>अधिक जानें</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "टर्मिनल वर्ण सीमा",
+			"description": "कमांड निष्पादित करते समय टर्मिनल आउटपुट में शामिल किए जाने वाले वर्णों की अधिकतम संख्या। यह सीमा अत्यधिक लंबी लाइनों से मेमोरी समस्याओं को रोकने के लिए लाइन सीमा पर पूर्वता लेती है। जब यह सीमा पार हो जाती है, तो आउटपुट छोटा कर दिया जाएगा। <0>और जानें</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "टर्मिनल शेल एकीकरण टाइमआउट",
+			"description": "कमांड निष्पादित करने से पहले शेल एकीकरण के आरंभ होने के लिए प्रतीक्षा का अधिकतम समय। लंबे शेल स्टार्टअप समय वाले उपयोगकर्ताओं के लिए, यदि आप टर्मिनल में \"Shell Integration Unavailable\" त्रुटियाँ देखते हैं तो इस मान को बढ़ाने की आवश्यकता हो सकती है। <0>अधिक जानें</0>"
+		},
+		"shellIntegrationDisabled": {
+			"label": "टर्मिनल शेल एकीकरण अक्षम करें",
+			"description": "इसे सक्षम करें यदि टर्मिनल कमांड सही ढंग से काम नहीं कर रहे हैं या आपको 'शेल एकीकरण अनुपलब्ध' त्रुटियाँ दिखाई देती हैं। यह कमांड चलाने के लिए एक सरल विधि का उपयोग करता है, कुछ उन्नत टर्मिनल सुविधाओं को दरकिनार करते हुए। <0>अधिक जानें</0>"
+		},
+		"commandDelay": {
+			"label": "टर्मिनल कमांड विलंब",
+			"description": "कमांड निष्पादन के बाद जोड़ने के लिए मिलीसेकंड में विलंब। 0 का डिफ़ॉल्ट सेटिंग विलंब को पूरी तरह से अक्षम कर देता है। यह टाइमिंग समस्याओं वाले टर्मिनलों में कमांड आउटपुट को पूरी तरह से कैप्चर करने में मदद कर सकता है। अधिकांश टर्मिनलों में यह `PROMPT_COMMAND='sleep N'` सेट करके कार्यान्वित किया जाता है और Powershell प्रत्येक कमांड के अंत में `start-sleep` जोड़ता है। मूल रूप से यह VSCode बग#237208 के लिए एक समाधान था और इसकी आवश्यकता नहीं हो सकती है। <0>अधिक जानें</0>"
+		},
+		"compressProgressBar": {
+			"label": "प्रगति बार आउटपुट संपीड़ित करें",
+			"description": "जब सक्षम किया जाता है, तो कैरिज रिटर्न (\\r) के साथ टर्मिनल आउटपुट को संसाधित करता है, जो वास्तविक टर्मिनल द्वारा सामग्री प्रदर्शित करने के तरीके का अनुकरण करता है। यह प्रगति बार के मध्यवर्ती स्थितियों को हटाता है, केवल अंतिम स्थिति को बनाए रखता है, जिससे अधिक प्रासंगिक जानकारी के लिए संदर्भ स्थान संरक्षित होता है। <0>अधिक जानें</0>"
+		},
+		"powershellCounter": {
+			"label": "PowerShell काउंटर समाधान सक्षम करें",
+			"description": "सक्षम होने पर, कमांड के सही निष्पादन को सुनिश्चित करने के लिए PowerShell कमांड में एक काउंटर जोड़ता है। यह उन PowerShell टर्मिनलों के साथ मदद करता है जिनमें आउटपुट कैप्चर करने में समस्याएं हो सकती हैं। <0>अधिक जानें</0>"
+		},
+		"zshClearEolMark": {
+			"label": "ZSH EOL मार्क साफ़ करें",
+			"description": "सक्षम होने पर, PROMPT_EOL_MARK='' सेट करके ZSH लाइन-समाप्ति मार्क को साफ़ करता है। यह कमांड आउटपुट की व्याख्या में समस्याओं को रोकता है जब आउटपुट '%' जैसे विशेष वर्णों के साथ समाप्त होता है। <0>अधिक जानें</0>"
+		},
+		"zshOhMy": {
+			"label": "Oh My Zsh एकीकरण सक्षम करें",
+			"description": "सक्षम होने पर, Oh My Zsh शेल एकीकरण सुविधाओं को सक्षम करने के लिए ITERM_SHELL_INTEGRATION_INSTALLED=Yes सेट करता है। इस सेटिंग को लागू करने के लिए IDE को पुनरारंभ करने की आवश्यकता हो सकती है। <0>अधिक जानें</0>"
+		},
+		"zshP10k": {
+			"label": "Powerlevel10k एकीकरण सक्षम करें",
+			"description": "सक्षम होने पर, Powerlevel10k शेल एकीकरण सुविधाओं को सक्षम करने के लिए POWERLEVEL9K_TERM_SHELL_INTEGRATION=true सेट करता है। <0>अधिक जानें</0>"
+		},
+		"zdotdir": {
+			"label": "ZDOTDIR प्रबंधन सक्षम करें",
+			"description": "सक्षम होने पर, zsh शेल एकीकरण को सही ढंग से संभालने के लिए ZDOTDIR के लिए एक अस्थायी डायरेक्टरी बनाता है। यह आपके zsh कॉन्फ़िगरेशन को बनाए रखते हुए VSCode शेल एकीकरण को zsh के साथ सही ढंग से काम करने की सुनिश्चितता करता है। <0>अधिक जानें</0>"
+		},
+		"inheritEnv": {
+			"label": "पर्यावरण चर विरासत में लें",
+			"description": "सक्षम होने पर, टर्मिनल VSCode के मूल प्रक्रिया से पर्यावरण चर विरासत में लेता है, जैसे उपयोगकर्ता प्रोफ़ाइल में परिभाषित शेल एकीकरण सेटिंग्स। यह VSCode की वैश्विक सेटिंग `terminal.integrated.inheritEnv` को सीधे टॉगल करता है। <0>अधिक जानें</0>"
+		}
+	},
+	"advancedSettings": {
+		"title": "उन्नत सेटिंग्स"
+	},
+	"advanced": {
+		"diff": {
+			"label": "diffs के माध्यम से संपादन सक्षम करें",
+			"description": "जब सक्षम होता है, Kilo Code फाइलों को तेजी से संपादित कर सकेगा और स्वचालित रूप से काटे गए पूर्ण-फाइल लेखन को अस्वीकार करेगा। नवीनतम Claude 4 Sonnet मॉडल के साथ सबसे अच्छा काम करता है।",
+			"strategy": {
+				"label": "Diff रणनीति",
+				"options": {
+					"standard": "मानक (एकल ब्लॉक)",
+					"multiBlock": "प्रायोगिक: मल्टी-ब्लॉक diff",
+					"unified": "प्रायोगिक: एकीकृत diff"
+				},
+				"descriptions": {
+					"standard": "मानक diff रणनीति एक समय में एक कोड ब्लॉक पर परिवर्तन लागू करती है।",
+					"unified": "एकीकृत diff रणनीति diffs लागू करने के लिए कई दृष्टिकोण लेती है और सर्वोत्तम दृष्टिकोण चुनती है।",
+					"multiBlock": "मल्टी-ब्लॉक diff रणनीति एक अनुरोध में एक फाइल में कई कोड ब्लॉक अपडेट करने की अनुमति देती है।"
+				}
+			},
+			"matchPrecision": {
+				"label": "मिलान सटीकता",
+				"description": "यह स्लाइडर नियंत्रित करता है कि diffs लागू करते समय कोड अनुभागों को कितनी सटीकता से मेल खाना चाहिए। निम्न मान अधिक लचीले मिलान की अनुमति देते हैं लेकिन गलत प्रतिस्थापन का जोखिम बढ़ाते हैं। 100% से नीचे के मानों का उपयोग अत्यधिक सावधानी के साथ करें।"
+			}
+		},
+		"todoList": {
+			"label": "टूडू सूची टूल सक्षम करें",
+			"description": "जब सक्षम हो, तो Kilo Code कार्य प्रगति को ट्रैक करने के लिए टूडू सूचियाँ बना और प्रबंधित कर सकता है। यह जटिल कार्यों को प्रबंधनीय चरणों में व्यवस्थित करने में मदद करता है।"
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "प्रायोगिक एकीकृत diff रणनीति का उपयोग करें",
+			"description": "प्रायोगिक एकीकृत diff रणनीति सक्षम करें। यह रणनीति मॉडल त्रुटियों के कारण पुनः प्रयासों की संख्या को कम कर सकती है, लेकिन अप्रत्याशित व्यवहार या गलत संपादन का कारण बन सकती है। केवल तभी सक्षम करें जब आप जोखिमों को समझते हों और सभी परिवर्तनों की सावधानीपूर्वक समीक्षा करने के लिए तैयार हों।"
+		},
+		"SEARCH_AND_REPLACE": {
+			"name": "प्रायोगिक खोज और प्रतिस्थापन उपकरण का उपयोग करें",
+			"description": "प्रायोगिक खोज और प्रतिस्थापन उपकरण सक्षम करें, जो Kilo Code को एक अनुरोध में खोज शब्द के कई उदाहरणों को बदलने की अनुमति देता है।"
+		},
+		"INSERT_BLOCK": {
+			"name": "प्रायोगिक सामग्री सम्मिलित करने के उपकरण का उपयोग करें",
+			"description": "प्रायोगिक सामग्री सम्मिलित करने के उपकरण को सक्षम करें, जो Kilo Code को diff बनाए बिना विशिष्ट लाइन नंबरों पर सामग्री सम्मिलित करने की अनुमति देता है।"
+		},
+		"POWER_STEERING": {
+			"name": "प्रायोगिक \"पावर स्टीयरिंग\" मोड का उपयोग करें",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code मॉडल को उसके वर्तमान मोड परिभाषा के विवरण के बारे में अधिक बार याद दिलाएगा। इससे भूमिका परिभाषाओं और कस्टम निर्देशों के प्रति अधिक मजबूत अनुपालन होगा, लेकिन प्रति संदेश अधिक token का उपयोग होगा।"
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "प्रायोगिक मल्टी ब्लॉक diff उपकरण का उपयोग करें",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code मल्टी ब्लॉक diff उपकरण का उपयोग करेगा। यह एक अनुरोध में फ़ाइल में कई कोड ब्लॉक अपडेट करने का प्रयास करेगा।"
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "समवर्ती फ़ाइल पढ़ना सक्षम करें",
+			"description": "सक्षम होने पर, Kilo Code एक ही अनुरोध में कई फ़ाइलें पढ़ सकता है अक्षम होने पर, Kilo Code को एक बार में एक फ़ाइल पढ़नी होगी। कम सक्षम मॉडल के साथ काम करते समय या जब आप फ़ाइल एक्सेस पर अधिक नियंत्रण चाहते हैं तो इसे अक्षम करना मददगार हो सकता है।"
+		},
+		"MARKETPLACE": {
+			"name": "Marketplace सक्षम करें",
+			"description": "जब सक्षम होता है, तो आप Marketplace से MCP और कस्टम मोड इंस्टॉल कर सकते हैं।"
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "समानांतर फ़ाइल संपादन सक्षम करें",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code एक ही अनुरोध में कई फ़ाइलों को संपादित कर सकता है। जब अक्षम किया जाता है, तो Kilo Code को एक समय में एक फ़ाइल संपादित करनी होगी। इसे अक्षम करना तब मदद कर सकता है जब आप कम सक्षम मॉडल के साथ काम कर रहे हों या जब आप फ़ाइल संशोधनों पर अधिक नियंत्रण चाहते हों।"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Fast Apply सक्षम करें",
+			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
+			"apiKey": "Morph API कुंजी (वैकल्पिक)",
+			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
+			"modelLabel": "मॉडल चयन",
+			"modelDescription": "फ़ाइल संपादन के लिए किस Fast Apply मॉडल का उपयोग करना है चुनें",
+			"models": {
+				"auto": "स्वचालित (डिफ़ॉल्ट - सर्वोत्तम उपलब्ध चुनता है)",
+				"morphFast": "Morph v3 Fast (तेज़, कम लागत)",
+				"morphLarge": "Morph v3 Large (अधिक सक्षम)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "बैकग्राउंड संपादन",
+			"description": "सक्षम होने पर एडिटर फोकस व्यवधान को रोकता है। फ़ाइल संपादन diff व्यू खोले बिना या फोकस चुराए बिना बैकग्राउंड में होता है। आप Kilo Code के बदलाव करते समय बिना किसी बाधा के काम जारी रख सकते हैं। फ़ाइलें डायग्नोस्टिक्स कैप्चर करने के लिए बिना फोकस के खुल सकती हैं या पूरी तरह बंद रह सकती हैं।"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "नए मैसेज पार्सर का उपयोग करें",
+			"description": "प्रायोगिक स्ट्रीमिंग मैसेज पार्सर सक्षम करें, जो लंबे उत्तरों के लिए संदेशों को अधिक कुशलता से प्रोसेस करके प्रदर्शन को बेहतर बनाता है।"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "नए कार्यों के लिए 'todos' सूची की आवश्यकता है",
+			"description": "जब सक्षम किया जाता है, तो new_task टूल को todos पैरामीटर प्रदान करने की आवश्यकता होगी। यह सुनिश्चित करता है कि सभी नए कार्य स्पष्ट उद्देश्यों की सूची के साथ शुरू हों। जब अक्षम किया जाता है (डिफ़ॉल्ट), तो todos पैरामीटर पिछड़े संगतता के लिए वैकल्पिक रहता है।"
+		},
+		"IMAGE_GENERATION": {
+			"name": "AI छवि निर्माण सक्षम करें",
+			"description": "जब सक्षम किया जाता है, तो Kilo Code टेक्स्ट प्रॉम्प्ट से छवियां उत्पन्न कर सकता है। Kilo Code या OpenRouter API कुंजी कॉन्फ़िगरेशन की आवश्यकता होती है।",
+			"apiProvider": "API प्रदाता",
+			"openRouterApiKeyLabel": "OpenRouter API कुंजी",
+			"openRouterApiKeyPlaceholder": "अपनी OpenRouter API कुंजी दर्ज करें",
+			"kiloCodeApiKeyLabel": "Kilo Code API कुंजी",
+			"kiloCodeApiKeyPlaceholder": "अपनी Kilo Code API कुंजी दर्ज करें",
+			"kiloCodeApiKeyPaste": "वर्तमान Kilo Code API कुंजी पेस्ट करें",
+			"getApiKeyText": "अपनी API कुंजी प्राप्त करें",
+			"modelSelectionLabel": "छवि निर्माण मॉडल",
+			"modelSelectionDescription": "छवि निर्माण के लिए उपयोग करने वाला मॉडल चुनें",
+			"warningMissingKey": "⚠️ छवि निर्माण के लिए API कुंजी आवश्यक है, कृपया इसे ऊपर कॉन्फ़िगर करें।",
+			"successConfigured": "✓ छवि निर्माण कॉन्फ़िगर है और उपयोग के लिए तैयार है"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "आपके एडिटर में सीधे त्वरित कोड सुझाव और सुधार के लिए Autocomplete सुविधाओं को सक्षम करें। लक्षित परिवर्तनों के लिए त्वरित कार्य (Cmd+I) और संदर्भित सुधारों के लिए Autocomplete शामिल है।"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "मॉडल द्वारा शुरू किए गए स्लैश कमांड सक्षम करें",
+			"description": "जब सक्षम होता है, Kilo Code वर्कफ़्लो चलाने के लिए आपके स्लैश कमांड चला सकता है।"
+		}
+	},
+	"promptCaching": {
+		"label": "प्रॉम्प्ट कैशिंग अक्षम करें",
+		"description": "जब चेक किया जाता है, तो Kilo Code इस मॉडल के लिए प्रॉम्प्ट कैशिंग का उपयोग नहीं करेगा।"
+	},
+	"temperature": {
+		"useCustom": "कस्टम तापमान का उपयोग करें",
+		"description": "मॉडल की प्रतिक्रियाओं में यादृच्छिकता को नियंत्रित करता है।",
+		"rangeDescription": "उच्च मान आउटपुट को अधिक यादृच्छिक बनाते हैं, निम्न मान इसे अधिक निर्धारित बनाते हैं।"
+	},
+	"modelInfo": {
+		"supportsImages": "छवियों का समर्थन करता है",
+		"noImages": "छवियों का समर्थन नहीं करता है",
+		"supportsComputerUse": "कंप्यूटर उपयोग का समर्थन करता है",
+		"noComputerUse": "कंप्यूटर उपयोग का समर्थन नहीं करता है",
+		"supportsPromptCache": "प्रॉम्प्ट कैशिंग का समर्थन करता है",
+		"noPromptCache": "प्रॉम्प्ट कैशिंग का समर्थन नहीं करता है",
+		"contextWindow": "संदर्भ विंडो:",
+		"maxOutput": "अधिकतम आउटपुट",
+		"inputPrice": "इनपुट मूल्य",
+		"outputPrice": "आउटपुट मूल्य",
+		"cacheReadsPrice": "कैश रीड्स मूल्य",
+		"cacheWritesPrice": "कैश राइट्स मूल्य",
+		"enableStreaming": "स्ट्रीमिंग सक्षम करें",
+		"enableR1Format": "R1 मॉडल पैरामीटर सक्षम करें",
+		"enableR1FormatTips": "QWQ जैसी R1 मॉडलों का उपयोग करते समय इसे सक्षम करना आवश्यक है, ताकि 400 त्रुटि से बचा जा सके",
+		"useAzure": "Azure का उपयोग करें",
+		"azureApiVersion": "Azure API संस्करण सेट करें",
+		"gemini": {
+			"freeRequests": "* प्रति मिनट {{count}} अनुरोधों तक मुफ्त। उसके बाद, बिलिंग प्रॉम्प्ट आकार पर निर्भर करती है।",
+			"pricingDetails": "अधिक जानकारी के लिए, मूल्य निर्धारण विवरण देखें।",
+			"billingEstimate": "* बिलिंग एक अनुमान है - सटीक लागत प्रॉम्प्ट आकार पर निर्भर करती है।"
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "एक्सटेंशन <serviceLink>{{serviceName}}</serviceLink> पर उपलब्ध मॉडलों की नवीनतम सूची स्वचालित रूप से प्राप्त करता है। यदि आप अनिश्चित हैं कि कौन सा मॉडल चुनना है, तो Kilo Code <defaultModelLink>{{defaultModelId}}</defaultModelLink> के साथ सबसे अच्छा काम करता है।",
+		"label": "मॉडल",
+		"searchPlaceholder": "खोजें",
+		"noMatchFound": "कोई मिलान नहीं मिला",
+		"useCustomModel": "कस्टम उपयोग करें: {{modelId}}"
+	},
+	"footer": {
+		"feedback": "यदि आपके कोई प्रश्न या प्रतिक्रिया है, तो <githubLink>github.com/Kilo-Org/kilocode</githubLink> पर एक मुद्दा खोलने या <redditLink>reddit.com/r/kilocode</redditLink> या <discordLink>kilocode.ai/discord</discordLink> में शामिल होने में संकोच न करें",
+		"support": "वित्तीय प्रश्नों के लिए, कृपया <supportLink>https://kilocode.ai/support</supportLink> पर ग्राहक सहायता से संपर्क करें",
+		"telemetry": {
+			"label": "त्रुटि और उपयोग रिपोर्टिंग की अनुमति दें",
+			"description": "उपयोग डेटा और त्रुटि रिपोर्ट भेजकर Kilo Code को बेहतर बनाने में मदद करें। कोड, प्रॉम्प्ट, या व्यक्तिगत जानकारी कभी भी नहीं भेजी जाती है। अधिक विवरण के लिए हमारी गोपनीयता नीति देखें।"
+		},
+		"settings": {
+			"import": "इम्पोर्ट",
+			"export": "एक्सपोर्ट",
+			"reset": "रीसेट करें"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "अधिकतम tokens",
+		"maxThinkingTokens": "अधिकतम thinking tokens"
+	},
+	"validation": {
+		"apiKey": "आपको एक मान्य API कुंजी प्रदान करनी होगी।",
+		"awsRegion": "Amazon Bedrock का उपयोग करने के लिए आपको एक क्षेत्र चुनना होगा।",
+		"googleCloud": "आपको एक मान्य Google Cloud प्रोजेक्ट ID और क्षेत्र प्रदान करना होगा।",
+		"modelId": "आपको एक मान्य मॉडल ID प्रदान करनी होगी।",
+		"modelSelector": "आपको एक मान्य मॉडल चयनकर्ता प्रदान करना होगा।",
+		"openAi": "आपको एक मान्य बेस URL, API कुंजी और मॉडल ID प्रदान करनी होगी।",
+		"arn": {
+			"invalidFormat": "अमान्य ARN प्रारूप। कृपया प्रारूप आवश्यकताएं जांचें।",
+			"regionMismatch": "चेतावनी: आपके ARN में क्षेत्र ({{arnRegion}}) आपके चयनित क्षेत्र ({{region}}) से मेल नहीं खाता। इससे पहुंच संबंधी समस्याएं हो सकती हैं। प्रदाता ARN से क्षेत्र का उपयोग करेगा।"
+		},
+		"modelAvailability": "आपके द्वारा प्रदान की गई मॉडल ID ({{modelId}}) उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
+		"modelDeprecated": "यह मॉडल अब उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
+		"providerNotAllowed": "प्रदाता '{{provider}}' आपके संगठन द्वारा अनुमत नहीं है",
+		"modelNotAllowed": "मॉडल '{{model}}' प्रदाता '{{provider}}' के लिए आपके संगठन द्वारा अनुमत नहीं है",
+		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है",
+		"qwenCodeOauthPath": "आपको एक वैध OAuth क्रेडेंशियल पथ प्रदान करना होगा"
+	},
+	"placeholders": {
+		"apiKey": "API कुंजी दर्ज करें...",
+		"profileName": "प्रोफ़ाइल नाम दर्ज करें",
+		"accessKey": "एक्सेस कुंजी दर्ज करें...",
+		"secretKey": "गुप्त कुंजी दर्ज करें...",
+		"sessionToken": "सत्र टोकन दर्ज करें...",
+		"credentialsJson": "क्रेडेंशियल्स JSON दर्ज करें...",
+		"keyFilePath": "कुंजी फ़ाइल पथ दर्ज करें...",
+		"projectId": "प्रोजेक्ट ID दर्ज करें...",
+		"customArn": "ARN दर्ज करें (उदा. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "बेस URL दर्ज करें...",
+		"modelId": {
+			"lmStudio": "उदा. meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "उदा. lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "उदा. llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "उदा. 4096",
+			"contextWindow": "उदा. 128000",
+			"inputPrice": "उदा. 0.0001",
+			"outputPrice": "उदा. 0.0002",
+			"cacheWritePrice": "उदा. 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "डिफ़ॉल्ट: http://localhost:11434",
+		"lmStudioUrl": "डिफ़ॉल्ट: http://localhost:1234",
+		"geminiUrl": "डिफ़ॉल्ट: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "कस्टम ARN",
+		"useCustomArn": "कस्टम ARN का उपयोग करें..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "कार्य टाइमलाइन दिखाएँ",
+			"description": "कार्य संदेशों की एक दृश्य समयरेखा प्रदर्शित करें, जो प्रकार के अनुसार रंगीन हैं, जिससे आप कार्य की प्रगति को जल्दी से देख सकें और कार्य के इतिहास में विशिष्ट बिंदुओं पर वापस स्क्रॉल कर सकें।"
+		},
+		"costThreshold": {
+			"label": "थ्रेशोल्ड से नीचे की लागत छिपाएं",
+			"currentValue": "वर्तमान थ्रेशोल्ड: ${{value}}",
+			"description": "केवल इस राशि से अधिक के अनुरोध की लागतों को दिखाएं। जब विवरण पेन खुला होता है, तो लागतें हमेशा दिखाई देती हैं।"
+		},
+		"showTimestamps": {
+			"label": "टाइमस्टैम्प दिखाएं",
+			"description": "चैट दृश्य में प्रत्येक संदेश के लिए टाइमस्टैम्प दिखाएं"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "स्वत:पूर्ण करते समय गटर एनिमेशन दिखाएँ",
+			"description": "स्वत:पूर्णता चल रही हो तो संपादक गटर में एनिमेटेड संकेतक प्रदर्शित करें",
+			"preview": "एनिमेशन पूर्वावलोकन"
+		}
+	},
+	"includeMaxOutputTokens": "अधिकतम आउटपुट टोकन शामिल करें",
+	"includeMaxOutputTokensDescription": "API अनुरोधों में अधिकतम आउटपुट टोकन पैरामीटर भेजें। कुछ प्रदाता इसका समर्थन नहीं कर सकते हैं।",
+	"limitMaxTokensDescription": "प्रतिक्रिया में टोकन की अधिकतम संख्या सीमित करें",
+	"maxOutputTokensLabel": "अधिकतम आउटपुट टोकन",
+	"maxTokensGenerateDescription": "प्रतिक्रिया में उत्पन्न करने के लिए अधिकतम टोकन",
+	"serviceTier": {
+		"label": "सेवा स्तर",
+		"tooltip": "API अनुरोधों के तेज़ प्रसंस्करण के लिए, प्राथमिकता प्रसंस्करण सेवा स्तर का प्रयास करें। उच्च विलंबता के साथ कम कीमतों के लिए, फ्लेक्स प्रसंस्करण स्तर का प्रयास करें।",
+		"standard": "मानक",
+		"flex": "फ्लेक्स",
+		"priority": "प्राथमिकता",
+		"pricingTableTitle": "सेवा स्तर के अनुसार मूल्य निर्धारण (प्रति 1M टोकन मूल्य)",
+		"columns": {
+			"tier": "स्तर",
+			"input": "इनपुट",
+			"output": "आउटपुट",
+			"cacheReads": "कैश रीड"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "सोच संदेशों को डिफ़ॉल्ट रूप से संक्षिप्त करें",
+			"description": "सक्षम होने पर, सोच ब्लॉक आपके द्वारा उनके साथ इंटरैक्ट करने तक डिफ़ॉल्ट रूप से संक्षिप्त रहेंगे"
+		}
+	}
+}

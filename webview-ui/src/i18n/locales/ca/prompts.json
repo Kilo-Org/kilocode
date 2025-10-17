@@ -1,0 +1,223 @@
+{
+	"title": "Modes",
+	"done": "Fet",
+	"modes": {
+		"title": "Modes",
+		"createNewMode": "Crear nou mode",
+		"importMode": "Importar mode",
+		"noMatchFound": "No s'han trobat modes",
+		"editModesConfig": "Editar configuració de modes",
+		"editGlobalModes": "Editar modes globals",
+		"editProjectModes": "Editar modes de projecte (.kilocodemodes)",
+		"createModeHelpText": "Els modes són persones especialitzades que adapten el comportament de Kilo Code. <0>Aprèn sobre l'ús de modes</0> o <1>Personalització de modes.</1>",
+		"selectMode": "Cerqueu modes"
+	},
+	"apiConfiguration": {
+		"title": "Configuració d'API",
+		"select": "Seleccioneu quina configuració d'API utilitzar per a aquest mode"
+	},
+	"organizationMode": {
+		"title": "Mode d'organització",
+		"description": "Aquest mode és proporcionat per la teva organització i no es pot editar aquí. Per modificar aquest mode, visita el Kilo Code Dashboard.",
+		"cannotEdit": "Els modes d'organització no es poden editar"
+	},
+	"tools": {
+		"title": "Eines disponibles",
+		"builtInModesText": "Les eines per a modes integrats no es poden modificar",
+		"editTools": "Editar eines",
+		"doneEditing": "Finalitzar edició",
+		"allowedFiles": "Fitxers permesos:",
+		"toolNames": {
+			"read": "Llegir fitxers",
+			"edit": "Editar fitxers",
+			"browser": "Utilitzar navegador",
+			"command": "Executar comandes",
+			"mcp": "Utilitzar MCP"
+		},
+		"noTools": "Cap"
+	},
+	"roleDefinition": {
+		"title": "Definició de rol",
+		"resetToDefault": "Restablir a valors predeterminats",
+		"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode. Aquesta descripció determina com Kilo Code es presenta i aborda les tasques."
+	},
+	"description": {
+		"title": "Descripció curta (per a humans)",
+		"resetToDefault": "Restablir a la descripció predeterminada",
+		"description": "Una breu descripció que es mostra al desplegable del selector de mode."
+	},
+	"whenToUse": {
+		"title": "Quan utilitzar (opcional)",
+		"description": "Descriviu quan s'hauria d'utilitzar aquest mode. Això ajuda l'Orchestrator a escollir el mode correcte per a una tasca.",
+		"resetToDefault": "Restablir la descripció 'Quan utilitzar' a valors predeterminats"
+	},
+	"customInstructions": {
+		"title": "Instruccions personalitzades específiques del mode (opcional)",
+		"resetToDefault": "Restablir a valors predeterminats",
+		"description": "Afegiu directrius de comportament específiques per al mode {{modeName}}.",
+		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.kilocode/rules-{{slug}}/</span> al vostre espai de treball o des del global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} i .clinerules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
+	},
+	"exportMode": {
+		"title": "Exportar mode",
+		"description": "Exporta aquest mode amb regles de la carpeta .kilocode/rules-{{slug}}/ combinades en un fitxer YAML compartible. Els fitxers originals romanen sense canvis.",
+		"exporting": "Exportant..."
+	},
+	"importMode": {
+		"selectLevel": "Tria on importar aquest mode:",
+		"import": "Importar",
+		"importing": "Important...",
+		"global": {
+			"label": "Nivell global",
+			"description": "Disponible a tots els projectes. Si el mode exportat contenia fitxers de regles, es tornaran a crear a la carpeta global .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Nivell de projecte",
+			"description": "Només disponible en aquest espai de treball. Si el mode exportat contenia fitxers de regles, es tornaran a crear a la carpeta .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Avançat"
+	},
+	"globalCustomInstructions": {
+		"title": "Instruccions personalitzades per a tots els modes",
+		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació. <0>Més informació</0>",
+		"loadFromFile": "Les instruccions també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball o des del global <0>.kilocode/rules/</0> (.kilocoderules i .clinerules estan obsolets i deixaran de funcionar aviat)."
+	},
+	"systemPrompt": {
+		"preview": "Previsualització del prompt del sistema",
+		"copy": "Copiar prompt del sistema al portapapers",
+		"title": "Prompt del sistema (mode {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Prompts de suport",
+		"resetPrompt": "Restablir el prompt {{promptType}} a valors predeterminats",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "Configuració d'API",
+			"apiConfigDescription": "Podeu seleccionar una configuració d'API per utilitzar sempre per millorar els prompts, o simplement utilitzar la que està seleccionada actualment",
+			"useCurrentConfig": "Utilitzar la configuració d'API seleccionada actualment",
+			"testPromptPlaceholder": "Introduïu un prompt per provar la millora",
+			"previewButton": "Previsualització de la millora del prompt",
+			"testEnhancement": "Prova la millora",
+			"includeTaskHistory": "Inclou l'historial de tasques com a context",
+			"includeTaskHistoryDescription": "Quan està activat, els últims 10 missatges de la conversa actual s'inclouran com a context en millorar els prompts, ajudant a generar suggeriments més rellevants i conscients del context."
+		},
+		"condense": {
+			"apiConfiguration": "Configuració de l'API per a la condensació de context",
+			"apiConfigDescription": "Seleccioneu quina configuració d'API voleu utilitzar per a les operacions de condensació de context. Deixeu-ho sense seleccionar per utilitzar la configuració activa actual.",
+			"useCurrentConfig": "Utilitza la configuració de l'API seleccionada actualment"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Millorar prompt",
+				"description": "Utilitzeu la millora de prompts per obtenir suggeriments o millores personalitzades per a les vostres entrades. Això assegura que Kilo Code entengui la vostra intenció i proporcioni les millors respostes possibles. Disponible a través de la icona ✨ al xat."
+			},
+			"CONDENSE": {
+				"label": "Condensació de context",
+				"description": "Configureu com es condensa el context de la conversa per gestionar els límits de testimonis. Aquest indicador s'utilitza tant per a les operacions de condensació de context manuals com automàtiques."
+			},
+			"EXPLAIN": {
+				"label": "Explicar codi",
+				"description": "Obtingueu explicacions detallades de fragments de codi, funcions o fitxers sencers. Útil per entendre codi complex o aprendre nous patrons. Disponible a les accions de codi (icona de bombeta a l'editor) i al menú contextual de l'editor (clic dret al codi seleccionat)."
+			},
+			"FIX": {
+				"label": "Corregir problemes",
+				"description": "Obtingueu ajuda per identificar i resoldre errors, fallades o problemes de qualitat del codi. Proporciona una guia pas a pas per solucionar problemes. Disponible a les accions de codi (icona de bombeta a l'editor) i al menú contextual de l'editor (clic dret al codi seleccionat)."
+			},
+			"IMPROVE": {
+				"label": "Millorar codi",
+				"description": "Rebeu suggeriments per optimitzar el codi, millors pràctiques i millores arquitectòniques mentre es manté la funcionalitat. Disponible a les accions de codi (icona de bombeta a l'editor) i al menú contextual de l'editor (clic dret al codi seleccionat)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Afegir al context",
+				"description": "Afegiu context a la vostra tasca o conversa actual. Útil per proporcionar informació addicional o aclariments. Disponible a les accions de codi (icona de bombeta a l'editor) i al menú contextual de l'editor (clic dret al codi seleccionat)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Afegir contingut del terminal al context",
+				"description": "Afegiu la sortida del terminal a la vostra tasca o conversa actual. Útil per proporcionar sortides de comandes o registres. Disponible al menú contextual del terminal (clic dret al contingut seleccionat del terminal)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Corregir comanda del terminal",
+				"description": "Obtingueu ajuda per corregir comandes del terminal que han fallat o necessiten millores. Disponible al menú contextual del terminal (clic dret al contingut seleccionat del terminal)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Explicar comanda del terminal",
+				"description": "Obtingueu explicacions detallades de les comandes del terminal i les seves sortides. Disponible al menú contextual del terminal (clic dret al contingut seleccionat del terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generar comanda de terminal",
+				"description": "Ajuda a generar comandes de terminal basades en la descripció."
+			},
+			"NEW_TASK": {
+				"label": "Iniciar nova tasca",
+				"description": "Inicieu una nova tasca amb l'entrada proporcionada. Disponible a la paleta de comandes."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generació de Missatges de Commit",
+				"description": "Genera missatges de commit descriptius basats en els teus canvis preparats a git. Personalitza el prompt per generar missatges que segueixin les millors pràctiques del teu repositori."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Avançat: Sobreescriure prompt del sistema",
+		"description": "<2>⚠️ Avís:</2> Aquesta funcionalitat avançada eludeix les salvaguardes. <1>LLEGIU AIXÒ ABANS D'UTILITZAR!</1>Sobreescriviu el prompt del sistema per defecte creant un fitxer a <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Crear nou mode",
+		"close": "Tancar",
+		"name": {
+			"label": "Nom",
+			"placeholder": "Introduïu nom del mode"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "El slug s'utilitza en URLs i noms de fitxers. Ha d'estar en minúscules i contenir només lletres, números i guions."
+		},
+		"saveLocation": {
+			"label": "Ubicació per desar",
+			"description": "Trieu on desar aquest mode. Els modes específics del projecte tenen prioritat sobre els modes globals.",
+			"global": {
+				"label": "Global",
+				"description": "Disponible a tots els espais de treball"
+			},
+			"project": {
+				"label": "Específic del projecte (.kilocodemodes)",
+				"description": "Només disponible en aquest espai de treball, té prioritat sobre el global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definició de rol",
+			"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode."
+		},
+		"whenToUse": {
+			"label": "Quan utilitzar (opcional)",
+			"description": "Proporcioneu una descripció clara de quan aquest mode és més efectiu i per a quins tipus de tasques excel·leix."
+		},
+		"tools": {
+			"label": "Eines disponibles",
+			"description": "Seleccioneu quines eines pot utilitzar aquest mode."
+		},
+		"description": {
+			"label": "Descripció curta (per a humans)",
+			"description": "Una breu descripció que es mostra al desplegable del selector de mode."
+		},
+		"customInstructions": {
+			"label": "Instruccions personalitzades (opcional)",
+			"description": "Afegiu directrius de comportament específiques per a aquest mode."
+		},
+		"buttons": {
+			"cancel": "Cancel·lar",
+			"create": "Crear mode"
+		},
+		"deleteMode": "Eliminar mode"
+	},
+	"allFiles": "tots els fitxers",
+	"deleteMode": {
+		"title": "Suprimeix el mode",
+		"message": "Estàs segur que vols suprimir el mode \"{{modeName}}\"?",
+		"rulesFolder": "Aquest mode té una carpeta de regles a {{folderPath}} que també se suprimirà.",
+		"descriptionNoRules": "Esteu segur que voleu suprimir aquest mode personalitzat?",
+		"confirm": "Suprimeix",
+		"cancel": "Cancel·la"
+	}
+}

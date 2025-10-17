@@ -1,0 +1,223 @@
+{
+	"title": "Modi",
+	"done": "Fatto",
+	"modes": {
+		"title": "Modalità",
+		"createNewMode": "Crea nuova modalità",
+		"importMode": "Importa modalità",
+		"noMatchFound": "Nessuna modalità trovata",
+		"editModesConfig": "Modifica configurazione modalità",
+		"editGlobalModes": "Modifica modalità globali",
+		"editProjectModes": "Modifica modalità di progetto (.kilocodemodes)",
+		"createModeHelpText": "Le modalità sono personas specializzate che personalizzano il comportamento di Kilo Code. <0>Scopri di più sull'uso delle modalità</0> o <1>sulla personalizzazione delle modalità.</1>",
+		"selectMode": "Cerca modalità"
+	},
+	"apiConfiguration": {
+		"title": "Configurazione API",
+		"select": "Seleziona quale configurazione API utilizzare per questa modalità"
+	},
+	"organizationMode": {
+		"title": "Modalità dell'organizzazione",
+		"description": "Questa modalità è fornita dalla tua organizzazione e non può essere modificata qui. Per modificare questa modalità, visita il Kilo Code Dashboard.",
+		"cannotEdit": "Le modalità dell'organizzazione non possono essere modificate"
+	},
+	"tools": {
+		"title": "Strumenti disponibili",
+		"builtInModesText": "Gli strumenti per le modalità integrate non possono essere modificati",
+		"editTools": "Modifica strumenti",
+		"doneEditing": "Modifica completata",
+		"allowedFiles": "File consentiti:",
+		"toolNames": {
+			"read": "Leggi file",
+			"edit": "Modifica file",
+			"browser": "Usa browser",
+			"command": "Esegui comandi",
+			"mcp": "Usa MCP"
+		},
+		"noTools": "Nessuno"
+	},
+	"roleDefinition": {
+		"title": "Definizione del ruolo",
+		"resetToDefault": "Ripristina predefiniti",
+		"description": "Definisci l'esperienza e la personalità di Kilo Code per questa modalità. Questa descrizione modella come Kilo Code si presenta e affronta i compiti."
+	},
+	"description": {
+		"title": "Descrizione breve (per umani)",
+		"resetToDefault": "Ripristina alla descrizione predefinita",
+		"description": "Una breve descrizione mostrata nel menu a discesa del selettore di modalità."
+	},
+	"whenToUse": {
+		"title": "Quando utilizzare (opzionale)",
+		"description": "Descrivi quando questa modalità dovrebbe essere utilizzata. Questo aiuta l'Orchestrator a scegliere la modalità giusta per un compito.",
+		"resetToDefault": "Ripristina la descrizione 'Quando utilizzare' ai valori predefiniti"
+	},
+	"customInstructions": {
+		"title": "Istruzioni personalizzate specifiche per la modalità (opzionale)",
+		"resetToDefault": "Ripristina predefiniti",
+		"description": "Aggiungi linee guida comportamentali specifiche per la modalità {{modeName}}.",
+		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono anche essere caricate dalla cartella <span>.kilocode/rules-{{slug}}/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} e .clinerules-{{slug}} sono deprecati e smetteranno di funzionare presto)."
+	},
+	"exportMode": {
+		"title": "Esporta modalità",
+		"description": "Esporta questa modalità con le regole dalla cartella .kilocode/rules-{{slug}}/ combinate in un file YAML condivisibile. I file originali rimangono invariati.",
+		"exporting": "Esportazione..."
+	},
+	"importMode": {
+		"selectLevel": "Scegli dove importare questa modalità:",
+		"import": "Importa",
+		"importing": "Importazione...",
+		"global": {
+			"label": "Livello globale",
+			"description": "Disponibile in tutti i progetti. Se la modalità esportata conteneva file di regole, verranno ricreati nella cartella globale .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Livello di progetto",
+			"description": "Disponibile solo in questo spazio di lavoro. Se la modalità esportata conteneva file di regole, verranno ricreati nella cartella .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Avanzato"
+	},
+	"globalCustomInstructions": {
+		"title": "Istruzioni personalizzate per tutte le modalità",
+		"description": "Queste istruzioni si applicano a tutte le modalità. Forniscono un insieme base di comportamenti che possono essere migliorati dalle istruzioni specifiche per modalità qui sotto. <0>Scopri di più</0>",
+		"loadFromFile": "Le istruzioni possono anche essere caricate dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules/</0> (.kilocoderules e .clinerules sono deprecati e smetteranno di funzionare presto)."
+	},
+	"systemPrompt": {
+		"preview": "Anteprima prompt di sistema",
+		"copy": "Copia prompt di sistema negli appunti",
+		"title": "Prompt di sistema (modalità {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Prompt di supporto",
+		"resetPrompt": "Ripristina il prompt {{promptType}} ai valori predefiniti",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "Configurazione API",
+			"apiConfigDescription": "Puoi selezionare una configurazione API da usare sempre per migliorare i prompt, o semplicemente usare quella attualmente selezionata",
+			"useCurrentConfig": "Usa la configurazione API attualmente selezionata",
+			"testPromptPlaceholder": "Inserisci un prompt per testare il miglioramento",
+			"previewButton": "Anteprima miglioramento prompt",
+			"testEnhancement": "Testa miglioramento",
+			"includeTaskHistory": "Includi cronologia attività come contesto",
+			"includeTaskHistoryDescription": "Quando abilitato, gli ultimi 10 messaggi della conversazione corrente verranno inclusi come contesto durante il miglioramento dei prompt, aiutando a generare suggerimenti più rilevanti e consapevoli del contesto."
+		},
+		"condense": {
+			"apiConfiguration": "Configurazione API per la condensazione del contesto",
+			"apiConfigDescription": "Seleziona quale configurazione API utilizzare per le operazioni di condensazione del contesto. Lascia deselezionato per utilizzare la configurazione attiva corrente.",
+			"useCurrentConfig": "Usa la configurazione API currently selezionata"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Migliora prompt",
+				"description": "Utilizza il miglioramento dei prompt per ottenere suggerimenti o miglioramenti personalizzati per i tuoi input. Questo assicura che Kilo Code comprenda la tua intenzione e fornisca le migliori risposte possibili. Disponibile tramite l'icona ✨ nella chat."
+			},
+			"CONDENSE": {
+				"label": "Condensazione del contesto",
+				"description": "Configura come viene condensato il contesto della conversazione per gestire i limiti dei token. Questo prompt viene utilizzato sia per le operazioni di condensazione del contesto manuali che automatiche."
+			},
+			"EXPLAIN": {
+				"label": "Spiega codice",
+				"description": "Ottieni spiegazioni dettagliate di frammenti di codice, funzioni o file interi. Utile per comprendere codice complesso o imparare nuovi pattern. Disponibile nelle azioni di codice (icona della lampadina nell'editor) e nel menu contestuale dell'editor (clic destro sul codice selezionato)."
+			},
+			"FIX": {
+				"label": "Risolvi problemi",
+				"description": "Ottieni aiuto per identificare e risolvere bug, errori o problemi di qualità del codice. Fornisce una guida passo-passo per risolvere i problemi. Disponibile nelle azioni di codice (icona della lampadina nell'editor) e nel menu contestuale dell'editor (clic destro sul codice selezionato)."
+			},
+			"IMPROVE": {
+				"label": "Migliora codice",
+				"description": "Ricevi suggerimenti per l'ottimizzazione del codice, migliori pratiche e miglioramenti architetturali mantenendo la funzionalità. Disponibile nelle azioni di codice (icona della lampadina nell'editor) e nel menu contestuale dell'editor (clic destro sul codice selezionato)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Aggiungi al contesto",
+				"description": "Aggiungi contesto al tuo compito o conversazione attuale. Utile per fornire informazioni aggiuntive o chiarimenti. Disponibile nelle azioni di codice (icona della lampadina nell'editor) e nel menu contestuale dell'editor (clic destro sul codice selezionato)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Aggiungi contenuto del terminale al contesto",
+				"description": "Aggiungi l'output del terminale al tuo compito o conversazione attuale. Utile per fornire output di comandi o log. Disponibile nel menu contestuale del terminale (clic destro sul contenuto selezionato del terminale)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Correggi comando del terminale",
+				"description": "Ottieni aiuto per correggere i comandi del terminale che hanno fallito o necessitano di miglioramenti. Disponibile nel menu contestuale del terminale (clic destro sul contenuto selezionato del terminale)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Spiega comando del terminale",
+				"description": "Ottieni spiegazioni dettagliate sui comandi del terminale e sui loro output. Disponibile nel menu contestuale del terminale (clic destro sul contenuto selezionato del terminale)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Genera comando terminale",
+				"description": "Aiuta a generare comandi del terminale basati sulla descrizione."
+			},
+			"NEW_TASK": {
+				"label": "Avvia nuova attività",
+				"description": "Avvia una nuova attività con il tuo input. Disponibile nella palette dei comandi."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generazione di Messaggi di Commit",
+				"description": "Genera messaggi di commit descrittivi basati sulle tue modifiche git in stage. Personalizza il prompt per generare messaggi che seguano le migliori pratiche del tuo repository."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Avanzato: Sovrascrivi prompt di sistema",
+		"description": "<2>⚠️ Attenzione:</2> Questa funzionalità avanzata bypassa le misure di sicurezza. <1>LEGGI QUESTO PRIMA DI USARE!</1>Sovrascrivi il prompt di sistema predefinito creando un file in <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Crea nuova modalità",
+		"close": "Chiudi",
+		"name": {
+			"label": "Nome",
+			"placeholder": "Inserisci nome modalità"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Lo slug viene utilizzato negli URL e nei nomi dei file. Deve essere in minuscolo e contenere solo lettere, numeri e trattini."
+		},
+		"saveLocation": {
+			"label": "Posizione di salvataggio",
+			"description": "Scegli dove salvare questa modalità. Le modalità specifiche del progetto hanno la precedenza sulle modalità globali.",
+			"global": {
+				"label": "Globale",
+				"description": "Disponibile in tutti gli spazi di lavoro"
+			},
+			"project": {
+				"label": "Specifico del progetto (.kilocodemodes)",
+				"description": "Disponibile solo in questo spazio di lavoro, ha la precedenza sul globale"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definizione del ruolo",
+			"description": "Definisci l'esperienza e la personalità di Kilo Code per questa modalità."
+		},
+		"description": {
+			"label": "Descrizione breve (per umani)",
+			"description": "Una breve descrizione mostrata nel menu a discesa del selettore di modalità."
+		},
+		"whenToUse": {
+			"label": "Quando utilizzare (opzionale)",
+			"description": "Fornisci una chiara descrizione di quando questa modalità è più efficace e per quali tipi di compiti eccelle."
+		},
+		"tools": {
+			"label": "Strumenti disponibili",
+			"description": "Seleziona quali strumenti questa modalità può utilizzare."
+		},
+		"customInstructions": {
+			"label": "Istruzioni personalizzate (opzionale)",
+			"description": "Aggiungi linee guida comportamentali specifiche per questa modalità."
+		},
+		"buttons": {
+			"cancel": "Annulla",
+			"create": "Crea modalità"
+		},
+		"deleteMode": "Elimina modalità"
+	},
+	"allFiles": "tutti i file",
+	"deleteMode": {
+		"title": "Elimina modalità",
+		"message": "Sei sicuro di voler eliminare la modalità \"{{modeName}}\"?",
+		"rulesFolder": "Questa modalità ha una cartella di regole in {{folderPath}} che verrà eliminata.",
+		"descriptionNoRules": "Sei sicuro di voler eliminare questa modalità personalizzata?",
+		"confirm": "Elimina",
+		"cancel": "Annulla"
+	}
+}

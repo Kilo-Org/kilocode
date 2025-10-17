@@ -1,0 +1,27 @@
+{
+	"greeting": "Hai, saya Kilo Code!",
+	"introduction": "<strong>Kilo Code adalah agen coding otonom terdepan.</strong> Bersiaplah untuk merancang, coding, debug, dan meningkatkan produktivitas seperti yang belum pernah Anda lihat sebelumnya. Untuk melanjutkan, Kilo Code memerlukan API key.",
+	"notice": "Untuk memulai, ekstensi ini memerlukan provider API.",
+	"start": "Ayo mulai!",
+	"routers": {
+		"requesty": {
+			"description": "Router LLM yang dioptimalkan",
+			"incentive": "Kredit gratis $1"
+		},
+		"openrouter": {
+			"description": "Interface terpadu untuk LLM"
+		},
+		"roo": {
+			"description": "Model gratis terbaik untuk memulai",
+			"incentive": "Coba Roo gratis"
+		}
+	},
+	"chooseProvider": "Untuk melakukan keajaibannya, Kilo Code membutuhkan API key.",
+	"startRouter": "Kami merekomendasikan menggunakan Router LLM:",
+	"startCustom": "Atau Anda dapat menggunakan API key Anda sendiri:",
+	"telemetry": {
+		"helpImprove": "Bantu Tingkatkan Kilo Code",
+		"helpImproveMessage": "Kilo Code mengumpulkan data error dan penggunaan untuk membantu kami memperbaiki bug dan meningkatkan ekstensi. Telemetri ini tidak mengumpulkan kode, prompts, atau informasi pribadi. Anda dapat mematikan ini di <settingsLink>pengaturan</settingsLink>."
+	},
+	"importSettings": "Impor Pengaturan"
+}

@@ -1,0 +1,156 @@
+{
+	"title": "Kilo Code Marketplace",
+	"tabs": {
+		"installed": "ติดตั้งแล้ว",
+		"settings": "การตั้งค่า",
+		"browse": "เรียกดู"
+	},
+	"done": "เสร็จสิ้น",
+	"refresh": "รีเฟรช",
+	"filters": {
+		"search": {
+			"placeholder": "ค้นหารายการใน marketplace...",
+			"placeholderMcp": "ค้นหา MCP...",
+			"placeholderMode": "ค้นหา Modes..."
+		},
+		"type": {
+			"label": "กรองตามประเภท:",
+			"all": "ทุกประเภท",
+			"mode": "Mode",
+			"mcpServer": "MCP Server"
+		},
+		"sort": {
+			"label": "เรียงตาม:",
+			"name": "ชื่อ",
+			"author": "ผู้สร้าง",
+			"lastUpdated": "อัปเดตล่าสุด"
+		},
+		"tags": {
+			"label": "กรองตามแท็ก:",
+			"clear": "ล้างแท็ก",
+			"placeholder": "พิมพ์เพื่อค้นหาและเลือกแท็ก...",
+			"noResults": "ไม่พบแท็กที่ตรงกัน",
+			"selected": "แสดงรายการที่มีแท็กที่เลือกอย่างใดอย่างหนึ่ง",
+			"clickToFilter": "คลิกแท็กเพื่อกรองรายการ"
+		},
+		"installed": {
+			"label": "กรองตามสถานะ",
+			"all": "รายการทั้งหมด",
+			"installed": "ติดตั้งแล้ว",
+			"notInstalled": "ยังไม่ได้ติดตั้ง"
+		},
+		"none": "ไม่มี"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCPs",
+		"marketplace": "Marketplace"
+	},
+	"type-group": {
+		"modes": "Modes",
+		"mcps": "MCP Servers"
+	},
+	"items": {
+		"empty": {
+			"noItems": "ไม่พบรายการใน marketplace",
+			"withFilters": "ลองปรับตัวกรองของคุณ",
+			"noSources": "ลองเพิ่ม source ในแท็บ Sources",
+			"adjustFilters": "ลองปรับตัวกรองหรือคำค้นหาของคุณ",
+			"clearAllFilters": "ล้างตัวกรองทั้งหมด"
+		},
+		"count": "พบ {{count}} รายการ",
+		"components": "{{count}} คอมโพเนนต์",
+		"matched": "{{count}} ตรงกัน",
+		"refresh": {
+			"button": "รีเฟรช",
+			"refreshing": "กำลังรีเฟรช...",
+			"mayTakeMoment": "อาจใช้เวลาสักครู่"
+		},
+		"card": {
+			"by": "โดย {{author}}",
+			"from": "จาก {{source}}",
+			"install": "ติดตั้ง",
+			"installProject": "ติดตั้ง",
+			"installGlobal": "ติดตั้ง (Global)",
+			"remove": "ลบ",
+			"removeProject": "ลบ",
+			"removeGlobal": "ลบ (Global)",
+			"viewSource": "ดู",
+			"viewOnSource": "ดูบน {{source}}",
+			"noWorkspaceTooltip": "เปิด workspace เพื่อติดตั้งรายการ marketplace",
+			"installed": "ติดตั้งแล้ว",
+			"removeProjectTooltip": "ลบจากโปรเจ็กต์ปัจจุบัน",
+			"removeGlobalTooltip": "ลบจากการตั้งค่า global",
+			"actionsMenuLabel": "การดำเนินการเพิ่มเติม"
+		},
+		"removeFailed": "ไม่สามารถลบรายการ: {{error}}",
+		"unknownError": "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ"
+	},
+	"install": {
+		"title": "ติดตั้ง {{name}}",
+		"titleMode": "ติดตั้ง {{name}} Mode",
+		"titleMcp": "ติดตั้ง {{name}} MCP",
+		"scope": "ขอบเขตการติดตั้ง",
+		"project": "โปรเจ็กต์ (workspace ปัจจุบัน)",
+		"global": "Global (ทุก workspace)",
+		"method": "วิธีการติดตั้ง",
+		"prerequisites": "ข้อกำหนดเบื้องต้น",
+		"configuration": "การกำหนดค่า",
+		"configurationDescription": "กำหนดค่าพารามิเตอร์ที่จำเป็นสำหรับ MCP server นี้",
+		"button": "ติดตั้ง",
+		"successTitle": "ติดตั้ง {{name}} แล้ว",
+		"successDescription": "การติดตั้งเสร็จสมบูรณ์",
+		"installed": "ติดตั้งสำเร็จ!",
+		"whatNextMcp": "ตอนนี้คุณสามารถกำหนดค่าและใช้ MCP server นี้ได้ คลิกไอคอน MCP ใน sidebar เพื่อเปลี่ยนแท็บ",
+		"whatNextMode": "ตอนนี้คุณสามารถใช้ mode นี้ได้ คลิกไอคอน Modes ใน sidebar เพื่อเปลี่ยนแท็บ",
+		"done": "เสร็จสิ้น",
+		"goToMcp": "ไปที่แท็บ MCP",
+		"goToModes": "ไปที่แท็บ Modes",
+		"moreInfoMcp": "ดูเอกสาร {{name}} MCP",
+		"validationRequired": "กรุณาระบุค่าสำหรับ {{paramName}}"
+	},
+	"sources": {
+		"title": "กำหนดค่า Marketplace Sources",
+		"description": "เพิ่ม Git repositories ที่มีรายการ marketplace รายการเหล่านี้จะถูกดึงมาเมื่อเรียกดู marketplace",
+		"add": {
+			"title": "เพิ่ม Source ใหม่",
+			"urlPlaceholder": "Git repository URL (เช่น https://github.com/username/repo)",
+			"urlFormats": "รูปแบบที่รองรับ: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git), หรือ Git protocol (git://github.com/username/repo.git)",
+			"namePlaceholder": "ชื่อที่แสดง (สูงสุด 20 ตัวอักษร)",
+			"button": "เพิ่ม Source"
+		},
+		"current": {
+			"title": "Sources ปัจจุบัน",
+			"empty": "ไม่มี source ที่กำหนดค่า เพิ่ม source เพื่อเริ่มต้น",
+			"refresh": "รีเฟรช source นี้",
+			"remove": "ลบ source"
+		},
+		"errors": {
+			"emptyUrl": "URL ต้องไม่ว่างเปล่า",
+			"invalidUrl": "รูปแบบ URL ไม่ถูกต้อง",
+			"nonVisibleChars": "URL มีอักขระที่มองไม่เห็นนอกเหนือจากช่องว่าง",
+			"invalidGitUrl": "URL ต้องเป็น Git repository URL ที่ถูกต้อง (เช่น https://github.com/username/repo)",
+			"duplicateUrl": "URL นี้มีอยู่ในรายการแล้ว (ไม่คำนึงถึงตัวพิมพ์และช่องว่าง)",
+			"nameTooLong": "ชื่อต้องมี 20 ตัวอักษรหรือน้อยกว่า",
+			"nonVisibleCharsName": "ชื่อมีอักขระที่มองไม่เห็นนอกเหนือจากช่องว่าง",
+			"duplicateName": "ชื่อนี้ถูกใช้แล้ว (ไม่คำนึงถึงตัวพิมพ์และช่องว่าง)",
+			"emojiName": "อักขระอีโมจิอาจทำให้เกิดปัญหาการแสดงผล",
+			"maxSources": "อนุญาตสูงสุด {{max}} sources"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "ลบ Mode",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ mode \"{{modeName}}\"?",
+			"rulesWarning": "การกระทำนี้จะลบไฟล์กฎที่เกี่ยวข้องกับ mode นี้ด้วย"
+		},
+		"mcp": {
+			"title": "ลบ MCP Server",
+			"message": "คุณแน่ใจหรือไม่ว่าต้องการลบ MCP server \"{{mcpName}}\"?"
+		},
+		"cancel": "ยกเลิก",
+		"confirm": "ลบ"
+	},
+	"footer": {
+		"issueText": "พบปัญหากับรายการ marketplace หรือมีข้อเสนอแนะสำหรับรายการใหม่? <0>เปิด GitHub issue</0> เพื่อแจ้งให้เราทราบ!"
+	}
+}

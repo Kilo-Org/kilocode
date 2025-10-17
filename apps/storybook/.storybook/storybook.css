@@ -1,0 +1,26 @@
+/* Content scanning for Tailwind v4 - this scans both webview-ui and storybook files */
+@source "../**/*.{js,ts,jsx,tsx}";
+@source "../../../webview-ui/src/**/*.{js,ts,jsx,tsx}";
+
+/* Import the webview-ui CSS first */
+@import "../../../webview-ui/src/index.css";
+@import "../../../webview-ui/src/codicon-custom.css";
+@import "@vscode/codicons/dist/codicon.css";
+
+:root {
+	/* These are normally set by VSCode directly. Set them here so Storybook looks like VSCode! */
+	font-family:
+		-apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", system-ui, "Ubuntu", "Droid Sans", sans-serif;
+	font-weight: normal;
+	font-size: 13px;
+
+	[data-theme="dark"] {
+		@import "../generated-theme-styles/dark-modern.css";
+		@import "./theme-variables.css";
+	}
+
+	[data-theme="light"] {
+		@import "../generated-theme-styles/light-modern.css";
+		@import "./theme-variables.css";
+	}
+}

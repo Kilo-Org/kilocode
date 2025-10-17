@@ -1,0 +1,223 @@
+{
+	"title": "Chế độ",
+	"done": "Hoàn thành",
+	"modes": {
+		"title": "Chế độ",
+		"createNewMode": "Tạo chế độ mới",
+		"importMode": "Nhập chế độ",
+		"noMatchFound": "Không tìm thấy chế độ nào",
+		"editModesConfig": "Chỉnh sửa cấu hình chế độ",
+		"editGlobalModes": "Chỉnh sửa chế độ toàn cục",
+		"editProjectModes": "Chỉnh sửa chế độ dự án (.kilocodemodes)",
+		"createModeHelpText": "Chế độ là các vai trò chuyên biệt điều chỉnh hành vi của Kilo Code. <0>Tìm hiểu về Sử dụng Chế độ</0> hoặc <1>Tùy chỉnh Chế độ.</1>",
+		"selectMode": "Tìm kiếm chế độ"
+	},
+	"apiConfiguration": {
+		"title": "Cấu hình API",
+		"select": "Chọn cấu hình API nào để sử dụng cho chế độ này"
+	},
+	"organizationMode": {
+		"title": "Chế độ của tổ chức",
+		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Kilo Code Dashboard.",
+		"cannotEdit": "Không thể chỉnh sửa các chế độ của tổ chức"
+	},
+	"tools": {
+		"title": "Công cụ có sẵn",
+		"builtInModesText": "Công cụ cho các chế độ tích hợp sẵn không thể được sửa đổi",
+		"editTools": "Chỉnh sửa công cụ",
+		"doneEditing": "Hoàn thành chỉnh sửa",
+		"allowedFiles": "Tệp được phép:",
+		"toolNames": {
+			"read": "Đọc tệp",
+			"edit": "Chỉnh sửa tệp",
+			"browser": "Sử dụng trình duyệt",
+			"command": "Chạy lệnh",
+			"mcp": "Sử dụng MCP"
+		},
+		"noTools": "Không có"
+	},
+	"roleDefinition": {
+		"title": "Định nghĩa vai trò",
+		"resetToDefault": "Đặt lại về mặc định",
+		"description": "Xác định chuyên môn và tính cách của Kilo Code cho chế độ này. Mô tả này định hình cách Kilo Code giới thiệu bản thân và tiếp cận nhiệm vụ."
+	},
+	"description": {
+		"title": "Mô tả ngắn (cho con người)",
+		"resetToDefault": "Đặt lại về mô tả mặc định",
+		"description": "Mô tả ngắn gọn hiển thị trong menu thả xuống bộ chọn chế độ."
+	},
+	"whenToUse": {
+		"title": "Khi nào nên sử dụng (tùy chọn)",
+		"description": "Mô tả khi nào nên sử dụng chế độ này. Điều này giúp Orchestrator chọn chế độ phù hợp cho một nhiệm vụ.",
+		"resetToDefault": "Đặt lại mô tả 'Khi nào nên sử dụng' về mặc định"
+	},
+	"customInstructions": {
+		"title": "Hướng dẫn tùy chỉnh dành riêng cho chế độ (tùy chọn)",
+		"resetToDefault": "Đặt lại về mặc định",
+		"description": "Thêm hướng dẫn hành vi dành riêng cho chế độ {{modeName}}.",
+		"loadFromFile": "Hướng dẫn tùy chỉnh cụ thể cho chế độ {{mode}} cũng có thể được tải từ thư mục <span>.kilocode/rules-{{slug}}/</span> trong không gian làm việc của bạn hoặc từ toàn cục <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} và .clinerules-{{slug}} đã lỗi thời và sẽ ngừng hoạt động sớm)."
+	},
+	"exportMode": {
+		"title": "Xuất chế độ",
+		"description": "Xuất chế độ này với các quy tắc từ thư mục .kilocode/rules-{{slug}}/ được kết hợp thành tệp YAML có thể chia sẻ. Các tệp gốc vẫn không thay đổi.",
+		"exporting": "Đang xuất..."
+	},
+	"globalCustomInstructions": {
+		"title": "Hướng dẫn tùy chỉnh cho tất cả các chế độ",
+		"description": "Những hướng dẫn này áp dụng cho tất cả các chế độ. Chúng cung cấp một bộ hành vi cơ bản có thể được nâng cao bởi hướng dẫn dành riêng cho chế độ bên dưới. <0>Tìm hiểu thêm</0>",
+		"loadFromFile": "Hướng dẫn cũng có thể được tải từ thư mục <span>.kilocode/rules/</span> trong không gian làm việc của bạn hoặc từ toàn cục <0>.kilocode/rules/</0> (.kilocoderules và .clinerules đã lỗi thời và sẽ ngừng hoạt động sớm)."
+	},
+	"importMode": {
+		"selectLevel": "Chọn nơi để nhập chế độ này:",
+		"import": "Nhập",
+		"importing": "Đang nhập...",
+		"global": {
+			"label": "Cấp độ toàn cục",
+			"description": "Có sẵn trong tất cả các dự án. Nếu chế độ đã xuất có chứa tệp quy tắc, chúng sẽ được tạo lại trong thư mục toàn cục .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Cấp độ dự án",
+			"description": "Chỉ có sẵn trong không gian làm việc này. Nếu chế độ đã xuất có chứa tệp quy tắc, chúng sẽ được tạo lại trong thư mục .kilocode/rules-{slug}/."
+		}
+	},
+	"systemPrompt": {
+		"preview": "Xem trước lời nhắc hệ thống",
+		"copy": "Sao chép lời nhắc hệ thống vào bộ nhớ tạm",
+		"title": "Lời nhắc hệ thống (chế độ {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Lời nhắc hỗ trợ",
+		"resetPrompt": "Đặt lại lời nhắc {{promptType}} về mặc định",
+		"prompt": "Lời nhắc",
+		"enhance": {
+			"apiConfiguration": "Cấu hình API",
+			"apiConfigDescription": "Bạn có thể chọn cấu hình API để luôn sử dụng cho việc nâng cao lời nhắc, hoặc chỉ sử dụng bất cứ cấu hình nào hiện đang được chọn",
+			"useCurrentConfig": "Sử dụng cấu hình API hiện tại đã chọn",
+			"testPromptPlaceholder": "Nhập lời nhắc để kiểm tra việc nâng cao",
+			"previewButton": "Xem trước nâng cao lời nhắc",
+			"testEnhancement": "Kiểm tra cải tiến",
+			"includeTaskHistory": "Bao gồm lịch sử tác vụ làm ngữ cảnh",
+			"includeTaskHistoryDescription": "Khi được bật, 10 tin nhắn cuối cùng từ cuộc trò chuyện hiện tại sẽ được bao gồm làm ngữ cảnh khi nâng cao lời nhắc, giúp tạo ra các gợi ý phù hợp và nhận thức ngữ cảnh hơn."
+		},
+		"condense": {
+			"apiConfiguration": "Cấu hình API để cô đọng ngữ cảnh",
+			"apiConfigDescription": "Chọn cấu hình API nào sẽ sử dụng cho các hoạt động cô đọng ngữ cảnh. Để trống để sử dụng cấu hình hiện đang hoạt động.",
+			"useCurrentConfig": "Sử dụng cấu hình API được chọn hiện tại"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Nâng cao lời nhắc",
+				"description": "Sử dụng nâng cao lời nhắc để nhận đề xuất hoặc cải tiến phù hợp cho đầu vào của bạn. Điều này đảm bảo Kilo Code hiểu ý định của bạn và cung cấp phản hồi tốt nhất có thể. Có sẵn thông qua biểu tượng ✨ trong chat."
+			},
+			"CONDENSE": {
+				"label": "Cô đọng ngữ cảnh",
+				"description": "Định cấu hình cách cô đọng ngữ cảnh cuộc trò chuyện để quản lý giới hạn token. Lời nhắc này được sử dụng cho cả hoạt động cô đọng ngữ cảnh thủ công và tự động."
+			},
+			"EXPLAIN": {
+				"label": "Giải thích mã",
+				"description": "Nhận giải thích chi tiết về đoạn mã, hàm hoặc toàn bộ tệp. Hữu ích để hiểu mã phức tạp hoặc học các mẫu mới. Có sẵn trong hành động mã (biểu tượng bóng đèn trong trình soạn thảo) và menu ngữ cảnh trình soạn thảo (nhấp chuột phải vào mã đã chọn)."
+			},
+			"FIX": {
+				"label": "Sửa vấn đề",
+				"description": "Nhận trợ giúp xác định và giải quyết lỗi, sai sót hoặc vấn đề chất lượng mã. Cung cấp hướng dẫn từng bước để sửa chữa vấn đề. Có sẵn trong hành động mã (biểu tượng bóng đèn trong trình soạn thảo) và menu ngữ cảnh trình soạn thảo (nhấp chuột phải vào mã đã chọn)."
+			},
+			"IMPROVE": {
+				"label": "Cải thiện mã",
+				"description": "Nhận đề xuất tối ưu hóa mã, thực hành tốt hơn và cải tiến kiến trúc trong khi duy trì chức năng. Có sẵn trong hành động mã (biểu tượng bóng đèn trong trình soạn thảo) và menu ngữ cảnh trình soạn thảo (nhấp chuột phải vào mã đã chọn)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Thêm vào ngữ cảnh",
+				"description": "Thêm ngữ cảnh vào nhiệm vụ hoặc cuộc trò chuyện hiện tại của bạn. Hữu ích để cung cấp thông tin bổ sung hoặc làm rõ. Có sẵn trong hành động mã (biểu tượng bóng đèn trong trình soạn thảo) và menu ngữ cảnh trình soạn thảo (nhấp chuột phải vào mã đã chọn)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Thêm nội dung terminal vào ngữ cảnh",
+				"description": "Thêm đầu ra terminal vào nhiệm vụ hoặc cuộc trò chuyện hiện tại của bạn. Hữu ích để cung cấp đầu ra lệnh hoặc nhật ký. Có sẵn trong menu ngữ cảnh terminal (nhấp chuột phải vào nội dung terminal đã chọn)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Sửa lệnh terminal",
+				"description": "Nhận trợ giúp sửa lệnh terminal đã thất bại hoặc cần cải thiện. Có sẵn trong menu ngữ cảnh terminal (nhấp chuột phải vào nội dung terminal đã chọn)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Giải thích lệnh terminal",
+				"description": "Nhận giải thích chi tiết về lệnh terminal và đầu ra của chúng. Có sẵn trong menu ngữ cảnh terminal (nhấp chuột phải vào nội dung terminal đã chọn)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Tạo lệnh terminal",
+				"description": "Hỗ trợ tạo lệnh terminal dựa trên mô tả."
+			},
+			"NEW_TASK": {
+				"label": "Bắt đầu tác vụ mới",
+				"description": "Bắt đầu tác vụ mới với nội dung đã nhập. Có sẵn trong bảng lệnh."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Tạo Thông Điệp Commit",
+				"description": "Tạo thông điệp commit mô tả dựa trên các thay đổi đã được đưa vào staging trong git. Tùy chỉnh prompt để tạo ra các thông điệp tuân theo các phương pháp tốt nhất của kho lưu trữ của bạn."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Nâng cao: Ghi đè lời nhắc hệ thống",
+		"description": "<2>⚠️ Cảnh báo:</2> Tính năng nâng cao này bỏ qua các biện pháp bảo vệ. <1>ĐỌC KỸ TRƯỚC KHI SỬ DỤNG!</1>Ghi đè lời nhắc hệ thống mặc định bằng cách tạo một tệp tại <span>.killcode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Tạo chế độ mới",
+		"close": "Đóng",
+		"name": {
+			"label": "Tên",
+			"placeholder": "Nhập tên chế độ"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug được sử dụng trong URL và tên tệp. Nó nên viết thường và chỉ chứa chữ cái, số và dấu gạch ngang."
+		},
+		"saveLocation": {
+			"label": "Vị trí lưu",
+			"description": "Chọn nơi lưu chế độ này. Chế độ dành riêng cho dự án được ưu tiên hơn chế độ toàn cục.",
+			"global": {
+				"label": "Toàn cục",
+				"description": "Có sẵn trong tất cả các không gian làm việc"
+			},
+			"project": {
+				"label": "Dành riêng cho dự án (.kilocodemodes)",
+				"description": "Chỉ có sẵn trong không gian làm việc này, được ưu tiên hơn toàn cục"
+			}
+		},
+		"roleDefinition": {
+			"label": "Định nghĩa vai trò",
+			"description": "Xác định chuyên môn và tính cách của Kilo Code cho chế độ này."
+		},
+		"whenToUse": {
+			"label": "Khi nào nên sử dụng (tùy chọn)",
+			"description": "Cung cấp mô tả rõ ràng về thời điểm chế độ này hiệu quả nhất và những loại nhiệm vụ nào nó thực hiện tốt nhất."
+		},
+		"tools": {
+			"label": "Công cụ có sẵn",
+			"description": "Chọn công cụ nào chế độ này có thể sử dụng."
+		},
+		"description": {
+			"label": "Mô tả ngắn (cho con người)",
+			"description": "Mô tả ngắn gọn hiển thị trong menu thả xuống bộ chọn chế độ."
+		},
+		"customInstructions": {
+			"label": "Hướng dẫn tùy chỉnh (tùy chọn)",
+			"description": "Thêm hướng dẫn hành vi dành riêng cho chế độ này."
+		},
+		"buttons": {
+			"cancel": "Hủy",
+			"create": "Tạo chế độ"
+		},
+		"deleteMode": "Xóa chế độ"
+	},
+	"allFiles": "tất cả các tệp",
+	"advanced": {
+		"title": "Nâng cao"
+	},
+	"deleteMode": {
+		"title": "Xóa chế độ",
+		"message": "Bạn có chắc chắn muốn xóa chế độ \"{{modeName}}\" không?",
+		"rulesFolder": "Chế độ này có một thư mục quy tắc tại {{folderPath}} cũng sẽ bị xóa.",
+		"descriptionNoRules": "Bạn có chắc chắn muốn xóa chế độ tùy chỉnh này không?",
+		"confirm": "Xóa",
+		"cancel": "Hủy"
+	}
+}

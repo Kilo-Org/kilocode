@@ -1,0 +1,223 @@
+{
+	"title": "Modlar",
+	"done": "Tamamlandı",
+	"modes": {
+		"title": "Modlar",
+		"createNewMode": "Yeni mod oluştur",
+		"importMode": "Modu içe aktar",
+		"noMatchFound": "Mod bulunamadı",
+		"editModesConfig": "Mod yapılandırmasını düzenle",
+		"editGlobalModes": "Global modları düzenle",
+		"editProjectModes": "Proje modlarını düzenle (.kilocodemodes)",
+		"createModeHelpText": "Modlar, Kilo Code'nun davranışını uyarlayan özel kişiliklerdir. <0>Modları Kullanma Hakkında Bilgi Edinin</0> veya <1>Modları Özelleştirme.</1>",
+		"selectMode": "Modları Ara"
+	},
+	"apiConfiguration": {
+		"title": "API Yapılandırması",
+		"select": "Bu mod için hangi API yapılandırmasının kullanılacağını seçin"
+	},
+	"organizationMode": {
+		"title": "Kuruluş Modu",
+		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Kilo Code Dashboard'u ziyaret et.",
+		"cannotEdit": "Kuruluş modları düzenlenemez"
+	},
+	"tools": {
+		"title": "Kullanılabilir Araçlar",
+		"builtInModesText": "Yerleşik modlar için araçlar değiştirilemez",
+		"editTools": "Araçları düzenle",
+		"doneEditing": "Düzenlemeyi bitir",
+		"allowedFiles": "İzin verilen dosyalar:",
+		"toolNames": {
+			"read": "Dosyaları Oku",
+			"edit": "Dosyaları Düzenle",
+			"browser": "Tarayıcı Kullan",
+			"command": "Komutları Çalıştır",
+			"mcp": "MCP Kullan"
+		},
+		"noTools": "Yok"
+	},
+	"roleDefinition": {
+		"title": "Rol Tanımı",
+		"resetToDefault": "Varsayılana sıfırla",
+		"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın. Bu açıklama, Kilo Code'nun kendini nasıl sunduğunu ve görevlere nasıl yaklaştığını şekillendirir."
+	},
+	"description": {
+		"title": "Kısa açıklama (insanlar için)",
+		"resetToDefault": "Varsayılan açıklamaya sıfırla",
+		"description": "Mod seçici açılır menüsünde gösterilen kısa bir açıklama."
+	},
+	"whenToUse": {
+		"title": "Ne zaman kullanılmalı (isteğe bağlı)",
+		"description": "Bu modun ne zaman kullanılması gerektiğini açıklayın. Bu, Orchestrator'ın bir görev için doğru modu seçmesine yardımcı olur.",
+		"resetToDefault": "'Ne zaman kullanılmalı' açıklamasını varsayılana sıfırla"
+	},
+	"customInstructions": {
+		"title": "Moda özgü özel talimatlar (isteğe bağlı)",
+		"resetToDefault": "Varsayılana sıfırla",
+		"description": "{{modeName}} modu için özel davranış yönergeleri ekleyin.",
+		"loadFromFile": "{{mode}} moduna özgü özel talimatlar, çalışma alanınızdaki <span>.kilocode/rules-{{slug}}/</span> klasöründen veya global <0>.kilocode/rules-{{slug}}/</0> klasöründen de yüklenebilir (.kilocoderules-{{slug}} ve .clinerules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
+	},
+	"exportMode": {
+		"title": "Modu Dışa Aktar",
+		"description": "Bu modu .kilocode/rules-{{slug}}/ klasöründeki kurallarla birlikte paylaşılabilir bir YAML dosyasına dışa aktar. Orijinal dosyalar değişmeden kalır.",
+		"exporting": "Dışa aktarılıyor..."
+	},
+	"globalCustomInstructions": {
+		"title": "Tüm Modlar için Özel Talimatlar",
+		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar. <0>Daha fazla bilgi edinin</0>",
+		"loadFromFile": "Talimatlar, çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen veya global <0>.kilocode/rules/</0> klasöründen de yüklenebilir (.kilocoderules ve .clinerules kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
+	},
+	"importMode": {
+		"selectLevel": "Bu modu nereye içe aktaracağınızı seçin:",
+		"import": "İçe Aktar",
+		"importing": "İçe aktarılıyor...",
+		"global": {
+			"label": "Genel Seviye",
+			"description": "Tüm projelerde kullanılabilir. Dışa aktarılan mod kural dosyaları içeriyorsa, bunlar genel .kilocode/rules-{slug}/ klasöründe yeniden oluşturulur."
+		},
+		"project": {
+			"label": "Proje Seviyesi",
+			"description": "Yalnızca bu çalışma alanında kullanılabilir. Dışa aktarılan mod kural dosyaları içeriyorsa, bunlar .kilocode/rules-{slug}/ klasöründe yeniden oluşturulur."
+		}
+	},
+	"systemPrompt": {
+		"preview": "Sistem promptunu önizle",
+		"copy": "Sistem promptunu panoya kopyala",
+		"title": "Sistem promptu ({{modeName}} modu)"
+	},
+	"supportPrompts": {
+		"title": "Destek Promptları",
+		"resetPrompt": "{{promptType}} promptunu varsayılana sıfırla",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API Yapılandırması",
+			"apiConfigDescription": "Promptları geliştirmek için her zaman kullanılacak bir API yapılandırması seçebilir veya şu anda seçili olanı kullanabilirsiniz",
+			"useCurrentConfig": "Şu anda seçili API yapılandırmasını kullan",
+			"testPromptPlaceholder": "Geliştirmeyi test etmek için bir prompt girin",
+			"previewButton": "Prompt geliştirmesini önizle",
+			"testEnhancement": "Geliştirmeyi test et",
+			"includeTaskHistory": "Görev geçmişini bağlam olarak dahil et",
+			"includeTaskHistoryDescription": "Etkinleştirildiğinde, mevcut konuşmanın son 10 mesajı promptları geliştirirken bağlam olarak dahil edilecek ve daha alakalı ve bağlam farkında öneriler üretmeye yardımcı olacaktır."
+		},
+		"condense": {
+			"apiConfiguration": "Bağlam Yoğunlaştırma için API Yapılandırması",
+			"apiConfigDescription": "Bağlam yoğunlaştırma işlemleri için hangi API yapılandırmasının kullanılacağını seçin. Geçerli etkin yapılandırmayı kullanmak için seçilmemiş bırakın.",
+			"useCurrentConfig": "Şu anda seçili olan API yapılandırmasını kullan"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Promptu Geliştir",
+				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, Kilo Code'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
+			},
+			"CONDENSE": {
+				"label": "Bağlam Yoğunlaştırma",
+				"description": "Jeton sınırlarını yönetmek için konuşma bağlamının nasıl yoğunlaştırılacağını yapılandırın. Bu istem, hem manuel hem de otomatik bağlam yoğunlaştırma işlemleri için kullanılır."
+			},
+			"EXPLAIN": {
+				"label": "Kodu Açıkla",
+				"description": "Kod parçaları, fonksiyonlar veya tüm dosyalar hakkında ayrıntılı açıklamalar alın. Karmaşık kodu anlamak veya yeni kalıpları öğrenmek için faydalıdır. Kod eylemlerinde (editördeki ampul simgesi) ve editör bağlam menüsünde (seçili koda sağ tıklayın) kullanılabilir."
+			},
+			"FIX": {
+				"label": "Sorunları Düzelt",
+				"description": "Hataları, bugları veya kod kalitesi sorunlarını tanımlama ve çözme konusunda yardım alın. Sorunları çözmek için adım adım rehberlik sağlar. Kod eylemlerinde (editördeki ampul simgesi) ve editör bağlam menüsünde (seçili koda sağ tıklayın) kullanılabilir."
+			},
+			"IMPROVE": {
+				"label": "Kodu İyileştir",
+				"description": "İşlevselliği korurken kod optimizasyonu, daha iyi uygulamalar ve mimari iyileştirmeler için öneriler alın. Kod eylemlerinde (editördeki ampul simgesi) ve editör bağlam menüsünde (seçili koda sağ tıklayın) kullanılabilir."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Bağlama Ekle",
+				"description": "Mevcut görevinize veya konuşmanıza bağlam ekleyin. Ek bilgi veya açıklamalar sağlamak için faydalıdır. Kod eylemlerinde (editördeki ampul simgesi) ve editör bağlam menüsünde (seçili koda sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Terminal İçeriğini Bağlama Ekle",
+				"description": "Terminal çıktısını mevcut görevinize veya konuşmanıza ekleyin. Komut çıktılarını veya günlükleri sağlamak için faydalıdır. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_FIX": {
+				"label": "Terminal Komutunu Düzelt",
+				"description": "Başarısız olan veya iyileştirme gerektiren terminal komutlarını düzeltme konusunda yardım alın. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Terminal Komutunu Açıkla",
+				"description": "Terminal komutları ve çıktıları hakkında ayrıntılı açıklamalar alın. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminal komutu oluştur",
+				"description": "Açıklamaya dayalı terminal komutları oluşturma konusunda yardım alın."
+			},
+			"NEW_TASK": {
+				"label": "Yeni Görev Başlat",
+				"description": "Girdiyle yeni bir görev başlat. Komut paletinde kullanılabilir."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Mesajı Oluşturma",
+				"description": "Sahnelenmiş git değişikliklerinize göre açıklayıcı commit mesajları oluşturun. Deponuzun en iyi uygulamalarına uygun mesajlar oluşturmak için komut istemini özelleştirin."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Gelişmiş: Sistem Promptunu Geçersiz Kıl",
+		"description": "<2>⚠️ Uyarı:</2> Bu gelişmiş özellik güvenlik önlemlerini atlar. <1>KULLANMADAN ÖNCE BUNU OKUYUN!</1>Çalışma alanınızda <span>.kilocode/system-prompt-{{slug}}</span> adresinde bir dosya oluşturarak varsayılan sistem istemini geçersiz kılın."
+	},
+	"createModeDialog": {
+		"title": "Yeni Mod Oluştur",
+		"close": "Kapat",
+		"name": {
+			"label": "İsim",
+			"placeholder": "Mod adını girin"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug, URL'lerde ve dosya adlarında kullanılır. Küçük harflerle yazılmalı ve yalnızca harfler, sayılar ve kısa çizgiler içermelidir."
+		},
+		"saveLocation": {
+			"label": "Kaydetme Konumu",
+			"description": "Bu modu nereye kaydedeceğinizi seçin. Projeye özgü modlar, global modlara göre önceliklidir.",
+			"global": {
+				"label": "Global",
+				"description": "Tüm çalışma alanlarında kullanılabilir"
+			},
+			"project": {
+				"label": "Projeye özgü (.kilocodemodes)",
+				"description": "Yalnızca bu çalışma alanında kullanılabilir, globale göre önceliklidir"
+			}
+		},
+		"roleDefinition": {
+			"label": "Rol Tanımı",
+			"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın."
+		},
+		"whenToUse": {
+			"label": "Ne zaman kullanılmalı (isteğe bağlı)",
+			"description": "Bu modun ne zaman en etkili olduğu ve hangi tür görevlerde üstün olduğu hakkında net bir açıklama sağlayın."
+		},
+		"tools": {
+			"label": "Kullanılabilir Araçlar",
+			"description": "Bu modun hangi araçları kullanabileceğini seçin."
+		},
+		"description": {
+			"label": "Kısa açıklama (insanlar için)",
+			"description": "Mod seçici açılır menüsünde gösterilen kısa bir açıklama."
+		},
+		"customInstructions": {
+			"label": "Özel Talimatlar (isteğe bağlı)",
+			"description": "Bu mod için özel davranış yönergeleri ekleyin."
+		},
+		"buttons": {
+			"cancel": "İptal",
+			"create": "Mod Oluştur"
+		},
+		"deleteMode": "Modu sil"
+	},
+	"allFiles": "tüm dosyalar",
+	"advanced": {
+		"title": "Gelişmiş"
+	},
+	"deleteMode": {
+		"title": "Modu Sil",
+		"message": "\"{{modeName}}\" modunu silmek istediğinizden emin misiniz?",
+		"rulesFolder": "Bu modun {{folderPath}} konumunda bir kurallar klasörü var ve bu da silinecek.",
+		"descriptionNoRules": "Bu özel modu silmek istediğinizden emin misiniz?",
+		"confirm": "Sil",
+		"cancel": "İptal"
+	}
+}

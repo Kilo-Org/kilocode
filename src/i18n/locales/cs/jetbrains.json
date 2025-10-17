@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Prostředí Node.js chybí",
+			"message": "Prostředí Node.js nebylo detekováno, nainstalujte prosím Node.js a zkuste to znovu. Doporučená verze: {{minVersion}} nebo vyšší."
+		},
+		"nodejsVersionLow": {
+			"title": "Verze Node.js je příliš nízká",
+			"message": "Aktuální verze Node.js ({{nodePath}}) je {{nodeVersion}}, aktualizujte prosím na {{minVersion}} nebo vyšší pro lepší kompatibilitu."
+		}
+	},
+	"dialog": {
+		"cancel": "Zrušit"
+	},
+	"ui": {
+		"initializing": "Kilo Code se inicializuje...",
+		"systemInformation": "Informace o systému"
+	}
+}

@@ -1,0 +1,5 @@
+# Description: Should complete try-catch-finally error handling
+function processData(data) {
+	try {
+		const result = JSON.parse(data);
+		<<<AUTOCOMPLETE_HERE>>>

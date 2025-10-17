@@ -1,0 +1,227 @@
+{
+	"title": "Mode",
+	"done": "Selesai",
+	"modes": {
+		"title": "Mode",
+		"createNewMode": "Buat mode baru",
+		"importMode": "Impor mode",
+		"noMatchFound": "Tidak ada mode yang ditemukan",
+		"editModesConfig": "Edit konfigurasi mode",
+		"editGlobalModes": "Edit Mode Global",
+		"editProjectModes": "Edit Mode Proyek (.kilocodemodes)",
+		"createModeHelpText": "Mode adalah persona khusus yang menyesuaikan perilaku Kilo Code. <0>Pelajari tentang Menggunakan Mode</0> atau <1>Menyesuaikan Mode.</1>",
+		"selectMode": "Cari mode"
+	},
+	"apiConfiguration": {
+		"title": "Konfigurasi API",
+		"select": "Pilih konfigurasi API mana yang akan digunakan untuk mode ini"
+	},
+	"organizationMode": {
+		"title": "Mode Organisasi",
+		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Kilo Code Dashboard.",
+		"cannotEdit": "Mode organisasi tidak dapat diedit"
+	},
+	"tools": {
+		"title": "Tools yang Tersedia",
+		"builtInModesText": "Tools untuk mode bawaan tidak dapat dimodifikasi",
+		"editTools": "Edit tools",
+		"doneEditing": "Selesai mengedit",
+		"allowedFiles": "File yang diizinkan:",
+		"toolNames": {
+			"read": "Baca File",
+			"edit": "Edit File",
+			"browser": "Gunakan Browser",
+			"command": "Jalankan Perintah",
+			"mcp": "Gunakan MCP"
+		},
+		"noTools": "Tidak Ada"
+	},
+	"roleDefinition": {
+		"title": "Definisi Peran",
+		"resetToDefault": "Reset ke default",
+		"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini. Deskripsi ini membentuk bagaimana Kilo Code mempresentasikan dirinya dan mendekati tugas."
+	},
+	"description": {
+		"title": "Deskripsi singkat (untuk manusia)",
+		"resetToDefault": "Setel ulang ke deskripsi default",
+		"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
+	},
+	"whenToUse": {
+		"title": "Kapan Menggunakan (opsional)",
+		"description": "Jelaskan kapan mode ini harus digunakan. Ini membantu Orchestrator memilih mode yang tepat untuk suatu tugas.",
+		"resetToDefault": "Reset ke deskripsi default 'Kapan Menggunakan'"
+	},
+	"customInstructions": {
+		"title": "Instruksi Kustom Khusus Mode (opsional)",
+		"resetToDefault": "Reset ke default",
+		"description": "Tambahkan panduan perilaku khusus untuk mode {{modeName}}.",
+		"loadFromFile": "Instruksi khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} dan .clinerules-{{slug}} sudah usang dan akan segera berhenti berfungsi)."
+	},
+	"exportMode": {
+		"title": "Ekspor Mode",
+		"description": "Ekspor mode ini dengan aturan dari folder .kilocode/rules-{{slug}}/ digabungkan ke dalam file YAML yang dapat dibagikan. File asli tetap tidak berubah.",
+		"exporting": "Mengekspor..."
+	},
+	"importMode": {
+		"selectLevel": "Pilih di mana akan mengimpor mode ini:",
+		"import": "Impor",
+		"importing": "Mengimpor...",
+		"global": {
+			"label": "Tingkat Global",
+			"description": "Tersedia di semua proyek. Jika mode yang diekspor berisi file aturan, file tersebut akan dibuat ulang di folder global .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Tingkat Proyek",
+			"description": "Hanya tersedia di ruang kerja ini. Jika mode yang diekspor berisi file aturan, file tersebut akan dibuat ulang di folder .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Lanjutan"
+	},
+	"globalCustomInstructions": {
+		"title": "Instruksi Kustom untuk Semua Mode",
+		"description": "Instruksi ini berlaku untuk semua mode. Mereka menyediakan set dasar perilaku yang dapat ditingkatkan oleh instruksi khusus mode di bawah. <0>Pelajari lebih lanjut</0>",
+		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules/</0> (.kilocoderules dan .clinerules sudah usang dan akan segera berhenti berfungsi)."
+	},
+	"systemPrompt": {
+		"preview": "Pratinjau System Prompt",
+		"copy": "Salin system prompt ke clipboard",
+		"title": "System Prompt (mode {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Support Prompts",
+		"resetPrompt": "Reset prompt {{promptType}} ke default",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "Konfigurasi API",
+			"apiConfigDescription": "Anda dapat memilih konfigurasi API untuk selalu digunakan untuk meningkatkan prompt, atau gunakan yang sedang dipilih saat ini",
+			"useCurrentConfig": "Gunakan konfigurasi API yang sedang dipilih",
+			"testPromptPlaceholder": "Masukkan prompt untuk menguji peningkatan",
+			"previewButton": "Pratinjau Peningkatan Prompt",
+			"testEnhancement": "Uji Peningkatan",
+			"includeTaskHistory": "Sertakan riwayat tugas sebagai konteks",
+			"includeTaskHistoryDescription": "Ketika diaktifkan, 10 pesan terakhir dari percakapan saat ini akan disertakan sebagai konteks saat meningkatkan prompt, membantu menghasilkan saran yang lebih relevan dan sadar konteks."
+		},
+		"condense": {
+			"apiConfiguration": "Konfigurasi API untuk Peringkasan Konteks",
+			"apiConfigDescription": "Pilih konfigurasi API mana yang akan digunakan untuk operasi peringkasan konteks. Biarkan tidak dipilih untuk menggunakan konfigurasi aktif saat ini.",
+			"useCurrentConfig": "Gunakan konfigurasi API yang saat ini dipilih"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Tingkatkan Prompt",
+				"description": "Gunakan peningkatan prompt untuk mendapatkan saran atau perbaikan yang disesuaikan untuk input Anda. Ini memastikan Kilo Code memahami maksud Anda dan memberikan respons terbaik. Tersedia melalui ikon ✨ di chat."
+			},
+			"CONDENSE": {
+				"label": "Peringkasan Konteks",
+				"description": "Konfigurasikan bagaimana konteks percakapan diringkas untuk mengelola batas token. Prompt ini digunakan untuk operasi peringkasan konteks manual dan otomatis."
+			},
+			"EXPLAIN": {
+				"label": "Jelaskan Kode",
+				"description": "Dapatkan penjelasan detail tentang snippet kode, fungsi, atau seluruh file. Berguna untuk memahami kode kompleks atau mempelajari pola baru. Tersedia di code actions (ikon lightbulb di editor) dan menu konteks editor (klik kanan pada kode yang dipilih)."
+			},
+			"FIX": {
+				"label": "Perbaiki Masalah",
+				"description": "Dapatkan bantuan mengidentifikasi dan menyelesaikan bug, error, atau masalah kualitas kode. Memberikan panduan langkah demi langkah untuk memperbaiki masalah. Tersedia di code actions (ikon lightbulb di editor) dan menu konteks editor (klik kanan pada kode yang dipilih)."
+			},
+			"IMPROVE": {
+				"label": "Tingkatkan Kode",
+				"description": "Terima saran untuk optimisasi kode, praktik yang lebih baik, dan perbaikan arsitektur sambil mempertahankan fungsionalitas. Tersedia di code actions (ikon lightbulb di editor) dan menu konteks editor (klik kanan pada kode yang dipilih)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Tambahkan ke Konteks",
+				"description": "Tambahkan konteks ke tugas atau percakapan saat ini. Berguna untuk memberikan informasi tambahan atau klarifikasi. Tersedia di code actions (ikon lightbulb di editor) dan menu konteks editor (klik kanan pada kode yang dipilih)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Tambahkan Konten Terminal ke Konteks",
+				"description": "Tambahkan output terminal ke tugas atau percakapan saat ini. Berguna untuk memberikan output perintah atau log. Tersedia di menu konteks terminal (klik kanan pada konten terminal yang dipilih)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Perbaiki Perintah Terminal",
+				"description": "Dapatkan bantuan memperbaiki perintah terminal yang gagal atau perlu perbaikan. Tersedia di menu konteks terminal (klik kanan pada konten terminal yang dipilih)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Jelaskan Perintah Terminal",
+				"description": "Dapatkan penjelasan detail tentang perintah terminal dan outputnya. Tersedia di menu konteks terminal (klik kanan pada konten terminal yang dipilih)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Buat Perintah Terminal",
+				"description": "Bantu membuat perintah terminal berdasarkan deskripsi."
+			},
+			"NEW_TASK": {
+				"label": "Mulai Tugas Baru",
+				"description": "Mulai tugas baru dengan input pengguna. Tersedia di Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generasi Pesan Commit",
+				"description": "Buat pesan commit yang deskriptif berdasarkan perubahan git yang sudah di-stage. Sesuaikan prompt untuk menghasilkan pesan yang mengikuti praktik terbaik repositori kamu."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Lanjutan: Override System Prompt",
+		"description": "<2>⚠️ Peringatan:</2> Fitur lanjutan ini melewati pengamanan. <1>BACA INI SEBELUM MENGGUNAKAN!</1>Override system prompt default dengan membuat file di <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Buat Mode Baru",
+		"close": "Tutup",
+		"name": {
+			"label": "Nama",
+			"placeholder": "Masukkan nama mode"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug digunakan dalam URL dan nama file. Harus huruf kecil dan hanya berisi huruf, angka, dan tanda hubung."
+		},
+		"saveLocation": {
+			"label": "Lokasi Penyimpanan",
+			"description": "Pilih di mana menyimpan mode ini. Mode khusus proyek lebih diutamakan daripada mode global.",
+			"global": {
+				"label": "Global",
+				"description": "Tersedia di semua workspace"
+			},
+			"project": {
+				"label": "Khusus proyek (.kilocodemodes)",
+				"description": "Hanya tersedia di workspace ini, lebih diutamakan daripada global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definisi Peran",
+			"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini."
+		},
+		"description": {
+			"label": "Deskripsi singkat (untuk manusia)",
+			"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
+		},
+		"whenToUse": {
+			"label": "Kapan Menggunakan (opsional)",
+			"description": "Berikan deskripsi yang jelas tentang kapan mode ini paling efektif dan jenis tugas apa yang unggul."
+		},
+		"tools": {
+			"label": "Tools yang Tersedia",
+			"description": "Pilih tools mana yang dapat digunakan mode ini."
+		},
+		"description": {
+			"label": "Deskripsi singkat (untuk manusia)",
+			"description": "Deskripsi singkat yang ditampilkan di dropdown pemilih mode."
+		},
+		"customInstructions": {
+			"label": "Instruksi Kustom (opsional)",
+			"description": "Tambahkan panduan perilaku khusus untuk mode ini."
+		},
+		"buttons": {
+			"cancel": "Batal",
+			"create": "Buat Mode"
+		},
+		"deleteMode": "Hapus mode"
+	},
+	"allFiles": "semua file",
+	"deleteMode": {
+		"title": "Hapus Mode",
+		"message": "Anda yakin ingin menghapus mode \"{{modeName}}\"?",
+		"rulesFolder": "Mode ini memiliki folder aturan di {{folderPath}} yang juga akan dihapus.",
+		"descriptionNoRules": "Apakah Anda yakin ingin menghapus mode kustom ini?",
+		"confirm": "Hapus",
+		"cancel": "Batal"
+	}
+}

@@ -1,0 +1,223 @@
+{
+	"title": "الأنماط",
+	"done": "تم",
+	"modes": {
+		"title": "الأنماط",
+		"createNewMode": "إنشاء نمط جديد",
+		"importMode": "استيراد نمط",
+		"editModesConfig": "تعديل إعدادات الأنماط",
+		"editGlobalModes": "تعديل الأنماط العامة",
+		"editProjectModes": "تعديل أنماط المشروع (.kilocodemodes)",
+		"createModeHelpText": "الأنماط تعرّف شخصيات مخصصة تضبط سلوك Kilo Code. <0>تعرف على طريقة استخدام الأنماط</0> أو <1>تخصيصها حسب شغلك</1>.",
+		"selectMode": "بحث في الأنماط",
+		"noMatchFound": "لم يتم العثور على أنماط"
+	},
+	"apiConfiguration": {
+		"title": "إعدادات API",
+		"select": "حدد أي إعداد API تبي يستخدمه النمط"
+	},
+	"organizationMode": {
+		"title": "نمط المنظمة",
+		"description": "هذا النمط مقدم من منظمتك ولا يمكن تعديله هنا. لتعديل هذا النمط، تفضل بزيارة لوحة تحكم Kilo Code.",
+		"cannotEdit": "لا يمكن تعديل أنماط المنظمة"
+	},
+	"tools": {
+		"title": "الأدوات المتوفرة",
+		"builtInModesText": "ما تقدر تعدل أدوات الأنماط الأساسية",
+		"editTools": "تعديل الأدوات",
+		"doneEditing": "انتهيت من التعديل",
+		"allowedFiles": "الملفات المسموح بها:",
+		"toolNames": {
+			"read": "قراءة ملفات",
+			"edit": "تعديل ملفات",
+			"browser": "فتح متصفح",
+			"command": "تشغيل أوامر",
+			"mcp": "استخدام MCP"
+		},
+		"noTools": "ما فيه"
+	},
+	"roleDefinition": {
+		"title": "تعريف الدور",
+		"resetToDefault": "رجّع للوضع الافتراضي",
+		"description": "حدد خبرة Kilo Code وطريقته في التعامل داخل هالنمط. هذا النص يحدد كيف يشتغل ويقدم نفسه."
+	},
+	"description": {
+		"title": "وصف مختصر (للبشر)",
+		"resetToDefault": "رجّع الوصف الافتراضي",
+		"description": "بيظهر هذا الوصف في قائمة اختيار الأنماط."
+	},
+	"whenToUse": {
+		"title": "وقت الاستخدام (اختياري)",
+		"description": "حدد متى يُفضّل استخدام النمط هذا. يساعد المنظم (Orchestrator) يختار الأنسب.",
+		"resetToDefault": "رجّع الوصف الافتراضي"
+	},
+	"customInstructions": {
+		"title": "تعليمات مخصصة لهذا النمط (اختياري)",
+		"resetToDefault": "رجّع للوضع الافتراضي",
+		"description": "اكتب تعليمات خاصة لسلوك نمط {{modeName}}.",
+		"loadFromFile": "تقدر تحمل التعليمات من المجلد <span>.kilocode/rules/</span> داخل المشروع (.kilocoderules-{{slug}} بيتوقف قريب)."
+	},
+	"exportMode": {
+		"title": "تصدير النمط",
+		"description": "صدّر هذا النمط مع القواعد من مجلد .kilocode/rules-{{slug}}/ في ملف YAML قابل للمشاركة. الملفات الأصلية تبقى كما هي.",
+		"exporting": "جاري التصدير..."
+	},
+	"importMode": {
+		"selectLevel": "اختر مكان استيراد النمط:",
+		"import": "استيراد",
+		"importing": "جاري الاستيراد...",
+		"global": {
+			"label": "المستوى العام",
+			"description": "متوفر في كل المشاريع. إذا كان النمط المصدّر يحتوي على ملفات قواعد، سيتم إنشاؤها في مجلد .kilocode/rules-{slug}/ العام."
+		},
+		"project": {
+			"label": "مستوى المشروع",
+			"description": "متوفر فقط في هذا المشروع. إذا كان النمط المصدّر يحتوي على ملفات قواعد، سيتم إنشاؤها في مجلد .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "متقدم: تجاوز موجه النظام"
+	},
+	"globalCustomInstructions": {
+		"title": "تعليمات عامة لكل الأنماط",
+		"description": "هذي التعليمات تنطبق على كل الأنماط، وتعتبر قاعدة ينضاف لها تعليمات مخصصة بالنمط. <0>اعرف أكثر</0>",
+		"loadFromFile": "تقدر تحمل التعليمات من المجلد <span>.kilocode/rules/</span> داخل المشروع (.kilocoderules بيتوقف قريب)."
+	},
+	"systemPrompt": {
+		"preview": "عرض تمهيدي للنظام",
+		"copy": "نسخ موجه النظام",
+		"title": "موجه النظام (نمط {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "الموجهات المساعدة",
+		"resetPrompt": "رجع {{promptType}} للموجه الافتراضي",
+		"prompt": "الموجه",
+		"enhance": {
+			"apiConfiguration": "إعدادات API",
+			"apiConfigDescription": "تقدر تختار إعداد API محدد لتحسين الموجه أو تستخدم الإعداد الحالي",
+			"useCurrentConfig": "استخدم الإعداد الحالي",
+			"testPromptPlaceholder": "اكتب موجه لاختبار التحسين",
+			"previewButton": "عرض تحسين الموجه",
+			"testEnhancement": "اختبار التحسين",
+			"includeTaskHistory": "تضمين تاريخ المهمة كسياق",
+			"includeTaskHistoryDescription": "عند التفعيل، آخر 10 رسائل من المحادثة الحالية ستُضمّن كسياق عند تحسين الموجهات، مما يساعد في توليد اقتراحات أكثر صلة ووعياً بالسياق."
+		},
+		"condense": {
+			"apiConfiguration": "إعدادات API لضغط السياق",
+			"apiConfigDescription": "اختر إعداد API لعمليات ضغط السياق. اتركه فارغ لاستخدام الإعداد النشط حالياً.",
+			"useCurrentConfig": "استخدم الإعداد الحالي"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "تحسين الموجه",
+				"description": "يحسن الموجهات ويخلي Kilo Code يفهم المطلوب بدقة. متوفر في المحادثة (أيقونة ✨)."
+			},
+			"CONDENSE": {
+				"label": "ضغط السياق",
+				"description": "يضبط كيفية ضغط سياق المحادثة لإدارة حدود الرموز. يستخدم للضغط اليدوي والتلقائي."
+			},
+			"EXPLAIN": {
+				"label": "شرح الكود",
+				"description": "يعطي شرح تفصيلي للكود، دوال، أو ملفات. متوفر من الإجراءات أو كلك يمين داخل المحرر."
+			},
+			"FIX": {
+				"label": "إصلاح المشاكل",
+				"description": "يساعدك تصلح أخطاء أو تحسن جودة الكود خطوة بخطوة."
+			},
+			"IMPROVE": {
+				"label": "تحسين الكود",
+				"description": "اقتراحات لتحسين الكود أو الأداء بدون تغيير الوظيفية."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "أضف للسياق",
+				"description": "أضف معلومات إضافية تساعد في تنفيذ المهمة أو الحوار."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "أضف محتوى الطرفية للسياق",
+				"description": "مفيد إذا عندك أوامر أو لوقات من الطرفية."
+			},
+			"TERMINAL_FIX": {
+				"label": "إصلاح أمر طرفية",
+				"description": "يساعدك تصلح الأوامر اللي فيها مشاكل من الطرفية."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "شرح أمر طرفية",
+				"description": "يعطيك شرح مفصل لأمر الطرفية اللي كتبته."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "توليد أمر طرفية",
+				"description": "يساعدك تولد أوامر طرفية حسب الوصف."
+			},
+			"NEW_TASK": {
+				"label": "مهمة جديدة",
+				"description": "تبدأ مهمة جديدة من لوحة الأوامر."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "توليد رسالة Commit",
+				"description": "يولّد رسالة git مناسبة حسب التعديلات. تقدر تخصص الموجه حسب ستايل المشروع."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "خيارات متقدمة: تجاوز موجه النظام",
+		"description": "<2>⚠️ تحذير:</2> هذا خيار متقدم يتجاوز الحمايات. <1>اقرأ قبل الاستخدام!</1> تقدر تتجاوز الموجه بإنشاء ملف في <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "إنشاء نمط جديد",
+		"close": "إغلاق",
+		"name": {
+			"label": "اسم النمط",
+			"placeholder": "اكتب اسم النمط"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "يستخدم slug في أسماء الملفات والروابط. لازم يكون بحروف صغيرة وأرقام وشرطات فقط."
+		},
+		"saveLocation": {
+			"label": "مكان الحفظ",
+			"description": "حدد وين تحفظ النمط. أنماط المشروع لها أولوية على العامة.",
+			"global": {
+				"label": "عام",
+				"description": "متوفر بكل المشاريع"
+			},
+			"project": {
+				"label": "خاص بالمشروع (.kilocodemodes)",
+				"description": "متوفر فقط بهالمشروع وله أولوية"
+			}
+		},
+		"roleDefinition": {
+			"label": "تعريف الدور",
+			"description": "حدد خبرة Kilo Code وطريقته في النمط هذا."
+		},
+		"description": {
+			"label": "وصف مختصر (للبشر)",
+			"description": "بيطلع في قائمة اختيار الأنماط."
+		},
+		"whenToUse": {
+			"label": "وقت الاستخدام (اختياري)",
+			"description": "وضح متى يُفضّل يستخدم النمط هذا."
+		},
+		"tools": {
+			"label": "الأدوات المتاحة",
+			"description": "اختر الأدوات اللي يقدر يستخدمها النمط."
+		},
+		"customInstructions": {
+			"label": "تعليمات مخصصة (اختياري)",
+			"description": "اكتب تعليمات تضبط سلوك النمط."
+		},
+		"buttons": {
+			"cancel": "إلغاء",
+			"create": "إنشاء النمط"
+		},
+		"deleteMode": "حذف النمط"
+	},
+	"allFiles": "كل الملفات",
+	"deleteMode": {
+		"title": "حذف النمط",
+		"message": "هل أنت متأكد من حذف النمط \"{{modeName}}\"؟",
+		"rulesFolder": "هذا النمط له مجلد قواعد في {{folderPath}} وسيتم حذفه أيضاً.",
+		"descriptionNoRules": "هل أنت متأكد من حذف هذا النمط المخصص؟",
+		"confirm": "حذف",
+		"cancel": "إلغاء"
+	}
+}

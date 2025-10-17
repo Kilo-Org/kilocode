@@ -1,0 +1,27 @@
+{
+	"greeting": "Hallo, ich bin Kilo Code!",
+	"introduction": "<strong>Kilo Code ist der führende autonome Coding-Agent.</strong> Mach dich bereit, zu architektieren, zu coden, zu debuggen und deine Produktivität wie nie zuvor zu steigern. Um fortzufahren, benötigt Kilo Code einen API-Schlüssel.",
+	"notice": "Um loszulegen, benötigt diese Erweiterung einen API-Anbieter.",
+	"start": "Los geht's!",
+	"routers": {
+		"requesty": {
+			"description": "Dein optimierter LLM-Router",
+			"incentive": "$1 Guthaben gratis"
+		},
+		"openrouter": {
+			"description": "Eine einheitliche Schnittstelle für LLMs"
+		},
+		"roo": {
+			"description": "Die besten kostenlosen Modelle für den Einstieg",
+			"incentive": "Probier Roo kostenlos aus"
+		}
+	},
+	"chooseProvider": "Um seine Magie zu entfalten, benötigt Kilo Code einen API-Schlüssel.",
+	"startRouter": "Wir empfehlen die Verwendung eines LLM-Routers:",
+	"startCustom": "Oder du kannst deinen eigenen API-Schlüssel verwenden:",
+	"telemetry": {
+		"helpImprove": "Hilf, Kilo Code zu verbessern",
+		"helpImproveMessage": "Kilo Code sammelt Fehler- und Nutzungsdaten, um uns bei der Fehlerbehebung und Verbesserung der Erweiterung zu helfen. Diese Telemetrie sammelt keinen Code, keine Prompts oder persönliche Informationen. Du kannst dies in den <settingsLink>Einstellungen</settingsLink> deaktivieren."
+	},
+	"importSettings": "Einstellungen importieren"
+}

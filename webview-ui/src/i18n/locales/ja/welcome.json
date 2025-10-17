@@ -1,0 +1,27 @@
+{
+	"greeting": "こんにちは、Kilo Codeです！",
+	"introduction": "<strong>Kilo Codeは最高の自律型コーディングエージェントです。</strong>アーキテクチャの設計、コーディング、デバッグ、そして今までにない生産性向上を体験する準備をしてください。続行するには、Kilo CodeにはAPIキーが必要です。",
+	"notice": "開始するには、この拡張機能にはAPIプロバイダーが必要です。",
+	"start": "さあ、始めましょう！",
+	"routers": {
+		"requesty": {
+			"description": "最適化されたLLMルーター",
+			"incentive": "$1の無料クレジット"
+		},
+		"openrouter": {
+			"description": "LLMsのための統一インターフェース"
+		},
+		"roo": {
+			"description": "始めるための最高の無料モデル",
+			"incentive": "Rooを無料で試す"
+		}
+	},
+	"chooseProvider": "Kilo Codeが機能するには、APIキーが必要です。",
+	"startRouter": "LLMルーターの使用をお勧めします：",
+	"startCustom": "または、あなた自身のAPIキーを使用できます：",
+	"telemetry": {
+		"helpImprove": "Kilo Codeの改善にご協力ください",
+		"helpImproveMessage": "Kilo Codeはバグの修正と拡張機能の改善のため、エラーと使用データを収集します。このテレメトリはコード、プロンプト、個人情報を収集しません。<settingsLink>設定</settingsLink>でこれを無効にできます。"
+	},
+	"importSettings": "設定をインポート"
+}

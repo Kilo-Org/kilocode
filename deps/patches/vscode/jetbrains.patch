@@ -1,0 +1,1832 @@
+From 84ef3dc1d9bf973d8bcaae8b91653bbfe74c2dcf Mon Sep 17 00:00:00 2001
+From: hongyu9 <hongyu9@staff.weibo.com>
+Date: Tue, 29 Jul 2025 21:50:18 +0800
+Subject: [PATCH] fix: update callback type and add default export for start
+
+- Change callback in extHostConsoleForwarder.ts to accept (err?: Error | null) => void for better TypeScript compatibility
+- Add a default export for the start function in extensionHostProcess.ts to allow easier importing and usage
+---
+ src/main.ts                                   | 719 ------------------
+ src/vs/base/common/uri.ts                     |   1 +
+ src/vs/base/parts/ipc/common/ipc.net.ts       |  16 +-
+ .../workbench/api/common/extHost.api.impl.ts  |  11 +-
+ .../api/common/extHostConfiguration.ts        |   1 +
+ .../api/common/extHostExtensionActivator.ts   |   4 +
+ .../api/common/extHostExtensionService.ts     |  17 +-
+ src/vs/workbench/api/common/extHostWebview.ts |   1 +
+ .../api/common/extHostWebviewView.ts          |   5 +
+ .../workbench/api/common/extHostWorkspace.ts  |   1 +
+ .../workbench/api/common/extensionHostMain.ts | 248 +++---
+ .../api/node/extHostConsoleForwarder.ts       |   2 +-
+ .../api/node/extensionHostProcess.ts          |  13 +-
+ .../contrib/webview/common/webview.ts         |  11 +-
+ .../common/abstractExtensionService.ts        |   1 +
+ .../common/fileRPCProtocolLogger.ts           | 246 ++++++
+ .../services/extensions/common/rpcProtocol.ts |   4 +-
+ 17 files changed, 453 insertions(+), 848 deletions(-)
+ delete mode 100644 src/main.ts
+ create mode 100644 src/vs/workbench/services/extensions/common/fileRPCProtocolLogger.ts
+
+diff --git a/src/main.ts b/src/main.ts
+deleted file mode 100644
+index 1af3c941e00..00000000000
+--- a/src/main.ts
++++ /dev/null
+@@ -1,719 +0,0 @@
+-/*---------------------------------------------------------------------------------------------
+- *  Copyright (c) Microsoft Corporation. All rights reserved.
+- *  Licensed under the MIT License. See License.txt in the project root for license information.
+- *--------------------------------------------------------------------------------------------*/
+-
+-import * as path from 'path';
+-import * as fs from 'original-fs';
+-import * as os from 'os';
+-import { performance } from 'perf_hooks';
+-import { configurePortable } from './bootstrap-node.js';
+-import { bootstrapESM } from './bootstrap-esm.js';
+-import { fileURLToPath } from 'url';
+-import { app, protocol, crashReporter, Menu, contentTracing } from 'electron';
+-import minimist from 'minimist';
+-import { product } from './bootstrap-meta.js';
+-import { parse } from './vs/base/common/jsonc.js';
+-import { getUserDataPath } from './vs/platform/environment/node/userDataPath.js';
+-import * as perf from './vs/base/common/performance.js';
+-import { resolveNLSConfiguration } from './vs/base/node/nls.js';
+-import { getUNCHost, addUNCHostToAllowlist } from './vs/base/node/unc.js';
+-import { INLSConfiguration } from './vs/nls.js';
+-import { NativeParsedArgs } from './vs/platform/environment/common/argv.js';
+-
+-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+-
+-perf.mark('code/didStartMain');
+-
+-perf.mark('code/willLoadMainBundle', {
+-	// When built, the main bundle is a single JS file with all
+-	// dependencies inlined. As such, we mark `willLoadMainBundle`
+-	// as the start of the main bundle loading process.
+-	startTime: Math.floor(performance.timeOrigin)
+-});
+-perf.mark('code/didLoadMainBundle');
+-
+-// Enable portable support
+-const portable = configurePortable(product);
+-
+-const args = parseCLIArgs();
+-// Configure static command line arguments
+-const argvConfig = configureCommandlineSwitchesSync(args);
+-// Enable sandbox globally unless
+-// 1) disabled via command line using either
+-//    `--no-sandbox` or `--disable-chromium-sandbox` argument.
+-// 2) argv.json contains `disable-chromium-sandbox: true`.
+-if (args['sandbox'] &&
+-	!args['disable-chromium-sandbox'] &&
+-	!argvConfig['disable-chromium-sandbox']) {
+-	app.enableSandbox();
+-} else if (app.commandLine.hasSwitch('no-sandbox') &&
+-	!app.commandLine.hasSwitch('disable-gpu-sandbox')) {
+-	// Disable GPU sandbox whenever --no-sandbox is used.
+-	app.commandLine.appendSwitch('disable-gpu-sandbox');
+-} else {
+-	app.commandLine.appendSwitch('no-sandbox');
+-	app.commandLine.appendSwitch('disable-gpu-sandbox');
+-}
+-
+-// Set userData path before app 'ready' event
+-const userDataPath = getUserDataPath(args, product.nameShort ?? 'code-oss-dev');
+-if (process.platform === 'win32') {
+-	const userDataUNCHost = getUNCHost(userDataPath);
+-	if (userDataUNCHost) {
+-		addUNCHostToAllowlist(userDataUNCHost); // enables to use UNC paths in userDataPath
+-	}
+-}
+-app.setPath('userData', userDataPath);
+-
+-// Resolve code cache path
+-const codeCachePath = getCodeCachePath();
+-
+-// Disable default menu (https://github.com/electron/electron/issues/35512)
+-Menu.setApplicationMenu(null);
+-
+-// Configure crash reporter
+-perf.mark('code/willStartCrashReporter');
+-// If a crash-reporter-directory is specified we store the crash reports
+-// in the specified directory and don't upload them to the crash server.
+-//
+-// Appcenter crash reporting is enabled if
+-// * enable-crash-reporter runtime argument is set to 'true'
+-// * --disable-crash-reporter command line parameter is not set
+-//
+-// Disable crash reporting in all other cases.
+-if (args['crash-reporter-directory'] || (argvConfig['enable-crash-reporter'] && !args['disable-crash-reporter'])) {
+-	configureCrashReporter();
+-}
+-perf.mark('code/didStartCrashReporter');
+-
+-// Set logs path before app 'ready' event if running portable
+-// to ensure that no 'logs' folder is created on disk at a
+-// location outside of the portable directory
+-// (https://github.com/microsoft/vscode/issues/56651)
+-if (portable && portable.isPortable) {
+-	app.setAppLogsPath(path.join(userDataPath, 'logs'));
+-}
+-
+-// Register custom schemes with privileges
+-protocol.registerSchemesAsPrivileged([
+-	{
+-		scheme: 'vscode-webview',
+-		privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, allowServiceWorkers: true, codeCache: true }
+-	},
+-	{
+-		scheme: 'vscode-file',
+-		privileges: { secure: true, standard: true, supportFetchAPI: true, corsEnabled: true, codeCache: true }
+-	}
+-]);
+-
+-// Global app listeners
+-registerListeners();
+-
+-/**
+- * We can resolve the NLS configuration early if it is defined
+- * in argv.json before `app.ready` event. Otherwise we can only
+- * resolve NLS after `app.ready` event to resolve the OS locale.
+- */
+-let nlsConfigurationPromise: Promise<INLSConfiguration> | undefined = undefined;
+-
+-// Use the most preferred OS language for language recommendation.
+-// The API might return an empty array on Linux, such as when
+-// the 'C' locale is the user's only configured locale.
+-// No matter the OS, if the array is empty, default back to 'en'.
+-const osLocale = processZhLocale((app.getPreferredSystemLanguages()?.[0] ?? 'en').toLowerCase());
+-const userLocale = getUserDefinedLocale(argvConfig);
+-if (userLocale) {
+-	nlsConfigurationPromise = resolveNLSConfiguration({
+-		userLocale,
+-		osLocale,
+-		commit: product.commit,
+-		userDataPath,
+-		nlsMetadataPath: __dirname
+-	});
+-}
+-
+-// Pass in the locale to Electron so that the
+-// Windows Control Overlay is rendered correctly on Windows.
+-// For now, don't pass in the locale on macOS due to
+-// https://github.com/microsoft/vscode/issues/167543.
+-// If the locale is `qps-ploc`, the Microsoft
+-// Pseudo Language Language Pack is being used.
+-// In that case, use `en` as the Electron locale.
+-
+-if (process.platform === 'win32' || process.platform === 'linux') {
+-	const electronLocale = (!userLocale || userLocale === 'qps-ploc') ? 'en' : userLocale;
+-	app.commandLine.appendSwitch('lang', electronLocale);
+-}
+-
+-// Load our code once ready
+-app.once('ready', function () {
+-	if (args['trace']) {
+-		let traceOptions: Electron.TraceConfig | Electron.TraceCategoriesAndOptions;
+-		if (args['trace-memory-infra']) {
+-			const customCategories = args['trace-category-filter']?.split(',') || [];
+-			customCategories.push('disabled-by-default-memory-infra', 'disabled-by-default-memory-infra.v8.code_stats');
+-			traceOptions = {
+-				included_categories: customCategories,
+-				excluded_categories: ['*'],
+-				memory_dump_config: {
+-					allowed_dump_modes: ['light', 'detailed'],
+-					triggers: [
+-						{
+-							type: 'periodic_interval',
+-							mode: 'detailed',
+-							min_time_between_dumps_ms: 10000
+-						},
+-						{
+-							type: 'periodic_interval',
+-							mode: 'light',
+-							min_time_between_dumps_ms: 1000
+-						}
+-					]
+-				}
+-			};
+-		} else {
+-			traceOptions = {
+-				categoryFilter: args['trace-category-filter'] || '*',
+-				traceOptions: args['trace-options'] || 'record-until-full,enable-sampling'
+-			};
+-		}
+-
+-		contentTracing.startRecording(traceOptions).finally(() => onReady());
+-	} else {
+-		onReady();
+-	}
+-});
+-
+-async function onReady() {
+-	perf.mark('code/mainAppReady');
+-
+-	try {
+-		const [, nlsConfig] = await Promise.all([
+-			mkdirpIgnoreError(codeCachePath),
+-			resolveNlsConfiguration()
+-		]);
+-
+-		await startup(codeCachePath, nlsConfig);
+-	} catch (error) {
+-		console.error(error);
+-	}
+-}
+-
+-/**
+- * Main startup routine
+- */
+-async function startup(codeCachePath: string | undefined, nlsConfig: INLSConfiguration): Promise<void> {
+-	process.env['VSCODE_NLS_CONFIG'] = JSON.stringify(nlsConfig);
+-	process.env['VSCODE_CODE_CACHE_PATH'] = codeCachePath || '';
+-
+-	// Bootstrap ESM
+-	await bootstrapESM();
+-
+-	// Load Main
+-	await import('./vs/code/electron-main/main.js');
+-	perf.mark('code/didRunMainBundle');
+-}
+-
+-function configureCommandlineSwitchesSync(cliArgs: NativeParsedArgs) {
+-	const SUPPORTED_ELECTRON_SWITCHES = [
+-
+-		// alias from us for --disable-gpu
+-		'disable-hardware-acceleration',
+-
+-		// override for the color profile to use
+-		'force-color-profile',
+-
+-		// disable LCD font rendering, a Chromium flag
+-		'disable-lcd-text',
+-
+-		// bypass any specified proxy for the given semi-colon-separated list of hosts
+-		'proxy-bypass-list'
+-	];
+-
+-	if (process.platform === 'linux') {
+-
+-		// Force enable screen readers on Linux via this flag
+-		SUPPORTED_ELECTRON_SWITCHES.push('force-renderer-accessibility');
+-
+-		// override which password-store is used on Linux
+-		SUPPORTED_ELECTRON_SWITCHES.push('password-store');
+-	}
+-
+-	const SUPPORTED_MAIN_PROCESS_SWITCHES = [
+-
+-		// Persistently enable proposed api via argv.json: https://github.com/microsoft/vscode/issues/99775
+-		'enable-proposed-api',
+-
+-		// Log level to use. Default is 'info'. Allowed values are 'error', 'warn', 'info', 'debug', 'trace', 'off'.
+-		'log-level',
+-
+-		// Use an in-memory storage for secrets
+-		'use-inmemory-secretstorage'
+-	];
+-
+-	// Read argv config
+-	const argvConfig = readArgvConfigSync();
+-
+-	Object.keys(argvConfig).forEach(argvKey => {
+-		const argvValue = argvConfig[argvKey];
+-
+-		// Append Electron flags to Electron
+-		if (SUPPORTED_ELECTRON_SWITCHES.indexOf(argvKey) !== -1) {
+-			if (argvValue === true || argvValue === 'true') {
+-				if (argvKey === 'disable-hardware-acceleration') {
+-					app.disableHardwareAcceleration(); // needs to be called explicitly
+-				} else {
+-					app.commandLine.appendSwitch(argvKey);
+-				}
+-			} else if (typeof argvValue === 'string' && argvValue) {
+-				if (argvKey === 'password-store') {
+-					// Password store
+-					// TODO@TylerLeonhardt: Remove this migration in 3 months
+-					let migratedArgvValue = argvValue;
+-					if (argvValue === 'gnome' || argvValue === 'gnome-keyring') {
+-						migratedArgvValue = 'gnome-libsecret';
+-					}
+-					app.commandLine.appendSwitch(argvKey, migratedArgvValue);
+-				} else {
+-					app.commandLine.appendSwitch(argvKey, argvValue);
+-				}
+-			}
+-		}
+-
+-		// Append main process flags to process.argv
+-		else if (SUPPORTED_MAIN_PROCESS_SWITCHES.indexOf(argvKey) !== -1) {
+-			switch (argvKey) {
+-				case 'enable-proposed-api':
+-					if (Array.isArray(argvValue)) {
+-						argvValue.forEach(id => id && typeof id === 'string' && process.argv.push('--enable-proposed-api', id));
+-					} else {
+-						console.error(`Unexpected value for \`enable-proposed-api\` in argv.json. Expected array of extension ids.`);
+-					}
+-					break;
+-
+-				case 'log-level':
+-					if (typeof argvValue === 'string') {
+-						process.argv.push('--log', argvValue);
+-					} else if (Array.isArray(argvValue)) {
+-						for (const value of argvValue) {
+-							process.argv.push('--log', value);
+-						}
+-					}
+-					break;
+-
+-				case 'use-inmemory-secretstorage':
+-					if (argvValue) {
+-						process.argv.push('--use-inmemory-secretstorage');
+-					}
+-					break;
+-			}
+-		}
+-	});
+-
+-	// Following features are enabled from the runtime:
+-	// `DocumentPolicyIncludeJSCallStacksInCrashReports` - https://www.electronjs.org/docs/latest/api/web-frame-main#framecollectjavascriptcallstack-experimental
+-	// `EarlyEstablishGpuChannel` - Refs https://issues.chromium.org/issues/40208065
+-	// `EstablishGpuChannelAsync` - Refs https://issues.chromium.org/issues/40208065
+-	const featuresToEnable =
+-		`DocumentPolicyIncludeJSCallStacksInCrashReports,EarlyEstablishGpuChannel,EstablishGpuChannelAsync,${app.commandLine.getSwitchValue('enable-features')}`;
+-	app.commandLine.appendSwitch('enable-features', featuresToEnable);
+-
+-	// Following features are disabled from the runtime:
+-	// `CalculateNativeWinOcclusion` - Disable native window occlusion tracker (https://groups.google.com/a/chromium.org/g/embedder-dev/c/ZF3uHHyWLKw/m/VDN2hDXMAAAJ)
+-	const featuresToDisable =
+-		`CalculateNativeWinOcclusion,${app.commandLine.getSwitchValue('disable-features')}`;
+-	app.commandLine.appendSwitch('disable-features', featuresToDisable);
+-
+-	// Blink features to configure.
+-	// `FontMatchingCTMigration` - Siwtch font matching on macOS to Appkit (Refs https://github.com/microsoft/vscode/issues/224496#issuecomment-2270418470).
+-	// `StandardizedBrowserZoom` - Disable zoom adjustment for bounding box (https://github.com/microsoft/vscode/issues/232750#issuecomment-2459495394)
+-	const blinkFeaturesToDisable =
+-		`FontMatchingCTMigration,StandardizedBrowserZoom,${app.commandLine.getSwitchValue('disable-blink-features')}`;
+-	app.commandLine.appendSwitch('disable-blink-features', blinkFeaturesToDisable);
+-
+-	// Support JS Flags
+-	const jsFlags = getJSFlags(cliArgs);
+-	if (jsFlags) {
+-		app.commandLine.appendSwitch('js-flags', jsFlags);
+-	}
+-
+-	// Use portal version 4 that supports current_folder option
+-	// to address https://github.com/microsoft/vscode/issues/213780
+-	// Runtime sets the default version to 3, refs https://github.com/electron/electron/pull/44426
+-	app.commandLine.appendSwitch('xdg-portal-required-version', '4');
+-
+-	return argvConfig;
+-}
+-
+-interface IArgvConfig {
+-	[key: string]: string | string[] | boolean | undefined;
+-	readonly locale?: string;
+-	readonly 'disable-lcd-text'?: boolean;
+-	readonly 'proxy-bypass-list'?: string;
+-	readonly 'disable-hardware-acceleration'?: boolean;
+-	readonly 'force-color-profile'?: string;
+-	readonly 'enable-crash-reporter'?: boolean;
+-	readonly 'crash-reporter-id'?: string;
+-	readonly 'enable-proposed-api'?: string[];
+-	readonly 'log-level'?: string | string[];
+-	readonly 'disable-chromium-sandbox'?: boolean;
+-	readonly 'use-inmemory-secretstorage'?: boolean;
+-}
+-
+-function readArgvConfigSync(): IArgvConfig {
+-
+-	// Read or create the argv.json config file sync before app('ready')
+-	const argvConfigPath = getArgvConfigPath();
+-	let argvConfig: IArgvConfig | undefined = undefined;
+-	try {
+-		argvConfig = parse(fs.readFileSync(argvConfigPath).toString());
+-	} catch (error) {
+-		if (error && error.code === 'ENOENT') {
+-			createDefaultArgvConfigSync(argvConfigPath);
+-		} else {
+-			console.warn(`Unable to read argv.json configuration file in ${argvConfigPath}, falling back to defaults (${error})`);
+-		}
+-	}
+-
+-	// Fallback to default
+-	if (!argvConfig) {
+-		argvConfig = {};
+-	}
+-
+-	return argvConfig;
+-}
+-
+-function createDefaultArgvConfigSync(argvConfigPath: string): void {
+-	try {
+-
+-		// Ensure argv config parent exists
+-		const argvConfigPathDirname = path.dirname(argvConfigPath);
+-		if (!fs.existsSync(argvConfigPathDirname)) {
+-			fs.mkdirSync(argvConfigPathDirname);
+-		}
+-
+-		// Default argv content
+-		const defaultArgvConfigContent = [
+-			'// This configuration file allows you to pass permanent command line arguments to VS Code.',
+-			'// Only a subset of arguments is currently supported to reduce the likelihood of breaking',
+-			'// the installation.',
+-			'//',
+-			'// PLEASE DO NOT CHANGE WITHOUT UNDERSTANDING THE IMPACT',
+-			'//',
+-			'// NOTE: Changing this file requires a restart of VS Code.',
+-			'{',
+-			'	// Use software rendering instead of hardware accelerated rendering.',
+-			'	// This can help in cases where you see rendering issues in VS Code.',
+-			'	// "disable-hardware-acceleration": true',
+-			'}'
+-		];
+-
+-		// Create initial argv.json with default content
+-		fs.writeFileSync(argvConfigPath, defaultArgvConfigContent.join('\n'));
+-	} catch (error) {
+-		console.error(`Unable to create argv.json configuration file in ${argvConfigPath}, falling back to defaults (${error})`);
+-	}
+-}
+-
+-function getArgvConfigPath(): string {
+-	const vscodePortable = process.env['VSCODE_PORTABLE'];
+-	if (vscodePortable) {
+-		return path.join(vscodePortable, 'argv.json');
+-	}
+-
+-	let dataFolderName = product.dataFolderName;
+-	if (process.env['VSCODE_DEV']) {
+-		dataFolderName = `${dataFolderName}-dev`;
+-	}
+-
+-	return path.join(os.homedir(), dataFolderName!, 'argv.json');
+-}
+-
+-function configureCrashReporter(): void {
+-	let crashReporterDirectory = args['crash-reporter-directory'];
+-	let submitURL = '';
+-	if (crashReporterDirectory) {
+-		crashReporterDirectory = path.normalize(crashReporterDirectory);
+-
+-		if (!path.isAbsolute(crashReporterDirectory)) {
+-			console.error(`The path '${crashReporterDirectory}' specified for --crash-reporter-directory must be absolute.`);
+-			app.exit(1);
+-		}
+-
+-		if (!fs.existsSync(crashReporterDirectory)) {
+-			try {
+-				fs.mkdirSync(crashReporterDirectory, { recursive: true });
+-			} catch (error) {
+-				console.error(`The path '${crashReporterDirectory}' specified for --crash-reporter-directory does not seem to exist or cannot be created.`);
+-				app.exit(1);
+-			}
+-		}
+-
+-		// Crashes are stored in the crashDumps directory by default, so we
+-		// need to change that directory to the provided one
+-		console.log(`Found --crash-reporter-directory argument. Setting crashDumps directory to be '${crashReporterDirectory}'`);
+-		app.setPath('crashDumps', crashReporterDirectory);
+-	}
+-
+-	// Otherwise we configure the crash reporter from product.json
+-	else {
+-		const appCenter = product.appCenter;
+-		if (appCenter) {
+-			const isWindows = (process.platform === 'win32');
+-			const isLinux = (process.platform === 'linux');
+-			const isDarwin = (process.platform === 'darwin');
+-			const crashReporterId = argvConfig['crash-reporter-id'];
+-			const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+-			if (crashReporterId && uuidPattern.test(crashReporterId)) {
+-				if (isWindows) {
+-					switch (process.arch) {
+-						case 'x64':
+-							submitURL = appCenter['win32-x64'];
+-							break;
+-						case 'arm64':
+-							submitURL = appCenter['win32-arm64'];
+-							break;
+-					}
+-				} else if (isDarwin) {
+-					if (product.darwinUniversalAssetId) {
+-						submitURL = appCenter['darwin-universal'];
+-					} else {
+-						switch (process.arch) {
+-							case 'x64':
+-								submitURL = appCenter['darwin'];
+-								break;
+-							case 'arm64':
+-								submitURL = appCenter['darwin-arm64'];
+-								break;
+-						}
+-					}
+-				} else if (isLinux) {
+-					submitURL = appCenter['linux-x64'];
+-				}
+-				submitURL = submitURL.concat('&uid=', crashReporterId, '&iid=', crashReporterId, '&sid=', crashReporterId);
+-				// Send the id for child node process that are explicitly starting crash reporter.
+-				// For vscode this is ExtensionHost process currently.
+-				const argv = process.argv;
+-				const endOfArgsMarkerIndex = argv.indexOf('--');
+-				if (endOfArgsMarkerIndex === -1) {
+-					argv.push('--crash-reporter-id', crashReporterId);
+-				} else {
+-					// if the we have an argument "--" (end of argument marker)
+-					// we cannot add arguments at the end. rather, we add
+-					// arguments before the "--" marker.
+-					argv.splice(endOfArgsMarkerIndex, 0, '--crash-reporter-id', crashReporterId);
+-				}
+-			}
+-		}
+-	}
+-
+-	// Start crash reporter for all processes
+-	const productName = (product.crashReporter ? product.crashReporter.productName : undefined) || product.nameShort;
+-	const companyName = (product.crashReporter ? product.crashReporter.companyName : undefined) || 'Microsoft';
+-	const uploadToServer = Boolean(!process.env['VSCODE_DEV'] && submitURL && !crashReporterDirectory);
+-	crashReporter.start({
+-		companyName,
+-		productName: process.env['VSCODE_DEV'] ? `${productName} Dev` : productName,
+-		submitURL,
+-		uploadToServer,
+-		compress: true
+-	});
+-}
+-
+-function getJSFlags(cliArgs: NativeParsedArgs): string | null {
+-	const jsFlags: string[] = [];
+-
+-	// Add any existing JS flags we already got from the command line
+-	if (cliArgs['js-flags']) {
+-		jsFlags.push(cliArgs['js-flags']);
+-	}
+-
+-	if (process.platform === 'linux') {
+-		// Fix cppgc crash on Linux with 16KB page size.
+-		// Refs https://issues.chromium.org/issues/378017037
+-		// The fix from https://github.com/electron/electron/commit/6c5b2ef55e08dc0bede02384747549c1eadac0eb
+-		// only affects non-renderer process.
+-		// The following will ensure that the flag will be
+-		// applied to the renderer process as well.
+-		// TODO(deepak1556): Remove this once we update to
+-		// Chromium >= 134.
+-		jsFlags.push('--nodecommit_pooled_pages');
+-	}
+-
+-	return jsFlags.length > 0 ? jsFlags.join(' ') : null;
+-}
+-
+-function parseCLIArgs(): NativeParsedArgs {
+-	return minimist(process.argv, {
+-		string: [
+-			'user-data-dir',
+-			'locale',
+-			'js-flags',
+-			'crash-reporter-directory'
+-		],
+-		boolean: [
+-			'disable-chromium-sandbox',
+-		],
+-		default: {
+-			'sandbox': true
+-		},
+-		alias: {
+-			'no-sandbox': 'sandbox'
+-		}
+-	});
+-}
+-
+-function registerListeners(): void {
+-
+-	/**
+-	 * macOS: when someone drops a file to the not-yet running VSCode, the open-file event fires even before
+-	 * the app-ready event. We listen very early for open-file and remember this upon startup as path to open.
+-	 */
+-	const macOpenFiles: string[] = [];
+-	(globalThis as any)['macOpenFiles'] = macOpenFiles;
+-	app.on('open-file', function (event, path) {
+-		macOpenFiles.push(path);
+-	});
+-
+-	/**
+-	 * macOS: react to open-url requests.
+-	 */
+-	const openUrls: string[] = [];
+-	const onOpenUrl =
+-		function (event: { preventDefault: () => void }, url: string) {
+-			event.preventDefault();
+-
+-			openUrls.push(url);
+-		};
+-
+-	app.on('will-finish-launching', function () {
+-		app.on('open-url', onOpenUrl);
+-	});
+-
+-	(globalThis as any)['getOpenUrls'] = function () {
+-		app.removeListener('open-url', onOpenUrl);
+-
+-		return openUrls;
+-	};
+-}
+-
+-function getCodeCachePath(): string | undefined {
+-
+-	// explicitly disabled via CLI args
+-	if (process.argv.indexOf('--no-cached-data') > 0) {
+-		return undefined;
+-	}
+-
+-	// running out of sources
+-	if (process.env['VSCODE_DEV']) {
+-		return undefined;
+-	}
+-
+-	// require commit id
+-	const commit = product.commit;
+-	if (!commit) {
+-		return undefined;
+-	}
+-
+-	return path.join(userDataPath, 'CachedData', commit);
+-}
+-
+-async function mkdirpIgnoreError(dir: string | undefined): Promise<string | undefined> {
+-	if (typeof dir === 'string') {
+-		try {
+-			await fs.promises.mkdir(dir, { recursive: true });
+-
+-			return dir;
+-		} catch (error) {
+-			// ignore
+-		}
+-	}
+-
+-	return undefined;
+-}
+-
+-//#region NLS Support
+-
+-function processZhLocale(appLocale: string): string {
+-	if (appLocale.startsWith('zh')) {
+-		const region = appLocale.split('-')[1];
+-
+-		// On Windows and macOS, Chinese languages returned by
+-		// app.getPreferredSystemLanguages() start with zh-hans
+-		// for Simplified Chinese or zh-hant for Traditional Chinese,
+-		// so we can easily determine whether to use Simplified or Traditional.
+-		// However, on Linux, Chinese languages returned by that same API
+-		// are of the form zh-XY, where XY is a country code.
+-		// For China (CN), Singapore (SG), and Malaysia (MY)
+-		// country codes, assume they use Simplified Chinese.
+-		// For other cases, assume they use Traditional.
+-		if (['hans', 'cn', 'sg', 'my'].includes(region)) {
+-			return 'zh-cn';
+-		}
+-
+-		return 'zh-tw';
+-	}
+-
+-	return appLocale;
+-}
+-
+-/**
+- * Resolve the NLS configuration
+- */
+-async function resolveNlsConfiguration(): Promise<INLSConfiguration> {
+-
+-	// First, we need to test a user defined locale.
+-	// If it fails we try the app locale.
+-	// If that fails we fall back to English.
+-
+-	const nlsConfiguration = nlsConfigurationPromise ? await nlsConfigurationPromise : undefined;
+-	if (nlsConfiguration) {
+-		return nlsConfiguration;
+-	}
+-
+-	// Try to use the app locale which is only valid
+-	// after the app ready event has been fired.
+-
+-	let userLocale = app.getLocale();
+-	if (!userLocale) {
+-		return {
+-			userLocale: 'en',
+-			osLocale,
+-			resolvedLanguage: 'en',
+-			defaultMessagesFile: path.join(__dirname, 'nls.messages.json'),
+-
+-			// NLS: below 2 are a relic from old times only used by vscode-nls and deprecated
+-			locale: 'en',
+-			availableLanguages: {}
+-		};
+-	}
+-
+-	// See above the comment about the loader and case sensitiveness
+-	userLocale = processZhLocale(userLocale.toLowerCase());
+-
+-	return resolveNLSConfiguration({
+-		userLocale,
+-		osLocale,
+-		commit: product.commit,
+-		userDataPath,
+-		nlsMetadataPath: __dirname
+-	});
+-}
+-
+-/**
+- * Language tags are case insensitive however an ESM loader is case sensitive
+- * To make this work on case preserving & insensitive FS we do the following:
+- * the language bundles have lower case language tags and we always lower case
+- * the locale we receive from the user or OS.
+- */
+-function getUserDefinedLocale(argvConfig: IArgvConfig): string | undefined {
+-	const locale = args['locale'];
+-	if (locale) {
+-		return locale.toLowerCase(); // a directly provided --locale always wins
+-	}
+-
+-	return typeof argvConfig?.locale === 'string' ? argvConfig.locale.toLowerCase() : undefined;
+-}
+-
+-//#endregion
+diff --git a/src/vs/base/common/uri.ts b/src/vs/base/common/uri.ts
+index 73a3aa6cd49..404070f038f 100644
+--- a/src/vs/base/common/uri.ts
++++ b/src/vs/base/common/uri.ts
+@@ -21,6 +21,7 @@ function _validateUri(ret: URI, _strict?: boolean): void {
+ 
+ 	// scheme, https://tools.ietf.org/html/rfc3986#section-3.1
+ 	// ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
++	// console.log('validate uri', ret.scheme);
+ 	if (ret.scheme && !_schemePattern.test(ret.scheme)) {
+ 		throw new Error('[UriError]: Scheme contains illegal characters.');
+ 	}
+diff --git a/src/vs/base/parts/ipc/common/ipc.net.ts b/src/vs/base/parts/ipc/common/ipc.net.ts
+index 1bc63ba6878..d14cd29de5d 100644
+--- a/src/vs/base/parts/ipc/common/ipc.net.ts
++++ b/src/vs/base/parts/ipc/common/ipc.net.ts
+@@ -3,6 +3,9 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+ 
++import { fileLoggerGlobal } from '../../../../../../../src/extension.js';
++import { FileRPCProtocolLogger } from '../../../../workbench/services/extensions/common/fileRPCProtocolLogger.js';
++import { RequestInitiator } from '../../../../workbench/services/extensions/common/rpcProtocol.js';
+ import { VSBuffer } from '../../../common/buffer.js';
+ import { Emitter, Event } from '../../../common/event.js';
+ import { Disposable, DisposableStore, IDisposable } from '../../../common/lifecycle.js';
+@@ -281,7 +284,7 @@ function protocolMessageTypeToString(messageType: ProtocolMessageType) {
+ }
+ 
+ export const enum ProtocolConstants {
+-	HeaderLength = 13,
++HeaderLength = 13,
+ 	/**
+ 	 * Send an Acknowledge message at most 2 seconds later...
+ 	 */
+@@ -353,13 +356,14 @@ class ProtocolReader extends Disposable {
+ 
+ 	public acceptChunk(data: VSBuffer | null): void {
+ 		if (!data || data.byteLength === 0) {
++			fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'Accept chunk: empty buffer');
+ 			return;
+ 		}
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'Accept chunk: ' + data.byteLength + ', read head: ' + this._state.readHead + ', read len: ' + this._state.readLen);
+ 
+ 		this.lastReadTime = Date.now();
+ 
+ 		this._incomingData.acceptChunk(data);
+-
+ 		while (this._incomingData.byteLength >= this._state.readLen) {
+ 
+ 			const buff = this._incomingData.read(this._state.readLen);
+@@ -373,6 +377,7 @@ class ProtocolReader extends Disposable {
+ 				this._state.messageType = buff.readUInt8(0);
+ 				this._state.id = buff.readUInt32BE(1);
+ 				this._state.ack = buff.readUInt32BE(5);
++				fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'Protocol header read: ' + this._state.id);
+ 
+ 				this._socket.traceSocketEvent(SocketDiagnosticsEventType.ProtocolHeaderRead, { messageType: protocolMessageTypeToString(this._state.messageType), id: this._state.id, ack: this._state.ack, messageSize: this._state.readLen });
+ 
+@@ -388,6 +393,7 @@ class ProtocolReader extends Disposable {
+ 				this._state.messageType = ProtocolMessageType.None;
+ 				this._state.id = 0;
+ 				this._state.ack = 0;
++				fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'Protocol message read: ' + id + ', type: ' + messageType + ', ack: ' + ack);
+ 
+ 				this._socket.traceSocketEvent(SocketDiagnosticsEventType.ProtocolMessageRead, buff);
+ 
+@@ -832,6 +838,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
+ 	private _socketReader: ProtocolReader;
+ 	// eslint-disable-next-line local/code-no-potentially-unsafe-disposables
+ 	private _socketDisposables: DisposableStore;
++	private _fileLogger: FileRPCProtocolLogger;
+ 
+ 	private readonly _loadEstimator: ILoadEstimator;
+ 	private readonly _shouldSendKeepAlive: boolean;
+@@ -878,7 +885,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
+ 		this._socketReader = this._socketDisposables.add(new ProtocolReader(this._socket));
+ 		this._socketDisposables.add(this._socketReader.onMessage(msg => this._receiveMessage(msg)));
+ 		this._socketDisposables.add(this._socket.onClose(e => this._onSocketClose.fire(e)));
+-
++		this._fileLogger = new FileRPCProtocolLogger('PersistentProtocol');
+ 		if (opts.initialChunk) {
+ 			this._socketReader.acceptChunk(opts.initialChunk);
+ 		}
+@@ -944,6 +951,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
+ 	}
+ 
+ 	public beginAcceptReconnection(socket: ISocket, initialDataChunk: VSBuffer | null): void {
++		this._fileLogger.logIncoming(0, 0, RequestInitiator.LocalSide, 'Begin accept reconnection');
+ 		this._isReconnecting = true;
+ 
+ 		this._socketDisposables.dispose();
+@@ -966,6 +974,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
+ 	}
+ 
+ 	public endAcceptReconnection(): void {
++		this._fileLogger.logIncoming(0, 0, RequestInitiator.LocalSide, 'End accept reconnection');
+ 		this._isReconnecting = false;
+ 
+ 		// After a reconnection, let the other party know (again) which messages have been received.
+@@ -987,6 +996,7 @@ export class PersistentProtocol implements IMessagePassingProtocol {
+ 	}
+ 
+ 	private _receiveMessage(msg: ProtocolMessage): void {
++		this._fileLogger.logIncoming(0, 0, RequestInitiator.LocalSide, 'Receive message: ' + msg.type + ', id: ' + msg.id + ', ack: ' + msg.ack + ', data: ' + msg.data.byteLength + ', _incomingMsgId: ' + this._incomingMsgId);
+ 		if (msg.ack > this._outgoingAckId) {
+ 			this._outgoingAckId = msg.ack;
+ 			do {
+diff --git a/src/vs/workbench/api/common/extHost.api.impl.ts b/src/vs/workbench/api/common/extHost.api.impl.ts
+index 79a1112b410..cb4f3bce86d 100644
+--- a/src/vs/workbench/api/common/extHost.api.impl.ts
++++ b/src/vs/workbench/api/common/extHost.api.impl.ts
+@@ -1241,14 +1241,14 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
+ 				checkProposedApiEnabled(extension, 'canonicalUriProvider');
+ 				return extHostWorkspace.provideCanonicalUri(uri, options, token);
+ 			},
+-			decode(content: Uint8Array, uri: vscode.Uri | undefined, options?: { encoding: string }) {
++			decode: function(content: Uint8Array): Thenable<string> {
+ 				checkProposedApiEnabled(extension, 'textDocumentEncoding');
+-				return extHostWorkspace.decode(content, uri, options);
++				return extHostWorkspace.decode(content, undefined, undefined);
+ 			},
+-			encode(content: string, uri: vscode.Uri | undefined, options?: { encoding: string }) {
++			encode: function(content: string): Thenable<Uint8Array> {
+ 				checkProposedApiEnabled(extension, 'textDocumentEncoding');
+-				return extHostWorkspace.encode(content, uri, options);
+-			}
++				return extHostWorkspace.encode(content, undefined, undefined);
++			},
+ 		};
+ 
+ 		// namespace: scm
+@@ -1837,3 +1837,4 @@ export function createApiFactoryAndRegisterActors(accessor: ServicesAccessor): I
+ 		};
+ 	};
+ }
++
+diff --git a/src/vs/workbench/api/common/extHostConfiguration.ts b/src/vs/workbench/api/common/extHostConfiguration.ts
+index f0d9124a0da..943bda43fe3 100644
+--- a/src/vs/workbench/api/common/extHostConfiguration.ts
++++ b/src/vs/workbench/api/common/extHostConfiguration.ts
+@@ -159,6 +159,7 @@ export class ExtHostConfigProvider {
+ 	}
+ 
+ 	getConfiguration(section?: string, scope?: vscode.ConfigurationScope | null, extensionDescription?: IExtensionDescription): vscode.WorkspaceConfiguration {
++		console.log('getConfiguration', section, scope, extensionDescription);
+ 		const overrides = scopeToOverrides(scope) || {};
+ 		const config = this._toReadonlyValue(this._configuration.getValue(section, overrides, this._extHostWorkspace.workspace));
+ 
+diff --git a/src/vs/workbench/api/common/extHostExtensionActivator.ts b/src/vs/workbench/api/common/extHostExtensionActivator.ts
+index 20f8efbfdbd..72d45f6b758 100644
+--- a/src/vs/workbench/api/common/extHostExtensionActivator.ts
++++ b/src/vs/workbench/api/common/extHostExtensionActivator.ts
+@@ -11,6 +11,8 @@ import { ExtensionIdentifier, ExtensionIdentifierMap } from '../../../platform/e
+ import { ExtensionActivationReason, MissingExtensionDependency } from '../../services/extensions/common/extensions.js';
+ import { ILogService } from '../../../platform/log/common/log.js';
+ import { Barrier } from '../../../base/common/async.js';
++import { fileLoggerGlobal } from '../../../../../../src/extension.js';
++import { RequestInitiator } from '../../services/extensions/common/rpcProtocol.js';
+ 
+ /**
+  * Represents the source code (module) of an extension.
+@@ -229,7 +231,9 @@ export class ExtensionsActivator implements IDisposable {
+ 	}
+ 
+ 	public activateById(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateById start: ' + extensionId.value);
+ 		const desc = this._registry.getExtensionDescription(extensionId);
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateById desc: ' + desc);
+ 		if (!desc) {
+ 			throw new Error(`Extension '${extensionId.value}' is not known`);
+ 		}
+diff --git a/src/vs/workbench/api/common/extHostExtensionService.ts b/src/vs/workbench/api/common/extHostExtensionService.ts
+index 03aabb46045..32a8fd18af6 100644
+--- a/src/vs/workbench/api/common/extHostExtensionService.ts
++++ b/src/vs/workbench/api/common/extHostExtensionService.ts
+@@ -48,6 +48,8 @@ import { StopWatch } from '../../../base/common/stopwatch.js';
+ import { isCI, setTimeout0 } from '../../../base/common/platform.js';
+ import { IExtHostManagedSockets } from './extHostManagedSockets.js';
+ import { Dto } from '../../services/extensions/common/proxyIdentifier.js';
++import { fileLoggerGlobal } from '../../../../../../src/extension.js';
++import { RequestInitiator } from '../../services/extensions/common/rpcProtocol.js';
+ 
+ interface ITestRunner {
+ 	/** Old test runner API, as exported from `vscode/lib/testrunner` */
+@@ -298,6 +300,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	private _activateByEvent(activationEvent: string, startup: boolean): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, '_activateByEvent: ' + activationEvent);
+ 		return this._activator.activateByEvent(activationEvent, startup);
+ 	}
+ 
+@@ -647,15 +650,19 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	private _activateAllStartupFinished(): void {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateAllStartupFinished start');
+ 		// startup is considered finished
+ 		this._mainThreadExtensionsProxy.$setPerformanceMarks(performance.getMarks());
+ 
+ 		this._extHostConfiguration.getConfigProvider().then((configProvider) => {
++			fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateAllStartupFinished getConfigProvider');
+ 			const shouldDeferActivation = configProvider.getConfiguration('extensions.experimental').get<boolean>('deferredStartupFinishedActivation');
+ 			const allExtensionDescriptions = this._myRegistry.getAllExtensionDescriptions();
+ 			if (shouldDeferActivation) {
++				fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateAllStartupFinished shouldDeferActivation');
+ 				this._activateAllStartupFinishedDeferred(allExtensionDescriptions);
+ 			} else {
++				fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'activateAllStartupFinished !shouldDeferActivation');
+ 				for (const desc of allExtensionDescriptions) {
+ 					if (desc.activationEvents) {
+ 						for (const activationEvent of desc.activationEvents) {
+@@ -671,6 +678,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 
+ 	// Handle "eager" activation extensions
+ 	private _handleEagerExtensions(): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'handleEagerExtensions start');
+ 		const starActivation = this._activateByEvent('*', true).then(undefined, (err) => {
+ 			this._logService.error(err);
+ 		});
+@@ -689,6 +697,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	private _handleWorkspaceContainsEagerExtensions(folders: ReadonlyArray<vscode.WorkspaceFolder>): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'handleWorkspaceContainsEagerExtensions start: ' + folders.length);
+ 		if (folders.length === 0) {
+ 			return Promise.resolve(undefined);
+ 		}
+@@ -697,7 +706,9 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 			this._myRegistry.getAllExtensionDescriptions().map((desc) => {
+ 				return this._handleWorkspaceContainsEagerExtension(folders, desc);
+ 			})
+-		).then(() => { });
++		).then(() => {
++			fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'handleWorkspaceContainsEagerExtensions end');
++		});
+ 	}
+ 
+ 	private async _handleWorkspaceContainsEagerExtension(folders: ReadonlyArray<vscode.WorkspaceFolder>, desc: IExtensionDescription): Promise<void> {
+@@ -726,6 +737,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	private async _handleRemoteResolverEagerExtensions(): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'handleRemoteResolverEagerExtensions start');
+ 		if (this._initData.remote.authority) {
+ 			return this._activateByEvent(`onResolveRemoteAuthority:${this._initData.remote.authority}`, false);
+ 		}
+@@ -803,7 +815,9 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	private _startExtensionHost(): Promise<void> {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'startExtensionHost start');
+ 		if (this._started) {
++			fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'Extension host is already started!');
+ 			throw new Error(`Extension host is already started!`);
+ 		}
+ 		this._started = true;
+@@ -1036,6 +1050,7 @@ export abstract class AbstractExtHostExtensionService extends Disposable impleme
+ 	}
+ 
+ 	public async $activate(extensionId: ExtensionIdentifier, reason: ExtensionActivationReason): Promise<boolean> {
++		console.log('activate', extensionId, reason);
+ 		await this._readyToRunExtensions.wait();
+ 		if (!this._myRegistry.getExtensionDescription(extensionId)) {
+ 			// unknown extension => ignore
+diff --git a/src/vs/workbench/api/common/extHostWebview.ts b/src/vs/workbench/api/common/extHostWebview.ts
+index 435df4b03fc..1b85d76d832 100644
+--- a/src/vs/workbench/api/common/extHostWebview.ts
++++ b/src/vs/workbench/api/common/extHostWebview.ts
+@@ -222,6 +222,7 @@ export class ExtHostWebviews extends Disposable implements extHostProtocol.ExtHo
+ 		jsonMessage: string,
+ 		buffers: SerializableObjectWithBuffers<VSBuffer[]>
+ 	): void {
++		console.log('onMessage', handle, jsonMessage, buffers);
+ 		const webview = this.getWebview(handle);
+ 		if (webview) {
+ 			const { message } = deserializeWebviewMessage(jsonMessage, buffers.value);
+diff --git a/src/vs/workbench/api/common/extHostWebviewView.ts b/src/vs/workbench/api/common/extHostWebviewView.ts
+index 4696f33c5fa..87d6300330c 100644
+--- a/src/vs/workbench/api/common/extHostWebviewView.ts
++++ b/src/vs/workbench/api/common/extHostWebviewView.ts
+@@ -12,6 +12,8 @@ import { ViewBadge } from './extHostTypeConverters.js';
+ import type * as vscode from 'vscode';
+ import * as extHostProtocol from './extHost.protocol.js';
+ import * as extHostTypes from './extHostTypes.js';
++import { fileLoggerGlobal } from '../../../../../../src/extension.js';
++import { RequestInitiator } from '../../services/extensions/common/rpcProtocol.js';
+ 
+ /* eslint-disable local/code-no-native-private */
+ 
+@@ -162,6 +164,7 @@ export class ExtHostWebviewViews implements extHostProtocol.ExtHostWebviewViewsS
+ 			retainContextWhenHidden?: boolean;
+ 		},
+ 	): vscode.Disposable {
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'registerWebviewViewProvider start: ' + viewType);
+ 		if (this._viewProviders.has(viewType)) {
+ 			throw new Error(`View provider for '${viewType}' already registered`);
+ 		}
+@@ -185,6 +188,8 @@ export class ExtHostWebviewViews implements extHostProtocol.ExtHostWebviewViewsS
+ 		state: any,
+ 		cancellation: CancellationToken,
+ 	): Promise<void> {
++		console.log('resolveWebviewView', webviewHandle, viewType, title, state);
++		fileLoggerGlobal.logIncoming(0, 0, RequestInitiator.LocalSide, 'resolveWebviewView start: ' + viewType);
+ 		const entry = this._viewProviders.get(viewType);
+ 		if (!entry) {
+ 			throw new Error(`No view provider found for '${viewType}'`);
+diff --git a/src/vs/workbench/api/common/extHostWorkspace.ts b/src/vs/workbench/api/common/extHostWorkspace.ts
+index 12af1c17f95..2e2b55b1fa4 100644
+--- a/src/vs/workbench/api/common/extHostWorkspace.ts
++++ b/src/vs/workbench/api/common/extHostWorkspace.ts
+@@ -227,6 +227,7 @@ export class ExtHostWorkspace implements ExtHostWorkspaceShape, IExtHostWorkspac
+ 	}
+ 
+ 	$initializeWorkspace(data: IWorkspaceData | null, trusted: boolean): void {
++		console.log('initializeWorkspace', data, trusted);
+ 		this._trusted = trusted;
+ 		this.$acceptWorkspaceData(data);
+ 		this._barrier.open();
+diff --git a/src/vs/workbench/api/common/extensionHostMain.ts b/src/vs/workbench/api/common/extensionHostMain.ts
+index 11980f9aafe..24d9a7aeca4 100644
+--- a/src/vs/workbench/api/common/extensionHostMain.ts
++++ b/src/vs/workbench/api/common/extensionHostMain.ts
+@@ -3,220 +3,236 @@
+  *  Licensed under the MIT License. See License.txt in the project root for license information.
+  *--------------------------------------------------------------------------------------------*/
+ 
+-import * as errors from '../../../base/common/errors.js';
+-import * as performance from '../../../base/common/performance.js';
+-import { URI } from '../../../base/common/uri.js';
+-import { IURITransformer } from '../../../base/common/uriIpc.js';
+-import { IMessagePassingProtocol } from '../../../base/parts/ipc/common/ipc.js';
+-import { MainContext, MainThreadConsoleShape } from './extHost.protocol.js';
+-import { IExtensionHostInitData } from '../../services/extensions/common/extensionHostProtocol.js';
+-import { RPCProtocol } from '../../services/extensions/common/rpcProtocol.js';
+-import { ExtensionError, ExtensionIdentifier, IExtensionDescription } from '../../../platform/extensions/common/extensions.js';
+-import { ILogService } from '../../../platform/log/common/log.js';
+-import { getSingletonServiceDescriptors } from '../../../platform/instantiation/common/extensions.js';
+-import { ServiceCollection } from '../../../platform/instantiation/common/serviceCollection.js';
+-import { IExtHostInitDataService } from './extHostInitDataService.js';
+-import { InstantiationService } from '../../../platform/instantiation/common/instantiationService.js';
+-import { IInstantiationService, ServicesAccessor } from '../../../platform/instantiation/common/instantiation.js';
+-import { IExtHostRpcService, ExtHostRpcService } from './extHostRpcService.js';
+-import { IURITransformerService, URITransformerService } from './extHostUriTransformerService.js';
+-import { IExtHostExtensionService, IHostUtils } from './extHostExtensionService.js';
+-import { IExtHostTelemetry } from './extHostTelemetry.js';
+-import { Mutable } from '../../../base/common/types.js';
++import * as errors from "../../../base/common/errors.js"
++import * as performance from "../../../base/common/performance.js"
++import { URI } from "../../../base/common/uri.js"
++import { IURITransformer } from "../../../base/common/uriIpc.js"
++import { IMessagePassingProtocol } from "../../../base/parts/ipc/common/ipc.js"
++import { MainContext, MainThreadConsoleShape } from "./extHost.protocol.js"
++import { IExtensionHostInitData } from "../../services/extensions/common/extensionHostProtocol.js"
++import { RPCProtocol } from "../../services/extensions/common/rpcProtocol.js"
++import {
++	ExtensionError,
++	ExtensionIdentifier,
++	IExtensionDescription,
++} from "../../../platform/extensions/common/extensions.js"
++import { ILogService } from "../../../platform/log/common/log.js"
++import { getSingletonServiceDescriptors } from "../../../platform/instantiation/common/extensions.js"
++import { ServiceCollection } from "../../../platform/instantiation/common/serviceCollection.js"
++import { IExtHostInitDataService } from "./extHostInitDataService.js"
++import { InstantiationService } from "../../../platform/instantiation/common/instantiationService.js"
++import { IInstantiationService, ServicesAccessor } from "../../../platform/instantiation/common/instantiation.js"
++import { IExtHostRpcService, ExtHostRpcService } from "./extHostRpcService.js"
++import { IURITransformerService, URITransformerService } from "./extHostUriTransformerService.js"
++import { IExtHostExtensionService, IHostUtils } from "./extHostExtensionService.js"
++import { IExtHostTelemetry } from "./extHostTelemetry.js"
++import { Mutable } from "../../../base/common/types.js"
++import { FileRPCProtocolLogger } from "../../services/extensions/common/fileRPCProtocolLogger.js"
+ 
+ export interface IExitFn {
+-	(code?: number): any;
++	(code?: number): any
+ }
+ 
+ export interface IConsolePatchFn {
+-	(mainThreadConsole: MainThreadConsoleShape): any;
++	(mainThreadConsole: MainThreadConsoleShape): any
+ }
+ 
+ export abstract class ErrorHandler {
+-
+ 	static async installEarlyHandler(accessor: ServicesAccessor): Promise<void> {
+-
+ 		// increase number of stack frames (from 10, https://github.com/v8/v8/wiki/Stack-Trace-API)
+-		Error.stackTraceLimit = 100;
++		Error.stackTraceLimit = 100
+ 
+ 		// does NOT dependent of extension information, can be installed immediately, and simply forwards
+ 		// to the log service and main thread errors
+-		const logService = accessor.get(ILogService);
+-		const rpcService = accessor.get(IExtHostRpcService);
+-		const mainThreadErrors = rpcService.getProxy(MainContext.MainThreadErrors);
+-
+-		errors.setUnexpectedErrorHandler(err => {
+-			logService.error(err);
+-			const data = errors.transformErrorForSerialization(err);
+-			mainThreadErrors.$onUnexpectedError(data);
+-		});
++		const logService = accessor.get(ILogService)
++		const rpcService = accessor.get(IExtHostRpcService)
++		const mainThreadErrors = rpcService.getProxy(MainContext.MainThreadErrors)
++
++		errors.setUnexpectedErrorHandler((err) => {
++			logService.error(err)
++			const data = errors.transformErrorForSerialization(err)
++			mainThreadErrors.$onUnexpectedError(data)
++		})
+ 	}
+ 
+ 	static async installFullHandler(accessor: ServicesAccessor): Promise<void> {
+ 		// uses extension knowledges to correlate errors with extensions
+ 
+-		const logService = accessor.get(ILogService);
+-		const rpcService = accessor.get(IExtHostRpcService);
+-		const extensionService = accessor.get(IExtHostExtensionService);
+-		const extensionTelemetry = accessor.get(IExtHostTelemetry);
++		const logService = accessor.get(ILogService)
++		const rpcService = accessor.get(IExtHostRpcService)
++		const extensionService = accessor.get(IExtHostExtensionService)
++		const extensionTelemetry = accessor.get(IExtHostTelemetry)
+ 
+-		const mainThreadExtensions = rpcService.getProxy(MainContext.MainThreadExtensionService);
+-		const mainThreadErrors = rpcService.getProxy(MainContext.MainThreadErrors);
++		const mainThreadExtensions = rpcService.getProxy(MainContext.MainThreadExtensionService)
++		const mainThreadErrors = rpcService.getProxy(MainContext.MainThreadErrors)
+ 
+-		const map = await extensionService.getExtensionPathIndex();
+-		const extensionErrors = new WeakMap<Error, { extensionIdentifier: ExtensionIdentifier | undefined; stack: string }>();
++		const map = await extensionService.getExtensionPathIndex()
++		const extensionErrors = new WeakMap<
++			Error,
++			{ extensionIdentifier: ExtensionIdentifier | undefined; stack: string }
++		>()
+ 
+ 		// PART 1
+ 		// set the prepareStackTrace-handle and use it as a side-effect to associate errors
+ 		// with extensions - this works by looking up callsites in the extension path index
+ 		function prepareStackTraceAndFindExtension(error: Error, stackTrace: errors.V8CallSite[]) {
+ 			if (extensionErrors.has(error)) {
+-				return extensionErrors.get(error)!.stack;
++				return extensionErrors.get(error)!.stack
+ 			}
+-			let stackTraceMessage = '';
+-			let extension: IExtensionDescription | undefined;
+-			let fileName: string | null;
++			let stackTraceMessage = ""
++			let extension: IExtensionDescription | undefined
++			let fileName: string | null
+ 			for (const call of stackTrace) {
+-				stackTraceMessage += `\n\tat ${call.toString()}`;
+-				fileName = call.getFileName();
++				stackTraceMessage += `\n\tat ${call.toString()}`
++				fileName = call.getFileName()
+ 				if (!extension && fileName) {
+-					extension = map.findSubstr(URI.file(fileName));
++					extension = map.findSubstr(URI.file(fileName))
+ 				}
+ 			}
+-			const result = `${error.name || 'Error'}: ${error.message || ''}${stackTraceMessage}`;
+-			extensionErrors.set(error, { extensionIdentifier: extension?.identifier, stack: result });
+-			return result;
++			const result = `${error.name || "Error"}: ${error.message || ""}${stackTraceMessage}`
++			extensionErrors.set(error, { extensionIdentifier: extension?.identifier, stack: result })
++			return result
+ 		}
+ 
+-		const _wasWrapped = Symbol('prepareStackTrace wrapped');
+-		let _prepareStackTrace = prepareStackTraceAndFindExtension;
++		const _wasWrapped = Symbol("prepareStackTrace wrapped")
++		let _prepareStackTrace = prepareStackTraceAndFindExtension
+ 
+-		Object.defineProperty(Error, 'prepareStackTrace', {
++		Object.defineProperty(Error, "prepareStackTrace", {
+ 			configurable: false,
+ 			get() {
+-				return _prepareStackTrace;
++				return _prepareStackTrace
+ 			},
+ 			set(v) {
+ 				if (v === prepareStackTraceAndFindExtension || !v || v[_wasWrapped]) {
+-					_prepareStackTrace = v || prepareStackTraceAndFindExtension;
+-					return;
++					_prepareStackTrace = v || prepareStackTraceAndFindExtension
++					return
+ 				}
+ 
+ 				_prepareStackTrace = function (error, stackTrace) {
+-					prepareStackTraceAndFindExtension(error, stackTrace);
+-					return v.call(Error, error, stackTrace);
+-				};
++					prepareStackTraceAndFindExtension(error, stackTrace)
++					return v.call(Error, error, stackTrace)
++				}
+ 
+-				Object.assign(_prepareStackTrace, { [_wasWrapped]: true });
++				Object.assign(_prepareStackTrace, { [_wasWrapped]: true })
+ 			},
+-		});
++		})
+ 
+ 		// PART 2
+ 		// set the unexpectedErrorHandler and check for extensions that have been identified as
+ 		// having caused the error. Note that the runtime order is actually reversed, the code
+ 		// below accesses the stack-property which triggers the code above
+-		errors.setUnexpectedErrorHandler(err => {
+-			logService.error(err);
++		errors.setUnexpectedErrorHandler((err) => {
++			logService.error(err)
+ 
+-			const errorData = errors.transformErrorForSerialization(err);
++			const errorData = errors.transformErrorForSerialization(err)
+ 
+-			let extension: ExtensionIdentifier | undefined;
++			let extension: ExtensionIdentifier | undefined
+ 			if (err instanceof ExtensionError) {
+-				extension = err.extension;
++				extension = err.extension
+ 			} else {
+-				const stackData = extensionErrors.get(err);
+-				extension = stackData?.extensionIdentifier;
++				const stackData = extensionErrors.get(err)
++				extension = stackData?.extensionIdentifier
+ 			}
+ 
+ 			if (extension) {
+-				mainThreadExtensions.$onExtensionRuntimeError(extension, errorData);
+-				const reported = extensionTelemetry.onExtensionError(extension, err);
+-				logService.trace('forwarded error to extension?', reported, extension);
++				mainThreadExtensions.$onExtensionRuntimeError(extension, errorData)
++				const reported = extensionTelemetry.onExtensionError(extension, err)
++				logService.trace("forwarded error to extension?", reported, extension)
+ 			}
+-		});
++		})
+ 
+-		errors.errorHandler.addListener(err => {
+-			mainThreadErrors.$onUnexpectedError(err);
+-		});
++		errors.errorHandler.addListener((err) => {
++			const data = errors.transformErrorForSerialization(err)
++			mainThreadErrors.$onUnexpectedError(data)
++		})
+ 	}
+ }
+ 
+ export class ExtensionHostMain {
+-
+-	private readonly _hostUtils: IHostUtils;
+-	private readonly _rpcProtocol: RPCProtocol;
+-	private readonly _extensionService: IExtHostExtensionService;
+-	private readonly _logService: ILogService;
++	private readonly _hostUtils: IHostUtils
++	private readonly _rpcProtocol: RPCProtocol
++	private readonly _extensionService: IExtHostExtensionService
++	private readonly _logService: ILogService
+ 
+ 	constructor(
+ 		protocol: IMessagePassingProtocol,
+ 		initData: IExtensionHostInitData,
+ 		hostUtils: IHostUtils,
+ 		uriTransformer: IURITransformer | null,
+-		messagePorts?: ReadonlyMap<string, MessagePort>
++		messagePorts?: ReadonlyMap<string, MessagePort>,
+ 	) {
+-		this._hostUtils = hostUtils;
+-		this._rpcProtocol = new RPCProtocol(protocol, null, uriTransformer);
++		this._hostUtils = hostUtils
++		this._rpcProtocol = new RPCProtocol(protocol, new FileRPCProtocolLogger("extension_protocol"), uriTransformer)
+ 
+ 		// ensure URIs are transformed and revived
+-		initData = ExtensionHostMain._transform(initData, this._rpcProtocol);
++		initData = ExtensionHostMain._transform(initData, this._rpcProtocol)
+ 
+ 		// bootstrap services
+-		const services = new ServiceCollection(...getSingletonServiceDescriptors());
+-		services.set(IExtHostInitDataService, { _serviceBrand: undefined, ...initData, messagePorts });
+-		services.set(IExtHostRpcService, new ExtHostRpcService(this._rpcProtocol));
+-		services.set(IURITransformerService, new URITransformerService(uriTransformer));
+-		services.set(IHostUtils, hostUtils);
++		const services = new ServiceCollection(...getSingletonServiceDescriptors())
++		services.set(IExtHostInitDataService, { _serviceBrand: undefined, ...initData, messagePorts })
++		services.set(IExtHostRpcService, new ExtHostRpcService(this._rpcProtocol))
++		services.set(IURITransformerService, new URITransformerService(uriTransformer))
++		services.set(IHostUtils, hostUtils)
+ 
+-		const instaService: IInstantiationService = new InstantiationService(services, true);
++		const instaService: IInstantiationService = new InstantiationService(services, true)
+ 
+-		instaService.invokeFunction(ErrorHandler.installEarlyHandler);
++		instaService.invokeFunction(ErrorHandler.installEarlyHandler)
+ 
+ 		// ugly self - inject
+-		this._logService = instaService.invokeFunction(accessor => accessor.get(ILogService));
++		this._logService = instaService.invokeFunction((accessor) => accessor.get(ILogService))
+ 
+-		performance.mark(`code/extHost/didCreateServices`);
++		performance.mark(`code/extHost/didCreateServices`)
+ 		if (this._hostUtils.pid) {
+-			this._logService.info(`Extension host with pid ${this._hostUtils.pid} started`);
++			this._logService.info(`Extension host with pid ${this._hostUtils.pid} started`)
+ 		} else {
+-			this._logService.info(`Extension host started`);
++			this._logService.info(`Extension host started`)
+ 		}
+-		this._logService.trace('initData', initData);
++		this._logService.trace("initData", initData)
+ 
+ 		// ugly self - inject
+ 		// must call initialize *after* creating the extension service
+ 		// because `initialize` itself creates instances that depend on it
+-		this._extensionService = instaService.invokeFunction(accessor => accessor.get(IExtHostExtensionService));
+-		this._extensionService.initialize();
++		this._extensionService = instaService.invokeFunction((accessor) => accessor.get(IExtHostExtensionService))
++		this._extensionService.initialize()
+ 
+ 		// install error handler that is extension-aware
+-		instaService.invokeFunction(ErrorHandler.installFullHandler);
++		instaService.invokeFunction(ErrorHandler.installFullHandler)
+ 	}
+ 
+ 	async asBrowserUri(uri: URI): Promise<URI> {
+-		const mainThreadExtensionsProxy = this._rpcProtocol.getProxy(MainContext.MainThreadExtensionService);
+-		return URI.revive(await mainThreadExtensionsProxy.$asBrowserUri(uri));
++		const mainThreadExtensionsProxy = this._rpcProtocol.getProxy(MainContext.MainThreadExtensionService)
++		return URI.revive(await mainThreadExtensionsProxy.$asBrowserUri(uri))
+ 	}
+ 
+ 	terminate(reason: string): void {
+-		this._extensionService.terminate(reason);
++		this._extensionService.terminate(reason)
+ 	}
+ 
+ 	private static _transform(initData: IExtensionHostInitData, rpcProtocol: RPCProtocol): IExtensionHostInitData {
+ 		initData.extensions.allExtensions.forEach((ext) => {
+-			(<Mutable<IExtensionDescription>>ext).extensionLocation = URI.revive(rpcProtocol.transformIncomingURIs(ext.extensionLocation));
+-		});
+-		initData.environment.appRoot = URI.revive(rpcProtocol.transformIncomingURIs(initData.environment.appRoot));
+-		const extDevLocs = initData.environment.extensionDevelopmentLocationURI;
++			;(<Mutable<IExtensionDescription>>ext).extensionLocation = URI.revive(
++				rpcProtocol.transformIncomingURIs(ext.extensionLocation),
++			)
++		})
++		initData.environment.appRoot = URI.revive(rpcProtocol.transformIncomingURIs(initData.environment.appRoot))
++		const extDevLocs = initData.environment.extensionDevelopmentLocationURI
+ 		if (extDevLocs) {
+-			initData.environment.extensionDevelopmentLocationURI = extDevLocs.map(url => URI.revive(rpcProtocol.transformIncomingURIs(url)));
++			initData.environment.extensionDevelopmentLocationURI = extDevLocs.map((url) =>
++				URI.revive(rpcProtocol.transformIncomingURIs(url)),
++			)
+ 		}
+-		initData.environment.extensionTestsLocationURI = URI.revive(rpcProtocol.transformIncomingURIs(initData.environment.extensionTestsLocationURI));
+-		initData.environment.globalStorageHome = URI.revive(rpcProtocol.transformIncomingURIs(initData.environment.globalStorageHome));
+-		initData.environment.workspaceStorageHome = URI.revive(rpcProtocol.transformIncomingURIs(initData.environment.workspaceStorageHome));
+-		initData.nlsBaseUrl = URI.revive(rpcProtocol.transformIncomingURIs(initData.nlsBaseUrl));
+-		initData.logsLocation = URI.revive(rpcProtocol.transformIncomingURIs(initData.logsLocation));
+-		initData.workspace = rpcProtocol.transformIncomingURIs(initData.workspace);
+-		return initData;
++		initData.environment.extensionTestsLocationURI = URI.revive(
++			rpcProtocol.transformIncomingURIs(initData.environment.extensionTestsLocationURI),
++		)
++		initData.environment.globalStorageHome = URI.revive(
++			rpcProtocol.transformIncomingURIs(initData.environment.globalStorageHome),
++		)
++		initData.environment.workspaceStorageHome = URI.revive(
++			rpcProtocol.transformIncomingURIs(initData.environment.workspaceStorageHome),
++		)
++		initData.nlsBaseUrl = URI.revive(rpcProtocol.transformIncomingURIs(initData.nlsBaseUrl))
++		initData.logsLocation = URI.revive(rpcProtocol.transformIncomingURIs(initData.logsLocation))
++		initData.workspace = rpcProtocol.transformIncomingURIs(initData.workspace)
++		return initData
+ 	}
+ }
+diff --git a/src/vs/workbench/api/node/extHostConsoleForwarder.ts b/src/vs/workbench/api/node/extHostConsoleForwarder.ts
+index aa2dbca286c..d9eb33a7043 100644
+--- a/src/vs/workbench/api/node/extHostConsoleForwarder.ts
++++ b/src/vs/workbench/api/node/extHostConsoleForwarder.ts
+@@ -47,7 +47,7 @@ export class ExtHostConsoleForwarder extends AbstractExtHostConsoleForwarder {
+ 
+ 		Object.defineProperty(stream, 'write', {
+ 			set: () => { },
+-			get: () => (chunk: Uint8Array | string, encoding?: BufferEncoding, callback?: (err?: Error) => void) => {
++			get: () => (chunk: Uint8Array | string, encoding?: BufferEncoding, callback?: (err?: Error | null) => void) => {
+ 				if (!this._isMakingConsoleCall) {
+ 					buf += (chunk as any).toString(encoding);
+ 					const eol = buf.length > MAX_STREAM_BUFFER_LENGTH ? buf.length : buf.lastIndexOf('\n');
+diff --git a/src/vs/workbench/api/node/extensionHostProcess.ts b/src/vs/workbench/api/node/extensionHostProcess.ts
+index 704a0dbb5bd..fa9a93ab32a 100644
+--- a/src/vs/workbench/api/node/extensionHostProcess.ts
++++ b/src/vs/workbench/api/node/extensionHostProcess.ts
+@@ -29,6 +29,8 @@ import { IDisposable } from '../../../base/common/lifecycle.js';
+ import '../common/extHost.common.services.js';
+ import './extHost.node.services.js';
+ import { createRequire } from 'node:module';
++import { fileLoggerGlobal } from '../../../../../../src/extension.js';
++import { RequestInitiator } from '../../services/extensions/common/rpcProtocol.js';
+ const require = createRequire(import.meta.url);
+ 
+ interface ParsedExtHostArgs {
+@@ -186,6 +188,7 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
+ 						socket = new WebSocketNodeSocket(new NodeSocket(handle, 'extHost-socket'), msg.permessageDeflate, inflateBytes, false);
+ 					}
+ 					if (protocol) {
++						fileLoggerGlobal.logOutgoing(0, 0, RequestInitiator.LocalSide, 'Reconnection case');
+ 						// reconnection case
+ 						disconnectRunner1.cancel();
+ 						disconnectRunner2.cancel();
+@@ -193,6 +196,7 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
+ 						protocol.endAcceptReconnection();
+ 						protocol.sendResume();
+ 					} else {
++						fileLoggerGlobal.logOutgoing(0, 0, RequestInitiator.LocalSide, 'New connection case');
+ 						clearTimeout(timer);
+ 						protocol = new PersistentProtocol({ socket, initialChunk: initialDataChunk });
+ 						protocol.sendResume();
+@@ -207,6 +211,7 @@ function _createExtHostProtocol(): Promise<IMessagePassingProtocol> {
+ 					}
+ 				}
+ 				if (msg && msg.type === 'VSCODE_EXTHOST_IPC_REDUCE_GRACE_TIME') {
++					fileLoggerGlobal.logOutgoing(0, 0, RequestInitiator.LocalSide, 'Reduce grace time case');
+ 					if (disconnectRunner2.isScheduled()) {
+ 						// we are disconnected and already running the short reconnection timer
+ 						return;
+@@ -338,12 +343,14 @@ function connectToRenderer(protocol: IMessagePassingProtocol): Promise<IRenderer
+ 			}
+ 
+ 			// Tell the outside that we are initialized
++			console.log('send initialized message');
+ 			protocol.send(createMessageOfType(MessageType.Initialized));
+ 
+ 			c({ protocol, initData });
+ 		});
+ 
+ 		// Tell the outside that we are ready to receive messages
++		console.log('send ready message');
+ 		protocol.send(createMessageOfType(MessageType.Ready));
+ 	});
+ }
+@@ -426,4 +433,8 @@ async function startExtensionHostProcess(): Promise<void> {
+ 	onTerminate = (reason: string) => extensionHostMain.terminate(reason);
+ }
+ 
+-startExtensionHostProcess().catch((err) => console.log(err));
++function start() {
++	startExtensionHostProcess().catch((err) => console.log(err));
++}
++
++export default start;
+\ No newline at end of file
+diff --git a/src/vs/workbench/contrib/webview/common/webview.ts b/src/vs/workbench/contrib/webview/common/webview.ts
+index 95c65048fcd..31aaea4a722 100644
+--- a/src/vs/workbench/contrib/webview/common/webview.ts
++++ b/src/vs/workbench/contrib/webview/common/webview.ts
+@@ -22,7 +22,7 @@ export const webviewResourceBaseHost = 'vscode-cdn.net';
+ 
+ export const webviewRootResourceAuthority = `vscode-resource.${webviewResourceBaseHost}`;
+ 
+-export const webviewGenericCspSource = `'self' https://*.${webviewResourceBaseHost}`;
++export const webviewGenericCspSource = `'self' https://*.${webviewResourceBaseHost} vscode-file://*`;
+ 
+ /**
+  * Construct a uri that can load resources inside a webview
+@@ -42,6 +42,15 @@ export function asWebviewUri(resource: URI, remoteInfo?: WebviewRemoteInfo): URI
+ 		return resource;
+ 	}
+ 
++	if (resource.scheme === Schemas.file) {
++		return URI.from({
++			scheme: "vscode-file",
++			path: resource.path,
++			fragment: resource.fragment,
++			query: resource.query,
++		});
++	}
++
+ 	if (remoteInfo && remoteInfo.authority && remoteInfo.isRemote && resource.scheme === Schemas.file) {
+ 		resource = URI.from({
+ 			scheme: Schemas.vscodeRemote,
+diff --git a/src/vs/workbench/services/extensions/common/abstractExtensionService.ts b/src/vs/workbench/services/extensions/common/abstractExtensionService.ts
+index 382683f3cf7..4478914fdc6 100644
+--- a/src/vs/workbench/services/extensions/common/abstractExtensionService.ts
++++ b/src/vs/workbench/services/extensions/common/abstractExtensionService.ts
+@@ -813,6 +813,7 @@ export abstract class AbstractExtensionService extends Disposable implements IEx
+ 		const disposableStore = new DisposableStore();
+ 		disposableStore.add(processManager.onDidExit(([code, signal]) => this._onExtensionHostCrashOrExit(processManager, code, signal)));
+ 		disposableStore.add(processManager.onDidChangeResponsiveState((responsiveState) => {
++			console.log(`Extension host (${processManager.friendyName}) is ${responsiveState === ResponsiveState.Responsive ? 'responsive' : 'unresponsive'}.`);
+ 			this._logService.info(`Extension host (${processManager.friendyName}) is ${responsiveState === ResponsiveState.Responsive ? 'responsive' : 'unresponsive'}.`);
+ 			this._onDidChangeResponsiveChange.fire({
+ 				extensionHostKind: processManager.kind,
+diff --git a/src/vs/workbench/services/extensions/common/fileRPCProtocolLogger.ts b/src/vs/workbench/services/extensions/common/fileRPCProtocolLogger.ts
+new file mode 100644
+index 00000000000..1b4fc52e001
+--- /dev/null
++++ b/src/vs/workbench/services/extensions/common/fileRPCProtocolLogger.ts
+@@ -0,0 +1,246 @@
++/*---------------------------------------------------------------------------------------------
++ *  Copyright (c) Microsoft Corporation. All rights reserved.
++ *  Licensed under the MIT License. See License.txt in the project root for license information.
++ *--------------------------------------------------------------------------------------------*/
++
++import * as fs from "fs"
++import * as path from "path"
++import * as os from "os"
++import { IRPCProtocolLogger, RequestInitiator } from "./rpcProtocol.js"
++
++/**
++ * 文件RPC协议日志记录器，将RPC通信日志保存到文件中
++ */
++export class FileRPCProtocolLogger implements IRPCProtocolLogger {
++	private _totalIncoming = 0
++	private _totalOutgoing = 0
++	private _logDir: string | undefined
++	private _logFile: string | undefined
++	private _writeStream: fs.WriteStream | null = null
++	private _logQueue: string[] = []
++	private _isInitialized = false
++	private _isDisposed = false
++	private _processInterval: NodeJS.Timeout | null = null
++	private _isEnabled = false
++
++	constructor(suffix?: string) {
++		if(!this._isEnabled) {
++			return
++		}
++		this._logDir = path.join(os.homedir(), ".ext_host", "log")
++		this._ensureLogDirectoryExists()
++		
++		// 创建日志文件名，使用时间戳确保唯一性
++		const timestamp = new Date().toISOString().replace(/[:.]/g, "-").replace("T", "_").slice(0, 19)
++		
++		// 如果提供了后缀，在文件名中添加
++		const suffixPart = suffix ? `_${suffix}` : '';
++		this._logFile = path.join(this._logDir, `rpc${suffixPart}_${timestamp}.log`)
++		
++		try {
++			// 创建日志文件写入流
++			this._writeStream = fs.createWriteStream(this._logFile, { flags: "a" })
++			
++			// 生成精确到毫秒的时间戳
++			const now = new Date()
++			const startTime = this._formatTimestampWithMilliseconds(now)
++			
++			// 写入日志头
++			const header = [
++				"-------------------------------------------------------------",
++				"Extension Host RPC Protocol Logger",
++				`Started at: ${startTime}`,
++				`Log file: ${this._logFile}`,
++				"-------------------------------------------------------------",
++				""
++			].join("\n")
++			
++			this._logQueue.push(header)
++			
++			// 启动日志处理定时器
++			this._startProcessingQueue()
++			
++			this._isInitialized = true
++			console.log(`FileRPCProtocolLogger initialized, log file: ${this._logFile}`)
++		} catch (e) {
++			console.error("Failed to initialize FileRPCProtocolLogger", e)
++		}
++	}
++
++	/**
++	 * 确保日志目录存在
++	 */
++	private _ensureLogDirectoryExists(): void {
++		if(!this._logDir) {
++			return
++		}
++		try {
++			if (!fs.existsSync(this._logDir)) {
++				fs.mkdirSync(this._logDir, { recursive: true })
++			}
++		} catch (e) {
++			console.error("Failed to create log directory", e)
++		}
++	}
++
++	/**
++	 * 启动队列处理定时器
++	 */
++	private _startProcessingQueue(): void {
++		this._processInterval = setInterval(() => {
++			this._processQueue()
++		}, 100) // 100毫秒处理一次队列
++	}
++
++	/**
++	 * 处理日志队列
++	 */
++	private _processQueue(): void {
++		if (this._isDisposed || !this._writeStream || this._logQueue.length === 0) {
++			return
++		}
++
++		try {
++			// 批量写入日志条目
++			const entries = this._logQueue.splice(0, Math.min(50, this._logQueue.length))
++			for (const entry of entries) {
++				this._writeStream.write(entry + "\n")
++			}
++		} catch (e) {
++			console.error("Failed to write log entries", e)
++		}
++	}
++
++	/**
++	 * 记录传入消息日志
++	 */
++	logIncoming(msgLength: number, req: number, initiator: RequestInitiator, str: string, data?: any): void {
++		if (!this._isInitialized) {
++			return
++		}
++
++		this._totalIncoming += msgLength
++		this._logMessage("IDEA → Ext", this._totalIncoming, msgLength, req, initiator, str, data)
++	}
++
++	/**
++	 * 记录传出消息日志
++	 */
++	logOutgoing(msgLength: number, req: number, initiator: RequestInitiator, str: string, data?: any): void {
++		if (!this._isInitialized) {
++			return
++		}
++
++		this._totalOutgoing += msgLength
++		this._logMessage("Ext → IDEA", this._totalOutgoing, msgLength, req, initiator, str, data)
++	}
++
++	/**
++	 * 记录消息
++	 */
++	private _logMessage(
++		direction: string,
++		totalLength: number,
++		msgLength: number,
++		req: number,
++		initiator: RequestInitiator,
++		str: string,
++		data: any
++	): void {
++		try {
++			const now = new Date()
++			const timestamp = this._formatTimestampWithMilliseconds(now)
++			
++			const initiatorStr = initiator === RequestInitiator.LocalSide ? "Local" : "Other"
++			
++			let logEntry = `[${timestamp}] `
++			logEntry += `[${direction}] `
++			logEntry += `[Total: ${String(totalLength).padStart(7)}] `
++			logEntry += `[Len: ${String(msgLength).padStart(5)}] `
++			logEntry += `[${String(req).padStart(5)}] `
++			logEntry += `[${initiatorStr}] `
++			logEntry += str
++			
++			if (data !== undefined) {
++				const dataStr = /\($/.test(str) ? `${this._stringify(data)})` : this._stringify(data)
++				logEntry += ` ${dataStr}`
++			}
++			
++			this._logQueue.push(logEntry)
++		} catch (e) {
++			console.error("Failed to format log message", e)
++		}
++	}
++
++	/**
++	 * 安全地将数据转换为字符串
++	 */
++	private _stringify(data: any): string {
++		try {
++			return JSON.stringify(data, null, 0)
++		} catch (e) {
++			return String(data)
++		}
++	}
++
++	/**
++	 * 释放资源
++	 */
++	dispose(): void {
++		if (this._isDisposed) {
++			return
++		}
++		
++		this._isDisposed = true
++		
++		try {
++			// 清除定时器
++			if (this._processInterval) {
++				clearInterval(this._processInterval)
++				this._processInterval = null
++			}
++			
++			// 处理剩余的队列条目
++			this._processQueue()
++			
++			// 生成精确到毫秒的时间戳
++			const now = new Date()
++			const endTime = this._formatTimestampWithMilliseconds(now)
++			
++			// 写入日志尾
++			const footer = [
++				"-------------------------------------------------------------",
++				"Extension Host RPC Protocol Logger",
++				`Ended at: ${endTime}`,
++				`Total incoming: ${this._totalIncoming} bytes`,
++				`Total outgoing: ${this._totalOutgoing} bytes`,
++				"-------------------------------------------------------------"
++			].join("\n")
++			
++			// 直接写入，不经过队列
++			if (this._writeStream) {
++				this._writeStream.write(footer + "\n")
++				this._writeStream.end()
++				this._writeStream = null
++			}
++			
++			console.log("FileRPCProtocolLogger disposed")
++		} catch (e) {
++			console.error("Failed to dispose FileRPCProtocolLogger", e)
++		}
++	}
++
++	/**
++	 * 格式化时间戳为毫秒级别
++	 */
++	private _formatTimestampWithMilliseconds(date: Date): string {
++		const year = date.getFullYear()
++		const month = String(date.getMonth() + 1).padStart(2, '0')
++		const day = String(date.getDate()).padStart(2, '0')
++		const hours = String(date.getHours()).padStart(2, '0')
++		const minutes = String(date.getMinutes()).padStart(2, '0')
++		const seconds = String(date.getSeconds()).padStart(2, '0')
++		const milliseconds = String(date.getMilliseconds()).padStart(3, '0')
++		return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`
++	}
++} 
+\ No newline at end of file
+diff --git a/src/vs/workbench/services/extensions/common/rpcProtocol.ts b/src/vs/workbench/services/extensions/common/rpcProtocol.ts
+index 6467e585843..eeb99f77f4a 100644
+--- a/src/vs/workbench/services/extensions/common/rpcProtocol.ts
++++ b/src/vs/workbench/services/extensions/common/rpcProtocol.ts
+@@ -288,6 +288,7 @@ export class RPCProtocol extends Disposable implements IRPCProtocol {
+ 		const buff = MessageBuffer.read(rawmsg, 0);
+ 		const messageType = <MessageType>buff.readUInt8();
+ 		const req = buff.readUInt32();
++		this._logger?.logIncoming(msgLength, req, RequestInitiator.OtherSide, `receiveMessage: ${messageType}, req: ${req}, msgType: ${messageType}`);
+ 
+ 		switch (messageType) {
+ 			case MessageType.RequestJSONArgs:
+@@ -309,7 +310,7 @@ export class RPCProtocol extends Disposable implements IRPCProtocol {
+ 				break;
+ 			}
+ 			case MessageType.Acknowledged: {
+-				this._logger?.logIncoming(msgLength, req, RequestInitiator.LocalSide, `ack`);
++				// this._logger?.logIncoming(msgLength, req, RequestInitiator.LocalSide, `ack`);
+ 				this._onDidReceiveAcknowledge(req);
+ 				break;
+ 			}
+@@ -442,6 +443,7 @@ export class RPCProtocol extends Disposable implements IRPCProtocol {
+ 		try {
+ 			return Promise.resolve(this._doInvokeHandler(rpcId, methodName, args));
+ 		} catch (err) {
++			console.error('invokeHandler error:', err);
+ 			return Promise.reject(err);
+ 		}
+ 	}
+-- 
+2.49.0

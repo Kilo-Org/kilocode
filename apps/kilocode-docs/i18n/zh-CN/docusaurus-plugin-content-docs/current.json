@@ -1,0 +1,63 @@
+{
+  "version.label": {
+    "message": "下一个",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.Getting Started": {
+    "message": "入门",
+    "description": "The label for category Getting Started in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Using Kilo Code": {
+    "message": "使用 Kilo Code",
+    "description": "The label for category Using Kilo Code in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Basic Features": {
+    "message": "基本功能",
+    "description": "The label for category Basic Features in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Core Concepts": {
+    "message": "核心概念",
+    "description": "The label for category Core Concepts in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Advanced Usage": {
+    "message": "高级用法",
+    "description": "The label for category Advanced Usage in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Customizing Kilo Code": {
+    "message": "自定义 Kilo Code",
+    "description": "The label for category Customizing Kilo Code in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Advanced Context Features": {
+    "message": "高级上下文功能",
+    "description": "The label for category Advanced Context Features in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Advanced AI Features": {
+    "message": "高级 AI 功能",
+    "description": "The label for category Advanced AI Features in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Customization": {
+    "message": "自定义",
+    "description": "The label for category Customization in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Extending Kilo Code": {
+    "message": "扩展 Kilo Code",
+    "description": "The label for category Extending Kilo Code in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Model Providers": {
+    "message": "模型供应商",
+    "description": "The label for category Model Providers in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Model Context Protocol (MCP)": {
+    "message": "模型上下文协议 (MCP)",
+    "description": "The label for category Model Context Protocol (MCP) in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.Tools Reference": {
+    "message": "工具参考",
+    "description": "The label for category Tools Reference in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.doc.Setup": {
+    "message": "设置",
+    "description": "The label for the doc item Setup in sidebar tutorialSidebar, linking to the doc getting-started/setting-up"
+  }
+}
+

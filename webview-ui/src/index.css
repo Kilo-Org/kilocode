@@ -1,0 +1,502 @@
+/**
+ * Normally we'd import tailwind with the following:
+ *
+ * @import "tailwindcss";
+ *
+ * However, we need to customize the preflight styles since the extension's
+ * current UI assumes there's no CSS resetting or normalization.
+ *
+ * We're excluding tailwind's default preflight and importing our own, which
+ * is based on the original:
+ * https://github.com/tailwindlabs/tailwindcss/blob/main/packages/tailwindcss/preflight.css
+ *
+ * Reference: https://tailwindcss.com/docs/preflight
+ */
+
+@layer theme, base, components, utilities;
+
+@import "tailwindcss/theme.css" layer(theme);
+@import "./preflight.css" layer(base);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "./kilocode.css";
+@import "katex/dist/katex.min.css";
+
+@plugin "tailwindcss-animate";
+
+@theme {
+	--font-display: var(--vscode-font-family);
+
+	--text-xs: calc(var(--vscode-font-size) * 0.85);
+	--text-sm: calc(var(--vscode-font-size) * 0.9);
+	--text-base: var(--vscode-font-size);
+	--text-lg: calc(var(--vscode-font-size) * 1.1);
+
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
+	--color-popover: var(--popover);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
+	--radius-lg: var(--radius);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-sm: calc(var(--radius) - 4px);
+
+	/**
+	 * Allow VSCode colors to be used with Tailwind.
+	 */
+
+	--color-vscode-foreground: var(--vscode-foreground);
+
+	--color-vscode-editor-foreground: var(--vscode-editor-foreground);
+	--color-vscode-editor-background: var(--vscode-editor-background);
+
+	--color-vscode-editorGroup-border: var(--vscode-editorGroup-border);
+
+	--color-vscode-editorWarning-foreground: var(--vscode-editorWarning-foreground);
+	--color-vscode-editorWarning-background: var(--vscode-editorWarning-background);
+
+	--color-vscode-button-foreground: var(--vscode-button-foreground);
+	--color-vscode-button-background: var(--vscode-button-background);
+	--color-vscode-button-secondaryForeground: var(--vscode-button-secondaryForeground);
+	--color-vscode-button-secondaryBackground: var(--vscode-button-secondaryBackground);
+	--color-vscode-button-hoverBackground: var(--vscode-button-hoverBackground);
+	--color-vscode-button-secondaryHoverBackground: var(--vscode-button-secondaryHoverBackground);
+
+	--color-vscode-dropdown-foreground: var(--vscode-dropdown-foreground);
+	--color-vscode-dropdown-background: var(--vscode-dropdown-background);
+	--color-vscode-dropdown-border: var(--vscode-dropdown-border);
+
+	--color-vscode-input-foreground: var(--vscode-input-foreground);
+	--color-vscode-input-background: var(--vscode-input-background);
+	--color-vscode-input-border: var(
+		--vscode-input-border,
+		transparent
+	); /* Some themes don't have a border color, so we can fallback to transparent */
+
+	--color-vscode-focusBorder: var(--vscode-focusBorder);
+
+	--color-vscode-badge-foreground: var(--vscode-badge-foreground);
+	--color-vscode-badge-background: var(--vscode-badge-background);
+
+	--color-vscode-notifications-foreground: var(--vscode-notifications-foreground);
+	--color-vscode-notifications-background: var(--vscode-notifications-background);
+	--color-vscode-notifications-border: var(--vscode-notifications-border);
+
+	--color-vscode-descriptionForeground: var(--vscode-descriptionForeground);
+	--color-vscode-errorForeground: var(--vscode-errorForeground);
+
+	--color-vscode-list-hoverForeground: var(--vscode-list-hoverForeground);
+	--color-vscode-list-hoverBackground: var(--vscode-list-hoverBackground);
+	--color-vscode-list-focusBackground: var(--vscode-list-focusBackground);
+	--color-vscode-list-activeSelectionBackground: var(--vscode-list-activeSelectionBackground);
+	--color-vscode-list-activeSelectionForeground: var(--vscode-list-activeSelectionForeground);
+
+	--color-vscode-toolbar-hoverBackground: var(--vscode-toolbar-hoverBackground);
+	--color-vscode-toolbar-hoverOutline: var(--vscode-toolbar-hoverOutline);
+
+	--color-vscode-panel-border: var(--vscode-panel-border);
+
+	--color-vscode-sideBar-foreground: var(--vscode-sideBar-foreground);
+	--color-vscode-sideBar-background: var(--vscode-sideBar-background);
+	--color-vscode-sideBar-border: var(--vscode-sideBar-border);
+
+	--color-vscode-sideBarSectionHeader-foreground: var(--vscode-sideBarSectionHeader-foreground);
+	--color-vscode-sideBarSectionHeader-background: var(--vscode-sideBarSectionHeader-background);
+	--color-vscode-sideBarSectionHeader-border: var(--vscode-sideBarSectionHeader-border);
+
+	--color-vscode-titleBar-activeForeground: var(--vscode-titleBar-activeForeground);
+	--color-vscode-titleBar-inactiveForeground: var(--vscode-titleBar-inactiveForeground);
+
+	--color-vscode-charts-green: var(--vscode-charts-green);
+	--color-vscode-charts-yellow: var(--vscode-charts-yellow);
+
+	--color-vscode-inputValidation-infoForeground: var(--vscode-inputValidation-infoForeground);
+	--color-vscode-inputValidation-infoBackground: var(--vscode-inputValidation-infoBackground);
+	--color-vscode-inputValidation-infoBorder: var(--vscode-inputValidation-infoBorder);
+
+	--color-vscode-widget-border: var(--vscode-widget-border);
+	--color-vscode-widget-shadow: var(--vscode-widget-shadow);
+
+	--color-vscode-textLink-foreground: var(--vscode-textLink-foreground);
+
+	--color-vscode-textCodeBlock-background: var(--vscode-textCodeBlock-background);
+
+	--color-vscode-editorHoverWidget-foreground: var(--vscode-editorHoverWidget-foreground);
+	--color-vscode-editorHoverWidget-background: var(--vscode-editorHoverWidget-background);
+	--color-vscode-editorHoverWidget-border: var(--vscode-editorHoverWidget-border);
+
+	--color-vscode-banner-background: var(--vscode-banner-background);
+	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
+}
+
+@layer base {
+	:root {
+		--background: var(--vscode-editor-background);
+		--foreground: var(--vscode-editor-foreground);
+		--card: var(--vscode-editor-background);
+		--card-foreground: var(--vscode-editor-foreground);
+		--popover: var(--vscode-menu-background, var(--vscode-editor-background));
+		--popover-foreground: var(--vscode-menu-foreground, var(--vscode-editor-foreground));
+		--primary: var(--vscode-button-background);
+		--primary-foreground: var(--vscode-button-foreground);
+		--secondary: var(--vscode-button-secondaryBackground);
+		--secondary-foreground: var(--vscode-button-secondaryForeground);
+		--muted: var(--vscode-disabledForeground);
+		--muted-foreground: var(--vscode-descriptionForeground);
+		--accent: var(--vscode-list-hoverBackground);
+		--accent-foreground: var(--vscode-list-hoverForeground);
+		--destructive: var(--vscode-errorForeground);
+		--destructive-foreground: var(--vscode-button-foreground);
+		--border: var(--vscode-input-border, transparent); /* --border gets theme value or transparent fallback */
+		--input: var(--vscode-input-background);
+		--ring: var(--vscode-input-border);
+		--chart-1: var(--vscode-charts-red);
+		--chart-2: var(--vscode-charts-blue);
+		--chart-3: var(--vscode-charts-yellow);
+		--chart-4: var(--vscode-charts-orange);
+		--chart-5: var(--vscode-charts-green);
+		--radius: 0.5rem;
+	}
+
+	/* Higher specififty than VSCode's theme and root. */
+	/* Used for baseline theme overrides, but avoid using for styling. */
+
+	body {
+		--vscode-input-border: var(--border);
+	}
+
+	/* kilocode_change start */
+	a {
+		color: var(--vscode-textLink-foreground);
+	}
+	/* kilocode_change end */
+}
+
+@layer components {
+	/* Border Styles */
+	.border,
+	.border-r,
+	.border-l,
+	.border-t,
+	.border-b,
+	.border-x,
+	.border-y {
+		border-color: var(--border);
+	}
+
+	/* Code Block Styles */
+	pre,
+	code {
+		background-color: var(--vscode-textCodeBlock-background);
+	}
+
+	/* Search result highlighting */
+	.history-item-highlight {
+		@apply underline;
+	}
+}
+
+/* Form Element Focus States */
+
+textarea:focus {
+	outline: 1.5px solid var(--vscode-focusBorder, #007fd4);
+}
+
+.focus\:outline-0 {
+	outline: 0 !important; /* Allow tailwind to override the `textarea:focus` rule */
+}
+
+/**
+ * Use vscode native scrollbar styles
+ * https://github.com/gitkraken/vscode-gitlens/blob/b1d71d4844523e8b2ef16f9e007068e91f46fd88/src/webviews/apps/home/home.scss
+ */
+
+html {
+	height: 100%;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	margin: 0;
+	line-height: 1.25;
+}
+
+body.scrollable,
+.scrollable,
+body.code-block-scrollable,
+.code-block-scrollable {
+	border-color: transparent;
+	transition: border-color 0.7s linear;
+}
+
+body:hover.scrollable,
+body:hover .scrollable,
+body:focus-within.scrollable,
+body:focus-within .scrollable,
+body:hover.code-block-scrollable,
+body:hover .code-block-scrollable,
+body:focus-within.code-block-scrollable,
+body:focus-within .code-block-scrollable {
+	border-color: var(--vscode-scrollbarSlider-background);
+	transition: none;
+}
+
+.scrollable::-webkit-scrollbar-corner {
+	background-color: transparent !important;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+	background-color: transparent;
+	border-color: inherit;
+	border-right-style: inset;
+	border-right-width: calc(100vw + 100vh);
+	border-radius: unset !important;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+	border-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.scrollable::-webkit-scrollbar-thumb:active {
+	border-color: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/**
+ * Fix VSCode ignoring webkit scrollbar modifiers
+ * https://github.com/microsoft/vscode/issues/213045
+ */
+@supports selector(::-webkit-scrollbar) {
+	html {
+		scrollbar-color: unset;
+	}
+}
+
+/**
+ * The above scrollbar styling uses some transparent background color magic to accomplish its animation. However this doesn't play nicely with SyntaxHighlighter, so we need to set a background color for the code blocks' horizontal scrollbar. This actually has the unintended consequence of always showing the scrollbar which I prefer since it makes it more obvious that there is more content to scroll to.
+ */
+
+.code-block-scrollable::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.code-block-scrollable::-webkit-scrollbar-thumb {
+	background-color: var(--vscode-scrollbarSlider-background);
+	border-radius: 5px;
+	border: 2px solid transparent;
+	background-clip: content-box;
+}
+
+.code-block-scrollable::-webkit-scrollbar-thumb:hover {
+	background-color: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.code-block-scrollable::-webkit-scrollbar-thumb:active {
+	background-color: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+.code-block-scrollable::-webkit-scrollbar-corner {
+	background-color: transparent;
+}
+
+/**
+ * Add a way to hide scrollbars.
+ */
+
+.scrollbar-hide {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+	display: none; /* Chrome, Safari and Opera */
+}
+
+/**
+ * Dropdown label
+ * https://github.com/microsoft/vscode-webview-ui-toolkit/tree/main/src/dropdown#with-label
+ */
+
+.dropdown-container {
+	box-sizing: border-box;
+	display: flex;
+	flex-flow: column nowrap;
+	align-items: flex-start;
+	justify-content: flex-start;
+}
+
+.dropdown-container label {
+	display: block;
+	color: var(--vscode-foreground);
+	cursor: pointer;
+	font-size: var(--vscode-font-size);
+	line-height: normal;
+	margin-bottom: 2px;
+}
+
+/* Fix dropdown double scrollbar overflow */
+
+#api-provider > div > ul {
+	overflow: unset;
+}
+
+/* Fix scrollbar in dropdown */
+
+vscode-dropdown::part(listbox) {
+	border-color: var(--vscode-scrollbarSlider-background);
+	transition: none;
+	scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
+}
+
+/* Faded icon buttons in textfields */
+.input-icon-button {
+	cursor: pointer;
+	opacity: 0.65;
+}
+
+.input-icon-button:hover {
+	opacity: 1;
+}
+
+.input-icon-button.disabled {
+	cursor: not-allowed;
+	opacity: 0.4;
+}
+
+.input-icon-button.disabled:hover {
+	opacity: 0.4;
+}
+
+/* Context mentions */
+
+.mention-context-textarea-highlight {
+	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	border-radius: 3px;
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	color: transparent;
+}
+
+.mention-context-highlight {
+	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	border-radius: 3px;
+}
+
+.mention-context-highlight-with-shadow {
+	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	border-radius: 3px;
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+}
+
+/**
+ * vscrui Overrides / Hacks
+ */
+
+.vscrui-checkbox__listbox > ul {
+	max-height: unset !important;
+}
+
+.vscrui-checkbox svg {
+	min-width: 16px;
+	min-height: 16px;
+}
+
+/**
+ * @shadcn/ui Overrides / Hacks
+ */
+
+input[cmdk-input]:focus {
+	outline: none;
+}
+
+/**
+ * Markdown
+ */
+
+.custom-markdown > pre {
+	background-color: transparent !important;
+}
+
+/*
+ * Use geometric precision for codicons to avoid blurriness
+ */
+
+.codicon[class*="codicon-"] {
+	text-rendering: geometricPrecision !important;
+}
+
+/*
+ * Fix the color of <a> in ChatView
+/**
+ * Custom animations for UI elements
+ */
+
+@keyframes slide-in-right {
+	from {
+		transform: translateX(100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+.animate-slide-in-right {
+	animation: slide-in-right 0.3s ease-out;
+}
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.animate-fade-in {
+	animation: fade-in 0.2s ease-out;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
+	}
+}
+
+.animate-pulse {
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Transition utilities */
+.transition-all {
+	transition-property: all;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	transition-duration: 150ms;
+}
+
+.transition-colors {
+	transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+	transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+	transition-duration: 150ms;
+}

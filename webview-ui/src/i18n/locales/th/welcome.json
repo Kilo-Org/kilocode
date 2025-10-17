@@ -1,0 +1,27 @@
+{
+	"greeting": "สวัสดี ฉันคือ Kilo Code!",
+	"introduction": "<strong>Kilo Code คือตัวช่วยเขียนโค้ดอัตโนมัติชั้นนำ</strong> เตรียมพร้อมที่จะออกแบบ เขียนโค้ด แก้ไขบัค และเพิ่มประสิทธิภาพการทำงานของคุณอย่างที่ไม่เคยเห็นมาก่อน ในการดำเนินการต่อ Kilo Code ต้องการ API key",
+	"notice": "ในการเริ่มต้น ส่วนขยายนี้ต้องการผู้ให้บริการ API",
+	"start": "ไปกันเลย!",
+	"routers": {
+		"requesty": {
+			"description": "LLM router ที่ปรับแต่งมาเพื่อคุณ",
+			"incentive": "เครดิตฟรี $1"
+		},
+		"openrouter": {
+			"description": "อินเทอร์เฟซรวมสำหรับ LLMs"
+		},
+		"roo": {
+			"description": "โมเดลฟรีที่ดีที่สุดเพื่อเริ่มต้น",
+			"incentive": "ลอง Roo ฟรี"
+		}
+	},
+	"chooseProvider": "เพื่อทำสิ่งมหัศจรรย์ Kilo Code ต้องการ API key",
+	"startRouter": "เราแนะนำให้ใช้ LLM Router:",
+	"startCustom": "หรือคุณสามารถใช้ API key ของผู้ให้บริการของคุณเอง:",
+	"telemetry": {
+		"helpImprove": "ช่วยปรับปรุง Kilo Code",
+		"helpImproveMessage": "Kilo Code เก็บรวบรวมข้อมูลข้อผิดพลาดและการใช้งานเพื่อช่วยเราแก้ไขบัคและปรับปรุงส่วนขยาย การส่งข้อมูลนี้ไม่รวมโค้ด prompts หรือข้อมูลส่วนบุคคล คุณสามารถปิดการทำงานนี้ได้ใน<settingsLink>การตั้งค่า</settingsLink>"
+	},
+	"importSettings": "นำเข้าการตั้งค่า"
+}

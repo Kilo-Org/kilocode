@@ -1,0 +1,425 @@
+{
+	"greeting": "歡迎使用 Kilo Code！",
+	"task": {
+		"title": "工作",
+		"expand": "展開工作",
+		"collapse": "收合工作",
+		"seeMore": "顯示更多",
+		"seeLess": "顯示較少",
+		"tokens": "Token",
+		"cache": "快取",
+		"apiCost": "API 費用",
+		"size": "大小",
+		"condenseContext": "智慧壓縮內容",
+		"contextWindow": "上下文長度",
+		"closeAndStart": "關閉現有工作並開始新工作",
+		"export": "匯出工作記錄",
+		"share": "分享工作",
+		"delete": "刪除工作 (按住 Shift 並點選可跳過確認)",
+		"shareWithOrganization": "與組織分享",
+		"shareWithOrganizationDescription": "僅組織成員可存取",
+		"sharePublicly": "公開分享",
+		"sharePubliclyDescription": "任何擁有連結的人都可存取",
+		"connectToCloud": "連線至雲端",
+		"connectToCloudDescription": "登入 Kilo Code Cloud 以分享工作",
+		"sharingDisabledByOrganization": "組織已停用分享功能",
+		"shareSuccessOrganization": "組織連結已複製到剪貼簿",
+		"shareSuccessPublic": "公開連結已複製到剪貼簿",
+		"openInCloud": "在 Roo Code Cloud 中開啟工作",
+		"openInCloudIntro": "從任何地方繼續監控或與 Roo 互動。掃描、點擊或複製以開啟。"
+	},
+	"history": {
+		"title": "歷史記錄"
+	},
+	"unpin": "取消釘選",
+	"pin": "釘選",
+	"retry": {
+		"title": "重試",
+		"tooltip": "再次嘗試操作"
+	},
+	"startNewTask": {
+		"title": "開始新任務",
+		"tooltip": "開始一個新任務"
+	},
+	"reportBug": {
+		"title": "回報錯誤"
+	},
+	"proceedAnyways": {
+		"title": "仍然繼續",
+		"tooltip": "在指令執行時繼續"
+	},
+	"save": {
+		"title": "儲存",
+		"tooltip": "儲存訊息變更"
+	},
+	"tokenProgress": {
+		"availableSpace": "可用空間：{{amount}} Token",
+		"tokensUsed": "已使用 Token： {{used}} / {{total}}",
+		"reservedForResponse": "模型回應保留：{{amount}} Token"
+	},
+	"reject": {
+		"title": "拒絕",
+		"tooltip": "拒絕此操作"
+	},
+	"completeSubtaskAndReturn": "完成子任務並返回",
+	"approve": {
+		"title": "核准",
+		"tooltip": "核准此操作"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "全部核准"
+		},
+		"deny": {
+			"title": "全部拒絕"
+		}
+	},
+	"runCommand": {
+		"title": "命令",
+		"tooltip": "執行此命令"
+	},
+	"proceedWhileRunning": {
+		"title": "執行時繼續",
+		"tooltip": "儘管有警告仍繼續執行"
+	},
+	"killCommand": {
+		"title": "終止命令",
+		"tooltip": "終止目前的命令"
+	},
+	"resumeTask": {
+		"title": "繼續任務",
+		"tooltip": "繼續目前的任務"
+	},
+	"terminate": {
+		"title": "終止",
+		"tooltip": "結束目前的任務"
+	},
+	"cancel": {
+		"title": "取消",
+		"tooltip": "取消目前操作"
+	},
+	"editMessage": {
+		"placeholder": "編輯您的訊息..."
+	},
+	"scrollToBottom": "捲動至聊天室底部",
+	"about": "利用 AI 輔助產生、重構和偵錯程式碼。請參閱我們的<DocsLink>說明文件</DocsLink>以瞭解更多資訊。",
+	"onboarding": "此工作區的工作清單是空的。",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "工作編排",
+			"description": "將工作拆分為更小、更易於管理的部分。"
+		},
+		"stickyModels": {
+			"title": "記憶模型",
+			"description": "每個模式都會記住您上次使用的模型"
+		},
+		"tools": {
+			"title": "工具",
+			"description": "允許 AI 透過瀏覽網路、執行命令等方式解決問題。"
+		},
+		"customizableModes": {
+			"title": "可自訂模式",
+			"description": "具有專屬行為和指定模型的特定角色"
+		}
+	},
+	"selectMode": "選擇互動模式",
+	"selectApiConfig": "選取 API 設定",
+	"selectModelConfig": "選擇模型",
+	"enhancePrompt": "使用額外內容強化提示詞",
+	"modeSelector": {
+		"title": "模式",
+		"marketplace": "模式市集",
+		"settings": "模式設定",
+		"description": "專門量身打造 Kilo Code 行為的角色。",
+		"searchPlaceholder": "搜尋模式...",
+		"noResults": "沒有找到結果",
+		"organizationModes": "組織模式"
+	},
+	"enhancePromptDescription": "「強化提示詞」按鈕可透過提供額外內容、說明或改寫來協助改善您的提示詞。請試著在這裡輸入提示詞，然後再次點選按鈕，以了解其運作方式。",
+	"addImages": "新增圖片到訊息中",
+	"sendMessage": "傳送訊息",
+	"stopTts": "停止文字轉語音",
+	"typeMessage": "輸入訊息...",
+	"typeTask": "在這裡輸入您的工作...",
+	"addContext": "輸入 @ 新增內容，/ 執行命令",
+	"dragFiles": "按住 Shift 鍵拖曳檔案",
+	"dragFilesImages": "按住 Shift 鍵拖曳檔案/圖片",
+	"errorReadingFile": "讀取檔案時發生錯誤",
+	"noValidImages": "未處理到任何有效圖片",
+	"separator": "分隔符號",
+	"edit": "編輯...",
+	"forNextMode": "用於下一個模式",
+	"forPreviousMode": "用於上一個模式",
+	"apiRequest": {
+		"title": "API 請求",
+		"failed": "API 請求失敗",
+		"streaming": "正在處理 API 請求...",
+		"cancelled": "API 請求已取消",
+		"streamingFailed": "API 串流處理失敗"
+	},
+	"checkpoint": {
+		"regular": "檢查點",
+		"initializingWarning": "正在初始化檢查點... 如果耗時過長，您可以在<settingsLink>設定</settingsLink>中停用檢查點並重新啟動工作。",
+		"menu": {
+			"viewDiff": "檢視差異",
+			"restore": "還原檢查點",
+			"restoreFiles": "還原檔案",
+			"restoreFilesDescription": "將您的專案檔案還原到此時的快照。",
+			"restoreFilesAndTask": "還原檔案和任務",
+			"confirm": "確認",
+			"cancel": "取消",
+			"cannotUndo": "此操作無法復原。",
+			"restoreFilesAndTaskDescription": "將您的專案檔案還原到此時的快照，並刪除此點之後的所有訊息。"
+		},
+		"current": "目前"
+	},
+	"contextCondense": {
+		"title": "上下文已壓縮",
+		"condensing": "正在壓縮上下文...",
+		"errorHeader": "壓縮上下文失敗",
+		"tokens": "Token"
+	},
+	"instructions": {
+		"wantsToFetch": "Kilo Code 想要取得詳細指示以協助目前工作"
+	},
+	"fileOperations": {
+		"wantsToRead": "Kilo Code 想要讀取此檔案",
+		"wantsToReadMultiple": "Kilo Code 想要讀取多個檔案",
+		"wantsToReadAndXMore": "Kilo Code 想要讀取此檔案以及另外 {{count}} 個檔案",
+		"wantsToReadOutsideWorkspace": "Kilo Code 想要讀取此工作區外的檔案",
+		"didRead": "Kilo Code 已讀取此檔案",
+		"wantsToEdit": "Kilo Code 想要編輯此檔案",
+		"wantsToEditOutsideWorkspace": "Kilo Code 想要編輯此工作區外的檔案",
+		"wantsToEditProtected": "Kilo Code 想要編輯受保護的設定檔案",
+		"wantsToApplyBatchChanges": "Kilo Code 想要對多個檔案套用變更",
+		"wantsToGenerateImage": "Kilo Code 想要產生圖片",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code 想要在工作區外產生圖片",
+		"wantsToGenerateImageProtected": "Kilo Code 想要在受保護位置產生圖片",
+		"didGenerateImage": "Kilo Code 已產生圖片",
+		"wantsToCreate": "Kilo Code 想要建立新檔案",
+		"wantsToSearchReplace": "Kilo Code 想要在此檔案中搜尋和取代",
+		"didSearchReplace": "Kilo Code 已在此檔案執行搜尋和取代",
+		"wantsToInsert": "Kilo Code 想要在此檔案中插入內容",
+		"wantsToInsertWithLineNumber": "Kilo Code 想要在此檔案第 {{lineNumber}} 行插入內容",
+		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案尾端新增內容"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Kilo Code 想要檢視此目錄中最上層的檔案",
+		"didViewTopLevel": "Kilo Code 已檢視此目錄中最上層的檔案",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code 想要檢視此目錄（工作區外）中最上層的檔案",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code 已檢視此目錄（工作區外）中最上層的檔案",
+		"wantsToViewRecursive": "Kilo Code 想要遞迴檢視此目錄中的所有檔案",
+		"didViewRecursive": "Kilo Code 已遞迴檢視此目錄中的所有檔案",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code 想要遞迴檢視此目錄（工作區外）中的所有檔案",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code 已遞迴檢視此目錄（工作區外）中的所有檔案",
+		"wantsToViewDefinitions": "Kilo Code 想要檢視此目錄中使用的原始碼定義名稱",
+		"didViewDefinitions": "Kilo Code 已檢視此目錄中使用的原始碼定義名稱",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code 想要檢視此目錄（工作區外）中使用的原始碼定義名稱",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code 已檢視此目錄（工作區外）中使用的原始碼定義名稱",
+		"wantsToSearch": "Kilo Code 想要在此目錄中搜尋 <code>{{regex}}</code>",
+		"didSearch": "Kilo Code 已在此目錄中搜尋 <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code 想要在此目錄（工作區外）中搜尋 <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code 已在此目錄（工作區外）中搜尋 <code>{{regex}}</code>"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code 想要在程式碼庫中搜尋 <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code 想要在 <code>{{path}}</code> 中搜尋程式碼庫 <code>{{query}}</code>",
+		"didSearch_one": "找到 1 個結果",
+		"didSearch_other": "找到 {{count}} 個結果",
+		"resultTooltip": "相似度評分：{{score}} (點選開啟檔案)"
+	},
+	"commandOutput": "命令輸出",
+	"commandExecution": {
+		"running": "正在執行",
+		"abort": "中止",
+		"pid": "PID: {{pid}}",
+		"exitStatus": "已結束，狀態碼 {{exitCode}}",
+		"manageCommands": "管理命令權限",
+		"commandManagementDescription": "管理命令權限：點選 ✓ 允許自動執行，點選 ✗ 拒絕執行。規則可以開啟/關閉或從清單中移除。<settingsLink>檢視所有設定</settingsLink>",
+		"addToAllowed": "新增至允許清單",
+		"removeFromAllowed": "從允許清單中移除",
+		"addToDenied": "新增至拒絕清單",
+		"removeFromDenied": "從拒絕清單中移除",
+		"abortCommand": "中止命令執行",
+		"expandOutput": "展開輸出",
+		"collapseOutput": "摺疊輸出",
+		"expandManagement": "展開命令管理部分",
+		"collapseManagement": "摺疊命令管理部分"
+	},
+	"response": "回應",
+	"arguments": "參數",
+	"text": {
+		"rooSaid": "Kilo 說"
+	},
+	"feedback": {
+		"youSaid": "您說"
+	},
+	"mcp": {
+		"wantsToUseTool": "Kilo Code 想要在 {{serverName}} MCP 伺服器上使用工具",
+		"wantsToAccessResource": "Kilo Code 想要存取 {{serverName}} MCP 伺服器上的資源"
+	},
+	"modes": {
+		"wantsToSwitch": "Kilo Code 想要切換至 {{mode}} 模式",
+		"wantsToSwitchWithReason": "Kilo Code 想要切換至 {{mode}} 模式，原因：{{reason}}",
+		"didSwitch": "Kilo Code 已切換至 {{mode}} 模式",
+		"didSwitchWithReason": "Kilo Code 已切換至 {{mode}} 模式，原因：{{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Kilo Code 想要在 {{mode}} 模式下建立新的子工作",
+		"wantsToFinish": "Kilo Code 想要完成此子工作",
+		"newTaskContent": "子工作指示",
+		"completionContent": "子工作已完成",
+		"resultContent": "子工作結果",
+		"defaultResult": "請繼續下一個工作。",
+		"completionInstructions": "子工作已完成！您可以檢閱結果並提出修正或後續步驟。如果一切順利，請確認以將結果回傳給主任務。"
+	},
+	"questions": {
+		"hasQuestion": "Kilo Code 有一個問題"
+	},
+	"taskCompleted": "工作完成",
+	"error": "錯誤",
+	"diffError": {
+		"title": "編輯失敗"
+	},
+	"troubleMessage": "Kilo Code 遇到問題...",
+	"powershell": {
+		"issues": "您似乎遇到了 Windows PowerShell 的問題，請參閱此說明文件"
+	},
+	"autoApprove": {
+		"tooltipManage": "管理自動批准設定",
+		"tooltipStatus": "自動批准已啟用：{{toggles}}",
+		"title": "自動批准",
+		"toggle": "切換自動批准",
+		"all": "全部",
+		"none": "無",
+		"description": "無需請求權限即可執行這些操作。僅對您完全信任的操作啟用此功能。",
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動批准",
+		"toggleAriaLabel": "切換自動批准",
+		"disabledAriaLabel": "自動批准已禁用 - 請先選擇選項",
+		"triggerLabelOff": "自動批准已關閉",
+		"triggerLabel_zero": "0 個自動核准",
+		"triggerLabel_one": "1 個自動核准",
+		"triggerLabel_other": "{{count}} 個自動核准",
+		"triggerLabelAll": "YOLO"
+	},
+	"announcement": {
+		"title": "🎉 Roo Code {{version}} 已發布",
+		"stealthModel": {
+			"feature": "<bold>限時免費隱形模型</bold> - Code Supernova：現已升級為 <bold>1M Token 上下文視窗</bold>！一個支援圖像輸入的多功能代理程式編程模型，透過 Roo Code Cloud 提供。",
+			"note": "(注意：提示和完成會被模型創建者記錄並用於改進模型)",
+			"connectButton": "連接到 Roo Code Cloud",
+			"selectModel": "在設定中從 Roo Code Cloud 提供商選擇 <code>roo/code-supernova</code> 開始使用。",
+			"goToSettingsButton": "前往設定"
+		},
+		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上關注我們 🚀"
+	},
+	"reasoning": {
+		"thinking": "思考中",
+		"seconds": "{{count}} 秒"
+	},
+	"followUpSuggest": {
+		"copyToInput": "複製到輸入框 (或按住 Shift 並點選)",
+		"autoSelectCountdown": "{{count}} 秒後自動選擇",
+		"countdownDisplay": "{{count}} 秒"
+	},
+	"browser": {
+		"rooWantsToUse": "Kilo Code 想要使用瀏覽器",
+		"consoleLogs": "主控台記錄",
+		"noNewLogs": "（沒有新記錄）",
+		"screenshot": "瀏覽器螢幕擷圖",
+		"cursor": "游標",
+		"navigation": {
+			"step": "步驟 {{current}} / {{total}}",
+			"previous": "上一步",
+			"next": "下一步"
+		},
+		"sessionStarted": "瀏覽器工作階段已啟動",
+		"actions": {
+			"title": "瀏覽器動作",
+			"launch": "在 {{url}} 啟動瀏覽器",
+			"click": "點選 ({{coordinate}})",
+			"type": "輸入「{{text}}」",
+			"scrollDown": "向下捲動",
+			"scrollUp": "向上捲動",
+			"close": "關閉瀏覽器"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "展開程式碼區塊",
+			"collapse": "摺疊程式碼區塊",
+			"copy_code": "複製程式碼"
+		}
+	},
+	"systemPromptWarning": "警告：自訂系統提示詞覆蓋已啟用。這可能嚴重破壞功能並導致不可預測的行為。",
+	"profileViolationWarning": "目前設定檔與您的組織設定不相容",
+	"shellIntegration": {
+		"title": "命令執行警告",
+		"description": "您的命令正在沒有 VSCode 終端機 Shell 整合的情況下執行。若要隱藏此警告，您可以在 <settingsLink>Kilo Code 設定</settingsLink> 的<strong>終端機</strong>區塊中停用 Shell 整合，或使用下方的連結來排解 VSCode 終端機整合問題。",
+		"troubleshooting": "點選此處查看 Shell 整合文件。"
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "已達自動核准請求上限",
+			"description": "Kilo Code 已達到 {{count}} 次 API 請求的自動核准上限。您想重設計數並繼續工作嗎？",
+			"button": "重設並繼續"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "已達自動核准費用上限",
+			"description": "Kilo Code 已達到 ${{count}} 的自動核准費用上限。您想重設費用並繼續工作嗎？",
+			"button": "重設並繼續"
+		}
+	},
+	"indexingStatus": {
+		"ready": "索引就緒",
+		"indexing": "索引中 {{percentage}}%",
+		"indexed": "已索引",
+		"error": "索引錯誤",
+		"status": "索引狀態"
+	},
+	"versionIndicator": {
+		"ariaLabel": "版本 {{version}} - 點選查看發布說明"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud 正在進化！",
+		"description": "在雲端執行 Roomote 遠端代理、隨時隨地存取您的工作、與他人協作等等。",
+		"joinWaitlist": "註冊以獲得最新更新。"
+	},
+	"command": {
+		"triggerDescription": "觸發 {{name}} 命令"
+	},
+	"slashCommands": {
+		"tooltip": "管理斜線命令",
+		"title": "斜線命令",
+		"description": "使用內建斜線命令或建立自訂命令，以便快速存取常用的提示詞和工作流程。<DocsLink>說明文件</DocsLink>",
+		"manageCommands": "在設定中管理斜線命令",
+		"builtInCommands": "內建命令",
+		"globalCommands": "全域命令",
+		"workspaceCommands": "工作區命令",
+		"globalCommand": "全域命令",
+		"editCommand": "編輯命令",
+		"deleteCommand": "刪除命令",
+		"newGlobalCommandPlaceholder": "新增全域命令...",
+		"newWorkspaceCommandPlaceholder": "新增工作區命令...",
+		"deleteDialog": {
+			"title": "刪除命令",
+			"description": "您確定要刪除「{{name}}」命令嗎？此操作無法復原。",
+			"cancel": "取消",
+			"confirm": "刪除"
+		}
+	},
+	"contextMenu": {
+		"noResults": "沒有結果",
+		"problems": "問題",
+		"terminal": "終端機",
+		"url": "貼上 URL 以擷取內容"
+	},
+	"queuedMessages": {
+		"title": "佇列中的訊息",
+		"clickToEdit": "點選以編輯訊息"
+	},
+	"slashCommand": {
+		"wantsToRun": "Kilo Code 想要執行斜線指令",
+		"didRun": "Kilo Code 執行了斜線指令"
+	}
+}

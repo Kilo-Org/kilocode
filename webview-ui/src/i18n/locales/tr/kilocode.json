@@ -1,0 +1,268 @@
+{
+	"welcome": {
+		"greeting": "Kilo Code'a hoş geldiniz!",
+		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
+		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
+		"ctaButton": "Başla",
+		"manualModeButton": "Kendi API anahtarınızı kullanın",
+		"alreadySignedUp": "Zaten kaydoldunuz mu?",
+		"loginText": "Buradan giriş yapın"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Kredi Ekle",
+		"lowBalance": "Kilo Code bakiyeniz düşük"
+	},
+	"pagination": {
+		"previous": "Önceki",
+		"next": "Sonraki",
+		"page": "Sayfa {{page}} / {{count}}"
+	},
+	"pricing": {
+		"costUnknown": "maliyet bilinmiyor",
+		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
+		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
+	},
+	"notifications": {
+		"toolRequest": "Araç isteği onay bekliyor",
+		"browserAction": "Tarayıcı eylemi onay bekliyor",
+		"command": "Komut onay bekliyor"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP Sunucuları"
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Çok büyük dosya okumalarına izin ver",
+				"description": "Etkinleştirildiğinde, Kilo Code bağlam penceresini taşma olasılığı yüksek olsa bile çok büyük dosya veya MCP çıktı okumalarını gerçekleştirir (içerik boyutu bağlam penceresinin %80'inden fazla)."
+			}
+		},
+		"provider": {
+			"account": "Kilo Code Hesabı",
+			"apiKey": "Kilo Code API Anahtarı",
+			"login": "Kilo Code'a giriş yap",
+			"logout": "Kilo Code'dan çıkış yap",
+			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
+			"providerRouting": {
+				"title": "Sağlayıcı Yönlendirme",
+				"managedByOrganization": "Sağlayıcı Yönlendirme ayarları organizasyonunuz tarafından yönetiliyor.",
+				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
+				"sorting": {
+					"default": "Varsayılan sağlayıcı sıralaması",
+					"price": "Düşük fiyatlı sağlayıcıları tercih et",
+					"throughput": "Yüksek aktarım hızlı sağlayıcıları tercih et",
+					"latency": "Düşük gecikme süreli sağlayıcıları tercih et"
+				},
+				"dataCollection": {
+					"default": "Veri politikası ayarlanmamış",
+					"allowFree": "Prompt eğitimine izin ver (sadece ücretsiz)",
+					"allow": "Prompt eğitimine izin ver",
+					"deny": "Prompt eğitimini reddet",
+					"zdr": "Sıfır veri saklama"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Bağlam penceresi",
+			"providerBreakdown": "Sağlayıcı Fiyat ve Yetenek Dökümü",
+			"averageKiloCodeCost": "Bu, Kilo Code'un bu modeli kullanarak geçtiğimiz hafta boyunca yaptığı ortalama gerçek harcamadır. Prompt önbellek kullanımı nedeniyle listelenen fiyattan daha düşük olabilir.",
+			"table": {
+				"provider": "Sağlayıcı",
+				"context": "Uç nokta bu sayıda token işleyebilir (giriş + çıkış).",
+				"inputPrice": "İstem için milyon token başına maliyet.",
+				"outputPrice": "Tamamlama için milyon token başına maliyet.",
+				"cacheReadPrice": "Önbellekten okuma için milyon token başına maliyet.",
+				"cacheWritePrice": "Önbelleğe yazma için milyon token başına maliyet."
+			}
+		},
+		"systemNotifications": {
+			"label": "Sistem bildirimlerini etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code görev tamamlama veya hatalar gibi önemli olaylar için sistem bildirimleri gönderecektir.",
+			"testButton": "Bildirimi test et",
+			"testTitle": "Kilo Code",
+			"testMessage": "Bu Kilo Code'dan bir test bildirimidir."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Komut Oluşturucu Sağlayıcısı",
+				"apiConfigId": {
+					"current": "Mevcut Yapılandırmayı Kullan",
+					"label": "API Yapılandırması",
+					"description": "Terminal komutlarını oluşturmak için hangi API yapılandırmasını kullanacağınızı seçin. Varsayılan ayarlarınızı kullanmak için 'Mevcut Yapılandırmayı Kullan' olarak bırakın."
+				}
+			}
+		}
+	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır."
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
+			"condenseConversation": "Konuşmayı Özetle"
+		},
+		"seeNewChanges": "Yeni Değişiklikleri Göster",
+		"revertNewChanges": "Yeni Değişiklikleri Geri Al",
+		"confirmRevertChanges": "Değişiklikleri Geri Almayı Onayla",
+		"cancelRevertChanges": "Değişiklikleri Geri Almayı İptal Et"
+	},
+	"newTaskPreview": {
+		"task": "Görev"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Kontrol Paneli",
+		"logOut": "Çıkış Yap",
+		"currentBalance": "MEVCUT BAKİYE",
+		"loading": "Yükleniyor...",
+		"organization": "Organizasyon",
+		"personal": "Kişisel",
+		"shop": {
+			"title": "Kredi Satın Al",
+			"popular": "Popüler",
+			"credits": "kredi",
+			"action": "Şimdi Satın Al",
+			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
+		}
+	},
+	"docs": "Belgeler",
+	"rules": {
+		"tooltip": "Kilo Code Kuralları ve İş Akışlarını Yönet",
+		"ariaLabel": "Kilo Code Kuralları",
+		"tabs": {
+			"rules": "Kurallar",
+			"workflows": "İş Akışları"
+		},
+		"description": {
+			"rules": "Kurallar, Kilo Code'a tüm modlarda ve tüm promptlarda uyması gereken talimatlar sağlamanıza olanak tanır. Bunlar, çalışma alanınızda veya global olarak tüm konuşmalar için bağlam ve tercihleri dahil etmenin kalıcı bir yoludur.",
+			"workflows": "İş akışları, bir konuşma için hazırlanmış bir şablondur. İş akışları, sık kullandığınız promptları tanımlamanıza olanak tanır ve bir hizmeti dağıtmak veya PR göndermek gibi tekrarlayan görevler boyunca Kilo Code'u yönlendirmek için bir dizi adım içerebilir. Bir iş akışını çağırmak için şunu yazın",
+			"workflowsInChat": "sohbette."
+		},
+		"sections": {
+			"globalRules": "Global Kurallar",
+			"workspaceRules": "Çalışma Alanı Kuralları",
+			"globalWorkflows": "Global İş Akışları",
+			"workspaceWorkflows": "Çalışma Alanı İş Akışları"
+		},
+		"validation": {
+			"invalidFileExtension": "Yalnızca .md, .txt veya uzantısız dosyalara izin verilir"
+		},
+		"placeholders": {
+			"workflowName": "iş-akışı-adı (.md, .txt veya uzantısız)",
+			"ruleName": "kural-adı (.md, .txt veya uzantısız)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Yeni iş akışı dosyası...",
+			"newRuleFile": "Yeni kural dosyası..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) Görüntüle",
+			"messageTypes": {
+				"browser_action_launch": "tarayıcı başlatma",
+				"browser_action_result": "tarayıcı işlemi sonucu",
+				"browser_action": "tarayıcı eylemi",
+				"command_output": "komut çıktısı",
+				"completion_result": "tamamlama sonucu",
+				"checkpoint_saved": "kontrol noktası kaydedildi\n(sometimes can be \"ilerleme kaydedildi\" depending on context)",
+				"condense_context": "bağlamı özetle",
+				"error": "hata mesajı",
+				"command": "komut yürütme",
+				"followup": "devam sorusu",
+				"mcp_server_response": "MCP sunucu yanıtı",
+				"text": "YZ yanıtı",
+				"reasoning": "Yapay zeka muhakemesi",
+				"tool": "araç kullanımı",
+				"unknown": "bilinmeyen mesaj türü",
+				"use_mcp_server": "MCP sunucu kullanımı",
+				"user": "kullanıcı geri bildirimi"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "İptal",
+		"send": "Gönder",
+		"restoreAndSend": "Geri Yükle ve Gönder"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Burada yeni misin?",
+		"suggestionText": "Harika bir fikir için <suggestionButton>buraya tıkla</suggestionButton>, sonra <sendIcon /> öğesine dokun ve beni büyü yaparken izle!",
+		"ideas": {
+			"idea1": "Fare hareketlerine yanıt veren dönen, parlayan 3D küre yap. Uygulamanın tarayıcıda çalışmasını sağla.",
+			"idea2": "Bir Python yazılım geliştirici için portföy web sitesi oluştur",
+			"idea3": "Tarayıcıda finansal uygulama maket oluştur. Sonra çalışıp çalışmadığını test et",
+			"idea4": "Şu anda en iyi AI video üretim modellerini içeren bir dizin web sitesi oluştur",
+			"idea5": "Özel stil sayfaları dışa aktaran ve canlı önizleme gösteren CSS gradient üretici oluştur",
+			"idea6": "Fare üzerine geldiğinde dinamik içeriği güzelce ortaya çıkaran kartlar üret",
+			"idea7": "Fare hareketleriyle birlikte hareket eden sakinleştirici etkileşimli yıldız alanı oluştur"
+		}
+	},
+	"ghost": {
+		"title": "Autocomplete",
+		"settings": {
+			"triggers": "Tetikleyiciler",
+			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
+			"enableAutoTrigger": {
+				"label": "Autocomplete'i Etkinleştir",
+				"description": "Etkinleştirildiğinde, Kilo Code yazmayı bıraktığında otomatik olarak Autocomplete'i tetikleyecek. Bu hızlı düzeltmeler ve öneriler için yararlı olabilir."
+			},
+			"autoTriggerDelay": {
+				"label": "Otomatik Tetikleme Gecikmesi",
+				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Hızlı Görev ({{keybinding}})",
+				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
+				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
+			},
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"model": "Model",
+			"provider": "Sağlayıcı"
+		}
+	},
+	"virtualProvider": {
+		"title": "Sanal Kota Yedek Sağlayıcı Ayarları",
+		"description": "Her biri kendi kota limitlerine sahip profil listesi yapılandırın. Bir sağlayıcının kota limitlerine ulaşıldığında, hiçbiri kalmayana kadar listedeki bir sonraki profil kullanılacaktır.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Birincil)",
+		"moveProfileUp": "Profili yukarı taşı",
+		"moveProfileDown": "Profili aşağı taşı",
+		"removeProfile": "Profili kaldır",
+		"selectProfilePlaceholder": "Profil seç...",
+		"addProfile": "Profil ekle",
+		"noProfilesAvailable": "Kullanılabilir profil yok. Lütfen önce en az bir sanal olmayan sağlayıcı profilini yapılandırın.",
+		"dangerZoneTitle": "Tehlike Bölgesi",
+		"dangerZoneDescription": "Bu eylemler yıkıcıdır ve geri alınamaz.",
+		"clearUsageData": "Kullanım Verilerini Temizle",
+		"confirmClearTitle": "Emin misiniz?",
+		"confirmClearDescription": "Bu, sanal sağlayıcılar için depolanan tüm kullanım verilerini kalıcı olarak silecektir. Bu eylem geri alınamaz.",
+		"perDay": "Günlük",
+		"tokensLabel": "Jetonlar",
+		"perHour": "Saat Başına",
+		"perMinute": "Dakika Başına",
+		"requestsLabel": "İstekler"
+	},
+	"imageWarnings": {
+		"maxImagesReached": "Mesaj başına maksimum 20 görsel. Daha fazla eklemek için bazı görselleri kaldırın.",
+		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
+		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
+	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",
+		"notAllowedForTeam": "⚠️ Organizasyonunuz {{model}} modelinin kullanımına izin vermiyor. Devam etmek için farklı bir model seçin.",
+		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
+		"continueWith": "{{model}} ile devam et",
+		"continue": "Devam et"
+	}
+}

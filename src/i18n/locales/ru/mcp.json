@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "Неверный формат JSON настроек MCP. Пожалуйста, убедитесь, что ваши настройки соответствуют правильному формату JSON.",
+		"invalid_settings_syntax": "Неверный формат JSON настроек MCP. Пожалуйста, проверьте ваш файл настроек на наличие синтаксических ошибок.",
+		"invalid_settings_validation": "Неверный формат настроек MCP: {{errorMessages}}",
+		"create_json": "Не удалось создать или открыть .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Не удалось обновить серверы проекта MCP",
+		"invalidJsonArgument": "Kilo Code попытался использовать {{toolName}} с недопустимым JSON-аргументом. Повторная попытка...",
+		"refresh_after_disable": "Не удалось обновить соединения MCP после отключения",
+		"refresh_after_enable": "Не удалось обновить соединения MCP после включения",
+		"disconnect_servers_partial": "Не удалось отключить {{count}} MCP сервер(ов). Проверьте вывод для получения подробностей.",
+		"toolNotFound": "Инструмент '{{toolName}}' не существует на сервере '{{serverName}}'. Доступные инструменты: {{availableTools}}",
+		"serverNotFound": "MCP сервер '{{serverName}}' не настроен. Доступные серверы: {{availableServers}}",
+		"toolDisabled": "Инструмент '{{toolName}}' на сервере '{{serverName}}' отключен. Доступные включенные инструменты: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
+		"server_connected": "Сервер MCP {{serverName}} подключен",
+		"server_deleted": "Удален сервер MCP: {{serverName}}",
+		"server_not_found": "Сервер \"{{serverName}}\" не найден в конфигурации",
+		"global_servers_active": "Активные глобальные MCP серверы: {{mcpServers}}",
+		"project_servers_active": "Активные MCP серверы проекта: {{mcpServers}}",
+		"already_refreshing": "MCP серверы уже обновляются.",
+		"refreshing_all": "Обновление всех MCP серверов...",
+		"all_refreshed": "Все MCP серверы обновлены.",
+		"project_config_deleted": "Файл конфигурации MCP проекта удален. Все MCP серверы проекта отключены."
+	}
+}

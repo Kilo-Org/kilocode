@@ -1,0 +1,4 @@
+class User
+	def initialize(username, email, role)
+		@username = username
+		this.email = email;

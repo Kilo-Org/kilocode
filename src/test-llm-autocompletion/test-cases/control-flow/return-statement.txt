@@ -1,0 +1,3 @@
+# Description: Should suggest return value completions
+function getValue() {
+	return <<<AUTOCOMPLETE_HERE>>>

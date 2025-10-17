@@ -1,0 +1,223 @@
+{
+	"title": "Tryby",
+	"done": "Gotowe",
+	"modes": {
+		"title": "Tryby",
+		"createNewMode": "Utwórz nowy tryb",
+		"importMode": "Importuj tryb",
+		"noMatchFound": "Nie znaleziono trybów",
+		"editModesConfig": "Edytuj konfigurację trybów",
+		"editGlobalModes": "Edytuj tryby globalne",
+		"editProjectModes": "Edytuj tryby projektu (.kilocodemodes)",
+		"createModeHelpText": "Tryby to wyspecjalizowane persony, które dostosowują zachowanie Kilo Code. <0>Dowiedz się o używaniu trybów</0> lub <1>dostosowywaniu trybów.</1>",
+		"selectMode": "Szukaj trybów"
+	},
+	"apiConfiguration": {
+		"title": "Konfiguracja API",
+		"select": "Wybierz, której konfiguracji API użyć dla tego trybu"
+	},
+	"organizationMode": {
+		"title": "Tryb organizacji",
+		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Kilo Code Dashboard.",
+		"cannotEdit": "Tryby organizacji nie mogą być edytowane"
+	},
+	"tools": {
+		"title": "Dostępne narzędzia",
+		"builtInModesText": "Narzędzia dla wbudowanych trybów nie mogą być modyfikowane",
+		"editTools": "Edytuj narzędzia",
+		"doneEditing": "Zakończ edycję",
+		"allowedFiles": "Dozwolone pliki:",
+		"toolNames": {
+			"read": "Czytaj pliki",
+			"edit": "Edytuj pliki",
+			"browser": "Używaj przeglądarki",
+			"command": "Uruchamiaj polecenia",
+			"mcp": "Używaj MCP"
+		},
+		"noTools": "Brak"
+	},
+	"roleDefinition": {
+		"title": "Definicja roli",
+		"resetToDefault": "Przywróć domyślne",
+		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu. Ten opis kształtuje, jak Kilo Code prezentuje się i podchodzi do zadań."
+	},
+	"description": {
+		"title": "Krótki opis (dla ludzi)",
+		"resetToDefault": "Przywróć domyślny opis",
+		"description": "Krótki opis wyświetlany w rozwijanej liście wyboru trybu."
+	},
+	"whenToUse": {
+		"title": "Kiedy używać (opcjonalne)",
+		"description": "Opisz, kiedy ten tryb powinien być używany. Pomaga to Orchestratorowi wybrać odpowiedni tryb dla zadania.",
+		"resetToDefault": "Przywróć domyślny opis 'Kiedy używać'"
+	},
+	"customInstructions": {
+		"title": "Niestandardowe instrukcje dla trybu (opcjonalne)",
+		"resetToDefault": "Przywróć domyślne",
+		"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla trybu {{modeName}}.",
+		"loadFromFile": "Niestandardowe instrukcje specyficzne dla trybu {{mode}} można również załadować z folderu <span>.kilocode/rules-{{slug}}/</span> w twoim obszarze roboczym lub z globalnego <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} i .clinerules-{{slug}} są przestarzałe i wkrótce przestaną działać)."
+	},
+	"exportMode": {
+		"title": "Eksportuj tryb",
+		"description": "Eksportuj ten tryb z regułami z folderu .kilocode/rules-{{slug}}/ połączonymi w udostępnialny plik YAML. Oryginalne pliki pozostają niezmienione.",
+		"exporting": "Eksportowanie..."
+	},
+	"importMode": {
+		"selectLevel": "Wybierz, gdzie zaimportować ten tryb:",
+		"import": "Importuj",
+		"importing": "Importowanie...",
+		"global": {
+			"label": "Poziom globalny",
+			"description": "Dostępne we wszystkich projektach. Jeśli wyeksportowany tryb zawierał pliki reguł, zostaną one odtworzone w globalnym folderze .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Poziom projektu",
+			"description": "Dostępne tylko w tym obszarze roboczym. Jeśli wyeksportowany tryb zawierał pliki reguł, zostaną one odtworzone w folderze .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Zaawansowane"
+	},
+	"globalCustomInstructions": {
+		"title": "Niestandardowe instrukcje dla wszystkich trybów",
+		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej. <0>Dowiedz się więcej</0>",
+		"loadFromFile": "Instrukcje można również załadować z folderu <span>.kilocode/rules/</span> w twoim obszarze roboczym lub z globalnego <0>.kilocode/rules/</0> (.kilocoderules i .clinerules są przestarzałe i wkrótce przestaną działać)."
+	},
+	"systemPrompt": {
+		"preview": "Podgląd podpowiedzi systemowej",
+		"copy": "Kopiuj podpowiedź systemową do schowka",
+		"title": "Podpowiedź systemowa (tryb {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Podpowiedzi pomocnicze",
+		"resetPrompt": "Zresetuj podpowiedź {{promptType}} do domyślnej",
+		"prompt": "Podpowiedź",
+		"enhance": {
+			"apiConfiguration": "Konfiguracja API",
+			"apiConfigDescription": "Możesz wybrać konfigurację API, która będzie zawsze używana do ulepszania podpowiedzi, lub po prostu użyć aktualnie wybranej",
+			"useCurrentConfig": "Użyj aktualnie wybranej konfiguracji API",
+			"testPromptPlaceholder": "Wprowadź podpowiedź, aby przetestować ulepszenie",
+			"previewButton": "Podgląd ulepszenia podpowiedzi",
+			"testEnhancement": "Testuj ulepszenie",
+			"includeTaskHistory": "Uwzględnij historię zadań jako kontekst",
+			"includeTaskHistoryDescription": "Gdy włączone, ostatnie 10 wiadomości z bieżącej rozmowy zostanie uwzględnione jako kontekst podczas ulepszania podpowiedzi, pomagając generować bardziej trafne i świadome kontekstu sugestie."
+		},
+		"condense": {
+			"apiConfiguration": "Konfiguracja API do kondensacji kontekstu",
+			"apiConfigDescription": "Wybierz, której konfiguracji API użyć do operacji kondensacji kontekstu. Pozostaw niewybrane, aby użyć bieżącej aktywnej konfiguracji.",
+			"useCurrentConfig": "Użyj aktualnie wybranej konfiguracji API"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Ulepsz podpowiedź",
+				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że Kilo Code rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
+			},
+			"CONDENSE": {
+				"label": "Kondensacja kontekstu",
+				"description": "Skonfiguruj, w jaki sposób kontekst rozmowy jest kondensowany w celu zarządzania limitami tokenów. Ten monit jest używany zarówno do ręcznych, jak i automatycznych operacji kondensacji kontekstu."
+			},
+			"EXPLAIN": {
+				"label": "Wyjaśnij kod",
+				"description": "Uzyskaj szczegółowe wyjaśnienia fragmentów kodu, funkcji lub całych plików. Przydatne do zrozumienia złożonego kodu lub nauki nowych wzorców. Dostępne w akcjach kodu (ikona żarówki w edytorze) i w menu kontekstowym edytor (prawy przycisk myszy na wybranym kodzie)."
+			},
+			"FIX": {
+				"label": "Napraw problemy",
+				"description": "Uzyskaj pomoc w identyfikowaniu i rozwiązywaniu błędów, usterek lub problemów z jakością kodu. Zapewnia krok po kroku wskazówki do naprawy problemów. Dostępne w akcjach kodu (ikona żarówki w edytorze) i w menu kontekstowym edytor (prawy przycisk myszy na wybranym kodzie)."
+			},
+			"IMPROVE": {
+				"label": "Ulepsz kod",
+				"description": "Otrzymuj sugestie dotyczące optymalizacji kodu, lepszych praktyk i ulepszeń architektonicznych przy zachowaniu funkcjonalności. Dostępne w akcjach kodu (ikona żarówki w edytorze) i w menu kontekstowym edytor (prawy przycisk myszy na wybranym kodzie)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Dodaj do kontekstu",
+				"description": "Dodaj kontekst do bieżącego zadania lub rozmowy. Przydatne do dostarczania dodatkowych informacji lub wyjaśnień. Dostępne w akcjach kodu (ikona żarówki w edytorze) i w menu kontekstowym edytor (prawy przycisk myszy na wybranym kodzie)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Dodaj zawartość terminala do kontekstu",
+				"description": "Dodaj wyjście terminala do bieżącego zadania lub rozmowy. Przydatne do dostarczania wyników poleceń lub logów. Dostępne w menu kontekstowym terminala (prawy przycisk myszy na wybranej zawartości terminala)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Napraw polecenie terminala",
+				"description": "Uzyskaj pomoc w naprawianiu poleceń terminala, które zawiodły lub wymagają ulepszeń. Dostępne w menu kontekstowym terminala (prawy przycisk myszy na wybranej zawartości terminala)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Wyjaśnij polecenie terminala",
+				"description": "Uzyskaj szczegółowe wyjaśnienia poleceń terminala i ich wyników. Dostępne w menu kontekstowym terminala (prawy przycisk myszy na wybranej zawartości terminala)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generuj polecenie terminala",
+				"description": "Pomaga generować polecenia terminala na podstawie opisu."
+			},
+			"NEW_TASK": {
+				"label": "Rozpocznij nowe zadanie",
+				"description": "Rozpocznij nowe zadanie z wprowadzonymi danymi. Dostępne w palecie poleceń."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Generowanie Komunikatów Zatwierdzania",
+				"description": "Generuj opisowe komunikaty commita na podstawie zaplanowanych zmian w git. Dostosuj zapytanie, aby generować komunikaty zgodne z najlepszymi praktykami Twojego repozytorium."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Zaawansowane: Zastąp podpowiedź systemową",
+		"description": "<2>⚠️ Ostrzeżenie:</2> Ta zaawansowana funkcja omija zabezpieczenia. <1>PRZECZYTAJ TO PRZED UŻYCIEM!</1>Zastąp domyślną podpowiedź systemową, tworząc plik w <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Utwórz nowy tryb",
+		"close": "Zamknij",
+		"name": {
+			"label": "Nazwa",
+			"placeholder": "Wprowadź nazwę trybu"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug jest używany w adresach URL i nazwach plików. Powinien być małymi literami i zawierać tylko litery, liczby i myślniki."
+		},
+		"saveLocation": {
+			"label": "Lokalizacja zapisu",
+			"description": "Wybierz, gdzie zapisać ten tryb. Tryby specyficzne dla projektu mają pierwszeństwo przed trybami globalnymi.",
+			"global": {
+				"label": "Globalny",
+				"description": "Dostępny we wszystkich obszarach roboczych"
+			},
+			"project": {
+				"label": "Specyficzny dla projektu (.kilocodemodes)",
+				"description": "Dostępny tylko w tym obszarze roboczym, ma pierwszeństwo przed globalnym"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definicja roli",
+			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu."
+		},
+		"whenToUse": {
+			"label": "Kiedy używać (opcjonalne)",
+			"description": "Podaj jasny opis, kiedy ten tryb jest najbardziej efektywny i w jakich typach zadań się sprawdza."
+		},
+		"tools": {
+			"label": "Dostępne narzędzia",
+			"description": "Wybierz, których narzędzi może używać ten tryb."
+		},
+		"description": {
+			"label": "Krótki opis (dla ludzi)",
+			"description": "Krótki opis wyświetlany w rozwijanej liście wyboru trybu."
+		},
+		"customInstructions": {
+			"label": "Niestandardowe instrukcje (opcjonalne)",
+			"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla tego trybu."
+		},
+		"buttons": {
+			"cancel": "Anuluj",
+			"create": "Utwórz tryb"
+		},
+		"deleteMode": "Usuń tryb"
+	},
+	"allFiles": "wszystkie pliki",
+	"deleteMode": {
+		"title": "Usuń tryb",
+		"message": "Czy na pewno chcesz usunąć tryb \"{{modeName}}\"?",
+		"rulesFolder": "Ten tryb ma folder z regułami w {{folderPath}}, który również zostanie usunięty.",
+		"descriptionNoRules": "Czy na pewno chcesz usunąć ten niestandardowy tryb?",
+		"confirm": "Usuń",
+		"cancel": "Anuluj"
+	}
+}

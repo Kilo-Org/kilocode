@@ -1,0 +1,424 @@
+{
+	"greeting": "Selamat datang di Kilo Code",
+	"task": {
+		"title": "Tugas",
+		"expand": "Perluas tugas",
+		"collapse": "Ciutkan tugas",
+		"seeMore": "Lihat lebih banyak",
+		"seeLess": "Lihat lebih sedikit",
+		"tokens": "Token",
+		"cache": "Cache",
+		"apiCost": "Biaya API",
+		"size": "Ukuran",
+		"condenseContext": "Kondensasi konteks secara cerdas",
+		"contextWindow": "Panjang Konteks",
+		"closeAndStart": "Tutup tugas dan mulai yang baru",
+		"export": "Ekspor riwayat tugas",
+		"share": "Bagikan tugas",
+		"delete": "Hapus Tugas (Shift + Klik untuk lewati konfirmasi)",
+		"shareWithOrganization": "Bagikan dengan organisasi",
+		"shareWithOrganizationDescription": "Hanya anggota organisasi Anda yang dapat mengakses",
+		"sharePublicly": "Bagikan secara publik",
+		"sharePubliclyDescription": "Siapa pun dengan tautan dapat mengakses",
+		"connectToCloud": "Hubungkan ke Cloud",
+		"connectToCloudDescription": "Masuk ke Kilo Code Cloud untuk berbagi tugas",
+		"sharingDisabledByOrganization": "Berbagi dinonaktifkan oleh organisasi",
+		"shareSuccessOrganization": "Tautan organisasi disalin ke clipboard",
+		"shareSuccessPublic": "Tautan publik disalin ke clipboard",
+		"openInCloud": "Buka tugas di Roo Code Cloud",
+		"openInCloudIntro": "Terus pantau atau berinteraksi dengan Roo dari mana saja. Pindai, klik atau salin untuk membuka."
+	},
+	"history": {
+		"title": "Riwayat"
+	},
+	"unpin": "Lepas Pin",
+	"pin": "Pin",
+	"retry": {
+		"title": "Coba Lagi",
+		"tooltip": "Coba operasi lagi"
+	},
+	"startNewTask": {
+		"title": "Mulai Tugas Baru",
+		"tooltip": "Mulai tugas baru"
+	},
+	"reportBug": {
+		"title": "Laporkan Bug"
+	},
+	"proceedAnyways": {
+		"title": "Lanjutkan Saja",
+		"tooltip": "Lanjutkan saat perintah dijalankan"
+	},
+	"save": {
+		"title": "Simpan",
+		"tooltip": "Simpan perubahan pesan"
+	},
+	"tokenProgress": {
+		"availableSpace": "Ruang tersedia: {{amount}} token",
+		"tokensUsed": "Token digunakan: {{used}} dari {{total}}",
+		"reservedForResponse": "Dicadangkan untuk respons model: {{amount}} token"
+	},
+	"reject": {
+		"title": "Tolak",
+		"tooltip": "Tolak aksi ini"
+	},
+	"completeSubtaskAndReturn": "Selesaikan Subtugas dan Kembali",
+	"approve": {
+		"title": "Setujui",
+		"tooltip": "Setujui aksi ini"
+	},
+	"read-batch": {
+		"approve": {
+			"title": "Setujui Semua"
+		},
+		"deny": {
+			"title": "Tolak Semua"
+		}
+	},
+	"runCommand": {
+		"title": "Perintah",
+		"tooltip": "Jalankan perintah ini"
+	},
+	"proceedWhileRunning": {
+		"title": "Lanjutkan Saat Berjalan",
+		"tooltip": "Lanjutkan meskipun ada peringatan"
+	},
+	"killCommand": {
+		"title": "Hentikan Perintah",
+		"tooltip": "Hentikan perintah saat ini"
+	},
+	"resumeTask": {
+		"title": "Lanjutkan Tugas",
+		"tooltip": "Lanjutkan tugas saat ini"
+	},
+	"terminate": {
+		"title": "Hentikan",
+		"tooltip": "Akhiri tugas saat ini"
+	},
+	"cancel": {
+		"title": "Batal",
+		"tooltip": "Batalkan operasi saat ini"
+	},
+	"scrollToBottom": "Gulir ke bawah chat",
+	"about": "Buat, refaktor, dan debug kode dengan bantuan AI.<br />Lihat <DocsLink>dokumentasi</DocsLink> kami untuk mempelajari lebih lanjut.",
+	"onboarding": "Daftar tugas di workspace ini kosong.",
+	"rooTips": {
+		"boomerangTasks": {
+			"title": "Orkestrasi Tugas",
+			"description": "Bagi tugas menjadi bagian-bagian kecil yang dapat dikelola"
+		},
+		"stickyModels": {
+			"title": "Model Sticky",
+			"description": "Setiap mode mengingat model terakhir yang kamu gunakan"
+		},
+		"tools": {
+			"title": "Tools",
+			"description": "Izinkan AI menyelesaikan masalah dengan browsing web, menjalankan perintah, dan lainnya"
+		},
+		"customizableModes": {
+			"title": "Mode yang Dapat Disesuaikan",
+			"description": "Persona khusus dengan perilaku dan model yang ditugaskan sendiri"
+		}
+	},
+	"selectMode": "Pilih mode untuk interaksi",
+	"selectApiConfig": "Pilih konfigurasi API",
+	"selectModelConfig": "Pilih model",
+	"enhancePrompt": "Tingkatkan prompt dengan konteks tambahan",
+	"enhancePromptDescription": "Tombol 'Tingkatkan Prompt' membantu memperbaiki prompt kamu dengan memberikan konteks tambahan, klarifikasi, atau penyusunan ulang. Coba ketik prompt di sini dan klik tombol lagi untuk melihat cara kerjanya.",
+	"modeSelector": {
+		"title": "Mode",
+		"marketplace": "Marketplace Mode",
+		"settings": "Pengaturan Mode",
+		"description": "Persona khusus yang menyesuaikan perilaku Kilo Code.",
+		"searchPlaceholder": "Cari mode...",
+		"noResults": "Tidak ada hasil yang ditemukan",
+		"organizationModes": "Mode Organisasi"
+	},
+	"addImages": "Tambahkan gambar ke pesan",
+	"sendMessage": "Kirim pesan",
+	"stopTts": "Hentikan text-to-speech",
+	"typeMessage": "Ketik pesan...",
+	"typeTask": "Bangun, cari, tanya sesuatu",
+	"addContext": "@ untuk menambah konteks, / untuk perintah",
+	"dragFiles": "tahan shift untuk drag file",
+	"dragFilesImages": "tahan shift untuk drag file/gambar",
+	"errorReadingFile": "Error membaca file",
+	"noValidImages": "Tidak ada gambar valid yang diproses",
+	"separator": "Pemisah",
+	"edit": "Edit...",
+	"forNextMode": "untuk mode selanjutnya",
+	"forPreviousMode": "untuk mode sebelumnya",
+	"apiRequest": {
+		"title": "Permintaan API",
+		"failed": "Permintaan API Gagal",
+		"streaming": "Permintaan API...",
+		"cancelled": "Permintaan API Dibatalkan",
+		"streamingFailed": "Streaming API Gagal"
+	},
+	"checkpoint": {
+		"regular": "Checkpoint",
+		"initializingWarning": "Masih menginisialisasi checkpoint... Jika ini terlalu lama, kamu bisa menonaktifkan checkpoint di <settingsLink>pengaturan</settingsLink> dan restart tugas.",
+		"menu": {
+			"viewDiff": "Lihat Diff",
+			"restore": "Pulihkan Checkpoint",
+			"restoreFiles": "Pulihkan File",
+			"restoreFilesDescription": "Mengembalikan file proyek kamu ke snapshot yang diambil pada titik ini.",
+			"restoreFilesAndTask": "Pulihkan File & Tugas",
+			"confirm": "Konfirmasi",
+			"cancel": "Batal",
+			"cannotUndo": "Aksi ini tidak dapat dibatalkan.",
+			"restoreFilesAndTaskDescription": "Mengembalikan file proyek kamu ke snapshot yang diambil pada titik ini dan menghapus semua pesan setelah titik ini."
+		},
+		"current": "Saat Ini"
+	},
+	"contextCondense": {
+		"title": "Konteks Dikondensasi",
+		"condensing": "Mengondensasi konteks...",
+		"errorHeader": "Gagal mengondensasi konteks",
+		"tokens": "token"
+	},
+	"instructions": {
+		"wantsToFetch": "Kilo Code ingin mengambil instruksi detail untuk membantu tugas saat ini"
+	},
+	"fileOperations": {
+		"wantsToRead": "Kilo Code ingin membaca file ini",
+		"wantsToReadMultiple": "Kilo Code ingin membaca beberapa file",
+		"wantsToReadAndXMore": "Kilo Code ingin membaca file ini dan {{count}} lainnya",
+		"wantsToReadOutsideWorkspace": "Kilo Code ingin membaca file ini di luar workspace",
+		"didRead": "Kilo Code membaca file ini",
+		"wantsToEdit": "Kilo Code ingin mengedit file ini",
+		"wantsToEditOutsideWorkspace": "Kilo Code ingin mengedit file ini di luar workspace",
+		"wantsToEditProtected": "Kilo Code ingin mengedit file konfigurasi yang dilindungi",
+		"wantsToApplyBatchChanges": "Kilo Code ingin menerapkan perubahan ke beberapa file",
+		"wantsToGenerateImage": "Kilo Code ingin menghasilkan gambar",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code ingin menghasilkan gambar di luar workspace",
+		"wantsToGenerateImageProtected": "Kilo Code ingin menghasilkan gambar di lokasi yang dilindungi",
+		"didGenerateImage": "Kilo Code telah menghasilkan gambar",
+		"wantsToCreate": "Kilo Code ingin membuat file baru",
+		"wantsToSearchReplace": "Kilo Code ingin mencari dan mengganti di file ini",
+		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini",
+		"wantsToInsert": "Kilo Code ingin menyisipkan konten ke file ini",
+		"wantsToInsertWithLineNumber": "Kilo Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
+		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini"
+	},
+	"directoryOperations": {
+		"wantsToViewTopLevel": "Kilo Code ingin melihat file tingkat atas di direktori ini",
+		"didViewTopLevel": "Kilo Code melihat file tingkat atas di direktori ini",
+		"wantsToViewRecursive": "Kilo Code ingin melihat semua file secara rekursif di direktori ini",
+		"didViewRecursive": "Kilo Code melihat semua file secara rekursif di direktori ini",
+		"wantsToViewDefinitions": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini",
+		"didViewDefinitions": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini",
+		"wantsToSearch": "Kilo Code ingin mencari direktori ini untuk <code>{{regex}}</code>",
+		"didSearch": "Kilo Code mencari direktori ini untuk <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code ingin mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code mencari direktori ini (di luar workspace) untuk <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code ingin melihat file tingkat atas di direktori ini (di luar workspace)",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code melihat file tingkat atas di direktori ini (di luar workspace)",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code ingin melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code melihat semua file secara rekursif di direktori ini (di luar workspace)",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code ingin melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code melihat nama definisi source code yang digunakan di direktori ini (di luar workspace)"
+	},
+	"codebaseSearch": {
+		"wantsToSearch": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code ingin mencari codebase untuk <code>{{query}}</code> di <code>{{path}}</code>",
+		"didSearch_one": "Ditemukan 1 hasil",
+		"didSearch_other": "Ditemukan {{count}} hasil",
+		"resultTooltip": "Skor kemiripan: {{score}} (klik untuk membuka file)"
+	},
+	"commandOutput": "Keluaran Perintah",
+	"commandExecution": {
+		"abort": "Batalkan",
+		"running": "Menjalankan",
+		"pid": "PID: {{pid}}",
+		"exitStatus": "Keluar dengan status {{exitCode}}",
+		"manageCommands": "Perintah yang disetujui secara otomatis",
+		"addToAllowed": "Tambahkan ke daftar yang diizinkan",
+		"removeFromAllowed": "Hapus dari daftar yang diizinkan",
+		"addToDenied": "Tambahkan ke daftar yang ditolak",
+		"removeFromDenied": "Hapus dari daftar yang ditolak",
+		"abortCommand": "Batalkan eksekusi perintah",
+		"expandOutput": "Perluas keluaran",
+		"collapseOutput": "Ciutkan keluaran",
+		"expandManagement": "Perluas bagian manajemen perintah",
+		"collapseManagement": "Ciutkan bagian manajemen perintah"
+	},
+	"response": "Respons",
+	"arguments": "Argumen",
+	"text": {
+		"rooSaid": "Kilo berkata"
+	},
+	"feedback": {
+		"youSaid": "Anda bilang"
+	},
+	"mcp": {
+		"wantsToUseTool": "Kilo Code ingin menggunakan tool di server MCP {{serverName}}",
+		"wantsToAccessResource": "Kilo Code ingin mengakses resource di server MCP {{serverName}}"
+	},
+	"modes": {
+		"wantsToSwitch": "Kilo Code ingin beralih ke mode {{mode}}",
+		"wantsToSwitchWithReason": "Kilo Code ingin beralih ke mode {{mode}} karena: {{reason}}",
+		"didSwitch": "Kilo Code beralih ke mode {{mode}}",
+		"didSwitchWithReason": "Kilo Code beralih ke mode {{mode}} karena: {{reason}}"
+	},
+	"subtasks": {
+		"wantsToCreate": "Kilo Code ingin membuat subtugas baru dalam mode {{mode}}",
+		"wantsToFinish": "Kilo Code ingin menyelesaikan subtugas ini",
+		"newTaskContent": "Instruksi Subtugas",
+		"completionContent": "Subtugas Selesai",
+		"resultContent": "Hasil Subtugas",
+		"defaultResult": "Silakan lanjutkan ke tugas berikutnya.",
+		"completionInstructions": "Subtugas selesai! Kamu bisa meninjau hasilnya dan menyarankan koreksi atau langkah selanjutnya. Jika semuanya terlihat baik, konfirmasi untuk mengembalikan hasil ke tugas induk."
+	},
+	"questions": {
+		"hasQuestion": "Kilo Code punya pertanyaan"
+	},
+	"taskCompleted": "Tugas Selesai",
+	"error": "Error",
+	"diffError": {
+		"title": "Edit Tidak Berhasil"
+	},
+	"troubleMessage": "Kilo Code mengalami masalah...",
+	"powershell": {
+		"issues": "Sepertinya kamu mengalami masalah Windows PowerShell, silakan lihat ini"
+	},
+	"autoApprove": {
+		"tooltipManage": "Kelola pengaturan persetujuan otomatis",
+		"tooltipStatus": "Persetujuan otomatis diaktifkan untuk: {{toggles}}",
+		"title": "Setujui Otomatis",
+		"toggle": "Beralih persetujuan otomatis",
+		"all": "Semua",
+		"none": "Tidak ada",
+		"description": "Jalankan tindakan ini tanpa meminta izin. Hanya aktifkan untuk tindakan yang Anda percayai sepenuhnya.",
+		"selectOptionsFirst": "Pilih setidaknya satu opsi di bawah ini untuk mengaktifkan persetujuan otomatis",
+		"toggleAriaLabel": "Beralih persetujuan otomatis",
+		"disabledAriaLabel": "Persetujuan otomatis dinonaktifkan - pilih opsi terlebih dahulu",
+		"triggerLabelOff": "Persetujuan otomatis mati",
+		"triggerLabel_zero": "0 disetujui otomatis",
+		"triggerLabel_one": "1 disetujui otomatis",
+		"triggerLabel_other": "{{count}} disetujui otomatis",
+		"triggerLabelAll": "YOLO"
+	},
+	"announcement": {
+		"title": "🎉 Roo Code {{version}} Dirilis",
+		"stealthModel": {
+			"feature": "<bold>Model stealth GRATIS waktu terbatas</bold> - Code Supernova: Sekarang diupgrade dengan <bold>jendela konteks 1M token</bold>! Model coding agentik serbaguna yang mendukung input gambar, tersedia melalui Roo Code Cloud.",
+			"note": "(Catatan: prompt dan completion dicatat oleh pembuat model dan digunakan untuk meningkatkan model)",
+			"connectButton": "Hubungkan ke Roo Code Cloud",
+			"selectModel": "Pilih <code>roo/code-supernova</code> dari penyedia Roo Code Cloud di Pengaturan untuk memulai.",
+			"goToSettingsButton": "Pergi ke Pengaturan"
+		},
+		"socialLinks": "Bergabunglah dengan kami di <xLink>X</xLink>, <discordLink>Discord</discordLink>, atau <redditLink>r/RooCode</redditLink> 🚀"
+	},
+	"reasoning": {
+		"thinking": "Berpikir",
+		"seconds": "{{count}}d"
+	},
+	"followUpSuggest": {
+		"copyToInput": "Salin ke input (sama dengan shift + klik)",
+		"autoSelectCountdown": "Pemilihan otomatis dalam {{count}}dtk",
+		"countdownDisplay": "{{count}}dtk"
+	},
+	"browser": {
+		"rooWantsToUse": "Kilo Code ingin menggunakan browser",
+		"consoleLogs": "Log Konsol",
+		"noNewLogs": "(Tidak ada log baru)",
+		"screenshot": "Screenshot browser",
+		"cursor": "kursor",
+		"navigation": {
+			"step": "Langkah {{current}} dari {{total}}",
+			"previous": "Sebelumnya",
+			"next": "Selanjutnya"
+		},
+		"sessionStarted": "Sesi Browser Dimulai",
+		"actions": {
+			"title": "Aksi Browse: ",
+			"launch": "Luncurkan browser di {{url}}",
+			"click": "Klik ({{coordinate}})",
+			"type": "Ketik \"{{text}}\"",
+			"scrollDown": "Gulir ke bawah",
+			"scrollUp": "Gulir ke atas",
+			"close": "Tutup browser"
+		}
+	},
+	"codeblock": {
+		"tooltips": {
+			"expand": "Perluas blok kode",
+			"collapse": "Tutup blok kode",
+			"copy_code": "Salin kode"
+		}
+	},
+	"systemPromptWarning": "PERINGATAN: Override system prompt kustom aktif. Ini dapat merusak fungsionalitas secara serius dan menyebabkan perilaku yang tidak terduga.",
+	"profileViolationWarning": "Profil saat ini tidak kompatibel dengan pengaturan organisasi kamu",
+	"shellIntegration": {
+		"title": "Peringatan Eksekusi Perintah",
+		"description": "Perintah kamu dijalankan tanpa integrasi shell terminal VSCode. Untuk menekan peringatan ini kamu bisa menonaktifkan integrasi shell di bagian <strong>Terminal</strong> dari <settingsLink>pengaturan Kilo Code</settingsLink> atau troubleshoot integrasi terminal VSCode menggunakan link di bawah.",
+		"troubleshooting": "Klik di sini untuk dokumentasi integrasi shell."
+	},
+	"ask": {
+		"autoApprovedRequestLimitReached": {
+			"title": "Batas Permintaan yang Disetujui Otomatis Tercapai",
+			"description": "Kilo Code telah mencapai batas {{count}} permintaan API yang disetujui otomatis. Apakah Anda ingin mengatur ulang hitungan dan melanjutkan tugas?",
+			"button": "Setel Ulang dan Lanjutkan"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Batas Biaya yang Disetujui Otomatis Tercapai",
+			"description": "Kilo Code telah mencapai batas biaya yang disetujui otomatis sebesar ${{count}}. Apakah Anda ingin mengatur ulang biaya dan melanjutkan tugas?",
+			"button": "Setel Ulang dan Lanjutkan"
+		}
+	},
+	"indexingStatus": {
+		"ready": "Indeks siap",
+		"indexing": "Mengindeks {{percentage}}%",
+		"indexed": "Terindeks",
+		"error": "Error indeks",
+		"status": "Status indeks"
+	},
+	"versionIndicator": {
+		"ariaLabel": "Versi {{version}} - Klik untuk melihat catatan rilis"
+	},
+	"rooCloudCTA": {
+		"title": "Roo Code Cloud sedang berkembang!",
+		"description": "Jalankan agen jarak jauh di cloud, akses tugas Anda dari mana saja, berkolaborasi dengan orang lain, dan banyak lagi.",
+		"joinWaitlist": "Daftar untuk mendapatkan pembaruan terbaru."
+	},
+	"editMessage": {
+		"placeholder": "Edit pesan Anda..."
+	},
+	"command": {
+		"triggerDescription": "Jalankan perintah {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Kelola perintah slash",
+		"title": "Perintah Slash",
+		"description": "Gunakan perintah slash bawaan atau buat kustom untuk akses cepat ke prompt dan alur kerja yang sering digunakan. <DocsLink>Dokumentasi</DocsLink>",
+		"manageCommands": "Kelola perintah slash di pengaturan",
+		"builtInCommands": "Perintah Bawaan",
+		"globalCommands": "Perintah Global",
+		"workspaceCommands": "Perintah Workspace",
+		"globalCommand": "Perintah global",
+		"editCommand": "Edit perintah",
+		"deleteCommand": "Hapus perintah",
+		"newGlobalCommandPlaceholder": "Perintah global baru...",
+		"newWorkspaceCommandPlaceholder": "Perintah workspace baru...",
+		"deleteDialog": {
+			"title": "Hapus Perintah",
+			"description": "Apakah Anda yakin ingin menghapus perintah \"{{name}}\"? Tindakan ini tidak dapat dibatalkan.",
+			"cancel": "Batal",
+			"confirm": "Hapus"
+		}
+	},
+	"contextMenu": {
+		"noResults": "Tidak ada hasil",
+		"problems": "Masalah",
+		"terminal": "Terminal",
+		"url": "Tempel URL untuk mengambil konten"
+	},
+	"queuedMessages": {
+		"title": "Pesan Antrian",
+		"clickToEdit": "Klik untuk mengedit pesan"
+	},
+	"slashCommand": {
+		"wantsToRun": "Kilo Code ingin menjalankan perintah slash",
+		"didRun": "Kilo Code telah menjalankan perintah slash"
+	}
+}

@@ -1,0 +1,29 @@
+{
+	"compilerOptions": {
+		"types": ["vitest/globals"],
+		"target": "ES2022",
+		"lib": ["dom", "dom.iterable", "esnext"],
+		"allowJs": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"strict": true,
+		"forceConsistentCasingInFileNames": true,
+		"noFallthroughCasesInSwitch": true,
+		"module": "esnext",
+		"sourceMap": true,
+		"inlineSources": false,
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "react-jsx",
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./src/*"],
+			"@src/*": ["./src/*"],
+			"@roo/*": ["../src/shared/*"]
+		}
+	},
+	"include": ["src", "../src/shared", "vitest.setup.ts"]
+}

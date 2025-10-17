@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js omgeving ontbreekt",
+			"message": "Node.js omgeving niet gedetecteerd, installeer Node.js en probeer opnieuw. Aanbevolen versie: {{minVersion}} of hoger."
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js versie te laag",
+			"message": "Huidige Node.js ({{nodePath}}) versie is {{nodeVersion}}, upgrade naar {{minVersion}} of hoger voor betere compatibiliteit."
+		}
+	},
+	"dialog": {
+		"cancel": "Annuleren"
+	},
+	"ui": {
+		"initializing": "Kilo Code wordt geïnitialiseerd...",
+		"systemInformation": "Systeeminformatie"
+	}
+}

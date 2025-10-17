@@ -1,0 +1,69 @@
+{
+	"type-group": {
+		"modes": "الأنماط",
+		"mcps": "خوادم MCP",
+		"match": "مطابقة"
+	},
+	"item-card": {
+		"type-mode": "نمط",
+		"type-mcp": "خادم MCP",
+		"type-other": "أخرى",
+		"by-author": "بواسطة {{author}}",
+		"authors-profile": "ملف الكاتب",
+		"remove-tag-filter": "إزالة فلتر الوسم: {{tag}}",
+		"filter-by-tag": "فرز حسب الوسم: {{tag}}",
+		"component-details": "تفاصيل المكون",
+		"view": "عرض",
+		"source": "المصدر"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "ابحث في السوق..."
+		},
+		"type": {
+			"label": "النوع",
+			"all": "كل الأنواع",
+			"mode": "نمط",
+			"mcpServer": "خادم MCP"
+		},
+		"sort": {
+			"label": "الفرز حسب",
+			"name": "الاسم",
+			"lastUpdated": "آخر تحديث"
+		},
+		"tags": {
+			"label": "الوسوم",
+			"clear": "مسح الوسوم",
+			"placeholder": "ابحث في الوسوم...",
+			"noResults": "ما فيه وسوم مطابقة.",
+			"selected": "يتم عرض العناصر اللي تحتوي أي من الوسوم المحددة"
+		},
+		"installed": {
+			"label": "فرز حسب الحالة",
+			"all": "كل العناصر",
+			"installed": "مثبتة",
+			"notInstalled": "غير مثبتة"
+		},
+		"title": "السوق"
+	},
+	"done": "تم",
+	"tabs": {
+		"installed": "المثبتة",
+		"browse": "تصفح",
+		"settings": "الإعدادات"
+	},
+	"items": {
+		"empty": {
+			"noItems": "ما فيه عناصر في السوق.",
+			"emptyHint": "جرّب تغير الفلاتر أو كلمات البحث"
+		}
+	},
+	"installation": {
+		"installing": "جاري تثبيت العنصر: \"{{itemName}}\"",
+		"installSuccess": "تم تثبيت \"{{itemName}}\" بنجاح",
+		"installError": "فشل تثبيت \"{{itemName}}\": {{errorMessage}}",
+		"removing": "جاري إزالة العنصر: \"{{itemName}}\"",
+		"removeSuccess": "تمت إزالة \"{{itemName}}\" بنجاح",
+		"removeError": "فشل إزالة \"{{itemName}}\": {{errorMessage}}"
+	}
+}

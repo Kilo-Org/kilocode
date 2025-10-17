@@ -1,0 +1,118 @@
+{
+	"errorBoundary": {
+		"title": "Bir şeyler yanlış gitti",
+		"reportText": "Bu hatayı bildirerek iyileştirmemize yardımcı olun",
+		"githubText": "GitHub Issues sayfamızda",
+		"copyInstructions": "Gönderiminize dahil etmek için aşağıdaki hata mesajını kopyalayıp yapıştırın:",
+		"errorStack": "Hata Yığını:",
+		"componentStack": "Bileşen Yığını:"
+	},
+	"answers": {
+		"yes": "Evet",
+		"no": "Hayır",
+		"cancel": "İptal",
+		"remove": "Kaldır",
+		"keep": "Tut"
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Geri Bildirim",
+		"description": "Geri bildirimlerinizi duymak veya yaşadığınız sorunlarda size yardımcı olmak isteriz.",
+		"githubIssues": "GitHub'da bir sorun bildirin",
+		"githubDiscussions": "GitHub tartışmalarına katılın",
+		"discord": "Discord topluluğumuza katılın",
+		"customerSupport": "Müşteri Desteği"
+	},
+	"ui": {
+		"search_placeholder": "Ara...",
+		"no_results": "Sonuç bulunamadı"
+	},
+	"mermaid": {
+		"loading": "Mermaid diyagramı oluşturuluyor...",
+		"render_error": "Diyagram render edilemiyor",
+		"fixing_syntax": "Mermaid sözdizimi düzeltiliyor...",
+		"fix_syntax_button": "Sözdizimini AI ile düzelt",
+		"original_code": "Orijinal kod:",
+		"errors": {
+			"unknown_syntax": "Bilinmeyen sözdizimi hatası",
+			"fix_timeout": "LLM düzeltme isteği zaman aşımına uğradı",
+			"fix_failed": "LLM düzeltme başarısız oldu",
+			"fix_attempts": "{{attempts}} denemeden sonra sözdizimi düzeltilemedi. Son hata: {{error}}",
+			"no_fix_provided": "LLM düzeltme sağlayamadı",
+			"fix_request_failed": "Düzeltme isteği başarısız oldu"
+		},
+		"buttons": {
+			"zoom": "Yakınlaştır",
+			"zoomIn": "Büyüt",
+			"zoomOut": "Küçült",
+			"copy": "Kopyala",
+			"save": "Resmi kaydet",
+			"viewCode": "Kodu görüntüle",
+			"viewDiagram": "Diyagramı görüntüle",
+			"close": "Kapat"
+		},
+		"modal": {
+			"codeTitle": "Mermaid Kodu"
+		},
+		"tabs": {
+			"diagram": "Diyagram",
+			"code": "Kod"
+		},
+		"feedback": {
+			"imageCopied": "Görsel panoya kopyalandı",
+			"copyError": "Görsel kopyalama hatası"
+		}
+	},
+	"image": {
+		"tabs": {
+			"view": "Resim"
+		},
+		"noData": "Resim verisi yok"
+	},
+	"file": {
+		"errors": {
+			"invalidDataUri": "Geçersiz veri URI formatı",
+			"copyingImage": "Görsel kopyalama hatası: {{error}}",
+			"openingImage": "Görsel açma hatası: {{error}}",
+			"pathNotExists": "Yol mevcut değil: {{path}}",
+			"couldNotOpen": "Dosya açılamadı: {{error}}",
+			"couldNotOpenGeneric": "Dosya açılamadı!"
+		},
+		"success": {
+			"imageDataUriCopied": "Görsel veri URI'si panoya kopyalandı"
+		}
+	},
+	"confirmation": {
+		"deleteMessage": "Mesajı Sil",
+		"deleteWarning": "Bu mesajı silmek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
+		"editMessage": "Mesajı Düzenle",
+		"editWarning": "Bu mesajı düzenlemek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
+		"editQuestionWithCheckpoint": "Bu mesajı düzenlemek, konuşmadaki sonraki tüm mesajları da silecektir. Bu kontrol noktasına kadar olan tüm değişiklikleri de geri almak istiyor musun?",
+		"deleteQuestionWithCheckpoint": "Bu mesajı silmek, konuşmadaki sonraki tüm mesajları da silecektir. Bu kontrol noktasına kadar olan tüm değişiklikleri de geri almak istiyor musun?",
+		"editOnly": "Hayır, sadece mesajı düzenle",
+		"deleteOnly": "Hayır, sadece mesajı sil",
+		"restoreToCheckpoint": "Evet, kontrol noktasını geri yükle",
+		"proceed": "Devam Et",
+		"dontShowAgain": "Tekrar gösterme"
+	},
+	"time_ago": {
+		"just_now": "şimdi",
+		"seconds_ago": "{{count}} saniye önce",
+		"minute_ago": "bir dakika önce",
+		"minutes_ago": "{{count}} dakika önce",
+		"hour_ago": "bir saat önce",
+		"hours_ago": "{{count}} saat önce",
+		"day_ago": "bir gün önce",
+		"days_ago": "{{count}} gün önce",
+		"week_ago": "bir hafta önce",
+		"weeks_ago": "{{count}} hafta önce",
+		"month_ago": "bir ay önce",
+		"months_ago": "{{count}} ay önce",
+		"year_ago": "bir yıl önce",
+		"years_ago": "{{count}} yıl önce"
+	}
+}

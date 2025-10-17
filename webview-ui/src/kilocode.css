@@ -1,0 +1,62 @@
+/* Kilo Code specific styles */
+
+/* Slash command highlighting */
+.slash-command-match-textarea-highlight {
+	background-color: color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+	border-radius: 3px;
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-focusBorder) 30%, transparent);
+	color: transparent;
+}
+
+/* Custom slow pulse animation for task progress squares */
+@keyframes slow-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.3;
+	}
+}
+
+.animate-slow-pulse {
+	animation: slow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-slow-pulse-delayed {
+	animation: slow-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	animation-delay: 0.5s;
+}
+
+/* Fade-in animation for new task progress squares */
+@keyframes fade-in {
+	0% {
+		opacity: 0;
+		transform: scale(0.8);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.animate-fade-in {
+	animation: fade-in 0.2s ease-out forwards;
+}
+
+/* Message highlight animation for timeline clicks */
+@keyframes message-highlight {
+	0% {
+		background-color: transparent;
+	}
+	20% {
+		background-color: color-mix(in srgb, var(--vscode-focusBorder) 25%, transparent);
+	}
+	100% {
+		background-color: transparent;
+	}
+}
+
+.animate-message-highlight {
+	animation: message-highlight 1s ease-out forwards;
+}

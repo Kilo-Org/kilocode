@@ -1,0 +1,2 @@
+def calculate_sum(a, b):
+	<<<AUTOCOMPLETE_HERE>>>

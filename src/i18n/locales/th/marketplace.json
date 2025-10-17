@@ -1,0 +1,69 @@
+{
+	"type-group": {
+		"modes": "โหมด",
+		"mcps": "เซิร์ฟเวอร์ MCP",
+		"match": "ตรงกัน"
+	},
+	"item-card": {
+		"type-mode": "โหมด",
+		"type-mcp": "เซิร์ฟเวอร์ MCP",
+		"type-other": "อื่นๆ",
+		"by-author": "โดย {{author}}",
+		"authors-profile": "โปรไฟล์ผู้เขียน",
+		"remove-tag-filter": "ลบตัวกรองแท็ก: {{tag}}",
+		"filter-by-tag": "กรองตามแท็ก: {{tag}}",
+		"component-details": "รายละเอียดคอมโพเนนต์",
+		"view": "ดู",
+		"source": "แหล่งที่มา"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "ค้นหาในตลาด..."
+		},
+		"type": {
+			"label": "ประเภท",
+			"all": "ทุกประเภท",
+			"mode": "โหมด",
+			"mcpServer": "เซิร์ฟเวอร์ MCP"
+		},
+		"sort": {
+			"label": "เรียงตาม",
+			"name": "ชื่อ",
+			"lastUpdated": "อัปเดตล่าสุด"
+		},
+		"tags": {
+			"label": "แท็ก",
+			"clear": "ล้างแท็ก",
+			"placeholder": "ค้นหาแท็ก...",
+			"noResults": "ไม่พบแท็ก",
+			"selected": "แสดงรายการที่มีแท็กที่เลือกอย่างใดอย่างหนึ่ง"
+		},
+		"installed": {
+			"label": "กรองตามสถานะ",
+			"all": "รายการทั้งหมด",
+			"installed": "ติดตั้งแล้ว",
+			"notInstalled": "ยังไม่ติดตั้ง"
+		},
+		"title": "ตลาด"
+	},
+	"done": "เสร็จสิ้น",
+	"tabs": {
+		"installed": "ติดตั้งแล้ว",
+		"browse": "เรียกดู",
+		"settings": "การตั้งค่า"
+	},
+	"items": {
+		"empty": {
+			"noItems": "ไม่พบรายการในตลาด",
+			"emptyHint": "ลองปรับตัวกรองหรือคำค้นหาของคุณ"
+		}
+	},
+	"installation": {
+		"installing": "กำลังติดตั้งรายการ: \"{{itemName}}\"",
+		"installSuccess": "ติดตั้ง \"{{itemName}}\" สำเร็จ",
+		"installError": "ล้มเหลวในการติดตั้ง \"{{itemName}}\": {{errorMessage}}",
+		"removing": "กำลังลบรายการ: \"{{itemName}}\"",
+		"removeSuccess": "ลบ \"{{itemName}}\" สำเร็จ",
+		"removeError": "ล้มเหลวในการลบ \"{{itemName}}\": {{errorMessage}}"
+	}
+}

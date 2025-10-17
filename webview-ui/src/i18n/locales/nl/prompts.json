@@ -1,0 +1,223 @@
+{
+	"title": "Modi",
+	"done": "Gereed",
+	"modes": {
+		"title": "Modi",
+		"createNewMode": "Nieuwe modus aanmaken",
+		"importMode": "Modus importeren",
+		"noMatchFound": "Geen modi gevonden",
+		"editModesConfig": "Modusconfiguratie bewerken",
+		"editGlobalModes": "Globale modi bewerken",
+		"editProjectModes": "Projectmodi bewerken (.kilocodemodes)",
+		"createModeHelpText": "Modi zijn gespecialiseerde persona's die het gedrag van Kilo Code aanpassen. <0>Meer informatie over het gebruik van modi</0> of <1>het aanpassen van modi.</1>",
+		"selectMode": "Modus zoeken"
+	},
+	"apiConfiguration": {
+		"title": "API-configuratie",
+		"select": "Selecteer welke API-configuratie voor deze modus gebruikt moet worden"
+	},
+	"organizationMode": {
+		"title": "Organisatiemodus",
+		"description": "Deze modus wordt geleverd door je organisatie en kan hier niet worden bewerkt. Om deze modus te wijzigen, bezoek het Kilo Code Dashboard.",
+		"cannotEdit": "Organisatiemodi kunnen niet worden bewerkt"
+	},
+	"tools": {
+		"title": "Beschikbare tools",
+		"builtInModesText": "Tools voor ingebouwde modi kunnen niet worden aangepast",
+		"editTools": "Tools bewerken",
+		"doneEditing": "Bewerken voltooid",
+		"allowedFiles": "Toegestane bestanden:",
+		"toolNames": {
+			"read": "Bestanden lezen",
+			"edit": "Bestanden bewerken",
+			"browser": "Browser gebruiken",
+			"command": "Commando's uitvoeren",
+			"mcp": "MCP gebruiken"
+		},
+		"noTools": "Geen"
+	},
+	"roleDefinition": {
+		"title": "Roldefinitie",
+		"resetToDefault": "Terugzetten naar standaard",
+		"description": "Definieer Kilo Code's expertise en persoonlijkheid voor deze modus. Deze beschrijving bepaalt hoe Kilo Code zich presenteert en taken benadert."
+	},
+	"description": {
+		"title": "Korte beschrijving (voor mensen)",
+		"resetToDefault": "Terugzetten naar standaardbeschrijving",
+		"description": "Een korte beschrijving die wordt getoond in de modusselectie dropdown."
+	},
+	"whenToUse": {
+		"title": "Wanneer te gebruiken (optioneel)",
+		"description": "Beschrijf wanneer deze modus gebruikt moet worden. Dit helpt de Orchestrator om de juiste modus voor een taak te kiezen.",
+		"resetToDefault": "Beschrijving 'Wanneer te gebruiken' terugzetten naar standaard"
+	},
+	"customInstructions": {
+		"title": "Modusspecifieke instructies (optioneel)",
+		"resetToDefault": "Terugzetten naar standaard",
+		"description": "Voeg gedragsrichtlijnen toe die specifiek zijn voor de modus {{modeName}}.",
+		"loadFromFile": "Aangepaste instructies specifiek voor de {{mode}} modus kunnen ook worden geladen vanuit de map <span>.kilocode/rules-{{slug}}/</span> in je werkruimte of vanuit de globale <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} en .clinerules-{{slug}} zijn verouderd en zullen binnenkort niet meer werken)."
+	},
+	"exportMode": {
+		"title": "Modus exporteren",
+		"description": "Exporteer deze modus met regels uit de .kilocode/rules-{{slug}}/ map gecombineerd in een deelbaar YAML-bestand. De originele bestanden blijven ongewijzigd.",
+		"exporting": "Exporteren..."
+	},
+	"importMode": {
+		"selectLevel": "Kies waar je deze modus wilt importeren:",
+		"import": "Importeren",
+		"importing": "Importeren...",
+		"global": {
+			"label": "Globaal niveau",
+			"description": "Beschikbaar in alle projecten. Als de geëxporteerde modus regelbestanden bevatte, worden deze opnieuw gemaakt in de globale map .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Projectniveau",
+			"description": "Alleen beschikbaar in deze werkruimte. Als de geëxporteerde modus regelbestanden bevatte, worden deze opnieuw gemaakt in de map .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Geavanceerd"
+	},
+	"globalCustomInstructions": {
+		"title": "Aangepaste instructies voor alle modi",
+		"description": "Deze instructies gelden voor alle modi. Ze bieden een basisset aan gedragingen die kunnen worden uitgebreid met modusspecifieke instructies hieronder. <0>Meer informatie</0>",
+		"loadFromFile": "Instructies kunnen ook worden geladen vanuit de map <span>.kilocode/rules/</span> in je werkruimte of vanuit de globale <0>.kilocode/rules/</0> (.kilocoderules en .clinerules zijn verouderd en zullen binnenkort niet meer werken)."
+	},
+	"systemPrompt": {
+		"preview": "Systeemprompt bekijken",
+		"copy": "Systeemprompt kopiëren naar klembord",
+		"title": "Systeemprompt ({{modeName}} modus)"
+	},
+	"supportPrompts": {
+		"title": "Ondersteuningsprompts",
+		"resetPrompt": "Reset {{promptType}} prompt naar standaard",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API-configuratie",
+			"apiConfigDescription": "Je kunt een API-configuratie selecteren die altijd wordt gebruikt voor het verbeteren van prompts, of gewoon de huidige selectie gebruiken",
+			"useCurrentConfig": "Huidige API-configuratie gebruiken",
+			"testPromptPlaceholder": "Voer een prompt in om de verbetering te testen",
+			"previewButton": "Voorbeeld promptverbetering",
+			"testEnhancement": "Test verbetering",
+			"includeTaskHistory": "Taakgeschiedenis als context opnemen",
+			"includeTaskHistoryDescription": "Wanneer ingeschakeld, worden de laatste 10 berichten van het huidige gesprek opgenomen als context bij het verbeteren van prompts, wat helpt bij het genereren van meer relevante en contextbewuste suggesties."
+		},
+		"condense": {
+			"apiConfiguration": "API-configuratie voor contextcondensatie",
+			"apiConfigDescription": "Selecteer welke API-configuratie moet worden gebruikt voor contextcondensatiebewerkingen. Laat leeg om de huidige actieve configuratie te gebruiken.",
+			"useCurrentConfig": "Gebruik de momenteel geselecteerde API-configuratie"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Prompt verbeteren",
+				"description": "Gebruik promptverbetering om op maat gemaakte suggesties of verbeteringen voor je invoer te krijgen. Zo begrijpt Kilo Code je intentie en krijg je de best mogelijke antwoorden. Beschikbaar via het ✨-icoon in de chat."
+			},
+			"CONDENSE": {
+				"label": "Contextcondensatie",
+				"description": "Configureer hoe de gesprekscontext wordt gecondenseerd om tokenlimieten te beheren.Deze prompt wordt gebruikt voor zowel handmatige als automatische contextcondensatiebewerkingen."
+			},
+			"EXPLAIN": {
+				"label": "Code uitleggen",
+				"description": "Krijg gedetailleerde uitleg over codefragmenten, functies of hele bestanden. Handig om complexe code te begrijpen of nieuwe patronen te leren. Beschikbaar via codeacties (lampje in de editor) en het contextmenu (rechtsklik op geselecteerde code)."
+			},
+			"FIX": {
+				"label": "Problemen oplossen",
+				"description": "Krijg hulp bij het identificeren en oplossen van bugs, fouten of codekwaliteitsproblemen. Biedt stapsgewijze begeleiding bij het oplossen van problemen. Beschikbaar via codeacties (lampje in de editor) en het contextmenu (rechtsklik op geselecteerde code)."
+			},
+			"IMPROVE": {
+				"label": "Code verbeteren",
+				"description": "Ontvang suggesties voor codeoptimalisatie, betere praktijken en architecturale verbeteringen met behoud van functionaliteit. Beschikbaar via codeacties (lampje in de editor) en het contextmenu (rechtsklik op geselecteerde code)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Aan context toevoegen",
+				"description": "Voeg context toe aan je huidige taak of gesprek. Handig voor extra informatie of verduidelijkingen. Beschikbaar via codeacties (lampje in de editor) en het contextmenu (rechtsklik op geselecteerde code)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Terminalinhoud aan context toevoegen",
+				"description": "Voeg terminaluitvoer toe aan je huidige taak of gesprek. Handig voor commando-uitvoer of logboeken. Beschikbaar in het terminalcontextmenu (rechtsklik op geselecteerde terminalinhoud)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Terminalcommando repareren",
+				"description": "Krijg hulp bij het repareren van terminalcommando's die zijn mislukt of verbetering nodig hebben. Beschikbaar in het terminalcontextmenu (rechtsklik op geselecteerde terminalinhoud)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Terminalcommando uitleggen",
+				"description": "Krijg gedetailleerde uitleg over terminalcommando's en hun uitvoer. Beschikbaar in het terminalcontextmenu (rechtsklik op geselecteerde terminalinhoud)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminalcommando genereren",
+				"description": "Help bij het genereren van terminalcommando's op basis van beschrijving."
+			},
+			"NEW_TASK": {
+				"label": "Nieuwe taak starten",
+				"description": "Start een nieuwe taak met gebruikersinvoer. Beschikbaar via de Command Palette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit Bericht Generatie",
+				"description": "Genereer beschrijvende commit-berichten gebaseerd op je staged git-wijzigingen. Pas de prompt aan om berichten te genereren die de best practices van je repository volgen."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Geavanceerd: Systeemprompt overschrijven",
+		"description": "<2>⚠️ Waarschuwing:</2> Deze geavanceerde functie omzeilt beveiligingen. <1>LEES DIT VOOR GEBRUIK!</1>Overschrijf de standaard systeemprompt door een bestand aan te maken op <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Nieuwe modus aanmaken",
+		"close": "Sluiten",
+		"name": {
+			"label": "Naam",
+			"placeholder": "Voer de naam van de modus in"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "De slug wordt gebruikt in URL's en bestandsnamen. Moet kleine letters, cijfers en koppeltekens bevatten."
+		},
+		"saveLocation": {
+			"label": "Opslaglocatie",
+			"description": "Kies waar je deze modus wilt opslaan. Projectspecifieke modi hebben voorrang op globale modi.",
+			"global": {
+				"label": "Globaal",
+				"description": "Beschikbaar in alle werkruimtes"
+			},
+			"project": {
+				"label": "Projectspecifiek (.kilocodemodes)",
+				"description": "Alleen beschikbaar in deze werkruimte, heeft voorrang op globaal"
+			}
+		},
+		"roleDefinition": {
+			"label": "Roldefinitie",
+			"description": "Definieer Kilo Code's expertise en persoonlijkheid voor deze modus."
+		},
+		"whenToUse": {
+			"label": "Wanneer te gebruiken (optioneel)",
+			"description": "Geef een duidelijke beschrijving van wanneer deze modus het meest effectief is en voor welke soorten taken deze uitblinkt."
+		},
+		"tools": {
+			"label": "Beschikbare tools",
+			"description": "Selecteer welke tools deze modus kan gebruiken."
+		},
+		"description": {
+			"label": "Korte beschrijving (voor mensen)",
+			"description": "Een korte beschrijving die wordt getoond in de modusselectie dropdown."
+		},
+		"customInstructions": {
+			"label": "Aangepaste instructies (optioneel)",
+			"description": "Voeg gedragsrichtlijnen toe die specifiek zijn voor deze modus."
+		},
+		"buttons": {
+			"cancel": "Annuleren",
+			"create": "Modus aanmaken"
+		},
+		"deleteMode": "Modus verwijderen"
+	},
+	"allFiles": "alle bestanden",
+	"deleteMode": {
+		"title": "Modus verwijderen",
+		"message": "Weet je zeker dat je de modus \"{{modeName}}\" wilt verwijderen?",
+		"rulesFolder": "Deze modus heeft een regelmap op {{folderPath}} die ook wordt verwijderd.",
+		"descriptionNoRules": "Weet je zeker dat je deze aangepaste modus wilt verwijderen?",
+		"confirm": "Verwijderen",
+		"cancel": "Annuleren"
+	}
+}

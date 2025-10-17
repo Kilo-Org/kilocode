@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js 環境遺失",
+			"message": "未偵測到 Node.js 環境，請安裝 Node.js 並重新嘗試。建議版本：{{minVersion}} 或更高。"
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js 版本過低",
+			"message": "目前 Node.js ({{nodePath}}) 版本為 {{nodeVersion}}，請升級至 {{minVersion}} 或更高版本以獲得更好的相容性。"
+		}
+	},
+	"dialog": {
+		"cancel": "取消"
+	},
+	"ui": {
+		"initializing": "Kilo Code 正在初始化...",
+		"systemInformation": "系統資訊"
+	}
+}

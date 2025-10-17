@@ -1,0 +1,2 @@
+# Description: Should suggest array initialization
+const numbers = <<<AUTOCOMPLETE_HERE>>>

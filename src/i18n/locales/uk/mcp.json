@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "Неправильний формат JSON налаштувань MCP. Будь ласка, переконайся, що твої налаштування відповідають правильному формату JSON.",
+		"invalid_settings_syntax": "Неправильний формат JSON налаштувань MCP. Будь ласка, перевір свій файл налаштувань на наявність синтаксичних помилок.",
+		"invalid_settings_validation": "Неправильний формат налаштувань MCP: {{errorMessages}}",
+		"create_json": "Не вдалося створити або відкрити .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Не вдалося оновити сервери MCP проекту",
+		"invalidJsonArgument": "Kilo Code спробував використати {{toolName}} з неправильним аргументом JSON. Повторна спроба...",
+		"refresh_after_disable": "Не вдалося оновити з'єднання MCP після вимкнення",
+		"refresh_after_enable": "Не вдалося оновити з'єднання MCP після увімкнення",
+		"disconnect_servers_partial": "Не вдалося відключити {{count}} сервер(ів) MCP. Перевір вивід для деталей.",
+		"toolNotFound": "Інструмент '{{toolName}}' не існує на сервері '{{serverName}}'. Доступні інструменти: {{availableTools}}",
+		"serverNotFound": "Сервер MCP '{{serverName}}' не налаштований. Доступні сервери: {{availableServers}}",
+		"toolDisabled": "Інструмент '{{toolName}}' на сервері '{{serverName}}' вимкнено. Доступні увімкнені інструменти: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "Перезапуск сервера MCP {{serverName}}...",
+		"server_connected": "Сервер MCP {{serverName}} підключено",
+		"server_deleted": "Видалено сервер MCP: {{serverName}}",
+		"server_not_found": "Сервер \"{{serverName}}\" не знайдено в конфігурації",
+		"global_servers_active": "Активні глобальні сервери MCP: {{mcpServers}}",
+		"project_servers_active": "Активні сервери MCP проекту: {{mcpServers}}",
+		"already_refreshing": "Сервери MCP вже оновлюються.",
+		"refreshing_all": "Оновлення всіх серверів MCP...",
+		"all_refreshed": "Усі сервери MCP оновлено.",
+		"project_config_deleted": "Файл конфігурації MCP проекту видалено. Усі сервери MCP проекту відключено."
+	}
+}

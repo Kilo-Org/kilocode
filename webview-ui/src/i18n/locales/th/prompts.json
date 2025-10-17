@@ -1,0 +1,223 @@
+{
+	"title": "โหมด",
+	"done": "เสร็จสิ้น",
+	"modes": {
+		"title": "โหมด",
+		"createNewMode": "สร้างโหมดใหม่",
+		"importMode": "นำเข้าโหมด",
+		"editModesConfig": "แก้ไขการตั้งค่าโหมด",
+		"editGlobalModes": "แก้ไข Global Modes",
+		"editProjectModes": "แก้ไข Project Modes (.kilocodemodes)",
+		"createModeHelpText": "โหมดคือบุคลิกเฉพาะที่ปรับแต่งพฤติกรรมของ Kilo Code <0>เรียนรู้เกี่ยวกับการใช้โหมด</0> หรือ <1>การปรับแต่งโหมด</1>",
+		"selectMode": "ค้นหาโหมด",
+		"noMatchFound": "ไม่พบโหมดที่ตรงกัน"
+	},
+	"apiConfiguration": {
+		"title": "การตั้งค่า API",
+		"select": "เลือกการตั้งค่า API ที่จะใช้สำหรับโหมดนี้"
+	},
+	"organizationMode": {
+		"title": "โหมดขององค์กร",
+		"description": "โหมดนี้จัดทำโดยองค์กรของคุณและไม่สามารถแก้ไขได้ที่นี่ หากต้องการแก้ไขโหมดนี้ โปรดไปที่ Kilo Code Dashboard.",
+		"cannotEdit": "ไม่สามารถแก้ไขโหมดขององค์กรได้"
+	},
+	"tools": {
+		"title": "เครื่องมือที่ใช้ได้",
+		"builtInModesText": "เครื่องมือสำหรับโหมดในตัวไม่สามารถแก้ไขได้",
+		"editTools": "แก้ไขเครื่องมือ",
+		"doneEditing": "แก้ไขเสร็จแล้ว",
+		"allowedFiles": "ไฟล์ที่อนุญาต:",
+		"toolNames": {
+			"read": "อ่านไฟล์",
+			"edit": "แก้ไขไฟล์",
+			"browser": "ใช้เบราว์เซอร์",
+			"command": "รันคำสั่ง",
+			"mcp": "ใช้ MCP"
+		},
+		"noTools": "ไม่มี"
+	},
+	"roleDefinition": {
+		"title": "นิยามบทบาท",
+		"resetToDefault": "รีเซ็ตเป็นค่าเริ่มต้น",
+		"description": "กำหนดความเชี่ยวชาญและบุคลิกภาพของ Kilo Code สำหรับโหมดนี้ คำอธิบายนี้กำหนดว่า Kilo Code นำเสนอตัวเองอย่างไรและจัดการกับงานอย่างไร"
+	},
+	"description": {
+		"title": "คำอธิบายสั้น (สำหรับมนุษย์)",
+		"resetToDefault": "รีเซ็ตเป็นคำอธิบายเริ่มต้น",
+		"description": "คำอธิบายสั้น ๆ ที่แสดงในดรอปดาวน์ตัวเลือกโหมด"
+	},
+	"whenToUse": {
+		"title": "เมื่อใดควรใช้ (ไม่บังคับ)",
+		"description": "อธิบายว่าควรใช้โหมดนี้เมื่อใด ช่วยให้ Orchestrator เลือกโหมดที่เหมาะสมสำหรับงาน",
+		"resetToDefault": "รีเซ็ตเป็นคำอธิบาย 'เมื่อใดควรใช้' เริ่มต้น"
+	},
+	"customInstructions": {
+		"title": "คำแนะนำเฉพาะโหมด (ไม่บังคับ)",
+		"resetToDefault": "รีเซ็ตเป็นค่าเริ่มต้น",
+		"description": "เพิ่มแนวทางพฤติกรรมเฉพาะสำหรับโหมด {{modeName}}",
+		"loadFromFile": "คำแนะนำเฉพาะสำหรับโหมด {{mode}} สามารถโหลดจากโฟลเดอร์ <span>.kilocode/rules/</span> ใน workspace ของคุณ (.kilocoderules-{{slug}} เลิกใช้แล้วและจะหยุดทำงานเร็วๆ นี้)"
+	},
+	"exportMode": {
+		"title": "ส่งออกโหมด",
+		"description": "ส่งออกโหมดนี้พร้อมกับกฎจากโฟลเดอร์ .kilocode/rules-{{slug}}/ รวมเป็นไฟล์ YAML ที่แชร์ได้ ไฟล์ต้นฉบับจะไม่เปลี่ยนแปลง",
+		"exporting": "กำลังส่งออก..."
+	},
+	"importMode": {
+		"selectLevel": "เลือกที่จะนำเข้าโหมดนี้:",
+		"import": "นำเข้า",
+		"importing": "กำลังนำเข้า...",
+		"global": {
+			"label": "ระดับ Global",
+			"description": "ใช้ได้ในทุกโปรเจ็กต์ หากโหมดที่ส่งออกมีไฟล์กฎ จะถูกสร้างใหม่ในโฟลเดอร์ .kilocode/rules-{slug}/ ระดับ global"
+		},
+		"project": {
+			"label": "ระดับโปรเจ็กต์",
+			"description": "ใช้ได้เฉพาะใน workspace นี้ หากโหมดที่ส่งออกมีไฟล์กฎ จะถูกสร้างใหม่ในโฟลเดอร์ .kilocode/rules-{slug}/"
+		}
+	},
+	"advanced": {
+		"title": "ขั้นสูง: แทนที่ System Prompt"
+	},
+	"globalCustomInstructions": {
+		"title": "คำแนะนำสำหรับทุกโหมด",
+		"description": "คำแนะนำเหล่านี้ใช้กับทุกโหมด ให้ชุดพฤติกรรมพื้นฐานที่สามารถเสริมด้วยคำแนะนำเฉพาะโหมดด้านล่าง <0>เรียนรู้เพิ่มเติม</0>",
+		"loadFromFile": "คำแนะนำสามารถโหลดจากโฟลเดอร์ <span>.kilocode/rules/</span> ใน workspace ของคุณ (.kilocoderules เลิกใช้แล้วและจะหยุดทำงานเร็วๆ นี้)"
+	},
+	"systemPrompt": {
+		"preview": "ดูตัวอย่าง System Prompt",
+		"copy": "คัดลอก system prompt ไปยังคลิปบอร์ด",
+		"title": "System Prompt (โหมด {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Support Prompts",
+		"resetPrompt": "รีเซ็ต {{promptType}} prompt เป็นค่าเริ่มต้น",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "การตั้งค่า API",
+			"apiConfigDescription": "คุณสามารถเลือกการตั้งค่า API ที่จะใช้เสมอสำหรับการปรับปรุง prompt หรือใช้สิ่งที่เลือกอยู่ในปัจจุบัน",
+			"useCurrentConfig": "ใช้การตั้งค่า API ที่เลือกอยู่ในปัจจุบัน",
+			"testPromptPlaceholder": "ใส่ prompt เพื่อทดสอบการปรับปรุง",
+			"previewButton": "ดูตัวอย่างการปรับปรุง Prompt",
+			"testEnhancement": "ทดสอบการปรับปรุง",
+			"includeTaskHistory": "รวมประวัติงานเป็น context",
+			"includeTaskHistoryDescription": "เมื่อเปิดใช้งาน ข้อความ 10 ข้อความล่าสุดจากการสนทนาปัจจุบันจะถูกรวมเป็น context เมื่อปรับปรุง prompt ช่วยสร้างคำแนะนำที่เกี่ยวข้องและตระหนักถึง context มากขึ้น"
+		},
+		"condense": {
+			"apiConfiguration": "การตั้งค่า API สำหรับการย่อ Context",
+			"apiConfigDescription": "เลือกการตั้งค่า API ที่จะใช้สำหรับการดำเนินการย่อ context หากไม่เลือก จะใช้การตั้งค่าที่ใช้งานอยู่ในปัจจุบัน",
+			"useCurrentConfig": "ใช้การตั้งค่า API ที่เลือกอยู่ในปัจจุบัน"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "ปรับปรุง Prompt",
+				"description": "ใช้การปรับปรุง prompt เพื่อรับคำแนะนำหรือการปรับปรุงที่เหมาะสมสำหรับข้อมูลของคุณ ช่วยให้ Kilo Code เข้าใจเจตนาของคุณและให้คำตอบที่ดีที่สุด ใช้ได้ผ่านไอคอน ✨ ในแชท"
+			},
+			"CONDENSE": {
+				"label": "การย่อ Context",
+				"description": "ตั้งค่าวิธีการย่อ context ของการสนทนาเพื่อจัดการขีดจำกัด token prompt นี้ใช้สำหรับการดำเนินการย่อ context ทั้งแบบแมนนวลและอัตโนมัติ"
+			},
+			"EXPLAIN": {
+				"label": "อธิบายโค้ด",
+				"description": "รับคำอธิบายโดยละเอียดของ code snippet, function หรือไฟล์ทั้งหมด มีประโยชน์สำหรับการทำความเข้าใจโค้ดที่ซับซ้อนหรือเรียนรู้ pattern ใหม่ ใช้ได้ใน code actions (ไอคอนหลอดไฟในตัวแก้ไข) และเมนูบริบทของตัวแก้ไข (คลิกขวาที่โค้ดที่เลือก)"
+			},
+			"FIX": {
+				"label": "แก้ไขปัญหา",
+				"description": "รับความช่วยเหลือในการระบุและแก้ไขบั๊ก ข้อผิดพลาด หรือปัญหาคุณภาพโค้ด ให้คำแนะนำทีละขั้นตอนสำหรับการแก้ไขปัญหา ใช้ได้ใน code actions (ไอคอนหลอดไฟในตัวแก้ไข) และเมนูบริบทของตัวแก้ไข (คลิกขวาที่โค้ดที่เลือก)"
+			},
+			"IMPROVE": {
+				"label": "ปรับปรุงโค้ด",
+				"description": "รับคำแนะนำสำหรับการเพิ่มประสิทธิภาพโค้ด แนวปฏิบัติที่ดีกว่า และการปรับปรุงสถาปัตยกรรมโดยยังคงฟังก์ชันการทำงานเดิม ใช้ได้ใน code actions (ไอคอนหลอดไฟในตัวแก้ไข) และเมนูบริบทของตัวแก้ไข (คลิกขวาที่โค้ดที่เลือก)"
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "เพิ่มไปยัง Context",
+				"description": "เพิ่ม context ไปยังงานหรือการสนทนาปัจจุบันของคุณ มีประโยชน์สำหรับการให้ข้อมูลเพิ่มเติมหรือคำชี้แจง ใช้ได้ใน code actions (ไอคอนหลอดไฟในตัวแก้ไข) และเมนูบริบทของตัวแก้ไข (คลิกขวาที่โค้ดที่เลือก)"
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "เพิ่มเนื้อหา Terminal ไปยัง Context",
+				"description": "เพิ่ม terminal output ไปยังงานหรือการสนทนาปัจจุบันของคุณ มีประโยชน์สำหรับการให้ command output หรือ log ใช้ได้ในเมนูบริบทของ terminal (คลิกขวาที่เนื้อหา terminal ที่เลือก)"
+			},
+			"TERMINAL_FIX": {
+				"label": "แก้ไข Terminal Command",
+				"description": "รับความช่วยเหลือในการแก้ไข terminal command ที่ล้มเหลวหรือต้องการปรับปรุง ใช้ได้ในเมนูบริบทของ terminal (คลิกขวาที่เนื้อหา terminal ที่เลือก)"
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "อธิบาย Terminal Command",
+				"description": "รับคำอธิบายโดยละเอียดของ terminal command และ output ของมัน ใช้ได้ในเมนูบริบทของ terminal (คลิกขวาที่เนื้อหา terminal ที่เลือก)"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "สร้าง Terminal Command",
+				"description": "ช่วยสร้าง terminal command ตามคำอธิบายที่ให้มา"
+			},
+			"NEW_TASK": {
+				"label": "เริ่มงานใหม่",
+				"description": "เริ่มงานใหม่ด้วย user input ใช้ได้ใน Command Palette"
+			},
+			"COMMIT_MESSAGE": {
+				"label": "สร้าง Commit Message",
+				"description": "สร้าง commit message ที่อธิบายได้ดีตาม staged git changes ของคุณ ปรับแต่ง prompt เพื่อสร้างข้อความที่ตาม best practices ของ repository ของคุณ"
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "ขั้นสูง: แทนที่ System Prompt",
+		"description": "<2>⚠️ คำเตือน:</2> ฟีเจอร์ขั้นสูงนี้ข้ามการป้องกัน <1>อ่านนี่ก่อนใช้!</1>แทนที่ system prompt เริ่มต้นโดยสร้างไฟล์ที่ <span>.kilocode/system-prompt-{{slug}}</span>"
+	},
+	"createModeDialog": {
+		"title": "สร้างโหมดใหม่",
+		"close": "ปิด",
+		"name": {
+			"label": "ชื่อ",
+			"placeholder": "ใส่ชื่อโหมด"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Slug ใช้ใน URL และชื่อไฟล์ ควรเป็นตัวพิมพ์เล็กและมีเฉพาะตัวอักษร ตัวเลข และขีดกลาง"
+		},
+		"saveLocation": {
+			"label": "ตำแหน่งบันทึก",
+			"description": "เลือกที่จะบันทึกโหมดนี้ โหมดเฉพาะโปรเจ็กต์มีความสำคัญกว่าโหมด global",
+			"global": {
+				"label": "Global",
+				"description": "ใช้ได้ในทุก workspace"
+			},
+			"project": {
+				"label": "เฉพาะโปรเจ็กต์ (.kilocodemodes)",
+				"description": "ใช้ได้เฉพาะใน workspace นี้ มีความสำคัญกว่า global"
+			}
+		},
+		"roleDefinition": {
+			"label": "นิยามบทบาท",
+			"description": "กำหนดความเชี่ยวชาญและบุคลิกภาพของ Kilo Code สำหรับโหมดนี้"
+		},
+		"description": {
+			"label": "คำอธิบายสั้น (สำหรับมนุษย์)",
+			"description": "คำอธิบายสั้น ๆ ที่แสดงในดรอปดาวน์ตัวเลือกโหมด"
+		},
+		"whenToUse": {
+			"label": "เมื่อใดควรใช้ (ไม่บังคับ)",
+			"description": "อธิบายว่าควรใช้โหมดนี้เมื่อใด ช่วยให้ Orchestrator เลือกโหมดที่เหมาะสมสำหรับงาน"
+		},
+		"tools": {
+			"label": "เครื่องมือที่ใช้ได้",
+			"description": "เลือกเครื่องมือที่โหมดนี้สามารถใช้ได้"
+		},
+		"customInstructions": {
+			"label": "คำแนะนำเฉพาะ (ไม่บังคับ)",
+			"description": "เพิ่มแนวทางพฤติกรรมเฉพาะสำหรับโหมดนี้"
+		},
+		"buttons": {
+			"cancel": "ยกเลิก",
+			"create": "สร้างโหมด"
+		},
+		"deleteMode": "ลบโหมด"
+	},
+	"allFiles": "ทุกไฟล์",
+	"deleteMode": {
+		"title": "ลบโหมด",
+		"message": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมด \"{{modeName}}\"?",
+		"rulesFolder": "โหมดนี้มีโฟลเดอร์กฎที่ {{folderPath}} ซึ่งจะถูกลบด้วย",
+		"descriptionNoRules": "คุณแน่ใจหรือไม่ว่าต้องการลบโหมดที่กำหนดเองนี้?",
+		"confirm": "ลบ",
+		"cancel": "ยกเลิก"
+	}
+}

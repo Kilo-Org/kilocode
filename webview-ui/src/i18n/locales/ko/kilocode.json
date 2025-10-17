@@ -1,0 +1,268 @@
+{
+	"welcome": {
+		"greeting": "Kilo Code에 오신 것을 환영합니다!",
+		"introText1": "Kilo Code는 무료 오픈소스 AI 코딩 에이전트입니다.",
+		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 및 450개 이상의 최신 AI 모델과 함께 작동합니다.",
+		"introText3": "무료 계정을 만들고 첫 충전 시 $20 보너스 크레딧을 받으세요.",
+		"ctaButton": "시작하기",
+		"manualModeButton": "내 API 키 사용하기",
+		"alreadySignedUp": "이미 가입하셨나요?",
+		"loginText": "여기에서 로그인"
+	},
+	"lowCreditWarning": {
+		"addCredit": "크레딧 추가",
+		"lowBalance": "Kilo Code 잔액이 부족합니다"
+	},
+	"pagination": {
+		"previous": "이전",
+		"next": "다음",
+		"page": "{{page}} / {{count}} 페이지"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}}의 알파 기간이 종료되었습니다! 계속하려면 다른 모델로 변경하세요.",
+		"notAllowedForTeam": "⚠️ 귀하의 조직에서는 {{model}} 모델 사용을 허용하지 않습니다. 계속하려면 다른 모델로 변경하세요.",
+		"modelUnavailable": "⚠️ {{model}} 모델을 사용할 수 없습니다. 계속하려면 다른 모델로 변경하세요.",
+		"continueWith": "{{model}}로 계속",
+		"continue": "계속"
+	},
+	"pricing": {
+		"costUnknown": "비용 알 수 없음",
+		"costUnknownDescription": "API 제공자가 비용 데이터를 제공하지 않았거나 요청이 취소되었습니다.",
+		"freeModelsDescription": "무료 모델에는 사용 제한이 있을 수 있습니다. 아래 링크를 사용하여 무료 모델 사용을 최적화하세요!",
+		"freeModelsLink": "무료 및 저비용 모델 옵션 알아보기"
+	},
+	"notifications": {
+		"toolRequest": "도구 요청 승인 대기 중",
+		"browserAction": "브라우저 작업 승인 대기 중",
+		"command": "명령 승인 대기 중"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP 서버"
+		},
+		"provider": {
+			"account": "Kilo Code 계정",
+			"apiKey": "Kilo Code API 키",
+			"login": "Kilo Code에 로그인",
+			"logout": "Kilo Code에서 로그아웃",
+			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
+			"providerRouting": {
+				"title": "공급자 라우팅",
+				"managedByOrganization": "공급자 라우팅 설정은 귀하의 조직에서 관리됩니다.",
+				"description": "Kilo Code는 모델에 가장 적합한 공급자에게 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자에게 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
+				"sorting": {
+					"default": "기본 공급자 정렬",
+					"price": "낮은 가격의 공급자 우선",
+					"throughput": "높은 처리량의 공급자 우선",
+					"latency": "낮은 지연 시간의 공급자 우선"
+				},
+				"dataCollection": {
+					"default": "데이터 정책 설정 없음",
+					"allowFree": "프롬프트 훈련 허용 (무료만)",
+					"allow": "프롬프트 훈련 허용",
+					"deny": "프롬프트 훈련 거부",
+					"zdr": "데이터 보존 없음"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "컨텍스트 창",
+			"providerBreakdown": "공급자 가격 및 기능 세부사항",
+			"averageKiloCodeCost": "이는 지난 주 동안 이 모델을 사용한 Kilo Code의 실제 평균 비용입니다. 프롬프트 캐시 활용으로 인해 표시된 가격보다 낮을 수 있습니다.",
+			"table": {
+				"provider": "공급자",
+				"context": "엔드포인트가 처리할 수 있는 토큰 수입니다 (입력 + 출력).",
+				"inputPrice": "프롬프트에 대한 백만 토큰당 비용입니다.",
+				"outputPrice": "완성에 대한 백만 토큰당 비용입니다.",
+				"cacheReadPrice": "캐시에서 읽기에 대한 백만 토큰당 비용입니다.",
+				"cacheWritePrice": "캐시에 쓰기에 대한 백만 토큰당 비용입니다."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "매우 큰 파일 읽기 허용",
+				"description": "활성화되면 Kilo Code는 컨텍스트 창을 오버플로할 가능성이 높더라도 매우 큰 파일이나 MCP 출력 읽기를 수행합니다 (콘텐츠 크기가 컨텍스트 창의 80% 이상)."
+			}
+		},
+		"systemNotifications": {
+			"label": "시스템 알림 활성화",
+			"description": "활성화되면 Kilo Code는 작업 완료나 오류와 같은 중요한 이벤트에 대한 시스템 알림을 보냅니다.",
+			"testButton": "알림 테스트",
+			"testTitle": "Kilo Code",
+			"testMessage": "이것은 Kilo Code의 테스트 알림입니다."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "터미널 명령어 생성기 제공자",
+				"apiConfigId": {
+					"description": "터미널 명령어 생성에 사용할 API 구성을 선택하세요. 기본 설정을 사용하려면 '현재 구성 사용'으로 두세요.",
+					"label": "API 구성",
+					"current": "현재 설정 사용"
+				}
+			}
+		}
+	},
+	"toolCallStyle": {
+		"title": "도구 호출 스타일",
+		"description": "시스템 프롬프트에서 도구 호출의 형식을 선택하세요. JSON은 현재 실험적이며 주로 개발에 기여하는 데 관심이 있는 사용자를 위한 것입니다."
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code가 대화를 요약하고자 합니다",
+			"condenseConversation": "대화 요약하기"
+		},
+		"seeNewChanges": "새 변경사항 보기",
+		"revertNewChanges": "새 변경사항 되돌리기",
+		"confirmRevertChanges": "변경사항 되돌리기 확인",
+		"cancelRevertChanges": "변경사항 되돌리기 취소"
+	},
+	"newTaskPreview": {
+		"task": "작업"
+	},
+	"profile": {
+		"title": "프로필",
+		"dashboard": "대시보드",
+		"logOut": "로그아웃",
+		"currentBalance": "현재 잔액",
+		"loading": "로딩 중...",
+		"organization": "조직",
+		"personal": "개인",
+		"shop": {
+			"title": "크레딧 구매",
+			"popular": "인기",
+			"credits": "크레딧",
+			"action": "지금 구매",
+			"viewAll": "모든 가격 옵션 보기"
+		}
+	},
+	"docs": "문서",
+	"rules": {
+		"tooltip": "Kilo Code 규칙 및 워크플로우 관리",
+		"ariaLabel": "Kilo Code 규칙",
+		"tabs": {
+			"rules": "규칙",
+			"workflows": "워크플로우"
+		},
+		"description": {
+			"rules": "규칙을 사용하면 Kilo Code가 모든 모드와 모든 프롬프트에서 따라야 할 지침을 제공할 수 있습니다. 이는 워크스페이스나 전역적으로 모든 대화에 컨텍스트와 기본 설정을 포함하는 지속적인 방법입니다.",
+			"workflows": "워크플로우는 대화를 위한 준비된 템플릿입니다. 워크플로우를 사용하면 자주 사용하는 프롬프트를 정의할 수 있으며, 서비스 배포나 PR 제출과 같은 반복적인 작업을 통해 Kilo Code를 안내하는 일련의 단계를 포함할 수 있습니다. 워크플로우를 호출하려면 다음과 같이 입력하세요",
+			"workflowsInChat": "채팅에서."
+		},
+		"sections": {
+			"globalRules": "전역 규칙",
+			"workspaceRules": "워크스페이스 규칙",
+			"globalWorkflows": "전역 워크플로우",
+			"workspaceWorkflows": "워크스페이스 워크플로우"
+		},
+		"validation": {
+			"invalidFileExtension": ".md, .txt 또는 확장자 없음만 허용됩니다"
+		},
+		"placeholders": {
+			"workflowName": "워크플로우-이름 (.md, .txt 또는 확장자 없음)",
+			"ruleName": "규칙-이름 (.md, .txt 또는 확장자 없음)"
+		},
+		"newFile": {
+			"newWorkflowFile": "새 워크플로우 파일...",
+			"newRuleFile": "새 규칙 파일..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "{{messageType}} (#{{messageNumber}}) 보기",
+			"messageTypes": {
+				"browser_action": "브라우저 작업",
+				"checkpoint_saved": "체크포인트 저장됨",
+				"browser_action_launch": "브라우저 실행",
+				"browser_action_result": "브라우저 작업 결과",
+				"command_output": "명령어 출력",
+				"command": "명령어 실행",
+				"condense_context": "컨텍스트 요약",
+				"followup": "후속 질문",
+				"error": "오류 메시지",
+				"completion_result": "완성 결과",
+				"mcp_server_response": "MCP 서버 응답",
+				"text": "AI 응답",
+				"tool": "도구 사용",
+				"unknown": "알 수 없는 메시지 유형",
+				"reasoning": "AI 추론",
+				"use_mcp_server": "MCP 서버 사용량",
+				"user": "사용자 피드백"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "취소",
+		"send": "보내기",
+		"restoreAndSend": "복원 및 보내기"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "처음이신가요?",
+		"suggestionText": "멋진 아이디어를 위해 <suggestionButton>여기를 클릭</suggestionButton>하세요. 그다음 <sendIcon />를 탭하고 제가 마법을 부리는 것을 보세요!",
+		"ideas": {
+			"idea1": "마우스 움직임에 반응하는 회전하고 빛나는 3D 구체를 만드세요. 앱이 브라우저에서 작동하도록 하세요.",
+			"idea2": "Python 소프트웨어 개발자를 위한 포트폴리오 웹사이트 만들기",
+			"idea3": "브라우저에서 금융 앱 모형을 만드세요. 그다음 작동하는지 테스트하세요",
+			"idea4": "현재 최고의 AI 비디오 생성 모델들을 포함한 디렉터리 웹사이트 만들기",
+			"idea5": "사용자 정의 스타일시트를 내보내고 실시간 미리보기를 보여주는 CSS 그라디언트 생성기 만들기",
+			"idea6": "마우스를 올렸을 때 동적 콘텐츠를 아름답게 보여주는 카드 생성하기",
+			"idea7": "마우스 제스처에 따라 움직이는 차분한 인터랙티브 별빛 만들기"
+		}
+	},
+	"ghost": {
+		"title": "Autocomplete",
+		"settings": {
+			"triggers": "트리거",
+			"keybindingDescription": "Autocomplete 기능은 명령으로 트리거할 수 있습니다. <DocsLink>키보드 단축키를 여기서</DocsLink> 구성할 수 있습니다.",
+			"enableAutoTrigger": {
+				"label": "Autocomplete 활성화",
+				"description": "활성화되면 타이핑을 멈췄을 때 Kilo Code가 자동으로 Autocomplete를 트리거합니다. 빠른 수정과 제안에 유용할 수 있습니다."
+			},
+			"autoTriggerDelay": {
+				"label": "자동 트리거 지연",
+				"description": "타이핑을 멈춘 후 Kilo Code가 Autocomplete를 트리거하기까지의 초 단위 지연. 지연이 짧을수록 제안이 빨라지지만 리소스를 더 많이 사용할 수 있습니다."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "빠른 작업 ({{keybinding}})",
+				"description": "빠른 변경만 필요하신가요? 코드를 선택하고(또는 하지 않고!) Cmd+I를 누르세요. 목표를 한국어로 설명하면(\"이 props로 React 컴포넌트 만들기\", \"이 함수에 에러 처리 추가\"), 에디터에서 바로 사용할 수 있는 여러 제안을 받을 수 있습니다. <DocsLink>단축키 보기</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "수동 자동완성({{keybinding}})",
+				"description": "빠른 수정, 완성 또는 리팩토링이 필요하신가요? Kilo가 주변 컨텍스트를 사용하여 즉각적인 개선사항을 제공하여 플로우를 유지합니다. <DocsLink>단축키 보기</DocsLink>"
+			},
+			"keybindingNotFound": "찾을 수 없음",
+			"noModelConfigured": "적합한 자동완성 모델을 찾을 수 없습니다. API 설정에서 제공자를 구성하세요.",
+			"model": "모델",
+			"provider": "제공자"
+		}
+	},
+	"virtualProvider": {
+		"title": "가상 할당량 대체 공급자 설정",
+		"description": "각각 고유한 할당량 제한이 있는 프로필 목록을 구성하세요. 한 제공자의 할당량 제한에 도달하면 남은 프로필이 없을 때까지 목록의 다음 프로필이 사용됩니다.",
+		"profileLabel": "프로필 {{number}}",
+		"primaryProfileLabel": "프로필 {{number}} (주요)",
+		"moveProfileUp": "프로필 위로 이동",
+		"moveProfileDown": "프로필을 아래로 이동",
+		"removeProfile": "프로필 삭제",
+		"selectProfilePlaceholder": "프로필 선택...",
+		"addProfile": "프로필 추가",
+		"noProfilesAvailable": "사용 가능한 프로필이 없습니다. 먼저 하나 이상의 비가상 공급자 프로필을 구성하십시오.",
+		"dangerZoneTitle": "위험 구역",
+		"dangerZoneDescription": "이러한 작업은 파괴적이며 되돌릴 수 없습니다.",
+		"clearUsageData": "사용 데이터 지우기",
+		"confirmClearTitle": "정말 확실합니까?",
+		"confirmClearDescription": "가상 공급자에 대해 저장된 모든 사용 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.",
+		"tokensLabel": "토큰",
+		"perHour": "시간당",
+		"perDay": "일일당",
+		"requestsLabel": "요청",
+		"perMinute": "분당"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "현재 모델은 이미지를 지원하지 않습니다.",
+		"maxImagesReached": "메시지당 최대 20개의 이미지. 더 추가하려면 일부 이미지를 제거하세요.",
+		"imagesRemovedNoSupport": "모델에서 지원되지 않는 이미지가 제거되었습니다."
+	},
+	"memoryWarning": {
+		"message": "메모리 사용량이 {{percentage}}%입니다. 충돌을 방지하려면 IDE를 재시작하세요."
+	}
+}

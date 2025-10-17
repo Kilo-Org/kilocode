@@ -1,0 +1,279 @@
+{
+	"extension": {
+		"name": "Kilo Code",
+		"description": "Trợ lý mã hóa AI nguồn mở để lập kế hoạch, xây dựng và sửa mã."
+	},
+	"number_format": {
+		"thousand_suffix": "k",
+		"million_suffix": "m",
+		"billion_suffix": "b"
+	},
+	"feedback": {
+		"title": "Phản hồi",
+		"description": "Chúng tôi rất muốn nghe phản hồi của bạn hoặc giúp bạn với bất kỳ vấn đề nào bạn đang gặp phải.",
+		"githubIssues": "Báo cáo vấn đề trên GitHub",
+		"githubDiscussions": "Tham gia thảo luận trên GitHub",
+		"discord": "Tham gia cộng đồng Discord của chúng tôi",
+		"customerSupport": "Hỗ trợ khách hàng"
+	},
+	"welcome": "Chào mừng, {{name}}! Bạn có {{count}} thông báo.",
+	"items": {
+		"zero": "Không có mục nào",
+		"one": "Một mục",
+		"other": "{{count}} mục"
+	},
+	"confirmation": {
+		"reset_state": "Bạn có chắc chắn muốn đặt lại tất cả trạng thái và lưu trữ bí mật trong tiện ích mở rộng không? Hành động này không thể hoàn tác.",
+		"delete_config_profile": "Bạn có chắc chắn muốn xóa hồ sơ cấu hình này không?",
+		"delete_custom_mode_with_rules": "Bạn có chắc chắn muốn xóa chế độ {scope} này không?\n\nThao tác này cũng sẽ xóa thư mục quy tắc liên quan tại:\n{rulesFolderPath}"
+	},
+	"errors": {
+		"invalid_data_uri": "Định dạng URI dữ liệu không hợp lệ",
+		"error_copying_image": "Lỗi khi sao chép hình ảnh: {{errorMessage}}",
+		"error_saving_image": "Lỗi khi lưu hình ảnh: {{errorMessage}}",
+		"error_opening_image": "Lỗi khi mở hình ảnh: {{error}}",
+		"could_not_open_file": "Không thể mở tệp: {{errorMessage}}",
+		"could_not_open_file_generic": "Không thể mở tệp!",
+		"checkpoint_timeout": "Đã hết thời gian khi cố gắng khôi phục điểm kiểm tra.",
+		"checkpoint_failed": "Không thể khôi phục điểm kiểm tra.",
+		"git_not_installed": "Yêu cầu Git cho tính năng điểm kiểm tra. Vui lòng cài đặt Git để bật điểm kiểm tra.",
+		"nested_git_repos_warning": "Điểm kiểm tra bị vô hiệu hóa vì phát hiện kho git lồng nhau tại: {{path}}. Để sử dụng điểm kiểm tra, vui lòng xóa hoặc di chuyển kho git lồng nhau này.",
+		"no_workspace": "Vui lòng mở thư mục dự án trước",
+		"update_support_prompt": "Không thể cập nhật lời nhắc hỗ trợ",
+		"reset_support_prompt": "Không thể đặt lại lời nhắc hỗ trợ",
+		"enhance_prompt": "Không thể nâng cao lời nhắc",
+		"get_system_prompt": "Không thể lấy lời nhắc hệ thống",
+		"search_commits": "Không thể tìm kiếm các commit",
+		"save_api_config": "Không thể lưu cấu hình API",
+		"create_api_config": "Không thể tạo cấu hình API",
+		"rename_api_config": "Không thể đổi tên cấu hình API",
+		"load_api_config": "Không thể tải cấu hình API",
+		"delete_api_config": "Không thể xóa cấu hình API",
+		"list_api_config": "Không thể lấy danh sách cấu hình API",
+		"update_server_timeout": "Không thể cập nhật thời gian chờ máy chủ",
+		"hmr_not_running": "Máy chủ phát triển cục bộ không chạy, HMR sẽ không hoạt động. Vui lòng chạy 'npm run dev' trước khi khởi chạy tiện ích mở rộng để bật HMR.",
+		"retrieve_current_mode": "Lỗi không thể truy xuất chế độ hiện tại từ trạng thái.",
+		"failed_delete_repo": "Không thể xóa kho lưu trữ hoặc nhánh liên quan: {{error}}",
+		"failed_remove_directory": "Không thể xóa thư mục nhiệm vụ: {{error}}",
+		"custom_storage_path_unusable": "Đường dẫn lưu trữ tùy chỉnh \"{{path}}\" không thể sử dụng được, sẽ sử dụng đường dẫn mặc định",
+		"cannot_access_path": "Không thể truy cập đường dẫn {{path}}: {{error}}",
+		"settings_import_failed": "Nhập cài đặt thất bại: {{error}}.",
+		"mistake_limit_guidance": "Điều này có thể cho thấy sự thất bại trong quá trình suy nghĩ của mô hình hoặc không thể sử dụng công cụ đúng cách, có thể được giảm thiểu bằng hướng dẫn của người dùng (ví dụ: \"Hãy thử chia nhỏ nhiệm vụ thành các bước nhỏ hơn\").",
+		"violated_organization_allowlist": "Không thể chạy tác vụ: hồ sơ hiện tại không tương thích với cài đặt của tổ chức của bạn",
+		"condense_failed": "Không thể nén ngữ cảnh",
+		"condense_not_enough_messages": "Không đủ tin nhắn để nén ngữ cảnh của {{prevContextTokens}} token. Cần ít nhất {{minimumMessageCount}} tin nhắn, nhưng chỉ có {{messageCount}} tin nhắn khả dụng.",
+		"condensed_recently": "Ngữ cảnh đã được nén gần đây; bỏ qua lần thử này",
+		"condense_handler_invalid": "Trình xử lý API để nén ngữ cảnh không hợp lệ",
+		"condense_context_grew": "Kích thước ngữ cảnh tăng từ {{prevContextTokens}} lên {{newContextTokens}} trong quá trình nén; bỏ qua lần thử này",
+		"url_timeout": "Trang web mất quá nhiều thời gian để tải (timeout). Điều này có thể do kết nối chậm, trang web nặng hoặc tạm thời không khả dụng. Bạn có thể thử lại sau hoặc kiểm tra xem URL có đúng không.",
+		"url_not_found": "Không thể tìm thấy địa chỉ trang web. Vui lòng kiểm tra URL có đúng không và thử lại.",
+		"no_internet": "Không có kết nối internet. Vui lòng kiểm tra kết nối mạng và thử lại.",
+		"url_forbidden": "Truy cập vào trang web này bị cấm. Trang có thể chặn truy cập tự động hoặc yêu cầu xác thực.",
+		"url_page_not_found": "Không tìm thấy trang. Vui lòng kiểm tra URL có đúng không.",
+		"url_request_aborted": "Yêu cầu lấy URL đã bị hủy. Điều này có thể xảy ra nếu trang web chặn truy cập tự động, yêu cầu xác thực hoặc có vấn đề về mạng. Vui lòng thử lại hoặc kiểm tra xem URL có thể truy cập được trong trình duyệt thông thường không.",
+		"url_fetch_failed": "Lỗi lấy nội dung URL: {{error}}",
+		"url_fetch_error_with_url": "Lỗi lấy nội dung cho {{url}}: {{error}}",
+		"command_timeout": "Thực thi lệnh đã hết thời gian chờ sau {{seconds}} giây",
+		"share_task_failed": "Không thể chia sẻ nhiệm vụ",
+		"share_no_active_task": "Không có nhiệm vụ hoạt động để chia sẻ",
+		"share_auth_required": "Cần xác thực. Vui lòng đăng nhập để chia sẻ nhiệm vụ.",
+		"share_not_enabled": "Chia sẻ nhiệm vụ không được bật cho tổ chức này.",
+		"share_task_not_found": "Không tìm thấy nhiệm vụ hoặc truy cập bị từ chối.",
+		"mode_import_failed": "Nhập chế độ thất bại: {{error}}",
+		"delete_rules_folder_failed": "Không thể xóa thư mục quy tắc: {{rulesFolderPath}}. Lỗi: {{error}}",
+		"command_not_found": "Không tìm thấy lệnh '{{name}}'",
+		"open_command_file": "Không thể mở tệp lệnh",
+		"delete_command": "Không thể xóa lệnh",
+		"no_workspace_for_project_command": "Không tìm thấy thư mục workspace cho lệnh dự án",
+		"command_already_exists": "Lệnh \"{{commandName}}\" đã tồn tại",
+		"create_command_failed": "Không thể tạo lệnh",
+		"command_template_content": "---\ndescription: \"Mô tả ngắn gọn về chức năng của lệnh này\"\n---\n\nĐây là một lệnh slash mới. Chỉnh sửa tệp này để tùy chỉnh hành vi của lệnh.",
+		"claudeCode": {
+			"processExited": "Tiến trình Claude Code thoát với mã {{exitCode}}.",
+			"errorOutput": "Đầu ra lỗi: {{output}}",
+			"processExitedWithError": "Tiến trình Claude Code thoát với mã {{exitCode}}. Đầu ra lỗi: {{output}}",
+			"stoppedWithReason": "Claude Code dừng lại vì lý do: {{reason}}",
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+		},
+		"geminiCli": {
+			"oauthLoadFailed": "Không thể tải thông tin xác thực OAuth. Vui lòng xác thực trước: {{error}}",
+			"tokenRefreshFailed": "Không thể làm mới token OAuth: {{error}}",
+			"onboardingTimeout": "Thao tác onboarding đã hết thời gian chờ sau 60 giây. Vui lòng thử lại sau.",
+			"projectDiscoveryFailed": "Không thể khám phá ID dự án. Đảm bảo bạn đã xác thực bằng 'gemini auth'.",
+			"rateLimitExceeded": "Đã vượt quá giới hạn tốc độ. Đã đạt đến giới hạn của gói miễn phí.",
+			"badRequest": "Yêu cầu không hợp lệ: {{details}}",
+			"apiError": "Lỗi API Gemini CLI: {{error}}",
+			"completionError": "Lỗi hoàn thành Gemini CLI: {{error}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "Không có nhiệm vụ hoạt động để xóa tin nhắn",
+			"invalid_timestamp_for_deletion": "Dấu thời gian tin nhắn không hợp lệ để xóa",
+			"cannot_delete_missing_timestamp": "Không thể xóa tin nhắn: thiếu dấu thời gian",
+			"cannot_delete_invalid_timestamp": "Không thể xóa tin nhắn: dấu thời gian không hợp lệ",
+			"message_not_found": "Không tìm thấy tin nhắn có dấu thời gian {{messageTs}}",
+			"error_deleting_message": "Lỗi xóa tin nhắn: {{error}}",
+			"error_editing_message": "Lỗi chỉnh sửa tin nhắn: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Lỗi luồng ngữ cảnh tạo Gemini: {{error}}",
+			"generate_complete_prompt": "Lỗi hoàn thành Gemini: {{error}}",
+			"sources": "Nguồn:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Xác thực API Cerebras thất bại. Vui lòng kiểm tra khóa API của bạn có hợp lệ và chưa hết hạn.",
+			"accessForbidden": "Truy cập API Cerebras bị từ chối. Khóa API của bạn có thể không có quyền truy cập vào mô hình hoặc tính năng được yêu cầu.",
+			"rateLimitExceeded": "Vượt quá giới hạn tốc độ API Cerebras. Vui lòng chờ trước khi thực hiện yêu cầu khác.",
+			"serverError": "Lỗi máy chủ API Cerebras ({{status}}). Vui lòng thử lại sau.",
+			"genericError": "Lỗi API Cerebras ({{status}}): {{message}}",
+			"noResponseBody": "Lỗi API Cerebras: Không có nội dung phản hồi",
+			"completionError": "Lỗi hoàn thành Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Không thể tải thông tin xác thực OAuth. Vui lòng xác thực trước: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Nhà cung cấp Roo yêu cầu xác thực đám mây. Vui lòng đăng nhập vào Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "Khóa API chứa ký tự không hợp lệ."
+		},
+		"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
+		"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
+		"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
+		"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
+		"manual_url_auth_error": "Xác thực thất bại"
+	},
+	"warnings": {
+		"no_terminal_content": "Không có nội dung terminal được chọn",
+		"missing_task_files": "Các tệp của nhiệm vụ này bị thiếu. Bạn có muốn xóa nó khỏi danh sách nhiệm vụ không?",
+		"auto_import_failed": "Không thể tự động nhập cài đặt Kilo Code: {{error}}"
+	},
+	"info": {
+		"no_changes": "Không tìm thấy thay đổi nào.",
+		"clipboard_copy": "Lời nhắc hệ thống đã được sao chép thành công vào clipboard",
+		"history_cleanup": "Đã dọn dẹp {{count}} nhiệm vụ có tệp bị thiếu khỏi lịch sử.",
+		"custom_storage_path_set": "Đã thiết lập đường dẫn lưu trữ tùy chỉnh: {{path}}",
+		"default_storage_path": "Đã quay lại sử dụng đường dẫn lưu trữ mặc định",
+		"settings_imported": "Cài đặt đã được nhập thành công.",
+		"auto_import_success": "Cài đặt Kilo Code đã được tự động nhập từ {{filename}}",
+		"share_link_copied": "Liên kết chia sẻ đã được sao chép vào clipboard",
+		"image_copied_to_clipboard": "URI dữ liệu hình ảnh đã được sao chép vào clipboard",
+		"image_saved": "Hình ảnh đã được lưu vào {{path}}",
+		"organization_share_link_copied": "Liên kết chia sẻ tổ chức đã được sao chép vào clipboard!",
+		"public_share_link_copied": "Liên kết chia sẻ công khai đã được sao chép vào clipboard!",
+		"mode_exported": "Chế độ '{{mode}}' đã được xuất thành công",
+		"mode_imported": "Chế độ đã được nhập thành công"
+	},
+	"answers": {
+		"yes": "Có",
+		"no": "Không",
+		"remove": "Xóa",
+		"keep": "Giữ"
+	},
+	"buttons": {
+		"save": "Lưu",
+		"edit": "Chỉnh sửa",
+		"learn_more": "Tìm hiểu thêm"
+	},
+	"tasks": {
+		"canceled": "Lỗi nhiệm vụ: Nó đã bị dừng và hủy bởi người dùng.",
+		"deleted": "Nhiệm vụ thất bại: Nó đã bị dừng và xóa bởi người dùng.",
+		"incomplete": "Nhiệm vụ #{{taskNumber}} (Chưa hoàn thành)",
+		"no_messages": "Nhiệm vụ #{{taskNumber}} (Không có tin nhắn)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Phản hồi bị gián đoạn bởi người dùng",
+		"responseInterruptedByApiError": "Phản hồi bị gián đoạn bởi lỗi API"
+	},
+	"storage": {
+		"prompt_custom_path": "Nhập đường dẫn lưu trữ tùy chỉnh cho lịch sử hội thoại, để trống để sử dụng vị trí mặc định",
+		"path_placeholder": "D:\\KiloCodeStorage",
+		"enter_absolute_path": "Vui lòng nhập đường dẫn tuyệt đối (ví dụ: D:\\KiloCodeStorage hoặc /home/user/storage)",
+		"enter_valid_path": "Vui lòng nhập đường dẫn hợp lệ"
+	},
+	"input": {
+		"task_prompt": "Bạn muốn Kilo Code làm gì?",
+		"task_placeholder": "Nhập nhiệm vụ của bạn ở đây"
+	},
+	"settings": {
+		"providers": {
+			"groqApiKey": "Khóa API Groq",
+			"getGroqApiKey": "Lấy khóa API Groq",
+			"claudeCode": {
+				"pathLabel": "Đường dẫn Claude Code",
+				"description": "Đường dẫn tùy chọn đến CLI Claude Code của bạn. Mặc định là 'claude' nếu không được đặt.",
+				"placeholder": "Mặc định: claude"
+			}
+		}
+	},
+	"customModes": {
+		"errors": {
+			"yamlParseError": "YAML không hợp lệ trong tệp .kilocodemodes tại dòng {{line}}. Vui lòng kiểm tra:\n• Thụt lề đúng (dùng dấu cách, không dùng tab)\n• Dấu ngoặc kép và ngoặc đơn khớp nhau\n• Cú pháp YAML hợp lệ",
+			"schemaValidationError": "Định dạng chế độ tùy chỉnh không hợp lệ trong .kilocodemodes:\n{{issues}}",
+			"invalidFormat": "Định dạng chế độ tùy chỉnh không hợp lệ. Vui lòng đảm bảo cài đặt của bạn tuân theo định dạng YAML đúng.",
+			"updateFailed": "Cập nhật chế độ tùy chỉnh thất bại: {{error}}",
+			"deleteFailed": "Xóa chế độ tùy chỉnh thất bại: {{error}}",
+			"resetFailed": "Đặt lại chế độ tùy chỉnh thất bại: {{error}}",
+			"modeNotFound": "Lỗi ghi: Không tìm thấy chế độ",
+			"noWorkspaceForProject": "Không tìm thấy thư mục workspace cho chế độ dành riêng cho dự án",
+			"rulesCleanupFailed": "Đã xóa chế độ thành công, nhưng không thể xóa thư mục quy tắc tại {{rulesFolderPath}}. Bạn có thể cần xóa thủ công."
+		},
+		"scope": {
+			"project": "dự án",
+			"global": "toàn cầu"
+		}
+	},
+	"marketplace": {
+		"mode": {
+			"rulesCleanupFailed": "Đã xóa chế độ thành công, nhưng không thể xóa thư mục quy tắc tại {{rulesFolderPath}}. Bạn có thể cần xóa thủ công."
+		}
+	},
+	"mdm": {
+		"errors": {
+			"cloud_auth_required": "Tổ chức của bạn yêu cầu xác thực Roo Code Cloud. Vui lòng đăng nhập để tiếp tục.",
+			"organization_mismatch": "Bạn phải được xác thực bằng tài khoản Roo Code Cloud của tổ chức.",
+			"manual_url_empty": "Vui lòng nhập URL callback hợp lệ",
+			"manual_url_no_query": "URL callback không hợp lệ: thiếu tham số truy vấn",
+			"manual_url_missing_params": "URL callback không hợp lệ: thiếu tham số bắt buộc (code và state)",
+			"manual_url_auth_failed": "Xác thực URL thủ công thất bại",
+			"manual_url_auth_error": "Xác thực thất bại",
+			"verification_failed": "Không thể xác minh xác thực tổ chức."
+		},
+		"info": {
+			"organization_requires_auth": "Tổ chức của bạn yêu cầu xác thực."
+		}
+	},
+	"prompts": {
+		"deleteMode": {
+			"title": "Xóa chế độ tùy chỉnh",
+			"description": "Bạn có chắc chắn muốn xóa chế độ {{scope}} này không? Thao tác này cũng θα xóa thư mục quy tắc liên quan tại {{rulesFolderPath}}",
+			"translations": {
+				"title": "Xóa chế độ",
+				"description": "Bạn có chắc chắn muốn xóa chế độ này không?",
+				"deleteMessage": "Chỉ chế độ này",
+				"rulesFolderMessage": "Thư mục quy tắc cũng sẽ bị xóa nếu tồn tại.",
+				"deleteConfirmation": "Chắc chắn xóa chế độ này?"
+			},
+			"descriptionNoRules": "Bạn có chắc chắn muốn xóa chế độ tùy chỉnh này không?",
+			"confirm": "Xóa"
+		}
+	},
+	"commands": {
+		"preventCompletionWithOpenTodos": {
+			"description": "Ngăn chặn hoàn thành nhiệm vụ khi có các todo chưa hoàn thành trong danh sách todo"
+		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Lỗi",
+		"reportText": "Vui lòng báo cáo lỗi này để giúp chúng tôi cải thiện ứng dụng.",
+		"githubText": "Báo cáo trên GitHub",
+		"copyInstructions": "Sao chép chi tiết lỗi bên dưới:",
+		"errorStack": "Stack lỗi",
+		"componentStack": "Stack thành phần"
+	}
+}

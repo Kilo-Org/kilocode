@@ -1,0 +1,27 @@
+{
+	"greeting": "Hoi, ik ben Kilo Code!",
+	"introduction": "<strong>Kilo Code is de toonaangevende autonome programmeeragent.</strong> Maak je klaar om te ontwerpen, coderen, debuggen en je productiviteit te verhogen als nooit tevoren. Om door te gaan, heeft Kilo Code een API-sleutel nodig.",
+	"notice": "Om te beginnen heeft deze extensie een API-provider nodig.",
+	"start": "Aan de slag!",
+	"routers": {
+		"requesty": {
+			"description": "Jouw geoptimaliseerde LLM-router",
+			"incentive": "$1 gratis tegoed"
+		},
+		"openrouter": {
+			"description": "Een uniforme interface voor LLM's"
+		},
+		"roo": {
+			"description": "De beste gratis modellen om mee te beginnen",
+			"incentive": "Probeer Roo gratis uit"
+		}
+	},
+	"chooseProvider": "Om zijn magie te doen, heeft Kilo Code een API-sleutel nodig.",
+	"startRouter": "We raden aan om een LLM-router te gebruiken:",
+	"startCustom": "Of je kunt je eigen API-sleutel gebruiken:",
+	"telemetry": {
+		"helpImprove": "Help Kilo Code verbeteren",
+		"helpImproveMessage": "Kilo Code verzamelt fout- en gebruiksgegevens om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt geen code, prompts of persoonlijke gegevens. Je kunt dit uitschakelen in de <settingsLink>instellingen</settingsLink>."
+	},
+	"importSettings": "Instellingen importeren"
+}

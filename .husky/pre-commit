@@ -1,0 +1,27 @@
+branch="$(git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "main" ]; then
+  echo "You can't commit directly to main - please check out a branch."
+  exit 1
+fi
+
+# Detect if running on Windows and use pnpm.cmd, otherwise use pnpm.
+if [ "$OS" = "Windows_NT" ]; then
+  pnpm_cmd="pnpm.cmd"
+else
+  if command -v pnpm >/dev/null 2>&1; then
+    pnpm_cmd="pnpm"
+  else
+    pnpm_cmd="npx pnpm"
+  fi
+fi
+
+# Detect if running on Windows and use npx.cmd, otherwise use npx.
+if [ "$OS" = "Windows_NT" ]; then
+  npx_cmd="npx.cmd"
+else
+  npx_cmd="npx"
+fi
+
+$npx_cmd lint-staged
+$pnpm_cmd lint

@@ -1,0 +1,69 @@
+{
+	"type-group": {
+		"modes": "Režimy",
+		"mcps": "MCP servery",
+		"match": "shoda"
+	},
+	"item-card": {
+		"type-mode": "Režim",
+		"type-mcp": "MCP server",
+		"type-other": "Jiné",
+		"by-author": "od {{author}}",
+		"authors-profile": "Profil autora",
+		"remove-tag-filter": "Odstranit filtr štítku: {{tag}}",
+		"filter-by-tag": "Filtrovat podle štítku: {{tag}}",
+		"component-details": "Podrobnosti komponenty",
+		"view": "Zobrazit",
+		"source": "Zdroj"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "Hledat na tržišti..."
+		},
+		"type": {
+			"label": "Typ",
+			"all": "Všechny typy",
+			"mode": "Režim",
+			"mcpServer": "MCP server"
+		},
+		"sort": {
+			"label": "Seřadit podle",
+			"name": "Názvu",
+			"lastUpdated": "Poslední aktualizace"
+		},
+		"tags": {
+			"label": "Štítky",
+			"clear": "Vymazat štítky",
+			"placeholder": "Hledat štítky...",
+			"noResults": "Žádné štítky nenalezeny.",
+			"selected": "Zobrazeny položky s jakýmkoli z vybraných štítků"
+		},
+		"installed": {
+			"label": "Filtrovat podle stavu",
+			"all": "Všechny položky",
+			"installed": "Nainstalováno",
+			"notInstalled": "Nenainstalováno"
+		},
+		"title": "Tržiště"
+	},
+	"done": "Hotovo",
+	"tabs": {
+		"installed": "Nainstalováno",
+		"browse": "Procházet",
+		"settings": "Nastavení"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Nebyly nalezeny žádné položky tržiště.",
+			"emptyHint": "Zkus upravit své filtry nebo vyhledávací termíny"
+		}
+	},
+	"installation": {
+		"installing": "Instalace položky: \"{{itemName}}\"",
+		"installSuccess": "\"{{itemName}}\" úspěšně nainstalováno",
+		"installError": "Instalace \"{{itemName}}\" selhala: {{errorMessage}}",
+		"removing": "Odstraňování položky: \"{{itemName}}\"",
+		"removeSuccess": "\"{{itemName}}\" úspěšně odstraněno",
+		"removeError": "Odstranění \"{{itemName}}\" selhalo: {{errorMessage}}"
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"readFile": {
+		"linesRange": " (第 {{start}}-{{end}} 行)",
+		"definitionsOnly": " (僅定義)",
+		"maxLines": " (最多 {{max}} 行)",
+		"imageTooLarge": "圖片檔案過大 ({{size}} MB)。允許的最大大小為 {{max}} MB。",
+		"imageWithSize": "圖片檔案 ({{size}} KB)"
+	},
+	"toolRepetitionLimitReached": "模型似乎陷入循環，反覆嘗試同一操作 ({{toolName}})。這可能表明目前策略存在問題。請考慮重新描述工作、提供更具體的指示或引導其嘗試不同的方法。",
+	"codebaseSearch": {
+		"approval": "正在搜尋程式碼庫中的「{{query}}」..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "由於政策限制，無法建立新工作。"
+		}
+	}
+}

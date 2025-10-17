@@ -1,0 +1,28 @@
+{
+	"extends": "@roo-code/config-typescript/base.json",
+	"compilerOptions": {
+		"module": "ESNext",
+		"moduleResolution": "Bundler",
+		"target": "ES2022",
+		"lib": ["ES2022", "ESNext.Disposable", "DOM"],
+		"sourceMap": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"useUnknownInCatchVariables": false,
+		"noUncheckedIndexedAccess": false,
+		"types": ["node", "@playwright/test"],
+		"declaration": false,
+		"declarationMap": false,
+		"noEmit": true
+	},
+	"include": [
+		"tests/**/*",
+		"playwright.config.ts",
+		"playwright.globalSetup.ts",
+		"types/**/*",
+		"helpers/**/*",
+		"scripts/theme-extraction-script.test.ts"
+	],
+	"exclude": ["node_modules", "test-results", "tests/**/__tests__/**/*"]
+}

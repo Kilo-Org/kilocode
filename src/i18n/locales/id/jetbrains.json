@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Lingkungan Node.js tidak ada",
+			"message": "Lingkungan Node.js tidak terdeteksi, harap instal Node.js dan coba lagi. Versi yang disarankan: {{minVersion}} atau lebih tinggi."
+		},
+		"nodejsVersionLow": {
+			"title": "Versi Node.js terlalu rendah",
+			"message": "Versi Node.js saat ini ({{nodePath}}) adalah {{nodeVersion}}, harap perbarui ke {{minVersion}} atau lebih tinggi untuk kompatibilitas yang lebih baik."
+		}
+	},
+	"dialog": {
+		"cancel": "Batal"
+	},
+	"ui": {
+		"initializing": "Kilo Code sedang menginisialisasi...",
+		"systemInformation": "Informasi Sistem"
+	}
+}

@@ -1,0 +1,4 @@
+function handleSearch(query) {
+  // TODO: Add debounce to prevent excessive API calls
+  searchAPI(query);
+}

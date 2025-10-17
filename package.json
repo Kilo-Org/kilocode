@@ -1,0 +1,81 @@
+{
+	"name": "kilo-code",
+	"packageManager": "pnpm@10.8.1",
+	"engines": {
+		"node": "20.19.2"
+	},
+	"scripts": {
+		"preinstall": "node scripts/bootstrap.mjs",
+		"prepare": "husky",
+		"install": "node scripts/bootstrap.mjs",
+		"install:all": "node scripts/bootstrap.mjs",
+		"lint": "turbo lint --log-order grouped --output-logs new-only",
+		"check-types": "turbo check-types --log-order grouped --output-logs new-only",
+		"test": "turbo test --log-order grouped --output-logs new-only",
+		"format": "turbo format --log-order grouped --output-logs new-only",
+		"build": "pnpm vsix",
+		"bundle": "turbo bundle --log-order grouped --output-logs new-only",
+		"bundle:nightly": "turbo bundle:nightly --log-order grouped --output-logs new-only",
+		"vsix:production": "turbo vsix --log-order grouped --output-logs new-only --force",
+		"vsix": "turbo vsix --log-order grouped --output-logs new-only",
+		"vsix:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
+		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
+		"install:vsix": "pnpm install --frozen-lockfile && pnpm clean && pnpm vsix && node scripts/install-vsix.js",
+		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md . && pnpm --filter @kilocode/cli changeset:version",
+		"knip": "knip --include files",
+		"update-contributors": "node scripts/update-contributors.js",
+		"evals": "dotenvx run -f packages/evals/.env.development packages/evals/.env.local -- docker compose -f packages/evals/docker-compose.yml --profile server --profile runner up --build --scale runner=0",
+		"playwright": "turbo playwright",
+		"npm:publish:types": "pnpm --filter @roo-code/types npm:publish",
+		"link-workspace-packages": "tsx scripts/link-packages.ts",
+		"unlink-workspace-packages": "tsx scripts/link-packages.ts --unlink",
+		"jetbrains:bundle": "turbo jetbrains:bundle",
+		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
+		"jetbrains:build": "turbo jetbrains:build",
+		"jetbrains:run": "turbo jetbrains:run",
+		"cli:build": "turbo run cli:build",
+		"cli:bundle": "turbo run cli:bundle",
+		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
+		"cli:run": "pnpm --filter @kilocode/cli run start",
+		"docs:start": "pnpm --filter kilocode-docs start",
+		"docs:build": "pnpm --filter kilocode-docs build"
+	},
+	"devDependencies": {
+		"@changesets/changelog-github": "^0.5.1",
+		"@changesets/cli": "^2.27.10",
+		"@dotenvx/dotenvx": "^1.34.0",
+		"@roo-code/config-typescript": "workspace:^",
+		"@types/glob": "^9.0.0",
+		"@types/node": "^24.1.0",
+		"@vscode/vsce": "3.3.2",
+		"esbuild": "^0.25.0",
+		"eslint": "^9.27.0",
+		"glob": "^11.0.3",
+		"husky": "^9.1.7",
+		"knip": "^5.44.4",
+		"lint-staged": "^16.0.0",
+		"mkdirp": "^3.0.1",
+		"only-allow": "^1.2.1",
+		"ovsx": "0.10.4",
+		"prettier": "^3.4.2",
+		"rimraf": "^6.0.1",
+		"tsx": "^4.19.3",
+		"turbo": "^2.5.6",
+		"typescript": "^5.4.5"
+	},
+	"lint-staged": {
+		"*.{js,jsx,ts,tsx,json,css,md}": [
+			"prettier --write"
+		]
+	},
+	"pnpm": {
+		"overrides": {
+			"tar-fs": ">=2.1.3",
+			"esbuild": ">=0.25.0",
+			"brace-expansion": ">=2.0.2",
+			"form-data": ">=4.0.4",
+			"bluebird": ">=3.7.2",
+			"type-fest": "2.19.0"
+		}
+	}
+}

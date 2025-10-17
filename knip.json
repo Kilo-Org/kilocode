@@ -1,0 +1,26 @@
+{
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"ignore": [
+		"**/__tests__/**",
+		"apps/vscode-e2e/**",
+		"src/extension/api.ts",
+		"src/activate/**",
+		"src/workers/countTokens.ts",
+		"src/extension.ts",
+		"scripts/**",
+		"apps/web-roo-code/next-sitemap.config.cjs"
+	],
+	"workspaces": {
+		"src": {
+			"entry": ["extension.ts"],
+			"project": ["**/*.ts"]
+		},
+		"webview-ui": {
+			"entry": ["src/index.tsx"],
+			"project": ["src/**/*.{ts,tsx}", "../src/shared/*.ts"]
+		},
+		"packages/{build,cloud,evals,ipc,telemetry,types}": {
+			"project": ["src/**/*.ts"]
+		}
+	}
+}

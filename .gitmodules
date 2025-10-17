@@ -1,0 +1,4 @@
+[submodule "deps/vscode"]
+	path = deps/vscode
+	url = https://github.com/microsoft/vscode.git
+	ignore = dirty

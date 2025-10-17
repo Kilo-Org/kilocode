@@ -1,0 +1,69 @@
+{
+	"type-group": {
+		"modes": "Режими",
+		"mcps": "MCP сервери",
+		"match": "збіг"
+	},
+	"item-card": {
+		"type-mode": "Режим",
+		"type-mcp": "MCP сервер",
+		"type-other": "Інше",
+		"by-author": "від {{author}}",
+		"authors-profile": "Профіль автора",
+		"remove-tag-filter": "Видалити фільтр тегу: {{tag}}",
+		"filter-by-tag": "Фільтрувати за тегом: {{tag}}",
+		"component-details": "Деталі компонента",
+		"view": "Переглянути",
+		"source": "Джерело"
+	},
+	"filters": {
+		"search": {
+			"placeholder": "Пошук на маркетплейсі..."
+		},
+		"type": {
+			"label": "Тип",
+			"all": "Всі типи",
+			"mode": "Режим",
+			"mcpServer": "MCP сервер"
+		},
+		"sort": {
+			"label": "Сортувати за",
+			"name": "Назвою",
+			"lastUpdated": "Останнім оновленням"
+		},
+		"tags": {
+			"label": "Теги",
+			"clear": "Очистити теги",
+			"placeholder": "Пошук тегів...",
+			"noResults": "Теги не знайдено.",
+			"selected": "Показано елементи з будь-яким з вибраних тегів"
+		},
+		"installed": {
+			"label": "Фільтрувати за статусом",
+			"all": "Всі елементи",
+			"installed": "Встановлено",
+			"notInstalled": "Не встановлено"
+		},
+		"title": "Маркетплейс"
+	},
+	"done": "Готово",
+	"tabs": {
+		"installed": "Встановлено",
+		"browse": "Переглянути",
+		"settings": "Налаштування"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Не знайдено елементів маркетплейсу.",
+			"emptyHint": "Спробуй налаштувати фільтри або пошукові терміни"
+		}
+	},
+	"installation": {
+		"installing": "Встановлення елемента: \"{{itemName}}\"",
+		"installSuccess": "\"{{itemName}}\" успішно встановлено",
+		"installError": "Не вдалося встановити \"{{itemName}}\": {{errorMessage}}",
+		"removing": "Видалення елемента: \"{{itemName}}\"",
+		"removeSuccess": "\"{{itemName}}\" успішно видалено",
+		"removeError": "Не вдалося видалити \"{{itemName}}\": {{errorMessage}}"
+	}
+}

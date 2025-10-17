@@ -1,0 +1,5 @@
+# Description: Should sanitize user input to prevent XSS attacks
+function renderUserComment(comment) {
+  // TODO: Sanitize input to prevent XSS attacks<<<CURSOR>>>
+  document.getElementById('comments').innerHTML = comment;
+}

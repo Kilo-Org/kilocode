@@ -1,0 +1,268 @@
+{
+	"welcome": {
+		"greeting": "Bienvenue dans Kilo Code !",
+		"introText1": "Kilo Code est un agent de codage IA gratuit et open source.",
+		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, et plus de 450 autres.",
+		"introText3": "Créez un compte gratuit et obtenez 20 $ de crédits bonus lors de votre première recharge.",
+		"ctaButton": "Commencer",
+		"manualModeButton": "Utilisez votre propre clé API",
+		"alreadySignedUp": "Déjà inscrit ?",
+		"loginText": "Connectez-vous ici"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Ajouter du crédit",
+		"lowBalance": "Votre solde Kilo Code est bas"
+	},
+	"pagination": {
+		"previous": "Précédent",
+		"next": "Suivant",
+		"page": "Page {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 La période alpha pour {{model}} est terminée ! Changez vers un modèle différent pour continuer.",
+		"notAllowedForTeam": "⚠️ Votre organisation n'autorise pas l'utilisation du modèle {{model}}. Changez vers un modèle différent pour continuer.",
+		"modelUnavailable": "⚠️ Le modèle {{model}} n'est pas disponible. Changez vers un modèle différent pour continuer.",
+		"continueWith": "Continuer avec {{model}}",
+		"continue": "Continuer"
+	},
+	"pricing": {
+		"costUnknown": "coût inconnu",
+		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
+		"freeModelsDescription": "Les modèles gratuits peuvent avoir des limites de débit. Utilisez le lien ci-dessous pour optimiser votre utilisation des modèles gratuits !",
+		"freeModelsLink": "Découvrir les options de modèles gratuits et économiques"
+	},
+	"notifications": {
+		"toolRequest": "Demande d'outil en attente d'approbation",
+		"browserAction": "Action du navigateur en attente d'approbation",
+		"command": "Commande en attente d'approbation"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "Serveurs MCP"
+		},
+		"provider": {
+			"account": "Compte Kilo Code",
+			"apiKey": "Clé API Kilo Code",
+			"login": "Se connecter à Kilo Code",
+			"logout": "Se déconnecter de Kilo Code",
+			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
+			"providerRouting": {
+				"title": "Routage des fournisseurs",
+				"managedByOrganization": "Les paramètres de routage des fournisseurs sont gérés par votre organisation.",
+				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
+				"sorting": {
+					"default": "Tri des fournisseurs par défaut",
+					"price": "Préférer les fournisseurs avec un prix plus bas",
+					"throughput": "Préférer les fournisseurs avec un débit plus élevé",
+					"latency": "Préférer les fournisseurs avec une latence plus faible"
+				},
+				"dataCollection": {
+					"default": "Aucune politique de données définie",
+					"allowFree": "Autoriser l'entraînement des prompts (gratuit uniquement)",
+					"allow": "Autoriser l'entraînement des prompts",
+					"deny": "Refuser l'entraînement des prompts",
+					"zdr": "Rétention zéro des données"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Fenêtre de contexte",
+			"providerBreakdown": "Répartition des prix et capacités par fournisseur",
+			"averageKiloCodeCost": "Il s'agit de la dépense réelle moyenne pour Kilo Code utilisant ce modèle au cours de la semaine dernière. Elle peut être inférieure au prix affiché en raison de l'utilisation du cache de prompts.",
+			"table": {
+				"provider": "Fournisseur",
+				"context": "Le point de terminaison peut traiter ce nombre de tokens (entrée + sortie).",
+				"inputPrice": "Coût par million de tokens pour le prompt.",
+				"outputPrice": "Coût par million de tokens pour la complétion.",
+				"cacheReadPrice": "Coût par million de tokens pour lire depuis le cache.",
+				"cacheWritePrice": "Coût par million de tokens pour écrire dans le cache."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Autoriser les lectures de fichiers très volumineux",
+				"description": "Lorsque cette option est activée, Kilo Code effectuera des lectures de fichiers ou de sorties MCP très volumineuses même s'il existe une forte probabilité de dépasser la fenêtre de contexte (taille du contenu >80% de la fenêtre de contexte)."
+			}
+		},
+		"systemNotifications": {
+			"label": "Activer les notifications système",
+			"description": "Lorsque cette option est activée, Kilo Code enverra des notifications système pour les événements importants comme la fin des tâches ou les erreurs.",
+			"testButton": "Tester la notification",
+			"testTitle": "Kilo Code",
+			"testMessage": "Ceci est une notification de test de Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Fournisseur de Générateur de Commandes Terminal",
+				"apiConfigId": {
+					"description": "Sélectionnez quelle configuration d'API utiliser pour générer des commandes de terminal. Laissez sur 'Utiliser la configuration actuelle' pour utiliser vos paramètres par défaut.",
+					"current": "Utiliser la configuration actuelle",
+					"label": "Configuration de l'API"
+				}
+			}
+		}
+	},
+	"toolCallStyle": {
+		"title": "Style d'Appel d'Outil",
+		"description": "Choisissez comment les appels d'outils sont formatés dans le prompt système. JSON est actuellement expérimental et principalement destiné aux utilisateurs intéressés à contribuer à son développement."
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code souhaite condenser votre conversation",
+			"condenseConversation": "Condenser la Conversation"
+		},
+		"seeNewChanges": "Afficher les nouvelles modifications",
+		"revertNewChanges": "Annuler les nouvelles modifications",
+		"confirmRevertChanges": "Confirmer l'annulation des modifications",
+		"cancelRevertChanges": "Annuler l'annulation des modifications"
+	},
+	"newTaskPreview": {
+		"task": "Tâche"
+	},
+	"profile": {
+		"title": "Profil",
+		"dashboard": "Tableau de bord",
+		"logOut": "Se déconnecter",
+		"currentBalance": "SOLDE ACTUEL",
+		"loading": "Chargement...",
+		"organization": "Organisation",
+		"personal": "Personnel",
+		"shop": {
+			"title": "Acheter des Crédits",
+			"popular": "Populaire",
+			"credits": "crédits",
+			"action": "Acheter Maintenant",
+			"viewAll": "Voir toutes les options de prix"
+		}
+	},
+	"docs": "Documentation",
+	"rules": {
+		"tooltip": "Gérer les Règles et Flux de Travail Kilo Code",
+		"ariaLabel": "Règles Kilo Code",
+		"tabs": {
+			"rules": "Règles",
+			"workflows": "Flux de Travail"
+		},
+		"description": {
+			"rules": "Les règles vous permettent de fournir à Kilo Code des instructions qu'il doit suivre dans tous les modes et pour tous les prompts. Elles sont un moyen persistant d'inclure du contexte et des préférences pour toutes les conversations dans votre espace de travail ou globalement.",
+			"workflows": "Les flux de travail sont un modèle préparé pour une conversation. Les flux de travail vous permettent de définir des prompts que vous utilisez fréquemment, et peuvent inclure une série d'étapes pour guider Kilo Code à travers des tâches répétitives, comme déployer un service ou soumettre une PR. Pour invoquer un flux de travail, tapez",
+			"workflowsInChat": "dans le chat."
+		},
+		"sections": {
+			"globalRules": "Règles Globales",
+			"workspaceRules": "Règles de l'Espace de Travail",
+			"globalWorkflows": "Flux de Travail Globaux",
+			"workspaceWorkflows": "Flux de Travail de l'Espace de Travail"
+		},
+		"validation": {
+			"invalidFileExtension": "Seules les extensions .md, .txt, ou aucune extension sont autorisées"
+		},
+		"placeholders": {
+			"workflowName": "nom-flux-travail (.md, .txt, ou sans extension)",
+			"ruleName": "nom-règle (.md, .txt, ou sans extension)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Nouveau fichier de flux de travail...",
+			"newRuleFile": "Nouveau fichier de règle..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Voir {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_result": "résultat de l'action du navigateur",
+				"browser_action_launch": "lancement du navigateur",
+				"browser_action": "action du navigateur",
+				"completion_result": "résultat de complétion",
+				"command_output": "sortie de commande",
+				"checkpoint_saved": "point de sauvegarde enregistré",
+				"condense_context": "condenser le contexte",
+				"command": "exécution de commande",
+				"error": "message d'erreur",
+				"followup": "question complémentaire",
+				"mcp_server_response": "Réponse du serveur MCP",
+				"text": "Réponse de l'IA",
+				"unknown": "type de message inconnu",
+				"reasoning": "Raisonnement de l'IA",
+				"use_mcp_server": "Utilisation du serveur MCP",
+				"tool": "utilisation d'outils",
+				"user": "commentaires des utilisateurs"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "Annuler",
+		"send": "Envoyer",
+		"restoreAndSend": "Restaurer et Envoyer"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Nouveau ici ?",
+		"suggestionText": "<suggestionButton>Cliquez ici</suggestionButton> pour une idée géniale, puis appuyez sur <sendIcon /> et regardez-moi faire de la magie !",
+		"ideas": {
+			"idea1": "Créez une sphère 3D rotative et brillante qui répond aux mouvements de la souris. Faites fonctionner l'application dans le navigateur.",
+			"idea2": "Créez un site web de portfolio pour un développeur logiciel Python",
+			"idea3": "Créez une maquette d'application financière dans le navigateur. Puis testez si elle fonctionne",
+			"idea4": "Créez un site web répertoire contenant les meilleurs modèles de génération vidéo IA actuellement",
+			"idea5": "Créez un générateur de dégradés CSS qui exporte des feuilles de style personnalisées et affiche un aperçu en direct",
+			"idea6": "Générez des cartes qui révèlent magnifiquement du contenu dynamique au survol",
+			"idea7": "Créez un champ d'étoiles interactif apaisant qui se déplace avec les gestes de la souris"
+		}
+	},
+	"ghost": {
+		"title": "Autocomplete",
+		"settings": {
+			"triggers": "Déclencheurs",
+			"keybindingDescription": "Les fonctionnalités Autocomplete peuvent être déclenchées par des commandes. Tu peux configurer les <DocsLink>Raccourcis Clavier ici</DocsLink>.",
+			"enableAutoTrigger": {
+				"label": "Pause pour Compléter",
+				"description": "Quand activé, Kilo Code déclenchera automatiquement Autocomplete quand tu arrêtes de taper. Cela peut être utile pour des corrections rapides et des suggestions."
+			},
+			"autoTriggerDelay": {
+				"label": "Délai de Déclenchement Automatique",
+				"description": "Le délai en secondes avant que Kilo Code déclenche Autocomplete après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus intensif en ressources."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tâche rapide ({{keybinding}})",
+				"description": "Tu n'as besoin que d'un changement rapide ? Sélectionne du code (ou pas !) et appuie sur Cmd+I. Décris ton objectif en français simple (\"créer un composant React avec ces props\", \"ajouter la gestion d'erreurs à cette fonction\"), et obtiens plusieurs suggestions prêtes à l'emploi directement dans ton éditeur. <DocsLink>Modifier le raccourci</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Saisie automatique manuelle ({{keybinding}})",
+				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Modifier le raccourci</DocsLink>"
+			},
+			"keybindingNotFound": "introuvable",
+			"noModelConfigured": "Aucun modèle d'autocomplétion approprié trouvé. Configure un fournisseur dans les paramètres API.",
+			"model": "Modèle",
+			"provider": "Fournisseur"
+		}
+	},
+	"virtualProvider": {
+		"title": "Paramètres du fournisseur de secours pour quota virtuel",
+		"description": "Configurez une liste de profils, chacun avec ses propres limites de quota. Lorsque les limites de quota d'un fournisseur sont atteintes, le profil suivant dans la liste sera utilisé jusqu'à ce qu'il n'en reste plus aucun.",
+		"profileLabel": "Profil {{number}}",
+		"primaryProfileLabel": "Profil {{number}} (Principal)",
+		"moveProfileUp": "Déplacer le profil vers le haut",
+		"moveProfileDown": "Déplacer le profil vers le bas",
+		"removeProfile": "Supprimer le profil",
+		"selectProfilePlaceholder": "Sélectionner le profil...",
+		"addProfile": "Ajouter un profil",
+		"noProfilesAvailable": "Aucun profil disponible. Veuillez d'abord configurer au moins un profil de fournisseur non virtuel.",
+		"dangerZoneTitle": "Zone de Danger",
+		"dangerZoneDescription": "Ces actions sont destructives et ne peuvent pas être annulées.",
+		"clearUsageData": "Effacer les Données d'Utilisation",
+		"confirmClearTitle": "Êtes-vous sûr ?",
+		"confirmClearDescription": "Cela supprimera définitivement toutes les données d'utilisation stockées pour les fournisseurs virtuels. Cette action ne peut pas être annulée.",
+		"tokensLabel": "Jetons",
+		"perHour": "Par heure",
+		"perMinute": "Par minute",
+		"requestsLabel": "Demandes",
+		"perDay": "Par jour"
+	},
+	"memoryWarning": {
+		"message": "L'utilisation de la mémoire est à {{percentage}}%. Veuillez redémarrer votre IDE pour éviter les plantages."
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
+		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",
+		"imagesRemovedNoSupport": "Images supprimées, non prises en charge par le modèle."
+	}
+}

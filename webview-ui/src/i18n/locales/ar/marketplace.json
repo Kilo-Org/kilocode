@@ -1,0 +1,156 @@
+{
+	"title": "سوق Kilo Code",
+	"tabs": {
+		"installed": "المثبتة",
+		"settings": "الإعدادات",
+		"browse": "تصفح"
+	},
+	"done": "تم",
+	"refresh": "تحديث",
+	"filters": {
+		"search": {
+			"placeholder": "ابحث عن عناصر بالسوق...",
+			"placeholderMcp": "ابحث عن خوادم MCP...",
+			"placeholderMode": "ابحث عن الأنماط..."
+		},
+		"type": {
+			"label": "فلتر حسب النوع:",
+			"all": "كل الأنواع",
+			"mode": "نمط",
+			"mcpServer": "خادم MCP"
+		},
+		"sort": {
+			"label": "رتّب حسب:",
+			"name": "الاسم",
+			"author": "الناشر",
+			"lastUpdated": "آخر تحديث"
+		},
+		"tags": {
+			"label": "فلتر حسب الوسوم:",
+			"clear": "مسح الوسوم",
+			"placeholder": "اكتب وابحث عن وسم...",
+			"noResults": "ما فيه وسوم تطابق بحثك",
+			"selected": "عرض العناصر بأي من الوسوم المحددة",
+			"clickToFilter": "اضغط على الوسوم لتفلتر العناصر"
+		},
+		"installed": {
+			"label": "فرز حسب الحالة",
+			"all": "كل العناصر",
+			"installed": "مثبتة",
+			"notInstalled": "غير مثبتة"
+		},
+		"none": "بدون"
+	},
+	"sections": {
+		"organizationMcps": "خوادم MCP الخاصة بـ {{organization}}",
+		"marketplace": "السوق"
+	},
+	"type-group": {
+		"modes": "الأنماط",
+		"mcps": "خوادم MCP"
+	},
+	"items": {
+		"empty": {
+			"noItems": "ما فيه عناصر بالسوق",
+			"withFilters": "جرّب تغيّر الفلاتر",
+			"noSources": "أضف مصدر في تبويب المصادر",
+			"adjustFilters": "عدّل الفلاتر أو كلمات البحث",
+			"clearAllFilters": "مسح كل الفلاتر"
+		},
+		"count": "{{count}} عنصر تم العثور عليه",
+		"components": "{{count}} مكوّن",
+		"matched": "{{count}} تطابق",
+		"refresh": {
+			"button": "تحديث",
+			"refreshing": "جاري التحديث...",
+			"mayTakeMoment": "الموضوع ياخذ وقت بسيط."
+		},
+		"card": {
+			"by": "بواسطة {{author}}",
+			"from": "من {{source}}",
+			"install": "تثبيت",
+			"installProject": "تثبيت",
+			"installGlobal": "تثبيت (عام)",
+			"remove": "إزالة",
+			"removeProject": "إزالة",
+			"removeGlobal": "إزالة (عام)",
+			"viewSource": "عرض",
+			"viewOnSource": "عرض على {{source}}",
+			"noWorkspaceTooltip": "افتح مشروع لتقدر تثبّت عناصر من السوق",
+			"installed": "مثبّت",
+			"removeProjectTooltip": "إزالة من المشروع الحالي",
+			"removeGlobalTooltip": "إزالة من الإعداد العام",
+			"actionsMenuLabel": "خيارات إضافية"
+		},
+		"removeFailed": "فشل في إزالة العنصر: {{error}}",
+		"unknownError": "حدث خطأ غير معروف"
+	},
+	"install": {
+		"title": "تثبيت {{name}}",
+		"titleMode": "تثبيت النمط {{name}}",
+		"titleMcp": "تثبيت MCP {{name}}",
+		"scope": "نطاق التثبيت",
+		"project": "مشروع (مساحة العمل الحالية)",
+		"global": "عام (كل المشاريع)",
+		"method": "طريقة التثبيت",
+		"prerequisites": "المتطلبات",
+		"configuration": "الإعداد",
+		"configurationDescription": "ضبط المعايير اللازمة لهذا الخادم",
+		"button": "تثبيت",
+		"successTitle": "تم تثبيت {{name}}",
+		"successDescription": "اكتمل التثبيت بنجاح",
+		"installed": "تم التثبيت بنجاح!",
+		"whatNextMcp": "تقدر الحين تضبط وتستخدم خادم MCP هذا. اضغط على أيقونة MCP بالجانب لتنتقل له.",
+		"whatNextMode": "تقدر الحين تستخدم هذا النمط. اضغط على أيقونة الأنماط في الشريط الجانبي.",
+		"done": "تم",
+		"goToMcp": "اذهب لخانة MCP",
+		"goToModes": "اذهب لإعدادات الأنماط",
+		"moreInfoMcp": "اطلع على توثيق MCP الخاص بـ {{name}}",
+		"validationRequired": "رجاءً عبِّ القيمة لـ {{paramName}}"
+	},
+	"sources": {
+		"title": "ضبط مصادر السوق",
+		"description": "أضف مستودعات Git فيها عناصر للسوق. هالمصادر تُسحب لما تتصفح السوق.",
+		"add": {
+			"title": "أضف مصدر جديد",
+			"urlPlaceholder": "رابط مستودع Git (مثلاً: https://github.com/username/repo)",
+			"urlFormats": "الصيغ المدعومة: HTTPS أو SSH أو Git protocol",
+			"namePlaceholder": "اسم العرض (حد أقصى 20 حرف)",
+			"button": "إضافة المصدر"
+		},
+		"current": {
+			"title": "المصادر الحالية",
+			"empty": "ما فيه مصادر حالياً. أضف واحد عشان تبدأ.",
+			"refresh": "تحديث هذا المصدر",
+			"remove": "إزالة المصدر"
+		},
+		"errors": {
+			"emptyUrl": "الرابط ما يصير فاضي",
+			"invalidUrl": "صيغة الرابط غير صحيحة",
+			"nonVisibleChars": "الرابط فيه حروف غير مرئية غير المسافات",
+			"invalidGitUrl": "الرابط لازم يكون لمستودع Git (مثل https://github.com/username/repo)",
+			"duplicateUrl": "الرابط موجود مسبقًا (حتى لو تغيّر بالحروف الكبيرة/الصغيرة أو المسافات)",
+			"nameTooLong": "الاسم لازم ما يزيد عن 20 حرف",
+			"nonVisibleCharsName": "الاسم فيه حروف غير مرئية غير المسافات",
+			"duplicateName": "الاسم مستخدم مسبقًا (نفس الحالة السابقة)",
+			"emojiName": "الإيموجي ممكن يسبب مشاكل بالعرض",
+			"maxSources": "الحد الأقصى {{max}} من المصادر"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "إزالة النمط",
+			"message": "متأكد تبي تحذف النمط \"{{modeName}}\"؟",
+			"rulesWarning": "هذا بيحذف كمان أي ملفات قواعد مرتبطة بهذا النمط."
+		},
+		"mcp": {
+			"title": "إزالة خادم MCP",
+			"message": "متأكد تبي تحذف خادم MCP \"{{mcpName}}\"؟"
+		},
+		"cancel": "إلغاء",
+		"confirm": "إزالة"
+	},
+	"footer": {
+		"issueText": "واجهت مشكلة أو عندك اقتراح لسوق العناصر؟ <0>افتح تذكرة على GitHub</0> وعطنا خبر!"
+	}
+}

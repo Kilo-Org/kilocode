@@ -1,0 +1,27 @@
+{
+	"greeting": "歡迎使用 Kilo Code！",
+	"introduction": "Kilo Code 提供一系列內建和可擴充的模式，讓您以前所未有的方式規劃專案、設計架構、編寫程式碼、除錯並提升工作效率。",
+	"notice": "開始使用前，此擴充功能需要一個 API 提供者。",
+	"start": "讓我們開始吧！",
+	"routers": {
+		"requesty": {
+			"description": "您的最佳化 LLM 路由器",
+			"incentive": "$1 免費額度"
+		},
+		"openrouter": {
+			"description": "LLM 的統一介面"
+		},
+		"roo": {
+			"description": "最優秀的免費模型助你開始",
+			"incentive": "免費試用 Roo"
+		}
+	},
+	"chooseProvider": "Kilo Code 需要 API 金鑰才能發揮魔力。",
+	"startRouter": "我們建議使用 LLM 路由器：",
+	"startCustom": "或者您可以使用自己的 API 金鑰：",
+	"telemetry": {
+		"helpImprove": "協助改進 Kilo Code",
+		"helpImproveMessage": "Kilo Code 收集錯誤和使用資料以協助我們修復錯誤並改善擴充功能。此遙測不會收集程式碼、提示詞或個人資訊。您可以在<settingsLink>設定</settingsLink>中關閉此功能。"
+	},
+	"importSettings": "匯入設定"
+}

@@ -1,0 +1,973 @@
+{
+	"common": {
+		"save": "Zapisz",
+		"done": "Gotowe",
+		"cancel": "Anuluj",
+		"reset": "Resetuj",
+		"select": "Wybierz",
+		"add": "Dodaj nagłówek",
+		"remove": "Usuń"
+	},
+	"header": {
+		"title": "Ustawienia",
+		"saveButtonTooltip": "Zapisz zmiany",
+		"nothingChangedTooltip": "Nic się nie zmieniło",
+		"doneButtonTooltip": "Odrzuć niezapisane zmiany i zamknij panel ustawień"
+	},
+	"unsavedChangesDialog": {
+		"title": "Niezapisane zmiany",
+		"description": "Czy chcesz odrzucić zmiany i kontynuować?",
+		"cancelButton": "Anuluj",
+		"discardButton": "Odrzuć zmiany"
+	},
+	"sections": {
+		"providers": "Dostawcy",
+		"autoApprove": "Auto-zatwierdzanie",
+		"browser": "Dostęp komputera",
+		"checkpoints": "Punkty kontrolne",
+		"notifications": "Powiadomienia",
+		"contextManagement": "Kontekst",
+		"terminal": "Terminal",
+		"slashCommands": "Polecenia Slash",
+		"prompts": "Podpowiedzi",
+		"ui": "UI",
+		"experimental": "Eksperymentalne",
+		"language": "Język",
+		"about": "O Kilo Code",
+		"display": "Wyświetl"
+	},
+	"slashCommands": {
+		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
+	},
+	"prompts": {
+		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."
+	},
+	"codeIndex": {
+		"title": "Indeksowanie kodu",
+		"enableLabel": "Włącz indeksowanie kodu",
+		"enableDescription": "Włącz indeksowanie kodu, aby poprawić wyszukiwanie i zrozumienie kontekstu",
+		"profileLabel": "Dostawca osadzania",
+		"selectProfilePlaceholder": "Wybierz dostawcę",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"geminiProvider": "Gemini",
+		"geminiApiKeyLabel": "Klucz API:",
+		"geminiApiKeyPlaceholder": "Wprowadź swój klucz API Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Klucz API:",
+		"mistralApiKeyPlaceholder": "Wprowadź swój klucz API Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Klucz API",
+		"vercelAiGatewayApiKeyPlaceholder": "Wprowadź swój klucz API Vercel AI Gateway",
+		"openaiCompatibleProvider": "Kompatybilny z OpenAI",
+		"openAiKeyLabel": "Klucz API OpenAI",
+		"openAiKeyPlaceholder": "Wprowadź swój klucz API OpenAI",
+		"openAiCompatibleBaseUrlLabel": "Bazowy URL",
+		"openAiCompatibleApiKeyLabel": "Klucz API",
+		"openAiCompatibleApiKeyPlaceholder": "Wprowadź swój klucz API",
+		"openAiCompatibleModelDimensionLabel": "Wymiar Embeddingu:",
+		"modelDimensionLabel": "Wymiar modelu",
+		"openAiCompatibleModelDimensionPlaceholder": "np., 1536",
+		"openAiCompatibleModelDimensionDescription": "Wymiar embeddingu (rozmiar wyjściowy) dla twojego modelu. Sprawdź dokumentację swojego dostawcy, aby uzyskać tę wartość. Typowe wartości: 384, 768, 1536, 3072.",
+		"modelLabel": "Model",
+		"selectModelPlaceholder": "Wybierz model",
+		"ollamaUrlLabel": "URL Ollama:",
+		"qdrantUrlLabel": "URL Qdrant",
+		"qdrantKeyLabel": "Klucz Qdrant:",
+		"startIndexingButton": "Rozpocznij",
+		"clearIndexDataButton": "Wyczyść indeks",
+		"unsavedSettingsMessage": "Zapisz swoje ustawienia przed rozpoczęciem procesu indeksowania.",
+		"clearDataDialog": {
+			"title": "Czy jesteś pewien?",
+			"description": "Tej akcji nie można cofnąć. Spowoduje to trwałe usunięcie danych indeksu Twojego kodu.",
+			"cancelButton": "Anuluj",
+			"confirmButton": "Wyczyść dane"
+		},
+		"description": "Skonfiguruj ustawienia indeksowania bazy kodu, aby włączyć wyszukiwanie semantyczne w swoim projekcie. <0>Dowiedz się więcej</0>",
+		"statusTitle": "Status",
+		"settingsTitle": "Ustawienia indeksowania",
+		"disabledMessage": "Indeksowanie bazy kodu jest obecnie wyłączone. Włącz je w ustawieniach globalnych, aby skonfigurować opcje indeksowania.",
+		"embedderProviderLabel": "Dostawca Embeddera",
+		"modelPlaceholder": "Wprowadź nazwę modelu",
+		"selectModel": "Wybierz model",
+		"ollamaBaseUrlLabel": "Bazowy URL Ollama",
+		"qdrantApiKeyLabel": "Klucz API Qdrant",
+		"qdrantApiKeyPlaceholder": "Wprowadź swój klucz API Qdrant (opcjonalnie)",
+		"setupConfigLabel": "Konfiguracja",
+		"ollamaUrlPlaceholder": "http://localhost:11434",
+		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
+		"modelDimensionPlaceholder": "1536",
+		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"saveError": "Nie udało się zapisać ustawień",
+		"modelDimensions": "({{dimension}} wymiarów)",
+		"saveSuccess": "Ustawienia zapisane pomyślnie",
+		"saving": "Zapisywanie...",
+		"saveSettings": "Zapisz",
+		"indexingStatuses": {
+			"standby": "Gotowość",
+			"indexing": "Indeksowanie",
+			"indexed": "Zaindeksowane",
+			"error": "Błąd"
+		},
+		"close": "Zamknij",
+		"validation": {
+			"invalidQdrantUrl": "Nieprawidłowy URL Qdrant",
+			"invalidOllamaUrl": "Nieprawidłowy URL Ollama",
+			"invalidBaseUrl": "Nieprawidłowy podstawowy URL",
+			"qdrantUrlRequired": "Wymagany jest URL Qdrant",
+			"openaiApiKeyRequired": "Wymagany jest klucz API OpenAI",
+			"modelSelectionRequired": "Wymagany jest wybór modelu",
+			"apiKeyRequired": "Wymagany jest klucz API",
+			"modelIdRequired": "Wymagane jest ID modelu",
+			"modelDimensionRequired": "Wymagany jest wymiar modelu",
+			"geminiApiKeyRequired": "Wymagany jest klucz API Gemini",
+			"mistralApiKeyRequired": "Klucz API Mistral jest wymagany",
+			"vercelAiGatewayApiKeyRequired": "Klucz API Vercel AI Gateway jest wymagany",
+			"ollamaBaseUrlRequired": "Wymagany jest bazowy adres URL Ollama",
+			"baseUrlRequired": "Wymagany jest bazowy adres URL",
+			"modelDimensionMinValue": "Wymiar modelu musi być większy niż 0"
+		},
+		"advancedConfigLabel": "Konfiguracja zaawansowana",
+		"searchMinScoreLabel": "Próg wyniku wyszukiwania",
+		"searchMinScoreDescription": "Minimalny wynik podobieństwa (0.0-1.0) wymagany dla wyników wyszukiwania. Niższe wartości zwracają więcej wyników, ale mogą być mniej trafne. Wyższe wartości zwracają mniej wyników, ale bardziej trafnych.",
+		"searchMinScoreResetTooltip": "Zresetuj do wartości domyślnej (0.4)",
+		"searchMaxResultsLabel": "Maksymalna liczba wyników wyszukiwania",
+		"searchMaxResultsDescription": "Maksymalna liczba wyników wyszukiwania zwracanych podczas zapytania do indeksu bazy kodu. Wyższe wartości zapewniają więcej kontekstu, ale mogą zawierać mniej istotne wyniki.",
+		"resetToDefault": "Przywróć domyślne",
+		"cancelling": "Anulowanie...",
+		"cancelIndexingButton": "Anuluj indeksowanie"
+	},
+	"autoApprove": {
+		"toggleShortcut": "Możesz skonfigurować globalny skrót dla tego ustawienia <SettingsLink>w preferencjach swojego IDE</SettingsLink>.",
+		"description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
+		"enabled": "Auto-zatwierdzanie włączone",
+		"toggleAriaLabel": "Przełącz automatyczne zatwierdzanie",
+		"disabledAriaLabel": "Automatyczne zatwierdzanie wyłączone - najpierw wybierz opcje",
+		"readOnly": {
+			"label": "Odczyt",
+			"description": "Gdy włączone, Kilo Code automatycznie będzie wyświetlać zawartość katalogów i czytać pliki bez konieczności klikania przycisku Zatwierdź.",
+			"outsideWorkspace": {
+				"label": "Uwzględnij pliki poza obszarem roboczym",
+				"description": "Pozwól Kilo Code na odczyt plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
+			}
+		},
+		"write": {
+			"label": "Zapis",
+			"description": "Automatycznie twórz i edytuj pliki bez konieczności zatwierdzania",
+			"delayLabel": "Opóźnienie po zapisach, aby umożliwić diagnostyce wykrycie potencjalnych problemów",
+			"outsideWorkspace": {
+				"label": "Uwzględnij pliki poza obszarem roboczym",
+				"description": "Pozwól Kilo Code na tworzenie i edycję plików poza bieżącym obszarem roboczym bez konieczności zatwierdzania."
+			},
+			"protected": {
+				"label": "Uwzględnij pliki chronione",
+				"description": "Pozwól Kilo Code na tworzenie i edycję plików chronionych (takich jak .kilocodeignore i pliki konfiguracyjne .kilocode/) bez konieczności zatwierdzania."
+			}
+		},
+		"browser": {
+			"label": "Przeglądarka",
+			"description": "Automatycznie wykonuj akcje przeglądarki bez konieczności zatwierdzania. Uwaga: Dotyczy tylko gdy model obsługuje używanie komputera"
+		},
+		"retry": {
+			"label": "Ponów",
+			"description": "Automatycznie ponawiaj nieudane żądania API, gdy serwer zwraca odpowiedź z błędem",
+			"delayLabel": "Opóźnienie przed ponowieniem żądania"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "Włącz automatyczne zatwierdzanie poszczególnych narzędzi MCP w widoku Serwerów MCP (wymaga zarówno tego ustawienia, jak i pola wyboru \"Zawsze zezwalaj\" narzędzia)"
+		},
+		"modeSwitch": {
+			"label": "Tryb",
+			"description": "Automatycznie przełączaj między różnymi trybami bez konieczności zatwierdzania"
+		},
+		"subtasks": {
+			"label": "Podzadania",
+			"description": "Zezwalaj na tworzenie i ukończenie podzadań bez konieczności zatwierdzania"
+		},
+		"followupQuestions": {
+			"label": "Pytanie",
+			"description": "Automatycznie wybierz pierwszą sugerowaną odpowiedź na pytania uzupełniające po skonfigurowanym limicie czasu",
+			"timeoutLabel": "Czas oczekiwania przed automatycznym wybraniem pierwszej odpowiedzi"
+		},
+		"execute": {
+			"label": "Wykonaj",
+			"description": "Automatycznie wykonuj dozwolone polecenia terminala bez konieczności zatwierdzania",
+			"allowedCommands": "Dozwolone polecenia auto-wykonania",
+			"allowedCommandsDescription": "Prefiksy poleceń, które mogą być automatycznie wykonywane, gdy \"Zawsze zatwierdzaj operacje wykonania\" jest włączone. Dodaj * aby zezwolić na wszystkie polecenia (używaj z ostrożnością).",
+			"deniedCommands": "Odrzucone polecenia",
+			"deniedCommandsDescription": "Prefiksy poleceń, które będą automatycznie odrzucane bez pytania o zatwierdzenie. W przypadku konfliktów z dozwolonymi poleceniami, najdłuższe dopasowanie prefiksu ma pierwszeństwo. Dodaj * aby odrzucić wszystkie polecenia.",
+			"commandPlaceholder": "Wprowadź prefiks polecenia (np. 'git ')",
+			"deniedCommandPlaceholder": "Wprowadź prefiks polecenia do odrzucenia (np. 'rm -rf')",
+			"addButton": "Dodaj",
+			"autoDenied": "Polecenia z prefiksem `{{prefix}}` zostały zabronione przez użytkownika. Nie obchodź tego ograniczenia uruchamiając inne polecenie."
+		},
+		"showMenu": {
+			"label": "Pokaż menu automatycznego zatwierdzania w widoku czatu",
+			"description": "Gdy włączone, menu automatycznego zatwierdzania będzie wyświetlane na dole widoku czatu, umożliwiając szybki dostęp do ustawień automatycznego zatwierdzania"
+		},
+		"updateTodoList": {
+			"label": "Todo",
+			"description": "Lista zadań jest automatycznie aktualizowana bez zatwierdzenia"
+		},
+		"apiRequestLimit": {
+			"title": "Maksymalna liczba żądań",
+			"description": "Automatycznie wykonaj tyle żądań API przed poproszeniem o zgodę na kontynuowanie zadania.",
+			"unlimited": "Bez limitu"
+		},
+		"selectOptionsFirst": "Wybierz co najmniej jedną opcję poniżej, aby włączyć automatyczne zatwierdzanie",
+		"apiCostLimit": {
+			"title": "Maksymalny koszt",
+			"unlimited": "Bez limitu"
+		},
+		"maxLimits": {
+			"description": "Automatycznie składaj zapytania do tych limitów przed poproszeniem o zgodę na kontynuowanie."
+		}
+	},
+	"providers": {
+		"providerDocumentation": "Dokumentacja {{provider}}",
+		"configProfile": "Profil konfiguracji",
+		"description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
+		"apiProvider": "Dostawca API",
+		"model": "Model",
+		"nameEmpty": "Nazwa nie może być pusta",
+		"nameExists": "Profil o tej nazwie już istnieje",
+		"deleteProfile": "Usuń profil",
+		"invalidArnFormat": "Nieprawidłowy format ARN. Sprawdź powyższe przykłady.",
+		"enterNewName": "Wprowadź nową nazwę",
+		"addProfile": "Dodaj profil",
+		"renameProfile": "Zmień nazwę profilu",
+		"newProfile": "Nowy profil konfiguracji",
+		"enterProfileName": "Wprowadź nazwę profilu",
+		"createProfile": "Utwórz profil",
+		"cannotDeleteOnlyProfile": "Nie można usunąć jedynego profilu",
+		"searchPlaceholder": "Szukaj profili",
+		"searchProviderPlaceholder": "Szukaj dostawców",
+		"noProviderMatchFound": "Nie znaleziono dostawców",
+		"noMatchFound": "Nie znaleziono pasujących profili",
+		"vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
+		"awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
+		"awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
+		"openRouterApiKey": "Klucz API OpenRouter",
+		"getOpenRouterApiKey": "Uzyskaj klucz API OpenRouter",
+		"vercelAiGatewayApiKey": "Klucz API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Uzyskaj klucz API Vercel AI Gateway",
+		"apiKeyStorageNotice": "Klucze API są bezpiecznie przechowywane w Tajnym Magazynie VSCode",
+		"glamaApiKey": "Klucz API Glama",
+		"getGlamaApiKey": "Uzyskaj klucz API Glama",
+		"useCustomBaseUrl": "Użyj niestandardowego URL bazowego",
+		"useReasoning": "Włącz rozumowanie",
+		"useHostHeader": "Użyj niestandardowego nagłówka Host",
+		"useLegacyFormat": "Użyj starszego formatu API OpenAI",
+		"customHeaders": "Niestandardowe nagłówki",
+		"headerName": "Nazwa nagłówka",
+		"headerValue": "Wartość nagłówka",
+		"noCustomHeaders": "Brak zdefiniowanych niestandardowych nagłówków. Kliknij przycisk +, aby dodać.",
+		"requestyApiKey": "Klucz API Requesty",
+		"refreshModels": {
+			"label": "Odśwież modele",
+			"hint": "Proszę ponownie otworzyć ustawienia, aby zobaczyć najnowsze modele.",
+			"loading": "Odświeżanie listy modeli...",
+			"success": "Lista modeli została pomyślnie odświeżona!",
+			"error": "Nie udało się odświeżyć listy modeli. Spróbuj ponownie."
+		},
+		"getRequestyApiKey": "Uzyskaj klucz API Requesty",
+		"getRequestyBaseUrl": "Bazowy URL",
+		"requestyUseCustomBaseUrl": "Użyj niestandardowego bazowego URL",
+		"openRouterTransformsText": "Kompresuj podpowiedzi i łańcuchy wiadomości do rozmiaru kontekstu (<a>Transformacje OpenRouter</a>)",
+		"anthropicApiKey": "Klucz API Anthropic",
+		"getAnthropicApiKey": "Uzyskaj klucz API Anthropic",
+		"anthropicUseAuthToken": "Przekaż klucz API Anthropic jako nagłówek Authorization zamiast X-Api-Key",
+		"anthropic1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Włącz okno kontekstowe 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Rozszerza okno kontekstowe do 1 miliona tokenów dla Claude Sonnet 4",
+		"cerebrasApiKey": "Klucz API Cerebras",
+		"getCerebrasApiKey": "Pobierz klucz API Cerebras",
+		"chutesApiKey": "Klucz API Chutes",
+		"getChutesApiKey": "Uzyskaj klucz API Chutes",
+		"fireworksApiKey": "Klucz API Fireworks",
+		"getFireworksApiKey": "Uzyskaj klucz API Fireworks",
+		"syntheticApiKey": "Klucz API Synthetic",
+		"getSyntheticApiKey": "Uzyskaj klucz API Synthetic",
+		"featherlessApiKey": "Klucz API Featherless",
+		"getFeatherlessApiKey": "Uzyskaj klucz API Featherless",
+		"ioIntelligenceApiKey": "Klucz API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Wprowadź swój klucz API IO Intelligence",
+		"getIoIntelligenceApiKey": "Uzyskaj klucz API IO Intelligence",
+		"deepSeekApiKey": "Klucz API DeepSeek",
+		"getDeepSeekApiKey": "Uzyskaj klucz API DeepSeek",
+		"doubaoApiKey": "Klucz API Doubao",
+		"getDoubaoApiKey": "Uzyskaj klucz API Doubao",
+		"moonshotApiKey": "Klucz API Moonshot",
+		"getMoonshotApiKey": "Uzyskaj klucz API Moonshot",
+		"moonshotBaseUrl": "Punkt wejścia Moonshot",
+		"zaiApiKey": "Klucz API Z AI",
+		"getZaiApiKey": "Uzyskaj klucz API Z AI",
+		"zaiEntrypoint": "Punkt wejścia Z AI",
+		"zaiEntrypointDescription": "Wybierz odpowiedni punkt wejścia API w zależności od swojej lokalizacji. Jeśli jesteś w Chinach, wybierz open.bigmodel.cn. W przeciwnym razie wybierz api.z.ai.",
+		"geminiApiKey": "Klucz API Gemini",
+		"getGroqApiKey": "Uzyskaj klucz API Groq",
+		"groqApiKey": "Klucz API Groq",
+		"getSambaNovaApiKey": "Uzyskaj klucz API SambaNova",
+		"sambaNovaApiKey": "Klucz API SambaNova",
+		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
+		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
+		"huggingFaceApiKey": "Klucz API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Uzyskaj klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Bazowy URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Użyj niestandardowego bazowego URL",
+		"huggingFaceModelId": "ID modelu",
+		"huggingFaceLoading": "Ładowanie...",
+		"huggingFaceModelsCount": "({{count}} modeli)",
+		"huggingFaceSelectModel": "Wybierz model...",
+		"huggingFaceSearchModels": "Szukaj modeli...",
+		"huggingFaceNoModelsFound": "Nie znaleziono modeli",
+		"huggingFaceProvider": "Dostawca",
+		"huggingFaceProviderAuto": "Automatyczny",
+		"huggingFaceSelectProvider": "Wybierz dostawcę...",
+		"huggingFaceSearchProviders": "Szukaj dostawców...",
+		"huggingFaceNoProvidersFound": "Nie znaleziono dostawców",
+		"apiKey": "Klucz API",
+		"openAiApiKey": "Klucz API OpenAI",
+		"openAiBaseUrl": "URL bazowy",
+		"getOpenAiApiKey": "Uzyskaj klucz API OpenAI",
+		"mistralApiKey": "Klucz API Mistral",
+		"getMistralApiKey": "Uzyskaj klucz API Mistral / Codestral",
+		"codestralBaseUrl": "URL bazowy Codestral (opcjonalnie)",
+		"codestralBaseUrlDesc": "Ustaw opcjonalny URL dla modeli Codestral.",
+		"xaiApiKey": "Klucz API xAI",
+		"getXaiApiKey": "Uzyskaj klucz API xAI",
+		"litellmApiKey": "Klucz API LiteLLM",
+		"litellmBaseUrl": "URL bazowy LiteLLM",
+		"awsCredentials": "Poświadczenia AWS",
+		"awsProfile": "Profil AWS",
+		"awsApiKey": "Klucz API Amazon Bedrock",
+		"awsProfileName": "Nazwa profilu AWS",
+		"awsAccessKey": "Klucz dostępu AWS",
+		"awsSecretKey": "Klucz tajny AWS",
+		"awsSessionToken": "Token sesji AWS",
+		"awsRegion": "Region AWS",
+		"awsCrossRegion": "Użyj wnioskowania międzyregionalnego",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Użyj niestandardowego punktu końcowego VPC",
+			"vpcEndpointUrlPlaceholder": "Wprowadź URL punktu końcowego VPC (opcjonalnie)",
+			"examples": "Przykłady:"
+		},
+		"enablePromptCaching": "Włącz buforowanie podpowiedzi",
+		"enablePromptCachingTitle": "Włącz buforowanie podpowiedzi, aby poprawić wydajność i zmniejszyć koszty dla obsługiwanych modeli.",
+		"cacheUsageNote": "Uwaga: Jeśli nie widzisz użycia bufora, spróbuj wybrać inny model, a następnie ponownie wybrać żądany model.",
+		"vscodeLmModel": "Model językowy",
+		"vscodeLmWarning": "Uwaga: To bardzo eksperymentalna integracja, a wsparcie dostawcy może się różnić. Jeśli otrzymasz błąd dotyczący nieobsługiwanego modelu, jest to problem po stronie dostawcy.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Włącz kontekst URL",
+				"description": "Pozwala Gemini uzyskiwać dostęp i przetwarzać adresy URL w celu uzyskania dodatkowego kontekstu podczas generowania odpowiedzi. Przydatne w zadaniach wymagających analizy zawartości sieci Web."
+			},
+			"groundingSearch": {
+				"title": "Włącz grounding przy użyciu wyszukiwarki Google",
+				"description": "Pozwala Gemini przeszukiwać Google w celu uzyskania aktualnych informacji i opierać odpowiedzi na danych w czasie rzeczywistym. Przydatne w zapytaniach wymagających najnowszych informacji."
+			}
+		},
+		"googleCloudSetup": {
+			"title": "Aby korzystać z Google Cloud Vertex AI, potrzebujesz:",
+			"step1": "1. Utworzyć konto Google Cloud, włączyć API Vertex AI i włączyć żądane modele Claude.",
+			"step2": "2. Zainstalować Google Cloud CLI i skonfigurować domyślne poświadczenia aplikacji.",
+			"step3": "3. Lub utworzyć konto usługi z poświadczeniami."
+		},
+		"googleCloudCredentials": "Poświadczenia Google Cloud",
+		"googleCloudKeyFile": "Ścieżka pliku klucza Google Cloud",
+		"googleCloudProjectId": "ID projektu Google Cloud",
+		"googleCloudRegion": "Region Google Cloud",
+		"lmStudio": {
+			"baseUrl": "URL bazowy (opcjonalnie)",
+			"modelId": "ID modelu",
+			"speculativeDecoding": "Włącz dekodowanie spekulacyjne",
+			"draftModelId": "ID modelu szkicu",
+			"draftModelDesc": "Aby dekodowanie spekulacyjne działało poprawnie, model szkicu musi pochodzić z tej samej rodziny modeli.",
+			"selectDraftModel": "Wybierz model szkicu",
+			"noModelsFound": "Nie znaleziono modeli szkicu. Upewnij się, że LM Studio jest uruchomione z włączonym trybem serwera.",
+			"description": "LM Studio pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z ich <a>przewodnikiem szybkiego startu</a>. Będziesz również musiał uruchomić funkcję <b>serwera lokalnego</b> LM Studio, aby używać go z tym rozszerzeniem. <span>Uwaga:</span> Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
+		},
+		"ollama": {
+			"baseUrl": "URL bazowy (opcjonalnie)",
+			"modelId": "ID modelu",
+			"apiKey": "Klucz API Ollama",
+			"apiKeyPlaceholder": "Wprowadź swój klucz API",
+			"apiKeyHelp": "Opcjonalny klucz API dla uwierzytelnionych instancji Ollama lub usług chmurowych. Pozostaw puste dla instalacji lokalnych.",
+			"numCtx": "Rozmiar okna kontekstu (num_ctx)",
+			"numCtxHelp": "Zastępuje domyślny rozmiar okna kontekstu modelu. Pozostaw puste, aby użyć konfiguracji Modelfile modelu. Minimalna wartość to 128.",
+			"description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
+			"warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
+		},
+		"unboundApiKey": "Klucz API Unbound",
+		"getUnboundApiKey": "Uzyskaj klucz API Unbound",
+		"unboundRefreshModelsSuccess": "Lista modeli zaktualizowana! Możesz teraz wybierać spośród najnowszych modeli.",
+		"unboundInvalidApiKey": "Nieprawidłowy klucz API. Sprawdź swój klucz API i spróbuj ponownie.",
+		"humanRelay": {
+			"description": "Nie jest wymagany klucz API, ale użytkownik będzie musiał pomóc w kopiowaniu i wklejaniu informacji do czatu internetowego AI.",
+			"instructions": "Podczas użytkowania pojawi się okno dialogowe, a bieżąca wiadomość zostanie automatycznie skopiowana do schowka. Będziesz musiał wkleić ją do internetowych wersji AI (takich jak ChatGPT lub Claude), a następnie skopiować odpowiedź AI z powrotem do okna dialogowego i kliknąć przycisk potwierdzenia."
+		},
+		"roo": {
+			"authenticatedMessage": "Bezpiecznie uwierzytelniony przez twoje konto Roo Code Cloud.",
+			"connectButton": "Połącz z Roo Code Cloud"
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "Routing dostawców OpenRouter",
+				"description": "OpenRouter kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia z tym modelem.",
+				"learnMore": "Dowiedz się więcej o routingu dostawców"
+			}
+		},
+		"customModel": {
+			"capabilities": "Skonfiguruj możliwości i ceny swojego niestandardowego modelu zgodnego z OpenAI. Zachowaj ostrożność podczas określania możliwości modelu, ponieważ mogą one wpływać na wydajność Kilo Code.",
+			"maxTokens": {
+				"label": "Maksymalna liczba tokenów wyjściowych",
+				"description": "Maksymalna liczba tokenów, które model może wygenerować w odpowiedzi. (Określ -1, aby pozwolić serwerowi ustawić maksymalną liczbę tokenów.)"
+			},
+			"contextWindow": {
+				"label": "Rozmiar okna kontekstu",
+				"description": "Całkowita liczba tokenów (wejście + wyjście), które model może przetworzyć."
+			},
+			"imageSupport": {
+				"label": "Obsługa obrazów",
+				"description": "Czy model jest w stanie przetwarzać i rozumieć obrazy?"
+			},
+			"computerUse": {
+				"label": "Użycie komputera",
+				"description": "Czy model jest w stanie wchodzić w interakcję z przeglądarką? (np. Claude 3.7 Sonnet)."
+			},
+			"promptCache": {
+				"label": "Buforowanie podpowiedzi",
+				"description": "Czy model jest w stanie buforować podpowiedzi?"
+			},
+			"pricing": {
+				"input": {
+					"label": "Cena wejścia",
+					"description": "Koszt za milion tokenów wejściowych/podpowiedzi. Wpływa to na koszt wysyłania kontekstu i instrukcji do modelu."
+				},
+				"output": {
+					"label": "Cena wyjścia",
+					"description": "Koszt za milion tokenów odpowiedzi modelu. Wpływa to na koszt generowanej treści i uzupełnień."
+				},
+				"cacheReads": {
+					"label": "Cena odczytów bufora",
+					"description": "Koszt za milion tokenów za odczyt z bufora. Ta cena jest naliczana przy otrzymywaniu zbuforowanej odpowiedzi."
+				},
+				"cacheWrites": {
+					"label": "Cena zapisów bufora",
+					"description": "Koszt za milion tokenów za zapis do bufora. Ta cena jest naliczana przy pierwszym buforowaniu podpowiedzi."
+				}
+			},
+			"resetDefaults": "Przywróć domyślne"
+		},
+		"rateLimitSeconds": {
+			"label": "Limit szybkości",
+			"description": "Minimalny czas między żądaniami API."
+		},
+		"consecutiveMistakeLimit": {
+			"label": "Limit błędów i powtórzeń",
+			"description": "Liczba kolejnych błędów lub powtórzonych akcji przed wyświetleniem okna dialogowego 'Kilo Code ma problemy'",
+			"unlimitedDescription": "Włączono nieograniczone próby (automatyczne kontynuowanie). Okno dialogowe nigdy się nie pojawi.",
+			"warning": "⚠️ Ustawienie na 0 pozwala na nieograniczone próby, co może zużyć znaczną ilość API"
+		},
+		"reasoningEffort": {
+			"label": "Wysiłek rozumowania modelu",
+			"minimal": "Minimalny (najszybszy)",
+			"high": "Wysoki",
+			"medium": "Średni",
+			"low": "Niski"
+		},
+		"verbosity": {
+			"label": "Szczegółowość danych wyjściowych",
+			"high": "Wysoka",
+			"medium": "Średnia",
+			"low": "Niska",
+			"description": "Kontroluje, jak szczegółowe są odpowiedzi modelu. Niska szczegółowość generuje zwięzłe odpowiedzi, podczas gdy wysoka szczegółowość dostarcza dokładnych wyjaśnień."
+		},
+		"setReasoningLevel": "Włącz wysiłek rozumowania",
+		"claudeCode": {
+			"pathLabel": "Ścieżka Claude Code",
+			"description": "Opcjonalna ścieżka do Twojego CLI Claude Code. Domyślnie 'claude', jeśli nie ustawiono.",
+			"placeholder": "Domyślnie: claude",
+			"maxTokensLabel": "Maksymalna liczba tokenów wyjściowych",
+			"maxTokensDescription": "Maksymalna liczba tokenów wyjściowych dla odpowiedzi Claude Code. Domyślnie 8000."
+		},
+		"geminiCli": {
+			"description": "Ten dostawca używa uwierzytelniania OAuth z narzędzia Gemini CLI i nie wymaga kluczy API.",
+			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
+			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.gemini/oauth_creds.json).",
+			"instructions": "Jeśli jeszcze się nie uwierzytelniłeś, uruchom najpierw",
+			"instructionsContinued": "w swoim terminalu.",
+			"setupLink": "Instrukcje konfiguracji Gemini CLI",
+			"requirementsTitle": "Ważne wymagania",
+			"requirement1": "Najpierw musisz zainstalować narzędzie Gemini CLI",
+			"requirement2": "Następnie uruchom gemini w swoim terminalu i upewnij się, że logujesz się przez Google",
+			"requirement3": "Działa tylko z osobistymi kontami Google (nie z kontami Google Workspace)",
+			"requirement4": "Nie używa kluczy API - uwierzytelnianie jest obsługiwane przez OAuth",
+			"requirement5": "Wymaga, aby narzędzie Gemini CLI było najpierw zainstalowane i uwierzytelnione",
+			"freeAccess": "Darmowy dostęp przez uwierzytelnianie OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ścieżka danych uwierzytelniających OAuth (opcjonalne)",
+			"oauthPathDescription": "Ścieżka do pliku danych uwierzytelniających OAuth. Pozostaw puste, aby użyć domyślnej lokalizacji (~/.qwen/oauth_creds.json).",
+			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
+			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
+			"setupLink": "Oficjalna dokumentacja Qwen"
+		}
+	},
+	"browser": {
+		"enable": {
+			"label": "Włącz narzędzie przeglądarki",
+			"description": "Gdy włączone, Kilo Code może używać przeglądarki do interakcji ze stronami internetowymi podczas korzystania z modeli obsługujących używanie komputera. <0>Dowiedz się więcej</0>"
+		},
+		"viewport": {
+			"label": "Rozmiar viewportu",
+			"description": "Wybierz rozmiar viewportu dla interakcji przeglądarki. Wpływa to na sposób wyświetlania stron internetowych i interakcji z nimi.",
+			"options": {
+				"largeDesktop": "Duży pulpit (1280x800)",
+				"smallDesktop": "Mały pulpit (900x600)",
+				"tablet": "Tablet (768x1024)",
+				"mobile": "Telefon (360x640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "Jakość zrzutów ekranu",
+			"description": "Dostosuj jakość WebP zrzutów ekranu przeglądarki. Wyższe wartości zapewniają wyraźniejsze zrzuty ekranu, ale zwiększają zużycie token."
+		},
+		"remote": {
+			"label": "Użyj zdalnego połączenia przeglądarki",
+			"description": "Połącz się z przeglądarką Chrome uruchomioną z włączonym zdalnym debugowaniem (--remote-debugging-port=9222).",
+			"urlPlaceholder": "Niestandardowy URL (np. http://localhost:9222)",
+			"testButton": "Testuj połączenie",
+			"testingButton": "Testowanie...",
+			"instructions": "Wprowadź adres hosta protokołu DevTools lub pozostaw puste, aby automatycznie wykryć lokalne instancje Chrome. Przycisk Test Połączenia spróbuje użyć niestandardowego URL, jeśli podany, lub automatycznie wykryje, jeśli pole jest puste."
+		}
+	},
+	"checkpoints": {
+		"enable": {
+			"label": "Włącz automatyczne punkty kontrolne",
+			"description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów. <0>Dowiedz się więcej</0>"
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "Włącz efekty dźwiękowe",
+			"description": "Gdy włączone, Kilo Code będzie odtwarzać efekty dźwiękowe dla powiadomień i zdarzeń.",
+			"volumeLabel": "Głośność"
+		},
+		"tts": {
+			"label": "Włącz syntezę mowy",
+			"description": "Gdy włączone, Kilo Code będzie czytać na głos swoje odpowiedzi za pomocą syntezy mowy.",
+			"speedLabel": "Szybkość"
+		}
+	},
+	"contextManagement": {
+		"description": "Kontroluj, jakie informacje są zawarte w oknie kontekstu AI, wpływając na zużycie token i jakość odpowiedzi",
+		"autoCondenseContextPercent": {
+			"label": "Próg wyzwalający inteligentną kondensację kontekstu",
+			"description": "Gdy okno kontekstu osiągnie ten próg, Kilo Code automatycznie je skondensuje."
+		},
+		"condensingApiConfiguration": {
+			"label": "Konfiguracja API dla kondensacji kontekstu",
+			"description": "Wybierz, którą konfigurację API używać do operacji kondensacji kontekstu. Pozostaw niewybrane, aby użyć aktualnej aktywnej konfiguracji.",
+			"useCurrentConfig": "Domyślna"
+		},
+		"customCondensingPrompt": {
+			"label": "Niestandardowy monit kondensacji kontekstu",
+			"description": "Niestandardowy monit systemowy dla kondensacji kontekstu. Pozostaw puste, aby użyć domyślnego monitu.",
+			"placeholder": "Wprowadź tutaj swój niestandardowy monit kondensacji...\n\nMożesz użyć tej samej struktury co domyślny monit:\n- Poprzednia rozmowa\n- Aktualna praca\n- Kluczowe koncepcje techniczne\n- Istotne pliki i kod\n- Rozwiązywanie problemów\n- Oczekujące zadania i następne kroki",
+			"reset": "Przywróć domyślne",
+			"hint": "Puste = użyj domyślnego monitu"
+		},
+		"autoCondenseContext": {
+			"name": "Automatycznie wyzwalaj inteligentną kondensację kontekstu",
+			"description": "Gdy włączone, Kilo Code automatycznie skondensuje kontekst po osiągnięciu progu. Gdy wyłączone, nadal możesz ręcznie wyzwolić kondensację kontekstu."
+		},
+		"openTabs": {
+			"label": "Limit kontekstu otwartych kart",
+			"description": "Maksymalna liczba otwartych kart VSCode do uwzględnienia w kontekście. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
+		},
+		"workspaceFiles": {
+			"label": "Limit kontekstu plików obszaru roboczego",
+			"description": "Maksymalna liczba plików do uwzględnienia w szczegółach bieżącego katalogu roboczego. Wyższe wartości zapewniają więcej kontekstu, ale zwiększają zużycie token."
+		},
+		"rooignore": {
+			"label": "Pokaż pliki .kilocodeignore na listach i w wyszukiwaniach",
+			"description": "Gdy włączone, pliki pasujące do wzorców w .kilocodeignore będą pokazywane na listach z symbolem kłódki. Gdy wyłączone, te pliki będą całkowicie ukryte z list plików i wyszukiwań."
+		},
+		"maxReadFile": {
+			"label": "Próg automatycznego skracania odczytu pliku",
+			"description": "Kilo Code odczytuje tę liczbę linii, gdy model nie określa wartości początkowej/końcowej. Jeśli ta liczba jest mniejsza niż całkowita liczba linii pliku, Kilo Code generuje indeks numerów linii definicji kodu. Przypadki specjalne: -1 nakazuje Kilo Code odczytać cały plik (bez indeksowania), a 0 nakazuje nie czytać żadnych linii i dostarczyć tylko indeksy linii dla minimalnego kontekstu. Niższe wartości minimalizują początkowe użycie kontekstu, umożliwiając późniejsze precyzyjne odczyty zakresów linii. Jawne żądania początku/końca nie są ograniczone tym ustawieniem.",
+			"lines": "linii",
+			"always_full_read": "Zawsze czytaj cały plik"
+		},
+		"maxConcurrentFileReads": {
+			"label": "Limit jednoczesnych odczytów",
+			"description": "Maksymalna liczba plików, które narzędzie 'read_file' może przetwarzać jednocześnie. Wyższe wartości mogą przyspieszyć odczyt wielu małych plików, ale zwiększają zużycie pamięci."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Automatycznie dołączaj diagnostykę do kontekstu",
+				"description": "Gdy włączone, komunikaty diagnostyczne (błędy) z edytowanych plików będą automatycznie dołączane do kontekstu. Zawsze możesz ręcznie dołączyć całą diagnostykę obszaru roboczego używając @problems."
+			},
+			"maxMessages": {
+				"label": "Maksymalna liczba komunikatów diagnostycznych",
+				"description": "Maksymalna liczba komunikatów diagnostycznych dołączanych na plik. Ten limit dotyczy zarówno automatycznego dołączania (gdy pole wyboru jest włączone) jak i ręcznych wzmianek @problems. Wyższe wartości dostarczają więcej kontekstu, ale zwiększają zużycie tokenów.",
+				"resetTooltip": "Resetuj do wartości domyślnej (50)",
+				"unlimited": "Nieograniczone komunikaty diagnostyczne",
+				"unlimitedLabel": "Nieograniczone"
+			},
+			"delayAfterWrite": {
+				"label": "Opóźnienie po zapisie, aby umożliwić diagnostyce wykrycie potencjalnych problemów",
+				"description": "Czas oczekiwania po zapisie plików przed kontynuowaniem, aby narzędzia diagnostyczne mogły przetworzyć zmiany i wykryć problemy."
+			}
+		},
+		"condensingThreshold": {
+			"label": "Próg wyzwalania kondensacji",
+			"selectProfile": "Skonfiguruj próg dla profilu",
+			"defaultProfile": "Globalny domyślny (wszystkie profile)",
+			"defaultDescription": "Gdy kontekst osiągnie ten procent, zostanie automatycznie skondensowany dla wszystkich profili, chyba że mają niestandardowe ustawienia",
+			"profileDescription": "Niestandardowy próg tylko dla tego profilu (zastępuje globalny domyślny)",
+			"inheritDescription": "Ten profil dziedziczy globalny domyślny próg ({{threshold}}%)",
+			"usesGlobal": "(używa globalnego {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Maksymalny rozmiar pliku obrazu",
+			"mb": "MB",
+			"description": "Maksymalny rozmiar (w MB) plików obrazów, które mogą być przetwarzane przez narzędzie do czytania plików."
+		},
+		"maxTotalImageSize": {
+			"label": "Maksymalny całkowity rozmiar obrazów",
+			"mb": "MB",
+			"description": "Maksymalny skumulowany limit rozmiaru (w MB) dla wszystkich obrazów przetwarzanych w jednej operacji read_file. Podczas odczytu wielu obrazów rozmiar każdego obrazu jest dodawany do sumy. Jeśli dołączenie kolejnego obrazu przekroczyłoby ten limit, zostanie on pominięty."
+		}
+	},
+	"terminal": {
+		"basic": {
+			"label": "Ustawienia terminala: Podstawowe",
+			"description": "Podstawowe ustawienia terminala"
+		},
+		"advanced": {
+			"label": "Ustawienia terminala: Zaawansowane",
+			"description": "Poniższe opcje mogą wymagać ponownego uruchomienia terminala, aby zastosować ustawienie."
+		},
+		"outputLineLimit": {
+			"label": "Limit wyjścia terminala",
+			"description": "Maksymalna liczba linii do uwzględnienia w wyjściu terminala podczas wykonywania poleceń. Po przekroczeniu linie będą usuwane ze środka, oszczędzając token. <0>Dowiedz się więcej</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Limit znaków w terminalu",
+			"description": "Maksymalna liczba znaków do uwzględnienia w danych wyjściowych terminala podczas wykonywania poleceń. Limit ten ma pierwszeństwo przed limitem linii, aby zapobiec problemom z pamięcią spowodowanym przez bardzo długie linie. Po przekroczeniu limitu dane wyjściowe zostaną obcięte. <0>Dowiedz się więcej</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "Limit czasu integracji powłoki terminala",
+			"description": "Maksymalny czas oczekiwania na inicjalizację integracji powłoki przed wykonaniem poleceń. Dla użytkowników z długim czasem uruchamiania powłoki, ta wartość może wymagać zwiększenia, jeśli widzisz błędy \"Shell Integration Unavailable\" w terminalu. <0>Dowiedz się więcej</0>"
+		},
+		"shellIntegrationDisabled": {
+			"label": "Wyłącz integrację powłoki terminala",
+			"description": "Włącz tę opcję, jeśli polecenia terminala nie działają poprawnie lub widzisz błędy 'Shell Integration Unavailable'. Używa to prostszej metody uruchamiania poleceń, omijając niektóre zaawansowane funkcje terminala. <0>Dowiedz się więcej</0>"
+		},
+		"commandDelay": {
+			"label": "Opóźnienie poleceń terminala",
+			"description": "Opóźnienie w milisekundach dodawane po wykonaniu polecenia. Domyślne ustawienie 0 całkowicie wyłącza opóźnienie. Może to pomóc w zapewnieniu pełnego przechwytywania wyjścia poleceń w terminalach z problemami z synchronizacją. W większości terminali jest to implementowane przez ustawienie `PROMPT_COMMAND='sleep N'`, a PowerShell dodaje `start-sleep` na końcu każdego polecenia. Pierwotnie było to obejście błędu VSCode#237208 i może nie być potrzebne. <0>Dowiedz się więcej</0>"
+		},
+		"compressProgressBar": {
+			"label": "Kompresuj wyjście pasków postępu",
+			"description": "Po włączeniu, przetwarza wyjście terminala z powrotami karetki (\\r), aby symulować sposób wyświetlania treści przez prawdziwy terminal. Usuwa to pośrednie stany pasków postępu, zachowując tylko stan końcowy, co oszczędza przestrzeń kontekstową dla bardziej istotnych informacji. <0>Dowiedz się więcej</0>"
+		},
+		"powershellCounter": {
+			"label": "Włącz obejście licznika PowerShell",
+			"description": "Po włączeniu dodaje licznik do poleceń PowerShell, aby zapewnić prawidłowe wykonanie poleceń. Pomaga to w terminalach PowerShell, które mogą mieć problemy z przechwytywaniem wyjścia. <0>Dowiedz się więcej</0>"
+		},
+		"zshClearEolMark": {
+			"label": "Wyczyść znacznik końca linii ZSH",
+			"description": "Po włączeniu czyści znacznik końca linii ZSH poprzez ustawienie PROMPT_EOL_MARK=''. Zapobiega to problemom z interpretacją wyjścia poleceń, gdy kończy się ono znakami specjalnymi jak '%'. <0>Dowiedz się więcej</0>"
+		},
+		"zshOhMy": {
+			"label": "Włącz integrację Oh My Zsh",
+			"description": "Po włączeniu ustawia ITERM_SHELL_INTEGRATION_INSTALLED=Yes, aby włączyć funkcje integracji powłoki Oh My Zsh. Zastosowanie tego ustawienia może wymagać ponownego uruchomienia IDE. <0>Dowiedz się więcej</0>"
+		},
+		"zshP10k": {
+			"label": "Włącz integrację Powerlevel10k",
+			"description": "Po włączeniu ustawia POWERLEVEL9K_TERM_SHELL_INTEGRATION=true, aby włączyć funkcje integracji powłoki Powerlevel10k. <0>Dowiedz się więcej</0>"
+		},
+		"zdotdir": {
+			"label": "Włącz obsługę ZDOTDIR",
+			"description": "Po włączeniu tworzy tymczasowy katalog dla ZDOTDIR, aby poprawnie obsłużyć integrację powłoki zsh. Zapewnia to prawidłowe działanie integracji powłoki VSCode z zsh, zachowując twoją konfigurację zsh. <0>Dowiedz się więcej</0>"
+		},
+		"inheritEnv": {
+			"label": "Dziedzicz zmienne środowiskowe",
+			"description": "Po włączeniu terminal dziedziczy zmienne środowiskowe z procesu nadrzędnego VSCode, takie jak ustawienia integracji powłoki zdefiniowane w profilu użytkownika. Przełącza to bezpośrednio globalne ustawienie VSCode `terminal.integrated.inheritEnv`. <0>Dowiedz się więcej</0>"
+		}
+	},
+	"advancedSettings": {
+		"title": "Ustawienia zaawansowane"
+	},
+	"advanced": {
+		"diff": {
+			"label": "Włącz edycję przez różnice",
+			"description": "Gdy włączone, Kilo Code będzie w stanie edytować pliki szybciej i automatycznie odrzuci obcięte pełne zapisy plików. Działa najlepiej z najnowszym modelem Claude 4 Sonnet.",
+			"strategy": {
+				"label": "Strategia diff",
+				"options": {
+					"standard": "Standardowa (Pojedynczy blok)",
+					"multiBlock": "Eksperymentalna: Diff wieloblokowy",
+					"unified": "Eksperymentalna: Diff ujednolicony"
+				},
+				"descriptions": {
+					"standard": "Standardowa strategia diff stosuje zmiany do jednego bloku kodu na raz.",
+					"unified": "Strategia diff ujednoliconego stosuje wiele podejść do zastosowania różnic i wybiera najlepsze podejście.",
+					"multiBlock": "Strategia diff wieloblokowego pozwala na aktualizację wielu bloków kodu w pliku w jednym żądaniu."
+				}
+			},
+			"matchPrecision": {
+				"label": "Precyzja dopasowania",
+				"description": "Ten suwak kontroluje, jak dokładnie sekcje kodu muszą pasować podczas stosowania różnic. Niższe wartości umożliwiają bardziej elastyczne dopasowywanie, ale zwiększają ryzyko nieprawidłowych zamian. Używaj wartości poniżej 100% z najwyższą ostrożnością."
+			}
+		},
+		"todoList": {
+			"label": "Włącz narzędzie listy zadań",
+			"description": "Po włączeniu Kilo Code może tworzyć i zarządzać listami zadań do śledzenia postępu zadań. Pomaga to organizować złożone zadania w łatwe do zarządzania kroki."
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "Użyj eksperymentalnej ujednoliconej strategii diff",
+			"description": "Włącz eksperymentalną ujednoliconą strategię diff. Ta strategia może zmniejszyć liczbę ponownych prób spowodowanych błędami modelu, ale może powodować nieoczekiwane zachowanie lub nieprawidłowe edycje. Włącz tylko jeśli rozumiesz ryzyko i jesteś gotów dokładnie przeglądać wszystkie zmiany."
+		},
+		"SEARCH_AND_REPLACE": {
+			"name": "Użyj eksperymentalnego narzędzia do wyszukiwania i zamiany",
+			"description": "Włącz eksperymentalne narzędzie do wyszukiwania i zamiany, umożliwiając Kilo Code zastąpienie wielu wystąpień wyszukiwanego terminu w jednym żądaniu."
+		},
+		"INSERT_BLOCK": {
+			"name": "Użyj eksperymentalnego narzędzia do wstawiania treści",
+			"description": "Włącz eksperymentalne narzędzie do wstawiania treści, umożliwiając Kilo Code wstawianie treści w określonych numerach linii bez konieczności tworzenia diff."
+		},
+		"POWER_STEERING": {
+			"name": "Użyj eksperymentalnego trybu \"wspomagania kierownicy\"",
+			"description": "Po włączeniu, Kilo Code będzie częściej przypominać modelowi o szczegółach jego bieżącej definicji trybu. Doprowadzi to do silniejszego przestrzegania definicji ról i niestandardowych instrukcji, ale będzie używać więcej tokenów na wiadomość."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Użyj eksperymentalnego narzędzia diff wieloblokowego",
+			"description": "Po włączeniu, Kilo Code użyje narzędzia diff wieloblokowego. Spróbuje to zaktualizować wiele bloków kodu w pliku w jednym żądaniu."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Włącz jednoczesne odczytywanie plików",
+			"description": "Po włączeniu Kilo Code może odczytać wiele plików w jednym żądaniu. Po wyłączeniu Kilo Code musi odczytywać pliki pojedynczo. Wyłączenie może pomóc podczas pracy z mniej wydajnymi modelami lub gdy chcesz mieć większą kontrolę nad dostępem do plików."
+		},
+		"MARKETPLACE": {
+			"name": "Włącz Marketplace",
+			"description": "Gdy włączone, możesz instalować MCP i niestandardowe tryby z Marketplace."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Włącz równoczesne edycje plików",
+			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Włącz szybkie stosowanie",
+			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą szybkiego stosowania ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
+			"apiKey": "Klucz API Morph (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"modelLabel": "Wybór modelu",
+			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
+			"models": {
+				"auto": "Automatyczny (Domyślny - wybiera najlepszy dostępny)",
+				"morphFast": "Morph v3 Fast (Szybszy, niższy koszt)",
+				"morphLarge": "Morph v3 Large (Bardziej zaawansowany)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edycja w tle",
+			"description": "Zapobiega zakłócaniu fokusa edytora gdy włączone. Edycje plików odbywają się w tle bez otwierania widoków różnic lub kradzieży fokusa. Możesz kontynuować pracę bez przeszkód podczas gdy Kilo Code wprowadza zmiany. Pliki mogą być otwierane bez fokusa aby przechwycić diagnostykę lub pozostać całkowicie zamknięte."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Użyj nowego parsera wiadomości",
+			"description": "Włącz eksperymentalny parser wiadomości w strumieniu, który przyspiesza długie odpowiedzi dzięki bardziej wydajnemu przetwarzaniu wiadomości."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Wymagaj listy 'todos' dla nowych zadań",
+			"description": "Gdy włączone, narzędzie new_task będzie wymagało podania parametru todos. Zapewnia to, że wszystkie nowe zadania rozpoczynają się od jasnej listy celów. Gdy wyłączone (domyślnie), parametr todos pozostaje opcjonalny dla zachowania kompatybilności wstecznej."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Włącz generowanie obrazów AI",
+			"description": "Gdy włączone, Kilo Code może generować obrazy z promptów tekstowych. Wymaga skonfigurowanego klucza API Kilo Code lub OpenRouter.",
+			"apiProvider": "Dostawca API",
+			"openRouterApiKeyLabel": "Klucz API OpenRouter",
+			"openRouterApiKeyPlaceholder": "Wprowadź swój klucz API OpenRouter",
+			"kiloCodeApiKeyLabel": "Klucz API Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Wprowadź swój klucz API Kilo Code",
+			"kiloCodeApiKeyPaste": "Wklej bieżący klucz API Kilo Code",
+			"getApiKeyText": "Uzyskaj swój klucz API od",
+			"modelSelectionLabel": "Model generowania obrazów",
+			"modelSelectionDescription": "Wybierz model do generowania obrazów",
+			"warningMissingKey": "⚠️ Klucz API jest wymagany do generowania obrazów, skonfiguruj go powyżej.",
+			"successConfigured": "✓ Generowanie obrazów jest skonfigurowane i gotowe do użycia"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Włącz funkcje Autocomplete dla szybkich sugestii kodu i ulepszeń bezpośrednio w twoim edytorze. Zawiera Szybkie Zadanie (Cmd+I) dla ukierunkowanych zmian i Autocomplete dla kontekstowych ulepszeń."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Włącz polecenia slash inicjowane przez model",
+			"description": "Gdy włączone, Kilo Code może uruchamiać twoje polecenia slash w celu wykonywania przepływów pracy."
+		}
+	},
+	"promptCaching": {
+		"label": "Wyłącz buforowanie promptów",
+		"description": "Po zaznaczeniu, Kilo Code nie będzie używać buforowania promptów dla tego modelu."
+	},
+	"temperature": {
+		"useCustom": "Użyj niestandardowej temperatury",
+		"description": "Kontroluje losowość w odpowiedziach modelu.",
+		"rangeDescription": "Wyższe wartości sprawiają, że wyjście jest bardziej losowe, niższe wartości czynią je bardziej deterministycznym."
+	},
+	"modelInfo": {
+		"supportsImages": "Obsługuje obrazy",
+		"noImages": "Nie obsługuje obrazów",
+		"supportsComputerUse": "Obsługuje użycie komputera",
+		"noComputerUse": "Nie obsługuje użycia komputera",
+		"supportsPromptCache": "Obsługuje buforowanie podpowiedzi",
+		"noPromptCache": "Nie obsługuje buforowania podpowiedzi",
+		"contextWindow": "Okno kontekstowe:",
+		"maxOutput": "Maksymalne wyjście",
+		"inputPrice": "Cena wejścia",
+		"outputPrice": "Cena wyjścia",
+		"cacheReadsPrice": "Cena odczytów bufora",
+		"cacheWritesPrice": "Cena zapisów bufora",
+		"enableStreaming": "Włącz strumieniowanie",
+		"enableR1Format": "Włącz parametry modelu R1",
+		"enableR1FormatTips": "Należy włączyć podczas korzystania z modeli R1, takich jak QWQ, aby uniknąć błędu 400",
+		"useAzure": "Użyj Azure",
+		"azureApiVersion": "Ustaw wersję API Azure",
+		"gemini": {
+			"freeRequests": "* Darmowe do {{count}} zapytań na minutę. Po tym, rozliczanie zależy od rozmiaru podpowiedzi.",
+			"pricingDetails": "Więcej informacji znajdziesz w szczegółach cennika.",
+			"billingEstimate": "* Rozliczenie jest szacunkowe - dokładny koszt zależy od rozmiaru podpowiedzi."
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "Rozszerzenie automatycznie pobiera najnowszą listę modeli dostępnych w <serviceLink>{{serviceName}}</serviceLink>. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"label": "Model",
+		"searchPlaceholder": "Wyszukaj",
+		"noMatchFound": "Nie znaleziono dopasowań",
+		"useCustomModel": "Użyj niestandardowy: {{modelId}}"
+	},
+	"footer": {
+		"feedback": "Jeśli masz jakiekolwiek pytania lub opinie, śmiało otwórz zgłoszenie na <githubLink>github.com/Kilo-Org/kilocode</githubLink> lub dołącz do <redditLink>reddit.com/r/kilocode</redditLink> lub <discordLink>kilocode.ai/discord</discordLink>",
+		"support": "W sprawach finansowych skontaktuj się z Obsługą Klienta pod adresem <supportLink>https://kilocode.ai/support</supportLink>",
+		"telemetry": {
+			"label": "Zezwól na anonimowe raportowanie błędów i użycia",
+			"description": "Pomóż ulepszyć Kilo Code, wysyłając anonimowe dane o użytkowaniu i raporty o błędach. Nigdy nie są wysyłane kod, podpowiedzi ani informacje osobiste. Zobacz naszą politykę prywatności, aby uzyskać więcej szczegółów."
+		},
+		"settings": {
+			"import": "Importuj",
+			"export": "Eksportuj",
+			"reset": "Resetuj"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "Maksymalna liczba tokenów",
+		"maxThinkingTokens": "Maksymalna liczba tokenów myślenia"
+	},
+	"validation": {
+		"apiKey": "Musisz podać prawidłowy klucz API.",
+		"awsRegion": "Musisz wybrać region, aby korzystać z Amazon Bedrock.",
+		"googleCloud": "Musisz podać prawidłowe ID projektu i region Google Cloud.",
+		"modelId": "Musisz podać prawidłowe ID modelu.",
+		"modelSelector": "Musisz podać prawidłowy selektor modelu.",
+		"openAi": "Musisz podać prawidłowy bazowy URL, klucz API i ID modelu.",
+		"arn": {
+			"invalidFormat": "Nieprawidłowy format ARN. Sprawdź wymagania dotyczące formatu.",
+			"regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
+		},
+		"modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model.",
+		"modelDeprecated": "Ten model nie jest już dostępny. Wybierz inny model.",
+		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
+		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
+		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
+		"qwenCodeOauthPath": "Musisz podać prawidłową ścieżkę do poświadczeń OAuth"
+	},
+	"placeholders": {
+		"apiKey": "Wprowadź klucz API...",
+		"profileName": "Wprowadź nazwę profilu",
+		"accessKey": "Wprowadź klucz dostępu...",
+		"secretKey": "Wprowadź klucz tajny...",
+		"sessionToken": "Wprowadź token sesji...",
+		"credentialsJson": "Wprowadź JSON poświadczeń...",
+		"keyFilePath": "Wprowadź ścieżkę pliku klucza...",
+		"projectId": "Wprowadź ID projektu...",
+		"customArn": "Wprowadź ARN (np. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "Wprowadź podstawowy URL...",
+		"modelId": {
+			"lmStudio": "np. meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "np. lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "np. llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "np. 4096",
+			"contextWindow": "np. 128000",
+			"inputPrice": "np. 0.0001",
+			"outputPrice": "np. 0.0002",
+			"cacheWritePrice": "np. 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "Domyślnie: http://localhost:11434",
+		"lmStudioUrl": "Domyślnie: http://localhost:1234",
+		"geminiUrl": "Domyślnie: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "Niestandardowy ARN",
+		"useCustomArn": "Użyj niestandardowego ARN..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Pokaż oś czasu zadania",
+			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"costThreshold": {
+			"currentValue": "Aktualny próg: ${{value}}",
+			"label": "Ukryj koszt poniżej progu",
+			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
+		},
+		"showTimestamps": {
+			"label": "Pokaż znaczniki czasu",
+			"description": "Pokaż znacznik czasu dla każdej wiadomości w widoku czatu"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Pokaż animację marginesu podczas autouzupełniania",
+			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",
+			"preview": "Podgląd animacji"
+		}
+	},
+	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",
+	"includeMaxOutputTokensDescription": "Wyślij parametr maksymalnych tokenów wyjściowych w żądaniach API. Niektórzy dostawcy mogą tego nie obsługiwać.",
+	"limitMaxTokensDescription": "Ogranicz maksymalną liczbę tokenów w odpowiedzi",
+	"maxOutputTokensLabel": "Maksymalne tokeny wyjściowe",
+	"maxTokensGenerateDescription": "Maksymalne tokeny do wygenerowania w odpowiedzi",
+	"serviceTier": {
+		"label": "Poziom usług",
+		"tooltip": "Aby szybciej przetwarzać żądania API, wypróbuj priorytetowy poziom usług. Aby uzyskać niższe ceny przy wyższej latencji, wypróbuj elastyczny poziom usług.",
+		"standard": "Standardowy",
+		"flex": "Elastyczny",
+		"priority": "Priorytetowy",
+		"pricingTableTitle": "Cennik według poziomu usług (cena za 1 mln tokenów)",
+		"columns": {
+			"tier": "Poziom",
+			"input": "Wejście",
+			"output": "Wyjście",
+			"cacheReads": "Odczyty z pamięci podręcznej"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Domyślnie zwijaj komunikaty o myśleniu",
+			"description": "Gdy włączone, bloki myślenia będą domyślnie zwinięte, dopóki nie wejdziesz z nimi w interakcję"
+		}
+	}
+}

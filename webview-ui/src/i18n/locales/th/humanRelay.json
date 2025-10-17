@@ -1,0 +1,13 @@
+{
+	"dialogTitle": "Human Relay - กรุณาช่วยคัดลอก/วางข้อมูล",
+	"dialogDescription": "กรุณาคัดลอก prompt ต่อไปนี้ไปยัง web AI จากนั้นวางคำตอบของ AI ในช่องกรอกข้อมูลด้านล่าง",
+	"copiedToClipboard": "คัดลอกไปยังคลิปบอร์ดแล้ว",
+	"aiResponse": {
+		"label": "กรุณาใส่คำตอบของ AI:",
+		"placeholder": "วางคำตอบของ AI ที่นี่..."
+	},
+	"actions": {
+		"cancel": "ยกเลิก",
+		"submit": "ส่ง"
+	}
+}

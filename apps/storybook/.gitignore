@@ -1,0 +1,10 @@
+# Storybook build output
+public
+storybook-static/
+build-storybook.log
+
+# Turbo cache
+.turbo/
+
+# Generated stories from playwright
+stories/generated/*

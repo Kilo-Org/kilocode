@@ -1,0 +1,82 @@
+name: Bug Report
+description: File a bug report
+type: "Bug"
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Thank you for contributing! Please search similar issues first to see if your bug is already known:
+              https://github.com/Kilo-Org/kilocode/issues
+
+    - type: dropdown
+      id: plugin-type
+      attributes:
+          label: Plugin Type
+          description: Which plugin are you reporting this bug for?
+          options:
+              - VSCode Extension
+              - JetBrains Plugin
+              - Kilo Code CLI
+          default: 0
+      validations:
+          required: true
+
+    - type: input
+      id: version
+      attributes:
+          label: App Version
+          description: What version of Kilo Code are you using? (e.g., v3.3.1)
+      validations:
+          required: true
+
+    - type: textarea
+      id: description
+      attributes:
+          label: Description
+          description: Describe what went wrong. Please include as much information as possible.
+      validations:
+          required: true
+
+    - type: textarea
+      id: steps
+      attributes:
+          label: Reproduction steps
+          description: How can we trigger this bug? Please provider clear steps so we can reproduce.
+          placeholder: |
+              1.
+              2.
+              3.
+      validations:
+          required: true
+
+    - type: input
+      id: provider
+      attributes:
+          label: Provider
+          description: What provider were you using when the issue occurred?
+          placeholder: "e.g., Kilo Code"
+      validations:
+          required: false
+
+    - type: input
+      id: model
+      attributes:
+          label: Model
+          description: What model were you using when the issue occurred?
+          placeholder: "e.g., Claude Sonnet 4"
+      validations:
+          required: false
+
+    - type: textarea
+      id: system-info
+      attributes:
+          label: System Information
+          description: What operating system and hardware are you using?
+          placeholder: |
+              e.g.
+              OS: Windows 11
+              CPU: Intel Core i7-11700K
+              GPU: NVIDIA GeForce RTX 3070
+              RAM: 32GB DDR4
+      validations:
+          required: false

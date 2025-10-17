@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Brak środowiska Node.js",
+			"message": "Nie wykryto środowiska Node.js, zainstaluj Node.js i spróbuj ponownie. Zalecana wersja: {{minVersion}} lub wyższa."
+		},
+		"nodejsVersionLow": {
+			"title": "Wersja Node.js zbyt niska",
+			"message": "Aktualna wersja Node.js ({{nodePath}}) to {{nodeVersion}}, zaktualizuj do {{minVersion}} lub wyższej dla lepszej kompatybilności."
+		}
+	},
+	"dialog": {
+		"cancel": "Anuluj"
+	},
+	"ui": {
+		"initializing": "Kilo Code się inicjalizuje...",
+		"systemInformation": "Informacje systemowe"
+	}
+}

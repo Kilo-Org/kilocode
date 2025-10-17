@@ -1,0 +1,11 @@
+# Plugin basic information
+pluginGroup=ai.kilocode.jetbrains
+pluginVersion={{VERSION}}
+
+# Platform basic information
+platformVersion=2024.1.4
+platformType=IC
+pluginSinceBuild=241
+
+# Other project configurations can be added here
+vscodeVersion=1.100.0

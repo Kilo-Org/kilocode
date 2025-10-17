@@ -1,0 +1,14 @@
+{
+	"name": "@roo-code/vscode-nightly",
+	"description": "Nightly build for the Kilo Code VSCode extension.",
+	"private": true,
+	"packageManager": "pnpm@10.8.1",
+	"scripts": {
+		"bundle:nightly": "node esbuild.mjs",
+		"vsix:nightly": "cd build && mkdirp ../../../bin && npx vsce package --no-dependencies --out ../../../bin",
+		"clean": "rimraf build .turbo"
+	},
+	"devDependencies": {
+		"@roo-code/build": "workspace:^"
+	}
+}

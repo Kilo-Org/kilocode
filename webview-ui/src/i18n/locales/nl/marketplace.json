@@ -1,0 +1,156 @@
+{
+	"title": "Kilo Code Marketplace",
+	"tabs": {
+		"installed": "Geïnstalleerd",
+		"settings": "Instellingen",
+		"browse": "Bladeren"
+	},
+	"done": "Gereed",
+	"refresh": "Vernieuwen",
+	"filters": {
+		"search": {
+			"placeholder": "Marketplace-items zoeken...",
+			"placeholderMcp": "MCP's zoeken...",
+			"placeholderMode": "Modi zoeken..."
+		},
+		"installed": {
+			"label": "Filteren op status",
+			"all": "Alle items",
+			"installed": "Geïnstalleerd",
+			"notInstalled": "Niet geïnstalleerd"
+		},
+		"type": {
+			"label": "Filteren op type:",
+			"all": "Alle types",
+			"mode": "Modus",
+			"mcpServer": "MCP-server"
+		},
+		"sort": {
+			"label": "Sorteren op:",
+			"name": "Naam",
+			"author": "Auteur",
+			"lastUpdated": "Laatst bijgewerkt"
+		},
+		"tags": {
+			"label": "Filteren op tags:",
+			"clear": "Tags wissen",
+			"placeholder": "Type om tags te zoeken en selecteren...",
+			"noResults": "Geen overeenkomende tags gevonden",
+			"selected": "Items tonen met een van de geselecteerde tags",
+			"clickToFilter": "Klik op tags om items te filteren"
+		},
+		"none": "Geen"
+	},
+	"sections": {
+		"organizationMcps": "MCP's van {{organization}}",
+		"marketplace": "Marktplaats"
+	},
+	"type-group": {
+		"modes": "Modi",
+		"mcps": "MCP-servers"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Geen Marketplace-items gevonden",
+			"withFilters": "Probeer je filters aan te passen",
+			"noSources": "Probeer een bron toe te voegen in het Bronnen-tabblad",
+			"adjustFilters": "Probeer je filters of zoektermen aan te passen",
+			"clearAllFilters": "Alle filters wissen"
+		},
+		"count": "{{count}} items gevonden",
+		"components": "{{count}} componenten",
+		"matched": "{{count}} gevonden",
+		"refresh": {
+			"button": "Vernieuwen",
+			"refreshing": "Vernieuwen...",
+			"mayTakeMoment": "Dit kan even duren."
+		},
+		"card": {
+			"by": "door {{author}}",
+			"from": "van {{source}}",
+			"install": "Installeren",
+			"installProject": "Installeren",
+			"installGlobal": "Installeren (Globaal)",
+			"remove": "Verwijderen",
+			"removeProject": "Verwijderen",
+			"removeGlobal": "Verwijderen (Globaal)",
+			"viewSource": "Bekijken",
+			"viewOnSource": "Bekijken op {{source}}",
+			"noWorkspaceTooltip": "Open een werkruimte om Marketplace-items te installeren",
+			"installed": "Geïnstalleerd",
+			"removeProjectTooltip": "Verwijderen uit huidig project",
+			"removeGlobalTooltip": "Verwijderen uit globale configuratie",
+			"actionsMenuLabel": "Meer acties"
+		},
+		"removeFailed": "Item verwijderen mislukt: {{error}}",
+		"unknownError": "Onbekende fout opgetreden"
+	},
+	"install": {
+		"title": "{{name}} installeren",
+		"titleMode": "{{name}} modus installeren",
+		"titleMcp": "{{name}} MCP installeren",
+		"scope": "Installatiebereik",
+		"project": "Project (huidige werkruimte)",
+		"global": "Globaal (alle werkruimtes)",
+		"method": "Installatiemethode",
+		"configuration": "Configuratie",
+		"configurationDescription": "Configureer de vereiste parameters voor deze MCP-server",
+		"button": "Installeren",
+		"successTitle": "{{name}} geïnstalleerd",
+		"successDescription": "Installatie succesvol voltooid",
+		"installed": "Succesvol geïnstalleerd!",
+		"whatNextMcp": "Je kunt deze MCP-server nu configureren en gebruiken. Klik op het MCP-pictogram in de zijbalk om van tabblad te wisselen.",
+		"whatNextMode": "Je kunt deze modus nu gebruiken. Klik op het modi-pictogram in de zijbalk om van tabblad te wisselen.",
+		"done": "Gereed",
+		"goToMcp": "Ga naar MCP-tabblad",
+		"goToModes": "Ga naar Modi-instellingen",
+		"moreInfoMcp": "{{name}} MCP-documentatie bekijken",
+		"validationRequired": "Geef een waarde op voor {{paramName}}",
+		"prerequisites": "Vereisten"
+	},
+	"sources": {
+		"title": "Marketplace-bronnen configureren",
+		"description": "Voeg Git-repositories toe die Marketplace-items bevatten. Deze repositories worden opgehaald bij het bladeren door de Marketplace.",
+		"add": {
+			"title": "Nieuwe bron toevoegen",
+			"urlPlaceholder": "Git-repository URL (bijv. https://github.com/username/repo)",
+			"urlFormats": "Ondersteunde formaten: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git) of Git-protocol (git://github.com/username/repo.git)",
+			"namePlaceholder": "Weergavenaam (max 20 tekens)",
+			"button": "Bron toevoegen"
+		},
+		"current": {
+			"title": "Huidige bronnen",
+			"empty": "Geen bronnen geconfigureerd. Voeg een bron toe om te beginnen.",
+			"refresh": "Deze bron vernieuwen",
+			"remove": "Bron verwijderen"
+		},
+		"errors": {
+			"emptyUrl": "URL mag niet leeg zijn",
+			"invalidUrl": "Ongeldig URL-formaat",
+			"nonVisibleChars": "URL bevat onzichtbare tekens anders dan spaties",
+			"invalidGitUrl": "URL moet een geldige Git-repository URL zijn (bijv. https://github.com/username/repo)",
+			"duplicateUrl": "Deze URL staat al in de lijst (hoofdletters en spaties genegeerd)",
+			"nameTooLong": "Naam moet 20 tekens of minder zijn",
+			"nonVisibleCharsName": "Naam bevat onzichtbare tekens anders dan spaties",
+			"duplicateName": "Deze naam is al in gebruik (hoofdletters en spaties genegeerd)",
+			"emojiName": "Emoji-tekens kunnen weergaveproblemen veroorzaken",
+			"maxSources": "Maximaal {{max}} bronnen toegestaan"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Modus verwijderen",
+			"message": "Weet je zeker dat je de modus \"{{modeName}}\" wilt verwijderen?",
+			"rulesWarning": "Dit verwijdert ook alle bijbehorende regelbestanden voor deze modus."
+		},
+		"mcp": {
+			"title": "MCP-server verwijderen",
+			"message": "Weet je zeker dat je de MCP-server \"{{mcpName}}\" wilt verwijderen?"
+		},
+		"cancel": "Annuleren",
+		"confirm": "Verwijderen"
+	},
+	"footer": {
+		"issueText": "Heb je een probleem gevonden met een marketplace-item of heb je suggesties voor nieuwe items? <0>Open een GitHub issue</0> om het ons te laten weten!"
+	}
+}

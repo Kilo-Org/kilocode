@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Thiếu môi trường Node.js",
+			"message": "Không phát hiện môi trường Node.js, vui lòng cài đặt Node.js và thử lại. Phiên bản được đề xuất: {{minVersion}} trở lên."
+		},
+		"nodejsVersionLow": {
+			"title": "Phiên bản Node.js quá thấp",
+			"message": "Phiên bản Node.js hiện tại ({{nodePath}}) là {{nodeVersion}}, vui lòng nâng cấp lên {{minVersion}} trở lên để có khả năng tương thích tốt hơn."
+		}
+	},
+	"dialog": {
+		"cancel": "Hủy"
+	},
+	"ui": {
+		"initializing": "Kilo Code đang khởi tạo...",
+		"systemInformation": "Thông tin hệ thống"
+	}
+}

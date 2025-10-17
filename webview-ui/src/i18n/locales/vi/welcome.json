@@ -1,0 +1,27 @@
+{
+	"greeting": "Xin chào, tôi là Kilo Code!",
+	"introduction": "<strong>Kilo Code là công cụ lập trình tự động hàng đầu.</strong> Hãy sẵn sàng để thiết kế kiến trúc, viết mã, gỡ lỗi và tăng năng suất của bạn như chưa từng có trước đây. Để tiếp tục, Kilo Code yêu cầu một khóa API.",
+	"notice": "Để bắt đầu, tiện ích mở rộng này cần một nhà cung cấp API.",
+	"start": "Bắt đầu thôi!",
+	"routers": {
+		"requesty": {
+			"description": "Bộ định tuyến LLM được tối ưu hóa của bạn",
+			"incentive": "$1 tín dụng miễn phí"
+		},
+		"openrouter": {
+			"description": "Giao diện thống nhất cho các LLM"
+		},
+		"roo": {
+			"description": "Những mô hình miễn phí tốt nhất để bắt đầu",
+			"incentive": "Dùng thử Roo miễn phí"
+		}
+	},
+	"chooseProvider": "Để thực hiện phép màu của mình, Kilo Code cần một khóa API.",
+	"startRouter": "Chúng tôi khuyên bạn nên sử dụng bộ định tuyến LLM:",
+	"startCustom": "Hoặc bạn có thể sử dụng khóa API của riêng mình:",
+	"telemetry": {
+		"helpImprove": "Giúp cải thiện Kilo Code",
+		"helpImproveMessage": "Kilo Code thu thập dữ liệu lỗi và sử dụng để giúp chúng tôi sửa lỗi và cải thiện tiện ích mở rộng. Dữ liệu viễn trắc này không thu thập mã, prompts hoặc thông tin cá nhân. Bạn có thể tắt tính năng này trong <settingsLink>cài đặt</settingsLink>."
+	},
+	"importSettings": "Nhập cài đặt"
+}

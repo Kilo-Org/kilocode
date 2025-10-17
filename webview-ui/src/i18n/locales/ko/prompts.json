@@ -1,0 +1,223 @@
+{
+	"title": "모드",
+	"done": "완료",
+	"modes": {
+		"title": "모드",
+		"createNewMode": "새 모드 만들기",
+		"importMode": "모드 가져오기",
+		"noMatchFound": "모드를 찾을 수 없습니다",
+		"editModesConfig": "모드 구성 편집",
+		"editGlobalModes": "전역 모드 편집",
+		"editProjectModes": "프로젝트 모드 편집 (.kilocodemodes)",
+		"createModeHelpText": "모드는 Kilo Code의 행동을 맞춤화하는 특화된 페르소나입니다. <0>모드 사용에 대해 알아보기</0> 또는 <1>모드 사용자 정의하기.</1>",
+		"selectMode": "모드 검색"
+	},
+	"apiConfiguration": {
+		"title": "API 구성",
+		"select": "이 모드에 사용할 API 구성 선택"
+	},
+	"organizationMode": {
+		"title": "조직 모드",
+		"description": "이 모드는 조직에서 제공하며 여기서 편집할 수 없습니다. 이 모드를 수정하려면 Kilo Code Dashboard를 방문하세요.",
+		"cannotEdit": "조직 모드는 편집할 수 없습니다"
+	},
+	"tools": {
+		"title": "사용 가능한 도구",
+		"builtInModesText": "내장 모드용 도구는 수정할 수 없습니다",
+		"editTools": "도구 편집",
+		"doneEditing": "편집 완료",
+		"allowedFiles": "허용된 파일:",
+		"toolNames": {
+			"read": "파일 읽기",
+			"edit": "파일 편집",
+			"browser": "브라우저 사용",
+			"command": "명령 실행",
+			"mcp": "MCP 사용"
+		},
+		"noTools": "없음"
+	},
+	"roleDefinition": {
+		"title": "역할 정의",
+		"resetToDefault": "기본값으로 재설정",
+		"description": "이 모드에 대한 Kilo Code의 전문성과 성격을 정의하세요. 이 설명은 Kilo Code가 자신을 어떻게 표현하고 작업에 접근하는지 형성합니다."
+	},
+	"description": {
+		"title": "짧은 설명 (사람용)",
+		"resetToDefault": "기본 설명으로 재설정",
+		"description": "모드 선택기 드롭다운에 표시되는 간단한 설명입니다."
+	},
+	"whenToUse": {
+		"title": "사용 시기 (선택 사항)",
+		"description": "이 모드를 언제 사용해야 하는지 설명합니다. 이는 Orchestrator가 작업에 적합한 모드를 선택하는 데 도움이 됩니다.",
+		"resetToDefault": "'사용 시기' 설명을 기본값으로 재설정"
+	},
+	"customInstructions": {
+		"title": "모드별 사용자 지정 지침 (선택 사항)",
+		"resetToDefault": "기본값으로 재설정",
+		"description": "{{modeName}} 모드에 대한 특정 행동 지침을 추가하세요.",
+		"loadFromFile": "{{mode}} 모드에 특정한 사용자 지정 지침은 작업 공간의 <span>.kilocode/rules-{{slug}}/</span> 폴더 또는 전역 <0>.kilocode/rules-{{slug}}/</0>에서도 로드할 수 있습니다 (.kilocoderules-{{slug}} 및 .clinerules-{{slug}}는 더 이상 사용되지 않으며 곧 작동을 중지합니다)."
+	},
+	"exportMode": {
+		"title": "모드 내보내기",
+		"description": ".kilocode/rules-{{slug}}/ 폴더의 규칙과 함께 이 모드를 공유 가능한 YAML 파일로 내보냅니다. 원본 파일은 변경되지 않습니다.",
+		"exporting": "내보내는 중..."
+	},
+	"importMode": {
+		"selectLevel": "이 모드를 가져올 위치를 선택하세요:",
+		"import": "가져오기",
+		"importing": "가져오는 중...",
+		"global": {
+			"label": "전역 수준",
+			"description": "모든 프로젝트에서 사용 가능합니다. 내보낸 모드에 규칙 파일이 포함되어 있었다면 전역 .kilocode/rules-{slug}/ 폴더에 다시 생성됩니다."
+		},
+		"project": {
+			"label": "프로젝트 수준",
+			"description": "이 작업 공간에서만 사용할 수 있습니다. 내보낸 모드에 규칙 파일이 포함된 경우 .kilocode/rules-{slug}/ 폴더에 다시 생성됩니다."
+		}
+	},
+	"advanced": {
+		"title": "고급"
+	},
+	"globalCustomInstructions": {
+		"title": "모든 모드에 대한 사용자 지정 지침",
+		"description": "이 지침은 모든 모드에 적용됩니다. 아래의 모드별 지침으로 향상될 수 있는 기본 동작 세트를 제공합니다. <0>더 알아보기</0>",
+		"loadFromFile": "지침은 작업 공간의 <span>.kilocode/rules/</span> 폴더 또는 전역 <0>.kilocode/rules/</0>에서도 로드할 수 있습니다 (.kilocoderules 및 .clinerules는 더 이상 사용되지 않으며 곧 작동을 중지합니다)."
+	},
+	"systemPrompt": {
+		"preview": "시스템 프롬프트 미리보기",
+		"copy": "시스템 프롬프트를 클립보드에 복사",
+		"title": "시스템 프롬프트 ({{modeName}} 모드)"
+	},
+	"supportPrompts": {
+		"title": "지원 프롬프트",
+		"resetPrompt": "{{promptType}} 프롬프트를 기본값으로 재설정",
+		"prompt": "프롬프트",
+		"enhance": {
+			"apiConfiguration": "API 구성",
+			"apiConfigDescription": "프롬프트 향상에 항상 사용할 API 구성을 선택하거나, 현재 선택된 구성을 사용할 수 있습니다",
+			"useCurrentConfig": "현재 선택된 API 구성 사용",
+			"testPromptPlaceholder": "향상을 테스트할 프롬프트 입력",
+			"previewButton": "프롬프트 향상 미리보기",
+			"testEnhancement": "향상 테스트",
+			"includeTaskHistory": "작업 기록을 컨텍스트로 포함",
+			"includeTaskHistoryDescription": "활성화하면 현재 대화의 마지막 10개 메시지가 프롬프트 향상 시 컨텍스트로 포함되어 더 관련성 높고 컨텍스트를 인식하는 제안을 생성하는 데 도움이 됩니다."
+		},
+		"condense": {
+			"apiConfiguration": "컨텍스트 압축을 위한 API 구성",
+			"apiConfigDescription": "컨텍스트 압축 작업에 사용할 API 구성을 선택합니다. 현재 활성 구성을 사용하려면 선택하지 않은 상태로 둡니다.",
+			"useCurrentConfig": "현재 선택된 API 구성 사용"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "프롬프트 향상",
+				"description": "입력에 맞춤화된 제안이나 개선을 얻기 위해 프롬프트 향상을 사용하세요. 이를 통해 Kilo Code가 의도를 이해하고 최상의 응답을 제공할 수 있습니다. 채팅에서 ✨ 아이콘을 통해 이용 가능합니다."
+			},
+			"CONDENSE": {
+				"label": "컨텍스트 압축",
+				"description": "토큰 제한을 관리하기 위해 대화 컨텍스트를 압축하는 방법을 구성합니다. 이 프롬프트는 수동 및 자동 컨텍스트 압축 작업 모두에 사용됩니다."
+			},
+			"EXPLAIN": {
+				"label": "코드 설명",
+				"description": "코드 스니펫, 함수 또는 전체 파일에 대한 상세한 설명을 얻을 수 있습니다. 복잡한 코드를 이해하거나 새로운 패턴을 배우는 데 유용합니다. 코드 액션(에디터의 전구 아이콘)과 에디터 컨텍스트 메뉴(선택한 코드에서 우클릭)에서 이용 가능합니다."
+			},
+			"FIX": {
+				"label": "문제 해결",
+				"description": "버그, 오류 또는 코드 품질 문제를 식별하고 해결하는 데 도움을 받을 수 있습니다. 문제 해결을 위한 단계별 안내를 제공합니다. 코드 액션(에디터의 전구 아이콘)과 에디터 컨텍스트 메뉴(선택한 코드에서 우클릭)에서 이용 가능합니다."
+			},
+			"IMPROVE": {
+				"label": "코드 개선",
+				"description": "기능을 유지하면서 코드 최적화, 더 나은 관행 및 아키텍처 개선에 대한 제안을 받을 수 있습니다. 코드 액션(에디터의 전구 아이콘)과 에디터 컨텍스트 메뉴(선택한 코드에서 우클릭)에서 이용 가능합니다."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "컨텍스트에 추가",
+				"description": "현재 작업이나 대화에 컨텍스트를 추가합니다. 추가 정보나 명확한 설명을 제공하는 데 유용합니다. 코드 액션(에디터의 전구 아이콘)과 에디터 컨텍스트 메뉴(선택한 코드에서 우클릭)에서 이용 가능합니다."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "터미널 콘텐츠를 컨텍스트에 추가",
+				"description": "현재 작업이나 대화에 터미널 출력을 추가합니다. 명령 출력이나 로그를 제공하는 데 유용합니다. 터미널 컨텍스트 메뉴(선택한 터미널 콘텐츠에서 우클릭)에서 이용 가능합니다."
+			},
+			"TERMINAL_FIX": {
+				"label": "터미널 명령 수정",
+				"description": "실패했거나 개선이 필요한 터미널 명령을 수정하는 데 도움을 받을 수 있습니다. 터미널 컨텍스트 메뉴(선택한 터미널 콘텐츠에서 우클릭)에서 이용 가능합니다."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "터미널 명령 설명",
+				"description": "터미널 명령과 그 출력에 대한 상세한 설명을 얻을 수 있습니다. 터미널 컨텍스트 메뉴(선택한 터미널 콘텐츠에서 우클릭)에서 이용 가능합니다."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "터미널 명령 생성",
+				"description": "설명을 기반으로 터미널 명령을 생성하는 데 도움을 줍니다."
+			},
+			"NEW_TASK": {
+				"label": "새 작업 시작",
+				"description": "입력한 내용으로 새 작업을 시작할 수 있습니다. 명령 팔레트에서 이용 가능합니다."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "커밋 메시지 생성",
+				"description": "스테이지된 git 변경 사항을 기반으로 설명이 포함된 커밋 메시지를 생성합니다. 프롬프트를 사용자 정의하여 저장소의 모범 사례를 따르는 메시지를 생성하세요."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "고급: 시스템 프롬프트 재정의",
+		"description": "<2>⚠️ 경고:</2> 이 고급 기능은 안전 장치를 우회합니다. <1>사용하기 전에 이것을 읽으십시오!</1>작업 공간의 <span>.kilocode/system-prompt-{{slug}}</span>에 파일을 생성하여 기본 시스템 프롬프트를 재정의합니다."
+	},
+	"createModeDialog": {
+		"title": "새 모드 만들기",
+		"close": "닫기",
+		"name": {
+			"label": "이름",
+			"placeholder": "모드 이름 입력"
+		},
+		"slug": {
+			"label": "슬러그",
+			"description": "슬러그는 URL 및 파일 이름에 사용됩니다. 소문자여야 하며 문자, 숫자 및 하이픈만 포함해야 합니다."
+		},
+		"saveLocation": {
+			"label": "저장 위치",
+			"description": "이 모드를 저장할 위치를 선택하세요. 프로젝트별 모드는 전역 모드보다 우선합니다.",
+			"global": {
+				"label": "전역",
+				"description": "모든 작업 공간에서 사용 가능"
+			},
+			"project": {
+				"label": "프로젝트별 (.kilocodemodes)",
+				"description": "이 작업 공간에서만 사용 가능, 전역보다 우선"
+			}
+		},
+		"roleDefinition": {
+			"label": "역할 정의",
+			"description": "이 모드에 대한 Kilo Code의 전문성과 성격을 정의하세요."
+		},
+		"whenToUse": {
+			"label": "사용 시기 (선택 사항)",
+			"description": "이 모드가 가장 효과적인 시기와 어떤 유형의 작업에 적합한지에 대한 명확한 설명을 제공하세요."
+		},
+		"tools": {
+			"label": "사용 가능한 도구",
+			"description": "이 모드가 사용할 수 있는 도구를 선택하세요."
+		},
+		"description": {
+			"label": "짧은 설명 (사람용)",
+			"description": "모드 선택기 드롭다운에 표시되는 간단한 설명입니다."
+		},
+		"customInstructions": {
+			"label": "사용자 지정 지침 (선택 사항)",
+			"description": "이 모드에 대한 특정 행동 지침을 추가하세요."
+		},
+		"buttons": {
+			"cancel": "취소",
+			"create": "모드 만들기"
+		},
+		"deleteMode": "모드 삭제"
+	},
+	"allFiles": "모든 파일",
+	"deleteMode": {
+		"title": "모드 삭제",
+		"message": "\"{{modeName}}\" 모드를 삭제하시겠습니까?",
+		"rulesFolder": "이 모드에는 {{folderPath}}에 규칙 폴더가 있으며 함께 삭제됩니다.",
+		"descriptionNoRules": "이 사용자 정의 모드를 삭제하시겠습니까?",
+		"confirm": "삭제",
+		"cancel": "취소"
+	}
+}

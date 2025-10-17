@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Відсутнє середовище Node.js",
+			"message": "Середовище Node.js не виявлено, встановіть Node.js і спробуйте знову. Рекомендована версія: {{minVersion}} або вища."
+		},
+		"nodejsVersionLow": {
+			"title": "Версія Node.js занадто низька",
+			"message": "Поточна версія Node.js ({{nodePath}}) {{nodeVersion}}, оновіть до {{minVersion}} або вищої для кращої сумісності."
+		}
+	},
+	"dialog": {
+		"cancel": "Скасувати"
+	},
+	"ui": {
+		"initializing": "Kilo Code ініціалізується...",
+		"systemInformation": "Інформація про систему"
+	}
+}

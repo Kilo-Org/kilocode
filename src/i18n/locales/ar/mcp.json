@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "تنسيق إعدادات MCP غير صالح. تأكد إن ملف الإعدادات مكتوب بصيغة JSON صحيحة.",
+		"invalid_settings_syntax": "فيه خطأ بصيغة JSON في إعدادات MCP. تحقق من وجود أخطاء في الكتابة داخل الملف.",
+		"invalid_settings_validation": "تنسيق إعدادات MCP غير صحيح: {{errorMessages}}",
+		"create_json": "فشل في إنشاء أو فتح الملف .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "فشل في تحديث خوادم MCP الخاصة بالمشروع",
+		"invalidJsonArgument": "Kilo Code حاول يستخدم {{toolName}} بوسيط JSON غير صحيح. جاري إعادة المحاولة...",
+		"refresh_after_disable": "فشل في تحديث اتصالات MCP بعد التعطيل",
+		"refresh_after_enable": "فشل في تحديث اتصالات MCP بعد التفعيل",
+		"disconnect_servers_partial": "فشل في قطع الاتصال عن {{count}} خادم MCP. تحقق من المخرجات للحصول على التفاصيل.",
+		"toolNotFound": "الأداة '{{toolName}}' غير موجودة في الخادم '{{serverName}}'. الأدوات المتاحة: {{availableTools}}",
+		"serverNotFound": "خادم MCP '{{serverName}}' غير مكوّن. الخوادم المتاحة: {{availableServers}}",
+		"toolDisabled": "الأداة '{{toolName}}' في الخادم '{{serverName}}' معطلة. الأدوات المفعلة المتاحة: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "جاري إعادة تشغيل خادم MCP: {{serverName}}...",
+		"server_connected": "تم الاتصال بخادم MCP: {{serverName}}",
+		"server_deleted": "تم حذف خادم MCP: {{serverName}}",
+		"server_not_found": "الخادم \"{{serverName}}\" غير موجود في الإعدادات",
+		"global_servers_active": "الخوادم العالمية النشطة: {{mcpServers}}",
+		"project_servers_active": "الخوادم النشطة في المشروع: {{mcpServers}}",
+		"already_refreshing": "الخوادم قيد التحديث حالياً.",
+		"refreshing_all": "جاري تحديث كل خوادم MCP...",
+		"all_refreshed": "تم تحديث جميع خوادم MCP.",
+		"project_config_deleted": "تم حذف ملف إعدادات MCP الخاص بالمشروع. تم فصل جميع الخوادم المرتبطة بالمشروع."
+	}
+}

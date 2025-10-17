@@ -1,0 +1,223 @@
+{
+	"title": "Modos",
+	"done": "Concluído",
+	"modes": {
+		"title": "Modos",
+		"createNewMode": "Criar novo modo",
+		"importMode": "Importar modo",
+		"noMatchFound": "Nenhum modo encontrado",
+		"editModesConfig": "Editar configuração de modos",
+		"editGlobalModes": "Editar modos globais",
+		"editProjectModes": "Editar modos do projeto (.kilocodemodes)",
+		"createModeHelpText": "Modos são personas especializadas que adaptam o comportamento do Kilo Code. <0>Saiba mais sobre o uso de modos</0> ou <1>Personalização de modos.</1>",
+		"selectMode": "Buscar modos"
+	},
+	"apiConfiguration": {
+		"title": "Configuração de API",
+		"select": "Selecione qual configuração de API usar para este modo"
+	},
+	"organizationMode": {
+		"title": "Modo da organização",
+		"description": "Este modo é fornecido pela sua organização e não pode ser editado aqui. Para modificar este modo, visite o Kilo Code Dashboard.",
+		"cannotEdit": "Modos da organização não podem ser editados"
+	},
+	"tools": {
+		"title": "Ferramentas disponíveis",
+		"builtInModesText": "Ferramentas para modos integrados não podem ser modificadas",
+		"editTools": "Editar ferramentas",
+		"doneEditing": "Concluir edição",
+		"allowedFiles": "Arquivos permitidos:",
+		"toolNames": {
+			"read": "Ler arquivos",
+			"edit": "Editar arquivos",
+			"browser": "Usar navegador",
+			"command": "Executar comandos",
+			"mcp": "Usar MCP"
+		},
+		"noTools": "Nenhuma"
+	},
+	"roleDefinition": {
+		"title": "Definição de função",
+		"resetToDefault": "Restaurar para padrão",
+		"description": "Defina a expertise e personalidade do Kilo Code para este modo. Esta descrição molda como o Kilo Code se apresenta e aborda tarefas."
+	},
+	"description": {
+		"title": "Descrição curta (para humanos)",
+		"resetToDefault": "Redefinir para descrição padrão",
+		"description": "Uma breve descrição exibida no menu suspenso do seletor de modo."
+	},
+	"whenToUse": {
+		"title": "Quando usar (opcional)",
+		"description": "Descreva quando este modo deve ser usado. Isso ajuda o Orchestrator a escolher o modo certo para uma tarefa.",
+		"resetToDefault": "Restaurar descrição 'Quando usar' para padrão"
+	},
+	"customInstructions": {
+		"title": "Instruções personalizadas específicas do modo (opcional)",
+		"resetToDefault": "Restaurar para padrão",
+		"description": "Adicione diretrizes comportamentais específicas para o modo {{modeName}}.",
+		"loadFromFile": "Instruções personalizadas específicas para o modo {{mode}} também podem ser carregadas da pasta <span>.kilocode/rules-{{slug}}/</span> no seu espaço de trabalho ou do global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} e .clinerules-{{slug}} estão obsoletos e deixarão de funcionar em breve)."
+	},
+	"exportMode": {
+		"title": "Exportar modo",
+		"description": "Exporta este modo com as regras da pasta .kilocode/rules-{{slug}}/ combinadas em um arquivo YAML compartilhável. Os arquivos originais permanecem inalterados.",
+		"exporting": "Exportando..."
+	},
+	"importMode": {
+		"selectLevel": "Escolha onde importar este modo:",
+		"import": "Importar",
+		"importing": "Importando...",
+		"global": {
+			"label": "Nível global",
+			"description": "Disponível em todos os projetos. Se o modo exportado continha arquivos de regras, eles serão recriados na pasta global .kilocode/rules-{slug}/."
+		},
+		"project": {
+			"label": "Nível do projeto",
+			"description": "Disponível apenas neste espaço de trabalho. Se o modo exportado continha arquivos de regras, eles serão recriados na pasta .kilocode/rules-{slug}/."
+		}
+	},
+	"advanced": {
+		"title": "Avançado"
+	},
+	"globalCustomInstructions": {
+		"title": "Instruções personalizadas para todos os modos",
+		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo. <0>Saiba mais</0>",
+		"loadFromFile": "Instruções também podem ser carregadas da pasta <span>.kilocode/rules/</span> no seu espaço de trabalho ou do global <0>.kilocode/rules/</0> (.kilocoderules e .clinerules estão obsoletos e deixarão de funcionar em breve)."
+	},
+	"systemPrompt": {
+		"preview": "Visualizar prompt do sistema",
+		"copy": "Copiar prompt do sistema para a área de transferência",
+		"title": "Prompt do sistema (modo {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Prompts de suporte",
+		"resetPrompt": "Restaurar prompt {{promptType}} para padrão",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "Configuração de API",
+			"apiConfigDescription": "Você pode selecionar uma configuração de API para usar sempre para aprimorar prompts, ou simplesmente use o que está atualmente selecionado",
+			"useCurrentConfig": "Usar configuração de API atualmente selecionada",
+			"testPromptPlaceholder": "Digite um prompt para testar o aprimoramento",
+			"previewButton": "Visualizar aprimoramento do prompt",
+			"testEnhancement": "Testar aprimoramento",
+			"includeTaskHistory": "Incluir histórico de tarefas como contexto",
+			"includeTaskHistoryDescription": "Quando habilitado, as últimas 10 mensagens da conversa atual serão incluídas como contexto ao aprimorar prompts, ajudando a gerar sugestões mais relevantes e conscientes do contexto."
+		},
+		"condense": {
+			"apiConfiguration": "Configuração da API para condensação de contexto",
+			"apiConfigDescription": "Selecione qual configuração de API usar para operações de condensação de contexto. Deixe desmarcado para usar a configuração ativa atual.",
+			"useCurrentConfig": "Usar a configuração de API selecionada no momento"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Aprimorar Prompt",
+				"description": "Use o aprimoramento de prompt para obter sugestões ou melhorias personalizadas para suas entradas. Isso garante que o Kilo Code entenda sua intenção e forneça as melhores respostas possíveis. Disponível através do ícone ✨ no chat."
+			},
+			"CONDENSE": {
+				"label": "Condensação de Contexto",
+				"description": "Configure como o contexto da conversa é condensado para gerenciar os limites de token. Este prompt é usado para operações de condensação de contexto manuais e automáticas."
+			},
+			"EXPLAIN": {
+				"label": "Explicar Código",
+				"description": "Obtenha explicações detalhadas de trechos de código, funções ou arquivos inteiros. Útil para entender código complexo ou aprender novos padrões. Disponível nas ações de código (ícone de lâmpada no editor) e no menu de contexto do editor (clique direito no código selecionado)."
+			},
+			"FIX": {
+				"label": "Corrigir Problemas",
+				"description": "Obtenha ajuda para identificar e resolver bugs, erros ou problemas de qualidade de código. Fornece orientação passo a passo para corrigir problemas. Disponível nas ações de código (ícone de lâmpada no editor) e no menu de contexto do editor (clique direito no código selecionado)."
+			},
+			"IMPROVE": {
+				"label": "Melhorar Código",
+				"description": "Receba sugestões para otimização de código, melhores práticas e melhorias arquitetônicas mantendo la funcionalidade. Disponível nas ações de código (ícone de lâmpada no editor) e no menu de contexto do editor (clique direito no código selecionado)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Adicionar ao Contexto",
+				"description": "Adicione contexto à sua tarefa ou conversa atual. Útil para fornecer informações adicionais ou esclarecimentos. Disponível nas ações de código (ícone de lâmpada no editor) e no menu de contexto do editor (clique direito no código selecionado)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Adicionar Conteúdo do Terminal ao Contexto",
+				"description": "Adicione a saída do terminal à sua tarefa ou conversa atual. Útil para fornecer saídas de comandos ou logs. Disponível no menu de contexto do terminal (clique direito no conteúdo selecionado do terminal)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Corrigir Comando do Terminal",
+				"description": "Obtenha ajuda para corrigir comandos de terminal que falharam ou precisam de melhorias. Disponível no menu de contexto do terminal (clique direito no conteúdo selecionado do terminal)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Explicar Comando do Terminal",
+				"description": "Obtenha explicações detalhadas de comandos de terminal e suas saídas. Disponível no menu de contexto do terminal (clique direito no conteúdo selecionado do terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Gerar comando de terminal",
+				"description": "Ajuda a gerar comandos de terminal baseados na descrição."
+			},
+			"NEW_TASK": {
+				"label": "Iniciar Nova Tarefa",
+				"description": "Inicie uma nova tarefa com a entrada fornecida. Disponível na paleta de comandos."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Geração de Mensagem de Commit",
+				"description": "Gere mensagens de commit descritivas baseadas em suas alterações git preparadas. Personalize o prompt para gerar mensagens que sigam as melhores práticas do seu repositório."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Avançado: Substituir prompt do sistema",
+		"description": "<2>⚠️ Aviso:</2> Este recurso avançado ignora as proteções. <1>LEIA ISTO ANTES DE USAR!</1>Substitua o prompt do sistema padrão criando um arquivo em <span>.kilocode/system-prompt-{{slug}}</span>."
+	},
+	"createModeDialog": {
+		"title": "Criar novo modo",
+		"close": "Fechar",
+		"name": {
+			"label": "Nome",
+			"placeholder": "Digite o nome do modo"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "O slug é usado em URLs e nomes de arquivos. Deve estar em minúsculas e conter apenas letras, números e hífens."
+		},
+		"saveLocation": {
+			"label": "Local de salvamento",
+			"description": "Escolha onde salvar este modo. Os modos específicos do projeto têm precedência sobre os modos globais.",
+			"global": {
+				"label": "Global",
+				"description": "Disponível em todos os espaços de trabalho"
+			},
+			"project": {
+				"label": "Específico do projeto (.kilocodemodes)",
+				"description": "Disponível apenas neste espaço de trabalho, tem precedência sobre o global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Definição de função",
+			"description": "Defina a expertise e personalidade do Kilo Code para este modo."
+		},
+		"whenToUse": {
+			"label": "Quando usar (opcional)",
+			"description": "Forneça uma descrição clara de quando este modo é mais eficaz e para quais tipos de tarefas ele se destaca."
+		},
+		"tools": {
+			"label": "Ferramentas disponíveis",
+			"description": "Selecione quais ferramentas este modo pode usar."
+		},
+		"description": {
+			"label": "Descrição curta (para humanos)",
+			"description": "Uma breve descrição exibida no menu suspenso do seletor de modo."
+		},
+		"customInstructions": {
+			"label": "Instruções personalizadas (opcional)",
+			"description": "Adicione diretrizes comportamentais específicas para este modo."
+		},
+		"buttons": {
+			"cancel": "Cancelar",
+			"create": "Criar Modo"
+		},
+		"deleteMode": "Excluir modo"
+	},
+	"allFiles": "todos os arquivos",
+	"deleteMode": {
+		"title": "Excluir Modo",
+		"message": "Tem certeza de que deseja excluir o modo \"{{modeName}}\"?",
+		"rulesFolder": "Este modo tem uma pasta de regras em {{folderPath}} que também será excluída.",
+		"descriptionNoRules": "Tem certeza de que deseja excluir este modo personalizado?",
+		"confirm": "Excluir",
+		"cancel": "Cancelar"
+	}
+}

@@ -1,0 +1,268 @@
+{
+	"welcome": {
+		"greeting": "Welkom bij Kilo Code!",
+		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
+		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
+		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
+		"ctaButton": "Aan de slag",
+		"manualModeButton": "Gebruik je eigen API-sleutel",
+		"alreadySignedUp": "Al aangemeld?",
+		"loginText": "Log hier in"
+	},
+	"lowCreditWarning": {
+		"addCredit": "Krediet toevoegen",
+		"lowBalance": "Uw Kilo Code-saldo is laag"
+	},
+	"pagination": {
+		"previous": "Vorige",
+		"next": "Volgende",
+		"page": "Pagina {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 De alfaperiode voor {{model}} is beëindigd! Verander naar een ander model om door te gaan.",
+		"notAllowedForTeam": "⚠️ Je organisatie staat het gebruik van het {{model}} model niet toe. Verander naar een ander model om door te gaan.",
+		"modelUnavailable": "⚠️ Het model {{model}} is niet beschikbaar. Verander naar een ander model om door te gaan.",
+		"continueWith": "Doorgaan met {{model}}",
+		"continue": "Doorgaan"
+	},
+	"pricing": {
+		"costUnknown": "kosten onbekend",
+		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
+		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
+		"freeModelsLink": "Ontdek gratis en budget modelopties"
+	},
+	"notifications": {
+		"toolRequest": "Toolverzoek wacht op goedkeuring",
+		"browserAction": "Browseractie wacht op goedkeuring",
+		"command": "Commando wacht op goedkeuring"
+	},
+	"settings": {
+		"sections": {
+			"mcp": "MCP-servers"
+		},
+		"provider": {
+			"account": "Kilo Code Account",
+			"apiKey": "Kilo Code API-sleutel",
+			"login": "Inloggen bij Kilo Code",
+			"logout": "Uitloggen bij Kilo Code",
+			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
+			"providerRouting": {
+				"title": "Provider Routing",
+				"managedByOrganization": "De Provider Routing instellingen worden beheerd door je organisatie.",
+				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
+				"sorting": {
+					"default": "Standaard provider sortering",
+					"price": "Voorkeur voor providers met lagere prijs",
+					"throughput": "Voorkeur voor providers met hogere doorvoer",
+					"latency": "Voorkeur voor providers met lagere latentie"
+				},
+				"dataCollection": {
+					"default": "Geen databeleid ingesteld",
+					"allowFree": "Sta prompt-training toe (alleen gratis)",
+					"allow": "Sta prompt-training toe",
+					"deny": "Weiger prompt-training",
+					"zdr": "Geen gegevensbewaring"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Context venster",
+			"providerBreakdown": "Provider Prijs en Capaciteit Overzicht",
+			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
+			"table": {
+				"provider": "Provider",
+				"context": "Het eindpunt kan dit aantal tokens verwerken (input + output).",
+				"inputPrice": "Kosten per miljoen tokens voor de prompt.",
+				"outputPrice": "Kosten per miljoen tokens voor de voltooiing.",
+				"cacheReadPrice": "Kosten per miljoen tokens voor het lezen uit de cache.",
+				"cacheWritePrice": "Kosten per miljoen tokens voor het schrijven naar de cache."
+			}
+		},
+		"contextManagement": {
+			"allowVeryLargeReads": {
+				"label": "Sta zeer grote bestandslezingen toe",
+				"description": "Wanneer ingeschakeld, zal Kilo Code zeer grote bestands- of MCP-outputlezingen uitvoeren, zelfs als er een grote kans is dat het contextvenster overloopt (inhoudsgrootte >80% van het contextvenster)."
+			}
+		},
+		"systemNotifications": {
+			"label": "Systeemmeldingen inschakelen",
+			"description": "Wanneer ingeschakeld, zal Kilo Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
+			"testButton": "Testmelding",
+			"testTitle": "Kilo Code",
+			"testMessage": "Dit is een testmelding van Kilo Code."
+		},
+		"terminal": {
+			"commandGenerator": {
+				"provider": "Terminal Opdrachtregel Generator Provider",
+				"apiConfigId": {
+					"label": "API Configuratie",
+					"description": "Selecteer welke API-configuratie u wilt gebruiken voor het genereren van terminalopdrachten. Laat dit op 'Gebruik huidige configuratie' staan om uw standaardinstellingen te gebruiken.",
+					"current": "Gebruik huidige configuratie"
+				}
+			}
+		}
+	},
+	"toolCallStyle": {
+		"title": "Tool Call Stijl",
+		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan."
+	},
+	"chat": {
+		"condense": {
+			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
+			"condenseConversation": "Gesprek samenvatten"
+		},
+		"seeNewChanges": "Toon Nieuwe Wijzigingen",
+		"revertNewChanges": "Herstel Nieuwe Wijzigingen",
+		"confirmRevertChanges": "Bevestig Wijzigingen Herstellen",
+		"cancelRevertChanges": "Annuleer Wijzigingen Herstellen"
+	},
+	"newTaskPreview": {
+		"task": "Taak"
+	},
+	"profile": {
+		"title": "Profiel",
+		"dashboard": "Dashboard",
+		"logOut": "Uitloggen",
+		"currentBalance": "HUIDIG SALDO",
+		"loading": "Laden...",
+		"organization": "Organisatie",
+		"personal": "Persoonlijk",
+		"shop": {
+			"title": "Credits Kopen",
+			"popular": "Populair",
+			"credits": "credits",
+			"action": "Nu Kopen",
+			"viewAll": "Alle prijs opties bekijken"
+		}
+	},
+	"docs": "Documentatie",
+	"rules": {
+		"tooltip": "Beheer Kilo Code Regels & Workflows",
+		"ariaLabel": "Kilo Code Regels",
+		"tabs": {
+			"rules": "Regels",
+			"workflows": "Workflows"
+		},
+		"description": {
+			"rules": "Regels stellen je in staat om Kilo Code instructies te geven die het moet volgen in alle modi en voor alle prompts. Ze zijn een persistente manier om context en voorkeuren op te nemen voor alle gesprekken in je workspace of globaal.",
+			"workflows": "Workflows zijn een voorbereid sjabloon voor een gesprek. Workflows stellen je in staat om prompts te definiëren die je vaak gebruikt, en kunnen een reeks stappen bevatten om Kilo Code te begeleiden door repetitieve taken, zoals het implementeren van een service of het indienen van een PR. Om een workflow aan te roepen, typ",
+			"workflowsInChat": "in de chat."
+		},
+		"sections": {
+			"globalRules": "Globale Regels",
+			"workspaceRules": "Werkruimte Regels",
+			"globalWorkflows": "Globale Workflows",
+			"workspaceWorkflows": "Werkruimte Workflows"
+		},
+		"validation": {
+			"invalidFileExtension": "Alleen .md, .txt of geen bestandsextensie toegestaan"
+		},
+		"placeholders": {
+			"workflowName": "workflow-naam (.md, .txt of geen extensie)",
+			"ruleName": "regel-naam (.md, .txt of geen extensie)"
+		},
+		"newFile": {
+			"newWorkflowFile": "Nieuw workflow bestand...",
+			"newRuleFile": "Nieuw regel bestand..."
+		}
+	},
+	"taskTimeline": {
+		"tooltip": {
+			"clickToScroll": "Bekijk {{messageType}} (#{{messageNumber}})",
+			"messageTypes": {
+				"browser_action_result": "resultaat van browseractie",
+				"browser_action_launch": "browser opstarten",
+				"checkpoint_saved": "controlepunt opgeslagen",
+				"command": "opdrachtuitvoering",
+				"browser_action": "browseractie",
+				"command_output": "opdrachtuitvoer",
+				"completion_result": "voltooiingsresultaat",
+				"error": "foutmelding",
+				"followup": "vervolgvraag",
+				"mcp_server_response": "MCP-serverrespons",
+				"reasoning": "AI-redenering",
+				"text": "AI-antwoord",
+				"unknown": "onbekend berichttype",
+				"condense_context": "context samenvatten",
+				"use_mcp_server": "MCP-servergebruik",
+				"tool": "gereedschapsgebruik",
+				"user": "gebruikersfeedback"
+			}
+		}
+	},
+	"userFeedback": {
+		"editCancel": "Annuleren",
+		"send": "Verzenden",
+		"restoreAndSend": "Herstellen & Verzenden"
+	},
+	"ideaSuggestionsBox": {
+		"newHere": "Nieuw hier?",
+		"suggestionText": "<suggestionButton>Klik hier</suggestionButton> voor een cool idee, tik dan op <sendIcon /> en kijk hoe ik magie doe!",
+		"ideas": {
+			"idea1": "Maak een draaiende, gloeiende 3D-bol die reageert op muisbewegingen. Laat de app in de browser werken.",
+			"idea2": "Maak een portfoliowebsite voor een Python-softwareontwikkelaar",
+			"idea3": "Maak een financiële app-mockup in de browser. Test dan of het werkt",
+			"idea4": "Maak een directorywebsite met de momenteel beste AI-videogeneratiemodellen",
+			"idea5": "Maak een CSS-gradiëntgenerator die aangepaste stylesheets exporteert en een live-preview toont",
+			"idea6": "Genereer kaarten die dynamische content prachtig onthullen bij hovering",
+			"idea7": "Maak een rustgevend interactief sterrenveld dat beweegt met muisgebaren"
+		}
+	},
+	"ghost": {
+		"title": "Autocomplete",
+		"settings": {
+			"triggers": "Triggers",
+			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
+			"enableAutoTrigger": {
+				"label": "Pauze om te Voltooien",
+				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
+			},
+			"autoTriggerDelay": {
+				"label": "Automatische Activeringsvertraging",
+				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Snelle Taak ({{keybinding}})",
+				"description": "Heb je alleen een snelle wijziging nodig? Selecteer wat code (of niet!) en druk op Cmd+I. Beschrijf je doel in eenvoudig Nederlands (\"maak een React-component met deze props\", \"voeg foutafhandeling toe aan deze functie\"), en krijg meerdere, klaar-voor-gebruik suggesties direct in je editor. <DocsLink>Sneltoets bewerken</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
+				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
+			},
+			"keybindingNotFound": "niet gevonden",
+			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
+			"model": "Model",
+			"provider": "Provider"
+		}
+	},
+	"virtualProvider": {
+		"title": "Virtuele Quota Fallback Provider Instellingen",
+		"description": "Configureer een lijst met profielen, elk met hun eigen quotalimieten. Wanneer de quotalimieten van één provider bereikt zijn, wordt het volgende profiel in de lijst gebruikt totdat er geen meer over zijn.",
+		"profileLabel": "Profiel {{number}}",
+		"primaryProfileLabel": "Profiel {{number}} (Primair)",
+		"moveProfileUp": "Profiel naar boven verplaatsen",
+		"moveProfileDown": "Profiel naar beneden verplaatsen",
+		"removeProfile": "Profiel verwijderen",
+		"selectProfilePlaceholder": "Selecteer profiel...",
+		"addProfile": "Profiel toevoegen",
+		"noProfilesAvailable": "Geen profielprofielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
+		"dangerZoneTitle": "Gevaarzone",
+		"dangerZoneDescription": "Deze acties zijn destructief en kunnen niet ongedaan worden gemaakt.",
+		"clearUsageData": "Gebruiksgegevens Wissen",
+		"confirmClearTitle": "Weet je het zeker?",
+		"confirmClearDescription": "Dit zal permanent alle opgeslagen gebruiksgegevens voor virtuele providers verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+		"tokensLabel": "Tokens",
+		"perMinute": "Per Minuut",
+		"perHour": "Per Uur",
+		"perDay": "Per dag",
+		"requestsLabel": "Verzoeken"
+	},
+	"memoryWarning": {
+		"message": "Geheugengebruik is {{percentage}}%. Start je IDE opnieuw op om crashes te voorkomen."
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
+		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",
+		"imagesRemovedNoSupport": "Afbeeldingen verwijderd, niet ondersteund door model."
+	}
+}

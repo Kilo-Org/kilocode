@@ -1,0 +1,223 @@
+{
+	"title": "Modi",
+	"done": "Fertig",
+	"modes": {
+		"title": "Modi",
+		"createNewMode": "Neuen Modus erstellen",
+		"importMode": "Modus importieren",
+		"noMatchFound": "Keine Modi gefunden",
+		"editModesConfig": "Moduskonfiguration bearbeiten",
+		"editGlobalModes": "Globale Modi bearbeiten",
+		"editProjectModes": "Projektmodi bearbeiten (.kilocodemodes)",
+		"createModeHelpText": "Modi sind spezialisierte Personas, die Kilo Codes Verhalten anpassen. <0>Erfahre mehr über die Verwendung von Modi</0> oder <1>die Anpassung von Modi.</1>",
+		"selectMode": "Modi suchen"
+	},
+	"apiConfiguration": {
+		"title": "API-Konfiguration",
+		"select": "Wähle, welche API-Konfiguration für diesen Modus verwendet werden soll"
+	},
+	"organizationMode": {
+		"title": "Organisations-Modus",
+		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das Kilo Code Dashboard.",
+		"cannotEdit": "Organisations-Modi können nicht bearbeitet werden"
+	},
+	"tools": {
+		"title": "Verfügbare Werkzeuge",
+		"builtInModesText": "Werkzeuge für eingebaute Modi können nicht geändert werden",
+		"editTools": "Werkzeuge bearbeiten",
+		"doneEditing": "Bearbeitung abschließen",
+		"allowedFiles": "Erlaubte Dateien:",
+		"toolNames": {
+			"read": "Dateien lesen",
+			"edit": "Dateien bearbeiten",
+			"browser": "Browser verwenden",
+			"command": "Befehle ausführen",
+			"mcp": "MCP verwenden"
+		},
+		"noTools": "Keine"
+	},
+	"roleDefinition": {
+		"title": "Rollendefinition",
+		"resetToDefault": "Auf Standardwerte zurücksetzen",
+		"description": "Definiere Kilo Codes Expertise und Persönlichkeit für diesen Modus. Diese Beschreibung prägt, wie Kilo Code sich präsentiert und an Aufgaben herangeht."
+	},
+	"description": {
+		"title": "Kurzbeschreibung (für Menschen)",
+		"resetToDefault": "Auf Standardbeschreibung zurücksetzen",
+		"description": "Eine kurze Beschreibung, die im Dropdown-Menü der Modusauswahl angezeigt wird."
+	},
+	"whenToUse": {
+		"title": "Wann zu verwenden (optional)",
+		"description": "Beschreibe, wann dieser Modus verwendet werden sollte. Dies hilft dem Orchestrator, den richtigen Modus für eine Aufgabe auszuwählen.",
+		"resetToDefault": "Beschreibung 'Wann zu verwenden' auf Standardwerte zurücksetzen"
+	},
+	"customInstructions": {
+		"title": "Modusspezifische benutzerdefinierte Anweisungen (optional)",
+		"resetToDefault": "Auf Standardwerte zurücksetzen",
+		"description": "Fügen Sie verhaltensspezifische Richtlinien für den Modus {{modeName}} hinzu.",
+		"loadFromFile": "Benutzerdefinierte Anweisungen für den Modus {{mode}} können auch aus dem Ordner <span>.kilocode/rules-{{slug}}/</span> in deinem Arbeitsbereich oder aus dem globalen <0>.kilocode/rules-{{slug}}/</0> geladen werden (.kilocoderules-{{slug}} und .clinerules-{{slug}} sind veraltet und werden bald nicht mehr funktionieren)."
+	},
+	"exportMode": {
+		"title": "Modus exportieren",
+		"description": "Exportiere diesen Modus mit Regeln aus dem .kilocode/rules-{{slug}}/ Ordner kombiniert in eine teilbare YAML-Datei. Die Originaldateien bleiben unverändert.",
+		"exporting": "Exportiere..."
+	},
+	"importMode": {
+		"selectLevel": "Wähle, wo dieser Modus importiert werden soll:",
+		"import": "Importieren",
+		"importing": "Importiere...",
+		"global": {
+			"label": "Globale Ebene",
+			"description": "Verfügbar in allen Projekten. Wenn der exportierte Modus Regeldateien enthielt, werden diese im globalen .kilocode/rules-{slug}/ Ordner neu erstellt."
+		},
+		"project": {
+			"label": "Projektebene",
+			"description": "Nur in diesem Arbeitsbereich verfügbar. Wenn der exportierte Modus Regeldateien enthielt, werden diese im .kilocode/rules-{slug}/ Ordner neu erstellt."
+		}
+	},
+	"advanced": {
+		"title": "Erweitert"
+	},
+	"globalCustomInstructions": {
+		"title": "Benutzerdefinierte Anweisungen für alle Modi",
+		"description": "Diese Anweisungen gelten für alle Modi. Sie bieten einen grundlegenden Satz von Verhaltensweisen, die durch modusspezifische Anweisungen unten erweitert werden können. <0>Mehr erfahren</0>",
+		"loadFromFile": "Anweisungen können auch aus dem Ordner <span>.kilocode/rules/</span> in deinem Arbeitsbereich oder aus dem globalen <0>.kilocode/rules/</0> geladen werden (.kilocoderules und .clinerules sind veraltet und werden bald nicht mehr funktionieren)."
+	},
+	"systemPrompt": {
+		"preview": "System-Prompt Vorschau",
+		"copy": "System-Prompt in Zwischenablage kopieren",
+		"title": "System-Prompt (Modus {{modeName}})"
+	},
+	"supportPrompts": {
+		"title": "Support-Prompts",
+		"resetPrompt": "{{promptType}}-Prompt auf Standardwerte zurücksetzen",
+		"prompt": "Prompt",
+		"enhance": {
+			"apiConfiguration": "API-Konfiguration",
+			"apiConfigDescription": "Du kannst eine API-Konfiguration auswählen, die immer zur Verbesserung von Prompts verwendet wird, oder einfach die aktuell ausgewählte verwenden",
+			"useCurrentConfig": "Aktuell ausgewählte API-Konfiguration verwenden",
+			"testPromptPlaceholder": "Gib einen Prompt ein, um die Verbesserung zu testen",
+			"previewButton": "Vorschau der Prompt-Verbesserung",
+			"testEnhancement": "Verbesserung testen",
+			"includeTaskHistory": "Aufgabenverlauf als Kontext einbeziehen",
+			"includeTaskHistoryDescription": "Wenn aktiviert, werden die letzten 10 Nachrichten aus der aktuellen Unterhaltung als Kontext beim Verbessern von Prompts einbezogen, um relevantere und kontextbewusste Vorschläge zu generieren."
+		},
+		"condense": {
+			"apiConfiguration": "API-Konfiguration für die Kontextverdichtung",
+			"apiConfigDescription": "Wähle aus, welche API-Konfiguration für Kontextverdichtungsvorgänge verwendet werden soll. Lasse die Auswahl leer, um die aktuell aktive Konfiguration zu verwenden.",
+			"useCurrentConfig": "Derzeit ausgewählte API-Konfiguration verwenden"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "Prompt verbessern",
+				"description": "Verwende die Prompt-Verbesserung, um maßgeschneiderte Vorschläge oder Verbesserungen für deine Eingaben zu erhalten. Dies stellt sicher, dass Kilo Code deine Absicht versteht und die bestmöglichen Antworten liefert. Verfügbar über das ✨-Symbol im Chat."
+			},
+			"CONDENSE": {
+				"label": "Kontextverdichtung",
+				"description": "Konfiguriere, wie der Konversationskontext verdichtet wird, um Token-Limits zu verwalten. Dieser Prompt wird sowohl für manuelle als auch für automatische Kontextverdichtungsvorgänge verwendet."
+			},
+			"EXPLAIN": {
+				"label": "Code erklären",
+				"description": "Erhalte detaillierte Erklärungen zu Code-Schnipseln, Funktionen oder ganzen Dateien. Nützlich zum Verständnis komplexen Codes oder zum Erlernen neuer Muster. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+			},
+			"FIX": {
+				"label": "Probleme beheben",
+				"description": "Erhalte Hilfe beim Identifizieren und Lösen von Bugs, Fehlern oder Problemen mit der Code-Qualität. Bietet Schritt-für-Schritt-Anleitungen zur Problemlösung. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+			},
+			"IMPROVE": {
+				"label": "Code verbessern",
+				"description": "Erhalte Vorschläge zur Code-Optimierung, bessere Praktiken und architektonische Verbesserungen bei gleichzeitiger Beibehaltung der Funktionalität. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "Zum Kontext hinzufügen",
+				"description": "Füge Kontext zu deiner aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung zusätzlicher Informationen oder Klarstellungen. Verfügbar in Code-Aktionen (Glühbirnen-Symbol im Editor) und im Kontextmenü des Editors (Rechtsklick auf ausgewählten Code)."
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "Terminal-Inhalt zum Kontext hinzufügen",
+				"description": "Füge Terminal-Ausgaben zu Ihrer aktuellen Aufgabe oder Konversation hinzu. Nützlich für die Bereitstellung von Befehlsausgaben oder Protokollen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+			},
+			"TERMINAL_FIX": {
+				"label": "Terminal-Befehl korrigieren",
+				"description": "Erhalte Hilfe bei der Korrektur fehlgeschlagener Terminal-Befehle oder solcher, die Verbesserungen benötigen. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "Terminal-Befehl erklären",
+				"description": "Erhalte detaillierte Erklärungen zu Terminal-Befehlen und deren Ausgaben. Verfügbar im Kontextmenü des Terminals (Rechtsklick auf ausgewählten Terminal-Inhalt)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminal-Befehl generieren",
+				"description": "Hilft dabei, Terminal-Befehle basierend auf einer Beschreibung zu generieren."
+			},
+			"NEW_TASK": {
+				"label": "Neue Aufgabe starten",
+				"description": "Starte eine neue Aufgabe mit deiner Eingabe. Verfügbar in der Befehlspalette."
+			},
+			"COMMIT_MESSAGE": {
+				"label": "Commit-Nachricht-Generierung",
+				"description": "Generiere beschreibende Commit-Nachrichten basierend auf deinen bereitgestellten Git-Änderungen. Passe den Prompt an, um Nachrichten zu erstellen, die den Best Practices deines Repositories entsprechen."
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "Erweitert: System-Prompt überschreiben",
+		"description": "<2>⚠️ Warnung:</2> Diese erweiterte Funktion umgeht Sicherheitsvorkehrungen. <1>LIES DIES VOR DER VERWENDUNG!</1>Überschreibe den Standard-System-Prompt, indem du eine Datei unter <span>.kilocode/system-prompt-{{slug}}</span> erstellst."
+	},
+	"createModeDialog": {
+		"title": "Neuen Modus erstellen",
+		"close": "Schließen",
+		"name": {
+			"label": "Name",
+			"placeholder": "Modusnamen eingeben"
+		},
+		"slug": {
+			"label": "Slug",
+			"description": "Der Slug wird in URLs und Dateinamen verwendet. Er sollte in Kleinbuchstaben sein und nur Buchstaben, Zahlen und Bindestriche enthalten."
+		},
+		"saveLocation": {
+			"label": "Speicherort",
+			"description": "Wähle, wo dieser Modus gespeichert werden soll. Projektspezifische Modi haben Vorrang vor globalen Modi.",
+			"global": {
+				"label": "Global",
+				"description": "Verfügbar in allen Arbeitsbereichen"
+			},
+			"project": {
+				"label": "Projektspezifisch (.kilocodemodes)",
+				"description": "Nur in diesem Arbeitsbereich verfügbar, hat Vorrang vor global"
+			}
+		},
+		"roleDefinition": {
+			"label": "Rollendefinition",
+			"description": "Definiere Kilo Codes Expertise und Persönlichkeit für diesen Modus."
+		},
+		"whenToUse": {
+			"label": "Wann zu verwenden (optional)",
+			"description": "Gib eine klare Beschreibung, wann dieser Modus am effektivsten ist und für welche Arten von Aufgaben er sich besonders eignet."
+		},
+		"tools": {
+			"label": "Verfügbare Werkzeuge",
+			"description": "Wähle, welche Werkzeuge dieser Modus verwenden kann."
+		},
+		"description": {
+			"label": "Kurzbeschreibung (für Menschen)",
+			"description": "Eine kurze Beschreibung, die im Dropdown-Menü der Modusauswahl angezeigt wird."
+		},
+		"customInstructions": {
+			"label": "Benutzerdefinierte Anweisungen (optional)",
+			"description": "Füge verhaltensspezifische Richtlinien für diesen Modus hinzu."
+		},
+		"buttons": {
+			"cancel": "Abbrechen",
+			"create": "Modus erstellen"
+		},
+		"deleteMode": "Modus löschen"
+	},
+	"allFiles": "alle Dateien",
+	"deleteMode": {
+		"title": "Modus löschen",
+		"message": "Möchtest du den Modus \"{{modeName}}\" wirklich löschen?",
+		"rulesFolder": "Dieser Modus hat einen Regelordner unter {{folderPath}}, der ebenfalls gelöscht wird.",
+		"descriptionNoRules": "Möchtest du diesen benutzerdefinierten Modus wirklich löschen?",
+		"confirm": "Löschen",
+		"cancel": "Abbrechen"
+	}
+}

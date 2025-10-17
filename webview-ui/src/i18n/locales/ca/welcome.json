@@ -1,0 +1,27 @@
+{
+	"greeting": "Hola, sóc Kilo Code!",
+	"introduction": "<strong>Kilo Code és el principal agent de codificació autònom.</strong> Prepara't per arquitectar, codificar, depurar i augmentar la teva productivitat com mai abans. Per continuar, Kilo Code necessita una clau API.",
+	"notice": "Per començar, aquesta extensió necessita un proveïdor d'API.",
+	"start": "Som-hi!",
+	"routers": {
+		"requesty": {
+			"description": "El teu router LLM optimitzat",
+			"incentive": "$1 de crèdit gratuït"
+		},
+		"openrouter": {
+			"description": "Una interfície unificada per a LLMs"
+		},
+		"roo": {
+			"description": "Els millors models gratuïts per començar",
+			"incentive": "Prova Roo gratis"
+		}
+	},
+	"chooseProvider": "Per fer la seva màgia, Kilo Code necessita una clau API.",
+	"startRouter": "Recomanem utilitzar un router LLM:",
+	"startCustom": "O pots utilitzar la teva pròpia clau API:",
+	"telemetry": {
+		"helpImprove": "Ajuda a millorar Kilo Code",
+		"helpImproveMessage": "Kilo Code recull dades d'errors i ús per ajudar-nos a corregir errors i millorar l'extensió. Aquesta telemetria no recull codi, prompts o informació personal. Pots desactivar això a la <settingsLink>configuració</settingsLink>."
+	},
+	"importSettings": "Importar configuració"
+}

@@ -1,0 +1,68 @@
+.pnpm-store
+dist
+out
+out-*
+node_modules
+package-lock.json
+coverage/
+mock/
+.DS_Store
+*.orig
+
+# Builds
+bin/
+bin-unpacked/
+*.vsix
+
+# Local prompts and rules
+/local-prompts
+
+# Test environment
+.test_env
+.vscode-test/
+
+# Docs
+docs/_site/
+
+# Dotenv
+.env
+.env.*
+!.env.*.sample
+
+# Logging
+logs
+*.log
+
+# Vite development
+.vite-port
+
+# kilocode_change
+.history/
+.aider*
+.docker-cache/
+
+# Turborepo
+.turbo
+
+# IntelliJ and Qodo plugin folders
+.idea/
+.qodo/
+.vercel
+.roo/mcp.json
+
+# Nix / Direnv
+.direnv
+
+# Exclude Conport Directory (MCP server)
+context_portal/
+
+# Submodules
+deps/vscode/*
+!deps/vscode/.git
+
+# Qdrant
+qdrant_storage/
+
+# allow multiple local clones with different workspaces with different colors
+# to make it easier to work on features in parallel
+*.code-workspace

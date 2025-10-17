@@ -1,0 +1,156 @@
+{
+	"title": "Kilo Code Marketplace",
+	"tabs": {
+		"installed": "Встановлені",
+		"settings": "Налаштування",
+		"browse": "Переглянути"
+	},
+	"done": "Готово",
+	"refresh": "Оновити",
+	"filters": {
+		"search": {
+			"placeholder": "Шукати елементи marketplace...",
+			"placeholderMcp": "Шукати MCP...",
+			"placeholderMode": "Шукати Modes..."
+		},
+		"type": {
+			"label": "Фільтрувати за типом:",
+			"all": "Усі типи",
+			"mode": "Mode",
+			"mcpServer": "MCP Server"
+		},
+		"sort": {
+			"label": "Сортувати за:",
+			"name": "Назвою",
+			"author": "Автором",
+			"lastUpdated": "Останнім оновленням"
+		},
+		"tags": {
+			"label": "Фільтрувати за тегами:",
+			"clear": "Очистити теги",
+			"placeholder": "Введи для пошуку та вибору тегів...",
+			"noResults": "Не знайдено відповідних тегів",
+			"selected": "Показано елементи з будь-яким з вибраних тегів",
+			"clickToFilter": "Клікни на теги для фільтрування елементів"
+		},
+		"installed": {
+			"label": "Фільтрувати за статусом",
+			"all": "Всі елементи",
+			"installed": "Встановлені",
+			"notInstalled": "Не встановлені"
+		},
+		"none": "Немає"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCPs",
+		"marketplace": "Marketplace"
+	},
+	"type-group": {
+		"modes": "Modes",
+		"mcps": "MCP Servers"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Не знайдено елементів marketplace",
+			"withFilters": "Спробуй налаштувати фільтри",
+			"noSources": "Спробуй додати джерело на вкладці Sources",
+			"adjustFilters": "Спробуй налаштувати фільтри або пошукові терміни",
+			"clearAllFilters": "Очистити всі фільтри"
+		},
+		"count": "Знайдено {{count}} елементів",
+		"components": "{{count}} компонентів",
+		"matched": "{{count}} збігів",
+		"refresh": {
+			"button": "Оновити",
+			"refreshing": "Оновлення...",
+			"mayTakeMoment": "Це може зайняти деякий час."
+		},
+		"card": {
+			"by": "від {{author}}",
+			"from": "з {{source}}",
+			"install": "Встановити",
+			"installProject": "Встановити",
+			"installGlobal": "Встановити (Глобально)",
+			"remove": "Видалити",
+			"removeProject": "Видалити",
+			"removeGlobal": "Видалити (Глобально)",
+			"viewSource": "Переглянути",
+			"viewOnSource": "Переглянути на {{source}}",
+			"noWorkspaceTooltip": "Відкрий робочий простір для встановлення елементів marketplace",
+			"installed": "Встановлено",
+			"removeProjectTooltip": "Видалити з поточного проекту",
+			"removeGlobalTooltip": "Видалити з глобальної конфігурації",
+			"actionsMenuLabel": "Більше дій"
+		},
+		"removeFailed": "Не вдалося видалити елемент: {{error}}",
+		"unknownError": "Сталася невідома помилка"
+	},
+	"install": {
+		"title": "Встановити {{name}}",
+		"titleMode": "Встановити {{name}} Mode",
+		"titleMcp": "Встановити {{name}} MCP",
+		"scope": "Область встановлення",
+		"project": "Проект (поточний робочий простір)",
+		"global": "Глобально (усі робочі простори)",
+		"method": "Метод встановлення",
+		"prerequisites": "Передумови",
+		"configuration": "Конфігурація",
+		"configurationDescription": "Налаштуй параметри, необхідні для цього MCP сервера",
+		"button": "Встановити",
+		"successTitle": "{{name}} встановлено",
+		"successDescription": "Встановлення завершено успішно",
+		"installed": "Успішно встановлено!",
+		"whatNextMcp": "Тепер ти можеш налаштувати та використовувати цей MCP сервер. Клікни на іконку MCP на бічній панелі, щоб змінити вкладку.",
+		"whatNextMode": "Тепер ти можеш використовувати цей режим. Клікни на іконку Modes на бічній панелі, щоб змінити вкладку.",
+		"done": "Готово",
+		"goToMcp": "Перейти до вкладки MCP",
+		"goToModes": "Перейти до вкладки Modes",
+		"moreInfoMcp": "Переглянути документацію {{name}} MCP",
+		"validationRequired": "Будь ласка, вкажи значення для {{paramName}}"
+	},
+	"sources": {
+		"title": "Налаштувати джерела Marketplace",
+		"description": "Додай Git репозиторії, які містять елементи marketplace. Ці репозиторії будуть завантажені під час перегляду marketplace.",
+		"add": {
+			"title": "Додати нове джерело",
+			"urlPlaceholder": "URL Git репозиторію (напр., https://github.com/username/repo)",
+			"urlFormats": "Підтримувані формати: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git), або Git protocol (git://github.com/username/repo.git)",
+			"namePlaceholder": "Назва для відображення (макс. 20 символів)",
+			"button": "Додати джерело"
+		},
+		"current": {
+			"title": "Поточні джерела",
+			"empty": "Немає налаштованих джерел. Додай джерело, щоб почати.",
+			"refresh": "Оновити це джерело",
+			"remove": "Видалити джерело"
+		},
+		"errors": {
+			"emptyUrl": "URL не може бути порожнім",
+			"invalidUrl": "Недійсний формат URL",
+			"nonVisibleChars": "URL містить невидимі символи, крім пробілів",
+			"invalidGitUrl": "URL має бути дійсним URL Git репозиторію (напр., https://github.com/username/repo)",
+			"duplicateUrl": "Цей URL вже є в списку (без урахування регістру та пробілів)",
+			"nameTooLong": "Назва має бути 20 символів або менше",
+			"nonVisibleCharsName": "Назва містить невидимі символи, крім пробілів",
+			"duplicateName": "Ця назва вже використовується (без урахування регістру та пробілів)",
+			"emojiName": "Символи емодзі можуть спричинити проблеми з відображенням",
+			"maxSources": "Дозволено максимум {{max}} джерел"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Видалити Mode",
+			"message": "Ти впевнений, що хочеш видалити mode \"{{modeName}}\"?",
+			"rulesWarning": "Це також видалить усі пов'язані файли правил для цього mode."
+		},
+		"mcp": {
+			"title": "Видалити MCP Server",
+			"message": "Ти впевнений, що хочеш видалити MCP server \"{{mcpName}}\"?"
+		},
+		"cancel": "Скасувати",
+		"confirm": "Видалити"
+	},
+	"footer": {
+		"issueText": "Знайшов проблему з елементом marketplace або маєш пропозиції щодо нових? <0>Відкрий GitHub issue</0>, щоб повідомити нам!"
+	}
+}

@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "Neplatný formát JSON nastavení MCP. Ujisti se prosím, že tvoje nastavení odpovídají správnému formátu JSON.",
+		"invalid_settings_syntax": "Neplatný formát JSON nastavení MCP. Zkontroluj prosím svůj soubor nastavení na syntaktické chyby.",
+		"invalid_settings_validation": "Neplatný formát nastavení MCP: {{errorMessages}}",
+		"create_json": "Nepodařilo se vytvořit nebo otevřít .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "Nepodařilo se aktualizovat servery MCP projektu",
+		"invalidJsonArgument": "Kilo Code se pokusil použít {{toolName}} s neplatným argumentem JSON. Zkouším znovu...",
+		"refresh_after_disable": "Nepodařilo se obnovit připojení MCP po deaktivaci",
+		"refresh_after_enable": "Nepodařilo se obnovit připojení MCP po aktivaci",
+		"disconnect_servers_partial": "Nepodařilo se odpojit {{count}} server(ů) MCP. Zkontroluj výstup pro podrobnosti.",
+		"toolNotFound": "Nástroj '{{toolName}}' neexistuje na serveru '{{serverName}}'. Dostupné nástroje: {{availableTools}}",
+		"serverNotFound": "Server MCP '{{serverName}}' není nakonfigurován. Dostupné servery: {{availableServers}}",
+		"toolDisabled": "Nástroj '{{toolName}}' na serveru '{{serverName}}' je zakázán. Dostupné povolené nástroje: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "Restartování serveru MCP {{serverName}}...",
+		"server_connected": "Server MCP {{serverName}} připojen",
+		"server_deleted": "Smazán server MCP: {{serverName}}",
+		"server_not_found": "Server \"{{serverName}}\" nebyl nalezen v konfiguraci",
+		"global_servers_active": "Aktivní globální servery MCP: {{mcpServers}}",
+		"project_servers_active": "Aktivní servery MCP projektu: {{mcpServers}}",
+		"already_refreshing": "Servery MCP se již obnovují.",
+		"refreshing_all": "Obnovování všech serverů MCP...",
+		"all_refreshed": "Všechny servery MCP byly obnoveny.",
+		"project_config_deleted": "Konfigurační soubor MCP projektu byl smazán. Všechny servery MCP projektu byly odpojeny."
+	}
+}

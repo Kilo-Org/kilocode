@@ -1,0 +1,24 @@
+{
+	"name": "@roo-code/build",
+	"description": "ESBuild utilities for Roo Code.",
+	"private": true,
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./src/index.ts",
+	"scripts": {
+		"lint": "eslint src --ext=ts --max-warnings=0",
+		"check-types": "tsc --noEmit",
+		"test": "vitest run",
+		"build": "tsc",
+		"clean": "rimraf dist .turbo"
+	},
+	"dependencies": {
+		"zod": "^3.25.61"
+	},
+	"devDependencies": {
+		"@roo-code/config-eslint": "workspace:^",
+		"@roo-code/config-typescript": "workspace:^",
+		"@types/node": "20.x",
+		"vitest": "^3.2.3"
+	}
+}

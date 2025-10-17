@@ -1,0 +1,156 @@
+{
+	"title": "Kilo Code Marketplace",
+	"tabs": {
+		"installed": "Nainstalované",
+		"settings": "Nastavení",
+		"browse": "Procházet"
+	},
+	"done": "Hotovo",
+	"refresh": "Obnovit",
+	"filters": {
+		"search": {
+			"placeholder": "Hledat položky marketplace...",
+			"placeholderMcp": "Hledat MCP...",
+			"placeholderMode": "Hledat Modes..."
+		},
+		"type": {
+			"label": "Filtrovat podle typu:",
+			"all": "Všechny typy",
+			"mode": "Mode",
+			"mcpServer": "MCP Server"
+		},
+		"sort": {
+			"label": "Seřadit podle:",
+			"name": "Názvu",
+			"author": "Autora",
+			"lastUpdated": "Poslední aktualizace"
+		},
+		"tags": {
+			"label": "Filtrovat podle štítků:",
+			"clear": "Vymazat štítky",
+			"placeholder": "Piš pro vyhledání a výběr štítků...",
+			"noResults": "Nenalezeny žádné odpovídající štítky",
+			"selected": "Zobrazeny položky s jakýmkoli z vybraných štítků",
+			"clickToFilter": "Klikni na štítky pro filtrování položek"
+		},
+		"installed": {
+			"label": "Filtrovat podle stavu",
+			"all": "Všechny položky",
+			"installed": "Nainstalováno",
+			"notInstalled": "Nenainstalováno"
+		},
+		"none": "Žádné"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCPs",
+		"marketplace": "Marketplace"
+	},
+	"type-group": {
+		"modes": "Modes",
+		"mcps": "MCP Servery"
+	},
+	"items": {
+		"empty": {
+			"noItems": "Nenalezeny žádné položky marketplace",
+			"withFilters": "Zkus upravit své filtry",
+			"noSources": "Zkus přidat zdroj na kartě Sources",
+			"adjustFilters": "Zkus upravit své filtry nebo vyhledávací termíny",
+			"clearAllFilters": "Vymazat všechny filtry"
+		},
+		"count": "Nalezeno {{count}} položek",
+		"components": "{{count}} komponent",
+		"matched": "{{count}} shod",
+		"refresh": {
+			"button": "Obnovit",
+			"refreshing": "Obnovování...",
+			"mayTakeMoment": "Může to chvíli trvat."
+		},
+		"card": {
+			"by": "od {{author}}",
+			"from": "z {{source}}",
+			"install": "Nainstalovat",
+			"installProject": "Nainstalovat",
+			"installGlobal": "Nainstalovat (Globálně)",
+			"remove": "Odebrat",
+			"removeProject": "Odebrat",
+			"removeGlobal": "Odebrat (Globálně)",
+			"viewSource": "Zobrazit",
+			"viewOnSource": "Zobrazit na {{source}}",
+			"noWorkspaceTooltip": "Otevři pracovní prostor pro instalaci položek marketplace",
+			"installed": "Nainstalováno",
+			"removeProjectTooltip": "Odebrat z aktuálního projektu",
+			"removeGlobalTooltip": "Odebrat z globální konfigurace",
+			"actionsMenuLabel": "Další akce"
+		},
+		"removeFailed": "Nepodařilo se odebrat položku: {{error}}",
+		"unknownError": "Došlo k neznámé chybě"
+	},
+	"install": {
+		"title": "Nainstalovat {{name}}",
+		"titleMode": "Nainstalovat {{name}} Mode",
+		"titleMcp": "Nainstalovat {{name}} MCP",
+		"scope": "Rozsah instalace",
+		"project": "Projekt (aktuální pracovní prostor)",
+		"global": "Globálně (všechny pracovní prostory)",
+		"method": "Metoda instalace",
+		"prerequisites": "Předpoklady",
+		"configuration": "Konfigurace",
+		"configurationDescription": "Nakonfiguruj parametry potřebné pro tento MCP server",
+		"button": "Nainstalovat",
+		"successTitle": "{{name}} nainstalováno",
+		"successDescription": "Instalace byla úspěšně dokončena",
+		"installed": "Úspěšně nainstalováno!",
+		"whatNextMcp": "Nyní můžeš nakonfigurovat a používat tento MCP server. Klikni na ikonu MCP v postranním panelu pro přepnutí karty.",
+		"whatNextMode": "Nyní můžeš používat tento režim. Klikni na ikonu Modes v postranním panelu pro přepnutí karty.",
+		"done": "Hotovo",
+		"goToMcp": "Přejít na kartu MCP",
+		"goToModes": "Přejít na kartu Modes",
+		"moreInfoMcp": "Zobrazit dokumentaci {{name}} MCP",
+		"validationRequired": "Prosím zadej hodnotu pro {{paramName}}"
+	},
+	"sources": {
+		"title": "Konfigurovat zdroje Marketplace",
+		"description": "Přidej Git repozitáře obsahující položky marketplace. Tyto repozitáře budou načteny při procházení marketplace.",
+		"add": {
+			"title": "Přidat nový zdroj",
+			"urlPlaceholder": "URL Git repozitáře (např. https://github.com/username/repo)",
+			"urlFormats": "Podporované formáty: HTTPS (https://github.com/username/repo), SSH (git@github.com:username/repo.git), nebo Git protocol (git://github.com/username/repo.git)",
+			"namePlaceholder": "Zobrazovaný název (max. 20 znaků)",
+			"button": "Přidat zdroj"
+		},
+		"current": {
+			"title": "Aktuální zdroje",
+			"empty": "Žádné nakonfigurované zdroje. Přidej zdroj pro začátek.",
+			"refresh": "Obnovit tento zdroj",
+			"remove": "Odebrat zdroj"
+		},
+		"errors": {
+			"emptyUrl": "URL nemůže být prázdné",
+			"invalidUrl": "Neplatný formát URL",
+			"nonVisibleChars": "URL obsahuje neviditelné znaky kromě mezer",
+			"invalidGitUrl": "URL musí být platné URL Git repozitáře (např. https://github.com/username/repo)",
+			"duplicateUrl": "Toto URL je již v seznamu (bez ohledu na velikost písmen a mezery)",
+			"nameTooLong": "Název musí mít 20 znaků nebo méně",
+			"nonVisibleCharsName": "Název obsahuje neviditelné znaky kromě mezer",
+			"duplicateName": "Tento název se již používá (bez ohledu na velikost písmen a mezery)",
+			"emojiName": "Emoji znaky mohou způsobit problémy se zobrazením",
+			"maxSources": "Povoleno maximálně {{max}} zdrojů"
+		}
+	},
+	"removeConfirm": {
+		"mode": {
+			"title": "Odebrat Mode",
+			"message": "Jsi si jistý, že chceš odebrat mode \"{{modeName}}\"?",
+			"rulesWarning": "Toto také odebere všechny související soubory pravidel pro tento mode."
+		},
+		"mcp": {
+			"title": "Odebrat MCP Server",
+			"message": "Jsi si jistý, že chceš odebrat MCP server \"{{mcpName}}\"?"
+		},
+		"cancel": "Zrušit",
+		"confirm": "Odebrat"
+	},
+	"footer": {
+		"issueText": "Našel jsi problém s položkou marketplace nebo máš návrhy na nové? <0>Otevři GitHub issue</0> a dej nám vědět!"
+	}
+}

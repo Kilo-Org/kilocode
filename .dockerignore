@@ -1,0 +1,90 @@
+# git
+.git
+
+# build artifacts
+bin/
+dist/
+**/dist/
+out/
+**/out/
+src/webview-ui/
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# testing
+coverage/
+**/.vscode-test/
+**/mock/
+
+# devtools
+knip.json
+.husky/
+
+# monorepo
+.turbo/
+**/.turbo/
+
+# next.js
+**/.next/
+.vercel
+
+# Ignore common development files
+node_modules
+.git
+.gitignore
+.dockerignore
+.env*
+.vscode
+.idea
+
+# Ignore build artifacts
+dist
+build
+*.log
+*.tmp
+.cache
+coverage
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore test files
+__tests__
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+
+# Ignore development config files
+.eslintrc*
+.prettierrc*
+
+# Ignore most directories except what we need for the build
+apps/
+evals/
+webview-ui/node_modules
+src/node_modules
+
+# Keep essential files for the build
+!README.md
+!CHANGELOG.md
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!scripts/bootstrap.mjs
+!apps/web-evals/
+!apps/playwright-e2e/
+!src/
+!webview-ui/
+!packages/evals/.docker/entrypoints/runner.sh
+!packages/build/
+!packages/config-eslint/
+!packages/config-typescript/
+!packages/evals/
+!packages/ipc/
+!packages/telemetry/
+!packages/types/
+!locales/

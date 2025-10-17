@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "بيئة Node.js مفقودة",
+			"message": "لم يتم اكتشاف بيئة Node.js، يرجى تثبيت Node.js والمحاولة مرة أخرى. الإصدار الموصى به: {{minVersion}} أو أعلى."
+		},
+		"nodejsVersionLow": {
+			"title": "إصدار Node.js منخفض جداً",
+			"message": "إصدار Node.js الحالي ({{nodePath}}) هو {{nodeVersion}}، يرجى الترقية إلى {{minVersion}} أو أعلى للحصول على توافق أفضل."
+		}
+	},
+	"dialog": {
+		"cancel": "إلغاء"
+	},
+	"ui": {
+		"initializing": "Kilo Code يتم تهيئته...",
+		"systemInformation": "معلومات النظام"
+	}
+}

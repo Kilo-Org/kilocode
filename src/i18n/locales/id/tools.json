@@ -1,0 +1,21 @@
+{
+	"readFile": {
+		"linesRange": " (baris {{start}}-{{end}})",
+		"definitionsOnly": " (hanya definisi)",
+		"maxLines": " (maks {{max}} baris)",
+		"imageTooLarge": "File gambar terlalu besar ({{size}} MB). Ukuran maksimum yang diizinkan adalah {{max}} MB.",
+		"imageWithSize": "File gambar ({{size}} KB)"
+	},
+	"toolRepetitionLimitReached": "Model tampaknya terjebak dalam loop, mencoba aksi yang sama ({{toolName}}) berulang kali. Ini mungkin menunjukkan masalah dengan strategi saat ini. Pertimbangkan untuk mengubah frasa tugas, memberikan instruksi yang lebih spesifik, atau mengarahkannya ke pendekatan yang berbeda.",
+	"codebaseSearch": {
+		"approval": "Mencari '{{query}}' di codebase..."
+	},
+	"searchFiles": {
+		"workspaceBoundaryError": "Tidak dapat mencari di luar workspace. Path '{{path}}' berada di luar workspace saat ini."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "Gagal membuat tugas baru karena pembatasan kebijakan."
+		}
+	}
+}

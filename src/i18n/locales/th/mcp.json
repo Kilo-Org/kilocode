@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "รูปแบบ JSON ของการตั้งค่า MCP ไม่ถูกต้อง กรุณาตรวจสอบให้แน่ใจว่าการตั้งค่าของคุณเป็นไปตามรูปแบบ JSON ที่ถูกต้อง",
+		"invalid_settings_syntax": "รูปแบบ JSON ของการตั้งค่า MCP ไม่ถูกต้อง กรุณาตรวจสอบไฟล์การตั้งค่าของคุณสำหรับข้อผิดพลาดทางไวยากรณ์",
+		"invalid_settings_validation": "รูปแบบการตั้งค่า MCP ไม่ถูกต้อง: {{errorMessages}}",
+		"create_json": "ล้มเหลวในการสร้างหรือเปิด .kilocode/mcp.json: {{error}}",
+		"failed_update_project": "ล้มเหลวในการอัปเดตเซิร์ฟเวอร์ MCP ของโปรเจ็กต์",
+		"invalidJsonArgument": "Kilo Code พยายามใช้ {{toolName}} ด้วยอาร์กิวเมนต์ JSON ที่ไม่ถูกต้อง กำลังลองใหม่...",
+		"refresh_after_disable": "ล้มเหลวในการรีเฟรชการเชื่อมต่อ MCP หลังจากปิดใช้งาน",
+		"refresh_after_enable": "ล้มเหลวในการรีเฟรชการเชื่อมต่อ MCP หลังจากเปิดใช้งาน",
+		"disconnect_servers_partial": "ล้มเหลวในการตัดการเชื่อมต่อเซิร์ฟเวอร์ MCP {{count}} ตัว ตรวจสอบผลลัพธ์สำหรับรายละเอียด",
+		"toolNotFound": "เครื่องมือ '{{toolName}}' ไม่มีอยู่บนเซิร์ฟเวอร์ '{{serverName}}' เครื่องมือที่ใช้ได้: {{availableTools}}",
+		"serverNotFound": "เซิร์ฟเวอร์ MCP '{{serverName}}' ไม่ได้รับการกำหนดค่า เซิร์ฟเวอร์ที่ใช้ได้: {{availableServers}}",
+		"toolDisabled": "เครื่องมือ '{{toolName}}' บนเซิร์ฟเวอร์ '{{serverName}}' ถูกปิดใช้งาน เครื่องมือที่เปิดใช้งานที่ใช้ได้: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "กำลังรีสตาร์ทเซิร์ฟเวอร์ MCP {{serverName}}...",
+		"server_connected": "เซิร์ฟเวอร์ MCP {{serverName}} เชื่อมต่อแล้ว",
+		"server_deleted": "ลบเซิร์ฟเวอร์ MCP: {{serverName}}",
+		"server_not_found": "ไม่พบเซิร์ฟเวอร์ \"{{serverName}}\" ในการกำหนดค่า",
+		"global_servers_active": "เซิร์ฟเวอร์ MCP ทั่วโลกที่ใช้งานอยู่: {{mcpServers}}",
+		"project_servers_active": "เซิร์ฟเวอร์ MCP ของโปรเจ็กต์ที่ใช้งานอยู่: {{mcpServers}}",
+		"already_refreshing": "เซิร์ฟเวอร์ MCP กำลังรีเฟรชอยู่แล้ว",
+		"refreshing_all": "กำลังรีเฟรชเซิร์ฟเวอร์ MCP ทั้งหมด...",
+		"all_refreshed": "เซิร์ฟเวอร์ MCP ทั้งหมดได้รับการรีเฟรชแล้ว",
+		"project_config_deleted": "ลบไฟล์กำหนดค่า MCP ของโปรเจ็กต์แล้ว เซิร์ฟเวอร์ MCP ของโปรเจ็กต์ทั้งหมดถูกตัดการเชื่อมต่อ"
+	}
+}

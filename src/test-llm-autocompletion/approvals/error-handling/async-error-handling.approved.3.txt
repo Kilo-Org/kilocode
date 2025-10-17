@@ -1,0 +1,6 @@
+async function saveUser(userData) {
+	try {
+		const validated = await validateUser(userData);
+		
+		const savedUser = await saveToDatabase(validated);
+		return savedUser;

@@ -1,0 +1,10 @@
+node_modules/
+test-results/
+playwright-report/
+playwright/.cache/
+screenshots/
+*.log
+.env
+.env.local
+.build/
+.docker-cache/

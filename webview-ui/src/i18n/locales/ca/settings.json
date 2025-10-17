@@ -1,0 +1,972 @@
+{
+	"common": {
+		"save": "Desar",
+		"done": "Fet",
+		"cancel": "Cancel·lar",
+		"reset": "Restablir",
+		"select": "Seleccionar",
+		"add": "Afegir capçalera",
+		"remove": "Eliminar"
+	},
+	"header": {
+		"title": "Configuració",
+		"saveButtonTooltip": "Desar canvis",
+		"nothingChangedTooltip": "No s'ha canviat res",
+		"doneButtonTooltip": "Descartar els canvis no desats i tancar el panell de configuració"
+	},
+	"unsavedChangesDialog": {
+		"title": "Canvis no desats",
+		"description": "Voleu descartar els canvis i continuar?",
+		"cancelButton": "Cancel·lar",
+		"discardButton": "Descartar canvis"
+	},
+	"sections": {
+		"providers": "Proveïdors",
+		"autoApprove": "Auto-aprovació",
+		"browser": "Accés a l'ordinador",
+		"checkpoints": "Punts de control",
+		"notifications": "Notificacions",
+		"contextManagement": "Context",
+		"terminal": "Terminal",
+		"slashCommands": "Comandes de barra",
+		"prompts": "Indicacions",
+		"ui": "UI",
+		"experimental": "Experimental",
+		"language": "Idioma",
+		"about": "Sobre Kilo Code",
+		"display": "Mostrar"
+	},
+	"slashCommands": {
+		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
+	},
+	"prompts": {
+		"description": "Configura les indicacions de suport utilitzades per a accions ràpides com millorar indicacions, explicar codi i solucionar problemes. Aquestes indicacions ajuden Kilo Code a proporcionar millor assistència per a tasques comunes de desenvolupament."
+	},
+	"codeIndex": {
+		"title": "Indexació de codi",
+		"enableLabel": "Habilitar indexació de codi",
+		"enableDescription": "Habilita la indexació de codi per millorar la cerca i la comprensió del context",
+		"profileLabel": "Proveïdor d'embeddings",
+		"selectProfilePlaceholder": "Seleccionar proveïdor",
+		"openaiProvider": "OpenAI",
+		"ollamaProvider": "Ollama",
+		"geminiProvider": "Gemini",
+		"geminiApiKeyLabel": "Clau API:",
+		"geminiApiKeyPlaceholder": "Introduïu la vostra clau d'API de Gemini",
+		"mistralProvider": "Mistral",
+		"mistralApiKeyLabel": "Clau de l'API:",
+		"mistralApiKeyPlaceholder": "Introduïu la vostra clau de l'API de Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Clau API",
+		"vercelAiGatewayApiKeyPlaceholder": "Introduïu la vostra clau API de Vercel AI Gateway",
+		"openaiCompatibleProvider": "Compatible amb OpenAI",
+		"openAiKeyLabel": "Clau API OpenAI",
+		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
+		"openAiCompatibleBaseUrlLabel": "URL base",
+		"openAiCompatibleApiKeyLabel": "Clau API",
+		"openAiCompatibleApiKeyPlaceholder": "Introduïu la vostra clau API",
+		"openAiCompatibleModelDimensionLabel": "Dimensió d'Embedding:",
+		"modelDimensionLabel": "Dimensió del model",
+		"openAiCompatibleModelDimensionPlaceholder": "p. ex., 1536",
+		"openAiCompatibleModelDimensionDescription": "La dimensió d'embedding (mida de sortida) per al teu model. Consulta la documentació del teu proveïdor per a aquest valor. Valors comuns: 384, 768, 1536, 3072.",
+		"modelLabel": "Model",
+		"selectModelPlaceholder": "Seleccionar model",
+		"ollamaUrlLabel": "URL d'Ollama:",
+		"qdrantUrlLabel": "URL de Qdrant",
+		"qdrantKeyLabel": "Clau de Qdrant:",
+		"startIndexingButton": "Iniciar",
+		"clearIndexDataButton": "Esborrar índex",
+		"unsavedSettingsMessage": "Si us plau, deseu la configuració abans d'iniciar el procés d'indexació.",
+		"clearDataDialog": {
+			"title": "Esteu segur?",
+			"description": "Aquesta acció no es pot desfer. Eliminarà permanentment les dades d'índex de la vostra base de codi.",
+			"cancelButton": "Cancel·lar",
+			"confirmButton": "Esborrar dades"
+		},
+		"description": "Configureu la configuració d'indexació de la base de codi per habilitar la cerca semàntica del vostre projecte. <0>Més informació</0>",
+		"statusTitle": "Estat",
+		"settingsTitle": "Configuració d'indexació",
+		"disabledMessage": "La indexació de la base de codi està actualment deshabilitada. Habiliteu-la a la configuració global per configurar les opcions d'indexació.",
+		"embedderProviderLabel": "Proveïdor d'embeddings",
+		"modelPlaceholder": "Introduïu el nom del model",
+		"selectModel": "Seleccioneu un model",
+		"ollamaBaseUrlLabel": "URL base d'Ollama",
+		"qdrantApiKeyLabel": "Clau API de Qdrant",
+		"qdrantApiKeyPlaceholder": "Introduïu la vostra clau API de Qdrant (opcional)",
+		"setupConfigLabel": "Configuració",
+		"ollamaUrlPlaceholder": "http://localhost:11434",
+		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
+		"modelDimensionPlaceholder": "1536",
+		"qdrantUrlPlaceholder": "http://localhost:6333",
+		"saveError": "Error en desar la configuració",
+		"modelDimensions": "({{dimension}} dimensions)",
+		"saveSuccess": "Configuració desada correctament",
+		"saving": "Desant...",
+		"saveSettings": "Desar",
+		"indexingStatuses": {
+			"standby": "En espera",
+			"indexing": "Indexant",
+			"indexed": "Indexat",
+			"error": "Error"
+		},
+		"close": "Tancar",
+		"validation": {
+			"invalidQdrantUrl": "URL de Qdrant no vàlida",
+			"invalidOllamaUrl": "URL d'Ollama no vàlida",
+			"invalidBaseUrl": "URL de base no vàlida",
+			"qdrantUrlRequired": "Cal una URL de Qdrant",
+			"openaiApiKeyRequired": "Cal una clau d'API d'OpenAI",
+			"modelSelectionRequired": "Cal seleccionar un model",
+			"apiKeyRequired": "Cal una clau d'API",
+			"modelIdRequired": "Cal un ID de model",
+			"modelDimensionRequired": "Cal una dimensió de model",
+			"geminiApiKeyRequired": "Cal una clau d'API de Gemini",
+			"mistralApiKeyRequired": "La clau de l'API de Mistral és requerida",
+			"vercelAiGatewayApiKeyRequired": "Es requereix la clau API de Vercel AI Gateway",
+			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
+			"baseUrlRequired": "Cal una URL base",
+			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0"
+		},
+		"advancedConfigLabel": "Configuració avançada",
+		"searchMinScoreLabel": "Llindar de puntuació de cerca",
+		"searchMinScoreDescription": "Puntuació mínima de similitud (0.0-1.0) requerida per als resultats de la cerca. Valors més baixos retornen més resultats però poden ser menys rellevants. Valors més alts retornen menys resultats però més rellevants.",
+		"searchMinScoreResetTooltip": "Restablir al valor per defecte (0.4)",
+		"searchMaxResultsLabel": "Màxim de resultats de cerca",
+		"searchMaxResultsDescription": "Nombre màxim de resultats de cerca a retornar quan es consulta l'índex de la base de codi. Els valors més alts proporcionen més context però poden incloure resultats menys rellevants.",
+		"resetToDefault": "Restablir al valor per defecte",
+		"cancelling": "S'està cancel·lant...",
+		"cancelIndexingButton": "Cancel·la la indexació"
+	},
+	"autoApprove": {
+		"toggleShortcut": "Pots configurar una drecera global per a aquesta configuració <SettingsLink>a les preferències del teu IDE</SettingsLink>.",
+		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
+		"enabled": "Auto-aprovació activada",
+		"toggleAriaLabel": "Commuta l'aprovació automàtica",
+		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions",
+		"readOnly": {
+			"label": "Llegir",
+			"description": "Quan està activat, Kilo Code veurà automàticament el contingut del directori i llegirà fitxers sense que calgui fer clic al botó Aprovar.",
+			"outsideWorkspace": {
+				"label": "Incloure fitxers fora de l'espai de treball",
+				"description": "Permetre a Kilo Code llegir fitxers fora de l'espai de treball actual sense requerir aprovació."
+			}
+		},
+		"write": {
+			"label": "Escriure",
+			"description": "Crear i editar fitxers automàticament sense requerir aprovació",
+			"delayLabel": "Retard després d'escriptura per permetre que els diagnòstics detectin possibles problemes",
+			"outsideWorkspace": {
+				"label": "Incloure fitxers fora de l'espai de treball",
+				"description": "Permetre a Kilo Code crear i editar fitxers fora de l'espai de treball actual sense requerir aprovació."
+			},
+			"protected": {
+				"label": "Incloure fitxers protegits",
+				"description": "Permetre a Kilo Code crear i editar fitxers protegits (com .kilocodeignore i fitxers de configuració .kilocode/) sense requerir aprovació."
+			}
+		},
+		"browser": {
+			"label": "Navegador",
+			"description": "Realitzar accions del navegador automàticament sense requerir aprovació. Nota: Només s'aplica quan el model admet l'ús de l'ordinador"
+		},
+		"retry": {
+			"label": "Reintentar",
+			"description": "Tornar a intentar sol·licituds d'API fallides automàticament quan el servidor retorna una resposta d'error",
+			"delayLabel": "Retard abans de tornar a intentar la sol·licitud"
+		},
+		"mcp": {
+			"label": "MCP",
+			"description": "Habilitar l'aprovació automàtica d'eines MCP individuals a la vista de Servidors MCP (requereix tant aquesta configuració com la casella \"Permetre sempre\" de l'eina)"
+		},
+		"modeSwitch": {
+			"label": "Mode",
+			"description": "Canviar automàticament entre diferents modes sense requerir aprovació"
+		},
+		"subtasks": {
+			"label": "Subtasques",
+			"description": "Permetre la creació i finalització de subtasques sense requerir aprovació"
+		},
+		"followupQuestions": {
+			"label": "Pregunta",
+			"description": "Seleccionar automàticament la primera resposta suggerida per a preguntes de seguiment després del temps d'espera configurat",
+			"timeoutLabel": "Temps d'espera abans de seleccionar automàticament la primera resposta"
+		},
+		"execute": {
+			"label": "Executar",
+			"description": "Executar automàticament comandes de terminal permeses sense requerir aprovació",
+			"allowedCommands": "Comandes d'auto-execució permeses",
+			"allowedCommandsDescription": "Prefixos de comandes que poden ser executats automàticament quan \"Aprovar sempre operacions d'execució\" està habilitat. Afegeix * per permetre totes les comandes (usar amb precaució).",
+			"deniedCommands": "Comandes denegades",
+			"deniedCommandsDescription": "Prefixos de comandes que es rebutjaran automàticament sense requerir aprovació. En cas de conflicte amb comandes permeses, la coincidència de prefix més llarga té prioritat. Afegeix * per denegar totes les comandes.",
+			"commandPlaceholder": "Introduïu prefix de comanda (ex. 'git ')",
+			"deniedCommandPlaceholder": "Introduïu prefix de comanda a denegar (ex. 'rm -rf')",
+			"addButton": "Afegir",
+			"autoDenied": "Les comandes amb el prefix `{{prefix}}` han estat prohibides per l'usuari. No eludeixis aquesta restricció executant una altra comanda."
+		},
+		"showMenu": {
+			"label": "Mostrar menú d'aprovació automàtica a la vista de xat",
+			"description": "Quan està habilitat, el menú d'aprovació automàtica es mostrarà a la part inferior de la vista de xat, permetent un accés ràpid a la configuració d'aprovació automàtica"
+		},
+		"updateTodoList": {
+			"label": "Todo",
+			"description": "La llista de tasques es actualitza automàticament sense aprovació"
+		},
+		"apiRequestLimit": {
+			"title": "Màximes Sol·licituds",
+			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
+			"unlimited": "Il·limitat"
+		},
+		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica",
+		"apiCostLimit": {
+			"title": "Cost Màxim",
+			"unlimited": "Il·limitat"
+		},
+		"maxLimits": {
+			"description": "Fes sol·licituds automàticament fins a aquests límits abans de demanar aprovació per continuar."
+		}
+	},
+	"providers": {
+		"providerDocumentation": "Documentació de {{provider}}",
+		"configProfile": "Perfil de configuració",
+		"description": "Deseu diferents configuracions d'API per canviar ràpidament entre proveïdors i configuracions.",
+		"apiProvider": "Proveïdor d'API",
+		"model": "Model",
+		"nameEmpty": "El nom no pot estar buit",
+		"nameExists": "Ja existeix un perfil amb aquest nom",
+		"deleteProfile": "Esborrar perfil",
+		"invalidArnFormat": "Format ARN no vàlid. Comprova els exemples anteriors.",
+		"enterNewName": "Introduïu un nou nom",
+		"addProfile": "Afegeix perfil",
+		"renameProfile": "Canvia el nom del perfil",
+		"newProfile": "Nou perfil de configuració",
+		"enterProfileName": "Introduïu el nom del perfil",
+		"createProfile": "Crea perfil",
+		"cannotDeleteOnlyProfile": "No es pot eliminar l'únic perfil",
+		"searchPlaceholder": "Cerca perfils",
+		"searchProviderPlaceholder": "Cerca proveïdors",
+		"noProviderMatchFound": "No s'han trobat proveïdors",
+		"noMatchFound": "No s'han trobat perfils coincidents",
+		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi però limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"awsCustomArnUse": "Introduïu un ARN vàlid d'Amazon Bedrock per al model que voleu utilitzar. Exemples de format:",
+		"awsCustomArnDesc": "Assegureu-vos que la regió a l'ARN coincideix amb la regió d'AWS seleccionada anteriorment.",
+		"openRouterApiKey": "Clau API d'OpenRouter",
+		"getOpenRouterApiKey": "Obtenir clau API d'OpenRouter",
+		"vercelAiGatewayApiKey": "Clau API de Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Obtenir clau API de Vercel AI Gateway",
+		"apiKeyStorageNotice": "Les claus API s'emmagatzemen de forma segura a l'Emmagatzematge Secret de VSCode",
+		"glamaApiKey": "Clau API de Glama",
+		"getGlamaApiKey": "Obtenir clau API de Glama",
+		"useCustomBaseUrl": "Utilitzar URL base personalitzada",
+		"useReasoning": "Activar raonament",
+		"useHostHeader": "Utilitzar capçalera Host personalitzada",
+		"useLegacyFormat": "Utilitzar el format d'API OpenAI antic",
+		"customHeaders": "Capçaleres personalitzades",
+		"headerName": "Nom de la capçalera",
+		"headerValue": "Valor de la capçalera",
+		"noCustomHeaders": "No hi ha capçaleres personalitzades definides. Feu clic al botó + per afegir-ne una.",
+		"requestyApiKey": "Clau API de Requesty",
+		"refreshModels": {
+			"label": "Actualitzar models",
+			"hint": "Si us plau, torneu a obrir la configuració per veure els models més recents.",
+			"loading": "Actualitzant la llista de models...",
+			"success": "Llista de models actualitzada correctament!",
+			"error": "No s'ha pogut actualitzar la llista de models. Si us plau, torneu-ho a provar."
+		},
+		"getRequestyApiKey": "Obtenir clau API de Requesty",
+		"getRequestyBaseUrl": "URL base",
+		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
+		"openRouterTransformsText": "Comprimir prompts i cadenes de missatges a la mida del context (<a>Transformacions d'OpenRouter</a>)",
+		"anthropicApiKey": "Clau API d'Anthropic",
+		"getAnthropicApiKey": "Obtenir clau API d'Anthropic",
+		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"anthropic1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"cerebrasApiKey": "Clau API de Cerebras",
+		"getCerebrasApiKey": "Obtenir clau API de Cerebras",
+		"chutesApiKey": "Clau API de Chutes",
+		"getChutesApiKey": "Obtenir clau API de Chutes",
+		"fireworksApiKey": "Clau API de Fireworks",
+		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"syntheticApiKey": "Clau API de Synthetic",
+		"getSyntheticApiKey": "Obtenir clau API de Synthetic",
+		"featherlessApiKey": "Clau API de Featherless",
+		"getFeatherlessApiKey": "Obtenir clau API de Featherless",
+		"ioIntelligenceApiKey": "Clau API d'IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Introdueix la teva clau d'API de IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtenir clau API d'IO Intelligence",
+		"deepSeekApiKey": "Clau API de DeepSeek",
+		"getDeepSeekApiKey": "Obtenir clau API de DeepSeek",
+		"doubaoApiKey": "Clau API de Doubao",
+		"getDoubaoApiKey": "Obtenir clau API de Doubao",
+		"moonshotApiKey": "Clau API de Moonshot",
+		"getMoonshotApiKey": "Obtenir clau API de Moonshot",
+		"moonshotBaseUrl": "Punt d'entrada de Moonshot",
+		"zaiApiKey": "Clau API de Z AI",
+		"getZaiApiKey": "Obtenir clau API de Z AI",
+		"zaiEntrypoint": "Punt d'entrada de Z AI",
+		"zaiEntrypointDescription": "Si us plau, seleccioneu el punt d'entrada de l'API apropiat segons la vostra ubicació. Si sou a la Xina, trieu open.bigmodel.cn. Altrament, trieu api.z.ai.",
+		"geminiApiKey": "Clau API de Gemini",
+		"getGroqApiKey": "Obtenir clau API de Groq",
+		"groqApiKey": "Clau API de Groq",
+		"getSambaNovaApiKey": "Obtenir clau API de SambaNova",
+		"sambaNovaApiKey": "Clau API de SambaNova",
+		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
+		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obtenir clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Utilitzar una URL base personalitzada",
+		"huggingFaceModelId": "ID del model",
+		"huggingFaceLoading": "Carregant...",
+		"huggingFaceModelsCount": "({{count}} models)",
+		"huggingFaceSelectModel": "Selecciona un model...",
+		"huggingFaceSearchModels": "Cerca models...",
+		"huggingFaceNoModelsFound": "No s'han trobat models",
+		"huggingFaceProvider": "Proveïdor",
+		"huggingFaceProviderAuto": "Automàtic",
+		"huggingFaceSelectProvider": "Selecciona un proveïdor...",
+		"huggingFaceSearchProviders": "Cerca proveïdors...",
+		"huggingFaceNoProvidersFound": "No s'han trobat proveïdors",
+		"getGeminiApiKey": "Obtenir clau API de Gemini",
+		"openAiApiKey": "Clau API d'OpenAI",
+		"apiKey": "Clau API",
+		"openAiBaseUrl": "URL base",
+		"getOpenAiApiKey": "Obtenir clau API d'OpenAI",
+		"mistralApiKey": "Clau API de Mistral",
+		"getMistralApiKey": "Obtenir clau API de Mistral / Codestral",
+		"codestralBaseUrl": "URL base de Codestral (opcional)",
+		"codestralBaseUrlDesc": "Establir una URL alternativa per al model Codestral.",
+		"xaiApiKey": "Clau API de xAI",
+		"getXaiApiKey": "Obtenir clau API de xAI",
+		"litellmApiKey": "Clau API de LiteLLM",
+		"litellmBaseUrl": "URL base de LiteLLM",
+		"awsCredentials": "Credencials d'AWS",
+		"awsProfile": "Perfil d'AWS",
+		"awsApiKey": "Clau d'API d'Amazon Bedrock",
+		"awsProfileName": "Nom del perfil d'AWS",
+		"awsAccessKey": "Clau d'accés d'AWS",
+		"awsSecretKey": "Clau secreta d'AWS",
+		"awsSessionToken": "Token de sessió d'AWS",
+		"awsRegion": "Regió d'AWS",
+		"awsCrossRegion": "Utilitzar inferència entre regions",
+		"awsBedrockVpc": {
+			"useCustomVpcEndpoint": "Utilitzar punt final VPC personalitzat",
+			"vpcEndpointUrlPlaceholder": "Introduïu l'URL del punt final VPC (opcional)",
+			"examples": "Exemples:"
+		},
+		"enablePromptCaching": "Habilitar emmagatzematge en caché de prompts",
+		"enablePromptCachingTitle": "Habilitar l'emmagatzematge en caché de prompts per millorar el rendiment i reduir els costos per als models compatibles.",
+		"cacheUsageNote": "Nota: Si no veieu l'ús de la caché, proveu de seleccionar un model diferent i després tornar a seleccionar el model desitjat.",
+		"vscodeLmModel": "Model de llenguatge",
+		"vscodeLmWarning": "Nota: Aquesta és una integració molt experimental i el suport del proveïdor variarà. Si rebeu un error sobre un model no compatible, és un problema del proveïdor.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Activa el context d'URL",
+				"description": "Permet a Gemini llegir pàgines enllaçades per extreure, comparar i sintetitzar el seu contingut en respostes informades."
+			},
+			"groundingSearch": {
+				"title": "Activa la Fonamentació amb la Cerca de Google",
+				"description": "Connecta Gemini a dades web en temps real per a respostes precises i actualitzades amb citacions verificables."
+			}
+		},
+		"googleCloudSetup": {
+			"title": "Per utilitzar Google Cloud Vertex AI, necessiteu:",
+			"step1": "1. Crear un compte de Google Cloud, habilitar l'API de Vertex AI i habilitar els models Claude necessaris.",
+			"step2": "2. Instal·lar Google Cloud CLI i configurar les credencials d'aplicació per defecte.",
+			"step3": "3. O crear un compte de servei amb credencials."
+		},
+		"googleCloudCredentials": "Credencials de Google Cloud",
+		"googleCloudKeyFile": "Ruta del fitxer de clau de Google Cloud",
+		"googleCloudProjectId": "ID del projecte de Google Cloud",
+		"googleCloudRegion": "Regió de Google Cloud",
+		"lmStudio": {
+			"baseUrl": "URL base (opcional)",
+			"modelId": "ID del model",
+			"speculativeDecoding": "Habilitar descodificació especulativa",
+			"draftModelId": "ID del model d'esborrany",
+			"draftModelDesc": "El model d'esborrany ha de ser de la mateixa família de models perquè la descodificació especulativa funcioni correctament.",
+			"selectDraftModel": "Seleccionar model d'esborrany",
+			"noModelsFound": "No s'han trobat models d'esborrany. Assegureu-vos que LM Studio s'està executant amb el mode servidor habilitat.",
+			"description": "LM Studio permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la seva <a>Guia d'inici ràpid</a>. També necessitareu iniciar la funció de <b>Servidor Local</b> de LM Studio per utilitzar-la amb aquesta extensió. <span>Nota:</span> Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
+		},
+		"ollama": {
+			"baseUrl": "URL base (opcional)",
+			"modelId": "ID del model",
+			"apiKey": "Clau API d'Ollama",
+			"apiKeyPlaceholder": "Introdueix la teva clau API",
+			"apiKeyHelp": "Clau API opcional per a instàncies d'Ollama autenticades o serveis al núvol. Deixa-ho buit per a instal·lacions locals.",
+			"numCtx": "Mida de la finestra de context (num_ctx)",
+			"numCtxHelp": "Sobreescriu la mida de la finestra de context per defecte del model. Deixeu-ho en blanc per utilitzar la configuració del Modelfile del model. El valor mínim és 128.",
+			"description": "Ollama permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la Guia d'inici ràpid.",
+			"warning": "Nota: Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
+		},
+		"unboundApiKey": "Clau API d'Unbound",
+		"getUnboundApiKey": "Obtenir clau API d'Unbound",
+		"unboundRefreshModelsSuccess": "Llista de models actualitzada! Ara podeu seleccionar entre els últims models.",
+		"unboundInvalidApiKey": "Clau API no vàlida. Si us plau, comproveu la vostra clau API i torneu-ho a provar.",
+		"humanRelay": {
+			"description": "No es requereix clau API, però l'usuari necessita ajuda per copiar i enganxar informació al xat d'IA web.",
+			"instructions": "Durant l'ús, apareixerà un diàleg i el missatge actual es copiarà automàticament al porta-retalls. Necessiteu enganxar-lo a les versions web d'IA (com ChatGPT o Claude), després copiar la resposta de l'IA de nou al diàleg i fer clic al botó de confirmació."
+		},
+		"roo": {
+			"authenticatedMessage": "Autenticat de forma segura a través del teu compte de Roo Code Cloud.",
+			"connectButton": "Connecta amb Roo Code Cloud"
+		},
+		"openRouter": {
+			"providerRouting": {
+				"title": "Encaminament de Proveïdors d'OpenRouter",
+				"description": "OpenRouter dirigeix les sol·licituds als millors proveïdors disponibles per al vostre model. Per defecte, les sol·licituds s'equilibren entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per utilitzar amb aquest model.",
+				"learnMore": "Més informació sobre l'encaminament de proveïdors"
+			}
+		},
+		"customModel": {
+			"capabilities": "Configureu les capacitats i preus per al vostre model personalitzat compatible amb OpenAI. Tingueu cura en especificar les capacitats del model, ja que poden afectar com funciona Kilo Code.",
+			"maxTokens": {
+				"label": "Màxim de tokens de sortida",
+				"description": "El nombre màxim de tokens que el model pot generar en una resposta. (Establiu -1 per permetre que el servidor estableixi el màxim de tokens.)"
+			},
+			"contextWindow": {
+				"label": "Mida de la finestra de context",
+				"description": "Total de tokens (entrada + sortida) que el model pot processar."
+			},
+			"imageSupport": {
+				"label": "Suport d'imatges",
+				"description": "Aquest model és capaç de processar i entendre imatges?"
+			},
+			"computerUse": {
+				"label": "Ús de l'ordinador",
+				"description": "Aquest model és capaç d'interactuar amb un navegador? (com Claude 3.7 Sonnet)"
+			},
+			"promptCache": {
+				"label": "Emmagatzematge en caché de prompts",
+				"description": "Aquest model és capaç d'emmagatzemar prompts en caché?"
+			},
+			"pricing": {
+				"input": {
+					"label": "Preu d'entrada",
+					"description": "Cost per milió de tokens en l'entrada/prompt. Això afecta el cost d'enviar context i instruccions al model."
+				},
+				"output": {
+					"label": "Preu de sortida",
+					"description": "Cost per milió de tokens en la resposta del model. Això afecta el cost del contingut generat i les completions."
+				},
+				"cacheReads": {
+					"label": "Preu de lectures de caché",
+					"description": "Cost per milió de tokens per llegir de la caché. Aquest és el preu cobrat quan es recupera una resposta emmagatzemada en caché."
+				},
+				"cacheWrites": {
+					"label": "Preu d'escriptures de caché",
+					"description": "Cost per milió de tokens per escriure a la caché. Aquest és el preu cobrat quan s'emmagatzema un prompt per primera vegada."
+				}
+			},
+			"resetDefaults": "Restablir als valors per defecte"
+		},
+		"rateLimitSeconds": {
+			"label": "Límit de freqüència",
+			"description": "Temps mínim entre sol·licituds d'API."
+		},
+		"consecutiveMistakeLimit": {
+			"label": "Límit d'errors i repeticions",
+			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo Code està tenint problemes'",
+			"unlimitedDescription": "Reintents il·limitats habilitats (procediment automàtic). El diàleg no apareixerà mai.",
+			"warning": "⚠️ Establir a 0 permet reintents il·limitats que poden consumir un ús significatiu de l'API"
+		},
+		"reasoningEffort": {
+			"label": "Esforç de raonament del model",
+			"minimal": "Mínim (el més ràpid)",
+			"high": "Alt",
+			"medium": "Mitjà",
+			"low": "Baix"
+		},
+		"verbosity": {
+			"label": "Verbositat de la sortida",
+			"high": "Alta",
+			"medium": "Mitjana",
+			"low": "Baixa",
+			"description": "Controla el nivell de detall de les respostes del model. La verbositat baixa produeix respostes concises, mentre que la verbositat alta proporciona explicacions exhaustives."
+		},
+		"setReasoningLevel": "Activa l'esforç de raonament",
+		"claudeCode": {
+			"pathLabel": "Ruta del Codi Claude",
+			"description": "Ruta opcional al teu CLI de Claude Code. Per defecte, 'claude' si no s'estableix.",
+			"placeholder": "Per defecte: claude",
+			"maxTokensLabel": "Tokens màxims de sortida",
+			"maxTokensDescription": "Nombre màxim de tokens de sortida per a les respostes de Claude Code. El valor per defecte és 8000."
+		},
+		"geminiCli": {
+			"description": "Aquest proveïdor utilitza l'autenticació OAuth de l'eina Gemini CLI i no requereix claus d'API.",
+			"oauthPath": "Ruta de Credencials OAuth (opcional)",
+			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.gemini/oauth_creds.json).",
+			"instructions": "Si encara no t'has autenticat, executa",
+			"instructionsContinued": "al teu terminal primer.",
+			"setupLink": "Instruccions de Configuració de Gemini CLI",
+			"requirementsTitle": "Requisits Importants",
+			"requirement1": "Primer, necessites instal·lar l'eina Gemini CLI",
+			"requirement2": "Després, executa gemini al teu terminal i assegura't d'iniciar sessió amb Google",
+			"requirement3": "Només funciona amb comptes personals de Google (no comptes de Google Workspace)",
+			"requirement4": "No utilitza claus d'API - l'autenticació es gestiona via OAuth",
+			"requirement5": "Requereix que l'eina Gemini CLI estigui instal·lada i autenticada primer",
+			"freeAccess": "Accés gratuït via autenticació OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credencials OAuth (opcional)",
+			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.qwen/oauth_creds.json).",
+			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
+			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
+			"setupLink": "Documentació oficial de Qwen"
+		}
+	},
+	"browser": {
+		"enable": {
+			"label": "Habilitar eina de navegador",
+			"description": "Quan està habilitat, Kilo Code pot utilitzar un navegador per interactuar amb llocs web quan s'utilitzen models que admeten l'ús de l'ordinador. <0>Més informació</0>"
+		},
+		"viewport": {
+			"label": "Mida del viewport",
+			"description": "Seleccioneu la mida del viewport per a interaccions del navegador. Això afecta com es mostren i interactuen els llocs web.",
+			"options": {
+				"largeDesktop": "Escriptori gran (1280x800)",
+				"smallDesktop": "Escriptori petit (900x600)",
+				"tablet": "Tauleta (768x1024)",
+				"mobile": "Mòbil (360x640)"
+			}
+		},
+		"screenshotQuality": {
+			"label": "Qualitat de captures de pantalla",
+			"description": "Ajusteu la qualitat WebP de les captures de pantalla del navegador. Valors més alts proporcionen captures més clares però augmenten l'ús de token."
+		},
+		"remote": {
+			"label": "Utilitzar connexió remota del navegador",
+			"description": "Connectar a un navegador Chrome que s'executa amb depuració remota habilitada (--remote-debugging-port=9222).",
+			"urlPlaceholder": "URL personalitzada (ex. http://localhost:9222)",
+			"testButton": "Provar connexió",
+			"testingButton": "Provant...",
+			"instructions": "Introduïu l'adreça d'amfitrió del protocol DevTools o deixeu-la buida per descobrir automàticament instàncies locals de Chrome. El botó Provar Connexió provarà la URL personalitzada si es proporciona, o descobrirà automàticament si el camp està buit."
+		}
+	},
+	"checkpoints": {
+		"enable": {
+			"label": "Habilitar punts de control automàtics",
+			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors. <0>Més informació</0>"
+		}
+	},
+	"notifications": {
+		"sound": {
+			"label": "Habilitar efectes de so",
+			"description": "Quan està habilitat, Kilo Code reproduirà efectes de so per a notificacions i esdeveniments.",
+			"volumeLabel": "Volum"
+		},
+		"tts": {
+			"label": "Habilitar text a veu",
+			"description": "Quan està habilitat, Kilo Code llegirà en veu alta les seves respostes utilitzant text a veu.",
+			"speedLabel": "Velocitat"
+		}
+	},
+	"contextManagement": {
+		"description": "Controleu quina informació s'inclou a la finestra de context de la IA, afectant l'ús de token i la qualitat de resposta",
+		"autoCondenseContextPercent": {
+			"label": "Llindar per activar la condensació intel·ligent de context",
+			"description": "Quan la finestra de context assoleix aquest llindar, Kilo Code la condensarà automàticament."
+		},
+		"condensingApiConfiguration": {
+			"label": "Configuració d'API per a la condensació de context",
+			"description": "Seleccioneu quina configuració d'API utilitzar per a les operacions de condensació de context. Deixeu-ho sense seleccionar per utilitzar la configuració activa actual.",
+			"useCurrentConfig": "Per defecte"
+		},
+		"customCondensingPrompt": {
+			"label": "Indicació personalitzada de condensació de context",
+			"description": "Personalitzeu la indicació del sistema utilitzada per a la condensació de context. Deixeu-ho buit per utilitzar la indicació per defecte.",
+			"placeholder": "Introduïu aquí la vostra indicació de condensació personalitzada...\n\nPodeu utilitzar la mateixa estructura que la indicació per defecte:\n- Conversa anterior\n- Treball actual\n- Conceptes tècnics clau\n- Fitxers i codi rellevants\n- Resolució de problemes\n- Tasques pendents i següents passos",
+			"reset": "Restablir als valors per defecte",
+			"hint": "Buit = utilitzar indicació per defecte"
+		},
+		"autoCondenseContext": {
+			"name": "Activar automàticament la condensació intel·ligent de context",
+			"description": "Quan està activat, Kilo Code condensarà automàticament el context quan s'assoleixi el llindar. Quan està desactivat, encara pots activar manualment la condensació de context."
+		},
+		"openTabs": {
+			"label": "Límit de context de pestanyes obertes",
+			"description": "Nombre màxim de pestanyes obertes de VSCode a incloure al context. Valors més alts proporcionen més context però augmenten l'ús de token."
+		},
+		"workspaceFiles": {
+			"label": "Límit de context de fitxers de l'espai de treball",
+			"description": "Nombre màxim de fitxers a incloure als detalls del directori de treball actual. Valors més alts proporcionen més context però augmenten l'ús de token."
+		},
+		"rooignore": {
+			"label": "Mostrar fitxers .kilocodeignore en llistes i cerques",
+			"description": "Quan està habilitat, els fitxers que coincideixen amb els patrons a .kilocodeignore es mostraran en llistes amb un símbol de cadenat. Quan està deshabilitat, aquests fitxers s'ocultaran completament de les llistes de fitxers i cerques."
+		},
+		"maxReadFile": {
+			"label": "Llindar d'auto-truncament de lectura de fitxers",
+			"description": "Kilo Code llegeix aquest nombre de línies quan el model omet els valors d'inici/final. Si aquest nombre és menor que el total del fitxer, Kilo Code genera un índex de números de línia de les definicions de codi. Casos especials: -1 indica a Kilo Code que llegeixi tot el fitxer (sense indexació), i 0 indica que no llegeixi cap línia i proporcioni només índexs de línia per a un context mínim. Valors més baixos minimitzen l'ús inicial de context, permetent lectures posteriors de rangs de línies precisos. Les sol·licituds amb inici/final explícits no estan limitades per aquesta configuració.",
+			"lines": "línies",
+			"always_full_read": "Llegeix sempre el fitxer sencer"
+		},
+		"maxConcurrentFileReads": {
+			"label": "Límit de lectures simultànies",
+			"description": "Nombre màxim de fitxers que l'eina 'read_file' pot processar simultàniament. Els valors més alts poden accelerar la lectura de múltiples fitxers petits però augmenten l'ús de memòria."
+		},
+		"diagnostics": {
+			"includeMessages": {
+				"label": "Inclou automàticament diagnòstics al context",
+				"description": "Quan està activat, els missatges de diagnòstic (errors) dels fitxers editats s'inclouran automàticament al context. Sempre pots incloure manualment tots els diagnòstics de l'espai de treball utilitzant @problems."
+			},
+			"maxMessages": {
+				"label": "Màxim de missatges de diagnòstic",
+				"description": "Nombre màxim de missatges de diagnòstic a incloure per fitxer. Aquest límit s'aplica tant a la inclusió automàtica (quan la casella està activada) com a les mencions manuals de @problems. Valors més alts proporcionen més context però augmenten l'ús de tokens.",
+				"resetTooltip": "Restablir al valor per defecte (50)",
+				"unlimitedLabel": "Il·limitat"
+			},
+			"delayAfterWrite": {
+				"label": "Retard després d'escriptures per permetre que els diagnòstics detectin possibles problemes",
+				"description": "Temps d'espera després d'escriptures de fitxers abans de continuar, permetent que les eines de diagnòstic processin els canvis i detectin problemes."
+			}
+		},
+		"condensingThreshold": {
+			"label": "Llindar d'activació de condensació",
+			"selectProfile": "Configura el llindar per al perfil",
+			"defaultProfile": "Per defecte global (tots els perfils)",
+			"defaultDescription": "Quan el context arribi a aquest percentatge, es condensarà automàticament per a tots els perfils tret que tinguin configuracions personalitzades",
+			"profileDescription": "Llindar personalitzat només per a aquest perfil (substitueix el per defecte global)",
+			"inheritDescription": "Aquest perfil hereta el llindar per defecte global ({{threshold}}%)",
+			"usesGlobal": "(utilitza global {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Mida màxima d'arxiu d'imatge",
+			"mb": "MB",
+			"description": "Mida màxima (en MB) per a arxius d'imatge que poden ser processats per l'eina de lectura d'arxius."
+		},
+		"maxTotalImageSize": {
+			"label": "Mida total màxima d'imatges",
+			"mb": "MB",
+			"description": "Límit de mida acumulativa màxima (en MB) per a totes les imatges processades en una sola operació read_file. Quan es llegeixen múltiples imatges, la mida de cada imatge s'afegeix al total. Si incloure una altra imatge excediria aquest límit, serà omesa."
+		}
+	},
+	"terminal": {
+		"basic": {
+			"label": "Configuració del terminal: Bàsica",
+			"description": "Configuració bàsica del terminal"
+		},
+		"advanced": {
+			"label": "Configuració del terminal: Avançada",
+			"description": "Les següents opcions poden requerir reiniciar el terminal per aplicar la configuració."
+		},
+		"outputLineLimit": {
+			"label": "Límit de sortida de terminal",
+			"description": "Nombre màxim de línies a incloure a la sortida del terminal en executar comandes. Quan s'excedeix, s'eliminaran línies del mig, estalviant token. <0>Més informació</0>"
+		},
+		"outputCharacterLimit": {
+			"label": "Límit de caràcters del terminal",
+			"description": "Nombre màxim de caràcters a incloure en la sortida del terminal en executar ordres. Aquest límit té precedència sobre el límit de línies per evitar problemes de memòria amb línies extremadament llargues. Quan se superi, la sortida es truncarà. <0>Més informació</0>"
+		},
+		"shellIntegrationTimeout": {
+			"label": "Temps d'espera d'integració de shell del terminal",
+			"description": "Temps màxim d'espera per a la inicialització de la integració de shell abans d'executar comandes. Per a usuaris amb temps d'inici de shell llargs, aquest valor pot necessitar ser augmentat si veieu errors \"Shell Integration Unavailable\" al terminal. <0>Més informació</0>"
+		},
+		"shellIntegrationDisabled": {
+			"label": "Desactiva la integració de l'intèrpret d'ordres del terminal",
+			"description": "Activa això si les ordres del terminal no funcionen correctament o si veus errors de 'Shell Integration Unavailable'. Això utilitza un mètode més senzill per executar ordres, evitant algunes funcions avançades del terminal. <0>Més informació</0>"
+		},
+		"commandDelay": {
+			"label": "Retard de comanda del terminal",
+			"description": "Retard en mil·lisegons a afegir després de l'execució de la comanda. La configuració predeterminada de 0 desactiva completament el retard. Això pot ajudar a assegurar que la sortida de la comanda es capturi completament en terminals amb problemes de temporització. En la majoria de terminals s'implementa establint `PROMPT_COMMAND='sleep N'` i Powershell afegeix `start-sleep` al final de cada comanda. Originalment era una solució per al error VSCode#237208 i pot no ser necessari. <0>Més informació</0>"
+		},
+		"compressProgressBar": {
+			"label": "Comprimir sortida de barra de progrés",
+			"description": "Quan està habilitat, processa la sortida del terminal amb retorns de carro (\\r) per simular com un terminal real mostraria el contingut. Això elimina els estats intermedis de les barres de progrés, mantenint només l'estat final, la qual cosa conserva espai de context per a informació més rellevant. <0>Més informació</0>"
+		},
+		"powershellCounter": {
+			"label": "Habilita la solució temporal del comptador PowerShell",
+			"description": "Quan està habilitat, afegeix un comptador a les comandes PowerShell per assegurar l'execució correcta de les comandes. Això ajuda amb els terminals PowerShell que poden tenir problemes amb la captura de sortida. <0>Més informació</0>"
+		},
+		"zshClearEolMark": {
+			"label": "Neteja la marca EOL de ZSH",
+			"description": "Quan està habilitat, neteja la marca de final de línia de ZSH establint PROMPT_EOL_MARK=''. Això evita problemes amb la interpretació de la sortida de comandes quan acaba amb caràcters especials com '%'. <0>Més informació</0>"
+		},
+		"zshOhMy": {
+			"label": "Habilita la integració Oh My Zsh",
+			"description": "Quan està habilitat, estableix ITERM_SHELL_INTEGRATION_INSTALLED=Yes per habilitar les característiques d'integració del shell Oh My Zsh. Aplicar aquesta configuració pot requerir reiniciar l'IDE. <0>Més informació</0>"
+		},
+		"zshP10k": {
+			"label": "Habilita la integració Powerlevel10k",
+			"description": "Quan està habilitat, estableix POWERLEVEL9K_TERM_SHELL_INTEGRATION=true per habilitar les característiques d'integració del shell Powerlevel10k. <0>Més informació</0>"
+		},
+		"zdotdir": {
+			"label": "Habilitar gestió de ZDOTDIR",
+			"description": "Quan està habilitat, crea un directori temporal per a ZDOTDIR per gestionar correctament la integració del shell zsh. Això assegura que la integració del shell de VSCode funcioni correctament amb zsh mentre es preserva la teva configuració de zsh. <0>Més informació</0>"
+		},
+		"inheritEnv": {
+			"label": "Hereta variables d'entorn",
+			"description": "Quan està habilitat, el terminal hereta les variables d'entorn del procés pare de VSCode, com ara la configuració d'integració del shell definida al perfil d'usuari. Això commuta directament la configuració global de VSCode `terminal.integrated.inheritEnv`. <0>Més informació</0>"
+		}
+	},
+	"advancedSettings": {
+		"title": "Configuració avançada"
+	},
+	"advanced": {
+		"diff": {
+			"label": "Habilitar edició mitjançant diffs",
+			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 4 Sonnet.",
+			"strategy": {
+				"label": "Estratègia de diff",
+				"options": {
+					"standard": "Estàndard (Bloc únic)",
+					"multiBlock": "Experimental: Diff multi-bloc",
+					"unified": "Experimental: Diff unificat"
+				},
+				"descriptions": {
+					"standard": "L'estratègia de diff estàndard aplica canvis a un sol bloc de codi alhora.",
+					"unified": "L'estratègia de diff unificat pren múltiples enfocaments per aplicar diffs i tria el millor enfocament.",
+					"multiBlock": "L'estratègia de diff multi-bloc permet actualitzar múltiples blocs de codi en un fitxer en una sola sol·licitud."
+				}
+			},
+			"matchPrecision": {
+				"label": "Precisió de coincidència",
+				"description": "Aquest control lliscant controla amb quina precisió han de coincidir les seccions de codi en aplicar diffs. Valors més baixos permeten coincidències més flexibles però augmenten el risc de reemplaçaments incorrectes. Utilitzeu valors per sota del 100% amb extrema precaució."
+			}
+		},
+		"todoList": {
+			"label": "Habilitar eina de llista de tasques",
+			"description": "Quan està habilitat, Kilo Code pot crear i gestionar llistes de tasques per fer el seguiment del progrés de les tasques. Això ajuda a organitzar tasques complexes en passos manejables."
+		}
+	},
+	"experimental": {
+		"DIFF_STRATEGY_UNIFIED": {
+			"name": "Utilitzar estratègia diff unificada experimental",
+			"description": "Activar l'estratègia diff unificada experimental. Aquesta estratègia podria reduir el nombre de reintents causats per errors del model, però pot causar comportaments inesperats o edicions incorrectes. Activeu-la només si enteneu els riscos i esteu disposats a revisar acuradament tots els canvis."
+		},
+		"SEARCH_AND_REPLACE": {
+			"name": "Utilitzar eina de cerca i reemplaçament experimental",
+			"description": "Activar l'eina de cerca i reemplaçament experimental, permetent a Kilo Code reemplaçar múltiples instàncies d'un terme de cerca en una sola petició."
+		},
+		"INSERT_BLOCK": {
+			"name": "Utilitzar eina d'inserció de contingut experimental",
+			"description": "Activar l'eina d'inserció de contingut experimental, permetent a Kilo Code inserir contingut a números de línia específics sense necessitat de crear un diff."
+		},
+		"POWER_STEERING": {
+			"name": "Utilitzar mode \"direcció assistida\" experimental",
+			"description": "Quan està activat, Kilo Code recordarà al model els detalls de la seva definició de mode actual amb més freqüència. Això portarà a una adherència més forta a les definicions de rol i instruccions personalitzades, però utilitzarà més tokens per missatge."
+		},
+		"MULTI_SEARCH_AND_REPLACE": {
+			"name": "Utilitzar eina diff de blocs múltiples experimental",
+			"description": "Quan està activat, Kilo Code utilitzarà l'eina diff de blocs múltiples. Això intentarà actualitzar múltiples blocs de codi a l'arxiu en una sola petició."
+		},
+		"CONCURRENT_FILE_READS": {
+			"name": "Habilitar lectura concurrent de fitxers",
+			"description": "Quan està habilitat, Kilo Code pot llegir múltiples fitxers en una sola sol·licitud. Quan està deshabilitat, Kilo Code ha de llegir fitxers un per un. Deshabilitar-ho pot ajudar quan es treballa amb models menys capaços o quan voleu més control sobre l'accés als fitxers."
+		},
+		"MARKETPLACE": {
+			"name": "Habilitar Marketplace",
+			"description": "Quan està habilitat, pots instal·lar MCP i modes personalitzats del Marketplace."
+		},
+		"MULTI_FILE_APPLY_DIFF": {
+			"name": "Habilita edicions de fitxers concurrents",
+			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edició en segon pla",
+			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Utilitza el nou analitzador de missatges",
+			"description": "Activa l'analitzador de missatges en streaming experimental que millora el rendiment en respostes llargues processant els missatges de manera més eficient."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Requerir la llista 'todos' per a noves tasques",
+			"description": "Quan estigui activat, l'eina new_task requerirà que es proporcioni un paràmetre 'todos'. Això garanteix que totes les noves tasques comencin amb una llista clara d'objectius. Quan estigui desactivat (per defecte), el paràmetre 'todos' continua sent opcional per a la compatibilitat amb versions anteriors."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Habilitar generació d'imatges amb IA",
+			"description": "Quan estigui habilitat, Kilo Code pot generar imatges a partir de prompts de text. Requereix que es configuri una clau d'API de Kilo Code o OpenRouter.",
+			"apiProvider": "Proveïdor d'API",
+			"openRouterApiKeyLabel": "Clau API d'OpenRouter",
+			"openRouterApiKeyPlaceholder": "Introdueix la teva clau API d'OpenRouter",
+			"kiloCodeApiKeyLabel": "Clau API de Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Introdueix la teva clau API de Kilo Code",
+			"kiloCodeApiKeyPaste": "Enganxa la clau API actual de Kilo Code",
+			"getApiKeyText": "Obté la teva clau API de",
+			"modelSelectionLabel": "Model de generació d'imatges",
+			"modelSelectionDescription": "Selecciona el model per a la generació d'imatges",
+			"warningMissingKey": "⚠️ Es requereix una clau API per a la generació d'imatges, si us plau configura-la a dalt.",
+			"successConfigured": "✓ La generació d'imatges està configurada i llesta per utilitzar"
+		},
+		"INLINE_ASSIST": {
+			"name": "Autocomplete",
+			"description": "Habilita les funcionalitats d'Autocomplete per a suggeriments de codi ràpids i millores directament al teu editor. Inclou Tasca Ràpida (Cmd+I) per a canvis específics i Autocomplete per a millores contextuals."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix el proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
+			"apiKey": "Clau d'API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"modelLabel": "Selecció de model",
+			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
+			"models": {
+				"auto": "Automàtic (Per defecte - tria el millor disponible)",
+				"morphFast": "Morph v3 Fast (Més ràpid, cost més baix)",
+				"morphLarge": "Morph v3 Large (Més capaç)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Habilitar comandes de barra diagonal iniciades pel model",
+			"description": "Quan està habilitat, Kilo Code pot executar les vostres comandes de barra diagonal per executar fluxos de treball."
+		}
+	},
+	"promptCaching": {
+		"label": "Desactivar la memòria cau de prompts",
+		"description": "Quan està marcat, Kilo Code no utilitzarà la memòria cau de prompts per a aquest model."
+	},
+	"temperature": {
+		"useCustom": "Utilitzar temperatura personalitzada",
+		"description": "Controla l'aleatorietat en les respostes del model.",
+		"rangeDescription": "Valors més alts fan que la sortida sigui més aleatòria, valors més baixos la fan més determinista."
+	},
+	"modelInfo": {
+		"supportsImages": "Suporta imatges",
+		"noImages": "No suporta imatges",
+		"supportsComputerUse": "Suporta ús de l'ordinador",
+		"noComputerUse": "No suporta ús de l'ordinador",
+		"supportsPromptCache": "Suporta emmagatzematge en caché de prompts",
+		"noPromptCache": "No suporta emmagatzematge en caché de prompts",
+		"contextWindow": "Finestra de context:",
+		"maxOutput": "Sortida màxima",
+		"inputPrice": "Preu d'entrada",
+		"outputPrice": "Preu de sortida",
+		"cacheReadsPrice": "Preu de lectures de caché",
+		"cacheWritesPrice": "Preu d'escriptures de caché",
+		"enableStreaming": "Habilitar streaming",
+		"enableR1Format": "Activar els paràmetres del model R1",
+		"enableR1FormatTips": "S'ha d'activat quan s'utilitzen models R1 com el QWQ per evitar errors 400",
+		"useAzure": "Utilitzar Azure",
+		"azureApiVersion": "Establir versió de l'API d'Azure",
+		"gemini": {
+			"freeRequests": "* Gratuït fins a {{count}} sol·licituds per minut. Després d'això, la facturació depèn de la mida del prompt.",
+			"pricingDetails": "Per a més informació, consulteu els detalls de preus.",
+			"billingEstimate": "* La facturació és una estimació - el cost exacte depèn de la mida del prompt."
+		}
+	},
+	"modelPicker": {
+		"automaticFetch": "L'extensió obté automàticament la llista més recent de models disponibles a <serviceLink>{{serviceName}}</serviceLink>. Si no esteu segur de quin model triar, Kilo Code funciona millor amb <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"label": "Model",
+		"searchPlaceholder": "Cerca",
+		"noMatchFound": "No s'ha trobat cap coincidència",
+		"useCustomModel": "Utilitzar personalitzat: {{modelId}}"
+	},
+	"footer": {
+		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>",
+		"support": "Per a qüestions financeres, poseu-vos en contacte amb el Suport al Client a <supportLink>https://kilocode.ai/support</supportLink>",
+		"telemetry": {
+			"label": "Permetre informes d'errors i ús",
+			"description": "Ajuda a millorar Kilo Code enviant dades d'ús i informes d'errors. Mai s'envia codi, prompts o informació personal. Consulta la nostra política de privacitat per a més detalls."
+		},
+		"settings": {
+			"import": "Importar",
+			"export": "Exportar",
+			"reset": "Restablir"
+		}
+	},
+	"thinkingBudget": {
+		"maxTokens": "Tokens màxims",
+		"maxThinkingTokens": "Tokens de pensament màxims"
+	},
+	"validation": {
+		"apiKey": "Heu de proporcionar una clau API vàlida.",
+		"awsRegion": "Heu de triar una regió per utilitzar Amazon Bedrock.",
+		"googleCloud": "Heu de proporcionar un ID de projecte i regió de Google Cloud vàlids.",
+		"modelId": "Heu de proporcionar un ID de model vàlid.",
+		"modelSelector": "Heu de proporcionar un selector de model vàlid.",
+		"openAi": "Heu de proporcionar una URL base, clau API i ID de model vàlids.",
+		"arn": {
+			"invalidFormat": "Format ARN no vàlid. Si us plau, comproveu els requisits del format.",
+			"regionMismatch": "Avís: La regió del vostre ARN ({{arnRegion}}) no coincideix amb la regió seleccionada ({{region}}). Això pot causar problemes d'accés. El proveïdor utilitzarà la regió de l'ARN."
+		},
+		"modelAvailability": "L'ID de model ({{modelId}}) que heu proporcionat no està disponible. Si us plau, trieu un altre model.",
+		"modelDeprecated": "Aquest model ja no està disponible. Si us plau, seleccioneu un model diferent.",
+		"providerNotAllowed": "El proveïdor '{{provider}}' no està permès per la vostra organització",
+		"modelNotAllowed": "El model '{{model}}' no està permès per al proveïdor '{{provider}}' per la vostra organització",
+		"profileInvalid": "Aquest perfil conté un proveïdor o model que no està permès per la vostra organització",
+		"qwenCodeOauthPath": "Has de proporcionar una ruta vàlida de credencials OAuth"
+	},
+	"placeholders": {
+		"apiKey": "Introduïu la clau API...",
+		"profileName": "Introduïu el nom del perfil",
+		"accessKey": "Introduïu la clau d'accés...",
+		"secretKey": "Introduïu la clau secreta...",
+		"sessionToken": "Introduïu el token de sessió...",
+		"credentialsJson": "Introduïu el JSON de credencials...",
+		"keyFilePath": "Introduïu la ruta del fitxer de clau...",
+		"projectId": "Introduïu l'ID del projecte...",
+		"customArn": "Introduïu l'ARN (p. ex. arn:aws:bedrock:us-east-1:123456789012:foundation-model/my-model)",
+		"baseUrl": "Introduïu l'URL base...",
+		"modelId": {
+			"lmStudio": "p. ex. meta-llama-3.1-8b-instruct",
+			"lmStudioDraft": "p. ex. lmstudio-community/llama-3.2-1b-instruct",
+			"ollama": "p. ex. llama3.1"
+		},
+		"numbers": {
+			"maxTokens": "p. ex. 4096",
+			"contextWindow": "p. ex. 128000",
+			"inputPrice": "p. ex. 0.0001",
+			"outputPrice": "p. ex. 0.0002",
+			"cacheWritePrice": "p. ex. 0.00005"
+		}
+	},
+	"defaults": {
+		"ollamaUrl": "Per defecte: http://localhost:11434",
+		"lmStudioUrl": "Per defecte: http://localhost:1234",
+		"geminiUrl": "Per defecte: https://generativelanguage.googleapis.com"
+	},
+	"labels": {
+		"customArn": "ARN personalitzat",
+		"useCustomArn": "Utilitza ARN personalitzat..."
+	},
+	"display": {
+		"taskTimeline": {
+			"label": "Mostra la línia temporal de la tasca",
+			"description": "Mostra una línia de temps visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i desplaçar-te cap enrere a punts específics de l'historial de la tasca."
+		},
+		"costThreshold": {
+			"label": "Amaga el cost per sota del llindar",
+			"description": "Mostra només els costos de sol·licituds superiors a aquesta quantitat. Els costos sempre són visibles quan el panell de detalls està obert.",
+			"currentValue": "Llindar actual: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Mostrar marca de temps",
+			"description": "Mostrar la marca de temps per a cada missatge a la vista del xat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra l'animació al marge quan s'autocompleta",
+			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",
+			"preview": "Previsualització de l'animació"
+		}
+	},
+	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
+	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això.",
+	"limitMaxTokensDescription": "Limitar el nombre màxim de tokens en la resposta",
+	"maxOutputTokensLabel": "Tokens màxims de sortida",
+	"maxTokensGenerateDescription": "Tokens màxims a generar en la resposta",
+	"serviceTier": {
+		"label": "Nivell de servei",
+		"tooltip": "Per a un processament més ràpid de les sol·licituds de l'API, proveu el nivell de servei de processament prioritari. Per a preus més baixos amb una latència més alta, proveu el nivell de processament flexible.",
+		"standard": "Estàndard",
+		"flex": "Flex",
+		"priority": "Prioritat",
+		"pricingTableTitle": "Preus per nivell de servei (preu per 1M de fitxes)",
+		"columns": {
+			"tier": "Nivell",
+			"input": "Entrada",
+			"output": "Sortida",
+			"cacheReads": "Lectures de memòria cau"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Replega els missatges de pensament per defecte",
+			"description": "Quan estigui activat, els blocs de pensament es replegaran per defecte fins que interactuïs amb ells"
+		}
+	}
+}

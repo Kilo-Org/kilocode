@@ -1,0 +1,18 @@
+{
+	"readFile": {
+		"linesRange": " (řádky {{start}}-{{end}})",
+		"definitionsOnly": " (pouze definice)",
+		"maxLines": " (max {{max}} řádků)",
+		"imageTooLarge": "Soubor obrázku je příliš velký ({{size}} MB). Maximální povolená velikost je {{max}} MB.",
+		"imageWithSize": "Soubor obrázku ({{size}} KB)"
+	},
+	"toolRepetitionLimitReached": "Zdá se, že model uvízl ve smyčce a opakovaně se pokouší o stejnou akci ({{toolName}}). To může naznačovat problém s jeho současnou strategií. Zkus úkol přeformulovat, poskytnout konkrétnější pokyny nebo ho navést k jinému přístupu.",
+	"codebaseSearch": {
+		"approval": "Hledání '{{query}}' v kódové základně..."
+	},
+	"newTask": {
+		"errors": {
+			"policy_restriction": "Nepodařilo se vytvořit nový úkol kvůli omezením zásad."
+		}
+	}
+}

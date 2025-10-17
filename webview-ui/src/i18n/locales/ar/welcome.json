@@ -1,0 +1,27 @@
+{
+	"greeting": "مرحبًا، أنا Kilo Code!",
+	"introduction": "<strong>Kilo Code هو وكيل البرمجة الذاتي الأفضل على الإطلاق.</strong> استعد للتصميم والبرمجة وتصحيح الأخطاء وزيادة إنتاجيتك بشكل غير مسبوق. للمتابعة، يحتاج Kilo Code إلى مفتاح API.",
+	"notice": "عشان تبدأ، هذي الإضافة تحتاج مزوّد API.",
+	"start": "يلا نبدأ!",
+	"routers": {
+		"requesty": {
+			"description": "موجّه LLM الأمثل لك",
+			"incentive": "$1 رصيد مجاني"
+		},
+		"openrouter": {
+			"description": "واجهة موحّدة لنماذج LLM"
+		},
+		"roo": {
+			"description": "أفضل النماذج المجانية للبدء",
+			"incentive": "جرب Roo مجاناً"
+		}
+	},
+	"chooseProvider": "عشان يشتغل سحر Kilo Code، يلزم مفتاح API.",
+	"startRouter": "نوصي باستخدام موجّه LLM:",
+	"startCustom": "أو تقدر تستخدم مفتاح مزوّدك الخاص:",
+	"telemetry": {
+		"helpImprove": "ساهم في تحسين Kilo Code",
+		"helpImproveMessage": "يجمع Kilo Code بيانات الأخطاء والاستخدام لمساعدتنا في إصلاح الأخطاء وتحسين الإضافة. هذه البيانات التشخيصية لا تجمع الكود أو المطالبات أو المعلومات الشخصية. يمكنك إيقاف هذا في <settingsLink>الإعدادات</settingsLink>."
+	},
+	"importSettings": "استيراد الإعدادات"
+}

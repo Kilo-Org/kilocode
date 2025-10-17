@@ -1,0 +1,27 @@
+{
+	"greeting": "嗨，我是 Kilo Code！",
+	"introduction": "<strong>Kilo Code 是领先的自主编程助手。</strong>准备好以前所未有的方式进行架构设计、编码、调试并提升你的工作效率。要继续使用，Kilo Code 需要一个 API 密钥。",
+	"notice": "请先配置大语言模型API提供商",
+	"start": "开始吧！",
+	"routers": {
+		"requesty": {
+			"description": "智能调度多个大语言模型",
+			"incentive": "$1 免费额度"
+		},
+		"openrouter": {
+			"description": "统一了大语言模型的接口"
+		},
+		"roo": {
+			"description": "最优秀的免费模型助你开始",
+			"incentive": "免费试用 Roo"
+		}
+	},
+	"chooseProvider": "Kilo Code 需要一个 API 密钥才能发挥魔力。",
+	"startRouter": "我们推荐使用 LLM 路由器：",
+	"startCustom": "或者你可以使用自己的 API 密钥：",
+	"telemetry": {
+		"helpImprove": "帮助改进 Kilo Code",
+		"helpImproveMessage": "Kilo Code 收集错误和使用数据以帮助我们修复错误并改进扩展。此遥测不会收集代码、提示词或个人信息。你可以在<settingsLink>设置</settingsLink>中关闭此功能。"
+	},
+	"importSettings": "导入设置"
+}

@@ -1,0 +1,186 @@
+name: Publish Extension
+on:
+    pull_request:
+        types: [closed]
+    workflow_dispatch:
+
+env:
+    GIT_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+    NODE_VERSION: 20.19.2
+    PNPM_VERSION: 10.8.1
+    TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+    TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+jobs:
+    publish-extension:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # Required for pushing tags.
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ env.GIT_REF }}
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
+            - name: Install dependencies
+              run: pnpm install
+            - name: Configure Git
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Package Extension
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  pnpm vsix:production
+
+                  # Save VSIX contents to a temporary file to avoid broken pipe issues.
+                  unzip -l bin/kilo-code-${current_package_version}.vsix > /tmp/kilo-code-vsix-contents.txt
+
+                  # Check for required files.
+                  grep -q "extension/package.json" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/package.nls.json" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/dist/extension.js" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/webview-ui/audio/celebration.wav" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/webview-ui/build/assets/index.js" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/assets/codicons/codicon.ttf" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q "extension/assets/vscode-material-icons/icons/3d.svg" /tmp/kilo-code-vsix-contents.txt || exit 1
+                  grep -q ".env" /tmp/kilo-code-vsix-contents.txt || exit 1
+
+                  # Clean up temporary file.
+                  rm /tmp/kilo-code-vsix-contents.txt
+            - name: Create and Push Git Tag
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  git tag -a "v${current_package_version}" -m "Release v${current_package_version}"
+                  git push origin "v${current_package_version}" --no-verify
+                  echo "Successfully created and pushed git tag v${current_package_version}"
+            - name: Publish Extension
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+                  OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  pnpm --filter kilo-code publish:marketplace
+                  echo "Successfully published version $current_package_version to VS Code Marketplace"
+            - name: Create GitHub Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+
+                  # Extract changelog for current version
+                  echo "Extracting changelog for version ${current_package_version}"
+                  # Try with 'v' prefix first (newer format), then without (older format)
+                  changelog_content=$(sed -n "/## \\[v${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
+                  if [ -z "$changelog_content" ]; then
+                    changelog_content=$(sed -n "/## \\[${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
+                  fi
+
+                  # If changelog extraction failed, use a default message
+                  if [ -z "$changelog_content" ]; then
+                    echo "Warning: No changelog section found for version ${current_package_version}"
+                    changelog_content="Release v${current_package_version}"
+                  else
+                    echo "Found changelog section for version ${current_package_version}"
+                  fi
+
+                  # Create release with changelog content
+                  gh release create "v${current_package_version}" \
+                    --title "Release v${current_package_version}" \
+                    --notes "$changelog_content" \
+                    --target ${{ env.GIT_REF }} \
+                    bin/kilo-code-${current_package_version}.vsix
+                  echo "Successfully created GitHub Release v${current_package_version}"
+
+    publish-jetbrains:
+        needs: publish-extension
+        runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+                  lfs: true
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: "jetbrains"
+                  java-version: "17"
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    libx11-dev \
+                    libxkbfile-dev \
+                    pkg-config \
+                    build-essential \
+                    python3
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
+            - name: Install dependencies
+              run: pnpm install
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Build
+              run: pnpm run jetbrains:bundle
+              shell: bash
+            - name: Get bundle name
+              id: get_bundle_name
+              run: echo "BUNDLE_NAME=$(node jetbrains/plugin/scripts/get_bundle_name.js)" >> $GITHUB_ENV
+            - name: Attach to GitHub Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  gh release upload "v${current_package_version}" \
+                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}#JetBrains Plugin"
+                  echo "Successfully attached JetBrains plugin to GitHub Release v${current_package_version}"
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ env.BUNDLE_NAME }}
+                  path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
+            # Disabled while we figure out why our JetBrains builds are no longer being approved.
+            #- name: JetBrains Marketplace Publisher
+            #  run: |
+            #      curl \
+            #      -X POST \
+            #      -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
+            #      -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
+            #      -F "pluginId=28350" \
+            #      -F "channel=stable" \
+            #      -F "isHidden=false" \
+            #      https://plugins.jetbrains.com/plugin/uploadPlugin

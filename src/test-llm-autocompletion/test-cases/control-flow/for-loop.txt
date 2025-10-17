@@ -1,0 +1,2 @@
+# Description: Should complete for loop body
+for (let i = 0; i < 10; i++) <<<AUTOCOMPLETE_HERE>>>

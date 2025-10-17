@@ -1,0 +1,5 @@
+# Description: Should complete Ruby begin-rescue-ensure error handling
+def process_data(data)
+	begin
+		result = JSON.parse(data)
+		<<<AUTOCOMPLETE_HERE>>>

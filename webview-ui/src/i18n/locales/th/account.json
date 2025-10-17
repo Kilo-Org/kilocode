@@ -1,0 +1,20 @@
+{
+	"title": "บัญชี",
+	"profilePicture": "รูปโปรไฟล์",
+	"logOut": "ออกจากระบบ",
+	"testApiAuthentication": "ทดสอบการยืนยันตัวตน API",
+	"signIn": "เชื่อมต่อกับ Kilo Code Cloud",
+	"connect": "เชื่อมต่อ",
+	"cloudBenefitsTitle": "เชื่อมต่อกับ Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "ซิงค์ prompts และ telemetry ของคุณเพื่อเปิดใช้งาน:",
+	"cloudBenefitHistory": "ประวัติงานออนไลน์",
+	"cloudBenefitSharing": "คุณสมบัติการแชร์และการทำงานร่วมกัน",
+	"cloudBenefitMetrics": "เมตริกการใช้งานตามงาน token และต้นทุน",
+	"visitCloudWebsite": "เยี่ยมชม Kilo Code Cloud",
+	"expandTask": "ขยายงาน",
+	"collapseTask": "ย่องาน",
+	"deleteFavoritedTaskWarning": "การดำเนินการนี้จะลบงานที่ชื่นชอบอย่างถาวร คุณแน่ใจหรือไม่?",
+	"cloudBenefitWalkaway": "ติดตามและควบคุมงานได้จากทุกที่ด้วย Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "เปิดใช้งานการติดตามและโต้ตอบกับงานใน workspace นี้โดยใช้ Kilo Code Cloud"
+}

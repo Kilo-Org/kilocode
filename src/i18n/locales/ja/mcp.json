@@ -1,0 +1,28 @@
+{
+	"errors": {
+		"invalid_settings_format": "MCP設定のJSONフォーマットが無効です。設定が正しいJSONフォーマットに従っていることを確認してください。",
+		"invalid_settings_syntax": "MCP設定のJSONフォーマットが無効です。設定ファイルの構文エラーを確認してください。",
+		"invalid_settings_validation": "MCP設定フォーマットが無効です：{{errorMessages}}",
+		"create_json": ".kilocode/mcp.jsonの作成または開くことに失敗しました：{{error}}",
+		"failed_update_project": "プロジェクトMCPサーバーの更新に失敗しました",
+		"invalidJsonArgument": "Kilo Codeが無効なJSON引数で{{toolName}}を使用しようとしました。再試行中...",
+		"refresh_after_disable": "無効化後にMCP接続の更新に失敗しました",
+		"refresh_after_enable": "有効化後にMCP接続の更新に失敗しました",
+		"disconnect_servers_partial": "{{count}}個のMCPサーバーの切断に失敗しました。詳細は出力を確認してください。",
+		"toolNotFound": "ツール '{{toolName}}' はサーバー '{{serverName}}' に存在しません。利用可能なツール: {{availableTools}}",
+		"serverNotFound": "MCPサーバー '{{serverName}}' は設定されていません。利用可能なサーバー: {{availableServers}}",
+		"toolDisabled": "サーバー '{{serverName}}' のツール '{{toolName}}' は無効です。利用可能な有効なツール: {{availableTools}}"
+	},
+	"info": {
+		"server_restarting": "MCPサーバー{{serverName}}を再起動中...",
+		"server_connected": "MCPサーバー{{serverName}}が接続されました",
+		"server_deleted": "MCPサーバーが削除されました：{{serverName}}",
+		"server_not_found": "サーバー\"{{serverName}}\"が設定内に見つかりません",
+		"global_servers_active": "アクティブなグローバルMCPサーバー: {{mcpServers}}",
+		"project_servers_active": "アクティブなプロジェクトMCPサーバー: {{mcpServers}}",
+		"already_refreshing": "MCPサーバーはすでに更新中です。",
+		"refreshing_all": "すべてのMCPサーバーを更新しています...",
+		"all_refreshed": "すべてのMCPサーバーが更新されました。",
+		"project_config_deleted": "プロジェクトMCP設定ファイルが削除されました。すべてのプロジェクトMCPサーバーが切断されました。"
+	}
+}

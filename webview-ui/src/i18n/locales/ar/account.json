@@ -1,0 +1,21 @@
+{
+	"title": "الحساب",
+	"profilePicture": "صورة الملف الشخصي",
+	"unknownUser": "مستخدم غير معروف",
+	"logOut": "تسجيل الخروج",
+	"testApiAuthentication": "اختبار تحقق API",
+	"signIn": "اتصل بـ Kilo Code Cloud",
+	"connect": "اتصال",
+	"cloudBenefitsTitle": "الاتصال بـ Kilo Code Cloud",
+	"cloudBenefitsSubtitle": "زامن التعليمات والسجلات لتفعيل المزايا التالية:",
+	"cloudBenefitHistory": "سجل مهامك أونلاين",
+	"cloudBenefitSharing": "مزايا المشاركة والتعاون",
+	"cloudBenefitMetrics": "إحصائيات الاستخدام حسب المهام والتوكينات والتكلفة",
+	"visitCloudWebsite": "زيارة موقع Kilo Code Cloud",
+	"expandTask": "توسيع المهمة",
+	"collapseTask": "طي المهمة",
+	"deleteFavoritedTaskWarning": "هذا سيحذف المهمة المفضلة نهائيًا. هل أنت متأكد؟",
+	"cloudBenefitWalkaway": "تابع وتحكم في المهام من أي مكان باستخدام التحكم عن بعد في Kilo",
+	"remoteControl": "التحكم عن بعد في Kilo",
+	"remoteControlDescription": "تفعيل متابعة والتفاعل مع المهام في مساحة العمل هذه باستخدام Kilo Code Cloud"
+}

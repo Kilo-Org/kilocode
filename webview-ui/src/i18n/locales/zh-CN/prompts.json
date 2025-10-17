@@ -1,0 +1,223 @@
+{
+	"title": "模式",
+	"done": "完成",
+	"modes": {
+		"title": "模式配置",
+		"createNewMode": "新建模式",
+		"importMode": "导入模式",
+		"noMatchFound": "未找到任何模式",
+		"editModesConfig": "模式设置",
+		"editGlobalModes": "修改全局模式",
+		"editProjectModes": "编辑项目模式 (.kilocodemodes)",
+		"createModeHelpText": "模式是Kilo Code的专属角色，用于定制其行为。<0>了解如何使用模式</0>或<1>自定义模式。</1>",
+		"selectMode": "搜索模式"
+	},
+	"apiConfiguration": {
+		"title": "API配置",
+		"select": "选择要用于此模式的API配置"
+	},
+	"organizationMode": {
+		"title": "组织模式",
+		"description": "此模式由你的组织提供，无法在此编辑。要修改此模式，请访问 Kilo Code Dashboard。",
+		"cannotEdit": "组织模式不可编辑"
+	},
+	"tools": {
+		"title": "可用功能",
+		"builtInModesText": "内置模式的可用功能不能被修改",
+		"editTools": "编辑功能",
+		"doneEditing": "完成编辑",
+		"allowedFiles": "允许操作的文件：",
+		"toolNames": {
+			"read": "读取文件",
+			"edit": "编辑文件",
+			"browser": "浏览器",
+			"command": "运行命令",
+			"mcp": "MCP服务"
+		},
+		"noTools": "无"
+	},
+	"roleDefinition": {
+		"title": "角色定义",
+		"resetToDefault": "重置为默认值",
+		"description": "设定专业领域和应答风格"
+	},
+	"description": {
+		"title": "简短描述（给人看的）",
+		"resetToDefault": "重置为默认描述",
+		"description": "在模式选择下拉菜单中显示的简短描述。"
+	},
+	"whenToUse": {
+		"title": "使用场景（可选）",
+		"description": "描述何时应该使用此模式。这有助于 Orchestrator 为任务选择合适的模式。",
+		"resetToDefault": "重置\"使用场景\"描述为默认值"
+	},
+	"customInstructions": {
+		"title": "模式专属规则（可选）",
+		"resetToDefault": "重置为默认值",
+		"description": "{{modeName}}模式的专属规则",
+		"loadFromFile": "{{mode}}模式的特定自定义指令也可以从工作区中的<span>.kilocode/rules-{{slug}}/</span>文件夹或全局<0>.kilocode/rules-{{slug}}/</0>加载（.kilocoderules-{{slug}}和.clinerules-{{slug}}已弃用，即将停止工作）。"
+	},
+	"exportMode": {
+		"title": "导出模式",
+		"description": "将此模式与 .kilocode/rules-{{slug}}/ 文件夹中的规则组合导出为可共享的 YAML 文件。原始文件保持不变。",
+		"exporting": "正在导出..."
+	},
+	"importMode": {
+		"selectLevel": "选择导入模式的位置：",
+		"import": "导入",
+		"importing": "导入中...",
+		"global": {
+			"label": "全局",
+			"description": "适用于所有项目。如果导出的模式包含规则文件，则将在全局 .kilocode/rules-{slug}/ 文件夹中重新创建这些文件。"
+		},
+		"project": {
+			"label": "项目级",
+			"description": "仅在此工作区可用。如果导出的模式包含规则文件，则将在 .kilocode/rules-{slug}/ 文件夹中重新创建这些文件。"
+		}
+	},
+	"globalCustomInstructions": {
+		"title": "所有模式的自定义指令",
+		"description": "这些指令适用于所有模式。它们提供了一套基础行为，可以通过下面的模式特定指令进行增强。<0>了解更多</0>",
+		"loadFromFile": "指令也可以从工作区中的<span>.kilocode/rules/</span>文件夹或全局<0>.kilocode/rules/</0>加载（.kilocoderules和.clinerules已弃用，即将停止工作）。"
+	},
+	"systemPrompt": {
+		"preview": "预览系统提示词",
+		"copy": "复制系统提示词",
+		"title": "系统提示词（{{modeName}}模式）"
+	},
+	"supportPrompts": {
+		"title": "功能提示词",
+		"resetPrompt": "恢复{{promptType}}默认设置",
+		"prompt": "提示词",
+		"enhance": {
+			"apiConfiguration": "API配置",
+			"apiConfigDescription": "您可以选择一个固定的API配置用于增强提示词，或者使用当前选择的配置",
+			"useCurrentConfig": "使用当前选择的API配置",
+			"testPromptPlaceholder": "输入提示词以测试增强效果",
+			"previewButton": "测试提示词增强",
+			"testEnhancement": "测试增强",
+			"includeTaskHistory": "包含任务历史作为上下文",
+			"includeTaskHistoryDescription": "启用后，当前对话的最后 10 条消息将作为上下文包含在增强提示词时，有助于生成更相关和上下文感知的建议。"
+		},
+		"condense": {
+			"apiConfiguration": "用于上下文压缩的 API 配置",
+			"apiConfigDescription": "选择用于上下文压缩操作的 API 配置。保留未选择状态以使用当前活动的配置。",
+			"useCurrentConfig": "使用当前选中的 API 配置"
+		},
+		"types": {
+			"ENHANCE": {
+				"label": "增强提示词",
+				"description": "优化提示获取更好回答（点击✨使用）"
+			},
+			"CONDENSE": {
+				"label": "上下文压缩",
+				"description": "配置如何压缩对话上下文以管理令牌限制。此提示用于手动和自动上下文压缩操作。"
+			},
+			"EXPLAIN": {
+				"label": "解释代码",
+				"description": "解读代码逻辑（支持文件/片段），可在代码操作（编辑器中的灯泡图标）和编辑器上下文菜单（右键点击选中的代码）中使用。"
+			},
+			"FIX": {
+				"label": "修复问题",
+				"description": "查找修复代码问题，可在代码操作（编辑器中的灯泡图标）和编辑器上下文菜单（右键点击选中的代码）中使用。"
+			},
+			"IMPROVE": {
+				"label": "改进代码",
+				"description": "提供优化建议（保留原功能），可在代码操作（编辑器中的灯泡图标）和编辑器上下文菜单（右键点击选中的代码）中使用。"
+			},
+			"ADD_TO_CONTEXT": {
+				"label": "添加到上下文",
+				"description": "添加额外信息到对话，可在代码操作（编辑器中的灯泡图标）和编辑器上下文菜单（右键点击选中的代码）中使用。"
+			},
+			"TERMINAL_ADD_TO_CONTEXT": {
+				"label": "添加终端内容到上下文",
+				"description": "将终端输出内容加入对话。可在终端右键菜单（右键点击选中的终端内容）中使用。"
+			},
+			"TERMINAL_FIX": {
+				"label": "修复终端命令",
+				"description": "修复终端命令问题。可在终端右键菜单（右键点击选中的终端内容）中使用。"
+			},
+			"TERMINAL_EXPLAIN": {
+				"label": "解释终端命令",
+				"description": "获取对终端命令及其输出的详细解释。可在终端右键菜单（右键点击选中的终端内容）中使用。"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "生成终端命令",
+				"description": "根据描述协助生成终端命令。"
+			},
+			"NEW_TASK": {
+				"label": "新任务",
+				"description": "控制开始新任务时的用户提示词。可在首页对话框中使用。"
+			},
+			"COMMIT_MESSAGE": {
+				"label": "提交信息生成",
+				"description": "根据您的已暂存git更改生成描述性提交信息。定制提示以生成符合您仓库最佳实践的提交信息。"
+			}
+		}
+	},
+	"advancedSystemPrompt": {
+		"title": "高级：覆盖系统提示词",
+		"description": "<2>⚠️ 警告：</2> 此高级功能会绕过安全措施。<1>使用前请阅读！</1>通过在您的工作区中创建文件 <span>.kilocode/system-prompt-{{slug}}</span> 来覆盖默认系统提示。"
+	},
+	"createModeDialog": {
+		"title": "创建新模式",
+		"close": "关闭",
+		"name": {
+			"label": "名称",
+			"placeholder": "输入模式名称"
+		},
+		"slug": {
+			"label": "标识符",
+			"description": "英文标识符（小写字母+数字+短横线）"
+		},
+		"saveLocation": {
+			"label": "保存位置",
+			"description": "配置存储位置（当前项目配置优先）",
+			"global": {
+				"label": "全局",
+				"description": "全局可用"
+			},
+			"project": {
+				"label": "项目特定 (.kilocodemodes)",
+				"description": "仅当前项目有效"
+			}
+		},
+		"roleDefinition": {
+			"label": "角色定义",
+			"description": "设定专业方向"
+		},
+		"whenToUse": {
+			"label": "使用场景（可选）",
+			"description": "清晰描述此模式最适合的场景和任务类型"
+		},
+		"tools": {
+			"label": "可用工具",
+			"description": "选择可用工具"
+		},
+		"description": {
+			"label": "简短描述（给人看的）",
+			"description": "在模式选择下拉菜单中显示的简短描述。"
+		},
+		"customInstructions": {
+			"label": "自定义指令（可选）",
+			"description": "设置专属规则"
+		},
+		"buttons": {
+			"cancel": "取消",
+			"create": "创建模式"
+		},
+		"deleteMode": "删除模式"
+	},
+	"allFiles": "所有文件",
+	"advanced": {
+		"title": "高级"
+	},
+	"deleteMode": {
+		"title": "删除模式",
+		"message": "您确定要删除\"{{modeName}}\"模式吗？",
+		"rulesFolder": "此模式在 {{folderPath}} 有一个规则文件夹，该文件夹也将被删除。",
+		"descriptionNoRules": "您确定要删除此自定义模式吗？",
+		"confirm": "删除",
+		"cancel": "取消"
+	}
+}

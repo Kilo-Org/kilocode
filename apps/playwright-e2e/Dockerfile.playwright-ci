@@ -1,0 +1,55 @@
+# Streamlined Dockerfile for Playwright E2E Testing
+# Optimized for speed: builds app outside Docker, installs only Playwright deps inside
+# Cache-optimized: layers ordered by frequency of change
+
+FROM mcr.microsoft.com/playwright:v1.53.1-noble
+
+# Install system dependencies (rarely changes - good for caching)
+# Use BuildKit cache mounts for faster APT operations
+RUN --mount=type=cache,id=apt-cache,target=/var/cache/apt \
+    --mount=type=cache,id=apt-lists,target=/var/lib/apt/lists \
+    apt-get update && apt-get install -y \
+    # VSCode dependencies
+    libasound2t64 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxrandr2 \
+    libgbm1 \
+    libxss1 \
+    # Additional Chrome dependencies
+    fonts-liberation \
+    libappindicator3-1 \
+    libnss3 \
+    lsb-release \
+    xdg-utils \
+    # Process management
+    procps \
+    # D-Bus for virtual display
+    dbus-x11 \
+    # VS Code secrets API support in Docker
+    gnome-keyring \
+    libsecret-1-0 \
+    libsecret-1-dev
+
+# Install pnpm globally (rarely changes - good for caching)
+RUN npm install -g pnpm@10.8.1
+
+# Set environment variables (rarely changes - good for caching)
+ENV NODE_ENV=production \
+    CI=true \
+    DISPLAY=:99 \
+    DOCKER_CONTAINER=true \
+    ELECTRON_DISABLE_SANDBOX=false \
+    ELECTRON_ENABLE_LOGGING=true
+
+# Create workspace directory
+WORKDIR /workspace
+
+# Copy entrypoint script with execute permissions
+COPY --chmod=755 apps/playwright-e2e/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Set entrypoint
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

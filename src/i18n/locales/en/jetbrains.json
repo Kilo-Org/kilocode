@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js environment missing",
+			"message": "Node.js environment not detected, please install Node.js and try again. Recommended version: {{minVersion}} or higher."
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js version too low",
+			"message": "Current Node.js ({{nodePath}}) version is {{nodeVersion}}, please upgrade to {{minVersion}} or higher for better compatibility."
+		}
+	},
+	"dialog": {
+		"cancel": "Cancel"
+	},
+	"ui": {
+		"initializing": "Kilo Code is initializing...",
+		"systemInformation": "System Information"
+	}
+}

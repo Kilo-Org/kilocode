@@ -1,0 +1,13 @@
+{
+	"dialogTitle": "人工辅助模式",
+	"dialogDescription": "操作指南：\n1. 复制下方提示词到外部AI工具\n2. 将得到的结果粘贴至输入框",
+	"copiedToClipboard": "已复制到剪贴板",
+	"aiResponse": {
+		"label": "AI响应内容：",
+		"placeholder": "请在此处粘贴结果..."
+	},
+	"actions": {
+		"cancel": "取消",
+		"submit": "提交"
+	}
+}
