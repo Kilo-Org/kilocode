@@ -1,7 +1,13 @@
 import fs from "node:fs";
 import path from "path";
 
-import Parser, { Language } from "web-tree-sitter";
+import {
+  Parser,
+  Language,
+  Node as SyntaxNode,
+  Query,
+  Tree,
+} from "web-tree-sitter";
 import { SymbolWithRange } from "..";
 import { getUriFileExtension } from "./uri";
 
@@ -156,7 +162,6 @@ async function getLanguageForFile(
   filepathOrUri: string,
 ): Promise<Language | undefined> {
   try {
-    await Parser.init();
     const extension = getExtensionFromPathOrUri(filepathOrUri);
 
     const languageName = supportedLanguages[extension];
@@ -184,7 +189,7 @@ export const getFullLanguageName = (filepathOrUri: string) => {
 export async function getQueryForFile(
   filepathOrUri: string,
   queryPath: string,
-): Promise<Parser.Query | undefined> {
+): Promise<Query | undefined> {
   const language = await getLanguageForFile(filepathOrUri);
   if (!language) {
     return undefined;
@@ -250,7 +255,7 @@ async function loadLanguageForFileExt(
 
   for (const p of candidatePaths) {
     if (fs.existsSync(p)) {
-      return await Parser.Language.load(p);
+      return await Language.load(p);
     }
   }
 
@@ -262,11 +267,11 @@ async function loadLanguageForFileExt(
     "out",
     filename,
   );
-  return await Parser.Language.load(fallback);
+  return await Language.load(fallback);
 }
 
 // See https://tree-sitter.github.io/tree-sitter/using-parsers
-const GET_SYMBOLS_FOR_NODE_TYPES: Parser.SyntaxNode["type"][] = [
+const GET_SYMBOLS_FOR_NODE_TYPES: SyntaxNode["type"][] = [
   "class_declaration",
   "class_definition",
   "function_item", // function name = first "identifier" child
@@ -288,18 +293,23 @@ export async function getSymbolsForFile( //MINIMAL_REPO - continue doesn't use t
     return;
   }
 
-  let tree: Parser.Tree;
+  let tree: Tree | null;
   try {
     tree = parser.parse(contents);
   } catch {
     console.log(`Error parsing file: ${filepath}`);
     return;
   }
+
+  if (!tree) {
+    console.log(`Failed to parse file: ${filepath}`);
+    return;
+  }
   // console.log(`file: ${filepath}`);
 
   // Function to recursively find all named nodes (classes and functions)
   const symbols: SymbolWithRange[] = [];
-  function findNamedNodesRecursive(node: Parser.SyntaxNode) {
+  function findNamedNodesRecursive(node: SyntaxNode) {
     // console.log(`node: ${node.type}, ${node.text}`);
     if (GET_SYMBOLS_FOR_NODE_TYPES.includes(node.type)) {
       // console.log(`parent: ${node.type}, ${node.text.substring(0, 200)}`);
@@ -310,13 +320,14 @@ export async function getSymbolsForFile( //MINIMAL_REPO - continue doesn't use t
       // Empirically, the actual name is the last identifier in the node
       // Especially with languages where return type is declared before the name
       // TODO use findLast in newer version of node target
-      let identifier: Parser.SyntaxNode | undefined = undefined;
+      let identifier: SyntaxNode | undefined = undefined;
       for (let i = node.children.length - 1; i >= 0; i--) {
+        const child = node.children[i];
         if (
-          node.children[i].type === "identifier" ||
-          node.children[i].type === "property_identifier"
+          child &&
+          (child.type === "identifier" || child.type === "property_identifier")
         ) {
-          identifier = node.children[i];
+          identifier = child;
           break;
         }
       }
@@ -340,7 +351,9 @@ export async function getSymbolsForFile( //MINIMAL_REPO - continue doesn't use t
         });
       }
     }
-    node.children.forEach(findNamedNodesRecursive);
+    node.children.forEach((child) => {
+      if (child) findNamedNodesRecursive(child);
+    });
   }
   findNamedNodesRecursive(tree.rootNode);
   return symbols;

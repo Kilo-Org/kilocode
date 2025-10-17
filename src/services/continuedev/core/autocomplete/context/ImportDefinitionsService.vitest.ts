@@ -406,7 +406,7 @@ def func():
         expect(dottedNames.length).toBeGreaterThan(0);
 
         // Verify the dotted name structure
-        const osPath = dottedNames.find((n) => n.text === "os.path");
+        const osPath = dottedNames.find((n) => n && n.text === "os.path");
         expect(osPath).toBeTruthy();
       });
 
@@ -422,17 +422,20 @@ def func():
           "import_from_statement",
         )[0];
         expect(importFromStmt).toBeTruthy();
+        if (!importFromStmt) return;
 
         // Find the actual imported names (not the module name)
         const allIdentifiers = importFromStmt.descendantsOfType("dotted_name");
-        const texts = allIdentifiers.map((n) => n.text);
+        const texts = allIdentifiers.map((n) => n && n.text).filter(Boolean);
 
         // Should include the imported names
         expect(
-          texts.some((t) => t === "defaultdict" || t.includes("defaultdict")),
+          texts.some(
+            (t) => t && (t === "defaultdict" || t.includes("defaultdict")),
+          ),
         ).toBe(true);
         expect(
-          texts.some((t) => t === "Counter" || t.includes("Counter")),
+          texts.some((t) => t && (t === "Counter" || t.includes("Counter"))),
         ).toBe(true);
       });
 
@@ -509,6 +512,7 @@ def func():
 
         // Verify the names
         const names = importSpecifiers.map((spec) => {
+          if (!spec) return undefined;
           const identifier = spec.childForFieldName("name");
           return identifier?.text;
         });
@@ -526,10 +530,11 @@ def func():
         const importStatement =
           tree.rootNode.descendantsOfType("import_statement")[0];
         expect(importStatement).toBeTruthy();
+        if (!importStatement) return;
 
         // Should find identifier for default import
         const identifiers = importStatement.descendantsOfType("identifier");
-        expect(identifiers.some((id) => id.text === "React")).toBe(true);
+        expect(identifiers.some((id) => id && id.text === "React")).toBe(true);
       });
 
       it("should handle namespace imports", async () => {
@@ -547,10 +552,11 @@ def func():
         const namespaceImport =
           tree.rootNode.descendantsOfType("namespace_import");
         expect(namespaceImport.length).toBeGreaterThan(0);
+        if (!namespaceImport[0]) return;
 
         // Verify the alias name
         const identifiers = namespaceImport[0].descendantsOfType("identifier");
-        expect(identifiers.some((id) => id.text === "Utils")).toBe(true);
+        expect(identifiers.some((id) => id && id.text === "Utils")).toBe(true);
       });
 
       it("should handle side-effect imports", async () => {
@@ -563,6 +569,7 @@ def func():
         const importStatement =
           tree.rootNode.descendantsOfType("import_statement")[0];
         expect(importStatement).toBeTruthy();
+        if (!importStatement) return;
 
         // Should have string literal for the path
         const strings = importStatement.descendantsOfType("string");
@@ -579,6 +586,7 @@ def func():
         const importStatement =
           tree.rootNode.descendantsOfType("import_statement")[0];
         expect(importStatement).toBeTruthy();
+        if (!importStatement) return;
 
         // Should have both default and named imports
         const importSpecifiers =
@@ -587,7 +595,9 @@ def func():
 
         // Should also have the default import identifier
         const allIdentifiers = importStatement.descendantsOfType("identifier");
-        expect(allIdentifiers.some((id) => id.text === "React")).toBe(true);
+        expect(allIdentifiers.some((id) => id && id.text === "React")).toBe(
+          true,
+        );
       });
 
       it("should handle import aliases", async () => {
@@ -600,6 +610,7 @@ def func():
         const importSpecifier =
           tree.rootNode.descendantsOfType("import_specifier")[0];
         expect(importSpecifier).toBeTruthy();
+        if (!importSpecifier) return;
 
         // Should find both the original and alias names
         const nameField = importSpecifier.childForFieldName("name");
@@ -626,8 +637,8 @@ import static java.lang.Math.PI;`;
         expect(importDecls.length).toBe(3);
 
         // Check for static import
-        const staticImports = importDecls.filter((decl) =>
-          decl.text.includes("static"),
+        const staticImports = importDecls.filter(
+          (decl) => decl && decl.text.includes("static"),
         );
         expect(staticImports.length).toBe(1);
       });
@@ -642,6 +653,7 @@ import static java.lang.Math.PI;`;
         const importDecl =
           tree.rootNode.descendantsOfType("import_declaration")[0];
         expect(importDecl).toBeTruthy();
+        if (!importDecl) return;
 
         // Should have scoped identifier for the full path
         const scopedId = importDecl.descendantsOfType("scoped_identifier");
@@ -658,6 +670,7 @@ import static java.lang.Math.PI;`;
         const importDecl =
           tree.rootNode.descendantsOfType("import_declaration")[0];
         expect(importDecl).toBeTruthy();
+        if (!importDecl) return;
 
         // Should contain asterisk for wildcard
         const asterisk = importDecl.descendantsOfType("asterisk");
@@ -691,12 +704,16 @@ import static java.lang.Math.PI;`;
         expect(includes.length).toBe(2);
 
         // System include uses <>
-        const systemInclude = includes.find((inc) => inc.text.includes("<"));
+        const systemInclude = includes.find(
+          (inc) => inc && inc.text.includes("<"),
+        );
         expect(systemInclude).toBeTruthy();
         expect(systemInclude?.text).toContain("vector");
 
         // Local include uses ""
-        const localInclude = includes.find((inc) => inc.text.includes('"'));
+        const localInclude = includes.find(
+          (inc) => inc && inc.text.includes('"'),
+        );
         expect(localInclude).toBeTruthy();
         expect(localInclude?.text).toContain("local.h");
       });
@@ -757,6 +774,7 @@ import static java.lang.Math.PI;`;
         const importStatement =
           tree.rootNode.descendantsOfType("import_statement")[0];
         expect(importStatement).toBeTruthy();
+        if (!importStatement) return;
 
         const importSpecifiers =
           importStatement.descendantsOfType("import_specifier");

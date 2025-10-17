@@ -1,13 +1,13 @@
-import Parser from "web-tree-sitter";
+import { Node as SyntaxNode, Tree } from "web-tree-sitter";
 
 import { getParserForFile } from "../../util/treeSitter";
 
-export type AstPath = Parser.SyntaxNode[];
+export type AstPath = SyntaxNode[];
 
 export async function getAst(
   filepath: string,
   fileContents: string,
-): Promise<Parser.Tree | undefined> {
+): Promise<Tree | undefined> {
   const parser = await getParserForFile(filepath);
 
   if (!parser) {
@@ -16,21 +16,25 @@ export async function getAst(
 
   try {
     const ast = parser.parse(fileContents);
-    return ast;
+    return ast || undefined;
   } catch {
     return undefined;
   }
 }
 
 export async function getTreePathAtCursor(
-  ast: Parser.Tree,
+  ast: Tree,
   cursorIndex: number,
 ): Promise<AstPath> {
   const path = [ast.rootNode];
   while (path[path.length - 1].childCount > 0) {
     let foundChild = false;
     for (const child of path[path.length - 1].children) {
-      if (child.startIndex <= cursorIndex && child.endIndex >= cursorIndex) {
+      if (
+        child &&
+        child.startIndex <= cursorIndex &&
+        child.endIndex >= cursorIndex
+      ) {
         path.push(child);
         foundChild = true;
         break;

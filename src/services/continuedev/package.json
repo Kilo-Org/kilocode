@@ -36,8 +36,8 @@
     "quick-lru": "^7.0.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "tree-sitter-wasms": "^0.1.11",
-    "web-tree-sitter": "^0.21.0",
+    "tree-sitter-wasms": "^0.1.12",
+    "web-tree-sitter": "^0.25.6",
     "zod": "^3.25.61"
   },
   "devDependencies": {

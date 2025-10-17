@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import path from "path";
 import { pathToFileURL } from "url";
-import Parser from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { IDE, Position } from "../../..";
 import { localPathOrUriToPath } from "../../../util/pathToUri";
 import { getFullLanguageName, getQueryForFile } from "../../../util/treeSitter";
@@ -525,8 +525,8 @@ export class StaticContextService {
 
   private async extractRelevantHeadersHelper(
     originalDeclText: string,
-    node: Parser.SyntaxNode,
-    targetTypes: Set<Parser.SyntaxNode>,
+    node: SyntaxNode,
+    targetTypes: Set<SyntaxNode>,
     relevantTypes: Map<string, TypeSpanAndSourceFileAndAst>,
     relevantContext: Set<TypeSpanAndSourceFile>,
     relevantContextMap: Map<string, TypeSpanAndSourceFile>,
@@ -578,7 +578,7 @@ export class StaticContextService {
     relevantTypes: Map<string, TypeSpanAndSourceFileAndAst>,
     holeType: string,
   ) {
-    const targetTypes = new Set<Parser.SyntaxNode>();
+    const targetTypes = new Set<SyntaxNode>();
     // const ast = relevantTypes.get(holeIdentifier)!.ast;
     const ast = await getAst("file.ts", `type T = ${holeType};`);
     if (!ast) {
@@ -608,8 +608,8 @@ export class StaticContextService {
   private async generateTargetTypesHelper(
     relevantTypes: Map<string, TypeSpanAndSourceFileAndAst>,
     currType: string,
-    targetTypes: Set<Parser.SyntaxNode>,
-    node: Parser.SyntaxNode | null,
+    targetTypes: Set<SyntaxNode>,
+    node: SyntaxNode | null,
   ): Promise<void> {
     if (!node) return;
 
@@ -679,8 +679,8 @@ export class StaticContextService {
   }
 
   private async isTypeEquivalent(
-    node: Parser.SyntaxNode,
-    typ: Parser.SyntaxNode,
+    node: SyntaxNode,
+    typ: SyntaxNode,
     relevantTypes: Map<string, TypeSpanAndSourceFileAndAst>,
     foundNormalForms: Map<string, string>,
   ): Promise<boolean> {
@@ -712,7 +712,7 @@ export class StaticContextService {
   }
 
   private async normalize(
-    node: Parser.SyntaxNode,
+    node: SyntaxNode,
     relevantTypes: Map<string, TypeSpanAndSourceFileAndAst>,
   ): Promise<string> {
     if (!node) return "";
@@ -723,31 +723,39 @@ export class StaticContextService {
         const returnType =
           node.childForFieldName("type") || node.namedChildren[1]; // function_type → parameters, =>, return
 
-        const paramTypes =
-          params?.namedChildren
-            .map((param) =>
-              this.normalize(
-                param!.childForFieldName("type")! ||
-                  param!.namedChildren.at(-1),
-                relevantTypes,
-              ),
-            )
-            .join(", ") || "";
+        const paramTypes = await Promise.all(
+          params?.namedChildren.map(async (param) => {
+            if (!param) return "";
+            return await this.normalize(
+              param.childForFieldName("type") ||
+                param.namedChildren.at(-1) ||
+                param,
+              relevantTypes,
+            );
+          }) || [],
+        );
 
-        const ret = this.normalize(returnType!, relevantTypes);
+        const ret = returnType
+          ? await this.normalize(returnType, relevantTypes)
+          : "";
+        return `(${paramTypes.join(", ")}) => ${ret}`;
         return `(${paramTypes}) => ${ret}`;
       }
 
       case "tuple_type": {
-        const elements = node.namedChildren.map((c) =>
-          this.normalize(c!, relevantTypes),
+        const elements = await Promise.all(
+          node.namedChildren.map((c) =>
+            c ? this.normalize(c, relevantTypes) : Promise.resolve(""),
+          ),
         );
         return `[${elements.join(", ")}]`;
       }
 
       case "union_type": {
-        const parts = node.namedChildren.map((c) =>
-          this.normalize(c!, relevantTypes),
+        const parts = await Promise.all(
+          node.namedChildren.map((c) =>
+            c ? this.normalize(c, relevantTypes) : Promise.resolve(""),
+          ),
         );
         return parts.join(" | ");
       }

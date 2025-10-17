@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import Parser from "web-tree-sitter";
+import { Node as SyntaxNode } from "web-tree-sitter";
 import { IDE, Position, RangeInFile } from "..";
 import { getAst } from "../autocomplete/util/ast";
 import {
@@ -888,6 +888,7 @@ count++;  // Refers to outer count`;
         expect(funcDefs?.length).toBeGreaterThan(0);
 
         funcDefs?.forEach((funcDef) => {
+          if (!funcDef) return;
           expect(isDeclarationNode(funcDef)).toBe(true);
           const funcName = findLeftmostIdentifier(funcDef);
           expect(funcName).toBeTruthy();
@@ -907,8 +908,8 @@ const admin = addUser("Admin", "admin@example.com");`;
         if (!tree) return;
 
         // Find all identifiers in the code
-        const allIdentifiers: Parser.SyntaxNode[] = [];
-        function traverse(node: Parser.SyntaxNode) {
+        const allIdentifiers: SyntaxNode[] = [];
+        function traverse(node: SyntaxNode) {
           if (isIdentifierNode(node)) {
             allIdentifiers.push(node);
           }

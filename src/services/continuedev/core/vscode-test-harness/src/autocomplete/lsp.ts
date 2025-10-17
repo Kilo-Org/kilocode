@@ -10,7 +10,7 @@ import { intersection } from "core/util/ranges";
 import * as vscode from "vscode";
 
 import type { IDE, Range, RangeInFile, RangeInFileWithContents } from "core";
-import type Parser from "web-tree-sitter";
+import type { Node as SyntaxNode } from "web-tree-sitter";
 const FUNCTION_BLOCK_NODE_TYPES = ["block", "statement_block"];
 const FUNCTION_DECLARATION_NODE_TYPEs = [
   "method_definition",
@@ -85,11 +85,11 @@ function isRifWithContents(
 }
 
 function findChildren(
-  node: Parser.SyntaxNode,
-  predicate: (n: Parser.SyntaxNode) => boolean,
+  node: SyntaxNode,
+  predicate: (n: SyntaxNode) => boolean,
   firstN?: number,
-): Parser.SyntaxNode[] {
-  let matchingNodes: Parser.SyntaxNode[] = [];
+): SyntaxNode[] {
+  let matchingNodes: SyntaxNode[] = [];
 
   if (firstN && firstN <= 0) {
     return [];
@@ -102,6 +102,7 @@ function findChildren(
 
   // Recursively search for matching types in all children of the current node
   for (const child of node.children) {
+    if (!child) continue;
     matchingNodes = matchingNodes.concat(
       findChildren(
         child,
@@ -114,7 +115,7 @@ function findChildren(
   return matchingNodes;
 }
 
-function findTypeIdentifiers(node: Parser.SyntaxNode): Parser.SyntaxNode[] {
+function findTypeIdentifiers(node: SyntaxNode): SyntaxNode[] {
   return findChildren(
     node,
     (childNode) =>
@@ -209,7 +210,7 @@ async function crawlTypes(
 
 async function getDefinitionsForNode(
   uri: vscode.Uri,
-  node: Parser.SyntaxNode,
+  node: SyntaxNode,
   ide: IDE,
   lang: AutocompleteLanguageInfo,
 ): Promise<RangeInFileWithContents[]> {
@@ -280,7 +281,7 @@ async function getDefinitionsForNode(
     case "new_expression": {
       // In 'new MyClass(...)', "MyClass" is the classNameNode
       const classNameNode = node.children.find(
-        (child) => child.type === "identifier",
+        (child) => child && child.type === "identifier",
       );
       const [classDef] = await executeGotoProvider({
         uri,

@@ -30,10 +30,8 @@ describe("DocumentHistoryTracker", () => {
     tracker = DocumentHistoryTracker.getInstance();
 
     // Create mock ASTs
-    // @ts-expect-error -- constructing mocked Tree class for testing
-    mockAst1 = new Parser.Tree() as Parser.Tree;
-    // @ts-expect-error -- constructing mocked Tree class for testing
-    mockAst2 = new Parser.Tree() as Parser.Tree;
+    mockAst1 = {} as Parser.Tree;
+    mockAst2 = {} as Parser.Tree;
   });
 
   afterEach(() => {
