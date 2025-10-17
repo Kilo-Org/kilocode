@@ -237,10 +237,6 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 		setExecuteSelectedCallback(() => executeSelected)
 	}, [approve, reject, executeSelected, setApproveCallback, setRejectCallback, setExecuteSelectedCallback])
 
-	// Note: All auto-approval logic has been moved to useApprovalEffect hook
-	// and the approvalDecision service. This hook now only handles manual
-	// approve/reject actions triggered by user interaction.
-
 	return {
 		pendingApproval,
 		approvalOptions,
