@@ -141,6 +141,7 @@ const __dirname = __dirname__(__filename);
 		"reconnecting-eventsource",
 		"sanitize-filename",
 		"say",
+		"semver",
 		"serialize-error",
 		"shiki",
 		"simple-git",
