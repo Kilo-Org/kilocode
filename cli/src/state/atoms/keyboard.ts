@@ -30,6 +30,7 @@ import {
 	insertTextAtom,
 	insertNewlineAtom,
 	backspaceAtom,
+	deleteCharAtom,
 	deleteWordAtom,
 	killLineAtom,
 	killLineLeftAtom,
@@ -578,6 +579,11 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 			}
 			return
 
+		// Delete
+		case "delete":
+			set(deleteCharAtom)
+			return
+
 		// Escape
 		case "escape":
 			set(clearTextBufferAtom)
@@ -641,6 +647,11 @@ function handleTextInputKeys(get: any, set: any, key: Key) {
 
 function handleGlobalHotkeys(get: any, set: any, key: Key): boolean {
 	switch (key.name) {
+		case "c":
+			if (key.ctrl) {
+				process.exit(0)
+			}
+			break
 		case "x":
 			if (key.ctrl) {
 				const isStreaming = get(isStreamingAtom)

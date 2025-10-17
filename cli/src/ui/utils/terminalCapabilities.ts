@@ -13,6 +13,7 @@ export function detectTerminalType(): string {
 	if (termProgram.includes("iTerm")) return "iterm2"
 	if (termProgram.includes("Apple_Terminal")) return "terminal.app"
 	if (termProgram.includes("vscode")) return "vscode"
+	if (termProgram.includes("ghostty")) return "ghostty"
 	if (term.includes("kitty")) return "kitty"
 	if (term.includes("alacritty")) return "alacritty"
 	if (term.includes("wezterm")) return "wezterm"
@@ -28,7 +29,7 @@ export function detectKittyProtocolSupport(): boolean {
 	const termType = detectTerminalType()
 
 	// Known terminals with Kitty protocol support
-	const supportedTerminals = ["kitty", "wezterm", "alacritty"]
+	const supportedTerminals = ["kitty", "wezterm", "alacritty", "ghostty"]
 	return supportedTerminals.includes(termType)
 }
 
