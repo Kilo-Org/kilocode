@@ -1,5 +1,5 @@
-import { useCallback } from "react"
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { useCallback, useState } from "react"
+import { VSCodeCheckbox, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
 import { OrganizationAllowList, ovhCloudAiEndpointsDefaultModelId, type ProviderSettings } from "@roo-code/types"
 
@@ -26,6 +26,7 @@ export const OvhCloudAiEndpoints = ({
 	modelValidationError,
 }: OvhCloudAiEndpointsProps) => {
 	const { t } = useAppTranslation()
+	const [customUrlEnabled, setCustomUrlEnabled] = useState(!!apiConfiguration?.ovhCloudAiEndpointsBaseUrl)
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -56,13 +57,41 @@ export const OvhCloudAiEndpoints = ({
 					{t("settings:providers.getOvhCloudAiEndpointsApiKey")}
 				</VSCodeButtonLink>
 			)}
+
+			<VSCodeCheckbox
+				checked={customUrlEnabled}
+				onChange={(e: any) => {
+					const isChecked = e.target.checked === true
+					if (!isChecked) {
+						setApiConfigurationField("ovhCloudAiEndpointsBaseUrl", undefined)
+					}
+
+					setCustomUrlEnabled(isChecked)
+				}}>
+				{t("settings:providers.getOvhCloudAiEndpointsBaseUrl")}
+			</VSCodeCheckbox>
+			{customUrlEnabled && (
+				<VSCodeTextField
+					value={apiConfiguration?.ovhCloudAiEndpointsBaseUrl || ""}
+					type="text"
+					onInput={handleInputChange("ovhCloudAiEndpointsBaseUrl")}
+					placeholder={t("settings:providers.getOvhCloudAiEndpointsBaseUrl")}
+					className="w-full">
+					<div className="flex justify-between items-center mb-1">
+						<label className="block font-medium">
+							{t("settings:providers.ovhCloudAiEndpointsBaseUrl")}
+						</label>
+					</div>
+				</VSCodeTextField>
+			)}
+
 			<ModelPicker
 				apiConfiguration={apiConfiguration}
 				setApiConfigurationField={setApiConfigurationField}
 				defaultModelId={ovhCloudAiEndpointsDefaultModelId}
 				models={routerModels?.ovhcloud ?? {}}
 				modelIdKey="ovhCloudAiEndpointsModelId"
-				serviceName="OVHCloud AI Endpoints"
+				serviceName="OVHcloud AI Endpoints"
 				serviceUrl="https://endpoints.ai.cloud.ovh.net/catalog"
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}

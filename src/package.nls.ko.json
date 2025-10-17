@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "편집 제안 취소",
 	"ghost.commands.applyCurrentSuggestion": "현재 편집 제안 적용",
 	"ghost.commands.applyAllSuggestions": "모든 편집 제안 적용",
-	"ghost.commands.promptCodeSuggestion": "빠른 작업",
 	"ghost.commands.goToNextSuggestion": "다음 제안으로 이동",
 	"ghost.commands.goToPreviousSuggestion": "이전 제안으로 이동"
 }

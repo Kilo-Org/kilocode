@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Cancel·lar Edicions Suggerides",
 	"ghost.commands.applyCurrentSuggestion": "Aplicar Edició Suggerida Actual",
 	"ghost.commands.applyAllSuggestions": "Aplicar Totes les Edicions Suggerides",
-	"ghost.commands.promptCodeSuggestion": "Tasca Ràpida",
 	"ghost.commands.goToNextSuggestion": "Anar al Suggeriment Següent",
 	"ghost.commands.goToPreviousSuggestion": "Anar al Suggeriment Anterior"
 }

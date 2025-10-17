@@ -79,6 +79,7 @@
 				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
 				"lastCompletion": "คำแนะนำล่าสุด:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
+				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:"
 			},
 			"cost": {
@@ -104,7 +105,6 @@
 			"cancelSuggestions": "ยกเลิกการแก้ไขที่แนะนำ",
 			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำปัจจุบัน",
 			"applyAllSuggestions": "ใช้การแก้ไขที่แนะนำทั้งหมด",
-			"promptCodeSuggestion": "งานด่วน",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -135,5 +135,10 @@
 			"cancelButton": "ยกเลิก"
 		},
 		"tipMessage": "Kilo: กด {{shortcut}} เพื่อสร้างคำสั่งเทอร์มินัล"
+	},
+	"creditsstatusbar": {
+		"loading": "กำลังโหลด...",
+		"clickToRefresh": "คลิกเพื่อรีเฟรช",
+		"minute": "นาที"
 	}
 }

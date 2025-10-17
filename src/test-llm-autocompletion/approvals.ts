@@ -85,6 +85,7 @@ export async function checkApproval(
 	testName: string,
 	input: string,
 	output: string,
+	skipApproval: boolean = false,
 ): Promise<ApprovalResult> {
 	const categoryDir = getCategoryPath(category)
 
@@ -96,6 +97,11 @@ export async function checkApproval(
 	const rejectedMatch = findMatchingFile(categoryDir, testName, "rejected", output)
 	if (rejectedMatch) {
 		return { isApproved: false, newOutput: false }
+	}
+
+	// If skipApproval is true, mark as unknown (new output)
+	if (skipApproval) {
+		return { isApproved: false, newOutput: true }
 	}
 
 	const isApproved = await askUserApproval(category, testName, input, output)

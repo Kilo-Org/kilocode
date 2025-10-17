@@ -9,13 +9,15 @@ import Anthropic from "@anthropic-ai/sdk"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { calculateApiCostOpenAI } from "../../shared/cost"
+import { convertToR1Format } from "../transform/r1-format"
+import { XmlMatcher } from "../../utils/xml-matcher"
 
-export class OVHCloudAIEndpointsHandler extends RouterProvider implements SingleCompletionHandler {
+export class OVHcloudAIEndpointsHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
 		super({
 			options,
 			name: "ovhcloud",
-			baseURL: "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1",
+			baseURL: `${options.ovhCloudAiEndpointsBaseUrl || "https://oai.endpoints.kepler.ai.cloud.ovh.net/v1"}`,
 			apiKey: options.ovhCloudAiEndpointsApiKey,
 			modelId: options.ovhCloudAiEndpointsModelId,
 			defaultModelId: ovhCloudAiEndpointsDefaultModelId,
@@ -30,27 +32,34 @@ export class OVHCloudAIEndpointsHandler extends RouterProvider implements Single
 	): ApiStream {
 		const { id: modelId, info } = await this.fetchModel()
 
+		const useR1Format = modelId.toLowerCase().includes("deepseek-r1")
 		const openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
+			...(useR1Format ? convertToR1Format(messages) : convertToOpenAiMessages(messages)),
 		]
 
 		const body: OpenAI.Chat.ChatCompletionCreateParams = {
 			model: modelId,
 			messages: openAiMessages,
-			max_tokens: info.maxTokens,
 			stream: true,
 			stream_options: { include_usage: true },
 		}
 
 		const completion = await this.client.chat.completions.create(body)
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
 
 		for await (const chunk of completion) {
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				for (const matcherChunk of matcher.update(delta.content)) {
+					yield matcherChunk
 				}
 			}
 
@@ -83,7 +92,7 @@ export class OVHCloudAIEndpointsHandler extends RouterProvider implements Single
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
 			if (error instanceof Error) {
-				throw new Error(`OVHCloud AI Endpoints completion error: ${error.message}`)
+				throw new Error(`OVHcloud AI Endpoints completion error: ${error.message}`)
 			}
 
 			throw error

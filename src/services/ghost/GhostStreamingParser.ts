@@ -16,12 +16,192 @@ export interface ParsedChange {
 	cursorPosition?: number // Offset within replace content where cursor should be positioned
 }
 
+function extractCursorPosition(content: string): number | undefined {
+	const markerIndex = content.indexOf(CURSOR_MARKER)
+	return markerIndex !== -1 ? markerIndex : undefined
+}
+
+function removeCursorMarker(content: string): string {
+	return content.replaceAll(CURSOR_MARKER, "")
+}
+
+/**
+ * Conservative XML sanitization - only fixes the specific case from user feedback
+ */
+function sanitizeXMLConservative(buffer: string): string {
+	let sanitized = buffer
+
+	// Fix malformed CDATA sections first - this is the main bug from user logs
+	// Replace </![CDATA[ with ]]> to fix malformed CDATA closures
+	sanitized = sanitized.replace(/<\/!\[CDATA\[/g, "]]>")
+
+	// Only fix the specific case: missing </change> tag when we have complete search/replace pairs
+	const changeOpenCount = (sanitized.match(/<change>/g) || []).length
+	const changeCloseCount = (sanitized.match(/<\/change>/g) || []).length
+
+	// Check if we have an incomplete </change> tag (like "</change" without the final ">")
+	const incompleteChangeClose = sanitized.includes("</change") && !sanitized.includes("</change>")
+
+	// Handle two cases:
+	// 1. Missing </change> tag entirely (changeCloseCount === 0 && !incompleteChangeClose)
+	// 2. Incomplete </change> tag (incompleteChangeClose)
+	if (changeOpenCount === 1 && changeCloseCount === 0) {
+		const searchCloseCount = (sanitized.match(/<\/search>/g) || []).length
+		const replaceCloseCount = (sanitized.match(/<\/replace>/g) || []).length
+
+		// Only fix if we have complete search/replace pairs
+		if (searchCloseCount === 1 && replaceCloseCount === 1) {
+			if (incompleteChangeClose) {
+				// Fix incomplete </change tag by adding the missing ">"
+				sanitized = sanitized.replace("</change", "</change>")
+			} else {
+				// Add missing </change> tag entirely
+				const trimmed = sanitized.trim()
+				// Make sure we're not in the middle of streaming an incomplete tag
+				if (!trimmed.endsWith("<")) {
+					sanitized += "</change>"
+				}
+			}
+		}
+	}
+
+	return sanitized
+}
+
+/**
+ * Check if the response appears to be complete
+ */
+function isResponseComplete(buffer: string, completedChangesCount: number): boolean {
+	// Simple heuristic: if the buffer doesn't end with an incomplete tag,
+	// consider it complete
+	const trimmedBuffer = buffer.trim()
+
+	// If the buffer is empty or only whitespace, consider it complete
+	if (trimmedBuffer.length === 0) {
+		return true
+	}
+
+	const incompleteChangeMatch = /<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(trimmedBuffer)
+	const incompleteSearchMatch = /<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(trimmedBuffer)
+	const incompleteReplaceMatch = /<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(trimmedBuffer)
+	const incompleteCDataMatch = /<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(trimmedBuffer)
+
+	// If we have incomplete tags, the response is not complete
+	if (incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch) {
+		return false
+	}
+
+	// If we have at least one complete change and no incomplete tags, likely complete
+	return completedChangesCount > 0
+}
+
+/**
+ * Find the best match for search content in the document, handling whitespace differences and cursor markers
+ * This is a simplified version of the method from GhostStrategy
+ */
+export function findBestMatch(content: string, searchPattern: string): number {
+	// Validate inputs
+	if (!content || !searchPattern) {
+		return -1
+	}
+
+	// First try exact match
+	let index = content.indexOf(searchPattern)
+	if (index !== -1) {
+		return index
+	}
+
+	// Handle the case where search pattern has trailing whitespace that might not match exactly
+	if (searchPattern.endsWith("\n")) {
+		// Try matching without the trailing newline, then check if we can find it in context
+		const searchWithoutTrailingNewline = searchPattern.slice(0, -1)
+		index = content.indexOf(searchWithoutTrailingNewline)
+		if (index !== -1) {
+			// Check if the character after the match is a newline or end of string
+			const afterMatchIndex = index + searchWithoutTrailingNewline.length
+			if (afterMatchIndex >= content.length || content[afterMatchIndex] === "\n") {
+				return index
+			}
+		}
+	}
+
+	// Normalize whitespace for both content and search pattern
+	const normalizeWhitespace = (text: string): string => {
+		return text
+			.replace(/\r\n/g, "\n") // Normalize line endings
+			.replace(/\r/g, "\n") // Handle old Mac line endings
+			.replace(/\t/g, "    ") // Convert tabs to spaces
+			.replace(/[ \t]+$/gm, "") // Remove trailing whitespace from each line
+	}
+
+	const normalizedContent = normalizeWhitespace(content)
+	const normalizedSearch = normalizeWhitespace(searchPattern)
+
+	// Try normalized match
+	index = normalizedContent.indexOf(normalizedSearch)
+	if (index !== -1) {
+		// Map back to original content position
+		return mapNormalizedToOriginalIndex(content, normalizedContent, index)
+	}
+
+	// Try trimmed search (remove leading/trailing whitespace)
+	const trimmedSearch = searchPattern.trim()
+	if (trimmedSearch !== searchPattern) {
+		index = content.indexOf(trimmedSearch)
+		if (index !== -1) {
+			return index
+		}
+	}
+
+	return -1 // No match found
+}
+
+/**
+ * Map an index from normalized content back to the original content
+ */
+function mapNormalizedToOriginalIndex(
+	originalContent: string,
+	normalizedContent: string,
+	normalizedIndex: number,
+): number {
+	let originalIndex = 0
+	let normalizedPos = 0
+
+	while (normalizedPos < normalizedIndex && originalIndex < originalContent.length) {
+		const originalChar = originalContent[originalIndex]
+		const normalizedChar = normalizedContent[normalizedPos]
+
+		if (originalChar === normalizedChar) {
+			originalIndex++
+			normalizedPos++
+		} else {
+			// Handle whitespace normalization differences
+			if (/\s/.test(originalChar)) {
+				originalIndex++
+				// Skip ahead in original until we find non-whitespace or match normalized
+				while (originalIndex < originalContent.length && /\s/.test(originalContent[originalIndex])) {
+					originalIndex++
+				}
+				if (normalizedPos < normalizedContent.length && /\s/.test(normalizedChar)) {
+					normalizedPos++
+				}
+			} else {
+				// Characters don't match, this shouldn't happen with proper normalization
+				originalIndex++
+				normalizedPos++
+			}
+		}
+	}
+
+	return originalIndex
+}
+
 /**
  * Streaming XML parser for Ghost suggestions that can process incomplete responses
  * and emit suggestions as soon as complete <change> blocks are available
  */
 export class GhostStreamingParser {
-	private buffer: string = ""
+	public buffer: string = ""
 	private completedChanges: ParsedChange[] = []
 	private lastProcessedIndex: number = 0
 	private context: GhostSuggestionContext | null = null
@@ -67,12 +247,12 @@ export class GhostStreamingParser {
 		this.completedChanges.push(...newChanges)
 
 		// Check if the response appears complete
-		let isComplete = this.isResponseComplete()
+		let isComplete = isResponseComplete(this.buffer, this.completedChanges.length)
 
 		// Apply very conservative sanitization only when the stream is finished
 		// and we still have no completed changes but have content in the buffer
 		if (this.completedChanges.length === 0 && this.buffer.trim().length > 0 && this.streamFinished) {
-			const sanitizedBuffer = this.sanitizeXMLConservative(this.buffer)
+			const sanitizedBuffer = sanitizeXMLConservative(this.buffer)
 			if (sanitizedBuffer !== this.buffer) {
 				// Re-process with sanitized buffer
 				this.buffer = sanitizedBuffer
@@ -80,7 +260,7 @@ export class GhostStreamingParser {
 				if (sanitizedChanges.length > 0) {
 					this.completedChanges.push(...sanitizedChanges)
 					hasNewSuggestions = true
-					isComplete = this.isResponseComplete() // Re-check completion after sanitization
+					isComplete = isResponseComplete(this.buffer, this.completedChanges.length) // Re-check completion after sanitization
 				}
 			}
 		}
@@ -124,7 +304,7 @@ export class GhostStreamingParser {
 			const searchContent = match[1]
 			// Extract cursor position from replace content
 			const replaceContent = match[2]
-			const cursorPosition = this.extractCursorPosition(replaceContent)
+			const cursorPosition = extractCursorPosition(replaceContent)
 
 			newChanges.push({
 				search: searchContent,
@@ -141,34 +321,6 @@ export class GhostStreamingParser {
 		}
 
 		return newChanges
-	}
-
-	/**
-	 * Check if the response appears to be complete
-	 */
-	private isResponseComplete(): boolean {
-		// Simple heuristic: if we haven't seen new content for a while and
-		// the buffer doesn't end with an incomplete tag, consider it complete
-		const trimmedBuffer = this.buffer.trim()
-
-		// Check if we have any incomplete <change> tags
-		const incompleteChangeMatch = /<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(trimmedBuffer)
-		const incompleteSearchMatch = /<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(trimmedBuffer)
-		const incompleteReplaceMatch = /<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(trimmedBuffer)
-		const incompleteCDataMatch = /<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(trimmedBuffer)
-
-		// If we have incomplete tags, the response is not complete
-		if (incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch) {
-			return false
-		}
-
-		// If the buffer is empty or only whitespace, consider it complete
-		if (trimmedBuffer.length === 0) {
-			return true
-		}
-
-		// If we have at least one complete change and no incomplete tags, likely complete
-		return this.completedChanges.length > 0
 	}
 
 	/**
@@ -199,7 +351,7 @@ export class GhostStreamingParser {
 		// Process changes: preserve search content as-is, clean replace content for application
 		const filteredChanges = changes.map((change) => ({
 			search: change.search, // Keep cursor markers for matching against document
-			replace: this.removeCursorMarker(change.replace), // Clean for content application
+			replace: removeCursorMarker(change.replace), // Clean for content application
 			cursorPosition: change.cursorPosition,
 		}))
 
@@ -213,7 +365,7 @@ export class GhostStreamingParser {
 		}> = []
 
 		for (const change of filteredChanges) {
-			let searchIndex = this.findBestMatch(modifiedContent, change.search)
+			let searchIndex = findBestMatch(modifiedContent, change.search)
 
 			if (searchIndex !== -1) {
 				// Check for overlapping changes before applying
@@ -276,7 +428,7 @@ export class GhostStreamingParser {
 
 		// Remove cursor marker from the final content if we added it
 		if (needsCursorMarker) {
-			modifiedContent = this.removeCursorMarker(modifiedContent)
+			modifiedContent = removeCursorMarker(modifiedContent)
 		}
 
 		// Generate diff between original and modified content
@@ -338,175 +490,9 @@ export class GhostStreamingParser {
 	}
 
 	/**
-	 * Find the best match for search content in the document, handling whitespace differences and cursor markers
-	 * This is a simplified version of the method from GhostStrategy
-	 */
-	private findBestMatch(content: string, searchPattern: string): number {
-		// Validate inputs
-		if (!content || !searchPattern) {
-			return -1
-		}
-
-		// First try exact match
-		let index = content.indexOf(searchPattern)
-		if (index !== -1) {
-			return index
-		}
-
-		// Handle the case where search pattern has trailing whitespace that might not match exactly
-		if (searchPattern.endsWith("\n")) {
-			// Try matching without the trailing newline, then check if we can find it in context
-			const searchWithoutTrailingNewline = searchPattern.slice(0, -1)
-			index = content.indexOf(searchWithoutTrailingNewline)
-			if (index !== -1) {
-				// Check if the character after the match is a newline or end of string
-				const afterMatchIndex = index + searchWithoutTrailingNewline.length
-				if (afterMatchIndex >= content.length || content[afterMatchIndex] === "\n") {
-					return index
-				}
-			}
-		}
-
-		// Normalize whitespace for both content and search pattern
-		const normalizeWhitespace = (text: string): string => {
-			return text
-				.replace(/\r\n/g, "\n") // Normalize line endings
-				.replace(/\r/g, "\n") // Handle old Mac line endings
-				.replace(/\t/g, "    ") // Convert tabs to spaces
-				.replace(/[ \t]+$/gm, "") // Remove trailing whitespace from each line
-		}
-
-		const normalizedContent = normalizeWhitespace(content)
-		const normalizedSearch = normalizeWhitespace(searchPattern)
-
-		// Try normalized match
-		index = normalizedContent.indexOf(normalizedSearch)
-		if (index !== -1) {
-			// Map back to original content position
-			return this.mapNormalizedToOriginalIndex(content, normalizedContent, index)
-		}
-
-		// Try trimmed search (remove leading/trailing whitespace)
-		const trimmedSearch = searchPattern.trim()
-		if (trimmedSearch !== searchPattern) {
-			index = content.indexOf(trimmedSearch)
-			if (index !== -1) {
-				return index
-			}
-		}
-
-		return -1 // No match found
-	}
-
-	/**
-	 * Map an index from normalized content back to the original content
-	 */
-	private mapNormalizedToOriginalIndex(
-		originalContent: string,
-		normalizedContent: string,
-		normalizedIndex: number,
-	): number {
-		let originalIndex = 0
-		let normalizedPos = 0
-
-		while (normalizedPos < normalizedIndex && originalIndex < originalContent.length) {
-			const originalChar = originalContent[originalIndex]
-			const normalizedChar = normalizedContent[normalizedPos]
-
-			if (originalChar === normalizedChar) {
-				originalIndex++
-				normalizedPos++
-			} else {
-				// Handle whitespace normalization differences
-				if (/\s/.test(originalChar)) {
-					originalIndex++
-					// Skip ahead in original until we find non-whitespace or match normalized
-					while (originalIndex < originalContent.length && /\s/.test(originalContent[originalIndex])) {
-						originalIndex++
-					}
-					if (normalizedPos < normalizedContent.length && /\s/.test(normalizedChar)) {
-						normalizedPos++
-					}
-				} else {
-					// Characters don't match, this shouldn't happen with proper normalization
-					originalIndex++
-					normalizedPos++
-				}
-			}
-		}
-
-		return originalIndex
-	}
-
-	/**
-	 * Extract cursor position from content containing cursor marker
-	 */
-	private extractCursorPosition(content: string): number | undefined {
-		const markerIndex = content.indexOf(CURSOR_MARKER)
-		return markerIndex !== -1 ? markerIndex : undefined
-	}
-
-	/**
-	 * Remove cursor marker from content and return clean content
-	 */
-	private removeCursorMarker(content: string): string {
-		return content.replaceAll(CURSOR_MARKER, "")
-	}
-
-	/**
-	 * Get the current buffer content (for debugging)
-	 */
-	public getBuffer(): string {
-		return this.buffer
-	}
-
-	/**
 	 * Get completed changes (for debugging)
 	 */
 	public getCompletedChanges(): ParsedChange[] {
 		return [...this.completedChanges]
-	}
-
-	/**
-	 * Conservative XML sanitization - only fixes the specific case from user feedback
-	 */
-	private sanitizeXMLConservative(buffer: string): string {
-		let sanitized = buffer
-
-		// Fix malformed CDATA sections first - this is the main bug from user logs
-		// Replace </![CDATA[ with ]]> to fix malformed CDATA closures
-		sanitized = sanitized.replace(/<\/!\[CDATA\[/g, "]]>")
-
-		// Only fix the specific case: missing </change> tag when we have complete search/replace pairs
-		const changeOpenCount = (sanitized.match(/<change>/g) || []).length
-		const changeCloseCount = (sanitized.match(/<\/change>/g) || []).length
-
-		// Check if we have an incomplete </change> tag (like "</change" without the final ">")
-		const incompleteChangeClose = sanitized.includes("</change") && !sanitized.includes("</change>")
-
-		// Handle two cases:
-		// 1. Missing </change> tag entirely (changeCloseCount === 0 && !incompleteChangeClose)
-		// 2. Incomplete </change> tag (incompleteChangeClose)
-		if (changeOpenCount === 1 && changeCloseCount === 0) {
-			const searchCloseCount = (sanitized.match(/<\/search>/g) || []).length
-			const replaceCloseCount = (sanitized.match(/<\/replace>/g) || []).length
-
-			// Only fix if we have complete search/replace pairs
-			if (searchCloseCount === 1 && replaceCloseCount === 1) {
-				if (incompleteChangeClose) {
-					// Fix incomplete </change tag by adding the missing ">"
-					sanitized = sanitized.replace("</change", "</change>")
-				} else {
-					// Add missing </change> tag entirely
-					const trimmed = sanitized.trim()
-					// Make sure we're not in the middle of streaming an incomplete tag
-					if (!trimmed.endsWith("<")) {
-						sanitized += "</change>"
-					}
-				}
-			}
-		}
-
-		return sanitized
 	}
 }

@@ -59,7 +59,8 @@ export async function getCommitRangeForNewCompletion(task: Task): Promise<Commit
 		const toCommit = lastCheckpointIndex >= 0 ? messages[lastCheckpointIndex].text : undefined
 		const fromCommit =
 			previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].text : messageWithFirstCommit?.text
-		const fromTimeStamp = previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].ts : undefined
+		const fromTimeStamp =
+			previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].ts : messageWithFirstCommit?.ts
 
 		if (!toCommit || !fromCommit || fromCommit === toCommit) {
 			console.log(`getCommitRangeForNewCompletion: invalid commit range '${fromCommit}' to '${toCommit}'.`)

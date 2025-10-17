@@ -21,7 +21,7 @@
 		"vsix:nightly": "turbo vsix:nightly --log-order grouped --output-logs new-only",
 		"clean": "turbo clean --log-order grouped --output-logs new-only && rimraf dist out bin .vite-port .turbo",
 		"install:vsix": "pnpm install --frozen-lockfile && pnpm clean && pnpm vsix && node scripts/install-vsix.js",
-		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md .",
+		"changeset:version": "cp CHANGELOG.md src/CHANGELOG.md && changeset version && cp -vf src/CHANGELOG.md . && pnpm --filter @kilocode/cli changeset:version",
 		"knip": "knip --include files",
 		"update-contributors": "node scripts/update-contributors.js",
 		"evals": "dotenvx run -f packages/evals/.env.development packages/evals/.env.local -- docker compose -f packages/evals/docker-compose.yml --profile server --profile runner up --build --scale runner=0",
@@ -33,6 +33,10 @@
 		"jetbrains:run-bundle": "turbo jetbrains:run-bundle",
 		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
+		"cli:build": "turbo run cli:build",
+		"cli:bundle": "turbo run cli:bundle",
+		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
+		"cli:run": "pnpm --filter @kilocode/cli run start",
 		"docs:start": "pnpm --filter kilocode-docs start",
 		"docs:build": "pnpm --filter kilocode-docs build"
 	},
@@ -70,7 +74,8 @@
 			"esbuild": ">=0.25.0",
 			"brace-expansion": ">=2.0.2",
 			"form-data": ">=4.0.4",
-			"bluebird": ">=3.7.2"
+			"bluebird": ">=3.7.2",
+			"type-fest": "2.19.0"
 		}
 	}
 }

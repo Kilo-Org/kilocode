@@ -12,8 +12,10 @@ import {
 	doubaoModels,
 	featherlessModels,
 	fireworksModels,
-	syntheticModels, // kilocode_change
-	geminiModels,
+	// kilocode_change start
+	syntheticModels,
+	// geminiModels,
+	// kilocode_change end
 	groqModels,
 	ioIntelligenceModels,
 	mistralModels,
@@ -27,6 +29,7 @@ import {
 	xaiModels,
 	internationalZAiModels,
 } from "./providers/index.js"
+import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
 /**
  * constants
@@ -49,6 +52,7 @@ export const dynamicProviders = [
 	"kilocode-openrouter",
 	"ovhcloud",
 	"chutes",
+	"gemini",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -195,6 +199,12 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model verbosity.
 	verbosity: verbosityLevelsSchema.optional(),
+
+	// kilocode_change start
+	// Tool style - xml (legacy) or json (modern).
+	// Default to XML for anywhere not specified.
+	toolStyle: toolUseStylesSchema.optional(),
+	// kilocode_change end
 })
 
 // Several of the providers share common model config properties.
@@ -414,6 +424,7 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 const ovhcloudSchema = baseProviderSettingsSchema.extend({
 	ovhCloudAiEndpointsApiKey: z.string().optional(),
 	ovhCloudAiEndpointsModelId: z.string().optional(),
+	ovhCloudAiEndpointsBaseUrl: z.string().optional(),
 })
 
 const kilocodeSchema = baseProviderSettingsSchema.extend({
@@ -709,7 +720,7 @@ export const getApiProtocol = (provider: ProviderName | undefined, modelId?: str
  */
 
 export const MODELS_BY_PROVIDER: Record<
-	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "lmstudio" | "openai" | "ollama">,
+	Exclude<ProviderName, "fake-ai" | "human-relay" | "gemini-cli" | "openai" | "gemini">, // kilocode_change: add gemini
 	{ id: ProviderName; label: string; models: string[] }
 > = {
 	anthropic: {
@@ -755,12 +766,12 @@ export const MODELS_BY_PROVIDER: Record<
 		label: "Synthetic",
 		models: Object.keys(syntheticModels),
 	},
+	//gemini: {
+	//	id: "gemini",
+	//	label: "Google Gemini",
+	//	models: Object.keys(geminiModels),
+	//},
 	// kilocode_change end
-	gemini: {
-		id: "gemini",
-		label: "Google Gemini",
-		models: Object.keys(geminiModels),
-	},
 	groq: { id: "groq", label: "Groq", models: Object.keys(groqModels) },
 	"io-intelligence": {
 		id: "io-intelligence",
@@ -802,14 +813,14 @@ export const MODELS_BY_PROVIDER: Record<
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
 
-	// Dynamic providers; models pulled from the respective APIs.
-	cortecs: { id: "cortecs", label: "cortecs", models: [] },
+	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	cortecs: { id: "cortecs", label: "cortecs", models: [] },
 	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] }, // kilocode_change
 
 	// kilocode_change start
@@ -819,4 +830,8 @@ export const MODELS_BY_PROVIDER: Record<
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
+
+	// Local providers; models discovered from localhost endpoints.
+	lmstudio: { id: "lmstudio", label: "LM Studio", models: [] },
+	ollama: { id: "ollama", label: "Ollama", models: [] },
 }

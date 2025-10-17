@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "ยกเลิกข้อเสนอแนะการแก้ไข",
 	"ghost.commands.applyCurrentSuggestion": "ใช้ข้อเสนอแนะการแก้ไขปัจจุบัน",
 	"ghost.commands.applyAllSuggestions": "ใช้ข้อเสนอแนะการแก้ไขทั้งหมด",
-	"ghost.commands.promptCodeSuggestion": "งานด่วน",
 	"ghost.commands.goToNextSuggestion": "ไปยังข้อเสนอแนะถัดไป",
 	"ghost.commands.goToPreviousSuggestion": "ไปยังข้อเสนอแนะก่อนหน้า"
 }

@@ -38,7 +38,6 @@
 	"ghost.commands.cancelSuggestions": "提案された編集をキャンセル",
 	"ghost.commands.applyCurrentSuggestion": "現在の提案された編集を適用",
 	"ghost.commands.applyAllSuggestions": "すべての提案された編集を適用",
-	"ghost.commands.promptCodeSuggestion": "クイックタスク",
 	"ghost.commands.goToNextSuggestion": "次の提案に移動",
 	"ghost.commands.goToPreviousSuggestion": "前の提案に移動",
 	"commands.allowedCommands.description": "'常に実行操作を承認する'が有効な場合に自動実行できるコマンド",

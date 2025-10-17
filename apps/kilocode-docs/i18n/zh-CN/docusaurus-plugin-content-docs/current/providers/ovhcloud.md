@@ -1,50 +1,36 @@
 ---
-sidebar_label: OVHCloud AI Endpoints
+sidebar_label: OVHcloud AI 端点
 ---
 
-# 在 Kilo Code 中使用 OVHCloud AI Endpoints
+# 在 Kilo Code 中使用 OVHcloud AI 端点
 
-OVHCloud 是欧洲领先的法国云服务提供商，保障数据主权与隐私。
+OVHcloud 是欧洲领先的法国云服务提供商，注重数据主权和隐私保护。
 
-轻松访问世界知名的预训练 AI 模型。在 OVHcloud 稳健且以隐私为先的基础设施上，通过简单、安全的 API 创新。为您的应用增强可扩展的 AI 能力，无需深厚的专业知识。借助为简洁与可靠性而设计的强大 AI 接口，助您实现更多可能。
+通过简单的方式访问世界知名的预训练 AI 模型。借助 OVHcloud 强大且以隐私为核心的基础设施，使用安全的 API 进行创新。使用可扩展的 AI 功能增强您的应用程序，而无需深入的专业知识。通过为简洁与可靠性而设计的强大 AI 端点，实现更多可能。
 
-**网站：** [https://endpoints.ai.cloud.ovh.net](https://endpoints.ai.cloud.ovh.net)
+**官方网站：** [https://endpoints.ai.cloud.ovh.net](https://endpoints.ai.cloud.ovh.net)
 
 :::info
 
-您可以在我们的 [Discord 服务器](https://discord.gg/ovhcloud) 上，通过 **AI Endpoints** 频道向我们反馈问题或建议。
+您可以通过加入我们的 [Discord 服务器](https://discord.gg/ovhcloud) 并在 AI Endpoints 频道中与我们聊天，报告任何错误或提供反馈。
 
 :::
 
 ## 获取 API 密钥
 
-1.  **注册/登录：** 前往 [OVHCloud 管理器](https://www.ovh.com/manager)。创建账户或登录。
-2.  **进入公有云：** 进入“Public Cloud”部分并创建新项目。在 _AI & Machine Learning_ 部分进入 **AI Endpoints**。
-3.  **创建密钥：** 点击 _API keys_ 并创建新的密钥。
+1.  **注册/登录：** 访问 [OVHcloud 管理平台](https://www.ovh.com/manager)。创建一个账户或登录。
+2.  **进入公共云：** 前往 Public Cloud 区域，创建一个新项目。在 _AI & Machine Learning_（人工智能与机器学习）部分中导航到 AI Endpoints。
+3.  **创建密钥：** 点击 _API keys_ 并创建一个新密钥。
 
 ## 支持的模型
 
-Kilo Code 支持以下 OVHCloud AI Endpoints 模型：
+Kilo Code 会自动从我们的 API 获取模型，并保持最新状态。
 
-- gpt-oss-120b
-- gpt-oss-20b
-- Qwen2.5-VL-72B-Instruct
-- llava-next-mistral-7b
-- Meta-Llama-3_3-70B-Instruct
-- Qwen2.5-Coder-32B-Instruct
-- Mixtral-8x7B-Instruct-v0.1
-- Meta-Llama-3_1-70B-Instruct
-- Mistral-Small-3.2-24B-Instruct-2506
-- DeepSeek-R1-Distill-Llama-70B
-- Llama-3.1-8B-Instruct
-- Mistral-7B-Instruct-v0.3
-- Mistral-Nemo-Instruct-2407
-- Qwen3-32B
-- mamba-codestral-7B-v0.1
+您可以浏览我们的 [模型目录](https://endpoints.ai.cloud.ovh.net/catalog) 来查看所有模型的详细信息。
 
-## 在 Kilo Code 中的配置
+## 在 Kilo Code 中进行配置
 
 1.  **打开 Kilo Code 设置：** 点击 Kilo Code 面板中的齿轮图标 (<Codicon name="gear" />)。
-2.  **选择提供商：** 在 “API Provider” 下拉菜单中选择 “OVHCloud AI Endpoints”。
-3.  **输入 API 密钥：** 将您的 AI Endpoints API 密钥粘贴到 “OVHCloud AI Endpoints API Key” 字段中。
-4.  **选择模型：** 在 “Model” 下拉菜单中选择所需的模型。
+2.  **选择提供商：** 在 “API Provider”（API 提供商）下拉菜单中选择 “OVHcloud AI Endpoints”。
+3.  **输入 API 密钥：** 将您的 AI Endpoints API 密钥粘贴到 “OVHcloud AI Endpoints API Key” 字段中。
+4.  **选择模型：** 从 “Model”（模型）下拉菜单中选择您需要的模型。

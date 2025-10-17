@@ -16,6 +16,11 @@
 		"title": "API-Konfiguration",
 		"select": "Wähle, welche API-Konfiguration für diesen Modus verwendet werden soll"
 	},
+	"organizationMode": {
+		"title": "Organisations-Modus",
+		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das Kilo Code Dashboard.",
+		"cannotEdit": "Organisations-Modi können nicht bearbeitet werden"
+	},
 	"tools": {
 		"title": "Verfügbare Werkzeuge",
 		"builtInModesText": "Werkzeuge für eingebaute Modi können nicht geändert werden",

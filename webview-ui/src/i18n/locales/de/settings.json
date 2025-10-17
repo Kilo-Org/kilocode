@@ -324,8 +324,10 @@
 		"sambaNovaApiKey": "SambaNova API-Schlüssel",
 		"getHuggingFaceApiKey": "Hugging Face API-Schlüssel erhalten",
 		"huggingFaceApiKey": "Hugging Face API-Schlüssel",
-		"getOvhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API-Schlüssel erhalten",
-		"ovhCloudAiEndpointsApiKey": "OVHCloud AI Endpoints API-Schlüssel",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-Schlüssel erhalten",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-Schlüssel",
+		"ovhCloudAiEndpointsBaseUrl": "Basis-URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"huggingFaceModelId": "Modell-ID",
 		"huggingFaceLoading": "Lädt...",
 		"huggingFaceModelsCount": "({{count}} Modelle)",
@@ -888,6 +890,7 @@
 			"regionMismatch": "Warnung: Die Region in deiner ARN ({{arnRegion}}) stimmt nicht mit deiner ausgewählten Region ({{region}}) überein. Dies kann zu Zugriffsproblemen führen. Der Anbieter wird die Region aus der ARN verwenden."
 		},
 		"modelAvailability": "Die von dir angegebene Modell-ID ({{modelId}}) ist nicht verfügbar. Bitte wähle ein anderes Modell.",
+		"modelDeprecated": "Dieses Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.",
 		"providerNotAllowed": "Anbieter '{{provider}}' ist von deiner Organisation nicht erlaubt",
 		"modelNotAllowed": "Modell '{{model}}' ist für Anbieter '{{provider}}' von deiner Organisation nicht erlaubt",
 		"profileInvalid": "Dieses Profil enthält einen Anbieter oder ein Modell, das von deiner Organisation nicht erlaubt ist",
@@ -935,6 +938,10 @@
 			"label": "Kosten unter Schwellenwert ausblenden",
 			"description": "Nur Anforderungskosten über diesem Betrag anzeigen. Kosten sind immer sichtbar, wenn der Detailbereich geöffnet ist.",
 			"currentValue": "Aktueller Schwellenwert: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zeitstempel anzeigen",
+			"description": "Zeitstempel für jede Nachricht in der Chat-Ansicht anzeigen"
 		}
 	},
 	"ghost": {

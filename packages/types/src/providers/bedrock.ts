@@ -169,6 +169,20 @@ export const bedrockModels = {
 		maxCachePoints: 4,
 		cachableFields: ["system", "messages", "tools"],
 	},
+	"anthropic.claude-haiku-4-5-20251001-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 1.0,
+		outputPrice: 5.0,
+		cacheWritesPrice: 1.25, // 5m cache writes
+		cacheReadsPrice: 0.1, // cache hits / refreshes
+		minTokensPerCachePoint: 2048,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
 	"anthropic.claude-3-5-sonnet-20240620-v1:0": {
 		maxTokens: 8192,
 		contextWindow: 200_000,
@@ -457,7 +471,6 @@ export const BEDROCK_REGIONS = [
 	{ value: "us-gov-west-1", label: "us-gov-west-1" },
 ].sort((a, b) => a.value.localeCompare(b.value))
 
-export const BEDROCK_CLAUDE_SONNET_4_MODEL_ID = "anthropic.claude-sonnet-4-20250514-v1:0"
 export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
 	"anthropic.claude-sonnet-4-20250514-v1:0",
 	"anthropic.claude-sonnet-4-5-20250929-v1:0",

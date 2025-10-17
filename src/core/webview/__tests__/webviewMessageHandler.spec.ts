@@ -191,10 +191,14 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glamaApiKey: "glama-key",
 				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
-				chutesApiKey: "chutes-key", // kilocode_change
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
-				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		})
 	})
@@ -228,7 +232,14 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "cortecs", apiKey: "cortecs-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
+		// kilocode_change start
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "gemini",
+			apiKey: "gemini-key",
+			baseUrl: "https://gemini.example.com",
+		})
+		// kilocode_change end
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "litellm",
@@ -244,6 +255,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				cortecs: mockModels,
@@ -346,6 +358,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				cortecs: mockModels,
@@ -376,6 +389,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		// Mock some providers to succeed and others to fail
 		mockGetModels
 			.mockResolvedValueOnce(mockModels) // openrouter
+			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockResolvedValueOnce(mockModels) // cortecs
@@ -398,6 +412,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
 				cortecs: mockModels,
@@ -450,6 +465,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		// Mock providers to fail with different error types
 		mockGetModels
 			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
+			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("cortecs API error")) // cortecs
@@ -459,7 +475,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("OVHCloud AI Endpoints error")) // ovhcloud // kilocode_change
+			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
 		await webviewMessageHandler(mockClineProvider, {
@@ -473,6 +489,15 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Structured error message",
 			values: { provider: "openrouter" },
 		})
+
+		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Gemini API error",
+			values: { provider: "gemini" },
+		})
+		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -509,6 +534,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			error: "Chutes API error",
 			values: { provider: "chutes" },
 		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Ollama API error",
+			values: { provider: "ollama" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Vercel AI Gateway error",
+			values: { provider: "vercel-ai-gateway" },
+		})
 		// kilocode_change end
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
@@ -529,7 +568,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "OVHCloud AI Endpoints error",
+			error: "OVHcloud AI Endpoints error",
 			values: { provider: "ovhcloud" },
 		})
 		// kilocode_change end

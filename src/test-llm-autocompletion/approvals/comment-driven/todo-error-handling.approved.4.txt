@@ -1,0 +1,5 @@
+function processData(data) {
+  try {
+    // TODO: Implement error handling<<<AUTOCOMPLETE_HERE>>>
+  return processedData;
+}

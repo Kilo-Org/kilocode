@@ -9,7 +9,7 @@ import { formatResponse } from "../prompts/responses"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { fileExistsAtPath } from "../../utils/fs"
 import { getReadablePath } from "../../utils/path"
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
+import { getKiloBaseUriFromToken } from "@roo-code/types"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
 import { type ClineProviderState } from "../webview/ClineProvider"
@@ -144,7 +144,9 @@ export async function editFileTool(
 		if (morphApplyResult && !morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("edit_file")
-			pushToolResult(formatResponse.toolError(`Failed to apply edit using Morph: ${morphApplyResult.error}`))
+			const error = `Failed to apply edit using Fast Apply. Please disable the Fast Apply experimental feature if this error persists. ${morphApplyResult.error}`
+			cline.say("error", error)
+			pushToolResult(formatResponse.toolError(error))
 			return
 		}
 

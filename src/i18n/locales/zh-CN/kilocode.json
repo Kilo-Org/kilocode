@@ -79,6 +79,7 @@
 				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
 				"lastCompletion": "最后建议:",
 				"sessionTotal": "会话总费用:",
+				"provider": "提供商:",
 				"model": "模型:"
 			},
 			"cost": {
@@ -104,7 +105,6 @@
 			"cancelSuggestions": "取消建议编辑",
 			"applyCurrentSuggestion": "应用当前建议编辑",
 			"applyAllSuggestions": "应用所有建议编辑",
-			"promptCodeSuggestion": "快速任务",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -135,5 +135,10 @@
 			"cancelButton": "取消"
 		},
 		"tipMessage": "Kilo Code: 按下 {{shortcut}} 生成终端命令"
+	},
+	"creditsstatusbar": {
+		"loading": "加载中...",
+		"clickToRefresh": "点击刷新",
+		"minute": "分钟"
 	}
 }

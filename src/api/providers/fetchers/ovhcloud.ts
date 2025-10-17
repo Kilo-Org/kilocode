@@ -23,7 +23,7 @@ export async function getOvhCloudAiEndpointsModels(): Promise<Record<string, Mod
 		}
 	} catch (error) {
 		console.error(
-			`Error fetching OVHCloud AI Endpoints models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+			`Error fetching OVHcloud AI Endpoints models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
 		)
 	}
 

@@ -2,17 +2,11 @@ import * as vscode from "vscode"
 import type { GhostServiceSettings } from "@roo-code/types"
 
 export class GhostGutterAnimation {
-	private state: "hide" | "wait" | "active" = "hide"
-	private decorationWait: vscode.TextEditorDecorationType
+	private state: "hide" | "active" = "hide"
 	private decorationActive: vscode.TextEditorDecorationType
 	private isEnabled: boolean = true
 
 	public constructor(context: vscode.ExtensionContext) {
-		this.decorationWait = vscode.window.createTextEditorDecorationType({
-			gutterIconPath: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "logo-outline-black.gif"),
-			gutterIconSize: "30px",
-			isWholeLine: false,
-		})
 		this.decorationActive = vscode.window.createTextEditorDecorationType({
 			gutterIconPath: vscode.Uri.joinPath(context.extensionUri, "assets", "icons", "logo-outline-yellow.gif"),
 			gutterIconSize: "30px",
@@ -31,7 +25,6 @@ export class GhostGutterAnimation {
 		const editor = vscode.window.activeTextEditor
 		if (editor) {
 			editor.setDecorations(this.decorationActive, [])
-			editor.setDecorations(this.decorationWait, [])
 		}
 	}
 
@@ -54,18 +47,7 @@ export class GhostGutterAnimation {
 		}
 
 		const position = this.getPosition(editor)
-		if (this.state == "wait") {
-			editor.setDecorations(this.decorationActive, [])
-			editor.setDecorations(this.decorationWait, [position])
-			return
-		}
-		editor.setDecorations(this.decorationWait, [])
 		editor.setDecorations(this.decorationActive, [position])
-	}
-
-	public wait() {
-		this.state = "wait"
-		this.update()
 	}
 
 	public active() {
@@ -81,8 +63,6 @@ export class GhostGutterAnimation {
 	public dispose() {
 		const editor = vscode.window.activeTextEditor
 		editor?.setDecorations(this.decorationActive, [])
-		editor?.setDecorations(this.decorationWait, [])
-		this.decorationWait.dispose()
 		this.decorationActive.dispose()
 	}
 }

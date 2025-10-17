@@ -324,8 +324,10 @@
 		"sambaNovaApiKey": "Clé API SambaNova",
 		"getHuggingFaceApiKey": "Obtenir la clé API Hugging Face",
 		"huggingFaceApiKey": "Clé API Hugging Face",
-		"getOvhCloudAiEndpointsApiKey": "Obtenir la clé API d'OVHCloud AI Endpoints",
-		"ovhCloudAiEndpointsApiKey": "Clé API d'OVHCloud AI Endpoints",
+		"getOvhCloudAiEndpointsApiKey": "Obtenir la clé API d'OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clé API d'OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL de base",
+		"getOvhCloudAiEndpointsBaseUrl": "Utiliser une URL de base personnalisée",
 		"huggingFaceModelId": "ID du modèle",
 		"huggingFaceLoading": "Chargement...",
 		"huggingFaceModelsCount": "({{count}} modèles)",
@@ -892,6 +894,7 @@
 			"regionMismatch": "Attention : La région dans votre ARN ({{arnRegion}}) ne correspond pas à votre région sélectionnée ({{region}}). Cela peut causer des problèmes d'accès. Le fournisseur utilisera la région de l'ARN."
 		},
 		"modelAvailability": "L'ID de modèle ({{modelId}}) que vous avez fourni n'est pas disponible. Veuillez choisir un modèle différent.",
+		"modelDeprecated": "Ce modèle n'est plus disponible. Veuillez sélectionner un modèle différent.",
 		"providerNotAllowed": "Le fournisseur '{{provider}}' n'est pas autorisé par votre organisation",
 		"modelNotAllowed": "Le modèle '{{model}}' n'est pas autorisé pour le fournisseur '{{provider}}' par votre organisation",
 		"profileInvalid": "Ce profil contient un fournisseur ou un modèle qui n'est pas autorisé par votre organisation",
@@ -939,6 +942,10 @@
 			"label": "Masquer le coût en dessous du seuil",
 			"currentValue": "Seuil actuel : ${{value}}",
 			"description": "N'afficher que les coûts de requête supérieurs à ce montant. Les coûts sont toujours visibles lorsque le volet de détails est ouvert."
+		},
+		"showTimestamps": {
+			"label": "Afficher les horodatages",
+			"description": "Afficher l'horodatage pour chaque message dans la vue de discussion"
 		}
 	},
 	"ghost": {

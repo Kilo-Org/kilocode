@@ -144,6 +144,7 @@ const sidebars: SidebarsConfig = {
 						"features/footgun-prompting",
 					],
 				},
+				"features/auto-launch-configuration",
 				"features/experimental/experimental-features",
 			],
 		},

@@ -188,10 +188,6 @@ function shouldDisableReasoning(modelId: string, reasoningEffort: ReasoningEffor
 		modelId.startsWith("deepseek/deepseek-chat-v3.1") ||
 		modelId.startsWith("x-ai/grok-4-fast") ||
 		modelId.startsWith("z-ai/glm-4.6")
-	return (
-		(supportsReasoningToggle && reasoningEffort === "minimal") ||
-		// 2025-10-01: GLM-4.6 seems completely broken with reasoning (it outputs tool calls as reasoning)
-		modelId.startsWith("z-ai/glm-4.6")
-	)
+	return supportsReasoningToggle && reasoningEffort === "minimal"
 }
 // kilocode_change end

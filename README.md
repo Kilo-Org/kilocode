@@ -8,7 +8,7 @@
 
 # 🚀 Kilo Code
 
-> Open-source VS Code AI agent. We frequently merge features from open-source projects while building our own vision.
+> Kilo is an open-source VS Code AI agent. We frequently merge features from open-source projects while building our own vision.
 
 - ✨ Generate code from natural language
 - ✅ Checks its own work
@@ -27,10 +27,10 @@
 
 ## Key Features
 
-- **Code Generation:** Generate code using natural language.
-- **Task Automation:** Automate repetitive coding tasks.
-- **Automated Refactoring:** Refactor and improve existing code.
-- **MCP Server Marketplace**: Easily find, and use MCP servers to extend the agent capabilities.
+- **Code Generation:** Kilo can generate code using natural language.
+- **Task Automation:** Kilo can automate repetitive coding tasks.
+- **Automated Refactoring:** Kilo can refactor and improve existing code.
+- **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
 ## How to get started with Kilo Code
@@ -45,7 +45,7 @@
 
 For details on building and developing the extension, see [DEVELOPMENT.md](/DEVELOPMENT.md)
 
-## Contributors
+## Contributors to Kilo
 
 Thanks to all the contributors who help make Kilo Code better!
 

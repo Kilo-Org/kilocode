@@ -9,10 +9,34 @@ import { GeminiHandler } from "../gemini"
 
 const GEMINI_20_FLASH_THINKING_NAME = "gemini-2.0-flash-thinking-exp-1219"
 
+// kilocode_change start
+const getGeminiModelsMock = vi.hoisted(() => vi.fn())
+
+vi.mock("../fetchers/gemini", () => ({
+	getGeminiModels: getGeminiModelsMock,
+}))
+// kilocode_change end
+
 describe("GeminiHandler", () => {
 	let handler: GeminiHandler
 
 	beforeEach(() => {
+		// kilocode_change start
+		getGeminiModelsMock.mockReset()
+		getGeminiModelsMock.mockResolvedValue({
+			[geminiDefaultModelId]: {
+				maxTokens: 8192,
+				contextWindow: 131_072,
+				supportsPromptCache: false,
+			},
+			[GEMINI_20_FLASH_THINKING_NAME]: {
+				maxTokens: 8192,
+				contextWindow: 131_072,
+				supportsPromptCache: false,
+			},
+		})
+		// kilocode_change end
+
 		// Create mock functions
 		const mockGenerateContentStream = vitest.fn()
 		const mockGenerateContent = vitest.fn()

@@ -325,8 +325,10 @@
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
-		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHCloud AI Endpoints",
-		"ovhCloudAiEndpointsApiKey": "Chiave API OVHCloud AI Endpoints",
+		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL di base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usa un URL di base personalizzato",
 		"huggingFaceModelId": "ID modello",
 		"huggingFaceLoading": "Caricamento...",
 		"huggingFaceModelsCount": "({{count}} modelli)",
@@ -894,6 +896,7 @@
 			"regionMismatch": "Attenzione: La regione nel tuo ARN ({{arnRegion}}) non corrisponde alla regione selezionata ({{region}}). Questo potrebbe causare problemi di accesso. Il provider utilizzerà la regione dall'ARN."
 		},
 		"modelAvailability": "L'ID modello ({{modelId}}) fornito non è disponibile. Seleziona un modello diverso.",
+		"modelDeprecated": "Questo modello non è più disponibile. Seleziona un modello diverso.",
 		"providerNotAllowed": "Il fornitore '{{provider}}' non è consentito dalla tua organizzazione",
 		"modelNotAllowed": "Il modello '{{model}}' non è consentito per il fornitore '{{provider}}' dalla tua organizzazione.",
 		"profileInvalid": "Questo profilo contiene un fornitore o un modello non consentito dalla tua organizzazione.",
@@ -941,6 +944,10 @@
 			"label": "Nascondi costo sotto la soglia",
 			"currentValue": "Soglia attuale: ${{value}}",
 			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
+		},
+		"showTimestamps": {
+			"label": "Mostra timestamp",
+			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
 		}
 	},
 	"ghost": {

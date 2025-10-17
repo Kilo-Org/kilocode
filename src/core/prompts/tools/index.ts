@@ -1,4 +1,8 @@
-import type { ToolName, ModeConfig } from "@roo-code/types"
+import type {
+	ToolName,
+	ModeConfig,
+	ToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
