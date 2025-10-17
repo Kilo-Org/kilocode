@@ -1,5 +1,4 @@
 import { getKiloUrl } from "../kilocode/url"
-import { getKiloUrlFromToken } from "../kilocode/token"
 
 describe("getKiloUrl", () => {
 	const originalEnv = process.env.KILOCODE_BACKEND_BASE_URL
@@ -149,22 +148,71 @@ describe("getKiloUrl", () => {
 		})
 	})
 
-	describe("Window environment variable", () => {
-		const originalWindow = global.window
+	describe("Error handling", () => {
+		it("should handle URL parsing errors gracefully", () => {
+			// Mock console.warn to verify it's called
+			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-		afterEach(() => {
-			global.window = originalWindow
+			const invalidUrl = "not-a-url-at-all"
+			const result = getKiloUrl(invalidUrl)
+
+			expect(result).toBe(invalidUrl)
+			expect(consoleSpy).toHaveBeenCalledWith("Failed to parse URL in getKiloUrl:", invalidUrl, expect.any(Error))
+
+			consoleSpy.mockRestore()
 		})
 
-		it("should use window.KILOCODE_BACKEND_BASE_URL when available", () => {
-			// Mock window object
-			global.window = {
-				KILOCODE_BACKEND_BASE_URL: "http://localhost:4000",
-			} as any
+		it("should handle malformed kilocode URLs", () => {
+			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 
-			// This test verifies the priority order but doesn't test dynamic re-import
-			// since the globalKilocodeBackendUrl is evaluated at module load time
-			expect(true).toBe(true) // Placeholder test
+			const malformedUrl = "https://kilocode.ai:invalid-port"
+			const result = getKiloUrl(malformedUrl)
+
+			expect(result).toBe(malformedUrl)
+			expect(consoleSpy).toHaveBeenCalled()
+
+			consoleSpy.mockRestore()
+		})
+	})
+
+	describe("Trailing slash handling", () => {
+		it("should remove trailing slash from base URLs", () => {
+			const result = getKiloUrl("https://kilocode.ai/")
+			expect(result).toBe("https://kilocode.ai")
+		})
+
+		it("should remove trailing slash from base localhost URLs", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
+			const result = getKiloUrl("https://kilocode.ai/")
+			expect(result).toBe("http://localhost:3000")
+		})
+
+		it("should preserve trailing slash for meaningful paths", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
+			const result = getKiloUrl("https://api.kilocode.ai/test/")
+			expect(result).toBe("http://localhost:3000/api/test/")
+		})
+
+		it("should handle empty pathname correctly", () => {
+			const result = getKiloUrl("https://kilocode.ai")
+			expect(result).toBe("https://kilocode.ai")
+		})
+	})
+
+	describe("Helper functions coverage", () => {
+		beforeEach(() => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
+		})
+
+		it("should handle no subdomain case", () => {
+			const result = getKiloUrl("https://kilocode.ai/path")
+			expect(result).toBe("http://localhost:3000/path")
+		})
+
+		it("should detect localhost development correctly", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://127.0.0.1:8080"
+			const result = getKiloUrl("https://api.kilocode.ai/test")
+			expect(result).toBe("http://127.0.0.1:8080/api/test")
 		})
 	})
 })
