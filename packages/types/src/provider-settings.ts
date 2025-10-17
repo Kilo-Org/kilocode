@@ -59,6 +59,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"aistupidlevel",
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -490,6 +491,11 @@ const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({
 	vercelAiGatewayModelId: z.string().optional(),
 })
 
+const aiStupidLevelSchema = baseProviderSettingsSchema.extend({
+	aiStupidLevelApiKey: z.string().optional(),
+	aiStupidLevelModelId: z.string().optional(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -537,6 +543,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
+	aiStupidLevelSchema.merge(z.object({ apiProvider: z.literal("aistupidlevel") })),
 	defaultSchema,
 ])
 
@@ -583,6 +590,7 @@ export const providerSettingsSchema = z.object({
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
+	...aiStupidLevelSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 	...ovhcloudSchema.shape, // kilocode_change
 })
@@ -620,6 +628,7 @@ export const modelIdKeys = [
 	"deepInfraModelId",
 	"kilocodeModel",
 	"ovhCloudAiEndpointsModelId", // kilocode_change
+	"aiStupidLevelModelId",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -676,6 +685,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	kilocode: "kilocodeModel",
 	"virtual-quota-fallback": "apiModelId",
 	ovhcloud: "ovhCloudAiEndpointsModelId", // kilocode_change
+	aistupidlevel: "aiStupidLevelModelId",
 }
 
 /**
@@ -827,4 +837,5 @@ export const MODELS_BY_PROVIDER: Record<
 	// kilocode_change end
 	deepinfra: { id: "deepinfra", label: "DeepInfra", models: [] },
 	"vercel-ai-gateway": { id: "vercel-ai-gateway", label: "Vercel AI Gateway", models: [] },
+	aistupidlevel: { id: "aistupidlevel", label: "AIStupidLevel", models: [] },
 }
