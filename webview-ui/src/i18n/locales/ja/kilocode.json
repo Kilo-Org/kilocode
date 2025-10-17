@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "メモリ使用率が{{percentage}}%に達しています。クラッシュを防ぐためにIDEを再起動してください。"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "リリースノートを表示"
 	}
 }

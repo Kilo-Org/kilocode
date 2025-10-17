@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "Využití paměti je na {{percentage}}%. Restartuj prosím své IDE, aby se předešlo pádům."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Zobrazit poznámky k vydání"
 	}
 }

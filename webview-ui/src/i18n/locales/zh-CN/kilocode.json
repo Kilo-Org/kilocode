@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "内存使用率已达 {{percentage}}%。请重启 IDE 以防止崩溃。"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "查看版本说明"
 	}
 }

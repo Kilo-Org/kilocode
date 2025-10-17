@@ -261,5 +261,8 @@
 		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
 		"continueWith": "{{model}} ile devam et",
 		"continue": "Devam et"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Sürüm Notlarını Görüntüle"
 	}
 }

@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "메모리 사용량이 {{percentage}}%입니다. 충돌을 방지하려면 IDE를 재시작하세요."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "릴리스 노트 보기"
 	}
 }

@@ -261,5 +261,8 @@
 		"modelUnavailable": "⚠️ El model {{model}} no està disponible. Canvia a un model diferent per continuar.",
 		"continueWith": "Continua amb {{model}}",
 		"continue": "Continua"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Veure Notes de Versió"
 	}
 }

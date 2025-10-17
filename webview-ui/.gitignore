@@ -11,6 +11,9 @@
 # production
 /build
 
+# kilocode_change - Generated release notes files
+/src/generated/
+
 # misc
 .DS_Store
 .env.local

@@ -4,6 +4,7 @@ import { VSCodeButton, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
+import { REPOSITORY_URL } from "@/constants/repository"
 
 type SettingsFooterProps = HTMLAttributes<HTMLDivElement> & {
 	version: string
@@ -13,7 +14,7 @@ export const SettingsFooter = ({ version, className, ...props }: SettingsFooterP
 	<div className={cn("text-vscode-descriptionForeground p-5", className)} {...props}>
 		<p style={{ wordWrap: "break-word", margin: 0, padding: 0 }}>
 			If you have any questions or feedback, feel free to open an issue at{" "}
-			<VSCodeLink href="https://github.com/Kilo-Org/kilocode" style={{ display: "inline" }}>
+			<VSCodeLink href={REPOSITORY_URL} style={{ display: "inline" }}>
 				github.com/Kilo-Org/kilocode
 			</VSCodeLink>{" "}
 			or join{" "}

@@ -261,5 +261,8 @@
 	"toolCallStyle": {
 		"title": "Stile Chiamata Strumenti",
 		"description": "Scegli come formattare le chiamate agli strumenti nel prompt di sistema. JSON è attualmente sperimentale e destinato principalmente agli utenti interessati a contribuire al suo sviluppo."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Visualizza Note di Rilascio"
 	}
 }

@@ -261,5 +261,8 @@
 		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
 		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",
 		"imagesRemovedNoSupport": "Images supprimées, non prises en charge par le modèle."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Voir les Notes de Version"
 	}
 }

@@ -260,5 +260,8 @@
 	},
 	"memoryWarning": {
 		"message": "Speicherauslastung liegt bei {{percentage}}%. Bitte starte deine IDE neu, um Abstürze zu vermeiden."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Versionshinweise anzeigen"
 	}
 }

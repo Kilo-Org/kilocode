@@ -12,8 +12,10 @@ import type { TelemetrySetting } from "@roo-code/types"
 import { Package } from "@roo/package"
 
 import { vscode } from "@/utils/vscode"
+import { REPOSITORY_URL } from "@/constants/repository"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui"
+import { ManualReleaseNotesButton } from "@/components/release-notes" // kilocode_change
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
@@ -67,7 +69,7 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 					<Trans
 						i18nKey="settings:footer.feedback"
 						components={{
-							githubLink: <VSCodeLink href="https://github.com/Kilo-Org/kilocode" />,
+							githubLink: <VSCodeLink href={REPOSITORY_URL} />,
 							redditLink: <VSCodeLink href="https://reddit.com/r/kilocode" />,
 							discordLink: <VSCodeLink href="https://kilocode.ai/discord" />,
 						}}
@@ -101,6 +103,10 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 						<TriangleAlert className="p-0.5" />
 						{t("settings:footer.settings.reset")}
 					</Button>
+				</div>
+
+				<div className="flex flex-wrap items-center gap-2 mt-2">
+					<ManualReleaseNotesButton />
 				</div>
 
 				{

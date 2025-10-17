@@ -261,5 +261,8 @@
 		"modelUnavailable": "⚠️ मॉडल {{model}} उपलब्ध नहीं है। जारी रखने के लिए एक अलग मॉडल पर स्विच करें।",
 		"continueWith": "{{model}} के साथ जारी रखें",
 		"continue": "जारी रखें"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "रिलीज़ नोट्स देखें"
 	}
 }

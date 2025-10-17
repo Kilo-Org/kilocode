@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "Użycie pamięci wynosi {{percentage}}%. Uruchom ponownie IDE, aby zapobiec awariom."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Zobacz Notatki Wydania"
 	}
 }

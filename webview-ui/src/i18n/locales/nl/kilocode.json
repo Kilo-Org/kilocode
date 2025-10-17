@@ -261,5 +261,8 @@
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
 		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",
 		"imagesRemovedNoSupport": "Afbeeldingen verwijderd, niet ondersteund door model."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Bekijk Release Notes"
 	}
 }

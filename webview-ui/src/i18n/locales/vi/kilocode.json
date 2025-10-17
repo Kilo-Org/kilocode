@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "Mức sử dụng bộ nhớ đang ở {{percentage}}%. Vui lòng khởi động lại IDE của bạn để tránh sự cố."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Xem Ghi chú Phát hành"
 	}
 }

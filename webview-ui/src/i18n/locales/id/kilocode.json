@@ -261,5 +261,8 @@
 	"toolCallStyle": {
 		"title": "Gaya Panggilan Tool",
 		"description": "Pilih bagaimana panggilan tool diformat dalam prompt sistem. JSON saat ini bersifat eksperimental dan sebagian besar ditujukan untuk pengguna yang tertarik berkontribusi pada pengembangannya."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Lihat Catatan Rilis"
 	}
 }

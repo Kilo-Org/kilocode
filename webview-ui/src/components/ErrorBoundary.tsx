@@ -2,6 +2,7 @@ import React, { Component } from "react"
 import { telemetryClient } from "@src/utils/TelemetryClient"
 import { withTranslation, WithTranslation } from "react-i18next"
 import { enhanceErrorWithSourceMaps } from "@src/utils/sourceMapUtils"
+import { REPOSITORY_URL } from "@src/constants/repository"
 
 type ErrorProps = {
 	children: React.ReactNode
@@ -71,7 +72,7 @@ class ErrorBoundary extends Component<ErrorProps, ErrorState> {
 				</h2>
 				<p className="mb-4">
 					{t("errorBoundary.reportText")}{" "}
-					<a href="https://github.com/Kilo-Org/kilocode/issues" target="_blank" rel="noreferrer">
+					<a href={`${REPOSITORY_URL}/issues`} target="_blank" rel="noreferrer">
 						{t("errorBoundary.githubText")}
 					</a>
 				</p>

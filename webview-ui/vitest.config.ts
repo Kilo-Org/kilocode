@@ -25,4 +25,5 @@ export default defineConfig({
 			vscode: path.resolve(__dirname, "./src/__mocks__/vscode.ts"),
 		},
 	},
+	assetsInclude: ["**/*.json"],
 })

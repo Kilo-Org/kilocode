@@ -261,5 +261,8 @@
 	},
 	"memoryWarning": {
 		"message": "記憶體使用量已達 {{percentage}}%。請重新啟動您的 IDE 以防止當機。"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "檢視版本說明"
 	}
 }

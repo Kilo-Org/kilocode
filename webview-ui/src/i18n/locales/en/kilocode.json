@@ -259,5 +259,8 @@
 		"clearUsageData": "Clear Usage Data",
 		"confirmClearTitle": "Are you sure?",
 		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "View Release Notes"
 	}
 }
