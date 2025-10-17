@@ -237,8 +237,8 @@ const ARROW_FUNCTIONS = [
 		language: "TypeScript",
 		cursorPosition: { line: 27, character: 11 },
 		definitionPositions: [
-			{ row: 26, column: 43 }, // Person
-			{ row: 26, column: 61 }, // Address
+			{ row: 26, column: 42 }, // Person
+			{ row: 26, column: 60 }, // Address
 		],
 	},
 ]
@@ -250,8 +250,8 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 4, character: 11 },
 		definitionPositions: [
-			{ row: 3, column: 33 }, // Person
-			{ row: 3, column: 43 }, // Address
+			{ row: 3, column: 32 }, // Person
+			{ row: 3, column: 42 }, // Address
 		],
 	},
 	{
@@ -260,7 +260,7 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 8, character: 11 },
 		definitionPositions: [
-			{ row: 7, column: 32 }, // Address
+			{ row: 7, column: 31 }, // Address
 		],
 	},
 	{
@@ -269,7 +269,7 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 12, character: 11 },
 		definitionPositions: [
-			{ row: 11, column: 26 }, // Person
+			{ row: 11, column: 25 }, // Person
 		],
 	},
 	{
@@ -278,7 +278,7 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 16, character: 11 },
 		definitionPositions: [
-			{ row: 15, column: 26 }, // Person
+			{ row: 15, column: 25 }, // Person
 		],
 	},
 	{
@@ -287,8 +287,8 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 20, character: 11 },
 		definitionPositions: [
-			{ row: 19, column: 29 }, // Person
-			{ row: 19, column: 41 }, // Address
+			{ row: 19, column: 28 }, // Person
+			{ row: 19, column: 40 }, // Address
 		],
 	},
 	{
@@ -297,10 +297,10 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 24, character: 11 },
 		definitionPositions: [
-			{ row: 23, column: 37 }, // Person
-			{ row: 23, column: 45 }, // Address
-			{ row: 23, column: 55 }, // Person
-			{ row: 23, column: 63 }, // Address
+			{ row: 23, column: 36 }, // Person
+			{ row: 23, column: 44 }, // Address
+			{ row: 23, column: 54 }, // Person
+			{ row: 23, column: 62 }, // Address
 		],
 	},
 	{
@@ -309,10 +309,10 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 28, character: 11 },
 		definitionPositions: [
-			{ row: 27, column: 35 }, // Person
-			{ row: 27, column: 45 }, // Address
-			{ row: 27, column: 54 }, // Person
-			{ row: 27, column: 64 }, // Address
+			{ row: 27, column: 34 }, // Person
+			{ row: 27, column: 44 }, // Address
+			{ row: 27, column: 53 }, // Person
+			{ row: 27, column: 63 }, // Address
 		],
 	},
 	{
@@ -321,8 +321,8 @@ const CLASS_METHODS = [
 		language: "TypeScript",
 		cursorPosition: { line: 32, character: 11 },
 		definitionPositions: [
-			{ row: 31, column: 36 }, // Person
-			{ row: 31, column: 54 }, // Address
+			{ row: 31, column: 35 }, // Person
+			{ row: 31, column: 53 }, // Address
 		],
 	},
 ]
