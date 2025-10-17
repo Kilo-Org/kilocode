@@ -767,8 +767,8 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Activer Fast Apply",
 			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite le fournisseur d'API Kilo Code, OpenRouter ou une clé API Morph.",
-			"apiKey": "Clé API Morph (optionnel)",
-			"placeholder": "Entrez votre clé API Morph (optionnel)",
+			"apiKey": "Clé API Morph",
+			"placeholder": "Entrez votre clé API Morph",
 			"modelLabel": "Sélection du modèle",
 			"modelDescription": "Choisissez quel modèle Fast Apply utiliser pour les éditions de fichiers",
 			"models": {

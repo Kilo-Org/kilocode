@@ -1468,6 +1468,11 @@ export const webviewMessageHandler = async (
 			await provider.postStateToWebview()
 			break
 		}
+		case "fastApplyApiProvider": {
+			await updateGlobalState("fastApplyApiProvider", message.text ?? "-")
+			await provider.postStateToWebview()
+			break
+		}
 		// kilocode_change end
 		case "updateVSCodeSetting": {
 			const { setting, value } = message
