@@ -14,7 +14,7 @@ interface ExtensionMessageRowProps {
 function ErrorFallback({ error }: { error: Error }) {
 	const theme = useTheme()
 	return (
-		<Box width={BOX_L1} borderColor={theme.semantic.error} borderStyle="single" padding={1} marginY={1}>
+		<Box width={BOX_L1} borderColor={theme.semantic.error} borderStyle="round" padding={1} marginY={1}>
 			<Text color={theme.semantic.error}>Error rendering message: {error.message}</Text>
 		</Box>
 	)

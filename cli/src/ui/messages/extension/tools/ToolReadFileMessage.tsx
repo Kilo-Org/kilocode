@@ -19,7 +19,7 @@ export const ToolReadFileMessage: React.FC<ToolMessageProps> = ({ toolData }) =>
 			<Box
 				width={BOX_L1}
 				flexDirection="column"
-				borderStyle="single"
+				borderStyle="round"
 				borderColor={theme.messages.user}
 				paddingX={1}
 				marginY={1}>

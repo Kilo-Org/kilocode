@@ -64,7 +64,7 @@ const SuggestionsMenu: React.FC<SuggestionsMenuProps> = ({ type, suggestions, se
 	const borderColor = type === "command" ? theme.ui.border.default : theme.ui.border.active
 
 	return (
-		<Box flexDirection="column" borderStyle="single" borderColor={borderColor} paddingX={1}>
+		<Box flexDirection="column" borderStyle="round" borderColor={borderColor} paddingX={1}>
 			<Text bold color={theme.semantic.info}>
 				{title}
 			</Text>
