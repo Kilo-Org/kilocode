@@ -106,8 +106,8 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
-import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
+import { getKiloUrlFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -1117,6 +1117,7 @@ ${prompt}
 						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1193,6 +1194,7 @@ ${prompt}
 				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -3358,9 +3360,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 				return result
 			}
 
-			const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
-			const url = `${baseUrl}/api/profile/balance`
-
+			const url = getKiloUrlFromToken(`https://api.kilocode.ai/api/profile/balance`, kilocodeToken)
 			this.log(`[fetchBalanceData] Fetching balance from: ${url}`)
 
 			const response = await axios.get(url, {

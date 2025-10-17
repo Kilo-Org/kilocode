@@ -17,6 +17,6 @@
 			"vscode": ["./mock-vscode.ts"]
 		}
 	},
-	"include": ["**/*.ts"],
+	"include": ["**/*.ts", "../shared/**/*.ts"],
 	"exclude": ["node_modules"]
 }
