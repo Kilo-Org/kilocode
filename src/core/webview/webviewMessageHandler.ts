@@ -6,7 +6,8 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
+import { getKiloUrl } from "../../shared/kilocode/url"
 import {
 	ProfileData,
 	SeeNewChangesPayload,
@@ -1973,7 +1974,7 @@ export const webviewMessageHandler = async (
 			} else if (answer === discordText) {
 				await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
 			} else if (answer === customerSupport) {
-				await vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai/support"))
+				await vscode.env.openExternal(vscode.Uri.parse(getKiloUrl("https://kilocode.ai/support")))
 			}
 			break
 		}
@@ -2594,12 +2595,8 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
-					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
-					{
-						headers,
-					},
-				)
+				const url = getKiloUrlFromToken(kilocodeToken, "https://api.kilocode.ai/api/profile")
+				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
 				const organizationExists = (response.data.organizations ?? []).some(
@@ -2694,10 +2691,8 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile/balance`, {
-					// Original path for balance
-					headers,
-				})
+				const url = getKiloUrlFromToken(kilocodeToken, "https://api.kilocode.ai/api/profile/balance")
+				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
 					payload: { success: true, data: response.data },
@@ -2725,9 +2720,12 @@ export const webviewMessageHandler = async (
 				const uiKind = message.values?.uiKind || "Desktop"
 				const source = uiKind === "Web" ? "web" : uriScheme
 
-				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+				const url = getKiloUrlFromToken(
+					kilocodeToken,
+					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+				)
 				const response = await axios.post(
-					`${baseUrl}/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					url,
 					{},
 					{
 						headers: {

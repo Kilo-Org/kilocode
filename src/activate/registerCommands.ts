@@ -17,6 +17,7 @@ import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
+import { getKiloUrl } from "../shared/kilocode/url"
 
 /**
  * Helper to get the visible ClineProvider instance or log if not found.
@@ -165,7 +166,7 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
 	},
 	helpButtonClicked: () => {
-		vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
+		vscode.env.openExternal(vscode.Uri.parse(getKiloUrl()))
 	},
 	// kilocode_change end
 	marketplaceButtonClicked: () => {
