@@ -371,40 +371,46 @@ export class GhostStreamingParser {
 	/**
 	 * Generate completion string from parsed changes
 	 * This converts the search/replace operations into a simple completion string
+	 *
+	 * The translator will insert the completion at cursor and diff against original.
+	 * The diff algorithm will figure out what changed, so we just return the full
+	 * modified content and let the diff handle it.
 	 */
 	private generateCompletionString(): string {
-		if (this.completedChanges.length === 0) {
+		if (this.completedChanges.length === 0 || !this.input) {
 			return ""
 		}
 
-		// For now, we'll use a simple approach: concatenate all replace content
-		// In the future, this could be more sophisticated
-		let completion = ""
+		// Get the current document content from prefix + suffix
+		const currentContent = this.prefix + this.suffix
+
+		// Apply all changes to generate the final content
+		let modifiedContent = currentContent
 
 		for (const change of this.completedChanges) {
-			// Remove cursor marker from replace content
+			// Remove cursor marker from both search and replace content
+			const cleanSearch = removeCursorMarker(change.search)
 			const cleanReplace = removeCursorMarker(change.replace)
-			
-			// If the search content contains the cursor marker, we're replacing at cursor position
-			if (change.search.includes(CURSOR_MARKER)) {
-				// Extract just the new content (what comes after the cursor marker in replace)
-				const searchParts = change.search.split(CURSOR_MARKER)
-				const beforeCursor = searchParts[0] || ""
-				
-				// The completion is what we're adding after the cursor
-				// We need to remove the "before cursor" part from the replace content
-				if (cleanReplace.startsWith(beforeCursor)) {
-					completion += cleanReplace.substring(beforeCursor.length)
-				} else {
-					completion += cleanReplace
-				}
+
+			// Find the search content in the current modified content
+			const searchIndex = findBestMatch(modifiedContent, cleanSearch)
+
+			if (searchIndex !== -1) {
+				// Replace the search content with the replace content
+				modifiedContent =
+					modifiedContent.substring(0, searchIndex) +
+					cleanReplace +
+					modifiedContent.substring(searchIndex + cleanSearch.length)
 			} else {
-				// If no cursor marker, just use the replace content
-				completion += cleanReplace
+				// If we can't find the search content, log warning
+				console.warn(`Could not find search content in document`)
 			}
 		}
 
-		return completion
+		// Return the full modified content
+		// The translator will insert this at cursor position and diff against original
+		// The diff algorithm will correctly identify what changed
+		return modifiedContent
 	}
 
 	/**

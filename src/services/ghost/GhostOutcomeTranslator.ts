@@ -32,8 +32,19 @@ export class GhostOutcomeTranslator {
 
 		// Apply completion at cursor position
 		const cursorOffset = document.offsetAt(cursorPosition)
-		const modifiedContent =
-			currentContent.substring(0, cursorOffset) + outcome.completion + currentContent.substring(cursorOffset)
+
+		// Check if this is a full document replacement (cursor at start)
+		// This happens with search/replace operations where the parser returns the full modified document
+		// The completion represents the entire new document content
+		let modifiedContent: string
+		if (cursorOffset === 0 && (outcome.prefix === "" || outcome.prefix.length === 0)) {
+			// Cursor is at the start of the document - treat completion as full document content
+			modifiedContent = outcome.completion
+		} else {
+			// Normal insertion at cursor
+			modifiedContent =
+				currentContent.substring(0, cursorOffset) + outcome.completion + currentContent.substring(cursorOffset)
+		}
 
 		// Generate diff between original and modified content
 		const relativePath = document.uri.fsPath
