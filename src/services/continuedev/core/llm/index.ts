@@ -245,6 +245,7 @@ export abstract class BaseLLM implements ILLM {
 		return `<${msg.role}>\n${contentToShow}\n\n`
 	}
 
+	// eslint-disable-next-line require-yield
 	protected async *_streamFim(
 		_prefix: string,
 		_suffix: string,
@@ -642,6 +643,7 @@ export abstract class BaseLLM implements ILLM {
 		throw new Error(`Reranking is not supported for provider type ${this.providerName}`)
 	}
 
+	// eslint-disable-next-line require-yield
 	protected async *_streamComplete(
 		_prompt: string,
 		_signal: AbortSignal,

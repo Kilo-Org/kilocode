@@ -307,6 +307,7 @@ export class WatsonXApi implements BaseLlmApi {
 		}
 	}
 
+	// eslint-disable-next-line require-yield
 	async *fimStream(): AsyncGenerator<ChatCompletionChunk, any, unknown> {
 		throw new Error("Method not implemented.")
 	}

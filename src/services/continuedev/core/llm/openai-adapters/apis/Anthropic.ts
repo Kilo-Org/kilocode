@@ -334,9 +334,11 @@ export class AnthropicApi implements BaseLlmApi {
 	async completionNonStream(_body: CompletionCreateParamsNonStreaming, _signal: AbortSignal): Promise<Completion> {
 		throw new Error("Method not implemented.")
 	}
+	// eslint-disable-next-line require-yield
 	async *completionStream(_body: CompletionCreateParamsStreaming, _signal: AbortSignal): AsyncGenerator<Completion> {
 		throw new Error("Method not implemented.")
 	}
+	// eslint-disable-next-line require-yield
 	async *fimStream(_body: FimCreateParamsStreaming, _signal: AbortSignal): AsyncGenerator<ChatCompletionChunk> {
 		throw new Error("Method not implemented.")
 	}

@@ -18,10 +18,14 @@
 		"strict": true,
 		"target": "ES2022",
 		"useDefineForClassFields": true,
-		"useUnknownInCatchVariables": false
+		"useUnknownInCatchVariables": false,
+		"paths": {
+			"core": ["./services/continuedev/core"],
+			"core/*": ["./services/continuedev/core/*"]
+		}
 	},
 	"include": ["."],
-	"exclude": ["node_modules", "services/continuedev/**"],
+	"exclude": ["node_modules"],
 	"watchOptions": {
 		"watchFile": "useFsEvents",
 		"watchDirectory": "useFsEvents",

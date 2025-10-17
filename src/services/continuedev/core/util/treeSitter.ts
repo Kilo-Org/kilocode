@@ -187,14 +187,12 @@ export async function getQueryForFile(filepathOrUri: string, queryPath: string):
 	// Resolve the query file from consolidated tree-sitter directory.
 	// Prefer repo-root/tree-sitter in tests and runtime, but also fall back to core-local layout.
 	const baseRoots = [
-		// Ensure we can resolve from the repo root first (…/continue)
-		path.resolve(__dirname, "..", "..", ".."),
-		// When tests run with cwd=core, still check there for backwards-compat
-		process.env.NODE_ENV === "test" ? process.cwd() : undefined, // e.g. .../continue/core (tests run from core/)
-		// Core directory (…/continue/core)
+		// In tests (running from src): src/services/continuedev/core/util -> src/services/continuedev
 		path.resolve(__dirname, "..", ".."),
-		// Legacy fallback: …/continue/core/util -> core
-		path.resolve(__dirname, ".."),
+		// In production (dist): dist/services/continuedev/core/util -> src/services/continuedev
+		path.resolve(__dirname, "..", "..", "..", "..", "src", "services", "continuedev"),
+		// Fallback: repo root
+		path.resolve(__dirname, "..", "..", "..", ".."),
 	].filter(Boolean) as string[]
 
 	let sourcePath: string | undefined = undefined

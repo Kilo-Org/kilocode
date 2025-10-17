@@ -39,7 +39,6 @@ export const getAutocompleteContext = async (
 	maxPromptTokens: number,
 	manuallyPassFileContents: string,
 	autocompleteModel?: ILLM | string,
-	// eslint-disable-next-line max-params
 ): Promise<string> => {
 	if (!recentlyEditedRanges) recentlyEditedRanges = []
 	if (!recentlyVisitedRanges) recentlyVisitedRanges = []

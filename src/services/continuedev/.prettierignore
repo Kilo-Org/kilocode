@@ -1,5 +1,0 @@
-# Ignore fixture files used for tree-sitter integration tests
-**/__fixtures__/**
-
-# Ignore temporary test directories
-**/testWorkspaceDir/**

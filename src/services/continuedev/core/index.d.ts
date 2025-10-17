@@ -148,40 +148,6 @@ export interface ContextProviderDescription {
 
 export type FetchFunction = (url: string | URL, init?: any) => Promise<any>
 
-export interface ContextProviderExtras {
-	config: ContinueConfig
-	fullInput: string
-	embeddingsProvider: ILLM | null
-	reranker: ILLM | null
-	llm: ILLM
-	ide: IDE
-	selectedCode: RangeInFile[]
-	fetch: FetchFunction
-	isInAgentMode: boolean
-}
-
-export interface LoadSubmenuItemsArgs {
-	config: ContinueConfig
-	ide: IDE
-	fetch: FetchFunction
-}
-export interface ContextSubmenuItem {
-	id: string
-	title: string
-	description: string
-	icon?: string
-	metadata?: any
-}
-
-export interface SiteIndexingConfig {
-	title: string
-	startUrl: string
-	maxDepth?: number
-	faviconUrl?: string
-	useLocalCrawling?: boolean
-	sourceFile?: string
-}
-
 export interface RangeInFile {
 	filepath: string
 	range: Range
@@ -652,24 +618,9 @@ export class SignatureInformation {
 	 * the UI.
 	 */
 	label: string
-
-	/**
-	 * The parameters of this signature.
-	 */
-	parameters: ParameterInformation[]
-
-	/**
-	 * The index of the active parameter.
-	 *
-	 * If provided, this is used in place of {@linkcode SignatureHelp.activeParameter}.
-	 */
-	activeParameter?: number
 }
 
 export type ConfigMergeType = "merge" | "overwrite"
-
-// in the actual Continue source code
-export interface ContinueConfig {}
 
 export interface CompiledMessagesResult {
 	compiledChatMessages: ChatMessage[]

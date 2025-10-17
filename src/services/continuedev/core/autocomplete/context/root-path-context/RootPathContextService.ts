@@ -85,13 +85,9 @@ export class RootPathContextService {
 
 		const queries = query.matches(node).map(async (match) => {
 			for (const item of match.captures) {
-				try {
-					const endPosition = item.node.endPosition
-					const newSnippets = await this.getSnippets(filepath, endPosition, language)
-					snippets.push(...newSnippets)
-				} catch (e) {
-					throw e
-				}
+				const endPosition = item.node.endPosition
+				const newSnippets = await this.getSnippets(filepath, endPosition, language)
+				snippets.push(...newSnippets)
 			}
 		})
 

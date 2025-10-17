@@ -22,6 +22,8 @@ export class JinaApi implements BaseLlmApi {
 	async chatCompletionNonStream(_body: ChatCompletionCreateParamsNonStreaming): Promise<ChatCompletion> {
 		throw new Error("Method not implemented.")
 	}
+
+	// eslint-disable-next-line require-yield
 	async *chatCompletionStream(
 		_body: ChatCompletionCreateParamsStreaming,
 	): AsyncGenerator<ChatCompletionChunk, any, unknown> {
@@ -30,9 +32,11 @@ export class JinaApi implements BaseLlmApi {
 	async completionNonStream(_body: CompletionCreateParamsNonStreaming): Promise<Completion> {
 		throw new Error("Method not implemented.")
 	}
+	// eslint-disable-next-line require-yield
 	async *completionStream(_body: CompletionCreateParamsStreaming): AsyncGenerator<Completion, any, unknown> {
 		throw new Error("Method not implemented.")
 	}
+	// eslint-disable-next-line require-yield
 	async *fimStream(_body: FimCreateParamsStreaming): AsyncGenerator<ChatCompletionChunk, any, unknown> {
 		throw new Error("Method not implemented.")
 	}
