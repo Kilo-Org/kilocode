@@ -30,6 +30,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import { Package } from "../../../shared/package"
+import { indexFromCodeBlocks } from "../KiloOrgCodeIndexer"
 
 export class DirectoryScanner implements IDirectoryScanner {
 	private _cancelled = false // kilocode_change
@@ -515,38 +516,49 @@ export class DirectoryScanner implements IDirectoryScanner {
 				if (this._cancelled) return // kilocode_change
 
 				console.debug(`[DirectoryScanner] Creating embeddings for ${batchTexts.length} texts`) // kilocode_change
+				const kiloOrgProps = this.getKiloOrgCodeIndexProps()
+				if (kiloOrgProps) {
+					await indexFromCodeBlocks({
+						blocks: batchBlocks,
+						cwd: scanWorkspace,
+						kilocodeToken: kiloOrgProps.kilocodeToken,
+						// We want to plumb through org here but we're going to hardcode for now
+						organizationId: kiloOrgProps.organizationId,
+					})
+				} else {
+					const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+					console.debug(`[DirectoryScanner] Successfully created ${embeddings.length} embeddings`) // kilocode_change
 
-				const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
-				console.debug(`[DirectoryScanner] Successfully created ${embeddings.length} embeddings`) // kilocode_change
+					// Prepare points for Qdrant
+					console.debug("[DirectoryScanner] Preparing points for Qdrant upsert") // kilocode_change
+					const points = batchBlocks.map((block, index) => {
+						const normalizedAbsolutePath = generateNormalizedAbsolutePath(block.file_path, scanWorkspace)
 
-				// Prepare points for Qdrant
-				console.debug("[DirectoryScanner] Preparing points for Qdrant upsert") // kilocode_change
-				const points = batchBlocks.map((block, index) => {
-					const normalizedAbsolutePath = generateNormalizedAbsolutePath(block.file_path, scanWorkspace)
+						// Use segmentHash for unique ID generation to handle multiple segments from same line
+						const pointId = uuidv5(block.segmentHash, QDRANT_CODE_BLOCK_NAMESPACE)
 
-					// Use segmentHash for unique ID generation to handle multiple segments from same line
-					const pointId = uuidv5(block.segmentHash, QDRANT_CODE_BLOCK_NAMESPACE)
+						return {
+							id: pointId,
+							vector: embeddings[index],
+							payload: {
+								filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
+								codeChunk: block.content,
+								startLine: block.start_line,
+								endLine: block.end_line,
+								segmentHash: block.segmentHash,
+							},
+						}
+					})
+					console.debug(`[DirectoryScanner] Prepared ${points.length} points for Qdrant`) // kilocode_change
 
-					return {
-						id: pointId,
-						vector: embeddings[index],
-						payload: {
-							filePath: generateRelativeFilePath(normalizedAbsolutePath, scanWorkspace),
-							codeChunk: block.content,
-							startLine: block.start_line,
-							endLine: block.end_line,
-							segmentHash: block.segmentHash,
-						},
-					}
-				})
-				console.debug(`[DirectoryScanner] Prepared ${points.length} points for Qdrant`) // kilocode_change
+					// Upsert points to Qdrant
+					if (this._cancelled) return // kilocode_change
 
-				// Upsert points to Qdrant
-				if (this._cancelled) return // kilocode_change
+					console.debug("[DirectoryScanner] Starting Qdrant upsert") // kilocode_change
 
-				console.debug("[DirectoryScanner] Starting Qdrant upsert") // kilocode_change
+					await this.qdrantClient.upsertPoints(points)
+				}
 
-				await this.qdrantClient.upsertPoints(points)
 				console.debug("[DirectoryScanner] Completed Qdrant upsert") // kilocode_change
 				onBlocksIndexed?.(batchBlocks.length)
 
@@ -603,4 +615,19 @@ export class DirectoryScanner implements IDirectoryScanner {
 			}
 		}
 	}
+
+	// kilocode_change start Add ability to set kilo specific props
+	private _kiloOrgCodeIndexProps: {
+		organizationId: string
+		kilocodeToken: string
+	} | null = null
+
+	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
+		this._kiloOrgCodeIndexProps = props
+	}
+
+	public getKiloOrgCodeIndexProps() {
+		return this._kiloOrgCodeIndexProps
+	}
+	// kilocode_change start
 }

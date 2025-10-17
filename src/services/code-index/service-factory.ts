@@ -206,6 +206,7 @@ export class CodeIndexServiceFactory {
 
 	/**
 	 * Creates all required service dependencies if the service is properly configured.
+	 * kilocode_change: In Kilo org mode, only creates scanner without embedder/vector store
 	 * @throws Error if the service is not properly configured
 	 */
 	public createServices(
@@ -214,15 +215,34 @@ export class CodeIndexServiceFactory {
 		ignoreInstance: Ignore,
 		rooIgnoreController?: RooIgnoreController,
 	): {
-		embedder: IEmbedder
-		vectorStore: IVectorStore
+		embedder: IEmbedder | null
+		vectorStore: IVectorStore | null
 		parser: ICodeParser
 		scanner: DirectoryScanner
-		fileWatcher: IFileWatcher
+		fileWatcher: IFileWatcher | null
 	} {
 		if (!this.configManager.isFeatureConfigured) {
 			throw new Error(t("embeddings:serviceFactory.codeIndexingNotConfigured"))
 		}
+
+		// kilocode_change start: Handle Kilo org mode
+		const isKiloOrgMode = this.configManager.isKiloOrgMode
+
+		if (isKiloOrgMode) {
+			// In Kilo org mode, we only need the scanner and parser
+			// No embedder or vector store needed as indexing happens server-side
+			const parser = codeParser
+			const scanner = this.createDirectoryScanner(null as any, null as any, parser, ignoreInstance)
+
+			return {
+				embedder: null,
+				vectorStore: null,
+				parser,
+				scanner,
+				fileWatcher: null, // File watcher not needed in Kilo org mode
+			}
+		}
+		// kilocode_change end
 
 		const embedder = this.createEmbedder()
 		const vectorStore = this.createVectorStore()

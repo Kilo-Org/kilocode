@@ -22,18 +22,26 @@ export class CodeIndexOrchestrator {
 		private readonly stateManager: CodeIndexStateManager,
 		private readonly workspacePath: string,
 		private readonly cacheManager: CacheManager,
-		private readonly vectorStore: IVectorStore,
+		private readonly vectorStore: IVectorStore | null, // kilocode_change: nullable for Kilo org mode
 		private readonly scanner: DirectoryScanner,
-		private readonly fileWatcher: IFileWatcher,
+		private readonly fileWatcher: IFileWatcher | null, // kilocode_change: nullable for Kilo org mode
 	) {}
 
 	/**
 	 * Starts the file watcher if not already running.
+	 * kilocode_change: Skip in Kilo org mode
 	 */
 	private async _startWatcher(): Promise<void> {
 		if (!this.configManager.isFeatureConfigured) {
 			throw new Error("Cannot start watcher: Service not configured.")
 		}
+
+		// kilocode_change start: Skip file watcher in Kilo org mode
+		if (this.configManager.isKiloOrgMode || !this.fileWatcher) {
+			this.stateManager.setSystemState("Indexed", "Indexing complete (Kilo org mode)")
+			return
+		}
+		// kilocode_change end
 
 		this.stateManager.setSystemState("Indexing", "Initializing file watcher...")
 
@@ -126,11 +134,15 @@ export class CodeIndexOrchestrator {
 		this.stateManager.setSystemState("Indexing", "Initializing services...")
 
 		try {
-			const collectionCreated = await this.vectorStore.initialize()
+			// kilocode_change start: Skip vector store initialization in Kilo org mode
+			if (!this.configManager.isKiloOrgMode && this.vectorStore) {
+				const collectionCreated = await this.vectorStore.initialize()
 
-			if (collectionCreated) {
-				await this.cacheManager.clearCacheFile()
+				if (collectionCreated) {
+					await this.cacheManager.clearCacheFile()
+				}
 			}
+			// kilocode_change end
 
 			// kilocode_change start
 			if (this._cancelRequested) {
@@ -232,16 +244,20 @@ export class CodeIndexOrchestrator {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "startIndexing",
 			})
-			try {
-				await this.vectorStore.clearCollection()
-			} catch (cleanupError) {
-				console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
-				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-					error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-					stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
-					location: "startIndexing.cleanup",
-				})
+			// kilocode_change start: Skip vector store cleanup in Kilo org mode
+			if (!this.configManager.isKiloOrgMode && this.vectorStore) {
+				try {
+					await this.vectorStore.clearCollection()
+				} catch (cleanupError) {
+					console.error("[CodeIndexOrchestrator] Failed to clean up after error:", cleanupError)
+					TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
+						error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+						stack: cleanupError instanceof Error ? cleanupError.stack : undefined,
+						location: "startIndexing.cleanup",
+					})
+				}
 			}
+			// kilocode_change end
 
 			await this.cacheManager.clearCacheFile()
 
@@ -259,9 +275,12 @@ export class CodeIndexOrchestrator {
 
 	/**
 	 * Stops the file watcher and cleans up resources.
+	 * kilocode_change: Handle null file watcher in Kilo org mode
 	 */
 	public stopWatcher(): void {
-		this.fileWatcher.dispose()
+		if (this.fileWatcher) {
+			this.fileWatcher.dispose()
+		}
 		this._fileWatcherSubscriptions.forEach((sub) => sub.dispose())
 		this._fileWatcherSubscriptions = []
 
@@ -308,11 +327,15 @@ export class CodeIndexOrchestrator {
 			await this.stopWatcher()
 
 			try {
-				if (this.configManager.isFeatureConfigured) {
+				// kilocode_change start: Skip vector store operations in Kilo org mode
+				if (this.configManager.isFeatureConfigured && !this.configManager.isKiloOrgMode && this.vectorStore) {
 					await this.vectorStore.deleteCollection()
 				} else {
-					console.warn("[CodeIndexOrchestrator] Service not configured, skipping vector collection clear.")
+					console.warn(
+						"[CodeIndexOrchestrator] Service not configured or in Kilo org mode, skipping vector collection clear.",
+					)
 				}
+				// kilocode_change end
 			} catch (error: any) {
 				console.error("[CodeIndexOrchestrator] Failed to clear vector collection:", error)
 				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {

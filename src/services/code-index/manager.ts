@@ -9,6 +9,7 @@ import { CodeIndexSearchService } from "./search-service"
 import { CodeIndexOrchestrator } from "./orchestrator"
 import { CacheManager } from "./cache-manager"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { DirectoryScanner } from "./processors"
 import fs from "fs/promises"
 import ignore from "ignore"
 import path from "path"
@@ -80,9 +81,16 @@ export class CodeIndexManager {
 	}
 
 	private assertInitialized() {
-		if (!this._configManager || !this._orchestrator || !this._searchService || !this._cacheManager) {
+		// kilocode_change start: In Kilo org mode, searchService is not required
+		const isKiloOrgMode = this._configManager?.isKiloOrgMode ?? false
+		const requiredServices = isKiloOrgMode
+			? !this._configManager || !this._orchestrator || !this._cacheManager
+			: !this._configManager || !this._orchestrator || !this._searchService || !this._cacheManager
+
+		if (requiredServices) {
 			throw new Error("CodeIndexManager not initialized. Call initialize() first.")
 		}
+		// kilocode_change end
 	}
 
 	public get state(): IndexingState {
@@ -120,6 +128,12 @@ export class CodeIndexManager {
 		if (!this._configManager) {
 			this._configManager = new CodeIndexConfigManager(contextProxy)
 		}
+
+		// Pass Kilo org props to config manager if available
+		if (this._kiloOrgCodeIndexProps) {
+			this._configManager.setKiloOrgProps(this._kiloOrgCodeIndexProps)
+		}
+
 		// Load configuration once to get current state and restart requirements
 		const { requiresRestart } = await this._configManager.loadConfiguration()
 
@@ -354,17 +368,21 @@ export class CodeIndexManager {
 			rooIgnoreController,
 		)
 
-		// kilocode_change start
-		// Only validate the embedder if it matches the currently configured provider
-		const config = this._configManager!.getConfig()
-		const shouldValidate = embedder.embedderInfo.name === config.embedderProvider
+		// kilocode_change start: Handle Kilo org mode (no embedder/vector store validation needed)
+		const isKiloOrgMode = this._configManager!.isKiloOrgMode
 
-		if (shouldValidate) {
-			const validationResult = await this._serviceFactory.validateEmbedder(embedder)
-			if (!validationResult.valid) {
-				const errorMessage = validationResult.error || "Embedder configuration validation failed"
-				this._stateManager.setSystemState("Error", errorMessage)
-				throw new Error(errorMessage)
+		if (!isKiloOrgMode) {
+			// Only validate the embedder if it matches the currently configured provider
+			const config = this._configManager!.getConfig()
+			const shouldValidate = embedder && embedder.embedderInfo.name === config.embedderProvider
+
+			if (shouldValidate) {
+				const validationResult = await this._serviceFactory.validateEmbedder(embedder)
+				if (!validationResult.valid) {
+					const errorMessage = validationResult.error || "Embedder configuration validation failed"
+					this._stateManager.setSystemState("Error", errorMessage)
+					throw new Error(errorMessage)
+				}
 			}
 		}
 		// kilocode_change end
@@ -375,21 +393,26 @@ export class CodeIndexManager {
 			this._stateManager,
 			this.workspacePath,
 			this._cacheManager!,
-			vectorStore,
+			vectorStore!,
 			scanner,
-			fileWatcher,
+			fileWatcher!,
 		)
 
-		// (Re)Initialize search service
-		this._searchService = new CodeIndexSearchService(
-			this._configManager!,
-			this._stateManager,
-			embedder,
-			vectorStore,
-		)
+		// (Re)Initialize search service only if not in Kilo org mode
+		if (!isKiloOrgMode) {
+			this._searchService = new CodeIndexSearchService(
+				this._configManager!,
+				this._stateManager,
+				embedder!,
+				vectorStore!,
+			)
+		}
 
 		// Clear any error state after successful recreation
 		this._stateManager.setSystemState("Standby", "")
+
+		// Update scanner with Kilo org props if they exist
+		this._updateScannerWithKiloProps()
 	}
 
 	/**
@@ -440,4 +463,41 @@ export class CodeIndexManager {
 			}
 		}
 	}
+
+	// kilocode_change start Add ability to set kilo specific props
+	private _kiloOrgCodeIndexProps: {
+		organizationId: string
+		kilocodeToken: string
+	} | null = null
+
+	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
+		this._kiloOrgCodeIndexProps = props
+
+		// Pass props to config manager if it exists
+		if (this._configManager) {
+			this._configManager.setKiloOrgProps(props)
+		}
+
+		// Pass the props to the scanner through the service factory
+		// The scanner will be updated when services are recreated
+		this._updateScannerWithKiloProps()
+	}
+
+	public getKiloOrgCodeIndexProps() {
+		return this._kiloOrgCodeIndexProps
+	}
+
+	/**
+	 * Updates the scanner with Kilo org props if available
+	 * This is called after services are created or when props are set
+	 */
+	private _updateScannerWithKiloProps(): void {
+		if (this._kiloOrgCodeIndexProps && this._orchestrator) {
+			const scanner = (this._orchestrator as any).scanner
+			if (scanner && typeof scanner.setKiloOrgCodeIndexProps === "function") {
+				scanner.setKiloOrgCodeIndexProps(this._kiloOrgCodeIndexProps)
+			}
+		}
+	}
+	// kilocode_change end
 }
