@@ -191,6 +191,14 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			let lastUsage
 
 			for await (const chunk of stream) {
+				if (!chunk) {
+					console.warn("Received a null/undefined chunk from the stream.")
+					continue
+				}
+				if (!chunk.choices || chunk.choices.length === 0) {
+					console.warn("Received a chunk without choices or empty choices array:", chunk)
+					continue
+				}
 				const delta = chunk.choices[0]?.delta ?? {}
 
 				if (delta.content) {
@@ -409,6 +417,14 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 	private async *handleStreamResponse(stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>): ApiStream {
 		for await (const chunk of stream) {
+			if (!chunk) {
+				console.warn("Received a null/undefined chunk from the stream in handleStreamResponse.")
+				continue
+			}
+			if (!chunk.choices || chunk.choices.length === 0) {
+				console.warn("Received a chunk without choices or empty choices array in handleStreamResponse:", chunk)
+				continue
+			}
 			const delta = chunk.choices[0]?.delta
 			if (delta?.content) {
 				yield {
