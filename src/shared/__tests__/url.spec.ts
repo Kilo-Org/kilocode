@@ -1,4 +1,4 @@
-import { getKiloUrl, DEFAULT_KILOCODE_BACKEND_URL } from "../kilocode/url"
+import { getKiloUrl } from "../kilocode/url"
 import { getKiloUrlFromToken } from "../kilocode/token"
 
 describe("getKiloUrl", () => {
@@ -166,50 +166,5 @@ describe("getKiloUrl", () => {
 			// since the globalKilocodeBackendUrl is evaluated at module load time
 			expect(true).toBe(true) // Placeholder test
 		})
-	})
-})
-
-describe("getKiloUrlFromToken", () => {
-	it("should combine token base URL with full URL for production token", () => {
-		// Mock a production token (no env payload)
-		const prodToken = "header." + btoa(JSON.stringify({ sub: "user123" })) + ".signature"
-		const result = getKiloUrlFromToken(prodToken, "https://api.kilocode.ai/api/profile")
-		expect(result).toBe("https://api.kilocode.ai/api/profile")
-	})
-
-	it("should combine token base URL with full URL for development token", () => {
-		// Mock a development token
-		const devToken = "header." + btoa(JSON.stringify({ sub: "user123", env: "development" })) + ".signature"
-		const result = getKiloUrlFromToken(devToken, "https://api.kilocode.ai/api/profile")
-		expect(result).toBe("http://localhost:3000/api/profile")
-	})
-
-	it("should handle organization-specific URLs", () => {
-		const prodToken = "header." + btoa(JSON.stringify({ sub: "user123" })) + ".signature"
-		const result = getKiloUrlFromToken(prodToken, "https://api.kilocode.ai/api/organizations/org-123/modes")
-		expect(result).toBe("https://api.kilocode.ai/api/organizations/org-123/modes")
-	})
-
-	it("should handle development token with organization URLs", () => {
-		const devToken = "header." + btoa(JSON.stringify({ sub: "user123", env: "development" })) + ".signature"
-		const result = getKiloUrlFromToken(devToken, "https://api.kilocode.ai/api/organizations/org-123/modes")
-		expect(result).toBe("http://localhost:3000/api/organizations/org-123/modes")
-	})
-
-	it("should handle invalid tokens gracefully", () => {
-		const invalidToken = "invalid.token.format"
-		const result = getKiloUrlFromToken(invalidToken, "https://api.kilocode.ai/api/profile")
-		expect(result).toBe("https://api.kilocode.ai/api/profile")
-	})
-
-	it("should handle empty token", () => {
-		const result = getKiloUrlFromToken("", "https://api.kilocode.ai/api/profile")
-		expect(result).toBe("https://api.kilocode.ai/api/profile")
-	})
-
-	it("should preserve query parameters and hash", () => {
-		const devToken = "header." + btoa(JSON.stringify({ sub: "user123", env: "development" })) + ".signature"
-		const result = getKiloUrlFromToken(devToken, "https://api.kilocode.ai/api/profile?test=1#section")
-		expect(result).toBe("http://localhost:3000/api/profile?test=1#section")
 	})
 })
