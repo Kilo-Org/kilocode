@@ -123,22 +123,106 @@ export function containsDangerousSubstitution(source: string): boolean {
 }
 
 /**
+ * Protect newlines inside quoted strings by replacing them with a placeholder.
+ * This handles proper shell quoting rules where quotes can be concatenated.
+ *
+ * Examples:
+ * - "hello\nworld" -> newline is protected (inside double quotes)
+ * - 'hello\nworld' -> newline is protected (inside single quotes)
+ * - echo '"'A'"' -> A is NOT quoted (quote concatenation)
+ * - "hello"world -> world is NOT quoted
+ *
+ * @param command - The command string to process
+ * @param placeholder - The placeholder string to use for protected newlines
+ * @returns The command with newlines in quotes replaced by placeholder
+ */
+export function protectNewlinesInQuotes(command: string, placeholder: string): string {
+	let result = ""
+	let i = 0
+
+	while (i < command.length) {
+		const char = command[i]
+
+		if (char === '"') {
+			// Start of double-quoted string
+			result += char
+			i++
+
+			// Process until we find the closing unescaped quote
+			while (i < command.length) {
+				const quoteChar = command[i]
+				const prevChar = i > 0 ? command[i - 1] : ""
+
+				if (quoteChar === '"' && prevChar !== "\\") {
+					// Found closing quote
+					result += quoteChar
+					i++
+					break
+				} else if (quoteChar === "\n" || quoteChar === "\r") {
+					// Replace newline inside double quotes
+					result += placeholder
+					i++
+				} else {
+					result += quoteChar
+					i++
+				}
+			}
+		} else if (char === "'") {
+			// Start of single-quoted string
+			result += char
+			i++
+
+			// Process until we find the closing quote
+			// Note: In single quotes, backslash does NOT escape (except for \' in some shells)
+			while (i < command.length) {
+				const quoteChar = command[i]
+
+				if (quoteChar === "'") {
+					// Found closing quote
+					result += quoteChar
+					i++
+					break
+				} else if (quoteChar === "\n" || quoteChar === "\r") {
+					// Replace newline inside single quotes
+					result += placeholder
+					i++
+				} else {
+					result += quoteChar
+					i++
+				}
+			}
+		} else {
+			// Not in quotes, keep character as-is
+			result += char
+			i++
+		}
+	}
+
+	return result
+}
+
+/**
  * Split a command string into individual sub-commands by
  * chaining operators (&&, ||, ;, |, or &) and newlines.
  *
  * Uses shell-quote to properly handle:
- * - Quoted strings (preserves quotes)
+ * - Quoted strings (preserves quotes and newlines within quotes)
  * - Subshell commands ($(cmd), `cmd`, <(cmd), >(cmd))
  * - PowerShell redirections (2>&1)
  * - Chain operators (&&, ||, ;, |, &)
- * - Newlines as command separators
+ * - Newlines as command separators (but not within quotes)
  */
 export function parseCommand(command: string): string[] {
 	if (!command?.trim()) return []
 
-	// Split by newlines first (handle different line ending formats)
+	// First, protect newlines inside quoted strings by replacing them with a placeholder
+	// This prevents splitting multi-line quoted strings (e.g., git commit -m "multi\nline")
+	const quotedStringPlaceholder = "___NEWLINE_IN_QUOTE___"
+	const protectedCommand = protectNewlinesInQuotes(command, quotedStringPlaceholder)
+
+	// Split by newlines (handle different line ending formats)
 	// This regex splits on \r\n (Windows), \n (Unix), or \r (old Mac)
-	const lines = command.split(/\r\n|\r|\n/)
+	const lines = protectedCommand.split(/\r\n|\r|\n/)
 	const allCommands: string[] = []
 
 	for (const line of lines) {
@@ -150,7 +234,8 @@ export function parseCommand(command: string): string[] {
 		allCommands.push(...lineCommands)
 	}
 
-	return allCommands
+	// Restore newlines in quoted strings
+	return allCommands.map((cmd) => cmd.replace(new RegExp(quotedStringPlaceholder, "g"), "\n"))
 }
 
 /**
