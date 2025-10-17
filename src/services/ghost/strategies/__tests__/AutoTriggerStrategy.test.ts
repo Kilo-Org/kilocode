@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { describe, it, expect, beforeEach } from "vitest"
 import { AutoTriggerStrategy } from "../AutoTriggerStrategy"
-import { GhostSuggestionContext } from "../../types"
+import { contextToAutocompleteInput, extractPrefixSuffix } from "../../types"
 
 describe("AutoTriggerStrategy", () => {
 	let strategy: AutoTriggerStrategy
@@ -20,9 +20,11 @@ describe("AutoTriggerStrategy", () => {
 					lineNumber: line,
 				}),
 				lineCount: 2,
-				uri: { toString: () => "file:///test.ts" },
+				uri: { toString: () => "file:///test.ts", fsPath: "/test.ts" } as vscode.Uri,
 				offsetAt: (position: vscode.Position) => (position.line === 1 ? 32 : 0),
-			} as vscode.TextDocument
+				isUntitled: false,
+				positionAt: () => new vscode.Position(0, 0),
+			} as unknown as vscode.TextDocument
 
 			const mockRange = {
 				start: { line: 1, character: 0 } as vscode.Position,
@@ -30,12 +32,14 @@ describe("AutoTriggerStrategy", () => {
 				isEmpty: true,
 			} as vscode.Range
 
-			const context: GhostSuggestionContext = {
+			const context = {
 				document: mockDocument,
 				range: mockRange,
 			}
 
-			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, mockRange.start)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(input, prefix, suffix, "typescript")
 
 			// Verify system prompt contains comment-specific keywords
 			expect(systemPrompt.toLowerCase()).toContain("comment")
@@ -56,9 +60,11 @@ describe("AutoTriggerStrategy", () => {
 					lineNumber: line,
 				}),
 				lineCount: 1,
-				uri: { toString: () => "file:///test.ts" },
-				offsetAt: (position: vscode.Position) => 0,
-			} as vscode.TextDocument
+				uri: { toString: () => "file:///test.ts", fsPath: "/test.ts" } as vscode.Uri,
+				offsetAt: (position: vscode.Position) => (position.character === 26 ? 26 : 0),
+				isUntitled: false,
+				positionAt: () => new vscode.Position(0, 0),
+			} as unknown as vscode.TextDocument
 
 			const mockRange = {
 				start: { line: 0, character: 26 } as vscode.Position,
@@ -66,12 +72,14 @@ describe("AutoTriggerStrategy", () => {
 				isEmpty: true,
 			} as vscode.Range
 
-			const context: GhostSuggestionContext = {
+			const context = {
 				document: mockDocument,
 				range: mockRange,
 			}
 
-			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, mockRange.start)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(input, prefix, suffix, "typescript")
 
 			// Verify system prompt contains comment-specific keywords
 			expect(systemPrompt.toLowerCase()).toContain("comment")
@@ -91,21 +99,25 @@ describe("AutoTriggerStrategy", () => {
 				lineAt: (line: number) => ({
 					text: "const x = 1;",
 				}),
-				uri: { toString: () => "file:///test.ts" },
+				uri: { toString: () => "file:///test.ts", fsPath: "/test.ts" } as vscode.Uri,
 				offsetAt: (position: vscode.Position) => 13,
-			} as vscode.TextDocument
+				isUntitled: false,
+				positionAt: () => new vscode.Position(0, 0),
+			} as unknown as vscode.TextDocument
 
 			const mockRange = {
 				start: { line: 0, character: 13 } as vscode.Position,
 				end: { line: 0, character: 13 } as vscode.Position,
 			} as vscode.Range
 
-			const context: GhostSuggestionContext = {
+			const context = {
 				document: mockDocument,
 				range: mockRange,
 			}
 
-			const { systemPrompt, userPrompt } = strategy.getPrompts(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, mockRange.start)
+			const { systemPrompt, userPrompt } = strategy.getPrompts(input, prefix, suffix, "typescript")
 
 			// Verify system prompt contains auto-trigger keywords
 			expect(systemPrompt).toContain("Auto-Completion")
@@ -125,9 +137,11 @@ describe("AutoTriggerStrategy", () => {
 					lineNumber: line,
 				}),
 				lineCount: 3,
-				uri: { toString: () => "file:///test.ts" },
+				uri: { toString: () => "file:///test.ts", fsPath: "/test.ts" } as vscode.Uri,
 				offsetAt: (position: vscode.Position) => (position.line === 1 ? 13 : 0),
-			} as vscode.TextDocument
+				isUntitled: false,
+				positionAt: () => new vscode.Position(0, 0),
+			} as unknown as vscode.TextDocument
 
 			const mockRange = {
 				start: { line: 1, character: 0 } as vscode.Position,
@@ -135,12 +149,14 @@ describe("AutoTriggerStrategy", () => {
 				isEmpty: true,
 			} as vscode.Range
 
-			const context: GhostSuggestionContext = {
+			const context = {
 				document: mockDocument,
 				range: mockRange,
 			}
 
-			const { systemPrompt } = strategy.getPrompts(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, mockRange.start)
+			const { systemPrompt } = strategy.getPrompts(input, prefix, suffix, "typescript")
 
 			// Should use auto-trigger, not comment-driven
 			expect(systemPrompt).toContain("Auto-Completion")

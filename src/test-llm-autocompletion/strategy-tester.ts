@@ -1,6 +1,11 @@
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
-import { GhostSuggestionContext } from "../services/ghost/types.js"
+import {
+	GhostSuggestionContext,
+	contextToAutocompleteInput,
+	extractPrefixSuffix,
+	AutocompleteInput,
+} from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
 import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
@@ -55,7 +60,17 @@ export class StrategyTester {
 
 	async getCompletion(code: string): Promise<string> {
 		const context = this.createContext(code)
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
+		const input = contextToAutocompleteInput(context)
+		const { prefix, suffix } = extractPrefixSuffix(
+			context.document,
+			context.range?.start ?? context.document.positionAt(0),
+		)
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
+			input,
+			prefix,
+			suffix,
+			context.document.languageId,
+		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		return response.content
@@ -64,12 +79,16 @@ export class StrategyTester {
 	parseCompletion(xmlResponse: string): { search: string; replace: string }[] {
 		const parser = new GhostStreamingParser()
 
-		const dummyContext: GhostSuggestionContext = {
-			document: new MockTextDocument(vscode.Uri.parse("file:///test.js"), "") as any,
-			range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)) as any,
+		const dummyInput: AutocompleteInput = {
+			isUntitledFile: false,
+			completionId: "dummy-id",
+			filepath: "/test.js",
+			pos: { line: 0, character: 0 },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
 		}
 
-		parser.initialize(dummyContext)
+		parser.initialize(dummyInput, "", "")
 		parser.processChunk(xmlResponse)
 		parser.finishStream()
 

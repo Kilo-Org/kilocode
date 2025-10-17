@@ -1,5 +1,5 @@
 import { GhostStreamingParser, findBestMatch } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { AutocompleteInput } from "../types"
 
 // Mock vscode module
 vi.mock("vscode", () => ({
@@ -13,26 +13,25 @@ vi.mock("vscode", () => ({
 
 describe("GhostStreamingParser", () => {
 	let parser: GhostStreamingParser
-	let mockDocument: any
-	let context: GhostSuggestionContext
+	let input: AutocompleteInput
+	const prefix = `function test() {
+	return true;
+}`
+	const suffix = ""
 
 	beforeEach(() => {
 		parser = new GhostStreamingParser()
 
-		// Create mock document
-		mockDocument = {
-			uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
-			getText: () => `function test() {
-	return true;
-}`,
-			languageId: "typescript",
+		input = {
+			isUntitledFile: false,
+			completionId: "test-id",
+			filepath: "/test/file.ts",
+			pos: { line: 2, character: 1 },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
 		}
 
-		context = {
-			document: mockDocument,
-		}
-
-		parser.initialize(context)
+		parser.initialize(input, prefix, suffix)
 	})
 
 	afterEach(() => {
@@ -44,9 +43,9 @@ describe("GhostStreamingParser", () => {
 			const chunk1 = "<change><search><![CDATA["
 			const result1 = parser.processChunk(chunk1)
 
-			expect(result1.hasNewSuggestions).toBe(false)
+			expect(result1.hasNewContent).toBe(false)
 			expect(result1.isComplete).toBe(false)
-			expect(result1.suggestions.hasSuggestions()).toBe(false)
+			expect(result1.outcome !== undefined).toBe(false)
 		})
 
 		it("should parse complete change blocks", () => {
@@ -59,8 +58,8 @@ describe("GhostStreamingParser", () => {
 
 			const result = parser.processChunk(completeChange)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.hasNewContent).toBe(true)
+			expect(result.outcome !== undefined).toBe(true)
 		})
 
 		it("should handle multiple chunks building up to complete change", () => {
@@ -78,8 +77,8 @@ describe("GhostStreamingParser", () => {
 				finalResult = parser.processChunk(chunk)
 			}
 
-			expect(finalResult!.hasNewSuggestions).toBe(true)
-			expect(finalResult!.suggestions.hasSuggestions()).toBe(true)
+			expect(finalResult!.hasNewContent).toBe(true)
+			expect(finalResult!.outcome).toBeDefined()
 		})
 
 		it("should handle multiple complete changes in sequence", () => {
@@ -91,8 +90,8 @@ describe("GhostStreamingParser", () => {
 			const result1 = parser.processChunk(change1)
 			const result2 = parser.processChunk(change2)
 
-			expect(result1.hasNewSuggestions).toBe(true)
-			expect(result2.hasNewSuggestions).toBe(true)
+			expect(result1.hasNewContent).toBe(true)
+			expect(result2.hasNewContent).toBe(true)
 			expect(parser.getCompletedChanges()).toHaveLength(2)
 		})
 
@@ -130,7 +129,7 @@ describe("GhostStreamingParser", () => {
 
 			const result = parser.processChunk(changeWithCursor)
 
-			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.hasNewContent).toBe(true)
 			// Verify cursor marker is preserved in search content for matching
 			const changes = parser.getCompletedChanges()
 			expect(changes[0].search).toContain("<<<AUTOCOMPLETE_HERE>>>") // Should preserve in search for matching
@@ -144,35 +143,27 @@ describe("GhostStreamingParser", () => {
 
 			const result = parser.processChunk(changeWithCursor)
 
-			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.hasNewContent).toBe(true)
 			const changes = parser.getCompletedChanges()
 			expect(changes[0].cursorPosition).toBe(15) // Position after "// Comment here"
 		})
 
 		it("should handle cursor marker in search content for matching", () => {
-			// Mock document WITHOUT cursor marker (parser should add it)
-			const mockDocumentWithoutCursor: any = {
-				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
-				getText: () => `function test() {
+			// Re-initialize parser for this test
+			const testInput: AutocompleteInput = {
+				isUntitledFile: false,
+				completionId: "test-id-2",
+				filepath: "/test/file.ts",
+				pos: { line: 1, character: 1 },
+				recentlyVisitedRanges: [],
+				recentlyEditedRanges: [],
+			}
+			const testPrefix = `function test() {
 	return true;
-}`,
-				languageId: "typescript",
-				offsetAt: (position: any) => 20, // Mock cursor position
-			}
+}`
+			const testSuffix = ""
 
-			const mockRange: any = {
-				start: { line: 1, character: 1 },
-				end: { line: 1, character: 1 },
-				isEmpty: true,
-				isSingleLine: true,
-			}
-
-			const contextWithCursor = {
-				document: mockDocumentWithoutCursor,
-				range: mockRange,
-			}
-
-			parser.initialize(contextWithCursor)
+			parser.initialize(testInput, testPrefix, testSuffix)
 
 			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[// New function
 function fibonacci(n: number): number {
@@ -182,25 +173,26 @@ function fibonacci(n: number): number {
 
 			const result = parser.processChunk(changeWithCursor)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.hasNewContent).toBe(true)
+			expect(result.outcome !== undefined).toBe(true)
 		})
 
 		it("should handle document that already contains cursor marker", () => {
-			// Mock document that already contains cursor marker
-			const mockDocumentWithCursor: any = {
-				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
-				getText: () => `function test() {
+			// Re-initialize parser for this test
+			const testInput: AutocompleteInput = {
+				isUntitledFile: false,
+				completionId: "test-id-3",
+				filepath: "/test/file.ts",
+				pos: { line: 1, character: 0 },
+				recentlyVisitedRanges: [],
+				recentlyEditedRanges: [],
+			}
+			const testPrefix = `function test() {
 	<<<AUTOCOMPLETE_HERE>>>
-}`,
-				languageId: "typescript",
-			}
+}`
+			const testSuffix = ""
 
-			const contextWithCursor = {
-				document: mockDocumentWithCursor,
-			}
-
-			parser.initialize(contextWithCursor)
+			parser.initialize(testInput, testPrefix, testSuffix)
 
 			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[// New function
 function fibonacci(n: number): number {
@@ -210,8 +202,8 @@ function fibonacci(n: number): number {
 
 			const result = parser.processChunk(changeWithCursor)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.hasNewContent).toBe(true)
+			expect(result.outcome !== undefined).toBe(true)
 		})
 
 		it("should handle malformed XML gracefully", () => {
@@ -220,24 +212,24 @@ function fibonacci(n: number): number {
 			const result = parser.processChunk(malformedXml)
 
 			// Should not crash and should not produce suggestions
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.hasNewContent).toBe(false)
+			expect(result.outcome !== undefined).toBe(false)
 		})
 
 		it("should handle empty chunks", () => {
 			const result = parser.processChunk("")
 
-			expect(result.hasNewSuggestions).toBe(false)
+			expect(result.hasNewContent).toBe(false)
 			expect(result.isComplete).toBe(true) // Empty is considered complete
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.outcome !== undefined).toBe(false)
 		})
 
 		it("should handle whitespace-only chunks", () => {
 			const result = parser.processChunk("   \n\t  ")
 
-			expect(result.hasNewSuggestions).toBe(false)
+			expect(result.hasNewContent).toBe(false)
 			expect(result.isComplete).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.outcome !== undefined).toBe(false)
 		})
 	})
 
@@ -290,14 +282,21 @@ function fibonacci(n: number): number {
 			}).toThrow("Parser not initialized")
 		})
 
-		it("should handle context without document", () => {
-			const contextWithoutDoc = {} as GhostSuggestionContext
-			parser.initialize(contextWithoutDoc)
+		it("should handle empty input", () => {
+			const emptyInput: AutocompleteInput = {
+				isUntitledFile: false,
+				completionId: "empty-id",
+				filepath: "",
+				pos: { line: 0, character: 0 },
+				recentlyVisitedRanges: [],
+				recentlyEditedRanges: [],
+			}
+			parser.initialize(emptyInput, "", "")
 
 			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
 			const result = parser.processChunk(change)
 
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.outcome).toBeDefined()
 		})
 	})
 
@@ -310,7 +309,7 @@ function fibonacci(n: number): number {
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(100) // Should complete in under 100ms
-			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.hasNewContent).toBe(true)
 		})
 
 		it("should handle many small chunks efficiently", () => {

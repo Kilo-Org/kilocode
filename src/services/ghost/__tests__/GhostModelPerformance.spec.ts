@@ -5,6 +5,7 @@ import { MockWorkspace } from "./MockWorkspace"
 import { ApiHandler, buildApiHandler } from "../../../api"
 import { GhostModel } from "../GhostModel"
 import { allowNetConnect } from "../../../vitest.setup"
+import { contextToAutocompleteInput, extractPrefixSuffix } from "../types"
 
 const KEYS = {
 	KILOCODE: null,
@@ -25,7 +26,9 @@ describe("GhostModelPerformance", () => {
 			document: document,
 		}
 
-		const { systemPrompt, userPrompt } = autoTriggerStrategy.getPrompts(context)
+		const input = contextToAutocompleteInput(context)
+		const { prefix, suffix } = extractPrefixSuffix(document, document.positionAt(0))
+		const { systemPrompt, userPrompt } = autoTriggerStrategy.getPrompts(input, prefix, suffix, document.languageId)
 
 		return { systemPrompt, suggestionPrompt: userPrompt }
 	}

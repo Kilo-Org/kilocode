@@ -71,10 +71,28 @@ export class MockWorkspace {
 				// Multi-line edit
 				const startLine = lines[range.start.line] || ""
 				const endLine = lines[range.end.line] || ""
-				const newLine = startLine.slice(0, range.start.character) + newText + endLine.slice(range.end.character)
+				const prefix = startLine.slice(0, range.start.character)
+				const suffix = endLine.slice(range.end.character)
 
-				// Remove the lines in between and replace with the new content
-				lines.splice(range.start.line, range.end.line - range.start.line + 1, newLine)
+				// Split the new text into lines
+				const newTextLines = newText.split("\n")
+
+				// Construct the replacement lines
+				const replacementLines: string[] = []
+				if (newTextLines.length === 1) {
+					// Single line replacement
+					replacementLines.push(prefix + newTextLines[0] + suffix)
+				} else {
+					// Multi-line replacement
+					replacementLines.push(prefix + newTextLines[0])
+					for (let i = 1; i < newTextLines.length - 1; i++) {
+						replacementLines.push(newTextLines[i])
+					}
+					replacementLines.push(newTextLines[newTextLines.length - 1] + suffix)
+				}
+
+				// Remove the old lines and insert the new ones
+				lines.splice(range.start.line, range.end.line - range.start.line + 1, ...replacementLines)
 			}
 		}
 

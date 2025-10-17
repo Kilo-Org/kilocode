@@ -1,5 +1,5 @@
 import { GhostStreamingParser } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { AutocompleteInput } from "../types"
 import * as vscode from "vscode"
 
 // Mock vscode workspace
@@ -19,24 +19,23 @@ vi.mock("vscode", async () => {
 
 describe("GhostStreamingParser - User Issue Fix", () => {
 	let parser: GhostStreamingParser
-	let mockContext: GhostSuggestionContext
+	let input: AutocompleteInput
+	const prefix = "function mutliply(<<<AUTOCOMPLETE_HERE>>>>"
+	const suffix = ""
 
 	beforeEach(() => {
 		parser = new GhostStreamingParser()
 
-		// Create mock document with the exact content from user's issue
-		const mockDocument = {
-			getText: vi.fn().mockReturnValue("function mutliply(<<<AUTOCOMPLETE_HERE>>>>"),
-			uri: { fsPath: "/test/file.ts", toString: () => "file:///test/file.ts" } as vscode.Uri,
-			offsetAt: vi.fn().mockReturnValue(17), // Position after "function mutliply("
-		} as unknown as vscode.TextDocument
-
-		mockContext = {
-			document: mockDocument,
-			range: { start: { line: 0, character: 17 }, end: { line: 0, character: 17 } } as vscode.Range,
+		input = {
+			isUntitledFile: false,
+			completionId: "test-id",
+			filepath: "/test/file.ts",
+			pos: { line: 0, character: 17 },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
 		}
 
-		parser.initialize(mockContext)
+		parser.initialize(input, prefix, suffix)
 	})
 
 	it("should fix the exact user issue: incomplete </change tag when stream is complete", () => {
@@ -47,15 +46,15 @@ describe("GhostStreamingParser - User Issue Fix", () => {
 
 		// First chunk - should not sanitize yet (stream not complete)
 		let result = parser.processChunk(userIssueXML)
-		expect(result.hasNewSuggestions).toBe(false)
+		expect(result.hasNewContent).toBe(false)
 		expect(result.isComplete).toBe(false)
 
 		// Simulate stream completion
 		result = parser.finishStream()
 
 		// Verify that the sanitization worked and we got suggestions
-		expect(result.hasNewSuggestions).toBe(true)
-		expect(result.suggestions.hasSuggestions()).toBe(true)
+		expect(result.hasNewContent).toBe(true)
+		expect(result.outcome).toBeDefined()
 		expect(parser.getCompletedChanges()).toHaveLength(1)
 
 		const change = parser.getCompletedChanges()[0]
@@ -74,14 +73,14 @@ describe("GhostStreamingParser - User Issue Fix", () => {
 
 		// First chunk - should not sanitize yet
 		let result = parser.processChunk(brokenXML)
-		expect(result.hasNewSuggestions).toBe(false)
+		expect(result.hasNewContent).toBe(false)
 		expect(result.isComplete).toBe(false)
 
 		// Simulate stream completion
 		result = parser.finishStream()
 
-		expect(result.hasNewSuggestions).toBe(true)
-		expect(result.suggestions.hasSuggestions()).toBe(true)
+		expect(result.hasNewContent).toBe(true)
+		expect(result.outcome).toBeDefined()
 		expect(parser.getCompletedChanges()).toHaveLength(1)
 	})
 })
