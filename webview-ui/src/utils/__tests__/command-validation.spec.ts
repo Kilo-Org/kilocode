@@ -1083,6 +1083,32 @@ describe("Unified Command Decision Functions", () => {
 			expect(getCommandDecision("dangerous", allowed, denied)).toBe("ask_user")
 			expect(getCommandDecision("npm install && dangerous", allowed, denied)).toBe("ask_user")
 		})
+		// Real-world regression: multi-line git commit message in quotes should not be treated as separate commands
+		// Current behavior splits on newlines before quote handling, which causes follow-up lines to be considered commands.
+		// This test reproduces the failure mode for visibility. A future fix could change parseCommand to preserve
+		// newlines inside quotes for specific cases (e.g., git commit -m).
+		describe("real-world: multi-line git commit message", () => {
+			it("auto-approves when commit message is single-line", () => {
+				const allowed = ["cd", "git add", "git commit"]
+				const command =
+					'cd /repo && git add src/a.ts src/b.ts && git commit -m "feat: title - one line message"'
+
+				expect(getCommandDecision(command, allowed, [])).toBe("auto_approve")
+			})
+
+			it("asks user when commit message is multi-line due to newline splitting (bug reproduction)", () => {
+				const allowed = ["cd", "git add", "git commit"]
+				// Simplified reproduction of the user's example: a multi-line quoted commit message
+				const command = `cd /repo && git add src/a.ts src/b.ts && git commit -m "feat: title
+
+- point a
+- point b"`
+
+				// Because parseCommand splits on actual newlines first, the lines after the first are treated as separate
+				// commands (e.g., "- point a"), which are not in the allowlist, so the overall decision becomes "ask_user".
+				expect(getCommandDecision(command, allowed, [])).toBe("ask_user")
+			})
+		})
 	})
 
 	describe("CommandValidator Integration Tests", () => {
