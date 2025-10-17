@@ -1,9 +1,0 @@
-# Test fixtures and temp test dirs
-**/__fixtures__/**
-**/testWorkspaceDir/**
-
-# Legacy JS with browser-only globals; keep out of lint until migrated
-core/llm/llamaTokenizer.js
-
-# Do not lint the local ESLint config file itself
-eslint.config.js

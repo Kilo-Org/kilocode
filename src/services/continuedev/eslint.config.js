@@ -1,16 +1,23 @@
-const tseslint = require("@typescript-eslint/eslint-plugin");
-const tsparser = require("@typescript-eslint/parser");
+import tseslint from "@typescript-eslint/eslint-plugin";
+import tsparser from "@typescript-eslint/parser";
 
-module.exports = [
+export default [
   {
-    ignores: ["**/testWorkspaceDir/**", "**/__fixtures__/**", "**/node_modules/**"],
+    ignores: [
+      "**/testWorkspaceDir/**",
+      "**/__fixtures__/**",
+      "**/node_modules/**",
+      "core/llm/llamaTokenizer.js",
+      "eslint.config.js",
+    ],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        project: "./tsconfig.json",
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         console: "readonly",
@@ -40,10 +47,10 @@ module.exports = [
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/naming-convention": "off",
       "@typescript-eslint/semi": "off",
-      "quotes": ["off", "double", {}],
-      "curly": "off",
-      "eqeqeq": "error",
-      "complexity": "off",
+      quotes: ["off", "double", {}],
+      curly: "off",
+      eqeqeq: "error",
+      complexity: "off",
       "max-lines-per-function": "off",
       "max-statements": "off",
       "max-depth": ["error", { max: 6 }],
