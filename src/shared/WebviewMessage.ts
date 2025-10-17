@@ -12,11 +12,11 @@ import {
 	// kilocode_change start
 	CommitRange,
 	HistoryItem,
+	GlobalState,
 	// kilocode_change end
 } from "@roo-code/types"
 
 import { Mode } from "./modes"
-import { GlobalStateUpdatePayload } from "./GlobalStateTypes"
 
 export type ClineAskResponse =
 	| "yesButtonClicked"
@@ -36,11 +36,14 @@ export interface UpdateTodoListPayload {
 export type EditQueuedMessagePayload = Pick<QueuedMessage, "id" | "text" | "images">
 
 // kilocode_change start: Type-safe global state update message
-type UpdateGlobalStateMessage = {
+export type GlobalStateValue<K extends keyof GlobalState> = GlobalState[K]
+export type UpdateGlobalStateMessage<K extends keyof GlobalState = keyof GlobalState> = {
 	type: "updateGlobalState"
-} & GlobalStateUpdatePayload
+	stateKey: K
+	stateValue: GlobalStateValue<K>
+}
+// kilocode_change end: Type-safe global state update message
 
-// Base message interface for all other message types
 export interface WebviewMessage {
 	type:
 		| "updateTodoList"
@@ -274,7 +277,7 @@ export interface WebviewMessage {
 		| "dismissNotificationId" // kilocode_change
 		| "tasksByIdRequest" // kilocode_change
 		| "taskHistoryRequest" // kilocode_change
-		| "updateGlobalState" // kilocode_change  - compatibility with GlobalStateUpdatePayload
+		| "updateGlobalState" // kilocode_change
 		| "shareTaskSuccess"
 		| "exportMode"
 		| "exportModeResult"
@@ -300,8 +303,6 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
-	stateKey?: string // kilocode_change - compatibility with GlobalStateUpdatePayload
-	stateValue?: any // kilocode_change - compatibility with GlobalStateUpdatePayload
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -396,9 +397,8 @@ export interface WebviewMessage {
 	}
 }
 
-// kilocode_change start: Create discriminated union for type-safe messages
+// kilocode_change: Create discriminated union for type-safe messages
 export type MaybeTypedWebviewMessage = WebviewMessage | UpdateGlobalStateMessage
-// kilocode_change end: Create discriminated union for type-safe messages
 
 // kilocode_change begin
 export type OrganizationRole = "owner" | "admin" | "member"
