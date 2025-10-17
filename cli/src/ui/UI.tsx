@@ -23,6 +23,7 @@ import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
+import { generateUpdateAvailableMessage, getAutoUpdateStatus } from "../utils/auto-update.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -61,6 +62,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	// Track if prompt has been executed and welcome message shown
 	const promptExecutedRef = useRef(false)
 	const welcomeShownRef = useRef(false)
+	const autoUpdatedCheckedRef = useRef(false)
 
 	// Initialize CI mode atoms
 	useEffect(() => {
@@ -146,6 +148,21 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			)
 		}
 	}, [options.ci, options.prompt, addMessage, configValidation])
+
+	// Auto-update check on mount
+	const checkVersion = async () => {
+		const status = await getAutoUpdateStatus()
+		if (status.isOutdated) {
+			addMessage(generateUpdateAvailableMessage(status))
+		}
+	}
+
+	useEffect(() => {
+		if (!autoUpdatedCheckedRef.current && !options.ci) {
+			autoUpdatedCheckedRef.current = true
+			checkVersion()
+		}
+	}, [])
 
 	// Exit if provider configuration is invalid
 	useEffect(() => {
