@@ -40,7 +40,7 @@ describe("processNextEditData", () => {
     // Setup mock config handler
     mockConfigHandler = new FakeConfigHandler({
       autocompleteModel: {
-        model: "test-model"
+        model: "test-model",
       } as any,
     });
 
@@ -59,8 +59,8 @@ describe("processNextEditData", () => {
     );
 
     // Spy on real prevEditLruCache functions to verify they're called
-    vi.spyOn(prevEditModule, 'setPrevEdit');
-    vi.spyOn(prevEditLruCache, 'clear');
+    vi.spyOn(prevEditModule, "setPrevEdit");
+    vi.spyOn(prevEditLruCache, "clear");
   });
 
   afterEach(() => {
@@ -128,7 +128,7 @@ describe("processNextEditData", () => {
       // Verify that setPrevEdit was called with a unified diff
       expect(prevEditModule.setPrevEdit).toHaveBeenCalledTimes(1);
       const storedEdit = (prevEditModule.setPrevEdit as any).mock.calls[0][0];
-      
+
       // Unified diffs should contain diff markers
       expect(storedEdit.unidiff).toContain("---");
       expect(storedEdit.unidiff).toContain("+++");
@@ -221,7 +221,7 @@ describe("processNextEditData", () => {
 
     it("should handle multiple previous edits", async () => {
       const consoleLogSpy = vi.spyOn(console, "log");
-      
+
       // Populate the real cache with multiple edits
       prevEditModule.setPrevEdit({
         unidiff: "--- a/test1.ts\n+++ b/test1.ts\n@@ @@\nheader\n-old1\n+new1",
@@ -229,7 +229,7 @@ describe("processNextEditData", () => {
         workspaceUri: "file:///workspace",
         timestamp: Date.now() - 1000,
       });
-      
+
       prevEditModule.setPrevEdit({
         unidiff: "--- a/test2.ts\n+++ b/test2.ts\n@@ @@\nheader\n-old2\n+new2",
         fileUri: "file:///workspace/test2.ts",

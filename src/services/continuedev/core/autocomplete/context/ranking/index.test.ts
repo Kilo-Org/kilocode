@@ -7,7 +7,8 @@ describe("rankAndOrderSnippets", () => {
   it("should rank and order snippets by similarity to cursor context", () => {
     // Create a simple mock HelperVars with only the required properties
     const mockHelper = {
-      fullPrefix: "function calculateTotal(items) {\n  const total = items.reduce(",
+      fullPrefix:
+        "function calculateTotal(items) {\n  const total = items.reduce(",
       fullSuffix: ", 0);\n  return total;\n}",
       options: {
         slidingWindowSize: 50,
@@ -23,7 +24,8 @@ describe("rankAndOrderSnippets", () => {
           start: { line: 10, character: 0 },
           end: { line: 12, character: 0 },
         },
-        contents: "// Helper function for database queries\nfunction queryDb() {}",
+        contents:
+          "// Helper function for database queries\nfunction queryDb() {}",
       },
       {
         filepath: "math.ts",
@@ -31,7 +33,8 @@ describe("rankAndOrderSnippets", () => {
           start: { line: 5, character: 0 },
           end: { line: 7, character: 0 },
         },
-        contents: "// Array reduce function\nconst sum = items.reduce((acc, item) => acc + item, 0);",
+        contents:
+          "// Array reduce function\nconst sum = items.reduce((acc, item) => acc + item, 0);",
       },
       {
         filepath: "helpers.ts",
@@ -39,7 +42,8 @@ describe("rankAndOrderSnippets", () => {
           start: { line: 20, character: 0 },
           end: { line: 22, character: 0 },
         },
-        contents: "// Calculate total with reduce\nfunction calculateSum(items) {\n  return items.reduce((a, b) => a + b);\n}",
+        contents:
+          "// Calculate total with reduce\nfunction calculateSum(items) {\n  return items.reduce((a, b) => a + b);\n}",
       },
     ];
 
@@ -47,10 +51,10 @@ describe("rankAndOrderSnippets", () => {
 
     // Verify the result has the expected structure
     expect(result).toHaveLength(3);
-    
+
     // All snippets should have scores assigned
     expect(result.every((s) => typeof s.score === "number")).toBe(true);
-    
+
     // All snippets should have required properties
     result.forEach((snippet) => {
       expect(snippet.filepath).toBeDefined();
@@ -95,7 +99,8 @@ describe("fillPromptWithSnippets", () => {
           start: { line: 10, character: 0 },
           end: { line: 15, character: 0 },
         },
-        contents: "function calculateSum(items) {\n  return items.reduce((acc, item) => acc + item, 0);\n}",
+        contents:
+          "function calculateSum(items) {\n  return items.reduce((acc, item) => acc + item, 0);\n}",
         score: 0.3,
       },
     ];
@@ -105,7 +110,11 @@ describe("fillPromptWithSnippets", () => {
     const maxSnippetTokens = 25;
     const modelName = "gpt-3.5-turbo";
 
-    const result = fillPromptWithSnippets(snippets, maxSnippetTokens, modelName);
+    const result = fillPromptWithSnippets(
+      snippets,
+      maxSnippetTokens,
+      modelName,
+    );
 
     // Verify that we got fewer snippets than we started with
     expect(result.length).toBeLessThan(snippets.length);

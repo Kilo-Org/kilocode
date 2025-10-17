@@ -93,8 +93,8 @@ describe("autocompleteContextFetching", () => {
 
   describe("getAutocompleteContext", () => {
     it("should successfully fetch autocomplete context", async () => {
-      const loadConfigSpy = vi.spyOn(mockConfigHandler, 'loadConfig');
-      
+      const loadConfigSpy = vi.spyOn(mockConfigHandler, "loadConfig");
+
       const result = await getAutocompleteContext(
         "test.ts",
         mockPosition,

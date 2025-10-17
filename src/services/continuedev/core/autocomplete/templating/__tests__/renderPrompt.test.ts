@@ -53,7 +53,8 @@ vi.mock("../getStopTokens", () => ({
 }));
 
 // AutocompleteTemplate – provide overridable template + compiler + completionOptions
-let templateOverride: any = (prefix: string, suffix: string) => `${prefix}|${suffix}`;
+let templateOverride: any = (prefix: string, suffix: string) =>
+  `${prefix}|${suffix}`;
 let compileFnOverride: ((...args: any[]) => [string, string]) | undefined;
 let completionOptionsOverride: Record<string, any> | undefined;
 vi.mock("../AutocompleteTemplate", () => ({
@@ -182,7 +183,8 @@ describe("template rendering paths", () => {
 describe("compilePrefixSuffix vs snippet formatting", () => {
   it("applies compilePrefixSuffix when provided", () => {
     compileFnOverride = (p: string, s: string) => [`COMP_${p}`, `COMP_${s}`];
-    templateOverride = (prefix: string, suffix: string) => `${prefix}|${suffix}`;
+    templateOverride = (prefix: string, suffix: string) =>
+      `${prefix}|${suffix}`;
     const helper = makeHelper();
 
     const { prefix: compiledPrefix } = renderPrompt({
@@ -254,7 +256,8 @@ describe("stop-token merging", () => {
   it("returns stop tokens from getStopTokens", () => {
     stopTokenReturn = ["LANG_STOP", "TEMPLATE_STOP"];
     completionOptionsOverride = { stop: ["TEMPLATE_STOP"] };
-    templateOverride = (prefix: string, suffix: string) => `${prefix}|${suffix}`;
+    templateOverride = (prefix: string, suffix: string) =>
+      `${prefix}|${suffix}`;
 
     const helper = makeHelper();
 

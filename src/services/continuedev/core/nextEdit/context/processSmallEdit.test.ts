@@ -113,7 +113,7 @@ describe("processSmallEdit", () => {
       // Verify that addDiffToContext was called with a unified diff format
       expect(mockNextEditProvider.addDiffToContext).toHaveBeenCalledTimes(1);
       const diffArg = mockNextEditProvider.addDiffToContext.mock.calls[0][0];
-      
+
       // Unified diffs should contain diff markers
       expect(diffArg).toContain("---");
       expect(diffArg).toContain("+++");

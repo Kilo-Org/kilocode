@@ -70,7 +70,11 @@ describe("lineStream (production-used subset)", () => {
 
   describe("streamWithNewLines", () => {
     it("adds newline separators between lines", async () => {
-      const linesGenerator = await getLineGenerator(["line1", "line2", "line3"]);
+      const linesGenerator = await getLineGenerator([
+        "line1",
+        "line2",
+        "line3",
+      ]);
       const result = streamWithNewLines(linesGenerator);
       const filteredLines = await getFilteredLines(result);
       expect(filteredLines).toEqual(["line1", "\n", "line2", "\n", "line3"]);
@@ -100,7 +104,11 @@ describe("lineStream (production-used subset)", () => {
         lineToTest,
       ]);
 
-      const result = stopAtSimilarLine(linesGenerator, lineToTest, mockFullStop);
+      const result = stopAtSimilarLine(
+        linesGenerator,
+        lineToTest,
+        mockFullStop,
+      );
       const filteredLines = await getFilteredLines(result);
 
       expect(filteredLines).toEqual(["console.log();", "const y = () => {};"]);
@@ -193,13 +201,7 @@ describe("lineStream (production-used subset)", () => {
 
   describe("stopAtRepeatingLines", () => {
     it("yields non-repeating lines and does not stop prematurely", async () => {
-      const linesGenerator = await getLineGenerator([
-        "a",
-        "b",
-        "c",
-        "d",
-        "e",
-      ]);
+      const linesGenerator = await getLineGenerator(["a", "b", "c", "d", "e"]);
 
       const result = stopAtRepeatingLines(linesGenerator as any, mockFullStop);
       const filteredLines = await getFilteredLines(result as any);

@@ -61,7 +61,8 @@ describe("encodingForModel()", () => {
 
 describe("countTokens()", () => {
   test("uses llama tokenizer path when appropriate", () => {
-    const s = "A llama-friendly test string: symbols • unicode ✓ accents café 🌟";
+    const s =
+      "A llama-friendly test string: symbols • unicode ✓ accents café 🌟";
     const expected = llamaTokenizer.encode(s).length;
 
     expect(countTokens(s, "llama2")).toBe(expected);
