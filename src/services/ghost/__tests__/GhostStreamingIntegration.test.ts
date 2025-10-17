@@ -1,7 +1,9 @@
 import { GhostModel } from "../GhostModel"
 import { GhostStreamingParser } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { AutocompleteInput } from "../types"
 import { ApiStreamChunk } from "../../../api/transform/stream"
+import { GhostOutcomeTranslator } from "../GhostOutcomeTranslator"
+import * as vscode from "vscode"
 
 // Mock vscode module
 vi.mock("vscode", () => ({
@@ -10,6 +12,9 @@ vi.mock("vscode", () => ({
 	},
 	workspace: {
 		asRelativePath: (uri: any) => uri.toString(),
+	},
+	Position: class {
+		constructor(public line: number, public character: number) {}
 	},
 }))
 
@@ -36,23 +41,24 @@ class MockApiHandler {
 
 describe("Ghost Streaming Integration", () => {
 	let streamingParser: GhostStreamingParser
-	let mockDocument: any
-	let context: GhostSuggestionContext
+	let translator: GhostOutcomeTranslator
+	let input: AutocompleteInput
+	const prefix = `function test() {
+	return true;
+}`
+	const suffix = ""
 
 	beforeEach(() => {
 		streamingParser = new GhostStreamingParser()
+		translator = new GhostOutcomeTranslator()
 
-		// Create mock document
-		mockDocument = {
-			uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
-			getText: () => `function test() {
-	return true;
-}`,
-			languageId: "typescript",
-		}
-
-		context = {
-			document: mockDocument,
+		input = {
+			isUntitledFile: false,
+			completionId: "test-id",
+			filepath: "/test/file.ts",
+			pos: { line: 2, character: 1 },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
 		}
 	})
 
@@ -74,7 +80,7 @@ describe("Ghost Streaming Integration", () => {
 			const model = new GhostModel(mockApiHandler as any)
 
 			// Initialize streaming parser
-			streamingParser.initialize(context)
+			streamingParser.initialize(input, prefix, suffix)
 
 			let firstSuggestionTime: number | null = null
 			let finalSuggestionTime: number | null = null
@@ -87,7 +93,7 @@ describe("Ghost Streaming Integration", () => {
 				if (chunk.type === "text") {
 					const parseResult = streamingParser.processChunk(chunk.text)
 
-					if (parseResult.hasNewSuggestions && parseResult.suggestions.hasSuggestions()) {
+					if (parseResult.hasNewContent && parseResult.outcome) {
 						suggestionCount++
 
 						if (firstSuggestionTime === null) {
@@ -140,7 +146,7 @@ describe("Ghost Streaming Integration", () => {
 			const mockApiHandler = new MockApiHandler(streamingChunks)
 			const model = new GhostModel(mockApiHandler as any)
 
-			streamingParser.initialize(context)
+			streamingParser.initialize(input, prefix, suffix)
 
 			let suggestionUpdates = 0
 			let finalSuggestions: any = null
@@ -149,9 +155,9 @@ describe("Ghost Streaming Integration", () => {
 				if (chunk.type === "text") {
 					const parseResult = streamingParser.processChunk(chunk.text)
 
-					if (parseResult.hasNewSuggestions) {
+					if (parseResult.hasNewContent) {
 						suggestionUpdates++
-						finalSuggestions = parseResult.suggestions
+						finalSuggestions = parseResult.outcome
 					}
 				}
 			}
@@ -161,7 +167,7 @@ describe("Ghost Streaming Integration", () => {
 			// Should have received multiple suggestion updates
 			expect(suggestionUpdates).toBe(2)
 			expect(finalSuggestions).not.toBeNull()
-			expect(finalSuggestions.hasSuggestions()).toBe(true)
+			expect(finalSuggestions).toBeDefined()
 		})
 
 		it("should handle cancellation during streaming", async () => {
@@ -174,7 +180,7 @@ describe("Ghost Streaming Integration", () => {
 			const mockApiHandler = new MockApiHandler(streamingChunks)
 			const model = new GhostModel(mockApiHandler as any)
 
-			streamingParser.initialize(context)
+			streamingParser.initialize(input, prefix, suffix)
 
 			let isRequestCancelled = false
 			let suggestionCount = 0
@@ -187,7 +193,7 @@ describe("Ghost Streaming Integration", () => {
 				if (chunk.type === "text") {
 					const parseResult = streamingParser.processChunk(chunk.text)
 
-					if (parseResult.hasNewSuggestions) {
+					if (parseResult.hasNewContent) {
 						suggestionCount++
 						// Simulate cancellation after first chunk
 						isRequestCancelled = true
@@ -220,7 +226,7 @@ describe("Ghost Streaming Integration", () => {
 			const mockApiHandler = new MockApiHandler(streamingChunks)
 			const model = new GhostModel(mockApiHandler as any)
 
-			streamingParser.initialize(context)
+			streamingParser.initialize(input, prefix, suffix)
 
 			let validSuggestions = 0
 			let errors = 0
@@ -230,7 +236,7 @@ describe("Ghost Streaming Integration", () => {
 					try {
 						const parseResult = streamingParser.processChunk(chunk.text)
 
-						if (parseResult.hasNewSuggestions) {
+						if (parseResult.hasNewContent) {
 							validSuggestions++
 						}
 					} catch (error) {
@@ -260,7 +266,7 @@ describe("Ghost Streaming Integration", () => {
 			const mockApiHandler = new MockApiHandler(streamingChunks)
 			const model = new GhostModel(mockApiHandler as any)
 
-			streamingParser.initialize(context)
+			streamingParser.initialize(input, prefix, suffix)
 
 			const startTime = performance.now()
 			let firstSuggestionTime: number | null = null
@@ -269,7 +275,7 @@ describe("Ghost Streaming Integration", () => {
 				if (chunk.type === "text") {
 					const parseResult = streamingParser.processChunk(chunk.text)
 
-					if (parseResult.hasNewSuggestions && firstSuggestionTime === null) {
+					if (parseResult.hasNewContent && firstSuggestionTime === null) {
 						firstSuggestionTime = performance.now()
 					}
 				}

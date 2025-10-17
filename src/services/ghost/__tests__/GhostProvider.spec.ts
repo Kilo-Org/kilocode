@@ -5,7 +5,8 @@ import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
 import { GhostStreamingParser } from "../GhostStreamingParser"
 import { GhostWorkspaceEdit } from "../GhostWorkspaceEdit"
-import { GhostSuggestionContext } from "../types"
+import { GhostSuggestionContext, AutocompleteInput, contextToAutocompleteInput, extractPrefixSuffix } from "../types"
+import { GhostOutcomeTranslator } from "../GhostOutcomeTranslator"
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -69,11 +70,13 @@ vi.mock("vscode", () => ({
 describe("GhostProvider", () => {
 	let mockWorkspace: MockWorkspace
 	let streamingParser: GhostStreamingParser
+	let translator: GhostOutcomeTranslator
 	let workspaceEdit: GhostWorkspaceEdit
 
 	beforeEach(() => {
 		vi.clearAllMocks()
 		streamingParser = new GhostStreamingParser()
+		translator = new GhostOutcomeTranslator()
 		mockWorkspace = new MockWorkspace()
 		workspaceEdit = new GhostWorkspaceEdit()
 
@@ -127,14 +130,21 @@ describe("GhostProvider", () => {
 	}
 
 	async function parseAndApplySuggestions(response: string, context: GhostSuggestionContext) {
+		// Convert context to AutocompleteInput
+		const input = contextToAutocompleteInput(context)
+		const { prefix, suffix } = extractPrefixSuffix(context.document, context.range?.start ?? context.document.positionAt(0))
+
 		// Initialize streaming parser
-		streamingParser.initialize(context)
+		streamingParser.initialize(input, prefix, suffix)
 
 		// Process the response as a single chunk (simulating complete response)
 		const result = streamingParser.processChunk(response)
 
-		// Apply the suggestions
-		await workspaceEdit.applySuggestions(result.suggestions)
+		// Translate outcome to suggestions if we have one
+		if (result.outcome) {
+			const suggestions = translator.translate(result.outcome, context.document, context.range?.start ?? context.document.positionAt(0))
+			await workspaceEdit.applySuggestions(suggestions)
+		}
 	}
 
 	// Test cases directory for file-based tests
@@ -231,9 +241,11 @@ describe("GhostProvider", () => {
 			const { context } = await setupTestDocument("empty.js", initialContent)
 
 			// Test empty response
-			streamingParser.initialize(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, context.range?.start ?? context.document.positionAt(0))
+			streamingParser.initialize(input, prefix, suffix)
 			const result = streamingParser.processChunk("")
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.outcome).toBeUndefined()
 		})
 
 		it("should handle invalid diff format", async () => {
@@ -242,9 +254,11 @@ describe("GhostProvider", () => {
 
 			// Test invalid diff format
 			const invalidDiff = "This is not a valid diff format"
-			streamingParser.initialize(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, context.range?.start ?? context.document.positionAt(0))
+			streamingParser.initialize(input, prefix, suffix)
 			const result = streamingParser.processChunk(invalidDiff)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.outcome).toBeUndefined()
 		})
 
 		it("should handle file not found in context", async () => {
@@ -261,10 +275,12 @@ describe("GhostProvider", () => {
 			const xmlResponse = `<change><search><![CDATA[console.log('test');]]></search><replace><![CDATA[// Added comment
 console.log('test');]]></replace></change>`
 
-			streamingParser.initialize(context)
+			const input = contextToAutocompleteInput(context)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, context.range?.start ?? context.document.positionAt(0))
+			streamingParser.initialize(input, prefix, suffix)
 			const result = streamingParser.processChunk(xmlResponse)
 			// Should work with the XML format
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.outcome).toBeDefined()
 		})
 	})
 })
