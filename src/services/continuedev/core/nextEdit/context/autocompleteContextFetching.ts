@@ -1,18 +1,15 @@
-import { Position } from "../..";
-import { ContextRetrievalService } from "../../autocomplete/context/ContextRetrievalService";
-import { getAllSnippetsWithoutRace } from "../../autocomplete/snippets/getAllSnippets";
-import { AutocompleteCodeSnippet } from "../../autocomplete/snippets/types";
-import { renderPrompt } from "../../autocomplete/templating";
-import { GetLspDefinitionsFunction } from "../../autocomplete/types";
-import { HelperVars } from "../../autocomplete/util/HelperVars";
-import {
-  AutocompleteInput,
-  RecentlyEditedRange,
-} from "../../autocomplete/util/types";
-import { MinimalConfigProvider } from "../../autocomplete/MinimalConfig";
-import { IDE, ILLM } from "../../index";
-import { isSecurityConcern } from "../../indexing/ignore";
-import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../util/parameters";
+import { Position } from "../.."
+import { ContextRetrievalService } from "../../autocomplete/context/ContextRetrievalService"
+import { getAllSnippetsWithoutRace } from "../../autocomplete/snippets/getAllSnippets"
+import { AutocompleteCodeSnippet } from "../../autocomplete/snippets/types"
+import { renderPrompt } from "../../autocomplete/templating"
+import { GetLspDefinitionsFunction } from "../../autocomplete/types"
+import { HelperVars } from "../../autocomplete/util/HelperVars"
+import { AutocompleteInput, RecentlyEditedRange } from "../../autocomplete/util/types"
+import { MinimalConfigProvider } from "../../autocomplete/MinimalConfig"
+import { IDE, ILLM } from "../../index"
+import { isSecurityConcern } from "../../indexing/ignore"
+import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../util/parameters"
 
 /**
  * Gets the formatted autocomplete context string that would be used for autocomplete at the given position.
@@ -32,110 +29,101 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../util/parameters";
  * @returns Promise that resolves to the formatted context string
  */
 export const getAutocompleteContext = async (
-  filepath: string,
-  pos: Position,
-  ide: IDE,
-  configHandler: MinimalConfigProvider,
-  getDefinitionsFromLsp: GetLspDefinitionsFunction = async () => [],
-  recentlyEditedRanges: RecentlyEditedRange[],
-  recentlyVisitedRanges: AutocompleteCodeSnippet[],
-  maxPromptTokens: number,
-  manuallyPassFileContents: string,
-  autocompleteModel?: ILLM | string,
-  // eslint-disable-next-line max-params
+	filepath: string,
+	pos: Position,
+	ide: IDE,
+	configHandler: MinimalConfigProvider,
+	getDefinitionsFromLsp: GetLspDefinitionsFunction = async () => [],
+	recentlyEditedRanges: RecentlyEditedRange[],
+	recentlyVisitedRanges: AutocompleteCodeSnippet[],
+	maxPromptTokens: number,
+	manuallyPassFileContents: string,
+	autocompleteModel?: ILLM | string,
+	// eslint-disable-next-line max-params
 ): Promise<string> => {
-  if (!recentlyEditedRanges) recentlyEditedRanges = [];
-  if (!recentlyVisitedRanges) recentlyVisitedRanges = [];
+	if (!recentlyEditedRanges) recentlyEditedRanges = []
+	if (!recentlyVisitedRanges) recentlyVisitedRanges = []
 
-  const input: AutocompleteInput = {
-    isUntitledFile: false,
-    completionId: `context-fetch-${Date.now()}`,
-    filepath,
-    pos,
-    recentlyVisitedRanges,
-    recentlyEditedRanges,
-    manuallyPassFileContents,
-  };
+	const input: AutocompleteInput = {
+		isUntitledFile: false,
+		completionId: `context-fetch-${Date.now()}`,
+		filepath,
+		pos,
+		recentlyVisitedRanges,
+		recentlyEditedRanges,
+		manuallyPassFileContents,
+	}
 
-  const { config } = await configHandler.loadConfig();
-  if (!config) {
-    throw new Error("No config available");
-  }
+	const { config } = await configHandler.loadConfig()
+	if (!config) {
+		throw new Error("No config available")
+	}
 
-  if (isSecurityConcern(input.filepath)) {
-    throw new Error("File is a security concern, autocomplete disabled");
-  }
+	if (isSecurityConcern(input.filepath)) {
+		throw new Error("File is a security concern, autocomplete disabled")
+	}
 
-  // Use provided autocomplete model or fall back to configured autocomplete model
-  let finalModel: ILLM;
-  let modelNameForTemplating: string;
+	// Use provided autocomplete model or fall back to configured autocomplete model
+	let finalModel: ILLM
+	let modelNameForTemplating: string
 
-  if (autocompleteModel) {
-    if (typeof autocompleteModel === "string") {
-      // Try to find the model in config first
-      const foundModel = config.modelsByRole?.autocomplete?.find(
-        (m: ILLM) => m.title === autocompleteModel,
-      );
-      if (foundModel) {
-        finalModel = foundModel;
-        modelNameForTemplating = foundModel.model;
-      } else {
-        // Model not found in config, but we can still use it for template selection
-        const configuredModel = config.selectedModelByRole?.autocomplete;
-        if (!configuredModel) {
-          throw new Error(
-            "No autocomplete model configured and provided model not found in config",
-          );
-        }
-        finalModel = configuredModel;
-        modelNameForTemplating = autocompleteModel; // Use the provided string for template selection
-      }
-    } else {
-      finalModel = autocompleteModel;
-      modelNameForTemplating = autocompleteModel.model;
-    }
-  } else {
-    const configuredModel = config.selectedModelByRole?.autocomplete;
-    if (!configuredModel) {
-      throw new Error("No autocomplete model configured and no model provided");
-    }
-    finalModel = configuredModel;
-    modelNameForTemplating = configuredModel.model;
-  }
+	if (autocompleteModel) {
+		if (typeof autocompleteModel === "string") {
+			// Try to find the model in config first
+			const foundModel = config.modelsByRole?.autocomplete?.find((m: ILLM) => m.title === autocompleteModel)
+			if (foundModel) {
+				finalModel = foundModel
+				modelNameForTemplating = foundModel.model
+			} else {
+				// Model not found in config, but we can still use it for template selection
+				const configuredModel = config.selectedModelByRole?.autocomplete
+				if (!configuredModel) {
+					throw new Error("No autocomplete model configured and provided model not found in config")
+				}
+				finalModel = configuredModel
+				modelNameForTemplating = autocompleteModel // Use the provided string for template selection
+			}
+		} else {
+			finalModel = autocompleteModel
+			modelNameForTemplating = autocompleteModel.model
+		}
+	} else {
+		const configuredModel = config.selectedModelByRole?.autocomplete
+		if (!configuredModel) {
+			throw new Error("No autocomplete model configured and no model provided")
+		}
+		finalModel = configuredModel
+		modelNameForTemplating = configuredModel.model
+	}
 
-  const options = {
-    ...DEFAULT_AUTOCOMPLETE_OPTS,
-    ...config.tabAutocompleteOptions,
-    ...finalModel.autocompleteOptions,
-    ...(maxPromptTokens && { maxPromptTokens }),
-  };
+	const options = {
+		...DEFAULT_AUTOCOMPLETE_OPTS,
+		...config.tabAutocompleteOptions,
+		...finalModel.autocompleteOptions,
+		...(maxPromptTokens && { maxPromptTokens }),
+	}
 
-  const helper = await HelperVars.create(
-    input,
-    options,
-    modelNameForTemplating,
-    ide,
-  );
+	const helper = await HelperVars.create(input, options, modelNameForTemplating, ide)
 
-  const contextRetrievalService = new ContextRetrievalService(ide);
+	const contextRetrievalService = new ContextRetrievalService(ide)
 
-  await contextRetrievalService.initializeForFile(filepath);
+	await contextRetrievalService.initializeForFile(filepath)
 
-  const [snippetPayload, workspaceDirs] = await Promise.all([
-    getAllSnippetsWithoutRace({
-      helper,
-      ide: ide,
-      getDefinitionsFromLsp: getDefinitionsFromLsp,
-      contextRetrievalService: contextRetrievalService,
-    }),
-    ide.getWorkspaceDirs(),
-  ]);
+	const [snippetPayload, workspaceDirs] = await Promise.all([
+		getAllSnippetsWithoutRace({
+			helper,
+			ide: ide,
+			getDefinitionsFromLsp: getDefinitionsFromLsp,
+			contextRetrievalService: contextRetrievalService,
+		}),
+		ide.getWorkspaceDirs(),
+	])
 
-  const { prefix } = renderPrompt({
-    snippetPayload,
-    workspaceDirs,
-    helper,
-  });
+	const { prefix } = renderPrompt({
+		snippetPayload,
+		workspaceDirs,
+		helper,
+	})
 
-  return prefix;
-};
+	return prefix
+}

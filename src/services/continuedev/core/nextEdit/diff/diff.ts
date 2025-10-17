@@ -1,5 +1,5 @@
-import { DiffLine } from "../..";
-import { myersDiff } from "../../diff/myers";
+import { DiffLine } from "../.."
+import { myersDiff } from "../../diff/myers"
 
 /**
  * Given a diff of two editable regions, get the offset position at the last new line inside the editable region.
@@ -9,54 +9,54 @@ import { myersDiff } from "../../diff/myers";
  * @returns Offset position at last new line inside the editable region.
  */
 export function getOffsetPositionAtLastNewLine(
-  diffLines: DiffLine[],
-  lineContentAtCursorPos: string,
-  lineOffsetAtCursorPos: number,
+	diffLines: DiffLine[],
+	lineContentAtCursorPos: string,
+	lineOffsetAtCursorPos: number,
 ): {
-  line: number;
-  character: number;
+	line: number
+	character: number
 } {
-  let lastNewLineContent = "";
-  let lineOffset = -1;
-  let currentResultLine = 0;
-  let hasChanges = false;
+	let lastNewLineContent = ""
+	let lineOffset = -1
+	let currentResultLine = 0
+	let hasChanges = false
 
-  // Build the string while tracking line numbers in the result
-  diffLines.reduce((acc, curr, i) => {
-    // Add the current line to our result
-    acc += curr.line;
+	// Build the string while tracking line numbers in the result
+	diffLines.reduce((acc, curr, i) => {
+		// Add the current line to our result
+		acc += curr.line
 
-    // Add newline if not the last line
-    if (i < diffLines.length - 1) {
-      acc += "\n";
-    }
+		// Add newline if not the last line
+		if (i < diffLines.length - 1) {
+			acc += "\n"
+		}
 
-    // If this is a "new" or "same" line, it will be part of the result
-    if (curr.type === "new" || curr.type === "same") {
-      if (curr.type === "new") {
-        // If it's a new line, update our tracking
-        lastNewLineContent = curr.line;
-        lineOffset = currentResultLine;
-        hasChanges = true;
-      }
-      // Increment our position in the result
-      currentResultLine++;
-    }
+		// If this is a "new" or "same" line, it will be part of the result
+		if (curr.type === "new" || curr.type === "same") {
+			if (curr.type === "new") {
+				// If it's a new line, update our tracking
+				lastNewLineContent = curr.line
+				lineOffset = currentResultLine
+				hasChanges = true
+			}
+			// Increment our position in the result
+			currentResultLine++
+		}
 
-    return acc;
-  }, "");
+		return acc
+	}, "")
 
-  // If nothing has changed, return the original position
-  if (!hasChanges) {
-    lineOffset = lineOffsetAtCursorPos;
-    lastNewLineContent = lineContentAtCursorPos;
-  }
-  // Calculate the character position for the end of the last relevant line
-  const endOfCharPos = lastNewLineContent.length;
-  return {
-    line: lineOffset,
-    character: endOfCharPos,
-  };
+	// If nothing has changed, return the original position
+	if (!hasChanges) {
+		lineOffset = lineOffsetAtCursorPos
+		lastNewLineContent = lineContentAtCursorPos
+	}
+	// Calculate the character position for the end of the last relevant line
+	const endOfCharPos = lastNewLineContent.length
+	return {
+		line: lineOffset,
+		character: endOfCharPos,
+	}
 }
 
 /**
@@ -68,124 +68,116 @@ export function getOffsetPositionAtLastNewLine(
  * @returns string of FIM text content.
  */
 export function checkFim(
-  oldEditRange: string,
-  newEditRange: string,
-  cursorPosition: { line: number; character: number },
+	oldEditRange: string,
+	newEditRange: string,
+	cursorPosition: { line: number; character: number },
 ):
-  | {
-      isFim: true;
-      fimText: string;
-    }
-  | {
-      isFim: false;
-      fimText: null;
-    } {
-  // console.log("oldEditRange", oldEditRange);
-  // console.log("newEditRange", newEditRange);
-  // Find the common prefix.
-  let prefixLength = 0;
-  while (
-    prefixLength < oldEditRange.length &&
-    prefixLength < newEditRange.length &&
-    oldEditRange[prefixLength] === newEditRange[prefixLength]
-  ) {
-    prefixLength++;
-  }
+	| {
+			isFim: true
+			fimText: string
+	  }
+	| {
+			isFim: false
+			fimText: null
+	  } {
+	// console.log("oldEditRange", oldEditRange);
+	// console.log("newEditRange", newEditRange);
+	// Find the common prefix.
+	let prefixLength = 0
+	while (
+		prefixLength < oldEditRange.length &&
+		prefixLength < newEditRange.length &&
+		oldEditRange[prefixLength] === newEditRange[prefixLength]
+	) {
+		prefixLength++
+	}
 
-  // Find the common suffix
-  let oldSuffixPos = oldEditRange.length - 1;
-  let newSuffixPos = newEditRange.length - 1;
+	// Find the common suffix
+	let oldSuffixPos = oldEditRange.length - 1
+	let newSuffixPos = newEditRange.length - 1
 
-  while (
-    oldSuffixPos >= prefixLength &&
-    newSuffixPos >= prefixLength &&
-    oldEditRange[oldSuffixPos] === newEditRange[newSuffixPos]
-  ) {
-    oldSuffixPos--;
-    newSuffixPos--;
-  }
+	while (
+		oldSuffixPos >= prefixLength &&
+		newSuffixPos >= prefixLength &&
+		oldEditRange[oldSuffixPos] === newEditRange[newSuffixPos]
+	) {
+		oldSuffixPos--
+		newSuffixPos--
+	}
 
-  // The old text is purely preserved if:
-  // 1. The prefix ends before or at the cursor.
-  // 2. The suffix starts after or at the cursor.
-  // 3. There's no gap between prefix and suffix in the old text.
+	// The old text is purely preserved if:
+	// 1. The prefix ends before or at the cursor.
+	// 2. The suffix starts after or at the cursor.
+	// 3. There's no gap between prefix and suffix in the old text.
 
-  const suffixStartInOld = oldSuffixPos + 1;
-  const suffixStartInNew = newSuffixPos + 1;
+	const suffixStartInOld = oldSuffixPos + 1
+	const suffixStartInNew = newSuffixPos + 1
 
-  // Convert cursor position to an offset in the string.
-  // For simplicity, we need to calculate the cursor's position in the string.
-  // This requires knowledge of line endings in the oldEditRange.
-  // const lines = oldEditRange.substring(0, prefixLength).split("\n");
-  // const lines = oldEditRange.split("\n");
-  // const cursorOffset =
-  //   lines.length > 1
-  //     ? lines.slice(0, -1).reduce((sum, line) => sum + line.length + 1, 0) +
-  //       cursorPosition.character
-  //     : cursorPosition.character;
-  const oldEditLines = oldEditRange.split("\n");
-  const cursorOffset =
-    oldEditLines
-      .slice(0, cursorPosition.line)
-      .reduce((sum, line) => sum + line.length + 1, 0) +
-    cursorPosition.character;
+	// Convert cursor position to an offset in the string.
+	// For simplicity, we need to calculate the cursor's position in the string.
+	// This requires knowledge of line endings in the oldEditRange.
+	// const lines = oldEditRange.substring(0, prefixLength).split("\n");
+	// const lines = oldEditRange.split("\n");
+	// const cursorOffset =
+	//   lines.length > 1
+	//     ? lines.slice(0, -1).reduce((sum, line) => sum + line.length + 1, 0) +
+	//       cursorPosition.character
+	//     : cursorPosition.character;
+	const oldEditLines = oldEditRange.split("\n")
+	const cursorOffset =
+		oldEditLines.slice(0, cursorPosition.line).reduce((sum, line) => sum + line.length + 1, 0) +
+		cursorPosition.character
 
-  // Check if the cursor is positioned between the prefix and suffix.
-  const cursorBetweenPrefixAndSuffix =
-    prefixLength <= cursorOffset && cursorOffset <= suffixStartInOld;
+	// Check if the cursor is positioned between the prefix and suffix.
+	const cursorBetweenPrefixAndSuffix = prefixLength <= cursorOffset && cursorOffset <= suffixStartInOld
 
-  // Check if the old text is completely preserved (no deletion).
-  const noTextDeleted = suffixStartInOld - prefixLength <= 0;
+	// Check if the old text is completely preserved (no deletion).
+	const noTextDeleted = suffixStartInOld - prefixLength <= 0
 
-  const isFim = cursorBetweenPrefixAndSuffix && noTextDeleted;
+	const isFim = cursorBetweenPrefixAndSuffix && noTextDeleted
 
-  if (isFim) {
-    // Extract the content between prefix and suffix in the new string.
-    const fimText = newEditRange.substring(prefixLength, suffixStartInNew);
-    return { isFim, fimText };
-  } else {
-    return { isFim, fimText: null };
-  }
+	if (isFim) {
+		// Extract the content between prefix and suffix in the new string.
+		const fimText = newEditRange.substring(prefixLength, suffixStartInNew)
+		return { isFim, fimText }
+	} else {
+		return { isFim, fimText: null }
+	}
 }
 type Position = {
-  line: number;
-  character: number;
-};
+	line: number
+	character: number
+}
 export function calculateFinalCursorPosition(
-  currCursorPos: Position,
-  editableRegionStartLine: number,
-  oldEditRangeSlice: string,
-  newEditRangeSlice: string,
+	currCursorPos: Position,
+	editableRegionStartLine: number,
+	oldEditRangeSlice: string,
+	newEditRangeSlice: string,
 ) {
-  if (newEditRangeSlice === "") {
-    return currCursorPos;
-  }
-  // How far away is the current line from the start of the editable region?
-  const lineOffsetAtCursorPos = currCursorPos.line - editableRegionStartLine;
+	if (newEditRangeSlice === "") {
+		return currCursorPos
+	}
+	// How far away is the current line from the start of the editable region?
+	const lineOffsetAtCursorPos = currCursorPos.line - editableRegionStartLine
 
-  // How long is the line at the current cursor position?
-  const lineContentAtCursorPos =
-    newEditRangeSlice.split("\n")[lineOffsetAtCursorPos];
+	// How long is the line at the current cursor position?
+	const lineContentAtCursorPos = newEditRangeSlice.split("\n")[lineOffsetAtCursorPos]
 
-  const diffLines = myersDiff(oldEditRangeSlice, newEditRangeSlice);
+	const diffLines = myersDiff(oldEditRangeSlice, newEditRangeSlice)
 
-  const offset = getOffsetPositionAtLastNewLine(
-    diffLines,
-    lineContentAtCursorPos,
-    lineOffsetAtCursorPos,
-  );
+	const offset = getOffsetPositionAtLastNewLine(diffLines, lineContentAtCursorPos, lineOffsetAtCursorPos)
 
-  return {
-    line: editableRegionStartLine + offset.line,
-    character: offset.character,
-  };
+	return {
+		line: editableRegionStartLine + offset.line,
+		character: offset.character,
+	}
 }
 
 export interface DiffGroup {
-  startLine: number;
-  endLine: number;
-  lines: DiffLine[];
-  type?: string; // Optional classification of the group
+	startLine: number
+	endLine: number
+	lines: DiffLine[]
+	type?: string // Optional classification of the group
 }
 
 /**
@@ -195,156 +187,123 @@ export interface DiffGroup {
  * @param maxGroupSize Optional maximum group size constraint (Mode 2)
  * @returns Array of DiffGroup objects representing the changes
  */
-export function groupDiffLines(
-  diffLines: DiffLine[],
-  offset: number = 0,
-  maxGroupSize?: number,
-): DiffGroup[] {
-  const groups: DiffGroup[] = [];
-  const changedAreas = findChangedAreas(diffLines);
+export function groupDiffLines(diffLines: DiffLine[], offset: number = 0, maxGroupSize?: number): DiffGroup[] {
+	const groups: DiffGroup[] = []
+	const changedAreas = findChangedAreas(diffLines)
 
-  for (const area of changedAreas) {
-    if (maxGroupSize === undefined) {
-      // Mode 1: Flexible group size.
-      groups.push(
-        processFlexibleSizeGroup(diffLines, area.start, area.end, offset),
-      );
-    } else {
-      // Mode 2: Limited group size.
-      groups.push(
-        processLimitedSizeGroup(
-          diffLines,
-          area.start,
-          area.end,
-          maxGroupSize,
-          offset,
-        ),
-      );
-    }
-  }
+	for (const area of changedAreas) {
+		if (maxGroupSize === undefined) {
+			// Mode 1: Flexible group size.
+			groups.push(processFlexibleSizeGroup(diffLines, area.start, area.end, offset))
+		} else {
+			// Mode 2: Limited group size.
+			groups.push(processLimitedSizeGroup(diffLines, area.start, area.end, maxGroupSize, offset))
+		}
+	}
 
-  return groups;
+	return groups
 }
 
 /**
  * Find areas of change in the diff lines.
  */
-function findChangedAreas(
-  diffLines: DiffLine[],
-): { start: number; end: number }[] {
-  const changedAreas: { start: number; end: number }[] = [];
-  let changedAreaStart = -1;
+function findChangedAreas(diffLines: DiffLine[]): { start: number; end: number }[] {
+	const changedAreas: { start: number; end: number }[] = []
+	let changedAreaStart = -1
 
-  for (let i = 0; i < diffLines.length; i++) {
-    if (diffLines[i].type !== "same" && changedAreaStart === -1) {
-      changedAreaStart = i;
-    } else if (diffLines[i].type === "same" && changedAreaStart !== -1) {
-      // We've found the end of a changed area.
-      changedAreas.push({ start: changedAreaStart, end: i - 1 });
-      changedAreaStart = -1;
-    }
-  }
+	for (let i = 0; i < diffLines.length; i++) {
+		if (diffLines[i].type !== "same" && changedAreaStart === -1) {
+			changedAreaStart = i
+		} else if (diffLines[i].type === "same" && changedAreaStart !== -1) {
+			// We've found the end of a changed area.
+			changedAreas.push({ start: changedAreaStart, end: i - 1 })
+			changedAreaStart = -1
+		}
+	}
 
-  // Handle the last changed area if it extends to the end.
-  if (changedAreaStart !== -1) {
-    changedAreas.push({ start: changedAreaStart, end: diffLines.length - 1 });
-  }
+	// Handle the last changed area if it extends to the end.
+	if (changedAreaStart !== -1) {
+		changedAreas.push({ start: changedAreaStart, end: diffLines.length - 1 })
+	}
 
-  return changedAreas;
+	return changedAreas
 }
 
 /**
  * Count the number of lines in the old content (excluding "new" lines).
  */
-function countOldContentLines(
-  diffLines: DiffLine[],
-  startIdx: number,
-  endIdx: number,
-): number {
-  let count = 0;
-  for (let i = startIdx; i <= endIdx; i++) {
-    if (diffLines[i].type !== "new") {
-      count++;
-    }
-  }
-  return count;
+function countOldContentLines(diffLines: DiffLine[], startIdx: number, endIdx: number): number {
+	let count = 0
+	for (let i = startIdx; i <= endIdx; i++) {
+		if (diffLines[i].type !== "new") {
+			count++
+		}
+	}
+	return count
 }
 
 /**
  * Process a changed area with a limited group size.
  */
 function processLimitedSizeGroup(
-  diffLines: DiffLine[],
-  start: number,
-  end: number,
-  maxGroupSize: number,
-  offset: number,
+	diffLines: DiffLine[],
+	start: number,
+	end: number,
+	maxGroupSize: number,
+	offset: number,
 ): DiffGroup {
-  // Calculate the starting line in old content.
-  const oldContentLineStart = countOldContentLines(diffLines, 0, start - 1);
+	// Calculate the starting line in old content.
+	const oldContentLineStart = countOldContentLines(diffLines, 0, start - 1)
 
-  // Track how many lines we have left in our group size budget.
-  let remainingGroupSize = maxGroupSize;
-  let currentLine = start;
-  const lines: DiffLine[] = [];
+	// Track how many lines we have left in our group size budget.
+	let remainingGroupSize = maxGroupSize
+	let currentLine = start
+	const lines: DiffLine[] = []
 
-  // Process lines until we hit our size limit or reach the end.
-  while (currentLine <= end && remainingGroupSize > 0) {
-    // Add current line to results if we haven't seen it yet.
-    if (
-      lines.length === 0 ||
-      (lines.length > 0 &&
-        lines[lines.length - 1].line !== diffLines[currentLine].line)
-    ) {
-      lines.push(diffLines[currentLine]);
-    }
+	// Process lines until we hit our size limit or reach the end.
+	while (currentLine <= end && remainingGroupSize > 0) {
+		// Add current line to results if we haven't seen it yet.
+		if (lines.length === 0 || (lines.length > 0 && lines[lines.length - 1].line !== diffLines[currentLine].line)) {
+			lines.push(diffLines[currentLine])
+		}
 
-    if (diffLines[currentLine].type === "old") {
-      currentLine++;
-    } else if (diffLines[currentLine].type === "same") {
-      remainingGroupSize--;
-      currentLine++;
-    } else if (diffLines[currentLine].type === "new") {
-      remainingGroupSize--;
-      currentLine++;
-    }
-  }
+		if (diffLines[currentLine].type === "old") {
+			currentLine++
+		} else if (diffLines[currentLine].type === "same") {
+			remainingGroupSize--
+			currentLine++
+		} else if (diffLines[currentLine].type === "new") {
+			remainingGroupSize--
+			currentLine++
+		}
+	}
 
-  // Adjust for the last increment.
-  currentLine--;
+	// Adjust for the last increment.
+	currentLine--
 
-  // Calculate the end line in old content.
-  const oldContentLineEnd =
-    oldContentLineStart +
-    countOldContentLines(diffLines, start, currentLine) -
-    1;
+	// Calculate the end line in old content.
+	const oldContentLineEnd = oldContentLineStart + countOldContentLines(diffLines, start, currentLine) - 1
 
-  return {
-    startLine: oldContentLineStart + offset,
-    endLine: oldContentLineEnd + offset,
-    lines,
-  };
+	return {
+		startLine: oldContentLineStart + offset,
+		endLine: oldContentLineEnd + offset,
+		lines,
+	}
 }
 
 /**
  * Process a changed area with flexible sizing.
  */
-function processFlexibleSizeGroup(
-  diffLines: DiffLine[],
-  start: number,
-  end: number,
-  offset: number,
-): DiffGroup {
-  // Calculate the starting line in old content.
-  const oldContentLineStart = countOldContentLines(diffLines, 0, start - 1);
+function processFlexibleSizeGroup(diffLines: DiffLine[], start: number, end: number, offset: number): DiffGroup {
+	// Calculate the starting line in old content.
+	const oldContentLineStart = countOldContentLines(diffLines, 0, start - 1)
 
-  // Calculate the end line in old content.
-  const oldContentLineEnd =
-    oldContentLineStart + countOldContentLines(diffLines, start, end) - 1;
+	// Calculate the end line in old content.
+	const oldContentLineEnd = oldContentLineStart + countOldContentLines(diffLines, start, end) - 1
 
-  return {
-    startLine: oldContentLineStart + offset,
-    endLine: oldContentLineEnd + offset,
-    lines: diffLines.slice(start, end + 1),
-  };
+	return {
+		startLine: oldContentLineStart + offset,
+		endLine: oldContentLineEnd + offset,
+		lines: diffLines.slice(start, end + 1),
+	}
 }

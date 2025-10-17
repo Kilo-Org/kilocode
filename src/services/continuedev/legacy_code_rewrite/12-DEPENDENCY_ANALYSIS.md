@@ -190,10 +190,10 @@ Tree-sitter parsing is **complex and critical** for autocomplete, yet has no sta
 **Because it's extensively tested through feature tests:**
 
 1. `RootPathContextService.vitest.ts` tests tree-sitter for:
-   - Python type definitions
-   - TypeScript interfaces and types
-   - PHP classes and methods
-   - Go struct types
+    - Python type definitions
+    - TypeScript interfaces and types
+    - PHP classes and methods
+    - Go struct types
 2. Static context tests use tree-sitter for code structure
 3. AST utility tests verify tree-sitter parsing works
 

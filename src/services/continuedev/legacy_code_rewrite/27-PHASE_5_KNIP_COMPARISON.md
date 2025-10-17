@@ -22,9 +22,9 @@ Phase 4 cleanup successfully reduced code bloat in the Continue codebase. This r
 
 - **Before**: Not analyzed in detail
 - **After**: 3 unused devDependencies identified
-  - `eslint-plugin-import`
-  - `lint-staged`
-  - `prettier-plugin-tailwindcss`
+    - `eslint-plugin-import`
+    - `lint-staged`
+    - `prettier-plugin-tailwindcss`
 
 ## Detailed Analysis
 
@@ -98,9 +98,9 @@ The remaining unused exports fall into several categories:
 1. **Test Suite**: All tests must pass after cleanup
 2. **Type Checking**: No new type errors introduced
 3. **Functionality**:
-   - Autocomplete still works
-   - NextEdit still works
-   - No runtime errors
+    - Autocomplete still works
+    - NextEdit still works
+    - No runtime errors
 
 ### Potential Risks
 

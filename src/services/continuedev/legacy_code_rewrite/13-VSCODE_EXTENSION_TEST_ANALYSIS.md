@@ -289,14 +289,14 @@ All tests depend on `core/` package modules:
 
 ```json
 {
-  "devDependencies": {
-    "vitest": "^x.x.x",
-    "@types/vscode": "^x.x.x"
-  },
-  "scripts": {
-    "test": "vitest run",
-    "test:watch": "vitest"
-  }
+	"devDependencies": {
+		"vitest": "^x.x.x",
+		"@types/vscode": "^x.x.x"
+	},
+	"scripts": {
+		"test": "vitest run",
+		"test:watch": "vitest"
+	}
 }
 ```
 

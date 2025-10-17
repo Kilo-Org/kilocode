@@ -290,34 +290,34 @@ These are dependencies that could be replaced with simpler alternatives:
 ```typescript
 // Minimal hardcoded config for autocomplete/nextEdit
 interface MinimalConfig {
-  tabAutocompleteOptions?: {
-    debounceDelay?: number;
-    modelTimeout?: number;
-    useCache?: boolean;
-    template?: string;
-    // ... other autocomplete options
-  };
-  experimental?: {
-    enableStaticContextualization?: boolean;
-  };
+	tabAutocompleteOptions?: {
+		debounceDelay?: number
+		modelTimeout?: number
+		useCache?: boolean
+		template?: string
+		// ... other autocomplete options
+	}
+	experimental?: {
+		enableStaticContextualization?: boolean
+	}
 }
 
 class MinimalConfigHandler {
-  private config: MinimalConfig = {
-    tabAutocompleteOptions: {
-      debounceDelay: 150,
-      modelTimeout: 5000,
-      useCache: true,
-    },
-  };
+	private config: MinimalConfig = {
+		tabAutocompleteOptions: {
+			debounceDelay: 150,
+			modelTimeout: 5000,
+			useCache: true,
+		},
+	}
 
-  async loadConfig() {
-    return { config: this.config };
-  }
+	async loadConfig() {
+		return { config: this.config }
+	}
 
-  get currentProfile() {
-    return { profileDescription: { profileType: "local" } };
-  }
+	get currentProfile() {
+		return { profileDescription: { profileType: "local" } }
+	}
 }
 ```
 
@@ -493,7 +493,7 @@ These were identified as unused by both dependency tracing AND Knip:
 
 ```typescript
 if (llm instanceof OpenAI) {
-  llm.useLegacyCompletionsEndpoint = true;
+	llm.useLegacyCompletionsEndpoint = true
 }
 ```
 
@@ -531,27 +531,27 @@ Safe to remove immediately (confirmed by both analyses):
 
 1. **Delete control-plane/ directory** (12 files)
 
-   - Not imported by autocomplete/nextEdit
-   - Only used via ConfigHandler (which we'll replace)
+    - Not imported by autocomplete/nextEdit
+    - Only used via ConfigHandler (which we'll replace)
 
 2. **Delete codeRenderer/ directory**
 
-   - Not imported anywhere
+    - Not imported anywhere
 
 3. **Delete unused NextEdit context files** (5 files)
 
-   - aggregateEdits.ts
-   - autocompleteContextFetching.ts
-   - prevEditLruCache.ts
-   - processNextEditData.ts
-   - processSmallEdit.ts
+    - aggregateEdits.ts
+    - autocompleteContextFetching.ts
+    - prevEditLruCache.ts
+    - processNextEditData.ts
+    - processSmallEdit.ts
 
 4. **Delete unused test files** (8 files)
 
-   - Test fixtures and setup files
+    - Test fixtures and setup files
 
 5. **Delete other unused files** (10+ files)
-   - All files from Knip's unused list
+    - All files from Knip's unused list
 
 **Total immediate removal:** ~35-40 files, estimated 3000-5000 lines
 
@@ -565,10 +565,10 @@ Safe to remove immediately (confirmed by both analyses):
 2. Update CompletionProvider to use new handler
 3. Update NextEditProvider to use new handler
 4. Remove config/ dependencies:
-   - yaml-package/ (entire directory)
-   - profile/ (entire directory)
-   - ProfileLifecycleManager.ts
-   - loadLocalAssistants.ts
+    - yaml-package/ (entire directory)
+    - profile/ (entire directory)
+    - ProfileLifecycleManager.ts
+    - loadLocalAssistants.ts
 
 **Impact:** Removes ~5000-8000 lines, eliminates control-plane dependency
 

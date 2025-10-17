@@ -91,9 +91,9 @@ Run by test-autocomplete.sh  NOT run by test script
 
 - Jest tests exist but aren't run by `test-autocomplete.sh`
 - These tests cover core functionality that autocomplete/nextEdit depend on:
-  - **fetch/** - HTTP request handling (critical for LLM calls)
-  - **util/** - Range calculations, JSON parsing, string utilities
-  - **llm/** - LLM provider tests
+    - **fetch/** - HTTP request handling (critical for LLM calls)
+    - **util/** - Range calculations, JSON parsing, string utilities
+    - **llm/** - LLM provider tests
 
 #### Recommendation
 
@@ -181,9 +181,9 @@ Execute **Phase 1** of KNIP_CLEANUP_PLAN.md:
 Execute **Phase 2** of KNIP_CLEANUP_PLAN.md:
 
 1. Migrate critical .test.ts files to .vitest.ts
-   - Start with fetch tests (critical for LLM calls)
-   - Then util tests (ranges, index utilities)
-   - Then LLM tests if keeping LLM infrastructure
+    - Start with fetch tests (critical for LLM calls)
+    - Then util tests (ranges, index utilities)
+    - Then LLM tests if keeping LLM infrastructure
 
 **Expected outcome**: Maintain test coverage while consolidating test infrastructure
 
@@ -201,13 +201,13 @@ Execute **Phases 3-5** of KNIP_CLEANUP_PLAN.md:
 
 1. Clean up unused exports (180 items)
 
-   - Review language constants - keep or remove
-   - Review internal utilities - mark as internal or remove
-   - Remove unused config path utilities
+    - Review language constants - keep or remove
+    - Review internal utilities - mark as internal or remove
+    - Remove unused config path utilities
 
 2. Simplify control-plane type references
-   - Remove "control-plane" from type unions
-   - Simplify to just "local" | "platform"
+    - Remove "control-plane" from type unions
+    - Simplify to just "local" | "platform"
 
 ---
 
@@ -217,17 +217,17 @@ Execute **Phases 3-5** of KNIP_CLEANUP_PLAN.md:
 
 1. **If removing files without checking dependencies**:
 
-   - Autocomplete or nextEdit might import something unexpectedly
-   - **Mitigation**: Run tests after each removal
+    - Autocomplete or nextEdit might import something unexpectedly
+    - **Mitigation**: Run tests after each removal
 
 2. **If migrating tests incorrectly**:
 
-   - Loss of test coverage for core functionality
-   - **Mitigation**: Migrate high-priority tests first, verify each migration
+    - Loss of test coverage for core functionality
+    - **Mitigation**: Migrate high-priority tests first, verify each migration
 
 3. **If removing Jest too early**:
-   - Lose existing test coverage before migration complete
-   - **Mitigation**: Complete Phase 2 before Phase 3
+    - Lose existing test coverage before migration complete
+    - **Mitigation**: Complete Phase 2 before Phase 3
 
 ### What Won't Break
 

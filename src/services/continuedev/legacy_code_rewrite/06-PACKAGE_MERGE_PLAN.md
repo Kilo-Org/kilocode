@@ -90,23 +90,23 @@ util/: 4 utility files
 ### From (Package Import):
 
 ```typescript
-import { something } from "@continuedev/fetch";
-import { something } from "@continuedev/llm-info";
-import { something } from "@continuedev/openai-adapters";
-import { something } from "@continuedev/config-types";
-import { something } from "@continuedev/config-yaml";
+import { something } from "@continuedev/fetch"
+import { something } from "@continuedev/llm-info"
+import { something } from "@continuedev/openai-adapters"
+import { something } from "@continuedev/config-types"
+import { something } from "@continuedev/config-yaml"
 ```
 
 ### To (Relative Import):
 
 ```typescript
-import { something } from "../fetch"; // from core/
-import { something } from "../../fetch"; // from core/subdir/
-import { something } from "../../../fetch"; // from core/subdir/subdir/
-import { something } from "../llm-info"; // etc.
-import { something } from "../llm/openai-adapters";
-import { something } from "../config-types";
-import { something } from "../config/yaml-loader"; // special case
+import { something } from "../fetch" // from core/
+import { something } from "../../fetch" // from core/subdir/
+import { something } from "../../../fetch" // from core/subdir/subdir/
+import { something } from "../llm-info" // etc.
+import { something } from "../llm/openai-adapters"
+import { something } from "../config-types"
+import { something } from "../config/yaml-loader" // special case
 ```
 
 ---

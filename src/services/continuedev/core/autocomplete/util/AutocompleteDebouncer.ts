@@ -1,32 +1,32 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto"
 
 export class AutocompleteDebouncer {
-  private debounceTimeout: NodeJS.Timeout | undefined = undefined;
-  private currentRequestId: string | undefined = undefined;
+	private debounceTimeout: NodeJS.Timeout | undefined = undefined
+	private currentRequestId: string | undefined = undefined
 
-  async delayAndShouldDebounce(debounceDelay: number): Promise<boolean> {
-    // Generate a unique ID for this request
-    const requestId = randomUUID();
-    this.currentRequestId = requestId;
+	async delayAndShouldDebounce(debounceDelay: number): Promise<boolean> {
+		// Generate a unique ID for this request
+		const requestId = randomUUID()
+		this.currentRequestId = requestId
 
-    // Clear any existing timeout
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
-    }
+		// Clear any existing timeout
+		if (this.debounceTimeout) {
+			clearTimeout(this.debounceTimeout)
+		}
 
-    // Create a new promise that resolves after the debounce delay
-    return new Promise<boolean>((resolve) => {
-      this.debounceTimeout = setTimeout(() => {
-        // When the timeout completes, check if this is still the most recent request
-        const shouldDebounce = this.currentRequestId !== requestId;
+		// Create a new promise that resolves after the debounce delay
+		return new Promise<boolean>((resolve) => {
+			this.debounceTimeout = setTimeout(() => {
+				// When the timeout completes, check if this is still the most recent request
+				const shouldDebounce = this.currentRequestId !== requestId
 
-        // If this is the most recent request, it shouldn't be debounced
-        if (!shouldDebounce) {
-          this.currentRequestId = undefined;
-        }
+				// If this is the most recent request, it shouldn't be debounced
+				if (!shouldDebounce) {
+					this.currentRequestId = undefined
+				}
 
-        resolve(shouldDebounce);
-      }, debounceDelay);
-    });
-  }
+				resolve(shouldDebounce)
+			}, debounceDelay)
+		})
+	}
 }

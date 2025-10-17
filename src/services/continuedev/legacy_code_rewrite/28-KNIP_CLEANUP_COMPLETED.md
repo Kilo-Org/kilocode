@@ -145,11 +145,11 @@ Changes to [`knip.json`](./knip.json):
 
 ```json
 {
-  "entry": [
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.vitest.ts" // Only Vitest tests now
-  ]
+	"entry": [
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.vitest.ts" // Only Vitest tests now
+	]
 }
 ```
 
@@ -283,23 +283,23 @@ cd core/vscode-test-harness && npm test
 Identified in [`PHASE_5_KNIP_COMPARISON.md`](./PHASE_5_KNIP_COMPARISON.md):
 
 1. **Unused devDependencies** (3 packages):
-   - `eslint-plugin-import`
-   - `lint-staged`
-   - `prettier-plugin-tailwindcss`
+    - `eslint-plugin-import`
+    - `lint-staged`
+    - `prettier-plugin-tailwindcss`
 2. **Unused exported types** (64 types):
 
-   - Review if these are part of public API
-   - Consider marking as internal or removing
+    - Review if these are part of public API
+    - Consider marking as internal or removing
 
 3. **Language definitions** (27 exports):
 
-   - Typescript, JavaScript, Python, etc. constants
-   - Currently unused but may be part of public API
-   - Document their intended usage
+    - Typescript, JavaScript, Python, etc. constants
+    - Currently unused but may be part of public API
+    - Document their intended usage
 
 4. **Remaining unused files** (18 files):
-   - Most are utility/infrastructure kept for strategic reasons
-   - See [`PHASE_5_KNIP_COMPARISON.md`](./PHASE_5_KNIP_COMPARISON.md) for full list
+    - Most are utility/infrastructure kept for strategic reasons
+    - See [`PHASE_5_KNIP_COMPARISON.md`](./PHASE_5_KNIP_COMPARISON.md) for full list
 
 ### Why These Were Kept
 

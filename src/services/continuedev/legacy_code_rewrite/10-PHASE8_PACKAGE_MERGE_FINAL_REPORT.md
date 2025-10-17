@@ -56,10 +56,10 @@ Successfully merged all 5 internal `@continuedev/*` packages into the `core/` di
 
 ```typescript
 // Before:
-import { ConfigJson } from "@continuedev/config-types";
+import { ConfigJson } from "@continuedev/config-types"
 
 // After:
-import { ConfigJson } from "../config-types";
+import { ConfigJson } from "../config-types"
 ```
 
 ### 2. @continuedev/fetch
@@ -80,13 +80,13 @@ import { ConfigJson } from "../config-types";
 
 ```typescript
 // Before:
-import { streamSse } from "@continuedev/fetch";
+import { streamSse } from "@continuedev/fetch"
 
 // After (from core/llm/):
-import { streamSse } from "../fetch";
+import { streamSse } from "../fetch"
 
 // After (from core/llm/llms/):
-import { streamSse } from "../../fetch";
+import { streamSse } from "../../fetch"
 ```
 
 ### 3. @continuedev/llm-info
@@ -105,10 +105,10 @@ import { streamSse } from "../../fetch";
 
 ```typescript
 // Before:
-import { LlmInfo } from "@continuedev/llm-info/dist/types";
+import { LlmInfo } from "@continuedev/llm-info/dist/types"
 
 // After:
-import { LlmInfo } from "../llm-info/types";
+import { LlmInfo } from "../llm-info/types"
 ```
 
 ### 4. @continuedev/openai-adapters
@@ -129,19 +129,19 @@ import { LlmInfo } from "../llm-info/types";
 
 ```typescript
 // Before:
-import { FimCreateParamsStreaming } from "@continuedev/openai-adapters/dist/apis/base";
+import { FimCreateParamsStreaming } from "@continuedev/openai-adapters/dist/apis/base"
 
 // After:
-import { FimCreateParamsStreaming } from "./openai-adapters/apis/base";
+import { FimCreateParamsStreaming } from "./openai-adapters/apis/base"
 ```
 
 **Internal References Fixed:**
 
 ```typescript
 // Within openai-adapters files:
-import { streamSse } from "@continuedev/fetch";
+import { streamSse } from "@continuedev/fetch"
 // Changed to:
-import { streamSse } from "../../fetch";
+import { streamSse } from "../../fetch"
 ```
 
 ### 5. @continuedev/config-yaml
@@ -165,10 +165,10 @@ import { streamSse } from "../../fetch";
 
 ```typescript
 // Before:
-import("@continuedev/config-yaml").SecretType;
+import("@continuedev/config-yaml").SecretType
 
 // After:
-import("./yaml-package").SecretType;
+import("./yaml-package").SecretType
 ```
 
 ---
@@ -285,25 +285,25 @@ After careful verification, these files appear genuinely unused:
 
 1. **`core/config/yaml-package/cli.ts`**
 
-   - CLI tool for standalone config-yaml package
-   - Not imported anywhere in the codebase
-   - Verification: `grep -r "cli" core/ | grep yaml-package` = 0 results
+    - CLI tool for standalone config-yaml package
+    - Not imported anywhere in the codebase
+    - Verification: `grep -r "cli" core/ | grep yaml-package` = 0 results
 
 2. **`core/config/yaml-package/scripts/generateJsonSchema.ts`**
-   - Build script for generating schemas
-   - Not imported anywhere
-   - Verification: `grep -r "generateJsonSchema" core/ | grep -v "\.ts:"` = 0 results
+    - Build script for generating schemas
+    - Not imported anywhere
+    - Verification: `grep -r "generateJsonSchema" core/ | grep -v "\.ts:"` = 0 results
 
 ### Medium Confidence (2 files):
 
 3. **`core/llm-info/util.ts`**
 
-   - Need to verify if index.ts uses it
-   - May contain helper functions
+    - Need to verify if index.ts uses it
+    - May contain helper functions
 
 4. **`core/llm-info/providers/vertexai.ts`**
-   - Wait, this IS used - grep found 5 references!
-   - ❌ **Not safe to remove**
+    - Wait, this IS used - grep found 5 references!
+    - ❌ **Not safe to remove**
 
 ---
 
@@ -523,17 +523,17 @@ $ grep -r "vertexai" core/ | wc -l
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts"],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/.next/**"],
-  "ignoreDependencies": ["@types/*"]
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts"],
+	"ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/.next/**"],
+	"ignoreDependencies": ["@types/*"]
 }
 ```
 

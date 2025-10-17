@@ -76,11 +76,11 @@ Successfully transformed the Continue repository into an autocomplete+nextEdit-o
 - ✅ Autocomplete provider
 - ✅ NextEdit functionality
 - ✅ Core commands:
-  - `continue.toggleTabAutocompleteEnabled`
-  - `continue.forceAutocomplete`
-  - `continue.toggleNextEditEnabled`
-  - `continue.forceNextEdit`
-  - `continue.nextEditWindow.*` commands
+    - `continue.toggleTabAutocompleteEnabled`
+    - `continue.forceAutocomplete`
+    - `continue.toggleNextEditEnabled`
+    - `continue.forceNextEdit`
+    - `continue.nextEditWindow.*` commands
 
 ### Phase 4: Cleaned Up Packages ✅
 
@@ -212,18 +212,18 @@ The `final-dead-code-report.txt` identifies 1,391 potentially unused exports, pr
 
 1. **Type definitions in index.d.ts** (intentionally exported)
 
-   - These serve as the public API
-   - Many are used by external consumers
-   - Should be reviewed case-by-case before removal
+    - These serve as the public API
+    - Many are used by external consumers
+    - Should be reviewed case-by-case before removal
 
 2. **Internal utilities** (minor cleanup potential)
 
-   - Some utility functions may be unused
-   - Low priority - minimal size impact
+    - Some utility functions may be unused
+    - Low priority - minimal size impact
 
 3. **LLM provider code** (keep for compatibility)
-   - Multiple LLM providers maintained for flexibility
-   - Removing unused providers would break user configurations
+    - Multiple LLM providers maintained for flexibility
+    - Removing unused providers would break user configurations
 
 ## Recommendations
 

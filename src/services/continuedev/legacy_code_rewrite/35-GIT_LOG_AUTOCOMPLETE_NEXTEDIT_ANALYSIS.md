@@ -47,11 +47,11 @@ Already Present: 16 .scm files in core/tag-qry/
 **Commit f6c00551b**: "Phase 4 Batch 3: Remove 5 unused NextEdit context files"
 
 - **DELETED**:
-  - `core/nextEdit/context/aggregateEdits.ts`
-  - `core/nextEdit/context/autocompleteContextFetching.ts`
-  - `core/nextEdit/context/prevEditLruCache.ts`
-  - `core/nextEdit/context/processNextEditData.ts`
-  - `core/nextEdit/context/processSmallEdit.ts`
+    - `core/nextEdit/context/aggregateEdits.ts`
+    - `core/nextEdit/context/autocompleteContextFetching.ts`
+    - `core/nextEdit/context/prevEditLruCache.ts`
+    - `core/nextEdit/context/processNextEditData.ts`
+    - `core/nextEdit/context/processSmallEdit.ts`
 
 **Commit 4a7563041**: "Revert 'Phase 4 Batch 3: Remove 5 unused NextEdit context files'"
 
@@ -63,13 +63,13 @@ Already Present: 16 .scm files in core/tag-qry/
 **Commit dec652609**: "Phase 4B: Replace config system with minimal hardcoded config"
 
 - **DELETED** (appears intentional as part of config system simplification):
-  - `core/config/yaml-package/schemas/data/autocomplete/index.ts`
-  - `core/config/yaml-package/schemas/data/autocomplete/v0.1.0.ts`
-  - `core/config/yaml-package/schemas/data/autocomplete/v0.2.0.ts`
-  - `core/config/yaml-package/schemas/data/nextEditOutcome/index.ts`
-  - `core/config/yaml-package/schemas/data/nextEditOutcome/v0.2.0.ts`
-  - `core/config/yaml-package/schemas/data/nextEditWithHistory/index.ts`
-  - `core/config/yaml-package/schemas/data/nextEditWithHistory/v0.2.0.ts`
+    - `core/config/yaml-package/schemas/data/autocomplete/index.ts`
+    - `core/config/yaml-package/schemas/data/autocomplete/v0.1.0.ts`
+    - `core/config/yaml-package/schemas/data/autocomplete/v0.2.0.ts`
+    - `core/config/yaml-package/schemas/data/nextEditOutcome/index.ts`
+    - `core/config/yaml-package/schemas/data/nextEditOutcome/v0.2.0.ts`
+    - `core/config/yaml-package/schemas/data/nextEditWithHistory/index.ts`
+    - `core/config/yaml-package/schemas/data/nextEditWithHistory/v0.2.0.ts`
 - **MOVED**: `core/config/MinimalConfig.ts` → `core/autocomplete/MinimalConfig.ts`
 - **Assessment**: This appears to be an intentional simplification, replacing YAML schemas with hardcoded config
 
@@ -78,11 +78,11 @@ Already Present: 16 .scm files in core/tag-qry/
 **Commit 97247845f**: "Phase 7: Remove unused files from kept directories"
 
 - **DELETED**:
-  - `core/autocomplete/context/root-path-context/test/files/typescript/arrowFunctions.ts`
-  - `core/autocomplete/context/root-path-context/test/files/typescript/classMethods.ts`
-  - `core/autocomplete/context/root-path-context/test/files/typescript/classes.ts`
-  - `core/autocomplete/context/root-path-context/test/files/typescript/functions.ts`
-  - `core/autocomplete/context/root-path-context/test/files/typescript/generators.ts`
+    - `core/autocomplete/context/root-path-context/test/files/typescript/arrowFunctions.ts`
+    - `core/autocomplete/context/root-path-context/test/files/typescript/classMethods.ts`
+    - `core/autocomplete/context/root-path-context/test/files/typescript/classes.ts`
+    - `core/autocomplete/context/root-path-context/test/files/typescript/functions.ts`
+    - `core/autocomplete/context/root-path-context/test/files/typescript/generators.ts`
 - **Impact**: Test coverage for TypeScript-specific autocomplete features reduced
 - **Remaining Test Files**: Python, Go, PHP fixtures still present in `__fixtures__/`
 
@@ -91,14 +91,14 @@ Already Present: 16 .scm files in core/tag-qry/
 **Commit d81c9d45c**: "Phase 1.5 Complete: Remove extensions/vscode directory"
 
 - **DELETED**:
-  - `extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.ts`
-  - `extensions/vscode/src/autocomplete/RecentlyVisitedRangesService.ts`
-  - `extensions/vscode/src/autocomplete/completionProvider.ts`
-  - `extensions/vscode/src/autocomplete/lsp.ts`
-  - `extensions/vscode/src/autocomplete/recentlyEdited.ts`
-  - `extensions/vscode/src/autocomplete/statusBar.ts`
-  - `extensions/vscode/src/activation/NextEditWindowManager.ts`
-  - VSCode extension NextEdit E2E tests
+    - `extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.ts`
+    - `extensions/vscode/src/autocomplete/RecentlyVisitedRangesService.ts`
+    - `extensions/vscode/src/autocomplete/completionProvider.ts`
+    - `extensions/vscode/src/autocomplete/lsp.ts`
+    - `extensions/vscode/src/autocomplete/recentlyEdited.ts`
+    - `extensions/vscode/src/autocomplete/statusBar.ts`
+    - `extensions/vscode/src/activation/NextEditWindowManager.ts`
+    - VSCode extension NextEdit E2E tests
 - **NOTE**: These files were moved to `core/vscode-test-harness/` in commit abb37e551
 
 ## Detailed Tree-Sitter File Analysis
@@ -166,53 +166,53 @@ Already Present: 16 .scm files in core/tag-qry/
 
 1. **d81c9d45c** - Phase 1.5 Complete: Remove extensions/vscode directory
 
-   - Deleted: 52 .scm files from `extensions/vscode/`
-     - 16 from `tag-qry/` (duplicates of files in `core/tag-qry/`)
-     - 36 from `tree-sitter/` (needed for autocomplete)
-   - Status: ⚠️ 36 critical files temporarily missing
+    - Deleted: 52 .scm files from `extensions/vscode/`
+        - 16 from `tag-qry/` (duplicates of files in `core/tag-qry/`)
+        - 36 from `tree-sitter/` (needed for autocomplete)
+    - Status: ⚠️ 36 critical files temporarily missing
 
 2. **9d4ae3a6d** - Move tree-sitter query files to repo root (core dependency)
 
-   - Added: 36 .scm query files to root `tree-sitter/`
-   - Status: ✅ Critical files restored
+    - Added: 36 .scm query files to root `tree-sitter/`
+    - Status: ✅ Critical files restored
 
 3. **No action needed for core/tag-qry/**
-   - These 16 files remained in place throughout all changes
-   - Status: ✅ Never affected
+    - These 16 files remained in place throughout all changes
+    - Status: ✅ Never affected
 
 ### NextEdit Context File Changes
 
 1. **f6c00551b** - Phase 4 Batch 3: Remove 5 unused NextEdit context files
 
-   - Deleted: 5 core NextEdit context TypeScript files
-   - Status: ❌ Premature deletion
+    - Deleted: 5 core NextEdit context TypeScript files
+    - Status: ❌ Premature deletion
 
 2. **4a7563041** - Revert "Phase 4 Batch 3: Remove 5 unused NextEdit context files"
-   - Restored: All 5 NextEdit context files
-   - Status: ✅ Issue resolved
+    - Restored: All 5 NextEdit context files
+    - Status: ✅ Issue resolved
 
 ### Configuration Changes
 
 1. **dec652609** - Phase 4B: Replace config system with minimal hardcoded config
-   - Deleted: 7 YAML schema files for autocomplete and NextEdit
-   - Moved: MinimalConfig.ts to autocomplete directory
-   - Status: ⚠️ Intentional simplification, may affect schema validation
+    - Deleted: 7 YAML schema files for autocomplete and NextEdit
+    - Moved: MinimalConfig.ts to autocomplete directory
+    - Status: ⚠️ Intentional simplification, may affect schema validation
 
 ### Test Coverage Changes
 
 1. **97247845f** - Phase 7: Remove unused files from kept directories
-   - Deleted: 5 TypeScript test fixture files
-   - Status: ⚠️ Reduced test coverage for TypeScript features
+    - Deleted: 5 TypeScript test fixture files
+    - Status: ⚠️ Reduced test coverage for TypeScript features
 
 ### VSCode Extension Migration
 
 1. **d81c9d45c** - Phase 1.5 Complete: Remove extensions/vscode directory
 
-   - Deleted: VSCode extension autocomplete and NextEdit implementations
-   - Note: Later moved to core/vscode-test-harness
+    - Deleted: VSCode extension autocomplete and NextEdit implementations
+    - Note: Later moved to core/vscode-test-harness
 
 2. **abb37e551** - Remove redundant extension test files (now in test harness)
-   - Context: Extension functionality moved to test harness
+    - Context: Extension functionality moved to test harness
 
 ## Current State Verification
 
@@ -238,14 +238,14 @@ Autocomplete code correctly uses tree-sitter files from both locations:
 
 - **Autocomplete queries**: Use root `tree-sitter/` directory
 
-  - `core/autocomplete/context/static-context/tree-sitter-utils.ts`
-  - `core/autocomplete/context/static-context/StaticContextService.ts`
-  - `core/autocomplete/context/root-path-context/RootPathContextService.ts`
-  - `core/autocomplete/util/ast.ts`
+    - `core/autocomplete/context/static-context/tree-sitter-utils.ts`
+    - `core/autocomplete/context/static-context/StaticContextService.ts`
+    - `core/autocomplete/context/root-path-context/RootPathContextService.ts`
+    - `core/autocomplete/util/ast.ts`
 
 - **Code highlighting**: Uses `core/tag-qry/` directory
-  - Via `llm-code-highlighter` npm package
-  - Listed in `core/package.json` as dependency
+    - Via `llm-code-highlighter` npm package
+    - Listed in `core/package.json` as dependency
 
 ## Recommendations
 
@@ -286,8 +286,8 @@ Verify that all necessary autocomplete/NextEdit functionality from the old VSCod
 
 - **52 .scm files were deleted** from `extensions/vscode/`
 - **All 52 files are accounted for**:
-  - 36 files restored to root `tree-sitter/` directory
-  - 16 files already present in `core/tag-qry/` (were never deleted)
+    - 36 files restored to root `tree-sitter/` directory
+    - 16 files already present in `core/tag-qry/` (were never deleted)
 
 **No Critical Issues**: The temporary deletion of 36 critical tree-sitter query files was caught and corrected. The other 16 files were duplicates that were safely removed.
 

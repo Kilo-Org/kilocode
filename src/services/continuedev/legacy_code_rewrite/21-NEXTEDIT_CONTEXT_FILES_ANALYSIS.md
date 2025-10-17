@@ -12,22 +12,22 @@ This document provides a comprehensive analysis of the 5 NextEdit context files 
 
 - **`EditClusterConfig` (interface)**: Configuration for edit clustering behavior
 
-  - `deltaT`: Time threshold in seconds for clustering (default: 1.0)
-  - `deltaL`: Line threshold for clustering (default: 5)
-  - `maxEdits`: Maximum edits per cluster (default: 500)
-  - `maxDuration`: Maximum cluster duration in seconds (default: 100.0)
-  - `contextSize`: Number of previous edits to store (default: 5)
-  - `contextLines`: Context lines for computations (default: 3)
+    - `deltaT`: Time threshold in seconds for clustering (default: 1.0)
+    - `deltaL`: Line threshold for clustering (default: 5)
+    - `maxEdits`: Maximum edits per cluster (default: 500)
+    - `maxDuration`: Maximum cluster duration in seconds (default: 100.0)
+    - `contextSize`: Number of previous edits to store (default: 5)
+    - `contextLines`: Context lines for computations (default: 3)
 
 - **`EditAggregator` (class)**: Singleton class that aggregates small edits into clusters
-  - **Key Methods**:
-    - `getInstance(config?, onComparisonFinalized?)`: Static singleton factory
-    - `processEdit(edit, timestamp)`: Process a single edit
-    - `processEdits(edits)`: Process multiple edits
-    - `finalizeAllClusters()`: Finalize all active clusters
-    - `getActiveClusterCount()`: Get count of active clusters
-    - `getProcessingQueueSize()`: Get size of processing queue
-    - `resetState()`: Clear all state
+    - **Key Methods**:
+        - `getInstance(config?, onComparisonFinalized?)`: Static singleton factory
+        - `processEdit(edit, timestamp)`: Process a single edit
+        - `processEdits(edits)`: Process multiple edits
+        - `finalizeAllClusters()`: Finalize all active clusters
+        - `getActiveClusterCount()`: Get count of active clusters
+        - `getProcessingQueueSize()`: Get size of processing queue
+        - `resetState()`: Clear all state
 
 ### Usage Patterns
 
@@ -41,15 +41,15 @@ const currentData = (EditAggregator.getInstance() as any).latestContextData || {
 
 1. **Edit Clustering**: Groups related edits based on temporal and spatial proximity
 2. **File State Management**: Maintains state per file including:
-   - Active clusters
-   - Current content
-   - Processing queue
+    - Active clusters
+    - Current content
+    - Processing queue
 3. **Smart Finalization**: Automatically finalizes clusters based on:
-   - Time gaps exceeding deltaT
-   - Line jumps exceeding deltaL
-   - Maximum edit count
-   - Maximum duration
-   - File switching
+    - Time gaps exceeding deltaT
+    - Line jumps exceeding deltaL
+    - Maximum edit count
+    - Maximum duration
+    - File switching
 4. **Queue Processing**: Processes edits in batches of 5 to prevent blocking
 5. **Whitespace Handling**: Skips whitespace-only edits and diffs
 
@@ -77,18 +77,18 @@ const currentData = (EditAggregator.getInstance() as any).latestContextData || {
 ### Exports
 
 - **`getAutocompleteContext` (async function)**: Fetches formatted autocomplete context
-  - **Parameters**:
-    - `filepath`: File path for context
-    - `pos`: Position in file
-    - `ide`: IDE interface
-    - `configHandler`: Config handler
-    - `getDefinitionsFromLsp`: LSP definitions function
-    - `recentlyEditedRanges`: Recently edited ranges
-    - `recentlyVisitedRanges`: Recently visited ranges
-    - `maxPromptTokens`: Token limit
-    - `manuallyPassFileContents`: Optional file contents
-    - `autocompleteModel`: Optional model override
-  - **Returns**: Promise<string> - Formatted context string
+    - **Parameters**:
+        - `filepath`: File path for context
+        - `pos`: Position in file
+        - `ide`: IDE interface
+        - `configHandler`: Config handler
+        - `getDefinitionsFromLsp`: LSP definitions function
+        - `recentlyEditedRanges`: Recently edited ranges
+        - `recentlyVisitedRanges`: Recently visited ranges
+        - `maxPromptTokens`: Token limit
+        - `manuallyPassFileContents`: Optional file contents
+        - `autocompleteModel`: Optional model override
+    - **Returns**: Promise<string> - Formatted context string
 
 ### Usage Patterns
 
@@ -96,17 +96,17 @@ const currentData = (EditAggregator.getInstance() as any).latestContextData || {
 
 ```typescript
 const autocompleteContext = await getAutocompleteContext(
-  filePath,
-  cursorPosBeforeEdit,
-  ide,
-  configHandler,
-  getDefinitionsFromLsp,
-  recentlyEditedRanges,
-  recentlyVisitedRanges,
-  maxPromptTokens,
-  beforeContent,
-  modelName,
-);
+	filePath,
+	cursorPosBeforeEdit,
+	ide,
+	configHandler,
+	getDefinitionsFromLsp,
+	recentlyEditedRanges,
+	recentlyVisitedRanges,
+	maxPromptTokens,
+	beforeContent,
+	modelName,
+)
 ```
 
 ### Key Functionality
@@ -147,30 +147,30 @@ const autocompleteContext = await getAutocompleteContext(
 
 - **`prevEdit` (interface)**: Structure for storing previous edits
 
-  - `unidiff`: Unified diff string
-  - `fileUri`: File URI
-  - `workspaceUri`: Workspace URI
-  - `timestamp`: Edit timestamp
+    - `unidiff`: Unified diff string
+    - `fileUri`: File URI
+    - `workspaceUri`: Workspace URI
+    - `timestamp`: Edit timestamp
 
 - **`prevEditLruCache` (QuickLRU instance)**: LRU cache for previous edits
 
-  - Max size: 5 edits
+    - Max size: 5 edits
 
 - **`setPrevEdit` (function)**: Adds edit to cache
-  - Generates unique key from fileUri, timestamp, and random suffix
+    - Generates unique key from fileUri, timestamp, and random suffix
 - **`getPrevEditsDescending` (function)**: Gets edits in descending order (most recent first)
-  - Returns up to 5 most recent edits
+    - Returns up to 5 most recent edits
 
 ### Usage Patterns
 
 **Used by**: [`processNextEditData.ts`](core/nextEdit/context/processNextEditData.ts:89)
 
 ```typescript
-let prevEdits: prevEdit[] = getPrevEditsDescending();
+let prevEdits: prevEdit[] = getPrevEditsDescending()
 // ... check if edits should be cleared
-prevEditLruCache.clear();
+prevEditLruCache.clear()
 // ... later
-setPrevEdit(thisEdit);
+setPrevEdit(thisEdit)
 ```
 
 ### Key Functionality
@@ -202,19 +202,19 @@ setPrevEdit(thisEdit);
 ### Exports
 
 - **`processNextEditData` (async function)**: Processes next edit data for logging and context
-  - **Parameters**: Object with properties:
-    - `filePath`: File path
-    - `beforeContent`: Content before edit
-    - `afterContent`: Content after edit
-    - `cursorPosBeforeEdit`: Cursor position before
-    - `cursorPosAfterPrevEdit`: Cursor position after previous edit
-    - `ide`: IDE interface
-    - `configHandler`: Config handler
-    - `getDefinitionsFromLsp`: LSP function
-    - `recentlyEditedRanges`: Recently edited ranges
-    - `recentlyVisitedRanges`: Recently visited ranges
-    - `workspaceDir`: Workspace directory
-    - `modelNameOrInstance`: Optional model override
+    - **Parameters**: Object with properties:
+        - `filePath`: File path
+        - `beforeContent`: Content before edit
+        - `afterContent`: Content after edit
+        - `cursorPosBeforeEdit`: Cursor position before
+        - `cursorPosAfterPrevEdit`: Cursor position after previous edit
+        - `ide`: IDE interface
+        - `configHandler`: Config handler
+        - `getDefinitionsFromLsp`: LSP function
+        - `recentlyEditedRanges`: Recently edited ranges
+        - `recentlyVisitedRanges`: Recently visited ranges
+        - `workspaceDir`: Workspace directory
+        - `modelNameOrInstance`: Optional model override
 
 ### Usage Patterns
 
@@ -222,18 +222,18 @@ setPrevEdit(thisEdit);
 
 ```typescript
 void processNextEditData({
-  filePath: beforeAfterdiff.filePath,
-  beforeContent: beforeAfterdiff.beforeContent,
-  afterContent: beforeAfterdiff.afterContent,
-  cursorPosBeforeEdit: cursorPosBeforeEdit,
-  cursorPosAfterPrevEdit: cursorPosAfterPrevEdit,
-  ide: ide,
-  configHandler: currentData.configHandler,
-  getDefinitionsFromLsp: currentData.getDefsFromLspFunction,
-  recentlyEditedRanges: currentData.recentlyEditedRanges,
-  recentlyVisitedRanges: currentData.recentlyVisitedRanges,
-  workspaceDir: currentData.workspaceDir,
-});
+	filePath: beforeAfterdiff.filePath,
+	beforeContent: beforeAfterdiff.beforeContent,
+	afterContent: beforeAfterdiff.afterContent,
+	cursorPosBeforeEdit: cursorPosBeforeEdit,
+	cursorPosAfterPrevEdit: cursorPosAfterPrevEdit,
+	ide: ide,
+	configHandler: currentData.configHandler,
+	getDefinitionsFromLsp: currentData.getDefsFromLspFunction,
+	recentlyEditedRanges: currentData.recentlyEditedRanges,
+	recentlyVisitedRanges: currentData.recentlyVisitedRanges,
+	workspaceDir: currentData.workspaceDir,
+})
 ```
 
 ### Key Functionality
@@ -241,8 +241,8 @@ void processNextEditData({
 1. **Autocomplete Context Fetching**: Gets context via `getAutocompleteContext`
 2. **Context Addition**: Adds context to NextEditProvider
 3. **History Management**: Manages previous edits cache
-   - Clears cache if last edit >10 minutes ago
-   - Clears cache if workspace changed
+    - Clears cache if last edit >10 minutes ago
+    - Clears cache if workspace changed
 4. **Data Logging**: Logs to DataLogger when history exists
 5. **Edit Storage**: Stores current edit with unified diff
 
@@ -275,13 +275,13 @@ void processNextEditData({
 ### Exports
 
 - **`processSmallEdit` (async function)**: Entry point for processing small edits
-  - **Parameters**:
-    - `beforeAfterdiff`: BeforeAfterDiff object
-    - `cursorPosBeforeEdit`: Cursor position before
-    - `cursorPosAfterPrevEdit`: Cursor position after previous
-    - `configHandler`: Config handler
-    - `getDefsFromLspFunction`: LSP function
-    - `ide`: IDE interface
+    - **Parameters**:
+        - `beforeAfterdiff`: BeforeAfterDiff object
+        - `cursorPosBeforeEdit`: Cursor position before
+        - `cursorPosAfterPrevEdit`: Cursor position after previous
+        - `configHandler`: Config handler
+        - `getDefsFromLspFunction`: LSP function
+        - `ide`: IDE interface
 
 ### Usage Patterns
 

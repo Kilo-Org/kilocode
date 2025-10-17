@@ -161,50 +161,50 @@ extensions/vscode/src/util/util.vitest.ts
 
 2. **Identify Extension Code Required by Tests**:
 
-   Based on test imports, the extension needs:
+    Based on test imports, the extension needs:
 
-   ```typescript
-   // Core integration layer
-   extensions/vscode/src/autocomplete/completionProvider.ts
-   extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.ts
-   extensions/vscode/src/autocomplete/statusBar.ts (mocked in tests)
-   extensions/vscode/src/autocomplete/lsp.ts (mocked in tests)
-   extensions/vscode/src/autocomplete/recentlyEdited.ts (mocked in tests)
-   extensions/vscode/src/autocomplete/RecentlyVisitedRangesService.ts (mocked in tests)
+    ```typescript
+    // Core integration layer
+    extensions/vscode/src/autocomplete/completionProvider.ts
+    extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.ts
+    extensions/vscode/src/autocomplete/statusBar.ts (mocked in tests)
+    extensions/vscode/src/autocomplete/lsp.ts (mocked in tests)
+    extensions/vscode/src/autocomplete/recentlyEdited.ts (mocked in tests)
+    extensions/vscode/src/autocomplete/RecentlyVisitedRangesService.ts (mocked in tests)
 
-   // NextEdit integration
-   extensions/vscode/src/activation/NextEditWindowManager.ts
-   extensions/vscode/src/activation/JumpManager.ts
-   extensions/vscode/src/activation/SelectionChangeManager.ts
+    // NextEdit integration
+    extensions/vscode/src/activation/NextEditWindowManager.ts
+    extensions/vscode/src/activation/JumpManager.ts
+    extensions/vscode/src/activation/SelectionChangeManager.ts
 
-   // Core interfaces
-   extensions/vscode/src/VsCodeIde.ts
-   extensions/vscode/src/webviewProtocol.ts (minimal stub)
+    // Core interfaces
+    extensions/vscode/src/VsCodeIde.ts
+    extensions/vscode/src/webviewProtocol.ts (minimal stub)
 
-   // Utilities
-   extensions/vscode/src/util/util.ts
-   extensions/vscode/src/util/getTheme.ts
-   extensions/vscode/src/util/errorHandling.ts
-   ```
+    // Utilities
+    extensions/vscode/src/util/util.ts
+    extensions/vscode/src/util/getTheme.ts
+    extensions/vscode/src/util/errorHandling.ts
+    ```
 
 3. **Identify Extension Code to REMOVE**:
 
-   ```
-   ❌ extensions/vscode/src/extension.ts (main entry point - not needed)
-   ❌ extensions/vscode/src/commands.ts (command registration - not needed)
-   ❌ extensions/vscode/src/suggestions.ts (if not used by tests)
-   ❌ extensions/vscode/src/activation/activate.ts (activation logic)
-   ❌ extensions/vscode/src/activation/api.ts (API exports)
-   ❌ extensions/vscode/src/activation/InlineTipManager.ts (if not tested)
-   ❌ extensions/vscode/src/activation/languageClient.ts (language server)
-   ❌ extensions/vscode/src/activation/proxy.ts (proxy logic)
-   ❌ extensions/vscode/src/extension/* (VsCodeExtension, messenger, etc.)
-   ❌ extensions/vscode/scripts/* (ALL build scripts)
-   ❌ extensions/vscode/e2e/* (e2e tests - separate from unit tests)
-   ❌ extensions/vscode/media/* (icons, images)
-   ❌ extensions/vscode/models/* (ML models)
-   ❌ extensions/vscode/textmate-syntaxes/* (syntax highlighting)
-   ```
+    ```
+    ❌ extensions/vscode/src/extension.ts (main entry point - not needed)
+    ❌ extensions/vscode/src/commands.ts (command registration - not needed)
+    ❌ extensions/vscode/src/suggestions.ts (if not used by tests)
+    ❌ extensions/vscode/src/activation/activate.ts (activation logic)
+    ❌ extensions/vscode/src/activation/api.ts (API exports)
+    ❌ extensions/vscode/src/activation/InlineTipManager.ts (if not tested)
+    ❌ extensions/vscode/src/activation/languageClient.ts (language server)
+    ❌ extensions/vscode/src/activation/proxy.ts (proxy logic)
+    ❌ extensions/vscode/src/extension/* (VsCodeExtension, messenger, etc.)
+    ❌ extensions/vscode/scripts/* (ALL build scripts)
+    ❌ extensions/vscode/e2e/* (e2e tests - separate from unit tests)
+    ❌ extensions/vscode/media/* (icons, images)
+    ❌ extensions/vscode/models/* (ML models)
+    ❌ extensions/vscode/textmate-syntaxes/* (syntax highlighting)
+    ```
 
 4. **Create analysis document**:
 
@@ -381,16 +381,16 @@ cd ../..
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "project": ["core/**/*.ts"],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "extensions/**"],
-  "ignoreDependencies": ["@types/*"]
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": [
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"project": ["core/**/*.ts"],
+	"ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "extensions/**"],
+	"ignoreDependencies": ["@types/*"]
 }
 ```
 
@@ -401,10 +401,10 @@ npx knip --include files,exports,types,dependencies > knip-initial-core-only.txt
 ```
 
 3. Analyze results to categorize:
-   - **Critical dependencies**: What autocomplete/nextEdit import from core/
-   - **Unused directories**: Entire folders not imported
-   - **Unused files**: Individual files not used
-   - **Unused exports**: Functions/classes defined but not imported
+    - **Critical dependencies**: What autocomplete/nextEdit import from core/
+    - **Unused directories**: Entire folders not imported
+    - **Unused files**: Individual files not used
+    - **Unused exports**: Functions/classes defined but not imported
 
 **Output**: `CORE_DEPENDENCY_ANALYSIS.md` documenting what's actually needed
 
@@ -418,36 +418,36 @@ npx knip --include files,exports,types,dependencies > knip-initial-core-only.txt
 
 1. For each import in CompletionProvider.ts and NextEditProvider.ts, trace dependencies:
 
-   ```
-   CompletionProvider
-   ├── ConfigHandler (config/)
-   ├── IDE, ILLM interfaces (index.ts)
-   ├── OpenAI (llm/llms/)
-   ├── DEFAULT_AUTOCOMPLETE_OPTS (util/parameters)
-   ├── isSecurityConcern (indexing/ignore)
-   ├── BracketMatchingService (autocomplete/filtering/)
-   ├── CompletionStreamer (autocomplete/generation/)
-   └── ... (continue mapping)
-   ```
+    ```
+    CompletionProvider
+    ├── ConfigHandler (config/)
+    ├── IDE, ILLM interfaces (index.ts)
+    ├── OpenAI (llm/llms/)
+    ├── DEFAULT_AUTOCOMPLETE_OPTS (util/parameters)
+    ├── isSecurityConcern (indexing/ignore)
+    ├── BracketMatchingService (autocomplete/filtering/)
+    ├── CompletionStreamer (autocomplete/generation/)
+    └── ... (continue mapping)
+    ```
 
 2. Identify core infrastructure needed:
 
-   - **Must Keep**:
-     - `core/autocomplete/` (primary feature)
-     - `core/nextEdit/` (primary feature)
-     - `core/llm/` (LLM communication)
-     - `core/diff/` (diff utilities for nextEdit)
-     - `core/util/` (shared utilities)
-     - `core/indexing/ignore.ts` (security filtering)
-   - **Likely Remove**:
-     - `core/config/` (replace with hardcoded objects)
-     - `core/config-types/` (no config system)
-     - `core/config/yaml-package/` (no YAML parsing)
-     - `core/control-plane/` (no telemetry/server)
-     - `core/data/` (unless needed for logging)
-     - `core/codeRenderer/` (not used by autocomplete/nextEdit)
-     - `core/file:/` (unclear purpose)
-     - `core/utils/` vs `core/util/` (consolidate)
+    - **Must Keep**:
+        - `core/autocomplete/` (primary feature)
+        - `core/nextEdit/` (primary feature)
+        - `core/llm/` (LLM communication)
+        - `core/diff/` (diff utilities for nextEdit)
+        - `core/util/` (shared utilities)
+        - `core/indexing/ignore.ts` (security filtering)
+    - **Likely Remove**:
+        - `core/config/` (replace with hardcoded objects)
+        - `core/config-types/` (no config system)
+        - `core/config/yaml-package/` (no YAML parsing)
+        - `core/control-plane/` (no telemetry/server)
+        - `core/data/` (unless needed for logging)
+        - `core/codeRenderer/` (not used by autocomplete/nextEdit)
+        - `core/file:/` (unclear purpose)
+        - `core/utils/` vs `core/util/` (consolidate)
 
 3. Document findings in `DEPENDENCY_GRAPH.md` with Mermaid diagram
 
@@ -480,15 +480,15 @@ git commit -m "Remove unused infrastructure directories"
 ```typescript
 // Hardcoded config objects replacing ConfigHandler
 export const DEFAULT_AUTOCOMPLETE_CONFIG = {
-  disableIndexing: false,
-  // ... other required config
-};
+	disableIndexing: false,
+	// ... other required config
+}
 
 export class MinimalConfigHandler {
-  getConfig() {
-    return DEFAULT_AUTOCOMPLETE_CONFIG;
-  }
-  // Minimal interface needed
+	getConfig() {
+		return DEFAULT_AUTOCOMPLETE_CONFIG
+	}
+	// Minimal interface needed
 }
 ```
 
@@ -527,22 +527,22 @@ git commit -m "Remove duplicate utils directory"
 
 1. Identify which LLM providers autocomplete/nextEdit actually use:
 
-   - Check tests: What models are tested?
-   - Check defaults: What's in DEFAULT_AUTOCOMPLETE_OPTS?
-   - Trace OpenAI usage (explicitly imported in both providers)
+    - Check tests: What models are tested?
+    - Check defaults: What's in DEFAULT_AUTOCOMPLETE_OPTS?
+    - Trace OpenAI usage (explicitly imported in both providers)
 
 2. Keep minimal LLM infrastructure:
 
-   - `core/llm/llms/OpenAI.ts` (explicitly used)
-   - `core/llm/llms/base.ts` (likely base class)
-   - `core/llm/countTokens.ts` (used in templating)
-   - `core/llm/constants.ts` (model definitions)
-   - `core/llm/openai-adapters/` (if OpenAI depends on it)
+    - `core/llm/llms/OpenAI.ts` (explicitly used)
+    - `core/llm/llms/base.ts` (likely base class)
+    - `core/llm/countTokens.ts` (used in templating)
+    - `core/llm/constants.ts` (model definitions)
+    - `core/llm/openai-adapters/` (if OpenAI depends on it)
 
 3. Remove unused LLM providers (per Knip):
 
-   - Anthropic, Cohere, Gemini, etc. (if not used in tests)
-   - Unless tests explicitly require them
+    - Anthropic, Cohere, Gemini, etc. (if not used in tests)
+    - Unless tests explicitly require them
 
 4. Verify with:
 
@@ -572,9 +572,9 @@ find extensions/vscode -name "*.vitest.ts"
 
 3. Three possible outcomes:
 
-   - **Option A**: Tests are unit tests that mock everything → Can delete entire extension except tests
-   - **Option B**: Tests need minimal IDE interface → Keep only test harness
-   - **Option C**: Tests need extension.ts → Keep minimal extension.ts stub
+    - **Option A**: Tests are unit tests that mock everything → Can delete entire extension except tests
+    - **Option B**: Tests need minimal IDE interface → Keep only test harness
+    - **Option C**: Tests need extension.ts → Keep minimal extension.ts stub
 
 4. Based on analysis, remove unused extension code:
 
@@ -607,9 +607,9 @@ npx knip --include files > knip-files-only.txt
 
 2. Review each "unused file" carefully:
 
-   - Verify with grep it's truly not imported
-   - Check if it's test infrastructure (keep those)
-   - Check if it's part of public API (even if unused internally)
+    - Verify with grep it's truly not imported
+    - Check if it's test infrastructure (keep those)
+    - Check if it's part of public API (even if unused internally)
 
 3. Remove in small batches (10-15 files):
 
@@ -639,9 +639,9 @@ npx knip --include exports > knip-exports.txt
 
 2. For each unused export, verify it's not:
 
-   - Part of public API (CompletionProvider, NextEditProvider main exports)
-   - Used in tests
-   - Used dynamically (string-based lookups)
+    - Part of public API (CompletionProvider, NextEditProvider main exports)
+    - Used in tests
+    - Used dynamically (string-based lookups)
 
 3. Remove exports or make them private:
 
@@ -675,18 +675,18 @@ git commit -m "Remove unused exports from core/util/"
 
 1. **Consolidate duplicates**:
 
-   - If `core/util/` and `core/utils/` both exist, merge them
-   - If multiple "helper" files exist, consolidate
+    - If `core/util/` and `core/utils/` both exist, merge them
+    - If multiple "helper" files exist, consolidate
 
 2. **Simplify interfaces**:
 
-   - Create `core/types.ts` with minimal shared types
-   - Remove unused type definitions
+    - Create `core/types.ts` with minimal shared types
+    - Remove unused type definitions
 
 3. **Update package.json**:
 
-   - Remove unused dependencies per Knip
-   - Update entry points to just CompletionProvider and NextEditProvider
+    - Remove unused dependencies per Knip
+    - Update entry points to just CompletionProvider and NextEditProvider
 
 4. **Final Knip validation**:
 
@@ -735,16 +735,16 @@ npm test # Runs 532 tests
 
 2. Create `API.md` documenting:
 
-   - Public classes (CompletionProvider, NextEditProvider)
-   - Required interfaces (IDE, ILLM)
-   - Configuration objects
-   - Type definitions
+    - Public classes (CompletionProvider, NextEditProvider)
+    - Required interfaces (IDE, ILLM)
+    - Configuration objects
+    - Type definitions
 
 3. Create `ARCHITECTURE.md` explaining:
-   - Directory structure
-   - How autocomplete works
-   - How nextEdit works
-   - Extension points
+    - Directory structure
+    - How autocomplete works
+    - How nextEdit works
+    - Extension points
 
 **Output**: Clear documentation for library users
 
@@ -777,9 +777,9 @@ npm test # Runs 532 tests
 2. Analyze what broke: Read test errors carefully
 3. Identify the missing dependency
 4. Either:
-   - Keep that dependency (it's needed)
-   - Mock it in tests (if it's external)
-   - Fix the tests (if they're over-specified)
+    - Keep that dependency (it's needed)
+    - Mock it in tests (if it's external)
+    - Fix the tests (if they're over-specified)
 
 ### Knip False Positives
 

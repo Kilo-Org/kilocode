@@ -134,27 +134,27 @@ Create vitest test files for each:
 For each test file, follow this pattern:
 
 ```typescript
-import { describe, it, expect } from "vitest";
-import { functionName } from "./filename";
+import { describe, it, expect } from "vitest"
+import { functionName } from "./filename"
 
 describe("filename", () => {
-  describe("functionName", () => {
-    it("should handle basic case", () => {
-      // Test core functionality
-      const result = functionName(testInput);
-      expect(result).toBeDefined();
-      // Add specific assertions based on function behavior
-    });
+	describe("functionName", () => {
+		it("should handle basic case", () => {
+			// Test core functionality
+			const result = functionName(testInput)
+			expect(result).toBeDefined()
+			// Add specific assertions based on function behavior
+		})
 
-    it("should handle empty/null inputs", () => {
-      // Test edge cases
-    });
+		it("should handle empty/null inputs", () => {
+			// Test edge cases
+		})
 
-    it("should handle typical usage pattern", () => {
-      // Test realistic usage scenario
-    });
-  });
-});
+		it("should handle typical usage pattern", () => {
+			// Test realistic usage scenario
+		})
+	})
+})
 ```
 
 ### Step 4: Test Coverage Goals

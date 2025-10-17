@@ -122,26 +122,26 @@ graph TB
 
 1. **CompletionProvider** ([`core/autocomplete/CompletionProvider.ts`](core/autocomplete/CompletionProvider.ts))
 
-   - Main orchestrator for autocomplete
-   - Coordinates all sub-systems
-   - Manages completion lifecycle
+    - Main orchestrator for autocomplete
+    - Coordinates all sub-systems
+    - Manages completion lifecycle
 
 2. **ContextRetrievalService** ([`core/autocomplete/context/ContextRetrievalService.ts`](core/autocomplete/context/ContextRetrievalService.ts))
 
-   - Gathers relevant code context
-   - Collects recently edited files
-   - Retrieves LSP definitions
+    - Gathers relevant code context
+    - Collects recently edited files
+    - Retrieves LSP definitions
 
 3. **CompletionStreamer** ([`core/autocomplete/generation/CompletionStreamer.ts`](core/autocomplete/generation/CompletionStreamer.ts))
 
-   - Streams completions from LLM
-   - Applies real-time filters
-   - Handles abort signals
+    - Streams completions from LLM
+    - Applies real-time filters
+    - Handles abort signals
 
 4. **BracketMatchingService** ([`core/autocomplete/filtering/BracketMatchingService.ts`](core/autocomplete/filtering/BracketMatchingService.ts))
-   - Validates bracket balance
-   - Tracks bracket context
-   - Filters invalid completions
+    - Validates bracket balance
+    - Tracks bracket context
+    - Filters invalid completions
 
 ### NextEdit Architecture
 
@@ -203,26 +203,26 @@ graph TB
 
 1. **NextEditProvider** ([`core/nextEdit/NextEditProvider.ts`](core/nextEdit/NextEditProvider.ts))
 
-   - Main orchestrator for NextEdit
-   - Coordinates edit prediction workflow
-   - Manages provider selection
+    - Main orchestrator for NextEdit
+    - Coordinates edit prediction workflow
+    - Manages provider selection
 
 2. **BaseNextEditProvider** ([`core/nextEdit/providers/BaseNextEditProvider.ts`](core/nextEdit/providers/BaseNextEditProvider.ts))
 
-   - Abstract base for model-specific providers
-   - Defines provider interface
-   - Implements common functionality
+    - Abstract base for model-specific providers
+    - Defines provider interface
+    - Implements common functionality
 
 3. **NextEditEditableRegionCalculator** ([`core/nextEdit/NextEditEditableRegionCalculator.ts`](core/nextEdit/NextEditEditableRegionCalculator.ts))
 
-   - Calculates editable regions
-   - Determines edit scope
-   - Supports full-file and partial-file modes
+    - Calculates editable regions
+    - Determines edit scope
+    - Supports full-file and partial-file modes
 
 4. **DocumentHistoryTracker** ([`core/nextEdit/DocumentHistoryTracker.ts`](core/nextEdit/DocumentHistoryTracker.ts))
-   - Tracks document changes over time
-   - Captures user edit patterns
-   - Provides edit history for context
+    - Tracks document changes over time
+    - Captures user edit patterns
+    - Provides edit history for context
 
 ---
 
@@ -437,13 +437,13 @@ The library abstracts LLM communication through the `ILLM` interface:
 ```typescript
 // LLM providers implement ILLM interface
 class OpenAI implements ILLM {
-  async *streamFim(prefix: string, suffix: string, signal: AbortSignal) {
-    // Call OpenAI API with FIM format
-    // Stream tokens back
-    for await (const token of stream) {
-      yield token;
-    }
-  }
+	async *streamFim(prefix: string, suffix: string, signal: AbortSignal) {
+		// Call OpenAI API with FIM format
+		// Stream tokens back
+		for await (const token of stream) {
+			yield token
+		}
+	}
 }
 ```
 
@@ -644,15 +644,15 @@ Implement the `IDE` interface to integrate with any editor:
 
 ```typescript
 class MyCustomIDE implements IDE {
-  async readFile(filepath: string): Promise<string> {
-    // Your implementation
-  }
+	async readFile(filepath: string): Promise<string> {
+		// Your implementation
+	}
 
-  async getWorkspaceDirs(): Promise<string[]> {
-    // Your implementation
-  }
+	async getWorkspaceDirs(): Promise<string[]> {
+		// Your implementation
+	}
 
-  // ... implement all required methods
+	// ... implement all required methods
 }
 ```
 
@@ -669,14 +669,14 @@ Implement the `ILLM` interface for custom LLM backends:
 
 ```typescript
 class MyCustomLLM implements ILLM {
-  async *streamFim(prefix: string, suffix: string, signal: AbortSignal) {
-    // Stream from your LLM
-    for await (const token of yourLLMStream(prefix, suffix)) {
-      yield token;
-    }
-  }
+	async *streamFim(prefix: string, suffix: string, signal: AbortSignal) {
+		// Stream from your LLM
+		for await (const token of yourLLMStream(prefix, suffix)) {
+			yield token
+		}
+	}
 
-  // ... implement other methods
+	// ... implement other methods
 }
 ```
 
@@ -693,10 +693,10 @@ Extend context gathering with custom providers:
 
 ```typescript
 class CustomContextProvider {
-  async getContext(filepath: string, position: Position): Promise<string> {
-    // Fetch custom context (e.g., from a database, API)
-    return customContext;
-  }
+	async getContext(filepath: string, position: Position): Promise<string> {
+		// Fetch custom context (e.g., from a database, API)
+		return customContext
+	}
 }
 ```
 
@@ -708,8 +708,8 @@ Add custom filters to the completion pipeline:
 
 ```typescript
 function customFilter(completion: string, context: HelperVars): boolean {
-  // Return false to reject completion
-  return isValid(completion);
+	// Return false to reject completion
+	return isValid(completion)
 }
 ```
 
@@ -721,15 +721,15 @@ Create model-specific NextEdit providers:
 
 ```typescript
 class CustomNextEditProvider extends BaseNextEditProvider {
-  async generatePrompts(context: ModelSpecificContext): Promise<Prompt[]> {
-    // Build custom prompts for your model
-  }
+	async generatePrompts(context: ModelSpecificContext): Promise<Prompt[]> {
+		// Build custom prompts for your model
+	}
 
-  extractCompletion(message: string): string {
-    // Extract completion from model response
-  }
+	extractCompletion(message: string): string {
+		// Extract completion from model response
+	}
 
-  // ... implement other required methods
+	// ... implement other required methods
 }
 ```
 
@@ -737,7 +737,7 @@ class CustomNextEditProvider extends BaseNextEditProvider {
 
 ```typescript
 // Add to NextEditProviderFactory
-NextEditProviderFactory.registerProvider("my-model", CustomNextEditProvider);
+NextEditProviderFactory.registerProvider("my-model", CustomNextEditProvider)
 ```
 
 ---
@@ -841,19 +841,19 @@ core/
 ### Test Coverage
 
 - **Autocomplete**: ~400 unit tests
-  - Context gathering
-  - Filtering logic
-  - Generation pipeline
-  - Caching behavior
+    - Context gathering
+    - Filtering logic
+    - Generation pipeline
+    - Caching behavior
 - **NextEdit**: ~46 unit tests
-  - Edit prediction
-  - Diff calculation
-  - Model providers
-  - Region calculation
+    - Edit prediction
+    - Diff calculation
+    - Model providers
+    - Region calculation
 - **Integration**: 86 tests
-  - VSCode integration patterns
-  - UI managers
-  - Acceptance tracking
+    - VSCode integration patterns
+    - UI managers
+    - Acceptance tracking
 
 ### Test Utilities
 

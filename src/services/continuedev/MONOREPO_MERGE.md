@@ -20,12 +20,12 @@ The repository is now a truly flat monorepo with a single package manifest at th
 The repository now uses a single root tsconfig for development and tests:
 
 - Root: [tsconfig.json](tsconfig.json) — single configuration for all code
-  - Global types: ["vitest/globals", "node"]; VS Code types are imported explicitly in harness files
-  - noEmit: true; composite/incremental disabled
-  - baseUrl/paths: maps "core" and "core/\*" to allow harness imports
+    - Global types: ["vitest/globals", "node"]; VS Code types are imported explicitly in harness files
+    - noEmit: true; composite/incremental disabled
+    - baseUrl/paths: maps "core" and "core/\*" to allow harness imports
 - Removed:
-  - [core/tsconfig.json](core/tsconfig.json)
-  - [core/vscode-test-harness/tsconfig.json](core/vscode-test-harness/tsconfig.json)
+    - [core/tsconfig.json](core/tsconfig.json)
+    - [core/vscode-test-harness/tsconfig.json](core/vscode-test-harness/tsconfig.json)
 
 ## Rationale
 
@@ -47,7 +47,7 @@ The repository now uses a single root tsconfig for development and tests:
 - [package.json](package.json) — single manifest with all dependencies and scripts
 - [tsconfig.json](tsconfig.json) — single TypeScript configuration
 - [core/](core)
-  - [vscode-test-harness/](core/vscode-test-harness)
+    - [vscode-test-harness/](core/vscode-test-harness)
 - [tree-sitter/tag-queries/](tree-sitter/tag-queries) — consolidated tag queries
 
 ## Verification

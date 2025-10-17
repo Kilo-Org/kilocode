@@ -19,10 +19,10 @@ Tree-sitter has **NO standalone test file**, but it's **thoroughly tested throug
 **What it tests:**
 
 - Tree-sitter parsing for **multiple languages**:
-  - ✅ Python (function definitions, type hints)
-  - ✅ TypeScript (interfaces, types, functions, methods)
-  - ✅ PHP (classes, methods, interfaces)
-  - ✅ Go (struct types, function parameters)
+    - ✅ Python (function definitions, type hints)
+    - ✅ TypeScript (interfaces, types, functions, methods)
+    - ✅ PHP (classes, methods, interfaces)
+    - ✅ Go (struct types, function parameters)
 
 **Example test cases:**
 
@@ -114,26 +114,18 @@ Tree-sitter is used by autocomplete for:
 
 ```typescript
 const TEST_CASES = [
-  ...PYTHON_TEST_CASES, // Multiple Python test cases
-  ...TYPESCRIPT_TEST_CASES, // Multiple TypeScript test cases
-  // Plus PHP and Go test cases
-];
+	...PYTHON_TEST_CASES, // Multiple Python test cases
+	...TYPESCRIPT_TEST_CASES, // Multiple TypeScript test cases
+	// Plus PHP and Go test cases
+]
 
 describe("RootPathContextService", () => {
-  describe("should look for correct type definitions", () => {
-    test.each(TEST_CASES)(
-      "$language: $nodeType",
-      async ({ fileName, cursorPosition, definitionPositions }) => {
-        await testRootPathContext(
-          "files",
-          fileName,
-          cursorPosition,
-          definitionPositions,
-        );
-      },
-    );
-  });
-});
+	describe("should look for correct type definitions", () => {
+		test.each(TEST_CASES)("$language: $nodeType", async ({ fileName, cursorPosition, definitionPositions }) => {
+			await testRootPathContext("files", fileName, cursorPosition, definitionPositions)
+		})
+	})
+})
 ```
 
 **This tests tree-sitter:**

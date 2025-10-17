@@ -16,12 +16,12 @@
 
 ```json
 {
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "core/vscode-test-harness/**" // ← THIS WAS THE PROBLEM
-  ]
+	"ignore": [
+		"**/*.d.ts",
+		"**/node_modules/**",
+		"**/dist/**",
+		"core/vscode-test-harness/**" // ← THIS WAS THE PROBLEM
+	]
 }
 ```
 
@@ -136,8 +136,8 @@ According to improved Knip analysis, only **2 files** are unused:
 1. Located in [`src/activation/`](core/vscode-test-harness/src/activation) (production code, not test/)
 2. Creates actual [`CodeRenderer`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:175) instance: `this.codeRenderer = CodeRenderer.getInstance()`
 3. Calls real methods:
-   - [`setTheme()`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:290) - Line 290, 618, 632
-   - [`getDataUri()`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:704) - Line 704
+    - [`setTheme()`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:290) - Line 290, 618, 632
+    - [`getDataUri()`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:704) - Line 704
 
 **Purpose:**
 [`NextEditWindowManager`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts:112) uses CodeRenderer to:
@@ -172,18 +172,18 @@ But this is standard practice - tests mock external dependencies while the real 
 
 ```json
 {
-  "entry": [
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "core/vscode-test-harness/**" // ← REMOVED THIS
-  ]
+	"entry": [
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"ignore": [
+		"**/*.d.ts",
+		"**/node_modules/**",
+		"**/dist/**",
+		"core/vscode-test-harness/**" // ← REMOVED THIS
+	]
 }
 ```
 
@@ -191,20 +191,20 @@ But this is standard practice - tests mock external dependencies while the real 
 
 ```json
 {
-  "entry": [
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts",
-    "core/vscode-test-harness/test/**/*.vitest.ts", // ← ADDED
-    "core/vscode-test-harness/src/**/*.ts" // ← ADDED
-  ],
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**"
-    // Removed vscode-test-harness from ignore
-  ]
+	"entry": [
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts",
+		"core/vscode-test-harness/test/**/*.vitest.ts", // ← ADDED
+		"core/vscode-test-harness/src/**/*.ts" // ← ADDED
+	],
+	"ignore": [
+		"**/*.d.ts",
+		"**/node_modules/**",
+		"**/dist/**"
+		// Removed vscode-test-harness from ignore
+	]
 }
 ```
 
@@ -228,11 +228,11 @@ But this is standard practice - tests mock external dependencies while the real 
 
 1. **`control-plane/` directory** - WRONG
 
-   - Actually used by `posthog.ts` (TeamAnalytics)
-   - Actually used by `ConfigHandler.ts` (ControlPlaneClient, etc.)
+    - Actually used by `posthog.ts` (TeamAnalytics)
+    - Actually used by `ConfigHandler.ts` (ControlPlaneClient, etc.)
 
 2. **`codeRenderer/` directory** - WRONG
-   - Actually used by `vscode-test-harness/src/activation/NextEditWindowManager.ts`
+    - Actually used by `vscode-test-harness/src/activation/NextEditWindowManager.ts`
 
 ### Confirmed Unused After Improved Analysis
 
@@ -323,9 +323,9 @@ The `control-plane/` directory contains **65 files** across multiple subdirector
 2. Next edit provider generates completion
 3. **NextEditWindowManager** needs to show it with syntax highlighting
 4. Uses **CodeRenderer** to:
-   - Tokenize code with proper language grammar
-   - Apply theme colors (dark-plus, light-plus, etc.)
-   - Generate SVG for VS Code decoration
+    - Tokenize code with proper language grammar
+    - Apply theme colors (dark-plus, light-plus, etc.)
+    - Generate SVG for VS Code decoration
 
 ### Alternatives Considered
 
@@ -391,18 +391,18 @@ To eliminate ConfigHandler, we'd need to provide:
 
 ```typescript
 interface MinimalConfig {
-  // LLM Configuration
-  getLLM(): Promise<ILLM>;
+	// LLM Configuration
+	getLLM(): Promise<ILLM>
 
-  // Autocomplete Settings
-  autocompleteOptions: {
-    temperature?: number;
-    maxTokens?: number;
-    // ... other options
-  };
+	// Autocomplete Settings
+	autocompleteOptions: {
+		temperature?: number
+		maxTokens?: number
+		// ... other options
+	}
 
-  // Event System
-  onConfigUpdate(callback: () => void): void;
+	// Event System
+	onConfigUpdate(callback: () => void): void
 }
 ```
 
@@ -463,16 +463,16 @@ grep "control-plane/schema.ts" knip-phase4.5-improved.txt
 
 1. **Replace Analytics:**
 
-   - Create standalone Telemetry class
-   - Remove TeamAnalytics dependency
-   - Keep PostHog integration, remove control-plane integration
+    - Create standalone Telemetry class
+    - Remove TeamAnalytics dependency
+    - Keep PostHog integration, remove control-plane integration
 
 2. **Simplify ConfigHandler:**
 
-   - Remove remote config fetching (ControlPlaneClient)
-   - Remove policy enforcement (PolicySingleton)
-   - Remove environment detection (getControlPlaneEnv)
-   - Only support local config files
+    - Remove remote config fetching (ControlPlaneClient)
+    - Remove policy enforcement (PolicySingleton)
+    - Remove environment detection (getControlPlaneEnv)
+    - Only support local config files
 
 3. **Estimated Effort:** 2-3 days of refactoring
 4. **Risk:** Medium - could break existing enterprise features
@@ -532,19 +532,19 @@ codeRenderer/CodeRenderer
 
 1. **Delete 2 unused control-plane files:**
 
-   - `control-plane/auth/index.ts`
-   - `control-plane/schema.ts`
+    - `control-plane/auth/index.ts`
+    - `control-plane/schema.ts`
 
 2. **Keep everything else:**
 
-   - ✅ control-plane/ (63 files) - Required dependency
-   - ✅ codeRenderer/ - Required dependency
-   - ✅ config/ - Required dependency
+    - ✅ control-plane/ (63 files) - Required dependency
+    - ✅ codeRenderer/ - Required dependency
+    - ✅ config/ - Required dependency
 
 3. **Focus on config replacement instead:**
-   - Create minimal ConfigHandler replacement
-   - This is the actual blocker for extraction
-   - Control-plane is a transitive dependency through ConfigHandler
+    - Create minimal ConfigHandler replacement
+    - This is the actual blocker for extraction
+    - Control-plane is a transitive dependency through ConfigHandler
 
 ### Config Replacement Strategy
 

@@ -60,9 +60,9 @@ Git removed 173 files via `git rm -r packages/{5 directories}`
 
 ```typescript
 // Changed from:
-import { something } from "@continuedev/fetch";
+import { something } from "@continuedev/fetch"
 // To:
-import { something } from "../fetch"; // or "../../fetch" depending on depth
+import { something } from "../fetch" // or "../../fetch" depending on depth
 ```
 
 **Dependency updates (2 files):**

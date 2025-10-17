@@ -16,18 +16,18 @@ Knip analysis was run successfully but revealed significant **configuration issu
 
 1. **Configuration Issues Detected:**
 
-   - Entry points specified in `knip.json` don't exist:
-     - `core/autocomplete/index.ts` ❌ (doesn't exist)
-     - `core/nextEdit/index.ts` ❌ (doesn't exist)
-     - `core/index.ts` ❌ (doesn't exist)
-   - Actual entry points appear to be:
-     - `core/autocomplete/CompletionProvider.ts` ✓
-     - `core/nextEdit/NextEditProvider.ts` ✓
-     - `extensions/vscode/src/extension.ts` ✓
+    - Entry points specified in `knip.json` don't exist:
+        - `core/autocomplete/index.ts` ❌ (doesn't exist)
+        - `core/nextEdit/index.ts` ❌ (doesn't exist)
+        - `core/index.ts` ❌ (doesn't exist)
+    - Actual entry points appear to be:
+        - `core/autocomplete/CompletionProvider.ts` ✓
+        - `core/nextEdit/NextEditProvider.ts` ✓
+        - `extensions/vscode/src/extension.ts` ✓
 
 2. **False Positive Identified:**
-   - `eslint-plugin-import` flagged as unused but is actively used in `extensions/cli/eslint.config.js`
-   - This suggests Knip may not be correctly analyzing cross-directory dependencies
+    - `eslint-plugin-import` flagged as unused but is actively used in `extensions/cli/eslint.config.js`
+    - This suggests Knip may not be correctly analyzing cross-directory dependencies
 
 ---
 
@@ -78,27 +78,27 @@ core/util/history.ts - May be used for session management
 
 1. **Language Info Exports (26):** All language configurations from `AutocompleteLanguageInfo.ts`
 
-   - Typescript, JavaScript, Python, Java, C++, C#, etc.
-   - **Assessment:** Likely used dynamically via language map lookups
+    - Typescript, JavaScript, Python, Java, C++, C#, etc.
+    - **Assessment:** Likely used dynamically via language map lookups
 
 2. **Utility Functions (50+):** Functions in core/util/, core/autocomplete/util/
 
-   - Examples: `getScopeAroundRange`, `matchLine`, `dedentAndGetCommonWhitespace`
-   - **Assessment:** May be used for specific features or edge cases
+    - Examples: `getScopeAroundRange`, `matchLine`, `dedentAndGetCommonWhitespace`
+    - **Assessment:** May be used for specific features or edge cases
 
 3. **Constants (30+):** Various constant exports
 
-   - Examples: `DEFAULT_SECURITY_IGNORE_FILETYPES`, `PROXY_URL`, `RETRY_AFTER_HEADER`
-   - **Assessment:** May be used in configuration or edge cases
+    - Examples: `DEFAULT_SECURITY_IGNORE_FILETYPES`, `PROXY_URL`, `RETRY_AFTER_HEADER`
+    - **Assessment:** May be used in configuration or edge cases
 
 4. **Transform Functions (20+):** Stream transform functions
 
-   - Examples: `filterCodeBlockLines`, `skipLines`, `logLines`
-   - **Assessment:** Likely used in autocomplete pipeline
+    - Examples: `filterCodeBlockLines`, `skipLines`, `logLines`
+    - **Assessment:** Likely used in autocomplete pipeline
 
 5. **Path/File Utilities (25+):** Functions in core/util/paths.ts
-   - Examples: `getSessionsFolderPath`, `getLanceDbPath`, `getDocsSqlitePath`
-   - **Assessment:** Used for file system operations
+    - Examples: `getSessionsFolderPath`, `getLanceDbPath`, `getDocsSqlitePath`
+    - **Assessment:** Used for file system operations
 
 **High-Risk Exports (DO NOT REMOVE):**
 
@@ -144,39 +144,35 @@ Update `knip.json` with correct entry points:
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "extensions/vscode/src/test/**/*.test.ts",
-    "extensions/vscode/src/test/**/*.vitest.ts",
-    "core/**/test/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "project": [
-    "core/**/*.ts",
-    "extensions/vscode/src/**/*.ts",
-    "packages/**/*.ts"
-  ],
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.next/**",
-    "**/__mocks__/**",
-    "**/test/**",
-    "**/*.test.ts",
-    "**/*.vitest.ts"
-  ],
-  "ignoreDependencies": ["@types/*"],
-  "workspaces": {
-    ".": {},
-    "core": {},
-    "extensions/vscode": {},
-    "extensions/cli": {},
-    "packages/*": {}
-  }
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"extensions/vscode/src/test/**/*.test.ts",
+		"extensions/vscode/src/test/**/*.vitest.ts",
+		"core/**/test/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts", "packages/**/*.ts"],
+	"ignore": [
+		"**/*.d.ts",
+		"**/node_modules/**",
+		"**/dist/**",
+		"**/.next/**",
+		"**/__mocks__/**",
+		"**/test/**",
+		"**/*.test.ts",
+		"**/*.vitest.ts"
+	],
+	"ignoreDependencies": ["@types/*"],
+	"workspaces": {
+		".": {},
+		"core": {},
+		"extensions/vscode": {},
+		"extensions/cli": {},
+		"packages/*": {}
+	}
 }
 ```
 
@@ -268,24 +264,20 @@ Given the configuration issues and false positive, I assess the **risk of automa
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/index.ts",
-    "core/nextEdit/index.ts",
-    "core/index.ts",
-    "extensions/vscode/src/test/**/*.test.ts",
-    "extensions/vscode/src/test/**/*.vitest.ts",
-    "core/**/test/**/*.test.ts",
-    "core/**/test/**/*.vitest.ts"
-  ],
-  "project": [
-    "core/**/*.ts",
-    "extensions/vscode/src/**/*.ts",
-    "packages/**/*.ts"
-  ],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/.next/**"],
-  "ignoreDependencies": ["@types/*"]
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/index.ts",
+		"core/nextEdit/index.ts",
+		"core/index.ts",
+		"extensions/vscode/src/test/**/*.test.ts",
+		"extensions/vscode/src/test/**/*.vitest.ts",
+		"core/**/test/**/*.test.ts",
+		"core/**/test/**/*.vitest.ts"
+	],
+	"project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts", "packages/**/*.ts"],
+	"ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/.next/**"],
+	"ignoreDependencies": ["@types/*"]
 }
 ```
 

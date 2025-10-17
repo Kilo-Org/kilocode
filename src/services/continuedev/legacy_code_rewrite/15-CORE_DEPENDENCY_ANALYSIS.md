@@ -40,65 +40,65 @@ These directories and files are actively imported and used by autocomplete/nextE
 
 - ✅ **`core/autocomplete/`** - Primary autocomplete feature (entry point)
 - ✅ **`core/nextEdit/`** - Primary NextEdit feature (entry point)
-  - Note: Some files within nextEdit/context/ are unused (see unused files section)
+    - Note: Some files within nextEdit/context/ are unused (see unused files section)
 
 #### Infrastructure (Required)
 
 - ✅ **`core/llm/`** - LLM communication infrastructure
 
-  - Used by both CompletionProvider and NextEditProvider
-  - Includes OpenAI adapter, token counting, logging
-  - Some files are unused (see unused files section)
+    - Used by both CompletionProvider and NextEditProvider
+    - Includes OpenAI adapter, token counting, logging
+    - Some files are unused (see unused files section)
 
 - ✅ **`core/llm-info/`** - LLM provider metadata
 
-  - Used for model detection and capabilities
-  - One unused file: providers/vertexai.ts
+    - Used for model detection and capabilities
+    - One unused file: providers/vertexai.ts
 
 - ✅ **`core/diff/`** - Diff utilities
 
-  - Used by NextEdit for generating and applying diffs
-  - All files appear to be used
+    - Used by NextEdit for generating and applying diffs
+    - All files appear to be used
 
 - ✅ **`core/indexing/`** - File indexing and ignore patterns
 
-  - [`isSecurityConcern()`](core/indexing/ignore.ts:261) function used by both features
-  - Other functionality may be unused
+    - [`isSecurityConcern()`](core/indexing/ignore.ts:261) function used by both features
+    - Other functionality may be unused
 
 - ✅ **`core/fetch/`** - HTTP fetching with certificate handling
-  - Used by LLM providers for API calls
-  - Appears fully utilized
+    - Used by LLM providers for API calls
+    - Appears fully utilized
 
 #### Configuration (Needs Simplification)
 
 - ⚠️ **`core/config/`** - Configuration system
 
-  - [`ConfigHandler`](core/config/ConfigHandler.ts:1) is used by both main providers
-  - Contains 8 unused files related to YAML parsing, onboarding, etc.
-  - **Recommendation:** Replace complex config system with minimal hardcoded config objects
+    - [`ConfigHandler`](core/config/ConfigHandler.ts:1) is used by both main providers
+    - Contains 8 unused files related to YAML parsing, onboarding, etc.
+    - **Recommendation:** Replace complex config system with minimal hardcoded config objects
 
 - ⚠️ **`core/config-types/`** - Configuration type definitions
-  - Many unused schemas (50+ unused exports)
-  - Only a small subset of types are actually used
-  - **Recommendation:** Consolidate to only needed types
+    - Many unused schemas (50+ unused exports)
+    - Only a small subset of types are actually used
+    - **Recommendation:** Consolidate to only needed types
 
 #### Utilities (Mixed Usage)
 
 - ✅ **`core/util/`** - Shared utilities
 
-  - [`DEFAULT_AUTOCOMPLETE_OPTS`](core/util/parameters.ts:1) used by both providers
-  - Many other utility functions used
-  - However, 50+ unused exports identified
-  - **Recommendation:** Audit and remove unused utility functions
+    - [`DEFAULT_AUTOCOMPLETE_OPTS`](core/util/parameters.ts:1) used by both providers
+    - Many other utility functions used
+    - However, 50+ unused exports identified
+    - **Recommendation:** Audit and remove unused utility functions
 
 - ⚠️ **`core/utils/`** - Additional utilities (note: different from util/)
 
-  - Markdown utilities appear to be used
-  - **Recommendation:** Audit if this should be merged with core/util/
+    - Markdown utilities appear to be used
+    - **Recommendation:** Audit if this should be merged with core/util/
 
 - ✅ **`core/test/`** - Test fixtures and utilities
-  - Used by test files
-  - Some setup files are unused (vitest.global-setup.ts, jest.global-setup.ts)
+    - Used by test files
+    - Some setup files are unused (vitest.global-setup.ts, jest.global-setup.ts)
 
 ---
 
@@ -112,10 +112,10 @@ These entire directories are not imported by autocomplete/nextEdit:
 - **Status:** NOT used by autocomplete or NextEdit
 - **Recommendation:** ✅ **REMOVE ENTIRE DIRECTORY**
 - **Files:**
-  - `AuthTypes.ts`, `client.ts`, `env.ts`, `PolicySingleton.ts`, `schema.ts`, `TeamAnalytics.ts`
-  - `analytics/` subdirectory
-  - `auth/index.ts`
-  - `mdm/` subdirectory
+    - `AuthTypes.ts`, `client.ts`, `env.ts`, `PolicySingleton.ts`, `schema.ts`, `TeamAnalytics.ts`
+    - `analytics/` subdirectory
+    - `auth/index.ts`
+    - `mdm/` subdirectory
 
 #### 2. **`core/codeRenderer/`** (1 file)
 
@@ -220,9 +220,9 @@ The following dev dependencies can be removed:
 
 ```json
 {
-  "eslint-plugin-import": "package.json:17:6",
-  "lint-staged": "package.json:19:6",
-  "prettier-plugin-tailwindcss": "package.json:21:6"
+	"eslint-plugin-import": "package.json:17:6",
+	"lint-staged": "package.json:19:6",
+	"prettier-plugin-tailwindcss": "package.json:21:6"
 }
 ```
 
@@ -359,23 +359,23 @@ All test files (`**/*.test.ts`, `**/*.vitest.ts`) are treated as entry points, s
 
 1. **NextEdit Context Files Mystery**
 
-   - 5 files in `core/nextEdit/context/` are marked unused
-   - Verify these are truly dead code from refactoring
-   - Check git history to understand when they became unused
+    - 5 files in `core/nextEdit/context/` are marked unused
+    - Verify these are truly dead code from refactoring
+    - Check git history to understand when they became unused
 
 2. **Test Infrastructure Files**
 
-   - Verify which test setup files are actually needed
-   - May need to keep some even if not directly imported
+    - Verify which test setup files are actually needed
+    - May need to keep some even if not directly imported
 
 3. **Data/Logging System**
 
-   - Determine if any logging is needed for debugging
-   - If not, remove `core/data/` entirely
+    - Determine if any logging is needed for debugging
+    - If not, remove `core/data/` entirely
 
 4. **Indexing Usage**
-   - Verify what parts of indexing are actually used
-   - May only need security concern checking, not full traversal
+    - Verify what parts of indexing are actually used
+    - May only need security concern checking, not full traversal
 
 ### Safe to Remove Immediately (High Confidence)
 

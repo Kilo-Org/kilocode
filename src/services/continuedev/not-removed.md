@@ -28,13 +28,13 @@ This package provides the WASM binaries for tree-sitter language parsers that ar
 **Usage details:**
 
 - The `loadLanguageForFileExt()` function searches for WASM files in multiple locations including:
-  - `node_modules/tree-sitter-wasms/out/` (hoisted location)
-  - `tree-sitter-wasms/` (local bundled layout)
+    - `node_modules/tree-sitter-wasms/out/` (hoisted location)
+    - `tree-sitter-wasms/` (local bundled layout)
 - Each supported language (TypeScript, Python, JavaScript, Go, Rust, etc.) requires its corresponding WASM file (e.g., `tree-sitter-typescript.wasm`, `tree-sitter-python.wasm`)
 - These WASM files are loaded dynamically at runtime via `Parser.Language.load()` to enable:
-  - Code parsing and syntax tree generation
-  - Symbol extraction from code files
-  - Language-aware code analysis
+    - Code parsing and syntax tree generation
+    - Symbol extraction from code files
+    - Language-aware code analysis
 
 **Impact if removed:**
 Removing this dependency would break all tree-sitter functionality, preventing the system from:

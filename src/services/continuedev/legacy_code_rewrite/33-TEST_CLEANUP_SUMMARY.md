@@ -23,7 +23,7 @@ popd
 #### Removed Directories
 
 - **`core/dist/`** - Entire directory removed (64+ test files)
-  - All build artifacts and compiled test files
+    - All build artifacts and compiled test files
 
 #### Removed Test Files by Category
 

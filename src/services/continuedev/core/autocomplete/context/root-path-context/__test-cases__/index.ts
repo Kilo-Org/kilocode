@@ -1,2 +1,2 @@
-export * from "./python";
-export * from "./typescript";
+export * from "./python"
+export * from "./typescript"

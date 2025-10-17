@@ -28,13 +28,13 @@ A comprehensive dead code analysis was performed using Knip. Through iterative c
 
 ```json
 {
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/index.ts", // ❌ Doesn't exist
-    "core/nextEdit/index.ts", // ❌ Doesn't exist
-    "core/index.ts" // ❌ Doesn't exist
-    // ... test patterns
-  ]
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/index.ts", // ❌ Doesn't exist
+		"core/nextEdit/index.ts", // ❌ Doesn't exist
+		"core/index.ts" // ❌ Doesn't exist
+		// ... test patterns
+	]
 }
 ```
 
@@ -44,13 +44,13 @@ A comprehensive dead code analysis was performed using Knip. Through iterative c
 
 ```json
 {
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts", // ✅ Actual entry point
-    "core/nextEdit/NextEditProvider.ts", // ✅ Actual entry point
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ]
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts", // ✅ Actual entry point
+		"core/nextEdit/NextEditProvider.ts", // ✅ Actual entry point
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	]
 }
 ```
 
@@ -60,24 +60,24 @@ A comprehensive dead code analysis was performed using Knip. Through iterative c
 
 ```json
 {
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.next/**",
-    "packages/**" // ✅ Fixed monorepo false positives
-  ],
-  "ignoreDependencies": [
-    "@types/*",
-    "@continuedev/*" // ✅ Internal package dependencies
-  ]
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"ignore": [
+		"**/*.d.ts",
+		"**/node_modules/**",
+		"**/dist/**",
+		"**/.next/**",
+		"packages/**" // ✅ Fixed monorepo false positives
+	],
+	"ignoreDependencies": [
+		"@types/*",
+		"@continuedev/*" // ✅ Internal package dependencies
+	]
 }
 ```
 
@@ -166,32 +166,32 @@ core/util/url.ts
 ```typescript
 // From core/autocomplete/constants/AutocompleteLanguageInfo.ts
 Typescript,
-  JavaScript,
-  Python,
-  Java,
-  Cpp,
-  CSharp,
-  C,
-  Scala,
-  Go,
-  Rust,
-  Haskell,
-  PHP,
-  RubyOnRails,
-  Swift,
-  Kotlin,
-  Ruby,
-  Clojure,
-  Julia,
-  FSharp,
-  R,
-  Dart,
-  Solidity,
-  Lua,
-  YAML,
-  Json,
-  Markdown,
-  LANGUAGES;
+	JavaScript,
+	Python,
+	Java,
+	Cpp,
+	CSharp,
+	C,
+	Scala,
+	Go,
+	Rust,
+	Haskell,
+	PHP,
+	RubyOnRails,
+	Swift,
+	Kotlin,
+	Ruby,
+	Clojure,
+	Julia,
+	FSharp,
+	R,
+	Dart,
+	Solidity,
+	Lua,
+	YAML,
+	Json,
+	Markdown,
+	LANGUAGES
 ```
 
 **Assessment:** ⚠️ Likely **USED DYNAMICALLY** via language map lookups  
@@ -318,7 +318,7 @@ $ grep -r "streamChat\|calculateRequestCost\|createNewAssistantFile" core/ exten
 
 ```typescript
 // Languages accessed dynamically
-const info = LANGUAGES[fileExtension];
+const info = LANGUAGES[fileExtension]
 // Knip sees: exports { Typescript, JavaScript, ... } - unused
 // Reality: All used via LANGUAGES map
 ```
@@ -327,7 +327,7 @@ const info = LANGUAGES[fileExtension];
 
 ```typescript
 // LLMs loaded based on provider string
-const llm = llmFromProviderAndOptions(provider, options);
+const llm = llmFromProviderAndOptions(provider, options)
 // Knip sees: export class CometAPI - unused
 // Reality: Loaded dynamically based on provider name
 ```
@@ -345,7 +345,7 @@ const pipeline = [filterLeadingNewline, removeTrailingWhitespace, ...];
 
 ```typescript
 // Internal packages
-import { fetch } from "@continuedev/fetch";
+import { fetch } from "@continuedev/fetch"
 // Knip sees: packages/fetch/** - all unused
 // Reality: Used as internal npm package
 ```
@@ -354,12 +354,7 @@ import { fetch } from "@continuedev/fetch";
 
 ```typescript
 // Commands registered dynamically
-context.subscriptions.push(
-  vscode.commands.registerCommand(
-    "continue.acceptSuggestion",
-    acceptAllSuggestionsCommand,
-  ),
-);
+context.subscriptions.push(vscode.commands.registerCommand("continue.acceptSuggestion", acceptAllSuggestionsCommand))
 // Knip sees: export function acceptAllSuggestionsCommand - unused
 // Reality: Registered as VSCode command
 ```
@@ -418,16 +413,16 @@ git log --all -- core/config/onboarding.ts
 
 ```json
 {
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/llm/llms/**/*.ts", // Include all LLM providers
-    "core/llm/index.ts", // LLM factory
-    "core/config/load.ts", // Config loader
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ]
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/llm/llms/**/*.ts", // Include all LLM providers
+		"core/llm/index.ts", // LLM factory
+		"core/config/load.ts", // Config loader
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	]
 }
 ```
 
@@ -435,10 +430,10 @@ git log --all -- core/config/onboarding.ts
 
 ```json
 {
-  "ignoreExportsUsedInFile": {
-    "interface": true, // Don't flag interfaces as unused
-    "type": true // Don't flag types as unused
-  }
+	"ignoreExportsUsedInFile": {
+		"interface": true, // Don't flag interfaces as unused
+		"type": true // Don't flag types as unused
+	}
 }
 ```
 
@@ -537,23 +532,17 @@ If manual cleanup is desired:
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "extensions/vscode/src/extension.ts",
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.test.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts"],
-  "ignore": [
-    "**/*.d.ts",
-    "**/node_modules/**",
-    "**/dist/**",
-    "**/.next/**",
-    "packages/**"
-  ],
-  "ignoreDependencies": ["@types/*", "@continuedev/*"]
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": [
+		"extensions/vscode/src/extension.ts",
+		"core/autocomplete/CompletionProvider.ts",
+		"core/nextEdit/NextEditProvider.ts",
+		"core/**/*.test.ts",
+		"core/**/*.vitest.ts"
+	],
+	"project": ["core/**/*.ts", "extensions/vscode/src/**/*.ts"],
+	"ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**", "**/.next/**", "packages/**"],
+	"ignoreDependencies": ["@types/*", "@continuedev/*"]
 }
 ```
 

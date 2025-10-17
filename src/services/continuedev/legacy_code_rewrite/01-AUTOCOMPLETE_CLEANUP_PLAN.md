@@ -132,8 +132,8 @@ grep -r "from.*protocol" core/autocomplete/ core/nextEdit/ extensions/vscode/src
 
 - If NO imports found → Remove directory: `git rm -rf core/protocol/`
 - If imports found → Document what's needed, then either:
-  - Keep only required files, or
-  - Extract types to `core/autocomplete/types.ts` and remove directory
+    - Keep only required files, or
+    - Extract types to `core/autocomplete/types.ts` and remove directory
 
 **Commit**: "Remove or consolidate protocol definitions"
 

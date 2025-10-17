@@ -180,44 +180,44 @@ For each test file to migrate:
 
 1. **Copy and rename**:
 
-   ```bash
-   cp core/util/ranges.test.ts core/util/ranges.vitest.ts
-   ```
+    ```bash
+    cp core/util/ranges.test.ts core/util/ranges.vitest.ts
+    ```
 
 2. **Update imports** (if needed):
 
-   ```typescript
-   // Change from:
-   import { test, expect, describe } from "@jest/globals";
+    ```typescript
+    // Change from:
+    import { test, expect, describe } from "@jest/globals"
 
-   // To:
-   import { test, expect, describe, it, beforeEach, afterEach } from "vitest";
-   ```
+    // To:
+    import { test, expect, describe, it, beforeEach, afterEach } from "vitest"
+    ```
 
 3. **Update mocking syntax** (if any):
 
-   ```typescript
-   // Change from:
-   jest.fn();
-   jest.mock();
+    ```typescript
+    // Change from:
+    jest.fn()
+    jest.mock()
 
-   // To:
-   import { vi } from "vitest";
-   vi.fn();
-   vi.mock();
-   ```
+    // To:
+    import { vi } from "vitest"
+    vi.fn()
+    vi.mock()
+    ```
 
 4. **Verify test runs**:
 
-   ```bash
-   cd core
-   npm run vitest -- util/ranges.vitest.ts
-   ```
+    ```bash
+    cd core
+    npm run vitest -- util/ranges.vitest.ts
+    ```
 
 5. **Remove original .test.ts**:
-   ```bash
-   git rm core/util/ranges.test.ts
-   ```
+    ```bash
+    git rm core/util/ranges.test.ts
+    ```
 
 ---
 
@@ -295,15 +295,11 @@ git rm core/util/chatDescriber.test.ts
 
 ```json
 {
-  "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": [
-    "core/autocomplete/CompletionProvider.ts",
-    "core/nextEdit/NextEditProvider.ts",
-    "core/**/*.vitest.ts"
-  ],
-  "project": ["core/**/*.ts"],
-  "ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**"],
-  "ignoreDependencies": ["@types/*"]
+	"$schema": "https://unpkg.com/knip@latest/schema.json",
+	"entry": ["core/autocomplete/CompletionProvider.ts", "core/nextEdit/NextEditProvider.ts", "core/**/*.vitest.ts"],
+	"project": ["core/**/*.ts"],
+	"ignore": ["**/*.d.ts", "**/node_modules/**", "**/dist/**"],
+	"ignoreDependencies": ["@types/*"]
 }
 ```
 
@@ -343,23 +339,23 @@ Expected: All 532+ tests pass (may be more after migrations)
 ## Execution Order Summary
 
 1. **Phase 1** (Safe cleanup): Remove obviously unused files
-   - Commit after each sub-phase
-   - Run tests after each commit
+    - Commit after each sub-phase
+    - Run tests after each commit
 2. **Phase 2** (Test migration): Migrate critical .test.ts → .vitest.ts
-   - Migrate high-priority tests first
-   - Test each migration individually
-   - Can be done over multiple sessions
+    - Migrate high-priority tests first
+    - Test each migration individually
+    - Can be done over multiple sessions
 3. **Phase 3** (Remove Jest): Clean up Jest infrastructure
-   - Only after Phase 2 migrations are complete
-   - Update package.json and scripts
-   - Remove all remaining .test.ts files
+    - Only after Phase 2 migrations are complete
+    - Update package.json and scripts
+    - Remove all remaining .test.ts files
 4. **Phase 4** (Update knip): Adjust knip configuration
-   - Remove .test.ts entry points
-   - Re-run knip analysis
+    - Remove .test.ts entry points
+    - Re-run knip analysis
 5. **Phase 5** (Final verification): Comprehensive testing
-   - Run all tests
-   - Verify knip results
-   - Document final state
+    - Run all tests
+    - Verify knip results
+    - Document final state
 
 ---
 

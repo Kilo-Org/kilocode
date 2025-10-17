@@ -47,15 +47,15 @@ All test files were migrated with identical test counts. The differences are min
 **Original Extension (`extensions/vscode/src/`):**
 
 - 3 references to tree-sitter
-  1. `util/expandSnippet.ts` - Type import: `SyntaxNode from "web-tree-sitter"`
-  2. `autocomplete/lsp.ts` - Type import: `Parser from "web-tree-sitter"`
-  3. `autocomplete/lsp.ts` - Comment reference to tree-sitter indexing
+    1. `util/expandSnippet.ts` - Type import: `SyntaxNode from "web-tree-sitter"`
+    2. `autocomplete/lsp.ts` - Type import: `Parser from "web-tree-sitter"`
+    3. `autocomplete/lsp.ts` - Comment reference to tree-sitter indexing
 
 **New Test Harness (`core/vscode-test-harness/src/`):**
 
 - 2 references to tree-sitter
-  1. `autocomplete/lsp.ts` - Type import: `Parser from "web-tree-sitter"`
-  2. `autocomplete/lsp.ts` - Comment reference to tree-sitter indexing
+    1. `autocomplete/lsp.ts` - Type import: `Parser from "web-tree-sitter"`
+    2. `autocomplete/lsp.ts` - Comment reference to tree-sitter indexing
 
 ### Missing File Analysis
 
@@ -151,14 +151,14 @@ Files without tests were intentionally excluded:
 
 1. **expandSnippet.ts** contains tree-sitter code but has NO tests
 
-   - This is a **pre-existing gap** in test coverage
-   - Not introduced by the migration
-   - Test harness correctly excludes untested code
+    - This is a **pre-existing gap** in test coverage
+    - Not introduced by the migration
+    - Test harness correctly excludes untested code
 
 2. **Tree-sitter query files** (`.scm`) have no unit tests
-   - This is **appropriate** - they are data files
-   - They are validated through integration tests
-   - Not a coverage gap
+    - This is **appropriate** - they are data files
+    - They are validated through integration tests
+    - Not a coverage gap
 
 ### 🎯 No Action Required
 
@@ -184,13 +184,13 @@ No issues found that would prevent removal of original extension tests.
 
 1. **Consider adding tests for expandSnippet.ts**
 
-   - This file uses tree-sitter but has no test coverage
-   - Pre-existing gap, not caused by migration
-   - Low priority as it's not blocking removal
+    - This file uses tree-sitter but has no test coverage
+    - Pre-existing gap, not caused by migration
+    - Low priority as it's not blocking removal
 
 2. **Document tree-sitter query file validation**
-   - `.scm` files are validated through integration tests
-   - Consider adding a note in documentation about how these are tested
+    - `.scm` files are validated through integration tests
+    - Consider adding a note in documentation about how these are tested
 
 ---
 

@@ -167,22 +167,22 @@ These tests cover functionality directly used by NextEdit and/or autocomplete:
 ### Priority 1: CRITICAL - Add to Test Suite Immediately
 
 1. **All diff tests** (`core/diff/*.vitest.ts`)
-   - Rationale: NextEdit fundamentally depends on diff functionality
+    - Rationale: NextEdit fundamentally depends on diff functionality
 2. **Core LLM tests**:
-   - `core/llm/autodetect.vitest.ts` (model detection)
-   - `core/llm/llm.vitest.ts` (base LLM functionality)
-   - `core/llm/llms/OpenAI.vitest.ts` (OpenAI-specific behavior)
+    - `core/llm/autodetect.vitest.ts` (model detection)
+    - `core/llm/llm.vitest.ts` (base LLM functionality)
+    - `core/llm/llms/OpenAI.vitest.ts` (OpenAI-specific behavior)
 
 ### Priority 2: HIGH - Strongly Recommend Including
 
 3. **Security test**: `core/indexing/ignore.vitest.ts`
-   - Rationale: Prevents security issues
+    - Rationale: Prevents security issues
 4. **Caching test**: `core/util/LruCache.vitest.ts`
 
-   - Rationale: Both features use AutocompleteLruCache
+    - Rationale: Both features use AutocompleteLruCache
 
 5. **Pre-fetch test**: `core/llm/llm-pre-fetch.vitest.ts`
-   - Rationale: Performance optimization test
+    - Rationale: Performance optimization test
 
 ### Priority 3: MEDIUM - Consider Including for Comprehensive Coverage
 
