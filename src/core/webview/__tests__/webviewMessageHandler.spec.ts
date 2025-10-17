@@ -190,6 +190,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 				// kilocode_change start
@@ -232,6 +233,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		// kilocode_change start
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "submodel", apiKey: "submodel-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({
 			provider: "gemini",
 			apiKey: "gemini-key",
@@ -258,6 +260,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
+				submodel: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
@@ -278,6 +281,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
+				submodelApiKey: "submodel-key", // kilocode_change
 				// Missing litellm config
 			},
 		})
@@ -319,6 +323,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
+				submodelApiKey: "submodel-key",
 				// kilocode_change end
 				// Missing litellm config
 			},
@@ -358,6 +363,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
+				submodel: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
@@ -388,6 +394,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
+			.mockRejectedValueOnce(new Error("Submodel API error")) // submodel // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
@@ -410,6 +417,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				glama: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
+				submodel: {}, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: {},
@@ -448,6 +456,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
+			error: "Submodel API error",
+			values: { provider: "submodel" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
@@ -462,6 +477,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
+			.mockRejectedValueOnce(new Error("Submodel API error")) // submodel // kilocode_change
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
@@ -541,6 +557,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "deepinfra" },
 		})
 
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Submodel API error",
+			values: { provider: "submodel" },
+		})
+    
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,

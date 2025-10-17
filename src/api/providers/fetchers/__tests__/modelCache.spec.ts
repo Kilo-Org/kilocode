@@ -26,6 +26,7 @@ vi.mock("../glama")
 vi.mock("../unbound")
 vi.mock("../io-intelligence")
 vi.mock("../ovhcloud") // kilocode_change
+vi.mock("../submodel")
 
 // Then imports
 import type { Mock } from "vitest"
@@ -37,6 +38,7 @@ import { getGlamaModels } from "../glama"
 import { getUnboundModels } from "../unbound"
 import { getIOIntelligenceModels } from "../io-intelligence"
 import { getOvhCloudAiEndpointsModels } from "../ovhcloud" // kilocode_change
+import { getSubmodelModels } from "../submodel"
 
 const mockGetLiteLLMModels = getLiteLLMModels as Mock<typeof getLiteLLMModels>
 const mockGetOpenRouterModels = getOpenRouterModels as Mock<typeof getOpenRouterModels>
@@ -45,10 +47,12 @@ const mockGetGlamaModels = getGlamaModels as Mock<typeof getGlamaModels>
 const mockGetUnboundModels = getUnboundModels as Mock<typeof getUnboundModels>
 const mockGetIOIntelligenceModels = getIOIntelligenceModels as Mock<typeof getIOIntelligenceModels>
 const mockGetOvhCloudAiEndpointsModels = getOvhCloudAiEndpointsModels as Mock<typeof getOvhCloudAiEndpointsModels> // kilocode_change
+const mockGetSubmodelModels = getSubmodelModels as Mock<typeof getSubmodelModels>
 
 const DUMMY_REQUESTY_KEY = "requesty-key-for-testing"
 const DUMMY_UNBOUND_KEY = "unbound-key-for-testing"
 const DUMMY_IOINTELLIGENCE_KEY = "io-intelligence-key-for-testing"
+const DUMMY_SUBMODEL_KEY = "submodel-key-for-testing"
 
 describe("getModels with new GetModelsOptions", () => {
 	beforeEach(() => {
@@ -161,6 +165,23 @@ describe("getModels with new GetModelsOptions", () => {
 		expect(result).toEqual(mockModels)
 	})
 
+	it("calls getSubmodelModels with optional API key", async () => {
+		const mockModels = {
+			"submodel/model": {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsPromptCache: false,
+				description: "Submodel model",
+			},
+		}
+		mockGetSubmodelModels.mockResolvedValue(mockModels)
+
+		const result = await getModels({ provider: "submodel", apiKey: DUMMY_SUBMODEL_KEY })
+
+		expect(mockGetSubmodelModels).toHaveBeenCalledWith(DUMMY_SUBMODEL_KEY)
+		expect(result).toEqual(mockModels)
+	})
+  
 	// kilocode_change start
 	it("calls OvhCloudAiEndpointsModels for ovhcloud provider", async () => {
 		const mockModels = {

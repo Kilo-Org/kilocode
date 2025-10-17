@@ -2701,6 +2701,7 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 				// kilocode_change start
@@ -2747,6 +2748,7 @@ describe("ClineProvider - Router Models", () => {
 		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
+		expect(getModels).toHaveBeenCalledWith({ provider: "submodel", apiKey: "submodel-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -2764,6 +2766,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
+				submodel: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
@@ -2786,6 +2789,7 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				submodelApiKey: "submodel-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
 				// kilocode_change start
@@ -2810,6 +2814,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Chutes API error")) // kilocode_change: chutes fail
+			.mockRejectedValueOnce(new Error("Submodel API error")) // kilocode_change: submodel fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
@@ -2830,6 +2835,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
+				submodel: {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
 				litellm: {},
@@ -2885,6 +2891,13 @@ describe("ClineProvider - Router Models", () => {
 			error: "LiteLLM connection failed",
 			values: { provider: "litellm" },
 		})
+
+		expect(mockPostMessage).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Submodel API error",
+			values: { provider: "submodel" },
+		})
 	})
 
 	test("handles requestRouterModels with LiteLLM values from message", async () => {
@@ -2901,6 +2914,7 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
+				submodelApiKey: "submodel-key",
 				// kilocode_change end
 				// No litellm config
 			},
@@ -2941,6 +2955,7 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
+				submodelApiKey: "submodel-key",
 				// kilocode_change end
 				// No litellm config
 			},
@@ -2972,6 +2987,7 @@ describe("ClineProvider - Router Models", () => {
 				glama: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
+				submodel: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change

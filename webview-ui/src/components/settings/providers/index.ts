@@ -34,5 +34,6 @@ export { LiteLLM } from "./LiteLLM"
 export { Fireworks } from "./Fireworks"
 export { Synthetic } from "./Synthetic" // kilocode_change
 export { Featherless } from "./Featherless"
+export { Submodel } from "./Submodel"
 export { VercelAiGateway } from "./VercelAiGateway"
 export { DeepInfra } from "./DeepInfra"

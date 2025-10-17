@@ -165,6 +165,11 @@ function validateModelsAndKeysProvided(apiConfiguration: ProviderSettings): stri
 				return i18next.t("settings:validation.apiKey")
 			}
 			break
+		case "submodel":
+			if (!apiConfiguration.submodelApiKey) {
+				return i18next.t("settings:validation.apiKey")
+			}
+			break
 		case "qwen-code":
 			if (!apiConfiguration.qwenCodeOauthPath) {
 				return i18next.t("settings:validation.qwenCodeOauthPath")

@@ -27,6 +27,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 import { getChutesModels } from "./chutes"
 import { getGeminiModels } from "./gemini"
+import { getSubmodelModels } from "./submodel"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -125,6 +126,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "io-intelligence":
 				models = await getIOIntelligenceModels(options.apiKey)
+				break
+			case "submodel":
+				models = await getSubmodelModels(options.apiKey)
 				break
 			case "vercel-ai-gateway":
 				models = await getVercelAiGatewayModels()
