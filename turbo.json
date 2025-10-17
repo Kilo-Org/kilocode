@@ -1,10 +1,14 @@
 {
 	"$schema": "https://turbo.build/schema.json",
 	"tasks": {
-		"lint": {},
-		"check-types": {},
+		"lint": {
+			"dependsOn": ["continuedev:lint"]
+		},
+		"check-types": {
+			"dependsOn": ["continuedev:typecheck"]
+		},
 		"test": {
-			"dependsOn": ["@roo-code/types#build"]
+			"dependsOn": ["@roo-code/types#build", "continuedev:test"]
 		},
 		"format": {},
 		"clean": {
