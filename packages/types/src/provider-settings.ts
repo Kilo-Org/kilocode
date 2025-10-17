@@ -59,6 +59,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"sap-ai-core",
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -150,6 +151,7 @@ export const providerNames = [
 	"virtual-quota-fallback",
 	"synthetic",
 	// kilocode_change end
+	"sap-ai-core",
 	"sambanova",
 	"vertex",
 	"xai",
@@ -490,6 +492,15 @@ const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({
 	vercelAiGatewayModelId: z.string().optional(),
 })
 
+const sapAiCoreSchema = baseProviderSettingsSchema.extend({
+	sapAiCoreServiceKey: z.string().optional(),
+	sapAiCoreResourceGroup: z.string().optional(),
+	sapAiCoreUseOrchestration: z.boolean().optional(),
+	sapAiCoreModelId: z.string().optional(),
+	sapAiCoreDeploymentId: z.string().optional(),
+	sapAiCoreCustomModelInfo: modelInfoSchema.nullish(),
+})
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -537,6 +548,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
+	sapAiCoreSchema.merge(z.object({ apiProvider: z.literal("sap-ai-core") })),
 	defaultSchema,
 ])
 
@@ -583,6 +595,7 @@ export const providerSettingsSchema = z.object({
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
+	...sapAiCoreSchema.shape,
 	...codebaseIndexProviderSchema.shape,
 	...ovhcloudSchema.shape, // kilocode_change
 })
@@ -620,6 +633,7 @@ export const modelIdKeys = [
 	"deepInfraModelId",
 	"kilocodeModel",
 	"ovhCloudAiEndpointsModelId", // kilocode_change
+	"sapAiCoreModelId",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -676,6 +690,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	kilocode: "kilocodeModel",
 	"virtual-quota-fallback": "apiModelId",
 	ovhcloud: "ovhCloudAiEndpointsModelId", // kilocode_change
+	"sap-ai-core": "sapAiCoreModelId",
 }
 
 /**
@@ -808,6 +823,7 @@ export const MODELS_BY_PROVIDER: Record<
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
 	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] }, // kilocode_change
+	"sap-ai-core": { id: "sap-ai-core", label: "SAP AI Core", models: [] },
 
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },

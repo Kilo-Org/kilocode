@@ -85,6 +85,8 @@ export interface WebviewMessage {
 		| "requestLmStudioModels"
 		| "requestVsCodeLmModels"
 		| "requestHuggingFaceModels"
+		| "requestSapAiCoreModels"
+		| "requestSapAiCoreDeployments"
 		| "openImage"
 		| "saveImage"
 		| "openFile"

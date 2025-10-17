@@ -31,6 +31,7 @@ import { getGeminiModels } from "./gemini"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { getSapAiCoreModels } from "./sap-ai-core"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -131,6 +132,13 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "huggingface":
 				models = await getHuggingFaceModels()
+				break
+			case "sap-ai-core":
+				models = await getSapAiCoreModels(
+					options.sapAiCoreServiceKey,
+					options.sapAiCoreResourceGroup,
+					options.sapAiCoreUseOrchestration,
+				)
 				break
 			// kilocode_change start
 			case "ovhcloud":
