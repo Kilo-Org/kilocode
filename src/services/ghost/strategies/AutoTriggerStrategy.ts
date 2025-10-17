@@ -85,6 +85,7 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 		prompt += `Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n`
 		prompt += "Complete only what the user appears to be typing.\n"
 		prompt += "Single line preferred, no new features.\n"
+		prompt += "NEVER suggest code that already exists in the file, including existing comments.\n"
 		prompt += "If nothing obvious to complete, provide NO suggestion.\n"
 
 		return prompt

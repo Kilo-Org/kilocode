@@ -7,7 +7,8 @@ import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
-import { GhostSuggestionContext } from "./types"
+import { GhostInlineCompletionProvider } from "./GhostInlineCompletionProvider"
+import { GhostSuggestionContext, GhostSuggestionEditOperation } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
@@ -26,6 +27,8 @@ import { normalizeAutoTriggerDelayToMs } from "./utils/autocompleteDelayUtils"
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
 	private decorations: GhostDecorations
+	private inlineCompletionProvider: GhostInlineCompletionProvider
+	private inlineCompletionDisposable: vscode.Disposable | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private streamingParser: GhostStreamingParser
@@ -64,6 +67,7 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions)
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
@@ -77,6 +81,9 @@ export class GhostProvider {
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.codeLensProvider = new GhostCodeLensProvider()
+
+		// Register inline completion provider
+		this.registerInlineCompletionProvider()
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -131,6 +138,10 @@ export class GhostProvider {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
+
+		// Re-register inline completion provider if settings changed
+		this.registerInlineCompletionProvider()
+
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.saveSettings()
@@ -310,6 +321,9 @@ export class GhostProvider {
 					// Update our suggestions with the new parsed results
 					this.suggestions = parseResult.suggestions
 
+					// Update inline completion provider with new suggestions
+					this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
 					// If this is the first suggestion, show it immediately
 					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
 						hasShownFirstSuggestion = true
@@ -395,8 +409,237 @@ export class GhostProvider {
 		}
 	}
 
+	/**
+	 * Find common prefix between two strings
+	 */
+	private findCommonPrefix(str1: string, str2: string): string {
+		let i = 0
+		while (i < str1.length && i < str2.length && str1[i] === str2[i]) {
+			i++
+		}
+		return str1.substring(0, i)
+	}
+
+	/**
+	 * Check if this is a modification where the deletion is just to remove a placeholder
+	 * This happens when LLM responds with search pattern of just <<<AUTOCOMPLETE_HERE>>>
+	 * but the context included more content with the placeholder
+	 */
+	private shouldTreatAsAddition(
+		deleteOps: GhostSuggestionEditOperation[],
+		addOps: GhostSuggestionEditOperation[],
+	): boolean {
+		if (deleteOps.length === 0 || addOps.length === 0) return false
+
+		const deletedContent = deleteOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+		const addedContent = addOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+
+		// Case 1: Added content starts with deleted content AND has meaningful extension
+		if (addedContent.startsWith(deletedContent)) {
+			// Always return false here - let the common prefix logic handle this
+			// This ensures proper inline completion with suffix only
+			return false
+		}
+
+		// Case 2: Added content starts with newline - indicates LLM wants to add content after current line
+		// This is a universal indicator regardless of programming language
+		return addedContent.startsWith("\n") || addedContent.startsWith("\r\n")
+	}
+
+	/**
+	 * Check if a deletion group is placeholder-only and should be treated as addition
+	 */
+	private isPlaceholderOnlyDeletion(group: GhostSuggestionEditOperation[]): boolean {
+		const deleteOps = group.filter((op) => op.type === "-")
+		if (deleteOps.length === 0) return false
+
+		const deletedContent = deleteOps
+			.map((op) => op.content)
+			.join("\n")
+			.trim()
+		return deletedContent === "<<<AUTOCOMPLETE_HERE>>>"
+	}
+
+	/**
+	 * Get effective group for inline completion decision (handles placeholder-only deletions)
+	 */
+	private getEffectiveGroupForInline(
+		file: any,
+	): { group: GhostSuggestionEditOperation[]; type: "+" | "/" | "-" } | null {
+		const groups = file.getGroupsOperations()
+		const selectedGroupIndex = file.getSelectedGroup()
+
+		if (selectedGroupIndex === null || selectedGroupIndex >= groups.length) {
+			return null
+		}
+
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
+
+		// Check if this is a deletion that should be treated as addition
+		if (selectedGroupType === "-") {
+			// Case 1: Placeholder-only deletion
+			if (this.isPlaceholderOnlyDeletion(selectedGroup)) {
+				if (selectedGroupIndex + 1 < groups.length) {
+					const nextGroup = groups[selectedGroupIndex + 1]
+					const nextGroupType = file.getGroupType(nextGroup)
+
+					if (nextGroupType === "+") {
+						return { group: nextGroup, type: "+" }
+					}
+				}
+				return null
+			}
+
+			// Case 2: Deletion followed by addition - check what type of handling it needs
+			if (selectedGroupIndex + 1 < groups.length) {
+				const nextGroup = groups[selectedGroupIndex + 1]
+				const nextGroupType = file.getGroupType(nextGroup)
+
+				if (nextGroupType === "+") {
+					const deleteOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+					const addOps = nextGroup.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+
+					const deletedContent = deleteOps
+						.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+						.map((op: GhostSuggestionEditOperation) => op.content)
+						.join("\n")
+					const addedContent = addOps
+						.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+						.map((op: GhostSuggestionEditOperation) => op.content)
+						.join("\n")
+
+					// Check if added content starts with deleted content (common prefix scenario)
+					if (addedContent.startsWith(deletedContent)) {
+						// Create synthetic modification group for proper common prefix handling
+						const syntheticGroup = [...selectedGroup, ...nextGroup]
+						return { group: syntheticGroup, type: "/" }
+					}
+
+					// Check if this should be treated as addition after existing content
+					if (this.shouldTreatAsAddition(deleteOps, addOps)) {
+						return { group: nextGroup, type: "+" }
+					}
+				}
+			}
+		}
+
+		return { group: selectedGroup, type: selectedGroupType }
+	}
+
+	/**
+	 * Determine if a group should use inline completion instead of SVG decoration
+	 * Centralized logic to ensure consistency across render() and displaySuggestions()
+	 */
+	private shouldUseInlineCompletion(
+		selectedGroup: GhostSuggestionEditOperation[],
+		groupType: "+" | "/" | "-",
+		cursorLine: number,
+		file: any,
+	): boolean {
+		// Deletions never use inline
+		if (groupType === "-") {
+			return false
+		}
+
+		// Calculate target line and distance
+		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+		let targetLine: number
+
+		if (groupType === "+") {
+			const firstOp = selectedGroup[0]
+			targetLine = firstOp.line + offset.removed
+		} else {
+			// groupType === "/"
+			const deleteOp = selectedGroup.find((op: any) => op.type === "-")
+			targetLine = deleteOp ? deleteOp.line + offset.added : selectedGroup[0].line
+		}
+
+		const distanceFromCursor = Math.abs(cursorLine - targetLine)
+
+		// Must be within 5 lines
+		if (distanceFromCursor > 5) {
+			return false
+		}
+
+		// For pure additions, use inline
+		if (groupType === "+") {
+			return true
+		}
+
+		// For modifications, check if there's a common prefix or empty deleted content
+		const deleteOps = selectedGroup.filter((op) => op.type === "-")
+		const addOps = selectedGroup.filter((op) => op.type === "+")
+
+		if (deleteOps.length === 0 || addOps.length === 0) {
+			return false
+		}
+
+		const deletedContent = deleteOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+		const addedContent = addOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+
+		// If deleted content is empty or just the placeholder, treat as pure addition
+		const trimmedDeleted = deletedContent.trim()
+		if (trimmedDeleted.length === 0 || trimmedDeleted === "<<<AUTOCOMPLETE_HERE>>>") {
+			return true
+		}
+
+		// Check if this should be treated as addition (LLM wants to add after existing content)
+		if (this.shouldTreatAsAddition(deleteOps, addOps)) {
+			return true
+		}
+
+		// Check for common prefix
+		const commonPrefix = this.findCommonPrefix(deletedContent, addedContent)
+		return commonPrefix.length > 0
+	}
+
 	private async render() {
 		await this.updateGlobalContext()
+
+		// Update inline completion provider with current suggestions
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
+		// Determine if we should trigger inline suggestions using centralized logic
+		let shouldTriggerInline = false
+		const editor = vscode.window.activeTextEditor
+		if (editor && this.suggestions.hasSuggestions()) {
+			const file = this.suggestions.getFile(editor.document.uri)
+			if (file) {
+				const effectiveGroup = this.getEffectiveGroupForInline(file)
+				if (effectiveGroup) {
+					shouldTriggerInline = this.shouldUseInlineCompletion(
+						effectiveGroup.group,
+						effectiveGroup.type,
+						editor.selection.active.line,
+						file,
+					)
+				}
+			}
+		}
+
+		// Only trigger inline suggestions if selected group should use them
+		if (shouldTriggerInline) {
+			try {
+				await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+			} catch {
+				// Silently fail if command is not available
+			}
+		}
+
+		// Display decorations for appropriate groups
 		await this.displaySuggestions()
 		// await this.displayCodeLens()
 	}
@@ -411,6 +654,37 @@ export class GhostProvider {
 			return
 		}
 		file.selectClosestGroup(editor.selection)
+
+		// If we selected a placeholder-only deletion, try to select next valid group
+		const selectedGroupIndex = file.getSelectedGroup()
+		if (selectedGroupIndex !== null) {
+			const groups = file.getGroupsOperations()
+			const selectedGroup = groups[selectedGroupIndex]
+			const selectedGroupType = file.getGroupType(selectedGroup)
+
+			if (selectedGroupType === "-" && this.isPlaceholderOnlyDeletion(selectedGroup)) {
+				// Try to select a non-placeholder group
+				const originalSelection = selectedGroupIndex
+				let attempts = 0
+				const maxAttempts = groups.length
+
+				while (attempts < maxAttempts) {
+					file.selectNextGroup()
+					attempts++
+					const currentSelection = file.getSelectedGroup()
+
+					if (currentSelection !== null && currentSelection < groups.length) {
+						const currentGroup = groups[currentSelection]
+						const currentGroupType = file.getGroupType(currentGroup)
+
+						// If it's not a placeholder-only deletion, we're done
+						if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+							break
+						}
+					}
+				}
+			}
+		}
 	}
 
 	public async displaySuggestions() {
@@ -421,7 +695,74 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		await this.decorations.displaySuggestions(this.suggestions)
+
+		const file = this.suggestions.getFile(editor.document.uri)
+		if (!file) {
+			this.decorations.clearAll()
+			return
+		}
+
+		const groups = file.getGroupsOperations()
+		if (groups.length === 0) {
+			this.decorations.clearAll()
+			return
+		}
+
+		const selectedGroupIndex = file.getSelectedGroup()
+		if (selectedGroupIndex === null) {
+			this.decorations.clearAll()
+			return
+		}
+
+		// Get the effective group for inline completion decision
+		const effectiveGroup = this.getEffectiveGroupForInline(file)
+		const selectedGroupUsesInlineCompletion = effectiveGroup
+			? this.shouldUseInlineCompletion(
+					effectiveGroup.group,
+					effectiveGroup.type,
+					editor.selection.active.line,
+					file,
+				)
+			: false
+
+		// Determine which group indices to skip
+		const skipGroupIndices: number[] = []
+		if (selectedGroupUsesInlineCompletion) {
+			// Always skip the selected group
+			skipGroupIndices.push(selectedGroupIndex)
+
+			// If we're using a synthetic modification group (deletion + addition),
+			// skip both the deletion group AND the addition group
+			const selectedGroup = groups[selectedGroupIndex]
+			const selectedGroupType = file.getGroupType(selectedGroup)
+
+			if (selectedGroupType === "-" && selectedGroupIndex + 1 < groups.length) {
+				const nextGroup = groups[selectedGroupIndex + 1]
+				const nextGroupType = file.getGroupType(nextGroup)
+
+				// If next group is addition and they should be combined, skip both
+				if (nextGroupType === "+") {
+					const deleteOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+					const addOps = nextGroup.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+
+					const deletedContent = deleteOps.map((op: GhostSuggestionEditOperation) => op.content).join("\n")
+					const addedContent = addOps.map((op: GhostSuggestionEditOperation) => op.content).join("\n")
+
+					// If they have common prefix or other addition criteria, skip the addition group too
+					if (
+						addedContent.startsWith(deletedContent) ||
+						deletedContent === "<<<AUTOCOMPLETE_HERE>>>" ||
+						addedContent.startsWith("\n") ||
+						addedContent.startsWith("\r\n")
+					) {
+						skipGroupIndices.push(selectedGroupIndex + 1)
+					}
+				}
+			}
+		}
+
+		// Always show decorations, but skip groups that use inline completion
+		await this.decorations.displaySuggestions(this.suggestions, skipGroupIndices)
 	}
 
 	private getSelectedSuggestionLine() {
@@ -487,6 +828,9 @@ export class GhostProvider {
 		this.decorations.clearAll()
 		this.suggestions.clear()
 
+		// Update inline completion provider
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
 		this.clearAutoTriggerTimer()
 		await this.render()
 	}
@@ -508,17 +852,27 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		if (suggestionsFile.getSelectedGroup() === null) {
+		const selectedGroupIndex = suggestionsFile.getSelectedGroup()
+		if (selectedGroupIndex === null) {
 			await this.cancelSuggestions()
 			return
 		}
+
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
 		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
 		this.cursor.moveToAppliedGroup(this.suggestions)
+
+		// For placeholder-only deletions, we need to apply the associated addition instead
+		const groups = suggestionsFile.getGroupsOperations()
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = suggestionsFile.getGroupType(selectedGroup)
+
+		// Simply delete the selected group - the workspace edit will handle the actual application
 		suggestionsFile.deleteSelectedGroup()
+
 		suggestionsFile.selectClosestGroup(editor.selection)
 		this.suggestions.validateFiles()
 		this.clearAutoTriggerTimer()
@@ -560,7 +914,36 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		suggestionsFile.selectNextGroup()
+
+		// Navigate to next valid group (skip placeholder-only deletions)
+		const originalSelection = suggestionsFile.getSelectedGroup()
+		let attempts = 0
+		const maxAttempts = suggestionsFile.getGroupsOperations().length
+		let foundValidGroup = false
+
+		while (attempts < maxAttempts && !foundValidGroup) {
+			suggestionsFile.selectNextGroup()
+			attempts++
+			const currentSelection = suggestionsFile.getSelectedGroup()
+
+			// Check if current group is placeholder-only deletion
+			if (currentSelection !== null) {
+				const groups = suggestionsFile.getGroupsOperations()
+				const currentGroup = groups[currentSelection]
+				const currentGroupType = suggestionsFile.getGroupType(currentGroup)
+
+				// If it's not a placeholder-only deletion, we found a valid group
+				if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+					foundValidGroup = true
+				}
+			}
+
+			// Safety check to avoid infinite loop
+			if (currentSelection === originalSelection) {
+				break
+			}
+		}
+
 		await this.render()
 	}
 
@@ -581,7 +964,36 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		suggestionsFile.selectPreviousGroup()
+
+		// Navigate to previous valid group (skip placeholder-only deletions)
+		const originalSelection = suggestionsFile.getSelectedGroup()
+		let attempts = 0
+		const maxAttempts = suggestionsFile.getGroupsOperations().length
+		let foundValidGroup = false
+
+		while (attempts < maxAttempts && !foundValidGroup) {
+			suggestionsFile.selectPreviousGroup()
+			attempts++
+			const currentSelection = suggestionsFile.getSelectedGroup()
+
+			// Check if current group is placeholder-only deletion
+			if (currentSelection !== null) {
+				const groups = suggestionsFile.getGroupsOperations()
+				const currentGroup = groups[currentSelection]
+				const currentGroupType = suggestionsFile.getGroupType(currentGroup)
+
+				// If it's not a placeholder-only deletion, we found a valid group
+				if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+					foundValidGroup = true
+				}
+			}
+
+			// Safety check to avoid infinite loop
+			if (currentSelection === originalSelection) {
+				break
+			}
+		}
+
 		await this.render()
 	}
 
@@ -743,6 +1155,23 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Register or re-register the inline completion provider
+	 */
+	private registerInlineCompletionProvider(): void {
+		// Dispose existing registration
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+
+		// Register inline completion provider for all languages
+		this.inlineCompletionDisposable = vscode.languages.registerInlineCompletionItemProvider(
+			{ pattern: "**" },
+			this.inlineCompletionProvider,
+		)
+	}
+
+	/**
 	 * Dispose of all resources used by the GhostProvider
 	 */
 	public dispose(): void {
@@ -751,6 +1180,13 @@ export class GhostProvider {
 
 		this.suggestions.clear()
 		this.decorations.clearAll()
+
+		// Dispose inline completion provider
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+		this.inlineCompletionProvider.dispose()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()
