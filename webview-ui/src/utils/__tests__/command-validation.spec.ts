@@ -12,7 +12,126 @@ import {
 	CommandValidator,
 	createCommandValidator,
 	containsDangerousSubstitution,
+	protectNewlinesInQuotes,
 } from "../command-validation"
+
+describe("protectNewlinesInQuotes", () => {
+	const placeholder = "___NEWLINE___"
+
+	describe("basic quote handling", () => {
+		it("protects newlines in double quotes", () => {
+			const input = 'echo "hello\nworld"'
+			const expected = `echo "hello${placeholder}world"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("protects newlines in single quotes", () => {
+			const input = "echo 'hello\nworld'"
+			const expected = `echo 'hello${placeholder}world'`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("does not protect newlines outside quotes", () => {
+			const input = "echo hello\necho world"
+			const expected = "echo hello\necho world"
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+	})
+
+	describe("quote concatenation", () => {
+		it("handles quote concatenation where content between quotes is NOT quoted", () => {
+			// In bash: echo '"'A'"' prints "A" (A is not quoted)
+			const input = `echo '"'A\n'"'`
+			// The newline after A is NOT inside quotes, so it should NOT be protected
+			const expected = `echo '"'A\n'"'`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles alternating quotes correctly", () => {
+			// echo "hello"world"test" -> hello is quoted, world is not, test is quoted
+			const input = `echo "hello\n"world\n"test\n"`
+			const expected = `echo "hello${placeholder}"world\n"test${placeholder}"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles single quote after double quote", () => {
+			const input = `echo "hello"'world\n'`
+			const expected = `echo "hello"'world${placeholder}'`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles double quote after single quote", () => {
+			const input = `echo 'hello'"world\n"`
+			const expected = `echo 'hello'"world${placeholder}"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+	})
+
+	describe("escaped quotes", () => {
+		it("handles escaped double quotes in double-quoted strings", () => {
+			const input = 'echo "hello\\"world\n"'
+			const expected = `echo "hello\\"world${placeholder}"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("does not treat backslash as escape in single quotes", () => {
+			// In single quotes, backslash is literal (except for \' in some shells)
+			const input = "echo 'hello\\'world\n'"
+			// The \\ is literal, the ' ends the quote, so world\n is outside quotes
+			const expected = "echo 'hello\\'world\n'"
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+	})
+
+	describe("edge cases", () => {
+		it("handles unclosed quotes", () => {
+			const input = 'echo "unclosed\n'
+			const expected = `echo "unclosed${placeholder}`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles empty string", () => {
+			expect(protectNewlinesInQuotes("", placeholder)).toBe("")
+		})
+
+		it("handles string with no quotes", () => {
+			const input = "echo hello\nworld"
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(input)
+		})
+
+		it("handles multiple newlines in quotes", () => {
+			const input = 'echo "line1\nline2\nline3"'
+			const expected = `echo "line1${placeholder}line2${placeholder}line3"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles carriage returns", () => {
+			const input = 'echo "hello\rworld"'
+			const expected = `echo "hello${placeholder}world"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles CRLF", () => {
+			const input = 'echo "hello\r\nworld"'
+			const expected = `echo "hello${placeholder}${placeholder}world"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+	})
+
+	describe("real-world git commit examples", () => {
+		it("protects newlines in git commit message", () => {
+			const input = `git commit -m "feat: title\n\n- point a\n- point b"`
+			const expected = `git commit -m "feat: title${placeholder}${placeholder}- point a${placeholder}- point b"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+
+		it("handles complex git command with multiple quoted sections", () => {
+			const input = `git add . && git commit -m "feat: title\n\n- point a" && echo "done\n"`
+			const expected = `git add . && git commit -m "feat: title${placeholder}${placeholder}- point a" && echo "done${placeholder}"`
+			expect(protectNewlinesInQuotes(input, placeholder)).toBe(expected)
+		})
+	})
+})
 
 describe("Command Validation", () => {
 	describe("parseCommand", () => {
