@@ -4,6 +4,10 @@
 import { loadEnvFile } from "./utils/env-loader.js"
 loadEnvFile()
 
+// Configure proxy settings immediately after loading environment
+import { configureProxy } from "./utils/proxy-config.js"
+configureProxy()
+
 import { Command } from "commander"
 import { existsSync } from "fs"
 import { spawn } from "child_process"
