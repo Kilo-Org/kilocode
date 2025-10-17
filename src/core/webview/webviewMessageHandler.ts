@@ -6,7 +6,7 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
-import { getKiloBaseUriFromToken, isGlobalStateKey } from "@roo-code/types"
+import { getKiloBaseUriFromToken, isGlobalStateKey } from "../../shared/kilocode/token"
 import { getKiloUrl } from "../../shared/kilocode/url"
 import {
 	MaybeTypedWebviewMessage,
