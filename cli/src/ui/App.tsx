@@ -1,6 +1,7 @@
 import React from "react"
 import { Provider as JotaiProvider } from "jotai"
 import { UI } from "./UI.js"
+import { KeyboardProvider } from "./providers/KeyboardProvider.js"
 
 type JotaiStore = any
 
@@ -21,7 +22,9 @@ export interface AppProps {
 export const App: React.FC<AppProps> = ({ store, options, onExit }) => {
 	return (
 		<JotaiProvider store={store}>
-			<UI options={options} onExit={onExit} />
+			<KeyboardProvider>
+				<UI options={options} onExit={onExit} />
+			</KeyboardProvider>
 		</JotaiProvider>
 	)
 }
