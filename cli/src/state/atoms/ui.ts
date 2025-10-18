@@ -9,6 +9,7 @@ import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
+import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -31,11 +32,6 @@ export const messagesAtom = atom<CliMessage[]>([])
  * Increments each time replaceMessages is called to force Static component re-render
  */
 export const messageResetCounterAtom = atom<number>(0)
-
-/**
- * Atom to hold the current input value
- */
-export const inputValueAtom = atom<string>("")
 
 /**
  * Atom to hold UI error messages
@@ -105,13 +101,49 @@ export const isStreamingAtom = atom<boolean>((get) => {
 })
 
 // ============================================================================
+// Input Mode System
+// ============================================================================
+
+/**
+ * Input mode determines keyboard behavior
+ */
+export type InputMode =
+	| "normal" // Regular text input
+	| "approval" // Approval pending (blocks input)
+	| "autocomplete" // Command autocomplete active
+	| "followup" // Followup suggestions active
+
+/**
+ * Current input mode
+ */
+export const inputModeAtom = atom<InputMode>("normal")
+
+/**
+ * Cursor position for multiline editing
+ * Derived from the text buffer state
+ */
+export const cursorPositionAtom = atom<{ row: number; col: number }>((get) => {
+	const cursor = get(textBufferCursorAtom)
+	return { row: cursor.row, col: cursor.column }
+})
+
+/**
+ * Single selection index used by all modes (replaces multiple separate indexes)
+ */
+export const selectedIndexAtom = atom<number>(0)
+
+// ============================================================================
 // Autocomplete State Atoms
 // ============================================================================
 
 /**
- * Atom to control autocomplete menu visibility
+ * Derived atom to control autocomplete menu visibility
+ * Automatically shows when text starts with "/"
  */
-export const showAutocompleteAtom = atom<boolean>(false)
+export const showAutocompleteAtom = atom<boolean>((get) => {
+	const text = get(textBufferStringAtom)
+	return text.startsWith("/")
+})
 
 /**
  * Atom to hold command suggestions for autocomplete
@@ -124,9 +156,10 @@ export const suggestionsAtom = atom<CommandSuggestion[]>([])
 export const argumentSuggestionsAtom = atom<ArgumentSuggestion[]>([])
 
 /**
- * Atom to track the currently selected suggestion index
+ * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
+ * This atom is kept for backward compatibility but will be removed in a future version.
  */
-export const selectedSuggestionIndexAtom = atom<number>(0)
+export const selectedSuggestionIndexAtom = selectedIndexAtom
 
 // ============================================================================
 // Followup Suggestions State Atoms
@@ -151,10 +184,11 @@ export const followupSuggestionsAtom = atom<FollowupSuggestion[]>([])
 export const showFollowupSuggestionsAtom = atom<boolean>(false)
 
 /**
- * Atom to track the currently selected followup suggestion index
- * -1 means no selection (user can type custom response)
+ * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
+ * This atom is kept for backward compatibility but will be removed in a future version.
+ * Note: The new selectedIndexAtom starts at 0, but followup mode logic handles -1 for "no selection"
  */
-export const selectedFollowupIndexAtom = atom<number>(-1)
+export const selectedFollowupIndexAtom = selectedIndexAtom
 
 // ============================================================================
 // Derived Atoms
@@ -173,7 +207,7 @@ export const suggestionCountAtom = atom<number>((get) => {
  * Derived atom to check if input is a command (starts with /)
  */
 export const isCommandInputAtom = atom<boolean>((get) => {
-	const input = get(inputValueAtom)
+	const input = get(textBufferStringAtom)
 	return input.startsWith("/")
 })
 
@@ -181,7 +215,7 @@ export const isCommandInputAtom = atom<boolean>((get) => {
  * Derived atom to get the command query (input without the leading /)
  */
 export const commandQueryAtom = atom<string>((get) => {
-	const input = get(inputValueAtom)
+	const input = get(textBufferStringAtom)
 	return get(isCommandInputAtom) ? input.slice(1) : ""
 })
 
@@ -259,31 +293,24 @@ export const updateLastMessageAtom = atom(null, (get, set, content: string) => {
 })
 
 /**
- * Action atom to set the input value
- * Also handles autocomplete visibility
+ * Action atom to update the text buffer value
  */
-export const setInputValueAtom = atom(null, (get, set, value: string) => {
-	set(inputValueAtom, value)
+export const updateTextBufferAtom = atom(null, (get, set, value: string) => {
+	set(setTextAtom, value)
 
-	// Update autocomplete visibility based on input
-	// Keep showing suggestions even for exact matches (e.g., "/mode")
-	// This provides visual confirmation that the user has typed a valid command
+	// Reset selected index when input is a command
 	const isCommand = value.startsWith("/")
-	set(showAutocompleteAtom, isCommand)
-
-	// Reset selected index when input changes
 	if (isCommand) {
-		set(selectedSuggestionIndexAtom, 0)
+		set(selectedIndexAtom, 0)
 	}
 })
 
 /**
- * Action atom to clear the input
+ * Action atom to clear the text buffer
  */
-export const clearInputAtom = atom(null, (get, set) => {
-	set(inputValueAtom, "")
-	set(showAutocompleteAtom, false)
-	set(selectedSuggestionIndexAtom, 0)
+export const clearTextBufferAtom = atom(null, (get, set) => {
+	set(clearTextAtom)
+	set(selectedIndexAtom, 0)
 })
 
 /**
@@ -291,7 +318,7 @@ export const clearInputAtom = atom(null, (get, set) => {
  */
 export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSuggestion[]) => {
 	set(suggestionsAtom, suggestions)
-	set(selectedSuggestionIndexAtom, 0)
+	set(selectedIndexAtom, 0)
 })
 
 /**
@@ -299,7 +326,7 @@ export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSugg
  */
 export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: ArgumentSuggestion[]) => {
 	set(argumentSuggestionsAtom, suggestions)
-	set(selectedSuggestionIndexAtom, 0)
+	set(selectedIndexAtom, 0)
 })
 
 /**
@@ -309,9 +336,9 @@ export const selectNextSuggestionAtom = atom(null, (get, set) => {
 	const count = get(suggestionCountAtom)
 	if (count === 0) return
 
-	const currentIndex = get(selectedSuggestionIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 	const nextIndex = (currentIndex + 1) % count
-	set(selectedSuggestionIndexAtom, nextIndex)
+	set(selectedIndexAtom, nextIndex)
 })
 
 /**
@@ -321,9 +348,9 @@ export const selectPreviousSuggestionAtom = atom(null, (get, set) => {
 	const count = get(suggestionCountAtom)
 	if (count === 0) return
 
-	const currentIndex = get(selectedSuggestionIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 	const prevIndex = currentIndex === 0 ? count - 1 : currentIndex - 1
-	set(selectedSuggestionIndexAtom, prevIndex)
+	set(selectedIndexAtom, prevIndex)
 })
 
 /**
@@ -342,21 +369,24 @@ export const setErrorAtom = atom(null, (get, set, error: string | null) => {
 })
 
 /**
- * Action atom to hide autocomplete
+ * Action atom to hide autocomplete by clearing the text buffer
+ * Note: Autocomplete visibility is now derived from text buffer content
+ * @deprecated This atom is kept for backward compatibility but may be removed
  */
 export const hideAutocompleteAtom = atom(null, (get, set) => {
-	set(showAutocompleteAtom, false)
-	set(selectedSuggestionIndexAtom, 0)
+	set(clearTextAtom)
+	set(selectedIndexAtom, 0)
 })
 
 /**
  * Action atom to show autocomplete
+ * Note: Autocomplete visibility is now automatically derived from text buffer
+ * This atom is kept for backward compatibility but has no effect
+ * @deprecated This atom is kept for backward compatibility but may be removed
  */
 export const showAutocompleteMenuAtom = atom(null, (get, set) => {
-	const isCommand = get(isCommandInputAtom)
-	if (isCommand) {
-		set(showAutocompleteAtom, true)
-	}
+	// No-op: autocomplete visibility is now derived from text buffer
+	// Kept for backward compatibility
 })
 
 /**
@@ -365,7 +395,7 @@ export const showAutocompleteMenuAtom = atom(null, (get, set) => {
 export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSuggestion | null>((get) => {
 	const commandSuggestions = get(suggestionsAtom)
 	const argumentSuggestions = get(argumentSuggestionsAtom)
-	const selectedIndex = get(selectedSuggestionIndexAtom)
+	const selectedIndex = get(selectedIndexAtom)
 
 	if (commandSuggestions.length > 0) {
 		return commandSuggestions[selectedIndex] ?? null
@@ -411,7 +441,7 @@ export const setFollowupSuggestionsAtom = atom(null, (get, set, suggestions: Fol
 	set(followupSuggestionsAtom, suggestions)
 	set(showFollowupSuggestionsAtom, suggestions.length > 0)
 	// Start with no selection (-1) so user can type custom response
-	set(selectedFollowupIndexAtom, -1)
+	set(selectedIndexAtom, -1)
 })
 
 /**
@@ -420,7 +450,7 @@ export const setFollowupSuggestionsAtom = atom(null, (get, set, suggestions: Fol
 export const clearFollowupSuggestionsAtom = atom(null, (get, set) => {
 	set(followupSuggestionsAtom, [])
 	set(showFollowupSuggestionsAtom, false)
-	set(selectedFollowupIndexAtom, -1)
+	set(selectedIndexAtom, -1)
 })
 
 /**
@@ -431,22 +461,22 @@ export const selectNextFollowupAtom = atom(null, (get, set) => {
 	const suggestions = get(followupSuggestionsAtom)
 	if (suggestions.length === 0) return
 
-	const currentIndex = get(selectedFollowupIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 
 	// If no selection (-1), start at 0
 	if (currentIndex === -1) {
-		set(selectedFollowupIndexAtom, 0)
+		set(selectedIndexAtom, 0)
 		return
 	}
 
 	// If at last item, unselect
 	if (currentIndex === suggestions.length - 1) {
-		set(selectedFollowupIndexAtom, -1)
+		set(selectedIndexAtom, -1)
 		return
 	}
 
 	// Otherwise, move to next
-	set(selectedFollowupIndexAtom, currentIndex + 1)
+	set(selectedIndexAtom, currentIndex + 1)
 })
 
 /**
@@ -457,29 +487,29 @@ export const selectPreviousFollowupAtom = atom(null, (get, set) => {
 	const suggestions = get(followupSuggestionsAtom)
 	if (suggestions.length === 0) return
 
-	const currentIndex = get(selectedFollowupIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 
 	// If at first item (0), unselect
 	if (currentIndex === 0) {
-		set(selectedFollowupIndexAtom, -1)
+		set(selectedIndexAtom, -1)
 		return
 	}
 
 	// If no selection (-1), go to last item
 	if (currentIndex === -1) {
-		set(selectedFollowupIndexAtom, suggestions.length - 1)
+		set(selectedIndexAtom, suggestions.length - 1)
 		return
 	}
 
 	// Otherwise, move to previous
-	set(selectedFollowupIndexAtom, currentIndex - 1)
+	set(selectedIndexAtom, currentIndex - 1)
 })
 
 /**
  * Action atom to unselect followup suggestion
  */
 export const unselectFollowupAtom = atom(null, (get, set) => {
-	set(selectedFollowupIndexAtom, -1)
+	set(selectedIndexAtom, -1)
 })
 
 /**
@@ -487,7 +517,7 @@ export const unselectFollowupAtom = atom(null, (get, set) => {
  */
 export const getSelectedFollowupAtom = atom<FollowupSuggestion | null>((get) => {
 	const suggestions = get(followupSuggestionsAtom)
-	const selectedIndex = get(selectedFollowupIndexAtom)
+	const selectedIndex = get(selectedIndexAtom)
 
 	if (selectedIndex === -1 || selectedIndex >= suggestions.length) {
 		return null

@@ -156,7 +156,6 @@ export {
 export {
 	// Core UI state atoms
 	messagesAtom,
-	inputValueAtom,
 	isStreamingAtom,
 	errorAtom,
 
@@ -186,8 +185,6 @@ export {
 	addMessageAtom,
 	clearMessagesAtom,
 	updateLastMessageAtom,
-	setInputValueAtom,
-	clearInputAtom,
 	setSuggestionsAtom,
 	setArgumentSuggestionsAtom,
 	selectNextSuggestionAtom,

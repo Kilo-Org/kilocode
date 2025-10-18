@@ -60,3 +60,231 @@ export interface GhostSuggestionContext {
 	recentOperations?: UserAction[] // Stores meaningful user actions instead of raw diff
 	diagnostics?: vscode.Diagnostic[] // Document diagnostics (errors, warnings, etc.)
 }
+
+// ============================================================================
+// CompletionProvider-compatible types (duplicated to avoid coupling)
+// ============================================================================
+
+/**
+ * Position in a file (line and character)
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface Position {
+	line: number
+	character: number
+}
+
+/**
+ * Range in a file
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface Range {
+	start: Position
+	end: Position
+}
+
+/**
+ * Range with file path
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface RangeInFile {
+	filepath: string
+	range: Range
+}
+
+/**
+ * Tab autocomplete options
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface TabAutocompleteOptions {
+	disable: boolean
+	maxPromptTokens: number
+	debounceDelay: number
+	modelTimeout: number
+	maxSuffixPercentage: number
+	prefixPercentage: number
+	transform?: boolean
+	multilineCompletions: "always" | "never" | "auto"
+	slidingWindowPrefixPercentage: number
+	slidingWindowSize: number
+	useCache?: boolean
+	onlyMyCode?: boolean
+	template?: string
+	useOtherFiles?: boolean
+	useRecentlyEdited?: boolean
+	recentlyEditedSimilarityThreshold?: number
+	maxSnippetTokens?: number
+	disableInFiles?: string[]
+}
+
+/**
+ * Recently edited range with timestamp
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface RecentlyEditedRange extends RangeInFile {
+	timestamp: number
+	lines: string[]
+	symbols: Set<string>
+}
+
+/**
+ * Code snippet for autocomplete context
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface AutocompleteCodeSnippet extends RangeInFile {
+	content: string
+	score?: number
+}
+
+/**
+ * Input for autocomplete request (CompletionProvider-compatible)
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface AutocompleteInput {
+	isUntitledFile: boolean
+	completionId: string
+	filepath: string
+	pos: Position
+	recentlyVisitedRanges: AutocompleteCodeSnippet[]
+	recentlyEditedRanges: RecentlyEditedRange[]
+	manuallyPassFileContents?: string
+	manuallyPassPrefix?: string
+	selectedCompletionInfo?: {
+		text: string
+		range: Range
+	}
+	injectDetails?: string
+}
+
+/**
+ * Output from autocomplete request (CompletionProvider-compatible)
+ * Duplicated from continuedev/core to avoid coupling
+ */
+export interface AutocompleteOutcome extends TabAutocompleteOptions {
+	accepted?: boolean
+	time: number
+	prefix: string
+	suffix: string
+	prompt: string
+	completion: string
+	modelProvider: string
+	modelName: string
+	completionOptions: any
+	cacheHit: boolean
+	numLines: number
+	filepath: string
+	gitRepo?: string
+	completionId: string
+	uniqueId: string
+	timestamp: string
+	enabledStaticContextualization?: boolean
+	profileType?: "local" | "platform" | "control-plane"
+}
+
+/**
+ * Result from prompt generation including prefix/suffix
+ * New interface for Ghost to align with CompletionProvider
+ */
+export interface PromptResult {
+	systemPrompt: string
+	userPrompt: string
+	prefix: string
+	suffix: string
+	completionId: string
+}
+
+// ============================================================================
+// Conversion Utilities
+// ============================================================================
+
+/**
+ * Extract prefix and suffix from a document at a given position
+ */
+export function extractPrefixSuffix(
+	document: vscode.TextDocument,
+	position: vscode.Position,
+): { prefix: string; suffix: string } {
+	const offset = document.offsetAt(position)
+	const text = document.getText()
+
+	return {
+		prefix: text.substring(0, offset),
+		suffix: text.substring(offset),
+	}
+}
+
+/**
+ * Extract prefix (all lines up to cursor) from context
+ */
+export function extractPrefix(context: GhostSuggestionContext): string {
+	if (!context.document || !context.range) {
+		return ""
+	}
+
+	const lines: string[] = []
+	for (let i = 0; i <= context.range.start.line; i++) {
+		lines.push(context.document.lineAt(i).text)
+	}
+	return lines.join("\n")
+}
+
+/**
+ * Convert VSCode Position to our Position type
+ */
+export function vscodePositionToPosition(pos: vscode.Position): Position {
+	return {
+		line: pos.line,
+		character: pos.character,
+	}
+}
+
+/**
+ * Convert VSCode Range to our Range type
+ */
+export function vscodeRangeToRange(range: vscode.Range): Range {
+	return {
+		start: vscodePositionToPosition(range.start),
+		end: vscodePositionToPosition(range.end),
+	}
+}
+
+/**
+ * Convert GhostSuggestionContext to AutocompleteInput
+ */
+export function contextToAutocompleteInput(context: GhostSuggestionContext): AutocompleteInput {
+	const position = context.range?.start ?? context.document.positionAt(0)
+	const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+
+	// Convert recent operations to recently edited ranges
+	const recentlyEditedRanges: RecentlyEditedRange[] =
+		context.recentOperations?.map((op) => {
+			const range: Range = op.lineRange
+				? {
+						start: { line: op.lineRange.start, character: 0 },
+						end: { line: op.lineRange.end, character: 0 },
+					}
+				: {
+						start: { line: 0, character: 0 },
+						end: { line: 0, character: 0 },
+					}
+
+			return {
+				filepath: context.document.uri.fsPath,
+				range,
+				timestamp: op.timestamp ?? Date.now(),
+				lines: op.content ? op.content.split("\n") : [],
+				symbols: new Set(op.affectedSymbol ? [op.affectedSymbol] : []),
+			}
+		}) ?? []
+
+	return {
+		isUntitledFile: context.document.isUntitled,
+		completionId: crypto.randomUUID(),
+		filepath: context.document.uri.fsPath,
+		pos: vscodePositionToPosition(position),
+		recentlyVisitedRanges: [], // Not tracked in current Ghost implementation
+		recentlyEditedRanges,
+		manuallyPassFileContents: undefined,
+		manuallyPassPrefix: prefix,
+	}
+}

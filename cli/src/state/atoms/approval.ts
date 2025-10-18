@@ -2,6 +2,7 @@ import { atom } from "jotai"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { ciModeAtom } from "./ci.js"
 import { logs } from "../../services/logs.js"
+import { selectedIndexAtom } from "./ui.js"
 import {
 	autoApproveReadAtom,
 	autoApproveReadOutsideAtom,
@@ -55,9 +56,9 @@ export const approvalProcessingAtom = atom<ApprovalProcessingState>({
 })
 
 /**
- * Atom to track the selected approval option index
+ * @deprecated Use selectedIndexAtom from ui.ts instead
  */
-export const selectedApprovalIndexAtom = atom<number>(0)
+export const selectedApprovalIndexAtom = selectedIndexAtom
 
 /**
  * Derived atom to check if there's a pending approval
@@ -147,7 +148,7 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 	})
 
 	set(pendingApprovalAtom, message)
-	set(selectedApprovalIndexAtom, 0) // Reset selection
+	set(selectedIndexAtom, 0) // Reset selection
 })
 
 /**
@@ -167,7 +168,7 @@ export const clearPendingApprovalAtom = atom(null, (get, set) => {
 	}
 
 	set(pendingApprovalAtom, null)
-	set(selectedApprovalIndexAtom, 0)
+	set(selectedIndexAtom, 0)
 
 	// Also clear processing state if it matches
 	if (processing.isProcessing && processing.processingTs === current?.ts) {
@@ -224,7 +225,7 @@ export const completeApprovalProcessingAtom = atom(null, (get, set) => {
 
 	// Clear both pending approval and processing state atomically
 	set(pendingApprovalAtom, null)
-	set(selectedApprovalIndexAtom, 0)
+	set(selectedIndexAtom, 0)
 	set(approvalProcessingAtom, { isProcessing: false })
 })
 
@@ -235,9 +236,9 @@ export const selectNextApprovalAtom = atom(null, (get, set) => {
 	const options = get(approvalOptionsAtom)
 	if (options.length === 0) return
 
-	const currentIndex = get(selectedApprovalIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 	const nextIndex = (currentIndex + 1) % options.length
-	set(selectedApprovalIndexAtom, nextIndex)
+	set(selectedIndexAtom, nextIndex)
 })
 
 /**
@@ -247,9 +248,9 @@ export const selectPreviousApprovalAtom = atom(null, (get, set) => {
 	const options = get(approvalOptionsAtom)
 	if (options.length === 0) return
 
-	const currentIndex = get(selectedApprovalIndexAtom)
+	const currentIndex = get(selectedIndexAtom)
 	const prevIndex = currentIndex === 0 ? options.length - 1 : currentIndex - 1
-	set(selectedApprovalIndexAtom, prevIndex)
+	set(selectedIndexAtom, prevIndex)
 })
 
 /**
@@ -257,7 +258,7 @@ export const selectPreviousApprovalAtom = atom(null, (get, set) => {
  */
 export const selectedApprovalOptionAtom = atom<ApprovalOption | null>((get) => {
 	const options = get(approvalOptionsAtom)
-	const selectedIndex = get(selectedApprovalIndexAtom)
+	const selectedIndex = get(selectedIndexAtom)
 
 	return options[selectedIndex] ?? null
 })
@@ -429,4 +430,59 @@ export const shouldAutoRejectAtom = atom<boolean>((get) => {
 
 	// Only auto-reject in CI mode when the operation is not approved
 	return isCIMode && !shouldApprove
+})
+
+// ============================================================================
+// Approval Action Callbacks (for keyboard handler)
+// ============================================================================
+
+/**
+ * Atom to store the approve callback
+ * The hook sets this to its approve function
+ */
+export const approveCallbackAtom = atom<(() => Promise<void>) | null>(null)
+
+/**
+ * Atom to store the reject callback
+ * The hook sets this to its reject function
+ */
+export const rejectCallbackAtom = atom<(() => Promise<void>) | null>(null)
+
+/**
+ * Atom to store the executeSelected callback
+ * The hook sets this to its executeSelected function
+ */
+export const executeSelectedCallbackAtom = atom<(() => Promise<void>) | null>(null)
+
+/**
+ * Action atom to approve the pending request
+ * Calls the callback set by the hook
+ */
+export const approveAtom = atom(null, async (get, set) => {
+	const callback = get(approveCallbackAtom)
+	if (callback) {
+		await callback()
+	}
+})
+
+/**
+ * Action atom to reject the pending request
+ * Calls the callback set by the hook
+ */
+export const rejectAtom = atom(null, async (get, set) => {
+	const callback = get(rejectCallbackAtom)
+	if (callback) {
+		await callback()
+	}
+})
+
+/**
+ * Action atom to execute the currently selected option
+ * Calls the callback set by the hook
+ */
+export const executeSelectedAtom = atom(null, async (get, set) => {
+	const callback = get(executeSelectedCallbackAtom)
+	if (callback) {
+		await callback()
+	}
 })

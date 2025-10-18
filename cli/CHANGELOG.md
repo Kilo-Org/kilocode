@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 0.0.5
+
+### Patch Changes
+
+- [#3094](https://github.com/Kilo-Org/kilocode/pull/3094) [`b55f3a8`](https://github.com/Kilo-Org/kilocode/commit/b55f3a8784df8efc1ff5f06d53a7c5998b4794ea) Thanks [@RSO](https://github.com/RSO)! - Rename -ci flag to -a (longform --auto)
+
+- [#3080](https://github.com/Kilo-Org/kilocode/pull/3080) [`021c91c`](https://github.com/Kilo-Org/kilocode/commit/021c91c98ac8959f1de0f651d9bfd0e0ab885b17) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Added support for multi-line prompts
+
+- [#3109](https://github.com/Kilo-Org/kilocode/pull/3109) [`2ed8e2e`](https://github.com/Kilo-Org/kilocode/commit/2ed8e2ec655efd22a081fe299b02d05e95227637) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update notification message at startup
+
 ## 0.0.4
 
 ### Patch Changes
