@@ -99,7 +99,7 @@ vi.mock("vscode", () => {
 // svg-builder is no longer used - removed mock
 
 // Mock NextEditProvider
-vi.mock("core/nextEdit/NextEditProvider", () => {
+vi.mock("../../nextEdit/NextEditProvider", () => {
 	const mockDeleteChain = vi.fn()
 	const mockGetInstance = vi.fn(() => ({
 		deleteChain: mockDeleteChain,

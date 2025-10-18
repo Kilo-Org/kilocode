@@ -62,7 +62,7 @@ vi.mock("vscode", () => ({
 }))
 
 // Mock core dependencies
-vi.mock("core/nextEdit/NextEditProvider", () => ({
+vi.mock("../../nextEdit/NextEditProvider", () => ({
 	NextEditProvider: {
 		getInstance: vi.fn(() => ({
 			deleteChain: vi.fn(),
@@ -70,7 +70,7 @@ vi.mock("core/nextEdit/NextEditProvider", () => ({
 	},
 }))
 
-vi.mock("core/nextEdit/NextEditEditableRegionCalculator", () => ({
+vi.mock("../../nextEdit/NextEditEditableRegionCalculator", () => ({
 	EditableRegionStrategy: {
 		Static: "static",
 		Sliding: "sliding",
@@ -78,7 +78,7 @@ vi.mock("core/nextEdit/NextEditEditableRegionCalculator", () => ({
 	getNextEditableRegion: vi.fn(),
 }))
 
-vi.mock("core/nextEdit/NextEditPrefetchQueue", () => ({
+vi.mock("../../nextEdit/NextEditPrefetchQueue", () => ({
 	PrefetchQueue: {
 		getInstance: vi.fn(() => ({
 			enqueueUnprocessed: vi.fn(),
@@ -86,7 +86,7 @@ vi.mock("core/nextEdit/NextEditPrefetchQueue", () => ({
 	},
 }))
 
-vi.mock("core/util/pathToUri", () => ({
+vi.mock("../../util/pathToUri", () => ({
 	localPathOrUriToPath: vi.fn((uri) => {
 		const uriStr = typeof uri === "string" ? uri : uri?.toString?.() || ""
 		return uriStr.replace("file://", "")

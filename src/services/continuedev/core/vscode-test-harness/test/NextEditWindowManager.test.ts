@@ -69,13 +69,13 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-vi.mock("core/util/env", () => ({
+vi.mock("../../util/env", () => ({
 	EXTENSION_NAME: "continue",
 }))
 
 // Theme detection removed - using hardcoded theme values instead
 
-vi.mock("core/util/CodeRenderer", () => ({
+vi.mock("../../util/CodeRenderer", () => ({
 	CodeRenderer: {
 		getInstance: vi.fn(() => ({
 			setTheme: vi.fn(),
@@ -84,7 +84,7 @@ vi.mock("core/util/CodeRenderer", () => ({
 	},
 }))
 
-vi.mock("core/nextEdit/NextEditProvider", () => ({
+vi.mock("../../nextEdit/NextEditProvider", () => ({
 	NextEditProvider: {
 		getInstance: vi.fn(() => ({
 			deleteChain: vi.fn(),
@@ -92,7 +92,7 @@ vi.mock("core/nextEdit/NextEditProvider", () => ({
 	},
 }))
 
-vi.mock("core/nextEdit/NextEditLoggingService", () => ({
+vi.mock("../../nextEdit/NextEditLoggingService", () => ({
 	NextEditLoggingService: {
 		getInstance: vi.fn(() => ({
 			cancelRejectionTimeout: vi.fn(),
@@ -101,11 +101,11 @@ vi.mock("core/nextEdit/NextEditLoggingService", () => ({
 	},
 }))
 
-vi.mock("core/diff/myers", () => ({
+vi.mock("../../diff/myers", () => ({
 	myersCharDiff: vi.fn(() => []),
 }))
 
-vi.mock("core/nextEdit/diff/diff", () => ({
+vi.mock("../../nextEdit/diff/diff", () => ({
 	getOffsetPositionAtLastNewLine: vi.fn(() => ({ line: 0, character: 0 })),
 }))
 

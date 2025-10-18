@@ -295,7 +295,7 @@ vi.mock("vscode", () => {
 	}
 })
 
-vi.mock("core/autocomplete/CompletionProvider", () => {
+vi.mock("../../autocomplete/CompletionProvider", () => {
 	return {
 		CompletionProvider: class {
 			provideInlineCompletionItems = vi.fn()
@@ -304,7 +304,7 @@ vi.mock("core/autocomplete/CompletionProvider", () => {
 	}
 })
 
-vi.mock("core/autocomplete/util/processSingleLineCompletion", () => ({
+vi.mock("../../autocomplete/util/processSingleLineCompletion", () => ({
 	processSingleLineCompletion: vi.fn((text: string) => ({
 		completionText: text,
 		range: { start: 0, end: text.length },
@@ -377,7 +377,7 @@ vi.mock("../../activation/JumpManager", () => {
 
 // Using real implementations - no mocks needed
 
-vi.mock("core/nextEdit/diff/diff", () => ({
+vi.mock("../../nextEdit/diff/diff", () => ({
 	checkFim: vi.fn(() => ({ isFim: true, fimText: "ghost" })),
 }))
 
