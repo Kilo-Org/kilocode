@@ -57,7 +57,7 @@ async function expectDiff(file: string) {
 	const testFilePath = path.join(__dirname, "test-examples", file + ".diff")
 	const testFileContents = fs.readFileSync(testFilePath, "utf-8")
 	const [oldText, newText, expectedDiff] = testFileContents
-		.split("\n---\n")
+		.split(/\r?\n---\r?\n/)
 		.map((s) => s.replace(/^\n+/, "").trimEnd())
 	const oldLines = oldText.split("\n")
 	const newLines = newText.split("\n")
