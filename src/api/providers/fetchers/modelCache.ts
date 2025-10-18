@@ -31,6 +31,7 @@ import { getGeminiModels } from "./gemini"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { getAIStupidLevelModels } from "./aistupidlevel"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -137,6 +138,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getOvhCloudAiEndpointsModels()
 				break
 			// kilocode_change end
+			case "aistupidlevel":
+				models = await getAIStupidLevelModels(options.apiKey)
+				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider
