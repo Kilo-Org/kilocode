@@ -53,6 +53,7 @@ export class CodeIndexServiceFactory {
 			}
 			return new CodeIndexOllamaEmbedder({
 				...config.ollamaOptions,
+				codebaseIndexEmbedderTimeoutMS: config.codebaseIndexEmbedderTimeoutMS,
 				ollamaModelId: config.modelId,
 			})
 		} else if (provider === "openai-compatible") {
