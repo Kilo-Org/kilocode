@@ -253,7 +253,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
-
+			// kilocode_change start: Add native tool call support when toolStyle is "json"
+			addNativeToolCallsToParams(requestOptions, this.options, metadata)
+			// kilocode_change end
 			let response
 			try {
 				response = await this.client.chat.completions.create(
@@ -264,7 +266,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			// kilocode_change start: reasoning
+			// kilocode_change start: reasoning & tool calls.
+			const toolStyle = getActiveToolUseStyle(this.options)
 			const message = response.choices[0]?.message
 			if (message) {
 				if ("reasoning" in message && typeof message.reasoning === "string") {
@@ -277,6 +280,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					yield {
 						type: "text",
 						text: message.content,
+					}
+				}
+				if (toolStyle === "json" && message.tool_calls) {
+					yield {
+						type: "native_tool_calls",
+						toolCalls: message.tool_calls,
 					}
 				}
 			}
