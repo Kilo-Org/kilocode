@@ -34,6 +34,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	private handlerConfigs: HandlerConfig[] = []
 	private activeHandler: ApiHandler | undefined
 	private activeProfileId: string | undefined
+	private autoRetryProfileId: string | undefined
 	private usage: UsageTracker
 	private isInitialized: boolean = false
 
@@ -73,8 +74,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
-		previousProfileId: string | undefined
+		metadata?: ApiHandlerCreateMessageMetadata
 	): ApiStream {
 		try {
 			await this.initialize()
@@ -100,8 +100,9 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 
 				// On successful current request, extend cooldown for the previous (errored) profile
 				// A 5-minute cooldown is enough due to auto-retry handling fallback logic
-				if (previousProfileId) {
-					await this.usage.setCooldown(previousProfileId, 5 * 60 * 1000)
+				if (this.autoRetryProfileId) {
+					await this.usage.setCooldown(this.autoRetryProfileId, 5 * 60 * 1000)
+					this.autoRetryProfileId = undefined
 				}
 			} catch (error) {
 				// Check if this is a retryable
@@ -118,17 +119,17 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				}
 
 				// For non-rate limit errors, set cooldown and rethrow
-				if (previousProfileId) {
+				if (this.autoRetryProfileId) {
 					// Auto-retry already attempted and failed, throwing error
 					// No cooldown needed; manual retry will trigger auto-retry logic
 					throw error
 				} else {
 					// First-time failure: perform auto-retry after setting cooldown
 					// If auto-retry succeeds, the error profile's cooldown will be extended
-					const erroredProfileId = this.activeProfileId
-					await this.usage.setCooldown(erroredProfileId, 3 * 60 * 1000)
+					this.autoRetryProfileId = this.activeProfileId
+					await this.usage.setCooldown(this.autoRetryProfileId, 3 * 60 * 1000)
 					await this.adjustActiveHandler("Auto Retry")
-					yield* this.createMessage(systemPrompt, messages, metadata, erroredProfileId)
+					yield* this.createMessage(systemPrompt, messages, metadata)
 				}
 			}
 		} catch (error) {
