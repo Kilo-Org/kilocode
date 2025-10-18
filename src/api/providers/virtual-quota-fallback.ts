@@ -34,6 +34,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	private handlerConfigs: HandlerConfig[] = []
 	private activeHandler: ApiHandler | undefined
 	private activeProfileId: string | undefined
+	private autoRetryProfileId: string | undefined
 	private usage: UsageTracker
 	private isInitialized: boolean = false
 
@@ -73,7 +74,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata,
+		metadata?: ApiHandlerCreateMessageMetadata
 	): ApiStream {
 		try {
 			await this.initialize()
@@ -96,6 +97,13 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 					}
 					yield chunk
 				}
+
+				// On successful current request, extend cooldown for the previous (errored) profile
+				// A 5-minute cooldown is enough due to auto-retry handling fallback logic
+				if (this.autoRetryProfileId) {
+					await this.usage.setCooldown(this.autoRetryProfileId, 5 * 60 * 1000)
+					this.autoRetryProfileId = undefined
+				}
 			} catch (error) {
 				// Check if this is a retryable
 				if (this.isRateLimitError(error) || this.isOverloadError(error)) {
@@ -111,8 +119,19 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				}
 
 				// For non-rate limit errors, set cooldown and rethrow
-				await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
-				throw error
+				if (this.autoRetryProfileId) {
+					// Auto-retry already attempted and failed, throwing error
+					// No cooldown needed; manual retry will trigger auto-retry logic
+					this.autoRetryProfileId = undefined
+					throw error
+				} else {
+					// First-time failure: perform auto-retry after setting cooldown
+					// If auto-retry succeeds, the error profile's cooldown will be extended
+					this.autoRetryProfileId = this.activeProfileId
+					await this.usage.setCooldown(this.autoRetryProfileId, 3 * 60 * 1000)
+					await this.adjustActiveHandler("Auto Retry")
+					yield* this.createMessage(systemPrompt, messages, metadata)
+				}
 			}
 		} catch (error) {
 			console.error("Error in createMessage:", error)
