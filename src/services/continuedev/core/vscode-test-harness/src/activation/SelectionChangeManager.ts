@@ -1,11 +1,11 @@
-import { EditableRegionStrategy, getNextEditableRegion } from "core/nextEdit/NextEditEditableRegionCalculator"
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue"
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
-import { localPathOrUriToPath } from "core/util/pathToUri"
+import { EditableRegionStrategy, getNextEditableRegion } from "../../../nextEdit/NextEditEditableRegionCalculator"
+import { PrefetchQueue } from "../../../nextEdit/NextEditPrefetchQueue"
+import { NextEditProvider } from "../../../nextEdit/NextEditProvider"
+import { localPathOrUriToPath } from "../../../util/pathToUri"
 import * as vscode from "vscode"
 import { JumpManager } from "./JumpManager"
 import { NextEditWindowManager } from "./NextEditWindowManager"
-import { IDE } from "core"
+import { IDE } from "../../../"
 
 export enum HandlerPriority {
 	CRITICAL = 5,

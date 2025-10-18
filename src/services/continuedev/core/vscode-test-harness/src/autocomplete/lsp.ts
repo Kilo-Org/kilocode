@@ -1,12 +1,12 @@
-import { AutocompleteLanguageInfo } from "core/autocomplete/constants/AutocompleteLanguageInfo"
-import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "core/autocomplete/snippets/types"
-import { GetLspDefinitionsFunction } from "core/autocomplete/types"
-import { getAst, getTreePathAtCursor } from "core/autocomplete/util/ast"
-import { intersection } from "core/util/ranges"
+import { AutocompleteLanguageInfo } from "../../../autocomplete/constants/AutocompleteLanguageInfo"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/snippets/types"
+import { GetLspDefinitionsFunction } from "../../../autocomplete/types"
+import { getAst, getTreePathAtCursor } from "../../../autocomplete/util/ast"
+import { intersection } from "../../../util/ranges"
 
 import * as vscode from "vscode"
 
-import type { IDE, Range, RangeInFile, RangeInFileWithContents } from "core"
+import type { IDE, Range, RangeInFile, RangeInFileWithContents } from "../../../"
 import type { Node as SyntaxNode } from "web-tree-sitter"
 const FUNCTION_BLOCK_NODE_TYPES = ["block", "statement_block"]
 const FUNCTION_DECLARATION_NODE_TYPEs = [

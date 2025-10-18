@@ -1,5 +1,5 @@
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
-import { NextEditOutcome } from "core/nextEdit/types"
+import { NextEditProvider } from "../../../nextEdit/NextEditProvider"
+import { NextEditOutcome } from "../../../nextEdit/types"
 import * as vscode from "vscode"
 import { HandlerPriority, SelectionChangeManager } from "./SelectionChangeManager"
 

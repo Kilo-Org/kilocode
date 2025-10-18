@@ -4,8 +4,8 @@ import * as vscode from "vscode"
 
 import { ContinueCompletionProvider } from "../src/autocomplete/completionProvider"
 
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue"
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
+import { PrefetchQueue } from "../../nextEdit/NextEditPrefetchQueue"
+import { NextEditProvider } from "../../nextEdit/NextEditProvider"
 import { JumpManager } from "../src/activation/JumpManager"
 import { FakeIDE } from "../../test/FakeIDE"
 

@@ -1,6 +1,6 @@
-import { IDE } from "core"
-import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "core/autocomplete/snippets/types"
-import { isSecurityConcern } from "core/indexing/ignore"
+import { IDE } from "../../../"
+import { AutocompleteCodeSnippet, AutocompleteSnippetType } from "../../../autocomplete/snippets/types"
+import { isSecurityConcern } from "../../../indexing/ignore"
 import { LRUCache } from "lru-cache"
 import * as vscode from "vscode"
 

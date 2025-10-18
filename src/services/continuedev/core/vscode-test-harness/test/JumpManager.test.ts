@@ -1,5 +1,5 @@
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
-import { NextEditOutcome } from "core/nextEdit/types"
+import { NextEditProvider } from "../../nextEdit/NextEditProvider"
+import { NextEditOutcome } from "../../nextEdit/types"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import * as vscode from "vscode"
 import { CompletionDataForAfterJump, JumpManager } from "../src/activation/JumpManager"

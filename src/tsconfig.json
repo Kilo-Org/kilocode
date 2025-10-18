@@ -18,11 +18,7 @@
 		"strict": true,
 		"target": "ES2022",
 		"useDefineForClassFields": true,
-		"useUnknownInCatchVariables": false,
-		"paths": {
-			"core": ["./services/continuedev/core"],
-			"core/*": ["./services/continuedev/core/*"]
-		}
+		"useUnknownInCatchVariables": false
 	},
 	"include": ["."],
 	"exclude": ["node_modules"],

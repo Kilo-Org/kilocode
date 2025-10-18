@@ -1,11 +1,11 @@
 import * as vscode from "vscode"
 
-import { DiffChar, DiffLine } from "core"
-import { CodeRenderer } from "core/util/CodeRenderer"
-import { myersCharDiff } from "core/diff/myers"
-import { getOffsetPositionAtLastNewLine } from "core/nextEdit/diff/diff"
-import { NextEditLoggingService } from "core/nextEdit/NextEditLoggingService"
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
+import { DiffChar, DiffLine } from "../../../"
+import { CodeRenderer } from "../../../util/CodeRenderer"
+import { myersCharDiff } from "../../../diff/myers"
+import { getOffsetPositionAtLastNewLine } from "../../../nextEdit/diff/diff"
+import { NextEditLoggingService } from "../../../nextEdit/NextEditLoggingService"
+import { NextEditProvider } from "../../../nextEdit/NextEditProvider"
 import { HandlerPriority, SelectionChangeManager } from "./SelectionChangeManager"
 
 interface TextApplier {

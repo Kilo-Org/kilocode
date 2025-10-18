@@ -1,8 +1,8 @@
-import { getSymbolsForSnippet } from "core/autocomplete/context/ranking"
-import { RecentlyEditedRange } from "core/autocomplete/util/types"
+import { getSymbolsForSnippet } from "../../../autocomplete/context/ranking"
+import { RecentlyEditedRange } from "../../../autocomplete/util/types"
 import * as vscode from "vscode"
 
-import { IDE } from "core"
+import { IDE } from "../../../"
 
 type VsCodeRecentlyEditedRange = {
 	uri: vscode.Uri

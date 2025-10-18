@@ -19,7 +19,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			vscode: path.resolve(__dirname, "./__mocks__/vscode.js"),
-			core: path.resolve(__dirname, "./services/continuedev/core"),
 		},
 	},
 })

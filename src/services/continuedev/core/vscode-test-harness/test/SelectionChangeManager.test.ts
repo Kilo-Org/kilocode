@@ -7,9 +7,9 @@ vi.mock("../src/extension/VsCodeExtension", () => ({
 	},
 }))
 
-import { EditableRegionStrategy, getNextEditableRegion } from "core/nextEdit/NextEditEditableRegionCalculator"
-import { PrefetchQueue } from "core/nextEdit/NextEditPrefetchQueue"
-import { NextEditProvider } from "core/nextEdit/NextEditProvider"
+import { EditableRegionStrategy, getNextEditableRegion } from "../../nextEdit/NextEditEditableRegionCalculator"
+import { PrefetchQueue } from "../../nextEdit/NextEditPrefetchQueue"
+import { NextEditProvider } from "../../nextEdit/NextEditProvider"
 import { FakeIDE } from "../../test/FakeIDE"
 import * as vscode from "vscode"
 import { JumpManager } from "../src/activation/JumpManager"
