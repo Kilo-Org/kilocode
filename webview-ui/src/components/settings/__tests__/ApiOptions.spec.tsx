@@ -31,6 +31,12 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 			{children}
 		</label>
 	),
+	VSCodeDropdown: ({ children, value, onChange, className }: any) => (
+		<select value={value} onChange={onChange} className={className}>
+			{children}
+		</select>
+	),
+	VSCodeOption: ({ children, value }: any) => <option value={value}>{children}</option>,
 }))
 
 // Mock other components
