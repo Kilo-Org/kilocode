@@ -47,6 +47,7 @@ import {
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
 	OVHcloudAIEndpointsHandler, // kilocode_change
+	AIStupidLevelHandler,
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -206,6 +207,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "ovhcloud":
 			return new OVHcloudAIEndpointsHandler(options)
 		// kilocode_change end
+		case "aistupidlevel":
+			return new AIStupidLevelHandler(options)
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

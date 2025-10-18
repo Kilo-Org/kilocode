@@ -29,6 +29,7 @@ export { XAI } from "./XAI"
 export { GeminiCli } from "./GeminiCli"
 export { VirtualQuotaFallbackProvider } from "./VirtualQuotaFallbackProvider"
 // kilocode_change end
+export { AIStupidLevel } from "./AIStupidLevel"
 export { ZAi } from "./ZAi"
 export { LiteLLM } from "./LiteLLM"
 export { Fireworks } from "./Fireworks"
