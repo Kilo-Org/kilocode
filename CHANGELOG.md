@@ -1,5 +1,22 @@
 # kilo-code
 
+## [v4.107.0]
+
+- [#2549](https://github.com/Kilo-Org/kilocode/pull/2549) [`4327563`](https://github.com/Kilo-Org/kilocode/commit/4327563ea315eaca0907286f02f03facf42a837c) Thanks [@mcowger](https://github.com/mcowger)! - Add Kilocode Credits Status Bar Item
+
+### Patch Changes
+
+- [#3082](https://github.com/Kilo-Org/kilocode/pull/3082) [`d82e684`](https://github.com/Kilo-Org/kilocode/commit/d82e6842d423861d7c5725ebfdba491438b3302a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The "Enable browser tool" setting is now honored when using experimental JSON style tool calls.
+
+- [#3059](https://github.com/Kilo-Org/kilocode/pull/3059) [`d71f1d6`](https://github.com/Kilo-Org/kilocode/commit/d71f1d67e372fab1186ec07eda97c6d950338ec2) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix bug preventing the agent from editing files properly when git diff views are open
+
+- [#3105](https://github.com/Kilo-Org/kilocode/pull/3105) [`b0c7475`](https://github.com/Kilo-Org/kilocode/commit/b0c7475a5f086171dbff162cbfa4761937617f27) Thanks [@metju90](https://github.com/metju90)! - Fix button styling on Let's Go CTA
+
+- [#3107](https://github.com/Kilo-Org/kilocode/pull/3107) [`c58c4ac`](https://github.com/Kilo-Org/kilocode/commit/c58c4ac9bed8af1a9c18250e759ee4b93873f86b) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.28.16-v3.28.17
+
+    - Fix: Update zh-TW run command title translation (thanks @PeterDaveHello!)
+    - feat: Add Claude Sonnet 4.5 1M context window support for Claude Code (thanks @ColbySerpa!)
+
 ## [v4.106.0]
 
 - [#2833](https://github.com/Kilo-Org/kilocode/pull/2833) [`0b8ef46`](https://github.com/Kilo-Org/kilocode/commit/0b8ef4632cab8cbf1da7a90a2f9b228861b41be8) Thanks [@mcowger](https://github.com/mcowger)! - (also thanks to @NaccOll for paving the way) - Preliminary support for native tool calling (a.k.a native function calling) was added.
