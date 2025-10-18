@@ -1,15 +1,26 @@
-# Continue: Autocomplete & NextEdit Only
+# Continue: Autocomplete & NextEdit Library
 
-A streamlined version of [Continue](https://github.com/continuedev/continue) containing only the AI-powered autocomplete and NextEdit features, with all other functionality removed.
+A focused TypeScript library extracted from [Continue](https://github.com/continuedev/continue) containing only the AI-powered autocomplete and NextEdit features. This library is integrated into the [Kilocode](https://github.com/kilocode/kilocode) monorepo as a service component.
 
 ## Overview
 
-This repository contains only the autocomplete and NextEdit features from Continue, with all other functionality (GUI, chat, agents, tools, etc.) removed. It provides two core features:
+This library provides two core features from the Continue project:
 
 - **Autocomplete**: Intelligent, context-aware code completion powered by LLMs
 - **NextEdit**: Multi-location code edit predictions that understand your editing patterns
 
-All GUI components, chat functionality, CLI tools, and other features have been removed to create a focused codebase for these two features only.
+All other Continue functionality (GUI, chat, agents, tools, etc.) has been removed to create a focused, reusable codebase.
+
+## Integration Context
+
+This library is part of the **Kilocode monorepo** at `src/services/continuedev/`. It contains pure TypeScript source code without independent build configuration:
+
+- **No package.json** - Dependencies managed by Kilocode's pnpm workspace
+- **No build config** - Uses Kilocode's TypeScript and build tooling
+- **Testing** - Integrated into Kilocode's vitest test suite
+- **Purpose** - Provides autocomplete and edit prediction capabilities to Kilocode
+
+For integration details, see [`INTEGRATION.md`](INTEGRATION.md).
 
 ## Features
 
@@ -30,60 +41,49 @@ All GUI components, chat functionality, CLI tools, and other features have been 
 - **Visual feedback**: Jump navigation between edit regions
 - **Cursor positioning**: Intelligent cursor placement after edits
 
-### 🔧 Additional Features
+### 🔧 Supporting Infrastructure
 
 - **Multiple LLM providers**: OpenAI, Anthropic, Gemini, Azure, Bedrock, and more
 - **Tree-sitter integration**: Accurate syntax-aware code analysis for multiple languages
-- **Comprehensive testing**: 778 tests covering autocomplete, NextEdit, and integrations
+- **Comprehensive testing**: 857 tests covering autocomplete, NextEdit, and integrations
 - **TypeScript**: Full type safety and IntelliSense support
 
-## Installation
+## Library Structure
 
-```bash
-# Clone the repository
-git clone <repository-url>
-cd continue
-
-# Install dependencies
-npm install
-
-# Run tests to verify installation
-npm test
 ```
-
-## Current State
-
-This repository now contains **only** the autocomplete and NextEdit features. All other Continue functionality has been removed:
-
-### What's Included ✅
-
-- **Autocomplete**: Full tab autocomplete with context gathering, filtering, and LLM generation
-- **NextEdit**: Multi-location edit prediction with diff calculation
-- **LLM Integrations**: OpenAI, Anthropic, Gemini, Azure, Bedrock, and 15+ other providers
-- **Tree-sitter**: Multi-language syntax parsing for context extraction
-- **Test Harness**: VSCode integration example with 86 integration tests
-- **All Dependencies**: fetch, diff utilities, security checks, logging, analytics
-
-### What's Removed ❌
-
-- GUI/Webview interface
-- Chat functionality
-- Agent/tool system
-- CLI extension
-- IntelliJ extension
-- Documentation site
-- Media assets
-- Deployment scripts
-- Complex YAML configuration (replaced with minimal config)
-- Package monorepo structure (consolidated to single root)
-
-### Project Statistics
-
-- **778 passing tests** (autocomplete, NextEdit, integrations, dependencies)
-- **TypeScript compiles cleanly** (zero type errors)
-- **~50,000 lines of code** (down from ~112,000 - 55% reduction)
-- **Single test framework** (Vitest only, Jest removed)
-- **Consolidated structure** (all code in `core/`, no separate packages)
+src/services/continuedev/
+├── core/                      # All autocomplete & NextEdit code
+│   ├── autocomplete/          # Autocomplete feature
+│   │   ├── CompletionProvider.ts
+│   │   ├── MinimalConfig.ts
+│   │   ├── context/          # Context gathering (tree-sitter based)
+│   │   ├── filtering/        # Bracket matching, stream transforms
+│   │   ├── generation/       # LLM completion streaming
+│   │   ├── postprocessing/   # Clean up completions
+│   │   ├── snippets/         # Code snippet retrieval
+│   │   └── templating/       # Prompt construction
+│   ├── nextEdit/             # NextEdit feature
+│   │   ├── NextEditProvider.ts
+│   │   ├── providers/        # Model-specific providers
+│   │   ├── context/          # Edit aggregation & context
+│   │   ├── diff/             # Diff calculation
+│   │   └── templating/       # NextEdit prompt engines
+│   ├── llm/                  # LLM integration
+│   │   ├── llms/             # Provider implementations
+│   │   └── openai-adapters/  # OpenAI-compatible adapters
+│   ├── diff/                 # Myers diff algorithm
+│   ├── util/                 # Shared utilities
+│   ├── indexing/             # Security checks & ignore patterns
+│   ├── fetch/                # HTTP client with cert support
+│   └── vscode-test-harness/  # VSCode integration example
+├── tree-sitter/              # Tree-sitter query files
+├── legacy_code_rewrite/      # Historical extraction documentation
+├── API_REFERENCE.md          # Complete API documentation
+├── ARCHITECTURE.md           # Technical architecture
+├── EXAMPLES.md               # Usage examples
+├── INTEGRATION.md            # Integration with Kilocode
+└── LICENSE                   # Apache 2.0 license
+```
 
 ## Architecture
 
@@ -119,196 +119,54 @@ This repository now contains **only** the autocomplete and NextEdit features. Al
 - **IDE Interface**: Abstraction for editor integration
 - **ILLM Interface**: Abstraction for LLM providers
 
-### Repository Structure
+## Documentation
 
-```
-continue/
-├── core/                      # All autocomplete & NextEdit code
-│   ├── autocomplete/          # Autocomplete feature
-│   │   ├── CompletionProvider.ts
-│   │   ├── MinimalConfig.ts
-│   │   ├── classification/    # Multiline detection
-│   │   ├── context/          # Context gathering (tree-sitter based)
-│   │   ├── filtering/        # Bracket matching, stream transforms
-│   │   ├── generation/       # LLM completion streaming
-│   │   ├── postprocessing/   # Clean up completions
-│   │   ├── snippets/         # Code snippet retrieval
-│   │   └── templating/       # Prompt construction
-│   ├── nextEdit/             # NextEdit feature
-│   │   ├── NextEditProvider.ts
-│   │   ├── providers/        # Model-specific providers
-│   │   ├── context/          # Edit aggregation & context
-│   │   ├── diff/             # Diff calculation
-│   │   └── templating/       # NextEdit prompt engines
-│   ├── llm/                  # LLM integration
-│   │   ├── llms/             # Provider implementations
-│   │   ├── openai-adapters/  # OpenAI-compatible adapters
-│   │   └── model-info/       # Model metadata
-│   ├── diff/                 # Myers diff algorithm
-│   ├── util/                 # Shared utilities
-│   ├── indexing/             # Security checks & ignore patterns
-│   ├── fetch/                # HTTP client with cert support
-│   └── vscode-test-harness/  # VSCode integration tests
-├── tree-sitter/              # Tree-sitter query files
-├── legacy_code_rewrite/      # Cleanup documentation
-├── package.json              # Root package configuration
-└── knip.json                 # Dead code analysis config
-```
+For detailed usage and API information:
 
-## API Reference
+- **[`API_REFERENCE.md`](API_REFERENCE.md)** - Complete API documentation with method signatures and parameters
+- **[`EXAMPLES.md`](EXAMPLES.md)** - Practical code examples for common use cases
+- **[`ARCHITECTURE.md`](ARCHITECTURE.md)** - Technical architecture and design decisions
+- **[`INTEGRATION.md`](INTEGRATION.md)** - Integration with Kilocode monorepo
 
-For detailed API documentation, see [`API_REFERENCE.md`](API_REFERENCE.md).
+The VSCode test harness at [`core/vscode-test-harness/`](core/vscode-test-harness/) provides a complete working integration example with 86 tests.
 
-Quick reference for main exports:
+## Current State
 
-### Autocomplete
+### What's Included ✅
 
-- [`CompletionProvider`](core/autocomplete/CompletionProvider.ts) - Main autocomplete class
-- [`MinimalConfigProvider`](core/autocomplete/MinimalConfig.ts) - Configuration provider
-- Types: `AutocompleteInput`, `AutocompleteOutcome`, `TabAutocompleteOptions`
+- **Autocomplete**: Full tab autocomplete with context gathering, filtering, and LLM generation
+- **NextEdit**: Multi-location edit prediction with diff calculation
+- **LLM Integrations**: OpenAI, Anthropic, Gemini, Azure, Bedrock, and 15+ other providers
+- **Tree-sitter**: Multi-language syntax parsing for context extraction
+- **Test Harness**: VSCode integration example with 86 integration tests
+- **All Dependencies**: fetch, diff utilities, security checks, logging, analytics
 
-### NextEdit
+### What's Removed ❌
 
-- [`NextEditProvider`](core/nextEdit/NextEditProvider.ts) - Main NextEdit class
-- [`NextEditProviderFactory`](core/nextEdit/NextEditProviderFactory.ts) - Creates model-specific providers
-- Types: `NextEditOutcome`, `ModelSpecificContext`, `EditableRegion`
+- GUI/Webview interface
+- Chat functionality
+- Agent/tool system
+- CLI extension
+- IntelliJ extension
+- Documentation site
+- Media assets
+- Deployment scripts
+- Complex YAML configuration (replaced with minimal config)
+- Package monorepo structure (consolidated to single root)
 
-### Core Interfaces
+### Statistics
 
-- [`IDE`](core/index.d.ts) - Interface for IDE integration
-- [`ILLM`](core/index.d.ts) - Interface for LLM providers
-- [`Position`, `Range`, `RangeInFile`](core/index.d.ts) - Common types
-
-## Integration
-
-## Quick Start Examples
-
-### Basic Autocomplete Usage
-
-```typescript
-import { CompletionProvider } from "./core/autocomplete/CompletionProvider";
-import { MinimalConfigProvider } from "./core/autocomplete/MinimalConfig";
-import { IDE, ILLM } from "./core/index.d";
-import { OpenAI } from "./core/llm/llms/OpenAI";
-
-// 1. Create minimal configuration
-const configProvider = new MinimalConfigProvider({
-  tabAutocompleteOptions: {
-    debounceDelay: 150,
-    maxPromptTokens: 1024,
-  },
-});
-
-// 2. Implement IDE interface (see core/vscode-test-harness/src/VsCodeIde.ts for full example)
-const ide: IDE = {
-  readFile: async (filepath) => {
-    /* read file */
-  },
-  getWorkspaceDirs: async () => ["/path/to/workspace"],
-  // ... other required methods
-};
-
-// 3. Create LLM provider function
-const getLlm = async (): Promise<ILLM> => {
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    model: "gpt-4",
-  });
-};
-
-// 4. Create completion provider
-const completionProvider = new CompletionProvider(
-  configProvider,
-  ide,
-  getLlm,
-  (error) => console.error("Autocomplete error:", error),
-);
-
-// 5. Request completion
-const outcome = await completionProvider.provideInlineCompletionItems(
-  {
-    filepath: "/path/to/file.ts",
-    pos: { line: 10, character: 5 },
-    completionId: "unique-id",
-  },
-  abortSignal,
-);
-
-if (outcome) {
-  console.log("Completion:", outcome.completion);
-
-  // Mark as displayed
-  completionProvider.markDisplayed("unique-id", outcome);
-
-  // On user acceptance
-  completionProvider.accept("unique-id");
-}
-```
-
-### Basic NextEdit Usage
-
-```typescript
-import { NextEditProvider } from "./core/nextEdit/NextEditProvider";
-
-// Create NextEdit provider (uses same config and IDE as autocomplete)
-const nextEditProvider = NextEditProvider.getInstance(
-  configProvider,
-  ide,
-  getLlm,
-  (error) => console.error("NextEdit error:", error),
-);
-
-// Request next edit prediction
-const outcome = await nextEditProvider.getNextEditPrediction({
-  filepath: "/path/to/file.ts",
-  pos: { line: 15, character: 0 },
-  fileContents: currentFileContents,
-  // ... other context
-});
-
-if (outcome) {
-  console.log("Predicted edits:", outcome.diffLines);
-  console.log("Regions to edit:", outcome.editableRegions);
-  console.log("New cursor position:", outcome.finalCursorPosition);
-}
-```
-
-### More Examples
-
-For complete examples and API documentation, see:
-
-- [`EXAMPLES.md`](EXAMPLES.md) - Comprehensive usage examples
-- [`API_REFERENCE.md`](API_REFERENCE.md) - Detailed API documentation
-- [`core/vscode-test-harness/`](core/vscode-test-harness/) - Full VSCode integration
-
-The VSCode test harness provides a complete working example:
-
-- [`VsCodeIde.ts`](core/vscode-test-harness/src/VsCodeIde.ts) - IDE interface implementation
-- [`completionProvider.ts`](core/vscode-test-harness/src/autocomplete/completionProvider.ts) - Autocomplete integration
-- [`NextEditWindowManager.ts`](core/vscode-test-harness/src/activation/NextEditWindowManager.ts) - NextEdit UI
-- 86 integration tests in [`test/`](core/vscode-test-harness/test/)
+- **857 passing tests** (autocomplete, NextEdit, integrations, dependencies)
+- **TypeScript compiles cleanly** (zero type errors)
+- **~50,000 lines of code** (down from ~112,000 - 55% reduction)
+- **Single test framework** (Vitest only, Jest removed)
+- **Consolidated structure** (all code in `core/`, no separate packages)
 
 ## Testing
 
-### Running Tests
+Tests for this library are integrated into Kilocode's test suite. See [`INTEGRATION.md`](INTEGRATION.md) for details on running tests within the Kilocode project.
 
-```bash
-# Run all tests (778 tests)
-npm test
-
-# Watch mode
-npm run test:watch
-
-# Type checking
-npm run typecheck
-
-# Type checking in watch mode
-npm run tsc:watch
-```
-
-### Test Coverage
-
-The repository includes **778 passing tests** across:
+The library includes comprehensive test coverage:
 
 - **Autocomplete tests**: Context gathering, filtering, generation, templating, caching
 - **NextEdit tests**: Edit prediction, diff calculation, template engines, history tracking
@@ -316,37 +174,14 @@ The repository includes **778 passing tests** across:
 - **Integration tests**: VSCode test harness with real-world usage scenarios
 - **Dependency tests**: LRU cache, tree-sitter parsing, security filtering
 
-## Development
+## Integration into Your IDE
 
-### Type Checking
+To integrate this library into your own IDE:
 
-```bash
-npm run typecheck
-npm run tsc:watch  # Watch mode
-```
-
-### Linting
-
-```bash
-npm run lint
-npm run lint:fix
-```
-
-### Formatting
-
-```bash
-npm run format        # Format all files
-npm run format:check  # Check formatting only
-```
-
-### Contributing
-
-This is a streamlined version of Continue containing only autocomplete and NextEdit. To contribute:
-
-1. Ensure all tests pass: `npm test`
-2. Add tests for new features
-3. Follow existing code style and TypeScript patterns
-4. Update documentation as needed
+1. Implement the [`IDE` interface](core/index.d.ts)
+2. Create [`CompletionProvider`](core/autocomplete/CompletionProvider.ts) instance
+3. Create [`NextEditProvider`](core/nextEdit/NextEditProvider.ts) instance (optional)
+4. See [`core/vscode-test-harness/`](core/vscode-test-harness/) for a complete VSCode example
 
 ## License & Credits
 
@@ -358,7 +193,7 @@ This library is extracted from [Continue](https://github.com/continuedev/continu
 
 ### Attribution
 
-The autocomplete and NextEdit functionality in this library was developed by the Continue team. This extraction preserves the original code structure and functionality while providing a minimal, reusable package.
+The autocomplete and NextEdit functionality in this library was developed by the Continue team. This extraction preserves the original code structure and functionality while providing a minimal, reusable library.
 
 Key contributors to the original Continue project:
 
@@ -373,27 +208,35 @@ This version removes everything except autocomplete and NextEdit:
 - ❌ **Removed**: Documentation site, media files, deployment scripts
 - ❌ **Removed**: Complex YAML config system (replaced with minimal config)
 - ❌ **Removed**: Package monorepo structure (consolidated into single root)
-- ✅ **Retained**: All autocomplete functionality with 778 passing tests
+- ✅ **Retained**: All autocomplete functionality with comprehensive test coverage
 - ✅ **Retained**: NextEdit feature with full test coverage
 - ✅ **Retained**: LLM integrations (OpenAI, Anthropic, Gemini, etc.)
 - ✅ **Retained**: Tree-sitter parsing and context gathering
 
+## Documentation
+
+- **[`README.md`](README.md)** - This file - Overview and integration
+- **[`INTEGRATION.md`](INTEGRATION.md)** - Integration with Kilocode monorepo
+- **[`ARCHITECTURE.md`](ARCHITECTURE.md)** - Technical architecture details
+- **[`API_REFERENCE.md`](API_REFERENCE.md)** - Complete API documentation
+- **[`EXAMPLES.md`](EXAMPLES.md)** - Comprehensive usage examples
+- **[`legacy_code_rewrite/`](legacy_code_rewrite/)** - Historical extraction documentation (49 files)
+
 ## Links
 
+- **Kilocode Project**: https://github.com/kilocode/kilocode
 - **Original Continue Project**: https://github.com/continuedev/continue
 - **Continue Documentation**: https://docs.continue.dev
 - **Continue Discord**: https://discord.gg/continue
-- **Architecture Documentation**: [`ARCHITECTURE.md`](ARCHITECTURE.md)
-- **API Reference**: [`API_REFERENCE.md`](API_REFERENCE.md)
-- **Examples**: [`EXAMPLES.md`](EXAMPLES.md)
 
 ## Support
 
-For questions about this extraction:
+For questions about this library:
 
 - Check the [`ARCHITECTURE.md`](ARCHITECTURE.md) for technical details
 - Review [`EXAMPLES.md`](EXAMPLES.md) for usage patterns
 - Examine the test harness in [`core/vscode-test-harness/`](core/vscode-test-harness/)
+- See [`INTEGRATION.md`](INTEGRATION.md) for Kilocode integration details
 
 For questions about the original Continue project:
 
