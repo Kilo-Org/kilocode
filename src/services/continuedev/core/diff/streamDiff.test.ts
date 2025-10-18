@@ -56,9 +56,9 @@ function displayDiff(diff: DiffLine[]) {
 async function expectDiff(file: string) {
 	const testFilePath = path.join(__dirname, "test-examples", file + ".diff")
 	const testFileContents = fs.readFileSync(testFilePath, "utf-8")
-	const [oldText, newText, expectedDiff] = testFileContents
-		.split(/\r?\n---\r?\n/)
-		.map((s) => s.replace(/^\n+/, "").trimEnd())
+	const normalized = testFileContents.replace(/\r\n/g, "\n")
+
+	const [oldText, newText, expectedDiff] = normalized.split("\n---\n").map((s) => s.replace(/^\n+/, "").trimEnd())
 	const oldLines = oldText.split("\n")
 	const newLines = newText.split("\n")
 	const { streamDiffs } = await collectDiffs(oldLines, newLines)
@@ -66,6 +66,7 @@ async function expectDiff(file: string) {
 
 	if (!expectedDiff || expectedDiff.trim() === "") {
 		console.log("Expected diff was empty. Writing computed diff to the test file")
+		// Persist with LF to keep fixtures stable cross-platform
 		fs.writeFileSync(testFilePath, `${oldText}\n\n---\n\n${newText}\n\n---\n\n${displayedDiff}`)
 
 		throw new Error("Expected diff is empty")
