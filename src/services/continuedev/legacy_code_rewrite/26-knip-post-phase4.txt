@@ -1,0 +1,204 @@
+Unused files (18)
+core/indexing/walkDir.ts                   
+core/llm/logFormatter.ts                   
+core/llm/openai-adapters/test/util.ts      
+core/llm/toolSupport.ts                    
+core/llm/utils/getSecureID.ts              
+core/llm/utils/retry.ts                    
+core/test/vitest.global-setup.ts           
+core/test/vitest.setup.ts                  
+core/util/chatDescriber.ts                 
+core/util/fetchFavicon.ts                  
+core/util/generateRepoMap.ts               
+core/util/GlobalContext.ts                 
+core/util/history.ts                       
+core/util/incrementalParseJson.ts          
+core/util/messageConversion.ts             
+core/util/sentry/anonymization.ts          
+core/vitest.config.ts                      
+core/vscode-test-harness/vitest.config.ts  
+Unused devDependencies (3)
+eslint-plugin-import         package.json:17:6
+lint-staged                  package.json:19:6
+prettier-plugin-tailwindcss  package.json:21:6
+Unused exports (115)
+Typescript                                                       …tocomplete/constants/AutocompleteLanguageInfo.ts:43:14
+JavaScript                                                       …tocomplete/constants/AutocompleteLanguageInfo.ts:51:14
+Python                                                           …tocomplete/constants/AutocompleteLanguageInfo.ts:59:14
+Java                                                             …tocomplete/constants/AutocompleteLanguageInfo.ts:69:14
+Cpp                                                              …tocomplete/constants/AutocompleteLanguageInfo.ts:77:14
+CSharp                                                           …tocomplete/constants/AutocompleteLanguageInfo.ts:85:14
+C                                                                …tocomplete/constants/AutocompleteLanguageInfo.ts:93:14
+Scala                                                            …ocomplete/constants/AutocompleteLanguageInfo.ts:101:14
+Go                                                               …ocomplete/constants/AutocompleteLanguageInfo.ts:109:14
+Rust                                                             …ocomplete/constants/AutocompleteLanguageInfo.ts:117:14
+Haskell                                                          …ocomplete/constants/AutocompleteLanguageInfo.ts:125:14
+PHP                                                              …ocomplete/constants/AutocompleteLanguageInfo.ts:142:14
+RubyOnRails                                                      …ocomplete/constants/AutocompleteLanguageInfo.ts:150:14
+Swift                                                            …ocomplete/constants/AutocompleteLanguageInfo.ts:158:14
+Kotlin                                                           …ocomplete/constants/AutocompleteLanguageInfo.ts:166:14
+Ruby                                                             …ocomplete/constants/AutocompleteLanguageInfo.ts:174:14
+Clojure                                                          …ocomplete/constants/AutocompleteLanguageInfo.ts:182:14
+Julia                                                            …ocomplete/constants/AutocompleteLanguageInfo.ts:190:14
+FSharp                                                           …ocomplete/constants/AutocompleteLanguageInfo.ts:209:14
+R                                                                …ocomplete/constants/AutocompleteLanguageInfo.ts:228:14
+Dart                                                             …ocomplete/constants/AutocompleteLanguageInfo.ts:245:14
+Solidity                                                         …ocomplete/constants/AutocompleteLanguageInfo.ts:253:14
+Lua                                                              …ocomplete/constants/AutocompleteLanguageInfo.ts:276:14
+YAML                                                             …ocomplete/constants/AutocompleteLanguageInfo.ts:284:14
+Json                                                             …ocomplete/constants/AutocompleteLanguageInfo.ts:325:14
+Markdown                                                         …ocomplete/constants/AutocompleteLanguageInfo.ts:344:14
+LANGUAGES                                                        …ocomplete/constants/AutocompleteLanguageInfo.ts:369:14
+rankAndOrderSnippets                                   function  core/autocomplete/context/ranking/index.ts:41:17       
+fillPromptWithSnippets                                 function  core/autocomplete/context/ranking/index.ts:137:17      
+FUNCTIONS                                                        …ontext/root-path-context/__test-cases__/python.ts:1:14
+CLASSES                                                          …ntext/root-path-context/__test-cases__/python.ts:98:14
+extractTopLevelDeclsWithForma…                         function  …lete/context/static-context/tree-sitter-utils.ts:81:23
+BRACKETS                                                         …/autocomplete/filtering/BracketMatchingService.ts:1:14
+BRACKETS_REVERSE                                                 …/autocomplete/filtering/BracketMatchingService.ts:6:14
+getAllSnippets                                                   core/autocomplete/snippets/getAllSnippets.ts:169:14    
+getDiffFn                                              function  core/autocomplete/snippets/gitDiffCache.ts:66:17       
+toAsyncIterable                                                  core/fetch/index.ts:17:13                              
+getEnvNoProxyPatterns                                  function  core/fetch/util.ts:32:17                               
+getReqOptionsNoProxyPatterns                           function  core/fetch/util.ts:44:17                               
+defaultIgnoreFileAndDir                                          core/indexing/ignore.ts:238:14                         
+throwIfFileIsSecurityConcern                           function  core/indexing/ignore.ts:261:17                         
+SqliteDb                                               class     core/indexing/refreshIndex.ts:21:14                    
+truncateToLastNBytes                                   function  core/indexing/refreshIndex.ts:527:17                   
+IndexLock                                              class     core/indexing/refreshIndex.ts:546:14                   
+GPTAsyncEncoder                                        class     core/llm/asyncEncoder.ts:35:14                         
+llmCanGenerateInParallel                                         core/llm/autodetect.ts:449:26                          
+modelSupportsReasoning                                           core/llm/autodetect.ts:452:25                          
+DEFAULT_REASONING_TOKENS                                         core/llm/constants.ts:34:26                            
+PROXY_URL                                                        core/llm/constants.ts:35:28                            
+cleanupAsyncEncoders                                             core/llm/countTokens.ts:547:9                          
+extractToolSequence                                              core/llm/countTokens.ts:551:20                         
+pruneStringFromTop                                               core/llm/countTokens.ts:556:25                         
+LLMError                                               class     core/llm/index.ts:68:14                                
+messageHasToolCalls                                    function  core/llm/messages.ts:3:17                              
+messageIsEmpty                                         function  core/llm/messages.ts:7:17                              
+isToolMessageForId                                     function  core/llm/messages.ts:38:17                             
+allModelProviders                                                core/llm/model-info/index.ts:4:14                      
+allLlms                                                          core/llm/model-info/index.ts:8:14                      
+getAllRecommendedFor                                   function  core/llm/model-info/index.ts:34:17                     
+AllMediaTypes                                                    core/llm/model-info/types.ts:48:14                     
+getAvailableStrategies                                           …nai-adapters/apis/AnthropicCachingStrategies.ts:169:14
+getStrategyDescription                                           …nai-adapters/apis/AnthropicCachingStrategies.ts:174:14
+getAnthropicErrorMessage                               function  core/llm/openai-adapters/apis/AnthropicUtils.ts:13:17  
+DEEPSEEK_API_BASE                                                core/llm/openai-adapters/apis/DeepSeek.ts:8:14         
+UNIQUE_TOKEN                                                     core/llm/openai-adapters/apis/Inception.ts:25:14       
+APPLY_UNIQUE_TOKEN                                               core/llm/openai-adapters/apis/Inception.ts:26:14       
+INCEPTION_API_BASE                                               core/llm/openai-adapters/apis/Inception.ts:27:14       
+Llamastack_API_BASE                                              core/llm/openai-adapters/apis/LlamaStack.ts:8:14       
+default                                                          core/llm/openai-adapters/apis/OpenRouter.ts:43:8       
+addCacheControlToLastTwoUserM…                                   core/llm/openai-adapters/index.ts:185:9                
+getAnthropicErrorMessage                                         core/llm/openai-adapters/index.ts:186:40               
+getAnthropicHeaders                                              core/llm/openai-adapters/index.ts:187:28               
+getAnthropicMediaTypeFromData…                                   core/llm/openai-adapters/index.ts:188:23               
+model                                                  function  core/llm/openai-adapters/util.ts:146:17                
+toChatMessage                                          function  core/llm/openaiTypeConverters.ts:13:17                 
+getSystemMessageWithRules                                        core/llm/rules/getSystemMessageWithRules.ts:327:14     
+IS_NEXT_EDIT_ACTIVE                                              core/nextEdit/constants.ts:3:14                        
+APPLY_UNIQUE_TOKEN                                               core/nextEdit/constants.ts:19:14                       
+getRenderableDiffWithGutterAn…                         function  core/nextEdit/diff/diff.ts:63:17                       
+applyCompletionToFile                                  function  core/nextEdit/diff/diff.ts:250:17                      
+__setMockNextEditLoggingServi…  NextEditLoggingServi…  function  core/nextEdit/NextEditLoggingService.ts:254:17         
+__setMockPrefetchQueueInstance  PrefetchQueueModule    function  core/nextEdit/NextEditPrefetchQueue.ts:155:17          
+ideSettingsPromise                                               core/test/fixtures.ts:11:14                            
+testControlPlaneClient                                           core/test/fixtures.ts:13:14                            
+testLLM                                                          core/test/fixtures.ts:21:14                            
+TEST_DIR_PATH                                                    core/test/testDir.ts:7:14                              
+getRootCause                                           function  core/util/errors.ts:7:17                               
+splitCamelCaseAndNonAlphaNume…                         function  core/util/index.ts:207:17                              
+startLocalLemonade                                     function  core/util/lemonadeHelper.ts:31:23                      
+mergeJson                                              function  core/util/merge.ts:5:17                                
+renderContextItemsWithStatus                           function  core/util/messageContent.ts:38:17                      
+startLocalOllama                                       function  core/util/ollamaHelper.ts:22:23                        
+getRemoteModelInfo                                     function  core/util/ollamaHelper.ts:54:23                        
+DO_NOT_COUNT_REJECTED_BEFORE                                     core/util/parameters.ts:32:14                          
+RETRIEVAL_PARAMS                                                 core/util/parameters.ts:34:14                          
+getSessionsFolderPath                                  function  core/util/paths.ts:71:17                               
+getGlobalContextFilePath                               function  core/util/paths.ts:87:17                               
+getSessionFilePath                                     function  core/util/paths.ts:95:17                               
+getSessionsListPath                                    function  core/util/paths.ts:99:17                               
+getRepoMapFilePath                                     function  core/util/paths.ts:426:17                              
+EXPERIMENTS                                                      core/util/posthog.ts:15:14                             
+SentryLogger                                           class     core/util/sentry/SentryLogger.ts:13:14                 
+initializeSentry                                       function  core/util/sentry/SentryLogger.ts:70:17                 
+createSpan                                             function  core/util/sentry/SentryLogger.ts:86:17                 
+captureLog                                             function  core/util/sentry/SentryLogger.ts:110:17                
+supportedLanguages                                               core/util/treeSitter.ts:38:14                          
+getLanguageForFile                                     function  core/util/treeSitter.ts:145:23                         
+getSymbolsForFile                                      function  core/util/treeSitter.ts:225:23                         
+getSymbolsForManyFiles                                 function  core/util/treeSitter.ts:292:23                         
+pathToUriPathSegment                                   function  core/util/uri.ts:8:17                                  
+getFileExtensionFromBasename                           function  core/util/uri.ts:93:17                                 
+joinEncodedUriPathSegmentToUri                         function  core/util/uri.ts:127:17                                
+getLastNPathParts                                      function  core/util/uri.ts:178:17                                
+getUriDescription                                      function  core/util/uri.ts:185:17                                
+RETRY_AFTER_HEADER                                               core/util/withExponentialBackoff.ts:5:14               
+Unused exported types (64)
+Filepath                                              type       core/autocomplete/context/static-context/types.ts:25:13
+RelevantType                                          type       core/autocomplete/context/static-context/types.ts:26:13
+RelevantHeader                                        type       core/autocomplete/context/static-context/types.ts:27:13
+MinimalConfig                                         interface  core/autocomplete/MinimalConfig.ts:16:18               
+MinimalProfile                                        interface  core/autocomplete/MinimalConfig.ts:30:18               
+ProcessedTestCase                                     interface  core/autocomplete/util/completionTestUtils.ts:9:18     
+cacheElementType                                      type       core/autocomplete/util/openedFilesLruCache.ts:4:13     
+MatchLineResult                                       type       core/diff/util.ts:8:13                                 
+RefreshIndex                                          type       core/indexing/types.ts:39:13                           
+ParameterType                                         type       core/llm/model-info/types.ts:3:13                      
+Parameter                                             interface  core/llm/model-info/types.ts:5:18                      
+ChatTemplate                                          enum       core/llm/model-info/types.ts:14:13                     
+LlmInfo                                               interface  core/llm/model-info/types.ts:19:18                     
+MediaType                                             enum       core/llm/model-info/types.ts:41:13                     
+ApiProviderInfo                                       interface  core/llm/model-info/types.ts:55:18                     
+ModelProviderCapability                               type       core/llm/model-info/types.ts:61:13                     
+CachingStrategy                                       type       …penai-adapters/apis/AnthropicCachingStrategies.ts:6:13
+CreateRerankItem                                      interface  core/llm/openai-adapters/apis/base.ts:26:18            
+ContinueProperties                                    interface  core/llm/openai-adapters/apis/ContinueProxy.ts:12:18   
+ProxyModelName                                        interface  core/llm/openai-adapters/apis/ContinueProxy.ts:20:18   
+OpenRouterConfig                                      interface  core/llm/openai-adapters/apis/OpenRouter.ts:7:18       
+ChatCompletion                                        type       core/llm/openai-adapters/index.ts:170:7                
+ChatCompletionChunk                                   type       core/llm/openai-adapters/index.ts:171:7                
+ChatCompletionCreateParamsNonStre…                    type       core/llm/openai-adapters/index.ts:173:7                
+ChatCompletionCreateParamsStreami…                    type       core/llm/openai-adapters/index.ts:174:7                
+Completion                                            type       core/llm/openai-adapters/index.ts:175:7                
+CompletionCreateParams                                type       core/llm/openai-adapters/index.ts:176:7                
+CompletionCreateParamsNonStreaming                    type       core/llm/openai-adapters/index.ts:177:7                
+CompletionCreateParamsStreaming                       type       core/llm/openai-adapters/index.ts:178:7                
+LLMConfig                                             type       core/llm/openai-adapters/index.ts:183:14               
+AdapterTestConfig                                     interface  …/llm/openai-adapters/test/adapter-test-utils.ts:172:18
+ContinueProxyConfig                                   type       core/llm/openai-adapters/types.ts:107:13               
+MockConfig                                            type       core/llm/openai-adapters/types.ts:113:13               
+AzureConfig                                           type       core/llm/openai-adapters/types.ts:142:13               
+GeminiGenerationConfig                                interface  core/llm/openai-adapters/util/gemini-types.ts:5:18     
+GeminiObjectSchemaType                                type       core/llm/openai-adapters/util/gemini-types.ts:20:13    
+GeminiObjectSchema                                    interface  core/llm/openai-adapters/util/gemini-types.ts:29:18    
+GeminiTextContentPart                                 type       core/llm/openai-adapters/util/gemini-types.ts:183:13   
+GeminiInlineDataContentPart                           type       core/llm/openai-adapters/util/gemini-types.ts:187:13   
+GeminiFunctionCallContentPart                         type       core/llm/openai-adapters/util/gemini-types.ts:194:13   
+GeminiFunctionResponseContentPart                     type       core/llm/openai-adapters/util/gemini-types.ts:202:13   
+GeminiFileDataContentPart                             type       core/llm/openai-adapters/util/gemini-types.ts:210:13   
+GeminiExecutableCodeContentPart                       type       core/llm/openai-adapters/util/gemini-types.ts:217:13   
+GeminiCodeExecutionResultContentP…                    type       core/llm/openai-adapters/util/gemini-types.ts:224:13   
+GeminiTool                                            interface  core/llm/openai-adapters/util/gemini-types.ts:255:18   
+GeminiToolConfig                                      interface  core/llm/openai-adapters/util/gemini-types.ts:266:18   
+GeminiChatRequestBody                                 interface  core/llm/openai-adapters/util/gemini-types.ts:274:18   
+GeminiChatResponseSuccess                             interface  core/llm/openai-adapters/util/gemini-types.ts:283:18   
+GeminiChatResponseError                               interface  core/llm/openai-adapters/util/gemini-types.ts:289:18   
+GeminiChatResponse                                    type       core/llm/openai-adapters/util/gemini-types.ts:295:13   
+RulePolicy                                            type       core/llm/rules/types.ts:1:13                           
+ProcessedItem                       PrefetchQueueMo…  interface  core/nextEdit/NextEditPrefetchQueue.ts:5:18            
+AutocompleteInput                                     interface  core/nextEdit/types.ts:18:18                           
+SystemPrompt                                          interface  core/nextEdit/types.ts:82:18                           
+UserPrompt                                            interface  core/nextEdit/types.ts:87:18                           
+InstinctTemplateVars                                  interface  core/nextEdit/types.ts:98:18                           
+MercuryTemplateVars                                   interface  core/nextEdit/types.ts:106:18                          
+EditableRegionConfig                                  interface  core/nextEdit/types.ts:130:18                          
+PromptConfig                                          interface  core/nextEdit/types.ts:140:18                          
+IAnalyticsProvider                                    interface  core/util/IAnalyticsProvider.ts:8:18                   
+TODO                                                  type       core/util/index.ts:137:13                              
+ModelInfo                                             interface  core/util/ollamaHelper.ts:6:18                         
+RegexValidationResult                                 interface  core/util/regexValidator.ts:5:18                       
+APIError                                              interface  core/util/withExponentialBackoff.ts:1:18               

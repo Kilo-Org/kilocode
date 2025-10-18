@@ -1,0 +1,874 @@
+Unused files (30)
+autocomplete/context/root-path-context/test/files/typescript/arrowFunctions.ts  
+autocomplete/context/root-path-context/test/files/typescript/classes.ts         
+autocomplete/context/root-path-context/test/files/typescript/classMethods.ts    
+autocomplete/context/root-path-context/test/files/typescript/functions.ts       
+autocomplete/context/root-path-context/test/files/typescript/generators.ts      
+config/createNewAssistantFile.ts                                                
+config/onboarding.ts                                                            
+config/yaml-package/cli.ts                                                      
+config/yaml-package/scripts/generateJsonSchema.ts                               
+config/yaml/default.ts                                                          
+control-plane/auth/index.ts                                                     
+control-plane/schema.ts                                                         
+fetch/node-fetch-patch.test.js                                                  
+llm-info/providers/vertexai.ts                                                  
+llm-info/util.ts                                                                
+llm/defaultSystemMessages.ts                                                    
+llm/llamaTokenizer.mjs                                                          
+llm/llamaTokenizerWorkerPool.mjs                                                
+llm/llms/llmTestHarness.ts                                                      
+llm/rules/rules-utils.ts                                                        
+llm/streamChat.ts                                                               
+llm/templates/edit/claude.ts                                                    
+llm/tiktokenWorkerPool.mjs                                                      
+llm/utils/calculateRequestCost.ts                                               
+util/sentry/constants.ts                                                        
+util/shellPath.ts                                                               
+util/url.ts                                                                     
+vendor/modules/@xenova/transformers/src/utils/image.js                          
+vscode-test-harness/src/extension/EditOutcomeTracker.ts                         
+vscode-test-harness/vitest.config.ts                                            
+Unused dependencies (24)
+@mozilla/readability          package.json:60:6 
+@octokit/rest                 package.json:61:6 
+@xenova/transformers          package.json:63:6 
+adf-to-md                     package.json:64:6 
+axios                         package.json:66:6 
+cheerio                       package.json:67:6 
+commander                     package.json:68:6 
+dbinfoz                       package.json:70:6 
+filtrex                       package.json:74:6 
+iconv-lite                    package.json:80:6 
+is-localhost-ip               package.json:82:6 
+launchdarkly-node-client-sdk  package.json:85:6 
+llm-code-highlighter          package.json:86:6 
+mac-ca                        package.json:88:6 
+node-html-markdown            package.json:90:6 
+ollama                        package.json:91:6 
+pg                            package.json:96:6 
+request                       package.json:101:6
+shell-quote                   package.json:102:6
+system-ca                     package.json:106:6
+tree-sitter-wasms             package.json:108:6
+vectordb                      package.json:110:6
+win-ca                        package.json:112:6
+wink-nlp-utils                package.json:113:6
+Unused devDependencies (16)
+@babel/preset-env                 package.json:20:6
+@biomejs/biome                    package.json:21:6
+@google/generative-ai             package.json:22:6
+@shikijs/colorized-brackets       package.json:23:6
+@types/jquery                     package.json:28:6
+@types/mozilla-readability        package.json:30:6
+@types/mustache                   package.json:31:6
+@types/node-fetch                 package.json:32:6
+@types/pg                         package.json:33:6
+@types/request                    package.json:35:6
+@types/shell-quote                package.json:36:6
+@types/tar                        package.json:37:6
+@types/win-ca                     package.json:39:6
+@typescript-eslint/eslint-plugin  package.json:40:6
+@typescript-eslint/parser         package.json:41:6
+jest-environment-jsdom            package.json:46:6
+Unused exports (661)
+Typescript                                                          …omplete/constants/AutocompleteLanguageInfo.ts:43:14
+JavaScript                                                          …omplete/constants/AutocompleteLanguageInfo.ts:51:14
+Python                                                              …omplete/constants/AutocompleteLanguageInfo.ts:59:14
+Java                                                                …omplete/constants/AutocompleteLanguageInfo.ts:69:14
+Cpp                                                                 …omplete/constants/AutocompleteLanguageInfo.ts:77:14
+CSharp                                                              …omplete/constants/AutocompleteLanguageInfo.ts:85:14
+C                                                                   …omplete/constants/AutocompleteLanguageInfo.ts:93:14
+Scala                                                               …mplete/constants/AutocompleteLanguageInfo.ts:101:14
+Go                                                                  …mplete/constants/AutocompleteLanguageInfo.ts:109:14
+Rust                                                                …mplete/constants/AutocompleteLanguageInfo.ts:117:14
+Haskell                                                             …mplete/constants/AutocompleteLanguageInfo.ts:125:14
+PHP                                                                 …mplete/constants/AutocompleteLanguageInfo.ts:142:14
+RubyOnRails                                                         …mplete/constants/AutocompleteLanguageInfo.ts:150:14
+Swift                                                               …mplete/constants/AutocompleteLanguageInfo.ts:158:14
+Kotlin                                                              …mplete/constants/AutocompleteLanguageInfo.ts:166:14
+Ruby                                                                …mplete/constants/AutocompleteLanguageInfo.ts:174:14
+Clojure                                                             …mplete/constants/AutocompleteLanguageInfo.ts:182:14
+Julia                                                               …mplete/constants/AutocompleteLanguageInfo.ts:190:14
+FSharp                                                              …mplete/constants/AutocompleteLanguageInfo.ts:209:14
+R                                                                   …mplete/constants/AutocompleteLanguageInfo.ts:228:14
+Dart                                                                …mplete/constants/AutocompleteLanguageInfo.ts:245:14
+Solidity                                                            …mplete/constants/AutocompleteLanguageInfo.ts:253:14
+Lua                                                                 …mplete/constants/AutocompleteLanguageInfo.ts:276:14
+YAML                                                                …mplete/constants/AutocompleteLanguageInfo.ts:284:14
+Json                                                                …mplete/constants/AutocompleteLanguageInfo.ts:325:14
+Markdown                                                            …mplete/constants/AutocompleteLanguageInfo.ts:344:14
+LANGUAGES                                                           …mplete/constants/AutocompleteLanguageInfo.ts:369:14
+rankAndOrderSnippets                                      function  autocomplete/context/ranking/index.ts:41:17         
+fillPromptWithSnippets                                    function  autocomplete/context/ranking/index.ts:137:17        
+FUNCTIONS                                                           …ext/root-path-context/test/testCases/python.ts:1:14
+CLASSES                                                             …xt/root-path-context/test/testCases/python.ts:98:14
+extractTopLevelDeclsWithFormatti…                         function  …e/context/static-context/tree-sitter-utils.ts:81:23
+BRACKETS                                                            …tocomplete/filtering/BracketMatchingService.ts:1:14
+BRACKETS_REVERSE                                                    …tocomplete/filtering/BracketMatchingService.ts:6:14
+onlyWhitespaceAfterEndOfLine                              function  …lete/filtering/streamTransforms/charStream.ts:11:24
+noFirstCharNewline                                        function  …lete/filtering/streamTransforms/charStream.ts:48:24
+processBlockNesting                lineStream             function  …ete/filtering/streamTransforms/lineStream.ts:153:17
+CODE_STOP_BLOCK                    lineStream                       …ete/filtering/streamTransforms/lineStream.ts:166:14
+BRACKET_ENDING_CHARS               lineStream                       …ete/filtering/streamTransforms/lineStream.ts:167:14
+LINES_TO_REMOVE_BEFORE_START       lineStream                       …ete/filtering/streamTransforms/lineStream.ts:176:14
+noTopLevelKeywordsMidline          lineStream             function  …ete/filtering/streamTransforms/lineStream.ts:202:24
+removeTrailingWhitespace           lineStream             function  …ete/filtering/streamTransforms/lineStream.ts:452:24
+filterLeadingNewline               lineStream             function  …ete/filtering/streamTransforms/lineStream.ts:515:24
+logLines                           lineStream             function  …ete/filtering/streamTransforms/lineStream.ts:631:24
+getAllSnippets                                                      autocomplete/snippets/getAllSnippets.ts:169:14      
+getDiffFn                                                 function  autocomplete/snippets/gitDiffCache.ts:66:17         
+getScopeAroundRange                                       function  autocomplete/util/ast.ts:49:23                      
+prevFilepaths                                                       autocomplete/util/openedFilesLruCache.ts:18:14      
+completionOptionsSchema                                             config-types/index.ts:3:14                          
+clientCertificateOptionsSchema                                      config-types/index.ts:22:14                         
+requestOptionsSchema                                                config-types/index.ts:31:14                         
+modelDescriptionSchema                                              config-types/index.ts:43:14                         
+embeddingsProviderSchema                                            config-types/index.ts:106:14                        
+uiOptionsSchema                                                     config-types/index.ts:129:14                        
+tabAutocompleteOptionsSchema                                        config-types/index.ts:138:14                        
+slashCommandSchema                                                  config-types/index.ts:169:14                        
+customCommandSchema                                                 config-types/index.ts:176:14                        
+contextProviderSchema                                               config-types/index.ts:183:14                        
+rerankerSchema                                                      config-types/index.ts:189:14                        
+analyticsSchema                                                     config-types/index.ts:195:14                        
+devDataSchema                                                       config-types/index.ts:211:14                        
+siteIndexingConfigSchema                                            config-types/index.ts:216:14                        
+controlPlaneConfigSchema                                            config-types/index.ts:226:14                        
+configJsonSchema                                                    config-types/index.ts:231:14                        
+isContextProviderWithParams                               function  config/load.ts:235:17                               
+isContinueConfigRelatedUri                                function  config/loadLocalAssistants.ts:16:17                 
+isContinueAgentConfigFile                                 function  config/loadLocalAssistants.ts:32:17                 
+isColocatedRulesFile                                      function  config/loadLocalAssistants.ts:45:17                 
+getDotContinueSubDirs                                     function  config/loadLocalAssistants.ts:103:17                
+createRelativeRuleFilePath                                function  config/markdown/utils.ts:9:17                       
+addModel                                                  function  config/util.ts:26:17                                
+deleteModel                                               function  config/util.ts:88:17                                
+convertJsonToYamlConfig                                   function  config/yaml-package/converter.ts:152:17             
+getLocationsToLook                                        function  config/yaml-package/interfaces/index.ts:35:17       
+listAvailableSecrets                                      function  config/yaml-package/interfaces/index.ts:95:17       
+renderSecrets                                             function  config/yaml-package/load/clientRender.ts:21:23      
+getUnrenderedSecretLocation                               function  config/yaml-package/load/clientRender.ts:82:17      
+continuePropertiesSchema                                            config/yaml-package/load/clientRender.ts:180:14     
+blockTypeSchema                                                     config/yaml-package/load/getBlockType.ts:14:14      
+mergePackages                                             function  config/yaml-package/load/merge.ts:4:17              
+isBlockItemWrapper                                                  config/yaml-package/load/typeGuards.ts:4:14         
+parseBlock                                                function  config/yaml-package/load/unroll.ts:77:17            
+unrollBlocks                                              function  config/yaml-package/load/unroll.ts:350:23           
+resolveBlock                                              function  config/yaml-package/load/unroll.ts:694:23           
+mergeOverrides                                            function  config/yaml-package/load/unroll.ts:774:17           
+RuleTypeDescriptions                                                config/yaml-package/markdown/getRuleType.ts:10:14   
+contextSchema                                                       config/yaml-package/schemas/index.ts:11:14          
+rulesJsonSchema                                                     config/yaml-package/schemas/index.ts:54:14          
+blockOrSchema                                                       config/yaml-package/schemas/index.ts:81:14          
+commonMetadataSchema                                                config/yaml-package/schemas/index.ts:86:14          
+baseConfigYamlSchema                                                config/yaml-package/schemas/index.ts:100:14         
+assistantUnrolledSchemaNonNullab…                                   config/yaml-package/schemas/index.ts:169:14         
+continueCommandSchema                                               config/yaml-package/schemas/index.ts:210:14         
+languageMarkerSchema                                                config/yaml-package/schemas/index.ts:226:14         
+sidebarSchema                                                       config/yaml-package/schemas/index.ts:231:14         
+autoindentExtensionsSchema                                          config/yaml-package/schemas/index.ts:244:14         
+configSchema                                                        config/yaml-package/schemas/index.ts:246:14         
+convertJsonEnvToYamlEnv                                   function  config/yaml-package/schemas/mcp/convertJson.ts:17:17
+convertYamlEnvToJsonEnv                                   function  config/yaml-package/schemas/mcp/convertJson.ts:33:17
+mcpServersRecordSchema                                              config/yaml-package/schemas/mcp/json.ts:27:14       
+claudeCodeLikeConfigFileSchema                                      config/yaml-package/schemas/mcp/json.ts:40:14       
+clientCertificateOptionsSchema                                      config/yaml-package/schemas/models.ts:3:14          
+modelRolesSchema                                                    config/yaml-package/schemas/models.ts:23:14         
+modelCapabilitySchema                                               config/yaml-package/schemas/models.ts:36:14         
+embeddingTasksSchema                                                config/yaml-package/schemas/models.ts:64:14         
+embeddingPrefixesSchema                                             config/yaml-package/schemas/models.ts:70:14         
+cacheBehaviorSchema                                                 config/yaml-package/schemas/models.ts:76:14         
+embedOptionsSchema                                                  config/yaml-package/schemas/models.ts:82:14         
+chatOptionsSchema                                                   config/yaml-package/schemas/models.ts:89:14         
+autocompleteOptionsSchema                                           config/yaml-package/schemas/models.ts:117:14        
+policySchema                                                        config/yaml-package/schemas/policy.ts:3:14          
+configYamlToContinueConfig                                function  config/yaml/loadYaml.ts:170:23                      
+isHubEnv                                                  function  control-plane/AuthTypes.ts:45:17                    
+LOCAL_DEV_DATA_VERSION                                              data/log.ts:20:14                                   
+convertMyersChangeToDiffLines                             function  diff/myers.ts:5:17                                  
+toAsyncIterable                                                     fetch/index.ts:17:13                                
+AbortError                                                          fetch/node-fetch-patch.js:46:9                      
+Blob                                                                fetch/node-fetch-patch.js:47:14                     
+blobFrom                                                            fetch/node-fetch-patch.js:48:8                      
+blobFromSync                                                        fetch/node-fetch-patch.js:49:12                     
+FetchError                                                          fetch/node-fetch-patch.js:50:16                     
+File                                                                fetch/node-fetch-patch.js:51:14                     
+fileFrom                                                            fetch/node-fetch-patch.js:52:8                      
+fileFromSync                                                        fetch/node-fetch-patch.js:53:12                     
+FormData                                                            fetch/node-fetch-patch.js:54:16                     
+Headers                                                             fetch/node-fetch-patch.js:55:12                     
+isRedirect                                                          fetch/node-fetch-patch.js:56:11                     
+Request                                                             fetch/node-fetch-patch.js:57:14                     
+Response                                                            fetch/node-fetch-patch.js:58:11                     
+getEnvNoProxyPatterns                                     function  fetch/util.ts:32:17                                 
+getReqOptionsNoProxyPatterns                              function  fetch/util.ts:44:17                                 
+ADDITIONAL_INDEXING_IGNORE_FILET…                                   indexing/ignore.ts:98:14                            
+ADDITIONAL_INDEXING_IGNORE_DIRS                                     indexing/ignore.ts:168:14                           
+defaultSecurityIgnoreFile                                           indexing/ignore.ts:215:14                           
+defaultSecurityIgnoreDir                                            indexing/ignore.ts:218:14                           
+defaultIgnoreFile                                                   indexing/ignore.ts:221:14                           
+defaultIgnoreDir                                                    indexing/ignore.ts:222:14                           
+DEFAULT_SECURITY_IGNORE                                             indexing/ignore.ts:225:14                           
+DEFAULT_IGNORE                                                      indexing/ignore.ts:230:14                           
+throwIfFileIsSecurityConcern                              function  indexing/ignore.ts:261:17                           
+SqliteDb                                                  class     indexing/refreshIndex.ts:21:14                      
+truncateToLastNBytes                                      function  indexing/refreshIndex.ts:527:17                     
+IndexLock                                                 class     indexing/refreshIndex.ts:546:14                     
+walkDirAsync                                              function  indexing/walkDir.ts:266:24                          
+getIgnoreContext                                          function  indexing/walkDir.ts:299:23                          
+allLlms                                                             llm-info/index.ts:30:14                             
+getAllRecommendedFor                                      function  llm-info/index.ts:56:17                             
+llmCanGenerateInParallel                                            llm/autodetect.ts:449:26                            
+modelSupportsReasoning                                              llm/autodetect.ts:452:25                            
+PROXY_URL                                                           llm/constants.ts:35:28                              
+LLMError                                                  class     llm/index.ts:68:14                                  
+LlamaTokenizer                                            class     llm/llamaTokenizer.js:107:14                        
+CometAPIError                                             class     llm/llms/CometAPI.ts:8:14                           
+CometAPIAuthenticationError                               class     llm/llms/CometAPI.ts:19:14                          
+CometAPIQuotaExceededError                                class     llm/llms/CometAPI.ts:26:14                          
+llmFromProviderAndOptions                                 function  llm/llms/index.ts:190:17                            
+OVHcloud                                                  class     llm/llms/OVHcloud.ts:5:14                           
+TransformersJsEmbeddingsProvider                          class     llm/llms/TransformersJsEmbeddingsProvider.ts:41:14  
+messageHasToolCalls                                       function  llm/messages.ts:3:17                                
+messageIsEmpty                                            function  llm/messages.ts:7:17                                
+isToolMessageForId                                        function  llm/messages.ts:38:17                               
+UNIQUE_TOKEN                                                        llm/openai-adapters/apis/Inception.ts:25:14         
+APPLY_UNIQUE_TOKEN                                                  llm/openai-adapters/apis/Inception.ts:26:14         
+Llamastack_API_BASE                                                 llm/openai-adapters/apis/LlamaStack.ts:8:14         
+default                                                             llm/openai-adapters/apis/OpenRouter.ts:43:8         
+testCompletion                                            function  llm/openai-adapters/test/util.ts:366:17             
+ClientCertificateOptionsSchema                                      llm/openai-adapters/types.ts:3:14                   
+RequestOptionsSchema                                                llm/openai-adapters/types.ts:9:14                   
+BaseConfig                                                          llm/openai-adapters/types.ts:21:14                  
+BasePlusConfig                                                      llm/openai-adapters/types.ts:26:14                  
+MoonshotConfigSchema                                                llm/openai-adapters/types.ts:66:14                  
+DeepseekConfigSchema                                                llm/openai-adapters/types.ts:71:14                  
+BedrockConfigSchema                                                 llm/openai-adapters/types.ts:76:14                  
+LlamastackConfigSchema                                              llm/openai-adapters/types.ts:93:14                  
+MockConfigSchema                                                    llm/openai-adapters/types.ts:109:14                 
+CohereConfigSchema                                                  llm/openai-adapters/types.ts:116:14                 
+CometAPIConfigSchema                                                llm/openai-adapters/types.ts:121:14                 
+GeminiConfigSchema                                                  llm/openai-adapters/types.ts:144:14                 
+AnthropicConfigSchema                                               llm/openai-adapters/types.ts:150:14                 
+WatsonXConfigSchema                                                 llm/openai-adapters/types.ts:156:14                 
+JinaConfigSchema                                                    llm/openai-adapters/types.ts:167:14                 
+InceptionConfigSchema                                               llm/openai-adapters/types.ts:172:14                 
+VertexAIConfigSchema                                                llm/openai-adapters/types.ts:177:14                 
+LLMConfigSchema                                                     llm/openai-adapters/types.ts:191:14                 
+model                                                     function  llm/openai-adapters/util.ts:146:17                  
+toChatMessage                                             function  llm/openaiTypeConverters.ts:13:17                   
+getSystemMessageWithRules                                           llm/rules/getSystemMessageWithRules.ts:327:14       
+isRecommendedAgentModel                                   function  llm/toolSupport.ts:377:17                           
+modelSupportsNativeTools                                  function  llm/toolSupport.ts:394:17                           
+getStringArg                                              function  llm/utils/parseArgs.ts:16:17                        
+getOptionalStringArg                                      function  llm/utils/parseArgs.ts:32:17                        
+getNumberArg                                              function  llm/utils/parseArgs.ts:43:17                        
+getBooleanArg                                             function  llm/utils/parseArgs.ts:61:17                        
+IS_NEXT_EDIT_ACTIVE                                                 nextEdit/constants.ts:3:14                          
+getRenderableDiffWithGutterAnnot…                         function  nextEdit/diff/diff.ts:63:17                         
+applyCompletionToFile                                     function  nextEdit/diff/diff.ts:250:17                        
+__setMockNextEditLoggingServiceI…  NextEditLoggingServi…  function  nextEdit/NextEditLoggingService.ts:254:17           
+__setMockPrefetchQueueInstance     PrefetchQueueModule    function  nextEdit/NextEditPrefetchQueue.ts:155:17            
+__setMockNextEditProviderInstance  NextEditProviderModu…  function  nextEdit/NextEditProvider.ts:623:17                 
+ideSettingsPromise                                                  test/fixtures.ts:11:14                              
+TEST_DIR_PATH                                                       test/testDir.ts:7:14                                
+getRootCause                                              function  util/errors.ts:7:17                                 
+HistoryManager                                            class     util/history.ts:24:14                               
+inferResolvedUriFromRelativePath                          function  util/ideUtils.ts:36:23                              
+splitCamelCaseAndNonAlphaNumeric                          function  util/index.ts:207:17                                
+startLocalLemonade                                        function  util/lemonadeHelper.ts:31:23                        
+mergeJson                                                 function  util/merge.ts:5:17                                  
+renderContextItemsWithStatus                              function  util/messageContent.ts:38:17                        
+convertToUnifiedMessage                                   function  util/messageConversion.ts:23:17                     
+convertFromUnifiedMessage                                 function  util/messageConversion.ts:75:17                     
+createHistoryItem                                         function  util/messageConversion.ts:201:17                    
+convertToUnifiedHistory                                   function  util/messageConversion.ts:253:17                    
+convertFromUnifiedHistoryWithSys…                         function  util/messageConversion.ts:352:17                    
+extractToolCallInfo                                       function  util/messageConversion.ts:374:17                    
+startLocalOllama                                          function  util/ollamaHelper.ts:22:23                          
+DO_NOT_COUNT_REJECTED_BEFORE                                        util/parameters.ts:32:14                            
+RETRIEVAL_PARAMS                                                    util/parameters.ts:34:14                            
+getChromiumPath                                           function  util/paths.ts:36:17                                 
+getContinueUtilsPath                                      function  util/paths.ts:40:17                                 
+getIndexFolderPath                                        function  util/paths.ts:76:17                                 
+getSharedConfigFilePath                                   function  util/paths.ts:88:17                                 
+getTsConfigPath                                           function  util/paths.ts:168:17                                
+getContinueRcPath                                         function  util/paths.ts:202:17                                
+migrate                                                   function  util/paths.ts:290:23                                
+getLanceDbPath                                            function  util/paths.ts:320:17                                
+getDocsSqlitePath                                         function  util/paths.ts:328:17                                
+getRemoteConfigsFolderPath                                function  util/paths.ts:332:17                                
+getPathToRemoteConfig                                     function  util/paths.ts:340:17                                
+getLogsDirPath                                            function  util/paths.ts:375:17                                
+getCoreLogsPath                                           function  util/paths.ts:383:17                                
+getPromptLogsPath                                         function  util/paths.ts:387:17                                
+getGlobalPromptsPath                                      function  util/paths.ts:395:17                                
+readAllGlobalPromptFiles                                  function  util/paths.ts:399:17                                
+migrateV1DevDataFiles                                     function  util/paths.ts:431:17                                
+getDiffsDirectoryPath                                     function  util/paths.ts:460:17                                
+isFileWithinFolder                                                  util/paths.ts:470:14                                
+EXPERIMENTS                                                         util/posthog.ts:15:14                               
+supportedLanguages                                                  util/treeSitter.ts:38:14                            
+getLanguageForFile                                        function  util/treeSitter.ts:145:23                           
+getSymbolsForFile                                         function  util/treeSitter.ts:225:23                           
+getSymbolsForManyFiles                                    function  util/treeSitter.ts:292:23                           
+sanitizeMessageForTTS                                     function  util/tts.ts:18:17                                   
+getUriDescription                                         function  util/uri.ts:185:17                                  
+PretrainedConfig                                          class     …r/modules/@xenova/transformers/src/configs.js:55:14
+ModelOutput                                               class     …/modules/@xenova/transformers/src/models.js:1603:14
+BaseModelOutput                                           class     …/modules/@xenova/transformers/src/models.js:1608:14
+BertPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:1624:14
+BertModel                                                 class     …/modules/@xenova/transformers/src/models.js:1625:14
+BertForMaskedLM                                           class     …/modules/@xenova/transformers/src/models.js:1630:14
+BertForSequenceClassification                             class     …/modules/@xenova/transformers/src/models.js:1645:14
+BertForTokenClassification                                class     …/modules/@xenova/transformers/src/models.js:1660:14
+BertForQuestionAnswering                                  class     …/modules/@xenova/transformers/src/models.js:1675:14
+RoFormerPreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:1690:14
+RoFormerModel                                             class     …/modules/@xenova/transformers/src/models.js:1695:14
+RoFormerForMaskedLM                                       class     …/modules/@xenova/transformers/src/models.js:1700:14
+RoFormerForSequenceClassification                         class     …/modules/@xenova/transformers/src/models.js:1715:14
+RoFormerForTokenClassification                            class     …/modules/@xenova/transformers/src/models.js:1731:14
+RoFormerForQuestionAnswering                              class     …/modules/@xenova/transformers/src/models.js:1747:14
+ConvBertPreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:1763:14
+ConvBertModel                                             class     …/modules/@xenova/transformers/src/models.js:1768:14
+ConvBertForMaskedLM                                       class     …/modules/@xenova/transformers/src/models.js:1773:14
+ConvBertForSequenceClassification                         class     …/modules/@xenova/transformers/src/models.js:1788:14
+ConvBertForTokenClassification                            class     …/modules/@xenova/transformers/src/models.js:1804:14
+ConvBertForQuestionAnswering                              class     …/modules/@xenova/transformers/src/models.js:1820:14
+ElectraPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:1835:14
+ElectraModel                                              class     …/modules/@xenova/transformers/src/models.js:1842:14
+ElectraForMaskedLM                                        class     …/modules/@xenova/transformers/src/models.js:1847:14
+ElectraForSequenceClassification                          class     …/modules/@xenova/transformers/src/models.js:1862:14
+ElectraForTokenClassification                             class     …/modules/@xenova/transformers/src/models.js:1877:14
+ElectraForQuestionAnswering                               class     …/modules/@xenova/transformers/src/models.js:1893:14
+CamembertPreTrainedModel                                  class     …/modules/@xenova/transformers/src/models.js:1908:14
+CamembertModel                                            class     …/modules/@xenova/transformers/src/models.js:1913:14
+CamembertForMaskedLM                                      class     …/modules/@xenova/transformers/src/models.js:1918:14
+CamembertForSequenceClassificati…                         class     …/modules/@xenova/transformers/src/models.js:1933:14
+CamembertForTokenClassification                           class     …/modules/@xenova/transformers/src/models.js:1948:14
+CamembertForQuestionAnswering                             class     …/modules/@xenova/transformers/src/models.js:1963:14
+DebertaPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:1978:14
+DebertaModel                                              class     …/modules/@xenova/transformers/src/models.js:1983:14
+DebertaForMaskedLM                                        class     …/modules/@xenova/transformers/src/models.js:1988:14
+DebertaForSequenceClassification                          class     …/modules/@xenova/transformers/src/models.js:2003:14
+DebertaForTokenClassification                             class     …/modules/@xenova/transformers/src/models.js:2018:14
+DebertaForQuestionAnswering                               class     …/modules/@xenova/transformers/src/models.js:2034:14
+DebertaV2PreTrainedModel                                  class     …/modules/@xenova/transformers/src/models.js:2049:14
+DebertaV2Model                                            class     …/modules/@xenova/transformers/src/models.js:2054:14
+DebertaV2ForMaskedLM                                      class     …/modules/@xenova/transformers/src/models.js:2059:14
+DebertaV2ForSequenceClassificati…                         class     …/modules/@xenova/transformers/src/models.js:2074:14
+DebertaV2ForTokenClassification                           class     …/modules/@xenova/transformers/src/models.js:2089:14
+DebertaV2ForQuestionAnswering                             class     …/modules/@xenova/transformers/src/models.js:2105:14
+DistilBertPreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:2120:14
+DistilBertModel                                           class     …/modules/@xenova/transformers/src/models.js:2121:14
+DistilBertForSequenceClassificat…                         class     …/modules/@xenova/transformers/src/models.js:2126:14
+DistilBertForTokenClassification                          class     …/modules/@xenova/transformers/src/models.js:2141:14
+DistilBertForQuestionAnswering                            class     …/modules/@xenova/transformers/src/models.js:2156:14
+DistilBertForMaskedLM                                     class     …/modules/@xenova/transformers/src/models.js:2171:14
+EsmPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:2186:14
+EsmModel                                                  class     …/modules/@xenova/transformers/src/models.js:2191:14
+EsmForMaskedLM                                            class     …/modules/@xenova/transformers/src/models.js:2196:14
+EsmForSequenceClassification                              class     …/modules/@xenova/transformers/src/models.js:2211:14
+EsmForTokenClassification                                 class     …/modules/@xenova/transformers/src/models.js:2227:14
+MobileBertPreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:2242:14
+MobileBertModel                                           class     …/modules/@xenova/transformers/src/models.js:2243:14
+MobileBertForMaskedLM                                     class     …/modules/@xenova/transformers/src/models.js:2248:14
+MobileBertForSequenceClassificat…                         class     …/modules/@xenova/transformers/src/models.js:2263:14
+MobileBertForQuestionAnswering                            class     …/modules/@xenova/transformers/src/models.js:2278:14
+MPNetPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:2293:14
+MPNetModel                                                class     …/modules/@xenova/transformers/src/models.js:2298:14
+MPNetForMaskedLM                                          class     …/modules/@xenova/transformers/src/models.js:2303:14
+MPNetForSequenceClassification                            class     …/modules/@xenova/transformers/src/models.js:2318:14
+MPNetForTokenClassification                               class     …/modules/@xenova/transformers/src/models.js:2333:14
+MPNetForQuestionAnswering                                 class     …/modules/@xenova/transformers/src/models.js:2348:14
+SqueezeBertPreTrainedModel                                class     …/modules/@xenova/transformers/src/models.js:2363:14
+SqueezeBertModel                                          class     …/modules/@xenova/transformers/src/models.js:2364:14
+SqueezeBertForMaskedLM                                    class     …/modules/@xenova/transformers/src/models.js:2365:14
+SqueezeBertForSequenceClassifica…                         class     …/modules/@xenova/transformers/src/models.js:2376:14
+SqueezeBertForQuestionAnswering                           class     …/modules/@xenova/transformers/src/models.js:2387:14
+AlbertPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:2402:14
+AlbertModel                                               class     …/modules/@xenova/transformers/src/models.js:2403:14
+AlbertForSequenceClassification                           class     …/modules/@xenova/transformers/src/models.js:2404:14
+AlbertForQuestionAnswering                                class     …/modules/@xenova/transformers/src/models.js:2415:14
+AlbertForMaskedLM                                         class     …/modules/@xenova/transformers/src/models.js:2426:14
+T5PreTrainedModel                                         class     …/modules/@xenova/transformers/src/models.js:2441:14
+T5Model                                                   class     …/modules/@xenova/transformers/src/models.js:2443:14
+T5ForConditionalGeneration                                class     …/modules/@xenova/transformers/src/models.js:2448:14
+LongT5PreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:2477:14
+LongT5Model                                               class     …/modules/@xenova/transformers/src/models.js:2482:14
+LongT5ForConditionalGeneration                            class     …/modules/@xenova/transformers/src/models.js:2487:14
+MT5PreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:2513:14
+MT5Model                                                  class     …/modules/@xenova/transformers/src/models.js:2515:14
+MT5ForConditionalGeneration                               class     …/modules/@xenova/transformers/src/models.js:2520:14
+BartPretrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:2546:14
+BartModel                                                 class     …/modules/@xenova/transformers/src/models.js:2551:14
+BartForConditionalGeneration                              class     …/modules/@xenova/transformers/src/models.js:2556:14
+BartForSequenceClassification                             class     …/modules/@xenova/transformers/src/models.js:2582:14
+MBartPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:2598:14
+MBartModel                                                class     …/modules/@xenova/transformers/src/models.js:2603:14
+MBartForConditionalGeneration                             class     …/modules/@xenova/transformers/src/models.js:2608:14
+MBartForSequenceClassification                            class     …/modules/@xenova/transformers/src/models.js:2634:14
+MBartForCausalLM                                          class     …/modules/@xenova/transformers/src/models.js:2646:14
+BlenderbotPreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:2670:14
+BlenderbotModel                                           class     …/modules/@xenova/transformers/src/models.js:2675:14
+BlenderbotForConditionalGenerati…                         class     …/modules/@xenova/transformers/src/models.js:2680:14
+BlenderbotSmallPreTrainedModel                            class     …/modules/@xenova/transformers/src/models.js:2706:14
+BlenderbotSmallModel                                      class     …/modules/@xenova/transformers/src/models.js:2711:14
+BlenderbotSmallForConditionalGen…                         class     …/modules/@xenova/transformers/src/models.js:2716:14
+RobertaPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:2742:14
+RobertaModel                                              class     …/modules/@xenova/transformers/src/models.js:2743:14
+RobertaForMaskedLM                                        class     …/modules/@xenova/transformers/src/models.js:2748:14
+RobertaForSequenceClassification                          class     …/modules/@xenova/transformers/src/models.js:2763:14
+RobertaForTokenClassification                             class     …/modules/@xenova/transformers/src/models.js:2778:14
+RobertaForQuestionAnswering                               class     …/modules/@xenova/transformers/src/models.js:2793:14
+XLMPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:2811:14
+XLMModel                                                  class     …/modules/@xenova/transformers/src/models.js:2816:14
+XLMWithLMHeadModel                                        class     …/modules/@xenova/transformers/src/models.js:2821:14
+XLMForSequenceClassification                              class     …/modules/@xenova/transformers/src/models.js:2836:14
+XLMForTokenClassification                                 class     …/modules/@xenova/transformers/src/models.js:2851:14
+XLMForQuestionAnswering                                   class     …/modules/@xenova/transformers/src/models.js:2866:14
+XLMRobertaPreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:2881:14
+XLMRobertaModel                                           class     …/modules/@xenova/transformers/src/models.js:2882:14
+XLMRobertaForMaskedLM                                     class     …/modules/@xenova/transformers/src/models.js:2887:14
+XLMRobertaForSequenceClassificat…                         class     …/modules/@xenova/transformers/src/models.js:2902:14
+XLMRobertaForTokenClassification                          class     …/modules/@xenova/transformers/src/models.js:2917:14
+XLMRobertaForQuestionAnswering                            class     …/modules/@xenova/transformers/src/models.js:2932:14
+ASTPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:2947:14
+ASTModel                                                  class     …/modules/@xenova/transformers/src/models.js:2952:14
+ASTForAudioClassification                                 class     …/modules/@xenova/transformers/src/models.js:2958:14
+WhisperPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:2963:14
+WhisperModel                                              class     …/modules/@xenova/transformers/src/models.js:2968:14
+WhisperForConditionalGeneration                           class     …/modules/@xenova/transformers/src/models.js:2973:14
+VisionEncoderDecoderModel                                 class     …/modules/@xenova/transformers/src/models.js:3207:14
+CLIPPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:3278:14
+CLIPModel                                                 class     …/modules/@xenova/transformers/src/models.js:3323:14
+CLIPTextModelWithProjection                               class     …/modules/@xenova/transformers/src/models.js:3351:14
+CLIPVisionModelWithProjection                             class     …/modules/@xenova/transformers/src/models.js:3386:14
+SiglipPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:3398:14
+SiglipModel                                               class     …/modules/@xenova/transformers/src/models.js:3443:14
+SiglipTextModel                                           class     …/modules/@xenova/transformers/src/models.js:3471:14
+SiglipVisionModel                                         class     …/modules/@xenova/transformers/src/models.js:3506:14
+ChineseCLIPPreTrainedModel                                class     …/modules/@xenova/transformers/src/models.js:3516:14
+ChineseCLIPModel                                          class     …/modules/@xenova/transformers/src/models.js:3518:14
+CLIPSegPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:3523:14
+CLIPSegModel                                              class     …/modules/@xenova/transformers/src/models.js:3525:14
+CLIPSegForImageSegmentation                               class     …/modules/@xenova/transformers/src/models.js:3573:14
+GPT2PreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:3578:14
+GPT2Model                                                 class     …/modules/@xenova/transformers/src/models.js:3598:14
+GPT2LMHeadModel                                           class     …/modules/@xenova/transformers/src/models.js:3603:14
+GPTNeoPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:3611:14
+GPTNeoModel                                               class     …/modules/@xenova/transformers/src/models.js:3630:14
+GPTNeoForCausalLM                                         class     …/modules/@xenova/transformers/src/models.js:3632:14
+GPTNeoXPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:3637:14
+GPTNeoXModel                                              class     …/modules/@xenova/transformers/src/models.js:3656:14
+GPTNeoXForCausalLM                                        class     …/modules/@xenova/transformers/src/models.js:3658:14
+GPTJPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:3663:14
+GPTJModel                                                 class     …/modules/@xenova/transformers/src/models.js:3683:14
+GPTJForCausalLM                                           class     …/modules/@xenova/transformers/src/models.js:3685:14
+GPTBigCodePreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:3690:14
+GPTBigCodeModel                                           class     …/modules/@xenova/transformers/src/models.js:3710:14
+GPTBigCodeForCausalLM                                     class     …/modules/@xenova/transformers/src/models.js:3712:14
+CodeGenPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:3717:14
+CodeGenModel                                              class     …/modules/@xenova/transformers/src/models.js:3739:14
+CodeGenForCausalLM                                        class     …/modules/@xenova/transformers/src/models.js:3744:14
+LlamaPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:3753:14
+LlamaModel                                                class     …/modules/@xenova/transformers/src/models.js:3776:14
+LlamaForCausalLM                                          class     …/modules/@xenova/transformers/src/models.js:3778:14
+PhiPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:3784:14
+PhiModel                                                  class     …/modules/@xenova/transformers/src/models.js:3806:14
+PhiForCausalLM                                            class     …/modules/@xenova/transformers/src/models.js:3808:14
+BloomPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:3816:14
+BloomModel                                                class     …/modules/@xenova/transformers/src/models.js:3839:14
+BloomForCausalLM                                          class     …/modules/@xenova/transformers/src/models.js:3844:14
+MptPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:3849:14
+MptModel                                                  class     …/modules/@xenova/transformers/src/models.js:3872:14
+MptForCausalLM                                            class     …/modules/@xenova/transformers/src/models.js:3877:14
+OPTPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:3882:14
+OPTModel                                                  class     …/modules/@xenova/transformers/src/models.js:3905:14
+OPTForCausalLM                                            class     …/modules/@xenova/transformers/src/models.js:3910:14
+ViTPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:3914:14
+ViTModel                                                  class     …/modules/@xenova/transformers/src/models.js:3915:14
+ViTForImageClassification                                 class     …/modules/@xenova/transformers/src/models.js:3916:14
+VitMattePreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:3927:14
+VitMatteForImageMatting                                   class     …/modules/@xenova/transformers/src/models.js:3984:14
+MobileViTPreTrainedModel                                  class     …/modules/@xenova/transformers/src/models.js:3995:14
+MobileViTModel                                            class     …/modules/@xenova/transformers/src/models.js:3996:14
+MobileViTForImageClassification                           class     …/modules/@xenova/transformers/src/models.js:3997:14
+OwlViTPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4010:14
+OwlViTModel                                               class     …/modules/@xenova/transformers/src/models.js:4011:14
+OwlViTForObjectDetection                                  class     …/modules/@xenova/transformers/src/models.js:4012:14
+BeitPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:4017:14
+BeitModel                                                 class     …/modules/@xenova/transformers/src/models.js:4018:14
+BeitForImageClassification                                class     …/modules/@xenova/transformers/src/models.js:4019:14
+DetrPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:4030:14
+DetrModel                                                 class     …/modules/@xenova/transformers/src/models.js:4031:14
+DetrForObjectDetection                                    class     …/modules/@xenova/transformers/src/models.js:4032:14
+DetrForSegmentation                                       class     …/modules/@xenova/transformers/src/models.js:4041:14
+DetrObjectDetectionOutput                                 class     …/modules/@xenova/transformers/src/models.js:4052:14
+DetrSegmentationOutput                                    class     …/modules/@xenova/transformers/src/models.js:4066:14
+TableTransformerPreTrainedModel                           class     …/modules/@xenova/transformers/src/models.js:4083:14
+TableTransformerModel                                     class     …/modules/@xenova/transformers/src/models.js:4089:14
+TableTransformerForObjectDetecti…                         class     …/modules/@xenova/transformers/src/models.js:4095:14
+TableTransformerObjectDetectionO…                         class     …/modules/@xenova/transformers/src/models.js:4105:14
+DeiTPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:4109:14
+DeiTModel                                                 class     …/modules/@xenova/transformers/src/models.js:4110:14
+DeiTForImageClassification                                class     …/modules/@xenova/transformers/src/models.js:4111:14
+ResNetPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4125:14
+ResNetModel                                               class     …/modules/@xenova/transformers/src/models.js:4130:14
+ResNetForImageClassification                              class     …/modules/@xenova/transformers/src/models.js:4135:14
+SwinPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:4146:14
+SwinModel                                                 class     …/modules/@xenova/transformers/src/models.js:4147:14
+SwinForImageClassification                                class     …/modules/@xenova/transformers/src/models.js:4148:14
+Swin2SRPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:4159:14
+Swin2SRModel                                              class     …/modules/@xenova/transformers/src/models.js:4164:14
+Swin2SRForImageSuperResolution                            class     …/modules/@xenova/transformers/src/models.js:4198:14
+DPTPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:4202:14
+DPTModel                                                  class     …/modules/@xenova/transformers/src/models.js:4207:14
+DPTForDepthEstimation                                     class     …/modules/@xenova/transformers/src/models.js:4245:14
+GLPNPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:4249:14
+GLPNModel                                                 class     …/modules/@xenova/transformers/src/models.js:4254:14
+GLPNForDepthEstimation                                    class     …/modules/@xenova/transformers/src/models.js:4292:14
+DonutSwinPreTrainedModel                                  class     …/modules/@xenova/transformers/src/models.js:4296:14
+DonutSwinModel                                            class     …/modules/@xenova/transformers/src/models.js:4372:14
+ConvNextPreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:4376:14
+ConvNextModel                                             class     …/modules/@xenova/transformers/src/models.js:4381:14
+ConvNextForImageClassification                            class     …/modules/@xenova/transformers/src/models.js:4386:14
+ConvNextV2PreTrainedModel                                 class     …/modules/@xenova/transformers/src/models.js:4397:14
+ConvNextV2Model                                           class     …/modules/@xenova/transformers/src/models.js:4402:14
+ConvNextV2ForImageClassification                          class     …/modules/@xenova/transformers/src/models.js:4407:14
+Dinov2PreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4418:14
+Dinov2Model                                               class     …/modules/@xenova/transformers/src/models.js:4423:14
+Dinov2ForImageClassification                              class     …/modules/@xenova/transformers/src/models.js:4428:14
+YolosPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:4439:14
+YolosModel                                                class     …/modules/@xenova/transformers/src/models.js:4440:14
+YolosForObjectDetection                                   class     …/modules/@xenova/transformers/src/models.js:4441:14
+YolosObjectDetectionOutput                                class     …/modules/@xenova/transformers/src/models.js:4450:14
+SamPreTrainedModel                                        class     …/modules/@xenova/transformers/src/models.js:4466:14
+SamModel                                                  class     …/modules/@xenova/transformers/src/models.js:4508:14
+SamImageSegmentationOutput                                class     …/modules/@xenova/transformers/src/models.js:4603:14
+MarianPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4619:14
+MarianModel                                               class     …/modules/@xenova/transformers/src/models.js:4621:14
+MarianMTModel                                             class     …/modules/@xenova/transformers/src/models.js:4623:14
+M2M100PreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4649:14
+M2M100Model                                               class     …/modules/@xenova/transformers/src/models.js:4651:14
+M2M100ForConditionalGeneration                            class     …/modules/@xenova/transformers/src/models.js:4653:14
+Wav2Vec2PreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:4679:14
+Wav2Vec2Model                                             class     …/modules/@xenova/transformers/src/models.js:4707:14
+Wav2Vec2ForCTC                                            class     …/modules/@xenova/transformers/src/models.js:4709:14
+Wav2Vec2ForSequenceClassification                         class     …/modules/@xenova/transformers/src/models.js:4720:14
+HubertPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:4734:14
+HubertModel                                               class     …/modules/@xenova/transformers/src/models.js:4762:14
+HubertForCTC                                              class     …/modules/@xenova/transformers/src/models.js:4767:14
+HubertForSequenceClassification                           class     …/modules/@xenova/transformers/src/models.js:4781:14
+WavLMPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:4798:14
+WavLMModel                                                class     …/modules/@xenova/transformers/src/models.js:4826:14
+WavLMForCTC                                               class     …/modules/@xenova/transformers/src/models.js:4831:14
+WavLMForSequenceClassification                            class     …/modules/@xenova/transformers/src/models.js:4845:14
+SpeechT5PreTrainedModel                                   class     …/modules/@xenova/transformers/src/models.js:4861:14
+SpeechT5Model                                             class     …/modules/@xenova/transformers/src/models.js:4866:14
+SpeechT5ForSpeechToText                                   class     …/modules/@xenova/transformers/src/models.js:4908:14
+SpeechT5ForTextToSpeech                                   class     …/modules/@xenova/transformers/src/models.js:4913:14
+SpeechT5HifiGan                                           class     …/modules/@xenova/transformers/src/models.js:5045:14
+TrOCRPreTrainedModel                                      class     …/modules/@xenova/transformers/src/models.js:5052:14
+TrOCRForCausalLM                                          class     …/modules/@xenova/transformers/src/models.js:5078:14
+MistralPreTrainedModel                                    class     …/modules/@xenova/transformers/src/models.js:5087:14
+MistralModel                                              class     …/modules/@xenova/transformers/src/models.js:5107:14
+MistralForCausalLM                                        class     …/modules/@xenova/transformers/src/models.js:5109:14
+FalconPreTrainedModel                                     class     …/modules/@xenova/transformers/src/models.js:5117:14
+FalconModel                                               class     …/modules/@xenova/transformers/src/models.js:5137:14
+FalconForCausalLM                                         class     …/modules/@xenova/transformers/src/models.js:5139:14
+ClapPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:5144:14
+ClapModel                                                 class     …/modules/@xenova/transformers/src/models.js:5146:14
+ClapTextModelWithProjection                               class     …/modules/@xenova/transformers/src/models.js:5174:14
+ClapAudioModelWithProjection                              class     …/modules/@xenova/transformers/src/models.js:5209:14
+VitsPreTrainedModel                                       class     …/modules/@xenova/transformers/src/models.js:5221:14
+VitsModel                                                 class     …/modules/@xenova/transformers/src/models.js:5247:14
+SegformerPreTrainedModel                                  class     …/modules/@xenova/transformers/src/models.js:5261:14
+SegformerModel                                            class     …/modules/@xenova/transformers/src/models.js:5266:14
+SegformerForImageClassification                           class     …/modules/@xenova/transformers/src/models.js:5271:14
+SegformerForSemanticSegmentation                          class     …/modules/@xenova/transformers/src/models.js:5276:14
+PretrainedMixin                                           class     …/modules/@xenova/transformers/src/models.js:5288:14
+AutoModelForMaskGeneration                                class     …/modules/@xenova/transformers/src/models.js:6016:14
+AutoModelForImageMatting                                  class     …/modules/@xenova/transformers/src/models.js:6034:14
+Seq2SeqLMOutput                                           class     …/modules/@xenova/transformers/src/models.js:6049:14
+SequenceClassifierOutput                                  class     …/modules/@xenova/transformers/src/models.js:6077:14
+TokenClassifierOutput                                     class     …/modules/@xenova/transformers/src/models.js:6091:14
+MaskedLMOutput                                            class     …/modules/@xenova/transformers/src/models.js:6105:14
+QuestionAnsweringModelOutput                              class     …/modules/@xenova/transformers/src/models.js:6119:14
+CausalLMOutput                                            class     …/modules/@xenova/transformers/src/models.js:6135:14
+CausalLMOutputWithPast                                    class     …/modules/@xenova/transformers/src/models.js:6149:14
+ImageMattingOutput                                        class     …/modules/@xenova/transformers/src/models.js:6163:14
+VitsModelOutput                                           class     …/modules/@xenova/transformers/src/models.js:6177:14
+Pipeline                                                  class     …odules/@xenova/transformers/src/pipelines.js:136:14
+TextClassificationPipeline                                class     …odules/@xenova/transformers/src/pipelines.js:243:14
+TokenClassificationPipeline                               class     …odules/@xenova/transformers/src/pipelines.js:347:14
+QuestionAnsweringPipeline                                 class     …odules/@xenova/transformers/src/pipelines.js:457:14
+FillMaskPipeline                                          class     …odules/@xenova/transformers/src/pipelines.js:567:14
+Text2TextGenerationPipeline                               class     …odules/@xenova/transformers/src/pipelines.js:652:14
+SummarizationPipeline                                     class     …odules/@xenova/transformers/src/pipelines.js:758:14
+TranslationPipeline                                       class     …odules/@xenova/transformers/src/pipelines.js:833:14
+TextGenerationPipeline                                    class     …odules/@xenova/transformers/src/pipelines.js:917:14
+ZeroShotClassificationPipeline                            class     …dules/@xenova/transformers/src/pipelines.js:1029:14
+FeatureExtractionPipeline                                 class     …dules/@xenova/transformers/src/pipelines.js:1183:14
+AudioClassificationPipeline                               class     …dules/@xenova/transformers/src/pipelines.js:1290:14
+ZeroShotAudioClassificationPipel…                         class     …dules/@xenova/transformers/src/pipelines.js:1376:14
+AutomaticSpeechRecognitionPipeli…                         class     …dules/@xenova/transformers/src/pipelines.js:1546:14
+ImageToTextPipeline                                       class     …dules/@xenova/transformers/src/pipelines.js:1780:14
+ImageClassificationPipeline                               class     …dules/@xenova/transformers/src/pipelines.js:1873:14
+ImageSegmentationPipeline                                 class     …dules/@xenova/transformers/src/pipelines.js:1954:14
+ZeroShotImageClassificationPipel…                         class     …dules/@xenova/transformers/src/pipelines.js:2112:14
+ObjectDetectionPipeline                                   class     …dules/@xenova/transformers/src/pipelines.js:2215:14
+ZeroShotObjectDetectionPipeline                           class     …dules/@xenova/transformers/src/pipelines.js:2357:14
+DocumentQuestionAnsweringPipeline                         class     …dules/@xenova/transformers/src/pipelines.js:2453:14
+TextToAudioPipeline                                       class     …dules/@xenova/transformers/src/pipelines.js:2559:14
+ImageToImagePipeline                                      class     …dules/@xenova/transformers/src/pipelines.js:2683:14
+DepthEstimationPipeline                                   class     …dules/@xenova/transformers/src/pipelines.js:2754:14
+FeatureExtractor                                          class     …dules/@xenova/transformers/src/processors.js:168:14
+ImageFeatureExtractor                                     class     …dules/@xenova/transformers/src/processors.js:192:14
+SegformerFeatureExtractor                                 class     …dules/@xenova/transformers/src/processors.js:675:14
+BitImageProcessor                                         class     …dules/@xenova/transformers/src/processors.js:739:14
+DPTFeatureExtractor                                       class     …dules/@xenova/transformers/src/processors.js:740:14
+GLPNFeatureExtractor                                      class     …dules/@xenova/transformers/src/processors.js:741:14
+CLIPFeatureExtractor                                      class     …dules/@xenova/transformers/src/processors.js:742:14
+ChineseCLIPFeatureExtractor                               class     …dules/@xenova/transformers/src/processors.js:743:14
+SiglipImageProcessor                                      class     …dules/@xenova/transformers/src/processors.js:744:14
+ConvNextFeatureExtractor                                  class     …dules/@xenova/transformers/src/processors.js:745:14
+ConvNextImageProcessor                                    class     …dules/@xenova/transformers/src/processors.js:785:14
+ViTFeatureExtractor                                       class     …dules/@xenova/transformers/src/processors.js:786:14
+ViTImageProcessor                                         class     …dules/@xenova/transformers/src/processors.js:787:14
+MobileViTFeatureExtractor                                 class     …dules/@xenova/transformers/src/processors.js:789:14
+OwlViTFeatureExtractor                                    class     …dules/@xenova/transformers/src/processors.js:790:14
+DeiTFeatureExtractor                                      class     …dules/@xenova/transformers/src/processors.js:796:14
+BeitFeatureExtractor                                      class     …dules/@xenova/transformers/src/processors.js:797:14
+DonutFeatureExtractor                                     class     …dules/@xenova/transformers/src/processors.js:798:14
+NougatImageProcessor                                      class     …dules/@xenova/transformers/src/processors.js:824:14
+DetrFeatureExtractor                                      class     …dules/@xenova/transformers/src/processors.js:837:14
+YolosFeatureExtractor                                     class     …ules/@xenova/transformers/src/processors.js:1163:14
+SamImageProcessor                                         class     …ules/@xenova/transformers/src/processors.js:1179:14
+Swin2SRImageProcessor                                     class     …ules/@xenova/transformers/src/processors.js:1383:14
+VitMatteImageProcessor                                    class     …ules/@xenova/transformers/src/processors.js:1409:14
+WhisperFeatureExtractor                                   class     …ules/@xenova/transformers/src/processors.js:1457:14
+Wav2Vec2FeatureExtractor                                  class     …ules/@xenova/transformers/src/processors.js:1535:14
+ASTFeatureExtractor                                       class     …ules/@xenova/transformers/src/processors.js:1582:14
+ClapFeatureExtractor                                      class     …ules/@xenova/transformers/src/processors.js:1668:14
+SpeechT5FeatureExtractor                                  class     …ules/@xenova/transformers/src/processors.js:1834:14
+SamProcessor                                              class     …ules/@xenova/transformers/src/processors.js:1862:14
+WhisperProcessor                                          class     …ules/@xenova/transformers/src/processors.js:1890:14
+Wav2Vec2ProcessorWithLM                                   class     …ules/@xenova/transformers/src/processors.js:1901:14
+SpeechT5Processor                                         class     …ules/@xenova/transformers/src/processors.js:1912:14
+OwlViTProcessor                                           class     …ules/@xenova/transformers/src/processors.js:1923:14
+TokenizerModel                                            class     …dules/@xenova/transformers/src/tokenizers.js:272:14
+BertTokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:3066:14
+AlbertTokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:3073:14
+MobileBertTokenizer                                       class     …ules/@xenova/transformers/src/tokenizers.js:3076:14
+SqueezeBertTokenizer                                      class     …ules/@xenova/transformers/src/tokenizers.js:3079:14
+DebertaTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3082:14
+DebertaV2Tokenizer                                        class     …ules/@xenova/transformers/src/tokenizers.js:3085:14
+HerbertTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3088:14
+ConvBertTokenizer                                         class     …ules/@xenova/transformers/src/tokenizers.js:3091:14
+RoFormerTokenizer                                         class     …ules/@xenova/transformers/src/tokenizers.js:3094:14
+DistilBertTokenizer                                       class     …ules/@xenova/transformers/src/tokenizers.js:3097:14
+CamembertTokenizer                                        class     …ules/@xenova/transformers/src/tokenizers.js:3098:14
+XLMTokenizer                                              class     …ules/@xenova/transformers/src/tokenizers.js:3099:14
+ElectraTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3109:14
+T5Tokenizer                                               class     …ules/@xenova/transformers/src/tokenizers.js:3113:14
+GPT2Tokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:3114:14
+BartTokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:3117:14
+MBartTokenizer                                            class     …ules/@xenova/transformers/src/tokenizers.js:3118:14
+MBart50Tokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3145:14
+RobertaTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3147:14
+BloomTokenizer                                            class     …ules/@xenova/transformers/src/tokenizers.js:3149:14
+LlamaTokenizer                                            class     …ules/@xenova/transformers/src/tokenizers.js:3170:14
+CodeLlamaTokenizer                                        class     …ules/@xenova/transformers/src/tokenizers.js:3238:14
+XLMRobertaTokenizer                                       class     …ules/@xenova/transformers/src/tokenizers.js:3240:14
+MPNetTokenizer                                            class     …ules/@xenova/transformers/src/tokenizers.js:3241:14
+FalconTokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:3243:14
+GPTNeoXTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3245:14
+EsmTokenizer                                              class     …ules/@xenova/transformers/src/tokenizers.js:3247:14
+NllbTokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:3333:14
+M2M100Tokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:3371:14
+WhisperTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:3525:14
+CodeGenTokenizer                                          class     …ules/@xenova/transformers/src/tokenizers.js:4313:14
+CLIPTokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:4314:14
+SiglipTokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:4315:14
+MarianTokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:4321:14
+Wav2Vec2CTCTokenizer                                      class     …ules/@xenova/transformers/src/tokenizers.js:4372:14
+BlenderbotTokenizer                                       class     …ules/@xenova/transformers/src/tokenizers.js:4374:14
+BlenderbotSmallTokenizer                                  class     …ules/@xenova/transformers/src/tokenizers.js:4377:14
+SpeechT5Tokenizer                                         class     …ules/@xenova/transformers/src/tokenizers.js:4379:14
+NougatTokenizer                                           class     …ules/@xenova/transformers/src/tokenizers.js:4381:14
+VitsTokenizer                                             class     …ules/@xenova/transformers/src/tokenizers.js:4383:14
+hanning                                                   function  …dules/@xenova/transformers/src/utils/audio.js:82:17
+LogitsProcessor                                           class     …/@xenova/transformers/src/utils/generation.js:71:14
+dot                                                       function  …ules/@xenova/transformers/src/utils/maths.js:178:17
+cos_sim                                                   function  …ules/@xenova/transformers/src/utils/maths.js:209:17
+magnitude                                                 function  …ules/@xenova/transformers/src/utils/maths.js:230:17
+medianFilter                                              function  …ules/@xenova/transformers/src/utils/maths.js:911:17
+ones                                                      function  …es/@xenova/transformers/src/utils/tensor.js:1185:17
+__setMockJumpManagerInstance       JumpManagerModule      function  …e-test-harness/src/activation/JumpManager.ts:464:17
+getDefinitionsForNode                                     function  vscode-test-harness/src/autocomplete/lsp.ts:228:23  
+quickPickStatusText                                                 …de-test-harness/src/autocomplete/statusBar.ts:18:14
+getStatusBarStatusFromQuickPickI…                                   …de-test-harness/src/autocomplete/statusBar.ts:30:14
+getAutocompleteStatusBarDescript…                         function  …e-test-harness/src/autocomplete/statusBar.ts:192:17
+getAutocompleteStatusBarTitle                             function  …e-test-harness/src/autocomplete/statusBar.ts:211:17
+getNextEditMenuItems                                      function  …e-test-harness/src/autocomplete/statusBar.ts:231:17
+isNextEditToggleLabel                                     function  …e-test-harness/src/autocomplete/statusBar.ts:248:17
+handleNextEditToggle                                      function  …e-test-harness/src/autocomplete/statusBar.ts:255:17
+getDebugContext                                           function  vscode-test-harness/src/debug/debug.ts:2:17         
+editorToSuggestions                                                 vscode-test-harness/src/suggestions.ts:14:14        
+currentSuggestion                                                   vscode-test-harness/src/suggestions.ts:18:14        
+rerenderDecorations                                       function  vscode-test-harness/src/suggestions.ts:57:17        
+suggestionDownCommand                                     function  vscode-test-harness/src/suggestions.ts:137:17       
+suggestionUpCommand                                       function  vscode-test-harness/src/suggestions.ts:161:17       
+acceptAllSuggestionsCommand                               function  vscode-test-harness/src/suggestions.ts:288:17       
+rejectAllSuggestionsCommand                               function  vscode-test-harness/src/suggestions.ts:292:17       
+convertSingleToDoubleQuoteJSON                            function  vscode-test-harness/src/util/util.ts:15:17          
+debounced                                                 function  vscode-test-harness/src/util/util.ts:59:17          
+getPlatform                                               function  vscode-test-harness/src/util/util.ts:75:17          
+getArchitecture                                           function  vscode-test-harness/src/util/util.ts:88:17          
+getAltOrOption                                            function  vscode-test-harness/src/util/util.ts:124:17         
+getMetaKeyName                                            function  vscode-test-harness/src/util/util.ts:145:17         
+getvsCodeUriScheme                                        function  vscode-test-harness/src/util/util.ts:163:17         
+getNonce                                                  function  vscode-test-harness/src/util/vscode.ts:14:17        
+getViewColumnOfFile                                       function  vscode-test-harness/src/util/vscode.ts:28:17        
+getRightViewColumn                                        function  vscode-test-harness/src/util/vscode.ts:44:17        
+Unused exported types (136)
+Filepath                                             type       autocomplete/context/static-context/types.ts:25:13      
+RelevantType                                         type       autocomplete/context/static-context/types.ts:26:13      
+RelevantHeader                                       type       autocomplete/context/static-context/types.ts:27:13      
+ProcessedTestCase                                    interface  autocomplete/util/completionTestUtils.ts:9:18           
+cacheElementType                                     type       autocomplete/util/openedFilesLruCache.ts:4:13           
+CompletionOptions                                    type       config-types/index.ts:20:13                             
+ClientCertificateOptions                             type       config-types/index.ts:27:13                             
+ModelDescription                                     type       config-types/index.ts:104:13                            
+EmbeddingsProvider                                   type       config-types/index.ts:127:13                            
+UiOptions                                            type       config-types/index.ts:136:13                            
+TabAutocompleteOptions                               type       config-types/index.ts:165:13                            
+SlashCommand                                         type       config-types/index.ts:174:13                            
+CustomCommand                                        type       config-types/index.ts:181:13                            
+ContextProvider                                      type       config-types/index.ts:187:13                            
+Reranker                                             type       config-types/index.ts:193:13                            
+DevData                                              type       config-types/index.ts:214:13                            
+ProfileDescription                                   type       config/ConfigHandler.ts:37:14                           
+BrowserSerializedContinueConfig                      type       config/load.ts:994:7                                    
+SecretNamesMap                                       type       config/yaml-package/interfaces/index.ts:15:13           
+OrgSecretLocation                                    interface  config/yaml-package/interfaces/SecretResult.ts:14:18    
+PackageSecretLocation                                interface  config/yaml-package/interfaces/SecretResult.ts:20:18    
+UserSecretLocation                                   interface  config/yaml-package/interfaces/SecretResult.ts:26:18    
+ModelsAddOnSecretLocation                            interface  config/yaml-package/interfaces/SecretResult.ts:32:18    
+FreeTrialSecretLocation                              interface  config/yaml-package/interfaces/SecretResult.ts:38:18    
+LocalEnvSecretLocation                               interface  config/yaml-package/interfaces/SecretResult.ts:44:18    
+ProcessEnvSecretLocation                             interface  config/yaml-package/interfaces/SecretResult.ts:49:18    
+NotFoundSecretLocation                               interface  config/yaml-package/interfaces/SecretResult.ts:60:18    
+NotFoundSecretResult                                 interface  config/yaml-package/interfaces/SecretResult.ts:159:18   
+FoundSecretResult                                    interface  config/yaml-package/interfaces/SecretResult.ts:165:18   
+FoundUserSecretResult                                interface  config/yaml-package/interfaces/SecretResult.ts:177:18   
+TemplateData                                         interface  config/yaml-package/load/unroll.ts:112:18               
+BaseUnrollAssistantOptions                           interface  config/yaml-package/load/unroll.ts:202:18               
+DoNotRenderSecretsUnrollAssistant…                   interface  config/yaml-package/load/unroll.ts:210:18               
+RenderSecretsUnrollAssistantOptio…                   interface  config/yaml-package/load/unroll.ts:215:18               
+UnrollAssistantOptions                               type       config/yaml-package/load/unroll.ts:225:13               
+PromptFrontmatter                                    interface  …nfig/yaml-package/markdown/createMarkdownPrompt.ts:3:18
+WorkflowFileFrontmatter                              type       config/yaml-package/markdown/workflowFiles.ts:15:13     
+WorkflowToolReference                                interface  config/yaml-package/markdown/workflowFiles.ts:27:18     
+ParsedWorkflowTools                                  interface  config/yaml-package/markdown/workflowFiles.ts:37:18     
+ProxyModelName                                       interface  config/yaml-package/modelName.ts:1:18                   
+DataDestination                                      type       config/yaml-package/schemas/data/index.ts:83:13         
+Prompt                                               type       config/yaml-package/schemas/index.ts:26:13              
+DocsConfig                                           type       config/yaml-package/schemas/index.ts:37:13              
+RulesJson                                            type       config/yaml-package/schemas/index.ts:67:13              
+Config                                               type       config/yaml-package/schemas/index.ts:266:13             
+PartialMCPServer                                     type       config/yaml-package/schemas/mcp/index.ts:40:13          
+McpServersJsonConfigRecord                           type       config/yaml-package/schemas/mcp/json.ts:31:13           
+ClientCertificateOptions                             type       config/yaml-package/schemas/models.ts:8:13              
+ModelCapability                                      type       config/yaml-package/schemas/models.ts:44:13             
+CompletionOptions                                    type       config/yaml-package/schemas/models.ts:62:13             
+EmbeddingTasks                                       type       config/yaml-package/schemas/models.ts:68:13             
+EmbeddingPrefixes                                    type       config/yaml-package/schemas/models.ts:74:13             
+CacheBehavior                                        type       config/yaml-package/schemas/models.ts:80:13             
+EmbedOptions                                         type       config/yaml-package/schemas/models.ts:87:13             
+ChatOptions                                          type       config/yaml-package/schemas/models.ts:94:13             
+PromptTemplates                                      type       config/yaml-package/schemas/models.ts:146:13            
+OnPremSessionInfo                                    interface  control-plane/AuthTypes.ts:10:18                        
+HubEnv                                               interface  control-plane/AuthTypes.ts:28:18                        
+OnPremEnv                                            interface  control-plane/AuthTypes.ts:36:18                        
+FreeTrialStatus                                      interface  control-plane/client.ts:34:18                           
+RemoteSessionMetadata                                interface  control-plane/client.ts:42:18                           
+MdmKeys                                              interface  control-plane/mdm/mdm.ts:7:18                           
+LicenseKey                                           interface  control-plane/mdm/mdm.ts:25:18                          
+MatchLineResult                                      type       diff/util.ts:8:13                                       
+RefreshIndex                                         type       indexing/types.ts:39:13                                 
+WalkerOptions                                        interface  indexing/walkDir.ts:9:18                                
+ParameterType                                        type       llm-info/types.ts:3:13                                  
+Parameter                                            interface  llm-info/types.ts:5:18                                  
+ChatTemplate                                         enum       llm-info/types.ts:14:13                                 
+MediaType                                            enum       llm-info/types.ts:41:13                                 
+ApiProviderInfo                                      interface  llm-info/types.ts:55:18                                 
+ModelProviderCapability                              type       llm-info/types.ts:61:13                                 
+GeminiObjectSchemaType                               type       llm/llms/gemini-types.ts:20:13                          
+GeminiObjectSchema                                   interface  llm/llms/gemini-types.ts:29:18                          
+GeminiTextContentPart                                type       llm/llms/gemini-types.ts:178:13                         
+GeminiInlineDataContentPart                          type       llm/llms/gemini-types.ts:182:13                         
+GeminiFunctionCallContentPart                        type       llm/llms/gemini-types.ts:189:13                         
+GeminiFunctionResponseContentPart                    type       llm/llms/gemini-types.ts:197:13                         
+GeminiFileDataContentPart                            type       llm/llms/gemini-types.ts:205:13                         
+GeminiExecutableCodeContentPart                      type       llm/llms/gemini-types.ts:212:13                         
+GeminiCodeExecutionResultContentP…                   type       llm/llms/gemini-types.ts:219:13                         
+GeminiTool                                           interface  llm/llms/gemini-types.ts:250:18                         
+GeminiToolConfig                                     interface  llm/llms/gemini-types.ts:261:18                         
+GeminiChatResponseSuccess                            interface  llm/llms/gemini-types.ts:278:18                         
+GeminiChatResponseError                              interface  llm/llms/gemini-types.ts:284:18                         
+CachingStrategy                                      type       …openai-adapters/apis/AnthropicCachingStrategies.ts:6:13
+CreateRerankItem                                     interface  llm/openai-adapters/apis/base.ts:26:18                  
+ContinueProperties                                   interface  llm/openai-adapters/apis/ContinueProxy.ts:12:18         
+ProxyModelName                                       interface  llm/openai-adapters/apis/ContinueProxy.ts:20:18         
+OpenRouterConfig                                     interface  llm/openai-adapters/apis/OpenRouter.ts:7:18             
+ChatCompletion                      openAiAdapters   type       llm/openai-adapters/index.ts:170:7                      
+ChatCompletionChunk                 openAiAdapters   type       llm/openai-adapters/index.ts:171:7                      
+ChatCompletionCreateParamsNonStre…  openAiAdapters   type       llm/openai-adapters/index.ts:173:7                      
+ChatCompletionCreateParamsStreami…  openAiAdapters   type       llm/openai-adapters/index.ts:174:7                      
+Completion                          openAiAdapters   type       llm/openai-adapters/index.ts:175:7                      
+CompletionCreateParams              openAiAdapters   type       llm/openai-adapters/index.ts:176:7                      
+CompletionCreateParamsNonStreaming  openAiAdapters   type       llm/openai-adapters/index.ts:177:7                      
+CompletionCreateParamsStreaming     openAiAdapters   type       llm/openai-adapters/index.ts:178:7                      
+LLMConfig                           openAiAdapters   type       llm/openai-adapters/index.ts:183:14                     
+AdapterTestConfig                                    interface  llm/openai-adapters/test/adapter-test-utils.ts:172:18   
+ContinueProxyConfig                                  type       llm/openai-adapters/types.ts:107:13                     
+MockConfig                                           type       llm/openai-adapters/types.ts:113:13                     
+AzureConfig                                          type       llm/openai-adapters/types.ts:142:13                     
+GeminiGenerationConfig                               interface  llm/openai-adapters/util/gemini-types.ts:5:18           
+GeminiObjectSchemaType                               type       llm/openai-adapters/util/gemini-types.ts:20:13          
+GeminiObjectSchema                                   interface  llm/openai-adapters/util/gemini-types.ts:29:18          
+GeminiTextContentPart                                type       llm/openai-adapters/util/gemini-types.ts:183:13         
+GeminiInlineDataContentPart                          type       llm/openai-adapters/util/gemini-types.ts:187:13         
+GeminiFunctionCallContentPart                        type       llm/openai-adapters/util/gemini-types.ts:194:13         
+GeminiFunctionResponseContentPart                    type       llm/openai-adapters/util/gemini-types.ts:202:13         
+GeminiFileDataContentPart                            type       llm/openai-adapters/util/gemini-types.ts:210:13         
+GeminiExecutableCodeContentPart                      type       llm/openai-adapters/util/gemini-types.ts:217:13         
+GeminiCodeExecutionResultContentP…                   type       llm/openai-adapters/util/gemini-types.ts:224:13         
+GeminiTool                                           interface  llm/openai-adapters/util/gemini-types.ts:255:18         
+GeminiToolConfig                                     interface  llm/openai-adapters/util/gemini-types.ts:266:18         
+GeminiChatRequestBody                                interface  llm/openai-adapters/util/gemini-types.ts:274:18         
+GeminiChatResponseSuccess                            interface  llm/openai-adapters/util/gemini-types.ts:283:18         
+GeminiChatResponseError                              interface  llm/openai-adapters/util/gemini-types.ts:289:18         
+GeminiChatResponse                                   type       llm/openai-adapters/util/gemini-types.ts:295:13         
+RulePolicy                                           type       llm/rules/types.ts:1:13                                 
+RetryOptions                                         interface  llm/utils/retry.ts:4:18                                 
+ProcessedItem                       PrefetchQueueM…  interface  nextEdit/NextEditPrefetchQueue.ts:5:18                  
+AutocompleteInput                                    interface  nextEdit/types.ts:18:18                                 
+SystemPrompt                                         interface  nextEdit/types.ts:82:18                                 
+UserPrompt                                           interface  nextEdit/types.ts:87:18                                 
+InstinctTemplateVars                                 interface  nextEdit/types.ts:98:18                                 
+MercuryTemplateVars                                  interface  nextEdit/types.ts:106:18                                
+EditableRegionConfig                                 interface  nextEdit/types.ts:130:18                                
+PromptConfig                                         interface  nextEdit/types.ts:140:18                                
+RepoMapOptions                                       interface  util/generateRepoMap.ts:11:18                           
+GlobalContextType                                    type       util/GlobalContext.ts:22:13                             
+TODO                                                 type       util/index.ts:137:13                                    
+ModelInfo                                            interface  util/ollamaHelper.ts:6:18                               
+RegexValidationResult                                interface  util/regexValidator.ts:5:18                             
+TextApplier                                          interface  …t-harness/src/activation/NextEditWindowManager.ts:18:18
+ExpectedGhostTextAcceptance                          interface  …ess/src/autocomplete/GhostTextAcceptanceTracker.ts:7:18
+Configuration hints (1)
+.      Create knip.json configuration file with workspaces["."] object (30 unused files)

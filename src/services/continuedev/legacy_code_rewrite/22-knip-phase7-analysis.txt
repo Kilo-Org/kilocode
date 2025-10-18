@@ -1,0 +1,216 @@
+Unused files (32)
+core/__mocks__/@continuedev/fetch/index.ts                                           
+core/autocomplete/context/root-path-context/test/files/typescript/arrowFunctions.ts  
+core/autocomplete/context/root-path-context/test/files/typescript/classes.ts         
+core/autocomplete/context/root-path-context/test/files/typescript/classMethods.ts    
+core/autocomplete/context/root-path-context/test/files/typescript/functions.ts       
+core/autocomplete/context/root-path-context/test/files/typescript/generators.ts      
+core/control-plane/AuthTypes.ts                                                      
+core/control-plane/PolicySingleton.ts                                                
+core/llm-info/util.ts                                                                
+core/llm/defaultSystemMessages.ts                                                    
+core/llm/llms/index.ts                                                               
+core/llm/llms/llm.ts                                                                 
+core/llm/llms/llmTestHarness.ts                                                      
+core/llm/rules/constants.ts                                                          
+core/llm/rules/rules-utils.ts                                                        
+core/llm/streamChat.ts                                                               
+core/llm/templates/edit/claude.ts                                                    
+core/llm/templates/edit/codestral.ts                                                 
+core/llm/utils/calculateRequestCost.ts                                               
+core/llm/utils/parseArgs.ts                                                          
+core/test/jest.global-setup.ts                                                       
+core/test/vitest.global-setup.ts                                                     
+core/test/vitest.setup.ts                                                            
+core/util/handlebars/handlebarUtils.ts                                               
+core/util/handlebars/renderTemplatedString.ts                                        
+core/util/ideUtils.ts                                                                
+core/util/sentry/constants.ts                                                        
+core/util/shellPath.ts                                                               
+core/util/tts.ts                                                                     
+core/util/url.ts                                                                     
+core/vitest.config.ts                                                                
+core/vscode-test-harness/vitest.config.ts                                            
+Unused exports (180)
+Typescript                                                         …complete/constants/AutocompleteLanguageInfo.ts:43:14
+JavaScript                                                         …complete/constants/AutocompleteLanguageInfo.ts:51:14
+Python                                                             …complete/constants/AutocompleteLanguageInfo.ts:59:14
+Java                                                               …complete/constants/AutocompleteLanguageInfo.ts:69:14
+Cpp                                                                …complete/constants/AutocompleteLanguageInfo.ts:77:14
+CSharp                                                             …complete/constants/AutocompleteLanguageInfo.ts:85:14
+C                                                                  …complete/constants/AutocompleteLanguageInfo.ts:93:14
+Scala                                                              …omplete/constants/AutocompleteLanguageInfo.ts:101:14
+Go                                                                 …omplete/constants/AutocompleteLanguageInfo.ts:109:14
+Rust                                                               …omplete/constants/AutocompleteLanguageInfo.ts:117:14
+Haskell                                                            …omplete/constants/AutocompleteLanguageInfo.ts:125:14
+PHP                                                                …omplete/constants/AutocompleteLanguageInfo.ts:142:14
+RubyOnRails                                                        …omplete/constants/AutocompleteLanguageInfo.ts:150:14
+Swift                                                              …omplete/constants/AutocompleteLanguageInfo.ts:158:14
+Kotlin                                                             …omplete/constants/AutocompleteLanguageInfo.ts:166:14
+Ruby                                                               …omplete/constants/AutocompleteLanguageInfo.ts:174:14
+Clojure                                                            …omplete/constants/AutocompleteLanguageInfo.ts:182:14
+Julia                                                              …omplete/constants/AutocompleteLanguageInfo.ts:190:14
+FSharp                                                             …omplete/constants/AutocompleteLanguageInfo.ts:209:14
+R                                                                  …omplete/constants/AutocompleteLanguageInfo.ts:228:14
+Dart                                                               …omplete/constants/AutocompleteLanguageInfo.ts:245:14
+Solidity                                                           …omplete/constants/AutocompleteLanguageInfo.ts:253:14
+Lua                                                                …omplete/constants/AutocompleteLanguageInfo.ts:276:14
+YAML                                                               …omplete/constants/AutocompleteLanguageInfo.ts:284:14
+Json                                                               …omplete/constants/AutocompleteLanguageInfo.ts:325:14
+Markdown                                                           …omplete/constants/AutocompleteLanguageInfo.ts:344:14
+LANGUAGES                                                          …omplete/constants/AutocompleteLanguageInfo.ts:369:14
+rankAndOrderSnippets                                     function  core/autocomplete/context/ranking/index.ts:41:17     
+fillPromptWithSnippets                                   function  core/autocomplete/context/ranking/index.ts:137:17    
+FUNCTIONS                                                          …text/root-path-context/test/testCases/python.ts:1:14
+CLASSES                                                            …ext/root-path-context/test/testCases/python.ts:98:14
+extractTopLevelDeclsWithFormatt…                         function  …te/context/static-context/tree-sitter-utils.ts:81:23
+BRACKETS                                                           …utocomplete/filtering/BracketMatchingService.ts:1:14
+BRACKETS_REVERSE                                                   …utocomplete/filtering/BracketMatchingService.ts:6:14
+onlyWhitespaceAfterEndOfLine                             function  …plete/filtering/streamTransforms/charStream.ts:11:24
+noFirstCharNewline                                       function  …plete/filtering/streamTransforms/charStream.ts:48:24
+processBlockNesting               lineStream             function  …lete/filtering/streamTransforms/lineStream.ts:153:17
+CODE_STOP_BLOCK                   lineStream                       …lete/filtering/streamTransforms/lineStream.ts:166:14
+BRACKET_ENDING_CHARS              lineStream                       …lete/filtering/streamTransforms/lineStream.ts:167:14
+LINES_TO_REMOVE_BEFORE_START      lineStream                       …lete/filtering/streamTransforms/lineStream.ts:176:14
+noTopLevelKeywordsMidline         lineStream             function  …lete/filtering/streamTransforms/lineStream.ts:202:24
+removeTrailingWhitespace          lineStream             function  …lete/filtering/streamTransforms/lineStream.ts:452:24
+filterLeadingNewline              lineStream             function  …lete/filtering/streamTransforms/lineStream.ts:515:24
+logLines                          lineStream             function  …lete/filtering/streamTransforms/lineStream.ts:631:24
+DEFAULT_MINIMAL_CONFIG                                             core/autocomplete/MinimalConfig.ts:40:14             
+getAllSnippets                                                     core/autocomplete/snippets/getAllSnippets.ts:169:14  
+getDiffFn                                                function  core/autocomplete/snippets/gitDiffCache.ts:66:17     
+getScopeAroundRange                                      function  core/autocomplete/util/ast.ts:49:23                  
+prevFilepaths                                                      core/autocomplete/util/openedFilesLruCache.ts:18:14  
+useHub                                                   function  core/control-plane/env.ts:12:17                      
+LOCAL_DEV_DATA_VERSION                                             core/data/log.ts:19:14                               
+convertMyersChangeToDiffLines                            function  core/diff/myers.ts:5:17                              
+toAsyncIterable                                                    core/fetch/index.ts:17:13                            
+getEnvNoProxyPatterns                                    function  core/fetch/util.ts:32:17                             
+getReqOptionsNoProxyPatterns                             function  core/fetch/util.ts:44:17                             
+ADDITIONAL_INDEXING_IGNORE_FILE…                                   core/indexing/ignore.ts:98:14                        
+ADDITIONAL_INDEXING_IGNORE_DIRS                                    core/indexing/ignore.ts:168:14                       
+DEFAULT_IGNORE_FILETYPES                                           core/indexing/ignore.ts:197:14                       
+DEFAULT_IGNORE_DIRS                                                core/indexing/ignore.ts:202:14                       
+defaultSecurityIgnoreFile                                          core/indexing/ignore.ts:215:14                       
+defaultSecurityIgnoreDir                                           core/indexing/ignore.ts:218:14                       
+defaultIgnoreFile                                                  core/indexing/ignore.ts:221:14                       
+defaultIgnoreDir                                                   core/indexing/ignore.ts:222:14                       
+DEFAULT_SECURITY_IGNORE                                            core/indexing/ignore.ts:225:14                       
+DEFAULT_IGNORE                                                     core/indexing/ignore.ts:230:14                       
+throwIfFileIsSecurityConcern                             function  core/indexing/ignore.ts:261:17                       
+SqliteDb                                                 class     core/indexing/refreshIndex.ts:21:14                  
+truncateToLastNBytes                                     function  core/indexing/refreshIndex.ts:527:17                 
+IndexLock                                                class     core/indexing/refreshIndex.ts:546:14                 
+walkDirCache                                                       core/indexing/walkDir.ts:72:14                       
+walkDirAsync                                             function  core/indexing/walkDir.ts:266:24                      
+walkDir                                                  function  core/indexing/walkDir.ts:275:23                      
+getIgnoreContext                                         function  core/indexing/walkDir.ts:299:23                      
+allModelProviders                                                  core/llm-info/index.ts:4:14                          
+allLlms                                                            core/llm-info/index.ts:8:14                          
+getAllRecommendedFor                                     function  core/llm-info/index.ts:34:17                         
+AllMediaTypes                                                      core/llm-info/types.ts:48:14                         
+llmCanGenerateInParallel                                           core/llm/autodetect.ts:449:26                        
+modelSupportsReasoning                                             core/llm/autodetect.ts:452:25                        
+DEFAULT_REASONING_TOKENS                                           core/llm/constants.ts:34:26                          
+PROXY_URL                                                          core/llm/constants.ts:35:28                          
+LLMError                                                 class     core/llm/index.ts:68:14                              
+messageHasToolCalls                                      function  core/llm/messages.ts:3:17                            
+messageIsEmpty                                           function  core/llm/messages.ts:7:17                            
+isToolMessageForId                                       function  core/llm/messages.ts:38:17                           
+getAnthropicErrorMessage                                 function  core/llm/openai-adapters/apis/AnthropicUtils.ts:13:17
+UNIQUE_TOKEN                                                       core/llm/openai-adapters/apis/Inception.ts:25:14     
+APPLY_UNIQUE_TOKEN                                                 core/llm/openai-adapters/apis/Inception.ts:26:14     
+Llamastack_API_BASE                                                core/llm/openai-adapters/apis/LlamaStack.ts:8:14     
+default                                                            core/llm/openai-adapters/apis/OpenRouter.ts:43:8     
+addCacheControlToLastTwoUserMes…                                   core/llm/openai-adapters/index.ts:185:9              
+getAnthropicErrorMessage                                           core/llm/openai-adapters/index.ts:186:40             
+getAnthropicHeaders                                                core/llm/openai-adapters/index.ts:187:28             
+getAnthropicMediaTypeFromDataUrl                                   core/llm/openai-adapters/index.ts:188:23             
+testCompletion                                           function  core/llm/openai-adapters/test/util.ts:366:17         
+ClientCertificateOptionsSchema                                     core/llm/openai-adapters/types.ts:3:14               
+RequestOptionsSchema                                               core/llm/openai-adapters/types.ts:9:14               
+BaseConfig                                                         core/llm/openai-adapters/types.ts:21:14              
+BasePlusConfig                                                     core/llm/openai-adapters/types.ts:26:14              
+MoonshotConfigSchema                                               core/llm/openai-adapters/types.ts:66:14              
+DeepseekConfigSchema                                               core/llm/openai-adapters/types.ts:71:14              
+BedrockConfigSchema                                                core/llm/openai-adapters/types.ts:76:14              
+LlamastackConfigSchema                                             core/llm/openai-adapters/types.ts:93:14              
+MockConfigSchema                                                   core/llm/openai-adapters/types.ts:109:14             
+CohereConfigSchema                                                 core/llm/openai-adapters/types.ts:116:14             
+CometAPIConfigSchema                                               core/llm/openai-adapters/types.ts:121:14             
+GeminiConfigSchema                                                 core/llm/openai-adapters/types.ts:144:14             
+AnthropicConfigSchema                                              core/llm/openai-adapters/types.ts:150:14             
+WatsonXConfigSchema                                                core/llm/openai-adapters/types.ts:156:14             
+JinaConfigSchema                                                   core/llm/openai-adapters/types.ts:167:14             
+InceptionConfigSchema                                              core/llm/openai-adapters/types.ts:172:14             
+VertexAIConfigSchema                                               core/llm/openai-adapters/types.ts:177:14             
+LLMConfigSchema                                                    core/llm/openai-adapters/types.ts:191:14             
+model                                                    function  core/llm/openai-adapters/util.ts:146:17              
+toChatMessage                                            function  core/llm/openaiTypeConverters.ts:13:17               
+getSystemMessageWithRules                                          core/llm/rules/getSystemMessageWithRules.ts:327:14   
+isRecommendedAgentModel                                  function  core/llm/toolSupport.ts:377:17                       
+modelSupportsNativeTools                                 function  core/llm/toolSupport.ts:394:17                       
+IS_NEXT_EDIT_ACTIVE                                                core/nextEdit/constants.ts:3:14                      
+APPLY_UNIQUE_TOKEN                                                 core/nextEdit/constants.ts:19:14                     
+getRenderableDiffWithGutterAnno…                         function  core/nextEdit/diff/diff.ts:63:17                     
+applyCompletionToFile                                    function  core/nextEdit/diff/diff.ts:250:17                    
+__setMockNextEditLoggingService…  NextEditLoggingServi…  function  core/nextEdit/NextEditLoggingService.ts:254:17       
+__setMockPrefetchQueueInstance    PrefetchQueueModule    function  core/nextEdit/NextEditPrefetchQueue.ts:155:17        
+ideSettingsPromise                                                 core/test/fixtures.ts:11:14                          
+testControlPlaneClient                                             core/test/fixtures.ts:13:14                          
+TEST_DIR_PATH                                                      core/test/testDir.ts:7:14                            
+getRootCause                                             function  core/util/errors.ts:7:17                             
+HistoryManager                                           class     core/util/history.ts:24:14                           
+splitCamelCaseAndNonAlphaNumeric                         function  core/util/index.ts:207:17                            
+startLocalLemonade                                       function  core/util/lemonadeHelper.ts:31:23                    
+mergeJson                                                function  core/util/merge.ts:5:17                              
+renderContextItemsWithStatus                             function  core/util/messageContent.ts:38:17                    
+convertToUnifiedMessage                                  function  core/util/messageConversion.ts:23:17                 
+convertFromUnifiedMessage                                function  core/util/messageConversion.ts:75:17                 
+createHistoryItem                                        function  core/util/messageConversion.ts:201:17                
+convertToUnifiedHistory                                  function  core/util/messageConversion.ts:253:17                
+convertFromUnifiedHistoryWithSy…                         function  core/util/messageConversion.ts:352:17                
+extractToolCallInfo                                      function  core/util/messageConversion.ts:374:17                
+startLocalOllama                                         function  core/util/ollamaHelper.ts:22:23                      
+getRemoteModelInfo                                       function  core/util/ollamaHelper.ts:54:23                      
+DO_NOT_COUNT_REJECTED_BEFORE                                       core/util/parameters.ts:32:14                        
+RETRIEVAL_PARAMS                                                   core/util/parameters.ts:34:14                        
+DEFAULT_CONFIG_TS_CONTENTS                                         core/util/paths.ts:35:14                             
+getChromiumPath                                          function  core/util/paths.ts:39:17                             
+getContinueUtilsPath                                     function  core/util/paths.ts:43:17                             
+getIndexFolderPath                                       function  core/util/paths.ts:79:17                             
+getSharedConfigFilePath                                  function  core/util/paths.ts:91:17                             
+getPrimaryConfigFilePath                                 function  core/util/paths.ts:127:17                            
+getConfigJsPath                                          function  core/util/paths.ts:166:17                            
+getTsConfigPath                                          function  core/util/paths.ts:171:17                            
+getContinueRcPath                                        function  core/util/paths.ts:205:17                            
+editConfigFile                                           function  core/util/paths.ts:272:17                            
+migrate                                                  function  core/util/paths.ts:293:23                            
+getLanceDbPath                                           function  core/util/paths.ts:323:17                            
+getDocsSqlitePath                                        function  core/util/paths.ts:331:17                            
+getRemoteConfigsFolderPath                               function  core/util/paths.ts:335:17                            
+getPathToRemoteConfig                                    function  core/util/paths.ts:343:17                            
+getConfigJsonPathForRemote                               function  core/util/paths.ts:358:17                            
+getConfigJsPathForRemote                                 function  core/util/paths.ts:364:17                            
+getContinueDotEnv                                        function  core/util/paths.ts:370:17                            
+getLogsDirPath                                           function  core/util/paths.ts:378:17                            
+getCoreLogsPath                                          function  core/util/paths.ts:386:17                            
+getPromptLogsPath                                        function  core/util/paths.ts:390:17                            
+getGlobalFolderWithName                                  function  core/util/paths.ts:394:17                            
+getGlobalPromptsPath                                     function  core/util/paths.ts:398:17                            
+readAllGlobalPromptFiles                                 function  core/util/paths.ts:402:17                            
+getEsbuildBinaryPath                                     function  core/util/paths.ts:430:17                            
+migrateV1DevDataFiles                                    function  core/util/paths.ts:434:17                            
+getLocalEnvironmentDotFilePath                           function  core/util/paths.ts:455:17                            
+getStagingEnvironmentDotFilePath                         function  core/util/paths.ts:459:17                            
+getDiffsDirectoryPath                                    function  core/util/paths.ts:463:17                            
+isFileWithinFolder                                                 core/util/paths.ts:473:14                            
+EXPERIMENTS                                                        core/util/posthog.ts:15:14                           
+supportedLanguages                                                 core/util/treeSitter.ts:38:14                        
+getLanguageForFile                                       function  core/util/treeSitter.ts:145:23                       
+getSymbolsForFile                                        function  core/util/treeSitter.ts:225:23                       
+getSymbolsForManyFiles                                   function  core/util/treeSitter.ts:292:23                       
+joinEncodedUriPathSegmentToUri                           function  core/util/uri.ts:127:17                              
+getUriDescription                                        function  core/util/uri.ts:185:17                              
+Configuration hints (1)
+.    knip.json  Add entry and/or refine project files in workspaces["."] (32 unused files)
