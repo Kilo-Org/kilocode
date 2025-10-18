@@ -2941,10 +2941,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				const provider = this.providerRef.deref()
 				const providerState = await provider?.getState()
 
+				const isMultiFileApplyDiffEnabled = experiments.isEnabled(
+					providerState!.experiments ?? {},
+					EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF,
+				)
 				const allowedTools = getAllowedJSONToolsForMode(
 					mode,
 					undefined, // codeIndexManager is private, not accessible here
 					providerState,
+					isMultiFileApplyDiffEnabled,
 					this.api?.getModel()?.info?.supportsImages,
 				)
 

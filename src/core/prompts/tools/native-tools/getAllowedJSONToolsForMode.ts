@@ -6,11 +6,13 @@ import OpenAI from "openai"
 import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS } from "../../../../shared/tools"
 import { isFastApplyAvailable } from "../../../tools/editFileTool"
 import { nativeTools } from "."
+import { apply_diff_multi_file, apply_diff_single_file } from "./apply_diff"
 
 export function getAllowedJSONToolsForMode(
 	mode: Mode,
 	codeIndexManager?: CodeIndexManager,
 	clineProviderState?: ClineProviderState,
+	isMultiFileApplyDiffEnabled: boolean = false,
 	supportsImages?: boolean,
 ): OpenAI.Chat.ChatCompletionTool[] {
 	const config = getModeConfig(mode, clineProviderState?.customModes)
@@ -82,6 +84,17 @@ export function getAllowedJSONToolsForMode(
 	nativeTools.forEach((tool) => {
 		nativeToolsMap.set(tool.function.name, tool)
 	})
+
+	// Prepare for supporting multi file diffs in the future.
+	// For now, regardless of what the user selects, just present the
+	// Single file definitions and instructions to the model.
+	// This allows the user to maintain their experiment options without having to
+	// Change their tool calling style.
+	if (isMultiFileApplyDiffEnabled) {
+		nativeToolsMap.set("apply_diff", apply_diff_multi_file)
+	} else {
+		nativeToolsMap.set("apply_diff", apply_diff_single_file)
+	}
 
 	// Map allowed tools to their native definitions
 	const allowedTools: OpenAI.Chat.ChatCompletionTool[] = []

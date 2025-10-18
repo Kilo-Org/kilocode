@@ -74,6 +74,7 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"files",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
