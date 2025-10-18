@@ -122,6 +122,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				if (this.autoRetryProfileId) {
 					// Auto-retry already attempted and failed, throwing error
 					// No cooldown needed; manual retry will trigger auto-retry logic
+					this.autoRetryProfileId = undefined
 					throw error
 				} else {
 					// First-time failure: perform auto-retry after setting cooldown
