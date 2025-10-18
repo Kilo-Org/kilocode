@@ -74,6 +74,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata,
+		previousProfileId: string | undefined
 	): ApiStream {
 		try {
 			await this.initialize()
@@ -96,6 +97,11 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 					}
 					yield chunk
 				}
+
+				// On successful current request, extend cooldown for the previous (errored) profile
+				if (previousProfileId) {
+					await this.usage.setCooldown(previousProfileId, 10 * 60 * 1000)
+				}
 			} catch (error) {
 				// Check if this is a retryable
 				if (this.isRateLimitError(error) || this.isOverloadError(error)) {
@@ -111,8 +117,18 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				}
 
 				// For non-rate limit errors, set cooldown and rethrow
-				await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
-				throw error
+				if (previousProfileId) {
+					// Auto-retry already attempted and failed, throwing error
+					// No cooldown needed; manual retry will trigger auto-retry logic
+					throw error
+				} else {
+					// First-time failure: perform auto-retry after setting cooldown
+					// If auto-retry succeeds, the error profile's cooldown will be extended
+					const erroredProfileId = this.activeProfileId
+					await this.usage.setCooldown(erroredProfileId, 3 * 60 * 1000)
+					await this.adjustActiveHandler("Auto Retry")
+					yield* this.createMessage(systemPrompt, messages, metadata, erroredProfileId)
+				}
 			}
 		} catch (error) {
 			console.error("Error in createMessage:", error)
