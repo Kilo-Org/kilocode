@@ -99,8 +99,9 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				}
 
 				// On successful current request, extend cooldown for the previous (errored) profile
+				// A 5-minute cooldown is enough due to auto-retry handling fallback logic
 				if (previousProfileId) {
-					await this.usage.setCooldown(previousProfileId, 10 * 60 * 1000)
+					await this.usage.setCooldown(previousProfileId, 5 * 60 * 1000)
 				}
 			} catch (error) {
 				// Check if this is a retryable
