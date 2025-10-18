@@ -2,6 +2,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import { z } from "zod"
 import * as vscode from "vscode"
+import EventEmitter from "events"
 import type { ModelInfo, ProviderSettings } from "@roo-code/types"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { ContextProxy } from "../../core/config/ContextProxy"
@@ -27,7 +28,8 @@ interface HandlerConfig {
  * Virtual Quota Fallback Provider API processor.
  * This handler is designed to call other API handlers with automatic fallback when quota limits are reached.
  */
-export class VirtualQuotaFallbackHandler implements ApiHandler {
+export class VirtualQuotaFallbackHandler extends EventEmitter implements ApiHandler {
+	//kilocode_change: Extend EventEmitter for model change notifications
 	private settingsManager: ProviderSettingsManager
 	private settings: ProviderSettings
 
@@ -38,6 +40,8 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	private isInitialized: boolean = false
 
 	constructor(options: ProviderSettings) {
+		super()
+		//kilocode_change: Call super() for EventEmitter
 		this.settings = options
 		this.settingsManager = new ProviderSettingsManager(ContextProxy.instance.rawContext)
 		this.usage = UsageTracker.getInstance()
@@ -121,17 +125,28 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 	}
 
 	getModel(): { id: string; info: ModelInfo } {
+		// This is a synchronous method, so we can't await adjustActiveHandler here.
+		// The handler should be adjusted before this method is called.
 		if (!this.activeHandler) {
 			return {
-				id: "unknown",
+				id: "",
 				info: {
-					maxTokens: 100000,
-					contextWindow: 100000,
+					maxTokens: 1,
+					contextWindow: 1,
 					supportsPromptCache: false,
 				},
 			}
 		}
 		return this.activeHandler.getModel()
+	}
+
+	//kilocode_change: Add contextWindow getter for virtual quota fallback
+	get contextWindow(): number {
+		if (!this.activeHandler) {
+			return 1 // Default fallback
+		}
+		const model = this.activeHandler.getModel()
+		return model.info.contextWindow
 	}
 
 	private async loadConfiguredProfiles(): Promise<void> {
@@ -234,6 +249,8 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 			}
 			this.activeHandler = handler
 			this.activeProfileId = profileId
+			//kilocode_change: Emit handlerChanged event for model change notifications
+			this.emit("handlerChanged", this.activeHandler)
 			return
 		}
 
@@ -243,6 +260,8 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		}
 		this.activeHandler = undefined
 		this.activeProfileId = undefined
+		//kilocode_change: Emit handlerChanged event when no valid handler found
+		this.emit("handlerChanged", this.activeHandler)
 	}
 
 	private async notifyHandlerSwitch(newProfileId: string | undefined, reason?: string): Promise<void> {

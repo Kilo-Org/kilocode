@@ -115,7 +115,7 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 
 	return isReasoningBudgetSupported && !!modelInfo.maxTokens ? (
 		<>
-			{!isReasoningBudgetRequired && (
+			{!isReasoningBudgetRequired && apiConfiguration.apiProvider !== "virtual-quota-fallback" && (
 				<div className="flex flex-col gap-1">
 					<Checkbox
 						checked={enableReasoningEffort}

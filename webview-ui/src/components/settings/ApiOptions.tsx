@@ -885,7 +885,7 @@ const ApiOptions = ({
 				// kilocode_change end
 			}
 
-			{!fromWelcomeView && (
+			{!fromWelcomeView && selectedProvider !== "virtual-quota-fallback" && (
 				<Collapsible open={isAdvancedSettingsOpen} onOpenChange={setIsAdvancedSettingsOpen}>
 					<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mb-2">
 						<span className={`codicon codicon-chevron-${isAdvancedSettingsOpen ? "down" : "right"}`}></span>
