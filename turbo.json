@@ -1,14 +1,10 @@
 {
 	"$schema": "https://turbo.build/schema.json",
 	"tasks": {
-		"lint": {
-			"dependsOn": ["continuedev:lint"]
-		},
-		"check-types": {
-			"dependsOn": ["continuedev:typecheck"]
-		},
+		"lint": {},
+		"check-types": {},
 		"test": {
-			"dependsOn": ["@roo-code/types#build", "continuedev:test"]
+			"dependsOn": ["@roo-code/types#build"]
 		},
 		"format": {},
 		"clean": {
@@ -50,27 +46,6 @@
 			"cache": false
 		},
 		"playwright": {
-			"cache": false
-		},
-		"continuedev:lint": {
-			"cache": true,
-			"inputs": [
-				"src/services/continuedev/**/*.ts",
-				"src/services/continuedev/**/*.js",
-				"src/services/continuedev/eslint.config.js",
-				"src/services/continuedev/tsconfig.json"
-			]
-		},
-		"continuedev:typecheck": {
-			"cache": true,
-			"inputs": ["src/services/continuedev/**/*.ts", "src/services/continuedev/tsconfig.json"]
-		},
-		"continuedev:test": {
-			"cache": true,
-			"dependsOn": ["continuedev:typecheck"],
-			"inputs": ["src/services/continuedev/core/**/*.ts", "src/services/continuedev/core/**/*.vitest.ts"]
-		},
-		"continuedev:format": {
 			"cache": false
 		}
 	}
