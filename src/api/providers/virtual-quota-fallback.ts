@@ -206,7 +206,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		if (this.activeHandler && this.activeProfileId) {
 			const currentConfig = this.handlerConfigs.find((c) => c.profileId === this.activeProfileId)
 			if (currentConfig) {
-				const isLatestConfig = this.handlerConfigs.length > 1 && this.handlerConfigs.at(-1).profileId === currentConfig.profileId
+				const isLatestConfig = this.handlerConfigs.length > 1 && this.handlerConfigs.at(-1)?.profileId === currentConfig.profileId
 				if (!isLatestConfig) {
 					const isUnderCooldown = await this.usage.isUnderCooldown(this.activeProfileId)
 					if (!isUnderCooldown && this.underLimit(currentConfig.config)) {
