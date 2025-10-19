@@ -51,7 +51,6 @@ export async function getSiliconCloudModels(
 			contextWindow: customModelInfo?.contextWindow || 65536,
 			supportsPromptCache: customModelInfo?.supportsPromptCache || false,
 		}
-		console.log(model.id, modelInfo, customModelInfo)
 		models[model.id] = modelInfo
 	}
 

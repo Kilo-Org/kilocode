@@ -62,6 +62,26 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		supportsPromptCache: false,
 		preferredIndex: 4,
 	},
+	"Qwen/Qwen3-VL-235B-A22B-Instruct": {
+		contextWindow: 262144,
+		inputPrice: 0.35,
+		outputPrice: 1.4,
+		description:
+			"Qwen3-VL-235B-A22B-Instruct 是一个拥有 2350 亿参数的混合专家（MoE）视觉语言模型，其中激活的参数量为 220 亿。它是 Qwen3-VL-235B-A22B 的指令微调版本，专为聊天应用进行了优化。Qwen3-VL 是一系列接受文本和图像输入的多模态模型，经过大量数据训练。它在理解和推理文本与图像方面表现出先进的能力",
+		supportsImages: true,
+		supportsPromptCache: false,
+		preferredIndex: 9,
+	},
+	"Qwen/Qwen3-VL-235B-A22B-Thinking": {
+		contextWindow: 262144,
+		inputPrice: 0.35,
+		outputPrice: 1.4,
+		description:
+			"Qwen3-VL 是通义千问系列迄今最强大的视觉语言模型。该系列在文本理解与生成、视觉感知与推理、上下文长度、空间关系和视频动态理解以及 AI Agent 交互方面均实现了全面升级。Qwen3-VL-235B-A22B-Thinking 是该系列的旗舰模型之一，为推理增强的“思考”版本，在数学、因果分析和逻辑推理等多个多模态推理基准测试中取得了业界顶尖（SOTA）的表现。该模型是一个混合专家（MoE）架构，总参数量为 235B，激活参数量为 22B。它原生支持 256K 的上下文长度，并可扩展至 100 万，能够处理整本教科书或数小时的视频内容。此外，该模型具备强大的视觉 Agent 能力，可以操作桌面及移动端图形界面（GUI）、将草图转换为代码，并支持 3D 接地，为复杂的空间推理和具身智能应用奠定了基础",
+		supportsImages: true,
+		supportsPromptCache: false,
+		preferredIndex: 9,
+	},
 	"zai-org/GLM-4.5": {
 		contextWindow: 131072,
 		inputPrice: 0.49,
@@ -100,17 +120,6 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		supportsPromptCache: false,
 		preferredIndex: 8,
 	},
-	"Qwen/Qwen3-Next-80B-A3B-Instruct": {
-		contextWindow: 262144,
-		inputPrice: 0.14,
-		outputPrice: 0.56,
-		description:
-			"Qwen3-Next-80B-A3B-Instruct 是由阿里巴巴通义千问团队发布的下一代基础模型。它基于全新的 Qwen3-Next 架构,旨在实现极致的训练和推理效率。该模型采用了创新的混合注意力机制（Gated DeltaNet 和 Gated Attention）、高稀疏度混合专家（MoE）结构以及多项训练稳定性优化。作为一个拥有 800 亿总参数的稀疏模型，它在推理时仅需激活约 30 亿参数，从而大幅降低了计算成本，并在处理超过 32K tokens 的长上下文任务时，推理吞吐量比 Qwen3-32B 模型高出 10 倍以上。此模型为指令微调版本，专为通用任务设计，不支持思维链（Thinking）模式。在性能上，它与通义千问的旗舰模型 Qwen3-235B 在部分基准测试中表现相当，尤其在超长上下文任务中展现出明显优势",
-		supportsPromptCache: false,
-		supportsReasoningBudget: true,
-		maxTokens: 262144,
-		preferredIndex: 9,
-	},
 }
 
 const siliconCloudInternationalModels: Record<string, ModelInfo> = {
@@ -135,6 +144,20 @@ const siliconCloudInternationalModels: Record<string, ModelInfo> = {
 		description:
 			"Kimi K2-Instruct-0905 is the latest, most capable version of Kimi K2. It is a state-of-the-art mixture-of-experts (MoE) language model, featuring 32 billion activated parameters and a total of 1 trillion parameters. Key features include enhanced agentic coding intelligence, with the model demonstrating significant improvements on public benchmarks and real-world coding agent tasks; an improved frontend coding experience, offering advancements in both the aesthetics and practicality of frontend programming",
 	},
+	"Qwen/Qwen3-VL-235B-A22B-Instruct": {
+		...siliconCloudChinaModels["Qwen/Qwen3-VL-235B-A22B-Instruct"]!,
+		inputPrice: 0.3,
+		outputPrice: 1.5,
+		description:
+			"Qwen3-VL-235B-A22B-Instruct is a 235B parameters Mixture-of-Experts (MoE) vision-language model, with 22B activated parameters. It is an instruction-tuned version of Qwen3-VL-235B-A22B and is aligned for chat applications. Qwen3-VL is a series of multimodal models accepting both text and image inputs, and it is trained with a large amount of data. It demonstrates advanced capabilities in understanding and reasoning over text and images",
+	},
+	"Qwen/Qwen3-VL-235B-A22B-Thinking": {
+		...siliconCloudChinaModels["Qwen/Qwen3-VL-235B-A22B-Thinking"]!,
+		inputPrice: 0.45,
+		outputPrice: 3.5,
+		description:
+			'Qwen3-VL is the most powerful vision-language model in the Qwen series to date, delivering comprehensive upgrades across text understanding and generation, visual perception and reasoning, context length, spatial and video dynamics comprehension, and agent interaction capabilities. Qwen3-VL-235B-A22B-Thinking is one of the series\' flagship models, a reasoning-enhanced "Thinking" edition that achieves state-of-the-art (SOTA) results across many multimodal reasoning benchmarks, excelling in STEM, math, causal analysis, and logical, evidence-based answers. It features a Mixture-of-Experts (MoE) architecture with 235B total parameters and 22B active parameters. The model natively supports a 262K context length, expandable to 1 million, allowing it to process entire textbooks or hours-long videos. Furthermore, it possesses strong visual agent capabilities, enabling it to operate PC/mobile GUIs, convert sketches into code, and perform 3D grounding, laying the foundation for complex spatial reasoning and embodied AI applications',
+	},
 	"zai-org/GLM-4.5": {
 		...siliconCloudChinaModels["zai-org/GLM-4.5"]!,
 		inputPrice: 0.4,
@@ -155,13 +178,6 @@ const siliconCloudInternationalModels: Record<string, ModelInfo> = {
 		outputPrice: 2.18,
 		description:
 			"DeepSeek-R1-0528 is a reasoning model powered by reinforcement learning (RL) that addresses the issues of repetition and readability. Prior to RL, DeepSeek-R1 incorporated cold-start data to further optimize its reasoning performance. It achieves performance comparable to OpenAI-o1 across math, code, and reasoning tasks, and through carefully designed training methods, it has enhanced overall effectiveness",
-	},
-	"Qwen/Qwen3-Next-80B-A3B-Instruct": {
-		...siliconCloudChinaModels["Qwen/Qwen3-Next-80B-A3B-Instruct"]!,
-		inputPrice: 0.14,
-		outputPrice: 1.4,
-		description:
-			"Qwen3-Next-80B-A3B-Instruct is a next-generation foundation model released by Alibaba's Qwen team. It is built on the new Qwen3-Next architecture, designed for ultimate training and inference efficiency. The model incorporates innovative features such as a Hybrid Attention mechanism (Gated DeltaNet and Gated Attention), a High-Sparsity Mixture-of-Experts (MoE) structure, and various stability optimizations. As an 80-billion-parameter sparse model, it activates only about 3 billion parameters per token during inference, which significantly reduces computational costs and delivers over 10 times higher throughput than the Qwen3-32B model for long-context tasks exceeding 32K tokens. This is an instruction-tuned version optimized for general-purpose tasks and does not support 'thinking' mode. In terms of performance, it is comparable to Qwen's flagship model, Qwen3-235B, on certain benchmarks, showing significant advantages in ultra-long-context scenarios",
 	},
 	"openai/gpt-oss-120b": {
 		contextWindow: 131072,
