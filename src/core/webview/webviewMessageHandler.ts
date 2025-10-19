@@ -814,7 +814,7 @@ export const webviewMessageHandler = async (
 				ollama: {},
 				lmstudio: {},
 				ovhcloud: {}, // kilocode_change
-				siliconcloud: {},
+				siliconcloud: {}, // kilocode_change
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {

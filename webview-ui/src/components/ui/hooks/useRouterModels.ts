@@ -46,8 +46,10 @@ type RouterModelsQueryKey = {
 	geminiApiKey?: string
 	googleGeminiBaseUrl?: string
 	chutesApiKey?: string
+	// kilocode_change start
 	siliconCloudApiKey?: string
 	siliconCloudApiLine?: string
+	// kilocode_change end
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 
@@ -55,6 +57,5 @@ export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
 	useQuery({
 		queryKey: ["routerModels", queryKey],
 		queryFn: () => getRouterModels(),
-		placeholderData: (previousData) => previousData, // Keep previous data while refetching
+		placeholderData: (previousData) => previousData, // kilocode_change: Keep previous data while refetching
 	})
-// kilocode_change end

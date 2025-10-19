@@ -24,7 +24,7 @@ import {
 	qwenCodeModels,
 	rooModels,
 	sambaNovaModels,
-	siliconCloudModels,
+	siliconCloudModels, // kilocode_change
 	vertexModels,
 	vscodeLlmModels,
 	xaiModels,
@@ -60,7 +60,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
-	"siliconcloud",
+	"siliconcloud", // kilocode_change
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -455,20 +455,24 @@ export const zaiApiLineSchema = z.enum(["international_coding", "china_coding"])
 
 export type ZaiApiLine = z.infer<typeof zaiApiLineSchema>
 
+// kilocode_change start
 export const siliconCloudApiLineSchema = z.enum(["china", "chinaOverseas", "international"])
 
 export type SiliconCloudApiLine = z.infer<typeof siliconCloudApiLineSchema>
+// kilocode_change end
 
 const zaiSchema = apiModelIdProviderModelSchema.extend({
 	zaiApiKey: z.string().optional(),
 	zaiApiLine: zaiApiLineSchema.optional(),
 })
 
+// kilocode_change start
 const siliconCloudSchema = apiModelIdProviderModelSchema.extend({
 	siliconCloudApiKey: z.string().optional(),
 	siliconCloudApiLine: siliconCloudApiLineSchema.optional(),
 	siliconCloudCustomModelInfo: modelInfoSchema.nullish(),
 })
+// kilocode_change end
 
 const fireworksSchema = apiModelIdProviderModelSchema.extend({
 	fireworksApiKey: z.string().optional(),
@@ -548,7 +552,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
-	siliconCloudSchema.merge(z.object({ apiProvider: z.literal("siliconcloud") })),
+	siliconCloudSchema.merge(z.object({ apiProvider: z.literal("siliconcloud") })), // kilocode_change
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
 	defaultSchema,
 ])
@@ -595,7 +599,7 @@ export const providerSettingsSchema = z.object({
 	...ioIntelligenceSchema.shape,
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
-	...siliconCloudSchema.shape,
+	...siliconCloudSchema.shape, // kilocode_change
 	...vercelAiGatewaySchema.shape,
 	...codebaseIndexProviderSchema.shape,
 	...ovhcloudSchema.shape, // kilocode_change
@@ -689,7 +693,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	"vercel-ai-gateway": "vercelAiGatewayModelId",
 	kilocode: "kilocodeModel",
 	"virtual-quota-fallback": "apiModelId",
-	siliconcloud: "apiModelId",
+	siliconcloud: "apiModelId", // kilocode_change
 	ovhcloud: "ovhCloudAiEndpointsModelId", // kilocode_change
 }
 
@@ -814,7 +818,7 @@ export const MODELS_BY_PROVIDER: Record<
 	},
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
-	siliconcloud: { id: "siliconcloud", label: "SiliconCloud", models: Object.keys(siliconCloudModels) },
+	siliconcloud: { id: "siliconcloud", label: "SiliconCloud", models: Object.keys(siliconCloudModels) }, // kilocode_change
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
