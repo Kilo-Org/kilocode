@@ -300,6 +300,17 @@
 		"getSyntheticApiKey": "Synthetic APIキーを取得",
 		"featherlessApiKey": "Featherless APIキー",
 		"getFeatherlessApiKey": "Featherless APIキーを取得",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud APIキー",
+			"getApiKey": "SiliconCloud APIキーを取得",
+			"entrypoint": "SiliconCloud サービスリージョン",
+			"entrypointDescription": "お住まいの地域に基づいて適切なサービスリージョンを選択してください。",
+			"apiLineConfigs": {
+				"china": "国内",
+				"chinaOverseas": "国内（海外アクセス）",
+				"international": "国際"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence APIキー",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence APIキーを入力してください",
 		"getIoIntelligenceApiKey": "IO Intelligence APIキーを取得",

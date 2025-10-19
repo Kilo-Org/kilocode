@@ -171,6 +171,7 @@ const dynamicProviderExtras = {
 	inception: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	roo: {} as { apiKey?: string; baseUrl?: string },
 	chutes: {} as { apiKey?: string },
+	siliconcloud: {} as { apiKey?: string; apiLine?: string; siliconCloudCustomModelInfo?: ModelInfo | null }, // kilocode_change
 } as const satisfies Record<RouterName, object>
 
 // Build the dynamic options union from the map, intersected with CommonFetchParams

@@ -312,6 +312,17 @@
 		"getDeepSeekApiKey": "Отримати ключ API DeepSeek",
 		"featherlessApiKey": "Ключ API Featherless",
 		"getFeatherlessApiKey": "Отримати ключ API Featherless",
+		"siliconcloud": {
+			"apiKey": "Ключ API SiliconCloud",
+			"getApiKey": "Отримати ключ API SiliconCloud",
+			"entrypoint": "Регіон сервісу SiliconCloud",
+			"entrypointDescription": "Будь ласка, виберіть відповідний регіон сервісу залежно від вашого місцезнаходження.",
+			"apiLineConfigs": {
+				"china": "Внутрішній",
+				"chinaOverseas": "Внутрішній (доступ з-за кордону)",
+				"international": "Міжнародний"
+			}
+		},
 		"fireworksApiKey": "Ключ API Fireworks",
 		"getFireworksApiKey": "Отримати ключ API Fireworks",
 		"syntheticApiKey": "Ключ API Synthetic",

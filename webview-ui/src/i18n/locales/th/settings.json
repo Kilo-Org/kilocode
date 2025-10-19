@@ -306,6 +306,17 @@
 		"getDeepSeekApiKey": "รับคีย์ API ของ DeepSeek",
 		"featherlessApiKey": "คีย์ API ของ Featherless",
 		"getFeatherlessApiKey": "รับคีย์ API ของ Featherless",
+		"siliconcloud": {
+			"apiKey": "คีย์ API ของ SiliconCloud",
+			"getApiKey": "รับคีย์ API ของ SiliconCloud",
+			"entrypoint": "ภูมิภาคบริการ SiliconCloud",
+			"entrypointDescription": "โปรดเลือกภูมิภาคบริการที่เหมาะสมตามตำแหน่งของคุณ",
+			"apiLineConfigs": {
+				"china": "ในประเทศ",
+				"chinaOverseas": "ในประเทศ (เข้าถึงจากต่างประเทศ)",
+				"international": "ระหว่างประเทศ"
+			}
+		},
 		"fireworksApiKey": "คีย์ API ของ Fireworks",
 		"getFireworksApiKey": "รับคีย์ API ของ Fireworks",
 		"syntheticApiKey": "คีย์ API ของ Synthetic",

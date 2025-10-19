@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Synthetic API कुंजी प्राप्त करें",
 		"featherlessApiKey": "Featherless API कुंजी",
 		"getFeatherlessApiKey": "Featherless API कुंजी प्राप्त करें",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API कुंजी",
+			"getApiKey": "SiliconCloud API कुंजी प्राप्त करें",
+			"entrypoint": "SiliconCloud सेवा क्षेत्र",
+			"entrypointDescription": "कृपया अपने स्थान के आधार पर उपयुक्त सेवा क्षेत्र का चयन करें।",
+			"apiLineConfigs": {
+				"china": "घरेलू",
+				"chinaOverseas": "घरेलू (विदेश से पहुंच)",
+				"international": "अंतर्राष्ट्रीय"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
 		"ioIntelligenceApiKeyPlaceholder": "अपना आईओ इंटेलिजेंस एपीआई कुंजी दर्ज करें",
 		"getIoIntelligenceApiKey": "IO Intelligence API कुंजी प्राप्त करें",

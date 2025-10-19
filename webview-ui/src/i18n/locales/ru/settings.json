@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Получить Synthetic API-ключ",
 		"featherlessApiKey": "Featherless API-ключ",
 		"getFeatherlessApiKey": "Получить Featherless API-ключ",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API-ключ",
+			"getApiKey": "Получить SiliconCloud API-ключ",
+			"entrypoint": "Регион сервиса SiliconCloud",
+			"entrypointDescription": "Выберите подходящий регион сервиса в зависимости от вашего местоположения.",
+			"apiLineConfigs": {
+				"china": "Внутренний",
+				"chinaOverseas": "Внутренний (доступ из-за рубежа)",
+				"international": "Международный"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API-ключ",
 		"ioIntelligenceApiKeyPlaceholder": "Введите свой ключ API IO Intelligence",
 		"getIoIntelligenceApiKey": "Получить IO Intelligence API-ключ",

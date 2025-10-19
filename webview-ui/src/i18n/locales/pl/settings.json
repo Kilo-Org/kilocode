@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Uzyskaj klucz API Synthetic",
 		"featherlessApiKey": "Klucz API Featherless",
 		"getFeatherlessApiKey": "Uzyskaj klucz API Featherless",
+		"siliconcloud": {
+			"apiKey": "Klucz API SiliconCloud",
+			"getApiKey": "Uzyskaj klucz API SiliconCloud",
+			"entrypoint": "Region usługi SiliconCloud",
+			"entrypointDescription": "Wybierz odpowiedni region usługi w zależności od swojej lokalizacji.",
+			"apiLineConfigs": {
+				"china": "Krajowy",
+				"chinaOverseas": "Krajowy (dostęp z zagranicy)",
+				"international": "Międzynarodowy"
+			}
+		},
 		"ioIntelligenceApiKey": "Klucz API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Wprowadź swój klucz API IO Intelligence",
 		"getIoIntelligenceApiKey": "Uzyskaj klucz API IO Intelligence",

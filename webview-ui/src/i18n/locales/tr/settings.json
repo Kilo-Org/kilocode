@@ -300,6 +300,17 @@
 		"getSyntheticApiKey": "Synthetic API Anahtarı Al",
 		"featherlessApiKey": "Featherless API Anahtarı",
 		"getFeatherlessApiKey": "Featherless API Anahtarı Al",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API Anahtarı",
+			"getApiKey": "SiliconCloud API Anahtarı Al",
+			"entrypoint": "SiliconCloud Hizmet Bölgesi",
+			"entrypointDescription": "Konumunuza göre uygun hizmet bölgesini seçin.",
+			"apiLineConfigs": {
+				"china": "Yerel",
+				"chinaOverseas": "Yerel (yurtdışından erişim)",
+				"international": "Uluslararası"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API anahtarınızı girin",
 		"getIoIntelligenceApiKey": "IO Intelligence API Anahtarı Al",

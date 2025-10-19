@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Dapatkan Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Dapatkan Featherless API Key",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API Key",
+			"getApiKey": "Dapatkan SiliconCloud API Key",
+			"entrypoint": "Wilayah Layanan SiliconCloud",
+			"entrypointDescription": "Pilih wilayah layanan yang sesuai berdasarkan lokasi Anda.",
+			"apiLineConfigs": {
+				"china": "Domestik",
+				"chinaOverseas": "Domestik (akses dari luar negeri)",
+				"international": "Internasional"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
 		"ioIntelligenceApiKeyPlaceholder": "Masukkan kunci API IO Intelligence Anda",
 		"getIoIntelligenceApiKey": "Dapatkan IO Intelligence API Key",

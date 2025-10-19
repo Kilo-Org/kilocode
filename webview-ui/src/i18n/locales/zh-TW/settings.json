@@ -300,6 +300,17 @@
 		"getSyntheticApiKey": "取得 Synthetic API 金鑰",
 		"featherlessApiKey": "Featherless API 金鑰",
 		"getFeatherlessApiKey": "取得 Featherless API 金鑰",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API 金鑰",
+			"getApiKey": "取得 SiliconCloud API 金鑰",
+			"entrypoint": "SiliconCloud 服務站點",
+			"entrypointDescription": "請根據您的所在區域選擇合適的服務站點。",
+			"apiLineConfigs": {
+				"china": "國內版",
+				"chinaOverseas": "國內版（海外存取）",
+				"international": "國際版"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API 金鑰",
 		"ioIntelligenceApiKeyPlaceholder": "輸入您的 IO Intelligence API 金鑰",
 		"getIoIntelligenceApiKey": "取得 IO Intelligence API 金鑰",

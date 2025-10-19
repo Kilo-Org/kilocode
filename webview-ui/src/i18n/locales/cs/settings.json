@@ -311,6 +311,17 @@
 		"getDoubaoApiKey": "Získat klíč API Doubao",
 		"featherlessApiKey": "Klíč API Featherless",
 		"getFeatherlessApiKey": "Získat klíč API Featherless",
+		"siliconcloud": {
+			"apiKey": "Klíč API SiliconCloud",
+			"getApiKey": "Získat klíč API SiliconCloud",
+			"entrypoint": "Oblast služby SiliconCloud",
+			"entrypointDescription": "Vyberte prosím vhodnou oblast služby podle vaší polohy.",
+			"apiLineConfigs": {
+				"china": "Domácí",
+				"chinaOverseas": "Domácí (přístup ze zahraničí)",
+				"international": "Mezinárodní"
+			}
+		},
 		"fireworksApiKey": "Klíč API Fireworks",
 		"getFireworksApiKey": "Získat klíč API Fireworks",
 		"syntheticApiKey": "Klíč API Synthetic",

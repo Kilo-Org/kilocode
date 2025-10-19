@@ -301,6 +301,17 @@
 		"getSyntheticApiKey": "Synthetic API-Schlüssel erhalten",
 		"featherlessApiKey": "Featherless API-Schlüssel",
 		"getFeatherlessApiKey": "Featherless API-Schlüssel erhalten",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API-Schlüssel",
+			"getApiKey": "SiliconCloud API-Schlüssel erhalten",
+			"entrypoint": "SiliconCloud-Serviceregion",
+			"entrypointDescription": "Bitte wählen Sie die entsprechende Serviceregion basierend auf Ihrem Standort aus.",
+			"apiLineConfigs": {
+				"china": "Inland",
+				"chinaOverseas": "Inland (Zugriff aus dem Ausland)",
+				"international": "International"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API-Schlüssel",
 		"ioIntelligenceApiKeyPlaceholder": "Gib deinen IO Intelligence API-Schlüssel ein",
 		"getIoIntelligenceApiKey": "IO Intelligence API-Schlüssel erhalten",

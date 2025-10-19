@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Lấy khóa API Synthetic",
 		"featherlessApiKey": "Khóa API Featherless",
 		"getFeatherlessApiKey": "Lấy khóa API Featherless",
+		"siliconcloud": {
+			"apiKey": "Khóa API SiliconCloud",
+			"getApiKey": "Lấy khóa API SiliconCloud",
+			"entrypoint": "Khu vực dịch vụ SiliconCloud",
+			"entrypointDescription": "Vui lòng chọn khu vực dịch vụ phù hợp dựa trên vị trí của bạn.",
+			"apiLineConfigs": {
+				"china": "Nội địa",
+				"chinaOverseas": "Nội địa (truy cập từ nước ngoài)",
+				"international": "Quốc tế"
+			}
+		},
 		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
 		"ioIntelligenceApiKeyPlaceholder": "Nhập khóa API IO Intelligence của bạn",
 		"getIoIntelligenceApiKey": "Lấy khóa API IO Intelligence",

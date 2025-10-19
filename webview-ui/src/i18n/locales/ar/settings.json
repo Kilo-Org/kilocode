@@ -311,6 +311,17 @@
 		"getDoubaoApiKey": "احصل على مفتاح Doubao",
 		"featherlessApiKey": "مفتاح Featherless API",
 		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
+		"siliconcloud": {
+			"apiKey": "مفتاح SiliconCloud API",
+			"getApiKey": "احصل على مفتاح SiliconCloud API",
+			"entrypoint": "منطقة خدمة SiliconCloud",
+			"entrypointDescription": "يرجى اختيار منطقة الخدمة المناسبة بناءً على موقعك.",
+			"apiLineConfigs": {
+				"china": "محلي",
+				"chinaOverseas": "محلي (الوصول من الخارج)",
+				"international": "دولي"
+			}
+		},
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
 		"syntheticApiKey": "مفتاح Synthetic API",

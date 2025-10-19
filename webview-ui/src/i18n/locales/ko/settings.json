@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Synthetic API 키 받기",
 		"featherlessApiKey": "Featherless API 키",
 		"getFeatherlessApiKey": "Featherless API 키 받기",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API 키",
+			"getApiKey": "SiliconCloud API 키 받기",
+			"entrypoint": "SiliconCloud 서비스 지역",
+			"entrypointDescription": "위치에 따라 적절한 서비스 지역을 선택하세요.",
+			"apiLineConfigs": {
+				"china": "국내",
+				"chinaOverseas": "국내 (해외 접속)",
+				"international": "국제"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API 키",
 		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API 키를 입력하세요",
 		"getIoIntelligenceApiKey": "IO Intelligence API 키 받기",

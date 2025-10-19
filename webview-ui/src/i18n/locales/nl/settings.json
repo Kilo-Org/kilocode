@@ -299,6 +299,17 @@
 		"getSyntheticApiKey": "Synthetic API-sleutel ophalen",
 		"featherlessApiKey": "Featherless API-sleutel",
 		"getFeatherlessApiKey": "Featherless API-sleutel ophalen",
+		"siliconcloud": {
+			"apiKey": "SiliconCloud API-sleutel",
+			"getApiKey": "SiliconCloud API-sleutel ophalen",
+			"entrypoint": "SiliconCloud-serviceregio",
+			"entrypointDescription": "Selecteer de juiste serviceregio op basis van uw locatie.",
+			"apiLineConfigs": {
+				"china": "Binnenlands",
+				"chinaOverseas": "Binnenlands (toegang vanuit het buitenland)",
+				"international": "Internationaal"
+			}
+		},
 		"ioIntelligenceApiKey": "IO Intelligence API-sleutel",
 		"ioIntelligenceApiKeyPlaceholder": "Voer je IO Intelligence API-sleutel in",
 		"getIoIntelligenceApiKey": "IO Intelligence API-sleutel ophalen",

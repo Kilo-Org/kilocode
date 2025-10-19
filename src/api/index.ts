@@ -49,6 +49,7 @@ import {
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
 	// MiniMaxHandler, // kilocode_change
+	SiliconCloudHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -211,6 +212,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new VercelAiGatewayHandler(options)
 		case "minimax":
 			return new MiniMaxAnthropicHandler(options) // kilocode_change: anthropic
+		// kilocode_change start
+		case "siliconcloud":
+			return new SiliconCloudHandler(options)
+		// kilocode_change end
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)
