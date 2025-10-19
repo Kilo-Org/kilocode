@@ -25,7 +25,7 @@ import {
 	rooModels,
 	featherlessModels,
 	minimaxModels,
-	siliconCloudModelsByApiLine,
+	siliconCloudModelsByApiLine, // kilocode_change
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -56,7 +56,9 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	minimax: minimaxModels,
 }
 
+// kilocode_change start
 export const SILICON_CLOUD_MODELS_BY_API_LINE = siliconCloudModelsByApiLine
+// kilocode_change end
 
 export const PROVIDERS = [
 	{ value: "openrouter", label: "OpenRouter" },

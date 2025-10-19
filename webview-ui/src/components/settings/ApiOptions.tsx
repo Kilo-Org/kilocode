@@ -54,7 +54,7 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { usePreferredModels } from "@src/components/ui/hooks/kilocode/usePreferredModels"
+import { usePreferredModels } from "@src/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
 // kilocode_change start
 //import {
 //	useOpenRouterModelProviders,
@@ -233,8 +233,10 @@ const ApiOptions = ({
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
+		// kilocode_change start
 		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
 		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
+		// kilocode_change end
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -307,8 +309,10 @@ const ApiOptions = ({
 			apiConfiguration?.deepInfraBaseUrl,
 			apiConfiguration?.chutesApiKey, // kilocode_change
 			apiConfiguration?.ovhCloudAiEndpointsBaseUrl, // kilocode_change
+			// kilocode_change start
 			apiConfiguration?.siliconCloudApiLine,
 			apiConfiguration?.siliconCloudApiKey,
+			// kilocode_change end
 			customHeaders,
 		],
 	)
@@ -421,7 +425,7 @@ const ApiOptions = ({
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
-				siliconcloud: { field: "apiModelId", default: siliconCloudDefaultModelId },
+				siliconcloud: { field: "apiModelId", default: siliconCloudDefaultModelId }, // kilocode_change
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
@@ -791,6 +795,7 @@ const ApiOptions = ({
 				/>
 			)}
 
+			{/* kilocode_change start */}
 			{selectedProvider === "siliconcloud" && (
 				<SiliconCloud
 					apiConfiguration={apiConfiguration}
@@ -800,6 +805,7 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "human-relay" && (
 				<>

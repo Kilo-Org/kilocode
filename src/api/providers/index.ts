@@ -24,7 +24,7 @@ export { OpenRouterHandler } from "./openrouter"
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"
-export { SiliconCloudHandler } from "./siliconcloud"
+export { SiliconCloudHandler } from "./siliconcloud" // kilocode_change
 export { UnboundHandler } from "./unbound"
 export { VertexHandler } from "./vertex"
 // kilocode_change start

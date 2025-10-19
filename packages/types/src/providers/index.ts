@@ -37,4 +37,4 @@ export * from "./xai.js"
 export * from "./vercel-ai-gateway.js"
 export * from "./zai.js"
 export * from "./deepinfra.js"
-export * from "./siliconcloud.js"
+export * from "./siliconcloud.js" // kilocode_change

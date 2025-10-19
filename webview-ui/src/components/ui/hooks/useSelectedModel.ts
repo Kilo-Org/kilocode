@@ -493,6 +493,7 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		// kilocode_change start
 		case "siliconcloud": {
 			const id = apiConfiguration.apiModelId ?? siliconCloudDefaultModelId
 			const dynamicInfo = routerModels.siliconcloud?.[id]
@@ -511,6 +512,7 @@ function getSelectedModel({
 
 			return { id, info }
 		}
+		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

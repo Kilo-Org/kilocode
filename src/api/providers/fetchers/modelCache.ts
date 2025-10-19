@@ -140,6 +140,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			case "ovhcloud":
 				models = await getOvhCloudAiEndpointsModels()
 				break
+			// kilocode_change start
 			case "siliconcloud":
 				models = await getSiliconCloudModels(
 					options.apiKey,

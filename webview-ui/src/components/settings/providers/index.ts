@@ -39,4 +39,4 @@ export { Featherless } from "./Featherless"
 export { VercelAiGateway } from "./VercelAiGateway"
 export { DeepInfra } from "./DeepInfra"
 export { MiniMax } from "./MiniMax"
-export { SiliconCloud } from "./SiliconCloud"
+export { SiliconCloud } from "./SiliconCloud" // kilocode_change
