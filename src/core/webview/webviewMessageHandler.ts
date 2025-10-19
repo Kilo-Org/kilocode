@@ -814,6 +814,7 @@ export const webviewMessageHandler = async (
 				ollama: {},
 				lmstudio: {},
 				ovhcloud: {}, // kilocode_change
+				siliconcloud: {},
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -884,6 +885,15 @@ export const webviewMessageHandler = async (
 						provider: "ovhcloud",
 						apiKey: apiConfiguration.ovhCloudAiEndpointsApiKey,
 						baseUrl: apiConfiguration.ovhCloudAiEndpointsBaseUrl,
+					},
+				},
+				{
+					key: "siliconcloud",
+					options: {
+						provider: "siliconcloud",
+						apiKey: apiConfiguration.siliconCloudApiKey,
+						apiLine: apiConfiguration.siliconCloudApiLine,
+						siliconCloudCustomModelInfo: apiConfiguration.siliconCloudCustomModelInfo,
 					},
 				},
 				// kilocode_change end

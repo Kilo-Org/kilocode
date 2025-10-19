@@ -25,6 +25,7 @@ import {
 	syntheticModels, // kilocode_change
 	rooModels,
 	featherlessModels,
+	siliconCloudModelsByApiLine,
 } from "@roo-code/types"
 
 export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, ModelInfo>>> = {
@@ -53,6 +54,8 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	roo: rooModels,
 	featherless: featherlessModels,
 }
+
+export const SILICON_CLOUD_MODELS_BY_API_LINE = siliconCloudModelsByApiLine
 
 export const PROVIDERS = [
 	{ value: "openrouter", label: "OpenRouter" },
@@ -97,6 +100,7 @@ export const PROVIDERS = [
 	// { value: "roo", label: "Roo Code Cloud" },
 	// kilocode_change end
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
+	{ value: "siliconcloud", label: "SiliconCloud" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
 PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

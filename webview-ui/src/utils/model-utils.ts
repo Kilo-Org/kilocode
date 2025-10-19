@@ -1,4 +1,4 @@
-import { ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
+import { ANTHROPIC_DEFAULT_MAX_TOKENS, type ModelInfo } from "@roo-code/types"
 
 /**
  * Result of token distribution calculation
@@ -78,4 +78,39 @@ export const calculateTokenDistribution = (
 		reservedForOutput,
 		availableSize,
 	}
+}
+
+/**
+ * Merges dynamic models fetched from an API with a static, curated list of models.
+ *
+ * @param dynamicModels - The list of models fetched from the provider's API. This is the source of truth for availability.
+ * @param staticModels - A hardcoded list of models with rich, curated information (descriptions, pricing, etc.).
+ * @returns A merged record of models, prioritizing the richness of static data while maintaining the freshness of the dynamic list.
+ */
+export function mergeSiliconCloudModels(
+	dynamicModels: Record<string, ModelInfo>,
+	staticModels: Record<string, ModelInfo>,
+): Record<string, ModelInfo> {
+	// If no dynamic models are available (e.g., API fetch failed), fall back to the static list.
+	if (!dynamicModels || Object.keys(dynamicModels).length === 0) {
+		return staticModels
+	}
+
+	// Start with the dynamic models as the base.
+	const mergedModels = { ...dynamicModels }
+
+	// Iterate over the static list to enrich the dynamic list.
+	for (const [id, staticInfo] of Object.entries(staticModels)) {
+		if (mergedModels[id]) {
+			// If a model exists in both lists, merge them.
+			// The static info (which is more detailed) overrides properties from the dynamic info.
+			mergedModels[id] = { ...mergedModels[id], ...staticInfo }
+		} else {
+			// If a model only exists in the static list, add it.
+			// This acts as a fallback for models not yet returned by the API.
+			mergedModels[id] = staticInfo
+		}
+	}
+
+	return mergedModels
 }

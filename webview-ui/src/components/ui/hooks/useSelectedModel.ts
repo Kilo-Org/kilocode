@@ -64,6 +64,9 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	siliconCloudDefaultModelId,
+	siliconCloudModelsByApiLine,
+	siliconCloudDefaultApiLine,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -103,6 +106,8 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId,
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
+		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
 	})
 	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration)
 	// kilocode_change end
@@ -457,6 +462,24 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		case "siliconcloud": {
+			const id = apiConfiguration.apiModelId ?? siliconCloudDefaultModelId
+			const dynamicInfo = routerModels.siliconcloud?.[id]
+			const apiLine = apiConfiguration.siliconCloudApiLine || siliconCloudDefaultApiLine
+			const staticInfo = siliconCloudModelsByApiLine[apiLine]?.[id]
+			const customInfo = apiConfiguration.siliconCloudCustomModelInfo
+
+			// Merge dynamic and static info (static overrides dynamic)
+			let info = dynamicInfo && staticInfo ? { ...dynamicInfo, ...staticInfo } : staticInfo || dynamicInfo
+
+			// If the model is not a known static model, it's a custom one.
+			// In that case, merge the custom settings.
+			if (!staticInfo && info && customInfo) {
+				info = { ...info, ...customInfo }
+			}
+
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":
