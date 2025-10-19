@@ -1,4 +1,4 @@
-import { ANTHROPIC_DEFAULT_MAX_TOKENS, type ModelInfo } from "@roo-code/types"
+import { ANTHROPIC_DEFAULT_MAX_TOKENS, type ModelInfo } from "@roo-code/types" // kilocode_change
 
 /**
  * Result of token distribution calculation
@@ -80,6 +80,7 @@ export const calculateTokenDistribution = (
 	}
 }
 
+// kilocode_change start
 /**
  * Merges dynamic models fetched from an API with a static, curated list of models.
  *
@@ -114,3 +115,4 @@ export function mergeSiliconCloudModels(
 
 	return mergedModels
 }
+// kilocode_change end

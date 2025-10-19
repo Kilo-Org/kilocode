@@ -64,9 +64,11 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	// kilocode_change start
 	siliconCloudDefaultModelId,
 	siliconCloudModelsByApiLine,
 	siliconCloudDefaultApiLine,
+	// kilocode_change end
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -106,8 +108,10 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId,
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		// kilocode_change start
 		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
 		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
+		// kilocode_change end
 	})
 	const openRouterModelProviders = useModelProviders(kilocodeDefaultModel, apiConfiguration)
 	// kilocode_change end
@@ -462,6 +466,7 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		// kilocode_change start
 		case "siliconcloud": {
 			const id = apiConfiguration.apiModelId ?? siliconCloudDefaultModelId
 			const dynamicInfo = routerModels.siliconcloud?.[id]
@@ -480,6 +485,7 @@ function getSelectedModel({
 
 			return { id, info }
 		}
+		// kilocode_change end
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

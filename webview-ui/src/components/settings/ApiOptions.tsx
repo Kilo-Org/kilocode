@@ -41,7 +41,7 @@ import {
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 	nativeFunctionCallingProviders, // kilocode_change: Added import for native function calling providers
-	siliconCloudDefaultModelId,
+	siliconCloudDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -50,7 +50,7 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { usePreferredModels } from "@src/components/ui/hooks/kilocode/usePreferredModels"
+import { usePreferredModels } from "@src/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
 // kilocode_change start
 //import {
 //	useOpenRouterModelProviders,
@@ -109,7 +109,7 @@ import {
 	VercelAiGateway,
 	DeepInfra,
 	OvhCloudAiEndpoints, // kilocode_change
-	SiliconCloud,
+	SiliconCloud, // kilocode_change
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -224,8 +224,10 @@ const ApiOptions = ({
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
+		// kilocode_change start
 		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
 		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
+		// kilocode_change end
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -278,7 +280,7 @@ const ApiOptions = ({
 				selectedProvider === "litellm" ||
 				selectedProvider === "deepinfra" ||
 				selectedProvider === "chutes" || // kilocode_change
-				selectedProvider === "siliconcloud"
+				selectedProvider === "siliconcloud" // kilocode_change
 			) {
 				vscode.postMessage({ type: "requestRouterModels" })
 			}
@@ -297,8 +299,10 @@ const ApiOptions = ({
 			apiConfiguration?.deepInfraBaseUrl,
 			apiConfiguration?.chutesApiKey, // kilocode_change
 			apiConfiguration?.ovhCloudAiEndpointsBaseUrl, // kilocode_change
+			// kilocode_change start
 			apiConfiguration?.siliconCloudApiLine,
 			apiConfiguration?.siliconCloudApiKey,
+			// kilocode_change end
 			customHeaders,
 		],
 	)
@@ -412,7 +416,7 @@ const ApiOptions = ({
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
-				siliconcloud: { field: "apiModelId", default: siliconCloudDefaultModelId },
+				siliconcloud: { field: "apiModelId", default: siliconCloudDefaultModelId }, // kilocode_change
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
@@ -755,6 +759,7 @@ const ApiOptions = ({
 				/>
 			)}
 
+			{/* kilocode_change start */}
 			{selectedProvider === "siliconcloud" && (
 				<SiliconCloud
 					apiConfiguration={apiConfiguration}
@@ -764,6 +769,7 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "human-relay" && (
 				<>

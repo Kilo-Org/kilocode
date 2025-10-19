@@ -47,7 +47,7 @@ import {
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
 	OVHcloudAIEndpointsHandler, // kilocode_change
-	SiliconCloudHandler,
+	SiliconCloudHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -207,8 +207,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		case "ovhcloud":
 			return new OVHcloudAIEndpointsHandler(options)
 		// kilocode_change end
+		// kilocode_change start
 		case "siliconcloud":
 			return new SiliconCloudHandler(options)
+		// kilocode_change end
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

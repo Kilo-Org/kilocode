@@ -1,4 +1,4 @@
-import { mergeSiliconCloudModels } from "@/utils/model-utils"
+import { mergeSiliconCloudModels } from "@/utils/model-utils" // kilocode_change
 import {
 	type ProviderName,
 	type ProviderSettings,
@@ -51,9 +51,11 @@ import {
 	cerebrasModels,
 	cerebrasDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	// kilocode_change start
 	siliconCloudDefaultModelId,
 	siliconCloudModelsByApiLine,
 	siliconCloudDefaultApiLine,
+	// kilocode_change end
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -68,12 +70,12 @@ export const getModelsByProvider = ({
 	provider,
 	routerModels,
 	kilocodeDefaultModel,
-	apiConfiguration,
+	apiConfiguration, // kilocode_change
 }: {
 	provider: ProviderName
 	routerModels: RouterModels
 	kilocodeDefaultModel: string
-	apiConfiguration?: ProviderSettings
+	apiConfiguration?: ProviderSettings // kilocode_change
 }): { models: ModelRecord; defaultModel: string } => {
 	switch (provider) {
 		case "openrouter": {
@@ -334,7 +336,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 					provider,
 					routerModels: routerModels.data,
 					kilocodeDefaultModel,
-					apiConfiguration,
+					apiConfiguration, // kilocode_change
 				})
 			: FALLBACK_MODELS
 
