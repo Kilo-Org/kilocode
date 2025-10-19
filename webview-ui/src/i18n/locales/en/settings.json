@@ -257,7 +257,7 @@
 		"getOpenRouterApiKey": "Get OpenRouter API Key",
 		"vercelAiGatewayApiKey": "Vercel AI Gateway API Key",
 		"getVercelAiGatewayApiKey": "Get Vercel AI Gateway API Key",
-		"aiStupidLevelApiKey": "AIStupidLevel API Key",
+		"aiStupidLevelApiKey": "AIStupidLevel API Key", 
 		"getAIStupidLevelApiKey": "Get AIStupidLevel API Key",
 		"apiKeyStorageNotice": "API keys are stored securely in VSCode's Secret Storage",
 		"glamaApiKey": "Glama API Key",

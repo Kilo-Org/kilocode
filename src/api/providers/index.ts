@@ -40,4 +40,4 @@ export { RooHandler } from "./roo"
 export { FeatherlessHandler } from "./featherless"
 export { VercelAiGatewayHandler } from "./vercel-ai-gateway"
 export { DeepInfraHandler } from "./deepinfra"
-export { AIStupidLevelHandler } from "./aistupidlevel"
+export { AIStupidLevelHandler } from "./aistupidlevel" // kilocode_change

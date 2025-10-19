@@ -35,4 +35,4 @@ export * from "./xai.js"
 export * from "./vercel-ai-gateway.js"
 export * from "./zai.js"
 export * from "./deepinfra.js"
-export * from "./aistupidlevel.js"
+export * from "./aistupidlevel.js" // kilocode_change
