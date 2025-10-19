@@ -64,7 +64,8 @@ export class AIStupidLevelHandler extends RouterProvider implements SingleComple
 					type: "usage",
 					inputTokens: chunk.usage.prompt_tokens || 0,
 					outputTokens: chunk.usage.completion_tokens || 0,
-					totalCost: 0, // AIStupidLevel handles cost tracking in their dashboard
+					// AIStupidLevel handles cost tracking in their dashboard
+					// Don't override totalCost - let it be calculated from pricing
 				}
 			}
 		}

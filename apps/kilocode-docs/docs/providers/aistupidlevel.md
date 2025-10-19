@@ -10,16 +10,7 @@ AIStupidLevel is an intelligent AI router that continuously benchmarks 25+ AI mo
 
 ## What is AIStupidLevel?
 
-AIStupidLevel is a smart AI router that provides:
-
-- **Real-time performance benchmarking** of 25+ AI models from OpenAI, Anthropic, Google, xAI, and more
-- **Intelligent routing** based on hourly speed tests and daily deep reasoning benchmarks
-- **7-axis scoring methodology** (Correctness, Spec Compliance, Code Quality, Efficiency, Stability, Refusal Rate, Recovery)
-- **Statistical degradation detection** to automatically avoid poorly performing models
-- **Cost optimization** with automatic provider switching
-- **Multiple routing strategies** optimized for different use cases
-
-Instead of manually choosing between GPT-4, Claude, Gemini, or other models, AIStupidLevel automatically selects the optimal model for your task based on continuous performance monitoring.
+AIStupidLevel is a smart AI router that automatically selects the best-performing model for your requests based on continuous benchmarking. Learn more at [aistupidlevel.info](https://aistupidlevel.info).
 
 ## Getting an API Key
 
@@ -44,6 +35,8 @@ AIStupidLevel offers different "auto" models that optimize for specific use case
 
 ## Configuration in Kilo Code
 
+**Important:** Before using AIStupidLevel, you must add your own provider API keys (OpenAI, Anthropic, etc.) to your [AIStupidLevel dashboard](https://aistupidlevel.info/router). The router uses your keys to access the underlying models.
+
 1. **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2. **Select Provider:** Choose "AIStupidLevel" from the "API Provider" dropdown.
 3. **Enter API Key:** Paste your AIStupidLevel router API key into the "AIStupidLevel API Key" field.
@@ -65,12 +58,7 @@ The router automatically:
 
 ## Key Features
 
-- **Degradation Protection:** Automatically avoids models with performance issues
-- **Cost Optimization:** Routes to cheaper models when performance is comparable
-- **Provider Diversity:** Access models from OpenAI, Anthropic, Google, xAI, DeepSeek, and more through one API
-- **Transparent Routing:** Response headers show which model was selected and why
-- **Performance Tracking:** Dashboard shows your usage, cost savings, and routing decisions
-- **Enterprise SLA:** 99.9% uptime guarantee with multi-region deployment
+For detailed information about AIStupidLevel's features, benchmarking methodology, and performance tracking, visit [aistupidlevel.info](https://aistupidlevel.info).
 
 ## Response Headers
 
@@ -88,7 +76,6 @@ AIStupidLevel charges only for the underlying model usage (at cost) plus a small
 
 ## Tips and Notes
 
-- **Provider Keys Required:** You must add your own provider API keys (OpenAI, Anthropic, etc.) to your AIStupidLevel dashboard before using the router
 - **Model Selection:** The router automatically selects the best model based on real-time benchmarks - you don't need to manually switch models
 - **Performance Monitoring:** Check the [AIStupidLevel dashboard](https://aistupidlevel.info) to see live performance rankings and routing decisions
 - **Cost Tracking:** The dashboard shows your cost savings compared to always using premium models
