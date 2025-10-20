@@ -87,6 +87,11 @@ export enum TextEditorRevealType {
 	AtTop = 3,
 }
 
+export enum StatusBarAlignment {
+	Left = 1,
+	Right = 2,
+}
+
 export enum DiagnosticSeverity {
 	Error = 0,
 	Warning = 1,
@@ -464,7 +469,7 @@ export enum DecorationRangeBehavior {
 	ClosedOpen = 3,
 }
 
-// Override Behavior mock
+// Overview Ruler Lane mock
 export enum OverviewRulerLane {
 	Left = 1,
 	Center = 2,
@@ -1230,6 +1235,73 @@ export class TextEditorDecorationType implements Disposable {
 	}
 }
 
+// StatusBarItem mock
+export class StatusBarItem implements Disposable {
+	private _text: string = ""
+	private _tooltip: string | undefined
+	private _command: string | undefined
+	private _color: string | undefined
+	private _backgroundColor: string | undefined
+	private _isVisible: boolean = false
+
+	constructor(
+		public readonly alignment: StatusBarAlignment,
+		public readonly priority?: number,
+	) {}
+
+	get text(): string {
+		return this._text
+	}
+
+	set text(value: string) {
+		this._text = value
+	}
+
+	get tooltip(): string | undefined {
+		return this._tooltip
+	}
+
+	set tooltip(value: string | undefined) {
+		this._tooltip = value
+	}
+
+	get command(): string | undefined {
+		return this._command
+	}
+
+	set command(value: string | undefined) {
+		this._command = value
+	}
+
+	get color(): string | undefined {
+		return this._color
+	}
+
+	set color(value: string | undefined) {
+		this._color = value
+	}
+
+	get backgroundColor(): string | undefined {
+		return this._backgroundColor
+	}
+
+	set backgroundColor(value: string | undefined) {
+		this._backgroundColor = value
+	}
+
+	show(): void {
+		this._isVisible = true
+	}
+
+	hide(): void {
+		this._isVisible = false
+	}
+
+	dispose(): void {
+		this._isVisible = false
+	}
+}
+
 // Tab and TabGroup interfaces for VSCode API
 export interface Tab {
 	input: TabInputText | any
@@ -1299,6 +1371,30 @@ export class WindowAPI {
 
 	createOutputChannel(name: string): OutputChannel {
 		return new OutputChannel(name)
+	}
+
+	createStatusBarItem(alignment?: StatusBarAlignment, priority?: number): StatusBarItem
+	createStatusBarItem(id?: string, alignment?: StatusBarAlignment, priority?: number): StatusBarItem
+	createStatusBarItem(
+		idOrAlignment?: string | StatusBarAlignment,
+		alignmentOrPriority?: StatusBarAlignment | number,
+		priority?: number,
+	): StatusBarItem {
+		// Handle overloaded signatures
+		let actualAlignment: StatusBarAlignment
+		let actualPriority: number | undefined
+
+		if (typeof idOrAlignment === "string") {
+			// Called with id, alignment, priority
+			actualAlignment = (alignmentOrPriority as StatusBarAlignment) ?? StatusBarAlignment.Left
+			actualPriority = priority
+		} else {
+			// Called with alignment, priority
+			actualAlignment = (idOrAlignment as StatusBarAlignment) ?? StatusBarAlignment.Left
+			actualPriority = alignmentOrPriority as number | undefined
+		}
+
+		return new StatusBarItem(actualAlignment, actualPriority)
 	}
 
 	createTextEditorDecorationType(_options: any): TextEditorDecorationType {
@@ -1717,6 +1813,7 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 		ConfigurationTarget,
 		ViewColumn,
 		TextEditorRevealType,
+		StatusBarAlignment,
 		DiagnosticSeverity,
 		DiagnosticTag,
 		Position,
@@ -1734,6 +1831,7 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 		ThemeColor,
 		DecorationRangeBehavior,
 		OverviewRulerLane,
+		StatusBarItem,
 		ExtensionContext,
 		FileType,
 		FileSystemError,

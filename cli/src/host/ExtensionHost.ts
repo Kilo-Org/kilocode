@@ -501,6 +501,7 @@ export class ExtensionHost extends EventEmitter {
 			logs.info("Calling extension activate function...", "ExtensionHost")
 
 			// Call the extension's activate function with our mocked context
+			// Use safeExecute to catch and handle any errors without crashing the CLI
 			this.extensionAPI = await this.safeExecute(
 				async () => await this.extensionModule.activate(this.vscodeAPI.context),
 				"extension.activate",

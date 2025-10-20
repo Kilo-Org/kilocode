@@ -34,7 +34,7 @@
 		"jetbrains:build": "turbo jetbrains:build",
 		"jetbrains:run": "turbo jetbrains:run",
 		"cli:build": "turbo run cli:build",
-		"cli:bundle": "turbo run cli:bundle",
+		"cli:bundle": "turbo run cli:bundle --force",
 		"cli:deps": "pnpm --filter @kilocode/cli run deps:install",
 		"cli:run": "pnpm --filter @kilocode/cli run start",
 		"docs:start": "pnpm --filter kilocode-docs start",
