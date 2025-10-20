@@ -11,9 +11,11 @@ import { GhostSuggestionEditOperation } from "./types"
  */
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestions: GhostSuggestionsState
+	private onIntelliSenseDetected?: () => void
 
-	constructor(suggestions: GhostSuggestionsState) {
+	constructor(suggestions: GhostSuggestionsState, onIntelliSenseDetected?: () => void) {
 		this.suggestions = suggestions
+		this.onIntelliSenseDetected = onIntelliSenseDetected
 	}
 
 	/**
@@ -332,6 +334,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		token: vscode.CancellationToken,
 	): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList | undefined> {
 		if (token.isCancellationRequested) {
+			return undefined
+		}
+
+		// Suppress inline completion when IntelliSense is showing suggestions
+		// This prevents double-acceptance when Tab is pressed
+		// IntelliSense takes priority since it's more specific to what the user typed
+		if (context.selectedCompletionInfo) {
+			// Notify that IntelliSense is active so we can cancel our suggestions
+			if (this.onIntelliSenseDetected) {
+				this.onIntelliSenseDetected()
+			}
 			return undefined
 		}
 

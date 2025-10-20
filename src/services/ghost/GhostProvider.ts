@@ -67,7 +67,9 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
-		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions)
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions, () =>
+			this.onIntelliSenseDetected(),
+		)
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
@@ -722,6 +724,14 @@ export class GhostProvider {
 			} catch {
 				// Silently fail if command is not available
 			}
+		} else {
+			// If we're not showing inline completion, explicitly hide any existing ones
+			// This prevents conflicts with IntelliSense
+			try {
+				await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+			} catch {
+				// Silently fail if command is not available
+			}
 		}
 
 		// Display decorations for appropriate groups
@@ -949,6 +959,13 @@ export class GhostProvider {
 
 		// Update inline completion provider
 		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
+		// Explicitly hide any inline suggestions
+		try {
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+		} catch {
+			// Silently fail if command is not available
+		}
 
 		this.clearAutoTriggerTimer()
 		await this.render()
@@ -1214,6 +1231,17 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Called when IntelliSense is detected to be active
+	 * Immediately cancels our suggestions to prevent conflicts
+	 */
+	private onIntelliSenseDetected(): void {
+		if (this.hasPendingSuggestions()) {
+			console.log("[Ghost] IntelliSense detected, canceling ghost suggestions to prevent conflict")
+			void this.cancelSuggestions()
+		}
+	}
+
+	/**
 	 * Handle typing events for auto-trigger functionality
 	 */
 	private handleTypingEvent(event: vscode.TextDocumentChangeEvent): void {
@@ -1221,6 +1249,14 @@ export class GhostProvider {
 		if (this.hasPendingSuggestions()) {
 			void this.cancelSuggestions()
 			return
+		}
+
+		// Explicitly hide any cached inline suggestions to prevent conflicts with IntelliSense
+		// This ensures a clean slate before our auto-trigger creates new suggestions
+		try {
+			void vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+		} catch {
+			// Silently fail if command is not available
 		}
 
 		// Skip if auto-trigger is not enabled
