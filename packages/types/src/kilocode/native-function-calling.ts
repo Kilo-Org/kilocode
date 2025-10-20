@@ -14,6 +14,7 @@ export const nativeFunctionCallingProviders = [
 	"openai",
 	"lmstudio",
 	"chutes",
+	"deepinfra",
 	"xai",
 	"zai",
 ] satisfies ProviderName[] as ProviderName[]
