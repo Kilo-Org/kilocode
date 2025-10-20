@@ -304,6 +304,21 @@ export class GhostStreamingParser {
 			const searchContent = match[1]
 			// Extract cursor position from replace content
 			const replaceContent = match[2]
+
+			// Validate that extracted content doesn't contain XML tags (indicates regex failure)
+			if (
+				searchContent.includes("<change>") ||
+				searchContent.includes("CDATA") ||
+				replaceContent.includes("<change>") ||
+				replaceContent.includes("CDATA")
+			) {
+				console.log("[GhostParser] XML tags detected in extracted content, skipping change:", {
+					searchSnippet: searchContent.substring(0, 50),
+					replaceSnippet: replaceContent.substring(0, 50),
+				})
+				continue
+			}
+
 			const cursorPosition = extractCursorPosition(replaceContent)
 
 			newChanges.push({

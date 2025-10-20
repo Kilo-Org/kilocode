@@ -838,7 +838,7 @@ export class GhostProvider {
 				skipGroupIndices.push(selectedGroupIndex)
 			}
 
-			// If we're using a synthetic modification group (deletion + addition),
+			// If we're using a synthetic modification group (deletion + addition in separate groups),
 			// skip both the deletion group AND the addition group
 			const selectedGroup = groups[selectedGroupIndex]
 			const selectedGroupType = file.getGroupType(selectedGroup)
@@ -866,6 +866,16 @@ export class GhostProvider {
 							skipGroupIndices.push(selectedGroupIndex + 1)
 						}
 					}
+				}
+			}
+
+			// IMPORTANT FIX: To prevent showing multiple suggestions simultaneously (inline + SVG),
+			// when we're using inline completion, hide ALL other groups from SVG decorations.
+			// This ensures only ONE suggestion is visible at a time (the inline one).
+			// Users can cycle through suggestions using next/previous commands.
+			for (let i = 0; i < groups.length; i++) {
+				if (i !== selectedGroupIndex && !skipGroupIndices.includes(i)) {
+					skipGroupIndices.push(i)
 				}
 			}
 		}
