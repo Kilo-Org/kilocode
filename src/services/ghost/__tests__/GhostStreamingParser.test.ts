@@ -214,6 +214,100 @@ function fibonacci(n: number): number {
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 
+		it("should not create extra newline when replacing cursor marker on empty line", () => {
+			// Mock document with cursor marker on an empty line (line 17)
+			const mockDocumentWithCursor: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `function test() {
+	return true;
+}
+
+// Some other code
+function another() {
+	const x = 1;
+}
+
+// Line 16
+<<<AUTOCOMPLETE_HERE>>>
+// Line 18`,
+				languageId: "typescript",
+			}
+
+			const contextWithCursor = {
+				document: mockDocumentWithCursor,
+			}
+
+			parser.initialize(contextWithCursor)
+
+			// This is the exact response from the logs showing the issue
+			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[// implement function to calculate factorial
+function calculateFactorial(n: number): number {
+		  if (n <= 1) return 1;
+		  return n * calculateFactorial(n - 1);
+}]]></replace></change>`
+
+			const result = parser.processChunk(changeWithCursor)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify the result doesn't have an extra blank line before "// Line 18"
+			// The suggestion should replace the empty line (with cursor marker) with the new code
+			const file = result.suggestions.getFile(mockDocumentWithCursor.uri.toString())
+			expect(file).toBeDefined()
+
+			// Check that operations don't add unnecessary blank lines
+			const operations = file!.getAllOperations()
+			const additionLines = operations.filter((op) => op.type === "+").map((op) => op.content)
+
+			// The first line should be the comment, not an empty line
+			expect(additionLines[0]).toBe("// implement function to calculate factorial")
+		})
+
+		it("should not create extra newline when cursor marker is at start of empty line", () => {
+			// Mock document with cursor marker at the very start of an empty line
+			const mockDocumentWithCursor: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `function implementYetAnotherFeature() {
+		  // Implementation of yet another described functionality
+		  console.log("Yet another feature implemented");
+}
+<<<AUTOCOMPLETE_HERE>>>`,
+				languageId: "typescript",
+			}
+
+			const contextWithCursor = {
+				document: mockDocumentWithCursor,
+			}
+
+			parser.initialize(contextWithCursor)
+
+			// Response that should replace the marker and empty line
+			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[function implementYetAnotherFeature() {
+		  // Implementation of yet another described functionality
+		  console.log("Yet another feature implemented");
+}]]></replace></change>`
+
+			const result = parser.processChunk(changeWithCursor)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify no extra blank line is created
+			const file = result.suggestions.getFile(mockDocumentWithCursor.uri.toString())
+			expect(file).toBeDefined()
+
+			const operations = file!.getAllOperations()
+			// There should be a deletion (the newline) and additions (the new function)
+			const deletions = operations.filter((op) => op.type === "-")
+			const additions = operations.filter((op) => op.type === "+")
+
+			// Should have a deletion for the newline
+			expect(deletions.length).toBeGreaterThan(0)
+			// Should have additions for the new function
+			expect(additions.length).toBeGreaterThan(0)
+		})
+
 		it("should handle malformed XML gracefully", () => {
 			const malformedXml = `<change><search><![CDATA[test]]><replace><![CDATA[replacement]]></replace></change>`
 
@@ -238,6 +332,115 @@ function fibonacci(n: number): number {
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
+		})
+
+		it("should not create extra newline when there's an empty line before the cursor marker", () => {
+			// Mock document with an empty line before the cursor marker
+			const mockDocumentWithCursor: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `// impl
+function implementation() {
+		  // This is the implementation of the functionality described in the comment
+		  console.log('Functionality implemented');
+}
+
+<<<AUTOCOMPLETE_HERE>>>`,
+				languageId: "typescript",
+			}
+
+			const contextWithCursor = {
+				document: mockDocumentWithCursor,
+			}
+
+			parser.initialize(contextWithCursor)
+
+			// Response that should replace the marker and consume the empty line before it
+			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[// Add new functionality here
+function newFunctionality() {
+		  // Implementation of new functionality
+		  console.log('New functionality added');
+}]]></replace></change>`
+
+			const result = parser.processChunk(changeWithCursor)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify the empty line before the marker is consumed
+			const file = result.suggestions.getFile(mockDocumentWithCursor.uri.toString())
+			expect(file).toBeDefined()
+
+			const operations = file!.getAllOperations()
+			const deletions = operations.filter((op) => op.type === "-")
+			const additions = operations.filter((op) => op.type === "+")
+
+			// Should have a deletion for the empty line
+			expect(deletions.length).toBeGreaterThan(0)
+			// Should have additions for the new function
+			expect(additions.length).toBeGreaterThan(0)
+
+			// First addition should be the comment
+			const additionLines = additions.map((op) => op.content)
+			expect(additionLines[0]).toBe("// Add new functionality here")
+		})
+
+		it("should add newline when cursor marker is at end of line with content", () => {
+			// Mock document with cursor marker at the end of a comment line
+			const mockDocumentWithCursor: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `// impl
+function implementFeature() {
+			 // Implementation code here
+}
+
+// implement another feature
+
+function implementAnotherFeature() {
+			 // Implementation code for another feature
+}
+
+// implement function to add two numbers<<<AUTOCOMPLETE_HERE>>>`,
+				languageId: "typescript",
+			}
+
+			const contextWithCursor = {
+				document: mockDocumentWithCursor,
+			}
+
+			parser.initialize(contextWithCursor)
+
+			// Response that should add a newline before the function
+			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[function addNumbers(a: number, b: number): number {
+			 return a + b;
+}]]></replace></change>`
+
+			const result = parser.processChunk(changeWithCursor)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify the function is on a new line, not concatenated with the comment
+			const file = result.suggestions.getFile(mockDocumentWithCursor.uri.toString())
+			expect(file).toBeDefined()
+
+			const operations = file!.getAllOperations()
+			const additions = operations.filter((op) => op.type === "+")
+
+			// Should have additions for the new function
+			expect(additions.length).toBeGreaterThan(0)
+
+			// Check that we have both the comment line and the function (as separate additions)
+			const commentAddition = additions.find((op) =>
+				op.content.includes("// implement function to add two numbers"),
+			)
+			const functionAddition = additions.find((op) => op.content.includes("function addNumbers"))
+
+			// Both should exist as separate operations
+			expect(commentAddition).toBeDefined()
+			expect(functionAddition).toBeDefined()
+
+			// The function should be on a later line than the comment
+			expect(functionAddition!.line).toBeGreaterThan(commentAddition!.line)
 		})
 	})
 
