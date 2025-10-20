@@ -111,6 +111,10 @@ export function useCommandContext(): UseCommandContextReturn {
 				refreshRouterModels: async () => {
 					await refreshRouterModels()
 				},
+				// Provider update function for teams command
+				updateProvider: async (providerId: string, updates: any) => {
+					await updateProvider(providerId, updates)
+				},
 			}
 		},
 		[

@@ -44,6 +44,8 @@ export interface CommandContext {
 	kilocodeDefaultModel: string
 	updateProviderModel: (modelId: string) => Promise<void>
 	refreshRouterModels: () => Promise<void>
+	// Provider update function for teams command
+	updateProvider: (providerId: string, updates: Partial<ProviderConfig>) => Promise<void>
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void
