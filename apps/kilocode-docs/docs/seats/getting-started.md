@@ -2,47 +2,35 @@
 sidebar_label: Getting Started
 ---
 
-# Get Started with Kilo for Teams in 10 Minutes
+# Get Started with Kilo Seats in 10 Minutes
 
-Kilo for Teams brings transparent AI coding to your entire engineering organization. No markup on AI costs, no vendor lock-in, complete usage visibility.
-
-**Launch Date:** September 10, 2025 | **Pricing:** $29/user/month
-
-## What You Get
-
-- **Zero markup** on AI provider costs - pay exactly what providers charge
-- **No rate limiting** or quality degradation during peak usage
-- **Centralized billing** - one invoice for your whole team
-- **Complete transparency** - see every request, cost, and usage pattern
-- **Team management** - roles, permissions, and usage controls
-- **Early adopter bonus** - $20 in free AI credits per seat
+Seats for Kilo in the Teams or Enterprise subscription brings transparent AI coding to your entire engineering organization. No markup on AI costs, no vendor lock-in, complete usage visibility.
 
 ## Before You Begin
 
-- Company email address (recommended for easier team management)
+- Your GitHub account or a Google Workspaces company email
 - Approximate team size for initial seat planning
 - Credit card for billing setup
-- VS Code installed for team members
+- VS Code or a JetBrains IDE installed for team members
 
 ## Quick Setup Guide
 
 ### Step 1: Create Your Organization
 
-1. Visit [app.kilocode.com](https://app.kilocode.com)
-2. Sign up using your company email
+1. Visit [app.kilocode.ai](https://app.kilocode.ai)
+2. Sign up using your company Google Workspaces or GitHub account
+    - Note: We recommend starting with your GitHub account rather than a personal Google account, but we can change it later.
 3. Click **Organizations** in the left sidebar and then **Create New Organization**
 
 <img src="/docs/img/teams/create-team.png" alt="Create new organization button" width="600" />
 
-### Step 2: Subscribe to Teams
+### Step 2: Subscribe to Teams or Enterprise
 
 1. Enter your organization name
-2. Select your initial seat count
+2. Select your initial seat count and tier (Teams or Enterprise)
 3. Complete checkout process
 
 <img src="/docs/img/teams/subscribe.png" alt="Create your organization and subscribe" width="600" />
-
-💡 **Early Adopter Bonus:** Receive $20 in free AI credits per seat when you sign up before October 31, 2025.
 
 ### Step 3: Invite Your Team
 
@@ -87,6 +75,6 @@ You can find the dedicated Teams support methods directly on your Organaization'
 
 ## Next Steps
 
-- [Learn about team roles and permissions](/teams/roles-permissions)
-- [Explore the dashboard features](/teams/dashboard)
-- [Set up team management policies](/teams/team-management)
+- [Learn about team roles and permissions](/seats/roles-permissions)
+- [Explore the dashboard features](/seats/dashboard)
+- [Set up team management policies](/seats/team-management)
