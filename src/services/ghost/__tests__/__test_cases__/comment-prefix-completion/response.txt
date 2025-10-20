@@ -1,0 +1,4 @@
+<change><search><![CDATA[// implement <<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[// implement
+function implement() {
+    // Implementation code here
+}]]></replace></change>

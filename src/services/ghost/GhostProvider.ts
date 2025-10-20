@@ -520,7 +520,7 @@ export class GhostProvider {
 			}
 		}
 
-		// Check if this is a deletion that should be treated as addition
+		// Check if this is a deletion that should be treated as addition or combined with next group
 		if (selectedGroupType === "-") {
 			// Case 1: Placeholder-only deletion
 			if (this.isPlaceholderOnlyDeletion(selectedGroup)) {
@@ -564,6 +564,38 @@ export class GhostProvider {
 					if (this.shouldTreatAsAddition(deleteOps, addOps)) {
 						return { group: nextGroup, type: "+" }
 					}
+				}
+			}
+		}
+
+		// NEW: Check if this is an addition group that should be combined with previous deletion
+		// This handles cases where deletion and addition were separated by the grouping logic
+		// because their newLine values differed, but they share a common prefix
+		if (selectedGroupType === "+" && selectedGroupIndex > 0) {
+			const previousGroup = groups[selectedGroupIndex - 1]
+			const previousGroupType = file.getGroupType(previousGroup)
+
+			if (previousGroupType === "-") {
+				const deleteOps = previousGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+				const addOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+
+				const deletedContent = deleteOps
+					.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+				const addedContent = addOps
+					.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+
+				// Check if they share a common prefix (trimmed to handle trailing whitespace differences)
+				const trimmedDeleted = deletedContent.trim()
+				const commonPrefix = this.findCommonPrefix(trimmedDeleted, addedContent)
+
+				if (commonPrefix.length > 0 && commonPrefix.length >= trimmedDeleted.length * 0.8) {
+					// Create synthetic modification group for proper common prefix handling
+					const syntheticGroup = [...previousGroup, ...selectedGroup]
+					return { group: syntheticGroup, type: "/" }
 				}
 			}
 		}
