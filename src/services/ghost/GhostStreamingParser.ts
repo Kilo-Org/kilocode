@@ -291,6 +291,8 @@ export class GhostStreamingParser {
 
 		// Look for complete <change> blocks starting from where we left off
 		const searchText = this.buffer.substring(this.lastProcessedIndex)
+
+		// Updated regex to handle both single-line XML format and traditional format with whitespace
 		const changeRegex =
 			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
 
@@ -298,7 +300,9 @@ export class GhostStreamingParser {
 		let lastMatchEnd = 0
 
 		while ((match = changeRegex.exec(searchText)) !== null) {
+			// Preserve cursor marker in search content (LLM includes it when it sees it in document)
 			const searchContent = match[1]
+			// Extract cursor position from replace content
 			const replaceContent = match[2]
 			const cursorPosition = extractCursorPosition(replaceContent)
 
@@ -374,7 +378,8 @@ export class GhostStreamingParser {
 				})
 
 				if (hasOverlap) {
-					continue // Skip overlapping changes to avoid duplicates
+					console.warn("Skipping overlapping change:", change.search.substring(0, 50))
+					continue // Skip this change to avoid duplicates
 				}
 
 				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace

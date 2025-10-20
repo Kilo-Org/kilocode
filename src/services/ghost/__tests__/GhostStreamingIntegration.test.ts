@@ -212,7 +212,7 @@ describe("Ghost Streaming Integration", () => {
 				{ type: "text", text: "malformed xml without proper closing" },
 				{
 					type: "text",
-					text: "<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>",
+					text: "<change><search><![CDATA[valid]]></search><replace><![CDATA[replacement]]></replace></change>",
 				},
 				{ type: "usage", inputTokens: 5, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 },
 			]
@@ -222,8 +222,8 @@ describe("Ghost Streaming Integration", () => {
 
 			streamingParser.initialize(context)
 
-			let errors = 0
 			let validSuggestions = 0
+			let errors = 0
 
 			const onChunk = (chunk: ApiStreamChunk) => {
 				if (chunk.type === "text") {
@@ -244,10 +244,6 @@ describe("Ghost Streaming Integration", () => {
 			// Should handle malformed data without crashing
 			expect(errors).toBe(0) // No errors thrown
 			expect(validSuggestions).toBe(1) // Only the valid suggestion processed
-
-			// Verify parser extracted the valid XML block despite earlier malformed content
-			const completedChanges = streamingParser.getCompletedChanges()
-			expect(completedChanges.length).toBeGreaterThanOrEqual(0) // May be 0 or 1 depending on content match
 		})
 	})
 

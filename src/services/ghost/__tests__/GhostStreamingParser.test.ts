@@ -322,7 +322,7 @@ function fibonacci(n: number): number {
 			}
 			const endTime = performance.now()
 
-			expect(endTime - startTime).toBeLessThan(500) // Should complete efficiently (under 500ms)
+			expect(endTime - startTime).toBeLessThan(200) // Should complete in under 200ms
 		})
 	})
 })
