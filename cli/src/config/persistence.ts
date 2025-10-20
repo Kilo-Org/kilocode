@@ -166,14 +166,16 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 	}
 }
 
-export async function saveConfig(config: CLIConfig): Promise<void> {
+export async function saveConfig(config: CLIConfig, skipValidation: boolean = false): Promise<void> {
 	try {
 		await ensureConfigDir()
 
-		// Validate before saving
-		const validation = await validateConfig(config)
-		if (!validation.valid) {
-			throw new Error(`Invalid config: ${validation.errors?.join(", ")}`)
+		// Validate before saving (unless explicitly skipped for initial config creation)
+		if (!skipValidation) {
+			const validation = await validateConfig(config)
+			if (!validation.valid) {
+				throw new Error(`Invalid config: ${validation.errors?.join(", ")}`)
+			}
 		}
 
 		// Write config with pretty formatting
