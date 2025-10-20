@@ -1,5 +1,17 @@
 # kilo-code
 
+## [v4.108.0]
+
+- [#2674](https://github.com/Kilo-Org/kilocode/pull/2674) [`2836aed`](https://github.com/Kilo-Org/kilocode/commit/2836aeddbbd6884f2c6f2421ca79387c25f5cd94) Thanks [@mcowger](https://github.com/mcowger)! - add send message on enter setting with configurable behavior
+
+- [#3090](https://github.com/Kilo-Org/kilocode/pull/3090) [`261889f`](https://github.com/Kilo-Org/kilocode/commit/261889f1d4fa853aea0ddb261856b6d4c63e1159) Thanks [@mcowger](https://github.com/mcowger)! - Allow the use of native function calling for OpenAI-compatible, LM Studio, Chutes, DeepInfra, xAI and Z.ai providers.
+
+### Patch Changes
+
+- [#3155](https://github.com/Kilo-Org/kilocode/pull/3155) [`6242b03`](https://github.com/Kilo-Org/kilocode/commit/6242b03e9fb58eff8da9f637fa448b35aeaae3a3) Thanks [@NikoDi2000](https://github.com/NikoDi2000)! - Improved the Chinese translation of "run" from '命令' to '运行'
+
+- [#3120](https://github.com/Kilo-Org/kilocode/pull/3120) [`ced4857`](https://github.com/Kilo-Org/kilocode/commit/ced48571894311e3350b9603071e5e2becc9473f) Thanks [@mcowger](https://github.com/mcowger)! - The apply_diff tool was implemented for experimental JSON-style tool calling
+
 ## [v4.107.0]
 
 ### Patch Changes
