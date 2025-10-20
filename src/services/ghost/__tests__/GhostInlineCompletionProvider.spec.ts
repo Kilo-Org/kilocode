@@ -729,15 +729,7 @@ describe("GhostInlineCompletionProvider", () => {
 
 			const file = suggestions.addFile(mockDocument.uri)
 
-			// Group 0: modification - delete empty, add comment
-			const deleteOp: GhostSuggestionEditOperation = {
-				type: "-",
-				line: 10,
-				oldLine: 10,
-				newLine: 10,
-				content: "",
-			}
-
+			// Group 0: modification - add comment
 			const commentOp: GhostSuggestionEditOperation = {
 				type: "+",
 				line: 10,
@@ -746,7 +738,6 @@ describe("GhostInlineCompletionProvider", () => {
 				content: "// implement function to add two numbers",
 			}
 
-			file.addOperation(deleteOp)
 			file.addOperation(commentOp)
 
 			// Group 1: pure additions - function lines
