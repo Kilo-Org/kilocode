@@ -12,6 +12,8 @@
 		"build": "node esbuild.config.mjs",
 		"dev": "pnpm build --watch",
 		"deps:install": "npm install --omit=dev --prefix ./dist",
+		"deps:freeze": "npm shrinkwrap --prefix ./dist",
+		"shrinkwrap": "pnpm run deps:install && pnpm run deps:freeze && cp ./dist/npm-shrinkwrap.json ./npm-shrinkwrap.dist.json",
 		"start": "node dist/index.js",
 		"clean": "rimraf dist",
 		"test": "vitest run",
