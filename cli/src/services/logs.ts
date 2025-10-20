@@ -77,15 +77,15 @@ export class LogsService {
 				name: error.name,
 				stack: error.stack,
 				// Include any additional enumerable properties
-				...Object.getOwnPropertyNames(error).reduce(
-					(acc, key) => {
-						if (key !== "message" && key !== "name" && key !== "stack") {
+				...Object.getOwnPropertyNames(error)
+					.filter(key => key !== "message" && key !== "name" && key !== "stack")
+					.reduce(
+						(acc, key) => {
 							acc[key] = (error as any)[key]
-						}
-						return acc
-					},
-					{} as Record<string, any>,
-				),
+							return acc
+						},
+						{} as Record<string, any>,
+					),
 			}
 		}
 		return error
