@@ -16,7 +16,7 @@ import { ApiStream } from "../transform/stream"
 
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
 import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
-import { ApiHandlerCreateMessageMetadata } from ".."
+import { ApiHandlerCreateMessageMetadata } from ".." // kilocode_change
 
 export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 	constructor(options: ApiHandlerOptions) {
