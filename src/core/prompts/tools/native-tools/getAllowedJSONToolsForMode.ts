@@ -1,4 +1,4 @@
-import { ModeConfig, ToolName } from "@roo-code/types"
+import { ToolName } from "@roo-code/types"
 import { CodeIndexManager } from "../../../../services/code-index/manager"
 import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../../shared/modes"
 import { ClineProviderState } from "../../../webview/ClineProvider"
@@ -6,6 +6,7 @@ import OpenAI from "openai"
 import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS } from "../../../../shared/tools"
 import { isFastApplyAvailable } from "../../../tools/editFileTool"
 import { nativeTools } from "."
+import { apply_diff_multi_file, apply_diff_single_file } from "./apply_diff"
 
 export function getAllowedJSONToolsForMode(
 	mode: Mode,
@@ -82,6 +83,14 @@ export function getAllowedJSONToolsForMode(
 	nativeTools.forEach((tool) => {
 		nativeToolsMap.set(tool.function.name, tool)
 	})
+
+	if (clineProviderState?.apiConfiguration.diffEnabled) {
+		if (clineProviderState?.experiments.multiFileApplyDiff) {
+			nativeToolsMap.set("apply_diff", apply_diff_multi_file)
+		} else {
+			nativeToolsMap.set("apply_diff", apply_diff_single_file)
+		}
+	}
 
 	// Map allowed tools to their native definitions
 	const allowedTools: OpenAI.Chat.ChatCompletionTool[] = []

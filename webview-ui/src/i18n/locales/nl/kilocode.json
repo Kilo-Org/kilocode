@@ -104,7 +104,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Tool Call Stijl",
-		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan."
+		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan.",
+		"automatic": "Laat Kilo beslissen",
+		"xml": "XML",
+		"json": "JSON (experimenteel)"
 	},
 	"chat": {
 		"condense": {

@@ -206,7 +206,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Styl volání nástrojů",
-		"description": "Vyber, jak jsou volání nástrojů formátována v systémovém promptu. JSON je momentálně experimentální a je určen především pro uživatele, kteří mají zájem přispět k jeho vývoji."
+		"description": "Vyber, jak jsou volání nástrojů formátována v systémovém promptu. JSON je momentálně experimentální a je určen především pro uživatele, kteří mají zájem přispět k jeho vývoji.",
+		"automatic": "Nech Kilo rozhodnout",
+		"xml": "XML",
+		"json": "JSON (experimentální)"
 	},
 	"ghost": {
 		"title": "Autocomplete",

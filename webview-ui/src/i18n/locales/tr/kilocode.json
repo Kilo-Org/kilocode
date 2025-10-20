@@ -97,7 +97,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Araç Çağrısı Stili",
-		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır."
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır.",
+		"automatic": "Kilo karar versin",
+		"xml": "XML",
+		"json": "JSON (deneysel)"
 	},
 	"chat": {
 		"condense": {

@@ -2,224 +2,124 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
-import {
-	DEFAULT_WRITE_DELAY_MS,
-	getActiveToolUseStyle, // kilocode_change
-} from "@roo-code/types"
+import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
-import { ClineSayTool } from "../../shared/ExtensionMessage"
-import { getReadablePath } from "../../utils/path"
-import { Task } from "../task/Task"
-import { ToolUse, RemoveClosingTag, AskApproval, HandleError, PushToolResult } from "../../shared/tools"
-import { formatResponse } from "../prompts/responses"
-import { fileExistsAtPath } from "../../utils/fs"
-import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
-import { unescapeHtmlEntities } from "../../utils/text-normalization"
-import { parseXmlForDiff } from "../../utils/xml"
-import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
-import { applyDiffToolLegacy } from "./applyDiffTool"
-import { applyNativeDiffTool } from "./kilocode/applyNativeDiffTool"
+import { ClineSayTool } from "../../../shared/ExtensionMessage"
+import { getReadablePath } from "../../../utils/path"
+import { Task } from "../../task/Task"
+import { ToolUse, RemoveClosingTag, AskApproval, HandleError, PushToolResult } from "../../../shared/tools"
+import { formatResponse } from "../../prompts/responses"
+import { fileExistsAtPath } from "../../../utils/fs"
+import { RecordSource } from "../../context-tracking/FileContextTrackerTypes"
+import { unescapeHtmlEntities } from "../../../utils/text-normalization"
+import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
+import { DiffOperation, OperationResult } from "../multiApplyDiffTool"
 
-export /*kilocode_change*/ interface DiffOperation {
+// Native tool format types for JSON-based tool calls
+interface NativeFileDiff {
 	path: string
-	diff: Array<{
+	diffs: Array<{
 		content: string
-		startLine?: number
+		start_line: number
 	}>
 }
 
-// Track operation status
-export /*kilocode_change*/ interface OperationResult {
-	path: string
-	status: "pending" | "approved" | "denied" | "blocked" | "error"
-	error?: string
-	result?: string
-	diffItems?: Array<{ content: string; startLine?: number }>
-	absolutePath?: string
-	fileExists?: boolean
+interface NativeToolArgs {
+	files: NativeFileDiff[]
 }
 
-// Add proper type definitions
-interface ParsedFile {
-	path: string
-	diff: ParsedDiff | ParsedDiff[]
-}
-
-interface ParsedDiff {
-	content: string
-	start_line?: string
-}
-
-interface ParsedXmlResult {
-	file: ParsedFile | ParsedFile[]
-}
-
-// kilocode_change: native tool calling
-export async function applyDiffTool(
+/**
+ * Parallel implementation of applyDiffTool that handles native JSON tool format
+ * instead of XML parsing. This is compatible with the apply_diff_multi_file tool definition.
+ */
+export async function applyNativeDiffTool(
 	cline: Task,
 	block: ToolUse,
 	askApproval: AskApproval,
 	handleError: HandleError,
 	pushToolResult: PushToolResult,
-	removeClosingTag: RemoveClosingTag,
 ) {
-	if (getActiveToolUseStyle(cline.apiConfiguration) === "json") {
-		console.log("Using native multi-file apply diff tool")
-		return applyNativeDiffTool(cline, block, askApproval, handleError, pushToolResult)
-	}
-	console.log("Using XML multi-file apply diff tool")
-	return applyXMLDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
-}
-// kilocode_change end
+	// For native JSON tools, the arguments come directly as objects in block.params
+	// Not as a JSON string in block.params.args
+	const filesParam = block.params.files
 
-/* kilocode_change: rename */ async function applyXMLDiffTool(
-	cline: Task,
-	block: ToolUse,
-	askApproval: AskApproval,
-	handleError: HandleError,
-	pushToolResult: PushToolResult,
-	removeClosingTag: RemoveClosingTag,
-) {
-	// Check if MULTI_FILE_APPLY_DIFF experiment is enabled
-	const provider = cline.providerRef.deref()
-	if (provider) {
-		const state = await provider.getState()
-		const isMultiFileApplyDiffEnabled = experiments.isEnabled(
-			state.experiments ?? {},
-			EXPERIMENT_IDS.MULTI_FILE_APPLY_DIFF,
-		)
-
-		// If experiment is disabled, use legacy tool
-		if (!isMultiFileApplyDiffEnabled) {
-			return applyDiffToolLegacy(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
-		}
-	}
-
-	// Otherwise, continue with new multi-file implementation
-	const argsXmlTag: string | undefined = block.params.args
-	const legacyPath: string | undefined = block.params.path
-	const legacyDiffContent: string | undefined = block.params.diff
-	const legacyStartLineStr: string | undefined = block.params.start_line
-
-	let operationsMap: Record<string, DiffOperation> = {}
-	let usingLegacyParams = false
-	let filteredOperationErrors: string[] = []
-
-	// Handle partial message first
-	if (block.partial) {
-		let filePath = ""
-		if (argsXmlTag) {
-			const match = argsXmlTag.match(/<file>.*?<path>([^<]+)<\/path>/s)
-			if (match) {
-				filePath = match[1]
-			}
-		} else if (legacyPath) {
-			// Use legacy path if argsXmlTag is not present for partial messages
-			filePath = legacyPath
-		}
-
-		const sharedMessageProps: ClineSayTool = {
-			tool: "appliedDiff",
-			path: getReadablePath(cline.cwd, filePath),
-		}
-		const partialMessage = JSON.stringify(sharedMessageProps)
-		await cline.ask("tool", partialMessage, block.partial).catch(() => {})
+	// Validate that filesParam exists
+	if (!filesParam) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("apply_diff")
+		const errorMsg = await cline.sayAndCreateMissingParamError("apply_diff", "files (array of file operations)")
+		pushToolResult(errorMsg)
+		cline.processQueuedMessages()
 		return
 	}
 
-	if (argsXmlTag) {
-		// Parse file entries from XML (new way)
+	// filesParam should already be parsed by AssistantMessageParser.parseDoubleEncodedParams
+	// If it's still a string, try to parse it; otherwise use it directly
+	let nativeArgs: NativeToolArgs
+	if (typeof filesParam === "string") {
 		try {
-			// IMPORTANT: We use parseXmlForDiff here instead of parseXml to prevent HTML entity decoding
-			// This ensures exact character matching when comparing parsed content against original file content
-			// Without this, special characters like & would be decoded to &amp; causing diff mismatches
-			const parsed = parseXmlForDiff(argsXmlTag, ["file.diff.content"]) as ParsedXmlResult
-			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
-
-			for (const file of files) {
-				if (!file.path || !file.diff) continue
-
-				const filePath = file.path
-
-				// Initialize the operation in the map if it doesn't exist
-				if (!operationsMap[filePath]) {
-					operationsMap[filePath] = {
-						path: filePath,
-						diff: [],
-					}
-				}
-
-				// Handle diff as either array or single element
-				const diffs = Array.isArray(file.diff) ? file.diff : [file.diff]
-
-				for (let i = 0; i < diffs.length; i++) {
-					const diff = diffs[i]
-					let diffContent: string
-					let startLine: number | undefined
-
-					// Ensure content is a string before storing it
-					diffContent = typeof diff.content === "string" ? diff.content : ""
-					startLine = diff.start_line ? parseInt(diff.start_line) : undefined
-
-					// Only add to operations if we have valid content
-					if (diffContent) {
-						operationsMap[filePath].diff.push({
-							content: diffContent,
-							startLine,
-						})
-					}
-				}
-			}
+			nativeArgs = JSON.parse(filesParam) as NativeToolArgs
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			const detailedError = `Failed to parse apply_diff XML. This usually means:
-1. The XML structure is malformed or incomplete
-2. Missing required <file>, <path>, or <diff> tags
-3. Invalid characters or encoding in the XML
-
-Expected structure:
-<args>
-  <file>
-    <path>relative/path/to/file.ext</path>
-    <diff>
-      <content>diff content here</content>
-      <start_line>line number</start_line>
-    </diff>
-  </file>
-</args>
-
-Original error: ${errorMessage}`
+			const fallbackError = error instanceof Error ? error.message : String(error)
+			const detailedError = `
+Failed to parse apply_diff JSON arguments. This usually means:
+1. The JSON structure is malformed or incomplete
+2. Missing required 'files' array
+`
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("apply_diff")
 			TelemetryService.instance.captureDiffApplicationError(cline.taskId, cline.consecutiveMistakeCount)
-			await cline.say("diff_error", `Failed to parse apply_diff XML: ${errorMessage}`)
+			await cline.say("diff_error", `Failed to parse apply_diff JSON: ${fallbackError}`)
 			pushToolResult(detailedError)
 			cline.processQueuedMessages()
 			return
 		}
-	} else if (legacyPath && typeof legacyDiffContent === "string") {
-		// Handle legacy parameters (old way)
-		usingLegacyParams = true
-		operationsMap[legacyPath] = {
-			path: legacyPath,
-			diff: [
-				{
-					content: legacyDiffContent, // Unescaping will be handled later like new diffs
-					startLine: legacyStartLineStr ? parseInt(legacyStartLineStr) : undefined,
-				},
-			],
-		}
 	} else {
-		// Neither new XML args nor old path/diff params are sufficient
+		// Already parsed as an object/array
+		nativeArgs = { files: filesParam }
+	}
+
+	// Validate the parsed arguments
+	if (!nativeArgs.files || !Array.isArray(nativeArgs.files) || nativeArgs.files.length === 0) {
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("apply_diff")
-		const errorMsg = await cline.sayAndCreateMissingParamError(
-			"apply_diff",
-			"args (or legacy 'path' and 'diff' parameters)",
+		pushToolResult(
+			await cline.sayAndCreateMissingParamError(
+				"apply_diff",
+				"files (must be a non-empty array of file operations)",
+			),
 		)
-		pushToolResult(errorMsg)
 		cline.processQueuedMessages()
 		return
+	}
+
+	// Convert native format to internal DiffOperation format
+	const operationsMap: Record<string, DiffOperation> = {}
+
+	for (const file of nativeArgs.files) {
+		if (!file.path || !file.diffs || !Array.isArray(file.diffs)) {
+			continue
+		}
+
+		const filePath = file.path
+
+		// Initialize the operation in the map if it doesn't exist
+		if (!operationsMap[filePath]) {
+			operationsMap[filePath] = {
+				path: filePath,
+				diff: [],
+			}
+		}
+
+		// Convert each diff to internal format
+		for (const diff of file.diffs) {
+			if (diff.content && typeof diff.content === "string") {
+				operationsMap[filePath].diff.push({
+					content: diff.content,
+					startLine: diff.start_line,
+				})
+			}
+		}
 	}
 
 	// If no operations were extracted, bail out
@@ -229,9 +129,7 @@ Original error: ${errorMessage}`
 		pushToolResult(
 			await cline.sayAndCreateMissingParamError(
 				"apply_diff",
-				usingLegacyParams
-					? "legacy 'path' and 'diff' (must be valid and non-empty)"
-					: "args (must contain at least one valid file element)",
+				"args.files (must contain at least one valid file with diffs)",
 			),
 		)
 		cline.processQueuedMessages()
@@ -258,7 +156,7 @@ Original error: ${errorMessage}`
 	try {
 		// First validate all files and prepare for batch approval
 		const operationsToApprove: OperationResult[] = []
-		const allDiffErrors: string[] = [] // Collect all diff errors
+		const allDiffErrors: string[] = []
 
 		for (const operation of operations) {
 			const { path: relPath, diff: diffItems } = operation
@@ -273,9 +171,6 @@ Original error: ${errorMessage}`
 				})
 				continue
 			}
-
-			// Check if file is write-protected
-			const isWriteProtected = cline.rooProtectedController?.isWriteProtected(relPath) || false
 
 			// Verify file exists
 			const absolutePath = path.resolve(cline.cwd, relPath)
@@ -314,7 +209,7 @@ Original error: ${errorMessage}`
 					path: readablePath,
 					changeCount,
 					key: `${readablePath} (${changeText})`,
-					content: opResult.path, // Full relative path
+					content: opResult.path,
 					diffs: opResult.diffItems?.map((item) => ({
 						content: item.content,
 						startLine: item.startLine,
@@ -355,7 +250,6 @@ Original error: ${errorMessage}`
 				// Handle individual permissions from objectResponse
 				try {
 					const parsedResponse = JSON.parse(text || "{}")
-					// Check if this is our batch diff approval response
 					if (parsedResponse.action === "applyDiff" && parsedResponse.approvedFiles) {
 						const approvedFiles = parsedResponse.approvedFiles
 						let hasAnyDenial = false
@@ -402,7 +296,6 @@ Original error: ${errorMessage}`
 						}
 					}
 				} catch (error) {
-					// Fallback: if JSON parsing fails, deny all files
 					console.error("Failed to parse individual permissions:", error)
 					cline.didRejectTool = true
 					operationsToApprove.forEach((opResult) => {
@@ -529,7 +422,6 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 								path: getReadablePath(cline.cwd, relPath),
 								diff: diffItems.map((item) => item.content).join("\n\n"),
 							}
-							// Send a complete message (partial: false) to update the UI and stop the spinner
 							await cline.ask("tool", JSON.stringify(sharedMessageProps), false).catch(() => {})
 						}
 					}
@@ -665,18 +557,13 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 
 				await cline.diffViewProvider.reset()
 			} catch (error) {
-				const errorMsg = error instanceof Error ? error.message : String(error)
+				const fallbackError = String(error)
 				updateOperationResult(relPath, {
 					status: "error",
-					error: `Error processing ${relPath}: ${errorMsg}`,
+					error: `Error processing ${relPath}: ${fallbackError}`,
 				})
-				results.push(`Error processing ${relPath}: ${errorMsg}`)
+				results.push(`Error processing ${relPath}: ${fallbackError}`)
 			}
-		}
-
-		// Add filtered operation errors to results
-		if (filteredOperationErrors.length > 0) {
-			results.push(...filteredOperationErrors)
 		}
 
 		// Report all diff errors at once if any
