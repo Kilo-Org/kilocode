@@ -6,7 +6,7 @@ import {
 	type ModelInfo,
 	openAiModelInfoSaneDefaults,
 	LMSTUDIO_DEFAULT_TEMPERATURE,
-	getActiveToolUseStyle,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -122,7 +122,7 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 			for await (const chunk of results) {
 				const delta = chunk.choices[0]?.delta
 
-				// Handle native tool calls when toolStyle is "json"
+				// kilocode_change start: Handle native tool calls when toolStyle is "json"
 				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
