@@ -57,9 +57,8 @@ Change the Tool Calling Style to `JSON`, and save the profile.
 This feature is currently experimental and mostly intended for users interested in contributing to its development.
 It is so far only supported when using OpenRouter or Kilo Code providers. There are possible issues including, but not limited to:
 
-- Missing tools (e.g. `apply_diff` tool)
+- Missing tools
 - Tools calls not updating the UI until they are complete
-- Tools being used even though they are disabled (e.g. browser tool)
 - MCP servers not working
 - Errors specific to certain inference providers
 
