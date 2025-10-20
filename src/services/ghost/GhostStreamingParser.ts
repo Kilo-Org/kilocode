@@ -385,6 +385,21 @@ export class GhostStreamingParser {
 				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
 				let adjustedReplaceContent = change.replace
 
+				// Special case: if we're replacing ONLY the cursor marker and it's at the end of a line with content,
+				// ensure the replacement starts on a new line
+				if (change.search === CURSOR_MARKER || change.search.trim() === CURSOR_MARKER) {
+					// Check if there's content before the marker on the same line
+					const beforeMarker = modifiedContent.substring(0, searchIndex)
+					const lastNewlineBeforeMarker = beforeMarker.lastIndexOf("\n")
+					const contentOnSameLine = beforeMarker.substring(lastNewlineBeforeMarker + 1)
+
+					// If there's non-whitespace content before the marker on the same line,
+					// and the replacement doesn't already start with a newline, add one
+					if (contentOnSameLine.trim().length > 0 && !adjustedReplaceContent.startsWith("\n")) {
+						adjustedReplaceContent = "\n" + adjustedReplaceContent
+					}
+				}
+
 				// If the search pattern ends with a newline, check if there are additional empty lines after it
 				if (change.search.endsWith("\n")) {
 					let nextCharIndex = endIndex
@@ -407,7 +422,7 @@ export class GhostStreamingParser {
 
 				appliedChanges.push({
 					searchContent: change.search,
-					replaceContent: adjustedReplaceContent,
+					replaceContent: adjustedReplaceContent, // Use the adjusted content (already set above)
 					startIndex: searchIndex,
 					endIndex: endIndex,
 					cursorPosition: change.cursorPosition, // Preserve cursor position info

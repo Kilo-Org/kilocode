@@ -135,13 +135,39 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private getCompletionText(
 		groupType: "+" | "/" | "-",
 		group: GhostSuggestionEditOperation[],
+		file: any,
+		groups: GhostSuggestionEditOperation[][],
+		selectedGroupIndex: number,
 	): { text: string; isAddition: boolean } {
 		if (groupType === "+") {
-			// Pure addition - show entire content
+			// Pure addition - but check if it's really part of a modification (deletion + addition)
+			// This happens when onlyAdditions mode skips the deletion group
 			const text = group
 				.sort((a, b) => a.line - b.line)
 				.map((op) => op.content)
 				.join("\n")
+
+			// Check if there's a previous deletion group
+			if (selectedGroupIndex > 0) {
+				const previousGroup = groups[selectedGroupIndex - 1]
+				const previousGroupType = file.getGroupType(previousGroup)
+
+				if (previousGroupType === "-") {
+					const deleteOps = previousGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+					const deletedContent = deleteOps
+						.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+						.map((op: GhostSuggestionEditOperation) => op.content)
+						.join("\n")
+
+					// If the addition starts with the deletion, strip the common prefix
+					if (text.startsWith(deletedContent)) {
+						const suffix = text.substring(deletedContent.length)
+						// Return the suffix, treating it as a modification
+						return { text: suffix, isAddition: false }
+					}
+				}
+			}
+
 			return { text, isAddition: true }
 		}
 
@@ -200,21 +226,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		isAddition: boolean,
 		completionText: string,
 	): vscode.Range {
-		// For pure additions, decide based on whether it's multi-line or single-line
+		// For pure additions, position at the end of the current line
+		// (newline prefix will be added later for multi-line content)
 		if (isAddition) {
-			const hasNewlines = completionText.includes("\n")
-
-			if (hasNewlines) {
-				// Multi-line content should start on next line
-				const nextLine = Math.min(position.line + 1, document.lineCount)
-				const insertPosition = new vscode.Position(nextLine, 0)
-				return new vscode.Range(insertPosition, insertPosition)
-			} else {
-				// Single-line content can continue on current line
-				const currentLineText = document.lineAt(position.line).text
-				const insertPosition = new vscode.Position(position.line, currentLineText.length)
-				return new vscode.Range(insertPosition, insertPosition)
-			}
+			const currentLineText = document.lineAt(position.line).text
+			const insertPosition = new vscode.Position(position.line, currentLineText.length)
+			return new vscode.Range(insertPosition, insertPosition)
 		}
 
 		// For modifications (common prefix), check if suffix is multi-line
@@ -287,7 +304,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		// Get completion text
-		const { text: completionText, isAddition } = this.getCompletionText(effectiveGroup.type, effectiveGroup.group)
+		const { text: completionText, isAddition } = this.getCompletionText(
+			effectiveGroup.type,
+			effectiveGroup.group,
+			file,
+			groups,
+			selectedGroupIndex,
+		)
 		if (!completionText.trim()) {
 			return undefined
 		}
@@ -296,14 +319,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		let range = this.getInsertionRange(document, position, targetLine, isAddition, completionText)
 		let finalCompletionText = completionText
 
-		// Add newline prefix only if we're inserting at end of current line
-		if (isAddition && range.start.line === position.line) {
+		// For pure additions, add newline prefix if content is multi-line AND doesn't already start with newline
+		if (isAddition && completionText.includes("\n") && !completionText.startsWith("\n")) {
 			finalCompletionText = "\n" + completionText
 		}
-		// For modifications with multi-line suffix starting on next line, no newline prefix needed
-		if (!isAddition && range.start.line > position.line) {
-			// Already positioned on next line, don't add newline prefix
-			finalCompletionText = completionText
+		// For modifications with multi-line suffix, add newline if needed and not already present
+		else if (
+			!isAddition &&
+			completionText.includes("\n") &&
+			range.start.line === position.line &&
+			!completionText.startsWith("\n")
+		) {
+			finalCompletionText = "\n" + completionText
 		}
 
 		// Create completion item
