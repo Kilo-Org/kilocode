@@ -23,9 +23,9 @@ describe("Provider Merging", () => {
 		await fs.rm(testDir, { recursive: true, force: true })
 	})
 
-	it("should merge provider field from defaults when missing in loaded config", async () => {
-		// Create a config file without the provider field in the provider object
-		const configWithoutProviderField = {
+	it("should merge provider fields from defaults when provider type matches", async () => {
+		// Create a config file with matching provider type but missing some fields
+		const configWithMatchingProvider = {
 			version: "1.0.0",
 			mode: "code",
 			telemetry: true,
@@ -33,24 +33,24 @@ describe("Provider Merging", () => {
 			providers: [
 				{
 					id: "default",
-					// Missing 'provider' field
-					kilocodeToken: "test-token-1234567890",
-					kilocodeModel: "anthropic/claude-sonnet-4.5",
+					provider: "kilocode",
+					// Missing kilocodeToken and kilocodeModel - should be filled from defaults
 				},
 			],
 			theme: "dark",
 		}
 
-		await fs.writeFile(testFile, JSON.stringify(configWithoutProviderField, null, 2))
+		await fs.writeFile(testFile, JSON.stringify(configWithMatchingProvider, null, 2))
 
 		// Load the config - it should merge with defaults
 		const result = await loadConfig()
 
-		// Check that the provider field was added from defaults
+		// Check that missing fields were added from defaults
 		expect(result.config.providers[0]).toHaveProperty("provider")
 		expect(result.config.providers[0].provider).toBe("kilocode")
 		expect(result.config.providers[0].id).toBe("default")
-		expect(result.config.providers[0].kilocodeToken).toBe("test-token-1234567890")
+		expect(result.config.providers[0]).toHaveProperty("kilocodeToken")
+		expect(result.config.providers[0]).toHaveProperty("kilocodeModel")
 		expect(result.config.providers[0].kilocodeModel).toBe("anthropic/claude-sonnet-4.5")
 		expect(result.validation.valid).toBe(true)
 	})
@@ -85,32 +85,65 @@ describe("Provider Merging", () => {
 		expect(result.validation.valid).toBe(true)
 	})
 
-	it("should handle providers with different ids", async () => {
-		// Create a config with a provider that doesn't match default id
-		const configWithDifferentId = {
+	it("should not merge fields when provider types don't match", async () => {
+		// Create a config with anthropic provider - should not get kilocode fields
+		const configWithDifferentProvider = {
 			version: "1.0.0",
 			mode: "code",
 			telemetry: true,
-			provider: "custom",
+			provider: "anthropic-custom",
 			providers: [
 				{
-					id: "custom",
-					// Missing 'provider' field
-					kilocodeToken: "test-token-1234567890",
-					kilocodeModel: "anthropic/claude-sonnet-4.5",
+					id: "anthropic-custom",
+					provider: "anthropic",
+					apiKey: "test-anthropic-key",
+					// Should not get kilocodeToken or kilocodeModel
 				},
 			],
 			theme: "dark",
 		}
 
-		await fs.writeFile(testFile, JSON.stringify(configWithDifferentId, null, 2))
+		await fs.writeFile(testFile, JSON.stringify(configWithDifferentProvider, null, 2))
 
 		// Load the config
 		const result = await loadConfig()
 
-		// Since there's no matching default provider with id "custom",
-		// the provider field won't be added automatically
-		// This will be caught by validation
-		expect(result.config.providers[0].id).toBe("custom")
+		// Check that anthropic provider doesn't have kilocode-specific fields
+		expect(result.config.providers[0].provider).toBe("anthropic")
+		expect(result.config.providers[0].apiKey).toBe("test-anthropic-key")
+		expect(result.config.providers[0]).not.toHaveProperty("kilocodeToken")
+		expect(result.config.providers[0]).not.toHaveProperty("kilocodeModel")
+		expect(result.validation.valid).toBe(true)
+	})
+
+	it("should only merge when provider field matches between loaded and default config", async () => {
+		// Create a config with kilocode provider that has custom values
+		const configWithKilocodeProvider = {
+			version: "1.0.0",
+			mode: "code",
+			telemetry: true,
+			provider: "custom-kilo",
+			providers: [
+				{
+					id: "custom-kilo",
+					provider: "kilocode",
+					kilocodeToken: "custom-token-xyz",
+					kilocodeModel: "anthropic/claude-opus-4",
+				},
+			],
+			theme: "dark",
+		}
+
+		await fs.writeFile(testFile, JSON.stringify(configWithKilocodeProvider, null, 2))
+
+		// Load the config
+		const result = await loadConfig()
+
+		// Check that custom values are preserved (not overwritten by defaults)
+		expect(result.config.providers[0].provider).toBe("kilocode")
+		expect(result.config.providers[0].id).toBe("custom-kilo")
+		expect(result.config.providers[0].kilocodeToken).toBe("custom-token-xyz")
+		expect(result.config.providers[0].kilocodeModel).toBe("anthropic/claude-opus-4")
+		expect(result.validation.valid).toBe(true)
 	})
 })

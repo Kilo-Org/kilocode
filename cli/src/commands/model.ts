@@ -425,7 +425,7 @@ async function modelAutocompleteProvider(context: ArgumentProviderContext) {
 
 	const { currentProvider, routerModels, kilocodeDefaultModel } = context.commandContext
 
-	if (!currentProvider || !routerModels) {
+	if (!currentProvider) {
 		return []
 	}
 

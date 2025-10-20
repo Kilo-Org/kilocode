@@ -4,7 +4,7 @@ sidebar_label: Migrating from Other Tools
 
 # Migrating from Other Tools
 
-Switch to Kilo for Teams from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
+Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
 
 ## Why Teams Switch to Kilo
 
@@ -12,19 +12,19 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 
 **Other AI coding vendors** hide their true costs behind opaque subscription models, leaving you wondering what you're actually paying for.
 
-**Kilo for Teams** shows you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
+**Kilo for Teams** and **Kilo for Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
 
 ### No Rate Limiting
 
 **Other tools** slow you down with rate limits and model switching when you need AI most.
 
-**Kilo for Teams** never limits your usage - pay for what you use, use what you need.
+**Kilo for Teams** and **Kilo for Enterprise** never limit your usage - pay for what you use, use what you need.
 
 ### True Team Management
 
 **Other solutions** offer basic user management with limited visibility.
 
-**Kilo for Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights.
+**Kilo for Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights, while **Kilo for Enterprise** adds advanced governance, audit logging, and enterprise-level security controls.
 
 ## Migrating from Cursor
 
@@ -36,13 +36,14 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 - **Vendor lock-in** with proprietary systems
 - **Hidden model switching** that degrades quality
 
-### What You Gain with Kilo for Teams
+### What You Gain with Kilo for Teams or Enterprise
 
 - **Transparent AI costs** - See exactly what providers charge
 - **No rate limiting** - Use AI when you need it most
 - **Comprehensive analytics** - Understand team usage patterns
 - **Open source extension** - No vendor lock-in
 - **Consistent quality** - No hidden model downgrades
+- **Enterprise controls** _(Enterprise only)_ - SSO, audit logs, and advanced configuration options
 
 ### Migration Process
 
@@ -50,40 +51,40 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 
 1. **Audit current Cursor usage** across your team
 2. **Identify active users** and their usage patterns
-3. **Calculate current costs** (if visible) vs. Kilo for Teams pricing
+3. **Calculate current costs** (if visible) vs. Kilo pricing
 4. **Plan migration timeline** to minimize disruption
 
-**Step 2: Kilo for Teams Setup**
+**Step 2: Kilo Setup**
 
 1. **Create organization** at [app.kilocode.com](https://app.kilocode.com)
-2. **Subscribe to Teams** with appropriate seat count
+2. **Subscribe to Teams ($29/month)** or **Enterprise ($299/month)**
 3. **Configure team settings** and usage policies
 4. **Purchase initial AI credits** based on usage estimates
 
 **Step 3: Team Migration**
 
-1. **Invite team members** to Kilo for Teams
+1. **Invite team members** to Kilo
 2. **Install Kilo Code extension** alongside Cursor initially
 3. **Migrate projects gradually** starting with non-critical work
 4. **Train team** on Kilo Code features and workflows
 
 **Step 4: Full Transition**
 
-1. **Monitor usage patterns** in Kilo for Teams dashboard
+1. **Monitor usage patterns** in Kilo dashboard
 2. **Optimize settings** based on team feedback
 3. **Cancel Cursor subscriptions** once fully migrated
 4. **Uninstall Cursor** from team machines
 
 ### Cursor Feature Mapping
 
-| Cursor Feature         | Kilo for Teams Equivalent             |
-| ---------------------- | ------------------------------------- |
-| AI Chat                | Chat interface with multiple modes    |
-| Code Generation        | Code mode with advanced tools         |
-| Code Editing           | Fast edits and surgical modifications |
-| Codebase Understanding | Codebase indexing and search          |
-| Team Management        | Comprehensive team dashboard          |
-| Usage Analytics        | Detailed usage and cost analytics     |
+| Cursor Feature         | Kilo for Teams / Enterprise Equivalent                         |
+| ---------------------- | -------------------------------------------------------------- |
+| AI Chat                | Chat interface with multiple modes                             |
+| Code Generation        | Code mode with advanced tools                                  |
+| Code Editing           | Fast edits and surgical modifications                          |
+| Codebase Understanding | Codebase indexing and search                                   |
+| Team Management        | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
+| Usage Analytics        | Detailed usage and cost analytics                              |
 
 ## Migrating from GitHub Copilot
 
@@ -95,13 +96,14 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 - **Microsoft ecosystem lock-in** - Tied to Microsoft services
 - **Limited customization** - Few options for team-specific needs
 
-### Kilo for Teams Advantages
+### Kilo for Teams and Enterprise Advantages
 
 - **Multiple AI providers** - Choose from 18+ model providers
 - **Advanced team management** - Roles, permissions, and analytics
 - **Transparent pricing** - See exact costs for every request
 - **Provider flexibility** - Switch providers or use your own API keys
 - **Extensive customization** - Custom modes and team policies
+- **Enterprise-level governance** _(Enterprise only)_ - Model filtering, audit logging, and compliance support
 
 ### Migration Strategy
 
@@ -123,18 +125,18 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 
 1. **Disable GitHub Copilot** for most team members
 2. **Cancel GitHub Copilot** subscriptions
-3. **Optimize Kilo for Teams** settings
+3. **Optimize Kilo for Teams or Enterprise** settings
 4. **Document new workflows** and best practices
 
 ### GitHub Copilot Feature Comparison
 
-| GitHub Copilot   | Kilo for Teams                   | Advantage              |
-| ---------------- | -------------------------------- | ---------------------- |
-| Code suggestions | AI-powered code generation       | ✅ More model choices  |
-| Chat interface   | Multi-mode chat system           | ✅ Specialized modes   |
-| Team admin       | Comprehensive team management    | ✅ Advanced analytics  |
-| Usage insights   | Detailed usage and cost tracking | ✅ Transparent pricing |
-| Model selection  | 18+ AI providers and models      | ✅ No vendor lock-in   |
+| GitHub Copilot   | Kilo for Teams / Enterprise      | Advantage                     |
+| ---------------- | -------------------------------- | ----------------------------- |
+| Code suggestions | AI-powered code generation       | ✅ More model choices         |
+| Chat interface   | Multi-mode chat system           | ✅ Specialized modes          |
+| Team admin       | Comprehensive team management    | ✅ Enterprise adds audit logs |
+| Usage insights   | Detailed usage and cost tracking | ✅ Transparent pricing        |
+| Model selection  | 18+ AI providers and models      | ✅ No vendor lock-in          |
 
 ## Migrating from Other AI Coding Tools
 
@@ -164,13 +166,13 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 
 - [ ] Audit current AI coding tool usage
 - [ ] Identify team members and their roles
-- [ ] Calculate current costs vs. Kilo for Teams pricing
+- [ ] Calculate current costs vs. Kilo pricing
 - [ ] Plan migration timeline and milestones
 - [ ] Prepare team communication and training
 
 **Migration Execution**
 
-- [ ] Set up Kilo for Teams organization
+- [ ] Set up Kilo for Teams or Enterprise organization
 - [ ] Configure team settings and policies
 - [ ] Invite team members and assign roles
 - [ ] Install Kilo Code extension across team
@@ -195,7 +197,7 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 - Rate limiting forces inefficient workflows
 - Model switching without notification
 
-**Kilo for Teams Transparent Pricing**
+**Kilo Transparent Pricing**
 
 - Pay exactly what AI providers charge
 - See cost of every request in real-time
@@ -211,24 +213,12 @@ Switch to Kilo for Teams from other AI coding tools and experience transparent p
 3. **Opportunity costs** from limited model access
 4. **Management overhead** from poor team visibility
 
-**Kilo for Teams Benefits**
+**Kilo Benefits**
 
 1. **Transparent AI costs** (typically 30-50% lower)
 2. **Productivity gains** from no rate limiting
 3. **Better outcomes** from optimal model selection
 4. **Reduced management time** with comprehensive analytics
-
-### Sample Cost Comparison
-
-**10-person team, moderate AI usage:**
-
-| Tool           | Monthly Cost    | Hidden Costs         | Total       |
-| -------------- | --------------- | -------------------- | ----------- |
-| Cursor Pro     | $200/month      | Rate limiting losses | ~$300/month |
-| GitHub Copilot | $190/month      | Limited model access | ~$250/month |
-| Kilo for Teams | $290 + AI costs | None                 | ~$200/month |
-
-_Actual savings vary based on usage patterns and team efficiency gains._
 
 ## Team Training and Adoption
 
@@ -347,29 +337,29 @@ _Actual savings vary based on usage patterns and team efficiency gains._
 
 ### Mid-Size Software Company (25 developers)
 
-**Previous:** Cursor Pro subscriptions
-**Challenge:** High costs with limited visibility
-**Result:** 40% cost reduction with better team insights
+**Previous:** Cursor Pro subscriptions  
+**Challenge:** High costs with limited visibility  
+**Result:** 40% cost reduction with better team insights  
 **Timeline:** 3-week migration with zero productivity loss
 
 ### Enterprise Development Team (100+ developers)
 
-**Previous:** GitHub Copilot Enterprise
-**Challenge:** Limited model choice and team management
-**Result:** Improved code quality and team collaboration
+**Previous:** GitHub Copilot Enterprise  
+**Challenge:** Limited model choice and team management  
+**Result:** Improved code quality and team collaboration  
 **Timeline:** 6-week phased migration across multiple teams
 
 ### Startup Engineering Team (8 developers)
 
-**Previous:** Multiple individual AI tool subscriptions
-**Challenge:** Expense report chaos and no team coordination
-**Result:** Centralized billing and improved team efficiency
+**Previous:** Multiple individual AI tool subscriptions  
+**Challenge:** Expense report chaos and no team coordination  
+**Result:** Centralized billing and improved team efficiency  
 **Timeline:** 1-week migration with immediate benefits
 
 ## Next Steps
 
-- [Get started with your team](/teams/getting-started)
-- [Explore team management features](/teams/team-management)
-- [Understand billing and pricing](/teams/billing)
+- [Get started with your team](/seats/getting-started)
+- [Explore team management features](/seats/team-management)
+- [Understand billing and pricing](/seats/billing)
 
 Ready to make the switch? Contact our migration team at migrations@kilocode.ai to plan your transition to transparent AI coding.

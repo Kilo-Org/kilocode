@@ -18,14 +18,22 @@ export const ToolUseControl: React.FC<ToolUseControlProps> = ({ toolStyle, onCha
 	)
 	const { t } = useAppTranslation()
 
+	const codeOptionClassName = "py-2 px-3"
+
 	return (
 		<div className="flex flex-col gap-1">
 			<div>
 				<label className="block font-medium mb-1">{t("kilocode:toolCallStyle.title")}</label>
 				<VSCodeDropdown value={toolStyle} onChange={handleToolStyleChange} className="w-full">
-					<VSCodeOption value="">(default)</VSCodeOption>
-					<VSCodeOption value={toolUseStylesSchema.Enum.xml}>XML</VSCodeOption>
-					<VSCodeOption value={toolUseStylesSchema.Enum.json}>JSON (experimental)</VSCodeOption>
+					<VSCodeOption className={codeOptionClassName} value="">
+						{t("kilocode:toolCallStyle.automatic")}
+					</VSCodeOption>
+					<VSCodeOption className={codeOptionClassName} value={toolUseStylesSchema.Enum.xml}>
+						{t("kilocode:toolCallStyle.xml")}
+					</VSCodeOption>
+					<VSCodeOption className={codeOptionClassName} value={toolUseStylesSchema.Enum.json}>
+						{t("kilocode:toolCallStyle.json")}
+					</VSCodeOption>
 				</VSCodeDropdown>
 				<div className="text-vscode-descriptionForeground text-sm mt-1">
 					{t("kilocode:toolCallStyle.description")}

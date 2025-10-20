@@ -4,15 +4,23 @@ sidebar_label: Billing & Credits
 
 # Billing & Credits
 
-Kilo for Teams uses a transparent, two-part billing system: a monthly subscription for seats plus pay-as-you-go AI credits with zero markup.
+Kilo Seats uses a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go AI credits with zero markup.
 
 ## Understanding the Billing Model
 
 ### Monthly Subscription
 
+**Enterprise:**
+
+- **$299 per user per month** for platform access
+- Billed on your signup anniversary
+- **Includes** dashboard access, team management, model limitation, SSO, and all platform features
+
+**Teams:**
+
 - **$29 per user per month** for platform access
-- **Billed monthly** on your signup anniversary
-- **Includes** dashboard access, team management, and all platform features
+- Billed monthly on your signup anniversary
+- Includes dashboard access, team management, and all platform features
 
 ### AI Credits System
 
@@ -25,8 +33,8 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 
 ### Credit Purchase Process
 
-1. **Navigate to Billing tab** in dashboard
-2. **Click "Buy Credits"**
+1. **Navigate to Organization tab** in dashboard
+2. **Click "Buy More Credits"**
 3. **Select credit amount** ($50, $100, $250, $500, $1000+)
 4. **Complete payment** using saved payment method
 5. **Credits available immediately** for team use
@@ -42,7 +50,7 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 
 ### Adding Seats
 
-1. **Go to Subscriptions tab**
+1. **Go to Organization tab**
 2. **Click "Add Seats"**
 3. **Enter number of additional seats**
 4. **Review pro-rated cost** for current billing cycle
@@ -50,7 +58,7 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 
 ### Removing Seats
 
-1. **Navigate to Subscriptions tab**
+1. **Navigate to Organization tab**
 2. **Click "Remove Seats"**
 3. **Select seats to remove** (must remove team members first)
 4. **Confirm reduction**
@@ -64,7 +72,7 @@ Kilo for Teams uses a transparent, two-part billing system: a monthly subscripti
 
 ## Invoice Management
 
-### Monthly Invoices
+### Periodic Invoices
 
 Each invoice includes:
 
@@ -112,8 +120,8 @@ If payment fails repeatedly:
 
 ## Next Steps
 
-- [Explore usage analytics](/teams/analytics)
-- [Learn about team roles and permissions](/teams/roles-permissions)
-- [Learn about team management](/teams/team-management)
+- [Explore usage analytics](/seats/analytics)
+- [Learn about team roles and permissions](/seats/roles-permissions)
+- [Learn about team management](/seats/team-management)
 
 Transparent billing ensures you always know exactly what you're paying for, with no hidden fees or surprise charges.

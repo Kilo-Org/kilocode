@@ -67,7 +67,7 @@
 		"tooltip": "批准此操作"
 	},
 	"runCommand": {
-		"title": "命令",
+		"title": "运行",
 		"tooltip": "执行此命令"
 	},
 	"proceedWhileRunning": {

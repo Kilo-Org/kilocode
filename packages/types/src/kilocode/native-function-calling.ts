@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { getModelId, ProviderSettings } from "../provider-settings.js"
+import { getModelId, ProviderName, ProviderSettings } from "../provider-settings.js"
 
 export const toolUseStyles = ["xml", "json"] as const
 
@@ -8,12 +8,24 @@ export const toolUseStylesSchema = z.enum(toolUseStyles)
 export type ToolUseStyle = z.infer<typeof toolUseStylesSchema>
 
 // a list of all provider slugs that have been tested to support native function calling
-export const nativeFunctionCallingProviders = ["openrouter", "kilocode"]
+export const nativeFunctionCallingProviders = [
+	"openrouter",
+	"kilocode",
+	"openai",
+	"lmstudio",
+	"chutes",
+	"deepinfra",
+	"xai",
+	"zai",
+] satisfies ProviderName[] as ProviderName[]
 
 const modelsDefaultingToNativeFunctionCalls = ["anthropic/claude-haiku-4.5"]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {
-	if (!settings || (settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider))) {
+	if (
+		!settings ||
+		(settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider as ProviderName))
+	) {
 		return "xml"
 	}
 	if (settings.toolStyle) {

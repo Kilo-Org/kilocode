@@ -14,11 +14,13 @@ import { Slider } from "../ui"
 
 type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
+	sendMessageOnEnter?: boolean // kilocode_change
 	showTimestamps?: boolean
 	ghostServiceSettings?: any
 	reasoningBlockCollapsed: boolean
 	setCachedStateField: SetCachedStateField<
 		| "showTaskTimeline"
+		| "sendMessageOnEnter"
 		| "ghostServiceSettings"
 		| "reasoningBlockCollapsed"
 		| "hideCostBelowThreshold"
@@ -30,6 +32,7 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 export const DisplaySettings = ({
 	showTaskTimeline,
 	showTimestamps,
+	sendMessageOnEnter,
 	ghostServiceSettings,
 	setCachedStateField,
 	reasoningBlockCollapsed,
@@ -114,6 +117,19 @@ export const DisplaySettings = ({
 					</VSCodeCheckbox>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:display.showTimestamps.description")}
+					</div>
+				</div>
+				{/* Send Message on Enter Setting */}
+				<div className="flex flex-col gap-1">
+					<VSCodeCheckbox
+						checked={sendMessageOnEnter}
+						onChange={(e) => {
+							setCachedStateField("sendMessageOnEnter", (e as any).target?.checked || false)
+						}}>
+						<span className="font-medium">{t("settings:display.sendMessageOnEnter.label")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:display.sendMessageOnEnter.description")}
 					</div>
 				</div>
 				{/* Gutter Animation Setting */}
