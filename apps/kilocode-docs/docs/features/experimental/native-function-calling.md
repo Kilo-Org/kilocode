@@ -48,7 +48,7 @@ To enable and use native function calling, consider and perform the following:
 - LM Studio
 - OpenAI Compatible
 
-By default, native function calling is _disabled_ for all models. Should you wish to try it, open the Advanced settings for a given provider profile that is included in the testing group.
+By default, native function calling is _disabled_ for most models. Should you wish to try it, open the Advanced settings for a given provider profile that is included in the testing group.
 
 Change the Tool Calling Style to `JSON`, and save the profile.
 
