@@ -1,8 +1,8 @@
 # Experimental Features
 
-Kilo Code includes experimental features that are still under development.  These features may be unstable, change significantly, or be removed in future versions.  Use them with caution and be aware that they may not work as expected.
+Kilo Code includes experimental features that are still under development. These features may be unstable, change significantly, or be removed in future versions. Use them with caution and be aware that they may not work as expected.
 
-**Warning:** Experimental features may have unexpected behavior, including potential data loss or security vulnerabilities.  Enable them at your own risk.
+**Warning:** Experimental features may have unexpected behavior, including potential data loss or security vulnerabilities. Enable them at your own risk.
 
 ## Enabling Experimental Features
 
@@ -18,10 +18,20 @@ To enable or disable experimental features:
 
 The following experimental features are currently available:
 
+## Native Function Calling
+
+When enabled, native JSON function calling improves reliability via explicit signatures, first‑class schema validation, and better cache hit rates due to normalized structured arguments.
+
+It replaces brittle XML-style prompts that risk mixed prose/markup, missing fields, and regex-heavy cleanup, yielding more deterministic tool use and clearer error handling.
+
+[More Details are available](native-function-calling)
+
 ## Autocomplete
+
 When enabled, Kilo Code will provide inline code suggestions as you type. Currently this requires the Kilo Code API Provider in order to use it.
 
 ## Concurrent file edits
+
 When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit one file at a time. Disabling this can help when working with less capable models or when you want more control over file modifications.
 
 ### Power Steering

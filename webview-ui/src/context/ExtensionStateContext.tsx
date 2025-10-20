@@ -32,7 +32,9 @@ import { ClineRulesToggles } from "@roo/cline-rules" // kilocode_change
 export interface ExtensionStateContextType extends ExtensionState {
 	historyPreviewCollapsed?: boolean
 	showTaskTimeline?: boolean // kilocode_change
+	sendMessageOnEnter?: boolean // kilocode_change New state property for Enter key behavior
 	setShowTaskTimeline: (value: boolean) => void // kilocode_change
+	setSendMessageOnEnter: (value: boolean) => void // kilocode_change
 	showTimestamps?: boolean // kilocode_change
 	setShowTimestamps: (value: boolean) => void // kilocode_change
 	hideCostBelowThreshold?: number // kilocode_change
@@ -279,6 +281,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		terminalCompressProgressBar: true, // Default to compress progress bar output
 		historyPreviewCollapsed: false, // Initialize the new state (default to expanded)
 		showTaskTimeline: true, // kilocode_change
+		sendMessageOnEnter: true, // kilocode_change
 		showTimestamps: true, // kilocode_change
 		kilocodeDefaultModel: openRouterDefaultModelId,
 		reasoningBlockCollapsed: true, // Default to collapsed
@@ -587,6 +590,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, commitMessageApiConfigId: value })),
 		setShowAutoApproveMenu: (value) => setState((prevState) => ({ ...prevState, showAutoApproveMenu: value })),
 		setShowTaskTimeline: (value) => setState((prevState) => ({ ...prevState, showTaskTimeline: value })),
+		setSendMessageOnEnter: (value) => setState((prevState) => ({ ...prevState, sendMessageOnEnter: value })), // kilocode_change
 		setHideCostBelowThreshold: (value) =>
 			setState((prevState) => ({ ...prevState, hideCostBelowThreshold: value })),
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),

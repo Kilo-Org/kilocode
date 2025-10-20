@@ -5,7 +5,7 @@ Terminal User Interface for Kilo Code
 ## Installation
 
 ```bash
-npm install -g @kilocode/cli@alpha
+npm install -g @kilocode/cli
 ```
 
 Then, make sure you place your Kilo Code API token in the CLI config:

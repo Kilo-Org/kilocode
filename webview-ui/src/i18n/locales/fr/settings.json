@@ -927,6 +927,10 @@
 			"label": "Afficher la chronologie des tâches",
 			"description": "Afficher une chronologie visuelle des messages de tâches, colorés selon leur type, permettant de voir rapidement la progression des tâches et de revenir à des points spécifiques dans l'historique de la tâche."
 		},
+		"sendMessageOnEnter": {
+			"label": "Envoyer le message avec Entrée",
+			"description": "Lorsque cette option est activée, appuyez sur Entrée pour envoyer et sur Maj+Entrée pour une nouvelle ligne. Désactivez-la pour utiliser Maj+Entrée pour envoyer à la place."
+		},
 		"costThreshold": {
 			"label": "Masquer le coût en dessous du seuil",
 			"currentValue": "Seuil actuel : ${{value}}",

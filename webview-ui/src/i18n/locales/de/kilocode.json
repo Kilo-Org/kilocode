@@ -254,7 +254,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Tool-Call-Stil",
-		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind."
+		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind.",
+		"automatic": "Lass Kilo entscheiden",
+		"xml": "XML",
+		"json": "JSON (experimentell)"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",

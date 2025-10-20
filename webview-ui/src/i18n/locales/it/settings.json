@@ -929,6 +929,10 @@
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
 		},
+		"sendMessageOnEnter": {
+			"label": "Invia messaggio con Invio",
+			"description": "Quando abilitato, premi Invio per inviare e Maiusc+Invio per una nuova riga. Disattiva per usare Maiusc+Invio per inviare invece."
+		},
 		"costThreshold": {
 			"label": "Nascondi costo sotto la soglia",
 			"currentValue": "Soglia attuale: ${{value}}",

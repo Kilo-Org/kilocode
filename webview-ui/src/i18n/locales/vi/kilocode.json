@@ -255,7 +255,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Kiểu Gọi Công Cụ",
-		"description": "Chọn cách định dạng các lệnh gọi công cụ trong system prompt. JSON hiện đang ở giai đoạn thử nghiệm và chủ yếu dành cho người dùng quan tâm đến việc đóng góp vào phát triển của nó."
+		"description": "Chọn cách định dạng các lệnh gọi công cụ trong system prompt. JSON hiện đang ở giai đoạn thử nghiệm và chủ yếu dành cho người dùng quan tâm đến việc đóng góp vào phát triển của nó.",
+		"automatic": "Để Kilo quyết định",
+		"xml": "XML",
+		"json": "JSON (thử nghiệm)"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Hình ảnh không được hỗ trợ bởi mô hình hiện tại.",

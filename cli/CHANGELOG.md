@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- [#3128](https://github.com/Kilo-Org/kilocode/pull/3128) [`04a8de4`](https://github.com/Kilo-Org/kilocode/commit/04a8de4367cdac6401001a906b01755373be5a80) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Support all providers that are supported by the VS Code extension
+
 ## 0.0.5
 
 ### Patch Changes
