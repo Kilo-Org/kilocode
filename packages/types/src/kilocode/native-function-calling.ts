@@ -13,6 +13,9 @@ export const nativeFunctionCallingProviders = [
 	"kilocode",
 	"openai",
 	"lmstudio",
+	"chutes",
+	"xai",
+	"zai",
 ] satisfies ProviderName[] as ProviderName[]
 
 const modelsDefaultingToNativeFunctionCalls = ["anthropic/claude-haiku-4.5"]

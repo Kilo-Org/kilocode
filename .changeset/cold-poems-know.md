@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Allow use of native function calling in OpenAI-Compatible and LM-Studio
+Allow the use of native function calling for OpenAI-compatible, LM Studio, Chutes, xAI and Z.ai providers.
