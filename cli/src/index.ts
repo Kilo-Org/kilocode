@@ -107,7 +107,8 @@ program
 			const exists = await configExists()
 			if (!exists) {
 				console.log("Config file not found. Creating default configuration...")
-				await saveConfig(DEFAULT_CONFIG)
+				// Skip validation when creating default config since tokens may be empty
+				await saveConfig(DEFAULT_CONFIG, true)
 				console.log("Default configuration created.")
 			}
 

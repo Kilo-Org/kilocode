@@ -248,7 +248,7 @@
 		"removeProfile": "프로필 삭제",
 		"selectProfilePlaceholder": "프로필 선택...",
 		"addProfile": "프로필 추가",
-		"noProfilesAvailable": "사용 가능한 프로필이 없습니다. 먼저 하나 이상의 비가상 공급자 프로필을 구성하십시오.",
+		"noProfilesAvailable": "사용 가능한 프로필이 없습니다. 먼저 가상이 아닌 공급자 프로필을 하나 이상 구성하세요.",
 		"dangerZoneTitle": "위험 구역",
 		"dangerZoneDescription": "이러한 작업은 파괴적이며 되돌릴 수 없습니다.",
 		"clearUsageData": "사용 데이터 지우기",

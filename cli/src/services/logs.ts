@@ -68,16 +68,65 @@ export class LogsService {
 	}
 
 	/**
+	 * Serialize an error object to a plain object with all relevant properties
+	 */
+	private serializeError(error: any): any {
+		if (error instanceof Error) {
+			return {
+				message: error.message,
+				name: error.name,
+				stack: error.stack,
+				// Include any additional enumerable properties
+				...Object.getOwnPropertyNames(error)
+					.filter(key => key !== "message" && key !== "name" && key !== "stack")
+					.reduce(
+						(acc, key) => {
+							acc[key] = (error as any)[key]
+							return acc
+						},
+						{} as Record<string, any>,
+					),
+			}
+		}
+		return error
+	}
+
+	/**
+	 * Serialize context object, handling Error objects specially
+	 */
+	private serializeContext(context?: Record<string, any>): Record<string, any> | undefined {
+		if (!context) {
+			return undefined
+		}
+
+		const serialized: Record<string, any> = {}
+		for (const [key, value] of Object.entries(context)) {
+			if (value instanceof Error) {
+				serialized[key] = this.serializeError(value)
+			} else if (typeof value === "object" && value !== null) {
+				// Recursively handle nested objects that might contain errors
+				serialized[key] = this.serializeContext(value as Record<string, any>) || value
+			} else {
+				serialized[key] = value
+			}
+		}
+		return serialized
+	}
+
+	/**
 	 * Add a log entry with the specified level
 	 */
 	private addLog(level: LogLevel, message: string, source?: string, context?: Record<string, any>): void {
+		// Serialize context to handle Error objects properly
+		const serializedContext = this.serializeContext(context)
+
 		const entry: LogEntry = {
 			id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 			ts: Date.now(),
 			level,
 			message,
 			...(source && { source }),
-			...(context && { context }),
+			...(serializedContext && { context: serializedContext }),
 		}
 
 		// Add to logs array

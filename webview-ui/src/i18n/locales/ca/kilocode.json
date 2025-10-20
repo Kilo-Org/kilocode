@@ -234,7 +234,7 @@
 		"removeProfile": "Eliminar perfil",
 		"selectProfilePlaceholder": "Selecciona el perfil...",
 		"addProfile": "Afegir perfil",
-		"noProfilesAvailable": "No hi ha perfils de perfil disponibles. Si us plau, configureu primer almenys un perfil de proveïdor no virtual.",
+		"noProfilesAvailable": "No hi ha perfils disponibles. Si us plau, configureu primer almenys un perfil de proveïdor no virtual.",
 		"dangerZoneTitle": "Zona de Perill",
 		"dangerZoneDescription": "Aquestes accions són destructives i no es poden desfer.",
 		"clearUsageData": "Esborrar Dades d'Ús",

@@ -254,7 +254,7 @@
 		"removeProfile": "Remove profile",
 		"selectProfilePlaceholder": "Select profile...",
 		"addProfile": "Add profile",
-		"noProfilesAvailable": "No profile profiles available. Please configure at least one non-virtual provider profile first.",
+		"noProfilesAvailable": "No profiles available. Please configure at least one non-virtual provider profile first.",
 		"tokensLabel": "Tokens",
 		"perMinute": "Per Minute",
 		"perHour": "Per Hour",

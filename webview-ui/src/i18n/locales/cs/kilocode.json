@@ -248,7 +248,7 @@
 		"removeProfile": "Odstranit profil",
 		"selectProfilePlaceholder": "Vybrat profil...",
 		"addProfile": "Přidat profil",
-		"noProfilesAvailable": "Žádné profily nejsou k dispozici. Nejprve prosím nakonfigurujte alespoň jeden nevirtualní profil poskytovatele.",
+		"noProfilesAvailable": "Žádné profily nejsou k dispozici. Nejprve nakonfigurujte alespoň jeden profil nevirtuálního poskytovatele.",
 		"dangerZoneTitle": "Nebezpečná zóna",
 		"dangerZoneDescription": "Tyto akce jsou destruktivní a nelze je vrátit zpět.",
 		"clearUsageData": "Vymazat data o využití",

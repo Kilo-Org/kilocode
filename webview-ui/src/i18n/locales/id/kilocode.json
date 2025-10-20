@@ -234,7 +234,7 @@
 		"removeProfile": "Hapus profil",
 		"selectProfilePlaceholder": "Pilih profil...",
 		"addProfile": "Tambahkan profil",
-		"noProfilesAvailable": "Tidak ada profil tersedia. Silakan mengonfigurasi setidaknya satu profil penyedia non-virtual terlebih dahulu.",
+		"noProfilesAvailable": "Tidak ada profil tersedia. Harap konfigurasikan setidaknya satu profil penyedia non-virtual terlebih dahulu.",
 		"dangerZoneTitle": "Zona Bahaya",
 		"dangerZoneDescription": "Tindakan ini bersifat merusak dan tidak dapat dibatalkan.",
 		"clearUsageData": "Hapus Data Penggunaan",
