@@ -4,7 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useRef } from "react"
-import { Box, Text, useInput } from "ink"
+import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
@@ -85,15 +85,6 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			}, 500)
 		}
 	}, [shouldExit, exitReason, options.ci, onExit])
-
-	// In CI mode, we don't use useInput because it tries to enable raw mode on stdin
-	// which fails when stdin is piped. The app stays alive through the message loop instead.
-	useInput(
-		() => {
-			// No-op: we don't handle input in CI mode
-		},
-		{ isActive: !options.ci },
-	)
 
 	// Execute prompt automatically on mount if provided
 	useEffect(() => {

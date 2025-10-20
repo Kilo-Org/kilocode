@@ -1,14 +1,14 @@
 ---
-sidebar_label: Team Roles & Permissions
+sidebar_label: Enterprise Roles & Permissions
 ---
 
-# Team Roles & Permissions
+# Enterprise Roles & Permissions
 
-Kilo for Teams uses a three-tier role system designed for clear responsibility separation and secure team management.
+Kilo Seats (both Teams & Enterprise) uses a three-tier role system designed for clear responsibility separation and secure team management.
 
 ## Role Overview
 
-Every team member has one of three roles that determine their access level and capabilities within your organization.
+Every member has one of three roles that determine their access level and capabilities within your organization.
 
 ### Owner
 
@@ -19,6 +19,7 @@ Every team member has one of three roles that determine their access level and c
 - Financial management and billing oversight
 - Strategic team planning and seat allocation
 - Ultimate security and compliance authority
+- Model/provider limitation and selection
 
 ### Admin
 
@@ -54,14 +55,16 @@ Every team member has one of three roles that determine their access level and c
 | Change member roles              | ✅    | ✅\*           | ❌     |
 | Manage seat count                | ✅    | ❌             | ❌     |
 | View team composition            | ✅    | ✅             | ✅     |
+| View audit logs                  | ✅    | ✅             | ✅     |
 | **Usage Controls**               |
+| Model/provider limitation        | ✅    | ✅             | ❌     |
 | Set daily usage limits           | ✅    | ✅             | ❌     |
 | View all usage statistics        | ✅    | ✅             | ❌     |
 | View personal usage              | ✅    | ✅             | ✅     |
 | **Security & Compliance**        |
 | Control data collection policies | ✅    | ✅             | ❌     |
 | Manage model access permissions  | ✅    | ✅             | ❌     |
-| Configure SSO settings           | ✅    | ❌             | ❌     |
+| Configure SSO settings           | ✅    | ✅             | ❌     |
 | **Development Access**           |
 | Use AI coding assistance         | ✅    | ✅             | ✅     |
 | Access all enabled models        | ✅    | ✅             | ✅     |
@@ -120,7 +123,7 @@ Every team member has one of three roles that determine their access level and c
 
 ### Admin Oversight
 
-- Admins should regularly audit team usage
+- Admins should regularly audit usage
 - Review and update usage limits quarterly
 - Monitor for policy violations
 - Ensure compliance with data policies
@@ -174,8 +177,8 @@ Every team member has one of three roles that determine their access level and c
 
 ## Next Steps
 
-- [Learn about dashboard features](/teams/dashboard)
-- [Set up team management policies](/teams/team-management)
-- [Configure billing and credits](/teams/billing)
+- [Learn about dashboard features](/seats/dashboard)
+- [Set up team management policies](/seats/team-management)
+- [Configure billing and credits](/seats/billing)
 
 Understanding roles and permissions ensures your team operates securely and efficiently with clear accountability.

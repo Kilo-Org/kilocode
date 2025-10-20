@@ -2,9 +2,9 @@
 sidebar_label: Dashboard Overview
 ---
 
-# Teams Dashboard
+# Seats Dashboard
 
-The Kilo for Teams dashboard provides complete visibility into your team's AI usage, costs, and management.
+The Kilo Seats dashboard is the first screen that comes up when you visit [the Kilo Code web app](https://app.kilocode.ai). It provides complete visibility into your team's AI usage, costs, and management.
 
 <center>
 <img src="/docs/img/teams/dashboard.png" alt="Invite your team members" width="700" />
@@ -12,12 +12,14 @@ The Kilo for Teams dashboard provides complete visibility into your team's AI us
 
 ## Dashboard Navigation
 
-The dashboard is organized into five main tabs, each serving specific management needs:
+The dashboard is organized into tabs, each serving specific management needs:
 
 - **Organization** - Team composition and quick actions
 - **Usage** - Real-time analytics and cost tracking
 - **Billing** - Financial management and invoicing
 - **Subscriptions** - Plan management and seat allocation
+- **Providers and models** (Enterprise Only) - Model availability and management
+- **Single Sign-On (SSO)** (Enterprise Only) - Add or modify SSO settings
 
 ## Organization Tab
 
@@ -136,8 +138,31 @@ Manage your Kilo for Teams plan and seat allocation.
 - **Renewal settings** and automatic billing
 - **Cancellation policy** and effective dates
 
+## Providers and Models (Enterprise Only)
+
+- Enable/disable models and providers
+- Filter by model Data Policy:
+    - Allows Training
+    - Retains Prompts
+    - Can Publish
+- Extensive other filters:
+    - Location
+    - Input/Output Modalities
+    - Context Length
+    - Pricing
+
+## Single Sign-On (SSO) (Enterprise Only)
+
+- Set up SSO if not already configured
+
+## Audit Logs (Enterprise Only)
+
+- View timestamped user activities across the Organization
+- View total events within dated periods
+- Filter by action time, user, and date
+
 ## Next Steps
 
-- [Learn about team management](/teams/team-management)
-- [Understand billing and credits](/teams/billing)
-- [Explore usage analytics](/teams/analytics)
+- [Learn about team management](/seats/team-management)
+- [Understand billing and credits](/seats/billing)
+- [Explore usage analytics](/seats/analytics)

@@ -4,7 +4,7 @@ sidebar_label: Managing Your Team
 
 # Managing Your Team
 
-Effective team management in Kilo for Teams ensures optimal AI usage, cost control, and smooth collaboration across your engineering organization.
+Effective team management in Kilo for Enterprise ensures optimal AI usage, cost control, and smooth collaboration across your engineering organization.
 
 ## Adding Team Members
 
@@ -16,7 +16,7 @@ Effective team management in Kilo for Teams ensures optimal AI usage, cost contr
 4. **Select initial role** (Member, Admin, or Owner)
 5. Click **Send Invitation**
 
-<img src="/docs/img/teams/invite-member.png" alt="Invite your team members" width="600" />
+<img width="619" height="311" alt="invite-member" src="https://github.com/user-attachments/assets/a3ca0391-8a61-457f-b38b-11f03b219b4f" />
 
 <!-- ## Setting Usage Limits
 
@@ -75,7 +75,6 @@ The Organization tab shows:
 
 - **Active members** with last activity
 - **Pending invitations** awaiting acceptance
-- **Seat utilization** (used vs. available)
 - **Role distribution** across the team
 
 ### Removing Team Members
@@ -102,8 +101,8 @@ Promote or demote team members as needed:
 
 **Model Selection**
 
-- Train team on cost-effective model choices
-- Use cheaper models for simple tasks
+- Set cost-effective model limitations on the Model Access page
+- Recommend cheaper models for simple tasks
 - Reserve expensive models for complex problems
 - Monitor model performance vs. cost
 
@@ -157,8 +156,8 @@ Promote or demote team members as needed:
 
 ## Next Steps
 
-- [Understand billing and credits](/teams/billing)
-- [Explore usage analytics](/teams/analytics)
-- [Learn about team roles and permissions](/teams/roles-permissions)
+- [Understand billing and credits](/seats/billing)
+- [Explore usage analytics](/seats/analytics)
+- [Learn about team roles and permissions](/seats/roles-permissions)
 
 Effective team management ensures your organization maximizes the benefits of AI-assisted development while maintaining cost control and security.
