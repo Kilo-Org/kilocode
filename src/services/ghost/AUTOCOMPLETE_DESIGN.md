@@ -11,6 +11,12 @@ The Ghost autocomplete system provides code suggestions using two visualization 
 
 The system chooses between inline ghost completions and SVG decorations based on these rules:
 
+### Only Additions Mode (Default)
+
+**Only Additions Mode** (enabled by default): When `onlyAdditions` setting is enabled, only pure addition operations (`+`) will be suggested and displayed using inline ghost completions. All modifications (`/`) and deletions (`-`) are completely ignored and will not be shown.
+
+This is the default behavior to keep autocomplete focused on pure additions near the cursor.
+
 ### When to Use Inline Ghost Completions
 
 Inline ghost completions are shown when ALL of the following conditions are met:
@@ -18,8 +24,8 @@ Inline ghost completions are shown when ALL of the following conditions are met:
 1. **Distance Check**: Suggestion is within 5 lines of the cursor
 2. **Operation Type**:
     - **Pure Additions** (`+`): Always use inline when near cursor
-    - **Modifications** (`/`): Use inline when there's a common prefix between old and new content
-    - **Deletions** (`-`): Never use inline (always use SVG)
+    - **Modifications** (`/`): Use inline when there's a common prefix between old and new content (only when `onlyAdditions` is disabled)
+    - **Deletions** (`-`): Never use inline (always use SVG, only when `onlyAdditions` is disabled)
 
 ### When to Use SVG Decorations
 

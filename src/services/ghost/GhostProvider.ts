@@ -534,6 +534,19 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Check if a group should be shown based on onlyAdditions setting
+	 */
+	private shouldShowGroup(groupType: "+" | "/" | "-"): boolean {
+		// If onlyAdditions is enabled (default), only show pure additions
+		const onlyAdditions = this.settings?.onlyAdditions ?? true
+		if (onlyAdditions) {
+			return groupType === "+"
+		}
+		// Otherwise show all group types
+		return true
+	}
+
+	/**
 	 * Determine if a group should use inline completion instead of SVG decoration
 	 * Centralized logic to ensure consistency across render() and displaySuggestions()
 	 */
@@ -543,6 +556,11 @@ export class GhostProvider {
 		cursorLine: number,
 		file: any,
 	): boolean {
+		// First check if this group type should be shown at all
+		if (!this.shouldShowGroup(groupType)) {
+			return false
+		}
+
 		// Deletions never use inline
 		if (groupType === "-") {
 			return false
@@ -655,15 +673,19 @@ export class GhostProvider {
 		}
 		file.selectClosestGroup(editor.selection)
 
-		// If we selected a placeholder-only deletion, try to select next valid group
+		// Skip groups that shouldn't be shown (placeholder deletions or filtered by onlyAdditions)
 		const selectedGroupIndex = file.getSelectedGroup()
 		if (selectedGroupIndex !== null) {
 			const groups = file.getGroupsOperations()
 			const selectedGroup = groups[selectedGroupIndex]
 			const selectedGroupType = file.getGroupType(selectedGroup)
 
-			if (selectedGroupType === "-" && this.isPlaceholderOnlyDeletion(selectedGroup)) {
-				// Try to select a non-placeholder group
+			const shouldSkip =
+				(selectedGroupType === "-" && this.isPlaceholderOnlyDeletion(selectedGroup)) ||
+				!this.shouldShowGroup(selectedGroupType)
+
+			if (shouldSkip) {
+				// Try to select a valid group
 				const originalSelection = selectedGroupIndex
 				let attempts = 0
 				const maxAttempts = groups.length
@@ -677,8 +699,11 @@ export class GhostProvider {
 						const currentGroup = groups[currentSelection]
 						const currentGroupType = file.getGroupType(currentGroup)
 
-						// If it's not a placeholder-only deletion, we're done
-						if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+						// Check if this group should be shown
+						const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
+						const shouldShow = this.shouldShowGroup(currentGroupType)
+
+						if (!isPlaceholder && shouldShow) {
 							break
 						}
 					}
@@ -727,9 +752,24 @@ export class GhostProvider {
 
 		// Determine which group indices to skip
 		const skipGroupIndices: number[] = []
+
+		// Filter out groups based on onlyAdditions setting
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i]
+			const groupType = file.getGroupType(group)
+
+			// Skip groups that shouldn't be shown based on settings
+			if (!this.shouldShowGroup(groupType)) {
+				skipGroupIndices.push(i)
+				continue
+			}
+		}
+
 		if (selectedGroupUsesInlineCompletion) {
-			// Always skip the selected group
-			skipGroupIndices.push(selectedGroupIndex)
+			// Always skip the selected group if it uses inline completion
+			if (!skipGroupIndices.includes(selectedGroupIndex)) {
+				skipGroupIndices.push(selectedGroupIndex)
+			}
 
 			// If we're using a synthetic modification group (deletion + addition),
 			// skip both the deletion group AND the addition group
@@ -755,13 +795,15 @@ export class GhostProvider {
 						addedContent.startsWith("\n") ||
 						addedContent.startsWith("\r\n")
 					) {
-						skipGroupIndices.push(selectedGroupIndex + 1)
+						if (!skipGroupIndices.includes(selectedGroupIndex + 1)) {
+							skipGroupIndices.push(selectedGroupIndex + 1)
+						}
 					}
 				}
 			}
 		}
 
-		// Always show decorations, but skip groups that use inline completion
+		// Always show decorations, but skip groups that use inline completion or are filtered
 		await this.decorations.displaySuggestions(this.suggestions, skipGroupIndices)
 	}
 
@@ -915,7 +957,7 @@ export class GhostProvider {
 			return
 		}
 
-		// Navigate to next valid group (skip placeholder-only deletions)
+		// Navigate to next valid group (skip placeholder deletions and groups filtered by onlyAdditions)
 		const originalSelection = suggestionsFile.getSelectedGroup()
 		let attempts = 0
 		const maxAttempts = suggestionsFile.getGroupsOperations().length
@@ -926,14 +968,16 @@ export class GhostProvider {
 			attempts++
 			const currentSelection = suggestionsFile.getSelectedGroup()
 
-			// Check if current group is placeholder-only deletion
 			if (currentSelection !== null) {
 				const groups = suggestionsFile.getGroupsOperations()
 				const currentGroup = groups[currentSelection]
 				const currentGroupType = suggestionsFile.getGroupType(currentGroup)
 
-				// If it's not a placeholder-only deletion, we found a valid group
-				if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+				// Check if this is a valid group to show
+				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
+				const shouldShow = this.shouldShowGroup(currentGroupType)
+
+				if (!isPlaceholder && shouldShow) {
 					foundValidGroup = true
 				}
 			}
@@ -965,7 +1009,7 @@ export class GhostProvider {
 			return
 		}
 
-		// Navigate to previous valid group (skip placeholder-only deletions)
+		// Navigate to previous valid group (skip placeholder deletions and groups filtered by onlyAdditions)
 		const originalSelection = suggestionsFile.getSelectedGroup()
 		let attempts = 0
 		const maxAttempts = suggestionsFile.getGroupsOperations().length
@@ -976,14 +1020,16 @@ export class GhostProvider {
 			attempts++
 			const currentSelection = suggestionsFile.getSelectedGroup()
 
-			// Check if current group is placeholder-only deletion
 			if (currentSelection !== null) {
 				const groups = suggestionsFile.getGroupsOperations()
 				const currentGroup = groups[currentSelection]
 				const currentGroupType = suggestionsFile.getGroupType(currentGroup)
 
-				// If it's not a placeholder-only deletion, we found a valid group
-				if (!(currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup))) {
+				// Check if this is a valid group to show
+				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
+				const shouldShow = this.shouldShowGroup(currentGroupType)
+
+				if (!isPlaceholder && shouldShow) {
 					foundValidGroup = true
 				}
 			}
