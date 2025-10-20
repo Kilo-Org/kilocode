@@ -161,7 +161,31 @@ class GhostSuggestionFile {
 			.forEach((group) => {
 				group.sort((a, b) => a.line - b.line)
 			})
+
+		// Filter out empty deletions after sorting
+		this.filterEmptyDeletions()
+
 		this.selectedGroup = this.groups.length > 0 ? 0 : null
+	}
+
+	/**
+	 * Filter out operations with empty content and remove empty groups
+	 */
+	private filterEmptyDeletions() {
+		// Filter each group to remove operations (additions and deletions) with empty content
+		this.groups = this.groups
+			.map((group) => {
+				return group.filter((op) => {
+					// Keep all additions and context operations
+					if (op.type === "-" || op.type === "+") {
+						// Only keep deletions and additions that have non-empty content
+						return op.content !== ""
+					} else {
+						return true
+					}
+				})
+			})
+			.filter((group) => group.length > 0) // Remove empty groups
 	}
 
 	private computeOperationsOffset(group: GhostSuggestionEditOperation[]): GhostSuggestionEditOperationsOffset {
