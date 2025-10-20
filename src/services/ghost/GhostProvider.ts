@@ -536,11 +536,42 @@ export class GhostProvider {
 	/**
 	 * Check if a group should be shown based on onlyAdditions setting
 	 */
-	private shouldShowGroup(groupType: "+" | "/" | "-"): boolean {
-		// If onlyAdditions is enabled (default), only show pure additions
+	private shouldShowGroup(groupType: "+" | "/" | "-", group?: GhostSuggestionEditOperation[]): boolean {
+		// If onlyAdditions is enabled (default), check what to show
 		const onlyAdditions = this.settings?.onlyAdditions ?? true
 		if (onlyAdditions) {
-			return groupType === "+"
+			// Always show pure additions
+			if (groupType === "+") {
+				return true
+			}
+
+			// For modifications, allow single-line completions with common prefix
+			// (e.g., typing "add" and completing to "addNumbers")
+			if (groupType === "/" && group) {
+				const deleteOps = group.filter((op) => op.type === "-")
+				const addOps = group.filter((op) => op.type === "+")
+
+				if (deleteOps.length > 0 && addOps.length > 0) {
+					// Check if it's a single-line modification
+					const isSingleLine =
+						deleteOps.every((op) => op.line === deleteOps[0].line) &&
+						addOps.every((op) => op.line === addOps[0].line) &&
+						deleteOps[0].line === addOps[0].line
+
+					if (isSingleLine) {
+						const deletedContent = deleteOps.map((op) => op.content).join("\n")
+						const addedContent = addOps.map((op) => op.content).join("\n")
+
+						// If added content starts with deleted content, it's a completion - allow it
+						if (addedContent.startsWith(deletedContent)) {
+							return true
+						}
+					}
+				}
+			}
+
+			// Don't show deletions or multi-line modifications
+			return false
 		}
 		// Otherwise show all group types
 		return true
@@ -682,7 +713,7 @@ export class GhostProvider {
 
 			const shouldSkip =
 				(selectedGroupType === "-" && this.isPlaceholderOnlyDeletion(selectedGroup)) ||
-				!this.shouldShowGroup(selectedGroupType)
+				!this.shouldShowGroup(selectedGroupType, selectedGroup)
 
 			if (shouldSkip) {
 				// Try to select a valid group
@@ -701,7 +732,7 @@ export class GhostProvider {
 
 						// Check if this group should be shown
 						const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
-						const shouldShow = this.shouldShowGroup(currentGroupType)
+						const shouldShow = this.shouldShowGroup(currentGroupType, currentGroup)
 
 						if (!isPlaceholder && shouldShow) {
 							break
@@ -759,7 +790,7 @@ export class GhostProvider {
 			const groupType = file.getGroupType(group)
 
 			// Skip groups that shouldn't be shown based on settings
-			if (!this.shouldShowGroup(groupType)) {
+			if (!this.shouldShowGroup(groupType, group)) {
 				skipGroupIndices.push(i)
 				continue
 			}
@@ -975,7 +1006,7 @@ export class GhostProvider {
 
 				// Check if this is a valid group to show
 				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
-				const shouldShow = this.shouldShowGroup(currentGroupType)
+				const shouldShow = this.shouldShowGroup(currentGroupType, currentGroup)
 
 				if (!isPlaceholder && shouldShow) {
 					foundValidGroup = true
@@ -1027,7 +1058,7 @@ export class GhostProvider {
 
 				// Check if this is a valid group to show
 				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
-				const shouldShow = this.shouldShowGroup(currentGroupType)
+				const shouldShow = this.shouldShowGroup(currentGroupType, currentGroup)
 
 				if (!isPlaceholder && shouldShow) {
 					foundValidGroup = true

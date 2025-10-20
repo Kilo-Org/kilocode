@@ -505,6 +505,206 @@ describe("GhostInlineCompletionProvider", () => {
 			)
 			expect(completionText).not.toContain("// now imple") // Should not duplicate existing text
 		})
+
+		it("should handle single-line completion without duplication (add → addNumbers)", async () => {
+			// Test case: typing "add" should complete to "addNumbers" on same line
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "const num = add",
+							range: new vscode.Range(line, 0, line, 15),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// LLM creates: delete "const num = add", add "const num = addNumbers"
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "const num = add",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "const num = addNumbers",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			mockPosition = new vscode.Position(5, 15) // After "add"
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should show inline completion with ONLY the suffix
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			expect(completionText).toBe("Numbers") // Only the suffix
+			expect(completionText).not.toContain("const num = add") // No duplication
+		})
+
+		it("should handle first line common prefix with multi-line addition (// → implement...)", async () => {
+			// Test: typing "// " should complete with "implement function..." + function code
+			// First line should strip "// " prefix
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "// ",
+							range: new vscode.Range(line, 0, line, 3),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// LLM creates: delete "// ", add "// implement function..." + function
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "// ",
+			}
+
+			// Addition has multiple lines, first starting with "// implement..."
+			file.addOperation(deleteOp)
+			file.addOperation({
+				type: "+",
+				line: 6,
+				oldLine: 6,
+				newLine: 6,
+				content: "// implement function to add two numbers",
+			})
+			file.addOperation({
+				type: "+",
+				line: 7,
+				oldLine: 6,
+				newLine: 7,
+				content: "function addNumbers(a: number, b: number): number {",
+			})
+			file.addOperation({
+				type: "+",
+				line: 8,
+				oldLine: 6,
+				newLine: 8,
+				content: "  return a + b;",
+			})
+			file.addOperation({
+				type: "+",
+				line: 9,
+				oldLine: 6,
+				newLine: 9,
+				content: "}",
+			})
+			file.sortGroups()
+
+			mockPosition = new vscode.Position(5, 3) // After "// "
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should show inline completion
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			// Should start with "implement..." not "// implement..."
+			expect(completionText.startsWith("implement")).toBe(true)
+			expect(completionText).toContain("function addNumbers")
+			expect(completionText.startsWith("// ")).toBe(false) // Should strip the "// " prefix
+		})
+
+		it("should not add extra newlines when content already starts with newline", async () => {
+			// Test: ensure we don't double-add newlines
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 10,
+				lineAt: (line: number) => {
+					if (line === 5) {
+						return {
+							text: "// comment",
+							range: new vscode.Range(line, 0, line, 10),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Addition that already starts with newline
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 6,
+				oldLine: 6,
+				newLine: 6,
+				content: "\nfunction test() {\n  return true;\n}",
+			}
+
+			file.addOperation(addOp)
+			file.sortGroups()
+
+			mockPosition = new vscode.Position(5, 10)
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			expect(result).toBeDefined()
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			// Should not have double newlines
+			expect(completionText.startsWith("\n\n")).toBe(false)
+			// Should start with single newline
+			expect(completionText.startsWith("\n")).toBe(true)
+		})
 	})
 
 	describe("updateSuggestions", () => {

@@ -142,10 +142,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		if (groupType === "+") {
 			// Pure addition - but check if it's really part of a modification (deletion + addition)
 			// This happens when onlyAdditions mode skips the deletion group
-			const text = group
-				.sort((a, b) => a.line - b.line)
-				.map((op) => op.content)
-				.join("\n")
+			const sortedOps = group.sort((a, b) => a.line - b.line)
+			const text = sortedOps.map((op) => op.content).join("\n")
 
 			// Check if there's a previous deletion group
 			if (selectedGroupIndex > 0) {
@@ -159,11 +157,21 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 						.map((op: GhostSuggestionEditOperation) => op.content)
 						.join("\n")
 
-					// If the addition starts with the deletion, strip the common prefix
+					// If the entire addition starts with the deletion, strip the common prefix
 					if (text.startsWith(deletedContent)) {
 						const suffix = text.substring(deletedContent.length)
 						// Return the suffix, treating it as a modification
 						return { text: suffix, isAddition: false }
+					}
+
+					// Check if just the first line of the addition starts with the deletion
+					// This handles cases like typing "// " and completing to "// implement..."
+					if (sortedOps.length > 0 && sortedOps[0].content.startsWith(deletedContent)) {
+						const firstLineSuffix = sortedOps[0].content.substring(deletedContent.length)
+						const remainingLines = sortedOps.slice(1).map((op) => op.content)
+						const completionText = [firstLineSuffix, ...remainingLines].join("\n")
+						// Return as modification so it shows on same line
+						return { text: completionText, isAddition: false }
 					}
 				}
 			}
