@@ -461,6 +461,82 @@ export class ThemeColor {
 	constructor(public id: string) {}
 }
 
+// Theme Icon mock
+export class ThemeIcon {
+	constructor(
+		public id: string,
+		public color?: ThemeColor,
+	) {}
+}
+
+// Cancellation Token mock
+export interface CancellationToken {
+	isCancellationRequested: boolean
+	onCancellationRequested: (listener: (e: any) => any) => Disposable
+}
+
+export class CancellationTokenSource {
+	private _token: CancellationToken
+	private _isCancelled = false
+	private _onCancellationRequestedEmitter = new EventEmitter<any>()
+
+	constructor() {
+		this._token = {
+			isCancellationRequested: false,
+			onCancellationRequested: this._onCancellationRequestedEmitter.event,
+		}
+	}
+
+	get token(): CancellationToken {
+		return this._token
+	}
+
+	cancel(): void {
+		if (!this._isCancelled) {
+			this._isCancelled = true
+			;(this._token as any).isCancellationRequested = true
+			this._onCancellationRequestedEmitter.fire(undefined)
+		}
+	}
+
+	dispose(): void {
+		this.cancel()
+		this._onCancellationRequestedEmitter.dispose()
+	}
+}
+
+// CodeLens mock
+export class CodeLens {
+	public range: Range
+	public command?: { command: string; title: string; arguments?: any[] } | undefined
+	public isResolved: boolean = false
+
+	constructor(range: Range, command?: { command: string; title: string; arguments?: any[] } | undefined) {
+		this.range = range
+		this.command = command
+	}
+}
+
+// Language Model API mocks (for VSCode LM API)
+export class LanguageModelTextPart {
+	constructor(public value: string) {}
+}
+
+export class LanguageModelToolCallPart {
+	constructor(
+		public callId: string,
+		public name: string,
+		public input: any,
+	) {}
+}
+
+export class LanguageModelToolResultPart {
+	constructor(
+		public callId: string,
+		public content: any[],
+	) {}
+}
+
 // Decoration Range Behavior mock
 export enum DecorationRangeBehavior {
 	OpenOpen = 0,
@@ -1401,6 +1477,39 @@ export class WindowAPI {
 		return new TextEditorDecorationType(`decoration-${Date.now()}`)
 	}
 
+	createTerminal(options?: {
+		name?: string
+		shellPath?: string
+		shellArgs?: string[]
+		cwd?: string
+		env?: { [key: string]: string | null | undefined }
+		iconPath?: ThemeIcon
+		hideFromUser?: boolean
+		message?: string
+		strictEnv?: boolean
+	}): any {
+		// Return a mock terminal object
+		return {
+			name: options?.name || "Terminal",
+			processId: Promise.resolve(undefined),
+			creationOptions: options || {},
+			exitStatus: undefined,
+			state: { isInteractedWith: false },
+			sendText: (text: string, _addNewLine?: boolean) => {
+				logs.debug(`Terminal sendText: ${text}`, "VSCode.Terminal")
+			},
+			show: (_preserveFocus?: boolean) => {
+				logs.debug("Terminal show called", "VSCode.Terminal")
+			},
+			hide: () => {
+				logs.debug("Terminal hide called", "VSCode.Terminal")
+			},
+			dispose: () => {
+				logs.debug("Terminal disposed", "VSCode.Terminal")
+			},
+		}
+	}
+
 	showInformationMessage(message: string, ..._items: string[]): Thenable<string | undefined> {
 		logs.info(message, "VSCode.Window")
 		return Promise.resolve(undefined)
@@ -1829,9 +1938,19 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 		ExtensionMode,
 		CodeActionKind,
 		ThemeColor,
+		ThemeIcon,
 		DecorationRangeBehavior,
 		OverviewRulerLane,
 		StatusBarItem,
+		CancellationToken: class CancellationTokenClass implements CancellationToken {
+			isCancellationRequested = false
+			onCancellationRequested = (_listener: (e: any) => any) => ({ dispose: () => {} })
+		},
+		CancellationTokenSource,
+		CodeLens,
+		LanguageModelTextPart,
+		LanguageModelToolCallPart,
+		LanguageModelToolResultPart,
 		ExtensionContext,
 		FileType,
 		FileSystemError,
