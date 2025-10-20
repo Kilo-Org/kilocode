@@ -482,6 +482,42 @@ export class GhostProvider {
 		const selectedGroup = groups[selectedGroupIndex]
 		const selectedGroupType = file.getGroupType(selectedGroup)
 
+		// Check if this is a modification with empty deletion followed by additions
+		// This happens when on empty line: delete '', add comment + function
+		if (selectedGroupType === "/") {
+			const deleteOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+			const addOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+
+			if (deleteOps.length > 0 && addOps.length > 0) {
+				const deletedContent = deleteOps
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+					.trim()
+
+				// If deletion is empty, treat entire thing (including next groups) as pure addition
+				if (deletedContent.length === 0 || deletedContent === "<<<AUTOCOMPLETE_HERE>>>") {
+					// Combine this group's additions with subsequent addition groups
+					const combinedOps = [...addOps]
+
+					// Check if there are subsequent addition groups
+					let nextIndex = selectedGroupIndex + 1
+					while (nextIndex < groups.length) {
+						const nextGroup = groups[nextIndex]
+						const nextGroupType = file.getGroupType(nextGroup)
+
+						if (nextGroupType === "+") {
+							combinedOps.push(...nextGroup)
+							nextIndex++
+						} else {
+							break
+						}
+					}
+
+					return { group: combinedOps, type: "+" }
+				}
+			}
+		}
+
 		// Check if this is a deletion that should be treated as addition
 		if (selectedGroupType === "-") {
 			// Case 1: Placeholder-only deletion

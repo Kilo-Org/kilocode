@@ -705,6 +705,202 @@ describe("GhostInlineCompletionProvider", () => {
 			// Should start with single newline
 			expect(completionText.startsWith("\n")).toBe(true)
 		})
+
+		it("should handle empty line deletion with multi-group additions as inline completion", async () => {
+			// Test: cursor on empty line, LLM suggests comment + function
+			// Creates: Group 0 (delete '', add comment), Group 1 (add function lines)
+			// Should combine all and show as inline completion
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 12,
+				lineAt: (line: number) => {
+					if (line === 10) {
+						return {
+							text: "",
+							range: new vscode.Range(line, 0, line, 0),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Group 0: modification - delete empty, add comment
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "",
+			}
+
+			const commentOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 10,
+				oldLine: 11,
+				newLine: 10,
+				content: "// implement function to add two numbers",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(commentOp)
+
+			// Group 1: pure additions - function lines
+			file.addOperation({
+				type: "+",
+				line: 11,
+				oldLine: 11,
+				newLine: 11,
+				content: "function addTwoNumbers(a: number, b: number): number {",
+			})
+			file.addOperation({
+				type: "+",
+				line: 12,
+				oldLine: 11,
+				newLine: 12,
+				content: "    return a + b;",
+			})
+			file.addOperation({
+				type: "+",
+				line: 13,
+				oldLine: 11,
+				newLine: 13,
+				content: "}",
+			})
+
+			file.sortGroups()
+
+			mockPosition = new vscode.Position(10, 0) // Cursor on empty line
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should show inline completion combining comment + function
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			// Should contain both comment and function
+			expect(completionText).toContain("// implement function")
+			expect(completionText).toContain("function addTwoNumbers")
+			expect(completionText).toContain("return a + b")
+		})
+
+		it("should combine modification suffix with subsequent additions (functio → functions + function)", async () => {
+			// Test: typing "// next use both these functio" should complete to:
+			// "ns" on same line + function on next lines
+			mockDocument = {
+				uri: vscode.Uri.file("/test/file.ts"),
+				lineCount: 20,
+				lineAt: (line: number) => {
+					if (line === 15) {
+						return {
+							text: "// next use both these functio",
+							range: new vscode.Range(line, 0, line, 30),
+						}
+					}
+					return {
+						text: `line ${line}`,
+						range: new vscode.Range(line, 0, line, 10),
+					}
+				},
+			} as any
+
+			const file = suggestions.addFile(mockDocument.uri)
+
+			// Group 0: modification - "functio" → "functions"
+			const deleteOp: GhostSuggestionEditOperation = {
+				type: "-",
+				line: 15,
+				oldLine: 15,
+				newLine: 15,
+				content: "// next use both these functio",
+			}
+
+			const addOp: GhostSuggestionEditOperation = {
+				type: "+",
+				line: 15,
+				oldLine: 16,
+				newLine: 15,
+				content: "// next use both these functions",
+			}
+
+			file.addOperation(deleteOp)
+			file.addOperation(addOp)
+
+			// Group 1: pure additions - function lines
+			file.addOperation({
+				type: "+",
+				line: 16,
+				oldLine: 16,
+				newLine: 16,
+				content: "function useBothFunctions(a: number, b: number): { sum: number; product: number } {",
+			})
+			file.addOperation({
+				type: "+",
+				line: 17,
+				oldLine: 16,
+				newLine: 17,
+				content: "    const sum = addNumbers(a, b);",
+			})
+			file.addOperation({
+				type: "+",
+				line: 18,
+				oldLine: 16,
+				newLine: 18,
+				content: "    const product = multiplyNumbers(a, b);",
+			})
+			file.addOperation({
+				type: "+",
+				line: 19,
+				oldLine: 16,
+				newLine: 19,
+				content: "    return { sum, product };",
+			})
+			file.addOperation({
+				type: "+",
+				line: 20,
+				oldLine: 16,
+				newLine: 20,
+				content: "}",
+			})
+
+			file.sortGroups()
+
+			mockPosition = new vscode.Position(15, 30) // After "functio"
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
+
+			// Should show inline completion
+			expect(result).toBeDefined()
+			expect(Array.isArray(result)).toBe(true)
+			const items = result as vscode.InlineCompletionItem[]
+			expect(items.length).toBe(1)
+
+			const completionText = items[0].insertText as string
+			// Should contain "ns" suffix on same line
+			expect(completionText).toContain("ns")
+			// Should contain function code on next lines
+			expect(completionText).toContain("function useBothFunctions")
+			expect(completionText).toContain("const sum = addNumbers")
+			// Should NOT duplicate existing text
+			expect(completionText).not.toContain("// next use both these functio")
+		})
 	})
 
 	describe("updateSuggestions", () => {

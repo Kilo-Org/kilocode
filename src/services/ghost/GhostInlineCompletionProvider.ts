@@ -47,6 +47,41 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const selectedGroup = groups[selectedGroupIndex]
 		const selectedGroupType = file.getGroupType(selectedGroup)
 
+		// Check if this is a modification with empty deletion
+		// This happens when on empty line: delete '', add content
+		if (selectedGroupType === "/") {
+			const deleteOps = selectedGroup.filter((op) => op.type === "-")
+			const addOps = selectedGroup.filter((op) => op.type === "+")
+
+			if (deleteOps.length > 0 && addOps.length > 0) {
+				const deletedContent = deleteOps
+					.map((op) => op.content)
+					.join("\n")
+					.trim()
+
+				// If deletion is empty, combine all subsequent additions
+				if (deletedContent.length === 0 || deletedContent === "<<<AUTOCOMPLETE_HERE>>>") {
+					const combinedOps = [...addOps]
+
+					// Add subsequent addition groups
+					let nextIndex = selectedGroupIndex + 1
+					while (nextIndex < groups.length) {
+						const nextGroup = groups[nextIndex]
+						const nextGroupType = file.getGroupType(nextGroup)
+
+						if (nextGroupType === "+") {
+							combinedOps.push(...nextGroup)
+							nextIndex++
+						} else {
+							break
+						}
+					}
+
+					return { group: combinedOps, type: "+" }
+				}
+			}
+		}
+
 		// If selected group is deletion, check if we should use associated addition
 		if (selectedGroupType === "-") {
 			const deleteOps = selectedGroup.filter((op) => op.type === "-")
@@ -221,7 +256,27 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return { text: "", isAddition: false } // No common prefix - use SVG decoration
 		}
 
-		return { text: addedContent.substring(commonPrefix.length), isAddition: false }
+		// Get the suffix for this modification
+		const suffix = addedContent.substring(commonPrefix.length)
+
+		// Check if there are subsequent addition groups that should be combined
+		// This handles: typing "functio" → complete to "functions\n<function code>"
+		if (selectedGroupIndex + 1 < groups.length) {
+			const nextGroup = groups[selectedGroupIndex + 1]
+			const nextGroupType = file.getGroupType(nextGroup)
+
+			if (nextGroupType === "+") {
+				// Combine the suffix with the next additions
+				const nextAdditions = nextGroup
+					.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+
+				return { text: suffix + "\n" + nextAdditions, isAddition: false }
+			}
+		}
+
+		return { text: suffix, isAddition: false }
 	}
 
 	/**
