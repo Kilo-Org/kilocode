@@ -241,7 +241,7 @@
 		"removeProfile": "Usuń profil",
 		"selectProfilePlaceholder": "Wybierz profil...",
 		"addProfile": "Dodaj profil",
-		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil dostawcy niewirtualnego.",
+		"noProfilesAvailable": "Brak dostępnych profili. Najpierw skonfiguruj co najmniej jeden profil dostawcy niewirtualnego.",
 		"dangerZoneTitle": "Strefa Niebezpieczna",
 		"dangerZoneDescription": "Te działania są destrukcyjne i nie można ich cofnąć.",
 		"clearUsageData": "Wyczyść Dane Użytkowania",

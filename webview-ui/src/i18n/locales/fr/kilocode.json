@@ -248,7 +248,7 @@
 		"removeProfile": "Supprimer le profil",
 		"selectProfilePlaceholder": "Sélectionner le profil...",
 		"addProfile": "Ajouter un profil",
-		"noProfilesAvailable": "Aucun profil disponible. Veuillez d'abord configurer au moins un profil de fournisseur non virtuel.",
+		"noProfilesAvailable": "Aucun profil disponible. Veuillez configurer d'abord au moins un profil de fournisseur non virtuel.",
 		"dangerZoneTitle": "Zone de Danger",
 		"dangerZoneDescription": "Ces actions sont destructives et ne peuvent pas être annulées.",
 		"clearUsageData": "Effacer les Données d'Utilisation",

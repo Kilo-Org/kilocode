@@ -243,7 +243,7 @@
 		"removeProfile": "移除設定檔",
 		"selectProfilePlaceholder": "選擇設定檔...",
 		"addProfile": "新增設定檔",
-		"noProfilesAvailable": "沒有可用的設定檔。請先設定至少一個非虛擬提供者設定檔。",
+		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
 		"dangerZoneTitle": "危險區域",
 		"dangerZoneDescription": "這些操作具有破壞性且無法復原。",
 		"clearUsageData": "清除使用資料",

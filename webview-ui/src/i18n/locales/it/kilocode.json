@@ -241,7 +241,7 @@
 		"removeProfile": "Rimuovi profilo",
 		"selectProfilePlaceholder": "Seleziona profilo...",
 		"addProfile": "Aggiungi profilo",
-		"noProfilesAvailable": "Nessun profilo disponibile. Si prega di configurare prima almeno un profilo di provider non virtuale.",
+		"noProfilesAvailable": "Nessun profilo disponibile. Configurare prima almeno un profilo provider non virtuale.",
 		"dangerZoneTitle": "Zona di Pericolo",
 		"dangerZoneDescription": "Queste azioni sono distruttive e non possono essere annullate.",
 		"clearUsageData": "Cancella Dati di Utilizzo",

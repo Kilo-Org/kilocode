@@ -248,7 +248,7 @@
 		"removeProfile": "プロフィールを削除",
 		"selectProfilePlaceholder": "プロフィールを選択...",
 		"addProfile": "プロフィールを追加",
-		"noProfilesAvailable": "利用可能なプロファイルがありません。まず、少なくとも1つの非仮想プロバイダープロファイルを構成してください。",
+		"noProfilesAvailable": "プロファイルが利用できません。最初に少なくとも1つの非仮想プロバイダープロファイルを設定してください。",
 		"dangerZoneTitle": "危険ゾーン",
 		"dangerZoneDescription": "これらのアクションは破壊的で、元に戻すことはできません。",
 		"clearUsageData": "使用データをクリア",
