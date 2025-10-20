@@ -8,6 +8,7 @@ import {
 	openAiModelInfoSaneDefaults,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
 	OPENAI_AZURE_AI_INFERENCE_PATH,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
@@ -19,7 +20,7 @@ import { convertToR1Format } from "../transform/r1-format"
 import { convertToSimpleMessages } from "../transform/simple-format"
 import { ApiStream, ApiStreamUsageChunk } from "../transform/stream"
 import { getModelParams } from "../transform/model-params"
-
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
@@ -169,6 +170,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
 
+			// kilocode_change start: Add native tool call support when toolStyle is "json"
+			addNativeToolCallsToParams(requestOptions, this.options, metadata)
+			// kilocode_change end
+
 			let stream
 			try {
 				stream = await this.client.chat.completions.create(
@@ -192,6 +197,10 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta ?? {}
+
+				// kilocode_change start: Handle native tool calls when toolStyle is "json"
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
+				// kilocode_change end
 
 				if (delta.content) {
 					for (const chunk of matcher.update(delta.content)) {
@@ -244,7 +253,9 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 
 			// Add max_tokens if needed
 			this.addMaxTokensIfNeeded(requestOptions, modelInfo)
-
+			// kilocode_change start: Add native tool call support when toolStyle is "json"
+			addNativeToolCallsToParams(requestOptions, this.options, metadata)
+			// kilocode_change end
 			let response
 			try {
 				response = await this.client.chat.completions.create(
@@ -255,7 +266,8 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				throw handleOpenAIError(error, this.providerName)
 			}
 
-			// kilocode_change start: reasoning
+			// kilocode_change start: reasoning & tool calls.
+			const toolStyle = getActiveToolUseStyle(this.options)
 			const message = response.choices[0]?.message
 			if (message) {
 				if ("reasoning" in message && typeof message.reasoning === "string") {
@@ -268,6 +280,12 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					yield {
 						type: "text",
 						text: message.content,
+					}
+				}
+				if (toolStyle === "json" && message.tool_calls) {
+					yield {
+						type: "native_tool_calls",
+						toolCalls: message.tool_calls,
 					}
 				}
 			}

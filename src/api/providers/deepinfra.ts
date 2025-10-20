@@ -1,7 +1,11 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import { deepInfraDefaultModelId, deepInfraDefaultModelInfo } from "@roo-code/types"
+import {
+	deepInfraDefaultModelId,
+	deepInfraDefaultModelInfo,
+	getActiveToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 import { calculateApiCostOpenAI } from "../../shared/cost"
@@ -13,6 +17,7 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { RouterProvider } from "./router-provider"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 export class DeepInfraHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
@@ -82,11 +87,17 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 			;(requestOptions as any).max_completion_tokens = this.options.modelMaxTokens || info.maxTokens
 		}
 
-		const { data: stream } = await this.client.chat.completions.create(requestOptions).withResponse()
+		const { data: stream } = await this.client.chat.completions
+			.create(
+				addNativeToolCallsToParams(requestOptions, this.options, _metadata), // kilocode_change
+			)
+			.withResponse()
 
 		let lastUsage: OpenAI.CompletionUsage | undefined
 		for await (const chunk of stream) {
 			const delta = chunk.choices[0]?.delta
+
+			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 			if (delta?.content) {
 				yield { type: "text", text: delta.content }

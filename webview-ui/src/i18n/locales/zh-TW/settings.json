@@ -929,6 +929,10 @@
 			"label": "顯示任務時間軸",
 			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
 		},
+		"sendMessageOnEnter": {
+			"label": "使用 Enter 鍵傳送訊息",
+			"description": "啟用後，按 Enter 鍵傳送訊息，Shift+Enter 鍵換行。停用後，使用 Shift+Enter 鍵傳送訊息。"
+		},
 		"costThreshold": {
 			"description": "仅显示超过此金额的请求费用。当详细信息面板打开时，费用始终可见。",
 			"label": "隐藏低于阈值的费用",

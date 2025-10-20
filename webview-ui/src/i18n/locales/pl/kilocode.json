@@ -97,7 +97,10 @@
 	},
 	"toolCallStyle": {
 		"title": "Styl Wywołań Narzędzi",
-		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój."
+		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój.",
+		"automatic": "Pozwól Kilo zdecydować",
+		"xml": "XML",
+		"json": "JSON (eksperymentalny)"
 	},
 	"chat": {
 		"condense": {

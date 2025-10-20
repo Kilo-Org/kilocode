@@ -602,6 +602,10 @@
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
 		},
+		"sendMessageOnEnter": {
+			"label": "Odeslat zprávu pomocí Enter",
+			"description": "Je-li povoleno, stiskněte Enter pro odeslání a Shift+Enter pro nový řádek. Vypněte pro použití Shift+Enter pro odeslání."
+		},
 		"costThreshold": {
 			"label": "Skrýt cenu pod prahem",
 			"currentValue": "Aktuální práh: ${{value}}",

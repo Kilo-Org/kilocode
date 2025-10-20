@@ -928,6 +928,10 @@
 			"label": "작업 타임라인 표시",
 			"description": "작업 메시지의 시각적 타임라인을 유형별로 색상화하여 표시하므로, 작업 진행 상황을 빠르게 확인하고 작업 기록의 특정 지점으로 스크롤하여 돌아갈 수 있습니다."
 		},
+		"sendMessageOnEnter": {
+			"label": "Enter로 메시지 보내기",
+			"description": "활성화되면 Enter 키를 눌러 메시지를 보내고 Shift+Enter로 새 줄을 입력합니다. 대신 Shift+Enter를 사용하여 메시지를 보내려면 비활성화하세요."
+		},
 		"costThreshold": {
 			"description": "해당 금액 이상의 요청비용만 표시합니다. 세부정보 창이 열려있을 때는 항상 비용이 표시됩니다.",
 			"label": "임계값 이하 비용 숨기기",
