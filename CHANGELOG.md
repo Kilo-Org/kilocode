@@ -2,8 +2,6 @@
 
 ## [v4.107.0]
 
-- [#2549](https://github.com/Kilo-Org/kilocode/pull/2549) [`4327563`](https://github.com/Kilo-Org/kilocode/commit/4327563ea315eaca0907286f02f03facf42a837c) Thanks [@mcowger](https://github.com/mcowger)! - Add Kilocode Credits Status Bar Item
-
 ### Patch Changes
 
 - [#3082](https://github.com/Kilo-Org/kilocode/pull/3082) [`d82e684`](https://github.com/Kilo-Org/kilocode/commit/d82e6842d423861d7c5725ebfdba491438b3302a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - The "Enable browser tool" setting is now honored when using experimental JSON style tool calls.
