@@ -442,6 +442,59 @@ function implementAnotherFeature() {
 			// The function should be on a later line than the comment
 			expect(functionAddition!.line).toBeGreaterThan(commentAddition!.line)
 		})
+
+		it("should not add extra newline when LLM response starts with newline for cursor marker on its own line", () => {
+			// This test reproduces the exact issue from the logs where the LLM returns
+			// a replacement that starts with a newline when the cursor marker is on its own line
+			const mockDocumentWithCursor: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `// implement function add two
+function addTwo(a: number, b: number): number {
+			 return a + b;
+}
+
+
+// implement function subtract two
+function subtractTwo(a: number, b: number): number {
+			 return a - b;
+}
+// implement function multiply two
+<<<AUTOCOMPLETE_HERE>>>`,
+				languageId: "typescript",
+			}
+
+			const contextWithCursor = {
+				document: mockDocumentWithCursor,
+			}
+
+			parser.initialize(contextWithCursor)
+
+			// The LLM response starts with a newline after CDATA (this is the bug scenario)
+			const changeWithCursor = `<change><search><![CDATA[<<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[
+function multiplyTwo(a: number, b: number): number {
+			 return a * b;
+}]]></replace></change>`
+
+			const result = parser.processChunk(changeWithCursor)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify NO extra blank line is created between the comment and the function
+			const file = result.suggestions.getFile(mockDocumentWithCursor.uri.toString())
+			expect(file).toBeDefined()
+
+			const operations = file!.getAllOperations()
+			const additions = operations.filter((op) => op.type === "+")
+
+			// Should have additions for the new function
+			expect(additions.length).toBeGreaterThan(0)
+
+			// The first addition should be the function, not an empty line
+			// Check that the first line of content is the function declaration
+			const firstAddition = additions[0]
+			expect(firstAddition.content).toMatch(/^function multiplyTwo/)
+		})
 	})
 
 	describe("reset", () => {
