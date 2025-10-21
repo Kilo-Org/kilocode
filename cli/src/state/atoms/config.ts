@@ -216,6 +216,30 @@ export const setModeAtom = atom(null, async (get, set, mode: string) => {
 	await set(syncConfigToExtensionEffectAtom)
 })
 
+// Action atom to update theme in config and persist
+export const setThemeAtom = atom(null, async (get, set, theme: string) => {
+	const config = get(configAtom)
+	const previousTheme = config.theme || "dark"
+	const updatedConfig = {
+		...config,
+		theme,
+	}
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Theme updated to: ${theme}`, "ConfigAtoms")
+
+	// Track theme change
+	getTelemetryService().trackThemeChanged?.(previousTheme, theme)
+
+	// Import from config-sync to avoid circular dependency
+	const { syncConfigToExtensionEffectAtom } = await import("./config-sync.js")
+
+	// Trigger sync to extension after theme change
+	await set(syncConfigToExtensionEffectAtom)
+})
+
 // Atom to get mapped extension state
 export const mappedExtensionStateAtom = atom((get) => {
 	const config = get(configAtom)

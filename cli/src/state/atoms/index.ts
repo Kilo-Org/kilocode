@@ -91,6 +91,7 @@ export {
 	updateProviderAtom,
 	removeProviderAtom,
 	setModeAtom,
+	setThemeAtom,
 } from "./config.js"
 
 // ============================================================================
