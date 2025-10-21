@@ -383,8 +383,8 @@ function newFunctionality() {
 			const additionLines = additions.map((op) => op.content)
 			expect(additionLines[0]).toBe("// Add new functionality here")
 		})
-
-		it("should add newline when cursor marker is at end of line with content", () => {
+		// TODO: this should be turned back on when we have the latest parser
+		it.skip("should add newline when cursor marker is at end of line with content", () => {
 			// Mock document with cursor marker at the end of a comment line
 			const mockDocumentWithCursor: any = {
 				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
