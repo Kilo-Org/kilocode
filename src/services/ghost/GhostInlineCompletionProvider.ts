@@ -251,6 +251,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	/**
 	 * Check if deletion and addition groups should be combined
+	 *
+	 * MULTI-GROUP COMBINATIONS:
+	 * This is a core part of handling LLM suggestions that come as separate deletion and addition
+	 * groups but should be treated as a single modification. When the LLM generates diffs,
+	 * it sometimes produces:
+	 *   Group 1 (deletion): "const x ="
+	 *   Group 2 (addition): "const x = 10"
+	 *
+	 * These should be combined into a synthetic modification group so the inline completion
+	 * shows only the suffix (e.g., " 10") rather than the entire addition. This provides a
+	 * better user experience by showing only what's actually being added/changed.
 	 */
 	private shouldCombineGroups(deletedContent: string, addedContent: string): boolean {
 		return (
@@ -458,6 +469,24 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	/**
 	 * Handle modification group with empty deletion
+	 *
+	 * SUBSEQUENT ADDITION GROUP MERGING:
+	 * When a modification has an empty or placeholder deletion (e.g., "<<<AUTOCOMPLETE_HERE>>>"),
+	 * it's actually a pure addition. However, the LLM may split this addition across multiple
+	 * groups:
+	 *   Group 1 (modification): - "<<<AUTOCOMPLETE_HERE>>>" + "function foo() {"
+	 *   Group 2 (addition): "  return 42;"
+	 *   Group 3 (addition): "}"
+	 *
+	 * This function merges all subsequent addition groups (lines 488-500) into a single combined
+	 * group. This ensures the inline completion shows the complete multi-line addition as one
+	 * cohesive suggestion, rather than requiring the user to navigate through multiple separate
+	 * groups. Without this merging, the user would see:
+	 *   - First: "function foo() {"
+	 *   - Tab to next: "  return 42;"
+	 *   - Tab to next: "}"
+	 *
+	 * With merging, they see the complete function in one go, which is more natural and efficient.
 	 */
 	private handleEmptyDeletionModification(
 		group: GhostSuggestionEditOperation[],
@@ -594,6 +623,33 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	/**
 	 * Get completion text for addition that may be part of modification
+	 *
+	 * FIRST-LINE PREFIX WITH MULTI-LINE ADDITIONS:
+	 * This handles a complex scenario where the LLM generates suggestions with a common prefix
+	 * on the first line, followed by additional lines. For example:
+	 *   Previous deletion: "const x ="
+	 *   Addition group:    "const x = 10\n  + 20\n  + 30"
+	 *
+	 * There are two cases to handle:
+	 *
+	 * 1. Entire addition starts with deletion (lines 634-636):
+	 *    If the whole addition text begins with the deleted content, we strip the common prefix
+	 *    from the entire text. This is straightforward prefix removal.
+	 *
+	 * 2. Only first line starts with deletion (lines 638-642):
+	 *    More complex - only the first operation's content contains the prefix, but subsequent
+	 *    lines don't. We need to:
+	 *    a) Extract the suffix from the first line after removing the prefix
+	 *    b) Keep all subsequent lines intact
+	 *    c) Join them with newlines
+	 *
+	 *    Example result: " 10\n  + 20\n  + 30" (only " 10" is shown inline on first line,
+	 *    then the remaining lines appear below)
+	 *
+	 * This approach allows for natural inline completion of multi-line suggestions where
+	 * the first line modifies existing code and subsequent lines add new content below it.
+	 * Without this logic, the inline completion would show redundant text that's already
+	 * on the line.
 	 */
 	private getAdditionCompletionText(
 		group: GhostSuggestionEditOperation[],
