@@ -553,7 +553,23 @@ export class GhostProvider {
 		await this.render()
 	}
 
+	/**
+	 * Apply suggestion via workspace edit (for SVG decoration acceptance).
+	 * Used when accepting through custom keybindings or clicking decorations.
+	 */
 	public async applySelectedSuggestions() {
+		await this.acceptSuggestion(true)
+	}
+
+	/**
+	 * Accept suggestion without applying edits (for inline completion acceptance).
+	 * VSCode's inline completion API already inserted the text - only clean up state.
+	 */
+	public async acceptInlineCompletion() {
+		await this.acceptSuggestion(false)
+	}
+
+	private async acceptSuggestion(applyEdits: boolean) {
 		if (!this.enabled) {
 			return
 		}
@@ -580,15 +596,13 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
-		this.cursor.moveToAppliedGroup(this.suggestions)
 
-		// For placeholder-only deletions, we need to apply the associated addition instead
-		const groups = suggestionsFile.getGroupsOperations()
-		const selectedGroup = groups[selectedGroupIndex]
-		const selectedGroupType = suggestionsFile.getGroupType(selectedGroup)
-
-		// Simply delete the selected group - the workspace edit will handle the actual application
+		// Apply workspace edits only if requested (for custom keybindings/decorations)
+		// For inline completions, VSCode already inserted the text
+		if (applyEdits) {
+			await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
+			this.cursor.moveToAppliedGroup(this.suggestions)
+		}
 		suggestionsFile.deleteSelectedGroup()
 
 		suggestionsFile.selectClosestGroup(editor.selection)
