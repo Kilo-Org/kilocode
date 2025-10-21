@@ -38,6 +38,7 @@ export interface CommandContext {
 	replaceMessages: (messages: any[]) => void
 	clearTask: () => Promise<void>
 	setMode: (mode: string) => void
+	setTheme: (theme: string) => Promise<void>
 	exit: () => void
 	// Model-related context
 	routerModels: RouterModels | null
