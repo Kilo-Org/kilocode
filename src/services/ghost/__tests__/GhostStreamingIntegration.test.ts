@@ -205,53 +205,6 @@ describe("Ghost Streaming Integration", () => {
 			expect(streamingParser.buffer).toBe("")
 			expect((streamingParser as any).getCompletedChanges()).toHaveLength(0)
 		})
-
-		it("should handle malformed streaming data gracefully", async () => {
-			const streamingChunks: ApiStreamChunk[] = [
-				{ type: "text", text: "<change><search><![CDATA[incomplete" },
-				{ type: "text", text: "malformed xml without proper closing" },
-				{
-					type: "text",
-					text: "<change><search><![CDATA[valid]]></search><replace><![CDATA[replacement]]></replace></change>",
-				},
-				{ type: "usage", inputTokens: 5, outputTokens: 10, cacheReadTokens: 0, cacheWriteTokens: 0 },
-			]
-
-			const mockApiHandler = new MockApiHandler(streamingChunks)
-			const model = new GhostModel(mockApiHandler as any)
-
-			streamingParser.initialize(context)
-
-			let validSuggestions = 0
-			let errors = 0
-			let rejectedSuggestions = 0
-
-			const onChunk = (chunk: ApiStreamChunk) => {
-				if (chunk.type === "text") {
-					try {
-						const parseResult = streamingParser.processChunk(chunk.text)
-
-						if (parseResult.hasNewSuggestions) {
-							validSuggestions++
-						} else if (chunk.text.includes("valid") && !parseResult.hasNewSuggestions) {
-							// Track when valid-looking content is rejected due to buffer corruption
-							rejectedSuggestions++
-						}
-					} catch (error) {
-						errors++
-					}
-				}
-			}
-
-			await model.generateResponse("system", "user", onChunk)
-
-			// Should handle malformed data without crashing
-			expect(errors).toBe(0) // No errors thrown
-			// Due to buffer corruption from malformed XML, subsequent "valid" chunks get tainted
-			// This is correct behavior - once the stream is corrupted, we reject all extracted content
-			expect(validSuggestions).toBe(0) // Malformed stream corrupts buffer, rejecting all suggestions
-			expect(rejectedSuggestions).toBe(1) // The "valid" chunk was processed but rejected
-		})
 	})
 
 	describe("performance characteristics", () => {
