@@ -1,5 +1,5 @@
 import { GhostStreamingParser, findBestMatch } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { GhostSuggestionContext, GhostSuggestionEditOperation } from "../types"
 
 // Mock vscode module
 vi.mock("vscode", () => ({
@@ -237,7 +237,7 @@ function calculateFactorial(n: number): number {
 		  return n * calculateFactorial(n - 1);
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -249,7 +249,9 @@ function calculateFactorial(n: number): number {
 
 			// Check that operations don't add unnecessary blank lines
 			const operations = file!.getAllOperations()
-			const additionLines = operations.filter((op) => op.type === "+").map((op) => op.content)
+			const additionLines = operations
+				.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+				.map((op: GhostSuggestionEditOperation) => op.content)
 
 			// The first line should be the comment, not an empty line
 			expect(additionLines[0]).toBe("// implement function to calculate factorial")
@@ -279,7 +281,7 @@ function calculateFactorial(n: number): number {
 		  console.log("Yet another feature implemented");
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -290,8 +292,8 @@ function calculateFactorial(n: number): number {
 
 			const operations = file!.getAllOperations()
 			// There should be a deletion (the newline) and additions (the new function)
-			const deletions = operations.filter((op) => op.type === "-")
-			const additions = operations.filter((op) => op.type === "+")
+			const deletions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+			const additions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "+")
 
 			// Should have a deletion for the newline
 			expect(deletions.length).toBeGreaterThan(0)
@@ -352,7 +354,7 @@ function newFunctionality() {
 		  console.log('New functionality added');
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -362,8 +364,8 @@ function newFunctionality() {
 			expect(file).toBeDefined()
 
 			const operations = file!.getAllOperations()
-			const deletions = operations.filter((op) => op.type === "-")
-			const additions = operations.filter((op) => op.type === "+")
+			const deletions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+			const additions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "+")
 
 			// Should have a deletion for the empty line
 			expect(deletions.length).toBeGreaterThan(0)
@@ -371,7 +373,7 @@ function newFunctionality() {
 			expect(additions.length).toBeGreaterThan(0)
 
 			// First addition should be the comment
-			const additionLines = additions.map((op) => op.content)
+			const additionLines = additions.map((op: GhostSuggestionEditOperation) => op.content)
 			expect(additionLines[0]).toBe("// Add new functionality here")
 		})
 		// TODO: this should be turned back on when we have the latest parser
@@ -405,7 +407,7 @@ function implementAnotherFeature() {
 			 return a + b;
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -415,16 +417,18 @@ function implementAnotherFeature() {
 			expect(file).toBeDefined()
 
 			const operations = file!.getAllOperations()
-			const additions = operations.filter((op) => op.type === "+")
+			const additions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "+")
 
 			// Should have additions for the new function
 			expect(additions.length).toBeGreaterThan(0)
 
 			// Check that we have both the comment line and the function (as separate additions)
-			const commentAddition = additions.find((op) =>
+			const commentAddition = additions.find((op: GhostSuggestionEditOperation) =>
 				op.content.includes("// implement function to add two numbers"),
 			)
-			const functionAddition = additions.find((op) => op.content.includes("function addNumbers"))
+			const functionAddition = additions.find((op: GhostSuggestionEditOperation) =>
+				op.content.includes("function addNumbers"),
+			)
 
 			// Both should exist as separate operations
 			expect(commentAddition).toBeDefined()
@@ -466,7 +470,7 @@ function multiplyTwo(a: number, b: number): number {
 			 return a * b;
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -476,7 +480,7 @@ function multiplyTwo(a: number, b: number): number {
 			expect(file).toBeDefined()
 
 			const operations = file!.getAllOperations()
-			const additions = operations.filter((op) => op.type === "+")
+			const additions = operations.filter((op: GhostSuggestionEditOperation) => op.type === "+")
 
 			// Should have additions for the new function
 			expect(additions.length).toBeGreaterThan(0)
