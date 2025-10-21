@@ -1,6 +1,7 @@
 import * as vscode from "vscode"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostSuggestionEditOperation } from "./types"
+import { GhostServiceSettings } from "@roo-code/types"
 
 /**
  * Inline Completion Provider for Ghost Code Suggestions
@@ -12,10 +13,16 @@ import { GhostSuggestionEditOperation } from "./types"
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestions: GhostSuggestionsState
 	private onIntelliSenseDetected?: () => void
+	private settings: GhostServiceSettings | null = null
 
-	constructor(suggestions: GhostSuggestionsState, onIntelliSenseDetected?: () => void) {
+	constructor(
+		suggestions: GhostSuggestionsState,
+		onIntelliSenseDetected?: () => void,
+		settings?: GhostServiceSettings | null,
+	) {
 		this.suggestions = suggestions
 		this.onIntelliSenseDetected = onIntelliSenseDetected
+		this.settings = settings || null
 	}
 
 	/**
@@ -23,6 +30,362 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 */
 	public updateSuggestions(suggestions: GhostSuggestionsState): void {
 		this.suggestions = suggestions
+	}
+
+	/**
+	 * Update the settings reference
+	 */
+	public updateSettings(settings: GhostServiceSettings | null): void {
+		this.settings = settings
+	}
+
+	/**
+	 * Check if a deletion group is placeholder-only and should be treated as addition
+	 */
+	private isPlaceholderOnlyDeletion(group: GhostSuggestionEditOperation[]): boolean {
+		const deleteOps = group.filter((op) => op.type === "-")
+		if (deleteOps.length === 0) return false
+
+		const deletedContent = deleteOps
+			.map((op) => op.content)
+			.join("\n")
+			.trim()
+		return deletedContent === "<<<AUTOCOMPLETE_HERE>>>"
+	}
+
+	/**
+	 * Check if a group should be shown based on onlyAdditions setting
+	 */
+	private shouldShowGroup(groupType: "+" | "/" | "-", group?: GhostSuggestionEditOperation[]): boolean {
+		// If onlyAdditions is enabled (default), check what to show
+		const onlyAdditions = this.settings?.onlyAdditions ?? true
+		if (onlyAdditions) {
+			// Always show pure additions
+			if (groupType === "+") {
+				return true
+			}
+
+			// For modifications, allow completions with common prefix
+			// This includes both single-line (e.g., "add" → "addNumbers")
+			// and multi-line (e.g., "// impl" → "// impl\nfunction...")
+			if (groupType === "/" && group) {
+				const deleteOps = group.filter((op) => op.type === "-")
+				const addOps = group.filter((op) => op.type === "+")
+
+				if (deleteOps.length > 0 && addOps.length > 0) {
+					const deletedContent = deleteOps
+						.sort((a, b) => a.line - b.line)
+						.map((op) => op.content)
+						.join("\n")
+					const addedContent = addOps
+						.sort((a, b) => a.line - b.line)
+						.map((op) => op.content)
+						.join("\n")
+
+					// If added content starts with deleted content, it's a completion - allow it
+					// This handles both single-line and multi-line completions
+					if (addedContent.startsWith(deletedContent)) {
+						return true
+					}
+				}
+			}
+
+			// Don't show deletions or multi-line modifications
+			return false
+		}
+		// Otherwise show all group types
+		return true
+	}
+
+	/**
+	 * Determine if a group should use inline completion instead of SVG decoration
+	 * Centralized logic to ensure consistency
+	 */
+	public shouldUseInlineCompletion(
+		selectedGroup: GhostSuggestionEditOperation[],
+		groupType: "+" | "/" | "-",
+		cursorLine: number,
+		file: any,
+	): boolean {
+		// First check if this group type should be shown at all
+		// Pass the group so shouldShowGroup can properly evaluate modifications
+		if (!this.shouldShowGroup(groupType, selectedGroup)) {
+			return false
+		}
+
+		// Deletions never use inline
+		if (groupType === "-") {
+			return false
+		}
+
+		// Calculate target line and distance
+		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
+		let targetLine: number
+
+		// For modifications, use the deletion line without offsets since that's where the change is happening
+		// For additions, apply the offset to account for previously removed lines
+		if (groupType === "/") {
+			const deleteOp = selectedGroup.find((op: any) => op.type === "-")
+			targetLine = deleteOp ? deleteOp.line : selectedGroup[0].line
+		} else if (groupType === "+") {
+			const firstOp = selectedGroup[0]
+			targetLine = firstOp.line + offset.removed
+		} else {
+			// groupType === "-"
+			targetLine = selectedGroup[0].line + offset.added
+		}
+
+		const distanceFromCursor = Math.abs(cursorLine - targetLine)
+
+		// Must be within 5 lines
+		if (distanceFromCursor > 5) {
+			return false
+		}
+
+		// For pure additions, use inline
+		if (groupType === "+") {
+			return true
+		}
+
+		// For modifications, check if there's a common prefix or empty deleted content
+		const deleteOps = selectedGroup.filter((op) => op.type === "-")
+		const addOps = selectedGroup.filter((op) => op.type === "+")
+
+		if (deleteOps.length === 0 || addOps.length === 0) {
+			return false
+		}
+
+		const deletedContent = deleteOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+		const addedContent = addOps
+			.sort((a, b) => a.line - b.line)
+			.map((op) => op.content)
+			.join("\n")
+
+		// If deleted content is empty or just the placeholder, treat as pure addition
+		const trimmedDeleted = deletedContent.trim()
+		if (trimmedDeleted.length === 0 || trimmedDeleted === "<<<AUTOCOMPLETE_HERE>>>") {
+			return true
+		}
+
+		// Check if this should be treated as addition (LLM wants to add after existing content)
+		if (this.shouldTreatAsAddition(deletedContent, addedContent)) {
+			return true
+		}
+
+		// Check for common prefix
+		const commonPrefix = this.findCommonPrefix(deletedContent, addedContent)
+		return commonPrefix.length > 0
+	}
+	/**
+	 * Determine if inline suggestions should be triggered for current state
+	 * Returns true if inline completion should be shown
+	 */
+	public shouldTriggerInline(editor: vscode.TextEditor, suggestions: GhostSuggestionsState): boolean {
+		if (!suggestions.hasSuggestions()) {
+			return false
+		}
+
+		const file = suggestions.getFile(editor.document.uri)
+		if (!file) {
+			return false
+		}
+
+		const groups = file.getGroupsOperations()
+		const selectedGroupIndex = file.getSelectedGroup()
+
+		if (selectedGroupIndex === null || selectedGroupIndex >= groups.length) {
+			return false
+		}
+
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
+
+		// Use the shouldUseInlineCompletion logic
+		return this.shouldUseInlineCompletion(selectedGroup, selectedGroupType, editor.selection.active.line, file)
+	}
+
+	/**
+	 * Get indices of groups that should be skipped for SVG decorations
+	 * Returns array of group indices to skip
+	 */
+	public getSkipGroupIndices(file: any, editor: vscode.TextEditor): number[] {
+		const groups = file.getGroupsOperations()
+		const selectedGroupIndex = file.getSelectedGroup()
+
+		if (selectedGroupIndex === null) {
+			return []
+		}
+
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
+		const skipGroupIndices: number[] = []
+
+		// Filter out groups based on onlyAdditions setting
+		for (let i = 0; i < groups.length; i++) {
+			const group = groups[i]
+			const groupType = file.getGroupType(group)
+
+			// Skip groups that shouldn't be shown based on settings
+			if (!this.shouldShowGroup(groupType, group)) {
+				skipGroupIndices.push(i)
+				continue
+			}
+		}
+
+		// Check if selected group uses inline completion
+		const selectedGroupUsesInline = this.shouldUseInlineCompletion(
+			selectedGroup,
+			selectedGroupType,
+			editor.selection.active.line,
+			file,
+		)
+
+		if (selectedGroupUsesInline) {
+			// Always skip the selected group if it uses inline completion
+			if (!skipGroupIndices.includes(selectedGroupIndex)) {
+				skipGroupIndices.push(selectedGroupIndex)
+			}
+
+			// If we're using a synthetic modification group (deletion + addition in separate groups),
+			// skip both the deletion group AND the addition group
+			if (selectedGroupType === "-" && selectedGroupIndex + 1 < groups.length) {
+				const nextGroup = groups[selectedGroupIndex + 1]
+				const nextGroupType = file.getGroupType(nextGroup)
+
+				// If next group is addition and they should be combined, skip both
+				if (nextGroupType === "+") {
+					const deleteOps = selectedGroup.filter((op: any) => op.type === "-")
+					const addOps = nextGroup.filter((op: any) => op.type === "+")
+
+					const deletedContent = deleteOps.map((op: any) => op.content).join("\n")
+					const addedContent = addOps.map((op: any) => op.content).join("\n")
+
+					// If they have common prefix or other addition criteria, skip the addition group too
+					if (
+						addedContent.startsWith(deletedContent) ||
+						deletedContent === "<<<AUTOCOMPLETE_HERE>>>" ||
+						addedContent.startsWith("\n") ||
+						addedContent.startsWith("\r\n")
+					) {
+						if (!skipGroupIndices.includes(selectedGroupIndex + 1)) {
+							skipGroupIndices.push(selectedGroupIndex + 1)
+						}
+					}
+				}
+			}
+
+			// IMPORTANT: To prevent showing multiple suggestions simultaneously (inline + SVG),
+			// when using inline completion, hide ALL other groups from SVG decorations.
+			// This ensures only ONE suggestion is visible at a time (the inline one).
+			for (let i = 0; i < groups.length; i++) {
+				if (i !== selectedGroupIndex && !skipGroupIndices.includes(i)) {
+					skipGroupIndices.push(i)
+				}
+			}
+		}
+
+		return skipGroupIndices
+	}
+
+	/**
+	 * Find next valid group index that should be shown
+	 * Returns the index or null if none found
+	 */
+	public findNextValidGroup(file: any, startIndex: number): number | null {
+		const groups = file.getGroupsOperations()
+		const maxAttempts = groups.length
+		let attempts = 0
+		let currentIndex = startIndex
+
+		while (attempts < maxAttempts) {
+			file.selectNextGroup()
+			attempts++
+			currentIndex = file.getSelectedGroup()
+
+			if (currentIndex !== null && currentIndex < groups.length) {
+				const currentGroup = groups[currentIndex]
+				const currentGroupType = file.getGroupType(currentGroup)
+
+				// Check if this is a valid group to show
+				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
+				const shouldShow = this.shouldShowGroup(currentGroupType, currentGroup)
+
+				if (!isPlaceholder && shouldShow) {
+					return currentIndex
+				}
+			}
+
+			// Safety check to avoid infinite loop
+			if (currentIndex === startIndex) {
+				break
+			}
+		}
+
+		return null
+	}
+
+	/**
+	 * Find previous valid group index that should be shown
+	 * Returns the index or null if none found
+	 */
+	public findPreviousValidGroup(file: any, startIndex: number): number | null {
+		const groups = file.getGroupsOperations()
+		const maxAttempts = groups.length
+		let attempts = 0
+		let currentIndex = startIndex
+
+		while (attempts < maxAttempts) {
+			file.selectPreviousGroup()
+			attempts++
+			currentIndex = file.getSelectedGroup()
+
+			if (currentIndex !== null && currentIndex < groups.length) {
+				const currentGroup = groups[currentIndex]
+				const currentGroupType = file.getGroupType(currentGroup)
+
+				// Check if this is a valid group to show
+				const isPlaceholder = currentGroupType === "-" && this.isPlaceholderOnlyDeletion(currentGroup)
+				const shouldShow = this.shouldShowGroup(currentGroupType, currentGroup)
+
+				if (!isPlaceholder && shouldShow) {
+					return currentIndex
+				}
+			}
+
+			// Safety check to avoid infinite loop
+			if (currentIndex === startIndex) {
+				break
+			}
+		}
+
+		return null
+	}
+
+	/**
+	 * Select closest valid group after initial selection
+	 * Ensures the selected group is valid to show
+	 */
+	public selectClosestValidGroup(file: any, editor: vscode.TextEditor): void {
+		const selectedGroupIndex = file.getSelectedGroup()
+		if (selectedGroupIndex === null) {
+			return
+		}
+
+		const groups = file.getGroupsOperations()
+		const selectedGroup = groups[selectedGroupIndex]
+		const selectedGroupType = file.getGroupType(selectedGroup)
+
+		const shouldSkip =
+			(selectedGroupType === "-" && this.isPlaceholderOnlyDeletion(selectedGroup)) ||
+			!this.shouldShowGroup(selectedGroupType, selectedGroup)
+
+		if (shouldSkip) {
+			// Try to find a valid group
+			this.findNextValidGroup(file, selectedGroupIndex)
+		}
 	}
 
 	/**
@@ -127,6 +490,38 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			}
 
 			return null // Regular deletions use SVG decorations
+		}
+
+		// NEW: Check if this is an addition group that should be combined with previous deletion
+		// This handles cases where deletion and addition were separated by the grouping logic
+		// because their newLine values differed, but they share a common prefix
+		if (selectedGroupType === "+" && selectedGroupIndex > 0) {
+			const previousGroup = groups[selectedGroupIndex - 1]
+			const previousGroupType = file.getGroupType(previousGroup)
+
+			if (previousGroupType === "-") {
+				const deleteOps = previousGroup.filter((op: GhostSuggestionEditOperation) => op.type === "-")
+				const addOps = selectedGroup.filter((op: GhostSuggestionEditOperation) => op.type === "+")
+
+				const deletedContent = deleteOps
+					.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+				const addedContent = addOps
+					.sort((a: GhostSuggestionEditOperation, b: GhostSuggestionEditOperation) => a.line - b.line)
+					.map((op: GhostSuggestionEditOperation) => op.content)
+					.join("\n")
+
+				// Check if they share a common prefix (trimmed to handle trailing whitespace differences)
+				const trimmedDeleted = deletedContent.trim()
+				const commonPrefix = this.findCommonPrefix(trimmedDeleted, addedContent)
+
+				if (commonPrefix.length > 0 && commonPrefix.length >= trimmedDeleted.length * 0.8) {
+					// Create synthetic modification group for proper common prefix handling
+					const syntheticGroup = [...previousGroup, ...selectedGroup]
+					return { group: syntheticGroup, type: "/" }
+				}
+			}
 		}
 
 		return { group: selectedGroup, type: selectedGroupType }
