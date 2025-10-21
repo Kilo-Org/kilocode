@@ -370,10 +370,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// Check distance from cursor
 		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
 		const firstOp = effectiveGroup.group[0]
+
+		// For modifications, use the deletion line without offsets since that's where the change is happening
+		// For additions, apply the offset to account for previously removed lines
 		const targetLine =
-			effectiveGroup.type === "+"
-				? firstOp.line + offset.removed
-				: (effectiveGroup.group.find((op) => op.type === "-")?.line || firstOp.line) + offset.added
+			effectiveGroup.type === "/"
+				? (effectiveGroup.group.find((op) => op.type === "-")?.line ?? firstOp.line)
+				: effectiveGroup.type === "+"
+					? firstOp.line + offset.removed
+					: firstOp.line + offset.added
 
 		if (Math.abs(position.line - targetLine) > 5) {
 			return undefined // Too far - let decorations handle it

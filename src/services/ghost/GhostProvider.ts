@@ -615,27 +615,27 @@ export class GhostProvider {
 				return true
 			}
 
-			// For modifications, allow single-line completions with common prefix
-			// (e.g., typing "add" and completing to "addNumbers")
+			// For modifications, allow completions with common prefix
+			// This includes both single-line (e.g., "add" → "addNumbers")
+			// and multi-line (e.g., "// impl" → "// impl\nfunction...")
 			if (groupType === "/" && group) {
 				const deleteOps = group.filter((op) => op.type === "-")
 				const addOps = group.filter((op) => op.type === "+")
 
 				if (deleteOps.length > 0 && addOps.length > 0) {
-					// Check if it's a single-line modification
-					const isSingleLine =
-						deleteOps.every((op) => op.line === deleteOps[0].line) &&
-						addOps.every((op) => op.line === addOps[0].line) &&
-						deleteOps[0].line === addOps[0].line
+					const deletedContent = deleteOps
+						.sort((a, b) => a.line - b.line)
+						.map((op) => op.content)
+						.join("\n")
+					const addedContent = addOps
+						.sort((a, b) => a.line - b.line)
+						.map((op) => op.content)
+						.join("\n")
 
-					if (isSingleLine) {
-						const deletedContent = deleteOps.map((op) => op.content).join("\n")
-						const addedContent = addOps.map((op) => op.content).join("\n")
-
-						// If added content starts with deleted content, it's a completion - allow it
-						if (addedContent.startsWith(deletedContent)) {
-							return true
-						}
+					// If added content starts with deleted content, it's a completion - allow it
+					// This handles both single-line and multi-line completions
+					if (addedContent.startsWith(deletedContent)) {
+						return true
 					}
 				}
 			}
@@ -658,7 +658,8 @@ export class GhostProvider {
 		file: any,
 	): boolean {
 		// First check if this group type should be shown at all
-		if (!this.shouldShowGroup(groupType)) {
+		// Pass the group so shouldShowGroup can properly evaluate modifications
+		if (!this.shouldShowGroup(groupType, selectedGroup)) {
 			return false
 		}
 
@@ -671,13 +672,17 @@ export class GhostProvider {
 		const offset = file.getPlaceholderOffsetSelectedGroupOperations()
 		let targetLine: number
 
-		if (groupType === "+") {
+		// For modifications, use the deletion line without offsets since that's where the change is happening
+		// For additions, apply the offset to account for previously removed lines
+		if (groupType === "/") {
+			const deleteOp = selectedGroup.find((op: any) => op.type === "-")
+			targetLine = deleteOp ? deleteOp.line : selectedGroup[0].line
+		} else if (groupType === "+") {
 			const firstOp = selectedGroup[0]
 			targetLine = firstOp.line + offset.removed
 		} else {
-			// groupType === "/"
-			const deleteOp = selectedGroup.find((op: any) => op.type === "-")
-			targetLine = deleteOp ? deleteOp.line + offset.added : selectedGroup[0].line
+			// groupType === "-"
+			targetLine = selectedGroup[0].line + offset.added
 		}
 
 		const distanceFromCursor = Math.abs(cursorLine - targetLine)
