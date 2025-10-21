@@ -60,7 +60,8 @@ export const CliMessageRow: React.FC<CliMessageRowProps> = ({ message }) => {
 		<Box flexDirection="column" marginBottom={1}>
 			<Box>
 				<Text color={getColor()} bold>
-					{getPrefix()}{" "}
+					{getPrefix()}
+					{"  "}
 				</Text>
 				<MarkdownText>{message.content}</MarkdownText>
 				{message.partial && (

@@ -18,6 +18,7 @@ import { isCommandInput } from "../services/autocomplete.js"
 import { useCommandHandler } from "../state/hooks/useCommandHandler.js"
 import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
+import { useProfile } from "../state/hooks/useProfile.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
@@ -51,6 +52,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Followup handler hook for automatic suggestion population
 	useFollowupHandler()
+
+	// Profile hook for handling profile/balance data responses
+	useProfile()
 
 	// CI mode hook for automatic exit
 	const { shouldExit, exitReason } = useCIMode({

@@ -4,6 +4,7 @@
 
 import type { RouterModels } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
+import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 
 export interface Command {
 	name: string
@@ -44,6 +45,13 @@ export interface CommandContext {
 	kilocodeDefaultModel: string
 	updateProviderModel: (modelId: string) => Promise<void>
 	refreshRouterModels: () => Promise<void>
+	// Provider update function for teams command
+	updateProvider: (providerId: string, updates: Partial<ProviderConfig>) => Promise<void>
+	// Profile data context
+	profileData: ProfileData | null
+	balanceData: BalanceData | null
+	profileLoading: boolean
+	balanceLoading: boolean
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void
@@ -100,6 +108,8 @@ export interface ArgumentProviderContext {
 		routerModels: RouterModels | null
 		currentProvider: ProviderConfig | null
 		kilocodeDefaultModel: string
+		profileData: ProfileData | null
+		profileLoading: boolean
 		updateProviderModel: (modelId: string) => Promise<void>
 		refreshRouterModels: () => Promise<void>
 	}

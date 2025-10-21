@@ -12,6 +12,8 @@ import { newCommand } from "./new.js"
 import { exitCommand } from "./exit.js"
 import { modeCommand } from "./mode.js"
 import { modelCommand } from "./model.js"
+import { profileCommand } from "./profile.js"
+import { teamsCommand } from "./teams.js"
 
 /**
  * Initialize all commands
@@ -23,4 +25,6 @@ export function initializeCommands(): void {
 	commandRegistry.register(exitCommand)
 	commandRegistry.register(modeCommand)
 	commandRegistry.register(modelCommand)
+	commandRegistry.register(profileCommand)
+	commandRegistry.register(teamsCommand)
 }
