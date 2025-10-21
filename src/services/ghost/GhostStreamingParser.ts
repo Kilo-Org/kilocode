@@ -304,7 +304,6 @@ export class GhostStreamingParser {
 			const searchContent = match[1]
 			// Extract cursor position from replace content
 			const replaceContent = match[2]
-
 			const cursorPosition = extractCursorPosition(replaceContent)
 
 			newChanges.push({
@@ -370,38 +369,7 @@ export class GhostStreamingParser {
 
 			if (searchIndex !== -1) {
 				// Check for overlapping changes before applying
-				let endIndex = searchIndex + change.search.length
-
-				// Special handling: if we're replacing ONLY the cursor marker on an empty line,
-				// consume surrounding newlines to avoid creating extra blank lines
-				if (change.search === CURSOR_MARKER || change.search.trim() === CURSOR_MARKER) {
-					// Check if the marker is on an empty line (only whitespace before it on the line)
-					const beforeMarker = modifiedContent.substring(0, searchIndex)
-					const lastNewlineBeforeMarker = beforeMarker.lastIndexOf("\n")
-					const contentOnSameLine = beforeMarker.substring(lastNewlineBeforeMarker + 1)
-
-					// If we're on an otherwise empty line (only whitespace)
-					if (contentOnSameLine.trim().length === 0) {
-						// Check if there's also an empty line BEFORE the marker's line
-						// This happens when the marker is at the start of a line and the previous line is also empty
-						if (contentOnSameLine.length === 0 && lastNewlineBeforeMarker > 0) {
-							// Find the newline before the last one to check if the previous line is empty
-							const beforePreviousLine = beforeMarker.substring(0, lastNewlineBeforeMarker)
-							const secondLastNewline = beforePreviousLine.lastIndexOf("\n")
-							const previousLineContent = beforePreviousLine.substring(secondLastNewline + 1)
-
-							// If the previous line is also empty (or only whitespace), consume the newline that creates it
-							if (previousLineContent.trim().length === 0) {
-								searchIndex-- // Include the preceding newline to consume the empty line before the marker
-							}
-						}
-
-						// Always consume the trailing newline if present when on an empty line
-						if (endIndex < modifiedContent.length && modifiedContent[endIndex] === "\n") {
-							endIndex++ // Include the trailing newline
-						}
-					}
-				}
+				const endIndex = searchIndex + change.search.length
 				const hasOverlap = appliedChanges.some((existingChange) => {
 					// Check if ranges overlap
 					const existingStart = existingChange.startIndex
@@ -416,25 +384,6 @@ export class GhostStreamingParser {
 
 				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
 				let adjustedReplaceContent = change.replace
-
-				// Special case: if we're replacing ONLY the cursor marker at the end of a line with content,
-				// ensure the replacement starts on a new line
-				if (change.search === CURSOR_MARKER || change.search.trim() === CURSOR_MARKER) {
-					// Check if there's content before the marker on the same line
-					const beforeMarker = modifiedContent.substring(0, searchIndex)
-					const lastNewlineBeforeMarker = beforeMarker.lastIndexOf("\n")
-					const contentOnSameLine = beforeMarker.substring(lastNewlineBeforeMarker + 1)
-
-					// If there's non-whitespace content before the marker on the same line,
-					// and the replacement doesn't already start with a newline, add one
-					if (contentOnSameLine.trim().length > 0 && !adjustedReplaceContent.startsWith("\n")) {
-						adjustedReplaceContent = "\n" + adjustedReplaceContent
-					} else if (contentOnSameLine.trim().length === 0 && adjustedReplaceContent.startsWith("\n")) {
-						// If the marker is on its own line (no content before it) and the replacement
-						// starts with a newline, remove it to avoid creating an extra blank line
-						adjustedReplaceContent = adjustedReplaceContent.substring(1)
-					}
-				}
 
 				// If the search pattern ends with a newline, check if there are additional empty lines after it
 				if (change.search.endsWith("\n")) {
@@ -458,7 +407,7 @@ export class GhostStreamingParser {
 
 				appliedChanges.push({
 					searchContent: change.search,
-					replaceContent: adjustedReplaceContent, // Use the adjusted content (already set above)
+					replaceContent: adjustedReplaceContent,
 					startIndex: searchIndex,
 					endIndex: endIndex,
 					cursorPosition: change.cursorPosition, // Preserve cursor position info
