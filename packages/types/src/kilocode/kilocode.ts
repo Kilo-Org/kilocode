@@ -95,6 +95,7 @@ export const AUTOCOMPLETE_PROVIDER_MODELS = {
 	mistral: "codestral-latest",
 	kilocode: "mistralai/codestral-2508",
 	openrouter: "mistralai/codestral-2508",
+	bedrock: "mistral.codestral-2508-v1:0",
 } as const
 export type AutocompleteProviderKey = keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
 

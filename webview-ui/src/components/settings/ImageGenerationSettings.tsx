@@ -18,7 +18,9 @@ interface ImageGenerationSettingsProps {
 
 // Hardcoded list of image generation models
 const IMAGE_GENERATION_MODELS = [
-	{ value: "google/gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image" }, // kilocode_change
+	{ value: "google/gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image" },
+	{ value: "openai/gpt-5-image", label: "GPT-5 Image" },
+	{ value: "openai/gpt-5-image-mini", label: "GPT-5 Image Mini" },
 	// Add more models as they become available
 ]
 
@@ -188,7 +190,7 @@ export const ImageGenerationSettings = ({
 					</div>
 
 					{/* Model Selection */}
-					<div style={{ display: isUsingOpenRouter ? undefined : "none" } /*kilocode_change*/}>
+					<div>
 						<label className="block font-medium mb-1">
 							{t("settings:experimental.IMAGE_GENERATION.modelSelectionLabel")}
 						</label>

@@ -1,5 +1,28 @@
 # kilo-code
 
+## [v4.109.0]
+
+- [#3088](https://github.com/Kilo-Org/kilocode/pull/3088) [`84a1fa3`](https://github.com/Kilo-Org/kilocode/commit/84a1fa3f84eac42fa76da9be09270cdb57b19b34) Thanks [@mcowger](https://github.com/mcowger)! - Update base URL for Vertex Anthropic models to work around outdated library.
+
+- [#3192](https://github.com/Kilo-Org/kilocode/pull/3192) [`7015c23`](https://github.com/Kilo-Org/kilocode/commit/7015c2367c0ddf45d40b4adf96386f3ca5005bc1) Thanks [@markijbema](https://github.com/markijbema)! - Fix bug: autocomplete no longer suggests strange XML
+
+### Patch Changes
+
+- [#3159](https://github.com/Kilo-Org/kilocode/pull/3159) [`935bbae`](https://github.com/Kilo-Org/kilocode/commit/935bbae3a080c8475671b97440eacf2ead939198) Thanks [@kevinvandijk](https://github.com/kevinvandijk)! - Include changes from Roo Code v3.28.18
+
+    - Fix: Remove request content from UI messages to improve performance and reduce clutter (#5601 by @MuriloFP, #8594 by @multivac2x, #8690 by @hannesrudolph, PR by @mrubens)
+    - Fix: Add userAgent to Bedrock client for version tracking (#8660 by @ajjuaire, PR by @app/roomote)
+    - Feat: Z AI now uses only two coding endpoints for better performance (#8687 by @hannesrudolph)
+    - Feat: Update image generation model selection for improved quality (thanks @chrarnoldus!)
+
+- [#3194](https://github.com/Kilo-Org/kilocode/pull/3194) [`b566965`](https://github.com/Kilo-Org/kilocode/commit/b56696581e82652086564503f7743e9e82585823) Thanks [@markijbema](https://github.com/markijbema)! - Do not trigger autocomplete for external events, like git changes
+
+- [#3100](https://github.com/Kilo-Org/kilocode/pull/3100) [`3e409b8`](https://github.com/Kilo-Org/kilocode/commit/3e409b84310f481d1c3be4095d887f5cf6d15282) Thanks [@markijbema](https://github.com/markijbema)! - Added Amazon Bedrock as a provider for autocomplete
+
+- [#3149](https://github.com/Kilo-Org/kilocode/pull/3149) [`79c7d60`](https://github.com/Kilo-Org/kilocode/commit/79c7d60a10a765da8195fde80e6a89630993b918) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Jetbrains - Update framework (Plugin now requires IntelliJ IDEA 2024.3 or later)
+
+- [#3195](https://github.com/Kilo-Org/kilocode/pull/3195) [`93371d0`](https://github.com/Kilo-Org/kilocode/commit/93371d08f1c1b88eeb9f567af9ae74188fe7e379) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed crash when browser tool is used with native tool calling enabled
+
 ## [v4.108.0]
 
 - [#2674](https://github.com/Kilo-Org/kilocode/pull/2674) [`2836aed`](https://github.com/Kilo-Org/kilocode/commit/2836aeddbbd6884f2c6f2421ca79387c25f5cd94) Thanks [@mcowger](https://github.com/mcowger)! - add send message on enter setting with configurable behavior

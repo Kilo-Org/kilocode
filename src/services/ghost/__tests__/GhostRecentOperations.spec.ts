@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
 import { AutoTriggerStrategy } from "../strategies/AutoTriggerStrategy"
-import { GhostSuggestionContext } from "../types"
+import { GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 // Mock vscode
@@ -115,8 +115,13 @@ describe("GhostRecentOperations", () => {
 		expect(enrichedContext.recentOperations).toBeDefined()
 		expect(enrichedContext.recentOperations?.length).toBeGreaterThan(0)
 
+		const autocompleteInput = contextToAutocompleteInput(enrichedContext)
+
 		// Generate prompt
-		const { userPrompt } = autoTriggerStrategy.getPrompts(enrichedContext)
+		const prefix = enrichedContext.document.getText()
+		const suffix = ""
+		const languageId = enrichedContext.document.languageId
+		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt includes the recent operations section
 		// The new strategy system uses "## Recent Typing" format
@@ -132,8 +137,13 @@ describe("GhostRecentOperations", () => {
 		// Generate context
 		const enrichedContext = await context.generate(suggestionContext)
 
+		const autocompleteInput = contextToAutocompleteInput(enrichedContext)
+
 		// Generate prompt
-		const { userPrompt } = autoTriggerStrategy.getPrompts(enrichedContext)
+		const prefix = enrichedContext.document.getText()
+		const suffix = ""
+		const languageId = enrichedContext.document.languageId
+		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check

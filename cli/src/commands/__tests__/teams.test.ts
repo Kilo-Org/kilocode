@@ -123,7 +123,7 @@ describe("/teams command", () => {
 			)
 		})
 
-		it("should list Personal when no organization is set", async () => {
+		it("should direct user to create a new organization when they don't have any", async () => {
 			mockContext.currentProvider = {
 				id: "test-provider",
 				provider: "kilocode",
@@ -139,8 +139,7 @@ describe("/teams command", () => {
 
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
-			expect(message.content).toContain("Available Teams:")
-			expect(message.content).toContain("→ Personal (current)")
+			expect(message.content).toContain("https://app.kilocode.ai/get-started/teams")
 		})
 
 		it("should list all teams including organizations", async () => {
@@ -170,9 +169,8 @@ describe("/teams command", () => {
 
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.content).toContain("Personal")
-			expect(message.content).toContain("Team Alpha (admin)")
-			expect(message.content).toContain("Team Beta (member)")
-			expect(message.content).toContain("**Total:** 3 teams")
+			expect(message.content).toContain("team-alpha")
+			expect(message.content).toContain("team-beta")
 		})
 
 		it("should mark current organization with arrow", async () => {
@@ -197,7 +195,7 @@ describe("/teams command", () => {
 			await teamsCommand.handler(mockContext)
 
 			const message = addMessageMock.mock.calls[0][0]
-			expect(message.content).toContain("→ Current Team (admin) (current)")
+			expect(message.content).toContain("→ current-team (current)")
 		})
 	})
 

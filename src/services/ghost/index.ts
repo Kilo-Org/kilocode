@@ -75,7 +75,4 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 			providedCodeActionKinds: Object.values(ghost.codeActionProvider.providedCodeActionKinds),
 		}),
 	)
-
-	// Register GhostProvider Code Lens
-	context.subscriptions.push(vscode.languages.registerCodeLensProvider("*", ghost.codeLensProvider))
 }

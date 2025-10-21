@@ -39,14 +39,14 @@ describe("GhostStreamingParser", () => {
 		parser.reset()
 	})
 
-	describe("processChunk", () => {
-		it("should handle incomplete XML chunks", () => {
-			const chunk1 = "<change><search><![CDATA["
-			const result1 = parser.processChunk(chunk1)
+	describe("finishStream", () => {
+		it("should handle incomplete XML", () => {
+			const incompleteXml = "<change><search><![CDATA["
+			const result = parser.parseResponse(incompleteXml)
 
-			expect(result1.hasNewSuggestions).toBe(false)
-			expect(result1.isComplete).toBe(false)
-			expect(result1.suggestions.hasSuggestions()).toBe(false)
+			expect(result.hasNewSuggestions).toBe(false)
+			expect(result.isComplete).toBe(false)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
 		it("should parse complete change blocks", () => {
@@ -57,42 +57,33 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(completeChange)
+			const result = parser.parseResponse(completeChange)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 
-		it("should handle multiple chunks building up to complete change", () => {
-			const chunks = [
-				"<change><search><![CDATA[function test() {",
-				"\n\treturn true;",
-				"\n}]]></search><replace><![CDATA[function test() {",
-				"\n\t// Added comment",
-				"\n\treturn true;",
-				"\n}]]></replace></change>",
-			]
+		it("should handle complete response built from multiple chunks", () => {
+			const fullResponse = `<change><search><![CDATA[function test() {
+	return true;
+}]]></search><replace><![CDATA[function test() {
+	// Added comment
+	return true;
+}]]></replace></change>`
 
-			let finalResult
-			for (const chunk of chunks) {
-				finalResult = parser.processChunk(chunk)
-			}
+			const result = parser.parseResponse(fullResponse)
 
-			expect(finalResult!.hasNewSuggestions).toBe(true)
-			expect(finalResult!.suggestions.hasSuggestions()).toBe(true)
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 
-		it("should handle multiple complete changes in sequence", () => {
-			const change1 = `<change><search><![CDATA[function test() {]]></search><replace><![CDATA[function test() {
-	// First change]]></replace></change>`
+		it("should handle multiple complete changes", () => {
+			const fullResponse = `<change><search><![CDATA[function test() {]]></search><replace><![CDATA[function test() {
+	// First change]]></replace></change><change><search><![CDATA[return true;]]></search><replace><![CDATA[return false; // Second change]]></replace></change>`
 
-			const change2 = `<change><search><![CDATA[return true;]]></search><replace><![CDATA[return false; // Second change]]></replace></change>`
+			const result = parser.parseResponse(fullResponse)
 
-			const result1 = parser.processChunk(change1)
-			const result2 = parser.processChunk(change2)
-
-			expect(result1.hasNewSuggestions).toBe(true)
-			expect(result2.hasNewSuggestions).toBe(true)
+			expect(result.hasNewSuggestions).toBe(true)
 			expect(parser.getCompletedChanges()).toHaveLength(2)
 		})
 
@@ -104,7 +95,7 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(completeResponse)
+			const result = parser.parseResponse(completeResponse)
 
 			expect(result.isComplete).toBe(true)
 		})
@@ -115,7 +106,7 @@ describe("GhostStreamingParser", () => {
 }]]></search><replace><![CDATA[function test() {
 	// Added comment`
 
-			const result = parser.processChunk(incompleteResponse)
+			const result = parser.parseResponse(incompleteResponse)
 
 			expect(result.isComplete).toBe(false)
 		})
@@ -128,7 +119,7 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			// Verify cursor marker is preserved in search content for matching
@@ -142,7 +133,7 @@ describe("GhostStreamingParser", () => {
 			const changeWithCursor = `<change><search><![CDATA[return true;]]></search><replace><![CDATA[// Comment here<<<AUTOCOMPLETE_HERE>>>
 	return false;]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			const changes = parser.getCompletedChanges()
@@ -180,7 +171,7 @@ function fibonacci(n: number): number {
 		return fibonacci(n - 1) + fibonacci(n - 2);
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -208,7 +199,7 @@ function fibonacci(n: number): number {
 		return fibonacci(n - 1) + fibonacci(n - 2);
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -217,23 +208,23 @@ function fibonacci(n: number): number {
 		it("should handle malformed XML gracefully", () => {
 			const malformedXml = `<change><search><![CDATA[test]]><replace><![CDATA[replacement]]></replace></change>`
 
-			const result = parser.processChunk(malformedXml)
+			const result = parser.parseResponse(malformedXml)
 
 			// Should not crash and should not produce suggestions
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
-		it("should handle empty chunks", () => {
-			const result = parser.processChunk("")
+		it("should handle empty response", () => {
+			const result = parser.parseResponse("")
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(true) // Empty is considered complete
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
-		it("should handle whitespace-only chunks", () => {
-			const result = parser.processChunk("   \n\t  ")
+		it("should handle whitespace-only response", () => {
+			const result = parser.parseResponse("   \n\t  ")
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(true)
@@ -245,7 +236,7 @@ function fibonacci(n: number): number {
 		it("should clear all state when reset", () => {
 			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
 
-			parser.processChunk(change)
+			parser.parseResponse(change)
 			expect(parser.buffer).not.toBe("")
 			expect(parser.getCompletedChanges()).toHaveLength(1)
 
@@ -282,44 +273,34 @@ function fibonacci(n: number): number {
 	})
 
 	describe("error handling", () => {
-		it("should throw error if not initialized", () => {
-			const uninitializedParser = new GhostStreamingParser()
-
-			expect(() => {
-				uninitializedParser.processChunk("test")
-			}).toThrow("Parser not initialized")
-		})
-
 		it("should handle context without document", () => {
 			const contextWithoutDoc = {} as GhostSuggestionContext
 			parser.initialize(contextWithoutDoc)
 
 			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
-			const result = parser.processChunk(change)
+			const result = parser.parseResponse(change)
 
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 	})
 
 	describe("performance", () => {
-		it("should handle large chunks efficiently", () => {
+		it("should handle large responses efficiently", () => {
 			const largeChange = `<change><search><![CDATA[${"x".repeat(10000)}]]></search><replace><![CDATA[${"y".repeat(10000)}]]></replace></change>`
 
 			const startTime = performance.now()
-			const result = parser.processChunk(largeChange)
+			const result = parser.parseResponse(largeChange)
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(100) // Should complete in under 100ms
 			expect(result.hasNewSuggestions).toBe(true)
 		})
 
-		it("should handle many small chunks efficiently", () => {
-			const chunks = Array(1000).fill("x")
+		it("should handle large concatenated responses efficiently", () => {
+			const largeResponse = Array(1000).fill("x").join("")
 			const startTime = performance.now()
 
-			for (const chunk of chunks) {
-				parser.processChunk(chunk)
-			}
+			parser.parseResponse(largeResponse)
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(200) // Should complete in under 200ms

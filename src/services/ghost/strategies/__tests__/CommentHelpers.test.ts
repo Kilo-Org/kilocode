@@ -1,6 +1,4 @@
-import * as vscode from "vscode"
-import { isCommentLine, extractComment, cleanComment } from "../CommentHelpers"
-import { MockTextDocument } from "../../../mocking/MockTextDocument"
+import { isCommentLine, cleanComment } from "../CommentHelpers"
 
 describe("CommentHelpers", () => {
 	describe("isCommentLine", () => {
@@ -133,98 +131,6 @@ describe("CommentHelpers", () => {
 			test("should handle unknown language IDs", () => {
 				expect(isCommentLine("// comment", "unknown")).toBe(true)
 				expect(isCommentLine("# comment", "unknown")).toBe(true)
-			})
-		})
-	})
-
-	describe("extractComment", () => {
-		function createDocument(content: string, languageId: string = "javascript"): MockTextDocument {
-			const uri = vscode.Uri.file("/test.js")
-			const doc = new MockTextDocument(uri, content)
-			doc.languageId = languageId
-			return doc
-		}
-
-		describe("single line comments", () => {
-			test("should extract comment from current line", () => {
-				const doc = createDocument("// comment\nconst x = 1")
-				expect(extractComment(doc, 0)).toBe("// comment")
-			})
-
-			test("should extract comment from previous line if current is not a comment", () => {
-				const doc = createDocument("// comment\nconst x = 1")
-				expect(extractComment(doc, 1)).toBe("// comment")
-			})
-
-			test("should return empty string if no comment found", () => {
-				const doc = createDocument("const x = 1\nconst y = 2")
-				expect(extractComment(doc, 1)).toBe("")
-			})
-
-			test("should not look at previous line if current line is first line", () => {
-				const doc = createDocument("const x = 1")
-				expect(extractComment(doc, 0)).toBe("")
-			})
-		})
-
-		describe("multi-line comments", () => {
-			test("should extract multi-line comment above current line", () => {
-				const doc = createDocument("// line 1\n// line 2\n// line 3\nconst x = 1")
-				const result = extractComment(doc, 2)
-				expect(result).toBe("// line 1\n// line 2\n// line 3")
-			})
-
-			test("should extract multi-line comment below current line", () => {
-				const doc = createDocument("// line 1\n// line 2\n// line 3\nconst x = 1")
-				const result = extractComment(doc, 0)
-				expect(result).toBe("// line 1\n// line 2\n// line 3")
-			})
-
-			test("should extract multi-line comment with cursor in middle", () => {
-				const doc = createDocument("// line 1\n// line 2\n// line 3\nconst x = 1")
-				const result = extractComment(doc, 1)
-				expect(result).toBe("// line 1\n// line 2\n// line 3")
-			})
-
-			test("should handle block comment style", () => {
-				const doc = createDocument("/*\n * line 1\n * line 2\n */\nconst x = 1")
-				const result = extractComment(doc, 1)
-				expect(result).toBe("* line 1\n* line 2\n*/")
-			})
-		})
-
-		describe("Python docstrings", () => {
-			test("should not extract empty Python docstring markers", () => {
-				const doc = createDocument('"""\n"""\n"""\ndef foo():', "python")
-				const result = extractComment(doc, 0)
-				expect(result).toBe("")
-			})
-		})
-
-		describe("edge cases", () => {
-			test("should handle document with only one line", () => {
-				const doc = createDocument("// comment")
-				expect(extractComment(doc, 0)).toBe("// comment")
-			})
-
-			test("should handle comment at end of document", () => {
-				const doc = createDocument("const x = 1\n// comment")
-				expect(extractComment(doc, 1)).toBe("// comment")
-			})
-
-			test("should stop at non-comment line", () => {
-				const doc = createDocument("// comment 1\nconst x = 1\n// comment 2")
-				expect(extractComment(doc, 0)).toBe("// comment 1")
-			})
-
-			test("should handle whitespace-only lines between comments", () => {
-				const doc = createDocument("// comment 1\n   \n// comment 2")
-				expect(extractComment(doc, 0)).toBe("// comment 1")
-			})
-
-			test("should preserve trimmed line content", () => {
-				const doc = createDocument("  // indented comment  \nconst x = 1")
-				expect(extractComment(doc, 0)).toBe("// indented comment")
 			})
 		})
 	})
