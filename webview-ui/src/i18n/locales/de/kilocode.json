@@ -240,7 +240,7 @@
 		"removeProfile": "Profil entfernen",
 		"selectProfilePlaceholder": "Profil auswählen...",
 		"addProfile": "Profil hinzufügen",
-		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfiguriere zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
+		"noProfilesAvailable": "Keine Profile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
 		"dangerZoneTitle": "Gefahrenbereich",
 		"dangerZoneDescription": "Diese Aktionen sind destruktiv und können nicht rückgängig gemacht werden.",
 		"clearUsageData": "Nutzungsdaten löschen",

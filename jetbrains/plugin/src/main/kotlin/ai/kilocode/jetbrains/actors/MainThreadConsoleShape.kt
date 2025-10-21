@@ -4,22 +4,22 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.logging.LogLevelConfig
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.logging.LogLevelConfig
 
 /**
  * Remote console log.
  * Corresponds to the IRemoteConsoleLog interface in TypeScript.
  */
 data class RemoteConsoleLog(
-    val type: String,        // Log type: "log", "warn", "error", "info", "debug"
-    val severity: Int,       // Severity level
-    val args: List<Any?>,    // Log arguments
+    val type: String, // Log type: "log", "warn", "error", "info", "debug"
+    val severity: Int, // Severity level
+    val args: List<Any?>, // Log arguments
     val source: String? = null, // Log source
-    val line: Int? = null,      // Source line number
+    val line: Int? = null, // Source line number
     val columnNumber: Int? = null, // Column number
-    val timestamp: Long = System.currentTimeMillis() // Timestamp
+    val timestamp: Long = System.currentTimeMillis(), // Timestamp
 )
 
 /**
@@ -32,7 +32,7 @@ interface MainThreadConsoleShape : Disposable {
      * @param msg Log message object
      */
     fun logExtensionHostMessage(msg: Map<String, Any>)
-    
+
     /**
      * Releases resources.
      */

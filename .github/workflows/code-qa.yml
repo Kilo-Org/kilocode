@@ -161,7 +161,7 @@ jobs:
             - uses: actions/setup-java@v4
               with:
                   distribution: 'jetbrains'
-                  java-version: '17'
+                  java-version: '21'
             - name: Install system dependencies
               run: |
                 sudo apt-get update

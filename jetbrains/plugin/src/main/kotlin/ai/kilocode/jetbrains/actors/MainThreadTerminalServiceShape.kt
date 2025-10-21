@@ -4,19 +4,18 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.core.PluginContext
+import ai.kilocode.jetbrains.terminal.TerminalConfig
+import ai.kilocode.jetbrains.terminal.TerminalInstance
+import ai.kilocode.jetbrains.terminal.TerminalInstanceManager
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import ai.kilocode.jetbrains.core.PluginContext
-import ai.kilocode.jetbrains.terminal.TerminalInstance
-import ai.kilocode.jetbrains.terminal.TerminalInstanceManager
-import ai.kilocode.jetbrains.terminal.TerminalConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-
 
 /**
  * Main thread terminal service interface.
@@ -35,13 +34,13 @@ interface MainThreadTerminalServiceShape : Disposable {
      * @param id Terminal identifier (can be String or Number)
      */
     fun dispose(id: Any)
-    
+
     /**
      * Hides terminal.
      * @param id Terminal identifier (can be String or Number)
      */
     fun hide(id: Any)
-    
+
     /**
      * Sends text to terminal.
      * @param id Terminal identifier (can be String or Number)
@@ -49,33 +48,33 @@ interface MainThreadTerminalServiceShape : Disposable {
      * @param shouldExecute Whether to execute
      */
     fun sendText(id: Any, text: String, shouldExecute: Boolean?)
-    
+
     /**
      * Shows terminal.
      * @param id Terminal identifier (can be String or Number)
      * @param preserveFocus Whether to preserve focus
      */
     fun show(id: Any, preserveFocus: Boolean?)
-    
+
     /**
      * Registers process support.
      * @param isSupported Whether supported
      */
     fun registerProcessSupport(isSupported: Boolean)
-    
+
     /**
      * Registers profile provider.
      * @param id Profile provider ID
      * @param extensionIdentifier Extension identifier
      */
     fun registerProfileProvider(id: String, extensionIdentifier: String)
-    
+
     /**
      * Unregisters profile provider.
      * @param id Profile provider ID
      */
     fun unregisterProfileProvider(id: String)
-    
+
     /**
      * Registers completion provider.
      * @param id Completion provider ID
@@ -83,26 +82,26 @@ interface MainThreadTerminalServiceShape : Disposable {
      * @param triggerCharacters List of trigger characters
      */
     fun registerCompletionProvider(id: String, extensionIdentifier: String, vararg triggerCharacters: String)
-    
+
     /**
      * Unregisters completion provider.
      * @param id Completion provider ID
      */
     fun unregisterCompletionProvider(id: String)
-    
+
     /**
      * Registers quick fix provider.
      * @param id Quick fix provider ID
      * @param extensionIdentifier Extension identifier
      */
     fun registerQuickFixProvider(id: String, extensionIdentifier: String)
-    
+
     /**
      * Unregisters quick fix provider.
      * @param id Quick fix provider ID
      */
     fun unregisterQuickFixProvider(id: String)
-    
+
     /**
      * Set environment variable collection
      * @param extensionIdentifier Extension identifier
@@ -114,34 +113,34 @@ interface MainThreadTerminalServiceShape : Disposable {
         extensionIdentifier: String,
         persistent: Boolean,
         collection: Map<String, Any?>?,
-        descriptionMap: Map<String, Any?>
+        descriptionMap: Map<String, Any?>,
     )
 
     /**
      * Start sending data events
      */
     fun startSendingDataEvents()
-    
+
     /**
      * Stop sending data events
      */
     fun stopSendingDataEvents()
-    
+
     /**
      * Start sending command events
      */
     fun startSendingCommandEvents()
-    
+
     /**
      * Stop sending command events
      */
     fun stopSendingCommandEvents()
-    
+
     /**
      * Start link provider
      */
     fun startLinkProvider()
-    
+
     /**
      * Stop link provider
      */
@@ -153,7 +152,7 @@ interface MainThreadTerminalServiceShape : Disposable {
      * @param data Data
      */
     fun sendProcessData(terminalId: Int, data: String)
-    
+
     /**
      * Send process ready
      * @param terminalId Terminal ID
@@ -165,16 +164,16 @@ interface MainThreadTerminalServiceShape : Disposable {
         terminalId: Int,
         pid: Int,
         cwd: String,
-        windowsPty: Map<String, Any?>?
+        windowsPty: Map<String, Any?>?,
     )
-    
+
     /**
      * Send process property
      * @param terminalId Terminal ID
      * @param property Process property
      */
     fun sendProcessProperty(terminalId: Int, property: Map<String, Any?>)
-    
+
     /**
      * Send process exit
      * @param terminalId Terminal ID
@@ -189,23 +188,23 @@ interface MainThreadTerminalServiceShape : Disposable {
  */
 class MainThreadTerminalService(private val project: Project) : MainThreadTerminalServiceShape {
     private val logger = Logger.getInstance(MainThreadTerminalService::class.java)
-    
+
     // Use terminal instance manager
     private val terminalManager = project.service<TerminalInstanceManager>()
-    
+
     // Coroutine scope - use IO dispatcher to avoid Main Dispatcher issues
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
+
     override suspend fun createTerminal(extHostTerminalId: String, config: Map<String, Any?>) {
         logger.info("🚀 Creating terminal: $extHostTerminalId, config: $config")
-        
+
         try {
             // Check if terminal already exists
             if (terminalManager.containsTerminal(extHostTerminalId)) {
                 logger.warn("Terminal already exists: $extHostTerminalId")
                 return
             }
-            
+
             // Get RPC protocol instance
             val pluginContext = PluginContext.getInstance(project)
             val rpcProtocol = pluginContext.getRPCProtocol()
@@ -214,11 +213,11 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
                 throw IllegalStateException("RPC protocol not initialized")
             }
             logger.info("✅ Got RPC protocol instance: ${rpcProtocol.javaClass.simpleName}")
-            
+
             // Allocate numeric ID
             val numericId = terminalManager.allocateNumericId()
             logger.info("🔢 Allocated terminal numeric ID: $numericId")
-            
+
             // Create terminal instance
             val terminalConfig = TerminalConfig.fromMap(config)
             val terminalInstance = TerminalInstance(extHostTerminalId, numericId, project, terminalConfig, rpcProtocol)
@@ -228,9 +227,8 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
 
             // Register to manager
             terminalManager.registerTerminal(extHostTerminalId, terminalInstance)
-            
+
             logger.info("✅ Terminal created successfully: $extHostTerminalId (numericId: $numericId)")
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to create terminal: $extHostTerminalId", e)
             // Clean up possibly created resources
@@ -242,7 +240,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
     override fun dispose(id: Any) {
         try {
             logger.info("🧹 Destroying terminal: $id")
-            
+
             val terminalInstance = terminalManager.unregisterTerminal(id.toString())
             if (terminalInstance != null) {
                 terminalInstance.dispose()
@@ -250,7 +248,6 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             } else {
                 logger.warn("Terminal does not exist: $id")
             }
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to destroy terminal: $id", e)
         }
@@ -259,7 +256,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
     override fun hide(id: Any) {
         try {
             logger.info("🙈 Hiding terminal: $id")
-            
+
             val terminalInstance = getTerminalInstance(id)
             if (terminalInstance != null) {
                 terminalInstance.hide()
@@ -267,7 +264,6 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             } else {
                 logger.warn("Terminal does not exist: $id")
             }
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to hide terminal: $id", e)
         }
@@ -276,7 +272,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
     override fun sendText(id: Any, text: String, shouldExecute: Boolean?) {
         try {
             logger.debug("📤 Sending text to terminal $id: $text (execute: $shouldExecute)")
-            
+
             val terminalInstance = getTerminalInstance(id)
             if (terminalInstance != null) {
                 terminalInstance.sendText(text, shouldExecute ?: false)
@@ -284,7 +280,6 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             } else {
                 logger.warn("Terminal does not exist: $id")
             }
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to send text to terminal: $id", e)
         }
@@ -293,7 +288,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
     override fun show(id: Any, preserveFocus: Boolean?) {
         try {
             logger.info("👁️ Showing terminal: $id (preserve focus: $preserveFocus)")
-            
+
             val terminalInstance = getTerminalInstance(id)
             if (terminalInstance != null) {
                 terminalInstance.show(preserveFocus ?: true)
@@ -301,7 +296,6 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             } else {
                 logger.warn("Terminal does not exist: $id")
             }
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to show terminal: $id", e)
         }
@@ -346,7 +340,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
         extensionIdentifier: String,
         persistent: Boolean,
         collection: Map<String, Any?>?,
-        descriptionMap: Map<String, Any?>
+        descriptionMap: Map<String, Any?>,
     ) {
         logger.info("📋 Setting environment variable collection: $extensionIdentifier (persistent: $persistent)")
         // TODO: Implement environment variable collection setting logic
@@ -415,7 +409,7 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
             }
         }
     }
-    
+
     /**
      * Get all terminal instances
      */
@@ -425,16 +419,15 @@ class MainThreadTerminalService(private val project: Project) : MainThreadTermin
 
     override fun dispose() {
         logger.info("🧹 Disposing main thread terminal service")
-        
+
         try {
             // Cancel coroutine scope
             scope.cancel()
-            
+
             // Terminal instance manager will automatically handle cleanup of all terminals
             // No manual cleanup needed here as TerminalInstanceManager is project-level service
-            
+
             logger.info("✅ Main thread terminal service disposed")
-            
         } catch (e: Exception) {
             logger.error("❌ Failed to dispose main thread terminal service", e)
         }

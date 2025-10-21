@@ -6,7 +6,6 @@ package ai.kilocode.jetbrains.ipc.proxy.interfaces
 
 import ai.kilocode.jetbrains.model.WorkspaceData
 import ai.kilocode.jetbrains.util.URIComponents
-import java.net.URI
 
 /**
  * Extension host workspace service interface

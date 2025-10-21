@@ -10,6 +10,7 @@ function copyPostBuildFiles() {
 
 		copyFileSync("src/config/schema.json", "dist/config/schema.json")
 		copyFileSync("package.dist.json", "dist/package.json")
+		copyFileSync("npm-shrinkwrap.dist.json", "dist/npm-shrinkwrap.json")
 		copyFileSync("README.md", "dist/README.md")
 
 		try {

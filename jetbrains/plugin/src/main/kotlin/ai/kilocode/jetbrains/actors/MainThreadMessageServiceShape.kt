@@ -8,10 +8,10 @@ import ai.kilocode.jetbrains.i18n.I18n
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.application.ApplicationManager
 import java.util.concurrent.atomic.AtomicReference
 
 interface MainThreadMessageServiceShape : Disposable {
@@ -26,7 +26,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
         severity: Int,
         message: String,
         options: Map<String, Any>,
-        commands: List<Map<String, Any>>
+        commands: List<Map<String, Any>>,
     ): Int? {
         logger.info("showMessage - severity: $severity, message: $message, options: $options, commands: $commands")
 
@@ -47,7 +47,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
         message: String,
         detail: String?,
         options: Map<String, Any>,
-        commands: List<Map<String, Any>>
+        commands: List<Map<String, Any>>,
     ): Int? {
         // Find if there's a button with isCloseAffordance=true as cancel button
         var cancelIdx = commands.indexOfFirst { it["isCloseAffordance"] == true }
@@ -82,7 +82,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
                     2 -> Messages.getWarningIcon()
                     3 -> Messages.getErrorIcon()
                     else -> Messages.getInformationIcon()
-                }
+                },
             )
             selectedIdxRef.set(selectedIdx)
         }
@@ -94,7 +94,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
     private fun showNotificationMessage(
         project: com.intellij.openapi.project.Project,
         severity: Int,
-        message: String
+        message: String,
     ) {
         val notificationType = when (severity) {
             1 -> NotificationType.INFORMATION
@@ -104,7 +104,7 @@ class MainThreadMessageService : MainThreadMessageServiceShape {
         }
         val notification = NotificationGroupManager.getInstance().getNotificationGroup("kilocode").createNotification(
             message,
-            notificationType
+            notificationType,
         )
         notification.notify(project)
     }

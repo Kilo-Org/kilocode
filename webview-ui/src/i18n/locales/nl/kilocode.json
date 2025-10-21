@@ -248,7 +248,7 @@
 		"removeProfile": "Profiel verwijderen",
 		"selectProfilePlaceholder": "Selecteer profiel...",
 		"addProfile": "Profiel toevoegen",
-		"noProfilesAvailable": "Geen profielprofielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
+		"noProfilesAvailable": "Geen profielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
 		"dangerZoneTitle": "Gevaarzone",
 		"dangerZoneDescription": "Deze acties zijn destructief en kunnen niet ongedaan worden gemaakt.",
 		"clearUsageData": "Gebruiksgegevens Wissen",
