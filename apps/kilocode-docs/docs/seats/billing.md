@@ -4,34 +4,25 @@ sidebar_label: Billing & Credits
 
 # Billing & Credits
 
-Kilo Seats uses a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go AI credits with zero markup.
+Kilo seats uses a transparent, two-part billing system: a monthly subscription per seat, plus pay-as-you-go model credits with zero markup.
 
-## Understanding the Billing Model
+:::note
 
-### Monthly Subscription
+Kilo Code seats purchases of Teams or Enterprise are separate from model provider credits.
 
-**Enterprise:**
+No credits are included with a Teams or Enterprise purchase.
 
-- **$299 per user per month** for platform access
-- Billed on your signup anniversary
-- **Includes** dashboard access, team management, model limitation, SSO, and all platform features
+:::
 
-**Teams:**
+## Organization Credits
 
-- **$29 per user per month** for platform access
-- Billed monthly on your signup anniversary
-- Includes dashboard access, team management, and all platform features
+Organization Owners can purchase credits on the [Organization dashboard](https://app.kilocode.ai).
 
-### AI Credits System
+Organization credits are purchased on behalf of all users in the organization. Every member of the organization can use credits in the organization's balance with the Kilo Code model provider.
 
-- **Pay exactly what AI providers charge** - no markup
-- **Pre-purchase credits** to fund AI requests
-- **Real-time deduction** as your team uses AI models
-- **Transparent pricing** - see exact provider costs
+Using organization credits works exactly like spending [individual credits](/basic-usage/adding-tokens), except that the credits come from the organization's credit balance, rather than the individuals.
 
-## How AI Credits Work
-
-### Credit Purchase Process
+### Buying Organization Credits
 
 1. **Navigate to Organization tab** in dashboard
 2. **Click "Buy More Credits"**
@@ -39,14 +30,23 @@ Kilo Seats uses a transparent, two-part billing system: a monthly subscription p
 4. **Complete payment** using saved payment method
 5. **Credits available immediately** for team use
 
-### Credit Consumption
+### Using Organization Credits
 
-- **Per-request billing** - pay only for what you use
-- **Model-specific rates** - different models have different costs
-- **Token-based pricing** - input and output tokens counted separately
-- **Real-time tracking** - see costs as requests happen
+Organization members can use organization credits by choosing the correct organization profile in the dropdown in the Profiles tab of the Kilo Code extension.
 
-## Subscription Management
+<img src="/docs/img/teams/org_credits.png" alt="Dropdown showing different organizations available" width="600" />
+
+## Managing Seats Subscriptions
+
+In order to add Members to your Kilo Code Organization, you must have seat(s) available for them.
+
+You can purchase more seats at any time during your billing cycle and will pay a pro-rated amount for the number of days left in your billing cycle.
+
+You can remove empty seats at any time. Your next payment will reflect the smaller number of seats.
+
+Your next billing date will not change.
+
+To fill empty seats or remove members ahead of seat deletion, see the [team management](/seats/team-management) page.
 
 ### Adding Seats
 
@@ -63,51 +63,11 @@ Kilo Seats uses a transparent, two-part billing system: a monthly subscription p
 3. **Select seats to remove** (must remove team members first)
 4. **Confirm reduction**
 
-### Pro-Rating Calculations
+To fill empty seats or remove members ahead of seat deletion, see the [team management](/seats/team-management) page.
 
-- **Adding seats mid-cycle:** Pay proportional amount for remaining days
-- **Removing seats mid-cycle:** Seat change will start at the next billing cycle
-- **Billing date remains the same** regardless of seat changes
-- **Next full cycle** reflects new seat count
+## Invoiceas
 
-## Invoice Management
-
-### Periodic Invoices
-
-Each invoice includes:
-
-- **Subscription charges** for all seats
-- **AI credit purchases** during billing period
-- **Tax calculations** based on your location
-- **Payment method** used for charges
-- **Detailed line items** for transparency
-
-### Downloading Invoices
-
-1. **Access Billing tab**
-2. **Find desired invoice** in history
-3. **Click "Download PDF"**
-4. **Save for expense reporting**
-
-## Billing Troubleshooting
-
-### Failed Payments
-
-If a payment fails:
-
-1. **Check payment method** validity (expiration, limits)
-2. **Update payment information** if needed
-3. **Retry payment** manually in dashboard
-4. **Contact support** if issues persist
-
-### Billing Disputes
-
-For billing questions:
-
-1. **Review invoice details** in dashboard
-2. **Check usage analytics** for the billing period
-3. **Contact support** with specific questions
-4. **Provide invoice number** and dispute details
+Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.
 
 ### Service Suspension
 
@@ -121,7 +81,5 @@ If payment fails repeatedly:
 ## Next Steps
 
 - [Explore usage analytics](/seats/analytics)
-- [Learn about team roles and permissions](/seats/roles-permissions)
+- [Learn about team roles and permissions](/seats/team-management)
 - [Learn about team management](/seats/team-management)
-
-Transparent billing ensures you always know exactly what you're paying for, with no hidden fees or surprise charges.

@@ -105,7 +105,6 @@ const sidebars: SidebarsConfig = {
 				"seats/dashboard",
 				"seats/analytics",
 				"seats/team-management",
-				"seats/roles-permissions",
 				"seats/custom-modes",
 				"seats/billing",
 				{
