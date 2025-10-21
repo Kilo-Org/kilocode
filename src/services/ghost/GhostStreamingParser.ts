@@ -443,6 +443,10 @@ export class GhostStreamingParser {
 					// and the replacement doesn't already start with a newline, add one
 					if (contentOnSameLine.trim().length > 0 && !adjustedReplaceContent.startsWith("\n")) {
 						adjustedReplaceContent = "\n" + adjustedReplaceContent
+					} else if (contentOnSameLine.trim().length === 0 && adjustedReplaceContent.startsWith("\n")) {
+						// If the marker is on its own line (no content before it) and the replacement
+						// starts with a newline, remove it to avoid creating an extra blank line
+						adjustedReplaceContent = adjustedReplaceContent.substring(1)
 					}
 				}
 
