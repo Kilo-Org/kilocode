@@ -59,6 +59,7 @@ describe("Model Validation Functions", () => {
 		lmstudio: {},
 		deepinfra: {},
 		"io-intelligence": {},
+		submodel: {},
 		"vercel-ai-gateway": {},
 		huggingface: {},
 		// kilocode_change start

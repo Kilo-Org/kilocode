@@ -97,6 +97,8 @@ export class ProfileValidator {
 			// kilocode_change start
 			case "ovhcloud":
 				return profile.ovhCloudAiEndpointsModelId
+			case "submodel":
+				return profile.submodelModelId
 			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":

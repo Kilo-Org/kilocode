@@ -154,6 +154,7 @@ export const providerNames = [
 	"vertex",
 	"xai",
 	"zai",
+	"submodel",
 ] as const
 
 export const providerNamesSchema = z.enum(providerNames)
@@ -477,6 +478,11 @@ const ioIntelligenceSchema = apiModelIdProviderModelSchema.extend({
 	ioIntelligenceApiKey: z.string().optional(),
 })
 
+const submodelSchema = apiModelIdProviderModelSchema.extend({
+	submodelModelId: z.string().optional(),
+	submodelApiKey: z.string().optional(),
+})
+
 const qwenCodeSchema = apiModelIdProviderModelSchema.extend({
 	qwenCodeOauthPath: z.string().optional(),
 })
@@ -534,6 +540,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	fireworksSchema.merge(z.object({ apiProvider: z.literal("fireworks") })),
 	featherlessSchema.merge(z.object({ apiProvider: z.literal("featherless") })),
 	ioIntelligenceSchema.merge(z.object({ apiProvider: z.literal("io-intelligence") })),
+	submodelSchema.merge(z.object({ apiProvider: z.literal("submodel") })),
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
@@ -580,6 +587,7 @@ export const providerSettingsSchema = z.object({
 	...fireworksSchema.shape,
 	...featherlessSchema.shape,
 	...ioIntelligenceSchema.shape,
+	...submodelSchema.shape,
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
@@ -620,6 +628,7 @@ export const modelIdKeys = [
 	"deepInfraModelId",
 	"kilocodeModel",
 	"ovhCloudAiEndpointsModelId", // kilocode_change
+	"submodelModelId",
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -808,6 +817,7 @@ export const MODELS_BY_PROVIDER: Record<
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
 	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] }, // kilocode_change
+	submodel: { id: "submodel", label: "SubModel", models: [] },
 
 	// kilocode_change start
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },

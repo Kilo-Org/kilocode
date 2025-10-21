@@ -71,6 +71,7 @@ const sidebars: SidebarsConfig = {
 								"providers/openrouter",
 								"providers/ovhcloud", // kilocode_change
 								"providers/requesty",
+                "providers/submodel",
 								"providers/unbound",
 								"providers/v0",
 								"providers/vercel-ai-gateway",

@@ -322,6 +322,21 @@ describe("ProfileValidator", () => {
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
 		})
 
+		it("should extract submodelModelId for submodel provider", () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					submodel: { allowAll: false, models: ["submodel-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "submodel",
+				submodelModelId: "submodel-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+
 		it("should extract requestyModelId for requesty provider", () => {
 			const allowList: OrganizationAllowList = {
 				allowAll: false,

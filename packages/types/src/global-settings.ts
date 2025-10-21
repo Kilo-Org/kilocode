@@ -233,6 +233,7 @@ export const SECRET_STATE_KEYS = [
 	"fireworksApiKey",
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
+	"submodelApiKey",
 	"vercelAiGatewayApiKey",
 	"ovhCloudAiEndpointsApiKey", // kilocode_change
 ] as const
