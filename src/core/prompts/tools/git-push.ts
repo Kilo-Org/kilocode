@@ -1,6 +1,6 @@
 export function getGitPushDescription(): string {
 	return `## git_push
-Description: Push the current branch to the remote repository. This tool is useful for GitLab workflows when you need to push your committed changes to the remote. Always ask for user approval before using this tool.
+Description: Push the current branch to the remote repository. This tool is useful for general git workflows when you need to push your committed changes to the remote. Always ask for user approval before using this tool.
 
 Parameters:
 - No parameters required

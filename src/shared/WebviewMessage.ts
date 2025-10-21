@@ -345,7 +345,6 @@ export interface WebviewMessage {
 	isEnabled?: boolean
 	mode?: Mode
 	promptMode?: PromptMode
-	isActivated?: boolean // For gitlabExtensionStatus
 	customPrompt?: PromptComponent
 	dataUrls?: string[]
 	values?: Record<string, any>

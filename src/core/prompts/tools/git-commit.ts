@@ -1,6 +1,6 @@
 export function getGitCommitDescription(): string {
 	return `## git_commit
-Description: Stage all changes and commit them with a descriptive message. This tool is useful for GitLab workflows when you need to commit your changes before pushing. Always ask for user approval before using this tool.
+Description: Stage all changes and commit them with a descriptive message. This tool is useful for general git workflows when you need to commit your changes before pushing. Always ask for user approval before using this tool.
 
 Parameters:
 - commit_message: (required) A clear, descriptive commit message that explains what changes were made. Should follow best practices for commit messages.

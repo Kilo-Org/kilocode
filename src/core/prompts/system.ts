@@ -189,8 +189,8 @@ export const SYSTEM_PROMPT = async (
 		language: language ?? formatLanguage(vscode.env.language),
 		shell: vscode.env.shell,
 		operatingSystem: os.type(),
-		gitlabContext: getGitLabIntegrationSection(),
 	}
+
 	const fileCustomSystemPrompt = await loadSystemPromptFile(cwd, mode, variablesForPrompt)
 
 	// Check if it's a custom mode

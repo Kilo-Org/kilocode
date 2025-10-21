@@ -75,10 +75,8 @@ export class GitLabIntegrationService {
 				return
 			}
 
-			// Get current branch
 			const currentBranch = repository.state.HEAD?.name || "unknown"
 
-			// Check remotes for GitLab URLs
 			const remotes = repository.state.remotes
 			let gitLabRemote = null
 
@@ -161,9 +159,7 @@ IMPORTANT: When GitLab Workflow Extension is active, you must always address the
 
 When working with GitLab projects, consider:
 - GitLab CI/CD configuration (.gitlab-ci.yml)
-- Merge request best practices
-- GitLab-specific git workflows
-- Issue and project board management`
+- Merge request best practices`
 
 		// Add repository-specific context if available
 		if (this.gitLabRepositoryInfo) {
@@ -232,13 +228,14 @@ At the START of EVERY task, you MUST:
 2. Use the update_todo_list tool to add relevant git workflow todos based on these suggestions
 3. Mark todos as "in_progress" when starting them, "completed" when done
 
-Current Workflow Suggestions for Branch "${branch}":
+Propose the user workflow suggestions for the current branch "${branch}":
 ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).join("\n")}
 
 **TODO LIST RULES:**
 - ALWAYS check if any workflow suggestions apply to the current task at the beginning
 - If working on main/master branch: Add todos for creating feature branch, committing, and pushing
 - If working on feature/fix branch: Add todos for committing and pushing when changes are ready
+- If working on feature/fix branch: Add todos for creating a new branch when you are ask for a new feature
 - Use update_todo_list tool to add these todos at the start of your work
 - Example todos based on current branch context:
 	 ${
@@ -248,8 +245,8 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 		}
 
 **GIT OPERATIONS GUIDELINES:**
-- Always ask for user approval before using any git tools
-- Use descriptive branch names following GitLab conventions (feature/, fix/, hotfix/, docs/, etc.)
+- Always ask for user approval before using any git tool
+- Use descriptive branch names following conventional commits (feature/, fix/, hotfix/, docs/, etc.)
 - Provide meaningful commit messages that explain what changes were made
 - After implementing changes, ALWAYS proactively suggest committing and pushing
 - When on main/master branch, ALWAYS suggest creating a feature branch first before making changes
@@ -269,14 +266,13 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 
 		if (repoInfo) {
 			const branch = repoInfo.currentBranch
-			const project = repoInfo.projectName
 
 			// Branch-specific suggestions
 			if (branch === "main" || branch === "master") {
 				suggestions.push(
 					"I notice you're on the main branch. Would you like me to help you create a feature branch for this work? After that, I can help you commit your changes and push them.",
 				)
-			} else if (branch.startsWith("feature/")) {
+			} else if (branch.startsWith("feat/") || branch.startsWith("feature/")) {
 				suggestions.push(
 					"You're working on a feature branch. After implementing this, I can help you create a merge request.",
 				)
@@ -286,12 +282,8 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 				)
 			}
 
-			// General GitLab workflow suggestions
-			suggestions.push("Would you like me to check the GitLab CI/CD pipeline status?")
 			suggestions.push("I can help you create a merge request when your changes are ready.")
 			suggestions.push("Need help with GitLab CI/CD configuration (.gitlab-ci.yml)?")
-		} else {
-			suggestions.push("I can help you set up GitLab workflows once you have a GitLab repository initialized.")
 		}
 
 		return suggestions

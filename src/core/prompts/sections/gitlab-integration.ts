@@ -11,7 +11,7 @@ export function getGitLabIntegrationSection(): string {
 		return ""
 	}
 
-	return `
+	return `====
 
 GITLAB INTEGRATION
 
