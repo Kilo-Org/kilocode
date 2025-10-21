@@ -1,7 +1,6 @@
 import { getGitBranchDescription } from "../git-branch"
 import { getGitCommitDescription } from "../git-commit"
 import { getGitPushDescription } from "../git-push"
-import { ToolArgs } from "../types"
 
 describe("Git Tools Descriptions", () => {
 	describe("getGitBranchDescription", () => {
@@ -17,7 +16,7 @@ describe("Git Tools Descriptions", () => {
 			const description = getGitBranchDescription()
 
 			expect(description).toContain("branch_name: (required)")
-			expect(description).toContain("GitLab conventions")
+			expect(description).toContain("conventional commits")
 		})
 
 		it("should include usage examples", () => {

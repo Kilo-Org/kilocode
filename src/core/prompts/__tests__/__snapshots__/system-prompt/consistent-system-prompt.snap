@@ -436,6 +436,69 @@ Replace the entire TODO list with an updated checklist reflecting the current st
 - Use clear, descriptive task names.
 
 
+## git_branch
+Description: Create a new git branch from the current branch. This tool is useful for general git workflows when you need to create a feature branch before making changes. Always ask for user approval before using this tool.
+
+Parameters:
+- branch_name: (required) The name of the new branch to create. Should follow conventional commits (e.g., feature/add-login, fix/validation-bug, docs/update-readme)
+
+Usage:
+<git_branch>
+<branch_name>Branch name here</branch_name>
+</git_branch>
+
+Example: Creating a feature branch
+<git_branch>
+<branch_name>feature/add-user-authentication</branch_name>
+</git_branch>
+
+Example: Creating a bugfix branch
+<git_branch>
+<branch_name>fix/login-validation</branch_name>
+</git_branch>
+
+## git_commit
+Description: Stage all changes and commit them with a descriptive message. This tool is useful for general git workflows when you need to commit your changes before pushing. Always ask for user approval before using this tool.
+
+Parameters:
+- commit_message: (required) A clear, descriptive commit message that explains what changes were made. Should follow best practices for commit messages.
+
+Usage:
+<git_commit>
+<commit_message>Your commit message here</commit_message>
+</git_commit>
+
+Example: Committing a new feature
+<git_commit>
+<commit_message>Add user authentication with JWT tokens</commit_message>
+</git_commit>
+
+Example: Committing a bug fix
+<git_commit>
+<commit_message>Fix validation error in login form</commit_message>
+</git_commit>
+
+Example: Committing documentation updates
+<git_commit>
+<commit_message>Update README with installation instructions</commit_message>
+</git_commit>
+
+## git_push
+Description: Push the current branch to the remote repository. This tool is useful for general git workflows when you need to push your committed changes to the remote. Always ask for user approval before using this tool.
+
+Parameters:
+- No parameters required
+
+Usage:
+<git_push>
+</git_push>
+
+Example: Pushing changes to remote
+<git_push>
+</git_push>
+
+Note: This will push the current branch to the remote repository. Make sure you have committed your changes before pushing.
+
 # Tool Use Guidelines
 
 1. Assess what information you already have and what information you need to proceed with the task.
@@ -519,6 +582,8 @@ Home Directory: /home/user
 Current Workspace Directory: /test/path
 
 The Current Workspace Directory is the active VS Code project directory, and is therefore the default directory for all tool operations. New terminals will be created in the current workspace directory, however if you change directories in a terminal it will then have a different working directory; changing directories in a terminal does not modify the workspace directory, because you do not have access to change the workspace directory. When the user initially gives you a task, a recursive list of all filepaths in the current workspace directory ('/test/path') will be included in environment_details. This provides an overview of the project's file structure, offering key insights into the project from directory/file names (how developers conceptualize and organize their code) and file extensions (the language used). This can also guide decision-making on which files to explore further. If you need to further explore directories such as outside the current workspace directory, you can use the list_files tool. If you pass 'true' for the recursive parameter, it will list files recursively. Otherwise, it will list files at the top level, which is better suited for generic directories where you don't necessarily need the nested structure, like the Desktop.
+
+
 
 ====
 
