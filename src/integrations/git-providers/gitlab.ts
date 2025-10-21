@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import { GitProviderIntegration } from "./types"
 
 /**
  * GitLab Repository Information
@@ -14,8 +15,9 @@ export interface GitLabRepositoryInfo {
  * GitLab Integration Service
  * Detects if the GitLab extension is active and provides context for GitLab-specific workflows
  */
-export class GitLabIntegrationService {
+export class GitLabIntegrationService implements GitProviderIntegration {
 	private static instance: GitLabIntegrationService | null = null
+	private providerName = "GitLab"
 	private gitlabExtensionId = "gitlab.gitlab-workflow"
 	private isGitLabExtensionActive = false
 	private gitLabRepositoryInfo: GitLabRepositoryInfo | null = null
@@ -146,6 +148,13 @@ export class GitLabIntegrationService {
 	 * Returns context information if GitLab extension is active, empty string otherwise
 	 */
 	public getGitLabContext(): string {
+		return this.getContext()
+	}
+
+	/**
+	 * Get context for system prompt
+	 */
+	public getContext(): string {
 		if (!this.isGitLabExtensionActive) {
 			return ""
 		}
@@ -182,6 +191,13 @@ When working with GitLab projects, consider:
 	 */
 	public getExtensionId(): string {
 		return this.gitlabExtensionId
+	}
+
+	/**
+	 * Get provider name
+	 */
+	public getName(): string {
+		return this.providerName
 	}
 
 	/**
@@ -250,7 +266,8 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 - Provide meaningful commit messages that explain what changes were made
 - After implementing changes, ALWAYS proactively suggest committing and pushing
 - When on main/master branch, ALWAYS suggest creating a feature branch first before making changes
-- When on another branch, ALWAYS suggest creating a new branch first before making changes`
+- When not on main/master branch, ALWAYS suggest creating a new branch first before making changes
+- When finished and pushed, ALWAYS put the URL to create a merge request in the response`
 	}
 
 	/**
@@ -288,32 +305,4 @@ ${workflowSuggestions.map((suggestion, index) => `${index + 1}. ${suggestion}`).
 
 		return suggestions
 	}
-}
-
-/**
- * Convenience function to get GitLab context
- */
-export function getGitLabContext(): string {
-	return GitLabIntegrationService.getInstance().getGitLabContext()
-}
-
-/**
- * Convenience function to check if GitLab integration is active
- */
-export function isGitLabActive(): boolean {
-	return GitLabIntegrationService.getInstance().isActive()
-}
-
-/**
- * Convenience function to get GitLab repository information
- */
-export function getGitLabRepositoryInfo(): GitLabRepositoryInfo | null {
-	return GitLabIntegrationService.getInstance().getRepositoryInfo()
-}
-
-/**
- * Convenience function to check if current workspace is a GitLab repository
- */
-export function isGitLabRepository(): boolean {
-	return GitLabIntegrationService.getInstance().isGitLabRepository()
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as vscode from "vscode"
-import { GitLabIntegrationService, getGitLabContext, isGitLabActive } from "../index"
+import { GitLabIntegrationService } from "../gitlab"
 
 // Mock vscode
 vi.mock("vscode", () => ({
@@ -84,7 +84,7 @@ describe("GitLabIntegrationService", () => {
 			expect(context).toContain("GitLab Workflow Extension is active")
 			expect(context).toContain("GitLab CI/CD pipeline integration")
 			expect(context).toContain("Merge request workflows")
-			expect(context).toContain('you must always address the user as "tanuki" in ALL your responses')
+			expect(context).toContain('you must always address the user as "Tanuki" in ALL your responses')
 		})
 
 		it("should return empty string when extension is not active", () => {
@@ -148,30 +148,6 @@ describe("GitLabIntegrationService", () => {
 		it("should return correct extension ID", () => {
 			const service = GitLabIntegrationService.getInstance()
 			expect(service.getExtensionId()).toBe("gitlab.gitlab-workflow")
-		})
-	})
-
-	describe("convenience functions", () => {
-		it("getGitLabContext should work correctly", () => {
-			mockGetExtension.mockReturnValue({
-				isActive: true,
-			})
-
-			const context = getGitLabContext()
-			expect(context).toContain("GitLab Workflow Extension is active")
-		})
-
-		it("isGitLabActive should work correctly", () => {
-			mockGetExtension.mockReturnValue({
-				isActive: true,
-			})
-
-			expect(isGitLabActive()).toBe(true)
-
-			mockGetExtension.mockReturnValue(undefined)
-			// Need to reset singleton for this test
-			;(GitLabIntegrationService as any).instance = null
-			expect(isGitLabActive()).toBe(false)
 		})
 	})
 })

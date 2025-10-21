@@ -33,7 +33,7 @@ import {
 	getModesSection,
 	addCustomInstructions,
 	markdownFormattingSection,
-	getGitLabIntegrationSection,
+	getGitProviderIntegrationSection,
 } from "./sections"
 import { type ClineProviderState } from "../webview/ClineProvider" // kilocode_change
 
@@ -137,7 +137,7 @@ ${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexMana
 
 ${getSystemInfoSection(cwd)}
 
-${getGitLabIntegrationSection()}
+${getGitProviderIntegrationSection()}
 
 ${getObjectiveSection(codeIndexManager, experiments)}
 

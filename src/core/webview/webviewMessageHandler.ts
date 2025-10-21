@@ -3791,8 +3791,7 @@ export const webviewMessageHandler = async (
 			break
 		}
 		case "checkGitLabExtension": {
-			// Import GitLab integration service
-			const { GitLabIntegrationService } = await import("../../integrations/gitlab")
+			const { GitLabIntegrationService } = await import("../../integrations/git-providers/gitlab")
 			const isActivated = GitLabIntegrationService.getInstance().isActive()
 			await provider.postMessageToWebview({
 				type: "gitlabExtensionStatus",
@@ -3801,8 +3800,7 @@ export const webviewMessageHandler = async (
 			break
 		}
 		case "getGitLabRepositoryInfo": {
-			// Import GitLab integration service
-			const { GitLabIntegrationService } = await import("../../integrations/gitlab")
+			const { GitLabIntegrationService } = await import("../../integrations/git-providers/gitlab")
 			const repositoryInfo = GitLabIntegrationService.getInstance().getRepositoryInfo()
 			await provider.postMessageToWebview({
 				type: "gitlabRepositoryInfo",

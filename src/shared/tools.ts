@@ -245,9 +245,9 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	update_todo_list: "update todo list",
 	run_slash_command: "run slash command",
 	generate_image: "generate images",
-	git_branch: "create git branch",
-	git_commit: "commit changes",
-	git_push: "push changes",
+	git_branch: "create git branch", // kilocode_change
+	git_commit: "commit changes", // kilocode_change
+	git_push: "push changes", // kilocode_change
 } as const
 
 // Define available tool groups.
@@ -298,9 +298,9 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"condense", // kilocode_Change
 	"update_todo_list",
 	"run_slash_command",
-	"git_branch",
-	"git_commit",
-	"git_push",
+	"git_branch", // kilocode_Change
+	"git_commit", // kilocode_Change
+	"git_push", // kilocode_Change
 ] as const
 
 export type DiffResult =
