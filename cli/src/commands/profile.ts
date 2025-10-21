@@ -3,12 +3,13 @@
  */
 
 import type { Command } from "./core/types.js"
+import type { UserOrganization } from "../state/atoms/profile.js"
 
 /**
  * Show user profile information
  */
 async function showProfile(context: any): Promise<void> {
-	const { currentProvider, addMessage, sendMessage } = context
+	const { currentProvider, addMessage, profileData, balanceData, profileLoading, balanceLoading } = context
 
 	// Check if user is authenticated with Kilocode
 	if (!currentProvider || currentProvider.provider !== "kilocode") {
@@ -31,46 +32,67 @@ async function showProfile(context: any): Promise<void> {
 		return
 	}
 
-	// Show loading message
-	addMessage({
-		id: Date.now().toString(),
-		type: "system",
-		content: "Loading profile information...",
-		ts: Date.now(),
-	})
-
-	try {
-		// Send profile data request
-		await sendMessage({
-			type: "fetchProfileDataRequest",
-		})
-
-		// Send balance data request
-		await sendMessage({
-			type: "fetchBalanceDataRequest",
-		})
-
-		// Note: The actual response handling is done by the extension
-		// and will be displayed through the message stream
+	// Check if still loading
+	if (profileLoading || balanceLoading) {
 		addMessage({
 			id: Date.now().toString(),
 			type: "system",
-			content: "Profile data requested. Check your profile in the Kilocode dashboard for detailed information.",
+			content: "Loading profile information...",
 			ts: Date.now(),
 		})
-	} catch (error) {
+		return
+	}
+
+	// Display profile information
+	const user = profileData.user
+
+	if (!user) {
 		addMessage({
 			id: Date.now().toString(),
 			type: "error",
-			content: `Failed to load profile: ${error instanceof Error ? error.message : String(error)}`,
+			content: "No user data available",
 			ts: Date.now(),
 		})
+		return
 	}
+
+	// Format profile information
+	let content = "**Profile Information:**\n\n"
+
+	if (user.name) {
+		content += `Name: ${user.name}\n`
+	}
+
+	if (user.email) {
+		content += `Email: ${user.email}\n`
+	}
+
+	if (balanceData?.balance !== undefined && balanceData?.balance !== null) {
+		content += `Balance: $${balanceData.balance.toFixed(2)}\n`
+	}
+
+	// Show current organization if set
+	const currentOrgId = currentProvider.kilocodeOrganizationId
+	if (currentOrgId && profileData.organizations) {
+		const currentOrg = profileData.organizations.find((org: UserOrganization) => org.id === currentOrgId)
+		if (currentOrg) {
+			content += `Teams: ${currentOrg.name} (${currentOrg.role})\n`
+		}
+	} else {
+		content += `Teams: Personal\n`
+	}
+
+	addMessage({
+		id: Date.now().toString(),
+		type: "system",
+		content,
+		ts: Date.now(),
+	})
 }
 
 export const profileCommand: Command = {
 	name: "profile",
-	aliases: ["prof"],
+	aliases: ["me", "whoami"],
 	description: "View your Kilocode profile information",
 	usage: "/profile",
 	examples: ["/profile"],

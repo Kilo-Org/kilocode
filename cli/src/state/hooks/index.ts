@@ -33,6 +33,10 @@ export type { UseTaskManagementReturn, TodoFilter } from "./useTaskManagement.js
 export { useModelSelection } from "./useModelSelection.js"
 export type { UseModelSelectionReturn } from "./useModelSelection.js"
 
+// Profile hooks
+export { useProfile } from "./useProfile.js"
+export type { UseProfileReturn } from "./useProfile.js"
+
 // Command input hooks
 export { useCommandInput } from "./useCommandInput.js"
 export type { UseCommandInputReturn } from "./useCommandInput.js"

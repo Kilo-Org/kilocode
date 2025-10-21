@@ -8,6 +8,14 @@ import type { ExtensionMessage } from "../../types/messages.js"
 import { extensionServiceAtom, setServiceReadyAtom, setServiceErrorAtom, setIsInitializingAtom } from "./service.js"
 import { updateExtensionStateAtom, updateChatMessageByTsAtom, updateRouterModelsAtom } from "./extension.js"
 import { ciCompletionDetectedAtom } from "./ci.js"
+import {
+	updateProfileDataAtom,
+	updateBalanceDataAtom,
+	setProfileLoadingAtom,
+	setBalanceLoadingAtom,
+	setProfileErrorAtom,
+	setBalanceErrorAtom,
+} from "./profile.js"
 import { logs } from "../../services/logs.js"
 
 /**
@@ -132,6 +140,25 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			case "routerModels":
 				if (message.routerModels) {
 					set(updateRouterModelsAtom, message.routerModels)
+				}
+				break
+
+			case "profileDataResponse":
+				set(setProfileLoadingAtom, false)
+				if (message.payload?.success) {
+					set(updateProfileDataAtom, message.payload.data)
+				} else {
+					set(setProfileErrorAtom, message.payload?.error || "Failed to fetch profile")
+				}
+				break
+
+			case "balanceDataResponse":
+				// Handle balance data response
+				set(setBalanceLoadingAtom, false)
+				if (message.payload?.success) {
+					set(updateBalanceDataAtom, message.payload.data)
+				} else {
+					set(setBalanceErrorAtom, message.payload?.error || "Failed to fetch balance")
 				}
 				break
 

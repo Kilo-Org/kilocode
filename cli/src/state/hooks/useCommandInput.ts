@@ -34,6 +34,7 @@ import { textBufferStringAtom } from "../atoms/textBuffer.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
+import { profileDataAtom, profileLoadingAtom } from "../atoms/profile.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
 
 /**
@@ -144,6 +145,8 @@ export function useCommandInput(): UseCommandInputReturn {
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
+	const profileData = useAtomValue(profileDataAtom)
+	const profileLoading = useAtomValue(profileLoadingAtom)
 
 	// Write atoms
 	const setInputAction = useSetAtom(updateTextBufferAtom)
@@ -205,6 +208,8 @@ export function useCommandInput(): UseCommandInputReturn {
 				routerModels,
 				currentProvider: currentProvider || null,
 				kilocodeDefaultModel,
+				profileData,
+				profileLoading,
 				updateProviderModel: async (modelId: string) => {
 					if (!currentProvider) {
 						throw new Error("No provider configured")
@@ -234,6 +239,8 @@ export function useCommandInput(): UseCommandInputReturn {
 		routerModels,
 		currentProvider,
 		kilocodeDefaultModel,
+		profileData,
+		profileLoading,
 		updateProvider,
 		refreshRouterModels,
 	])
