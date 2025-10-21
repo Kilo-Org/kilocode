@@ -15,7 +15,7 @@ interface IRPCProtocol : Disposable {
      * Current responsive state
      */
     val responsiveState: ResponsiveState
-    
+
     /**
      * Get proxy object
      * @param identifier Proxy identifier

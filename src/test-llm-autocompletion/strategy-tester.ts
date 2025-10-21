@@ -1,10 +1,11 @@
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
-import { GhostSuggestionContext } from "../services/ghost/types.js"
+import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
 import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
 import * as vscode from "vscode"
+import crypto from "crypto"
 
 export class StrategyTester {
 	private llmClient: LLMClient
@@ -35,7 +36,7 @@ export class StrategyTester {
 		}
 
 		// Remove the cursor marker from the code before creating the document
-		// formatDocumentWithCursor will add it back at the correct position
+		// the code will add it back at the correct position
 		const codeWithoutMarker = code.replace(CURSOR_MARKER, "")
 
 		const uri = vscode.Uri.parse("file:///test.js")
@@ -55,7 +56,31 @@ export class StrategyTester {
 
 	async getCompletion(code: string): Promise<string> {
 		const context = this.createContext(code)
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(context)
+
+		// Extract prefix, suffix, and languageId
+		const position = context.range?.start ?? new vscode.Position(0, 0)
+		const offset = context.document.offsetAt(position)
+		const text = context.document.getText()
+		const prefix = text.substring(0, offset)
+		const suffix = text.substring(offset)
+		const languageId = context.document.languageId || "javascript"
+
+		// Create AutocompleteInput
+		const autocompleteInput: AutocompleteInput = {
+			isUntitledFile: false,
+			completionId: crypto.randomUUID(),
+			filepath: context.document.uri.fsPath,
+			pos: { line: position.line, character: position.character },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
+		}
+
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
+			autocompleteInput,
+			prefix,
+			suffix,
+			languageId,
+		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		return response.content
@@ -70,8 +95,7 @@ export class StrategyTester {
 		}
 
 		parser.initialize(dummyContext)
-		parser.processChunk(xmlResponse)
-		parser.finishStream()
+		parser.parseResponse(xmlResponse)
 
 		return parser.getCompletedChanges()
 	}

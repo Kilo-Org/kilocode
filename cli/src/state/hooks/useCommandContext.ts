@@ -11,6 +11,7 @@ import { addMessageAtom, clearMessagesAtom, replaceMessagesAtom } from "../atoms
 import { setModeAtom, providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
+import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
 
@@ -66,6 +67,12 @@ export function useCommandContext(): UseCommandContextReturn {
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
 
+	// Get profile state
+	const profileData = useAtomValue(profileDataAtom)
+	const balanceData = useAtomValue(balanceDataAtom)
+	const profileLoading = useAtomValue(profileLoadingAtom)
+	const balanceLoading = useAtomValue(balanceLoadingAtom)
+
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
 		(input: string, args: string[], options: Record<string, any>, onExit: () => void): CommandContext => {
@@ -94,7 +101,7 @@ export function useCommandContext(): UseCommandContextReturn {
 				exit: () => {
 					onExit()
 				},
-				// New model-related context
+				// Model-related context
 				routerModels,
 				currentProvider: currentProvider || null,
 				kilocodeDefaultModel,
@@ -111,6 +118,15 @@ export function useCommandContext(): UseCommandContextReturn {
 				refreshRouterModels: async () => {
 					await refreshRouterModels()
 				},
+				// Provider update function for teams command
+				updateProvider: async (providerId: string, updates: any) => {
+					await updateProvider(providerId, updates)
+				},
+				// Profile data context
+				profileData,
+				balanceData,
+				profileLoading,
+				balanceLoading,
 			}
 		},
 		[
@@ -124,6 +140,11 @@ export function useCommandContext(): UseCommandContextReturn {
 			kilocodeDefaultModel,
 			updateProvider,
 			refreshRouterModels,
+			replaceMessages,
+			profileData,
+			balanceData,
+			profileLoading,
+			balanceLoading,
 		],
 	)
 

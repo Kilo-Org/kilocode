@@ -442,6 +442,8 @@ function createProviderContext(
 			routerModels: commandContext.routerModels || null,
 			currentProvider: commandContext.currentProvider || null,
 			kilocodeDefaultModel: commandContext.kilocodeDefaultModel || "",
+			profileData: commandContext.profileData || null,
+			profileLoading: commandContext.profileLoading || false,
 			updateProviderModel: commandContext.updateProviderModel,
 			refreshRouterModels: commandContext.refreshRouterModels,
 		}

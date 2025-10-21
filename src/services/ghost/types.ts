@@ -214,21 +214,6 @@ export function extractPrefixSuffix(
 }
 
 /**
- * Extract prefix (all lines up to cursor) from context
- */
-export function extractPrefix(context: GhostSuggestionContext): string {
-	if (!context.document || !context.range) {
-		return ""
-	}
-
-	const lines: string[] = []
-	for (let i = 0; i <= context.range.start.line; i++) {
-		lines.push(context.document.lineAt(i).text)
-	}
-	return lines.join("\n")
-}
-
-/**
  * Convert VSCode Position to our Position type
  */
 export function vscodePositionToPosition(pos: vscode.Position): Position {

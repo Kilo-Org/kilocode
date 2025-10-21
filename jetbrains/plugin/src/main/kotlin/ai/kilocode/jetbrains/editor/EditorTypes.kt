@@ -6,7 +6,6 @@ package ai.kilocode.jetbrains.editor
 
 import ai.kilocode.jetbrains.util.URI
 
-
 data class ModelAddedData(
     val uri: URI,
     var versionId: Int,
@@ -14,21 +13,21 @@ data class ModelAddedData(
     val EOL: String,
     var languageId: String,
     var isDirty: Boolean,
-    var encoding: String
+    var encoding: String,
 )
 
 data class Selection(
     val selectionStartLineNumber: Int,
     val selectionStartColumn: Int,
     val positionLineNumber: Int,
-    val positionColumn: Int
+    val positionColumn: Int,
 )
 
 data class Range(
     val startLineNumber: Int,
     val startColumn: Int,
     val endLineNumber: Int,
-    val endColumn: Int
+    val endColumn: Int,
 )
 
 data class ResolvedTextEditorConfiguration(
@@ -37,10 +36,8 @@ data class ResolvedTextEditorConfiguration(
     val originalIndentSize: Int = 4,
     val insertSpaces: Boolean = true,
     val cursorStyle: Int = 1,
-    val lineNumbers: Int = 1
+    val lineNumbers: Int = 1,
 )
-
-
 
 data class TextEditorAddData(
     val id: String,
@@ -48,14 +45,14 @@ data class TextEditorAddData(
     var options: ResolvedTextEditorConfiguration,
     var selections: List<Selection>,
     var visibleRanges: List<Range>,
-    var editorPosition: Int?
+    var editorPosition: Int?,
 )
 
 data class ModelContentChange(
     val range: Range,
     val rangeOffset: Int,
     val rangeLength: Int,
-    val text: String
+    val text: String,
 )
 
 data class ModelChangedEvent(
@@ -64,18 +61,18 @@ data class ModelChangedEvent(
     val versionId: Int,
     val isUndoing: Boolean,
     val isRedoing: Boolean,
-    val isDirty: Boolean
+    val isDirty: Boolean,
 )
 
 data class SelectionChangeEvent(
     val selections: List<Selection>,
-    val source: String?
+    val source: String?,
 )
 
 data class EditorPropertiesChangeData(
     val options: ResolvedTextEditorConfiguration?,
     val selections: SelectionChangeEvent?,
-    val visibleRanges: List<Range>?
+    val visibleRanges: List<Range>?,
 )
 
 data class DocumentsAndEditorsDelta(
@@ -83,7 +80,7 @@ data class DocumentsAndEditorsDelta(
     val addedDocuments: List<ModelAddedData>?,
     val removedEditors: List<String>?,
     val addedEditors: List<TextEditorAddData>?,
-    val newActiveEditor: String?
+    val newActiveEditor: String?,
 ) {
     fun isEmpty(): Boolean {
         var isEmpty = true
@@ -106,40 +103,39 @@ data class DocumentsAndEditorsDelta(
     }
 }
 
-
 data class TextEditorChange(
-    val originalStartLineNumber : Int,
-    val originalEndLineNumberExclusive : Int,
-    val modifiedStartLineNumber : Int,
-    val modifiedEndLineNumberExclusive : Int
+    val originalStartLineNumber: Int,
+    val originalEndLineNumberExclusive: Int,
+    val modifiedStartLineNumber: Int,
+    val modifiedEndLineNumberExclusive: Int,
 )
-
 
 data class TextEditorDiffInformation(
     val documentVersion: Int,
     val original: URI?,
     val modified: URI,
-    val changes: List<TextEditorChange>
+    val changes: List<TextEditorChange>,
 )
 
 enum class EditorGroupColumn(val value: Int) {
-    active(-1),
-    beside(-2),
-    one(1),
-    two(2),
-    three(3),
-    four(4),
-    five(5),
-    six(6),
-    seven(7),
-    eight(8),
-    nine(9);
+    ACTIVE(-1),
+    BESIDE(-2),
+    ONE(1),
+    TWO(2),
+    THREE(3),
+    FOUR(4),
+    FIVE(5),
+    SIX(6),
+    SEVEN(7),
+    EIGHT(8),
+    NINE(9),
+    ;
 
-    val groupIndex : Int
+    val groupIndex: Int
         get() {
             return when (this) {
-                active -> -1
-                beside -> -2
+                ACTIVE -> -1
+                BESIDE -> -2
                 else -> this.value - 1
             }
         }
@@ -147,18 +143,18 @@ enum class EditorGroupColumn(val value: Int) {
     companion object {
         fun fromValue(value: Int): EditorGroupColumn {
             return when (value) {
-                -2 -> beside
-                -1 -> active
-                1 -> one
-                2 -> two
-                3 -> three
-                4 -> four
-                5 -> five
-                6 -> six
-                7 -> seven
-                8 -> eight
-                9 -> nine
-                else -> {active}
+                -2 -> BESIDE
+                -1 -> ACTIVE
+                1 -> ONE
+                2 -> TWO
+                3 -> THREE
+                4 -> FOUR
+                5 -> FIVE
+                6 -> SIX
+                7 -> SEVEN
+                8 -> EIGHT
+                9 -> NINE
+                else -> { ACTIVE }
             }
         }
     }

@@ -10,18 +10,18 @@ data class TerminalCommandDto(
     val commandLine: String?,
     val cwd: String?,
     val exitCode: Int?,
-    val output: String?
+    val output: String?,
 )
 
 data class TerminalTabAction(
     val id: String,
     val label: String,
-    val icon: Any?
+    val icon: Any?,
 )
 
 data class ReconnectionProperties(
     val ownerId: String,
-    val data: Any?
+    val data: Any?,
 )
 
 data class ShellLaunchConfigDto(
@@ -36,17 +36,17 @@ data class ShellLaunchConfigDto(
     val type: String?,
     val isFeatureTerminal: Boolean?,
     val tabActions: List<TerminalTabAction>?,
-    val shellIntegrationEnvironmentReporting: Boolean?
+    val shellIntegrationEnvironmentReporting: Boolean?,
 )
 
 data class TerminalDimensionsDto(
     val columns: Int,
-    val rows: Int
+    val rows: Int,
 )
 
 data class TerminalLaunchError(
     val message: String,
-    val code: Int?
+    val code: Int?,
 )
 
 data class TerminalProfile(
@@ -74,10 +74,10 @@ data class TerminalProfile(
     val env: Map<String, String>?,
     val overrideName: Boolean?,
     val color: String?,
-    val icon: Any?
+    val icon: Any?,
 )
 
-//export interface ExtHostTerminalServiceShape {
+// export interface ExtHostTerminalServiceShape {
 //    $acceptTerminalClosed(id: number, exitCode: number | undefined, exitReason: TerminalExitReason): void;
 //    $acceptTerminalOpened(id: number, extHostTerminalId: string | undefined, name: string, shellLaunchConfig: IShellLaunchConfigDto): void;
 //    $acceptActiveTerminalChanged(id: number | null): void;
@@ -105,7 +105,7 @@ data class TerminalProfile(
 //    $createContributedProfileTerminal(id: string, options: ICreateContributedTerminalProfileOptions): Promise<void>;
 //    $provideTerminalQuickFixes(id: string, matchResult: TerminalCommandMatchResultDto, token: CancellationToken): Promise<SingleOrMany<TerminalQuickFix> | undefined>;
 //    $provideTerminalCompletions(id: string, options: ITerminalCompletionContextDto, token: CancellationToken): Promise<TerminalCompletionListDto | undefined>;
-//}
+// }
 
 interface ExtHostTerminalServiceProxy {
     fun acceptTerminalClosed(id: Int, exitCode: Int?, exitReason: Int)

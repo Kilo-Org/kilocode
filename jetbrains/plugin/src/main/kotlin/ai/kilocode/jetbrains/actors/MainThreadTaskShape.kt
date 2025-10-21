@@ -6,13 +6,6 @@ package ai.kilocode.jetbrains.actors
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.plugin.SystemObjectProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.future.future
-import java.util.concurrent.CompletableFuture
 
 /**
  * Main thread task service interface.
@@ -25,61 +18,61 @@ interface MainThreadTaskShape : Disposable {
      * @return Task ID
      */
     fun createTaskId(task: Map<String, Any?>): String
-    
+
     /**
      * Registers task provider.
      * @param handle Provider ID
      * @param type Task type
      */
     fun registerTaskProvider(handle: Int, type: String)
-    
+
     /**
      * Unregisters task provider.
      * @param handle Provider ID
      */
     fun unregisterTaskProvider(handle: Int)
-    
+
     /**
      * Fetches task list.
      * @param filter Task filter
      * @return Task list
      */
     fun fetchTasks(filter: Map<String, Any?>?): List<Map<String, Any?>>
-    
+
     /**
      * Gets task execution instance.
      * @param value Task handle or task DTO
      * @return Task execution DTO
      */
     fun getTaskExecution(value: Map<String, Any?>): Map<String, Any?>
-    
+
     /**
      * Executes task.
      * @param task Task handle or task DTO
      * @return Task execution DTO
      */
     fun executeTask(task: Map<String, Any?>): Map<String, Any?>
-    
+
     /**
      * Terminates task.
      * @param id Task ID
      */
     fun terminateTask(id: String)
-    
+
     /**
      * Registers task system.
      * @param scheme Scheme
      * @param info Task system information
      */
     fun registerTaskSystem(scheme: String, info: Map<String, Any?>)
-    
+
     /**
      * Custom execution complete.
      * @param id Task ID
      * @param result Execution result
      */
     fun customExecutionComplete(id: String, result: Int?)
-    
+
     /**
      * Registers supported execution types.
      * @param custom Whether supports custom execution
@@ -97,8 +90,8 @@ class MainThreadTask : MainThreadTaskShape {
     private val logger = Logger.getInstance(MainThreadTask::class.java)
     private val taskProviders = mutableMapOf<Int, String>()
     private val taskExecutions = mutableMapOf<String, Map<String, Any?>>()
-    
-    override fun createTaskId(task: Map<String, Any?>):String {
+
+    override fun createTaskId(task: Map<String, Any?>): String {
         try {
             logger.info("Creating task ID for task: $task")
             val id = "task-${System.currentTimeMillis()}-${task.hashCode()}"
@@ -143,12 +136,12 @@ class MainThreadTask : MainThreadTaskShape {
         try {
             val taskId = value["id"] as? String ?: value["taskId"] as? String
             logger.info("Getting task execution for task: $taskId")
-            
+
             // Create a simple task execution DTO
             return mapOf(
                 "id" to (taskId ?: "unknown-task"),
                 "task" to value,
-                "active" to false
+                "active" to false,
             )
         } catch (e: Exception) {
             logger.error("Failed to get task execution", e)
@@ -156,18 +149,18 @@ class MainThreadTask : MainThreadTaskShape {
         }
     }
 
-    override fun executeTask(task: Map<String, Any?>):Map<String, Any?> {
+    override fun executeTask(task: Map<String, Any?>): Map<String, Any?> {
         try {
             val taskId = task["id"] as? String ?: task["taskId"] as? String ?: "unknown-task"
             logger.info("Executing task: $taskId")
-            
+
             // Create an executing task execution DTO
             val execution = mapOf(
                 "id" to taskId,
                 "task" to task,
-                "active" to true
+                "active" to true,
             )
-            
+
             // Store task execution information
             taskExecutions[taskId] = execution
             return execution
@@ -220,4 +213,4 @@ class MainThreadTask : MainThreadTaskShape {
         taskProviders.clear()
         taskExecutions.clear()
     }
-} 
+}

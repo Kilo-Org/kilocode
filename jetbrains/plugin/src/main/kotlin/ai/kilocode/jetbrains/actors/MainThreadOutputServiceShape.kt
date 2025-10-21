@@ -6,7 +6,6 @@ package ai.kilocode.jetbrains.actors
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.util.URI
 
 /**
  * Main thread output service interface.
@@ -22,7 +21,7 @@ interface MainThreadOutputServiceShape : Disposable {
      * @return Channel ID
      */
     suspend fun register(label: String, file: Map<String, Any>, languageId: String?, extensionId: String): String
-    
+
     /**
      * Updates output channel.
      * @param channelId Channel ID
@@ -30,20 +29,20 @@ interface MainThreadOutputServiceShape : Disposable {
      * @param till Update to specified position
      */
     suspend fun update(channelId: String, mode: Int, till: Int? = null)
-    
+
     /**
      * Reveals output channel.
      * @param channelId Channel ID
      * @param preserveFocus Whether to preserve focus
      */
     suspend fun reveal(channelId: String, preserveFocus: Boolean)
-    
+
     /**
      * Closes output channel.
      * @param channelId Channel ID
      */
     suspend fun close(channelId: String)
-    
+
     /**
      * Disposes output channel.
      * @param channelId Channel ID
@@ -69,7 +68,7 @@ class MainThreadOutputService : MainThreadOutputServiceShape {
         logger.info("Register output channel: label=$label, file=$file, extensionId=$extensionId")
         return label // Use label as channel ID
     }
-    
+
     /**
      * Updates output channel.
      * @param channelId Channel ID
@@ -79,7 +78,7 @@ class MainThreadOutputService : MainThreadOutputServiceShape {
     override suspend fun update(channelId: String, mode: Int, till: Int?) {
         logger.info("Update output channel: channelId=$channelId, mode=$mode, till=$till")
     }
-    
+
     /**
      * Reveals output channel.
      * @param channelId Channel ID
@@ -88,7 +87,7 @@ class MainThreadOutputService : MainThreadOutputServiceShape {
     override suspend fun reveal(channelId: String, preserveFocus: Boolean) {
         logger.info("Reveal output channel: channelId=$channelId, preserveFocus=$preserveFocus")
     }
-    
+
     /**
      * Closes output channel.
      * @param channelId Channel ID
@@ -96,7 +95,7 @@ class MainThreadOutputService : MainThreadOutputServiceShape {
     override suspend fun close(channelId: String) {
         logger.info("Close output channel: channelId=$channelId")
     }
-    
+
     /**
      * Disposes output channel.
      * @param channelId Channel ID
@@ -111,4 +110,4 @@ class MainThreadOutputService : MainThreadOutputServiceShape {
     override fun dispose() {
         logger.info("Disposing all output channel resources")
     }
-} 
+}

@@ -38,56 +38,6 @@ export function isCommentLine(line: string, languageId: string): boolean {
 	return false
 }
 
-export function extractComment(document: TextDocument, currentLine: number): string {
-	let comment = ""
-
-	// Get the comment (could be multi-line)
-	let commentStartLine = currentLine
-	let commentEndLine = currentLine
-
-	// Check if current line is a comment
-	const currentLineText = document.lineAt(currentLine).text
-	if (isCommentLine(currentLineText.trim(), document.languageId)) {
-		comment = currentLineText.trim()
-
-		// Check for multi-line comments above
-		let line = currentLine - 1
-		while (line >= 0) {
-			const lineText = document.lineAt(line).text.trim()
-			if (isCommentLine(lineText, document.languageId)) {
-				comment = lineText + "\n" + comment
-				commentStartLine = line
-				line--
-			} else {
-				break
-			}
-		}
-
-		// Check for multi-line comments below
-		line = currentLine + 1
-		while (line < document.lineCount) {
-			const lineText = document.lineAt(line).text.trim()
-			if (isCommentLine(lineText, document.languageId)) {
-				comment = comment + "\n" + lineText
-				commentEndLine = line
-				line++
-			} else {
-				break
-			}
-		}
-	} else if (currentLine > 0) {
-		// Check previous line for comment
-		const prevLineText = document.lineAt(currentLine - 1).text
-		if (isCommentLine(prevLineText.trim(), document.languageId)) {
-			comment = prevLineText.trim()
-			commentStartLine = currentLine - 1
-			commentEndLine = currentLine - 1
-		}
-	}
-
-	return comment
-}
-
 /**
  * Cleans comment text by removing comment syntax
  */

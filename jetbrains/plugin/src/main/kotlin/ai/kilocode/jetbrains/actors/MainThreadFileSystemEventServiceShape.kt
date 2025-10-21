@@ -27,7 +27,7 @@ interface MainThreadFileSystemEventServiceShape : Disposable {
         session: Int,
         resource: Map<String, Any?>,
         opts: Map<String, Any?>,
-        correlate: Boolean
+        correlate: Boolean,
     )
 
     /**
@@ -59,7 +59,7 @@ class MainThreadFileSystemEventService : MainThreadFileSystemEventServiceShape {
         session: Int,
         resource: Map<String, Any?>,
         opts: Map<String, Any?>,
-        correlate: Boolean
+        correlate: Boolean,
     ) {
         logger.info("Starting to watch file system changes: extensionId=$extensionId, session=$session, resource=$resource, opts=$opts, correlate=$correlate")
     }
@@ -79,4 +79,4 @@ class MainThreadFileSystemEventService : MainThreadFileSystemEventServiceShape {
     override fun dispose() {
         logger.info("Releasing MainThreadFileSystemEventService resources")
     }
-} 
+}

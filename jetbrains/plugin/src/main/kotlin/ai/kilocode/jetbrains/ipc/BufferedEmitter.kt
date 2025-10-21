@@ -10,8 +10,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.Executors
-import kotlin.coroutines.CoroutineContext
 
 /**
  * Buffered event emitter
@@ -24,10 +22,10 @@ class BufferedEmitter<T> {
     private val bufferedMessages = ConcurrentLinkedQueue<T>()
     private var hasListeners = false
     private var isDeliveringMessages = false
-    
+
     private val coroutineContext = Dispatchers.IO
     private val scope = CoroutineScope(coroutineContext)
-    
+
     companion object {
         private val LOG = Logger.getInstance(BufferedEmitter::class.java)
     }
@@ -36,7 +34,7 @@ class BufferedEmitter<T> {
      * Event listener property, similar to the event property in TypeScript version
      */
     val event: EventListener<T> = this::onEvent
-    
+
     /**
      * Add event listener
      * @param listener Event listener
@@ -45,13 +43,13 @@ class BufferedEmitter<T> {
     fun onEvent(listener: (T) -> Unit): Disposable {
         val wasEmpty = listeners.isEmpty()
         listeners.add(listener)
-        
+
         if (wasEmpty) {
             hasListeners = true
             // Use microtask queue to ensure these messages are delivered before other messages have a chance to be received
             scope.launch { deliverMessages() }
         }
-        
+
         return Disposable {
             synchronized(listeners) {
                 listeners.remove(listener)
@@ -61,7 +59,7 @@ class BufferedEmitter<T> {
             }
         }
     }
-    
+
     /**
      * Fire event
      * @param event Event data
@@ -86,14 +84,14 @@ class BufferedEmitter<T> {
             bufferedMessages.offer(event)
         }
     }
-    
+
     /**
      * Clear buffer
      */
     fun flushBuffer() {
         bufferedMessages.clear()
     }
-    
+
     /**
      * Deliver buffered messages
      */
@@ -101,7 +99,7 @@ class BufferedEmitter<T> {
         if (isDeliveringMessages) {
             return
         }
-        
+
         isDeliveringMessages = true
         try {
             while (hasListeners && bufferedMessages.isNotEmpty()) {
@@ -126,4 +124,4 @@ class BufferedEmitter<T> {
 /**
  * Event listener type alias
  */
-typealias EventListener<T> = ((T) -> Unit) -> Disposable 
+typealias EventListener<T> = ((T) -> Unit) -> Disposable

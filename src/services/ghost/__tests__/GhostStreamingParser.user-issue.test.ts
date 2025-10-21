@@ -45,13 +45,8 @@ describe("GhostStreamingParser - User Issue Fix", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change`
 
-		// First chunk - should not sanitize yet (stream not complete)
-		let result = parser.processChunk(userIssueXML)
-		expect(result.hasNewSuggestions).toBe(false)
-		expect(result.isComplete).toBe(false)
-
-		// Simulate stream completion
-		result = parser.finishStream()
+		// Simulate stream completion with full response
+		const result = parser.parseResponse(userIssueXML)
 
 		// Verify that the sanitization worked and we got suggestions
 		expect(result.hasNewSuggestions).toBe(true)
@@ -72,13 +67,8 @@ describe("GhostStreamingParser - User Issue Fix", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change`
 
-		// First chunk - should not sanitize yet
-		let result = parser.processChunk(brokenXML)
-		expect(result.hasNewSuggestions).toBe(false)
-		expect(result.isComplete).toBe(false)
-
 		// Simulate stream completion
-		result = parser.finishStream()
+		const result = parser.parseResponse(brokenXML)
 
 		expect(result.hasNewSuggestions).toBe(true)
 		expect(result.suggestions.hasSuggestions()).toBe(true)

@@ -23,9 +23,9 @@ interface ExtHostWebviewViewsProxy {
         viewType: String,
         title: String?,
         state: Any?,
-        cancellation: Any?
+        cancellation: Any?,
     )
-    
+
     /**
      * Triggered when WebView view visibility changes
      * @param webviewHandle WebView handle
@@ -33,14 +33,14 @@ interface ExtHostWebviewViewsProxy {
      */
     fun onDidChangeWebviewViewVisibility(
         webviewHandle: String,
-        visible: Boolean
+        visible: Boolean,
     )
-    
+
     /**
      * Dispose WebView view
      * @param webviewHandle WebView handle
      */
     fun disposeWebviewView(
-        webviewHandle: String
+        webviewHandle: String,
     )
-} 
+}

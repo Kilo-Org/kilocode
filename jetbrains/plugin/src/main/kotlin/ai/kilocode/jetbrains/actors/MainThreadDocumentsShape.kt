@@ -4,26 +4,24 @@
 
 package ai.kilocode.jetbrains.actors
 
-import com.google.common.collect.Maps
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
-import com.intellij.testFramework.utils.vfs.createFile
 import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.editor.createURI
 import ai.kilocode.jetbrains.service.DocumentSyncService
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileDocumentManagerListener
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.editor.Document
-import com.intellij.util.messages.MessageBusConnection
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
 import com.intellij.openapi.progress.ProcessCanceledException
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.util.messages.MessageBusConnection
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 interface MainThreadDocumentsShape {
@@ -57,7 +55,7 @@ class MainThreadDocuments(var project: Project) : MainThreadDocumentsShape {
                     override fun beforeDocumentSaving(document: Document) {
                         handleDocumentSaving(document)
                     }
-                }
+                },
             )
 
             logger.info("Document save listener registered successfully")
@@ -104,7 +102,9 @@ class MainThreadDocuments(var project: Project) : MainThreadDocumentsShape {
         if (!file.exists()) {
             file.parentFile.mkdirs()
             val vf = vfs.findFileByIoFile(file.parentFile)
-            vf?.createFile(file.name)
+            ApplicationManager.getApplication().runWriteAction {
+                vf?.createChildData(this, file.name)
+            }
         }
 
         project.getService(EditorAndDocManager::class.java).openDocument(uri)
@@ -123,14 +123,13 @@ class MainThreadDocuments(var project: Project) : MainThreadDocumentsShape {
 
         logger.info("trySaveDocument： ${uri.path}")
 
-        project.getService(EditorAndDocManager::class.java).getEditorHandleByUri(uri,true)?.updateDocumentDirty(false) ?: run {
+        project.getService(EditorAndDocManager::class.java).getEditorHandleByUri(uri, true)?.updateDocumentDirty(false) ?: run {
             logger.info("trySaveDocument： ${uri.path} not found")
             return false
         }
         logger.info("trySaveDocument： ${uri.path} execution completed")
         return true
     }
-
 
     fun dispose() {
         try {
@@ -143,5 +142,4 @@ class MainThreadDocuments(var project: Project) : MainThreadDocumentsShape {
             logger.error("Error disposing document save listener", e)
         }
     }
-
 }
