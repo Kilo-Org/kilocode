@@ -106,7 +106,7 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
-import { getKiloUrlFromToken } from "../../shared/kilocode/token" // kilocode_change
+import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
 import { getKilocodeConfig, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>

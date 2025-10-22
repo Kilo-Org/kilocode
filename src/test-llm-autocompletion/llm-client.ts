@@ -1,7 +1,7 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
 import { DEFAULT_HEADERS } from "../api/providers/constants.js"
-import { getKiloUrlFromToken } from "../shared/kilocode/token.js"
+import { getKiloUrlFromToken } from "@roo-code/types"
 
 config()
 
@@ -29,7 +29,7 @@ export class LLMClient {
 			throw new Error("KILOCODE_API_KEY is required for Kilocode provider")
 		}
 
-		const baseURL = getKiloUrlFromToken(process.env.KILOCODE_API_KEY, "https://api.kilocode.ai/api/openrouter/")
+		const baseURL = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", process.env.KILOCODE_API_KEY)
 		this.openai = new OpenAI({
 			baseURL,
 			apiKey: process.env.KILOCODE_API_KEY,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react"
 import { VSCodeCheckbox, VSCodeTextField, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { getAppUrl } from "@roo/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 
 interface ImageGenerationSettingsProps {
 	enabled: boolean

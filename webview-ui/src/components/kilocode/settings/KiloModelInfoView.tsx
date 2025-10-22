@@ -5,7 +5,7 @@ import { ModelInfoSupportsItem } from "@/components/settings/ModelInfoView"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, StandardTooltip } from "@/components/ui"
 import { FreeModelsInfoView } from "../FreeModelsLink"
 import { useQuery } from "@tanstack/react-query"
-import { getKiloUrlFromToken } from "@roo/kilocode/token"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { telemetryClient } from "@/utils/TelemetryClient"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 

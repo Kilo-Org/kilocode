@@ -16,7 +16,7 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
-import { getAppUrl } from "../shared/kilocode/url" // kilocode_change
+import { getAppUrl } from "@roo-code/types" // kilocode_change
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
 
 /**

@@ -1,5 +1,5 @@
 import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../../../src/shared/kilocode/wrapper"
-import { getAppUrl } from "../../../../src/shared/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 
 const getJetbrainsUrlScheme = (code: string) => {
 	return JETBRAIN_PRODUCTS[code as keyof typeof JETBRAIN_PRODUCTS]?.urlScheme || "jetbrains"

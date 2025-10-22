@@ -1,6 +1,6 @@
 import { X_KILOCODE_VERSION } from "../../shared/kilocode/headers"
 import { Package } from "../../shared/package"
-import { getAppUrl } from "../../shared/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 
 export const DEFAULT_HEADERS = {
 	"HTTP-Referer": getAppUrl(),

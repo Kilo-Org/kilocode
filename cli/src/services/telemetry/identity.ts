@@ -9,7 +9,7 @@ import * as crypto from "crypto"
 import * as os from "os"
 import { KiloCodePaths } from "../../utils/paths.js"
 import { logs } from "../logs.js"
-import { getApiUrl } from "../../../../src/shared/kilocode/url.js"
+import { getApiUrl } from "@roo-code/types"
 
 /**
  * User identity structure

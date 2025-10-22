@@ -122,7 +122,7 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
-import { getAppUrl } from "../../shared/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds

@@ -11,7 +11,7 @@ import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
 import { OrganizationSelector } from "../../common/OrganizationSelector"
 import { KiloCodeWrapperProperties } from "../../../../../../src/shared/kilocode/wrapper"
-import { getAppUrl } from "../../../../../../src/shared/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 import { useKiloIdentity } from "@src/utils/kilocode/useKiloIdentity"
 
 type KiloCodeProps = {

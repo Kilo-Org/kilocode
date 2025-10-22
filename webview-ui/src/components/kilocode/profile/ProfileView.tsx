@@ -15,7 +15,7 @@ import { Tab, TabContent, TabHeader } from "@src/components/common/Tab"
 import { Button } from "@src/components/ui"
 import KiloCodeAuth from "../common/KiloCodeAuth"
 import { OrganizationSelector } from "../common/OrganizationSelector"
-import { getAppUrl } from "@roo/kilocode/url"
+import { getAppUrl } from "@roo-code/types"
 
 interface ProfileViewProps {
 	onDone: () => void

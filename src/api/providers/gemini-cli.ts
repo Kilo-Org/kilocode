@@ -17,7 +17,7 @@ import { getModelParams } from "../transform/model-params"
 
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
-import { getApiUrl } from "../../shared/kilocode/url"
+import { getApiUrl } from "@roo-code/types"
 
 // OAuth2 Configuration (from Cline implementation)
 const OAUTH_REDIRECT_URI = "http://localhost:45289"
@@ -56,7 +56,9 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 
 	private async fetchOAuthConfig(): Promise<void> {
 		try {
-			const response = await axios.get<{ geminiCli: OauthConfig }>(getApiUrl("/extension-config.json"))
+			const response = await axios.get<{ geminiCli: OauthConfig }>(
+				"https://api.kilocode.ai/extension-config.json",
+			)
 			const config = response.data
 
 			this.oauthClientId = config.geminiCli.oauthClientId
