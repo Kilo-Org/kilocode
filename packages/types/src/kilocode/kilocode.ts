@@ -94,20 +94,18 @@ function ensureLeadingSlash(path: string): string {
 }
 
 /**
- * Gets the API base URL for the current environment.
- * In development: http://localhost:3000/api
- * In production: uses /api path structure
+ * Internal helper to build URLs for the current environment.
  */
-export function getApiUrl(path: string = ""): string {
+function buildUrl(path: string = ""): string {
 	try {
 		const backend = new URL(getGlobalKilocodeBackendUrl())
 		const result = new URL(backend)
-		result.pathname = `/api${path ? ensureLeadingSlash(path) : ""}`
+		result.pathname = path ? ensureLeadingSlash(path) : ""
 
 		return removeTrailingSlash(result.toString(), result.pathname)
 	} catch (error) {
-		console.warn("Failed to build API URL:", path, error)
-		return `https://kilocode.ai/api${path ? ensureLeadingSlash(path) : ""}`
+		console.warn("Failed to build URL:", path, error)
+		return `https://kilocode.ai${path ? ensureLeadingSlash(path) : ""}`
 	}
 }
 
@@ -117,15 +115,34 @@ export function getApiUrl(path: string = ""): string {
  * In production: https://kilocode.ai
  */
 export function getAppUrl(path: string = ""): string {
-	try {
-		const backend = new URL(getGlobalKilocodeBackendUrl())
-		const result = new URL(backend)
-		result.pathname = path ? ensureLeadingSlash(path) : ""
+	return buildUrl(path)
+}
 
-		return removeTrailingSlash(result.toString(), result.pathname)
+/**
+ * Gets the API base URL for the current environment.
+ * In development: http://localhost:3000/api
+ * In production: https://kilocode.ai/api
+ */
+export function getApiUrl(path: string = ""): string {
+	return buildUrl(`/api${path ? ensureLeadingSlash(path) : ""}`)
+}
+
+/**
+ * Gets the extension config URL, which uses a legacy subdomain structure.
+ * In development: http://localhost:3000/extension-config.json
+ * In production: https://api.kilocode.ai/extension-config.json
+ */
+export function getExtensionConfigUrl(): string {
+	try {
+		const backend = getGlobalKilocodeBackendUrl()
+		if (backend.includes("localhost")) {
+			return getAppUrl("/extension-config.json")
+		} else {
+			return "https://api.kilocode.ai/extension-config.json"
+		}
 	} catch (error) {
-		console.warn("Failed to build app URL:", path, error)
-		return `https://kilocode.ai${path ? ensureLeadingSlash(path) : ""}`
+		console.warn("Failed to build extension config URL:", error)
+		return "https://api.kilocode.ai/extension-config.json"
 	}
 }
 

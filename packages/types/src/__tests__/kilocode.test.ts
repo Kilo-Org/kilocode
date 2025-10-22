@@ -7,6 +7,7 @@ import {
 	getApiUrl,
 	getAppUrl,
 	getKiloUrlFromToken,
+	getExtensionConfigUrl,
 } from "../kilocode/kilocode.js"
 
 describe("ghostServiceSettingsSchema", () => {
@@ -235,6 +236,16 @@ describe("URL functions", () => {
 		}
 	})
 
+	describe("getExtensionConfigUrl", () => {
+		it("should use path structure for development", () => {
+			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
+			expect(getExtensionConfigUrl()).toBe("http://localhost:3000/extension-config.json")
+		})
+		it("should use subdomain structure for production", () => {
+			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
+		})
+	})
+
 	describe("getApiUrl", () => {
 		it("should handle production URLs correctly", () => {
 			// API URLs using /api path structure
@@ -373,12 +384,9 @@ describe("URL functions", () => {
 		})
 
 		it("should maintain backwards compatibility for legacy endpoints", () => {
-			// extension-config.json is a special case that uses subdomain structure
-			// It should be hard-coded in gemini-cli.ts as "https://api.kilocode.ai/extension-config.json"
-			// This test documents that getApiUrl would produce the wrong URL for this endpoint
-			const wrongUrl = getApiUrl("/extension-config.json")
-			expect(wrongUrl).toBe("https://kilocode.ai/api/extension-config.json")
-			expect(wrongUrl).not.toBe("https://api.kilocode.ai/extension-config.json")
+			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
+			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
+			expect(getApiUrl("/extension-config.json")).not.toBe(getExtensionConfigUrl())
 		})
 	})
 
