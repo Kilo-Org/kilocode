@@ -70,7 +70,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	/**
 	 * Check if added content has common prefix with deleted content
 	 */
-	private hasCommonPrefix(deletedContent: string, addedContent: string): boolean {
+	private isPrefix(deletedContent: string, addedContent: string): boolean {
 		return addedContent.startsWith(deletedContent)
 	}
 
@@ -79,7 +79,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 */
 	private shouldTreatAsAddition(deletedContent: string, addedContent: string): boolean {
 		// If added content starts with deleted content, let common prefix logic handle this
-		if (this.hasCommonPrefix(deletedContent, addedContent)) {
+		if (this.isPrefix(deletedContent, addedContent)) {
 			return false
 		}
 
@@ -98,7 +98,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const deletedContent = this.extractContent(group, "-")
 			const addedContent = this.extractContent(group, "+")
 
-			if (deletedContent && addedContent && this.hasCommonPrefix(deletedContent, addedContent)) {
+			if (deletedContent && addedContent && this.isPrefix(deletedContent, addedContent)) {
 				return true
 			}
 		}
@@ -242,7 +242,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 */
 	private shouldCombineGroups(deletedContent: string, addedContent: string): boolean {
 		return (
-			this.hasCommonPrefix(deletedContent, addedContent) ||
+			this.isPrefix(deletedContent, addedContent) ||
 			this.isPlaceholderContent(deletedContent) ||
 			addedContent.startsWith("\n") ||
 			addedContent.startsWith("\r\n")
@@ -522,7 +522,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				const addedContent = this.extractContent(nextGroup, "+")
 
 				// Common prefix scenario - create synthetic modification
-				if (this.hasCommonPrefix(deletedContent, addedContent)) {
+				if (this.isPrefix(deletedContent, addedContent)) {
 					console.log("[InlineCompletion] Common prefix detected, creating synthetic modification group")
 					console.log("[InlineCompletion] Deleted:", deletedContent.substring(0, 50))
 					console.log("[InlineCompletion] Added:", addedContent.substring(0, 50))
@@ -646,7 +646,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				const deletedContent = this.extractContent(previousGroup, "-")
 
 				// If entire addition starts with deletion, strip common prefix
-				if (this.hasCommonPrefix(deletedContent, text)) {
+				if (this.isPrefix(deletedContent, text)) {
 					return { text: text.substring(deletedContent.length), isAddition: false }
 				}
 
@@ -687,7 +687,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		// Should be treated as addition
 		if (this.shouldTreatAsAddition(deletedContent, addedContent)) {
-			if (this.hasCommonPrefix(deletedContent, addedContent)) {
+			if (this.isPrefix(deletedContent, addedContent)) {
 				return { text: addedContent.substring(deletedContent.length), isAddition: false }
 			} else if (addedContent.startsWith("\n") || addedContent.startsWith("\r\n")) {
 				return { text: addedContent.replace(/^\r?\n/, ""), isAddition: true }
