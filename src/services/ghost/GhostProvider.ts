@@ -522,12 +522,7 @@ export class GhostProvider {
 		// Update inline completion provider
 		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
 
-		// Explicitly hide any inline suggestions
-		try {
-			await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-		} catch {
-			// Silently fail if command is not available
-		}
+		await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
 
 		this.clearAutoTriggerTimer()
 		await this.render()
@@ -775,14 +770,6 @@ export class GhostProvider {
 		if (this.hasPendingSuggestions()) {
 			void this.cancelSuggestions()
 			return
-		}
-
-		// Explicitly hide any cached inline suggestions to prevent conflicts with IntelliSense
-		// This ensures a clean slate before our auto-trigger creates new suggestions
-		try {
-			void vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-		} catch {
-			// Silently fail if command is not available
 		}
 
 		// Skip if auto-trigger is not enabled
