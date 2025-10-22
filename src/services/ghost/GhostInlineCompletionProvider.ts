@@ -1,7 +1,6 @@
 import * as vscode from "vscode"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { GhostSuggestionEditOperation } from "./types"
-import { GhostServiceSettings } from "@roo-code/types"
 
 // Constants
 const PLACEHOLDER_TEXT = "<<<AUTOCOMPLETE_HERE>>>"
@@ -18,16 +17,10 @@ const COMMON_PREFIX_THRESHOLD = 0.8
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestions: GhostSuggestionsState
 	private onIntelliSenseDetected?: () => void
-	private settings: GhostServiceSettings | null = null
 
-	constructor(
-		suggestions: GhostSuggestionsState,
-		onIntelliSenseDetected?: () => void,
-		settings?: GhostServiceSettings | null,
-	) {
+	constructor(suggestions: GhostSuggestionsState, onIntelliSenseDetected?: () => void) {
 		this.suggestions = suggestions
 		this.onIntelliSenseDetected = onIntelliSenseDetected
-		this.settings = settings || null
 	}
 
 	/**
@@ -35,13 +28,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 */
 	public updateSuggestions(suggestions: GhostSuggestionsState): void {
 		this.suggestions = suggestions
-	}
-
-	/**
-	 * Update the settings reference
-	 */
-	public updateSettings(settings: GhostServiceSettings | null): void {
-		this.settings = settings
 	}
 
 	/**
@@ -101,16 +87,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return addedContent.startsWith("\n") || addedContent.startsWith("\r\n")
 	}
 
-	/**
-	 * Check if a group should be shown based on onlyAdditions setting
-	 */
 	private shouldShowGroup(groupType: "+" | "/" | "-", group?: GhostSuggestionEditOperation[]): boolean {
-		const onlyAdditions = this.settings?.onlyAdditions ?? true
-
-		if (!onlyAdditions) {
-			return true
-		}
-
 		// Always show pure additions
 		if (groupType === "+") {
 			return true

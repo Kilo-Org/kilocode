@@ -65,10 +65,8 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
-		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
-			this.suggestions,
-			() => this.onIntelliSenseDetected(),
-			this.settings,
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions, () =>
+			this.onIntelliSenseDetected(),
 		)
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
@@ -139,13 +137,6 @@ export class GhostProvider {
 		this.settings = this.loadSettings()
 		await this.model.reload(this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
-
-		// Update inline completion provider with new settings
-		this.inlineCompletionProvider.updateSettings(this.settings)
-
-		// Re-register inline completion provider if settings changed
-		this.registerInlineCompletionProvider()
-
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.saveSettings()
@@ -438,12 +429,12 @@ export class GhostProvider {
 		} else {
 			// If we're not showing inline completion, explicitly hide any existing ones
 			// This prevents conflicts with IntelliSense
-
 			await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
 		}
 
-		// Display decorations for appropriate groups
-		await this.displaySuggestions()
+		// TODO: Turned off for now and only show Inline ghost completions. Reintroduce later for next edits.
+		// Display SVG decorations for appropriate groups
+		// await this.displaySuggestions()
 	}
 
 	private selectClosestSuggestion() {

@@ -8,7 +8,6 @@ export const ghostServiceSettingsSchema = z
 		enableQuickInlineTaskKeybinding: z.boolean().optional(),
 		enableSmartInlineTaskKeybinding: z.boolean().optional(),
 		showGutterAnimation: z.boolean().optional(),
-		onlyAdditions: z.boolean().default(true).optional(),
 		provider: z.string().optional(),
 		model: z.string().optional(),
 	})
