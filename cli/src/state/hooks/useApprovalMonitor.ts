@@ -137,8 +137,12 @@ export function useApprovalMonitor(): void {
 		},
 	}
 
-	// Track the last message we set as pending (timestamp + partial state)
-	const lastPendingRef = useRef<{ ts: number; partial: boolean } | null>(null)
+	// Track the last message we set as pending (full message snapshot for comparison)
+	const lastPendingRef = useRef<{
+		ts: number
+		partial: boolean
+		text: string
+	} | null>(null)
 
 	// Main effect: handle approval orchestration
 	useEffect(() => {
@@ -166,16 +170,25 @@ export function useApprovalMonitor(): void {
 
 		// Set as pending if:
 		// 1. This is a new message (different timestamp), OR
-		// 2. The message transitioned from partial to complete (need to update options)
+		// 2. The message transitioned from partial to complete (need to update options), OR
+		// 3. The message text changed (for command messages, this means the command is now available)
 		const isNewMessage = !lastPendingRef.current || lastPendingRef.current.ts !== lastAskMessage.ts
 		const transitionedToComplete =
 			lastPendingRef.current &&
 			lastPendingRef.current.ts === lastAskMessage.ts &&
 			lastPendingRef.current.partial &&
 			!lastAskMessage.partial
+		const textChanged =
+			lastPendingRef.current &&
+			lastPendingRef.current.ts === lastAskMessage.ts &&
+			lastPendingRef.current.text !== (lastAskMessage.text || "")
 
-		if (isNewMessage || transitionedToComplete) {
-			lastPendingRef.current = { ts: lastAskMessage.ts, partial: lastAskMessage.partial || false }
+		if (isNewMessage || transitionedToComplete || textChanged) {
+			lastPendingRef.current = {
+				ts: lastAskMessage.ts,
+				partial: lastAskMessage.partial || false,
+				text: lastAskMessage.text || "",
+			}
 			setPendingApproval(lastAskMessage)
 		}
 

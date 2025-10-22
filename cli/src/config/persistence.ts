@@ -116,10 +116,7 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 	try {
 		await ensureConfigDir()
 
-		// Check if config file exists
-		try {
-			await fs.access(configFile)
-		} catch {
+		if (!(await configExists())) {
 			// File doesn't exist, write default config directly without validation
 			// (DEFAULT_CONFIG may have empty credentials which is ok for initial setup)
 			await fs.writeFile(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2))

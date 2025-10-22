@@ -81,7 +81,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
-				"basic-usage/adding-tokens",
+				"basic-usage/adding-credits",
 			],
 		},
 		{
