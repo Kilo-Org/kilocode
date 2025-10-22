@@ -87,7 +87,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return addedContent.startsWith("\n") || addedContent.startsWith("\r\n")
 	}
 
-	private shouldShowGroup(groupType: "+" | "/" | "-", group?: GhostSuggestionEditOperation[]): boolean {
+	private shouldHandleGroupInline(groupType: "+" | "/" | "-", group?: GhostSuggestionEditOperation[]): boolean {
 		// Always show pure additions
 		if (groupType === "+") {
 			return true
@@ -174,7 +174,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		file: any,
 	): boolean {
 		// First check if this group type should be shown at all
-		if (!this.shouldShowGroup(groupType, selectedGroup)) {
+		if (!this.shouldHandleGroupInline(groupType, selectedGroup)) {
 			return false
 		}
 
@@ -269,7 +269,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const group = groups[i]
 			const groupType = file.getGroupType(group)
 
-			if (!this.shouldShowGroup(groupType, group)) {
+			if (!this.shouldHandleGroupInline(groupType, group)) {
 				skipGroupIndices.push(i)
 			}
 		}
@@ -321,8 +321,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	 */
 	private isValidGroup(group: GhostSuggestionEditOperation[], groupType: "+" | "/" | "-"): boolean {
 		const isPlaceholder = groupType === "-" && this.isPlaceholderOnlyDeletion(group)
-		const shouldShow = this.shouldShowGroup(groupType, group)
-		return !isPlaceholder && shouldShow
+		const shouldHandleGroupInline = this.shouldHandleGroupInline(groupType, group)
+		return !isPlaceholder && shouldHandleGroupInline
 	}
 
 	/**
