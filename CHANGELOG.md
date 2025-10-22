@@ -1,5 +1,13 @@
 # kilo-code
 
+## [v4.109.2]
+
+- [#3216](https://github.com/Kilo-Org/kilocode/pull/3216) [`3f34635`](https://github.com/Kilo-Org/kilocode/commit/3f3463554f7cf016db9b2851c40217e38a048840) Thanks [@markijbema](https://github.com/markijbema)! - Do not accept an autocomplete suggestion with shift-tab or ctrl-tab (only plain tab)
+
+- [#3214](https://github.com/Kilo-Org/kilocode/pull/3214) [`b271af9`](https://github.com/Kilo-Org/kilocode/commit/b271af9c51da9a8f6ec3a6f4caf78ff18db9b3a8) Thanks [@mcowger](https://github.com/mcowger)! - Update Synthetic Provider to support GLM 4.6, and enable native tool calling
+
+- [#3199](https://github.com/Kilo-Org/kilocode/pull/3199) [`14bbc5f`](https://github.com/Kilo-Org/kilocode/commit/14bbc5f9b5a61cbf2016c7b6a784fdc546fa6a0e) Thanks [@possible055](https://github.com/possible055)! - Improve Chinese translation of autocomplete-related terms
+
 ## [v4.109.1]
 
 - [#3203](https://github.com/Kilo-Org/kilocode/pull/3203) [`aeb8bf3`](https://github.com/Kilo-Org/kilocode/commit/aeb8bf37df44532517db96511e3f0f85861f55b8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix Z.ai provider giving an Unauthorized error

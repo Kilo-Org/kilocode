@@ -65,7 +65,7 @@ export { useTheme } from "./useTheme.js"
 export { useApprovalHandler } from "./useApprovalHandler.js"
 export type { UseApprovalHandlerOptions, UseApprovalHandlerReturn } from "./useApprovalHandler.js"
 
-export { useApprovalEffect } from "./useApprovalEffect.js"
+export { useApprovalMonitor } from "./useApprovalMonitor.js"
 
 export { useFollowupSuggestions } from "./useFollowupSuggestions.js"
 export type { UseFollowupSuggestionsReturn } from "./useFollowupSuggestions.js"

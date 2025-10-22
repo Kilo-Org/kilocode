@@ -125,7 +125,7 @@ export const StatusBar: React.FC = () => {
 	const gitStatusColor = gitInfo.isClean ? theme.semantic.success : theme.semantic.warning
 
 	return (
-		<Box borderStyle="single" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
+		<Box borderStyle="round" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
 			{/* Left side: Project and Git Branch */}
 			<Box>
 				{/* Project Name */}

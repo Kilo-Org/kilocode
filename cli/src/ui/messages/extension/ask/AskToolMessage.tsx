@@ -2,18 +2,16 @@ import React from "react"
 import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { parseToolData, getToolIcon } from "../utils.js"
-import { useApprovalEffect } from "../../../../state/hooks/useApprovalEffect.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { BOX_L3 } from "../../../utils/width.js"
 
 /**
  * Display tool usage requests requiring approval
  * Parses tool data and shows tool information
+ * Approval is handled centrally by useApprovalMonitor in UI.tsx
  */
 export const AskToolMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
-	// Use centralized approval orchestration
-	useApprovalEffect(message)
 
 	const toolData = parseToolData(message)
 

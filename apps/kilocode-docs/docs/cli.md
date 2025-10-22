@@ -1,40 +1,16 @@
 # Kilo Code CLI
 
-Terminal User Interface for Kilo Code
+Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
-## Installation
+The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
-```bash
-npm install -g @kilocode/cli
+## Install
+
+`npm install -g @kilocode/cli`
+
+Change directory to where you want to work and run kilocode:
+
 ```
-
-Then, make sure you place your Kilo Code API token in the CLI config:
-
-```bash
-kilocode config # this opens up your editor
-```
-
-You can find your Kilo Code API token on your profile page at [app.kilocode.ai](https://app.kilocode.ai), and place it in the `kilocodeToken` field in the CLI config.
-
-## Known Issues
-
-### Theme Detection
-
-We don't detect the theme of your terminal, and are aware the the current theme doesn't work well on light mode terminals. Switch to the light theme using using `kilocode config`.
-
-### Outdated dependency warnings
-
-When installing Kilo Code CLI you'll be greeted by some scary looking dependency deprecation warnings. We're aware of the issue and will resolve it shortly.
-
-### Windows Support
-
-We've only tested the CLI on Mac and Linux, and are aware that there are some issues on Windows. For now, if you can, we advise you to use a WSL environment to run the CLI.
-
-## Usage
-
-### Interactive Mode
-
-```bash
 # Start interactive chat session
 kilocode
 
@@ -45,7 +21,42 @@ kilocode --mode architect
 kilocode --workspace /path/to/project
 ```
 
-### Autonomous mode (Non-Interactive)
+to start the CLI and begin a new task with your preferred model and relevant mode.
+
+## What you can do with Kilo Code CLI
+
+- **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
+- **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
+- **Choose the right mode for the task in your workflow.** Select between Architect, Ask, Debug, Orchestrator, or custom agent modes.
+- **Automate tasks.** Get AI assistance writing shell scripts for tasks like renaming all of the files in a folder or transforming sizes for a set of images.
+
+## CLI reference
+
+### CLI commands
+
+| Command         | Description                                                      | Example                     |
+| --------------- | ---------------------------------------------------------------- | --------------------------- |
+| `kilocode`      | Start interactive                                                |                             |
+| `/mode`         | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`        |
+| `/model`        | Learn about available models and switch between them             |                             |
+| `/model list`   | List available models                                            |                             |
+| `/model info`   | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v` |
+| `/model select` | Select and switch to a new model                                 |                             |
+| `/new`          | Start a new task with the agent with a clean slate               |                             |
+| `/help`         | List available commands and how to use them                      |                             |
+| `/exit`         | Exit the CLI                                                     |                             |
+
+## Config reference for providers
+
+Kilo gives you the ability to bring your own keys for a number of model providers and AI gateways, like OpenRouter and Vercel AI Gateway. Each provider has unique configuration options and some let you set environment variables.
+
+You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit .config files manually. You can also run:
+
+`kilocode config`
+
+to complete configuration with an interactive workflow on the command line.
+
+## Autonomous mode (Non-Interactive)
 
 Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
@@ -60,7 +71,7 @@ echo "Fix the bug in app.ts" | kilocode --auto
 kilocode --auto "Run tests" --timeout 300
 ```
 
-#### Autonomous mode Behavior
+### Autonomous Mode Behavior
 
 When running in Autonomous mode (`--auto` flag):
 
@@ -69,7 +80,7 @@ When running in Autonomous mode (`--auto` flag):
 3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
 4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
 
-#### Auto-Approval Configuration
+### Auto-Approval Configuration
 
 Autonomous mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
 
@@ -136,7 +147,7 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
 
-#### Command Approval Patterns
+### Command Approval Patterns
 
 The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
 
@@ -162,7 +173,7 @@ The `execute.allowed` and `execute.denied` lists support hierarchical pattern ma
 }
 ```
 
-#### Interactive Command Approval
+### Interactive Command Approval
 
 When running in interactive mode, command approval requests now show hierarchical options:
 
@@ -183,7 +194,7 @@ Selecting an "Always run" option will:
 
 This allows you to progressively build your auto-approval rules without manually editing the config file.
 
-#### Autonomous mode Follow-up Questions
+### Autonomous Mode Follow-up Questions
 
 In Autonomous mode, when the AI asks a follow-up question, it receives this response:
 
@@ -191,13 +202,13 @@ In Autonomous mode, when the AI asks a follow-up question, it receives this resp
 
 This instructs the AI to proceed without user input.
 
-#### Exit Codes
+### Exit Codes
 
 - `0`: Success (task completed)
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
 
-#### Example CI/CD Integration
+### Example CI/CD Integration
 
 ```yaml
 # GitHub Actions example

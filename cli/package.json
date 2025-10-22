@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "dist/index.js",
@@ -74,6 +74,7 @@
 		"ink-spinner": "^5.0.0",
 		"ink-table": "^3.1.0",
 		"ink-text-input": "^6.0.0",
+		"inquirer": "^12.10.0",
 		"is-wsl": "^3.1.0",
 		"isbinaryfile": "^5.0.2",
 		"jotai": "^2.14.0",
