@@ -17,6 +17,7 @@ export const nativeFunctionCallingProviders = [
 	"deepinfra",
 	"xai",
 	"zai",
+	"synthetic",
 	"human-relay",
 ] satisfies ProviderName[] as ProviderName[]
 

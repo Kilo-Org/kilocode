@@ -10,6 +10,7 @@ import {
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
+import { historyDataAtom, historyModeAtom, historyIndexAtom } from "../history.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
@@ -147,7 +148,7 @@ describe("keypress atoms", () => {
 	})
 
 	describe("submission callback", () => {
-		it("should call submission callback when Enter is pressed with text", () => {
+		it("should call submission callback when Enter is pressed with text", async () => {
 			const mockCallback = vi.fn()
 			store.set(submissionCallbackAtom, { callback: mockCallback })
 
@@ -174,7 +175,10 @@ describe("keypress atoms", () => {
 				shift: false,
 				paste: false,
 			}
-			store.set(keyboardHandlerAtom, enterKey)
+			await store.set(keyboardHandlerAtom, enterKey)
+
+			// Wait for async operations to complete
+			await new Promise((resolve) => setTimeout(resolve, 10))
 
 			expect(mockCallback).toHaveBeenCalledWith("hello")
 		})
@@ -634,6 +638,117 @@ describe("keypress atoms", () => {
 			const selectedIndex = store.get(selectedIndexAtom)
 			expect(selectedIndex).not.toBeNaN()
 			expect(selectedIndex).toBe(0) // Should remain unchanged
+		})
+	})
+
+	describe("history navigation", () => {
+		it("should display most recent entry when entering history mode with up arrow", () => {
+			// Set up history with multiple entries
+			store.set(historyDataAtom, {
+				version: "1.0.0",
+				entries: [
+					{ prompt: "/help", timestamp: 1 },
+					{ prompt: "/mode ask", timestamp: 2 },
+					{ prompt: "what time is now?", timestamp: 3 },
+				],
+				maxSize: 500,
+			})
+
+			// Ensure input is empty
+			expect(store.get(textBufferStringAtom)).toBe("")
+
+			// Press up arrow to enter history mode
+			const upKey: Key = {
+				name: "up",
+				sequence: "\x1b[A",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, upKey)
+
+			// Should display the most recent entry
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("what time is now?")
+
+			// Should be in history mode
+			expect(store.get(historyModeAtom)).toBe(true)
+		})
+
+		it("should navigate to older entries on subsequent up presses", () => {
+			// Set up history with multiple entries
+			store.set(historyDataAtom, {
+				version: "1.0.0",
+				entries: [
+					{ prompt: "/help", timestamp: 1 },
+					{ prompt: "/mode ask", timestamp: 2 },
+					{ prompt: "what time is now?", timestamp: 3 },
+				],
+				maxSize: 500,
+			})
+
+			// Press up arrow to enter history mode (shows most recent)
+			const upKey: Key = {
+				name: "up",
+				sequence: "\x1b[A",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+
+			// First press - enter history mode
+			store.set(keyboardHandlerAtom, upKey)
+			expect(store.get(textBufferStringAtom)).toBe("what time is now?")
+			expect(store.get(historyModeAtom)).toBe(true)
+
+			// Second press - navigate to older
+			store.set(keyboardHandlerAtom, upKey)
+			expect(store.get(textBufferStringAtom)).toBe("/mode ask")
+
+			// Third press - navigate to oldest
+			store.set(keyboardHandlerAtom, upKey)
+			expect(store.get(textBufferStringAtom)).toBe("/help")
+		})
+
+		it("should not enter history mode when input is not empty", () => {
+			// Set up history
+			store.set(historyDataAtom, {
+				version: "1.0.0",
+				entries: [{ prompt: "test", timestamp: 1 }],
+				maxSize: 500,
+			})
+
+			// Type some text
+			const chars = ["h", "i"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Press up arrow
+			const upKey: Key = {
+				name: "up",
+				sequence: "\x1b[A",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, upKey)
+
+			// Should not enter history mode
+			expect(store.get(historyModeAtom)).toBe(false)
+			// Text should remain unchanged
+			expect(store.get(textBufferStringAtom)).toBe("hi")
 		})
 	})
 })

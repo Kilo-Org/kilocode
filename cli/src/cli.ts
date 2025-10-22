@@ -10,6 +10,7 @@ import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom } from "./state/atoms/config.js"
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
+import { loadHistoryAtom } from "./state/atoms/history.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 
 export interface CLIOptions {
@@ -106,6 +107,10 @@ export class CLI {
 
 			// Track successful extension initialization
 			telemetryService.trackExtensionInitialized(true)
+
+			// Load command history
+			await this.store.set(loadHistoryAtom)
+			logs.debug("Command history loaded", "CLI")
 
 			// Inject CLI configuration into ExtensionHost
 			await this.injectConfigurationToExtension()

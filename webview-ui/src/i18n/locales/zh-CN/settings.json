@@ -798,8 +798,8 @@
 			"successConfigured": "✓ 图像生成已配置完成，可以使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
+			"name": "自动补全",
+			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "启用快速应用",

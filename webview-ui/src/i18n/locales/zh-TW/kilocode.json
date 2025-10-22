@@ -207,30 +207,30 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "自動補全",
 		"settings": {
 			"triggers": "觸發器",
-			"keybindingDescription": "Autocomplete 功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
+			"keybindingDescription": "自動補全功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "啟用 Autocomplete",
-				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發 Autocomplete。這對快速修正和建議很有用。"
+				"label": "啟用自動補全",
+				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發自動補全。這對快速修正和建議很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "你停止輸入後 Kilo Code 觸發 Autocomplete 前的秒數延遲。延遲越短建議越快，但可能更耗費資源。"
+				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速任务 ({{keybinding}})",
+				"label": "快速任務 ({{keybinding}})",
 				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "手动自动补全 ({{keybinding}})",
+				"label": "手動自動補全 ({{keybinding}})",
 				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
 			},
 			"keybindingNotFound": "未找到",
-			"noModelConfigured": "找不到合適的自動完成模型。請在 API 設定中配置提供者。",
+			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
 			"model": "模型",
-			"provider": "Provider"
+			"provider": "供應商"
 		}
 	},
 	"virtualProvider": {
@@ -243,12 +243,12 @@
 		"removeProfile": "移除設定檔",
 		"selectProfilePlaceholder": "選擇設定檔...",
 		"addProfile": "新增設定檔",
-		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
+		"noProfilesAvailable": "沒有可用的設定檔。請先配置至少一個非虛擬供應商設定檔。",
 		"dangerZoneTitle": "危險區域",
 		"dangerZoneDescription": "這些操作具有破壞性且無法復原。",
 		"clearUsageData": "清除使用資料",
 		"confirmClearTitle": "確定嗎？",
-		"confirmClearDescription": "這將永久刪除虛擬提供者的所有儲存使用資料。此操作無法復原。",
+		"confirmClearDescription": "這將永久刪除虛擬供應商儲存的所有使用資料。此操作無法復原。",
 		"perMinute": "每分鐘",
 		"tokensLabel": "Tokens",
 		"perDay": "每天",
@@ -261,9 +261,9 @@
 		"page": "第 {{page}} 頁 / 共 {{count}} 頁"
 	},
 	"imageWarnings": {
-		"modelNoImageSupport": "当前模型不支持图片。",
-		"maxImagesReached": "每条信息最多可发送20张图片。要添加更多图片，请先删除一些现有图片。",
-		"imagesRemovedNoSupport": "已移除图像，模型不支持。"
+		"modelNoImageSupport": "當前模型不支援圖片。",
+		"maxImagesReached": "每條訊息最多可包含 20 張圖片。請刪除部分圖片以新增更多圖片。",
+		"imagesRemovedNoSupport": "已移除圖片，模型不支援。"
 	},
 	"memoryWarning": {
 		"message": "記憶體使用量已達 {{percentage}}%。請重新啟動您的 IDE 以防止當機。"

@@ -437,7 +437,7 @@
 			{
 				"command": "editor.action.inlineSuggest.commit",
 				"key": "tab",
-				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown'"
+				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown' && !shiftKey && !ctrlKey && !altKey && !metaKey"
 			},
 			{
 				"command": "kilo-code.ghost.applyAllSuggestions",
