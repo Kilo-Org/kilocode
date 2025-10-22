@@ -434,19 +434,12 @@ export class GhostProvider {
 
 		// Trigger or hide inline suggestions as appropriate
 		if (shouldTriggerInline) {
-			try {
-				await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
-			} catch {
-				// Silently fail if command is not available
-			}
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 		} else {
 			// If we're not showing inline completion, explicitly hide any existing ones
 			// This prevents conflicts with IntelliSense
-			try {
-				await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
-			} catch {
-				// Silently fail if command is not available
-			}
+
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
 		}
 
 		// Display decorations for appropriate groups
