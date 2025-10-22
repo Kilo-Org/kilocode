@@ -162,21 +162,35 @@ class GhostSuggestionFile {
 				group.sort((a, b) => a.line - b.line)
 			})
 
-		// Filter out empty deletions after sorting
-		this.filterEmptyDeletions()
+		// Filter out empty operations after sorting
+		this.removeOperationsWithEmptyContent()
 
 		this.selectedGroup = this.groups.length > 0 ? 0 : null
 	}
 
 	/**
-	 * Filter out operations with empty content and remove empty groups
+	 * Remove operations with empty content and clean up empty groups
+	 *
+	 * This filters out operations that have no actual content (empty strings),
+	 * which can occur when the LLM generates malformed diffs or placeholder operations.
+	 * After filtering operations, any groups that become empty are also removed.
+	 *
+	 * Example:
+	 * Before: [
+	 *   [{ type: '+', content: 'function foo() {', line: 1 }],
+	 *   [{ type: '-', content: '', line: 2 }],  // Empty deletion - will be removed
+	 *   [{ type: '+', content: 'return 42;', line: 3 }]
+	 * ]
+	 * After: [
+	 *   [{ type: '+', content: 'function foo() {', line: 1 }],
+	 *   [{ type: '+', content: 'return 42;', line: 3 }]
+	 * ]
 	 */
-	private filterEmptyDeletions() {
+	private removeOperationsWithEmptyContent() {
 		// Filter each group to remove operations (additions and deletions) with empty content
 		this.groups = this.groups
 			.map((group) => {
 				return group.filter((op) => {
-					// Keep all additions and context operations
 					if (op.type === "-" || op.type === "+") {
 						// Only keep deletions and additions that have non-empty content
 						return op.content !== ""
