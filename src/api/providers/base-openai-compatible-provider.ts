@@ -70,7 +70,7 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			defaultHeaders: DEFAULT_HEADERS,
 			// kilocode_change start
 			timeout: timeout,
-			fetch: fetchWithTimeout(timeout, DEFAULT_HEADERS),
+			fetch: fetchWithTimeout(timeout),
 			// kilocode_change end
 		})
 	}

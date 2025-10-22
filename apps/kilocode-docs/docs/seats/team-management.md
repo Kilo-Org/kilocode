@@ -4,80 +4,25 @@ sidebar_label: Managing Your Team
 
 # Managing Your Team
 
-Effective team management in Kilo for Enterprise ensures optimal AI usage, cost control, and smooth collaboration across your engineering organization.
+Every person on the team is an _Owner_ or a _Member_.
+
+Owners have full administrative oversight including billing, seat allocation, and model/provider selection.
+
+Only Owners can conduct team management activities.
+
+Members can use the Kilo Code extension and see data on the team's usage in the [usage dashboard](/seats/analytics).
 
 ## Adding Team Members
-
-### Invitation Process
 
 1. **Navigate to Organization Tab** in your profile page and click on the team you want to manage
 2. **Click "Invite Member"** button
 3. **Enter the team member's email address**
-4. **Select initial role** (Member, Admin, or Owner)
+4. **Select initial role** (Member or Owner)
 5. Click **Send Invitation**
 
 <img width="619" height="311" alt="invite-member" src="https://github.com/user-attachments/assets/a3ca0391-8a61-457f-b38b-11f03b219b4f" />
 
-<!-- ## Setting Usage Limits
-
-### Daily Spending Limits
-
-Control costs by setting daily limits per user:
-
-1. **Go to Organization tab**
-2. **Find team member** in the list
-3. **Click "Set Limit"** next to their name
-4. **Enter daily dollar amount** (e.g., $10.00)
-5. **Save changes**
-
-### How Limits Work
-
-- **$0 = Unlimited** - No spending restrictions
-- **Soft limits** - Users receive warnings at 80% of limit
-- **Hard limits** - AI requests blocked when limit reached
-- **Daily reset** - Limits reset at midnight UTC
-- **Rollover** - Unused limits don't carry over to next day
-
-### Recommended Limit Guidelines
-
-**Individual Contributors**
-
-- **Junior developers:** $5-10/day
-- **Senior developers:** $10-20/day
-- **Occasional users:** $2-5/day
-
-**Team Leads and Architects**
-
-- **Team leads:** $15-25/day
-- **Architects:** $20-30/day
-- **Heavy users:** $25-50/day
-
-**Special Cases**
-
-- **Demo/training days:** Temporarily increase limits
-- **Hackathons:** Remove limits for event duration
-- **New feature development:** Higher limits for exploration
-
-### Monitoring Usage Patterns
-
-Track team usage to optimize limits:
-
-- **Weekly usage reports** show actual consumption
-- **Peak usage days** help identify patterns
-- **Model preferences** affect cost per request
-- **Task complexity** influences daily needs -->
-
-## Managing Team Composition
-
-### Viewing Team Status
-
-The Organization tab shows:
-
-- **Active members** with last activity
-- **Pending invitations** awaiting acceptance
-- **Role distribution** across the team
-
-### Removing Team Members
+## Removing Team Members
 
 When team members leave:
 
@@ -87,77 +32,28 @@ When team members leave:
 4. **Confirm removal**
 5. **Seat becomes available** immediately
 
-### Role Changes
+## Changing Team Member Roles
 
 Promote or demote team members as needed:
 
 1. **Locate team member** in Organization tab
 2. **Click role dropdown** next to their name
-3. **Select new role** (Member, Admin, Owner)
+3. **Select new role** (Member, Owner)
 4. **Confirm change**
 5. **Member receives email notification**
 
-### Cost Optimization Strategies
+### Viewing Team Status
 
-**Model Selection**
+The Organization tab shows:
 
-- Set cost-effective model limitations on the Model Access page
-- Recommend cheaper models for simple tasks
-- Reserve expensive models for complex problems
-- Monitor model performance vs. cost
-
-**Usage Patterns**
-
-- Identify peak usage times
-- Batch similar requests when possible
-- Avoid redundant AI requests
-- Share solutions across team members
-
-**Limit Adjustments**
-
-- Regularly review and adjust individual limits
-- Increase limits for high-value activities
-- Decrease limits for occasional users
-- Set temporary limits for special projects
-
-## Troubleshooting Common Issues
-
-### Invitation Problems
-
-**Invitations Not Received**
-
-- Check spam/junk folders
-- Verify email address spelling
-- Resend invitation after 24 hours
-- Contact support if persistent issues
-
-**Can't Accept Invitation**
-
-- Ensure using correct email address
-- Clear browser cache and cookies
-- Try different browser or incognito mode
-- Check for corporate firewall restrictions
-
-### Access Issues
-
-**Member Can't Access Dashboard**
-
-- Verify they accepted the invitation
-- Check their role permissions
-- Ensure they're using invited email address
-- Confirm organization membership
-
-**Usage Limits Not Working**
-
-- Verify limits are set correctly
-- Check timezone differences (limits reset at UTC midnight)
-- Confirm user is within their role permissions
-- Review recent usage in dashboard
+- **Active members** with last activity
+- **Pending invitations** awaiting acceptance
+- **Role distribution** across the team
 
 ## Next Steps
 
 - [Understand billing and credits](/seats/billing)
 - [Explore usage analytics](/seats/analytics)
-- [Learn about team roles and permissions](/seats/roles-permissions)
+- [Learn about team roles and permissions](/seats/team-management)
 
 Effective team management ensures your organization maximizes the benefits of AI-assisted development while maintaining cost control and security.

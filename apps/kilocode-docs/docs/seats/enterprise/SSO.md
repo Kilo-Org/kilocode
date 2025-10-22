@@ -27,7 +27,7 @@ You’ll need:
 Find the Single Sign-On (SSO) Configuration panel, and click "Set up SSO":
 <img width="822" height="288" alt="Set-up-SSO screen" src="https://github.com/user-attachments/assets/b6ca5f83-4533-4d41-bcb1-0038b645c030" />
 
-### 2. Submit the SSO Request Form:
+### 2. Submit the SSO Request Form
 
 Fill in your contact information and someone from our team will reach out soon to help you configure SSO.
 

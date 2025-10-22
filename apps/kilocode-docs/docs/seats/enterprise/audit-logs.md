@@ -10,7 +10,7 @@ Owners and Admins can search and filter logs to review access patterns and ensur
 
 ## Viewing Audit Logs
 
-Only **Admins** and **Owners** can view and filter through logs.
+Only **Owners** can view and filter through logs.
 
 Go to **Enterprise Dashboard → Audit Logs** to view a searchable history of all organization events.
 Use filters to narrow down results by action, user, or date range.
@@ -37,3 +37,13 @@ Each event includes:
 | **Action**  | The event type (e.g. `user.login`, `settings.change`).                          |
 | **Actor**   | The user who performed the action.                                              |
 | **Details** | Context or additional data related to the event (e.g. models added or removed). |
+
+## Logged Events
+
+Here is the list of all events included in the Kilo Code audit logs:
+
+- Organization: Create, Settings Change, Purchase Credits
+- Organization Member: Remove, Change Role
+- User: Login, Logout, Accept Invite, Send Invite, Revoke Invite
+- [Custom Modes](/seats/custom-modes): Create, Update, Delete
+- [SSO](/seats/enterprise/SSO) (Enterprise Only): Auto Provision, Set Domain, Remove Domain
