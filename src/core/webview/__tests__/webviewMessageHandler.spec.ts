@@ -189,6 +189,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
@@ -229,6 +230,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "glama" })
+		expect(mockGetModels).toHaveBeenCalledWith({ provider: "cortecs", apiKey: "cortecs-key" })
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		// kilocode_change start
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
@@ -256,6 +258,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
@@ -276,6 +279,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key", // kilocode_change
 				// Missing litellm config
@@ -315,6 +319,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
@@ -356,6 +361,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: {},
@@ -386,6 +392,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockResolvedValueOnce(mockModels) // glama
+			.mockResolvedValueOnce(mockModels) // cortecs
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
@@ -408,6 +415,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
 				litellm: {},
@@ -460,6 +468,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
+			.mockRejectedValueOnce(new Error("cortecs API error")) // cortecs
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes // kilocode_change
 			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
@@ -502,6 +511,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			success: false,
 			error: "Glama API error",
 			values: { provider: "glama" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "cortecs API error",
+			values: { provider: "cortecs" },
 		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({

@@ -504,7 +504,7 @@ describe("ClineProvider", () => {
 		// Verify Content Security Policy contains the necessary PostHog domains
 		expect(mockWebviewView.webview.html).toContain(
 			// kilocode_change: added localhost:3000
-			"connect-src vscode-webview://test-csp-source https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com",
+			"connect-src vscode-webview://test-csp-source https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://api.cortecs.ai https://cortecs.ai https://us.i.posthog.com https://us-assets.i.posthog.com",
 		)
 
 		// Extract the script-src directive section and verify required security elements
@@ -2700,6 +2700,7 @@ describe("ClineProvider - Router Models", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
@@ -2743,6 +2744,7 @@ describe("ClineProvider - Router Models", () => {
 		// kilocode_change end
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "cortecs", apiKey: "cortecs-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
@@ -2762,6 +2764,7 @@ describe("ClineProvider - Router Models", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
@@ -2785,6 +2788,7 @@ describe("ClineProvider - Router Models", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
@@ -2808,6 +2812,7 @@ describe("ClineProvider - Router Models", () => {
 			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
+			.mockResolvedValueOnce(mockModels) // cortecs success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
 			.mockRejectedValueOnce(new Error("Chutes API error")) // kilocode_change: chutes fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
@@ -2828,6 +2833,7 @@ describe("ClineProvider - Router Models", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: {},
 				chutes: {}, // kilocode_change
 				ollama: {},
@@ -2897,6 +2903,7 @@ describe("ClineProvider - Router Models", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
@@ -2937,6 +2944,7 @@ describe("ClineProvider - Router Models", () => {
 				openRouterApiKey: "openrouter-key",
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
+				cortecsApiKey: "cortecs-key",
 				unboundApiKey: "unbound-key",
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
@@ -2970,6 +2978,7 @@ describe("ClineProvider - Router Models", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				cortecs: mockModels,
 				unbound: mockModels,
 				chutes: mockModels, // kilocode_change
 				litellm: {},

@@ -812,6 +812,7 @@ export const webviewMessageHandler = async (
 				chutes: {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
+				cortecs: {},
 				ovhcloud: {}, // kilocode_change
 			}
 
@@ -856,6 +857,14 @@ export const webviewMessageHandler = async (
 					},
 				},
 				{ key: "glama", options: { provider: "glama" } },
+				{
+					key: "cortecs",
+					options: {
+						provider: "cortecs",
+						apiKey: apiConfiguration.cortecsApiKey,
+						baseUrl: apiConfiguration.cortecsBaseUrl,
+					},
+				},
 				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
 				{ key: "chutes", options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey } }, // kilocode_change
 				{
