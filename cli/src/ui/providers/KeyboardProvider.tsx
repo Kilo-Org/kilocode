@@ -39,7 +39,7 @@ import {
 	createPasteKey,
 	createSpecialKey,
 } from "../utils/keyParsing.js"
-import { autoEnableKittyProtocol, disableKittyProtocol } from "../utils/terminalCapabilities.js"
+import { autoEnableKittyProtocol, disableKittyProtocol, detectFallbackSupport } from "../utils/terminalCapabilities.js"
 import {
 	ESC,
 	PASTE_MODE_PREFIX,
@@ -89,6 +89,12 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const backslashTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const waitingForEnterRef = useRef(false)
 
+	// Fallback paste detection refs
+	const fallbackPasteTimerRef = useRef<NodeJS.Timeout | null>(null)
+	const fallbackPasteBufferRef = useRef<string>("")
+	const isFallbackPastingRef = useRef(false)
+	const lastKeypressTimeRef = useRef<number>(0)
+
 	// Update debug logging atom
 	useEffect(() => {
 		setDebugLogging(debugKeystrokeLogging)
@@ -109,6 +115,30 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			backslashTimerRef.current = null
 		}
 	}, [])
+
+	// Clear fallback paste timer
+	const clearFallbackPasteTimer = useCallback(() => {
+		if (fallbackPasteTimerRef.current) {
+			clearTimeout(fallbackPasteTimerRef.current)
+			fallbackPasteTimerRef.current = null
+		}
+	}, [])
+
+	// Complete fallback paste
+	const completeFallbackPaste = useCallback(() => {
+		if (isFallbackPastingRef.current && fallbackPasteBufferRef.current) {
+			if (isDebugEnabled) {
+				logs.debug(
+					`Fallback paste completed: ${fallbackPasteBufferRef.current.length} chars, ${fallbackPasteBufferRef.current.split("\n").length} lines`,
+					"KeyboardProvider",
+				)
+			}
+			broadcastKey(createPasteKey(fallbackPasteBufferRef.current))
+			isFallbackPastingRef.current = false
+			fallbackPasteBufferRef.current = ""
+		}
+		clearFallbackPasteTimer()
+	}, [broadcastKey, clearFallbackPasteTimer, isDebugEnabled])
 
 	// Handle paste completion
 	const completePaste = useCallback(() => {
@@ -140,6 +170,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		const wasRaw = stdin.isRaw
 		let kittyEnabled = false
 
+		// Detect Fallback Paste Support
+		const requiresFallback = detectFallbackSupport()
+
 		// Setup centralized keyboard handler first
 		const unsubscribeKeyboard = setupKeyboard()
 
@@ -150,8 +183,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 
 			// Enable bracketed paste mode
-			// This tells the terminal to wrap pasted content with ESC[200~ and ESC[201~
-			process.stdout.write("\x1b[?2004h")
+			if (!requiresFallback) {
+				process.stdout.write("\x1b[?2004h")
+			}
 
 			// Auto-detect and enable Kitty protocol if supported
 			kittyEnabled = await autoEnableKittyProtocol()
@@ -165,16 +199,8 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		init()
 
-		// Determine if we need a passthrough stream (for older Node versions or paste workaround)
-		const nodeVersionParts = process.versions.node.split(".")
-		const nodeMajorVersion = nodeVersionParts[0] ? parseInt(nodeVersionParts[0], 10) : 20
-		const usePassthrough =
-			nodeMajorVersion < 20 ||
-			process.env["PASTE_WORKAROUND"] === "1" ||
-			process.env["PASTE_WORKAROUND"] === "true"
-
 		// Setup streams
-		const keypressStream = usePassthrough ? new PassThrough() : stdin
+		const keypressStream = requiresFallback ? new PassThrough() : stdin
 		const rl = readline.createInterface({
 			input: keypressStream,
 			escapeCodeTimeout,
@@ -192,6 +218,43 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 			if (isDebugEnabled) {
 				logs.debug("Keypress", "KeyboardProvider", { parsedKey })
+			}
+
+			// Fallback support for terminals like VSCode
+			// Only trigger on newlines followed by rapid input (the specific paste problem)
+			if (requiresFallback) {
+				const now = Date.now()
+				const timeSinceLastKey = now - lastKeypressTimeRef.current
+				lastKeypressTimeRef.current = now
+
+				// If we're already in paste mode, continue accumulating
+				if (isFallbackPastingRef.current) {
+					fallbackPasteBufferRef.current += parsedKey.sequence
+
+					// Reset timer - wait for input to stop
+					clearFallbackPasteTimer()
+					fallbackPasteTimerRef.current = setTimeout(() => {
+						completeFallbackPaste()
+					}, 50)
+
+					return // Don't process this key normally
+				}
+
+				// Only start paste detection on newline with rapid subsequent input
+				// This avoids false positives from fast typing or key repeats
+				if (parsedKey.name === "return" && timeSinceLastKey <= 10) {
+					// Rapid newline - likely start of multiline paste
+					isFallbackPastingRef.current = true
+					fallbackPasteBufferRef.current = parsedKey.sequence
+
+					// Set timer to complete paste if no more input arrives
+					clearFallbackPasteTimer()
+					fallbackPasteTimerRef.current = setTimeout(() => {
+						completeFallbackPaste()
+					}, 50)
+
+					return // Don't process this key normally
+				}
 			}
 
 			// Check for focus events
@@ -216,7 +279,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Handle paste mode - when using passthrough, paste content is handled in handleRawData
 			// When not using passthrough, we still need to accumulate here
 			if (isPasteRef.current) {
-				if (!usePassthrough) {
+				if (!requiresFallback) {
 					pasteBufferRef.current += parsedKey.sequence
 					appendToPasteBuffer(parsedKey.sequence)
 				}
@@ -362,7 +425,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		// Handle raw data for paste detection (if using passthrough)
 		const handleRawData = (data: Buffer) => {
-			if (!usePassthrough) return
+			if (!requiresFallback) return
 
 			const dataStr = data.toString()
 			let pos = 0
@@ -428,14 +491,14 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		// Setup event listeners
 		keypressStream.on("keypress", handleKeypress)
-		if (usePassthrough) {
+		if (requiresFallback) {
 			stdin.on("data", handleRawData)
 		}
 
 		// Cleanup
 		return () => {
 			keypressStream.removeListener("keypress", handleKeypress)
-			if (usePassthrough) {
+			if (requiresFallback) {
 				stdin.removeListener("data", handleRawData)
 			}
 			rl.close()
@@ -443,8 +506,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Cleanup keyboard handler
 			unsubscribeKeyboard()
 
-			// Disable bracketed paste mode
-			process.stdout.write("\x1b[?2004l")
+			// Disable bracketed paste mode (only if it was enabled)
+			if (!requiresFallback) {
+				process.stdout.write("\x1b[?2004l")
+			}
 
 			// Disable Kitty keyboard protocol if it was enabled
 			const currentKittyState = isKittyEnabled
@@ -460,10 +525,12 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Clear timers
 			clearDragTimer()
 			clearBackslashTimer()
+			clearFallbackPasteTimer()
 
 			// Flush any pending buffers
 			completePaste()
 			completeDrag()
+			completeFallbackPaste()
 			clearBuffers()
 		}
 	}, [
@@ -488,6 +555,8 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		completeDrag,
 		clearDragTimer,
 		clearBackslashTimer,
+		clearFallbackPasteTimer,
+		completeFallbackPaste,
 		setupKeyboard,
 	])
 

@@ -3,6 +3,27 @@
  * Detects support for Kitty keyboard protocol and other advanced features
  */
 
+const TERMINALS = {
+	ITERM2: "iterm2",
+	TERMINAL_APP: "terminal.app",
+	VSCODE: "vscode",
+	GHOSTTY: "ghostty",
+	KITTY: "kitty",
+	ALACRITTY: "alacritty",
+	WEZTERM: "wezterm",
+	XTERM: "xterm",
+	UNKNOWN: "unknown",
+}
+
+const TERMINALS_WITH_KITTY_PROTOCOL_SUPPORT = [
+	TERMINALS.KITTY,
+	TERMINALS.WEZTERM,
+	TERMINALS.ALACRITTY,
+	TERMINALS.GHOSTTY,
+]
+
+const TERMINALS_REQUIRING_PASTE_FALLBACK = [TERMINALS.VSCODE]
+
 /**
  * Detect terminal type from environment variables
  */
@@ -23,14 +44,21 @@ export function detectTerminalType(): string {
 }
 
 /**
+ * Check if terminal likely requires fallback support
+ */
+export function detectFallbackSupport(): boolean {
+	const nodeVersionParts = process.versions.node.split(".")
+	const nodeMajorVersion = nodeVersionParts[0] ? parseInt(nodeVersionParts[0], 10) : 20
+	const termType = detectTerminalType()
+	return TERMINALS_REQUIRING_PASTE_FALLBACK.includes(termType) || nodeMajorVersion < 20
+}
+
+/**
  * Check if terminal is likely to support Kitty protocol based on type
  */
 export function detectKittyProtocolSupport(): boolean {
 	const termType = detectTerminalType()
-
-	// Known terminals with Kitty protocol support
-	const supportedTerminals = ["kitty", "wezterm", "alacritty", "ghostty"]
-	return supportedTerminals.includes(termType)
+	return TERMINALS_WITH_KITTY_PROTOCOL_SUPPORT.includes(termType)
 }
 
 /**
