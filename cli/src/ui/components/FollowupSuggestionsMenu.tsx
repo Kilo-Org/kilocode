@@ -26,7 +26,7 @@ export const FollowupSuggestionsMenu: React.FC<FollowupSuggestionsMenuProps> = (
 	}
 
 	return (
-		<Box flexDirection="column" borderStyle="single" borderColor={theme.actions.pending} paddingX={1}>
+		<Box flexDirection="column" borderStyle="round" borderColor={theme.actions.pending} paddingX={1}>
 			<Text bold color={theme.actions.pending}>
 				Suggestions:
 			</Text>

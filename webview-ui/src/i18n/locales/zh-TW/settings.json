@@ -808,11 +808,11 @@
 			"successConfigured": "✓ 圖像生成已設定完成並準備使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "啟用 Autocomplete 功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的 Autocomplete。"
+			"name": "自動補全",
+			"description": "啟用自動補全功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的自動補全"
 		},
 		"RUN_SLASH_COMMAND": {
-			"name": "啟用模型啟動的斜線命令",
+			"name": "啟用模型發起斜線命令",
 			"description": "啟用時，Kilo Code 可以執行您的斜線命令來執行工作流程。"
 		}
 	},
@@ -934,9 +934,9 @@
 			"description": "啟用後，按 Enter 鍵傳送訊息，Shift+Enter 鍵換行。停用後，使用 Shift+Enter 鍵傳送訊息。"
 		},
 		"costThreshold": {
-			"description": "仅显示超过此金额的请求费用。当详细信息面板打开时，费用始终可见。",
-			"label": "隐藏低于阈值的费用",
-			"currentValue": "当前阈值：${{value}}"
+			"description": "僅顯示超過此金額的請求費用。當詳細資訊儀錶板打開時，費用始終可見。",
+			"label": "隱藏低於閾值的費用",
+			"currentValue": "當前閾值：${{value}}"
 		},
 		"showTimestamps": {
 			"label": "顯示時間戳記",

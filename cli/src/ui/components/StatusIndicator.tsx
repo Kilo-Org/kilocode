@@ -40,7 +40,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ disabled = fal
 	}
 
 	return (
-		<Box borderStyle="single" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
+		<Box borderStyle="round" borderColor={theme.ui.border.default} paddingX={1} justifyContent="space-between">
 			{/* Status text on the left */}
 			<Box>
 				{isStreaming && <Text color={theme.ui.text.dimmed}>Thinking...</Text>}

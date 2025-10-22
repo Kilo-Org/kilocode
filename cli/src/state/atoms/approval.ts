@@ -8,9 +8,13 @@ import { selectedIndexAtom } from "./ui.js"
  */
 export interface ApprovalOption {
 	label: string
-	action: "approve" | "reject"
+	action: "approve" | "reject" | "approve-and-remember"
 	hotkey: string
 	color: "green" | "red"
+	/** Command pattern to remember (for approve-and-remember action) */
+	commandPattern?: string
+	/** Unique key for React rendering (combines action + pattern) */
+	key?: string
 }
 
 /**
@@ -53,13 +57,66 @@ export const isApprovalPendingAtom = atom<boolean>((get) => {
 })
 
 /**
+ * Helper function to parse command into hierarchical parts
+ * Example: "git status --short --branch" returns:
+ * - "git"
+ * - "git status"
+ * - "git status --short --branch"
+ */
+function parseCommandHierarchy(command: string): string[] {
+	const parts = command.trim().split(/\s+/).filter(Boolean)
+	if (parts.length === 0) return []
+
+	const hierarchy: string[] = []
+
+	// Add base command
+	if (parts[0]) {
+		hierarchy.push(parts[0])
+	}
+
+	// Add command + first subcommand if exists
+	if (parts.length > 1 && parts[0] && parts[1]) {
+		hierarchy.push(`${parts[0]} ${parts[1]}`)
+	}
+
+	// Add full command if it's different from the previous entries
+	if (parts.length > 2) {
+		hierarchy.push(command)
+	}
+
+	return hierarchy
+}
+
+/**
  * Derived atom to get approval options based on the pending message type
+ * Note: This atom recalculates whenever the pending message changes OR when
+ * the message text/partial status changes (for streaming messages)
  */
 export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 	const pendingMessage = get(pendingApprovalAtom)
 
 	if (!pendingMessage || pendingMessage.type !== "ask") {
 		return []
+	}
+
+	// For command messages, wait until the message is complete (not partial)
+	// and has text before generating hierarchical options
+	if (pendingMessage.ask === "command" && (pendingMessage.partial || !pendingMessage.text)) {
+		// Return basic options while waiting for complete message
+		return [
+			{
+				label: "Run Command",
+				action: "approve" as const,
+				hotkey: "y",
+				color: "green" as const,
+			},
+			{
+				label: "Reject",
+				action: "reject" as const,
+				hotkey: "n",
+				color: "red" as const,
+			},
+		]
 	}
 
 	// Determine button labels based on ask type
@@ -81,6 +138,50 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 		}
 	} else if (pendingMessage.ask === "command") {
 		approveLabel = "Run Command"
+
+		// Parse command and generate hierarchical approval options
+		let command = ""
+		try {
+			// Try parsing as JSON first
+			const commandData = JSON.parse(pendingMessage.text || "{}")
+			command = commandData.command || ""
+		} catch {
+			// If not JSON, use the text directly as the command
+			command = pendingMessage.text || ""
+		}
+
+		if (command) {
+			const hierarchy = parseCommandHierarchy(command)
+			const options: ApprovalOption[] = [
+				{
+					label: approveLabel,
+					action: "approve" as const,
+					hotkey: "y",
+					color: "green" as const,
+				},
+			]
+
+			// Add "Always run X" options for each level of the hierarchy
+			hierarchy.forEach((pattern, index) => {
+				options.push({
+					label: `Always Run "${pattern}"`,
+					action: "approve-and-remember" as const,
+					hotkey: String(index + 1),
+					color: "green" as const,
+					commandPattern: pattern,
+					key: `approve-and-remember-${pattern}`,
+				})
+			})
+
+			options.push({
+				label: rejectLabel,
+				action: "reject" as const,
+				hotkey: "n",
+				color: "red" as const,
+			})
+
+			return options
+		}
 	}
 
 	return [
@@ -108,29 +209,24 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 
 	// Don't set pending approval if we're currently processing an approval
 	if (processing.isProcessing) {
-		logs.debug("Skipping setPendingApproval - approval is being processed", "approval", {
-			processingTs: processing.processingTs,
-			newTs: message?.ts,
-		})
 		return
 	}
 
 	// Don't set if message is already answered
 	if (message?.isAnswered) {
-		logs.debug("Skipping setPendingApproval - message already answered", "approval", {
-			ts: message.ts,
-		})
 		return
 	}
 
-	logs.debug("Setting pending approval", "approval", {
-		ts: message?.ts,
-		ask: message?.ask,
-		text: message?.text?.substring(0, 100),
-	})
+	// Create a new object reference to force Jotai to re-evaluate dependent atoms
+	// This is important for streaming messages that update from partial to complete
+	const messageToSet = message ? { ...message } : null
+	set(pendingApprovalAtom, messageToSet)
 
-	set(pendingApprovalAtom, message)
-	set(selectedIndexAtom, 0) // Reset selection
+	// Only reset selection if this is a new message (different timestamp)
+	const current = get(pendingApprovalAtom)
+	if (!current || current.ts !== message?.ts) {
+		set(selectedIndexAtom, 0)
+	}
 })
 
 /**
@@ -140,14 +236,6 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 export const clearPendingApprovalAtom = atom(null, (get, set) => {
 	const current = get(pendingApprovalAtom)
 	const processing = get(approvalProcessingAtom)
-
-	if (current) {
-		logs.debug("Clearing pending approval atom", "approval", {
-			ts: current.ts,
-			ask: current.ask,
-			wasProcessing: processing.isProcessing,
-		})
-	}
 
 	set(pendingApprovalAtom, null)
 	set(selectedIndexAtom, 0)
@@ -179,11 +267,6 @@ export const startApprovalProcessingAtom = atom(null, (get, set, operation: "app
 		return false
 	}
 
-	logs.debug("Starting approval processing", "approval", {
-		ts: pending.ts,
-		operation,
-	})
-
 	set(approvalProcessingAtom, {
 		isProcessing: true,
 		processingTs: pending.ts,
@@ -198,14 +281,6 @@ export const startApprovalProcessingAtom = atom(null, (get, set, operation: "app
  * This clears both the pending approval and processing state atomically
  */
 export const completeApprovalProcessingAtom = atom(null, (get, set) => {
-	const processing = get(approvalProcessingAtom)
-
-	logs.debug("Completing approval processing", "approval", {
-		ts: processing.processingTs,
-		operation: processing.operation,
-	})
-
-	// Clear both pending approval and processing state atomically
 	set(pendingApprovalAtom, null)
 	set(selectedIndexAtom, 0)
 	set(approvalProcessingAtom, { isProcessing: false })

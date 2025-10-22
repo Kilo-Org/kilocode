@@ -1,29 +1,22 @@
 /**
- * Centralized Approval Effect Hook
+ * Centralized Approval Monitor Hook
  *
- * This hook handles all approval orchestration for Ask messages.
- * It replaces the duplicated approval logic that was previously
- * scattered across multiple Ask message components.
+ * This hook monitors extension messages for ask messages and handles all approval orchestration.
+ * It replaces the distributed useApprovalEffect that was previously called from multiple components.
  *
- * RACE CONDITION FIXES:
- * - Uses atomic state operations to prevent duplicate approvals
- * - Single source of truth for approval processing
- * - Proper cleanup when messages are answered
- * - No stale closures - reads state from store at execution time
- * - Prevents re-processing same message on re-renders
+ * Similar to useFollowupHandler, this hook:
+ * - Monitors messages from a single source (chatMessagesAtom via lastAskMessageAtom)
+ * - Handles approval state management centrally
+ * - Executes auto-approval logic when appropriate
+ * - Cleans up when messages are answered
  *
- * @module useApprovalEffect
+ * @module useApprovalMonitor
  */
 
 import { useEffect, useRef } from "react"
 import { useAtomValue, useSetAtom, useStore } from "jotai"
-import type { ExtensionChatMessage } from "../../types/messages.js"
-import {
-	setPendingApprovalAtom,
-	clearPendingApprovalAtom,
-	approvalProcessingAtom,
-	pendingApprovalAtom,
-} from "../atoms/approval.js"
+import { lastAskMessageAtom } from "../atoms/ui.js"
+import { setPendingApprovalAtom, clearPendingApprovalAtom, approvalProcessingAtom } from "../atoms/approval.js"
 import {
 	autoApproveReadAtom,
 	autoApproveReadOutsideAtom,
@@ -51,32 +44,29 @@ import { logs } from "../../services/logs.js"
 import { useApprovalTelemetry } from "./useApprovalTelemetry.js"
 
 /**
- * Hook that orchestrates approval flow for Ask messages
+ * Hook that monitors messages and orchestrates approval flow
  *
  * This hook:
- * 1. Sets the message as pending approval when it arrives
- * 2. Gets the approval decision from the service
- * 3. Executes auto-approve/reject based on the decision
- * 4. Handles timeouts and cleanup
- * 5. Clears pending approval when message is answered
- *
- * IMPORTANT: This is the ONLY place where auto-approval should be triggered.
- * Other components should only set pending approval, not execute approvals.
- *
- * @param message - The Ask message to handle
+ * 1. Watches for new ask messages via lastAskMessageAtom
+ * 2. Sets the message as pending approval when it arrives
+ * 3. Gets the approval decision from the service
+ * 4. Executes auto-approve/reject based on the decision
+ * 5. Handles timeouts and cleanup
+ * 6. Clears pending approval when message is answered
  *
  * @example
  * ```typescript
- * export const AskCommandMessage = ({ message }) => {
- *   useApprovalEffect(message)
+ * export const UI = () => {
+ *   // Call once at the top level
+ *   useApprovalMonitor()
  *
- *   // Just render UI
  *   return <Box>...</Box>
  * }
  * ```
  */
-export function useApprovalEffect(message: ExtensionChatMessage): void {
+export function useApprovalMonitor(): void {
 	const store = useStore()
+	const lastAskMessage = useAtomValue(lastAskMessageAtom)
 	const setPendingApproval = useSetAtom(setPendingApprovalAtom)
 	const clearPendingApproval = useSetAtom(clearPendingApprovalAtom)
 
@@ -105,8 +95,6 @@ export function useApprovalEffect(message: ExtensionChatMessage): void {
 
 	// Track if we've already handled auto-approval for this message timestamp
 	const autoApprovalHandledRef = useRef<Set<number>>(new Set())
-	// Track the last message timestamp we processed to prevent re-processing on re-renders
-	const lastProcessedTsRef = useRef<number | null>(null)
 
 	// Build config object with proper nested structure
 	const config: AutoApprovalConfig = {
@@ -149,83 +137,92 @@ export function useApprovalEffect(message: ExtensionChatMessage): void {
 		},
 	}
 
+	// Track the last message we set as pending (timestamp + partial state)
+	const lastPendingRef = useRef<{ ts: number; partial: boolean } | null>(null)
+
 	// Main effect: handle approval orchestration
 	useEffect(() => {
 		let timeoutId: NodeJS.Timeout | null = null
 
-		// If message is answered, clear pending approval and don't process
-		if (message.isAnswered) {
+		// If no ask message, clear pending approval
+		if (!lastAskMessage) {
 			clearPendingApproval()
+			lastPendingRef.current = null
 			return
 		}
 
-		// Skip if this is a partial message
-		if (message.partial) {
-			return
-		}
-
-		// CRITICAL FIX: Skip if we've already processed this exact message timestamp
-		// This prevents re-processing on re-renders when the message object reference changes
-		if (lastProcessedTsRef.current === message.ts) {
+		// If message is answered, clear pending approval
+		if (lastAskMessage.isAnswered) {
+			clearPendingApproval()
+			lastPendingRef.current = null
 			return
 		}
 
 		// Check if we're already processing this message
 		const processingState = store.get(approvalProcessingAtom)
-		if (processingState.isProcessing && processingState.processingTs === message.ts) {
+		if (processingState.isProcessing && processingState.processingTs === lastAskMessage.ts) {
 			return
 		}
 
-		// Check if this message is already pending
-		const currentPending = store.get(pendingApprovalAtom)
-		if (currentPending?.ts === message.ts) {
-			// Don't set pending again, but continue with auto-approval check
-		} else {
-			// Set pending approval (this will be skipped if already processing)
-			setPendingApproval(message)
+		// Set as pending if:
+		// 1. This is a new message (different timestamp), OR
+		// 2. The message transitioned from partial to complete (need to update options)
+		const isNewMessage = !lastPendingRef.current || lastPendingRef.current.ts !== lastAskMessage.ts
+		const transitionedToComplete =
+			lastPendingRef.current &&
+			lastPendingRef.current.ts === lastAskMessage.ts &&
+			lastPendingRef.current.partial &&
+			!lastAskMessage.partial
+
+		if (isNewMessage || transitionedToComplete) {
+			lastPendingRef.current = { ts: lastAskMessage.ts, partial: lastAskMessage.partial || false }
+			setPendingApproval(lastAskMessage)
 		}
 
-		// Mark this timestamp as processed
-		lastProcessedTsRef.current = message.ts
-
-		// Handle auto-approval once per message timestamp
-		if (!autoApprovalHandledRef.current.has(message.ts)) {
-			autoApprovalHandledRef.current.add(message.ts)
+		// Handle auto-approval once per message timestamp, but ONLY for complete messages
+		// This allows the approval modal to show for partial messages while preventing premature auto-approval
+		if (!lastAskMessage.partial && !autoApprovalHandledRef.current.has(lastAskMessage.ts)) {
+			autoApprovalHandledRef.current.add(lastAskMessage.ts)
 
 			// Get approval decision from service
-			const decision = getApprovalDecision(message, config, isCIMode)
+			const decision = getApprovalDecision(lastAskMessage, config, isCIMode)
 
 			// Execute based on decision
 			if (decision.action === "auto-approve") {
 				const delay = decision.delay || 0
 
 				if (delay > 0) {
-					logs.info(`Auto-approving ${message.ask} after ${delay / 1000}s delay`, "useApprovalEffect")
+					logs.info(`Auto-approving ${lastAskMessage.ask} after ${delay / 1000}s delay`, "useApprovalMonitor")
 					timeoutId = setTimeout(() => {
-						// Check if message is still pending before approving
-						const currentPending = store.get(pendingApprovalAtom)
-						if (currentPending?.ts === message.ts && !currentPending.isAnswered) {
+						// Check if message is still the current ask before approving
+						const currentAsk = store.get(lastAskMessageAtom)
+						if (currentAsk?.ts === lastAskMessage.ts && !currentAsk.isAnswered) {
 							approve(decision.message).catch((error) => {
-								logs.error(`Failed to auto-approve ${message.ask}`, "useApprovalEffect", { error })
+								logs.error(`Failed to auto-approve ${lastAskMessage.ask}`, "useApprovalMonitor", {
+									error,
+								})
 							})
 						}
 					}, delay)
 				} else {
-					logs.info(`${isCIMode ? "CI mode: " : ""}Auto-approving ${message.ask}`, "useApprovalEffect")
+					logs.info(
+						`${isCIMode ? "CI mode: " : ""}Auto-approving ${lastAskMessage.ask}`,
+						"useApprovalMonitor",
+					)
 					// Track auto-approval
-					approvalTelemetry.trackAutoApproval(message)
+					approvalTelemetry.trackAutoApproval(lastAskMessage)
 					// Execute approval immediately
 					approve(decision.message).catch((error) => {
-						logs.error(`Failed to auto-approve ${message.ask}`, "useApprovalEffect", { error })
+						logs.error(`Failed to auto-approve ${lastAskMessage.ask}`, "useApprovalMonitor", { error })
 					})
 				}
 			} else if (decision.action === "auto-reject") {
-				logs.info(`CI mode: Auto-rejecting ${message.ask}`, "useApprovalEffect")
+				logs.info(`CI mode: Auto-rejecting ${lastAskMessage.ask}`, "useApprovalMonitor")
 				// Track auto-rejection
-				approvalTelemetry.trackAutoRejection(message)
+				approvalTelemetry.trackAutoRejection(lastAskMessage)
 				// Execute rejection immediately
 				reject(decision.message).catch((error) => {
-					logs.error(`CI mode: Failed to auto-reject ${message.ask}`, "useApprovalEffect", { error })
+					logs.error(`CI mode: Failed to auto-reject ${lastAskMessage.ask}`, "useApprovalMonitor", { error })
 				})
 			}
 		}
@@ -237,10 +234,7 @@ export function useApprovalEffect(message: ExtensionChatMessage): void {
 			}
 		}
 	}, [
-		message.ts,
-		message.isAnswered,
-		message.partial,
-		message.ask,
+		lastAskMessage,
 		setPendingApproval,
 		clearPendingApproval,
 		approve,
@@ -248,12 +242,12 @@ export function useApprovalEffect(message: ExtensionChatMessage): void {
 		config,
 		isCIMode,
 		store,
+		approvalTelemetry,
 	])
 
-	// Cleanup: remove timestamp from handled set when message timestamp changes
+	// Cleanup: remove old timestamps to prevent memory leak
 	useEffect(() => {
 		return () => {
-			// Clean up old timestamps to prevent memory leak
 			// Keep only the last 100 timestamps
 			if (autoApprovalHandledRef.current.size > 100) {
 				const timestamps = Array.from(autoApprovalHandledRef.current)
@@ -261,5 +255,5 @@ export function useApprovalEffect(message: ExtensionChatMessage): void {
 				autoApprovalHandledRef.current = new Set(toKeep)
 			}
 		}
-	}, [message.ts])
+	}, [lastAskMessage?.ts])
 }

@@ -97,7 +97,6 @@ function isResponseComplete(buffer: string, completedChangesCount: number): bool
 
 /**
  * Find the best match for search content in the document, handling whitespace differences and cursor markers
- * This is a simplified version of the method from GhostStrategy
  */
 export function findBestMatch(content: string, searchPattern: string): number {
 	// Validate inputs
@@ -105,95 +104,114 @@ export function findBestMatch(content: string, searchPattern: string): number {
 		return -1
 	}
 
-	// First try exact match
+	// Strategy 1: Try exact match (fastest path)
 	let index = content.indexOf(searchPattern)
 	if (index !== -1) {
 		return index
 	}
 
-	// Handle the case where search pattern has trailing whitespace that might not match exactly
-	if (searchPattern.endsWith("\n")) {
-		// Try matching without the trailing newline, then check if we can find it in context
-		const searchWithoutTrailingNewline = searchPattern.slice(0, -1)
-		index = content.indexOf(searchWithoutTrailingNewline)
-		if (index !== -1) {
-			// Check if the character after the match is a newline or end of string
-			const afterMatchIndex = index + searchWithoutTrailingNewline.length
-			if (afterMatchIndex >= content.length || content[afterMatchIndex] === "\n") {
-				return index
+	// Strategy 2: Fuzzy match with whitespace normalization
+	const contentLen = content.length
+	const patternLen = searchPattern.length
+
+	// Try starting the match at each position in content
+	for (let contentStart = 0; contentStart < contentLen; contentStart++) {
+		let contentPos = contentStart
+		let patternPos = 0
+
+		// Try to match the entire pattern starting from contentStart
+		while (patternPos < patternLen && contentPos < contentLen) {
+			const contentChar = content[contentPos]
+			const patternChar = searchPattern[patternPos]
+
+			const contentIsNewline = isNewline(contentChar)
+			const patternIsNewline = isNewline(patternChar)
+
+			// Special case: pattern has newline but content has non-newline whitespace
+			// Skip trailing whitespace in content before newline
+			if (patternIsNewline && isNonNewlineWhitespace(contentChar)) {
+				const savedContentPos = contentPos
+				contentPos = skipChars(content, contentPos, isNonNewlineWhitespace)
+
+				if (contentPos < contentLen && isNewline(content[contentPos])) {
+					continue
+				}
+
+				contentPos = savedContentPos
+				break
+			}
+
+			if (contentIsNewline !== patternIsNewline) {
+				break
+			}
+
+			if (contentIsNewline && patternIsNewline) {
+				contentPos = skipChars(content, contentPos, isNewline)
+				patternPos = skipChars(searchPattern, patternPos, isNewline)
+				continue
+			}
+
+			const contentIsWhitespace = isNonNewlineWhitespace(contentChar)
+			const patternIsWhitespace = isNonNewlineWhitespace(patternChar)
+
+			if (contentIsWhitespace && patternIsWhitespace) {
+				contentPos = skipChars(content, contentPos, isNonNewlineWhitespace)
+				patternPos = skipChars(searchPattern, patternPos, isNonNewlineWhitespace)
+				continue
+			}
+
+			if (contentChar === patternChar) {
+				contentPos++
+				patternPos++
+				continue
+			}
+
+			// Characters don't match and can't be normalized - this starting position fails
+			break
+		}
+
+		// Check if we matched the entire pattern, or if we only have trailing whitespace left in pattern
+		if (patternPos === patternLen) {
+			return contentStart
+		}
+
+		// Allow trailing whitespace/newlines in the pattern
+		if (patternPos < patternLen) {
+			patternPos = skipChars(searchPattern, patternPos, (c) => isNewline(c) || isNonNewlineWhitespace(c))
+			if (patternPos === patternLen) {
+				return contentStart
 			}
 		}
-	}
 
-	// Normalize whitespace for both content and search pattern
-	const normalizeWhitespace = (text: string): string => {
-		return text
-			.replace(/\r\n/g, "\n") // Normalize line endings
-			.replace(/\r/g, "\n") // Handle old Mac line endings
-			.replace(/\t/g, "    ") // Convert tabs to spaces
-			.replace(/[ \t]+$/gm, "") // Remove trailing whitespace from each line
-	}
-
-	const normalizedContent = normalizeWhitespace(content)
-	const normalizedSearch = normalizeWhitespace(searchPattern)
-
-	// Try normalized match
-	index = normalizedContent.indexOf(normalizedSearch)
-	if (index !== -1) {
-		// Map back to original content position
-		return mapNormalizedToOriginalIndex(content, normalizedContent, index)
-	}
-
-	// Try trimmed search (remove leading/trailing whitespace)
-	const trimmedSearch = searchPattern.trim()
-	if (trimmedSearch !== searchPattern) {
-		index = content.indexOf(trimmedSearch)
-		if (index !== -1) {
-			return index
-		}
+		break
 	}
 
 	return -1 // No match found
 }
 
 /**
- * Map an index from normalized content back to the original content
+ * Check if a character is a newline (\n, \r, or part of \r\n)
  */
-function mapNormalizedToOriginalIndex(
-	originalContent: string,
-	normalizedContent: string,
-	normalizedIndex: number,
-): number {
-	let originalIndex = 0
-	let normalizedPos = 0
+function isNewline(char: string): boolean {
+	return char === "\n" || char === "\r"
+}
 
-	while (normalizedPos < normalizedIndex && originalIndex < originalContent.length) {
-		const originalChar = originalContent[originalIndex]
-		const normalizedChar = normalizedContent[normalizedPos]
+/**
+ * Check if a character is non-newline whitespace (space or tab)
+ */
+function isNonNewlineWhitespace(char: string): boolean {
+	return char === " " || char === "\t"
+}
 
-		if (originalChar === normalizedChar) {
-			originalIndex++
-			normalizedPos++
-		} else {
-			// Handle whitespace normalization differences
-			if (/\s/.test(originalChar)) {
-				originalIndex++
-				// Skip ahead in original until we find non-whitespace or match normalized
-				while (originalIndex < originalContent.length && /\s/.test(originalContent[originalIndex])) {
-					originalIndex++
-				}
-				if (normalizedPos < normalizedContent.length && /\s/.test(normalizedChar)) {
-					normalizedPos++
-				}
-			} else {
-				// Characters don't match, this shouldn't happen with proper normalization
-				originalIndex++
-				normalizedPos++
-			}
-		}
+/**
+ * Skip consecutive characters that match the predicate and return the next position
+ */
+function skipChars(text: string, startPos: number, predicate: (char: string) => boolean): number {
+	let pos = startPos
+	while (pos < text.length && predicate(text[pos])) {
+		pos++
 	}
-
-	return originalIndex
+	return pos
 }
 
 /**

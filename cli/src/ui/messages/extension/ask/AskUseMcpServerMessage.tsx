@@ -2,17 +2,15 @@ import React from "react"
 import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { getMessageIcon, parseMcpServerData } from "../utils.js"
-import { useApprovalEffect } from "../../../../state/hooks/useApprovalEffect.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { BOX_L3 } from "../../../utils/width.js"
 
 /**
  * Display MCP server usage request (tool or resource access)
+ * Approval is handled centrally by useApprovalMonitor in UI.tsx
  */
 export const AskUseMcpServerMessage: React.FC<MessageComponentProps> = ({ message }) => {
 	const theme = useTheme()
-	// Use centralized approval orchestration
-	useApprovalEffect(message)
 
 	const icon = getMessageIcon("ask", "use_mcp_server")
 	const mcpData = parseMcpServerData(message)

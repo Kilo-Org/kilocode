@@ -136,6 +136,53 @@ Autonomous mode respects your auto-approval configuration. Edit your config file
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
 
+#### Command Approval Patterns
+
+The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
+
+- **Base command**: `"git"` matches any git command (e.g., `git status`, `git commit`, `git push`)
+- **Command + subcommand**: `"git status"` matches any git status command (e.g., `git status --short`, `git status -v`)
+- **Full command**: `"git status --short"` only matches exactly `git status --short`
+
+**Example:**
+
+```json
+{
+	"execute": {
+		"enabled": true,
+		"allowed": [
+			"npm", // Allows all npm commands
+			"git status", // Allows all git status commands
+			"ls -la" // Only allows exactly "ls -la"
+		],
+		"denied": [
+			"git push --force" // Denies this specific command even if "git" is allowed
+		]
+	}
+}
+```
+
+#### Interactive Command Approval
+
+When running in interactive mode, command approval requests now show hierarchical options:
+
+```
+[!] Action Required:
+> ✓ Run Command (y)
+  ✓ Always run git (1)
+  ✓ Always run git status (2)
+  ✓ Always run git status --short --branch (3)
+  ✗ Reject (n)
+```
+
+Selecting an "Always run" option will:
+
+1. Approve and execute the current command
+2. Add the pattern to your `execute.allowed` list in the config
+3. Auto-approve matching commands in the future
+
+This allows you to progressively build your auto-approval rules without manually editing the config file.
+
 #### Autonomous mode Follow-up Questions
 
 In Autonomous mode, when the AI asks a follow-up question, it receives this response:
