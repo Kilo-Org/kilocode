@@ -138,6 +138,7 @@ export const globalSettingsSchema = z.object({
 	diagnosticsEnabled: z.boolean().optional(),
 
 	rateLimitSeconds: z.number().optional(),
+	rateLimitAfter: z.boolean().optional(), // kilocode_change
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	experiments: experimentsSchema.optional(),

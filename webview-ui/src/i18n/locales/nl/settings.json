@@ -462,6 +462,10 @@
 			},
 			"resetDefaults": "Standaardwaarden herstellen"
 		},
+		"rateLimitAfter": {
+			"label": "Snelheidslimiet aan het eind",
+			"description": "Begin met snelheidsbeperking nadat de API-stream is beëindigd."
+		},
 		"rateLimitSeconds": {
 			"label": "Snelheidslimiet",
 			"description": "Minimale tijd tussen API-verzoeken."
