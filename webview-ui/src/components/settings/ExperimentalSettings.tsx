@@ -8,10 +8,7 @@ import { EXPERIMENT_IDS, experimentConfigsMap } from "@roo/experiments"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
 
-import {
-	SetCachedStateField, // kilocode_change
-	SetExperimentEnabled,
-} from "./types"
+import { SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { ExperimentalFeature } from "./ExperimentalFeature"
@@ -24,7 +21,12 @@ type ExperimentalSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	// kilocode_change start
 	morphApiKey?: string
 	fastApplyModel?: string
-	setCachedStateField: SetCachedStateField<"morphApiKey" | "fastApplyModel">
+	fastApplyProviderType?: "morph" | "openrouter" | "kilocode"
+	fastApplyProfileId?: string
+	setMorphApiKey: (apiKey: string) => void
+	setFastApplyModel: (model: string) => void
+	setFastApplyProviderType: (providerType: "morph" | "openrouter" | "kilocode") => void
+	setFastApplyProfileId: (profileId: string) => void
 	kiloCodeImageApiKey?: string
 	setKiloCodeImageApiKey?: (apiKey: string) => void
 	currentProfileKilocodeToken?: string
@@ -50,7 +52,12 @@ export const ExperimentalSettings = ({
 	// kilocode_change start
 	morphApiKey,
 	fastApplyModel, // kilocode_change: Fast Apply model selection
-	setCachedStateField,
+	fastApplyProviderType,
+	fastApplyProfileId,
+	setMorphApiKey,
+	setFastApplyModel,
+	setFastApplyProviderType,
+	setFastApplyProfileId,
 	setKiloCodeImageApiKey,
 	kiloCodeImageApiKey,
 	currentProfileKilocodeToken,
@@ -104,9 +111,14 @@ export const ExperimentalSettings = ({
 									/>
 									{enabled && (
 										<FastApplySettings
-											setCachedStateField={setCachedStateField}
 											morphApiKey={morphApiKey}
 											fastApplyModel={fastApplyModel}
+											fastApplyProviderType={fastApplyProviderType}
+											fastApplyProfileId={fastApplyProfileId}
+											setMorphApiKey={setMorphApiKey}
+											setFastApplyModel={setFastApplyModel}
+											setFastApplyProviderType={setFastApplyProviderType}
+											setFastApplyProfileId={setFastApplyProfileId}
 										/>
 									)}
 								</React.Fragment>
