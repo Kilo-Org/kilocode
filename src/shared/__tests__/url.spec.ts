@@ -1,6 +1,6 @@
-import { getKiloUrl } from "../kilocode/url"
+import { getApiUrl, getAppUrl } from "../kilocode/url"
 
-describe("getKiloUrl", () => {
+describe("URL functions", () => {
 	const originalEnv = process.env.KILOCODE_BACKEND_BASE_URL
 
 	afterEach(() => {
@@ -14,20 +14,27 @@ describe("getKiloUrl", () => {
 
 	describe("Production behavior (default)", () => {
 		it("should handle production URLs correctly", () => {
-			// Default base URL
-			expect(getKiloUrl()).toBe("https://kilocode.ai")
+			// Base URL
+			expect(getAppUrl()).toBe("https://kilocode.ai")
 
-			// Different subdomains and paths
-			expect(getKiloUrl("https://api.kilocode.ai/extension-config.json")).toBe(
-				"https://api.kilocode.ai/extension-config.json",
-			)
-			expect(getKiloUrl("https://app.kilocode.ai/profile")).toBe("https://app.kilocode.ai/profile")
-			expect(getKiloUrl("https://kilocode.ai/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
+			// API URLs (now using /api path structure)
+			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
+			expect(getApiUrl("/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
+			expect(getApiUrl("/profile/balance")).toBe("https://kilocode.ai/api/profile/balance")
+			expect(getApiUrl()).toBe("https://kilocode.ai/api")
 
-			// Query parameters and hash preservation
-			expect(getKiloUrl("https://kilocode.ai/sign-in?source=vscode&utm=test#section")).toBe(
-				"https://kilocode.ai/sign-in?source=vscode&utm=test#section",
-			)
+			// App URLs
+			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
+			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
+			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
+			expect(getAppUrl()).toBe("https://kilocode.ai")
+		})
+
+		it("should handle empty and root paths", () => {
+			expect(getApiUrl("")).toBe("https://kilocode.ai/api")
+			expect(getAppUrl("")).toBe("https://kilocode.ai")
+			expect(getApiUrl("/")).toBe("https://kilocode.ai/api/")
+			expect(getAppUrl("/")).toBe("https://kilocode.ai")
 		})
 	})
 
@@ -36,31 +43,26 @@ describe("getKiloUrl", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
 		})
 
-		it("should map subdomains to paths in localhost", () => {
+		it("should map to localhost paths correctly", () => {
 			// Base URL mapping
-			expect(getKiloUrl()).toBe("http://localhost:3000")
+			expect(getAppUrl()).toBe("http://localhost:3000")
 
-			// API subdomain mapping
-			expect(getKiloUrl("https://api.kilocode.ai/extension-config.json")).toBe(
-				"http://localhost:3000/api/extension-config.json",
-			)
-			expect(getKiloUrl("https://api.kilocode.ai/organizations/123/modes")).toBe(
-				"http://localhost:3000/api/organizations/123/modes",
-			)
-			expect(getKiloUrl("https://api.kilocode.ai/")).toBe("http://localhost:3000/api/")
+			// API URL mapping
+			expect(getApiUrl("/extension-config.json")).toBe("http://localhost:3000/api/extension-config.json")
+			expect(getApiUrl("/marketplace/modes")).toBe("http://localhost:3000/api/marketplace/modes")
+			expect(getApiUrl("/organizations/123/modes")).toBe("http://localhost:3000/api/organizations/123/modes")
+			expect(getApiUrl()).toBe("http://localhost:3000/api")
 
-			// App subdomain and main domain mapping
-			expect(getKiloUrl("https://app.kilocode.ai/profile")).toBe("http://localhost:3000/profile")
-			expect(getKiloUrl("https://kilocode.ai/sign-in-to-editor")).toBe("http://localhost:3000/sign-in-to-editor")
+			// App URL mapping
+			expect(getAppUrl("/profile")).toBe("http://localhost:3000/profile")
+			expect(getAppUrl("/support")).toBe("http://localhost:3000/support")
+			expect(getAppUrl("/sign-in-to-editor")).toBe("http://localhost:3000/sign-in-to-editor")
+			expect(getAppUrl()).toBe("http://localhost:3000")
 		})
 
-		it("should preserve query parameters and hash in localhost", () => {
-			expect(getKiloUrl("https://api.kilocode.ai/profile?test=1")).toBe(
-				"http://localhost:3000/api/profile?test=1",
-			)
-			expect(getKiloUrl("https://kilocode.ai/docs#getting-started")).toBe(
-				"http://localhost:3000/docs#getting-started",
-			)
+		it("should handle paths without leading slash", () => {
+			expect(getApiUrl("extension-config.json")).toBe("http://localhost:3000/api/extension-config.json")
+			expect(getAppUrl("profile")).toBe("http://localhost:3000/profile")
 		})
 	})
 
@@ -69,49 +71,20 @@ describe("getKiloUrl", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "https://staging.example.com"
 		})
 
-		it("should map to custom backend with subdomain preservation", () => {
-			expect(getKiloUrl()).toBe("https://staging.example.com")
-			expect(getKiloUrl("https://api.kilocode.ai/test")).toBe("https://api.staging.example.com/test")
-			expect(getKiloUrl("https://app.kilocode.ai/dashboard")).toBe("https://app.staging.example.com/dashboard")
+		it("should map to custom backend with path structure", () => {
+			expect(getAppUrl()).toBe("https://staging.example.com")
+			expect(getApiUrl("/test")).toBe("https://staging.example.com/api/test")
+			expect(getAppUrl("/dashboard")).toBe("https://staging.example.com/dashboard")
 		})
 	})
 
 	describe("Edge cases and error handling", () => {
-		it("should handle non-kilocode URLs and invalid inputs", () => {
-			const externalUrl = "https://example.com/some/path"
-			expect(getKiloUrl(externalUrl)).toBe(externalUrl)
-
-			const invalidUrl = "not-a-url"
-			expect(getKiloUrl(invalidUrl)).toBe(invalidUrl)
-		})
-
 		it("should handle various localhost configurations", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:8080"
-			expect(getKiloUrl("https://api.kilocode.ai/test")).toBe("http://localhost:8080/api/test")
+			expect(getApiUrl("/test")).toBe("http://localhost:8080/api/test")
 
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://127.0.0.1:3000"
-			expect(getKiloUrl("https://api.kilocode.ai/test")).toBe("http://127.0.0.1:3000/api/test")
-		})
-	})
-
-	describe("Path and trailing slash handling", () => {
-		it("should handle trailing slashes correctly", () => {
-			expect(getKiloUrl("https://kilocode.ai/")).toBe("https://kilocode.ai")
-			expect(getKiloUrl("https://kilocode.ai")).toBe("https://kilocode.ai")
-
-			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
-			expect(getKiloUrl("https://kilocode.ai/")).toBe("http://localhost:3000")
-
-			expect(getKiloUrl("https://api.kilocode.ai/test/")).toBe("http://localhost:3000/api/test/")
-		})
-
-		it("should handle various path scenarios", () => {
-			expect(getKiloUrl("https://v2.api.kilocode.ai/test")).toBe("https://v2.api.kilocode.ai/test")
-
-			expect(getKiloUrl("https://api.kilocode.ai")).toBe("https://api.kilocode.ai")
-
-			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
-			expect(getKiloUrl("https://kilocode.ai/path")).toBe("http://localhost:3000/path")
+			expect(getApiUrl("/test")).toBe("http://127.0.0.1:3000/api/test")
 		})
 	})
 })

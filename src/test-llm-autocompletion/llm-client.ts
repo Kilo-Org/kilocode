@@ -1,7 +1,6 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
 import { DEFAULT_HEADERS } from "../api/providers/constants.js"
-import { getKiloUrl } from "../shared/kilocode/url.js"
 import { getKiloUrlFromToken } from "../shared/kilocode/token.js"
 
 config()

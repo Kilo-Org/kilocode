@@ -1,7 +1,7 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-import { getKiloUrl } from "../../shared/kilocode/url"
+import { getApiUrl } from "../../shared/kilocode/url"
 import {
 	type MarketplaceItem,
 	type MarketplaceItemType,
@@ -44,7 +44,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getKiloUrl("https://kilocode.ai/api/marketplace/modes")
+		const url = getApiUrl("/marketplace/modes")
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
@@ -67,7 +67,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getKiloUrl("https://kilocode.ai/api/marketplace/mcps")
+		const url = getApiUrl("/marketplace/mcps")
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)

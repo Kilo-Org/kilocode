@@ -7,7 +7,7 @@ import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
 import { getKiloBaseUriFromToken, isGlobalStateKey } from "../../shared/kilocode/token"
-import { getKiloUrl } from "../../shared/kilocode/url"
+import { getAppUrl } from "../../shared/kilocode/url"
 import {
 	MaybeTypedWebviewMessage,
 	ProfileData,
@@ -1982,7 +1982,7 @@ export const webviewMessageHandler = async (
 			} else if (answer === discordText) {
 				await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
 			} else if (answer === customerSupport) {
-				await vscode.env.openExternal(vscode.Uri.parse(getKiloUrl("https://kilocode.ai/support")))
+				await vscode.env.openExternal(vscode.Uri.parse(getAppUrl("/support")))
 			}
 			break
 		}

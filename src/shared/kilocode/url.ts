@@ -8,11 +8,6 @@ function getGlobalKilocodeBackendUrl(): string {
 	)
 }
 
-function extractSubdomain(hostname: string): string {
-	const parts = hostname.split(".")
-	return parts.length > 2 ? parts.slice(0, -2).join(".") : ""
-}
-
 function isLocalDevelopment(hostname: string): boolean {
 	return hostname === "localhost" || hostname === "127.0.0.1"
 }
@@ -21,38 +16,45 @@ function removeTrailingSlashFromBaseUrl(url: string, pathname: string): string {
 	return url.endsWith("/") && (pathname === "/" || pathname === "") ? url.slice(0, -1) : url
 }
 
+function ensureLeadingSlash(path: string): string {
+	return path.startsWith("/") ? path : `/${path}`
+}
+
 /**
- * Maps kilocode.ai URLs to the configured backend environment.
- * In development: maps subdomains to paths (api.kilocode.ai → localhost:3000/api)
- * In production: preserves subdomain structure (api.kilocode.ai → api.kilocode.ai)
+ * Gets the API base URL for the current environment.
+ * In development: http://localhost:3000/api
+ * In production: uses /api path structure
  */
-export function getKiloUrl(targetUrl: string = "https://kilocode.ai"): string {
+export function getApiUrl(path: string = ""): string {
 	try {
-		const target = new URL(targetUrl)
-
-		if (!target.hostname.endsWith("kilocode.ai")) {
-			return targetUrl
-		}
-
 		const backend = new URL(getGlobalKilocodeBackendUrl())
-		const subdomain = extractSubdomain(target.hostname)
 		const result = new URL(backend)
 
-		if (isLocalDevelopment(backend.hostname)) {
-			result.pathname = subdomain === "api" ? `/api${target.pathname}` : target.pathname
-		} else {
-			if (subdomain) {
-				result.hostname = `${subdomain}.${backend.hostname}`
-			}
-			result.pathname = target.pathname
-		}
-
-		result.search = target.search
-		result.hash = target.hash
+		// Always use /api path structure (simpler than subdomain logic)
+		result.pathname = `/api${path ? ensureLeadingSlash(path) : ""}`
 
 		return removeTrailingSlashFromBaseUrl(result.toString(), result.pathname)
 	} catch (error) {
-		console.warn("Failed to parse URL in getKiloUrl:", targetUrl, error)
-		return targetUrl
+		console.warn("Failed to build API URL:", path, error)
+		return `https://kilocode.ai/api${path ? ensureLeadingSlash(path) : ""}`
+	}
+}
+
+/**
+ * Gets the app/web URL for the current environment.
+ * In development: http://localhost:3000
+ * In production: https://kilocode.ai
+ */
+export function getAppUrl(path: string = ""): string {
+	try {
+		const backend = new URL(getGlobalKilocodeBackendUrl())
+		const result = new URL(backend)
+
+		result.pathname = path ? ensureLeadingSlash(path) : ""
+
+		return removeTrailingSlashFromBaseUrl(result.toString(), result.pathname)
+	} catch (error) {
+		console.warn("Failed to build app URL:", path, error)
+		return `https://kilocode.ai${path ? ensureLeadingSlash(path) : ""}`
 	}
 }

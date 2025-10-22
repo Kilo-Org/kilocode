@@ -16,7 +16,7 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
-import { getKiloUrl } from "../shared/kilocode/url" // kilocode_change
+import { getAppUrl } from "../shared/kilocode/url" // kilocode_change
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
 
 /**
@@ -166,7 +166,7 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
 	},
 	helpButtonClicked: () => {
-		vscode.env.openExternal(vscode.Uri.parse(getKiloUrl()))
+		vscode.env.openExternal(vscode.Uri.parse(getAppUrl()))
 	},
 	// kilocode_change end
 	marketplaceButtonClicked: () => {
