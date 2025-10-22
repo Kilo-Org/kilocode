@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { GhostSuggestionsState } from "./GhostSuggestions"
+import { GhostSuggestionsState, GhostSuggestionFile } from "./GhostSuggestions"
 import { GhostSuggestionEditOperation } from "./types"
 
 // Constants
@@ -546,13 +546,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		selectedGroup: GhostSuggestionEditOperation[],
 		groups: GhostSuggestionEditOperation[][],
 		selectedGroupIndex: number,
+		file: GhostSuggestionFile,
 	): { group: GhostSuggestionEditOperation[]; type: "/" } | null {
 		if (selectedGroupIndex <= 0) {
 			return null
 		}
 
 		const previousGroup = groups[selectedGroupIndex - 1]
-		const previousGroupType = (previousGroup[0]?.type === "-" ? "-" : "+") as "+" | "-"
+		const previousGroupType = file.getGroupType(previousGroup)
 
 		if (previousGroupType === "-" && this.shouldCreateSyntheticModification(previousGroup, selectedGroup)) {
 			return { group: [...previousGroup, ...selectedGroup], type: "/" }
@@ -591,7 +592,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		// Handle addition that may combine with previous deletion
 		if (selectedGroupType === "+") {
-			const result = this.handleAdditionWithPreviousDeletion(selectedGroup, groups, selectedGroupIndex)
+			const result = this.handleAdditionWithPreviousDeletion(selectedGroup, groups, selectedGroupIndex, file)
 			if (result) return result
 		}
 

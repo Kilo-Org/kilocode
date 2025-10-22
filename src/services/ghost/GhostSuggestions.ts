@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { GhostSuggestionEditOperation, GhostSuggestionEditOperationsOffset } from "./types"
 
-class GhostSuggestionFile {
+export class GhostSuggestionFile {
 	public fileUri: vscode.Uri
 	private selectedGroup: number | null = null
 	private groups: Array<GhostSuggestionEditOperation[]> = []
@@ -104,12 +104,21 @@ class GhostSuggestionFile {
 		return this.selectedGroup
 	}
 
-	public getGroupType = (group: GhostSuggestionEditOperation[]) => {
-		const types = group.flatMap((x) => x.type)
-		if (types.length == 2) {
+	public getGroupType = (group: GhostSuggestionEditOperation[]): "+" | "-" | "/" => {
+		if (group.length === 0) {
+			return "+" // Default to addition for empty groups
+		}
+
+		const hasAdd = group.some((op) => op.type === "+")
+		const hasDel = group.some((op) => op.type === "-")
+
+		// Modification: has both additions and deletions
+		if (hasAdd && hasDel) {
 			return "/"
 		}
-		return types[0]
+
+		// Pure addition or deletion
+		return group[0].type
 	}
 
 	public getSelectedGroupPreviousOperations(): GhostSuggestionEditOperation[] {
