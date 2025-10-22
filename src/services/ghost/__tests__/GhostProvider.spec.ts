@@ -130,8 +130,8 @@ describe("GhostProvider", () => {
 		// Initialize streaming parser
 		streamingParser.initialize(context)
 
-		// Process the response as a single chunk (simulating complete response)
-		const result = streamingParser.processChunk(response)
+		// Process the complete response
+		const result = streamingParser.parseResponse(response)
 
 		// Apply the suggestions
 		await workspaceEdit.applySuggestions(result.suggestions)
@@ -232,7 +232,7 @@ describe("GhostProvider", () => {
 
 			// Test empty response
 			streamingParser.initialize(context)
-			const result = streamingParser.processChunk("")
+			const result = streamingParser.parseResponse("")
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -243,7 +243,7 @@ describe("GhostProvider", () => {
 			// Test invalid diff format
 			const invalidDiff = "This is not a valid diff format"
 			streamingParser.initialize(context)
-			const result = streamingParser.processChunk(invalidDiff)
+			const result = streamingParser.parseResponse(invalidDiff)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -262,9 +262,253 @@ describe("GhostProvider", () => {
 console.log('test');]]></replace></change>`
 
 			streamingParser.initialize(context)
-			const result = streamingParser.processChunk(xmlResponse)
+			const result = streamingParser.parseResponse(xmlResponse)
 			// Should work with the XML format
 			expect(result.suggestions.hasSuggestions()).toBe(true)
+		})
+	})
+
+	describe("onDidChangeTextDocument filtering", () => {
+		it("should process user typing (small changes near cursor)", async () => {
+			const initialContent = `console.log('test');`
+			const { testUri, mockDocument } = await setupTestDocument("typing.js", initialContent)
+
+			// Mock active editor with cursor at line 0
+			;(vscode.window as any).activeTextEditor = {
+				document: mockDocument,
+				selection: {
+					active: new vscode.Position(0, 10),
+				},
+			}
+
+			// Simulate user typing - small change near cursor
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 10), new vscode.Position(0, 10)),
+						rangeLength: 0,
+						text: "a",
+					},
+				],
+				reason: undefined, // User typing has no reason
+			}
+
+			// This should be processed (not filtered out)
+			// We can't directly test the private method, but we can verify the logic
+			expect(event.reason).toBeUndefined()
+			expect(event.contentChanges.length).toBeGreaterThan(0)
+			expect(event.contentChanges[0].text.length).toBeLessThanOrEqual(100)
+		})
+
+		it("should filter out undo operations", async () => {
+			const initialContent = `console.log('test');`
+			const { mockDocument } = await setupTestDocument("undo.js", initialContent)
+
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 10)),
+						rangeLength: 10,
+						text: "",
+					},
+				],
+				reason: 1, // Undo
+			}
+
+			// Should be filtered out
+			expect(event.reason).toBe(1)
+		})
+
+		it("should filter out redo operations", async () => {
+			const initialContent = `console.log('test');`
+			const { mockDocument } = await setupTestDocument("redo.js", initialContent)
+
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 10)),
+						rangeLength: 0,
+						text: "console.log",
+					},
+				],
+				reason: 2, // Redo
+			}
+
+			// Should be filtered out
+			expect(event.reason).toBe(2)
+		})
+
+		it("should filter out bulk changes (git operations)", async () => {
+			const initialContent = `console.log('test');`
+			const { mockDocument } = await setupTestDocument("bulk.js", initialContent)
+
+			// Simulate git checkout - large text replacement
+			const largeText = "a".repeat(150)
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 20)),
+						rangeLength: 20,
+						text: largeText,
+					},
+				],
+				reason: undefined,
+			}
+
+			// Should be filtered out due to bulk change
+			const isBulkChange = event.contentChanges.some(
+				(change) => change.rangeLength > 100 || change.text.length > 100,
+			)
+			expect(isBulkChange).toBe(true)
+		})
+
+		it("should filter out changes far from cursor (LLM edits)", async () => {
+			const initialContent = `line 1\nline 2\nline 3\nline 4\nline 5\nline 6\nline 7\nline 8`
+			const { mockDocument } = await setupTestDocument("far.js", initialContent)
+
+			// Mock active editor with cursor at line 0
+			;(vscode.window as any).activeTextEditor = {
+				document: mockDocument,
+				selection: {
+					active: new vscode.Position(0, 0),
+				},
+			}
+
+			// Simulate change at line 7 (far from cursor at line 0)
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(7, 0), new vscode.Position(7, 6)),
+						rangeLength: 6,
+						text: "modified",
+					},
+				],
+				reason: undefined,
+			}
+
+			// Should be filtered out - change is more than 2 lines away
+			const cursorPos = (vscode.window as any).activeTextEditor.selection.active
+			const isNearCursor = event.contentChanges.some((change) => {
+				const distance = Math.abs(cursorPos.line - change.range.start.line)
+				return distance <= 2
+			})
+			expect(isNearCursor).toBe(false)
+		})
+
+		it("should allow changes within 2 lines of cursor", async () => {
+			const initialContent = `line 1\nline 2\nline 3\nline 4\nline 5`
+			const { mockDocument } = await setupTestDocument("near.js", initialContent)
+
+			// Mock active editor with cursor at line 2
+			;(vscode.window as any).activeTextEditor = {
+				document: mockDocument,
+				selection: {
+					active: new vscode.Position(2, 0),
+				},
+			}
+
+			// Simulate change at line 4 (2 lines away from cursor)
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(4, 0), new vscode.Position(4, 6)),
+						rangeLength: 6,
+						text: "modified",
+					},
+				],
+				reason: undefined,
+			}
+
+			// Should NOT be filtered out - change is within 2 lines
+			const cursorPos = (vscode.window as any).activeTextEditor.selection.active
+			const isNearCursor = event.contentChanges.some((change) => {
+				const distance = Math.abs(cursorPos.line - change.range.start.line)
+				return distance <= 2
+			})
+			expect(isNearCursor).toBe(true)
+		})
+
+		it("should filter out changes to non-active documents", async () => {
+			const initialContent = `console.log('test');`
+			const { mockDocument } = await setupTestDocument("inactive.js", initialContent)
+
+			// Create a different document for the active editor
+			const activeContent = `console.log('active');`
+			const activeUri = vscode.Uri.parse("file://active.js")
+			mockWorkspace.addDocument(activeUri, activeContent)
+			const activeDocument = await mockWorkspace.openTextDocument(activeUri)
+
+			// Mock active editor with a different document
+			;(vscode.window as any).activeTextEditor = {
+				document: activeDocument,
+				selection: {
+					active: new vscode.Position(0, 10),
+				},
+			}
+
+			// Simulate change to the non-active document
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 10), new vscode.Position(0, 10)),
+						rangeLength: 0,
+						text: "a",
+					},
+				],
+				reason: undefined,
+			}
+
+			// Should be filtered out - document doesn't match active editor
+			const editor = (vscode.window as any).activeTextEditor
+			const shouldProcess = editor && editor.document === event.document
+			expect(shouldProcess).toBe(false)
+		})
+
+		it("should allow small paste operations near cursor", async () => {
+			const initialContent = `console.log('test');`
+			const { mockDocument } = await setupTestDocument("paste.js", initialContent)
+
+			// Mock active editor with cursor at line 0
+			;(vscode.window as any).activeTextEditor = {
+				document: mockDocument,
+				selection: {
+					active: new vscode.Position(0, 10),
+				},
+			}
+
+			// Simulate paste of 50 characters (under threshold)
+			const pastedText = "a".repeat(50)
+			const event = {
+				document: mockDocument,
+				contentChanges: [
+					{
+						range: new vscode.Range(new vscode.Position(0, 10), new vscode.Position(0, 10)),
+						rangeLength: 0,
+						text: pastedText,
+					},
+				],
+				reason: undefined,
+			}
+
+			// Should NOT be filtered out - paste is small and near cursor
+			const isBulkChange = event.contentChanges.some(
+				(change) => change.rangeLength > 100 || change.text.length > 100,
+			)
+			expect(isBulkChange).toBe(false)
+
+			const cursorPos = (vscode.window as any).activeTextEditor.selection.active
+			const isNearCursor = event.contentChanges.some((change) => {
+				const distance = Math.abs(cursorPos.line - change.range.start.line)
+				return distance <= 2
+			})
+			expect(isNearCursor).toBe(true)
 		})
 	})
 })

@@ -449,7 +449,7 @@ const virtualQuotaFallbackSchema = baseProviderSettingsSchema.extend({
 })
 // kilocode_change end
 
-export const zaiApiLineSchema = z.enum(["international_coding", "international", "china_coding", "china"])
+export const zaiApiLineSchema = z.enum(["international_coding", "china_coding"])
 
 export type ZaiApiLine = z.infer<typeof zaiApiLineSchema>
 

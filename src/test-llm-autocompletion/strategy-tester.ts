@@ -95,8 +95,7 @@ export class StrategyTester {
 		}
 
 		parser.initialize(dummyContext)
-		parser.processChunk(xmlResponse)
-		parser.finishStream()
+		parser.parseResponse(xmlResponse)
 
 		return parser.getCompletedChanges()
 	}

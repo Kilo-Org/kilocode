@@ -4,7 +4,7 @@ sidebar_label: Usage Analytics & Reporting
 
 # Usage Analytics & Reporting
 
-Using Kilo Seats with an Enterprise or Teams subscription provides detailed usage analytics to help you monitor and understand your organization’s AI usage patterns, costs, and activity through the Kilo Code API provider.
+Using Kilo seats with an Enterprise or Teams subscription provides detailed usage analytics to help you monitor and understand your organization’s AI usage patterns, costs, and activity through the Kilo Code API provider.
 
 ## Analytics Dashboard Overview
 
@@ -73,7 +73,31 @@ Click on any row to expand and see which specific team members used that model o
 
 ### By Project View
 
-You can also view usage **by project**, which is automatically pulled from the repository name. Alternatively, you can configure or override the project name at the repository level via the `.kilocode/config.json` file.
+You can also view usage **by project**.
+
+Project names are automatically parsed from the project's `.git/config` for the remote named `origin` (if there is one).
+
+For example, if the following were in your `.git/config`:
+
+```bash
+[remote "origin"]
+    url = git@github.com:example-co/example-repo.git
+    fetch = +refs/heads/*:refs/remotes/origin/*
+```
+
+The project name would be `example-repo`.
+
+You can also manually override the project name in the `.kilocode/config.json` file in your project.
+
+To set the project identifier to `my-project`, create a `.kilocode/config.json` file with the following contents:
+
+```json
+{
+	"project": {
+		"id": "my-project"
+	}
+}
+```
 
 ## Understanding the Data
 
@@ -105,6 +129,6 @@ All costs are displayed in USD with detailed precision, helping you:
 ## Next Steps
 
 - [Manage team billing settings](/seats/billing)
-- [Configure team roles and permissions](/seats/roles-permissions)
+- [Configure team roles and permissions](/seats/team-management)
 
 The usage analytics provide the insights needed to optimize your team's AI usage while maintaining visibility into costs and activity patterns.

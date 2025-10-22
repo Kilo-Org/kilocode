@@ -204,9 +204,37 @@ export class GhostProvider {
 		if (this.workspaceEdit.isLocked()) {
 			return
 		}
+
+		// Filter out undo/redo operations
+		if (event.reason !== undefined) {
+			return
+		}
+
 		if (event.contentChanges.length === 0) {
 			return
 		}
+
+		// Heuristic to filter out bulk changes (git operations, external edits)
+		const isBulkChange = event.contentChanges.some((change) => change.rangeLength > 100 || change.text.length > 100)
+		if (isBulkChange) {
+			return
+		}
+
+		// Heuristic to filter out changes far from cursor (likely external or LLM edits)
+		const editor = vscode.window.activeTextEditor
+		if (!editor || editor.document !== event.document) {
+			return
+		}
+
+		const cursorPos = editor.selection.active
+		const isNearCursor = event.contentChanges.some((change) => {
+			const distance = Math.abs(cursorPos.line - change.range.start.line)
+			return distance <= 2
+		})
+		if (!isNearCursor) {
+			return
+		}
+
 		await this.documentStore.storeDocument({ document: event.document })
 		this.lastTextChangeTime = Date.now()
 		this.handleTypingEvent(event)
@@ -311,32 +339,6 @@ export class GhostProvider {
 
 			if (chunk.type === "text") {
 				response += chunk.text
-
-				// Process the text chunk through our streaming parser
-				const parseResult = this.streamingParser.processChunk(chunk.text)
-
-				if (parseResult.hasNewSuggestions) {
-					// Update our suggestions with the new parsed results
-					this.suggestions = parseResult.suggestions
-
-					// If this is the first suggestion, show it immediately
-					if (!hasShownFirstSuggestion && this.suggestions.hasSuggestions()) {
-						hasShownFirstSuggestion = true
-						this.stopProcessing() // Stop the loading animation
-						this.selectClosestSuggestion()
-						void this.render() // Render asynchronously to not block streaming
-					} else if (hasShownFirstSuggestion) {
-						// Update existing suggestions
-						this.selectClosestSuggestion()
-						void this.render() // Update UI asynchronously
-					}
-				}
-
-				// If the response appears complete, finalize
-				if (parseResult.isComplete && hasShownFirstSuggestion) {
-					this.selectClosestSuggestion()
-					void this.render()
-				}
 			}
 		}
 
@@ -373,7 +375,7 @@ export class GhostProvider {
 			}
 
 			// Finish the streaming parser to apply sanitization if needed
-			const finalParseResult = this.streamingParser.finishStream()
+			const finalParseResult = this.streamingParser.parseResponse(response)
 			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
 				// Handle case where sanitization produced suggestions
 				this.suggestions = finalParseResult.suggestions

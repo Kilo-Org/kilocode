@@ -17,6 +17,8 @@ export const nativeFunctionCallingProviders = [
 	"deepinfra",
 	"xai",
 	"zai",
+	"synthetic",
+	"human-relay",
 ] satisfies ProviderName[] as ProviderName[]
 
 const modelsDefaultingToNativeFunctionCalls = ["anthropic/claude-haiku-4.5"]

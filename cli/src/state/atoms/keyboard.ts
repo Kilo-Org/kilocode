@@ -20,6 +20,7 @@ import {
 } from "./ui.js"
 import {
 	textBufferStringAtom,
+	textBufferIsEmptyAtom,
 	moveUpAtom,
 	moveDownAtom,
 	moveLeftAtom,
@@ -39,6 +40,14 @@ import {
 import { isApprovalPendingAtom, approvalOptionsAtom, approveAtom, rejectAtom, executeSelectedAtom } from "./approval.js"
 import { hasResumeTaskAtom } from "./extension.js"
 import { cancelTaskAtom, resumeTaskAtom } from "./actions.js"
+import {
+	historyModeAtom,
+	historyEntriesAtom,
+	enterHistoryModeAtom,
+	exitHistoryModeAtom,
+	navigateHistoryUpAtom,
+	navigateHistoryDownAtom,
+} from "./history.js"
 
 // ============================================================================
 // Core State Atoms
@@ -536,10 +545,65 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 }
 
 /**
+ * History mode keyboard handler
+ * Handles navigation through command history
+ */
+function handleHistoryKeys(get: any, set: any, key: Key): void {
+	switch (key.name) {
+		case "up": {
+			// Navigate to older command
+			const command = set(navigateHistoryUpAtom)
+			if (command !== null) {
+				set(setTextAtom, command)
+			}
+			return
+		}
+
+		case "down": {
+			// Navigate to newer command
+			const command = set(navigateHistoryDownAtom)
+			if (command !== null) {
+				set(setTextAtom, command)
+			}
+			return
+		}
+
+		default:
+			// Any other key exits history mode
+			set(exitHistoryModeAtom)
+			// Fall through to normal text handling
+			handleTextInputKeys(get, set, key)
+			return
+	}
+}
+
+/**
  * Unified text input keyboard handler
  * Handles both normal (single-line) and multiline text input
  */
 function handleTextInputKeys(get: any, set: any, key: Key) {
+	// Check if we should enter history mode
+	const isEmpty = get(textBufferIsEmptyAtom)
+	const isInHistoryMode = get(historyModeAtom)
+
+	// Enter history mode on up/down when input is empty and not already in history mode
+	if (isEmpty && !isInHistoryMode && (key.name === "up" || key.name === "down")) {
+		const entered = set(enterHistoryModeAtom, "")
+		if (entered) {
+			// Successfully entered history mode
+			// Get the current entry (most recent) and display it
+			const entries = get(historyEntriesAtom)
+			if (entries.length > 0) {
+				const mostRecent = entries[entries.length - 1]
+				if (mostRecent) {
+					set(setTextAtom, mostRecent.prompt)
+				}
+			}
+			return
+		}
+		// If couldn't enter history mode (no history), fall through to normal handling
+	}
+
 	switch (key.name) {
 		// Navigation keys (multiline only)
 		case "up":
@@ -680,11 +744,15 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 	const isApprovalPending = get(isApprovalPendingAtom)
 	const isFollowupVisible = get(showFollowupSuggestionsAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
+	const isInHistoryMode = get(historyModeAtom)
 
-	// Mode priority: approval > followup > autocomplete > normal
+	// Mode priority: approval > followup > history > autocomplete > normal
+	// History has higher priority than autocomplete because when navigating history,
+	// the text buffer may contain commands that start with "/" which would trigger autocomplete
 	let mode: InputMode = "normal"
 	if (isApprovalPending) mode = "approval"
 	else if (isFollowupVisible) mode = "followup"
+	else if (isInHistoryMode) mode = "history"
 	else if (isAutocompleteVisible) mode = "autocomplete"
 
 	// Update mode atom
@@ -698,6 +766,8 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 			return handleFollowupKeys(get, set, key)
 		case "autocomplete":
 			return handleAutocompleteKeys(get, set, key)
+		case "history":
+			return handleHistoryKeys(get, set, key)
 		default:
 			return handleTextInputKeys(get, set, key)
 	}

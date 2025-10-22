@@ -12,6 +12,7 @@ import {
 	// kilocode_change start
 	CommitRange,
 	HistoryItem,
+	GlobalState,
 	// kilocode_change end
 } from "@roo-code/types"
 
@@ -33,6 +34,15 @@ export interface UpdateTodoListPayload {
 }
 
 export type EditQueuedMessagePayload = Pick<QueuedMessage, "id" | "text" | "images">
+
+// kilocode_change start: Type-safe global state update message
+export type GlobalStateValue<K extends keyof GlobalState> = GlobalState[K]
+export type UpdateGlobalStateMessage<K extends keyof GlobalState = keyof GlobalState> = {
+	type: "updateGlobalState"
+	stateKey: K
+	stateValue: GlobalStateValue<K>
+}
+// kilocode_change end: Type-safe global state update message
 
 export interface WebviewMessage {
 	type:
@@ -268,6 +278,7 @@ export interface WebviewMessage {
 		| "dismissNotificationId" // kilocode_change
 		| "tasksByIdRequest" // kilocode_change
 		| "taskHistoryRequest" // kilocode_change
+		| "updateGlobalState" // kilocode_change
 		| "shareTaskSuccess"
 		| "exportMode"
 		| "exportModeResult"
@@ -386,6 +397,9 @@ export interface WebviewMessage {
 		codebaseIndexVercelAiGatewayApiKey?: string
 	}
 }
+
+// kilocode_change: Create discriminated union for type-safe messages
+export type MaybeTypedWebviewMessage = WebviewMessage | UpdateGlobalStateMessage
 
 // kilocode_change begin
 export type OrganizationRole = "owner" | "admin" | "member"

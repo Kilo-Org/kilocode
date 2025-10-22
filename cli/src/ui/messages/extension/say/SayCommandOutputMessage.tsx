@@ -18,7 +18,7 @@ export const SayCommandOutputMessage: React.FC<MessageComponentProps> = ({ messa
 
 	return (
 		<Box flexDirection="column" marginBottom={1}>
-			<Box width={BOX_L1} borderStyle="single" borderColor={theme.ui.border.default} paddingX={1}>
+			<Box width={BOX_L1} borderStyle="round" borderColor={theme.ui.border.default} paddingX={1}>
 				<Text color={theme.ui.text.dimmed} dimColor>
 					{text}
 				</Text>

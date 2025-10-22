@@ -8,9 +8,15 @@ Kilo Code accelerates development with AI-driven code generation and task automa
 
 Organizations adopting AI accelerated coding at scale often want a better way to monitor, manage, and collaborate on their AI-drive practices.
 
-Kilo Code Seats, available via either the Teams or Enterprise subscriptions, are the solution for these organizations.
+Kilo Code seats, available via either the Teams or Enterprise subscriptions, are the solution for these organizations.
 
-Kilo Code seats are **billed separately** from credits for using models via the Kilo Code provider
+:::note
+
+Kilo Code seats purchases of Teams or Enterprise are separate from model provider credits.
+
+No credits are included with a Teams or Enterprise purchase.
+
+:::
 
 ## What You Get from Teams
 

@@ -14,7 +14,7 @@ export const SayErrorMessage: React.FC<MessageComponentProps> = ({ message }) =>
 		<Box
 			width={BOX_L1}
 			flexDirection="column"
-			borderStyle="single"
+			borderStyle="round"
 			borderColor={theme.semantic.error}
 			paddingX={1}
 			marginY={1}>

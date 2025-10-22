@@ -45,13 +45,8 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change`
 
-			// First chunk - should not sanitize yet (stream not complete)
-			let result = parser.processChunk(incompleteXML)
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
-
-			// Simulate stream completion by calling finishStream
-			result = parser.finishStream()
+			// Simulate stream completion by calling finishStream with full response
+			const result = parser.parseResponse(incompleteXML)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -67,13 +62,8 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace>`
 
-			// First chunk - should not sanitize yet (stream not complete)
-			let result = parser.processChunk(incompleteXML)
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
-
 			// Simulate stream completion
-			result = parser.finishStream()
+			const result = parser.parseResponse(incompleteXML)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -89,7 +79,7 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></change`
 
-			const result = parser.processChunk(incompleteXML)
+			const result = parser.parseResponse(incompleteXML)
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
@@ -99,7 +89,7 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 		it("should not fix when multiple change blocks are present", () => {
 			const incompleteXML = `<change><search><![CDATA[test1]]></search><replace><![CDATA[test1]]></replace></change><change><search><![CDATA[test2]]></search><replace><![CDATA[test2]]></replace></change`
 
-			const result = parser.processChunk(incompleteXML)
+			const result = parser.parseResponse(incompleteXML)
 
 			// Should process the first complete change but not fix the incomplete second one
 			expect(result.hasNewSuggestions).toBe(true)
@@ -111,7 +101,7 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace><`
 
-			const result = parser.processChunk(incompleteXML)
+			const result = parser.parseResponse(incompleteXML)
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(false)
@@ -119,21 +109,11 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 		})
 
 		it("should not apply sanitization during active streaming", () => {
-			// Simulate streaming chunks
-			let result = parser.processChunk(`<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>`)
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
-
-			result = parser.processChunk(`]]></search><replace><![CDATA[function mutliply(a, b) {`)
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
-
-			result = parser.processChunk(`]]></replace></change`)
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
+			// Build up the full response from chunks
+			const fullResponse = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>]]></search><replace><![CDATA[function mutliply(a, b) {]]></replace></change`
 
 			// Only when stream completes should sanitization be applied
-			result = parser.finishStream()
+			const result = parser.parseResponse(fullResponse)
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.isComplete).toBe(true)
 			expect(parser.getCompletedChanges()).toHaveLength(1)
@@ -144,7 +124,7 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change>`
 
-			const result = parser.processChunk(completeXML)
+			const result = parser.parseResponse(completeXML)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -154,21 +134,21 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 		it("should handle malformed CDATA sections - the actual bug from user logs", () => {
 			// This reproduces the EXACT malformed CDATA issue from user logs
 			const malformedCDataXML = `<change><search><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
-  <<<AUTOCOMPLETE_HERE>>>
+	 <<<AUTOCOMPLETE_HERE>>>
 
-  const params = new URLSearchParams();</![CDATA[</search><replace><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
-  if (!txn) {
-    return '/organizations';
-  }
+	 const params = new URLSearchParams();</![CDATA[</search><replace><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
+	 if (!txn) {
+	   return '/organizations';
+	 }
 
-  const params = new URLSearchParams();</![CDATA[</replace></change>`
+	 const params = new URLSearchParams();</![CDATA[</replace></change>`
 
 			// Update mock document to match the search content exactly
 			const mockDocument = {
 				getText: vi.fn().mockReturnValue(`function getRedirectUrl(txn: CreditTransaction | undefined) {
-  <<<AUTOCOMPLETE_HERE>>>
+	 <<<AUTOCOMPLETE_HERE>>>
 
-  const params = new URLSearchParams();`),
+	 const params = new URLSearchParams();`),
 				uri: { fsPath: "/test/file.tsx", toString: () => "file:///test/file.tsx" } as vscode.Uri,
 				offsetAt: vi.fn().mockReturnValue(60),
 			} as unknown as vscode.TextDocument
@@ -180,16 +160,8 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 
 			parser.initialize(testContext)
 
-			// Process the malformed XML - this should initially fail
-			let result = parser.processChunk(malformedCDataXML)
-
-			// Should fail to parse initially due to malformed CDATA
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(false)
-			expect(parser.getCompletedChanges()).toHaveLength(0)
-
 			// Simulate stream completion - this should trigger sanitization and fix the CDATA issue
-			result = parser.finishStream()
+			const result = parser.parseResponse(malformedCDataXML)
 
 			// After sanitization, it should work
 			expect(result.hasNewSuggestions).toBe(true)

@@ -112,6 +112,7 @@ export type InputMode =
 	| "approval" // Approval pending (blocks input)
 	| "autocomplete" // Command autocomplete active
 	| "followup" // Followup suggestions active
+	| "history" // History navigation mode
 
 /**
  * Current input mode

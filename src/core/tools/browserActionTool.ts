@@ -8,6 +8,32 @@ import {
 } from "../../shared/ExtensionMessage"
 import { formatResponse } from "../prompts/responses"
 
+function toStringlyTyped_kilocode(value: string | number[] | object | null | undefined): string | undefined {
+	if (typeof value === "string") {
+		console.debug("toStringlyTyped: returning string as-is", value)
+		return value
+	}
+	if (Array.isArray(value)) {
+		console.debug(
+			"toStringlyTyped: model returned an array, this is not allowed by either the XML or JSON tool.",
+			value,
+		)
+		return value.join(",")
+	}
+	if (value && typeof value === "object") {
+		if ("x" in value && "y" in value) {
+			console.debug("toStringlyTyped: x,y object", value)
+			return `${value.x},${value.y}`
+		}
+		if ("width" in value && "height" in value) {
+			console.debug("toStringlyTyped: width,height object", value)
+			return `${value.width},${value.height}`
+		}
+	}
+	console.debug("toStringlyTyped: returning undefined", value)
+	return undefined
+}
+
 export async function browserActionTool(
 	cline: Task,
 	block: ToolUse,
@@ -18,9 +44,9 @@ export async function browserActionTool(
 ) {
 	const action: BrowserAction | undefined = block.params.action as BrowserAction
 	const url: string | undefined = block.params.url
-	const coordinate: string | undefined = block.params.coordinate
+	const coordinate: string | undefined = toStringlyTyped_kilocode(block.params.coordinate)
 	const text: string | undefined = block.params.text
-	const size: string | undefined = block.params.size
+	const size: string | undefined = toStringlyTyped_kilocode(block.params.size)
 
 	if (!action || !browserActions.includes(action)) {
 		// checking for action to ensure it is complete and valid

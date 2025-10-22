@@ -39,14 +39,14 @@ describe("GhostStreamingParser", () => {
 		parser.reset()
 	})
 
-	describe("processChunk", () => {
-		it("should handle incomplete XML chunks", () => {
-			const chunk1 = "<change><search><![CDATA["
-			const result1 = parser.processChunk(chunk1)
+	describe("finishStream", () => {
+		it("should handle incomplete XML", () => {
+			const incompleteXml = "<change><search><![CDATA["
+			const result = parser.parseResponse(incompleteXml)
 
-			expect(result1.hasNewSuggestions).toBe(false)
-			expect(result1.isComplete).toBe(false)
-			expect(result1.suggestions.hasSuggestions()).toBe(false)
+			expect(result.hasNewSuggestions).toBe(false)
+			expect(result.isComplete).toBe(false)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
 		it("should parse complete change blocks", () => {
@@ -57,42 +57,33 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(completeChange)
+			const result = parser.parseResponse(completeChange)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 
-		it("should handle multiple chunks building up to complete change", () => {
-			const chunks = [
-				"<change><search><![CDATA[function test() {",
-				"\n\treturn true;",
-				"\n}]]></search><replace><![CDATA[function test() {",
-				"\n\t// Added comment",
-				"\n\treturn true;",
-				"\n}]]></replace></change>",
-			]
+		it("should handle complete response built from multiple chunks", () => {
+			const fullResponse = `<change><search><![CDATA[function test() {
+	return true;
+}]]></search><replace><![CDATA[function test() {
+	// Added comment
+	return true;
+}]]></replace></change>`
 
-			let finalResult
-			for (const chunk of chunks) {
-				finalResult = parser.processChunk(chunk)
-			}
+			const result = parser.parseResponse(fullResponse)
 
-			expect(finalResult!.hasNewSuggestions).toBe(true)
-			expect(finalResult!.suggestions.hasSuggestions()).toBe(true)
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})
 
-		it("should handle multiple complete changes in sequence", () => {
-			const change1 = `<change><search><![CDATA[function test() {]]></search><replace><![CDATA[function test() {
-	// First change]]></replace></change>`
+		it("should handle multiple complete changes", () => {
+			const fullResponse = `<change><search><![CDATA[function test() {]]></search><replace><![CDATA[function test() {
+	// First change]]></replace></change><change><search><![CDATA[return true;]]></search><replace><![CDATA[return false; // Second change]]></replace></change>`
 
-			const change2 = `<change><search><![CDATA[return true;]]></search><replace><![CDATA[return false; // Second change]]></replace></change>`
+			const result = parser.parseResponse(fullResponse)
 
-			const result1 = parser.processChunk(change1)
-			const result2 = parser.processChunk(change2)
-
-			expect(result1.hasNewSuggestions).toBe(true)
-			expect(result2.hasNewSuggestions).toBe(true)
+			expect(result.hasNewSuggestions).toBe(true)
 			expect(parser.getCompletedChanges()).toHaveLength(2)
 		})
 
@@ -104,7 +95,7 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(completeResponse)
+			const result = parser.parseResponse(completeResponse)
 
 			expect(result.isComplete).toBe(true)
 		})
@@ -115,7 +106,7 @@ describe("GhostStreamingParser", () => {
 }]]></search><replace><![CDATA[function test() {
 	// Added comment`
 
-			const result = parser.processChunk(incompleteResponse)
+			const result = parser.parseResponse(incompleteResponse)
 
 			expect(result.isComplete).toBe(false)
 		})
@@ -128,7 +119,7 @@ describe("GhostStreamingParser", () => {
 	return true;
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			// Verify cursor marker is preserved in search content for matching
@@ -142,7 +133,7 @@ describe("GhostStreamingParser", () => {
 			const changeWithCursor = `<change><search><![CDATA[return true;]]></search><replace><![CDATA[// Comment here<<<AUTOCOMPLETE_HERE>>>
 	return false;]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			const changes = parser.getCompletedChanges()
@@ -180,7 +171,7 @@ function fibonacci(n: number): number {
 		return fibonacci(n - 1) + fibonacci(n - 2);
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -208,7 +199,7 @@ function fibonacci(n: number): number {
 		return fibonacci(n - 1) + fibonacci(n - 2);
 }]]></replace></change>`
 
-			const result = parser.processChunk(changeWithCursor)
+			const result = parser.parseResponse(changeWithCursor)
 
 			expect(result.hasNewSuggestions).toBe(true)
 			expect(result.suggestions.hasSuggestions()).toBe(true)
@@ -217,23 +208,23 @@ function fibonacci(n: number): number {
 		it("should handle malformed XML gracefully", () => {
 			const malformedXml = `<change><search><![CDATA[test]]><replace><![CDATA[replacement]]></replace></change>`
 
-			const result = parser.processChunk(malformedXml)
+			const result = parser.parseResponse(malformedXml)
 
 			// Should not crash and should not produce suggestions
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
-		it("should handle empty chunks", () => {
-			const result = parser.processChunk("")
+		it("should handle empty response", () => {
+			const result = parser.parseResponse("")
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(true) // Empty is considered complete
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
-		it("should handle whitespace-only chunks", () => {
-			const result = parser.processChunk("   \n\t  ")
+		it("should handle whitespace-only response", () => {
+			const result = parser.parseResponse("   \n\t  ")
 
 			expect(result.hasNewSuggestions).toBe(false)
 			expect(result.isComplete).toBe(true)
@@ -245,7 +236,7 @@ function fibonacci(n: number): number {
 		it("should clear all state when reset", () => {
 			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
 
-			parser.processChunk(change)
+			parser.parseResponse(change)
 			expect(parser.buffer).not.toBe("")
 			expect(parser.getCompletedChanges()).toHaveLength(1)
 
@@ -256,70 +247,373 @@ function fibonacci(n: number): number {
 	})
 
 	describe("findBestMatch", () => {
-		it("should find exact matches", () => {
-			const content = "function test() {\n\treturn true;\n}"
-			const search = "return true;"
+		describe("exact matches", () => {
+			it("should find exact match at start", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "function test()"
 
-			const index = findBestMatch(content, search)
-			expect(index).toBeGreaterThan(-1)
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should find exact match in middle", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "return true;"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(19)
+			})
+
+			it("should find exact match at end", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(32)
+			})
+
+			it("should find exact multiline match", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
 		})
 
-		it("should handle whitespace differences", () => {
-			const content = "function test() {\n\treturn true;\n}"
-			const search = "function test() {\n    return true;\n}" // Different indentation
+		describe("whitespace variations", () => {
+			it("should handle tabs vs spaces", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "function test() {\n    return true;\n}" // Spaces instead of tab
 
-			const index = findBestMatch(content, search)
-			expect(index).toBeGreaterThan(-1)
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle extra spaces in content", () => {
+				const content = "function  test()  {\n\treturn true;\n}" // Extra spaces
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle different line endings (\\n vs \\r\\n)", () => {
+				const content = "function test() {\r\n\treturn true;\r\n}"
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle trailing whitespace differences", () => {
+				const content = "function test() {  \n\treturn true;\n}"
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle leading whitespace differences", () => {
+				const content = "  function test() {\n\treturn true;\n}"
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(2)
+			})
+
+			it("should handle multiple consecutive spaces vs single space", () => {
+				const content = "const x    =    5;"
+				const search = "const x = 5;"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle trailing newline in search pattern", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "return true;\n"
+
+				const index = findBestMatch(content, search)
+				// Fuzzy matcher handles this by normalizing whitespace
+				expect(index).toBe(19)
+			})
+
+			it("should handle trailing newline when content has more newlines", () => {
+				const content = "function test() {\n\treturn true;\n\n\n}"
+				const search = "return true;\n"
+
+				const index = findBestMatch(content, search)
+				// Fuzzy matcher handles this by normalizing whitespace
+				expect(index).toBe(19)
+			})
 		})
 
-		it("should return -1 for no match", () => {
-			const content = "function test() {\n\treturn true;\n}"
-			const search = "nonexistent code"
+		describe("newline matching", () => {
+			it("should NOT match newline with space", () => {
+				const content = "line1\nline2"
+				const search = "line1 line2"
 
-			const index = findBestMatch(content, search)
-			expect(index).toBe(-1)
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should NOT match newline with tab", () => {
+				const content = "line1\nline2"
+				const search = "line1\tline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should NOT match space with newline", () => {
+				const content = "line1 line2"
+				const search = "line1\nline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should match \\n with \\r\\n", () => {
+				const content = "line1\r\nline2"
+				const search = "line1\nline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should match \\r\\n with \\n", () => {
+				const content = "line1\nline2"
+				const search = "line1\r\nline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should match \\r with \\n", () => {
+				const content = "line1\rline2"
+				const search = "line1\nline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle multiple newlines correctly", () => {
+				const content = "line1\n\nline2"
+				const search = "line1\n\nline2"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should still handle spaces and tabs flexibly (non-newline whitespace)", () => {
+				const content = "const x  =  5;"
+				const search = "const x\t=\t5;"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle mixed whitespace correctly", () => {
+				const content = "function test() {\n\treturn  true;\n}"
+				const search = "function test() {\n    return true;\n}"
+
+				const index = findBestMatch(content, search)
+				// Should match because tabs/spaces are flexible but newlines must match
+				expect(index).toBe(0)
+			})
+		})
+
+		describe("edge cases", () => {
+			it("should return -1 for empty content", () => {
+				const content = ""
+				const search = "test"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should return -1 for empty pattern", () => {
+				const content = "function test() {}"
+				const search = ""
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should return -1 when pattern is longer than content", () => {
+				const content = "short"
+				const search = "this is a much longer pattern"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should return -1 for no match", () => {
+				const content = "function test() {\n\treturn true;\n}"
+				const search = "nonexistent code"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+
+			it("should handle pattern with only whitespace", () => {
+				const content = "a   b"
+				const search = "   "
+
+				const index = findBestMatch(content, search)
+				expect(index).toBeGreaterThanOrEqual(0)
+			})
+
+			it("should handle content with only whitespace", () => {
+				const content = "   \n\t  "
+				const search = "test"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(-1)
+			})
+		})
+
+		describe("real-world scenarios", () => {
+			it("should handle code with inconsistent indentation", () => {
+				// Use explicit \t and spaces to ensure correct test case
+				const content = 'function example() {\n\tif (true) {\n\t\tconsole.log("test");\n\t}\n}'
+				const search = 'function example() {\n    if (true) {\n        console.log("test");\n    }\n}'
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle code with mixed tabs and spaces", () => {
+				const content = "function test() {\n\t  return true;\n}"
+				const search = "function test() {\n    return true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle actual different line endings in code", () => {
+				const content = "function test() {\r\n\treturn true;\r\n}"
+				const search = "function test() {\n\treturn true;\n}"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should find match when content has extra trailing whitespace", () => {
+				const content = "const x = 5;   \nconst y = 10;"
+				const search = "const x = 5;\nconst y = 10;"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(0)
+			})
+
+			it("should handle partial matches correctly", () => {
+				const content = "function test() { return true; }\nfunction test2() { return false; }"
+				const search = "function test2() { return false; }"
+
+				const index = findBestMatch(content, search)
+				expect(index).toBe(33)
+			})
+		})
+
+		describe("performance", () => {
+			it("should handle large content efficiently", () => {
+				const content = "x".repeat(10000) + "needle" + "y".repeat(10000)
+				const search = "needle"
+
+				const startTime = performance.now()
+				const index = findBestMatch(content, search)
+				const endTime = performance.now()
+
+				expect(index).toBe(10000)
+				expect(endTime - startTime).toBeLessThan(50) // Should complete quickly
+			})
+
+			it("should handle large pattern efficiently", () => {
+				const pattern = "x".repeat(1000)
+				const content = "y".repeat(5000) + pattern + "z".repeat(5000)
+
+				const startTime = performance.now()
+				const index = findBestMatch(content, pattern)
+				const endTime = performance.now()
+
+				expect(index).toBe(5000)
+				expect(endTime - startTime).toBeLessThan(100)
+			})
+
+			it("should handle worst-case scenario (no match with similar patterns)", () => {
+				const content = "a".repeat(1000) + "b"
+				const search = "a".repeat(1000) + "c"
+
+				const startTime = performance.now()
+				const index = findBestMatch(content, search)
+				const endTime = performance.now()
+
+				expect(index).toBe(-1)
+				expect(endTime - startTime).toBeLessThan(200)
+			})
+		})
+
+		describe("trimmed search fallback", () => {
+			it("should NOT find match with leading whitespace in pattern (fuzzy matcher limitation)", () => {
+				const content = "function test() {}"
+				const search = "  function test() {}"
+
+				const index = findBestMatch(content, search)
+				// Fuzzy matcher doesn't handle leading whitespace in pattern that doesn't exist in content
+				expect(index).toBe(-1)
+			})
+
+			it("should find match with trailing whitespace in pattern", () => {
+				const content = "function test() {}"
+				const search = "function test() {}  "
+
+				const index = findBestMatch(content, search)
+				// Fuzzy matcher now allows trailing whitespace in pattern
+				expect(index).toBe(0)
+			})
+
+			it("should NOT find match with both leading and trailing whitespace in pattern (fuzzy matcher limitation)", () => {
+				const content = "function test() {}"
+				const search = "  function test() {}  "
+
+				const index = findBestMatch(content, search)
+				// Fuzzy matcher doesn't handle leading/trailing whitespace in pattern that doesn't exist in content
+				expect(index).toBe(-1)
+			})
 		})
 	})
 
 	describe("error handling", () => {
-		it("should throw error if not initialized", () => {
-			const uninitializedParser = new GhostStreamingParser()
-
-			expect(() => {
-				uninitializedParser.processChunk("test")
-			}).toThrow("Parser not initialized")
-		})
-
 		it("should handle context without document", () => {
 			const contextWithoutDoc = {} as GhostSuggestionContext
 			parser.initialize(contextWithoutDoc)
 
 			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
-			const result = parser.processChunk(change)
+			const result = parser.parseResponse(change)
 
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 	})
 
 	describe("performance", () => {
-		it("should handle large chunks efficiently", () => {
+		it("should handle large responses efficiently", () => {
 			const largeChange = `<change><search><![CDATA[${"x".repeat(10000)}]]></search><replace><![CDATA[${"y".repeat(10000)}]]></replace></change>`
 
 			const startTime = performance.now()
-			const result = parser.processChunk(largeChange)
+			const result = parser.parseResponse(largeChange)
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(100) // Should complete in under 100ms
 			expect(result.hasNewSuggestions).toBe(true)
 		})
 
-		it("should handle many small chunks efficiently", () => {
-			const chunks = Array(1000).fill("x")
+		it("should handle large concatenated responses efficiently", () => {
+			const largeResponse = Array(1000).fill("x").join("")
 			const startTime = performance.now()
 
-			for (const chunk of chunks) {
-				parser.processChunk(chunk)
-			}
+			parser.parseResponse(largeResponse)
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(200) // Should complete in under 200ms

@@ -6,12 +6,14 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloBaseUriFromToken, isGlobalStateKey } from "@roo-code/types"
 import {
+	MaybeTypedWebviewMessage,
 	ProfileData,
 	SeeNewChangesPayload,
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
+	UpdateGlobalStateMessage,
 } from "../../shared/WebviewMessage"
 // kilocode_change end
 
@@ -85,7 +87,7 @@ import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } f
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
-	message: WebviewMessage,
+	message: MaybeTypedWebviewMessage, // kilocode_change switch to MaybeTypedWebviewMessage for better type-safety
 	marketplaceManager?: MarketplaceManager,
 ) => {
 	// Utility functions provided for concise get/update of global state via contextProxy API.
@@ -3505,6 +3507,16 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		// kilocode_change start: Type-safe global state handler
+		case "updateGlobalState": {
+			const { stateKey, stateValue } = message as UpdateGlobalStateMessage
+			if (stateKey !== undefined && stateValue !== undefined && isGlobalStateKey(stateKey)) {
+				await updateGlobalState(stateKey, stateValue)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+		// kilocode_change end: Type-safe global state handler
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break
