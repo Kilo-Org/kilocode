@@ -133,7 +133,8 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					"KeyboardProvider",
 				)
 			}
-			broadcastKey(createPasteKey(fallbackPasteBufferRef.current))
+			const normalizedBuffer = fallbackPasteBufferRef.current.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+			broadcastKey(createPasteKey(normalizedBuffer))
 			isFallbackPastingRef.current = false
 			fallbackPasteBufferRef.current = ""
 		}
@@ -147,7 +148,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Normalize line endings: convert \r\n and \r to \n
 			// This handles different line ending formats from various terminals/platforms
 			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-
 			broadcastKey(createPasteKey(normalizedBuffer))
 			setPasteMode(false)
 			isPasteRef.current = false
@@ -225,7 +225,36 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			if (requiresFallback) {
 				const now = Date.now()
 				const timeSinceLastKey = now - lastKeypressTimeRef.current
-				lastKeypressTimeRef.current = now
+
+				// Check if this is a navigation key that should never trigger paste detection
+				const isNavigationKey =
+					parsedKey.name &&
+					[
+						"up",
+						"down",
+						"left",
+						"right",
+						"home",
+						"end",
+						"pageup",
+						"pagedown",
+						"tab",
+						"escape",
+						"backspace",
+						"delete",
+						"f1",
+						"f2",
+						"f3",
+						"f4",
+						"f5",
+						"f6",
+						"f7",
+						"f8",
+						"f9",
+						"f10",
+						"f11",
+						"f12",
+					].includes(parsedKey.name)
 
 				// If we're already in paste mode, continue accumulating
 				if (isFallbackPastingRef.current) {
@@ -235,14 +264,21 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					clearFallbackPasteTimer()
 					fallbackPasteTimerRef.current = setTimeout(() => {
 						completeFallbackPaste()
-					}, 50)
+					}, 100)
 
 					return // Don't process this key normally
 				}
 
+				// Check if this is a newline/return key
+				const isNewline =
+					parsedKey.name === "return" ||
+					parsedKey.sequence === "\n" ||
+					parsedKey.sequence === "\r" ||
+					parsedKey.sequence === "\r\n"
+
 				// Only start paste detection on newline with rapid subsequent input
-				// This avoids false positives from fast typing or key repeats
-				if (parsedKey.name === "return" && timeSinceLastKey <= 10) {
+				// Ignore navigation keys completely - they should never trigger paste mode
+				if (!isNavigationKey && isNewline && timeSinceLastKey <= 20) {
 					// Rapid newline - likely start of multiline paste
 					isFallbackPastingRef.current = true
 					fallbackPasteBufferRef.current = parsedKey.sequence
@@ -251,9 +287,15 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					clearFallbackPasteTimer()
 					fallbackPasteTimerRef.current = setTimeout(() => {
 						completeFallbackPaste()
-					}, 50)
+					}, 100)
 
 					return // Don't process this key normally
+				}
+
+				// Update last keypress time only for non-navigation keys
+				// This prevents arrow key repeats from affecting timing
+				if (!isNavigationKey) {
+					lastKeypressTimeRef.current = now
 				}
 			}
 
