@@ -419,6 +419,15 @@ export class ClineProvider
 				return
 			}
 
+			// Get project ID from Kilo config
+			const kiloConfig = await this.getKiloConfig()
+			const projectId = kiloConfig?.project?.id
+
+			if (!projectId) {
+				this.log("[updateCodeIndexWithKiloProps] No projectId found in Kilo config, skipping code index update")
+				return
+			}
+
 			// Get or create the code index manager for the current workspace
 			let codeIndexManager = this.getCurrentWorkspaceCodeIndexManager()
 
@@ -437,6 +446,7 @@ export class ClineProvider
 				codeIndexManager.setKiloOrgCodeIndexProps({
 					kilocodeToken: apiConfiguration.kilocodeToken,
 					organizationId: apiConfiguration.kilocodeOrganizationId,
+					projectId,
 				})
 
 				// Initialize the manager with context proxy if not already initialized

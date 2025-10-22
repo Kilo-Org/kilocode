@@ -168,7 +168,7 @@ export async function codebaseSearchTool(
 				score: result.score,
 				startLine: result.payload.startLine,
 				endLine: result.payload.endLine,
-				codeChunk: result.payload.codeChunk.trim(),
+				codeChunk: "", //result.payload.codeChunk.trim(),
 			})
 		})
 
@@ -185,7 +185,6 @@ ${jsonResult.results
 		(result) => `File path: ${result.filePath}
 Score: ${result.score}
 Lines: ${result.startLine}-${result.endLine}
-Code Chunk: ${result.codeChunk}
 `,
 	)
 	.join("\n")}`

@@ -3188,23 +3188,73 @@ export const webviewMessageHandler = async (
 					provider.log("Cannot start indexing: No workspace folder open")
 					return
 				}
+
+				// kilocode_change start: Set Kilo org props before initialization
+				const { apiConfiguration } = await provider.getState()
+				if (apiConfiguration.kilocodeToken && apiConfiguration.kilocodeOrganizationId) {
+					provider.log(
+						`[startIndexing] Setting Kilo org props: orgId=${apiConfiguration.kilocodeOrganizationId}`,
+					)
+					// Get project ID from Kilo config
+					const kiloConfig = await provider.getKiloConfig()
+					const projectId = kiloConfig?.project?.id
+
+					if (projectId) {
+						manager.setKiloOrgCodeIndexProps({
+							kilocodeToken: apiConfiguration.kilocodeToken,
+							organizationId: apiConfiguration.kilocodeOrganizationId,
+							projectId,
+						})
+					} else {
+						provider.log(`[startIndexing] No projectId found in Kilo config`)
+					}
+				} else {
+					provider.log(
+						`[startIndexing] No Kilo org props available: token=${!!apiConfiguration.kilocodeToken}, orgId=${!!apiConfiguration.kilocodeOrganizationId}`,
+					)
+				}
+				// kilocode_change end
+
+				provider.log(
+					`[startIndexing] Feature enabled: ${manager.isFeatureEnabled}, configured: ${manager.isFeatureConfigured}, initialized: ${manager.isInitialized}`,
+				)
+
 				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
 					if (!manager.isInitialized) {
-						await manager.initialize(provider.contextProxy)
+						provider.log(`[startIndexing] Initializing manager...`)
+						try {
+							await manager.initialize(provider.contextProxy)
+							provider.log(`[startIndexing] Manager initialized successfully`)
+						} catch (initError) {
+							provider.log(
+								`[startIndexing] Initialization failed: ${initError instanceof Error ? initError.message : String(initError)}`,
+							)
+							provider.log(
+								`[startIndexing] Stack: ${initError instanceof Error ? initError.stack : "N/A"}`,
+							)
+							throw initError
+						}
 					}
 
 					// startIndexing now handles error recovery internally
+					provider.log(`[startIndexing] Starting indexing...`)
 					manager.startIndexing()
 
 					// If startIndexing recovered from error, we need to reinitialize
 					if (!manager.isInitialized) {
+						provider.log(`[startIndexing] Manager not initialized after startIndexing, reinitializing...`)
 						await manager.initialize(provider.contextProxy)
 						// Try starting again after initialization
 						manager.startIndexing()
 					}
+				} else {
+					provider.log(
+						`[startIndexing] Cannot start: enabled=${manager.isFeatureEnabled}, configured=${manager.isFeatureConfigured}`,
+					)
 				}
 			} catch (error) {
 				provider.log(`Error starting indexing: ${error instanceof Error ? error.message : String(error)}`)
+				provider.log(`Stack: ${error instanceof Error ? error.stack : "N/A"}`)
 			}
 			break
 		}

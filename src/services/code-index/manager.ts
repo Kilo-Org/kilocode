@@ -81,16 +81,9 @@ export class CodeIndexManager {
 	}
 
 	private assertInitialized() {
-		// kilocode_change start: In Kilo org mode, searchService is not required
-		const isKiloOrgMode = this._configManager?.isKiloOrgMode ?? false
-		const requiredServices = isKiloOrgMode
-			? !this._configManager || !this._orchestrator || !this._cacheManager
-			: !this._configManager || !this._orchestrator || !this._searchService || !this._cacheManager
-
-		if (requiredServices) {
+		if (!this._configManager || !this._orchestrator || !this._searchService || !this._cacheManager) {
 			throw new Error("CodeIndexManager not initialized. Call initialize() first.")
 		}
-		// kilocode_change end
 	}
 
 	public get state(): IndexingState {
@@ -162,7 +155,18 @@ export class CodeIndexManager {
 		const needsServiceRecreation = !this._serviceFactory || requiresRestart
 
 		if (needsServiceRecreation) {
-			await this._recreateServices()
+			try {
+				await this._recreateServices()
+			} catch (error) {
+				// Log the error and set error state
+				console.error("[CodeIndexManager] Failed to recreate services:", error)
+				this._stateManager.setSystemState(
+					"Error",
+					`Failed to initialize: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				// Re-throw to prevent further initialization
+				throw error
+			}
 		}
 
 		// 5. Handle Indexing Start/Restart
@@ -398,15 +402,15 @@ export class CodeIndexManager {
 			fileWatcher!,
 		)
 
-		// (Re)Initialize search service only if not in Kilo org mode
-		if (!isKiloOrgMode) {
-			this._searchService = new CodeIndexSearchService(
-				this._configManager!,
-				this._stateManager,
-				embedder!,
-				vectorStore!,
-			)
-		}
+		// kilocode_change start: Always create search service (it handles both local and Kilo org mode)
+		// In Kilo org mode, embedder and vectorStore will be null, but search service handles this
+		this._searchService = new CodeIndexSearchService(
+			this._configManager!,
+			this._stateManager,
+			embedder!,
+			vectorStore!,
+		)
+		// kilocode_change end
 
 		// Clear any error state after successful recreation
 		this._stateManager.setSystemState("Standby", "")
@@ -468,6 +472,7 @@ export class CodeIndexManager {
 	private _kiloOrgCodeIndexProps: {
 		organizationId: string
 		kilocodeToken: string
+		projectId: string
 	} | null = null
 
 	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
