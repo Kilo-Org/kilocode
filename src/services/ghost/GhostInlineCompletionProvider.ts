@@ -226,12 +226,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	/**
 	 * Determine if inline suggestions should be triggered for current state
 	 */
-	public shouldTriggerInline(editor: vscode.TextEditor, suggestions: GhostSuggestionsState): boolean {
-		if (!suggestions.hasSuggestions()) {
+	public shouldTriggerInline(editor: vscode.TextEditor): boolean {
+		if (!this.suggestions.hasSuggestions()) {
 			return false
 		}
 
-		const file = suggestions.getFile(editor.document.uri)
+		const file = this.suggestions.getFile(editor.document.uri)
 		if (!file) {
 			return false
 		}

@@ -427,14 +427,10 @@ export class GhostProvider {
 	private async render() {
 		await this.updateGlobalContext()
 
-		// Update inline completion provider with current suggestions
 		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
 
-		// Determine if we should trigger inline suggestions
 		const editor = vscode.window.activeTextEditor
-		const shouldTriggerInline = editor
-			? this.inlineCompletionProvider.shouldTriggerInline(editor, this.suggestions)
-			: false
+		const shouldTriggerInline = editor ? this.inlineCompletionProvider.shouldTriggerInline(editor) : false
 
 		// Trigger or hide inline suggestions as appropriate
 		if (shouldTriggerInline) {
