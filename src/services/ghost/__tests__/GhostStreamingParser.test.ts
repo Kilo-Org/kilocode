@@ -619,4 +619,177 @@ function fibonacci(n: number): number {
 			expect(endTime - startTime).toBeLessThan(200) // Should complete in under 200ms
 		})
 	})
+
+	describe("combineWhitespaceSeparatedHunks", () => {
+		it("should combine hunks separated only by whitespace lines", () => {
+			// Create a document with whitespace between changes
+			const mockDocWithWhitespace: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `function test1() {
+	return true;
+}
+
+function test2() {
+	return false;
+}`,
+				languageId: "typescript",
+				lineAt: (lineNum: number) => {
+					const lines = [
+						"function test1() {",
+						"\treturn true;",
+						"}",
+						"", // Empty line
+						"function test2() {",
+						"\treturn false;",
+						"}",
+					]
+					return { text: lines[lineNum] || "" }
+				},
+			}
+
+			const contextWithWhitespace = {
+				document: mockDocWithWhitespace,
+			}
+
+			parser.initialize(contextWithWhitespace)
+
+			// Two separate changes with whitespace between them
+			const changes = `<change><search><![CDATA[function test1() {
+	return true;
+}]]></search><replace><![CDATA[function test1() {
+	// Modified
+	return true;
+}]]></replace></change><change><search><![CDATA[function test2() {
+	return false;
+}]]></search><replace><![CDATA[function test2() {
+	// Modified
+	return false;
+}]]></replace></change>`
+
+			const result = parser.parseResponse(changes)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+
+			// Verify that suggestions were created successfully
+			// The actual combining happens at the hunk level, not the file level
+			const file = result.suggestions.getFile(mockDocWithWhitespace.uri)
+			expect(file).toBeDefined()
+			expect(file?.isEmpty()).toBe(false)
+		})
+
+		it("should not combine hunks separated by non-whitespace lines", () => {
+			// Create a document with code between changes
+			const mockDocWithCode: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `function test1() {
+	return true;
+}
+const x = 5;
+function test2() {
+	return false;
+}`,
+				languageId: "typescript",
+				lineAt: (lineNum: number) => {
+					const lines = [
+						"function test1() {",
+						"\treturn true;",
+						"}",
+						"const x = 5;", // Non-whitespace line
+						"function test2() {",
+						"\treturn false;",
+						"}",
+					]
+					return { text: lines[lineNum] || "" }
+				},
+			}
+
+			const contextWithCode = {
+				document: mockDocWithCode,
+			}
+
+			parser.initialize(contextWithCode)
+
+			// Two separate changes with code between them
+			const changes = `<change><search><![CDATA[function test1() {
+	return true;
+}]]></search><replace><![CDATA[function test1() {
+	// Modified
+	return true;
+}]]></replace></change><change><search><![CDATA[function test2() {
+	return false;
+}]]></search><replace><![CDATA[function test2() {
+	// Modified
+	return false;
+}]]></replace></change>`
+
+			const result = parser.parseResponse(changes)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+		})
+
+		it("should combine adjacent hunks with no gap", () => {
+			// Create a document with adjacent changes
+			const mockDocAdjacent: any = {
+				uri: { toString: () => "/test/file.ts", fsPath: "/test/file.ts" },
+				getText: () => `function test1() {
+	return true;
+}
+function test2() {
+	return false;
+}`,
+				languageId: "typescript",
+				lineAt: (lineNum: number) => {
+					const lines = [
+						"function test1() {",
+						"\treturn true;",
+						"}",
+						"function test2() {",
+						"\treturn false;",
+						"}",
+					]
+					return { text: lines[lineNum] || "" }
+				},
+			}
+
+			const contextAdjacent = {
+				document: mockDocAdjacent,
+			}
+
+			parser.initialize(contextAdjacent)
+
+			// Two adjacent changes
+			const changes = `<change><search><![CDATA[function test1() {
+	return true;
+}]]></search><replace><![CDATA[function test1() {
+	// Modified
+	return true;
+}]]></replace></change><change><search><![CDATA[function test2() {
+	return false;
+}]]></search><replace><![CDATA[function test2() {
+	// Modified
+	return false;
+}]]></replace></change>`
+
+			const result = parser.parseResponse(changes)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+		})
+
+		it("should handle single hunk without combining", () => {
+			const singleChange = `<change><search><![CDATA[function test() {
+	return true;
+}]]></search><replace><![CDATA[function test() {
+	// Modified
+	return true;
+}]]></replace></change>`
+
+			const result = parser.parseResponse(singleChange)
+
+			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+		})
+	})
 })

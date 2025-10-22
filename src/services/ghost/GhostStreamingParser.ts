@@ -426,13 +426,94 @@ export class GhostStreamingParser {
 		return structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
 	}
 
+	/**
+	 * Combine hunks that are only separated by whitespace lines
+	 */
+	private combineWhitespaceSeparatedHunks(hunks: ParsedDiff["hunks"]): ParsedDiff["hunks"] {
+		if (hunks.length <= 1) {
+			return hunks
+		}
+
+		const combined: ParsedDiff["hunks"] = []
+		let currentHunk = hunks[0]
+
+		for (let i = 1; i < hunks.length; i++) {
+			const nextHunk = hunks[i]
+
+			// Calculate the gap between current hunk end and next hunk start
+			const currentHunkEnd = currentHunk.oldStart + currentHunk.oldLines - 1
+			const nextHunkStart = nextHunk.oldStart
+			const gapSize = nextHunkStart - currentHunkEnd - 1
+
+			// Check if the gap contains only whitespace
+			let shouldCombine = false
+			if (gapSize > 0) {
+				// Get the lines in the gap from the document
+				const gapStartLine = currentHunkEnd
+				const gapEndLine = nextHunkStart - 1
+
+				// Check if all lines in the gap are whitespace-only
+				let allWhitespace = true
+				for (let lineNum = gapStartLine; lineNum <= gapEndLine; lineNum++) {
+					const line = this.context?.document.lineAt(lineNum).text || ""
+					if (line.trim().length > 0) {
+						allWhitespace = false
+						break
+					}
+				}
+
+				shouldCombine = allWhitespace
+			} else if (gapSize === 0) {
+				// Hunks are adjacent, combine them
+				shouldCombine = true
+			}
+
+			if (shouldCombine) {
+				// Merge nextHunk into currentHunk
+				const gapLines: string[] = []
+
+				// Add whitespace lines between hunks as context
+				if (gapSize > 0) {
+					const gapStartLine = currentHunkEnd
+					const gapEndLine = nextHunkStart - 1
+
+					for (let lineNum = gapStartLine; lineNum <= gapEndLine; lineNum++) {
+						const line = this.context?.document.lineAt(lineNum).text || ""
+						gapLines.push(" " + line)
+					}
+				}
+
+				// Combine the hunks
+				currentHunk = {
+					oldStart: currentHunk.oldStart,
+					oldLines: currentHunk.oldLines + gapSize + nextHunk.oldLines,
+					newStart: currentHunk.newStart,
+					newLines: currentHunk.newLines + gapSize + nextHunk.newLines,
+					lines: [...currentHunk.lines, ...gapLines, ...nextHunk.lines],
+				}
+			} else {
+				// Can't combine, push current and move to next
+				combined.push(currentHunk)
+				currentHunk = nextHunk
+			}
+		}
+
+		// Don't forget to add the last hunk
+		combined.push(currentHunk)
+
+		return combined
+	}
+
 	private convertToSuggestions(patch: ParsedDiff | undefined, document: vscode.TextDocument): GhostSuggestionsState {
 		const suggestions = new GhostSuggestionsState()
 		if (!patch) return suggestions
 
 		const suggestionFile = suggestions.addFile(document.uri)
 
-		for (const hunk of patch.hunks) {
+		// Combine hunks that are only separated by whitespace
+		const combinedHunks = this.combineWhitespaceSeparatedHunks(patch.hunks)
+
+		for (const hunk of combinedHunks) {
 			let currentOldLineNumber = hunk.oldStart
 			let currentNewLineNumber = hunk.newStart
 
