@@ -107,17 +107,13 @@ export function updateCacheEntry(
 	fileHash: string,
 	chunkCount: number,
 ): ClientCache {
-	return {
-		...cache,
-		files: {
-			...cache.files,
-			[filePath]: {
-				hash: fileHash,
-				lastIndexed: Date.now(),
-				chunkCount,
-			},
-		},
+	cache.files[filePath] = {
+		hash: fileHash,
+		lastIndexed: Date.now(),
+		chunkCount,
 	}
+
+	return cache
 }
 
 /**

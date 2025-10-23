@@ -134,7 +134,7 @@ function createChunk(
 	isBaseBranch: boolean,
 ): ManagedCodeChunk {
 	const content = lines.join("\n")
-	const chunkHash = generateChunkHash(filePath, startLine, endLine, content)
+	const chunkHash = generateChunkHash(filePath, startLine, endLine)
 	const id = generateChunkId(chunkHash, organizationId, gitBranch)
 
 	return {
@@ -166,11 +166,8 @@ function createChunk(
  * @param content Chunk content
  * @returns SHA-256 hash string
  */
-function generateChunkHash(filePath: string, startLine: number, endLine: number, content: string): string {
-	const contentPreview = content.slice(0, 100)
-	return createHash("sha256")
-		.update(`${filePath}-${startLine}-${endLine}-${content.length}-${contentPreview}`)
-		.digest("hex")
+function generateChunkHash(filePath: string, startLine: number, endLine: number): string {
+	return createHash("sha256").update(`${filePath}-${startLine}-${endLine}`).digest("hex")
 }
 
 /**

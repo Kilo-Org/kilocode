@@ -49,7 +49,15 @@ export { createFileWatcher } from "./watcher"
 export { chunkFile, calculateFileHash, getDefaultChunkerConfig } from "./chunker"
 
 // API client functions
-export { upsertChunks, searchCode, deleteFiles, deleteFile, getServerManifest } from "./api-client"
+export {
+	upsertChunks,
+	searchCode,
+	deleteFiles,
+	deleteFile,
+	getServerManifest,
+	deleteBranchIndex,
+	deleteProjectIndex,
+} from "./api-client"
 
 // Git utilities
 export {
@@ -61,6 +69,8 @@ export {
 	getBaseBranch,
 	isGitRepository,
 	hasUncommittedChanges,
+	getGitTrackedFiles,
+	getGitTrackedFilesSync,
 } from "./git-utils"
 
 // Cache utilities

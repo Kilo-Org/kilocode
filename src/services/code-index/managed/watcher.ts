@@ -7,6 +7,7 @@
 
 import * as vscode from "vscode"
 import * as path from "path"
+import { execSync } from "child_process"
 import { indexFile, handleFileDeleted } from "./scanner"
 import { ManagedIndexingConfig, FileChangeEvent, ClientCache } from "./types"
 import { loadClientCache, saveClientCache } from "./cache"

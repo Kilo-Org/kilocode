@@ -92,23 +92,24 @@ export async function startIndexing(
 			`Initial scan complete: ${result.filesProcessed} files processed, ${result.chunksIndexed} chunks indexed`,
 		)
 
-		// Start file watcher
-		const watcher = createFileWatcher(config, context, (events) => {
-			logger.info(`File watcher processed ${events.length} changes`)
-		})
+		// TODO: Re-enable file watcher once git-tracking issues are resolved
+		// File watcher is temporarily disabled to prevent endless loops with .gitignored files
+		// const watcher = createFileWatcher(config, context, (events) => {
+		// 	logger.info(`File watcher processed ${events.length} changes`)
+		// })
 
-		// Update state: watching
+		// Update state: indexed (not watching)
 		onStateChange?.({
 			status: "watching",
-			message: "Index up-to-date. Watching for changes...",
+			message: "Index up-to-date. File watching temporarily disabled.",
 			gitBranch,
 			lastSyncTime: Date.now(),
 			totalFiles: result.filesProcessed,
 			totalChunks: result.chunksIndexed,
 		})
 
-		// Return disposable that stops the watcher
-		return vscode.Disposable.from(watcher, {
+		// Return disposable that cleans up state
+		return vscode.Disposable.from({
 			dispose: () => {
 				onStateChange?.({
 					status: "idle",

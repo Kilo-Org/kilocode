@@ -15,6 +15,21 @@ vi.mock("../git-utils", () => ({
 	isGitRepository: vi.fn(() => true),
 	getCurrentBranch: vi.fn(() => "main"),
 }))
+vi.mock("@roo-code/telemetry", () => ({
+	TelemetryService: {
+		instance: {
+			captureEvent: vi.fn(),
+		},
+	},
+}))
+vi.mock("../../../utils/logging", () => ({
+	logger: {
+		info: vi.fn(),
+		error: vi.fn(),
+		warn: vi.fn(),
+		debug: vi.fn(),
+	},
+}))
 
 describe("Managed Indexing Error Handling", () => {
 	let mockContext: vscode.ExtensionContext

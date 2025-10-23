@@ -128,11 +128,12 @@ export function getToolDescriptionsForMode(
 	// Add always available tools
 	ALWAYS_AVAILABLE_TOOLS.forEach((tool) => tools.add(tool))
 
-	// Conditionally exclude codebase_search if feature is disabled or not configured
-	if (
-		!codeIndexManager ||
-		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
-	) {
+	// Conditionally exclude codebase_search if neither local nor managed indexing is available
+	const hasLocalIndexing =
+		codeIndexManager?.isFeatureEnabled && codeIndexManager?.isFeatureConfigured && codeIndexManager?.isInitialized
+	const hasManagedIndexing = codeIndexManager?.isManagedIndexingAvailable
+
+	if (!codeIndexManager || !(hasLocalIndexing || hasManagedIndexing)) {
 		tools.delete("codebase_search")
 	}
 

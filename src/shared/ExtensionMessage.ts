@@ -154,6 +154,9 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
+		| "clearManagedLocalCache" // kilocode_change
+		| "deleteManagedBranchIndex" // kilocode_change
+		| "deleteManagedProjectIndex" // kilocode_change
 	text?: string
 	// kilocode_change start
 	payload?:

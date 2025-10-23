@@ -16,7 +16,13 @@ import { scannerExtensions } from "../shared/supported-extensions"
 import { generateRelativeFilePath } from "../shared/get-relative-path"
 import { chunkFile, calculateFileHash } from "./chunker"
 import { upsertChunks, deleteFiles } from "./api-client"
-import { getCurrentBranch, getGitDiff, isBaseBranch as checkIsBaseBranch, isGitRepository } from "./git-utils"
+import {
+	getCurrentBranch,
+	getGitDiff,
+	isBaseBranch as checkIsBaseBranch,
+	isGitRepository,
+	getGitTrackedFilesSync,
+} from "./git-utils"
 import {
 	loadClientCache,
 	saveClientCache,
@@ -75,7 +81,7 @@ export async function scanDirectory(
 		// Determine which files to scan
 		const filesToScan = await getFilesToScan(config.workspacePath, currentBranch, isBase)
 
-		logger.info(`Scanning ${filesToScan.length} files on branch ${currentBranch} (isBase: ${isBase})`)
+		console.info(`Scanning ${filesToScan.length} files on branch ${currentBranch} (isBase: ${isBase})`)
 
 		// Process files
 		const result = await processFiles(filesToScan, config, context, cache, currentBranch, isBase, onProgress)
@@ -93,7 +99,7 @@ export async function scanDirectory(
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))
 		errors.push(err)
-		logger.error(`Scan directory failed: ${err.message}`)
+		console.error(`Scan directory failed: ${err.message}`)
 		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 			error: err.message,
 			stack: err.stack,
@@ -127,46 +133,54 @@ async function getFilesToScan(workspacePath: string, currentBranch: string, isBa
 		const diff = getGitDiff(currentBranch, "main", workspacePath)
 		const changedFiles = [...diff.added, ...diff.modified]
 
-		// Filter to only supported files
-		return changedFiles.filter((file) => {
-			const ext = path.extname(file).toLowerCase()
-			return scannerExtensions.includes(ext)
-		})
+		// Convert relative paths from git to absolute paths and filter to only supported files
+		return changedFiles
+			.filter((file) => {
+				const ext = path.extname(file).toLowerCase()
+				return scannerExtensions.includes(ext)
+			})
+			.map((file) => path.join(workspacePath, file))
 	}
 }
 
 /**
- * Gets all supported files in the workspace
+ * Gets all supported files in the workspace that are tracked by git
  *
  * @param workspacePath Workspace root path
- * @returns Array of supported file paths
+ * @returns Array of supported file paths (absolute paths)
  */
 async function getAllSupportedFiles(workspacePath: string): Promise<string[]> {
-	// Get all files recursively
-	const [allPaths] = await listFiles(workspacePath, true, MAX_LIST_FILES_LIMIT_CODE_INDEX)
+	// Get all git-tracked files (relative paths)
+	const gitTrackedFiles = getGitTrackedFilesSync(workspacePath)
 
-	// Filter out directories
-	const filePaths = allPaths.filter((p) => !p.endsWith("/"))
+	logger.info(`Found ${gitTrackedFiles.length} git-tracked files`)
 
-	// Initialize ignore controller
+	// Initialize ignore controller for .rooignore
 	const ignoreController = new RooIgnoreController(workspacePath)
 	await ignoreController.initialize()
 
 	// Filter by .rooignore
-	const allowedPaths = ignoreController.filterPaths(filePaths)
+	const allowedPaths = ignoreController.filterPaths(gitTrackedFiles)
 
-	// Filter by supported extensions and ignored directories
-	return allowedPaths.filter((filePath) => {
-		const ext = path.extname(filePath).toLowerCase()
-		const relativeFilePath = generateRelativeFilePath(filePath, workspacePath)
+	logger.info(`After .rooignore filter: ${allowedPaths.length} files`)
 
-		// Check if file is in an ignored directory
-		if (isPathInIgnoredDirectory(filePath)) {
-			return false
-		}
+	// Filter by supported extensions and convert to absolute paths
+	const supportedFiles = allowedPaths
+		.filter((filePath) => {
+			const ext = path.extname(filePath).toLowerCase()
 
-		return scannerExtensions.includes(ext)
-	})
+			// Check if file is in an ignored directory
+			if (isPathInIgnoredDirectory(filePath)) {
+				return false
+			}
+
+			return scannerExtensions.includes(ext)
+		})
+		.map((filePath) => path.join(workspacePath, filePath))
+
+	logger.info(`After extension filter: ${supportedFiles.length} files`)
+
+	return supportedFiles
 }
 
 /**
@@ -226,7 +240,7 @@ async function processFiles(
 				const stats = await stat(filePath)
 				if (stats.size > MAX_FILE_SIZE_BYTES) {
 					filesSkipped++
-					logger.warn(`Skipping large file: ${filePath} (${stats.size} bytes)`)
+					console.warn(`Skipping large file: ${filePath} (${stats.size} bytes)`)
 					return
 				}
 
@@ -283,9 +297,9 @@ async function processFiles(
 				const contextualError = new Error(`Failed to process ${filePath}: ${err.message}`)
 				contextualError.stack = err.stack
 				errors.push(contextualError)
-				logger.error(`Error processing file ${filePath}: ${err.message}`)
+				console.error(`Error processing file ${filePath}: ${err.message}`)
 				if (err.stack) {
-					logger.error(`Stack trace: ${err.stack}`)
+					console.error(`Stack trace: ${err.stack}`)
 				}
 				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 					error: err.message,
@@ -337,7 +351,7 @@ export async function indexFile(
 		// Check file size
 		const stats = await stat(filePath)
 		if (stats.size > MAX_FILE_SIZE_BYTES) {
-			logger.warn(`Skipping large file: ${filePath} (${stats.size} bytes)`)
+			console.warn(`Skipping large file: ${filePath} (${stats.size} bytes)`)
 			return cache
 		}
 
@@ -376,12 +390,12 @@ export async function indexFile(
 		// Save cache
 		await saveClientCache(context, config.workspacePath, updatedCache)
 
-		logger.info(`Indexed file: ${relativeFilePath} (${chunks.length} chunks)`)
+		console.info(`Indexed file: ${relativeFilePath} (${chunks.length} chunks)`)
 
 		return updatedCache
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))
-		logger.error(`Failed to index file ${filePath}: ${err.message}`)
+		console.error(`Failed to index file ${filePath}: ${err.message}`)
 		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 			error: err.message,
 			stack: err.stack,
@@ -429,12 +443,12 @@ export async function handleFileDeleted(
 		// Save cache
 		await saveClientCache(context, config.workspacePath, updatedCache)
 
-		logger.info(`Deleted file from index: ${relativeFilePath}`)
+		console.info(`Deleted file from index: ${relativeFilePath}`)
 
 		return updatedCache
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))
-		logger.error(`Failed to handle file deletion ${filePath}: ${err.message}`)
+		console.error(`Failed to handle file deletion ${filePath}: ${err.message}`)
 		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 			error: err.message,
 			stack: err.stack,

@@ -75,7 +75,7 @@ export class CodeIndexManager {
 		CodeIndexManager.instances.clear()
 	}
 
-	private readonly workspacePath: string
+	public readonly workspacePath: string
 	private readonly context: vscode.ExtensionContext
 
 	// Private constructor for singleton pattern

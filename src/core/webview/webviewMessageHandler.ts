@@ -3219,9 +3219,17 @@ export const webviewMessageHandler = async (
 					`[startIndexing] Feature enabled: ${manager.isFeatureEnabled}, configured: ${manager.isFeatureConfigured}, initialized: ${manager.isInitialized}`,
 				)
 
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
+				// Check if managed indexing is available (has org credentials)
+				if (manager.isManagedIndexingAvailable) {
+					provider.log(
+						`[startIndexing] Using managed indexing (already started via setKiloOrgCodeIndexProps)`,
+					)
+					// Managed indexing is already started in setKiloOrgCodeIndexProps
+					// No need to start local indexing
+				} else if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
+					// Use local indexing
 					if (!manager.isInitialized) {
-						provider.log(`[startIndexing] Initializing manager...`)
+						provider.log(`[startIndexing] Initializing manager for local indexing...`)
 						try {
 							await manager.initialize(provider.contextProxy)
 							provider.log(`[startIndexing] Manager initialized successfully`)
@@ -3237,7 +3245,7 @@ export const webviewMessageHandler = async (
 					}
 
 					// startIndexing now handles error recovery internally
-					provider.log(`[startIndexing] Starting indexing...`)
+					provider.log(`[startIndexing] Starting local indexing...`)
 					manager.startIndexing()
 
 					// If startIndexing recovered from error, we need to reinitialize
@@ -3318,6 +3326,134 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		// kilocode_change start - Managed indexing management operations
+		case "clearManagedLocalCache": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				if (!manager) {
+					vscode.window.showErrorMessage("No workspace folder open")
+					return
+				}
+
+				// Clear the local cache
+				const { clearClientCache } = await import("../../services/code-index/managed")
+				await clearClientCache(provider.context, manager.workspacePath)
+
+				vscode.window.showInformationMessage("Local cache cleared successfully")
+
+				// Update status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: manager.getCurrentStatus(),
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error clearing managed local cache: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to clear local cache: ${errorMessage}`)
+			}
+			break
+		}
+		case "deleteManagedBranchIndex": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				if (!manager) {
+					vscode.window.showErrorMessage("No workspace folder open")
+					return
+				}
+
+				const { apiConfiguration } = await provider.getState()
+				if (!apiConfiguration.kilocodeToken || !apiConfiguration.kilocodeOrganizationId) {
+					vscode.window.showErrorMessage("Organization credentials not configured")
+					return
+				}
+
+				// Get project ID from Kilo config
+				const kiloConfig = await provider.getKiloConfig()
+				const projectId = kiloConfig?.project?.id
+				if (!projectId) {
+					vscode.window.showErrorMessage("No project ID found in Kilo config")
+					return
+				}
+
+				// Get current branch
+				const { getCurrentBranch, deleteBranchIndex } = await import("../../services/code-index/managed")
+				const gitBranch = getCurrentBranch(manager.workspacePath)
+
+				// Delete branch index from server
+				await deleteBranchIndex(
+					apiConfiguration.kilocodeOrganizationId,
+					projectId,
+					gitBranch,
+					apiConfiguration.kilocodeToken,
+				)
+
+				// Clear local cache for this branch
+				const { clearClientCache } = await import("../../services/code-index/managed")
+				await clearClientCache(provider.context, manager.workspacePath)
+
+				vscode.window.showInformationMessage(`Branch index for '${gitBranch}' deleted successfully`)
+
+				// Update status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: manager.getCurrentStatus(),
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error deleting managed branch index: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to delete branch index: ${errorMessage}`)
+			}
+			break
+		}
+		case "deleteManagedProjectIndex": {
+			try {
+				const manager = provider.getCurrentWorkspaceCodeIndexManager()
+				if (!manager) {
+					vscode.window.showErrorMessage("No workspace folder open")
+					return
+				}
+
+				const { apiConfiguration } = await provider.getState()
+				if (!apiConfiguration.kilocodeToken || !apiConfiguration.kilocodeOrganizationId) {
+					vscode.window.showErrorMessage("Organization credentials not configured")
+					return
+				}
+
+				// Get project ID from Kilo config
+				const kiloConfig = await provider.getKiloConfig()
+				const projectId = kiloConfig?.project?.id
+				if (!projectId) {
+					vscode.window.showErrorMessage("No project ID found in Kilo config")
+					return
+				}
+
+				// Delete entire project index from server
+				const { deleteProjectIndex } = await import("../../services/code-index/managed")
+				await deleteProjectIndex(
+					apiConfiguration.kilocodeOrganizationId,
+					projectId,
+					apiConfiguration.kilocodeToken,
+				)
+
+				// Clear local cache
+				const { clearClientCache } = await import("../../services/code-index/managed")
+				await clearClientCache(provider.context, manager.workspacePath)
+
+				vscode.window.showInformationMessage("Entire project index deleted successfully")
+
+				// Update status
+				provider.postMessageToWebview({
+					type: "indexingStatusUpdate",
+					values: manager.getCurrentStatus(),
+				})
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Error deleting managed project index: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to delete project index: ${errorMessage}`)
+			}
+			break
+		}
+		// kilocode_change end
 		// kilocode_change start - add clearUsageData
 		case "clearUsageData": {
 			try {

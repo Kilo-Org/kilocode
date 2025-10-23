@@ -1551,18 +1551,110 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 								</div>
 
 								{/* Action Buttons */}
-								<div className="flex gap-2">
-									{indexingStatus.systemStatus === "Indexing" && (
-										<VSCodeButton appearance="secondary" onClick={handleCancelIndexing}>
-											{t("settings:codeIndex.cancelIndexingButton")}
-										</VSCodeButton>
-									)}
-									{(indexingStatus.systemStatus === "Error" ||
-										indexingStatus.systemStatus === "Standby") && (
-										<VSCodeButton onClick={() => vscode.postMessage({ type: "startIndexing" })}>
-											Start Organization Indexing
-										</VSCodeButton>
-									)}
+								<div className="space-y-3">
+									<div className="flex gap-2">
+										{indexingStatus.systemStatus === "Indexing" && (
+											<VSCodeButton appearance="secondary" onClick={handleCancelIndexing}>
+												{t("settings:codeIndex.cancelIndexingButton")}
+											</VSCodeButton>
+										)}
+										{(indexingStatus.systemStatus === "Error" ||
+											indexingStatus.systemStatus === "Standby") && (
+											<VSCodeButton onClick={() => vscode.postMessage({ type: "startIndexing" })}>
+												Start Organization Indexing
+											</VSCodeButton>
+										)}
+									</div>
+
+									{/* Management Buttons */}
+									<div className="space-y-2 pt-2 border-t border-vscode-dropdown-border">
+										<h4 className="text-sm font-medium">Management</h4>
+										<div className="flex flex-col gap-2">
+											<AlertDialog>
+												<AlertDialogTrigger asChild>
+													<VSCodeButton appearance="secondary" className="w-full">
+														Clear Local Cache
+													</VSCodeButton>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>Clear Local Cache?</AlertDialogTitle>
+														<AlertDialogDescription>
+															This will clear the local cache for this workspace and
+															branch. The server index will not be affected. You'll need
+															to re-scan to rebuild the cache.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel>Cancel</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={() =>
+																vscode.postMessage({ type: "clearManagedLocalCache" })
+															}>
+															Clear Cache
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+
+											<AlertDialog>
+												<AlertDialogTrigger asChild>
+													<VSCodeButton appearance="secondary" className="w-full">
+														Delete Branch Index
+													</VSCodeButton>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>Delete Branch Index?</AlertDialogTitle>
+														<AlertDialogDescription>
+															This will delete all indexed data for the current branch
+															from the server. This action cannot be undone. You'll need
+															to re-index to restore the data.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel>Cancel</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={() =>
+																vscode.postMessage({ type: "deleteManagedBranchIndex" })
+															}>
+															Delete Branch Index
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+
+											<AlertDialog>
+												<AlertDialogTrigger asChild>
+													<VSCodeButton appearance="secondary" className="w-full">
+														Delete Entire Index
+													</VSCodeButton>
+												</AlertDialogTrigger>
+												<AlertDialogContent>
+													<AlertDialogHeader>
+														<AlertDialogTitle>Delete Entire Index?</AlertDialogTitle>
+														<AlertDialogDescription>
+															This will delete ALL indexed data for this project across
+															ALL branches from the server. This action cannot be undone
+															and will affect all team members. You'll need to re-index
+															everything to restore the data.
+														</AlertDialogDescription>
+													</AlertDialogHeader>
+													<AlertDialogFooter>
+														<AlertDialogCancel>Cancel</AlertDialogCancel>
+														<AlertDialogAction
+															onClick={() =>
+																vscode.postMessage({
+																	type: "deleteManagedProjectIndex",
+																})
+															}>
+															Delete Entire Index
+														</AlertDialogAction>
+													</AlertDialogFooter>
+												</AlertDialogContent>
+											</AlertDialog>
+										</div>
+									</div>
 								</div>
 							</div>
 						)}

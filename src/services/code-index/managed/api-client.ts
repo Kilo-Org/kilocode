@@ -22,13 +22,15 @@ export async function upsertChunks(chunks: ManagedCodeChunk[], kilocodeToken: st
 		return
 	}
 
+	console.log("upsertChunks", chunks)
+
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 
 	try {
 		const response = await axios({
 			method: "PUT",
 			url: `${baseUrl}/api/codebase-indexing/upsert`,
-			data: { chunks },
+			data: chunks,
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -108,8 +110,8 @@ export async function deleteFiles(
 
 	try {
 		const response = await axios({
-			method: "DELETE",
-			url: `${baseUrl}/api/codebase-indexing/files`,
+			method: "PUT",
+			url: `${baseUrl}/api/codebase-indexing/delete`,
 			data: {
 				organizationId,
 				projectId,
@@ -203,4 +205,89 @@ export async function deleteFile(
 	kilocodeToken: string,
 ): Promise<void> {
 	return deleteFiles([filePath], gitBranch, organizationId, projectId, kilocodeToken)
+}
+
+/**
+ * Deletes all chunks for a specific branch
+ *
+ * @param organizationId Organization ID
+ * @param projectId Project ID
+ * @param gitBranch Git branch to delete
+ * @param kilocodeToken Authentication token
+ * @throws Error if the request fails
+ */
+export async function deleteBranchIndex(
+	organizationId: string,
+	projectId: string,
+	gitBranch: string,
+	kilocodeToken: string,
+): Promise<void> {
+	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+
+	try {
+		const response = await axios({
+			method: "DELETE",
+			url: `${baseUrl}/api/codebase-indexing/branch`,
+			data: {
+				organizationId,
+				projectId,
+				gitBranch,
+			},
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			},
+		})
+
+		if (response.status !== 200) {
+			throw new Error(`Failed to delete branch index: ${response.statusText}`)
+		}
+
+		logger.info(`Successfully deleted branch index for ${gitBranch}`)
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		logger.error(`Failed to delete branch index: ${errorMessage}`)
+		throw error
+	}
+}
+
+/**
+ * Deletes all chunks for a project (all branches)
+ *
+ * @param organizationId Organization ID
+ * @param projectId Project ID
+ * @param kilocodeToken Authentication token
+ * @throws Error if the request fails
+ */
+export async function deleteProjectIndex(
+	organizationId: string,
+	projectId: string,
+	kilocodeToken: string,
+): Promise<void> {
+	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+
+	try {
+		const response = await axios({
+			method: "DELETE",
+			url: `${baseUrl}/api/codebase-indexing/project`,
+			data: {
+				organizationId,
+				projectId,
+			},
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			},
+		})
+
+		if (response.status !== 200) {
+			throw new Error(`Failed to delete project index: ${response.statusText}`)
+		}
+
+		logger.info(`Successfully deleted project index`)
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		logger.error(`Failed to delete project index: ${errorMessage}`)
+		throw error
+	}
 }
