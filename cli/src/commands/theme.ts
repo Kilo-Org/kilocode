@@ -5,15 +5,48 @@
 import type { Command, ArgumentValue } from "./core/types.js"
 import { getAvailableThemes, getThemeById } from "../constants/themes/index.js"
 
-// Get theme information for display
-const THEMES = getAvailableThemes().map((themeId) => {
-	const theme = getThemeById(themeId)
-	return {
-		id: themeId,
-		name: theme.name,
-		description: theme.name,
-	}
-})
+// Define theme type mapping based on specifications
+const THEME_TYPES: Record<string, string> = {
+	// Default kilo themes
+	dark: "Dark",
+	light: "Light",
+	alpha: "Dark",
+
+	// Dark themes
+	ansi: "Dark",
+	"atom-one-dark": "Dark",
+	"ayu-dark": "Dark",
+	dracula: "Dark",
+	"github-dark": "Dark",
+	"shades-of-purple": "Dark",
+
+	// Light themes
+	"ansi-light": "Light",
+	"ayu-light": "Light",
+	"github-light": "Light",
+	googlecode: "Light",
+	xcode: "Light",
+}
+
+// Get theme information for display and sort by type then ID
+const THEMES = getAvailableThemes()
+	.map((themeId) => {
+		const theme = getThemeById(themeId)
+		const themeType = THEME_TYPES[themeId] || "Dark"
+		return {
+			id: themeId,
+			name: theme.name,
+			description: themeType,
+			type: themeType,
+		}
+	})
+	.sort((a, b) => {
+		// Sort by type (Dark first, then Light), then by ID alphabetically
+		if (a.type !== b.type) {
+			return b.type.localeCompare(a.type)
+		}
+		return a.id.localeCompare(b.id)
+	})
 
 // Convert themes to ArgumentValue format
 const THEME_VALUES: ArgumentValue[] = THEMES.map((theme) => ({
@@ -52,17 +85,37 @@ export const themeCommand: Command = {
 		const { args, addMessage, setTheme } = context
 
 		if (args.length === 0 || !args[0]) {
+			// Group themes by type
+			const lightThemes = THEMES.filter((theme) => theme.type === "Light")
+			const darkThemes = THEMES.filter((theme) => theme.type === "Dark")
+
 			// Show interactive theme selection menu
+			const helpText: string[] = ["**Available Themes:**", ""]
+
+			// Dark themes section
+			if (darkThemes.length > 0) {
+				helpText.push("**Dark:**")
+				darkThemes.forEach((theme) => {
+					helpText.push(`  ${theme.name} (${theme.id})`)
+				})
+				helpText.push("")
+			}
+
+			// Light themes section
+			if (lightThemes.length > 0) {
+				helpText.push("**Light:**")
+				lightThemes.forEach((theme) => {
+					helpText.push(`  ${theme.name} (${theme.id})`)
+				})
+				helpText.push("")
+			}
+
+			helpText.push("Usage: /theme <theme-name>")
+
 			addMessage({
 				id: Date.now().toString(),
 				type: "system",
-				content: [
-					"**Available Themes:**",
-					"",
-					...THEMES.map((theme) => `  - **${theme.name}** (${theme.id})`),
-					"",
-					"Usage: /theme <theme-name>",
-				].join("\n"),
+				content: helpText.join("\n"),
 				ts: Date.now(),
 			})
 			return
