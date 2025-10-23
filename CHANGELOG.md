@@ -1,5 +1,21 @@
 # kilo-code
 
+## [v4.110.0]
+
+- [#3104](https://github.com/Kilo-Org/kilocode/pull/3104) [`3008656`](https://github.com/Kilo-Org/kilocode/commit/30086567e31d8e774c89412afcdc96e3c46d57a0) Thanks [@markijbema](https://github.com/markijbema)! - Support multiline quoted strings within Auto-approved commands (especially useful for git commit)
+
+### Patch Changes
+
+- [#3249](https://github.com/Kilo-Org/kilocode/pull/3249) [`ccee64c`](https://github.com/Kilo-Org/kilocode/commit/ccee64cf1676f51a6b9dae49aad994d9f834b3e8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Remove credit status bar until we can retrieve the up to date balance from the proxy response.
+
+- [#3235](https://github.com/Kilo-Org/kilocode/pull/3235) [`0108896`](https://github.com/Kilo-Org/kilocode/commit/010889619121159a8993ad5846ac2cccecd91bd8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fixed some "not a function" crashes
+
+- [#3226](https://github.com/Kilo-Org/kilocode/pull/3226) [`e13a99c`](https://github.com/Kilo-Org/kilocode/commit/e13a99c67bd644e7ab9372757227aab3f72da1d4) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Reverted "Update base URL for Vertex Anthropic models to work around outdated library." because it is causing issues for some users.
+
+- [#2663](https://github.com/Kilo-Org/kilocode/pull/2663) [`43140c9`](https://github.com/Kilo-Org/kilocode/commit/43140c950719d9718c089e45f9ae63b334dd9a6e) Thanks [@NaccOll](https://github.com/NaccOll)! - Fix listCodeDefinitionNamesTool for annotated Java methods
+
+- [#3242](https://github.com/Kilo-Org/kilocode/pull/3242) [`8604c83`](https://github.com/Kilo-Org/kilocode/commit/8604c838b205eaa1bdf510b8b64083a8c9c15377) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved support for HTTP proxy environment variables
+
 ## [v4.109.2]
 
 - [#3216](https://github.com/Kilo-Org/kilocode/pull/3216) [`3f34635`](https://github.com/Kilo-Org/kilocode/commit/3f3463554f7cf016db9b2851c40217e38a048840) Thanks [@markijbema](https://github.com/markijbema)! - Do not accept an autocomplete suggestion with shift-tab or ctrl-tab (only plain tab)

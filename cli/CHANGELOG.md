@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 0.0.9
+
+### Patch Changes
+
+- [#3255](https://github.com/Kilo-Org/kilocode/pull/3255) [`55430b7`](https://github.com/Kilo-Org/kilocode/commit/55430b7965ae2aef12517375a0e0c0e7d8f2367c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix suggestion selection with arrow keys
+
+- [#3253](https://github.com/Kilo-Org/kilocode/pull/3253) [`db9cb43`](https://github.com/Kilo-Org/kilocode/commit/db9cb4355ae0e4559e99066c78315ee3635a3543) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Terminal resize support
+
 ## 0.0.8
 
 ### Patch Changes
