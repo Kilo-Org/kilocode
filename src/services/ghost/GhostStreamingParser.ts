@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { structuredPatch } from "diff"
+import { ParsedDiff, structuredPatch } from "diff"
 import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { CURSOR_MARKER } from "./ghostConstants"
@@ -28,7 +28,7 @@ function removeCursorMarker(content: string): string {
 /**
  * Conservative XML sanitization - only fixes the specific case from user feedback
  */
-function sanitizeXMLConservative(buffer: string): string {
+export function sanitizeXMLConservative(buffer: string): string {
 	let sanitized = buffer
 
 	// Fix malformed CDATA sections first - this is the main bug from user logs
@@ -219,7 +219,6 @@ function skipChars(text: string, startPos: number, predicate: (char: string) => 
  * and emit suggestions as soon as complete <change> blocks are available
  */
 export class GhostStreamingParser {
-	public buffer: string = ""
 	private completedChanges: ParsedChange[] = []
 
 	private context: GhostSuggestionContext | null = null
@@ -238,7 +237,6 @@ export class GhostStreamingParser {
 	 * Reset parser state for a new parsing session
 	 */
 	public reset(): void {
-		this.buffer = ""
 		this.completedChanges = []
 	}
 
@@ -246,10 +244,10 @@ export class GhostStreamingParser {
 	 * Mark the stream as finished and process any remaining content with sanitization
 	 */
 	public parseResponse(fullResponse: string): StreamingParseResult {
-		this.buffer = fullResponse
+		let llmResponse = fullResponse
 
 		// Extract any newly completed changes from the current buffer
-		const newChanges = this.extractCompletedChanges(this.buffer)
+		const newChanges = this.extractCompletedChanges(llmResponse)
 
 		let hasNewSuggestions = newChanges.length > 0
 
@@ -257,26 +255,27 @@ export class GhostStreamingParser {
 		this.completedChanges.push(...newChanges)
 
 		// Check if the response appears complete
-		let isComplete = isResponseComplete(this.buffer, this.completedChanges.length)
+		let isComplete = isResponseComplete(llmResponse, this.completedChanges.length)
 
 		// Apply very conservative sanitization only when the stream is finished
 		// and we still have no completed changes but have content in the buffer
-		if (this.completedChanges.length === 0 && this.buffer.trim().length > 0) {
-			const sanitizedBuffer = sanitizeXMLConservative(this.buffer)
-			if (sanitizedBuffer !== this.buffer) {
+		if (this.completedChanges.length === 0 && llmResponse.trim().length > 0) {
+			const sanitizedBuffer = sanitizeXMLConservative(llmResponse)
+			if (sanitizedBuffer !== llmResponse) {
 				// Re-process with sanitized buffer
-				this.buffer = sanitizedBuffer
-				const sanitizedChanges = this.extractCompletedChanges(this.buffer)
+				llmResponse = sanitizedBuffer
+				const sanitizedChanges = this.extractCompletedChanges(llmResponse)
 				if (sanitizedChanges.length > 0) {
 					this.completedChanges.push(...sanitizedChanges)
 					hasNewSuggestions = true
-					isComplete = isResponseComplete(this.buffer, this.completedChanges.length) // Re-check completion after sanitization
+					isComplete = isResponseComplete(llmResponse, this.completedChanges.length) // Re-check completion after sanitization
 				}
 			}
 		}
 
 		// Generate suggestions from all completed changes
-		const suggestions = this.generateSuggestions(this.completedChanges)
+		const patch = this.generatePatch(this.completedChanges)
+		const suggestions = this.convertToSuggestions(patch, this.context!.document)
 
 		return {
 			suggestions,
@@ -317,14 +316,9 @@ export class GhostStreamingParser {
 		return newChanges
 	}
 
-	/**
-	 * Generate suggestions from completed changes
-	 */
-	private generateSuggestions(changes: ParsedChange[]): GhostSuggestionsState {
-		const suggestions = new GhostSuggestionsState()
-
+	private generatePatch(changes: ParsedChange[]): ParsedDiff | undefined {
 		if (!this.context?.document || changes.length === 0) {
-			return suggestions
+			return undefined
 		}
 
 		const document = this.context.document
@@ -427,19 +421,21 @@ export class GhostStreamingParser {
 
 		// Generate diff between original and modified content
 		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
-		const patch = structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
+		return structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
+	}
 
-		// Create a suggestion file
+	private convertToSuggestions(patch: ParsedDiff | undefined, document: vscode.TextDocument): GhostSuggestionsState {
+		const suggestions = new GhostSuggestionsState()
+		if (!patch) return suggestions
+
 		const suggestionFile = suggestions.addFile(document.uri)
 
-		// Process each hunk in the patch
 		for (const hunk of patch.hunks) {
 			let currentOldLineNumber = hunk.oldStart
 			let currentNewLineNumber = hunk.newStart
 
-			// Iterate over each line within the hunk
 			for (const line of hunk.lines) {
-				const operationType = line.charAt(0) as GhostSuggestionEditOperationType
+				const operationType = line.charAt(0)
 				const content = line.substring(1)
 
 				switch (operationType) {
@@ -485,6 +481,7 @@ export class GhostStreamingParser {
 
 	/**
 	 * Get completed changes (for debugging)
+	 * @deprecated This method is obsolete and should not be used
 	 */
 	public getCompletedChanges(): ParsedChange[] {
 		return [...this.completedChanges]

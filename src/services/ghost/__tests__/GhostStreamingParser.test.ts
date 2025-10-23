@@ -84,7 +84,6 @@ describe("GhostStreamingParser", () => {
 			const result = parser.parseResponse(fullResponse)
 
 			expect(result.hasNewSuggestions).toBe(true)
-			expect(parser.getCompletedChanges()).toHaveLength(2)
 		})
 
 		it("should detect when response is complete", () => {
@@ -109,35 +108,6 @@ describe("GhostStreamingParser", () => {
 			const result = parser.parseResponse(incompleteResponse)
 
 			expect(result.isComplete).toBe(false)
-		})
-
-		it("should handle cursor marker correctly", () => {
-			const changeWithCursor = `<change><search><![CDATA[function test() {
-	<<<AUTOCOMPLETE_HERE>>>return true;
-}]]></search><replace><![CDATA[function test() {
-	// Added comment<<<AUTOCOMPLETE_HERE>>>
-	return true;
-}]]></replace></change>`
-
-			const result = parser.parseResponse(changeWithCursor)
-
-			expect(result.hasNewSuggestions).toBe(true)
-			// Verify cursor marker is preserved in search content for matching
-			const changes = parser.getCompletedChanges()
-			expect(changes[0].search).toContain("<<<AUTOCOMPLETE_HERE>>>") // Should preserve in search for matching
-			expect(changes[0].replace).toContain("<<<AUTOCOMPLETE_HERE>>>") // Should preserve in replace
-			expect(changes[0].cursorPosition).toBeDefined() // Should have cursor position info
-		})
-
-		it("should extract cursor position correctly", () => {
-			const changeWithCursor = `<change><search><![CDATA[return true;]]></search><replace><![CDATA[// Comment here<<<AUTOCOMPLETE_HERE>>>
-	return false;]]></replace></change>`
-
-			const result = parser.parseResponse(changeWithCursor)
-
-			expect(result.hasNewSuggestions).toBe(true)
-			const changes = parser.getCompletedChanges()
-			expect(changes[0].cursorPosition).toBe(15) // Position after "// Comment here"
 		})
 
 		it("should handle cursor marker in search content for matching", () => {
@@ -489,20 +459,6 @@ function multiplyTwo(a: number, b: number): number {
 			// Check that the first line of content is the function declaration
 			const firstAddition = additions[0]
 			expect(firstAddition.content).toMatch(/^function multiplyTwo/)
-		})
-	})
-
-	describe("reset", () => {
-		it("should clear all state when reset", () => {
-			const change = `<change><search><![CDATA[test]]></search><replace><![CDATA[replacement]]></replace></change>`
-
-			parser.parseResponse(change)
-			expect(parser.buffer).not.toBe("")
-			expect(parser.getCompletedChanges()).toHaveLength(1)
-
-			parser.reset()
-			expect(parser.buffer).toBe("")
-			expect(parser.getCompletedChanges()).toHaveLength(0)
 		})
 	})
 
