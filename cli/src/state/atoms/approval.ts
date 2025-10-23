@@ -242,7 +242,6 @@ export const clearPendingApprovalAtom = atom(null, (get, set) => {
 	const processing = get(approvalProcessingAtom)
 
 	set(pendingApprovalAtom, null)
-	set(selectedIndexAtom, 0)
 
 	// Also clear processing state if it matches
 	if (processing.isProcessing && processing.processingTs === current?.ts) {

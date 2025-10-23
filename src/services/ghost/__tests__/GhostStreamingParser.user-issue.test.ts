@@ -1,77 +1,81 @@
-import { GhostStreamingParser } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
-import * as vscode from "vscode"
+import { sanitizeXMLConservative } from "../GhostStreamingParser"
 
-// Mock vscode workspace
-vi.mock("vscode", async () => {
-	const actual = await vi.importActual("vscode")
-	return {
-		...actual,
-		workspace: {
-			asRelativePath: vi.fn().mockReturnValue("test/file.ts"),
-		},
-		Range: vi.fn().mockImplementation((startLine, startChar, endLine, endChar) => ({
-			start: { line: startLine, character: startChar },
-			end: { line: endLine, character: endChar },
-		})),
-	}
-})
-
-describe("GhostStreamingParser - User Issue Fix", () => {
-	let parser: GhostStreamingParser
-	let mockContext: GhostSuggestionContext
-
-	beforeEach(() => {
-		parser = new GhostStreamingParser()
-
-		// Create mock document with the exact content from user's issue
-		const mockDocument = {
-			getText: vi.fn().mockReturnValue("function mutliply(<<<AUTOCOMPLETE_HERE>>>>"),
-			uri: { fsPath: "/test/file.ts", toString: () => "file:///test/file.ts" } as vscode.Uri,
-			offsetAt: vi.fn().mockReturnValue(17), // Position after "function mutliply("
-		} as unknown as vscode.TextDocument
-
-		mockContext = {
-			document: mockDocument,
-			range: { start: { line: 0, character: 17 }, end: { line: 0, character: 17 } } as vscode.Range,
-		}
-
-		parser.initialize(mockContext)
-	})
-
-	it("should fix the exact user issue: incomplete </change tag when stream is complete", () => {
+describe("sanitizeXMLConservative - User Issue Fix", () => {
+	it("should fix the exact user issue: incomplete </change tag", () => {
 		// This is the exact XML from the user's issue
 		const userIssueXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change`
 
-		// Simulate stream completion with full response
-		const result = parser.parseResponse(userIssueXML)
+		const sanitized = sanitizeXMLConservative(userIssueXML)
 
-		// Verify that the sanitization worked and we got suggestions
-		expect(result.hasNewSuggestions).toBe(true)
-		expect(result.suggestions.hasSuggestions()).toBe(true)
-		expect(parser.getCompletedChanges()).toHaveLength(1)
-
-		const change = parser.getCompletedChanges()[0]
-		expect(change.search).toBe("function mutliply(<<<AUTOCOMPLETE_HERE>>>>\n")
-		expect(change.replace).toBe("function mutliply(a, b) {\n")
-
-		// Verify the buffer was sanitized correctly
-		expect(parser.buffer).toContain("</change>")
+		// Verify the closing tag was added
+		expect(sanitized).toContain("</change>")
+		expect(sanitized).toBe(`<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
+]]></search><replace><![CDATA[function mutliply(a, b) {
+]]></replace></change>`)
 	})
 
-	it("should handle the case where the XML is completely missing the closing > when stream is complete", () => {
+	it("should handle XML completely missing the closing >", () => {
 		// Even more broken XML - missing the final ">" entirely
 		const brokenXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
 ]]></search><replace><![CDATA[function mutliply(a, b) {
 ]]></replace></change`
 
-		// Simulate stream completion
-		const result = parser.parseResponse(brokenXML)
+		const sanitized = sanitizeXMLConservative(brokenXML)
 
-		expect(result.hasNewSuggestions).toBe(true)
-		expect(result.suggestions.hasSuggestions()).toBe(true)
-		expect(parser.getCompletedChanges()).toHaveLength(1)
+		// Should fix the incomplete tag
+		expect(sanitized).toContain("</change>")
+		expect(sanitized).toBe(`<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
+]]></search><replace><![CDATA[function mutliply(a, b) {
+]]></replace></change>`)
+	})
+
+	it("should not modify already complete XML", () => {
+		const completeXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
+]]></search><replace><![CDATA[function mutliply(a, b) {
+]]></replace></change>`
+
+		const sanitized = sanitizeXMLConservative(completeXML)
+
+		// Should remain unchanged
+		expect(sanitized).toBe(completeXML)
+	})
+
+	it("should fix malformed CDATA sections", () => {
+		const malformedCDATA = `<change><search><![CDATA[test content</![CDATA[</search><replace><![CDATA[new content]]></replace></change>`
+
+		const sanitized = sanitizeXMLConservative(malformedCDATA)
+
+		// Should replace </![CDATA[ with ]]>
+		expect(sanitized).toContain("]]>")
+		expect(sanitized).not.toContain("</![CDATA[")
+	})
+
+	it("should not add closing tag when stream is incomplete (ends with <)", () => {
+		const incompleteStream = `<change><search><![CDATA[test]]></search><replace><![CDATA[new]]></replace><`
+
+		const sanitized = sanitizeXMLConservative(incompleteStream)
+
+		// Should not add closing tag when clearly in the middle of streaming
+		expect(sanitized).toBe(incompleteStream)
+	})
+
+	it("should not modify XML with multiple changes", () => {
+		const multipleChanges = `<change><search><![CDATA[test1]]></search><replace><![CDATA[new1]]></replace></change><change><search><![CDATA[test2]]></search><replace><![CDATA[new2]]></replace></change>`
+
+		const sanitized = sanitizeXMLConservative(multipleChanges)
+
+		// Should remain unchanged when multiple complete changes exist
+		expect(sanitized).toBe(multipleChanges)
+	})
+
+	it("should only fix when search and replace are complete", () => {
+		const incompleteSearchReplace = `<change><search><![CDATA[test]]></search><replace><![CDATA[new`
+
+		const sanitized = sanitizeXMLConservative(incompleteSearchReplace)
+
+		// Should not add closing tag when search/replace are incomplete
+		expect(sanitized).toBe(incompleteSearchReplace)
 	})
 })

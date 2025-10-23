@@ -1,0 +1,30 @@
+config/util.ts:26 - addModel
+config/util.ts:88 - deleteModel
+diff/util.ts:8 - MatchLineResult (used in module)
+util/ca.ts:6 - setupCa
+util/clipboardCache.ts:71 - clipboardCache
+util/constants.ts:3 - GITHUB_LINK
+util/constants.ts:5 - DISCORD_LINK
+util/conversationCompaction.ts:19 - compactConversation
+util/conversationCompaction.ts:5 - CompactionParams (used in module)
+util/findLast.ts:1 - findLastIndex
+util/findLast.ts:16 - findLast
+util/generateRepoMap.ts:11 - RepoMapOptions (used in module)
+util/GlobalContext.ts:22 - GlobalContextType (used in module)
+util/historyUtils.ts:41 - toMarkDown (used in module)
+util/historyUtils.ts:67 - shareSession
+util/ideUtils.ts:36 - inferResolvedUriFromRelativePath
+util/index.ts:1 - removeQuotesAndEscapes
+util/index.ts:30 - dedentAndGetCommonWhitespace
+util/index.ts:69 - getMarkdownLanguageTagForFile
+util/index.ts:115 - copyOf
+util/index.ts:122 - deduplicateArray
+util/index.ts:139 - dedent
+util/index.ts:198 - removeCodeBlocksAndTrim
+util/index.ts:207 - splitCamelCaseAndNonAlphaNumeric
+util/index.ts:137 - TODO
+util/isContinueTeamMember.ts:4 - isContinueTeamMember
+util/lemonadeHelper.ts:31 - startLocalLemonade
+util/merge.ts:5 - mergeJson (used in module)
+util/messageContent.ts:38 - renderContextItemsWithStatus
+util/messageConversion.ts:23 - convertToUnifiedMessage (used in module)

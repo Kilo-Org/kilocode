@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { getMessageIcon, parseMcpServerData } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display MCP server usage request (tool or resource access)
@@ -54,7 +54,7 @@ export const AskUseMcpServerMessage: React.FC<MessageComponentProps> = ({ messag
 
 			{mcpData.arguments && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					marginLeft={2}
 					marginTop={1}
 					borderStyle="single"

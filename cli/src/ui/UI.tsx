@@ -23,6 +23,7 @@ import { useApprovalMonitor } from "../state/hooks/useApprovalMonitor.js"
 import { useProfile } from "../state/hooks/useProfile.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
+import { useTerminalResize } from "../state/hooks/useTerminalResize.js"
 import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
@@ -70,6 +71,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		...(options.timeout !== undefined && { timeout: options.timeout }),
 		onExit: onExit,
 	})
+
+	// Terminal resize hook for handling terminal size changes
+	// This clears the terminal and forces re-render of static components
+	useTerminalResize()
 
 	// Track if prompt has been executed and welcome message shown
 	const promptExecutedRef = useRef(false)

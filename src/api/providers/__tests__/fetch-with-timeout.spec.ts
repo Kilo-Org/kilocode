@@ -23,9 +23,9 @@ vi.mock("undici", () => {
 	}
 
 	return {
-		Agent: vi.fn().mockImplementation((opts: any) => {
+		EnvHttpProxyAgent: vi.fn().mockImplementation((opts: any) => {
 			hoisted.mockAgentConstructor(opts)
-			const instance = { __mock: "Agent" }
+			const instance = { __mock: "EnvHttpProxyAgent" }
 			hoisted.agentInstances.push(instance)
 			return instance
 		}),

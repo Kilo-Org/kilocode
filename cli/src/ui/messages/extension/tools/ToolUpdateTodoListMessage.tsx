@@ -5,7 +5,7 @@ import { getToolIcon } from "../utils.js"
 import { MarkdownText } from "../../../components/MarkdownText.js"
 import { logs } from "../../../../services/logs.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display todo list updates with status indicators
@@ -48,7 +48,7 @@ export const ToolUpdateTodoListMessage: React.FC<ToolMessageProps> = ({ toolData
 
 			{toolData.todos && toolData.todos.length > 0 && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					flexDirection="column"
 					borderStyle="single"
 					borderColor={theme.ui.border.default}

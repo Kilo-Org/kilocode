@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "新しい変更を表示できません。チェックポイントが利用できません。",
 		"noChanges": "新しい変更を表示できません。変更が見つかりませんでした。",
 		"error": "新しい変更を表示できません。エラーが発生しました。"
-	},
-	"creditsstatusbar": {
-		"loading": "読み込み中...",
-		"clickToRefresh": "クリックして更新",
-		"minute": "分"
 	}
 }

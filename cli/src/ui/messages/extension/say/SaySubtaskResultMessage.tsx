@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { MarkdownText } from "../../../components/MarkdownText.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L1 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display subtask results in a badge-styled box
@@ -12,7 +12,7 @@ export const SaySubtaskResultMessage: React.FC<MessageComponentProps> = ({ messa
 	const theme = useTheme()
 	return (
 		<Box
-			width={BOX_L1}
+			width={getBoxWidth(1)}
 			flexDirection="column"
 			borderStyle="round"
 			borderColor={theme.semantic.info}
