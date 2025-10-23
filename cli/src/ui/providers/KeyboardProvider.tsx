@@ -19,9 +19,6 @@ import {
 	setDragModeAtom,
 	appendToDragBufferAtom,
 	dragBufferAtom,
-	appendToKittyBufferAtom,
-	clearKittyBufferAtom,
-	kittySequenceBufferAtom,
 	kittyProtocolEnabledAtom,
 	setKittyProtocolAtom,
 	debugKeystrokeLoggingAtom,
@@ -30,16 +27,19 @@ import {
 	setupKeyboardAtom,
 } from "../../state/atoms/keyboard.js"
 import {
-	parseKittySequence,
+	parseReadlineKey,
+	createPasteKey,
+	createSpecialKey,
 	isPasteModeBoundary,
 	isFocusEvent,
 	mapAltKeyCharacter,
 	isDragStart,
-	parseReadlineKey,
-	createPasteKey,
-	createSpecialKey,
-} from "../utils/keyParsing.js"
-import { autoEnableKittyProtocol, disableKittyProtocol } from "../utils/terminalCapabilities.js"
+} from "../../utils/keyboard/parsing.js"
+import {
+	autoEnableKittyProtocol,
+	disableKittyProtocol,
+	detectFallbackSupport,
+} from "../../utils/keyboard/terminalCapabilities.js"
 import {
 	ESC,
 	PASTE_MODE_PREFIX,
@@ -47,8 +47,15 @@ import {
 	BACKSLASH,
 	BACKSLASH_ENTER_DETECTION_WINDOW_MS,
 	DRAG_COMPLETION_TIMEOUT_MS,
-	MAX_KITTY_SEQUENCE_LENGTH,
 } from "../../constants/keyboard/index.js"
+import { createTimerManager } from "../../utils/keyboard/timerManager.js"
+import { isShiftEnterSequence, normalizeLineEndings } from "../../utils/keyboard/helpers.js"
+import {
+	createFallbackPasteState,
+	processFallbackPasteKey,
+	completeFallbackPaste,
+} from "../../utils/keyboard/pasteDetection.js"
+import { createKittyBufferState, handleKittySequence, clearKittyBuffer } from "../../utils/keyboard/kitty.js"
 
 interface KeyboardProviderProps {
 	children: React.ReactNode
@@ -67,8 +74,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
 	const setDragMode = useSetAtom(setDragModeAtom)
 	const appendToDragBuffer = useSetAtom(appendToDragBufferAtom)
-	const appendToKittyBuffer = useSetAtom(appendToKittyBufferAtom)
-	const clearKittyBuffer = useSetAtom(clearKittyBufferAtom)
 	const setKittyProtocol = useSetAtom(setKittyProtocolAtom)
 	const setDebugLogging = useSetAtom(setDebugLoggingAtom)
 	const clearBuffers = useSetAtom(clearBuffersAtom)
@@ -77,7 +82,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Jotai getters (for reading current state)
 	const pasteBuffer = useAtomValue(pasteBufferAtom)
 	const dragBuffer = useAtomValue(dragBufferAtom)
-	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
 	const isKittyEnabled = useAtomValue(kittyProtocolEnabledAtom)
 	const isDebugEnabled = useAtomValue(debugKeystrokeLoggingAtom)
 
@@ -85,39 +89,29 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const isPasteRef = useRef(false)
 	const pasteBufferRef = useRef<string>("")
 	const isDraggingRef = useRef(false)
-	const dragTimerRef = useRef<NodeJS.Timeout | null>(null)
-	const backslashTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const waitingForEnterRef = useRef(false)
+
+	// Timer managers
+	const dragTimerRef = useRef(createTimerManager())
+	const backslashTimerRef = useRef(createTimerManager())
+	const fallbackPasteTimerRef = useRef(createTimerManager())
+
+	// Fallback paste detection state
+	const fallbackPasteStateRef = useRef(createFallbackPasteState())
+
+	// Kitty protocol state
+	const kittyBufferStateRef = useRef(createKittyBufferState())
 
 	// Update debug logging atom
 	useEffect(() => {
 		setDebugLogging(debugKeystrokeLogging)
 	}, [debugKeystrokeLogging, setDebugLogging])
 
-	// Clear drag timer
-	const clearDragTimer = useCallback(() => {
-		if (dragTimerRef.current) {
-			clearTimeout(dragTimerRef.current)
-			dragTimerRef.current = null
-		}
-	}, [])
-
-	// Clear backslash timer
-	const clearBackslashTimer = useCallback(() => {
-		if (backslashTimerRef.current) {
-			clearTimeout(backslashTimerRef.current)
-			backslashTimerRef.current = null
-		}
-	}, [])
-
-	// Handle paste completion
+	// Complete paste
 	const completePaste = useCallback(() => {
 		const currentBuffer = pasteBufferRef.current
 		if (isPasteRef.current && currentBuffer) {
-			// Normalize line endings: convert \r\n and \r to \n
-			// This handles different line ending formats from various terminals/platforms
-			const normalizedBuffer = currentBuffer.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
-
+			const normalizedBuffer = normalizeLineEndings(currentBuffer)
 			broadcastKey(createPasteKey(normalizedBuffer))
 			setPasteMode(false)
 			isPasteRef.current = false
@@ -125,20 +119,23 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		}
 	}, [broadcastKey, setPasteMode])
 
-	// Handle drag completion
+	// Complete drag
 	const completeDrag = useCallback(() => {
 		if (isDraggingRef.current && dragBuffer) {
 			broadcastKey(createPasteKey(dragBuffer))
 			setDragMode(false)
 			isDraggingRef.current = false
 		}
-		clearDragTimer()
-	}, [dragBuffer, broadcastKey, setDragMode, clearDragTimer])
+		dragTimerRef.current.clear()
+	}, [dragBuffer, broadcastKey, setDragMode])
 
 	useEffect(() => {
 		// Save original raw mode state
 		const wasRaw = stdin.isRaw
 		let kittyEnabled = false
+
+		// Detect Fallback Paste Support
+		const requiresFallback = detectFallbackSupport()
 
 		// Setup centralized keyboard handler first
 		const unsubscribeKeyboard = setupKeyboard()
@@ -150,8 +147,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 
 			// Enable bracketed paste mode
-			// This tells the terminal to wrap pasted content with ESC[200~ and ESC[201~
-			process.stdout.write("\x1b[?2004h")
+			if (!requiresFallback) {
+				process.stdout.write("\x1b[?2004h")
+			}
 
 			// Auto-detect and enable Kitty protocol if supported
 			kittyEnabled = await autoEnableKittyProtocol()
@@ -165,16 +163,8 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		init()
 
-		// Determine if we need a passthrough stream (for older Node versions or paste workaround)
-		const nodeVersionParts = process.versions.node.split(".")
-		const nodeMajorVersion = nodeVersionParts[0] ? parseInt(nodeVersionParts[0], 10) : 20
-		const usePassthrough =
-			nodeMajorVersion < 20 ||
-			process.env["PASTE_WORKAROUND"] === "1" ||
-			process.env["PASTE_WORKAROUND"] === "true"
-
 		// Setup streams
-		const keypressStream = usePassthrough ? new PassThrough() : stdin
+		const keypressStream = requiresFallback ? new PassThrough() : stdin
 		const rl = readline.createInterface({
 			input: keypressStream,
 			escapeCodeTimeout,
@@ -192,6 +182,17 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 			if (isDebugEnabled) {
 				logs.debug("Keypress", "KeyboardProvider", { parsedKey })
+			}
+
+			// Fallback paste detection for terminals like VSCode
+			if (requiresFallback) {
+				const wasHandled = processFallbackPasteKey(
+					parsedKey,
+					fallbackPasteStateRef.current,
+					fallbackPasteTimerRef.current,
+					broadcastKey,
+				)
+				if (wasHandled) return
 			}
 
 			// Check for focus events
@@ -213,10 +214,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				return
 			}
 
-			// Handle paste mode - when using passthrough, paste content is handled in handleRawData
-			// When not using passthrough, we still need to accumulate here
+			// Handle paste mode
 			if (isPasteRef.current) {
-				if (!usePassthrough) {
+				if (!requiresFallback) {
 					pasteBufferRef.current += parsedKey.sequence
 					appendToPasteBuffer(parsedKey.sequence)
 				}
@@ -228,8 +228,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				isDraggingRef.current = true
 				appendToDragBuffer(parsedKey.sequence)
 
-				clearDragTimer()
-				dragTimerRef.current = setTimeout(() => {
+				dragTimerRef.current.set(() => {
 					completeDrag()
 				}, DRAG_COMPLETION_TIMEOUT_MS)
 				return
@@ -248,7 +247,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 			// Handle backslash + Enter detection (for Shift+Enter fallback)
 			if (parsedKey.name === "return" && waitingForEnterRef.current) {
-				clearBackslashTimer()
+				backslashTimerRef.current.clear()
 				waitingForEnterRef.current = false
 				broadcastKey({
 					...parsedKey,
@@ -258,8 +257,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 
 			// Check for Shift+Enter via escape sequence
-			// Some terminals send ESC + Enter for Shift+Enter
-			if (parsedKey.sequence === `${ESC}\r` || parsedKey.sequence === `${ESC}\n`) {
+			if (isShiftEnterSequence(parsedKey.sequence)) {
 				broadcastKey({
 					name: "return",
 					ctrl: false,
@@ -271,83 +269,35 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 				return
 			}
 
+			// Handle backslash detection
 			if (parsedKey.sequence === BACKSLASH && !parsedKey.name) {
 				waitingForEnterRef.current = true
-				backslashTimerRef.current = setTimeout(() => {
+				backslashTimerRef.current.set(() => {
 					waitingForEnterRef.current = false
 					broadcastKey(parsedKey)
 				}, BACKSLASH_ENTER_DETECTION_WINDOW_MS)
 				return
 			}
 
+			// If waiting for Enter but got something else, send backslash first
 			if (waitingForEnterRef.current && parsedKey.name !== "return") {
-				clearBackslashTimer()
+				backslashTimerRef.current.clear()
 				waitingForEnterRef.current = false
-				// Send the backslash first
 				broadcastKey(createSpecialKey("", BACKSLASH))
 			}
 
 			// Handle Kitty protocol sequences
 			if (isKittyEnabled && parsedKey.sequence.startsWith(ESC)) {
-				// Try to parse the sequence directly first
-				const result = parseKittySequence(parsedKey.sequence)
+				const keys = handleKittySequence(parsedKey.sequence, kittyBufferStateRef.current, isDebugEnabled)
 
-				if (result.key) {
-					// Successfully parsed immediately
-					if (isDebugEnabled) {
-						logs.debug("Kitty sequence parsed", "KeyboardProvider", { key: result.key })
-					}
-					broadcastKey(result.key)
+				if (keys.length > 0) {
+					keys.forEach((k) => broadcastKey(k))
 					return
 				}
 
-				// If not parsed, accumulate in buffer
-				appendToKittyBuffer(parsedKey.sequence)
-
-				// Try to parse accumulated buffer
-				let buffer = kittyBuffer + parsedKey.sequence
-				let parsedAny = false
-
-				while (buffer) {
-					const bufferResult = parseKittySequence(buffer)
-					if (!bufferResult.key) {
-						// Look for next CSI start
-						const nextStart = buffer.indexOf(ESC, 1)
-						if (nextStart > 0) {
-							if (isDebugEnabled) {
-								logs.debug("Skipping incomplete sequence, looking for next CSI", "KeyboardProvider")
-							}
-							buffer = buffer.slice(nextStart)
-							continue
-						}
-						break
-					}
-
-					// Successfully parsed a key
-					if (isDebugEnabled) {
-						logs.debug("Kitty buffer parsed", "KeyboardProvider", { key: bufferResult.key })
-					}
-					buffer = buffer.slice(bufferResult.consumedLength)
-					broadcastKey(bufferResult.key)
-					parsedAny = true
-				}
-
-				if (parsedAny) {
-					clearKittyBuffer()
-					if (buffer) {
-						appendToKittyBuffer(buffer)
-					}
+				// If no keys parsed, wait for more data (unless buffer is empty)
+				if (kittyBufferStateRef.current.buffer.length > 0) {
 					return
-				}
-
-				// Check for buffer overflow
-				if (kittyBuffer.length > MAX_KITTY_SEQUENCE_LENGTH) {
-					if (isDebugEnabled) {
-						logs.warn("Kitty buffer overflow, clearing", "KeyboardProvider", { kittyBuffer })
-					}
-					clearKittyBuffer()
-				} else {
-					return // Wait for more data
 				}
 			}
 
@@ -362,7 +312,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		// Handle raw data for paste detection (if using passthrough)
 		const handleRawData = (data: Buffer) => {
-			if (!usePassthrough) return
+			if (!requiresFallback) return
 
 			const dataStr = data.toString()
 			let pos = 0
@@ -428,14 +378,14 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 		// Setup event listeners
 		keypressStream.on("keypress", handleKeypress)
-		if (usePassthrough) {
+		if (requiresFallback) {
 			stdin.on("data", handleRawData)
 		}
 
 		// Cleanup
 		return () => {
 			keypressStream.removeListener("keypress", handleKeypress)
-			if (usePassthrough) {
+			if (requiresFallback) {
 				stdin.removeListener("data", handleRawData)
 			}
 			rl.close()
@@ -443,8 +393,10 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Cleanup keyboard handler
 			unsubscribeKeyboard()
 
-			// Disable bracketed paste mode
-			process.stdout.write("\x1b[?2004l")
+			// Disable bracketed paste mode (only if it was enabled)
+			if (!requiresFallback) {
+				process.stdout.write("\x1b[?2004l")
+			}
 
 			// Disable Kitty keyboard protocol if it was enabled
 			const currentKittyState = isKittyEnabled
@@ -458,13 +410,18 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 
 			// Clear timers
-			clearDragTimer()
-			clearBackslashTimer()
+			dragTimerRef.current.clear()
+			backslashTimerRef.current.clear()
+			fallbackPasteTimerRef.current.clear()
 
 			// Flush any pending buffers
 			completePaste()
 			completeDrag()
+			completeFallbackPaste(fallbackPasteStateRef.current, (text) => {
+				broadcastKey(createPasteKey(text))
+			})
 			clearBuffers()
+			clearKittyBuffer(kittyBufferStateRef.current)
 		}
 	}, [
 		stdin,
@@ -475,19 +432,14 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		appendToPasteBuffer,
 		setDragMode,
 		appendToDragBuffer,
-		appendToKittyBuffer,
-		clearKittyBuffer,
 		clearBuffers,
 		setKittyProtocol,
 		pasteBuffer,
 		dragBuffer,
-		kittyBuffer,
 		isKittyEnabled,
 		isDebugEnabled,
 		completePaste,
 		completeDrag,
-		clearDragTimer,
-		clearBackslashTimer,
 		setupKeyboard,
 	])
 

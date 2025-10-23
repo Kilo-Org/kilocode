@@ -5,3 +5,4 @@
 export * from "./keyCodes.js"
 export * from "./sequences.js"
 export * from "./kittyProtocol.js"
+export * from "./terminals.js"
