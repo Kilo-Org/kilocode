@@ -8,6 +8,7 @@
  */
 
 import type { Theme, ThemeId } from "../../types/theme.js"
+import type { CLIConfig } from "../../config/types.js"
 import { alphaTheme } from "./alpha.js"
 import { darkTheme } from "./dark.js"
 import { lightTheme } from "./light.js"
@@ -44,29 +45,53 @@ const themeRegistry: Record<ThemeId, Theme> = {
 }
 
 /**
- * Get a theme by ID
+ * Get a theme by ID (supports custom themes from config)
  * @param themeId - The theme identifier
+ * @param config - Optional config containing custom themes
  * @returns The requested theme, or dark theme as fallback
  */
-export function getThemeById(themeId: ThemeId): Theme {
+export function getThemeById(themeId: ThemeId, config?: CLIConfig): Theme {
+	// Check custom themes first if config is provided
+	if (config && config.customThemes && config.customThemes[themeId]) {
+		return config.customThemes[themeId]
+	}
+
+	// Fall back to built-in themes
 	return themeRegistry[themeId] || darkTheme
 }
 
 /**
  * Get all available theme IDs
+ * @param config - Optional config containing custom themes
  * @returns Array of theme identifiers
  */
-export function getAvailableThemes(): ThemeId[] {
-	return Object.keys(themeRegistry)
+export function getAvailableThemes(config?: CLIConfig): ThemeId[] {
+	const builtInThemes = Object.keys(themeRegistry) as ThemeId[]
+
+	if (config && config.customThemes) {
+		const customThemeIds = Object.keys(config.customThemes) as ThemeId[]
+		return [...builtInThemes, ...customThemeIds]
+	}
+
+	return builtInThemes
 }
 
 /**
  * Check if a theme ID is valid
  * @param themeId - The theme identifier to check
+ * @param config - Optional config containing custom themes
  * @returns True if the theme exists
  */
-export function isValidThemeId(themeId: string): themeId is ThemeId {
-	return themeId in themeRegistry
+export function isValidThemeId(themeId: string, config?: CLIConfig): themeId is ThemeId {
+	const builtInThemes = Object.keys(themeRegistry)
+	const isValidBuiltIn = builtInThemes.includes(themeId)
+
+	// Also check custom themes if config is provided
+	if (config && config.customThemes) {
+		return isValidBuiltIn || Object.keys(config.customThemes).includes(themeId)
+	}
+
+	return isValidBuiltIn
 }
 
 // Re-export types and themes

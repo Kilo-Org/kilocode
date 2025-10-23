@@ -60,6 +60,7 @@ export const DEFAULT_CONFIG: CLIConfig = {
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
 	theme: "dark",
+	customThemes: {},
 }
 
 export function createDefaultProvider(provider: string): any {

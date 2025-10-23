@@ -109,6 +109,11 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 		})
 	}
 
+	// Ensure customThemes property exists (for backward compatibility)
+	if (!merged.customThemes) {
+		merged.customThemes = {}
+	}
+
 	return merged
 }
 
