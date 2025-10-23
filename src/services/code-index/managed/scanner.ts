@@ -31,7 +31,7 @@ import {
 	addDeletedFile,
 	createEmptyCache,
 } from "./cache"
-import { ManagedIndexingConfig, ScanProgress, ScanResult, ClientCache } from "./types"
+import { ManagedIndexingConfig, ScanProgress, ScanResult, ClientCache, ServerManifest } from "./types"
 import {
 	MAX_FILE_SIZE_BYTES,
 	MAX_LIST_FILES_LIMIT_CODE_INDEX,
@@ -43,6 +43,17 @@ import { TelemetryEventName } from "@roo-code/types"
 import { logger } from "../../../utils/logging"
 
 /**
+ * Helper function to compare two arrays for equality
+ */
+function arraysEqual<T>(a: T[], b: T[]): boolean {
+	if (a.length !== b.length) return false
+	for (let i = 0; i < a.length; i++) {
+		if (a[i] !== b[i]) return false
+	}
+	return true
+}
+
+/**
  * Scans a directory and indexes files based on branch strategy
  *
  * - Main branch: Scans all files
@@ -50,12 +61,14 @@ import { logger } from "../../../utils/logging"
  *
  * @param config Managed indexing configuration
  * @param context VSCode extension context
+ * @param manifest Optional server manifest for intelligent delta indexing
  * @param onProgress Optional progress callback
  * @returns Scan result with statistics
  */
 export async function scanDirectory(
 	config: ManagedIndexingConfig,
 	context: vscode.ExtensionContext,
+	manifest?: ServerManifest,
 	onProgress?: (progress: ScanProgress) => void,
 ): Promise<ScanResult> {
 	const errors: Error[] = []
@@ -83,8 +96,17 @@ export async function scanDirectory(
 
 		console.info(`Scanning ${filesToScan.length} files on branch ${currentBranch} (isBase: ${isBase})`)
 
-		// Process files
-		const result = await processFiles(filesToScan, config, context, cache, currentBranch, isBase, onProgress)
+		// Process files with manifest for intelligent skipping
+		const result = await processFiles(
+			filesToScan,
+			config,
+			context,
+			cache,
+			currentBranch,
+			isBase,
+			manifest,
+			onProgress,
+		)
 
 		// Save updated cache
 		await saveClientCache(context, config.workspacePath, result.cache)
@@ -192,6 +214,7 @@ async function getAllSupportedFiles(workspacePath: string): Promise<string[]> {
  * @param cache Client cache
  * @param gitBranch Current git branch
  * @param isBase Whether this is a base branch
+ * @param manifest Optional server manifest for intelligent skipping
  * @param onProgress Progress callback
  * @returns Processing result with updated cache
  */
@@ -202,6 +225,7 @@ async function processFiles(
 	cache: ClientCache,
 	gitBranch: string,
 	isBase: boolean,
+	manifest?: ServerManifest,
 	onProgress?: (progress: ScanProgress) => void,
 ): Promise<{
 	filesProcessed: number
@@ -252,14 +276,10 @@ async function processFiles(
 				// Calculate file hash
 				const fileHash = calculateFileHash(content)
 
-				// Check if file needs indexing
-				if (!shouldIndexFile(updatedCache, filePath, fileHash)) {
-					filesSkipped++
-					return
-				}
+				// Get relative path for manifest comparison
+				const relativeFilePath = generateRelativeFilePath(filePath, config.workspacePath)
 
 				// Chunk the file
-				const relativeFilePath = generateRelativeFilePath(filePath, config.workspacePath)
 				const chunks = chunkFile(
 					relativeFilePath,
 					content,
@@ -270,6 +290,33 @@ async function processFiles(
 					isBase,
 					config.chunker,
 				)
+
+				// Extract chunk hashes for comparison
+				const currentChunkHashes = chunks.map((c) => c.chunkHash)
+
+				// Check if file is already indexed on server with matching chunk hashes
+				if (manifest) {
+					const manifestEntry = manifest.files.find((f) => f.filePath === relativeFilePath)
+					if (manifestEntry && arraysEqual(currentChunkHashes, manifestEntry.chunkHashes)) {
+						// File already indexed on server with same chunks - skip
+						filesSkipped++
+						// Update cache to reflect server state
+						updatedCache = updateCacheEntry(
+							updatedCache,
+							relativeFilePath,
+							fileHash,
+							manifestEntry.chunkCount,
+						)
+						logger.info(`[Scanner] Skipping ${relativeFilePath} - already indexed on server`)
+						return
+					}
+				}
+
+				// Check if file needs indexing based on client cache
+				if (!shouldIndexFile(updatedCache, filePath, fileHash)) {
+					filesSkipped++
+					return
+				}
 
 				// Add to batch
 				currentBatch.push(...chunks)

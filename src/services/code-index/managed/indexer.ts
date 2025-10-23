@@ -10,10 +10,10 @@
 import * as vscode from "vscode"
 import { scanDirectory } from "./scanner"
 import { createFileWatcher } from "./watcher"
-import { searchCode as apiSearchCode } from "./api-client"
+import { searchCode as apiSearchCode, getServerManifest } from "./api-client"
 import { getCurrentBranch, getGitDiff, isGitRepository } from "./git-utils"
 import { loadClientCache } from "./cache"
-import { ManagedIndexingConfig, IndexerState, SearchResult } from "./types"
+import { ManagedIndexingConfig, IndexerState, SearchResult, ServerManifest } from "./types"
 import { getDefaultChunkerConfig } from "./chunker"
 import { logger } from "../../../utils/logging"
 import { TelemetryService } from "@roo-code/telemetry"
@@ -53,6 +53,18 @@ export async function startIndexing(
 		// Get current branch
 		const gitBranch = getCurrentBranch(config.workspacePath)
 
+		// Fetch server manifest to determine what's already indexed
+		let manifest: ServerManifest | undefined
+		try {
+			manifest = await getServerManifest(config.organizationId, config.projectId, gitBranch, config.kilocodeToken)
+			logger.info(
+				`[Managed Indexing] Server manifest: ${manifest.totalFiles} files, ${manifest.totalChunks} chunks`,
+			)
+		} catch (error) {
+			logger.warn("[Managed Indexing] Failed to fetch manifest, will perform full scan:", error)
+			// Continue without manifest - scanner will index everything
+		}
+
 		// Update state: scanning
 		onStateChange?.({
 			status: "scanning",
@@ -60,8 +72,8 @@ export async function startIndexing(
 			gitBranch,
 		})
 
-		// Perform initial scan
-		const result = await scanDirectory(config, context, (progress) => {
+		// Perform initial scan with manifest for intelligent delta indexing
+		const result = await scanDirectory(config, context, manifest, (progress) => {
 			onStateChange?.({
 				status: "scanning",
 				message: `Scanning: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,

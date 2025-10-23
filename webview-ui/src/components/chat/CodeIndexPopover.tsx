@@ -1581,8 +1581,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														<AlertDialogTitle>Clear Local Cache?</AlertDialogTitle>
 														<AlertDialogDescription>
 															This will clear the local cache for this workspace and
-															branch. The server index will not be affected. You'll need
-															to re-scan to rebuild the cache.
+															branch. The server index will not be affected. You&apos;ll
+															need to re-scan to rebuild the cache.
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>
@@ -1608,8 +1608,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														<AlertDialogTitle>Delete Branch Index?</AlertDialogTitle>
 														<AlertDialogDescription>
 															This will delete all indexed data for the current branch
-															from the server. This action cannot be undone. You'll need
-															to re-index to restore the data.
+															from the server. This action cannot be undone. You&apos;ll
+															need to re-index to restore the data.
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>
@@ -1636,8 +1636,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														<AlertDialogDescription>
 															This will delete ALL indexed data for this project across
 															ALL branches from the server. This action cannot be undone
-															and will affect all team members. You'll need to re-index
-															everything to restore the data.
+															and will affect all team members. You&apos;ll need to
+															re-index everything to restore the data.
 														</AlertDialogDescription>
 													</AlertDialogHeader>
 													<AlertDialogFooter>

@@ -227,57 +227,57 @@ export function hasUncommittedChanges(workspacePath: string): boolean {
  * @param workspacePath Path to the workspace
  * @yields File paths relative to workspace root
  */
-export async function* getGitTrackedFiles(workspacePath: string): AsyncGenerator<string, void, unknown> {
-	const { spawn } = await import("child_process")
+// export async function* getGitTrackedFiles(workspacePath: string): AsyncGenerator<string, void, unknown> {
+// 	const { spawn } = await import("child_process")
 
-	return new Promise<void>((resolve, reject) => {
-		const gitProcess = spawn("git", ["ls-files"], {
-			cwd: workspacePath,
-			stdio: ["ignore", "pipe", "pipe"],
-		})
+// 	return new Promise<void>((resolve, reject) => {
+// 		const gitProcess = spawn("git", ["ls-files"], {
+// 			cwd: workspacePath,
+// 			stdio: ["ignore", "pipe", "pipe"],
+// 		})
 
-		let buffer = ""
+// 		let buffer = ""
 
-		gitProcess.stdout.on("data", (chunk: Buffer) => {
-			buffer += chunk.toString()
-			const lines = buffer.split("\n")
-			// Keep the last incomplete line in the buffer
-			buffer = lines.pop() || ""
+// 		gitProcess.stdout.on("data", (chunk: Buffer) => {
+// 			buffer += chunk.toString()
+// 			const lines = buffer.split("\n")
+// 			// Keep the last incomplete line in the buffer
+// 			buffer = lines.pop() || ""
 
-			// Yield complete lines
-			for (const line of lines) {
-				const trimmed = line.trim()
-				if (trimmed) {
-					// This is a hack to make the generator work synchronously
-					// We'll refactor this to use a proper async generator pattern
-					;(async () => {
-						// Yield the file path
-					})()
-				}
-			}
-		})
+// 			// Yield complete lines
+// 			for (const line of lines) {
+// 				const trimmed = line.trim()
+// 				if (trimmed) {
+// 					// This is a hack to make the generator work synchronously
+// 					// We'll refactor this to use a proper async generator pattern
+// 					;(async () => {
+// 						// Yield the file path
+// 					})()
+// 				}
+// 			}
+// 		})
 
-		gitProcess.stderr.on("data", (chunk: Buffer) => {
-			console.error(`git ls-files error: ${chunk.toString()}`)
-		})
+// 		gitProcess.stderr.on("data", (chunk: Buffer) => {
+// 			console.error(`git ls-files error: ${chunk.toString()}`)
+// 		})
 
-		gitProcess.on("close", (code) => {
-			if (code !== 0) {
-				reject(new Error(`git ls-files exited with code ${code}`))
-			} else {
-				// Process any remaining buffer
-				if (buffer.trim()) {
-					// Yield final line
-				}
-				resolve()
-			}
-		})
+// 		gitProcess.on("close", (code) => {
+// 			if (code !== 0) {
+// 				reject(new Error(`git ls-files exited with code ${code}`))
+// 			} else {
+// 				// Process any remaining buffer
+// 				if (buffer.trim()) {
+// 					// Yield final line
+// 				}
+// 				resolve()
+// 			}
+// 		})
 
-		gitProcess.on("error", (error) => {
-			reject(new Error(`Failed to execute git ls-files: ${error.message}`))
-		})
-	})
-}
+// 		gitProcess.on("error", (error) => {
+// 			reject(new Error(`Failed to execute git ls-files: ${error.message}`))
+// 		})
+// 	})
+// }
 
 /**
  * Gets all files tracked by git (synchronous version)

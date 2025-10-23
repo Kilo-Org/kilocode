@@ -69,7 +69,7 @@ export {
 	getBaseBranch,
 	isGitRepository,
 	hasUncommittedChanges,
-	getGitTrackedFiles,
+	// getGitTrackedFiles,
 	getGitTrackedFilesSync,
 } from "./git-utils"
 
