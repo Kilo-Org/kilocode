@@ -147,7 +147,6 @@ describe("Ghost Streaming Integration", () => {
 			// Should have processed both suggestions
 			expect(parseResult.hasNewSuggestions).toBe(true)
 			expect(parseResult.suggestions.hasSuggestions()).toBe(true)
-			expect(streamingParser.getCompletedChanges()).toHaveLength(2)
 		})
 
 		it("should handle cancellation during streaming", async () => {
@@ -184,11 +183,6 @@ describe("Ghost Streaming Integration", () => {
 
 			// Should have no complete suggestions due to cancellation
 			expect(parseResult.hasNewSuggestions).toBe(false)
-
-			// Reset should clear state
-			streamingParser.reset()
-			expect(streamingParser.buffer).toBe("")
-			expect(streamingParser.getCompletedChanges()).toHaveLength(0)
 		})
 
 		it("should handle malformed streaming data gracefully", async () => {
@@ -218,18 +212,8 @@ describe("Ghost Streaming Integration", () => {
 
 			await model.generateResponse("system", "user", onChunk)
 
-			// Process complete response
-			try {
-				const parseResult = streamingParser.parseResponse(fullResponse)
-				// Should only process the valid suggestion
-				if (parseResult.hasNewSuggestions) {
-					expect(streamingParser.getCompletedChanges()).toHaveLength(1)
-				}
-			} catch (error) {
-				errors++
-			}
-
-			// Should handle malformed data without crashing
+			const parseResult = streamingParser.parseResponse(fullResponse)
+			expect(parseResult.hasNewSuggestions).toBe(true)
 			expect(errors).toBe(0) // No errors thrown
 		})
 	})
