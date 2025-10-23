@@ -38,6 +38,17 @@ import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 export const DEFAULT_CONSECUTIVE_MISTAKE_LIMIT = 3
 
 /**
+ * Profile Type System
+ */
+
+export const profileTypes = ["chat", "autocomplete"] as const
+export const profileTypeSchema = z.enum(profileTypes)
+export type ProfileType = z.infer<typeof profileTypeSchema>
+
+// Default value constant
+export const DEFAULT_PROFILE_TYPE: ProfileType = "chat"
+
+/**
  * DynamicProvider
  *
  * Dynamic provider requires external API calls in order to get the model list.
@@ -172,6 +183,7 @@ export const providerSettingsEntrySchema = z.object({
 	name: z.string(),
 	apiProvider: providerNamesSchema.optional(),
 	modelId: z.string().optional(),
+	profileType: profileTypeSchema.optional(),
 })
 
 export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
@@ -181,6 +193,7 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
  */
 
 const baseProviderSettingsSchema = z.object({
+	profileType: profileTypeSchema.optional(),
 	includeMaxTokens: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	todoListEnabled: z.boolean().optional(),

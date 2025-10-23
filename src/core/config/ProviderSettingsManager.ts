@@ -12,6 +12,7 @@ import {
 	getModelId,
 	type ProviderName,
 	type RooModelId,
+	type ProfileType,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
@@ -48,6 +49,7 @@ export const providerProfilesSchema = z.object({
 			consecutiveMistakeLimitMigrated: z.boolean().optional(),
 			todoListEnabledMigrated: z.boolean().optional(),
 			morphApiKeyMigrated: z.boolean().optional(), // kilocode_change: Morph API key migration
+			profileTypeMigrated: z.boolean().optional(),
 		})
 		.optional(),
 })
@@ -72,6 +74,7 @@ export class ProviderSettingsManager {
 			openAiHeadersMigrated: true, // Mark as migrated on fresh installs
 			consecutiveMistakeLimitMigrated: true, // Mark as migrated on fresh installs
 			todoListEnabledMigrated: true, // Mark as migrated on fresh installs
+			profileTypeMigrated: true, // Mark as migrated on fresh installs
 		},
 	}
 
@@ -145,6 +148,7 @@ export class ProviderSettingsManager {
 						consecutiveMistakeLimitMigrated: false,
 						todoListEnabledMigrated: false,
 						morphApiKeyMigrated: false, // kilocode_change: Morph API key migration
+						profileTypeMigrated: false,
 					} // Initialize with default values
 					isDirty = true
 				}
@@ -186,6 +190,12 @@ export class ProviderSettingsManager {
 					isDirty ||= result
 				}
 				// kilocode_change end
+
+				if (!providerProfiles.migrations.profileTypeMigrated) {
+					await this.migrateProfileType(providerProfiles)
+					providerProfiles.migrations.profileTypeMigrated = true
+					isDirty = true
+				}
 
 				if (isDirty) {
 					await this.store(providerProfiles)
@@ -305,6 +315,21 @@ export class ProviderSettingsManager {
 	}
 
 	/**
+	 * Migrate existing profiles to have profileType field defaulting to "chat"
+	 */
+	private async migrateProfileType(providerProfiles: ProviderProfiles) {
+		try {
+			for (const [_name, apiConfig] of Object.entries(providerProfiles.apiConfigs)) {
+				if (apiConfig.profileType === undefined) {
+					apiConfig.profileType = "chat" // Default to chat for existing profiles
+				}
+			}
+		} catch (error) {
+			console.error(`[MigrateProfileType] Failed to migrate profile type:`, error)
+		}
+	}
+
+	/**
 	 * Apply model migrations for all providers
 	 * Returns true if any migrations were applied
 	 */
@@ -369,10 +394,37 @@ export class ProviderSettingsManager {
 					id: apiConfig.id || "",
 					apiProvider: apiConfig.apiProvider,
 					modelId: this.cleanModelId(getModelId(apiConfig)),
+					profileType: apiConfig.profileType,
 				}))
 			})
 		} catch (error) {
 			throw new Error(`Failed to list configs: ${error}`)
+		}
+	}
+
+	/**
+	 * Validate that only one autocomplete profile exists
+	 */
+	private async validateAutocompleteConstraint(
+		profiles: ProviderProfiles,
+		newProfileName: string,
+		newProfileType?: ProfileType,
+	): Promise<void> {
+		if (newProfileType !== "autocomplete") {
+			return // No constraint for non-autocomplete profiles
+		}
+
+		const autocompleteProfiles = Object.entries(profiles.apiConfigs).filter(
+			([name, config]) => config.profileType === "autocomplete" && name !== newProfileName,
+		)
+
+		if (autocompleteProfiles.length > 0) {
+			const existingName = autocompleteProfiles[0][0]
+			throw new Error(
+				`Only one autocomplete profile is allowed. ` +
+					`Profile "${existingName}" is already configured for autocomplete. ` +
+					`Please change its type first or delete it.`,
+			)
 		}
 	}
 
@@ -385,6 +437,10 @@ export class ProviderSettingsManager {
 		try {
 			return await this.lock(async () => {
 				const providerProfiles = await this.load()
+
+				// Validate autocomplete constraint
+				await this.validateAutocompleteConstraint(providerProfiles, name, config.profileType)
+
 				// Preserve the existing ID if this is an update to an existing config.
 				const existingId = providerProfiles.apiConfigs[name]?.id
 				const id = config.id || existingId || this.generateId()
