@@ -1,0 +1,27 @@
+{
+	"greeting": "Hej, jag är Kilo Code!",
+	"introduction": "<strong>Kilo Code är den ledande autonoma kodagenten.</strong> Gör dig redo att designa, koda, felsöka och öka din produktivitet som aldrig förr. För att fortsätta behöver Kilo Code en API-nyckel.",
+	"notice": "För att komma igång behöver detta tillägg en API-leverantör.",
+	"start": "Nu kör vi!",
+	"routers": {
+		"requesty": {
+			"description": "Din optimerade LLM-router",
+			"incentive": "$1 gratis kredit"
+		},
+		"openrouter": {
+			"description": "Ett enhetligt gränssnitt för LLM:er"
+		}
+	},
+	"chooseProvider": "För att göra sin magi behöver Kilo Code en API-nyckel.",
+	"startRouter": "Vi rekommenderar att använda en LLM-router:",
+	"startCustom": "Eller så kan du använda din leverantörs API-nyckel:",
+	"telemetry": {
+		"title": "Hjälp till att förbättra Kilo Code",
+		"anonymousTelemetry": "Skicka fel- och användningsdata för att hjälpa oss att åtgärda buggar och förbättra tillägget. Ingen kod, inga promptar eller personuppgifter skickas någonsin.",
+		"changeSettings": "Du kan alltid ändra detta längst ned i <settingsLink>inställningarna</settingsLink>",
+		"settings": "inställningar",
+		"allow": "Tillåt",
+		"deny": "Neka"
+	},
+	"importSettings": "Importera inställningar"
+}

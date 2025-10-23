@@ -1,0 +1,137 @@
+{
+	"info": {
+		"settings_imported": "Inställningar importerade."
+	},
+	"userFeedback": {
+		"message_update_failed": "Misslyckades med att uppdatera meddelande",
+		"no_checkpoint_found": "Ingen kontrollpunkt hittades före detta meddelande",
+		"message_updated": "Meddelande uppdaterat"
+	},
+	"lowCreditWarning": {
+		"title": "Varning: lågt kreditsaldo!",
+		"message": "Kontrollera om du kan fylla på med gratiskrediter eller köpa fler!"
+	},
+	"task": {
+		"noAssistantMessages": "Modellens svar avslutades oväntat (inga assistentmeddelanden). Detta kan vara ett tecken på hastighetsbegränsning.",
+		"notLoggedInError": "Kan inte slutföra begäran, se till att du är ansluten och inloggad med den valda leverantören.\n\n{{error}}",
+		"maxCompletionTokens": "Maximalt antal kompletteringstokens uppnåddes."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Kontrollpunkter är inte tillgängliga eftersom nästlade Git-repon upptäcktes i arbetsytan. Ta bort eller flytta nästlade Git-repon för att använda kontrollpunktsfunktionen eller inaktivera kontrollpunkter i inställningarna för att undertrycka denna varning.",
+		"protectedPaths": "Kontrollpunkter är inte tillgängliga i {{workspaceDir}}. Öppna en undermapp som arbetsyta för att använda kontrollpunkter eller inaktivera kontrollpunkter i inställningarna för att undertrycka denna varning.",
+		"dismissWarning": "Avfärda"
+	},
+	"rules": {
+		"actions": {
+			"delete": "Ta bort",
+			"confirmDelete": "Är du säker på att du vill ta bort {{filename}}?",
+			"deleted": "Tog bort {{filename}}"
+		},
+		"errors": {
+			"noWorkspaceFound": "Ingen arbetsytemapp hittades",
+			"fileAlreadyExists": "Filen {{filename}} finns redan",
+			"failedToCreateRuleFile": "Det gick inte att skapa regelfil.",
+			"failedToDeleteRuleFile": "Det gick inte att ta bort regelfil."
+		},
+		"templates": {
+			"workflow": {
+				"description": "Beskrivning av arbetsflöde här...",
+				"stepsHeader": "## Steg",
+				"step1": "Steg 1",
+				"step2": "Steg 2"
+			},
+			"rule": {
+				"description": "Beskrivning av regel här...",
+				"guidelinesHeader": "## Riktlinjer",
+				"guideline1": "Riktlinje 1",
+				"guideline2": "Riktlinje 2"
+			}
+		}
+	},
+	"commitMessage": {
+		"activated": "Kilo Code commit-meddelande-generator aktiverad",
+		"gitNotFound": "⚠️ Git-repo hittades inte eller git är inte tillgängligt",
+		"gitInitError": "⚠️ Fel vid initiering av git: {{error}}",
+		"generating": "Kilo: Genererar commit-meddelande...",
+		"noChanges": "Kilo: Inga ändringar hittades att analysera",
+		"generated": "Kilo: Commit-meddelande genererat!",
+		"generationFailed": "Kilo: Misslyckades med att generera commit-meddelande: {{errorMessage}}",
+		"generatingFromUnstaged": "Kilo: Genererar meddelande med ostagade ändringar",
+		"activationFailed": "Kilo: Misslyckades med att aktivera meddelandegenerator: {{error}}",
+		"providerRegistered": "Kilo: Leverantör för commit-meddelande registrerad"
+	},
+	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Code Autokomplettering",
+			"disabled": "$(circle-slash) Kilo Code Autokomplettering",
+			"warning": "$(warning) Kilo Code Autokomplettering",
+			"tooltip": {
+				"basic": "Kilo Code Autokomplettering",
+				"disabled": "Kilo Code Autokomplettering (inaktiverad)",
+				"tokenError": "En giltig token måste anges för att använda autokomplettering",
+				"lastCompletion": "Senaste förslag:",
+				"sessionTotal": "Totalkostnad för session:",
+				"model": "Modell:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autokomplettering {{status}}",
+		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Analyserar din kod...",
+			"generating": "Genererar föreslagna ändringar...",
+			"processing": "Bearbetar föreslagna ändringar...",
+			"showing": "Visar föreslagna ändringar..."
+		},
+		"input": {
+			"title": "Kilo Code: Snabbuppgift",
+			"placeholder": "t.ex. 'refaktorera den här funktionen för att bli mer effektiv'"
+		},
+		"commands": {
+			"generateSuggestions": "Kilo Code: Generera föreslagna ändringar",
+			"displaySuggestions": "Visa föreslagna ändringar",
+			"cancelSuggestions": "Avbryt föreslagna ändringar",
+			"applyCurrentSuggestion": "Tillämpa aktuellt förslag",
+			"applyAllSuggestions": "Tillämpa alla föreslagna ändringar",
+			"promptCodeSuggestion": "Snabbuppgift",
+			"category": "Kilo Code"
+		},
+		"codeAction": {
+			"title": "Kilo Code: Föreslagna ändringar"
+		},
+		"chatParticipant": {
+			"fullName": "Kilo Code-agent",
+			"name": "Agent",
+			"description": "Jag kan hjälpa dig med snabba uppgifter och föreslagna ändringar."
+		},
+		"incompatibilityExtensionPopup": {
+			"message": "Kilo Code Autokomplettering blockeras av en konflikt med GitHub Copilot. För att åtgärda detta måste du inaktivera Copilots inline-förslag.",
+			"disableCopilot": "Inaktivera Copilot",
+			"disableInlineAssist": "Inaktivera autokomplettering"
+		}
+	},
+	"seeNewChanges": {
+		"title": "Visar nya ändringar",
+		"checkpointsUnavailable": "Kan inte visa nya ändringar, kontrollpunkter är inte tillgängliga.",
+		"noChanges": "Kan inte visa nya ändringar, inga ändringar hittades.",
+		"error": "Kan inte visa nya ändringar, ett fel inträffade."
+	},
+	"terminalCommandGenerator": {
+		"tipMessage": "Kilo: Tryck {{shortcut}} för att generera terminalkommandon",
+		"inputPrompt": "Kilo: Beskriv kommandot du vill generera",
+		"inputPlaceholder": "t.ex. döda processen som körs på port 3001, hitta stora filer, etc.",
+		"noActiveTerminal": "Kilo: Ingen aktiv terminal hittades. Öppna först en terminal.",
+		"generatingProgress": "Kilo: Genererar terminalkommando...",
+		"commandGenerated": "Kilo: Genererat kommando: {{command}}",
+		"generationFailed": "Kilo: Misslyckades med att generera kommando: {{error}}",
+		"warningDialog": {
+			"title": "Varning för terminalsäkerhet",
+			"message": "Dubbelkolla alla genererade kommandon innan du kör dem. Terminalåtgärder kan inte alltid ångras — att köra overifierade kommandon kan leda till oåterkallelig dataförlust eller systemskada. Granska och förstå kommandot helt innan du fortsätter!",
+			"okButton": "Jag förstår",
+			"cancelButton": "Avbryt"
+		}
+	}
+}
