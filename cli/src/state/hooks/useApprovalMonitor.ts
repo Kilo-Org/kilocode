@@ -17,6 +17,7 @@ import { useEffect, useRef } from "react"
 import { useAtomValue, useSetAtom, useStore } from "jotai"
 import { lastAskMessageAtom } from "../atoms/ui.js"
 import { setPendingApprovalAtom, clearPendingApprovalAtom, approvalProcessingAtom } from "../atoms/approval.js"
+import { hasResumeTaskAtom } from "../atoms/extension.js"
 import {
 	autoApproveReadAtom,
 	autoApproveReadOutsideAtom,
@@ -69,6 +70,7 @@ export function useApprovalMonitor(): void {
 	const lastAskMessage = useAtomValue(lastAskMessageAtom)
 	const setPendingApproval = useSetAtom(setPendingApprovalAtom)
 	const clearPendingApproval = useSetAtom(clearPendingApprovalAtom)
+	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
 
 	// Get all config values
 	const autoApproveRead = useAtomValue(autoApproveReadAtom)
@@ -157,6 +159,19 @@ export function useApprovalMonitor(): void {
 
 		// If message is answered, clear pending approval
 		if (lastAskMessage.isAnswered) {
+			clearPendingApproval()
+			lastPendingRef.current = null
+			return
+		}
+
+		// If we're in a resume context, treat historical messages as already answered
+		// This prevents asking for approval on actions that were already approved in the original conversation
+		if (hasResumeTask && lastAskMessage.ask !== "resume_task" && lastAskMessage.ask !== "resume_completed_task") {
+			// This is a historical message from the resumed task, treat it as already answered
+			logs.debug("Skipping approval for historical message in resume context", "useApprovalMonitor", {
+				ask: lastAskMessage.ask,
+				ts: lastAskMessage.ts,
+			})
 			clearPendingApproval()
 			lastPendingRef.current = null
 			return
