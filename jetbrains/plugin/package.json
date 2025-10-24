@@ -26,6 +26,9 @@
 		"copy:resource-nodemodules": "cp ../host/package.json ../resources/package.json && npm install --prefix ../resources",
 		"propDep": "npx del-cli ./propDep.txt --force && npm ls --omit=dev --all --parseable --prefix ../resources > ./prodDep.txt",
 		"sync:version": "node scripts/sync_version.js",
-		"sync:changelog": "node scripts/update_change_notes.js"
+		"validate:version": "node scripts/sync_version.js --validate",
+		"validate:build-system": "node scripts/validate_build_system.js",
+		"build:with-sync": "npm run sync:version && npm run build",
+		"bundle:with-sync": "npm run sync:version && npm run bundle"
 	}
 }

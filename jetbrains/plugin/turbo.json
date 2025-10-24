@@ -55,24 +55,28 @@
 		"sync:version": {
 			"cache": false,
 			"outputs": ["./gradle.properties"],
-			"inputs": ["../src/package.json", "./gradle.properties.template"]
+			"inputs": ["../../src/package.json", "./gradle.properties"]
 		},
-		"sync:changelog": {
-			"cache": false,
-			"outputs": ["./src/main/resources/META-INF/plugin.xml"],
-			"inputs": [
-				"./gradle.properties",
-				"../../CHANGELOG.md",
-				"./src/main/resources/META-INF/plugin.xml.template"
-			],
+		"validate:version": {
+			"cache": true,
+			"inputs": ["../../src/package.json", "./gradle.properties"],
 			"dependsOn": ["sync:version"]
+		},
+		"build:with-sync": {
+			"outputs": ["build/**"],
+			"inputs": ["src/**", "plugin/**"],
+			"dependsOn": ["sync:version", "build"]
+		},
+		"bundle:with-sync": {
+			"outputs": ["build/**"],
+			"inputs": ["src/**", "plugin/**"],
+			"dependsOn": ["sync:version", "bundle"]
 		},
 		"build": {
 			"outputs": ["build/**"],
 			"inputs": ["src/**", "plugin/**"],
 			"dependsOn": [
 				"sync:version",
-				"sync:changelog",
 				"copy:kilocode",
 				"copy:resource-kilocode",
 				"copy:resource-host",
@@ -87,7 +91,6 @@
 			"inputs": ["src/**", "plugin/**"],
 			"dependsOn": [
 				"sync:version",
-				"sync:changelog",
 				"copy:kilocode",
 				"copy:resource-kilocode",
 				"copy:resource-host",

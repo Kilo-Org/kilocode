@@ -87,14 +87,12 @@ dependencies {
             listOf(
                 "com.intellij.java",
                 "org.jetbrains.plugins.terminal",
+                "Git4Idea",
             ),
         )
 
         // Plugin verifier
         pluginVerifier()
-
-        // Instrumentation tools
-        instrumentationTools()
     }
 }
 
@@ -116,6 +114,10 @@ intellijPlatform {
         ideaVersion {
             sinceBuild = properties("pluginSinceBuild")
             untilBuild = provider { null }
+        }
+
+        changeNotes = provider {
+            generateChangeNotes(properties("pluginVersion").get())
         }
     }
 
