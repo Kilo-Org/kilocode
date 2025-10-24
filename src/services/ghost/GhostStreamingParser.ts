@@ -252,22 +252,34 @@ export class GhostStreamingParser {
 			return null
 		}
 
+		// Trim trailing whitespace from search for better matching
+		const searchTrimmed = searchWithoutMarker.trimEnd()
+
 		// Extract the new content
 		let newContent = replaceWithoutMarker
-		if (replaceWithoutMarker.startsWith(searchWithoutMarker)) {
+		if (replaceWithoutMarker.startsWith(searchTrimmed)) {
 			// LLM preserved the search context - remove it
-			newContent = replaceWithoutMarker.substring(searchWithoutMarker.length)
+			newContent = replaceWithoutMarker.substring(searchTrimmed.length)
 		}
 
+		// Trim trailing newlines from the content (LLM often adds extras)
+		newContent = newContent.trimEnd()
+
 		// Check if current line (where cursor is) has content
-		// Extract the last line before cursor marker in the original search
 		const lines = prefix.split("\n")
 		const currentLine = lines[lines.length - 1]
 		const currentLineHasContent = currentLine.trim().length > 0
 
-		// Only add newline if current line has content
-		if (currentLineHasContent && !newContent.startsWith("\n")) {
-			newContent = "\n" + newContent
+		if (currentLineHasContent) {
+			// Current line has content - add newline if not present
+			if (!newContent.startsWith("\n")) {
+				newContent = "\n" + newContent
+			}
+		} else {
+			// Current line is empty - remove any leading newline LLM might have added
+			if (newContent.startsWith("\n")) {
+				newContent = newContent.substring(1)
+			}
 		}
 
 		return { text: newContent, prefix, suffix }
