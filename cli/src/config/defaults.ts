@@ -45,7 +45,7 @@ export const DEFAULT_AUTO_APPROVAL: AutoApprovalConfig = {
 	},
 }
 
-export const DEFAULT_CONFIG: CLIConfig = {
+export const DEFAULT_CONFIG = {
 	version: "1.0.0",
 	mode: "code",
 	telemetry: true,
@@ -61,7 +61,7 @@ export const DEFAULT_CONFIG: CLIConfig = {
 	autoApproval: DEFAULT_AUTO_APPROVAL,
 	theme: "dark",
 	customThemes: {},
-}
+} satisfies CLIConfig
 
 export function createDefaultProvider(provider: string): any {
 	switch (provider) {

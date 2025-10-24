@@ -110,16 +110,17 @@ describe("Command Validation", () => {
 				])
 			})
 
-			it("splits on actual newlines even within quotes", () => {
-				// Note: Since we split by newlines first, actual newlines in the input
-				// will split the command, even if they appear to be within quotes
+			// kilocode_change start allowed newlines within quotes
+			it("preserves newlines within quotes", () => {
+				// Newlines inside quoted strings should be preserved as part of the command
 				// Using template literal to create actual newline
 				const commandWithNewlineInQuotes = `echo "Hello
 World"
 git status`
-				// The quotes get stripped because they're no longer properly paired after splitting
-				expect(parseCommand(commandWithNewlineInQuotes)).toEqual(["echo Hello", "World", "git status"])
+				// The newlines inside quotes are preserved, so we get two commands
+				expect(parseCommand(commandWithNewlineInQuotes)).toEqual(['echo "Hello\nWorld"', "git status"])
 			})
+			// kilocode_change end
 
 			it("handles quoted strings on single line", () => {
 				// When quotes are on the same line, they are preserved
@@ -1083,6 +1084,44 @@ describe("Unified Command Decision Functions", () => {
 			expect(getCommandDecision("dangerous", allowed, denied)).toBe("ask_user")
 			expect(getCommandDecision("npm install && dangerous", allowed, denied)).toBe("ask_user")
 		})
+		// kilocode_change start
+		// Real-world regression: multi-line git commit message in quotes should be treated as a single command
+		describe("real-world: multi-line git commit message", () => {
+			it("auto-approves when commit message is single-line", () => {
+				const allowed = ["cd", "git add", "git commit"]
+				const command =
+					'cd /repo && git add src/a.ts src/b.ts && git commit -m "feat: title - one line message"'
+
+				expect(getCommandDecision(command, allowed, [])).toBe("auto_approve")
+			})
+
+			it("auto-approves when commit message is multi-line (newlines preserved in quotes)", () => {
+				const allowed = ["cd", "git add", "git commit"]
+				// Simplified reproduction of the user's example: a multi-line quoted commit message
+				const command = `cd /repo && git add src/a.ts src/b.ts && git commit -m "feat: title
+
+- point a
+- point b"`
+
+				// parseCommand now preserves newlines inside quotes, so the entire commit message
+				// stays as part of the git commit command and gets auto-approved
+				expect(getCommandDecision(command, allowed, [])).toBe("auto_approve")
+			})
+
+			it("preserves newlines in the parsed command", () => {
+				const command = `git commit -m "feat: title
+
+- point a
+- point b"`
+
+				const parsed = parseCommand(command)
+				expect(parsed).toHaveLength(1)
+				expect(parsed[0]).toContain("\n")
+				expect(parsed[0]).toContain("- point a")
+				expect(parsed[0]).toContain("- point b")
+			})
+		})
+		// kilocode_change end
 	})
 
 	describe("CommandValidator Integration Tests", () => {

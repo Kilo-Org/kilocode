@@ -163,6 +163,12 @@ const config: Config = {
 						to: "/seats/team-management",
 						from: ["/seats/team-management"],
 					},
+
+					// Kilo credits, not tokens
+					{
+						to: "/basic-usage/adding-credits",
+						from: ["/basic-usage/adding-tokens"],
+					},
 				],
 			},
 		],

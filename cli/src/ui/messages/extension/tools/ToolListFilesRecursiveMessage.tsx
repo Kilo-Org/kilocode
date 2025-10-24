@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { ToolMessageProps } from "../types.js"
 import { getToolIcon, formatFilePath, truncateText } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display recursive file listing
@@ -29,7 +29,7 @@ export const ToolListFilesRecursiveMessage: React.FC<ToolMessageProps> = ({ tool
 
 			{files.length > 0 && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					flexDirection="column"
 					borderStyle="single"
 					borderColor={theme.ui.border.default}

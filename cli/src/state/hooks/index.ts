@@ -65,10 +65,11 @@ export { useTheme } from "./useTheme.js"
 export { useApprovalHandler } from "./useApprovalHandler.js"
 export type { UseApprovalHandlerOptions, UseApprovalHandlerReturn } from "./useApprovalHandler.js"
 
-export { useApprovalEffect } from "./useApprovalEffect.js"
+export { useApprovalMonitor } from "./useApprovalMonitor.js"
 
 export { useFollowupSuggestions } from "./useFollowupSuggestions.js"
 export type { UseFollowupSuggestionsReturn } from "./useFollowupSuggestions.js"
 
 export { useFollowupCIResponse } from "./useFollowupCIResponse.js"
+export { useTerminalResize } from "./useTerminalResize.js"
 export { useFollowupHandler } from "./useFollowupHandler.js"

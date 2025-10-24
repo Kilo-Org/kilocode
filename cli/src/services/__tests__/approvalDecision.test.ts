@@ -297,6 +297,106 @@ describe("approvalDecision", () => {
 				const decision = getApprovalDecision(message, config, false)
 				expect(decision.action).toBe("auto-approve")
 			})
+
+			describe("hierarchical command matching", () => {
+				it("should match base command pattern", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status --short" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should match command with subcommand pattern", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status --short --branch" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should match exact command pattern", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git status --short" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git status --short"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should not match partial word patterns", () => {
+					const message = createMessage("command", JSON.stringify({ command: "gitignore" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+
+				it("should handle commands with multiple spaces", () => {
+					const message = createMessage("command", JSON.stringify({ command: "npm  install  --save" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["npm"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should handle commands with tabs", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git\tstatus" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: [],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("auto-approve")
+				})
+
+				it("should respect denied patterns over allowed patterns", () => {
+					const message = createMessage("command", JSON.stringify({ command: "git push --force" }))
+					const config = {
+						...createBaseConfig(),
+						execute: {
+							enabled: true,
+							allowed: ["git"],
+							denied: ["git push --force"],
+						},
+					}
+					const decision = getApprovalDecision(message, config, false)
+					expect(decision.action).toBe("manual")
+				})
+			})
 		})
 
 		describe("followup questions", () => {

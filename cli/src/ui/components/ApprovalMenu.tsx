@@ -27,7 +27,11 @@ export const ApprovalMenu: React.FC<ApprovalMenuProps> = ({ options, selectedInd
 				[!] Action Required:
 			</Text>
 			{options.map((option, index) => (
-				<ApprovalOptionRow key={option.action} option={option} isSelected={index === selectedIndex} />
+				<ApprovalOptionRow
+					key={option.key || `${option.action}-${index}`}
+					option={option}
+					isSelected={index === selectedIndex}
+				/>
 			))}
 		</Box>
 	)

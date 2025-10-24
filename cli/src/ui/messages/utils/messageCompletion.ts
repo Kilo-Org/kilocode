@@ -9,7 +9,6 @@ import type { UnifiedMessage } from "../../../state/atoms/ui.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { CliMessage } from "../../../types/cli.js"
 import { parseApiReqInfo } from "../extension/utils.js"
-import { logs } from "../../../services/logs.js"
 
 /**
  * Determines if a CLI message is complete
@@ -17,12 +16,6 @@ import { logs } from "../../../services/logs.js"
  */
 function isCliMessageComplete(message: CliMessage): boolean {
 	const isComplete = message.partial !== true
-	logs.debug("CLI message completion check", "messageCompletion", {
-		id: message.id,
-		type: message.type,
-		partial: message.partial,
-		isComplete,
-	})
 	return isComplete
 }
 
@@ -38,12 +31,6 @@ function isCliMessageComplete(message: CliMessage): boolean {
 function isExtensionMessageComplete(message: ExtensionChatMessage): boolean {
 	// Handle partial flag first - if partial is explicitly true, not complete
 	if (message.partial === true) {
-		logs.debug("Extension message incomplete: partial=true", "messageCompletion", {
-			ts: message.ts,
-			type: message.type,
-			say: message.say,
-			ask: message.ask,
-		})
 		return false
 	}
 
@@ -52,13 +39,6 @@ function isExtensionMessageComplete(message: ExtensionChatMessage): boolean {
 	if (message.say === "api_req_started") {
 		const apiInfo = parseApiReqInfo(message)
 		const isComplete = !!(apiInfo?.streamingFailedMessage || apiInfo?.cancelReason || apiInfo?.cost !== undefined)
-		logs.debug("api_req_started completion check", "messageCompletion", {
-			ts: message.ts,
-			hasStreamingFailed: !!apiInfo?.streamingFailedMessage,
-			hasCancelReason: !!apiInfo?.cancelReason,
-			hasCost: apiInfo?.cost !== undefined,
-			isComplete,
-		})
 		return isComplete
 	}
 
@@ -67,10 +47,6 @@ function isExtensionMessageComplete(message: ExtensionChatMessage): boolean {
 		// These ask types don't render, so they're immediately complete
 		const nonRenderingAskTypes = ["completion_result", "command_output"]
 		if (message.ask && nonRenderingAskTypes.includes(message.ask)) {
-			logs.debug("Ask message complete (non-rendering type)", "messageCompletion", {
-				ts: message.ts,
-				ask: message.ask,
-			})
 			return true
 		}
 
@@ -78,25 +54,9 @@ function isExtensionMessageComplete(message: ExtensionChatMessage): boolean {
 		// They don't need to wait for isAnswered since they're just displaying
 		// the request and waiting for user interaction
 		const isComplete = !message.partial
-		logs.debug("Ask message completion check", "messageCompletion", {
-			ts: message.ts,
-			ask: message.ask,
-			isAnswered: message.isAnswered,
-			isAnsweredType: typeof message.isAnswered,
-			partial: message.partial,
-			isComplete,
-			reason: isComplete ? "not partial" : "still partial",
-		})
 		return isComplete
 	}
 
-	// All other messages are complete if not partial
-	logs.debug("Extension message complete (default)", "messageCompletion", {
-		ts: message.ts,
-		type: message.type,
-		say: message.say,
-		partial: message.partial,
-	})
 	return true
 }
 
@@ -129,10 +89,6 @@ function deduplicateCheckpointMessages(messages: UnifiedMessage[]): UnifiedMessa
 			const hash = msg.message.text.trim()
 			if (seenCheckpointHashes.has(hash)) {
 				// Skip duplicate checkpoint
-				logs.debug("Skipping duplicate checkpoint message", "messageCompletion", {
-					ts: msg.message.ts,
-					hash,
-				})
 				continue
 			}
 			seenCheckpointHashes.add(hash)
@@ -210,16 +166,6 @@ export function splitMessages(messages: UnifiedMessage[]): {
 
 	const staticMessages = deduplicatedMessages.slice(0, lastCompleteIndex + 1)
 	const dynamicMessages = deduplicatedMessages.slice(lastCompleteIndex + 1)
-
-	logs.debug("Message split summary", "messageCompletion", {
-		originalCount: messages.length,
-		deduplicatedCount: deduplicatedMessages.length,
-		totalMessages: deduplicatedMessages.length,
-		staticCount: staticMessages.length,
-		dynamicCount: dynamicMessages.length,
-		lastCompleteIndex,
-		incompleteReasons: incompleteReasons.length > 0 ? incompleteReasons : "All messages complete",
-	})
 
 	return {
 		staticMessages,

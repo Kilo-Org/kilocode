@@ -60,7 +60,6 @@ describe("VertexHandler", () => {
 			})
 
 			expect(AnthropicVertex).toHaveBeenCalledWith({
-				baseURL: "https://aiplatform.googleapis.com/v1", // kilocode_change
 				projectId: "test-project",
 				region: "us-central1",
 			})

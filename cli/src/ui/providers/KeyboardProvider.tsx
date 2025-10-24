@@ -16,9 +16,6 @@ import {
 	setPasteModeAtom,
 	appendToPasteBufferAtom,
 	pasteBufferAtom,
-	setDragModeAtom,
-	appendToDragBufferAtom,
-	dragBufferAtom,
 	appendToKittyBufferAtom,
 	clearKittyBufferAtom,
 	kittySequenceBufferAtom,
@@ -34,19 +31,17 @@ import {
 	isPasteModeBoundary,
 	isFocusEvent,
 	mapAltKeyCharacter,
-	isDragStart,
 	parseReadlineKey,
 	createPasteKey,
 	createSpecialKey,
 } from "../utils/keyParsing.js"
-import { autoEnableKittyProtocol, disableKittyProtocol } from "../utils/terminalCapabilities.js"
+import { autoEnableKittyProtocol } from "../utils/terminalCapabilities.js"
 import {
 	ESC,
 	PASTE_MODE_PREFIX,
 	PASTE_MODE_SUFFIX,
 	BACKSLASH,
 	BACKSLASH_ENTER_DETECTION_WINDOW_MS,
-	DRAG_COMPLETION_TIMEOUT_MS,
 	MAX_KITTY_SEQUENCE_LENGTH,
 } from "../../constants/keyboard/index.js"
 
@@ -65,8 +60,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	const broadcastKey = useSetAtom(broadcastKeyEventAtom)
 	const setPasteMode = useSetAtom(setPasteModeAtom)
 	const appendToPasteBuffer = useSetAtom(appendToPasteBufferAtom)
-	const setDragMode = useSetAtom(setDragModeAtom)
-	const appendToDragBuffer = useSetAtom(appendToDragBufferAtom)
 	const appendToKittyBuffer = useSetAtom(appendToKittyBufferAtom)
 	const clearKittyBuffer = useSetAtom(clearKittyBufferAtom)
 	const setKittyProtocol = useSetAtom(setKittyProtocolAtom)
@@ -76,7 +69,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 
 	// Jotai getters (for reading current state)
 	const pasteBuffer = useAtomValue(pasteBufferAtom)
-	const dragBuffer = useAtomValue(dragBufferAtom)
 	const kittyBuffer = useAtomValue(kittySequenceBufferAtom)
 	const isKittyEnabled = useAtomValue(kittyProtocolEnabledAtom)
 	const isDebugEnabled = useAtomValue(debugKeystrokeLoggingAtom)
@@ -84,8 +76,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	// Local refs for mutable state
 	const isPasteRef = useRef(false)
 	const pasteBufferRef = useRef<string>("")
-	const isDraggingRef = useRef(false)
-	const dragTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const backslashTimerRef = useRef<NodeJS.Timeout | null>(null)
 	const waitingForEnterRef = useRef(false)
 
@@ -93,14 +83,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 	useEffect(() => {
 		setDebugLogging(debugKeystrokeLogging)
 	}, [debugKeystrokeLogging, setDebugLogging])
-
-	// Clear drag timer
-	const clearDragTimer = useCallback(() => {
-		if (dragTimerRef.current) {
-			clearTimeout(dragTimerRef.current)
-			dragTimerRef.current = null
-		}
-	}, [])
 
 	// Clear backslash timer
 	const clearBackslashTimer = useCallback(() => {
@@ -125,20 +107,9 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		}
 	}, [broadcastKey, setPasteMode])
 
-	// Handle drag completion
-	const completeDrag = useCallback(() => {
-		if (isDraggingRef.current && dragBuffer) {
-			broadcastKey(createPasteKey(dragBuffer))
-			setDragMode(false)
-			isDraggingRef.current = false
-		}
-		clearDragTimer()
-	}, [dragBuffer, broadcastKey, setDragMode, clearDragTimer])
-
 	useEffect(() => {
 		// Save original raw mode state
 		const wasRaw = stdin.isRaw
-		let kittyEnabled = false
 
 		// Setup centralized keyboard handler first
 		const unsubscribeKeyboard = setupKeyboard()
@@ -154,13 +125,18 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			process.stdout.write("\x1b[?2004h")
 
 			// Auto-detect and enable Kitty protocol if supported
-			kittyEnabled = await autoEnableKittyProtocol()
+			const kittyEnabled = await autoEnableKittyProtocol()
 			if (debugKeystrokeLogging) {
 				logs.debug(`Kitty protocol: ${kittyEnabled ? "enabled" : "not supported"}`, "KeyboardProvider")
 			}
 
 			// Update atom with actual state
 			setKittyProtocol(kittyEnabled)
+
+			keypressStream.on("keypress", handleKeypress)
+			if (usePassthrough) {
+				stdin.on("data", handleRawData)
+			}
 		}
 
 		init()
@@ -220,18 +196,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 					pasteBufferRef.current += parsedKey.sequence
 					appendToPasteBuffer(parsedKey.sequence)
 				}
-				return
-			}
-
-			// Handle drag mode
-			if (isDragStart(parsedKey.sequence) || isDraggingRef.current) {
-				isDraggingRef.current = true
-				appendToDragBuffer(parsedKey.sequence)
-
-				clearDragTimer()
-				dragTimerRef.current = setTimeout(() => {
-					completeDrag()
-				}, DRAG_COMPLETION_TIMEOUT_MS)
 				return
 			}
 
@@ -426,12 +390,6 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			}
 		}
 
-		// Setup event listeners
-		keypressStream.on("keypress", handleKeypress)
-		if (usePassthrough) {
-			stdin.on("data", handleRawData)
-		}
-
 		// Cleanup
 		return () => {
 			keypressStream.removeListener("keypress", handleKeypress)
@@ -446,24 +404,16 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			// Disable bracketed paste mode
 			process.stdout.write("\x1b[?2004l")
 
-			// Disable Kitty keyboard protocol if it was enabled
-			const currentKittyState = isKittyEnabled
-			if (currentKittyState) {
-				disableKittyProtocol()
-			}
-
 			// Restore original raw mode
 			if (!wasRaw) {
 				setRawMode(false)
 			}
 
 			// Clear timers
-			clearDragTimer()
 			clearBackslashTimer()
 
 			// Flush any pending buffers
 			completePaste()
-			completeDrag()
 			clearBuffers()
 		}
 	}, [
@@ -473,20 +423,15 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		broadcastKey,
 		setPasteMode,
 		appendToPasteBuffer,
-		setDragMode,
-		appendToDragBuffer,
 		appendToKittyBuffer,
 		clearKittyBuffer,
 		clearBuffers,
 		setKittyProtocol,
 		pasteBuffer,
-		dragBuffer,
 		kittyBuffer,
 		isKittyEnabled,
 		isDebugEnabled,
 		completePaste,
-		completeDrag,
-		clearDragTimer,
 		clearBackslashTimer,
 		setupKeyboard,
 	])

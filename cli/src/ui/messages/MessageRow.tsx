@@ -9,7 +9,6 @@ interface MessageRowProps {
 }
 
 export const MessageRow: React.FC<MessageRowProps> = ({ unifiedMessage }) => {
-	//logs.debug("Message", "MessageRow", { unifiedMessage })
 	if (unifiedMessage.source === "cli") {
 		return <CliMessageRow message={unifiedMessage.message} />
 	}

@@ -1,5 +1,23 @@
 # @kilocode/cli
 
+## 0.0.9
+
+### Patch Changes
+
+- [#3255](https://github.com/Kilo-Org/kilocode/pull/3255) [`55430b7`](https://github.com/Kilo-Org/kilocode/commit/55430b7965ae2aef12517375a0e0c0e7d8f2367c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix suggestion selection with arrow keys
+
+- [#3253](https://github.com/Kilo-Org/kilocode/pull/3253) [`db9cb43`](https://github.com/Kilo-Org/kilocode/commit/db9cb4355ae0e4559e99066c78315ee3635a3543) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Terminal resize support
+
+## 0.0.8
+
+### Patch Changes
+
+- [#3201](https://github.com/Kilo-Org/kilocode/pull/3201) [`c44f948`](https://github.com/Kilo-Org/kilocode/commit/c44f9482fd024f38b7216a7f74b20a96445461a7) Thanks [@RSO](https://github.com/RSO)! - Added an onboarding wizard that helps you get set up in the CLI.
+
+- [#3208](https://github.com/Kilo-Org/kilocode/pull/3208) [`cdc007c`](https://github.com/Kilo-Org/kilocode/commit/cdc007c1150d5210cc0b9c8e5c2b4c57efadfd44) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Allow auto-approval of commands straight from the approval menu
+
+- [#3202](https://github.com/Kilo-Org/kilocode/pull/3202) [`6ab57f4`](https://github.com/Kilo-Org/kilocode/commit/6ab57f441847e07dd6868a87913a41e0cb137fa8) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Added prompt history. Use your up/down keys to navigate through previous prompts!
+
 ## 0.0.7
 
 ### Patch Changes

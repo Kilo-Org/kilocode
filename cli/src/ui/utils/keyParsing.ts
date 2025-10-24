@@ -321,13 +321,6 @@ export function mapAltKeyCharacter(char: string): string | null {
 }
 
 /**
- * Detect if a character sequence looks like the start of a drag operation
- */
-export function isDragStart(sequence: string): boolean {
-	return sequence === '"' || sequence === "'"
-}
-
-/**
  * Parse a simple key from readline's keypress event
  */
 export function parseReadlineKey(key: any): Key {

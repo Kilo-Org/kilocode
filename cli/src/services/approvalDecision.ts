@@ -27,16 +27,34 @@ export interface ApprovalDecision {
 
 /**
  * Helper function to check if a command matches allowed/denied patterns
+ * Supports hierarchical matching:
+ * - "git" matches "git status", "git commit", etc.
+ * - "git status" matches "git status --short", "git status -v", etc.
+ * - Exact match: "git status --short" only matches "git status --short"
  */
 function matchesCommandPattern(command: string, patterns: string[]): boolean {
 	if (patterns.length === 0) return false
 
+	const normalizedCommand = command.trim()
+
 	return patterns.some((pattern) => {
-		// Simple pattern matching - can be enhanced with regex if needed
-		if (pattern === "*") return true
-		if (pattern === command) return true
-		// Check if command starts with pattern (for partial matches like "npm")
-		if (command.startsWith(pattern)) return true
+		const normalizedPattern = pattern.trim()
+
+		// Wildcard matches everything
+		if (normalizedPattern === "*") return true
+
+		// Exact match
+		if (normalizedPattern === normalizedCommand) return true
+
+		// Hierarchical match: pattern is a prefix of the command
+		// Must match word boundaries to avoid false positives
+		// e.g., "git" matches "git status" but not "gitignore"
+		if (normalizedCommand.startsWith(normalizedPattern)) {
+			// Check if it's followed by whitespace or end of string
+			const nextChar = normalizedCommand[normalizedPattern.length]
+			return nextChar === undefined || nextChar === " " || nextChar === "\t"
+		}
+
 		return false
 	})
 }
@@ -161,25 +179,27 @@ function getCommandApprovalDecision(
 		return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 	}
 
-	// Parse command from message - it's stored as JSON with a "command" field
+	// Parse command from message
+	// It can be either JSON with a "command" field or plain text
 	let command = ""
 	try {
 		const commandData = JSON.parse(message.text || "{}")
-		command = commandData.command || message.text || ""
+		command = commandData.command || ""
 	} catch {
-		// If parsing fails, use text directly
+		// If parsing fails, use text directly as the command
 		command = message.text || ""
 	}
 
 	const allowedCommands = config.execute?.allowed ?? []
 	const deniedCommands = config.execute?.denied ?? []
 
-	logs.debug("Checking command approval", "approvalDecision", {
+	logs.info("Checking command approval", "approvalDecision", {
 		command,
 		rawText: message.text,
 		allowedCommands,
 		deniedCommands,
 		executeEnabled: config.execute?.enabled,
+		configExecute: config.execute,
 	})
 
 	// Check denied list first (takes precedence)
@@ -196,11 +216,18 @@ function getCommandApprovalDecision(
 
 	// Check if command matches allowed patterns
 	if (matchesCommandPattern(command, allowedCommands)) {
-		logs.debug("Command matches allowed pattern - auto-approving", "approvalDecision", { command })
+		logs.info("Command matches allowed pattern - auto-approving", "approvalDecision", {
+			command,
+			matchedAgainst: allowedCommands,
+		})
 		return { action: "auto-approve" }
 	}
 
-	logs.debug("Command does not match any allowed pattern", "approvalDecision", { command, allowedCommands })
+	logs.info("Command does not match any allowed pattern", "approvalDecision", {
+		command,
+		allowedCommands,
+		deniedCommands,
+	})
 	return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 }
 

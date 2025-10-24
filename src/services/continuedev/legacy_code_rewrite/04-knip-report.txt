@@ -1,0 +1,563 @@
+Unused files (288)
+core/__mocks__/@continuedev/fetch/index.ts                                           
+core/autocomplete/context/root-path-context/test/files/typescript/arrowFunctions.ts  
+core/autocomplete/context/root-path-context/test/files/typescript/classes.ts         
+core/autocomplete/context/root-path-context/test/files/typescript/classMethods.ts    
+core/autocomplete/context/root-path-context/test/files/typescript/functions.ts       
+core/autocomplete/context/root-path-context/test/files/typescript/generators.ts      
+core/autocomplete/filtering/streamTransforms/charStream.vitest.ts                    
+core/autocomplete/filtering/streamTransforms/filterCodeBlock.vitest.ts               
+core/autocomplete/filtering/streamTransforms/lineStream.vitest.ts                    
+core/autocomplete/generation/GeneratorReuseManager.vitest.ts                         
+core/autocomplete/generation/ListenableGenerator.vitest.ts                           
+core/autocomplete/generation/utils.vitest.ts                                         
+core/autocomplete/postprocessing/index.vitest.ts                                     
+core/autocomplete/snippets/gitDiffCache.vitest.ts                                    
+core/autocomplete/templating/__tests__/formatOpenedFilesContext.vitest.ts            
+core/autocomplete/templating/__tests__/renderPrompt.vitest.ts                        
+core/autocomplete/util/completionTestUtils.ts                                        
+core/autocomplete/util/completionTestUtils.vitest.ts                                 
+core/autocomplete/util/processSingleLineCompletion.vitest.ts                         
+core/config/ConfigHandler.vitest.ts                                                  
+core/config/createNewAssistantFile.ts                                                
+core/config/loadContextProviders.vitest.ts                                           
+core/config/loadLocalAssistants.vitest.ts                                            
+core/config/markdown/loadCodebaseRules.vitest.ts                                     
+core/config/markdown/ruleCollocationApplication.vitest.ts                            
+core/config/markdown/utils.ts                                                        
+core/config/markdown/utils.vitest.ts                                                 
+core/config/onboarding.ts                                                            
+core/config/usesFreeTrialApiKey.ts                                                   
+core/config/usesFreeTrialApiKey.vitest.ts                                            
+core/config/util.vitest.ts                                                           
+core/config/workspace/workspaceBlocks.ts                                             
+core/config/workspace/workspaceBlocks.vitest.ts                                      
+core/config/yaml/default.ts                                                          
+core/config/yaml/loadYaml.vitest.ts                                                  
+core/config/yaml/LocalPlatformClient.vitest.ts                                       
+core/config/yaml/models.vitest.ts                                                    
+core/control-plane/auth/index.ts                                                     
+core/control-plane/mdm/mdm.vitest.ts                                                 
+core/control-plane/schema.ts                                                         
+core/data/log.vitest.ts                                                              
+core/diff/myers.vitest.ts                                                            
+core/diff/streamDiff.ts                                                              
+core/diff/streamDiff.vitest.ts                                                       
+core/diff/util.vitest.ts                                                             
+core/indexing/ignore.vitest.ts                                                       
+core/llm/asyncEncoder.test.ts                                                        
+core/llm/autodetect.vitest.ts                                                        
+core/llm/countTokens.test.ts                                                         
+core/llm/defaultSystemMessages.ts                                                    
+core/llm/index.test.ts                                                               
+core/llm/llm-pre-fetch.vitest.ts                                                     
+core/llm/llm.test.ts                                                                 
+core/llm/llms/Anthropic.vitest.ts                                                    
+core/llm/llms/Bedrock.test.ts                                                        
+core/llm/llms/Fireworks.vitest.ts                                                    
+core/llm/llms/Groq.vitest.ts                                                         
+core/llm/llms/llmTestHarness.ts                                                      
+core/llm/llms/OpenAI-compatible-core.vitest.ts                                       
+core/llm/llms/OpenAI-compatible.vitest.ts                                            
+core/llm/llms/OpenAI.test.ts                                                         
+core/llm/llms/OpenAI.vitest.ts                                                       
+core/llm/llms/OpenRouter.vitest.ts                                                   
+core/llm/llms/stubs/ContinueProxy.vitest.ts                                          
+core/llm/logFormatter.test.ts                                                        
+core/llm/logFormatter.ts                                                             
+core/llm/rules/alwaysApply.vitest.ts                                                 
+core/llm/rules/alwaysApplyRules.vitest.ts                                            
+core/llm/rules/fileProtocolMatching.vitest.ts                                        
+core/llm/rules/getSystemMessageWithRules.ts                                          
+core/llm/rules/getSystemMessageWithRules.vitest.ts                                   
+core/llm/rules/implicitGlobalRules.vitest.ts                                         
+core/llm/rules/nestedDirectoryRules.vitest.ts                                        
+core/llm/rules/ruleColocation.vitest.ts                                              
+core/llm/rules/rules-utils.ts                                                        
+core/llm/rules/types.ts                                                              
+core/llm/streamChat.ts                                                               
+core/llm/templates/chat.test.ts                                                      
+core/llm/templates/edit/claude.ts                                                    
+core/llm/toolSupport.test.ts                                                         
+core/llm/utils/calculateRequestCost.ts                                               
+core/llm/utils/extractContentFromCodeBlocks.test.ts                                  
+core/llm/utils/extractContentFromCodeBlocks.ts                                       
+core/llm/utils/extractPathsFromCodeBlocks.test.ts                                    
+core/llm/utils/extractPathsFromCodeBlocks.ts                                         
+core/llm/utils/getSecureID.test.ts                                                   
+core/llm/utils/retry.test.ts                                                         
+core/nextEdit/context/aggregateEdits.ts                                              
+core/nextEdit/context/autocompleteContextFetching.ts                                 
+core/nextEdit/context/diffFormatting.vitest.ts                                       
+core/nextEdit/context/prevEditLruCache.ts                                            
+core/nextEdit/context/processNextEditData.ts                                         
+core/nextEdit/context/processSmallEdit.ts                                            
+core/nextEdit/diff/diff.vitest.ts                                                    
+core/nextEdit/DocumentHistoryTracker.vitest.ts                                       
+core/nextEdit/templating/instinct.vitest.ts                                          
+core/nextEdit/templating/mercuryCoderNextEdit.vitest.ts                              
+core/nextEdit/templating/NextEditPromptEngine.vitest.ts                              
+core/nextEdit/templating/utils.vitest.ts                                             
+core/nextEdit/utils.vitest.ts                                                        
+core/test/jest.global-setup.ts                                                       
+core/test/vitest.global-setup.ts                                                     
+core/test/vitest.setup.ts                                                            
+core/util/chatDescriber.test.ts                                                      
+core/util/chatDescriber.ts                                                           
+core/util/extractMinimalStackTraceInfo.test.ts                                       
+core/util/fetchFavicon.test.ts                                                       
+core/util/fetchFavicon.ts                                                            
+core/util/generateRepoMap.test.ts                                                    
+core/util/generateRepoMap.ts                                                         
+core/util/GlobalContext.test.ts                                                      
+core/util/grepSearch.ts                                                              
+core/util/grepSearch.vitest.ts                                                       
+core/util/history.test.ts                                                            
+core/util/history.ts                                                                 
+core/util/incrementalParseJson.test.ts                                               
+core/util/incrementalParseJson.ts                                                    
+core/util/index.test.ts                                                              
+core/util/lcs.test.ts                                                                
+core/util/LruCache.test.ts                                                           
+core/util/merge.test.ts                                                              
+core/util/messageContent.test.ts                                                     
+core/util/messageConversion.ts                                                       
+core/util/processTerminalStates.test.ts                                              
+core/util/processTerminalStates.ts                                                   
+core/util/ranges.test.ts                                                             
+core/util/regexValidator.ts                                                          
+core/util/regexValidator.vitest.ts                                                   
+core/util/sentry/anonymization.test.ts                                               
+core/util/sentry/anonymization.ts                                                    
+core/util/sentry/constants.ts                                                        
+core/util/sentry/SentryLogger.test.ts                                                
+core/util/shellPath.ts                                                               
+core/util/text.vitest.ts                                                             
+core/util/uri.test.ts                                                                
+core/util/url.ts                                                                     
+core/util/withExponentialBackoff.test.ts                                             
+core/utils/markdownUtils.vitest.ts                                                   
+core/utils/streamMarkdownUtils.vitest.ts                                             
+core/vitest.config.ts                                                                
+extensions/vscode/src/activation/JumpManager.vitest.ts                               
+extensions/vscode/src/activation/languageClient.ts                                   
+extensions/vscode/src/activation/NextEditWindowManager.vitest.ts                     
+extensions/vscode/src/activation/proxy.ts                                            
+extensions/vscode/src/activation/SelectionChangeManager.vitest.ts                    
+extensions/vscode/src/autocomplete/__tests__/ContinueCompletionProvider.vitest.ts    
+extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.vitest.ts              
+extensions/vscode/src/extension/EditOutcomeTracker.ts                                
+extensions/vscode/src/util/cleanSlate.ts                                             
+extensions/vscode/src/util/expandSnippet.ts                                          
+extensions/vscode/src/util/util.vitest.ts                                            
+packages/config-types/src/index.ts                                                   
+packages/config-yaml/src/__tests__/index.test.ts                                     
+packages/config-yaml/src/browser.ts                                                  
+packages/config-yaml/src/cli.ts                                                      
+packages/config-yaml/src/converter.ts                                                
+packages/config-yaml/src/index.ts                                                    
+packages/config-yaml/src/interfaces/index.ts                                         
+packages/config-yaml/src/interfaces/SecretResult.test.ts                             
+packages/config-yaml/src/interfaces/SecretResult.ts                                  
+packages/config-yaml/src/interfaces/slugs.test.ts                                    
+packages/config-yaml/src/interfaces/slugs.ts                                         
+packages/config-yaml/src/load/blockDuplicationDetector.ts                            
+packages/config-yaml/src/load/clientRender.ts                                        
+packages/config-yaml/src/load/getBlockType.ts                                        
+packages/config-yaml/src/load/merge.test.ts                                          
+packages/config-yaml/src/load/merge.ts                                               
+packages/config-yaml/src/load/proxySecretResolution.ts                               
+packages/config-yaml/src/load/typeGuards.ts                                          
+packages/config-yaml/src/load/unroll.test.ts                                         
+packages/config-yaml/src/load/unroll.ts                                              
+packages/config-yaml/src/markdown/createMarkdownPrompt.test.ts                       
+packages/config-yaml/src/markdown/createMarkdownPrompt.ts                            
+packages/config-yaml/src/markdown/createMarkdownRule.test.ts                         
+packages/config-yaml/src/markdown/createMarkdownRule.ts                              
+packages/config-yaml/src/markdown/getRuleType.test.ts                                
+packages/config-yaml/src/markdown/getRuleType.ts                                     
+packages/config-yaml/src/markdown/index.ts                                           
+packages/config-yaml/src/markdown/markdownToRule.test.ts                             
+packages/config-yaml/src/markdown/markdownToRule.ts                                  
+packages/config-yaml/src/markdown/workflowFiles.test.ts                              
+packages/config-yaml/src/markdown/workflowFiles.ts                                   
+packages/config-yaml/src/modelName.test.ts                                           
+packages/config-yaml/src/modelName.ts                                                
+packages/config-yaml/src/registryClient.test.ts                                      
+packages/config-yaml/src/registryClient.ts                                           
+packages/config-yaml/src/schemas/commonSlugs.ts                                      
+packages/config-yaml/src/schemas/data/autocomplete/index.ts                          
+packages/config-yaml/src/schemas/data/autocomplete/v0.1.0.ts                         
+packages/config-yaml/src/schemas/data/autocomplete/v0.2.0.ts                         
+packages/config-yaml/src/schemas/data/base.ts                                        
+packages/config-yaml/src/schemas/data/chatFeedback/index.ts                          
+packages/config-yaml/src/schemas/data/chatFeedback/v0.1.0.ts                         
+packages/config-yaml/src/schemas/data/chatFeedback/v0.2.0.ts                         
+packages/config-yaml/src/schemas/data/chatInteraction/index.ts                       
+packages/config-yaml/src/schemas/data/chatInteraction/v0.2.0.ts                      
+packages/config-yaml/src/schemas/data/editInteraction/index.ts                       
+packages/config-yaml/src/schemas/data/editInteraction/v0.2.0.ts                      
+packages/config-yaml/src/schemas/data/editOutcome/index.ts                           
+packages/config-yaml/src/schemas/data/editOutcome/v0.2.0.ts                          
+packages/config-yaml/src/schemas/data/index.ts                                       
+packages/config-yaml/src/schemas/data/nextEditOutcome/index.ts                       
+packages/config-yaml/src/schemas/data/nextEditOutcome/v0.2.0.ts                      
+packages/config-yaml/src/schemas/data/nextEditWithHistory/index.ts                   
+packages/config-yaml/src/schemas/data/nextEditWithHistory/v0.2.0.ts                  
+packages/config-yaml/src/schemas/data/quickEdit/index.ts                             
+packages/config-yaml/src/schemas/data/quickEdit/v0.1.0.ts                            
+packages/config-yaml/src/schemas/data/tokensGenerated/index.ts                       
+packages/config-yaml/src/schemas/data/tokensGenerated/v0.1.0.ts                      
+packages/config-yaml/src/schemas/data/tokensGenerated/v0.2.0.ts                      
+packages/config-yaml/src/schemas/data/toolUsage/index.ts                             
+packages/config-yaml/src/schemas/data/toolUsage/v0.2.0.ts                            
+packages/config-yaml/src/schemas/index.ts                                            
+packages/config-yaml/src/schemas/mcp/convertJson.test.ts                             
+packages/config-yaml/src/schemas/mcp/convertJson.ts                                  
+packages/config-yaml/src/schemas/mcp/index.ts                                        
+packages/config-yaml/src/schemas/mcp/json.ts                                         
+packages/config-yaml/src/schemas/models.ts                                           
+packages/config-yaml/src/schemas/policy.ts                                           
+packages/config-yaml/src/scripts/generateJsonSchema.ts                               
+packages/config-yaml/src/validation.ts                                               
+packages/fetch/src/certs.test.ts                                                     
+packages/fetch/src/certs.ts                                                          
+packages/fetch/src/fetch.e2e.test.ts                                                 
+packages/fetch/src/fetch.ts                                                          
+packages/fetch/src/getAgentOptions.test.ts                                           
+packages/fetch/src/getAgentOptions.ts                                                
+packages/fetch/src/index.ts                                                          
+packages/fetch/src/ssl-certificate.test.ts                                           
+packages/fetch/src/stream.test.ts                                                    
+packages/fetch/src/stream.ts                                                         
+packages/fetch/src/util.test.ts                                                      
+packages/fetch/src/util.ts                                                           
+packages/fetch/vitest.config.ts                                                      
+packages/llm-info/src/index.ts                                                       
+packages/llm-info/src/providers/anthropic.ts                                         
+packages/llm-info/src/providers/azure.ts                                             
+packages/llm-info/src/providers/bedrock.ts                                           
+packages/llm-info/src/providers/cohere.ts                                            
+packages/llm-info/src/providers/cometapi.ts                                          
+packages/llm-info/src/providers/gemini.ts                                            
+packages/llm-info/src/providers/mistral.ts                                           
+packages/llm-info/src/providers/ollama.ts                                            
+packages/llm-info/src/providers/openai.ts                                            
+packages/llm-info/src/providers/os.ts                                                
+packages/llm-info/src/providers/vertexai.ts                                          
+packages/llm-info/src/providers/vllm.ts                                              
+packages/llm-info/src/providers/voyage.ts                                            
+packages/llm-info/src/providers/xAI.ts                                               
+packages/llm-info/src/types.ts                                                       
+packages/llm-info/src/util.ts                                                        
+packages/openai-adapters/src/apis/Anthropic.ts                                       
+packages/openai-adapters/src/apis/AnthropicCachingStrategies.test.ts                 
+packages/openai-adapters/src/apis/AnthropicCachingStrategies.ts                      
+packages/openai-adapters/src/apis/AnthropicUtils.ts                                  
+packages/openai-adapters/src/apis/Azure.ts                                           
+packages/openai-adapters/src/apis/base.ts                                            
+packages/openai-adapters/src/apis/Bedrock.ts                                         
+packages/openai-adapters/src/apis/Cohere.ts                                          
+packages/openai-adapters/src/apis/CometAPI.ts                                        
+packages/openai-adapters/src/apis/ContinueProxy.ts                                   
+packages/openai-adapters/src/apis/DeepSeek.ts                                        
+packages/openai-adapters/src/apis/Gemini.ts                                          
+packages/openai-adapters/src/apis/Inception.ts                                       
+packages/openai-adapters/src/apis/Jina.ts                                            
+packages/openai-adapters/src/apis/LlamaStack.ts                                      
+packages/openai-adapters/src/apis/Mock.ts                                            
+packages/openai-adapters/src/apis/Moonshot.ts                                        
+packages/openai-adapters/src/apis/OpenAI.ts                                          
+packages/openai-adapters/src/apis/OpenRouter.test.ts                                 
+packages/openai-adapters/src/apis/OpenRouter.ts                                      
+packages/openai-adapters/src/apis/OpenRouterCaching.ts                               
+packages/openai-adapters/src/apis/Relace.ts                                          
+packages/openai-adapters/src/apis/VertexAI.ts                                        
+packages/openai-adapters/src/apis/WatsonX.ts                                         
+packages/openai-adapters/src/index.ts                                                
+packages/openai-adapters/src/test/adapter-test-utils.ts                              
+packages/openai-adapters/src/test/anthropic-adapter.vitest.ts                        
+packages/openai-adapters/src/test/main.test.ts                                       
+packages/openai-adapters/src/test/openai-adapter.vitest.ts                           
+packages/openai-adapters/src/test/util.ts                                            
+packages/openai-adapters/src/types.ts                                                
+packages/openai-adapters/src/util.ts                                                 
+packages/openai-adapters/src/util/appendPathToUrl.ts                                 
+packages/openai-adapters/src/util/emptyChatCompletion.ts                             
+packages/openai-adapters/src/util/gemini-types.ts                                    
+packages/openai-adapters/src/util/parseArgs.ts                                       
+packages/openai-adapters/vitest.config.ts                                            
+Unused devDependencies (1)
+eslint-plugin-import  package.json:17:6
+Unused exports (214)
+Typescript                                         core/autocomplete/constants/AutocompleteLanguageInfo.ts:43:14        
+JavaScript                                         core/autocomplete/constants/AutocompleteLanguageInfo.ts:51:14        
+Python                                             core/autocomplete/constants/AutocompleteLanguageInfo.ts:59:14        
+Java                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:69:14        
+Cpp                                                core/autocomplete/constants/AutocompleteLanguageInfo.ts:77:14        
+CSharp                                             core/autocomplete/constants/AutocompleteLanguageInfo.ts:85:14        
+C                                                  core/autocomplete/constants/AutocompleteLanguageInfo.ts:93:14        
+Scala                                              core/autocomplete/constants/AutocompleteLanguageInfo.ts:101:14       
+Go                                                 core/autocomplete/constants/AutocompleteLanguageInfo.ts:109:14       
+Rust                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:117:14       
+Haskell                                            core/autocomplete/constants/AutocompleteLanguageInfo.ts:125:14       
+PHP                                                core/autocomplete/constants/AutocompleteLanguageInfo.ts:142:14       
+RubyOnRails                                        core/autocomplete/constants/AutocompleteLanguageInfo.ts:150:14       
+Swift                                              core/autocomplete/constants/AutocompleteLanguageInfo.ts:158:14       
+Kotlin                                             core/autocomplete/constants/AutocompleteLanguageInfo.ts:166:14       
+Ruby                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:174:14       
+Clojure                                            core/autocomplete/constants/AutocompleteLanguageInfo.ts:182:14       
+Julia                                              core/autocomplete/constants/AutocompleteLanguageInfo.ts:190:14       
+FSharp                                             core/autocomplete/constants/AutocompleteLanguageInfo.ts:209:14       
+R                                                  core/autocomplete/constants/AutocompleteLanguageInfo.ts:228:14       
+Dart                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:245:14       
+Solidity                                           core/autocomplete/constants/AutocompleteLanguageInfo.ts:253:14       
+Lua                                                core/autocomplete/constants/AutocompleteLanguageInfo.ts:276:14       
+YAML                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:284:14       
+Json                                               core/autocomplete/constants/AutocompleteLanguageInfo.ts:325:14       
+Markdown                                           core/autocomplete/constants/AutocompleteLanguageInfo.ts:344:14       
+LANGUAGES                                          core/autocomplete/constants/AutocompleteLanguageInfo.ts:369:14       
+rankAndOrderSnippets                     function  core/autocomplete/context/ranking/index.ts:41:17                     
+fillPromptWithSnippets                   function  core/autocomplete/context/ranking/index.ts:137:17                    
+FUNCTIONS                                          …autocomplete/context/root-path-context/test/testCases/python.ts:1:14
+CLASSES                                            …utocomplete/context/root-path-context/test/testCases/python.ts:98:14
+extractTopLevelDeclsWithFormatting       function  core/autocomplete/context/static-context/tree-sitter-utils.ts:81:23  
+BRACKETS                                           core/autocomplete/filtering/BracketMatchingService.ts:1:14           
+BRACKETS_REVERSE                                   core/autocomplete/filtering/BracketMatchingService.ts:6:14           
+onlyWhitespaceAfterEndOfLine             function  core/autocomplete/filtering/streamTransforms/charStream.ts:11:24     
+noFirstCharNewline                       function  core/autocomplete/filtering/streamTransforms/charStream.ts:48:24     
+filterCodeBlockLines                     function  core/autocomplete/filtering/streamTransforms/filterCodeBlock.ts:31:24
+filterCodeBlockLines                               core/autocomplete/filtering/streamTransforms/lineStream.ts:9:9       
+validatePatternInLine                    function  core/autocomplete/filtering/streamTransforms/lineStream.ts:62:17     
+processBlockNesting                      function  core/autocomplete/filtering/streamTransforms/lineStream.ts:153:17    
+USELESS_LINES                                      core/autocomplete/filtering/streamTransforms/lineStream.ts:164:14    
+CODE_KEYWORDS_ENDING_IN_SEMICOLON                  core/autocomplete/filtering/streamTransforms/lineStream.ts:165:14    
+CODE_STOP_BLOCK                                    core/autocomplete/filtering/streamTransforms/lineStream.ts:166:14    
+BRACKET_ENDING_CHARS                               core/autocomplete/filtering/streamTransforms/lineStream.ts:167:14    
+PREFIXES_TO_SKIP                                   core/autocomplete/filtering/streamTransforms/lineStream.ts:168:14    
+LINES_TO_STOP_AT                                   core/autocomplete/filtering/streamTransforms/lineStream.ts:169:14    
+LINES_TO_SKIP                                      core/autocomplete/filtering/streamTransforms/lineStream.ts:175:14    
+LINES_TO_REMOVE_BEFORE_START                       core/autocomplete/filtering/streamTransforms/lineStream.ts:176:14    
+ENGLISH_START_PHRASES                              core/autocomplete/filtering/streamTransforms/lineStream.ts:183:14    
+ENGLISH_POST_PHRASES                               core/autocomplete/filtering/streamTransforms/lineStream.ts:195:14    
+noTopLevelKeywordsMidline                function  core/autocomplete/filtering/streamTransforms/lineStream.ts:202:24    
+skipLines                                function  core/autocomplete/filtering/streamTransforms/lineStream.ts:439:24    
+removeTrailingWhitespace                 function  core/autocomplete/filtering/streamTransforms/lineStream.ts:452:24    
+filterEnglishLinesAtStart                function  core/autocomplete/filtering/streamTransforms/lineStream.ts:473:24    
+filterEnglishLinesAtEnd                  function  core/autocomplete/filtering/streamTransforms/lineStream.ts:501:24    
+filterLeadingNewline                     function  core/autocomplete/filtering/streamTransforms/lineStream.ts:515:24    
+fixCodeLlamaFirstLineIndentation         function  core/autocomplete/filtering/streamTransforms/lineStream.ts:531:24    
+filterLeadingAndTrailingNewLineInserti…  function  core/autocomplete/filtering/streamTransforms/lineStream.ts:559:24    
+logLines                                 function  core/autocomplete/filtering/streamTransforms/lineStream.ts:631:24    
+getAllSnippets                                     core/autocomplete/snippets/getAllSnippets.ts:169:14                  
+getDiffFn                                function  core/autocomplete/snippets/gitDiffCache.ts:66:17                     
+getRecencyAndSizeScore                             core/autocomplete/templating/formatOpenedFilesContext.ts:178:9       
+rankByScore                                        core/autocomplete/templating/formatOpenedFilesContext.ts:179:26      
+setLogStats                                        core/autocomplete/templating/formatOpenedFilesContext.ts:180:15      
+trimSnippetForContext                              core/autocomplete/templating/formatOpenedFilesContext.ts:181:15      
+renderPrompt                             function  core/autocomplete/templating/index.ts:100:17                         
+getScopeAroundRange                      function  core/autocomplete/util/ast.ts:49:23                                  
+prevFilepaths                                      core/autocomplete/util/openedFilesLruCache.ts:18:14                  
+isContextProviderWithParams              function  core/config/load.ts:235:17                                           
+isContinueConfigRelatedUri               function  core/config/loadLocalAssistants.ts:16:17                             
+isContinueAgentConfigFile                function  core/config/loadLocalAssistants.ts:32:17                             
+isColocatedRulesFile                     function  core/config/loadLocalAssistants.ts:45:17                             
+getDotContinueSubDirs                    function  core/config/loadLocalAssistants.ts:103:17                            
+loadCodebaseRules                        function  core/config/markdown/loadCodebaseRules.ts:67:23                      
+addModel                                 function  core/config/util.ts:26:17                                            
+deleteModel                              function  core/config/util.ts:88:17                                            
+configYamlToContinueConfig               function  core/config/yaml/loadYaml.ts:170:23                                  
+isHubEnv                                 function  core/control-plane/AuthTypes.ts:45:17                                
+validateLicenseKey                       function  core/control-plane/mdm/mdm.ts:37:17                                  
+LOCAL_DEV_DATA_VERSION                             core/data/log.ts:20:14                                               
+convertMyersChangeToDiffLines            function  core/diff/myers.ts:5:17                                              
+matchLine                                function  core/diff/util.ts:48:17                                              
+generateLines                            function  core/diff/util.ts:136:24                                             
+DEFAULT_SECURITY_IGNORE_FILETYPES                  core/indexing/ignore.ts:8:14                                         
+DEFAULT_SECURITY_IGNORE_DIRS                       core/indexing/ignore.ts:67:14                                        
+ADDITIONAL_INDEXING_IGNORE_FILETYPES               core/indexing/ignore.ts:98:14                                        
+ADDITIONAL_INDEXING_IGNORE_DIRS                    core/indexing/ignore.ts:168:14                                       
+defaultSecurityIgnoreFile                          core/indexing/ignore.ts:215:14                                       
+defaultSecurityIgnoreDir                           core/indexing/ignore.ts:218:14                                       
+defaultIgnoreFile                                  core/indexing/ignore.ts:221:14                                       
+defaultIgnoreDir                                   core/indexing/ignore.ts:222:14                                       
+DEFAULT_SECURITY_IGNORE                            core/indexing/ignore.ts:225:14                                       
+DEFAULT_IGNORE                                     core/indexing/ignore.ts:230:14                                       
+defaultFileAndFolderSecurityIgnores                core/indexing/ignore.ts:234:14                                       
+throwIfFileIsSecurityConcern             function  core/indexing/ignore.ts:261:17                                       
+SqliteDb                                 class     core/indexing/refreshIndex.ts:21:14                                  
+truncateToLastNBytes                     function  core/indexing/refreshIndex.ts:527:17                                 
+IndexLock                                class     core/indexing/refreshIndex.ts:546:14                                 
+walkDirCache                                       core/indexing/walkDir.ts:72:14                                       
+getIgnoreContext                         function  core/indexing/walkDir.ts:299:23                                      
+GPTAsyncEncoder                          class     core/llm/asyncEncoder.ts:35:14                                       
+llmCanGenerateInParallel                           core/llm/autodetect.ts:449:26                                        
+modelSupportsReasoning                             core/llm/autodetect.ts:452:25                                        
+PROXY_URL                                          core/llm/constants.ts:35:28                                          
+cleanupAsyncEncoders                               core/llm/countTokens.ts:547:9                                        
+extractToolSequence                                core/llm/countTokens.ts:551:20                                       
+pruneStringFromTop                                 core/llm/countTokens.ts:556:25                                       
+LLMError                                 class     core/llm/index.ts:68:14                                              
+CometAPIError                            class     core/llm/llms/CometAPI.ts:8:14                                       
+CometAPIAuthenticationError              class     core/llm/llms/CometAPI.ts:19:14                                      
+CometAPIQuotaExceededError               class     core/llm/llms/CometAPI.ts:26:14                                      
+llmFromProviderAndOptions                function  core/llm/llms/index.ts:190:17                                        
+OVHcloud                                 class     core/llm/llms/OVHcloud.ts:5:14                                       
+TransformersJsEmbeddingsProvider         class     core/llm/llms/TransformersJsEmbeddingsProvider.ts:41:14              
+messageHasToolCalls                      function  core/llm/messages.ts:3:17                                            
+messageIsEmpty                           function  core/llm/messages.ts:7:17                                            
+isToolMessageForId                       function  core/llm/messages.ts:38:17                                           
+toChatMessage                            function  core/llm/openaiTypeConverters.ts:13:17                               
+isRecommendedAgentModel                  function  core/llm/toolSupport.ts:377:17                                       
+modelSupportsNativeTools                 function  core/llm/toolSupport.ts:394:17                                       
+getStringArg                             function  core/llm/utils/parseArgs.ts:16:17                                    
+getOptionalStringArg                     function  core/llm/utils/parseArgs.ts:32:17                                    
+getNumberArg                             function  core/llm/utils/parseArgs.ts:43:17                                    
+getBooleanArg                            function  core/llm/utils/parseArgs.ts:61:17                                    
+withRetry                                function  core/llm/utils/retry.ts:193:17                                       
+retryAsync                               function  core/llm/utils/retry.ts:404:23                                       
+IS_NEXT_EDIT_ACTIVE                                core/nextEdit/constants.ts:3:14                                      
+createBeforeAfterDiff                              core/nextEdit/context/diffFormatting.ts:83:14                        
+extractMetadataFromUnifiedDiff           function  core/nextEdit/context/diffFormatting.ts:138:17                       
+getRenderableDiffWithGutterAnnotations   function  core/nextEdit/diff/diff.ts:63:17                                     
+applyCompletionToFile                    function  core/nextEdit/diff/diff.ts:250:17                                    
+getTemplateForModel                      function  core/nextEdit/templating/NextEditPromptEngine.ts:41:17               
+insertEditableRegionTokensWithStaticRa…  function  core/nextEdit/templating/utils.ts:30:17                              
+convertNextEditModelNameToEnum           function  core/nextEdit/utils.ts:26:17                                         
+ideSettingsPromise                                 core/test/fixtures.ts:11:14                                          
+testControlPlaneClient                             core/test/fixtures.ts:13:14                                          
+testLLM                                            core/test/fixtures.ts:24:14                                          
+TEST_DIR_PATH                                      core/test/testDir.ts:7:14                                            
+getRootCause                             function  core/util/errors.ts:7:17                                             
+inferResolvedUriFromRelativePath         function  core/util/ideUtils.ts:36:23                                          
+removeQuotesAndEscapes                   function  core/util/index.ts:1:17                                              
+dedentAndGetCommonWhitespace             function  core/util/index.ts:30:17                                             
+getMarkdownLanguageTagForFile            function  core/util/index.ts:69:17                                             
+mergeJson                                function  core/util/merge.ts:5:17                                              
+renderContextItems                       function  core/util/messageContent.ts:34:17                                    
+renderContextItemsWithStatus             function  core/util/messageContent.ts:38:17                                    
+normalizeToMessageParts                  function  core/util/messageContent.ts:53:17                                    
+DO_NOT_COUNT_REJECTED_BEFORE                       core/util/parameters.ts:32:14                                        
+RETRIEVAL_PARAMS                                   core/util/parameters.ts:34:14                                        
+getChromiumPath                          function  core/util/paths.ts:36:17                                             
+getContinueUtilsPath                     function  core/util/paths.ts:40:17                                             
+getSessionsFolderPath                    function  core/util/paths.ts:68:17                                             
+getIndexFolderPath                       function  core/util/paths.ts:76:17                                             
+getSharedConfigFilePath                  function  core/util/paths.ts:88:17                                             
+getSessionFilePath                       function  core/util/paths.ts:92:17                                             
+getSessionsListPath                      function  core/util/paths.ts:96:17                                             
+migrate                                  function  core/util/paths.ts:290:23                                            
+getLanceDbPath                           function  core/util/paths.ts:320:17                                            
+getDocsSqlitePath                        function  core/util/paths.ts:328:17                                            
+getRemoteConfigsFolderPath               function  core/util/paths.ts:332:17                                            
+getPathToRemoteConfig                    function  core/util/paths.ts:340:17                                            
+getLogsDirPath                           function  core/util/paths.ts:375:17                                            
+getCoreLogsPath                          function  core/util/paths.ts:383:17                                            
+getPromptLogsPath                        function  core/util/paths.ts:387:17                                            
+getGlobalPromptsPath                     function  core/util/paths.ts:395:17                                            
+readAllGlobalPromptFiles                 function  core/util/paths.ts:399:17                                            
+getRepoMapFilePath                       function  core/util/paths.ts:423:17                                            
+migrateV1DevDataFiles                    function  core/util/paths.ts:431:17                                            
+getDiffsDirectoryPath                    function  core/util/paths.ts:460:17                                            
+isFileWithinFolder                                 core/util/paths.ts:470:14                                            
+EXPERIMENTS                                        core/util/posthog.ts:15:14                                           
+union                                    function  core/util/ranges.ts:60:17                                            
+maxPosition                              function  core/util/ranges.ts:85:17                                            
+minPosition                              function  core/util/ranges.ts:95:17                                            
+initializeSentry                         function  core/util/sentry/SentryLogger.ts:70:17                               
+createSpan                               function  core/util/sentry/SentryLogger.ts:86:17                               
+captureLog                               function  core/util/sentry/SentryLogger.ts:110:17                              
+capitalizeFirstLetter                              core/util/text.ts:1:14                                               
+replaceEscapedCharacters                 function  core/util/text.ts:8:17                                               
+kebabOfStr                               function  core/util/text.ts:41:17                                              
+supportedLanguages                                 core/util/treeSitter.ts:38:14                                        
+getLanguageForFile                       function  core/util/treeSitter.ts:145:23                                       
+getSymbolsForFile                        function  core/util/treeSitter.ts:227:23                                       
+getSymbolsForManyFiles                   function  core/util/treeSitter.ts:294:23                                       
+sanitizeMessageForTTS                    function  core/util/tts.ts:18:17                                               
+getFileExtensionFromBasename             function  core/util/uri.ts:93:17                                               
+getLastNPathParts                        function  core/util/uri.ts:178:17                                              
+getUriDescription                        function  core/util/uri.ts:185:17                                              
+RETRY_AFTER_HEADER                                 core/util/withExponentialBackoff.ts:5:14                             
+stopAtLinesWithMarkdownSupport           function  core/utils/streamMarkdownUtils.ts:39:24                              
+HIDE_NEXT_EDIT_SUGGESTION_COMMAND                  extensions/vscode/src/activation/NextEditWindowManager.ts:96:14      
+ACCEPT_NEXT_EDIT_SUGGESTION_COMMAND                extensions/vscode/src/activation/NextEditWindowManager.ts:98:14      
+getDefinitionsForNode                    function  extensions/vscode/src/autocomplete/lsp.ts:228:23                     
+editorToSuggestions                                extensions/vscode/src/suggestions.ts:14:14                           
+currentSuggestion                                  extensions/vscode/src/suggestions.ts:18:14                           
+rerenderDecorations                      function  extensions/vscode/src/suggestions.ts:57:17                           
+suggestionDownCommand                    function  extensions/vscode/src/suggestions.ts:137:17                          
+suggestionUpCommand                      function  extensions/vscode/src/suggestions.ts:161:17                          
+acceptAllSuggestionsCommand              function  extensions/vscode/src/suggestions.ts:288:17                          
+rejectAllSuggestionsCommand              function  extensions/vscode/src/suggestions.ts:292:17                          
+getRangeInFileWithContents               function  extensions/vscode/src/util/addCode.ts:10:17                          
+isEmptyFile                              function  extensions/vscode/src/util/addCode.ts:148:17                         
+getBeforeCursorPos                                 extensions/vscode/src/util/editLoggingUtils.ts:9:14                  
+getTutorialUri                           function  extensions/vscode/src/util/tutorial.ts:7:17                          
+isTutorialFile                           function  extensions/vscode/src/util/tutorial.ts:11:17                         
+convertSingleToDoubleQuoteJSON           function  extensions/vscode/src/util/util.ts:15:17                             
+debounced                                function  extensions/vscode/src/util/util.ts:59:17                             
+getPlatform                              function  extensions/vscode/src/util/util.ts:75:17                             
+getArchitecture                          function  extensions/vscode/src/util/util.ts:88:17                             
+getAltOrOption                           function  extensions/vscode/src/util/util.ts:124:17                            
+getvsCodeUriScheme                       function  extensions/vscode/src/util/util.ts:163:17                            
+getNonce                                 function  extensions/vscode/src/util/vscode.ts:14:17                           
+getViewColumnOfFile                      function  extensions/vscode/src/util/vscode.ts:28:17                           
+getRightViewColumn                       function  extensions/vscode/src/util/vscode.ts:44:17                           
+Unused exported types (49)
+Filepath                              type       core/autocomplete/context/static-context/types.ts:25:13              
+RelevantType                          type       core/autocomplete/context/static-context/types.ts:26:13              
+RelevantHeader                        type       core/autocomplete/context/static-context/types.ts:27:13              
+cacheElementType                      type       core/autocomplete/util/openedFilesLruCache.ts:4:13                   
+ProfileDescription                    type       core/config/ConfigHandler.ts:37:14                                   
+BrowserSerializedContinueConfig       type       core/config/load.ts:994:7                                            
+OnPremSessionInfo                     interface  core/control-plane/AuthTypes.ts:10:18                                
+HubEnv                                interface  core/control-plane/AuthTypes.ts:28:18                                
+OnPremEnv                             interface  core/control-plane/AuthTypes.ts:36:18                                
+FreeTrialStatus                       interface  core/control-plane/client.ts:34:18                                   
+RemoteSessionMetadata                 interface  core/control-plane/client.ts:42:18                                   
+MdmKeys                               interface  core/control-plane/mdm/mdm.ts:7:18                                   
+LicenseKey                            interface  core/control-plane/mdm/mdm.ts:25:18                                  
+LicenseKeyData                        interface  core/control-plane/mdm/mdm.ts:31:18                                  
+MatchLineResult                       type       core/diff/util.ts:8:13                                               
+RefreshIndex                          type       core/indexing/types.ts:39:13                                         
+WalkerOptions                         interface  core/indexing/walkDir.ts:9:18                                        
+GeminiObjectSchemaType                type       core/llm/llms/gemini-types.ts:20:13                                  
+GeminiObjectSchema                    interface  core/llm/llms/gemini-types.ts:29:18                                  
+GeminiTextContentPart                 type       core/llm/llms/gemini-types.ts:178:13                                 
+GeminiInlineDataContentPart           type       core/llm/llms/gemini-types.ts:182:13                                 
+GeminiFunctionCallContentPart         type       core/llm/llms/gemini-types.ts:189:13                                 
+GeminiFunctionResponseContentPart     type       core/llm/llms/gemini-types.ts:197:13                                 
+GeminiFileDataContentPart             type       core/llm/llms/gemini-types.ts:205:13                                 
+GeminiExecutableCodeContentPart       type       core/llm/llms/gemini-types.ts:212:13                                 
+GeminiCodeExecutionResultContentPart  type       core/llm/llms/gemini-types.ts:219:13                                 
+GeminiTool                            interface  core/llm/llms/gemini-types.ts:250:18                                 
+GeminiToolConfig                      interface  core/llm/llms/gemini-types.ts:261:18                                 
+GeminiChatResponseSuccess             interface  core/llm/llms/gemini-types.ts:278:18                                 
+GeminiChatResponseError               interface  core/llm/llms/gemini-types.ts:284:18                                 
+RetryOptions                          interface  core/llm/utils/retry.ts:4:18                                         
+BeforeAfterDiff                       type       core/nextEdit/context/diffFormatting.ts:10:13                        
+CreateDiffArgs                        interface  core/nextEdit/context/diffFormatting.ts:16:18                        
+DiffMetadata                          interface  core/nextEdit/context/diffFormatting.ts:113:18                       
+ProcessedItem                         interface  core/nextEdit/NextEditPrefetchQueue.ts:5:18                          
+AutocompleteInput                     interface  core/nextEdit/types.ts:18:18                                         
+SystemPrompt                          interface  core/nextEdit/types.ts:82:18                                         
+UserPrompt                            interface  core/nextEdit/types.ts:87:18                                         
+InstinctTemplateVars                  interface  core/nextEdit/types.ts:98:18                                         
+MercuryTemplateVars                   interface  core/nextEdit/types.ts:106:18                                        
+EditableRegionConfig                  interface  core/nextEdit/types.ts:130:18                                        
+PromptConfig                          interface  core/nextEdit/types.ts:140:18                                        
+GlobalContextType                     type       core/util/GlobalContext.ts:22:13                                     
+TODO                                  type       core/util/index.ts:137:13                                            
+ModelInfo                             interface  core/util/ollamaHelper.ts:6:18                                       
+APIError                              interface  core/util/withExponentialBackoff.ts:1:18                             
+CompletionDataForAfterJump            interface  extensions/vscode/src/activation/JumpManager.ts:63:18                
+TextApplier                           interface  extensions/vscode/src/activation/NextEditWindowManager.ts:18:18      
+ExpectedGhostTextAcceptance           interface  extensions/vscode/src/autocomplete/GhostTextAcceptanceTracker.ts:7:18
+Configuration hints (6)
+.                                          …ip.json  Add entry and/or refine project files in workspaces["."] (288 unus…
+core/autocomplete/index.ts                 …ip.json  Refine entry pattern (no matches)                                  
+core/nextEdit/index.ts                     …ip.json  Refine entry pattern (no matches)                                  
+core/index.ts                              …ip.json  Refine entry pattern (no matches)                                  
+extensions/vscode/src/test/**/*.test.ts    …ip.json  Refine entry pattern (no matches)                                  
+…ensions/vscode/src/test/**/*.vitest.ts    …ip.json  Refine entry pattern (no matches)                                  

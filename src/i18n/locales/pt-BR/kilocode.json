@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "Não é possível exibir novas alterações, pontos de verificação não estão disponíveis.",
 		"noChanges": "Não é possível exibir novas alterações, nenhuma alteração foi encontrada.",
 		"error": "Não é possível exibir novas alterações, ocorreu um erro."
-	},
-	"creditsstatusbar": {
-		"loading": "Carregando...",
-		"clickToRefresh": "Clique para atualizar",
-		"minute": "minuto"
 	}
 }
