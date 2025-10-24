@@ -19,10 +19,14 @@ const mcpMarketplaceResponse = z.object({
 })
 
 export class RemoteConfigLoader {
+	// private apiBaseUrl: string // kilocode_change
 	private cache: Map<string, { data: MarketplaceItem[]; timestamp: number }> = new Map()
 	private cacheDuration = 5 * 60 * 1000 // 5 minutes
 
-	constructor() {}
+	// kilocode_change - empty constructor
+	// constructor() {
+	// 	this.apiBaseUrl = getKiloBaseUriFromToken()
+	// }
 
 	async loadAllItems(hideMarketplaceMcps = false): Promise<MarketplaceItem[]> {
 		const items: MarketplaceItem[] = []
@@ -44,7 +48,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getApiUrl("/marketplace/modes")
+		const url = getApiUrl("/marketplace/modes") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)
@@ -67,7 +71,7 @@ export class RemoteConfigLoader {
 			return cached
 		}
 
-		const url = getApiUrl("/marketplace/mcps")
+		const url = getApiUrl("/marketplace/mcps") // kilocode_change
 		const data = await this.fetchWithRetry<string>(url)
 
 		const yamlData = yaml.parse(data)

@@ -1,29 +1,29 @@
 // @ts-nocheck
 
 const getAddress = (person: Person): Address => {
-	// TODO
-}
+  // TODO
+};
 
 const logPerson = (person: Person) => {
-	// TODO
-}
+  // TODO
+};
 
 const getHardcodedAddress = (): Address => {
-	// TODO
-}
+  // TODO
+};
 
 const getAddresses = (people: Person[]): Address[] => {
-	// TODO
-}
+  // TODO
+};
 
 const logPersonWithAddres = (person: Person<Address>): Person<Address> => {
-	// TODO
-}
+  // TODO
+};
 
 const logPersonOrAddress = (person: Person | Address): Person | Address => {
-	// TODO
-}
+  // TODO
+};
 
 const logPersonAndAddress = (person: Person, address: Address) => {
-	// TODO
-}
+  // TODO
+};

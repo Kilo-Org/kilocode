@@ -1,33 +1,33 @@
 // @ts-nocheck
 
 function* getAddress(person: Person): Address {
-	// TODO
+  // TODO
 }
 
 function* getFirstAddress(people: Person[]): Address {
-	// TODO
+  // TODO
 }
 
 function* logPerson(person: Person) {
-	// TODO
+  // TODO
 }
 
 function* getHardcodedAddress(): Address {
-	// TODO
+  // TODO
 }
 
 function* getAddresses(people: Person[]): Address[] {
-	// TODO
+  // TODO
 }
 
 function* logPersonWithAddress(person: Person<Address>): Person<Address> {
-	// TODO
+  // TODO
 }
 
 function* logPersonOrAddress(person: Person | Address): Person | Address {
-	// TODO
+  // TODO
 }
 
 function* logPersonAndAddress(person: Person, address: Address) {
-	// TODO
+  // TODO
 }
