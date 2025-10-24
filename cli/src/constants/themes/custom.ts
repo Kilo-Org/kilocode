@@ -4,14 +4,42 @@
 
 import type { Theme } from "../../types/theme.js"
 import type { CLIConfig } from "../../config/types.js"
+import {
+	darkTheme,
+	lightTheme,
+	alphaTheme,
+	draculaTheme,
+	atomOneDarkTheme,
+	ayuDarkTheme,
+	githubDarkTheme,
+	githubLightTheme,
+	googleCodeTheme,
+	xcodeTheme,
+	shadesOfPurpleTheme,
+	ayuLightTheme,
+	ansiTheme,
+	ansiLightTheme,
+} from "./index.js"
 
 /**
  * Get all themes including custom ones from config
  */
 export function getAllThemes(config: CLIConfig): Record<string, Theme> {
 	const builtInThemes = {
-		// These will be imported from the main theme registry
-		// We'll update this after modifying the registry
+		dark: darkTheme,
+		light: lightTheme,
+		alpha: alphaTheme,
+		dracula: draculaTheme,
+		"atom-one-dark": atomOneDarkTheme,
+		"ayu-dark": ayuDarkTheme,
+		"github-dark": githubDarkTheme,
+		"github-light": githubLightTheme,
+		googlecode: googleCodeTheme,
+		xcode: xcodeTheme,
+		"shades-of-purple": shadesOfPurpleTheme,
+		"ayu-light": ayuLightTheme,
+		ansi: ansiTheme,
+		"ansi-light": ansiLightTheme,
 	}
 
 	// Merge custom themes
@@ -31,6 +59,35 @@ export function isCustomTheme(themeId: string, config: CLIConfig): boolean {
  * Add a custom theme to the configuration
  */
 export function addCustomTheme(config: CLIConfig, themeId: string, theme: Theme): CLIConfig {
+	// Validate that the theme object conforms to the Theme interface
+	if (!theme || typeof theme !== "object") {
+		throw new Error("Invalid theme: theme must be an object")
+	}
+
+	// Check for required properties
+	const requiredProps = [
+		"id",
+		"name",
+		"brand",
+		"semantic",
+		"interactive",
+		"messages",
+		"actions",
+		"code",
+		"ui",
+		"status",
+	]
+	for (const prop of requiredProps) {
+		if (!(prop in theme)) {
+			throw new Error(`Invalid theme: missing required property '${prop}'`)
+		}
+	}
+
+	// Check that themeId is a non-empty string
+	if (!themeId || typeof themeId !== "string") {
+		throw new Error("Invalid theme ID: theme ID must be a non-empty string")
+	}
+
 	if (!config.customThemes) {
 		config.customThemes = {}
 	}
@@ -55,7 +112,7 @@ export function removeCustomTheme(config: CLIConfig, themeId: string): CLIConfig
 		return config
 	}
 
-	const { [themeId]: removed, ...remainingThemes } = config.customThemes
+	const { [themeId]: _removed, ...remainingThemes } = config.customThemes
 
 	return {
 		...config,
