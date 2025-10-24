@@ -1,5 +1,11 @@
 import { test, expect, type TestFixtures } from "./playwright-base-test"
-import { findWebview, upsertApiConfiguration, verifyExtensionInstalled, clickSaveSettingsButton } from "../helpers"
+import {
+	findWebview,
+	upsertApiConfiguration,
+	verifyExtensionInstalled,
+	clickSaveSettingsButton,
+	waitForTooltipsToDismiss,
+} from "../helpers"
 
 test.describe("Settings", () => {
 	test("screenshots", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
@@ -35,6 +41,7 @@ test.describe("Settings", () => {
 			const sectionId = testId?.replace("tab-", "") || `section-${i}`
 
 			await clickSaveSettingsButton(webviewFrame) // To avoid flakey screenshots
+			await waitForTooltipsToDismiss(webviewFrame) // Wait for tooltips to dismiss before screenshot
 			await takeScreenshot(`${i}-settings-${sectionId}-${tabName.toLowerCase().replace(/\s+/g, "-")}`)
 		}
 
