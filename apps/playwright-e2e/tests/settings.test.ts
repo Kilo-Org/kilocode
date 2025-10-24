@@ -14,9 +14,10 @@ test.describe("Settings", () => {
 
 		// Open the settings then move the mouse to avoid triggering the tooltip
 		const webviewFrame = await findWebview(page)
-		page.locator('[aria-label*="Settings"], [title*="Settings"]').first().click()
-		await clickSaveSettingsButton(webviewFrame)
+		await page.locator('[aria-label*="Settings"], [title*="Settings"]').first().click()
+		await page.mouse.move(0, 0) // Move cursor to top-left corner to avoid triggering hover states
 
+		await clickSaveSettingsButton(webviewFrame)
 		await expect(webviewFrame.locator('[role="tablist"]')).toBeVisible({ timeout: 10000 })
 		console.log("✅ Settings view loaded")
 
