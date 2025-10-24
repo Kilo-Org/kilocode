@@ -1,6 +1,12 @@
 import { z } from "zod"
 import { ProviderSettings, ProviderSettingsEntry } from "../provider-settings.js"
 
+declare global {
+	interface Window {
+		KILOCODE_BACKEND_BASE_URL: string | undefined
+	}
+}
+
 export const ghostServiceSettingsSchema = z
 	.object({
 		enableAutoTrigger: z.boolean().optional(),
@@ -71,15 +77,15 @@ export function getKiloUrlFromToken(targetUrl: string, kilocodeToken?: string): 
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 	const target = new URL(targetUrl)
 
-	const { protocol, hostname, port } = new URL(baseUrl)
-	Object.assign(target, { protocol, hostname, port })
+	const { protocol, port } = new URL(baseUrl)
+	Object.assign(target, { protocol, port })
+
 	return target.toString()
 }
 
 function getGlobalKilocodeBackendUrl(): string {
 	return (
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(typeof window !== "undefined" ? (window as any).KILOCODE_BACKEND_BASE_URL : undefined) ||
+		(typeof window !== "undefined" ? window.KILOCODE_BACKEND_BASE_URL : undefined) ||
 		process.env.KILOCODE_BACKEND_BASE_URL ||
 		DEFAULT_KILOCODE_BACKEND_URL
 	)
