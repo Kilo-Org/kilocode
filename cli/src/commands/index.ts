@@ -14,6 +14,7 @@ import { modeCommand } from "./mode.js"
 import { modelCommand } from "./model.js"
 import { profileCommand } from "./profile.js"
 import { teamsCommand } from "./teams.js"
+import { themeCommand } from "./theme.js"
 
 /**
  * Initialize all commands
@@ -27,4 +28,5 @@ export function initializeCommands(): void {
 	commandRegistry.register(modelCommand)
 	commandRegistry.register(profileCommand)
 	commandRegistry.register(teamsCommand)
+	commandRegistry.register(themeCommand)
 }
