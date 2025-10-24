@@ -92,7 +92,7 @@ describe("Ghost Streaming Integration", () => {
 			const usageInfo = await model.generateResponse("system prompt", "user prompt", onChunk)
 
 			// Process complete response
-			const parseResult = streamingParser.parseResponse(fullResponse)
+			const parseResult = streamingParser.parseResponse(fullResponse, "", "")
 			finalSuggestionTime = performance.now()
 
 			const endTime = performance.now()
@@ -142,7 +142,7 @@ describe("Ghost Streaming Integration", () => {
 			await model.generateResponse("system", "user", onChunk)
 
 			// Process complete response
-			const parseResult = streamingParser.parseResponse(fullResponse)
+			const parseResult = streamingParser.parseResponse(fullResponse, "", "")
 
 			// Should have processed both suggestions
 			expect(parseResult.hasNewSuggestions).toBe(true)
@@ -179,7 +179,7 @@ describe("Ghost Streaming Integration", () => {
 			await model.generateResponse("system", "user", onChunk)
 
 			// Try to process incomplete response
-			const parseResult = streamingParser.parseResponse(fullResponse)
+			const parseResult = streamingParser.parseResponse(fullResponse, "", "")
 
 			// Should have no complete suggestions due to cancellation
 			expect(parseResult.hasNewSuggestions).toBe(false)
@@ -212,7 +212,7 @@ describe("Ghost Streaming Integration", () => {
 
 			await model.generateResponse("system", "user", onChunk)
 
-			const parseResult = streamingParser.parseResponse(fullResponse)
+			const parseResult = streamingParser.parseResponse(fullResponse, "", "")
 			expect(parseResult.hasNewSuggestions).toBe(true)
 			expect(errors).toBe(0) // No errors thrown
 		})
@@ -244,7 +244,7 @@ describe("Ghost Streaming Integration", () => {
 
 			await model.generateResponse("system", "user", onChunk)
 
-			const parseResult = streamingParser.parseResponse(fullResponse)
+			const parseResult = streamingParser.parseResponse(fullResponse, "", "")
 			const totalTime = performance.now() - startTime
 
 			// Should process successfully

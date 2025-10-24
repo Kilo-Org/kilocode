@@ -71,28 +71,13 @@ export function sanitizeXMLConservative(buffer: string): string {
 /**
  * Check if the response appears to be complete
  */
-function isResponseComplete(buffer: string, completedChangesCount: number): boolean {
-	// Simple heuristic: if the buffer doesn't end with an incomplete tag,
-	// consider it complete
-	const trimmedBuffer = buffer.trim()
+function isResponseComplete(buffer: string): boolean {
+	const incompleteChangeMatch = /<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(buffer)
+	const incompleteSearchMatch = /<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(buffer)
+	const incompleteReplaceMatch = /<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(buffer)
+	const incompleteCDataMatch = /<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(buffer)
 
-	// If the buffer is empty or only whitespace, consider it complete
-	if (trimmedBuffer.length === 0) {
-		return true
-	}
-
-	const incompleteChangeMatch = /<change(?:\s[^>]*)?>(?:(?!<\/change>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteSearchMatch = /<search(?:\s[^>]*)?>(?:(?!<\/search>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteReplaceMatch = /<replace(?:\s[^>]*)?>(?:(?!<\/replace>)[\s\S])*$/i.test(trimmedBuffer)
-	const incompleteCDataMatch = /<!\[CDATA\[(?:(?!\]\]>)[\s\S])*$/i.test(trimmedBuffer)
-
-	// If we have incomplete tags, the response is not complete
-	if (incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch) {
-		return false
-	}
-
-	// If we have at least one complete change and no incomplete tags, likely complete
-	return completedChangesCount > 0
+	return !(incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch)
 }
 
 /**
@@ -219,8 +204,6 @@ function skipChars(text: string, startPos: number, predicate: (char: string) => 
  * and emit suggestions as soon as complete <change> blocks are available
  */
 export class GhostStreamingParser {
-	private completedChanges: ParsedChange[] = []
-
 	private context: GhostSuggestionContext | null = null
 
 	constructor() {}
@@ -230,52 +213,57 @@ export class GhostStreamingParser {
 	 */
 	public initialize(context: GhostSuggestionContext): void {
 		this.context = context
-		this.reset()
 	}
 
 	/**
-	 * Reset parser state for a new parsing session
+	 * Sanitize response if needed and return sanitized response with completion status
 	 */
-	public reset(): void {
-		this.completedChanges = []
+	private sanitizeResponseIfNeeded(response: string): { sanitizedResponse: string; isComplete: boolean } {
+		let sanitizedResponse = response
+		let isComplete = isResponseComplete(sanitizedResponse)
+
+		if (!isComplete) {
+			sanitizedResponse = sanitizeXMLConservative(sanitizedResponse)
+			isComplete = isResponseComplete(sanitizedResponse) // Re-check completion after sanitization
+		}
+
+		return { sanitizedResponse, isComplete }
 	}
 
 	/**
 	 * Mark the stream as finished and process any remaining content with sanitization
 	 */
-	public parseResponse(fullResponse: string): StreamingParseResult {
-		let llmResponse = fullResponse
+	public parseResponse(fullResponse: string, prefix: string, suffix: string): StreamingParseResult {
+		const { sanitizedResponse, isComplete } = this.sanitizeResponseIfNeeded(fullResponse)
 
-		// Extract any newly completed changes from the current buffer
-		const newChanges = this.extractCompletedChanges(llmResponse)
-
+		const newChanges = this.extractCompletedChanges(sanitizedResponse)
 		let hasNewSuggestions = newChanges.length > 0
 
-		// Add new changes to our completed list
-		this.completedChanges.push(...newChanges)
-
-		// Check if the response appears complete
-		let isComplete = isResponseComplete(llmResponse, this.completedChanges.length)
-
-		// Apply very conservative sanitization only when the stream is finished
-		// and we still have no completed changes but have content in the buffer
-		if (this.completedChanges.length === 0 && llmResponse.trim().length > 0) {
-			const sanitizedBuffer = sanitizeXMLConservative(llmResponse)
-			if (sanitizedBuffer !== llmResponse) {
-				// Re-process with sanitized buffer
-				llmResponse = sanitizedBuffer
-				const sanitizedChanges = this.extractCompletedChanges(llmResponse)
-				if (sanitizedChanges.length > 0) {
-					this.completedChanges.push(...sanitizedChanges)
-					hasNewSuggestions = true
-					isComplete = isResponseComplete(llmResponse, this.completedChanges.length) // Re-check completion after sanitization
-				}
-			}
-		}
-
 		// Generate suggestions from all completed changes
-		const patch = this.generatePatch(this.completedChanges)
-		const suggestions = this.convertToSuggestions(patch, this.context!.document)
+		const document = this.context!.document
+		const range = this.context!.range
+
+		const modifiedContent = this.generateModifiedContent(newChanges, document, range)
+		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
+		const patch = structuredPatch(
+			relativePath,
+			relativePath,
+			document.getText(),
+			modifiedContent ?? document.getText(),
+			"",
+			"",
+		)
+
+		const modifiedContent_has_prefix_and_suffix =
+			modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
+
+		const suggestions = this.convertToSuggestions(patch, document)
+
+		if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
+			// Mark as FIM option
+			const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
+			suggestions.setFillInAtCursor(middle)
+		}
 
 		return {
 			suggestions,
@@ -316,12 +304,15 @@ export class GhostStreamingParser {
 		return newChanges
 	}
 
-	private generatePatch(changes: ParsedChange[]): ParsedDiff | undefined {
-		if (!this.context?.document || changes.length === 0) {
+	private generateModifiedContent(
+		changes: ParsedChange[],
+		document: vscode.TextDocument,
+		range: vscode.Range | undefined,
+	): string | undefined {
+		if (changes.length === 0) {
 			return undefined
 		}
 
-		const document = this.context.document
 		const currentContent = document.getText()
 
 		// Add cursor marker to document content if it's not already there
@@ -329,9 +320,9 @@ export class GhostStreamingParser {
 		let modifiedContent = currentContent
 		const needsCursorMarker =
 			changes.some((change) => change.search.includes(CURSOR_MARKER)) && !currentContent.includes(CURSOR_MARKER)
-		if (needsCursorMarker && this.context.range) {
+		if (needsCursorMarker && range) {
 			// Add cursor marker at the specified range position
-			const cursorOffset = document.offsetAt(this.context.range.start)
+			const cursorOffset = document.offsetAt(range.start)
 			modifiedContent =
 				currentContent.substring(0, cursorOffset) + CURSOR_MARKER + currentContent.substring(cursorOffset)
 		}
@@ -419,14 +410,11 @@ export class GhostStreamingParser {
 			modifiedContent = removeCursorMarker(modifiedContent)
 		}
 
-		// Generate diff between original and modified content
-		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
-		return structuredPatch(relativePath, relativePath, currentContent, modifiedContent, "", "")
+		return modifiedContent
 	}
 
-	private convertToSuggestions(patch: ParsedDiff | undefined, document: vscode.TextDocument): GhostSuggestionsState {
+	private convertToSuggestions(patch: ParsedDiff, document: vscode.TextDocument): GhostSuggestionsState {
 		const suggestions = new GhostSuggestionsState()
-		if (!patch) return suggestions
 
 		const suggestionFile = suggestions.addFile(document.uri)
 
@@ -477,13 +465,5 @@ export class GhostStreamingParser {
 
 		suggestions.sortGroups()
 		return suggestions
-	}
-
-	/**
-	 * Get completed changes (for debugging)
-	 * @deprecated This method is obsolete and should not be used
-	 */
-	public getCompletedChanges(): ParsedChange[] {
-		return [...this.completedChanges]
 	}
 }

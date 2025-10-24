@@ -1,5 +1,21 @@
 # @kilocode/cli
 
+## 0.0.10
+
+### Patch Changes
+
+- [#3260](https://github.com/Kilo-Org/kilocode/pull/3260) [`0f71526`](https://github.com/Kilo-Org/kilocode/commit/0f715267745a0458caa396736551b4b3bb374259) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improved stability of the approval menu, preventing it from showing when you don't expect it
+
+- [#3262](https://github.com/Kilo-Org/kilocode/pull/3262) [`e6b62d4`](https://github.com/Kilo-Org/kilocode/commit/e6b62d45597aba9f08015fac9ced1c34ae779998) Thanks [@catrielmuller](https://github.com/catrielmuller)! - 'Added /clear command'
+
+## 0.0.9
+
+### Patch Changes
+
+- [#3255](https://github.com/Kilo-Org/kilocode/pull/3255) [`55430b7`](https://github.com/Kilo-Org/kilocode/commit/55430b7965ae2aef12517375a0e0c0e7d8f2367c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix suggestion selection with arrow keys
+
+- [#3253](https://github.com/Kilo-Org/kilocode/pull/3253) [`db9cb43`](https://github.com/Kilo-Org/kilocode/commit/db9cb4355ae0e4559e99066c78315ee3635a3543) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Terminal resize support
+
 ## 0.0.8
 
 ### Patch Changes

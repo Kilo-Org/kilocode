@@ -5,7 +5,7 @@ import { ErrorBoundary } from "react-error-boundary"
 import { AskMessageRouter } from "./AskMessageRouter.js"
 import { SayMessageRouter } from "./SayMessageRouter.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
-import { BOX_L1 } from "../../utils/width.js"
+import { getBoxWidth } from "../../utils/width.js"
 
 interface ExtensionMessageRowProps {
 	message: ExtensionChatMessage
@@ -14,7 +14,7 @@ interface ExtensionMessageRowProps {
 function ErrorFallback({ error }: { error: Error }) {
 	const theme = useTheme()
 	return (
-		<Box width={BOX_L1} borderColor={theme.semantic.error} borderStyle="round" padding={1} marginY={1}>
+		<Box width={getBoxWidth(1)} borderColor={theme.semantic.error} borderStyle="round" padding={1} marginY={1}>
 			<Text color={theme.semantic.error}>Error rendering message: {error.message}</Text>
 		</Box>
 	)

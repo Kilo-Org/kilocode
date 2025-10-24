@@ -71,4 +71,5 @@ export { useFollowupSuggestions } from "./useFollowupSuggestions.js"
 export type { UseFollowupSuggestionsReturn } from "./useFollowupSuggestions.js"
 
 export { useFollowupCIResponse } from "./useFollowupCIResponse.js"
+export { useTerminal } from "./useTerminal.js"
 export { useFollowupHandler } from "./useFollowupHandler.js"

@@ -38,14 +38,12 @@ export class TestRunner {
 			const completion = await this.strategyTester.getCompletion(testCase.input)
 			const llmRequestDuration = performance.now() - startTime
 
-			const changes = this.strategyTester.parseCompletion(completion)
+			const modifiedCode = this.strategyTester.parseCompletion(testCase.input, completion)
 
 			let actualValue: string
 
-			if (changes.length > 0) {
-				// Apply the change: replace search with replace in the input
-				const change = changes[0]
-				actualValue = testCase.input.replace(change.search, change.replace)
+			if (modifiedCode !== null) {
+				actualValue = modifiedCode
 			} else {
 				actualValue = "(no changes parsed)"
 			}
@@ -331,33 +329,17 @@ export class TestRunner {
 		}
 
 		if (lastResult.completion) {
-			const changes = this.strategyTester.parseCompletion(lastResult.completion)
-			if (changes.length > 0) {
-				console.log("\nParsed Changes:")
-				changes.forEach((change, i) => {
-					console.log(`Change ${i + 1}:`)
-					console.log("  Search:")
-					console.log("  " + "─".repeat(78))
-					console.log(
-						change.search
-							.split("\n")
-							.map((l) => "  " + l)
-							.join("\n"),
-					)
-					console.log("  " + "─".repeat(78))
-					console.log("  Replace:")
-					console.log("  " + "─".repeat(78))
-					console.log(
-						change.replace
-							.split("\n")
-							.map((l) => "  " + l)
-							.join("\n"),
-					)
-					console.log("  " + "─".repeat(78))
-
-					const extracted = change.replace.replace(testCase.input, "").trim()
-					console.log("  Extracted for test:", extracted || "(full replacement)")
-				})
+			const modifiedCode = this.strategyTester.parseCompletion(lastResult.testCase.input, lastResult.completion)
+			if (modifiedCode !== null) {
+				console.log("\nModified Code:")
+				console.log("  " + "─".repeat(78))
+				console.log(
+					modifiedCode
+						.split("\n")
+						.map((l) => "  " + l)
+						.join("\n"),
+				)
+				console.log("  " + "─".repeat(78))
 			} else {
 				console.log("\nNo changes were parsed from the response")
 			}

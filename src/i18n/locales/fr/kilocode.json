@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "Impossible d'afficher les nouveaux changements, les points de contrôle ne sont pas disponibles.",
 		"noChanges": "Impossible d'afficher les nouveaux changements, aucun changement trouvé.",
 		"error": "Impossible d'afficher les nouveaux changements, une erreur s'est produite."
-	},
-	"creditsstatusbar": {
-		"loading": "Chargement...",
-		"clickToRefresh": "Clique pour actualiser",
-		"minute": "minute"
 	}
 }

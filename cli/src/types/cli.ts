@@ -9,7 +9,7 @@ export interface WelcomeMessageOptions {
 
 export interface CliMessage {
 	id: string
-	type: "user" | "assistant" | "system" | "error" | "welcome"
+	type: "user" | "assistant" | "system" | "error" | "welcome" | "empty"
 	content: string
 	ts: number
 	partial?: boolean | undefined

@@ -135,10 +135,5 @@
 			"cancelButton": "Zrušit"
 		},
 		"tipMessage": "Kilo: Stiskněte {{shortcut}} pro generování příkazů v terminálu"
-	},
-	"creditsstatusbar": {
-		"loading": "Načítání...",
-		"clickToRefresh": "Kliknutím aktualizujete",
-		"minute": "minuta"
 	}
 }
