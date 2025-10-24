@@ -41,6 +41,7 @@ import {
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 	nativeFunctionCallingProviders, // kilocode_change: Added import for native function calling providers
+	siliconCloudDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
@@ -49,6 +50,7 @@ import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { usePreferredModels } from "@src/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
 // kilocode_change start
 //import {
 //	useOpenRouterModelProviders,
@@ -107,6 +109,7 @@ import {
 	VercelAiGateway,
 	DeepInfra,
 	OvhCloudAiEndpoints, // kilocode_change
+	SiliconCloud, // kilocode_change
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -221,6 +224,10 @@ const ApiOptions = ({
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
+		// kilocode_change start
+		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
+		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
+		// kilocode_change end
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -272,7 +279,8 @@ const ApiOptions = ({
 			} else if (
 				selectedProvider === "litellm" ||
 				selectedProvider === "deepinfra" ||
-				selectedProvider === "chutes" // kilocode_change
+				selectedProvider === "chutes" || // kilocode_change
+				selectedProvider === "siliconcloud" // kilocode_change
 			) {
 				vscode.postMessage({ type: "requestRouterModels" })
 			}
@@ -291,6 +299,10 @@ const ApiOptions = ({
 			apiConfiguration?.deepInfraBaseUrl,
 			apiConfiguration?.chutesApiKey, // kilocode_change
 			apiConfiguration?.ovhCloudAiEndpointsBaseUrl, // kilocode_change
+			// kilocode_change start
+			apiConfiguration?.siliconCloudApiLine,
+			apiConfiguration?.siliconCloudApiKey,
+			// kilocode_change end
 			customHeaders,
 		],
 	)
@@ -304,30 +316,31 @@ const ApiOptions = ({
 		setErrorMessage(apiValidationResult)
 	}, [apiConfiguration, routerModels, organizationAllowList, setErrorMessage])
 
+	// Get the raw models for the selected provider
+	const rawProviderModels = useMemo(() => {
+		return MODELS_BY_PROVIDER[selectedProvider] || {}
+	}, [selectedProvider])
+
+	// Apply preferredIndex sorting (same as ModelSelector)
+	const sortedModelIds = usePreferredModels(rawProviderModels)
+
+	// Filter and map to options
 	const selectedProviderModels = useMemo(() => {
-		const models = MODELS_BY_PROVIDER[selectedProvider]
-		if (!models) return []
+		const filteredModels = filterModels(rawProviderModels, selectedProvider, organizationAllowList)
+		if (!filteredModels) return []
 
-		const filteredModels = filterModels(models, selectedProvider, organizationAllowList)
-
-		// Include the currently selected model even if deprecated (so users can see what they have selected)
-		// But filter out other deprecated models from being newly selectable
-		const availableModels = filteredModels
-			? Object.entries(filteredModels)
-					.filter(([modelId, modelInfo]) => {
-						// Always include the currently selected model
-						if (modelId === selectedModelId) return true
-						// Filter out deprecated models that aren't currently selected
-						return !modelInfo.deprecated
-					})
-					.map(([modelId]) => ({
-						value: modelId,
-						label: modelId,
-					}))
-			: []
-
-		return availableModels
-	}, [selectedProvider, organizationAllowList, selectedModelId])
+		// Filter sortedModelIds to only include non-deprecated models (or the selected one)
+		return sortedModelIds
+			.filter((modelId) => {
+				if (!(modelId in filteredModels)) return false
+				if (modelId === selectedModelId) return true
+				return !filteredModels[modelId]?.deprecated
+			})
+			.map((modelId) => ({
+				value: modelId,
+				label: modelId,
+			}))
+	}, [sortedModelIds, rawProviderModels, selectedProvider, organizationAllowList, selectedModelId])
 
 	const onProviderChange = useCallback(
 		(value: ProviderName) => {
@@ -403,6 +416,7 @@ const ApiOptions = ({
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
+				siliconcloud: { field: "apiModelId", default: siliconCloudDefaultModelId }, // kilocode_change
 				openai: { field: "openAiModelId" },
 				ollama: { field: "ollamaModelId" },
 				lmstudio: { field: "lmStudioModelId" },
@@ -744,6 +758,18 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "siliconcloud" && (
+				<SiliconCloud
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "human-relay" && (
 				<>

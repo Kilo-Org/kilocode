@@ -31,6 +31,7 @@ describe("getModelsByProvider", () => {
 			gemini: { "test-model": testModel },
 			ovhcloud: { "test-model": testModel },
 			chutes: { "test-model": testModel },
+			siliconcloud: { "test-model": testModel },
 			// kilocode_change end
 		}
 
