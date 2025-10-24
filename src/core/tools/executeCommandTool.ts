@@ -30,6 +30,7 @@ export async function executeCommandTool(
 ) {
 	let command: string | undefined = block.params.command
 	const customCwd: string | undefined = block.params.cwd
+	const runInBackground: boolean = block.params.run_in_background === "true" // kilocode_change
 
 	try {
 		if (block.partial) {
@@ -94,6 +95,7 @@ export async function executeCommandTool(
 				terminalOutputLineLimit,
 				terminalOutputCharacterLimit,
 				commandExecutionTimeout,
+				runInBackground, // kilocode_change
 			}
 
 			try {
@@ -141,6 +143,7 @@ export type ExecuteCommandOptions = {
 	terminalOutputLineLimit?: number
 	terminalOutputCharacterLimit?: number
 	commandExecutionTimeout?: number
+	runInBackground?: boolean // kilocode_change
 }
 
 export async function executeCommand(
@@ -150,6 +153,7 @@ export async function executeCommand(
 		command,
 		customCwd,
 		terminalShellIntegrationDisabled = true, // kilocode_change: default
+		runInBackground: runInBackgroundRequested = false, // kilocode_change
 		terminalOutputLineLimit = 500,
 		terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 		commandExecutionTimeout = 0,
@@ -174,7 +178,7 @@ export async function executeCommand(
 	}
 
 	let message: { text?: string; images?: string[] } | undefined
-	let runInBackground = false
+	let runInBackground = runInBackgroundRequested // kilocode_change
 	let completed = false
 	let result: string = ""
 	let exitDetails: ExitCodeDetails | undefined
@@ -223,6 +227,12 @@ export async function executeCommand(
 			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
 			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+
+			// kilocode_change start- automatically continue the process
+			if (runInBackground) {
+				process.continue()
+			}
+			// kilocode_change end
 		},
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }
