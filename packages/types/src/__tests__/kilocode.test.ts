@@ -282,6 +282,9 @@ describe("URL functions", () => {
 			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
 			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
 			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
+			expect(getAppUrl("/sign-in-to-editor?source=vscode")).toBe(
+				"https://kilocode.ai/sign-in-to-editor?source=vscode",
+			)
 		})
 
 		it("should handle development environment", () => {
