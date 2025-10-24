@@ -231,6 +231,49 @@ export class GhostStreamingParser {
 	}
 
 	/**
+	 * Detect FIM for addition-only autocomplete with cursor marker
+	 * Adds content on same line if current line is empty, otherwise on next line
+	 */
+	private detectFillInMiddleCursorMarker(
+		changes: ParsedChange[],
+		prefix: string,
+		suffix: string,
+	): { text: string; prefix: string; suffix: string } | null {
+		// Only single-change additions with cursor marker
+		if (changes.length !== 1 || !changes[0].search.includes(CURSOR_MARKER)) {
+			return null
+		}
+
+		const searchWithoutMarker = removeCursorMarker(changes[0].search)
+		const replaceWithoutMarker = removeCursorMarker(changes[0].replace)
+
+		// Check if this is addition-only (replace adds content)
+		if (replaceWithoutMarker.length <= searchWithoutMarker.length) {
+			return null
+		}
+
+		// Extract the new content
+		let newContent = replaceWithoutMarker
+		if (replaceWithoutMarker.startsWith(searchWithoutMarker)) {
+			// LLM preserved the search context - remove it
+			newContent = replaceWithoutMarker.substring(searchWithoutMarker.length)
+		}
+
+		// Check if current line (where cursor is) has content
+		// Extract the last line before cursor marker in the original search
+		const lines = prefix.split("\n")
+		const currentLine = lines[lines.length - 1]
+		const currentLineHasContent = currentLine.trim().length > 0
+
+		// Only add newline if current line has content
+		if (currentLineHasContent && !newContent.startsWith("\n")) {
+			newContent = "\n" + newContent
+		}
+
+		return { text: newContent, prefix, suffix }
+	}
+
+	/**
 	 * Mark the stream as finished and process any remaining content with sanitization
 	 */
 	public parseResponse(fullResponse: string, prefix: string, suffix: string): StreamingParseResult {
@@ -254,19 +297,26 @@ export class GhostStreamingParser {
 			"",
 		)
 
-		const modifiedContent_has_prefix_and_suffix =
-			modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
-
 		const suggestions = this.convertToSuggestions(patch, document)
 
-		if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
-			// Mark as FIM option
-			const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
-			suggestions.setFillInAtCursor({
-				text: middle,
-				prefix,
-				suffix,
-			})
+		// Try new FIM detection for cursor marker addition-only cases first
+		const cursorMarkerFim = this.detectFillInMiddleCursorMarker(newChanges, prefix, suffix)
+		if (cursorMarkerFim) {
+			suggestions.setFillInAtCursor(cursorMarkerFim)
+		} else {
+			// Fallback to original FIM detection (checks if modifiedContent preserves prefix/suffix)
+			const modifiedContent_has_prefix_and_suffix =
+				modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
+
+			if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
+				// Mark as FIM option
+				const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
+				suggestions.setFillInAtCursor({
+					text: middle,
+					prefix,
+					suffix,
+				})
+			}
 		}
 
 		return {
