@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { ToolMessageProps } from "../types.js"
 import { getToolIcon, formatFilePath, truncateText } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L1, BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display file edits with diff (handles both editedExistingFile and appliedDiff tool types)
@@ -16,7 +16,7 @@ export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ tool
 	if (isBatch) {
 		return (
 			<Box
-				width={BOX_L1}
+				width={getBoxWidth(1)}
 				flexDirection="column"
 				borderStyle="single"
 				borderColor={theme.semantic.info}
@@ -66,7 +66,7 @@ export const ToolEditedExistingFileMessage: React.FC<ToolMessageProps> = ({ tool
 
 			{toolData.diff && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					flexDirection="column"
 					borderStyle="single"
 					borderColor={theme.ui.border.default}

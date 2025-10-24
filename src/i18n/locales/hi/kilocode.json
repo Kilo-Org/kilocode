@@ -135,10 +135,5 @@
 			"cancelButton": "रद्द करें"
 		},
 		"tipMessage": "Kilo: टर्मिनल कमांड उत्पन्न करने के लिए {{shortcut}} दबाएँ"
-	},
-	"creditsstatusbar": {
-		"loading": "लोड हो रहा है...",
-		"clickToRefresh": "रीफ्रेश करने के लिए क्लिक करें",
-		"minute": "मिनट"
 	}
 }

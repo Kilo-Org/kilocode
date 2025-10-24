@@ -1,4 +1,13 @@
-export const BOX_FULL_WIDTH = process.stdout.columns || 80
-export const BOX_L1 = BOX_FULL_WIDTH - 2
-export const BOX_L2 = BOX_FULL_WIDTH - 4
-export const BOX_L3 = BOX_FULL_WIDTH - 6
+export const getBoxWidth = (level: 1 | 2 | 3): number => {
+	const width = process.stdout.columns || 80
+	switch (level) {
+		case 1:
+			return width - 2
+		case 2:
+			return width - 4
+		case 3:
+			return width - 6
+		default:
+			return width
+	}
+}

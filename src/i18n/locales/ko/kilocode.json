@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "새로운 변경사항을 표시할 수 없습니다. 체크포인트를 사용할 수 없습니다.",
 		"noChanges": "새로운 변경사항을 표시할 수 없습니다. 변경사항이 없습니다.",
 		"error": "새로운 변경사항을 표시할 수 없습니다. 오류가 발생했습니다."
-	},
-	"creditsstatusbar": {
-		"loading": "로딩 중...",
-		"clickToRefresh": "클릭하여 새로고침",
-		"minute": "분"
 	}
 }

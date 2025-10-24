@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "Kan nieuwe wijzigingen niet weergeven, controlepunten zijn niet beschikbaar.",
 		"noChanges": "Kan nieuwe wijzigingen niet weergeven, er zijn geen wijzigingen gevonden.",
 		"error": "Kan nieuwe wijzigingen niet weergeven, er is een fout opgetreden."
-	},
-	"creditsstatusbar": {
-		"loading": "Laden...",
-		"clickToRefresh": "Klik om te vernieuwen",
-		"minute": "minuut"
 	}
 }

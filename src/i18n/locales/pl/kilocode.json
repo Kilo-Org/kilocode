@@ -135,10 +135,5 @@
 			"cancelButton": "Anuluj"
 		},
 		"tipMessage": "Kilo: Naciśnij {{shortcut}}, aby wygenerować polecenia terminala"
-	},
-	"creditsstatusbar": {
-		"loading": "Ładowanie...",
-		"clickToRefresh": "Kliknij, aby odświeżyć",
-		"minute": "minuta"
 	}
 }

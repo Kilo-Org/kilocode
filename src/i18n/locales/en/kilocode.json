@@ -135,10 +135,5 @@
 			"okButton": "I Understand",
 			"cancelButton": "Cancel"
 		}
-	},
-	"creditsstatusbar": {
-		"loading": "Loading...",
-		"clickToRefresh": "Click to refresh",
-		"minute": "minute"
 	}
 }

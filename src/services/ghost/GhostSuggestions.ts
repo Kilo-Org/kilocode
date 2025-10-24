@@ -260,8 +260,17 @@ class GhostSuggestionFile {
 
 export class GhostSuggestionsState {
 	private files = new Map<string, GhostSuggestionFile>()
+	private fillinAtCursorSuggestion: string | undefined = undefined
 
 	constructor() {}
+
+	public setFillInAtCursor(suggestion: string) {
+		this.fillinAtCursorSuggestion = suggestion
+	}
+
+	public getFillInAtCursor(): string | undefined {
+		return this.fillinAtCursorSuggestion
+	}
 
 	public addFile(fileUri: vscode.Uri) {
 		const key = fileUri.toString()

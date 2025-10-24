@@ -83,11 +83,6 @@ export const debugKeystrokeLoggingAtom = atom<boolean>(false)
 export const pasteBufferAtom = atom<string>("")
 
 /**
- * Buffer for drag-and-drop text (e.g., file paths)
- */
-export const dragBufferAtom = atom<string>("")
-
-/**
  * Buffer for incomplete Kitty protocol sequences
  */
 export const kittySequenceBufferAtom = atom<string>("")
@@ -105,11 +100,6 @@ export const backslashBufferAtom = atom<boolean>(false)
  * Whether we're currently in paste mode (between paste brackets)
  */
 export const isPasteModeAtom = atom<boolean>(false)
-
-/**
- * Whether we're currently dragging text (started with quote)
- */
-export const isDragModeAtom = atom<boolean>(false)
 
 /**
  * Whether we're waiting for Enter after backslash
@@ -211,11 +201,9 @@ export const broadcastKeyEventAtom = atom(null, (get, set, key: Key) => {
  */
 export const clearBuffersAtom = atom(null, (get, set) => {
 	set(pasteBufferAtom, "")
-	set(dragBufferAtom, "")
 	set(kittySequenceBufferAtom, "")
 	set(backslashBufferAtom, false)
 	set(isPasteModeAtom, false)
-	set(isDragModeAtom, false)
 	set(waitingForEnterAfterBackslashAtom, false)
 })
 
@@ -236,25 +224,6 @@ export const setPasteModeAtom = atom(null, (get, set, isPaste: boolean) => {
 export const appendToPasteBufferAtom = atom(null, (get, set, text: string) => {
 	const current = get(pasteBufferAtom)
 	set(pasteBufferAtom, current + text)
-})
-
-/**
- * Set drag mode
- */
-export const setDragModeAtom = atom(null, (get, set, isDrag: boolean) => {
-	set(isDragModeAtom, isDrag)
-	if (!isDrag) {
-		// Clear drag buffer when exiting drag mode
-		set(dragBufferAtom, "")
-	}
-})
-
-/**
- * Append to drag buffer
- */
-export const appendToDragBufferAtom = atom(null, (get, set, text: string) => {
-	const current = get(dragBufferAtom)
-	set(dragBufferAtom, current + text)
 })
 
 /**

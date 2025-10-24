@@ -135,10 +135,5 @@
 		"checkpointsUnavailable": "Không thể hiển thị các thay đổi mới, điểm kiểm tra không khả dụng.",
 		"noChanges": "Không thể hiển thị các thay đổi mới, không tìm thấy thay đổi nào.",
 		"error": "Không thể hiển thị các thay đổi mới, đã xảy ra lỗi."
-	},
-	"creditsstatusbar": {
-		"loading": "Đang tải...",
-		"clickToRefresh": "Nhấp để làm mới",
-		"minute": "phút"
 	}
 }
