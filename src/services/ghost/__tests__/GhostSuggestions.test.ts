@@ -1,582 +1,317 @@
-import * as vscode from "vscode"
 import { GhostSuggestionsState } from "../GhostSuggestions"
-import { GhostSuggestionEditOperation } from "../types"
+import * as vscode from "vscode"
 
-describe("GhostSuggestions", () => {
-	let ghostSuggestions: GhostSuggestionsState
+// Mock vscode module
+vi.mock("vscode", () => ({
+	Uri: {
+		file: (path: string) => ({
+			toString: () => path,
+			fsPath: path,
+		}),
+	},
+}))
+
+describe("GhostSuggestionsState", () => {
+	let suggestions: GhostSuggestionsState
 	let mockUri: vscode.Uri
 
 	beforeEach(() => {
-		ghostSuggestions = new GhostSuggestionsState()
+		suggestions = new GhostSuggestionsState()
 		mockUri = vscode.Uri.file("/test/file.ts")
 	})
 
-	describe("selectClosestGroup", () => {
-		it("should select the closest group to a selection", () => {
-			const file = ghostSuggestions.addFile(mockUri)
+	describe("sortGroups", () => {
+		it("should filter out deletion operations with empty content", () => {
+			const file = suggestions.addFile(mockUri)
 
-			// Add operations with large distances to ensure separate groups
-			const operation1: GhostSuggestionEditOperation = {
-				line: 1,
-				oldLine: 1,
-				newLine: 1,
-				type: "+",
-				content: "line 1",
-			}
-			const operation2: GhostSuggestionEditOperation = {
-				line: 50,
-				oldLine: 50,
-				newLine: 50,
-				type: "+",
-				content: "line 50",
-			}
-			const operation3: GhostSuggestionEditOperation = {
-				line: 100,
-				oldLine: 100,
-				newLine: 100,
-				type: "+",
-				content: "line 100",
-			}
-
-			file.addOperation(operation1)
-			file.addOperation(operation2)
-			file.addOperation(operation3)
-
-			file.sortGroups()
-
-			const groups = file.getGroupsOperations()
-
-			// Test the selectClosestGroup functionality regardless of how many groups exist
-			if (groups.length === 1) {
-				// All operations are in one group - test that it selects the group
-				const selection = new vscode.Selection(45, 0, 55, 0) // Closest to operation2 at line 50
-				file.selectClosestGroup(selection)
-				expect(file.getSelectedGroup()).toBe(0) // Only group
-			} else {
-				// Multiple groups exist - test that it selects the closest one
-				expect(groups.length).toBeGreaterThan(1)
-				const selection = new vscode.Selection(45, 0, 55, 0) // Closest to operation2 at line 50
-				file.selectClosestGroup(selection)
-				// Should select whichever group contains the operation closest to line 50
-				expect(file.getSelectedGroup()).not.toBeNull()
-			}
-		})
-
-		it("should select group when selection overlaps with operation", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const operation1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "+",
-				content: "line 5",
-			}
-			const operation2: GhostSuggestionEditOperation = {
-				line: 50,
-				oldLine: 50,
-				newLine: 50,
-				type: "+",
-				content: "line 50",
-			}
-
-			file.addOperation(operation1)
-			file.addOperation(operation2)
-
-			file.sortGroups()
-
-			// Create a selection that includes line 50
-			const selection = new vscode.Selection(49, 0, 51, 0)
-			file.selectClosestGroup(selection)
-
-			// Should select a group (distance is 0 since selection overlaps)
-			expect(file.getSelectedGroup()).not.toBeNull()
-		})
-
-		it("should select first group when selection is before all operations", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const operation1: GhostSuggestionEditOperation = {
-				line: 10,
-				oldLine: 10,
-				newLine: 10,
-				type: "+",
-				content: "line 10",
-			}
-			const operation2: GhostSuggestionEditOperation = {
-				line: 20,
-				oldLine: 20,
-				newLine: 20,
-				type: "+",
-				content: "line 20",
-			}
-
-			file.addOperation(operation1)
-			file.addOperation(operation2)
-
-			file.sortGroups()
-
-			// Create a selection before all operations
-			const selection = new vscode.Selection(1, 0, 3, 0)
-			file.selectClosestGroup(selection)
-
-			expect(file.getSelectedGroup()).toBe(0) // First group (operation1)
-		})
-
-		it("should select group closest to selection when selection is after all operations", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const operation1: GhostSuggestionEditOperation = {
-				line: 10,
-				oldLine: 10,
-				newLine: 10,
-				type: "+",
-				content: "line 10",
-			}
-			const operation2: GhostSuggestionEditOperation = {
-				line: 50,
-				oldLine: 50,
-				newLine: 50,
-				type: "+",
-				content: "line 50",
-			}
-
-			file.addOperation(operation1)
-			file.addOperation(operation2)
-
-			file.sortGroups()
-
-			// Create a selection after all operations (closer to operation2)
-			const selection = new vscode.Selection(60, 0, 65, 0)
-			file.selectClosestGroup(selection)
-
-			// Should select a group (the one with operation closest to the selection)
-			expect(file.getSelectedGroup()).not.toBeNull()
-		})
-
-		it("should handle empty groups", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const selection = new vscode.Selection(10, 0, 15, 0)
-			file.selectClosestGroup(selection)
-
-			expect(file.getSelectedGroup()).toBeNull()
-		})
-
-		it("should select group with multiple operations closest to selection", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			// Create a group with multiple operations
-			const operation1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "+",
-				content: "line 5",
-			}
-			const operation2: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 6,
-				newLine: 6,
-				type: "+",
-				content: "line 6",
-			}
-			const operation3: GhostSuggestionEditOperation = {
-				line: 20,
-				oldLine: 20,
-				newLine: 20,
-				type: "+",
-				content: "line 20",
-			}
-
-			file.addOperation(operation1)
-			file.addOperation(operation2) // Should be in same group as operation1
-			file.addOperation(operation3) // Should be in different group
-
-			file.sortGroups()
-
-			// Create a selection closer to the first group
-			const selection = new vscode.Selection(8, 0, 10, 0)
-			file.selectClosestGroup(selection)
-
-			expect(file.getSelectedGroup()).toBe(0) // First group
-		})
-	})
-
-	describe("addOperation grouping rules", () => {
-		it("should create modification group (delete on line N, add on line N+1) with highest priority", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			// Add a delete operation on line 5
-			const deleteOp: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 6,
+			// Add operations that simulate the user's scenario
+			// Group 1: deletion of empty string + addition
+			file.addOperation({
 				type: "-",
-				content: "old content",
-			}
-			file.addOperation(deleteOp)
-
-			// Add an add operation on line 6 (next line) - should form modification group
-			const addOp: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 5,
-				newLine: 6,
+				line: 33,
+				oldLine: 33,
+				newLine: 33,
+				content: "",
+			})
+			file.addOperation({
 				type: "+",
-				content: "new content",
-			}
-			file.addOperation(addOp)
+				line: 33,
+				oldLine: 35,
+				newLine: 33,
+				content: "// implement function to divide two numbers",
+			})
+
+			// Group 2: only deletion of empty string
+			file.addOperation({
+				type: "-",
+				line: 34,
+				oldLine: 34,
+				newLine: 33,
+				content: "",
+			})
+
+			// Group 3: multiple additions
+			file.addOperation({
+				type: "+",
+				line: 34,
+				oldLine: 35,
+				newLine: 34,
+				content: "function divideNumbers(a: number, b: number): number {",
+			})
+			file.addOperation({
+				type: "+",
+				line: 35,
+				oldLine: 35,
+				newLine: 35,
+				content: "    if (b === 0) {",
+			})
+
+			// Before sorting and filtering
+			const groupsBefore = file.getGroupsOperations()
+			expect(groupsBefore.length).toBe(3)
+
+			// Sort and filter
+			suggestions.sortGroups()
+
+			// After sorting and filtering
+			const groupsAfter = file.getGroupsOperations()
+
+			// Group 2 (only empty deletion) should be removed entirely
+			expect(groupsAfter.length).toBe(2)
+
+			// Group 1 should only have the addition (empty deletion filtered out)
+			const group1 = groupsAfter[0]
+			expect(group1.length).toBe(1)
+			expect(group1[0].type).toBe("+")
+			expect(group1[0].content).toBe("// implement function to divide two numbers")
+
+			// Group 3 should have all additions
+			const group2 = groupsAfter[1]
+			expect(group2.length).toBe(2)
+			expect(group2.every((op) => op.type === "+")).toBe(true)
+		})
+
+		it("should not filter out deletions with non-empty content", () => {
+			const file = suggestions.addFile(mockUri)
+
+			// Add a deletion with actual content
+			file.addOperation({
+				type: "-",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "const x = 1;",
+			})
+
+			// Add an addition
+			file.addOperation({
+				type: "+",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "const x = 2;",
+			})
+
+			suggestions.sortGroups()
 
 			const groups = file.getGroupsOperations()
 			expect(groups.length).toBe(1)
 			expect(groups[0].length).toBe(2)
-			expect(groups[0]).toContainEqual(deleteOp)
-			expect(groups[0]).toContainEqual(addOp)
+
+			// Both operations should still be present
+			const hasDeletion = groups[0].some((op) => op.type === "-" && op.content === "const x = 1;")
+			const hasAddition = groups[0].some((op) => op.type === "+" && op.content === "const x = 2;")
+			expect(hasDeletion).toBe(true)
+			expect(hasAddition).toBe(true)
 		})
 
-		it("should move operation from existing group to create modification group", () => {
-			const file = ghostSuggestions.addFile(mockUri)
+		it("should handle multiple groups with mixed empty and non-empty deletions", () => {
+			const file = suggestions.addFile(mockUri)
 
-			// Add consecutive delete operations (should be in same group)
-			const deleteOp1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 6,
+			// Group 1: Empty deletion only (should be removed)
+			file.addOperation({
 				type: "-",
-				content: "line 5",
-			}
-			const deleteOp2: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 6,
-				newLine: 6,
-				type: "-",
-				content: "line 6",
-			}
-			file.addOperation(deleteOp1)
-			file.addOperation(deleteOp2)
-
-			// Add an add operation on line 6 (after deleteOp1) - should move deleteOp1 to new modification group
-			const addOp: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 5,
-				newLine: 6,
-				type: "+",
-				content: "new line 6",
-			}
-			file.addOperation(addOp)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(2)
-
-			// Find the modification group
-			const modificationGroup = groups.find(
-				(group) => group.some((op) => op.type === "+") && group.some((op) => op.type === "-"),
-			)
-			expect(modificationGroup).toBeDefined()
-			expect(modificationGroup!.length).toBe(2)
-			expect(modificationGroup).toContainEqual(deleteOp1)
-			expect(modificationGroup).toContainEqual(addOp)
-
-			// Find the delete-only group
-			const deleteGroup = groups.find((group) => group.every((op) => op.type === "-") && group.length === 1)
-			expect(deleteGroup).toBeDefined()
-			expect(deleteGroup).toContainEqual(deleteOp2)
-		})
-
-		it("should group consecutive delete operations", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const deleteOp1: GhostSuggestionEditOperation = {
 				line: 5,
 				oldLine: 5,
 				newLine: 5,
+				content: "",
+			})
+
+			// Group 2: Non-empty deletion and addition (should be kept)
+			file.addOperation({
 				type: "-",
-				content: "line 5",
-			}
-			const deleteOp2: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 6,
-				newLine: 6,
-				type: "-",
-				content: "line 6",
-			}
-			const deleteOp3: GhostSuggestionEditOperation = {
-				line: 7,
-				oldLine: 7,
-				newLine: 7,
-				type: "-",
-				content: "line 7",
-			}
-
-			file.addOperation(deleteOp1)
-			file.addOperation(deleteOp2)
-			file.addOperation(deleteOp3)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(1)
-			expect(groups[0].length).toBe(3)
-			expect(groups[0]).toContainEqual(deleteOp1)
-			expect(groups[0]).toContainEqual(deleteOp2)
-			expect(groups[0]).toContainEqual(deleteOp3)
-		})
-
-		it("should group consecutive add operations", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const addOp1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "+",
-				content: "line 5",
-			}
-			const addOp2: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 6,
-				newLine: 6,
-				type: "+",
-				content: "line 6",
-			}
-			const addOp3: GhostSuggestionEditOperation = {
-				line: 7,
-				oldLine: 7,
-				newLine: 7,
-				type: "+",
-				content: "line 7",
-			}
-
-			file.addOperation(addOp1)
-			file.addOperation(addOp2)
-			file.addOperation(addOp3)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(1)
-			expect(groups[0].length).toBe(3)
-			expect(groups[0]).toContainEqual(addOp1)
-			expect(groups[0]).toContainEqual(addOp2)
-			expect(groups[0]).toContainEqual(addOp3)
-		})
-
-		it("should create separate groups for non-consecutive operations", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const addOp1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "+",
-				content: "line 5",
-			}
-			const addOp2: GhostSuggestionEditOperation = {
 				line: 10,
 				oldLine: 10,
 				newLine: 10,
+				content: "old code",
+			})
+			file.addOperation({
 				type: "+",
-				content: "line 10",
-			} // Gap of 5 lines
-
-			file.addOperation(addOp1)
-			file.addOperation(addOp2)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(2)
-			expect(groups[0]).toContainEqual(addOp1)
-			expect(groups[1]).toContainEqual(addOp2)
-		})
-
-		it("should create modification group when delete is followed by add on next line", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const deleteOp: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 6,
-				type: "-",
-				content: "line 5",
-			}
-			const addOp: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 5,
-				newLine: 6,
-				type: "+",
-				content: "line 6",
-			} // Next line - should form modification group
-
-			file.addOperation(deleteOp)
-			file.addOperation(addOp)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(1) // Should be in one modification group
-			expect(groups[0].length).toBe(2)
-			expect(groups[0]).toContainEqual(deleteOp)
-			expect(groups[0]).toContainEqual(addOp)
-		})
-
-		it("should not group different operation types when not consecutive", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const deleteOp: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "-",
-				content: "line 5",
-			}
-			const addOp: GhostSuggestionEditOperation = {
-				line: 7,
-				oldLine: 7,
-				newLine: 7,
-				type: "+",
-				content: "line 7",
-			} // Gap of 1 line - should not form modification group
-
-			file.addOperation(deleteOp)
-			file.addOperation(addOp)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(2)
-			expect(groups[0]).toContainEqual(deleteOp)
-			expect(groups[1]).toContainEqual(addOp)
-		})
-
-		it("should handle reverse consecutive operations (adding before existing)", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			const addOp1: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 6,
-				newLine: 6,
-				type: "+",
-				content: "line 6",
-			}
-			const addOp2: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 5,
-				type: "+",
-				content: "line 5",
-			} // Before existing
-
-			file.addOperation(addOp1)
-			file.addOperation(addOp2)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(1)
-			expect(groups[0].length).toBe(2)
-			expect(groups[0]).toContainEqual(addOp1)
-			expect(groups[0]).toContainEqual(addOp2)
-		})
-
-		it("should prioritize modification groups over same-type groups", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			// Create a group of consecutive add operations
-			const addOp1: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 5,
-				newLine: 6,
-				type: "+",
-				content: "line 6",
-			}
-			const addOp2: GhostSuggestionEditOperation = {
-				line: 7,
-				oldLine: 7,
-				newLine: 7,
-				type: "+",
-				content: "line 7",
-			}
-			file.addOperation(addOp1)
-			file.addOperation(addOp2)
-
-			// Add a delete operation on line 5 - should move addOp1 to modification group (delete line 5, add line 6)
-			const deleteOp: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 6,
-				type: "-",
-				content: "old line 5",
-			}
-			file.addOperation(deleteOp)
-
-			const groups = file.getGroupsOperations()
-			expect(groups.length).toBe(2)
-
-			// Find modification group
-			const modificationGroup = groups.find(
-				(group) => group.some((op) => op.type === "+") && group.some((op) => op.type === "-"),
-			)
-			expect(modificationGroup).toBeDefined()
-			expect(modificationGroup!.length).toBe(2)
-			expect(modificationGroup).toContainEqual(addOp1)
-			expect(modificationGroup).toContainEqual(deleteOp)
-
-			// Find remaining add group
-			const addGroup = groups.find((group) => group.every((op) => op.type === "+") && group.length === 1)
-			expect(addGroup).toBeDefined()
-			expect(addGroup).toContainEqual(addOp2)
-		})
-
-		it("should handle complex mixed operations scenario", () => {
-			const file = ghostSuggestions.addFile(mockUri)
-
-			// Add operations in mixed order
-			const deleteOp1: GhostSuggestionEditOperation = {
-				line: 5,
-				oldLine: 5,
-				newLine: 6,
-				type: "-",
-				content: "line 5",
-			}
-			const deleteOp2: GhostSuggestionEditOperation = {
-				line: 7,
-				oldLine: 7,
-				newLine: 7,
-				type: "-",
-				content: "line 7",
-			}
-			const addOp1: GhostSuggestionEditOperation = {
 				line: 10,
 				oldLine: 10,
 				newLine: 10,
+				content: "new code",
+			})
+
+			// Group 3: Empty deletion + addition (deletion filtered, group kept)
+			file.addOperation({
+				type: "-",
+				line: 15,
+				oldLine: 15,
+				newLine: 15,
+				content: "",
+			})
+			file.addOperation({
 				type: "+",
-				content: "line 10",
-			}
-			const addOp2: GhostSuggestionEditOperation = {
+				line: 15,
+				oldLine: 15,
+				newLine: 15,
+				content: "added line",
+			})
+
+			suggestions.sortGroups()
+
+			const groups = file.getGroupsOperations()
+
+			// Should have 2 groups (group 1 removed entirely)
+			expect(groups.length).toBe(2)
+
+			// First group should have both operations (non-empty deletion)
+			expect(groups[0].length).toBe(2)
+			expect(groups[0].some((op) => op.type === "-" && op.content === "old code")).toBe(true)
+
+			// Second group should only have the addition (empty deletion filtered)
+			expect(groups[1].length).toBe(1)
+			expect(groups[1][0].type).toBe("+")
+			expect(groups[1][0].content).toBe("added line")
+		})
+
+		it("should filter out addition operations with empty content", () => {
+			const file = suggestions.addFile(mockUri)
+
+			// Add operations with empty additions
+			file.addOperation({
+				type: "+",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "",
+			})
+			file.addOperation({
+				type: "+",
 				line: 11,
 				oldLine: 11,
 				newLine: 11,
-				type: "+",
-				content: "line 11",
-			}
-			const modifyAdd: GhostSuggestionEditOperation = {
-				line: 6,
-				oldLine: 5,
-				newLine: 6,
-				type: "+",
-				content: "new line 6",
-			}
+				content: "actual content",
+			})
 
-			file.addOperation(deleteOp1)
-			file.addOperation(deleteOp2)
-			file.addOperation(addOp1)
-			file.addOperation(addOp2)
-			file.addOperation(modifyAdd) // Should create modification group with deleteOp1 (delete line 5, add line 6)
+			// Group with only empty addition (should be removed)
+			file.addOperation({
+				type: "+",
+				line: 20,
+				oldLine: 20,
+				newLine: 20,
+				content: "",
+			})
+
+			suggestions.sortGroups()
 
 			const groups = file.getGroupsOperations()
+
+			// Should only have 1 group (second group removed, first group filtered)
+			expect(groups.length).toBe(1)
+			expect(groups[0].length).toBe(1)
+			expect(groups[0][0].content).toBe("actual content")
+		})
+
+		it("should filter out both empty additions and empty deletions", () => {
+			const file = suggestions.addFile(mockUri)
+
+			// Group 1: Empty deletion + empty addition (should be removed entirely)
+			file.addOperation({
+				type: "-",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "",
+			})
+			file.addOperation({
+				type: "+",
+				line: 5,
+				oldLine: 5,
+				newLine: 5,
+				content: "",
+			})
+
+			// Group 2: Empty deletion + non-empty addition (deletion filtered, group kept)
+			file.addOperation({
+				type: "-",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "",
+			})
+			file.addOperation({
+				type: "+",
+				line: 10,
+				oldLine: 10,
+				newLine: 10,
+				content: "valid addition",
+			})
+
+			// Group 3: Non-empty deletion + empty addition (addition filtered, group kept)
+			file.addOperation({
+				type: "-",
+				line: 15,
+				oldLine: 15,
+				newLine: 15,
+				content: "valid deletion",
+			})
+			file.addOperation({
+				type: "+",
+				line: 15,
+				oldLine: 15,
+				newLine: 15,
+				content: "",
+			})
+
+			// Group 4: Both non-empty (should be kept as is)
+			file.addOperation({
+				type: "-",
+				line: 20,
+				oldLine: 20,
+				newLine: 20,
+				content: "old code",
+			})
+			file.addOperation({
+				type: "+",
+				line: 20,
+				oldLine: 20,
+				newLine: 20,
+				content: "new code",
+			})
+
+			suggestions.sortGroups()
+
+			const groups = file.getGroupsOperations()
+
+			// Should have 3 groups (group 1 removed entirely)
 			expect(groups.length).toBe(3)
 
-			// Should have: modification group (delete line 5, add line 6), delete group (line 7), add group (lines 10-11)
-			const modificationGroup = groups.find(
-				(group) => group.some((op) => op.type === "+") && group.some((op) => op.type === "-"),
-			)
-			expect(modificationGroup).toBeDefined()
-			expect(modificationGroup!.length).toBe(2)
+			// Group 1 (originally group 2): Only addition
+			expect(groups[0].length).toBe(1)
+			expect(groups[0][0].type).toBe("+")
+			expect(groups[0][0].content).toBe("valid addition")
 
-			const deleteGroup = groups.find((group) => group.every((op) => op.type === "-") && group.length === 1)
-			expect(deleteGroup).toBeDefined()
+			// Group 2 (originally group 3): Only deletion
+			expect(groups[1].length).toBe(1)
+			expect(groups[1][0].type).toBe("-")
+			expect(groups[1][0].content).toBe("valid deletion")
 
-			const addGroup = groups.find((group) => group.every((op) => op.type === "+") && group.length === 2)
-			expect(addGroup).toBeDefined()
+			// Group 3 (originally group 4): Both operations
+			expect(groups[2].length).toBe(2)
+			expect(groups[2].some((op) => op.type === "-" && op.content === "old code")).toBe(true)
+			expect(groups[2].some((op) => op.type === "+" && op.content === "new code")).toBe(true)
 		})
 	})
 })

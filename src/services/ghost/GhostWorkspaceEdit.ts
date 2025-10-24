@@ -72,7 +72,10 @@ export class GhostWorkspaceEdit {
 
 		// --- 2. Translate and Prepare Current Operations ---
 		const currentDeletes = operations.filter((op) => op.type === "-").sort((a, b) => a.line - b.line)
-		const currentInserts = operations.filter((op) => op.type === "+").sort((a, b) => a.line - b.line)
+		// For insertions, sort by oldLine to apply them in the correct order relative to the original document
+		const currentInserts = operations
+			.filter((op) => op.type === "+")
+			.sort((a, b) => a.oldLine - b.oldLine || a.newLine - b.newLine)
 		const translatedInsertOps: { originalLine: number; content: string }[] = []
 		let currDelPtr = 0
 		let currInsPtr = 0
@@ -80,17 +83,17 @@ export class GhostWorkspaceEdit {
 		// Run the simulation for the new operations, starting from the state calculated above.
 		while (currDelPtr < currentDeletes.length || currInsPtr < currentInserts.length) {
 			const nextDelLine = currentDeletes[currDelPtr]?.line ?? Infinity
-			const nextInsLine = currentInserts[currInsPtr]?.line ?? Infinity
+			// Use oldLine for insertions to determine their position in the original document
+			const nextInsLine = currentInserts[currInsPtr]?.oldLine ?? Infinity
 
 			if (nextDelLine <= originalLineCursor && nextDelLine !== Infinity) {
 				originalLineCursor++
 				currDelPtr++
-			} else if (nextInsLine <= finalLineCursor && nextInsLine !== Infinity) {
+			} else if (nextInsLine <= originalLineCursor && nextInsLine !== Infinity) {
 				translatedInsertOps.push({
 					originalLine: originalLineCursor,
 					content: currentInserts[currInsPtr].content || "",
 				})
-				finalLineCursor++
 				currInsPtr++
 			} else if (nextDelLine === Infinity && nextInsLine === Infinity) {
 				break

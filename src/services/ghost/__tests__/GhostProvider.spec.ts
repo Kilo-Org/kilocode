@@ -171,7 +171,7 @@ describe("GhostProvider", () => {
 			const processedFinal = normalizedForComparison(normalizedFinal)
 			const processedExpected = normalizedForComparison(normalizedExpected)
 			expect(processedFinal).toBe(processedExpected)
-		} else if (testCaseName === "partial-mixed-operations") {
+		} else if (testCaseName === "comment-prefix-completion" || testCaseName === "partial-mixed-operations") {
 			// For partial-mixed-operations, compare without whitespace
 			const strippedFinal = normalizedFinal.replace(/\s+/g, "")
 			const strippedExpected = normalizedExpected.replace(/\s+/g, "")
@@ -204,6 +204,10 @@ describe("GhostProvider", () => {
 
 		it("should apply function rename and var to const changes from files", async () => {
 			await runFileBasedTest("function-rename-var-to-const")
+		})
+
+		it("should handle comment prefix completion without duplication", async () => {
+			await runFileBasedTest("comment-prefix-completion")
 		})
 	})
 

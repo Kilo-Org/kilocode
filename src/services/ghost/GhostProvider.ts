@@ -7,6 +7,7 @@ import { AutoTriggerStrategy } from "./strategies/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
 import { GhostWorkspaceEdit } from "./GhostWorkspaceEdit"
 import { GhostDecorations } from "./GhostDecorations"
+import { GhostInlineCompletionProvider } from "./GhostInlineCompletionProvider"
 import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostSuggestionsState } from "./GhostSuggestions"
@@ -25,6 +26,8 @@ import { normalizeAutoTriggerDelayToMs } from "./utils/autocompleteDelayUtils"
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
 	private decorations: GhostDecorations
+	private inlineCompletionProvider: GhostInlineCompletionProvider
+	private inlineCompletionDisposable: vscode.Disposable | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private streamingParser: GhostStreamingParser
@@ -62,6 +65,9 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.decorations = new GhostDecorations()
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(this.suggestions, () =>
+			this.onIntelliSenseDetected(),
+		)
 		this.documentStore = new GhostDocumentStore()
 		this.streamingParser = new GhostStreamingParser()
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
@@ -74,6 +80,9 @@ export class GhostProvider {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
+
+		// Register inline completion provider
+		this.registerInlineCompletionProvider()
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -413,7 +422,24 @@ export class GhostProvider {
 
 	private async render() {
 		await this.updateGlobalContext()
-		await this.displaySuggestions()
+
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
+		const editor = vscode.window.activeTextEditor
+		const shouldTriggerInline = editor ? this.inlineCompletionProvider.shouldTriggerInline(editor) : false
+
+		// Trigger or hide inline suggestions as appropriate
+		if (shouldTriggerInline) {
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+		} else {
+			// If we're not showing inline completion, explicitly hide any existing ones
+			// This prevents conflicts with IntelliSense
+			await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+		}
+
+		// TODO: Turned off for now and only show Inline ghost completions. Reintroduce later for next edits.
+		// Display SVG decorations for appropriate groups
+		// await this.displaySuggestions()
 	}
 
 	private selectClosestSuggestion() {
@@ -426,6 +452,9 @@ export class GhostProvider {
 			return
 		}
 		file.selectClosestGroup(editor.selection)
+
+		// Use inline completion provider to validate and select closest valid group
+		this.inlineCompletionProvider.selectClosestValidGroup(file, editor)
 	}
 
 	public async displaySuggestions() {
@@ -436,7 +465,30 @@ export class GhostProvider {
 		if (!editor) {
 			return
 		}
-		await this.decorations.displaySuggestions(this.suggestions)
+
+		const file = this.suggestions.getFile(editor.document.uri)
+		if (!file) {
+			this.decorations.clearAll()
+			return
+		}
+
+		const groups = file.getGroupsOperations()
+		if (groups.length === 0) {
+			this.decorations.clearAll()
+			return
+		}
+
+		const selectedGroupIndex = file.getSelectedGroup()
+		if (selectedGroupIndex === null) {
+			this.decorations.clearAll()
+			return
+		}
+
+		// Use inline completion provider to determine which groups to skip
+		const skipGroupIndices = this.inlineCompletionProvider.getSkipGroupIndices(file, editor)
+
+		// Display decorations, skipping groups as determined by inline provider
+		await this.decorations.displaySuggestions(this.suggestions, skipGroupIndices)
 	}
 
 	private async updateGlobalContext() {
@@ -472,11 +524,32 @@ export class GhostProvider {
 		this.decorations.clearAll()
 		this.suggestions.clear()
 
+		// Update inline completion provider
+		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
+
+		await vscode.commands.executeCommand("editor.action.inlineSuggest.hide")
+
 		this.clearAutoTriggerTimer()
 		await this.render()
 	}
 
+	/**
+	 * Apply suggestion via workspace edit (for SVG decoration acceptance).
+	 * Used when accepting through custom keybindings or clicking decorations.
+	 */
 	public async applySelectedSuggestions() {
+		await this.acceptSuggestion(true)
+	}
+
+	/**
+	 * Accept suggestion without applying edits (for inline completion acceptance).
+	 * VSCode's inline completion API already inserted the text - only clean up state.
+	 */
+	public async acceptInlineCompletion() {
+		await this.acceptSuggestion(false)
+	}
+
+	private async acceptSuggestion(applyEdits: boolean) {
 		if (!this.enabled) {
 			return
 		}
@@ -493,17 +566,25 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		if (suggestionsFile.getSelectedGroup() === null) {
+		const selectedGroupIndex = suggestionsFile.getSelectedGroup()
+		if (selectedGroupIndex === null) {
 			await this.cancelSuggestions()
 			return
 		}
+
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, {
 			taskId: this.taskId,
 		})
 		this.decorations.clearAll()
-		await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
-		this.cursor.moveToAppliedGroup(this.suggestions)
+
+		// Apply workspace edits only if requested (for custom keybindings/decorations)
+		// For inline completions, VSCode already inserted the text
+		if (applyEdits) {
+			await this.workspaceEdit.applySelectedSuggestions(this.suggestions)
+			this.cursor.moveToAppliedGroup(this.suggestions)
+		}
 		suggestionsFile.deleteSelectedGroup()
+
 		suggestionsFile.selectClosestGroup(editor.selection)
 		this.suggestions.validateFiles()
 		this.clearAutoTriggerTimer()
@@ -545,7 +626,13 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		suggestionsFile.selectNextGroup()
+
+		// Use inline completion provider to find next valid group
+		const originalSelection = suggestionsFile.getSelectedGroup()
+		if (originalSelection !== null) {
+			this.inlineCompletionProvider.findNextValidGroup(suggestionsFile, originalSelection)
+		}
+
 		await this.render()
 	}
 
@@ -566,7 +653,13 @@ export class GhostProvider {
 			await this.cancelSuggestions()
 			return
 		}
-		suggestionsFile.selectPreviousGroup()
+
+		// Use inline completion provider to find previous valid group
+		const originalSelection = suggestionsFile.getSelectedGroup()
+		if (originalSelection !== null) {
+			this.inlineCompletionProvider.findPreviousValidGroup(suggestionsFile, originalSelection)
+		}
+
 		await this.render()
 	}
 
@@ -662,6 +755,17 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Called when IntelliSense is detected to be active
+	 * Immediately cancels our suggestions to prevent conflicts
+	 */
+	private onIntelliSenseDetected(): void {
+		if (this.hasPendingSuggestions()) {
+			console.log("[Ghost] IntelliSense detected, canceling ghost suggestions to prevent conflict")
+			void this.cancelSuggestions()
+		}
+	}
+
+	/**
 	 * Handle typing events for auto-trigger functionality
 	 */
 	private handleTypingEvent(event: vscode.TextDocumentChangeEvent): void {
@@ -726,6 +830,23 @@ export class GhostProvider {
 	}
 
 	/**
+	 * Register or re-register the inline completion provider
+	 */
+	private registerInlineCompletionProvider(): void {
+		// Dispose existing registration
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+
+		// Register inline completion provider for all languages
+		this.inlineCompletionDisposable = vscode.languages.registerInlineCompletionItemProvider(
+			{ pattern: "**" },
+			this.inlineCompletionProvider,
+		)
+	}
+
+	/**
 	 * Dispose of all resources used by the GhostProvider
 	 */
 	public dispose(): void {
@@ -734,6 +855,13 @@ export class GhostProvider {
 
 		this.suggestions.clear()
 		this.decorations.clearAll()
+
+		// Dispose inline completion provider
+		if (this.inlineCompletionDisposable) {
+			this.inlineCompletionDisposable.dispose()
+			this.inlineCompletionDisposable = null
+		}
+		this.inlineCompletionProvider.dispose()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()

@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { GhostSuggestionEditOperation, GhostSuggestionEditOperationsOffset } from "./types"
 
-class GhostSuggestionFile {
+export class GhostSuggestionFile {
 	public fileUri: vscode.Uri
 	private selectedGroup: number | null = null
 	private groups: Array<GhostSuggestionEditOperation[]> = []
@@ -104,12 +104,21 @@ class GhostSuggestionFile {
 		return this.selectedGroup
 	}
 
-	public getGroupType = (group: GhostSuggestionEditOperation[]) => {
-		const types = group.flatMap((x) => x.type)
-		if (types.length == 2) {
+	public getGroupType = (group: GhostSuggestionEditOperation[]): "+" | "-" | "/" => {
+		if (group.length === 0) {
+			return "+" // Default to addition for empty groups
+		}
+
+		const hasAdd = group.some((op) => op.type === "+")
+		const hasDel = group.some((op) => op.type === "-")
+
+		// Modification: has both additions and deletions
+		if (hasAdd && hasDel) {
 			return "/"
 		}
-		return types[0]
+
+		// Pure addition or deletion
+		return group[0].type
 	}
 
 	public getSelectedGroupPreviousOperations(): GhostSuggestionEditOperation[] {
@@ -161,7 +170,45 @@ class GhostSuggestionFile {
 			.forEach((group) => {
 				group.sort((a, b) => a.line - b.line)
 			})
+
+		// Filter out empty operations after sorting
+		this.removeOperationsWithEmptyContent()
+
 		this.selectedGroup = this.groups.length > 0 ? 0 : null
+	}
+
+	/**
+	 * Remove operations with empty content and clean up empty groups
+	 *
+	 * This filters out operations that have no actual content (empty strings),
+	 * which can occur when the LLM generates malformed diffs or placeholder operations.
+	 * After filtering operations, any groups that become empty are also removed.
+	 *
+	 * Example:
+	 * Before: [
+	 *   [{ type: '+', content: 'function foo() {', line: 1 }],
+	 *   [{ type: '-', content: '', line: 2 }],  // Empty deletion - will be removed
+	 *   [{ type: '+', content: 'return 42;', line: 3 }]
+	 * ]
+	 * After: [
+	 *   [{ type: '+', content: 'function foo() {', line: 1 }],
+	 *   [{ type: '+', content: 'return 42;', line: 3 }]
+	 * ]
+	 */
+	private removeOperationsWithEmptyContent() {
+		// Filter each group to remove operations (additions and deletions) with empty content
+		this.groups = this.groups
+			.map((group) => {
+				return group.filter((op) => {
+					if (op.type === "-" || op.type === "+") {
+						// Only keep deletions and additions that have non-empty content
+						return op.content !== ""
+					} else {
+						return true
+					}
+				})
+			})
+			.filter((group) => group.length > 0) // Remove empty groups
 	}
 
 	private computeOperationsOffset(group: GhostSuggestionEditOperation[]): GhostSuggestionEditOperationsOffset {

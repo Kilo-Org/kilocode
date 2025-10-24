@@ -1,0 +1,3 @@
+<change><search><![CDATA[    <<<AUTOCOMPLETE_HERE>>>]]></search><replace><![CDATA[    def initialize
+        puts "Hello, World!"
+    end]]></replace></change>

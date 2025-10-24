@@ -39,6 +39,11 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 		}),
 	)
 	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.acceptInlineCompletion", async () => {
+			ghost.acceptInlineCompletion()
+		}),
+	)
+	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.goToNextSuggestion", async () => {
 			await ghost.selectNextSuggestion()
 		}),
