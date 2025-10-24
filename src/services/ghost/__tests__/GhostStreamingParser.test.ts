@@ -596,7 +596,11 @@ function fibonacci(n: number): number {
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			// Check that FIM was set
 			const fimContent = result.suggestions.getFillInAtCursor()
-			expect(fimContent).toBe('const middle = "inserted";')
+			expect(fimContent).toEqual({
+				text: 'const middle = "inserted";',
+				prefix: 'const prefix = "start";\n',
+				suffix: '\nconst suffix = "end";',
+			})
 		})
 
 		it("should NOT set FIM when prefix doesn't match", () => {
@@ -700,7 +704,11 @@ function fibonacci(n: number): number {
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			// With empty prefix and suffix, the entire content should be FIM
 			const fimContent = result.suggestions.getFillInAtCursor()
-			expect(fimContent).toBe('const middle = "updated";')
+			expect(fimContent).toEqual({
+				text: 'const middle = "updated";',
+				prefix: "",
+				suffix: "",
+			})
 		})
 
 		it("should extract correct middle content when FIM matches", () => {
@@ -725,7 +733,11 @@ function fibonacci(n: number): number {
 
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			const fimContent = result.suggestions.getFillInAtCursor()
-			expect(fimContent).toBe("\tconst x = 5;\n\treturn true;")
+			expect(fimContent).toEqual({
+				text: "\tconst x = 5;\n\treturn true;",
+				prefix: "function test() {\n",
+				suffix: "\n}",
+			})
 		})
 
 		it("should NOT set FIM when modifiedContent is undefined", () => {
@@ -752,7 +764,11 @@ function fibonacci(n: number): number {
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 			const fimContent = result.suggestions.getFillInAtCursor()
 			// When no changes are applied, FIM is set to empty string (the entire unchanged document matches prefix+suffix)
-			expect(fimContent).toBe("")
+			expect(fimContent).toEqual({
+				text: "",
+				prefix: "const x = 1;",
+				suffix: "",
+			})
 		})
 
 		it("should handle multiline prefix and suffix correctly", () => {
@@ -777,7 +793,11 @@ function fibonacci(n: number): number {
 
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			const fimContent = result.suggestions.getFillInAtCursor()
-			expect(fimContent).toBe('\t\tthis.value = 0;\n\t\tthis.name = "test";')
+			expect(fimContent).toEqual({
+				text: '\t\tthis.value = 0;\n\t\tthis.name = "test";',
+				prefix: "class Test {\n\tconstructor() {\n",
+				suffix: "\n\t}\n}",
+			})
 		})
 
 		it("should handle prefix/suffix with special characters", () => {
@@ -802,7 +822,11 @@ function fibonacci(n: number): number {
 
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 			const fimContent = result.suggestions.getFillInAtCursor()
-			expect(fimContent).toBe('const middle = "inserted";')
+			expect(fimContent).toEqual({
+				text: 'const middle = "inserted";',
+				prefix: "const regex = /test/g;\n",
+				suffix: '\nconst result = "match";',
+			})
 		})
 	})
 })

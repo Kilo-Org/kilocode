@@ -246,7 +246,7 @@ export const lastMessageAtom = atom<CliMessage | null>((get) => {
 
 /**
  * Derived atom to get the last ask message from extension messages
- * Returns the most recent unanswered ask message that requires user approval, or null if none exists
+ * Returns the most recent ask message that requires user approval, or null if none exists
  */
 export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 	const messages = get(chatMessagesAtom)
@@ -254,21 +254,17 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 	// Ask types that require user approval
 	const approvalAskTypes = ["tool", "command", "browser_action_launch", "use_mcp_server"]
 
-	// Find the last unanswered ask message that requires approval
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i]
-		if (
-			msg &&
-			msg.type === "ask" &&
-			!msg.isAnswered &&
-			msg.ask &&
-			approvalAskTypes.includes(msg.ask) &&
-			!msg.partial
-		) {
-			return msg
-		}
+	const lastMessage = messages[messages.length - 1]
+	if (
+		lastMessage &&
+		lastMessage.type === "ask" &&
+		!lastMessage.isAnswered &&
+		lastMessage.ask &&
+		approvalAskTypes.includes(lastMessage.ask) &&
+		!lastMessage.partial
+	) {
+		return lastMessage
 	}
-
 	return null
 })
 

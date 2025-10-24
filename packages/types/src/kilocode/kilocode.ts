@@ -106,7 +106,13 @@ function buildUrl(path: string = ""): string {
 	try {
 		const backend = new URL(getGlobalKilocodeBackendUrl())
 		const result = new URL(backend)
-		result.pathname = path ? ensureLeadingSlash(path) : ""
+
+		// Separate pathname and search parameters
+		const [pathname, search] = path.split("?")
+		result.pathname = pathname ? ensureLeadingSlash(pathname) : ""
+		if (search) {
+			result.search = `?${search}`
+		}
 
 		return removeTrailingSlash(result.toString(), result.pathname)
 	} catch (error) {
