@@ -44,6 +44,23 @@
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
+		},
+		{
+			"name": "Run Extension [Local Backend]",
+			"type": "extensionHost",
+			"request": "launch",
+			"runtimeExecutable": "${execPath}",
+			"args": ["--extensionDevelopmentPath=${workspaceFolder}/src", "--disable-extensions"],
+			"sourceMaps": true,
+			"outFiles": ["${workspaceFolder}/dist/**/*.js"],
+			"preLaunchTask": "${defaultBuildTask}",
+			"env": {
+				"NODE_ENV": "development",
+				"VSCODE_DEBUG_MODE": "true",
+				"KILOCODE_BACKEND_BASE_URL": "${input:kilocodeBackendBaseUrl}"
+			},
+			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
+			"presentation": { "hidden": false, "group": "tasks", "order": 2 }
 		}
 	],
 	"inputs": [
@@ -51,6 +68,12 @@
 			"id": "extensionLaunchDir",
 			"description": "Directory the dev extension will open in",
 			"default": "${workspaceFolder}/launch",
+			"type": "promptString"
+		},
+		{
+			"id": "kilocodeBackendBaseUrl",
+			"description": "Override the kilocode backend base URL",
+			"default": "http://localhost:3000",
 			"type": "promptString"
 		}
 	]

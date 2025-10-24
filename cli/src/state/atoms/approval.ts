@@ -216,16 +216,15 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 	if (message?.isAnswered) {
 		return
 	}
+	// Get the current pending message to check if this is a new message or an update
+	const current = get(pendingApprovalAtom)
+	const isNewMessage = !current || current.ts !== message?.ts
 
 	// Always create a new object reference to force Jotai to re-evaluate dependent atoms
 	// This is critical for streaming messages that update from partial to complete
 	// and ensures approvalOptionsAtom recalculates when message content changes
 	const messageToSet = message ? { ...message } : null
 	set(pendingApprovalAtom, messageToSet)
-
-	// Get the current pending message to check if this is a new message or an update
-	const current = get(pendingApprovalAtom)
-	const isNewMessage = !current || current.ts !== message?.ts
 
 	// Reset selection if this is a new message (different timestamp)
 	if (isNewMessage) {

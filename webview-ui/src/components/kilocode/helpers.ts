@@ -1,4 +1,5 @@
 import { JETBRAIN_PRODUCTS, KiloCodeWrapperProperties } from "../../../../src/shared/kilocode/wrapper"
+import { getAppUrl } from "@roo-code/types"
 
 const getJetbrainsUrlScheme = (code: string) => {
 	return JETBRAIN_PRODUCTS[code as keyof typeof JETBRAIN_PRODUCTS]?.urlScheme || "jetbrains"
@@ -21,9 +22,8 @@ export function getKiloCodeBackendSignInUrl(
 	uiKind: string = "Desktop",
 	kiloCodeWrapperProperties?: KiloCodeWrapperProperties,
 ) {
-	const baseUrl = "https://kilocode.ai"
 	const source = uiKind === "Web" ? "web" : getKiloCodeSource(uriScheme, kiloCodeWrapperProperties)
-	return `${baseUrl}/sign-in-to-editor?source=${source}`
+	return getAppUrl(`/sign-in-to-editor?source=${source}`)
 }
 
 export function getKiloCodeBackendSignUpUrl(
@@ -31,7 +31,6 @@ export function getKiloCodeBackendSignUpUrl(
 	uiKind: string = "Desktop",
 	kiloCodeWrapperProperties?: KiloCodeWrapperProperties,
 ) {
-	const baseUrl = "https://kilocode.ai"
 	const source = uiKind === "Web" ? "web" : getKiloCodeSource(uriScheme, kiloCodeWrapperProperties)
-	return `${baseUrl}/users/sign_up?source=${source}`
+	return getAppUrl(`/users/sign_up?source=${source}`)
 }

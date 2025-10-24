@@ -31,6 +31,11 @@ describe("RemoteConfigLoader", () => {
 		vi.clearAllMocks()
 		// Clear any existing cache
 		loader.clearCache()
+		process.env.KILOCODE_BACKEND_BASE_URL = "https://test.api.com"
+	})
+
+	afterEach(() => {
+		delete process.env.KILOCODE_BACKEND_BASE_URL
 	})
 
 	describe("loadAllItems", () => {

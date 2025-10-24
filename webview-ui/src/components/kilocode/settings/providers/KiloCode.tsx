@@ -11,6 +11,7 @@ import { ModelPicker } from "../../../settings/ModelPicker"
 import { vscode } from "@src/utils/vscode"
 import { OrganizationSelector } from "../../common/OrganizationSelector"
 import { KiloCodeWrapperProperties } from "../../../../../../src/shared/kilocode/wrapper"
+import { getAppUrl } from "@roo-code/types"
 import { useKiloIdentity } from "@src/utils/kilocode/useKiloIdentity"
 
 type KiloCodeProps = {
@@ -118,7 +119,7 @@ export const KiloCode = ({
 				models={routerModels?.["kilocode-openrouter"] ?? {}}
 				modelIdKey="kilocodeModel"
 				serviceName="Kilo Code"
-				serviceUrl="https://kilocode.ai"
+				serviceUrl={getAppUrl()}
 				organizationAllowList={organizationAllowList}
 			/>
 

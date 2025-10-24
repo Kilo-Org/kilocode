@@ -17,7 +17,7 @@ test.describe("E2E Chat Test", () => {
 		await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")
 
 		await (await getChatInput(page)).focus()
-		await page.waitForTimeout(1000) // Let the page settle to avoid flakes
+		await page.waitForTimeout(3000) // Let the page settle to avoid flakes
 		await takeScreenshot("ready-to-chat")
 
 		// Don't take any more screenshots after the reponse starts-

@@ -192,7 +192,10 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		const incomingMessages = state.clineMessages || state.chatMessages || []
 
 		// Reconcile with current messages to preserve streaming state
-		const reconciledMessages = reconcileMessages(currentMessages, incomingMessages, versionMap, streamingSet)
+		let reconciledMessages = reconcileMessages(currentMessages, incomingMessages, versionMap, streamingSet)
+
+		// Auto-complete orphaned partial ask messages (CLI-only workaround for extension bug)
+		reconciledMessages = autoCompleteOrphanedPartialAsks(reconciledMessages)
 
 		set(chatMessagesAtom, reconciledMessages)
 
@@ -299,8 +302,13 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 	const currentVersion = versionMap.get(existingMessage.ts) || 0
 	const newVersion = getMessageContentLength(updatedMessage)
 
-	// Always update partial messages, or if new version has more content
-	if (updatedMessage.partial || newVersion > currentVersion) {
+	// Always update if:
+	// 1. Message is partial (streaming update)
+	// 2. New version has more content
+	// 3. Partial flag changed (partial=true -> partial=false transition)
+	const partialFlagChanged = existingMessage.partial !== updatedMessage.partial
+
+	if (updatedMessage.partial || newVersion > currentVersion || partialFlagChanged) {
 		const newMessages = [...messages]
 		newMessages[messageIndex] = updatedMessage
 		set(updateChatMessagesAtom, newMessages)
@@ -447,6 +455,57 @@ function getMessageContentLength(msg: ExtensionChatMessage): number {
 }
 
 /**
+ * Auto-complete orphaned partial ask messages (CLI-only workaround)
+ *
+ * This handles the extension bug where ask messages can get stuck with partial=true
+ * when other messages (like checkpoint_saved) are added between the partial message
+ * and its completion, causing the extension to create a new message instead of updating.
+ *
+ * Detection logic:
+ * - If an ask message has partial=true
+ * - AND there's a subsequent message with a later timestamp
+ * - AND that subsequent message is NOT command_output (which is expected during command execution)
+ * - THEN mark the partial ask as complete (partial=false)
+ *
+ * This ensures messages don't get stuck in partial state indefinitely.
+ */
+function autoCompleteOrphanedPartialAsks(messages: ExtensionChatMessage[]): ExtensionChatMessage[] {
+	const result = [...messages]
+
+	for (let i = 0; i < result.length; i++) {
+		const msg = result[i]
+
+		// Only process partial ask messages
+		if (!msg || msg.type !== "ask" || !msg.partial) {
+			continue
+		}
+
+		// Check if there's a subsequent message (not command_output)
+		let hasSubsequentMessage = false
+		for (let j = i + 1; j < result.length; j++) {
+			const nextMsg = result[j]
+			if (!nextMsg) continue
+
+			// Skip command_output messages as they're expected during command execution
+			if (nextMsg.ask === "command_output") {
+				continue
+			}
+
+			// Found a subsequent non-command_output message
+			hasSubsequentMessage = true
+			break
+		}
+
+		// If there's a subsequent message, this partial ask is orphaned - mark it complete
+		if (hasSubsequentMessage) {
+			result[i] = { ...msg, partial: false }
+		}
+	}
+
+	return result
+}
+
+/**
  * Helper function to reconcile messages from state updates with existing messages
  * Strategy:
  * - State is the source of truth for WHICH messages exist (count/list)
@@ -469,12 +528,38 @@ function reconcileMessages(
 	const resultMessages: ExtensionChatMessage[] = incoming.map((incomingMsg) => {
 		const existingMsg = currentMap.get(incomingMsg.ts)
 
-		// Only preserve content if message is actively streaming AND has more content
+		// PRIORITY 1: Prevent completed messages from being overwritten by stale partial updates
+		// This handles the race condition where:
+		// 1. Extension sends messageUpdated with partial=false (removes from streamingSet)
+		// 2. Extension sends state update with stale partial=true version
+		// We should keep the completed version if incoming is partial with less/equal content
+		// NOTE: This must come BEFORE streaming protection check since the message
+		// is no longer in streamingSet after being marked complete
+		if (existingMsg && !existingMsg.partial && incomingMsg.partial) {
+			const currentVersion = versionMap.get(incomingMsg.ts) || 0
+			const incomingVersion = getMessageContentLength(incomingMsg)
+
+			// Reject if incoming has less or equal content (stale update)
+			// This includes the case where content is identical (race condition bug)
+			if (incomingVersion <= currentVersion) {
+				return existingMsg
+			}
+			// If incoming has MORE content, accept it (might be a new streaming session)
+		}
+
+		// PRIORITY 2: If message is actively streaming, protect it from ALL rollbacks
+		// This handles both partial and non-partial state updates that might have stale content
 		if (existingMsg && streamingSet.has(incomingMsg.ts) && existingMsg.partial) {
 			const currentVersion = versionMap.get(incomingMsg.ts) || 0
 			const incomingVersion = getMessageContentLength(incomingMsg)
 
-			// Keep current version if it has more content
+			// If incoming message is no longer partial AND has more/equal content, accept it (completion)
+			// This ensures messages properly transition from partial=true to partial=false
+			if (!incomingMsg.partial && incomingVersion >= currentVersion) {
+				return incomingMsg
+			}
+
+			// For any other case (partial incoming OR shorter non-partial), keep current if it has more content
 			if (currentVersion > incomingVersion) {
 				return existingMsg
 			}

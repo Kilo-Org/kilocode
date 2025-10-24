@@ -2,8 +2,6 @@
 
 ## [v4.110.0]
 
-- [#3104](https://github.com/Kilo-Org/kilocode/pull/3104) [`3008656`](https://github.com/Kilo-Org/kilocode/commit/30086567e31d8e774c89412afcdc96e3c46d57a0) Thanks [@markijbema](https://github.com/markijbema)! - Support multiline quoted strings within Auto-approved commands (especially useful for git commit)
-
 ### Patch Changes
 
 - [#3249](https://github.com/Kilo-Org/kilocode/pull/3249) [`ccee64c`](https://github.com/Kilo-Org/kilocode/commit/ccee64cf1676f51a6b9dae49aad994d9f834b3e8) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Remove credit status bar until we can retrieve the up to date balance from the proxy response.

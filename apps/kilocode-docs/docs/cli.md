@@ -42,6 +42,7 @@ to start the CLI and begin a new task with your preferred model and relevant mod
 | `/model list`   | List available models                                            |                             |
 | `/model info`   | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v` |
 | `/model select` | Select and switch to a new model                                 |                             |
+| `/config`       | Open configuration editor (same as `kilocode config`)            |                             |
 | `/new`          | Start a new task with the agent with a clean slate               |                             |
 | `/help`         | List available commands and how to use them                      |                             |
 | `/exit`         | Exit the CLI                                                     |                             |
@@ -55,6 +56,10 @@ You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org
 `kilocode config`
 
 to complete configuration with an interactive workflow on the command line.
+
+:::tip
+You can also use the `/config` slash command during an interactive session, which is equivalent to running `kilocode config`.
+:::
 
 ## Autonomous mode (Non-Interactive)
 
