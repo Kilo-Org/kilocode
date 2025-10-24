@@ -61,19 +61,70 @@ export function getThemeById(themeId: ThemeId, config?: CLIConfig): Theme {
 }
 
 /**
+ * Define theme types for categorization
+ */
+const THEME_TYPES: Record<string, string> = {
+	// Default kilo themes
+	dark: "Dark",
+	light: "Light",
+	alpha: "Dark",
+
+	// Dark themes
+	ansi: "Dark",
+	"atom-one-dark": "Dark",
+	"ayu-dark": "Dark",
+	dracula: "Dark",
+	"github-dark": "Dark",
+	"shades-of-purple": "Dark",
+
+	// Light themes
+	"ansi-light": "Light",
+	"ayu-light": "Light",
+	"github-light": "Light",
+	googlecode: "Light",
+	xcode: "Light",
+}
+
+/**
+ * Get theme type for a theme ID
+ * @param themeId - The theme identifier
+ * @param config - Optional config containing custom themes
+ * @returns The theme type (Dark, Light, or Custom)
+ */
+export function getThemeType(themeId: string, config?: CLIConfig): string {
+	if (config && config.customThemes && config.customThemes[themeId]) {
+		return "Custom"
+	}
+	return THEME_TYPES[themeId] || "Dark"
+}
+
+/**
  * Get all available theme IDs
  * @param config - Optional config containing custom themes
- * @returns Array of theme identifiers
+ * @returns Array of theme identifiers sorted by type then alphabetically
  */
 export function getAvailableThemes(config?: CLIConfig): ThemeId[] {
 	const builtInThemes = Object.keys(themeRegistry) as ThemeId[]
+	let allThemes: ThemeId[] = []
 
 	if (config && config.customThemes) {
 		const customThemeIds = Object.keys(config.customThemes) as ThemeId[]
-		return [...builtInThemes, ...customThemeIds]
+		allThemes = [...builtInThemes, ...customThemeIds]
+	} else {
+		allThemes = builtInThemes
 	}
 
-	return builtInThemes
+	// Sort themes by type (Dark first, then Light, then Custom), then alphabetically
+	const typeOrder = { Dark: 0, Light: 1, Custom: 2 }
+	return allThemes.sort((a, b) => {
+		const typeAOrder = typeOrder[getThemeType(a, config) as keyof typeof typeOrder] ?? 3
+		const typeBOrder = typeOrder[getThemeType(b, config) as keyof typeof typeOrder] ?? 3
+
+		if (typeAOrder !== typeBOrder) {
+			return typeAOrder - typeBOrder
+		}
+		return a.localeCompare(b)
+	})
 }
 
 /**

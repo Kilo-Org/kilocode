@@ -4,42 +4,9 @@
 
 import type { Command, ArgumentProviderContext } from "./core/types.js"
 import type { CLIConfig } from "../config/types.js"
-import { getThemeById, getAvailableThemes } from "../constants/themes/index.js"
-import { isCustomTheme, getBuiltinThemeIds } from "../constants/themes/custom.js"
+import { getThemeById, getAvailableThemes, getThemeType } from "../constants/themes/index.js"
+import { getBuiltinThemeIds } from "../constants/themes/custom.js"
 import { logs } from "../services/logs.js"
-
-// Define theme type mapping based on theme specifications
-const THEME_TYPES: Record<string, string> = {
-	// Default kilo themes
-	dark: "Dark",
-	light: "Light",
-	alpha: "Dark",
-
-	// Dark themes
-	ansi: "Dark",
-	"atom-one-dark": "Dark",
-	"ayu-dark": "Dark",
-	dracula: "Dark",
-	"github-dark": "Dark",
-	"shades-of-purple": "Dark",
-
-	// Light themes
-	"ansi-light": "Light",
-	"ayu-light": "Light",
-	"github-light": "Light",
-	googlecode: "Light",
-	xcode: "Light",
-}
-
-/**
- * Get theme type (Dark/Light/Custom) for a theme
- */
-function getThemeType(themeId: string, config: CLIConfig): string {
-	if (isCustomTheme(themeId, config)) {
-		return "Custom"
-	}
-	return THEME_TYPES[themeId] || "Dark"
-}
 
 // Cache for config to improve performance
 let configCache: { config: CLIConfig | null; timestamp: number } | null = null
@@ -109,29 +76,8 @@ async function themeAutocompleteProvider(_context: ArgumentProviderContext) {
 	const { config } = await getConfigWithCache()
 	const availableThemeIds = getAvailableThemes(config)
 
-	return availableThemeIds
-		.map((themeId) => {
-			const theme = getThemeById(themeId, config)
-			const description = getThemeType(themeId, config)
-
-			return {
-				value: themeId,
-				title: theme.name,
-				description: description,
-				matchScore: 1.0,
-				highlightedValue: themeId,
-			}
-		})
-		.filter((item): item is NonNullable<typeof item> => item !== null)
-}
-
-/**
- * Get theme information for display and sort
- */
-function getThemeDisplayInfo(config: CLIConfig) {
-	const availableThemeIds = getAvailableThemes(config)
-
-	return availableThemeIds
+	// Create theme display info array to apply same sorting logic
+	const sortedThemes = availableThemeIds
 		.map((themeId) => {
 			const theme = getThemeById(themeId, config)
 			const themeType = getThemeType(themeId, config)
@@ -153,6 +99,37 @@ function getThemeDisplayInfo(config: CLIConfig) {
 			}
 			return a.id.localeCompare(b.id)
 		})
+
+	return sortedThemes
+		.map((theme) => {
+			return {
+				value: theme.id,
+				title: theme.name,
+				description: theme.description,
+				matchScore: 1.0,
+				highlightedValue: theme.id,
+			}
+		})
+		.filter((item): item is NonNullable<typeof item> => item !== null)
+}
+
+/**
+ * Get theme information for display with themes already sorted by getAvailableThemes
+ */
+function getThemeDisplayInfo(config: CLIConfig) {
+	// getAvailableThemes already returns themes in the correct order
+	const availableThemeIds = getAvailableThemes(config)
+
+	return availableThemeIds.map((themeId) => {
+		const theme = getThemeById(themeId, config)
+		const themeType = getThemeType(themeId, config)
+		return {
+			id: themeId,
+			name: theme.name,
+			description: themeType,
+			type: themeType,
+		}
+	})
 }
 
 export const themeCommand: Command = {
