@@ -31,12 +31,10 @@ describe("RemoteConfigLoader", () => {
 		vi.clearAllMocks()
 		// Clear any existing cache
 		loader.clearCache()
-		// Set the backend URL environment variable for testing
 		process.env.KILOCODE_BACKEND_BASE_URL = "https://test.api.com"
 	})
 
 	afterEach(() => {
-		// Clean up environment variable
 		delete process.env.KILOCODE_BACKEND_BASE_URL
 	})
 

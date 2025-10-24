@@ -1,7 +1,6 @@
 import OpenAI from "openai"
 import { config } from "dotenv"
 import { DEFAULT_HEADERS } from "../api/providers/constants.js"
-import { getKiloUrlFromToken } from "@roo-code/types"
 
 config()
 
@@ -10,6 +9,21 @@ export interface LLMResponse {
 	provider: string
 	model: string
 	tokensUsed?: number
+}
+
+function getKiloBaseUriFromToken(kilocodeToken?: string): string {
+	if (kilocodeToken) {
+		try {
+			const payload_string = kilocodeToken.split(".")[1]
+			const payload_json = Buffer.from(payload_string, "base64").toString()
+			const payload = JSON.parse(payload_json)
+			// Note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker
+			if (payload.env === "development") return "http://localhost:3000"
+		} catch (_error) {
+			console.warn("Failed to get base URL from Kilo Code token")
+		}
+	}
+	return "https://api.kilocode.ai"
 }
 
 export class LLMClient {
@@ -29,9 +43,10 @@ export class LLMClient {
 			throw new Error("KILOCODE_API_KEY is required for Kilocode provider")
 		}
 
-		const baseURL = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", process.env.KILOCODE_API_KEY)
+		const baseUrl = getKiloBaseUriFromToken(process.env.KILOCODE_API_KEY)
+
 		this.openai = new OpenAI({
-			baseURL,
+			baseURL: `${baseUrl}/api/openrouter/`,
 			apiKey: process.env.KILOCODE_API_KEY,
 			defaultHeaders: {
 				...DEFAULT_HEADERS,
