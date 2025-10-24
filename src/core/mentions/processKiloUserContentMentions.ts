@@ -57,7 +57,11 @@ export async function processKiloUserContentMentions({
 
 		return await Promise.all(
 			userContent.map(async (block) => {
-				const shouldProcessMentions = (text: string) => text.includes("<task>") || text.includes("<feedback>")
+				const shouldProcessMentions = (text: string) =>
+					text.includes("<task>") ||
+					text.includes("<feedback>") ||
+					text.includes("<answer>") ||
+					text.includes("<user_message>")
 
 				if (block.type === "text") {
 					if (shouldProcessMentions(block.text)) {
