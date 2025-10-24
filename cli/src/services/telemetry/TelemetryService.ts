@@ -352,6 +352,17 @@ export class TelemetryService {
 		})
 	}
 
+	public trackThemeChanged(previousTheme: string, newTheme: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.THEME_CHANGED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			previousTheme,
+			newTheme,
+		})
+	}
+
 	// ============================================================================
 	// Tool Tracking
 	// ============================================================================
