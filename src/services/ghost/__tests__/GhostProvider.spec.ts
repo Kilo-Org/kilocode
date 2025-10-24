@@ -4,7 +4,6 @@ import * as path from "node:path"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
 import { GhostStreamingParser } from "../GhostStreamingParser"
-import { GhostWorkspaceEdit } from "../GhostWorkspaceEdit"
 import { GhostSuggestionContext } from "../types"
 
 vi.mock("vscode", () => ({
@@ -69,13 +68,11 @@ vi.mock("vscode", () => ({
 describe("GhostProvider", () => {
 	let mockWorkspace: MockWorkspace
 	let streamingParser: GhostStreamingParser
-	let workspaceEdit: GhostWorkspaceEdit
 
 	beforeEach(() => {
 		vi.clearAllMocks()
 		streamingParser = new GhostStreamingParser()
 		mockWorkspace = new MockWorkspace()
-		workspaceEdit = new GhostWorkspaceEdit()
 
 		vi.mocked(vscode.workspace.openTextDocument).mockImplementation(async (uri: any) => {
 			const uriObj = typeof uri === "string" ? vscode.Uri.parse(uri) : uri
@@ -126,17 +123,6 @@ describe("GhostProvider", () => {
 		return { testUri, context, mockDocument }
 	}
 
-	async function parseAndApplySuggestions(response: string, context: GhostSuggestionContext) {
-		// Initialize streaming parser
-		streamingParser.initialize(context)
-
-		// Process the complete response
-		const result = streamingParser.parseResponse(response, "", "")
-
-		// Apply the suggestions
-		await workspaceEdit.applySuggestions(result.suggestions)
-	}
-
 	// Test cases directory for file-based tests
 	const TEST_CASES_DIR = path.join(__dirname, "__test_cases__")
 
@@ -152,8 +138,21 @@ describe("GhostProvider", () => {
 		const response = fs.readFileSync(diffFilePath, "utf8")
 		const expectedContent = fs.readFileSync(expectedFilePath, "utf8")
 
-		const { testUri, context } = await setupTestDocument(`${testCaseName}/input.js`, initialContent)
-		await parseAndApplySuggestions(response, context)
+		const { testUri, context, mockDocument } = await setupTestDocument(`${testCaseName}/input.js`, initialContent)
+		
+		// Parse and apply suggestions
+		streamingParser.initialize(context)
+		const parseResult = streamingParser.parseResponse(response, "", "")
+		
+		// Apply the changes if we have suggestions
+		if (parseResult.hasNewSuggestions) {
+			const fillInSuggestion = parseResult.suggestions.getFillInAtCursor()
+			if (fillInSuggestion) {
+				// For FIM (Fill-In-Middle) suggestions, reconstruct the full content
+				const newContent = fillInSuggestion.prefix + fillInSuggestion.text + fillInSuggestion.suffix
+				;(mockDocument as any).updateContent(newContent)
+			}
+		}
 
 		const finalContent = mockWorkspace.getDocumentContent(testUri)
 		// Compare the normalized content

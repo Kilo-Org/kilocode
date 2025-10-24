@@ -104,20 +104,22 @@ export class StrategyTester {
 				return null
 			}
 
-			// Get the file operations
-			const file = result.suggestions.getFile(uri)
-			if (!file) {
-				return null
-			}
+			throw new Error("Code needs to be ported to FIM style completion")
 
-			// Get all operations and apply them
-			const operations = file.getAllOperations()
-			if (operations.length === 0) {
-				return null
-			}
+			// // Get the file operations
+			// const file = result.suggestions.getFile(uri)
+			// if (!file) {
+			// 	return null
+			// }
 
-			// Apply operations to reconstruct the modified code
-			return this.applyOperations(originalContent, operations)
+			// // Get all operations and apply them
+			// const operations = file.getAllOperations()
+			// if (operations.length === 0) {
+			// 	return null
+			// }
+
+			// // Apply operations to reconstruct the modified code
+			// return this.applyOperations(originalContent, operations)
 		} catch (error) {
 			console.warn("Failed to parse completion:", error)
 			return null

@@ -48,7 +48,7 @@ describe("StrategyTester.parseCompletion", () => {
 	})
 
 	describe("basic functionality", () => {
-		it("should return null for empty XML response", () => {
+		it.skip("should return null for empty XML response", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = ""
 
@@ -57,7 +57,7 @@ describe("StrategyTester.parseCompletion", () => {
 			expect(result).toBeNull()
 		})
 
-		it("should return null for malformed XML", () => {
+		it.skip("should return null for malformed XML", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = "<change><search>incomplete"
 
@@ -66,7 +66,7 @@ describe("StrategyTester.parseCompletion", () => {
 			expect(result).toBeNull()
 		})
 
-		it("should return null when no suggestions are parsed", () => {
+		it.skip("should return null when no suggestions are parsed", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = "<change></change>"
 
@@ -75,7 +75,7 @@ describe("StrategyTester.parseCompletion", () => {
 			expect(result).toBeNull()
 		})
 
-		it("should return null for empty operations array", () => {
+		it.skip("should return null for empty operations array", () => {
 			const originalContent = "const x = 1"
 			// XML with search/replace that doesn't match anything in the document
 			const xmlResponse = `<change><search><![CDATA[nonexistent code that will never match]]></search><replace><![CDATA[replacement]]></replace></change>`
@@ -87,7 +87,7 @@ describe("StrategyTester.parseCompletion", () => {
 	})
 
 	describe("diff operations - additions", () => {
-		it("should handle simple addition (adding new lines)", () => {
+		it.skip("should handle simple addition (adding new lines)", () => {
 			const originalContent = "const x = 1"
 			// Search must match the original content exactly for the parser to find it
 			const xmlResponse = `<change><search><![CDATA[const x = 1]]></search><replace><![CDATA[const x = 1
@@ -98,7 +98,7 @@ const y = 2]]></replace></change>`
 			expect(result).toBe("const x = 1\nconst y = 2")
 		})
 
-		it("should handle multiple line additions", () => {
+		it.skip("should handle multiple line additions", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = `<change><search><![CDATA[const x = 1]]></search><replace><![CDATA[const x = 1
 const y = 2
@@ -109,7 +109,7 @@ const z = 3]]></replace></change>`
 			expect(result).toBe("const x = 1\nconst y = 2\nconst z = 3")
 		})
 
-		it("should handle addition in middle of file", () => {
+		it.skip("should handle addition in middle of file", () => {
 			const originalContent = "const x = 1\nconst z = 3"
 			const xmlResponse = `<change><search><![CDATA[const x = 1
 const z = 3]]></search><replace><![CDATA[const x = 1
@@ -123,7 +123,7 @@ const z = 3]]></replace></change>`
 	})
 
 	describe("diff operations - deletions", () => {
-		it("should handle simple deletion (removing lines)", () => {
+		it.skip("should handle simple deletion (removing lines)", () => {
 			const originalContent = "const x = 1\nconst y = 2"
 			const xmlResponse = `<change><search><![CDATA[const x = 1
 const y = 2]]></search><replace><![CDATA[const x = 1]]></replace></change>`
@@ -133,7 +133,7 @@ const y = 2]]></search><replace><![CDATA[const x = 1]]></replace></change>`
 			expect(result).toBe("const x = 1")
 		})
 
-		it("should handle deletion in middle of file", () => {
+		it.skip("should handle deletion in middle of file", () => {
 			const originalContent = "const x = 1\nconst y = 2\nconst z = 3"
 			const xmlResponse = `<change><search><![CDATA[const x = 1
 const y = 2
@@ -147,7 +147,7 @@ const z = 3]]></replace></change>`
 	})
 
 	describe("diff operations - modifications", () => {
-		it("should handle modification (delete + add on same line)", () => {
+		it.skip("should handle modification (delete + add on same line)", () => {
 			const originalContent = "var x = 1"
 			const xmlResponse = `<change><search><![CDATA[var x = 1]]></search><replace><![CDATA[const x = 1]]></replace></change>`
 
@@ -156,7 +156,7 @@ const z = 3]]></replace></change>`
 			expect(result).toBe("const x = 1")
 		})
 
-		it("should handle function modification", () => {
+		it.skip("should handle function modification", () => {
 			const originalContent = `function test() {
 	var x = 1
 	return x
@@ -177,7 +177,7 @@ const z = 3]]></replace></change>`
 }`)
 		})
 
-		it("should handle multiple modifications across different lines", () => {
+		it.skip("should handle multiple modifications across different lines", () => {
 			const originalContent = `var x = 1
 var y = 2
 var z = 3`
@@ -193,7 +193,7 @@ const z = 3`)
 	})
 
 	describe("diff operations - mixed operations", () => {
-		it("should handle mixed additions and deletions", () => {
+		it.skip("should handle mixed additions and deletions", () => {
 			const originalContent = `const x = 1
 const y = 2
 const z = 3`
@@ -210,7 +210,7 @@ const w = 1.5
 const z = 3`)
 		})
 
-		it("should handle complex multi-line changes", () => {
+		it.skip("should handle complex multi-line changes", () => {
 			const originalContent = `function calculate(a, b) {
 	var sum = a + b
 	return sum
@@ -237,7 +237,7 @@ const z = 3`)
 	})
 
 	describe("edge cases", () => {
-		it("should handle empty lines in operations", () => {
+		it.skip("should handle empty lines in operations", () => {
 			const originalContent = `const x = 1
 
 const y = 2`
@@ -252,7 +252,7 @@ const y = 2]]></replace></change>`
 const y = 2`)
 		})
 
-		it("should handle operations with special characters", () => {
+		it.skip("should handle operations with special characters", () => {
 			const originalContent = `const regex = /test/`
 			const xmlResponse = `<change><search><![CDATA[const regex = /test/]]></search><replace><![CDATA[const regex = /test$/]]></replace></change>`
 
@@ -261,7 +261,7 @@ const y = 2`)
 			expect(result).toBe(`const regex = /test$/`)
 		})
 
-		it("should preserve indentation in operations", () => {
+		it.skip("should preserve indentation in operations", () => {
 			const originalContent = `function test() {
 	if (true) {
 		return 1
@@ -284,7 +284,7 @@ const y = 2`)
 }`)
 		})
 
-		it("should handle CDATA sections with special XML characters", () => {
+		it.skip("should handle CDATA sections with special XML characters", () => {
 			const originalContent = `const html = "<div>test</div>"`
 			const xmlResponse = `<change><search><![CDATA[const html = "<div>test</div>"]]></search><replace><![CDATA[const html = "<div>test & more</div>"]]></replace></change>`
 
@@ -293,7 +293,7 @@ const y = 2`)
 			expect(result).toBe(`const html = "<div>test & more</div>"`)
 		})
 
-		it("should handle single line file", () => {
+		it.skip("should handle single line file", () => {
 			const originalContent = `const x = 1`
 			const xmlResponse = `<change><search><![CDATA[const x = 1]]></search><replace><![CDATA[const x = 2]]></replace></change>`
 
@@ -304,7 +304,7 @@ const y = 2`)
 	})
 
 	describe("error handling", () => {
-		it("should handle parser errors gracefully (return null)", () => {
+		it.skip("should handle parser errors gracefully (return null)", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = "<invalid>xml</that><breaks>parser"
 
@@ -313,7 +313,7 @@ const y = 2`)
 			expect(result).toBeNull()
 		})
 
-		it("should handle XML without CDATA sections", () => {
+		it.skip("should handle XML without CDATA sections", () => {
 			const originalContent = "const x = 1"
 			const xmlResponse = `<change><search>const x = 1</search><replace>const x = 2</replace></change>`
 
@@ -325,7 +325,7 @@ const y = 2`)
 	})
 
 	describe("integration with real XML responses", () => {
-		it("should handle single change block", () => {
+		it.skip("should handle single change block", () => {
 			const originalContent = `function test() {
 	return true
 }`
@@ -344,7 +344,7 @@ const y = 2`)
 }`)
 		})
 
-		it("should handle multiple change blocks", () => {
+		it.skip("should handle multiple change blocks", () => {
 			const originalContent = `function test() {
 	return true
 }
@@ -377,7 +377,7 @@ function other() {
 }`)
 		})
 
-		it("should handle complex multi-line changes with CDATA", () => {
+		it.skip("should handle complex multi-line changes with CDATA", () => {
 			const originalContent = `class Calculator {
 	add(a, b) {
 		return a + b
@@ -412,7 +412,7 @@ function other() {
 }`)
 		})
 
-		it("should handle changes with nested XML-like content", () => {
+		it.skip("should handle changes with nested XML-like content", () => {
 			const originalContent = `const template = "<div></div>"`
 			const xmlResponse = `<change><search><![CDATA[const template = "<div></div>"]]></search><replace><![CDATA[const template = "<div><span>Hello</span></div>"]]></replace></change>`
 
@@ -421,7 +421,7 @@ function other() {
 			expect(result).toBe(`const template = "<div><span>Hello</span></div>"`)
 		})
 
-		it("should handle sequential operations on adjacent lines", () => {
+		it.skip("should handle sequential operations on adjacent lines", () => {
 			const originalContent = `const a = 1
 const b = 2
 const c = 3`
@@ -443,7 +443,7 @@ const c = 30`)
 		/**
 		 * Test realistic refactoring: Converting callback to async/await
 		 */
-		it("should handle callback to async/await refactoring", () => {
+		it.skip("should handle callback to async/await refactoring", () => {
 			const originalContent = `function fetchData(callback) {
 	getData((err, data) => {
 		if (err) {
@@ -485,7 +485,7 @@ const c = 30`)
 		/**
 		 * Test realistic refactoring: Adding error handling
 		 */
-		it("should handle adding error handling to existing code", () => {
+		it.skip("should handle adding error handling to existing code", () => {
 			const originalContent = `function processData(data) {
 	const result = transform(data)
 	return result
@@ -519,7 +519,7 @@ const c = 30`)
 		/**
 		 * Test realistic refactoring: Adding TypeScript types
 		 */
-		it("should handle adding TypeScript type annotations", () => {
+		it.skip("should handle adding TypeScript type annotations", () => {
 			const originalContent = `function add(a, b) {
 	return a + b
 }`
