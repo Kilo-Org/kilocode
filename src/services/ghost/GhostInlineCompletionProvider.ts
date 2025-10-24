@@ -81,6 +81,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+
 		if (matchingText !== null) {
 			const item: vscode.InlineCompletionItem = {
 				insertText: matchingText,
