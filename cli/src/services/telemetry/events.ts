@@ -31,6 +31,7 @@ export enum TelemetryEvent {
 	PROVIDER_CHANGED = "cli_provider_changed",
 	MODEL_CHANGED = "cli_model_changed",
 	MODE_CHANGED = "cli_mode_changed",
+	THEME_CHANGED = "cli_theme_changed",
 
 	// Tool Usage Events
 	TOOL_EXECUTED = "cli_tool_executed",
@@ -168,6 +169,14 @@ export interface ProviderChangeEventProperties extends BaseProperties {
 	newProvider: string
 	previousModel?: string
 	newModel?: string
+}
+
+/**
+ * Theme change event properties
+ */
+export interface ThemeChangeEventProperties extends BaseProperties {
+	previousTheme: string
+	newTheme: string
 }
 
 /**
