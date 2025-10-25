@@ -9,6 +9,7 @@ import type { Theme } from "../../types/theme.js"
 export const githubLightTheme: Theme = {
 	id: "github-light",
 	name: "GitHub Light",
+	type: "Light",
 
 	brand: {
 		primary: "#458", // Use first gradient color for banner

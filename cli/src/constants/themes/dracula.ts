@@ -9,6 +9,7 @@ import type { Theme } from "../../types/theme.js"
 export const draculaTheme: Theme = {
 	id: "dracula",
 	name: "Dracula",
+	type: "Dark",
 
 	brand: {
 		primary: "#ff79c6", // Use first gradient color for banner

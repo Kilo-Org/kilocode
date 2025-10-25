@@ -9,6 +9,7 @@ import type { Theme } from "../../types/theme.js"
 export const googleCodeTheme: Theme = {
 	id: "googlecode",
 	name: "Google Code",
+	type: "Light",
 
 	brand: {
 		primary: "#066", // Use first gradient color for banner

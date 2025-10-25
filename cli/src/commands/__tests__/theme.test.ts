@@ -16,6 +16,7 @@ describe("/theme command", () => {
 	const mockTheme: Theme = {
 		id: "custom-theme",
 		name: "Test Theme",
+		type: "Custom",
 		brand: {
 			primary: "#007acc",
 			secondary: "#005a9e",
@@ -96,18 +97,6 @@ describe("/theme command", () => {
 
 		// Mock the constants/themes/index.js functions
 		vi.doMock("../../constants/themes/index.js", () => ({
-			getThemeType: vi.fn((id: string, config?: CLIConfig) => {
-				if (config?.customThemes?.[id]) {
-					return "Custom"
-				}
-				// Built-in themes are hardcoded as Dark or Light
-				const darkThemes = ["alpha", "dark", "dracula", "github-dark"]
-				const lightThemes = ["light", "github-light"]
-
-				if (darkThemes.includes(id)) return "Dark"
-				if (lightThemes.includes(id)) return "Light"
-				return "Dark" // Default for themes not explicitly categorized
-			}),
 			getAvailableThemes: vi.fn(() => [
 				"alpha",
 				"dark",
@@ -122,6 +111,7 @@ describe("/theme command", () => {
 					dark: {
 						id: "dark",
 						name: "Dark",
+						type: "Dark",
 						brand: { primary: "#3b82f6", secondary: "#1d4ed8" },
 						semantic: {
 							success: "#4ade80",
@@ -156,6 +146,7 @@ describe("/theme command", () => {
 					light: {
 						id: "light",
 						name: "Light",
+						type: "Light",
 						brand: { primary: "#3b82f6", secondary: "#1d4ed8" },
 						semantic: {
 							success: "#4ade80",
@@ -193,6 +184,7 @@ describe("/theme command", () => {
 					themes[id] || {
 						id: "unknown",
 						name: "Unknown Theme",
+						type: "Dark",
 						brand: { primary: "#000000", secondary: "#000000" },
 						semantic: {
 							success: "#000000",

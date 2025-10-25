@@ -9,6 +9,7 @@ import type { Theme } from "../../types/theme.js"
 export const atomOneDarkTheme: Theme = {
 	id: "atom-one-dark",
 	name: "Atom One Dark",
+	type: "Dark",
 
 	brand: {
 		primary: "#61aeee", // Use first gradient color for banner

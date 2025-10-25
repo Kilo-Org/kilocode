@@ -68,6 +68,7 @@ export function addCustomTheme(config: CLIConfig, themeId: string, theme: Theme)
 	const requiredProps = [
 		"id",
 		"name",
+		"type",
 		"brand",
 		"semantic",
 		"interactive",
@@ -99,6 +100,7 @@ export function addCustomTheme(config: CLIConfig, themeId: string, theme: Theme)
 			[themeId]: {
 				...theme,
 				id: themeId, // Ensure the ID matches the key
+				type: "Custom", // Always set custom themes to "Custom" type
 			},
 		},
 	}
@@ -136,6 +138,7 @@ export function updateCustomTheme(config: CLIConfig, themeId: string, theme: Par
 				...config.customThemes[themeId],
 				...theme,
 				id: themeId, // Ensure the ID is preserved
+				type: "Custom", // Always ensure custom themes have "Custom" type
 			},
 		},
 	}
