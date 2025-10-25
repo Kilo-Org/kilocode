@@ -318,6 +318,14 @@
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
+		"nanoGptApiKey": "Klíč API Nano-GPT",
+		"getNanoGptApiKey": "Získat klíč API Nano-GPT",
+		"nanoGptModelList": "Seznam modelů",
+		"nanoGptModelListOptions": {
+			"all": "Všechny modely",
+			"personalized": "Personalizované modely",
+			"subscription": "Modely předplatného"
+		},
 		"getSambaNovaApiKey": "Získat klíč API SambaNova",
 		"sambaNovaApiKey": "Klíč API SambaNova",
 		"getGeminiApiKey": "Získat klíč API Gemini",

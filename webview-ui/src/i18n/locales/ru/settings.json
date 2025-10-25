@@ -309,6 +309,14 @@
 		"geminiApiKey": "Gemini API-ключ",
 		"getGroqApiKey": "Получить Groq API-ключ",
 		"groqApiKey": "Groq API-ключ",
+		"nanoGptApiKey": "Nano-GPT API-ключ",
+		"getNanoGptApiKey": "Получить Nano-GPT API-ключ",
+		"nanoGptModelList": "Список моделей",
+		"nanoGptModelListOptions": {
+			"all": "Все модели",
+			"personalized": "Персонализированные модели",
+			"subscription": "Модели подписки"
+		},
 		"getSambaNovaApiKey": "Получить SambaNova API-ключ",
 		"sambaNovaApiKey": "SambaNova API-ключ",
 		"getGeminiApiKey": "Получить Gemini API-ключ",

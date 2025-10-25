@@ -309,6 +309,14 @@
 		"geminiApiKey": "Gemini API कुंजी",
 		"getGroqApiKey": "Groq API कुंजी प्राप्त करें",
 		"groqApiKey": "Groq API कुंजी",
+		"nanoGptApiKey": "Nano-GPT API कुंजी",
+		"getNanoGptApiKey": "Nano-GPT API कुंजी प्राप्त करें",
+		"nanoGptModelList": "मॉडल सूची",
+		"nanoGptModelListOptions": {
+			"all": "सभी मॉडल",
+			"personalized": "व्यक्तिगत मॉडल",
+			"subscription": "सदस्यता मॉडल"
+		},
 		"getSambaNovaApiKey": "SambaNova API कुंजी प्राप्त करें",
 		"sambaNovaApiKey": "SambaNova API कुंजी",
 		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
