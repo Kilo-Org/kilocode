@@ -5,7 +5,6 @@
 import type { Command, ArgumentProviderContext } from "./core/types.js"
 import type { CLIConfig } from "../config/types.js"
 import { getThemeById, getAvailableThemes } from "../constants/themes/index.js"
-import { getBuiltinThemeIds } from "../constants/themes/custom.js"
 import { messageResetCounterAtom } from "../state/atoms/ui.js"
 import { createStore } from "jotai"
 
@@ -68,15 +67,20 @@ function getThemeDisplayInfo(config: CLIConfig) {
 	// getAvailableThemes already returns themes in the correct order
 	const availableThemeIds = getAvailableThemes(config)
 
-	return availableThemeIds.map((themeId) => {
-		const theme = getThemeById(themeId, config)
-		return {
-			id: themeId,
-			name: theme.name,
-			description: theme.type,
-			type: theme.type,
-		}
-	})
+	return availableThemeIds
+		.map((themeId) => {
+			const theme = getThemeById(themeId, config)
+			if (!theme) {
+				return null
+			}
+			return {
+				id: themeId,
+				name: theme.name,
+				description: theme.type,
+				type: theme.type,
+			}
+		})
+		.filter((item): item is NonNullable<typeof item> => item !== null)
 }
 
 export const themeCommand: Command = {
@@ -124,9 +128,14 @@ export const themeCommand: Command = {
 				const themesByType = allThemes.reduce(
 					(acc, theme) => {
 						if (!acc[theme.type]) {
-							acc[theme.type] = []
+							acc[theme.type] = [] as Array<{
+								id: string
+								name: string
+								description: string
+								type: string
+							}>
 						}
-						acc[theme.type].push(theme)
+						acc[theme.type]!.push(theme)
 						return acc
 					},
 					{} as Record<string, Array<{ id: string; name: string; description: string; type: string }>>,
