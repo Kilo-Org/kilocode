@@ -768,8 +768,8 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Code API Provider, OpenRouter, of een Morph API-sleutel.",
-			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"apiKey": "Morph API-sleutel",
+			"placeholder": "Voer je Morph API-sleutel in",
 			"modelLabel": "Modelselectie",
 			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
 			"models": {

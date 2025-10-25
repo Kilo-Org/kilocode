@@ -789,8 +789,8 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
-			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
+			"apiKey": "Kunci API Morph",
+			"placeholder": "Masukkan kunci API Morph kamu",
 			"modelLabel": "Pemilihan Model",
 			"modelDescription": "Pilih model Fast Apply mana yang akan digunakan untuk edit file",
 			"models": {
