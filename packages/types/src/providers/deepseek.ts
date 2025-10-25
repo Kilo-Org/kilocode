@@ -11,22 +11,22 @@ export const deepSeekModels = {
 		contextWindow: 128_000,
 		supportsImages: false,
 		supportsPromptCache: true,
-		inputPrice: 0.56, // $0.56 per million tokens (cache miss) - Updated Sept 5, 2025
-		outputPrice: 1.68, // $1.68 per million tokens - Updated Sept 5, 2025
-		cacheWritesPrice: 0.56, // $0.56 per million tokens (cache miss) - Updated Sept 5, 2025
-		cacheReadsPrice: 0.07, // $0.07 per million tokens (cache hit) - Updated Sept 5, 2025
-		description: `DeepSeek-V3 achieves a significant breakthrough in inference speed over previous models. It tops the leaderboard among open-source models and rivals the most advanced closed-source models globally.`,
+		inputPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Sept 29, 2025
+		outputPrice: 0.42, // $0.42 per million tokens - Updated Sept 29, 2025
+		cacheWritesPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Sept 29, 2025
+		cacheReadsPrice: 0.028, // $0.028 per million tokens (cache hit) - Updated Sept 29, 2025
+		description: `DeepSeek-V3.2 (Non-thinking Mode). Optimized for speed and efficiency without explicit reasoning traces. Best for general chat, fast API responses, and lightweight tasks while still leveraging V3.1’s strong performance across domains.`,
 	},
 	"deepseek-reasoner": {
 		maxTokens: 65536, // 64K max output for reasoning mode
 		contextWindow: 128_000,
 		supportsImages: false,
 		supportsPromptCache: true,
-		inputPrice: 0.56, // $0.56 per million tokens (cache miss) - Updated Sept 5, 2025
-		outputPrice: 1.68, // $1.68 per million tokens - Updated Sept 5, 2025
-		cacheWritesPrice: 0.56, // $0.56 per million tokens (cache miss) - Updated Sept 5, 2025
-		cacheReadsPrice: 0.07, // $0.07 per million tokens (cache hit) - Updated Sept 5, 2025
-		description: `DeepSeek-R1 achieves performance comparable to OpenAI-o1 across math, code, and reasoning tasks. Supports Chain of Thought reasoning with up to 64K output tokens.`,
+		inputPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Sept 29, 2025
+		outputPrice: 0.42, // $0.42 per million tokens - Updated Sept 29, 2025
+		cacheWritesPrice: 0.28, // $0.28 per million tokens (cache miss) - Updated Sept 29, 2025
+		cacheReadsPrice: 0.028, // $0.028 per million tokens (cache hit) - Updated Sept 29, 2025
+		description: `DeepSeek-V3.2 (Thinking Mode). Enables advanced reasoning with visible chain-of-thought traces and extended outputs (up to 64K tokens). Recommended for math, coding, and complex multi-step problems where reasoning quality is critical.`,
 	},
 } as const satisfies Record<string, ModelInfo>
 
