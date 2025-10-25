@@ -2,7 +2,7 @@ import { memo, useEffect, useRef, useState } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { AlertTriangle } from "lucide-react"
 
-import type { ProviderSettingsEntry, OrganizationAllowList } from "@roo-code/types"
+import type { ProviderSettingsEntry, OrganizationAllowList, ProfileType } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import {
@@ -14,6 +14,11 @@ import {
 	DialogTitle,
 	StandardTooltip,
 	SearchableSelect,
+	Select,
+	SelectTrigger,
+	SelectValue,
+	SelectContent,
+	SelectItem,
 } from "@/components/ui"
 
 interface ApiConfigManagerProps {
@@ -23,7 +28,7 @@ interface ApiConfigManagerProps {
 	onSelectConfig: (configName: string) => void
 	onDeleteConfig: (configName: string) => void
 	onRenameConfig: (oldName: string, newName: string) => void
-	onUpsertConfig: (configName: string) => void
+	onUpsertConfig: (configName: string, profileType?: ProfileType) => void
 }
 
 const ApiConfigManager = ({
@@ -41,6 +46,7 @@ const ApiConfigManager = ({
 	const [isCreating, setIsCreating] = useState(false)
 	const [inputValue, setInputValue] = useState("")
 	const [newProfileName, setNewProfileName] = useState("")
+	const [newProfileType, setNewProfileType] = useState<ProfileType>("chat")
 	const [error, setError] = useState<string | null>(null)
 	const inputRef = useRef<any>(null)
 	const newProfileInputRef = useRef<any>(null)
@@ -87,6 +93,7 @@ const ApiConfigManager = ({
 	const resetCreateState = () => {
 		setIsCreating(false)
 		setNewProfileName("")
+		setNewProfileType("chat")
 		setError(null)
 	}
 
@@ -167,7 +174,7 @@ const ApiConfigManager = ({
 			return
 		}
 
-		onUpsertConfig(trimmedValue)
+		onUpsertConfig(trimmedValue, newProfileType)
 		resetCreateState()
 	}
 
@@ -239,9 +246,13 @@ const ApiConfigManager = ({
 							onValueChange={handleSelectConfig}
 							options={listApiConfigMeta.map((config) => {
 								const valid = isProfileValid(config)
+								const profileType = config.profileType || "chat"
+								const label =
+									profileType === "autocomplete" ? `${config.name} (Autocomplete)` : config.name
+
 								return {
 									value: config.name,
-									label: config.name,
+									label: label,
 									disabled: !valid,
 									icon: !valid ? (
 										<StandardTooltip content={t("settings:validation.profileInvalid")}>
@@ -312,26 +323,48 @@ const ApiConfigManager = ({
 				aria-labelledby="new-profile-title">
 				<DialogContent className="p-4 max-w-sm bg-card">
 					<DialogTitle>{t("settings:providers.newProfile")}</DialogTitle>
-					<Input
-						ref={newProfileInputRef}
-						value={newProfileName}
-						onInput={(e: unknown) => {
-							const target = e as { target: { value: string } }
-							setNewProfileName(target.target.value)
-							setError(null)
-						}}
-						placeholder={t("settings:providers.enterProfileName")}
-						data-testid="new-profile-input"
-						style={{ width: "100%" }}
-						onKeyDown={(e: unknown) => {
-							const event = e as { key: string }
-							if (event.key === "Enter" && newProfileName.trim()) {
-								handleNewProfileSave()
-							} else if (event.key === "Escape") {
-								resetCreateState()
-							}
-						}}
-					/>
+					<div className="flex flex-col gap-3">
+						<div>
+							<label className="block text-sm font-medium mb-1">Profile Name</label>
+							<Input
+								ref={newProfileInputRef}
+								value={newProfileName}
+								onInput={(e: unknown) => {
+									const target = e as { target: { value: string } }
+									setNewProfileName(target.target.value)
+									setError(null)
+								}}
+								placeholder={t("settings:providers.enterProfileName")}
+								data-testid="new-profile-input"
+								style={{ width: "100%" }}
+								onKeyDown={(e: unknown) => {
+									const event = e as { key: string }
+									if (event.key === "Enter" && newProfileName.trim()) {
+										handleNewProfileSave()
+									} else if (event.key === "Escape") {
+										resetCreateState()
+									}
+								}}
+							/>
+						</div>
+						<div>
+							<label className="block text-sm font-medium mb-1">Profile Type</label>
+							<Select
+								value={newProfileType}
+								onValueChange={(value) => setNewProfileType(value as ProfileType)}>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="chat">Chat</SelectItem>
+									<SelectItem value="autocomplete">Autocomplete</SelectItem>
+								</SelectContent>
+							</Select>
+							<p className="text-vscode-descriptionForeground text-xs mt-1">
+								Chat profiles are used for conversations. Only one autocomplete profile is allowed.
+							</p>
+						</div>
+					</div>
 					{error && (
 						<p className="text-vscode-errorForeground text-sm mt-2" data-testid="error-message">
 							{error}

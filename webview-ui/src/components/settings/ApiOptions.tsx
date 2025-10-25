@@ -7,6 +7,7 @@ import { VSCodeLink, VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import {
 	type ProviderName,
 	type ProviderSettings,
+	type ProfileType,
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	openRouterDefaultModelId,
 	requestyDefaultModelId,
@@ -472,6 +473,25 @@ const ApiOptions = ({
 
 	return (
 		<div className="flex flex-col gap-3">
+			{/* Profile Type Selector */}
+			<div className="flex flex-col gap-1">
+				<label className="block font-medium mb-1">Profile Type</label>
+				<Select
+					value={apiConfiguration.profileType || "chat"}
+					onValueChange={(value) => setApiConfigurationField("profileType", value as ProfileType)}>
+					<SelectTrigger className="w-full">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="chat">Chat</SelectItem>
+						<SelectItem value="autocomplete">Autocomplete</SelectItem>
+					</SelectContent>
+				</Select>
+				<div className="text-vscode-descriptionForeground text-sm mt-1">
+					Chat profiles are used for conversations. Only one autocomplete profile is allowed.
+				</div>
+			</div>
+
 			<div className="flex flex-col gap-1 relative">
 				<div className="flex justify-between items-center">
 					<label className="block font-medium mb-1">{t("settings:providers.apiProvider")}</label>

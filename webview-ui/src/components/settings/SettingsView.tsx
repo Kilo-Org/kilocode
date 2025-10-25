@@ -33,7 +33,7 @@ import {
 // kilocode_change
 import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
-import type { ProviderSettings, ExperimentId, TelemetrySetting } from "@roo-code/types"
+import type { ProviderSettings, ExperimentId, TelemetrySetting, ProfileType } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
 import { cn } from "@src/lib/utils"
@@ -774,11 +774,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 										})
 										prevApiConfigName.current = newName
 									}}
-									onUpsertConfig={(configName: string) =>
+									onUpsertConfig={(configName: string, profileType?: ProfileType) =>
 										vscode.postMessage({
 											type: "upsertApiConfiguration",
 											text: configName,
-											apiConfiguration,
+											apiConfiguration: {
+												...apiConfiguration,
+												profileType: profileType || "chat",
+											},
 										})
 									}
 								/>

@@ -59,6 +59,7 @@ describe("ProviderSettingsManager", () => {
 							id: "default",
 							diffEnabled: true,
 							fuzzyMatchThreshold: 1.0,
+							profileType: "chat",
 						},
 					},
 					modeApiConfigs: {},
@@ -68,6 +69,7 @@ describe("ProviderSettingsManager", () => {
 						openAiHeadersMigrated: true,
 						consecutiveMistakeLimitMigrated: true,
 						todoListEnabledMigrated: true,
+						profileTypeMigrated: true,
 					},
 				}),
 			)
