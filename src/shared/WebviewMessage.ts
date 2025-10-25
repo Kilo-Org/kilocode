@@ -304,6 +304,10 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		| "checkGitLabExtension"
+		| "gitlabExtensionStatus"
+		| "getGitLabRepositoryInfo"
+		| "gitlabRepositoryInfo"
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"

@@ -28,6 +28,7 @@ import {
 	LucideIcon,
 	// SquareSlash, // kilocode_change
 	// Glasses, // kilocode_change
+	FolderGit2, // kilocode_change
 } from "lucide-react"
 
 // kilocode_change
@@ -78,6 +79,7 @@ import deepEqual from "fast-deep-equal" // kilocode_change
 import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
 import { UISettings } from "./UISettings"
+import { GitProviders } from "./GitProviders"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
@@ -106,6 +108,7 @@ const sectionNames = [
 	"experimental",
 	"language",
 	"mcp",
+	"gitProviders", // kilocode_change
 	"about",
 ] as const
 
@@ -596,6 +599,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			{ id: "mcp", icon: Server },
+			{ id: "gitProviders", icon: FolderGit2 }, // kilocode_change
 			{ id: "about", icon: Info },
 		],
 		[kiloCodeWrapperProperties?.kiloCodeWrapped], // kilocode_change
@@ -970,6 +974,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{/* kilocode_change */}
 					{/* MCP Section */}
 					{activeTab === "mcp" && <McpView />}
+
+					{/* kilocode_change */}
+					{/* GitProviders Section */}
+					{activeTab === "gitProviders" && <GitProviders></GitProviders>}
 
 					{/* About Section */}
 					{activeTab === "about" && (

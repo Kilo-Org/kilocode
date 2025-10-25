@@ -154,6 +154,8 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
+		| "gitlabExtensionStatus"
+		| "gitlabRepositoryInfo"
 	text?: string
 	// kilocode_change start
 	payload?:
@@ -364,6 +366,7 @@ export type ExtensionState = Pick<
 	| "openRouterImageGenerationSelectedModel"
 	| "includeTaskHistoryInEnhance"
 	| "reasoningBlockCollapsed"
+	| "gitlabExtensionStatus"
 > & {
 	version: string
 	clineMessages: ClineMessage[]
