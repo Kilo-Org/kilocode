@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.11
+
+### Patch Changes
+
+- [#3278](https://github.com/Kilo-Org/kilocode/pull/3278) [`cba3d00`](https://github.com/Kilo-Org/kilocode/commit/cba3d005766c88200a2d170770dcaeaef172dfbd) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improved stability of the approval menu, preventing it from showing when you don't expect it
+
 ## 0.0.10
 
 ### Patch Changes
