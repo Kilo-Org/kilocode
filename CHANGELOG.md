@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.111.0
-
-### Minor Changes
+## [v4.111.0]
 
 - [#3256](https://github.com/Kilo-Org/kilocode/pull/3256) [`f81b48b`](https://github.com/Kilo-Org/kilocode/commit/f81b48b8dec9cd276c3c7ba994d0512036abfa96) Thanks [@markijbema](https://github.com/markijbema)! - Switched autocomplete to showing completions inline
 
