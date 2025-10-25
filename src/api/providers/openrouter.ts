@@ -240,12 +240,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
 				throw error
 			}
-			const rawError = safeJsonParse(error?.error?.metadata?.raw) as { error?: OpenAI.ErrorObject } | undefined
-			if (rawError?.error?.message) {
-				throw new Error(`${this.providerName} error: ${rawError.error.message}`)
-			}
+			throw new Error(makeOpenRouterErrorReadable(error))
 			// kilocode_change end
-			throw handleOpenAIError(error, this.providerName)
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
@@ -514,8 +510,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
+	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
+	const parsedJson = safeJsonParse(metadata?.raw)
+	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+
 	if (error?.code !== 429 && error?.code !== 418) {
-		return `OpenRouter API Error: ${error?.message || error}`
+		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 
 	try {

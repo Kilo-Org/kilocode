@@ -159,6 +159,18 @@ export async function attemptCompletionTool(
 			})
 
 			toolResults.push(...formatResponse.imageBlocks(images))
+
+			// kilocode_change start
+			if (block.toolUseId) {
+				cline.userMessageContent.push({
+					type: "tool_result",
+					tool_use_id: block.toolUseId,
+					content: [{ type: "text", text: `${toolDescription()} Result:` }, ...toolResults],
+				})
+				return
+			}
+			// kilocode_change end
+
 			cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
 			cline.userMessageContent.push(...toolResults)
 

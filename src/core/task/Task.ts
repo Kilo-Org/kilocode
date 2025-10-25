@@ -300,7 +300,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = []
+	userMessageContent: (
+		| Anthropic.TextBlockParam
+		| Anthropic.ImageBlockParam
+		| Anthropic.ToolResultBlockParam // kilocode_change
+	)[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -2004,6 +2008,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// limit error, which gets thrown on the first chunk).
 				const stream = this.attemptApiRequest()
 				let assistantMessage = ""
+				let assistantToolUses = new Array<Anthropic.Messages.ToolUseBlockParam>() // kilocode_change
 				let reasoningMessage = ""
 				let pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
@@ -2056,7 +2061,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							case "native_tool_calls": {
 								// Handle native OpenAI-format tool calls
 								// Process native tool calls through the parser
-								this.assistantMessageParser.processNativeToolCalls(chunk.toolCalls)
+								for (const toolUse of this.assistantMessageParser.processNativeToolCalls(
+									chunk.toolCalls,
+								)) {
+									assistantToolUses.push(toolUse)
+								}
 
 								// Update content blocks after processing native tool calls
 								const prevLength = this.assistantMessageContent.length
@@ -2407,12 +2416,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// able to save the assistant's response.
 				let didEndLoop = false
 
-				// kilocode_change start: Check for tool use before determining if response is empty
-				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
-				// kilocode_change end
-
-				if (assistantMessage.length > 0 || didToolUse) {
-					// kilocode_change: also check for tool use
+				if (assistantMessage.length > 0 || assistantToolUses.length > 0 /* kilocode_change */) {
 					// Display grounding sources to the user if they exist
 					if (pendingGroundingSources.length > 0) {
 						const citationLinks = pendingGroundingSources.map((source, i) => `[${i + 1}](${source.url})`)
@@ -2423,10 +2427,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						})
 					}
 
+					// kilocode_change start: also add tool calls to history
+					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
+					if (assistantMessage) {
+						assistantMessageContent.push({ type: "text", text: assistantMessage })
+					}
+					for (const toolUse of assistantToolUses) {
+						assistantMessageContent.push(toolUse)
+					}
 					await this.addToApiConversationHistory({
 						role: "assistant",
-						content: [{ type: "text", text: assistantMessage }],
+						content: assistantMessageContent,
 					})
+					// kilocode_change end
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
 

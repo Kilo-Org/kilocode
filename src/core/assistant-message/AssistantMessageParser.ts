@@ -2,6 +2,7 @@ import { type ToolName, toolNames } from "@roo-code/types"
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
 import { NativeToolCall, parseDoubleEncodedParams } from "./kilocode/native-tool-call"
+import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
  * Parser for assistant messages. Maintains state between chunks
@@ -75,7 +76,7 @@ export class AssistantMessageParser {
 	 * @param toolCalls Array of native tool call objects (may be partial during streaming).  We
 	 * currently set parallel_tool_calls to false, so in theory there should only be 1 call.
 	 */
-	public processNativeToolCalls(toolCalls: NativeToolCall[]): void {
+	public *processNativeToolCalls(toolCalls: NativeToolCall[]): Generator<Anthropic.ToolUseBlockParam> {
 		for (const toolCall of toolCalls) {
 			// Determine the tracking key
 			// If we have an index, use that to look up or store the id
@@ -187,6 +188,7 @@ export class AssistantMessageParser {
 					name: toolName as ToolName,
 					params: parsedArgs,
 					partial: false, // Now complete after accumulation
+					toolUseId: accumulatedCall.id,
 				}
 
 				// Add the tool use to content blocks
@@ -195,6 +197,13 @@ export class AssistantMessageParser {
 				// Mark this tool call as processed
 				this.processedNativeToolCallIds.add(toolCallId)
 				this.nativeToolCallsAccumulator.delete(toolCallId)
+
+				yield {
+					type: "tool_use",
+					name: toolUse.name,
+					id: toolUse.toolUseId ?? "",
+					input: toolUse.params,
+				}
 			}
 		}
 	}
