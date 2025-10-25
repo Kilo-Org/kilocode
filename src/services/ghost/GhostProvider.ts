@@ -365,7 +365,6 @@ export class GhostProvider {
 			})
 
 			if (this.isRequestCancelled) {
-				this.suggestions.clear()
 				await this.render()
 				return
 			}
@@ -439,7 +438,6 @@ export class GhostProvider {
 		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, {
 			taskId: this.taskId,
 		})
-		this.suggestions.clear()
 
 		this.clearAutoTriggerTimer()
 		await this.render()
@@ -606,8 +604,6 @@ export class GhostProvider {
 	public dispose(): void {
 		this.clearAutoTriggerTimer()
 		this.cancelRequest()
-
-		this.suggestions.clear()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()
