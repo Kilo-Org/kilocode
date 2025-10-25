@@ -35,6 +35,12 @@ export const DEFAULT_MODES: ModeConfig[] = [
 		description: "Coordinate complex multi-step projects",
 		source: "global",
 	},
+	{
+		slug: "shell",
+		name: "Shell",
+		description: "Interactive shell mode with command execution (Shift+1)",
+		source: "global",
+	},
 ]
 
 /**

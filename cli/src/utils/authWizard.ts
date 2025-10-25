@@ -2,6 +2,7 @@ import inquirer from "inquirer"
 import { loadConfig, saveConfig, CLIConfig } from "../config"
 import openConfigFile from "../config/openConfig"
 import wait from "../utils/wait"
+import { ZAI_DEFAULTS, formatZaiApiLineChoices, formatZaiModelChoices } from "../constants/providers/zai"
 
 export default async function authWizard() {
 	const config = await loadConfig()
@@ -39,14 +40,46 @@ export default async function authWizard() {
 			break
 		}
 		case "zai": {
+			console.info("\nConfigure ZAI provider with API token, API line, and model selection.\n")
+
+			// Step 1: Get API token
 			const { zaiApiKey } = await inquirer.prompt<{ zaiApiKey: string }>([
 				{
 					type: "password",
 					name: "zaiApiKey",
-					message: "Please enter your zAI token:",
+					message: "Please enter your ZAI API token:",
+					validate: (input: string) => {
+						if (!input || input.trim() === "") {
+							return "API token is required"
+						}
+						return true
+					},
 				},
 			])
-			providerSpecificConfig = { zaiApiKey }
+
+			// Step 2: Select API line
+			const { zaiApiLine } = await inquirer.prompt<{ zaiApiLine: string }>([
+				{
+					type: "list",
+					name: "zaiApiLine",
+					message: "Select your ZAI API line:",
+					choices: formatZaiApiLineChoices(),
+					default: ZAI_DEFAULTS.apiLine,
+				},
+			])
+
+			// Step 3: Select model
+			const { apiModelId } = await inquirer.prompt<{ apiModelId: string }>([
+				{
+					type: "list",
+					name: "apiModelId",
+					message: "Select your ZAI model:",
+					choices: formatZaiModelChoices(),
+					default: ZAI_DEFAULTS.model,
+				},
+			])
+
+			providerSpecificConfig = { zaiApiKey, zaiApiLine, apiModelId }
 			break
 		}
 		case "other": {

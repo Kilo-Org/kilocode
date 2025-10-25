@@ -7,6 +7,7 @@ import { useMemo } from "react"
 import { isStreamingAtom, showFollowupSuggestionsAtom } from "../atoms/ui.js"
 import { useApprovalHandler } from "./useApprovalHandler.js"
 import { hasResumeTaskAtom } from "../atoms/extension.js"
+import { shellModeActiveAtom } from "../atoms/keyboard.js"
 
 export interface Hotkey {
 	/** The key combination (e.g., "Ctrl+C", "Cmd+X") */
@@ -47,6 +48,7 @@ export function useHotkeys(): UseHotkeysReturn {
 	const isStreaming = useAtomValue(isStreamingAtom)
 	const isFollowupVisible = useAtomValue(showFollowupSuggestionsAtom)
 	const hasResumeTask = useAtomValue(hasResumeTaskAtom)
+	const isShellModeActive = useAtomValue(shellModeActiveAtom)
 	const { isApprovalPending } = useApprovalHandler()
 
 	const modifierKey = useMemo(() => getModifierKey(), [])
@@ -80,12 +82,23 @@ export function useHotkeys(): UseHotkeysReturn {
 			]
 		}
 
+		// Priority 5: Shell mode hotkeys
+		if (isShellModeActive) {
+			return [
+				{ keys: "↑↓", description: "history" },
+				{ keys: "Enter", description: "to execute" },
+				{ keys: "Esc", description: "to exit" },
+				{ keys: "Shift+1", description: "to toggle" },
+			]
+		}
+
 		// Default: General command hints
 		return [
 			{ keys: "/help", description: "for commands" },
 			{ keys: "/mode", description: "to switch mode" },
+			{ keys: "Shift+1", description: "for shell mode", primary: true },
 		]
-	}, [hasResumeTask, isApprovalPending, isStreaming, isFollowupVisible, modifierKey])
+	}, [hasResumeTask, isApprovalPending, isStreaming, isFollowupVisible, isShellModeActive, modifierKey])
 
 	const shouldShow = hotkeys.length > 0
 
