@@ -109,6 +109,18 @@ export class UsageTracker {
 		await this.memento.update(COOLDOWNS_STORAGE_KEY, allCooldowns)
 	}
 
+	public async reduceCooldown(providerId: string, durationMs: number): Promise<void> {
+		const allCooldowns = await this.getPrunedCooldowns()
+		const currentCooldown = allCooldowns[providerId]
+
+		// Skip if provider has no active cooldown
+		if (!currentCooldown) return
+
+		allCooldowns[providerId] = currentCooldown - durationMs
+
+		await this.memento.update(COOLDOWNS_STORAGE_KEY, allCooldowns)
+	}
+
 	public async isUnderCooldown(providerId: string): Promise<boolean> {
 		const allCooldowns = await this.getPrunedCooldowns()
 		const cooldownUntil = allCooldowns[providerId]
