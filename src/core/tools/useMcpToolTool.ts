@@ -83,6 +83,30 @@ async function validateParams(
 	}
 }
 
+/**
+ * Reverses property renaming applied in schema generation.
+ * Properties named `renamed_*` are converted back to their original names.
+ */
+function reversePropertyRenaming(args: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+	if (!args) {
+		return args
+	}
+
+	const reversed: Record<string, unknown> = {}
+
+	for (const [key, value] of Object.entries(args)) {
+		if (key.startsWith("renamed_")) {
+			// Extract original property name (e.g., "renamed_type" -> "type")
+			const originalKey = key.substring("renamed_".length)
+			reversed[originalKey] = value
+		} else {
+			reversed[key] = value
+		}
+	}
+
+	return reversed
+}
+
 async function validateToolExists(
 	cline: Task,
 	serverName: string,
@@ -239,7 +263,10 @@ async function executeToolAndProcessResult(
 		toolName,
 	})
 
-	const toolResult = await cline.providerRef.deref()?.getMcpHub()?.callTool(serverName, toolName, parsedArguments)
+	// Reverse any property renaming before calling the tool
+	const actualArguments = reversePropertyRenaming(parsedArguments)
+
+	const toolResult = await cline.providerRef.deref()?.getMcpHub()?.callTool(serverName, toolName, actualArguments)
 
 	let toolResultPretty = "(No response)"
 

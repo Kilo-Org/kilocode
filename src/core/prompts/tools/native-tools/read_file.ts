@@ -28,7 +28,6 @@ export default {
 									type: "string",
 									pattern: "^\\d+-\\d+$",
 								},
-								minItems: 1,
 							},
 						},
 						required: ["path", "line_ranges"],
