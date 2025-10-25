@@ -12,6 +12,12 @@ import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
+import {
+	getLastTaskForWorkspace,
+	taskFilesExist,
+	getNoTasksErrorMessage,
+	getTaskFilesNotFoundErrorMessage,
+} from "./utils/task-resume.js"
 
 export interface CLIOptions {
 	mode?: string
@@ -19,6 +25,7 @@ export interface CLIOptions {
 	ci?: boolean
 	prompt?: string
 	timeout?: number
+	continue?: boolean
 }
 
 /**
@@ -118,6 +125,11 @@ export class CLI {
 
 			// Request router models after configuration is injected
 			await this.requestRouterModels()
+
+			// Handle continue mode (resume last conversation)
+			if (this.options.continue) {
+				await this.resumeLastConversation()
+			}
 
 			this.isInitialized = true
 			logs.info("Kilo Code CLI initialized successfully", "CLI")
@@ -281,6 +293,91 @@ export class CLI {
 		} catch (error) {
 			logs.error("Failed to request router models", "CLI", { error })
 		}
+	}
+
+	/**
+	 * Resume the last conversation from the current workspace
+	 */
+	private async resumeLastConversation(): Promise<void> {
+		if (!this.service) {
+			logs.error("Cannot resume conversation: service not available", "CLI")
+			throw new Error("Service not initialized")
+		}
+
+		const workspace = this.options.workspace || process.cwd()
+
+		try {
+			logs.info("Attempting to resume last conversation", "CLI", { workspace })
+
+			// Get the last task for this workspace
+			const lastTask = await getLastTaskForWorkspace(workspace)
+
+			if (!lastTask) {
+				const errorMessage = getNoTasksErrorMessage(workspace)
+				console.error(`\n${errorMessage}\n`)
+				logs.warn("No previous tasks found for workspace", "CLI", { workspace })
+				process.exit(1)
+				return // TypeScript doesn't know process.exit stops execution
+			}
+
+			logs.debug("Found last task", "CLI", { taskId: lastTask.id, task: lastTask.task })
+
+			// Check if task files exist
+			const filesExist = await taskFilesExist(lastTask.id)
+
+			if (!filesExist) {
+				const errorMessage = getTaskFilesNotFoundErrorMessage(lastTask.id)
+				console.error(`\n${errorMessage}\n`)
+				logs.error("Task files not found", "CLI", { taskId: lastTask.id })
+				process.exit(1)
+				return // TypeScript doesn't know process.exit stops execution
+			}
+
+			// Wait for extension service to be ready before sending resume message
+			await this.waitForExtensionReady()
+
+			// Get the extension host and resume the task
+			const extensionHost = this.service.getExtensionHost()
+			await extensionHost.resumeTask(lastTask.id)
+
+			logs.info("Task resume initiated", "CLI", { taskId: lastTask.id })
+		} catch (error) {
+			logs.error("Failed to resume conversation", "CLI", { error, workspace })
+			console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			process.exit(1)
+		}
+	}
+
+	/**
+	 * Wait for the extension service to be ready
+	 */
+	private async waitForExtensionReady(): Promise<void> {
+		if (!this.service) {
+			throw new Error("Service not available")
+		}
+
+		// Check if already ready
+		if (this.service.isReady()) {
+			return
+		}
+
+		logs.debug("Waiting for extension service to be ready", "CLI")
+
+		// Wait for the ready event with a timeout
+		return new Promise((resolve, reject) => {
+			const timeout = setTimeout(() => {
+				reject(new Error("Extension service ready timeout"))
+			}, 10000) // 10 second timeout
+
+			const readyHandler = () => {
+				clearTimeout(timeout)
+				this.service?.off("ready", readyHandler)
+				logs.debug("Extension service is ready", "CLI")
+				resolve()
+			}
+
+			this.service.on("ready", readyHandler)
+		})
 	}
 
 	/**

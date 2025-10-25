@@ -895,6 +895,27 @@ export class ExtensionHost extends EventEmitter {
 		this.webviewProviders.delete(viewId)
 		logs.debug(`Unregistered webview provider: ${viewId}`, "ExtensionHost")
 	}
+
+	/**
+	 * Resume a task by its ID
+	 * This triggers the extension to load and display the specified task
+	 */
+	async resumeTask(taskId: string): Promise<void> {
+		logs.info("Resuming task", "ExtensionHost", { taskId })
+
+		try {
+			// Send message to extension to show the task
+			await this.sendWebviewMessage({
+				type: "showTaskWithId",
+				text: taskId,
+			})
+
+			logs.debug("Resume task message sent to extension", "ExtensionHost", { taskId })
+		} catch (error) {
+			logs.error("Failed to resume task", "ExtensionHost", { error, taskId })
+			throw error
+		}
+	}
 }
 
 export function createExtensionHost(options: ExtensionHostOptions): ExtensionHost {

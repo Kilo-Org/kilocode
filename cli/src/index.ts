@@ -27,6 +27,7 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("-c, --continue", "Resume the last conversation from this workspace", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
@@ -43,14 +44,16 @@ program
 		}
 
 		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
+		// Check if stdin is actually being piped (not just isTTY being undefined)
+		const isStdinPiped = process.stdin.isTTY === false
+		if (isStdinPiped && !options.auto) {
 			console.error("Error: Piped input requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
 		let finalPrompt = prompt
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && isStdinPiped) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
@@ -77,6 +80,18 @@ program
 			process.exit(1)
 		}
 
+		// Validate that continue mode is not used with autonomous mode
+		if (options.continue && options.auto) {
+			console.error("Error: --continue option cannot be used with --auto flag")
+			process.exit(1)
+		}
+
+		// Validate that continue mode is not used with a prompt
+		if (options.continue && finalPrompt) {
+			console.error("Error: --continue option cannot be used with a prompt argument")
+			process.exit(1)
+		}
+
 		// Track autonomous mode start if applicable
 		if (options.auto && finalPrompt) {
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
@@ -94,6 +109,7 @@ program
 			ci: options.auto,
 			prompt: finalPrompt,
 			timeout: options.timeout,
+			continue: options.continue,
 		})
 		await cli.start()
 		await cli.dispose()

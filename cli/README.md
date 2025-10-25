@@ -43,7 +43,30 @@ kilocode --mode architect
 
 # Start with a specific workspace
 kilocode --workspace /path/to/project
+
+# Resume the last conversation from this workspace
+kilocode -c
+# or
+kilocode --continue
 ```
+
+### Resume Conversations
+
+The `-c` or `--continue` flag allows you to resume your last conversation from the current workspace:
+
+```bash
+# Resume the most recent conversation
+kilocode -c
+```
+
+This feature:
+
+- Resumes the last conversation from the current workspace only
+- Works in interactive mode (cannot be combined with `--auto`)
+- Shows an error if no previous conversations exist
+- Restores the full conversation history and allows you to continue where you left off
+
+**Note:** The `-c` flag cannot be used with a prompt argument or in autonomous mode (`--auto`).
 
 ### Autonomous mode (Non-Interactive)
 
