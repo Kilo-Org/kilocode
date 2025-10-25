@@ -100,7 +100,7 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 				// Check if this is a retryable
 				if (this.isRateLimitError(error) || this.isOverloadError(error)) {
 					// Set cooldown for the current provider
-					await this.usage.setCooldown(this.activeProfileId, 10 * 60 * 1000)
+					await this.usage.setCooldown(this.activeProfileId, 1 * 60 * 1000)
 
 					// Switch to a different provider
 					await this.adjustActiveHandler("Retryable Error")
