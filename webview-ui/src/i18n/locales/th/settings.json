@@ -308,6 +308,9 @@
 		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",
 		"zaiEntrypoint": "จุดเข้าใช้งาน Z AI",
 		"zaiEntrypointDescription": "โปรดเลือกจุดเข้าใช้งาน API ที่เหมาะสมตามตำแหน่งของคุณ หากคุณอยู่ในจีน ให้เลือก open.bigmodel.cn มิฉะนั้น ให้เลือก api.z.ai",
+		"minimaxApiKey": "คีย์ API ของ MiniMax",
+		"getMiniMaxApiKey": "รับคีย์ API ของ MiniMax",
+		"minimaxBaseUrl": "จุดเข้าใช้งาน MiniMax",
 		"geminiApiKey": "คีย์ API ของ Gemini",
 		"geminiParameters": {
 			"urlContext": {

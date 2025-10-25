@@ -78,7 +78,7 @@ export class LogsService {
 				stack: error.stack,
 				// Include any additional enumerable properties
 				...Object.getOwnPropertyNames(error)
-					.filter(key => key !== "message" && key !== "name" && key !== "stack")
+					.filter((key) => key !== "message" && key !== "name" && key !== "stack")
 					.reduce(
 						(acc, key) => {
 							acc[key] = (error as any)[key]

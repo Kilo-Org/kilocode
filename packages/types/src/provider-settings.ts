@@ -28,6 +28,7 @@ import {
 	vscodeLlmModels,
 	xaiModels,
 	internationalZAiModels,
+	minimaxModels,
 } from "./providers/index.js"
 import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
@@ -141,6 +142,7 @@ export const providerNames = [
 	"groq",
 	"mistral",
 	"moonshot",
+	"minimax",
 	"openai-native",
 	"qwen-code",
 	"roo",
@@ -411,6 +413,13 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 	sambaNovaApiKey: z.string().optional(),
 })
 
+const minimaxSchema = apiModelIdProviderModelSchema.extend({
+	minimaxBaseUrl: z
+		.union([z.literal("https://api.minimax.io/v1"), z.literal("https://api.minimaxi.com/v1")])
+		.optional(),
+	minimaxApiKey: z.string().optional(),
+})
+
 // kilocode_change start
 const ovhcloudSchema = baseProviderSettingsSchema.extend({
 	ovhCloudAiEndpointsApiKey: z.string().optional(),
@@ -518,6 +527,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	humanRelaySchema.merge(z.object({ apiProvider: z.literal("human-relay") })),
 	fakeAiSchema.merge(z.object({ apiProvider: z.literal("fake-ai") })),
 	xaiSchema.merge(z.object({ apiProvider: z.literal("xai") })),
+	minimaxSchema.merge(z.object({ apiProvider: z.literal("minimax") })),
 	// kilocode_change start
 	geminiCliSchema.merge(z.object({ apiProvider: z.literal("gemini-cli") })),
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
@@ -570,6 +580,7 @@ export const providerSettingsSchema = z.object({
 	...humanRelaySchema.shape,
 	...fakeAiSchema.shape,
 	...xaiSchema.shape,
+	...minimaxSchema.shape,
 	...groqSchema.shape,
 	...huggingFaceSchema.shape,
 	...chutesSchema.shape,
@@ -660,6 +671,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	unbound: "unboundModelId",
 	requesty: "requestyModelId",
 	xai: "apiModelId",
+	minimax: "apiModelId",
 	groq: "apiModelId",
 	chutes: "apiModelId",
 	litellm: "litellmModelId",
@@ -799,6 +811,11 @@ export const MODELS_BY_PROVIDER: Record<
 	},
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
 	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
+	minimax: {
+		id: "minimax",
+		label: "MiniMax",
+		models: Object.keys(minimaxModels),
+	},
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
