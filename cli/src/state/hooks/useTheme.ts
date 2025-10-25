@@ -3,7 +3,7 @@
  */
 
 import { useAtomValue } from "jotai"
-import { themeAtom } from "../atoms/config.js"
+import { themeAtom, configAtom } from "../atoms/config.js"
 import { getThemeById } from "../../constants/themes/index.js"
 import type { Theme } from "../../types/theme.js"
 
@@ -13,5 +13,6 @@ import type { Theme } from "../../types/theme.js"
  */
 export function useTheme(): Theme {
 	const themeId = useAtomValue(themeAtom)
-	return getThemeById(themeId)
+	const config = useAtomValue(configAtom)
+	return getThemeById(themeId, config)
 }

@@ -2,8 +2,10 @@
  * /theme command - Switch between different themes
  */
 
-import type { Command, ArgumentValue } from "./core/types.js"
-import { getAvailableThemes, getThemeById } from "../constants/themes/index.js"
+import type { Command, ArgumentProviderContext } from "./core/types.js"
+import type { CLIConfig } from "../config/types.js"
+import { getThemeById, getAvailableThemes } from "../constants/themes/index.js"
+import { isCustomTheme, getBuiltinThemeIds } from "../constants/themes/custom.js"
 
 // Define theme type mapping based on specifications
 const THEME_TYPES: Record<string, string> = {
@@ -28,34 +30,77 @@ const THEME_TYPES: Record<string, string> = {
 	xcode: "Light",
 }
 
-// Get theme information for display and sort by type then ID
-const THEMES = getAvailableThemes()
-	.map((themeId) => {
-		const theme = getThemeById(themeId)
-		const themeType = THEME_TYPES[themeId] || "Dark"
-		return {
-			id: themeId,
-			name: theme.name,
-			description: themeType,
-			type: themeType,
-		}
-	})
-	.sort((a, b) => {
-		// Sort by type (Dark first, then Light), then by ID alphabetically
-		if (a.type !== b.type) {
-			return b.type.localeCompare(a.type)
-		}
-		return a.id.localeCompare(b.id)
-	})
+/**
+ * Autocomplete provider for theme names
+ */
+async function themeAutocompleteProvider(_context: ArgumentProviderContext) {
+	try {
+		const { loadConfig } = await import("../config/persistence.js")
+		const { config } = await loadConfig()
+		const availableThemeIds = getAvailableThemes(config)
 
-// Convert themes to ArgumentValue format
-const THEME_VALUES: ArgumentValue[] = THEMES.map((theme) => ({
-	value: theme.id,
-	description: theme.description,
-}))
+		return availableThemeIds
+			.map((themeId) => {
+				const theme = getThemeById(themeId, config)
+				const description = isCustomTheme(themeId, config) ? "Custom" : THEME_TYPES[themeId] || "Unknown"
 
-// Extract theme IDs for validation
-const AVAILABLE_THEME_IDS = getAvailableThemes()
+				return {
+					value: themeId,
+					title: theme.name,
+					description: description,
+					matchScore: 1.0,
+					highlightedValue: themeId,
+				}
+			})
+			.filter((item): item is NonNullable<typeof item> => item !== null)
+	} catch (_error) {
+		// Fallback to built-in themes if we can't load config
+		return getBuiltinThemeIds()
+			.map((themeId) => {
+				const theme = getThemeById(themeId)
+				const description = THEME_TYPES[themeId] || "Unknown"
+
+				return {
+					value: themeId,
+					title: theme.name,
+					description: description,
+					matchScore: 1.0,
+					highlightedValue: themeId,
+				}
+			})
+			.filter((item): item is NonNullable<typeof item> => item !== null)
+	}
+}
+
+/**
+ * Get theme information for display and sort
+ */
+function getThemeDisplayInfo(config: CLIConfig) {
+	const availableThemeIds = getAvailableThemes(config)
+
+	return availableThemeIds
+		.map((themeId) => {
+			const theme = getThemeById(themeId, config)
+			const themeType = isCustomTheme(themeId, config) ? "Custom" : THEME_TYPES[themeId] || "Dark"
+			return {
+				id: themeId,
+				name: theme.name,
+				description: themeType,
+				type: themeType,
+			}
+		})
+		.sort((a, b) => {
+			// Sort by type (Dark first, then Light, then Custom), then by ID alphabetically
+			const typeOrder = { Dark: 0, Light: 1, Custom: 2 }
+			const typeAOrder = typeOrder[a.type as keyof typeof typeOrder] ?? 3
+			const typeBOrder = typeOrder[b.type as keyof typeof typeOrder] ?? 3
+
+			if (typeAOrder !== typeBOrder) {
+				return typeAOrder - typeBOrder
+			}
+			return a.id.localeCompare(b.id)
+		})
+}
 
 export const themeCommand: Command = {
 	name: "theme",
@@ -70,24 +115,34 @@ export const themeCommand: Command = {
 			name: "theme-name",
 			description: "The theme to switch to (optional for interactive selection)",
 			required: false,
-			values: THEME_VALUES,
 			placeholder: "Select a theme",
-			validate: (value) => {
-				const isValid = AVAILABLE_THEME_IDS.includes(value.toLowerCase())
+			provider: themeAutocompleteProvider,
+			validate: (_value, _context) => {
+				// For validation, we need to check against actual available themes
+				// This is a simplified check - in practice we should load the actual config
+				const isValid = true // Default to true for now, actual validation happens in handler
 				return {
 					valid: isValid,
-					...(isValid ? {} : { error: `Invalid theme. Available: ${AVAILABLE_THEME_IDS.join(", ")}` }),
 				}
 			},
 		},
 	],
 	handler: async (context) => {
 		const { args, addMessage, setTheme } = context
+		// Note: For now we need to load the actual config from the persistence layer
+		// In a real implementation, config should be passed in the context
+		const { loadConfig } = await import("../config/persistence.js")
+		const { config } = await loadConfig()
+		const availableThemeIds = getAvailableThemes(config)
 
 		if (args.length === 0 || !args[0]) {
+			// Get theme display info with custom themes
+			const allThemes = getThemeDisplayInfo(config)
+
 			// Group themes by type
-			const lightThemes = THEMES.filter((theme) => theme.type === "Light")
-			const darkThemes = THEMES.filter((theme) => theme.type === "Dark")
+			const lightThemes = allThemes.filter((theme) => theme.type === "Light")
+			const darkThemes = allThemes.filter((theme) => theme.type === "Dark")
+			const customThemes = allThemes.filter((theme) => theme.type === "Custom")
 
 			// Show interactive theme selection menu
 			const helpText: string[] = ["**Available Themes:**", ""]
@@ -110,6 +165,15 @@ export const themeCommand: Command = {
 				helpText.push("")
 			}
 
+			// Custom themes section
+			if (customThemes.length > 0) {
+				helpText.push("**Custom:**")
+				customThemes.forEach((theme) => {
+					helpText.push(`  ${theme.name} (${theme.id})`)
+				})
+				helpText.push("")
+			}
+
 			helpText.push("Usage: /theme <theme-name>")
 
 			addMessage({
@@ -123,18 +187,18 @@ export const themeCommand: Command = {
 
 		const requestedTheme = args[0].toLowerCase()
 
-		if (!AVAILABLE_THEME_IDS.includes(requestedTheme)) {
+		if (!availableThemeIds.includes(requestedTheme)) {
 			addMessage({
 				id: Date.now().toString(),
 				type: "error",
-				content: `Invalid theme "${requestedTheme}". Available themes: ${AVAILABLE_THEME_IDS.join(", ")}`,
+				content: `Invalid theme "${requestedTheme}". Available themes: ${availableThemeIds.join(", ")}`,
 				ts: Date.now(),
 			})
 			return
 		}
 
 		// Find the theme to get its display name
-		const theme = getThemeById(requestedTheme)
+		const theme = getThemeById(requestedTheme, config)
 		const themeName = theme.name || requestedTheme
 
 		try {
