@@ -66,6 +66,7 @@ describe("Model Validation Functions", () => {
 		chutes: {},
 		gemini: {},
 		// kilocode_change end
+		"sap-ai-core": {},
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {
