@@ -49,7 +49,7 @@ export function createWelcomeMessage(options?: WelcomeMessageOptions): CliMessag
 		id,
 		type: "welcome",
 		content: "", // Content is rendered by WelcomeMessageContent component
-		ts: timestamp,
+		ts: 0, // Welcome message should show at the top
 		metadata: {
 			welcomeOptions: options,
 		},

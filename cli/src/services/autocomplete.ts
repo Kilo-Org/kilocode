@@ -446,6 +446,7 @@ function createProviderContext(
 			profileLoading: commandContext.profileLoading || false,
 			updateProviderModel: commandContext.updateProviderModel,
 			refreshRouterModels: commandContext.refreshRouterModels,
+			taskHistoryData: commandContext.taskHistoryData || null,
 		}
 	}
 
