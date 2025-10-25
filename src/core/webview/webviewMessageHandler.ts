@@ -2986,6 +2986,7 @@ export const webviewMessageHandler = async (
 					codebaseIndexEmbedderProvider: settings.codebaseIndexEmbedderProvider,
 					codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
 					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
+					codebaseIndexEmbedderTimeoutMS: settings.codebaseIndexEmbedderTimeoutMS,
 					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension
 					codebaseIndexOpenAiCompatibleBaseUrl: settings.codebaseIndexOpenAiCompatibleBaseUrl,
 					codebaseIndexSearchMaxResults: settings.codebaseIndexSearchMaxResults,
