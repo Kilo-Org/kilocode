@@ -590,7 +590,11 @@
 					"default": false,
 					"description": "%settings.newTaskRequireTodos.description%"
 				},
-				"kilo-code.codeIndex.embeddingBatchSize": {
+				"kilo-code.enableSettingsSync": {
+					"type": "boolean",
+					"default": true,
+					"description": "%settings.enableSettingsSync.description%"
+         "kilo-code.codeIndex.embeddingBatchSize": {
 					"type": "number",
 					"default": 60,
 					"minimum": 1,
