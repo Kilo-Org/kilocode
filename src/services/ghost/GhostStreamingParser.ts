@@ -262,7 +262,11 @@ export class GhostStreamingParser {
 		if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
 			// Mark as FIM option
 			const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
-			suggestions.setFillInAtCursor(middle)
+			suggestions.setFillInAtCursor({
+				text: middle,
+				prefix,
+				suffix,
+			})
 		}
 
 		return {

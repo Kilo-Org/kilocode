@@ -258,17 +258,23 @@ class GhostSuggestionFile {
 	}
 }
 
+export interface FillInAtCursorSuggestion {
+	text: string
+	prefix: string
+	suffix: string
+}
+
 export class GhostSuggestionsState {
 	private files = new Map<string, GhostSuggestionFile>()
-	private fillinAtCursorSuggestion: string | undefined = undefined
+	private fillinAtCursorSuggestion: FillInAtCursorSuggestion | undefined = undefined
 
 	constructor() {}
 
-	public setFillInAtCursor(suggestion: string) {
+	public setFillInAtCursor(suggestion: FillInAtCursorSuggestion) {
 		this.fillinAtCursorSuggestion = suggestion
 	}
 
-	public getFillInAtCursor(): string | undefined {
+	public getFillInAtCursor(): FillInAtCursorSuggestion | undefined {
 		return this.fillinAtCursorSuggestion
 	}
 

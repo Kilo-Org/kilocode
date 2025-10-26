@@ -1,5 +1,5 @@
 import { openRouterDefaultModelId, type ProviderSettings } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
 import { fetchWithTimeout } from "./fetchWithTimeout"
@@ -24,7 +24,7 @@ async function fetchKilocodeDefaultModel(
 ): Promise<string> {
 	try {
 		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
-		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api${path}`
+		const url = getKiloUrlFromToken(`https://api.kilocode.ai/api${path}`, kilocodeToken)
 
 		const headers: Record<string, string> = {
 			...DEFAULT_HEADERS,
