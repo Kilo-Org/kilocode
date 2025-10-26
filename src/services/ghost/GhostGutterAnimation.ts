@@ -4,7 +4,7 @@ import type { GhostServiceSettings } from "@roo-code/types"
 export class GhostGutterAnimation {
 	private state: "hide" | "active" = "hide"
 	private decorationActive: vscode.TextEditorDecorationType
-	private isEnabled: boolean = true
+	private isEnabled: boolean = false
 
 	public constructor(context: vscode.ExtensionContext) {
 		this.decorationActive = vscode.window.createTextEditorDecorationType({
@@ -15,7 +15,7 @@ export class GhostGutterAnimation {
 	}
 
 	public updateSettings(settings: GhostServiceSettings | undefined) {
-		this.isEnabled = settings?.showGutterAnimation !== false
+		this.isEnabled = settings?.showGutterAnimation === true
 		if (!this.isEnabled) {
 			this.clearDecorations()
 		}

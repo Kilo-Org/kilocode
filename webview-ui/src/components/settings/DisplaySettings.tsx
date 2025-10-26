@@ -136,7 +136,7 @@ export const DisplaySettings = ({
 				<div className="mt-6 pt-6 border-t border-vscode-panel-border">
 					<div className="flex flex-col gap-1">
 						<VSCodeCheckbox
-							checked={ghostServiceSettings?.showGutterAnimation !== false}
+							checked={ghostServiceSettings?.showGutterAnimation === true}
 							onChange={(e) => {
 								onShowGutterAnimationChange((e as any).target?.checked || false)
 							}}>
