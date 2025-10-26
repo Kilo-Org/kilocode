@@ -313,9 +313,6 @@ export class GhostProvider {
 			await this.load()
 		}
 
-		console.log("system", systemPrompt)
-		console.log("userprompt", userPrompt)
-
 		// Initialize the streaming parser
 		this.streamingParser.initialize(context)
 
