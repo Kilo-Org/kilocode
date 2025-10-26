@@ -2158,9 +2158,12 @@ ${prompt}
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
-			ghostServiceSettings: ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
+			ghostServiceSettings: {
+				enableAutoTrigger: ghostServiceSettings?.enableAutoTrigger ?? true,
+				enableQuickInlineTaskKeybinding: ghostServiceSettings?.enableQuickInlineTaskKeybinding ?? true,
+				enableSmartInlineTaskKeybinding: ghostServiceSettings?.enableSmartInlineTaskKeybinding ?? true,
+				provider: ghostServiceSettings?.provider,
+				model: ghostServiceSettings?.model,
 			},
 			// kilocode_change end
 			organizationSettingsVersion,
@@ -2390,9 +2393,14 @@ ${prompt}
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
+			ghostServiceSettings: {
+				enableAutoTrigger: stateValues.ghostServiceSettings?.enableAutoTrigger ?? true,
+				enableQuickInlineTaskKeybinding:
+					stateValues.ghostServiceSettings?.enableQuickInlineTaskKeybinding ?? true,
+				enableSmartInlineTaskKeybinding:
+					stateValues.ghostServiceSettings?.enableSmartInlineTaskKeybinding ?? true,
+				provider: stateValues.ghostServiceSettings?.provider,
+				model: stateValues.ghostServiceSettings?.model,
 			},
 			// kilocode_change end
 			// kilocode_change start - Auto-purge settings
