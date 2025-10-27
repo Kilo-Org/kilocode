@@ -166,7 +166,7 @@ export function findBestMatch(content: string, searchPattern: string): number {
 			}
 		}
 
-		break
+		// Continue to next position instead of breaking
 	}
 
 	return -1 // No match found
@@ -267,7 +267,8 @@ function extractCompletedChanges(searchText: string): ParsedChange[] {
 
 	while ((match = changeRegex.exec(searchText)) !== null) {
 		// Preserve cursor marker in search content (LLM includes it when it sees it in document)
-		const searchContent = match[1]
+		// But trim trailing whitespace to be more lenient with matching
+		const searchContent = match[1].trimEnd()
 		// Extract cursor position from replace content
 		const replaceContent = match[2]
 		const cursorPosition = extractCursorPosition(replaceContent)
