@@ -1,19 +1,23 @@
 import axios from "axios"
 
-import { LITELLM_COMPUTER_USE_MODELS } from "@roo-code/types"
-
-import type { ModelRecord } from "../../../shared/api"
-
 import { DEFAULT_HEADERS } from "../constants"
+
+export function getAxiosSettings(): { adapter?: any } {
+	return { adapter: "fetch" as any }
+}
 /**
- * Fetches available models from a LiteLLM server
+ * Fetches available models from an OpenAI-compatible server (OCA/LiteLLM)
  *
- * @param apiKey The API key for the LiteLLM server
- * @param baseUrl The base URL of the LiteLLM server
+ * @param apiKey Optional API key for the server
+ * @param baseUrl The base URL of the server
  * @returns A promise that resolves to a record of model IDs to model info
  * @throws Will throw an error if the request fails or the response is not as expected.
  */
-export async function getOCAModels(baseUrl: string, apiKey?: string, openAiHeaders?: Record<string, string>) {
+export async function getOCAModels(
+	baseUrl: string,
+	apiKey?: string,
+	openAiHeaders?: Record<string, string>,
+): Promise<string[]> {
 	try {
 		if (!baseUrl) return []
 
@@ -38,7 +42,7 @@ export async function getOCAModels(baseUrl: string, apiKey?: string, openAiHeade
 		// Helper to try an endpoint and parse ids
 		const tryFetchIds = async (endpoint: string): Promise<string[] | null> => {
 			try {
-				const resp = await axios.get(endpoint, { headers, timeout: 5000 })
+				const resp = await axios.get(endpoint, { headers, timeout: 5000, ...getAxiosSettings() })
 				const arr = resp?.data?.data
 				if (Array.isArray(arr)) {
 					const ids = arr.map((m: any) => m?.id).filter((id: any) => typeof id === "string")
