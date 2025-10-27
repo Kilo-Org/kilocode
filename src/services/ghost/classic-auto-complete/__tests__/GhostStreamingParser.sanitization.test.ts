@@ -1,5 +1,5 @@
 import { GhostStreamingParser, sanitizeXMLConservative } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { GhostSuggestionContext } from "../../types"
 import * as vscode from "vscode"
 
 // Mock vscode workspace

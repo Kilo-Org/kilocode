@@ -1,9 +1,9 @@
 import { LLMClient } from "./llm-client.js"
-import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
+import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
 import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
-import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
+import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
+import { GhostStreamingParser } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 

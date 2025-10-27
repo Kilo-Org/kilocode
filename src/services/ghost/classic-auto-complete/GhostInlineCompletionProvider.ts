@@ -1,6 +1,6 @@
 import * as vscode from "vscode"
 import { FillInAtCursorSuggestion, GhostSuggestionsState } from "./GhostSuggestions"
-import { extractPrefixSuffix } from "./types"
+import { extractPrefixSuffix } from "../types"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 

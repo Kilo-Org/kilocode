@@ -1,5 +1,5 @@
 import * as vscode from "vscode"
-import { GhostSuggestionContext } from "./types"
+import { GhostSuggestionContext } from "../types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { CURSOR_MARKER } from "./ghostConstants"
 
