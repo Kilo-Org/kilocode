@@ -6,6 +6,24 @@ import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 import type { RouterModels } from "@roo/api"
 
 import { ModelPicker } from "../ModelPicker"
+import OcaAcknowledgeModal from "../../kilocode/common/OcaAcknowledgeModal"
+
+// OCA webview messaging constants and types
+const MSG = {
+	SHOW_AUTH_URL: "oca/show-auth-url",
+	LOGIN_SUCCESS: "oca/login-success",
+	LOGIN_ERROR: "oca/login-error",
+	LOGOUT_SUCCESS: "oca/logout-success",
+	STATUS: "oca/status",
+} as const
+type OcaWebviewMessage =
+	| { type: typeof MSG.SHOW_AUTH_URL; url: string }
+	| { type: typeof MSG.LOGIN_SUCCESS }
+	| { type: typeof MSG.LOGIN_ERROR; error?: string }
+	| { type: typeof MSG.LOGOUT_SUCCESS }
+	| { type: typeof MSG.STATUS; authenticated?: boolean }
+
+const OCA_STATE_KEY = "ocaActivated" as const
 
 type OCAProps = {
 	apiConfiguration: ProviderSettings
@@ -15,6 +33,7 @@ type OCAProps = {
 		isUserAction?: boolean,
 	) => void
 	routerModels?: RouterModels
+	routerModelsLoading?: boolean
 	refetchRouterModels?: () => void
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
@@ -24,6 +43,7 @@ export function OCA({
 	apiConfiguration,
 	setApiConfigurationField,
 	routerModels,
+	routerModelsLoading,
 	refetchRouterModels,
 	organizationAllowList,
 	modelValidationError,
@@ -31,6 +51,11 @@ export function OCA({
 	const [authUrl, setAuthUrl] = React.useState<string | null>(null)
 	const [status, setStatus] = React.useState<"idle" | "waiting" | "done" | "error">("idle")
 	const [error, setError] = React.useState<string | null>(null)
+	const [ackOpen, setAckOpen] = React.useState(false)
+	const [pendingModelId, setPendingModelId] = React.useState<string | null>(null)
+	const [activated, setActivated] = React.useState<boolean>(() =>
+		Boolean(((vscode.getState() as any) || {})[OCA_STATE_KEY]),
+	)
 
 	const ocaModels = React.useMemo(() => routerModels?.oca ?? {}, [routerModels?.oca])
 	const defaultModelId = React.useMemo(() => {
@@ -47,56 +72,122 @@ export function OCA({
 		}
 	}, [refetchRouterModels])
 
+	// Keep stable references to avoid re-binding the event listener unnecessarily
+	const activatedRef = React.useRef(activated)
+	React.useEffect(() => {
+		activatedRef.current = activated
+	}, [activated])
+
+	const requestOcaModelsRef = React.useRef(requestOcaModels)
+	React.useEffect(() => {
+		requestOcaModelsRef.current = requestOcaModels
+	}, [requestOcaModels])
+
 	React.useEffect(() => {
 		const h = (ev: MessageEvent) => {
-			const m = ev.data
-			if (m?.type === "oca/show-auth-url") {
-				setAuthUrl(m.url)
-				setStatus("waiting")
-			}
-			if (m?.type === "oca/login-success") {
-				setStatus("done")
-				setError(null)
-				// After successful login, flush and refresh models so the dropdown appears
-				// vscode.postMessage({ type: "flushRouterModels", text: "oca" })
-				// setTimeout(() => {
-				requestOcaModels()
-				// }, 300)
-			}
-			if (m?.type === "oca/login-error") {
-				setStatus("error")
-				setError(m.error ?? "Login failed")
-			}
-			if (m?.type === "oca/logout-success") {
-				setStatus("idle")
-				setAuthUrl(null)
-				setError(null)
-			}
-			if (m?.type === "oca/status") {
-				if (m.authenticated) {
-					setStatus("done")
+			const m = ev.data as OcaWebviewMessage
+			switch (m?.type) {
+				case MSG.SHOW_AUTH_URL:
+					setAuthUrl((m as any).url || null)
+					setStatus("waiting")
+					break
+				case MSG.LOGIN_SUCCESS:
 					setError(null)
-					// Do not auto-fetch models; user can refresh explicitly.
-				} else {
+					setActivated(true)
+					setStatus("done")
+					requestOcaModelsRef.current?.()
+					break
+				case MSG.LOGIN_ERROR:
+					setStatus("error")
+					setError((m as any).error ?? "Login failed")
+					break
+				case MSG.LOGOUT_SUCCESS:
 					setStatus("idle")
-				}
+					setAuthUrl(null)
+					setError(null)
+					setActivated(false)
+					break
+				case MSG.STATUS:
+					if (activatedRef.current && (m as any).authenticated) {
+						setStatus("done")
+					} else if (!activatedRef.current) {
+						setStatus("idle")
+					}
+					break
 			}
 		}
 		window.addEventListener("message", h)
 		return () => window.removeEventListener("message", h)
-	}, [requestOcaModels])
+	}, [])
 
 	// On mount, passively check OCA auth status so returning users see correct state.
-	// This does not initiate authentication or fetch models.
+	// This does not initiate interactive auth or fetch models.
 	React.useEffect(() => {
 		vscode.postMessage({ type: "oca/status" })
+	}, [])
+
+	// Initialize UI based on persisted activation; do not auto-advance unless previously activated
+	React.useEffect(() => {
+		setAuthUrl(null)
+		setError(null)
+		if (activated) {
+			setStatus("done")
+			// User previously clicked Sign in in this settings view; it's okay to fetch models now
+			requestOcaModels()
+		} else {
+			setStatus("idle")
+		}
+	}, [activated, requestOcaModels])
+
+	// Persist activation flag across settings panel mounts
+	React.useEffect(() => {
+		const prev = (vscode.getState() as any) || {}
+		vscode.setState({ ...prev, [OCA_STATE_KEY]: activated })
+	}, [activated])
+
+	const bannerHtml = pendingModelId ? (ocaModels as any)?.[pendingModelId]?.banner : undefined
+
+	const wrappedSetApiConfigurationField = React.useCallback(
+		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K], isUserAction?: boolean) => {
+			// Only gate user-triggered changes to the OCA model
+			if (field === "apiModelId" && isUserAction !== false && typeof value === "string") {
+				const banner = (ocaModels as any)?.[value as string]?.banner
+				if (banner) {
+					setPendingModelId(value as string)
+					setAckOpen(true)
+					return
+				}
+			}
+			setApiConfigurationField(field, value, isUserAction)
+		},
+		[setApiConfigurationField, ocaModels],
+	)
+
+	const handleAcknowledge = React.useCallback(() => {
+		if (pendingModelId) {
+			// Confirm model selection after acknowledgement
+			setApiConfigurationField("apiModelId", pendingModelId as any, true)
+		}
+		setAckOpen(false)
+		setPendingModelId(null)
+	}, [pendingModelId, setApiConfigurationField])
+
+	const handleCancelAck = React.useCallback(() => {
+		setAckOpen(false)
+		setPendingModelId(null)
 	}, [])
 
 	return (
 		<div className="provider-card">
 			<h3>Oracle Code Assist (IDCS)</h3>
+			<OcaAcknowledgeModal
+				open={ackOpen}
+				bannerHtml={bannerHtml ?? undefined}
+				onAcknowledge={handleAcknowledge}
+				onCancel={handleCancelAck}
+			/>
 
-			{status === "idle" && (
+			{status === "idle" && !activated && (
 				<VSCodeButton appearance="primary" onClick={() => vscode.postMessage({ type: "oca/login" })}>
 					Sign in
 				</VSCodeButton>
@@ -111,17 +202,23 @@ export function OCA({
 					<p>After completing sign-in, return here. This page will update automatically.</p>
 				</>
 			)}
-			{status === "done" && (
+			{status === "done" && activated && (
 				<div className="flex items-center gap-2">
 					<VSCodeButton onClick={requestOcaModels}>Refresh models</VSCodeButton>
 				</div>
 			)}
+			{status === "done" && activated && routerModelsLoading && (
+				<div className="text-sm text-vscode-descriptionForeground flex items-center gap-2 mt-2">
+					<span className="codicon codicon-loading codicon-modifier-spin" />
+					<span>Fetching models…</span>
+				</div>
+			)}
 
-			{status === "done" && Object.keys(ocaModels).length > 0 && (
+			{status === "done" && activated && Object.keys(ocaModels).length > 0 && (
 				<div className="mt-3">
 					<ModelPicker
 						apiConfiguration={apiConfiguration}
-						setApiConfigurationField={setApiConfigurationField}
+						setApiConfigurationField={wrappedSetApiConfigurationField}
 						defaultModelId={defaultModelId}
 						models={ocaModels}
 						modelIdKey="apiModelId"
@@ -135,9 +232,11 @@ export function OCA({
 
 			{status === "error" && <p>❌ {error}</p>}
 
-			<div style={{ marginTop: 8 }}>
-				<VSCodeButton onClick={() => vscode.postMessage({ type: "oca/logout" })}>Sign out</VSCodeButton>
-			</div>
+			{status === "done" && activated && (
+				<div style={{ marginTop: 8 }}>
+					<VSCodeButton onClick={() => vscode.postMessage({ type: "oca/logout" })}>Sign out</VSCodeButton>
+				</div>
+			)}
 		</div>
 	)
 }

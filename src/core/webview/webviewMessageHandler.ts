@@ -1077,6 +1077,22 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+
+		case "oca/status": {
+			try {
+				const valid = await OcaTokenManager.getValid()
+				await provider.postMessageToWebview({
+					type: "oca/status",
+					authenticated: !!valid?.access_token,
+				})
+			} catch {
+				await provider.postMessageToWebview({
+					type: "oca/status",
+					authenticated: false,
+				})
+			}
+			break
+		}
 		case "checkpointDiff":
 			const result = checkoutDiffPayloadSchema.safeParse(message.payload)
 

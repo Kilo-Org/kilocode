@@ -46,6 +46,6 @@ type RouterModelsQueryKey = {
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 
-export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
-	useQuery({ queryKey: ["routerModels", queryKey], queryFn: getRouterModels })
+export const useRouterModels = (queryKey: RouterModelsQueryKey, enabled: boolean = true) =>
+	useQuery({ queryKey: ["routerModels", queryKey], queryFn: getRouterModels, enabled })
 // kilocode_change end

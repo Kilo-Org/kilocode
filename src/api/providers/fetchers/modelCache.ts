@@ -121,17 +121,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getHuggingFaceModels()
 				break
 			case "oca": {
-				const ids = await getOCAModels(options.baseUrl ?? DEFAULT_OCA_BASE_URL, options.apiKey)
-				const record: ModelRecord = {}
-				for (const id of ids) {
-					record[id] = {
-						maxTokens: 8192,
-						contextWindow: 200000,
-						supportsPromptCache: false,
-						description: `${id} via OCA`,
-					}
-				}
-				models = record
+				models = await getOCAModels(options.baseUrl ?? DEFAULT_OCA_BASE_URL, options.apiKey)
 				break
 			}
 			default: {

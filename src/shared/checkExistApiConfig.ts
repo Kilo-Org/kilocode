@@ -5,10 +5,11 @@ export function checkExistKey(config: ProviderSettings | undefined) {
 		return false
 	}
 
-	// Special case for human-relay, fake-ai, claude-code, qwen-code, and roo providers which don't need any configuration.
+	// Special case for providers which don't need configuration to exit onboarding.
+	// Add 'oca' so selecting Oracle Code Assist exits Welcome flow immediately (login happens in Settings).
 	if (
 		config.apiProvider &&
-		["human-relay", "fake-ai", "claude-code", "qwen-code", "roo", "gemini-cli"].includes(config.apiProvider) // kilocode_change: add gemini-cli
+		["human-relay", "fake-ai", "claude-code", "qwen-code", "roo", "gemini-cli", "oca"].includes(config.apiProvider)
 	) {
 		return true
 	}
