@@ -1,21 +1,33 @@
 # Kilo Code CLI Docker Image
-# Production-ready image with full browser support
-
 FROM node:20.19.2-bookworm-slim
 
-# Install system dependencies
+# Build arguments for metadata (all optional with defaults)
+ARG BUILD_DATE=""
+ARG VCS_REF=""
+ARG VERSION="latest"
+
+# OCI Image labels
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.version="${VERSION}"
+LABEL org.opencontainers.image.title="Kilo Code CLI"
+LABEL org.opencontainers.image.description="Docker image for Kilo Code CLI with Chromium support"
+LABEL org.opencontainers.image.vendor="Kilo Code"
+LABEL org.opencontainers.image.url="https://kilocode.ai/docs/cli"
+LABEL org.opencontainers.image.documentation="https://kilocode.ai/docs/cli"
+LABEL org.opencontainers.image.source="https://github.com/Kilo-Org/kilocode"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
+# Install system dependencies and clean up in one layer
 RUN apt-get update && apt-get install -y \
-    # Build tools for native modules
     python3 \
     make \
     g++ \
     # Chromium and dependencies for puppeteer
     chromium \
     chromium-sandbox \
-    # Fonts for proper rendering
     fonts-liberation \
     fonts-noto-color-emoji \
-    # Required libraries
     libnss3 \
     libnspr4 \
     libatk1.0-0 \
@@ -29,16 +41,12 @@ RUN apt-get update && apt-get install -y \
     libxrandr2 \
     libgbm1 \
     libasound2 \
-    # Git for repository operations
     git \
-    # CA certificates for HTTPS
     ca-certificates \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Install CLI globally and verify installation
-RUN npm install -g @kilocode/cli@latest && \
-    # Verify the installation worked
-    kilocode --version || echo "CLI installed but version check failed"
+RUN npm install -g @kilocode/cli@latest
 
 # Set environment variables for Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
@@ -46,23 +54,19 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     CHROME_PATH=/usr/bin/chromium \
     CHROME_BIN=/usr/bin/chromium
 
-# Create non-root user for security
+# Set home directory
+ENV HOME=/home/kilocode
+
+# Create non-root user and set up directories in one layer
 RUN groupadd -r kilocode && useradd -r -g kilocode -G audio,video kilocode \
-    && mkdir -p /home/kilocode/.kilocode \
-    && chown -R kilocode:kilocode /home/kilocode
+    && mkdir -p /home/kilocode/.kilocode /workspace \
+    && chown -R kilocode:kilocode /home/kilocode /workspace
 
 # Set working directory
 WORKDIR /workspace
 
-# Change ownership of workspace
-RUN chown kilocode:kilocode /workspace
-
 # Switch to non-root user
 USER kilocode
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/kilocode --help || exit 1
 
 # Use ENTRYPOINT so arguments are properly passed to the CLI
 ENTRYPOINT ["/usr/local/bin/kilocode"]

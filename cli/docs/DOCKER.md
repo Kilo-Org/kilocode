@@ -4,14 +4,32 @@ A containerized version of the Kilo Code CLI with full browser automation suppor
 
 ## Quick Start Examples
 
-### Build the image
+### Build the Image
 
-Build from the CLI directory:
+**Basic build** (no metadata required):
 
 ```bash
 cd cli
 docker build -t kilocode/cli .
 ```
+
+**With build metadata** (optional, for production/CI):
+
+```bash
+docker build \
+  --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+  --build-arg VCS_REF=$(git rev-parse --short HEAD) \
+  --build-arg VERSION=$(jq -r '.version' package.json) \
+  -t kilocode/cli:$(jq -r '.version' package.json) \
+  -t kilocode/cli:latest \
+  .
+```
+
+The build arguments are all optional and have defaults:
+
+- `BUILD_DATE` - defaults to empty string
+- `VCS_REF` - defaults to empty string
+- `VERSION` - defaults to "latest"
 
 ### 1. Basic Interactive Mode
 
