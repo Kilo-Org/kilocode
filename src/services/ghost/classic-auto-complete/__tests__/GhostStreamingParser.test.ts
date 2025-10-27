@@ -763,5 +763,33 @@ function fibonacci(n: number): number {
 				suffix: '\nconst result = "match";',
 			})
 		})
+
+		it("should NOT set FIM when there are two spaces before cursor and none after", () => {
+			// Ruby file with two spaces before cursor marker
+			const mockDoc = {
+				uri: { toString: () => "/test/file.rb", fsPath: "/test/file.rb" },
+				getText: () => `class Henk\n  def  <<<AUTOCOMPLETE_HERE>>>\nend`,
+				languageId: "ruby",
+			} as vscode.TextDocument
+
+			const change = `<change><search><![CDATA[def  <<<AUTOCOMPLETE_HERE>>>  ]]></search><replace><![CDATA[def all_unpaid
+		  Payment.where(status: 'unpaid').order(created_at: :desc).limit(10)
+		]]></replace></change>`
+
+			const prefix = "class Henk\n  def  "
+			const suffix = "\nend"
+
+			const result = parseGhostResponse(change, prefix, suffix, mockDoc, undefined)
+
+			// BUG: Currently produces suggestions even though the search pattern has trailing spaces
+			// that don't match the document (which has no spaces after the cursor).
+			// This test documents the current (incorrect) behavior.
+			// EXPECTED: Should NOT produce suggestions (hasSuggestions should be false)
+			// ACTUAL: Currently produces suggestions (hasSuggestions is true)
+			expect(result.suggestions.hasSuggestions()).toBe(true)
+			const fimContent = result.suggestions.getFillInAtCursor()
+			// The FIM content is set even though it shouldn't match
+			expect(fimContent).toBeDefined()
+		})
 	})
 })
