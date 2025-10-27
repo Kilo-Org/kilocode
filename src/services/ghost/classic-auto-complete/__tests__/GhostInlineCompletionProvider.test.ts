@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { GhostInlineCompletionProvider, findMatchingSuggestion } from "../GhostInlineCompletionProvider"
 import { GhostSuggestionsState, FillInAtCursorSuggestion } from "../GhostSuggestions"
-import { MockTextDocument } from "../../mocking/MockTextDocument"
+import { MockTextDocument } from "../../../mocking/MockTextDocument"
 
 describe("findMatchingSuggestion", () => {
 	describe("exact matching", () => {
