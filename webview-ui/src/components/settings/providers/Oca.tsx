@@ -1,6 +1,7 @@
 import * as React from "react"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@src/utils/vscode"
+import { ModelService } from "@src/services/ModelService"
 
 import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 import type { RouterModels } from "@roo/api"
@@ -58,10 +59,11 @@ export function OCA({
 	)
 
 	const ocaModels = React.useMemo(() => routerModels?.oca ?? {}, [routerModels?.oca])
+	const firstOcaModelId = React.useMemo(() => Object.keys(ocaModels)[0] || "", [ocaModels])
 	const defaultModelId = React.useMemo(() => {
-		// Prefer the currently selected model if present, otherwise first available model
-		return apiConfiguration.apiModelId || Object.keys(ocaModels)[0] || ""
-	}, [apiConfiguration.apiModelId, ocaModels])
+		const saved = ModelService.getOcaSelectedModelId()
+		return saved || apiConfiguration.apiModelId || firstOcaModelId
+	}, [apiConfiguration.apiModelId, firstOcaModelId])
 
 	const requestOcaModels = React.useCallback(() => {
 		// Ask extension to fetch router models; backend will include OCA when apiProvider === "oca"
@@ -106,6 +108,12 @@ export function OCA({
 					setAuthUrl(null)
 					setError(null)
 					setActivated(false)
+					// Clear persisted selection on logout
+					try {
+						ModelService.clearOcaSelection()
+					} catch {
+						// best-effort
+					}
 					break
 				case MSG.STATUS:
 					if (activatedRef.current && (m as any).authenticated) {
@@ -139,6 +147,37 @@ export function OCA({
 		}
 	}, [activated, requestOcaModels])
 
+	// When activated and models are available, persist list and ensure a stable selection:
+	// - prefer previously saved selection
+	// - otherwise choose the first model from the list
+	React.useEffect(() => {
+		if (!activated || status !== "done") return
+
+		// Persist latest OCA models
+		try {
+			ModelService.setOcaModels(ocaModels as any)
+		} catch {
+			// best-effort
+		}
+
+		const saved = ModelService.getOcaSelectedModelId()
+		const first = Object.keys(ocaModels || {})[0]
+		const target = saved || first
+		if (!target) return
+
+		// If apiConfiguration doesn't match, set without marking as user action
+		if (apiConfiguration.apiModelId !== target && (ocaModels as any)?.[target]) {
+			setApiConfigurationField("apiModelId", target as any, false)
+		}
+
+		// Persist current selection to service
+		try {
+			ModelService.setOcaSelectedModelId(target)
+		} catch {
+			// best-effort
+		}
+	}, [activated, status, ocaModels, apiConfiguration.apiModelId, setApiConfigurationField])
+
 	// Persist activation flag across settings panel mounts
 	React.useEffect(() => {
 		const prev = (vscode.getState() as any) || {}
@@ -159,6 +198,15 @@ export function OCA({
 				}
 			}
 			setApiConfigurationField(field, value, isUserAction)
+
+			// Persist OCA selection in service for cross-view stability
+			if (field === "apiModelId" && typeof value === "string") {
+				try {
+					ModelService.setOcaSelectedModelId(value as string)
+				} catch {
+					// best-effort
+				}
+			}
 		},
 		[setApiConfigurationField, ocaModels],
 	)
@@ -167,6 +215,12 @@ export function OCA({
 		if (pendingModelId) {
 			// Confirm model selection after acknowledgement
 			setApiConfigurationField("apiModelId", pendingModelId as any, true)
+			// Persist selection
+			try {
+				ModelService.setOcaSelectedModelId(pendingModelId)
+			} catch {
+				// best-effort
+			}
 		}
 		setAckOpen(false)
 		setPendingModelId(null)

@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, useEffect } from "react"
 import { SelectDropdown, DropdownOptionType } from "@/components/ui"
 import { OPENROUTER_DEFAULT_PROVIDER_NAME, type ProviderSettings } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
+import { ModelService } from "@src/services/ModelService"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
 import { prettyModelName } from "../../../utils/prettyModelName"
@@ -43,6 +44,46 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 
 	const disabled = isLoading || isError
 
+	// OCA-only persistence: cache models and selection across Chat <-> Settings and mode switches.
+	useEffect(() => {
+		if (provider !== "oca") return
+		// Persist latest OCA models so Settings and Chat share the same list
+		try {
+			ModelService.setOcaModels(providerModels as any)
+		} catch {
+			// best-effort
+		}
+
+		// Resolve desired selection:
+		// 1) previously saved selection from ModelService, or
+		// 2) first model from the list
+		const saved = ModelService.getOcaSelectedModelId()
+		const first = Object.keys(providerModels || {})[0]
+		const target = saved || first
+
+		// If we don't have a viable target or can't update config, bail
+		if (!target || !currentApiConfigName) return
+		// If already selected or not present in list, do nothing
+		if (selectedModelId === target || !providerModels[target]) return
+
+		// Update VS Code-side apiConfiguration and persist selection locally
+		vscode.postMessage({
+			type: "upsertApiConfiguration",
+			text: currentApiConfigName,
+			apiConfiguration: {
+				...apiConfiguration,
+				[getModelIdKey({ provider })]: target,
+				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
+			},
+		})
+		try {
+			ModelService.setOcaSelectedModelId(target)
+		} catch {
+			// best-effort
+		}
+		// We intentionally depend on providerModels and selectedModelId to react to fresh lists
+	}, [provider, providerModels, selectedModelId, currentApiConfigName, apiConfiguration])
+
 	const onChange = (value: string) => {
 		if (!currentApiConfigName) return
 		if (apiConfiguration[modelIdKey] === value) return
@@ -52,6 +93,15 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			setPendingModelId(value)
 			setAckOpen(true)
 			return
+		}
+
+		// Persist OCA selection locally
+		if (provider === "oca") {
+			try {
+				ModelService.setOcaSelectedModelId(value)
+			} catch {
+				// best-effort
+			}
 		}
 
 		vscode.postMessage({
