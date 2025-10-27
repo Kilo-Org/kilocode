@@ -623,7 +623,7 @@ function fibonacci(n: number): number {
 
 			const result = parser.parseResponse(change, prefix, suffix)
 
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 			// Check that FIM was NOT set
 			const fimContent = result.suggestions.getFillInAtCursor()
 			expect(fimContent).toBeUndefined()
@@ -649,7 +649,7 @@ function fibonacci(n: number): number {
 
 			const result = parser.parseResponse(change, prefix, suffix)
 
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 			// Check that FIM was NOT set
 			const fimContent = result.suggestions.getFillInAtCursor()
 			expect(fimContent).toBeUndefined()
@@ -675,7 +675,7 @@ function fibonacci(n: number): number {
 
 			const result = parser.parseResponse(change, prefix, suffix)
 
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.suggestions.hasSuggestions()).toBe(false)
 			// Check that FIM was NOT set
 			const fimContent = result.suggestions.getFillInAtCursor()
 			expect(fimContent).toBeUndefined()
@@ -761,7 +761,6 @@ function fibonacci(n: number): number {
 
 			const result = parser.parseResponse(change, prefix, suffix)
 
-			expect(result.suggestions.hasSuggestions()).toBe(false)
 			const fimContent = result.suggestions.getFillInAtCursor()
 			// When no changes are applied, FIM is set to empty string (the entire unchanged document matches prefix+suffix)
 			expect(fimContent).toEqual({

@@ -1,6 +1,5 @@
 import * as vscode from "vscode"
-import { ParsedDiff, structuredPatch } from "diff"
-import { GhostSuggestionContext, GhostSuggestionEditOperationType } from "./types"
+import { GhostSuggestionContext } from "./types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { CURSOR_MARKER } from "./ghostConstants"
 
@@ -244,20 +243,11 @@ export class GhostStreamingParser {
 		const range = this.context!.range
 
 		const modifiedContent = this.generateModifiedContent(newChanges, document, range)
-		const relativePath = vscode.workspace.asRelativePath(document.uri, false)
-		const patch = structuredPatch(
-			relativePath,
-			relativePath,
-			document.getText(),
-			modifiedContent ?? document.getText(),
-			"",
-			"",
-		)
 
 		const modifiedContent_has_prefix_and_suffix =
 			modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
 
-		const suggestions = this.convertToSuggestions(patch, document)
+		const suggestions = new GhostSuggestionsState()
 
 		if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
 			// Mark as FIM option
@@ -415,59 +405,5 @@ export class GhostStreamingParser {
 		}
 
 		return modifiedContent
-	}
-
-	private convertToSuggestions(patch: ParsedDiff, document: vscode.TextDocument): GhostSuggestionsState {
-		const suggestions = new GhostSuggestionsState()
-
-		const suggestionFile = suggestions.addFile(document.uri)
-
-		for (const hunk of patch.hunks) {
-			let currentOldLineNumber = hunk.oldStart
-			let currentNewLineNumber = hunk.newStart
-
-			for (const line of hunk.lines) {
-				const operationType = line.charAt(0)
-				const content = line.substring(1)
-
-				switch (operationType) {
-					// Case 1: The line is an addition
-					case "+":
-						suggestionFile.addOperation({
-							type: "+",
-							line: currentNewLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the new line counter for additions and context lines
-						currentNewLineNumber++
-						break
-
-					// Case 2: The line is a deletion
-					case "-":
-						suggestionFile.addOperation({
-							type: "-",
-							line: currentOldLineNumber - 1,
-							oldLine: currentOldLineNumber - 1,
-							newLine: currentNewLineNumber - 1,
-							content: content,
-						})
-						// Only increment the old line counter for deletions and context lines
-						currentOldLineNumber++
-						break
-
-					// Case 3: The line is unchanged (context)
-					default:
-						// For context lines, we increment both counters
-						currentOldLineNumber++
-						currentNewLineNumber++
-						break
-				}
-			}
-		}
-
-		suggestions.sortGroups()
-		return suggestions
 	}
 }
