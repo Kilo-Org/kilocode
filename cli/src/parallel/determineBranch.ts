@@ -39,55 +39,44 @@ export async function determineParallelBranch({
 		process.exit(1)
 	}
 
+	// Determine the branch to use
 	let worktreeBranch: string
-	let worktreePath: string
 
 	if (existingBranch) {
 		// Check if the existing branch exists
 		const exists = await branchExists(cwd, existingBranch)
+
 		if (!exists) {
 			console.error(`Error: Branch "${existingBranch}" does not exist`)
 			process.exit(1)
 		}
 
 		worktreeBranch = existingBranch
+
 		logs.info(`Using existing branch: ${worktreeBranch}`, "ParallelMode")
-
-		// Create worktree directory path in OS temp directory
-		const tempDir = os.tmpdir()
-		worktreePath = path.join(tempDir, `kilocode-worktree-${worktreeBranch}`)
-
-		try {
-			// Create worktree from existing branch (without -b flag)
-			await execAsync(`git worktree add "${worktreePath}" ${worktreeBranch}`, { cwd })
-			logs.info(`Created worktree at: ${worktreePath}`, "ParallelMode")
-		} catch (error) {
-			logs.error("Failed to create worktree", "ParallelMode", { error })
-			console.error(
-				`Error: Failed to create git worktree: ${error instanceof Error ? error.message : String(error)}`,
-			)
-			process.exit(1)
-		}
 	} else {
 		// Generate branch name from prompt
 		worktreeBranch = generateBranchName(prompt)
+
 		logs.info(`Creating worktree with branch: ${worktreeBranch}`, "ParallelMode")
+	}
 
-		// Create worktree directory path in OS temp directory
-		const tempDir = os.tmpdir()
-		worktreePath = path.join(tempDir, `kilocode-worktree-${worktreeBranch}`)
+	// Create worktree directory path in OS temp directory
+	const tempDir = os.tmpdir()
+	const worktreePath = path.join(tempDir, `kilocode-worktree-${worktreeBranch}`)
 
-		try {
-			// Create new branch and worktree using git command directly
-			await execAsync(`git worktree add -b ${worktreeBranch} "${worktreePath}"`, { cwd })
-			logs.info(`Created worktree at: ${worktreePath}`, "ParallelMode")
-		} catch (error) {
-			logs.error("Failed to create worktree", "ParallelMode", { error })
-			console.error(
-				`Error: Failed to create git worktree: ${error instanceof Error ? error.message : String(error)}`,
-			)
-			process.exit(1)
-		}
+	// Create worktree with appropriate git command
+	try {
+		const gitCommand = existingBranch
+			? `git worktree add "${worktreePath}" ${worktreeBranch}`
+			: `git worktree add -b ${worktreeBranch} "${worktreePath}"`
+
+		await execAsync(gitCommand, { cwd })
+		logs.info(`Created worktree at: ${worktreePath}`, "ParallelMode")
+	} catch (error) {
+		logs.error("Failed to create worktree", "ParallelMode", { error })
+		console.error(`Error: Failed to create git worktree: ${error instanceof Error ? error.message : String(error)}`)
+		process.exit(1)
 	}
 
 	return { worktreeBranch, worktreePath }
