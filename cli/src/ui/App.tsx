@@ -13,7 +13,6 @@ export interface AppOptions {
 	ci?: boolean
 	prompt?: string
 	timeout?: number
-	disableKeyboard?: boolean
 }
 
 export interface AppProps {
