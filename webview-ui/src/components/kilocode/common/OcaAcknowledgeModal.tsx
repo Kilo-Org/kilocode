@@ -40,10 +40,14 @@ export const OcaAcknowledgeModal: React.FC<OcaAcknowledgeModalProps> = ({
 				<h4 className="mb-2 font-semibold" style={{ color: "var(--vscode-descriptionForeground,#b3b3b3)" }}>
 					Disclaimer: Prohibited Data Submission
 				</h4>
+				<style>{`.oca-ack-banner, .oca-ack-banner * { color: #000 !important; } .oca-ack-banner a { text-decoration: underline; }`}</style>
 				<div
-					className="overflow-y-auto flex-1 pr-2 mb-4 text-[13px] leading-[1.5]"
+					className="overflow-y-auto flex-1 pr-2 mb-4 text-[13px] leading-[1.5] oca-ack-banner"
 					style={{
-						color: "var(--vscode-foreground,#dddddd)",
+						color: "#000",
+						background: "#fff",
+						padding: "8px",
+						borderRadius: "4px",
 						maskImage: "linear-gradient(to bottom, black 96%, transparent 100%)",
 						WebkitMaskImage: "linear-gradient(to bottom, black 96%, transparent 100%)",
 						maxHeight: "50vh",

@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react"
 import { SelectDropdown, DropdownOptionType } from "@/components/ui"
 import { OPENROUTER_DEFAULT_PROVIDER_NAME, type ProviderSettings } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
-import { ModelService } from "@src/services/ModelService"
+import { OCAModelService } from "@src/services/OCAModelService"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { cn } from "@src/lib/utils"
 import { prettyModelName } from "../../../utils/prettyModelName"
@@ -49,7 +49,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		if (provider !== "oca") return
 		// Persist latest OCA models so Settings and Chat share the same list
 		try {
-			ModelService.setOcaModels(providerModels as any)
+			OCAModelService.setOcaModels(providerModels as any)
 		} catch {
 			// best-effort
 		}
@@ -57,7 +57,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		// Resolve desired selection:
 		// 1) previously saved selection from ModelService, or
 		// 2) first model from the list
-		const saved = ModelService.getOcaSelectedModelId()
+		const saved = OCAModelService.getOcaSelectedModelId()
 		const first = Object.keys(providerModels || {})[0]
 		const target = saved || first
 
@@ -77,7 +77,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			},
 		})
 		try {
-			ModelService.setOcaSelectedModelId(target)
+			OCAModelService.setOcaSelectedModelId(target)
 		} catch {
 			// best-effort
 		}
@@ -98,7 +98,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		// Persist OCA selection locally
 		if (provider === "oca") {
 			try {
-				ModelService.setOcaSelectedModelId(value)
+				OCAModelService.setOcaSelectedModelId(value)
 			} catch {
 				// best-effort
 			}
@@ -135,6 +135,14 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
 			},
 		})
+		// Persist OCA selection locally so Chat doesn't revert after acknowledgement
+		try {
+			if (provider === "oca") {
+				OCAModelService.setOcaSelectedModelId(pendingModelId)
+			}
+		} catch {
+			// best-effort
+		}
 		setAckOpen(false)
 		setPendingModelId(null)
 	}

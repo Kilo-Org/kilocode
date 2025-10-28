@@ -286,14 +286,18 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
 	})
 
-	const { models, defaultModel } =
+	const selection =
 		apiConfiguration && typeof routerModels.data !== "undefined"
 			? getModelsByProvider({
 					provider,
 					routerModels: routerModels.data,
 					kilocodeDefaultModel,
 				})
-			: FALLBACK_MODELS
+			: provider === "oca"
+				? { models: {}, defaultModel: "" }
+				: FALLBACK_MODELS
+
+	const { models, defaultModel } = selection
 
 	return {
 		provider,

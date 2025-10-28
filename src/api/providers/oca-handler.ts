@@ -47,7 +47,7 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 	private async getClientWithBase(baseURL: string): Promise<OpenAI> {
 		const token = await OcaTokenManager.getValid()
 		if (!token?.access_token) {
-			throw new Error("OCA authentication required. Please sign in from Settings > Providers > OCA.")
+			throw new Error("Please sign in with Oracle SSO at Settings > Providers > Oracle Code Assist.")
 		}
 
 		return new OpenAI({
