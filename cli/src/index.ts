@@ -102,6 +102,9 @@ program
 			await authWizard()
 		}
 
+		let finalWorkspace = options.workspace
+		let worktreeBranch
+
 		if (options.parallel) {
 			getTelemetryService().trackParallelModeStarted(
 				finalPrompt.length,
@@ -109,22 +112,27 @@ program
 				!!options.existingBranch,
 			)
 
-			await startParallelMode({
+			const parallelResult = await startParallelMode({
 				cwd: options.workspace,
 				prompt: finalPrompt,
 				timeout: options.timeout,
 				existingBranch: options.existingBranch,
 			})
 
+			finalWorkspace = parallelResult.worktreePath
+			worktreeBranch = parallelResult.worktreeBranch
+
 			return
 		}
 
 		cli = new CLI({
 			mode: options.mode,
-			workspace: options.workspace,
+			workspace: finalWorkspace,
 			ci: options.auto,
 			prompt: finalPrompt,
 			timeout: options.timeout,
+			parallel: options.parallel,
+			worktreeBranch,
 		})
 		await cli.start()
 		await cli.dispose()

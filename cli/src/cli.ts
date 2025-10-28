@@ -14,6 +14,7 @@ import { loadHistoryAtom } from "./state/atoms/history.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
+import { finishParallelMode } from "./parallel/parallel.js"
 
 export interface CLIOptions {
 	mode?: string
@@ -22,6 +23,7 @@ export interface CLIOptions {
 	prompt?: string
 	timeout?: number
 	parallel?: boolean
+	worktreeBranch?: string | undefined
 }
 
 /**
@@ -186,7 +188,7 @@ export class CLI {
 	 * - Disposes service
 	 * - Cleans up store
 	 */
-	async dispose(): Promise<number> {
+	async dispose(): Promise<void> {
 		// Determine exit code based on CI mode and exit reason
 		let exitCode = 0
 
@@ -211,6 +213,11 @@ export class CLI {
 					exitCode = 1
 					logs.info("Exiting with default failure code", "CLI")
 				}
+			}
+
+			// In parallel mode, we need to do manual git worktree cleanup
+			if (this.options.parallel) {
+				await finishParallelMode()
 			}
 
 			// Shutdown telemetry service before exiting
@@ -239,13 +246,8 @@ export class CLI {
 			logs.error("Error disposing CLI", "CLI", { error })
 		} finally {
 			// Exit process with appropriate code
-			// in parallel mode, skip exiting as we still need to do cleanup afterwards
-			if (!this.options.parallel) {
-				process.exit(exitCode)
-			}
+			process.exit(exitCode)
 		}
-
-		return exitCode
 	}
 
 	/**
