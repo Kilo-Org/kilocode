@@ -192,6 +192,8 @@ export class CLI {
 		// Determine exit code based on CI mode and exit reason
 		let exitCode = 0
 
+		let beforeExit = () => {}
+
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
 
@@ -217,7 +219,7 @@ export class CLI {
 
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
-				await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
 			}
 
 			// Shutdown telemetry service before exiting
@@ -245,6 +247,8 @@ export class CLI {
 		} catch (error) {
 			logs.error("Error disposing CLI", "CLI", { error })
 		} finally {
+			beforeExit()
+
 			// Exit process with appropriate code
 			process.exit(exitCode)
 		}
