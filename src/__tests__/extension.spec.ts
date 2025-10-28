@@ -248,8 +248,8 @@ vi.mock("../i18n", () => ({
 	}),
 }))
 
-vi.mock("../services/ghost/GhostProvider", () => ({
-	GhostProvider: {
+vi.mock("../services/ghost/GhostServiceManager", () => ({
+	GhostServiceManager: {
 		initialize: vi.fn().mockReturnValue({
 			load: vi.fn(),
 		}),

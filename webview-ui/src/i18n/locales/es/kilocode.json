@@ -41,7 +41,8 @@
 			"automaticFetch": "Los modelos más recientes están disponibles automáticamente en Kilo Code. Si no estás seguro de qué modelo elegir, Kilo Code funciona mejor con los modelos recomendados que aparecen en la parte superior en <strong>negrita</strong>.",
 			"providerRouting": {
 				"title": "Enrutamiento de proveedores",
-				"managedByOrganization": "La configuración de enrutamiento de proveedores está gestionada por tu organización.",
+				"managedByOrganization": "Gestionar enrutamiento de proveedores a nivel de organización",
+				"createOrganization": "Crear organización para gestionar enrutamiento de proveedores",
 				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenación de proveedor predeterminada",
@@ -129,7 +130,9 @@
 			"credits": "créditos",
 			"action": "Comprar Ahora",
 			"viewAll": "Ver todas las opciones de precio"
-		}
+		},
+		"detailedUsage": "Uso detallado",
+		"createOrganization": "Crear organización para rastrear uso detallado"
 	},
 	"docs": "Documentos",
 	"rules": {

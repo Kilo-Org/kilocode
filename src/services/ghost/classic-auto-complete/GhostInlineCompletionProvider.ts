@@ -200,7 +200,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		// Parse the response using the standalone function
-		const finalParseResult = parseGhostResponse(response, prefix, suffix, context.document, context.range)
+		const finalParseResult = parseGhostResponse(response, prefix, suffix)
 
 		if (finalParseResult.suggestions.getFillInAtCursor()) {
 			console.info("Final suggestion:", finalParseResult.suggestions.getFillInAtCursor())
