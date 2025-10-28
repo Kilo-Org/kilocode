@@ -12,19 +12,15 @@ export const SayCheckpointSavedMessage: React.FC<MessageComponentProps> = ({ mes
 	const icon = getMessageIcon("say", "checkpoint_saved")
 
 	return (
-		<Box flexDirection="column" marginY={1}>
-			<Box>
-				<Text color={theme.semantic.info} bold>
-					{icon} Checkpoint Saved
-				</Text>
-			</Box>
-
+		<Box marginY={1}>
+			<Text color={theme.semantic.info} bold>
+				{icon} Checkpoint Saved
+			</Text>
 			{message.text && (
-				<Box marginLeft={2} marginTop={1}>
-					<Text color={theme.ui.text.dimmed} dimColor>
-						{message.text}
-					</Text>
-				</Box>
+				<Text color={theme.ui.text.dimmed} dimColor>
+					{" "}
+					({message.text})
+				</Text>
 			)}
 		</Box>
 	)

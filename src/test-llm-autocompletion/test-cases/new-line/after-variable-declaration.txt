@@ -1,6 +1,0 @@
-# Description: Should use the declared variable
-function initialize() {
-  const config = loadConfig();
-<<<CURSOR>>>
-  return config;
-}

@@ -106,7 +106,7 @@ export class TestRunner {
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				const strategyName = this.strategyTester.getSelectedStrategyName(testCase.input)
+				const strategyName = this.strategyTester.getSelectedStrategyName()
 				process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
 
 				const result = await this.runTest(testCase)

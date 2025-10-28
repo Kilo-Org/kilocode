@@ -3,7 +3,7 @@
  * Refactored to use specialized hooks for better maintainability
  */
 
-import React, { useCallback, useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { Box, Text } from "ink"
 import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
@@ -27,6 +27,8 @@ import { AppOptions } from "./App.js"
 import { logs } from "../services/logs.js"
 import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/welcomeMessage.js"
 import { generateUpdateAvailableMessage, getAutoUpdateStatus } from "../utils/auto-update.js"
+import { generateNotificationMessage } from "../utils/notifications.js"
+import { notificationsAtom } from "../state/atoms/notifications.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 
 // Initialize commands on module load
@@ -43,6 +45,8 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const theme = useTheme()
 	const configValidation = useAtomValue(configValidationAtom)
 	const resetCounter = useAtomValue(messageResetCounterAtom)
+	const notifications = useAtomValue(notificationsAtom)
+	const [versionStatus, setVersionStatus] = useState<Awaited<ReturnType<typeof getAutoUpdateStatus>>>()
 
 	// Initialize CI mode configuration
 	const setCIMode = useSetAtom(setCIModeAtom)
@@ -164,20 +168,27 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [options.ci, options.prompt, addMessage, configValidation])
 
-	// Auto-update check on mount
-	const checkVersion = async () => {
-		const status = await getAutoUpdateStatus()
-		if (status.isOutdated) {
-			addMessage(generateUpdateAvailableMessage(status))
-		}
-	}
-
 	useEffect(() => {
+		const checkVersion = async () => {
+			setVersionStatus(await getAutoUpdateStatus())
+		}
+
 		if (!autoUpdatedCheckedRef.current && !options.ci) {
 			autoUpdatedCheckedRef.current = true
 			checkVersion()
 		}
 	}, [])
+
+	useEffect(() => {
+		if (!versionStatus) return
+
+		if (versionStatus.isOutdated) {
+			addMessage(generateUpdateAvailableMessage(versionStatus))
+		} else if (notifications.length > 0 && notifications[0]) {
+			// Only show notification if there's no pending update
+			addMessage(generateNotificationMessage(notifications[0]))
+		}
+	}, [notifications, versionStatus])
 
 	// Exit if provider configuration is invalid
 	useEffect(() => {

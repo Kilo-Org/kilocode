@@ -7,6 +7,8 @@ import { Task } from "../../task/Task"
 import axios from "axios"
 import { getKiloUrlFromToken } from "@roo-code/types"
 
+const shownNativeNotificationIds = new Set<string>()
+
 // Helper function to delete messages for resending
 const deleteMessagesForResend = async (cline: Task, originalMessageIndex: number, originalMessageTs: number) => {
 	// Delete UI messages after the edited message
@@ -71,7 +73,7 @@ const resendMessageSequence = async (
 
 export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider) => {
 	try {
-		const { apiConfiguration } = await provider.getState()
+		const { apiConfiguration, dismissedNotificationIds } = await provider.getState()
 		const kilocodeToken = apiConfiguration?.kilocodeToken
 
 		if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
@@ -101,10 +103,51 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			timeout: 5000,
 		})
 
+		const notifications = response.data?.notifications || []
+		const dismissedIds = dismissedNotificationIds || []
+
+		// Filter notifications to only show new ones
+		const notificationsToShowAsNative = notifications.filter(
+			(notification: any) =>
+				!dismissedIds.includes(notification.id) &&
+				!shownNativeNotificationIds.has(notification.id) &&
+				notification.showAsNative === true,
+		)
+
 		provider.postMessageToWebview({
 			type: "kilocodeNotificationsResponse",
-			notifications: response.data?.notifications || [],
+			notifications: (response.data?.notifications || []).filter(
+				(notification: any) => notification.showAsNative !== true,
+			),
 		})
+
+		for (const notification of notificationsToShowAsNative) {
+			try {
+				const message = `${notification.title}: ${notification.message}`
+				const actionButton = notification.action?.actionText
+				const selection = await vscode.window.showInformationMessage(
+					message,
+					...(actionButton ? [actionButton] : []),
+				)
+				if (selection === actionButton) {
+					const currentDismissedIds = dismissedNotificationIds || []
+					if (!currentDismissedIds.includes(notification.id)) {
+						await provider.contextProxy.setValue("dismissedNotificationIds", [
+							...currentDismissedIds,
+							notification.id,
+						])
+					}
+
+					if (notification.action?.actionURL) {
+						await vscode.env.openExternal(vscode.Uri.parse(notification.action.actionURL))
+					}
+				}
+
+				shownNativeNotificationIds.add(notification.id)
+			} catch (error: any) {
+				provider.log(`Error displaying notification ${notification.id}: ${error.message}`)
+			}
+		}
 	} catch (error: any) {
 		provider.log(`Error fetching Kilocode notifications: ${error.message}`)
 		provider.postMessageToWebview({

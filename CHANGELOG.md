@@ -1,8 +1,10 @@
 # kilo-code
 
-## [v4.111.1]
+## [v4.111.2]
 
-- [#3337](https://github.com/Kilo-Org/kilocode/pull/3337) [`85a4447`](https://github.com/Kilo-Org/kilocode/commit/85a4447da76fc51697fb098a9cdda1d2064f7d1b) Thanks [@mcowger](https://github.com/mcowger)! - Added MiniMax M2 to Synthetic Provider
+- [#3363](https://github.com/Kilo-Org/kilocode/pull/3363) [`233334c`](https://github.com/Kilo-Org/kilocode/commit/233334cd284477290b67359add7e0f703d8707b7) Thanks [@markijbema](https://github.com/markijbema)! - Various improvements to the autocomplete functionality
+
+## [v4.111.1]
 
 - [#3282](https://github.com/Kilo-Org/kilocode/pull/3282) [`ed4399b`](https://github.com/Kilo-Org/kilocode/commit/ed4399b7d82d735895fbf4d85cfaefff5002571a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved handling of tool calls in the API conversation history
 

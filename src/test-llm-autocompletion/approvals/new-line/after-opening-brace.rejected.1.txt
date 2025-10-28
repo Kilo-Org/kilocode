@@ -1,4 +1,0 @@
-function processItems(items) {
-    // Process each item
-
-}
