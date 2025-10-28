@@ -63,7 +63,7 @@ vi.mock("vscode", () => ({
 	},
 }))
 
-describe("GhostProvider", () => {
+describe("GhostServiceManager", () => {
 	let mockWorkspace: MockWorkspace
 
 	beforeEach(() => {

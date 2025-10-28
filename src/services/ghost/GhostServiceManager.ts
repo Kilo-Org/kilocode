@@ -1,11 +1,8 @@
-import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
 import { GhostModel } from "./GhostModel"
-import { GhostSuggestionContext } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
-import { GhostSuggestionsState } from "./classic-auto-complete/GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
@@ -17,11 +14,10 @@ import { ClineProvider } from "../../core/webview/ClineProvider"
 import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 
-export class GhostProvider {
-	private static instance: GhostProvider | null = null
+export class GhostServiceManager {
+	private static instance: GhostServiceManager | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
-	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
@@ -29,9 +25,7 @@ export class GhostProvider {
 	private cursorAnimation: GhostGutterAnimation
 
 	private enabled: boolean = true
-	private taskId: string | null = null
 	private isProcessing: boolean = false
-	private isRequestCancelled: boolean = false
 
 	// Status bar integration
 	private statusBar: GhostStatusBar | null = null
@@ -78,19 +72,19 @@ export class GhostProvider {
 	}
 
 	// Singleton Management
-	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostProvider {
-		if (GhostProvider.instance) {
-			throw new Error("GhostProvider is already initialized. Use getInstance() instead.")
+	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostServiceManager {
+		if (GhostServiceManager.instance) {
+			throw new Error("GhostServiceManager is already initialized. Use getInstance() instead.")
 		}
-		GhostProvider.instance = new GhostProvider(context, cline)
-		return GhostProvider.instance
+		GhostServiceManager.instance = new GhostServiceManager(context, cline)
+		return GhostServiceManager.instance
 	}
 
-	public static getInstance(): GhostProvider {
-		if (!GhostProvider.instance) {
-			throw new Error("GhostProvider is not initialized. Call initialize() first.")
+	public static getInstance(): GhostServiceManager {
+		if (!GhostServiceManager.instance) {
+			throw new Error("GhostServiceManager is not initialized. Call initialize() first.")
 		}
-		return GhostProvider.instance
+		return GhostServiceManager.instance
 	}
 
 	// Settings Management
@@ -234,69 +228,11 @@ export class GhostProvider {
 		if (!this.enabled || !editor) {
 			return
 		}
-		await this.render()
-	}
-
-	private async hasAccess(document: vscode.TextDocument) {
-		return document.isUntitled || (await this.initializeIgnoreController()).validateAccess(document.fileName)
-	}
-
-	public async codeSuggestion() {
-		if (!this.enabled) {
-			return
-		}
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			return
-		}
-
-		this.taskId = crypto.randomUUID()
-		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
-			taskId: this.taskId,
-		})
-
-		const document = editor.document
-		if (!(await this.hasAccess(document))) {
-			return
-		}
-
-		const range = editor.selection.isEmpty ? undefined : editor.selection
-
-		await this.provideCodeSuggestions({ document, range })
-	}
-
-	private async provideCodeSuggestions(initialContext: GhostSuggestionContext): Promise<void> {
-		// Cancel any ongoing suggestions
-		await this.cancelSuggestions()
-		this.startRequesting()
-		this.isRequestCancelled = false
-
-		if (this.isRequestCancelled) {
-			return
-		}
-
-		if (!this.model.loaded) {
-			this.stopProcessing()
-			await this.load()
-		}
-
-		// Just trigger the inline completion provider
-		// It will call getFromLLM internally when no cached suggestion is available
-		this.stopProcessing()
-		await this.render()
-	}
-
-	private async render() {
+		// Update global context when switching editors
 		await this.updateGlobalContext()
-
-		this.inlineCompletionProvider.updateSuggestions(this.suggestions)
-
-		await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
 	}
 
 	private async updateGlobalContext() {
-		const hasSuggestions = this.suggestions.hasSuggestions()
-		await vscode.commands.executeCommand("setContext", "kilocode.ghost.hasSuggestions", hasSuggestions)
 		await vscode.commands.executeCommand("setContext", "kilocode.ghost.isProcessing", this.isProcessing)
 		await vscode.commands.executeCommand(
 			"setContext",
@@ -308,24 +244,6 @@ export class GhostProvider {
 			"kilocode.ghost.enableSmartInlineTaskKeybinding",
 			this.settings?.enableSmartInlineTaskKeybinding || false,
 		)
-	}
-
-	public hasPendingSuggestions(): boolean {
-		if (!this.enabled) {
-			return false
-		}
-		return this.suggestions.hasSuggestions()
-	}
-
-	public async cancelSuggestions() {
-		if (!this.hasPendingSuggestions()) {
-			return
-		}
-		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, {
-			taskId: this.taskId,
-		})
-		this.suggestions.clear()
-		await this.render()
 	}
 
 	private initializeStatusBar() {
@@ -373,7 +291,6 @@ export class GhostProvider {
 
 		// Send telemetry
 		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-			taskId: this.taskId,
 			inputTokens,
 			outputTokens,
 			cacheWriteTokens,
@@ -411,17 +328,6 @@ export class GhostProvider {
 		}
 	}
 
-	private startRequesting() {
-		this.cursorAnimation.active()
-		this.isProcessing = true
-		this.updateGlobalContext()
-	}
-
-	private startProcessing() {
-		this.isProcessing = true
-		this.updateGlobalContext()
-	}
-
 	private stopProcessing() {
 		this.cursorAnimation.hide()
 		this.isProcessing = false
@@ -430,23 +336,20 @@ export class GhostProvider {
 
 	public cancelRequest() {
 		this.stopProcessing()
-		this.isRequestCancelled = true
 		this.inlineCompletionProvider.cancelRequest()
 	}
 
 	/**
-	 * Dispose of all resources used by the GhostProvider
+	 * Dispose of all resources used by the GhostServiceManager
 	 */
 	public dispose(): void {
 		this.cancelRequest()
-
-		this.suggestions.clear()
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()
 
 		this.disposeIgnoreController()
 
-		GhostProvider.instance = null // Reset singleton
+		GhostServiceManager.instance = null // Reset singleton
 	}
 }

@@ -72,19 +72,25 @@ function isResponseComplete(buffer: string): boolean {
 	return !(incompleteChangeMatch || incompleteSearchMatch || incompleteReplaceMatch || incompleteCDataMatch)
 }
 
+export interface MatchResult {
+	startIndex: number
+	matchLength: number
+}
+
 /**
  * Find the best match for search content in the document, handling whitespace differences and cursor markers
+ * Returns both the start index and the actual length of the matched content
  */
-export function findBestMatch(content: string, searchPattern: string): number {
+export function findBestMatch(content: string, searchPattern: string): MatchResult {
 	// Validate inputs
 	if (!content || !searchPattern) {
-		return -1
+		return { startIndex: -1, matchLength: 0 }
 	}
 
 	// Strategy 1: Try exact match (fastest path)
 	let index = content.indexOf(searchPattern)
 	if (index !== -1) {
-		return index
+		return { startIndex: index, matchLength: searchPattern.length }
 	}
 
 	// Strategy 2: Fuzzy match with whitespace normalization
@@ -149,21 +155,19 @@ export function findBestMatch(content: string, searchPattern: string): number {
 
 		// Check if we matched the entire pattern, or if we only have trailing whitespace left in pattern
 		if (patternPos === patternLen) {
-			return contentStart
+			return { startIndex: contentStart, matchLength: contentPos - contentStart }
 		}
 
 		// Allow trailing whitespace/newlines in the pattern
 		if (patternPos < patternLen) {
 			patternPos = skipChars(searchPattern, patternPos, (c) => isNewline(c) || isNonNewlineWhitespace(c))
 			if (patternPos === patternLen) {
-				return contentStart
+				return { startIndex: contentStart, matchLength: contentPos - contentStart }
 			}
 		}
-
-		break
 	}
 
-	return -1 // No match found
+	return { startIndex: -1, matchLength: 0 } // No match found
 }
 
 /**
@@ -291,16 +295,16 @@ function generateModifiedContent(
 	}> = []
 
 	for (const change of filteredChanges) {
-		let searchIndex = findBestMatch(modifiedContent, change.search)
+		const matchResult = findBestMatch(modifiedContent, change.search)
 
-		if (searchIndex !== -1) {
+		if (matchResult.startIndex !== -1) {
 			// Check for overlapping changes before applying
-			const endIndex = searchIndex + change.search.length
+			const endIndex = matchResult.startIndex + matchResult.matchLength
 			const hasOverlap = appliedChanges.some((existingChange) => {
 				// Check if ranges overlap
 				const existingStart = existingChange.startIndex
 				const existingEnd = existingChange.endIndex
-				return searchIndex < existingEnd && endIndex > existingStart
+				return matchResult.startIndex < existingEnd && endIndex > existingStart
 			})
 
 			if (hasOverlap) {
@@ -334,7 +338,7 @@ function generateModifiedContent(
 			appliedChanges.push({
 				searchContent: change.search,
 				replaceContent: adjustedReplaceContent,
-				startIndex: searchIndex,
+				startIndex: matchResult.startIndex,
 				endIndex: endIndex,
 			})
 		}
