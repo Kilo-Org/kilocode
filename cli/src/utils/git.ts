@@ -80,6 +80,35 @@ export async function getGitBranch(cwd: string): Promise<string | null> {
 }
 
 /**
+ * Check if a branch exists in the repository
+ * @param cwd - Current working directory path
+ * @param branchName - Name of the branch to check
+ * @returns True if branch exists, false otherwise
+ */
+export async function branchExists(cwd: string, branchName: string): Promise<boolean> {
+	if (!cwd || !branchName) {
+		return false
+	}
+
+	try {
+		const git: SimpleGit = simpleGit(cwd)
+		const isRepo = await git.checkIsRepo()
+		if (!isRepo) {
+			return false
+		}
+
+		// Get all branches (local and remote)
+		const branches = await git.branch()
+
+		// Check if branch exists in local branches
+		return branches.all.includes(branchName) || branches.all.includes(`remotes/origin/${branchName}`)
+	} catch (error) {
+		logs.debug("Failed to check if branch exists", "GitUtils", { error, cwd, branchName })
+		return false
+	}
+}
+
+/**
  * Generate a valid git branch name from a prompt
  * Sanitizes the prompt to create a safe branch name
  */

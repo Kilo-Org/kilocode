@@ -42,6 +42,12 @@ program
 			process.exit(1)
 		}
 
+		// Validate that --existing-branch requires --parallel
+		if (options.existingBranch && !options.parallel) {
+			console.error("Error: --existing-branch option requires --parallel flag to be enabled")
+			process.exit(1)
+		}
+
 		// Validate workspace path exists
 		if (!existsSync(options.workspace)) {
 			console.error(`Error: Workspace path does not exist: ${options.workspace}`)
@@ -103,6 +109,7 @@ program
 				cwd: options.workspace,
 				prompt: finalPrompt,
 				timeout: options.timeout,
+				existingBranch: options.existingBranch,
 			})
 
 			return
