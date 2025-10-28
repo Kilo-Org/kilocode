@@ -19,7 +19,7 @@ async function commitWithFallback(cwd: string): Promise<void> {
  * Poll git status to check if commit is complete
  * Returns true if commit was made, false if timeout reached
  */
-async function waitForCommitCompletion(cwd: string, timeoutMs: number = 30000): Promise<boolean> {
+async function waitForCommitCompletion(cwd: string, timeoutMs: number = 60000): Promise<boolean> {
 	const pollIntervalMs = 1000
 	const startTime = Date.now()
 	const git = simpleGit(cwd)
