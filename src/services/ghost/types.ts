@@ -35,22 +35,6 @@ export interface GhostDocumentStoreItem {
 	recentActions?: UserAction[]
 }
 
-export type GhostSuggestionEditOperationType = "+" | "-"
-
-export interface GhostSuggestionEditOperation {
-	type: GhostSuggestionEditOperationType
-	line: number
-	oldLine: number
-	newLine: number
-	content: string
-}
-
-export interface GhostSuggestionEditOperationsOffset {
-	added: number
-	removed: number
-	offset: number
-}
-
 export interface GhostSuggestionContext {
 	document: vscode.TextDocument
 	editor?: vscode.TextEditor

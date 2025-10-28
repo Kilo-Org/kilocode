@@ -1,5 +1,25 @@
 # kilo-code
 
+## [v4.111.1]
+
+- [#3337](https://github.com/Kilo-Org/kilocode/pull/3337) [`85a4447`](https://github.com/Kilo-Org/kilocode/commit/85a4447da76fc51697fb098a9cdda1d2064f7d1b) Thanks [@mcowger](https://github.com/mcowger)! - Added MiniMax M2 to Synthetic Provider
+
+- [#3282](https://github.com/Kilo-Org/kilocode/pull/3282) [`ed4399b`](https://github.com/Kilo-Org/kilocode/commit/ed4399b7d82d735895fbf4d85cfaefff5002571a) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Improved handling of tool calls in the API conversation history
+
+- [#3270](https://github.com/Kilo-Org/kilocode/pull/3270) [`2b35053`](https://github.com/Kilo-Org/kilocode/commit/2b350530367bb0a14a0fdc7c11a030c2943c6cf6) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Claude Haiku 4.5 now uses a simplified read file tool for reduced error rate
+
+## [v4.111.0]
+
+- [#3256](https://github.com/Kilo-Org/kilocode/pull/3256) [`f81b48b`](https://github.com/Kilo-Org/kilocode/commit/f81b48b8dec9cd276c3c7ba994d0512036abfa96) Thanks [@markijbema](https://github.com/markijbema)! - Switched autocomplete to showing completions inline
+
+### Patch Changes
+
+- [#3261](https://github.com/Kilo-Org/kilocode/pull/3261) [`bae048f`](https://github.com/Kilo-Org/kilocode/commit/bae048f914712439e54f29363d52dc24860000e7) Thanks [@mcowger](https://github.com/mcowger)! - Improve native tool calling consistency
+
+- [#3281](https://github.com/Kilo-Org/kilocode/pull/3281) [`2586e9b`](https://github.com/Kilo-Org/kilocode/commit/2586e9b4f6cbea9734ff10df7086f2d999713448) Thanks [@hassoncs](https://github.com/hassoncs)! - Fix broken sign-in links
+
+- [#3313](https://github.com/Kilo-Org/kilocode/pull/3313) [`2e61e91`](https://github.com/Kilo-Org/kilocode/commit/2e61e9152ae3be43ce12e9fd3c2f94c0d603d771) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Running commands are no longer sometimes shown twice in the chat
+
 ## [v4.110.0]
 
 ### Patch Changes

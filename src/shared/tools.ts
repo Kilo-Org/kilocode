@@ -85,6 +85,7 @@ export interface ToolUse {
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
+	toolUseId?: string // kilocode_change
 }
 
 export interface ExecuteCommandToolUse extends ToolUse {

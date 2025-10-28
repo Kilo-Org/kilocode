@@ -1,9 +1,9 @@
 import { LLMClient } from "./llm-client.js"
-import { AutoTriggerStrategy } from "../services/ghost/strategies/AutoTriggerStrategy.js"
-import { GhostSuggestionContext, AutocompleteInput, GhostSuggestionEditOperation } from "../services/ghost/types.js"
+import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
+import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
-import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
+import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
+import { parseGhostResponse } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 
@@ -88,7 +88,6 @@ export class StrategyTester {
 
 	parseCompletion(originalContent: string, xmlResponse: string): string | null {
 		try {
-			const parser = new GhostStreamingParser()
 			const uri = vscode.Uri.parse("file:///test.js")
 
 			const dummyContext: GhostSuggestionContext = {
@@ -96,85 +95,33 @@ export class StrategyTester {
 				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)) as any,
 			}
 
-			parser.initialize(dummyContext)
-			const result = parser.parseResponse(xmlResponse, "", "")
+			const result = parseGhostResponse(xmlResponse, "", "", dummyContext.document, dummyContext.range)
 
 			// Check if we have any suggestions
 			if (!result.suggestions.hasSuggestions()) {
 				return null
 			}
 
-			// Get the file operations
-			const file = result.suggestions.getFile(uri)
-			if (!file) {
-				return null
-			}
+			throw new Error("Code needs to be ported to FIM style completion")
 
-			// Get all operations and apply them
-			const operations = file.getAllOperations()
-			if (operations.length === 0) {
-				return null
-			}
+			// // Get the file operations
+			// const file = result.suggestions.getFile(uri)
+			// if (!file) {
+			// 	return null
+			// }
 
-			// Apply operations to reconstruct the modified code
-			return this.applyOperations(originalContent, operations)
+			// // Get all operations and apply them
+			// const operations = file.getAllOperations()
+			// if (operations.length === 0) {
+			// 	return null
+			// }
+
+			// // Apply operations to reconstruct the modified code
+			// return this.applyOperations(originalContent, operations)
 		} catch (error) {
 			console.warn("Failed to parse completion:", error)
 			return null
 		}
-	}
-
-	/**
-	 * Apply diff operations to reconstruct the modified code
-	 * Operations use 0-based line numbers from the parser
-	 */
-	private applyOperations(originalContent: string, operations: GhostSuggestionEditOperation[]): string {
-		const originalLines = originalContent.split("\n")
-
-		// Sort operations by oldLine to process them in order
-		const sortedOps = [...operations].sort((a, b) => {
-			if (a.oldLine !== b.oldLine) {
-				return a.oldLine - b.oldLine
-			}
-			// Deletions before additions on same line
-			if (a.type === "-" && b.type === "+") return -1
-			if (a.type === "+" && b.type === "-") return 1
-			return 0
-		})
-
-		const finalLines: string[] = []
-		let currentOriginalLine = 0
-
-		for (const op of sortedOps) {
-			// Add any unmodified lines before this operation
-			while (currentOriginalLine < op.oldLine) {
-				finalLines.push(originalLines[currentOriginalLine])
-				currentOriginalLine++
-			}
-
-			if (op.type === "+") {
-				// Addition: add the new content
-				// Strip leading newlines to prevent extra blank lines
-				const content = op.content.replace(/^\n+/, "")
-				finalLines.push(content)
-			} else if (op.type === "-") {
-				// Deletion: skip the original line
-				currentOriginalLine++
-			}
-		}
-
-		// Add remaining original lines
-		while (currentOriginalLine < originalLines.length) {
-			finalLines.push(originalLines[currentOriginalLine])
-			currentOriginalLine++
-		}
-
-		// Filter out undefined values that may occur from line number mismatches
-		const validLines = finalLines.filter((line) => line !== undefined)
-		const resultText = validLines.join("\n")
-
-		// Remove leading/trailing newlines that may come from diff generation
-		return resultText.replace(/^\n+/, "").replace(/\n+$/, "")
 	}
 
 	/**

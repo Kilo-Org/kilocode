@@ -1,5 +1,5 @@
-import { GhostStreamingParser, sanitizeXMLConservative } from "../GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { sanitizeXMLConservative } from "../GhostStreamingParser"
+import { GhostSuggestionContext } from "../../types"
 import * as vscode from "vscode"
 
 // Mock vscode workspace
@@ -18,12 +18,9 @@ vi.mock("vscode", async () => {
 })
 
 describe("GhostStreamingParser - XML Sanitization", () => {
-	let parser: GhostStreamingParser
 	let mockContext: GhostSuggestionContext
 
 	beforeEach(() => {
-		parser = new GhostStreamingParser()
-
 		// Create mock document
 		const mockDocument = {
 			getText: vi.fn().mockReturnValue("function mutliply(<<<AUTOCOMPLETE_HERE>>>>"),
@@ -35,8 +32,6 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 			document: mockDocument,
 			range: { start: { line: 0, character: 17 }, end: { line: 0, character: 17 } } as vscode.Range,
 		}
-
-		parser.initialize(mockContext)
 	})
 
 	describe("sanitizeXMLConservative", () => {

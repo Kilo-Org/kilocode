@@ -1,5 +1,0 @@
-empty-diff-response/input.js
-```js
-console.log("test")
-
-```
