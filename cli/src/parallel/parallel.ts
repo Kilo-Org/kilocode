@@ -36,7 +36,9 @@ async function waitForCommitCompletion(cwd: string, timeoutMs: number = 300000):
 			// Wait before next poll
 			await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
 		} catch (error) {
-			logs.error("Error checking commit status", "ParallelMode", { error })
+			logs.error("Error checking commit status", "ParallelMode", {
+				error: error instanceof Error ? error.message : String(error),
+			})
 
 			return false
 		}
