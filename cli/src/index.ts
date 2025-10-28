@@ -121,8 +121,6 @@ program
 
 			finalWorkspace = parallelResult.worktreePath
 			worktreeBranch = parallelResult.worktreeBranch
-
-			return
 		}
 
 		cli = new CLI({
