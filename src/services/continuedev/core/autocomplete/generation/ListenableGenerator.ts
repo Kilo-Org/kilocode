@@ -4,6 +4,7 @@ export class ListenableGenerator<T> {
 	private _listeners: Set<(value: T) => void> = new Set()
 	private _isEnded = false
 	private _abortController: AbortController
+	private _completionPromise: Promise<void>
 
 	constructor(
 		source: AsyncGenerator<T>,
@@ -12,12 +13,16 @@ export class ListenableGenerator<T> {
 	) {
 		this._source = source
 		this._abortController = abortController
-		this._start().catch((e) => console.log(`Listenable generator failed: ${e.message}`))
+		this._completionPromise = this._start().catch((e) => console.log(`Listenable generator failed: ${e.message}`))
 	}
 
 	public cancel() {
 		this._abortController.abort()
 		this._isEnded = true
+	}
+
+	public waitForCompletion(): Promise<void> {
+		return this._completionPromise
 	}
 
 	private async _start() {

@@ -15,6 +15,7 @@ import { Tab, TabContent, TabHeader } from "@src/components/common/Tab"
 import { Button } from "@src/components/ui"
 import KiloCodeAuth from "../common/KiloCodeAuth"
 import { OrganizationSelector } from "../common/OrganizationSelector"
+import { getAppUrl } from "@roo-code/types"
 
 interface ProfileViewProps {
 	onDone: () => void
@@ -29,12 +30,8 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 	const [isLoadingUser, setIsLoadingUser] = React.useState(true)
 
 	useEffect(() => {
-		vscode.postMessage({
-			type: "fetchProfileDataRequest",
-		})
-		vscode.postMessage({
-			type: "fetchBalanceDataRequest",
-		})
+		vscode.postMessage({ type: "fetchProfileDataRequest" })
+		vscode.postMessage({ type: "fetchBalanceDataRequest" })
 	}, [apiConfiguration?.kilocodeToken, apiConfiguration?.kilocodeOrganizationId])
 
 	useEffect(() => {
@@ -165,7 +162,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 								<div className="w-full flex gap-2 flex-col min-[225px]:flex-row">
 									<div className="w-full min-[225px]:w-1/2">
 										<VSCodeButtonLink
-											href="https://kilocode.ai/profile"
+											href={getAppUrl("/profile")}
 											appearance="primary"
 											className="w-full">
 											{t("kilocode:profile.dashboard")}
@@ -254,7 +251,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 											<div className="text-center">
 												<VSCodeButtonLink
-													href="https://kilocode.ai/profile"
+													href={getAppUrl("/profile")}
 													appearance="secondary"
 													className="text-sm">
 													{t("kilocode:profile.shop.viewAll")}

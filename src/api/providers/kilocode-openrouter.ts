@@ -3,7 +3,7 @@ import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
@@ -27,10 +27,12 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	constructor(options: ApiHandlerOptions) {
-		const baseUri = getKiloBaseUriFromToken(options.kilocodeToken ?? "")
 		options = {
 			...options,
-			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
+			openRouterBaseUrl: getKiloUrlFromToken(
+				"https://api.kilocode.ai/api/openrouter/",
+				options.kilocodeToken ?? "",
+			),
 			openRouterApiKey: options.kilocodeToken,
 		}
 
@@ -74,6 +76,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		if (lastUsage.is_byok) {
 			return lastUsage.cost_details?.upstream_inference_cost || 0
 		}
+
 		return lastUsage.cost || 0
 	}
 

@@ -14,7 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
-import { blockFileReadWhenTooLarge } from "./kilocode"
+import { blockFileReadWhenTooLarge, getNativeReadFileToolDescription, parseNativeFiles } from "./kilocode"
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -26,7 +26,11 @@ import {
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
-	if (blockParams.args) {
+	// kilocode_change start
+	if (blockParams.files && Array.isArray(blockParams.files)) {
+		return getNativeReadFileToolDescription(blockName, parseNativeFiles(blockParams.files))
+		// kilocode_change end
+	} else if (blockParams.args) {
 		try {
 			const parsed = parseXml(blockParams.args) as any
 			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
@@ -131,28 +135,7 @@ export async function readFileTool(
 	// kilocode_change start
 	// Handle native JSON format first (from OpenAI-style tool calls)
 	if (nativeFiles && Array.isArray(nativeFiles)) {
-		for (const file of nativeFiles) {
-			if (!file.path) continue
-
-			const fileEntry: FileEntry = {
-				path: file.path,
-				lineRanges: [],
-			}
-
-			// Handle line_ranges array from native format
-			if (file.line_ranges && Array.isArray(file.line_ranges)) {
-				for (const range of file.line_ranges) {
-					const match = String(range).match(/(\d+)-(\d+)/)
-					if (match) {
-						const [, start, end] = match.map(Number)
-						if (!isNaN(start) && !isNaN(end)) {
-							fileEntry.lineRanges?.push({ start, end })
-						}
-					}
-				}
-			}
-			fileEntries.push(fileEntry)
-		}
+		fileEntries.push(...parseNativeFiles(nativeFiles))
 		// kilocode_change end
 	} else if (argsXmlTag) {
 		// Parse file entries from XML (new multi-file format)

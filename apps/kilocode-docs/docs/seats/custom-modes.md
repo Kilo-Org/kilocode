@@ -8,7 +8,7 @@ Custom Modes let you create tailored versions of Kilo’s built-in [modes](/basi
 
 For example, Admins and Owners can extend these by creating **Custom Modes** with specialized roles or personalities (e.g. “Documentation Writer” or “Security Reviewer”).
 
-<img width="900" height="925" alt="Custom Modes Tab" src="https://github.com/user-attachments/assets/183a6d7e-c072-4774-be5b-7653a3fe93fb" />
+![Create a new custom mode tab.](/img/teams/custom_modes.png)
 
 ## Creating a Custom Mode
 

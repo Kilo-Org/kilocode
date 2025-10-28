@@ -7,11 +7,13 @@ import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
-import { loadConfigAtom, mappedExtensionStateAtom } from "./state/atoms/config.js"
+import { loadConfigAtom, mappedExtensionStateAtom, providersAtom } from "./state/atoms/config.js"
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
+import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
+import { fetchKilocodeNotifications } from "./utils/notifications.js"
 
 export interface CLIOptions {
 	mode?: string
@@ -117,7 +119,12 @@ export class CLI {
 			logs.debug("CLI configuration injected into extension", "CLI")
 
 			// Request router models after configuration is injected
-			await this.requestRouterModels()
+			void this.requestRouterModels()
+
+			if (!this.options.ci && !this.options.prompt) {
+				// Fetch Kilocode notifications if provider is kilocode
+				void this.fetchNotifications()
+			}
 
 			this.isInitialized = true
 			logs.info("Kilo Code CLI initialized successfully", "CLI")
@@ -280,6 +287,39 @@ export class CLI {
 			logs.debug("Router models requested", "CLI")
 		} catch (error) {
 			logs.error("Failed to request router models", "CLI", { error })
+		}
+	}
+
+	/**
+	 * Fetch notifications from Kilocode backend if provider is kilocode
+	 */
+	private async fetchNotifications(): Promise<void> {
+		if (!this.store) {
+			logs.warn("Cannot fetch notifications: store not available", "CLI")
+			return
+		}
+
+		try {
+			const providers = this.store.get(providersAtom)
+
+			const provider = providers.find(({ provider }) => provider === "kilocode")
+
+			if (!provider) {
+				logs.debug("No provider configured, skipping notification fetch", "CLI")
+				return
+			}
+
+			this.store.set(notificationsLoadingAtom, true)
+
+			const notifications = await fetchKilocodeNotifications(provider)
+
+			this.store.set(notificationsAtom, notifications)
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error))
+			this.store.set(notificationsErrorAtom, err)
+			logs.error("Failed to fetch notifications", "CLI", { error })
+		} finally {
+			this.store.set(notificationsLoadingAtom, false)
 		}
 	}
 
