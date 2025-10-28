@@ -560,6 +560,49 @@ export class TelemetryService {
 	}
 
 	// ============================================================================
+	// Parallel Mode Tracking
+	// ============================================================================
+
+	public trackParallelModeStarted(promptLength: number, timeoutSeconds?: number, usedExistingBranch = false): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_STARTED, {
+			mode: this.currentMode,
+			ciMode: true,
+			promptLength,
+			timeoutSeconds,
+			usedExistingBranch,
+		})
+	}
+
+	public trackParallelModeCompleted(stats: { duration: number; branchName: string; taskCompleted: boolean }): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_COMPLETED, {
+			mode: this.currentMode,
+			ciMode: true,
+			totalDuration: stats.duration,
+			branchName: stats.branchName,
+			taskCompleted: stats.taskCompleted,
+			exitReason: "completed",
+		})
+	}
+
+	public trackParallelModeFailed(errorMessage: string, duration: number, branchName?: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_FAILED, {
+			mode: this.currentMode,
+			ciMode: true,
+			errorMessage,
+			totalDuration: duration,
+			branchName,
+			exitReason: "failed",
+			taskCompleted: false,
+		})
+	}
+
+	// ============================================================================
 	// MCP Tracking
 	// ============================================================================
 

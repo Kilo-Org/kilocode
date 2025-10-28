@@ -96,8 +96,6 @@ program
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
 		}
 
-		// TODO: track parallel mode start
-
 		if (!(await configExists())) {
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
@@ -105,6 +103,12 @@ program
 		}
 
 		if (options.parallel) {
+			getTelemetryService().trackParallelModeStarted(
+				finalPrompt.length,
+				options.timeout,
+				!!options.existingBranch,
+			)
+
 			await startParallelMode({
 				cwd: options.workspace,
 				prompt: finalPrompt,
