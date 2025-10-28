@@ -78,8 +78,7 @@ export async function getParallelModeParams({ cwd, prompt, existingBranch }: Inp
  * Since it's part of the dispose flow, this function must never throw an error
  */
 export async function finishParallelMode(cli: CLI, worktreePath: string, worktreeBranch: string) {
-	const cwd = worktreePath
-	const git = simpleGit(cwd)
+	const git = simpleGit(worktreePath)
 
 	let beforeExit = () => {}
 
@@ -101,7 +100,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 				if (!service) {
 					logs.error("Extension service not available, using fallback commit", "ParallelMode")
 
-					await commitWithFallback(cwd)
+					await commitWithFallback(worktreePath)
 				} else {
 					logs.info("Instructing extension agent to inspect diff and commit changes...", "ParallelMode")
 
@@ -114,12 +113,12 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 
 					logs.info("Waiting for agent to commit changes...", "ParallelMode")
 
-					const commitCompleted = await waitForCommitCompletion(cwd)
+					const commitCompleted = await waitForCommitCompletion(worktreePath)
 
 					if (!commitCompleted) {
 						logs.warn("Agent did not complete commit within timeout, using fallback", "ParallelMode")
 
-						await commitWithFallback(cwd)
+						await commitWithFallback(worktreePath)
 					} else {
 						logs.info("Agent successfully committed changes", "ParallelMode")
 					}
