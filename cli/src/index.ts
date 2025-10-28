@@ -13,7 +13,7 @@ import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./utils/authWizard.js"
 import { configExists } from "./config/persistence.js"
-import { startParallelMode } from "./parallel/parallel.js"
+import { getParallelModeParams } from "./parallel/parallel.js"
 
 const program = new Command()
 let cli: CLI | null = null
@@ -112,15 +112,15 @@ program
 				!!options.existingBranch,
 			)
 
-			const parallelResult = await startParallelMode({
+			const parallelParams = await getParallelModeParams({
 				cwd: options.workspace,
 				prompt: finalPrompt,
 				timeout: options.timeout,
 				existingBranch: options.existingBranch,
 			})
 
-			finalWorkspace = parallelResult.worktreePath
-			worktreeBranch = parallelResult.worktreeBranch
+			finalWorkspace = parallelParams.worktreePath
+			worktreeBranch = parallelParams.worktreeBranch
 		}
 
 		cli = new CLI({

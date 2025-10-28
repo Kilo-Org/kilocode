@@ -217,7 +217,7 @@ export class CLI {
 
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
-				await finishParallelMode(this, this.options.workspace)
+				await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
 			}
 
 			// Shutdown telemetry service before exiting

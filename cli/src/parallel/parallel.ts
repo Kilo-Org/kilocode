@@ -4,6 +4,50 @@ import { logs } from "../services/logs.js"
 import type { CLI } from "../cli.js"
 import { execSync } from "child_process"
 
+/**
+ * Helper function to commit changes with a fallback message
+ */
+function commitWithFallback(cwd: string): void {
+	const fallbackMessage = "chore: parallel mode task completion"
+
+	execSync(`git commit -m "${fallbackMessage}"`, { cwd, stdio: "inherit" })
+
+	logs.info("Changes committed with fallback message", "ParallelMode")
+}
+
+/**
+ * Poll git status to check if commit is complete
+ * Returns true if commit was made, false if timeout reached
+ */
+async function waitForCommitCompletion(cwd: string, timeoutMs: number = 300000): Promise<boolean> {
+	const pollIntervalMs = 1000
+	const startTime = Date.now()
+
+	while (Date.now() - startTime < timeoutMs) {
+		try {
+			const stagedDiff = execSync("git diff --staged", {
+				cwd,
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			})
+
+			// If no staged changes, commit was successful
+			if (!stagedDiff.trim()) {
+				return true
+			}
+
+			// Wait before next poll
+			await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+		} catch (error) {
+			logs.error("Error checking commit status", "ParallelMode", { error })
+
+			return false
+		}
+	}
+
+	return false
+}
+
 export type Input = {
 	cwd: string
 	prompt: string
@@ -12,11 +56,9 @@ export type Input = {
 }
 
 /**
- * Start parallel mode by creating a git worktree and spawning CLI in auto mode
+ * Get parameters for parallel mode execution
  */
-export async function startParallelMode({ cwd, prompt, existingBranch }: Input) {
-	const { branch: cwdBranch } = await getGitInfo(cwd)
-
+export async function getParallelModeParams({ cwd, prompt, existingBranch }: Input) {
 	// Determine branch and worktree path
 	const { worktreeBranch, worktreePath } = await determineParallelBranch({
 		cwd,
@@ -25,7 +67,6 @@ export async function startParallelMode({ cwd, prompt, existingBranch }: Input) 
 	})
 
 	return {
-		cwdBranch,
 		worktreeBranch,
 		worktreePath,
 	}
@@ -36,14 +77,10 @@ export async function startParallelMode({ cwd, prompt, existingBranch }: Input) 
  * then cleaning up the git worktree
  * This function should be called from the CLI dispose method when in parallel mode
  */
-export async function finishParallelMode(cli: CLI, worktreePath?: string) {
-	const cwd = process.cwd()
+export async function finishParallelMode(cli: CLI, worktreePath: string, worktreeBranch: string) {
+	const cwd = worktreePath
 
-	logs.info("Starting parallel mode cleanup...", "ParallelMode")
-
-	// 1. Get the git diff and have the extension agent generate a commit message
 	try {
-		// Check if there are any changes to commit
 		const statusOutput = execSync("git status --porcelain", {
 			cwd,
 			encoding: "utf8",
@@ -53,10 +90,8 @@ export async function finishParallelMode(cli: CLI, worktreePath?: string) {
 		if (statusOutput.trim()) {
 			logs.info("Staging all changes...", "ParallelMode")
 
-			// Stage all changes first
 			execSync("git add -A", { cwd, stdio: "inherit" })
 
-			// Get the staged diff
 			const diff = execSync("git diff --staged", {
 				cwd,
 				encoding: "utf8",
@@ -66,21 +101,15 @@ export async function finishParallelMode(cli: CLI, worktreePath?: string) {
 			if (!diff.trim()) {
 				logs.warn("No staged changes found after git add", "ParallelMode")
 			} else {
-				// Request the extension agent to inspect the diff and commit with a proper message
 				const service = cli.getService()
 
 				if (!service) {
 					logs.error("Extension service not available, using fallback commit", "ParallelMode")
 
-					const fallbackMessage = "chore: parallel mode task completion"
-
-					execSync(`git commit -m "${fallbackMessage}"`, { cwd, stdio: "inherit" })
-
-					logs.info("Changes committed with fallback message", "ParallelMode")
+					commitWithFallback(cwd)
 				} else {
 					logs.info("Instructing extension agent to inspect diff and commit changes...", "ParallelMode")
 
-					// Send a task to the extension agent to inspect the diff and commit
 					await service.sendWebviewMessage({
 						type: "askResponse",
 						askResponse:
@@ -90,24 +119,12 @@ export async function finishParallelMode(cli: CLI, worktreePath?: string) {
 
 					logs.info("Waiting for agent to commit changes...", "ParallelMode")
 
-					// TODO: fix
-					await new Promise((resolve) => setTimeout(resolve, 8000))
+					const commitCompleted = await waitForCommitCompletion(cwd)
 
-					// Verify if commit was made
-					const commitCheck = execSync("git diff --staged", {
-						cwd,
-						encoding: "utf8",
-						stdio: ["pipe", "pipe", "pipe"],
-					})
+					if (!commitCompleted) {
+						logs.warn("Agent did not complete commit within timeout, using fallback", "ParallelMode")
 
-					if (commitCheck.trim()) {
-						logs.warn("Agent did not complete commit, using fallback", "ParallelMode")
-
-						const fallbackMessage = "chore: parallel mode task completion"
-
-						execSync(`git commit -m "${fallbackMessage}"`, { cwd, stdio: "inherit" })
-
-						logs.info("Changes committed with fallback message", "ParallelMode")
+						commitWithFallback(cwd)
 					} else {
 						logs.info("Agent successfully committed changes", "ParallelMode")
 					}
@@ -116,6 +133,22 @@ export async function finishParallelMode(cli: CLI, worktreePath?: string) {
 		} else {
 			logs.info("No changes to commit", "ParallelMode")
 		}
+
+		const green = "\x1b[32m"
+		const cyan = "\x1b[36m"
+		const yellow = "\x1b[33m"
+		const bold = "\x1b[1m"
+		const reset = "\x1b[0m"
+
+		console.log("\n" + cyan + "─".repeat(60) + reset)
+		console.log(
+			`${green}✓${reset} ${bold}Parallel mode complete!${reset} Changes committed to: ${cyan}${worktreeBranch}${reset}`,
+		)
+		console.log(`\n${bold}To merge changes:${reset}`)
+		console.log(`  ${yellow}git merge ${worktreeBranch}${reset}`)
+		console.log(`\n${bold}💡 Tip:${reset} Resume work with ${yellow}--existing-branch${reset}:`)
+		console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch}${reset}`)
+		console.log(cyan + "─".repeat(60) + reset + "\n")
 	} catch (error) {
 		logs.error("Failed to commit changes", "ParallelMode", { error })
 
@@ -125,7 +158,6 @@ export async function finishParallelMode(cli: CLI, worktreePath?: string) {
 	try {
 		logs.info(`Removing worktree at: ${worktreePath}`, "ParallelMode")
 
-		// Remove the worktree using git worktree remove
 		execSync(`git worktree remove "${worktreePath}"`, {
 			stdio: "pipe",
 		})
