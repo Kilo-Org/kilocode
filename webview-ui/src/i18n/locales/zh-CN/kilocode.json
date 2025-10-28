@@ -61,7 +61,8 @@
 			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
 			"providerRouting": {
 				"title": "提供商路由",
-				"managedByOrganization": "提供商路由设置由您的组织管理。",
+				"managedByOrganization": "管理组织级提供商路由",
+				"createOrganization": "创建组织以管理提供商路由",
 				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。",
 				"sorting": {
 					"default": "默认提供商排序",
@@ -136,7 +137,9 @@
 			"credits": "Credits",
 			"action": "立即购买",
 			"viewAll": "查看所有价格选项"
-		}
+		},
+		"detailedUsage": "详细使用情况",
+		"createOrganization": "创建组织以跟踪详细使用情况"
 	},
 	"docs": "文档",
 	"rules": {

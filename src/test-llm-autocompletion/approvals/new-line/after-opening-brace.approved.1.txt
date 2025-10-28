@@ -1,8 +1,0 @@
-function processItems(items) {
-
-    // Process each item in the array
-    for (const item of items) {
-        // Add your item processing logic here
-    }
-
-}

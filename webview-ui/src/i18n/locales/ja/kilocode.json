@@ -47,7 +47,8 @@
 			"logout": "Kilo Codeからログアウト",
 			"providerRouting": {
 				"title": "プロバイダールーティング",
-				"managedByOrganization": "プロバイダールーティング設定はあなたの組織によって管理されています。",
+				"managedByOrganization": "組織レベルのプロバイダールーティングを管理",
+				"createOrganization": "プロバイダールーティングを管理する組織を作成",
 				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。",
 				"sorting": {
 					"default": "デフォルトプロバイダーソート",
@@ -136,7 +137,9 @@
 			"credits": "クレジット",
 			"action": "今すぐ購入",
 			"viewAll": "すべての価格オプションを表示"
-		}
+		},
+		"detailedUsage": "詳細な使用状況",
+		"createOrganization": "詳細な使用状況を追跡する組織を作成"
 	},
 	"docs": "ドキュメント",
 	"rules": {
