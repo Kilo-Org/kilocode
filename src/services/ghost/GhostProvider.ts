@@ -2,10 +2,8 @@ import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
-import { GhostStreamingParser } from "./classic-auto-complete/GhostStreamingParser"
-import { AutoTriggerStrategy } from "./classic-auto-complete/AutoTriggerStrategy"
 import { GhostModel } from "./GhostModel"
-import { GhostSuggestionContext, contextToAutocompleteInput, extractPrefixSuffix } from "./types"
+import { GhostSuggestionContext } from "./types"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostSuggestionsState } from "./classic-auto-complete/GhostSuggestions"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
@@ -18,14 +16,11 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { GhostGutterAnimation } from "./GhostGutterAnimation"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
-import { normalizeAutoTriggerDelayToMs } from "./utils/autocompleteDelayUtils"
 
 export class GhostProvider {
 	private static instance: GhostProvider | null = null
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
-	private streamingParser: GhostStreamingParser
-	private autoTriggerStrategy: AutoTriggerStrategy
 	private suggestions: GhostSuggestionsState = new GhostSuggestionsState()
 	private cline: ClineProvider
 	private providerSettingsManager: ProviderSettingsManager
@@ -43,10 +38,6 @@ export class GhostProvider {
 	private sessionCost: number = 0
 	private lastCompletionCost: number = 0
 
-	// Auto-trigger timer management
-	private autoTriggerTimer: NodeJS.Timeout | null = null
-	private lastTextChangeTime: number = 0
-
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public inlineCompletionProvider: GhostInlineCompletionProvider
@@ -58,8 +49,6 @@ export class GhostProvider {
 
 		// Register Internal Components
 		this.documentStore = new GhostDocumentStore()
-		this.streamingParser = new GhostStreamingParser()
-		this.autoTriggerStrategy = new AutoTriggerStrategy()
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
@@ -67,7 +56,12 @@ export class GhostProvider {
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
-		this.inlineCompletionProvider = new GhostInlineCompletionProvider()
+		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
+			this.model,
+			this.updateCostTracking.bind(this),
+			this.ghostContext,
+			this.cursorAnimation,
+		)
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -227,8 +221,6 @@ export class GhostProvider {
 		}
 
 		await this.documentStore.storeDocument({ document: event.document })
-		this.lastTextChangeTime = Date.now()
-		this.handleTypingEvent(event)
 	}
 
 	private async onDidChangeTextEditorSelection(event: vscode.TextEditorSelectionChangeEvent): Promise<void> {
@@ -236,18 +228,12 @@ export class GhostProvider {
 			return
 		}
 		this.cursorAnimation.update()
-		const timeSinceLastTextChange = Date.now() - this.lastTextChangeTime
-		const isSelectionChangeFromTyping = timeSinceLastTextChange < 50
-		if (!isSelectionChangeFromTyping) {
-			this.clearAutoTriggerTimer()
-		}
 	}
 
 	private async onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
 		if (!this.enabled || !editor) {
 			return
 		}
-		this.clearAutoTriggerTimer()
 		await this.render()
 	}
 
@@ -285,25 +271,6 @@ export class GhostProvider {
 		this.startRequesting()
 		this.isRequestCancelled = false
 
-		const context = await this.ghostContext.generate(initialContext)
-
-		const autocompleteInput = contextToAutocompleteInput(context)
-
-		const position = context.range?.start ?? context.document.positionAt(0)
-		const { prefix, suffix } = extractPrefixSuffix(context.document, position)
-		const languageId = context.document.languageId
-
-		// Check cache before making API call
-		if (this.inlineCompletionProvider.cachedSuggestionAvailable(prefix, suffix)) {
-			return
-		}
-
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
-			autocompleteInput,
-			prefix,
-			suffix,
-			languageId,
-		)
 		if (this.isRequestCancelled) {
 			return
 		}
@@ -313,89 +280,10 @@ export class GhostProvider {
 			await this.load()
 		}
 
-		// Initialize the streaming parser
-		this.streamingParser.initialize(context)
-
-		let hasShownFirstSuggestion = false
-		let cost = 0
-		let inputTokens = 0
-		let outputTokens = 0
-		let cacheWriteTokens = 0
-		let cacheReadTokens = 0
-		let response = ""
-
-		// Create streaming callback
-		const onChunk = (chunk: any) => {
-			if (this.isRequestCancelled) {
-				return
-			}
-
-			if (chunk.type === "text") {
-				response += chunk.text
-			}
-		}
-
-		try {
-			// Start streaming generation
-			const usageInfo = await this.model.generateResponse(systemPrompt, userPrompt, onChunk)
-
-			console.log("response", response)
-
-			// Update cost tracking
-			cost = usageInfo.cost
-			inputTokens = usageInfo.inputTokens
-			outputTokens = usageInfo.outputTokens
-			cacheWriteTokens = usageInfo.cacheWriteTokens
-			cacheReadTokens = usageInfo.cacheReadTokens
-
-			this.updateCostTracking(cost)
-
-			// Send telemetry
-			TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
-				taskId: this.taskId,
-				inputTokens: inputTokens,
-				outputTokens: outputTokens,
-				cacheWriteTokens: cacheWriteTokens,
-				cacheReadTokens: cacheReadTokens,
-				cost: cost,
-				service: "INLINE_ASSIST",
-			})
-
-			if (this.isRequestCancelled) {
-				this.suggestions.clear()
-				await this.render()
-				return
-			}
-
-			// Finish the streaming parser to apply sanitization if needed
-			const finalParseResult = this.streamingParser.parseResponse(response, prefix, suffix)
-
-			if (finalParseResult.suggestions.getFillInAtCursor()) {
-				console.info("Final suggestion:", finalParseResult.suggestions.getFillInAtCursor())
-			}
-
-			if (finalParseResult.hasNewSuggestions && !hasShownFirstSuggestion) {
-				// Handle case where sanitization produced suggestions
-				this.suggestions = finalParseResult.suggestions
-				hasShownFirstSuggestion = true
-				this.stopProcessing()
-				await this.render()
-			} else if (finalParseResult.hasNewSuggestions && hasShownFirstSuggestion) {
-				// Update existing suggestions with sanitized results
-				this.suggestions = finalParseResult.suggestions
-				await this.render()
-			}
-
-			// If we never showed any suggestions, there might have been an issue
-			if (!hasShownFirstSuggestion) {
-				console.warn("No suggestions were generated during streaming")
-				this.stopProcessing()
-			}
-		} catch (error) {
-			console.error("Error in streaming generation:", error)
-			this.stopProcessing()
-			throw error
-		}
+		// Just trigger the inline completion provider
+		// It will call getFromLLM internally when no cached suggestion is available
+		this.stopProcessing()
+		await this.render()
 	}
 
 	private async render() {
@@ -437,8 +325,6 @@ export class GhostProvider {
 			taskId: this.taskId,
 		})
 		this.suggestions.clear()
-
-		this.clearAutoTriggerTimer()
 		await this.render()
 	}
 
@@ -474,10 +360,27 @@ export class GhostProvider {
 		return this.model.loaded && this.model.hasValidCredentials()
 	}
 
-	private updateCostTracking(cost: number) {
+	private updateCostTracking(
+		cost: number,
+		inputTokens: number,
+		outputTokens: number,
+		cacheWriteTokens: number,
+		cacheReadTokens: number,
+	): void {
 		this.lastCompletionCost = cost
 		this.sessionCost += cost
 		this.updateStatusBar()
+
+		// Send telemetry
+		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
+			taskId: this.taskId,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens,
+			cacheReadTokens,
+			cost,
+			service: "INLINE_ASSIST",
+		})
 	}
 
 	private updateStatusBar() {
@@ -528,80 +431,13 @@ export class GhostProvider {
 	public cancelRequest() {
 		this.stopProcessing()
 		this.isRequestCancelled = true
-		if (this.autoTriggerTimer) {
-			this.clearAutoTriggerTimer()
-		}
-	}
-
-	/**
-	 * Handle typing events for auto-trigger functionality
-	 */
-	private handleTypingEvent(event: vscode.TextDocumentChangeEvent): void {
-		// Cancel existing suggestions when user starts typing
-		if (this.hasPendingSuggestions()) {
-			void this.cancelSuggestions()
-			return
-		}
-
-		// Skip if auto-trigger is not enabled
-		if (!this.isAutoTriggerEnabled()) {
-			return
-		}
-
-		// Clear any existing timer
-		this.clearAutoTriggerTimer()
-		this.startProcessing()
-		const delay = normalizeAutoTriggerDelayToMs(this.settings?.autoTriggerDelay)
-		this.autoTriggerTimer = setTimeout(() => {
-			this.onAutoTriggerTimeout()
-		}, delay)
-	}
-
-	/**
-	 * Clear the auto-trigger timer
-	 */
-	private clearAutoTriggerTimer(): void {
-		this.stopProcessing()
-		if (this.autoTriggerTimer) {
-			clearTimeout(this.autoTriggerTimer)
-			this.autoTriggerTimer = null
-		}
-	}
-
-	/**
-	 * Check if auto-trigger is enabled in settings
-	 */
-	private isAutoTriggerEnabled(): boolean {
-		return this.settings?.enableAutoTrigger === true
-	}
-
-	/**
-	 * Handle auto-trigger timeout - triggers code suggestion automatically
-	 */
-	private async onAutoTriggerTimeout(): Promise<void> {
-		// Reset typing state
-		this.autoTriggerTimer = null
-
-		// Double-check that we should still trigger
-		if (!this.enabled || !this.isAutoTriggerEnabled() || this.hasPendingSuggestions()) {
-			return
-		}
-
-		// Get the active editor
-		const editor = vscode.window.activeTextEditor
-		if (!editor) {
-			return
-		}
-
-		// Trigger code suggestion automatically
-		await this.codeSuggestion()
+		this.inlineCompletionProvider.cancelRequest()
 	}
 
 	/**
 	 * Dispose of all resources used by the GhostProvider
 	 */
 	public dispose(): void {
-		this.clearAutoTriggerTimer()
 		this.cancelRequest()
 
 		this.suggestions.clear()

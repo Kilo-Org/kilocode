@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
-import { GhostStreamingParser } from "../classic-auto-complete/GhostStreamingParser"
-import { GhostSuggestionContext } from "../types"
+import { parseGhostResponse } from "../classic-auto-complete/GhostStreamingParser"
+import { GhostSuggestionContext, extractPrefixSuffix } from "../types"
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -65,11 +65,9 @@ vi.mock("vscode", () => ({
 
 describe("GhostProvider", () => {
 	let mockWorkspace: MockWorkspace
-	let streamingParser: GhostStreamingParser
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-		streamingParser = new GhostStreamingParser()
 		mockWorkspace = new MockWorkspace()
 
 		vi.mocked(vscode.workspace.openTextDocument).mockImplementation(async (uri: any) => {
@@ -107,8 +105,9 @@ describe("GhostProvider", () => {
 			const { context } = await setupTestDocument("empty.js", initialContent)
 
 			// Test empty response
-			streamingParser.initialize(context)
-			const result = streamingParser.parseResponse("", "", "")
+			const position = context.range?.start ?? context.document.positionAt(0)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const result = parseGhostResponse("", prefix, suffix)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -118,8 +117,9 @@ describe("GhostProvider", () => {
 
 			// Test invalid XML format
 			const invalidXML = "This is not a valid XML format"
-			streamingParser.initialize(context)
-			const result = streamingParser.parseResponse(invalidXML, "", "")
+			const position = context.range?.start ?? context.document.positionAt(0)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const result = parseGhostResponse(invalidXML, prefix, suffix)
 			expect(result.suggestions.hasSuggestions()).toBe(false)
 		})
 
@@ -137,8 +137,9 @@ describe("GhostProvider", () => {
 			const xmlResponse = `<change><search><![CDATA[console.log('test');]]></search><replace><![CDATA[// Added comment
 console.log('test');]]></replace></change>`
 
-			streamingParser.initialize(context)
-			const result = streamingParser.parseResponse(xmlResponse, "", "")
+			const position = context.range?.start ?? context.document.positionAt(0)
+			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const result = parseGhostResponse(xmlResponse, prefix, suffix)
 			// Should work with the XML format
 			expect(result.suggestions.hasSuggestions()).toBe(true)
 		})

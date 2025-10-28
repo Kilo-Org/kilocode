@@ -1,9 +1,9 @@
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
-import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
+import { GhostSuggestionContext, AutocompleteInput, extractPrefixSuffix } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
-import { GhostStreamingParser } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
+import { parseGhostResponse } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 
@@ -88,7 +88,6 @@ export class StrategyTester {
 
 	parseCompletion(originalContent: string, xmlResponse: string): string | null {
 		try {
-			const parser = new GhostStreamingParser()
 			const uri = vscode.Uri.parse("file:///test.js")
 
 			const dummyContext: GhostSuggestionContext = {
@@ -96,8 +95,9 @@ export class StrategyTester {
 				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)) as any,
 			}
 
-			parser.initialize(dummyContext)
-			const result = parser.parseResponse(xmlResponse, "", "")
+			const position = dummyContext.range?.start ?? new vscode.Position(0, 0)
+			const { prefix, suffix } = extractPrefixSuffix(dummyContext.document, position)
+			const result = parseGhostResponse(xmlResponse, prefix, suffix)
 
 			// Check if we have any suggestions
 			if (!result.suggestions.hasSuggestions()) {

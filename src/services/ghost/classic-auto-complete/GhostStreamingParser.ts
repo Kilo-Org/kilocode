@@ -1,5 +1,4 @@
 import * as vscode from "vscode"
-import { GhostSuggestionContext } from "../types"
 import { GhostSuggestionsState } from "./GhostSuggestions"
 import { CURSOR_MARKER } from "./ghostConstants"
 
@@ -12,12 +11,6 @@ export interface StreamingParseResult {
 export interface ParsedChange {
 	search: string
 	replace: string
-	cursorPosition?: number // Offset within replace content where cursor should be positioned
-}
-
-function extractCursorPosition(content: string): number | undefined {
-	const markerIndex = content.indexOf(CURSOR_MARKER)
-	return markerIndex !== -1 ? markerIndex : undefined
 }
 
 function removeCursorMarker(content: string): string {
@@ -199,211 +192,169 @@ function skipChars(text: string, startPos: number, predicate: (char: string) => 
 }
 
 /**
- * Streaming XML parser for Ghost suggestions that can process incomplete responses
- * and emit suggestions as soon as complete <change> blocks are available
+ * Sanitize response if needed and return sanitized response with completion status
  */
-export class GhostStreamingParser {
-	private context: GhostSuggestionContext | null = null
+function sanitizeResponseIfNeeded(response: string): { sanitizedResponse: string; isComplete: boolean } {
+	let sanitizedResponse = response
+	let isComplete = isResponseComplete(sanitizedResponse)
 
-	constructor() {}
-
-	/**
-	 * Initialize the parser with context
-	 */
-	public initialize(context: GhostSuggestionContext): void {
-		this.context = context
+	if (!isComplete) {
+		sanitizedResponse = sanitizeXMLConservative(sanitizedResponse)
+		isComplete = isResponseComplete(sanitizedResponse) // Re-check completion after sanitization
 	}
 
-	/**
-	 * Sanitize response if needed and return sanitized response with completion status
-	 */
-	private sanitizeResponseIfNeeded(response: string): { sanitizedResponse: string; isComplete: boolean } {
-		let sanitizedResponse = response
-		let isComplete = isResponseComplete(sanitizedResponse)
+	return { sanitizedResponse, isComplete }
+}
 
-		if (!isComplete) {
-			sanitizedResponse = sanitizeXMLConservative(sanitizedResponse)
-			isComplete = isResponseComplete(sanitizedResponse) // Re-check completion after sanitization
-		}
+/**
+ * Parse the response
+ */
+export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): StreamingParseResult {
+	const { sanitizedResponse, isComplete } = sanitizeResponseIfNeeded(fullResponse)
 
-		return { sanitizedResponse, isComplete }
+	const newChanges = extractCompletedChanges(sanitizedResponse)
+	let hasNewSuggestions = newChanges.length > 0
+
+	// Generate suggestions from all completed changes
+	const modifiedContent = generateModifiedContent(newChanges, prefix, suffix, prefix + suffix)
+
+	const modifiedContent_has_prefix_and_suffix =
+		modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
+
+	const suggestions = new GhostSuggestionsState()
+
+	if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
+		// Mark as FIM option
+		const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
+		suggestions.setFillInAtCursor({
+			text: middle,
+			prefix,
+			suffix,
+		})
 	}
 
-	/**
-	 * Mark the stream as finished and process any remaining content with sanitization
-	 */
-	public parseResponse(fullResponse: string, prefix: string, suffix: string): StreamingParseResult {
-		const { sanitizedResponse, isComplete } = this.sanitizeResponseIfNeeded(fullResponse)
+	return {
+		suggestions,
+		isComplete,
+		hasNewSuggestions,
+	}
+}
 
-		const newChanges = this.extractCompletedChanges(sanitizedResponse)
-		let hasNewSuggestions = newChanges.length > 0
+/**
+ * Extract completed <change> blocks from the buffer
+ */
+function extractCompletedChanges(searchText: string): ParsedChange[] {
+	const changeRegex =
+		/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
 
-		// Generate suggestions from all completed changes
-		const document = this.context!.document
-		const range = this.context!.range
+	return Array.from(searchText.matchAll(changeRegex), (match) => ({
+		search: match[1],
+		replace: match[2],
+	}))
+}
 
-		const modifiedContent = this.generateModifiedContent(newChanges, document, range)
+/**
+ * Generate modified content by applying changes to the document
+ */
+function generateModifiedContent(
+	changes: ParsedChange[],
+	prefix: string,
+	suffix: string,
+	currentContent: string,
+): string | undefined {
+	if (changes.length === 0) {
+		return undefined
+	}
 
-		const modifiedContent_has_prefix_and_suffix =
-			modifiedContent?.startsWith(prefix) && modifiedContent.endsWith(suffix)
+	// Add cursor marker to document content if it's not already there
+	// This ensures that when LLM searches for <<<AUTOCOMPLETE_HERE>>>, it can find it
+	let modifiedContent = currentContent
+	const needsCursorMarker =
+		changes.some((change) => change.search.includes(CURSOR_MARKER)) && !currentContent.includes(CURSOR_MARKER)
+	if (needsCursorMarker) {
+		// Construct content with cursor marker at the position between prefix and suffix
+		modifiedContent = prefix + CURSOR_MARKER + suffix
+	}
 
-		const suggestions = new GhostSuggestionsState()
+	// Process changes: preserve search content as-is, clean replace content for application
+	const filteredChanges = changes.map((change) => ({
+		search: change.search, // Keep cursor markers for matching against document
+		replace: removeCursorMarker(change.replace), // Clean for content application
+	}))
 
-		if (modifiedContent_has_prefix_and_suffix && modifiedContent) {
-			// Mark as FIM option
-			const middle = modifiedContent.slice(prefix.length, modifiedContent.length - suffix.length)
-			suggestions.setFillInAtCursor({
-				text: middle,
-				prefix,
-				suffix,
+	// Apply changes in reverse order to maintain line numbers
+	const appliedChanges: Array<{
+		searchContent: string
+		replaceContent: string
+		startIndex: number
+		endIndex: number
+	}> = []
+
+	for (const change of filteredChanges) {
+		let searchIndex = findBestMatch(modifiedContent, change.search)
+
+		if (searchIndex !== -1) {
+			// Check for overlapping changes before applying
+			const endIndex = searchIndex + change.search.length
+			const hasOverlap = appliedChanges.some((existingChange) => {
+				// Check if ranges overlap
+				const existingStart = existingChange.startIndex
+				const existingEnd = existingChange.endIndex
+				return searchIndex < existingEnd && endIndex > existingStart
 			})
-		}
 
-		return {
-			suggestions,
-			isComplete,
-			hasNewSuggestions,
-		}
-	}
-
-	/**
-	 * Extract completed <change> blocks from the buffer
-	 */
-	private extractCompletedChanges(searchText: string): ParsedChange[] {
-		const newChanges: ParsedChange[] = []
-
-		// Updated regex to handle both single-line XML format and traditional format with whitespace
-		const changeRegex =
-			/<change>\s*<search>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/search>\s*<replace>\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*<\/replace>\s*<\/change>/g
-
-		let match
-		let lastMatchEnd = 0
-
-		while ((match = changeRegex.exec(searchText)) !== null) {
-			// Preserve cursor marker in search content (LLM includes it when it sees it in document)
-			const searchContent = match[1]
-			// Extract cursor position from replace content
-			const replaceContent = match[2]
-			const cursorPosition = extractCursorPosition(replaceContent)
-
-			newChanges.push({
-				search: searchContent,
-				replace: replaceContent,
-				cursorPosition,
-			})
-
-			lastMatchEnd = match.index + match[0].length
-		}
-
-		return newChanges
-	}
-
-	private generateModifiedContent(
-		changes: ParsedChange[],
-		document: vscode.TextDocument,
-		range: vscode.Range | undefined,
-	): string | undefined {
-		if (changes.length === 0) {
-			return undefined
-		}
-
-		const currentContent = document.getText()
-
-		// Add cursor marker to document content if it's not already there
-		// This ensures that when LLM searches for <<<AUTOCOMPLETE_HERE>>>, it can find it
-		let modifiedContent = currentContent
-		const needsCursorMarker =
-			changes.some((change) => change.search.includes(CURSOR_MARKER)) && !currentContent.includes(CURSOR_MARKER)
-		if (needsCursorMarker && range) {
-			// Add cursor marker at the specified range position
-			const cursorOffset = document.offsetAt(range.start)
-			modifiedContent =
-				currentContent.substring(0, cursorOffset) + CURSOR_MARKER + currentContent.substring(cursorOffset)
-		}
-
-		// Process changes: preserve search content as-is, clean replace content for application
-		const filteredChanges = changes.map((change) => ({
-			search: change.search, // Keep cursor markers for matching against document
-			replace: removeCursorMarker(change.replace), // Clean for content application
-			cursorPosition: change.cursorPosition,
-		}))
-
-		// Apply changes in reverse order to maintain line numbers
-		const appliedChanges: Array<{
-			searchContent: string
-			replaceContent: string
-			startIndex: number
-			endIndex: number
-			cursorPosition?: number
-		}> = []
-
-		for (const change of filteredChanges) {
-			let searchIndex = findBestMatch(modifiedContent, change.search)
-
-			if (searchIndex !== -1) {
-				// Check for overlapping changes before applying
-				const endIndex = searchIndex + change.search.length
-				const hasOverlap = appliedChanges.some((existingChange) => {
-					// Check if ranges overlap
-					const existingStart = existingChange.startIndex
-					const existingEnd = existingChange.endIndex
-					return searchIndex < existingEnd && endIndex > existingStart
-				})
-
-				if (hasOverlap) {
-					console.warn("Skipping overlapping change:", change.search.substring(0, 50))
-					continue // Skip this change to avoid duplicates
-				}
-
-				// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
-				let adjustedReplaceContent = change.replace
-
-				// If the search pattern ends with a newline, check if there are additional empty lines after it
-				if (change.search.endsWith("\n")) {
-					let nextCharIndex = endIndex
-					let extraNewlines = ""
-
-					// Count consecutive newlines after the search pattern
-					while (nextCharIndex < modifiedContent.length && modifiedContent[nextCharIndex] === "\n") {
-						extraNewlines += "\n"
-						nextCharIndex++
-					}
-
-					// If we found extra newlines, preserve them by adding them to the replacement
-					if (extraNewlines.length > 0) {
-						// Only add the extra newlines if the replacement doesn't already end with enough newlines
-						if (!adjustedReplaceContent.endsWith("\n" + extraNewlines)) {
-							adjustedReplaceContent = adjustedReplaceContent.trimEnd() + "\n" + extraNewlines
-						}
-					}
-				}
-
-				appliedChanges.push({
-					searchContent: change.search,
-					replaceContent: adjustedReplaceContent,
-					startIndex: searchIndex,
-					endIndex: endIndex,
-					cursorPosition: change.cursorPosition, // Preserve cursor position info
-				})
+			if (hasOverlap) {
+				console.warn("Skipping overlapping change:", change.search.substring(0, 50))
+				continue // Skip this change to avoid duplicates
 			}
+
+			// Handle the case where search pattern ends with newline but we need to preserve additional whitespace
+			let adjustedReplaceContent = change.replace
+
+			// If the search pattern ends with a newline, check if there are additional empty lines after it
+			if (change.search.endsWith("\n")) {
+				let nextCharIndex = endIndex
+				let extraNewlines = ""
+
+				// Count consecutive newlines after the search pattern
+				while (nextCharIndex < modifiedContent.length && modifiedContent[nextCharIndex] === "\n") {
+					extraNewlines += "\n"
+					nextCharIndex++
+				}
+
+				// If we found extra newlines, preserve them by adding them to the replacement
+				if (extraNewlines.length > 0) {
+					// Only add the extra newlines if the replacement doesn't already end with enough newlines
+					if (!adjustedReplaceContent.endsWith("\n" + extraNewlines)) {
+						adjustedReplaceContent = adjustedReplaceContent.trimEnd() + "\n" + extraNewlines
+					}
+				}
+			}
+
+			appliedChanges.push({
+				searchContent: change.search,
+				replaceContent: adjustedReplaceContent,
+				startIndex: searchIndex,
+				endIndex: endIndex,
+			})
 		}
-
-		// Sort by start index in descending order to apply changes from end to beginning
-		appliedChanges.sort((a, b) => b.startIndex - a.startIndex)
-
-		// Apply the changes
-		for (const change of appliedChanges) {
-			modifiedContent =
-				modifiedContent.substring(0, change.startIndex) +
-				change.replaceContent +
-				modifiedContent.substring(change.endIndex)
-		}
-
-		// Remove cursor marker from the final content if we added it
-		if (needsCursorMarker) {
-			modifiedContent = removeCursorMarker(modifiedContent)
-		}
-
-		return modifiedContent
 	}
+
+	// Sort by start index in descending order to apply changes from end to beginning
+	appliedChanges.sort((a, b) => b.startIndex - a.startIndex)
+
+	// Apply the changes
+	for (const change of appliedChanges) {
+		modifiedContent =
+			modifiedContent.substring(0, change.startIndex) +
+			change.replaceContent +
+			modifiedContent.substring(change.endIndex)
+	}
+
+	// Remove cursor marker from the final content if we added it
+	if (needsCursorMarker) {
+		modifiedContent = removeCursorMarker(modifiedContent)
+	}
+
+	return modifiedContent
 }

@@ -797,8 +797,8 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
-			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix el proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
-			"apiKey": "Clau d'API de Morph (opcional)",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
+			"apiKey": "Clau API de Morph (opcional)",
 			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
 			"modelLabel": "Selecció de model",
 			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",

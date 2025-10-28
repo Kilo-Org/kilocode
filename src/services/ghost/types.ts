@@ -153,7 +153,7 @@ export interface AutocompleteOutcome extends TabAutocompleteOptions {
 	completion: string
 	modelProvider: string
 	modelName: string
-	completionOptions: any
+	completionOptions: Record<string, unknown>
 	cacheHit: boolean
 	numLines: number
 	filepath: string
