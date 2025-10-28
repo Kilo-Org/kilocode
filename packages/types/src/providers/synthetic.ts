@@ -3,6 +3,7 @@
 import type { ModelInfo } from "../model.js"
 
 export type SyntheticModelId =
+	| "hf:MiniMaxAI/MiniMax-M2"
 	| "hf:zai-org/GLM-4.6"
 	| "hf:zai-org/GLM-4.5"
 	| "hf:openai/gpt-oss-120b"
@@ -26,6 +27,16 @@ export type SyntheticModelId =
 export const syntheticDefaultModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 
 export const syntheticModels = {
+	"hf:MiniMaxAI/MiniMax-M2": {
+		maxTokens: 192608,
+		contextWindow: 192608,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.55,
+		outputPrice: 2.19,
+		description:
+			"MiniMax's latest hybrid reasoning model: it's fast, it thinks before it responds, it's great at using tools via the API, and it's a strong coding model. 192k-token context.",
+	},
 	"hf:moonshotai/Kimi-K2-Instruct-0905": {
 		maxTokens: 262144,
 		contextWindow: 262144,

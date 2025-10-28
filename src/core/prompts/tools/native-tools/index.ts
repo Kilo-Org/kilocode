@@ -11,7 +11,7 @@ import insertContent from "./insert_content"
 import listCodeDefinitionNames from "./list_code_definition_names"
 import listFiles from "./list_files"
 import newTask from "./new_task"
-import readFile from "./read_file"
+import { read_file_single, read_file_multi } from "./read_file"
 import runSlashCommand from "./run_slash_command"
 import searchAndReplace from "./search_and_replace"
 import searchFiles from "./search_files"
@@ -35,7 +35,8 @@ export const nativeTools = [
 	listCodeDefinitionNames,
 	listFiles,
 	newTask,
-	readFile,
+	read_file_single,
+	read_file_multi,
 	runSlashCommand,
 	searchAndReplace,
 	searchFiles,

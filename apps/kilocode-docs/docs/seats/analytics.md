@@ -4,14 +4,14 @@ sidebar_label: Usage Analytics & Reporting
 
 # Usage Analytics & Reporting
 
-Using Kilo seats with an Enterprise or Teams subscription provides detailed usage analytics to help you monitor and understand your organization’s AI usage patterns, costs, and activity through the Kilo Code API provider.
+Using Kilo seats with an Enterprise or Teams subscription provides detailed usage analytics to help you monitor and understand your organization’s AI usage patterns, costs, and activity through the Kilo Gateway provider.
 
 ## Analytics Dashboard Overview
 
-Access your organization’s usage analytics through the **Usage Details** section in your dashboard. The analytics show comprehensive data about your team's usage of the Kilo Code API provider.
+Access your organization’s usage analytics through the **Usage Details** section in your dashboard. The analytics show comprehensive data about your team's usage of the Kilo Gateway provider.
 
 :::info Usage Scope
-This usage overview includes all of your usage of the Kilo Code API provider. It does **NOT** include any usage made via the Kilo Code extension to other, non-Kilo Code providers. You can choose which API provider to use from the extension's main settings page.
+This usage overview includes all of your usage of the Kilo Gateway provider. It does **NOT** include any usage made via the Kilo Code extension to other, non-Kilo Code providers. You can choose which API provider to use from the extension's main settings page.
 :::
 
 ## Summary Metrics

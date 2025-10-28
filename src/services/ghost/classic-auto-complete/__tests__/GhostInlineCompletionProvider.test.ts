@@ -1,7 +1,14 @@
 import * as vscode from "vscode"
-import { GhostInlineCompletionProvider, findMatchingSuggestion } from "../GhostInlineCompletionProvider"
+import {
+	GhostInlineCompletionProvider,
+	findMatchingSuggestion,
+	CostTrackingCallback,
+} from "../GhostInlineCompletionProvider"
 import { GhostSuggestionsState, FillInAtCursorSuggestion } from "../GhostSuggestions"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
+import { GhostModel } from "../../GhostModel"
+import { GhostContext } from "../../GhostContext"
+import { GhostGutterAnimation } from "../../GhostGutterAnimation"
 
 describe("findMatchingSuggestion", () => {
 	describe("exact matching", () => {
@@ -215,30 +222,75 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockPosition: vscode.Position
 	let mockContext: vscode.InlineCompletionContext
 	let mockToken: vscode.CancellationToken
+	let mockModel: GhostModel
+	let mockCostTrackingCallback: CostTrackingCallback
+	let mockGhostContext: GhostContext
+	let mockCursorAnimation: GhostGutterAnimation
 
 	beforeEach(() => {
-		provider = new GhostInlineCompletionProvider()
 		mockDocument = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
 		mockPosition = new vscode.Position(0, 11) // After "const x = 1"
 		mockContext = {} as vscode.InlineCompletionContext
 		mockToken = {} as vscode.CancellationToken
+
+		// Create mock dependencies
+		mockModel = {
+			generateResponse: vi.fn().mockResolvedValue({
+				cost: 0,
+				inputTokens: 0,
+				outputTokens: 0,
+				cacheWriteTokens: 0,
+				cacheReadTokens: 0,
+			}),
+		} as unknown as GhostModel
+		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
+		mockGhostContext = {
+			generate: vi.fn().mockResolvedValue({
+				document: mockDocument,
+				range: undefined,
+			}),
+		} as unknown as GhostContext
+		mockCursorAnimation = {
+			active: vi.fn(),
+			hide: vi.fn(),
+			update: vi.fn(),
+			dispose: vi.fn(),
+			updateSettings: vi.fn(),
+		} as unknown as GhostGutterAnimation
+
+		provider = new GhostInlineCompletionProvider(
+			mockModel,
+			mockCostTrackingCallback,
+			mockGhostContext,
+			mockCursorAnimation,
+		)
 	})
 
 	describe("provideInlineCompletionItems", () => {
-		it("should return empty array when no suggestions are set", () => {
-			const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+		it("should return empty array when no suggestions are set", async () => {
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
 			expect(result).toEqual([])
 		})
 
-		it("should return empty array when suggestions have no FIM content", () => {
+		it("should return empty array when suggestions have no FIM content", async () => {
 			const suggestions = new GhostSuggestionsState()
 			provider.updateSuggestions(suggestions)
 
-			const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
 			expect(result).toEqual([])
 		})
 
-		it("should return inline completion item when FIM content is available and prefix/suffix match", () => {
+		it("should return inline completion item when FIM content is available and prefix/suffix match", async () => {
 			const suggestions = new GhostSuggestionsState()
 			const fimContent = {
 				text: "console.log('Hello, World!');",
@@ -248,12 +300,12 @@ describe("GhostInlineCompletionProvider", () => {
 			suggestions.setFillInAtCursor(fimContent)
 			provider.updateSuggestions(suggestions)
 
-			const result = provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe(fimContent.text)
@@ -262,7 +314,7 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result[0].command).toBeUndefined()
 		})
 
-		it("should return empty array when prefix does not match", () => {
+		it("should return empty array when prefix does not match", async () => {
 			const suggestions = new GhostSuggestionsState()
 			const fimContent = {
 				text: "console.log('Hello, World!');",
@@ -272,12 +324,17 @@ describe("GhostInlineCompletionProvider", () => {
 			suggestions.setFillInAtCursor(fimContent)
 			provider.updateSuggestions(suggestions)
 
-			const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
 
 			expect(result).toEqual([])
 		})
 
-		it("should return empty array when suffix does not match", () => {
+		it("should return empty array when suffix does not match", async () => {
 			const suggestions = new GhostSuggestionsState()
 			const fimContent = {
 				text: "console.log('Hello, World!');",
@@ -287,12 +344,17 @@ describe("GhostInlineCompletionProvider", () => {
 			suggestions.setFillInAtCursor(fimContent)
 			provider.updateSuggestions(suggestions)
 
-			const result = provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)
 
 			expect(result).toEqual([])
 		})
 
-		it("should update suggestions when called multiple times", () => {
+		it("should update suggestions when called multiple times", async () => {
 			const suggestions1 = new GhostSuggestionsState()
 			suggestions1.setFillInAtCursor({
 				text: "first suggestion",
@@ -301,12 +363,12 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 			provider.updateSuggestions(suggestions1)
 
-			let result = provider.provideInlineCompletionItems(
+			let result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("first suggestion")
 
 			const suggestions2 = new GhostSuggestionsState()
@@ -317,15 +379,15 @@ describe("GhostInlineCompletionProvider", () => {
 			})
 			provider.updateSuggestions(suggestions2)
 
-			result = provider.provideInlineCompletionItems(
+			result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("second suggestion")
 		})
-		it("should maintain a rolling window of suggestions and match from most recent", () => {
+		it("should maintain a rolling window of suggestions and match from most recent", async () => {
 			// Add first suggestion
 			const suggestions1 = new GhostSuggestionsState()
 			suggestions1.setFillInAtCursor({
@@ -345,27 +407,27 @@ describe("GhostInlineCompletionProvider", () => {
 			provider.updateSuggestions(suggestions2)
 
 			// Should match the first suggestion when context matches
-			let result = provider.provideInlineCompletionItems(
+			let result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("first suggestion")
 
 			// Should match the second suggestion when context matches
 			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
 			const mockPosition2 = new vscode.Position(0, 11)
-			result = provider.provideInlineCompletionItems(
+			result = (await provider.provideInlineCompletionItems(
 				mockDocument2,
 				mockPosition2,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("second suggestion")
 		})
 
-		it("should prefer most recent matching suggestion when multiple match", () => {
+		it("should prefer most recent matching suggestion when multiple match", async () => {
 			// Add first suggestion
 			const suggestions1 = new GhostSuggestionsState()
 			suggestions1.setFillInAtCursor({
@@ -385,16 +447,16 @@ describe("GhostInlineCompletionProvider", () => {
 			provider.updateSuggestions(suggestions2)
 
 			// Should return the most recent (second) suggestion
-			const result = provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("second suggestion")
 		})
 
-		it("should maintain only the last 20 suggestions (FIFO)", () => {
+		it("should maintain only the last 20 suggestions (FIFO)", async () => {
 			// Add 25 suggestions
 			for (let i = 0; i < 25; i++) {
 				const suggestions = new GhostSuggestionsState()
@@ -410,32 +472,37 @@ describe("GhostInlineCompletionProvider", () => {
 			// Try to match suggestion 0 (should not be found)
 			const mockDocument0 = new MockTextDocument(vscode.Uri.file("/test0.ts"), "const x0 = 1\nconst y0 = 2")
 			const mockPosition0 = new vscode.Position(0, 12)
-			let result = provider.provideInlineCompletionItems(mockDocument0, mockPosition0, mockContext, mockToken)
+			let result = await provider.provideInlineCompletionItems(
+				mockDocument0,
+				mockPosition0,
+				mockContext,
+				mockToken,
+			)
 			expect(result).toEqual([])
 
 			// Try to match suggestion 5 (should be found - it's the oldest in the window)
 			const mockDocument5 = new MockTextDocument(vscode.Uri.file("/test5.ts"), "const x5 = 1\nconst y5 = 2")
 			const mockPosition5 = new vscode.Position(0, 12)
-			result = provider.provideInlineCompletionItems(
+			result = (await provider.provideInlineCompletionItems(
 				mockDocument5,
 				mockPosition5,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("suggestion 5")
 
 			// Try to match suggestion 24 (should be found - it's the most recent)
 			const mockDocument24 = new MockTextDocument(vscode.Uri.file("/test24.ts"), "const x24 = 1\nconst y24 = 2")
 			const mockPosition24 = new vscode.Position(0, 13)
-			result = provider.provideInlineCompletionItems(
+			result = (await provider.provideInlineCompletionItems(
 				mockDocument24,
 				mockPosition24,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result[0].insertText).toBe("suggestion 24")
 		})
-		it("should not add duplicate suggestions", () => {
+		it("should not add duplicate suggestions", async () => {
 			const suggestions1 = new GhostSuggestionsState()
 			suggestions1.setFillInAtCursor({
 				text: "console.log('test')",
@@ -463,18 +530,18 @@ describe("GhostInlineCompletionProvider", () => {
 			provider.updateSuggestions(suggestions3)
 
 			// Should return the most recent non-duplicate suggestion
-			const result = provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 
 			// Should get the different suggestion (suggestions3), not the duplicate
 			expect(result[0].insertText).toBe("console.log('different')")
 		})
 
-		it("should allow same text with different prefix/suffix", () => {
+		it("should allow same text with different prefix/suffix", async () => {
 			const suggestions1 = new GhostSuggestionsState()
 			suggestions1.setFillInAtCursor({
 				text: "console.log('test')",
@@ -495,18 +562,18 @@ describe("GhostInlineCompletionProvider", () => {
 			// Should match the second suggestion when context matches
 			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
 			const mockPosition2 = new vscode.Position(0, 11)
-			const result = provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument2,
 				mockPosition2,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 
 			expect(result[0].insertText).toBe("console.log('test')")
 		})
 
 		describe("partial typing support", () => {
-			it("should return remaining suggestion when user has partially typed the suggestion", () => {
+			it("should return remaining suggestion when user has partially typed the suggestion", async () => {
 				// Set up a suggestion
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
@@ -523,19 +590,19 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const partialPosition = new vscode.Position(0, 15) // After "const x = 1cons"
 
-				const result = provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					partialDocument,
 					partialPosition,
 					mockContext,
 					mockToken,
-				) as vscode.InlineCompletionItem[]
+				)) as vscode.InlineCompletionItem[]
 
 				expect(result).toHaveLength(1)
 				// Should return the remaining part after "cons"
 				expect(result[0].insertText).toBe("ole.log('Hello, World!');")
 			})
 
-			it("should return full suggestion when user has typed nothing after prefix", () => {
+			it("should return full suggestion when user has typed nothing after prefix", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "console.log('test');",
@@ -545,18 +612,18 @@ describe("GhostInlineCompletionProvider", () => {
 				provider.updateSuggestions(suggestions)
 
 				// User is at exact prefix position (no partial typing)
-				const result = provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					mockDocument,
 					mockPosition,
 					mockContext,
 					mockToken,
-				) as vscode.InlineCompletionItem[]
+				)) as vscode.InlineCompletionItem[]
 
 				expect(result).toHaveLength(1)
 				expect(result[0].insertText).toBe("console.log('test');")
 			})
 
-			it("should return empty when partially typed content does not match suggestion", () => {
+			it("should return empty when partially typed content does not match suggestion", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "console.log('test');",
@@ -572,7 +639,7 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const mismatchPosition = new vscode.Position(0, 14)
 
-				const result = provider.provideInlineCompletionItems(
+				const result = await provider.provideInlineCompletionItems(
 					mismatchDocument,
 					mismatchPosition,
 					mockContext,
@@ -582,7 +649,7 @@ describe("GhostInlineCompletionProvider", () => {
 				expect(result).toEqual([])
 			})
 
-			it("should return empty string when user has typed entire suggestion", () => {
+			it("should return empty string when user has typed entire suggestion", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "console.log('test');",
@@ -599,19 +666,19 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const completePosition = new vscode.Position(0, 31) // After the semicolon, before newline
 
-				const result = provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					completeDocument,
 					completePosition,
 					mockContext,
 					mockToken,
-				) as vscode.InlineCompletionItem[]
+				)) as vscode.InlineCompletionItem[]
 
 				expect(result).toHaveLength(1)
 				// Should return empty string since everything is typed
 				expect(result[0].insertText).toBe("")
 			})
 
-			it("should not match when suffix has changed", () => {
+			it("should not match when suffix has changed", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "console.log('test');",
@@ -627,7 +694,7 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const changedSuffixPosition = new vscode.Position(0, 15)
 
-				const result = provider.provideInlineCompletionItems(
+				const result = await provider.provideInlineCompletionItems(
 					changedSuffixDocument,
 					changedSuffixPosition,
 					mockContext,
@@ -637,7 +704,7 @@ describe("GhostInlineCompletionProvider", () => {
 				expect(result).toEqual([])
 			})
 
-			it("should prefer exact match over partial match", () => {
+			it("should prefer exact match over partial match", async () => {
 				// Add a suggestion that would match partially
 				const suggestions1 = new GhostSuggestionsState()
 				suggestions1.setFillInAtCursor({
@@ -660,19 +727,19 @@ describe("GhostInlineCompletionProvider", () => {
 				const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1cons\nconst y = 2")
 				const position = new vscode.Position(0, 15)
 
-				const result = provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					document,
 					position,
 					mockContext,
 					mockToken,
-				) as vscode.InlineCompletionItem[]
+				)) as vscode.InlineCompletionItem[]
 
 				expect(result).toHaveLength(1)
 				// Should return exact match (most recent), not partial
 				expect(result[0].insertText).toBe("exact match")
 			})
 
-			it("should handle multi-character partial typing", () => {
+			it("should handle multi-character partial typing", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "function test() { return 42; }",
@@ -688,18 +755,18 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const partialPosition = new vscode.Position(0, 22)
 
-				const result = provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					partialDocument,
 					partialPosition,
 					mockContext,
 					mockToken,
-				) as vscode.InlineCompletionItem[]
+				)) as vscode.InlineCompletionItem[]
 
 				expect(result).toHaveLength(1)
 				expect(result[0].insertText).toBe("st() { return 42; }")
 			})
 
-			it("should handle case-sensitive partial matching", () => {
+			it("should handle case-sensitive partial matching", async () => {
 				const suggestions = new GhostSuggestionsState()
 				suggestions.setFillInAtCursor({
 					text: "Console.log('test');",
@@ -715,7 +782,7 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const partialPosition = new vscode.Position(0, 15)
 
-				const result = provider.provideInlineCompletionItems(
+				const result = await provider.provideInlineCompletionItems(
 					partialDocument,
 					partialPosition,
 					mockContext,
@@ -792,7 +859,7 @@ describe("GhostInlineCompletionProvider", () => {
 	})
 
 	describe("updateSuggestions", () => {
-		it("should accept new suggestions state", () => {
+		it("should accept new suggestions state", async () => {
 			const suggestions = new GhostSuggestionsState()
 			suggestions.setFillInAtCursor({
 				text: "new content",
@@ -802,12 +869,12 @@ describe("GhostInlineCompletionProvider", () => {
 
 			provider.updateSuggestions(suggestions)
 
-			const result = provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			) as vscode.InlineCompletionItem[]
+			)) as vscode.InlineCompletionItem[]
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe("new content")
 		})

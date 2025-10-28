@@ -2964,7 +2964,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					undefined, // codeIndexManager is private, not accessible here
 					providerState,
 					this.diffEnabled,
-					this.api?.getModel()?.info?.supportsImages ?? false,
+					this.api?.getModel(),
 				)
 
 				metadata.allowedTools = allowedTools
