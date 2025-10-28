@@ -100,4 +100,4 @@ export const PROVIDERS = [
 	{ value: "aistupidlevel", label: "AIStupidLevel" }, // kilocode_change
 ].sort((a, b) => a.label.localeCompare(b.label))
 
-PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

@@ -28,7 +28,7 @@ It replaces brittle XML-style prompts that risk mixed prose/markup, missing fiel
 
 ## Autocomplete
 
-When enabled, Kilo Code will provide inline code suggestions as you type. Currently this requires the Kilo Code API Provider in order to use it.
+When enabled, Kilo Code will provide inline code suggestions as you type. Currently this requires the Kilo Gateway Provider in order to use it.
 
 ## Concurrent file edits
 

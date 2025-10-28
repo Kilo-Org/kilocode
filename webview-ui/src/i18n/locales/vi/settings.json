@@ -798,7 +798,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Bật Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Nhà cung cấp API Kilo Code, OpenRouter hoặc khóa API Morph.",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
 			"apiKey": "Khóa API Morph (tùy chọn)",
 			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
 			"modelLabel": "Lựa chọn mô hình",

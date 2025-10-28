@@ -1,6 +1,0 @@
-function initialize() {
-  const config = loadConfig();
-  validateConfig(config);
-<<<AUTOCOMPLETE_HERE>>>
-  return config;
-}

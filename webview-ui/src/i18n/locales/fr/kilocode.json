@@ -48,7 +48,8 @@
 			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
 			"providerRouting": {
 				"title": "Routage des fournisseurs",
-				"managedByOrganization": "Les paramètres de routage des fournisseurs sont gérés par votre organisation.",
+				"managedByOrganization": "Gérer le routage des fournisseurs au niveau de l'organisation",
+				"createOrganization": "Créer une organisation pour gérer le routage des fournisseurs",
 				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
 				"sorting": {
 					"default": "Tri des fournisseurs par défaut",
@@ -136,7 +137,9 @@
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
 			"viewAll": "Voir toutes les options de prix"
-		}
+		},
+		"detailedUsage": "Utilisation détaillée",
+		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"
 	},
 	"docs": "Documentation",
 	"rules": {

@@ -53,7 +53,8 @@
 			"logout": "Đăng xuất khỏi Kilo Code",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
-				"managedByOrganization": "Cài đặt Định tuyến nhà cung cấp được quản lý bởi tổ chức của bạn.",
+				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",
+				"createOrganization": "Tạo tổ chức để quản lý Định tuyến nhà cung cấp",
 				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 				"sorting": {
 					"default": "Sắp xếp nhà cung cấp mặc định",
@@ -129,7 +130,9 @@
 			"credits": "tín dụng",
 			"action": "Mua Ngay",
 			"viewAll": "Xem tất cả tùy chọn giá"
-		}
+		},
+		"detailedUsage": "Sử dụng chi tiết",
+		"createOrganization": "Tạo tổ chức để theo dõi sử dụng chi tiết"
 	},
 	"docs": "Tài liệu",
 	"rules": {

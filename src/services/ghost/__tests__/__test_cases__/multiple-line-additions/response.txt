@@ -1,9 +1,0 @@
-<change><search><![CDATA[function calculate(a, b) {
-	return a + b
-}]]></search><replace><![CDATA[function calculate(a, b) {
-	// Validate inputs
-	if (typeof a !== "number" || typeof b !== "number") {
-		throw new Error("Invalid input")
-	}
-	return a + b
-}]]></replace></change>

@@ -300,7 +300,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = []
+	userMessageContent: (
+		| Anthropic.TextBlockParam
+		| Anthropic.ImageBlockParam
+		| Anthropic.ToolResultBlockParam // kilocode_change
+	)[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -729,6 +733,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		return undefined
 	}
 
+	async nextClineMessageTimestamp_kilocode() {
+		let ts = Date.now()
+		while (ts <= (this.clineMessages?.at(-1)?.ts ?? 0)) {
+			console.warn("nextClineMessageTimeStamp: timestamp already taken", ts)
+			await new Promise<void>((resolve) => setTimeout(() => resolve(), 1))
+			ts = Date.now()
+		}
+		return ts
+	}
+
 	// Note that `partial` has three valid states true (partial message),
 	// false (completion of partial message), undefined (individual complete
 	// message).
@@ -775,7 +789,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				} else {
 					// This is a new partial message, so add it with partial
 					// state.
-					askTs = Date.now()
+					askTs = await this.nextClineMessageTimestamp_kilocode()
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, partial, isProtected })
 					throw new Error("Current ask promise was ignored (#2)")
@@ -812,7 +826,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.askResponse = undefined
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
-					askTs = Date.now()
+					askTs = await this.nextClineMessageTimestamp_kilocode()
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 				}
@@ -822,7 +836,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.askResponse = undefined
 			this.askResponseText = undefined
 			this.askResponseImages = undefined
-			askTs = Date.now()
+			askTs = await this.nextClineMessageTimestamp_kilocode()
 			this.lastMessageTs = askTs
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
@@ -1123,7 +1137,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new partial message, so add it with partial state.
-					const sayTs = Date.now()
+					const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 					if (!options.isNonInteractive) {
 						this.lastMessageTs = sayTs
@@ -1170,7 +1184,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new and complete message, so add it like normal.
-					const sayTs = Date.now()
+					const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 					if (!options.isNonInteractive) {
 						this.lastMessageTs = sayTs
@@ -1189,7 +1203,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 		} else {
 			// This is a new non-partial message, so add it like normal.
-			const sayTs = Date.now()
+			const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 			// A "non-interactive" message is a message is one that the user
 			// does not need to respond to. We don't want these message types
@@ -2004,6 +2018,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// limit error, which gets thrown on the first chunk).
 				const stream = this.attemptApiRequest()
 				let assistantMessage = ""
+				let assistantToolUses = new Array<Anthropic.Messages.ToolUseBlockParam>() // kilocode_change
 				let reasoningMessage = ""
 				let pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
@@ -2056,7 +2071,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							case "native_tool_calls": {
 								// Handle native OpenAI-format tool calls
 								// Process native tool calls through the parser
-								this.assistantMessageParser.processNativeToolCalls(chunk.toolCalls)
+								for (const toolUse of this.assistantMessageParser.processNativeToolCalls(
+									chunk.toolCalls,
+								)) {
+									assistantToolUses.push(toolUse)
+								}
 
 								// Update content blocks after processing native tool calls
 								const prevLength = this.assistantMessageContent.length
@@ -2407,12 +2426,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// able to save the assistant's response.
 				let didEndLoop = false
 
-				// kilocode_change start: Check for tool use before determining if response is empty
-				const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
-				// kilocode_change end
-
-				if (assistantMessage.length > 0 || didToolUse) {
-					// kilocode_change: also check for tool use
+				if (assistantMessage.length > 0 || assistantToolUses.length > 0 /* kilocode_change */) {
 					// Display grounding sources to the user if they exist
 					if (pendingGroundingSources.length > 0) {
 						const citationLinks = pendingGroundingSources.map((source, i) => `[${i + 1}](${source.url})`)
@@ -2423,10 +2437,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						})
 					}
 
+					// kilocode_change start: also add tool calls to history
+					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
+					if (assistantMessage) {
+						assistantMessageContent.push({ type: "text", text: assistantMessage })
+					}
+					assistantMessageContent.push(...assistantToolUses)
 					await this.addToApiConversationHistory({
 						role: "assistant",
-						content: [{ type: "text", text: assistantMessage }],
+						content: assistantMessageContent,
 					})
+					// kilocode_change end
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
 
@@ -2943,7 +2964,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					undefined, // codeIndexManager is private, not accessible here
 					providerState,
 					this.diffEnabled,
-					this.api?.getModel()?.info?.supportsImages ?? false,
+					this.api?.getModel(),
 				)
 
 				metadata.allowedTools = allowedTools
