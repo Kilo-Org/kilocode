@@ -21,6 +21,7 @@ import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
 import { useApprovalMonitor } from "../state/hooks/useApprovalMonitor.js"
 import { useProfile } from "../state/hooks/useProfile.js"
+import { useTaskHistory } from "../state/hooks/useTaskHistory.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
@@ -65,6 +66,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Profile hook for handling profile/balance data responses
 	useProfile()
+
+	// Task history hook for fetching task history
+	const { fetchTaskHistory } = useTaskHistory()
 
 	// This clears the terminal and forces re-render of static components
 	useTerminal()
@@ -178,6 +182,15 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			checkVersion()
 		}
 	}, [])
+
+	// Fetch task history on mount if not in CI mode
+	const taskHistoryFetchedRef = useRef(false)
+	useEffect(() => {
+		if (!taskHistoryFetchedRef.current && !options.ci && configValidation.valid) {
+			taskHistoryFetchedRef.current = true
+			fetchTaskHistory()
+		}
+	}, [options.ci, configValidation.valid, fetchTaskHistory])
 
 	// Exit if provider configuration is invalid
 	useEffect(() => {
