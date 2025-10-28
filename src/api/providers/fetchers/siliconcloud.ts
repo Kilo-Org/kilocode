@@ -26,33 +26,51 @@ export async function getSiliconCloudModels(
 	apiLine?: string,
 	customModelInfo?: ModelInfo | null,
 ): Promise<ModelRecord> {
-	if (!apiKey) {
-		return {}
-	}
-
-	const line = (apiLine as SiliconCloudApiLine) || siliconCloudDefaultApiLine
-	const baseUrl = siliconCloudApiLineConfigs[line]?.baseUrl
-
-	if (!baseUrl) {
-		return {}
-	}
-
-	const response = await axios.get<SiliconCloudModelsResponse>(`${baseUrl}/models`, {
-		headers: {
-			Authorization: `Bearer ${apiKey}`,
-		},
-	})
-
-	const models: ModelRecord = {}
-	for (const model of response.data.data) {
-		const modelInfo: ModelInfo = {
-			...customModelInfo,
-			displayName: model.id,
-			contextWindow: customModelInfo?.contextWindow || 65536,
-			supportsPromptCache: customModelInfo?.supportsPromptCache || false,
+	try {
+		if (!apiKey) {
+			return {}
 		}
-		models[model.id] = modelInfo
-	}
 
-	return models
+		const line = (apiLine as SiliconCloudApiLine) || siliconCloudDefaultApiLine
+		const baseUrl = siliconCloudApiLineConfigs[line]?.baseUrl
+
+		if (!baseUrl) {
+			return {}
+		}
+
+		const response = await axios.get<SiliconCloudModelsResponse>(`${baseUrl}/models`, {
+			headers: {
+				Authorization: `Bearer ${apiKey}`,
+			},
+		})
+
+		// Handle malformed response data
+		if (!response?.data?.data || !Array.isArray(response.data.data)) {
+			return {}
+		}
+
+		const models: ModelRecord = {}
+		for (const model of response.data.data) {
+			// Skip invalid model entries
+			if (!model || typeof model !== "object" || !model.id) {
+				continue
+			}
+
+			const contextWindow = customModelInfo?.contextWindow
+			const isValidContextWindow = typeof contextWindow === "number" && contextWindow > 0
+
+			const modelInfo: ModelInfo = {
+				...customModelInfo,
+				displayName: model.id,
+				contextWindow: isValidContextWindow ? contextWindow : 65536,
+				supportsPromptCache: customModelInfo?.supportsPromptCache || false,
+			}
+			models[model.id] = modelInfo
+		}
+
+		return models
+	} catch (error) {
+		// Handle all errors gracefully - return empty object
+		return {}
+	}
 }
