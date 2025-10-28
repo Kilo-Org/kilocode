@@ -146,7 +146,9 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			console.log(cyan + "─".repeat(80) + reset + "\n")
 		}
 	} catch (error) {
-		logs.error("Failed to commit changes", "ParallelMode", { error })
+		logs.error("Failed to commit changes", "ParallelMode", {
+			error: error instanceof Error ? error.message : String(error),
+		})
 	}
 
 	try {
@@ -158,7 +160,9 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 
 		logs.info("Worktree removed successfully", "ParallelMode")
 	} catch (error) {
-		logs.warn("Failed to remove worktree", "ParallelMode", { error })
+		logs.warn("Failed to remove worktree", "ParallelMode", {
+			error: error instanceof Error ? error.message : String(error),
+		})
 	}
 
 	return beforeExit
