@@ -182,6 +182,8 @@ export class CLI {
 		await this.ui.waitUntilExit()
 	}
 
+	private isDisposing = false
+
 	/**
 	 * Dispose the application and clean up resources
 	 * - Unmounts UI
@@ -189,6 +191,14 @@ export class CLI {
 	 * - Cleans up store
 	 */
 	async dispose(): Promise<void> {
+		if (this.isDisposing) {
+			logs.info("Already disposing, ignoring duplicate dispose call", "CLI")
+
+			return
+		}
+
+		this.isDisposing = true
+
 		// Determine exit code based on CI mode and exit reason
 		let exitCode = 0
 
