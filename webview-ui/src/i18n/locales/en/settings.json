@@ -797,7 +797,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Code API Provider, OpenRouter, or a Morph API key.",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)",
 			"modelLabel": "Model Selection",
