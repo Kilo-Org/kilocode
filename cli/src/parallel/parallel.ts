@@ -140,10 +140,11 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			console.log(
 				`${green}✓${reset} ${bold}Parallel mode complete!${reset} Changes committed to: ${cyan}${worktreeBranch}${reset}`,
 			)
-			console.log(`\n${bold}To merge changes:${reset}`)
+			console.log(`\n${bold}Review and merge changes:${reset}`)
+			console.log(`  ${yellow}git diff ${worktreeBranch}${reset}`)
 			console.log(`  ${yellow}git merge ${worktreeBranch}${reset}`)
 			console.log(`\n${bold}💡 Tip:${reset} Resume work with ${yellow}--existing-branch${reset}:`)
-			console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch}${reset}`)
+			console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch} "<prompt>"${reset}`)
 			console.log(cyan + "─".repeat(80) + reset + "\n")
 		}
 	} catch (error) {
