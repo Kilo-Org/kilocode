@@ -48,7 +48,8 @@
 			"automaticFetch": "Nejnovější modely jsou v Kilo Code automaticky dostupné. Pokud si nejste jisti, který model zvolit, Kilo Code funguje nejlépe s doporučenými modely uvedenými nahoře <strong>tučně</strong>.",
 			"providerRouting": {
 				"title": "Směrování poskytovatelů",
-				"managedByOrganization": "Nastavení směrování poskytovatelů je spravováno vaší organizací.",
+				"managedByOrganization": "Spravovat směrování poskytovatelů na úrovni organizace",
+				"createOrganization": "Vytvořit organizaci pro správu směrování poskytovatelů",
 				"description": "Kilo Code směruje požadavky na nejlepší dostupné poskytovatele pro váš model. Ve výchozím nastavení jsou požadavky rozloženy mezi nejlepší poskytovatele, aby se maximalizovala doba provozu. Můžete si však vybrat konkrétního poskytovatele, kterého chcete pro tento model použít.",
 				"sorting": {
 					"default": "Výchozí řazení poskytovatelů",
@@ -129,7 +130,9 @@
 			"credits": "kredity",
 			"action": "Koupit nyní",
 			"viewAll": "Zobrazit všechny cenové možnosti"
-		}
+		},
+		"detailedUsage": "Podrobné využití",
+		"createOrganization": "Vytvořit organizaci pro sledování podrobného využití"
 	},
 	"docs": "Dokumentace",
 	"rules": {

@@ -47,7 +47,8 @@
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
 			"providerRouting": {
 				"title": "Sağlayıcı Yönlendirme",
-				"managedByOrganization": "Sağlayıcı Yönlendirme ayarları organizasyonunuz tarafından yönetiliyor.",
+				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
+				"createOrganization": "Sağlayıcı Yönlendirmeyi yönetmek için Organizasyon oluştur",
 				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 				"sorting": {
 					"default": "Varsayılan sağlayıcı sıralaması",
@@ -129,7 +130,9 @@
 			"credits": "kredi",
 			"action": "Şimdi Satın Al",
 			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
-		}
+		},
+		"detailedUsage": "Detaylı Kullanım",
+		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"
 	},
 	"docs": "Belgeler",
 	"rules": {

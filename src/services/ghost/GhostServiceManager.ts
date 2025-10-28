@@ -19,6 +19,7 @@ export class GhostServiceManager {
 	private documentStore: GhostDocumentStore
 	private model: GhostModel
 	private cline: ClineProvider
+	private context: vscode.ExtensionContext
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
@@ -35,10 +36,12 @@ export class GhostServiceManager {
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public inlineCompletionProvider: GhostInlineCompletionProvider
+	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	private ignoreController?: Promise<RooIgnoreController>
 
 	private constructor(context: vscode.ExtensionContext, cline: ClineProvider) {
+		this.context = context
 		this.cline = cline
 
 		// Register Internal Components
@@ -112,7 +115,28 @@ export class GhostServiceManager {
 		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
+		await this.updateInlineCompletionProviderRegistration()
 		await this.saveSettings()
+	}
+
+	/**
+	 * Register or unregister the inline completion provider based on enableAutoTrigger setting
+	 */
+	private async updateInlineCompletionProviderRegistration() {
+		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+
+		if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
+			// Register the provider
+			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+				"*",
+				this.inlineCompletionProvider,
+			)
+			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
+		} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
+			// Unregister the provider
+			this.inlineCompletionProviderDisposable.dispose()
+			this.inlineCompletionProviderDisposable = null
+		}
 	}
 
 	public async disable() {
@@ -347,6 +371,12 @@ export class GhostServiceManager {
 
 		this.statusBar?.dispose()
 		this.cursorAnimation.dispose()
+
+		// Dispose inline completion provider registration
+		if (this.inlineCompletionProviderDisposable) {
+			this.inlineCompletionProviderDisposable.dispose()
+			this.inlineCompletionProviderDisposable = null
+		}
 
 		this.disposeIgnoreController()
 

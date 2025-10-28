@@ -55,7 +55,8 @@
 			"logout": "Log out from Kilo Code",
 			"providerRouting": {
 				"title": "Provider Routing",
-				"managedByOrganization": "The Provider Routing settings are managed by your organization.",
+				"managedByOrganization": "Manage Organization-level Provider Routing",
+				"createOrganization": "Create an Organization to Manage Provider Routing",
 				"sorting": {
 					"default": "Default provider sorting",
 					"price": "Prefer providers with lower price",
@@ -136,7 +137,9 @@
 			"credits": "credits",
 			"action": "Buy Now",
 			"viewAll": "View all pricing options"
-		}
+		},
+		"detailedUsage": "Detailed Usage",
+		"createOrganization": "Create an Organization to Track Detailed Usage"
 	},
 	"docs": "Docs",
 	"rules": {

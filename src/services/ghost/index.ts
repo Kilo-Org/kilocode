@@ -45,9 +45,4 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 			providedCodeActionKinds: Object.values(ghost.codeActionProvider.providedCodeActionKinds),
 		}),
 	)
-
-	// Register GhostServiceManager Inline Completion Provider
-	context.subscriptions.push(
-		vscode.languages.registerInlineCompletionItemProvider("*", ghost.inlineCompletionProvider),
-	)
 }

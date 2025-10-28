@@ -40,7 +40,8 @@
 			"logout": "Wyloguj się z Kilo Code",
 			"providerRouting": {
 				"title": "Routing dostawców",
-				"managedByOrganization": "Ustawienia routingu dostawców są zarządzane przez Twoją organizację.",
+				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",
+				"createOrganization": "Utwórz organizację, aby zarządzać routingiem dostawców",
 				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu.",
 				"sorting": {
 					"default": "Domyślne sortowanie dostawców",
@@ -129,7 +130,9 @@
 			"credits": "kredyty",
 			"action": "Kup Teraz",
 			"viewAll": "Zobacz wszystkie opcje cenowe"
-		}
+		},
+		"detailedUsage": "Szczegółowe użycie",
+		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"
 	},
 	"docs": "Dokumentacja",
 	"rules": {

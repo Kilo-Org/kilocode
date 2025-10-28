@@ -41,7 +41,8 @@
 			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
 			"providerRouting": {
 				"title": "Perutean Penyedia",
-				"managedByOrganization": "Pengaturan Perutean Penyedia dikelola oleh organisasi Anda.",
+				"managedByOrganization": "Kelola Perutean Penyedia Tingkat Organisasi",
+				"createOrganization": "Buat Organisasi untuk Mengelola Perutean Penyedia",
 				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini.",
 				"sorting": {
 					"default": "Pengurutan penyedia default",
@@ -122,7 +123,9 @@
 			"credits": "kredit",
 			"action": "Beli Sekarang",
 			"viewAll": "Lihat semua opsi harga"
-		}
+		},
+		"detailedUsage": "Penggunaan Terperinci",
+		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"
 	},
 	"docs": "Dokumentasi",
 	"rules": {

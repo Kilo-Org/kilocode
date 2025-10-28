@@ -48,7 +48,8 @@
 			"automaticFetch": "최신 모델은 Kilo Code에서 자동으로 사용할 수 있습니다. 어떤 모델을 선택할지 확실하지 않다면, Kilo Code는 상단에 <strong>굵은 글씨</strong>로 나열된 권장 모델과 가장 잘 작동합니다.",
 			"providerRouting": {
 				"title": "공급자 라우팅",
-				"managedByOrganization": "공급자 라우팅 설정은 귀하의 조직에서 관리됩니다.",
+				"managedByOrganization": "조직 수준 공급자 라우팅 관리",
+				"createOrganization": "공급자 라우팅 관리를 위한 조직 생성",
 				"description": "Kilo Code는 모델에 가장 적합한 공급자에게 요청을 라우팅합니다. 기본적으로 요청은 가동 시간을 최대화하기 위해 상위 공급자에게 로드 밸런싱됩니다. 그러나 이 모델에 사용할 특정 공급자를 선택할 수 있습니다.",
 				"sorting": {
 					"default": "기본 공급자 정렬",
@@ -136,7 +137,9 @@
 			"credits": "크레딧",
 			"action": "지금 구매",
 			"viewAll": "모든 가격 옵션 보기"
-		}
+		},
+		"detailedUsage": "상세 사용량",
+		"createOrganization": "상세 사용량 추적을 위한 조직 생성"
 	},
 	"docs": "문서",
 	"rules": {
