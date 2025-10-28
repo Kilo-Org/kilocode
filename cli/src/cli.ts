@@ -19,6 +19,7 @@ export interface CLIOptions {
 	ci?: boolean
 	prompt?: string
 	timeout?: number
+	parallel?: boolean
 }
 
 /**
@@ -147,6 +148,7 @@ export class CLI {
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.ci || !process.stdin.isTTY
+
 		this.ui = render(
 			React.createElement(App, {
 				store: this.store,
@@ -177,12 +179,12 @@ export class CLI {
 	 * - Disposes service
 	 * - Cleans up store
 	 */
-	async dispose(): Promise<void> {
+	async dispose(): Promise<number> {
+		// Determine exit code based on CI mode and exit reason
+		let exitCode = 0
+
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
-
-			// Determine exit code based on CI mode and exit reason
-			let exitCode = 0
 
 			if (this.options.ci && this.store) {
 				// Check exit reason from CI atoms
@@ -226,13 +228,17 @@ export class CLI {
 
 			this.isInitialized = false
 			logs.info("Kilo Code CLI disposed", "CLI")
-
-			// Exit process with appropriate code
-			process.exit(exitCode)
 		} catch (error) {
 			logs.error("Error disposing CLI", "CLI", { error })
-			process.exit(1)
+		} finally {
+			// Exit process with appropriate code
+			// in parallel mode, skip exiting as we still need to do cleanup afterwards
+			if (!this.options.parallel) {
+				process.exit(exitCode)
+			}
 		}
+
+		return exitCode
 	}
 
 	/**

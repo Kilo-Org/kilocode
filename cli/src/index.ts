@@ -13,6 +13,7 @@ import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./utils/authWizard.js"
 import { configExists } from "./config/persistence.js"
+import { startParallelMode } from "./parallel/parallel.js"
 
 const program = new Command()
 let cli: CLI | null = null
@@ -28,6 +29,11 @@ program
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
+	.option(
+		"-p, --parallel",
+		"Run in parallel mode - the agent will create a separate git branch, unless you provide the --existing-branch option",
+	)
+	.option("-eb, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
 		// Validate mode if provided
@@ -43,7 +49,7 @@ program
 		}
 
 		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
+		if (!process.stdin.isTTY && !options.auto && !options.parallel) {
 			console.error("Error: Piped input requires --auto flag to be enabled")
 			process.exit(1)
 		}
@@ -59,9 +65,11 @@ program
 			finalPrompt = Buffer.concat(chunks).toString("utf-8").trim()
 		}
 
-		// Validate that autonomous mode requires a prompt
-		if (options.auto && !finalPrompt) {
-			console.error("Error: autonomous mode (--auto) requires a prompt argument or piped input")
+		// Validate that autonomous and parallel mode require a prompt
+		if ((options.auto || options.parallel) && !finalPrompt) {
+			console.error(
+				"Error: autonomous mode (--auto) and parallel mode (--parallel) require a prompt argument or piped input",
+			)
 			process.exit(1)
 		}
 
@@ -82,10 +90,22 @@ program
 			getTelemetryService().trackCIModeStarted(finalPrompt.length, options.timeout)
 		}
 
+		// TODO: track parallel mode start
+
 		if (!(await configExists())) {
 			console.info("Welcome to the Kilo Code CLI! 🎉\n")
 			console.info("To get you started, please fill out these following questions.")
 			await authWizard()
+		}
+
+		if (options.parallel) {
+			await startParallelMode({
+				cwd: options.workspace,
+				prompt: finalPrompt,
+				timeout: options.timeout,
+			})
+
+			return
 		}
 
 		cli = new CLI({

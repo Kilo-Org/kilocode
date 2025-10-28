@@ -78,3 +78,21 @@ export async function getGitBranch(cwd: string): Promise<string | null> {
 		return null
 	}
 }
+
+/**
+ * Generate a valid git branch name from a prompt
+ * Sanitizes the prompt to create a safe branch name
+ */
+export function generateBranchName(prompt: string): string {
+	// Take first 50 chars, convert to lowercase, replace spaces and special chars with hyphens
+	const sanitized = prompt
+		.slice(0, 50)
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "") // Remove leading/trailing hyphens
+		.replace(/-+/g, "-") // Collapse multiple hyphens
+
+	// Add timestamp to ensure uniqueness
+	const timestamp = Date.now()
+	return `kilo-agent-${sanitized}-${timestamp}`
+}
