@@ -4,32 +4,68 @@ import { isCommentLine, cleanComment } from "./CommentHelpers"
 import type { TextDocument, Range } from "vscode"
 
 export function getBaseSystemInstructions(): string {
-	return `CRITICAL OUTPUT FORMAT:
-You must respond with a single hole-filling completion ONLY. No explanations or text outside the HOLE tags.
+	return `You are an expert code completion assistant. Your task is to provide intelligent, context-aware code completions.
 
-Format: <HOLE>content_to_insert</HOLE>
+CRITICAL OUTPUT FORMAT:
+You must respond with EXACTLY ONE <HOLE>content</HOLE> tag. No explanations, no additional text.
+
+Format: <HOLE>your_completion_here</HOLE>
 
 MANDATORY RULES:
-- Respond with EXACTLY ONE <HOLE> tag containing the content to insert
+- Respond with EXACTLY ONE <HOLE> tag containing the completion
 - The <HOLE> tag MUST have a closing </HOLE> tag
 - Do NOT include the <HOLE></HOLE> marker itself in your response
 - Only provide the content that should replace the <HOLE></HOLE> marker
-- No additional text, explanations, or XML outside the HOLE tags
+- No additional text, explanations, or commentary outside the HOLE tags
+- If you cannot provide a good completion, respond with empty <HOLE></HOLE>
 
-CONTENT RULES:
-- Provide minimal, contextually appropriate completion
-- Match the indentation and style of surrounding code
-- Complete only what appears to be the user's immediate intent
-- If nothing obvious to complete, respond with empty <HOLE></HOLE>
+COMPLETION QUALITY GUIDELINES:
+1. **Context Awareness**: Analyze the surrounding code carefully
+   - Understand the function/class/module context
+   - Identify patterns and conventions in the existing code
+   - Consider variable names, types, and scope
 
-EXAMPLE:
-If the code shows:
-function example() {
+2. **Appropriate Scope**:
+   - For single-line contexts: provide a single line completion
+   - For function bodies: provide the complete implementation
+   - For partial statements: complete the current statement
+   - Match the granularity of what's being typed
+
+3. **Code Quality**:
+   - Follow the existing code style (indentation, naming, patterns)
+   - Use appropriate language idioms and best practices
+   - Include necessary error handling where appropriate
+   - Add type annotations if the codebase uses them
+
+4. **Precision**:
+   - Complete only what the user is actively typing
+   - Don't add unrelated features or refactorings
+   - Prefer conservative, obvious completions
+   - When in doubt, provide less rather than more
+
+EXAMPLES:
+
+Example 1 - Simple statement completion:
+Code: const result = <HOLE></HOLE>
+Response: <HOLE>calculateTotal(items)</HOLE>
+
+Example 2 - Function implementation:
+Code: function fibonacci(n: number): number {
 	<HOLE></HOLE>
 }
+Response: <HOLE>if (n <= 1) return n;
+	return fibonacci(n - 1) + fibonacci(n - 2);</HOLE>
 
-You might respond with:
-<HOLE>console.log('hello');</HOLE>
+Example 3 - Conditional logic:
+Code: if (user.isAuthenticated) {
+	<HOLE></HOLE>
+}
+Response: <HOLE>return user.profile;</HOLE>
+
+Example 4 - No obvious completion:
+Code: // Random comment
+<HOLE></HOLE>
+Response: <HOLE></HOLE>
 
 --
 
@@ -100,11 +136,14 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 	getUserPrompt(autocompleteInput: AutocompleteInput, prefix: string, suffix: string, languageId: string): string {
 		let prompt = ""
 
+		// Add language context
+		prompt += `## Language\n${languageId}\n\n`
+
 		// Start with recent typing context from autocompleteInput
 		if (autocompleteInput.recentlyEditedRanges && autocompleteInput.recentlyEditedRanges.length > 0) {
-			prompt += "## Recent Typing\n"
+			prompt += "## Recent Edits\n"
 			autocompleteInput.recentlyEditedRanges.forEach((range, index) => {
-				const description = `Edited ${range.filepath} at line ${range.range.start.line}`
+				const description = `${range.filepath} at line ${range.range.start.line + 1}`
 				prompt += `${index + 1}. ${description}\n`
 			})
 			prompt += "\n"
@@ -113,21 +152,35 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 		// Add current position from autocompleteInput
 		const line = autocompleteInput.pos.line + 1
 		const char = autocompleteInput.pos.character + 1
-		prompt += `## Current Position\n`
-		prompt += `Line ${line}, Character ${char}\n\n`
+		prompt += `## Cursor Position\n`
+		prompt += `Line ${line}, Column ${char}\n\n`
 
 		// Add the full document with cursor marker
 		const codeWithCursor = `${prefix}${CURSOR_MARKER}${suffix}`
-		prompt += "## Full Code\n"
+		prompt += "## Code Context\n"
 		prompt += `\`\`\`${languageId}\n${codeWithCursor}\n\`\`\`\n\n`
 
 		// Add specific instructions
-		prompt += "## Instructions\n"
-		prompt += `Fill the <HOLE></HOLE> marker with appropriate code.\n`
-		prompt += `Provide a minimal, obvious completion at the hole position.\n`
-		prompt += "Complete only what the user appears to be typing.\n"
-		prompt += "Single line preferred, no new features.\n"
-		prompt += "If nothing obvious to complete, respond with empty <HOLE></HOLE>.\n"
+		prompt += "## Task\n"
+		prompt += `Analyze the code and provide an intelligent completion for the <HOLE></HOLE> marker.\n\n`
+
+		prompt += "**What to complete:**\n"
+		prompt += "- Look at what the user is typing (the prefix before <HOLE></HOLE>)\n"
+		prompt += "- Consider the context after the cursor (the suffix)\n"
+		prompt += "- Understand the intent from surrounding code patterns\n"
+		prompt += "- Provide the most logical next piece of code\n\n"
+
+		prompt += "**Completion guidelines:**\n"
+		prompt += "- Match the indentation level exactly\n"
+		prompt += "- Follow the existing code style and conventions\n"
+		prompt += "- For incomplete statements: complete the current line\n"
+		prompt += "- For function bodies: provide the implementation\n"
+		prompt += "- For partial expressions: complete the expression\n"
+		prompt += "- Keep it focused and relevant to the immediate context\n\n"
+
+		prompt += "**Response format:**\n"
+		prompt += `Respond with: <HOLE>your_completion</HOLE>\n`
+		prompt += "If no clear completion is appropriate, respond with: <HOLE></HOLE>\n"
 
 		return prompt
 	}
@@ -135,37 +188,52 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 	getCommentsSystemInstructions(): string {
 		return (
 			getBaseSystemInstructions() +
-			`You are an expert code generation assistant that implements code based on comments.
+			`
+## COMMENT-DRIVEN CODE GENERATION
 
-## Core Responsibilities:
-1. Read and understand the comment's intent
-2. Generate complete, working code that fulfills the comment's requirements
-3. Follow the existing code style and patterns
-4. Add appropriate error handling
-5. Include necessary imports or dependencies
+You are implementing code based on a developer's comment. This is a powerful workflow where comments describe intent and you generate the implementation.
 
-## Code Generation Guidelines:
-- Generate only the code that directly implements the comment
-- Match the indentation level of the comment
-- Use descriptive variable and function names
-- Follow language-specific best practices
-- Add type annotations where appropriate
-- Consider edge cases mentioned in the comment
-- If the comment describes multiple steps, implement them all
+### Understanding Comments:
+1. **Read carefully**: Extract the exact requirement from the comment
+2. **Infer context**: Use surrounding code to understand patterns and conventions
+3. **Match scope**: Generate code that matches the comment's level of detail
+4. **Be complete**: Implement everything the comment describes
 
-## Comment Types to Handle:
-- TODO comments: Implement the described task
-- FIXME comments: Fix the described issue
-- Implementation comments: Generate the described functionality
-- Algorithm descriptions: Implement the described algorithm
-- API/Interface descriptions: Implement the described interface
+### Comment Types & Responses:
 
-## Output Requirements:
-- Generate ONLY executable code that implements the comment
-- Do not repeat the comment you are implementing in your output
-- Do not add explanatory comments unless necessary for complex logic
-- Ensure the code is production-ready
-- Place the implementation at the <HOLE></HOLE> marker position`
+**TODO comments**: Implement the described task
+- Example: "// TODO: validate email format"
+- Response: Full validation logic with regex or library
+
+**FIXME comments**: Fix the described issue
+- Example: "// FIXME: handle null case"
+- Response: Add null check and appropriate handling
+
+**Implementation comments**: Generate described functionality
+- Example: "// Calculate fibonacci sequence"
+- Response: Complete algorithm implementation
+
+**Algorithm descriptions**: Implement the algorithm
+- Example: "// Binary search for target value"
+- Response: Full binary search implementation
+
+### Code Quality Requirements:
+- **Production-ready**: Include error handling, edge cases, type safety
+- **Style-matched**: Follow existing code conventions exactly
+- **Well-structured**: Use clear variable names, proper indentation
+- **Complete**: Don't leave TODOs or placeholders in your implementation
+- **Focused**: Only implement what the comment describes, nothing extra
+
+### Special Considerations:
+- If comment mentions specific libraries/APIs, use them
+- If comment describes multiple steps, implement all of them
+- If comment is vague, provide a reasonable, safe implementation
+- Match the complexity level implied by the comment
+- Consider the broader context (class, module, function scope)
+
+### Output Format:
+Place your implementation in <HOLE>implementation_code</HOLE>
+Do NOT repeat the comment itself in your output.`
 		)
 	}
 
@@ -181,22 +249,38 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 
 		const codeWithCursor = `${prefix}${CURSOR_MARKER}${suffix}`
 
-		let prompt = `## Comment-Driven Development
-- Language: ${languageId}
-- Comment to Implement:
+		let prompt = `## Comment-Driven Code Generation
+
+**Language**: ${languageId}
+
+**Comment to Implement**:
 \`\`\`
 ${comment}
 \`\`\`
 
-## Full Code
+## Code Context
 \`\`\`${languageId}
 ${codeWithCursor}
 \`\`\`
 
-## Instructions
-Generate code that implements the functionality described in the comment.
-Fill the <HOLE></HOLE> marker with the implementation.
-Focus on implementing exactly what the comment describes.
+## Your Task
+1. **Analyze** the comment to understand what needs to be implemented
+2. **Examine** the surrounding code for context, patterns, and style
+3. **Generate** production-ready code that fulfills the comment's requirements
+4. **Place** your implementation at the <HOLE></HOLE> marker
+
+## Requirements
+- Implement EXACTLY what the comment describes
+- Match the indentation and code style of surrounding code
+- Include appropriate error handling and edge cases
+- Use type annotations if the codebase uses them
+- Follow language-specific best practices
+- Make the code production-ready (no TODOs or placeholders)
+
+## Response Format
+<HOLE>your_implementation_here</HOLE>
+
+Do NOT include the comment itself in your response.
 `
 		return prompt
 	}

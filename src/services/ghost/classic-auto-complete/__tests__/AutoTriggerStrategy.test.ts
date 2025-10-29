@@ -96,7 +96,7 @@ describe("AutoTriggerStrategy", () => {
 			expect(systemPrompt).toContain("implement")
 
 			// Verify user prompt contains comment context
-			expect(userPrompt).toContain("Comment-Driven Development")
+			expect(userPrompt).toContain("Comment-Driven Code Generation")
 			expect(userPrompt).toContain("implement sum function")
 		})
 
@@ -132,8 +132,8 @@ describe("AutoTriggerStrategy", () => {
 			expect(systemPrompt).toContain("non-intrusive")
 
 			// Verify user prompt contains auto-trigger instructions
-			expect(userPrompt).toContain("minimal, obvious completion")
-			expect(userPrompt).toContain("Single line preferred")
+			expect(userPrompt).toContain("intelligent completion")
+			expect(userPrompt).toContain("focused and relevant")
 		})
 
 		it("should not treat empty line without preceding comment as comment-driven", () => {
@@ -146,7 +146,7 @@ describe("AutoTriggerStrategy", () => {
 
 			// Should use auto-trigger, not comment-driven
 			expect(systemPrompt).toContain("Auto-Completion")
-			expect(systemPrompt).not.toContain("Comment-Driven")
+			expect(systemPrompt).not.toContain("Comment-Driven Code Generation")
 		})
 	})
 })
