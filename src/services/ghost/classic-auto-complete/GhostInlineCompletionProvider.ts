@@ -10,6 +10,90 @@ import { GhostGutterAnimation } from "../GhostGutterAnimation"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
+/**
+ * Bracket pairs that VSCode auto-closes
+ */
+const BRACKET_PAIRS: Record<string, string> = {
+	"[": "]",
+	"(": ")",
+	"{": "}",
+	"<": ">",
+	'"': '"',
+	"'": "'",
+	"`": "`",
+}
+
+/**
+ * Detect if the suggestion text contains closing brackets that might have been auto-closed by VSCode
+ * @param suggestionText - The text being suggested
+ * @returns Array of closing bracket characters found in the suggestion
+ */
+export function findClosingBracketsInSuggestion(suggestionText: string): string[] {
+	const closingBrackets: string[] = []
+	const closingChars = new Set(Object.values(BRACKET_PAIRS))
+
+	for (const char of suggestionText) {
+		if (closingChars.has(char)) {
+			closingBrackets.push(char)
+		}
+	}
+
+	return closingBrackets
+}
+
+/**
+ * Calculate how many auto-closed characters after the cursor should be replaced
+ * @param document - The text document
+ * @param position - Current cursor position
+ * @param suggestionText - The text being suggested
+ * @returns Number of characters after cursor to include in replacement range
+ */
+export function calculateAutoClosedCharsToReplace(
+	document: vscode.TextDocument,
+	position: vscode.Position,
+	suggestionText: string,
+): number {
+	// Get text after cursor on the same line
+	const lineText = document.lineAt(position.line).text
+	const textAfterCursor = lineText.substring(position.character)
+
+	// If there's nothing after cursor, no auto-closed chars to replace
+	if (!textAfterCursor) {
+		return 0
+	}
+
+	// Find closing brackets in the suggestion
+	const closingBracketsInSuggestion = findClosingBracketsInSuggestion(suggestionText)
+
+	if (closingBracketsInSuggestion.length === 0) {
+		return 0
+	}
+
+	// Check how many consecutive characters after cursor match closing brackets in suggestion
+	let charsToReplace = 0
+	let suggestionBracketIndex = 0
+
+	for (let i = 0; i < textAfterCursor.length && suggestionBracketIndex < closingBracketsInSuggestion.length; i++) {
+		const charAfterCursor = textAfterCursor[i]
+
+		// Skip whitespace
+		if (charAfterCursor === " " || charAfterCursor === "\t") {
+			continue
+		}
+
+		// Check if this character matches the next closing bracket in our suggestion
+		if (charAfterCursor === closingBracketsInSuggestion[suggestionBracketIndex]) {
+			charsToReplace = i + 1
+			suggestionBracketIndex++
+		} else {
+			// If we hit a non-matching character, stop
+			break
+		}
+	}
+
+	return charsToReplace
+}
+
 export type CostTrackingCallback = (
 	cost: number,
 	inputTokens: number,
@@ -234,9 +318,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 		if (matchingText !== null) {
+			// Calculate how many auto-closed characters to replace
+			const charsToReplace = calculateAutoClosedCharsToReplace(document, position, matchingText)
+			const endPosition = new vscode.Position(position.line, position.character + charsToReplace)
+
 			const item: vscode.InlineCompletionItem = {
 				insertText: matchingText,
-				range: new vscode.Range(position, position),
+				range: new vscode.Range(position, endPosition),
 			}
 			return [item]
 		}
@@ -274,9 +362,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			// Return the new suggestion if available
 			const fillInAtCursor = result.suggestions.getFillInAtCursor()
 			if (fillInAtCursor) {
+				// Calculate how many auto-closed characters to replace
+				const charsToReplace = calculateAutoClosedCharsToReplace(document, position, fillInAtCursor.text)
+				const endPosition = new vscode.Position(position.line, position.character + charsToReplace)
+
 				const item: vscode.InlineCompletionItem = {
 					insertText: fillInAtCursor.text,
-					range: new vscode.Range(position, position),
+					range: new vscode.Range(position, endPosition),
 				}
 				return [item]
 			}

@@ -2,6 +2,8 @@ import * as vscode from "vscode"
 import {
 	GhostInlineCompletionProvider,
 	findMatchingSuggestion,
+	findClosingBracketsInSuggestion,
+	calculateAutoClosedCharsToReplace,
 	CostTrackingCallback,
 } from "../GhostInlineCompletionProvider"
 import { GhostSuggestionsState, FillInAtCursorSuggestion } from "../GhostSuggestions"
@@ -877,6 +879,310 @@ describe("GhostInlineCompletionProvider", () => {
 			)) as vscode.InlineCompletionItem[]
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe("new content")
+
+			describe("findClosingBracketsInSuggestion", () => {
+				it("should find closing square brackets", () => {
+					const result = findClosingBracketsInSuggestion("[usageData, setUsageData] = useState()")
+					expect(result).toContain("]")
+					expect(result).toContain(")")
+				})
+
+				it("should find closing parentheses", () => {
+					const result = findClosingBracketsInSuggestion("func(param)")
+					expect(result).toContain(")")
+				})
+
+				it("should find closing curly braces", () => {
+					const result = findClosingBracketsInSuggestion("{ key: value }")
+					expect(result).toContain("}")
+				})
+
+				it("should find closing angle brackets", () => {
+					const result = findClosingBracketsInSuggestion("useState<Type>()")
+					expect(result).toContain(">")
+					expect(result).toContain(")")
+				})
+
+				it("should find quotes", () => {
+					const result = findClosingBracketsInSuggestion('"string"')
+					expect(result).toContain('"')
+				})
+
+				it("should find multiple bracket types", () => {
+					const result = findClosingBracketsInSuggestion('[a, b] = func({ key: "value" })')
+					expect(result).toContain("]")
+					expect(result).toContain(")")
+					expect(result).toContain("}")
+					expect(result).toContain('"')
+				})
+
+				it("should return empty array when no closing brackets", () => {
+					const result = findClosingBracketsInSuggestion("const x = 1")
+					expect(result).toEqual([])
+				})
+
+				it("should handle nested brackets", () => {
+					const result = findClosingBracketsInSuggestion("[[nested]]")
+					expect(result.filter((b) => b === "]")).toHaveLength(2)
+				})
+			})
+
+			describe("calculateAutoClosedCharsToReplace", () => {
+				it("should detect single auto-closed bracket", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const []\nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(1) // Should replace the "]"
+				})
+
+				it("should detect multiple auto-closed brackets", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const [])\nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(3) // Should replace "])"
+				})
+
+				it("should return 0 when no auto-closed brackets", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const \nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(0)
+				})
+
+				it("should return 0 when suggestion has no closing brackets", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x]\nconst y = 2")
+					const position = new vscode.Position(0, 7) // After "const x"
+					const suggestionText = " = 1"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(0)
+				})
+
+				it("should handle whitespace after cursor", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const  ]  \nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					// Should skip whitespace and find the ]
+					expect(result).toBeGreaterThan(0)
+				})
+
+				it("should stop at non-matching character", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const ]x\nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(1) // Should only replace "]", stop at "x"
+				})
+
+				it("should handle cursor at end of line", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const ")
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = "[usageData, setUsageData] = useState()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(0)
+				})
+
+				it("should handle quotes", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), 'const ""\nconst y = 2')
+					const position = new vscode.Position(0, 6) // After "const "
+					const suggestionText = '"Hello, World!"'
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(1) // Should replace the closing quote
+				})
+
+				it("should handle angle brackets in generics", () => {
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "useState<>()\nconst y = 2")
+					const position = new vscode.Position(0, 9) // After "useState<"
+					const suggestionText = "Type>()"
+
+					const result = calculateAutoClosedCharsToReplace(document, position, suggestionText)
+					expect(result).toBe(3) // Should replace ">()"
+				})
+			})
+
+			describe("GhostInlineCompletionProvider - bracket auto-close handling", () => {
+				let provider: GhostInlineCompletionProvider
+				let mockModel: GhostModel
+				let mockCostTrackingCallback: CostTrackingCallback
+				let mockGhostContext: GhostContext
+				let mockCursorAnimation: GhostGutterAnimation
+				let mockContext: vscode.InlineCompletionContext
+				let mockToken: vscode.CancellationToken
+
+				beforeEach(() => {
+					mockContext = {} as vscode.InlineCompletionContext
+					mockToken = {} as vscode.CancellationToken
+
+					mockModel = {
+						generateResponse: vi.fn().mockResolvedValue({
+							cost: 0,
+							inputTokens: 0,
+							outputTokens: 0,
+							cacheWriteTokens: 0,
+							cacheReadTokens: 0,
+						}),
+					} as unknown as GhostModel
+					mockCostTrackingCallback = vi.fn() as CostTrackingCallback
+					mockGhostContext = {
+						generate: vi.fn().mockResolvedValue({
+							document: new MockTextDocument(vscode.Uri.file("/test.ts"), ""),
+							range: undefined,
+						}),
+					} as unknown as GhostContext
+					mockCursorAnimation = {
+						active: vi.fn(),
+						hide: vi.fn(),
+						update: vi.fn(),
+						dispose: vi.fn(),
+						updateSettings: vi.fn(),
+					} as unknown as GhostGutterAnimation
+
+					provider = new GhostInlineCompletionProvider(
+						mockModel,
+						mockCostTrackingCallback,
+						mockGhostContext,
+						mockCursorAnimation,
+					)
+				})
+
+				it("should extend range to replace auto-closed square bracket", async () => {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "[usageData, setUsageData] = useState(null)",
+						prefix: "const ",
+						suffix: "\nconst y = 2",
+					})
+					provider.updateSuggestions(suggestions)
+
+					// Simulate: user typed "const [", VSCode auto-closed with "]"
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const []\nconst y = 2")
+					const position = new vscode.Position(0, 7) // After "const ["
+
+					const result = (await provider.provideInlineCompletionItems(
+						document,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					expect(result[0].insertText).toBe("usageData, setUsageData] = useState(null)")
+					// Range should extend to include the auto-closed "]"
+					expect(result[0].range).toEqual(new vscode.Range(position, new vscode.Position(0, 8)))
+				})
+
+				it("should extend range to replace multiple auto-closed brackets", async () => {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "[a, b] = func()",
+						prefix: "const ",
+						suffix: "\nconst y = 2",
+					})
+					provider.updateSuggestions(suggestions)
+
+					// Simulate: user typed "const [", VSCode auto-closed with "]", then suggestion has "()"
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const [])\nconst y = 2")
+					const position = new vscode.Position(0, 7) // After "const ["
+
+					const result = (await provider.provideInlineCompletionItems(
+						document,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					// Range should extend to include both "]" and ")"
+					expect(result[0].range?.end.character).toBeGreaterThan(position.character)
+				})
+
+				it("should not extend range when no auto-closed brackets", async () => {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "x = 1",
+						prefix: "const ",
+						suffix: "\nconst y = 2",
+					})
+					provider.updateSuggestions(suggestions)
+
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const \nconst y = 2")
+					const position = new vscode.Position(0, 6) // After "const "
+
+					const result = (await provider.provideInlineCompletionItems(
+						document,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					// Range should be zero-width (no extension)
+					expect(result[0].range).toEqual(new vscode.Range(position, position))
+				})
+
+				it("should handle array destructuring with useState", async () => {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "[showUsageWarning, setShowUsageWarning] = useState(true)",
+						prefix: "const ",
+						suffix: "",
+					})
+					provider.updateSuggestions(suggestions)
+
+					// Real-world scenario: user types "const [", VSCode adds "]"
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const []")
+					const position = new vscode.Position(0, 7) // After "const ["
+
+					const result = (await provider.provideInlineCompletionItems(
+						document,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					expect(result[0].insertText).toContain("showUsageWarning")
+					// Should replace the auto-closed "]"
+					expect(result[0].range?.end.character).toBe(8)
+				})
+
+				it("should handle partial typing with auto-closed brackets", async () => {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "[usageData, setUsageData] = useState(null)",
+						prefix: "const ",
+						suffix: "",
+					})
+					provider.updateSuggestions(suggestions)
+
+					// User typed "const [us", VSCode auto-closed with "]"
+					const document = new MockTextDocument(vscode.Uri.file("/test.ts"), "const [us]")
+					const position = new vscode.Position(0, 9) // After "const [us"
+
+					const result = (await provider.provideInlineCompletionItems(
+						document,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					expect(result[0].insertText).toBe("ageData, setUsageData] = useState(null)")
+					// Should replace the auto-closed "]"
+					expect(result[0].range?.end.character).toBe(10)
+				})
+			})
 		})
 	})
 })
