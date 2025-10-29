@@ -70,7 +70,7 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "SOTA coding model with ~3000 tokens/s",
+		description: "SOTA coding model with ~1000 tokens/s",
 	},
 	"gpt-oss-120b": {
 		maxTokens: 40000,
