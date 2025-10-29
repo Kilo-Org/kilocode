@@ -88,38 +88,27 @@ export class StrategyTester {
 
 	parseCompletion(originalContent: string, xmlResponse: string): string | null {
 		try {
-			const uri = vscode.Uri.parse("file:///test.js")
+			const cursorIndex = originalContent.indexOf(CURSOR_MARKER)
+			const prefix = originalContent.substring(0, cursorIndex)
+			const suffix = originalContent.substring(cursorIndex + CURSOR_MARKER.length)
 
-			const dummyContext: GhostSuggestionContext = {
-				document: new MockTextDocument(uri, originalContent) as any,
-				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)) as any,
-			}
-
-			const position = dummyContext.range?.start ?? new vscode.Position(0, 0)
-			const { prefix, suffix } = extractPrefixSuffix(dummyContext.document, position)
 			const result = parseGhostResponse(xmlResponse, prefix, suffix)
 
 			// Check if we have any suggestions
 			if (!result.suggestions.hasSuggestions()) {
+				console.warn("No suggestions found")
 				return null
 			}
 
-			throw new Error("Code needs to be ported to FIM style completion")
+			// Get the FIM suggestion
+			const fimSuggestion = result.suggestions.getFillInAtCursor()
+			if (!fimSuggestion) {
+				console.warn("No FIM suggestion found")
+				return null
+			}
 
-			// // Get the file operations
-			// const file = result.suggestions.getFile(uri)
-			// if (!file) {
-			// 	return null
-			// }
-
-			// // Get all operations and apply them
-			// const operations = file.getAllOperations()
-			// if (operations.length === 0) {
-			// 	return null
-			// }
-
-			// // Apply operations to reconstruct the modified code
-			// return this.applyOperations(originalContent, operations)
+			// Reconstruct the complete content with the FIM text inserted
+			return fimSuggestion.prefix + fimSuggestion.text + fimSuggestion.suffix
 		} catch (error) {
 			console.warn("Failed to parse completion:", error)
 			return null
@@ -129,7 +118,7 @@ export class StrategyTester {
 	/**
 	 * Get the type of the strategy (always auto-trigger now)
 	 */
-	getSelectedStrategyName(code: string): string {
+	getSelectedStrategyName(): string {
 		return "auto-trigger"
 	}
 }

@@ -228,10 +228,10 @@ This instructs the AI to proceed without user input.
 
 In order to run the CLI with devtools, add `DEV=true` to your `pnpm start` command, and then run `npx react-devtools` to show the devtools inspector.
 
-## Switching into an Organization from the CLI 
+## Switching into an Organization from the CLI
 
 Use the `/teams` command to see a list of all organizations you can switch into.
 
-Use `/teams select` and start typing the team name to switch teams.  
+Use `/teams select` and start typing the team name to switch teams.
 
 The process is the same when switching into a Team or Enterprise organization.

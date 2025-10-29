@@ -48,7 +48,8 @@
 			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Kilo Code. Se non sei sicuro di quale modello scegliere, Kilo Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
 			"providerRouting": {
 				"title": "Routing dei provider",
-				"managedByOrganization": "Le impostazioni di routing dei provider sono gestite dalla tua organizzazione.",
+				"managedByOrganization": "Gestisci routing dei provider a livello di organizzazione",
+				"createOrganization": "Crea organizzazione per gestire routing dei provider",
 				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello.",
 				"sorting": {
 					"default": "Ordinamento predefinito dei provider",
@@ -129,7 +130,9 @@
 			"credits": "crediti",
 			"action": "Acquista Ora",
 			"viewAll": "Visualizza tutte le opzioni di prezzo"
-		}
+		},
+		"detailedUsage": "Utilizzo dettagliato",
+		"createOrganization": "Crea organizzazione per tracciare utilizzo dettagliato"
 	},
 	"docs": "Documentazione",
 	"rules": {

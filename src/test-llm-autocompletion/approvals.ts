@@ -73,9 +73,11 @@ async function askUserApproval(category: string, testName: string, input: string
 		console.log("─".repeat(80))
 		console.log("\n" + "─".repeat(80))
 
-		rl.question("\nIs this acceptable? (y/n): ", (answer) => {
+		rl.question("\nIs this acceptable? [Y/n]: ", (answer) => {
 			rl.close()
-			resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes")
+			const trimmed = answer.trim().toLowerCase()
+			const isApproved = trimmed === "" || trimmed === "y" || trimmed === "yes"
+			resolve(isApproved)
 		})
 	})
 }

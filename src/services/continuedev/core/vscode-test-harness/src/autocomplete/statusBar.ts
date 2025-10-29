@@ -114,5 +114,5 @@ export function setupStatusBar(status: StatusBarStatus | undefined, loading?: bo
 }
 
 export function getStatusBarStatus(): StatusBarStatus | undefined {
-	return statusBarStatus
+	return StatusBarStatus.Enabled
 }

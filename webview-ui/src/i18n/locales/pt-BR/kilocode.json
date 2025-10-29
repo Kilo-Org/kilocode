@@ -48,7 +48,8 @@
 			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
 			"providerRouting": {
 				"title": "Roteamento de Provedor",
-				"managedByOrganization": "As configurações de Roteamento de Provedor são gerenciadas pela sua organização.",
+				"managedByOrganization": "Gerenciar roteamento de provedor em nível de organização",
+				"createOrganization": "Criar organização para gerenciar roteamento de provedor",
 				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenação padrão do provedor",
@@ -129,7 +130,9 @@
 			"credits": "créditos",
 			"action": "Comprar Agora",
 			"viewAll": "Ver todas as opções de preço"
-		}
+		},
+		"detailedUsage": "Uso detalhado",
+		"createOrganization": "Criar organização para rastrear uso detalhado"
 	},
 	"docs": "Documentação",
 	"rules": {

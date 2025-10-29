@@ -19,6 +19,11 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 		}),
 	)
 	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.generateSuggestions", async () => {
+			ghost.codeSuggestion()
+		}),
+	)
+	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.showIncompatibilityExtensionPopup", async () => {
 			await ghost.showIncompatibilityExtensionPopup()
 		}),
@@ -44,10 +49,5 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 		vscode.languages.registerCodeActionsProvider("*", ghost.codeActionProvider, {
 			providedCodeActionKinds: Object.values(ghost.codeActionProvider.providedCodeActionKinds),
 		}),
-	)
-
-	// Register GhostServiceManager Inline Completion Provider
-	context.subscriptions.push(
-		vscode.languages.registerInlineCompletionItemProvider("*", ghost.inlineCompletionProvider),
 	)
 }

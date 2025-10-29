@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.13
+
+### Patch Changes
+
+- [#3369](https://github.com/Kilo-Org/kilocode/pull/3369) [`e41556e`](https://github.com/Kilo-Org/kilocode/commit/e41556e81a190cafa123e84bd804f7fbede36419) Thanks [@RSO](https://github.com/RSO)! - Add support for showing Kilo Code notifications
+
 ## 0.0.12
 
 ### Patch Changes
