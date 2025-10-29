@@ -6,6 +6,7 @@ import { t } from "../../i18n"
 import { ApiHandler } from "../../api"
 import { ApiMessage } from "../task-persistence/apiMessages"
 import { maybeRemoveImageBlocks } from "../../api/transform/image-cleaning"
+import { maybeRemoveThinkingBlocks_kilocode } from "../../api/transform/thinking-cleaning-kilocode"
 
 export const N_MESSAGES_TO_KEEP = 3
 export const MIN_CONDENSE_THRESHOLD = 5 // Minimum percentage of context window to trigger condensing
@@ -134,9 +135,10 @@ export async function summarizeConversation(
 		content: "Summarize the conversation so far, as described in the prompt instructions.",
 	}
 
-	const requestMessages = maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler).map(
-		({ role, content }) => ({ role, content }),
-	)
+	const requestMessages = maybeRemoveThinkingBlocks_kilocode(
+		maybeRemoveImageBlocks([...messagesToSummarize, finalRequestMessage], apiHandler),
+		apiHandler,
+	).map(({ role, content }) => ({ role, content }))
 
 	// Note: this doesn't need to be a stream, consider using something like apiHandler.completePrompt
 	// Use custom prompt if provided and non-empty, otherwise use the default SUMMARY_PROMPT

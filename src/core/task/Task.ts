@@ -123,6 +123,7 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
+import { maybeRemoveThinkingBlocks_kilocode } from "../../api/transform/thinking-cleaning-kilocode"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -2437,8 +2438,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						})
 					}
 
-					// kilocode_change start: also add tool calls to history
+					// kilocode_change start: also add tool calls and reasoning to history
 					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
+					if (reasoningMessage) {
+						assistantMessageContent.push({ type: "thinking", thinking: reasoningMessage, signature: "" })
+					}
 					if (assistantMessage) {
 						assistantMessageContent.push({ type: "text", text: assistantMessage })
 					}
@@ -2891,9 +2895,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(this.apiConversationHistory)
-		let cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
-			({ role, content }) => ({ role, content }),
-		)
+		let cleanConversationHistory = maybeRemoveThinkingBlocks_kilocode(
+			maybeRemoveImageBlocks(messagesSinceLastSummary, this.api),
+			this.api,
+		).map(({ role, content }) => ({ role, content }))
 
 		// kilocode_change start
 		// Fetch project properties for KiloCode provider tracking

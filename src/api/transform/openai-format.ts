@@ -101,13 +101,21 @@ export function convertToOpenAiMessages(
 				}
 			} else if (anthropicMessage.role === "assistant") {
 				const { nonToolMessages, toolMessages } = anthropicMessage.content.reduce<{
-					nonToolMessages: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
+					nonToolMessages: (
+						| Anthropic.TextBlockParam
+						| Anthropic.ImageBlockParam
+						| Anthropic.ThinkingBlockParam // kilocode_change
+					)[]
 					toolMessages: Anthropic.ToolUseBlockParam[]
 				}>(
 					(acc, part) => {
 						if (part.type === "tool_use") {
 							acc.toolMessages.push(part)
-						} else if (part.type === "text" || part.type === "image") {
+						} else if (
+							part.type === "text" ||
+							part.type === "image" ||
+							part.type === "thinking" // kilocode_change
+						) {
 							acc.nonToolMessages.push(part)
 						} // assistant cannot send tool_result messages
 						return acc
@@ -117,12 +125,19 @@ export function convertToOpenAiMessages(
 
 				// Process non-tool messages
 				let content: string | undefined
+				let reasoning: string = "" // kilocode_change
 				if (nonToolMessages.length > 0) {
 					content = nonToolMessages
 						.map((part) => {
 							if (part.type === "image") {
 								return "" // impossible as the assistant cannot send images
 							}
+							// kilocode_change start
+							if (part.type === "thinking") {
+								reasoning += part.thinking
+								return ""
+							}
+							// kilocode_change end
 							return part.text
 						})
 						.join("\n")
@@ -142,9 +157,10 @@ export function convertToOpenAiMessages(
 				openAiMessages.push({
 					role: "assistant",
 					content,
+					reasoning: reasoning || undefined, // kilocode_change
 					// Cannot be an empty array. API expects an array with minimum length 1, and will respond with an error if it's empty
 					tool_calls: tool_calls.length > 0 ? tool_calls : undefined,
-				})
+				} as OpenAI.Chat.Completions.ChatCompletionAssistantMessageParam) // kilocode_change
 			}
 		}
 	}
