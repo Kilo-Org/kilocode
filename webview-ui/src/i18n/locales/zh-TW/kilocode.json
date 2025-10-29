@@ -270,5 +270,16 @@
 	},
 	"memoryWarning": {
 		"message": "記憶體使用量已達 {{percentage}}%。請重新啟動您的 IDE 以防止當機。"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "这些MCP服务器由社区维护。点击<1>这里</1>编辑您自己的MCP设置。"
+		},
+		"modes": {
+			"description": "这些模式来自社区提供。点击<1>这里</1>编辑您自己的自定义模式。"
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "新功能：通过创建组织共享模式"
 	}
 }

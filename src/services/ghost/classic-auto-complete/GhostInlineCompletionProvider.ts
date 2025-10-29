@@ -7,6 +7,7 @@ import { GhostModel } from "../GhostModel"
 import { GhostContext } from "../GhostContext"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 import { GhostGutterAnimation } from "../GhostGutterAnimation"
+import { GhostServiceSettings } from "@roo-code/types"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
@@ -73,6 +74,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private costTrackingCallback: CostTrackingCallback
 	private ghostContext: GhostContext
 	private cursorAnimation: GhostGutterAnimation
+	private settings: GhostServiceSettings | null = null
 
 	constructor(
 		model: GhostModel,
@@ -85,6 +87,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.ghostContext = ghostContext
 		this.cursorAnimation = cursorAnimation
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
+	}
+
+	public updateSettings(settings: GhostServiceSettings | null): void {
+		this.settings = settings
 	}
 
 	/**
@@ -226,7 +232,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	public async provideInlineCompletionItems(
 		document: vscode.TextDocument,
 		position: vscode.Position,
-		_context: vscode.InlineCompletionContext,
+		context: vscode.InlineCompletionContext,
 		_token: vscode.CancellationToken,
 	): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
@@ -239,6 +245,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				range: new vscode.Range(position, position),
 			}
 			return [item]
+		}
+
+		// Check if auto-trigger is enabled
+		// Only proceed with LLM call if:
+		// 1. It's a manual trigger (triggerKind === Invoke), OR
+		// 2. Auto-trigger is enabled (enableAutoTrigger === true)
+		const isManualTrigger = context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke
+		const isAutoTriggerEnabled = this.settings?.enableAutoTrigger ?? false
+
+		if (!isManualTrigger && !isAutoTriggerEnabled) {
+			// Auto-trigger is disabled and this is not a manual trigger
+			return []
 		}
 
 		// No cached suggestion available - invoke LLM

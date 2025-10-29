@@ -111,13 +111,13 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			(notification: any) =>
 				!dismissedIds.includes(notification.id) &&
 				!shownNativeNotificationIds.has(notification.id) &&
-				notification.showAsNative === true,
+				(notification.showIn ?? []).includes("extension-native"),
 		)
 
 		provider.postMessageToWebview({
 			type: "kilocodeNotificationsResponse",
 			notifications: (response.data?.notifications || []).filter(
-				(notification: any) => notification.showAsNative !== true,
+				({ showIn }: { showIn?: string[] }) => !showIn || showIn.includes("extension"),
 			),
 		})
 

@@ -10,6 +10,18 @@ import { GhostModel } from "../../GhostModel"
 import { GhostContext } from "../../GhostContext"
 import { GhostGutterAnimation } from "../../GhostGutterAnimation"
 
+// Mock vscode InlineCompletionTriggerKind enum
+vi.mock("vscode", async () => {
+	const actual = await vi.importActual<typeof vscode>("vscode")
+	return {
+		...actual,
+		InlineCompletionTriggerKind: {
+			Invoke: 0,
+			Automatic: 1,
+		},
+	}
+})
+
 describe("findMatchingSuggestion", () => {
 	describe("exact matching", () => {
 		it("should return suggestion text when prefix and suffix match exactly", () => {
@@ -230,7 +242,10 @@ describe("GhostInlineCompletionProvider", () => {
 	beforeEach(() => {
 		mockDocument = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
 		mockPosition = new vscode.Position(0, 11) // After "const x = 1"
-		mockContext = {} as vscode.InlineCompletionContext
+		mockContext = {
+			triggerKind: vscode.InlineCompletionTriggerKind.Invoke,
+			selectedCompletionInfo: undefined,
+		} as vscode.InlineCompletionContext
 		mockToken = {} as vscode.CancellationToken
 
 		// Create mock dependencies

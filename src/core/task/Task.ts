@@ -841,6 +841,41 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
 
+		// kilocode_change start: YOLO mode auto-answer for follow-up questions
+		// Check if this is a follow-up question with suggestions in YOLO mode
+		if (type === "followup" && text && !partial) {
+			try {
+				const state = await this.providerRef.deref()?.getState()
+				if (state?.yoloMode) {
+					// Parse the follow-up JSON to extract suggestions
+					const followUpData = JSON.parse(text)
+					if (
+						followUpData.suggest &&
+						Array.isArray(followUpData.suggest) &&
+						followUpData.suggest.length > 0
+					) {
+						// Auto-select the first suggestion
+						const firstSuggestion = followUpData.suggest[0]
+						const autoAnswer = firstSuggestion.answer || firstSuggestion
+
+						// Immediately set the response as if the user clicked the first suggestion
+						this.handleWebviewAskResponse("messageResponse", autoAnswer, undefined)
+
+						// Return immediately with the auto-selected answer
+						const result = { response: this.askResponse!, text: autoAnswer, images: undefined }
+						this.askResponse = undefined
+						this.askResponseText = undefined
+						this.askResponseImages = undefined
+						return result
+					}
+				}
+			} catch (error) {
+				// If parsing fails or YOLO check fails, continue with normal flow
+				console.warn("Failed to auto-answer follow-up question in YOLO mode:", error)
+			}
+		}
+		// kilocode_change end
+
 		// The state is mutable if the message is complete and the task will
 		// block (via the `pWaitFor`).
 		const isBlocking = !(this.askResponse !== undefined || this.lastMessageTs !== askTs)

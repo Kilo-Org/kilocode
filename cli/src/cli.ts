@@ -19,6 +19,7 @@ export interface CLIOptions {
 	mode?: string
 	workspace?: string
 	ci?: boolean
+	json?: boolean
 	prompt?: string
 	timeout?: number
 }
@@ -161,6 +162,7 @@ export class CLI {
 					mode: this.options.mode || "code",
 					workspace: this.options.workspace || process.cwd(),
 					ci: this.options.ci || false,
+					json: this.options.json || false,
 					prompt: this.options.prompt || "",
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
 				},

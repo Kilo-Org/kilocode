@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import * as vscode from "vscode"
 import { t } from "../../i18n"
 import { GhostDocumentStore } from "./GhostDocumentStore"
@@ -26,6 +27,7 @@ export class GhostServiceManager {
 	private cursorAnimation: GhostGutterAnimation
 
 	private enabled: boolean = true
+	private taskId: string | null = null
 	private isProcessing: boolean = false
 
 	// Status bar integration
@@ -120,23 +122,21 @@ export class GhostServiceManager {
 	}
 
 	/**
-	 * Register or unregister the inline completion provider based on enableAutoTrigger setting
+	 * Update the inline completion provider with current settings
 	 */
 	private async updateInlineCompletionProviderRegistration() {
-		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-
-		if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-			// Register the provider
+		// Always keep the provider registered so manual triggers (cmd-L) work
+		// The provider will check enableAutoTrigger internally to decide whether to auto-trigger
+		if (!this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
 				"*",
 				this.inlineCompletionProvider,
 			)
 			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-		} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-			// Unregister the provider
-			this.inlineCompletionProviderDisposable.dispose()
-			this.inlineCompletionProviderDisposable = null
 		}
+
+		// Update the provider's settings
+		this.inlineCompletionProvider.updateSettings(this.settings)
 	}
 
 	public async disable() {
@@ -256,6 +256,38 @@ export class GhostServiceManager {
 		await this.updateGlobalContext()
 	}
 
+	private async hasAccess(document: vscode.TextDocument) {
+		return document.isUntitled || (await this.initializeIgnoreController()).validateAccess(document.fileName)
+	}
+
+	public async codeSuggestion() {
+		if (!this.enabled) {
+			return
+		}
+		const editor = vscode.window.activeTextEditor
+		if (!editor) {
+			return
+		}
+
+		this.taskId = crypto.randomUUID()
+		TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_AUTO_TASK, {
+			taskId: this.taskId,
+		})
+
+		const document = editor.document
+		if (!(await this.hasAccess(document))) {
+			return
+		}
+
+		// Ensure model is loaded
+		if (!this.model.loaded) {
+			await this.load()
+		}
+
+		// Trigger the inline completion provider
+		await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+	}
+
 	private async updateGlobalContext() {
 		await vscode.commands.executeCommand("setContext", "kilocode.ghost.isProcessing", this.isProcessing)
 		await vscode.commands.executeCommand(
@@ -315,6 +347,7 @@ export class GhostServiceManager {
 
 		// Send telemetry
 		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
+			taskId: this.taskId,
 			inputTokens,
 			outputTokens,
 			cacheWriteTokens,

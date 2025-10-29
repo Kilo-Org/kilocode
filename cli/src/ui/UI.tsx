@@ -11,6 +11,7 @@ import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
+import { JsonRenderer } from "./JsonRenderer.js"
 import { CommandInput } from "./components/CommandInput.js"
 import { StatusBar } from "./components/StatusBar.js"
 import { StatusIndicator } from "./components/StatusIndicator.js"
@@ -200,6 +201,11 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			}, 500)
 		}
 	}, [configValidation])
+
+	// If JSON mode is enabled, use JSON renderer instead of UI components
+	if (options.json && options.ci) {
+		return <JsonRenderer />
+	}
 
 	return (
 		// Using stdout.rows causes layout shift during renders

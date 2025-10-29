@@ -270,5 +270,16 @@
 		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
 		"continueWith": "{{model}} ile devam et",
 		"continue": "Devam et"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Bu MCP sunucuları topluluk tarafından yönetilmektedir. Kendi MCP ayarlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"modes": {
+			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
 	}
 }

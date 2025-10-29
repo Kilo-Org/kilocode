@@ -11,6 +11,7 @@ export interface KilocodeNotification {
 		actionText: string
 		actionURL: string
 	}
+	showIn?: string[]
 }
 
 /**

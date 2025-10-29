@@ -35,6 +35,56 @@ describe("AutoApprovalHandler", () => {
 			expect(mockAskForApproval).not.toHaveBeenCalled()
 		})
 
+		// kilocode_change start: yolo mode
+		it("should bypass all checks when YOLO mode is enabled", async () => {
+			mockState.yoloMode = true
+			mockState.allowedMaxRequests = 1
+			mockState.allowedMaxCost = 0.01
+
+			const messages: ClineMessage[] = []
+			// Add messages that would normally exceed limits
+			for (let i = 0; i < 10; i++) {
+				messages.push({ type: "say", say: "api_req_started", text: "{}", ts: 1000 + i })
+			}
+
+			mockGetApiMetrics.mockReturnValue({ totalCost: 100.0 })
+
+			const result = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			expect(result.shouldProceed).toBe(true)
+			expect(result.requiresApproval).toBe(false)
+			expect(mockAskForApproval).not.toHaveBeenCalled()
+			expect(mockGetApiMetrics).not.toHaveBeenCalled()
+		})
+
+		it("should bypass request limits when YOLO mode is enabled", async () => {
+			mockState.yoloMode = true
+			mockState.allowedMaxRequests = 0
+
+			const messages: ClineMessage[] = []
+			const result = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			expect(result.shouldProceed).toBe(true)
+			expect(result.requiresApproval).toBe(false)
+			expect(mockAskForApproval).not.toHaveBeenCalled()
+		})
+
+		it("should bypass cost limits when YOLO mode is enabled", async () => {
+			mockState.yoloMode = true
+			mockState.allowedMaxCost = 0
+
+			const messages: ClineMessage[] = []
+			mockGetApiMetrics.mockReturnValue({ totalCost: 1000.0 })
+
+			const result = await handler.checkAutoApprovalLimits(mockState, messages, mockAskForApproval)
+
+			expect(result.shouldProceed).toBe(true)
+			expect(result.requiresApproval).toBe(false)
+			expect(mockAskForApproval).not.toHaveBeenCalled()
+			expect(mockGetApiMetrics).not.toHaveBeenCalled()
+		})
+		// kilocode_change end
+
 		it("should check request limit before cost limit", async () => {
 			mockState.allowedMaxRequests = 1
 			mockState.allowedMaxCost = 10
