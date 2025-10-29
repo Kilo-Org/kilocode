@@ -270,5 +270,16 @@
 	},
 	"memoryWarning": {
 		"message": "Využití paměti je na {{percentage}}%. Restartuj prosím své IDE, aby se předešlo pádům."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Tyto servery MCP jsou spravovány komunitou. Klikněte <1>zde</1> pro úpravu vašich vlastních nastavení MCP."
+		},
+		"modes": {
+			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novinka: Sdílejte režimy vytvořením organizace"
 	}
 }

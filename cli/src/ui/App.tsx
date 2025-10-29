@@ -9,6 +9,7 @@ export interface AppOptions {
 	mode?: string
 	workspace?: string
 	ci?: boolean
+	json?: boolean
 	prompt?: string
 	timeout?: number
 }

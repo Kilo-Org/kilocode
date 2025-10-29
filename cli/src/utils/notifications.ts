@@ -52,7 +52,7 @@ export async function fetchKilocodeNotifications({
 
 	const { notifications } = (await response.json()) as NotificationsResponse
 
-	return notifications
+	return notifications.filter(({ showIn }) => !showIn || showIn.includes("cli"))
 }
 
 /**

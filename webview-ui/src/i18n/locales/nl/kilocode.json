@@ -270,5 +270,16 @@
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
 		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",
 		"imagesRemovedNoSupport": "Afbeeldingen verwijderd, niet ondersteund door model."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Deze MCP-servers worden onderhouden door de gemeenschap. Klik <1>hier</1> om je eigen MCP-instellingen te bewerken."
+		},
+		"modes": {
+			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nieuw: Deel modi door een organisatie aan te maken"
 	}
 }
