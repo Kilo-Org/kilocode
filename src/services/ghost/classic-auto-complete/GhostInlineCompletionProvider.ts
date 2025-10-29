@@ -66,6 +66,8 @@ export interface LLMRetrievalResult {
 	cacheReadTokens: number
 }
 
+export type SuggestionsUpdateCallback = (suggestions: FillInAtCursorSuggestion[]) => void
+
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
 	private autoTriggerStrategy: AutoTriggerStrategy
@@ -75,6 +77,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private ghostContext: GhostContext
 	private cursorAnimation: GhostGutterAnimation
 	private settings: GhostServiceSettings | null = null
+	private suggestionsUpdateCallback?: SuggestionsUpdateCallback
 
 	constructor(
 		model: GhostModel,
@@ -87,6 +90,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.ghostContext = ghostContext
 		this.cursorAnimation = cursorAnimation
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
+	}
+
+	/**
+	 * Set a callback to be notified when suggestions are updated
+	 */
+	public setSuggestionsUpdateCallback(callback: SuggestionsUpdateCallback): void {
+		this.suggestionsUpdateCallback = callback
 	}
 
 	public updateSettings(settings: GhostServiceSettings | null): void {
@@ -128,6 +138,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		if (this.suggestionsHistory.length > MAX_SUGGESTIONS_HISTORY) {
 			this.suggestionsHistory.shift()
 		}
+
+		// Notify callback of update
+		if (this.suggestionsUpdateCallback) {
+			this.suggestionsUpdateCallback(this.suggestionsHistory)
+		}
+	}
+
+	/**
+	 * Get the current suggestions history for use by other providers
+	 */
+	public getSuggestionsHistory(): FillInAtCursorSuggestion[] {
+		return this.suggestionsHistory
 	}
 
 	/**
@@ -239,67 +261,92 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
+		const results: vscode.InlineCompletionItem[] = []
+
+		// Add the main suggestion if available
 		if (matchingText !== null) {
 			const item: vscode.InlineCompletionItem = {
 				insertText: matchingText,
 				range: new vscode.Range(position, position),
 			}
-			return [item]
-		}
+			results.push(item)
 
-		// Check if auto-trigger is enabled
-		// Only proceed with LLM call if:
-		// 1. It's a manual trigger (triggerKind === Invoke), OR
-		// 2. Auto-trigger is enabled (enableAutoTrigger === true)
-		const isManualTrigger = context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke
-		const isAutoTriggerEnabled = this.settings?.enableAutoTrigger ?? false
+			// Always add attribution comment as a second suggestion
+			const attributionItem: vscode.InlineCompletionItem = {
+				insertText: "// code coproduced by kilo\n",
+				range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+			}
+			results.push(attributionItem)
 
-		if (!isManualTrigger && !isAutoTriggerEnabled) {
-			// Auto-trigger is disabled and this is not a manual trigger
-			return []
-		}
+			return results
+		} else {
+			// Check if auto-trigger is enabled
+			// Only proceed with LLM call if:
+			// 1. It's a manual trigger (triggerKind === Invoke), OR
+			// 2. Auto-trigger is enabled (enableAutoTrigger === true)
+			const isManualTrigger = context.triggerKind === vscode.InlineCompletionTriggerKind.Invoke
+			const isAutoTriggerEnabled = this.settings?.enableAutoTrigger ?? false
 
-		// No cached suggestion available - invoke LLM
-		if (this.model && this.ghostContext) {
-			// Show cursor animation while generating
-			this.cursorAnimation.active()
-
-			const context: GhostSuggestionContext = {
-				document,
-				range: new vscode.Range(position, position),
+			if (!isManualTrigger && !isAutoTriggerEnabled) {
+				// Auto-trigger is disabled and this is not a manual trigger
+				// Always add attribution comment as a suggestion
+				const attributionItem: vscode.InlineCompletionItem = {
+					insertText: "// code coproduced by kilo\n",
+					range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+				}
+				results.push(attributionItem)
+				return results
 			}
 
-			const fullContext = await this.ghostContext.generate(context)
-			const result = await this.getFromLLM(fullContext, this.model)
+			// No cached suggestion available - invoke LLM
+			if (this.model && this.ghostContext) {
+				// Show cursor animation while generating
+				this.cursorAnimation.active()
 
-			// Hide cursor animation after generation
-			this.cursorAnimation.hide()
-
-			// Track costs
-			if (this.costTrackingCallback) {
-				this.costTrackingCallback(
-					result.cost,
-					result.inputTokens,
-					result.outputTokens,
-					result.cacheWriteTokens,
-					result.cacheReadTokens,
-				)
-			}
-
-			// Update suggestions history
-			this.updateSuggestions(result.suggestions)
-
-			// Return the new suggestion if available
-			const fillInAtCursor = result.suggestions.getFillInAtCursor()
-			if (fillInAtCursor) {
-				const item: vscode.InlineCompletionItem = {
-					insertText: fillInAtCursor.text,
+				const suggestionContext: GhostSuggestionContext = {
+					document,
 					range: new vscode.Range(position, position),
 				}
-				return [item]
+
+				const fullContext = await this.ghostContext.generate(suggestionContext)
+				const result = await this.getFromLLM(fullContext, this.model)
+
+				// Hide cursor animation after generation
+				this.cursorAnimation.hide()
+
+				// Track costs
+				if (this.costTrackingCallback) {
+					this.costTrackingCallback(
+						result.cost,
+						result.inputTokens,
+						result.outputTokens,
+						result.cacheWriteTokens,
+						result.cacheReadTokens,
+					)
+				}
+
+				// Update suggestions history
+				this.updateSuggestions(result.suggestions)
+
+				// Return the new suggestion if available
+				const fillInAtCursor = result.suggestions.getFillInAtCursor()
+				if (fillInAtCursor) {
+					const item: vscode.InlineCompletionItem = {
+						insertText: fillInAtCursor.text,
+						range: new vscode.Range(position, position),
+					}
+					results.push(item)
+				}
 			}
 		}
 
-		return []
+		// Always add attribution comment as a second suggestion
+		const attributionItem: vscode.InlineCompletionItem = {
+			insertText: "// code coproduced by kilo\n",
+			range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)),
+		}
+		results.push(attributionItem)
+
+		return results
 	}
 }
