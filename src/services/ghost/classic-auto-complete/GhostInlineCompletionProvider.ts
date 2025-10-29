@@ -258,12 +258,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			// Show cursor animation while generating
 			this.cursorAnimation.active()
 
-			const context: GhostSuggestionContext = {
+			const suggestionContext: GhostSuggestionContext = {
 				document,
 				range: new vscode.Range(position, position),
 			}
 
-			const fullContext = await this.ghostContext.generate(context)
+			const fullContext = await this.ghostContext.generate(suggestionContext)
 			const result = await this.getFromLLM(fullContext, this.model)
 
 			// Hide cursor animation after generation
