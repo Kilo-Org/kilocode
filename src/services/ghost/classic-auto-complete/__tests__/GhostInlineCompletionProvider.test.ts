@@ -3,6 +3,7 @@ import {
 	GhostInlineCompletionProvider,
 	findMatchingSuggestion,
 	CostTrackingCallback,
+	MatchingSuggestionResult,
 } from "../GhostInlineCompletionProvider"
 import { GhostSuggestionsState, FillInAtCursorSuggestion } from "../GhostSuggestions"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
@@ -34,7 +35,9 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("console.log('Hello, World!');")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("console.log('Hello, World!');")
+			expect(result?.originalSuggestion).toEqual(suggestions[0])
 		})
 
 		it("should return null when prefix does not match", () => {
@@ -81,7 +84,9 @@ describe("findMatchingSuggestion", () => {
 
 			// User typed "cons" after the prefix
 			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
-			expect(result).toBe("ole.log('Hello, World!');")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("ole.log('Hello, World!');")
+			expect(result?.originalSuggestion).toEqual(suggestions[0])
 		})
 
 		it("should return full suggestion when no partial typing", () => {
@@ -94,7 +99,8 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("console.log('test');")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("console.log('test');")
 		})
 
 		it("should return null when partially typed content does not match suggestion", () => {
@@ -121,7 +127,8 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1console.log('test');", "\nconst y = 2", suggestions)
-			expect(result).toBe("")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("")
 		})
 
 		it("should return null when suffix has changed during partial typing", () => {
@@ -149,7 +156,8 @@ describe("findMatchingSuggestion", () => {
 
 			// User typed "function te"
 			const result = findMatchingSuggestion("const x = 1function te", "\nconst y = 2", suggestions)
-			expect(result).toBe("st() { return 42; }")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("st() { return 42; }")
 		})
 
 		it("should be case-sensitive in partial matching", () => {
@@ -183,7 +191,8 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result).toBe("second suggestion")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("second suggestion")
 		})
 
 		it("should match different suggestions based on context", () => {
@@ -201,10 +210,12 @@ describe("findMatchingSuggestion", () => {
 			]
 
 			const result1 = findMatchingSuggestion("const x = 1", "\nconst y = 2", suggestions)
-			expect(result1).toBe("first suggestion")
+			expect(result1).not.toBeNull()
+			expect(result1?.text).toBe("first suggestion")
 
 			const result2 = findMatchingSuggestion("const a = 1", "\nconst b = 2", suggestions)
-			expect(result2).toBe("second suggestion")
+			expect(result2).not.toBeNull()
+			expect(result2?.text).toBe("second suggestion")
 		})
 
 		it("should prefer exact match over partial match", () => {
@@ -223,7 +234,8 @@ describe("findMatchingSuggestion", () => {
 
 			// User is at position that matches exact prefix of second suggestion
 			const result = findMatchingSuggestion("const x = 1cons", "\nconst y = 2", suggestions)
-			expect(result).toBe("exact match")
+			expect(result).not.toBeNull()
+			expect(result?.text).toBe("exact match")
 		})
 	})
 })
@@ -325,8 +337,11 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe(fimContent.text)
 			expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
-			// No command property - VSCode handles acceptance automatically
-			expect(result[0].command).toBeUndefined()
+			// Command property to suppress conflicting VS Code completions
+			expect(result[0].command).toEqual({
+				title: "Accept Suggestion",
+				command: "editor.action.inlineSuggest.commit",
+			})
 		})
 
 		it("should return empty array when prefix does not match", async () => {
@@ -806,6 +821,106 @@ describe("GhostInlineCompletionProvider", () => {
 
 				// Should not match due to case difference
 				expect(result).toEqual([])
+			})
+		})
+
+		describe("auto-bracket detection", () => {
+			it("should replace auto-inserted closing bracket when detected", async () => {
+				// Set up a suggestion with no bracket in suffix
+				const suggestions = new GhostSuggestionsState()
+				suggestions.setFillInAtCursor({
+					text: "useState<boolean>(true);",
+					prefix: "const x = ",
+					suffix: "\nconst y = 2",
+				})
+				provider.updateSuggestions(suggestions)
+
+				// Simulate VS Code auto-inserting a closing bracket after typing "["
+				// Document now has: "const x = ]\nconst y = 2"
+				// Position is right after "= " and before the auto-inserted "]"
+				const documentWithBracket = new MockTextDocument(
+					vscode.Uri.file("/test.ts"),
+					"const x = ]\nconst y = 2",
+				)
+				const positionBeforeBracket = new vscode.Position(0, 10) // After "= ", before "]"
+
+				const result = (await provider.provideInlineCompletionItems(
+					documentWithBracket,
+					positionBeforeBracket,
+					mockContext,
+					mockToken,
+				)) as vscode.InlineCompletionItem[]
+
+				expect(result).toHaveLength(1)
+				expect(result[0].insertText).toBe("useState<boolean>(true);")
+				// Should replace the auto-inserted bracket
+				expect(result[0].range).toEqual(new vscode.Range(positionBeforeBracket, new vscode.Position(0, 11)))
+			})
+
+			it("should not replace bracket if it was in original suffix", async () => {
+				// Set up a suggestion where bracket was already in suffix
+				const suggestions = new GhostSuggestionsState()
+				suggestions.setFillInAtCursor({
+					text: "useState<boolean>(true);",
+					prefix: "const x = ",
+					suffix: "]\nconst y = 2",
+				})
+				provider.updateSuggestions(suggestions)
+
+				// Same document state - bracket was already there when suggestion was cached
+				const documentWithBracket = new MockTextDocument(
+					vscode.Uri.file("/test.ts"),
+					"const x = ]\nconst y = 2",
+				)
+				const positionBeforeBracket = new vscode.Position(0, 10)
+
+				const result = (await provider.provideInlineCompletionItems(
+					documentWithBracket,
+					positionBeforeBracket,
+					mockContext,
+					mockToken,
+				)) as vscode.InlineCompletionItem[]
+
+				expect(result).toHaveLength(1)
+				expect(result[0].insertText).toBe("useState<boolean>(true);")
+				// Should NOT replace the bracket - just insert
+				expect(result[0].range).toEqual(new vscode.Range(positionBeforeBracket, positionBeforeBracket))
+			})
+
+			it("should handle other auto-closing characters", async () => {
+				const testCases = [
+					{ char: ")", desc: "parenthesis" },
+					{ char: "}", desc: "curly brace" },
+					{ char: ">", desc: "angle bracket" },
+					{ char: '"', desc: "double quote" },
+					{ char: "'", desc: "single quote" },
+				]
+
+				for (const { char, desc } of testCases) {
+					const suggestions = new GhostSuggestionsState()
+					suggestions.setFillInAtCursor({
+						text: "test",
+						prefix: "const x = ",
+						suffix: "\nconst y = 2",
+					})
+					provider.updateSuggestions(suggestions)
+
+					const documentWithChar = new MockTextDocument(
+						vscode.Uri.file("/test.ts"),
+						`const x = ${char}\nconst y = 2`,
+					)
+					const position = new vscode.Position(0, 10)
+
+					const result = (await provider.provideInlineCompletionItems(
+						documentWithChar,
+						position,
+						mockContext,
+						mockToken,
+					)) as vscode.InlineCompletionItem[]
+
+					expect(result).toHaveLength(1)
+					expect(result[0].range).toEqual(new vscode.Range(position, new vscode.Position(0, 11)))
+				}
 			})
 		})
 	})

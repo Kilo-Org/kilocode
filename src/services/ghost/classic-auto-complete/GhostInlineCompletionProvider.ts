@@ -20,24 +20,55 @@ export type CostTrackingCallback = (
 ) => void
 
 /**
+ * Result of finding a matching suggestion
+ */
+export interface MatchingSuggestionResult {
+	text: string
+	originalSuggestion: FillInAtCursorSuggestion
+}
+
+/**
+ * Check if a character is an auto-closing bracket/quote
+ */
+function isAutoClosingChar(char: string): boolean {
+	return [")", "]", "}", ">", '"', "'", "`"].includes(char)
+}
+
+/**
  * Find a matching suggestion from the history based on current prefix and suffix
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
  * @param suggestionsHistory - Array of previous suggestions (most recent last)
- * @returns The matching suggestion text, or null if no match found
+ * @returns The matching suggestion result with text and original suggestion, or null if no match found
  */
 export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
 	suggestionsHistory: FillInAtCursorSuggestion[],
-): string | null {
+): MatchingSuggestionResult | null {
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
 
 		// First, try exact prefix/suffix match
 		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return fillInAtCursor.text
+			return {
+				text: fillInAtCursor.text,
+				originalSuggestion: fillInAtCursor,
+			}
+		}
+
+		// Check if suffix has an auto-inserted bracket at the start
+		// This happens when VS Code's bracket completion runs after we cached the suggestion
+		const suffixWithoutAutoBracket =
+			suffix.length > 0 && isAutoClosingChar(suffix[0]) ? suffix.substring(1) : suffix
+
+		// Try matching with the suffix minus any auto-inserted bracket
+		if (prefix === fillInAtCursor.prefix && suffixWithoutAutoBracket === fillInAtCursor.suffix) {
+			return {
+				text: fillInAtCursor.text,
+				originalSuggestion: fillInAtCursor,
+			}
 		}
 
 		// If no exact match, check for partial typing
@@ -49,7 +80,22 @@ export function findMatchingSuggestion(
 			// Check if the typed content matches the beginning of the suggestion
 			if (fillInAtCursor.text.startsWith(typedContent)) {
 				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return fillInAtCursor.text.substring(typedContent.length)
+				return {
+					text: fillInAtCursor.text.substring(typedContent.length),
+					originalSuggestion: fillInAtCursor,
+				}
+			}
+		}
+
+		// Also check partial typing with auto-inserted bracket in suffix
+		if (prefix.startsWith(fillInAtCursor.prefix) && suffixWithoutAutoBracket === fillInAtCursor.suffix) {
+			const typedContent = prefix.substring(fillInAtCursor.prefix.length)
+
+			if (fillInAtCursor.text.startsWith(typedContent)) {
+				return {
+					text: fillInAtCursor.text.substring(typedContent.length),
+					originalSuggestion: fillInAtCursor,
+				}
 			}
 		}
 	}
@@ -237,12 +283,30 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 
-		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		const matchingResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
-		if (matchingText !== null) {
+		if (matchingResult !== null) {
+			// Check if suffix has a new auto-inserted bracket at the start
+			// This happens when VS Code's bracket completion runs before our suggestion
+			const suffixFirstChar = suffix.length > 0 ? suffix[0] : ""
+			const originalSuffixFirstChar =
+				matchingResult.originalSuggestion.suffix.length > 0 ? matchingResult.originalSuggestion.suffix[0] : ""
+
+			// Detect if a bracket was auto-inserted:
+			// 1. Current suffix starts with an auto-closing character
+			// 2. Original suffix didn't start with that character (or was different)
+			const hasAutoInsertedBracket =
+				isAutoClosingChar(suffixFirstChar) && suffixFirstChar !== originalSuffixFirstChar
+
 			const item: vscode.InlineCompletionItem = {
-				insertText: matchingText,
-				range: new vscode.Range(position, position),
+				insertText: matchingResult.text,
+				range: hasAutoInsertedBracket
+					? new vscode.Range(position, new vscode.Position(position.line, position.character + 1)) // Replace the auto-bracket
+					: new vscode.Range(position, position), // Just insert
+				command: {
+					title: "Accept Suggestion",
+					command: "editor.action.inlineSuggest.commit",
+				},
 			}
 			return [item]
 		}
@@ -295,6 +359,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				const item: vscode.InlineCompletionItem = {
 					insertText: fillInAtCursor.text,
 					range: new vscode.Range(position, position),
+					command: {
+						title: "Accept Suggestion",
+						command: "editor.action.inlineSuggest.commit",
+					},
 				}
 				return [item]
 			}
