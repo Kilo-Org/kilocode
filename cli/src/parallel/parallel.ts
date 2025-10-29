@@ -72,6 +72,9 @@ export async function getParallelModeParams({ cwd, prompt, existingBranch }: Inp
 	}
 }
 
+const agentCommitInstruction =
+	"Inspect the git diff and commit all staged changes with a proper conventional commit message (e.g., 'feat:', 'fix:', 'chore:', etc.). Use execute_command to run 'git diff --staged', then commit with an appropriate message using 'git commit -m \"your-message\"'."
+
 /**
  * Finish parallel mode by having the extension agent generate a commit message and committing changes,
  * then cleaning up the git worktree
@@ -107,9 +110,8 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 
 					await service.sendWebviewMessage({
 						type: "askResponse",
-						askResponse:
-							"Inspect the git diff and commit all staged changes with a proper conventional commit message (e.g., 'feat:', 'fix:', 'chore:', etc.). Use execute_command to run 'git diff --staged', then commit with an appropriate message using 'git commit -m \"your-message\"'.",
-						text: "Inspect the git diff and commit all staged changes with a proper conventional commit message (e.g., 'feat:', 'fix:', 'chore:', etc.). Use execute_command to run 'git diff --staged', then commit with an appropriate message using 'git commit -m \"your-message\"'.",
+						askResponse: agentCommitInstruction,
+						text: agentCommitInstruction,
 					})
 
 					logs.info("Waiting for agent to commit changes...", "ParallelMode")
