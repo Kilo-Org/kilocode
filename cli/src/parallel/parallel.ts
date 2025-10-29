@@ -136,7 +136,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			const bold = "\x1b[1m"
 			const reset = "\x1b[0m"
 
-			console.log("\n" + cyan + "─".repeat(80) + reset)
+			console.log("\n" + cyan + "─".repeat(100) + reset)
 			console.log(
 				`${green}✓${reset} ${bold}Parallel mode complete!${reset} Changes committed to: ${cyan}${worktreeBranch}${reset}`,
 			)
@@ -145,7 +145,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			console.log(`  ${yellow}git merge ${worktreeBranch}${reset}`)
 			console.log(`\n${bold}💡 Tip:${reset} Resume work with ${yellow}--existing-branch${reset}:`)
 			console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch} "<prompt>"${reset}`)
-			console.log(cyan + "─".repeat(80) + reset + "\n")
+			console.log(cyan + "─".repeat(100) + reset + "\n")
 		}
 	} catch (error) {
 		logs.error("Failed to commit changes", "ParallelMode", {
