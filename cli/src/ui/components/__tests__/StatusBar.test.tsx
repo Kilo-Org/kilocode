@@ -16,6 +16,9 @@ vi.mock("jotai")
 
 vi.mock("../../../state/hooks/useGitInfo.js")
 vi.mock("../../../state/hooks/useContextUsage.js")
+vi.mock("../../../utils/git.js", () => ({
+	isGitWorktree: vi.fn(),
+}))
 
 describe("StatusBar", () => {
 	beforeEach(() => {
@@ -205,6 +208,12 @@ describe("StatusBar", () => {
 	})
 
 	describe("parallel mode", () => {
+		let isGitWorktreeMock: any
+
+		beforeEach(async () => {
+			const gitModule = await import("../../../utils/git.js")
+			isGitWorktreeMock = vi.mocked(gitModule.isGitWorktree)
+		})
 		let originalCwd: () => string
 
 		beforeEach(() => {
@@ -217,7 +226,10 @@ describe("StatusBar", () => {
 			process.cwd = originalCwd
 		})
 
-		it("should render project name with git worktree suffix in parallel mode", () => {
+		it("should render project name with git worktree suffix in parallel mode", async () => {
+			// Mock isGitWorktree to return true immediately
+			isGitWorktreeMock.mockResolvedValue(true)
+
 			// Mock process.cwd() to return the actual project directory
 			process.cwd = vi.fn(() => "/home/user/kilocode")
 
@@ -251,10 +263,14 @@ describe("StatusBar", () => {
 			})
 
 			const { lastFrame } = render(<StatusBar />)
-			const frame = lastFrame()
 
-			// Should show project name from process.cwd() with git worktree suffix
-			expect(frame).toContain("kilocode (git worktree)")
+			await vi.waitFor(
+				() => {
+					const frame = lastFrame()
+					expect(frame).toContain("kilocode (git worktree)")
+				},
+				{ timeout: 1000, interval: 50 },
+			)
 		})
 	})
 })
