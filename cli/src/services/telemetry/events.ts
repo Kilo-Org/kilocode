@@ -54,9 +54,6 @@ export enum TelemetryEvent {
 	CI_MODE_TIMEOUT = "cli_ci_mode_timeout",
 
 	// Parallel Mode Events
-	PARALLEL_MODE_STARTED = "cli_parallel_mode_started",
-	PARALLEL_MODE_COMPLETED = "cli_parallel_mode_completed",
-	PARALLEL_MODE_FAILED = "cli_parallel_mode_failed",
 
 	// Error Events
 	ERROR_OCCURRED = "cli_error_occurred",
@@ -231,16 +228,6 @@ export interface CIModeEventProperties extends BaseProperties {
 /**
  * Parallel mode event properties
  */
-export interface ParallelModeEventProperties extends BaseProperties {
-	promptLength: number
-	timeoutSeconds?: number
-	usedExistingBranch: boolean
-	branchName?: string
-	exitReason?: string
-	totalDuration?: number
-	taskCompleted?: boolean
-	errorMessage?: string
-}
 
 /**
  * Error event properties

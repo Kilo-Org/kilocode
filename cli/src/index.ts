@@ -106,12 +106,6 @@ program
 		let worktreeBranch
 
 		if (options.parallel) {
-			getTelemetryService().trackParallelModeStarted(
-				finalPrompt.length,
-				options.timeout,
-				!!options.existingBranch,
-			)
-
 			const parallelParams = await getParallelModeParams({
 				cwd: options.workspace,
 				prompt: finalPrompt,
