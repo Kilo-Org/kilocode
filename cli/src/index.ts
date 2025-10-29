@@ -115,6 +115,12 @@ program
 
 			finalWorkspace = parallelParams.worktreePath
 			worktreeBranch = parallelParams.worktreeBranch
+
+			getTelemetryService().trackParallelModeStarted(
+				!!options.existingBranch,
+				finalPrompt.length,
+				options.timeout,
+			)
 		}
 
 		cli = new CLI({

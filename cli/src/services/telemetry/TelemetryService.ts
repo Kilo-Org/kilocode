@@ -563,6 +563,42 @@ export class TelemetryService {
 	// Parallel Mode Tracking
 	// ============================================================================
 
+	public parallelModeStart = 0
+
+	public trackParallelModeStarted(isExistingBranch: boolean, promptLength: number, timeoutSeconds?: number): void {
+		if (!this.client) return
+
+		this.parallelModeStart = Date.now()
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_STARTED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			isExistingBranch,
+			promptLength,
+			timeoutSeconds,
+		})
+	}
+
+	public trackParallelModeCompleted(duration: number): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_COMPLETED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			duration,
+		})
+	}
+
+	public trackParallelModeErrored(errorMessage: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_ERRORED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			errorMessage,
+		})
+	}
+
 	// ============================================================================
 	// MCP Tracking
 	// ============================================================================

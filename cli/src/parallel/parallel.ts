@@ -2,6 +2,7 @@ import { determineParallelBranch } from "./determineBranch.js"
 import { logs } from "../services/logs.js"
 import type { CLI } from "../cli.js"
 import { simpleGit } from "simple-git"
+import { getTelemetryService } from "../services/telemetry/index.js"
 
 /**
  * Helper function to commit changes with a fallback message
@@ -147,10 +148,19 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch} "<prompt>"${reset}`)
 			console.log(cyan + "─".repeat(100) + reset + "\n")
 		}
+
+		// Track successful completion
+		const duration = Date.now() - getTelemetryService().parallelModeStart
+		getTelemetryService().trackParallelModeCompleted(duration)
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+
 		logs.error("Failed to commit changes", "ParallelMode", {
-			error: error instanceof Error ? error.message : String(error),
+			error: errorMessage,
 		})
+
+		// Track parallel mode error
+		getTelemetryService().trackParallelModeErrored(errorMessage)
 	}
 
 	try {
@@ -162,9 +172,14 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 
 		logs.info("Worktree removed successfully", "ParallelMode")
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+
 		logs.warn("Failed to remove worktree", "ParallelMode", {
-			error: error instanceof Error ? error.message : String(error),
+			error: errorMessage,
 		})
+
+		// Track parallel mode error
+		getTelemetryService().trackParallelModeErrored(errorMessage)
 	}
 
 	return beforeExit
