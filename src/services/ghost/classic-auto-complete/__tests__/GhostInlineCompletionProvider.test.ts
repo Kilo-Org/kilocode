@@ -337,11 +337,8 @@ describe("GhostInlineCompletionProvider", () => {
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe(fimContent.text)
 			expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
-			// Command property to suppress conflicting VS Code completions
-			expect(result[0].command).toEqual({
-				title: "Accept Suggestion",
-				command: "editor.action.inlineSuggest.commit",
-			})
+			// No command property - VSCode handles acceptance automatically
+			expect(result[0].command).toBeUndefined()
 		})
 
 		it("should return empty array when prefix does not match", async () => {

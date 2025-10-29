@@ -19,9 +19,6 @@ export type CostTrackingCallback = (
 	cacheReadTokens: number,
 ) => void
 
-/**
- * Result of finding a matching suggestion
- */
 export interface MatchingSuggestionResult {
 	text: string
 	originalSuggestion: FillInAtCursorSuggestion
@@ -297,10 +294,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				range: hasAutoInsertedBracket
 					? new vscode.Range(position, new vscode.Position(position.line, position.character + 1)) // Replace the auto-bracket
 					: new vscode.Range(position, position), // Just insert
-				command: {
-					title: "Accept Suggestion",
-					command: "editor.action.inlineSuggest.commit",
-				},
 			}
 			return [item]
 		}
@@ -353,10 +346,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				const item: vscode.InlineCompletionItem = {
 					insertText: fillInAtCursor.text,
 					range: new vscode.Range(position, position),
-					command: {
-						title: "Accept Suggestion",
-						command: "editor.action.inlineSuggest.commit",
-					},
 				}
 				return [item]
 			}
