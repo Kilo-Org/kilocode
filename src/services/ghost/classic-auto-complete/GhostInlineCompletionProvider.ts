@@ -146,10 +146,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const languageId = context.document.languageId
 
 		// Check cache before making API call
-		if (this.cachedSuggestionAvailable(prefix, suffix)) {
-			// Return empty result if cached suggestion is available
+		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		if (cachedText !== null) {
+			// Return cached suggestion
+			const cachedSuggestions = new GhostSuggestionsState()
+			cachedSuggestions.setFillInAtCursor({
+				text: cachedText,
+				prefix,
+				suffix,
+			})
 			return {
-				suggestions: new GhostSuggestionsState(),
+				suggestions: cachedSuggestions,
 				cost: 0,
 				inputTokens: 0,
 				outputTokens: 0,
