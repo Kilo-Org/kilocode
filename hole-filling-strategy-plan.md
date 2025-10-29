@@ -4,8 +4,8 @@
 
 Replace the current search/replace XML strategy with a simpler hole-filling approach where:
 
-- The cursor marker changes from `<<<AUTOCOMPLETE_HERE>>>` to `<<HOLE>>`
-- LLM receives the full prefix with `<<HOLE>>` marker
+- The cursor marker changes from `<<<AUTOCOMPLETE_HERE>>>` to `<HOLE></HOLE>`
+- LLM receives the full prefix with `<HOLE></HOLE>` marker
 - LLM responds with `<HOLE>content</HOLE>` format
 - No backward compatibility with old search/replace format
 
@@ -14,7 +14,7 @@ Replace the current search/replace XML strategy with a simpler hole-filling appr
 ```mermaid
 graph TD
     A[User Types Code] --> B[AutoTriggerStrategy]
-    B --> C[Build Prompt with prefix<<HOLE>>suffix]
+    B --> C[Build Prompt with prefix<HOLE></HOLE>suffix]
     C --> D[Send to LLM]
     D --> E[LLM Returns <HOLE>content</HOLE>]
     E --> F[GhostStreamingParser]
@@ -28,14 +28,14 @@ graph TD
 ### 1. Core Constants
 
 - **File**: `src/services/ghost/classic-auto-complete/ghostConstants.ts`
-- **Change**: Update `CURSOR_MARKER` from `"<<<AUTOCOMPLETE_HERE>>>"` to `"<<HOLE>>"`
+- **Change**: Update `CURSOR_MARKER` from `"<<<AUTOCOMPLETE_HERE>>>"` to `"<HOLE></HOLE>"`
 
 ### 2. Prompt Generation
 
 - **File**: `src/services/ghost/classic-auto-complete/AutoTriggerStrategy.ts`
 - **Changes**:
     - Update `getBaseSystemInstructions()` to describe hole-filling format
-    - Update `getUserPrompt()` to reference `<<HOLE>>` marker
+    - Update `getUserPrompt()` to reference `<HOLE></HOLE>` marker
     - Update `getCommentsSystemInstructions()` for hole-filling
     - Update `getCommentsUserPrompt()` for hole-filling
 
@@ -64,7 +64,7 @@ All test files need updates to use new format:
 
 ### Step 1: Update Constants
 
-- Change `CURSOR_MARKER` constant to `"<<HOLE>>"`
+- Change `CURSOR_MARKER` constant to `"<HOLE></HOLE>"`
 - Verify no other files directly reference the old marker string
 
 ### Step 2: Update AutoTriggerStrategy Prompts
@@ -75,14 +75,14 @@ All test files need updates to use new format:
     - Emphasize single hole at cursor position
     - Remove CDATA wrapper instructions
 - Update `getUserPrompt()`:
-    - Change references from `<<<AUTOCOMPLETE_HERE>>>` to `<<HOLE>>`
+    - Change references from `<<<AUTOCOMPLETE_HERE>>>` to `<HOLE></HOLE>`
     - Simplify instructions for hole-filling
     - Remove search block requirements
 - Update `getCommentsSystemInstructions()`:
     - Adapt for hole-filling format
     - Remove search/replace references
 - Update `getCommentsUserPrompt()`:
-    - Change cursor marker references to `<<HOLE>>`
+    - Change cursor marker references to `<HOLE></HOLE>`
 
 ### Step 3: Rewrite GhostStreamingParser
 
@@ -113,7 +113,7 @@ All test files need updates to use new format:
 
 ### Step 5: Update All Tests
 
-- Update test expectations to use `<<HOLE>>` marker
+- Update test expectations to use `<HOLE></HOLE>` marker
 - Rewrite test cases to expect `<HOLE>content</HOLE>` format
 - Remove tests for search/replace functionality
 - Add new tests for hole extraction edge cases:

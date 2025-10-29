@@ -23,7 +23,7 @@ describe("GhostStreamingParser - XML Sanitization (Hole Filling)", () => {
 	beforeEach(() => {
 		// Create mock document
 		const mockDocument = {
-			getText: vi.fn().mockReturnValue("function multiply(<<HOLE>>"),
+			getText: vi.fn().mockReturnValue("function multiply(<HOLE></HOLE>"),
 			uri: { fsPath: "/test/file.ts", toString: () => "file:///test/file.ts" } as vscode.Uri,
 			offsetAt: vi.fn().mockReturnValue(17),
 		} as unknown as vscode.TextDocument

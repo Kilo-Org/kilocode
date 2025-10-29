@@ -4,7 +4,7 @@
 
 ### 1.1 Update Constants
 
-- [ ] Change `CURSOR_MARKER` in [`ghostConstants.ts`](src/services/ghost/classic-auto-complete/ghostConstants.ts:4) from `"<<<AUTOCOMPLETE_HERE>>>"` to `"<<HOLE>>"`
+- [ ] Change `CURSOR_MARKER` in [`ghostConstants.ts`](src/services/ghost/classic-auto-complete/ghostConstants.ts:4) from `"<<<AUTOCOMPLETE_HERE>>>"` to `"<HOLE></HOLE>"`
 - [ ] Search codebase for any hardcoded references to old marker string
 
 ### 1.2 Update AutoTriggerStrategy Prompts
@@ -18,7 +18,7 @@
 
 - [ ] Update [`getUserPrompt()`](src/services/ghost/classic-auto-complete/AutoTriggerStrategy.ts:95) method
 
-    - Change all references from `<<<AUTOCOMPLETE_HERE>>>` to `<<HOLE>>`
+    - Change all references from `<<<AUTOCOMPLETE_HERE>>>` to `<HOLE></HOLE>`
     - Simplify instructions for hole-filling approach
     - Remove search block requirements
 
@@ -28,7 +28,7 @@
     - Remove search/replace references
 
 - [ ] Update [`getCommentsUserPrompt()`](src/services/ghost/classic-auto-complete/AutoTriggerStrategy.ts:152) method
-    - Change cursor marker references to `<<HOLE>>`
+    - Change cursor marker references to `<HOLE></HOLE>`
 
 ## Phase 2: Parser Rewrite
 
@@ -76,7 +76,7 @@
 ### 3.1 Update AutoTriggerStrategy Tests
 
 - [ ] Update [`AutoTriggerStrategy.test.ts`](src/services/ghost/classic-auto-complete/__tests__/AutoTriggerStrategy.test.ts:1)
-    - Change all marker references to `<<HOLE>>`
+    - Change all marker references to `<HOLE></HOLE>`
     - Update prompt expectation tests
 
 ### 3.2 Update Parser Tests

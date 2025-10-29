@@ -12,8 +12,8 @@ Format: <HOLE>content_to_insert</HOLE>
 MANDATORY RULES:
 - Respond with EXACTLY ONE <HOLE> tag containing the content to insert
 - The <HOLE> tag MUST have a closing </HOLE> tag
-- Do NOT include the <<HOLE>> marker itself in your response
-- Only provide the content that should replace the <<HOLE>> marker
+- Do NOT include the <HOLE></HOLE> marker itself in your response
+- Only provide the content that should replace the <HOLE></HOLE> marker
 - No additional text, explanations, or XML outside the HOLE tags
 
 CONTENT RULES:
@@ -25,7 +25,7 @@ CONTENT RULES:
 EXAMPLE:
 If the code shows:
 function example() {
-	<<HOLE>>
+	<HOLE></HOLE>
 }
 
 You might respond with:
@@ -123,7 +123,7 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
-		prompt += `Fill the ${CURSOR_MARKER} marker with appropriate code.\n`
+		prompt += `Fill the <HOLE></HOLE> marker with appropriate code.\n`
 		prompt += `Provide a minimal, obvious completion at the hole position.\n`
 		prompt += "Complete only what the user appears to be typing.\n"
 		prompt += "Single line preferred, no new features.\n"
@@ -165,7 +165,7 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 - Do not repeat the comment you are implementing in your output
 - Do not add explanatory comments unless necessary for complex logic
 - Ensure the code is production-ready
-- Place the implementation at the <<HOLE>> marker position`
+- Place the implementation at the <HOLE></HOLE> marker position`
 		)
 	}
 
@@ -195,7 +195,7 @@ ${codeWithCursor}
 
 ## Instructions
 Generate code that implements the functionality described in the comment.
-Fill the ${CURSOR_MARKER} marker with the implementation.
+Fill the <HOLE></HOLE> marker with the implementation.
 Focus on implementing exactly what the comment describes.
 `
 		return prompt
