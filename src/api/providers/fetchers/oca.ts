@@ -1,6 +1,9 @@
 import axios from "axios"
+import * as vscode from "vscode"
 
 import { DEFAULT_HEADERS } from "../constants"
+import { Package } from "../../../shared/package"
+import { getOcaClientInfo } from "../utils/getOcaClientInfo"
 import type { ModelRecord } from "../../../shared/api"
 
 /**
@@ -52,8 +55,14 @@ export function resolveOcaModelInfoUrl(baseUrl: string): string {
  * and Authorization when apiKey is present.
  */
 export function buildOcaHeaders(apiKey?: string, openAiHeaders?: Record<string, string>): Record<string, string> {
+	const { client, clientVersion, clientIde, clientIdeVersion } = getOcaClientInfo()
+
 	const headers: Record<string, string> = {
 		"Content-Type": "application/json",
+		client: client,
+		"client-version": clientVersion,
+		"client-ide": clientIde,
+		"client-ide-version": clientIdeVersion,
 		...DEFAULT_HEADERS,
 		...(openAiHeaders || {}),
 	}

@@ -11,6 +11,8 @@ import { BaseProvider } from "./base-provider"
 import { OcaTokenManager } from "./oca/OcaTokenManager"
 import { DEFAULT_OCA_BASE_URL } from "./oca/constants"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import { getOcaClientInfo } from "./utils/getOcaClientInfo"
+
 import { DEFAULT_HEADERS as BASE_HEADERS } from "./constants"
 
 const DEFAULT_HEADERS = {
@@ -50,11 +52,17 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 			throw new Error("Please sign in with Oracle SSO at Settings > Providers > Oracle Code Assist.")
 		}
 
+		const { client, clientVersion, clientIde, clientIdeVersion } = getOcaClientInfo()
+
 		return new OpenAI({
 			apiKey: token.access_token,
 			baseURL,
 			defaultHeaders: {
 				...DEFAULT_HEADERS,
+				client: client,
+				"client-version": clientVersion,
+				"client-ide": clientIde,
+				"client-ide-version": clientIdeVersion,
 			},
 		})
 	}
