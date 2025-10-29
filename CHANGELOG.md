@@ -6,10 +6,6 @@
 
 ## [v4.112.0]
 
-- [#3346](https://github.com/Kilo-Org/kilocode/pull/3346) [`c70b93e`](https://github.com/Kilo-Org/kilocode/commit/c70b93e80de2e365c2dadad516006752c6fac54a) Thanks [@mcowger](https://github.com/mcowger)! - Update baseURL for Vertex Anthropic models to fix.
-
-### Patch Changes
-
 - [#3346](https://github.com/Kilo-Org/kilocode/pull/3346) [`5d82884`](https://github.com/Kilo-Org/kilocode/commit/5d828842b502b6accd2e0423db99ef8bdc0dbf33) Thanks [@mcowger](https://github.com/mcowger)! - Fixed Anthropic models not working on Google Vertex Global
 
 ## [v4.111.2]
