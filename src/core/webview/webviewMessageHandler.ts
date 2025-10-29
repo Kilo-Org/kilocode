@@ -2663,6 +2663,9 @@ export const webviewMessageHandler = async (
 					type: "profileDataResponse",
 					payload: { success: true, data: { kilocodeToken, ...response.data } },
 				})
+
+				// Reload ghost service after successful profile fetch to detect newly available autocomplete models
+				await vscode.commands.executeCommand("kilo-code.ghost.reload")
 			} catch (error: any) {
 				const errorMessage =
 					error.response?.data?.message ||
