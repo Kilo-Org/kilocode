@@ -65,7 +65,7 @@ export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/mod
 export const cerebrasModels = {
 	"zai-glm-4.6": {
 		maxTokens: 40000,
-		contextWindow: 64000,
+		contextWindow: 128000,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0,
