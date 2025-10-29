@@ -37,6 +37,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	allowedMaxRequests?: number | undefined
 	allowedMaxCost?: number | undefined
 	showAutoApproveMenu?: boolean // kilocode_change
+	yoloMode?: boolean // kilocode_change
 	deniedCommands?: string[]
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
@@ -57,6 +58,7 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "allowedMaxRequests"
 		| "allowedMaxCost"
 		| "showAutoApproveMenu" // kilocode_change
+		| "yoloMode" // kilocode_change
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
 	>
@@ -82,6 +84,7 @@ export const AutoApproveSettings = ({
 	allowedMaxRequests,
 	allowedMaxCost,
 	showAutoApproveMenu, // kilocode_change
+	yoloMode, // kilocode_change
 	deniedCommands,
 	setCachedStateField,
 	...props
@@ -140,6 +143,45 @@ export const AutoApproveSettings = ({
 					</div>
 				</div>
 			</Section>
+
+			{/* YOLO MODE SECTION */}
+			{process.env.NODE_ENV === "development" && (
+				<Section>
+					<div className="border-2 border-yellow-500 rounded-md p-4 bg-yellow-500/10">
+						<div className="flex items-center gap-2 mb-3">
+							<span className="text-2xl">⚠️</span>
+							<h3 className="text-lg font-bold text-yellow-500">YOLO Mode</h3>
+						</div>
+						<VSCodeCheckbox
+							checked={yoloMode ?? false}
+							onChange={(e: any) => setCachedStateField("yoloMode", e.target.checked)}
+							data-testid="yolo-mode-checkbox">
+							<span className="font-bold text-base">Enable YOLO Mode - Auto-approve EVERYTHING</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-2 pl-6">
+							<p className="mb-2">
+								When enabled,{" "}
+								<strong>all operations will be automatically approved without confirmation</strong>.
+							</p>
+							<p className="text-yellow-500 font-medium">
+								⚡ This includes file modifications, command execution, MCP tools, browser actions, and
+								all other operations. Use with extreme caution!
+							</p>
+						</div>
+					</div>
+				</Section>
+			)}
+
+			{process.env.NODE_ENV === "development" && yoloMode && (
+				<Section>
+					<div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 flex items-center gap-2">
+						<span className="text-lg">⚡</span>
+						<span className="text-sm font-medium text-yellow-500">
+							YOLO Mode is active - all auto-approval settings below are overridden
+						</span>
+					</div>
+				</Section>
+			)}
 			{/* kilocode_change end */}
 
 			<Section>

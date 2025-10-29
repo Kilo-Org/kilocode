@@ -268,5 +268,16 @@
 		"clearUsageData": "Clear Usage Data",
 		"confirmClearTitle": "Are you sure?",
 		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "These MCP servers are maintained by the community. Click <1>here</1> to edit your own MCP settings."
+		},
+		"modes": {
+			"description": "These modes are available from the community. Click <1>here</1> to edit your own custom modes."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "New: Share modes by creating an organization"
 	}
 }

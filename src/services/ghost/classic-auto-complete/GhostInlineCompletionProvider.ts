@@ -270,33 +270,39 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			}
 
 			const fullContext = await this.ghostContext.generate(context)
-			const result = await this.getFromLLM(fullContext, this.model)
+			try {
+				const result = await this.getFromLLM(fullContext, this.model)
 
-			// Hide cursor animation after generation
-			this.cursorAnimation.hide()
+				// Hide cursor animation after generation
+				this.cursorAnimation.hide()
 
-			// Track costs
-			if (this.costTrackingCallback) {
-				this.costTrackingCallback(
-					result.cost,
-					result.inputTokens,
-					result.outputTokens,
-					result.cacheWriteTokens,
-					result.cacheReadTokens,
-				)
-			}
-
-			// Update suggestions history
-			this.updateSuggestions(result.suggestions)
-
-			// Return the new suggestion if available
-			const fillInAtCursor = result.suggestions.getFillInAtCursor()
-			if (fillInAtCursor) {
-				const item: vscode.InlineCompletionItem = {
-					insertText: fillInAtCursor.text,
-					range: new vscode.Range(position, position),
+				// Track costs
+				if (this.costTrackingCallback) {
+					this.costTrackingCallback(
+						result.cost,
+						result.inputTokens,
+						result.outputTokens,
+						result.cacheWriteTokens,
+						result.cacheReadTokens,
+					)
 				}
-				return [item]
+
+				// Update suggestions history
+				this.updateSuggestions(result.suggestions)
+
+				// Return the new suggestion if available
+				const fillInAtCursor = result.suggestions.getFillInAtCursor()
+				if (fillInAtCursor) {
+					const item: vscode.InlineCompletionItem = {
+						insertText: fillInAtCursor.text,
+						range: new vscode.Range(position, position),
+					}
+					return [item]
+				}
+			} catch (error) {
+				this.cursorAnimation.hide()
+				console.error("Error getting inline completion from LLM:", error)
+				return []
 			}
 		}
 

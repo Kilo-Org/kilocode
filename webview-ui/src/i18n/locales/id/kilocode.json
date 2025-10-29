@@ -270,5 +270,16 @@
 		"automatic": "Biarkan Kilo yang memutuskan",
 		"xml": "XML",
 		"json": "JSON (eksperimental)"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Server MCP ini dipelihara oleh komunitas. Klik <1>di sini</1> untuk mengedit pengaturan MCP Anda sendiri."
+		},
+		"modes": {
+			"description": "Mode-mode ini tersedia dari komunitas. Klik <1>di sini</1> untuk mengedit mode kustom Anda sendiri."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
 	}
 }
