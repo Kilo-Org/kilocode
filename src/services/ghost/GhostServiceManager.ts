@@ -6,6 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
+import { GhostCompletionItemProvider } from "./classic-auto-complete/GhostCompletionItemProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
@@ -38,7 +39,9 @@ export class GhostServiceManager {
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public inlineCompletionProvider: GhostInlineCompletionProvider
+	public completionItemProvider: GhostCompletionItemProvider
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
+	private completionItemProviderDisposable: vscode.Disposable | null = null
 
 	private ignoreController?: Promise<RooIgnoreController>
 
@@ -61,6 +64,12 @@ export class GhostServiceManager {
 			this.ghostContext,
 			this.cursorAnimation,
 		)
+		this.completionItemProvider = new GhostCompletionItemProvider()
+
+		// Set up callback to sync suggestions between providers
+		this.inlineCompletionProvider.setSuggestionsUpdateCallback((suggestions) => {
+			this.completionItemProvider.updateSuggestions(suggestions)
+		})
 
 		// Register document event handlers
 		vscode.workspace.onDidChangeTextDocument(this.onDidChangeTextDocument, this, context.subscriptions)
@@ -135,8 +144,20 @@ export class GhostServiceManager {
 			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
 		}
 
+		// Register the dropdown completion item provider
+		if (!this.completionItemProviderDisposable) {
+			this.completionItemProviderDisposable = vscode.languages.registerCompletionItemProvider(
+				"*",
+				this.completionItemProvider,
+			)
+			this.context.subscriptions.push(this.completionItemProviderDisposable)
+		}
+
 		// Update the provider's settings
 		this.inlineCompletionProvider.updateSettings(this.settings)
+
+		// Sync suggestions history to the completion item provider
+		this.completionItemProvider.updateSuggestions(this.inlineCompletionProvider.getSuggestionsHistory())
 	}
 
 	public async disable() {
@@ -409,6 +430,12 @@ export class GhostServiceManager {
 		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
 			this.inlineCompletionProviderDisposable = null
+		}
+
+		// Dispose completion item provider registration
+		if (this.completionItemProviderDisposable) {
+			this.completionItemProviderDisposable.dispose()
+			this.completionItemProviderDisposable = null
 		}
 
 		this.disposeIgnoreController()

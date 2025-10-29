@@ -22,6 +22,89 @@ vi.mock("vscode", async () => {
 	}
 })
 
+// Mock vscode.WorkspaceEdit
+class MockWorkspaceEdit {
+	private _edits = new Map<string, vscode.TextEdit[]>()
+	size = 0
+
+	insert(uri: vscode.Uri, position: vscode.Position, newText: string) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		const range = new vscode.Range(position, position)
+		this._edits.get(key)!.push({ range, newText } as vscode.TextEdit)
+		this.size = this._edits.size
+	}
+
+	delete(uri: vscode.Uri, range: vscode.Range) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		this._edits.get(key)!.push({ range, newText: "" } as vscode.TextEdit)
+		this.size = this._edits.size
+	}
+
+	replace(uri: vscode.Uri, range: vscode.Range, newText: string) {
+		const key = uri.toString()
+		if (!this._edits.has(key)) {
+			this._edits.set(key, [])
+		}
+		this._edits.get(key)!.push({ range, newText } as vscode.TextEdit)
+		this.size = this._edits.size
+	}
+
+	get(uri: vscode.Uri) {
+		return this._edits.get(uri.toString()) || []
+	}
+
+	set(uri: vscode.Uri, edits: readonly vscode.TextEdit[] | undefined): void {
+		if (edits) {
+			this._edits.set(uri.toString(), [...edits] as vscode.TextEdit[])
+		} else {
+			this._edits.delete(uri.toString())
+		}
+		this.size = this._edits.size
+	}
+
+	has(uri: vscode.Uri): boolean {
+		return this._edits.has(uri.toString())
+	}
+
+	entries(): [vscode.Uri, vscode.TextEdit[]][] {
+		return Array.from(this._edits.entries()).map(([uriString, edits]) => [vscode.Uri.parse(uriString), edits])
+	}
+
+	createFile(
+		uri: vscode.Uri,
+		options?: { overwrite?: boolean; ignoreIfExists?: boolean },
+		metadata?: vscode.WorkspaceEditEntryMetadata,
+	): void {
+		throw new Error("Not implemented")
+	}
+
+	deleteFile(
+		uri: vscode.Uri,
+		options?: { recursive?: boolean; ignoreIfNotExists?: boolean },
+		metadata?: vscode.WorkspaceEditEntryMetadata,
+	): void {
+		throw new Error("Not implemented")
+	}
+
+	renameFile(
+		oldUri: vscode.Uri,
+		newUri: vscode.Uri,
+		options?: { overwrite?: boolean; ignoreIfExists?: boolean },
+		metadata?: vscode.WorkspaceEditEntryMetadata,
+	): void {
+		throw new Error("Not implemented")
+	}
+}
+
+// Mock vscode.WorkspaceEdit constructor
+;(vscode as any).WorkspaceEdit = MockWorkspaceEdit
+
 describe("findMatchingSuggestion", () => {
 	describe("exact matching", () => {
 		it("should return suggestion text when prefix and suffix match exactly", () => {
@@ -238,6 +321,7 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockCostTrackingCallback: CostTrackingCallback
 	let mockGhostContext: GhostContext
 	let mockCursorAnimation: GhostGutterAnimation
+	let applyEditSpy: any
 
 	beforeEach(() => {
 		mockDocument = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
@@ -247,6 +331,12 @@ describe("GhostInlineCompletionProvider", () => {
 			selectedCompletionInfo: undefined,
 		} as vscode.InlineCompletionContext
 		mockToken = {} as vscode.CancellationToken
+
+		// Mock vscode.workspace.applyEdit
+		if (!vscode.workspace.applyEdit) {
+			;(vscode.workspace as any).applyEdit = vi.fn().mockResolvedValue(true)
+		}
+		applyEditSpy = vi.spyOn(vscode.workspace, "applyEdit").mockResolvedValue(true)
 
 		// Create mock dependencies
 		mockModel = {
@@ -281,28 +371,58 @@ describe("GhostInlineCompletionProvider", () => {
 		)
 	})
 
+	afterEach(() => {
+		if (applyEditSpy) {
+			applyEditSpy.mockRestore()
+		}
+	})
+
 	describe("provideInlineCompletionItems", () => {
-		it("should return empty array when no suggestions are set", async () => {
-			const result = await provider.provideInlineCompletionItems(
+		it("should always include attribution comment as a suggestion", async () => {
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			)
-			expect(result).toEqual([])
+			)) as vscode.InlineCompletionItem[]
+
+			// Should have at least the attribution comment
+			expect(result.length).toBeGreaterThanOrEqual(1)
+
+			// Last item should be the attribution comment
+			const lastItem = result[result.length - 1]
+			expect(lastItem.insertText).toBe("// code coproduced by kilo\n")
+			expect(lastItem.range!.start.line).toBe(0)
+			expect(lastItem.range!.start.character).toBe(0)
+		})
+
+		it("should return attribution comment when no suggestions are set", async () => {
+			const result = (await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				mockContext,
+				mockToken,
+			)) as vscode.InlineCompletionItem[]
+
+			// Should have exactly one item: the attribution comment
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should return empty array when suggestions have no FIM content", async () => {
 			const suggestions = new GhostSuggestionsState()
 			provider.updateSuggestions(suggestions)
 
-			const result = await provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			)
-			expect(result).toEqual([])
+			)) as vscode.InlineCompletionItem[]
+
+			// Should have exactly one item: the attribution comment
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should return inline completion item when FIM content is available and prefix/suffix match", async () => {
@@ -322,11 +442,11 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
 
-			expect(result).toHaveLength(1)
+			// Should have two items: the suggestion and the attribution comment
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe(fimContent.text)
 			expect(result[0].range).toEqual(new vscode.Range(mockPosition, mockPosition))
-			// No command property - VSCode handles acceptance automatically
-			expect(result[0].command).toBeUndefined()
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should return empty array when prefix does not match", async () => {
@@ -339,14 +459,16 @@ describe("GhostInlineCompletionProvider", () => {
 			suggestions.setFillInAtCursor(fimContent)
 			provider.updateSuggestions(suggestions)
 
-			const result = await provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			)
+			)) as vscode.InlineCompletionItem[]
 
-			expect(result).toEqual([])
+			// Should have exactly one item: the attribution comment
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should return empty array when suffix does not match", async () => {
@@ -359,14 +481,16 @@ describe("GhostInlineCompletionProvider", () => {
 			suggestions.setFillInAtCursor(fimContent)
 			provider.updateSuggestions(suggestions)
 
-			const result = await provider.provideInlineCompletionItems(
+			const result = (await provider.provideInlineCompletionItems(
 				mockDocument,
 				mockPosition,
 				mockContext,
 				mockToken,
-			)
+			)) as vscode.InlineCompletionItem[]
 
-			expect(result).toEqual([])
+			// Should have exactly one item: the attribution comment
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should update suggestions when called multiple times", async () => {
@@ -384,7 +508,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("first suggestion")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 
 			const suggestions2 = new GhostSuggestionsState()
 			suggestions2.setFillInAtCursor({
@@ -400,7 +526,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("second suggestion")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 		it("should maintain a rolling window of suggestions and match from most recent", async () => {
 			// Add first suggestion
@@ -428,7 +556,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("first suggestion")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 
 			// Should match the second suggestion when context matches
 			const mockDocument2 = new MockTextDocument(vscode.Uri.file("/test2.ts"), "const a = 1\nconst b = 2")
@@ -439,7 +569,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("second suggestion")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should prefer most recent matching suggestion when multiple match", async () => {
@@ -468,7 +600,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("second suggestion")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should maintain only the last 20 suggestions (FIFO)", async () => {
@@ -487,13 +621,16 @@ describe("GhostInlineCompletionProvider", () => {
 			// Try to match suggestion 0 (should not be found)
 			const mockDocument0 = new MockTextDocument(vscode.Uri.file("/test0.ts"), "const x0 = 1\nconst y0 = 2")
 			const mockPosition0 = new vscode.Position(0, 12)
-			let result = await provider.provideInlineCompletionItems(
+			let result = (await provider.provideInlineCompletionItems(
 				mockDocument0,
 				mockPosition0,
 				mockContext,
 				mockToken,
-			)
-			expect(result).toEqual([])
+			)) as vscode.InlineCompletionItem[]
+
+			// Should have exactly one item: the attribution comment
+			expect(result).toHaveLength(1)
+			expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 
 			// Try to match suggestion 5 (should be found - it's the oldest in the window)
 			const mockDocument5 = new MockTextDocument(vscode.Uri.file("/test5.ts"), "const x5 = 1\nconst y5 = 2")
@@ -504,7 +641,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("suggestion 5")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 
 			// Try to match suggestion 24 (should be found - it's the most recent)
 			const mockDocument24 = new MockTextDocument(vscode.Uri.file("/test24.ts"), "const x24 = 1\nconst y24 = 2")
@@ -515,7 +654,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("suggestion 24")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 		it("should not add duplicate suggestions", async () => {
 			const suggestions1 = new GhostSuggestionsState()
@@ -553,7 +694,9 @@ describe("GhostInlineCompletionProvider", () => {
 			)) as vscode.InlineCompletionItem[]
 
 			// Should get the different suggestion (suggestions3), not the duplicate
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("console.log('different')")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		it("should allow same text with different prefix/suffix", async () => {
@@ -584,7 +727,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
 
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("console.log('test')")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 
 		describe("partial typing support", () => {
@@ -612,9 +757,10 @@ describe("GhostInlineCompletionProvider", () => {
 					mockToken,
 				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toHaveLength(1)
+				expect(result).toHaveLength(2)
 				// Should return the remaining part after "cons"
 				expect(result[0].insertText).toBe("ole.log('Hello, World!');")
+				expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should return full suggestion when user has typed nothing after prefix", async () => {
@@ -634,8 +780,9 @@ describe("GhostInlineCompletionProvider", () => {
 					mockToken,
 				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toHaveLength(1)
+				expect(result).toHaveLength(2)
 				expect(result[0].insertText).toBe("console.log('test');")
+				expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should return empty when partially typed content does not match suggestion", async () => {
@@ -654,14 +801,16 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const mismatchPosition = new vscode.Position(0, 14)
 
-				const result = await provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					mismatchDocument,
 					mismatchPosition,
 					mockContext,
 					mockToken,
-				)
+				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toEqual([])
+				// Should have exactly one item: the attribution comment
+				expect(result).toHaveLength(1)
+				expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should return empty string when user has typed entire suggestion", async () => {
@@ -688,9 +837,10 @@ describe("GhostInlineCompletionProvider", () => {
 					mockToken,
 				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toHaveLength(1)
+				expect(result).toHaveLength(2)
 				// Should return empty string since everything is typed
 				expect(result[0].insertText).toBe("")
+				expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should not match when suffix has changed", async () => {
@@ -709,14 +859,16 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const changedSuffixPosition = new vscode.Position(0, 15)
 
-				const result = await provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					changedSuffixDocument,
 					changedSuffixPosition,
 					mockContext,
 					mockToken,
-				)
+				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toEqual([])
+				// Should have exactly one item: the attribution comment
+				expect(result).toHaveLength(1)
+				expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should prefer exact match over partial match", async () => {
@@ -749,9 +901,10 @@ describe("GhostInlineCompletionProvider", () => {
 					mockToken,
 				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toHaveLength(1)
+				expect(result).toHaveLength(2)
 				// Should return exact match (most recent), not partial
 				expect(result[0].insertText).toBe("exact match")
+				expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should handle multi-character partial typing", async () => {
@@ -777,8 +930,9 @@ describe("GhostInlineCompletionProvider", () => {
 					mockToken,
 				)) as vscode.InlineCompletionItem[]
 
-				expect(result).toHaveLength(1)
+				expect(result).toHaveLength(2)
 				expect(result[0].insertText).toBe("st() { return 42; }")
+				expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 			})
 
 			it("should handle case-sensitive partial matching", async () => {
@@ -797,15 +951,16 @@ describe("GhostInlineCompletionProvider", () => {
 				)
 				const partialPosition = new vscode.Position(0, 15)
 
-				const result = await provider.provideInlineCompletionItems(
+				const result = (await provider.provideInlineCompletionItems(
 					partialDocument,
 					partialPosition,
 					mockContext,
 					mockToken,
-				)
+				)) as vscode.InlineCompletionItem[]
 
-				// Should not match due to case difference
-				expect(result).toEqual([])
+				// Should not match due to case difference, but still have attribution
+				expect(result).toHaveLength(1)
+				expect(result[0].insertText).toBe("// code coproduced by kilo\n")
 			})
 		})
 	})
@@ -890,8 +1045,9 @@ describe("GhostInlineCompletionProvider", () => {
 				mockContext,
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
-			expect(result).toHaveLength(1)
+			expect(result).toHaveLength(2)
 			expect(result[0].insertText).toBe("new content")
+			expect(result[1].insertText).toBe("// code coproduced by kilo\n")
 		})
 	})
 })
