@@ -145,26 +145,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 		const languageId = context.document.languageId
 
-		// Check cache before making API call
-		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
-		if (cachedText !== null) {
-			// Return cached suggestion
-			const cachedSuggestions = new GhostSuggestionsState()
-			cachedSuggestions.setFillInAtCursor({
-				text: cachedText,
-				prefix,
-				suffix,
-			})
-			return {
-				suggestions: cachedSuggestions,
-				cost: 0,
-				inputTokens: 0,
-				outputTokens: 0,
-				cacheWriteTokens: 0,
-				cacheReadTokens: 0,
-			}
-		}
-
 		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
 			autocompleteInput,
 			prefix,
