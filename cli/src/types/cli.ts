@@ -7,6 +7,8 @@ export interface WelcomeMessageOptions {
 	instructions?: string[] // Custom instruction lines
 	// Parallel mode branch name
 	worktreeBranch?: string | undefined
+	// Workspace directory
+	workspace?: string | undefined
 }
 
 export interface CliMessage {

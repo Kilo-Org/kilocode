@@ -173,8 +173,10 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					showInstructions: !options.ci || !options.prompt,
 					instructions: createConfigErrorInstructions(configValidation),
 					...(options.parallel &&
-						options.worktreeBranch &&
-						!options.ci && { worktreeBranch: options.worktreeBranch }),
+						options.worktreeBranch && {
+							worktreeBranch: options.worktreeBranch,
+							workspace: options.workspace,
+						}),
 				}),
 			)
 		}

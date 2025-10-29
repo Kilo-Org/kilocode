@@ -41,7 +41,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 
 			{/* Parallel mode message */}
 			{showParallelMessage && (
-				<Box flexDirection="column">
+				<Box flexDirection="column" gap={1}>
 					<Text color={theme.ui.text.primary}>
 						You are working on branch{" "}
 						<Text bold color={theme.ui.text.highlight}>
@@ -49,6 +49,12 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 						</Text>{" "}
 						in parallel mode. Changes will be committed when you /exit.
 					</Text>
+					<Box flexDirection="column">
+						<Text color={theme.ui.text.primary}>
+							In case of an error, your pending changes are saved in <Text bold>{options.workspace}</Text>
+						</Text>
+						<Text>Commits in that directory will be visible in your main repository directory.</Text>
+					</Box>
 				</Box>
 			)}
 		</Box>
