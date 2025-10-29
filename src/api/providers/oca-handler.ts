@@ -21,17 +21,6 @@ const DEFAULT_HEADERS = {
 	"Content-Type": "application/json",
 }
 
-/**
- * Oracle Code Assist provider handler.
- * Responsibilities:
- * - Acquire a valid access token via OcaTokenManager
- * - Construct an OpenAI-compatible client with base URL and headers
- * - Stream chat completions and surface usage events
- *
- * Notes:
- * - Secret storage is handled exclusively by OcaTokenManager (SRP)
- * - Base URL can be overridden by process.env.OCA_API_BASE
- */
 export class OcaHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
 	private baseURL: string
@@ -86,7 +75,6 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 		try {
 			stream = await client.chat.completions.create(request)
 		} catch (err: any) {
-			// Retry once with alternate base if 404 (route mismatch /v1)
 			throw handleOpenAIError(err, "Oracle Code Assist")
 		}
 

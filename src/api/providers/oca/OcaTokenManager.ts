@@ -32,14 +32,6 @@ type TokenRecord = {
 const SECRET_STORAGE_KEY = "ocaTokenRecord"
 const RENEW_TOKEN_BUFFER_SEC = 180
 
-/* ==== CONFIG (from environment) ====
-   Values can be overridden via process.env:
-   - IDCS_URL
-   - CLIENT_ID
-   - SCOPES
-   - PORT
-   - REDIRECT_URI
-*/
 const IDCS_URL = (process.env.IDCS_URL ?? DEFAULT_IDCS_URL).replace(/\/+$/, "")
 const CLIENT_ID = process.env.CLIENT_ID ?? DEFAULT_IDCS_CLIENT_ID
 const SCOPES = process.env.SCOPES ?? DEFAULT_IDSC_SCOPES
@@ -64,7 +56,6 @@ export class OcaTokenManager {
 	private static cached: TokenRecord | null = null
 	private static inflightLogin: Promise<TokenRecord> | null = null
 
-	// --------- cache helpers ----------
 	private static async save(t: TokenRecord) {
 		await ContextProxy.instance.rawContext.secrets.store(SECRET_STORAGE_KEY, JSON.stringify(t))
 	}
@@ -87,7 +78,6 @@ export class OcaTokenManager {
 		const now = Math.floor(Date.now() / 1000)
 		return !!t.expires_at && now < t.expires_at - RENEW_TOKEN_BUFFER_SEC
 	}
-	// -----------------------------------
 
 	private static async tryRefresh(token: TokenRecord): Promise<TokenRecord | null> {
 		try {
@@ -154,21 +144,15 @@ export class OcaTokenManager {
 	}
 
 	private static async runInteractiveLogin(postAuthUrl: (url: string) => void): Promise<TokenRecord> {
-		// Discover AS metadata and create a client configuration (v6 API)
 		const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
 		const config = await discovery(discoveryUrl, CLIENT_ID)
 
-		// PKCE values using v6 helpers (conditionally enabled)
 		let code_verifier: string | undefined
 		let code_challenge: string | undefined
 		if (USE_PKCE) {
 			code_verifier = randomPKCECodeVerifier()
 			code_challenge = await calculatePKCECodeChallenge(code_verifier)
 		}
-
-		// Authorization URL will be built per-port after binding a local callback server
-
-		// Note: URL parameters are percent-encoded per RFC 3986.
 
 		// Start a local HTTP server to receive the redirect, with port fallbacks
 		const attemptOnPort = (port: number): Promise<TokenEndpointResponse> => {
@@ -190,7 +174,6 @@ export class OcaTokenManager {
 					if (currentUrl.pathname !== "/callback") return
 
 					try {
-						// Exchange code for tokens (v6 API)
 						const t = await authorizationCodeGrant(
 							config,
 							currentUrl,
@@ -277,7 +260,6 @@ export class OcaTokenManager {
 
 	public static async logout(): Promise<void> {
 		try {
-			// Clear in-memory state
 			this.cached = null
 			this.inflightLogin = null
 			try {

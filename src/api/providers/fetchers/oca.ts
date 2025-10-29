@@ -1,35 +1,13 @@
 import axios from "axios"
-import * as vscode from "vscode"
 
 import { DEFAULT_HEADERS } from "../constants"
-import { Package } from "../../../shared/package"
 import { getOcaClientInfo } from "../utils/getOcaClientInfo"
 import type { ModelRecord } from "../../../shared/api"
 
-/**
- * SOLID refactor notes:
- * - Single Responsibility:
- *   - URL resolution, header construction, HTTP, parsing, and record building are isolated helpers.
- * - Open/Closed:
- *   - Optional HttpClient injection for testing or transport substitution without modifying logic.
- * - Liskov Substitution:
- *   - HttpClient matches axios.get signature subset; any compatible client can be supplied.
- * - Interface Segregation:
- *   - Minimal HttpClient interface; call sites depend only on what they use.
- * - Dependency Inversion:
- *   - getOCAModels depends on abstractions (HttpClient), not axios directly.
- */
-
-/**
- * Adapter hint for axios to run in the VSCode environment.
- */
 export function getAxiosSettings(): { adapter?: any } {
 	return { adapter: "fetch" as any }
 }
 
-/**
- * Minimal HTTP client abstraction for testability and substitution.
- */
 export interface HttpClient {
 	get: (url: string, config?: any) => Promise<{ status: number; data: any }>
 }
@@ -38,10 +16,6 @@ const defaultHttpClient: HttpClient = {
 	get: (url, config) => axios.get(url, config),
 }
 
-/**
- * Build the fully-qualified URL for OCA model info.
- * OCA exposes models via /v1/model/info.
- */
 export function resolveOcaModelInfoUrl(baseUrl: string): string {
 	const normalized = new URL(baseUrl)
 	const basePath = normalized.pathname.replace(/\/+$/, "").replace(/\/+/g, "/")
@@ -50,10 +24,6 @@ export function resolveOcaModelInfoUrl(baseUrl: string): string {
 	return urlModelInfo.href
 }
 
-/**
- * Construct headers for OCA fetch, merging defaults, user-provided headers,
- * and Authorization when apiKey is present.
- */
 export function buildOcaHeaders(apiKey?: string, openAiHeaders?: Record<string, string>): Record<string, string> {
 	const { client, clientVersion, clientIde, clientIdeVersion } = getOcaClientInfo()
 
@@ -70,18 +40,11 @@ export function buildOcaHeaders(apiKey?: string, openAiHeaders?: Record<string, 
 	return headers
 }
 
-/**
- * Shape of a single model entry coming back from OCA's /v1/model/info.
- */
 export interface OcaModelEntry {
 	id: string
 	banner?: string
 }
 
-/**
- * Parse the /v1/model/info response into a normalized list of entries.
- * Favors entries that include a banner when deduplicating by id.
- */
 export function parseOcaModelInfoResponse(data: any): OcaModelEntry[] {
 	const arr = data?.data
 	if (!Array.isArray(arr)) return []
@@ -99,9 +62,6 @@ export function parseOcaModelInfoResponse(data: any): OcaModelEntry[] {
 	return Array.from(byId.values())
 }
 
-/**
- * Convert OCA entries to the app's ModelRecord structure with reasonable defaults.
- */
 export function toModelRecord(entries: OcaModelEntry[]): ModelRecord {
 	const record: ModelRecord = {}
 	for (const { id, banner } of entries) {
@@ -117,9 +77,6 @@ export function toModelRecord(entries: OcaModelEntry[]): ModelRecord {
 	return record
 }
 
-/**
- * Normalize thrown errors to clean, actionable messages.
- */
 export function normalizeOcaModelsError(error: unknown): Error {
 	if (axios.isAxiosError(error)) {
 		const status = error.response?.status
@@ -137,16 +94,6 @@ export function normalizeOcaModelsError(error: unknown): Error {
 
 const DEFAULT_TIMEOUT_MS = 5000
 
-/**
- * Fetches available models from Oracle Code Assist (/v1/model/info).
- *
- * Compatibility: keeps the original call signature; adds an optional HttpClient for DI/testing.
- *
- * Rules:
- * - Never throws for empty/invalid baseUrl; returns {}.
- * - Robust error normalization.
- * - No assumptions about caller auth flow; apiKey is optional.
- */
 export async function getOCAModels(
 	baseUrl: string,
 	apiKey?: string,

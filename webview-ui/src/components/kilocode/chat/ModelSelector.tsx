@@ -27,7 +27,6 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 	})
 	const modelIdKey = getModelIdKey({ provider })
 
-	// OCA model acknowledgement gating (Settings and Chat)
 	const [ackOpen, setAckOpen] = useState(false)
 	const [pendingModelId, setPendingModelId] = useState<string | null>(null)
 	const bannerHtml = pendingModelId ? (providerModels as any)?.[pendingModelId]?.banner : undefined
@@ -44,29 +43,21 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 
 	const disabled = isLoading || isError
 
-	// OCA-only persistence: cache models and selection across Chat <-> Settings and mode switches.
 	useEffect(() => {
 		if (provider !== "oca") return
-		// Persist latest OCA models so Settings and Chat share the same list
 		try {
 			OCAModelService.setOcaModels(providerModels as any)
 		} catch {
 			// best-effort
 		}
 
-		// Resolve desired selection:
-		// 1) previously saved selection from ModelService, or
-		// 2) first model from the list
 		const saved = OCAModelService.getOcaSelectedModelId()
 		const first = Object.keys(providerModels || {})[0]
 		const target = saved || first
 
-		// If we don't have a viable target or can't update config, bail
 		if (!target || !currentApiConfigName) return
-		// If already selected or not present in list, do nothing
 		if (selectedModelId === target || !providerModels[target]) return
 
-		// Update VS Code-side apiConfiguration and persist selection locally
 		vscode.postMessage({
 			type: "upsertApiConfiguration",
 			text: currentApiConfigName,
@@ -81,21 +72,18 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		} catch {
 			// best-effort
 		}
-		// We intentionally depend on providerModels and selectedModelId to react to fresh lists
 	}, [provider, providerModels, selectedModelId, currentApiConfigName, apiConfiguration])
 
 	const onChange = (value: string) => {
 		if (!currentApiConfigName) return
 		if (apiConfiguration[modelIdKey] === value) return
 
-		// Gate OCA models that require acknowledgement
 		if (provider === "oca" && (providerModels as any)?.[value]?.banner) {
 			setPendingModelId(value)
 			setAckOpen(true)
 			return
 		}
 
-		// Persist OCA selection locally
 		if (provider === "oca") {
 			try {
 				OCAModelService.setOcaSelectedModelId(value)
@@ -135,7 +123,6 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
 			},
 		})
-		// Persist OCA selection locally so Chat doesn't revert after acknowledgement
 		try {
 			if (provider === "oca") {
 				OCAModelService.setOcaSelectedModelId(pendingModelId)

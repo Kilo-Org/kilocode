@@ -1,16 +1,6 @@
 import type { ModelInfo } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 
-/**
- * OCAModelService
- * - Webview-local singleton that persists OCA model lists and selections across view switches.
- * - OCA-only scope per product request.
- * - Uses vscode.getState()/setState() to survive navigation Chat <-> Settings.
- *
- * SOLID:
- * - SRP: Only responsible for caching and retrieving OCA model metadata and selection.
- * - DIP: No direct component coupling; consumed via typed API.
- */
 type OcaCache = {
 	models?: Record<string, ModelInfo>
 	selectedModelId?: string
@@ -54,7 +44,6 @@ export class OCAModelService {
 		return keys[0] || ""
 	}
 
-	// OCA SELECTION
 	static setOcaSelectedModelId(modelId: string): void {
 		const state = readState()
 		state[STATE_KEY]!.oca!.selectedModelId = modelId

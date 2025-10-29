@@ -1,9 +1,3 @@
-/**
- * Centralized OCA webview messaging primitives
- * - Single source of truth for message names and payload types
- * - Safe runtime type-guard for incoming webview messages
- */
-
 export const OCA_MSG = {
 	SHOW_AUTH_URL: "oca/show-auth-url",
 	LOGIN_SUCCESS: "oca/login-success",

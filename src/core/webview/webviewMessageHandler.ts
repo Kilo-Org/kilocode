@@ -860,8 +860,7 @@ export const webviewMessageHandler = async (
 			]
 			// kilocode_change end
 
-			// Add OCA models fetch when the user is authenticated (token exists), regardless of selected provider.
-			// Do NOT trigger auth automatically; only use existing valid token.
+			// Add OCA models fetch when the user is authenticated.
 			try {
 				const valid = await OcaTokenManager.getValid()
 				if (valid?.access_token) {
@@ -1064,7 +1063,6 @@ export const webviewMessageHandler = async (
 		case "oca/logout": {
 			try {
 				await OcaTokenManager.logout()
-				// Best-effort cleanup for any legacy secret usage
 				try {
 					await provider.context.secrets.delete("ocaTokenSet")
 				} catch {}

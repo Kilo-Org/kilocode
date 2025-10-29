@@ -53,15 +53,12 @@ export function OCA({
 	}, [apiConfiguration.apiModelId, firstOcaModelId])
 
 	const requestOcaModels = React.useCallback(() => {
-		// Ask extension to fetch router models; backend will include OCA when apiProvider === "oca"
 		requestRouterModels()
-		// Also trigger the hook refetch if provided
 		if (typeof refetchRouterModels === "function") {
 			refetchRouterModels()
 		}
 	}, [refetchRouterModels])
 
-	// Keep stable references to avoid re-binding the event listener unnecessarily
 	const activatedRef = React.useRef(activated)
 	React.useEffect(() => {
 		activatedRef.current = activated
@@ -95,7 +92,6 @@ export function OCA({
 					setAuthUrl(null)
 					setError(null)
 					setActivated(false)
-					// Clear persisted selection on logout
 					try {
 						OCAModelService.clearOcaSelection()
 					} catch {
@@ -115,32 +111,24 @@ export function OCA({
 		return () => window.removeEventListener("message", h)
 	}, [])
 
-	// On mount, passively check OCA auth status so returning users see correct state.
-	// This does not initiate interactive auth or fetch models.
 	React.useEffect(() => {
 		postOcaStatus()
 	}, [])
 
-	// Initialize UI based on persisted activation; do not auto-advance unless previously activated
 	React.useEffect(() => {
 		setAuthUrl(null)
 		setError(null)
 		if (activated) {
 			setStatus("done")
-			// User previously clicked Sign in in this settings view; it's okay to fetch models now
 			requestOcaModels()
 		} else {
 			setStatus("idle")
 		}
 	}, [activated, requestOcaModels])
 
-	// When activated and models are available, persist list and ensure a stable selection:
-	// - prefer previously saved selection
-	// - otherwise choose the first model from the list
 	React.useEffect(() => {
 		if (!activated || status !== "done") return
 
-		// Persist latest OCA models
 		try {
 			OCAModelService.setOcaModels(ocaModels as any)
 		} catch {
@@ -152,12 +140,10 @@ export function OCA({
 		const target = saved || first
 		if (!target) return
 
-		// If apiConfiguration doesn't match, set without marking as user action
 		if (apiConfiguration.apiModelId !== target && (ocaModels as any)?.[target]) {
 			setApiConfigurationField("apiModelId", target as any, false)
 		}
 
-		// Persist current selection to service
 		try {
 			OCAModelService.setOcaSelectedModelId(target)
 		} catch {
@@ -165,7 +151,6 @@ export function OCA({
 		}
 	}, [activated, status, ocaModels, apiConfiguration.apiModelId, setApiConfigurationField])
 
-	// Persist activation flag across settings panel mounts
 	React.useEffect(() => {
 		const prev = (vscode.getState() as any) || {}
 		vscode.setState({ ...prev, [OCA_STATE_KEY]: activated })
@@ -175,7 +160,6 @@ export function OCA({
 
 	const wrappedSetApiConfigurationField = React.useCallback(
 		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K], isUserAction?: boolean) => {
-			// Only gate user-triggered changes to the OCA model
 			if (field === "apiModelId" && isUserAction !== false && typeof value === "string") {
 				const banner = (ocaModels as any)?.[value as string]?.banner
 				if (banner) {
@@ -185,8 +169,6 @@ export function OCA({
 				}
 			}
 			setApiConfigurationField(field, value, isUserAction)
-
-			// Persist OCA selection in service for cross-view stability
 			if (field === "apiModelId" && typeof value === "string") {
 				try {
 					OCAModelService.setOcaSelectedModelId(value as string)
@@ -200,9 +182,7 @@ export function OCA({
 
 	const handleAcknowledge = React.useCallback(() => {
 		if (pendingModelId) {
-			// Confirm model selection after acknowledgement
 			setApiConfigurationField("apiModelId", pendingModelId as any, true)
-			// Persist selection
 			try {
 				OCAModelService.setOcaSelectedModelId(pendingModelId)
 			} catch {

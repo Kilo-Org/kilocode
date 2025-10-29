@@ -3,14 +3,7 @@ import { OcaTokenManager } from "./oca/OcaTokenManager"
 import { DEFAULT_OCA_BASE_URL } from "./oca/constants"
 
 /**
- * - Single Responsibility: token acquisition vs. auth header construction are separated.
- * - Dependency Inversion: callers can inject a custom token source (e.g., for tests).
- * - Clear contracts and typed callbacks; no hidden side effects.
- */
-
-/**
  * Callback used to publish the interactive authorization URL
- * (e.g., posted to Webview where the browser is opened).
  */
 export type PostAuthUrl = (url: string) => void
 
@@ -30,29 +23,15 @@ export interface OcaTokenSource {
 	loginWithoutAutoOpen(postAuthUrl: PostAuthUrl): Promise<OcaTokenShape>
 }
 
-/**
- * Default implementation backed by OcaTokenManager.
- */
 export const DefaultOcaTokenSource: OcaTokenSource = {
 	getValid: () => OcaTokenManager.getValid(),
 	loginWithoutAutoOpen: (postAuthUrl: PostAuthUrl) => OcaTokenManager.loginWithoutAutoOpen(postAuthUrl),
 }
 
-/**
- * Resolve the base URL for Oracle Code Assist API.
- * Reads from environment (OCA_API_BASE) with a safe fallback to DEFAULT_OCA_BASE_URL.
- */
 export function resolveOcaBaseUrl(env: NodeJS.ProcessEnv = process.env): string {
 	return env.OCA_API_BASE ?? DEFAULT_OCA_BASE_URL
 }
 
-/**
- * Acquire an access token using the provided token source.
- * - If a valid token is already available, returns it.
- * - Otherwise triggers the interactive login flow via the provided postAuthUrl callback.
- *
- * This function is intentionally decoupled from VS Code context to uphold DIP.
- */
 export async function getOcaAccessToken(
 	postAuthUrl: PostAuthUrl,
 	tokenSource: OcaTokenSource = DefaultOcaTokenSource,
@@ -60,7 +39,6 @@ export async function getOcaAccessToken(
 	const valid = await tokenSource.getValid()
 	if (valid?.access_token) return valid.access_token
 
-	// Interactive login; requires a callback to surface the auth URL to the UI
 	const tokens = await tokenSource.loginWithoutAutoOpen(postAuthUrl)
 	if (!tokens?.access_token) {
 		throw new Error("OCA login did not return an access token")
@@ -68,12 +46,6 @@ export async function getOcaAccessToken(
 	return tokens.access_token
 }
 
-/**
- * Build auth configuration (baseUrl and headers) for OCA API calls.
- * Behavior:
- * - Does not mutate process state; returns a pure object with baseUrl + headers.
- * - Respects dependency inversion via tokenSource and baseUrl overrides.
- */
 export async function buildOcaAuthConfig(options: {
 	postAuthUrl: PostAuthUrl
 	tokenSource?: OcaTokenSource
@@ -88,14 +60,6 @@ export async function buildOcaAuthConfig(options: {
 	}
 }
 
-/* =========================
-   Backward-compatible API
-   ========================= */
-
-/**
- * Legacy helper kept for compatibility.
- * Note: VS Code ExtensionContext is not needed for token acquisition and is ignored.
- */
 export async function ensureOcaTokenAndGetAccessToken(
 	_context: vscode.ExtensionContext,
 	postAuthUrl: PostAuthUrl,
@@ -103,10 +67,6 @@ export async function ensureOcaTokenAndGetAccessToken(
 	return getOcaAccessToken(postAuthUrl, DefaultOcaTokenSource)
 }
 
-/**
- * Legacy helper kept for compatibility.
- * Returns baseUrl and Authorization header for OCA requests.
- */
 export async function buildOcaAuth(
 	_context: vscode.ExtensionContext,
 	postAuthUrl: PostAuthUrl,

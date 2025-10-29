@@ -3,7 +3,6 @@ import { OCA_MSG } from "./ocaMessages"
 
 /**
  * Centralized helpers to post OCA-related messages to the extension.
- * Avoids magic strings and keeps a single place to adapt payload shapes.
  */
 
 export function postOcaStatus(): void {
