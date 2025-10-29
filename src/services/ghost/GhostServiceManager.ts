@@ -6,7 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
+import { GhostServiceSettings, TelemetryEventName, RooCodeEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { GhostContext } from "./GhostContext"
@@ -69,6 +69,23 @@ export class GhostServiceManager {
 		vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders, this, context.subscriptions)
 		vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions)
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
+
+		// Listen for configuration changes that might affect autocomplete model availability
+		vscode.workspace.onDidChangeConfiguration(
+			async (e) => {
+				// Reload when API provider settings change (e.g., after login or profile update)
+				if (e.affectsConfiguration("kilo-code")) {
+					await this.load()
+				}
+			},
+			this,
+			context.subscriptions,
+		)
+
+		// Listen for provider profile changes from ClineProvider
+		cline.on(RooCodeEventName.ProviderProfileChanged, async () => {
+			await this.load()
+		})
 
 		void this.load()
 
