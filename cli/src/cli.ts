@@ -261,6 +261,8 @@ export class CLI {
 			logs.info("Kilo Code CLI disposed", "CLI")
 		} catch (error) {
 			logs.error("Error disposing CLI", "CLI", { error })
+
+			exitCode = 1
 		} finally {
 			beforeExit()
 
