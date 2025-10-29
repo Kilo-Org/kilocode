@@ -125,3 +125,30 @@ export function generateBranchName(prompt: string): string {
 	const timestamp = Date.now()
 	return `${sanitized || "kilo"}-${timestamp}`
 }
+
+/**
+ * Check if a directory is a git worktree
+ * @param cwd - Current working directory path
+ * @returns True if directory is a git worktree, false otherwise
+ */
+export async function isGitWorktree(cwd: string): Promise<boolean> {
+	if (!cwd) {
+		return false
+	}
+
+	try {
+		const git: SimpleGit = simpleGit(cwd)
+		const isRepo = await git.checkIsRepo()
+		if (!isRepo) {
+			return false
+		}
+
+		// In a worktree, --git-dir points to .git/worktrees/<name>
+		// In a normal repo, --git-dir points to .git
+		const gitDir = await git.revparse(["--git-dir"])
+		return gitDir.trim().includes("worktrees")
+	} catch (error) {
+		logs.debug("Failed to check if git worktree", "GitUtils", { error, cwd })
+		return false
+	}
+}

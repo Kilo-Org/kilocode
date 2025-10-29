@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { getGitInfo, getGitBranch, branchExists, generateBranchName } from "../git.js"
+import { getGitInfo, getGitBranch, branchExists, generateBranchName, isGitWorktree } from "../git.js"
 import simpleGit from "simple-git"
 
 // Mock simple-git
@@ -255,6 +255,55 @@ describe("git utilities", () => {
 		it("should handle mixed case properly", () => {
 			const result = generateBranchName("FixBugInAuthSystem")
 			expect(result).toMatch(/^fixbuginauthsystem-\d+$/)
+		})
+	})
+
+	describe("isGitWorktree", () => {
+		it("should return false for empty cwd", async () => {
+			const result = await isGitWorktree("")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for non-git directory", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(false),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/some/path")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for regular git repository", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				revparse: vi.fn().mockResolvedValue(".git\n"),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/repo")
+			expect(result).toBe(false)
+		})
+
+		it("should return true for git worktree", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				revparse: vi.fn().mockResolvedValue("/path/to/.git/worktrees/feature-branch\n"),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/worktree")
+			expect(result).toBe(true)
+		})
+
+		it("should handle errors gracefully", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/repo")
+			expect(result).toBe(false)
 		})
 	})
 })
