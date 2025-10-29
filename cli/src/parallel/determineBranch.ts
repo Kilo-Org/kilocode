@@ -2,10 +2,7 @@ import { getGitInfo, generateBranchName, branchExists } from "../utils/git.js"
 import { logs } from "../services/logs.js"
 import path from "path"
 import os from "os"
-import { exec } from "child_process"
-import { promisify } from "util"
-
-const execAsync = promisify(exec)
+import simpleGit from "simple-git"
 
 export interface DetermineParallelBranchInput {
 	cwd: string
@@ -30,13 +27,15 @@ export async function determineParallelBranch({
 	const { isRepo, branch } = await getGitInfo(cwd)
 
 	if (!isRepo) {
-		console.error("Error: parallel mode (-p) requires the current working directory to be a git repository")
-		process.exit(1)
+		const errorMessage = "Error: parallel mode requires the current working directory to be a git repository"
+		logs.error(errorMessage, "ParallelMode")
+		throw new Error(errorMessage)
 	}
 
 	if (!branch) {
-		console.error("Error: could not determine current git branch")
-		process.exit(1)
+		const errorMessage = "Could not determine current git branch"
+		logs.error(errorMessage, "ParallelMode")
+		throw new Error(errorMessage)
 	}
 
 	// Determine the branch to use
@@ -47,8 +46,9 @@ export async function determineParallelBranch({
 		const exists = await branchExists(cwd, existingBranch)
 
 		if (!exists) {
-			console.error(`Error: Branch "${existingBranch}" does not exist`)
-			process.exit(1)
+			const errorMessage = `Error: Branch "${existingBranch}" does not exist`
+			logs.error(errorMessage, "ParallelMode")
+			throw new Error(errorMessage)
 		}
 
 		worktreeBranch = existingBranch
@@ -67,16 +67,17 @@ export async function determineParallelBranch({
 
 	// Create worktree with appropriate git command
 	try {
-		const gitCommand = existingBranch
-			? `git worktree add "${worktreePath}" ${worktreeBranch}`
-			: `git worktree add -b ${worktreeBranch} "${worktreePath}"`
+		const git = simpleGit(cwd)
+		const args = existingBranch
+			? ["worktree", "add", worktreePath, worktreeBranch]
+			: ["worktree", "add", "-b", worktreeBranch, worktreePath]
 
-		await execAsync(gitCommand, { cwd })
+		await git.raw(args)
 		logs.info(`Created worktree at: ${worktreePath}`, "ParallelMode")
 	} catch (error) {
 		logs.error("Failed to create worktree", "ParallelMode", { error })
-		console.error(`Error: Failed to create git worktree: ${error instanceof Error ? error.message : String(error)}`)
-		process.exit(1)
+
+		throw error
 	}
 
 	return { worktreeBranch, worktreePath }
