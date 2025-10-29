@@ -39,9 +39,6 @@ describe("determineParallelBranch", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks()
-
-		// Setup console.error mock to avoid noise in test output
-		vi.spyOn(console, "error").mockImplementation(() => {})
 	})
 
 	describe("git repository validation", () => {
@@ -58,11 +55,7 @@ describe("determineParallelBranch", () => {
 			}
 
 			await expect(determineParallelBranch(input)).rejects.toThrow(
-				"Current directory is not a git repository. Parallel mode requires a git repository.",
-			)
-
-			expect(console.error).toHaveBeenCalledWith(
-				"Error: parallel mode (-p) requires the current working directory to be a git repository",
+				"Error: parallel mode requires the current working directory to be a git repository",
 			)
 		})
 
@@ -79,8 +72,6 @@ describe("determineParallelBranch", () => {
 			}
 
 			await expect(determineParallelBranch(input)).rejects.toThrow("Could not determine current git branch")
-
-			expect(console.error).toHaveBeenCalledWith("Error: could not determine current git branch")
 		})
 	})
 
@@ -125,7 +116,6 @@ describe("determineParallelBranch", () => {
 			)
 
 			expect(branchExists).toHaveBeenCalledWith(mockCwd, existingBranch)
-			expect(console.error).toHaveBeenCalledWith(`Error: Branch "${existingBranch}" does not exist`)
 		})
 	})
 
