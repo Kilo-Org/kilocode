@@ -63,6 +63,24 @@ export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/mod
 // Cerebras AI Inference Model Definitions - Updated July 2025
 
 export const cerebrasModels = {
+	"zai-glm-4.6": {
+		maxTokens: 40000,
+		contextWindow: 64000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "SOTA coding model with ~3000 tokens/s",
+	},
+	"gpt-oss-120b": {
+		maxTokens: 40000,
+		contextWindow: 64000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "SOTA coding model with ~3000 tokens/s",
+	},
 	"qwen-3-coder-480b-free": {
 		maxTokens: 40000,
 		contextWindow: 64000,
@@ -70,7 +88,7 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "SOTA coding model with ~2000 tokens/s (free tier)",
+		description: "[SOON TO BE DEPRECATED] SOTA coding model with ~2000 tokens/s (free tier)",
 	},
 	"qwen-3-coder-480b": {
 		maxTokens: 40000,
@@ -79,7 +97,7 @@ export const cerebrasModels = {
 		supportsPromptCache: false,
 		inputPrice: 0,
 		outputPrice: 0,
-		description: "SOTA coding model with ~2000 tokens/s",
+		description: "[SOON TO BE DEPRECATED] SOTA coding model with ~2000 tokens/s",
 	},
 	"qwen-3-235b-a22b-instruct-2507": {
 		maxTokens: 20000,
@@ -120,7 +138,7 @@ export const cerebrasModels = {
 } as const satisfies Record<string, ModelInfo>
 
 export type CerebrasModelId = keyof typeof cerebrasModels
-export const cerebrasDefaultModelId: CerebrasModelId = "qwen-3-coder-480b-free"
+export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 // kilocode_change end
 
