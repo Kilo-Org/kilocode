@@ -1,11 +1,9 @@
 // kilocode_change - new file
-import React from "react"
 import type { Meta, StoryObj } from "@storybook/react-vite"
-import { fn } from "storybook/test"
-
 import { MarketplaceView } from "../../../webview-ui/src/components/marketplace/MarketplaceView"
 import { createMockMarketplaceStateManager } from "../src/mockData"
 import { createExtensionStateMock } from "../src/utils/createExtensionStateMock"
+import { withSidebarContainer } from "../src/decorators/withSidebarContainer"
 
 const meta = {
 	title: "Views/MarketplaceView",
@@ -29,13 +27,7 @@ const meta = {
 		hideHeader: false,
 		onDone: () => {},
 	},
-	decorators: [
-		(Story) => (
-			<div className="w-[300px] min-h-[600px] bg-vscode-sideBar-background">
-				<Story />
-			</div>
-		),
-	],
+	decorators: [withSidebarContainer()],
 	parameters: {
 		extensionState: createExtensionStateMock({
 			organizationAllowList: {

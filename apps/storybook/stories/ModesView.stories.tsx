@@ -4,6 +4,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import ModesView from "../../../webview-ui/src/components/modes/ModesView"
 import { mockModes } from "../src/mockData"
 import { createExtensionStateMock } from "../src/utils/createExtensionStateMock"
+import { withSidebarContainer } from "../src/decorators/withSidebarContainer"
 
 const meta = {
 	title: "Views/ModesView",
@@ -14,13 +15,7 @@ const meta = {
 			description: "Callback when done button is clicked",
 		},
 	},
-	decorators: [
-		(Story) => (
-			<div className="w-[400px] min-h-[600px] bg-vscode-sideBar-background relative scale-100">
-				<Story />
-			</div>
-		),
-	],
+	decorators: [withSidebarContainer()], // ModesView needs more width for its content
 	parameters: {
 		extensionState: createExtensionStateMock({
 			customModePrompts: {},
