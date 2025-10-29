@@ -17,15 +17,15 @@ vi.mock("vscode", async () => {
 	}
 })
 
-describe("GhostStreamingParser - XML Sanitization", () => {
+describe("GhostStreamingParser - XML Sanitization (Hole Filling)", () => {
 	let mockContext: GhostSuggestionContext
 
 	beforeEach(() => {
 		// Create mock document
 		const mockDocument = {
-			getText: vi.fn().mockReturnValue("function mutliply(<<<AUTOCOMPLETE_HERE>>>>"),
+			getText: vi.fn().mockReturnValue("function multiply(<<HOLE>>"),
 			uri: { fsPath: "/test/file.ts", toString: () => "file:///test/file.ts" } as vscode.Uri,
-			offsetAt: vi.fn().mockReturnValue(17), // Position after "function mutliply("
+			offsetAt: vi.fn().mockReturnValue(17),
 		} as unknown as vscode.TextDocument
 
 		mockContext = {
@@ -35,98 +35,106 @@ describe("GhostStreamingParser - XML Sanitization", () => {
 	})
 
 	describe("sanitizeXMLConservative", () => {
-		it("should fix incomplete closing tag </change without > when stream is complete", () => {
-			const incompleteXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
-]]></search><replace><![CDATA[function mutliply(a, b) {
-]]></replace></change`
+		it("should fix incomplete closing tag </HOLE without >", () => {
+			const incompleteXML = `<HOLE>function multiply(a, b) {
+	return a * b;
+}</HOLE`
 
-			// Test sanitization directly
 			const sanitized = sanitizeXMLConservative(incompleteXML)
-			expect(sanitized).toContain("</change>")
-			expect(sanitized).toBe(incompleteXML.replace("</change", "</change>"))
-			// Verify the incomplete tag was fixed
-			expect(incompleteXML).toMatch(/\/change$/)
-			expect(sanitized).toMatch(/\/change>$/)
+			expect(sanitized).toContain("</HOLE>")
+			expect(sanitized).toBe(incompleteXML + ">")
 		})
 
-		it("should add missing </change> tag entirely when stream is complete", () => {
-			const incompleteXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
-]]></search><replace><![CDATA[function mutliply(a, b) {
-]]></replace>`
+		it("should add missing </HOLE> tag entirely", () => {
+			const incompleteXML = `<HOLE>function multiply(a, b) {
+	return a * b;
+}`
 
-			// Test sanitization directly
 			const sanitized = sanitizeXMLConservative(incompleteXML)
-			expect(sanitized).toContain("</change>")
-			expect(sanitized).toBe(incompleteXML + "</change>")
-		})
-
-		it("should not fix when search/replace pairs are incomplete", () => {
-			const incompleteXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
-]]></search><replace><![CDATA[function mutliply(a, b) {
-]]></change`
-
-			// Test sanitization directly - should NOT modify when replace is incomplete
-			const sanitized = sanitizeXMLConservative(incompleteXML)
-			expect(sanitized).toBe(incompleteXML)
-		})
-
-		it("should not fix when multiple change blocks are present", () => {
-			const incompleteXML = `<change><search><![CDATA[test1]]></search><replace><![CDATA[test1]]></replace></change><change><search><![CDATA[test2]]></search><replace><![CDATA[test2]]></replace></change`
-
-			// Test sanitization directly - should NOT modify when multiple changes present
-			const sanitized = sanitizeXMLConservative(incompleteXML)
-			expect(sanitized).toBe(incompleteXML)
+			expect(sanitized).toContain("</HOLE>")
+			expect(sanitized).toBe(incompleteXML + "</HOLE>")
 		})
 
 		it("should not fix when buffer ends with incomplete tag marker", () => {
-			const incompleteXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
-]]></search><replace><![CDATA[function mutliply(a, b) {
-]]></replace><`
+			const incompleteXML = `<HOLE>function multiply(a, b) {
+	return a * b;
+}<`
 
-			// Test sanitization directly - should NOT modify when ending with incomplete tag
 			const sanitized = sanitizeXMLConservative(incompleteXML)
 			expect(sanitized).toBe(incompleteXML)
 		})
 
-		it("should apply sanitization when stream is complete", () => {
-			// Build up the full response from chunks
-			const fullResponse = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>]]></search><replace><![CDATA[function mutliply(a, b) {]]></replace></change`
-
-			// Test sanitization directly
-			const sanitized = sanitizeXMLConservative(fullResponse)
-			expect(sanitized).toContain("</change>")
-			expect(sanitized).toBe(fullResponse.replace("</change", "</change>"))
-		})
-
 		it("should handle already complete XML without modification", () => {
-			const completeXML = `<change><search><![CDATA[function mutliply(<<<AUTOCOMPLETE_HERE>>>>
-]]></search><replace><![CDATA[function mutliply(a, b) {
-]]></replace></change>`
+			const completeXML = `<HOLE>function multiply(a, b) {
+	return a * b;
+}</HOLE>`
 
-			// Test sanitization directly - should NOT modify already complete XML
 			const sanitized = sanitizeXMLConservative(completeXML)
 			expect(sanitized).toBe(completeXML)
 		})
 
-		it("should handle malformed CDATA sections - the actual bug from user logs", () => {
-			// This reproduces the EXACT malformed CDATA issue from user logs
-			const malformedCDataXML = `<change><search><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
-		<<<AUTOCOMPLETE_HERE>>>
+		it("should handle empty HOLE tags", () => {
+			const emptyHole = "<HOLE></HOLE>"
+			const sanitized = sanitizeXMLConservative(emptyHole)
+			expect(sanitized).toBe(emptyHole)
+		})
 
-		const params = new URLSearchParams();</![CDATA[</search><replace><![CDATA[function getRedirectUrl(txn: CreditTransaction | undefined) {
-		if (!txn) {
-		  return '/organizations';
-		}
+		it("should handle HOLE with only whitespace", () => {
+			const whitespaceHole = "<HOLE>   \n\t  </HOLE>"
+			const sanitized = sanitizeXMLConservative(whitespaceHole)
+			expect(sanitized).toBe(whitespaceHole)
+		})
 
-		const params = new URLSearchParams();</![CDATA[</replace></change>`
+		it("should fix incomplete opening tag", () => {
+			const incompleteOpening = "<HOLE>content"
+			const sanitized = sanitizeXMLConservative(incompleteOpening)
+			expect(sanitized).toBe(incompleteOpening + "</HOLE>")
+		})
 
-			// Test sanitization directly - should fix malformed CDATA
-			const sanitized = sanitizeXMLConservative(malformedCDataXML)
-			expect(sanitized).not.toContain("</![CDATA[")
-			expect(sanitized).toContain("]]>")
-			// Verify the malformed CDATA closures are replaced
-			const expectedSanitized = malformedCDataXML.replace(/<\/!\[CDATA\[/g, "]]>")
-			expect(sanitized).toBe(expectedSanitized)
+		it("should not modify when no HOLE tags present", () => {
+			const noHole = "just some text"
+			const sanitized = sanitizeXMLConservative(noHole)
+			expect(sanitized).toBe(noHole)
+		})
+
+		it("should handle case-insensitive tags", () => {
+			const lowerCase = "<hole>content</hole"
+			const sanitized = sanitizeXMLConservative(lowerCase)
+			// Should fix the incomplete closing tag (adds uppercase HOLE)
+			expect(sanitized).toContain("</HOLE>")
+		})
+
+		it("should handle multiple incomplete tags (only fixes first)", () => {
+			const multipleIncomplete = "<HOLE>first</HOLE<HOLE>second"
+			const sanitized = sanitizeXMLConservative(multipleIncomplete)
+			// Should fix the first incomplete tag
+			expect(sanitized).toContain("</HOLE>")
+		})
+
+		it("should handle HOLE with special characters", () => {
+			const specialChars = "<HOLE>const regex = /test/g;</HOLE>"
+			const sanitized = sanitizeXMLConservative(specialChars)
+			expect(sanitized).toBe(specialChars)
+		})
+
+		it("should handle HOLE with nested XML-like content", () => {
+			const nestedXML = "<HOLE><div>test</div></HOLE>"
+			const sanitized = sanitizeXMLConservative(nestedXML)
+			expect(sanitized).toBe(nestedXML)
+		})
+
+		it("should handle streaming scenario - incomplete tag at end", () => {
+			const streaming = "<HOLE>console.log('streaming');"
+			const sanitized = sanitizeXMLConservative(streaming)
+			// Should add closing tag since it's not ending with <
+			expect(sanitized).toBe(streaming + "</HOLE>")
+		})
+
+		it("should not add closing tag when actively streaming (ends with <)", () => {
+			const activeStreaming = "<HOLE>console.log('streaming');<"
+			const sanitized = sanitizeXMLConservative(activeStreaming)
+			// Should NOT add closing tag - still streaming
+			expect(sanitized).toBe(activeStreaming)
 		})
 	})
 })

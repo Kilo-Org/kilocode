@@ -5,39 +5,31 @@ import type { TextDocument, Range } from "vscode"
 
 export function getBaseSystemInstructions(): string {
 	return `CRITICAL OUTPUT FORMAT:
-You must respond with XML-formatted changes ONLY. No explanations or text outside XML tags.
+You must respond with a single hole-filling completion ONLY. No explanations or text outside the HOLE tags.
 
-Format: <change><search><![CDATA[exact_code]]></search><replace><![CDATA[new_code]]></replace></change>
+Format: <HOLE>content_to_insert</HOLE>
 
-MANDATORY XML STRUCTURE RULES:
-- Every <change> tag MUST have a closing </change> tag
-- Every <search> tag MUST have a closing </search> tag
-- Every <replace> tag MUST have a closing </replace> tag
-- Every <![CDATA[ MUST have a closing ]]>
-- XML tags should be properly formatted and nested
-- Multiple <change> blocks allowed for different modifications
+MANDATORY RULES:
+- Respond with EXACTLY ONE <HOLE> tag containing the content to insert
+- The <HOLE> tag MUST have a closing </HOLE> tag
+- Do NOT include the <<HOLE>> marker itself in your response
+- Only provide the content that should replace the <<HOLE>> marker
+- No additional text, explanations, or XML outside the HOLE tags
 
-CHANGE ORDERING PRIORITY:
-- CRITICAL: Order all <change> blocks by proximity to the cursor marker (<<<AUTOCOMPLETE_HERE>>>)
-- Put changes closest to the cursor marker FIRST in your response
-- This allows immediate display of the most relevant suggestions to the user
-- Changes further from the cursor should come later in the response
-- Measure proximity by line distance from the cursor marker position
-
-CONTENT MATCHING RULES:
-- Search content must match EXACTLY (including whitespace, indentation, and line breaks)
-- Use CDATA wrappers for all code content
-- Preserve all line breaks and formatting within CDATA sections
-- Never generate overlapping changes
-- The <search> block must contain exact text that exists in the code
-- If you can't find exact match, don't generate that change
+CONTENT RULES:
+- Provide minimal, contextually appropriate completion
+- Match the indentation and style of surrounding code
+- Complete only what appears to be the user's immediate intent
+- If nothing obvious to complete, respond with empty <HOLE></HOLE>
 
 EXAMPLE:
-<change><search><![CDATA[function example() {
-	 // old code
-}]]></search><replace><![CDATA[function example() {
-	 // new code
-}]]></replace></change>
+If the code shows:
+function example() {
+	<<HOLE>>
+}
+
+You might respond with:
+<HOLE>console.log('hello');</HOLE>
 
 --
 
@@ -131,12 +123,11 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 
 		// Add specific instructions
 		prompt += "## Instructions\n"
-		prompt += `Provide a minimal, obvious completion at the cursor position (${CURSOR_MARKER}).\n`
-		prompt += `IMPORTANT: Your <search> block must include the cursor marker ${CURSOR_MARKER} to target the exact location.\n`
-		prompt += `Include surrounding text with the cursor marker to avoid conflicts with similar code elsewhere.\n`
+		prompt += `Fill the ${CURSOR_MARKER} marker with appropriate code.\n`
+		prompt += `Provide a minimal, obvious completion at the hole position.\n`
 		prompt += "Complete only what the user appears to be typing.\n"
 		prompt += "Single line preferred, no new features.\n"
-		prompt += "If nothing obvious to complete, provide NO suggestion.\n"
+		prompt += "If nothing obvious to complete, respond with empty <HOLE></HOLE>.\n"
 
 		return prompt
 	}
@@ -171,11 +162,10 @@ Provide non-intrusive completions after a typing pause. Be conservative and help
 
 ## Output Requirements:
 - Generate ONLY executable code that implements the comment
-- PRESERVE all existing code and comments in the provided context
 - Do not repeat the comment you are implementing in your output
 - Do not add explanatory comments unless necessary for complex logic
 - Ensure the code is production-ready
-- When using search/replace format, include ALL existing code to preserve it`
+- Place the implementation at the <<HOLE>> marker position`
 		)
 	}
 
@@ -205,7 +195,7 @@ ${codeWithCursor}
 
 ## Instructions
 Generate code that implements the functionality described in the comment.
-The code should be placed at the cursor position (${CURSOR_MARKER}).
+Fill the ${CURSOR_MARKER} marker with the implementation.
 Focus on implementing exactly what the comment describes.
 `
 		return prompt
