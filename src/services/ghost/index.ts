@@ -19,6 +19,11 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 		}),
 	)
 	context.subscriptions.push(
+		vscode.commands.registerCommand("kilo-code.ghost.generateSuggestions", async () => {
+			ghost.codeSuggestion()
+		}),
+	)
+	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.showIncompatibilityExtensionPopup", async () => {
 			await ghost.showIncompatibilityExtensionPopup()
 		}),

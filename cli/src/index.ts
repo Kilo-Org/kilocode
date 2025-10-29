@@ -27,6 +27,7 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
@@ -45,6 +46,12 @@ program
 		// Validate that piped stdin requires autonomous mode
 		if (!process.stdin.isTTY && !options.auto) {
 			console.error("Error: Piped input requires --auto flag to be enabled")
+			process.exit(1)
+		}
+
+		// Validate that JSON mode requires autonomous mode
+		if (options.json && !options.auto) {
+			console.error("Error: --json option requires --auto flag to be enabled")
 			process.exit(1)
 		}
 
@@ -92,6 +99,7 @@ program
 			mode: options.mode,
 			workspace: options.workspace,
 			ci: options.auto,
+			json: options.json,
 			prompt: finalPrompt,
 			timeout: options.timeout,
 		})

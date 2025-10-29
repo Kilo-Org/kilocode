@@ -269,5 +269,16 @@
 	},
 	"memoryWarning": {
 		"message": "Speicherauslastung liegt bei {{percentage}}%. Bitte starte deine IDE neu, um Abstürze zu vermeiden."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Diese MCP-Server werden von der Community gepflegt. Klicken Sie <1>hier</1>, um Ihre eigenen MCP-Einstellungen zu bearbeiten."
+		},
+		"modes": {
+			"description": "Diese Modi werden von der Community bereitgestellt. Klicken Sie <1>hier</1>, um Ihre eigenen benutzerdefinierten Modi zu bearbeiten."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Neu: Modi teilen durch Erstellen einer Organisation"
 	}
 }

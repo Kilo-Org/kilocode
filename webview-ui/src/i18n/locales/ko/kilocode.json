@@ -270,5 +270,16 @@
 	},
 	"memoryWarning": {
 		"message": "메모리 사용량이 {{percentage}}%입니다. 충돌을 방지하려면 IDE를 재시작하세요."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "이 MCP 서버들은 커뮤니티에 의해 유지됩니다. <1>여기</1>를 클릭하여 자신의 MCP 설정을 편집하세요."
+		},
+		"modes": {
+			"description": "이러한 모드는 커뮤니티에서 제공됩니다. <1>여기</1>를 클릭하여 자신만의 사용자 정의 모드를 편집하세요."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "신규: 조직을 생성하여 모드 공유하기"
 	}
 }
