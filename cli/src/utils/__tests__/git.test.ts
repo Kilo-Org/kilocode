@@ -239,12 +239,12 @@ describe("git utilities", () => {
 
 		it("should handle empty string", () => {
 			const result = generateBranchName("")
-			expect(result).toMatch(/^-\d+$/)
+			expect(result).toMatch(/^kilo-\d+$/)
 		})
 
 		it("should handle only special characters", () => {
 			const result = generateBranchName("!@#$%^&*()")
-			expect(result).toMatch(/^-\d+$/)
+			expect(result).toMatch(/^kilo-\d+$/)
 		})
 
 		it("should handle unicode characters", () => {
