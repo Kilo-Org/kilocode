@@ -57,7 +57,7 @@ export class CLI {
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
-			const folderName = `${basename(titleWorkspace)}${this.options.parallel ? " (worktree)" : ""}`
+			const folderName = `${basename(titleWorkspace)}${this.options.parallel ? " (git worktree)" : ""}`
 			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 
 			// Create Jotai store
