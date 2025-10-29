@@ -270,5 +270,16 @@
 	},
 	"memoryWarning": {
 		"message": "O uso de memória está em {{percentage}}%. Por favor, reinicie seu IDE para evitar travamentos."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Estes servidores MCP são mantidos pela comunidade. Clique <1>aqui</1> para editar suas próprias configurações MCP."
+		},
+		"modes": {
+			"description": "Estes modos estão disponíveis na comunidade. Clique <1>aqui</1> para editar seus próprios modos personalizados."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novo: Compartilhe modos criando uma organização"
 	}
 }

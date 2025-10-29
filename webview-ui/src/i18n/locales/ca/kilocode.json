@@ -270,5 +270,16 @@
 		"modelUnavailable": "⚠️ El model {{model}} no està disponible. Canvia a un model diferent per continuar.",
 		"continueWith": "Continua amb {{model}}",
 		"continue": "Continua"
+	},
+	"marketplace": {
+		"modes": {
+			"description": "Aquests modes estan disponibles des de la comunitat. Feu clic <1>aquí</1> per editar els vostres propis modes personalitzats."
+		},
+		"mcp": {
+			"description": "Aquests servidors MCP són mantinguts per la comunitat. Fes clic <1>aquí</1> per editar els teus propis ajustos de MCP."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
 	}
 }
