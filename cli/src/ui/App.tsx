@@ -14,6 +14,7 @@ export interface AppOptions {
 	prompt?: string
 	timeout?: number
 	parallel?: boolean
+	worktreeBranch?: string | undefined
 }
 
 export interface AppProps {

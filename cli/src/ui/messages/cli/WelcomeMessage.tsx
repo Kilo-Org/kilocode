@@ -19,7 +19,8 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 	const showInstructions = options.showInstructions !== false
 	const instructions =
 		options.instructions && options.instructions.length > 0 ? options.instructions : DEFAULT_INSTRUCTIONS
-	const contentHeight = 12 + (showInstructions ? instructions.length : 0)
+	const showParallelMessage = !!options.worktreeBranch
+	const contentHeight = 12 + (showInstructions ? instructions.length : 0) + (showParallelMessage ? 1 : 0)
 	const marginTop = options.clearScreen ? Math.max(0, (stdout?.rows || 0) - contentHeight) : 0
 
 	return (
@@ -35,6 +36,19 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 							{instruction}
 						</Text>
 					))}
+				</Box>
+			)}
+
+			{/* Parallel mode message */}
+			{showParallelMessage && (
+				<Box flexDirection="column">
+					<Text color={theme.ui.text.primary}>
+						You are working on branch{" "}
+						<Text bold color={theme.ui.text.highlight}>
+							{options.worktreeBranch}
+						</Text>{" "}
+						in parallel mode. Changes will be committed when you /exit.
+					</Text>
 				</Box>
 			)}
 		</Box>

@@ -5,6 +5,8 @@ export interface WelcomeMessageOptions {
 	showInstructions?: boolean
 	// Content customization
 	instructions?: string[] // Custom instruction lines
+	// Parallel mode branch name
+	worktreeBranch?: string | undefined
 }
 
 export interface CliMessage {

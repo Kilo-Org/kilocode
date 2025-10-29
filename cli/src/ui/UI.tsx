@@ -172,10 +172,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					clearScreen: !options.ci && configValidation.valid,
 					showInstructions: !options.ci || !options.prompt,
 					instructions: createConfigErrorInstructions(configValidation),
+					...(options.parallel &&
+						options.worktreeBranch &&
+						!options.ci && { worktreeBranch: options.worktreeBranch }),
 				}),
 			)
 		}
-	}, [options.ci, options.prompt, addMessage, configValidation])
+	}, [addMessage, options.ci, configValidation, options.prompt, options.parallel, options.worktreeBranch])
 
 	useEffect(() => {
 		const checkVersion = async () => {

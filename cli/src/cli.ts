@@ -169,6 +169,7 @@ export class CLI {
 					prompt: this.options.prompt || "",
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
 					parallel: this.options.parallel || false,
+					worktreeBranch: this.options.worktreeBranch || undefined,
 				},
 				onExit: () => this.dispose(),
 			}),
