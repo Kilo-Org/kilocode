@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import path from "path"
 
-import { Parser, Language, Node as SyntaxNode, Query, Tree } from "web-tree-sitter"
+import type { Language, Node as SyntaxNode, Query, Tree } from "web-tree-sitter"
 import { SymbolWithRange } from ".."
 import { getUriFileExtension } from "./uri"
 
@@ -120,6 +120,9 @@ export const IGNORE_PATH_PATTERNS: Partial<Record<LanguageName, RegExp[]>> = {
 
 export async function getParserForFile(filepath: string) {
 	try {
+		// Dynamically import Parser to avoid issues with WASM loading
+		const { Parser } = require("web-tree-sitter")
+
 		await Parser.init()
 		const parser = new Parser()
 
@@ -132,9 +135,19 @@ export async function getParserForFile(filepath: string) {
 
 		return parser
 	} catch (e) {
-		console.debug("Unable to load language for file", filepath, e)
+		console.error("Unable to load language for file", filepath, e)
 		return undefined
 	}
+}
+
+// Helper function to find the first existing path from a list of candidates
+function findExistingPath(candidatePaths: string[]): string | undefined {
+	for (const p of candidatePaths) {
+		if (fs.existsSync(p)) {
+			return p
+		}
+	}
+	return undefined
 }
 
 // Loading the wasm files to create a Language object is an expensive operation and with
@@ -186,65 +199,56 @@ export async function getQueryForFile(filepathOrUri: string, queryPath: string):
 
 	// Resolve the query file from consolidated tree-sitter directory.
 	// Prefer repo-root/tree-sitter in tests and runtime, but also fall back to core-local layout.
+	const repoRoot = path.resolve(__dirname, "..", "..", "..", "..")
 	const baseRoots = [
 		// In tests (running from src): src/services/continuedev/core/util -> src/services/continuedev
 		path.resolve(__dirname, "..", ".."),
 		// In production (dist): dist/services/continuedev/core/util -> src/services/continuedev
-		path.resolve(__dirname, "..", "..", "..", "..", "src", "services", "continuedev"),
+		path.join(repoRoot, "src", "services", "continuedev"),
 		// Fallback: repo root
-		path.resolve(__dirname, "..", "..", "..", ".."),
-	].filter(Boolean) as string[]
+		repoRoot,
+	]
 
-	let sourcePath: string | undefined = undefined
-	for (const root of baseRoots) {
-		const candidate = path.join(root, "tree-sitter", queryPath)
-		if (fs.existsSync(candidate)) {
-			sourcePath = candidate
-			break
-		}
-	}
+	const candidatePaths = baseRoots.map((root) => path.join(root, "tree-sitter", queryPath))
+	const sourcePath = findExistingPath(candidatePaths)
+
 	if (!sourcePath) {
 		return undefined
 	}
 
 	const querySource = fs.readFileSync(sourcePath).toString()
-
-	const query = language.query(querySource)
-	return query
+	return language.query(querySource)
 }
 
 async function loadLanguageForFileExt(fileExtension: string): Promise<Language> {
+	// Dynamically import Language to avoid issues with WASM loading
+	const { Language } = require("web-tree-sitter")
+
 	const filename = `tree-sitter-${supportedLanguages[fileExtension]}.wasm`
+	const repoRoot = path.resolve(__dirname, "..", "..", "..", "..")
 
-	// Try multiple locations to support both hoisted (root node_modules) and local installs.
-	const candidateRoots = [
-		// Prefer repo root first so hoisted node_modules are found (…/continue)
-		path.resolve(__dirname, "..", "..", ".."),
-		// Then current working directory when running tests (often …/continue/core)
-		process.env.NODE_ENV === "test" ? process.cwd() : undefined,
-		// Compiled dir for runtime usage
-		__dirname,
-		// Core directory (…/continue/core)
-		path.resolve(__dirname, "..", ".."),
-	].filter(Boolean) as string[]
+	// The WASM files are copied to src/dist/ during build
+	// In production (compiled): __dirname = /path/to/kilocode/src/dist or dist/
+	// In development: __dirname = /path/to/kilocode/src/services/continuedev/core/util
+	const candidatePaths: string[] = [
+		// Production: WASM files are in the same directory as the compiled code
+		path.join(__dirname, filename),
+		// Development: from src/services/continuedev/core/util -> src/dist
+		path.join(repoRoot, "dist", filename),
+		// Fallback: repo root
+		path.join(repoRoot, filename),
+		// Legacy: node_modules location (fallback for older setups)
+		path.join(repoRoot, "src", "node_modules", "tree-sitter-wasms", "out", filename),
+	]
 
-	const candidatePaths: string[] = []
-	for (const root of candidateRoots) {
-		// Typical hoisted location in monorepo tests
-		candidatePaths.push(path.join(root, "node_modules", "tree-sitter-wasms", "out", filename))
-		// Legacy/local bundled layout
-		candidatePaths.push(path.join(root, "tree-sitter-wasms", filename))
+	const wasmPath = findExistingPath(candidatePaths)
+
+	if (!wasmPath) {
+		console.error(`Could not find ${filename}. Tried paths:`, candidatePaths)
+		throw new Error(`Could not find language WASM file: ${filename}`)
 	}
 
-	for (const p of candidatePaths) {
-		if (fs.existsSync(p)) {
-			return await Language.load(p)
-		}
-	}
-
-	// Fallback (will throw with a clear path in error if still missing)
-	const fallback = path.join(candidateRoots[0]!, "node_modules", "tree-sitter-wasms", "out", filename)
-	return await Language.load(fallback)
+	return await Language.load(wasmPath)
 }
 
 // See https://tree-sitter.github.io/tree-sitter/using-parsers

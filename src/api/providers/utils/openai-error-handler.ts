@@ -4,7 +4,6 @@
  */
 
 import i18n from "../../../i18n/setup"
-import { isAnyRecognizedKiloCodeError } from "../../../shared/kilocode/errorUtils"
 
 /**
  * Handles OpenAI client errors and transforms them into user-friendly messages

@@ -617,7 +617,18 @@ export class SignatureInformation {
 	 * The label of this signature. Will be shown in
 	 * the UI.
 	 */
-	label: string
+	label: strin
+  /**
+   * The parameters of this signature.
+   */
+  parameters: ParameterInformation[];
+
+  /**
+   * The index of the active parameter.
+   *
+   * If provided, this is used in place of {@linkcode SignatureHelp.activeParameter}.
+   */
+  activeParameter?: number;g
 }
 
 export type ConfigMergeType = "merge" | "overwrite"

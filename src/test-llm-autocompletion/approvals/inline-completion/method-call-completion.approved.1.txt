@@ -1,1 +1,0 @@
-const result = items.map(x => x * 2);

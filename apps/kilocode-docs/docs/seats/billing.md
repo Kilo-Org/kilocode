@@ -65,7 +65,7 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 To fill empty seats or remove members ahead of seat deletion, see the [team management](/seats/team-management) page.
 
-## Invoiceas
+## Invoices
 
 Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.
 

@@ -1,4 +1,4 @@
-import { ToolName } from "@roo-code/types"
+import { ModelInfo, shouldUseSingleFileRead, ToolName } from "@roo-code/types"
 import { CodeIndexManager } from "../../../../services/code-index/manager"
 import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../../../shared/modes"
 import { ClineProviderState } from "../../../webview/ClineProvider"
@@ -7,12 +7,14 @@ import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS } from "../../../../shared/tools"
 import { isFastApplyAvailable } from "../../../tools/editFileTool"
 import { nativeTools } from "."
 import { apply_diff_multi_file, apply_diff_single_file } from "./apply_diff"
+import { read_file_multi, read_file_single } from "./read_file"
 
 export function getAllowedJSONToolsForMode(
 	mode: Mode,
-	codeIndexManager?: CodeIndexManager,
-	clineProviderState?: ClineProviderState,
-	supportsImages?: boolean,
+	codeIndexManager: CodeIndexManager | undefined,
+	clineProviderState: ClineProviderState | undefined,
+	diffEnabled: boolean,
+	model: { id: string; info: ModelInfo } | undefined,
 ): OpenAI.Chat.ChatCompletionTool[] {
 	const config = getModeConfig(mode, clineProviderState?.customModes)
 
@@ -74,32 +76,48 @@ export function getAllowedJSONToolsForMode(
 		tools.delete("run_slash_command")
 	}
 
-	if (!clineProviderState?.browserToolEnabled || !supportsImages) {
+	if (!clineProviderState?.browserToolEnabled || !model?.info.supportsImages) {
 		tools.delete("browser_action")
 	}
 
 	// Create a map of tool names to native tool definitions for quick lookup
-	const nativeToolsMap = new Map<string, OpenAI.Chat.ChatCompletionTool>()
-	nativeTools.forEach((tool) => {
-		nativeToolsMap.set(tool.function.name, tool)
-	})
+	// Exclude apply_diff tools as they are handled specially below
+	const allowedTools: OpenAI.Chat.ChatCompletionTool[] = []
 
-	if (clineProviderState?.apiConfiguration.diffEnabled) {
-		if (clineProviderState?.experiments.multiFileApplyDiff) {
-			nativeToolsMap.set("apply_diff", apply_diff_multi_file)
-		} else {
-			nativeToolsMap.set("apply_diff", apply_diff_single_file)
+	let isReadFileToolAllowedForMode = false
+	let isApplyDiffToolAllowedForMode = false
+	for (const nativeTool of nativeTools) {
+		const toolName = nativeTool.function.name
+
+		// If the tool is in the allowed set, add it.
+		if (tools.has(toolName)) {
+			if (toolName === "read_file") {
+				isReadFileToolAllowedForMode = true
+			} else if (toolName === "apply_diff") {
+				isApplyDiffToolAllowedForMode = true
+			} else {
+				allowedTools.push(nativeTool)
+			}
 		}
 	}
 
-	// Map allowed tools to their native definitions
-	const allowedTools: OpenAI.Chat.ChatCompletionTool[] = []
-	tools.forEach((toolName) => {
-		const nativeTool = nativeToolsMap.get(toolName)
-		if (nativeTool) {
-			allowedTools.push(nativeTool)
+	if (isReadFileToolAllowedForMode) {
+		if (model?.id && shouldUseSingleFileRead(model?.id)) {
+			allowedTools.push(read_file_single)
+		} else {
+			allowedTools.push(read_file_multi)
 		}
-	})
+	}
+
+	// Handle the "apply_diff" logic separately because the same tool has different
+	// implementations depending on whether multi-file diffs are enabled, but the same name is used.
+	if (isApplyDiffToolAllowedForMode && diffEnabled) {
+		if (clineProviderState?.experiments.multiFileApplyDiff) {
+			allowedTools.push(apply_diff_multi_file)
+		} else {
+			allowedTools.push(apply_diff_single_file)
+		}
+	}
 
 	return allowedTools
 }
