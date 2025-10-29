@@ -240,8 +240,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		document: vscode.TextDocument,
 		position: vscode.Position,
 		context: vscode.InlineCompletionContext,
-		_token: vscode.CancellationToken,
+		token: vscode.CancellationToken,
 	): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+		// Listen for cancellation requests from VSCode
+		if (token.onCancellationRequested) {
+			token.onCancellationRequested(() => {
+				this.cancelRequest()
+			})
+		}
+
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
