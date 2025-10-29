@@ -27,30 +27,14 @@ export interface MatchingSuggestionResult {
 	originalSuggestion: FillInAtCursorSuggestion
 }
 
-/**
- * Check if a character is an auto-closing bracket/quote
- */
 function isAutoClosingChar(char: string): boolean {
 	return [")", "]", "}", ">", '"', "'", "`"].includes(char)
 }
 
-/**
- * Remove auto-inserted bracket from the start of suffix if present
- * @param suffix - The text after the cursor position
- * @returns The suffix with any auto-inserted bracket removed
- */
 function removePotentialAutoBracket(suffix: string): string {
 	return suffix.length > 0 && isAutoClosingChar(suffix[0]) ? suffix.substring(1) : suffix
 }
 
-/**
- * Check if prefix and suffix match, considering potential auto-inserted brackets
- * @param prefix - Current prefix to check
- * @param suffix - Current suffix to check
- * @param expectedPrefix - Expected prefix from cached suggestion
- * @param expectedSuffix - Expected suffix from cached suggestion
- * @returns Object with match status and cleaned suffix
- */
 function checkPrefixSuffixMatch(
 	prefix: string,
 	suffix: string,
@@ -59,12 +43,10 @@ function checkPrefixSuffixMatch(
 ): { matches: boolean; cleanedSuffix: string } {
 	const cleanedSuffix = removePotentialAutoBracket(suffix)
 
-	// Check exact match first
 	if (prefix === expectedPrefix && suffix === expectedSuffix) {
 		return { matches: true, cleanedSuffix: suffix }
 	}
 
-	// Check match with auto-bracket removed
 	if (prefix === expectedPrefix && cleanedSuffix === expectedSuffix) {
 		return { matches: true, cleanedSuffix }
 	}
@@ -88,7 +70,6 @@ export function findMatchingSuggestion(
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
 
-		// Check for exact match (with or without auto-inserted bracket)
 		const exactMatch = checkPrefixSuffixMatch(prefix, suffix, fillInAtCursor.prefix, fillInAtCursor.suffix)
 		if (exactMatch.matches) {
 			return {
@@ -97,18 +78,13 @@ export function findMatchingSuggestion(
 			}
 		}
 
-		// Check for partial typing - user may have started typing the suggested text
 		if (prefix.startsWith(fillInAtCursor.prefix)) {
 			const partialMatch = checkPrefixSuffixMatch(prefix, suffix, fillInAtCursor.prefix, fillInAtCursor.suffix)
 
-			// Only proceed if suffix matches (with or without auto-bracket)
 			if (partialMatch.cleanedSuffix === fillInAtCursor.suffix) {
-				// Extract what the user has typed between the original prefix and current position
 				const typedContent = prefix.substring(fillInAtCursor.prefix.length)
 
-				// Check if the typed content matches the beginning of the suggestion
 				if (fillInAtCursor.text.startsWith(typedContent)) {
-					// Return the remaining part of the suggestion (with already-typed portion removed)
 					return {
 						text: fillInAtCursor.text.substring(typedContent.length),
 						originalSuggestion: fillInAtCursor,
