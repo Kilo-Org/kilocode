@@ -632,7 +632,7 @@ export const webviewMessageHandler = async (
 			break
 		case "terminalOperation":
 			if (message.terminalOperation) {
-				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation)
+				provider.getCurrentTask()?.handleTerminalOperation(message.terminalOperation, message.terminalId)
 			}
 			break
 		case "clearTask":

@@ -6,15 +6,18 @@ Description: Request to execute a CLI command on the system. Use this when you n
 Parameters:
 - command: (required) The CLI command to execute. This should be valid for the current operating system. Ensure the command is properly formatted and does not contain any harmful instructions.
 - cwd: (optional) The working directory to execute the command in (default: ${args.cwd})
+- run_in_background: (optional) If true, runs the command in the background without user interaction. Useful for long-running commands like dev servers or monitoring (default: false)
+
 Usage:
 <execute_command>
 <command>Your command here</command>
 <cwd>Working directory path (optional)</cwd>
 </execute_command>
 
-Example: Requesting to execute npm run dev
+Example: Requesting to execute npm run dev in background
 <execute_command>
 <command>npm run dev</command>
+<run_in_background>true</run_in_background>
 </execute_command>
 
 Example: Requesting to execute ls in a specific directory if directed

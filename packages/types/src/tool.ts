@@ -38,6 +38,7 @@ export const toolNames = [
 	"new_rule",
 	"report_bug",
 	"condense",
+	"terminal_kill",
 	// kilocode_change end
 	"update_todo_list",
 	"run_slash_command",

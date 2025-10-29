@@ -33,11 +33,12 @@ import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
-// kilocode_change start: Morph fast apply
+// kilocode_change start: Morph fast apply & terminal control
 import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
-// kilocode_change end
+import { getTerminalKillDescription } from "./terminal-kill"
+// kilocode_change end: Morph fast apply & terminal control
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
@@ -65,6 +66,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	new_task: (args) => getNewTaskDescription(args),
 	insert_content: (args) => getInsertContentDescription(args),
 	search_and_replace: (args) => getSearchAndReplaceDescription(args),
+	terminal_kill: (args) => getTerminalKillDescription(args), // kilocode_change: Used to control run_in_background commands
 	edit_file: () => getEditFileDescription(), // kilocode_change: Morph fast apply
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
@@ -200,6 +202,7 @@ export {
 	getInsertContentDescription,
 	getSearchAndReplaceDescription,
 	getEditFileDescription, // kilocode_change: Morph fast apply
+	getTerminalKillDescription, // kilocode_change: Used to control run_in_background commands
 	getCodebaseSearchDescription,
 	getRunSlashCommandDescription,
 	getGenerateImageDescription,

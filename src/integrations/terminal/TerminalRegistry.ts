@@ -325,4 +325,64 @@ export class TerminalRegistry {
 		ShellIntegrationManager.zshCleanupTmpDir(id)
 		this.terminals = this.terminals.filter((t) => t.id !== id)
 	}
+
+	/**
+	 * Kills a process running in a specific terminal by sending Ctrl+C or aborting
+	 * @param terminalId The terminal ID containing the process to kill
+	 * @returns Promise<string> Result message
+	 */
+	public static async killTerminal(terminalId: number): Promise<string> {
+		const targetTerminal = this.findTerminal(terminalId)
+		if (!targetTerminal) {
+			return this.getTerminalNotFoundMessage(terminalId)
+		}
+		if (!targetTerminal.busy && !targetTerminal.process) {
+			return `Terminal ${terminalId} is not running any process.`
+		}
+
+		try {
+			targetTerminal.killRequested = true
+
+			if (targetTerminal instanceof Terminal) {
+				// For VSCode terminals, send Ctrl+C
+				targetTerminal.terminal.sendText("\x03")
+				return `Sent Ctrl+C to terminal ${terminalId}. Process should terminate shortly.`
+			} else {
+				// For ExecaTerminal, use the abort method
+				if (targetTerminal.process) {
+					targetTerminal.process.abort()
+					return `Terminated process in terminal ${terminalId}.`
+				} else {
+					return `No active process found in terminal ${terminalId}.`
+				}
+			}
+		} catch (error) {
+			targetTerminal.killRequested = false
+			throw new Error(
+				`Failed to kill process in terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
+	/**
+	 * Helper function to find a terminal by ID
+	 */
+	public static findTerminal(terminalId: number) {
+		const busyTerminals = this.getTerminals(true)
+		const allTerminals = this.getTerminals(false)
+		const allTerminalsList = [...busyTerminals, ...allTerminals]
+
+		return allTerminalsList.find((t) => t.id === terminalId)
+	}
+
+	/**
+	 * Helper function to get terminal not found message
+	 */
+	private static getTerminalNotFoundMessage(terminalId: number): string {
+		const busyTerminals = this.getTerminals(true)
+		const allTerminals = this.getTerminals(false)
+		const allTerminalsList = [...busyTerminals, ...allTerminals]
+
+		return `Terminal ${terminalId} not found. Available terminals: ${allTerminalsList.map((t) => t.id).join(", ")}`
+	}
 }

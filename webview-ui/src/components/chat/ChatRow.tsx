@@ -1026,6 +1026,30 @@ export const ChatRowContent = ({
 						)}
 					</>
 				)
+			case "terminal_kill":
+				return (
+					<>
+						<div style={headerStyle}>
+							<span
+								className="codicon codicon-stop-circle"
+								style={{ color: "var(--vscode-testing-iconFailed)", marginBottom: "-1.5px" }}
+							/>
+							<span style={{ fontWeight: "bold" }}>Kill Terminal Process</span>
+						</div>
+						<div className="pl-6">
+							<div
+								style={{
+									fontFamily: "monospace",
+									padding: "10px",
+									backgroundColor: "var(--vscode-editor-background)",
+									border: "1px solid var(--vscode-panel-border)",
+									borderRadius: "4px",
+								}}>
+								{tool.content}
+							</div>
+						</div>
+					</>
+				)
 			default:
 				return null
 		}
