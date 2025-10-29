@@ -12,7 +12,13 @@ export const exitCommand: Command = {
 	examples: ["/exit"],
 	category: "system",
 	handler: async (context) => {
-		const { exit } = context
+		const { exit, setCommittingParallelMode, isParallelMode } = context
+
+		// In parallel mode, set the committing state before exit
+		if (isParallelMode) {
+			setCommittingParallelMode(true)
+		}
+
 		exit()
 	},
 }

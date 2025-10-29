@@ -40,6 +40,8 @@ export interface CommandContext {
 	clearTask: () => Promise<void>
 	setMode: (mode: string) => void
 	exit: () => void
+	setCommittingParallelMode: (isCommitting: boolean) => void
+	isParallelMode: boolean
 	// Model-related context
 	routerModels: RouterModels | null
 	currentProvider: ProviderConfig | null

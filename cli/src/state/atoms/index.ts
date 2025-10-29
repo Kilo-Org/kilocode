@@ -169,6 +169,8 @@ export {
 	messagesAtom,
 	isStreamingAtom,
 	errorAtom,
+	isCommittingParallelModeAtom,
+	commitCountdownSecondsAtom,
 
 	// Autocomplete state atoms
 	showAutocompleteAtom,

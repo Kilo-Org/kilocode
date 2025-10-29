@@ -16,16 +16,18 @@ async function commitWithFallback(cwd: string): Promise<void> {
 	logs.info("Changes committed with fallback message", "ParallelMode")
 }
 
+export const commitCompletionTimeout = 40000
+
 /**
  * Poll git status to check if commit is complete
  * Returns true if commit was made, false if timeout reached
  */
-async function waitForCommitCompletion(cwd: string, timeoutMs: number = 60000): Promise<boolean> {
+async function waitForCommitCompletion(cwd: string): Promise<boolean> {
 	const pollIntervalMs = 1000
 	const startTime = Date.now()
 	const git = simpleGit(cwd)
 
-	while (Date.now() - startTime < timeoutMs) {
+	while (Date.now() - startTime < commitCompletionTimeout) {
 		try {
 			const stagedDiff = await git.diff(["--staged"])
 
