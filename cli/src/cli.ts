@@ -55,8 +55,9 @@ export class CLI {
 		try {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 
-			// Set terminal title
-			const folderName = basename(this.options.workspace || process.cwd())
+			// Set terminal title - use process.cwd() in parallel mode to show original directory
+			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
+			const folderName = `${basename(titleWorkspace)}${this.options.parallel ? " (worktree)" : ""}`
 			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 
 			// Create Jotai store
@@ -167,6 +168,7 @@ export class CLI {
 					ci: this.options.ci || false,
 					prompt: this.options.prompt || "",
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
+					parallel: this.options.parallel || false,
 				},
 				onExit: () => this.dispose(),
 			}),

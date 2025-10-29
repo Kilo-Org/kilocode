@@ -13,6 +13,7 @@ export interface AppOptions {
 	ci?: boolean
 	prompt?: string
 	timeout?: number
+	parallel?: boolean
 }
 
 export interface AppProps {

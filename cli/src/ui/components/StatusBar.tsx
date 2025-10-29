@@ -7,6 +7,7 @@ import { Box, Text } from "ink"
 import { useAtomValue } from "jotai"
 import {
 	cwdAtom,
+	isParallelModeAtom,
 	extensionModeAtom,
 	apiConfigurationAtom,
 	chatMessagesAtom,
@@ -93,6 +94,7 @@ export const StatusBar: React.FC = () => {
 
 	// Get data from atoms
 	const cwd = useAtomValue(cwdAtom)
+	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const mode = useAtomValue(extensionModeAtom)
 	const apiConfig = useAtomValue(apiConfigurationAtom)
 	const messages = useAtomValue(chatMessagesAtom)
@@ -105,7 +107,9 @@ export const StatusBar: React.FC = () => {
 	const contextUsage = useContextUsage(messages, apiConfig)
 
 	// Prepare display values
-	const projectName = getProjectName(cwd)
+	// In parallel mode, show the original directory (process.cwd()) instead of the worktree path
+	const displayCwd = isParallelMode ? process.cwd() : cwd
+	const projectName = `${getProjectName(displayCwd)}${isParallelMode ? " (worktree)" : ""}`
 	const modelName = useMemo(() => getModelDisplayName(apiConfig, routerModels), [apiConfig, routerModels])
 
 	// Get context color based on percentage using theme colors

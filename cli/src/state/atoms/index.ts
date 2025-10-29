@@ -42,6 +42,7 @@ export {
 	customModesAtom,
 	mcpServersAtom,
 	cwdAtom,
+	isParallelModeAtom,
 
 	// Derived extension state atoms
 	extensionVersionAtom,
