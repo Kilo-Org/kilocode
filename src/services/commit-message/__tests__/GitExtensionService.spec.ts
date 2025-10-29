@@ -1,160 +1,56 @@
-// kilocode_change - new file
-// npx vitest services/commit-message/__tests__/GitExtensionService.spec.ts
-import { spawnSync } from "child_process"
+import { describe, it, expect, vi, beforeEach, Mock } from "vitest"
 import * as path from "path"
-import type { Mock } from "vitest"
+import { spawnSync } from "child_process"
 import { GitExtensionService } from "../GitExtensionService"
 
-vi.mock("child_process", () => ({
-	spawnSync: vi.fn(),
-}))
-
+vi.mock("child_process")
 vi.mock("vscode", () => ({
-	workspace: {
-		workspaceFolders: [{ uri: { fsPath: "/test/workspace" } }],
-		createFileSystemWatcher: vi.fn(() => ({
-			onDidCreate: vi.fn(() => ({ dispose: vi.fn() })),
-			onDidChange: vi.fn(() => ({ dispose: vi.fn() })),
-			onDidDelete: vi.fn(() => ({ dispose: vi.fn() })),
-			dispose: vi.fn(),
-		})),
-	},
-	extensions: {
-		getExtension: vi.fn(() => ({
-			isActive: true,
-			exports: {
-				getAPI: vi.fn(() => ({
-					repositories: [
-						{
-							rootUri: { fsPath: "/test/workspace" },
-							inputBox: { value: "" },
-						},
-					],
-				})),
-			},
-		})),
-	},
-	env: {
-		clipboard: { writeText: vi.fn() },
-	},
 	window: { showInformationMessage: vi.fn() },
+	workspace: {
+		createFileSystemWatcher: vi.fn().mockReturnValue({
+			onDidCreate: vi.fn(),
+			onDidChange: vi.fn(),
+			onDidDelete: vi.fn(),
+			dispose: vi.fn(),
+		}),
+	},
 	RelativePattern: vi.fn().mockImplementation((base, pattern) => ({ base, pattern })),
 }))
+
+vi.mock("../../core/ignore/RooIgnoreController", () => {
+	const mockInstance = {
+		initialize: vi.fn(),
+		dispose: vi.fn(),
+		validateAccess: vi.fn().mockReturnValue(true),
+	}
+	return {
+		RooIgnoreController: vi.fn().mockImplementation(() => mockInstance),
+	}
+})
 
 const mockSpawnSync = spawnSync as Mock
 
 describe("GitExtensionService", () => {
 	let service: GitExtensionService
+	const mockWorkspaceRoot = "/test/workspace"
 
 	beforeEach(() => {
-		service = new GitExtensionService()
-		service.configureRepositoryContext()
+		service = new GitExtensionService(mockWorkspaceRoot)
 		mockSpawnSync.mockClear()
-	})
-
-	describe("getDiffForChanges", () => {
-		it("should generate diffs per file and exclude files properly for staged changes", async () => {
-			const stagedFiles = ["src/test.ts", "package-lock.json", "src/utils.ts"]
-			const mockFileListOutput = stagedFiles.join("\n")
-
-			const testTsDiff = "diff --git a/src/test.ts b/src/test.ts\n+added line"
-			const utilsTsDiff = "diff --git a/src/utils.ts b/src/utils.ts\n+added util"
-
-			mockSpawnSync
-				.mockReturnValueOnce({ status: 0, stdout: mockFileListOutput, stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: testTsDiff, stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: utilsTsDiff, stderr: "", error: null })
-
-			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = await getDiffForChanges.call(service, { staged: true })
-
-			expect(mockSpawnSync).toHaveBeenNthCalledWith(
-				1,
-				"git",
-				["diff", "--name-only", "--cached"],
-				expect.any(Object),
-			)
-
-			// Should call git diff for non-excluded files only
-			expect(mockSpawnSync).toHaveBeenNthCalledWith(
-				2,
-				"git",
-				["diff", "--cached", "--", "src/test.ts"],
-				expect.any(Object),
-			)
-			expect(mockSpawnSync).toHaveBeenNthCalledWith(
-				3,
-				"git",
-				["diff", "--cached", "--", "src/utils.ts"],
-				expect.any(Object),
-			)
-
-			// Should NOT call git diff for package-lock.json (excluded file)
-			expect(mockSpawnSync).not.toHaveBeenCalledWith(
-				"git",
-				["diff", "--cached", "--", "package-lock.json"],
-				expect.any(Object),
-			)
-
-			// Should return aggregated diffs
-			expect(result).toBe(`${testTsDiff}\n${utilsTsDiff}`)
-		})
-
-		it("should return empty string when no staged files", async () => {
-			mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null })
-
-			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = await getDiffForChanges.call(service, { staged: true })
-
-			expect(result).toBe("")
-			expect(mockSpawnSync).toHaveBeenCalledTimes(1)
-		})
-
-		it("should handle file paths with special characters", async () => {
-			const stagedFiles = ["src/file with spaces.ts", "src/file'with'quotes.ts"]
-			const mockFileListOutput = stagedFiles.join("\n")
-			const spaceDiff = "diff --git a/src/file with spaces.ts b/src/file with spaces.ts\n+content"
-			const quoteDiff = "diff --git a/src/file'with'quotes.ts b/src/file'with'quotes.ts\n+content"
-
-			mockSpawnSync
-				.mockReturnValueOnce({ status: 0, stdout: mockFileListOutput, stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: spaceDiff, stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: quoteDiff, stderr: "", error: null })
-
-			const getDiffForChanges = (service as any).getDiffForChanges
-			const result = await getDiffForChanges.call(service, { staged: true })
-
-			// Should handle file paths with special characters without manual escaping
-			expect(mockSpawnSync).toHaveBeenNthCalledWith(
-				2,
-				"git",
-				["diff", "--cached", "--", "src/file with spaces.ts"],
-				expect.any(Object),
-			)
-			expect(mockSpawnSync).toHaveBeenNthCalledWith(
-				3,
-				"git",
-				["diff", "--cached", "--", "src/file'with'quotes.ts"],
-				expect.any(Object),
-			)
-
-			expect(result).toBe(`${spaceDiff}\n${quoteDiff}`)
-		})
 	})
 
 	describe("gatherChanges", () => {
 		it("should gather unstaged changes correctly", async () => {
-			const mockStatusOutput = "M\tfile1.ts\nA\tfile2.ts\nD\tfile3.ts"
+			const mockStatusOutput = " M file1.ts\n A file2.ts\n D file3.ts"
 			mockSpawnSync.mockReturnValue({ status: 0, stdout: mockStatusOutput, stderr: "", error: null })
 
 			const result = await service.gatherChanges({ staged: false })
 
-			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--name-status"], expect.any(Object))
-
+			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["status", "--porcelain"], expect.any(Object))
 			expect(result).toEqual([
-				{ filePath: path.join("/test/workspace/file1.ts"), status: "Modified" },
-				{ filePath: path.join("/test/workspace/file2.ts"), status: "Added" },
-				{ filePath: path.join("/test/workspace/file3.ts"), status: "Deleted" },
+				{ filePath: path.join(mockWorkspaceRoot, "file1.ts"), status: "M", staged: false },
+				{ filePath: path.join(mockWorkspaceRoot, "file2.ts"), status: "A", staged: false },
+				{ filePath: path.join(mockWorkspaceRoot, "file3.ts"), status: "D", staged: false },
 			])
 		})
 
@@ -165,11 +61,10 @@ describe("GitExtensionService", () => {
 			const result = await service.gatherChanges({ staged: true })
 
 			expect(mockSpawnSync).toHaveBeenCalledWith("git", ["diff", "--name-status", "--cached"], expect.any(Object))
-
 			expect(result).toEqual([
-				{ filePath: path.join("/test/workspace/file1.ts"), status: "Modified" },
-				{ filePath: path.join("/test/workspace/file2.ts"), status: "Added" },
-				{ filePath: path.join("/test/workspace/file3.ts"), status: "Deleted" },
+				{ filePath: path.join(mockWorkspaceRoot, "file1.ts"), status: "M", staged: true },
+				{ filePath: path.join(mockWorkspaceRoot, "file2.ts"), status: "A", staged: true },
+				{ filePath: path.join(mockWorkspaceRoot, "file3.ts"), status: "D", staged: true },
 			])
 		})
 
@@ -182,80 +77,81 @@ describe("GitExtensionService", () => {
 		})
 
 		it("should return empty array when git command fails", async () => {
-			mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "error", error: new Error("Git error") })
+			mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "error", error: null })
 
 			const result = await service.gatherChanges({ staged: false })
 
 			expect(result).toEqual([])
 		})
+
+		it("should handle untracked files correctly", async () => {
+			const mockStatusOutput = "?? newfile.ts\n M existingfile.ts"
+			mockSpawnSync.mockReturnValue({ status: 0, stdout: mockStatusOutput, stderr: "", error: null })
+
+			const result = await service.gatherChanges({ staged: false })
+
+			expect(result).toEqual([
+				{ filePath: path.join(mockWorkspaceRoot, "newfile.ts"), status: "?", staged: false },
+				{ filePath: path.join(mockWorkspaceRoot, "existingfile.ts"), status: "M", staged: false },
+			])
+		})
 	})
 
-	it("should generate diffs per file and exclude files properly for unstaged changes", async () => {
-		const unstagedFiles = ["src/test.ts", "package-lock.json", "src/utils.ts"]
-		const mockFileListOutput = unstagedFiles.join("\n")
+	describe("spawnGitWithArgs", () => {
+		it("should execute git command successfully", () => {
+			const mockOutput = "git output"
+			mockSpawnSync.mockReturnValue({ status: 0, stdout: mockOutput, stderr: "", error: null })
 
-		const testTsDiff = "diff --git a/src/test.ts b/src/test.ts\n+added line"
-		const utilsTsDiff = "diff --git a/src/utils.ts b/src/utils.ts\n+added util"
+			const result = service.spawnGitWithArgs(["status"])
 
-		mockSpawnSync
-			.mockReturnValueOnce({ status: 0, stdout: mockFileListOutput, stderr: "", error: null })
-			.mockReturnValueOnce({ status: 0, stdout: testTsDiff, stderr: "", error: null })
-			.mockReturnValueOnce({ status: 0, stdout: utilsTsDiff, stderr: "", error: null })
+			expect(mockSpawnSync).toHaveBeenCalledWith(
+				"git",
+				["status"],
+				expect.objectContaining({
+					cwd: mockWorkspaceRoot,
+					encoding: "utf8",
+					stdio: ["ignore", "pipe", "pipe"],
+				}),
+			)
+			expect(result).toBe(mockOutput)
+		})
 
-		const getDiffForChanges = (service as any).getDiffForChanges
-		const result = await getDiffForChanges.call(service, { staged: false })
+		it("should throw error when git command fails", () => {
+			mockSpawnSync.mockReturnValue({ status: 1, stdout: "", stderr: "error", error: null })
 
-		expect(mockSpawnSync).toHaveBeenNthCalledWith(1, "git", ["diff", "--name-only"], expect.any(Object))
+			expect(() => {
+				service.spawnGitWithArgs(["status"])
+			}).toThrow("Git command failed with status 1: error")
+		})
 
-		expect(mockSpawnSync).toHaveBeenNthCalledWith(2, "git", ["diff", "--", "src/test.ts"], expect.any(Object))
-		expect(mockSpawnSync).toHaveBeenNthCalledWith(3, "git", ["diff", "--", "src/utils.ts"], expect.any(Object))
+		it("should throw error when spawn fails", () => {
+			const spawnError = new Error("spawn failed")
+			mockSpawnSync.mockReturnValue({ status: null, stdout: "", stderr: "", error: spawnError })
 
-		expect(mockSpawnSync).not.toHaveBeenCalledWith("git", ["diff", "--", "package-lock.json"], expect.any(Object))
-
-		expect(result).toBe(`${testTsDiff}\n${utilsTsDiff}`)
-	})
-
-	it("should return empty string when no unstaged files", async () => {
-		mockSpawnSync.mockReturnValue({ status: 0, stdout: "", stderr: "", error: null })
-
-		const getDiffForChanges = (service as any).getDiffForChanges
-		const result = await getDiffForChanges.call(service, { staged: false })
-
-		expect(result).toBe("")
-		expect(mockSpawnSync).toHaveBeenCalledTimes(1)
+			expect(() => {
+				service.spawnGitWithArgs(["status"])
+			}).toThrow(spawnError)
+		})
 	})
 
 	describe("getCommitContext", () => {
-		it("should generate context for staged changes by default", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+		it("should generate basic context structure", async () => {
+			const mockChanges = [
+				{ filePath: path.join(mockWorkspaceRoot, "file1.ts"), status: "M" as const, staged: true },
+			]
 
-			mockSpawnSync
-				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "diff content", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "1 file changed", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "main", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "abc123 commit", stderr: "", error: null })
+			const result = await service.getCommitContext(mockChanges, { staged: true, includeRepoContext: false })
 
-			const result = await service.getCommitContext(mockChanges, { staged: true })
-
-			expect(result).toContain("Full Diff of Staged Changes")
-			expect(result).not.toContain("Full Diff of Unstaged Changes")
+			expect(result).toContain("## Git Context for Commit Message Generation")
+			expect(result).toContain("### Change Summary")
+			expect(result).toContain("Modified (staged): file1.ts")
 		})
 
-		it("should generate context for unstaged changes when specified", async () => {
-			const mockChanges = [{ filePath: "file1.ts", status: "Modified" }]
+		it("should handle empty changes gracefully", async () => {
+			const result = await service.getCommitContext([], { staged: true, includeRepoContext: false })
 
-			mockSpawnSync
-				.mockReturnValueOnce({ status: 0, stdout: "file1.ts", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "diff content", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "1 file changed", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "main", stderr: "", error: null })
-				.mockReturnValueOnce({ status: 0, stdout: "abc123 commit", stderr: "", error: null })
-
-			const result = await service.getCommitContext(mockChanges, { staged: false })
-
-			expect(result).toContain("Full Diff of Unstaged Changes")
-			expect(result).not.toContain("Full Diff of Staged Changes")
+			expect(result).toContain("## Git Context for Commit Message Generation")
+			expect(result).toContain("(No changes matched selection)")
 		})
 	})
 })
