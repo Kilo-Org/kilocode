@@ -15,6 +15,7 @@ import { getTelemetryService, getIdentityManager } from "./services/telemetry/in
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
+import { isGitWorktree } from "./utils/git.js"
 
 export interface CLIOptions {
 	mode?: string
@@ -58,7 +59,7 @@ export class CLI {
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
-			const folderName = `${basename(titleWorkspace)}${this.options.parallel ? " (git worktree)" : ""}`
+			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
 			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 
 			// Create Jotai store
