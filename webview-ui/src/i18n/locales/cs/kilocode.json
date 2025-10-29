@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Tyto režimy jsou dostupné od komunity. Klikněte <1>zde</1> pro úpravu vašich vlastních režimů."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novinka: Sdílejte režimy vytvořením organizace"
 	}
 }

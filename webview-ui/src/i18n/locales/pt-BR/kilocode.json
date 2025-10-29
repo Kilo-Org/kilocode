@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Estes modos estão disponíveis na comunidade. Clique <1>aqui</1> para editar seus próprios modos personalizados."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novo: Compartilhe modos criando uma organização"
 	}
 }

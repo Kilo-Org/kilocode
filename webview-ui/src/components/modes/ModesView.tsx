@@ -11,7 +11,15 @@ import {
 import { Trans } from "react-i18next"
 import { ChevronDown, X, Upload, Download } from "lucide-react"
 
-import { ModeConfig, GroupEntry, PromptComponent, ToolGroup, modeConfigSchema } from "@roo-code/types"
+import {
+	ModeConfig,
+	GroupEntry,
+	PromptComponent,
+	ToolGroup,
+	modeConfigSchema,
+	getAppUrl,
+	TelemetryEventName,
+} from "@roo-code/types"
 
 import {
 	Mode,
@@ -51,6 +59,7 @@ import {
 import { DeleteModeDialog } from "@src/components/modes/DeleteModeDialog"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import { OrganizationModeWarning } from "../kilocode/OrganizationModeWarning"
+import { telemetryClient } from "@/utils/TelemetryClient"
 
 // Get all available groups that should show in prompts view
 const availableGroups = (Object.keys(TOOL_GROUPS) as ToolGroup[]).filter((group) => !TOOL_GROUPS[group].alwaysAvailable)
@@ -605,7 +614,24 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						</div>
 					</div>
 
-					<div className="text-sm text-vscode-descriptionForeground mb-3">
+					<div className="text-sm text-vscode-descriptionForeground mb-6">
+						<a
+							className="flex items-center gap-1 bg-vscode-editor-background border border-vscode-panel-border rounded-md p-1 my-1 mb-2 text-[var(--vscode-activityWarningBadge-background)] cursor-pointer hover:[filter:brightness(1.1)]"
+							href={getAppUrl("/organizations/new")}
+							onClick={() => {
+								telemetryClient.capture(TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED, {
+									origin: "modes-view",
+								})
+							}}>
+							<div className="flex items-center px-2 py-0.5 rounded-full text-xs font-bold">
+								<span className="codicon codicon-sparkle text-xs" />
+							</div>
+							<span className="text-sm">
+								<span className="font-bold">NEW:</span>{" "}
+								{t("kilocode:modes.shareModesNewBanner").replace("New: ", "")}
+							</span>
+						</a>
+
 						<Trans i18nKey="prompts:modes.createModeHelpText">
 							<VSCodeLink
 								href={buildDocLink("basic-usage/using-modes", "prompts_view_modes")}

@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Những chế độ này được cung cấp từ cộng đồng. Nhấp <1>vào đây</1> để chỉnh sửa chế độ tùy chỉnh của riêng bạn."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Mới: Chia sẻ chế độ bằng cách tạo một tổ chức"
 	}
 }

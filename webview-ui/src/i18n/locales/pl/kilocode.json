@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Te tryby są dostępne ze społeczności. Kliknij <1>tutaj</1>, aby edytować swoje własne niestandardowe tryby."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
 	}
 }

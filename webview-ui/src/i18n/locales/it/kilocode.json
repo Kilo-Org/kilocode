@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Queste modalità sono disponibili dalla community. Clicca <1>qui</1> per modificare le tue modalità personalizzate."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Novità: Condividi le modalità creando un'organizzazione"
 	}
 }

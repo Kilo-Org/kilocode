@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nieuw: Deel modi door een organisatie aan te maken"
 	}
 }

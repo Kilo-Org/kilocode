@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "这些模式来自社区。点击<1>此处</1>编辑您自己的自定义模式。"
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
 	}
 }

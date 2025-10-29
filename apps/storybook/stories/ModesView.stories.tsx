@@ -15,7 +15,7 @@ const meta = {
 			description: "Callback when done button is clicked",
 		},
 	},
-	decorators: [withSidebarContainer()], // ModesView needs more width for its content
+	decorators: [withSidebarContainer(400)], // ModesView needs more width for its content
 	parameters: {
 		extensionState: createExtensionStateMock({
 			customModePrompts: {},

@@ -278,5 +278,8 @@
 		"modes": {
 			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
 		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
 	}
 }
