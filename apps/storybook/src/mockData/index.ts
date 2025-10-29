@@ -84,8 +84,8 @@ export const createMockMarketplaceStateManager = (activeTab: "mcp" | "mode" = "m
 		},
 		installedMetadata: { global: {}, project: {} },
 	}),
-	transition: () => Promise.resolve(), // No-op async function
-	onStateChange: () => () => {}, // Returns unsubscribe function
-	cleanup: () => {}, // No-op function
-	handleMessage: () => Promise.resolve(), // No-op async function
+	transition: () => Promise.resolve(),
+	onStateChange: () => () => {},
+	cleanup: () => {},
+	handleMessage: () => Promise.resolve(),
 })
