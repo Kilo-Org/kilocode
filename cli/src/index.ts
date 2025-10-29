@@ -56,7 +56,7 @@ program
 		}
 
 		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto && !options.parallel) {
+		if (!process.stdin.isTTY && !options.auto) {
 			console.error("Error: Piped input requires --auto flag to be enabled")
 			process.exit(1)
 		}
@@ -78,8 +78,8 @@ program
 			finalPrompt = Buffer.concat(chunks).toString("utf-8").trim()
 		}
 
-		// Validate that autonomous and parallel mode require a prompt
-		if ((options.auto || options.parallel) && !finalPrompt) {
+		// Validate that autonomous mode requires a prompt
+		if (options.auto && !finalPrompt) {
 			console.error(
 				"Error: autonomous mode (--auto) and parallel mode (--parallel) require a prompt argument or piped input",
 			)
