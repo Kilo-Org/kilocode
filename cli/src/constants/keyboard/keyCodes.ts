@@ -11,6 +11,8 @@ export const CHAR_CODE_ENTER = 13
 export const CHAR_CODE_CTRL_U = 21
 export const CHAR_CODE_ESC = 27
 export const CHAR_CODE_SPACE = 32
+export const CHAR_CODE_EXCLAMATION = 33 // ! character
+export const CHAR_CODE_DIGIT_1 = 49 // 1 character
 export const CHAR_CODE_DELETE = 127
 
 // Kitty protocol specific key codes
