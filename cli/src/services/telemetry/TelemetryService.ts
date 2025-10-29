@@ -579,8 +579,10 @@ export class TelemetryService {
 		})
 	}
 
-	public trackParallelModeCompleted(duration: number): void {
+	public trackParallelModeCompleted(): void {
 		if (!this.client) return
+
+		const duration = Date.now() - this.parallelModeStart
 
 		this.client.capture(TelemetryEvent.PARALLEL_MODE_COMPLETED, {
 			mode: this.currentMode,

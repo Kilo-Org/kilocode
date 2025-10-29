@@ -149,9 +149,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 			console.log(cyan + "─".repeat(113) + reset + "\n")
 		}
 
-		// Track successful completion
-		const duration = Date.now() - getTelemetryService().parallelModeStart
-		getTelemetryService().trackParallelModeCompleted(duration)
+		getTelemetryService().trackParallelModeCompleted()
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 
