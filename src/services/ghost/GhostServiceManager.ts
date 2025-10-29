@@ -130,12 +130,24 @@ export class GhostServiceManager {
 
 	public async load() {
 		this.settings = this.loadSettings()
-		await this.model.reload(this.providerSettingsManager)
+		const modelFound = await this.model.reload(this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
 		await this.saveSettings()
+
+		// If no model was found on first attempt, retry after a delay
+		// This handles race conditions where profile/auth state is still being updated
+		if (!modelFound) {
+			setTimeout(async () => {
+				const retryModelFound = await this.model.reload(this.providerSettingsManager)
+				if (retryModelFound) {
+					this.updateStatusBar()
+					await this.saveSettings()
+				}
+			}, 1000) // 1 second delay to allow auth state to settle
+		}
 	}
 
 	/**
