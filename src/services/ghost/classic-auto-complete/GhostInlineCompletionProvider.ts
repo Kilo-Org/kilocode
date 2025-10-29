@@ -179,8 +179,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// Start streaming generation
 		const usageInfo = await model.generateResponse(systemPrompt, userPrompt, onChunk)
 
-		console.log("response", response)
-
 		if (this.isRequestCancelled) {
 			return {
 				suggestions: new GhostSuggestionsState(),
