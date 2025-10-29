@@ -145,19 +145,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 		const languageId = context.document.languageId
 
-		// Check cache before making API call
-		if (this.cachedSuggestionAvailable(prefix, suffix)) {
-			// Return empty result if cached suggestion is available
-			return {
-				suggestions: new GhostSuggestionsState(),
-				cost: 0,
-				inputTokens: 0,
-				outputTokens: 0,
-				cacheWriteTokens: 0,
-				cacheReadTokens: 0,
-			}
-		}
-
 		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
 			autocompleteInput,
 			prefix,
@@ -191,8 +178,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		// Start streaming generation
 		const usageInfo = await model.generateResponse(systemPrompt, userPrompt, onChunk)
-
-		console.log("response", response)
 
 		if (this.isRequestCancelled) {
 			return {
@@ -233,8 +218,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		document: vscode.TextDocument,
 		position: vscode.Position,
 		context: vscode.InlineCompletionContext,
-		_token: vscode.CancellationToken,
+		token: vscode.CancellationToken,
 	): Promise<vscode.InlineCompletionItem[] | vscode.InlineCompletionList> {
+		// Listen for cancellation requests from VSCode
+		if (token.onCancellationRequested) {
+			token.onCancellationRequested(() => {
+				this.cancelRequest()
+			})
+		}
+
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
@@ -264,12 +256,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			// Show cursor animation while generating
 			this.cursorAnimation.active()
 
-			const context: GhostSuggestionContext = {
+			const suggestionContext: GhostSuggestionContext = {
 				document,
 				range: new vscode.Range(position, position),
 			}
 
-			const fullContext = await this.ghostContext.generate(context)
+			const fullContext = await this.ghostContext.generate(suggestionContext)
 			const result = await this.getFromLLM(fullContext, this.model)
 
 			// Hide cursor animation after generation
