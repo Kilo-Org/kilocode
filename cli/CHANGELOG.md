@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.15
+
+### Patch Changes
+
+- [#3355](https://github.com/Kilo-Org/kilocode/pull/3355) [`e366e4c`](https://github.com/Kilo-Org/kilocode/commit/e366e4ce61deb98c587dbc9ef4527b9c04bc2e32) Thanks [@iscekic](https://github.com/iscekic)! - add parallel mode support
+
 ## 0.0.14
 
 ### Patch Changes
