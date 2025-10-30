@@ -253,6 +253,28 @@ describe("ChutesHandler", () => {
 		)
 	})
 
+	it("should return zai-org/GLM-4.5-turbo model with correct configuration", () => {
+		const testModelId: ChutesModelId = "zai-org/GLM-4.5-turbo"
+		const handlerWithModel = new ChutesHandler({
+			apiModelId: testModelId,
+			chutesApiKey: "test-chutes-api-key",
+		})
+		const model = handlerWithModel.getModel()
+		expect(model.id).toBe(testModelId)
+		expect(model.info).toEqual(
+			expect.objectContaining({
+				maxTokens: 32768,
+				contextWindow: 131072,
+				supportsImages: false,
+				supportsPromptCache: false,
+				inputPrice: 1,
+				outputPrice: 3,
+				description: "GLM-4.5-turbo model with 128K token context window, optimized for fast inference.",
+				temperature: 0.5, // Default temperature for non-DeepSeek models
+			}),
+		)
+	})
+
 	it("should return Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8 model with correct configuration", () => {
 		const testModelId: ChutesModelId = "Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8"
 		const handlerWithModel = new ChutesHandler({
@@ -409,6 +431,10 @@ describe("ChutesHandler", () => {
 						content: `${systemPrompt}\n${messages[0].content}`,
 					},
 				],
+				max_tokens: 32768,
+				temperature: 0.6,
+				stream: true,
+				stream_options: { include_usage: true },
 			}),
 		)
 	})
@@ -438,6 +464,7 @@ describe("ChutesHandler", () => {
 			expect.objectContaining({
 				model: modelId,
 				max_tokens: modelInfo.maxTokens,
+				temperature: 0.5,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,
 				stream_options: { include_usage: true },

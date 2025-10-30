@@ -28,11 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "コンテキスト",
 		"terminal": "ターミナル",
+		"slashCommands": "スラッシュコマンド",
 		"prompts": "プロンプト",
+		"ui": "UI",
 		"experimental": "実験的",
 		"language": "言語",
 		"about": "Kilo Codeについて",
-		"display": "表示"
+		"display": "表示",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "スラッシュコマンドを管理して、カスタムワークフローやアクションを素早く実行します。<DocsLink>詳細はこちら</DocsLink>"
 	},
 	"prompts": {
 		"description": "プロンプトの強化、コードの説明、問題の修正などの迅速なアクションに使用されるサポートプロンプトを設定します。これらのプロンプトは、Kilo Codeが一般的な開発タスクでより良いサポートを提供するのに役立ちます。"
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "デフォルト値（0.4）にリセット",
 		"searchMaxResultsLabel": "最大検索結果数",
 		"searchMaxResultsDescription": "コードベースインデックスをクエリする際に返される検索結果の最大数。値を高くするとより多くのコンテキストが提供されますが、関連性の低い結果が含まれる可能性があります。",
-		"resetToDefault": "デフォルトにリセット"
+		"resetToDefault": "デフォルトにリセット",
+		"cancelling": "キャンセル中...",
+		"cancelIndexingButton": "インデックス作成をキャンセル"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDEの環境設定</SettingsLink>で、この設定のグローバルショートカットを設定できます。",
 		"description": "Kilo Codeが承認なしで自動的に操作を実行できるようにします。AIを完全に信頼し、関連するセキュリティリスクを理解している場合にのみ、これらの設定を有効にしてください。",
 		"enabled": "自動承認が有効",
 		"toggleAriaLabel": "自動承認の切り替え",
@@ -280,6 +289,8 @@
 		"getChutesApiKey": "Chutes APIキーを取得",
 		"fireworksApiKey": "Fireworks APIキー",
 		"getFireworksApiKey": "Fireworks APIキーを取得",
+		"syntheticApiKey": "Synthetic APIキー",
+		"getSyntheticApiKey": "Synthetic APIキーを取得",
 		"featherlessApiKey": "Featherless APIキー",
 		"getFeatherlessApiKey": "Featherless APIキーを取得",
 		"ioIntelligenceApiKey": "IO Intelligence APIキー",
@@ -303,6 +314,10 @@
 		"sambaNovaApiKey": "SambaNova APIキー",
 		"getHuggingFaceApiKey": "Hugging Face APIキーを取得",
 		"huggingFaceApiKey": "Hugging Face APIキー",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints APIキーを取得",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints APIキー",
+		"ovhCloudAiEndpointsBaseUrl": "ベースURL",
+		"getOvhCloudAiEndpointsBaseUrl": "カスタムベースURLを使用",
 		"huggingFaceModelId": "モデルID",
 		"huggingFaceLoading": "読み込み中...",
 		"huggingFaceModelsCount": "({{count}}個のモデル)",
@@ -379,9 +394,11 @@
 		"ollama": {
 			"baseUrl": "ベースURL（オプション）",
 			"modelId": "モデルID",
-			"apiKey": "APIキー",
+			"apiKey": "Ollama APIキー",
 			"apiKeyPlaceholder": "APIキーを入力してください",
-			"apiKeyInfo": "APIキーはAuthorizationヘッダーとして送信されます",
+			"apiKeyHelp": "認証されたOllamaインスタンスやクラウドサービス用のオプションAPIキー。ローカルインストールの場合は空のままにしてください。",
+			"numCtx": "コンテキストウィンドウサイズ (num_ctx)",
+			"numCtxHelp": "モデルのデフォルトのコンテキストウィンドウサイズを上書きします。モデルのModelfile構成を使用するには、空のままにします。最小値は128です。",
 			"description": "Ollamaを使用すると、ローカルコンピューターでモデルを実行できます。始め方については、クイックスタートガイドをご覧ください。",
 			"warning": "注意：Kilo Codeは複雑なプロンプトを使用し、Claudeモデルで最適に動作します。能力の低いモデルは期待通りに動作しない場合があります。"
 		},
@@ -749,12 +766,6 @@
 			"name": "同時ファイル編集を有効にする",
 			"description": "有効にすると、Kilo Codeは単一のリクエストで複数のファイルを編集できます。無効にすると、Kilo Codeはファイルを一つずつ編集する必要があります。これを無効にすることで、能力の低いモデルで作業する場合や、ファイル変更をより細かく制御したい場合に役立ちます。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Applyを有効にする",
-			"description": "有効にすると、Kilo CodeはMorph Fast Applyを使用してファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "バックグラウンド編集",
 			"description": "有効にすると、エディターのフォーカス中断を防ぎます。ファイル編集は差分ビューを開いたりフォーカスを奪ったりすることなく、バックグラウンドで行われます。Rooが変更を行っている間も中断されることなく作業を続けることができます。ファイルは診断をキャプチャするためにフォーカスなしで開くか、完全に閉じたままにできます。"
@@ -785,6 +796,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "エディター内で直接コードの迅速な提案と改善を行うAutocomplete機能を有効にします。ターゲット変更用のクイックタスク（Cmd+I）とコンテキスト改善用のAutocompleteが含まれます。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Fast Applyを有効化",
+			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Gateway Provider、OpenRouter、またはMorph APIキーが必要です。",
+			"apiKey": "Morph APIキー（オプション）",
+			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"modelLabel": "モデル選択",
+			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
+			"models": {
+				"auto": "自動（デフォルト - 最適なものを選択）",
+				"morphFast": "Morph v3 Fast（高速、低コスト）",
+				"morphLarge": "Morph v3 Large（より高性能）",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "モデル開始スラッシュコマンドを有効にする",
@@ -860,6 +885,7 @@
 			"regionMismatch": "警告：ARN内のリージョン（{{arnRegion}}）が選択したリージョン（{{region}}）と一致しません。これによりアクセスの問題が発生する可能性があります。プロバイダーはARNのリージョンを使用します。"
 		},
 		"modelAvailability": "指定されたモデルID（{{modelId}}）は利用できません。別のモデルを選択してください。",
+		"modelDeprecated": "このモデルは利用できなくなりました。別のモデルを選択してください。",
 		"providerNotAllowed": "プロバイダー「{{provider}}」は組織によって許可されていません",
 		"modelNotAllowed": "モデル「{{model}}」はプロバイダー「{{provider}}」に対して組織によって許可されていません",
 		"profileInvalid": "このプロファイルには、組織によって許可されていないプロバイダーまたはモデルが含まれています",
@@ -902,6 +928,26 @@
 		"taskTimeline": {
 			"label": "タスクのタイムラインを表示",
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
+		},
+		"sendMessageOnEnter": {
+			"label": "Enterでメッセージを送信",
+			"description": "有効にすると、Enterキーで送信し、Shift+Enterで改行します。代わりにShift+Enterで送信するにはオフにします。"
+		},
+		"costThreshold": {
+			"label": "しきい値以下のコストを非表示にする",
+			"currentValue": "現在のしきい値: ${{value}}",
+			"description": "この金額を超えるリクエストコストのみを表示します。詳細パネルが開いている場合、コストは常に表示されます。"
+		},
+		"showTimestamps": {
+			"label": "タイムスタンプを表示",
+			"description": "チャット表示で各メッセージにタイムスタンプを表示する"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "オートコンプリート時にガターアニメーションを表示",
+			"description": "オートコンプリートの実行中にエディタガターにアニメーションインジケータを表示",
+			"preview": "アニメーションプレビュー"
 		}
 	},
 	"includeMaxOutputTokens": "最大出力トークンを含める",
@@ -921,6 +967,12 @@
 			"input": "入力",
 			"output": "出力",
 			"cacheReads": "キャッシュ読み取り"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "デフォルトで思考メッセージを折りたたむ",
+			"description": "有効にすると、操作するまで思考ブロックがデフォルトで折りたたまれます"
 		}
 	}
 }

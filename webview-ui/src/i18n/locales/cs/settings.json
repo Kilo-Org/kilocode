@@ -29,10 +29,21 @@
 		"notifications": "Oznámení",
 		"contextManagement": "Kontext",
 		"terminal": "Terminál",
-		"prompts": "Výzvy",
+		"slashCommands": "Slash příkazy",
+		"prompts": "Podpůrné výzvy",
+		"ui": "Uživatelské rozhraní",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
 		"about": "O Kilo Code"
+	},
+	"slashCommands": {
+		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Sbalit zprávy Přemýšlení ve výchozím nastavení",
+			"description": "Když je povoleno, bloky přemýšlení budou ve výchozím nastavení sbalené, dokud s nimi neinteragujete"
+		}
 	},
 	"prompts": {
 		"description": "Nakonfigurujte podpůrné výzvy, které se používají pro rychlé akce, jako je vylepšení výzev, vysvětlení kódu a oprava problémů. Tyto výzvy pomáhají Kilo Code poskytovat lepší pomoc při běžných vývojových úkolech."
@@ -128,7 +139,9 @@
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
-		}
+		},
+		"cancelling": "Probíhá rušení...",
+		"cancelIndexingButton": "Zrušit indexování"
 	},
 	"autoApproval": {
 		"title": "Automatické schválení",
@@ -136,6 +149,7 @@
 	},
 	"autoApprove": {
 		"description": "Povolit Kilo Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům.",
+		"toggleShortcut": "Můžete nakonfigurovat klávesovou zkratku pro toto nastavení <SettingsLink>v nastaveních vašeho IDE</SettingsLink>.",
 		"enabled": "Automatické schválení povoleno",
 		"readOnly": {
 			"label": "Číst",
@@ -292,6 +306,8 @@
 		"getFeatherlessApiKey": "Získat klíč API Featherless",
 		"fireworksApiKey": "Klíč API Fireworks",
 		"getFireworksApiKey": "Získat klíč API Fireworks",
+		"syntheticApiKey": "Klíč API Synthetic",
+		"getSyntheticApiKey": "Získat klíč API Synthetic",
 		"zaiApiKey": "Klíč API Z.AI",
 		"getZaiApiKey": "Získat klíč API Z.AI",
 		"moonshotApiKey": "Klíč API Moonshot",
@@ -308,6 +324,10 @@
 		"openAiApiKey": "Klíč API OpenAI",
 		"getHuggingFaceApiKey": "Získat klíč API Hugging Face",
 		"huggingFaceApiKey": "Klíč API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Získat klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klíč API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Základní URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Použít vlastní základní URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Načítání...",
 		"huggingFaceModelsCount": "({{count}} modelů)",
@@ -397,6 +417,9 @@
 			"apiKey": "Klíč API",
 			"apiKeyPlaceholder": "Zadejte svůj klíč API",
 			"apiKeyInfo": "Klíč API bude odeslán jako Authorization hlavička",
+			"apiKeyHelp": "Volitelný klíč API pro autentizované instance Ollama nebo cloudové služby. Ponechte prázdné pro místní instalace.",
+			"numCtx": "Velikost kontextového okna (num_ctx)",
+			"numCtxHelp": "Přepsat výchozí velikost kontextového okna modelu. Ponechte prázdné pro použití konfigurace Modelfile modelu. Minimální hodnota je 128.",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
 			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
@@ -578,6 +601,26 @@
 		"taskTimeline": {
 			"label": "Zobrazit časovou osu úkolu",
 			"description": "Zobrazit vizuální časovou osu zpráv úkolu, barevně odlišenou podle typu, což vám umožní rychle zobrazit průběh úkolu a posunout se zpět na konkrétní body v historii úkolu."
+		},
+		"sendMessageOnEnter": {
+			"label": "Odeslat zprávu pomocí Enter",
+			"description": "Je-li povoleno, stiskněte Enter pro odeslání a Shift+Enter pro nový řádek. Vypněte pro použití Shift+Enter pro odeslání."
+		},
+		"costThreshold": {
+			"label": "Skrýt cenu pod prahem",
+			"currentValue": "Aktuální práh: ${{value}}",
+			"description": "Zobrazovat pouze náklady na požadavky převyšující tuto částku. Náklady jsou vždy viditelné, když je panel podrobností otevřený."
+		},
+		"showTimestamps": {
+			"label": "Zobrazit časová razítka",
+			"description": "Zobrazit časové razítko pro každou zprávu v zobrazení chatu"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Zobrazit animaci v okraji při automatickém dokončování",
+			"description": "Zobrazit animovaný indikátor v okraji editoru, když běží automatické dokončování",
+			"preview": "Náhled animace"
 		}
 	},
 	"notifications": {
@@ -695,7 +738,7 @@
 		},
 		"shellIntegrationDisabled": {
 			"label": "Zakázat integraci shellu terminálu",
-			"description": "Povolte tuto možnost, pokud příkazy terminálu nefungují správně nebo se zobrazují chyby „Integrace shellu není k dispozici“. Tímto se použije jednodušší metoda spouštění příkazů, která obejde některé pokročilé funkce terminálu. <0>Dozvědět se více</0>"
+			"description": "Povolte tuto možnost, pokud příkazy terminálu nefungují správně nebo se zobrazují chyby „Integrace shellu není k dispozici“. Tím k se použije jednodušší metoda spouštění příkazů, která obejde některé pokročilé funkce terminálu. <0>Dozvědět se více</0>"
 		},
 		"commandDelay": {
 			"label": "Zpoždění příkazu terminálu",
@@ -757,7 +800,7 @@
 				},
 				"descriptions": {
 					"standard": "Standardní strategie diff aplikuje změny na jeden blok kódu najednou.",
-					"unified": "Sjednocená strategie diff používá více přístupů k aplikaci diffů a vybírá ten nejlepší.",
+					"unified": "Sjednocená strategie diff používá více přístupů k aplikace diffů a vybírá ten nejlepší.",
 					"multiBlock": "Strategie diff s více bloky umožňuje aktualizovat více bloků kódu v souboru v jednom požadavku."
 				}
 			},
@@ -775,6 +818,20 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Použít experimentální sjednocenou strategii diff",
 			"description": "Povolit experimentální sjednocenou strategii diff. Tato strategie může snížit počet opakování způsobených chybami modelu, ale může způsobit neočekávané chování nebo nesprávné úpravy. Povolte pouze pokud rozumíte rizikům a jste ochotni pečlivě zkontrolovat všechny změny."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Povolit Fast Apply",
+			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Fast Apply se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter nebo klíč API Morph.",
+			"apiKey": "Klíč API Morph (volitelné)",
+			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
+			"modelLabel": "Výběr modelu",
+			"modelDescription": "Vyberte, který model rychlého aplikování použít pro úpravy souborů",
+			"models": {
+				"auto": "Automaticky (výchozí - vybere nejlepší dostupný)",
+				"morphFast": "Morph v3 Fast (rychlejší, nižší náklady)",
+				"morphLarge": "Morph v3 Large (schopnější)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Použít experimentální nástroj hledání a nahrazování",
@@ -803,12 +860,6 @@
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Povolit souběžné úpravy souborů",
 			"description": "Pokud je povoleno, Kilo Code může upravovat více souborů v jednom požadavku. Pokud je zakázáno, Kilo Code musí upravovat soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad úpravami souborů."
-		},
-		"MORPH_FAST_APPLY": {
-			"name": "Povolit Morph Fast Apply",
-			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Morph Fast Apply. Vyžaduje poskytovatele Kilo Code API, OpenRouter nebo klíč API Morph.",
-			"apiKey": "Klíč API Morph (volitelné)",
-			"placeholder": "Zadejte svůj klíč API Morph (volitelné)"
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Úpravy na pozadí",
@@ -839,7 +890,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Povolit slash příkazy iniciované modelem",
-			"description": "Když je povoleno, Roo může spouštět vaše slash příkazy k provedení pracovních toků."
+			"description": "Když je povoleno, Kilo Code může spouštět vaše slash příkazy k provedení pracovních toků."
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
@@ -918,6 +969,7 @@
 		"providerNotAllowed": "Poskytovatel '{{provider}}' není povolen vaší organizací",
 		"modelNotAllowed": "Model '{{model}}' není povolen pro poskytovatele '{{provider}}' vaší organizací",
 		"profileInvalid": "Tento profil obsahuje poskytovatele nebo model, který není povolen vaší organizací",
+		"modelDeprecated": "Tento model již není dostupný. Prosím vyberte jiný model.",
 		"qwenCodeOauthPath": "Musíte poskytnout platnou cestu k OAuth pověřením."
 	},
 	"placeholders": {

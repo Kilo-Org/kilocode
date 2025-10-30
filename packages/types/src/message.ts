@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { kiloCodeMetaDataSchema } from "./kilocode.js"
+import { kiloCodeMetaDataSchema } from "./kilocode/kilocode.js"
 
 /**
  * ClineAsk
@@ -96,6 +96,7 @@ export function isResumableAsk(ask: ClineAsk): ask is ResumableAsk {
  */
 
 export const interactiveAsks = [
+	"followup",
 	"command",
 	"tool",
 	"browser_action_launch",

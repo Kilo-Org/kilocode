@@ -1,5 +1,5 @@
-import { openRouterDefaultModelId } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "../../../shared/kilocode/token"
+import { openRouterDefaultModelId, type ProviderSettings } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { z } from "zod"
 import { fetchWithTimeout } from "./fetchWithTimeout"
@@ -7,7 +7,9 @@ import { DEFAULT_HEADERS } from "../constants"
 
 type KilocodeToken = string
 
-const cache = new Map<KilocodeToken, Promise<string>>()
+type OrganizationId = string
+
+const cache = new Map<string, Promise<string>>()
 
 const defaultsSchema = z.object({
 	defaultModel: z.string().nullish(),
@@ -15,15 +17,29 @@ const defaultsSchema = z.object({
 
 const fetcher = fetchWithTimeout(5000)
 
-async function fetchKilocodeDefaultModel(kilocodeToken: KilocodeToken): Promise<string> {
+async function fetchKilocodeDefaultModel(
+	kilocodeToken: KilocodeToken,
+	organizationId?: OrganizationId,
+	providerSettings?: ProviderSettings,
+): Promise<string> {
 	try {
-		const url = `${getKiloBaseUriFromToken(kilocodeToken)}/api/defaults`
-		const response = await fetcher(url, {
-			headers: {
-				...DEFAULT_HEADERS,
-				Authorization: `Bearer ${kilocodeToken}`,
-			},
-		})
+		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
+		const url = getKiloUrlFromToken(`https://api.kilocode.ai/api${path}`, kilocodeToken)
+
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+			Authorization: `Bearer ${kilocodeToken}`,
+		}
+
+		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+		if (
+			providerSettings?.kilocodeTesterWarningsDisabledUntil &&
+			providerSettings.kilocodeTesterWarningsDisabledUntil > Date.now()
+		) {
+			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+		}
+
+		const response = await fetcher(url, { headers })
 		if (!response.ok) {
 			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
 		}
@@ -40,14 +56,23 @@ async function fetchKilocodeDefaultModel(kilocodeToken: KilocodeToken): Promise<
 	}
 }
 
-export async function getKilocodeDefaultModel(kilocodeToken?: KilocodeToken): Promise<string> {
+export async function getKilocodeDefaultModel(
+	kilocodeToken?: KilocodeToken,
+	organizationId?: OrganizationId,
+	providerSettings?: ProviderSettings,
+): Promise<string> {
 	if (!kilocodeToken) {
 		return openRouterDefaultModelId
 	}
-	let defaultModelPromise = cache.get(kilocodeToken ?? "")
+	const key = JSON.stringify({
+		kilocodeToken,
+		organizationId,
+		testerSuppressed: providerSettings?.kilocodeTesterWarningsDisabledUntil,
+	})
+	let defaultModelPromise = cache.get(key)
 	if (!defaultModelPromise) {
-		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken)
-		cache.set(kilocodeToken, defaultModelPromise)
+		defaultModelPromise = fetchKilocodeDefaultModel(kilocodeToken, organizationId, providerSettings)
+		cache.set(key, defaultModelPromise)
 	}
 	return await defaultModelPromise
 }

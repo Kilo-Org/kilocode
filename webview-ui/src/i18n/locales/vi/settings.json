@@ -28,11 +28,16 @@
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
+		"slashCommands": "Lệnh Gạch Chéo",
 		"prompts": "Lời nhắc",
+		"ui": "UI",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
 		"display": "Hiển thị"
+	},
+	"slashCommands": {
+		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Đặt lại về giá trị mặc định (0.4)",
 		"searchMaxResultsLabel": "Số Kết Quả Tìm Kiếm Tối Đa",
 		"searchMaxResultsDescription": "Số lượng kết quả tìm kiếm tối đa được trả về khi truy vấn chỉ mục cơ sở mã. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng có thể bao gồm các kết quả ít liên quan hơn.",
-		"resetToDefault": "Đặt lại về mặc định"
+		"resetToDefault": "Đặt lại về mặc định",
+		"cancelling": "Đang hủy...",
+		"cancelIndexingButton": "Hủy lập chỉ mục"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Bạn có thể định cấu hình một phím tắt chung cho cài đặt này <SettingsLink>trong tùy chọn IDE của bạn</SettingsLink>.",
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
 		"enabled": "Phê duyệt tự động đã bật",
 		"toggleAriaLabel": "Chuyển đổi tự động phê duyệt",
@@ -280,6 +288,8 @@
 		"getChutesApiKey": "Lấy khóa API Chutes",
 		"fireworksApiKey": "Khóa API Fireworks",
 		"getFireworksApiKey": "Lấy khóa API Fireworks",
+		"syntheticApiKey": "Khóa API Synthetic",
+		"getSyntheticApiKey": "Lấy khóa API Synthetic",
 		"featherlessApiKey": "Khóa API Featherless",
 		"getFeatherlessApiKey": "Lấy khóa API Featherless",
 		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
@@ -303,6 +313,10 @@
 		"sambaNovaApiKey": "Khóa API SambaNova",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Lấy Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL Cơ sở",
+		"getOvhCloudAiEndpointsBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"huggingFaceModelId": "ID Mô hình",
 		"huggingFaceLoading": "Đang tải...",
 		"huggingFaceModelsCount": "({{count}} mô hình)",
@@ -379,9 +393,11 @@
 		"ollama": {
 			"baseUrl": "URL cơ sở (tùy chọn)",
 			"modelId": "ID mô hình",
-			"apiKey": "Khóa API",
+			"apiKey": "Khóa API Ollama",
 			"apiKeyPlaceholder": "Nhập khóa API của bạn",
-			"apiKeyInfo": "Khóa API sẽ được gửi dưới dạng tiêu đề Authorization",
+			"apiKeyHelp": "Khóa API tùy chọn cho các phiên bản Ollama đã xác thực hoặc dịch vụ đám mây. Để trống cho cài đặt cục bộ.",
+			"numCtx": "Kích thước cửa sổ ngữ cảnh (num_ctx)",
+			"numCtxHelp": "Ghi đè kích thước cửa sổ ngữ cảnh mặc định của mô hình. Để trống để sử dụng cấu hình Modelfile của mô hình. Giá trị tối thiểu là 128.",
 			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
 			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},
@@ -749,12 +765,6 @@
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Bật Morph Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Morph Fast Apply. Yêu cầu Nhà cung cấp API Kilo Code, OpenRouter hoặc khóa API Morph.",
-			"apiKey": "Khóa API Morph (tùy chọn)",
-			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Chỉnh sửa nền",
 			"description": "Khi được bật, ngăn chặn gián đoạn tiêu điểm trình soạn thảo. Việc chỉnh sửa tệp diễn ra ở nền mà không mở chế độ xem diff hoặc chiếm tiêu điểm. Bạn có thể tiếp tục làm việc không bị gián đoạn trong khi Kilo Code thực hiện thay đổi. Các tệp có thể được mở mà không có tiêu điểm để thu thập chẩn đoán hoặc giữ hoàn toàn đóng."
@@ -785,6 +795,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Bật các tính năng Autocomplete cho gợi ý mã nhanh và cải tiến trực tiếp trong editor của bạn. Bao gồm Tác Vụ Nhanh (Cmd+I) cho các thay đổi có mục tiêu và Autocomplete cho các cải tiến theo ngữ cảnh."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Bật Fast Apply",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
+			"apiKey": "Khóa API Morph (tùy chọn)",
+			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
+			"modelLabel": "Lựa chọn mô hình",
+			"modelDescription": "Chọn mô hình Fast Apply nào để sử dụng cho việc chỉnh sửa tệp",
+			"models": {
+				"auto": "Tự động (Mặc định - chọn tốt nhất có sẵn)",
+				"morphFast": "Morph v3 Fast (Nhanh hơn, chi phí thấp hơn)",
+				"morphLarge": "Morph v3 Large (Khả năng cao hơn)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Bật lệnh slash do mô hình khởi tạo",
@@ -860,6 +884,7 @@
 			"regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
 		},
 		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác.",
+		"modelDeprecated": "Mô hình này không còn khả dụng. Vui lòng chọn một mô hình khác.",
 		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
 		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
 		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn",
@@ -902,6 +927,26 @@
 		"taskTimeline": {
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		},
+		"sendMessageOnEnter": {
+			"label": "Gửi tin nhắn bằng Enter",
+			"description": "Khi được bật, nhấn Enter để gửi và Shift+Enter cho dòng mới. Tắt để sử dụng Shift+Enter để gửi."
+		},
+		"costThreshold": {
+			"label": "Ẩn chi phí dưới ngưỡng",
+			"description": "Chỉ hiển thị chi phí yêu cầu trên mức này. Chi phí luôn được hiển thị khi khung thông tin chi tiết được mở.",
+			"currentValue": "Ngưỡng hiện tại: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Hiển thị dấu thời gian",
+			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
+			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",
+			"preview": "Xem trước hoạt ảnh"
 		}
 	},
 	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",
@@ -921,6 +966,12 @@
 			"input": "Đầu vào",
 			"output": "Đầu ra",
 			"cacheReads": "Lượt đọc bộ nhớ đệm"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Thu gọn tin nhắn Suy nghĩ theo mặc định",
+			"description": "Khi được bật, các khối suy nghĩ sẽ được thu gọn theo mặc định cho đến khi bạn tương tác với chúng"
 		}
 	}
 }

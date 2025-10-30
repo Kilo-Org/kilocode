@@ -38,7 +38,9 @@ type ModelIdKey = keyof Pick<
 	| "openAiModelId"
 	| "litellmModelId"
 	// kilocode_change start
+	| "apiModelId"
 	| "kilocodeModel"
+	| "ovhCloudAiEndpointsModelId"
 	// kilocode_change end
 	| "deepInfraModelId"
 	| "ioIntelligenceModelId"

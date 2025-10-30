@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Welcome to Kilo Code!",
 		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, and 450+ more.",
-		"introText3": "Create a free account and get up to $25 worth of tokens to use across any AI model.",
+		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
 		"alreadySignedUp": "Already signed up?",
@@ -11,10 +11,20 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
-		"lowBalance": "Your Kilo Code balance is low"
+		"lowBalance": "Your Kilo Code balance is low",
+		"newOrganization": "Using Kilo for work?"
+	},
+	"memoryWarning": {
+		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
+	},
+	"pagination": {
+		"previous": "Previous",
+		"next": "Next",
+		"page": "Page {{page}} / {{count}}"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 The alpha period for {{model}} has ended! Change to a different model to continue.",
+		"notAllowedForTeam": "⚠️ Your organization does not allow use of the {{model}} model. Change to a different model to continue.",
 		"modelUnavailable": "⚠️ The model {{model}} is unavailable. Change to a different model to continue.",
 		"continueWith": "Continue with {{model}}",
 		"continue": "Continue"
@@ -23,9 +33,7 @@
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
 		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
-		"freeModelsLink": "Discover free and budget model options",
-		"openRouterMarkup": "The Kilo Code provider includes all of the OpenRouter models, with zero markup and 0% commission!",
-		"switchToKiloCode": "Switch to Kilo Code"
+		"freeModelsLink": "Discover free and budget model options"
 	},
 	"notifications": {
 		"toolRequest": "Tool request waiting for approval",
@@ -47,8 +55,9 @@
 			"login": "Log in at Kilo Code",
 			"logout": "Log out from Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter Provider Routing",
-				"description": "Kilo Code routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
+				"title": "Provider Routing",
+				"managedByOrganization": "Manage Organization-level Provider Routing",
+				"createOrganization": "Create an Organization to Manage Provider Routing",
 				"sorting": {
 					"default": "Default provider sorting",
 					"price": "Prefer providers with lower price",
@@ -57,8 +66,10 @@
 				},
 				"dataCollection": {
 					"default": "No data policy set",
-					"allow": "Allow provider data collection",
-					"deny": "Deny provider data collection"
+					"allowFree": "Allow prompt training (free only)",
+					"allow": "Allow prompt training",
+					"deny": "Deny prompt training",
+					"zdr": "Zero data retention"
 				}
 			},
 			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
@@ -105,7 +116,10 @@
 			"wantsToCondense": "Kilo Code wants to condense your conversation",
 			"condenseConversation": "Condense Conversation"
 		},
-		"seeNewChanges": "See New Changes"
+		"seeNewChanges": "See New Changes",
+		"revertNewChanges": "Revert New Changes",
+		"confirmRevertChanges": "Confirm Revert Changes",
+		"cancelRevertChanges": "Cancel Revert Changes"
 	},
 	"newTaskPreview": {
 		"task": "Task"
@@ -124,7 +138,9 @@
 			"credits": "credits",
 			"action": "Buy Now",
 			"viewAll": "View all pricing options"
-		}
+		},
+		"detailedUsage": "Detailed Usage",
+		"createOrganization": "Create an Organization to Track Detailed Usage"
 	},
 	"docs": "Docs",
 	"rules": {
@@ -199,38 +215,37 @@
 			"idea7": "Create a calming interactive starfield that moves with mouse gestures"
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Style",
+		"description": "Choose how tool calls are formatted in the system prompt. JSON is currently experimental and mostly intended for users interested in contributing to its development.",
+		"automatic": "Let Kilo decide",
+		"xml": "XML",
+		"json": "JSON (experimental)"
+	},
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Auto Trigger",
 			"triggers": "Triggers",
-			"keybindingDescription": "Autocomplete features can be triggered by commands. You can configure the <DocsLink>Keyboard Shortcuts here</DocsLink>.",
+			"model": "Model",
+			"provider": "Provider",
 			"enableAutoTrigger": {
-				"label": "Enable Autocomplete",
-				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you stop typing. This can be useful for quick fixes and suggestions."
+				"label": "Pause to Complete",
+				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto Trigger Delay",
-				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you stop typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Quick Task",
-				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>See shortcut</DocsLink>"
+				"label": "Quick Task ({{keybinding}})",
+				"description": "Only need a quick change? Select some code (or don't!) and hit Cmd+I. Describe your goal in plain English (\"create a React component with these props\", \"add error handling to this function\"), and get multiple, ready-to-use suggestions right in your editor. <DocsLink>Edit shortcut</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manual Autocomplete",
-				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>See shortcut</DocsLink>"
+				"label": "Manual Autocomplete ({{keybinding}})",
+				"description": "Need a quick fix, completion, or refactor? Kilo will use the surrounding context to offer immediate improvements, keeping you in the flow. <DocsLink>Edit shortcut</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Use custom provider",
-				"description": "Autocomplete uses your KiloCode / OpenRouter / Mistral credential to use the Codestral model by default"
-			},
-			"provider": "Provider",
-			"apiConfigId": {
-				"label": "API Configuration",
-				"current": "Use currently selected API configuration",
-				"description": "Select an API configuration to use for Autocomplete prompts, or just use whatever is currently selected"
-			}
+			"keybindingNotFound": "not found",
+			"noModelConfigured": "No suitable autocomplete model found. Please configure a provider in the API settings."
 		}
 	},
 	"virtualProvider": {
@@ -243,7 +258,7 @@
 		"removeProfile": "Remove profile",
 		"selectProfilePlaceholder": "Select profile...",
 		"addProfile": "Add profile",
-		"noProfilesAvailable": "No profile profiles available. Please configure at least one non-virtual provider profile first.",
+		"noProfilesAvailable": "No profiles available. Please configure at least one non-virtual provider profile first.",
 		"tokensLabel": "Tokens",
 		"perMinute": "Per Minute",
 		"perHour": "Per Hour",
@@ -254,5 +269,16 @@
 		"clearUsageData": "Clear Usage Data",
 		"confirmClearTitle": "Are you sure?",
 		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "These MCP servers are maintained by the community. Click <1>here</1> to edit your own MCP settings."
+		},
+		"modes": {
+			"description": "These modes are available from the community. Click <1>here</1> to edit your own custom modes."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "New: Share modes by creating an organization"
 	}
 }

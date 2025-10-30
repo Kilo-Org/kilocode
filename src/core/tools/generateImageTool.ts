@@ -12,7 +12,7 @@ import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 
 // Hardcoded list of image generation models for now
-const IMAGE_GENERATION_MODELS = ["google/gemini-2.5-flash-image-preview", "google/gemini-2.5-flash-image-preview:free"]
+const IMAGE_GENERATION_MODELS = ["google/gemini-2.5-flash-image", "openai/gpt-5-image", "openai/gpt-5-image-mini"]
 
 export async function generateImageTool(
 	cline: Task,
@@ -204,6 +204,7 @@ export async function generateImageTool(
 					})(),
 				// kilocode_change end
 				inputImageData,
+				cline.taskId, // kilocode_change
 			)
 
 			if (!result.success) {
@@ -263,7 +264,11 @@ export async function generateImageTool(
 			const fullImagePath = path.join(cline.cwd, finalPath)
 
 			// Convert to webview URI if provider is available
-			const imageUri = provider?.convertToWebviewUri?.(fullImagePath) ?? vscode.Uri.file(fullImagePath).toString()
+			let imageUri = provider?.convertToWebviewUri?.(fullImagePath) ?? vscode.Uri.file(fullImagePath).toString()
+
+			// Add cache-busting parameter to prevent browser caching issues
+			const cacheBuster = Date.now()
+			imageUri = imageUri.includes("?") ? `${imageUri}&t=${cacheBuster}` : `${imageUri}?t=${cacheBuster}`
 
 			// Send the image with the webview URI
 			await cline.say("image", JSON.stringify({ imageUri, imagePath: fullImagePath }))

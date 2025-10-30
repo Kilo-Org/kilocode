@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Kilo Code'a hoş geldiniz!",
 		"introText1": "Kilo Code ücretsiz, açık kaynaklı bir AI kodlama ajanıdır.",
-		"introText2": "Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 ve 450+ diğer en yeni AI modelleri ile çalışır.",
-		"introText3": "Ücretsiz hesap oluşturun ve herhangi bir AI modeli ile kullanabilceğiniz $25 değerinde token alın.",
+		"introText2": "Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 ve 450+ diğer en yeni AI modelleri ile çalışır.",
+		"introText3": "Ücretsiz hesap oluşturun ve ilk yüklemenizde $20 bonus kredi alın.",
 		"ctaButton": "Başla",
 		"manualModeButton": "Kendi API anahtarınızı kullanın",
 		"alreadySignedUp": "Zaten kaydoldunuz mu?",
@@ -11,15 +11,19 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
-		"lowBalance": "Kilo Code bakiyeniz düşük"
+		"lowBalance": "Kilo Code bakiyeniz düşük",
+		"newOrganization": "İş için mi kullanıyorsun?"
+	},
+	"pagination": {
+		"previous": "Önceki",
+		"next": "Sonraki",
+		"page": "Sayfa {{page}} / {{count}}"
 	},
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
 		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
-		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet",
-		"openRouterMarkup": "Kilo Code sağlayıcısı tüm OpenRouter modellerini içerir, sıfır ek ücret ve %0 komisyon ile!",
-		"switchToKiloCode": "Kilo Code'a geç"
+		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
 	},
 	"notifications": {
 		"toolRequest": "Araç isteği onay bekliyor",
@@ -43,7 +47,9 @@
 			"logout": "Kilo Code'dan çıkış yap",
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter Sağlayıcı Yönlendirme",
+				"title": "Sağlayıcı Yönlendirme",
+				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
+				"createOrganization": "Sağlayıcı Yönlendirmeyi yönetmek için Organizasyon oluştur",
 				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 				"sorting": {
 					"default": "Varsayılan sağlayıcı sıralaması",
@@ -53,8 +59,10 @@
 				},
 				"dataCollection": {
 					"default": "Veri politikası ayarlanmamış",
-					"allow": "Sağlayıcı veri toplamaya izin ver",
-					"deny": "Sağlayıcı veri toplamayı reddet"
+					"allowFree": "Prompt eğitimine izin ver (sadece ücretsiz)",
+					"allow": "Prompt eğitimine izin ver",
+					"deny": "Prompt eğitimini reddet",
+					"zdr": "Sıfır veri saklama"
 				}
 			}
 		},
@@ -89,12 +97,22 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır.",
+		"automatic": "Kilo karar versin",
+		"xml": "XML",
+		"json": "JSON (deneysel)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
 			"condenseConversation": "Konuşmayı Özetle"
 		},
-		"seeNewChanges": "Yeni Değişiklikleri Göster"
+		"seeNewChanges": "Yeni Değişiklikleri Göster",
+		"revertNewChanges": "Yeni Değişiklikleri Geri Al",
+		"confirmRevertChanges": "Değişiklikleri Geri Almayı Onayla",
+		"cancelRevertChanges": "Değişiklikleri Geri Almayı İptal Et"
 	},
 	"newTaskPreview": {
 		"task": "Görev"
@@ -113,7 +131,9 @@
 			"credits": "kredi",
 			"action": "Şimdi Satın Al",
 			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
-		}
+		},
+		"detailedUsage": "Detaylı Kullanım",
+		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"
 	},
 	"docs": "Belgeler",
 	"rules": {
@@ -191,7 +211,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Otomatik Tetikleme",
 			"triggers": "Tetikleyiciler",
 			"keybindingDescription": "Autocomplete özellikleri komutlarla tetiklenebilir. <DocsLink>Klavye Kısayollarını burada</DocsLink> yapılandırabilirsin.",
 			"enableAutoTrigger": {
@@ -203,23 +222,17 @@
 				"description": "Yazmayı bıraktıktan sonra Kilo Code'un Autocomplete'i tetiklemeden önceki saniye cinsinden gecikme. Daha kısa gecikme daha hızlı öneriler anlamına gelir, ancak daha fazla kaynak yoğun olabilir."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Hızlı Görev",
+				"label": "Hızlı Görev ({{keybinding}})",
 				"description": "Sadece hızlı bir değişiklik mi gerekiyor? Biraz kod seç (ya da seçme!) ve Cmd+I'ya bas. Hedefini basit Türkçe ile açıkla (\"bu props'larla bir React bileşeni oluştur\", \"bu fonksiyona hata işleme ekle\"), ve editöründe doğrudan kullanıma hazır birden fazla öneri al. <DocsLink>Kısayolu gör</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Manuel Autocomplete",
+				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Özel sağlayıcı kullan",
-				"description": "Autocomplete varsayılan olarak Codestral modelini kullanmak için KiloCode / OpenRouter / Mistral kimlik bilgilerini kullanır"
-			},
-			"provider": "Sağlayıcı",
-			"apiConfigId": {
-				"label": "API Yapılandırması",
-				"current": "Şu anda seçili API yapılandırmasını kullan",
-				"description": "Autocomplete istekleri için kullanılacak API yapılandırmasını seç, ya da şu anda seçili olanı kullan"
-			}
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"model": "Model",
+			"provider": "Sağlayıcı"
 		}
 	},
 	"virtualProvider": {
@@ -249,10 +262,25 @@
 		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
 		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
 	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",
+		"notAllowedForTeam": "⚠️ Organizasyonunuz {{model}} modelinin kullanımına izin vermiyor. Devam etmek için farklı bir model seçin.",
 		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
 		"continueWith": "{{model}} ile devam et",
 		"continue": "Devam et"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Bu MCP sunucuları topluluk tarafından yönetilmektedir. Kendi MCP ayarlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"modes": {
+			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
 	}
 }

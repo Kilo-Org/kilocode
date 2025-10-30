@@ -29,10 +29,21 @@
 		"notifications": "Notifications",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Slash Commands",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code"
+	},
+	"slashCommands": {
+		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Collapse Thinking messages by default",
+			"description": "When enabled, thinking blocks will be collapsed by default until you interact with them"
+		}
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Kilo Code provide better assistance for common development tasks."
@@ -128,10 +139,13 @@
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
-		}
+		},
+		"cancelling": "Cancelling...",
+		"cancelIndexingButton": "Cancel Indexing"
 	},
 	"autoApprove": {
-		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",
+		"description": "Run these actions without asking for permission. Only enable for actions you fully trust and if you understand the security risks.",
+		"toggleShortcut": "You can configure a keyboard shortcut for this setting <SettingsLink>in your IDE preferences</SettingsLink>.",
 		"enabled": "Auto-Approve Enabled",
 		"readOnly": {
 			"label": "Read",
@@ -279,6 +293,8 @@
 		"getChutesApiKey": "Get Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Get Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Get Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Get Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
@@ -302,6 +318,10 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Get Hugging Face API Key",
 		"huggingFaceApiKey": "Hugging Face API Key",
+		"getOvhCloudAiEndpointsApiKey": "Get OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsBaseUrl": "Base URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Use a custom base URL",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Loading...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -378,9 +398,11 @@
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
 			"modelId": "Model ID",
-			"apiKey": "API Key",
+			"apiKey": "Ollama API Key",
 			"apiKeyPlaceholder": "Enter your API key",
-			"apiKeyInfo": "API key will be sent as Authorization header",
+			"apiKeyHelp": "Optional API key for authenticated Ollama instances or cloud services. Leave empty for local installations.",
+			"numCtx": "Context Window Size (num_ctx)",
+			"numCtxHelp": "Override the model's default context window size. Leave empty to use the model's Modelfile configuration. Minimum value is 128.",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
 			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
@@ -538,6 +560,26 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		},
+		"sendMessageOnEnter": {
+			"label": "Send message with Enter",
+			"description": "When enabled, press Enter to send and Shift+Enter for a new line. Turn off to use Shift+Enter to send instead."
+		},
+		"costThreshold": {
+			"label": "Hide cost below threshold",
+			"description": "Only show request costs above this amount. Costs are always visible when the details pane is open.",
+			"currentValue": "Current threshold: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Show timestamps",
+			"description": "Show timestamp for every message in the chat view"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Show gutter animation when autocompleting",
+			"description": "Display animated indicator in the editor gutter when autocompletion is running",
+			"preview": "Animation preview"
 		}
 	},
 	"notifications": {
@@ -754,10 +796,18 @@
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Enable Morph Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply. Requires the Kilo Code API Provider, OpenRouter or a Morph API key.",
+			"name": "Enable Fast Apply",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)"
+			"placeholder": "Enter your Morph API key (optional)",
+			"modelLabel": "Model Selection",
+			"modelDescription": "Choose which Fast Apply model to use for file edits",
+			"models": {
+				"auto": "Auto (Default - chooses best available)",
+				"morphFast": "Morph v3 Fast (Faster, lower cost)",
+				"morphLarge": "Morph v3 Large (More capable)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",
@@ -788,7 +838,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Enable model-initiated slash commands",
-			"description": "When enabled, Roo can run your slash commands to execute workflows."
+			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {
@@ -860,6 +910,7 @@
 			"regionMismatch": "Warning: The region in your ARN ({{arnRegion}}) does not match your selected region ({{region}}). This may cause access issues. The provider will use the region from the ARN."
 		},
 		"modelAvailability": "The model ID ({{modelId}}) you provided is not available. Please choose a different model.",
+		"modelDeprecated": "This model is no longer available. Please select a different model.",
 		"providerNotAllowed": "Provider '{{provider}}' is not allowed by your organization",
 		"modelNotAllowed": "Model '{{model}}' is not allowed for provider '{{provider}}' by your organization",
 		"profileInvalid": "This profile contains a provider or model that is not allowed by your organization",

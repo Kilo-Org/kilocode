@@ -1,11 +1,19 @@
 import { z } from "zod"
-import { kiloLanguages } from "./kiloLanguages.js"
+import { kiloLanguages } from "./kilocode/kiloLanguages.js"
 
 /**
  * CodeAction
  */
 
-export const codeActionIds = ["explainCode", "fixCode", "improveCode", "addToContext", "newTask"] as const
+export const kiloCodeActionIds = ["addToContextAndFocus"] as const // kilocode_change
+export const codeActionIds = [
+	...kiloCodeActionIds, // kilocode_change
+	"explainCode",
+	"fixCode",
+	"improveCode",
+	"addToContext",
+	"newTask",
+] as const
 
 export type CodeActionId = (typeof codeActionIds)[number]
 
@@ -62,6 +70,7 @@ export const commandIds = [
 	"generateTerminalCommand", // kilocode_change
 	"handleExternalUri", // kilocode_change - for JetBrains plugin URL forwarding
 	"focusPanel",
+	"toggleAutoApprove",
 ] as const
 
 export type CommandId = (typeof commandIds)[number]

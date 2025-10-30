@@ -26,13 +26,25 @@
 		"browser": "เบราว์เซอร์",
 		"checkpoints": "จุดตรวจสอบ",
 		"display": "การแสดงผล",
+		"ghost": "Ghost",
 		"notifications": "การแจ้งเตือน",
 		"contextManagement": "บริบท",
 		"terminal": "เทอร์มินัล",
+		"slashCommands": "คำสั่งแบบ Slash",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "ทดลอง",
 		"language": "ภาษา",
 		"about": "เกี่ยวกับ Kilo Code"
+	},
+	"slashCommands": {
+		"description": "จัดการคำสั่งแบบ slash ของคุณเพื่อดำเนินการเวิร์กโฟลว์และการกระทำแบบกำหนดเองอย่างรวดเร็ว <DocsLink>เรียนรู้เพิ่มเติม</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "ย่อข้อความ Thinking โดยค่าเริ่มต้น",
+			"description": "เมื่อเปิดใช้งาน บล็อก thinking จะถูกย่อโดยค่าเริ่มต้นจนกว่าคุณจะโต้ตอบกับมัน"
+		}
 	},
 	"prompts": {
 		"description": "กำหนดค่า support prompts ที่ใช้สำหรับการกระทำด่วน เช่น การปรับปรุง prompts, การอธิบายโค้ด, และการแก้ไขปัญหา Prompts เหล่านี้ช่วยให้ Kilo Code ให้ความช่วยเหลือที่ดีขึ้นสำหรับงานพัฒนาทั่วไป"
@@ -128,10 +140,13 @@
 			"baseUrlRequired": "จำเป็นต้องมี URL พื้นฐาน",
 			"modelDimensionMinValue": "มิติโมเดลต้องมากกว่า 0",
 			"vercelAiGatewayApiKeyRequired": "จำเป็นต้องมีคีย์ API Vercel AI Gateway"
-		}
+		},
+		"cancelling": "กำลังยกเลิก...",
+		"cancelIndexingButton": "ยกเลิกการจัดทำดัชนี"
 	},
 	"autoApprove": {
 		"description": "อนุญาตให้ Kilo Code ดำเนินการโดยอัตโนมัติโดยไม่ต้องขออนุมัติ เปิดใช้งานการตั้งค่าเหล่านี้เฉพาะเมื่อคุณเชื่อถือ AI อย่างเต็มที่และเข้าใจความเสี่ยงด้านความปลอดภัยที่เกี่ยวข้อง",
+		"toggleShortcut": "คุณสามารถกำหนดค่าแป้นพิมพ์ลัดสำหรับการตั้งค่านี้ <SettingsLink>ในการตั้งค่า IDE ของคุณ</SettingsLink>",
 		"enabled": "เปิดใช้งานการอนุมัติอัตโนมัติ",
 		"readOnly": {
 			"label": "อ่าน",
@@ -286,6 +301,8 @@
 		"getFeatherlessApiKey": "รับคีย์ API ของ Featherless",
 		"fireworksApiKey": "คีย์ API ของ Fireworks",
 		"getFireworksApiKey": "รับคีย์ API ของ Fireworks",
+		"syntheticApiKey": "คีย์ API ของ Synthetic",
+		"getSyntheticApiKey": "รับคีย์ API ของ Synthetic",
 		"moonshotApiKey": "คีย์ API ของ Moonshot",
 		"getMoonshotApiKey": "รับคีย์ API ของ Moonshot",
 		"moonshotBaseUrl": "จุดเข้าใช้งาน Moonshot",
@@ -308,6 +325,10 @@
 		"openAiApiKey": "คีย์ API ของ OpenAI",
 		"getHuggingFaceApiKey": "รับคีย์ API ของ Hugging Face",
 		"huggingFaceApiKey": "คีย์ API ของ Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "รับคีย์ API ของ OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "คีย์ API ของ OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL ฐาน",
+		"getOvhCloudAiEndpointsBaseUrl": "ใช้ URL ฐานแบบกำหนดเอง",
 		"huggingFaceModelId": "รหัสโมเดล",
 		"huggingFaceLoading": "กำลังโหลด...",
 		"huggingFaceModelsCount": "({{count}} โมเดล)",
@@ -373,6 +394,9 @@
 			"baseUrl": "URL พื้นฐาน (ไม่บังคับ)",
 			"modelId": "รหัสโมเดล",
 			"apiKey": "คีย์ API",
+			"apiKeyHelp": "API key เสริมสำหรับ Ollama instances ที่ต้องการการยืนยันตัวตนหรือบริการคลาวด์ เว้นว่างสำหรับการติดตั้งในเครื่อง",
+			"numCtx": "ขนาดหน้าต่างบริบท (num_ctx)",
+			"numCtxHelp": "แทนที่ขนาดหน้าต่างบริบทเริ่มต้นของโมเดล เว้นว่างเพื่อใช้การกำหนดค่า Modelfile ค่าต่ำสุดคือ 128",
 			"apiKeyPlaceholder": "ป้อนคีย์ API ของคุณ",
 			"apiKeyInfo": "คีย์ API จะถูกส่งเป็นส่วนหัว Authorization",
 			"description": "Ollama ช่วยให้คุณสามารถรันโมเดลในเครื่องคอมพิวเตอร์ของคุณได้ สำหรับคำแนะนำเกี่ยวกับวิธีเริ่มต้น โปรดดูคำแนะนำเริ่มต้นอย่างรวดเร็วของพวกเขา",
@@ -562,6 +586,26 @@
 		"taskTimeline": {
 			"label": "แสดงไทม์ไลน์ของงาน",
 			"description": "แสดงไทม์ไลน์ภาพของข้อความงาน โดยมีสีตามประเภท ช่วยให้คุณสามารถดูความคืบหน้าของงานได้อย่างรวดเร็วและเลื่อนกลับไปยังจุดเฉพาะในประวัติของงาน"
+		},
+		"sendMessageOnEnter": {
+			"label": "ส่งข้อความด้วย Enter",
+			"description": "เมื่อเปิดใช้งาน ให้กด Enter เพื่อส่งข้อความและ Shift+Enter สำหรับบรรทัดใหม่ ปิดใช้งานเพื่อใช้ Shift+Enter ในการส่งแทน"
+		},
+		"costThreshold": {
+			"label": "ซ่อนต้นทุนที่ต่ำกว่าเกณฑ์",
+			"currentValue": "เกณฑ์ปัจจุบัน: ${{value}}",
+			"description": "แสดงค่าใช้จ่ายคำขอเฉพาะที่เกินกว่าจำนวนนี้ ค่าใช้จ่ายจะมองเห็นได้เสมอเมื่อเปิดบานหน้าต่างรายละเอียด"
+		},
+		"showTimestamps": {
+			"label": "แสดงตราเวลา",
+			"description": "แสดงตราเวลาสำหรับข้อความแต่ละข้อในมุมมองแชต"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "แสดงภาพเคลื่อนไหวขอบเมื่อทำการเติมอัตโนมัติ",
+			"description": "แสดงตัวบ่งชี้แบบเคลื่อนไหวในขอบตัวแก้ไขเมื่อกำลังทำการเติมอัตโนมัติ",
+			"preview": "ตัวอย่างภาพเคลื่อนไหว"
 		}
 	},
 	"notifications": {
@@ -782,12 +826,6 @@
 			"name": "เปิดใช้งานการแก้ไขไฟล์พร้อมกัน",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขหลายไฟล์ในคำขอเดียว เมื่อปิดใช้งาน Kilo Code ต้องแก้ไขไฟล์ทีละไฟล์ การปิดใช้งานนี้จะช่วยเมื่อทำงานกับโมเดลที่มีความสามารถน้อยกว่าหรือเมื่อคุณต้องการควบคุมการแก้ไขไฟล์มากขึ้น"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "เปิดใช้งาน Morph Fast Apply",
-			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Morph Fast Apply ต้องใช้ Kilo Code API Provider, OpenRouter หรือคีย์ API ของ Morph",
-			"apiKey": "คีย์ API ของ Morph (ไม่บังคับ)",
-			"placeholder": "ป้อนคีย์ API ของ Morph (ไม่บังคับ)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "การแก้ไขเบื้องหลัง",
 			"description": "ป้องกันการรบกวนโฟกัสของตัวแก้ไขเมื่อเปิดใช้งาน การแก้ไขไฟล์จะเกิดขึ้นในเบื้องหลังโดยไม่เปิดมุมมอง diff หรือขโมยโฟกัส คุณสามารถทำงานต่อไปได้โดยไม่ถูกขัดจังหวะขณะที่ Kilo Code ทำการเปลี่ยนแปลง ไฟล์อาจเปิดโดยไม่มีโฟกัสเพื่อจับการวินิจฉัยหรือยังคงปิดอยู่ทั้งหมด"
@@ -817,7 +855,21 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "เปิดใช้งานคำสั่ง slash ที่เริ่มต้นโดยโมเดล",
-			"description": "เมื่อเปิดใช้งาน Roo สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถรันคำสั่ง slash ของคุณเพื่อดำเนินการตามเวิร์กโฟลว์"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "เปิดใช้งาน Fast Apply",
+			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Fast Apply กับโมเดลเฉพาะทางที่ปรับแต่งสำหรับการแก้ไขโค้ด ต้องใช้ Kilo Gateway Provider, OpenRouter หรือ Morph API key",
+			"apiKey": "Morph API key (ไม่บังคับ)",
+			"placeholder": "ป้อน Morph API key ของคุณ (ไม่บังคับ)",
+			"modelLabel": "การเลือกโมเดล",
+			"modelDescription": "เลือกโมเดล Fast Apply ที่จะใช้สำหรับการแก้ไขไฟล์",
+			"models": {
+				"auto": "อัตโนมัติ (ค่าเริ่มต้น - เลือกที่ดีที่สุดที่มี)",
+				"morphFast": "Morph v3 Fast (เร็วกว่า ค่าใช้จ่ายต่ำกว่า)",
+				"morphLarge": "Morph v3 Large (มีความสามารถมากกว่า)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
@@ -896,7 +948,8 @@
 		"providerNotAllowed": "ผู้ให้บริการ '{{provider}}' ไม่ได้รับอนุญาตจากองค์กรของคุณ",
 		"modelNotAllowed": "โมเดล '{{model}}' ไม่ได้รับอนุญาตสำหรับผู้ให้บริการ '{{provider}}' จากองค์กรของคุณ",
 		"profileInvalid": "โปรไฟล์นี้มีผู้ให้บริการหรือโมเดลที่ไม่ได้รับอนุญาตจากองค์กรของคุณ",
-		"qwenCodeOauthPath": "คุณต้องระบุเส้นทางข้อมูลประจำตัว OAuth ที่ถูกต้อง"
+		"qwenCodeOauthPath": "คุณต้องระบุเส้นทางข้อมูลประจำตัว OAuth ที่ถูกต้อง",
+		"modelDeprecated": "โมเดลนี้ไม่สามารถใช้งานได้อีกต่อไป โปรดเลือกโมเดลอื่น"
 	},
 	"placeholders": {
 		"apiKey": "ป้อนคีย์ API...",

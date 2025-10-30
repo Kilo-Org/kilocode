@@ -6,7 +6,12 @@ package ai.kilocode.jetbrains.webview
 
 import com.intellij.openapi.diagnostic.Logger
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.*
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDragEvent
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.dnd.DropTargetEvent
 import java.io.File
 import javax.swing.JComponent
 
@@ -16,52 +21,55 @@ import javax.swing.JComponent
  */
 class DragDropHandler(
     private val webViewInstance: WebViewInstance,
-    private val targetComponent: JComponent
+    private val targetComponent: JComponent,
 ) {
     private val logger = Logger.getInstance(DragDropHandler::class.java)
-    
+
     /**
      * Setup drag and drop support
      */
     fun setupDragAndDrop() {
         logger.info("Setting up drag and drop support for WebView (VSCode-compatible)")
-        
-        val dropTarget = DropTarget(targetComponent, object : DropTargetAdapter() {
-            
-            override fun dragEnter(dtde: DropTargetDragEvent) {
-                logger.info("Drag enter detected")
-                if (isShiftKeyPressed(dtde) && hasFileList(dtde)) {
-                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
-                    notifyDragState(true)
-                    logger.info("Drag accepted - Shift key pressed and files detected")
-                } else {
-                    dtde.rejectDrag()
-                    logger.info("Drag rejected - ${if (!isShiftKeyPressed(dtde)) "Shift key not pressed" else "no files detected"}")
+
+        val dropTarget = DropTarget(
+            targetComponent,
+            object : DropTargetAdapter() {
+
+                override fun dragEnter(dtde: DropTargetDragEvent) {
+                    logger.info("Drag enter detected")
+                    if (isShiftKeyPressed(dtde) && hasFileList(dtde)) {
+                        dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                        notifyDragState(true)
+                        logger.info("Drag accepted - Shift key pressed and files detected")
+                    } else {
+                        dtde.rejectDrag()
+                        logger.info("Drag rejected - ${if (!isShiftKeyPressed(dtde)) "Shift key not pressed" else "no files detected"}")
+                    }
                 }
-            }
-            
-            override fun dragOver(dtde: DropTargetDragEvent) {
-                if (isShiftKeyPressed(dtde) && hasFileList(dtde)) {
-                    dtde.acceptDrag(DnDConstants.ACTION_COPY)
-                } else {
-                    dtde.rejectDrag()
+
+                override fun dragOver(dtde: DropTargetDragEvent) {
+                    if (isShiftKeyPressed(dtde) && hasFileList(dtde)) {
+                        dtde.acceptDrag(DnDConstants.ACTION_COPY)
+                    } else {
+                        dtde.rejectDrag()
+                    }
                 }
-            }
-            
-            override fun dragExit(dte: DropTargetEvent) {
-                logger.info("Drag exit detected")
-                notifyDragState(false)
-            }
-            
-            override fun drop(dtde: DropTargetDropEvent) {
-                logger.info("Drop event detected")
-                handleFileDrop(dtde)
-            }
-        })
-        
+
+                override fun dragExit(dte: DropTargetEvent) {
+                    logger.info("Drag exit detected")
+                    notifyDragState(false)
+                }
+
+                override fun drop(dtde: DropTargetDropEvent) {
+                    logger.info("Drop event detected")
+                    handleFileDrop(dtde)
+                }
+            },
+        )
+
         logger.info("Drag and drop setup completed")
     }
-    
+
     /**
      * Check if Shift key is pressed.
      * Simulates VSCode native if (!e.shiftKey) check.
@@ -73,7 +81,7 @@ class DragDropHandler(
         // TODO: Implement real Shift key detection if needed.
         return true
     }
-    
+
     /**
      * Notify WebView drag state change.
      * Simulates VSCode drag visual feedback (isDraggingOver state).
@@ -104,7 +112,7 @@ class DragDropHandler(
             logger.error("Failed to notify drag state", e)
         }
     }
-    
+
     /**
      * Handle file drop event.
      * Based on VSCode handleDrop function.
@@ -112,22 +120,23 @@ class DragDropHandler(
     private fun handleFileDrop(dtde: DropTargetDropEvent) {
         try {
             logger.info("Processing drop event")
-            
+
             if (!hasFileList(dtde)) {
                 logger.info("Drop rejected: No file list in transferable")
                 dtde.rejectDrop()
                 notifyDragState(false)
                 return
             }
-            
+
             dtde.acceptDrop(DnDConstants.ACTION_COPY)
-            
+
             val transferable = dtde.transferable
+
             @Suppress("UNCHECKED_CAST")
             val fileList = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
-            
+
             logger.info("Files dropped: ${fileList.map { it.absolutePath }}")
-            
+
             if (fileList.isNotEmpty()) {
                 insertFilePathsIntoTextarea(fileList)
                 dtde.dropComplete(true)
@@ -135,16 +144,15 @@ class DragDropHandler(
                 logger.warn("No valid files found in drop event")
                 dtde.dropComplete(false)
             }
-            
+
             notifyDragState(false)
-            
         } catch (e: Exception) {
             logger.error("Error handling file drop", e)
             dtde.dropComplete(false)
             notifyDragState(false)
         }
     }
-    
+
     /**
      * Forward file paths to VSCode native handler.
      * Simulate native drag event for VSCode extension.
@@ -155,9 +163,9 @@ class DragDropHandler(
             val filePaths = files.map { file ->
                 file.absolutePath
             }
-            
+
             logger.info("Forwarding drag drop event to VSCode native handler: ${filePaths.size} files")
-            
+
             // Create a simulated native drag event for VSCode extension
             val jsCode = """
                 (function() {
@@ -307,21 +315,20 @@ class DragDropHandler(
                     return true;
                 })();
             """.trimIndent()
-            
+
             webViewInstance.executeJavaScript(jsCode)
-            
         } catch (e: Exception) {
             logger.error("Failed to forward drag drop event to VSCode", e)
         }
     }
-    
+
     /**
      * Check if drag data contains file list.
      */
     private fun hasFileList(dtde: DropTargetDragEvent): Boolean {
         return dtde.transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)
     }
-    
+
     /**
      * Check if drag data contains file list (Drop event version).
      */

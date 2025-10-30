@@ -2,8 +2,8 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { GhostStrategy } from "../GhostStrategy"
-import { GhostSuggestionContext } from "../types"
+import { AutoTriggerStrategy } from "../classic-auto-complete/AutoTriggerStrategy"
+import { GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
 // Mock vscode
@@ -78,13 +78,13 @@ vi.mock("diff", async (importOriginal) => {
 describe("GhostRecentOperations", () => {
 	let documentStore: GhostDocumentStore
 	let context: GhostContext
-	let strategy: GhostStrategy
+	let autoTriggerStrategy: AutoTriggerStrategy
 	let mockDocument: MockTextDocument
 
 	beforeEach(() => {
 		documentStore = new GhostDocumentStore()
 		context = new GhostContext(documentStore)
-		strategy = new GhostStrategy()
+		autoTriggerStrategy = new AutoTriggerStrategy()
 
 		// Create a mock document
 		const uri = vscode.Uri.parse("file:///test-file.ts")
@@ -115,12 +115,17 @@ describe("GhostRecentOperations", () => {
 		expect(enrichedContext.recentOperations).toBeDefined()
 		expect(enrichedContext.recentOperations?.length).toBeGreaterThan(0)
 
+		const autocompleteInput = contextToAutocompleteInput(enrichedContext)
+
 		// Generate prompt
-		const prompt = strategy.getSuggestionPrompt(enrichedContext)
+		const prefix = enrichedContext.document.getText()
+		const suffix = ""
+		const languageId = enrichedContext.document.languageId
+		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt includes the recent operations section
 		// The new strategy system uses "## Recent Typing" format
-		expect(prompt).toContain("## Recent Typing")
+		expect(userPrompt).toContain("## Recent Typing")
 	})
 
 	it("should not include recent operations in the prompt when not available", async () => {
@@ -132,12 +137,17 @@ describe("GhostRecentOperations", () => {
 		// Generate context
 		const enrichedContext = await context.generate(suggestionContext)
 
+		const autocompleteInput = contextToAutocompleteInput(enrichedContext)
+
 		// Generate prompt
-		const prompt = strategy.getSuggestionPrompt(enrichedContext)
+		const prefix = enrichedContext.document.getText()
+		const suffix = ""
+		const languageId = enrichedContext.document.languageId
+		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check
 		// that the "**Recent Changes (Diff):**" section is not present
-		expect(prompt.includes("**Recent Changes (Diff):**")).toBe(false)
+		expect(userPrompt.includes("**Recent Changes (Diff):**")).toBe(false)
 	})
 })

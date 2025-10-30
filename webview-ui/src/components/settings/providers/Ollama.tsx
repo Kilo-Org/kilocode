@@ -11,6 +11,7 @@ import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { vscode } from "@src/utils/vscode"
 
 import { inputEventTransform } from "../transforms"
+import { ModelRecord } from "@roo/api"
 
 type OllamaProps = {
 	apiConfiguration: ProviderSettings
@@ -20,9 +21,10 @@ type OllamaProps = {
 export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaProps) => {
 	const { t } = useAppTranslation()
 
-	const [ollamaModels, setOllamaModels] = useState<string[]>([])
-	const [showApiKey, setShowApiKey] = useState(false) // kilocode_change added
-	const routerModels = useRouterModels({ ollamaBaseUrl: apiConfiguration.ollamaBaseUrl }) // kilocode_change query key
+	const [ollamaModels, setOllamaModels] = useState<ModelRecord>({})
+	const routerModels = useRouterModels({
+		ollamaBaseUrl: apiConfiguration?.ollamaBaseUrl, // kilocode_change
+	})
 
 	const handleInputChange = useCallback(
 		<K extends keyof ProviderSettings, E>(
@@ -41,7 +43,7 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 		switch (message.type) {
 			case "ollamaModels":
 				{
-					const newModels = message.ollamaModels ?? []
+					const newModels = message.ollamaModels ?? {}
 					setOllamaModels(newModels)
 				}
 				break
@@ -62,7 +64,7 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 		if (!selectedModel) return false
 
 		// Check if model exists in local ollama models
-		if (ollamaModels.length > 0 && ollamaModels.includes(selectedModel)) {
+		if (Object.keys(ollamaModels).length > 0 && selectedModel in ollamaModels) {
 			return false // Model is available locally
 		}
 
@@ -87,40 +89,19 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 				className="w-full">
 				<label className="block font-medium mb-1">{t("settings:providers.ollama.baseUrl")}</label>
 			</VSCodeTextField>
-			{
-				// kilocode_change start
-				<>
-					<div className="relative">
-						<VSCodeTextField
-							value={apiConfiguration?.ollamaApiKey || ""}
-							type={showApiKey ? "text" : "password"}
-							onInput={handleInputChange("ollamaApiKey")}
-							placeholder={t("settings:providers.ollama.apiKeyPlaceholder")}
-							className="w-full pr-10">
-							<label className="block font-medium mb-1">
-								{t("settings:providers.ollama.apiKeyInfo")}{" "}
-								<span className="text-vscode-descriptionForeground font-normal">
-									({t("settings:optional")})
-								</span>
-							</label>
-						</VSCodeTextField>
-						<button
-							type="button"
-							onClick={() => setShowApiKey(!showApiKey)}
-							className="absolute right-3 top-8 text-vscode-foreground hover:text-vscode-descriptionForeground focus:outline-none">
-							{showApiKey ? (
-								<span className="codicon codicon-eye" />
-							) : (
-								<span className="codicon codicon-eye-closed" />
-							)}
-						</button>
+			{apiConfiguration?.ollamaBaseUrl && (
+				<VSCodeTextField
+					value={apiConfiguration?.ollamaApiKey || ""}
+					type="password"
+					onInput={handleInputChange("ollamaApiKey")}
+					placeholder={t("settings:placeholders.apiKey")}
+					className="w-full">
+					<label className="block font-medium mb-1">{t("settings:providers.ollama.apiKey")}</label>
+					<div className="text-xs text-vscode-descriptionForeground mt-1">
+						{t("settings:providers.ollama.apiKeyHelp")}
 					</div>
-					<div className="text-sm text-vscode-descriptionForeground mb-2">
-						{t("settings:providers.ollama.apiKeyInfo")}
-					</div>
-				</>
-				// kilocode_change end
-			}
+				</VSCodeTextField>
+			)}
 			<VSCodeTextField
 				value={apiConfiguration?.ollamaModelId || ""}
 				onInput={handleInputChange("ollamaModelId")}
@@ -138,21 +119,39 @@ export const Ollama = ({ apiConfiguration, setApiConfigurationField }: OllamaPro
 					</div>
 				</div>
 			)}
-			{ollamaModels.length > 0 && (
+			{Object.keys(ollamaModels).length > 0 && (
 				<VSCodeRadioGroup
 					value={
-						ollamaModels.includes(apiConfiguration?.ollamaModelId || "")
-							? apiConfiguration?.ollamaModelId
-							: ""
+						(apiConfiguration?.ollamaModelId || "") in ollamaModels ? apiConfiguration?.ollamaModelId : ""
 					}
 					onChange={handleInputChange("ollamaModelId")}>
-					{ollamaModels.map((model) => (
+					{Object.keys(ollamaModels).map((model) => (
 						<VSCodeRadio key={model} value={model} checked={apiConfiguration?.ollamaModelId === model}>
 							{model}
 						</VSCodeRadio>
 					))}
 				</VSCodeRadioGroup>
 			)}
+			<VSCodeTextField
+				value={apiConfiguration?.ollamaNumCtx?.toString() || ""}
+				onInput={(e: any) => {
+					const value = e.target?.value
+					if (value === "") {
+						setApiConfigurationField("ollamaNumCtx", undefined)
+					} else {
+						const numValue = parseInt(value, 10)
+						if (!isNaN(numValue) && numValue >= 128) {
+							setApiConfigurationField("ollamaNumCtx", numValue)
+						}
+					}
+				}}
+				placeholder="e.g., 4096"
+				className="w-full">
+				<label className="block font-medium mb-1">{t("settings:providers.ollama.numCtx")}</label>
+				<div className="text-xs text-vscode-descriptionForeground mt-1">
+					{t("settings:providers.ollama.numCtxHelp")}
+				</div>
+			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground">
 				{t("settings:providers.ollama.description")}
 				<span className="text-vscode-errorForeground ml-1">{t("settings:providers.ollama.warning")}</span>

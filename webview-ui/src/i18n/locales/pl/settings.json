@@ -28,11 +28,16 @@
 		"notifications": "Powiadomienia",
 		"contextManagement": "Kontekst",
 		"terminal": "Terminal",
+		"slashCommands": "Polecenia Slash",
 		"prompts": "Podpowiedzi",
+		"ui": "UI",
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
 		"display": "Wyświetl"
+	},
+	"slashCommands": {
+		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
 	},
 	"prompts": {
 		"description": "Skonfiguruj podpowiedzi wsparcia używane do szybkich działań, takich jak ulepszanie podpowiedzi, wyjaśnianie kodu i rozwiązywanie problemów. Te podpowiedzi pomagają Kilo Code zapewnić lepsze wsparcie dla typowych zadań programistycznych."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Zresetuj do wartości domyślnej (0.4)",
 		"searchMaxResultsLabel": "Maksymalna liczba wyników wyszukiwania",
 		"searchMaxResultsDescription": "Maksymalna liczba wyników wyszukiwania zwracanych podczas zapytania do indeksu bazy kodu. Wyższe wartości zapewniają więcej kontekstu, ale mogą zawierać mniej istotne wyniki.",
-		"resetToDefault": "Przywróć domyślne"
+		"resetToDefault": "Przywróć domyślne",
+		"cancelling": "Anulowanie...",
+		"cancelIndexingButton": "Anuluj indeksowanie"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Możesz skonfigurować globalny skrót dla tego ustawienia <SettingsLink>w preferencjach swojego IDE</SettingsLink>.",
 		"description": "Pozwól Kilo Code na automatyczne wykonywanie operacji bez wymagania zatwierdzenia. Włącz te ustawienia tylko jeśli w pełni ufasz AI i rozumiesz związane z tym zagrożenia bezpieczeństwa.",
 		"enabled": "Auto-zatwierdzanie włączone",
 		"toggleAriaLabel": "Przełącz automatyczne zatwierdzanie",
@@ -280,6 +288,8 @@
 		"getChutesApiKey": "Uzyskaj klucz API Chutes",
 		"fireworksApiKey": "Klucz API Fireworks",
 		"getFireworksApiKey": "Uzyskaj klucz API Fireworks",
+		"syntheticApiKey": "Klucz API Synthetic",
+		"getSyntheticApiKey": "Uzyskaj klucz API Synthetic",
 		"featherlessApiKey": "Klucz API Featherless",
 		"getFeatherlessApiKey": "Uzyskaj klucz API Featherless",
 		"ioIntelligenceApiKey": "Klucz API IO Intelligence",
@@ -304,6 +314,10 @@
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
 		"huggingFaceApiKey": "Klucz API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Uzyskaj klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Bazowy URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Użyj niestandardowego bazowego URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Ładowanie...",
 		"huggingFaceModelsCount": "({{count}} modeli)",
@@ -379,9 +393,11 @@
 		"ollama": {
 			"baseUrl": "URL bazowy (opcjonalnie)",
 			"modelId": "ID modelu",
-			"apiKey": "Klucz API",
+			"apiKey": "Klucz API Ollama",
 			"apiKeyPlaceholder": "Wprowadź swój klucz API",
-			"apiKeyInfo": "Klucz API będzie wysłany jako nagłówek Authorization",
+			"apiKeyHelp": "Opcjonalny klucz API dla uwierzytelnionych instancji Ollama lub usług chmurowych. Pozostaw puste dla instalacji lokalnych.",
+			"numCtx": "Rozmiar okna kontekstu (num_ctx)",
+			"numCtxHelp": "Zastępuje domyślny rozmiar okna kontekstu modelu. Pozostaw puste, aby użyć konfiguracji Modelfile modelu. Minimalna wartość to 128.",
 			"description": "Ollama pozwala na lokalne uruchamianie modeli na twoim komputerze. Aby rozpocząć, zapoznaj się z przewodnikiem szybkiego startu.",
 			"warning": "Uwaga: Kilo Code używa złożonych podpowiedzi i działa najlepiej z modelami Claude. Modele o niższych możliwościach mogą nie działać zgodnie z oczekiwaniami."
 		},
@@ -747,13 +763,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Włącz równoczesne edycje plików",
-			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików."
+			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Włącz Morph Fast Apply",
-			"description": "Gdy włączone, Kilo Code może edytować pliki używając Morph Fast Apply. Wymaga Dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
-			"apiKey": "Klucz API Morph (opcjonalny)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalny)"
+			"name": "Włącz Fast Apply",
+			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
+			"apiKey": "Klucz API Morph (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"modelLabel": "Wybór modelu",
+			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
+			"models": {
+				"auto": "Automatyczny (Domyślny - wybiera najlepszy dostępny)",
+				"morphFast": "Morph v3 Fast (Szybszy, niższy koszt)",
+				"morphLarge": "Morph v3 Large (Bardziej zaawansowany)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edycja w tle",
@@ -860,6 +884,7 @@
 			"regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
 		},
 		"modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model.",
+		"modelDeprecated": "Ten model nie jest już dostępny. Wybierz inny model.",
 		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
 		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
 		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
@@ -902,6 +927,26 @@
 		"taskTimeline": {
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"sendMessageOnEnter": {
+			"label": "Wyślij wiadomość klawiszem Enter",
+			"description": "Gdy włączone, naciśnij Enter, aby wysłać i Shift+Enter, aby dodać nową linię. Wyłącz, aby użyć Shift+Enter do wysłania."
+		},
+		"costThreshold": {
+			"currentValue": "Aktualny próg: ${{value}}",
+			"label": "Ukryj koszt poniżej progu",
+			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
+		},
+		"showTimestamps": {
+			"label": "Pokaż znaczniki czasu",
+			"description": "Pokaż znacznik czasu dla każdej wiadomości w widoku czatu"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Pokaż animację marginesu podczas autouzupełniania",
+			"description": "Wyświetl animowany wskaźnik w marginesie edytora, gdy autouzupełnianie jest uruchomione",
+			"preview": "Podgląd animacji"
 		}
 	},
 	"includeMaxOutputTokens": "Uwzględnij maksymalne tokeny wyjściowe",
@@ -921,6 +966,12 @@
 			"input": "Wejście",
 			"output": "Wyjście",
 			"cacheReads": "Odczyty z pamięci podręcznej"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Domyślnie zwijaj komunikaty o myśleniu",
+			"description": "Gdy włączone, bloki myślenia będą domyślnie zwinięte, dopóki nie wejdziesz z nimi w interakcję"
 		}
 	}
 }

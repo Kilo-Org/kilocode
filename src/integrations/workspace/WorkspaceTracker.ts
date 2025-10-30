@@ -34,6 +34,7 @@ class WorkspaceTracker {
 		if (this.prevWorkSpacePath !== tempCwd) {
 			return
 		}
+		this.filePaths.clear() // kilocode_change: initializeFilePaths is called multiple times, clear to avoid exceeding MAX_INITIAL_FILES
 		files.slice(0, MAX_INITIAL_FILES).forEach((file) => this.filePaths.add(this.normalizeFilePath(file)))
 		this.workspaceDidUpdate()
 	}

@@ -30,9 +30,9 @@ export async function getCommitRangeForNewCompletion(task: Task): Promise<Commit
 				: task.clineMessages
 
 		const firstCompletionIndex = messages.findIndex((msg) => msg.type === "say" && msg.say === "completion_result")
-		const firstCommit = messages
+		const messageWithFirstCommit = messages
 			.slice(0, firstCompletionIndex >= 0 ? firstCompletionIndex : messages.length)
-			.find((msg) => msg.type === "say" && msg.say === "checkpoint_saved")?.text
+			.find((msg) => msg.type === "say" && msg.say === "checkpoint_saved")
 
 		const previousCompletionIndex = findLast(
 			messages,
@@ -57,14 +57,17 @@ export async function getCommitRangeForNewCompletion(task: Task): Promise<Commit
 				: -1
 
 		const toCommit = lastCheckpointIndex >= 0 ? messages[lastCheckpointIndex].text : undefined
-		const fromCommit = previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].text : firstCommit
+		const fromCommit =
+			previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].text : messageWithFirstCommit?.text
+		const fromTimeStamp =
+			previousCheckpointIndex >= 0 ? messages[previousCheckpointIndex].ts : messageWithFirstCommit?.ts
 
 		if (!toCommit || !fromCommit || fromCommit === toCommit) {
 			console.log(`getCommitRangeForNewCompletion: invalid commit range '${fromCommit}' to '${toCommit}'.`)
 			return undefined
 		}
 
-		const result = { to: toCommit, from: fromCommit }
+		const result = { from: fromCommit, fromTimeStamp: fromTimeStamp, to: toCommit }
 		if ((await service.getDiff(result)).length === 0) {
 			console.log(`getCommitRangeForNewCompletion: no changes in commit range '${fromCommit}' to '${toCommit}'.`)
 			return undefined

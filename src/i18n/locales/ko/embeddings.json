@@ -61,6 +61,7 @@
 		"fileWatcherStopped": "파일 감시자가 중지되었습니다.",
 		"failedDuringInitialScan": "초기 스캔 중 실패: {{errorMessage}}",
 		"unknownError": "알 수 없는 오류",
-		"indexingRequiresWorkspace": "인덱싱에는 열린 워크스페이스 폴더가 필요합니다"
+		"indexingRequiresWorkspace": "인덱싱에는 열린 워크스페이스 폴더가 필요합니다",
+		"indexingCancelled": "인덱싱이 취소되었습니다"
 	}
 }

@@ -1,0 +1,5 @@
+# Description: Should complete Ruby initialize method with instance variables
+class User
+	def initialize(username, email, role)
+		@username = username
+		@email = <<<AUTOCOMPLETE_HERE>>>

@@ -6,9 +6,10 @@ import { getModelIdKey, getSelectedModelId } from "../hooks/useSelectedModel"
 import { useProviderModels } from "../hooks/useProviderModels"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { isAlphaPeriodEndedError } from "@roo/kilocode/errorUtils"
+import { isAlphaPeriodEndedError, isModelNotAllowedForTeamError } from "@roo/kilocode/errorUtils"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
+import i18next from "i18next"
 
 type InnerMessage = {
 	modelId?: string
@@ -16,6 +17,17 @@ type InnerMessage = {
 		status?: number
 		message?: string
 	}
+}
+
+function warningText(innerMessage?: InnerMessage) {
+	const unavailableModel = innerMessage?.modelId || "(unknown)"
+	if (isAlphaPeriodEndedError(innerMessage?.error)) {
+		return i18next.t("kilocode:invalidModel.alphaPeriodEnded", { model: unavailableModel })
+	}
+	if (isModelNotAllowedForTeamError(innerMessage?.error)) {
+		return i18next.t("kilocode:invalidModel.notAllowedForTeam", { model: unavailableModel })
+	}
+	return i18next.t("kilocode:invalidModel.modelUnavailable", { model: unavailableModel })
 }
 
 export const InvalidModelWarning = ({ message, isLast }: { message: ClineMessage; isLast: boolean }) => {
@@ -45,8 +57,6 @@ export const InvalidModelWarning = ({ message, isLast }: { message: ClineMessage
 
 	const didAlphaPeriodEnd = isAlphaPeriodEndedError(innerMessage?.error)
 
-	const unavailableModel = innerMessage?.modelId || "(unknown)"
-
 	const isAlreadyChanged = !!(
 		selectedModelId === defaultModelId ||
 		(innerMessage?.modelId && innerMessage.modelId !== selectedModelId)
@@ -57,11 +67,7 @@ export const InvalidModelWarning = ({ message, isLast }: { message: ClineMessage
 
 	return (
 		<div className="bg-vscode-panel-border flex flex-col gap-3 p-3 text-base">
-			<div>
-				{didAlphaPeriodEnd
-					? t("kilocode:invalidModel.alphaPeriodEnded", { model: unavailableModel })
-					: t("kilocode:invalidModel.modelUnavailable", { model: unavailableModel })}
-			</div>
+			<div>{warningText(innerMessage)}</div>
 			{isLast && !isLoading && !continueWasClicked && (
 				<>
 					<VSCodeButton

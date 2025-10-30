@@ -1,7 +1,10 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import type { ModelInfo } from "@roo-code/types"
+import {
+	getActiveToolUseStyle, // kilocode_change
+	type ModelInfo,
+} from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 import { ApiStream } from "../transform/stream"
@@ -12,6 +15,9 @@ import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 import { handleOpenAIError } from "./utils/openai-error-handler"
+import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
+import { getApiRequestTimeout } from "./utils/timeout-config" // kilocode_change
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 type BaseOpenAiCompatibleProviderOptions<ModelName extends string> = ApiHandlerOptions & {
 	providerName: string
@@ -57,10 +63,15 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			throw new Error("API key is required")
 		}
 
+		const timeout = getApiRequestTimeout() // kilocode_change
 		this.client = new OpenAI({
 			baseURL,
 			apiKey: this.options.apiKey,
 			defaultHeaders: DEFAULT_HEADERS,
+			// kilocode_change start
+			timeout: timeout,
+			fetch: fetchWithTimeout(timeout),
+			// kilocode_change end
 		})
 	}
 
@@ -75,24 +86,22 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			info: { maxTokens: max_tokens },
 		} = this.getModel()
 
+		const temperature = this.options.modelTemperature ?? this.defaultTemperature
+
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
 			max_tokens,
+			temperature,
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
 		}
 
-		// Only include temperature if explicitly set
-		if (
-			this.options.modelTemperature !== undefined &&
-			this.options.modelTemperature !== null // kilocode_change: some providers like Chutes don't like this
-		) {
-			params.temperature = this.options.modelTemperature
-		}
-
 		try {
-			return this.client.chat.completions.create(params, requestOptions)
+			return this.client.chat.completions.create(
+				addNativeToolCallsToParams(params, this.options, metadata), // kilocode_change
+				requestOptions,
+			)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}
@@ -108,6 +117,8 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		for await (const chunk of stream) {
 			verifyFinishReason(chunk.choices[0]) // kilocode_change
 			const delta = chunk.choices[0]?.delta
+
+			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 			if (delta?.content) {
 				yield {

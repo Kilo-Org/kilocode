@@ -24,6 +24,7 @@ const sidebars: SidebarsConfig = {
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
 				"basic-usage/using-modes",
+				"basic-usage/autocomplete",
 				"basic-usage/context-mentions",
 				{
 					type: "category",
@@ -56,6 +57,7 @@ const sidebars: SidebarsConfig = {
 								"providers/claude-code",
 								"providers/deepseek",
 								"providers/fireworks",
+								"providers/synthetic", // kilocode_change
 								"providers/vertex",
 								"providers/glama",
 								"providers/gemini",
@@ -67,9 +69,11 @@ const sidebars: SidebarsConfig = {
 								"providers/openai",
 								"providers/openai-compatible",
 								"providers/openrouter",
+								"providers/ovhcloud", // kilocode_change
 								"providers/requesty",
 								"providers/unbound",
 								"providers/v0",
+								"providers/vercel-ai-gateway",
 								"providers/virtual-quota-fallback",
 								"providers/vscode-lm",
 								"providers/xai",
@@ -77,7 +81,7 @@ const sidebars: SidebarsConfig = {
 						},
 					],
 				},
-				"basic-usage/adding-tokens",
+				"basic-usage/adding-credits",
 			],
 		},
 		{
@@ -90,6 +94,25 @@ const sidebars: SidebarsConfig = {
 				"features/enhance-prompt",
 				"features/checkpoints",
 				"tips-and-tricks",
+			],
+		},
+		{
+			type: "category",
+			label: "Kilo for Teams & Enterprise",
+			items: [
+				"seats/about",
+				"seats/getting-started",
+				"seats/dashboard",
+				"seats/analytics",
+				"seats/team-management",
+				"seats/custom-modes",
+				"seats/billing",
+				{
+					type: "category",
+					label: "Enterprise-Only Features",
+					items: ["seats/enterprise/SSO", "seats/enterprise/model-access", "seats/enterprise/audit-logs"],
+				},
+				"seats/migration",
 			],
 		},
 		{
@@ -126,6 +149,7 @@ const sidebars: SidebarsConfig = {
 						"features/footgun-prompting",
 					],
 				},
+				"features/auto-launch-configuration",
 				"features/experimental/experimental-features",
 			],
 		},
@@ -177,6 +201,7 @@ const sidebars: SidebarsConfig = {
 				"features/tools/write-to-file",
 			],
 		},
+		"cli",
 	],
 }
 

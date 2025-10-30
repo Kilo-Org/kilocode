@@ -14,7 +14,7 @@ import { ExtensionStateContextProvider, useExtensionState } from "./context/Exte
 import ChatView, { ChatViewRef } from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import SettingsView, { SettingsViewRef } from "./components/settings/SettingsView"
-import WelcomeView from "./components/kilocode/Welcome/WelcomeView" // kilocode_change
+import WelcomeView from "./components/kilocode/welcome/WelcomeView" // kilocode_change
 import ProfileView from "./components/kilocode/profile/ProfileView" // kilocode_change
 import McpView from "./components/mcp/McpView"
 import { MarketplaceView } from "./components/marketplace/MarketplaceView"
@@ -31,6 +31,7 @@ import { useAddNonInteractiveClickListener } from "./components/ui/hooks/useNonI
 import { TooltipProvider } from "./components/ui/tooltip"
 import { STANDARD_TOOLTIP_DELAY } from "./components/ui/standard-tooltip"
 import { useKiloIdentity } from "./utils/kilocode/useKiloIdentity"
+import { MemoryWarningBanner } from "./kilocode/MemoryWarningBanner"
 
 type Tab = "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "account" | "cloud" | "profile" // kilocode_change: add "profile"
 
@@ -79,8 +80,12 @@ const App = () => {
 		telemetrySetting,
 		telemetryKey,
 		machineId,
-		// cloudUserInfo, // kilocode_change not used
-		// cloudIsAuthenticated, // kilocode_change not used
+		// kilocode_change start: unused
+		// cloudUserInfo,
+		// cloudIsAuthenticated,
+		// cloudApiUrl,
+		// cloudOrganizations,
+		// kilocode_change end
 		renderContext,
 		mdmCompliant,
 		apiConfiguration, // kilocode_change
@@ -159,7 +164,9 @@ const App = () => {
 				if (message.action === "switchTab" && message.tab) {
 					const targetTab = message.tab as Tab
 					switchTab(targetTab)
-					setCurrentSection(undefined)
+					// Extract targetSection from values if provided
+					const targetSection = message.values?.section as string | undefined
+					setCurrentSection(targetSection)
 					setCurrentMarketplaceTab(undefined)
 				} else {
 					// Handle other actions using the mapping
@@ -209,11 +216,11 @@ const App = () => {
 	useEvent("message", onMessage)
 
 	useEffect(() => {
-		if (shouldShowAnnouncement) {
+		if (shouldShowAnnouncement && tab === "chat") {
 			setShowAnnouncement(true)
 			vscode.postMessage({ type: "didShowAnnouncement" })
 		}
-	}, [shouldShowAnnouncement])
+	}, [shouldShowAnnouncement, tab])
 
 	// kilocode_change start
 	const telemetryDistinctId = useKiloIdentity(apiConfiguration?.kilocodeToken ?? "", machineId ?? "")
@@ -273,6 +280,8 @@ const App = () => {
 		<WelcomeView />
 	) : (
 		<>
+			{/* kilocode_change: add MemoryWarningBanner */}
+			<MemoryWarningBanner />
 			{tab === "modes" && <ModesView onDone={() => switchTab("chat")} />}
 			{tab === "mcp" && <McpView onDone={() => switchTab("chat")} />}
 			{tab === "history" && <HistoryView onDone={() => switchTab("chat")} />}
@@ -295,6 +304,7 @@ const App = () => {
 					userInfo={cloudUserInfo}
 					isAuthenticated={cloudIsAuthenticated}
 					cloudApiUrl={cloudApiUrl}
+					organizations={cloudOrganizations}
 					onDone={() => switchTab("chat")}
 				/>
 			)} */}

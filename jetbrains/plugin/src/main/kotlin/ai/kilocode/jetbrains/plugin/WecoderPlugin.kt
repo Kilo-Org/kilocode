@@ -4,34 +4,41 @@
 
 package ai.kilocode.jetbrains.plugin
 
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
-
-import com.intellij.openapi.components.Service
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.startup.StartupActivity
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.Disposable
 import ai.kilocode.jetbrains.core.ExtensionProcessManager
 import ai.kilocode.jetbrains.core.ExtensionSocketServer
+import ai.kilocode.jetbrains.core.ExtensionUnixDomainSocketServer
+import ai.kilocode.jetbrains.core.ISocketServer
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
-import ai.kilocode.jetbrains.webview.WebViewManager
-import ai.kilocode.jetbrains.workspace.WorkspaceFileChangeManager
-import java.util.concurrent.CompletableFuture
-import kotlinx.coroutines.*
-import java.util.Properties
-import java.io.InputStream
-import com.intellij.ide.plugins.PluginManagerCore
-import com.intellij.openapi.extensions.PluginId
-import com.intellij.openapi.util.SystemInfo
-import com.intellij.ui.jcef.JBCefApp
-import com.intellij.openapi.application.ApplicationInfo
-import ai.kilocode.jetbrains.core.*
 import ai.kilocode.jetbrains.util.ExtensionUtils
 import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.util.PluginResourceUtil
+import ai.kilocode.jetbrains.webview.WebViewManager
+import ai.kilocode.jetbrains.workspace.WorkspaceFileChangeManager
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.Service
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
+import com.intellij.openapi.project.ProjectManagerListener
+import com.intellij.openapi.startup.StartupActivity
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.SystemInfo
+import com.intellij.ui.jcef.JBCefApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.File
+import java.io.InputStream
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
 
 /**
  * WeCode IDEA plugin entry class
@@ -40,6 +47,53 @@ import java.io.File
 class WecoderPlugin : StartupActivity.DumbAware {
     companion object {
         private val LOG = Logger.getInstance(WecoderPlugin::class.java)
+
+        // Project manager listener for handling project lifecycle events
+        private val projectManagerListener = object : ProjectManagerListener {
+            override fun projectOpened(project: Project) {
+                LOG.info("Project opened: ${project.name}")
+                // Initialize plugin service for newly opened project
+                try {
+                    val pluginService = getInstance(project)
+                    pluginService.initialize(project)
+                } catch (e: Exception) {
+                    LOG.error("Failed to initialize plugin for opened project: ${project.name}", e)
+                }
+            }
+
+            override fun projectClosed(project: Project) {
+                LOG.info("Project closed: ${project.name}")
+                // Clean up resources for closed project
+                try {
+                    val pluginService = getInstance(project)
+                    pluginService.dispose()
+                } catch (e: Exception) {
+                    LOG.error("Failed to dispose plugin for closed project: ${project.name}", e)
+                }
+            }
+
+            override fun projectClosing(project: Project) {
+                LOG.info("Project closing: ${project.name}")
+                // Perform any pre-close cleanup
+                try {
+                    // Notify WebViewManager about impending project close
+                    project.getService(WebViewManager::class.java).onProjectSwitch()
+                } catch (e: Exception) {
+                    LOG.error("Failed to handle project closing for: ${project.name}", e)
+                }
+            }
+        }
+
+        init {
+            // Register the project manager listener
+            try {
+                val messageBus = ApplicationManager.getApplication().messageBus
+                messageBus.connect().subscribe(ProjectManager.TOPIC, projectManagerListener)
+                LOG.info("Project manager listener registered successfully")
+            } catch (e: Exception) {
+                LOG.error("Failed to register project manager listener", e)
+            }
+        }
 
         /**
          * Get plugin service instance
@@ -65,30 +119,33 @@ class WecoderPlugin : StartupActivity.DumbAware {
         val osName = System.getProperty("os.name")
         val osVersion = System.getProperty("os.version")
         val osArch = System.getProperty("os.arch")
-        
+
         LOG.info(
             "Initializing Kilo Code plugin for project: ${project.name}, " +
-            "OS: $osName $osVersion ($osArch), " +
-            "IDE: ${appInfo.fullApplicationName} (build ${appInfo.build}), " +
-            "Plugin version: $pluginVersion, " +
-            "JCEF supported: ${JBCefApp.isSupported()}"
+                "OS: $osName $osVersion ($osArch), " +
+                "IDE: ${appInfo.fullApplicationName} (build ${appInfo.build}), " +
+                "Plugin version: $pluginVersion, " +
+                "JCEF supported: ${JBCefApp.isSupported()}",
         )
 
         try {
             // Initialize plugin service
             val pluginService = getInstance(project)
             pluginService.initialize(project)
-            
+
             // Initialize WebViewManager and register to project Disposer
             val webViewManager = project.getService(WebViewManager::class.java)
             Disposer.register(project, webViewManager)
-            
+
             // Register project-level resource disposal
-            Disposer.register(project, Disposable {
-                LOG.info("Disposing Kilo Code plugin for project: ${project.name}")
-                pluginService.dispose()
-                SystemObjectProvider.dispose()
-            })
+            Disposer.register(
+                project,
+                Disposable {
+                    LOG.info("Disposing Kilo Code plugin for project: ${project.name}")
+                    pluginService.dispose()
+                    // SystemObjectProvider is now project-scoped and will be disposed automatically
+                },
+            )
 
             LOG.info("Kilo Code plugin initialized successfully for project: ${project.name}")
         } catch (e: Exception) {
@@ -100,22 +157,24 @@ class WecoderPlugin : StartupActivity.DumbAware {
 /**
  * Debug mode enum
  */
-enum class DEBUG_MODE {
-    ALL,    // All debug modes
-    IDEA,   // Only IDEA plugin debug
-    NONE;   // Debug not enabled
-    
+enum class DebugMode {
+    ALL, // All debug modes
+    IDEA, // Only IDEA plugin debug
+    NONE, // Debug not enabled
+    ;
+
     companion object {
         /**
          * Parse debug mode from string
          * @param value String value
          * @return Corresponding debug mode
          */
-        fun fromString(value: String): DEBUG_MODE {
+        fun fromString(value: String): DebugMode {
             return when (value.lowercase()) {
                 "all" -> ALL
                 "idea" -> IDEA
-                "true" -> ALL  // backward compatibility
+                "true" -> ALL // backward compatibility
+                "none", "" -> NONE
                 else -> NONE
             }
         }
@@ -128,14 +187,14 @@ enum class DEBUG_MODE {
 @Service(Service.Level.PROJECT)
 class WecoderPluginService(private var currentProject: Project) : Disposable {
     private val LOG = Logger.getInstance(WecoderPluginService::class.java)
-    
+
     // Whether initialized
     @Volatile
     private var isInitialized = false
-    
+
     // Plugin initialization complete flag
-    private val initializationComplete = CompletableFuture<Boolean>()
-    
+    private var initializationComplete = CompletableFuture<Boolean>()
+
     // Coroutine scope
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -143,21 +202,20 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
     private val socketServer = ExtensionSocketServer()
     private val udsSocketServer = ExtensionUnixDomainSocketServer()
     private val processManager = ExtensionProcessManager()
-    
+
     companion object {
         // Debug mode switch
         @Volatile
-        private var DEBUG_TYPE: DEBUG_MODE = ai.kilocode.jetbrains.plugin.DEBUG_MODE.NONE
+        private var DEBUG_TYPE: DebugMode = DebugMode.NONE
 
         @Volatile
         private var DEBUG_RESOURCE: String? = null
-        
+
         // Debug mode connection address
         private const val DEBUG_HOST = "127.0.0.1"
-        
+
         // Debug mode connection port
         private const val DEBUG_PORT = 51234
-
 
         // Initialize configuration at class load
         init {
@@ -165,22 +223,22 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
                 // Read debug mode setting from config file
                 val properties = Properties()
                 val configStream: InputStream? = WecoderPluginService::class.java.getResourceAsStream("/ai/kilocode/jetbrains/plugin/config/plugin.properties")
-                
+
                 if (configStream != null) {
                     properties.load(configStream)
                     configStream.close()
-                    
+
                     // Read debug mode config
                     val debugModeStr = properties.getProperty("debug.mode", "none").lowercase()
-                    DEBUG_TYPE = DEBUG_MODE.fromString(debugModeStr)
+                    DEBUG_TYPE = DebugMode.fromString(debugModeStr)
                     DEBUG_RESOURCE = properties.getProperty("debug.resource", null)
 
-                    Logger.getInstance(WecoderPluginService::class.java).info("Read debug mode from config file: $DEBUG_MODE")
+                    Logger.getInstance(WecoderPluginService::class.java).info("Read debug mode from config file: $DEBUG_TYPE")
                 } else {
-                    Logger.getInstance(WecoderPluginService::class.java).warn("Cannot load config file, use default debug mode: $DEBUG_MODE")
+                    Logger.getInstance(WecoderPluginService::class.java).warn("Cannot load config file, use default debug mode: $DEBUG_TYPE")
                 }
             } catch (e: Exception) {
-                Logger.getInstance(WecoderPluginService::class.java).warn("Error reading config file, use default debug mode: $DEBUG_MODE", e)
+                Logger.getInstance(WecoderPluginService::class.java).warn("Error reading config file, use default debug mode: $DEBUG_TYPE", e)
             }
         }
 
@@ -189,7 +247,7 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
          * @return Debug mode
          */
         @JvmStatic
-        fun getDebugMode(): DEBUG_MODE {
+        fun getDebugMode(): DebugMode {
             return DEBUG_TYPE
         }
 
@@ -202,27 +260,41 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
             return DEBUG_RESOURCE
         }
     }
-    
+
     /**
      * Initialize plugin service
      */
     fun initialize(project: Project) {
-        // DEBUG_MODE is no longer set directly in code, now read from config file
-        if (isInitialized) {
-            LOG.info("WecoderPluginService already initialized")
+        // Check if already initialized for the same project
+        if (isInitialized && this.currentProject == project) {
+            LOG.info("WecoderPluginService already initialized for project: ${project.name}")
             return
         }
-        
-        LOG.info("Initializing WecoderPluginService, debug mode: $DEBUG_TYPE")
+
+        // If initialized for a different project, clean up first
+        if (isInitialized && this.currentProject != project) {
+            LOG.info("Switching projects from ${this.currentProject?.name} to ${project.name}, cleaning up previous state")
+
+            // Notify WebViewManager about project switch
+            this.currentProject?.getService(WebViewManager::class.java)?.onProjectSwitch()
+
+            cleanup()
+            isInitialized = false
+            initializationComplete = CompletableFuture<Boolean>() // Reset completion flag
+        }
+
+        LOG.info("Initializing WecoderPluginService for project: ${project.name}, debug mode: $DEBUG_TYPE")
+
         // Initialize system object provider
-        SystemObjectProvider.initialize(project)
+        var systemObjectProvider = project.getService(SystemObjectProvider::class.java)
+        systemObjectProvider.initialize(project)
         this.currentProject = project
         socketServer.project = project
         udsSocketServer.project = project
-        
+
         // Register to system object provider
-        SystemObjectProvider.register("pluginService", this)
-        
+        systemObjectProvider.register("pluginService", this)
+
         // Start initialization in background thread
         coroutineScope.launch {
             try {
@@ -233,33 +305,33 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
                 // Initialize service registration
                 project.getService(ServiceProxyRegistry::class.java).initialize()
 //                ServiceProxyRegistry.getInstance().initialize()
-                
-                if (DEBUG_TYPE == ai.kilocode.jetbrains.plugin.DEBUG_MODE.ALL) {
+
+                if (DEBUG_TYPE == DebugMode.ALL) {
                     // Debug mode: directly connect to extension process in debug
                     LOG.info("Running in debug mode: ${DEBUG_TYPE}, will directly connect to $DEBUG_HOST:$DEBUG_PORT")
-                    
+
                     // connet to debug port
                     socketServer.connectToDebugHost(DEBUG_HOST, DEBUG_PORT)
-                    
+
                     // Initialization successful
                     isInitialized = true
                     initializationComplete.complete(true)
-                    LOG.info("Debug mode connection successful, WecoderPluginService initialized")
+                    LOG.info("Debug mode connection successful, WecoderPluginService initialized for project: ${project.name}")
                 } else {
                     // Normal mode: start Socket server and extension process
                     // 1. Start Socket server according to system, use UDS except on Windows
                     val server: ISocketServer = if (SystemInfo.isWindows) socketServer else udsSocketServer
                     val portOrPath = server.start(projectPath)
                     if (!ExtensionUtils.isValidPortOrPath(portOrPath)) {
-                        LOG.error("Failed to start socket server")
+                        LOG.error("Failed to start socket server for project: ${project.name}")
                         initializationComplete.complete(false)
                         return@launch
                     }
 
-                    LOG.info("Socket server started on: $portOrPath")
+                    LOG.info("Socket server started on: $portOrPath for project: ${project.name}")
                     // 2. Start extension process
                     if (!processManager.start(portOrPath)) {
-                        LOG.error("Failed to start extension process")
+                        LOG.error("Failed to start extension process for project: ${project.name}")
                         server.stop()
                         initializationComplete.complete(false)
                         return@launch
@@ -267,10 +339,10 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
                     // Initialization successful
                     isInitialized = true
                     initializationComplete.complete(true)
-                    LOG.info("WecoderPluginService initialization completed")
+                    LOG.info("WecoderPluginService initialization completed for project: ${project.name}")
                 }
             } catch (e: Exception) {
-                LOG.error("Error during WecoderPluginService initialization", e)
+                LOG.error("Error during WecoderPluginService initialization for project: ${project.name}", e)
                 cleanup()
                 initializationComplete.complete(false)
             }
@@ -309,7 +381,7 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
                             Files.move(
                                 suffixedFile.toPath(),
                                 originalFile.toPath(),
-                                StandardCopyOption.REPLACE_EXISTING
+                                StandardCopyOption.REPLACE_EXISTING,
                             )
                             originalFile.setExecutable(true)
                         }
@@ -326,63 +398,85 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
     fun waitForInitialization(): Boolean {
         return initializationComplete.get()
     }
-    
+
     /**
      * Clean up resources
      */
     private fun cleanup() {
+        LOG.info("Starting cleanup for project: ${currentProject?.name}")
+
+        // First, stop the extension process to prevent new connections
         try {
-            // Stop extension process, only needed in non-debug mode
-            if (DEBUG_TYPE == ai.kilocode.jetbrains.plugin.DEBUG_MODE.NONE) {
+            if (DEBUG_TYPE == DebugMode.NONE) {
+                LOG.info("Stopping extension process")
                 processManager.stop()
             }
         } catch (e: Exception) {
             LOG.error("Error stopping process manager", e)
         }
-        
+
+        // Wait a bit for the process to fully stop
         try {
-            // Stop Socket server
+            Thread.sleep(500)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
+        // Then stop socket servers - this will close all client connections
+        try {
+            LOG.info("Stopping socket servers")
             socketServer.stop()
             udsSocketServer.stop()
         } catch (e: Exception) {
             LOG.error("Error stopping socket server", e)
         }
 
-        // Unregister workspace file change listener
-        currentProject.getService(WorkspaceFileChangeManager::class.java).dispose()
-//        WorkspaceFileChangeManager.disposeInstance()
-        
+        // Wait for socket connections to be fully closed
+        try {
+            Thread.sleep(1000)
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
+
+        // Finally, clean up workspace file change listener
+        try {
+            currentProject?.getService(WorkspaceFileChangeManager::class.java)?.dispose()
+        } catch (e: Exception) {
+            LOG.error("Error disposing workspace file change manager", e)
+        }
+
         isInitialized = false
+        LOG.info("Cleanup completed for project: ${currentProject?.name}")
     }
-    
+
     /**
      * Get whether initialized
      */
     fun isInitialized(): Boolean {
         return isInitialized
     }
-    
+
     /**
      * Get Socket server
      */
     fun getSocketServer(): ExtensionSocketServer {
         return socketServer
     }
-    
+
     /**
      * Get process manager
      */
     fun getProcessManager(): ExtensionProcessManager {
         return processManager
     }
-    
+
     /**
      * Get current project
      */
     fun getCurrentProject(): Project? {
         return currentProject
     }
-    
+
     /**
      * Close service
      */
@@ -390,17 +484,17 @@ class WecoderPluginService(private var currentProject: Project) : Disposable {
         if (!isInitialized) {
             return
         }
-        
+
         LOG.info("Disposing WecoderPluginService")
 
         currentProject?.getService(WebViewManager::class.java)?.dispose()
-        
+
         // Cancel all coroutines
         coroutineScope.cancel()
-        
+
         // Clean up resources
         cleanup()
-        
+
         LOG.info("WecoderPluginService disposed")
     }
 }

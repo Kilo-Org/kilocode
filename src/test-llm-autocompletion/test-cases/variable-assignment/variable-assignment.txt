@@ -1,0 +1,2 @@
+# Description: Should suggest common variable assignments
+const userName = <<<AUTOCOMPLETE_HERE>>>

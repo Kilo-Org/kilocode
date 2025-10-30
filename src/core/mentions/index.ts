@@ -20,6 +20,7 @@ import { RooIgnoreController } from "../ignore/RooIgnoreController"
 import { getCommand, type Command } from "../../services/command/commands"
 
 import { t } from "../../i18n"
+import { isSupportedImageFormat } from "../tools/helpers/imageHelpers" // kilocode_change
 
 function getUrlErrorMessage(error: unknown): string {
 	const errorMessage = error instanceof Error ? error.message : String(error)
@@ -277,6 +278,11 @@ async function getFileOrFolderContent(
 			if (rooIgnoreController && !rooIgnoreController.validateAccess(absPath)) {
 				return `(File ${mentionPath} is ignored by .kilocodeignore)`
 			}
+			// kilocode_change start
+			if (isSupportedImageFormat(path.extname(absPath))) {
+				return `(Image of size ${stats.size} bytes, the read_file tool may be able to read it)`
+			}
+			// kilocode_change end
 			try {
 				const content = await extractTextFromFile(absPath, maxReadFileLine)
 				return content

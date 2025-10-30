@@ -4,6 +4,7 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.logging.LogLevelConfig
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 
@@ -12,13 +13,13 @@ import com.intellij.openapi.diagnostic.Logger
  * Corresponds to the IRemoteConsoleLog interface in TypeScript.
  */
 data class RemoteConsoleLog(
-    val type: String,        // Log type: "log", "warn", "error", "info", "debug"
-    val severity: Int,       // Severity level
-    val args: List<Any?>,    // Log arguments
+    val type: String, // Log type: "log", "warn", "error", "info", "debug"
+    val severity: Int, // Severity level
+    val args: List<Any?>, // Log arguments
     val source: String? = null, // Log source
-    val line: Int? = null,      // Source line number
+    val line: Int? = null, // Source line number
     val columnNumber: Int? = null, // Column number
-    val timestamp: Long = System.currentTimeMillis() // Timestamp
+    val timestamp: Long = System.currentTimeMillis(), // Timestamp
 )
 
 /**
@@ -31,7 +32,7 @@ interface MainThreadConsoleShape : Disposable {
      * @param msg Log message object
      */
     fun logExtensionHostMessage(msg: Map<String, Any>)
-    
+
     /**
      * Releases resources.
      */
@@ -47,7 +48,7 @@ class MainThreadConsole : MainThreadConsoleShape {
      */
     override fun logExtensionHostMessage(msg: Map<String, Any>) {
         val type = msg["type"]
-        val severity = msg["severity"]
+        val severity = msg["severity"] as? String ?: "info"
         val arguments = msg["arguments"]?.let { args ->
             if (args is List<*>) {
                 args.joinToString(", ") { it.toString() }
@@ -56,16 +57,22 @@ class MainThreadConsole : MainThreadConsoleShape {
             }
         } ?: return
 
+        // Check if this log level should be logged based on current debug mode
+        if (!LogLevelConfig.shouldLog(severity)) {
+            return
+        }
+
         try {
             when (severity) {
-//                "log", "info" -> logger.info("[Extension Host] $arguments")
-                "warn" -> logger.warn("[Extension Host] $arguments")
-                "error" -> logger.warn("[Extension Host] ERROR: $arguments")
-//                "debug" -> logger.debug("[Extension Host] $arguments")
-//                else -> logger.info("[Extension Host] $arguments")
+                "log", "info" -> logger.info("[Extension Host] $arguments")
+                "warn" -> logger.warn("[Host] $arguments")
+                "error" -> logger.warn("[ERROR]: $arguments")
+                "debug" -> logger.debug("[Host] $arguments")
+                else -> logger.info("[Host] $arguments")
             }
         } catch (e: Exception) {
-            logger.error("Failed to process extension host log message", e)
+            val errorMsg = "Failed to process extension host log message"
+            logger.error(errorMsg, e) // IntelliJ logger handles both file and terminal
         }
     }
 

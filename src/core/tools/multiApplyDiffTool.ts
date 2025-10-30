@@ -2,7 +2,10 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import {
+	DEFAULT_WRITE_DELAY_MS,
+	getActiveToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -15,8 +18,9 @@ import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "./applyDiffTool"
+import { applyNativeDiffTool } from "./kilocode/applyNativeDiffTool"
 
-interface DiffOperation {
+export /*kilocode_change*/ interface DiffOperation {
 	path: string
 	diff: Array<{
 		content: string
@@ -25,7 +29,7 @@ interface DiffOperation {
 }
 
 // Track operation status
-interface OperationResult {
+export /*kilocode_change*/ interface OperationResult {
 	path: string
 	status: "pending" | "approved" | "denied" | "blocked" | "error"
 	error?: string
@@ -50,7 +54,25 @@ interface ParsedXmlResult {
 	file: ParsedFile | ParsedFile[]
 }
 
+// kilocode_change: native tool calling
 export async function applyDiffTool(
+	cline: Task,
+	block: ToolUse,
+	askApproval: AskApproval,
+	handleError: HandleError,
+	pushToolResult: PushToolResult,
+	removeClosingTag: RemoveClosingTag,
+) {
+	if (getActiveToolUseStyle(cline.apiConfiguration) === "json") {
+		console.log("Using native multi-file apply diff tool")
+		return applyNativeDiffTool(cline, block, askApproval, handleError, pushToolResult)
+	}
+	console.log("Using XML multi-file apply diff tool")
+	return applyXMLDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+}
+// kilocode_change end
+
+/* kilocode_change: rename */ async function applyXMLDiffTool(
 	cline: Task,
 	block: ToolUse,
 	askApproval: AskApproval,
@@ -172,6 +194,7 @@ Original error: ${errorMessage}`
 			TelemetryService.instance.captureDiffApplicationError(cline.taskId, cline.consecutiveMistakeCount)
 			await cline.say("diff_error", `Failed to parse apply_diff XML: ${errorMessage}`)
 			pushToolResult(detailedError)
+			cline.processQueuedMessages()
 			return
 		}
 	} else if (legacyPath && typeof legacyDiffContent === "string") {
@@ -195,6 +218,7 @@ Original error: ${errorMessage}`
 			"args (or legacy 'path' and 'diff' parameters)",
 		)
 		pushToolResult(errorMsg)
+		cline.processQueuedMessages()
 		return
 	}
 
@@ -210,6 +234,7 @@ Original error: ${errorMessage}`
 					: "args (must contain at least one valid file element)",
 			),
 		)
+		cline.processQueuedMessages()
 		return
 	}
 
@@ -460,7 +485,7 @@ Error: ${failPart.error}
 Suggested fixes:
 1. Verify the search content exactly matches the file content (including whitespace and case)
 2. Check for correct indentation and line endings
-3. Use <read_file> to see the current file content
+3. Use the read_file tool to verify the file's current contents
 4. Consider breaking complex changes into smaller diffs
 5. Ensure start_line parameter matches the actual content location
 ${errorDetails ? `\nDetailed error information:\n${errorDetails}\n` : ""}
@@ -473,7 +498,7 @@ Unable to apply diffs to file: ${absolutePath}
 Error: ${diffResult.error}
 
 Recovery suggestions:
-1. Use <read_file> to examine the current file content
+1. Use the read_file tool to verify the file's current contents
 2. Verify the diff format matches the expected search/replace pattern
 3. Check that the search content exactly matches what's in the file
 4. Consider using line numbers with start_line parameter
@@ -675,10 +700,12 @@ ${errorDetails ? `\nTechnical details:\n${errorDetails}\n` : ""}
 
 		// Push the final result combining all operation results
 		pushToolResult(results.join("\n\n") + singleBlockNotice)
+		cline.processQueuedMessages()
 		return
 	} catch (error) {
 		await handleError("applying diff", error)
 		await cline.diffViewProvider.reset()
+		cline.processQueuedMessages()
 		return
 	}
 }

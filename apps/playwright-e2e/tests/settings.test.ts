@@ -1,5 +1,11 @@
 import { test, expect, type TestFixtures } from "./playwright-base-test"
-import { findWebview, upsertApiConfiguration, closeAllToastNotifications, verifyExtensionInstalled } from "../helpers"
+import {
+	findWebview,
+	upsertApiConfiguration,
+	verifyExtensionInstalled,
+	clickSaveSettingsButton,
+	waitForTooltipsToDismiss,
+} from "../helpers"
 
 test.describe("Settings", () => {
 	test("screenshots", async ({ workbox: page, takeScreenshot }: TestFixtures) => {
@@ -7,11 +13,11 @@ test.describe("Settings", () => {
 		await upsertApiConfiguration(page)
 
 		// Open the settings then move the mouse to avoid triggering the tooltip
-		page.locator('[aria-label*="Settings"], [title*="Settings"]').first().click()
-		await page.mouse.move(0, 0)
-		await page.mouse.click(0, 0)
-
 		const webviewFrame = await findWebview(page)
+		await page.locator('[aria-label*="Settings"], [title*="Settings"]').first().click()
+		await page.mouse.move(0, 0) // Move cursor to top-left corner to avoid triggering hover states
+
+		await clickSaveSettingsButton(webviewFrame)
 		await expect(webviewFrame.locator('[role="tablist"]')).toBeVisible({ timeout: 10000 })
 		console.log("✅ Settings view loaded")
 
@@ -35,7 +41,8 @@ test.describe("Settings", () => {
 			const testId = await tabButton.getAttribute("data-testid")
 			const sectionId = testId?.replace("tab-", "") || `section-${i}`
 
-			await closeAllToastNotifications(page)
+			await clickSaveSettingsButton(webviewFrame) // To avoid flakey screenshots
+			await waitForTooltipsToDismiss(webviewFrame) // Wait for tooltips to dismiss before screenshot
 			await takeScreenshot(`${i}-settings-${sectionId}-${tabName.toLowerCase().replace(/\s+/g, "-")}`)
 		}
 

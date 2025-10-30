@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Witaj w Kilo Code!",
 		"introText1": "Kilo Code to darmowy, otwartoźródłowy agent kodowania AI.",
-		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1 i ponad 450 innymi.",
-		"introText3": "Stwórz darmowe konto i otrzymaj do $25 wartości tokenów do wykorzystania z dowolnym modelem AI.",
+		"introText2": "Współpracuje z najnowszymi modelami AI, takimi jak Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5 i ponad 450 innymi.",
+		"introText3": "Stwórz darmowe konto i otrzymaj $20 bonusowych kredytów przy pierwszym doładowaniu.",
 		"ctaButton": "Rozpocznij",
 		"manualModeButton": "Użyj własnego klucza API",
 		"alreadySignedUp": "Już zarejestrowany?",
@@ -11,15 +11,19 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
-		"lowBalance": "Twój stan konta Kilo Code jest niski"
+		"lowBalance": "Twój stan konta Kilo Code jest niski",
+		"newOrganization": "Używasz Kilo do pracy?"
+	},
+	"pagination": {
+		"previous": "Poprzednia",
+		"next": "Następna",
+		"page": "Strona {{page}} / {{count}}"
 	},
 	"pricing": {
 		"costUnknown": "koszt nieznany",
 		"costUnknownDescription": "Dostawca API nie podał żadnych danych o kosztach lub żądanie zostało anulowane.",
 		"freeModelsDescription": "Darmowe modele mogą mieć limity użycia. Użyj poniższego linku, aby zoptymalizować wykorzystanie darmowych modeli!",
-		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych",
-		"openRouterMarkup": "Dostawca Kilo Code zawiera wszystkie modele OpenRouter, bez narzutu i z 0% prowizji!",
-		"switchToKiloCode": "Przełącz na Kilo Code"
+		"freeModelsLink": "Odkryj opcje darmowych modeli i modeli budżetowych"
 	},
 	"notifications": {
 		"toolRequest": "Żądanie narzędzia oczekuje na zatwierdzenie",
@@ -36,7 +40,9 @@
 			"login": "Zaloguj się do Kilo Code",
 			"logout": "Wyloguj się z Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - Routing dostawców OpenRouter",
+				"title": "Routing dostawców",
+				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",
+				"createOrganization": "Utwórz organizację, aby zarządzać routingiem dostawców",
 				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu.",
 				"sorting": {
 					"default": "Domyślne sortowanie dostawców",
@@ -46,8 +52,10 @@
 				},
 				"dataCollection": {
 					"default": "Brak ustawionej polityki danych",
-					"allow": "Zezwól na gromadzenie danych przez dostawcę",
-					"deny": "Zabroń gromadzenia danych przez dostawcę"
+					"allowFree": "Zezwól na trening promptów (tylko darmowe)",
+					"allow": "Zezwól na trening promptów",
+					"deny": "Zabroń treningu promptów",
+					"zdr": "Zerowe przechowywanie danych"
 				}
 			},
 			"automaticFetch": "Najnowsze modele są automatycznie dostępne w Kilo Code. Jeśli nie jesteś pewien, który model wybrać, Kilo Code działa najlepiej z zalecanymi modelami wymienionymi na górze <strong>pogrubioną czcionką</strong>."
@@ -89,12 +97,22 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Styl Wywołań Narzędzi",
+		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój.",
+		"automatic": "Pozwól Kilo zdecydować",
+		"xml": "XML",
+		"json": "JSON (eksperymentalny)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code chce skondensować Twoją rozmowę",
 			"condenseConversation": "Skondensuj Rozmowę"
 		},
-		"seeNewChanges": "Pokaż nowe zmiany"
+		"seeNewChanges": "Pokaż nowe zmiany",
+		"revertNewChanges": "Cofnij nowe zmiany",
+		"confirmRevertChanges": "Potwierdź cofnięcie zmian",
+		"cancelRevertChanges": "Anuluj cofnięcie zmian"
 	},
 	"newTaskPreview": {
 		"task": "Zadanie"
@@ -113,7 +131,9 @@
 			"credits": "kredyty",
 			"action": "Kup Teraz",
 			"viewAll": "Zobacz wszystkie opcje cenowe"
-		}
+		},
+		"detailedUsage": "Szczegółowe użycie",
+		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"
 	},
 	"docs": "Dokumentacja",
 	"rules": {
@@ -191,7 +211,6 @@
 	"ghost": {
 		"title": "Autocomplete",
 		"settings": {
-			"autoTrigger": "Automatyczne Wyzwalanie",
 			"triggers": "Wyzwalacze",
 			"keybindingDescription": "Funkcje Autocomplete mogą być wyzwalane przez polecenia. Możesz skonfigurować <DocsLink>Skróty Klawiszowe tutaj</DocsLink>.",
 			"enableAutoTrigger": {
@@ -203,23 +222,17 @@
 				"description": "Opóźnienie w sekundach przed tym, jak Kilo Code wyzwoli Autocomplete po tym, jak przestaniesz pisać. Krótsze opóźnienie oznacza szybsze sugestie, ale może być bardziej zasobożerne."
 			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "Szybkie Zadanie",
+				"label": "Szybkie zadanie ({{keybinding}})",
 				"description": "Potrzebujesz tylko szybkiej zmiany? Zaznacz trochę kodu (lub nie!) i naciśnij Cmd+I. Opisz swój cel w prostym języku polskim (\"stwórz komponent React z tymi propsami\", \"dodaj obsługę błędów do tej funkcji\"), i otrzymaj wiele gotowych do użycia sugestii bezpośrednio w swoim edytorze. <DocsLink>Zobacz skrót</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "Ręczne Autocomplete",
+				"label": "Ręczne uzupełnianie ({{keybinding}})",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Użyj niestandardowego dostawcy",
-				"description": "Autocomplete używa domyślnie twoich danych uwierzytelniających KiloCode / OpenRouter / Mistral do korzystania z modelu Codestral"
-			},
-			"provider": "Dostawca",
-			"apiConfigId": {
-				"label": "Konfiguracja API",
-				"current": "Użyj aktualnie wybranej konfiguracji API",
-				"description": "Wybierz konfigurację API do użycia dla promptów Autocomplete, lub po prostu użyj tej, która jest aktualnie wybrana"
-			}
+			"keybindingNotFound": "nie znaleziono",
+			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
+			"model": "Model",
+			"provider": "Dostawca"
 		}
 	},
 	"virtualProvider": {
@@ -232,7 +245,7 @@
 		"removeProfile": "Usuń profil",
 		"selectProfilePlaceholder": "Wybierz profil...",
 		"addProfile": "Dodaj profil",
-		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil dostawcy niewirtualnego.",
+		"noProfilesAvailable": "Brak dostępnych profili. Najpierw skonfiguruj co najmniej jeden profil dostawcy niewirtualnego.",
 		"dangerZoneTitle": "Strefa Niebezpieczna",
 		"dangerZoneDescription": "Te działania są destrukcyjne i nie można ich cofnąć.",
 		"clearUsageData": "Wyczyść Dane Użytkowania",
@@ -251,8 +264,23 @@
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 Okres alfa dla {{model}} się zakończył! Zmień na inny model, aby kontynuować.",
+		"notAllowedForTeam": "⚠️ Twoja organizacja nie zezwala na używanie modelu {{model}}. Zmień na inny model, aby kontynuować.",
 		"modelUnavailable": "⚠️ Model {{model}} jest niedostępny. Zmień na inny model, aby kontynuować.",
 		"continueWith": "Kontynuuj z {{model}}",
 		"continue": "Kontynuuj"
+	},
+	"memoryWarning": {
+		"message": "Użycie pamięci wynosi {{percentage}}%. Uruchom ponownie IDE, aby zapobiec awariom."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Te serwery MCP są utrzymywane przez społeczność. Kliknij <1>tutaj</1>, aby edytować własne ustawienia MCP."
+		},
+		"modes": {
+			"description": "Te tryby są dostępne ze społeczności. Kliknij <1>tutaj</1>, aby edytować swoje własne niestandardowe tryby."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
 	}
 }

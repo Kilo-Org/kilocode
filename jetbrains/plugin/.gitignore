@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 .gradle
+.intellijPlatform/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -52,4 +53,3 @@ plugins
 ### Generated build artifacts ###
 gradle.properties
 src/main/resources/META-INF/plugin.xml
-platform.zip

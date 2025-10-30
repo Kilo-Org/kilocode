@@ -1,0 +1,5 @@
+# Description: Should suggest nested object properties
+const config = {
+	server: {
+	  port: 3000,
+	  <<<AUTOCOMPLETE_HERE>>>

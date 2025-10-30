@@ -14,10 +14,12 @@
 	"task": {
 		"noAssistantMessages": "Odpowiedź modelu zakończyła się nieoczekiwanie (brak komunikatów asystenta). To może być oznaka ograniczenia częstotliwości żądań.",
 		"notLoggedInError": "Nie można ukończyć żądania, upewnij się, że jesteś połączony i zalogowany u wybranego dostawcy.\n\n{{error}}",
-		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia."
+		"maxCompletionTokens": "Osiągnięto maksymalną liczbę tokenów uzupełnienia.",
+		"disableApplyDiff": "Jeśli ten błąd będzie się powtarzał, wyłącz Edycję Przez Różnice w Ustawieniach Zaawansowanych.",
+		"disableEditFile": "Jeśli ten błąd będzie się powtarzał, wyłącz eksperymentalną funkcję Szybkiego Zastosowania."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytoria Git w obszarze roboczym. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
+		"nestedGitRepos": "Punkty kontrolne są niedostępne, ponieważ wykryto zagnieżdżone repozytorium Git w: {{path}}. Usuń lub przenieś zagnieżdżone repozytoria Git, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
 		"protectedPaths": "Punkty kontrolne są niedostępne w {{workspaceDir}}. Otwórz podfolder jako obszar roboczy, aby korzystać z funkcji punktów kontrolnych, lub wyłącz punkty kontrolne w ustawieniach, aby pominąć to ostrzeżenie.",
 		"dismissWarning": "Odrzuć"
 	},
@@ -58,7 +60,41 @@
 		"generationFailed": "Kilo: Nie udało się wygenerować wiadomości commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generowanie wiadomości przy użyciu niezatwierdzonych zmian",
 		"activationFailed": "Kilo: Nie udało się aktywować generatora wiadomości: {{error}}",
-		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit"
+		"providerRegistered": "Kilo: Zarejestrowano dostawcę wiadomości commit",
+		"errors": {
+			"noProject": "Brak dostępnego projektu",
+			"timeout": "Upłynął limit czasu żądania po 30 sekundach",
+			"connectionFailed": "Nie udało się połączyć z rozszerzeniem Kilo Code",
+			"invalidResponse": "Nieprawidłowy format odpowiedzi otrzymany z rozszerzenia",
+			"noChanges": "Nie znaleziono zmian do zatwierdzenia",
+			"missingMessage": "Nie otrzymano komunikatu zatwierdzenia z rozszerzenia",
+			"noWorkspacePath": "Nie można określić ścieżki przestrzeni roboczej dla repozytorium Git",
+			"workspaceNotFound": "Nie udało się ustalić ścieżki obszaru roboczego dla repozytorium Git",
+			"processingError": "Błąd przetwarzania generowania wiadomości commit: {{error}}"
+		},
+		"error": {
+			"title": "Błąd",
+			"workspacePathNotFound": "Nie można określić ścieżki obszaru roboczego dla repozytorium Git",
+			"generationFailed": "Nie udało się wygenerować komunikatu commita: {{error}}",
+			"unknown": "Nieznany błąd",
+			"processingFailed": "Błąd podczas przetwarzania generowania wiadomości commita: {{error}}"
+		},
+		"dialogs": {
+			"success": "Sukces",
+			"error": "Błąd",
+			"info": "Wiadomość Commita AI",
+			"title": "Wiadomość Commita AI"
+		},
+		"progress": {
+			"title": "Generowanie treści commita",
+			"analyzing": "Analizowanie zmian...",
+			"connecting": "Łączenie z Kilo Code...",
+			"generating": "Generowanie wiadomości do commita..."
+		},
+		"ui": {
+			"generateButton": "Generuj Treść Commitu",
+			"generateButtonTooltip": "Generuje komunikaty commitów za pomocą AI, analizując zmiany w twoim kodzie"
+		}
 	},
 	"seeNewChanges": {
 		"title": "Wyświetlanie nowych zmian",
@@ -77,6 +113,7 @@
 				"tokenError": "Aby używać Autocomplete, musi być ustawiony ważny token",
 				"lastCompletion": "Ostatnia sugestia:",
 				"sessionTotal": "Całkowity koszt sesji:",
+				"provider": "Dostawca:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -102,7 +139,6 @@
 			"cancelSuggestions": "Anuluj Sugerowane Edycje",
 			"applyCurrentSuggestion": "Zastosuj Bieżącą Sugerowaną Edycję",
 			"applyAllSuggestions": "Zastosuj Wszystkie Sugerowane Edycje",
-			"promptCodeSuggestion": "Szybkie Zadanie",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

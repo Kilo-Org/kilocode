@@ -30,6 +30,7 @@ import {
 	type TerminalActionPromptType,
 	type HistoryItem,
 	type CloudUserInfo,
+	type CloudOrganizationMembership,
 	type CreateTaskOptions,
 	type TokenUsage,
 	RooCodeEventName,
@@ -40,6 +41,7 @@ import {
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -90,6 +92,8 @@ import { Task } from "../task/Task"
 import { getSystemPromptFilePath } from "../prompts/sections/custom-system-prompt"
 
 import { webviewMessageHandler } from "./webviewMessageHandler"
+import type { ClineMessage } from "@roo-code/types"
+import { readApiMessages, saveApiMessages, saveTaskMessages } from "../task-persistence"
 import { getNonce } from "./getNonce"
 import { getUri } from "./getUri"
 
@@ -101,6 +105,8 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
+import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -154,7 +160,7 @@ export class ClineProvider
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
-	public readonly latestAnnouncementId = "aug-25-2025-grok-code-fast" // Update for Grok Code Fast announcement
+	public readonly latestAnnouncementId = "sep-2025-code-supernova-1m" // Code Supernova 1M context window announcement
 	public readonly providerSettingsManager: ProviderSettingsManager
 	public readonly customModesManager: CustomModesManager
 
@@ -209,7 +215,35 @@ export class ClineProvider
 			const onTaskStarted = () => this.emit(RooCodeEventName.TaskStarted, instance.taskId)
 			const onTaskCompleted = (taskId: string, tokenUsage: any, toolUsage: any) =>
 				this.emit(RooCodeEventName.TaskCompleted, taskId, tokenUsage, toolUsage)
-			const onTaskAborted = () => this.emit(RooCodeEventName.TaskAborted, instance.taskId)
+			const onTaskAborted = async () => {
+				this.emit(RooCodeEventName.TaskAborted, instance.taskId)
+
+				try {
+					// Only rehydrate on genuine streaming failures.
+					// User-initiated cancels are handled by cancelTask().
+					if (instance.abortReason === "streaming_failed") {
+						// Defensive safeguard: if another path already replaced this instance, skip
+						const current = this.getCurrentTask()
+						if (current && current.instanceId !== instance.instanceId) {
+							this.log(
+								`[onTaskAborted] Skipping rehydrate: current instance ${current.instanceId} != aborted ${instance.instanceId}`,
+							)
+							return
+						}
+
+						const { historyItem } = await this.getTaskWithId(instance.taskId)
+						const rootTask = instance.rootTask
+						const parentTask = instance.parentTask
+						await this.createTaskWithHistoryItem({ ...historyItem, rootTask, parentTask })
+					}
+				} catch (error) {
+					this.log(
+						`[onTaskAborted] Failed to rehydrate after streaming failure: ${
+							error instanceof Error ? error.message : String(error)
+						}`,
+					)
+				}
+			}
 			const onTaskFocused = () => this.emit(RooCodeEventName.TaskFocused, instance.taskId)
 			const onTaskUnfocused = () => this.emit(RooCodeEventName.TaskUnfocused, instance.taskId)
 			const onTaskActive = (taskId: string) => this.emit(RooCodeEventName.TaskActive, taskId)
@@ -662,6 +696,39 @@ export class ClineProvider
 			return
 		}
 
+		//kilocode_change start
+		if (command === "addToContextAndFocus") {
+			let messageText = prompt
+
+			const editor = vscode.window.activeTextEditor
+			if (editor) {
+				const fullContent = editor.document.getText()
+				const filePath = params.filePath as string
+
+				messageText = `
+For context, we are working within this file:
+
+'${filePath}' (see below for file content)
+<file_content path="${filePath}">
+${fullContent}
+</file_content>
+
+Heed this prompt:
+
+${prompt}
+`
+			}
+
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: messageText,
+			})
+			await vscode.commands.executeCommand("kilo-code.focusChatInput")
+			return
+		}
+		// kilocode_change end
+
 		await visibleProvider.createTask(prompt)
 	}
 
@@ -884,7 +951,7 @@ export class ClineProvider
 			fuzzyMatchThreshold,
 			experiments,
 			cloudUserInfo,
-			remoteControlEnabled,
+			taskSyncEnabled,
 		} = await this.getState()
 
 		const task = new Task({
@@ -902,7 +969,7 @@ export class ClineProvider
 			taskNumber: historyItem.number,
 			workspacePath: historyItem.workspace,
 			onCreated: this.taskCreationCallback,
-			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, remoteControlEnabled),
+			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, taskSyncEnabled),
 		})
 
 		await this.addClineToStack(task)
@@ -1007,6 +1074,7 @@ export class ClineProvider
 			"icons",
 		])
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
+		const iconsUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "icons"]) // kilocode_change
 		const audioUri = getUri(webview, this.contextProxy.extensionUri, ["webview-ui", "audio"])
 
 		const file = "src/index.tsx"
@@ -1043,8 +1111,10 @@ export class ClineProvider
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
+						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1088,6 +1158,7 @@ export class ClineProvider
 			"icons",
 		])
 		const imagesUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "images"])
+		const iconsUri = getUri(webview, this.contextProxy.extensionUri, ["assets", "icons"]) // kilocode_changes
 		const audioUri = getUri(webview, this.contextProxy.extensionUri, ["webview-ui", "audio"])
 
 		// Use a nonce to only allow a specific script to be run.
@@ -1117,8 +1188,10 @@ export class ClineProvider
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
+				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -1144,6 +1217,21 @@ export class ClineProvider
 		const messageDisposable = webview.onDidReceiveMessage(onReceiveMessage)
 		this.webviewDisposables.push(messageDisposable)
 	}
+
+	/* kilocode_change start */
+	/**
+	 * Handle messages from CLI ExtensionHost
+	 * This method allows the CLI to send messages directly to the webviewMessageHandler
+	 */
+	public async handleCLIMessage(message: WebviewMessage): Promise<void> {
+		try {
+			await webviewMessageHandler(this, message, this.marketplaceManager)
+		} catch (error) {
+			this.log(`Error handling CLI message: ${error instanceof Error ? error.message : String(error)}`)
+			throw error
+		}
+	}
+	/* kilocode_change end */
 
 	/**
 	 * Handle switching to a new mode, including updating the associated API configuration
@@ -1822,6 +1910,7 @@ export class ClineProvider
 		const taskHistory = this.getGlobalState("taskHistory") ?? []
 		const updatedTaskHistory = taskHistory.filter((task) => task.id !== id)
 		await this.updateGlobalState("taskHistory", updatedTaskHistory)
+		this.kiloCodeTaskHistoryVersion++
 		this.recentTasksCache = undefined
 		await this.postStateToWebview()
 	}
@@ -1989,7 +2078,7 @@ export class ClineProvider
 			ttsSpeed,
 			diffEnabled,
 			enableCheckpoints,
-			taskHistory,
+			// taskHistory, // kilocode_change
 			soundVolume,
 			browserViewportSize,
 			screenshotQuality,
@@ -2032,11 +2121,15 @@ export class ClineProvider
 			language,
 			showAutoApproveMenu, // kilocode_change
 			showTaskTimeline, // kilocode_change
+			sendMessageOnEnter, // kilocode_change
+			showTimestamps, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			maxReadFileLine,
 			maxImageFileSize,
 			maxTotalImageSize,
 			terminalCompressProgressBar,
 			historyPreviewCollapsed,
+			reasoningBlockCollapsed,
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,
@@ -2053,17 +2146,31 @@ export class ClineProvider
 			systemNotificationsEnabled, // kilocode_change
 			dismissedNotificationIds, // kilocode_change
 			morphApiKey, // kilocode_change
+			fastApplyModel, // kilocode_change: Fast Apply model selection
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
 			maxDiagnosticMessages,
 			includeTaskHistoryInEnhance,
+			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
+			featureRoomoteControlEnabled,
+			yoloMode, // kilocode_change
 		} = await this.getState()
+
+		let cloudOrganizations: CloudOrganizationMembership[] = []
+
+		try {
+			cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+		} catch (error) {
+			console.error(
+				`[getStateToPostToWebview] failed to get cloud organizations: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
 
 		const telemetryKey = process.env.KILOCODE_POSTHOG_API_KEY
 		const machineId = vscode.env.machineId
@@ -2078,6 +2185,8 @@ export class ClineProvider
 
 		// kilocode_change start wrapper information
 		const kiloCodeWrapperProperties = getKiloCodeWrapperProperties()
+		const taskHistory = this.getTaskHistory()
+		this.kiloCodeTaskHistorySizeForTelemetryOnly = taskHistory.length
 		// kilocode_change end
 
 		return {
@@ -2095,6 +2204,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
@@ -2102,16 +2212,18 @@ export class ClineProvider
 			uriScheme: vscode.env.uriScheme,
 			uiKind: vscode.UIKind[vscode.env.uiKind], // kilocode_change
 			kiloCodeWrapperProperties, // kilocode_change wrapper information
-			kilocodeDefaultModel: await getKilocodeDefaultModel(apiConfiguration.kilocodeToken),
+			kilocodeDefaultModel: await getKilocodeDefaultModel(
+				apiConfiguration.kilocodeToken,
+				apiConfiguration.kilocodeOrganizationId,
+			),
 			currentTaskItem: this.getCurrentTask()?.taskId
 				? (taskHistory || []).find((item: HistoryItem) => item.id === this.getCurrentTask()?.taskId)
 				: undefined,
 			clineMessages: this.getCurrentTask()?.clineMessages || [],
 			currentTaskTodos: this.getCurrentTask()?.todoList || [],
 			messageQueue: this.getCurrentTask()?.messageQueueService?.messages,
-			taskHistory: (taskHistory || [])
-				.filter((item: HistoryItem) => item.ts && item.task)
-				.sort((a: HistoryItem, b: HistoryItem) => b.ts - a.ts),
+			taskHistoryFullLength: taskHistory.length, // kilocode_change
+			taskHistoryVersion: this.kiloCodeTaskHistoryVersion, // kilocode_change
 			soundEnabled: soundEnabled ?? false,
 			ttsEnabled: ttsEnabled ?? false,
 			ttsSpeed: ttsSpeed ?? 1.0,
@@ -2165,6 +2277,9 @@ export class ClineProvider
 			showRooIgnoredFiles: showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: sendMessageOnEnter ?? true, // kilocode_change
+			showTimestamps: showTimestamps ?? true, // kilocode_change
+			hideCostBelowThreshold, // kilocode_change
 			language, // kilocode_change
 			renderContext: this.renderContext,
 			maxReadFileLine: maxReadFileLine ?? -1,
@@ -2176,8 +2291,10 @@ export class ClineProvider
 			terminalCompressProgressBar: terminalCompressProgressBar ?? true,
 			hasSystemPromptOverride,
 			historyPreviewCollapsed: historyPreviewCollapsed ?? false,
+			reasoningBlockCollapsed: reasoningBlockCollapsed ?? true,
 			cloudUserInfo,
 			cloudIsAuthenticated: cloudIsAuthenticated ?? false,
+			cloudOrganizations,
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
@@ -2210,16 +2327,19 @@ export class ClineProvider
 			systemNotificationsEnabled: systemNotificationsEnabled ?? false, // kilocode_change
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey, // kilocode_change
+			fastApplyModel: fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: includeTaskHistoryInEnhance ?? true,
+			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
+			featureRoomoteControlEnabled,
 		}
 	}
 
@@ -2238,6 +2358,10 @@ export class ClineProvider
 			| "version"
 			| "shouldShowAnnouncement"
 			| "hasSystemPromptOverride"
+			// kilocode_change start
+			| "taskHistoryFullLength"
+			| "taskHistoryVersion"
+			// kilocode_change end
 		>
 	> {
 		const stateValues = this.contextProxy.getValues()
@@ -2307,10 +2431,23 @@ export class ClineProvider
 			)
 		}
 
+		let taskSyncEnabled: boolean = false
+
+		try {
+			taskSyncEnabled = CloudService.instance.isTaskSyncEnabled()
+		} catch (error) {
+			console.error(
+				`[getState] failed to get task sync enabled state: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+
 		// Return the same structure as before.
 		return {
 			apiConfiguration: providerSettings,
-			kilocodeDefaultModel: await getKilocodeDefaultModel(providerSettings.kilocodeToken), // kilocode_change
+			kilocodeDefaultModel: await getKilocodeDefaultModel(
+				providerSettings.kilocodeToken,
+				providerSettings.kilocodeOrganizationId,
+			), // kilocode_change
 			lastShownAnnouncementId: stateValues.lastShownAnnouncementId,
 			customInstructions: stateValues.customInstructions,
 			apiModelId: stateValues.apiModelId,
@@ -2326,13 +2463,14 @@ export class ClineProvider
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
+			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
 			allowedMaxCost: stateValues.allowedMaxCost,
 			autoCondenseContext: stateValues.autoCondenseContext ?? true,
 			autoCondenseContextPercent: stateValues.autoCondenseContextPercent ?? 100,
-			taskHistory: stateValues.taskHistory ?? [],
+			// taskHistory: stateValues.taskHistory ?? [], // kilocode_change
 			allowedCommands: stateValues.allowedCommands,
 			deniedCommands: stateValues.deniedCommands,
 			soundEnabled: stateValues.soundEnabled ?? false,
@@ -2393,6 +2531,9 @@ export class ClineProvider
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: stateValues.sendMessageOnEnter ?? true, // kilocode_change
+			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
+			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
 			maxImageFileSize: stateValues.maxImageFileSize ?? 5,
 			maxTotalImageSize: stateValues.maxTotalImageSize ?? 20,
@@ -2401,7 +2542,9 @@ export class ClineProvider
 			systemNotificationsEnabled: stateValues.systemNotificationsEnabled ?? true, // kilocode_change
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey: stateValues.morphApiKey, // kilocode_change
+			fastApplyModel: stateValues.fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
+			reasoningBlockCollapsed: stateValues.reasoningBlockCollapsed ?? true,
 			cloudUserInfo,
 			cloudIsAuthenticated,
 			sharingEnabled,
@@ -2429,6 +2572,7 @@ export class ClineProvider
 			includeDiagnosticMessages: stateValues.includeDiagnosticMessages ?? true,
 			maxDiagnosticMessages: stateValues.maxDiagnosticMessages ?? 50,
 			includeTaskHistoryInEnhance: stateValues.includeTaskHistoryInEnhance ?? true,
+			taskSyncEnabled,
 			remoteControlEnabled: (() => {
 				try {
 					const cloudSettings = CloudService.instance.getUserSettings()
@@ -2443,6 +2587,18 @@ export class ClineProvider
 			openRouterImageApiKey: stateValues.openRouterImageApiKey,
 			kiloCodeImageApiKey: stateValues.kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel: stateValues.openRouterImageGenerationSelectedModel,
+			featureRoomoteControlEnabled: (() => {
+				try {
+					const userSettings = CloudService.instance.getUserSettings()
+					const hasOrganization = cloudUserInfo?.organizationId != null
+					return hasOrganization || (userSettings?.features?.roomoteControlEnabled ?? false)
+				} catch (error) {
+					console.error(
+						`[getState] failed to get featureRoomoteControlEnabled: ${error instanceof Error ? error.message : String(error)}`,
+					)
+					return false
+				}
+			})(),
 		}
 	}
 
@@ -2457,6 +2613,7 @@ export class ClineProvider
 		}
 
 		await this.updateGlobalState("taskHistory", history)
+		this.kiloCodeTaskHistoryVersion++
 		this.recentTasksCache = undefined
 
 		return history
@@ -2565,7 +2722,19 @@ export class ClineProvider
 	}
 
 	public async remoteControlEnabled(enabled: boolean) {
+		if (!enabled) {
+			await BridgeOrchestrator.disconnect()
+			return
+		}
+
 		const userInfo = CloudService.instance.getUserInfo()
+
+		if (!userInfo) {
+			this.log("[ClineProvider#remoteControlEnabled] Failed to get user info, disconnecting")
+			await BridgeOrchestrator.disconnect()
+			return
+		}
+
 		const config = await CloudService.instance.cloudAPI?.bridgeConfig().catch(() => undefined)
 
 		if (!config) {
@@ -2577,6 +2746,7 @@ export class ClineProvider
 			...config,
 			provider: this,
 			sessionId: vscode.env.sessionId,
+			isCloudAgent: CloudService.instance.isCloudAgent,
 		})
 
 		const bridge = BridgeOrchestrator.getInstance()
@@ -2817,13 +2987,23 @@ export class ClineProvider
 
 		console.log(`[cancelTask] cancelling task ${task.taskId}.${task.instanceId}`)
 
-		const { historyItem } = await this.getTaskWithId(task.taskId)
+		const { historyItem, uiMessagesFilePath } = await this.getTaskWithId(task.taskId)
 
 		// Preserve parent and root task information for history item.
 		const rootTask = task.rootTask
 		const parentTask = task.parentTask
 
+		// Mark this as a user-initiated cancellation so provider-only rehydration can occur
+		task.abortReason = "user_cancelled"
+
+		// Capture the current instance to detect if rehydrate already occurred elsewhere
+		const originalInstanceId = task.instanceId
+
+		// Begin abort (non-blocking)
 		task.abortTask()
+
+		// Immediately mark the original instance as abandoned to prevent any residual activity
+		task.abandoned = true
 
 		await pWaitFor(
 			() =>
@@ -2841,11 +3021,24 @@ export class ClineProvider
 			console.error("Failed to abort task")
 		})
 
-		if (this.getCurrentTask()) {
-			// 'abandoned' will prevent this Cline instance from affecting
-			// future Cline instances. This may happen if its hanging on a
-			// streaming request.
-			this.getCurrentTask()!.abandoned = true
+		// Defensive safeguard: if current instance already changed, skip rehydrate
+		const current = this.getCurrentTask()
+		if (current && current.instanceId !== originalInstanceId) {
+			this.log(
+				`[cancelTask] Skipping rehydrate: current instance ${current.instanceId} != original ${originalInstanceId}`,
+			)
+			return
+		}
+
+		// Final race check before rehydrate to avoid duplicate rehydration
+		{
+			const currentAfterCheck = this.getCurrentTask()
+			if (currentAfterCheck && currentAfterCheck.instanceId !== originalInstanceId) {
+				this.log(
+					`[cancelTask] Skipping rehydrate after final check: current instance ${currentAfterCheck.instanceId} != original ${originalInstanceId}`,
+				)
+				return
+			}
 		}
 
 		// Clears task again, so we need to abortTask manually above.
@@ -2982,10 +3175,16 @@ export class ClineProvider
 			language,
 			mode,
 			taskId: task?.taskId,
+			parentTaskId: task?.parentTask?.taskId,
 			apiProvider: apiConfiguration?.apiProvider,
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
 			...(todos && { todos }),
+			// kilocode_change start
+			currentTaskSize: task?.clineMessages.length,
+			taskHistorySize: this.kiloCodeTaskHistorySizeForTelemetryOnly || undefined,
+			toolStyle: getActiveToolUseStyle(apiConfiguration),
+			// kilocode_change end
 		}
 	}
 
@@ -3001,17 +3200,22 @@ export class ClineProvider
 		return this._gitProperties
 	}
 
+	// kilocode_change start
+	private _kiloConfig: KilocodeConfig | null = null
+	public async getKiloConfig(): Promise<KilocodeConfig | null> {
+		if (this._kiloConfig === null) {
+			const { repositoryUrl } = await this.getGitProperties()
+			this._kiloConfig = await getKilocodeConfig(this.cwd, repositoryUrl)
+			console.log("getKiloConfig", this._kiloConfig)
+		}
+		return this._kiloConfig
+	}
+	// kilocode_change end
+
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start
-		const {
-			mode,
-			apiConfiguration,
-			language,
-			experiments, // kilocode_change
-		} = await this.getState()
+		const { apiConfiguration, experiments } = await this.getState()
 		const task = this.getCurrentTask()
-
-		const packageJSON = this.context.extension?.packageJSON
 
 		async function getModelId() {
 			try {
@@ -3059,6 +3263,7 @@ export class ClineProvider
 					fastApply: {
 						morphFastApply: Boolean(experiments.morphFastApply),
 						morphApiKey: Boolean(this.contextProxy.getValue("morphApiKey")),
+						selectedModel: this.contextProxy.getValue("fastApplyModel") || "auto",
 					},
 				}
 			} catch (error) {
@@ -3264,6 +3469,7 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			return item
 		})
 		await this.updateGlobalState("taskHistory", updatedHistory)
+		this.kiloCodeTaskHistoryVersion++
 		await this.postStateToWebview()
 	}
 
@@ -3295,9 +3501,16 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 			return item
 		})
 		await this.updateGlobalState("taskHistory", updatedHistory)
+		this.kiloCodeTaskHistoryVersion++
 		await this.postStateToWebview()
 	}
 
+	private kiloCodeTaskHistoryVersion = 0
+	private kiloCodeTaskHistorySizeForTelemetryOnly = 0
+
+	public getTaskHistory(): HistoryItem[] {
+		return this.getGlobalState("taskHistory") || []
+	}
 	// kilocode_change end
 
 	public get cwd() {

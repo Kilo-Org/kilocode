@@ -1,96 +1,74 @@
-import { useCallback, useEffect, useRef, useState } from "react"
-import { CaretDownIcon, CaretUpIcon, CounterClockwiseClockIcon } from "@radix-ui/react-icons"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
+import { useExtensionState } from "@src/context/ExtensionStateContext"
 
 import MarkdownBlock from "../common/MarkdownBlock"
-import { useMount } from "react-use"
+import { Lightbulb, ChevronUp } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ReasoningBlockProps {
 	content: string
-	elapsed?: number
-	isCollapsed?: boolean
-	onToggleCollapse?: () => void
+	ts: number
+	isStreaming: boolean
+	isLast: boolean
+	metadata?: any
 }
 
-export const ReasoningBlock = ({ content, elapsed, isCollapsed = false, onToggleCollapse }: ReasoningBlockProps) => {
+export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockProps) => {
+	const { t } = useTranslation()
+	const { reasoningBlockCollapsed } = useExtensionState()
+
+	const [isCollapsed, setIsCollapsed] = useState(reasoningBlockCollapsed)
+
+	const startTimeRef = useRef<number>(Date.now())
+	const [elapsed, setElapsed] = useState<number>(0)
 	const contentRef = useRef<HTMLDivElement>(null)
-	const elapsedRef = useRef<number>(0)
-	const { t } = useTranslation("chat")
-	const [thought, setThought] = useState<string>()
-	const [prevThought, setPrevThought] = useState<string>(t("chat:reasoning.thinking"))
-	const [isTransitioning, setIsTransitioning] = useState<boolean>(false)
-	const cursorRef = useRef<number>(0)
-	const queueRef = useRef<string[]>([])
 
 	useEffect(() => {
-		if (contentRef.current && !isCollapsed) {
-			contentRef.current.scrollTop = contentRef.current.scrollHeight
-		}
-	}, [content, isCollapsed])
+		setIsCollapsed(reasoningBlockCollapsed)
+	}, [reasoningBlockCollapsed])
 
 	useEffect(() => {
-		if (elapsed) {
-			elapsedRef.current = elapsed
+		if (isLast && isStreaming) {
+			const tick = () => setElapsed(Date.now() - startTimeRef.current)
+			tick()
+			const id = setInterval(tick, 1000)
+			return () => clearInterval(id)
 		}
-	}, [elapsed])
+	}, [isLast, isStreaming])
 
-	// Process the transition queue.
-	const processNextTransition = useCallback(() => {
-		const nextThought = queueRef.current.pop()
-		queueRef.current = []
+	const seconds = Math.floor(elapsed / 1000)
+	const secondsLabel = t("chat:reasoning.seconds", { count: seconds })
 
-		if (nextThought) {
-			setIsTransitioning(true)
-		}
-
-		setTimeout(() => {
-			if (nextThought) {
-				setPrevThought(nextThought)
-				setIsTransitioning(false)
-			}
-
-			setTimeout(() => processNextTransition(), 500)
-		}, 200)
-	}, [])
-
-	useMount(() => {
-		processNextTransition()
-	})
-
-	useEffect(() => {
-		if (content.length - cursorRef.current > 160) {
-			setThought("... " + content.slice(cursorRef.current))
-			cursorRef.current = content.length
-		}
-	}, [content])
-
-	useEffect(() => {
-		if (thought && thought !== prevThought) {
-			queueRef.current.push(thought)
-		}
-	}, [thought, prevThought])
+	const handleToggle = () => {
+		setIsCollapsed(!isCollapsed)
+	}
 
 	return (
-		<div className="bg-vscode-editor-background border border-vscode-border rounded-xs overflow-hidden">
+		<div className="group">
 			<div
-				className="flex items-center justify-between gap-1 px-3 py-2 cursor-pointer text-muted-foreground"
-				onClick={onToggleCollapse}>
-				<div
-					className={`truncate flex-1 transition-opacity duration-200 ${isTransitioning ? "opacity-0" : "opacity-100"}`}>
-					{prevThought}
-				</div>
-				<div className="flex flex-row items-center gap-1">
-					{elapsedRef.current > 1000 && (
-						<>
-							<CounterClockwiseClockIcon className="scale-80" />
-							<div>{t("reasoning.seconds", { count: Math.round(elapsedRef.current / 1000) })}</div>
-						</>
+				className="flex items-center justify-between mb-2.5 pr-2 cursor-pointer select-none"
+				onClick={handleToggle}>
+				<div className="flex items-center gap-2">
+					<Lightbulb className="w-4" />
+					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+					{elapsed > 0 && (
+						<span className="text-sm text-vscode-descriptionForeground mt-0.5">{secondsLabel}</span>
 					)}
-					{isCollapsed ? <CaretDownIcon /> : <CaretUpIcon />}
+				</div>
+				<div className="flex items-center gap-2">
+					<ChevronUp
+						className={cn(
+							"w-4 transition-all opacity-0 group-hover:opacity-100",
+							isCollapsed && "-rotate-180",
+						)}
+					/>
 				</div>
 			</div>
-			{!isCollapsed && (
-				<div ref={contentRef} className="px-3 max-h-[160px] overflow-y-auto">
+			{(content?.trim()?.length ?? 0) > 0 && !isCollapsed && (
+				<div
+					ref={contentRef}
+					className="border-l border-vscode-descriptionForeground/20 ml-2 pl-4 pb-1 text-vscode-descriptionForeground">
 					<MarkdownBlock markdown={content} />
 				</div>
 			)}

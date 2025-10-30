@@ -28,11 +28,16 @@
 		"notifications": "Notificacions",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Comandes de barra",
 		"prompts": "Indicacions",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
 		"display": "Mostrar"
+	},
+	"slashCommands": {
+		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configura les indicacions de suport utilitzades per a accions ràpides com millorar indicacions, explicar codi i solucionar problemes. Aquestes indicacions ajuden Kilo Code a proporcionar millor assistència per a tasques comunes de desenvolupament."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Restablir al valor per defecte (0.4)",
 		"searchMaxResultsLabel": "Màxim de resultats de cerca",
 		"searchMaxResultsDescription": "Nombre màxim de resultats de cerca a retornar quan es consulta l'índex de la base de codi. Els valors més alts proporcionen més context però poden incloure resultats menys rellevants.",
-		"resetToDefault": "Restablir al valor per defecte"
+		"resetToDefault": "Restablir al valor per defecte",
+		"cancelling": "S'està cancel·lant...",
+		"cancelIndexingButton": "Cancel·la la indexació"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Pots configurar una drecera global per a aquesta configuració <SettingsLink>a les preferències del teu IDE</SettingsLink>.",
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
 		"enabled": "Auto-aprovació activada",
 		"toggleAriaLabel": "Commuta l'aprovació automàtica",
@@ -237,7 +245,7 @@
 		"searchProviderPlaceholder": "Cerca proveïdors",
 		"noProviderMatchFound": "No s'han trobat proveïdors",
 		"noMatchFound": "No s'han trobat perfils coincidents",
-		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi, però no limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi però limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
 		"awsCustomArnUse": "Introduïu un ARN vàlid d'Amazon Bedrock per al model que voleu utilitzar. Exemples de format:",
 		"awsCustomArnDesc": "Assegureu-vos que la regió a l'ARN coincideix amb la regió d'AWS seleccionada anteriorment.",
 		"openRouterApiKey": "Clau API d'OpenRouter",
@@ -280,6 +288,8 @@
 		"getChutesApiKey": "Obtenir clau API de Chutes",
 		"fireworksApiKey": "Clau API de Fireworks",
 		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"syntheticApiKey": "Clau API de Synthetic",
+		"getSyntheticApiKey": "Obtenir clau API de Synthetic",
 		"featherlessApiKey": "Clau API de Featherless",
 		"getFeatherlessApiKey": "Obtenir clau API de Featherless",
 		"ioIntelligenceApiKey": "Clau API d'IO Intelligence",
@@ -303,6 +313,10 @@
 		"sambaNovaApiKey": "Clau API de SambaNova",
 		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
 		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obtenir clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Utilitzar una URL base personalitzada",
 		"huggingFaceModelId": "ID del model",
 		"huggingFaceLoading": "Carregant...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -379,9 +393,11 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del model",
-			"apiKey": "Clau API",
-			"apiKeyPlaceholder": "Introduïu la vostra clau API",
-			"apiKeyInfo": "La clau API s'enviarà com a capçalera d'autorització",
+			"apiKey": "Clau API d'Ollama",
+			"apiKeyPlaceholder": "Introdueix la teva clau API",
+			"apiKeyHelp": "Clau API opcional per a instàncies d'Ollama autenticades o serveis al núvol. Deixa-ho buit per a instal·lacions locals.",
+			"numCtx": "Mida de la finestra de context (num_ctx)",
+			"numCtxHelp": "Sobreescriu la mida de la finestra de context per defecte del model. Deixeu-ho en blanc per utilitzar la configuració del Modelfile del model. El valor mínim és 128.",
 			"description": "Ollama permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la Guia d'inici ràpid.",
 			"warning": "Nota: Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
 		},
@@ -748,12 +764,6 @@
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Morph Fast Apply. Requereix el Proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
-			"apiKey": "Clau d'API de Morph (opcional)",
-			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edició en segon pla",
 			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
@@ -784,6 +794,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Habilita les funcionalitats d'Autocomplete per a suggeriments de codi ràpids i millores directament al teu editor. Inclou Tasca Ràpida (Cmd+I) per a canvis específics i Autocomplete per a millores contextuals."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
+			"apiKey": "Clau API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"modelLabel": "Selecció de model",
+			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
+			"models": {
+				"auto": "Automàtic (Per defecte - tria el millor disponible)",
+				"morphFast": "Morph v3 Fast (Més ràpid, cost més baix)",
+				"morphLarge": "Morph v3 Large (Més capaç)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Habilitar comandes de barra diagonal iniciades pel model",
@@ -859,6 +883,7 @@
 			"regionMismatch": "Avís: La regió del vostre ARN ({{arnRegion}}) no coincideix amb la regió seleccionada ({{region}}). Això pot causar problemes d'accés. El proveïdor utilitzarà la regió de l'ARN."
 		},
 		"modelAvailability": "L'ID de model ({{modelId}}) que heu proporcionat no està disponible. Si us plau, trieu un altre model.",
+		"modelDeprecated": "Aquest model ja no està disponible. Si us plau, seleccioneu un model diferent.",
 		"providerNotAllowed": "El proveïdor '{{provider}}' no està permès per la vostra organització",
 		"modelNotAllowed": "El model '{{model}}' no està permès per al proveïdor '{{provider}}' per la vostra organització",
 		"profileInvalid": "Aquest perfil conté un proveïdor o model que no està permès per la vostra organització",
@@ -901,6 +926,26 @@
 		"taskTimeline": {
 			"label": "Mostra la línia temporal de la tasca",
 			"description": "Mostra una línia de temps visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i desplaçar-te cap enrere a punts específics de l'historial de la tasca."
+		},
+		"sendMessageOnEnter": {
+			"label": "Envia missatge amb Enter",
+			"description": "Quan estigui activat, prem Enter per enviar i Shift+Enter per a una nova línia. Desactiva-ho per utilitzar Shift+Enter per enviar en el seu lloc."
+		},
+		"costThreshold": {
+			"label": "Amaga el cost per sota del llindar",
+			"description": "Mostra només els costos de sol·licituds superiors a aquesta quantitat. Els costos sempre són visibles quan el panell de detalls està obert.",
+			"currentValue": "Llindar actual: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Mostrar marca de temps",
+			"description": "Mostrar la marca de temps per a cada missatge a la vista del xat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra l'animació al marge quan s'autocompleta",
+			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",
+			"preview": "Previsualització de l'animació"
 		}
 	},
 	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
@@ -920,6 +965,12 @@
 			"input": "Entrada",
 			"output": "Sortida",
 			"cacheReads": "Lectures de memòria cau"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Replega els missatges de pensament per defecte",
+			"description": "Quan estigui activat, els blocs de pensament es replegaran per defecte fins que interactuïs amb ells"
 		}
 	}
 }

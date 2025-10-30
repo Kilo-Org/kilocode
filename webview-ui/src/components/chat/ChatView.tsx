@@ -37,15 +37,15 @@ import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
 // import RooHero from "@src/components/welcome/RooHero" // kilocode_change: unused
 // import RooTips from "@src/components/welcome/RooTips" // kilocode_change: unused
-// import RooCloudCTA from "@src/components/welcome/RooCloudCTA" // kilocode_change: unused
 import { StandardTooltip } from "@src/components/ui"
 import { useAutoApprovalState } from "@src/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@src/hooks/useAutoApprovalToggles"
+// import { CloudUpsellDialog } from "@src/components/cloud/CloudUpsellDialog" // kilocode_change: unused
 
 import TelemetryBanner from "../common/TelemetryBanner" // kilocode_change: deactivated for now
 // import VersionIndicator from "../common/VersionIndicator" // kilocode_change: unused
 import { OrganizationSelector } from "../kilocode/common/OrganizationSelector"
-import { useTaskSearch } from "../history/useTaskSearch"
+// import { useTaskSearch } from "../history/useTaskSearch" // kilocode_change: unused
 import HistoryPreview from "../history/HistoryPreview"
 import Announcement from "./Announcement"
 import BrowserSessionRow from "./BrowserSessionRow"
@@ -63,6 +63,9 @@ import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilo
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
 import { QueuedMessages } from "./QueuedMessages"
 import { buildDocLink } from "@/utils/docLinks"
+// import DismissibleUpsell from "../common/DismissibleUpsell" // kilocode_change: unused
+// import { useCloudUpsell } from "@src/hooks/useCloudUpsell" // kilocode_change: unused
+// import { Cloud } from "lucide-react" // kilocode_change: unused
 
 export interface ChatViewProps {
 	isHidden: boolean
@@ -98,7 +101,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		clineMessages: messages,
 		currentTaskItem,
 		currentTaskTodos,
-		taskHistory,
+		taskHistoryFullLength, // kilocode_change
+		taskHistoryVersion, // kilocode_change
 		apiConfiguration,
 		organizationAllowList,
 		mcpServers,
@@ -119,6 +123,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		autoApprovalEnabled,
 		alwaysAllowModeSwitch,
 		showAutoApproveMenu, // kilocode_change
+		enableCheckpoints, // kilocode_change
 		alwaysAllowSubtasks,
 		alwaysAllowFollowupQuestions,
 		alwaysAllowUpdateTodoList,
@@ -130,6 +135,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		soundVolume,
 		// cloudIsAuthenticated, // kilocode_change
 		messageQueue = [],
+		sendMessageOnEnter, // kilocode_change
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -138,7 +144,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		messagesRef.current = messages
 	}, [messages])
 
-	const { tasks } = useTaskSearch()
+	// const { tasks } = useTaskSearch() // kilocode_change
 
 	// Initialize expanded state based on the persisted setting (default to expanded if undefined)
 	const [isExpanded, setIsExpanded] = useState(
@@ -216,6 +222,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useEffect(() => {
 		clineAskRef.current = clineAsk
 	}, [clineAsk])
+
+	// kilocode_change start: unused
+	// const {
+	// 	isOpen: isUpsellOpen,
+	// 	openUpsell,
+	// 	closeUpsell,
+	// 	handleConnect,
+	// } = useCloudUpsell({
+	// 	autoOpenOnAuth: false,
+	// })
+	// kilocode_change end
 
 	// Keep inputValueRef in sync with inputValue state
 	useEffect(() => {
@@ -1625,6 +1642,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					onSuggestionClick={handleSuggestionClickInRow} // This was already stabilized
 					onBatchFileResponse={handleBatchFileResponse}
 					highlighted={highlightedMessageIndex === index} // kilocode_change: add highlight prop
+					enableCheckpoints={enableCheckpoints} // kilocode_change
 					onFollowUpUnmount={handleFollowUpUnmount}
 					isFollowUpAnswered={messageOrGroup.isAnswered === true || messageOrGroup.ts === currentFollowUpTs}
 					editable={
@@ -1658,6 +1676,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			handleSuggestionClickInRow,
 			handleBatchFileResponse,
 			highlightedMessageIndex, // kilocode_change: add highlightedMessageIndex
+			enableCheckpoints, // kilocode_change
 			handleFollowUpUnmount,
 			currentFollowUpTs,
 			alwaysAllowUpdateTodoList,
@@ -1887,6 +1906,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 	const areButtonsVisible = showScrollToBottom || primaryButtonText || secondaryButtonText || isStreaming
 
+	const showTelemetryBanner = telemetrySetting === "unset" // kilocode_change
+
 	return (
 		<div
 			data-testid="chat-view"
@@ -1951,10 +1972,10 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			) : (
 				<div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-4 relative">
 					{/* Moved Task Bar Header Here */}
-					{tasks.length !== 0 && (
+					{taskHistoryFullLength !== 0 && (
 						<div className="flex text-vscode-descriptionForeground w-full mx-auto px-5 pt-3">
 							<div className="flex items-center gap-1 cursor-pointer" onClick={toggleExpanded}>
-								{tasks.length < 10 && (
+								{taskHistoryFullLength < 10 && (
 									<span className={`font-medium text-xs `}>{t("history:recentTasks")}</span>
 								)}
 								<span
@@ -1963,9 +1984,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							</div>
 						</div>
 					)}
-					<div>
-						<OrganizationSelector className="absolute top-2 right-3" />
-					</div>
+					{!showTelemetryBanner && (
+						<div>
+							<OrganizationSelector className="absolute top-2 right-3" />
+						</div>
+					)}
 					{/* kilocode_change start: changed the classes to support notifications */}
 					<div className="w-full h-full flex flex-col gap-4 px-3.5 transition-all duration-300">
 						{/* kilocode_change end */}
@@ -1978,16 +2001,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 
 						<RooHero /> */}
 
-						{telemetrySetting === "unset" && <TelemetryBanner />}
 						{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
-						{telemetrySetting !== "unset" && (
-							<div className={tasks.length === 0 ? "mt-10" : undefined}>
+						{showTelemetryBanner && <TelemetryBanner />}
+						{!showTelemetryBanner && (
+							<div className={taskHistoryFullLength === 0 ? "mt-10" : undefined}>
 								<KilocodeNotifications />
 							</div>
 						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
 							{/* kilocode_change end */}
-							<p className="text-vscode-editor-foreground leading-tight font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+							<p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
 									i18nKey="chat:about"
 									components={{
@@ -2002,12 +2025,14 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 									}}
 								/>
 							</p>
-							{taskHistory.length === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
+							{taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
 							{/*<div className="mb-2.5">
 								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
 							</div> kilocode_change: do not show */}
 							{/* Show the task history preview if expanded and tasks exist */}
-							{taskHistory.length > 0 && isExpanded && <HistoryPreview />}
+							{taskHistoryFullLength > 0 && isExpanded && (
+								<HistoryPreview taskHistoryVersion={taskHistoryVersion} />
+							)}
 							{/* kilocode_change start: KilocodeNotifications + Layout fixes */}
 						</div>
 						{/* kilocode_change end */}
@@ -2183,6 +2208,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				mode={mode}
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
+				sendMessageOnEnter={sendMessageOnEnter} // kilocode_change
 			/>
 			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls showApiConfig />
@@ -2195,6 +2221,8 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 			)} */}
 
 			<div id="roo-portal" />
+			{/* kilocode_change: disable  */}
+			{/* <CloudUpsellDialog open={isUpsellOpen} onOpenChange={closeUpsell} onConnect={handleConnect} /> */}
 		</div>
 	)
 }

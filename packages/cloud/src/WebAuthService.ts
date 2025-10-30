@@ -141,7 +141,8 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 				if (
 					this.credentials === null ||
 					this.credentials.clientToken !== credentials.clientToken ||
-					this.credentials.sessionId !== credentials.sessionId
+					this.credentials.sessionId !== credentials.sessionId ||
+					this.credentials.organizationId !== credentials.organizationId
 				) {
 					this.transitionToAttemptingSession(credentials)
 				}
@@ -174,6 +175,7 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 
 		this.changeState("attempting-session")
 
+		this.timer.stop()
 		this.timer.start()
 	}
 
@@ -248,8 +250,10 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	 *
 	 * This method initiates the authentication flow by generating a state parameter
 	 * and opening the browser to the authorization URL.
+	 *
+	 * @param landingPageSlug Optional slug of a specific landing page (e.g., "supernova", "special-offer", etc.)
 	 */
-	public async login(): Promise<void> {
+	public async login(landingPageSlug?: string): Promise<void> {
 		try {
 			const vscode = await importVscode()
 
@@ -267,11 +271,17 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 				state,
 				auth_redirect: `${vscode.env.uriScheme}://${publisher}.${name}`,
 			})
-			const url = `${getRooCodeApiUrl()}/extension/sign-in?${params.toString()}`
+
+			// Use landing page URL if slug is provided, otherwise use default sign-in URL
+			const url = landingPageSlug
+				? `${getRooCodeApiUrl()}/l/${landingPageSlug}?${params.toString()}`
+				: `${getRooCodeApiUrl()}/extension/sign-in?${params.toString()}`
+
 			await vscode.env.openExternal(vscode.Uri.parse(url))
 		} catch (error) {
-			this.log(`[auth] Error initiating Roo Code Cloud auth: ${error}`)
-			throw new Error(`Failed to initiate Roo Code Cloud authentication: ${error}`)
+			const context = landingPageSlug ? ` (landing page: ${landingPageSlug})` : ""
+			this.log(`[auth] Error initiating Roo Code Cloud auth${context}: ${error}`)
+			throw new Error(`Failed to initiate Roo Code Cloud authentication${context}: ${error}`)
 		}
 	}
 
@@ -461,6 +471,42 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 		return this.credentials?.organizationId || null
 	}
 
+	/**
+	 * Switch to a different organization context
+	 * @param organizationId The organization ID to switch to, or null for personal account
+	 */
+	public async switchOrganization(organizationId: string | null): Promise<void> {
+		if (!this.credentials) {
+			throw new Error("Cannot switch organization: not authenticated")
+		}
+
+		// Update the stored credentials with the new organization ID
+		const updatedCredentials: AuthCredentials = {
+			...this.credentials,
+			organizationId: organizationId,
+		}
+
+		// Store the updated credentials, handleCredentialsChange will handle the update
+		await this.storeCredentials(updatedCredentials)
+	}
+
+	/**
+	 * Get all organization memberships for the current user
+	 * @returns Array of organization memberships
+	 */
+	public async getOrganizationMemberships(): Promise<CloudOrganizationMembership[]> {
+		if (!this.credentials) {
+			return []
+		}
+
+		try {
+			return await this.clerkGetOrganizationMemberships()
+		} catch (error) {
+			this.log(`[auth] Failed to get organization memberships: ${error}`)
+			return []
+		}
+	}
+
 	private async clerkSignIn(ticket: string): Promise<AuthCredentials> {
 		const formData = new URLSearchParams()
 		formData.append("strategy", "ticket")
@@ -645,9 +691,14 @@ export class WebAuthService extends EventEmitter<AuthServiceEvents> implements A
 	}
 
 	private async clerkGetOrganizationMemberships(): Promise<CloudOrganizationMembership[]> {
+		if (!this.credentials) {
+			this.log("[auth] Cannot get organization memberships: missing credentials")
+			return []
+		}
+
 		const response = await fetch(`${getClerkBaseUrl()}/v1/me/organization_memberships`, {
 			headers: {
-				Authorization: `Bearer ${this.credentials!.clientToken}`,
+				Authorization: `Bearer ${this.credentials.clientToken}`,
 				"User-Agent": this.userAgent(),
 			},
 			signal: AbortSignal.timeout(10000),

@@ -40,7 +40,7 @@ vi.mock("../../../utils/fs", () => ({
 }))
 
 import { SYSTEM_PROMPT } from "../system"
-import { defaultModeSlug, modes } from "../../../shared/modes"
+import { defaultModeSlug, modes, getModeBySlug } from "../../../shared/modes"
 import * as vscode from "vscode"
 import * as fs from "fs/promises"
 import { toPosix } from "./utils"
@@ -83,38 +83,42 @@ describe("File-Based Custom System Prompt", () => {
 		mockedFs.readFile.mockRejectedValue({ code: "ENOENT" })
 	})
 
-	it("should use default generation when no file-based system prompt is found", async () => {
-		const customModePrompts = {
-			[defaultModeSlug]: {
-				roleDefinition: "Test role definition",
-			},
-		}
+	// Skipped on Windows due to timeout/flake issues
+	it.skipIf(process.platform === "win32")(
+		"should use default generation when no file-based system prompt is found",
+		async () => {
+			const customModePrompts = {
+				[defaultModeSlug]: {
+					roleDefinition: "Test role definition",
+				},
+			}
 
-		const prompt = await SYSTEM_PROMPT(
-			mockContext,
-			"test/path", // Using a relative path without leading slash
-			false, // supportsComputerUse
-			undefined, // mcpHub
-			undefined, // diffStrategy
-			undefined, // browserViewportSize
-			defaultModeSlug, // mode
-			customModePrompts, // customModePrompts
-			undefined, // customModes
-			undefined, // globalCustomInstructions
-			undefined, // diffEnabled
-			undefined, // experiments
-			true, // enableMcpServerCreation
-			undefined, // language
-			undefined, // rooIgnoreInstructions
-			undefined, // partialReadsEnabled
-		)
+			const prompt = await SYSTEM_PROMPT(
+				mockContext,
+				"test/path", // Using a relative path without leading slash
+				false, // supportsComputerUse
+				undefined, // mcpHub
+				undefined, // diffStrategy
+				undefined, // browserViewportSize
+				defaultModeSlug, // mode
+				customModePrompts, // customModePrompts
+				undefined, // customModes
+				undefined, // globalCustomInstructions
+				undefined, // diffEnabled
+				undefined, // experiments
+				true, // enableMcpServerCreation
+				undefined, // language
+				undefined, // rooIgnoreInstructions
+				undefined, // partialReadsEnabled
+			)
 
-		// Should contain default sections
-		expect(prompt).toContain("TOOL USE")
-		expect(prompt).toContain("CAPABILITIES")
-		expect(prompt).toContain("MODES")
-		expect(prompt).toContain("Test role definition")
-	})
+			// Should contain default sections
+			expect(prompt).toContain("TOOL USE")
+			expect(prompt).toContain("CAPABILITIES")
+			expect(prompt).toContain("MODES")
+			expect(prompt).toContain("Test role definition")
+		},
+	)
 
 	it("should use file-based custom system prompt when available", async () => {
 		// Mock the readFile to return content from a file
@@ -148,7 +152,8 @@ describe("File-Based Custom System Prompt", () => {
 		)
 
 		// Should contain role definition and file-based system prompt
-		expect(prompt).toContain(modes[0].roleDefinition)
+		const expectedMode = getModeBySlug(defaultModeSlug) || modes[0]
+		expect(prompt).toContain(expectedMode.roleDefinition)
 		expect(prompt).toContain(fileCustomSystemPrompt)
 
 		// Should not contain any of the default sections

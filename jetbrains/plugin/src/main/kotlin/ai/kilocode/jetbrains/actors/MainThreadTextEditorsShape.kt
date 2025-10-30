@@ -4,15 +4,13 @@
 
 package ai.kilocode.jetbrains.actors
 
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
 import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.editor.Range
 import ai.kilocode.jetbrains.editor.createURI
-import kotlinx.coroutines.delay
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import java.io.File
 
 /**
@@ -25,8 +23,8 @@ interface MainThreadTextEditorsShape : Disposable {
      * @param options Display options
      * @return Editor ID or null
      */
-    suspend fun tryShowTextDocument(resource: Map<String,Any?>, options: Any?): Any?
-    
+    suspend fun tryShowTextDocument(resource: Map<String, Any?>, options: Any?): Any?
+
     /**
      * Register text editor decoration type
      * @param extensionId Extension ID
@@ -34,13 +32,13 @@ interface MainThreadTextEditorsShape : Disposable {
      * @param options Decoration rendering options
      */
     fun registerTextEditorDecorationType(extensionId: Map<String, String>, key: String, options: Any)
-    
+
     /**
      * Remove text editor decoration type
      * @param key Decoration type key
      */
     fun removeTextEditorDecorationType(key: String)
-    
+
     /**
      * Try to show editor
      * @param id Editor ID
@@ -48,14 +46,14 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Operation result
      */
     fun tryShowEditor(id: String, position: Any?): Any
-    
+
     /**
      * Try to hide editor
      * @param id Editor ID
      * @return Operation result
      */
     fun tryHideEditor(id: String): Any
-    
+
     /**
      * Try to set options
      * @param id Editor ID
@@ -63,7 +61,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Operation result
      */
     fun trySetOptions(id: String, options: Any): Any
-    
+
     /**
      * Try to set decorations
      * @param id Editor ID
@@ -72,7 +70,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Operation result
      */
     fun trySetDecorations(id: String, key: String, ranges: List<Any>): Any
-    
+
     /**
      * Try to quickly set decorations
      * @param id Editor ID
@@ -81,7 +79,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Operation result
      */
     fun trySetDecorationsFast(id: String, key: String, ranges: List<Any>): Any
-    
+
     /**
      * Try to reveal range
      * @param id Editor ID
@@ -89,8 +87,8 @@ interface MainThreadTextEditorsShape : Disposable {
      * @param revealType Display type
      * @return Operation result
      */
-    fun tryRevealRange(id: String, range: Map<String,Any?>, revealType: Int): Any
-    
+    fun tryRevealRange(id: String, range: Map<String, Any?>, revealType: Int): Any
+
     /**
      * Try to set selections
      * @param id Editor ID
@@ -98,7 +96,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Operation result
      */
     fun trySetSelections(id: String, selections: List<Any>): Any
-    
+
     /**
      * Try to apply edits
      * @param id Editor ID
@@ -108,7 +106,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Whether successful
      */
     fun tryApplyEdits(id: String, modelVersionId: Int, edits: List<Any>, opts: Any?): Boolean
-    
+
     /**
      * Try to insert snippet
      * @param id Editor ID
@@ -119,7 +117,7 @@ interface MainThreadTextEditorsShape : Disposable {
      * @return Whether successful
      */
     fun tryInsertSnippet(id: String, modelVersionId: Int, template: String, selections: List<Any>, opts: Any?): Boolean
-    
+
     /**
      * Get diff information
      * @param id Editor ID
@@ -142,10 +140,10 @@ class MainThreadTextEditors(var project: Project) : MainThreadTextEditorsShape {
         vfs.refreshIoFiles(listOf(File(path)))
         val resourceURI = createURI(resource)
         val editorHandle = project.getService(EditorAndDocManager::class.java).openEditor(resourceURI)
-        logger.info("Trying to show text document: resource=$resource execution completed" )
+        logger.info("Trying to show text document: resource=$resource execution completed")
         return editorHandle.id
     }
-    
+
     override fun registerTextEditorDecorationType(extensionId: Map<String, String>, key: String, options: Any) {
         logger.info("Registering text editor decoration type: extensionId=$extensionId, key=$key, options=$options")
     }
@@ -179,7 +177,7 @@ class MainThreadTextEditors(var project: Project) : MainThreadTextEditorsShape {
         return Unit
     }
 
-    override fun tryRevealRange(id: String, range: Map<String,Any?>, revealType: Int): Any {
+    override fun tryRevealRange(id: String, range: Map<String, Any?>, revealType: Int): Any {
         logger.info("Try to reveal range: id=$id, range=$range, revealType=$revealType")
         val handle = project.getService(EditorAndDocManager::class.java).getEditorHandleById(id)
         handle?.let {
@@ -189,7 +187,7 @@ class MainThreadTextEditors(var project: Project) : MainThreadTextEditorsShape {
         return Unit
     }
 
-    private fun createRanges(range: Map<String,Any?>): Range {
+    private fun createRanges(range: Map<String, Any?>): Range {
         val startLineNumber = (range["startLineNumber"] as? Number)?.toInt() ?: 0
         val startColumn = (range["startColumn"] as? Number)?.toInt() ?: 0
         val endLineNumber = (range["endLineNumber"] as? Number)?.toInt() ?: startLineNumber

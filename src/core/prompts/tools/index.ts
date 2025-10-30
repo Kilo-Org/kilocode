@@ -1,4 +1,8 @@
-import type { ToolName, ModeConfig } from "@roo-code/types"
+import type {
+	ToolName,
+	ModeConfig,
+	ToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
@@ -28,9 +32,9 @@ import { getUpdateTodoListDescription } from "./update-todo-list"
 import { getRunSlashCommandDescription } from "./run-slash-command"
 import { getGenerateImageDescription } from "./generate-image"
 import { CodeIndexManager } from "../../../services/code-index/manager"
-import { isMorphAvailable } from "../../tools/editFileTool"
 
 // kilocode_change start: Morph fast apply
+import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 // kilocode_change end
@@ -137,7 +141,7 @@ export function getToolDescriptionsForMode(
 	}
 
 	// kilocode_change start: Morph fast apply
-	if (isMorphAvailable(clineProviderState)) {
+	if (isFastApplyAvailable(clineProviderState)) {
 		// When Morph is enabled, disable traditional editing tools
 		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
 		traditionalEditingTools.forEach((tool) => tools.delete(tool))

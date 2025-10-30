@@ -22,6 +22,11 @@ export async function waitForWebviewText(page: Page, text: string, timeout: numb
 	await expect(webviewFrame.locator("body")).toContainText(text, { timeout })
 }
 
+export async function waitForModelSelector(page: Page, timeout: number = 30000): Promise<void> {
+	const webviewFrame = await findWebview(page)
+	await expect(webviewFrame.locator('[data-testid="model-selector"]')).toBeVisible({ timeout })
+}
+
 export async function postWebviewMessage(page: Page, message: WebviewMessage): Promise<void> {
 	const webviewFrame = await findWebview(page)
 
@@ -85,4 +90,68 @@ export async function configureApiKeyThroughUI(page: Page): Promise<void> {
 	await submitButton.waitFor()
 	await submitButton.click()
 	console.log("✅ Provider configured!")
+}
+
+export async function clickSaveSettingsButton(webviewFrame: FrameLocator): Promise<void> {
+	const saveButton = webviewFrame.locator('[data-testid="save-button"]')
+	const saveButtonExists = (await saveButton.count()) > 0
+	if (saveButtonExists) {
+		await saveButton.click({ force: true }) // Click it even its disabled
+	}
+}
+
+/**
+ * Waits for all tooltips to be dismissed before proceeding.
+ * This is necessary when tooltips appear after clicking elements and need to animate away
+ * before taking screenshots to avoid inconsistent visual states.
+ */
+export async function waitForTooltipsToDismiss(webviewFrame: FrameLocator): Promise<void> {
+	const tooltipContent = webviewFrame.locator('[data-slot="tooltip-content"]')
+	await tooltipContent.waitFor({ state: "detached", timeout: 3000 }).catch(() => {
+		// If timeout, tooltips should be gone by now anyway
+	})
+}
+
+/**
+ * Freezes all GIFs on the page by converting them to static PNG images.
+ * Also sets up a MutationObserver to handle dynamically added GIFs.
+ * Works inside the VSCode extension webview iframe.
+ */
+export async function freezeGifs(page: Page): Promise<void> {
+	await page.emulateMedia({ reducedMotion: "reduce" })
+
+	// Get the webview frame to work inside the extension iframe
+	const webviewFrame = await findWebview(page)
+
+	await webviewFrame.locator("body").evaluate(() => {
+		// Function to freeze a single GIF
+		const freezeGif = (img: HTMLImageElement) => {
+			if (!img.src.toLowerCase().includes(".gif")) return
+			if (img.dataset.gifFrozen === "true") return // Already processed
+
+			const canvas = document.createElement("canvas")
+			const ctx = canvas.getContext("2d")
+			if (!ctx) return
+
+			const frame = new Image()
+			frame.crossOrigin = "anonymous"
+			frame.onload = () => {
+				canvas.width = frame.naturalWidth || frame.width
+				canvas.height = frame.naturalHeight || frame.height
+				ctx.drawImage(frame, 0, 0)
+				img.src = canvas.toDataURL("image/png")
+				img.dataset.gifFrozen = "true"
+			}
+			frame.onerror = () => {
+				// Fallback: just mark as processed to avoid infinite loops
+				img.dataset.gifFrozen = "true"
+			}
+			frame.src = img.src
+		}
+
+		// Freeze existing GIFs in the webview
+		document.querySelectorAll('img[src*=".gif"]').forEach((img) => {
+			freezeGif(img as HTMLImageElement)
+		})
+	})
 }

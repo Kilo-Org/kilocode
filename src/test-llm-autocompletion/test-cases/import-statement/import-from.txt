@@ -1,0 +1,2 @@
+# Description: Should complete import module name
+import { useState } from <<<AUTOCOMPLETE_HERE>>>

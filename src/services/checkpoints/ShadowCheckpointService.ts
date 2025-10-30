@@ -6,9 +6,11 @@ import EventEmitter from "events"
 
 import simpleGit, { SimpleGit } from "simple-git"
 import pWaitFor from "p-wait-for"
+import * as vscode from "vscode"
 
 import { fileExistsAtPath } from "../../utils/fs"
 import { executeRipgrep } from "../../services/search/file-search"
+import { t } from "../../i18n"
 
 import { CheckpointDiff, CheckpointResult, CheckpointEventMap } from "./types"
 import { getExcludePatterns } from "./excludes"
@@ -17,9 +19,6 @@ import { getExcludePatterns } from "./excludes"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { stringifyError } from "../../shared/kilocode/errorUtils"
-import * as vscode from "vscode"
-import { t } from "../../i18n"
-
 function reportError(callsite: string, error: unknown) {
 	TelemetryService.instance.captureEvent(TelemetryEventName.CHECKPOINT_FAILURE, {
 		callsite,
@@ -92,12 +91,16 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 			throw new Error("Shadow git repo already initialized")
 		}
 
-		const hasNestedGitRepos = await this.hasNestedGitRepositories()
+		const nestedGitPath = await this.getNestedGitRepository()
 
-		if (hasNestedGitRepos) {
-			showWarning(t("kilocode:checkpoints.nestedGitRepos")) // kilocode_change
+		if (nestedGitPath) {
+			// Show persistent error message with the offending path
+			const relativePath = path.relative(this.workspaceDir, nestedGitPath)
+
+			showWarning(t("kilocode:checkpoints.nestedGitRepos", { path: relativePath })) // kilocode_change
+
 			throw new Error(
-				"Checkpoints are disabled because nested git repositories were detected in the workspace. " +
+				`Checkpoints are disabled because a nested git repository was detected at: ${relativePath}. ` +
 					"Please remove or relocate nested git repositories to use the checkpoints feature.",
 			)
 		}
@@ -179,35 +182,55 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 		}
 	}
 
-	private async hasNestedGitRepositories(): Promise<boolean> {
+	private async getNestedGitRepository(): Promise<string | null> {
 		try {
-			// Find all .git directories that are not at the root level.
+			// Find all .git/HEAD files that are not at the root level.
 			const args = ["--files", "--hidden", "--follow", "-g", "**/.git/HEAD", this.workspaceDir]
 
 			const gitPaths = await executeRipgrep({ args, workspacePath: this.workspaceDir })
 
 			// Filter to only include nested git directories (not the root .git).
-			const nestedGitPaths = gitPaths.filter(
-				({ type, path }) =>
-					type === "folder" && path.includes(".git") && !path.startsWith(".git") && path !== ".git",
-			)
+			// Since we're searching for HEAD files, we expect type to be "file"
+			const nestedGitPaths = gitPaths.filter(({ type, path: filePath }) => {
+				// Check if it's a file and is a nested .git/HEAD (not at root)
+				if (type !== "file") return false
+
+				// Ensure it's a .git/HEAD file and not the root one
+				const normalizedPath = filePath.replace(/\\/g, "/")
+				return (
+					normalizedPath.includes(".git/HEAD") &&
+					!normalizedPath.startsWith(".git/") &&
+					normalizedPath !== ".git/HEAD"
+				)
+			})
 
 			if (nestedGitPaths.length > 0) {
+				// Get the first nested git repository path
+				// Remove .git/HEAD from the path to get the repository directory
+				const headPath = nestedGitPaths[0].path
+
+				// Use path module to properly extract the repository directory
+				// The HEAD file is at .git/HEAD, so we need to go up two directories
+				const gitDir = path.dirname(headPath) // removes HEAD, gives us .git
+				const repoDir = path.dirname(gitDir) // removes .git, gives us the repo directory
+
+				const absolutePath = path.join(this.workspaceDir, repoDir)
+
 				this.log(
-					`[${this.constructor.name}#hasNestedGitRepositories] found ${nestedGitPaths.length} nested git repositories: ${nestedGitPaths.map((p) => p.path).join(", ")}`,
+					`[${this.constructor.name}#getNestedGitRepository] found ${nestedGitPaths.length} nested git repositories, first at: ${repoDir}`,
 				)
-				return true
+				return absolutePath
 			}
 
-			return false
+			return null
 		} catch (error) {
 			this.log(
-				`[${this.constructor.name}#hasNestedGitRepositories] failed to check for nested git repos: ${error instanceof Error ? error.message : String(error)}`,
+				`[${this.constructor.name}#getNestedGitRepository] failed to check for nested git repos: ${error instanceof Error ? error.message : String(error)}`,
 			)
 			reportError(`${this.constructor.name}#hasNestedGitRepositories`, error) // kilocode_change
 
 			// If we can't check, assume there are no nested repos to avoid blocking the feature.
-			return false
+			return null
 		}
 	}
 

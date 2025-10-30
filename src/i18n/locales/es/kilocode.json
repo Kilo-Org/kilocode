@@ -14,10 +14,12 @@
 	"task": {
 		"noAssistantMessages": "La respuesta del modelo terminó inesperadamente (sin mensajes del asistente). Esto puede ser una señal de limitación de tasa.",
 		"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}",
-		"maxCompletionTokens": "Se alcanzó el número máximo de tokens de finalización."
+		"maxCompletionTokens": "Se alcanzó el número máximo de tokens de finalización.",
+		"disableApplyDiff": "Si este error sigue ocurriendo, por favor desactiva la Edición a través de Diferencias en Configuración Avanzada.",
+		"disableEditFile": "Si este error sigue ocurriendo, por favor desactiva la función experimental de Aplicación Rápida."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectaron repositorios Git anidados en el espacio de trabajo. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectó un repositorio Git anidado en: {{path}}. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
 		"protectedPaths": "Los puntos de control no están disponibles en {{workspaceDir}}. Por favor, abra una subcarpeta como espacio de trabajo para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
 		"dismissWarning": "Descartar"
 	},
@@ -58,7 +60,41 @@
 		"generationFailed": "Kilo: Error al generar mensaje de confirmación: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generando mensaje usando cambios no preparados",
 		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado",
-		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}"
+		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}",
+		"errors": {
+			"noProject": "Ningún proyecto disponible",
+			"connectionFailed": "Error al conectar con la extensión de Kilo Code",
+			"missingMessage": "No se recibió mensaje de confirmación desde la extensión",
+			"invalidResponse": "Formato de respuesta inválido recibido de la extensión",
+			"noChanges": "No se encontraron cambios para confirmar",
+			"timeout": "La solicitud agotó el tiempo de espera después de 30 segundos",
+			"noWorkspacePath": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"processingError": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"workspaceNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git"
+		},
+		"error": {
+			"title": "Error",
+			"workspacePathNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"unknown": "Error desconocido",
+			"processingFailed": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"generationFailed": "Fallo al generar mensaje de confirmación: {{error}}"
+		},
+		"dialogs": {
+			"info": "Mensaje de Commit de IA",
+			"error": "Error",
+			"success": "Éxito",
+			"title": "Mensaje de Commit de IA"
+		},
+		"progress": {
+			"analyzing": "Analizando cambios...",
+			"title": "Generando Mensaje de Commit",
+			"connecting": "Conectando con Kilo Code...",
+			"generating": "Generando mensaje de commit..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Genera mensaje de commit usando IA para analizar tus cambios en el código",
+			"generateButton": "Generar Mensaje de Commit"
+		}
 	},
 	"ghost": {
 		"statusBar": {
@@ -71,6 +107,7 @@
 				"tokenError": "Se debe establecer un token válido para usar Autocomplete",
 				"lastCompletion": "Última sugerencia:",
 				"sessionTotal": "Costo total de la sesión:",
+				"provider": "Proveedor:",
 				"model": "Modelo:"
 			},
 			"cost": {
@@ -96,7 +133,6 @@
 			"cancelSuggestions": "Cancelar Ediciones Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edición Sugerida Actual",
 			"applyAllSuggestions": "Aplicar Todas las Ediciones Sugeridas",
-			"promptCodeSuggestion": "Tarea Rápida",
 			"category": "Kilo Code"
 		},
 		"codeAction": {

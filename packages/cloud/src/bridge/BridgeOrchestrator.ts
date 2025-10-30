@@ -23,7 +23,8 @@ export interface BridgeOrchestratorOptions {
 	socketBridgeUrl: string
 	token: string
 	provider: TaskProviderLike
-	sessionId?: string
+	sessionId: string
+	isCloudAgent: boolean
 }
 
 /**
@@ -44,6 +45,7 @@ export class BridgeOrchestrator {
 	private readonly instanceId: string
 	private readonly appProperties: StaticAppProperties
 	private readonly gitProperties?: GitProperties
+	private readonly isCloudAgent?: boolean
 
 	// Components
 	private socketTransport: SocketTransport
@@ -59,13 +61,28 @@ export class BridgeOrchestrator {
 		return BridgeOrchestrator.instance
 	}
 
-	public static isEnabled(user?: CloudUserInfo | null, remoteControlEnabled?: boolean): boolean {
-		return !!(user?.id && user.extensionBridgeEnabled && remoteControlEnabled)
+	public static isEnabled(user: CloudUserInfo | null, remoteControlEnabled: boolean): boolean {
+		// Always disabled if signed out.
+		if (!user) {
+			return false
+		}
+
+		// Disabled by the user's organization?
+		if (!user.extensionBridgeEnabled) {
+			return false
+		}
+
+		// Disabled by the user?
+		if (!remoteControlEnabled) {
+			return false
+		}
+
+		return true
 	}
 
 	public static async connectOrDisconnect(
-		userInfo: CloudUserInfo | null,
-		remoteControlEnabled: boolean | undefined,
+		userInfo: CloudUserInfo,
+		remoteControlEnabled: boolean,
 		options: BridgeOrchestratorOptions,
 	): Promise<void> {
 		if (BridgeOrchestrator.isEnabled(userInfo, remoteControlEnabled)) {
@@ -81,6 +98,7 @@ export class BridgeOrchestrator {
 		if (!instance) {
 			try {
 				console.log(`[BridgeOrchestrator#connectOrDisconnect] Connecting...`)
+
 				// Populate telemetry properties before registering the instance.
 				await options.provider.getTelemetryProperties()
 
@@ -159,6 +177,7 @@ export class BridgeOrchestrator {
 		this.instanceId = options.sessionId || crypto.randomUUID()
 		this.appProperties = { ...options.provider.appProperties, hostname: os.hostname() }
 		this.gitProperties = options.provider.gitProperties
+		this.isCloudAgent = options.isCloudAgent
 
 		this.socketTransport = new SocketTransport({
 			url: this.socketBridgeUrl,
@@ -185,12 +204,14 @@ export class BridgeOrchestrator {
 			gitProperties: this.gitProperties,
 			userId: this.userId,
 			provider: this.provider,
+			isCloudAgent: this.isCloudAgent,
 		})
 
 		this.taskChannel = new TaskChannel({
 			instanceId: this.instanceId,
 			appProperties: this.appProperties,
 			gitProperties: this.gitProperties,
+			isCloudAgent: this.isCloudAgent,
 		})
 	}
 

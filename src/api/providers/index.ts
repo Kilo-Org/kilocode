@@ -21,6 +21,7 @@ export { OllamaHandler } from "./ollama"
 export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
 export { OpenRouterHandler } from "./openrouter"
+export { OVHcloudAIEndpointsHandler } from "./ovhcloud" // kilocode_change
 export { QwenCodeHandler } from "./qwen-code"
 export { RequestyHandler } from "./requesty"
 export { SambaNovaHandler } from "./sambanova"
@@ -29,6 +30,7 @@ export { VertexHandler } from "./vertex"
 // kilocode_change start
 export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
+export { SyntheticHandler } from "./synthetic"
 // kilocode_change end
 export { VsCodeLmHandler } from "./vscode-lm"
 export { XAIHandler } from "./xai"

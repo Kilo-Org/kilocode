@@ -522,7 +522,8 @@ describe("ClineProvider", () => {
 		const mockState: ExtensionState = {
 			version: "1.0.0",
 			clineMessages: [],
-			taskHistory: [],
+			taskHistoryFullLength: 0, // kilocode_change
+			taskHistoryVersion: 0, // kilocode_change
 			shouldShowAnnouncement: false,
 			apiConfiguration: {
 				// kilocode_change start
@@ -582,6 +583,9 @@ describe("ClineProvider", () => {
 			diagnosticsEnabled: true,
 			openRouterImageApiKey: undefined,
 			openRouterImageGenerationSelectedModel: undefined,
+			remoteControlEnabled: false,
+			taskSyncEnabled: false,
+			featureRoomoteControlEnabled: false,
 		}
 
 		const message: ExtensionMessage = {
@@ -768,7 +772,7 @@ describe("ClineProvider", () => {
 		expect(state).toHaveProperty("alwaysAllowWrite")
 		expect(state).toHaveProperty("alwaysAllowExecute")
 		expect(state).toHaveProperty("alwaysAllowBrowser")
-		expect(state).toHaveProperty("taskHistory")
+		// expect(state).toHaveProperty("taskHistory") // kilocode_change
 		expect(state).toHaveProperty("soundEnabled")
 		expect(state).toHaveProperty("ttsEnabled")
 		expect(state).toHaveProperty("diffEnabled")
@@ -1360,19 +1364,11 @@ describe("ClineProvider", () => {
 				text: "Edited message content",
 			})
 
-			// Verify correct messages were kept (only messages before the edited one)
-			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([
-				mockMessages[0],
-				mockMessages[1],
-				mockMessages[2],
-			])
+			// Verify correct messages were kept - delete from the preceding user message to truly replace it
+			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([])
 
-			// Verify correct API messages were kept (only messages before the edited one)
-			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([
-				mockApiHistory[0],
-				mockApiHistory[1],
-				mockApiHistory[2],
-			])
+			// Verify correct API messages were kept
+			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([])
 
 			// The new flow calls webviewMessageHandler recursively with askResponse
 			// We need to verify the recursive call happened by checking if the handler was called again
@@ -2707,6 +2703,12 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		} as any)
 
@@ -2732,10 +2734,19 @@ describe("ClineProvider - Router Models", () => {
 
 		// Verify getModels was called for each provider with correct options
 		expect(getModels).toHaveBeenCalledWith({ provider: "openrouter", apiKey: "openrouter-key" }) // kilocode_change: apiKey
+		// kilocode_change start
+		expect(getModels).toHaveBeenCalledWith({
+			provider: "gemini",
+			apiKey: "gemini-key",
+			baseUrl: "https://gemini.example.com",
+		})
+		// kilocode_change end
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -2748,14 +2759,19 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})
@@ -2772,6 +2788,12 @@ describe("ClineProvider - Router Models", () => {
 				unboundApiKey: "unbound-key",
 				litellmApiKey: "litellm-key",
 				litellmBaseUrl: "http://localhost:4000",
+				// kilocode_change start
+				chutesApiKey: "chutes-key",
+				geminiApiKey: "gemini-key",
+				googleGeminiBaseUrl: "https://gemini.example.com",
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				// kilocode_change end
 			},
 		} as any)
 
@@ -2783,12 +2805,15 @@ describe("ClineProvider - Router Models", () => {
 		// Mock some providers to succeed and others to fail
 		vi.mocked(getModels)
 			.mockResolvedValueOnce(mockModels) // openrouter success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini success
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty fail
 			.mockResolvedValueOnce(mockModels) // glama success
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound fail
+			.mockRejectedValueOnce(new Error("Chutes API error")) // kilocode_change: chutes fail
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockResolvedValueOnce(mockModels) // deepinfra success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
@@ -2800,14 +2825,19 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				chutes: {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
 				litellm: {},
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 
@@ -2825,6 +2855,15 @@ describe("ClineProvider - Router Models", () => {
 			error: "Unbound API error",
 			values: { provider: "unbound" },
 		})
+
+		// kilocode_change start
+		expect(mockPostMessage).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Chutes API error",
+			values: { provider: "chutes" },
+		})
+		// kilocode_change end
 
 		expect(mockPostMessage).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -2859,6 +2898,10 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				// kilocode_change start
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				chutesApiKey: "chutes-key",
+				// kilocode_change end
 				// No litellm config
 			},
 		} as any)
@@ -2895,6 +2938,10 @@ describe("ClineProvider - Router Models", () => {
 				requestyApiKey: "requesty-key",
 				glamaApiKey: "glama-key",
 				unboundApiKey: "unbound-key",
+				// kilocode_change start
+				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				chutesApiKey: "chutes-key",
+				// kilocode_change end
 				// No litellm config
 			},
 		} as any)
@@ -2920,14 +2967,19 @@ describe("ClineProvider - Router Models", () => {
 			routerModels: {
 				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
 				unbound: mockModels,
+				chutes: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				ovhcloud: mockModels, // kilocode_change
+				huggingface: {},
+				"io-intelligence": {},
 			},
 		})
 	})
@@ -3076,7 +3128,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			mockCline.apiConversationHistory = [{ ts: 1000 }, { ts: 2000 }, { ts: 3000 }] as any[]
 			mockCline.overwriteClineMessages = vi.fn()
 			mockCline.overwriteApiConversationHistory = vi.fn()
-			mockCline.handleWebviewAskResponse = vi.fn()
+			mockCline.submitUserMessage = vi.fn()
 
 			await provider.addClineToStack(mockCline)
 			;(provider as any).getTaskWithId = vi.fn().mockResolvedValue({
@@ -3106,9 +3158,11 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				text: "Edited message with preserved images",
 			})
 
-			// Verify messages were edited correctly - messages up to the edited message should remain
-			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0], mockMessages[1]])
-			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([{ ts: 1000 }, { ts: 2000 }])
+			// Verify messages were edited correctly - the ORIGINAL user message and all subsequent messages are removed
+			expect(mockCline.overwriteClineMessages).toHaveBeenCalledWith([mockMessages[0]])
+			expect(mockCline.overwriteApiConversationHistory).toHaveBeenCalledWith([{ ts: 1000 }])
+			// Verify submitUserMessage was called with the edited content
+			expect(mockCline.submitUserMessage).toHaveBeenCalledWith("Edited message with preserved images", undefined)
 		})
 
 		test("handles editing messages with file attachments", async () => {
@@ -3130,7 +3184,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			mockCline.apiConversationHistory = [{ ts: 1000 }, { ts: 2000 }, { ts: 3000 }] as any[]
 			mockCline.overwriteClineMessages = vi.fn()
 			mockCline.overwriteApiConversationHistory = vi.fn()
-			mockCline.handleWebviewAskResponse = vi.fn()
+			mockCline.submitUserMessage = vi.fn()
 
 			await provider.addClineToStack(mockCline)
 			;(provider as any).getTaskWithId = vi.fn().mockResolvedValue({
@@ -3161,11 +3215,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			})
 
 			expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
-			expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
-				"messageResponse",
-				"Edited message with file attachment",
-				undefined,
-			)
+			expect(mockCline.submitUserMessage).toHaveBeenCalledWith("Edited message with file attachment", undefined)
 		})
 	})
 
@@ -3257,7 +3307,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 			await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: "Edited message" })
 
 			// The error should be caught and shown
-			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Connection lost")
+			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.message.error_editing_message")
 		})
 	})
 
@@ -3380,7 +3430,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				text: "Edited message",
 			})
 
-			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Unauthorized")
+			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.message.error_editing_message")
 		})
 
 		describe("Malformed Requests and Invalid Formats", () => {
@@ -3604,7 +3654,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				// Verify cleanup was attempted before failure
 				expect(cleanupSpy).toHaveBeenCalled()
-				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("Error editing message: Operation failed")
+				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.message.error_editing_message")
 			})
 
 			test("validates proper cleanup during failed delete operations", async () => {
@@ -3644,9 +3694,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				// Verify cleanup was attempted before failure
 				expect(cleanupSpy).toHaveBeenCalled()
-				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-					"Error deleting message: Delete operation failed",
-				)
+				expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.message.error_deleting_message")
 			})
 		})
 
@@ -3669,7 +3717,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				mockCline.apiConversationHistory = [{ ts: 1000 }, { ts: 2000 }] as any[]
 				mockCline.overwriteClineMessages = vi.fn()
 				mockCline.overwriteApiConversationHistory = vi.fn()
-				mockCline.handleWebviewAskResponse = vi.fn()
+				mockCline.submitUserMessage = vi.fn()
 
 				await provider.addClineToStack(mockCline)
 				;(provider as any).getTaskWithId = vi.fn().mockResolvedValue({
@@ -3698,11 +3746,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				await messageHandler({ type: "editMessageConfirm", messageTs: 2000, text: largeEditedContent })
 
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
-				expect(mockCline.handleWebviewAskResponse).toHaveBeenCalledWith(
-					"messageResponse",
-					largeEditedContent,
-					undefined,
-				)
+				expect(mockCline.submitUserMessage).toHaveBeenCalledWith(largeEditedContent, undefined)
 			})
 
 			test("handles deleting messages with large payloads", async () => {
@@ -3882,7 +3926,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 				] as any[]
 				mockCline.overwriteClineMessages = vi.fn()
 				mockCline.overwriteApiConversationHistory = vi.fn()
-				mockCline.handleWebviewAskResponse = vi.fn()
+				mockCline.submitUserMessage = vi.fn()
 
 				await provider.addClineToStack(mockCline)
 				;(provider as any).getTaskWithId = vi.fn().mockResolvedValue({
@@ -3915,7 +3959,7 @@ describe("ClineProvider - Comprehensive Edit/Delete Edge Cases", () => {
 
 				// Should handle future timestamps correctly
 				expect(mockCline.overwriteClineMessages).toHaveBeenCalled()
-				expect(mockCline.handleWebviewAskResponse).toHaveBeenCalled()
+				expect(mockCline.submitUserMessage).toHaveBeenCalled()
 			})
 		})
 	})

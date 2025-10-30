@@ -8,7 +8,6 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
 import java.io.IOException
 import java.net.Socket
-import java.net.SocketException
 import java.nio.channels.Channels
 import java.nio.channels.SocketChannel
 import java.util.concurrent.ConcurrentHashMap
@@ -100,8 +99,14 @@ class NodeSocket : ISocket {
                         }
                     } catch (e: IOException) {
                         if (!isDisposed.get()) {
-                            // Only report errors when socket is not actively closed
-                            logger.error("Socket[$debugLabel] IO exception occurred while reading data", e)
+                            // Check if this is a connection reset during project switching
+                            val isConnectionReset = e.message?.contains("Connection reset") == true
+                            if (isConnectionReset) {
+                                logger.info("Socket[$debugLabel] Connection reset detected, likely due to project switching")
+                            } else {
+                                // Only report non-connection-reset errors when socket is not actively closed
+                                logger.error("Socket[$debugLabel] IO exception occurred while reading data", e)
+                            }
                             handleSocketError(e)
                         }
                         break
@@ -159,10 +164,11 @@ class NodeSocket : ISocket {
         }
 
         traceSocketEvent(
-            SocketDiagnosticsEventType.ERROR, mapOf(
+            SocketDiagnosticsEventType.ERROR,
+            mapOf(
                 "code" to errorCode,
-                "message" to error.message
-            )
+                "message" to error.message,
+            ),
         )
 
         // EPIPE errors don't need additional handling, socket will close itself
@@ -269,14 +275,16 @@ class NodeSocket : ISocket {
         try {
             if (isSocket && socket != null) {
                 socket.shutdownOutput()
-            } else channel?.shutdownOutput()
+            } else {
+                channel?.shutdownOutput()
+            }
         } catch (e: Exception) {
             logger.error("Socket[$debugLabel] Exception occurred while sending END signal", e)
             handleSocketError(e)
         }
     }
 
-    override suspend fun drain(): Unit {
+    override suspend fun drain() {
         traceSocketEvent(SocketDiagnosticsEventType.NODE_DRAIN_BEGIN)
 
         try {
@@ -305,12 +313,31 @@ class NodeSocket : ISocket {
         traceSocketEvent(SocketDiagnosticsEventType.CLOSE)
         logger.info("Socket[$debugLabel] Releasing resources")
 
-        // Clean up listeners
+        // Clean up listeners first to prevent new events
         dataListeners.clear()
         closeListeners.clear()
         endListeners.clear()
 
-        // Close Socket
+        // Interrupt threads before closing socket to prevent race conditions
+        receiveThread?.interrupt()
+        endTimeoutHandle?.interrupt()
+
+        // Wait for threads to finish
+        try {
+            receiveThread?.join(2000) // Wait up to 2 seconds for receive thread
+        } catch (e: InterruptedException) {
+            logger.warn("Socket[$debugLabel] Interrupted while waiting for receive thread")
+            Thread.currentThread().interrupt()
+        }
+
+        try {
+            endTimeoutHandle?.join(1000) // Wait up to 1 second for timeout thread
+        } catch (e: InterruptedException) {
+            logger.warn("Socket[$debugLabel] Interrupted while waiting for timeout thread")
+            Thread.currentThread().interrupt()
+        }
+
+        // Close Socket after threads are stopped
         try {
             if (!isClosed()) {
                 closeAction()
@@ -319,10 +346,8 @@ class NodeSocket : ISocket {
             logger.warn("Socket[$debugLabel] Exception occurred while closing Socket during resource release", e)
         }
 
-        // Interrupt threads
-        receiveThread?.interrupt()
+        // Clean up thread references
         receiveThread = null
-        endTimeoutHandle?.interrupt()
         endTimeoutHandle = null
 
         logger.info("Socket[$debugLabel] Resource release completed")
@@ -354,4 +379,4 @@ class NodeSocket : ISocket {
     }
 
     fun isDisposed(): Boolean = isDisposed.get()
-} 
+}

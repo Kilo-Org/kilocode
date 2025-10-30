@@ -28,11 +28,17 @@
 		"notifications": "Notifiche",
 		"contextManagement": "Contesto",
 		"terminal": "Terminal",
+		"slashCommands": "Comandi Slash",
 		"prompts": "Prompt",
+		"ui": "UI",
 		"experimental": "Sperimentale",
 		"language": "Lingua",
 		"about": "Informazioni su Kilo Code",
-		"display": "Mostra"
+		"display": "Mostra",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "Gestisci i tuoi comandi slash per eseguire rapidamente flussi di lavoro e azioni personalizzate. <DocsLink>Scopri di più</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configura i prompt di supporto utilizzati per azioni rapide come il miglioramento dei prompt, la spiegazione del codice e la risoluzione dei problemi. Questi prompt aiutano Kilo Code a fornire una migliore assistenza per le attività di sviluppo comuni."
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "Ripristina al valore predefinito (0.4)",
 		"searchMaxResultsLabel": "Risultati di ricerca massimi",
 		"searchMaxResultsDescription": "Numero massimo di risultati di ricerca da restituire quando si interroga l'indice del codice. Valori più alti forniscono più contesto ma possono includere risultati meno pertinenti.",
-		"resetToDefault": "Ripristina al valore predefinito"
+		"resetToDefault": "Ripristina al valore predefinito",
+		"cancelling": "Annullamento...",
+		"cancelIndexingButton": "Annulla indicizzazione"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Puoi configurare una scorciatoia globale per questa impostazione <SettingsLink>nelle preferenze del tuo IDE</SettingsLink>.",
 		"description": "Permetti a Kilo Code di eseguire automaticamente operazioni senza richiedere approvazione. Abilita queste impostazioni solo se ti fidi completamente dell'IA e comprendi i rischi di sicurezza associati.",
 		"enabled": "Auto-approvazione abilitata",
 		"toggleAriaLabel": "Attiva/disattiva approvazione automatica",
@@ -280,6 +289,8 @@
 		"getChutesApiKey": "Ottieni chiave API Chutes",
 		"fireworksApiKey": "Chiave API Fireworks",
 		"getFireworksApiKey": "Ottieni chiave API Fireworks",
+		"syntheticApiKey": "Chiave API Synthetic",
+		"getSyntheticApiKey": "Ottieni chiave API Synthetic",
 		"featherlessApiKey": "Chiave API Featherless",
 		"getFeatherlessApiKey": "Ottieni chiave API Featherless",
 		"ioIntelligenceApiKey": "Chiave API IO Intelligence",
@@ -303,6 +314,10 @@
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL di base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usa un URL di base personalizzato",
 		"huggingFaceModelId": "ID modello",
 		"huggingFaceLoading": "Caricamento...",
 		"huggingFaceModelsCount": "({{count}} modelli)",
@@ -379,11 +394,13 @@
 		"ollama": {
 			"baseUrl": "URL base (opzionale)",
 			"modelId": "ID modello",
-			"apiKey": "Chiave API",
+			"apiKey": "Chiave API Ollama",
 			"apiKeyPlaceholder": "Inserisci la tua chiave API",
-			"apiKeyInfo": "La chiave API verrà inviata come intestazione Authorization",
+			"apiKeyHelp": "Chiave API opzionale per istanze Ollama autenticate o servizi cloud. Lascia vuoto per installazioni locali.",
+			"numCtx": "Dimensione della finestra di contesto (num_ctx)",
+			"numCtxHelp": "Sovrascrive la dimensione predefinita della finestra di contesto del modello. Lasciare vuoto per utilizzare la configurazione del Modelfile del modello. Il valore minimo è 128.",
 			"description": "Ollama ti permette di eseguire modelli localmente sul tuo computer. Per iniziare, consulta la guida rapida.",
-			"warning": "Nota: Kilo Code utilizza prompt complessi e funziona meglio con i modelli Claude. I modelli con capacità inferiori potrebbero non funzionare come previsto."
+			"warning": "Nota: Kilo Code utiliza prompt complessi e funziona meglio con i modelli Claude. I modelli con capacità inferiori potrebbero non funzionare come previsto."
 		},
 		"unboundApiKey": "Chiave API Unbound",
 		"getUnboundApiKey": "Ottieni chiave API Unbound",
@@ -749,12 +766,6 @@
 			"name": "Abilita modifiche di file concorrenti",
 			"description": "Quando abilitato, Kilo Code può modificare più file in una singola richiesta. Quando disabilitato, Kilo Code deve modificare i file uno alla volta. Disabilitare questa opzione può aiutare quando lavori con modelli meno capaci o quando vuoi più controllo sulle modifiche dei file."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Abilita Morph Fast Apply",
-			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Morph Fast Apply. Richiede il Fornitore API Kilo Code, OpenRouter o una chiave API Morph.",
-			"apiKey": "Chiave API Morph (opzionale)",
-			"placeholder": "Inserisci la tua chiave API Morph (opzionale)"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Modifica in background",
 			"description": "Previene l'interruzione del focus dell'editor quando abilitato. Le modifiche ai file avvengono in background senza aprire viste di differenze o rubare il focus. Puoi continuare a lavorare senza interruzioni mentre Kilo Code effettua modifiche. I file possono essere aperti senza focus per catturare diagnostiche o rimanere completamente chiusi."
@@ -785,6 +796,20 @@
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
 			"description": "Abilita le funzionalità Autocomplete per suggerimenti di codice rapidi e miglioramenti direttamente nel tuo editor. Include Attività Rapida (Cmd+I) per modifiche mirate e Autocomplete per miglioramenti contestuali."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Abilita Fast Apply",
+			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede Kilo Gateway Provider, OpenRouter o una chiave API Morph.",
+			"apiKey": "Chiave API Morph (opzionale)",
+			"placeholder": "Inserisci la tua chiave API Morph (opzionale)",
+			"modelLabel": "Selezione modello",
+			"modelDescription": "Scegli quale modello Fast Apply utilizzare per le modifiche ai file",
+			"models": {
+				"auto": "Automatico (Predefinito - sceglie il migliore disponibile)",
+				"morphFast": "Morph v3 Fast (Più veloce, costo inferiore)",
+				"morphLarge": "Morph v3 Large (Più capace)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Abilita comandi slash avviati dal modello",
@@ -860,6 +885,7 @@
 			"regionMismatch": "Attenzione: La regione nel tuo ARN ({{arnRegion}}) non corrisponde alla regione selezionata ({{region}}). Questo potrebbe causare problemi di accesso. Il provider utilizzerà la regione dall'ARN."
 		},
 		"modelAvailability": "L'ID modello ({{modelId}}) fornito non è disponibile. Seleziona un modello diverso.",
+		"modelDeprecated": "Questo modello non è più disponibile. Seleziona un modello diverso.",
 		"providerNotAllowed": "Il fornitore '{{provider}}' non è consentito dalla tua organizzazione",
 		"modelNotAllowed": "Il modello '{{model}}' non è consentito per il fornitore '{{provider}}' dalla tua organizzazione.",
 		"profileInvalid": "Questo profilo contiene un fornitore o un modello non consentito dalla tua organizzazione.",
@@ -902,6 +928,26 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"sendMessageOnEnter": {
+			"label": "Invia messaggio con Invio",
+			"description": "Quando abilitato, premi Invio per inviare e Maiusc+Invio per una nuova riga. Disattiva per usare Maiusc+Invio per inviare invece."
+		},
+		"costThreshold": {
+			"label": "Nascondi costo sotto la soglia",
+			"currentValue": "Soglia attuale: ${{value}}",
+			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
+		},
+		"showTimestamps": {
+			"label": "Mostra timestamp",
+			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra animazione gutter durante l'autocompletamento",
+			"description": "Visualizza indicatore animato nel gutter dell'editor quando l'autocompletamento è in esecuzione",
+			"preview": "Anteprima animazione"
 		}
 	},
 	"includeMaxOutputTokens": "Includi token di output massimi",
@@ -921,6 +967,12 @@
 			"input": "Input",
 			"output": "Output",
 			"cacheReads": "Letture cache"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Comprimi i messaggi di pensiero per impostazione predefinita",
+			"description": "Se abilitato, i blocchi di pensiero verranno compressi per impostazione predefinita finché non interagisci con essi"
 		}
 	}
 }

@@ -1,0 +1,3 @@
+# Description: Should suggest object properties
+const obj = { name: 'test', value: 42 };
+obj.<<<AUTOCOMPLETE_HERE>>>

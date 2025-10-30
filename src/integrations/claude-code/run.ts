@@ -173,6 +173,9 @@ const claudeCodeTools = [
 	"TodoRead",
 	"TodoWrite",
 	"WebSearch",
+	"ExitPlanMode",
+	"BashOutput",
+	"KillBash",
 ].join(",")
 
 const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes

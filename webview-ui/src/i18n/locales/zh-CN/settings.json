@@ -28,12 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
+		"slashCommands": "斜杠命令",
 		"prompts": "提示词",
+		"ui": "UI",
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
 		"display": "显示"
+	},
+	"slashCommands": {
+		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
@@ -129,9 +134,12 @@
 		"searchMinScoreResetTooltip": "恢复默认值 (0.4)",
 		"searchMaxResultsLabel": "最大搜索结果数",
 		"searchMaxResultsDescription": "查询代码库索引时返回的最大搜索结果数。较高的值提供更多上下文，但可能包含相关性较低的结果。",
-		"resetToDefault": "恢复默认值"
+		"resetToDefault": "恢复默认值",
+		"cancelling": "正在取消...",
+		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
+		"toggleShortcut": "您可以<SettingsLink>在 IDE 首选项中</SettingsLink>为此设置配置全局快捷方式。",
 		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
 		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
@@ -281,6 +289,8 @@
 		"getChutesApiKey": "获取 Chutes API 密钥",
 		"fireworksApiKey": "Fireworks API 密钥",
 		"getFireworksApiKey": "获取 Fireworks API 密钥",
+		"syntheticApiKey": "Synthetic API 密钥",
+		"getSyntheticApiKey": "获取 Synthetic API 密钥",
 		"featherlessApiKey": "Featherless API 密钥",
 		"getFeatherlessApiKey": "获取 Featherless API 密钥",
 		"ioIntelligenceApiKey": "IO Intelligence API 密钥",
@@ -304,6 +314,10 @@
 		"sambaNovaApiKey": "SambaNova API 密钥",
 		"getHuggingFaceApiKey": "获取 Hugging Face API 密钥",
 		"huggingFaceApiKey": "Hugging Face API 密钥",
+		"getOvhCloudAiEndpointsApiKey": "获取 OVHcloud AI Endpoints API 密钥",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API 密钥",
+		"ovhCloudAiEndpointsBaseUrl": "基础 URL",
+		"getOvhCloudAiEndpointsBaseUrl": "使用自定义基础 URL",
 		"huggingFaceModelId": "模型 ID",
 		"huggingFaceLoading": "加载中...",
 		"huggingFaceModelsCount": "({{count}} 个模型)",
@@ -380,9 +394,11 @@
 		"ollama": {
 			"baseUrl": "基础 URL（可选）",
 			"modelId": "模型 ID",
-			"apiKey": "API 密钥",
+			"apiKey": "Ollama API 密钥",
 			"apiKeyPlaceholder": "输入您的 API 密钥",
-			"apiKeyInfo": "API 密钥将作为 Authorization 标头发送",
+			"apiKeyHelp": "用于已认证 Ollama 实例或云服务的可选 API 密钥。本地安装请留空。",
+			"numCtx": "上下文窗口大小 (num_ctx)",
+			"numCtxHelp": "覆盖模型的默认上下文窗口大小。留空以使用模型的 Modelfile 配置。最小值为 128。",
 			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
 			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
 		},
@@ -754,12 +770,6 @@
 			"name": "启用并发文件编辑",
 			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "启用 Morph Fast Apply",
-			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
-			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）"
-		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "后台编辑",
 			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
@@ -788,8 +798,22 @@
 			"successConfigured": "✓ 图像生成已配置完成，可以使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
+			"name": "自动补全",
+			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "启用 Fast Apply",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
+			"apiKey": "Morph API 密钥（可选）",
+			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"modelLabel": "模型选择",
+			"modelDescription": "选择用于文件编辑的快速应用模型",
+			"models": {
+				"auto": "自动（默认 - 选择最佳可用）",
+				"morphFast": "Morph v3 Fast（更快，成本更低）",
+				"morphLarge": "Morph v3 Large（功能更强）",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "启用模型发起的斜杠命令",
@@ -865,6 +889,7 @@
 			"regionMismatch": "警告：您的 ARN 中的区域 ({{arnRegion}}) 与您选择的区域 ({{region}}) 不匹配。这可能会导致访问问题。提供程序将使用 ARN 中的区域。"
 		},
 		"modelAvailability": "模型ID {{modelId}} 不可用，请重新选择",
+		"modelDeprecated": "此模型不再可用，请选择其他模型。",
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
 		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
@@ -907,6 +932,26 @@
 		"taskTimeline": {
 			"label": "显示任务时间轴",
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
+		},
+		"sendMessageOnEnter": {
+			"label": "使用回车键发送消息",
+			"description": "启用后，按回车键发送消息，Shift+回车键换行。禁用后，使用Shift+回车键发送消息。"
+		},
+		"costThreshold": {
+			"label": "隐藏低于阈值的费用",
+			"description": "仅显示超过此金额的请求成本。当详情面板打开时，成本始终可见。",
+			"currentValue": "当前阈值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "显示时间戳",
+			"description": "在聊天视图中为每条消息显示时间戳"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自动完成时显示边栏动画",
+			"description": "自动完成运行时在编辑器边栏显示动画指示器",
+			"preview": "动画预览"
 		}
 	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
@@ -926,6 +971,12 @@
 			"input": "输入",
 			"output": "输出",
 			"cacheReads": "缓存读取"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "默认折叠“思考”消息",
+			"description": "启用后，“思考”块将默认折叠，直到您与其交互"
 		}
 	}
 }

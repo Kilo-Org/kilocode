@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { providerNames } from "./provider-settings.js"
 import { clineMessageSchema } from "./message.js"
+import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
 /**
  * TelemetrySetting
@@ -25,11 +26,13 @@ export enum TelemetryEventName {
 	INLINE_ASSIST_ACCEPT_SUGGESTION = "Inline Assist Accept Suggestion",
 	INLINE_ASSIST_REJECT_SUGGESTION = "Inline Assist Reject Suggestion",
 	CHECKPOINT_FAILURE = "Checkpoint Failure",
-	EXCESSIVE_RECURSION = "Excessive Recursion",
+	TOOL_ERROR = "Tool Error",
+	MAX_COMPLETION_TOKENS_REACHED_ERROR = "Max Completion Tokens Reached Error",
 	NOTIFICATION_CLICKED = "Notification Clicked",
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
+	MEMORY_WARNING_SHOWN = "Memory Warning Shown",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
-	SWITCH_TO_KILO_CODE_CLICKED = "Switch To Kilo Code Clicked",
+	CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
 	// kilocode_change end
@@ -77,11 +80,17 @@ export enum TelemetryEventName {
 	ACCOUNT_LOGOUT_CLICKED = "Account Logout Clicked",
 	ACCOUNT_LOGOUT_SUCCESS = "Account Logout Success",
 
+	FEATURED_PROVIDER_CLICKED = "Featured Provider Clicked",
+
+	UPSELL_DISMISSED = "Upsell Dismissed",
+	UPSELL_CLICKED = "Upsell Clicked",
+
 	SCHEMA_VALIDATION_ERROR = "Schema Validation Error",
 	DIFF_APPLICATION_ERROR = "Diff Application Error",
 	SHELL_INTEGRATION_ERROR = "Shell Integration Error",
 	CONSECUTIVE_MISTAKE_ERROR = "Consecutive Mistake Error",
 	CODE_INDEX_ERROR = "Code Index Error",
+	TELEMETRY_SETTINGS_CHANGED = "Telemetry Settings Changed",
 }
 
 /**
@@ -127,6 +136,7 @@ export type AppProperties = z.infer<typeof appPropertiesSchema>
 
 export const taskPropertiesSchema = z.object({
 	taskId: z.string().optional(),
+	parentTaskId: z.string().optional(),
 	apiProvider: z.enum(providerNames).optional(),
 	modelId: z.string().optional(),
 	diffStrategy: z.string().optional(),
@@ -139,6 +149,11 @@ export const taskPropertiesSchema = z.object({
 			pending: z.number(),
 		})
 		.optional(),
+	// kilocode_change start
+	currentTaskSize: z.number().optional(),
+	taskHistorySize: z.number().optional(),
+	toolStyle: toolUseStylesSchema.optional(),
+	// kilocode_change end
 })
 
 export type TaskProperties = z.infer<typeof taskPropertiesSchema>
@@ -211,6 +226,9 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.ACCOUNT_CONNECT_SUCCESS,
 			TelemetryEventName.ACCOUNT_LOGOUT_CLICKED,
 			TelemetryEventName.ACCOUNT_LOGOUT_SUCCESS,
+			TelemetryEventName.FEATURED_PROVIDER_CLICKED,
+			TelemetryEventName.UPSELL_DISMISSED,
+			TelemetryEventName.UPSELL_CLICKED,
 			TelemetryEventName.SCHEMA_VALIDATION_ERROR,
 			TelemetryEventName.DIFF_APPLICATION_ERROR,
 			TelemetryEventName.SHELL_INTEGRATION_ERROR,
@@ -223,6 +241,14 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.CUSTOM_MODE_CREATED,
 		]),
 		properties: telemetryPropertiesSchema,
+	}),
+	z.object({
+		type: z.literal(TelemetryEventName.TELEMETRY_SETTINGS_CHANGED),
+		properties: z.object({
+			...telemetryPropertiesSchema.shape,
+			previousSetting: telemetrySettingsSchema,
+			newSetting: telemetrySettingsSchema,
+		}),
 	}),
 	z.object({
 		type: z.literal(TelemetryEventName.TASK_MESSAGE),
@@ -272,11 +298,11 @@ export interface TelemetryClient {
 
 	setProvider(provider: TelemetryPropertiesProvider): void
 	capture(options: TelemetryEvent): Promise<void>
-	updateTelemetryState(didUserOptIn: boolean): void
 	// kilocode_change start
 	captureException(error: Error, properties?: Record<string | number, unknown>): void
 	updateIdentity(kilocodeToken: string): Promise<void>
 	// kilocode_change end
+	updateTelemetryState(isOptedIn: boolean): void
 	isTelemetryEnabled(): boolean
 	shutdown(): Promise<void>
 }

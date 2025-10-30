@@ -4,9 +4,9 @@
 
 package ai.kilocode.jetbrains.actors
 
+import ai.kilocode.jetbrains.util.URI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.util.URI
 
 /**
  * Main thread logger interface.
@@ -18,13 +18,13 @@ interface MainThreadLoggerShape : Disposable {
      * @param messages List of log messages
      */
     fun log(file: URI, messages: List<String>)
-    
+
     /**
      * Flushes log.
      * @param file Log file URI
      */
     fun flush(file: URI)
-    
+
     /**
      * Creates logger.
      * @param file Log file URI
@@ -32,21 +32,21 @@ interface MainThreadLoggerShape : Disposable {
      * @return Creation result
      */
     fun createLogger(file: URI, options: Map<String, Any?>): Any
-    
+
     /**
      * Registers logger.
      * @param logger Logger information
      * @return Registration result
      */
     fun registerLogger(logger: Map<String, Any?>): Any
-    
+
     /**
      * Deregisters logger.
      * @param resource Resource URI
      * @return Deregistration result
      */
     fun deregisterLogger(resource: String): Any
-    
+
     /**
      * Sets logger visibility.
      * @param resource Resource URI
@@ -54,7 +54,6 @@ interface MainThreadLoggerShape : Disposable {
      * @return Setting result
      */
     fun setVisibility(resource: String, visible: Boolean): Any
-
 }
 
 class MainThreadLogger : MainThreadLoggerShape {
@@ -91,5 +90,4 @@ class MainThreadLogger : MainThreadLoggerShape {
     override fun dispose() {
         logger.info("Disposing MainThreadLogger")
     }
-
 }

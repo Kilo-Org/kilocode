@@ -21,7 +21,7 @@
         libnotify
         jetbrains.idea-community
         jetbrains.jdk
-        jdk17
+        jdk21
         gradle
         unzip
         # Build tools for native modules

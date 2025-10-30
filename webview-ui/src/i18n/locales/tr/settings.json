@@ -28,11 +28,17 @@
 		"notifications": "Bildirimler",
 		"contextManagement": "Bağlam",
 		"terminal": "Terminal",
+		"slashCommands": "Eğik Çizgi Komutları",
 		"prompts": "Promptlar",
+		"ui": "UI",
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"display": "Göster"
+		"display": "Göster",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -128,9 +134,12 @@
 		"searchMinScoreResetTooltip": "Varsayılan değere sıfırla (0.4)",
 		"searchMaxResultsLabel": "Maksimum Arama Sonuçları",
 		"searchMaxResultsDescription": "Kod tabanı dizinini sorgularken döndürülecek maksimum arama sonucu sayısı. Daha yüksek değerler daha fazla bağlam sağlar ancak daha az alakalı sonuçlar içerebilir.",
-		"resetToDefault": "Varsayılana sıfırla"
+		"resetToDefault": "Varsayılana sıfırla",
+		"cancelling": "İptal ediliyor...",
+		"cancelIndexingButton": "İndekslemeyi iptal et"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDE tercihlerinizde</SettingsLink> bu ayar için genel bir kısayol yapılandırabilirsiniz.",
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
 		"enabled": "Oto-onay etkinleştirildi",
 		"toggleAriaLabel": "Otomatik onayı değiştir",
@@ -280,6 +289,8 @@
 		"getChutesApiKey": "Chutes API Anahtarı Al",
 		"fireworksApiKey": "Fireworks API Anahtarı",
 		"getFireworksApiKey": "Fireworks API Anahtarı Al",
+		"syntheticApiKey": "Synthetic API Anahtarı",
+		"getSyntheticApiKey": "Synthetic API Anahtarı Al",
 		"featherlessApiKey": "Featherless API Anahtarı",
 		"getFeatherlessApiKey": "Featherless API Anahtarı Al",
 		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
@@ -303,6 +314,10 @@
 		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı Al",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı",
+		"ovhCloudAiEndpointsBaseUrl": "Temel URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Özel temel URL kullan",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Yükleniyor...",
 		"huggingFaceModelsCount": "({{count}} model)",
@@ -379,9 +394,11 @@
 		"ollama": {
 			"baseUrl": "Temel URL (İsteğe bağlı)",
 			"modelId": "Model Kimliği",
-			"apiKey": "API Anahtarı",
+			"apiKey": "Ollama API Anahtarı",
 			"apiKeyPlaceholder": "API anahtarınızı girin",
-			"apiKeyInfo": "API anahtarı Authorization başlığı olarak gönderilecek",
+			"apiKeyHelp": "Kimlik doğrulamalı Ollama örnekleri veya bulut hizmetleri için isteğe bağlı API anahtarı. Yerel kurulumlar için boş bırakın.",
+			"numCtx": "Bağlam Penceresi Boyutu (num_ctx)",
+			"numCtxHelp": "Modelin varsayılan bağlam penceresi boyutunu geçersiz kılar. Modelin Modelfile yapılandırmasını kullanmak için boş bırakın. Minimum değer 128'dir.",
 			"description": "Ollama, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için hızlı başlangıç kılavuzlarına bakın.",
 			"warning": "Not: Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},
@@ -747,13 +764,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Apply'ı etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir. Kilo Code API Sağlayıcısı, OpenRouter veya bir Morph API anahtarı gerektirir.",
+			"name": "Fast Apply'ı etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları kod değişiklikleri için optimize edilmiş özel modellerle Fast Apply kullanarak düzenleyebilir. Kilo Gateway Provider, OpenRouter veya bir Morph API anahtarı gerektirir.",
 			"apiKey": "Morph API anahtarı (isteğe bağlı)",
-			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)"
+			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
+			"modelLabel": "Model Seçimi",
+			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
+			"models": {
+				"auto": "Otomatik (Varsayılan - en uygun olanı seçer)",
+				"morphFast": "Morph v3 Fast (Daha hızlı, düşük maliyet)",
+				"morphLarge": "Morph v3 Large (Daha yetenekli)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Arka plan düzenleme",
@@ -860,6 +885,7 @@
 			"regionMismatch": "Uyarı: ARN'nizdeki bölge ({{arnRegion}}) seçtiğiniz bölge ({{region}}) ile eşleşmiyor. Bu erişim sorunlarına neden olabilir. Sağlayıcı, ARN'deki bölgeyi kullanacak."
 		},
 		"modelAvailability": "Sağladığınız model kimliği ({{modelId}}) kullanılamıyor. Lütfen başka bir model seçin.",
+		"modelDeprecated": "Bu model artık kullanılamıyor. Lütfen farklı bir model seçin.",
 		"providerNotAllowed": "Sağlayıcı '{{provider}}' kuruluşunuz tarafından izin verilmiyor",
 		"modelNotAllowed": "Model '{{model}}' sağlayıcı '{{provider}}' için kuruluşunuz tarafından izin verilmiyor",
 		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor",
@@ -902,6 +928,26 @@
 		"taskTimeline": {
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
+		},
+		"sendMessageOnEnter": {
+			"label": "Enter ile mesaj gönder",
+			"description": "Etkinleştirildiğinde, Enter'a basarak mesaj gönderin ve yeni satır için Shift+Enter kullanın. Kapatmak için Shift+Enter ile göndermek yerine Enter ile göndermeyi kullanın."
+		},
+		"costThreshold": {
+			"label": "Eşik değerin altındaki maliyeti gizle",
+			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",
+			"currentValue": "Mevcut eşik: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zaman damgalarını göster",
+			"description": "Sohbet görünümündeki her mesaj için zaman damgası göster"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
+			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",
+			"preview": "Animasyon önizlemesi"
 		}
 	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",
@@ -921,6 +967,12 @@
 			"input": "Giriş",
 			"output": "Çıkış",
 			"cacheReads": "Önbellek okumaları"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Düşünme mesajlarını varsayılan olarak daralt",
+			"description": "Etkinleştirildiğinde, düşünme blokları siz onlarla etkileşime girene kadar varsayılan olarak daraltılır"
 		}
 	}
 }

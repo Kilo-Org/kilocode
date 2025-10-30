@@ -86,6 +86,10 @@ vi.mock("vscode", () => {
 			QuickFix: { value: "quickfix" },
 			RefactorRewrite: { value: "refactor.rewrite" },
 		},
+		Uri: {
+			file: vi.fn((path) => ({ fsPath: path, toString: () => `file://${path}` })),
+		},
+		RelativePattern: vi.fn((base, pattern) => ({ base, pattern })),
 		window: {
 			createTextEditorDecorationType: vi.fn().mockReturnValue({
 				dispose: vi.fn(),
@@ -116,6 +120,7 @@ vi.mock("vscode", () => {
 				stat: vi.fn().mockResolvedValue({ type: 1 }), // FileType.File = 1
 			},
 			onDidSaveTextDocument: vi.fn(() => mockDisposable),
+			onDidChangeWorkspaceFolders: vi.fn(() => mockDisposable),
 			getConfiguration: vi.fn(() => ({ get: (key: string, defaultValue: any) => defaultValue })),
 		},
 		env: {
@@ -715,7 +720,6 @@ describe("Cline", () => {
 							tokensOut: 50,
 							cacheWrites: 0,
 							cacheReads: 0,
-							request: "test request",
 						}),
 					},
 				]
@@ -841,7 +845,6 @@ describe("Cline", () => {
 							tokensOut: 50,
 							cacheWrites: 0,
 							cacheReads: 0,
-							request: "test request",
 						}),
 					},
 				]
@@ -990,6 +993,7 @@ describe("Cline", () => {
 					postStateToWebview: vi.fn().mockResolvedValue(undefined),
 					postMessageToWebview: vi.fn().mockResolvedValue(undefined),
 					updateTaskHistory: vi.fn().mockResolvedValue(undefined),
+					getKiloConfig: vi.fn().mockResolvedValue(undefined),
 				}
 
 				// Get the mocked delay function
@@ -1114,9 +1118,11 @@ describe("Cline", () => {
 				await parentIterator.next()
 
 				// Simulate time passing (more than rate limit)
-				const originalDateNow = Date.now
-				const mockTime = Date.now() + (mockApiConfig.rateLimitSeconds + 1) * 1000
-				Date.now = vi.fn(() => mockTime)
+				// kilocode_change start: use performance instead of Date
+				const originalPerformanceNow = performance.now
+				const mockTime = performance.now() + (mockApiConfig.rateLimitSeconds + 1) * 1000
+				performance.now = vi.fn(() => mockTime)
+				// kilocode_change end
 
 				// Create a subtask after time has passed
 				const child = new Task({
@@ -1138,8 +1144,9 @@ describe("Cline", () => {
 				// Verify no rate limiting was applied
 				expect(mockDelay).not.toHaveBeenCalled()
 
-				// Restore Date.now
-				Date.now = originalDateNow
+				// kilocode_change start
+				performance.now = originalPerformanceNow
+				// kilocode_change end
 			})
 
 			it("should share rate limiting across multiple subtasks", async () => {

@@ -28,11 +28,16 @@
 		"notifications": "Meldingen",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Slash-opdrachten",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimenteel",
 		"language": "Taal",
 		"about": "Over Kilo Code",
 		"display": "Weergeven"
+	},
+	"slashCommands": {
+		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configureer ondersteuningsprompts die worden gebruikt voor snelle acties zoals het verbeteren van prompts, het uitleggen van code en het oplossen van problemen. Deze prompts helpen Kilo Code om betere ondersteuning te bieden voor veelvoorkomende ontwikkelingstaken."
@@ -128,9 +133,12 @@
 		"searchMinScoreResetTooltip": "Reset naar standaardwaarde (0.4)",
 		"searchMaxResultsLabel": "Maximum Zoekresultaten",
 		"searchMaxResultsDescription": "Maximum aantal zoekresultaten dat wordt geretourneerd bij het doorzoeken van de codebase-index. Hogere waarden bieden meer context maar kunnen minder relevante resultaten bevatten.",
-		"resetToDefault": "Reset naar standaard"
+		"resetToDefault": "Reset naar standaard",
+		"cancelling": "Bezig met annuleren...",
+		"cancelIndexingButton": "Indexering annuleren"
 	},
 	"autoApprove": {
+		"toggleShortcut": "U kunt een globale sneltoets voor deze instelling configureren <SettingsLink>in de voorkeuren van uw IDE</SettingsLink>.",
 		"description": "Sta Kilo Code toe om automatisch handelingen uit te voeren zonder goedkeuring. Schakel deze instellingen alleen in als je de AI volledig vertrouwt en de bijbehorende beveiligingsrisico's begrijpt.",
 		"enabled": "Auto-goedkeuren ingeschakeld",
 		"toggleAriaLabel": "Automatisch goedkeuren in-/uitschakelen",
@@ -280,6 +288,8 @@
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
 		"fireworksApiKey": "Fireworks API-sleutel",
 		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
+		"syntheticApiKey": "Synthetic API-sleutel",
+		"getSyntheticApiKey": "Synthetic API-sleutel ophalen",
 		"featherlessApiKey": "Featherless API-sleutel",
 		"getFeatherlessApiKey": "Featherless API-sleutel ophalen",
 		"ioIntelligenceApiKey": "IO Intelligence API-sleutel",
@@ -304,6 +314,10 @@
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
 		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel ophalen",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel",
+		"ovhCloudAiEndpointsBaseUrl": "Basis-URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Aangepaste basis-URL gebruiken",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Laden...",
 		"huggingFaceModelsCount": "({{count}} modellen)",
@@ -379,9 +393,11 @@
 		"ollama": {
 			"baseUrl": "Basis-URL (optioneel)",
 			"modelId": "Model-ID",
-			"apiKey": "API-sleutel",
+			"apiKey": "Ollama API-sleutel",
 			"apiKeyPlaceholder": "Voer je API-sleutel in",
-			"apiKeyInfo": "API-sleutel wordt verzonden als Authorization-header",
+			"apiKeyHelp": "Optionele API-sleutel voor geauthenticeerde Ollama-instanties of cloudservices. Laat leeg voor lokale installaties.",
+			"numCtx": "Contextvenstergrootte (num_ctx)",
+			"numCtxHelp": "Overschrijft de standaard contextvenstergrootte van het model. Laat leeg om de Modelfile-configuratie van het model te gebruiken. De minimumwaarde is 128.",
 			"description": "Ollama laat je modellen lokaal op je computer draaien. Zie hun quickstart-gids voor instructies.",
 			"warning": "Let op: Kilo Code gebruikt complexe prompts en werkt het beste met Claude-modellen. Minder krachtige modellen werken mogelijk niet zoals verwacht."
 		},
@@ -747,13 +763,21 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Gelijktijdige bestandsbewerkingen inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen."
+			"description": "Wanneer ingeschakeld, kan Kilo Code meerdere bestanden in één verzoek bewerken. Wanneer uitgeschakeld, moet Kilo Code bestanden één voor één bewerken. Het uitschakelen hiervan kan helpen wanneer je werkt met minder capabele modellen of wanneer je meer controle wilt over bestandswijzigingen。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Apply inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Morph Fast Apply. Vereist de Kilo Code API Provider, OpenRouter of een Morph API-sleutel.",
+			"name": "Fast Apply inschakelen",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
 			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)"
+			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"modelLabel": "Modelselectie",
+			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
+			"models": {
+				"auto": "Automatisch (Standaard - kiest beste beschikbare)",
+				"morphFast": "Morph v3 Fast (Sneller, lagere kosten)",
+				"morphLarge": "Morph v3 Large (Meer capabel)",
+				"relace": "Relace Apply v3"
+			}
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Achtergrondbewerking",
@@ -860,6 +884,7 @@
 			"regionMismatch": "Waarschuwing: De regio in je ARN ({{arnRegion}}) komt niet overeen met je geselecteerde regio ({{region}}). Dit kan toegangsfouten veroorzaken. De provider gebruikt de regio uit de ARN."
 		},
 		"modelAvailability": "Het opgegeven model-ID ({{modelId}}) is niet beschikbaar. Kies een ander model.",
+		"modelDeprecated": "Dit model is niet meer beschikbaar. Kies een ander model.",
 		"providerNotAllowed": "Provider '{{provider}}' is niet toegestaan door je organisatie",
 		"modelNotAllowed": "Model '{{model}}' is niet toegestaan voor provider '{{provider}}' door je organisatie",
 		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie",
@@ -902,6 +927,26 @@
 		"taskTimeline": {
 			"label": "Taaktijdlijn weergeven",
 			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
+		},
+		"sendMessageOnEnter": {
+			"label": "Bericht verzenden met Enter",
+			"description": "Indien ingeschakeld, druk op Enter om te verzenden en Shift+Enter voor een nieuwe regel. Schakel uit om in plaats daarvan Shift+Enter te gebruiken om te verzenden."
+		},
+		"costThreshold": {
+			"label": "Kosten onder drempel verbergen",
+			"currentValue": "Huidige drempelwaarde: ${{value}}",
+			"description": "Toon alleen aanvraagkosten hoger dan dit bedrag. Kosten zijn altijd zichtbaar wanneer het detailpaneel is geopend."
+		},
+		"showTimestamps": {
+			"label": "Tijdstempels weergeven",
+			"description": "Toon tijdstempel voor elk bericht in de chatweergave"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Goot animatie tonen bij automatisch aanvullen",
+			"description": "Animatie-indicator tonen in de editor goot wanneer automatisch aanvullen actief is",
+			"preview": "Animatie voorbeeld"
 		}
 	},
 	"includeMaxOutputTokens": "Maximale output tokens opnemen",
@@ -921,6 +966,12 @@
 			"input": "Invoer",
 			"output": "Uitvoer",
 			"cacheReads": "Cache leest"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Denkberichten standaard samenvouwen",
+			"description": "Indien ingeschakeld, worden denkblokken standaard samengevouwen totdat je ermee interageert"
 		}
 	}
 }

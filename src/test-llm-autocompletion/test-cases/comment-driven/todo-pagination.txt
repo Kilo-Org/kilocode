@@ -1,0 +1,5 @@
+# Description: Should implement pagination logic
+function fetchUsers(page, limit) {
+  // TODO: Implement pagination with offset and limit<<<CURSOR>>>
+  return db.query('SELECT * FROM users');
+}

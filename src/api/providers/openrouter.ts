@@ -7,7 +7,7 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	ModelInfo, // kilocode_change
+	getActiveToolUseStyle,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -30,17 +30,22 @@ import type {
 	SingleCompletionHandler,
 } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
 	order?: string[]
 	only?: string[]
-	ignore?: string[] // kilocode_change
 	allow_fallbacks?: boolean
 	data_collection?: "allow" | "deny"
 	sort?: "price" | "throughput" | "latency"
+	zdr?: boolean
 }
+
+import { safeJsonParse } from "../../shared/safeJsonParse"
+import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 // kilocode_change end
+
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
 // Image generation types
@@ -105,7 +110,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	private client: OpenAI
 	protected models: ModelRecord = {}
 	protected endpoints: ModelRecord = {}
-	private readonly providerName = "OpenRouter"
+
+	// kilocode_change start property
+	protected get providerName(): "OpenRouter" | "KiloCode" {
+		return "OpenRouter" as const
+	}
+	// kilocode_change end
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -122,22 +132,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		return undefined
 	}
 
+	getCustomRequestHeaders(taskId?: string) {
+		return (taskId ? this.customRequestOptions({ taskId })?.headers : undefined) ?? {}
+	}
+
 	getTotalCost(lastUsage: CompletionUsage): number {
 		return (lastUsage.cost_details?.upstream_inference_cost || 0) + (lastUsage.cost || 0)
 	}
 
-	getIgnoredProviders(model: ModelInfo): string[] | undefined {
-		const endpoints = Object.entries(this.endpoints)
-		const ignoredProviders = endpoints
-			.filter((endpoint) => endpoint[1].contextWindow < model.contextWindow)
-			.map((endpoint) => endpoint[0])
-		if (ignoredProviders.length > 0 && ignoredProviders.length < endpoints.length) {
-			return ignoredProviders
-		}
-		return undefined
-	}
-
-	getProviderParams(model: ModelInfo): { provider?: OpenRouterProviderParams } {
+	getProviderParams(): { provider?: OpenRouterProviderParams } {
 		if (this.options.openRouterSpecificProvider && this.endpoints[this.options.openRouterSpecificProvider]) {
 			return {
 				provider: {
@@ -145,20 +148,20 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					only: [this.options.openRouterSpecificProvider],
 					allow_fallbacks: false,
 					data_collection: this.options.openRouterProviderDataCollection,
+					zdr: this.options.openRouterZdr,
 				},
 			}
 		}
-		const ignoredProviders = this.getIgnoredProviders(model)
 		if (
-			(ignoredProviders?.length ?? 0) > 0 ||
 			this.options.openRouterProviderDataCollection ||
-			this.options.openRouterProviderSort
+			this.options.openRouterProviderSort ||
+			this.options.openRouterZdr
 		) {
 			return {
 				provider: {
-					ignore: ignoredProviders,
 					data_collection: this.options.openRouterProviderDataCollection,
 					sort: this.options.openRouterProviderSort,
+					zdr: this.options.openRouterZdr,
 				},
 			}
 		}
@@ -198,15 +201,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			openAiMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 		}
 
-		// https://openrouter.ai/docs/features/prompt-caching
-		// TODO: Add a `promptCacheStratey` field to `ModelInfo`.
-		if (OPEN_ROUTER_PROMPT_CACHING_MODELS.has(modelId)) {
-			if (modelId.startsWith("google")) {
-				addGeminiCacheBreakpoints(systemPrompt, openAiMessages)
-			} else {
-				addAnthropicCacheBreakpoints(systemPrompt, openAiMessages)
-			}
+		// kilocode_change start
+		if (modelId.startsWith("google/gemini")) {
+			addGeminiCacheBreakpoints(systemPrompt, openAiMessages)
+		} else if (modelId.startsWith("anthropic/claude") || OPEN_ROUTER_PROMPT_CACHING_MODELS.has(modelId)) {
+			addAnthropicCacheBreakpoints(systemPrompt, openAiMessages)
 		}
+		// kilocode_change end
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
@@ -219,10 +220,14 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			messages: openAiMessages,
 			stream: true,
 			stream_options: { include_usage: true },
-			...this.getProviderParams(model.info), // kilocode_change: original expression was moved into function
+			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
 		}
+
+		// kilocode_change start: Add native tool call support when toolStyle is "json"
+		addNativeToolCallsToParams(completionParams, this.options, metadata)
+		// kilocode_change end
 
 		let stream
 		try {
@@ -231,10 +236,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				this.customRequestOptions(metadata), // kilocode_change
 			)
 		} catch (error) {
-			throw handleOpenAIError(error, this.providerName)
+			// kilocode_change start
+			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
+				throw error
+			}
+			throw new Error(makeOpenRouterErrorReadable(error))
+			// kilocode_change end
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
+		let inferenceProvider: string | undefined // kilocode_change
 
 		try {
 			for await (const chunk of stream) {
@@ -244,6 +255,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
 					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
 				}
+
+				// kilocode_change start
+				if ("provider" in chunk && typeof chunk.provider === "string") {
+					inferenceProvider = chunk.provider
+				}
+				// kilocode_change end
 
 				verifyFinishReason(chunk.choices[0]) // kilocode_change
 				const delta = chunk.choices[0]?.delta
@@ -261,6 +278,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
+
+				// Handle native tool calls when toolStyle is "json"
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
 				if (delta?.content) {
@@ -283,7 +303,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				outputTokens: lastUsage.completion_tokens || 0,
 				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: this.getTotalCost(lastUsage), // kilocode_change
+				// kilocode_change start
+				totalCost: this.getTotalCost(lastUsage),
+				inferenceProvider,
+				// kilocode_change end
 			}
 		}
 	}
@@ -327,13 +350,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	async completePrompt(prompt: string) {
-		let {
-			id: modelId,
-			maxTokens,
-			temperature,
-			reasoning,
-			info: modelInfo, // kilocode_change
-		} = await this.fetchModel()
+		let { id: modelId, maxTokens, temperature, reasoning } = await this.fetchModel()
 
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
@@ -341,13 +358,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			temperature,
 			messages: [{ role: "user", content: prompt }],
 			stream: false,
-			...this.getProviderParams(modelInfo), // kilocode_change: original expression was moved into function
+			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(reasoning && { reasoning }),
 		}
 
 		let response
 		try {
-			response = await this.client.chat.completions.create(completionParams)
+			response = await this.client.chat.completions.create(
+				completionParams,
+				this.customRequestOptions(), // kilocode_change
+			)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}
@@ -383,8 +403,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			}
 		}
 
-		const extraHeaders = (taskId ? this.customRequestOptions({ taskId })?.headers : undefined) ?? {} // kilocode_change
-
 		try {
 			const response = await fetch(
 				`${this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1/"}chat/completions`, // kilocode_change: support baseUrl
@@ -393,7 +411,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					headers: {
 						// kilocode_change start
 						...DEFAULT_HEADERS,
-						...extraHeaders,
+						...this.getCustomRequestHeaders(taskId),
 						// kilocode_change end
 						Authorization: `Bearer ${apiKey}`,
 						"Content-Type": "application/json",
@@ -492,8 +510,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
+	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
+	const parsedJson = safeJsonParse(metadata?.raw)
+	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+
 	if (error?.code !== 429 && error?.code !== 418) {
-		return `OpenRouter API Error: ${error?.message || error}`
+		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 
 	try {

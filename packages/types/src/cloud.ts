@@ -134,6 +134,16 @@ export const organizationCloudSettingsSchema = z.object({
 export type OrganizationCloudSettings = z.infer<typeof organizationCloudSettingsSchema>
 
 /**
+ * OrganizationFeatures
+ */
+
+export const organizationFeaturesSchema = z.object({
+	roomoteControlEnabled: z.boolean().optional(),
+})
+
+export type OrganizationFeatures = z.infer<typeof organizationFeaturesSchema>
+
+/**
  * OrganizationSettings
  */
 
@@ -142,6 +152,7 @@ export const organizationSettingsSchema = z.object({
 	cloudSettings: organizationCloudSettingsSchema.optional(),
 	defaultSettings: organizationDefaultSettingsSchema,
 	allowList: organizationAllowListSchema,
+	features: organizationFeaturesSchema.optional(),
 	hiddenMcps: z.array(z.string()).optional(),
 	hideMarketplaceMcps: z.boolean().optional(),
 	mcps: z.array(mcpMarketplaceItemSchema).optional(),
@@ -162,6 +173,7 @@ export type UserFeatures = z.infer<typeof userFeaturesSchema>
 
 export const userSettingsConfigSchema = z.object({
 	extensionBridgeEnabled: z.boolean().optional(),
+	taskSyncEnabled: z.boolean().optional(),
 })
 
 export type UserSettingsConfig = z.infer<typeof userSettingsConfigSchema>
@@ -227,9 +239,10 @@ export interface AuthService extends EventEmitter<AuthServiceEvents> {
 	broadcast(): void
 
 	// Authentication methods
-	login(): Promise<void>
+	login(landingPageSlug?: string): Promise<void>
 	logout(): Promise<void>
 	handleCallback(code: string | null, state: string | null, organizationId?: string | null): Promise<void>
+	switchOrganization(organizationId: string | null): Promise<void>
 
 	// State methods
 	getState(): AuthState
@@ -241,6 +254,9 @@ export interface AuthService extends EventEmitter<AuthServiceEvents> {
 	getSessionToken(): string | undefined
 	getUserInfo(): CloudUserInfo | null
 	getStoredOrganizationId(): string | null
+
+	// Organization management
+	getOrganizationMemberships(): Promise<CloudOrganizationMembership[]>
 }
 
 /**
@@ -301,6 +317,14 @@ export interface SettingsService {
 	 * @returns Promise that resolves to true if successful, false otherwise
 	 */
 	updateUserSettings(settings: Partial<UserSettingsConfig>): Promise<boolean>
+
+	/**
+	 * Determines if task sync/recording is enabled based on organization and user settings
+	 * Organization settings take precedence over user settings.
+	 * User settings default to true if unspecified.
+	 * @returns true if task sync is enabled, false otherwise
+	 */
+	isTaskSyncEnabled(): boolean
 
 	/**
 	 * Dispose of the settings service and clean up resources
@@ -387,6 +411,7 @@ export const extensionInstanceSchema = z.object({
 	modes: z.array(z.object({ slug: z.string(), name: z.string() })).optional(),
 	providerProfile: z.string().optional(),
 	providerProfiles: z.array(z.object({ name: z.string(), provider: z.string().optional() })).optional(),
+	isCloudAgent: z.boolean().optional(),
 })
 
 export type ExtensionInstance = z.infer<typeof extensionInstanceSchema>
@@ -697,3 +722,25 @@ export type LeaveResponse = {
 	taskId?: string
 	timestamp?: string
 }
+
+/**
+ * UsageStats
+ */
+
+export const usageStatsSchema = z.object({
+	success: z.boolean(),
+	data: z.object({
+		dates: z.array(z.string()), // Array of date strings
+		tasks: z.array(z.number()), // Array of task counts
+		tokens: z.array(z.number()), // Array of token counts
+		costs: z.array(z.number()), // Array of costs in USD
+		totals: z.object({
+			tasks: z.number(),
+			tokens: z.number(),
+			cost: z.number(), // Total cost in USD
+		}),
+	}),
+	period: z.number(), // Period in days (e.g., 30)
+})
+
+export type UsageStats = z.infer<typeof usageStatsSchema>

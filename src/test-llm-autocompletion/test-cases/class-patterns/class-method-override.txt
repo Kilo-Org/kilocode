@@ -1,0 +1,16 @@
+# Description: Should complete method override in derived class
+class Shape {
+	area() {
+		return 0;
+	}
+}
+
+class Rectangle extends Shape {
+	constructor(width, height) {
+		super();
+		this.width = width;
+		this.height = height;
+	}
+	
+	area() {
+		return <<<AUTOCOMPLETE_HERE>>>

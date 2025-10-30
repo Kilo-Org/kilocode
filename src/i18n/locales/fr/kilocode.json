@@ -14,10 +14,12 @@
 	"task": {
 		"noAssistantMessages": "La réponse du modèle s'est terminée de manière inattendue (aucun message d'assistant). Cela peut être un signe de limitation du taux de requêtes.",
 		"notLoggedInError": "Impossible de terminer la demande, assurez-vous d'être connecté et identifié avec le fournisseur sélectionné.\n\n{{error}}",
-		"maxCompletionTokens": "Le nombre maximum de jetons de complétion a été atteint."
+		"maxCompletionTokens": "Le nombre maximum de jetons de complétion a été atteint.",
+		"disableApplyDiff": "Si cette erreur persiste, veuillez désactiver l'Édition par Différences dans les Paramètres Avancés.",
+		"disableEditFile": "Si cette erreur persiste, veuillez désactiver la fonctionnalité expérimentale Application Rapide."
 	},
 	"checkpoints": {
-		"nestedGitRepos": "Les points de contrôle ne sont pas disponibles car des dépôts Git imbriqués ont été détectés dans l'espace de travail. Veuillez supprimer ou déplacer les dépôts Git imbriqués pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
+		"nestedGitRepos": "Les points de contrôle ne sont pas disponibles car un dépôt Git imbriqué a été détecté à : {{path}}. Veuillez supprimer ou déplacer les dépôts Git imbriqués pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
 		"protectedPaths": "Les points de contrôle ne sont pas disponibles dans {{workspaceDir}}. Veuillez ouvrir un sous-dossier comme espace de travail pour utiliser la fonctionnalité de points de contrôle ou désactiver les points de contrôle dans les paramètres pour supprimer cet avertissement.",
 		"dismissWarning": "Ignorer"
 	},
@@ -58,7 +60,41 @@
 		"generationFailed": "Kilo : Échec de la génération du message de commit : {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo : Génération du message à partir des modifications non préparées",
 		"activationFailed": "Kilo : Échec de l'activation du générateur de messages : {{error}}",
-		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré"
+		"providerRegistered": "Kilo : Fournisseur de messages de commit enregistré",
+		"errors": {
+			"noProject": "Aucun projet disponible",
+			"timeout": "La requête a expiré après 30 secondes",
+			"connectionFailed": "Échec de connexion à l'extension Kilo Code",
+			"invalidResponse": "Format de réponse invalide reçu de l'extension",
+			"missingMessage": "Aucun message de commit reçu de l'extension",
+			"noWorkspacePath": "Impossible de déterminer le chemin d'espace de travail pour le dépôt Git",
+			"workspaceNotFound": "Impossible de déterminer le chemin d'espace de travail pour le dépôt Git",
+			"noChanges": "Aucun changement trouvé à valider",
+			"processingError": "Erreur lors du traitement de la génération du message de commit : {{error}}"
+		},
+		"error": {
+			"title": "Erreur",
+			"workspacePathNotFound": "Impossible de déterminer le chemin de l'espace de travail pour le dépôt Git",
+			"processingFailed": "Erreur lors du traitement de la génération du message de commit : {{error}}",
+			"unknown": "Erreur inconnue",
+			"generationFailed": "Échec de la génération du message de commit : {{error}}"
+		},
+		"dialogs": {
+			"error": "Erreur",
+			"success": "Succès",
+			"info": "Message de Commit IA",
+			"title": "Message de Commit IA"
+		},
+		"progress": {
+			"title": "Génération du Message de Commit",
+			"connecting": "Connexion à Kilo Code...",
+			"analyzing": "Analyse des changements en cours...",
+			"generating": "Génération du message de commit..."
+		},
+		"ui": {
+			"generateButton": "Générer un Message de Commit",
+			"generateButtonTooltip": "Génère un message de commit en utilisant l'IA pour analyser vos changements de code"
+		}
 	},
 	"ghost": {
 		"statusBar": {
@@ -71,6 +107,7 @@
 				"tokenError": "Un token valide doit être défini pour utiliser Autocomplete",
 				"lastCompletion": "Dernière suggestion :",
 				"sessionTotal": "Coût total de la session :",
+				"provider": "Fournisseur:",
 				"model": "Modèle :"
 			},
 			"cost": {
@@ -96,7 +133,6 @@
 			"cancelSuggestions": "Annuler les Modifications Suggérées",
 			"applyCurrentSuggestion": "Appliquer la Modification Suggérée Actuelle",
 			"applyAllSuggestions": "Appliquer Toutes les Modifications Suggérées",
-			"promptCodeSuggestion": "Tâche Rapide",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
