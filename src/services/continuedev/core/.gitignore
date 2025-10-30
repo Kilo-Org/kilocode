@@ -1,9 +1,0 @@
-target
-**/node_modules
-**/.DS_Store
-npm-debug.log*
-.env
-test/.continue-test
-coverage
-# Sentry Config File
-.sentryclirc

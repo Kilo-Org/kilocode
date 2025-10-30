@@ -9,12 +9,14 @@ import { commandRegistry } from "./core/registry.js"
 
 import { helpCommand } from "./help.js"
 import { newCommand } from "./new.js"
+import { clearCommand } from "./clear.js"
 import { exitCommand } from "./exit.js"
 import { modeCommand } from "./mode.js"
 import { modelCommand } from "./model.js"
 import { profileCommand } from "./profile.js"
 import { teamsCommand } from "./teams.js"
 import { themeCommand } from "./theme.js"
+import { configCommand } from "./config.js"
 
 /**
  * Initialize all commands
@@ -23,10 +25,12 @@ export function initializeCommands(): void {
 	// Register all commands
 	commandRegistry.register(helpCommand)
 	commandRegistry.register(newCommand)
+	commandRegistry.register(clearCommand)
 	commandRegistry.register(exitCommand)
 	commandRegistry.register(modeCommand)
 	commandRegistry.register(modelCommand)
 	commandRegistry.register(profileCommand)
 	commandRegistry.register(teamsCommand)
 	commandRegistry.register(themeCommand)
+	commandRegistry.register(configCommand)
 }

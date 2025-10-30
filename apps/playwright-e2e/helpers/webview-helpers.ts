@@ -101,6 +101,18 @@ export async function clickSaveSettingsButton(webviewFrame: FrameLocator): Promi
 }
 
 /**
+ * Waits for all tooltips to be dismissed before proceeding.
+ * This is necessary when tooltips appear after clicking elements and need to animate away
+ * before taking screenshots to avoid inconsistent visual states.
+ */
+export async function waitForTooltipsToDismiss(webviewFrame: FrameLocator): Promise<void> {
+	const tooltipContent = webviewFrame.locator('[data-slot="tooltip-content"]')
+	await tooltipContent.waitFor({ state: "detached", timeout: 3000 }).catch(() => {
+		// If timeout, tooltips should be gone by now anyway
+	})
+}
+
+/**
  * Freezes all GIFs on the page by converting them to static PNG images.
  * Also sets up a MutationObserver to handle dynamically added GIFs.
  * Works inside the VSCode extension webview iframe.

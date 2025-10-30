@@ -162,6 +162,8 @@ jobs:
               with:
                   distribution: 'jetbrains'
                   java-version: '21'
+                  check-latest: false
+                  token: ${{ secrets.GITHUB_TOKEN }}
             - name: Install system dependencies
               run: |
                 sudo apt-get update

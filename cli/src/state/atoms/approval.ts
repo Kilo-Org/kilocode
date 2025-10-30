@@ -47,6 +47,11 @@ export const approvalProcessingAtom = atom<ApprovalProcessingState>({
 export const selectedApprovalIndexAtom = selectedIndexAtom
 
 /**
+ * Atom to track when approval was set (for delay logic)
+ */
+export const approvalSetTimestampAtom = atom<number | null>(null)
+
+/**
  * Derived atom to check if there's a pending approval
  */
 export const isApprovalPendingAtom = atom<boolean>((get) => {
@@ -216,6 +221,9 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 	if (message?.isAnswered) {
 		return
 	}
+	// Get the current pending message to check if this is a new message or an update
+	const current = get(pendingApprovalAtom)
+	const isNewMessage = !current || current.ts !== message?.ts
 
 	// Always create a new object reference to force Jotai to re-evaluate dependent atoms
 	// This is critical for streaming messages that update from partial to complete
@@ -223,9 +231,10 @@ export const setPendingApprovalAtom = atom(null, (get, set, message: ExtensionCh
 	const messageToSet = message ? { ...message } : null
 	set(pendingApprovalAtom, messageToSet)
 
-	// Get the current pending message to check if this is a new message or an update
-	const current = get(pendingApprovalAtom)
-	const isNewMessage = !current || current.ts !== message?.ts
+	// Set timestamp for delay tracking when setting a new message
+	if (isNewMessage && messageToSet !== null) {
+		set(approvalSetTimestampAtom, Date.now())
+	}
 
 	// Reset selection if this is a new message (different timestamp)
 	if (isNewMessage) {
@@ -242,6 +251,7 @@ export const clearPendingApprovalAtom = atom(null, (get, set) => {
 	const processing = get(approvalProcessingAtom)
 
 	set(pendingApprovalAtom, null)
+	set(approvalSetTimestampAtom, null)
 
 	// Also clear processing state if it matches
 	if (processing.isProcessing && processing.processingTs === current?.ts) {
@@ -285,6 +295,7 @@ export const startApprovalProcessingAtom = atom(null, (get, set, operation: "app
  */
 export const completeApprovalProcessingAtom = atom(null, (get, set) => {
 	set(pendingApprovalAtom, null)
+	set(approvalSetTimestampAtom, null)
 	set(selectedIndexAtom, 0)
 	set(approvalProcessingAtom, { isProcessing: false })
 })

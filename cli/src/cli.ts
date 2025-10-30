@@ -7,18 +7,25 @@ import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
-import { loadConfigAtom, mappedExtensionStateAtom } from "./state/atoms/config.js"
+import { loadConfigAtom, mappedExtensionStateAtom, providersAtom } from "./state/atoms/config.js"
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
+import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
+import { fetchKilocodeNotifications } from "./utils/notifications.js"
+import { finishParallelMode } from "./parallel/parallel.js"
+import { isGitWorktree } from "./utils/git.js"
 
 export interface CLIOptions {
 	mode?: string
 	workspace?: string
 	ci?: boolean
+	json?: boolean
 	prompt?: string
 	timeout?: number
+	parallel?: boolean
+	worktreeBranch?: string | undefined
 }
 
 /**
@@ -50,8 +57,9 @@ export class CLI {
 		try {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 
-			// Set terminal title
-			const folderName = basename(this.options.workspace || process.cwd())
+			// Set terminal title - use process.cwd() in parallel mode to show original directory
+			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
+			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
 			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 
 			// Create Jotai store
@@ -116,8 +124,19 @@ export class CLI {
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
+			const extensionHost = this.service.getExtensionHost()
+			extensionHost.sendWebviewMessage({
+				type: "yoloMode",
+				bool: Boolean(this.options.ci),
+			})
+
 			// Request router models after configuration is injected
-			await this.requestRouterModels()
+			void this.requestRouterModels()
+
+			if (!this.options.ci && !this.options.prompt) {
+				// Fetch Kilocode notifications if provider is kilocode
+				void this.fetchNotifications()
+			}
 
 			this.isInitialized = true
 			logs.info("Kilo Code CLI initialized successfully", "CLI")
@@ -147,6 +166,7 @@ export class CLI {
 		// Disable stdin for Ink when in CI mode or when stdin is piped (not a TTY)
 		// This prevents the "Raw mode is not supported" error
 		const shouldDisableStdin = this.options.ci || !process.stdin.isTTY
+
 		this.ui = render(
 			React.createElement(App, {
 				store: this.store,
@@ -154,8 +174,11 @@ export class CLI {
 					mode: this.options.mode || "code",
 					workspace: this.options.workspace || process.cwd(),
 					ci: this.options.ci || false,
+					json: this.options.json || false,
 					prompt: this.options.prompt || "",
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
+					parallel: this.options.parallel || false,
+					worktreeBranch: this.options.worktreeBranch || undefined,
 				},
 				onExit: () => this.dispose(),
 			}),
@@ -171,6 +194,8 @@ export class CLI {
 		await this.ui.waitUntilExit()
 	}
 
+	private isDisposing = false
+
 	/**
 	 * Dispose the application and clean up resources
 	 * - Unmounts UI
@@ -178,11 +203,21 @@ export class CLI {
 	 * - Cleans up store
 	 */
 	async dispose(): Promise<void> {
+		if (this.isDisposing) {
+			logs.info("Already disposing, ignoring duplicate dispose call", "CLI")
+
+			return
+		}
+
+		this.isDisposing = true
+
+		// Determine exit code based on CI mode and exit reason
+		let exitCode = 0
+
+		let beforeExit = () => {}
+
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
-
-			// Determine exit code based on CI mode and exit reason
-			let exitCode = 0
 
 			if (this.options.ci && this.store) {
 				// Check exit reason from CI atoms
@@ -202,6 +237,11 @@ export class CLI {
 					exitCode = 1
 					logs.info("Exiting with default failure code", "CLI")
 				}
+			}
+
+			// In parallel mode, we need to do manual git worktree cleanup
+			if (this.options.parallel) {
+				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
 			}
 
 			// Shutdown telemetry service before exiting
@@ -226,12 +266,15 @@ export class CLI {
 
 			this.isInitialized = false
 			logs.info("Kilo Code CLI disposed", "CLI")
+		} catch (error) {
+			logs.error("Error disposing CLI", "CLI", { error })
+
+			exitCode = 1
+		} finally {
+			beforeExit()
 
 			// Exit process with appropriate code
 			process.exit(exitCode)
-		} catch (error) {
-			logs.error("Error disposing CLI", "CLI", { error })
-			process.exit(1)
 		}
 	}
 
@@ -280,6 +323,39 @@ export class CLI {
 			logs.debug("Router models requested", "CLI")
 		} catch (error) {
 			logs.error("Failed to request router models", "CLI", { error })
+		}
+	}
+
+	/**
+	 * Fetch notifications from Kilocode backend if provider is kilocode
+	 */
+	private async fetchNotifications(): Promise<void> {
+		if (!this.store) {
+			logs.warn("Cannot fetch notifications: store not available", "CLI")
+			return
+		}
+
+		try {
+			const providers = this.store.get(providersAtom)
+
+			const provider = providers.find(({ provider }) => provider === "kilocode")
+
+			if (!provider) {
+				logs.debug("No provider configured, skipping notification fetch", "CLI")
+				return
+			}
+
+			this.store.set(notificationsLoadingAtom, true)
+
+			const notifications = await fetchKilocodeNotifications(provider)
+
+			this.store.set(notificationsAtom, notifications)
+		} catch (error) {
+			const err = error instanceof Error ? error : new Error(String(error))
+			this.store.set(notificationsErrorAtom, err)
+			logs.error("Failed to fetch notifications", "CLI", { error })
+		} finally {
+			this.store.set(notificationsLoadingAtom, false)
 		}
 	}
 

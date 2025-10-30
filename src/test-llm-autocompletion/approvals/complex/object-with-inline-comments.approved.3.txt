@@ -1,7 +1,0 @@
-const creditConfig = {
-	credit_category: 'credits',
-	description: 'Free credits as a reward',
-	amount_usd: 5, // inlined from FREE CREDITS<<<AUTOCOMPLETE_HERE>>>
-	is_idempotent: true,
-	expiry: "2 months",
-	

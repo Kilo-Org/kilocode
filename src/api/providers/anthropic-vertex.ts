@@ -34,27 +34,29 @@ export class AnthropicVertexHandler extends BaseProvider implements SingleComple
 		const projectId = this.options.vertexProjectId ?? "not-provided"
 		const region = this.options.vertexRegion ?? "us-east5"
 
-		if (this.options.vertexJsonCredentials) {
-			this.client = new AnthropicVertex({
-				projectId,
-				region,
-				googleAuth: new GoogleAuth({
-					scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-					credentials: safeJsonParse<JWTInput>(this.options.vertexJsonCredentials, undefined),
-				}),
-			})
-		} else if (this.options.vertexKeyFile) {
-			this.client = new AnthropicVertex({
-				projectId,
-				region,
-				googleAuth: new GoogleAuth({
-					scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-					keyFile: this.options.vertexKeyFile,
-				}),
-			})
-		} else {
-			this.client = new AnthropicVertex({ projectId, region })
-		}
+		// kilocode_change start
+		// Manually construct the baseURL for the global endpoint because the format has changed,
+		// but updating the required anthropic libraries has significant breaking changes for other parts of the application.
+		// TODO: Upgrade the anthropic libraries
+		const updatedGlobalBaseUrl = `https://aiplatform.googleapis.com/v1`
+
+		const googleAuthConfig =
+			this.options.vertexJsonCredentials || this.options.vertexKeyFile
+				? {
+						scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+						...(this.options.vertexJsonCredentials
+							? { credentials: safeJsonParse<JWTInput>(this.options.vertexJsonCredentials, undefined) }
+							: { keyFile: this.options.vertexKeyFile }),
+					}
+				: undefined
+
+		this.client = new AnthropicVertex({
+			baseURL: this.options.vertexRegion === "global" ? updatedGlobalBaseUrl : undefined,
+			projectId,
+			region,
+			...(googleAuthConfig && { googleAuth: new GoogleAuth(googleAuthConfig) }),
+		})
+		// kilocode_change end
 	}
 
 	override async *createMessage(

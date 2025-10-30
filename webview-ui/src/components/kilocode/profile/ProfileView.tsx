@@ -15,6 +15,8 @@ import { Tab, TabContent, TabHeader } from "@src/components/common/Tab"
 import { Button } from "@src/components/ui"
 import KiloCodeAuth from "../common/KiloCodeAuth"
 import { OrganizationSelector } from "../common/OrganizationSelector"
+import { getAppUrl, TelemetryEventName } from "@roo-code/types"
+import { telemetryClient } from "@/utils/TelemetryClient"
 
 interface ProfileViewProps {
 	onDone: () => void
@@ -27,15 +29,12 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 	const [balance, setBalance] = React.useState<number | null>(null)
 	const [isLoadingBalance, setIsLoadingBalance] = React.useState(true)
 	const [isLoadingUser, setIsLoadingUser] = React.useState(true)
+	const organizationId = apiConfiguration?.kilocodeOrganizationId
 
 	useEffect(() => {
-		vscode.postMessage({
-			type: "fetchProfileDataRequest",
-		})
-		vscode.postMessage({
-			type: "fetchBalanceDataRequest",
-		})
-	}, [apiConfiguration?.kilocodeToken, apiConfiguration?.kilocodeOrganizationId])
+		vscode.postMessage({ type: "fetchProfileDataRequest" })
+		vscode.postMessage({ type: "fetchBalanceDataRequest" })
+	}, [apiConfiguration?.kilocodeToken, organizationId])
 
 	useEffect(() => {
 		const handleMessage = (event: MessageEvent<WebviewMessage>) => {
@@ -165,7 +164,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 								<div className="w-full flex gap-2 flex-col min-[225px]:flex-row">
 									<div className="w-full min-[225px]:w-1/2">
 										<VSCodeButtonLink
-											href="https://kilocode.ai/profile"
+											href={getAppUrl("/profile")}
 											appearance="primary"
 											className="w-full">
 											{t("kilocode:profile.dashboard")}
@@ -177,6 +176,30 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 										className="w-full min-[225px]:w-1/2">
 										{t("kilocode:profile.logOut")}
 									</VSCodeButton>
+								</div>
+
+								<div className="w-full mt-2">
+									{organizationId ? (
+										<VSCodeButtonLink
+											href={getAppUrl(`/organizations/${organizationId}/usage-details`)}
+											appearance="secondary"
+											className="w-full">
+											{t("kilocode:profile.detailedUsage")}
+										</VSCodeButtonLink>
+									) : (
+										<VSCodeButtonLink
+											onClick={() => {
+												telemetryClient.capture(
+													TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED,
+													{ origin: "usage-details" },
+												)
+											}}
+											href={getAppUrl("/organizations/new")}
+											appearance="primary"
+											className="w-full">
+											{t("kilocode:profile.createOrganization")}
+										</VSCodeButtonLink>
+									)}
 								</div>
 
 								<VSCodeDivider className="w-full my-6" />
@@ -211,7 +234,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 									</div>
 
 									{/* Buy Credits Section - Only show for personal accounts */}
-									{!apiConfiguration?.kilocodeOrganizationId && (
+									{!organizationId && (
 										<div className="w-full mt-8">
 											<div className="text-lg font-semibold text-[var(--vscode-foreground)] mb-4 text-center">
 												{t("kilocode:profile.shop.title")}
@@ -254,7 +277,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 
 											<div className="text-center">
 												<VSCodeButtonLink
-													href="https://kilocode.ai/profile"
+													href={getAppUrl("/profile")}
 													appearance="secondary"
 													className="text-sm">
 													{t("kilocode:profile.shop.viewAll")}

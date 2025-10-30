@@ -1,4 +1,0 @@
-# Description: Should complete content after opening brace
-function processItems(items) {
-<<<CURSOR>>>
-}

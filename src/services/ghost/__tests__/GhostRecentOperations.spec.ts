@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { AutoTriggerStrategy } from "../strategies/AutoTriggerStrategy"
+import { AutoTriggerStrategy } from "../classic-auto-complete/AutoTriggerStrategy"
 import { GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 

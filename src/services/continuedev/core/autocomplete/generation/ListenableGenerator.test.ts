@@ -4,11 +4,10 @@ import { ListenableGenerator } from "./ListenableGenerator"
 
 describe("ListenableGenerator", () => {
 	// Helper function to create an async generator
-	async function* asyncGenerator<T>(values: T[], delay = 0) {
+	async function* asyncGenerator<T>(values: T[]) {
 		for (const value of values) {
-			if (delay > 0) {
-				await new Promise((resolve) => setTimeout(resolve, delay))
-			}
+			// Yield on next event loop iteration to ensure async behavior
+			await new Promise(setImmediate)
 			yield value
 		}
 	}
@@ -31,20 +30,19 @@ describe("ListenableGenerator", () => {
 
 	it("should allow listeners to receive values", async () => {
 		const values = [1, 2, 3]
-		const source = asyncGenerator(values, 10) // Introduce delay to simulate async behavior
+		const source = asyncGenerator(values)
 		const onError = vi.fn()
 
 		const lg = new ListenableGenerator<number>(source, onError, new AbortController())
 
 		const listener = vi.fn()
 
-		// Add listener after some delay to simulate late subscription
-		setTimeout(() => {
-			lg.listen(listener)
-		}, 15)
+		// Add listener after yielding starts (next event loop iteration)
+		await new Promise(setImmediate)
+		lg.listen(listener)
 
-		// Wait for generator to finish
-		await new Promise((resolve) => setTimeout(resolve, 50))
+		// Wait for generator to actually finish
+		await lg.waitForCompletion()
 
 		expect(listener).toHaveBeenCalledWith(1)
 		expect(listener).toHaveBeenCalledWith(2)
@@ -55,7 +53,7 @@ describe("ListenableGenerator", () => {
 
 	it("should buffer values for listeners added after some values have been yielded", async () => {
 		const values = [1, 2, 3]
-		const source = asyncGenerator(values, 10)
+		const source = asyncGenerator(values)
 		const onError = vi.fn()
 
 		const lg = new ListenableGenerator<number>(source, onError, new AbortController())
@@ -64,15 +62,15 @@ describe("ListenableGenerator", () => {
 
 		lg.listen(initialListener)
 
-		// Wait for the first value to be yielded
-		await new Promise((resolve) => setTimeout(resolve, 15))
+		// Wait for the first value to be yielded (next event loop iteration)
+		await new Promise(setImmediate)
 
-		// Add a second listener
+		// Add a second listener after first value has been yielded
 		const newListener = vi.fn()
 		lg.listen(newListener)
 
-		// Wait for generator to finish
-		await new Promise((resolve) => setTimeout(resolve, 50))
+		// Wait for generator to actually finish
+		await lg.waitForCompletion()
 
 		// Both listeners should have received all values
 		;[initialListener, newListener].forEach((listener) => {
@@ -85,7 +83,7 @@ describe("ListenableGenerator", () => {
 
 	it("should handle cancellation", async () => {
 		const values = [1, 2, 3, 4, 5]
-		const source = asyncGenerator(values, 10)
+		const source = asyncGenerator(values)
 		const onError = vi.fn()
 
 		const lg = new ListenableGenerator<number>(source, onError, new AbortController())
@@ -139,8 +137,8 @@ describe("ListenableGenerator", () => {
 		const listener = vi.fn()
 		lg.listen(listener)
 
-		// Wait for the generator to finish
-		await new Promise((resolve) => setTimeout(resolve, 10))
+		// Wait for the generator to actually finish
+		await lg.waitForCompletion()
 
 		expect(listener).toHaveBeenCalledWith(1)
 		expect(listener).toHaveBeenCalledWith(2)

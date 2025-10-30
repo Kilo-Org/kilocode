@@ -4,12 +4,14 @@
  */
 
 import { atom } from "jotai"
+import { atomWithReset } from "jotai/utils"
 import type { CliMessage } from "../../types/cli.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
+import { commitCompletionTimeout } from "../../parallel/parallel.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -34,9 +36,29 @@ export const messagesAtom = atom<CliMessage[]>([])
 export const messageResetCounterAtom = atom<number>(0)
 
 /**
+ * Atom to track the cutoff timestamp for message display
+ * Messages with timestamp <= this value will be hidden from display
+ * Set to 0 to show all messages (default)
+ * Set to Date.now() to hide all previous messages
+ */
+export const messageCutoffTimestampAtom = atom<number>(0)
+
+/**
  * Atom to hold UI error messages
  */
 export const errorAtom = atom<string | null>(null)
+
+/**
+ * Atom to track when parallel mode is committing changes
+ * Used to disable input and show "Committing your changes..." message
+ */
+export const isCommittingParallelModeAtom = atom<boolean>(false)
+
+/**
+ * Atom to track countdown timer for parallel mode commit (in seconds)
+ * Starts at 60 and counts down to 0
+ */
+export const commitCountdownSecondsAtom = atomWithReset<number>(commitCompletionTimeout / 1000)
 
 /**
  * Derived atom to check if the extension is currently streaming/processing
@@ -238,29 +260,25 @@ export const lastMessageAtom = atom<CliMessage | null>((get) => {
 
 /**
  * Derived atom to get the last ask message from extension messages
- * Returns the most recent unanswered ask message that requires user approval, or null if none exists
+ * Returns the most recent ask message that requires user approval, or null if none exists
  */
 export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 	const messages = get(chatMessagesAtom)
 
-	// Ask types that require user approval (not auto-handled)
-	const approvalAskTypes = [
-		"tool",
-		"command",
-		"followup",
-		"api_req_failed",
-		"browser_action_launch",
-		"use_mcp_server",
-	]
+	// Ask types that require user approval
+	const approvalAskTypes = ["tool", "command", "browser_action_launch", "use_mcp_server"]
 
-	// Find the last unanswered ask message that requires approval
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i]
-		if (msg && msg.type === "ask" && !msg.isAnswered && msg.ask && approvalAskTypes.includes(msg.ask)) {
-			return msg
-		}
+	const lastMessage = messages[messages.length - 1]
+	if (
+		lastMessage &&
+		lastMessage.type === "ask" &&
+		!lastMessage.isAnswered &&
+		lastMessage.ask &&
+		approvalAskTypes.includes(lastMessage.ask) &&
+		!lastMessage.partial
+	) {
+		return lastMessage
 	}
-
 	return null
 })
 
@@ -440,10 +458,12 @@ export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSugges
 /**
  * Derived atom that merges CLI messages and extension messages chronologically
  * This provides a unified view of all messages for display
+ * Filters out messages before the cutoff timestamp
  */
 export const mergedMessagesAtom = atom<UnifiedMessage[]>((get) => {
 	const cliMessages = get(messagesAtom)
 	const extensionMessages = get(chatMessagesAtom)
+	const cutoffTimestamp = get(messageCutoffTimestampAtom)
 
 	// Convert to unified format
 	const unified: UnifiedMessage[] = [
@@ -456,7 +476,10 @@ export const mergedMessagesAtom = atom<UnifiedMessage[]>((get) => {
 		return a.message.ts - b.message.ts
 	})
 
-	return sorted
+	// Filter out messages before the cutoff timestamp
+	const filtered = sorted.filter((msg) => msg.message.ts > cutoffTimestamp)
+
+	return filtered
 })
 
 // ============================================================================
@@ -560,6 +583,21 @@ export const getSelectedFollowupAtom = atom<FollowupSuggestion | null>((get) => 
  */
 export const hasFollowupSuggestionsAtom = atom<boolean>((get) => {
 	return get(followupSuggestionsAtom).length > 0
+})
+
+/**
+ * Action atom to set the message cutoff timestamp
+ * Messages with timestamp <= this value will be hidden from display
+ */
+export const setMessageCutoffTimestampAtom = atom(null, (get, set, timestamp: number) => {
+	set(messageCutoffTimestampAtom, timestamp)
+})
+
+/**
+ * Action atom to reset the message cutoff timestamp to 0 (show all messages)
+ */
+export const resetMessageCutoffAtom = atom(null, (get, set) => {
+	set(messageCutoffTimestampAtom, 0)
 })
 
 // ============================================================================

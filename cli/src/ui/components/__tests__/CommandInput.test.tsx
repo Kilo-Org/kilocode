@@ -10,8 +10,14 @@ vi.mock("jotai", async (importOriginal) => {
 		...actual,
 		useSetAtom: vi.fn(() => vi.fn()),
 		useAtomValue: vi.fn(() => 0),
+		useAtom: vi.fn(() => [0, vi.fn()]),
 	}
 })
+
+// Mock jotai/utils
+vi.mock("jotai/utils", () => ({
+	useResetAtom: vi.fn(() => vi.fn()),
+}))
 
 // Mock the hooks
 vi.mock("../../../state/hooks/useCommandInput.js", () => ({
@@ -70,6 +76,8 @@ vi.mock("../../../state/atoms/keyboard.js", () => ({
 
 vi.mock("../../../state/atoms/ui.js", () => ({
 	selectedIndexAtom: {},
+	isCommittingParallelModeAtom: {},
+	commitCountdownSecondsAtom: {},
 }))
 
 describe("CommandInput", () => {

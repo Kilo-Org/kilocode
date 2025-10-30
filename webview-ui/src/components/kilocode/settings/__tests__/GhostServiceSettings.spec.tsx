@@ -74,7 +74,6 @@ vi.mock("../../settings/Section", () => ({
 
 const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
-	autoTriggerDelay: 3,
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
 	provider: "openrouter",
@@ -181,54 +180,6 @@ describe("GhostServiceSettingsView", () => {
 			"ghostServiceSettings",
 			expect.objectContaining({
 				enableSmartInlineTaskKeybinding: true,
-			}),
-		)
-	})
-
-	it("shows auto-trigger delay slider when auto-trigger is enabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: true,
-			},
-		})
-
-		// Check that the delay slider is visible
-		expect(screen.getByText(/kilocode:ghost.settings.autoTriggerDelay.label/)).toBeInTheDocument()
-		expect(screen.getByRole("slider")).toBeInTheDocument()
-	})
-
-	it("hides auto-trigger delay slider when auto-trigger is disabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: false,
-			},
-		})
-
-		// Check that the delay slider is not visible
-		expect(screen.queryByText(/kilocode:ghost.settings.autoTriggerDelay.label/)).not.toBeInTheDocument()
-		expect(screen.queryByRole("slider")).not.toBeInTheDocument()
-	})
-
-	it("updates auto-trigger delay via slider", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({
-			setCachedStateField,
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: true,
-			},
-		})
-
-		// Find and change the slider value
-		const slider = screen.getByRole("slider")
-		fireEvent.change(slider, { target: { value: "5" } })
-
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				autoTriggerDelay: 500,
 			}),
 		)
 	})

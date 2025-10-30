@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom, useStore } from "jotai"
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
 	pendingApprovalAtom,
 	approvalOptionsAtom,
@@ -8,6 +8,7 @@ import {
 	selectNextApprovalAtom,
 	selectPreviousApprovalAtom,
 	isApprovalPendingAtom,
+	approvalSetTimestampAtom,
 	startApprovalProcessingAtom,
 	completeApprovalProcessingAtom,
 	approvalProcessingAtom,
@@ -22,6 +23,8 @@ import { useWebviewMessage } from "./useWebviewMessage.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { useApprovalTelemetry } from "./useApprovalTelemetry.js"
+
+const APPROVAL_MENU_DELAY_MS = 500
 
 /**
  * Options for useApprovalHandler hook
@@ -88,7 +91,14 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 	const approvalOptions = useAtomValue(approvalOptionsAtom)
 	const selectedIndex = useAtomValue(selectedApprovalIndexAtom)
 	const selectedOption = useAtomValue(selectedApprovalOptionAtom)
-	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const approvalSetTimestamp = useAtomValue(approvalSetTimestampAtom)
+	const isApprovalPendingImmediate = useAtomValue(isApprovalPendingAtom)
+
+	// Use state to manage delayed visibility
+	const [showApprovalMenu, setShowApprovalMenu] = useState(false)
+
+	// Compute if approval is pending with delay
+	const isApprovalPending = isApprovalPendingImmediate && showApprovalMenu
 
 	const selectNext = useSetAtom(selectNextApprovalAtom)
 	const selectPrevious = useSetAtom(selectPreviousApprovalAtom)
@@ -275,6 +285,28 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 		setRejectCallback(() => reject)
 		setExecuteSelectedCallback(() => executeSelected)
 	}, [approve, reject, executeSelected, setApproveCallback, setRejectCallback, setExecuteSelectedCallback])
+
+	// Manage delayed visibility of approval menu
+	useEffect(() => {
+		if (approvalSetTimestamp === null) {
+			// No pending approval, hide menu
+			setShowApprovalMenu(false)
+			return
+		}
+
+		// Calculate remaining time for delay
+		const elapsed = Date.now() - approvalSetTimestamp
+		const remaining = Math.max(0, APPROVAL_MENU_DELAY_MS - elapsed)
+
+		// Set timeout to show menu after delay
+		const timeoutId = setTimeout(() => {
+			setShowApprovalMenu(true)
+		}, remaining)
+
+		return () => {
+			clearTimeout(timeoutId)
+		}
+	}, [approvalSetTimestamp, isApprovalPendingImmediate])
 
 	return {
 		pendingApproval,

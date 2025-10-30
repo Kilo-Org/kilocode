@@ -5,9 +5,9 @@
 
 import React, { useEffect } from "react"
 import { Box, Text } from "ink"
-import { useSetAtom, useAtomValue } from "jotai"
+import { useSetAtom, useAtomValue, useAtom } from "jotai"
 import { submissionCallbackAtom } from "../../state/atoms/keyboard.js"
-import { selectedIndexAtom } from "../../state/atoms/ui.js"
+import { selectedIndexAtom, isCommittingParallelModeAtom, commitCountdownSecondsAtom } from "../../state/atoms/ui.js"
 import { MultilineTextInput } from "./MultilineTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
 import { useApprovalHandler } from "../../state/hooks/useApprovalHandler.js"
@@ -16,6 +16,7 @@ import { useTheme } from "../../state/hooks/useTheme.js"
 import { AutocompleteMenu } from "./AutocompleteMenu.js"
 import { ApprovalMenu } from "./ApprovalMenu.js"
 import { FollowupSuggestionsMenu } from "./FollowupSuggestionsMenu.js"
+import { useResetAtom } from "jotai/utils"
 
 interface CommandInputProps {
 	onSubmit: (value: string) => void
@@ -44,6 +45,31 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	// Setup centralized keyboard handler
 	const setSubmissionCallback = useSetAtom(submissionCallbackAtom)
 	const sharedSelectedIndex = useAtomValue(selectedIndexAtom)
+	const isCommittingParallelMode = useAtomValue(isCommittingParallelModeAtom)
+	const [countdownSeconds, setCountdownSeconds] = useAtom(commitCountdownSecondsAtom)
+	const resetCountdownSeconds = useResetAtom(commitCountdownSecondsAtom)
+
+	// Countdown timer effect for parallel mode commit
+	useEffect(() => {
+		if (!isCommittingParallelMode) {
+			resetCountdownSeconds()
+			return
+		}
+
+		resetCountdownSeconds()
+
+		const interval = setInterval(() => {
+			setCountdownSeconds((prev) => {
+				if (prev <= 1) {
+					clearInterval(interval)
+					return 0
+				}
+				return prev - 1
+			})
+		}, 1000)
+
+		return () => clearInterval(interval)
+	}, [isCommittingParallelMode, setCountdownSeconds, resetCountdownSeconds])
 
 	// Set the submission callback so keyboard handler can trigger onSubmit
 	useEffect(() => {
@@ -54,21 +80,41 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	const suggestionType =
 		commandSuggestions.length > 0 ? "command" : argumentSuggestions.length > 0 ? "argument" : "none"
 
-	// Determine if input should be disabled (during approval or when explicitly disabled)
-	const isInputDisabled = disabled || isApprovalPending
+	// Determine if input should be disabled (during approval, when explicitly disabled, or when committing parallel mode)
+	const isInputDisabled = disabled || isApprovalPending || isCommittingParallelMode
 
 	return (
 		<Box flexDirection="column">
 			{/* Input field */}
 			<Box
 				borderStyle="round"
-				borderColor={isApprovalPending ? theme.actions.pending : theme.ui.border.active}
+				borderColor={
+					isCommittingParallelMode
+						? theme.ui.border.active
+						: isApprovalPending
+							? theme.actions.pending
+							: theme.ui.border.active
+				}
 				paddingX={1}>
-				<Text color={isApprovalPending ? theme.actions.pending : theme.ui.border.active} bold>
-					{isApprovalPending ? "[!] " : "> "}
+				<Text
+					color={
+						isCommittingParallelMode
+							? theme.ui.border.active
+							: isApprovalPending
+								? theme.actions.pending
+								: theme.ui.border.active
+					}
+					bold>
+					{isCommittingParallelMode ? "⏳ " : isApprovalPending ? "[!] " : "> "}
 				</Text>
 				<MultilineTextInput
-					placeholder={isApprovalPending ? "Awaiting approval..." : placeholder}
+					placeholder={
+						isCommittingParallelMode
+							? `Committing your changes... (${countdownSeconds}s)`
+							: isApprovalPending
+								? "Awaiting approval..."
+								: placeholder
+					}
 					showCursor={!isInputDisabled}
 					maxLines={5}
 					width={Math.max(10, process.stdout.columns - 6)}

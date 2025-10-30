@@ -7,9 +7,15 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { useCallback } from "react"
 import type { CommandContext } from "../../commands/core/types.js"
 import type { CliMessage } from "../../types/cli.js"
-import { addMessageAtom, clearMessagesAtom, replaceMessagesAtom } from "../atoms/ui.js"
+import {
+	addMessageAtom,
+	clearMessagesAtom,
+	replaceMessagesAtom,
+	setMessageCutoffTimestampAtom,
+	isCommittingParallelModeAtom,
+} from "../atoms/ui.js"
 import { setModeAtom, setThemeAtom, providerAtom, updateProviderAtom } from "../atoms/config.js"
-import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
+import { routerModelsAtom, extensionStateAtom, isParallelModeAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
@@ -60,6 +66,8 @@ export function useCommandContext(): UseCommandContextReturn {
 	const setTheme = useSetAtom(setThemeAtom)
 	const updateProvider = useSetAtom(updateProviderAtom)
 	const refreshRouterModels = useSetAtom(requestRouterModelsAtom)
+	const setMessageCutoffTimestamp = useSetAtom(setMessageCutoffTimestampAtom)
+	const setCommittingParallelMode = useSetAtom(isCommittingParallelModeAtom)
 	const { sendMessage, clearTask } = useWebviewMessage()
 
 	// Get read-only state
@@ -67,6 +75,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
+	const isParallelMode = useAtomValue(isParallelModeAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -93,6 +102,9 @@ export function useCommandContext(): UseCommandContextReturn {
 				replaceMessages: (messages: CliMessage[]) => {
 					replaceMessages(messages)
 				},
+				setMessageCutoffTimestamp: (timestamp: number) => {
+					setMessageCutoffTimestamp(timestamp)
+				},
 				clearTask: async () => {
 					await clearTask()
 				},
@@ -105,6 +117,10 @@ export function useCommandContext(): UseCommandContextReturn {
 				exit: () => {
 					onExit()
 				},
+				setCommittingParallelMode: (isCommitting: boolean) => {
+					setCommittingParallelMode(isCommitting)
+				},
+				isParallelMode,
 				// Model-related context
 				routerModels,
 				currentProvider: currentProvider || null,
@@ -146,10 +162,13 @@ export function useCommandContext(): UseCommandContextReturn {
 			updateProvider,
 			refreshRouterModels,
 			replaceMessages,
+			setMessageCutoffTimestamp,
 			profileData,
 			balanceData,
 			profileLoading,
 			balanceLoading,
+			setCommittingParallelMode,
+			isParallelMode,
 		],
 	)
 

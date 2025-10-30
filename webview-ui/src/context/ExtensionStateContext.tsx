@@ -44,6 +44,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	systemNotificationsEnabled?: boolean // kilocode_change
 	setSystemNotificationsEnabled: (value: boolean) => void // kilocode_change
 	dismissedNotificationIds: string[] // kilocode_change
+	yoloMode?: boolean // kilocode_change
+	setYoloMode: (value: boolean) => void // kilocode_Change
 	didHydrateState: boolean
 	showWelcome: boolean
 	theme: any
@@ -595,6 +597,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, hideCostBelowThreshold: value })),
 		setHoveringTaskTimeline: (value) => setState((prevState) => ({ ...prevState, hoveringTaskTimeline: value })),
 		setShowTimestamps: (value) => setState((prevState) => ({ ...prevState, showTimestamps: value })),
+		setYoloMode: (value) => setState((prevState) => ({ ...prevState, yoloMode: value })), // kilocode_change
 		// kilocode_change end
 		setAutoApprovalEnabled: (value) => setState((prevState) => ({ ...prevState, autoApprovalEnabled: value })),
 		setCustomModes: (value) => setState((prevState) => ({ ...prevState, customModes: value })),

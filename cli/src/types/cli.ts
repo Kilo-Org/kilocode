@@ -5,11 +5,15 @@ export interface WelcomeMessageOptions {
 	showInstructions?: boolean
 	// Content customization
 	instructions?: string[] // Custom instruction lines
+	// Parallel mode branch name
+	worktreeBranch?: string | undefined
+	// Workspace directory
+	workspace?: string | undefined
 }
 
 export interface CliMessage {
 	id: string
-	type: "user" | "assistant" | "system" | "error" | "welcome"
+	type: "user" | "assistant" | "system" | "error" | "welcome" | "empty"
 	content: string
 	ts: number
 	partial?: boolean | undefined
