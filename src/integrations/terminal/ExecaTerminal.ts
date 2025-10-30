@@ -9,10 +9,11 @@ export class ExecaTerminal extends BaseTerminal {
 	}
 
 	/**
-	 * Unlike the VSCode terminal, this is never closed.
+	 * ExecaTerminal is closed when it has no active process and no unretrieved output.
 	 */
 	public override isClosed(): boolean {
-		return false
+		// Terminal is closed if it's not busy and has no processes with output
+		return !this.busy && this.getProcessesWithOutput().length === 0
 	}
 
 	public override runCommand(command: string, callbacks: RooTerminalCallbacks): RooTerminalProcessResultPromise {

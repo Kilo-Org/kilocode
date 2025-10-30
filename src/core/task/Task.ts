@@ -1057,11 +1057,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
-	async handleTerminalOperation(terminalOperation: "continue" | "abort") {
+	async handleTerminalOperation(terminalOperation: "continue" | "abort", terminalId?: number) {
 		if (terminalOperation === "continue") {
 			this.terminalProcess?.continue()
 		} else if (terminalOperation === "abort") {
-			this.terminalProcess?.abort()
+			if (terminalId === undefined) {
+				this.terminalProcess?.abort()
+			} else {
+				await TerminalRegistry.killTerminal(terminalId)
+			}
 		}
 	}
 

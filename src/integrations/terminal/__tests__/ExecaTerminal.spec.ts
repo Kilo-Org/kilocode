@@ -21,7 +21,18 @@ describe("ExecaTerminal", () => {
 		}
 
 		const subprocess = terminal.runCommand("ls -al", callbacks)
+
+		// Wait for the subprocess to start
 		await subprocess
+
+		// Wait for callbacks to be called by waiting for completion
+		await new Promise<void>((resolve) => {
+			const originalOnCompleted = callbacks.onCompleted
+			callbacks.onCompleted = (output, process) => {
+				originalOnCompleted(output, process)
+				resolve()
+			}
+		})
 
 		expect(callbacks.onLine).toHaveBeenCalled()
 		expect(callbacks.onShellExecutionStarted).toHaveBeenCalled()
