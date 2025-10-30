@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Failed to connect to Qdrant vector database. Please ensure Qdrant is running and accessible at {{qdrantUrl}}. Error: {{errorMessage}}",
-		"vectorDimensionMismatch": "Failed to update vector index for new model. Please try clearing the index and starting again. Details: {{errorMessage}}"
+		"vectorDimensionMismatch": "Failed to update vector index for new model. Please try clearing the index and starting again. Details: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Failed to initialize lancedb vector store: {{errorMessage}}",
+		"lancedbLoadFailed": "Failed to load LanceDB module: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Authentication failed. Please check your API key in the settings.",

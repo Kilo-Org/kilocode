@@ -2,6 +2,7 @@ import * as vscode from "vscode"
 import * as path from "path"
 import * as fs from "fs/promises"
 import { constants as fsConstants } from "fs"
+import * as fsSync from "fs"
 
 import { Package } from "../shared/package"
 import { t } from "../i18n"
@@ -48,6 +49,32 @@ export async function getStorageBasePath(defaultPath: string): Promise<string> {
 }
 
 /**
+ * Gets the base storage path for conversations(Sync)
+ */
+export function getStorageBasePathSync(defaultPath: string): string {
+	let customStoragePath = ""
+	try {
+		const config = vscode.workspace.getConfiguration(Package.name)
+		customStoragePath = config.get<string>("customStoragePath", "")
+	} catch (error) {
+		console.warn("Could not access VSCode configuration - using default path")
+		return defaultPath
+	}
+	if (!customStoragePath) {
+		return defaultPath
+	}
+	try {
+		fsSync.mkdirSync(customStoragePath, { recursive: true })
+		const testFile = path.join(customStoragePath, ".write_test")
+		fsSync.writeFileSync(testFile, "test")
+		fsSync.rmSync(testFile)
+		return customStoragePath
+	} catch (error) {
+		return defaultPath
+	}
+}
+
+/**
  * Gets the storage directory path for a task
  */
 export async function getTaskDirectoryPath(globalStoragePath: string, taskId: string): Promise<string> {
@@ -74,6 +101,16 @@ export async function getCacheDirectoryPath(globalStoragePath: string): Promise<
 	const basePath = await getStorageBasePath(globalStoragePath)
 	const cacheDir = path.join(basePath, "cache")
 	await fs.mkdir(cacheDir, { recursive: true })
+	return cacheDir
+}
+
+/**
+ * Gets the local vector store directory path
+ */
+export function getLancedbVectorStoreDirectoryPath(globalStoragePath: string): string {
+	const basePath = getStorageBasePathSync(globalStoragePath)
+	const cacheDir = path.join(basePath, "vector")
+	fsSync.mkdirSync(cacheDir, { recursive: true })
 	return cacheDir
 }
 

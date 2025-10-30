@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Připojení k vektorové databázi Qdrant selhalo. Ujisti se prosím, že Qdrant běží a je přístupný na {{qdrantUrl}}. Chyba: {{errorMessage}}",
-		"vectorDimensionMismatch": "Aktualizace vektorového indexu pro nový model selhala. Zkus prosím vymazat index a začít znovu. Podrobnosti: {{errorMessage}}"
+		"vectorDimensionMismatch": "Aktualizace vektorového indexu pro nový model selhala. Zkus prosím vymazat index a začít znovu. Podrobnosti: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Inicializace úložiště vektorů LanceDB selhala: {{errorMessage}}",
+		"lancedbLoadFailed": "Načtení modulu LanceDB selhalo: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Autentizace selhala. Zkontroluj prosím svůj API klíč v nastavení.",
