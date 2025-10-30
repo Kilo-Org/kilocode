@@ -1026,6 +1026,7 @@ export const ChatRowContent = ({
 						)}
 					</>
 				)
+			// kilocode_change start: Add terminal_kill tool UI
 			case "terminal_kill":
 				return (
 					<>
@@ -1050,6 +1051,7 @@ export const ChatRowContent = ({
 						</div>
 					</>
 				)
+			// kilocode_change end: Add terminal_kill tool UI
 			default:
 				return null
 		}
@@ -1653,6 +1655,7 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
+					// kilocode_change: Remove isOrganization prop
 					return <LowCreditWarning message={message} />
 				}
 				case "invalid_model": {

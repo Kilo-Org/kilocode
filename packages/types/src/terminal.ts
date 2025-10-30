@@ -10,8 +10,8 @@ export const commandExecutionStatusSchema = z.discriminatedUnion("status", [
 		status: z.literal("started"),
 		pid: z.number().optional(),
 		command: z.string(),
-		runInBackground: z.boolean().optional(),
-		terminalId: z.number().optional(),
+		runInBackground: z.boolean().optional(), // kilocode_change
+		terminalId: z.number().optional(), // kilocode_change
 	}),
 	z.object({
 		executionId: z.string(),
