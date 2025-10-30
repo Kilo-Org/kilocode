@@ -68,7 +68,7 @@ program
 		}
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
-		let finalPrompt = prompt
+		let finalPrompt = prompt || ""
 		if (!finalPrompt && !process.stdin.isTTY) {
 			// Read from stdin
 			const chunks: Buffer[] = []
