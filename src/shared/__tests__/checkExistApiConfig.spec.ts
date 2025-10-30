@@ -58,6 +58,7 @@ describe("checkExistKey", () => {
 			vsCodeLmModelSelector: undefined,
 			requestyApiKey: undefined,
 			unboundApiKey: undefined,
+			submodelApiKey: undefined,
 		}
 		expect(checkExistKey(config)).toBe(false)
 	})

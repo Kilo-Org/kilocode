@@ -44,6 +44,7 @@ import {
 	SyntheticHandler, // kilocode_change
 	RooHandler,
 	FeatherlessHandler,
+	SubmodelHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
 	OVHcloudAIEndpointsHandler, // kilocode_change
@@ -194,6 +195,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)
+		case "submodel":
+			return new SubmodelHandler(options)
 		case "roo":
 			// Never throw exceptions from provider constructors
 			// The provider-proxy server will handle authentication and return appropriate error codes
