@@ -124,6 +124,12 @@ export class CLI {
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
+			const extensionHost = this.service.getExtensionHost()
+			extensionHost.sendWebviewMessage({
+				type: "yoloMode",
+				bool: Boolean(this.options.ci),
+			})
+
 			// Request router models after configuration is injected
 			void this.requestRouterModels()
 

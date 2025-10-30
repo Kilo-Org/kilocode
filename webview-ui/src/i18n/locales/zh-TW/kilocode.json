@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加額度",
-		"lowBalance": "你的 Kilo Code 餘額不足"
+		"lowBalance": "你的 Kilo Code 餘額不足",
+		"newOrganization": "將 Kilo 用於工作？"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",

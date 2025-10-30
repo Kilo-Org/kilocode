@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
-		"lowBalance": "Seu saldo do Kilo Code está baixo"
+		"lowBalance": "Seu saldo do Kilo Code está baixo",
+		"newOrganization": "Usando o Kilo para trabalho?"
 	},
 	"pagination": {
 		"previous": "Anterior",

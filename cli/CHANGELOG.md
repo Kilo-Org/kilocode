@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.14
+
+### Patch Changes
+
+- [#3371](https://github.com/Kilo-Org/kilocode/pull/3371) [`e0e01b2`](https://github.com/Kilo-Org/kilocode/commit/e0e01b2ea03e84ee7447b546231ebed530d5aac8) Thanks [@RSO](https://github.com/RSO)! - Add a --json flag to render a stream of JSON objects while in --auto mode
+
 ## 0.0.13
 
 ### Patch Changes

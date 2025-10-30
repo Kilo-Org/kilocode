@@ -1629,7 +1629,12 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
-					return <LowCreditWarning message={message} />
+					return (
+						<LowCreditWarning
+							message={message}
+							isOrganization={!!apiConfiguration.kilocodeOrganizationId}
+						/>
+					)
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

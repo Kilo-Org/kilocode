@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
-		"lowBalance": "你的 Kilo Code 余额不足"
+		"lowBalance": "你的 Kilo Code 余额不足",
+		"newOrganization": "在工作中使用 Kilo？"
 	},
 	"pagination": {
 		"previous": "上一页",
