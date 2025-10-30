@@ -54,6 +54,11 @@ export enum TelemetryEvent {
 	CI_MODE_COMPLETED = "cli_ci_mode_completed",
 	CI_MODE_TIMEOUT = "cli_ci_mode_timeout",
 
+	// Parallel Mode Events
+	PARALLEL_MODE_STARTED = "cli_parallel_mode_started",
+	PARALLEL_MODE_COMPLETED = "cli_parallel_mode_completed",
+	PARALLEL_MODE_ERRORED = "cli_parallel_mode_errored",
+
 	// Error Events
 	ERROR_OCCURRED = "cli_error_occurred",
 	EXCEPTION_CAUGHT = "cli_exception_caught",
