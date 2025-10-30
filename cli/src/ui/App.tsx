@@ -3,7 +3,9 @@ import { Provider as JotaiProvider } from "jotai"
 import { UI } from "./UI.js"
 import { KeyboardProvider } from "./providers/KeyboardProvider.js"
 
-type JotaiStore = any
+import type { createStore } from "jotai"
+
+type JotaiStore = ReturnType<typeof createStore>
 
 export interface AppOptions {
 	mode?: string
@@ -12,6 +14,8 @@ export interface AppOptions {
 	json?: boolean
 	prompt?: string
 	timeout?: number
+	parallel?: boolean
+	worktreeBranch?: string | undefined
 }
 
 export interface AppProps {

@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "크레딧 추가",
-		"lowBalance": "Kilo Code 잔액이 부족합니다"
+		"lowBalance": "Kilo Code 잔액이 부족합니다",
+		"newOrganization": "업무용으로 Kilo를 사용하시나요?"
 	},
 	"pagination": {
 		"previous": "이전",
