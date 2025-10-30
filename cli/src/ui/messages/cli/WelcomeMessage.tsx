@@ -19,13 +19,17 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 	const showInstructions = options.showInstructions !== false
 	const instructions =
 		options.instructions && options.instructions.length > 0 ? options.instructions : DEFAULT_INSTRUCTIONS
+
+	// Check if logo should be hidden via environment variable
+	const hideLogo = process.env.KILOCODE_HIDE_LOGO === "true" || process.env.KILOCODE_HIDE_LOGO === "1"
+
 	const contentHeight = 12 + (showInstructions ? instructions.length : 0)
 	const marginTop = options.clearScreen ? Math.max(0, (stdout?.rows || 0) - contentHeight) : 0
 
 	return (
 		<Box flexDirection="column" gap={2} marginTop={marginTop}>
-			{/* Logo section - always shown */}
-			<Logo />
+			{/* Logo section - hidden if KILOCODE_HIDE_LOGO env var is set */}
+			{!hideLogo && <Logo />}
 
 			{/* Instructions section */}
 			{showInstructions && (
