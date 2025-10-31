@@ -60,7 +60,7 @@ export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/mod
 // Cerebras
 // https://inference-docs.cerebras.ai/api-reference/models
 
-// Cerebras AI Inference Model Definitions - Updated July 2025
+// Cerebras AI Inference Model Definitions - Updated Oct 31/2025
 
 export const cerebrasModels = {
 	"zai-glm-4.6": {
