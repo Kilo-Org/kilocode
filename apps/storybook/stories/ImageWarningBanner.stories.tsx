@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { ImageWarningBanner } from "../../../webview-ui/src/components/chat/ImageWarningBanner"
 
 const meta = {
-	title: "Components/Chat/ImageWarningBanner",
+	title: "Chat/ImageWarningBanner",
 	component: ImageWarningBanner,
 	tags: ["autodocs"],
 	args: {

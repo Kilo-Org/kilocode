@@ -78,6 +78,11 @@ export const mcpServersAtom = atom<McpServer[]>([])
 export const cwdAtom = atom<string | null>(null)
 
 /**
+ * Atom to track if we're in parallel mode
+ */
+export const isParallelModeAtom = atom(false)
+
+/**
  * Derived atom to get the extension version
  */
 export const extensionVersionAtom = atom<string>((get) => {

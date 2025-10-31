@@ -42,6 +42,7 @@ export {
 	customModesAtom,
 	mcpServersAtom,
 	cwdAtom,
+	isParallelModeAtom,
 
 	// Derived extension state atoms
 	extensionVersionAtom,
@@ -151,6 +152,16 @@ export {
 } from "./config-sync.js"
 
 // ============================================================================
+// Notifications Atoms - Kilocode notifications management
+// ============================================================================
+export {
+	// Core notifications atoms
+	notificationsAtom,
+	notificationsLoadingAtom,
+	notificationsErrorAtom,
+} from "./notifications.js"
+
+// ============================================================================
 // UI Atoms - Command-based UI state
 // ============================================================================
 export {
@@ -158,6 +169,8 @@ export {
 	messagesAtom,
 	isStreamingAtom,
 	errorAtom,
+	isCommittingParallelModeAtom,
+	commitCountdownSecondsAtom,
 
 	// Autocomplete state atoms
 	showAutocompleteAtom,
@@ -219,3 +232,4 @@ export type {
 export type { CliMessage } from "../../types/cli.js"
 export type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 export type { FollowupSuggestion } from "./ui.js"
+export type { KilocodeNotification } from "./notifications.js"

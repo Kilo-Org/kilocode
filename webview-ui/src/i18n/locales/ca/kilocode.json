@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
-		"lowBalance": "El teu saldo de Kilo Code és baix"
+		"lowBalance": "El teu saldo de Kilo Code és baix",
+		"newOrganization": "Utilitzes Kilo per a la feina?"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -41,7 +42,8 @@
 			"automaticFetch": "Els models més recents estan disponibles automàticament a Kilo Code. Si no estàs segur de quin model triar, Kilo Code funciona millor amb els models recomanats que apareixen a la part superior en <strong>negreta</strong>.",
 			"providerRouting": {
 				"title": "Encaminament de proveïdors",
-				"managedByOrganization": "La configuració d'encaminament de proveïdors està gestionada per la teva organització.",
+				"managedByOrganization": "Gestionar encaminament de proveïdors a nivell d'organització",
+				"createOrganization": "Crear organització per gestionar encaminament de proveïdors",
 				"description": "Kilo Code encamina les sol·licituds als millors proveïdors disponibles per al vostre model. Per defecte, les sol·licituds es distribueixen entre els principals proveïdors per maximitzar el temps de funcionament. No obstant això, podeu triar un proveïdor específic per a aquest model.",
 				"sorting": {
 					"default": "Ordenació de proveïdors per defecte",
@@ -109,7 +111,9 @@
 			"credits": "crèdits",
 			"action": "Comprar Ara",
 			"viewAll": "Veure totes les opcions de preus"
-		}
+		},
+		"detailedUsage": "Ús detallat",
+		"createOrganization": "Crear organització per fer seguiment de l'ús detallat"
 	},
 	"chat": {
 		"condense": {
@@ -267,5 +271,16 @@
 		"modelUnavailable": "⚠️ El model {{model}} no està disponible. Canvia a un model diferent per continuar.",
 		"continueWith": "Continua amb {{model}}",
 		"continue": "Continua"
+	},
+	"marketplace": {
+		"modes": {
+			"description": "Aquests modes estan disponibles des de la comunitat. Feu clic <1>aquí</1> per editar els vostres propis modes personalitzats."
+		},
+		"mcp": {
+			"description": "Aquests servidors MCP són mantinguts per la comunitat. Fes clic <1>aquí</1> per editar els teus propis ajustos de MCP."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nou: Comparteix modes creant una organització"
 	}
 }

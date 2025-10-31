@@ -75,6 +75,7 @@ export class CompletionProvider {
 			llm.useLegacyCompletionsEndpoint = true
 		}
 
+		console.log("using LLM", llm)
 		return llm
 	}
 
@@ -136,6 +137,7 @@ export class CompletionProvider {
 			// Create abort signal if not given
 			if (!token) {
 				const controller = this.loggingService.createAbortController(input.completionId)
+				console.log("creating abort token because none given")
 				token = controller.signal
 			}
 			const startTime = Date.now()
@@ -211,8 +213,11 @@ export class CompletionProvider {
 
 				// Don't postprocess if aborted
 				if (token.aborted) {
+					console.log("aborted")
 					return undefined
 				}
+
+				console.log("raw completion", completion)
 
 				const processedCompletion = helper.options.transform
 					? postprocessCompletion({
@@ -277,3 +282,5 @@ export class CompletionProvider {
 		}
 	}
 }
+
+export default CompletionProvider

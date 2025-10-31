@@ -34,7 +34,7 @@ describe("getAllowedJSONToolsForMode", () => {
 			mockCodeIndexManager,
 			providerState as ClineProviderState,
 			true,
-			false,
+			undefined,
 		)
 
 		const applyDiffTool = tools.find((tool) => "function" in tool && tool.function.name === "apply_diff")
@@ -59,7 +59,7 @@ describe("getAllowedJSONToolsForMode", () => {
 			mockCodeIndexManager,
 			providerState as ClineProviderState,
 			true,
-			false,
+			undefined,
 		)
 
 		const applyDiffTool = tools.find((tool) => "function" in tool && tool.function.name === "apply_diff")

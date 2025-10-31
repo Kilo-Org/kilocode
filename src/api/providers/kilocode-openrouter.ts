@@ -76,6 +76,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		if (lastUsage.is_byok) {
 			return lastUsage.cost_details?.upstream_inference_cost || 0
 		}
+
 		return lastUsage.cost || 0
 	}
 

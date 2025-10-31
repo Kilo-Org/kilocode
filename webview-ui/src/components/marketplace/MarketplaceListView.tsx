@@ -11,15 +11,28 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 import { useStateManager } from "./useStateManager"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { IssueFooter } from "./IssueFooter"
+import { Trans } from "react-i18next" // kilocode_change
 
 export interface MarketplaceListViewProps {
 	stateManager: MarketplaceViewStateManager
 	allTags: string[]
 	filteredTags: string[]
 	filterByType?: "mcp" | "mode"
+	// kilocode_change start
+	headerMessage?: {
+		translationKey: string
+		onLinkClick: () => void
+	}
+	// kilocode_change end
 }
 
-export function MarketplaceListView({ stateManager, allTags, filteredTags, filterByType }: MarketplaceListViewProps) {
+export function MarketplaceListView({
+	stateManager,
+	allTags,
+	filteredTags,
+	filterByType,
+	headerMessage, // kilocode_change start
+}: MarketplaceListViewProps) {
 	const [state, manager] = useStateManager(stateManager)
 	const { t } = useAppTranslation()
 	const { marketplaceInstalledMetadata, cloudUserInfo } = useExtensionState()
@@ -39,6 +52,26 @@ export function MarketplaceListView({ stateManager, allTags, filteredTags, filte
 
 	return (
 		<>
+			{/* kilocode_change start - headerMessage */}
+			{headerMessage && (
+				<div className="mb-4">
+					<p className="text-sm text-vscode-descriptionForeground">
+						<Trans
+							i18nKey={headerMessage.translationKey}
+							components={{
+								1: (
+									<a
+										className="text-vscode-textLink-foreground hover:text-vscode-textLink-activeForeground underline cursor-pointer bg-transparent border-none p-0 font-inherit"
+										onClick={headerMessage.onLinkClick}
+									/>
+								),
+							}}
+						/>
+					</p>
+				</div>
+			)}
+			{/* kilocode_change end - headerMessage */}
+
 			<div className="mb-4">
 				<div className="relative">
 					<Input

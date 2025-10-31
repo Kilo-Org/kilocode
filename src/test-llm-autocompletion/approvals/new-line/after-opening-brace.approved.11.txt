@@ -1,5 +1,0 @@
-function processItems(items) {
-	items.forEach(item => {
-<<<AUTOCOMPLETE_HERE>>>
-	});
-}

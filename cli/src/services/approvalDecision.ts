@@ -125,10 +125,14 @@ function getToolApprovalDecision(
 		}
 
 		// MCP operations
-		if (tool === "use_mcp_tool" || tool === "access_mcp_resource") {
+		if (tool === "use_mcp_tool" || tool === "use_mcp_server" || tool === "access_mcp_resource") {
 			if (config.mcp?.enabled) {
 				return { action: "auto-approve" }
 			}
+			logs.warn("MCP tool rejected - mcp.enabled is false", "approvalDecision", {
+				tool,
+				mcpEnabled: config.mcp?.enabled,
+			})
 			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 		}
 
@@ -336,8 +340,21 @@ export function getApprovalDecision(
 		case "api_req_failed":
 			return getRetryApprovalDecision(message, config, isCIMode)
 
+		// Handle MCP server requests (extension uses this as ask type instead of "tool")
+		case "use_mcp_server":
+		case "access_mcp_resource":
+			if (config.mcp?.enabled) {
+				return { action: "auto-approve" }
+			}
+			logs.warn("MCP operation rejected - mcp.enabled is false", "approvalDecision", {
+				askType,
+				mcpEnabled: config.mcp?.enabled,
+			})
+			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
+
 		default:
 			// Unknown ask type - don't auto-approve
+			logs.warn("Unknown ask type", "approvalDecision", { askType, isCIMode })
 			return isCIMode ? { action: "auto-reject", message: CI_MODE_MESSAGES.AUTO_REJECTED } : { action: "manual" }
 	}
 }

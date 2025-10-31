@@ -802,8 +802,8 @@
 			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "启用快速应用",
-			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行快速应用编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
+			"name": "启用 Fast Apply",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
 			"apiKey": "Morph API 密钥（可选）",
 			"placeholder": "输入您的 Morph API 密钥（可选）",
 			"modelLabel": "模型选择",

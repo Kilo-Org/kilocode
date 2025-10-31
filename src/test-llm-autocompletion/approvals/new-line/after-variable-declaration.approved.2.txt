@@ -1,8 +1,0 @@
-function initialize() {
-  const config = loadConfig();
-  if (!config) {
-    throw new Error('Failed to load configuration');
-  }
-<<<AUTOCOMPLETE_HERE>>>
-  return config;
-}

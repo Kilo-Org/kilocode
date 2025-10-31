@@ -3,6 +3,8 @@ import {
 	openRouterProviderSortSchema,
 	openRouterProviderDataCollectionSchema,
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
+	getAppUrl,
+	TelemetryEventName,
 } from "@roo-code/types"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -11,6 +13,8 @@ import { z } from "zod"
 import { safeJsonParse } from "@roo/safeJsonParse"
 import { useModelProviders } from "@/components/ui/hooks/useSelectedModel"
 import { cn } from "@/lib/utils"
+import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
+import { telemetryClient } from "@/utils/TelemetryClient"
 
 const DEFAULT_VALUE_KEY = "default" as const
 const SPECIFIC_PROVIDER_KEY = "specific" as const
@@ -41,7 +45,7 @@ interface Props {
 	kilocodeDefaultModel: string
 }
 
-export const KiloProviderRoutingManagedByOrganization = () => {
+export const KiloProviderRoutingManagedByOrganization = (props: { organizationId: string }) => {
 	const { t } = useAppTranslation()
 	return (
 		<div className="flex flex-col gap-1">
@@ -51,7 +55,12 @@ export const KiloProviderRoutingManagedByOrganization = () => {
 				</label>
 			</div>
 			<div className="text-sm text-vscode-descriptionForeground">
-				{t("kilocode:settings.provider.providerRouting.managedByOrganization")}
+				<VSCodeButtonLink
+					href={getAppUrl(`/organizations/${props.organizationId}`)}
+					appearance="secondary"
+					className="text-sm w-full">
+					{t("kilocode:settings.provider.providerRouting.managedByOrganization")}
+				</VSCodeButtonLink>
 			</div>
 		</div>
 	)
@@ -151,6 +160,17 @@ export const KiloProviderRouting = ({ apiConfiguration, setApiConfigurationField
 					</SelectItem>
 				</SelectContent>
 			</Select>
+			<VSCodeButtonLink
+				onClick={() => {
+					telemetryClient.capture(TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED, {
+						origin: "provider-routing",
+					})
+				}}
+				href={getAppUrl("/organizations/new")}
+				appearance="primary"
+				className="text-sm w-full">
+				{t("kilocode:settings.provider.providerRouting.createOrganization")}
+			</VSCodeButtonLink>
 		</div>
 	)
 }

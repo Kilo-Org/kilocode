@@ -54,6 +54,8 @@ SPDX-License-Identifier: Apache-2.0
                     id="kilocode"
                     displayType="BALLOON"
         />
+        <checkinHandlerFactory implementation="ai.kilocode.jetbrains.git.CommitMessageHandlerFactory"/>
+        <applicationService serviceImplementation="ai.kilocode.jetbrains.git.CommitMessageService"/>
     </extensions>
 
     <extensions defaultExtensionNs="org.jetbrains.plugins.terminal">
@@ -99,6 +101,14 @@ SPDX-License-Identifier: Apache-2.0
                 text="Settings"
                 description="Setting">
             <override-text place="GoToAction" text="Setting" />
+        </action>
+
+        <action id="kilocode.generateCommitMessage"
+                icon="/icons/kilo-dark-small.svg"
+                class="ai.kilocode.jetbrains.actions.GitCommitMessageAction"
+                text="Generate Commit Message"
+                description="Generate AI-powered commit message">
+            <add-to-group group-id="Vcs.MessageActionGroup" anchor="first"/>
         </action>
 
         <group id="WecoderToolbarGroup">

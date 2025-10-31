@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import BottomControls from "../kilocode/BottomControls" // kilocode_change
+import { KiloShareModesBanner } from "../kilocode/KiloShareModesBanner" // kilocode_change
 import {
 	VSCodeCheckbox,
 	VSCodeRadioGroup,
@@ -605,7 +606,10 @@ const ModesView = ({ onDone }: ModesViewProps) => {
 						</div>
 					</div>
 
-					<div className="text-sm text-vscode-descriptionForeground mb-3">
+					<div className="text-sm text-vscode-descriptionForeground mb-6">
+						{/* kilocode_change - add KiloShareModesBanner */}
+						<KiloShareModesBanner />
+
 						<Trans i18nKey="prompts:modes.createModeHelpText">
 							<VSCodeLink
 								href={buildDocLink("basic-usage/using-modes", "prompts_view_modes")}

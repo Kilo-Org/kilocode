@@ -1872,6 +1872,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("autoApprovalEnabled", message.bool ?? false)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start: yolo mode
+		case "yoloMode":
+			await updateGlobalState("yoloMode", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "enhancePrompt":
 			if (message.text) {
 				try {

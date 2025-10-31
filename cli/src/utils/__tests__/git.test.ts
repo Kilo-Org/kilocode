@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { getGitInfo, getGitBranch } from "../git.js"
+import { getGitInfo, getGitBranch, branchExists, generateBranchName, isGitWorktree } from "../git.js"
 import simpleGit from "simple-git"
 
 // Mock simple-git
@@ -122,6 +122,188 @@ describe("git utilities", () => {
 
 			const result = await getGitBranch("/git/repo")
 			expect(result).toBeNull()
+		})
+	})
+
+	describe("branchExists", () => {
+		it("should return false for empty cwd", async () => {
+			const result = await branchExists("", "main")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for empty branchName", async () => {
+			const result = await branchExists("/git/repo", "")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for non-git directory", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(false),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await branchExists("/some/path", "main")
+			expect(result).toBe(false)
+		})
+
+		it("should return true when local branch exists", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				branch: vi.fn().mockResolvedValue({
+					all: ["main", "develop", "feature-branch"],
+				}),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await branchExists("/git/repo", "feature-branch")
+			expect(result).toBe(true)
+		})
+
+		it("should return true when remote branch exists", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				branch: vi.fn().mockResolvedValue({
+					all: ["main", "remotes/origin/feature-branch"],
+				}),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await branchExists("/git/repo", "feature-branch")
+			expect(result).toBe(true)
+		})
+
+		it("should return false when branch does not exist", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				branch: vi.fn().mockResolvedValue({
+					all: ["main", "develop"],
+				}),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await branchExists("/git/repo", "nonexistent")
+			expect(result).toBe(false)
+		})
+
+		it("should handle errors gracefully", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await branchExists("/git/repo", "main")
+			expect(result).toBe(false)
+		})
+	})
+
+	describe("generateBranchName", () => {
+		it("should generate branch name with lowercase and hyphens", () => {
+			const result = generateBranchName("Fix Bug in Auth")
+			expect(result).toMatch(/^fix-bug-in-auth-\d+$/)
+		})
+
+		it("should replace special characters with hyphens", () => {
+			const result = generateBranchName("Feature: Add @user support!")
+			expect(result).toMatch(/^feature-add-user-support-\d+$/)
+		})
+
+		it("should remove leading and trailing hyphens", () => {
+			const result = generateBranchName("---test---")
+			expect(result).toMatch(/^test-\d+$/)
+		})
+
+		it("should collapse multiple hyphens into one", () => {
+			const result = generateBranchName("fix   multiple   spaces")
+			expect(result).toMatch(/^fix-multiple-spaces-\d+$/)
+		})
+
+		it("should truncate to 50 characters", () => {
+			const longPrompt = "a".repeat(100)
+			const result = generateBranchName(longPrompt)
+			const withoutTimestamp = result.split("-").slice(0, -1).join("-")
+			expect(withoutTimestamp.length).toBeLessThanOrEqual(50)
+		})
+
+		it("should add timestamp for uniqueness", async () => {
+			const prompt = "test feature"
+			const result1 = generateBranchName(prompt)
+
+			await new Promise((resolve) => setTimeout(resolve, 5))
+
+			const result2 = generateBranchName(prompt)
+
+			expect(result1).not.toBe(result2)
+			expect(result1).toMatch(/^test-feature-\d+$/)
+			expect(result2).toMatch(/^test-feature-\d+$/)
+		})
+
+		it("should handle empty string", () => {
+			const result = generateBranchName("")
+			expect(result).toMatch(/^kilo-\d+$/)
+		})
+
+		it("should handle only special characters", () => {
+			const result = generateBranchName("!@#$%^&*()")
+			expect(result).toMatch(/^kilo-\d+$/)
+		})
+
+		it("should handle unicode characters", () => {
+			const result = generateBranchName("Add 日本語 support")
+			expect(result).toMatch(/^add-support-\d+$/)
+		})
+
+		it("should handle mixed case properly", () => {
+			const result = generateBranchName("FixBugInAuthSystem")
+			expect(result).toMatch(/^fixbuginauthsystem-\d+$/)
+		})
+	})
+
+	describe("isGitWorktree", () => {
+		it("should return false for empty cwd", async () => {
+			const result = await isGitWorktree("")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for non-git directory", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(false),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/some/path")
+			expect(result).toBe(false)
+		})
+
+		it("should return false for regular git repository", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				revparse: vi.fn().mockResolvedValue(".git\n"),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/repo")
+			expect(result).toBe(false)
+		})
+
+		it("should return true for git worktree", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockResolvedValue(true),
+				revparse: vi.fn().mockResolvedValue("/path/to/.git/worktrees/feature-branch\n"),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/worktree")
+			expect(result).toBe(true)
+		})
+
+		it("should handle errors gracefully", async () => {
+			const mockGit = {
+				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
+			}
+			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+
+			const result = await isGitWorktree("/git/repo")
+			expect(result).toBe(false)
 		})
 	})
 })

@@ -54,10 +54,6 @@ export type { UseMessageHandlerReturn } from "./useMessageHandler.js"
 export { useTaskState } from "./useTaskState.js"
 export type { UseTaskStateReturn } from "./useTaskState.js"
 
-// Config hooks
-export { useConfig } from "./useConfig.js"
-export type { UseConfigReturn } from "./useConfig.js"
-
 // Theme hooks
 export { useTheme } from "./useTheme.js"
 

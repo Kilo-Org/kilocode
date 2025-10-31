@@ -218,6 +218,11 @@ export async function readFileTool(
 		}
 	}
 
+	// kilocode_change start: yolo mode
+	const state = await cline.providerRef.deref()?.getState()
+	const isYoloMode = state?.yoloMode ?? false
+	// kilocode_change end
+
 	try {
 		// First validate all files and prepare for batch approval
 		const filesToApprove: FileResult[] = []
@@ -316,7 +321,11 @@ export async function readFileTool(
 				batchFiles,
 			} satisfies ClineSayTool)
 
-			const { response, text, images } = await cline.ask("tool", completeMessage, false)
+			// kilocode_change start: yolo mode
+			const { response, text, images } = isYoloMode
+				? { response: "yesButtonClicked" }
+				: await cline.ask("tool", completeMessage, false)
+			// kilocode_change end
 
 			// Process batch response
 			if (response === "yesButtonClicked") {
@@ -416,7 +425,11 @@ export async function readFileTool(
 				reason: lineSnippet,
 			} satisfies ClineSayTool)
 
-			const { response, text, images } = await cline.ask("tool", completeMessage, false)
+			// kilocode_change start: yolo mode
+			const { response, text, images } = isYoloMode
+				? { response: "yesButtonClicked" }
+				: await cline.ask("tool", completeMessage, false)
+			// kilocode_change end
 
 			if (response !== "yesButtonClicked") {
 				// Handle both messageResponse and noButtonClicked with text
