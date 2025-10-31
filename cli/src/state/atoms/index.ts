@@ -42,6 +42,7 @@ export {
 	customModesAtom,
 	mcpServersAtom,
 	cwdAtom,
+	isParallelModeAtom,
 
 	// Derived extension state atoms
 	extensionVersionAtom,
@@ -168,6 +169,8 @@ export {
 	messagesAtom,
 	isStreamingAtom,
 	errorAtom,
+	isCommittingParallelModeAtom,
+	commitCountdownSecondsAtom,
 
 	// Autocomplete state atoms
 	showAutocompleteAtom,

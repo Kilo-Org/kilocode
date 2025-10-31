@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Không tìm thấy nhà cung cấp",
 		"noMatchFound": "Không tìm thấy hồ sơ phù hợp",
 		"vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
+		"vscodeLmUnavailable": "Hỗ trợ Mô hình Ngôn ngữ VS Code chỉ có trên Visual Studio Code. Các bản fork như VSCodium và các công cụ khác có thể không hoạt động. Ngoài ra, tính năng này không có trong các công cụ JetBrains.",
+		"vscodeLmUnavailableInstructions": "Hãy đảm bảo bạn đang sử dụng công cụ được hỗ trợ và VS Code Chat đã được cài đặt và kích hoạt",
 		"awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",

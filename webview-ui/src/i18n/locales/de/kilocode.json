@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Guthaben hinzufügen",
-		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
+		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig",
+		"newOrganization": "Verwendest du Kilo für die Arbeit?"
 	},
 	"pagination": {
 		"previous": "Zurück",

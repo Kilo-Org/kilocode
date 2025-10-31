@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Přidat kredit",
-		"lowBalance": "Tvůj Kilo Code zůstatek je nízký"
+		"lowBalance": "Tvůj Kilo Code zůstatek je nízký",
+		"newOrganization": "Používáš Kilo pro práci?"
 	},
 	"pagination": {
 		"previous": "Předchozí",
