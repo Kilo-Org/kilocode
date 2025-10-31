@@ -172,6 +172,16 @@ const config: Config = {
 				],
 			},
 		],
+		[
+			"docusaurus-plugin-llms",
+			{
+				id: "llms-txt",
+				name: "Kilo Code Documentation",
+				description: "Comprehensive documentation for Kilo Code, an AI-powered coding assistant for VS Code",
+				url: "https://kilocode.ai/docs",
+				email: "support@kilocode.ai",
+			},
+		],
 	],
 
 	themeConfig: {
