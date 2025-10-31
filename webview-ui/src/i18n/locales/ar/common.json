@@ -1,9 +1,9 @@
 {
 	"errorBoundary": {
 		"title": "حدث خطأ ما",
-		"reportText": "ساعدنا في التحسين من خلال الإبلاغ عن هذا الخطأ على",
-		"githubText": "صفحة مشاكل GitHub الخاصة بنا",
-		"copyInstructions": "انسخ والصق رسالة الخطأ التالية لتضمينها كجزء من تقريرك:",
+		"reportText": "يرجى الإبلاغ عن هذه المشكلة على GitHub:",
+		"githubText": "فتح مشكلة على GitHub",
+		"copyInstructions": "انسخ تفاصيل الخطأ أدناه لتضمينها في تقريرك:",
 		"errorStack": "مكدس الخطأ:",
 		"componentStack": "مكدس المكونات:"
 	},
@@ -28,7 +28,8 @@
 		"customerSupport": "الدعم الفني"
 	},
 	"ui": {
-		"search_placeholder": "ابحث..."
+		"search_placeholder": "ابحث...",
+		"no_results": "لا توجد نتائج"
 	},
 	"mermaid": {
 		"loading": "جاري توليد مخطط Mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "خطأ أثناء نسخ الصورة"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "صورة"
+		},
+		"noData": "لا توجد بيانات صورة"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "تنسيق URI للبيانات غير صالح",
@@ -87,7 +94,29 @@
 		"deleteWarning": "حذف هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد المتابعة؟",
 		"editMessage": "تعديل الرسالة",
 		"editWarning": "تعديل هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد المتابعة؟",
+		"editQuestionWithCheckpoint": "تعديل هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد أيضاً التراجع عن جميع التغييرات للعودة إلى نقطة الحفظ هذه؟",
+		"deleteQuestionWithCheckpoint": "حذف هذه الرسالة سيحذف جميع الرسائل اللاحقة في المحادثة. هل تريد أيضاً التراجع عن جميع التغييرات للعودة إلى نقطة الحفظ هذه؟",
+		"editOnly": "لا، تعديل الرسالة فقط",
+		"deleteOnly": "لا، حذف الرسالة فقط",
+		"restoreToCheckpoint": "نعم، استعادة نقطة الحفظ",
+		"dontShowAgain": "لا تظهر هذا مرة أخرى",
 		"proceed": "متابعة",
 		"title": "تأكيد"
+	},
+	"time_ago": {
+		"just_now": "الآن",
+		"seconds_ago": "منذ {{count}} ثانية",
+		"minute_ago": "منذ دقيقة",
+		"minutes_ago": "منذ {{count}} دقيقة",
+		"hour_ago": "منذ ساعة",
+		"hours_ago": "منذ {{count}} ساعة",
+		"day_ago": "منذ يوم",
+		"days_ago": "منذ {{count}} يوم",
+		"week_ago": "منذ أسبوع",
+		"weeks_ago": "منذ {{count}} أسبوع",
+		"month_ago": "منذ شهر",
+		"months_ago": "منذ {{count}} شهر",
+		"year_ago": "منذ سنة",
+		"years_ago": "منذ {{count}} سنة"
 	}
 }

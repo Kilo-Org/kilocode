@@ -14,8 +14,8 @@ import {
 	Button,
 } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { useTaskSearch } from "./useTaskSearch" // kilocode_change
 import { vscode } from "@/utils/vscode"
+import { useTaskWithId } from "@/kilocode/hooks/useTaskHistory"
 
 interface DeleteTaskDialogProps extends AlertDialogProps {
 	taskId: string
@@ -24,11 +24,11 @@ interface DeleteTaskDialogProps extends AlertDialogProps {
 export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) => {
 	const { t } = useAppTranslation()
 	const [isEnterPressed] = useKeyPress("Enter")
-	const { tasks } = useTaskSearch() // kilocode_change
+	const { data: tasks } = useTaskWithId([taskId]) // kilocode_change
 
 	const { onOpenChange } = props
 
-	const task = tasks.find((t) => t.id === taskId) // kilocode_change
+	const task = tasks?.find((t) => t.id === taskId) // kilocode_change
 	const isFavorited = task?.isFavorited // kilocode_change
 
 	const onDelete = useCallback(() => {

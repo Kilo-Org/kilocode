@@ -1,6 +1,6 @@
 # Improve your prompt
 
-Click the stars icon to make your prompt clearer and more complete. Kilo Code will rewrite it to get better results.
+Click the magic wand icon to make your prompt clearer and more complete. Kilo Code will rewrite it to get better results.
 
 # Add files or folders for context
 

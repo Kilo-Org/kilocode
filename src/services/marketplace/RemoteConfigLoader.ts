@@ -1,12 +1,15 @@
 import axios from "axios"
 import * as yaml from "yaml"
 import { z } from "zod"
-// import { getRooCodeApiUrl } from "@roo-code/cloud" kilocode_change: use our own api
-import type { MarketplaceItem, MarketplaceItemType } from "@roo-code/types"
-import { modeMarketplaceItemSchema, mcpMarketplaceItemSchema } from "@roo-code/types"
-import { getKiloCodeApiUrl } from "../../shared/kilocode/api"
+import { getApiUrl } from "@roo-code/types" // kilocode_change
+import {
+	type MarketplaceItem,
+	type MarketplaceItemType,
+	modeMarketplaceItemSchema,
+	mcpMarketplaceItemSchema,
+} from "@roo-code/types"
+//import { getRooCodeApiUrl } from "@roo-code/cloud" kilocode_change: use our own api
 
-// Response schemas for YAML API responses
 const modeMarketplaceResponse = z.object({
 	items: z.array(modeMarketplaceItemSchema),
 })
@@ -16,18 +19,22 @@ const mcpMarketplaceResponse = z.object({
 })
 
 export class RemoteConfigLoader {
-	private apiBaseUrl: string
+	// private apiBaseUrl: string // kilocode_change
 	private cache: Map<string, { data: MarketplaceItem[]; timestamp: number }> = new Map()
 	private cacheDuration = 5 * 60 * 1000 // 5 minutes
 
-	constructor() {
-		this.apiBaseUrl = getKiloCodeApiUrl()
-	}
+	// kilocode_change - empty constructor
+	// constructor() {
+	// 	this.apiBaseUrl = getKiloBaseUriFromToken()
+	// }
 
-	async loadAllItems(): Promise<MarketplaceItem[]> {
+	async loadAllItems(hideMarketplaceMcps = false): Promise<MarketplaceItem[]> {
 		const items: MarketplaceItem[] = []
 
-		const [modes, mcps] = await Promise.all([this.fetchModes(), this.fetchMcps()])
+		const modesPromise = this.fetchModes()
+		const mcpsPromise = hideMarketplaceMcps ? Promise.resolve([]) : this.fetchMcps()
+
+		const [modes, mcps] = await Promise.all([modesPromise, mcpsPromise])
 
 		items.push(...modes, ...mcps)
 		return items
@@ -36,11 +43,14 @@ export class RemoteConfigLoader {
 	private async fetchModes(): Promise<MarketplaceItem[]> {
 		const cacheKey = "modes"
 		const cached = this.getFromCache(cacheKey)
-		if (cached) return cached
 
-		const data = await this.fetchWithRetry<string>(`${this.apiBaseUrl}/api/marketplace/modes`)
+		if (cached) {
+			return cached
+		}
 
-		// Parse and validate YAML response
+		const url = getApiUrl("/marketplace/modes") // kilocode_change
+		const data = await this.fetchWithRetry<string>(url)
+
 		const yamlData = yaml.parse(data)
 		const validated = modeMarketplaceResponse.parse(yamlData)
 
@@ -56,11 +66,14 @@ export class RemoteConfigLoader {
 	private async fetchMcps(): Promise<MarketplaceItem[]> {
 		const cacheKey = "mcps"
 		const cached = this.getFromCache(cacheKey)
-		if (cached) return cached
 
-		const data = await this.fetchWithRetry<string>(`${this.apiBaseUrl}/api/marketplace/mcps`)
+		if (cached) {
+			return cached
+		}
 
-		// Parse and validate YAML response
+		const url = getApiUrl("/marketplace/mcps") // kilocode_change
+		const data = await this.fetchWithRetry<string>(url)
+
 		const yamlData = yaml.parse(data)
 		const validated = mcpMarketplaceResponse.parse(yamlData)
 

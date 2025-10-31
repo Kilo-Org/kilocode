@@ -35,13 +35,6 @@ jobs:
               with:
                   node-version: ${{ env.NODE_VERSION }}
                   cache: "pnpm"
-            - name: Turbo cache setup
-              uses: actions/cache@v4
-              with:
-                  path: .turbo
-                  key: ${{ runner.os }}-turbo-${{ github.sha }}
-                  restore-keys: |
-                      ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
             - name: Configure Git
@@ -53,7 +46,7 @@ jobs:
             - name: Package Extension
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
-                  pnpm build
+                  pnpm vsix:production
 
                   # Save VSIX contents to a temporary file to avoid broken pipe issues.
                   unzip -l bin/kilo-code-${current_package_version}.vsix > /tmp/kilo-code-vsix-contents.txt
@@ -113,3 +106,82 @@ jobs:
                     --target ${{ env.GIT_REF }} \
                     bin/kilo-code-${current_package_version}.vsix
                   echo "Successfully created GitHub Release v${current_package_version}"
+
+    publish-jetbrains:
+        needs: publish-extension
+        runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  submodules: recursive
+                  lfs: true
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: "jetbrains"
+                  java-version: "21"
+                  check-latest: false
+                  token: ${{ secrets.GITHUB_TOKEN }}
+            - name: Install system dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y \
+                    libx11-dev \
+                    libxkbfile-dev \
+                    pkg-config \
+                    build-essential \
+                    python3
+            - name: Turbo cache setup
+              uses: actions/cache@v4
+              with:
+                  path: .turbo
+                  key: ${{ runner.os }}-turbo-${{ github.sha }}
+                  restore-keys: |
+                      ${{ runner.os }}-turbo-
+            - name: Install dependencies
+              run: pnpm install
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Build
+              run: pnpm run jetbrains:bundle
+              shell: bash
+            - name: Get bundle name
+              id: get_bundle_name
+              run: echo "BUNDLE_NAME=$(node jetbrains/plugin/scripts/get_bundle_name.js)" >> $GITHUB_ENV
+            - name: Attach to GitHub Release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  gh release upload "v${current_package_version}" \
+                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}#JetBrains Plugin"
+                  echo "Successfully attached JetBrains plugin to GitHub Release v${current_package_version}"
+            - name: Upload artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ${{ env.BUNDLE_NAME }}
+                  path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
+            - name: JetBrains Marketplace Publisher
+              run: |
+                 curl \
+                 -X POST \
+                 -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
+                 -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
+                 -F "pluginId=28350" \
+                 -F "channel=stable" \
+                 -F "isHidden=false" \
+                 https://plugins.jetbrains.com/plugin/uploadPlugin

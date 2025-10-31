@@ -1,12 +1,15 @@
-import { ClineMessage } from "@roo-code/types"
+import { ClineMessage, getAppUrl, TelemetryEventName } from "@roo-code/types"
 import { vscode } from "@src/utils/vscode"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { RetryIconButton } from "../common/RetryIconButton"
 import styled from "styled-components"
 import { useTranslation } from "react-i18next"
+import { VSCodeButtonLink } from "@/components/common/VSCodeButtonLink"
+import { telemetryClient } from "@/utils/TelemetryClient"
 
 type LowCreditWarningProps = {
 	message: ClineMessage
+	isOrganization: boolean
 }
 
 const HeaderContainer = styled.div`
@@ -23,7 +26,7 @@ const Description = styled.div`
 	overflow-wrap: anywhere;
 `
 
-export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
+export const LowCreditWarning = ({ message, isOrganization }: LowCreditWarningProps) => {
 	const { t } = useTranslation()
 	let data = { title: "Error", message: "Payment required.", balance: "-?.??", buyCreditsUrl: "" }
 
@@ -65,7 +68,7 @@ export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
 					/>
 				</div>
 				<VSCodeButton
-					style={{ width: "100%", padding: "6px", borderRadius: "4px" }}
+					className="p-1 w-full rounded"
 					onClick={(e) => {
 						e.preventDefault()
 
@@ -76,6 +79,19 @@ export const LowCreditWarning = ({ message }: LowCreditWarningProps) => {
 					}}>
 					{t("kilocode:lowCreditWarning.addCredit")}
 				</VSCodeButton>
+				{!isOrganization && (
+					<VSCodeButtonLink
+						onClick={() => {
+							telemetryClient.capture(TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED, {
+								origin: "low-credit-warning",
+							})
+						}}
+						href={getAppUrl("/organizations/new")}
+						appearance="primary"
+						className="p-1 w-full rounded">
+						{t("kilocode:lowCreditWarning.newOrganization")}
+					</VSCodeButtonLink>
+				)}
 			</div>
 		</>
 	)

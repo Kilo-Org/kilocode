@@ -28,7 +28,8 @@
 		"customerSupport": "Klantenservice"
 	},
 	"ui": {
-		"search_placeholder": "Zoeken..."
+		"search_placeholder": "Zoeken...",
+		"no_results": "Geen resultaten gevonden"
 	},
 	"mermaid": {
 		"loading": "Mermaid-diagram genereren...",
@@ -66,6 +67,12 @@
 			"copyError": "Fout bij kopiëren van afbeelding"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Afbeelding"
+		},
+		"noData": "Geen afbeeldingsgegevens"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Ongeldig data-URI-formaat",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Het verwijderen van dit bericht zal alle volgende berichten in het gesprek verwijderen. Wil je doorgaan?",
 		"editMessage": "Bericht Bewerken",
 		"editWarning": "Het bewerken van dit bericht zal alle volgende berichten in het gesprek verwijderen. Wil je doorgaan?",
-		"proceed": "Doorgaan"
+		"editQuestionWithCheckpoint": "Het bewerken van dit bericht zal alle latere berichten in het gesprek verwijderen. Wil je ook alle wijzigingen ongedaan maken tot dit checkpoint?",
+		"deleteQuestionWithCheckpoint": "Het verwijderen van dit bericht zal alle latere berichten in het gesprek verwijderen. Wil je ook alle wijzigingen ongedaan maken tot dit checkpoint?",
+		"editOnly": "Nee, alleen bericht bewerken",
+		"deleteOnly": "Nee, alleen bericht verwijderen",
+		"restoreToCheckpoint": "Ja, checkpoint herstellen",
+		"proceed": "Doorgaan",
+		"dontShowAgain": "Niet meer tonen"
+	},
+	"time_ago": {
+		"just_now": "zojuist",
+		"seconds_ago": "{{count}} seconden geleden",
+		"minute_ago": "een minuut geleden",
+		"minutes_ago": "{{count}} minuten geleden",
+		"hour_ago": "een uur geleden",
+		"hours_ago": "{{count}} uur geleden",
+		"day_ago": "een dag geleden",
+		"days_ago": "{{count}} dagen geleden",
+		"week_ago": "een week geleden",
+		"weeks_ago": "{{count}} weken geleden",
+		"month_ago": "een maand geleden",
+		"months_ago": "{{count}} maanden geleden",
+		"year_ago": "een jaar geleden",
+		"years_ago": "{{count}} jaar geleden"
 	}
 }

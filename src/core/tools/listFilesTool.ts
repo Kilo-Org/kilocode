@@ -32,8 +32,10 @@ export async function listFilesTool(
 	removeClosingTag: RemoveClosingTag,
 ) {
 	const relDirPath: string | undefined = block.params.path
-	const recursiveRaw: string | undefined = block.params.recursive
-	const recursive = recursiveRaw?.toLowerCase() === "true"
+	// kilocode_change start: input can be strongly types
+	const recursiveRaw: string | boolean | null | undefined = block.params.recursive
+	const recursive = typeof recursiveRaw === "boolean" ? recursiveRaw : recursiveRaw?.toLowerCase() === "true"
+	// kilocode_change end
 
 	// Calculate if the path is outside workspace
 	const absolutePath = relDirPath ? path.resolve(cline.cwd, relDirPath) : cline.cwd
@@ -61,7 +63,7 @@ export async function listFilesTool(
 			cline.consecutiveMistakeCount = 0
 
 			const [files, didHitLimit] = await listFiles(absolutePath, recursive, 200)
-			const { showRooIgnoredFiles = true } = (await cline.providerRef.deref()?.getState()) ?? {}
+			const { showRooIgnoredFiles = false } = (await cline.providerRef.deref()?.getState()) ?? {}
 
 			const result = formatResponse.formatFilesList(
 				absolutePath,

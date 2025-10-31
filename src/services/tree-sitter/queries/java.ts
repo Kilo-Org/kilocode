@@ -39,6 +39,7 @@ export default `
 
 ; Method declarations
 (method_declaration
+  type: (_) @definition.method.start ; kilocode_change
   name: (identifier) @name.definition.method) @definition.method
 
 ; Inner class declarations

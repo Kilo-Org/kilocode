@@ -47,6 +47,7 @@
 		"openAiCompatibleConfigMissing": "การกำหนดค่า OpenAI Compatible หายไปสำหรับการสร้าง embedder",
 		"geminiConfigMissing": "การกำหนดค่า Gemini หายไปสำหรับการสร้าง embedder",
 		"mistralConfigMissing": "การกำหนดค่า Mistral หายไปสำหรับการสร้าง embedder",
+		"vercelAiGatewayConfigMissing": "การกำหนดค่า Vercel AI Gateway หายไปสำหรับการสร้าง embedder",
 		"invalidEmbedderType": "ประเภท embedder ที่กำหนดค่าไม่ถูกต้อง: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' กรุณาตรวจสอบให้แน่ใจว่า 'Embedding Dimension' ถูกตั้งค่าอย่างถูกต้องในการตั้งค่าผู้ให้บริการ OpenAI-Compatible",
 		"vectorDimensionNotDetermined": "ไม่สามารถกำหนดมิติเวกเตอร์สำหรับโมเดล '{{modelId}}' กับผู้ให้บริการ '{{provider}}' ตรวจสอบโปรไฟล์โมเดลหรือการกำหนดค่า",
@@ -60,6 +61,7 @@
 		"fileWatcherStopped": "หยุดตัวติดตามไฟล์แล้ว",
 		"failedDuringInitialScan": "ล้มเหลวระหว่างการสแกนเริ่มต้น: {{errorMessage}}",
 		"unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
-		"indexingRequiresWorkspace": "การจัดทำดัชนีต้องการโฟลเดอร์พื้นที่ทำงานที่เปิดอยู่"
+		"indexingRequiresWorkspace": "การจัดทำดัชนีต้องการโฟลเดอร์พื้นที่ทำงานที่เปิดอยู่",
+		"indexingCancelled": "ยกเลิกการจัดทำดัชนีแล้ว"
 	}
 }

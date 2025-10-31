@@ -51,6 +51,8 @@ const config: StorybookConfig = {
 			// Add automatically generated aliases from tsconfig
 			...tsConfigAliases,
 			// Mock overrides for Storybook (these override the tsconfig paths)
+			jsdom: resolve(currentDirname, "../src/mocks/jsdom"),
+			vscode: resolve(currentDirname, "../src/mocks/vscode"),
 			"@src/utils/clipboard": resolve(currentDirname, "../src/mocks/utils"),
 			"@src/utils/highlighter": resolve(currentDirname, "../src/mocks/utils"),
 			"@src/i18n/TranslationContext": resolve(currentDirname, "../src/mocks/utils"),

@@ -1,6 +1,6 @@
 import React from "react"
-import { render, screen, fireEvent } from "@testing-library/react"
-import { describe, it, expect, vi } from "vitest"
+import { render, screen, fireEvent, within } from "@testing-library/react"
+
 import { CommandPatternSelector } from "../CommandPatternSelector"
 import { TooltipProvider } from "../../../components/ui/tooltip"
 
@@ -26,8 +26,8 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => <TooltipPro
 
 describe("CommandPatternSelector", () => {
 	const defaultProps = {
-		command: "npm install express",
 		patterns: [
+			{ pattern: "npm install express", description: "Full command" },
 			{ pattern: "npm install", description: "Install npm packages" },
 			{ pattern: "npm *", description: "Any npm command" },
 		],
@@ -51,19 +51,30 @@ describe("CommandPatternSelector", () => {
 		expect(screen.getByText("chat:commandExecution.manageCommands")).toBeInTheDocument()
 	})
 
-	it("should show full command as first pattern when expanded", () => {
+	it("should show patterns when expanded", () => {
 		render(
 			<TestWrapper>
 				<CommandPatternSelector {...defaultProps} />
 			</TestWrapper>,
 		)
 
-		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
 
-		// Check that the full command is shown
-		expect(screen.getByText("npm install express")).toBeInTheDocument()
+		// Click to expand the component
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns. It's the next sibling of the button's parent div.
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
+
+		// Check that the patterns are shown
+		expect(getByText("npm install express")).toBeInTheDocument()
+		expect(getByText("- Full command")).toBeInTheDocument()
 	})
 
 	it("should show extracted patterns when expanded", () => {
@@ -73,15 +84,25 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
+
 		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns. It's the next sibling of the button's parent div.
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
 
 		// Check that patterns are shown
-		expect(screen.getByText("npm install")).toBeInTheDocument()
-		expect(screen.getByText("- Install npm packages")).toBeInTheDocument()
-		expect(screen.getByText("npm *")).toBeInTheDocument()
-		expect(screen.getByText("- Any npm command")).toBeInTheDocument()
+		expect(getByText("npm install")).toBeInTheDocument()
+		expect(getByText("- Install npm packages")).toBeInTheDocument()
+		expect(getByText("npm *")).toBeInTheDocument()
+		expect(getByText("- Any npm command")).toBeInTheDocument()
 	})
 
 	it("should allow editing patterns when clicked", () => {
@@ -91,16 +112,26 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
-		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
 
-		// Click on the full command pattern
-		const fullCommandDiv = screen.getByText("npm install express").closest("div")
-		fireEvent.click(fullCommandDiv!)
+		// Click to expand the component
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns. It's the next sibling of the button's parent div.
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText, getByDisplayValue } = within(patternsContainer)
+
+		// Click on a pattern
+		const patternDiv = getByText("npm install express").closest("div")
+		fireEvent.click(patternDiv!)
 
 		// An input should appear
-		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
+		const input = getByDisplayValue("npm install express") as HTMLInputElement
 		expect(input).toBeInTheDocument()
 
 		// Change the value
@@ -115,12 +146,23 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
+
 		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
 
 		// Find the npm install pattern row
-		const npmInstallPattern = screen.getByText("npm install").closest(".ml-5")
+		const npmInstallText = getByText("npm install")
+		const npmInstallPattern = npmInstallText.closest(".flex")?.parentElement
 
 		// The allow button should have the active styling (we can check by aria-label)
 		const allowButton = npmInstallPattern?.querySelector('button[aria-label*="removeFromAllowed"]')
@@ -139,12 +181,23 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
+
 		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
 
 		// Find the git push pattern row
-		const gitPushPattern = screen.getByText("git push").closest(".ml-5")
+		const gitPushText = getByText("git push")
+		const gitPushPattern = gitPushText.closest(".flex")?.parentElement
 
 		// The deny button should have the active styling (we can check by aria-label)
 		const denyButton = gitPushPattern?.querySelector('button[aria-label*="removeFromDenied"]')
@@ -164,13 +217,24 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
-		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
 
-		// Find the full command pattern row and click allow
-		const fullCommandPattern = screen.getByText("npm install express").closest(".ml-5")
-		const allowButton = fullCommandPattern?.querySelector('button[aria-label*="addToAllowed"]')
+		// Click to expand the component
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
+
+		// Find a pattern row and click allow
+		const patternText = getByText("npm install express")
+		const patternRow = patternText.closest(".flex")?.parentElement
+		const allowButton = patternRow?.querySelector('button[aria-label*="addToAllowed"]')
 		fireEvent.click(allowButton!)
 
 		// Check that the callback was called with the pattern
@@ -190,13 +254,24 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
-		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
 
-		// Find the full command pattern row and click deny
-		const fullCommandPattern = screen.getByText("npm install express").closest(".ml-5")
-		const denyButton = fullCommandPattern?.querySelector('button[aria-label*="addToDenied"]')
+		// Click to expand the component
+		fireEvent.click(manageCommandsButton!)
+
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
+
+		// Use within to query elements inside the patterns container
+		const { getByText } = within(patternsContainer)
+
+		// Find a pattern row and click deny
+		const patternText = getByText("npm install express")
+		const patternRow = patternText.closest(".flex")?.parentElement
+		const denyButton = patternRow?.querySelector('button[aria-label*="addToDenied"]')
 		fireEvent.click(denyButton!)
 
 		// Check that the callback was called with the pattern
@@ -216,23 +291,33 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
+
 		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		fireEvent.click(manageCommandsButton!)
 
-		// Click on the full command pattern to edit
-		const fullCommandDiv = screen.getByText("npm install express").closest("div")
-		fireEvent.click(fullCommandDiv!)
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
 
-		// Edit the command
-		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
+		// Use within to query elements inside the patterns container
+		const { getByText, getByDisplayValue } = within(patternsContainer)
+
+		// Click on a pattern to edit
+		const patternDiv = getByText("npm install express").closest("div")
+		fireEvent.click(patternDiv!)
+
+		// Edit the pattern
+		const input = getByDisplayValue("npm install express") as HTMLInputElement
 		fireEvent.change(input, { target: { value: "npm install react" } })
 
 		// Don't press Enter or blur - just click the button while still editing
 		// This simulates the user clicking the button while the input is still focused
 
 		// Find the allow button in the same row as the input
-		const patternRow = input.closest(".ml-5")
+		const patternRow = input.closest(".flex")?.parentElement
 		const allowButton = patternRow?.querySelector('button[aria-label*="addToAllowed"]')
 		expect(allowButton).toBeInTheDocument()
 
@@ -250,23 +335,33 @@ describe("CommandPatternSelector", () => {
 			</TestWrapper>,
 		)
 
+		// Find the button that expands the section
+		const manageCommandsButton = screen.getByText("chat:commandExecution.manageCommands").closest("button")
+		expect(manageCommandsButton).toBeInTheDocument()
+
 		// Click to expand the component
-		const expandButton = screen.getByRole("button")
-		fireEvent.click(expandButton)
+		fireEvent.click(manageCommandsButton!)
 
-		// Click on the full command pattern to edit
-		const fullCommandDiv = screen.getByText("npm install express").closest("div")
-		fireEvent.click(fullCommandDiv!)
+		// Find the container for the patterns
+		const patternsContainer = manageCommandsButton?.nextElementSibling as HTMLElement
+		expect(patternsContainer).toBeInTheDocument()
 
-		// Edit the command
-		const input = screen.getByDisplayValue("npm install express") as HTMLInputElement
+		// Use within to query elements inside the patterns container
+		const { getByText, getByDisplayValue, queryByDisplayValue } = within(patternsContainer)
+
+		// Click on a pattern to edit
+		const patternDiv = getByText("npm install express").closest("div")
+		fireEvent.click(patternDiv!)
+
+		// Edit the pattern
+		const input = getByDisplayValue("npm install express") as HTMLInputElement
 		fireEvent.change(input, { target: { value: "npm install react" } })
 
 		// Press Escape to cancel
 		fireEvent.keyDown(input, { key: "Escape" })
 
 		// The original value should be restored
-		expect(screen.getByText("npm install express")).toBeInTheDocument()
-		expect(screen.queryByDisplayValue("npm install react")).not.toBeInTheDocument()
+		expect(getByText("npm install express")).toBeInTheDocument()
+		expect(queryByDisplayValue("npm install react")).not.toBeInTheDocument()
 	})
 })

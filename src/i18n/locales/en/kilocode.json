@@ -11,7 +11,18 @@
 		"title": "Low Credit Warning!",
 		"message": "Check to see if you can top up with free credits or purchase some more!"
 	},
-	"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
+		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
+		"maxCompletionTokens": "The maximum number of completion tokens was reached.",
+		"disableApplyDiff": "If this error keep reoccuring, please disable Editing Through Diffs in Advanced Settings.",
+		"disableEditFile": "If this error keep reoccuring, please disable the Fast Apply experimental feature."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Checkpoints are unavailable, because a nested Git repository was detected at: {{path}}. Please remove or relocate nested Git repositories to use the checkpoints feature or disable checkpoints in the settings to suppress this warning.",
+		"protectedPaths": "Checkpoints are unavailable in {{workspaceDir}}. Please open a subfolder as workspace to use the checkpoints feature or disable checkpoints in the settings to suppress this warning.",
+		"dismissWarning": "Dismiss"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Delete",
@@ -49,19 +60,54 @@
 		"generationFailed": "Kilo: Failed to generate commit message: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generating message using unstaged changes",
 		"activationFailed": "Kilo: Failed to activate message generator: {{error}}",
-		"providerRegistered": "Kilo: Commit message provider registered"
+		"providerRegistered": "Kilo: Commit message provider registered",
+		"errors": {
+			"connectionFailed": "Failed to connect to Kilo Code extension",
+			"timeout": "Request timed out after 30 seconds",
+			"invalidResponse": "Invalid response format received from extension",
+			"missingMessage": "No commit message received from extension",
+			"noChanges": "No changes found to commit",
+			"noProject": "No project available",
+			"noWorkspacePath": "Could not determine workspace path for Git repository",
+			"workspaceNotFound": "Could not determine workspace path for Git repository",
+			"processingError": "Error processing commit message generation: {{error}}"
+		},
+		"error": {
+			"title": "Error",
+			"workspacePathNotFound": "Could not determine workspace path for Git repository",
+			"generationFailed": "Failed to generate commit message: {{error}}",
+			"processingFailed": "Error processing commit message generation: {{error}}",
+			"unknown": "Unknown error"
+		},
+		"dialogs": {
+			"info": "AI Commit Message",
+			"error": "Error",
+			"success": "Success",
+			"title": "AI Commit Message"
+		},
+		"progress": {
+			"title": "Generating Commit Message",
+			"analyzing": "Analyzing changes...",
+			"connecting": "Connecting to Kilo Code...",
+			"generating": "Generating commit message..."
+		},
+		"ui": {
+			"generateButton": "Generate Commit Message",
+			"generateButtonTooltip": "Generates commit message using AI to analyze your code changes"
+		}
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Inline Assist",
-				"disabled": "Kilo Code Inline Assist (disabled)",
-				"tokenError": "A valid token must be set to use Inline Assist",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (disabled)",
+				"tokenError": "A valid token must be set to use Autocomplete",
 				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
+				"provider": "Provider:",
 				"model": "Model:"
 			},
 			"cost": {
@@ -69,7 +115,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analyzing your code...",
@@ -87,7 +133,6 @@
 			"cancelSuggestions": "Cancel Suggested Edits",
 			"applyCurrentSuggestion": "Apply Current Suggested Edit",
 			"applyAllSuggestions": "Apply All Suggested Edits",
-			"promptCodeSuggestion": "Quick Task",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -99,10 +144,16 @@
 			"description": "I can help you with quick tasks and suggested edits."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "The Kilo Code Inline Assist is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
+			"message": "The Kilo Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
 			"disableCopilot": "Disable Copilot",
-			"disableInlineAssist": "Disable Inline Assist"
+			"disableInlineAssist": "Disable Autocomplete"
 		}
+	},
+	"seeNewChanges": {
+		"title": "Showing new changes",
+		"checkpointsUnavailable": "Cannot show new changes, checkpoints are unavailable.",
+		"noChanges": "Cannot show new changes, no changes were found.",
+		"error": "Cannot show new changes, an error occured."
 	},
 	"terminalCommandGenerator": {
 		"tipMessage": "Kilo: Press {{shortcut}} to generate terminal commands",

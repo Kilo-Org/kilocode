@@ -12,7 +12,8 @@ try {
 	console.warn("Failed to load environment variables:", e)
 }
 
-import { CloudService } from "@roo-code/cloud"
+import type { CloudUserInfo, AuthState } from "@roo-code/types"
+import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
 import { TelemetryService, PostHogTelemetryClient } from "@roo-code/telemetry"
 
 import "./utils/path" // Necessary to have access to String.prototype.toPosix.
@@ -42,7 +43,9 @@ import {
 } from "./activate"
 import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
-import { TerminalWelcomeService } from "./services/terminal-welcome/TerminalWelcomeService" // kilocode_change
+import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
+import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
+import { registerAutocompleteProvider } from "./services/autocomplete" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -54,6 +57,11 @@ import { TerminalWelcomeService } from "./services/terminal-welcome/TerminalWelc
 
 let outputChannel: vscode.OutputChannel
 let extensionContext: vscode.ExtensionContext
+let cloudService: CloudService | undefined
+
+let authStateChangedHandler: ((data: { state: AuthState; previousState: AuthState }) => Promise<void>) | undefined
+let settingsUpdatedHandler: (() => void) | undefined
+let userInfoHandler: ((data: { userInfo: CloudUserInfo }) => Promise<void>) | undefined
 
 // This method is called when your extension is activated.
 // Your extension is activated the very first time the command is executed.
@@ -75,20 +83,40 @@ export async function activate(context: vscode.ExtensionContext) {
 		console.warn("Failed to register PostHogTelemetryClient:", error)
 	}
 
-	// Create logger for cloud services
+	// Create logger for cloud services.
 	const cloudLogger = createDualLogger(createOutputChannelLogger(outputChannel))
 
+	// kilocode_change start: no Roo cloud service
 	// Initialize Roo Code Cloud service.
-	await CloudService.createInstance(context, {
-		stateChanged: () => ClineProvider.getVisibleInstance()?.postStateToWebview(),
-		log: cloudLogger,
-	})
+	// const cloudService = await CloudService.createInstance(context, cloudLogger)
+
+	// try {
+	// 	if (cloudService.telemetryClient) {
+	// 		TelemetryService.instance.register(cloudService.telemetryClient)
+	// 	}
+	// } catch (error) {
+	// 	outputChannel.appendLine(
+	// 		`[CloudService] Failed to register TelemetryClient: ${error instanceof Error ? error.message : String(error)}`,
+	// 	)
+	// }
+
+	// const postStateListener = () => {
+	// 	ClineProvider.getVisibleInstance()?.postStateToWebview()
+	// }
+
+	// cloudService.on("auth-state-changed", postStateListener)
+	// cloudService.on("user-info", postStateListener)
+	// cloudService.on("settings-updated", postStateListener)
+
+	// // Add to subscriptions for proper cleanup on deactivate
+	// context.subscriptions.push(cloudService)
+	// kilocode_change end
 
 	// Initialize MDM service
 	const mdmService = await MdmService.createInstance(cloudLogger)
 
 	// Initialize i18n for internationalization support
-	initializeI18n(context.globalState.get("language") ?? "en-US") // kilocode_change
+	initializeI18n(context.globalState.get("language") ?? formatLanguage(vscode.env.language))
 
 	// Initialize terminal shell execution handlers.
 	TerminalRegistry.initialize()
@@ -101,29 +129,114 @@ export async function activate(context: vscode.ExtensionContext) {
 		context.globalState.update("allowedCommands", defaultCommands)
 	}
 
-	// kilocode_change start
-	if (!context.globalState.get("firstInstallCompleted")) {
-		context.globalState.update("telemetrySetting", "enabled")
-	}
-	// kilocode_change end
-
 	const contextProxy = await ContextProxy.getInstance(context)
-	const codeIndexManager = CodeIndexManager.getInstance(context)
+
+	// Initialize code index managers for all workspace folders.
+	const codeIndexManagers: CodeIndexManager[] = []
+
+	if (vscode.workspace.workspaceFolders) {
+		for (const folder of vscode.workspace.workspaceFolders) {
+			const manager = CodeIndexManager.getInstance(context, folder.uri.fsPath)
+
+			if (manager) {
+				codeIndexManagers.push(manager)
+
+				try {
+					await manager.initialize(contextProxy)
+				} catch (error) {
+					outputChannel.appendLine(
+						`[CodeIndexManager] Error during background CodeIndexManager configuration/indexing for ${folder.uri.fsPath}: ${error.message || error}`,
+					)
+				}
+
+				context.subscriptions.push(manager)
+			}
+		}
+	}
+
+	// Initialize the provider *before* the Roo Code Cloud service.
+	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
+
+	// Initialize Roo Code Cloud service.
+	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
+
+	authStateChangedHandler = async (data: { state: AuthState; previousState: AuthState }) => {
+		postStateListener()
+
+		if (data.state === "logged-out") {
+			try {
+				await provider.remoteControlEnabled(false)
+			} catch (error) {
+				cloudLogger(
+					`[authStateChangedHandler] remoteControlEnabled(false) failed: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+	}
+
+	settingsUpdatedHandler = async () => {
+		const userInfo = CloudService.instance.getUserInfo()
+
+		if (userInfo && CloudService.instance.cloudAPI) {
+			try {
+				provider.remoteControlEnabled(CloudService.instance.isTaskSyncEnabled())
+			} catch (error) {
+				cloudLogger(
+					`[settingsUpdatedHandler] remoteControlEnabled failed: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+
+		postStateListener()
+	}
+
+	userInfoHandler = async ({ userInfo }: { userInfo: CloudUserInfo }) => {
+		postStateListener()
+
+		if (!CloudService.instance.cloudAPI) {
+			cloudLogger("[userInfoHandler] CloudAPI is not initialized")
+			return
+		}
+
+		try {
+			provider.remoteControlEnabled(CloudService.instance.isTaskSyncEnabled())
+		} catch (error) {
+			cloudLogger(
+				`[userInfoHandler] remoteControlEnabled failed: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
+	cloudService = await CloudService.createInstance(context, cloudLogger, {
+		"auth-state-changed": authStateChangedHandler,
+		"settings-updated": settingsUpdatedHandler,
+		"user-info": userInfoHandler,
+	})
 
 	try {
-		await codeIndexManager?.initialize(contextProxy)
+		if (cloudService.telemetryClient) {
+			// TelemetryService.instance.register(cloudService.telemetryClient) kilocode_change
+		}
 	} catch (error) {
 		outputChannel.appendLine(
-			`[CodeIndexManager] Error during background CodeIndexManager configuration/indexing: ${error.message || error}`,
+			`[CloudService] Failed to register TelemetryClient: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	}
 
-	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, codeIndexManager, mdmService)
-	TelemetryService.instance.setProvider(provider)
+	// Add to subscriptions for proper cleanup on deactivate.
+	context.subscriptions.push(cloudService)
 
-	if (codeIndexManager) {
-		context.subscriptions.push(codeIndexManager)
+	// Trigger initial cloud profile sync now that CloudService is ready.
+	try {
+		await provider.initializeCloudProfileSyncWhenReady()
+	} catch (error) {
+		outputChannel.appendLine(
+			`[CloudService] Failed to initialize cloud profile sync: ${error instanceof Error ? error.message : String(error)}`,
+		)
 	}
+
+	// Finish initializing the provider.
+	TelemetryService.instance.setProvider(provider)
 
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(ClineProvider.sideBarId, provider, {
@@ -149,7 +262,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		} catch (error) {
 			outputChannel.appendLine(`Error during first-time setup: ${error.message}`)
 		} finally {
-			context.globalState.update("firstInstallCompleted", true)
+			await context.globalState.update("firstInstallCompleted", true)
 		}
 	}
 	// kilocode_change end
@@ -204,11 +317,22 @@ export async function activate(context: vscode.ExtensionContext) {
 		}),
 	)
 
-	registerGhostProvider(context, provider) // kilocode_change
+	// kilocode_change start - Kilo Code specific registrations
+	const { kiloCodeWrapped } = getKiloCodeWrapperProperties()
+	if (!kiloCodeWrapped) {
+		// Only use autocomplete in VS Code
+		registerGhostProvider(context, provider)
+		// Experimental
+		// registerAutocompleteProvider(context, provider)
+	} else {
+		// Only foward logs in Jetbrains
+		registerMainThreadForwardingLogger(context)
+	}
 	registerCommitMessageProvider(context, outputChannel) // kilocode_change
+	// kilocode_change end - Kilo Code specific registrations
+
 	registerCodeActions(context)
 	registerTerminalActions(context)
-	TerminalWelcomeService.register(context) // kilocode_change
 
 	// Allows other extensions to activate once Kilo Code is ready.
 	vscode.commands.executeCommand(`${Package.name}.activationCompleted`)
@@ -219,28 +343,53 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Watch the core files and automatically reload the extension host.
 	if (process.env.NODE_ENV === "development") {
-		const pattern = "**/*.ts"
-
 		const watchPaths = [
-			{ path: context.extensionPath, name: "extension" },
-			{ path: path.join(context.extensionPath, "../packages/types"), name: "types" },
-			{ path: path.join(context.extensionPath, "../packages/telemetry"), name: "telemetry" },
-			{ path: path.join(context.extensionPath, "../packages/cloud"), name: "cloud" },
+			{ path: context.extensionPath, pattern: "**/*.ts" },
+			{ path: path.join(context.extensionPath, "../packages/types"), pattern: "**/*.ts" },
+			{ path: path.join(context.extensionPath, "../packages/telemetry"), pattern: "**/*.ts" },
+			{ path: path.join(context.extensionPath, "node_modules/@roo-code/cloud"), pattern: "**/*" },
 		]
 
 		console.log(
-			`♻️♻️♻️ Core auto-reloading is ENABLED. Watching for changes in: ${watchPaths.map(({ name }) => name).join(", ")}`,
+			`♻️♻️♻️ Core auto-reloading: Watching for changes in ${watchPaths.map(({ path }) => path).join(", ")}`,
 		)
 
-		watchPaths.forEach(({ path: watchPath, name }) => {
-			const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(watchPath, pattern))
+		// Create a debounced reload function to prevent excessive reloads
+		let reloadTimeout: NodeJS.Timeout | undefined
+		const DEBOUNCE_DELAY = 1_000
 
-			watcher.onDidChange((uri) => {
-				console.log(`♻️ ${name} file changed: ${uri.fsPath}. Reloading host…`)
+		const debouncedReload = (uri: vscode.Uri) => {
+			if (reloadTimeout) {
+				clearTimeout(reloadTimeout)
+			}
+
+			console.log(`♻️ ${uri.fsPath} changed; scheduling reload...`)
+
+			reloadTimeout = setTimeout(() => {
+				console.log(`♻️ Reloading host after debounce delay...`)
 				vscode.commands.executeCommand("workbench.action.reloadWindow")
-			})
+			}, DEBOUNCE_DELAY)
+		}
+
+		watchPaths.forEach(({ path: watchPath, pattern }) => {
+			const relPattern = new vscode.RelativePattern(vscode.Uri.file(watchPath), pattern)
+			const watcher = vscode.workspace.createFileSystemWatcher(relPattern, false, false, false)
+
+			// Listen to all change types to ensure symlinked file updates trigger reloads.
+			watcher.onDidChange(debouncedReload)
+			watcher.onDidCreate(debouncedReload)
+			watcher.onDidDelete(debouncedReload)
 
 			context.subscriptions.push(watcher)
+		})
+
+		// Clean up the timeout on deactivation
+		context.subscriptions.push({
+			dispose: () => {
+				if (reloadTimeout) {
+					clearTimeout(reloadTimeout)
+				}
+			},
 		})
 	}
 
@@ -252,6 +401,35 @@ export async function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated.
 export async function deactivate() {
 	outputChannel.appendLine(`${Package.name} extension deactivated`)
+
+	if (cloudService && CloudService.hasInstance()) {
+		try {
+			if (authStateChangedHandler) {
+				CloudService.instance.off("auth-state-changed", authStateChangedHandler)
+			}
+
+			if (settingsUpdatedHandler) {
+				CloudService.instance.off("settings-updated", settingsUpdatedHandler)
+			}
+
+			if (userInfoHandler) {
+				CloudService.instance.off("user-info", userInfoHandler as any)
+			}
+
+			outputChannel.appendLine("CloudService event handlers cleaned up")
+		} catch (error) {
+			outputChannel.appendLine(
+				`Failed to clean up CloudService event handlers: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+
+	const bridge = BridgeOrchestrator.getInstance()
+
+	if (bridge) {
+		await bridge.disconnect()
+	}
+
 	await McpServerManager.cleanup(extensionContext)
 	TelemetryService.instance.shutdown()
 	TerminalRegistry.cleanup()

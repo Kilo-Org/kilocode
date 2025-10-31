@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Kontrol noktasını geri yüklemeye çalışırken zaman aşımına uğradı.",
 		"checkpoint_failed": "Kontrol noktası geri yüklenemedi.",
 		"git_not_installed": "Kontrol noktaları özelliği için Git gereklidir. Kontrol noktalarını etkinleştirmek için lütfen Git'i yükleyin.",
+		"nested_git_repos_warning": "{{path}} konumunda iç içe git deposu tespit edildiği için kontrol noktaları devre dışı bırakıldı. Kontrol noktalarını kullanmak için lütfen bu iç içe git deposunu kaldırın veya taşıyın.",
 		"no_workspace": "Lütfen önce bir proje klasörü açın",
 		"update_support_prompt": "Destek istemi güncellenemedi",
 		"reset_support_prompt": "Destek istemi sıfırlanamadı",
@@ -69,6 +70,7 @@
 		"no_internet": "İnternet bağlantısı yok. Ağ bağlantını kontrol et ve tekrar dene.",
 		"url_forbidden": "Bu web sitesine erişim yasak. Site otomatik erişimi engelliyor veya kimlik doğrulama gerektiriyor olabilir.",
 		"url_page_not_found": "Sayfa bulunamadı. URL'nin doğru olup olmadığını kontrol et.",
+		"url_request_aborted": "URL'yi getirme isteği iptal edildi. Bu, sitenin otomatik erişimi engellemesi, kimlik doğrulama gerektirmesi veya bir ağ sorunu olması durumunda gerçekleşebilir. Tekrar dene veya URL'nin normal bir tarayıcıda erişilebilir olup olmadığını kontrol et.",
 		"url_fetch_failed": "URL içeriği getirme hatası: {{error}}",
 		"url_fetch_error_with_url": "{{url}} için içerik getirme hatası: {{error}}",
 		"command_timeout": "Komut çalıştırma {{seconds}} saniye sonra zaman aşımına uğradı",
@@ -79,12 +81,20 @@
 		"share_task_not_found": "Görev bulunamadı veya erişim reddedildi.",
 		"mode_import_failed": "Mod içe aktarılamadı: {{error}}",
 		"delete_rules_folder_failed": "Kurallar klasörü silinemedi: {{rulesFolderPath}}. Hata: {{error}}",
+		"command_not_found": "'{{name}}' komutu bulunamadı",
+		"open_command_file": "Komut dosyası açılamadı",
+		"delete_command": "Komut silinemedi",
+		"no_workspace_for_project_command": "Proje komutu için çalışma alanı klasörü bulunamadı",
+		"command_already_exists": "\"{{commandName}}\" komutu zaten mevcut",
+		"create_command_failed": "Komut oluşturulamadı",
+		"command_template_content": "---\ndescription: \"Bu komutun ne yaptığının kısa açıklaması\"\n---\n\nBu yeni bir slash komutudur. Komut davranışını özelleştirmek için bu dosyayı düzenleyin.",
 		"claudeCode": {
 			"processExited": "Claude Code işlemi {{exitCode}} koduyla çıktı.",
 			"errorOutput": "Hata çıktısı: {{output}}",
 			"processExitedWithError": "Claude Code işlemi {{exitCode}} koduyla çıktı. Hata çıktısı: {{output}}",
 			"stoppedWithReason": "Claude Code şu nedenle durdu: {{reason}}",
-			"apiKeyModelPlanMismatch": "API anahtarları ve abonelik planları farklı modellere izin verir. Seçilen modelin planınıza dahil olduğundan emin olun."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}",
@@ -95,7 +105,44 @@
 			"badRequest": "Geçersiz istek: {{details}}",
 			"apiError": "Gemini CLI API hatası: {{error}}",
 			"completionError": "Gemini CLI tamamlama hatası: {{error}}"
-		}
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "Mesaj silinecek aktif görev yok",
+			"invalid_timestamp_for_deletion": "Silme için geçersiz mesaj zaman damgası",
+			"cannot_delete_missing_timestamp": "Mesaj silinemiyor: zaman damgası eksik",
+			"cannot_delete_invalid_timestamp": "Mesaj silinemiyor: geçersiz zaman damgası",
+			"message_not_found": "{{messageTs}} zaman damgalı mesaj bulunamadı",
+			"error_deleting_message": "Mesaj silme hatası: {{error}}",
+			"error_editing_message": "Mesaj düzenleme hatası: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Gemini oluşturma bağlam akışı hatası: {{error}}",
+			"generate_complete_prompt": "Gemini tamamlama hatası: {{error}}",
+			"sources": "Kaynaklar:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API kimlik doğrulama başarısız oldu. API anahtarınızın geçerli olduğunu ve süresi dolmadığını kontrol edin.",
+			"accessForbidden": "Cerebras API erişimi yasak. API anahtarınız istenen modele veya özelliğe erişimi olmayabilir.",
+			"rateLimitExceeded": "Cerebras API hız sınırı aşıldı. Başka bir istek yapmadan önce bekleyin.",
+			"serverError": "Cerebras API sunucu hatası ({{status}}). Lütfen daha sonra tekrar deneyin.",
+			"genericError": "Cerebras API Hatası ({{status}}): {{message}}",
+			"noResponseBody": "Cerebras API Hatası: Yanıt gövdesi yok",
+			"completionError": "Cerebras tamamlama hatası: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo sağlayıcısı bulut kimlik doğrulaması gerektirir. Lütfen Roo Code Cloud'a giriş yapın."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API anahtarı geçersiz karakterler içeriyor."
+		},
+		"manual_url_empty": "Lütfen geçerli bir callback URL'si girin",
+		"manual_url_no_query": "Geçersiz callback URL'si: sorgu parametreleri eksik",
+		"manual_url_missing_params": "Geçersiz callback URL'si: gerekli parametreler eksik (code ve state)",
+		"manual_url_auth_failed": "Manuel URL kimlik doğrulama başarısız",
+		"manual_url_auth_error": "Kimlik doğrulama başarısız"
 	},
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",
@@ -134,6 +181,10 @@
 		"deleted": "Görev başarısız: Kullanıcı tarafından durduruldu ve silindi.",
 		"incomplete": "Görev #{{taskNumber}} (Tamamlanmamış)",
 		"no_messages": "Görev #{{taskNumber}} (Mesaj yok)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Yanıt kullanıcı tarafından kesildi",
+		"responseInterruptedByApiError": "Yanıt API hatası nedeniyle kesildi"
 	},
 	"storage": {
 		"prompt_custom_path": "Konuşma geçmişi için özel depolama yolunu girin, varsayılan konumu kullanmak için boş bırakın",
@@ -180,9 +231,17 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Kuruluşunuz Kilo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
-			"organization_mismatch": "Kuruluşunuzun Kilo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
+			"cloud_auth_required": "Kuruluşunuz Roo Code Cloud kimlik doğrulaması gerektiriyor. Devam etmek için giriş yapın.",
+			"organization_mismatch": "Kuruluşunuzun Roo Code Cloud hesabıyla kimlik doğrulaması yapmalısınız.",
+			"manual_url_empty": "Lütfen geçerli bir callback URL'si girin",
+			"manual_url_no_query": "Geçersiz callback URL'si: sorgu parametreleri eksik",
+			"manual_url_missing_params": "Geçersiz callback URL'si: gerekli parametreler eksik (code ve state)",
+			"manual_url_auth_failed": "Manuel URL kimlik doğrulama başarısız",
+			"manual_url_auth_error": "Kimlik doğrulama başarısız",
 			"verification_failed": "Kuruluş kimlik doğrulaması doğrulanamıyor."
+		},
+		"info": {
+			"organization_requires_auth": "Kuruluşunuz kimlik doğrulaması gerektiriyor."
 		}
 	},
 	"prompts": {
@@ -197,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Todo listesinde tamamlanmamış todolar olduğunda görev tamamlanmasını engelle"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Hata",
+		"reportText": "Uygulamayı geliştirmemize yardımcı olmak için lütfen bu hatayı bildirin.",
+		"githubText": "GitHub'da bildir",
+		"copyInstructions": "Aşağıdaki hata ayrıntılarını kopyalayın:",
+		"errorStack": "Hata Stack'i",
+		"componentStack": "Bileşen Stack'i"
 	}
 }

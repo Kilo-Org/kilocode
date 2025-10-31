@@ -1,57 +1,50 @@
-// kilocode_change start
-import React from "react"
-import { VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-import { type ProviderSettings } from "@roo-code/types"
+import { useCallback } from "react"
+import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+
+import type { ProviderSettings } from "@roo-code/types"
+
 import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
+
 import { inputEventTransform } from "../transforms"
 
-interface CerebrasProps {
+type CerebrasProps = {
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: <K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => void
+	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
 }
 
 export const Cerebras = ({ apiConfiguration, setApiConfigurationField }: CerebrasProps) => {
 	const { t } = useAppTranslation()
 
-	const handleInputChange =
-		<K extends keyof typeof apiConfiguration, E>(field: K, transform: (event: E) => (typeof apiConfiguration)[K]) =>
-		(event: E | Event) => {
-			setApiConfigurationField(field, transform(event as E))
-		}
+	const handleInputChange = useCallback(
+		<K extends keyof ProviderSettings, E>(
+			field: K,
+			transform: (event: E) => ProviderSettings[K] = inputEventTransform,
+		) =>
+			(event: E | Event) => {
+				setApiConfigurationField(field, transform(event as E))
+			},
+		[setApiConfigurationField],
+	)
 
 	return (
-		<div>
+		<>
 			<VSCodeTextField
 				value={apiConfiguration?.cerebrasApiKey || ""}
-				style={{ width: "100%" }}
 				type="password"
-				onInput={handleInputChange("cerebrasApiKey", inputEventTransform)}
-				placeholder={t("settings:providers.apiKeyPlaceholder")}>
-				<span style={{ fontWeight: 500 }}>{t("settings:providers.cerebras.apiKey")}</span>
+				onInput={handleInputChange("cerebrasApiKey")}
+				placeholder={t("settings:placeholders.apiKey")}
+				className="w-full">
+				<label className="block font-medium mb-1">{t("settings:providers.cerebrasApiKey")}</label>
 			</VSCodeTextField>
-			<p
-				style={{
-					fontSize: "12px",
-					marginTop: 3,
-					color: "var(--vscode-descriptionForeground)",
-				}}>
+			<div className="text-sm text-vscode-descriptionForeground -mt-2">
 				{t("settings:providers.apiKeyStorageNotice")}
-				{!apiConfiguration?.cerebrasApiKey && (
-					<>
-						<br />
-						<br />
-						<VSCodeLink
-							href="https://cloud.cerebras.ai/"
-							style={{
-								display: "inline",
-								fontSize: "inherit",
-							}}>
-							{t("settings:providers.cerebras.getApiKey")}
-						</VSCodeLink>
-					</>
-				)}
-			</p>
-		</div>
+			</div>
+			{!apiConfiguration?.cerebrasApiKey && (
+				<VSCodeButtonLink href="https://cloud.cerebras.ai?utm_source=roocode" appearance="secondary">
+					{t("settings:providers.getCerebrasApiKey")}
+				</VSCodeButtonLink>
+			)}
+		</>
 	)
 }
-// kilocode_change end

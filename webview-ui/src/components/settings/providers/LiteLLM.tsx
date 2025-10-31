@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect, useRef } from "react"
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 
 import { type ProviderSettings, type OrganizationAllowList, litellmDefaultModelId } from "@roo-code/types"
 
@@ -85,6 +85,7 @@ export const LiteLLM = ({
 			setRefreshError(t("settings:providers.refreshModels.missingConfig"))
 			return
 		}
+
 		vscode.postMessage({ type: "requestRouterModels", values: { litellmApiKey: key, litellmBaseUrl: url } })
 	}, [apiConfiguration, setRefreshStatus, setRefreshError, t])
 
@@ -151,6 +152,29 @@ export const LiteLLM = ({
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
 			/>
+
+			{/* Show prompt caching option if the selected model supports it */}
+			{(() => {
+				const selectedModelId = apiConfiguration.litellmModelId || litellmDefaultModelId
+				const selectedModel = routerModels?.litellm?.[selectedModelId]
+				if (selectedModel?.supportsPromptCache) {
+					return (
+						<div className="mt-4">
+							<VSCodeCheckbox
+								checked={apiConfiguration.litellmUsePromptCache || false}
+								onChange={(e: any) => {
+									setApiConfigurationField("litellmUsePromptCache", e.target.checked)
+								}}>
+								<span className="font-medium">{t("settings:providers.enablePromptCaching")}</span>
+							</VSCodeCheckbox>
+							<div className="text-sm text-vscode-descriptionForeground ml-6 mt-1">
+								{t("settings:providers.enablePromptCachingTitle")}
+							</div>
+						</div>
+					)
+				}
+				return null
+			})()}
 		</>
 	)
 }

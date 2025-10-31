@@ -21,14 +21,15 @@
 	},
 	"feedback": {
 		"title": "Feedback",
-		"description": "Wir würden gerne Ihr Feedback hören oder Ihnen bei Problemen helfen, die Sie erleben.",
+		"description": "Wir würden gerne dein Feedback hören, um dir bei allen Problemen zu helfen.",
 		"githubIssues": "Ein Problem auf GitHub melden",
 		"githubDiscussions": "An GitHub-Diskussionen teilnehmen",
-		"discord": "Treten Sie unserer Discord-Community bei",
+		"discord": "Trete unserer Discord-Community bei",
 		"customerSupport": "Kundensupport"
 	},
 	"ui": {
-		"search_placeholder": "Suchen..."
+		"search_placeholder": "Suchen...",
+		"no_results": "Keine Ergebnisse gefunden"
 	},
 	"mermaid": {
 		"loading": "Mermaid-Diagramm wird generiert...",
@@ -66,6 +67,12 @@
 			"copyError": "Fehler beim Kopieren des Bildes"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Bild"
+		},
+		"noData": "Keine Bilddaten"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Ungültiges Daten-URI-Format",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Das Löschen dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
 		"editMessage": "Nachricht bearbeiten",
 		"editWarning": "Das Bearbeiten dieser Nachricht wird alle nachfolgenden Nachrichten in der Unterhaltung löschen. Möchtest du fortfahren?",
-		"proceed": "Fortfahren"
+		"editQuestionWithCheckpoint": "Das Bearbeiten dieser Nachricht wird alle späteren Nachrichten in der Unterhaltung löschen. Möchtest du auch alle Änderungen bis zu diesem Checkpoint rückgängig machen?",
+		"deleteQuestionWithCheckpoint": "Das Löschen dieser Nachricht wird alle späteren Nachrichten in der Unterhaltung löschen. Möchtest du auch alle Änderungen bis zu diesem Checkpoint rückgängig machen?",
+		"editOnly": "Nein, nur Nachricht bearbeiten",
+		"deleteOnly": "Nein, nur Nachricht löschen",
+		"restoreToCheckpoint": "Ja, Checkpoint wiederherstellen",
+		"proceed": "Fortfahren",
+		"dontShowAgain": "Nicht mehr anzeigen"
+	},
+	"time_ago": {
+		"just_now": "gerade eben",
+		"seconds_ago": "vor {{count}} Sekunden",
+		"minute_ago": "vor einer Minute",
+		"minutes_ago": "vor {{count}} Minuten",
+		"hour_ago": "vor einer Stunde",
+		"hours_ago": "vor {{count}} Stunden",
+		"day_ago": "vor einem Tag",
+		"days_ago": "vor {{count}} Tagen",
+		"week_ago": "vor einer Woche",
+		"weeks_ago": "vor {{count}} Wochen",
+		"month_ago": "vor einem Monat",
+		"months_ago": "vor {{count}} Monaten",
+		"year_ago": "vor einem Jahr",
+		"years_ago": "vor {{count}} Jahren"
 	}
 }

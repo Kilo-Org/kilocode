@@ -1,8 +1,15 @@
-import { type ModelInfo, type ProviderSettings, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
+import {
+	type ModelInfo,
+	type ProviderSettings,
+	type VerbosityLevel,
+	type ReasoningEffortWithMinimal,
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
+} from "@roo-code/types"
 
 import {
 	DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS,
 	DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS,
+	GEMINI_25_PRO_MIN_THINKING_TOKENS,
 	shouldUseReasoningBudget,
 	shouldUseReasoningEffort,
 	getModelMaxOutputTokens,
@@ -32,8 +39,9 @@ type GetModelParamsOptions<T extends Format> = {
 type BaseModelParams = {
 	maxTokens: number | undefined
 	temperature: number | undefined
-	reasoningEffort: "low" | "medium" | "high" | undefined
+	reasoningEffort: ReasoningEffortWithMinimal | undefined
 	reasoningBudget: number | undefined
+	verbosity: VerbosityLevel | undefined
 }
 
 type AnthropicModelParams = {
@@ -75,6 +83,7 @@ export function getModelParams({
 		modelMaxThinkingTokens: customMaxThinkingTokens,
 		modelTemperature: customTemperature,
 		reasoningEffort: customReasoningEffort,
+		verbosity: customVerbosity,
 	} = settings
 
 	// Use the centralized logic for computing maxTokens
@@ -88,10 +97,18 @@ export function getModelParams({
 	let temperature = customTemperature ?? defaultTemperature
 	let reasoningBudget: ModelParams["reasoningBudget"] = undefined
 	let reasoningEffort: ModelParams["reasoningEffort"] = undefined
+	let verbosity: VerbosityLevel | undefined = customVerbosity
 
 	if (shouldUseReasoningBudget({ model, settings })) {
+		// Check if this is a Gemini 2.5 Pro model
+		const isGemini25Pro = modelId.includes("gemini-2.5-pro")
+
 		// If `customMaxThinkingTokens` is not specified use the default.
-		reasoningBudget = customMaxThinkingTokens ?? DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS
+		// For Gemini 2.5 Pro, default to 128 instead of 8192
+		const defaultThinkingTokens = isGemini25Pro
+			? GEMINI_25_PRO_MIN_THINKING_TOKENS
+			: DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS
+		reasoningBudget = customMaxThinkingTokens ?? defaultThinkingTokens
 
 		// Reasoning cannot exceed 80% of the `maxTokens` value.
 		// maxTokens should always be defined for reasoning budget models, but add a guard just in case
@@ -99,9 +116,12 @@ export function getModelParams({
 			reasoningBudget = Math.floor(maxTokens * 0.8)
 		}
 
-		// Reasoning cannot be less than 1024 tokens.
-		if (reasoningBudget < 1024) {
-			reasoningBudget = 1024
+		// Reasoning cannot be less than minimum tokens.
+		// For Gemini 2.5 Pro models, the minimum is 128 tokens
+		// For other models, the minimum is 1024 tokens
+		const minThinkingTokens = isGemini25Pro ? GEMINI_25_PRO_MIN_THINKING_TOKENS : 1024
+		if (reasoningBudget < minThinkingTokens) {
+			reasoningBudget = minThinkingTokens
 		}
 
 		// Let's assume that "Hybrid" reasoning models require a temperature of
@@ -109,10 +129,11 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		reasoningEffort = customReasoningEffort ?? model.reasoningEffort
+		const effort = customReasoningEffort ?? model.reasoningEffort
+		reasoningEffort = effort as ReasoningEffortWithMinimal
 	}
 
-	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget }
+	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget, verbosity }
 
 	if (format === "anthropic") {
 		return {
@@ -151,7 +172,22 @@ export function getModelParams({
 		return {
 			format,
 			...params,
-			reasoning: getOpenRouterReasoning({ model, reasoningBudget, reasoningEffort, settings }),
+			// kilocode_change start
+			reasoning: shouldDisableReasoning(modelId, reasoningEffort)
+				? { enabled: false }
+				: getOpenRouterReasoning({ model, reasoningBudget, reasoningEffort, settings }),
+			// kilocode_change end
 		}
 	}
 }
+
+// kilocode_change start
+function shouldDisableReasoning(modelId: string, reasoningEffort: ReasoningEffortWithMinimal | undefined) {
+	const supportsReasoningToggle =
+		modelId.startsWith("deepseek/deepseek-v3.1") ||
+		modelId.startsWith("deepseek/deepseek-chat-v3.1") ||
+		modelId.startsWith("x-ai/grok-4-fast") ||
+		modelId.startsWith("z-ai/glm-4.6")
+	return supportsReasoningToggle && reasoningEffort === "minimal"
+}
+// kilocode_change end

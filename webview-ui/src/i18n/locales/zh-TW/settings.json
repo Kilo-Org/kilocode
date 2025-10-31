@@ -28,11 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
+		"slashCommands": "斜線命令",
 		"prompts": "提示詞",
+		"ui": "UI",
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "显示"
+		"display": "顯示",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
 		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
@@ -41,13 +47,16 @@
 		"title": "程式碼庫索引",
 		"enableLabel": "啟用程式碼庫索引",
 		"enableDescription": "啟用程式碼索引以改進搜尋和上下文理解",
-		"profileLabel": "嵌入提供者",
-		"selectProfilePlaceholder": "選擇提供者",
+		"profileLabel": "嵌入供應商",
+		"selectProfilePlaceholder": "選擇供應商",
 		"openaiProvider": "OpenAI",
 		"ollamaProvider": "Ollama",
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 金鑰：",
-		"geminiApiKeyPlaceholder": "輸入您的Gemini API金鑰",
+		"geminiApiKeyPlaceholder": "輸入您的 Gemini API 金鑰",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API 金鑰",
+		"vercelAiGatewayApiKeyPlaceholder": "輸入您的 Vercel AI Gateway API 金鑰",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 金鑰：",
 		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
@@ -60,10 +69,10 @@
 		"openAiCompatibleModelDimensionLabel": "嵌入維度：",
 		"modelDimensionLabel": "模型維度",
 		"openAiCompatibleModelDimensionPlaceholder": "例如，1536",
-		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件獲取此值。常見值：384、768、1536、3072。",
+		"openAiCompatibleModelDimensionDescription": "模型的嵌入維度（輸出大小）。請查閱您的提供商文件以取得此值。常見值：384、768、1536、3072。",
 		"modelLabel": "模型",
 		"selectModelPlaceholder": "選擇模型",
-		"ollamaUrlLabel": "Ollama URL：",
+		"ollamaUrlLabel": "Ollama URL:",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 金鑰：",
 		"startIndexingButton": "開始",
@@ -79,7 +88,7 @@
 		"statusTitle": "狀態",
 		"settingsTitle": "索引設定",
 		"disabledMessage": "程式碼庫索引目前已停用。請在全域設定中啟用以設定索引選項。",
-		"embedderProviderLabel": "嵌入器提供者",
+		"embedderProviderLabel": "嵌入模型供應商",
 		"modelPlaceholder": "輸入模型名稱",
 		"selectModel": "選擇模型",
 		"ollamaBaseUrlLabel": "Ollama 基礎 URL",
@@ -114,6 +123,7 @@
 			"modelDimensionRequired": "需要模型維度",
 			"geminiApiKeyRequired": "需要 Gemini API 金鑰",
 			"mistralApiKeyRequired": "需要 Mistral API 金鑰",
+			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 金鑰",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",
 			"baseUrlRequired": "需要基礎 URL",
 			"modelDimensionMinValue": "模型維度必須大於 0"
@@ -124,10 +134,14 @@
 		"searchMinScoreResetTooltip": "重設為預設值 (0.4)",
 		"searchMaxResultsLabel": "最大搜尋結果數",
 		"searchMaxResultsDescription": "查詢程式碼庫索引時傳回的最大搜尋結果數。較高的值提供更多上下文，但可能包含相關性較低的結果。",
-		"resetToDefault": "重設為預設值"
+		"resetToDefault": "重設為預設值",
+		"cancelling": "正在取消...",
+		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
+		"toggleShortcut": "您可以<SettingsLink>在 IDE 偏好設定中</SettingsLink>為此設定設定全域快捷鍵。",
 		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"enabled": "自動核准已啟用",
 		"toggleAriaLabel": "切換自動核准",
 		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
@@ -140,7 +154,7 @@
 		},
 		"write": {
 			"label": "寫入",
-			"description": "自動建立和編輯文件而無需核准",
+			"description": "自動建立和編輯檔案而無需核准",
 			"delayLabel": "寫入後延遲以允許診斷偵測潛在問題",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
@@ -169,8 +183,8 @@
 			"description": "自動在不同模式之間切換而無需核准"
 		},
 		"subtasks": {
-			"label": "子工作",
-			"description": "允許建立和完成子工作而無需核准"
+			"label": "子任務",
+			"description": "允許建立和完成子任務而無需核准"
 		},
 		"followupQuestions": {
 			"label": "問題",
@@ -195,18 +209,25 @@
 		},
 		"updateTodoList": {
 			"label": "待辦",
-			"description": "自動更新待辦清單無需批准"
+			"description": "自動更新待辦清單無需核准"
 		},
 		"apiRequestLimit": {
 			"title": "最大請求數",
-			"description": "在請求批准以繼續執行工作之前，自動發出此數量的 API 請求。",
+			"description": "在請求核准以繼續執行工作之前，自動發出此數量的 API 請求。",
 			"unlimited": "無限制"
 		},
-		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准"
+		"selectOptionsFirst": "請至少選擇以下一個選項以啟用自動核准",
+		"apiCostLimit": {
+			"unlimited": "無限",
+			"title": "最高費用"
+		},
+		"maxLimits": {
+			"description": "在請求獲得繼續操作的核准前，自動發送請求直至達到這些限制。"
+		}
 	},
 	"providers": {
-		"providerDocumentation": "{{provider}} 文件",
-		"configProfile": "配置設定檔",
+		"providerDocumentation": "{{provider}} 說明文件",
+		"configProfile": "設定檔",
 		"description": "儲存不同的 API 設定以快速切換供應商和設定。",
 		"apiProvider": "API 供應商",
 		"model": "模型",
@@ -226,15 +247,15 @@
 		"noProviderMatchFound": "找不到供應商",
 		"noMatchFound": "找不到符合的設定檔",
 		"vscodeLmDescription": "VS Code 語言模型 API 可以讓您使用其他擴充功能（如 GitHub Copilot）提供的模型。最簡單的方式是從 VS Code Marketplace 安裝 Copilot 和 Copilot Chat 擴充套件。",
+		"vscodeLmUnavailable": "VS Code 語言模型支援僅在 Visual Studio Code 可用。像 VSCodium 這類分支可能無法運作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "請確認您使用支援的工具，並且已安裝且啟用了 VS Code Chat",
 		"awsCustomArnUse": "輸入您要使用的模型的有效 Amazon Bedrock ARN。格式範例：",
 		"awsCustomArnDesc": "確保 ARN 中的區域與您上面選擇的 AWS 區域相符。",
 		"openRouterApiKey": "OpenRouter API 金鑰",
 		"getOpenRouterApiKey": "取得 OpenRouter API 金鑰",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API 金鑰",
+		"getVercelAiGatewayApiKey": "取得 Vercel AI Gateway API 金鑰",
 		"apiKeyStorageNotice": "API 金鑰安全儲存於 VSCode 金鑰儲存中",
-		"cerebras": {
-			"apiKey": "Cerebras API 金鑰",
-			"getApiKey": "取得 Cerebras API 金鑰"
-		},
 		"glamaApiKey": "Glama API 金鑰",
 		"getGlamaApiKey": "取得 Glama API 金鑰",
 		"useCustomBaseUrl": "使用自訂基礎 URL",
@@ -254,33 +275,62 @@
 			"error": "重新整理模型列表失敗。請再試一次。"
 		},
 		"getRequestyApiKey": "取得 Requesty API 金鑰",
+		"getRequestyBaseUrl": "基礎 URL",
+		"requestyUseCustomBaseUrl": "使用自訂基礎 URL",
 		"openRouterTransformsText": "將提示和訊息鏈壓縮到上下文大小 (<a>OpenRouter 轉換</a>)",
 		"anthropicApiKey": "Anthropic API 金鑰",
 		"getAnthropicApiKey": "取得 Anthropic API 金鑰",
 		"anthropicUseAuthToken": "將 Anthropic API 金鑰作為 Authorization 標頭傳遞，而非使用 X-Api-Key",
+		"anthropic1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
+		"anthropic1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"awsBedrock1MContextBetaLabel": "啟用 1M 上下文視窗 (Beta)",
+		"awsBedrock1MContextBetaDescription": "為 Claude Sonnet 4 將上下文視窗擴展至 100 萬個 token",
+		"cerebrasApiKey": "Cerebras API 金鑰",
+		"getCerebrasApiKey": "取得 Cerebras API 金鑰",
 		"chutesApiKey": "Chutes API 金鑰",
 		"getChutesApiKey": "取得 Chutes API 金鑰",
+		"fireworksApiKey": "Fireworks API 金鑰",
+		"getFireworksApiKey": "取得 Fireworks API 金鑰",
+		"syntheticApiKey": "Synthetic API 金鑰",
+		"getSyntheticApiKey": "取得 Synthetic API 金鑰",
+		"featherlessApiKey": "Featherless API 金鑰",
+		"getFeatherlessApiKey": "取得 Featherless API 金鑰",
+		"ioIntelligenceApiKey": "IO Intelligence API 金鑰",
+		"ioIntelligenceApiKeyPlaceholder": "輸入您的 IO Intelligence API 金鑰",
+		"getIoIntelligenceApiKey": "取得 IO Intelligence API 金鑰",
 		"deepSeekApiKey": "DeepSeek API 金鑰",
 		"getDeepSeekApiKey": "取得 DeepSeek API 金鑰",
+		"doubaoApiKey": "豆包 API 金鑰",
+		"getDoubaoApiKey": "取得豆包 API 金鑰",
 		"moonshotApiKey": "Moonshot API 金鑰",
 		"getMoonshotApiKey": "取得 Moonshot API 金鑰",
-		"moonshotBaseUrl": "Moonshot 服務站點",
+		"moonshotBaseUrl": "Moonshot 服務端點",
+		"zaiApiKey": "Z AI API 金鑰",
+		"getZaiApiKey": "取得 Z AI API 金鑰",
+		"zaiEntrypoint": "Z AI 服務端點",
+		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務端點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
+		"getSambaNovaApiKey": "取得 SambaNova API 金鑰",
+		"sambaNovaApiKey": "SambaNova API 金鑰",
 		"getHuggingFaceApiKey": "取得 Hugging Face API 金鑰",
 		"huggingFaceApiKey": "Hugging Face API 金鑰",
+		"getOvhCloudAiEndpointsApiKey": "取得 OVHcloud AI Endpoints API 金鑰",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API 金鑰",
+		"ovhCloudAiEndpointsBaseUrl": "基礎 URL",
+		"getOvhCloudAiEndpointsBaseUrl": "使用自訂基礎 URL",
 		"huggingFaceModelId": "模型 ID",
 		"huggingFaceLoading": "載入中...",
 		"huggingFaceModelsCount": "({{count}} 個模型)",
 		"huggingFaceSelectModel": "選擇模型...",
 		"huggingFaceSearchModels": "搜尋模型...",
 		"huggingFaceNoModelsFound": "找不到模型",
-		"huggingFaceProvider": "提供者",
+		"huggingFaceProvider": "供應商",
 		"huggingFaceProviderAuto": "自動",
-		"huggingFaceSelectProvider": "選擇提供者...",
-		"huggingFaceSearchProviders": "搜尋提供者...",
-		"huggingFaceNoProvidersFound": "找不到提供者",
+		"huggingFaceSelectProvider": "選擇供應商...",
+		"huggingFaceSearchProviders": "搜尋供應商...",
+		"huggingFaceNoProvidersFound": "找不到供應商",
 		"getGeminiApiKey": "取得 Gemini API 金鑰",
 		"openAiApiKey": "OpenAI API 金鑰",
 		"apiKey": "API 金鑰",
@@ -313,6 +363,16 @@
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
 		"vscodeLmModel": "語言模型",
 		"vscodeLmWarning": "注意：此整合功能仍處於實驗階段，各供應商的支援程度可能不同。如果出現模型不支援的錯誤，通常是供應商方面的問題。",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "啟用 URL 上下文",
+				"description": "讓 Gemini 讀取連結的頁面以提取、比較和綜合其內容，從而提供明智的答覆。"
+			},
+			"groundingSearch": {
+				"title": "啟用 Google 搜尋基礎",
+				"description": "將 Gemini 連接到即時網路數據，以獲得包含可驗證引用的準確、最新的答案。"
+			}
+		},
 		"googleCloudSetup": {
 			"title": "要使用 Google Cloud Vertex AI，您需要：",
 			"step1": "1. 建立 Google Cloud 帳戶，啟用 Vertex AI API 並啟用所需的 Claude 模型。",
@@ -336,16 +396,25 @@
 		"ollama": {
 			"baseUrl": "基礎 URL（選用）",
 			"modelId": "模型 ID",
+			"apiKey": "Ollama API 金鑰",
+			"apiKeyPlaceholder": "輸入您的 API 金鑰",
+			"apiKeyHelp": "用於已認證 Ollama 執行個體或雲端服務的選用 API 金鑰。本機安裝請留空。",
+			"numCtx": "上下文視窗大小 (num_ctx)",
+			"numCtxHelp": "覆寫模型的預設上下文視窗大小。留空以使用模型的 Modelfile 設定。最小值為 128。",
 			"description": "Ollama 允許您在本機電腦執行模型。請參閱快速入門指南。",
 			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
 		"unboundRefreshModelsSuccess": "模型列表已更新！您現在可以從最新模型中選擇。",
-		"unboundInvalidApiKey": "無效的API金鑰。請檢查您的API金鑰並重試。",
+		"unboundInvalidApiKey": "無效的 API 金鑰。請檢查您的 API 金鑰並重試。",
 		"humanRelay": {
 			"description": "不需要 API 金鑰，但使用者需要協助將資訊複製並貼上到網頁聊天 AI。",
 			"instructions": "使用期間會彈出對話框，並自動將目前訊息複製到剪貼簿。您需要將這些內容貼上到網頁版 AI（如 ChatGPT 或 Claude），然後將 AI 的回覆複製回對話框並點選確認按鈕。"
+		},
+		"roo": {
+			"authenticatedMessage": "已透過 Roo Code Cloud 帳戶安全認證。",
+			"connectButton": "連接到 Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -408,9 +477,17 @@
 		},
 		"reasoningEffort": {
 			"label": "模型推理強度",
+			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
 			"low": "低"
+		},
+		"verbosity": {
+			"label": "輸出詳細程度",
+			"high": "高",
+			"medium": "中",
+			"low": "低",
+			"description": "控制模型回應的詳細程度。低詳細度產生簡潔的回答，而高詳細度提供詳盡的解釋。"
 		},
 		"setReasoningLevel": "啟用推理工作量",
 		"claudeCode": {
@@ -421,7 +498,7 @@
 			"maxTokensDescription": "Claude Code 回應的最大輸出 Token 數量。預設為 8000。"
 		},
 		"geminiCli": {
-			"description": "此提供商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
+			"description": "此供應商使用 Gemini CLI 工具的 OAuth 身份驗證，不需要 API 金鑰。",
 			"oauthPath": "OAuth 憑證路徑（可選）",
 			"oauthPathDescription": "OAuth 憑證檔案的路徑。留空以使用預設位置（~/.gemini/oauth_creds.json）。",
 			"instructions": "如果您尚未進行身份驗證，請先執行",
@@ -434,12 +511,19 @@
 			"requirement4": "不使用 API 金鑰 - 身份驗證透過 OAuth 處理",
 			"requirement5": "需要先安裝並驗證 Gemini CLI 工具",
 			"freeAccess": "透過 OAuth 身份驗證免費存取"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth 憑證路徑（選用）",
+			"oauthPathDescription": "OAuth 憑證檔案的路徑。留空以使用預設位置（~/.qwen/oauth_creds.json）。",
+			"description": "此供應商使用 Qwen 服務的 OAuth 身份驗證，不需要 API 金鑰。",
+			"instructions": "請依照官方文件取得授權檔案並放置在指定路徑。",
+			"setupLink": "Qwen 官方文件"
 		}
 	},
 	"browser": {
 		"enable": {
 			"label": "啟用瀏覽器工具",
-			"description": "啟用後，Kilo Code 可在使用支援電腦使用的模型時使用瀏覽器與網站互動。 <0>瞭解更多</0>"
+			"description": "啟用後，Kilo Code 可在使用支援電腦使用的模型時使用瀏覽器與網站互動。 <0>了解更多</0>"
 		},
 		"viewport": {
 			"label": "視窗大小",
@@ -467,7 +551,7 @@
 	"checkpoints": {
 		"enable": {
 			"label": "啟用自動檢查點",
-			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>瞭解更多</0>"
+			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
 		}
 	},
 	"notifications": {
@@ -489,9 +573,9 @@
 			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
 		},
 		"condensingApiConfiguration": {
-			"label": "上下文壓縮的API配置",
-			"description": "選擇用於上下文壓縮操作的API配置。留空則使用當前活動的配置。",
-			"useCurrentConfig": "使用當前配置"
+			"label": "上下文壓縮的 API 設定",
+			"description": "選擇用於上下文壓縮操作的 API 設定。留空則使用目前啟用的設定。",
+			"useCurrentConfig": "使用目前設定"
 		},
 		"customCondensingPrompt": {
 			"label": "自訂上下文壓縮提示",
@@ -518,7 +602,7 @@
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
-			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>瞭解更多</0>",
+			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>了解更多</0>",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		},
@@ -533,7 +617,7 @@
 			},
 			"maxMessages": {
 				"label": "最大診斷訊息數",
-				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加權杖使用量。",
+				"description": "每個檔案包含的最大診斷訊息數。此限制適用於自動包含（當核取方塊啟用時）和手動 @problems 提及。較高的值提供更多上下文，但會增加 token 使用量。",
 				"resetTooltip": "重設為預設值 (50)",
 				"unlimited": "無限制診斷訊息",
 				"unlimitedLabel": "無限制"
@@ -546,11 +630,21 @@
 		"condensingThreshold": {
 			"label": "壓縮觸發閾值",
 			"selectProfile": "設定檔案閾值",
-			"defaultProfile": "全域預設（所有檔案）",
-			"defaultDescription": "當上下文達到此百分比時，將自動為所有檔案壓縮，除非它們有自訂設定",
-			"profileDescription": "僅此檔案的自訂閾值（覆蓋全域預設）",
-			"inheritDescription": "此檔案繼承全域預設閾值（{{threshold}}%）",
+			"defaultProfile": "全域預設（所有設定檔）",
+			"defaultDescription": "當上下文達到此百分比時，將自動壓縮上下文，可被自定義設定檔覆蓋",
+			"profileDescription": "僅此設定檔的自訂閾值（覆蓋全域預設）",
+			"inheritDescription": "此設定檔繼承全域預設閾值（{{threshold}}%）",
 			"usesGlobal": "（使用全域 {{threshold}}%）"
+		},
+		"maxImageFileSize": {
+			"label": "最大圖片檔案大小",
+			"mb": "MB",
+			"description": "read file 工具可以處理的圖像檔案的最大大小（以 MB 為單位）。"
+		},
+		"maxTotalImageSize": {
+			"label": "圖片總大小上限",
+			"mb": "MB",
+			"description": "單次 read_file 操作中處理的所有圖片的最大累計大小限制（MB）。讀取多張圖片時，每張圖片的大小會累加到總大小中。如果包含另一張圖片會超過此限制，則會跳過該圖片。"
 		}
 	},
 	"terminal": {
@@ -564,7 +658,7 @@
 		},
 		"outputLineLimit": {
 			"label": "終端機輸出行數限制",
-			"description": "執行命令時終端機輸出的最大行數。超過此限制時，會從中間移除多餘的行數，以節省 token 用量。 <0>瞭解更多</0>"
+			"description": "執行命令時終端機輸出的最大行數。超過此限制時，會從中間移除多餘的行數，以節省 token 用量。 <0>了解更多</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "終端機字元限制",
@@ -572,43 +666,43 @@
 		},
 		"shellIntegrationTimeout": {
 			"label": "終端機 Shell 整合逾時",
-			"description": "執行命令前等待 Shell 整合初始化的最長時間。如果您的 Shell 啟動較慢，且終端機出現「Shell 整合無法使用」的錯誤訊息，可能需要提高此數值。 <0>瞭解更多</0>"
+			"description": "執行命令前等待 Shell 整合初始化的最長時間。如果您的 Shell 啟動較慢，且終端機出現「Shell 整合無法使用」的錯誤訊息，可能需要提高此數值。 <0>了解更多</0>"
 		},
 		"shellIntegrationDisabled": {
 			"label": "停用終端機 Shell 整合",
-			"description": "如果終端機指令無法正常運作或看到 'Shell Integration Unavailable' 錯誤，請啟用此項。這會使用較簡單的方法執行指令，繞過一些進階終端機功能。 <0>瞭解更多</0>"
+			"description": "如果終端機指令無法正常運作或看到 'Shell Integration Unavailable' 錯誤，請啟用此項。這會使用較簡單的方法執行指令，繞過一些進階終端機功能。 <0>了解更多</0>"
 		},
 		"commandDelay": {
 			"label": "終端機命令延遲",
-			"description": "命令執行後添加的延遲時間（毫秒）。預設值為 0 時完全停用延遲。這可以幫助確保在有計時問題的終端機中完整擷取命令輸出。在大多數終端機中，這是透過設定 `PROMPT_COMMAND='sleep N'` 實現的，而 PowerShell 會在每個命令結尾加入 `start-sleep`。最初是為了解決 VSCode 錯誤#237208，現在可能不再需要。 <0>瞭解更多</0>"
+			"description": "命令執行後添加的延遲時間（毫秒）。預設值為 0 時完全停用延遲。這可以幫助確保在有計時問題的終端機中完整擷取命令輸出。在大多數終端機中，這是透過設定 `PROMPT_COMMAND='sleep N'` 實現的，而 PowerShell 會在每個命令結尾加入 `start-sleep`。最初是為了解決 VSCode 錯誤#237208，現在可能不再需要。 <0>了解更多</0>"
 		},
 		"compressProgressBar": {
 			"label": "壓縮進度條輸出",
-			"description": "啟用後，將處理包含歸位字元 (\\r) 的終端機輸出，模擬真實終端機顯示內容的方式。這會移除進度條的中間狀態，只保留最終狀態，為更重要的資訊節省上下文空間。 <0>瞭解更多</0>"
+			"description": "啟用後，將處理包含歸位字元 (\\r) 的終端機輸出，模擬真實終端機顯示內容的方式。這會移除進度條的中間狀態，只保留最終狀態，為更重要的資訊節省上下文空間。 <0>了解更多</0>"
 		},
 		"powershellCounter": {
 			"label": "啟用 PowerShell 計數器解決方案",
-			"description": "啟用後，會在 PowerShell 命令中加入計數器以確保命令正確執行。這有助於解決可能存在輸出擷取問題的 PowerShell 終端機。 <0>瞭解更多</0>"
+			"description": "啟用後，會在 PowerShell 命令中加入計數器以確保命令正確執行。這有助於解決可能存在輸出擷取問題的 PowerShell 終端機。 <0>了解更多</0>"
 		},
 		"zshClearEolMark": {
 			"label": "清除 ZSH 行尾標記",
-			"description": "啟用後，透過設定 PROMPT_EOL_MARK='' 清除 ZSH 行尾標記。這可以防止命令輸出以特殊字元（如 '%'）結尾時的解析問題。 <0>瞭解更多</0>"
+			"description": "啟用後，透過設定 PROMPT_EOL_MARK='' 清除 ZSH 行尾標記。這可以防止命令輸出以特殊字元（如 '%'）結尾時的解析問題。 <0>了解更多</0>"
 		},
 		"zshOhMy": {
 			"label": "啟用 Oh My Zsh 整合",
-			"description": "啟用後，設定 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以啟用 Oh My Zsh shell 整合功能。套用此設定可能需要重新啟動 IDE。 <0>瞭解更多</0>"
+			"description": "啟用後，設定 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以啟用 Oh My Zsh shell 整合功能。套用此設定可能需要重新啟動 IDE。 <0>了解更多</0>"
 		},
 		"zshP10k": {
 			"label": "啟用 Powerlevel10k 整合",
-			"description": "啟用後，設定 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以啟用 Powerlevel10k shell 整合功能。 <0>瞭解更多</0>"
+			"description": "啟用後，設定 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以啟用 Powerlevel10k shell 整合功能。 <0>了解更多</0>"
 		},
 		"zdotdir": {
 			"label": "啟用 ZDOTDIR 處理",
-			"description": "啟用後將建立暫存目錄用於 ZDOTDIR，以正確處理 zsh shell 整合。這確保 VSCode shell 整合能與 zsh 正常運作，同時保留您的 zsh 設定。 <0>瞭解更多</0>"
+			"description": "啟用後將建立暫存目錄用於 ZDOTDIR，以正確處理 zsh shell 整合。這確保 VSCode shell 整合能與 zsh 正常運作，同時保留您的 zsh 設定。 <0>了解更多</0>"
 		},
 		"inheritEnv": {
 			"label": "繼承環境變數",
-			"description": "啟用後，終端機將從 VSCode 父程序繼承環境變數，如使用者設定檔中定義的 shell 整合設定。這直接切換 VSCode 全域設定 `terminal.integrated.inheritEnv`。 <0>瞭解更多</0>"
+			"description": "啟用後，終端機將從 VSCode 父程序繼承環境變數，如使用者設定檔中定義的 shell 整合設定。這直接切換 VSCode 全域設定 `terminal.integrated.inheritEnv`。 <0>了解更多</0>"
 		}
 	},
 	"advancedSettings": {
@@ -675,15 +769,53 @@
 			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "啟用 Morph Fast Apply",
-			"description": "啟用後，Kilo Code 可使用 Morph Fast Apply 編輯檔案。",
+			"name": "啟用 Fast Apply",
+			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）",
-			"warning": "如果您未設定 Morph API 金鑰，仍可透過 Kilo Code 或 OpenRouter 使用 Fast Apply。您的帳戶將被收取模型使用費用，目前擴充套件 UI 中不會顯示此費用。"
+			"modelLabel": "模型選擇",
+			"modelDescription": "選擇用於檔案編輯的快速套用模型",
+			"models": {
+				"auto": "自動（預設 - 選擇最佳可用）",
+				"morphFast": "Morph v3 Fast（更快、成本更低）",
+				"morphLarge": "Morph v3 Large（功能更強）",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "背景編輯",
+			"description": "啟用後可防止編輯器焦點中斷。檔案編輯會在背景進行，不會開啟 diff 檢視或搶奪焦點。您可以在 Roo 進行變更時繼續不受干擾地工作。檔案可能會在不獲得焦點的情況下開啟以捕獲診斷，或保持完全關閉。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "使用全新訊息解析器",
+			"description": "啟用實驗性的串流訊息解析器。透過更有效率地處理訊息，能顯著提升長回覆的效能。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "要求新工作提供 'todos' 列表",
+			"description": "啟用後，new_task 工具將需要提供 todos 參數。這可以確保所有新工作都以明確的目標列表開始。停用時（預設），todos 參數保持可選，以實現向後相容。"
+		},
+		"IMAGE_GENERATION": {
+			"name": "啟用 AI 圖像生成",
+			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
+			"apiProvider": "API 供應商",
+			"openRouterApiKeyLabel": "OpenRouter API 金鑰",
+			"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
+			"kiloCodeApiKeyLabel": "Kilo Code API 金鑰",
+			"kiloCodeApiKeyPlaceholder": "輸入您的 Kilo Code API 金鑰",
+			"kiloCodeApiKeyPaste": "貼上目前的 Kilo Code API 金鑰",
+			"getApiKeyText": "取得您的 API 金鑰從",
+			"modelSelectionLabel": "圖像生成模型",
+			"modelSelectionDescription": "選擇用於圖像生成的模型",
+			"warningMissingKey": "⚠️ 圖像生成需要 API 金鑰，請在上方設定。",
+			"successConfigured": "✓ 圖像生成已設定完成並準備使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "内联助手",
-			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括快速内联任务（Cmd+I）用于定向更改和自动内联任务用于上下文相关的改进。"
+			"name": "自動補全",
+			"description": "啟用自動補全功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的自動補全"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "啟用模型發起斜線命令",
+			"description": "啟用時，Kilo Code 可以執行您的斜線命令來執行工作流程。"
 		}
 	},
 	"promptCaching": {
@@ -693,7 +825,7 @@
 	"temperature": {
 		"useCustom": "使用自訂溫度",
 		"description": "控制模型回應的隨機性",
-		"rangeDescription": "較高值使輸出更隨機，較低值更確定"
+		"rangeDescription": "較高值使輸出更隨機，較低值更穩定"
 	},
 	"modelInfo": {
 		"supportsImages": "支援影像",
@@ -702,6 +834,7 @@
 		"noComputerUse": "不支援電腦使用",
 		"supportsPromptCache": "支援提示快取",
 		"noPromptCache": "不支援提示快取",
+		"contextWindow": "上下文視窗:",
 		"maxOutput": "最大輸出",
 		"inputPrice": "輸入價格",
 		"outputPrice": "輸出價格",
@@ -754,9 +887,11 @@
 			"regionMismatch": "警告：您 ARN 中的區域 ({{arnRegion}}) 與您選擇的區域 ({{region}}) 不符，可能導致存取問題。系統將使用 ARN 中指定的區域。"
 		},
 		"modelAvailability": "您指定的模型 ID ({{modelId}}) 目前無法使用，請選擇其他模型。",
+		"modelDeprecated": "此模型已停用，請選擇其他模型。",
 		"providerNotAllowed": "供應商 '{{provider}}' 不允許用於您的組織。",
 		"modelNotAllowed": "模型 '{{model}}' 不允許用於供應商 '{{provider}}'，您的組織不允許",
-		"profileInvalid": "此設定檔包含您的組織不允許的供應商或模型"
+		"profileInvalid": "此設定檔包含您的組織不允許的供應商或模型",
+		"qwenCodeOauthPath": "您必須提供有效的 OAuth 憑證路徑"
 	},
 	"placeholders": {
 		"apiKey": "請輸入 API 金鑰...",
@@ -793,13 +928,60 @@
 	},
 	"display": {
 		"taskTimeline": {
-			"label": "显示任务时间轴",
-			"description": "显示任务消息的可视化时间线，按类型着色，让您能够快速查看任务进度并回滚到任务历史中的特定点。"
+			"label": "顯示任務時間軸",
+			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
+		},
+		"sendMessageOnEnter": {
+			"label": "使用 Enter 鍵傳送訊息",
+			"description": "啟用後，按 Enter 鍵傳送訊息，Shift+Enter 鍵換行。停用後，使用 Shift+Enter 鍵傳送訊息。"
+		},
+		"costThreshold": {
+			"description": "僅顯示超過此金額的請求費用。當詳細資訊儀錶板打開時，費用始終可見。",
+			"label": "隱藏低於閾值的費用",
+			"currentValue": "當前閾值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "顯示時間戳記",
+			"description": "在聊天檢視中顯示每則訊息的時間戳記"
 		}
 	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自動完成時顯示編輯器邊欄動畫",
+			"description": "在自動完成執行時於編輯器邊欄顯示動畫指示",
+			"preview": "動畫預覽"
+		}
+	},
+	"contextWindow": {
+		"description": "最大對話內容",
+		"oneMillion": "1M"
+	},
+	"kiloRemoteControl": {
+		"description": "啟用遠端任務控制"
+	},
 	"includeMaxOutputTokens": "包含最大輸出 Token 數",
-	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些提供商可能不支援此功能。",
+	"includeMaxOutputTokensDescription": "在 API 請求中傳送最大輸出 Token 參數。某些供應商可能不支援此功能。",
 	"limitMaxTokensDescription": "限制回應中的最大 Token 數量",
 	"maxOutputTokensLabel": "最大輸出 Token 數",
-	"maxTokensGenerateDescription": "回應中產生的最大 Token 數"
+	"maxTokensGenerateDescription": "回應中產生的最大 Token 數",
+	"serviceTier": {
+		"label": "服務層級",
+		"tooltip": "若需更快的 API 請求處理，請嘗試優先處理服務層級。若需較低價格但延遲較高，請嘗試彈性處理層級。",
+		"standard": "標準",
+		"flex": "彈性",
+		"priority": "優先",
+		"pricingTableTitle": "按服務層級定價（每百萬 Token 價格）",
+		"columns": {
+			"tier": "層級",
+			"input": "輸入",
+			"output": "輸出",
+			"cacheReads": "快取讀取"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "預設折疊“思考”訊息",
+			"description": "啟用後，“思考”塊將預設折疊，直到您與其互動"
+		}
+	}
 }

@@ -28,7 +28,8 @@
 		"customerSupport": "Müşteri Desteği"
 	},
 	"ui": {
-		"search_placeholder": "Ara..."
+		"search_placeholder": "Ara...",
+		"no_results": "Sonuç bulunamadı"
 	},
 	"mermaid": {
 		"loading": "Mermaid diyagramı oluşturuluyor...",
@@ -66,6 +67,12 @@
 			"copyError": "Görsel kopyalama hatası"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Resim"
+		},
+		"noData": "Resim verisi yok"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Geçersiz veri URI formatı",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Bu mesajı silmek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
 		"editMessage": "Mesajı Düzenle",
 		"editWarning": "Bu mesajı düzenlemek, konuşmadaki sonraki tüm mesajları da silecektir. Devam etmek istiyor musun?",
-		"proceed": "Devam Et"
+		"editQuestionWithCheckpoint": "Bu mesajı düzenlemek, konuşmadaki sonraki tüm mesajları da silecektir. Bu kontrol noktasına kadar olan tüm değişiklikleri de geri almak istiyor musun?",
+		"deleteQuestionWithCheckpoint": "Bu mesajı silmek, konuşmadaki sonraki tüm mesajları da silecektir. Bu kontrol noktasına kadar olan tüm değişiklikleri de geri almak istiyor musun?",
+		"editOnly": "Hayır, sadece mesajı düzenle",
+		"deleteOnly": "Hayır, sadece mesajı sil",
+		"restoreToCheckpoint": "Evet, kontrol noktasını geri yükle",
+		"proceed": "Devam Et",
+		"dontShowAgain": "Tekrar gösterme"
+	},
+	"time_ago": {
+		"just_now": "şimdi",
+		"seconds_ago": "{{count}} saniye önce",
+		"minute_ago": "bir dakika önce",
+		"minutes_ago": "{{count}} dakika önce",
+		"hour_ago": "bir saat önce",
+		"hours_ago": "{{count}} saat önce",
+		"day_ago": "bir gün önce",
+		"days_ago": "{{count}} gün önce",
+		"week_ago": "bir hafta önce",
+		"weeks_ago": "{{count}} hafta önce",
+		"month_ago": "bir ay önce",
+		"months_ago": "{{count}} ay önce",
+		"year_ago": "bir yıl önce",
+		"years_ago": "{{count}} yıl önce"
 	}
 }

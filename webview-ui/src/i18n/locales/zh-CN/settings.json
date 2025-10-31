@@ -28,12 +28,17 @@
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
+		"slashCommands": "斜杠命令",
 		"prompts": "提示词",
+		"ui": "UI",
 		"experimental": "实验性",
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
 		"display": "显示"
+	},
+	"slashCommands": {
+		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
 		"description": "配置用于快速操作的支持提示词，如增强提示词、解释代码和修复问题。这些提示词帮助 Kilo Code 为常见开发任务提供更好的支持。"
@@ -54,6 +59,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "API 密钥：",
 		"geminiApiKeyPlaceholder": "输入您的Gemini API密钥",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API 密钥",
+		"vercelAiGatewayApiKeyPlaceholder": "输入您的 Vercel AI Gateway API 密钥",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 密钥:",
 		"mistralApiKeyPlaceholder": "输入您的 Mistral API 密钥",
@@ -115,6 +123,7 @@
 			"modelDimensionRequired": "需要模型维度",
 			"geminiApiKeyRequired": "需要 Gemini API 密钥",
 			"mistralApiKeyRequired": "需要 Mistral API 密钥",
+			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 密钥",
 			"ollamaBaseUrlRequired": "需要 Ollama 基础 URL",
 			"baseUrlRequired": "需要基础 URL",
 			"modelDimensionMinValue": "模型维度必须大于 0"
@@ -125,10 +134,14 @@
 		"searchMinScoreResetTooltip": "恢复默认值 (0.4)",
 		"searchMaxResultsLabel": "最大搜索结果数",
 		"searchMaxResultsDescription": "查询代码库索引时返回的最大搜索结果数。较高的值提供更多上下文，但可能包含相关性较低的结果。",
-		"resetToDefault": "恢复默认值"
+		"resetToDefault": "恢复默认值",
+		"cancelling": "正在取消...",
+		"cancelIndexingButton": "取消索引"
 	},
 	"autoApprove": {
+		"toggleShortcut": "您可以<SettingsLink>在 IDE 首选项中</SettingsLink>为此设置配置全局快捷方式。",
 		"description": "允许 Kilo Code 自动执行操作而无需批准。只有在您完全信任 AI 并了解相关安全风险的情况下才启用这些设置。",
+		"enabled": "自动批准已启用",
 		"toggleAriaLabel": "切换自动批准",
 		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
 		"readOnly": {
@@ -203,7 +216,14 @@
 			"description": "在请求批准以继续执行任务之前，自动发出此数量的 API 请求。",
 			"unlimited": "无限制"
 		},
-		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准"
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
+		"apiCostLimit": {
+			"title": "最高费用",
+			"unlimited": "无限"
+		},
+		"maxLimits": {
+			"description": "在请求批准继续之前，自动发出请求，最多不超过这些限制。"
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} 文档",
@@ -227,15 +247,15 @@
 		"noProviderMatchFound": "未找到提供商",
 		"noMatchFound": "未找到匹配的配置文件",
 		"vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
+		"vscodeLmUnavailable": "VS Code 语言模型支持仅在 Visual Studio Code 中可用。VSCodium 等分支可能无法工作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "请确保您使用的是受支持的工具，并且已安装并启用 VS Code Chat",
 		"awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
 		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
 		"openRouterApiKey": "OpenRouter API 密钥",
 		"getOpenRouterApiKey": "获取 OpenRouter API 密钥",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API 密钥",
+		"getVercelAiGatewayApiKey": "获取 Vercel AI Gateway API 密钥",
 		"apiKeyStorageNotice": "API 密钥安全存储在 VSCode 的密钥存储中",
-		"cerebras": {
-			"apiKey": "Cerebras API 密钥",
-			"getApiKey": "获取 Cerebras API 密钥"
-		},
 		"glamaApiKey": "Glama API 密钥",
 		"getGlamaApiKey": "获取 Glama API 密钥",
 		"useCustomBaseUrl": "使用自定义基础 URL",
@@ -255,22 +275,51 @@
 			"error": "刷新模型列表失败。请重试。"
 		},
 		"getRequestyApiKey": "获取 Requesty API 密钥",
+		"getRequestyBaseUrl": "基础 URL",
+		"requestyUseCustomBaseUrl": "使用自定义基础 URL",
 		"openRouterTransformsText": "自动压缩提示词和消息链到上下文长度限制内 (<a>OpenRouter转换</a>)",
 		"anthropicApiKey": "Anthropic API 密钥",
 		"getAnthropicApiKey": "获取 Anthropic API 密钥",
 		"anthropicUseAuthToken": "将 Anthropic API 密钥作为 Authorization 标头传递，而不是 X-Api-Key",
+		"anthropic1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
+		"anthropic1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"awsBedrock1MContextBetaLabel": "启用 1M 上下文窗口 (Beta)",
+		"awsBedrock1MContextBetaDescription": "为 Claude Sonnet 4 将上下文窗口扩展至 100 万个 token",
+		"cerebrasApiKey": "Cerebras API 密钥",
+		"getCerebrasApiKey": "获取 Cerebras API 密钥",
 		"chutesApiKey": "Chutes API 密钥",
 		"getChutesApiKey": "获取 Chutes API 密钥",
+		"fireworksApiKey": "Fireworks API 密钥",
+		"getFireworksApiKey": "获取 Fireworks API 密钥",
+		"syntheticApiKey": "Synthetic API 密钥",
+		"getSyntheticApiKey": "获取 Synthetic API 密钥",
+		"featherlessApiKey": "Featherless API 密钥",
+		"getFeatherlessApiKey": "获取 Featherless API 密钥",
+		"ioIntelligenceApiKey": "IO Intelligence API 密钥",
+		"ioIntelligenceApiKeyPlaceholder": "输入您的 IO Intelligence API 密钥",
+		"getIoIntelligenceApiKey": "获取 IO Intelligence API 密钥",
 		"deepSeekApiKey": "DeepSeek API 密钥",
 		"getDeepSeekApiKey": "获取 DeepSeek API 密钥",
+		"doubaoApiKey": "豆包 API 密钥",
+		"getDoubaoApiKey": "获取豆包 API 密钥",
 		"moonshotApiKey": "Moonshot API 密钥",
 		"getMoonshotApiKey": "获取 Moonshot API 密钥",
 		"moonshotBaseUrl": "Moonshot 服务站点",
+		"zaiApiKey": "Z AI API 密钥",
+		"getZaiApiKey": "获取 Z AI API 密钥",
+		"zaiEntrypoint": "Z AI 服务站点",
+		"zaiEntrypointDescription": "请根据您的位置选择适当的 API 服务站点。如果您在中国，请选择 open.bigmodel.cn。否则，请选择 api.z.ai。",
 		"geminiApiKey": "Gemini API 密钥",
 		"getGroqApiKey": "获取 Groq API 密钥",
 		"groqApiKey": "Groq API 密钥",
+		"getSambaNovaApiKey": "获取 SambaNova API 密钥",
+		"sambaNovaApiKey": "SambaNova API 密钥",
 		"getHuggingFaceApiKey": "获取 Hugging Face API 密钥",
 		"huggingFaceApiKey": "Hugging Face API 密钥",
+		"getOvhCloudAiEndpointsApiKey": "获取 OVHcloud AI Endpoints API 密钥",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API 密钥",
+		"ovhCloudAiEndpointsBaseUrl": "基础 URL",
+		"getOvhCloudAiEndpointsBaseUrl": "使用自定义基础 URL",
 		"huggingFaceModelId": "模型 ID",
 		"huggingFaceLoading": "加载中...",
 		"huggingFaceModelsCount": "({{count}} 个模型)",
@@ -314,6 +363,16 @@
 		"cacheUsageNote": "提示：若未显示缓存使用情况，请切换模型后重新选择",
 		"vscodeLmModel": "VSCode LM 模型",
 		"vscodeLmWarning": "注意：这是一个非常实验性的集成，提供商支持会有所不同。如果您收到有关不支持模型的错误，则这是提供商方面的问题。",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "启用 URL 上下文",
+				"description": "让 Gemini 读取链接的页面以提取、比较和综合其内容，从而提供明智的答复。"
+			},
+			"groundingSearch": {
+				"title": "启用 Google 搜索基础",
+				"description": "将 Gemini 连接到实时网络数据，以获得包含可验证引用的准确、最新的答案。"
+			}
+		},
 		"googleCloudSetup": {
 			"title": "要使用 Google Cloud Vertex AI，您需要：",
 			"step1": "1. 注册Google Cloud账号并启用Vertex AI API",
@@ -337,6 +396,11 @@
 		"ollama": {
 			"baseUrl": "基础 URL（可选）",
 			"modelId": "模型 ID",
+			"apiKey": "Ollama API 密钥",
+			"apiKeyPlaceholder": "输入您的 API 密钥",
+			"apiKeyHelp": "用于已认证 Ollama 实例或云服务的可选 API 密钥。本地安装请留空。",
+			"numCtx": "上下文窗口大小 (num_ctx)",
+			"numCtxHelp": "覆盖模型的默认上下文窗口大小。留空以使用模型的 Modelfile 配置。最小值为 128。",
 			"description": "Ollama 允许您在本地计算机上运行模型。有关如何开始使用的说明，请参阅其快速入门指南。",
 			"warning": "注意：Kilo Code 使用复杂的提示，与 Claude 模型配合最佳。功能较弱的模型可能无法按预期工作。"
 		},
@@ -347,6 +411,10 @@
 		"humanRelay": {
 			"description": "不需要 API 密钥，但用户需要帮助将信息复制并粘贴到网页聊天 AI。",
 			"instructions": "使用期间，将弹出对话框并自动将当前消息复制到剪贴板。您需要将这些内容粘贴到 AI 的网页版本（如 ChatGPT 或 Claude），然后将 AI 的回复复制回对话框并点击确认按钮。"
+		},
+		"roo": {
+			"authenticatedMessage": "已通过 Roo Code Cloud 账户安全认证。",
+			"connectButton": "连接到 Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -409,9 +477,17 @@
 		},
 		"reasoningEffort": {
 			"label": "模型推理强度",
+			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
 			"low": "低"
+		},
+		"verbosity": {
+			"label": "输出详细程度",
+			"high": "高",
+			"medium": "中",
+			"low": "低",
+			"description": "控制模型响应的详细程度。低详细度产生简洁的回答，而高详细度提供详尽的解释。"
 		},
 		"setReasoningLevel": "启用推理工作量",
 		"claudeCode": {
@@ -435,6 +511,13 @@
 			"requirement4": "不使用 API 密钥 - 身份验证通过 OAuth 处理",
 			"requirement5": "需要先安装并验证 Gemini CLI 工具",
 			"freeAccess": "通过 OAuth 身份验证免费访问"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth 凭据路径（可选）",
+			"oauthPathDescription": "OAuth 凭据文件的路径。留空以使用默认位置（~/.qwen/oauth_creds.json）。",
+			"description": "此提供商使用 Qwen 服务的 OAuth 身份验证，不需要 API 密钥。",
+			"instructions": "请按照官方文档获取授权文件并将其放置在指定路径中。",
+			"setupLink": "Qwen 官方文档"
 		}
 	},
 	"browser": {
@@ -552,6 +635,16 @@
 			"profileDescription": "仅此配置文件的自定义阈值（覆盖全局默认）",
 			"inheritDescription": "此配置文件继承全局默认阈值（{{threshold}}%）",
 			"usesGlobal": "（使用全局 {{threshold}}%）"
+		},
+		"maxImageFileSize": {
+			"label": "最大图像文件大小",
+			"mb": "MB",
+			"description": "read file工具可以处理的图像文件的最大大小（以MB为单位）。"
+		},
+		"maxTotalImageSize": {
+			"label": "图片总大小上限",
+			"mb": "MB",
+			"description": "单次 read_file 操作中处理的所有图片的最大累计大小限制（MB）。读取多张图片时，每张图片的大小会累加到总大小中。如果包含另一张图片会超过此限制，则会跳过该图片。"
 		}
 	},
 	"terminal": {
@@ -679,16 +772,54 @@
 			"name": "启用并发文件编辑",
 			"description": "启用后 Kilo Code 可在单个请求中编辑多个文件。禁用后 Kilo Code 必须逐个编辑文件。禁用此功能有助于使用能力较弱的模型或需要更精确控制文件修改时。"
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "启用 Morph Fast Apply",
-			"description": "启用后 Kilo Code 可使用 Morph Fast Apply 编辑文件。",
-			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）",
-			"warning": "如果您未配置 Morph API 密钥，仍可通过 Kilo Code 或 OpenRouter 使用 Fast Apply。您的账户将承担模型使用费用，目前扩展界面中不会显示此费用。"
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "后台编辑",
+			"description": "启用后防止编辑器焦点干扰。文件编辑在后台进行，不会打开差异视图或抢夺焦点。你可以在 Kilo Code 进行更改时继续不受干扰地工作。文件可以在不获取焦点的情况下打开以捕获诊断信息，或保持完全关闭状态。"
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "使用新的消息解析器",
+			"description": "启用实验性的流式消息解析器。通过更高效地处理消息，可显著提升长回复的性能。"
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "要求新任务提供 'todos' 列表",
+			"description": "启用后，new_task 工具将需要提供 todos 参数。这可以确保所有新任务都以明确的目标列表开始。禁用时（默认），todos 参数保持可选，以实现向后兼容。"
+		},
+		"IMAGE_GENERATION": {
+			"name": "启用 AI 图像生成",
+			"description": "启用后，Kilo Code 可以从文本提示生成图像。需要配置 Kilo Code 或 OpenRouter API 密钥。",
+			"apiProvider": "API 提供商",
+			"openRouterApiKeyLabel": "OpenRouter API 密钥",
+			"openRouterApiKeyPlaceholder": "输入您的 OpenRouter API 密钥",
+			"kiloCodeApiKeyLabel": "Kilo Code API 密钥",
+			"kiloCodeApiKeyPlaceholder": "输入您的 Kilo Code API 密钥",
+			"kiloCodeApiKeyPaste": "粘贴当前 Kilo Code API 密钥",
+			"getApiKeyText": "获取您的 API 密钥",
+			"modelSelectionLabel": "图像生成模型",
+			"modelSelectionDescription": "选择用于图像生成的模型",
+			"warningMissingKey": "⚠️ 图像生成需要 API 密钥，请在上方配置。",
+			"successConfigured": "✓ 图像生成已配置完成，可以使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "内嵌助手",
-			"description": "启用内联辅助功能，在您的编辑器中直接获取快速代码建议和改进。包括用于定向更改的快速内联任务（Cmd+I）和用于上下文相关改进的自动内联任务。"
+			"name": "自动补全",
+			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "启用 Fast Apply",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
+			"apiKey": "Morph API 密钥（可选）",
+			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"modelLabel": "模型选择",
+			"modelDescription": "选择用于文件编辑的快速应用模型",
+			"models": {
+				"auto": "自动（默认 - 选择最佳可用）",
+				"morphFast": "Morph v3 Fast（更快，成本更低）",
+				"morphLarge": "Morph v3 Large（功能更强）",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "启用模型发起的斜杠命令",
+			"description": "启用后 Kilo Code 可运行斜杠命令执行工作流程。"
 		}
 	},
 	"promptCaching": {
@@ -707,6 +838,7 @@
 		"noComputerUse": "不支持计算机功能调用",
 		"supportsPromptCache": "支持提示缓存",
 		"noPromptCache": "不支持提示缓存",
+		"contextWindow": "上下文窗口:",
 		"maxOutput": "最大输出",
 		"inputPrice": "输入价格",
 		"outputPrice": "输出价格",
@@ -759,9 +891,11 @@
 			"regionMismatch": "警告：您的 ARN 中的区域 ({{arnRegion}}) 与您选择的区域 ({{region}}) 不匹配。这可能会导致访问问题。提供程序将使用 ARN 中的区域。"
 		},
 		"modelAvailability": "模型ID {{modelId}} 不可用，请重新选择",
+		"modelDeprecated": "此模型不再可用，请选择其他模型。",
 		"providerNotAllowed": "提供商 '{{provider}}' 不允许用于您的组织",
 		"modelNotAllowed": "模型 '{{model}}' 不允许用于提供商 '{{provider}}'，您的组织不允许",
-		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型"
+		"profileInvalid": "此配置文件包含您的组织不允许的提供商或模型",
+		"qwenCodeOauthPath": "您必须提供有效的 OAuth 凭证路径"
 	},
 	"placeholders": {
 		"apiKey": "请输入 API 密钥...",
@@ -800,11 +934,51 @@
 		"taskTimeline": {
 			"label": "显示任务时间轴",
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
+		},
+		"sendMessageOnEnter": {
+			"label": "使用回车键发送消息",
+			"description": "启用后，按回车键发送消息，Shift+回车键换行。禁用后，使用Shift+回车键发送消息。"
+		},
+		"costThreshold": {
+			"label": "隐藏低于阈值的费用",
+			"description": "仅显示超过此金额的请求成本。当详情面板打开时，成本始终可见。",
+			"currentValue": "当前阈值：${{value}}"
+		},
+		"showTimestamps": {
+			"label": "显示时间戳",
+			"description": "在聊天视图中为每条消息显示时间戳"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "自动完成时显示边栏动画",
+			"description": "自动完成运行时在编辑器边栏显示动画指示器",
+			"preview": "动画预览"
 		}
 	},
 	"includeMaxOutputTokens": "包含最大输出 Token 数",
 	"includeMaxOutputTokensDescription": "在 API 请求中发送最大输出 Token 参数。某些提供商可能不支持此功能。",
 	"limitMaxTokensDescription": "限制响应中的最大 Token 数量",
 	"maxOutputTokensLabel": "最大输出 Token 数",
-	"maxTokensGenerateDescription": "响应中生成的最大 Token 数"
+	"maxTokensGenerateDescription": "响应中生成的最大 Token 数",
+	"serviceTier": {
+		"label": "服务等级",
+		"tooltip": "为加快API请求处理速度，请尝试优先处理服务等级。为获得更低价格但延迟较高，请尝试灵活处理等级。",
+		"standard": "标准",
+		"flex": "灵活",
+		"priority": "优先",
+		"pricingTableTitle": "按服务等级定价 (每百万Token价格)",
+		"columns": {
+			"tier": "等级",
+			"input": "输入",
+			"output": "输出",
+			"cacheReads": "缓存读取"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "默认折叠“思考”消息",
+			"description": "启用后，“思考”块将默认折叠，直到您与其交互"
+		}
+	}
 }

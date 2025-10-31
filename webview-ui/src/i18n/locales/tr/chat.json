@@ -2,12 +2,15 @@
 	"greeting": "Kilo Code sizin için ne yapabilir?",
 	"task": {
 		"title": "Görev",
+		"expand": "Görevi genişlet",
+		"collapse": "Görevi daralt",
 		"seeMore": "Daha fazla gör",
 		"seeLess": "Daha az gör",
-		"tokens": "Tokenlar:",
-		"cache": "Önbellek:",
-		"apiCost": "API Maliyeti:",
-		"contextWindow": "Bağlam Uzunluğu:",
+		"tokens": "Tokenlar",
+		"cache": "Önbellek",
+		"apiCost": "API Maliyeti",
+		"size": "Boyut",
+		"contextWindow": "Bağlam Uzunluğu",
 		"closeAndStart": "Görevi kapat ve yeni bir görev başlat",
 		"export": "Görev geçmişini dışa aktar",
 		"delete": "Görevi sil (Onayı atlamak için Shift + Tıkla)",
@@ -21,7 +24,9 @@
 		"connectToCloudDescription": "Görevleri paylaşmak için Kilo Code Cloud'a giriş yap",
 		"sharingDisabledByOrganization": "Paylaşım kuruluş tarafından devre dışı bırakıldı",
 		"shareSuccessOrganization": "Organizasyon bağlantısı panoya kopyalandı",
-		"shareSuccessPublic": "Genel bağlantı panoya kopyalandı"
+		"shareSuccessPublic": "Genel bağlantı panoya kopyalandı",
+		"openInCloud": "Görevi Roo Code Cloud'da aç",
+		"openInCloudIntro": "Roo'yu her yerden izlemeye veya etkileşime devam et. Açmak için tara, tıkla veya kopyala."
 	},
 	"history": {
 		"title": "Geçmiş"
@@ -62,7 +67,7 @@
 		"tooltip": "Bu eylemi onayla"
 	},
 	"runCommand": {
-		"title": "Komutu Çalıştır",
+		"title": "Komut",
 		"tooltip": "Bu komutu çalıştır"
 	},
 	"proceedWhileRunning": {
@@ -114,8 +119,8 @@
 	"sendMessage": "Mesaj gönder",
 	"stopTts": "Metin okumayı durdur",
 	"typeMessage": "Bir mesaj yazın...",
-	"typeTask": "Oluştur, bul, bir şey sor",
-	"addContext": "Bağlam eklemek için @, mod değiştirmek için /",
+	"typeTask": "Görevinizi buraya yazın...",
+	"addContext": "Bağlam eklemek için @, komutlar için /",
 	"dragFiles": "dosyaları sürüklemek için shift tuşuna basılı tutun",
 	"dragFilesImages": "dosyaları/resimleri sürüklemek için shift tuşuna basılı tutun",
 	"enhancePromptDescription": "'İstemi geliştir' düğmesi, ek bağlam, açıklama veya yeniden ifade sağlayarak isteğinizi iyileştirmeye yardımcı olur. Buraya bir istek yazıp düğmeye tekrar tıklayarak nasıl çalıştığını görebilirsiniz.",
@@ -123,9 +128,12 @@
 		"title": "Modlar",
 		"marketplace": "Mod Pazaryeri",
 		"settings": "Mod Ayarları",
-		"description": "Kilo Code'nun davranışını özelleştiren uzmanlaşmış kişilikler."
+		"description": "Kilo Code'nun davranışını özelleştiren uzmanlaşmış kişilikler.",
+		"searchPlaceholder": "Modları ara...",
+		"noResults": "Sonuç bulunamadı",
+		"organizationModes": "Kuruluş Modları"
 	},
-	"errorReadingFile": "Dosya okuma hatası:",
+	"errorReadingFile": "Dosya okuma hatası",
 	"noValidImages": "Hiçbir geçerli resim işlenmedi",
 	"separator": "Ayırıcı",
 	"edit": "Düzenle...",
@@ -144,7 +152,6 @@
 		"streamingFailed": "API Akışı Başarısız"
 	},
 	"checkpoint": {
-		"initial": "İlk Kontrol Noktası",
 		"regular": "Kontrol Noktası",
 		"initializingWarning": "Kontrol noktası hala başlatılıyor... Bu çok uzun sürerse, <settingsLink>ayarlar</settingsLink> bölümünden kontrol noktalarını devre dışı bırakabilir ve görevinizi yeniden başlatabilirsiniz.",
 		"menu": {
@@ -164,45 +171,50 @@
 		"wantsToFetch": "Kilo Code mevcut göreve yardımcı olmak için ayrıntılı talimatlar almak istiyor"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code bu dosyayı okumak istiyor:",
-		"wantsToReadOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı okumak istiyor:",
-		"didRead": "Kilo Code bu dosyayı okudu:",
-		"wantsToEdit": "Kilo Code bu dosyayı düzenlemek istiyor:",
-		"wantsToEditOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı düzenlemek istiyor:",
-		"wantsToEditProtected": "Kilo Code korumalı bir yapılandırma dosyasını düzenlemek istiyor:",
-		"wantsToCreate": "Kilo Code yeni bir dosya oluşturmak istiyor:",
-		"wantsToSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yapmak istiyor:",
-		"didSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yaptı:",
-		"wantsToInsert": "Kilo Code bu dosyaya içerik eklemek istiyor:",
-		"wantsToInsertWithLineNumber": "Kilo Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor:",
-		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor:",
-		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor:",
-		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor:",
-		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor:"
+		"wantsToRead": "Kilo Code bu dosyayı okumak istiyor",
+		"wantsToReadOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı okumak istiyor",
+		"didRead": "Kilo Code bu dosyayı okudu",
+		"wantsToEdit": "Kilo Code bu dosyayı düzenlemek istiyor",
+		"wantsToEditOutsideWorkspace": "Kilo Code çalışma alanı dışındaki bu dosyayı düzenlemek istiyor",
+		"wantsToEditProtected": "Kilo Code korumalı bir yapılandırma dosyasını düzenlemek istiyor",
+		"wantsToCreate": "Kilo Code yeni bir dosya oluşturmak istiyor",
+		"wantsToSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yapmak istiyor",
+		"didSearchReplace": "Kilo Code bu dosyada arama ve değiştirme yaptı",
+		"wantsToInsert": "Kilo Code bu dosyaya içerik eklemek istiyor",
+		"wantsToInsertWithLineNumber": "Kilo Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor",
+		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor",
+		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor",
+		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor",
+		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor",
+		"wantsToGenerateImage": "Kilo Code bir görsel oluşturmak istiyor",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code çalışma alanının dışında bir görsel oluşturmak istiyor",
+		"wantsToGenerateImageProtected": "Kilo Code korumalı bir konumda görsel oluşturmak istiyor",
+		"didGenerateImage": "Kilo Code bir görsel oluşturdu"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntülemek istiyor:",
-		"didViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntüledi:",
-		"wantsToViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntülemek istiyor:",
-		"didViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntüledi:",
-		"wantsToViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
-		"didViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi:",
-		"wantsToSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yapmak istiyor:",
-		"didSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yaptı:",
-		"wantsToSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yapmak istiyor:",
-		"didSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yaptı:",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntülemek istiyor:",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntüledi:",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntülemek istiyor:",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntüledi:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor:",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi:"
+		"wantsToViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntülemek istiyor",
+		"didViewTopLevel": "Kilo Code bu dizindeki üst düzey dosyaları görüntüledi",
+		"wantsToViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntülemek istiyor",
+		"didViewRecursive": "Kilo Code bu dizindeki tüm dosyaları özyinelemeli olarak görüntüledi",
+		"wantsToViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor",
+		"didViewDefinitions": "Kilo Code bu dizinde kullanılan kaynak kod tanımlama isimlerini görüntüledi",
+		"wantsToSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yapmak istiyor",
+		"didSearch": "Kilo Code bu dizinde <code>{{regex}}</code> için arama yaptı",
+		"wantsToSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yapmak istiyor",
+		"didSearchOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) <code>{{regex}}</code> için arama yaptı",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntülemek istiyor",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) üst düzey dosyaları görüntüledi",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntülemek istiyor",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code bu dizindeki (çalışma alanı dışında) tüm dosyaları özyinelemeli olarak görüntüledi",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntülemek istiyor",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code bu dizinde (çalışma alanı dışında) kullanılan kaynak kod tanımlama isimlerini görüntüledi"
 	},
 	"commandOutput": "Komut Çıktısı",
 	"commandExecution": {
 		"running": "Çalışıyor",
+		"abort": "İptal Et",
 		"pid": "PID: {{pid}}",
-		"exited": "Çıkıldı ({{exitCode}})",
+		"exitStatus": "{{exitCode}} durumuyla çıkıldı",
 		"manageCommands": "Komut İzinlerini Yönet",
 		"commandManagementDescription": "Komut izinlerini yönetin: Otomatik yürütmeye izin vermek için ✓'e, yürütmeyi reddetmek için ✗'e tıklayın. Desenler açılıp kapatılabilir veya listelerden kaldırılabilir. <settingsLink>Tüm ayarları görüntüle</settingsLink>",
 		"addToAllowed": "İzin verilenler listesine ekle",
@@ -217,9 +229,15 @@
 	},
 	"response": "Yanıt",
 	"arguments": "Argümanlar",
+	"text": {
+		"rooSaid": "Kilo dedi"
+	},
+	"feedback": {
+		"youSaid": "Dediniz ki"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code {{serverName}} MCP sunucusunda bir araç kullanmak istiyor:",
-		"wantsToAccessResource": "Kilo Code {{serverName}} MCP sunucusundaki bir kaynağa erişmek istiyor:"
+		"wantsToUseTool": "Kilo Code {{serverName}} MCP sunucusunda bir araç kullanmak istiyor",
+		"wantsToAccessResource": "Kilo Code {{serverName}} MCP sunucusundaki bir kaynağa erişmek istiyor"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Code <code>{{mode}}</code> moduna geçmek istiyor",
@@ -228,7 +246,7 @@
 		"didSwitchWithReason": "Kilo Code <code>{{mode}}</code> moduna geçti çünkü: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code <code>{{mode}}</code> modunda yeni bir alt görev oluşturmak istiyor:",
+		"wantsToCreate": "Kilo Code <code>{{mode}}</code> modunda yeni bir alt görev oluşturmak istiyor",
 		"wantsToFinish": "Kilo Code bu alt görevi bitirmek istiyor",
 		"newTaskContent": "Alt Görev Talimatları",
 		"completionContent": "Alt Görev Tamamlandı",
@@ -237,19 +255,28 @@
 		"completionInstructions": "Alt görev tamamlandı! Sonuçları inceleyebilir ve düzeltmeler veya sonraki adımlar önerebilirsiniz. Her şey iyi görünüyorsa, sonucu üst göreve döndürmek için onaylayın."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code'nun bir sorusu var:"
+		"hasQuestion": "Kilo Code'nun bir sorusu var"
 	},
 	"taskCompleted": "Görev Tamamlandı",
 	"powershell": {
 		"issues": "Windows PowerShell ile ilgili sorunlar yaşıyor gibi görünüyorsunuz, lütfen şu konuya bakın"
 	},
 	"autoApprove": {
-		"title": "Otomatik-onay:",
+		"tooltipManage": "Otomatik onay ayarlarını yönet",
+		"tooltipStatus": "Otomatik onay şunlar için etkinleştirildi: {{toggles}}",
+		"title": "Otomatik onayla",
+		"toggle": "Otomatik onayı aç/kapat",
+		"all": "Tümü",
 		"none": "Hiçbiri",
-		"description": "Otomatik onay, Kilo Code'un izin istemeden işlemler gerçekleştirmesine olanak tanır. Yalnızca tamamen güvendiğiniz eylemler için etkinleştirin. Daha detaylı yapılandırma <settingsLink>Ayarlar</settingsLink>'da mevcuttur.",
-		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek belirleyin",
-		"toggleAriaLabel": "Otomatik onayı değiştir",
-		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri belirleyin"
+		"description": "İzin istemeden bu eylemleri gerçekleştirin. Bunu yalnızca tamamen güvendiğiniz eylemler için etkinleştirin.",
+		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin",
+		"toggleAriaLabel": "Otomatik onayı aç/kapat",
+		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri seçin",
+		"triggerLabelOff": "Otomatik onay kapalı",
+		"triggerLabel_zero": "0 otomatik onaylandı",
+		"triggerLabel_one": "1 otomatik onaylandı",
+		"triggerLabel_other": "{{count}} otomatik onaylandı",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "Düşünüyor",
@@ -267,17 +294,18 @@
 		"countdownDisplay": "{{count}}sn"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} Yayınlandı",
-		"description": "Kilo Code {{version}}, geliştirme iş akışınızı geliştirmek için güçlü yeni özellikler ve önemli iyileştirmeler getiriyor.",
-		"whatsNew": "Yenilikler",
-		"feature1": "<bold>Hugging Face Sağlayıcısı</bold>: Yeni Hugging Face sağlayıcısı aracılığıyla sorunsuz entegrasyon ve model seçimi ile tonlarca harika açık kaynak modeline doğrudan erişin.",
-		"feature2": "<bold>Satır İçi Komut Kontrolleri</bold>: Komut yürütme için yeni otomatik onay ve reddetme kontrolleri, özelleştirilebilir izinlerle terminal işlemleri üzerinde hassas kontrol sağlar.",
-		"feature3": "<bold>AGENTS.md Kuralları Desteği</bold>: Projenin kökünde topluluk standardı AGENTS.md dosyası için destek ekler.",
-		"hideButton": "Duyuruyu gizle",
-		"detailsDiscussLinks": "<discordLink>Discord</discordLink> ve <redditLink>Reddit</redditLink>'te daha fazla ayrıntı alın ve tartışmalara katılın 🚀"
+		"title": "🎉 Roo Code {{version}} Yayınlandı",
+		"stealthModel": {
+			"feature": "<bold>Sınırlı süre ÜCRETSİZ gizli model</bold> - Code Supernova: Artık <bold>1M token bağlam penceresi</bold> ile yükseltildi! Görüntü girişlerini destekleyen çok amaçlı acentik kodlama modeli, Roo Code Cloud üzerinden kullanılabilir.",
+			"note": "(Not: istemler ve tamamlamalar model yaratıcısı tarafından kaydedilir ve modeli geliştirmek için kullanılır)",
+			"connectButton": "Roo Code Cloud'a bağlan",
+			"selectModel": "Başlamak için Ayarlar'da Roo Code Cloud sağlayıcısından <code>roo/code-supernova</code>'yı seçin.",
+			"goToSettingsButton": "Ayarlar'a Git"
+		},
+		"socialLinks": "Bize <xLink>X</xLink>, <discordLink>Discord</discordLink>, veya <redditLink>r/RooCode</redditLink>'da katılın 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code tarayıcıyı kullanmak istiyor:",
+		"rooWantsToUse": "Kilo Code tarayıcıyı kullanmak istiyor",
 		"consoleLogs": "Konsol Kayıtları",
 		"noNewLogs": "(Yeni kayıt yok)",
 		"screenshot": "Tarayıcı ekran görüntüsü",
@@ -302,8 +330,6 @@
 		"tooltips": {
 			"expand": "Kod bloğunu genişlet",
 			"collapse": "Kod bloğunu daralt",
-			"enable_wrap": "Satır kaydırmayı etkinleştir",
-			"disable_wrap": "Satır kaydırmayı devre dışı bırak",
 			"copy_code": "Kodu kopyala"
 		}
 	},
@@ -319,11 +345,16 @@
 			"title": "Otomatik Onaylanan İstek Limiti Aşıldı",
 			"description": "Kilo Code, {{count}} API isteği/istekleri için otomatik onaylanan limite ulaştı. Sayacı sıfırlamak ve göreve devam etmek istiyor musunuz?",
 			"button": "Sıfırla ve Devam Et"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Otomatik Onaylanan Maliyet Sınırına Ulaşıldı",
+			"description": "Kilo Code otomatik olarak onaylanmış ${{count}} maliyet sınırına ulaştı. Maliyeti sıfırlamak ve göreve devam etmek ister misiniz?",
+			"button": "Sıfırla ve Devam Et"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code kod tabanında <code>{{query}}</code> aramak istiyor:",
-		"wantsToSearchWithPath": "Kilo Code <code>{{path}}</code> içinde kod tabanında <code>{{query}}</code> aramak istiyor:",
+		"wantsToSearch": "Kilo Code kod tabanında <code>{{query}}</code> aramak istiyor",
+		"wantsToSearchWithPath": "Kilo Code <code>{{path}}</code> içinde kod tabanında <code>{{query}}</code> aramak istiyor",
 		"didSearch_one": "1 sonuç bulundu",
 		"didSearch_other": "{{count}} sonuç bulundu",
 		"resultTooltip": "Benzerlik puanı: {{score}} (dosyayı açmak için tıklayın)"
@@ -347,11 +378,48 @@
 		"ariaLabel": "Sürüm {{version}} - Sürüm notlarını görüntülemek için tıklayın"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud yakında geliyor!",
+		"title": "Roo Code Cloud gelişiyor!",
 		"description": "Bulutta uzak ajanlar çalıştırın, görevlerinize her yerden erişin, başkalarıyla işbirliği yapın ve daha fazlası.",
-		"joinWaitlist": "Erken erişim için bekleme listesine katılın."
+		"joinWaitlist": "En son güncellemeleri almak için kaydolun."
 	},
 	"editMessage": {
 		"placeholder": "Mesajını düzenle..."
+	},
+	"command": {
+		"triggerDescription": "{{name}} komutunu tetikle"
+	},
+	"slashCommands": {
+		"tooltip": "Eğik çizgi komutlarını yönet",
+		"title": "Eğik Çizgi Komutları",
+		"description": "Yerleşik eğik çizgi komutlarını kullanın veya sık kullanılan komut istemleri ve iş akışlarına hızlı erişim için özel komutlar oluşturun. <DocsLink>Belgeler</DocsLink>",
+		"manageCommands": "Ayarlarda eğik çizgi komutlarını yönet",
+		"builtInCommands": "Yerleşik Komutlar",
+		"globalCommands": "Genel Komutlar",
+		"workspaceCommands": "Çalışma Alanı Komutları",
+		"globalCommand": "Genel komut",
+		"editCommand": "Komutu düzenle",
+		"deleteCommand": "Komutu sil",
+		"newGlobalCommandPlaceholder": "Yeni genel komut...",
+		"newWorkspaceCommandPlaceholder": "Yeni çalışma alanı komutu...",
+		"deleteDialog": {
+			"title": "Komutu Sil",
+			"description": "\"{{name}}\" komutunu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+			"cancel": "İptal",
+			"confirm": "Sil"
+		}
+	},
+	"contextMenu": {
+		"noResults": "Sonuç yok",
+		"problems": "Sorunlar",
+		"terminal": "Terminal",
+		"url": "İçeriği getirmek için URL'yi yapıştırın"
+	},
+	"queuedMessages": {
+		"title": "Sıradaki Mesajlar",
+		"clickToEdit": "Mesajı düzenlemek için tıkla"
+	},
+	"slashCommand": {
+		"wantsToRun": "Kilo Code bir slash komutu çalıştırmak istiyor",
+		"didRun": "Kilo Code bir slash komutu çalıştırdı"
 	}
 }

@@ -16,6 +16,11 @@
 		"title": "API設定",
 		"select": "このモードで使用するAPI設定を選択してください"
 	},
+	"organizationMode": {
+		"title": "組織モード",
+		"description": "このモードは組織によって提供されており、ここでは編集できません。このモードを変更するには、Kilo Code Dashboardにアクセスしてください。",
+		"cannotEdit": "組織モードは編集できません"
+	},
 	"tools": {
 		"title": "利用可能なツール",
 		"builtInModesText": "組み込みモードのツールは変更できません",
@@ -50,7 +55,7 @@
 		"title": "モード固有のカスタム指示（オプション）",
 		"resetToDefault": "デフォルトにリセット",
 		"description": "{{modeName}}モードに特化した行動ガイドラインを追加します。",
-		"loadFromFile": "{{mode}}モード固有のカスタム指示は、ワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules-{{slug}}は非推奨であり、まもなく機能しなくなります）。"
+		"loadFromFile": "{{mode}}モード固有のカスタム指示は、ワークスペースの<span>.kilocode/rules-{{slug}}/</span>フォルダまたはグローバル<0>.kilocode/rules-{{slug}}/</0>からも読み込むことができます（.kilocoderules-{{slug}}と.clinerules-{{slug}}は非推奨で、まもなく動作しなくなります）。"
 	},
 	"exportMode": {
 		"title": "モードをエクスポート",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "すべてのモードのカスタム指示",
 		"description": "これらの指示はすべてのモードに適用されます。モード固有の指示で強化できる基本的な動作セットを提供します。<0>詳細はこちら</0>",
-		"loadFromFile": "指示はワークスペースの<span>.kilocode/rules/</span>フォルダからも読み込めます（.kilocoderules と .clinerules は非推奨であり、まもなく機能しなくなります）。"
+		"loadFromFile": "指示は、ワークスペースの<span>.kilocode/rules/</span>フォルダまたはグローバル<0>.kilocode/rules/</0>からも読み込むことができます（.kilocoderulesと.clinerulesは非推奨で、まもなく動作しなくなります）。"
 	},
 	"systemPrompt": {
 		"preview": "システムプロンプトのプレビュー",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "現在選択されているAPI設定を使用",
 			"testPromptPlaceholder": "強化をテストするプロンプトを入力してください",
 			"previewButton": "プロンプト強化のプレビュー",
-			"testEnhancement": "強化をテスト"
+			"testEnhancement": "強化をテスト",
+			"includeTaskHistory": "タスク履歴をコンテキストとして含める",
+			"includeTaskHistoryDescription": "有効にすると、現在の会話の最後の10メッセージがプロンプト強化時にコンテキストとして含まれ、より関連性が高くコンテキストを意識した提案の生成に役立ちます。"
 		},
 		"condense": {
 			"apiConfiguration": "コンテキスト圧縮のためのAPI構成",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "ターミナルコマンドを説明",
 				"description": "ターミナルコマンドとその出力の詳細な説明を得ることができます。ターミナルのコンテキストメニュー（選択したターミナルの内容で右クリック）から利用できます。"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "ターミナルコマンドを生成",
+				"description": "説明に基づいてターミナルコマンドの生成を支援します。"
 			},
 			"NEW_TASK": {
 				"label": "新しいタスクを開始",

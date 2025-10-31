@@ -4,16 +4,20 @@ import { CodeIndexOllamaEmbedder } from "./embedders/ollama"
 import { OpenAICompatibleEmbedder } from "./embedders/openai-compatible"
 import { GeminiEmbedder } from "./embedders/gemini"
 import { MistralEmbedder } from "./embedders/mistral"
+import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
 import { CacheManager } from "./cache-manager"
+import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { Ignore } from "ignore"
 import { t } from "../../i18n"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
+import { Package } from "../../shared/package"
+import { BATCH_SEGMENT_THRESHOLD } from "./constants"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -70,6 +74,11 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.mistralConfigMissing"))
 			}
 			return new MistralEmbedder(config.mistralOptions.apiKey, config.modelId)
+		} else if (provider === "vercel-ai-gateway") {
+			if (!config.vercelAiGatewayOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.vercelAiGatewayConfigMissing"))
+			}
+			return new VercelAiGatewayEmbedder(config.vercelAiGatewayOptions.apiKey, config.modelId)
 		}
 
 		throw new Error(
@@ -149,7 +158,17 @@ export class CodeIndexServiceFactory {
 		parser: ICodeParser,
 		ignoreInstance: Ignore,
 	): DirectoryScanner {
-		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance)
+		// Get the configurable batch size from VSCode settings
+		let batchSize: number
+		try {
+			batchSize = vscode.workspace
+				.getConfiguration(Package.name)
+				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
+		} catch {
+			// In test environment, vscode.workspace might not be available
+			batchSize = BATCH_SEGMENT_THRESHOLD
+		}
+		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance, batchSize)
 	}
 
 	/**
@@ -161,8 +180,28 @@ export class CodeIndexServiceFactory {
 		vectorStore: IVectorStore,
 		cacheManager: CacheManager,
 		ignoreInstance: Ignore,
+		rooIgnoreController?: RooIgnoreController,
 	): IFileWatcher {
-		return new FileWatcher(this.workspacePath, context, cacheManager, embedder, vectorStore, ignoreInstance)
+		// Get the configurable batch size from VSCode settings
+		let batchSize: number
+		try {
+			batchSize = vscode.workspace
+				.getConfiguration(Package.name)
+				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
+		} catch {
+			// In test environment, vscode.workspace might not be available
+			batchSize = BATCH_SEGMENT_THRESHOLD
+		}
+		return new FileWatcher(
+			this.workspacePath,
+			context,
+			cacheManager,
+			embedder,
+			vectorStore,
+			ignoreInstance,
+			rooIgnoreController,
+			batchSize,
+		)
 	}
 
 	/**
@@ -173,6 +212,7 @@ export class CodeIndexServiceFactory {
 		context: vscode.ExtensionContext,
 		cacheManager: CacheManager,
 		ignoreInstance: Ignore,
+		rooIgnoreController?: RooIgnoreController,
 	): {
 		embedder: IEmbedder
 		vectorStore: IVectorStore
@@ -188,7 +228,14 @@ export class CodeIndexServiceFactory {
 		const vectorStore = this.createVectorStore()
 		const parser = codeParser
 		const scanner = this.createDirectoryScanner(embedder, vectorStore, parser, ignoreInstance)
-		const fileWatcher = this.createFileWatcher(context, embedder, vectorStore, cacheManager, ignoreInstance)
+		const fileWatcher = this.createFileWatcher(
+			context,
+			embedder,
+			vectorStore,
+			cacheManager,
+			ignoreInstance,
+			rooIgnoreController,
+		)
 
 		return {
 			embedder,

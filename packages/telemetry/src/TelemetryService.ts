@@ -1,6 +1,11 @@
 import { ZodError } from "zod"
 
-import { type TelemetryClient, type TelemetryPropertiesProvider, TelemetryEventName } from "@roo-code/types"
+import {
+	type TelemetryClient,
+	type TelemetryPropertiesProvider,
+	TelemetryEventName,
+	type TelemetrySetting,
+} from "@roo-code/types"
 
 /**
  * TelemetryService wrapper class that defers initialization.
@@ -36,14 +41,14 @@ export class TelemetryService {
 
 	/**
 	 * Updates the telemetry state based on user preferences and VSCode settings
-	 * @param didUserOptIn Whether the user has explicitly opted into telemetry
+	 * @param isOptedIn Whether the user is opted into telemetry
 	 */
-	public updateTelemetryState(didUserOptIn: boolean): void {
+	public updateTelemetryState(isOptedIn: boolean): void {
 		if (!this.isReady) {
 			return
 		}
 
-		this.clients.forEach((client) => client.updateTelemetryState(didUserOptIn))
+		this.clients.forEach((client) => client.updateTelemetryState(isOptedIn))
 	}
 
 	// kilocode_change start
@@ -96,6 +101,10 @@ export class TelemetryService {
 			cacheWriteTokens: number
 			cacheReadTokens: number
 			cost?: number
+			// kilocode_change start
+			completionTime?: number
+			inferenceProvider?: string
+			// kilocode_change end
 		},
 	): void {
 		this.captureEvent(TelemetryEventName.LLM_COMPLETION, { taskId, ...properties })
@@ -236,6 +245,18 @@ export class TelemetryService {
 	 */
 	public captureTitleButtonClicked(button: string): void {
 		this.captureEvent(TelemetryEventName.TITLE_BUTTON_CLICKED, { button })
+	}
+
+	/**
+	 * Captures when telemetry settings are changed
+	 * @param previousSetting The previous telemetry setting
+	 * @param newSetting The new telemetry setting
+	 */
+	public captureTelemetrySettingsChanged(previousSetting: TelemetrySetting, newSetting: TelemetrySetting): void {
+		this.captureEvent(TelemetryEventName.TELEMETRY_SETTINGS_CHANGED, {
+			previousSetting,
+			newSetting,
+		})
 	}
 
 	/**

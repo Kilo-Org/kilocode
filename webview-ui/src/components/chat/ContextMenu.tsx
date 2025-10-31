@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { getIconForFilePath, getIconUrlByName, getIconForDirectoryPath } from "vscode-material-icons"
+import { Settings } from "lucide-react"
 
 import type { ModeConfig } from "@roo-code/types"
+import type { Command } from "@roo/ExtensionMessage"
 
 import {
 	ContextMenuOptionType,
@@ -10,6 +12,10 @@ import {
 	SearchResult,
 } from "@src/utils/context-mentions"
 import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
+import { vscode } from "@src/utils/vscode"
+import { buildDocLink } from "@/utils/docLinks"
+import { Trans } from "react-i18next"
+import { t } from "i18next"
 
 interface ContextMenuProps {
 	onSelect: (type: ContextMenuOptionType, value?: string) => void
@@ -23,12 +29,12 @@ interface ContextMenuProps {
 	modes?: ModeConfig[]
 	loading?: boolean
 	dynamicSearchResults?: SearchResult[]
+	commands?: Command[]
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
 	onSelect,
 	searchQuery,
-	inputValue,
 	onMouseDown,
 	selectedIndex,
 	setSelectedIndex,
@@ -36,13 +42,14 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	queryItems,
 	modes,
 	dynamicSearchResults = [],
+	commands = [],
 }) => {
 	const [materialIconsBaseUri, setMaterialIconsBaseUri] = useState("")
 	const menuRef = useRef<HTMLDivElement>(null)
 
 	const filteredOptions = useMemo(() => {
-		return getContextMenuOptions(searchQuery, inputValue, selectedType, queryItems, dynamicSearchResults, modes)
-	}, [searchQuery, inputValue, selectedType, queryItems, dynamicSearchResults, modes])
+		return getContextMenuOptions(searchQuery, selectedType, queryItems, dynamicSearchResults, modes, commands)
+	}, [searchQuery, selectedType, queryItems, dynamicSearchResults, modes, commands])
 
 	useEffect(() => {
 		if (menuRef.current) {
@@ -68,10 +75,54 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
 	const renderOptionContent = (option: ContextMenuQueryItem) => {
 		switch (option.type) {
+			case ContextMenuOptionType.SectionHeader:
+				return (
+					<span
+						style={{
+							fontWeight: "bold",
+							fontSize: "0.85em",
+							opacity: 0.8,
+						}}>
+						{option.label}
+					</span>
+				)
 			case ContextMenuOptionType.Mode:
 				return (
 					<div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-						<span style={{ lineHeight: "1.2" }}>{option.label}</span>
+						<div style={{ lineHeight: "1.2" }}>
+							<span>{option.slashCommand}</span>
+						</div>
+						{option.description && (
+							<span
+								style={{
+									opacity: 0.5,
+									fontSize: "0.9em",
+									lineHeight: "1.2",
+									whiteSpace: "nowrap",
+									overflow: "hidden",
+									textOverflow: "ellipsis",
+								}}>
+								{option.description}
+							</span>
+						)}
+					</div>
+				)
+			case ContextMenuOptionType.Command:
+				return (
+					<div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+						<div style={{ lineHeight: "1.2", display: "flex", alignItems: "center", gap: "6px" }}>
+							<span>{option.slashCommand}</span>
+							{option.argumentHint && (
+								<span
+									style={{
+										opacity: 0.5,
+										fontSize: "0.9em",
+										lineHeight: "1.2",
+									}}>
+									{option.argumentHint}
+								</span>
+							)}
+						</div>
 						{option.description && (
 							<span
 								style={{
@@ -88,13 +139,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 					</div>
 				)
 			case ContextMenuOptionType.Problems:
-				return <span>Problems</span>
+				return <span>{t("chat:contextMenu.problems")}</span>
 			case ContextMenuOptionType.Terminal:
-				return <span>Terminal</span>
+				return <span>{t("chat:contextMenu.terminal")}</span>
 			case ContextMenuOptionType.URL:
-				return <span>Paste URL to fetch contents</span>
+				return <span>{t("chat:contextMenu.url")}</span>
 			case ContextMenuOptionType.NoResults:
-				return <span>No results found</span>
+				return <span>{t("chat:contextMenu.noResults")}</span>
 			// kilocode_change start
 			case ContextMenuOptionType.Image:
 				return <span>Add Image</span>
@@ -167,6 +218,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 		switch (option.type) {
 			case ContextMenuOptionType.Mode:
 				return "symbol-misc"
+			case ContextMenuOptionType.Command:
+				return "play"
 			case ContextMenuOptionType.OpenedFile:
 				return "window"
 			case ContextMenuOptionType.File:
@@ -202,7 +255,22 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 	}
 
 	const isOptionSelectable = (option: ContextMenuQueryItem): boolean => {
-		return option.type !== ContextMenuOptionType.NoResults && option.type !== ContextMenuOptionType.URL
+		return (
+			option.type !== ContextMenuOptionType.NoResults &&
+			option.type !== ContextMenuOptionType.URL &&
+			option.type !== ContextMenuOptionType.SectionHeader
+		)
+	}
+
+	const handleSettingsClick = (e: React.MouseEvent) => {
+		// Prevent any default behavior
+		e.preventDefault()
+		// Switch to settings tab and navigate to slash commands section
+		vscode.postMessage({
+			type: "switchTab",
+			tab: "settings",
+			values: { section: "slashCommands" },
+		})
 	}
 
 	return (
@@ -225,21 +293,79 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 					zIndex: 1000,
 					display: "flex",
 					flexDirection: "column",
-					maxHeight: "200px",
+					maxHeight: "300px",
 					overflowY: "auto",
+					overflowX: "hidden",
 				}}>
+				{/* Settings button for slash commands */}
+				{searchQuery === "/" && (
+					<div className="p-2 flex items-start gap-4 justify-between">
+						{searchQuery.length === 1 && (
+							<div className="text-sm">
+								<p className="font-bold text-base text-vscode-foreground mt-1 mb-0.5">Slash Commands</p>
+								<p className="text-xs mt-0.5 -mb-1">
+									<Trans
+										i18nKey="settings:slashCommands.description"
+										components={{
+											DocsLink: (
+												<a
+													href={buildDocLink(
+														"features/slash-commands",
+														"slash_commands_settings",
+													)}
+													target="_blank"
+													rel="noopener noreferrer"
+													className="text-vscode-textLink-foreground hover:underline">
+													{t("common:docsLink.label")}
+												</a>
+											),
+										}}
+									/>
+								</p>
+							</div>
+						)}
+						<button
+							className="mt-1 cursor-pointer"
+							onClick={handleSettingsClick}
+							onMouseDown={(e) => {
+								e.stopPropagation()
+								e.preventDefault()
+							}}
+							onMouseEnter={(e) => {
+								e.currentTarget.style.opacity = "1"
+								e.currentTarget.style.backgroundColor = "var(--vscode-list-hoverBackground)"
+							}}
+							onMouseLeave={(e) => {
+								e.currentTarget.style.opacity = "0.7"
+								e.currentTarget.style.backgroundColor = "transparent"
+							}}
+							title={t("chat:slashCommands.manageCommands")}>
+							<Settings size={16} />
+						</button>
+					</div>
+				)}
 				{filteredOptions && filteredOptions.length > 0 ? (
 					filteredOptions.map((option, index) => (
 						<div
 							key={`${option.type}-${option.value || index}`}
 							onClick={() => isOptionSelectable(option) && onSelect(option.type, option.value)}
 							style={{
-								padding: "4px 6px",
+								padding:
+									option.type === ContextMenuOptionType.SectionHeader
+										? "16px 8px 4px 8px"
+										: "4px 8px",
 								cursor: isOptionSelectable(option) ? "pointer" : "default",
 								color: "var(--vscode-dropdown-foreground)",
 								display: "flex",
 								alignItems: "center",
 								justifyContent: "space-between",
+								position: "relative",
+								...(option.type === ContextMenuOptionType.SectionHeader
+									? {
+											borderBottom: "1px solid var(--vscode-editorGroup-border)",
+											marginBottom: "2px",
+										}
+									: {}),
 								...(index === selectedIndex && isOptionSelectable(option)
 									? {
 											backgroundColor: "var(--vscode-list-activeSelectionBackground)",
@@ -256,6 +382,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 									minWidth: 0,
 									overflow: "hidden",
 									paddingTop: 0,
+									position: "relative",
 								}}>
 								{(option.type === ContextMenuOptionType.File ||
 									option.type === ContextMenuOptionType.Folder ||
@@ -272,9 +399,11 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 									/>
 								)}
 								{option.type !== ContextMenuOptionType.Mode &&
+									option.type !== ContextMenuOptionType.Command &&
 									option.type !== ContextMenuOptionType.File &&
 									option.type !== ContextMenuOptionType.Folder &&
 									option.type !== ContextMenuOptionType.OpenedFile &&
+									option.type !== ContextMenuOptionType.SectionHeader &&
 									getIconForOption(option) && (
 										<i
 											className={`codicon codicon-${getIconForOption(option)}`}
@@ -309,7 +438,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 							color: "var(--vscode-foreground)",
 							opacity: 0.7,
 						}}>
-						<span>No results found</span>
+						<span>{t("chat:contextMenu.noResults")}</span>
 					</div>
 				)}
 			</div>

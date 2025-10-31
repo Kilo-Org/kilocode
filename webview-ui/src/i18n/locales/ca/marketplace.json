@@ -13,6 +13,12 @@
 			"placeholderMcp": "Cercar MCPs...",
 			"placeholderMode": "Cercar modes..."
 		},
+		"installed": {
+			"label": "Filtra per estat",
+			"all": "Tots els articles",
+			"installed": "Instal·lats",
+			"notInstalled": "No instal·lats"
+		},
 		"type": {
 			"label": "Filtrar per tipus:",
 			"all": "Tots els tipus",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Feu clic a les etiquetes per filtrar elements"
 		},
 		"none": "Cap"
+	},
+	"sections": {
+		"organizationMcps": "MCPs de {{organization}}",
+		"marketplace": "Mercat"
 	},
 	"type-group": {
 		"modes": "Modes",

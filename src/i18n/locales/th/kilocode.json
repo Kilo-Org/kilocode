@@ -11,7 +11,18 @@
 		"title": "คำเตือนเครดิตเหลือน้อย!",
 		"message": "ตรวจสอบว่าคุณสามารถเติมเครดิตฟรีหรือซื้อเพิ่มได้หรือไม่!"
 	},
-	"notLoggedInError": "ไม่สามารถดำเนินการตามคำขอได้ โปรดตรวจสอบว่าคุณได้เชื่อมต่อและเข้าสู่ระบบด้วยผู้ให้บริการที่เลือกแล้ว\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "การตอบสนองของโมเดลสิ้นสุดอย่างไม่คาดคิด (ไม่มีข้อความจากผู้ช่วย) อาจเป็นสัญญาณของการจำกัดอัตรา",
+		"notLoggedInError": "ไม่สามารถดำเนินการตามคำขอได้ โปรดตรวจสอบว่าคุณได้เชื่อมต่อและเข้าสู่ระบบด้วยผู้ให้บริการที่เลือกแล้ว\n\n{{error}}",
+		"maxCompletionTokens": "จำนวนโทเค็นการตอบสนองสูงสุดถูกใช้หมดแล้ว",
+		"disableApplyDiff": "หากข้อผิดพลาดนี้เกิดขึ้นซ้ำ กรุณาปิดใช้งาน Editing Through Diffs ในการตั้งค่าขั้นสูง",
+		"disableEditFile": "หากข้อผิดพลาดนี้เกิดขึ้นซ้ำ กรุณาปิดใช้งานฟีเจอร์ทดลอง Fast Apply"
+	},
+	"checkpoints": {
+		"nestedGitRepos": "ไม่สามารถใช้จุดตรวจสอบได้ เนื่องจากตรวจพบที่เก็บ Git ซ้อนกันที่: {{path}} กรุณาลบหรือย้ายที่เก็บ Git ที่ซ้อนกันเพื่อใช้ฟีเจอร์จุดตรวจสอบ หรือปิดใช้งานจุดตรวจสอบในการตั้งค่าเพื่อปิดคำเตือนนี้",
+		"protectedPaths": "ไม่สามารถใช้จุดตรวจสอบได้ใน {{workspaceDir}} กรุณาเปิดโฟลเดอร์ย่อยเป็นพื้นที่ทำงานเพื่อใช้ฟีเจอร์จุดตรวจสอบ หรือปิดใช้งานจุดตรวจสอบในการตั้งค่าเพื่อปิดคำเตือนนี้",
+		"dismissWarning": "ปิด"
+	},
 	"rules": {
 		"actions": {
 			"delete": "ลบ",
@@ -49,19 +60,60 @@
 		"generationFailed": "Kilo: สร้างข้อความคอมมิตไม่สำเร็จ: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: กำลังสร้างข้อความโดยใช้การเปลี่ยนแปลงที่ยังไม่ได้จัดเก็บ",
 		"activationFailed": "Kilo: เปิดใช้งานตัวสร้างข้อความไม่สำเร็จ: {{error}}",
-		"providerRegistered": "Kilo: ผู้ให้บริการข้อความคอมมิตลงทะเบียนแล้ว"
+		"providerRegistered": "Kilo: ผู้ให้บริการข้อความคอมมิตลงทะเบียนแล้ว",
+		"errors": {
+			"noProject": "ไม่มีโครงการที่ใช้งานได้",
+			"timeout": "คำขอหมดเวลาหลังจาก 30 วินาที",
+			"connectionFailed": "ไม่สามารถเชื่อมต่อกับส่วนขยาย Kilo Code",
+			"noChanges": "ไม่พบการเปลี่ยนแปลงที่จะคอมมิต",
+			"missingMessage": "ไม่ได้รับข้อความคอมมิตจากส่วนขยาย",
+			"invalidResponse": "ได้รับรูปแบบการตอบกลับที่ไม่ถูกต้องจากส่วนขยาย",
+			"noWorkspacePath": "ไม่สามารถระบุเส้นทางพื้นที่ทำงานสำหรับที่เก็บ Git",
+			"workspaceNotFound": "ไม่สามารถกำหนดเส้นทางพื้นที่ทำงานสำหรับพื้นที่เก็บข้อมูล Git ได้",
+			"processingError": "เกิดข้อผิดพลาดในการประมวลผลการสร้างข้อความคอมมิต: {{error}}"
+		},
+		"error": {
+			"title": "ข้อผิดพลาด",
+			"workspacePathNotFound": "ไม่สามารถระบุพาธของพื้นที่ทำงานสำหรับ Git repository ได้",
+			"unknown": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
+			"generationFailed": "การสร้างข้อความการคอมมิตล้มเหลว: {{error}}",
+			"processingFailed": "เกิดข้อผิดพลาดในการประมวลผลการสร้างข้อความคอมมิต: {{error}}"
+		},
+		"dialogs": {
+			"info": "ข้อความคอมมิตแบบ AI",
+			"error": "ข้อผิดพลาด",
+			"success": "สำเร็จ",
+			"title": "ข้อความคอมมิตโดย AI"
+		},
+		"progress": {
+			"analyzing": "กำลังวิเคราะห์การเปลี่ยนแปลง...",
+			"title": "กำลังสร้างข้อความคอมมิต",
+			"connecting": "กำลังเชื่อมต่อกับ Kilo Code...",
+			"generating": "กำลังสร้างข้อความคอมมิต..."
+		},
+		"ui": {
+			"generateButton": "สร้างข้อความ Commit",
+			"generateButtonTooltip": "สร้างข้อความคอมมิตโดยใช้ AI เพื่อวิเคราะห์การเปลี่ยนแปลงโค้ดของคุณ"
+		}
+	},
+	"seeNewChanges": {
+		"title": "กำลังแสดงการเปลี่ยนแปลงใหม่",
+		"checkpointsUnavailable": "ไม่สามารถแสดงการเปลี่ยนแปลงใหม่ได้ จุดตรวจสอบไม่พร้อมใช้งาน",
+		"noChanges": "ไม่สามารถแสดงการเปลี่ยนแปลงใหม่ได้ ไม่พบการเปลี่ยนแปลงใดๆ",
+		"error": "ไม่สามารถแสดงการเปลี่ยนแปลงใหม่ได้ เกิดข้อผิดพลาด"
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Inline Assist",
-			"disabled": "$(circle-slash) Kilo Inline Assist",
-			"warning": "$(warning) Kilo Inline Assist",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Inline Assist",
-				"disabled": "Kilo Code Inline Assist (ปิดใช้งาน)",
-				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Inline Assist",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
+				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
 				"lastCompletion": "คำแนะนำล่าสุด:",
-				"sessionTotal": "ค่าใช้จ่ายเซสชันทั้งหมด:",
+				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
+				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:"
 			},
 			"cost": {
@@ -69,7 +121,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "กำลังวิเคราะห์โค้ดของคุณ...",
@@ -79,7 +131,7 @@
 		},
 		"input": {
 			"title": "Kilo Code: งานด่วน",
-			"placeholder": "เช่น 'ปรับปรุงฟังก์ชันนี้ให้มีประสิทธิภาพมากขึ้น'"
+			"placeholder": "เช่น 'ปรับโครงสร้างฟังก์ชันนี้ให้มีประสิทธิภาพมากขึ้น'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: สร้างการแก้ไขที่แนะนำ",
@@ -87,7 +139,6 @@
 			"cancelSuggestions": "ยกเลิกการแก้ไขที่แนะนำ",
 			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำปัจจุบัน",
 			"applyAllSuggestions": "ใช้การแก้ไขที่แนะนำทั้งหมด",
-			"promptCodeSuggestion": "งานด่วน",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
@@ -96,30 +147,27 @@
 		"chatParticipant": {
 			"fullName": "Kilo Code Agent",
 			"name": "Agent",
-			"description": "ฉันสามารถช่วยคุณเกี่ยวกับงานด่วนและการแก้ไขที่แนะนำได้"
-		},
-		"messages": {
-			"provideCodeSuggestions": "กำลังให้คำแนะนำโค้ด..."
+			"description": "ฉันสามารถช่วยคุณในงานด่วนและการแก้ไขที่แนะนำได้"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Inline Assist ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot หากต้องการแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำในบรรทัดของ Copilot",
+			"message": "Kilo Code Autocomplete ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot เพื่อแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำแบบอินไลน์ของ Copilot",
 			"disableCopilot": "ปิดใช้งาน Copilot",
-			"disableInlineAssist": "ปิดใช้งาน Inline Assist"
+			"disableInlineAssist": "ปิดใช้งาน Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "กิโล: อธิบายคำสั่งที่คุณต้องการสร้าง",
+		"inputPrompt": "Kilo: อธิบายคำสั่งที่คุณต้องการสร้าง",
 		"noActiveTerminal": "Kilo: ไม่พบเทอร์มินัลที่ใช้งานอยู่ กรุณาเปิดเทอร์มินัลก่อน",
-		"generatingProgress": "กิโล: กำลังสร้างคำสั่งเทอร์มินัล...",
-		"commandGenerated": "กิโล: คำสั่งที่สร้างขึ้น: {{command}}",
+		"generatingProgress": "Kilo: กำลังสร้างคำสั่งเทอร์มินัล...",
+		"commandGenerated": "Kilo: คำสั่งที่สร้างขึ้น: {{command}}",
 		"inputPlaceholder": "เช่น ยุติกระบวนการที่ทำงานบนพอร์ต 3001, ค้นหาไฟล์ขนาดใหญ่, ฯลฯ",
-		"generationFailed": "กิโล: สร้างคำสั่งไม่สำเร็จ: {{error}}",
+		"generationFailed": "Kilo: สร้างคำสั่งไม่สำเร็จ: {{error}}",
 		"warningDialog": {
 			"title": "คำเตือนความปลอดภัยของเทอร์มินัล",
 			"okButton": "ฉันเข้าใจแล้ว",
 			"message": "ตรวจสอบคำสั่งที่สร้างขึ้นทั้งหมดอีกครั้งก่อนที่จะรันคำสั่งเหล่านั้น การดำเนินการในเทอร์มินัลไม่สามารถยกเลิกได้เสมอ — การรันคำสั่งที่ไม่ได้ตรวจสอบอาจส่งผลให้เกิดการสูญเสียข้อมูลหรือความเสียหายต่อระบบที่ไม่สามารถแก้ไขได้ ตรวจสอบและทำความเข้าใจคำสั่งอย่างครบถ้วนก่อนดำเนินการต่อไป!",
 			"cancelButton": "ยกเลิก"
 		},
-		"tipMessage": "กิโล: กด {{shortcut}} เพื่อสร้างคำสั่งเทอร์มินัล"
+		"tipMessage": "Kilo: กด {{shortcut}} เพื่อสร้างคำสั่งเทอร์มินัล"
 	}
 }

@@ -13,6 +13,12 @@
 			"placeholderMcp": "Cerca MCP...",
 			"placeholderMode": "Cerca modalità..."
 		},
+		"installed": {
+			"label": "Filtra per stato",
+			"all": "Tutti gli articoli",
+			"installed": "Installati",
+			"notInstalled": "Non installati"
+		},
 		"type": {
 			"label": "Filtra per tipo:",
 			"all": "Tutti i tipi",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Clicca sui tag per filtrare gli elementi"
 		},
 		"none": "Nessuno"
+	},
+	"sections": {
+		"organizationMcps": "MCP di {{organization}}",
+		"marketplace": "Mercato"
 	},
 	"type-group": {
 		"modes": "Modalità",

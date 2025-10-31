@@ -16,6 +16,11 @@
 		"title": "API Configuration",
 		"select": "Select which API configuration to use for this mode"
 	},
+	"organizationMode": {
+		"title": "Organization Mode",
+		"description": "This mode is provided by your organization and cannot be edited here. To modify this mode, please visit the Kilo Code Dashboard.",
+		"cannotEdit": "Organization modes cannot be edited"
+	},
 	"tools": {
 		"title": "Available Tools",
 		"builtInModesText": "Tools for built-in modes cannot be modified",
@@ -50,7 +55,7 @@
 		"title": "Mode-specific Custom Instructions (optional)",
 		"resetToDefault": "Reset to default",
 		"description": "Add behavioral guidelines specific to {{modeName}} mode.",
-		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace (.kilocoderules-{{slug}} is deprecated and will stop working soon)."
+		"loadFromFile": "Custom instructions specific to {{mode}} mode can also be loaded from the <span>.kilocode/rules-{{slug}}/</span> folder in your workspace or from the global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} and .clinerules-{{slug}} are deprecated and will stop working soon)."
 	},
 	"exportMode": {
 		"title": "Export Mode",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Custom Instructions for All Modes",
 		"description": "These instructions apply to all modes. They provide a base set of behaviors that can be enhanced by mode-specific instructions below. <0>Learn more</0>",
-		"loadFromFile": "Instructions can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace (.kilocoderules is deprecated and will stop working soon)."
+		"loadFromFile": "Instructions can also be loaded from the <span>.kilocode/rules/</span> folder in your workspace or from the global <0>.kilocode/rules/</0> (.kilocoderules and .clinerules are deprecated and will stop working soon)."
 	},
 	"systemPrompt": {
 		"preview": "Preview System Prompt",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Use currently selected API configuration",
 			"testPromptPlaceholder": "Enter a prompt to test the enhancement",
 			"previewButton": "Preview Prompt Enhancement",
-			"testEnhancement": "Test Enhancement"
+			"testEnhancement": "Test Enhancement",
+			"includeTaskHistory": "Include task history as context",
+			"includeTaskHistoryDescription": "When enabled, the last 10 messages from the current conversation will be included as context when enhancing prompts, helping to generate more relevant and context-aware suggestions."
 		},
 		"condense": {
 			"apiConfiguration": "API Configuration for Context Condensing",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Explain Terminal Command",
 				"description": "Get detailed explanations of terminal commands and their outputs. Available in the terminal context menu (right-click on selected terminal content)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generate terminal command",
+				"description": "Help generate terminal commands based on description."
 			},
 			"NEW_TASK": {
 				"label": "Start New Task",

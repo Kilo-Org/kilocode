@@ -11,7 +11,18 @@
 		"title": "Varování o nízkém kreditu!",
 		"message": "Zkontroluj, zda můžeš doplnit bezplatné kredity nebo si koupit další!"
 	},
-	"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "Odpověď modelu neočekávaně skončila (žádné zprávy asistenta). Může to být známka omezení počtu požadavků.",
+		"notLoggedInError": "Požadavek nelze dokončit, ujisti se, že jsi připojen a přihlášen u vybraného poskytovatele.\n\n{{error}}",
+		"maxCompletionTokens": "Bylo dosaženo maximálního počtu completion tokenů.",
+		"disableApplyDiff": "Pokud se tato chyba opakuje, zakažte prosím Úpravy pomocí rozdílů v pokročilém nastavení.",
+		"disableEditFile": "Pokud se tato chyba opakuje, zakažte prosím experimentální funkci Rychlé použití."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Checkpointy nejsou k dispozici, protože byl detekován vnořený Git repozitář na: {{path}}. Prosím odstraňte nebo přemístěte vnořené Git repozitáře pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",
+		"protectedPaths": "Checkpointy nejsou k dispozici v {{workspaceDir}}. Prosím otevřete podsložku jako workspace pro použití funkce checkpointů nebo deaktivujte checkpointy v nastavení pro potlačení tohoto varování.",
+		"dismissWarning": "Zavřít"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Smazat",
@@ -49,62 +60,99 @@
 		"generationFailed": "Kilo: Nepodařilo se vygenerovat zprávu commitu: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generování zprávy s použitím nenapojených změn",
 		"activationFailed": "Kilo: Aktivace generátoru zpráv se nezdařila: {{error}}",
-		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován"
+		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován",
+		"errors": {
+			"noProject": "Žádný projekt k dispozici",
+			"connectionFailed": "Nepodařilo se připojit k rozšíření Kilo Code",
+			"timeout": "Časový limit požadavku vypršel po 30 sekundách",
+			"invalidResponse": "Neplatný formát odpovědi obdržen od rozšíření",
+			"missingMessage": "Z rozšíření nebyla přijata žádná zpráva o commitu",
+			"noChanges": "Nenalezeny žádné změny k zapsání",
+			"noWorkspacePath": "Nebylo možné určit cestu pracovního prostoru pro Git repozitář",
+			"workspaceNotFound": "Nelze určit cestu k pracovnímu prostoru pro Git repozitář",
+			"processingError": "Chyba při zpracování generování zprávy o commitu: {{error}}"
+		},
+		"error": {
+			"title": "Chyba",
+			"workspacePathNotFound": "Nelze určit cestu pracovního prostoru pro Git repozitář",
+			"generationFailed": "Nepodařilo se vygenerovat zprávu o commitu: {{error}}",
+			"processingFailed": "Chyba při zpracování generování zprávy o commitu: {{error}}",
+			"unknown": "Neznámá chyba"
+		},
+		"dialogs": {
+			"info": "Zpráva commitu AI",
+			"success": "Úspěch",
+			"error": "Chyba",
+			"title": "Commit zpráva AI"
+		},
+		"progress": {
+			"title": "Generování Commit Message",
+			"connecting": "Připojování k Kilo Code...",
+			"analyzing": "Analyzuji změny...",
+			"generating": "Generuji zprávu commitu..."
+		},
+		"ui": {
+			"generateButton": "Vygenerovat zprávu pro commit",
+			"generateButtonTooltip": "Generuje zprávy pro commit pomocí umělé inteligence pro analýzu změn ve vašem kódu"
+		}
+	},
+	"seeNewChanges": {
+		"title": "Zobrazování nových změn",
+		"checkpointsUnavailable": "Nelze zobrazit nové změny, kontrolní body nejsou dostupné.",
+		"noChanges": "Nelze zobrazit nové změny, nebyly nalezeny žádné změny.",
+		"error": "Nelze zobrazit nové změny, došlo k chybě."
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
+			"tooltip": {
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (zakázáno)",
+				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
+				"lastCompletion": "Poslední návrh:",
+				"sessionTotal": "Celkové náklady relace:",
+				"provider": "Poskytovatel:",
+				"model": "Model:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
+			"title": "Kilo Code",
+			"analyzing": "Analyzuji tvůj kód...",
 			"generating": "Generuji navrhované úpravy...",
-			"analyzing": "Analyzuji váš kód...",
-			"processing": "Zpracování navržených úprav...",
-			"showing": "Zobrazuji navrhované úpravy...",
-			"title": "Kilo Code"
+			"processing": "Zpracovávám navrhované úpravy...",
+			"showing": "Zobrazuji navrhované úpravy..."
 		},
 		"input": {
 			"title": "Kilo Code: Rychlý úkol",
-			"placeholder": "např. \"přepracovat tuto funkci, aby byla efektivnější\""
+			"placeholder": "např. 'refaktoruj tuto funkci, aby byla efektivnější'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Generování navrhovaných úprav",
-			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
+			"generateSuggestions": "Kilo Code: Generovat navrhované úpravy",
 			"displaySuggestions": "Zobrazit navrhované úpravy",
 			"cancelSuggestions": "Zrušit navrhované úpravy",
+			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
 			"applyAllSuggestions": "Použít všechny navrhované úpravy",
-			"promptCodeSuggestion": "Rychlý úkol",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Navrhované úpravy"
 		},
 		"chatParticipant": {
-			"name": "Agent",
 			"fullName": "Kilo Code Agent",
-			"description": "Mohu vám pomoci s rychlými úkoly a navrženými úpravami."
+			"name": "Agent",
+			"description": "Mohu ti pomoci s rychlými úkoly a navrženými úpravami."
 		},
-		"messages": {
-			"provideCodeSuggestions": "Poskytuji návrhy kódu..."
-		},
-		"statusBar": {
-			"disabled": "$(circle-slash) Inline asistent Kilo",
-			"enabled": "$(sparkle) Kilo Inline Asistent",
-			"warning": "$(warning) Inline asistence Kilo",
-			"tooltip": {
-				"disabled": "Kilo Code Inline Assist (deaktivováno)",
-				"basic": "Inline asistent Kilo Code",
-				"tokenError": "Pro použití Inline Assist je nutné nastavit platný token",
-				"sessionTotal": "Celková cena sezení:",
-				"model": "Model:",
-				"lastCompletion": "Poslední návrh:"
-			},
-			"cost": {
-				"zero": "0,00 Kč",
-				"lessThanCent": "<0,01 $"
-			}
-		},
-		"toggleMessage": "Kilo Inline Assist {{status}}",
 		"incompatibilityExtensionPopup": {
-			"message": "Inline asistent Kilo Code je blokován kvůli konfliktu s GitHub Copilot. Pro vyřešení tohoto problému musíš deaktivovat inline návrhy Copilotu.",
-			"disableCopilot": "Deaktivovat Copilot",
-			"disableInlineAssist": "Deaktivovat Inline asistenta"
+			"message": "Kilo Code Autocomplete je blokováno konfliktem s GitHub Copilot. Pro vyřešení tohoto problému musíš zakázat inline návrhy Copilot.",
+			"disableCopilot": "Zakázat Copilot",
+			"disableInlineAssist": "Zakázat Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {

@@ -1,9 +1,10 @@
 // npx vitest run src/__tests__/CloudService.integration.test.ts
 
-import * as vscode from "vscode"
-import { CloudService } from "../CloudService"
-import { StaticSettingsService } from "../StaticSettingsService"
-import { CloudSettingsService } from "../CloudSettingsService"
+import type { ExtensionContext } from "vscode"
+
+import { CloudService } from "../CloudService.js"
+import { StaticSettingsService } from "../StaticSettingsService.js"
+import { CloudSettingsService } from "../CloudSettingsService.js"
 
 vi.mock("vscode", () => ({
 	ExtensionContext: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock("vscode", () => ({
 }))
 
 describe("CloudService Integration - Settings Service Selection", () => {
-	let mockContext: vscode.ExtensionContext
+	let mockContext: ExtensionContext
 
 	beforeEach(() => {
 		CloudService.resetInstance()
@@ -54,7 +55,7 @@ describe("CloudService Integration - Settings Service Selection", () => {
 					version: "1.0.0",
 				},
 			},
-		} as unknown as vscode.ExtensionContext
+		} as unknown as ExtensionContext
 	})
 
 	afterEach(() => {

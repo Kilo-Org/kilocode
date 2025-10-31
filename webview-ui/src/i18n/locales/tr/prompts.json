@@ -16,6 +16,11 @@
 		"title": "API Yapılandırması",
 		"select": "Bu mod için hangi API yapılandırmasının kullanılacağını seçin"
 	},
+	"organizationMode": {
+		"title": "Kuruluş Modu",
+		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Kilo Code Dashboard'u ziyaret et.",
+		"cannotEdit": "Kuruluş modları düzenlenemez"
+	},
 	"tools": {
 		"title": "Kullanılabilir Araçlar",
 		"builtInModesText": "Yerleşik modlar için araçlar değiştirilemez",
@@ -50,7 +55,7 @@
 		"title": "Moda özgü özel talimatlar (isteğe bağlı)",
 		"resetToDefault": "Varsayılana sıfırla",
 		"description": "{{modeName}} modu için özel davranış yönergeleri ekleyin.",
-		"loadFromFile": "{{mode}} moduna özgü özel talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen yüklenebilir (.kilocoderules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
+		"loadFromFile": "{{mode}} moduna özgü özel talimatlar, çalışma alanınızdaki <span>.kilocode/rules-{{slug}}/</span> klasöründen veya global <0>.kilocode/rules-{{slug}}/</0> klasöründen de yüklenebilir (.kilocoderules-{{slug}} ve .clinerules-{{slug}} kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
 	},
 	"exportMode": {
 		"title": "Modu Dışa Aktar",
@@ -60,7 +65,7 @@
 	"globalCustomInstructions": {
 		"title": "Tüm Modlar için Özel Talimatlar",
 		"description": "Bu talimatlar tüm modlara uygulanır. Aşağıdaki moda özgü talimatlarla geliştirilebilen temel davranış seti sağlarlar. <0>Daha fazla bilgi edinin</0>",
-		"loadFromFile": "Talimatlar ayrıca çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen de yüklenebilir (.kilocoderules ve .clinerules kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaklardır)."
+		"loadFromFile": "Talimatlar, çalışma alanınızdaki <span>.kilocode/rules/</span> klasöründen veya global <0>.kilocode/rules/</0> klasöründen de yüklenebilir (.kilocoderules ve .clinerules kullanımdan kaldırılmıştır ve yakında çalışmayı durduracaktır)."
 	},
 	"importMode": {
 		"selectLevel": "Bu modu nereye içe aktaracağınızı seçin:",
@@ -90,7 +95,9 @@
 			"useCurrentConfig": "Şu anda seçili API yapılandırmasını kullan",
 			"testPromptPlaceholder": "Geliştirmeyi test etmek için bir prompt girin",
 			"previewButton": "Prompt geliştirmesini önizle",
-			"testEnhancement": "Geliştirmeyi test et"
+			"testEnhancement": "Geliştirmeyi test et",
+			"includeTaskHistory": "Görev geçmişini bağlam olarak dahil et",
+			"includeTaskHistoryDescription": "Etkinleştirildiğinde, mevcut konuşmanın son 10 mesajı promptları geliştirirken bağlam olarak dahil edilecek ve daha alakalı ve bağlam farkında öneriler üretmeye yardımcı olacaktır."
 		},
 		"condense": {
 			"apiConfiguration": "Bağlam Yoğunlaştırma için API Yapılandırması",
@@ -133,6 +140,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Terminal Komutunu Açıkla",
 				"description": "Terminal komutları ve çıktıları hakkında ayrıntılı açıklamalar alın. Terminal bağlam menüsünde (seçili terminal içeriğine sağ tıklayın) kullanılabilir."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Terminal komutu oluştur",
+				"description": "Açıklamaya dayalı terminal komutları oluşturma konusunda yardım alın."
 			},
 			"NEW_TASK": {
 				"label": "Yeni Görev Başlat",

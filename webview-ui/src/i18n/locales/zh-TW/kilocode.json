@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "歡迎使用 Kilo Code！",
 		"introText1": "Kilo Code 是一個免費的開源 AI 程式設計代理。",
-		"introText2": "它適用於最新的 AI 模型，如 Claude 4 Sonnet、Gemini 2.5 Pro、GPT-4.1 以及 450 多個其他模型。",
-		"introText3": "建立免費帳戶，獲得價值 20 美元的 token，可用於任何 AI 模型。",
+		"introText2": "它適用於最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多個其他模型。",
+		"introText3": "建立免費帳戶，首次儲值即可獲得 20 美元獎勵額度。",
 		"ctaButton": "開始使用",
 		"manualModeButton": "使用你自己的 API 金鑰",
 		"alreadySignedUp": "已經註冊了？",
@@ -11,7 +11,21 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加額度",
-		"lowBalance": "你的 Kilo Code 餘額不足"
+		"lowBalance": "你的 Kilo Code 餘額不足",
+		"newOrganization": "將 Kilo 用於工作？"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 {{model}} 的測試期已結束！請切換到其他模型繼續使用。",
+		"notAllowedForTeam": "⚠️ 您的組織不允許使用 {{model}} 模型。請切換到其他模型繼續使用。",
+		"modelUnavailable": "⚠️ 模型 {{model}} 無法使用。請切換到其他模型繼續使用。",
+		"continueWith": "繼續使用 {{model}}",
+		"continue": "繼續"
+	},
+	"pricing": {
+		"costUnknown": "費用未知",
+		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
+		"freeModelsDescription": "免費模型可能有速率限制。使用下方連結來優化你的免費模型使用！",
+		"freeModelsLink": "探索免費模型選項"
 	},
 	"notifications": {
 		"toolRequest": "工具請求等待核准",
@@ -41,26 +55,66 @@
 			"login": "登入 Kilo Code",
 			"logout": "登出 Kilo Code",
 			"providerRouting": {
-				"title": "Kilo Code - OpenRouter 提供者路由",
-				"description": "Kilo Code 將請求路由到您模型的最佳可用提供者。預設情況下，請求會在頂級提供者之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定提供者。"
+				"title": "供應商路由",
+				"managedByOrganization": "管理組織層級供應商路由",
+				"createOrganization": "建立組織以管理供應商路由",
+				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。",
+				"sorting": {
+					"default": "預設供應商排序",
+					"price": "偏好較低價格的供應商",
+					"throughput": "偏好較高輸送量的供應商",
+					"latency": "偏好較低延遲的供應商"
+				},
+				"dataCollection": {
+					"default": "未設定資料政策",
+					"allowFree": "允許提示詞訓練（僅免費）",
+					"allow": "允許提示詞訓練",
+					"deny": "拒絕提示詞訓練",
+					"zdr": "零資料保留"
+				}
+			},
+			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+		},
+		"modelInfo": {
+			"contextWindow": "上下文視窗",
+			"providerBreakdown": "供應商價格與功能明細",
+			"averageKiloCodeCost": "這是過去一週 Kilo Code 使用此模型的平均實際花費。由於提示詞快取的使用，可能低於列出的價格。",
+			"table": {
+				"provider": "供應商",
+				"context": "端點可以處理這個數量的 Token（輸入 + 輸出）。",
+				"inputPrice": "提示每百萬 Token 的費用。",
+				"outputPrice": "完成每百萬 Token 的費用。",
+				"cacheReadPrice": "從快取讀取每百萬 Token 的費用。",
+				"cacheWritePrice": "寫入快取每百萬 Token 的費用。"
 			}
 		},
 		"terminal": {
 			"commandGenerator": {
 				"apiConfigId": {
-					"label": "API 配置",
-					"description": "选择用于生成终端命令的API配置。选择\"使用当前配置\"则使用您的默认设置。",
-					"current": "使用当前配置"
+					"label": "API 設定檔",
+					"description": "選擇用於產生終端命令的 API 設定檔。選擇\"使用目前設定檔\"則使用您的預設設定檔。",
+					"current": "使用目前設定檔"
 				},
-				"provider": "终端命令生成器提供程序"
+				"provider": "終端機命令產生器供應商"
 			}
 		}
+	},
+	"toolCallStyle": {
+		"title": "工具呼叫樣式",
+		"description": "選擇系統提示中工具呼叫的格式化方式。JSON 目前為實驗性功能，主要供有興趣參與開發的使用者使用。",
+		"automatic": "讓 Kilo 決定",
+		"xml": "XML",
+		"json": "JSON（實驗性）"
 	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要壓縮你的對話",
 			"condenseConversation": "壓縮對話"
-		}
+		},
+		"seeNewChanges": "顯示新變更",
+		"revertNewChanges": "還原新變更",
+		"confirmRevertChanges": "確認還原變更",
+		"cancelRevertChanges": "取消還原變更"
 	},
 	"newTaskPreview": {
 		"task": "任務"
@@ -71,13 +125,17 @@
 		"logOut": "登出",
 		"currentBalance": "目前餘額",
 		"loading": "載入中...",
+		"organization": "組織",
+		"personal": "個人",
 		"shop": {
 			"title": "購買點數",
 			"popular": "熱門",
 			"credits": "點數",
 			"action": "立即購買",
 			"viewAll": "檢視所有價格選項"
-		}
+		},
+		"detailedUsage": "詳細使用情況",
+		"createOrganization": "建立組織以追蹤詳細使用情況"
 	},
 	"docs": "文件",
 	"rules": {
@@ -153,46 +211,76 @@
 		}
 	},
 	"ghost": {
-		"title": "內聯輔助",
+		"title": "自動補全",
 		"settings": {
+			"triggers": "觸發器",
+			"keybindingDescription": "自動補全功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
+			"enableAutoTrigger": {
+				"label": "啟用自動補全",
+				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發自動補全。這對快速修正和建議很有用。"
+			},
+			"autoTriggerDelay": {
+				"label": "自動觸發延遲",
+				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
+			},
 			"enableQuickInlineTaskKeybinding": {
-				"label": "快速内联任务",
-				"description": "只需要快速修改？选择一些代码（或者不选！）并按下 Cmd+I。用简单的语言描述你的目标（\"创建一个带有这些属性的 React 组件\"，\"为这个函数添加错误处理\"），然后在你的编辑器中获取多个随时可用的建议。<DocsLink>查看快捷键</DocsLink>"
+				"label": "快速任務 ({{keybinding}})",
+				"description": "只需要快速變更？選取一些程式碼（或不選！）然後按 Cmd+I。用簡單的中文描述你的目標（「用這些 props 建立 React 元件」，「為這個函數新增錯誤處理」），在編輯器中直接取得多個即用建議。<DocsLink>檢視快速鍵</DocsLink>"
 			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "自动内联任务",
-				"description": "需要快速修复、完成或重构代码？Kilo 将使用周围的上下文提供即时改进，让您保持工作流畅。<DocsLink>查看快捷键</DocsLink>"
+			"enableSmartInlineTaskKeybinding": {
+				"label": "手動自動補全 ({{keybinding}})",
+				"description": "需要快速修正、補全或重構？Kilo 將使用周圍內容提供即時改進，保持你的工作流程。<DocsLink>檢視快速鍵</DocsLink>"
 			},
-			"provider": "提供者",
-			"apiConfigId": {
-				"label": "API 設定",
-				"current": "使用目前選擇的 API 設定",
-				"description": "為內聯輔D助提示選擇一個 API 設定，或者只使用目前選擇的設定"
-			},
-			"triggers": "触发器",
-			"keybindingDescription": "Inline Assist 功能通过命令触发。您可以在<DocsLink>此处配置键盘快捷键</DocsLink>。"
+			"keybindingNotFound": "未找到",
+			"noModelConfigured": "找不到合適的自動補全模型。請在 API 設定中配置提供者。",
+			"model": "模型",
+			"provider": "供應商"
 		}
 	},
 	"virtualProvider": {
-		"title": "虚拟配额回退提供方设置",
-		"description": "配置一个配置文件列表，每个配置文件都有自己的配额限制。当一个提供商的配额限制达到时，将使用列表中的下一个配置文件，直到没有剩余配置文件为止。",
-		"profileLabel": "档案 {{number}}",
-		"primaryProfileLabel": "个人资料 {{number}} (主要)",
-		"moveProfileUp": "将个人资料上移",
-		"moveProfileDown": "下移档案",
-		"removeProfile": "移除个人资料",
-		"selectProfilePlaceholder": "选择个人资料...",
-		"addProfile": "添加资料",
-		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
+		"title": "虛擬配額回滾供應商設定",
+		"description": "建立一個設定檔清單，每個設定檔都有各自的配額限制。當一個供應商的配額達到上限時，將使用清單中的下一個設定檔，直到沒有剩餘的設定檔為止。",
+		"profileLabel": "設定檔 {{number}}",
+		"primaryProfileLabel": "設定檔 {{number}} (主要)",
+		"moveProfileUp": "向上移動設定檔",
+		"moveProfileDown": "向下移動設定檔",
+		"removeProfile": "移除設定檔",
+		"selectProfilePlaceholder": "選擇設定檔...",
+		"addProfile": "新增設定檔",
+		"noProfilesAvailable": "沒有可用的設定檔。請先配置至少一個非虛擬供應商設定檔。",
 		"dangerZoneTitle": "危險區域",
 		"dangerZoneDescription": "這些操作具有破壞性且無法復原。",
 		"clearUsageData": "清除使用資料",
 		"confirmClearTitle": "確定嗎？",
-		"confirmClearDescription": "這將永久刪除虛擬提供者的所有儲存使用資料。此操作無法復原。",
-		"perMinute": "每分钟",
-		"tokensLabel": "代币",
+		"confirmClearDescription": "這將永久刪除虛擬供應商儲存的所有使用資料。此操作無法復原。",
+		"perMinute": "每分鐘",
+		"tokensLabel": "Tokens",
 		"perDay": "每天",
-		"perHour": "每小时",
-		"requestsLabel": "请求"
+		"perHour": "每小時",
+		"requestsLabel": "請求"
+	},
+	"pagination": {
+		"previous": "上一頁",
+		"next": "下一頁",
+		"page": "第 {{page}} 頁 / 共 {{count}} 頁"
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "當前模型不支援圖片。",
+		"maxImagesReached": "每條訊息最多可包含 20 張圖片。請刪除部分圖片以新增更多圖片。",
+		"imagesRemovedNoSupport": "已移除圖片，模型不支援。"
+	},
+	"memoryWarning": {
+		"message": "記憶體使用量已達 {{percentage}}%。請重新啟動您的 IDE 以防止當機。"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "这些MCP服务器由社区维护。点击<1>这里</1>编辑您自己的MCP设置。"
+		},
+		"modes": {
+			"description": "这些模式来自社区提供。点击<1>这里</1>编辑您自己的自定义模式。"
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "新功能：通过创建组织共享模式"
 	}
 }

@@ -1,5 +1,6 @@
 export const EXTERNAL_LINKS = {
 	GITHUB: "https://github.com/RooCodeInc/Roo-Code",
+	GITHUB_DISCUSSIONS: "https://github.com/RooCodeInc/Roo-Code/discussions",
 	DISCORD: "https://discord.gg/roocode",
 	REDDIT: "https://reddit.com/r/RooCode",
 	X: "https://x.com/roo_code",
@@ -18,6 +19,13 @@ export const EXTERNAL_LINKS = {
 	TUTORIALS: "https://docs.roocode.com/tutorial-videos",
 	MARKETPLACE: "https://marketplace.visualstudio.com/items?itemName=RooVeterinaryInc.roo-cline",
 	SECURITY: "https://trust.roocode.com",
+	EVALS: "https://roocode.com/evals",
+	BLOG: "https://blog.roocode.com",
+	OFFICE_HOURS_PODCAST: "https://www.youtube.com/@RooCodeYT/podcasts",
+	FAQ: "https://roocode.com/#faq",
+	TESTIMONIALS: "https://roocode.com/#testimonials",
+	CLOUD_APP_LOGIN: "https://app.roocode.com/sign-in",
+	CLOUD_APP_SIGNUP: "https://app.roocode.com/sign-up",
 }
 
 export const INTERNAL_LINKS = {

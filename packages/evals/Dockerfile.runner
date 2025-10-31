@@ -84,13 +84,13 @@ WORKDIR /roo/repo
 RUN mkdir -p \
   scripts \
   packages/build \
-  packages/cloud \
   packages/config-eslint \
   packages/config-typescript \
   packages/evals \
   packages/ipc \
   packages/telemetry \
   packages/types \
+  packages/cloud \
   src \
   webview-ui
 
@@ -99,13 +99,13 @@ COPY ./pnpm-lock.yaml                          ./
 COPY ./pnpm-workspace.yaml                     ./
 COPY ./scripts/bootstrap.mjs                   ./scripts/
 COPY ./packages/build/package.json             ./packages/build/
-COPY ./packages/cloud/package.json             ./packages/cloud/
 COPY ./packages/config-eslint/package.json     ./packages/config-eslint/
 COPY ./packages/config-typescript/package.json ./packages/config-typescript/
 COPY ./packages/evals/package.json             ./packages/evals/
 COPY ./packages/ipc/package.json               ./packages/ipc/
 COPY ./packages/telemetry/package.json         ./packages/telemetry/
 COPY ./packages/types/package.json             ./packages/types/
+COPY ./packages/cloud/package.json             ./packages/cloud/
 COPY ./src/package.json                        ./src/
 COPY ./webview-ui/package.json                 ./webview-ui/
 

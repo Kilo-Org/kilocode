@@ -11,6 +11,7 @@ mock/
 
 # Builds
 bin/
+bin-unpacked/
 *.vsix
 
 # Local prompts and rules
@@ -51,3 +52,17 @@ logs
 
 # Nix / Direnv
 .direnv
+
+# Exclude Conport Directory (MCP server)
+context_portal/
+
+# Submodules
+deps/vscode/*
+!deps/vscode/.git
+
+# Qdrant
+qdrant_storage/
+
+# allow multiple local clones with different workspaces with different colors
+# to make it easier to work on features in parallel
+*.code-workspace

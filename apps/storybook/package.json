@@ -3,7 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"generate-theme-styles": "node scripts/generate-vscode-themes.js",
+		"generate-theme-styles": "node ../playwright-e2e/scripts/extract-vscode-variables.js",
 		"generate-screenshot-stories": "node scripts/generate-playwright-screenshot-stories.js",
 		"storybook": "storybook dev -p 6006",
 		"build-storybook": "storybook build --webpack-stats-json",
@@ -14,7 +14,6 @@
 	"dependencies": {
 		"@roo-code/types": "workspace:^",
 		"@radix-ui/react-slot": "^1.1.2",
-		"@tanstack/react-query": "^5.62.7",
 		"@vscode/codicons": "^0.0.36",
 		"change-case": "^5.4.4",
 		"class-variance-authority": "^0.7.1",

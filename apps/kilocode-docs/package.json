@@ -1,0 +1,55 @@
+{
+	"name": "kilocode-docs",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"docusaurus": "docusaurus",
+		"start": "cross-env NODE_OPTIONS='-r dotenv/config' docusaurus start --host 0.0.0.0",
+		"build": "cross-env NODE_OPTIONS='-r dotenv/config' docusaurus build",
+		"swizzle": "docusaurus swizzle",
+		"deploy": "docusaurus deploy",
+		"clear": "docusaurus clear",
+		"serve": "docusaurus serve --host 0.0.0.0",
+		"write-translations": "docusaurus write-translations",
+		"write-heading-ids": "docusaurus write-heading-ids",
+		"typecheck": "tsc",
+		"prepare": "husky"
+	},
+	"dependencies": {
+		"@docusaurus/core": "^3.8.1",
+		"@docusaurus/plugin-client-redirects": "^3.8.1",
+		"@docusaurus/preset-classic": "^3.8.1",
+		"@easyops-cn/docusaurus-search-local": "^0.48.5",
+		"@mdx-js/react": "^3.0.0",
+		"@vscode/codicons": "^0.0.36",
+		"clsx": "^2.0.0",
+		"posthog-docusaurus": "^2.0.4",
+		"prism-react-renderer": "^2.3.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@docusaurus/module-type-aliases": "^3.8.1",
+		"@docusaurus/tsconfig": "^3.8.1",
+		"@docusaurus/types": "^3.8.1",
+		"cross-env": "^10.0.0",
+		"dotenv": "^16.4.7",
+		"husky": "^9.1.7",
+		"typescript": "~5.6.2"
+	},
+	"browserslist": {
+		"production": [
+			">0.5%",
+			"not dead",
+			"not op_mini all"
+		],
+		"development": [
+			"last 3 chrome version",
+			"last 3 firefox version",
+			"last 5 safari version"
+		]
+	},
+	"engines": {
+		"node": ">=18.0"
+	}
+}

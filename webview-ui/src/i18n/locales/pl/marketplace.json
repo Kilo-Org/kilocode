@@ -13,6 +13,12 @@
 			"placeholderMcp": "Szukaj MCPs...",
 			"placeholderMode": "Szukaj trybów..."
 		},
+		"installed": {
+			"label": "Filtruj według statusu",
+			"all": "Wszystkie elementy",
+			"installed": "Zainstalowane",
+			"notInstalled": "Niezainstalowane"
+		},
 		"type": {
 			"label": "Filtruj według typu:",
 			"all": "Wszystkie typy",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Kliknij tagi, aby filtrować elementy"
 		},
 		"none": "Brak"
+	},
+	"sections": {
+		"organizationMcps": "MCPs {{organization}}",
+		"marketplace": "Rynek"
 	},
 	"type-group": {
 		"modes": "Tryby",

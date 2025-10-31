@@ -16,6 +16,7 @@ import { CodeIndexManager } from "../services/code-index/manager"
 import { importSettingsWithFeedback } from "../core/config/importExport"
 import { MdmService } from "../services/mdm/MdmService"
 import { t } from "../i18n"
+import { getAppUrl } from "@roo-code/types" // kilocode_change
 import { generateTerminalCommand } from "../utils/terminalCommandGenerator" // kilocode_change
 
 /**
@@ -75,16 +76,16 @@ export const registerCommands = (options: RegisterCommandOptions) => {
 
 const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Record<CommandId, any> => ({
 	activationCompleted: () => {},
-	accountButtonClicked: () => {
+	cloudButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
 
 		if (!visibleProvider) {
 			return
 		}
 
-		TelemetryService.instance.captureTitleButtonClicked("account")
+		TelemetryService.instance.captureTitleButtonClicked("cloud")
 
-		visibleProvider.postMessageToWebview({ type: "action", action: "accountButtonClicked" })
+		visibleProvider.postMessageToWebview({ type: "action", action: "cloudButtonClicked" })
 	},
 	plusButtonClicked: async () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
@@ -96,8 +97,11 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		TelemetryService.instance.captureTitleButtonClicked("plus")
 
 		await visibleProvider.removeClineFromStack()
-		await visibleProvider.postStateToWebview()
+		await visibleProvider.refreshWorkspace()
 		await visibleProvider.postMessageToWebview({ type: "action", action: "chatButtonClicked" })
+		// Send focusInput action immediately after chatButtonClicked
+		// This ensures the focus happens after the view has switched
+		await visibleProvider.postMessageToWebview({ type: "action", action: "focusInput" })
 	},
 	mcpButtonClicked: () => {
 		const visibleProvider = getVisibleProviderOrLog(outputChannel)
@@ -162,7 +166,7 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 		visibleProvider.postMessageToWebview({ type: "action", action: "profileButtonClicked" })
 	},
 	helpButtonClicked: () => {
-		vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai"))
+		vscode.env.openExternal(vscode.Uri.parse(getAppUrl()))
 	},
 	// kilocode_change end
 	marketplaceButtonClicked: () => {
@@ -253,7 +257,39 @@ const getCommandsMap = ({ context, outputChannel }: RegisterCommandOptions): Rec
 			contextProxy: visibleProvider.contextProxy,
 		})
 	},
+	// Handle external URI - used by JetBrains plugin to forward auth tokens
+	handleExternalUri: async (uriString: string) => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+		if (!visibleProvider) {
+			return
+		}
+
+		try {
+			// Parse the URI string and create a VSCode URI object
+			const uri = vscode.Uri.parse(uriString)
+
+			// Import and use the existing handleUri function
+			const { handleUri } = await import("./handleUri")
+			await handleUri(uri)
+
+			outputChannel.appendLine(`Successfully handled external URI: ${uriString}`)
+		} catch (error) {
+			outputChannel.appendLine(`Error handling external URI: ${uriString}, error: ${error}`)
+		}
+	},
 	// kilocode_change end
+	toggleAutoApprove: async () => {
+		const visibleProvider = getVisibleProviderOrLog(outputChannel)
+
+		if (!visibleProvider) {
+			return
+		}
+
+		visibleProvider.postMessageToWebview({
+			type: "action",
+			action: "toggleAutoApprove",
+		})
+	},
 })
 
 export const openClineInNewTab = async ({ context, outputChannel }: Omit<RegisterCommandOptions, "provider">) => {
@@ -273,7 +309,7 @@ export const openClineInNewTab = async ({ context, outputChannel }: Omit<Registe
 		mdmService = undefined
 	}
 
-	const tabProvider = new ClineProvider(context, outputChannel, "editor", contextProxy, codeIndexManager, mdmService)
+	const tabProvider = new ClineProvider(context, outputChannel, "editor", contextProxy, mdmService)
 	const lastCol = Math.max(...vscode.window.visibleTextEditors.map((editor) => editor.viewColumn || 0))
 
 	// Check if there are any visible text editors, otherwise open a new group

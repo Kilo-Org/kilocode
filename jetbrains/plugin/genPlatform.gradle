@@ -1,0 +1,180 @@
+// SPDX-FileCopyrightText: 2025 Weibo, Inc.
+//
+// SPDX-License-Identifier: Apache-2.0
+
+import java.nio.file.*
+import java.security.MessageDigest
+
+
+tasks.register('genPlatform', Zip) {
+    doFirst {
+        // Delete existing platform.zip right before regeneration
+        def zipFile = new File(project.projectDir, "platform.zip")
+        if (zipFile.exists()) {
+            zipFile.delete()
+            println "Deleted existing platform.zip before regeneration"
+        }
+        
+        // Download platform files only when task actually executes
+        download(project)
+    }
+    
+    from(new File(project.buildDir, "genPlatform/gen"))
+    into("")
+    destinationDirectory = project.projectDir
+    archiveFileName = "platform.zip"
+}
+def download(Project project){
+
+    def version = project.findProperty("vscodeVersion")
+    String windows_x64 = "https://update.code.visualstudio.com/${version}/win32-x64-archive/stable"
+    String mac_x64 = "https://update.code.visualstudio.com/${version}/darwin/stable"
+    String mac_arm64  = "https://update.code.visualstudio.com/${version}/darwin-arm64/stable"
+    String linux_x64 = "https://update.code.visualstudio.com/${version}/linux-x64/stable"
+    // To support other platforms, need to synchronously modify the initPlatfromFiles method in WecoderPlugin
+
+    def list = [] // node_module directories for multiple platforms
+
+    def projectBuild = new File(project.buildDir,"genPlatform")
+    projectBuild.mkdirs();
+    println "Downloading Windows platform files"
+    def windowsZipFile = new File(projectBuild,"windows-x64.zip")
+    if (!windowsZipFile.exists()) {
+        windowsZipFile << new URL(windows_x64).openStream()
+    } else {
+        println "Windows platform file already exists, skipping download"
+    }
+
+    def windowsDir = new File(projectBuild, "windows-x64")
+    copy {
+        from(zipTree(new File(projectBuild, "windows-x64.zip")))
+        into(windowsDir)
+    }
+    new File(windowsDir, "resources/app/node_modules").renameTo( new File(windowsDir, "resources/app/windows-x64"))
+    list << new File(windowsDir, "resources/app/windows-x64")
+
+    println "Downloading Mac x64 platform files"
+    def macX64ZipFile = new File(projectBuild,"darwin-x64.zip")
+    if (!macX64ZipFile.exists()) {
+        macX64ZipFile << new URL(mac_x64).openStream()
+    } else {
+        println "Mac x64 platform file already exists, skipping download"
+    }
+
+    def macX64Dir = new File(projectBuild, "darwin-x64")
+    copy {
+        from(zipTree(new File(projectBuild, "darwin-x64.zip")))
+        into(macX64Dir)
+    }
+    new File(macX64Dir, "Visual Studio Code.app/Contents/Resources/app/node_modules").renameTo(new File(macX64Dir, "Visual Studio Code.app/Contents/Resources/app/darwin-x64"))
+    list << new File(macX64Dir, "Visual Studio Code.app/Contents/Resources/app/darwin-x64")
+
+    println "Downloading Mac arm64 platform files"
+    def macArm64ZipFile = new File(projectBuild,"darwin-arm64.zip")
+    if (!macArm64ZipFile.exists()) {
+        macArm64ZipFile << new URL(mac_arm64).openStream()
+    } else {
+        println "Mac arm64 platform file already exists, skipping download"
+    }
+
+    def macArm64Dir = new File(projectBuild, "darwin-arm64")
+    copy {
+        from(zipTree(new File(projectBuild, "darwin-arm64.zip")))
+        into(macArm64Dir)
+    }
+    new File(macArm64Dir, "Visual Studio Code.app/Contents/Resources/app/node_modules").renameTo(new File(macArm64Dir, "Visual Studio Code.app/Contents/Resources/app/darwin-arm64"))
+    list << new File(macArm64Dir, "Visual Studio Code.app/Contents/Resources/app/darwin-arm64")
+
+    println "Downloading Linux x64 platform files"
+    def linuxZipFile = new File(projectBuild,"linux-x64.zip")
+    if (!linuxZipFile.exists()) {
+        linuxZipFile << new URL(linux_x64).openStream()
+    } else {
+        println "Linux x64 platform file already exists, skipping download"
+    }
+
+    def linuxDir = new File(projectBuild, "linux-x64")
+    copy {
+        from(tarTree(resources.gzip(projectBuild.toPath().resolve("linux-x64.zip"))))
+        into(linuxDir)
+    }
+    new File(linuxDir, "VSCode-linux-x64/resources/app/node_modules").renameTo(new File(linuxDir, "VSCode-linux-x64/resources/app/linux-x64"))
+    list << new File(linuxDir, "VSCode-linux-x64/resources/app/linux-x64")
+
+    def targetDir = new File(projectBuild, "gen/node_modules")
+    def txtFile = new File(projectBuild, "gen/platform.txt")
+    mergeDirectories(list, targetDir,txtFile)
+}
+
+
+def mergeDirectories(List<File> dirs, File targetDir, File outputFile = null) {
+    def outputContent = new StringBuilder()
+    if (!targetDir.exists()) {
+        targetDir.mkdirs()
+    }
+
+    // Collect all file paths (relative paths), ignore .DS_Store
+    def allFiles = []
+    dirs.each { dir ->
+        if (dir.exists()) {
+            dir.eachFileRecurse { file ->
+                if (file.isFile() && file.name != ".DS_Store") {  // Ignore .DS_Store
+                    def relativePath = dir.toPath().relativize(file.toPath()).toString()
+                    allFiles << [dir: dir, file: file, relativePath: relativePath]
+                }
+                
+            }
+        }
+    }
+
+    // Group by relative path
+    def groupedFiles = allFiles.groupBy { it.relativePath }
+
+    groupedFiles.each { relativePath, entries ->
+        def targetFile = new File(targetDir, relativePath)
+        targetFile.parentFile.mkdirs()
+
+        if (entries.size() == 1) {
+            // Unique file, copy directly
+            Files.copy(entries[0].file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } else {
+            // Check if all file contents are the same
+            def uniqueHashes = entries.collect { entry ->
+                def file = entry.file
+                def digest = MessageDigest.getInstance("SHA-256")
+                file.withInputStream { is ->
+                    byte[] buffer = new byte[8192]
+                    int read
+                    while ((read = is.read(buffer)) != -1) {
+                        digest.update(buffer, 0, read)
+                    }
+                }
+                def hash = digest.digest().encodeHex().toString()
+                [hash: hash, file: file, dir: entry.dir]
+            }.groupBy { it.hash }
+
+            if (uniqueHashes.size() == 1) {
+                // Same content, keep one copy
+                Files.copy(entries[0].file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            } else {
+                // Different content, add directory name as suffix
+                if (outputFile) {
+                    outputContent.append("$relativePath\n")
+                } else {
+                    println "$relativePath"
+                }
+                uniqueHashes.each { hash, files ->
+                    def sourceFile = files[0].file
+                    def dirName = files[0].dir.name
+                    def newName = targetFile.name + dirName
+                    def conflictFile = new File(targetFile.parentFile, newName)
+                    Files.copy(sourceFile.toPath(), conflictFile.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                }
+            }
+        }
+    }
+    if (outputFile && outputContent.length() > 0) {
+        outputFile.parentFile.mkdirs()
+        outputFile.text = outputContent.toString()
+    }
+}

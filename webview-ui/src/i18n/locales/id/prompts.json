@@ -16,6 +16,11 @@
 		"title": "Konfigurasi API",
 		"select": "Pilih konfigurasi API mana yang akan digunakan untuk mode ini"
 	},
+	"organizationMode": {
+		"title": "Mode Organisasi",
+		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Kilo Code Dashboard.",
+		"cannotEdit": "Mode organisasi tidak dapat diedit"
+	},
 	"tools": {
 		"title": "Tools yang Tersedia",
 		"builtInModesText": "Tools untuk mode bawaan tidak dapat dimodifikasi",
@@ -50,7 +55,7 @@
 		"title": "Instruksi Kustom Khusus Mode (opsional)",
 		"resetToDefault": "Reset ke default",
 		"description": "Tambahkan panduan perilaku khusus untuk mode {{modeName}}.",
-		"loadFromFile": "Instruksi kustom khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di workspace Anda (.kilocodemodes-{{slug}} dan .clinerules-{{slug}} sudah deprecated dan akan segera berhenti bekerja)."
+		"loadFromFile": "Instruksi khusus untuk mode {{mode}} juga dapat dimuat dari folder <span>.kilocode/rules-{{slug}}/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} dan .clinerules-{{slug}} sudah usang dan akan segera berhenti berfungsi)."
 	},
 	"exportMode": {
 		"title": "Ekspor Mode",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Instruksi Kustom untuk Semua Mode",
 		"description": "Instruksi ini berlaku untuk semua mode. Mereka menyediakan set dasar perilaku yang dapat ditingkatkan oleh instruksi khusus mode di bawah. <0>Pelajari lebih lanjut</0>",
-		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di workspace Anda (.kilocoderules dan .clinerules sudah deprecated dan akan segera berhenti bekerja)."
+		"loadFromFile": "Instruksi juga dapat dimuat dari folder <span>.kilocode/rules/</span> di ruang kerja Anda atau dari global <0>.kilocode/rules/</0> (.kilocoderules dan .clinerules sudah usang dan akan segera berhenti berfungsi)."
 	},
 	"systemPrompt": {
 		"preview": "Pratinjau System Prompt",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Gunakan konfigurasi API yang sedang dipilih",
 			"testPromptPlaceholder": "Masukkan prompt untuk menguji peningkatan",
 			"previewButton": "Pratinjau Peningkatan Prompt",
-			"testEnhancement": "Uji Peningkatan"
+			"testEnhancement": "Uji Peningkatan",
+			"includeTaskHistory": "Sertakan riwayat tugas sebagai konteks",
+			"includeTaskHistoryDescription": "Ketika diaktifkan, 10 pesan terakhir dari percakapan saat ini akan disertakan sebagai konteks saat meningkatkan prompt, membantu menghasilkan saran yang lebih relevan dan sadar konteks."
 		},
 		"condense": {
 			"apiConfiguration": "Konfigurasi API untuk Peringkasan Konteks",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Jelaskan Perintah Terminal",
 				"description": "Dapatkan penjelasan detail tentang perintah terminal dan outputnya. Tersedia di menu konteks terminal (klik kanan pada konten terminal yang dipilih)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Buat Perintah Terminal",
+				"description": "Bantu membuat perintah terminal berdasarkan deskripsi."
 			},
 			"NEW_TASK": {
 				"label": "Mulai Tugas Baru",

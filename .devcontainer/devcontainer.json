@@ -1,0 +1,58 @@
+{
+	"name": "Kilo Code Development",
+	"dockerFile": "Dockerfile",
+	"context": "..",
+
+	"features": {
+		"ghcr.io/devcontainers/features/git:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"csstools.postcss",
+				"bradlc.vscode-tailwindcss",
+				"connor4312.esbuild-problem-matchers",
+				"yoavbls.pretty-ts-errors",
+				"ms-vscode.vscode-typescript-next"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "bash",
+				"typescript.preferences.includePackageJsonAutoImports": "auto",
+				"eslint.workingDirectories": ["src", "webview-ui"],
+				"prettier.requireConfig": true,
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.fixAll.eslint": "explicit"
+				}
+			}
+		}
+	},
+
+	"forwardPorts": [3000, 5173, 8080],
+	"portsAttributes": {
+		"3000": {
+			"label": "Dev Server",
+			"onAutoForward": "notify"
+		},
+		"5173": {
+			"label": "Vite Dev Server",
+			"onAutoForward": "notify"
+		},
+		"8080": {
+			"label": "Other Services",
+			"onAutoForward": "silent"
+		}
+	},
+
+	"postCreateCommand": "bash .devcontainer/setup.sh",
+	"postStartCommand": "echo '🚀 Kilo Code devcontainer is ready!'",
+
+	"remoteUser": "root",
+	"containerUser": "root",
+
+	"mounts": ["source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached"]
+}

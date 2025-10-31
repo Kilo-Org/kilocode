@@ -1,4 +1,5 @@
-import { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
+
 import { RouterModels } from "@roo/api"
 
 import { getModelValidationError, validateApiConfigurationExcludingModelErrors } from "../validate"
@@ -56,6 +57,15 @@ describe("Model Validation Functions", () => {
 		litellm: {},
 		ollama: {},
 		lmstudio: {},
+		deepinfra: {},
+		"io-intelligence": {},
+		"vercel-ai-gateway": {},
+		huggingface: {},
+		// kilocode_change start
+		ovhcloud: {},
+		chutes: {},
+		gemini: {},
+		// kilocode_change end
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {
@@ -202,6 +212,26 @@ describe("Model Validation Functions", () => {
 				restrictiveOrganization,
 			)
 			expect(result).toBeUndefined() // Should exclude model-specific org errors
+		})
+
+		it("returns undefined for valid IO Intelligence model", () => {
+			const config: ProviderSettings = {
+				apiProvider: "io-intelligence",
+				glamaModelId: "valid-model",
+			}
+
+			const result = getModelValidationError(config, mockRouterModels, allowAllOrganization)
+			expect(result).toBeUndefined()
+		})
+
+		it("returns error for invalid IO Intelligence model", () => {
+			const config: ProviderSettings = {
+				apiProvider: "io-intelligence",
+				glamaModelId: "invalid-model",
+			}
+
+			const result = getModelValidationError(config, mockRouterModels, allowAllOrganization)
+			expect(result).toBeUndefined()
 		})
 	})
 })

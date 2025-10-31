@@ -1,4 +1,4 @@
-// kilocode_change: Morph fast apply -- file added
+// kilocode_change: Fast Apply -- file added
 
 import path from "path"
 import { promises as fs } from "fs"
@@ -9,10 +9,43 @@ import { formatResponse } from "../prompts/responses"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { fileExistsAtPath } from "../../utils/fs"
 import { getReadablePath } from "../../utils/path"
-import { Experiments, ProviderSettings } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "../../utils/kilocode-token"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { DEFAULT_HEADERS } from "../../api/providers/constants"
 import { TelemetryService } from "@roo-code/telemetry"
+import { type ClineProviderState } from "../webview/ClineProvider"
+import { ClineSayTool } from "../../shared/ExtensionMessage"
+import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
+
+const FAST_APPLY_MODEL_PRICING = {
+	"morph-v3-fast": {
+		inputPrice: 0.8, // $0.8 per 1M tokens
+		outputPrice: 1.2, // $1.2 per 1M tokens
+	},
+	"morph-v3-large": {
+		inputPrice: 0.9, // $0.9 per 1M tokens
+		outputPrice: 1.9, // $1.9 per 1M tokens
+	},
+	"relace-apply-3": {
+		inputPrice: 0.85, // $0.85 per 1M tokens
+		outputPrice: 1.25, // $1.25 per 1M tokens
+	},
+	auto: {
+		inputPrice: 0.9, // Default to morph-v3-large pricing
+		outputPrice: 1.9,
+	},
+} as const
+
+function calculateFastApplyCost(inputTokens: number, outputTokens: number, model: string): number {
+	const normalizedModel = model.replace(/^(morph|relace)\//, "") // Remove provider prefix if present
+	const pricing =
+		FAST_APPLY_MODEL_PRICING[normalizedModel as keyof typeof FAST_APPLY_MODEL_PRICING] ||
+		FAST_APPLY_MODEL_PRICING["auto"]
+
+	const inputCost = (pricing.inputPrice / 1_000_000) * inputTokens
+	const outputCost = (pricing.outputPrice / 1_000_000) * outputTokens
+
+	return inputCost + outputCost
+}
 
 async function validateParams(
 	cline: Task,
@@ -57,20 +90,24 @@ export async function editFileTool(
 	const instructions: string | undefined = block.params.instructions
 	const code_edit: string | undefined = block.params.code_edit
 
+	let fileExists = true
 	try {
+		if (block.partial && (!target_file || instructions === undefined)) {
+			// wait so we can determine if it's a new file or editing an existing file
+			return
+		}
+		fileExists = await fileExistsAtPath(path.resolve(cline.cwd, target_file ?? ""))
+
 		// Handle partial tool use
 		if (block.partial) {
 			const partialMessageProps = {
-				tool: "editFile" as const,
+				tool: fileExists ? "editedExistingFile" : "newFileCreated",
 				path: getReadablePath(cline.cwd, removeClosingTag("target_file", target_file)),
-				instructions: removeClosingTag("instructions", instructions),
-				codeEdit: removeClosingTag("code_edit", code_edit),
-			}
-			try {
-				await cline.ask("tool", JSON.stringify(partialMessageProps), block.partial)
-			} catch (error) {
-				TelemetryService.instance.captureException(error, { context: "editFileTool" })
-			}
+				content: removeClosingTag("code_edit", code_edit),
+			} satisfies ClineSayTool
+			await cline.ask("tool", JSON.stringify(partialMessageProps), block.partial).catch(() => {
+				// Roo tools ignore exceptions as well here
+			})
 			return
 		}
 
@@ -88,18 +125,6 @@ export async function editFileTool(
 		const absolutePath = path.resolve(cline.cwd, targetFile)
 		const relPath = getReadablePath(cline.cwd, absolutePath)
 
-		// Check if file exists
-		if (!(await fileExistsAtPath(absolutePath))) {
-			cline.consecutiveMistakeCount++
-			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`The file ${relPath} does not exist. Use write_to_file to create new files, or make sure the file path is correct.`,
-				),
-			)
-			return
-		}
-
 		// Check if file access is allowed
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
 		if (!accessAllowed) {
@@ -109,26 +134,26 @@ export async function editFileTool(
 		}
 
 		// Read the original file content
-		const originalContent = await fs.readFile(absolutePath, "utf-8")
+		const originalContent = fileExists ? await fs.readFile(absolutePath, "utf-8") : ""
 
-		// Check if Morph is available
-		const morphApplyResult = await applyMorphEdit(originalContent, editInstructions, editCode, cline)
+		// Check if Fast Apply is available
+		const morphApplyResult = fileExists
+			? await applyFastApplyEdit(originalContent, editInstructions, editCode, cline, relPath)
+			: undefined
 
-		if (!morphApplyResult.success) {
+		if (morphApplyResult && !morphApplyResult.success) {
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("edit_file")
-			pushToolResult(
-				formatResponse.toolError(
-					`Failed to apply edit using Morph: ${morphApplyResult.error}. Consider using apply_diff tool instead.`,
-				),
-			)
+			const error = `Failed to apply edit using Fast Apply. Please disable the Fast Apply experimental feature if this error persists. ${morphApplyResult.error}`
+			cline.say("error", error)
+			pushToolResult(formatResponse.toolError(error))
 			return
 		}
 
-		const newContent = morphApplyResult.result!
+		const newContent = morphApplyResult?.result ?? code_edit ?? ""
 
 		// Show the diff and ask for approval
-		cline.diffViewProvider.editType = "modify"
+		cline.diffViewProvider.editType = fileExists ? "modify" : "create"
 		await cline.diffViewProvider.open(relPath)
 
 		// Stream the content to show the diff
@@ -139,18 +164,25 @@ export async function editFileTool(
 		const approved = await askApproval(
 			"tool",
 			JSON.stringify({
-				tool: "editedExistingFile",
+				tool: fileExists ? "editedExistingFile" : "newFileCreated",
 				path: relPath,
 				isProtected: cline.rooProtectedController?.isWriteProtected(relPath) || false,
-				instructions: editInstructions,
-			}),
+				content: editCode,
+				fastApplyResult: morphApplyResult
+					? {
+							description: morphApplyResult.description,
+							tokensIn: morphApplyResult.tokensIn,
+							tokensOut: morphApplyResult.tokensOut,
+							cost: morphApplyResult.cost,
+						}
+					: undefined,
+			} satisfies ClineSayTool),
 			undefined,
 			cline.rooProtectedController?.isWriteProtected(relPath) || false,
 		)
 
 		if (!approved) {
 			await cline.diffViewProvider.revertChanges()
-			pushToolResult(formatResponse.toolResult("Edit cancelled by user."))
 			return
 		}
 
@@ -167,9 +199,12 @@ export async function editFileTool(
 		pushToolResult(message)
 
 		await cline.diffViewProvider.reset()
+
+		// Process any queued messages after file edit completes
+		cline.processQueuedMessages()
 	} catch (error) {
 		TelemetryService.instance.captureException(error, { context: "editFileTool" })
-		await handleError("editing file with Morph", error as Error)
+		await handleError("editing file with Fast Apply", error as Error)
 		await cline.diffViewProvider.reset()
 	}
 }
@@ -178,36 +213,65 @@ interface MorphApplyResult {
 	success: boolean
 	result?: string
 	error?: string
+	description?: string
+	tokensIn?: number
+	tokensOut?: number
+	cost?: number
 }
 
-async function applyMorphEdit(
+async function applyFastApplyEdit(
 	originalContent: string,
 	instructions: string,
 	codeEdit: string,
 	cline: Task,
+	filePath: string,
 ): Promise<MorphApplyResult> {
 	try {
 		// Get the current API configuration
 		const provider = cline.providerRef.deref()
 		if (!provider) {
-			return { success: false, error: "No API provider available" }
+			return { success: false, error: "No API provider available for Fast Apply" }
 		}
 
 		const state = await provider.getState()
 
-		// Check if user has Morph enabled via OpenRouter or direct API
-		const morphConfig = await getMorphConfiguration(state.experiments, state.apiConfiguration)
+		// Check if user has Fast Apply enabled via OpenRouter or direct API
+		const morphConfig = await getFastApplyConfiguration(state)
 		if (!morphConfig.available) {
-			return { success: false, error: morphConfig.error || "Morph is not available" }
+			return { success: false, error: morphConfig.error || "Fast Apply is not available" }
 		}
 
+		// Create a verbose request description similar to regular API requests
+		const fileName = filePath ? path.basename(filePath) : "unknown file"
+		const truncatedCodeEdit = codeEdit.length > 500 ? codeEdit.substring(0, 500) + "\n...(truncated)" : codeEdit
+		const description = [
+			`Fast Apply Edit (${morphConfig.model})`,
+			``,
+			`File: ${fileName}`,
+			`Instructions: ${instructions}`,
+			``,
+			`Code Edit:`,
+			"```",
+			truncatedCodeEdit,
+			"```",
+			``,
+			`Original Content: ${originalContent.length} characters`,
+		].join("\n")
+
+		const kiloTesterSuppressUntil = state.apiConfiguration.kilocodeTesterWarningsDisabledUntil
+		const kiloTesterSuppress =
+			kiloTesterSuppressUntil && kiloTesterSuppressUntil > Date.now() ? { [X_KILOCODE_TESTER]: "SUPPRESS" } : {}
 		// Create OpenAI client for Morph API
 		const client = new OpenAI({
 			apiKey: morphConfig.apiKey,
 			baseURL: morphConfig.baseUrl,
 			defaultHeaders: {
-				"X-KiloCode-TaskId": cline.taskId,
 				...DEFAULT_HEADERS,
+				...(morphConfig.kiloCodeOrganizationId
+					? { [X_KILOCODE_ORGANIZATIONID]: morphConfig.kiloCodeOrganizationId }
+					: {}),
+				...kiloTesterSuppress,
+				[X_KILOCODE_TASKID]: cline.taskId,
 			},
 		})
 
@@ -234,9 +298,22 @@ async function applyMorphEdit(
 			return { success: false, error: "Morph API returned empty response" }
 		}
 
-		return { success: true, result: mergedCode }
+		// Extract usage information from response
+		const usage = response.usage
+		const tokensIn = usage?.prompt_tokens || 0
+		const tokensOut = usage?.completion_tokens || 0
+		const cost = calculateFastApplyCost(tokensIn, tokensOut, morphConfig.model!)
+
+		return {
+			success: true,
+			result: mergedCode,
+			description,
+			tokensIn,
+			tokensOut,
+			cost,
+		}
 	} catch (error) {
-		TelemetryService.instance.captureException(error, { context: "applyMorphEdit" })
+		TelemetryService.instance.captureException(error, { context: "applyFastApplyEdit" })
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : "Unknown error occurred",
@@ -244,57 +321,80 @@ async function applyMorphEdit(
 	}
 }
 
-interface MorphConfiguration {
+interface FastApplyConfiguration {
 	available: boolean
 	apiKey?: string
 	baseUrl?: string
 	model?: string
 	error?: string
+	kiloCodeOrganizationId?: string
 }
 
-async function getMorphConfiguration(
-	experiments: Experiments,
-	apiConfig: ProviderSettings,
-): Promise<MorphConfiguration> {
-	// Check if Morph is enabled in API configuration
-	if (experiments.morphFastApply !== true) {
+function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfiguration {
+	// Check if Fast Apply is enabled in API configuration
+	if (state.experiments.morphFastApply !== true) {
 		return {
 			available: false,
-			error: "Morph is disabled. Enable it in API Options > Enable Editing with Morph FastApply",
+			error: "Fast Apply is disabled. Enable it in API Options > Enable Editing with Fast Apply",
 		}
 	}
 
-	// If user has direct Morph API key, use it
-	if (apiConfig.morphApiKey) {
+	// Read the selected model from state
+	const selectedModel = state.fastApplyModel || "auto"
+
+	// Priority 1: Use direct Morph API key if available
+	// Allow human-relay for debugging
+	if (state.morphApiKey || state.apiConfiguration?.apiProvider === "human-relay") {
+		const [org, model] = selectedModel.split("/")
 		return {
 			available: true,
-			apiKey: apiConfig.morphApiKey,
+			apiKey: state.morphApiKey,
 			baseUrl: "https://api.morphllm.com/v1",
-			model: "auto",
+			model: org === "morph" ? model : "auto", // Use selected model instead of hardcoded "auto"
 		}
 	}
 
-	if (apiConfig.apiProvider === "kilocode" && apiConfig.kilocodeToken) {
+	// Priority 2: Use KiloCode provider
+	if (state.apiConfiguration?.apiProvider === "kilocode") {
+		const token = state.apiConfiguration.kilocodeToken
+		if (!token) {
+			return { available: false, error: "No KiloCode token available to use Fast Apply" }
+		}
+		const url = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", token)
+
 		return {
 			available: true,
-			apiKey: apiConfig.kilocodeToken,
-			baseUrl: `${getKiloBaseUriFromToken(apiConfig.kilocodeToken)}/api/openrouter/`,
-			model: "morph/morph-v3-large", // Morph model via OpenRouter
+			apiKey: token,
+			baseUrl: url,
+			model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
+			kiloCodeOrganizationId: state.apiConfiguration.kilocodeOrganizationId,
 		}
 	}
 
-	// If user is using OpenRouter as their provider, use Morph through OpenRouter
-	if (apiConfig.apiProvider === "openrouter" && apiConfig.openRouterApiKey) {
+	// Priority 3: Use OpenRouter provider
+	if (state.apiConfiguration?.apiProvider === "openrouter") {
+		const token = state.apiConfiguration.openRouterApiKey
+		if (!token) {
+			return { available: false, error: "No OpenRouter API token available to use Fast Apply" }
+		}
 		return {
 			available: true,
-			apiKey: apiConfig.openRouterApiKey,
-			baseUrl: apiConfig.openRouterBaseUrl || "https://openrouter.ai/api/v1",
-			model: "morph/morph-v3-large", // Morph model via OpenRouter
+			apiKey: token,
+			baseUrl: state.apiConfiguration.openRouterBaseUrl || "https://openrouter.ai/api/v1",
+			model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
 		}
 	}
 
 	return {
 		available: false,
-		error: "Morph is enabled but not configured. Either set a Morph API key in API Options or use OpenRouter with Morph access.",
+		error: "Fast Apply configuration error. Please check your settings.",
 	}
+}
+
+export function isFastApplyAvailable(state?: ClineProviderState): boolean {
+	return (state && getFastApplyConfiguration(state).available) || false
+}
+
+export function getFastApplyModelType(state?: ClineProviderState): "Morph" | "Relace" {
+	return state && getFastApplyConfiguration(state).model?.startsWith("relace/") ? "Relace" : "Morph"
 }

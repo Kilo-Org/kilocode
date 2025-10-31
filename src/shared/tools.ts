@@ -65,6 +65,7 @@ export const toolParamNames = [
 	"target_file",
 	"instructions",
 	"code_edit",
+	"files",
 	// kilocode_change end
 	"args",
 	"start_line",
@@ -72,6 +73,8 @@ export const toolParamNames = [
 	"query",
 	"args",
 	"todos",
+	"prompt",
+	"image",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -82,6 +85,7 @@ export interface ToolUse {
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
+	toolUseId?: string // kilocode_change
 }
 
 export interface ExecuteCommandToolUse extends ToolUse {
@@ -162,12 +166,17 @@ export interface SwitchModeToolUse extends ToolUse {
 
 export interface NewTaskToolUse extends ToolUse {
 	name: "new_task"
-	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message">>
+	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos">>
 }
 
 export interface ReportBugToolUse extends ToolUse {
 	name: "report_bug"
 	params: Partial<Pick<Record<ToolParamName, string>, "title" | "description">>
+}
+
+export interface RunSlashCommandToolUse extends ToolUse {
+	name: "run_slash_command"
+	params: Partial<Pick<Record<ToolParamName, string>, "command" | "args">>
 }
 
 export interface SearchAndReplaceToolUse extends ToolUse {
@@ -182,6 +191,11 @@ export interface EditFileToolUse extends ToolUse {
 	params: Required<Pick<Record<ToolParamName, string>, "target_file" | "instructions" | "code_edit">>
 }
 // kilocode_change end
+
+export interface GenerateImageToolUse extends ToolUse {
+	name: "generate_image"
+	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
+}
 
 // Define tool group configuration
 export type ToolGroupConfig = {
@@ -213,6 +227,8 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	condense: "condense the current context window", // kilocode_change
 	codebase_search: "codebase search",
 	update_todo_list: "update todo list",
+	run_slash_command: "run slash command",
+	generate_image: "generate images",
 } as const
 
 // Define available tool groups.
@@ -234,7 +250,8 @@ export const TOOL_GROUPS: Record<ToolGroup, ToolGroupConfig> = {
 			"write_to_file",
 			"insert_content",
 			"search_and_replace",
-			"new_rule",
+			"new_rule", // kilocode_change
+			"generate_image",
 		],
 	},
 	browser: {
@@ -261,6 +278,7 @@ export const ALWAYS_AVAILABLE_TOOLS: ToolName[] = [
 	"report_bug",
 	"condense", // kilocode_Change
 	"update_todo_list",
+	"run_slash_command",
 ] as const
 
 export type DiffResult =

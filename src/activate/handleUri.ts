@@ -35,6 +35,18 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
+		// kilocode_change start
+		case "/kilocode/profile": {
+			await visibleProvider.postMessageToWebview({
+				type: "action",
+				action: "profileButtonClicked",
+			})
+			await visibleProvider.postMessageToWebview({
+				type: "updateProfileData",
+			})
+			break
+		}
+		// kilocode_change end
 		case "/requesty": {
 			const code = query.get("code")
 			if (code) {

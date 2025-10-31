@@ -7,6 +7,7 @@
 		"tokens": "Tokeny:",
 		"cache": "Cache:",
 		"apiCost": "Cena API:",
+		"size": "Velikost",
 		"condenseContext": "Inteligentně zhustit kontext",
 		"contextWindow": "Délka kontextu:",
 		"closeAndStart": "Zavřít úkol a začít nový",
@@ -21,7 +22,11 @@
 		"connectToCloudDescription": "Přihlaste se do Kilo Code Cloud pro sdílení úkolů",
 		"sharingDisabledByOrganization": "Sdílení zakázáno organizací",
 		"shareSuccessOrganization": "Odkaz organizace zkopírován do schránky",
-		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky"
+		"shareSuccessPublic": "Veřejný odkaz zkopírován do schránky",
+		"expand": "Rozbalit úkol",
+		"collapse": "Sbalit úkol",
+		"openInCloud": "Otevřít v cloudu",
+		"openInCloudIntro": "Monitoruj a spravuj tento úkol vzdáleně"
 	},
 	"history": {
 		"title": "Historie"
@@ -183,6 +188,10 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code chce upravit tento soubor mimo pracovní prostor:",
 		"wantsToEditProtected": "Kilo Code chce upravit chráněný konfigurační soubor:",
 		"wantsToApplyBatchChanges": "Kilo Code chce aplikovat změny na více souborů:",
+		"wantsToGenerateImage": "Kilo Code chce vygenerovat obrázek:",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code chce vygenerovat obrázek mimo pracovní prostor:",
+		"wantsToGenerateImageProtected": "Kilo Code chce vygenerovat obrázek v chráněném umístění:",
+		"didGenerateImage": "Kilo Code vygeneroval obrázek:",
 		"wantsToCreate": "Kilo Code chce vytvořit nový soubor:",
 		"wantsToSearchReplace": "Kilo Code chce hledat a nahradit v tomto souboru:",
 		"didSearchReplace": "Kilo Code provedl hledání a nahrazení v tomto souboru:",
@@ -217,7 +226,9 @@
 	},
 	"commandOutput": "Výstup příkazu",
 	"commandExecution": {
+		"abort": "Přerušit",
 		"running": "Běží",
+		"exitStatus": "Ukončen se stavem {{exitCode}}",
 		"pid": "PID: {{pid}}",
 		"exited": "Ukončeno ({{exitCode}})",
 		"manageCommands": "Spravovat oprávnění příkazů",
@@ -234,6 +245,12 @@
 	},
 	"response": "Odpověď",
 	"arguments": "Argumenty",
+	"text": {
+		"rooSaid": "Kilo řekl"
+	},
+	"feedback": {
+		"youSaid": "Řekl jsi"
+	},
 	"mcp": {
 		"wantsToUseTool": "Kilo Code chce použít nástroj na MCP serveru {{serverName}}:",
 		"wantsToAccessResource": "Kilo Code chce přistupovat k prostředku na MCP serveru {{serverName}}:"
@@ -271,13 +288,25 @@
 		"description": "Automatické schvalování umožňuje Kilo Code provádět akce bez žádání o povolení. Zapni pouze pro akce, kterým plně důvěřuješ. Podrobnější konfigurace je dostupná v <settingsLink>Nastavení</settingsLink>.",
 		"selectOptionsFirst": "Nejprve vyber alespoň jednu možnost níže pro povolení automatického schvalování",
 		"toggleAriaLabel": "Přepnout automatické schvalování",
-		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti"
+		"disabledAriaLabel": "Automatické schvalování zakázáno - nejprve vyber možnosti",
+		"tooltip": "Automaticky schválit požadavky na použití nástrojů",
+		"tooltipManage": "Spravovat nastavení automatického schvalování",
+		"tooltipStatus": "Automatické schvalování povoleno pro: {{toggles}}",
+		"all": "Vše",
+		"triggerLabel_zero": "Automatické schválení: vypnuto",
+		"triggerLabel_one": "Automatické schválení: 1",
+		"triggerLabel_other": "Automatické schválení: {{count}}",
+		"triggerLabelAll": "Automatické schválení: YOLO",
+		"triggerLabelOff": "Automatické schvalování vypnuto"
 	},
 	"modeSelector": {
 		"title": "Režimy",
 		"marketplace": "Tržiště režimů",
 		"settings": "Nastavení režimů",
-		"description": "Specializované persony které přizpůsobují chování Kilo Code."
+		"description": "Specializované persony které přizpůsobují chování Kilo Code.",
+		"searchPlaceholder": "Hledat režimy...",
+		"noResults": "Nebyly nalezeny žádné výsledky",
+		"organizationModes": "Režimy organizace"
 	},
 	"announcement": {
 		"title": "🎉 Vydán Kilo Code {{version}}",
@@ -287,7 +316,17 @@
 		"feature2": "<bold>Modely Gemini 2.5</bold>: Přidána podpora pro nové modely Gemini 2.5 Pro, Flash a Flash Lite.",
 		"feature3": "<bold>Podpora souborů Excel a další</bold>: Přidána podpora souborů Excel (.xlsx) a mnoho oprav chyb a vylepšení!",
 		"hideButton": "Skrýt oznámení",
-		"detailsDiscussLinks": "Získej více podrobností a diskutuj na <discordLink>Discord</discordLink> a <redditLink>Reddit</redditLink> 🚀"
+		"detailsDiscussLinks": "Získej více podrobností a diskutuj na <discordLink>Discord</discordLink> a <redditLink>Reddit</redditLink> 🚀",
+		"learnMore": "Dozvědět se více",
+		"visitCloudButton": "Navštívit Roo Code Cloud",
+		"socialLinks": "Následujte nás",
+		"stealthModel": {
+			"feature": "<bold>Časově omezený ZDARMA stealth model</bold> - Bleskurychle rychlý rozumový model, který vyniká v agentním kódování s kontextovým oknem 262k, dostupný prostřednictvím Roo Code Cloud.",
+			"note": "(Poznámka: prompty a dokončení jsou zaznamenávány tvůrcem modelu za účelem vylepšení modelu)",
+			"connectButton": "Připojit se k Roo Code Cloud",
+			"selectModel": "Vyber <code>roo/sonic</code> z poskytovatele Roo Code Cloud v<br/><settingsLink>Nastaveních</settingsLink> pro začátek",
+			"goToSettingsButton": "Jít do Nastavení"
+		}
 	},
 	"reasoning": {
 		"thinking": "Přemýšlím",
@@ -341,6 +380,11 @@
 			"title": "Dosažen limit automaticky schválených požadavků",
 			"description": "Kilo Code dosáhl automaticky schváleného limitu {{count}} API požadavků. Chceš resetovat počítadlo a pokračovat v úkolu?",
 			"button": "Resetovat a pokračovat"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "Dosažen limit automaticky schválených nákladů",
+			"description": "Kilo Code dosáhl limitu automaticky schválených nákladů ${{count}}. Chceš resetovat náklady a pokračovat v úkolu?",
+			"button": "Resetovat a pokračovat"
 		}
 	},
 	"indexingStatus": {
@@ -358,7 +402,45 @@
 		"description": "Spouštěj vzdálené agenty v cloudu, přistupuj ke svým úkolům odkudkoli, spolupracuj s ostatními a mnoho dalšího.",
 		"joinWaitlist": "Připoj se na čekací listinu pro získání přednostního přístupu."
 	},
+	"command": {
+		"triggerDescription": "Spustit příkaz {{name}}"
+	},
+	"slashCommands": {
+		"tooltip": "Spravovat slash příkazy",
+		"manageCommands": "Spravovat slash příkazy v nastavení",
+		"title": "Slash příkazy",
+		"description": "Vytvoř vlastní slash příkazy pro rychlý přístup k často používaným promptům a pracovním postupům. <DocsLink>Dokumentace</DocsLink>",
+		"builtInCommands": "Vestavěné příkazy",
+		"globalCommands": "Globální příkazy",
+		"workspaceCommands": "Příkazy pracovního prostoru",
+		"globalCommand": "Globální příkaz",
+		"editCommand": "Upravit příkaz",
+		"deleteCommand": "Smazat příkaz",
+		"newGlobalCommandPlaceholder": "Nový globální příkaz...",
+		"newWorkspaceCommandPlaceholder": "Nový příkaz pracovního prostoru...",
+		"deleteDialog": {
+			"title": "Smazat příkaz",
+			"description": "Jsi si jistý, že chceš smazat příkaz \"{{name}}\"? Tuto akci nelze vrátit zpět.",
+			"cancel": "Zrušit",
+			"confirm": "Smazat"
+		}
+	},
+	"queuedMessages": {
+		"title": "Zprávy ve frontě:",
+		"clickToEdit": "Klikni pro úpravu zprávy"
+	},
 	"editMessage": {
 		"placeholder": "Upravit tvou zprávu..."
+	},
+	"generateCommitMessage": "Vygenerovat commit zprávu",
+	"slashCommand": {
+		"wantsToRun": "Kilo Code chce spustit slash příkaz:",
+		"didRun": "Kilo Code spustil slash příkaz:"
+	},
+	"contextMenu": {
+		"noResults": "Žádné výsledky",
+		"problems": "Problémy",
+		"terminal": "Terminál",
+		"url": "Vložit URL pro získání obsahu"
 	}
 }

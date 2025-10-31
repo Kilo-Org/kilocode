@@ -13,12 +13,18 @@ export const Uri = {
 	parse: vi.fn((uri: string) => ({ toString: () => uri })),
 }
 
+export const commands = {
+	executeCommand: vi.fn().mockResolvedValue(undefined),
+}
+
 export interface ExtensionContext {
 	secrets: {
 		get: (key: string) => Promise<string | undefined>
 		store: (key: string, value: string) => Promise<void>
 		delete: (key: string) => Promise<void>
-		onDidChange: (listener: (e: { key: string }) => void) => { dispose: () => void }
+		onDidChange: (listener: (e: { key: string }) => void) => {
+			dispose: () => void
+		}
 	}
 	globalState: {
 		get: <T>(key: string) => T | undefined

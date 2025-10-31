@@ -28,7 +28,8 @@
 		"customerSupport": "Dukungan Pelanggan"
 	},
 	"ui": {
-		"search_placeholder": "Cari..."
+		"search_placeholder": "Cari...",
+		"no_results": "Tidak ada hasil yang ditemukan"
 	},
 	"mermaid": {
 		"loading": "Membuat diagram mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Error menyalin gambar"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Gambar"
+		},
+		"noData": "Tidak ada data gambar"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Format data URI tidak valid",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Menghapus pesan ini akan menghapus semua pesan selanjutnya dalam percakapan. Apakah kamu ingin melanjutkan?",
 		"editMessage": "Edit Pesan",
 		"editWarning": "Mengedit pesan ini akan menghapus semua pesan selanjutnya dalam percakapan. Apakah kamu ingin melanjutkan?",
-		"proceed": "Lanjutkan"
+		"editQuestionWithCheckpoint": "Mengedit pesan ini akan menghapus semua pesan selanjutnya dalam percakapan. Apakah kamu juga ingin membatalkan semua perubahan kembali ke checkpoint ini?",
+		"deleteQuestionWithCheckpoint": "Menghapus pesan ini akan menghapus semua pesan selanjutnya dalam percakapan. Apakah kamu juga ingin membatalkan semua perubahan kembali ke checkpoint ini?",
+		"editOnly": "Tidak, edit pesan saja",
+		"deleteOnly": "Tidak, hapus pesan saja",
+		"restoreToCheckpoint": "Ya, pulihkan checkpoint",
+		"proceed": "Lanjutkan",
+		"dontShowAgain": "Jangan tampilkan lagi"
+	},
+	"time_ago": {
+		"just_now": "baru saja",
+		"seconds_ago": "{{count}} detik yang lalu",
+		"minute_ago": "satu menit yang lalu",
+		"minutes_ago": "{{count}} menit yang lalu",
+		"hour_ago": "satu jam yang lalu",
+		"hours_ago": "{{count}} jam yang lalu",
+		"day_ago": "satu hari yang lalu",
+		"days_ago": "{{count}} hari yang lalu",
+		"week_ago": "satu minggu yang lalu",
+		"weeks_ago": "{{count}} minggu yang lalu",
+		"month_ago": "satu bulan yang lalu",
+		"months_ago": "{{count}} bulan yang lalu",
+		"year_ago": "satu tahun yang lalu",
+		"years_ago": "{{count}} tahun yang lalu"
 	}
 }

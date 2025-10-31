@@ -13,6 +13,12 @@
 			"placeholderMcp": "Поиск MCPs...",
 			"placeholderMode": "Поиск режимов..."
 		},
+		"installed": {
+			"label": "Фильтр по статусу",
+			"all": "Все элементы",
+			"installed": "Установленные",
+			"notInstalled": "Не установленные"
+		},
 		"type": {
 			"label": "Фильтр по типу:",
 			"all": "Все типы",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Нажмите на теги для фильтрации элементов"
 		},
 		"none": "Нет"
+	},
+	"sections": {
+		"organizationMcps": "MCPs {{organization}}",
+		"marketplace": "Маркетплейс"
 	},
 	"type-group": {
 		"modes": "Режимы",

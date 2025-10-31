@@ -1,7 +1,14 @@
 // npx vitest run src/api/providers/__tests__/groq.spec.ts
 
-// Mock vscode first to avoid import errors
-vitest.mock("vscode", () => ({}))
+// kilocode_change start
+vitest.mock("vscode", () => ({
+	workspace: {
+		getConfiguration: vitest.fn().mockReturnValue({
+			get: vitest.fn().mockReturnValue(600), // Default timeout in seconds
+		}),
+	},
+}))
+// kilocode_change end
 
 import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk"
@@ -108,7 +115,53 @@ describe("GroqHandler", () => {
 		const firstChunk = await stream.next()
 
 		expect(firstChunk.done).toBe(false)
-		expect(firstChunk.value).toEqual({ type: "usage", inputTokens: 10, outputTokens: 20 })
+		expect(firstChunk.value).toMatchObject({
+			type: "usage",
+			inputTokens: 10,
+			outputTokens: 20,
+			cacheWriteTokens: 0,
+			cacheReadTokens: 0,
+		})
+		// Check that totalCost is a number (we don't need to test the exact value as that's tested in cost.spec.ts)
+		expect(typeof firstChunk.value.totalCost).toBe("number")
+	})
+
+	it("createMessage should handle cached tokens in usage data", async () => {
+		mockCreate.mockImplementationOnce(() => {
+			return {
+				[Symbol.asyncIterator]: () => ({
+					next: vitest
+						.fn()
+						.mockResolvedValueOnce({
+							done: false,
+							value: {
+								choices: [{ delta: {} }],
+								usage: {
+									prompt_tokens: 100,
+									completion_tokens: 50,
+									prompt_tokens_details: {
+										cached_tokens: 30,
+									},
+								},
+							},
+						})
+						.mockResolvedValueOnce({ done: true }),
+				}),
+			}
+		})
+
+		const stream = handler.createMessage("system prompt", [])
+		const firstChunk = await stream.next()
+
+		expect(firstChunk.done).toBe(false)
+		expect(firstChunk.value).toMatchObject({
+			type: "usage",
+			inputTokens: 100,
+			outputTokens: 50,
+			cacheWriteTokens: 0,
+			cacheReadTokens: 30,
+		})
+		expect(typeof firstChunk.value.totalCost).toBe("number")
 	})
 
 	it("createMessage should pass correct parameters to Groq client", async () => {
@@ -141,6 +194,7 @@ describe("GroqHandler", () => {
 				stream: true,
 				stream_options: { include_usage: true },
 			}),
+			undefined,
 		)
 	})
 })

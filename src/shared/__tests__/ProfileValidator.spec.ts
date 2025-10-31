@@ -1,6 +1,6 @@
 // npx vitest run src/shared/__tests__/ProfileValidator.spec.ts
 
-import { OrganizationAllowList, ProviderSettings } from "@roo-code/types"
+import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
 
 import { ProfileValidator } from "../ProfileValidator"
 
@@ -192,6 +192,10 @@ describe("ProfileValidator", () => {
 			"xai",
 			"groq",
 			"chutes",
+			"sambanova",
+			"fireworks",
+			"synthetic", // kilocode_change
+			"featherless",
 		]
 
 		apiModelProviders.forEach((provider) => {
@@ -222,6 +226,22 @@ describe("ProfileValidator", () => {
 			const profile: ProviderSettings = {
 				apiProvider: "litellm" as any,
 				litellmModelId: "test-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+
+		// Test for io-intelligence provider which uses ioIntelligenceModelId
+		it(`should extract ioIntelligenceModelId for io-intelligence provider`, () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					"io-intelligence": { allowAll: false, models: ["test-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "io-intelligence" as any,
+				ioIntelligenceModelId: "test-model",
 			}
 
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
@@ -316,6 +336,23 @@ describe("ProfileValidator", () => {
 
 			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
 		})
+
+		// kilocode_change start
+		it("should extract ovhCloudAiEndpointsModelId for ovhcloud provider", () => {
+			const allowList: OrganizationAllowList = {
+				allowAll: false,
+				providers: {
+					ovhcloud: { allowAll: false, models: ["ovhcloud-model"] },
+				},
+			}
+			const profile: ProviderSettings = {
+				apiProvider: "ovhcloud",
+				ovhCloudAiEndpointsModelId: "ovhcloud-model",
+			}
+
+			expect(ProfileValidator.isProfileAllowed(profile, allowList)).toBe(true)
+		})
+		// kilocode_change end
 
 		it("should handle providers with undefined models list gracefully", () => {
 			const allowList: OrganizationAllowList = {

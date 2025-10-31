@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Expiration du délai lors de la tentative de rétablissement du checkpoint.",
 		"checkpoint_failed": "Échec du rétablissement du checkpoint.",
 		"git_not_installed": "Git est requis pour la fonctionnalité des points de contrôle. Veuillez installer Git pour activer les points de contrôle.",
+		"nested_git_repos_warning": "Les points de contrôle sont désactivés car un dépôt git imbriqué a été détecté à : {{path}}. Pour utiliser les points de contrôle, veuillez supprimer ou déplacer ce dépôt git imbriqué.",
 		"no_workspace": "Veuillez d'abord ouvrir un espace de travail",
 		"update_support_prompt": "Erreur lors de la mise à jour du prompt de support",
 		"reset_support_prompt": "Erreur lors de la réinitialisation du prompt de support",
@@ -68,7 +69,8 @@
 		"url_not_found": "L'adresse du site web n'a pas pu être trouvée. Vérifier si l'URL est correcte et réessayer.",
 		"no_internet": "Pas de connexion internet. Verifier votre connexion réseau et réessayer.",
 		"url_forbidden": "L'accès à ce site web est interdit. Le site peut bloquer l'accès automatisé ou nécessiter une authentification.",
-		"url_page_not_found": "La page n'a pas été trouvée. Verifier si l'URL est correcte.",
+		"url_page_not_found": "La page n'a pas été trouvée. Vérifie si l'URL est correcte.",
+		"url_request_aborted": "La demande de récupération de l'URL a été interrompue. Cela peut se produire si le site bloque l'accès automatisé, nécessite une authentification ou s'il y a un problème de réseau. Réessaie ou vérifie si l'URL est accessible dans un navigateur normal.",
 		"url_fetch_failed": "Échec de récupération du contenu de l'URL : {{error}}",
 		"url_fetch_error_with_url": "Erreur lors de la récupération du contenu pour {{url}} : {{error}}",
 		"command_timeout": "L'exécution de la commande a expiré après {{seconds}} secondes",
@@ -79,12 +81,20 @@
 		"share_task_not_found": "Tâche non trouvée ou accès refusé.",
 		"mode_import_failed": "Échec de l'importation du mode : {{error}}",
 		"delete_rules_folder_failed": "Échec de la suppression du dossier de règles : {{rulesFolderPath}}. Erreur : {{error}}",
+		"command_not_found": "Commande '{{name}}' introuvable",
+		"open_command_file": "Échec de l'ouverture du fichier de commande",
+		"delete_command": "Échec de la suppression de la commande",
+		"no_workspace_for_project_command": "Aucun dossier d'espace de travail trouvé pour la commande de projet",
+		"command_already_exists": "La commande \"{{commandName}}\" existe déjà",
+		"create_command_failed": "Échec de la création de la commande",
+		"command_template_content": "---\ndescription: \"Brève description de ce que fait cette commande\"\n---\n\nCeci est une nouvelle commande slash. Modifie ce fichier pour personnaliser le comportement de la commande.",
 		"claudeCode": {
 			"processExited": "Le processus Claude Code s'est terminé avec le code {{exitCode}}.",
 			"errorOutput": "Sortie d'erreur : {{output}}",
 			"processExitedWithError": "Le processus Claude Code s'est terminé avec le code {{exitCode}}. Sortie d'erreur : {{output}}",
 			"stoppedWithReason": "Claude Code s'est arrêté pour la raison : {{reason}}",
-			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan."
+			"apiKeyModelPlanMismatch": "Les clés API et les plans d'abonnement permettent différents modèles. Assurez-vous que le modèle sélectionné est inclus dans votre plan.",
+			"notFound": "Exécutable Claude Code '{{claudePath}}' introuvable.\n\nVeuillez installer Claude Code CLI :\n1. Visitez {{installationUrl}} pour télécharger Claude Code\n2. Suivez les instructions d'installation pour votre système d'exploitation\n3. Assurez-vous que la commande 'claude' est disponible dans votre PATH\n4. Alternativement, configurez un chemin personnalisé dans les paramètres Kilo Code sous 'Chemin de Claude Code'\n\nErreur originale : {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}",
@@ -95,7 +105,44 @@
 			"badRequest": "Requête incorrecte : {{details}}",
 			"apiError": "Erreur API Gemini CLI : {{error}}",
 			"completionError": "Erreur de complétion Gemini CLI : {{error}}"
-		}
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Échec du chargement des identifiants OAuth. Veuillez vous authentifier d'abord : {{error}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "Aucune tâche active pour supprimer des messages",
+			"invalid_timestamp_for_deletion": "Horodatage du message invalide pour la suppression",
+			"cannot_delete_missing_timestamp": "Impossible de supprimer le message : horodatage manquant",
+			"cannot_delete_invalid_timestamp": "Impossible de supprimer le message : horodatage invalide",
+			"message_not_found": "Message avec horodatage {{messageTs}} introuvable",
+			"error_deleting_message": "Erreur lors de la suppression du message : {{error}}",
+			"error_editing_message": "Erreur lors de la modification du message : {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Erreur du flux de contexte de génération Gemini : {{error}}",
+			"generate_complete_prompt": "Erreur d'achèvement de Gemini : {{error}}",
+			"sources": "Sources :"
+		},
+		"cerebras": {
+			"authenticationFailed": "Échec de l'authentification de l'API Cerebras. Vérifiez que votre clé API est valide et n'a pas expiré.",
+			"accessForbidden": "Accès interdit à l'API Cerebras. Votre clé API peut ne pas avoir accès au modèle ou à la fonction demandée.",
+			"rateLimitExceeded": "Limite de débit de l'API Cerebras dépassée. Veuillez attendre avant de faire une autre demande.",
+			"serverError": "Erreur du serveur de l'API Cerebras ({{status}}). Veuillez réessayer plus tard.",
+			"genericError": "Erreur de l'API Cerebras ({{status}}) : {{message}}",
+			"noResponseBody": "Erreur de l'API Cerebras : Aucun corps de réponse",
+			"completionError": "Erreur d'achèvement de Cerebras : {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Le fournisseur Roo nécessite une authentification cloud. Veuillez vous connecter à Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "La clé API contient des caractères invalides."
+		},
+		"manual_url_empty": "Veuillez entrer une URL de callback valide",
+		"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
+		"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
+		"manual_url_auth_failed": "Authentification par URL manuelle échouée",
+		"manual_url_auth_error": "Échec de l'authentification"
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",
@@ -134,6 +181,10 @@
 		"deleted": "Échec de la tâche : Elle a été arrêtée et supprimée par l'utilisateur.",
 		"incomplete": "Tâche #{{taskNumber}} (Incomplète)",
 		"no_messages": "Tâche #{{taskNumber}} (Aucun message)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Réponse interrompue par l'utilisateur",
+		"responseInterruptedByApiError": "Réponse interrompue par une erreur d'API"
 	},
 	"storage": {
 		"prompt_custom_path": "Entrez le chemin de stockage personnalisé pour l'historique des conversations, laissez vide pour utiliser l'emplacement par défaut",
@@ -180,9 +231,17 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Votre organisation nécessite une authentification Kilo Code Cloud. Veuillez vous connecter pour continuer.",
-			"organization_mismatch": "Vous devez être authentifié avec le compte Kilo Code Cloud de votre organisation.",
+			"cloud_auth_required": "Votre organisation nécessite une authentification Roo Code Cloud. Veuillez vous connecter pour continuer.",
+			"organization_mismatch": "Vous devez être authentifié avec le compte Roo Code Cloud de votre organisation.",
+			"manual_url_empty": "Veuillez entrer une URL de callback valide",
+			"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
+			"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
+			"manual_url_auth_failed": "Authentification par URL manuelle échouée",
+			"manual_url_auth_error": "Échec de l'authentification",
 			"verification_failed": "Impossible de vérifier l'authentification de l'organisation."
+		},
+		"info": {
+			"organization_requires_auth": "Votre organisation nécessite une authentification."
 		}
 	},
 	"prompts": {
@@ -197,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Empêcher la finalisation des tâches lorsqu'il y a des todos incomplets dans la liste de todos"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Erreur",
+		"reportText": "Veuillez signaler cette erreur pour nous aider à améliorer l'application.",
+		"githubText": "Signaler sur GitHub",
+		"copyInstructions": "Copiez les détails de l'erreur ci-dessous :",
+		"errorStack": "Pile d'erreur",
+		"componentStack": "Pile de composants"
 	}
 }

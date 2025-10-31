@@ -1,0 +1,3 @@
+# Description: Should suggest function call argument completion
+function greet(name) { return 'Hello ' + name; }
+greet(<<<AUTOCOMPLETE_HERE>>>

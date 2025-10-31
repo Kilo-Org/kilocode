@@ -34,7 +34,11 @@ type HuggingFaceModel = {
 
 type HuggingFaceProps = {
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	setApiConfigurationField: (
+		field: keyof ProviderSettings,
+		value: ProviderSettings[keyof ProviderSettings],
+		isUserAction?: boolean,
+	) => void
 }
 
 export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: HuggingFaceProps) => {
@@ -56,19 +60,19 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 		[setApiConfigurationField],
 	)
 
-	// Fetch models when component mounts
+	// Fetch models when component mounts.
 	useEffect(() => {
 		setLoading(true)
 		vscode.postMessage({ type: "requestHuggingFaceModels" })
 	}, [])
 
-	// Handle messages from extension
+	// Handle messages from extension.
 	const onMessage = useCallback((event: MessageEvent) => {
 		const message: ExtensionMessage = event.data
 
 		switch (message.type) {
 			case "huggingFaceModels":
-				setModels(message.huggingFaceModels || [])
+				setModels(message.huggingFaceModels?.sort((a, b) => a.id.localeCompare(b.id)) || [])
 				setLoading(false)
 				break
 		}
@@ -93,7 +97,7 @@ export const HuggingFace = ({ apiConfiguration, setApiConfigurationField }: Hugg
 					// Set to "auto" as default
 					const defaultProvider = "auto"
 					setSelectedProvider(defaultProvider)
-					setApiConfigurationField("huggingFaceInferenceProvider", defaultProvider)
+					setApiConfigurationField("huggingFaceInferenceProvider", defaultProvider, false) // false = automatic default
 				}
 			}
 		}

@@ -11,7 +11,18 @@
 		"title": "Avviso Credito Basso!",
 		"message": "Controlla se puoi ricaricare con crediti gratuiti o acquistarne altri!"
 	},
-	"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La risposta del modello è terminata inaspettatamente (nessun messaggio dell'assistente). Questo potrebbe essere un segno di limitazione del tasso di richieste.",
+		"notLoggedInError": "Impossibile completare la richiesta, assicurati di essere connesso e di aver effettuato l'accesso con il provider selezionato.\n\n{{error}}",
+		"maxCompletionTokens": "È stato raggiunto il numero massimo di token di completamento.",
+		"disableApplyDiff": "Se questo errore continua a verificarsi, disabilita Modifica Tramite Diff nelle Impostazioni Avanzate.",
+		"disableEditFile": "Se questo errore continua a verificarsi, disabilita la funzione sperimentale Applicazione Rapida."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "I checkpoint non sono disponibili perché è stato rilevato un repository Git annidato in: {{path}}. Rimuovi o sposta i repository Git annidati per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
+		"protectedPaths": "I checkpoint non sono disponibili in {{workspaceDir}}. Apri una sottocartella come workspace per utilizzare la funzione checkpoint oppure disabilita i checkpoint nelle impostazioni per sopprimere questo avviso.",
+		"dismissWarning": "Ignora"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Elimina",
@@ -49,19 +60,54 @@
 		"generationFailed": "Kilo: Errore durante la generazione del messaggio di commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generazione messaggio utilizzando modifiche non preparate",
 		"activationFailed": "Kilo: Impossibile attivare il generatore di messaggi: {{error}}",
-		"providerRegistered": "Kilo: Provider di messaggi di commit registrato"
+		"providerRegistered": "Kilo: Provider di messaggi di commit registrato",
+		"errors": {
+			"noProject": "Nessun progetto disponibile",
+			"connectionFailed": "Impossibile connettersi all'estensione Kilo Code",
+			"invalidResponse": "Formato di risposta non valido ricevuto dall'estensione",
+			"timeout": "Richiesta scaduta dopo 30 secondi",
+			"noChanges": "Nessuna modifica da confermare",
+			"missingMessage": "Nessun messaggio di commit ricevuto dall'estensione",
+			"workspaceNotFound": "Impossibile determinare il percorso dell'area di lavoro per il repository Git",
+			"processingError": "Errore durante l'elaborazione della generazione del messaggio di commit: {{error}}",
+			"noWorkspacePath": "Impossibile determinare il percorso di lavoro per il repository Git"
+		},
+		"error": {
+			"title": "Errore",
+			"workspacePathNotFound": "Impossibile determinare il percorso di lavoro per il repository Git",
+			"unknown": "Errore sconosciuto",
+			"generationFailed": "Impossibile generare il messaggio di commit: {{error}}",
+			"processingFailed": "Errore durante l'elaborazione della generazione del messaggio di commit: {{error}}"
+		},
+		"dialogs": {
+			"info": "Messaggio di Commit AI",
+			"error": "Errore",
+			"success": "Successo",
+			"title": "Messaggio di Commit AI"
+		},
+		"progress": {
+			"connecting": "Connessione a Kilo Code in corso...",
+			"title": "Generazione del messaggio di commit",
+			"analyzing": "Analizzando le modifiche...",
+			"generating": "Generazione del messaggio di commit..."
+		},
+		"ui": {
+			"generateButton": "Genera Messaggio di Commit",
+			"generateButtonTooltip": "Genera messaggi di commit utilizzando l'IA per analizzare le modifiche al tuo codice"
+		}
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Assistenza in linea Kilo",
-			"disabled": "$(circle-slash) Assistenza in linea Kilo",
-			"warning": "$(warning) Assistenza in linea Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Assistenza in linea Kilo Code",
-				"disabled": "Assistenza in linea Kilo Code (disabilitata)",
-				"tokenError": "È necessario impostare un token valido per utilizzare l'assistenza in linea",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (disabilitato)",
+				"tokenError": "Deve essere impostato un token valido per usare Autocomplete",
 				"lastCompletion": "Ultimo suggerimento:",
-				"sessionTotal": "Costo totale sessione:",
+				"sessionTotal": "Costo totale della sessione:",
+				"provider": "Provider:",
 				"model": "Modello:"
 			},
 			"cost": {
@@ -69,42 +115,38 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Assistenza in linea Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
-			"analyzing": "Analisi del tuo codice...",
-			"generating": "Generazione modifiche suggerite...",
-			"processing": "Elaborazione modifiche suggerite...",
-			"showing": "Visualizzazione modifiche suggerite..."
+			"analyzing": "Analizzando il tuo codice...",
+			"generating": "Generando modifiche suggerite...",
+			"processing": "Elaborando modifiche suggerite...",
+			"showing": "Mostrando modifiche suggerite..."
 		},
 		"input": {
 			"title": "Kilo Code: Attività Rapida",
-			"placeholder": "es. 'refactorizza questa funzione per renderla più efficiente'"
+			"placeholder": "es., 'refactorizza questa funzione per renderla più efficiente'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Genera modifiche suggerite",
-			"displaySuggestions": "Mostra modifiche suggerite",
-			"cancelSuggestions": "Annulla modifiche suggerite",
-			"applyCurrentSuggestion": "Applica modifica suggerita corrente",
-			"applyAllSuggestions": "Applica tutte le modifiche suggerite",
-			"promptCodeSuggestion": "Attività Rapida",
+			"generateSuggestions": "Kilo Code: Genera Modifiche Suggerite",
+			"displaySuggestions": "Mostra Modifiche Suggerite",
+			"cancelSuggestions": "Annulla Modifiche Suggerite",
+			"applyCurrentSuggestion": "Applica Modifica Suggerita Corrente",
+			"applyAllSuggestions": "Applica Tutte le Modifiche Suggerite",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Modifiche suggerite"
+			"title": "Kilo Code: Modifiche Suggerite"
 		},
 		"chatParticipant": {
-			"fullName": "Agente Kilo Code",
-			"name": "Agente",
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
 			"description": "Posso aiutarti con attività rapide e modifiche suggerite."
 		},
-		"messages": {
-			"provideCodeSuggestions": "Fornitura suggerimenti codice..."
-		},
 		"incompatibilityExtensionPopup": {
-			"message": "L'assistenza in linea di Kilo Code è bloccata da un conflitto con GitHub Copilot. Per risolvere questo problema, devi disabilitare i suggerimenti in linea di Copilot.",
+			"message": "Il Kilo Code Autocomplete è bloccato da un conflitto con GitHub Copilot. Per risolvere questo problema, devi disabilitare i suggerimenti in linea di Copilot.",
 			"disableCopilot": "Disabilita Copilot",
-			"disableInlineAssist": "Disabilita Assistenza in Linea"
+			"disableInlineAssist": "Disabilita Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
@@ -121,5 +163,11 @@
 			"cancelButton": "Annulla"
 		},
 		"tipMessage": "Kilo: Premi {{shortcut}} per generare comandi del terminale"
+	},
+	"seeNewChanges": {
+		"title": "Visualizzazione nuove modifiche",
+		"checkpointsUnavailable": "Impossibile mostrare le nuove modifiche, i checkpoint non sono disponibili.",
+		"noChanges": "Impossibile mostrare le nuove modifiche, nessuna modifica trovata.",
+		"error": "Impossibile mostrare le nuove modifiche, si è verificato un errore."
 	}
 }

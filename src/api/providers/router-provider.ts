@@ -9,6 +9,8 @@ import { getModels } from "./fetchers/modelCache"
 
 import { DEFAULT_HEADERS } from "./constants"
 
+const TEMPERATURE_UNSUPPORTED_PREFIXES = ["openai/o3", "openai/gpt5", "gpt-5"] // kilocode_change
+
 type RouterProviderOptions = {
 	name: RouterName
 	baseURL: string
@@ -69,6 +71,6 @@ export abstract class RouterProvider extends BaseProvider {
 	}
 
 	protected supportsTemperature(modelId: string): boolean {
-		return !modelId.startsWith("openai/o3-mini")
+		return !TEMPERATURE_UNSUPPORTED_PREFIXES.some((prefix) => modelId.startsWith(prefix)) // kilocode_change
 	}
 }

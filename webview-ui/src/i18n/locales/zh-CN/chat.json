@@ -2,12 +2,15 @@
 	"greeting": "Kilo Code 能为您做什么？",
 	"task": {
 		"title": "任务",
+		"expand": "展开任务",
+		"collapse": "收起任务",
 		"seeMore": "展开",
 		"seeLess": "收起",
-		"tokens": "Token 用量:",
-		"cache": "缓存:",
-		"apiCost": "API 费用:",
-		"contextWindow": "上下文长度：",
+		"tokens": "Token 用量",
+		"cache": "缓存",
+		"apiCost": "API 费用",
+		"size": "大小",
+		"contextWindow": "上下文长度",
 		"closeAndStart": "关闭任务并开始新任务",
 		"export": "导出任务历史",
 		"delete": "删除任务（Shift + 点击跳过确认）",
@@ -21,7 +24,9 @@
 		"connectToCloudDescription": "登录 Kilo Code Cloud 以分享任务",
 		"sharingDisabledByOrganization": "组织已禁用分享功能",
 		"shareSuccessOrganization": "组织链接已复制到剪贴板",
-		"shareSuccessPublic": "公开链接已复制到剪贴板"
+		"shareSuccessPublic": "公开链接已复制到剪贴板",
+		"openInCloud": "在 Roo Code Cloud 中打开任务",
+		"openInCloudIntro": "从任何地方继续监控或与 Roo 交互。扫描、点击或复制以打开。"
 	},
 	"history": {
 		"title": "历史"
@@ -62,7 +67,7 @@
 		"tooltip": "批准此操作"
 	},
 	"runCommand": {
-		"title": "运行命令",
+		"title": "运行",
 		"tooltip": "执行此命令"
 	},
 	"proceedWhileRunning": {
@@ -114,8 +119,8 @@
 	"sendMessage": "发送消息",
 	"stopTts": "停止文本转语音",
 	"typeMessage": "输入消息...",
-	"typeTask": "构建、查找、询问",
-	"addContext": "@添加上下文，/切换模式",
+	"typeTask": "在此处输入您的任务...",
+	"addContext": "@添加上下文，/输入命令",
 	"dragFiles": "Shift+拖拽文件",
 	"dragFilesImages": "Shift+拖拽文件/图片",
 	"enhancePromptDescription": "'增强提示'按钮通过提供额外上下文、澄清或重新表述来帮助改进您的请求。尝试在此处输入请求，然后再次点击按钮查看其工作原理。",
@@ -123,9 +128,12 @@
 		"title": "模式",
 		"marketplace": "模式市场",
 		"settings": "模式设置",
-		"description": "专门定制Kilo Code行为的角色。"
+		"description": "专门定制Kilo Code行为的角色。",
+		"searchPlaceholder": "搜索模式...",
+		"noResults": "未找到结果",
+		"organizationModes": "组织模式"
 	},
-	"errorReadingFile": "读取文件时出错:",
+	"errorReadingFile": "读取文件时出错",
 	"noValidImages": "没有处理有效图片",
 	"separator": "分隔符",
 	"edit": "编辑...",
@@ -144,7 +152,6 @@
 		"streamingFailed": "API流式传输失败"
 	},
 	"checkpoint": {
-		"initial": "初始检查点",
 		"regular": "检查点",
 		"initializingWarning": "正在初始化检查点...如果耗时过长，你可以在<settingsLink>设置</settingsLink>中禁用检查点并重新启动任务。",
 		"menu": {
@@ -164,45 +171,50 @@
 		"wantsToFetch": "Kilo Code 想要获取详细指示以协助当前任务"
 	},
 	"fileOperations": {
-		"wantsToRead": "需要读取文件:",
-		"wantsToReadOutsideWorkspace": "请求访问外部文件:",
-		"didRead": "已读取文件:",
-		"wantsToEdit": "需要编辑文件:",
-		"wantsToEditOutsideWorkspace": "需要编辑外部文件:",
-		"wantsToEditProtected": "需要编辑受保护的配置文件:",
-		"wantsToCreate": "需要新建文件:",
-		"wantsToSearchReplace": "需要在此文件中搜索和替换:",
-		"didSearchReplace": "已完成搜索和替换:",
-		"wantsToInsert": "需要在此文件中插入内容:",
-		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容:",
-		"wantsToInsertAtEnd": "需要在文件末尾添加内容:",
-		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件：",
-		"wantsToReadMultiple": "Kilo Code 想要读取多个文件：",
-		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改："
+		"wantsToRead": "需要读取文件",
+		"wantsToReadOutsideWorkspace": "请求访问外部文件",
+		"didRead": "已读取文件",
+		"wantsToEdit": "需要编辑文件",
+		"wantsToEditOutsideWorkspace": "需要编辑外部文件",
+		"wantsToEditProtected": "需要编辑受保护的配置文件",
+		"wantsToCreate": "需要新建文件",
+		"wantsToSearchReplace": "需要在此文件中搜索和替换",
+		"didSearchReplace": "已完成搜索和替换",
+		"wantsToInsert": "需要在此文件中插入内容",
+		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容",
+		"wantsToInsertAtEnd": "需要在文件末尾添加内容",
+		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件",
+		"wantsToReadMultiple": "Kilo Code 想要读取多个文件",
+		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改",
+		"wantsToGenerateImage": "需要生成图片",
+		"wantsToGenerateImageOutsideWorkspace": "需要在工作区外生成图片",
+		"wantsToGenerateImageProtected": "需要在受保护位置生成图片",
+		"didGenerateImage": "已生成图片"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "需要查看目录文件列表:",
-		"didViewTopLevel": "已查看目录文件列表:",
-		"wantsToViewRecursive": "需要查看目录所有文件:",
-		"didViewRecursive": "已查看目录所有文件:",
-		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称:",
-		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称:",
+		"wantsToViewTopLevel": "需要查看目录文件列表",
+		"didViewTopLevel": "已查看目录文件列表",
+		"wantsToViewRecursive": "需要查看目录所有文件",
+		"didViewRecursive": "已查看目录所有文件",
+		"wantsToViewDefinitions": "Kilo Code想查看此目录中使用的源代码定义名称",
+		"didViewDefinitions": "Kilo Code已查看此目录中使用的源代码定义名称",
 		"wantsToSearch": "需要搜索内容: {{regex}}",
 		"didSearch": "已完成内容搜索: {{regex}}",
 		"wantsToSearchOutsideWorkspace": "需要搜索内容（工作区外）: {{regex}}",
 		"didSearchOutsideWorkspace": "已完成内容搜索（工作区外）: {{regex}}",
-		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）:",
-		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）:",
-		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）:",
-		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）:",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）:",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）:"
+		"wantsToViewTopLevelOutsideWorkspace": "需要查看目录文件列表（工作区外）",
+		"didViewTopLevelOutsideWorkspace": "已查看目录文件列表（工作区外）",
+		"wantsToViewRecursiveOutsideWorkspace": "需要查看目录所有文件（工作区外）",
+		"didViewRecursiveOutsideWorkspace": "已查看目录所有文件（工作区外）",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code想查看此目录中使用的源代码定义名称（工作区外）",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code已查看此目录中使用的源代码定义名称（工作区外）"
 	},
 	"commandOutput": "命令输出",
 	"commandExecution": {
 		"running": "正在运行",
+		"abort": "中止",
 		"pid": "PID: {{pid}}",
-		"exited": "已退出 ({{exitCode}})",
+		"exitStatus": "已退出，状态码 {{exitCode}}",
 		"manageCommands": "管理命令权限",
 		"commandManagementDescription": "管理命令权限：点击 ✓ 允许自动执行，点击 ✗ 拒绝执行。可以打开/关闭模式或从列表中删除。<settingsLink>查看所有设置</settingsLink>",
 		"addToAllowed": "添加到允许列表",
@@ -217,9 +229,15 @@
 	},
 	"response": "响应",
 	"arguments": "参数",
+	"text": {
+		"rooSaid": "Kilo 说"
+	},
+	"feedback": {
+		"youSaid": "你说"
+	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP上使用工具:",
-		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务上的资源:"
+		"wantsToUseTool": "Kilo Code想在{{serverName}} MCP上使用工具",
+		"wantsToAccessResource": "Kilo Code想访问{{serverName}} MCP服务上的资源"
 	},
 	"modes": {
 		"wantsToSwitch": "即将切换至{{mode}}模式",
@@ -228,7 +246,7 @@
 		"didSwitchWithReason": "已切换至{{mode}}模式（原因：{{reason}}）"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务:",
+		"wantsToCreate": "Kilo Code想在<code>{{mode}}</code>模式下创建新子任务",
 		"wantsToFinish": "Kilo Code想完成此子任务",
 		"newTaskContent": "子任务说明",
 		"completionContent": "子任务已完成",
@@ -237,19 +255,28 @@
 		"completionInstructions": "子任务已完成！您可以查看结果并提出修改或下一步建议。如果一切正常，请确认以将结果返回给主任务。"
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code有一个问题:"
+		"hasQuestion": "Kilo Code有一个问题"
 	},
 	"taskCompleted": "任务完成",
 	"powershell": {
 		"issues": "看起来您遇到了Windows PowerShell问题，请参阅此"
 	},
 	"autoApprove": {
-		"title": "自动批准:",
+		"tooltipManage": "管理自动批准设置",
+		"tooltipStatus": "自动批准已启用：{{toggles}}",
+		"title": "自动批准",
+		"toggle": "切换自动批准",
+		"all": "全部",
 		"none": "无",
-		"description": "允许直接执行操作无需确认，请谨慎启用。前往<settingsLink>设置</settingsLink>调整",
-		"selectOptionsFirst": "选择至少一个下面的选项以启用自动批准",
+		"description": "无需请求权限即可执行这些操作。仅对您完全信任的操作启用此功能。",
+		"selectOptionsFirst": "请至少选择以下一个选项以启用自动批准",
 		"toggleAriaLabel": "切换自动批准",
-		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项"
+		"disabledAriaLabel": "自动批准已禁用 - 请先选择选项",
+		"triggerLabelOff": "自动批准已关闭",
+		"triggerLabel_zero": "0 个自动批准",
+		"triggerLabel_one": "1 个自动批准",
+		"triggerLabel_other": "{{count}} 个自动批准",
+		"triggerLabelAll": "YOLO"
 	},
 	"reasoning": {
 		"thinking": "思考中",
@@ -267,17 +294,18 @@
 		"countdownDisplay": "{{count}}秒"
 	},
 	"announcement": {
-		"title": "🎉 Kilo Code {{version}} 已发布",
-		"description": "Kilo Code {{version}} 带来强大的新功能和重大改进，提升您的开发工作流程。",
-		"whatsNew": "新特性",
-		"feature1": "<bold>Hugging Face 提供商</bold>: 通过新的 Hugging Face 提供商直接访问大量优秀的开源模型，具备无缝集成和模型选择功能。",
-		"feature2": "<bold>内联命令控制</bold>: 新的自动批准和拒绝命令执行控制，为您提供对终端操作的精确控制和可自定义权限。",
-		"feature3": "<bold>AGENTS.md 规则支持</bold>: 添加对项目根目录中社区标准 AGENTS.md 文件的支持。",
-		"hideButton": "隐藏公告",
-		"detailsDiscussLinks": "在 <discordLink>Discord</discordLink> 和 <redditLink>Reddit</redditLink> 获取更多详情并参与讨论 🚀"
+		"title": "🎉 Roo Code {{version}} 已发布",
+		"stealthModel": {
+			"feature": "<bold>限时免费隐形模型</bold> - Code Supernova：现已升级为 <bold>1M Token 上下文窗口</bold>！一个支持图像输入的多功能代理编程模型，通过 Roo Code Cloud 提供。",
+			"note": "(注意：提示词和补全内容会被模型创建者记录并用于改进模型)",
+			"connectButton": "连接到 Roo Code Cloud",
+			"selectModel": "在设置中从 Roo Code Cloud 提供商选择 <code>roo/code-supernova</code> 开始使用。",
+			"goToSettingsButton": "前往设置"
+		},
+		"socialLinks": "在 <xLink>X</xLink>、<discordLink>Discord</discordLink> 或 <redditLink>r/RooCode</redditLink> 上关注我们 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code想使用浏览器:",
+		"rooWantsToUse": "Kilo Code想使用浏览器",
 		"consoleLogs": "控制台日志",
 		"noNewLogs": "(没有新日志)",
 		"screenshot": "浏览器截图",
@@ -302,8 +330,6 @@
 		"tooltips": {
 			"expand": "展开代码块",
 			"collapse": "收起代码块",
-			"enable_wrap": "启用自动换行",
-			"disable_wrap": "禁用自动换行",
 			"copy_code": "复制代码"
 		}
 	},
@@ -318,6 +344,11 @@
 		"autoApprovedRequestLimitReached": {
 			"title": "已达自动批准请求限制",
 			"description": "Kilo Code 已达到 {{count}} 次 API 请求的自动批准限制。您想重置计数并继续任务吗？",
+			"button": "重置并继续"
+		},
+		"autoApprovedCostLimitReached": {
+			"title": "已达到自动批准的费用限额",
+			"description": "Kilo Code已经达到了${{count}}的自动批准成本限制。您想重置成本并继续任务吗？",
 			"button": "重置并继续"
 		}
 	},
@@ -347,11 +378,48 @@
 		"ariaLabel": "版本 {{version}} - 点击查看发布说明"
 	},
 	"rooCloudCTA": {
-		"title": "Roo Code Cloud 即将推出！",
+		"title": "Roo Code Cloud 正在进化！",
 		"description": "在云端运行远程代理，随时随地访问任务，与他人协作等更多功能。",
-		"joinWaitlist": "加入等待列表获取早期访问权限。"
+		"joinWaitlist": "注册获取最新更新。"
+	},
+	"command": {
+		"triggerDescription": "触发 {{name}} 命令"
 	},
 	"editMessage": {
 		"placeholder": "编辑消息..."
+	},
+	"slashCommands": {
+		"tooltip": "管理斜杠命令",
+		"title": "斜杠命令",
+		"description": "使用内置斜杠命令或创建自定义命令，快速访问常用提示词和工作流程。<DocsLink>文档</DocsLink>",
+		"manageCommands": "在设置中管理斜杠命令",
+		"builtInCommands": "内置命令",
+		"globalCommands": "全局命令",
+		"workspaceCommands": "工作区命令",
+		"globalCommand": "全局命令",
+		"editCommand": "编辑命令",
+		"deleteCommand": "删除命令",
+		"newGlobalCommandPlaceholder": "新建全局命令...",
+		"newWorkspaceCommandPlaceholder": "新建工作区命令...",
+		"deleteDialog": {
+			"title": "删除命令",
+			"description": "确定要删除命令 \"{{name}}\" 吗？此操作无法撤销。",
+			"cancel": "取消",
+			"confirm": "删除"
+		}
+	},
+	"contextMenu": {
+		"noResults": "无结果",
+		"problems": "问题",
+		"terminal": "终端",
+		"url": "粘贴URL以获取内容"
+	},
+	"queuedMessages": {
+		"title": "队列消息",
+		"clickToEdit": "点击编辑消息"
+	},
+	"slashCommand": {
+		"wantsToRun": "Kilo Code 想要运行斜杠命令",
+		"didRun": "Kilo Code 运行了斜杠命令"
 	}
 }

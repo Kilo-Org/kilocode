@@ -28,11 +28,16 @@
 		"notifications": "Notificacions",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Comandes de barra",
 		"prompts": "Indicacions",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
 		"display": "Mostrar"
+	},
+	"slashCommands": {
+		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configura les indicacions de suport utilitzades per a accions ràpides com millorar indicacions, explicar codi i solucionar problemes. Aquestes indicacions ajuden Kilo Code a proporcionar millor assistència per a tasques comunes de desenvolupament."
@@ -51,6 +56,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clau de l'API:",
 		"mistralApiKeyPlaceholder": "Introduïu la vostra clau de l'API de Mistral",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Clau API",
+		"vercelAiGatewayApiKeyPlaceholder": "Introduïu la vostra clau API de Vercel AI Gateway",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
 		"openAiKeyLabel": "Clau API OpenAI",
 		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
@@ -114,6 +122,7 @@
 			"modelDimensionRequired": "Cal una dimensió de model",
 			"geminiApiKeyRequired": "Cal una clau d'API de Gemini",
 			"mistralApiKeyRequired": "La clau de l'API de Mistral és requerida",
+			"vercelAiGatewayApiKeyRequired": "Es requereix la clau API de Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
 			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0"
@@ -124,10 +133,14 @@
 		"searchMinScoreResetTooltip": "Restablir al valor per defecte (0.4)",
 		"searchMaxResultsLabel": "Màxim de resultats de cerca",
 		"searchMaxResultsDescription": "Nombre màxim de resultats de cerca a retornar quan es consulta l'índex de la base de codi. Els valors més alts proporcionen més context però poden incloure resultats menys rellevants.",
-		"resetToDefault": "Restablir al valor per defecte"
+		"resetToDefault": "Restablir al valor per defecte",
+		"cancelling": "S'està cancel·lant...",
+		"cancelIndexingButton": "Cancel·la la indexació"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Pots configurar una drecera global per a aquesta configuració <SettingsLink>a les preferències del teu IDE</SettingsLink>.",
 		"description": "Permet que Kilo Code realitzi operacions automàticament sense requerir aprovació. Activeu aquesta configuració només si confieu plenament en la IA i enteneu els riscos de seguretat associats.",
+		"enabled": "Auto-aprovació activada",
 		"toggleAriaLabel": "Commuta l'aprovació automàtica",
 		"disabledAriaLabel": "Aprovació automàtica desactivada: seleccioneu primer les opcions",
 		"readOnly": {
@@ -202,7 +215,14 @@
 			"description": "Fes aquesta quantitat de sol·licituds API automàticament abans de demanar aprovació per continuar amb la tasca.",
 			"unlimited": "Il·limitat"
 		},
-		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica"
+		"selectOptionsFirst": "Seleccioneu almenys una opció a continuació per activar l'aprovació automàtica",
+		"apiCostLimit": {
+			"title": "Cost Màxim",
+			"unlimited": "Il·limitat"
+		},
+		"maxLimits": {
+			"description": "Fes sol·licituds automàticament fins a aquests límits abans de demanar aprovació per continuar."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentació de {{provider}}",
@@ -225,15 +245,15 @@
 		"searchProviderPlaceholder": "Cerca proveïdors",
 		"noProviderMatchFound": "No s'han trobat proveïdors",
 		"noMatchFound": "No s'han trobat perfils coincidents",
-		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi, però no limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi però limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"vscodeLmUnavailable": "El suport de models de llenguatge de VS Code només està disponible a Visual Studio Code. Els forks com VSCodium i altres poden no funcionar. A més, aquesta capacitat no està disponible a les eines JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assegureu-vos que utilitzeu una eina compatible i que VS Code Chat estigui instal·lat i habilitat",
 		"awsCustomArnUse": "Introduïu un ARN vàlid d'Amazon Bedrock per al model que voleu utilitzar. Exemples de format:",
 		"awsCustomArnDesc": "Assegureu-vos que la regió a l'ARN coincideix amb la regió d'AWS seleccionada anteriorment.",
 		"openRouterApiKey": "Clau API d'OpenRouter",
 		"getOpenRouterApiKey": "Obtenir clau API d'OpenRouter",
-		"cerebras": {
-			"apiKey": "Clau API de Cerebras",
-			"getApiKey": "Obtenir clau API de Cerebras"
-		},
+		"vercelAiGatewayApiKey": "Clau API de Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Obtenir clau API de Vercel AI Gateway",
 		"apiKeyStorageNotice": "Les claus API s'emmagatzemen de forma segura a l'Emmagatzematge Secret de VSCode",
 		"glamaApiKey": "Clau API de Glama",
 		"getGlamaApiKey": "Obtenir clau API de Glama",
@@ -254,22 +274,51 @@
 			"error": "No s'ha pogut actualitzar la llista de models. Si us plau, torneu-ho a provar."
 		},
 		"getRequestyApiKey": "Obtenir clau API de Requesty",
+		"getRequestyBaseUrl": "URL base",
+		"requestyUseCustomBaseUrl": "Utilitza l'URL base personalitzada",
 		"openRouterTransformsText": "Comprimir prompts i cadenes de missatges a la mida del context (<a>Transformacions d'OpenRouter</a>)",
 		"anthropicApiKey": "Clau API d'Anthropic",
 		"getAnthropicApiKey": "Obtenir clau API d'Anthropic",
 		"anthropicUseAuthToken": "Passar la clau API d'Anthropic com a capçalera d'autorització en lloc de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"anthropic1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Activa la finestra de context d'1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Amplia la finestra de context a 1 milió de tokens per a Claude Sonnet 4",
+		"cerebrasApiKey": "Clau API de Cerebras",
+		"getCerebrasApiKey": "Obtenir clau API de Cerebras",
 		"chutesApiKey": "Clau API de Chutes",
 		"getChutesApiKey": "Obtenir clau API de Chutes",
+		"fireworksApiKey": "Clau API de Fireworks",
+		"getFireworksApiKey": "Obtenir clau API de Fireworks",
+		"syntheticApiKey": "Clau API de Synthetic",
+		"getSyntheticApiKey": "Obtenir clau API de Synthetic",
+		"featherlessApiKey": "Clau API de Featherless",
+		"getFeatherlessApiKey": "Obtenir clau API de Featherless",
+		"ioIntelligenceApiKey": "Clau API d'IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Introdueix la teva clau d'API de IO Intelligence",
+		"getIoIntelligenceApiKey": "Obtenir clau API d'IO Intelligence",
 		"deepSeekApiKey": "Clau API de DeepSeek",
 		"getDeepSeekApiKey": "Obtenir clau API de DeepSeek",
+		"doubaoApiKey": "Clau API de Doubao",
+		"getDoubaoApiKey": "Obtenir clau API de Doubao",
 		"moonshotApiKey": "Clau API de Moonshot",
 		"getMoonshotApiKey": "Obtenir clau API de Moonshot",
 		"moonshotBaseUrl": "Punt d'entrada de Moonshot",
+		"zaiApiKey": "Clau API de Z AI",
+		"getZaiApiKey": "Obtenir clau API de Z AI",
+		"zaiEntrypoint": "Punt d'entrada de Z AI",
+		"zaiEntrypointDescription": "Si us plau, seleccioneu el punt d'entrada de l'API apropiat segons la vostra ubicació. Si sou a la Xina, trieu open.bigmodel.cn. Altrament, trieu api.z.ai.",
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
+		"getSambaNovaApiKey": "Obtenir clau API de SambaNova",
+		"sambaNovaApiKey": "Clau API de SambaNova",
 		"getHuggingFaceApiKey": "Obtenir clau API de Hugging Face",
 		"huggingFaceApiKey": "Clau API de Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obtenir clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Clau API de OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Utilitzar una URL base personalitzada",
 		"huggingFaceModelId": "ID del model",
 		"huggingFaceLoading": "Carregant...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -313,6 +362,16 @@
 		"cacheUsageNote": "Nota: Si no veieu l'ús de la caché, proveu de seleccionar un model diferent i després tornar a seleccionar el model desitjat.",
 		"vscodeLmModel": "Model de llenguatge",
 		"vscodeLmWarning": "Nota: Aquesta és una integració molt experimental i el suport del proveïdor variarà. Si rebeu un error sobre un model no compatible, és un problema del proveïdor.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Activa el context d'URL",
+				"description": "Permet a Gemini llegir pàgines enllaçades per extreure, comparar i sintetitzar el seu contingut en respostes informades."
+			},
+			"groundingSearch": {
+				"title": "Activa la Fonamentació amb la Cerca de Google",
+				"description": "Connecta Gemini a dades web en temps real per a respostes precises i actualitzades amb citacions verificables."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Per utilitzar Google Cloud Vertex AI, necessiteu:",
 			"step1": "1. Crear un compte de Google Cloud, habilitar l'API de Vertex AI i habilitar els models Claude necessaris.",
@@ -336,6 +395,11 @@
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
 			"modelId": "ID del model",
+			"apiKey": "Clau API d'Ollama",
+			"apiKeyPlaceholder": "Introdueix la teva clau API",
+			"apiKeyHelp": "Clau API opcional per a instàncies d'Ollama autenticades o serveis al núvol. Deixa-ho buit per a instal·lacions locals.",
+			"numCtx": "Mida de la finestra de context (num_ctx)",
+			"numCtxHelp": "Sobreescriu la mida de la finestra de context per defecte del model. Deixeu-ho en blanc per utilitzar la configuració del Modelfile del model. El valor mínim és 128.",
 			"description": "Ollama permet executar models localment al vostre ordinador. Per a instruccions sobre com començar, consulteu la Guia d'inici ràpid.",
 			"warning": "Nota: Kilo Code utilitza prompts complexos i funciona millor amb models Claude. Els models menys capaços poden no funcionar com s'espera."
 		},
@@ -346,6 +410,10 @@
 		"humanRelay": {
 			"description": "No es requereix clau API, però l'usuari necessita ajuda per copiar i enganxar informació al xat d'IA web.",
 			"instructions": "Durant l'ús, apareixerà un diàleg i el missatge actual es copiarà automàticament al porta-retalls. Necessiteu enganxar-lo a les versions web d'IA (com ChatGPT o Claude), després copiar la resposta de l'IA de nou al diàleg i fer clic al botó de confirmació."
+		},
+		"roo": {
+			"authenticatedMessage": "Autenticat de forma segura a través del teu compte de Roo Code Cloud.",
+			"connectButton": "Connecta amb Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -408,9 +476,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Esforç de raonament del model",
+			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
 			"medium": "Mitjà",
 			"low": "Baix"
+		},
+		"verbosity": {
+			"label": "Verbositat de la sortida",
+			"high": "Alta",
+			"medium": "Mitjana",
+			"low": "Baixa",
+			"description": "Controla el nivell de detall de les respostes del model. La verbositat baixa produeix respostes concises, mentre que la verbositat alta proporciona explicacions exhaustives."
 		},
 		"setReasoningLevel": "Activa l'esforç de raonament",
 		"claudeCode": {
@@ -434,6 +510,13 @@
 			"requirement4": "No utilitza claus d'API - l'autenticació es gestiona via OAuth",
 			"requirement5": "Requereix que l'eina Gemini CLI estigui instal·lada i autenticada primer",
 			"freeAccess": "Accés gratuït via autenticació OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Ruta de Credencials OAuth (opcional)",
+			"oauthPathDescription": "Ruta al fitxer de credencials OAuth. Deixa buit per utilitzar la ubicació per defecte (~/.qwen/oauth_creds.json).",
+			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
+			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
+			"setupLink": "Documentació oficial de Qwen"
 		}
 	},
 	"browser": {
@@ -550,6 +633,16 @@
 			"profileDescription": "Llindar personalitzat només per a aquest perfil (substitueix el per defecte global)",
 			"inheritDescription": "Aquest perfil hereta el llindar per defecte global ({{threshold}}%)",
 			"usesGlobal": "(utilitza global {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Mida màxima d'arxiu d'imatge",
+			"mb": "MB",
+			"description": "Mida màxima (en MB) per a arxius d'imatge que poden ser processats per l'eina de lectura d'arxius."
+		},
+		"maxTotalImageSize": {
+			"label": "Mida total màxima d'imatges",
+			"mb": "MB",
+			"description": "Límit de mida acumulativa màxima (en MB) per a totes les imatges processades en una sola operació read_file. Quan es llegeixen múltiples imatges, la mida de cada imatge s'afegeix al total. Si incloure una altra imatge excediria aquest límit, serà omesa."
 		}
 	},
 	"terminal": {
@@ -673,16 +766,54 @@
 			"name": "Habilita edicions de fitxers concurrents",
 			"description": "Quan està activat, Kilo Code pot editar múltiples fitxers en una sola petició. Quan està desactivat, Kilo Code ha d'editar fitxers d'un en un. Desactivar això pot ajudar quan es treballa amb models menys capaços o quan vols més control sobre les modificacions de fitxers."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Morph Fast Apply.",
-			"apiKey": "Clau API de Morph (opcional)",
-			"placeholder": "Introduïu la vostra clau API de Morph (opcional)",
-			"warning": "Si no configureu una clau API de Morph, encara podeu utilitzar Fast Apply amb Kilo Code o OpenRouter. El vostre compte serà facturat per l'ús del model, això actualment no es mostra a la interfície de l'extensió."
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edició en segon pla",
+			"description": "Quan s'activa, evita la interrupció del focus de l'editor. Les edicions de fitxers es produeixen en segon pla sense obrir la vista diff o robar el focus. Pots continuar treballant sense interrupcions mentre Kilo Code fa canvis. Els fitxers poden obrir-se sense focus per capturar diagnòstics o romandre completament tancats."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Utilitza el nou analitzador de missatges",
+			"description": "Activa l'analitzador de missatges en streaming experimental que millora el rendiment en respostes llargues processant els missatges de manera més eficient."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Requerir la llista 'todos' per a noves tasques",
+			"description": "Quan estigui activat, l'eina new_task requerirà que es proporcioni un paràmetre 'todos'. Això garanteix que totes les noves tasques comencin amb una llista clara d'objectius. Quan estigui desactivat (per defecte), el paràmetre 'todos' continua sent opcional per a la compatibilitat amb versions anteriors."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Habilitar generació d'imatges amb IA",
+			"description": "Quan estigui habilitat, Kilo Code pot generar imatges a partir de prompts de text. Requereix que es configuri una clau d'API de Kilo Code o OpenRouter.",
+			"apiProvider": "Proveïdor d'API",
+			"openRouterApiKeyLabel": "Clau API d'OpenRouter",
+			"openRouterApiKeyPlaceholder": "Introdueix la teva clau API d'OpenRouter",
+			"kiloCodeApiKeyLabel": "Clau API de Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Introdueix la teva clau API de Kilo Code",
+			"kiloCodeApiKeyPaste": "Enganxa la clau API actual de Kilo Code",
+			"getApiKeyText": "Obté la teva clau API de",
+			"modelSelectionLabel": "Model de generació d'imatges",
+			"modelSelectionDescription": "Selecciona el model per a la generació d'imatges",
+			"warningMissingKey": "⚠️ Es requereix una clau API per a la generació d'imatges, si us plau configura-la a dalt.",
+			"successConfigured": "✓ La generació d'imatges està configurada i llesta per utilitzar"
 		},
 		"INLINE_ASSIST": {
-			"name": "Assistència en línia",
-			"description": "Activa les funcions d'assistència en línia per obtenir suggeriments i millores de codi ràpides directament al teu editor. Inclou la Tasca ràpida en línia (Cmd+I) per a canvis específics i la Tasca automàtica en línia per a millores contextuals."
+			"name": "Autocomplete",
+			"description": "Habilita les funcionalitats d'Autocomplete per a suggeriments de codi ràpids i millores directament al teu editor. Inclou Tasca Ràpida (Cmd+I) per a canvis específics i Autocomplete per a millores contextuals."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Habilitar Fast Apply",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
+			"apiKey": "Clau API de Morph (opcional)",
+			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"modelLabel": "Selecció de model",
+			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
+			"models": {
+				"auto": "Automàtic (Per defecte - tria el millor disponible)",
+				"morphFast": "Morph v3 Fast (Més ràpid, cost més baix)",
+				"morphLarge": "Morph v3 Large (Més capaç)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Habilitar comandes de barra diagonal iniciades pel model",
+			"description": "Quan està habilitat, Kilo Code pot executar les vostres comandes de barra diagonal per executar fluxos de treball."
 		}
 	},
 	"promptCaching": {
@@ -701,6 +832,7 @@
 		"noComputerUse": "No suporta ús de l'ordinador",
 		"supportsPromptCache": "Suporta emmagatzematge en caché de prompts",
 		"noPromptCache": "No suporta emmagatzematge en caché de prompts",
+		"contextWindow": "Finestra de context:",
 		"maxOutput": "Sortida màxima",
 		"inputPrice": "Preu d'entrada",
 		"outputPrice": "Preu de sortida",
@@ -753,9 +885,11 @@
 			"regionMismatch": "Avís: La regió del vostre ARN ({{arnRegion}}) no coincideix amb la regió seleccionada ({{region}}). Això pot causar problemes d'accés. El proveïdor utilitzarà la regió de l'ARN."
 		},
 		"modelAvailability": "L'ID de model ({{modelId}}) que heu proporcionat no està disponible. Si us plau, trieu un altre model.",
+		"modelDeprecated": "Aquest model ja no està disponible. Si us plau, seleccioneu un model diferent.",
 		"providerNotAllowed": "El proveïdor '{{provider}}' no està permès per la vostra organització",
 		"modelNotAllowed": "El model '{{model}}' no està permès per al proveïdor '{{provider}}' per la vostra organització",
-		"profileInvalid": "Aquest perfil conté un proveïdor o model que no està permès per la vostra organització"
+		"profileInvalid": "Aquest perfil conté un proveïdor o model que no està permès per la vostra organització",
+		"qwenCodeOauthPath": "Has de proporcionar una ruta vàlida de credencials OAuth"
 	},
 	"placeholders": {
 		"apiKey": "Introduïu la clau API...",
@@ -794,11 +928,51 @@
 		"taskTimeline": {
 			"label": "Mostra la línia temporal de la tasca",
 			"description": "Mostra una línia de temps visual dels missatges de tasques, acolorida per tipus, que et permet veure ràpidament el progrés de la tasca i desplaçar-te cap enrere a punts específics de l'historial de la tasca."
+		},
+		"sendMessageOnEnter": {
+			"label": "Envia missatge amb Enter",
+			"description": "Quan estigui activat, prem Enter per enviar i Shift+Enter per a una nova línia. Desactiva-ho per utilitzar Shift+Enter per enviar en el seu lloc."
+		},
+		"costThreshold": {
+			"label": "Amaga el cost per sota del llindar",
+			"description": "Mostra només els costos de sol·licituds superiors a aquesta quantitat. Els costos sempre són visibles quan el panell de detalls està obert.",
+			"currentValue": "Llindar actual: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Mostrar marca de temps",
+			"description": "Mostrar la marca de temps per a cada missatge a la vista del xat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostra l'animació al marge quan s'autocompleta",
+			"description": "Mostra un indicador animat al marge de l'editor quan l'autocompletament s'està executant",
+			"preview": "Previsualització de l'animació"
 		}
 	},
 	"includeMaxOutputTokens": "Incloure tokens màxims de sortida",
 	"includeMaxOutputTokensDescription": "Enviar el paràmetre de tokens màxims de sortida a les sol·licituds API. Alguns proveïdors poden no admetre això.",
 	"limitMaxTokensDescription": "Limitar el nombre màxim de tokens en la resposta",
 	"maxOutputTokensLabel": "Tokens màxims de sortida",
-	"maxTokensGenerateDescription": "Tokens màxims a generar en la resposta"
+	"maxTokensGenerateDescription": "Tokens màxims a generar en la resposta",
+	"serviceTier": {
+		"label": "Nivell de servei",
+		"tooltip": "Per a un processament més ràpid de les sol·licituds de l'API, proveu el nivell de servei de processament prioritari. Per a preus més baixos amb una latència més alta, proveu el nivell de processament flexible.",
+		"standard": "Estàndard",
+		"flex": "Flex",
+		"priority": "Prioritat",
+		"pricingTableTitle": "Preus per nivell de servei (preu per 1M de fitxes)",
+		"columns": {
+			"tier": "Nivell",
+			"input": "Entrada",
+			"output": "Sortida",
+			"cacheReads": "Lectures de memòria cau"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Replega els missatges de pensament per defecte",
+			"description": "Quan estigui activat, els blocs de pensament es replegaran per defecte fins que interactuïs amb ells"
+		}
+	}
 }

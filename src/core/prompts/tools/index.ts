@@ -1,4 +1,8 @@
-import type { ToolName, ModeConfig } from "@roo-code/types"
+import type {
+	ToolName,
+	ModeConfig,
+	ToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
 import { McpHub } from "../../../services/mcp/McpHub"
@@ -7,13 +11,14 @@ import { Mode, getModeConfig, isToolAllowedForMode, getGroupName } from "../../.
 import { ToolArgs } from "./types"
 import { getExecuteCommandDescription } from "./execute-command"
 import { getReadFileDescription } from "./read-file"
+import { getSimpleReadFileDescription } from "./simple-read-file"
 import { getFetchInstructionsDescription } from "./fetch-instructions"
+import { shouldUseSingleFileRead } from "@roo-code/types"
 import { getWriteToFileDescription } from "./write-to-file"
 import { getSearchFilesDescription } from "./search-files"
 import { getListFilesDescription } from "./list-files"
 import { getInsertContentDescription } from "./insert-content"
 import { getSearchAndReplaceDescription } from "./search-and-replace"
-import { getEditFileDescription } from "./edit-file" // kilocode_change: Morph fast apply
 import { getListCodeDefinitionNamesDescription } from "./list-code-definition-names"
 import { getBrowserActionDescription } from "./browser-action"
 import { getAskFollowupQuestionDescription } from "./ask-followup-question"
@@ -24,13 +29,28 @@ import { getSwitchModeDescription } from "./switch-mode"
 import { getNewTaskDescription } from "./new-task"
 import { getCodebaseSearchDescription } from "./codebase-search"
 import { getUpdateTodoListDescription } from "./update-todo-list"
+import { getRunSlashCommandDescription } from "./run-slash-command"
+import { getGenerateImageDescription } from "./generate-image"
 import { CodeIndexManager } from "../../../services/code-index/manager"
+
+// kilocode_change start: Morph fast apply
+import { isFastApplyAvailable } from "../../tools/editFileTool"
+import { getEditFileDescription } from "./edit-file"
+import { type ClineProviderState } from "../../webview/ClineProvider"
+// kilocode_change end
 
 // Map of tool names to their description functions
 const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined> = {
 	execute_command: (args) => getExecuteCommandDescription(args),
-	read_file: (args) => getReadFileDescription(args),
-	fetch_instructions: () => getFetchInstructionsDescription(),
+	read_file: (args) => {
+		// Check if the current model should use the simplified read_file tool
+		const modelId = args.settings?.modelId
+		if (modelId && shouldUseSingleFileRead(modelId)) {
+			return getSimpleReadFileDescription(args)
+		}
+		return getReadFileDescription(args)
+	},
+	fetch_instructions: (args) => getFetchInstructionsDescription(args.settings?.enableMcpServerCreation),
 	write_to_file: (args) => getWriteToFileDescription(args),
 	search_files: (args) => getSearchFilesDescription(args),
 	list_files: (args) => getListFilesDescription(args),
@@ -40,7 +60,7 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	attempt_completion: (args) => getAttemptCompletionDescription(args),
 	use_mcp_tool: (args) => getUseMcpToolDescription(args),
 	access_mcp_resource: (args) => getAccessMcpResourceDescription(args),
-	codebase_search: () => getCodebaseSearchDescription(),
+	codebase_search: (args) => getCodebaseSearchDescription(args),
 	switch_mode: () => getSwitchModeDescription(),
 	new_task: (args) => getNewTaskDescription(args),
 	insert_content: (args) => getInsertContentDescription(args),
@@ -49,6 +69,8 @@ const toolDescriptionMap: Record<string, (args: ToolArgs) => string | undefined>
 	apply_diff: (args) =>
 		args.diffStrategy ? args.diffStrategy.getToolDescription({ cwd: args.cwd, toolOptions: args.toolOptions }) : "",
 	update_todo_list: (args) => getUpdateTodoListDescription(args),
+	run_slash_command: () => getRunSlashCommandDescription(),
+	generate_image: (args) => getGenerateImageDescription(args),
 }
 
 export function getToolDescriptionsForMode(
@@ -63,6 +85,9 @@ export function getToolDescriptionsForMode(
 	experiments?: Record<string, boolean>,
 	partialReadsEnabled?: boolean,
 	settings?: Record<string, any>,
+	enableMcpServerCreation?: boolean,
+	modelId?: string,
+	clineProviderState?: ClineProviderState, // kilocode_change
 ): string {
 	const config = getModeConfig(mode, customModes)
 	const args: ToolArgs = {
@@ -72,7 +97,11 @@ export function getToolDescriptionsForMode(
 		browserViewportSize,
 		mcpHub,
 		partialReadsEnabled,
-		settings,
+		settings: {
+			...settings,
+			enableMcpServerCreation,
+			modelId,
+		},
 		experiments,
 	}
 
@@ -111,14 +140,29 @@ export function getToolDescriptionsForMode(
 		tools.delete("codebase_search")
 	}
 
-	// kilocode_change: Morph fast apply
-	if (experiments?.morphFastApply !== true) {
+	// kilocode_change start: Morph fast apply
+	if (isFastApplyAvailable(clineProviderState)) {
+		// When Morph is enabled, disable traditional editing tools
+		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		traditionalEditingTools.forEach((tool) => tools.delete(tool))
+	} else {
 		tools.delete("edit_file")
 	}
+	// kilocode_change end
 
 	// Conditionally exclude update_todo_list if disabled in settings
 	if (settings?.todoListEnabled === false) {
 		tools.delete("update_todo_list")
+	}
+
+	// Conditionally exclude generate_image if experiment is not enabled
+	if (!experiments?.imageGeneration) {
+		tools.delete("generate_image")
+	}
+
+	// Conditionally exclude run_slash_command if experiment is not enabled
+	if (!experiments?.runSlashCommand) {
+		tools.delete("run_slash_command")
 	}
 
 	// Map tool descriptions for allowed tools
@@ -141,6 +185,7 @@ export function getToolDescriptionsForMode(
 export {
 	getExecuteCommandDescription,
 	getReadFileDescription,
+	getSimpleReadFileDescription,
 	getFetchInstructionsDescription,
 	getWriteToFileDescription,
 	getSearchFilesDescription,
@@ -156,4 +201,6 @@ export {
 	getSearchAndReplaceDescription,
 	getEditFileDescription, // kilocode_change: Morph fast apply
 	getCodebaseSearchDescription,
+	getRunSlashCommandDescription,
+	getGenerateImageDescription,
 }

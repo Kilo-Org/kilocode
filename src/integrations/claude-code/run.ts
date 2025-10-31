@@ -5,11 +5,22 @@ import { ClaudeCodeMessage } from "./types"
 import readline from "readline"
 import { CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS } from "@roo-code/types"
 import * as os from "os"
+// kilocode_change start
+import path from "node:path"
+import crypto from "node:crypto"
+import fs from "node:fs/promises"
+import { t } from "../../i18n"
 
+export const MAX_SYSTEM_PROMPT_LENGTH = 65536
+// kilocode_change end
 const cwd = vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0)
+
+// Claude Code installation URL - can be easily updated if needed
+const CLAUDE_CODE_INSTALLATION_URL = "https://docs.anthropic.com/en/docs/claude-code/setup"
 
 type ClaudeCodeOptions = {
 	systemPrompt: string
+	systemPromptFile?: string // kilocode_change
 	messages: Anthropic.Messages.MessageParam[]
 	path?: string
 	modelId?: string
@@ -22,10 +33,43 @@ type ProcessState = {
 	exitCode: number | null
 }
 
+// kilocode_change start
+async function generateTempSystemPrompt(options: ClaudeCodeOptions): Promise<string | undefined> {
+	const isWindows = os.platform() === "win32"
+	const isSystemPromptTooLong = options.systemPrompt.length > MAX_SYSTEM_PROMPT_LENGTH
+	if (!isWindows && !isSystemPromptTooLong) {
+		return undefined
+	}
+	const uniqueId = crypto.randomUUID()
+	const tempFilePath = path.join(os.tmpdir(), `kilocode-system-prompt-${uniqueId}.txt`)
+	await fs.writeFile(tempFilePath, options.systemPrompt, "utf8")
+	return tempFilePath
+}
+
+async function unlinkTempSystemPrompt(systemPromptFile: string | undefined): Promise<void> {
+	if (!systemPromptFile) {
+		return
+	}
+	await fs.unlink(systemPromptFile).catch(console.log)
+}
+// kilocode_change end
+
 export async function* runClaudeCode(
 	options: ClaudeCodeOptions & { maxOutputTokens?: number },
 ): AsyncGenerator<ClaudeCodeMessage | string> {
-	const process = runProcess(options)
+	const systemPromptFile = await generateTempSystemPrompt(options) // kilocode_change
+	const claudePath = options.path || "claude"
+	let process
+
+	try {
+		process = runProcess({ ...options, systemPromptFile }) // kilocode_change
+	} catch (error: any) {
+		// Handle ENOENT errors immediately when spawning the process
+		if (error.code === "ENOENT" || error.message?.includes("ENOENT")) {
+			throw createClaudeCodeNotFoundError(claudePath, error)
+		}
+		throw error
+	}
 
 	const rl = readline.createInterface({
 		input: process.stdout,
@@ -48,7 +92,14 @@ export async function* runClaudeCode(
 		})
 
 		process.on("error", (err) => {
-			processState.error = err
+			// Enhance ENOENT errors with helpful installation guidance
+			if (err.message.includes("ENOENT") || (err as any).code === "ENOENT") {
+				processState.error = createClaudeCodeNotFoundError(claudePath, err)
+			} else {
+				processState.error = err
+			}
+			// Close the readline interface to break out of the loop
+			rl.close()
 		})
 
 		for await (const line of rl) {
@@ -67,6 +118,11 @@ export async function* runClaudeCode(
 			}
 		}
 
+		// Check for errors that occurred during processing
+		if (processState.error) {
+			throw processState.error
+		}
+
 		// We rely on the assistant message. If the output was truncated, it's better having a poorly formatted message
 		// from which to extract something, than throwing an error/showing the model didn't return any messages.
 		if (processState.partialData && processState.partialData.startsWith(`{"type":"assistant"`)) {
@@ -75,7 +131,12 @@ export async function* runClaudeCode(
 
 		const { exitCode } = await process
 		if (exitCode !== null && exitCode !== 0) {
-			const errorOutput = processState.error?.message || processState.stderrLogs?.trim()
+			// If we have a specific ENOENT error, throw that instead
+			if (processState.error && (processState.error as any).name === "ClaudeCodeNotFoundError") {
+				throw processState.error
+			}
+
+			const errorOutput = (processState.error as any)?.message || processState.stderrLogs?.trim()
 			throw new Error(
 				`Claude Code process exited with code ${exitCode}.${errorOutput ? ` Error output: ${errorOutput}` : ""}`,
 			)
@@ -85,6 +146,11 @@ export async function* runClaudeCode(
 		if (!process.killed) {
 			process.kill()
 		}
+		// kilocode_change start
+		if (systemPromptFile) {
+			await unlinkTempSystemPrompt(systemPromptFile)
+		}
+		// kilocode_change end
 	}
 }
 
@@ -107,27 +173,35 @@ const claudeCodeTools = [
 	"TodoRead",
 	"TodoWrite",
 	"WebSearch",
+	"ExitPlanMode",
+	"BashOutput",
+	"KillBash",
 ].join(",")
 
 const CLAUDE_CODE_TIMEOUT = 600000 // 10 minutes
 
 function runProcess({
 	systemPrompt,
+	systemPromptFile,
 	messages,
 	path,
 	modelId,
 	maxOutputTokens,
 }: ClaudeCodeOptions & { maxOutputTokens?: number }) {
 	const claudePath = path || "claude"
-	const isWindows = os.platform() === "win32"
+	// const isWindows = os.platform() === "win32" kilocode_change
 
 	// Build args based on platform
 	const args = ["-p"]
 
 	// Pass system prompt as flag on non-Windows, via stdin on Windows (avoids cmd length limits)
-	if (!isWindows) {
+	// kilocode_change start
+	if (systemPromptFile) {
+		args.push("--system-prompt-file", systemPromptFile)
+	} else {
 		args.push("--system-prompt", systemPrompt)
 	}
+	// kilocode_change end
 
 	args.push(
 		"--verbose",
@@ -161,17 +235,7 @@ function runProcess({
 		timeout: CLAUDE_CODE_TIMEOUT,
 	})
 
-	// Prepare stdin data: Windows gets both system prompt & messages (avoids 8191 char limit),
-	// other platforms get messages only (avoids Linux E2BIG error from ~128KiB execve limit)
-	let stdinData: string
-	if (isWindows) {
-		stdinData = JSON.stringify({
-			systemPrompt,
-			messages,
-		})
-	} else {
-		stdinData = JSON.stringify(messages)
-	}
+	const stdinData = JSON.stringify(messages) // kilocode_change
 
 	// Use setImmediate to ensure process is spawned before writing (prevents stdin race conditions)
 	setImmediate(() => {
@@ -222,4 +286,19 @@ function attemptParseChunk(data: string): ClaudeCodeMessage | null {
 		console.error("Error parsing chunk:", error, data.length)
 		return null
 	}
+}
+
+/**
+ * Creates a user-friendly error message for Claude Code ENOENT errors
+ */
+function createClaudeCodeNotFoundError(claudePath: string, originalError: Error): Error {
+	const errorMessage = t("common:errors.claudeCode.notFound", {
+		claudePath,
+		installationUrl: CLAUDE_CODE_INSTALLATION_URL,
+		originalError: originalError.message,
+	})
+
+	const error = new Error(errorMessage)
+	error.name = "ClaudeCodeNotFoundError"
+	return error
 }

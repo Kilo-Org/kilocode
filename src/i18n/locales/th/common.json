@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "หมดเวลาเมื่อพยายามกู้คืน checkpoint",
 		"checkpoint_failed": "ล้มเหลวในการกู้คืน checkpoint",
 		"git_not_installed": "ต้องใช้ Git สำหรับฟีเจอร์ checkpoint กรุณาติดตั้ง Git เพื่อเปิดใช้งาน checkpoint",
+		"nested_git_repos_warning": "คำเตือน: พบ git repositories ที่ซ้อนกันในเส้นทางเหล่านี้ อาจทำให้เกิดพฤติกรรมที่ไม่คาดคิดกับเชคพอยท์: {{paths}}",
 		"no_workspace": "กรุณาเปิดโฟลเดอร์โปรเจ็กต์ก่อน",
 		"update_support_prompt": "ล้มเหลวในการอัปเดต support prompt",
 		"reset_support_prompt": "ล้มเหลวในการรีเซ็ต support prompt",
@@ -74,6 +75,7 @@
 		"no_internet": "ไม่มีการเชื่อมต่ออินเทอร์เน็ต กรุณาตรวจสอบการเชื่อมต่อเครือข่ายและลองอีกครั้ง",
 		"url_forbidden": "การเข้าถึงเว็บไซต์นี้ถูกห้าม เว็บไซต์อาจบล็อกการเข้าถึงอัตโนมัติหรือต้องการการยืนยันตัวตน",
 		"url_page_not_found": "ไม่พบหน้าเว็บ กรุณาตรวจสอบว่า URL ถูกต้อง",
+		"url_request_aborted": "คำขอดึง URL ถูกยกเลิก อาจเกิดขึ้นได้หากเว็บไซต์บล็อกการเข้าถึงอัตโนมัติ ต้องการการยืนยันตัวตน หรือมีปัญหาเครือข่าย กรุณาลองใหม่อีกครั้งหรือตรวจสอบว่า URL สามารถเข้าถึงได้ในเบราว์เซอร์ปกติ",
 		"url_fetch_failed": "ล้มเหลวในการดึงเนื้อหา URL: {{error}}",
 		"url_fetch_error_with_url": "เกิดข้อผิดพลาดในการดึงเนื้อหาสำหรับ {{url}}: {{error}}",
 		"command_timeout": "การดำเนินการคำสั่งหมดเวลาหลังจาก {{seconds}} วินาที",
@@ -84,12 +86,20 @@
 		"share_task_not_found": "ไม่พบงานหรือการเข้าถึงถูกปฏิเสธ",
 		"mode_import_failed": "ล้มเหลวในการนำเข้าโหมด: {{error}}",
 		"delete_rules_folder_failed": "ล้มเหลวในการลบโฟลเดอร์กฎ: {{rulesFolderPath}} ข้อผิดพลาด: {{error}}",
+		"command_not_found": "ไม่พบคำสั่ง '{{name}}'",
+		"open_command_file": "ล้มเหลวในการเปิดไฟล์คำสั่ง",
+		"delete_command": "ล้มเหลวในการลบคำสั่ง",
+		"no_workspace_for_project_command": "ไม่พบโฟลเดอร์พื้นที่ทำงานสำหรับคำสั่งโครงการ",
+		"command_already_exists": "คำสั่ง \"{{commandName}}\" มีอยู่แล้ว",
+		"create_command_failed": "ล้มเหลวในการสร้างคำสั่ง",
+		"command_template_content": "---\ndescription: \"คำอธิบายสั้นๆ ว่าคำสั่งนี้ทำอะไร\"\n---\n\nนี่คือคำสั่ง slash ใหม่ แก้ไขไฟล์นี้เพื่อปรับแต่งพฤติกรรมของคำสั่ง",
 		"claudeCode": {
 			"processExited": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}}",
 			"errorOutput": "ผลลัพธ์ข้อผิดพลาด: {{output}}",
 			"processExitedWithError": "กระบวนการ Claude Code ออกด้วยรหัส {{exitCode}} ผลลัพธ์ข้อผิดพลาด: {{output}}",
 			"stoppedWithReason": "Claude Code หยุดด้วยเหตุผล: {{reason}}",
-			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ"
+			"apiKeyModelPlanMismatch": "คีย์ API และแผนการสมัครสมาชิกอนุญาตให้ใช้โมเดลที่แตกต่างกัน ตรวจสอบให้แน่ใจว่าโมเดลที่เลือกรวมอยู่ในแผนของคุณ",
+			"notFound": "ไม่พบไฟล์ปฏิบัติการ Claude Code '{{claudePath}}'\n\nกรุณาติดตั้ง Claude Code CLI:\n1. เยี่ยมชม {{installationUrl}} เพื่อดาวน์โหลด Claude Code\n2. ทำตามคำแนะนำการติดตั้งสำหรับระบบปฏิบัติการของคุณ\n3. ตรวจสอบให้แน่ใจว่าคำสั่ง 'claude' พร้อมใช้งานใน PATH\n4. หรือกำหนดค่าเส้นทางแบบกำหนดเองในการตั้งค่า Kilo Code ภายใต้ 'เส้นทาง Claude Code'\n\nข้อผิดพลาดเดิม: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}",
@@ -100,6 +110,43 @@
 			"badRequest": "คำขอไม่ถูกต้อง: {{details}}",
 			"apiError": "ข้อผิดพลาด Gemini CLI API: {{error}}",
 			"completionError": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini CLI: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "ข้อผิดพลาดในการสร้างสตรีมบริบท Gemini: {{error}}",
+			"generate_complete_prompt": "ข้อผิดพลาดการทำงานเสร็จสิ้น Gemini: {{error}}",
+			"sources": "แหล่งที่มา:"
+		},
+		"cerebras": {
+			"authenticationFailed": "การยืนยันตัวตน Cerebras API ล้มเหลว กรุณาตรวจสอบว่า API key ของคุณถูกต้องและยังไม่หมดอายุ",
+			"accessForbidden": "การเข้าถึง Cerebras API ถูกปฏิเสธ API key ของคุณอาจไม่มีสิทธิ์เข้าถึงโมเดลหรือฟีเจอร์ที่ร้องขอ",
+			"rateLimitExceeded": "เกินขีดจำกัดอัตรา Cerebras API กรุณารอก่อนทำคำขอครั้งต่อไป",
+			"serverError": "ข้อผิดพลาดเซิร์ฟเวอร์ Cerebras API ({{status}}) กรุณาลองใหม่อีกครั้งในภายหลัง",
+			"genericError": "ข้อผิดพลาด Cerebras API ({{status}}): {{message}}",
+			"noResponseBody": "ข้อผิดพลาด Cerebras API: ไม่มีเนื้อหาการตอบกลับ",
+			"completionError": "ข้อผิดพลาดการเติมเต็ม Cerebras: {{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "ล้มเหลวในการโหลดข้อมูลประจำตัว OAuth กรุณายืนยันตัวตนก่อน: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "ผู้ให้บริการ Roo ต้องการการยืนยันตัวตนบนคลาวด์ กรุณาเข้าสู่ระบบ Roo Code Cloud"
+		},
+		"message": {
+			"no_active_task_to_delete": "ไม่พบงานที่ใช้งานอยู่ ไม่สามารถลบข้อความได้",
+			"invalid_timestamp_for_deletion": "ระบุ timestamp ที่ไม่ถูกต้องสำหรับการลบ",
+			"cannot_delete_missing_timestamp": "ไม่สามารถลบข้อความได้: ไม่มี timestamp",
+			"cannot_delete_invalid_timestamp": "ไม่สามารถลบข้อความได้: timestamp ไม่ถูกต้อง",
+			"message_not_found": "ไม่พบข้อความ",
+			"error_deleting_message": "เกิดข้อผิดพลาดในการลบข้อความ",
+			"error_editing_message": "เกิดข้อผิดพลาดในการแก้ไขข้อความ"
+		},
+		"manual_url_empty": "URL ไม่สามารถเป็นค่าว่างได้",
+		"manual_url_no_query": "URL ต้องมีพารามิเตอร์ query",
+		"manual_url_missing_params": "URL ขาดพารามิเตอร์ที่จำเป็น",
+		"manual_url_auth_failed": "การยืนยันตัวตนล้มเหลว",
+		"manual_url_auth_error": "เกิดข้อผิดพลาดในการยืนยันตัวตน",
+		"api": {
+			"invalidKeyInvalidChars": "API key มีตัวอักษรที่ไม่ถูกต้อง"
 		}
 	},
 	"warnings": {
@@ -178,6 +225,9 @@
 			"cloud_auth_required": "องค์กรของคุณต้องการการยืนยันตัวตน Kilo Code Cloud กรุณาลงชื่อเข้าใช้เพื่อดำเนินการต่อ",
 			"organization_mismatch": "คุณต้องยืนยันตัวตนด้วยบัญชี Kilo Code Cloud ขององค์กรของคุณ",
 			"verification_failed": "ไม่สามารถตรวจสอบการยืนยันตัวตนขององค์กร"
+		},
+		"info": {
+			"organization_requires_auth": "องค์กรของคุณต้องการการยืนยันตัวตน"
 		}
 	},
 	"prompts": {
@@ -188,9 +238,25 @@
 			"confirm": "ลบ"
 		}
 	},
+	"interruption": {
+		"responseInterruptedByUser": "การตอบสนองถูกหยุดโดยผู้ใช้",
+		"responseInterruptedByApiError": "การตอบสนองถูกหยุดโดยข้อผิดพลาดของ API"
+	},
 	"commands": {
 		"preventCompletionWithOpenTodos": {
 			"description": "ป้องกันการทำงานเสร็จสิ้นเมื่อมี todo ที่ยังไม่เสร็จในรายการ todo"
 		}
+	},
+	"docsLink": {
+		"label": "เอกสาร",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "ข้อผิดพลาด",
+		"reportText": "กรุณารายงานข้อผิดพลาดนี้เพื่อช่วยเราปรับปรุงแอปพลิเคชัน",
+		"githubText": "รายงานบน GitHub",
+		"copyInstructions": "คัดลอกรายละเอียดข้อผิดพลาดด้านล่าง:",
+		"errorStack": "Error Stack",
+		"componentStack": "Component Stack"
 	}
 }

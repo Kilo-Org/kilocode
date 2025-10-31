@@ -11,7 +11,18 @@
 		"title": "تنبيه: الرصيد منخفض!",
 		"message": "تحقق إذا تقدر تشحن برصيد مجاني أو تشتري رصيد إضافي!"
 	},
-	"notLoggedInError": "لا يمكن إكمال الطلب، تأكد من أنك متصل ومسجل الدخول باستخدام المزود المحدد.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "انتهت استجابة النموذج بشكل غير متوقع (لا توجد رسائل مساعد). قد يكون هذا علامة على تقييد المعدل.",
+		"notLoggedInError": "لا يمكن إكمال الطلب، تأكد من أنك متصل ومسجل الدخول باستخدام المزود المحدد.\n\n{{error}}",
+		"maxCompletionTokens": "تم الوصول إلى الحد الأقصى لعدد رموز الإكمال.",
+		"disableApplyDiff": "إذا استمر هذا الخطأ في الظهور، يرجى تعطيل التعديل عبر الفروقات في الإعدادات المتقدمة.",
+		"disableEditFile": "إذا استمر هذا الخطأ في الظهور، يرجى تعطيل ميزة التطبيق السريع التجريبية."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "نقاط الحفظ غير متاحة، لأنه تم اكتشاف مستودع Git متداخل في: {{path}}. يرجى إزالة أو نقل مستودعات Git المتداخلة لاستخدام ميزة نقاط الحفظ أو تعطيل نقاط الحفظ في الإعدادات لإخفاء هذا التحذير.",
+		"protectedPaths": "نقاط الحفظ غير متاحة في {{workspaceDir}}. يرجى فتح مجلد فرعي كمساحة عمل لاستخدام ميزة نقاط الحفظ أو تعطيل نقاط الحفظ في الإعدادات لإخفاء هذا التحذير.",
+		"dismissWarning": "تجاهل"
+	},
 	"rules": {
 		"actions": {
 			"delete": "احذف",
@@ -53,77 +64,114 @@
 		"noStagedChanges": "Kilo: ما فيه تعديلات مضافة لتحليلها",
 		"tokenRequired": "يتطلب توليد الرسالة رمز Kilo Code",
 		"activationFailed": "Kilo: فشل تفعيل مولّد الرسائل: {{error}}",
-		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد"
+		"providerRegistered": "Kilo: تم تسجيل موفر رسائل الاعتماد",
+		"errors": {
+			"noProject": "لا يوجد مشروع متاح",
+			"connectionFailed": "فشل الاتصال بملحق Kilo Code",
+			"invalidResponse": "تم استلام صيغة استجابة غير صالحة من الملحق",
+			"noChanges": "لا توجد تغييرات للإرسال",
+			"timeout": "انتهت مهلة الطلب بعد 30 ثانية",
+			"missingMessage": "لم يتم استلام رسالة الالتزام من الإضافة",
+			"noWorkspacePath": "تعذر تحديد مسار مساحة العمل لمستودع Git",
+			"workspaceNotFound": "تعذر تحديد مسار مساحة العمل لمستودع Git",
+			"processingError": "خطأ في معالجة إنشاء رسالة الالتزام: {{error}}"
+		},
+		"error": {
+			"title": "خطأ",
+			"workspacePathNotFound": "تعذّر تحديد مسار مساحة العمل لمستودع Git",
+			"generationFailed": "فشل في إنشاء رسالة الالتزام: {{error}}",
+			"processingFailed": "خطأ في معالجة إنشاء رسالة الالتزام: {{error}}",
+			"unknown": "خطأ غير معروف"
+		},
+		"dialogs": {
+			"info": "رسالة التزام الذكاء الاصطناعي",
+			"error": "خطأ",
+			"success": "نجاح",
+			"title": "رسالة التزام الذكاء الاصطناعي"
+		},
+		"progress": {
+			"title": "إنشاء رسالة الالتزام",
+			"analyzing": "جاري تحليل التغييرات...",
+			"connecting": "جاري الاتصال بكيلو كود...",
+			"generating": "جاري إنشاء رسالة الالتزام..."
+		},
+		"ui": {
+			"generateButton": "توليد رسالة الالتزام",
+			"generateButtonTooltip": "ينشئ رسالة الالتزام (commit message) باستخدام الذكاء الاصطناعي لتحليل تغييرات الكود الخاصة بك"
+		}
 	},
 	"ghost": {
+		"statusBar": {
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
+			"tooltip": {
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (معطل)",
+				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
+				"lastCompletion": "آخر اقتراح:",
+				"sessionTotal": "إجمالي تكلفة الجلسة:",
+				"provider": "المزود:",
+				"model": "النموذج:"
+			},
+			"cost": {
+				"zero": "$0.00",
+				"lessThanCent": "<$0.01"
+			}
+		},
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
-			"analyzing": "جارِ تحليل الكود الخاص بك...",
-			"showing": "عرض التعديلات المقترحة...",
-			"generating": "جاري توليد التعديلات المقترحة...",
-			"processing": "جارِ معالجة التعديلات المقترحة...",
-			"title": "Kilo Code"
+			"title": "Kilo Code",
+			"analyzing": "تحليل الكود الخاص بك...",
+			"generating": "إنشاء التعديلات المقترحة...",
+			"processing": "معالجة التعديلات المقترحة...",
+			"showing": "عرض التعديلات المقترحة..."
 		},
 		"input": {
 			"title": "Kilo Code: مهمة سريعة",
-			"placeholder": "مثلاً، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
+			"placeholder": "مثال، 'أعد هيكلة هذه الدالة لتكون أكثر كفاءة'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: إنشاء التعديلات المقترحة",
 			"displaySuggestions": "عرض التعديلات المقترحة",
-			"generateSuggestions": "Kilo Code: توليد تعديلات مقترحة",
-			"applyCurrentSuggestion": "تطبيق التعديل المُقترح الحالي",
 			"cancelSuggestions": "إلغاء التعديلات المقترحة",
-			"promptCodeSuggestion": "مهمة سريعة",
-			"applyAllSuggestions": "تطبيق كافة التعديلات المقترحة",
+			"applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
+			"applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: التعديلات المقترحة"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code وكيل",
-			"description": "يمكنني مساعدتك بالمهام السريعة والتعديلات المقترحة.",
-			"name": "وكيل"
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "يمكنني مساعدتك في المهام السريعة والتعديلات المقترحة."
 		},
-		"messages": {
-			"provideCodeSuggestions": "جارٍ تقديم اقتراحات الرمز..."
-		},
-		"statusBar": {
-			"warning": "$(warning) مساعد كيلو المباشر",
-			"disabled": "$(circle-slash) مساعدة كيلو المضمنة",
-			"tooltip": {
-				"disabled": "مساعد كيلو كود المضمّن (معطّل)",
-				"basic": "مساعد رمز كيلو المدمج",
-				"lastCompletion": "الاقتراح الأخير:",
-				"model": "النموذج:",
-				"tokenError": "يجب تعيين رمز صالح لاستخدام المساعد المضمن",
-				"sessionTotal": "التكلفة الإجمالية للجلسة:"
-			},
-			"enabled": "$(sparkle) مساعد كيلو المضمّن",
-			"cost": {
-				"lessThanCent": "<$0.01",
-				"zero": "$٠٫٠٠"
-			}
-		},
-		"toggleMessage": "المساعد المضمن Kilo {{status}}",
 		"incompatibilityExtensionPopup": {
-			"message": "يتم حظر مساعد كيلو كود المضمّن بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
+			"message": "يتم حظر Kilo Code Autocomplete بسبب تعارض مع GitHub Copilot. لإصلاح هذا، يجب عليك تعطيل اقتراحات Copilot المضمنة.",
 			"disableCopilot": "تعطيل Copilot",
-			"disableInlineAssist": "تعطيل المساعد المضمّن"
+			"disableInlineAssist": "تعطيل الإكمال التلقائي"
 		}
 	},
 	"terminalCommandGenerator": {
-		"inputPrompt": "كيلو: وصف الأمر الذي ترغب في توليده",
-		"generatingProgress": "كيلو: جاري توليد الأمر الطرفي...",
-		"noActiveTerminal": "كيلو: لا يوجد طرفية نشطة. يرجى فتح طرفية أولاً.",
-		"commandGenerated": "كيلو: الأمر الذي تم إنشاؤه: {{command}}",
+		"inputPrompt": "Kilo: وصف الأمر الذي ترغب في توليده",
+		"generatingProgress": "Kilo: جاري توليد الأمر الطرفي...",
+		"noActiveTerminal": "Kilo: لا يوجد طرفية نشطة. يرجى فتح طرفية أولاً.",
+		"commandGenerated": "Kilo: الأمر الذي تم إنشاؤه: {{command}}",
 		"inputPlaceholder": "مثلًا، إنهاء العملية التي تعمل على المنفذ 3001، إيجاد الملفات الكبيرة، إلخ",
-		"generationFailed": "كيلو: فشل في إنشاء الأمر: {{error}}",
+		"generationFailed": "Kilo: فشل في إنشاء الأمر: {{error}}",
 		"warningDialog": {
 			"okButton": "أفهم",
 			"title": "تحذير أمان للمحطة",
 			"message": "تحقق مرة أخرى من جميع الأوامر التي تم إنشاؤها قبل تنفيذها. لا يمكن دائمًا التراجع عن الإجراءات التي تتم في نافذة الطرفية - فتنفيذ أوامر غير موثوقة قد يؤدي إلى فقدان البيانات بشكل لا رجعة فيه أو تلف النظام. راجع وافهم الأمر بشكل كامل قبل المتابعة!",
 			"cancelButton": "إلغاء"
 		},
-		"tipMessage": "كيلو: اضغط {{shortcut}} لإنشاء أوامر الطرفية"
+		"tipMessage": "Kilo: اضغط {{shortcut}} لإنشاء أوامر الطرفية"
+	},
+	"seeNewChanges": {
+		"title": "عرض التغييرات الجديدة",
+		"checkpointsUnavailable": "لا يمكن عرض التغييرات الجديدة، نقاط الحفظ غير متاحة.",
+		"noChanges": "لا يمكن عرض التغييرات الجديدة، لم يتم العثور على أي تغييرات.",
+		"error": "لا يمكن عرض التغييرات الجديدة، حدث خطأ."
 	}
 }

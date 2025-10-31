@@ -1,16 +1,18 @@
 import { HTMLAttributes, useState } from "react"
-import { X } from "lucide-react"
+import { X, CheckCheck } from "lucide-react"
+import { Trans } from "react-i18next"
+import { Package } from "@roo/package"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
-import { Button, Input, Slider, StandardTooltip } from "@/components/ui"
+import { Button, Input, Slider } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
 import { AutoApproveToggle } from "./AutoApproveToggle"
-import { MaxRequestsInput } from "./MaxRequestsInput" // kilocode_change
+import { MaxLimitInputs } from "./MaxLimitInputs"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAutoApprovalState } from "@/hooks/useAutoApprovalState"
 import { useAutoApprovalToggles } from "@/hooks/useAutoApprovalToggles"
@@ -32,8 +34,10 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	alwaysAllowUpdateTodoList?: boolean
 	followupAutoApproveTimeoutMs?: number
 	allowedCommands?: string[]
-	allowedMaxRequests?: number | undefined // kilocode_change
+	allowedMaxRequests?: number | undefined
+	allowedMaxCost?: number | undefined
 	showAutoApproveMenu?: boolean // kilocode_change
+	yoloMode?: boolean // kilocode_change
 	deniedCommands?: string[]
 	setCachedStateField: SetCachedStateField<
 		| "alwaysAllowReadOnly"
@@ -51,8 +55,10 @@ type AutoApproveSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "alwaysAllowFollowupQuestions"
 		| "followupAutoApproveTimeoutMs"
 		| "allowedCommands"
-		| "allowedMaxRequests" // kilocode_change
+		| "allowedMaxRequests"
+		| "allowedMaxCost"
 		| "showAutoApproveMenu" // kilocode_change
+		| "yoloMode" // kilocode_change
 		| "deniedCommands"
 		| "alwaysAllowUpdateTodoList"
 	>
@@ -75,8 +81,10 @@ export const AutoApproveSettings = ({
 	followupAutoApproveTimeoutMs = 60000,
 	alwaysAllowUpdateTodoList,
 	allowedCommands,
-	allowedMaxRequests, // kilocode_change
+	allowedMaxRequests,
+	allowedMaxCost,
 	showAutoApproveMenu, // kilocode_change
+	yoloMode, // kilocode_change
 	deniedCommands,
 	setCachedStateField,
 	...props
@@ -88,7 +96,7 @@ export const AutoApproveSettings = ({
 
 	const toggles = useAutoApprovalToggles()
 
-	const { hasEnabledOptions, effectiveAutoApprovalEnabled } = useAutoApprovalState(toggles, autoApprovalEnabled)
+	const { effectiveAutoApprovalEnabled } = useAutoApprovalState(toggles, autoApprovalEnabled)
 
 	const handleAddCommand = () => {
 		const currentCommands = allowedCommands ?? []
@@ -114,33 +122,9 @@ export const AutoApproveSettings = ({
 
 	return (
 		<div {...props}>
-			<SectionHeader description={t("settings:autoApprove.description")}>
+			<SectionHeader>
 				<div className="flex items-center gap-2">
-					{!hasEnabledOptions ? (
-						<StandardTooltip content={t("settings:autoApprove.selectOptionsFirst")}>
-							<VSCodeCheckbox
-								checked={effectiveAutoApprovalEnabled}
-								disabled={!hasEnabledOptions}
-								aria-label={t("settings:autoApprove.disabledAriaLabel")}
-								onChange={() => {
-									// Do nothing when no options are enabled
-									return
-								}}
-							/>
-						</StandardTooltip>
-					) : (
-						<VSCodeCheckbox
-							checked={effectiveAutoApprovalEnabled}
-							disabled={!hasEnabledOptions}
-							aria-label={t("settings:autoApprove.toggleAriaLabel")}
-							onChange={() => {
-								const newValue = !(autoApprovalEnabled ?? false)
-								setAutoApprovalEnabled(newValue)
-								vscode.postMessage({ type: "autoApprovalEnabled", bool: newValue })
-							}}
-						/>
-					)}
-					<span className="codicon codicon-check w-4" />
+					<CheckCheck className="w-4 h-4" />
 					<div>{t("settings:sections.autoApprove")}</div>
 				</div>
 			</SectionHeader>
@@ -159,28 +143,105 @@ export const AutoApproveSettings = ({
 					</div>
 				</div>
 			</Section>
+
+			{/* YOLO MODE SECTION */}
+			{process.env.NODE_ENV === "development" && (
+				<Section>
+					<div className="border-2 border-yellow-500 rounded-md p-4 bg-yellow-500/10">
+						<div className="flex items-center gap-2 mb-3">
+							<span className="text-2xl">⚠️</span>
+							<h3 className="text-lg font-bold text-yellow-500">YOLO Mode</h3>
+						</div>
+						<VSCodeCheckbox
+							checked={yoloMode ?? false}
+							onChange={(e: any) => setCachedStateField("yoloMode", e.target.checked)}
+							data-testid="yolo-mode-checkbox">
+							<span className="font-bold text-base">Enable YOLO Mode - Auto-approve EVERYTHING</span>
+						</VSCodeCheckbox>
+						<div className="text-vscode-descriptionForeground text-sm mt-2 pl-6">
+							<p className="mb-2">
+								When enabled,{" "}
+								<strong>all operations will be automatically approved without confirmation</strong>.
+							</p>
+							<p className="text-yellow-500 font-medium">
+								⚡ This includes file modifications, command execution, MCP tools, browser actions, and
+								all other operations. Use with extreme caution!
+							</p>
+						</div>
+					</div>
+				</Section>
+			)}
+
+			{process.env.NODE_ENV === "development" && yoloMode && (
+				<Section>
+					<div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-3 flex items-center gap-2">
+						<span className="text-lg">⚡</span>
+						<span className="text-sm font-medium text-yellow-500">
+							YOLO Mode is active - all auto-approval settings below are overridden
+						</span>
+					</div>
+				</Section>
+			)}
 			{/* kilocode_change end */}
 
 			<Section>
-				<AutoApproveToggle
-					alwaysAllowReadOnly={alwaysAllowReadOnly}
-					alwaysAllowWrite={alwaysAllowWrite}
-					alwaysAllowBrowser={alwaysAllowBrowser}
-					alwaysApproveResubmit={alwaysApproveResubmit}
-					alwaysAllowMcp={alwaysAllowMcp}
-					alwaysAllowModeSwitch={alwaysAllowModeSwitch}
-					alwaysAllowSubtasks={alwaysAllowSubtasks}
-					alwaysAllowExecute={alwaysAllowExecute}
-					alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
-					alwaysAllowUpdateTodoList={alwaysAllowUpdateTodoList}
-					onToggle={(key, value) => setCachedStateField(key, value)}
-				/>
-				{/* kilocode_change start */}
-				<MaxRequestsInput
-					allowedMaxRequests={allowedMaxRequests}
-					onValueChange={(value) => setCachedStateField("allowedMaxRequests", value)}
-				/>
-				{/* kilocode_change end */}
+				<div className="space-y-4">
+					<VSCodeCheckbox
+						checked={effectiveAutoApprovalEnabled}
+						aria-label={t("settings:autoApprove.toggleAriaLabel")}
+						onChange={() => {
+							const newValue = !(autoApprovalEnabled ?? false)
+							setAutoApprovalEnabled(newValue)
+							vscode.postMessage({ type: "autoApprovalEnabled", bool: newValue })
+						}}>
+						<span className="font-medium">{t("settings:autoApprove.enabled")}</span>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						<p>{t("settings:autoApprove.description")}</p>
+						<p>
+							<Trans
+								i18nKey="settings:autoApprove.toggleShortcut"
+								components={{
+									SettingsLink: (
+										<a
+											href="#"
+											className="text-vscode-textLink-foreground hover:underline cursor-pointer"
+											onClick={(e) => {
+												e.preventDefault()
+												// Send message to open keyboard shortcuts with search for toggle command
+												vscode.postMessage({
+													type: "openKeyboardShortcuts",
+													text: `${Package.name}.toggleAutoApprove`,
+												})
+											}}
+										/>
+									),
+								}}
+							/>
+						</p>
+					</div>
+
+					<AutoApproveToggle
+						alwaysAllowReadOnly={alwaysAllowReadOnly}
+						alwaysAllowWrite={alwaysAllowWrite}
+						alwaysAllowBrowser={alwaysAllowBrowser}
+						alwaysApproveResubmit={alwaysApproveResubmit}
+						alwaysAllowMcp={alwaysAllowMcp}
+						alwaysAllowModeSwitch={alwaysAllowModeSwitch}
+						alwaysAllowSubtasks={alwaysAllowSubtasks}
+						alwaysAllowExecute={alwaysAllowExecute}
+						alwaysAllowFollowupQuestions={alwaysAllowFollowupQuestions}
+						alwaysAllowUpdateTodoList={alwaysAllowUpdateTodoList}
+						onToggle={(key, value) => setCachedStateField(key, value)}
+					/>
+
+					<MaxLimitInputs
+						allowedMaxRequests={allowedMaxRequests}
+						allowedMaxCost={allowedMaxCost}
+						onMaxRequestsChange={(value) => setCachedStateField("allowedMaxRequests", value)}
+						onMaxCostChange={(value) => setCachedStateField("allowedMaxCost", value)}
+					/>
+				</div>
 
 				{/* ADDITIONAL SETTINGS */}
 

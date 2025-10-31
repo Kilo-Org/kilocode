@@ -1,0 +1,110 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"clean": {
+			"cache": false
+		},
+		"clean:resource-kilocode": {
+			"cache": false
+		},
+		"clean:resource-host": {
+			"cache": false
+		},
+		"clean:resource-logs": {
+			"cache": false
+		},
+		"clean:resource-nodemodules": {
+			"cache": false
+		},
+		"clean:kilocode": {
+			"cache": false
+		},
+		"copy:kilocode": {
+			"cache": false,
+			"dependsOn": ["clean:kilocode", "kilo-code#vsix:unpacked"]
+		},
+		"copy:resource-kilocode": {
+			"cache": false,
+			"dependsOn": ["clean:resource-kilocode", "kilo-code#vsix:unpacked"]
+		},
+		"copy:resource-host": {
+			"cache": false,
+			"dependsOn": [
+				"clean:resource-host",
+				"@kilo-code/jetbrains-host#bundle",
+				"@kilo-code/jetbrains-host#prop:deps"
+			]
+		},
+		"copy:resource-logs": {
+			"cache": false,
+			"dependsOn": ["clean:resource-logs"]
+		},
+		"copy:resource-nodemodules": {
+			"cache": false,
+			"inputs": ["../host/package.json", "../host/package-lock.json"],
+			"outputs": ["../resources/node_modules/**", "../resources/package.json", "../resources/package-lock.json"],
+			"dependsOn": ["copy:resource-host"],
+			"env": ["PKG_CONFIG_PATH"]
+		},
+		"propDep": {
+			"inputs": ["../host/package.json", "../host/package-lock.json"],
+			"outputs": ["./prodDep.txt"],
+			"dependsOn": ["copy:resource-nodemodules"]
+		},
+		"sync:version": {
+			"cache": false,
+			"outputs": ["./gradle.properties"],
+			"inputs": ["../src/package.json", "./gradle.properties.template"]
+		},
+		"sync:changelog": {
+			"cache": false,
+			"outputs": ["./src/main/resources/META-INF/plugin.xml"],
+			"inputs": [
+				"./gradle.properties",
+				"../../CHANGELOG.md",
+				"./src/main/resources/META-INF/plugin.xml.template"
+			],
+			"dependsOn": ["sync:version"]
+		},
+		"build": {
+			"outputs": ["build/**"],
+			"inputs": ["src/**", "plugin/**"],
+			"dependsOn": [
+				"sync:version",
+				"sync:changelog",
+				"copy:kilocode",
+				"copy:resource-kilocode",
+				"copy:resource-host",
+				"copy:resource-logs",
+				"copy:resource-nodemodules",
+				"propDep"
+			]
+		},
+		"bundle": {
+			"cache": false,
+			"outputs": ["build/**"],
+			"inputs": ["src/**", "plugin/**"],
+			"dependsOn": [
+				"sync:version",
+				"sync:changelog",
+				"copy:kilocode",
+				"copy:resource-kilocode",
+				"copy:resource-host",
+				"copy:resource-logs",
+				"copy:resource-nodemodules",
+				"propDep"
+			]
+		},
+		"run": {
+			"cache": false,
+			"dependsOn": ["build"],
+			"env": ["DISPLAY", "XAUTHORITY", "XDG_RUNTIME_DIR", "WAYLAND_DISPLAY"]
+		},
+		"run:bundle": {
+			"cache": false,
+			"dependsOn": ["bundle"],
+			"env": ["DISPLAY", "XAUTHORITY", "XDG_RUNTIME_DIR", "WAYLAND_DISPLAY"]
+		}
+	}
+}

@@ -24,6 +24,26 @@
 		"storybook:build": {
 			"outputs": ["storybook-static/**"]
 		},
+		"jetbrains:bundle": {
+			"cache": false,
+			"dependsOn": ["@kilo-code/jetbrains-plugin#bundle"]
+		},
+		"jetbrains:run-bundle": {
+			"cache": false,
+			"dependsOn": ["@kilo-code/jetbrains-plugin#run:bundle"]
+		},
+		"jetbrains:build": {
+			"dependsOn": ["@kilo-code/jetbrains-plugin#build"]
+		},
+		"jetbrains:run": {
+			"dependsOn": ["@kilo-code/jetbrains-plugin#run"]
+		},
+		"cli:build": {
+			"dependsOn": ["@kilocode/cli#build"]
+		},
+		"cli:bundle": {
+			"dependsOn": ["@kilocode/cli#build"]
+		},
 		"chromatic": {
 			"dependsOn": ["storybook:build"],
 			"cache": false

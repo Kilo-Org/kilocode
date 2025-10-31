@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "Timeout saat mencoba memulihkan checkpoint.",
 		"checkpoint_failed": "Gagal memulihkan checkpoint.",
 		"git_not_installed": "Git diperlukan untuk fitur checkpoint. Silakan instal Git untuk mengaktifkan checkpoint.",
+		"nested_git_repos_warning": "Checkpoint dinonaktifkan karena repositori git bersarang terdeteksi di: {{path}}. Untuk menggunakan checkpoint, silakan hapus atau pindahkan repositori git bersarang ini.",
 		"no_workspace": "Silakan buka folder proyek terlebih dahulu",
 		"update_support_prompt": "Gagal memperbarui support prompt",
 		"reset_support_prompt": "Gagal mereset support prompt",
@@ -69,6 +70,7 @@
 		"no_internet": "Tidak ada koneksi internet. Silakan periksa koneksi jaringan kamu dan coba lagi.",
 		"url_forbidden": "Akses ke situs web ini dilarang. Situs mungkin memblokir akses otomatis atau memerlukan autentikasi.",
 		"url_page_not_found": "Halaman tidak ditemukan. Silakan periksa apakah URL sudah benar.",
+		"url_request_aborted": "Permintaan untuk mengambil URL dibatalkan. Ini bisa terjadi jika situs memblokir akses otomatis, memerlukan autentikasi, atau ada masalah jaringan. Silakan coba lagi atau periksa apakah URL dapat diakses di browser biasa.",
 		"url_fetch_failed": "Gagal mengambil konten URL: {{error}}",
 		"url_fetch_error_with_url": "Error mengambil konten untuk {{url}}: {{error}}",
 		"command_timeout": "Eksekusi perintah waktu habis setelah {{seconds}} detik",
@@ -79,12 +81,20 @@
 		"share_task_not_found": "Tugas tidak ditemukan atau akses ditolak.",
 		"mode_import_failed": "Gagal mengimpor mode: {{error}}",
 		"delete_rules_folder_failed": "Gagal menghapus folder aturan: {{rulesFolderPath}}. Error: {{error}}",
+		"command_not_found": "Perintah '{{name}}' tidak ditemukan",
+		"open_command_file": "Gagal membuka file perintah",
+		"delete_command": "Gagal menghapus perintah",
+		"no_workspace_for_project_command": "Tidak ditemukan folder workspace untuk perintah proyek",
+		"command_already_exists": "Perintah \"{{commandName}}\" sudah ada",
+		"create_command_failed": "Gagal membuat perintah",
+		"command_template_content": "---\ndescription: \"Deskripsi singkat tentang fungsi perintah ini\"\n---\n\nIni adalah perintah slash baru. Edit file ini untuk menyesuaikan perilaku perintah.",
 		"claudeCode": {
 			"processExited": "Proses Claude Code keluar dengan kode {{exitCode}}.",
 			"errorOutput": "Output error: {{output}}",
 			"processExitedWithError": "Proses Claude Code keluar dengan kode {{exitCode}}. Output error: {{output}}",
 			"stoppedWithReason": "Claude Code berhenti karena alasan: {{reason}}",
-			"apiKeyModelPlanMismatch": "Kunci API dan paket berlangganan memungkinkan model yang berbeda. Pastikan model yang dipilih termasuk dalam paket Anda."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Gagal memuat kredensial OAuth. Silakan autentikasi terlebih dahulu: {{error}}",
@@ -95,7 +105,44 @@
 			"badRequest": "Permintaan tidak valid: {{details}}",
 			"apiError": "Kesalahan API Gemini CLI: {{error}}",
 			"completionError": "Kesalahan penyelesaian Gemini CLI: {{error}}"
-		}
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "Gagal memuat kredensial OAuth. Silakan autentikasi terlebih dahulu: {{error}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "Tidak ada tugas aktif untuk menghapus pesan",
+			"invalid_timestamp_for_deletion": "Timestamp pesan tidak valid untuk penghapusan",
+			"cannot_delete_missing_timestamp": "Tidak dapat menghapus pesan: timestamp tidak ada",
+			"cannot_delete_invalid_timestamp": "Tidak dapat menghapus pesan: timestamp tidak valid",
+			"message_not_found": "Pesan dengan timestamp {{messageTs}} tidak ditemukan",
+			"error_deleting_message": "Error menghapus pesan: {{error}}",
+			"error_editing_message": "Error mengedit pesan: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Kesalahan aliran konteks pembuatan Gemini: {{error}}",
+			"generate_complete_prompt": "Kesalahan penyelesaian Gemini: {{error}}",
+			"sources": "Sumber:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Autentikasi API Cerebras gagal. Silakan periksa apakah kunci API Anda valid dan belum kedaluwarsa.",
+			"accessForbidden": "Akses API Cerebras ditolak. Kunci API Anda mungkin tidak memiliki akses ke model atau fitur yang diminta.",
+			"rateLimitExceeded": "Batas kecepatan API Cerebras terlampaui. Silakan tunggu sebelum membuat permintaan lain.",
+			"serverError": "Kesalahan server API Cerebras ({{status}}). Silakan coba lagi nanti.",
+			"genericError": "Kesalahan API Cerebras ({{status}}): {{message}}",
+			"noResponseBody": "Kesalahan API Cerebras: Tidak ada isi respons",
+			"completionError": "Kesalahan penyelesaian Cerebras: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Penyedia Roo memerlukan autentikasi cloud. Silakan masuk ke Roo Code Cloud."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "Kunci API mengandung karakter tidak valid."
+		},
+		"manual_url_empty": "Silakan masukkan URL callback yang valid",
+		"manual_url_no_query": "URL callback tidak valid: parameter query hilang",
+		"manual_url_missing_params": "URL callback tidak valid: parameter yang diperlukan hilang (code dan state)",
+		"manual_url_auth_failed": "Autentikasi URL manual gagal",
+		"manual_url_auth_error": "Autentikasi gagal"
 	},
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
@@ -134,6 +181,10 @@
 		"deleted": "Kegagalan tugas: Dihentikan dan dihapus oleh pengguna.",
 		"incomplete": "Tugas #{{taskNumber}} (Tidak lengkap)",
 		"no_messages": "Tugas #{{taskNumber}} (Tidak ada pesan)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "Respons diinterupsi oleh pengguna",
+		"responseInterruptedByApiError": "Respons diinterupsi oleh error API"
 	},
 	"storage": {
 		"prompt_custom_path": "Masukkan path penyimpanan riwayat percakapan kustom, biarkan kosong untuk menggunakan lokasi default",
@@ -180,9 +231,17 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Organisasi kamu memerlukan autentikasi Kilo Code Cloud. Silakan masuk untuk melanjutkan.",
-			"organization_mismatch": "Kamu harus diautentikasi dengan akun Kilo Code Cloud organisasi kamu.",
+			"cloud_auth_required": "Organisasi kamu memerlukan autentikasi Roo Code Cloud. Silakan masuk untuk melanjutkan.",
+			"organization_mismatch": "Kamu harus diautentikasi dengan akun Roo Code Cloud organisasi kamu.",
+			"manual_url_empty": "Silakan masukkan URL callback yang valid",
+			"manual_url_no_query": "URL callback tidak valid: parameter query hilang",
+			"manual_url_missing_params": "URL callback tidak valid: parameter yang diperlukan hilang (code dan state)",
+			"manual_url_auth_failed": "Autentikasi URL manual gagal",
+			"manual_url_auth_error": "Autentikasi gagal",
 			"verification_failed": "Tidak dapat memverifikasi autentikasi organisasi."
+		},
+		"info": {
+			"organization_requires_auth": "Organisasi kamu memerlukan autentikasi."
 		}
 	},
 	"prompts": {
@@ -197,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "Mencegah penyelesaian tugas ketika ada todo yang belum selesai dalam daftar todo"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "Error",
+		"reportText": "Harap laporkan error ini untuk membantu kami meningkatkan aplikasi.",
+		"githubText": "Laporkan di GitHub",
+		"copyInstructions": "Salin detail error di bawah:",
+		"errorStack": "Stack Error",
+		"componentStack": "Stack Komponen"
 	}
 }

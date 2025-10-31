@@ -1,12 +1,15 @@
-import { HTMLAttributes, useState } from "react"
+import {
+	HTMLAttributes,
+	useState, // kilocode_change
+} from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
 import { Info, Download, Upload, TriangleAlert } from "lucide-react"
-
 import { VSCodeCheckbox, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
+import type { TelemetrySetting } from "@roo-code/types"
+
 import { Package } from "@roo/package"
-import { TelemetrySetting } from "@roo/TelemetrySetting"
 
 import { vscode } from "@/utils/vscode"
 import { cn } from "@/lib/utils"
@@ -14,6 +17,7 @@ import { Button } from "@/components/ui"
 
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import { getMemoryPercentage } from "@/kilocode/helpers"
 
 type AboutProps = HTMLAttributes<HTMLDivElement> & {
 	telemetrySetting: TelemetrySetting
@@ -22,33 +26,11 @@ type AboutProps = HTMLAttributes<HTMLDivElement> & {
 
 export const About = ({ telemetrySetting, setTelemetrySetting, className, ...props }: AboutProps) => {
 	const { t } = useAppTranslation()
-	const [shouldThrowError, setShouldThrowError] = useState(false)
 
-	// Function to trigger error for testing ErrorBoundary
-	const triggerTestError = () => {
-		setShouldThrowError(true)
-	}
-
-	// Named function to make it easier to identify in stack traces
-	function throwTestError() {
-		// Intentionally cause a type error by accessing a property on undefined
-		const obj: any = undefined
-		obj.nonExistentMethod()
-	}
-
-	// Test component that throws an error when shouldThrow is true
-	const ErrorThrower = ({ shouldThrow = false }) => {
-		if (shouldThrow) {
-			// Use a named function to make it easier to identify in stack traces
-			throwTestError()
-		}
-		return null
-	}
+	const [kiloCodeBloat, setKiloCodeBloat] = useState<number[][]>([])
 
 	return (
 		<div className={cn("flex flex-col gap-2", className)} {...props}>
-			{/* Test component that throws an error when shouldThrow is true */}
-			<ErrorThrower shouldThrow={shouldThrowError} />
 			<SectionHeader
 				description={
 					Package.sha
@@ -64,7 +46,7 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 			<Section>
 				<div>
 					<VSCodeCheckbox
-						checked={telemetrySetting === "enabled"}
+						checked={telemetrySetting !== "disabled"}
 						onChange={(e: any) => {
 							const checked = e.target.checked === true
 							setTelemetrySetting(checked ? "enabled" : "disabled")
@@ -119,13 +101,24 @@ export const About = ({ telemetrySetting, setTelemetrySetting, className, ...pro
 						<TriangleAlert className="p-0.5" />
 						{t("settings:footer.settings.reset")}
 					</Button>
-
-					{/* Test button for ErrorBoundary - only visible in development */}
-					<Button variant="destructive" onClick={triggerTestError} className="w-auto">
-						<TriangleAlert className="p-0.5" />
-						Test ErrorBoundary
-					</Button>
 				</div>
+
+				{
+					// kilocode_change start
+					process.env.NODE_ENV === "development" && (
+						<div className="flex flex-wrap items-center gap-2 mt-2">
+							<Button
+								variant="destructive"
+								onClick={() => {
+									setKiloCodeBloat([...kiloCodeBloat, new Array<number>(20_000_000).fill(0)])
+									console.debug(`Memory percentage: ${getMemoryPercentage()}`)
+								}}>
+								Development: Allocate memory
+							</Button>
+						</div>
+					)
+					// kilocode_change end
+				}
 			</Section>
 		</div>
 	)

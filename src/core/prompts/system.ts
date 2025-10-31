@@ -15,7 +15,7 @@ import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelec
 import { DiffStrategy } from "../../shared/tools"
 import { formatLanguage } from "../../shared/language"
 import { isEmpty } from "../../utils/object"
-
+import { ToolUseStyle } from "../../../packages/types/src" // kilocode_change
 import { McpHub } from "../../services/mcp/McpHub"
 import { CodeIndexManager } from "../../services/code-index/manager"
 
@@ -34,7 +34,7 @@ import {
 	addCustomInstructions,
 	markdownFormattingSection,
 } from "./sections"
-import { getMorphInstructions } from "./tools/edit-file" // kilocode_change: Morph fast apply
+import { type ClineProviderState } from "../webview/ClineProvider" // kilocode_change
 
 // Helper function to get prompt component, filtering out empty objects
 export function getPromptComponent(
@@ -68,6 +68,9 @@ async function generatePrompt(
 	partialReadsEnabled?: boolean,
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
+	modelId?: string,
+	toolUseStyle?: ToolUseStyle, // kilocode_change
+	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -86,43 +89,50 @@ async function generatePrompt(
 	const shouldIncludeMcp = hasMcpGroup && hasMcpServers
 
 	const [modesSection, mcpServersSection] = await Promise.all([
-		getModesSection(context),
+		getModesSection(context, toolUseStyle /*kilocode_change*/),
 		shouldIncludeMcp
 			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
 			: Promise.resolve(""),
 	])
 
-	const codeIndexManager = CodeIndexManager.getInstance(context)
+	const codeIndexManager = CodeIndexManager.getInstance(context, cwd)
 
 	const basePrompt = `${roleDefinition}
 
-${markdownFormattingSection()}
+${markdownFormattingSection(toolUseStyle ?? "xml" /*kilocode_change*/)}
 
-${getSharedToolUseSection()}
+${getSharedToolUseSection(toolUseStyle /*kilocode_change*/)}
 
-${getToolDescriptionsForMode(
-	mode,
-	cwd,
-	supportsComputerUse,
-	codeIndexManager,
-	effectiveDiffStrategy,
-	browserViewportSize,
-	shouldIncludeMcp ? mcpHub : undefined,
-	customModeConfigs,
-	experiments,
-	partialReadsEnabled,
-	settings,
-)}
+${
+	toolUseStyle !== "json" // kilocode_change
+		? getToolDescriptionsForMode(
+				mode,
+				cwd,
+				supportsComputerUse,
+				codeIndexManager,
+				effectiveDiffStrategy,
+				browserViewportSize,
+				shouldIncludeMcp ? mcpHub : undefined,
+				customModeConfigs,
+				experiments,
+				partialReadsEnabled,
+				settings,
+				enableMcpServerCreation,
+				modelId,
+				clineProviderState, // kilocode_change
+			)
+		: ""
+}
 
-${getToolUseGuidelinesSection(codeIndexManager)}
+${getToolUseGuidelinesSection(codeIndexManager, toolUseStyle /*kilocode_change*/)}
 
-${getMorphInstructions(experiments) /* kilocode_change: newlines are returned by function */}${mcpServersSection}
+${mcpServersSection}
 
-${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager)}
+${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager)}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, clineProviderState, toolUseStyle /* kilocode_change */)}
 
 ${getSystemInfoSection(cwd)}
 
@@ -158,6 +168,9 @@ export const SYSTEM_PROMPT = async (
 	partialReadsEnabled?: boolean,
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
+	modelId?: string,
+	toolUseStyle?: ToolUseStyle, // kilocode_change
+	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> => {
 	if (!context) {
 		throw new Error("Extension context is required for generating system prompt")
@@ -207,7 +220,7 @@ export const SYSTEM_PROMPT = async (
 
 ${fileCustomSystemPrompt}
 
-${getMorphInstructions(experiments) /* kilocode_change: Morph fast apply */}${customInstructions}`
+${customInstructions}`
 	}
 
 	// If diff is disabled, don't pass the diffStrategy
@@ -232,5 +245,8 @@ ${getMorphInstructions(experiments) /* kilocode_change: Morph fast apply */}${cu
 		partialReadsEnabled,
 		settings,
 		todoList,
+		modelId,
+		toolUseStyle, // kilocode_change
+		clineProviderState, // kilocode_change
 	)
 }

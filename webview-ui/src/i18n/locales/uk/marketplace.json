@@ -33,7 +33,17 @@
 			"selected": "Показано елементи з будь-яким з вибраних тегів",
 			"clickToFilter": "Клікни на теги для фільтрування елементів"
 		},
+		"installed": {
+			"label": "Фільтрувати за статусом",
+			"all": "Всі елементи",
+			"installed": "Встановлені",
+			"notInstalled": "Не встановлені"
+		},
 		"none": "Немає"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCPs",
+		"marketplace": "Marketplace"
 	},
 	"type-group": {
 		"modes": "Modes",

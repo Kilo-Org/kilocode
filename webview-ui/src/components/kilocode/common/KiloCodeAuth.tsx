@@ -12,7 +12,7 @@ interface KiloCodeAuthProps {
 }
 
 const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, className = "" }) => {
-	const { uriScheme, uiKind } = useExtensionState()
+	const { uriScheme, uiKind, kiloCodeWrapperProperties } = useExtensionState()
 
 	const { t } = useAppTranslation()
 
@@ -27,7 +27,7 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, classN
 
 			<div className="w-full flex flex-col gap-5">
 				<ButtonLink
-					href={getKiloCodeBackendSignUpUrl(uriScheme, uiKind)}
+					href={getKiloCodeBackendSignUpUrl(uriScheme, uiKind, kiloCodeWrapperProperties)}
 					onClick={() => {
 						if (uiKind === "Web" && onManualConfigClick) {
 							onManualConfigClick()

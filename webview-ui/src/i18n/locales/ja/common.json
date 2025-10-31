@@ -28,7 +28,8 @@
 		"customerSupport": "カスタマーサポート"
 	},
 	"ui": {
-		"search_placeholder": "検索..."
+		"search_placeholder": "検索...",
+		"no_results": "結果が見つかりません"
 	},
 	"mermaid": {
 		"loading": "Mermaidダイアグラムを生成中...",
@@ -66,6 +67,12 @@
 			"copyError": "画像のコピーエラー"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "画像"
+		},
+		"noData": "画像データなし"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "無効なデータURI形式",
@@ -84,6 +91,28 @@
 		"deleteWarning": "このメッセージを削除すると、会話内の後続のメッセージもすべて削除されます。続行しますか？",
 		"editMessage": "メッセージを編集",
 		"editWarning": "このメッセージを編集すると、会話内の後続のメッセージもすべて削除されます。続行しますか？",
-		"proceed": "続行"
+		"editQuestionWithCheckpoint": "このメッセージを編集すると、会話内の後続のメッセージもすべて削除されます。このチェックポイントまでのすべての変更も元に戻しますか？",
+		"deleteQuestionWithCheckpoint": "このメッセージを削除すると、会話内の後続のメッセージもすべて削除されます。このチェックポイントまでのすべての変更も元に戻しますか？",
+		"editOnly": "いいえ、メッセージのみ編集",
+		"deleteOnly": "いいえ、メッセージのみ削除",
+		"restoreToCheckpoint": "はい、チェックポイントを復元",
+		"proceed": "続行",
+		"dontShowAgain": "今後表示しない"
+	},
+	"time_ago": {
+		"just_now": "たった今",
+		"seconds_ago": "{{count}}秒前",
+		"minute_ago": "1分前",
+		"minutes_ago": "{{count}}分前",
+		"hour_ago": "1時間前",
+		"hours_ago": "{{count}}時間前",
+		"day_ago": "1日前",
+		"days_ago": "{{count}}日前",
+		"week_ago": "1週間前",
+		"weeks_ago": "{{count}}週間前",
+		"month_ago": "1ヶ月前",
+		"months_ago": "{{count}}ヶ月前",
+		"year_ago": "1年前",
+		"years_ago": "{{count}}年前"
 	}
 }

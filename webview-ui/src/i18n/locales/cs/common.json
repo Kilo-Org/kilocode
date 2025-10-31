@@ -28,7 +28,8 @@
 		"customerSupport": "Zákaznická podpora"
 	},
 	"ui": {
-		"search_placeholder": "Hledat..."
+		"search_placeholder": "Hledat...",
+		"no_results": "Nebyly nalezeny žádné výsledky"
 	},
 	"mermaid": {
 		"loading": "Vytváření diagramu mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Chyba při kopírování obrázku"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Obrázek"
+		},
+		"noData": "Žádná data obrázku"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Neplatný formát data URI",
@@ -87,7 +94,29 @@
 		"deleteWarning": "Smazáním této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
 		"editMessage": "Upravit zprávu",
 		"editWarning": "Úpravou této zprávy se smažou všechny následující zprávy v konverzaci. Chceš pokračovat?",
+		"editQuestionWithCheckpoint": "Úprava této zprávy smaže všechny pozdější zprávy v konverzaci. Chceš také vrátit všechny změny zpět k tomuto kontrolnímu bodu?",
+		"deleteQuestionWithCheckpoint": "Smazání této zprávy smaže všechny pozdější zprávy v konverzaci. Chceš také vrátit všechny změny zpět k tomuto kontrolnímu bodu?",
+		"editOnly": "Ne, pouze upravit zprávu",
+		"deleteOnly": "Ne, pouze smazat zprávu",
+		"restoreToCheckpoint": "Ano, obnovit kontrolní bod",
+		"dontShowAgain": "Už nezobrazovat",
 		"proceed": "Pokračovat",
 		"title": "Potvrzení"
+	},
+	"time_ago": {
+		"just_now": "právě teď",
+		"seconds_ago": "před {{count}} sekundami",
+		"minute_ago": "před minutou",
+		"minutes_ago": "před {{count}} minutami",
+		"hour_ago": "před hodinou",
+		"hours_ago": "před {{count}} hodinami",
+		"day_ago": "před dnem",
+		"days_ago": "před {{count}} dny",
+		"week_ago": "před týdnem",
+		"weeks_ago": "před {{count}} týdny",
+		"month_ago": "před měsícem",
+		"months_ago": "před {{count}} měsíci",
+		"year_ago": "před rokem",
+		"years_ago": "před {{count}} lety"
 	}
 }

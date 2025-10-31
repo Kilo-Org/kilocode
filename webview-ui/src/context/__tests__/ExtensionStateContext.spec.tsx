@@ -1,6 +1,10 @@
 import { render, screen, act } from "@/utils/test-utils"
 
-import { ProviderSettings, ExperimentId } from "@roo-code/types"
+import {
+	ProviderSettings,
+	ExperimentId,
+	openRouterDefaultModelId, // kilocode_change
+} from "@roo-code/types"
 
 import { ExtensionState } from "@roo/ExtensionMessage"
 
@@ -226,7 +230,8 @@ describe("mergeExtensionState", () => {
 			mcpEnabled: false,
 			enableMcpServerCreation: false,
 			clineMessages: [],
-			taskHistory: [],
+			taskHistoryFullLength: 0, // kilocode_change
+			taskHistoryVersion: 0, // kilocode_change
 			shouldShowAnnouncement: false,
 			enableCheckpoints: true,
 			writeDelayMs: 1000,
@@ -250,6 +255,12 @@ describe("mergeExtensionState", () => {
 			sharingEnabled: false,
 			profileThresholds: {},
 			hasOpenedModeSelector: false, // Add the new required property
+			maxImageFileSize: 5,
+			maxTotalImageSize: 20,
+			kilocodeDefaultModel: openRouterDefaultModelId,
+			remoteControlEnabled: false,
+			taskSyncEnabled: false,
+			featureRoomoteControlEnabled: false,
 		}
 
 		const prevState: ExtensionState = {
@@ -264,9 +275,12 @@ describe("mergeExtensionState", () => {
 			experiments: {
 				powerSteering: true,
 				multiFileApplyDiff: true,
-				inlineAssist: false, // kilocode_change
+				preventFocusDisruption: false,
 				morphFastApply: false, // kilocode_change
-			},
+				newTaskRequireTodos: false,
+				imageGeneration: false,
+				runSlashCommand: false,
+			} as Record<ExperimentId, boolean>,
 		}
 
 		const result = mergeExtensionState(prevState, newState)
@@ -279,8 +293,11 @@ describe("mergeExtensionState", () => {
 		expect(result.experiments).toEqual({
 			powerSteering: true,
 			multiFileApplyDiff: true,
-			inlineAssist: false, // kilocode_change
+			preventFocusDisruption: false,
 			morphFastApply: false, // kilocode_change
+			newTaskRequireTodos: false,
+			imageGeneration: false,
+			runSlashCommand: false,
 		})
 	})
 })

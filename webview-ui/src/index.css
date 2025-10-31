@@ -110,6 +110,7 @@
 	--color-vscode-list-activeSelectionForeground: var(--vscode-list-activeSelectionForeground);
 
 	--color-vscode-toolbar-hoverBackground: var(--vscode-toolbar-hoverBackground);
+	--color-vscode-toolbar-hoverOutline: var(--vscode-toolbar-hoverOutline);
 
 	--color-vscode-panel-border: var(--vscode-panel-border);
 
@@ -132,9 +133,18 @@
 	--color-vscode-inputValidation-infoBorder: var(--vscode-inputValidation-infoBorder);
 
 	--color-vscode-widget-border: var(--vscode-widget-border);
+	--color-vscode-widget-shadow: var(--vscode-widget-shadow);
+
 	--color-vscode-textLink-foreground: var(--vscode-textLink-foreground);
+
 	--color-vscode-textCodeBlock-background: var(--vscode-textCodeBlock-background);
-	--color-vscode-button-hoverBackground: var(--vscode-button-hoverBackground);
+
+	--color-vscode-editorHoverWidget-foreground: var(--vscode-editorHoverWidget-foreground);
+	--color-vscode-editorHoverWidget-background: var(--vscode-editorHoverWidget-background);
+	--color-vscode-editorHoverWidget-border: var(--vscode-editorHoverWidget-border);
+
+	--color-vscode-banner-background: var(--vscode-banner-background);
+	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
 }
 
 @layer base {
@@ -172,6 +182,12 @@
 	body {
 		--vscode-input-border: var(--border);
 	}
+
+	/* kilocode_change start */
+	a {
+		color: var(--vscode-textLink-foreground);
+	}
+	/* kilocode_change end */
 }
 
 @layer components {

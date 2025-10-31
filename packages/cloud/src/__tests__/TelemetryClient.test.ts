@@ -4,12 +4,13 @@
 
 import { type TelemetryPropertiesProvider, TelemetryEventName } from "@roo-code/types"
 
-import { TelemetryClient } from "../TelemetryClient"
+import { CloudTelemetryClient as TelemetryClient } from "../TelemetryClient.js"
 
 const mockFetch = vi.fn()
 global.fetch = mockFetch as any
 
-describe("TelemetryClient", () => {
+// kilocode_change - skip these tests since we don't use this code
+describe.skip("TelemetryClient", () => {
 	const getPrivateProperty = <T>(instance: any, propertyName: string): T => {
 		return instance[propertyName]
 	}
@@ -35,6 +36,14 @@ describe("TelemetryClient", () => {
 					recordTaskMessages: true,
 				},
 			}),
+			getUserSettings: vi.fn().mockReturnValue({
+				features: {},
+				settings: {
+					taskSyncEnabled: true,
+				},
+				version: 1,
+			}),
+			isTaskSyncEnabled: vi.fn().mockReturnValue(true),
 		}
 
 		mockFetch.mockResolvedValue({
@@ -76,12 +85,8 @@ describe("TelemetryClient", () => {
 			expect(isEventCapturable(TelemetryEventName.TASK_CONVERSATION_MESSAGE)).toBe(false)
 		})
 
-		it("should return true for TASK_MESSAGE events when recordTaskMessages is true", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: true,
-				},
-			})
+		it("should return true for TASK_MESSAGE events when isTaskSyncEnabled returns true", () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(true)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -91,14 +96,11 @@ describe("TelemetryClient", () => {
 			).bind(client)
 
 			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(true)
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 
-		it("should return false for TASK_MESSAGE events when recordTaskMessages is false", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: false,
-				},
-			})
+		it("should return false for TASK_MESSAGE events when isTaskSyncEnabled returns false", () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(false)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -108,47 +110,7 @@ describe("TelemetryClient", () => {
 			).bind(client)
 
 			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when recordTaskMessages is undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {},
-			})
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when cloudSettings is undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue({})
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
-		})
-
-		it("should return false for TASK_MESSAGE events when getSettings returns undefined", () => {
-			mockSettingsService.getSettings.mockReturnValue(undefined)
-
-			const client = new TelemetryClient(mockAuthService, mockSettingsService)
-
-			const isEventCapturable = getPrivateProperty<(eventName: TelemetryEventName) => boolean>(
-				client,
-				"isEventCapturable",
-			).bind(client)
-
-			expect(isEventCapturable(TelemetryEventName.TASK_MESSAGE)).toBe(false)
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 	})
 
@@ -273,10 +235,8 @@ describe("TelemetryClient", () => {
 			expect(mockFetch).not.toHaveBeenCalled()
 		})
 
-		it("should not capture TASK_MESSAGE events when recordTaskMessages is undefined", async () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {},
-			})
+		it("should not capture TASK_MESSAGE events when isTaskSyncEnabled returns false", async () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(false)
 
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -294,6 +254,7 @@ describe("TelemetryClient", () => {
 			})
 
 			expect(mockFetch).not.toHaveBeenCalled()
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 		})
 
 		it("should not send request when schema validation fails", async () => {
@@ -353,12 +314,8 @@ describe("TelemetryClient", () => {
 			)
 		})
 
-		it("should attempt to capture TASK_MESSAGE events when recordTaskMessages is true", async () => {
-			mockSettingsService.getSettings.mockReturnValue({
-				cloudSettings: {
-					recordTaskMessages: true,
-				},
-			})
+		it("should attempt to capture TASK_MESSAGE events when isTaskSyncEnabled returns true", async () => {
+			mockSettingsService.isTaskSyncEnabled.mockReturnValue(true)
 
 			const eventProperties = {
 				appName: "roo-code",
@@ -389,6 +346,7 @@ describe("TelemetryClient", () => {
 				properties: eventProperties,
 			})
 
+			expect(mockSettingsService.isTaskSyncEnabled).toHaveBeenCalled()
 			expect(mockFetch).toHaveBeenCalledWith(
 				"https://app.roocode.com/api/events",
 				expect.objectContaining({
@@ -514,7 +472,7 @@ describe("TelemetryClient", () => {
 
 			// Verify FormData contents
 			const call = mockFetch.mock.calls[0]
-			const formData = call[1].body as FormData
+			const formData = call?.[1]?.body as FormData
 
 			expect(formData.get("taskId")).toBe("test-task-id")
 
@@ -569,7 +527,7 @@ describe("TelemetryClient", () => {
 
 			// Verify FormData contents - should still work with just taskId
 			const call = mockFetch.mock.calls[0]
-			const formData = call[1].body as FormData
+			const formData = call?.[1]?.body as FormData
 
 			expect(formData.get("taskId")).toBe("test-task-id")
 			expect(formData.get("properties")).toBe(
@@ -577,6 +535,7 @@ describe("TelemetryClient", () => {
 					taskId: "test-task-id",
 				}),
 			)
+
 			// The messages are stored as a File object under the "file" key
 			const fileField = formData.get("file") as File
 			expect(fileField).toBeInstanceOf(File)
@@ -615,7 +574,7 @@ describe("TelemetryClient", () => {
 
 			// Verify FormData contents - should work with just taskId
 			const call = mockFetch.mock.calls[0]
-			const formData = call[1].body as FormData
+			const formData = call?.[1]?.body as FormData
 
 			expect(formData.get("taskId")).toBe("test-task-id")
 			expect(formData.get("properties")).toBe(
@@ -623,6 +582,7 @@ describe("TelemetryClient", () => {
 					taskId: "test-task-id",
 				}),
 			)
+
 			// The messages are stored as a File object under the "file" key
 			const fileField = formData.get("file") as File
 			expect(fileField).toBeInstanceOf(File)
@@ -682,28 +642,6 @@ describe("TelemetryClient", () => {
 			)
 		})
 
-		it("should log debug information when debug is enabled", async () => {
-			const client = new TelemetryClient(mockAuthService, mockSettingsService, true)
-
-			const messages = [
-				{
-					ts: 1,
-					type: "say" as const,
-					say: "text" as const,
-					text: "test message",
-				},
-			]
-
-			await client.backfillMessages(messages, "test-task-id")
-
-			expect(console.info).toHaveBeenCalledWith(
-				"[TelemetryClient#backfillMessages] Uploading 1 messages for task test-task-id",
-			)
-			expect(console.info).toHaveBeenCalledWith(
-				"[TelemetryClient#backfillMessages] Successfully uploaded messages for task test-task-id",
-			)
-		})
-
 		it("should handle empty messages array", async () => {
 			const client = new TelemetryClient(mockAuthService, mockSettingsService)
 
@@ -722,7 +660,7 @@ describe("TelemetryClient", () => {
 
 			// Verify FormData contents
 			const call = mockFetch.mock.calls[0]
-			const formData = call[1].body as FormData
+			const formData = call?.[1]?.body as FormData
 
 			// The messages are stored as a File object under the "file" key
 			const fileField = formData.get("file") as File

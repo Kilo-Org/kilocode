@@ -233,12 +233,46 @@ describe("PromptsView", () => {
 		const changeEvent = new Event("change", { bubbles: true })
 		fireEvent(textarea, changeEvent)
 
-		// The component calls setCustomInstructions with value || undefined
-		// Since empty string is falsy, it should be undefined
-		expect(setCustomInstructions).toHaveBeenCalledWith(undefined)
+		// The component calls setCustomInstructions with value ?? undefined
+		// With nullish coalescing, empty string is preserved (not treated as nullish)
+		expect(setCustomInstructions).toHaveBeenCalledWith("")
+		// The postMessage call will have multiple calls, we need to check the right one
 		expect(vscode.postMessage).toHaveBeenCalledWith({
 			type: "customInstructions",
-			text: undefined,
+			text: "", // empty string is now preserved with ?? operator
 		})
+	})
+
+	it("closes the mode selection popover when ESC key is pressed", async () => {
+		renderPromptsView()
+		const selectTrigger = screen.getByTestId("mode-select-trigger")
+
+		// Open the popover
+		fireEvent.click(selectTrigger)
+		await waitFor(() => {
+			expect(selectTrigger).toHaveAttribute("aria-expanded", "true")
+		})
+
+		// Press ESC key
+		fireEvent.keyDown(window, { key: "Escape" })
+
+		// Verify popover is closed
+		await waitFor(() => {
+			expect(selectTrigger).toHaveAttribute("aria-expanded", "false")
+		})
+	})
+
+	it("does not close the popover when ESC is pressed while popover is closed", async () => {
+		renderPromptsView()
+		const selectTrigger = screen.getByTestId("mode-select-trigger")
+
+		// Ensure popover is closed
+		expect(selectTrigger).toHaveAttribute("aria-expanded", "false")
+
+		// Press ESC key
+		fireEvent.keyDown(window, { key: "Escape" })
+
+		// Verify popover remains closed
+		expect(selectTrigger).toHaveAttribute("aria-expanded", "false")
 	})
 })

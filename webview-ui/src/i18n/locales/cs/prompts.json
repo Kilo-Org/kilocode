@@ -16,6 +16,11 @@
 		"title": "Konfigurace API",
 		"select": "Vyber, kterou konfiguraci API použít pro tento režim"
 	},
+	"organizationMode": {
+		"title": "Režim organizace",
+		"description": "Tento režim je poskytován tvou organizací a nelze ho zde upravovat. Pro úpravu tohoto režimu navštiv Kilo Code Dashboard.",
+		"cannotEdit": "Režimy organizace nelze upravovat"
+	},
 	"tools": {
 		"title": "Dostupné nástroje",
 		"builtInModesText": "Nástroje pro vestavěné režimy nelze upravovat",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Použít aktuálně vybranou konfiguraci API",
 			"testPromptPlaceholder": "Zadej prompt pro otestování vylepšení",
 			"previewButton": "Náhled vylepšení promptu",
-			"testEnhancement": "Otestovat vylepšení"
+			"testEnhancement": "Otestovat vylepšení",
+			"includeTaskHistory": "Zahrnout historii úkolů jako kontext",
+			"includeTaskHistoryDescription": "Když je povoleno, posledních 10 zpráv z aktuální konverzace bude zahrnuto jako kontext při vylepšování promptů, což pomáhá generovat relevantnější a kontextově uvědomělé návrhy."
 		},
 		"condense": {
 			"apiConfiguration": "Konfigurace API pro kondenzaci kontextu",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Vysvětlit příkaz terminálu",
 				"description": "Získej podrobná vysvětlení příkazů terminálu a jejich výstupů. Dostupné v kontextové nabídce terminálu (pravé tlačítko na vybraném obsahu terminálu)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generovat příkaz terminálu",
+				"description": "Pomáhá generovat příkazy terminálu na základě popisu."
 			},
 			"NEW_TASK": {
 				"label": "Začít nový úkol",

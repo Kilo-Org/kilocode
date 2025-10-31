@@ -1,9 +1,9 @@
 {
 	"errorBoundary": {
 		"title": "Something went wrong",
-		"reportText": "Please help us improve by reporting this error on",
-		"githubText": "our GitHub Issues page",
-		"copyInstructions": "Copy and paste the following error message to include it as part of your submission:",
+		"reportText": "Please report this issue on our GitHub:",
+		"githubText": "Open GitHub Issue",
+		"copyInstructions": "Copy error details below to include in your report:",
 		"errorStack": "Error Stack:",
 		"componentStack": "Component Stack:"
 	},
@@ -28,7 +28,8 @@
 		"customerSupport": "Customer Support"
 	},
 	"ui": {
-		"search_placeholder": "Search..."
+		"search_placeholder": "Search...",
+		"no_results": "No results found"
 	},
 	"mermaid": {
 		"loading": "Generating mermaid diagram...",
@@ -66,6 +67,12 @@
 			"copyError": "Error copying image"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Image"
+		},
+		"noData": "No image data"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Invalid data URI format",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Deleting this message will delete all subsequent messages in the conversation. Do you want to proceed?",
 		"editMessage": "Edit Message",
 		"editWarning": "Editing this message will delete all subsequent messages in the conversation. Do you want to proceed?",
-		"proceed": "Proceed"
+		"editQuestionWithCheckpoint": "Editing this message will delete all later messages in the conversation. Do you also want to undo all changes back to this checkpoint?",
+		"deleteQuestionWithCheckpoint": "Deleting this message will delete all later messages in the conversation. Do you also want to undo all changes back to this checkpoint?",
+		"editOnly": "No, edit message only",
+		"deleteOnly": "No, delete message only",
+		"restoreToCheckpoint": "Yes, restore the checkpoint",
+		"proceed": "Proceed",
+		"dontShowAgain": "Don't show this again"
+	},
+	"time_ago": {
+		"just_now": "just now",
+		"seconds_ago": "{{count}} seconds ago",
+		"minute_ago": "a minute ago",
+		"minutes_ago": "{{count}} minutes ago",
+		"hour_ago": "an hour ago",
+		"hours_ago": "{{count}} hours ago",
+		"day_ago": "a day ago",
+		"days_ago": "{{count}} days ago",
+		"week_ago": "a week ago",
+		"weeks_ago": "{{count}} weeks ago",
+		"month_ago": "a month ago",
+		"months_ago": "{{count}} months ago",
+		"year_ago": "a year ago",
+		"years_ago": "{{count}} years ago"
 	}
 }

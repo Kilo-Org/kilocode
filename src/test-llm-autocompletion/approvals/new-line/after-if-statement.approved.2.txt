@@ -1,0 +1,7 @@
+function checkValue(value) {
+  if (value > 0) {
+    return true;
+<<<AUTOCOMPLETE_HERE>>>
+  }
+  return false;
+}

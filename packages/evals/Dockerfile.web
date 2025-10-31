@@ -31,7 +31,8 @@ RUN mkdir -p \
   packages/config-typescript \
   packages/evals \
   packages/ipc \
-  packages/types
+  packages/types \
+  packages/cloud
 
 COPY ./package.json                            ./
 COPY ./pnpm-lock.yaml                          ./
@@ -43,6 +44,7 @@ COPY ./packages/config-typescript/package.json ./packages/config-typescript/
 COPY ./packages/evals/package.json             ./packages/evals/
 COPY ./packages/ipc/package.json               ./packages/ipc/
 COPY ./packages/types/package.json             ./packages/types/
+COPY ./packages/cloud/package.json             ./packages/cloud/
 
 RUN pnpm install
 
@@ -58,5 +60,5 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENV DATABASE_URL=postgresql://postgres:password@db:5432/evals_development
 ENV REDIS_URL=redis://redis:6379
-EXPOSE 3000
+EXPOSE 3446
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

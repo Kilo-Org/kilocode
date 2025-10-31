@@ -22,9 +22,9 @@ vi.mock("@/i18n/TranslationContext", () => ({
 }))
 
 // kilocode_change start: add mocks
-vi.mock("../useTaskSearch", () => ({
-	useTaskSearch: () => ({
-		tasks: [
+vi.mock("@/kilocode/hooks/useTaskHistory", () => ({
+	useTaskWithId: () => ({
+		data: [
 			{ id: "task-1", isFavorited: false },
 			{ id: "task-2", isFavorited: true },
 			{ id: "task-3", isFavorited: false },

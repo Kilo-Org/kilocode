@@ -5,8 +5,16 @@ import { AlertTriangle } from "lucide-react"
 import type { ProviderSettingsEntry, OrganizationAllowList } from "@roo-code/types"
 
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { Button, Input, Dialog, DialogContent, DialogTitle, StandardTooltip, SearchableSelect } from "@/components/ui"
-import type { SearchableSelectOption } from "@/components/ui"
+import {
+	type SearchableSelectOption,
+	Button,
+	Input,
+	Dialog,
+	DialogContent,
+	DialogTitle,
+	StandardTooltip,
+	SearchableSelect,
+} from "@/components/ui"
 
 interface ApiConfigManagerProps {
 	currentApiConfigName?: string

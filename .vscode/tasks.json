@@ -21,7 +21,19 @@
 			"label": "watch:pnpm",
 			"type": "shell",
 			"command": "npx",
-			"args": ["nodemon", "--watch", "pnpm-lock.yaml", "--exec", "pnpm install"],
+			"args": [
+				"nodemon",
+				"--watch",
+				"package.json",
+				"--watch",
+				"src/package.json",
+				"--watch",
+				"webview-ui/package.json",
+				"--watch",
+				"pnpm-workspace.yaml",
+				"--exec",
+				"pnpm install"
+			],
 			"group": "none",
 			"isBackground": true,
 			"presentation": {
@@ -119,7 +131,7 @@
 		{
 			"label": "install-dev-extension",
 			"type": "shell",
-			"command": "pnpm i && npm run build && code --install-extension \"$(ls -1v bin/kilo-code-*.vsix | tail -n1)\"",
+			"command": "pnpm i && npm run build && code --force --install-extension \"$(ls -1v bin/kilo-code-*.vsix | tail -n1)\"",
 			"group": "build",
 			"presentation": {
 				"echo": true,
@@ -130,6 +142,20 @@
 				"clear": false
 			},
 			"problemMatcher": []
+		},
+		{
+			"type": "shell",
+			"command": "pnpm docs:start",
+			"problemMatcher": [],
+			"label": "docs: start",
+			"detail": "node -r dotenv/config node_modules/.bin/docusaurus start --host 0.0.0.0"
+		},
+		{
+			"type": "shell",
+			"command": "pnpm docs:build",
+			"problemMatcher": [],
+			"label": "docs: build",
+			"detail": "Build the Docusaurus site for production"
 		}
 	]
 }

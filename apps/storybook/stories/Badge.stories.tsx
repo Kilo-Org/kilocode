@@ -5,7 +5,7 @@ import { createTableStory } from "../src/utils/createTableStory"
 const BADGE_VARIANTS = ["default", "secondary", "destructive", "outline"] as const
 
 const meta = {
-	title: "Component/Badge",
+	title: "Components/Badge",
 	component: Badge,
 	parameters: {
 		layout: "centered",

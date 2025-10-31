@@ -29,7 +29,9 @@ describe("experiments", () => {
 				morphFastApply: false, // kilocode_change
 				powerSteering: false,
 				multiFileApplyDiff: false,
-				inlineAssist: false, // kilocode_change
+				preventFocusDisruption: false,
+				imageGeneration: false,
+				runSlashCommand: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})
@@ -39,7 +41,9 @@ describe("experiments", () => {
 				morphFastApply: false, // kilocode_change
 				powerSteering: true,
 				multiFileApplyDiff: false,
-				inlineAssist: false, // kilocode_change
+				preventFocusDisruption: false,
+				imageGeneration: false,
+				runSlashCommand: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(true)
 		})
@@ -49,7 +53,9 @@ describe("experiments", () => {
 				morphFastApply: false, // kilocode_change
 				powerSteering: false,
 				multiFileApplyDiff: false,
-				inlineAssist: false, // kilocode_change
+				preventFocusDisruption: false,
+				imageGeneration: false,
+				runSlashCommand: false,
 			}
 			expect(Experiments.isEnabled(experiments, EXPERIMENT_IDS.POWER_STEERING)).toBe(false)
 		})

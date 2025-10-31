@@ -28,7 +28,8 @@
 		"customerSupport": "고객 지원"
 	},
 	"ui": {
-		"search_placeholder": "검색..."
+		"search_placeholder": "검색...",
+		"no_results": "결과를 찾을 수 없습니다"
 	},
 	"mermaid": {
 		"loading": "머메이드 다이어그램 생성 중...",
@@ -66,6 +67,12 @@
 			"copyError": "이미지 복사 오류"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "이미지"
+		},
+		"noData": "이미지 데이터 없음"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "잘못된 데이터 URI 형식",
@@ -84,6 +91,28 @@
 		"deleteWarning": "이 메시지를 삭제하면 대화의 모든 후속 메시지가 삭제됩니다. 계속하시겠습니까?",
 		"editMessage": "메시지 편집",
 		"editWarning": "이 메시지를 편집하면 대화의 모든 후속 메시지가 삭제됩니다. 계속하시겠습니까?",
-		"proceed": "계속"
+		"editQuestionWithCheckpoint": "이 메시지를 편집하면 대화의 모든 후속 메시지가 삭제됩니다. 이 체크포인트까지의 모든 변경사항도 되돌리시겠습니까?",
+		"deleteQuestionWithCheckpoint": "이 메시지를 삭제하면 대화의 모든 후속 메시지가 삭제됩니다. 이 체크포인트까지의 모든 변경사항도 되돌리시겠습니까?",
+		"editOnly": "아니요, 메시지만 편집",
+		"deleteOnly": "아니요, 메시지만 삭제",
+		"restoreToCheckpoint": "예, 체크포인트 복원",
+		"proceed": "계속",
+		"dontShowAgain": "다시 표시하지 않음"
+	},
+	"time_ago": {
+		"just_now": "방금",
+		"seconds_ago": "{{count}}초 전",
+		"minute_ago": "1분 전",
+		"minutes_ago": "{{count}}분 전",
+		"hour_ago": "1시간 전",
+		"hours_ago": "{{count}}시간 전",
+		"day_ago": "1일 전",
+		"days_ago": "{{count}}일 전",
+		"week_ago": "1주일 전",
+		"weeks_ago": "{{count}}주일 전",
+		"month_ago": "1개월 전",
+		"months_ago": "{{count}}개월 전",
+		"year_ago": "1년 전",
+		"years_ago": "{{count}}년 전"
 	}
 }

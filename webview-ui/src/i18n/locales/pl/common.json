@@ -28,7 +28,8 @@
 		"keep": "Zachowaj"
 	},
 	"ui": {
-		"search_placeholder": "Szukaj..."
+		"search_placeholder": "Szukaj...",
+		"no_results": "Nie znaleziono wyników"
 	},
 	"mermaid": {
 		"loading": "Generowanie diagramu mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Błąd kopiowania obrazu"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Obraz"
+		},
+		"noData": "Brak danych obrazu"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Nieprawidłowy format URI danych",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Usunięcie tej wiadomości spowoduje usunięcie wszystkich kolejnych wiadomości w rozmowie. Czy chcesz kontynuować?",
 		"editMessage": "Edytuj Wiadomość",
 		"editWarning": "Edycja tej wiadomości spowoduje usunięcie wszystkich kolejnych wiadomości w rozmowie. Czy chcesz kontynuować?",
-		"proceed": "Kontynuuj"
+		"editQuestionWithCheckpoint": "Edycja tej wiadomości spowoduje usunięcie wszystkich późniejszych wiadomości w rozmowie. Czy chcesz również cofnąć wszystkie zmiany do tego punktu kontrolnego?",
+		"deleteQuestionWithCheckpoint": "Usunięcie tej wiadomości spowoduje usunięcie wszystkich późniejszych wiadomości w rozmowie. Czy chcesz również cofnąć wszystkie zmiany do tego punktu kontrolnego?",
+		"editOnly": "Nie, tylko edytuj wiadomość",
+		"deleteOnly": "Nie, tylko usuń wiadomość",
+		"restoreToCheckpoint": "Tak, przywróć punkt kontrolny",
+		"proceed": "Kontynuuj",
+		"dontShowAgain": "Nie pokazuj ponownie"
+	},
+	"time_ago": {
+		"just_now": "przed chwilą",
+		"seconds_ago": "{{count}} sekund temu",
+		"minute_ago": "minutę temu",
+		"minutes_ago": "{{count}} minut temu",
+		"hour_ago": "godzinę temu",
+		"hours_ago": "{{count}} godzin temu",
+		"day_ago": "dzień temu",
+		"days_ago": "{{count}} dni temu",
+		"week_ago": "tydzień temu",
+		"weeks_ago": "{{count}} tygodni temu",
+		"month_ago": "miesiąc temu",
+		"months_ago": "{{count}} miesięcy temu",
+		"year_ago": "rok temu",
+		"years_ago": "{{count}} lat temu"
 	}
 }

@@ -16,7 +16,11 @@ import { ModelPicker } from "../ModelPicker"
 
 type UnboundProps = {
 	apiConfiguration: ProviderSettings
-	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	setApiConfigurationField: (
+		field: keyof ProviderSettings,
+		value: ProviderSettings[keyof ProviderSettings],
+		isUserAction?: boolean,
+	) => void
 	routerModels?: RouterModels
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
@@ -86,11 +90,13 @@ export const Unbound = ({
 		const modelsPromise = new Promise<void>((resolve) => {
 			const messageHandler = (event: MessageEvent) => {
 				const message = event.data
+
 				if (message.type === "routerModels") {
 					window.removeEventListener("message", messageHandler)
 					resolve()
 				}
 			}
+
 			window.addEventListener("message", messageHandler)
 		})
 
@@ -109,7 +115,7 @@ export const Unbound = ({
 
 			if (!currentModelId || !modelExists) {
 				const firstAvailableModelId = Object.keys(updatedModels)[0]
-				setApiConfigurationField("unboundModelId", firstAvailableModelId)
+				setApiConfigurationField("unboundModelId", firstAvailableModelId, false) // false = automatic model selection
 			}
 		}
 

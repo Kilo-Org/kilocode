@@ -2,28 +2,15 @@ import type { Meta, StoryObj } from "@storybook/react-vite"
 import { fn } from "storybook/test"
 
 import TaskHeader from "../../../webview-ui/src/components/chat/TaskHeader"
-import { TooltipProvider } from "../../../webview-ui/src/components/ui/tooltip"
-import { createTaskHeaderMessages, createMockTask } from "../src/mockData/clineMessages"
+import { createMockTask } from "../src/mockData/clineMessages"
+import { withTooltipProvider } from "../src/decorators/withTooltipProvider"
 
 const meta = {
-	title: "Chat/TaskHeader",
+	title: "Roo/TaskHeader",
 	component: TaskHeader,
-	decorators: [
-		(Story) => (
-			<TooltipProvider delayDuration={300}>
-				<Story />
-			</TooltipProvider>
-		),
-	],
-	parameters: {
-		layout: "padded",
-	},
-	tags: ["autodocs"],
-	argTypes: {},
+	decorators: [withTooltipProvider],
 	args: {
 		handleCondenseContext: fn(),
-		onClose: fn(),
-		onMessageClick: fn(),
 	},
 } satisfies Meta<typeof TaskHeader>
 
@@ -41,9 +28,5 @@ export const Default: Story = {
 		contextTokens: 15000,
 		buttonsDisabled: false,
 		handleCondenseContext: fn(),
-		onClose: fn(),
-		groupedMessages: createTaskHeaderMessages(),
-		onMessageClick: fn(),
-		isTaskActive: true,
 	},
 }

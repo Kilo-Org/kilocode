@@ -37,6 +37,7 @@
 		"checkpoint_timeout": "체크포인트 복원을 시도하는 중 시간 초과되었습니다.",
 		"checkpoint_failed": "체크포인트 복원에 실패했습니다.",
 		"git_not_installed": "체크포인트 기능을 사용하려면 Git이 필요합니다. 체크포인트를 활성화하려면 Git을 설치하세요.",
+		"nested_git_repos_warning": "{{path}}에서 중첩된 git 저장소가 감지되어 체크포인트가 비활성화되었습니다. 체크포인트를 사용하려면 이 중첩된 git 저장소를 제거하거나 이동해주세요.",
 		"no_workspace": "먼저 프로젝트 폴더를 열어주세요",
 		"update_support_prompt": "지원 프롬프트 업데이트에 실패했습니다",
 		"reset_support_prompt": "지원 프롬프트 재설정에 실패했습니다",
@@ -69,6 +70,7 @@
 		"no_internet": "인터넷 연결이 없습니다. 네트워크 연결을 확인하고 다시 시도해 주세요.",
 		"url_forbidden": "이 웹사이트에 대한 접근이 금지되었습니다. 사이트가 자동 접근을 차단하거나 인증이 필요할 수 있습니다.",
 		"url_page_not_found": "페이지를 찾을 수 없습니다. URL이 올바른지 확인해 주세요.",
+		"url_request_aborted": "URL을 가져오는 요청이 중단되었습니다. 사이트가 자동 접근을 차단하거나, 인증이 필요하거나, 네트워크 문제가 있을 때 발생할 수 있습니다. 다시 시도하거나 일반 브라우저에서 URL에 접근할 수 있는지 확인해 주세요.",
 		"url_fetch_failed": "URL 콘텐츠 가져오기 실패: {{error}}",
 		"url_fetch_error_with_url": "{{url}} 콘텐츠 가져오기 오류: {{error}}",
 		"command_timeout": "명령 실행 시간이 {{seconds}}초 후 초과되었습니다",
@@ -79,12 +81,20 @@
 		"share_task_not_found": "작업을 찾을 수 없거나 액세스가 거부되었습니다.",
 		"mode_import_failed": "모드 가져오기 실패: {{error}}",
 		"delete_rules_folder_failed": "규칙 폴더 삭제 실패: {{rulesFolderPath}}. 오류: {{error}}",
+		"command_not_found": "'{{name}}' 명령을 찾을 수 없습니다",
+		"open_command_file": "명령 파일을 열 수 없습니다",
+		"delete_command": "명령 삭제 실패",
+		"no_workspace_for_project_command": "프로젝트 명령용 워크스페이스 폴더를 찾을 수 없습니다",
+		"command_already_exists": "명령 \"{{commandName}}\"이(가) 이미 존재합니다",
+		"create_command_failed": "명령 생성에 실패했습니다",
+		"command_template_content": "---\ndescription: \"이 명령이 수행하는 작업에 대한 간단한 설명\"\n---\n\n이것은 새로운 슬래시 명령입니다. 이 파일을 편집하여 명령 동작을 사용자 정의하세요.",
 		"claudeCode": {
 			"processExited": "Claude Code 프로세스가 코드 {{exitCode}}로 종료되었습니다.",
 			"errorOutput": "오류 출력: {{output}}",
 			"processExitedWithError": "Claude Code 프로세스가 코드 {{exitCode}}로 종료되었습니다. 오류 출력: {{output}}",
 			"stoppedWithReason": "Claude Code가 다음 이유로 중지되었습니다: {{reason}}",
-			"apiKeyModelPlanMismatch": "API 키와 구독 플랜에서 다른 모델을 허용합니다. 선택한 모델이 플랜에 포함되어 있는지 확인하세요."
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}",
@@ -95,7 +105,44 @@
 			"badRequest": "잘못된 요청: {{details}}",
 			"apiError": "Gemini CLI API 오류: {{error}}",
 			"completionError": "Gemini CLI 완성 오류: {{error}}"
-		}
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "OAuth 자격 증명을 로드하지 못했습니다. 먼저 인증하세요: {{error}}"
+		},
+		"message": {
+			"no_active_task_to_delete": "메시지를 삭제할 활성 작업이 없습니다",
+			"invalid_timestamp_for_deletion": "삭제를 위한 메시지 타임스탬프가 유효하지 않습니다",
+			"cannot_delete_missing_timestamp": "메시지를 삭제할 수 없습니다: 타임스탬프가 없습니다",
+			"cannot_delete_invalid_timestamp": "메시지를 삭제할 수 없습니다: 타임스탬프가 유효하지 않습니다",
+			"message_not_found": "타임스탬프 {{messageTs}}인 메시지를 찾을 수 없습니다",
+			"error_deleting_message": "메시지 삭제 오류: {{error}}",
+			"error_editing_message": "메시지 편집 오류: {{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Gemini 생성 컨텍스트 스트림 오류: {{error}}",
+			"generate_complete_prompt": "Gemini 완료 오류: {{error}}",
+			"sources": "출처:"
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API 인증에 실패했습니다. API 키가 유효하고 만료되지 않았는지 확인하세요.",
+			"accessForbidden": "Cerebras API 액세스가 금지되었습니다. API 키가 요청된 모델이나 기능에 액세스할 수 없을 수 있습니다.",
+			"rateLimitExceeded": "Cerebras API 속도 제한을 초과했습니다. 다른 요청을 하기 전에 기다리세요.",
+			"serverError": "Cerebras API 서버 오류 ({{status}}). 나중에 다시 시도하세요.",
+			"genericError": "Cerebras API 오류 ({{status}}): {{message}}",
+			"noResponseBody": "Cerebras API 오류: 응답 본문 없음",
+			"completionError": "Cerebras 완료 오류: {{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 제공업체는 클라우드 인증이 필요합니다. Roo Code Cloud에 로그인하세요."
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API 키에 유효하지 않은 문자가 포함되어 있습니다."
+		},
+		"manual_url_empty": "유효한 콜백 URL을 입력하세요",
+		"manual_url_no_query": "유효하지 않은 콜백 URL: 쿼리 매개변수 누락",
+		"manual_url_missing_params": "유효하지 않은 콜백 URL: 필요한 매개변수 누락 (code와 state)",
+		"manual_url_auth_failed": "수동 URL 인증 실패",
+		"manual_url_auth_error": "인증 실패"
 	},
 	"warnings": {
 		"no_terminal_content": "선택된 터미널 내용이 없습니다",
@@ -134,6 +181,10 @@
 		"deleted": "작업 실패: 사용자에 의해 중지 및 삭제되었습니다.",
 		"incomplete": "작업 #{{taskNumber}} (미완료)",
 		"no_messages": "작업 #{{taskNumber}} (메시지 없음)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "사용자에 의해 응답이 중단됨",
+		"responseInterruptedByApiError": "API 오류로 인해 응답이 중단됨"
 	},
 	"storage": {
 		"prompt_custom_path": "대화 내역을 위한 사용자 지정 저장 경로를 입력하세요. 기본 위치를 사용하려면 비워두세요",
@@ -180,9 +231,17 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "조직에서 Kilo Code Cloud 인증이 필요합니다. 계속하려면 로그인하세요.",
-			"organization_mismatch": "조직의 Kilo Code Cloud 계정으로 인증해야 합니다.",
+			"cloud_auth_required": "조직에서 Roo Code Cloud 인증이 필요합니다. 계속하려면 로그인하세요.",
+			"organization_mismatch": "조직의 Roo Code Cloud 계정으로 인증해야 합니다.",
+			"manual_url_empty": "유효한 콜백 URL을 입력하세요",
+			"manual_url_no_query": "유효하지 않은 콜백 URL: 쿼리 매개변수 누락",
+			"manual_url_missing_params": "유효하지 않은 콜백 URL: 필요한 매개변수 누락 (code와 state)",
+			"manual_url_auth_failed": "수동 URL 인증 실패",
+			"manual_url_auth_error": "인증 실패",
 			"verification_failed": "조직 인증을 확인할 수 없습니다."
+		},
+		"info": {
+			"organization_requires_auth": "조직에서 인증이 필요합니다."
 		}
 	},
 	"prompts": {
@@ -197,5 +256,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "할 일 목록에 미완료된 할 일이 있을 때 작업 완료를 방지"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "오류",
+		"reportText": "애플리케이션 개선에 도움을 주시기 위해 이 오류를 신고해 주세요.",
+		"githubText": "GitHub에서 신고",
+		"copyInstructions": "아래 오류 세부 정보를 복사하세요:",
+		"errorStack": "오류 스택",
+		"componentStack": "컴포넌트 스택"
 	}
 }

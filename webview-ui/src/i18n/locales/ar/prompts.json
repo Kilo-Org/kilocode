@@ -16,6 +16,11 @@
 		"title": "إعدادات API",
 		"select": "حدد أي إعداد API تبي يستخدمه النمط"
 	},
+	"organizationMode": {
+		"title": "نمط المنظمة",
+		"description": "هذا النمط مقدم من منظمتك ولا يمكن تعديله هنا. لتعديل هذا النمط، تفضل بزيارة لوحة تحكم Kilo Code.",
+		"cannotEdit": "لا يمكن تعديل أنماط المنظمة"
+	},
 	"tools": {
 		"title": "الأدوات المتوفرة",
 		"builtInModesText": "ما تقدر تعدل أدوات الأنماط الأساسية",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "استخدم الإعداد الحالي",
 			"testPromptPlaceholder": "اكتب موجه لاختبار التحسين",
 			"previewButton": "عرض تحسين الموجه",
-			"testEnhancement": "اختبار التحسين"
+			"testEnhancement": "اختبار التحسين",
+			"includeTaskHistory": "تضمين تاريخ المهمة كسياق",
+			"includeTaskHistoryDescription": "عند التفعيل، آخر 10 رسائل من المحادثة الحالية ستُضمّن كسياق عند تحسين الموجهات، مما يساعد في توليد اقتراحات أكثر صلة ووعياً بالسياق."
 		},
 		"condense": {
 			"apiConfiguration": "إعدادات API لضغط السياق",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "شرح أمر طرفية",
 				"description": "يعطيك شرح مفصل لأمر الطرفية اللي كتبته."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "توليد أمر طرفية",
+				"description": "يساعدك تولد أوامر طرفية حسب الوصف."
 			},
 			"NEW_TASK": {
 				"label": "مهمة جديدة",

@@ -1,9 +1,8 @@
 // npx vitest services/browser/__tests__/UrlContentFetcher.spec.ts
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { UrlContentFetcher } from "../UrlContentFetcher"
-import { fileExistsAtPath } from "../../../utils/fs"
 import * as path from "path"
+
+import { UrlContentFetcher } from "../UrlContentFetcher"
 
 // Mock dependencies
 vi.mock("vscode", () => ({
@@ -125,25 +124,75 @@ describe("UrlContentFetcher", () => {
 	})
 
 	describe("launchBrowser", () => {
-		it("should launch browser with correct arguments", async () => {
-			await urlContentFetcher.launchBrowser()
-
-			expect(vi.mocked(PCR)).toHaveBeenCalledWith({
-				downloadPath: path.join("/test/storage", "puppeteer"),
+		it("should launch browser with correct arguments on non-Linux platforms", async () => {
+			// Ensure we're not on Linux for this test
+			const originalPlatform = process.platform
+			Object.defineProperty(process, "platform", {
+				value: "darwin", // macOS
 			})
 
-			const stats = await vi.mocked(PCR).mock.results[0].value
-			expect(stats.puppeteer.launch).toHaveBeenCalledWith({
-				args: [
-					"--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-					"--disable-dev-shm-usage",
-					"--disable-accelerated-2d-canvas",
-					"--no-first-run",
-					"--disable-gpu",
-					"--disable-features=VizDisplayCompositor",
-				],
-				executablePath: "/path/to/chromium",
+			try {
+				await urlContentFetcher.launchBrowser()
+
+				expect(vi.mocked(PCR)).toHaveBeenCalledWith({
+					downloadPath: path.join("/test/storage", "puppeteer"),
+				})
+
+				const stats = await vi.mocked(PCR).mock.results[0].value
+				expect(stats.puppeteer.launch).toHaveBeenCalledWith({
+					args: [
+						"--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+						"--disable-dev-shm-usage",
+						"--disable-accelerated-2d-canvas",
+						"--no-first-run",
+						"--disable-gpu",
+						"--disable-features=VizDisplayCompositor",
+					],
+					executablePath: "/path/to/chromium",
+				})
+			} finally {
+				// Restore original platform
+				Object.defineProperty(process, "platform", {
+					value: originalPlatform,
+				})
+			}
+		})
+
+		it("should launch browser with Linux-specific arguments", async () => {
+			// Mock process.platform to be linux
+			const originalPlatform = process.platform
+			Object.defineProperty(process, "platform", {
+				value: "linux",
 			})
+
+			try {
+				// Create a new instance to ensure fresh state
+				const linuxFetcher = new UrlContentFetcher(mockContext)
+				await linuxFetcher.launchBrowser()
+
+				expect(vi.mocked(PCR)).toHaveBeenCalledWith({
+					downloadPath: path.join("/test/storage", "puppeteer"),
+				})
+
+				const stats = await vi.mocked(PCR).mock.results[vi.mocked(PCR).mock.results.length - 1].value
+				expect(stats.puppeteer.launch).toHaveBeenCalledWith({
+					args: [
+						"--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+						"--disable-dev-shm-usage",
+						"--disable-accelerated-2d-canvas",
+						"--no-first-run",
+						"--disable-gpu",
+						"--disable-features=VizDisplayCompositor",
+						"--no-sandbox", // Linux-specific argument
+					],
+					executablePath: "/path/to/chromium",
+				})
+			} finally {
+				// Restore original platform
+				Object.defineProperty(process, "platform", {
+					value: originalPlatform,
+				})
+			}
 		})
 
 		it("should set viewport and headers after launching", async () => {
@@ -272,6 +321,36 @@ describe("UrlContentFetcher", () => {
 
 			await expect(urlContentFetcher.urlToMarkdown("https://example.com")).rejects.toThrow("Simple string error")
 			expect(mockPage.goto).toHaveBeenCalledTimes(1)
+		})
+
+		it("should retry net::ERR_ABORTED like other network errors", async () => {
+			const abortedError = new Error("net::ERR_ABORTED at https://example.com")
+			mockPage.goto.mockRejectedValueOnce(abortedError).mockResolvedValueOnce(undefined)
+
+			const result = await urlContentFetcher.urlToMarkdown("https://example.com")
+
+			expect(mockPage.goto).toHaveBeenCalledTimes(2)
+			expect(mockPage.goto).toHaveBeenNthCalledWith(1, "https://example.com", {
+				timeout: 30000,
+				waitUntil: ["domcontentloaded", "networkidle2"],
+			})
+			expect(mockPage.goto).toHaveBeenNthCalledWith(2, "https://example.com", {
+				timeout: 20000,
+				waitUntil: ["domcontentloaded"],
+			})
+			expect(result).toBe("# Test content")
+		})
+
+		it("should throw error when ERR_ABORTED retry also fails", async () => {
+			const abortedError = new Error("net::ERR_ABORTED at https://example.com")
+			const retryError = new Error("net::ERR_CONNECTION_REFUSED")
+			mockPage.goto.mockRejectedValueOnce(abortedError).mockRejectedValueOnce(retryError)
+
+			await expect(urlContentFetcher.urlToMarkdown("https://example.com")).rejects.toThrow(
+				"net::ERR_CONNECTION_REFUSED",
+			)
+
+			expect(mockPage.goto).toHaveBeenCalledTimes(2)
 		})
 	})
 

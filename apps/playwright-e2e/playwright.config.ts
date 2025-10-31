@@ -16,7 +16,7 @@ export default defineConfig<void, TestOptions>({
 	timeout: 120_000,
 	expect: { timeout: 30_000 },
 	reporter: process.env.CI ? "html" : "list",
-	workers: process.env.CI ? 2 : 1,
+	workers: 1,
 	retries: process.env.CI ? 2 : 0, // Retry in CI, never locally
 	globalSetup: "./playwright.globalSetup",
 	testDir: "./tests",

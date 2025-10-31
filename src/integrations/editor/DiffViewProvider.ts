@@ -54,8 +54,8 @@ export class DiffViewProvider {
 		// If the file is already open, ensure it's not dirty before getting its
 		// contents.
 		if (fileExists) {
-			const existingDocument = vscode.workspace.textDocuments.find((doc) =>
-				arePathsEqual(doc.uri.fsPath, absolutePath),
+			const existingDocument = vscode.workspace.textDocuments.find(
+				(doc) => doc.uri.scheme === "file" && arePathsEqual(doc.uri.fsPath, absolutePath),
 			)
 
 			if (existingDocument && existingDocument.isDirty) {
@@ -91,7 +91,10 @@ export class DiffViewProvider {
 			.map((tg) => tg.tabs)
 			.flat()
 			.filter(
-				(tab) => tab.input instanceof vscode.TabInputText && arePathsEqual(tab.input.uri.fsPath, absolutePath),
+				(tab) =>
+					tab.input instanceof vscode.TabInputText &&
+					tab.input.uri.scheme === "file" &&
+					arePathsEqual(tab.input.uri.fsPath, absolutePath),
 			)
 
 		for (const tab of tabs) {
@@ -509,13 +512,14 @@ export class DiffViewProvider {
 			// Listen for document open events - more efficient than scanning all tabs
 			disposables.push(
 				vscode.workspace.onDidOpenTextDocument(async (document) => {
-					if (arePathsEqual(document.uri.fsPath, uri.fsPath)) {
+					// Only match file:// scheme documents to avoid git diffs
+					if (document.uri.scheme === "file" && arePathsEqual(document.uri.fsPath, uri.fsPath)) {
 						// Wait a tick for the editor to be available
 						await new Promise((r) => setTimeout(r, 0))
 
 						// Find the editor for this document
-						const editor = vscode.window.visibleTextEditors.find((e) =>
-							arePathsEqual(e.document.uri.fsPath, uri.fsPath),
+						const editor = vscode.window.visibleTextEditors.find(
+							(e) => e.document.uri.scheme === "file" && arePathsEqual(e.document.uri.fsPath, uri.fsPath),
 						)
 
 						if (editor) {
@@ -529,7 +533,11 @@ export class DiffViewProvider {
 			// Also listen for visible editor changes as a fallback
 			disposables.push(
 				vscode.window.onDidChangeVisibleTextEditors((editors) => {
-					const editor = editors.find((e) => arePathsEqual(e.document.uri.fsPath, uri.fsPath))
+					const editor = editors.find((e) => {
+						const isFileScheme = e.document.uri.scheme === "file"
+						const pathMatches = arePathsEqual(e.document.uri.fsPath, uri.fsPath)
+						return isFileScheme && pathMatches
+					})
 					if (editor) {
 						cleanup()
 						resolve(editor)
@@ -627,5 +635,100 @@ export class DiffViewProvider {
 		this.activeLineController = undefined
 		this.streamedLines = []
 		this.preDiagnostics = []
+	}
+
+	/**
+	 * Directly save content to a file without showing diff view
+	 * Used when preventFocusDisruption experiment is enabled
+	 *
+	 * @param relPath - Relative path to the file
+	 * @param content - Content to write to the file
+	 * @param openFile - Whether to show the file in editor (false = open in memory only for diagnostics)
+	 * @returns Result of the save operation including any new problems detected
+	 */
+	async saveDirectly(
+		relPath: string,
+		content: string,
+		openFile: boolean = true,
+		diagnosticsEnabled: boolean = true,
+		writeDelayMs: number = DEFAULT_WRITE_DELAY_MS,
+	): Promise<{
+		newProblemsMessage: string | undefined
+		userEdits: string | undefined
+		finalContent: string | undefined
+	}> {
+		const absolutePath = path.resolve(this.cwd, relPath)
+
+		// Get diagnostics before editing the file
+		this.preDiagnostics = vscode.languages.getDiagnostics()
+
+		// Write the content directly to the file
+		await createDirectoriesForFile(absolutePath)
+		await fs.writeFile(absolutePath, content, "utf-8")
+
+		// Open the document to ensure diagnostics are loaded
+		// When openFile is false (PREVENT_FOCUS_DISRUPTION enabled), we only open in memory
+		if (openFile) {
+			// Show the document in the editor
+			await vscode.window.showTextDocument(vscode.Uri.file(absolutePath), {
+				preview: false,
+				preserveFocus: true,
+			})
+		} else {
+			// Just open the document in memory to trigger diagnostics without showing it
+			const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(absolutePath))
+
+			// Save the document to ensure VSCode recognizes it as saved and triggers diagnostics
+			if (doc.isDirty) {
+				await doc.save()
+			}
+
+			// Force a small delay to ensure diagnostics are triggered
+			await new Promise((resolve) => setTimeout(resolve, 100))
+		}
+
+		let newProblemsMessage = ""
+
+		if (diagnosticsEnabled) {
+			// Add configurable delay to allow linters time to process
+			const safeDelayMs = Math.max(0, writeDelayMs)
+
+			try {
+				await delay(safeDelayMs)
+			} catch (error) {
+				console.warn(`Failed to apply write delay: ${error}`)
+			}
+
+			const postDiagnostics = vscode.languages.getDiagnostics()
+
+			// Get diagnostic settings from state
+			const task = this.taskRef.deref()
+			const state = await task?.providerRef.deref()?.getState()
+			const includeDiagnosticMessages = state?.includeDiagnosticMessages ?? true
+			const maxDiagnosticMessages = state?.maxDiagnosticMessages ?? 50
+
+			const newProblems = await diagnosticsToProblemsString(
+				getNewDiagnostics(this.preDiagnostics, postDiagnostics),
+				[vscode.DiagnosticSeverity.Error],
+				this.cwd,
+				includeDiagnosticMessages,
+				maxDiagnosticMessages,
+			)
+
+			newProblemsMessage =
+				newProblems.length > 0 ? `\n\nNew problems detected after saving the file:\n${newProblems}` : ""
+		}
+
+		// Store the results for formatFileWriteResponse
+		this.newProblemsMessage = newProblemsMessage
+		this.userEdits = undefined
+		this.relPath = relPath
+		this.newContent = content
+
+		return {
+			newProblemsMessage,
+			userEdits: undefined,
+			finalContent: content,
+		}
 	}
 }

@@ -1,0 +1,44 @@
+{
+	"$schema": "https://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"deps:check": {
+			"cache": false,
+			"env": ["DEVENV"]
+		},
+		"deps:clean": {
+			"cache": false
+		},
+		"deps:patch": {
+			"cache": false,
+			"dependsOn": ["deps:check", "deps:clean"],
+			"env": ["DEVENV"]
+		},
+		"deps:copy": {
+			"cache": false,
+			"dependsOn": ["deps:check", "deps:patch"],
+			"env": ["DEVENV"]
+		},
+		"prop:deps": {
+			"cache": false
+		},
+		"bundle:build": {
+			"outputs": ["dist/**"],
+			"inputs": ["package.json", "tsconfig.json", "src/**", "deps/vscode/**"],
+			"dependsOn": ["clean", "deps:clean", "deps:patch", "deps:copy"]
+		},
+		"bundle:package": {
+			"cache": false,
+			"dependsOn": ["bundle:build"]
+		},
+		"bundle": {
+			"cache": false,
+			"dependsOn": ["bundle:package"]
+		},
+		"build": {
+			"outputs": ["dist/**"],
+			"inputs": ["package.json", "tsconfig.json", "src/**", "deps/vscode/**"],
+			"dependsOn": ["clean", "deps:clean", "deps:patch", "deps:copy"]
+		}
+	}
+}

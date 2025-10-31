@@ -12,7 +12,8 @@ export const BottomApiConfig = () => {
 
 	return (
 		<>
-			<div className="w-auto overflow-hidden">
+			{/* kilocode_change - add data-testid="model-selector" below */}
+			<div className="w-auto overflow-hidden" data-testid="model-selector">
 				<ModelSelector
 					currentApiConfigName={currentApiConfigName}
 					apiConfiguration={apiConfiguration}

@@ -13,6 +13,21 @@ export const bedrockDefaultPromptRouterModelId: BedrockModelId = "anthropic.clau
 // of the default prompt routers AWS enabled for GA of the promot router
 // feature.
 export const bedrockModels = {
+	"anthropic.claude-sonnet-4-5-20250929-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 3.0,
+		outputPrice: 15.0,
+		cacheWritesPrice: 3.75,
+		cacheReadsPrice: 0.3,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
 	"amazon.nova-pro-v1:0": {
 		maxTokens: 5000,
 		contextWindow: 300_000,
@@ -82,6 +97,21 @@ export const bedrockModels = {
 		maxCachePoints: 4,
 		cachableFields: ["system", "messages", "tools"],
 	},
+	"anthropic.claude-opus-4-1-20250805-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsComputerUse: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 15.0,
+		outputPrice: 75.0,
+		cacheWritesPrice: 18.75,
+		cacheReadsPrice: 1.5,
+		minTokensPerCachePoint: 1024,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
 	"anthropic.claude-opus-4-20250514-v1:0": {
 		maxTokens: 8192,
 		contextWindow: 200_000,
@@ -135,6 +165,20 @@ export const bedrockModels = {
 		outputPrice: 4.0,
 		cacheWritesPrice: 1.0,
 		cacheReadsPrice: 0.08,
+		minTokensPerCachePoint: 2048,
+		maxCachePoints: 4,
+		cachableFields: ["system", "messages", "tools"],
+	},
+	"anthropic.claude-haiku-4-5-20251001-v1:0": {
+		maxTokens: 8192,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningBudget: true,
+		inputPrice: 1.0,
+		outputPrice: 5.0,
+		cacheWritesPrice: 1.25, // 5m cache writes
+		cacheReadsPrice: 0.1, // cache hits / refreshes
 		minTokensPerCachePoint: 2048,
 		maxCachePoints: 4,
 		cachableFields: ["system", "messages", "tools"],
@@ -205,6 +249,26 @@ export const bedrockModels = {
 		supportsPromptCache: false,
 		inputPrice: 1.35,
 		outputPrice: 5.4,
+	},
+	"openai.gpt-oss-20b-1:0": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 0.5,
+		outputPrice: 1.5,
+		description: "GPT-OSS 20B - Optimized for low latency and local/specialized use cases",
+	},
+	"openai.gpt-oss-120b-1:0": {
+		maxTokens: 8192,
+		contextWindow: 128_000,
+		supportsImages: false,
+		supportsComputerUse: false,
+		supportsPromptCache: false,
+		inputPrice: 2.0,
+		outputPrice: 6.0,
+		description: "GPT-OSS 120B - Production-ready, general-purpose, high-reasoning model",
 	},
 	"meta.llama3-3-70b-instruct-v1:0": {
 		maxTokens: 8192,
@@ -406,3 +470,8 @@ export const BEDROCK_REGIONS = [
 	{ value: "us-gov-east-1", label: "us-gov-east-1" },
 	{ value: "us-gov-west-1", label: "us-gov-west-1" },
 ].sort((a, b) => a.value.localeCompare(b.value))
+
+export const BEDROCK_1M_CONTEXT_MODEL_IDS = [
+	"anthropic.claude-sonnet-4-20250514-v1:0",
+	"anthropic.claude-sonnet-4-5-20250929-v1:0",
+] as const

@@ -10,5 +10,11 @@
 	"cloudBenefitHistory": "Online historie úkolů",
 	"cloudBenefitSharing": "Funkce sdílení a spolupráce",
 	"cloudBenefitMetrics": "Metriky využití založené na úkolech, tokenech a nákladech",
-	"visitCloudWebsite": "Navštívit Kilo Code Cloud"
+	"visitCloudWebsite": "Navštívit Kilo Code Cloud",
+	"expandTask": "Rozbalit úkol",
+	"collapseTask": "Sbalit úkol",
+	"deleteFavoritedTaskWarning": "Toto trvale smaže oblíbený úkol. Jste si jisti?",
+	"cloudBenefitWalkaway": "Sledujte a ovládejte úkoly odkudkoli pomocí Kilo remote Control",
+	"remoteControl": "Kilo remote Control",
+	"remoteControlDescription": "Povolit sledování a interakci s úkoly v tomto workspace pomocí Kilo Code Cloud"
 }

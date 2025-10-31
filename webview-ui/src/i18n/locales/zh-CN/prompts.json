@@ -16,6 +16,11 @@
 		"title": "API配置",
 		"select": "选择要用于此模式的API配置"
 	},
+	"organizationMode": {
+		"title": "组织模式",
+		"description": "此模式由你的组织提供，无法在此编辑。要修改此模式，请访问 Kilo Code Dashboard。",
+		"cannotEdit": "组织模式不可编辑"
+	},
 	"tools": {
 		"title": "可用功能",
 		"builtInModesText": "内置模式的可用功能不能被修改",
@@ -50,7 +55,7 @@
 		"title": "模式专属规则（可选）",
 		"resetToDefault": "重置为默认值",
 		"description": "{{modeName}}模式的专属规则",
-		"loadFromFile": "支持从<span>.kilocode/rules/</span>目录读取配置（.kilocoderules-{{slug}}已弃用并将很快停止工作）。"
+		"loadFromFile": "{{mode}}模式的特定自定义指令也可以从工作区中的<span>.kilocode/rules-{{slug}}/</span>文件夹或全局<0>.kilocode/rules-{{slug}}/</0>加载（.kilocoderules-{{slug}}和.clinerules-{{slug}}已弃用，即将停止工作）。"
 	},
 	"exportMode": {
 		"title": "导出模式",
@@ -73,7 +78,7 @@
 	"globalCustomInstructions": {
 		"title": "所有模式的自定义指令",
 		"description": "这些指令适用于所有模式。它们提供了一套基础行为，可以通过下面的模式特定指令进行增强。<0>了解更多</0>",
-		"loadFromFile": "支持从<span>.kilocode/rules/</span>目录读取全局配置（.kilocoderules和.clinerules已弃用并将很快停止工作）。"
+		"loadFromFile": "指令也可以从工作区中的<span>.kilocode/rules/</span>文件夹或全局<0>.kilocode/rules/</0>加载（.kilocoderules和.clinerules已弃用，即将停止工作）。"
 	},
 	"systemPrompt": {
 		"preview": "预览系统提示词",
@@ -90,7 +95,9 @@
 			"useCurrentConfig": "使用当前选择的API配置",
 			"testPromptPlaceholder": "输入提示词以测试增强效果",
 			"previewButton": "测试提示词增强",
-			"testEnhancement": "测试增强"
+			"testEnhancement": "测试增强",
+			"includeTaskHistory": "包含任务历史作为上下文",
+			"includeTaskHistoryDescription": "启用后，当前对话的最后 10 条消息将作为上下文包含在增强提示词时，有助于生成更相关和上下文感知的建议。"
 		},
 		"condense": {
 			"apiConfiguration": "用于上下文压缩的 API 配置",
@@ -133,6 +140,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "解释终端命令",
 				"description": "获取对终端命令及其输出的详细解释。可在终端右键菜单（右键点击选中的终端内容）中使用。"
+			},
+			"TERMINAL_GENERATE": {
+				"label": "生成终端命令",
+				"description": "根据描述协助生成终端命令。"
 			},
 			"NEW_TASK": {
 				"label": "新任务",

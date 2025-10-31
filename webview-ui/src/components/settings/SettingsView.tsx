@@ -26,16 +26,17 @@ import {
 	MessageSquare,
 	Monitor,
 	LucideIcon,
+	// SquareSlash, // kilocode_change
+	// Glasses, // kilocode_change
 } from "lucide-react"
 
 // kilocode_change
 import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
-import type { ProviderSettings, ExperimentId } from "@roo-code/types"
-
-import { TelemetrySetting } from "@roo/TelemetrySetting"
+import type { ProviderSettings, ExperimentId, TelemetrySetting } from "@roo-code/types"
 
 import { vscode } from "@src/utils/vscode"
+import { cn } from "@src/lib/utils"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { ExtensionStateContextType, useExtensionState } from "@src/context/ExtensionStateContext"
 import {
@@ -72,17 +73,19 @@ import { LanguageSettings } from "./LanguageSettings"
 import { About } from "./About"
 import { Section } from "./Section"
 import PromptsSettings from "./PromptsSettings"
-import { cn } from "@/lib/utils"
 import McpView from "../kilocodeMcp/McpView" // kilocode_change
 import deepEqual from "fast-deep-equal" // kilocode_change
 import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
+import { SlashCommandsSettings } from "./SlashCommandsSettings"
+import { UISettings } from "./UISettings"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
 export const settingsTabList =
 	"w-48 data-[compact=true]:w-12 flex-shrink-0 flex flex-col overflow-y-auto overflow-x-hidden border-r border-vscode-sideBar-background"
 export const settingsTabTrigger =
-	"whitespace-nowrap overflow-hidden min-w-0 h-12 px-4 py-3 box-border flex items-center border-l-2 border-transparent text-vscode-foreground opacity-70 hover:bg-vscode-list-hoverBackground data-[compact=true]:w-12 data-[compact=true]:p-4"
-export const settingsTabTriggerActive = "opacity-100 border-vscode-focusBorder bg-vscode-list-activeSelectionBackground"
+	"whitespace-nowrap overflow-hidden min-w-0 h-12 px-4 py-3 box-border flex items-center border-l-2 border-transparent text-vscode-foreground opacity-70 hover:bg-vscode-list-hoverBackground data-[compact=true]:w-12 data-[compact=true]:p-4 cursor-pointer" // kilocode_change add cursor-pointer
+export const settingsTabTriggerActive =
+	"opacity-100 border-vscode-focusBorder bg-vscode-list-activeSelectionBackground hover:bg-vscode-list-activeSelectionBackground cursor-default" // kilocode_change add hover:bg-* and cursor-default
 
 export interface SettingsViewRef {
 	checkUnsaveChanges: (then: () => void) => void
@@ -90,6 +93,7 @@ export interface SettingsViewRef {
 const sectionNames = [
 	"providers",
 	"autoApprove",
+	"slashCommands",
 	"browser",
 	"checkpoints",
 	"ghost", // kilocode_change
@@ -98,6 +102,7 @@ const sectionNames = [
 	"contextManagement",
 	"terminal",
 	"prompts",
+	"ui",
 	"experimental",
 	"language",
 	"mcp",
@@ -115,8 +120,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	const { t } = useAppTranslation()
 
 	const extensionState = useExtensionState()
-	const { currentApiConfigName, listApiConfigMeta, uriScheme, settingsImportedAt } = extensionState
-	const { uiKind } = extensionState // kilocode_change
+	const {
+		currentApiConfigName,
+		listApiConfigMeta,
+		uriScheme,
+		kiloCodeWrapperProperties, // kilocode_change
+		settingsImportedAt,
+	} = extensionState
 
 	const [isDiscardDialogShow, setDiscardDialogShow] = useState(false)
 	const [isChangeDetected, setChangeDetected] = useState(false)
@@ -127,10 +137,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			: "providers",
 	)
 
+	const scrollPositions = useRef<Record<SectionName, number>>(
+		Object.fromEntries(sectionNames.map((s) => [s, 0])) as Record<SectionName, number>,
+	)
+	const contentRef = useRef<HTMLDivElement | null>(null)
+
 	const prevApiConfigName = useRef(currentApiConfigName)
 	const confirmDialogHandler = useRef<() => void>()
 
-	const [cachedState, setCachedState] = useState(extensionState)
+	const [cachedState, setCachedState] = useState(() => extensionState)
 
 	// kilocode_change begin
 	useEffect(() => {
@@ -148,6 +163,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		allowedCommands,
 		deniedCommands,
 		allowedMaxRequests,
+		allowedMaxCost,
 		language,
 		alwaysAllowBrowser,
 		alwaysAllowExecute,
@@ -165,6 +181,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		enableCheckpoints,
 		diffEnabled,
 		experiments,
+		morphApiKey, // kilocode_change
+		fastApplyModel, // kilocode_change: Fast Apply model selection
 		fuzzyMatchThreshold,
 		maxOpenTabsContext,
 		maxWorkspaceFiles,
@@ -192,7 +210,13 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		remoteBrowserEnabled,
 		maxReadFileLine,
 		showAutoApproveMenu, // kilocode_change
+		yoloMode, // kilocode_change
 		showTaskTimeline, // kilocode_change
+		sendMessageOnEnter, // kilocode_change
+		showTimestamps, // kilocode_change
+		hideCostBelowThreshold, // kilocode_change
+		maxImageFileSize,
+		maxTotalImageSize,
 		terminalCompressProgressBar,
 		maxConcurrentFileReads,
 		allowVeryLargeReads, // kilocode_change
@@ -208,6 +232,11 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		ghostServiceSettings, // kilocode_change
 		includeDiagnosticMessages,
 		maxDiagnosticMessages,
+		includeTaskHistoryInEnhance,
+		openRouterImageApiKey,
+		kiloCodeImageApiKey,
+		openRouterImageGenerationSelectedModel,
+		reasoningBlockCollapsed,
 	} = cachedState
 
 	const apiConfiguration = useMemo(() => cachedState.apiConfiguration ?? {}, [cachedState.apiConfiguration])
@@ -222,7 +251,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 		prevApiConfigName.current = currentApiConfigName
 		setChangeDetected(false)
-	}, [currentApiConfigName, extensionState, isChangeDetected])
+	}, [currentApiConfigName, extensionState])
 
 	// kilocode_change start
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
@@ -274,7 +303,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	}, [])
 
 	const setApiConfigurationField = useCallback(
-		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K]) => {
+		<K extends keyof ProviderSettings>(field: K, value: ProviderSettings[K], isUserAction: boolean = true) => {
 			setCachedState((prevState) => {
 				if (prevState.apiConfiguration?.[field] === value) {
 					return prevState
@@ -282,9 +311,15 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 
 				const previousValue = prevState.apiConfiguration?.[field]
 
-				// Don't treat initial sync from undefined to a defined value as a user change
-				// This prevents the dirty state when the component initializes and auto-syncs the model ID
-				const isInitialSync = previousValue === undefined && value !== undefined
+				// Only skip change detection for automatic initialization (not user actions)
+				// This prevents the dirty state when the component initializes and auto-syncs values
+				// Treat undefined, null, and empty string as uninitialized states
+				const isInitialSync =
+					!isUserAction &&
+					(previousValue === undefined || previousValue === "" || previousValue === null) &&
+					value !== undefined &&
+					value !== "" &&
+					value !== null
 
 				if (!isInitialSync) {
 					setChangeDetected(true)
@@ -317,9 +352,39 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		})
 	}, [])
 
+	const setOpenRouterImageApiKey = useCallback((apiKey: string) => {
+		setCachedState((prevState) => {
+			// Only set change detected if value actually changed
+			if (prevState.openRouterImageApiKey !== apiKey) {
+				setChangeDetected(true)
+			}
+			return { ...prevState, openRouterImageApiKey: apiKey }
+		})
+	}, [])
+
+	const setKiloCodeImageApiKey = useCallback((apiKey: string) => {
+		setCachedState((prevState) => {
+			setChangeDetected(true)
+			return { ...prevState, kiloCodeImageApiKey: apiKey }
+		})
+	}, [])
+
+	const setImageGenerationSelectedModel = useCallback((model: string) => {
+		setCachedState((prevState) => {
+			// Only set change detected if value actually changed
+			if (prevState.openRouterImageGenerationSelectedModel !== model) {
+				setChangeDetected(true)
+			}
+			return { ...prevState, openRouterImageGenerationSelectedModel: model }
+		})
+	}, [])
+
 	const setCustomSupportPromptsField = useCallback((prompts: Record<string, string | undefined>) => {
 		setCachedState((prevState) => {
-			if (JSON.stringify(prevState.customSupportPrompts) === JSON.stringify(prompts)) {
+			const previousStr = JSON.stringify(prevState.customSupportPrompts)
+			const newStr = JSON.stringify(prompts)
+
+			if (previousStr === newStr) {
 				return prevState
 			}
 
@@ -347,6 +412,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "allowedCommands", commands: allowedCommands ?? [] })
 			vscode.postMessage({ type: "deniedCommands", commands: deniedCommands ?? [] })
 			vscode.postMessage({ type: "allowedMaxRequests", value: allowedMaxRequests ?? undefined })
+			vscode.postMessage({ type: "allowedMaxCost", value: allowedMaxCost ?? undefined })
 			vscode.postMessage({ type: "autoCondenseContext", bool: autoCondenseContext })
 			vscode.postMessage({ type: "autoCondenseContextPercent", value: autoCondenseContextPercent })
 			vscode.postMessage({ type: "browserToolEnabled", bool: browserToolEnabled })
@@ -381,7 +447,10 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "maxWorkspaceFiles", value: maxWorkspaceFiles ?? 200 })
 			vscode.postMessage({ type: "showRooIgnoredFiles", bool: showRooIgnoredFiles })
 			vscode.postMessage({ type: "showAutoApproveMenu", bool: showAutoApproveMenu }) // kilocode_change
+			vscode.postMessage({ type: "yoloMode", bool: yoloMode }) // kilocode_change
 			vscode.postMessage({ type: "maxReadFileLine", value: maxReadFileLine ?? -1 })
+			vscode.postMessage({ type: "maxImageFileSize", value: maxImageFileSize ?? 5 })
+			vscode.postMessage({ type: "maxTotalImageSize", value: maxTotalImageSize ?? 20 })
 			vscode.postMessage({ type: "maxConcurrentFileReads", value: cachedState.maxConcurrentFileReads ?? 5 })
 			vscode.postMessage({ type: "allowVeryLargeReads", bool: allowVeryLargeReads }) // kilocode_change
 			vscode.postMessage({ type: "includeDiagnosticMessages", bool: includeDiagnosticMessages })
@@ -391,18 +460,30 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline }) // kilocode_change
+			vscode.postMessage({ type: "sendMessageOnEnter", bool: sendMessageOnEnter }) // kilocode_change
+			vscode.postMessage({ type: "showTimestamps", bool: showTimestamps }) // kilocode_change
+			vscode.postMessage({ type: "hideCostBelowThreshold", value: hideCostBelowThreshold }) // kilocode_change
 			vscode.postMessage({ type: "alwaysAllowFollowupQuestions", bool: alwaysAllowFollowupQuestions })
 			vscode.postMessage({ type: "alwaysAllowUpdateTodoList", bool: alwaysAllowUpdateTodoList })
 			vscode.postMessage({ type: "followupAutoApproveTimeoutMs", value: followupAutoApproveTimeoutMs })
 			vscode.postMessage({ type: "condensingApiConfigId", text: condensingApiConfigId || "" })
 			vscode.postMessage({ type: "updateCondensingPrompt", text: customCondensingPrompt || "" })
 			vscode.postMessage({ type: "updateSupportPrompt", values: customSupportPrompts || {} })
+			vscode.postMessage({ type: "includeTaskHistoryInEnhance", bool: includeTaskHistoryInEnhance ?? true })
+			vscode.postMessage({ type: "setReasoningBlockCollapsed", bool: reasoningBlockCollapsed ?? true })
 			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
 			vscode.postMessage({ type: "ghostServiceSettings", values: ghostServiceSettings }) // kilocode_change
-
+			vscode.postMessage({ type: "morphApiKey", text: morphApiKey }) // kilocode_change
+			vscode.postMessage({ type: "fastApplyModel", text: fastApplyModel }) // kilocode_change: Fast Apply model selection
+			vscode.postMessage({ type: "openRouterImageApiKey", text: openRouterImageApiKey })
+			vscode.postMessage({ type: "kiloCodeImageApiKey", text: kiloCodeImageApiKey })
+			vscode.postMessage({
+				type: "openRouterImageGenerationSelectedModel",
+				text: openRouterImageGenerationSelectedModel,
+			})
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
 			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
 			setChangeDetected(false)
@@ -459,11 +540,19 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	// Handle tab changes with unsaved changes check
 	const handleTabChange = useCallback(
 		(newTab: SectionName) => {
-			// Directly switch tab without checking for unsaved changes
+			if (contentRef.current) {
+				scrollPositions.current[activeTab] = contentRef.current.scrollTop
+			}
 			setActiveTab(newTab)
 		},
-		[], // No dependency on isChangeDetected needed anymore
+		[activeTab],
 	)
+
+	useLayoutEffect(() => {
+		if (contentRef.current) {
+			contentRef.current.scrollTop = scrollPositions.current[activeTab] ?? 0
+		}
+	}, [activeTab])
 
 	// Store direct DOM element refs for each tab
 	const tabRefs = useRef<Record<SectionName, HTMLButtonElement | null>>(
@@ -496,22 +585,23 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		() => [
 			{ id: "providers", icon: Webhook },
 			{ id: "autoApprove", icon: CheckCheck },
+			// { id: "slashCommands", icon: SquareSlash }, // kilocode_change: needs work to be re-introduced
 			{ id: "browser", icon: SquareMousePointer },
 			{ id: "checkpoints", icon: GitBranch },
 			{ id: "display", icon: Monitor }, // kilocode_change
-			...(extensionState.experiments?.inlineAssist ? [{ id: "ghost" as const, icon: Bot }] : []), // kilocode_change
+			...(kiloCodeWrapperProperties?.kiloCodeWrapped ? [] : [{ id: "ghost" as const, icon: Bot }]), // kilocode_change
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
 			{ id: "prompts", icon: MessageSquare },
+			// { id: "ui", icon: Glasses }, // kilocode_change: we have our own display section
 			{ id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			{ id: "mcp", icon: Server },
 			{ id: "about", icon: Info },
 		],
-		[extensionState.experiments?.inlineAssist], // kilocode_change
+		[kiloCodeWrapperProperties?.kiloCodeWrapped], // kilocode_change
 	)
-
 	// Update target section logic to set active tab
 	useEffect(() => {
 		if (targetSection && sectionNames.includes(targetSection as SectionName)) {
@@ -655,7 +745,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				</TabList>
 
 				{/* Content area */}
-				<TabContent className="p-0 flex-1 overflow-auto">
+				<TabContent ref={contentRef} className="p-0 flex-1 overflow-auto">
 					{/* Providers Section */}
 					{activeTab === "providers" && (
 						<div>
@@ -696,7 +786,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								/>
 								<ApiOptions
 									uriScheme={uriScheme}
-									uiKind={uiKind /* kilocode_change */}
 									apiConfiguration={apiConfiguration}
 									setApiConfigurationField={setApiConfigurationField}
 									errorMessage={errorMessage}
@@ -711,6 +800,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{activeTab === "autoApprove" && (
 						<AutoApproveSettings
 							showAutoApproveMenu={showAutoApproveMenu} // kilocode_change
+							yoloMode={yoloMode} // kilocode_change
 							alwaysAllowReadOnly={alwaysAllowReadOnly}
 							alwaysAllowReadOnlyOutsideWorkspace={alwaysAllowReadOnlyOutsideWorkspace}
 							alwaysAllowWrite={alwaysAllowWrite}
@@ -728,10 +818,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							followupAutoApproveTimeoutMs={followupAutoApproveTimeoutMs}
 							allowedCommands={allowedCommands}
 							allowedMaxRequests={allowedMaxRequests ?? undefined}
+							allowedMaxCost={allowedMaxCost ?? undefined}
 							deniedCommands={deniedCommands}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
+
+					{/* Slash Commands Section */}
+					{activeTab === "slashCommands" && <SlashCommandsSettings />}
 
 					{/* Browser Section */}
 					{activeTab === "browser" && (
@@ -756,7 +850,12 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{/* kilocode_change start display section */}
 					{activeTab === "display" && (
 						<DisplaySettings
+							reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
 							showTaskTimeline={showTaskTimeline}
+							sendMessageOnEnter={sendMessageOnEnter}
+							showTimestamps={cachedState.showTimestamps} // kilocode_change
+							ghostServiceSettings={ghostServiceSettings}
+							hideCostBelowThreshold={hideCostBelowThreshold}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
@@ -791,6 +890,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							maxWorkspaceFiles={maxWorkspaceFiles ?? 200}
 							showRooIgnoredFiles={showRooIgnoredFiles}
 							maxReadFileLine={maxReadFileLine}
+							maxImageFileSize={maxImageFileSize}
+							maxTotalImageSize={maxTotalImageSize}
 							maxConcurrentFileReads={maxConcurrentFileReads}
 							allowVeryLargeReads={allowVeryLargeReads /* kilocode_change */}
 							profileThresholds={profileThresholds}
@@ -825,6 +926,18 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<PromptsSettings
 							customSupportPrompts={customSupportPrompts || {}}
 							setCustomSupportPrompts={setCustomSupportPromptsField}
+							includeTaskHistoryInEnhance={includeTaskHistoryInEnhance}
+							setIncludeTaskHistoryInEnhance={(value) =>
+								setCachedStateField("includeTaskHistoryInEnhance", value)
+							}
+						/>
+					)}
+
+					{/* UI Section */}
+					{activeTab === "ui" && (
+						<UISettings
+							reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
+							setCachedStateField={setCachedStateField}
 						/>
 					)}
 
@@ -833,8 +946,22 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<ExperimentalSettings
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
-							apiConfiguration={apiConfiguration /*kilocode_change*/}
-							setApiConfigurationField={setApiConfigurationField /*kilocode_change*/}
+							// kilocode_change start
+							setCachedStateField={setCachedStateField}
+							morphApiKey={morphApiKey}
+							fastApplyModel={fastApplyModel}
+							// kilocode_change end
+							apiConfiguration={apiConfiguration}
+							setApiConfigurationField={setApiConfigurationField}
+							openRouterImageApiKey={openRouterImageApiKey as string | undefined}
+							kiloCodeImageApiKey={kiloCodeImageApiKey}
+							openRouterImageGenerationSelectedModel={
+								openRouterImageGenerationSelectedModel as string | undefined
+							}
+							setOpenRouterImageApiKey={setOpenRouterImageApiKey}
+							setKiloCodeImageApiKey={setKiloCodeImageApiKey}
+							setImageGenerationSelectedModel={setImageGenerationSelectedModel}
+							currentProfileKilocodeToken={apiConfiguration.kilocodeToken}
 						/>
 					)}
 

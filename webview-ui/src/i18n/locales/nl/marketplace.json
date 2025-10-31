@@ -13,6 +13,12 @@
 			"placeholderMcp": "MCP's zoeken...",
 			"placeholderMode": "Modi zoeken..."
 		},
+		"installed": {
+			"label": "Filteren op status",
+			"all": "Alle items",
+			"installed": "Geïnstalleerd",
+			"notInstalled": "Niet geïnstalleerd"
+		},
 		"type": {
 			"label": "Filteren op type:",
 			"all": "Alle types",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Klik op tags om items te filteren"
 		},
 		"none": "Geen"
+	},
+	"sections": {
+		"organizationMcps": "MCP's van {{organization}}",
+		"marketplace": "Marktplaats"
 	},
 	"type-group": {
 		"modes": "Modi",

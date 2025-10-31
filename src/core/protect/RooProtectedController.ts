@@ -24,8 +24,10 @@ export class RooProtectedController {
 		".clinerules*",
 		".roo/**",
 		".vscode/**",
+		"*.code-workspace",
 		".rooprotected", // For future use
 		"AGENTS.md",
+		"AGENT.md",
 	]
 
 	constructor(cwd: string) {

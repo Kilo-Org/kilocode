@@ -1,5 +1,4 @@
 import { useState } from "react"
-import prettyBytes from "pretty-bytes"
 import { useTranslation } from "react-i18next"
 
 import type { HistoryItem } from "@roo-code/types"
@@ -10,6 +9,7 @@ import { useCopyToClipboard } from "@/utils/clipboard"
 import { DeleteTaskDialog } from "../history/DeleteTaskDialog"
 import { IconButton } from "./IconButton"
 // import { ShareButton } from "./ShareButton" // kilocode_change unused
+// import { CloudTaskButton } from "./CloudTaskButton" // kilocode_change: unused
 
 interface TaskActionsProps {
 	item?: HistoryItem
@@ -22,8 +22,7 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 	const { copyWithFeedback, showCopyFeedback } = useCopyToClipboard()
 
 	return (
-		<div className="flex flex-row gap-1">
-			{/*<ShareButton item={item} disabled={false} /> kilocode_change unused */}
+		<div className="flex flex-row items-center">
 			<IconButton
 				iconClass="codicon-desktop-download"
 				title={t("chat:task.export")}
@@ -53,7 +52,6 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 								}
 							}}
 						/>
-						<span className="ml-1 text-xs text-vscode-foreground opacity-85">{prettyBytes(item.size)}</span>
 					</div>
 					{deleteTaskId && (
 						<DeleteTaskDialog
@@ -64,6 +62,8 @@ export const TaskActions = ({ item, buttonsDisabled }: TaskActionsProps) => {
 					)}
 				</>
 			)}
+			{/* <ShareButton item={item} disabled={false} showLabel={false} /> kilocode_change: unused */}
+			{/* <CloudTaskButton item={item} disabled={buttonsDisabled} />  */}
 		</div>
 	)
 }

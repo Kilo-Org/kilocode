@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "ไม่พบสภาพแวดล้อม Node.js",
+			"message": "ไม่พบสภาพแวดล้อม Node.js โปรดติดตั้ง Node.js และลองอีกครั้ง เวอร์ชันที่แนะนำ: {{minVersion}} หรือสูงกว่า"
+		},
+		"nodejsVersionLow": {
+			"title": "เวอร์ชัน Node.js ต่ำเกินไป",
+			"message": "เวอร์ชัน Node.js ปัจจุบัน ({{nodePath}}) คือ {{nodeVersion}} โปรดอัปเกรดเป็น {{minVersion}} หรือสูงกว่าเพื่อความเข้ากันได้ที่ดีขึ้น"
+		}
+	},
+	"dialog": {
+		"cancel": "ยกเลิก"
+	},
+	"ui": {
+		"initializing": "Kilo Code กำลังเริ่มต้น...",
+		"systemInformation": "ข้อมูลระบบ"
+	}
+}

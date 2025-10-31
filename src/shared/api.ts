@@ -1,60 +1,31 @@
 import {
 	type ModelInfo,
 	type ProviderSettings,
+	type DynamicProvider,
+	type LocalProvider,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
 	CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS,
+	isDynamicProvider,
+	isLocalProvider,
 } from "@roo-code/types"
 
 // ApiHandlerOptions
 
-export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider">
-
-// kilocode_change start
-// Fireworks
-// https://fireworks.ai/models
-// TODO: Add support for all Fireworks models, currently only supports DeepSeek's serverless models
-
-export const fireworksModels = {
-	"accounts/fireworks/models/deepseek-r1": {
-		maxTokens: 16384,
-		contextWindow: 160000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 3.0,
-		outputPrice: 8.0,
-	},
-
-	"accounts/fireworks/models/deepseek-v3": {
-		maxTokens: 16384,
-		contextWindow: 128_000,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0.9,
-		outputPrice: 0.9,
-	},
-
-	"accounts/fireworks/models/llama4-scout-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 128_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.15,
-		outputPrice: 0.6,
-	},
-
-	"accounts/fireworks/models/llama4-maverick-instruct-basic": {
-		maxTokens: 16_384,
-		contextWindow: 1_000_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0.22,
-		outputPrice: 0.88,
-	},
-} as const satisfies Record<string, ModelInfo>
-
-export type FireworksModelId = keyof typeof fireworksModels
-export const fireworksDefaultModelId: FireworksModelId = "accounts/fireworks/models/llama4-maverick-instruct-basic"
-// kilocode_change end
+// Extend ProviderSettings (minus apiProvider) with handler-specific toggles.
+export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
+	/**
+	 * When true and using GPT‑5 Responses API, include reasoning.summary: "auto"
+	 * so the API returns reasoning summaries (we already parse and surface them).
+	 * Defaults to true; set to false to disable summaries.
+	 */
+	enableGpt5ReasoningSummary?: boolean
+	/**
+	 * Optional override for Ollama's num_ctx parameter.
+	 * When set, this value will be used in Ollama chat requests.
+	 * When undefined, Ollama will use the model's default num_ctx from the Modelfile.
+	 */
+	ollamaNumCtx?: number
+}
 
 // kilocode_change start
 // Cerebras
@@ -144,20 +115,9 @@ export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 // RouterName
 
-const routerNames = [
-	"openrouter",
-	"requesty",
-	"glama",
-	"unbound",
-	"litellm",
-	"kilocode-openrouter",
-	"ollama",
-	"lmstudio",
-] as const
+export type RouterName = DynamicProvider | LocalProvider
 
-export type RouterName = (typeof routerNames)[number]
-
-export const isRouterName = (value: string): value is RouterName => routerNames.includes(value as RouterName)
+export const isRouterName = (value: string): value is RouterName => isDynamicProvider(value) || isLocalProvider(value)
 
 export function toRouterName(value?: string): RouterName {
 	if (value && isRouterName(value)) {
@@ -189,10 +149,21 @@ export const shouldUseReasoningEffort = ({
 }: {
 	model: ModelInfo
 	settings?: ProviderSettings
-}): boolean => (!!model.supportsReasoningEffort && !!settings?.reasoningEffort) || !!model.reasoningEffort
+}): boolean => {
+	// If enableReasoningEffort is explicitly set to false, reasoning should be disabled
+	if (settings?.enableReasoningEffort === false) {
+		return false
+	}
+
+	// Otherwise, use reasoning if:
+	// 1. Model supports reasoning effort AND settings provide reasoning effort, OR
+	// 2. Model itself has a reasoningEffort property
+	return (!!model.supportsReasoningEffort && !!settings?.reasoningEffort) || !!model.reasoningEffort
+}
 
 export const DEFAULT_HYBRID_REASONING_MODEL_MAX_TOKENS = 16_384
 export const DEFAULT_HYBRID_REASONING_MODEL_THINKING_TOKENS = 8_192
+export const GEMINI_25_PRO_MIN_THINKING_TOKENS = 128
 
 // Max Tokens
 
@@ -222,18 +193,29 @@ export const getModelMaxOutputTokens = ({
 		(format === "openrouter" && modelId.startsWith("anthropic/"))
 
 	// For "Hybrid" reasoning models, discard the model's actual maxTokens for Anthropic contexts
+	/* kilocode_change: don't limit Anthropic model output, no idea why this was done before
 	if (model.supportsReasoningBudget && isAnthropicContext) {
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
-	}
+	}*/
 
 	// For Anthropic contexts, always ensure a maxTokens value is set
 	if (isAnthropicContext && (!model.maxTokens || model.maxTokens === 0)) {
 		return ANTHROPIC_DEFAULT_MAX_TOKENS
 	}
 
-	// If model has explicit maxTokens and it's not the full context window, use it
-	if (model.maxTokens && model.maxTokens !== model.contextWindow) {
-		return model.maxTokens
+	// If model has explicit maxTokens, clamp it to 20% of the context window
+	// Exception: GPT-5 models should use their exact configured max output tokens
+	if (model.maxTokens) {
+		// Check if this is a GPT-5 model (case-insensitive)
+		const isGpt5Model = modelId.toLowerCase().includes("gpt-5")
+
+		// GPT-5 models bypass the 20% cap and use their full configured max tokens
+		if (isGpt5Model) {
+			return model.maxTokens
+		}
+
+		// All other models are clamped to 20% of context window
+		return Math.min(model.maxTokens, Math.ceil(model.contextWindow * 0.2))
 	}
 
 	// For non-Anthropic formats without explicit maxTokens, return undefined
@@ -247,13 +229,36 @@ export const getModelMaxOutputTokens = ({
 
 // GetModelsOptions
 
-export type GetModelsOptions =
-	| { provider: "openrouter"; apiKey?: string; baseUrl?: string } // kilocode_change: add apiKey, baseUrl
-	| { provider: "glama" }
-	| { provider: "requesty"; apiKey?: string }
-	| { provider: "unbound"; apiKey?: string }
-	| { provider: "litellm"; apiKey: string; baseUrl: string }
-	| { provider: "kilocode-openrouter"; kilocodeToken?: string } // kilocode_change
-	| { provider: "cerebras"; cerebrasApiKey?: string } // kilocode_change
-	| { provider: "ollama"; baseUrl?: string }
-	| { provider: "lmstudio"; baseUrl?: string }
+// Allow callers to always pass apiKey/baseUrl without excess property errors,
+// while still enforcing required fields per provider where applicable.
+type CommonFetchParams = {
+	apiKey?: string
+	baseUrl?: string
+}
+
+// Exhaustive, value-level map for all dynamic providers.
+// If a new dynamic provider is added in packages/types, this will fail to compile
+// until a corresponding entry is added here.
+const dynamicProviderExtras = {
+	gemini: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
+	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	litellm: {} as { apiKey: string; baseUrl: string },
+	"kilocode-openrouter": {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
+	deepinfra: {} as { apiKey?: string; baseUrl?: string },
+	"io-intelligence": {} as { apiKey: string },
+	requesty: {} as { apiKey?: string; baseUrl?: string },
+	unbound: {} as { apiKey?: string },
+	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	ollama: {} as { numCtx?: number }, // kilocode_change
+	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
+	ovhcloud: {} as { apiKey?: string }, // kilocode_change
+	chutes: {} as { apiKey?: string }, // kilocode_change
+} as const satisfies Record<RouterName, object>
+
+// Build the dynamic options union from the map, intersected with CommonFetchParams
+// so extra fields are always allowed while required ones are enforced.
+export type GetModelsOptions = {
+	[P in keyof typeof dynamicProviderExtras]: ({ provider: P } & (typeof dynamicProviderExtras)[P]) & CommonFetchParams
+}[RouterName]

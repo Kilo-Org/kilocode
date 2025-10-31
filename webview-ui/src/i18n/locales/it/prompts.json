@@ -16,6 +16,11 @@
 		"title": "Configurazione API",
 		"select": "Seleziona quale configurazione API utilizzare per questa modalità"
 	},
+	"organizationMode": {
+		"title": "Modalità dell'organizzazione",
+		"description": "Questa modalità è fornita dalla tua organizzazione e non può essere modificata qui. Per modificare questa modalità, visita il Kilo Code Dashboard.",
+		"cannotEdit": "Le modalità dell'organizzazione non possono essere modificate"
+	},
 	"tools": {
 		"title": "Strumenti disponibili",
 		"builtInModesText": "Gli strumenti per le modalità integrate non possono essere modificati",
@@ -50,7 +55,7 @@
 		"title": "Istruzioni personalizzate specifiche per la modalità (opzionale)",
 		"resetToDefault": "Ripristina predefiniti",
 		"description": "Aggiungi linee guida comportamentali specifiche per la modalità {{modeName}}.",
-		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules-{{slug}} è obsoleto e smetterà di funzionare presto)."
+		"loadFromFile": "Le istruzioni personalizzate specifiche per la modalità {{mode}} possono anche essere caricate dalla cartella <span>.kilocode/rules-{{slug}}/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} e .clinerules-{{slug}} sono deprecati e smetteranno di funzionare presto)."
 	},
 	"exportMode": {
 		"title": "Esporta modalità",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Istruzioni personalizzate per tutte le modalità",
 		"description": "Queste istruzioni si applicano a tutte le modalità. Forniscono un insieme base di comportamenti che possono essere migliorati dalle istruzioni specifiche per modalità qui sotto. <0>Scopri di più</0>",
-		"loadFromFile": "Le istruzioni possono essere caricate anche dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro (.kilocoderules sono obsoleti e smetteranno di funzionare presto)."
+		"loadFromFile": "Le istruzioni possono anche essere caricate dalla cartella <span>.kilocode/rules/</span> nel tuo spazio di lavoro o dal globale <0>.kilocode/rules/</0> (.kilocoderules e .clinerules sono deprecati e smetteranno di funzionare presto)."
 	},
 	"systemPrompt": {
 		"preview": "Anteprima prompt di sistema",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Usa la configurazione API attualmente selezionata",
 			"testPromptPlaceholder": "Inserisci un prompt per testare il miglioramento",
 			"previewButton": "Anteprima miglioramento prompt",
-			"testEnhancement": "Testa miglioramento"
+			"testEnhancement": "Testa miglioramento",
+			"includeTaskHistory": "Includi cronologia attività come contesto",
+			"includeTaskHistoryDescription": "Quando abilitato, gli ultimi 10 messaggi della conversazione corrente verranno inclusi come contesto durante il miglioramento dei prompt, aiutando a generare suggerimenti più rilevanti e consapevoli del contesto."
 		},
 		"condense": {
 			"apiConfiguration": "Configurazione API per la condensazione del contesto",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Spiega comando del terminale",
 				"description": "Ottieni spiegazioni dettagliate sui comandi del terminale e sui loro output. Disponibile nel menu contestuale del terminale (clic destro sul contenuto selezionato del terminale)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Genera comando terminale",
+				"description": "Aiuta a generare comandi del terminale basati sulla descrizione."
 			},
 			"NEW_TASK": {
 				"label": "Avvia nuova attività",

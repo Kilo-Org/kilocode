@@ -32,6 +32,13 @@ export class ToolRepetitionDetector {
 			messageDetail: string
 		}
 	} {
+		// Browser scroll actions should not be subject to repetition detection
+		// as they are frequently needed for navigating through web pages
+		if (this.isBrowserScrollAction(currentToolCallBlock)) {
+			// Allow browser scroll actions without counting them as repetitions
+			return { allowExecution: true }
+		}
+
 		// Serialize the block to a canonical JSON string for comparison
 		const currentToolCallJson = this.serializeToolUse(currentToolCallBlock)
 
@@ -39,21 +46,14 @@ export class ToolRepetitionDetector {
 		if (this.previousToolCallJson === currentToolCallJson) {
 			this.consecutiveIdenticalToolCallCount++
 		} else {
-			this.consecutiveIdenticalToolCallCount = 1 // Start with 1 for the first occurrence
+			this.consecutiveIdenticalToolCallCount = 0 // Reset to 0 for a new tool
 			this.previousToolCallJson = currentToolCallJson
 		}
-
-		// kilocode_change start: browser scrolling many times is fine
-		const limit =
-			currentToolCallBlock.name === "browser_action"
-				? 10 * this.consecutiveIdenticalToolCallLimit
-				: this.consecutiveIdenticalToolCallLimit
-		// kilocode_change end
 
 		// Check if limit is reached (0 means unlimited)
 		if (
 			this.consecutiveIdenticalToolCallLimit > 0 &&
-			this.consecutiveIdenticalToolCallCount >= limit /*kilocode_change*/
+			this.consecutiveIdenticalToolCallCount >= this.consecutiveIdenticalToolCallLimit
 		) {
 			// Reset counters to allow recovery if user guides the AI past this point
 			this.consecutiveIdenticalToolCallCount = 0
@@ -71,6 +71,21 @@ export class ToolRepetitionDetector {
 
 		// Execution is allowed
 		return { allowExecution: true }
+	}
+
+	/**
+	 * Checks if a tool use is a browser scroll action
+	 *
+	 * @param toolUse The ToolUse object to check
+	 * @returns true if the tool is a browser_action with scroll_down or scroll_up action
+	 */
+	private isBrowserScrollAction(toolUse: ToolUse): boolean {
+		if (toolUse.name !== "browser_action") {
+			return false
+		}
+
+		const action = toolUse.params.action as string
+		return action === "scroll_down" || action === "scroll_up"
 	}
 
 	/**

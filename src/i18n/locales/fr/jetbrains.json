@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Environnement Node.js manquant",
+			"message": "L'environnement Node.js n'a pas été détecté, veuillez installer Node.js et réessayer. Version recommandée : {{minVersion}} ou supérieure."
+		},
+		"nodejsVersionLow": {
+			"title": "Version de Node.js trop ancienne",
+			"message": "La version actuelle de Node.js ({{nodePath}}) est {{nodeVersion}}, veuillez mettre à jour vers {{minVersion}} ou supérieure pour une meilleure compatibilité."
+		}
+	},
+	"dialog": {
+		"cancel": "Annuler"
+	},
+	"ui": {
+		"initializing": "Kilo Code s'initialise...",
+		"systemInformation": "Informations système"
+	}
+}

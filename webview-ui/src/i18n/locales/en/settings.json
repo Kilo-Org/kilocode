@@ -29,10 +29,21 @@
 		"notifications": "Notifications",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
+		"slashCommands": "Slash Commands",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
 		"about": "About Kilo Code"
+	},
+	"slashCommands": {
+		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Collapse Thinking messages by default",
+			"description": "When enabled, thinking blocks will be collapsed by default until you interact with them"
+		}
 	},
 	"prompts": {
 		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Kilo Code provide better assistance for common development tasks."
@@ -56,6 +67,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API Key:",
 		"mistralApiKeyPlaceholder": "Enter your Mistral API key",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API Key",
+		"vercelAiGatewayApiKeyPlaceholder": "Enter your Vercel AI Gateway API key",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
@@ -121,13 +135,18 @@
 			"modelDimensionRequired": "Model dimension is required",
 			"geminiApiKeyRequired": "Gemini API key is required",
 			"mistralApiKeyRequired": "Mistral API key is required",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API key is required",
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
-		}
+		},
+		"cancelling": "Cancelling...",
+		"cancelIndexingButton": "Cancel Indexing"
 	},
 	"autoApprove": {
-		"description": "Allow Kilo Code to automatically perform operations without requiring approval. Enable these settings only if you fully trust the AI and understand the associated security risks.",
+		"description": "Run these actions without asking for permission. Only enable for actions you fully trust and if you understand the security risks.",
+		"toggleShortcut": "You can configure a keyboard shortcut for this setting <SettingsLink>in your IDE preferences</SettingsLink>.",
+		"enabled": "Auto-Approve Enabled",
 		"readOnly": {
 			"label": "Read",
 			"description": "When enabled, Kilo Code will automatically view directory contents and read files without requiring you to click the Approve button.",
@@ -196,9 +215,15 @@
 			"description": "Automatically update the to-do list without requiring approval"
 		},
 		"apiRequestLimit": {
-			"title": "Max Requests",
-			"description": "Automatically make this many API requests before asking for approval to continue with the task.",
+			"title": "Max Count",
 			"unlimited": "Unlimited"
+		},
+		"apiCostLimit": {
+			"title": "Max Cost",
+			"unlimited": "Unlimited"
+		},
+		"maxLimits": {
+			"description": "Automatically make requests up to these limits before asking for approval to continue."
 		},
 		"toggleAriaLabel": "Toggle auto-approval",
 		"disabledAriaLabel": "Auto-approval disabled - select options first",
@@ -226,10 +251,14 @@
 		"noProviderMatchFound": "No providers found",
 		"noMatchFound": "No matching profiles found",
 		"vscodeLmDescription": " The VS Code Language Model API allows you to run models provided by other VS Code extensions (including but not limited to GitHub Copilot). The easiest way to get started is to install the Copilot and Copilot Chat extensions from the VS Code Marketplace.",
+		"vscodeLmUnavailable": "VS Code Language Model support is only available on Visual Studio Code. Forks such as VSCodium and others may not work. Further, this capability is not available in JetBrains tools.",
+		"vscodeLmUnavailableInstructions": "Ensure you are using a supported tool and that VS Code Chat is installed and enabled",
 		"awsCustomArnUse": "Enter a valid Amazon Bedrock ARN for the model you want to use. Format examples:",
 		"awsCustomArnDesc": "Make sure the region in the ARN matches your selected AWS Region above.",
 		"openRouterApiKey": "OpenRouter API Key",
 		"getOpenRouterApiKey": "Get OpenRouter API Key",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API Key",
+		"getVercelAiGatewayApiKey": "Get Vercel AI Gateway API Key",
 		"apiKeyStorageNotice": "API keys are stored securely in VSCode's Secret Storage",
 		"glamaApiKey": "Glama API Key",
 		"getGlamaApiKey": "Get Glama API Key",
@@ -250,22 +279,51 @@
 			"error": "Failed to refresh models list. Please try again."
 		},
 		"getRequestyApiKey": "Get Requesty API Key",
+		"getRequestyBaseUrl": "Base URL",
+		"requestyUseCustomBaseUrl": "Use custom base URL",
 		"openRouterTransformsText": "Compress prompts and message chains to the context size (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Anthropic API Key",
 		"getAnthropicApiKey": "Get Anthropic API Key",
 		"anthropicUseAuthToken": "Pass Anthropic API Key as Authorization header instead of X-Api-Key",
+		"anthropic1MContextBetaLabel": "Enable 1M context window (Beta)",
+		"anthropic1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Enable 1M context window (Beta)",
+		"awsBedrock1MContextBetaDescription": "Extends context window to 1 million tokens for Claude Sonnet 4",
+		"cerebrasApiKey": "Cerebras API Key",
+		"getCerebrasApiKey": "Get Cerebras API Key",
 		"chutesApiKey": "Chutes API Key",
 		"getChutesApiKey": "Get Chutes API Key",
+		"fireworksApiKey": "Fireworks API Key",
+		"getFireworksApiKey": "Get Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Get Synthetic API Key",
+		"featherlessApiKey": "Featherless API Key",
+		"getFeatherlessApiKey": "Get Featherless API Key",
+		"ioIntelligenceApiKey": "IO Intelligence API Key",
+		"ioIntelligenceApiKeyPlaceholder": "Enter your IO Intelligence API key",
+		"getIoIntelligenceApiKey": "Get IO Intelligence API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
 		"getDeepSeekApiKey": "Get DeepSeek API Key",
+		"doubaoApiKey": "Doubao API Key",
+		"getDoubaoApiKey": "Get Doubao API Key",
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",
+		"zaiApiKey": "Z AI API Key",
+		"getZaiApiKey": "Get Z AI API Key",
+		"zaiEntrypoint": "Z AI Entrypoint",
+		"zaiEntrypointDescription": "Please select the appropriate API entrypoint based on your location. If you are in China, choose open.bigmodel.cn. Otherwise, choose api.z.ai.",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Get Groq API Key",
 		"groqApiKey": "Groq API Key",
+		"getSambaNovaApiKey": "Get SambaNova API Key",
+		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Get Hugging Face API Key",
 		"huggingFaceApiKey": "Hugging Face API Key",
+		"getOvhCloudAiEndpointsApiKey": "Get OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsBaseUrl": "Base URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Use a custom base URL",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Loading...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -309,6 +367,16 @@
 		"cacheUsageNote": "Note: If you don't see cache usage, try selecting a different model and then selecting your desired model again.",
 		"vscodeLmModel": "Language Model",
 		"vscodeLmWarning": "Note: This is a very experimental integration and provider support will vary. If you get an error about a model not being supported, that's an issue on the provider's end.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Enable URL context",
+				"description": "Lets Gemini read linked pages to extract, compare, and synthesize their content into informed responses."
+			},
+			"groundingSearch": {
+				"title": "Enable Grounding with Google search",
+				"description": "Connects Gemini to real‑time web data for accurate, up‑to‑date answers with verifiable citations."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "To use Google Cloud Vertex AI, you need to:",
 			"step1": "1. Create a Google Cloud account, enable the Vertex AI API & enable the desired Claude models.",
@@ -332,6 +400,11 @@
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
 			"modelId": "Model ID",
+			"apiKey": "Ollama API Key",
+			"apiKeyPlaceholder": "Enter your API key",
+			"apiKeyHelp": "Optional API key for authenticated Ollama instances or cloud services. Leave empty for local installations.",
+			"numCtx": "Context Window Size (num_ctx)",
+			"numCtxHelp": "Override the model's default context window size. Leave empty to use the model's Modelfile configuration. Minimum value is 128.",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
 			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
@@ -343,16 +416,16 @@
 			"description": "No API key is required, but the user needs to help copy and paste the information to the web chat AI.",
 			"instructions": "During use, a dialog box will pop up and the current message will be copied to the clipboard automatically. You need to paste these to web versions of AI (such as ChatGPT or Claude), then copy the AI's reply back to the dialog box and click the confirm button."
 		},
+		"roo": {
+			"authenticatedMessage": "Securely authenticated through your Roo Code Cloud account.",
+			"connectButton": "Connect to Roo Code Cloud"
+		},
 		"openRouter": {
 			"providerRouting": {
 				"title": "OpenRouter Provider Routing",
 				"description": "OpenRouter routes requests to the best available providers for your model. By default, requests are load balanced across the top providers to maximize uptime. However, you can choose a specific provider to use for this model.",
 				"learnMore": "Learn more about provider routing"
 			}
-		},
-		"cerebras": {
-			"apiKey": "Cerebras API Key",
-			"getApiKey": "Get Cerebras API Key"
 		},
 		"customModel": {
 			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how Kilo Code performs.",
@@ -408,9 +481,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Model Reasoning Effort",
+			"minimal": "Minimal (Fastest)",
+			"low": "Low",
+			"medium": "Medium",
+			"high": "High"
+		},
+		"verbosity": {
+			"label": "Output Verbosity",
 			"high": "High",
 			"medium": "Medium",
-			"low": "Low"
+			"low": "Low",
+			"description": "Controls how detailed the model's responses are. Low verbosity produces concise answers, while high verbosity provides thorough explanations."
 		},
 		"setReasoningLevel": "Enable Reasoning Effort",
 		"claudeCode": {
@@ -434,6 +515,13 @@
 			"requirement4": "Does not use API keys - authentication is handled via OAuth",
 			"requirement5": "Requires the Gemini CLI tool to be installed and authenticated first",
 			"freeAccess": "Free tier access via OAuth authentication"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth Credentials Path (optional)",
+			"oauthPathDescription": "Path to the OAuth credentials file. Leave empty to use the default location (~/.qwen/oauth_creds.json).",
+			"description": "This provider uses OAuth authentication from the Qwen service and does not require API keys.",
+			"instructions": "Please follow the official documentation to obtain the authorization file and place it in the specified path.",
+			"setupLink": "Qwen Official Documentation"
 		}
 	},
 	"browser": {
@@ -474,6 +562,26 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		},
+		"sendMessageOnEnter": {
+			"label": "Send message with Enter",
+			"description": "When enabled, press Enter to send and Shift+Enter for a new line. Turn off to use Shift+Enter to send instead."
+		},
+		"costThreshold": {
+			"label": "Hide cost below threshold",
+			"description": "Only show request costs above this amount. Costs are always visible when the details pane is open.",
+			"currentValue": "Current threshold: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Show timestamps",
+			"description": "Show timestamp for every message in the chat view"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Show gutter animation when autocompleting",
+			"description": "Display animated indicator in the editor gutter when autocompletion is running",
+			"preview": "Animation preview"
 		}
 	},
 	"notifications": {
@@ -531,6 +639,16 @@
 			"description": "Kilo Code reads this number of lines when the model omits start/end values. If this number is less than the file's total, Kilo Code generates a line number index of code definitions. Special cases: -1 instructs Kilo Code to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
+		},
+		"maxImageFileSize": {
+			"label": "Max image file size",
+			"mb": "MB",
+			"description": "Maximum size (in MB) for image files that can be processed by the read file tool."
+		},
+		"maxTotalImageSize": {
+			"label": "Max total image size",
+			"mb": "MB",
+			"description": "Maximum cumulative size limit (in MB) for all images processed in a single read_file operation. When reading multiple images, each image's size is added to the total. If including another image would exceed this limit, it will be skipped."
 		},
 		"diagnostics": {
 			"includeMessages": {
@@ -680,15 +798,49 @@
 			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Enable Morph Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Morph Fast Apply.",
+			"name": "Enable Fast Apply",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)",
-			"warning": "If you do not configure a Morph API key, you can still use Fast Apply with Kilo Code or OpenRouter. Your account will be billed for model usage, this is currently not shown in the extension UI."
+			"modelLabel": "Model Selection",
+			"modelDescription": "Choose which Fast Apply model to use for file edits",
+			"models": {
+				"auto": "Auto (Default - chooses best available)",
+				"morphFast": "Morph v3 Fast (Faster, lower cost)",
+				"morphLarge": "Morph v3 Large (More capable)",
+				"relace": "Relace Apply v3"
+			}
 		},
-		"INLINE_ASSIST": {
-			"name": "Inline Assist",
-			"description": "Enable Inline Assist features for quick code suggestions and improvements directly in your editor. Includes Quick Inline Task (Cmd+I) for targeted changes and Auto Inline Task for contextual improvements."
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Background editing",
+			"description": "Prevent editor focus disruption when enabled. File edits happen in the background without opening diff views or stealing focus. You can continue working uninterrupted while Kilo Code makes changes. Files can be opened without focus to capture diagnostics or kept closed entirely."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Use new message parser",
+			"description": "Enable the experimental streaming message parser that provides significant performance improvements for long assistant responses by processing messages more efficiently."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Require 'todos' list for new tasks",
+			"description": "When enabled, the new_task tool will require a todos parameter to be provided. This ensures all new tasks start with a clear list of objectives. When disabled (default), the todos parameter remains optional for backward compatibility."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Enable AI image generation",
+			"description": "When enabled, Kilo Code can generate images from text prompts. Requires a Kilo Code or OpenRouter API key to be configured.",
+			"apiProvider": "API Provider",
+			"openRouterApiKeyLabel": "OpenRouter API Key",
+			"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
+			"kiloCodeApiKeyLabel": "Kilo Code API Key",
+			"kiloCodeApiKeyPlaceholder": "Enter your Kilo Code API key",
+			"kiloCodeApiKeyPaste": "Paste current Kilo Code API Key",
+			"getApiKeyText": "Get your API key from",
+			"modelSelectionLabel": "Image Generation Model",
+			"modelSelectionDescription": "Select the model to use for image generation",
+			"warningMissingKey": "⚠️ An API key is required for image generation, please configure it above.",
+			"successConfigured": "✓ Image generation is configured and ready to use"
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Enable model-initiated slash commands",
+			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {
@@ -707,6 +859,7 @@
 		"noComputerUse": "Does not support computer use",
 		"supportsPromptCache": "Supports prompt caching",
 		"noPromptCache": "Does not support prompt caching",
+		"contextWindow": "Context Window:",
 		"maxOutput": "Max output",
 		"inputPrice": "Input price",
 		"outputPrice": "Output price",
@@ -759,9 +912,11 @@
 			"regionMismatch": "Warning: The region in your ARN ({{arnRegion}}) does not match your selected region ({{region}}). This may cause access issues. The provider will use the region from the ARN."
 		},
 		"modelAvailability": "The model ID ({{modelId}}) you provided is not available. Please choose a different model.",
+		"modelDeprecated": "This model is no longer available. Please select a different model.",
 		"providerNotAllowed": "Provider '{{provider}}' is not allowed by your organization",
 		"modelNotAllowed": "Model '{{model}}' is not allowed for provider '{{provider}}' by your organization",
-		"profileInvalid": "This profile contains a provider or model that is not allowed by your organization"
+		"profileInvalid": "This profile contains a provider or model that is not allowed by your organization",
+		"qwenCodeOauthPath": "You must provide a valid OAuth credentials path."
 	},
 	"placeholders": {
 		"apiKey": "Enter API Key...",
@@ -800,5 +955,19 @@
 	"includeMaxOutputTokensDescription": "Send max output tokens parameter in API requests. Some providers may not support this.",
 	"limitMaxTokensDescription": "Limit the maximum number of tokens in the response",
 	"maxOutputTokensLabel": "Max output tokens",
-	"maxTokensGenerateDescription": "Maximum tokens to generate in response"
+	"maxTokensGenerateDescription": "Maximum tokens to generate in response",
+	"serviceTier": {
+		"label": "Service tier",
+		"tooltip": "For faster processing of API requests, try the priority processing service tier. For lower prices with higher latency, try the flex processing tier.",
+		"standard": "Standard",
+		"flex": "Flex",
+		"priority": "Priority",
+		"pricingTableTitle": "Pricing by service tier (price per 1M tokens)",
+		"columns": {
+			"tier": "Tier",
+			"input": "Input",
+			"output": "Output",
+			"cacheReads": "Cache reads"
+		}
+	}
 }

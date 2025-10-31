@@ -3,7 +3,7 @@ import * as fs from "fs/promises"
 import * as path from "path"
 import * as vscode from "vscode"
 
-import type { ClineMessage } from "@roo-code/types"
+import { RooCodeEventName, type ClineMessage } from "@roo-code/types"
 
 import { waitFor, sleep } from "../utils"
 import { setDefaultSuiteTimeout } from "../test-utils"
@@ -207,7 +207,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				}
 			}
 		}
-		api.on("message", messageHandler)
+		api.on(RooCodeEventName.Message, messageHandler)
 
 		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
@@ -215,7 +215,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				taskCompleted = true
 			}
 		}
-		api.on("taskCompleted", taskCompletedHandler)
+		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 
 		let taskId: string
 		try {
@@ -242,8 +242,8 @@ This directory contains various files and subdirectories for testing the list_fi
 			// Verify the tool returned the expected files (non-recursive)
 			assert.ok(listResults, "Tool execution results should be captured")
 
-			// Check that expected root-level files are present (excluding hidden files due to current bug)
-			const expectedFiles = ["root-file-1.txt", "root-file-2.js", "config.yaml", "README.md"]
+			// Check that expected root-level files are present (including hidden files now that bug is fixed)
+			const expectedFiles = ["root-file-1.txt", "root-file-2.js", "config.yaml", "README.md", ".hidden-file"]
 			const expectedDirs = ["nested/"]
 
 			const results = listResults as string
@@ -255,13 +255,9 @@ This directory contains various files and subdirectories for testing the list_fi
 				assert.ok(results.includes(dir), `Tool results should include directory ${dir}`)
 			}
 
-			// BUG: Hidden files are currently excluded in non-recursive mode
-			// This should be fixed - hidden files should be included when using --hidden flag
-			console.log("BUG DETECTED: Hidden files are excluded in non-recursive mode")
-			assert.ok(
-				!results.includes(".hidden-file"),
-				"KNOWN BUG: Hidden files are currently excluded in non-recursive mode",
-			)
+			// Verify hidden files are now included (bug has been fixed)
+			console.log("Verifying hidden files are included in non-recursive mode")
+			assert.ok(results.includes(".hidden-file"), "Hidden files should be included in non-recursive mode")
 
 			// Verify nested files are NOT included (non-recursive)
 			const nestedFiles = ["nested-file-1.md", "nested-file-2.json", "deep-nested-file.ts"]
@@ -275,8 +271,8 @@ This directory contains various files and subdirectories for testing the list_fi
 			console.log("Test passed! Directory listing (non-recursive) executed successfully")
 		} finally {
 			// Clean up
-			api.off("message", messageHandler)
-			api.off("taskCompleted", taskCompletedHandler)
+			api.off(RooCodeEventName.Message, messageHandler)
+			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})
 
@@ -314,7 +310,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				}
 			}
 		}
-		api.on("message", messageHandler)
+		api.on(RooCodeEventName.Message, messageHandler)
 
 		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
@@ -322,7 +318,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				taskCompleted = true
 			}
 		}
-		api.on("taskCompleted", taskCompletedHandler)
+		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 
 		let taskId: string
 		try {
@@ -385,8 +381,8 @@ This directory contains various files and subdirectories for testing the list_fi
 			console.log("Test passed! Directory listing (recursive) executed successfully")
 		} finally {
 			// Clean up
-			api.off("message", messageHandler)
-			api.off("taskCompleted", taskCompletedHandler)
+			api.off(RooCodeEventName.Message, messageHandler)
+			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})
 
@@ -424,7 +420,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				}
 			}
 		}
-		api.on("message", messageHandler)
+		api.on(RooCodeEventName.Message, messageHandler)
 
 		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
@@ -432,7 +428,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				taskCompleted = true
 			}
 		}
-		api.on("taskCompleted", taskCompletedHandler)
+		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 
 		let taskId: string
 		try {
@@ -503,8 +499,8 @@ This directory contains various files and subdirectories for testing the list_fi
 			await fs.rm(testDir, { recursive: true, force: true })
 		} finally {
 			// Clean up
-			api.off("message", messageHandler)
-			api.off("taskCompleted", taskCompletedHandler)
+			api.off(RooCodeEventName.Message, messageHandler)
+			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})
 
@@ -527,7 +523,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				}
 			}
 		}
-		api.on("message", messageHandler)
+		api.on(RooCodeEventName.Message, messageHandler)
 
 		// Listen for task completion
 		const taskCompletedHandler = (id: string) => {
@@ -535,7 +531,7 @@ This directory contains various files and subdirectories for testing the list_fi
 				taskCompleted = true
 			}
 		}
-		api.on("taskCompleted", taskCompletedHandler)
+		api.on(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 
 		let taskId: string
 		try {
@@ -573,8 +569,8 @@ This directory contains various files and subdirectories for testing the list_fi
 			console.log("Test passed! Workspace root directory listing executed successfully")
 		} finally {
 			// Clean up
-			api.off("message", messageHandler)
-			api.off("taskCompleted", taskCompletedHandler)
+			api.off(RooCodeEventName.Message, messageHandler)
+			api.off(RooCodeEventName.TaskCompleted, taskCompletedHandler)
 		}
 	})
 })

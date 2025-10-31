@@ -11,7 +11,18 @@
 		"title": "Aviso de Crédito Baixo!",
 		"message": "Verifique se você pode recarregar com créditos gratuitos ou comprar mais!"
 	},
-	"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "A resposta do modelo terminou inesperadamente (nenhuma mensagem do assistente). Isso pode ser um sinal de limitação de taxa.",
+		"notLoggedInError": "Não é possível concluir a solicitação, certifique-se de que está conectado e logado com o provedor selecionado.\n\n{{error}}",
+		"maxCompletionTokens": "O número máximo de tokens de conclusão foi atingido.",
+		"disableApplyDiff": "Se este erro continuar ocorrendo, desabilite a opção Edição Através de Diffs nas Configurações Avançadas.",
+		"disableEditFile": "Se este erro continuar ocorrendo, desabilite o recurso experimental Fast Apply."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Os pontos de verificação não estão disponíveis porque foi detectado um repositório Git aninhado em: {{path}}. Remova ou realoque os repositórios Git aninhados para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
+		"protectedPaths": "Os pontos de verificação não estão disponíveis em {{workspaceDir}}. Abra uma subpasta como workspace para usar o recurso de pontos de verificação ou desabilite os pontos de verificação nas configurações para suprimir este aviso.",
+		"dismissWarning": "Dispensar"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Excluir",
@@ -49,19 +60,54 @@
 		"generationFailed": "Kilo: Falha ao gerar mensagem de commit: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Gerando mensagem usando alterações não preparadas",
 		"activationFailed": "Kilo: Falha ao ativar o gerador de mensagens: {{error}}",
-		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado"
+		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado",
+		"errors": {
+			"noProject": "Nenhum projeto disponível",
+			"connectionFailed": "Falha ao conectar com a extensão Kilo Code",
+			"invalidResponse": "Formato de resposta inválido recebido da extensão",
+			"missingMessage": "Nenhuma mensagem de commit recebida da extensão",
+			"timeout": "Solicitação excedeu o tempo limite após 30 segundos",
+			"noChanges": "Nenhuma alteração encontrada para confirmar",
+			"noWorkspacePath": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"workspaceNotFound": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"processingError": "Erro ao processar a geração da mensagem de commit: {{error}}"
+		},
+		"error": {
+			"title": "Erro",
+			"workspacePathNotFound": "Não foi possível determinar o caminho do espaço de trabalho para o repositório Git",
+			"generationFailed": "Falha ao gerar mensagem de commit: {{error}}",
+			"processingFailed": "Erro ao processar a geração de mensagem de commit: {{error}}",
+			"unknown": "Erro desconhecido"
+		},
+		"dialogs": {
+			"info": "Mensagem de Commit de IA",
+			"error": "Erro",
+			"success": "Sucesso",
+			"title": "Mensagem de Commit IA"
+		},
+		"progress": {
+			"analyzing": "Analisando mudanças...",
+			"title": "Gerando Mensagem de Commit",
+			"connecting": "Conectando ao Kilo Code...",
+			"generating": "Gerando mensagem de commit..."
+		},
+		"ui": {
+			"generateButton": "Gerar Mensagem de Commit",
+			"generateButtonTooltip": "Gera mensagem de commit usando IA para analisar suas alterações de código"
+		}
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Assistente Inline Kilo",
-			"disabled": "$(circle-slash) Assistente Inline Kilo",
-			"warning": "$(warning) Assistente Inline Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Assistente Inline Kilo Code",
-				"disabled": "Assistente Inline Kilo Code (desativado)",
-				"tokenError": "Um token válido deve ser definido para usar o Assistente Inline",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (desabilitado)",
+				"tokenError": "Um token válido deve ser definido para usar o Autocomplete",
 				"lastCompletion": "Última sugestão:",
 				"sessionTotal": "Custo total da sessão:",
+				"provider": "Provedor:",
 				"model": "Modelo:"
 			},
 			"cost": {
@@ -69,7 +115,7 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Assistente Inline Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
 			"title": "Kilo Code",
 			"analyzing": "Analisando seu código...",
@@ -79,7 +125,7 @@
 		},
 		"input": {
 			"title": "Kilo Code: Tarefa Rápida",
-			"placeholder": "ex. 'refatorar esta função para torná-la mais eficiente'"
+			"placeholder": "ex., 'refatore esta função para ser mais eficiente'"
 		},
 		"commands": {
 			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
@@ -87,24 +133,20 @@
 			"cancelSuggestions": "Cancelar Edições Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
 			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
-			"promptCodeSuggestion": "Tarefa Rápida",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
 			"title": "Kilo Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Agente Kilo Code",
-			"name": "Agente",
-			"description": "Posso ajudá-lo com tarefas rápidas e edições sugeridas."
-		},
-		"messages": {
-			"provideCodeSuggestions": "Fornecendo sugestões de código..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Posso te ajudar com tarefas rápidas e edições sugeridas."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "O Assistente Inline do Kilo Code está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"message": "O Kilo Code Autocomplete está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
 			"disableCopilot": "Desabilitar Copilot",
-			"disableInlineAssist": "Desabilitar Assistente Inline"
+			"disableInlineAssist": "Desabilitar Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
@@ -121,5 +163,11 @@
 			"cancelButton": "Cancelar"
 		},
 		"tipMessage": "Kilo: Pressione {{shortcut}} para gerar comandos de terminal"
+	},
+	"seeNewChanges": {
+		"title": "Exibindo novas alterações",
+		"checkpointsUnavailable": "Não é possível exibir novas alterações, pontos de verificação não estão disponíveis.",
+		"noChanges": "Não é possível exibir novas alterações, nenhuma alteração foi encontrada.",
+		"error": "Não é possível exibir novas alterações, ocorreu um erro."
 	}
 }

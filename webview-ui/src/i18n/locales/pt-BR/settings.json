@@ -28,11 +28,16 @@
 		"notifications": "Notificações",
 		"contextManagement": "Contexto",
 		"terminal": "Terminal",
+		"slashCommands": "Comandos de Barra",
 		"prompts": "Prompts",
+		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre",
 		"display": "Exibir"
+	},
+	"slashCommands": {
+		"description": "Gerencie seus comandos de barra para executar rapidamente fluxos de trabalho e ações personalizadas. <DocsLink>Saiba mais</DocsLink>"
 	},
 	"prompts": {
 		"description": "Configure prompts de suporte usados para ações rápidas como melhorar prompts, explicar código e corrigir problemas. Esses prompts ajudam o Kilo Code a fornecer melhor assistência para tarefas comuns de desenvolvimento."
@@ -48,6 +53,9 @@
 		"geminiProvider": "Gemini",
 		"geminiApiKeyLabel": "Chave de API:",
 		"geminiApiKeyPlaceholder": "Digite sua chave de API do Gemini",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Chave de API",
+		"vercelAiGatewayApiKeyPlaceholder": "Digite sua chave de API do Vercel AI Gateway",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Chave de API:",
 		"mistralApiKeyPlaceholder": "Digite sua chave de API da Mistral",
@@ -114,6 +122,7 @@
 			"modelDimensionRequired": "A dimensão do modelo é obrigatória",
 			"geminiApiKeyRequired": "A chave de API do Gemini é obrigatória",
 			"mistralApiKeyRequired": "A chave de API Mistral é obrigatória",
+			"vercelAiGatewayApiKeyRequired": "A chave de API do Vercel AI Gateway é obrigatória",
 			"ollamaBaseUrlRequired": "A URL base do Ollama é obrigatória",
 			"baseUrlRequired": "A URL base é obrigatória",
 			"modelDimensionMinValue": "A dimensão do modelo deve ser maior que 0"
@@ -124,10 +133,14 @@
 		"searchMinScoreResetTooltip": "Redefinir para o valor padrão (0.4)",
 		"searchMaxResultsLabel": "Resultados máximos de busca",
 		"searchMaxResultsDescription": "Número máximo de resultados de busca a retornar ao consultar o índice de código. Valores mais altos fornecem mais contexto, mas podem incluir resultados menos relevantes.",
-		"resetToDefault": "Redefinir para o padrão"
+		"resetToDefault": "Redefinir para o padrão",
+		"cancelling": "Cancelando...",
+		"cancelIndexingButton": "Cancelar indexação"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Você pode configurar um atalho global para esta configuração <SettingsLink>nas preferências do seu IDE</SettingsLink>.",
 		"description": "Permitir que o Kilo Code realize operações automaticamente sem exigir aprovação. Ative essas configurações apenas se confiar totalmente na IA e compreender os riscos de segurança associados.",
+		"enabled": "Aprovação automática habilitada",
 		"toggleAriaLabel": "Alternar aprovação automática",
 		"disabledAriaLabel": "Aprovação automática desativada - selecione as opções primeiro",
 		"readOnly": {
@@ -202,7 +215,14 @@
 			"description": "Fazer automaticamente este número de requisições à API antes de pedir aprovação para continuar com a tarefa.",
 			"unlimited": "Ilimitado"
 		},
-		"selectOptionsFirst": "Selecione pelo menos uma opção abaixo para habilitar a aprovação automática"
+		"selectOptionsFirst": "Selecione pelo menos uma opção abaixo para habilitar a aprovação automática",
+		"apiCostLimit": {
+			"title": "Custo máximo",
+			"unlimited": "Ilimitado"
+		},
+		"maxLimits": {
+			"description": "Fazer solicitações automaticamente até estes limites antes de pedir aprovação para continuar."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Documentação do {{provider}}",
@@ -226,14 +246,14 @@
 		"noProviderMatchFound": "Nenhum provedor encontrado",
 		"noMatchFound": "Nenhum perfil correspondente encontrado",
 		"vscodeLmDescription": "A API do Modelo de Linguagem do VS Code permite executar modelos fornecidos por outras extensões do VS Code (incluindo, mas não se limitando, ao GitHub Copilot). A maneira mais fácil de começar é instalar as extensões Copilot e Copilot Chat no VS Code Marketplace.",
+		"vscodeLmUnavailable": "O suporte a Modelos de Linguagem do VS Code está disponível apenas no Visual Studio Code. Forks como o VSCodium e outros podem não funcionar. Além disso, esse recurso não está disponível em ferramentas JetBrains.",
+		"vscodeLmUnavailableInstructions": "Certifique-se de estar usando uma ferramenta compatível e de que o VS Code Chat esteja instalado e habilitado",
 		"awsCustomArnUse": "Insira um ARN Amazon Bedrock válido para o modelo que deseja usar. Exemplos de formato:",
 		"awsCustomArnDesc": "Certifique-se de que a região no ARN corresponde à região AWS selecionada acima.",
 		"openRouterApiKey": "Chave de API OpenRouter",
 		"getOpenRouterApiKey": "Obter chave de API OpenRouter",
-		"cerebras": {
-			"apiKey": "Chave de API Cerebras",
-			"getApiKey": "Obter chave de API Cerebras"
-		},
+		"vercelAiGatewayApiKey": "Chave API do Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Obter chave API do Vercel AI Gateway",
 		"apiKeyStorageNotice": "As chaves de API são armazenadas com segurança no Armazenamento Secreto do VSCode",
 		"glamaApiKey": "Chave de API Glama",
 		"getGlamaApiKey": "Obter chave de API Glama",
@@ -254,23 +274,52 @@
 			"error": "Falha ao atualizar a lista de modelos. Por favor, tente novamente."
 		},
 		"getRequestyApiKey": "Obter chave de API Requesty",
+		"getRequestyBaseUrl": "URL Base",
+		"requestyUseCustomBaseUrl": "Usar URL base personalizada",
 		"openRouterTransformsText": "Comprimir prompts e cadeias de mensagens para o tamanho do contexto (<a>Transformações OpenRouter</a>)",
 		"anthropicApiKey": "Chave de API Anthropic",
 		"getAnthropicApiKey": "Obter chave de API Anthropic",
 		"anthropicUseAuthToken": "Passar a chave de API Anthropic como cabeçalho Authorization em vez de X-Api-Key",
+		"anthropic1MContextBetaLabel": "Ativar janela de contexto de 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Estende a janela de contexto para 1 milhão de tokens para o Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Ativar janela de contexto de 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Estende a janela de contexto para 1 milhão de tokens para o Claude Sonnet 4",
+		"cerebrasApiKey": "Chave de API Cerebras",
+		"getCerebrasApiKey": "Obter chave de API Cerebras",
 		"chutesApiKey": "Chave de API Chutes",
 		"getChutesApiKey": "Obter chave de API Chutes",
+		"fireworksApiKey": "Chave de API Fireworks",
+		"getFireworksApiKey": "Obter chave de API Fireworks",
+		"syntheticApiKey": "Chave de API Synthetic",
+		"getSyntheticApiKey": "Obter chave de API Synthetic",
+		"featherlessApiKey": "Chave de API Featherless",
+		"getFeatherlessApiKey": "Obter chave de API Featherless",
+		"ioIntelligenceApiKey": "Chave de API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Insira sua chave de API da IO Intelligence",
+		"getIoIntelligenceApiKey": "Obter chave de API IO Intelligence",
 		"deepSeekApiKey": "Chave de API DeepSeek",
 		"getDeepSeekApiKey": "Obter chave de API DeepSeek",
+		"doubaoApiKey": "Chave de API Doubao",
+		"getDoubaoApiKey": "Obter chave de API Doubao",
 		"moonshotApiKey": "Chave de API Moonshot",
 		"getMoonshotApiKey": "Obter chave de API Moonshot",
 		"moonshotBaseUrl": "Ponto de entrada Moonshot",
+		"zaiApiKey": "Chave de API Z AI",
+		"getZaiApiKey": "Obter chave de API Z AI",
+		"zaiEntrypoint": "Ponto de entrada Z AI",
+		"zaiEntrypointDescription": "Selecione o ponto de entrada da API apropriado com base na sua localização. Se você estiver na China, escolha open.bigmodel.cn. Caso contrário, escolha api.z.ai.",
 		"geminiApiKey": "Chave de API Gemini",
 		"getGroqApiKey": "Obter chave de API Groq",
 		"groqApiKey": "Chave de API Groq",
+		"getSambaNovaApiKey": "Obter chave de API SambaNova",
+		"sambaNovaApiKey": "Chave de API SambaNova",
 		"getGeminiApiKey": "Obter chave de API Gemini",
 		"getHuggingFaceApiKey": "Obter chave de API Hugging Face",
 		"huggingFaceApiKey": "Chave de API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obter chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usar uma URL base personalizada",
 		"huggingFaceModelId": "ID do modelo",
 		"huggingFaceLoading": "Carregando...",
 		"huggingFaceModelsCount": "({{count}} modelos)",
@@ -313,6 +362,16 @@
 		"cacheUsageNote": "Nota: Se você não vir o uso do cache, tente selecionar um modelo diferente e depois selecionar novamente o modelo desejado.",
 		"vscodeLmModel": "Modelo de Linguagem",
 		"vscodeLmWarning": "Nota: Esta é uma integração muito experimental e o suporte do provedor pode variar. Se você receber um erro sobre um modelo não ser suportado, isso é um problema do lado do provedor.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Ativar contexto de URL",
+				"description": "Permite que o Gemini acesse e processe URLs para contexto adicional ao gerar respostas. Útil para tarefas que exijam análise de conteúdo da web."
+			},
+			"groundingSearch": {
+				"title": "Ativar grounding com pesquisa no Google",
+				"description": "Permite que o Gemini pesquise informações atuais no Google e fundamente as respostas em dados em tempo real. Útil para consultas que requerem informações atualizadas."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Para usar o Google Cloud Vertex AI, você precisa:",
 			"step1": "1. Criar uma conta Google Cloud, ativar a API Vertex AI e ativar os modelos Claude desejados.",
@@ -336,6 +395,11 @@
 		"ollama": {
 			"baseUrl": "URL Base (opcional)",
 			"modelId": "ID do Modelo",
+			"apiKey": "Chave API Ollama",
+			"apiKeyPlaceholder": "Digite sua chave de API",
+			"apiKeyHelp": "Chave API opcional para instâncias Ollama autenticadas ou serviços em nuvem. Deixe vazio para instalações locais.",
+			"numCtx": "Tamanho da janela de contexto (num_ctx)",
+			"numCtxHelp": "Substitui o tamanho da janela de contexto padrão do modelo. Deixe em branco para usar a configuração do Modelfile do modelo. O valor mínimo é 128.",
 			"description": "O Ollama permite que você execute modelos localmente em seu computador. Para instruções sobre como começar, veja o guia de início rápido deles.",
 			"warning": "Nota: O Kilo Code usa prompts complexos e funciona melhor com modelos Claude. Modelos menos capazes podem não funcionar como esperado."
 		},
@@ -346,6 +410,10 @@
 		"humanRelay": {
 			"description": "Não é necessária chave de API, mas o usuário precisa ajudar a copiar e colar as informações para a IA do chat web.",
 			"instructions": "Durante o uso, uma caixa de diálogo será exibida e a mensagem atual será copiada para a área de transferência automaticamente. Você precisa colar isso nas versões web de IA (como ChatGPT ou Claude), depois copiar a resposta da IA de volta para a caixa de diálogo e clicar no botão confirmar."
+		},
+		"roo": {
+			"authenticatedMessage": "Autenticado com segurança através da sua conta Roo Code Cloud.",
+			"connectButton": "Conectar ao Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -408,9 +476,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Esforço de raciocínio do modelo",
+			"minimal": "Mínimo (mais rápido)",
 			"high": "Alto",
 			"medium": "Médio",
 			"low": "Baixo"
+		},
+		"verbosity": {
+			"label": "Verbosidade da saída",
+			"high": "Alta",
+			"medium": "Média",
+			"low": "Baixa",
+			"description": "Controla o quão detalhadas são as respostas do modelo. A verbosidade baixa produz respostas concisas, enquanto a verbosidade alta fornisce explicações detalhadas."
 		},
 		"setReasoningLevel": "Habilitar esforço de raciocínio",
 		"claudeCode": {
@@ -434,6 +510,13 @@
 			"requirement4": "Não usa chaves de API - a autenticação é tratada via OAuth",
 			"requirement5": "Requer que a ferramenta Gemini CLI seja instalada e autenticada primeiro",
 			"freeAccess": "Acesso gratuito via autenticação OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Caminho das Credenciais OAuth (opcional)",
+			"oauthPathDescription": "Caminho para o arquivo de credenciais OAuth. Deixe vazio para usar o local padrão (~/.qwen/oauth_creds.json).",
+			"description": "Este provedor usa autenticação OAuth do serviço Qwen e não requer chaves de API.",
+			"instructions": "Siga a documentação oficial para obter o arquivo de autorização e colocá-lo no caminho especificado.",
+			"setupLink": "Documentação Oficial do Qwen"
 		}
 	},
 	"browser": {
@@ -551,6 +634,16 @@
 			"profileDescription": "Limite personalizado apenas para este perfil (substitui o padrão global)",
 			"inheritDescription": "Este perfil herda o limite padrão global ({{threshold}}%)",
 			"usesGlobal": "(usa global {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Tamanho máximo do arquivo de imagem",
+			"mb": "MB",
+			"description": "Tamanho máximo (em MB) para arquivos de imagem que podem ser processados pela ferramenta de leitura de arquivos."
+		},
+		"maxTotalImageSize": {
+			"label": "Tamanho total máximo da imagem",
+			"mb": "MB",
+			"description": "Limite máximo de tamanho cumulativo (em MB) para todas as imagens processadas em uma única operação read_file. Ao ler várias imagens, o tamanho de cada imagem é adicionado ao total. Se incluir outra imagem exceder esse limite, ela será ignorada."
 		}
 	},
 	"terminal": {
@@ -672,18 +765,56 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar edições de arquivos concorrentes",
-			"description": "Quando habilitado, o Kilo Code pode editar múltiplos arquivos em uma única solicitação. Quando desabilitado, o Kilo Code deve editar arquivos um de cada vez. Desabilitar isso pode ajudar ao trabalhar com modelos menos capazes ou quando você quer mais controle sobre modificações de arquivos."
+			"description": "Quando habilitado, o Kilo Code pode editar múltiplos arquivos em uma única solicitação. Quando desabilitado, o Kilo Code deve editar arquivos um de cada vez. Desabilitar isso pode ajudar ao trabalhar com modelos menos capazes ou quando você quer mais controle sobre modificações de arquivos。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Habilitar Morph Fast Apply",
-			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Morph Fast Apply.",
+			"name": "Habilitar Fast Apply",
+			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Kilo Gateway Provider, OpenRouter ou uma chave de API Morph.",
 			"apiKey": "Chave de API Morph (opcional)",
 			"placeholder": "Digite sua chave de API Morph (opcional)",
-			"warning": "Se você não configurar uma chave de API Morph, ainda poderá usar Fast Apply com Kilo Code ou OpenRouter. Sua conta será cobrada pelo uso do modelo, isso atualmente não é mostrado na interface da extensão."
+			"modelLabel": "Seleção de Modelo",
+			"modelDescription": "Escolha qual modelo Fast Apply usar para edições de arquivos",
+			"models": {
+				"auto": "Automático (Padrão - escolhe o melhor disponível)",
+				"morphFast": "Morph v3 Fast (Mais rápido, menor custo)",
+				"morphLarge": "Morph v3 Large (Mais capaz)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Edição em segundo plano",
+			"description": "Previne a interrupção do foco do editor quando habilitado. As edições de arquivos acontecem em segundo plano sem abrir visualizações de diferenças ou roubar o foco. Você pode continuar trabalhando sem interrupções enquanto o Kilo Code faz alterações. Os arquivos podem ser abertos sem foco para capturar diagnósticos ou permanecer completamente fechados."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Usar o novo parser de mensagens",
+			"description": "Ativa o parser de mensagens em streaming experimental que acelera respostas longas ao processar as mensagens de forma mais eficiente."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Exigir lista de 'todos' para novas tarefas",
+			"description": "Quando ativado, a ferramenta new_task exigirá que um parâmetro todos seja fornecido. Isso garante que todas as novas tarefas comecem com uma lista clara de objetivos. Quando desativado (padrão), o parâmetro todos permanece opcional para compatibilidade com versões anteriores."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Habilitar geração de imagens com IA",
+			"description": "Quando habilitado, Kilo Code pode gerar imagens a partir de prompts de texto. Requer uma chave de API do Kilo Code ou OpenRouter configurada.",
+			"apiProvider": "Provedor de API",
+			"openRouterApiKeyLabel": "Chave de API do OpenRouter",
+			"openRouterApiKeyPlaceholder": "Digite sua chave de API do OpenRouter",
+			"kiloCodeApiKeyLabel": "Chave de API do Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Digite sua chave de API do Kilo Code",
+			"kiloCodeApiKeyPaste": "Colar chave de API atual do Kilo Code",
+			"getApiKeyText": "Obtenha sua chave de API de",
+			"modelSelectionLabel": "Modelo de Geração de Imagens",
+			"modelSelectionDescription": "Selecione o modelo para geração de imagens",
+			"warningMissingKey": "⚠️ Uma chave de API é necessária para geração de imagens, configure-a acima.",
+			"successConfigured": "✓ A geração de imagens está configurada e pronta para uso"
 		},
 		"INLINE_ASSIST": {
-			"name": "Assistência em Linha",
-			"description": "Ative os recursos de assistência em linha para obter sugestões e melhorias de código rápidas diretamente no seu editor. Inclui Tarefa Rápida em Linha (Cmd+I) para alterações direcionadas e Tarefa Automática em Linha para melhorias contextuais."
+			"name": "Autocomplete",
+			"description": "Habilita as funcionalidades do Autocomplete para sugestões de código rápidas e melhorias diretamente no seu editor. Inclui Tarefa Rápida (Cmd+I) para mudanças direcionadas e Autocomplete para melhorias contextuais."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Ativar comandos slash iniciados pelo modelo",
+			"description": "Quando ativado, Kilo Code pode executar seus comandos slash para executar fluxos de trabalho."
 		}
 	},
 	"promptCaching": {
@@ -702,6 +833,7 @@
 		"noComputerUse": "Não suporta uso do computador",
 		"supportsPromptCache": "Suporta cache de prompts",
 		"noPromptCache": "Não suporta cache de prompts",
+		"contextWindow": "Janela de Contexto:",
 		"maxOutput": "Saída máxima",
 		"inputPrice": "Preço de entrada",
 		"outputPrice": "Preço de saída",
@@ -754,9 +886,11 @@
 			"regionMismatch": "Aviso: A região em seu ARN ({{arnRegion}}) não corresponde à região selecionada ({{region}}). Isso pode causar problemas de acesso. O provedor usará a região do ARN."
 		},
 		"modelAvailability": "O ID do modelo ({{modelId}}) que você forneceu não está disponível. Por favor, escolha outro modelo.",
+		"modelDeprecated": "Este modelo não está mais disponível. Por favor, selecione um modelo diferente.",
 		"providerNotAllowed": "O provedor '{{provider}}' não é permitido pela sua organização",
 		"modelNotAllowed": "O modelo '{{model}}' não é permitido para o provedor '{{provider}}' pela sua organização",
-		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização"
+		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização",
+		"qwenCodeOauthPath": "Você deve fornecer um caminho válido de credenciais OAuth"
 	},
 	"placeholders": {
 		"apiKey": "Digite a chave API...",
@@ -795,11 +929,51 @@
 		"taskTimeline": {
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		},
+		"sendMessageOnEnter": {
+			"label": "Enviar mensagem com Enter",
+			"description": "Quando ativado, pressione Enter para enviar e Shift+Enter para uma nova linha. Desative para usar Shift+Enter para enviar."
+		},
+		"costThreshold": {
+			"label": "Ocultar custo abaixo do limite",
+			"currentValue": "Limiar atual: ${{value}}",
+			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
+		},
+		"showTimestamps": {
+			"label": "Mostrar carimbos de tempo",
+			"description": "Mostrar carimbo de tempo para cada mensagem na visualização do chat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Mostrar animação na lateral ao autocompletar",
+			"description": "Exibir indicador animado na lateral do editor quando o autocompletar está em execução",
+			"preview": "Visualização da animação"
 		}
 	},
 	"includeMaxOutputTokens": "Incluir tokens máximos de saída",
 	"includeMaxOutputTokensDescription": "Enviar parâmetro de tokens máximos de saída nas solicitações de API. Alguns provedores podem não suportar isso.",
 	"limitMaxTokensDescription": "Limitar o número máximo de tokens na resposta",
 	"maxOutputTokensLabel": "Tokens máximos de saída",
-	"maxTokensGenerateDescription": "Tokens máximos para gerar na resposta"
+	"maxTokensGenerateDescription": "Tokens máximos para gerar na resposta",
+	"serviceTier": {
+		"label": "Nível de serviço",
+		"tooltip": "Para um processamento mais rápido das solicitações de API, experimente o nível de serviço de processamento prioritário. Para preços mais baixos com maior latência, experimente o nível de processamento flexível.",
+		"standard": "Padrão",
+		"flex": "Flexível",
+		"priority": "Prioritário",
+		"pricingTableTitle": "Preços por nível de serviço (preço por 1 milhão de tokens)",
+		"columns": {
+			"tier": "Nível",
+			"input": "Entrada",
+			"output": "Saída",
+			"cacheReads": "Leituras de cache"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Recolher mensagens de pensamento por padrão",
+			"description": "Quando ativado, os blocos de pensamento serão recolhidos por padrão até que você interaja com eles"
+		}
+	}
 }

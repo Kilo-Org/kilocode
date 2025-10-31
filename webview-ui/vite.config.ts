@@ -5,6 +5,7 @@ import { execSync } from "child_process"
 import { defineConfig, type PluginOption, type Plugin } from "vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
+
 import { sourcemapPlugin } from "./src/vite-plugins/sourcemapPlugin"
 
 function getGitSha() {
@@ -54,7 +55,17 @@ const persistPortPlugin = (): Plugin => ({
 export default defineConfig(({ mode }) => {
 	let outDir = "../src/webview-ui/build"
 
-	const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "src", "package.json"), "utf8"))
+	// kilocode_change start - read package.json fresh every time to avoid caching issues
+	const getPkg = () => {
+		try {
+			return JSON.parse(fs.readFileSync(path.join(__dirname, "..", "src", "package.json"), "utf8"))
+		} catch (error) {
+			throw new Error(`Could not read package.json: ${error}`)
+		}
+	}
+
+	const pkg = getPkg()
+	// kilocode_change end
 	const gitSha = getGitSha()
 
 	const define: Record<string, any> = {
@@ -153,8 +164,9 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		server: {
+			host: "0.0.0.0", // kilocode_change
 			hmr: {
-				host: "localhost",
+				// host: "localhost", kilocode_change
 				protocol: "ws",
 			},
 			cors: {

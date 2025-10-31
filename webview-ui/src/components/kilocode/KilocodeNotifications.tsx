@@ -3,7 +3,9 @@ import { useExtensionState } from "@/context/ExtensionStateContext"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import { vscode } from "@/utils/vscode"
 import { telemetryClient } from "@/utils/TelemetryClient"
-import { TelemetryEventName } from "@roo-code/types"
+import { OPENROUTER_DEFAULT_PROVIDER_NAME, TelemetryEventName } from "@roo-code/types"
+import { useProviderModels } from "./hooks/useProviderModels"
+import { getModelIdKey } from "./hooks/useSelectedModel"
 
 interface NotificationAction {
 	actionText: string
@@ -15,10 +17,14 @@ interface Notification {
 	title: string
 	message: string
 	action?: NotificationAction
+	suggestModelId?: string
 }
 
+const USE_MODEL_BUTTON_LABEL = "Try model"
+
 export const KilocodeNotifications: React.FC = () => {
-	const { dismissedNotificationIds } = useExtensionState()
+	const { dismissedNotificationIds, currentApiConfigName, apiConfiguration } = useExtensionState()
+	const { provider, providerModels, isLoading, isError } = useProviderModels(apiConfiguration)
 	const [notifications, setNotifications] = useState<Notification[]>([])
 	const filteredNotifications = notifications.filter(
 		(notification) => !(dismissedNotificationIds || []).includes(notification.id),
@@ -57,6 +63,24 @@ export const KilocodeNotifications: React.FC = () => {
 		})
 	}
 
+	const modelIdKey = getModelIdKey({ provider })
+
+	const switchModel = (suggestModelId: string) => {
+		vscode.postMessage({
+			type: "upsertApiConfiguration",
+			text: currentApiConfigName,
+			apiConfiguration: {
+				...apiConfiguration,
+				[modelIdKey]: suggestModelId,
+				openRouterSpecificProvider: OPENROUTER_DEFAULT_PROVIDER_NAME,
+			},
+		})
+		telemetryClient.capture(TelemetryEventName.NOTIFICATION_CLICKED, {
+			actionText: USE_MODEL_BUTTON_LABEL,
+			suggestModelId,
+		})
+	}
+
 	const goToNext = () => {
 		setCurrentIndex((prev) => (prev + 1) % filteredNotifications.length)
 	}
@@ -77,11 +101,22 @@ export const KilocodeNotifications: React.FC = () => {
 		return null
 	}
 
+	const action = currentNotification.action
+	const suggestModelId = currentNotification.suggestModelId
+	const isReadyToSwitchModels =
+		!isLoading &&
+		!isError &&
+		suggestModelId &&
+		suggestModelId in providerModels &&
+		currentApiConfigName &&
+		apiConfiguration &&
+		suggestModelId !== apiConfiguration[modelIdKey]
+
 	return (
 		<div className="kilocode-notifications flex flex-col mb-4">
 			<div className="bg-vscode-editor-background border border-vscode-panel-border rounded-lg p-3 gap-3">
 				<div className="flex items-center justify-between">
-					<h3 className="text-sm font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
+					<h3 className="font-medium text-vscode-foreground m-0">{currentNotification.title}</h3>
 					<button
 						onClick={() => dismissNotificationId(currentNotification.id)}
 						className="text-vscode-descriptionForeground hover:text-vscode-foreground p-1"
@@ -90,16 +125,20 @@ export const KilocodeNotifications: React.FC = () => {
 					</button>
 				</div>
 
-				<p className="text-sm text-vscode-descriptionForeground">{currentNotification.message}</p>
+				<p className="text-vscode-descriptionForeground">{currentNotification.message}</p>
 
-				{currentNotification.action && (
-					<div className="flex items-center justify-end">
-						<VSCodeButton
-							appearance="primary"
-							onClick={() => handleAction(currentNotification.action!)}
-							className="text-sm">
-							{currentNotification.action.actionText}
-						</VSCodeButton>
+				{(action || isReadyToSwitchModels) && (
+					<div className="flex items-center justify-end gap-2">
+						{suggestModelId && isReadyToSwitchModels && (
+							<VSCodeButton appearance="primary" onClick={() => switchModel(suggestModelId)}>
+								{USE_MODEL_BUTTON_LABEL}
+							</VSCodeButton>
+						)}
+						{action && (
+							<VSCodeButton appearance="primary" onClick={() => handleAction(action)}>
+								{action.actionText}
+							</VSCodeButton>
+						)}
 					</div>
 				)}
 			</div>

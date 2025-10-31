@@ -18,7 +18,7 @@ export const TabHeader = ({ className, children, ...props }: TabProps) => (
 	</div>
 )
 
-export const TabContent = ({ className, children, ...props }: TabProps) => {
+export const TabContent = forwardRef<HTMLDivElement, TabProps>(({ className, children, ...props }, ref) => {
 	const { renderContext } = useExtensionState()
 
 	const onWheel = useCallback(
@@ -41,11 +41,12 @@ export const TabContent = ({ className, children, ...props }: TabProps) => {
 	)
 
 	return (
-		<div className={cn("flex-1 overflow-auto p-5", className)} onWheel={onWheel} {...props}>
+		<div ref={ref} className={cn("flex-1 overflow-auto p-5", className)} onWheel={onWheel} {...props}>
 			{children}
 		</div>
 	)
-}
+})
+TabContent.displayName = "TabContent"
 
 export const TabList = forwardRef<
 	HTMLDivElement,

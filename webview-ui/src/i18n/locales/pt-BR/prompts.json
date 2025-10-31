@@ -16,6 +16,11 @@
 		"title": "Configuração de API",
 		"select": "Selecione qual configuração de API usar para este modo"
 	},
+	"organizationMode": {
+		"title": "Modo da organização",
+		"description": "Este modo é fornecido pela sua organização e não pode ser editado aqui. Para modificar este modo, visite o Kilo Code Dashboard.",
+		"cannotEdit": "Modos da organização não podem ser editados"
+	},
 	"tools": {
 		"title": "Ferramentas disponíveis",
 		"builtInModesText": "Ferramentas para modos integrados não podem ser modificadas",
@@ -50,7 +55,7 @@
 		"title": "Instruções personalizadas específicas do modo (opcional)",
 		"resetToDefault": "Restaurar para padrão",
 		"description": "Adicione diretrizes comportamentais específicas para o modo {{modeName}}.",
-		"loadFromFile": "Instruções personalizadas específicas para o modo {{mode}} também podem ser carregadas da pasta <span>.kilocode/rules-{{slug}}/</span> no seu espaço de trabalho (.kilocoderules-{{slug}} e .clinerules-{{slug}} estão obsoletos e deixarão de funcionar em breve)."
+		"loadFromFile": "Instruções personalizadas específicas para o modo {{mode}} também podem ser carregadas da pasta <span>.kilocode/rules-{{slug}}/</span> no seu espaço de trabalho ou do global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} e .clinerules-{{slug}} estão obsoletos e deixarão de funcionar em breve)."
 	},
 	"exportMode": {
 		"title": "Exportar modo",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Instruções personalizadas para todos os modos",
 		"description": "Estas instruções se aplicam a todos os modos. Elas fornecem um conjunto base de comportamentos que podem ser aprimorados por instruções específicas do modo abaixo. <0>Saiba mais</0>",
-		"loadFromFile": "As instruções também podem ser carregadas da pasta <span>.kilocode/rules/</span> no seu espaço de trabalho (.kilocoderules estão obsoletos e deixarão de funcionar em breve)."
+		"loadFromFile": "Instruções também podem ser carregadas da pasta <span>.kilocode/rules/</span> no seu espaço de trabalho ou do global <0>.kilocode/rules/</0> (.kilocoderules e .clinerules estão obsoletos e deixarão de funcionar em breve)."
 	},
 	"systemPrompt": {
 		"preview": "Visualizar prompt do sistema",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Usar configuração de API atualmente selecionada",
 			"testPromptPlaceholder": "Digite um prompt para testar o aprimoramento",
 			"previewButton": "Visualizar aprimoramento do prompt",
-			"testEnhancement": "Testar aprimoramento"
+			"testEnhancement": "Testar aprimoramento",
+			"includeTaskHistory": "Incluir histórico de tarefas como contexto",
+			"includeTaskHistoryDescription": "Quando habilitado, as últimas 10 mensagens da conversa atual serão incluídas como contexto ao aprimorar prompts, ajudando a gerar sugestões mais relevantes e conscientes do contexto."
 		},
 		"condense": {
 			"apiConfiguration": "Configuração da API para condensação de contexto",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Explicar Comando do Terminal",
 				"description": "Obtenha explicações detalhadas de comandos de terminal e suas saídas. Disponível no menu de contexto do terminal (clique direito no conteúdo selecionado do terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Gerar comando de terminal",
+				"description": "Ajuda a gerar comandos de terminal baseados na descrição."
 			},
 			"NEW_TASK": {
 				"label": "Iniciar Nova Tarefa",

@@ -14,6 +14,25 @@ vi.mock("@/utils/highlight", () => ({
 
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
+// kilocode_change start
+import { useTaskHistory } from "@/kilocode/hooks/useTaskHistory"
+import { getTaskHistory } from "@roo/kilocode/getTaskHistory"
+import { TaskHistoryRequestPayload } from "@roo/WebviewMessage"
+
+vi.mock("@/kilocode/hooks/useTaskHistory")
+
+function kiloCodeSetUpUseTaskHistoryMock(taskHistory: Partial<HistoryItem>[], cwd: string) {
+	;(useTaskHistory as ReturnType<typeof vi.fn>).mockImplementation(
+		(payload: Omit<TaskHistoryRequestPayload, "requestId">) => ({
+			data: getTaskHistory(taskHistory as HistoryItem[], cwd, {
+				requestId: "",
+				...payload,
+			}),
+		}),
+	)
+}
+// kilocode_change end
+
 const mockUseExtensionState = useExtensionState as ReturnType<typeof vi.fn>
 
 const mockTaskHistory: HistoryItem[] = [
@@ -56,8 +75,10 @@ describe("useTaskSearch", () => {
 		vi.clearAllMocks()
 		mockUseExtensionState.mockReturnValue({
 			taskHistory: mockTaskHistory,
+			taskHistoryVersion: 0, // kilocode_change
 			cwd: "/workspace/project1",
 		} as any)
+		kiloCodeSetUpUseTaskHistoryMock(mockTaskHistory, "/workspace/project1")
 	})
 
 	it("returns all tasks by default", () => {
@@ -215,6 +236,7 @@ describe("useTaskSearch", () => {
 			taskHistory: [],
 			cwd: "/workspace/project1",
 		} as any)
+		kiloCodeSetUpUseTaskHistoryMock([], "/workspace/project1")
 
 		const { result } = renderHook(() => useTaskSearch())
 

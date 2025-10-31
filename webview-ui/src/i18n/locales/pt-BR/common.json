@@ -28,7 +28,8 @@
 		"keep": "Manter"
 	},
 	"ui": {
-		"search_placeholder": "Pesquisar..."
+		"search_placeholder": "Pesquisar...",
+		"no_results": "Nenhum resultado encontrado"
 	},
 	"mermaid": {
 		"loading": "Gerando diagrama mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Erro ao copiar imagem"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Imagem"
+		},
+		"noData": "Nenhum dado de imagem"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Formato de URI de dados inválido",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Excluir esta mensagem irá excluir todas as mensagens subsequentes na conversa. Deseja prosseguir?",
 		"editMessage": "Editar Mensagem",
 		"editWarning": "Editar esta mensagem irá excluir todas as mensagens subsequentes na conversa. Deseja prosseguir?",
-		"proceed": "Prosseguir"
+		"editQuestionWithCheckpoint": "Editar esta mensagem irá excluir todas as mensagens posteriores na conversa. Você também deseja desfazer todas as alterações até este checkpoint?",
+		"deleteQuestionWithCheckpoint": "Excluir esta mensagem irá excluir todas as mensagens posteriores na conversa. Você também deseja desfazer todas as alterações até este checkpoint?",
+		"editOnly": "Não, apenas editar a mensagem",
+		"deleteOnly": "Não, apenas excluir a mensagem",
+		"restoreToCheckpoint": "Sim, restaurar o checkpoint",
+		"proceed": "Prosseguir",
+		"dontShowAgain": "Não mostrar novamente"
+	},
+	"time_ago": {
+		"just_now": "agora mesmo",
+		"seconds_ago": "há {{count}} segundos",
+		"minute_ago": "há um minuto",
+		"minutes_ago": "há {{count}} minutos",
+		"hour_ago": "há uma hora",
+		"hours_ago": "há {{count}} horas",
+		"day_ago": "há um dia",
+		"days_ago": "há {{count}} dias",
+		"week_ago": "há uma semana",
+		"weeks_ago": "há {{count}} semanas",
+		"month_ago": "há um mês",
+		"months_ago": "há {{count}} meses",
+		"year_ago": "há um ano",
+		"years_ago": "há {{count}} anos"
 	}
 }

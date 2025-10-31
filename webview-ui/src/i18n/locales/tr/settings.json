@@ -28,11 +28,17 @@
 		"notifications": "Bildirimler",
 		"contextManagement": "Bağlam",
 		"terminal": "Terminal",
+		"slashCommands": "Eğik Çizgi Komutları",
 		"prompts": "Promptlar",
+		"ui": "UI",
 		"experimental": "Deneysel",
 		"language": "Dil",
 		"about": "Kilo Code Hakkında",
-		"display": "Göster"
+		"display": "Göster",
+		"ghost": "Ghost"
+	},
+	"slashCommands": {
+		"description": "Özel iş akışlarını ve eylemleri hızlı bir şekilde yürütmek için eğik çizgi komutlarınızı yönetin. <DocsLink>Daha fazla bilgi edinin</DocsLink>"
 	},
 	"prompts": {
 		"description": "Prompt geliştirme, kod açıklama ve sorun çözme gibi hızlı eylemler için kullanılan destek promptlarını yapılandırın. Bu promptlar, Kilo Code'nun yaygın geliştirme görevleri için daha iyi destek sağlamasına yardımcı olur."
@@ -51,6 +57,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API Anahtarı:",
 		"mistralApiKeyPlaceholder": "Mistral API anahtarınızı girin",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "API Anahtarı",
+		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API anahtarınızı girin",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -114,6 +123,7 @@
 			"modelDimensionRequired": "Model boyutu gereklidir",
 			"geminiApiKeyRequired": "Gemini API anahtarı gereklidir",
 			"mistralApiKeyRequired": "Mistral API anahtarı gereklidir",
+			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API anahtarı gereklidir",
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
 			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır"
@@ -124,10 +134,14 @@
 		"searchMinScoreResetTooltip": "Varsayılan değere sıfırla (0.4)",
 		"searchMaxResultsLabel": "Maksimum Arama Sonuçları",
 		"searchMaxResultsDescription": "Kod tabanı dizinini sorgularken döndürülecek maksimum arama sonucu sayısı. Daha yüksek değerler daha fazla bağlam sağlar ancak daha az alakalı sonuçlar içerebilir.",
-		"resetToDefault": "Varsayılana sıfırla"
+		"resetToDefault": "Varsayılana sıfırla",
+		"cancelling": "İptal ediliyor...",
+		"cancelIndexingButton": "İndekslemeyi iptal et"
 	},
 	"autoApprove": {
+		"toggleShortcut": "<SettingsLink>IDE tercihlerinizde</SettingsLink> bu ayar için genel bir kısayol yapılandırabilirsiniz.",
 		"description": "Kilo Code'nun onay gerektirmeden otomatik olarak işlemler gerçekleştirmesine izin verin. Bu ayarları yalnızca yapay zekaya tamamen güveniyorsanız ve ilgili güvenlik risklerini anlıyorsanız etkinleştirin.",
+		"enabled": "Oto-onay etkinleştirildi",
 		"toggleAriaLabel": "Otomatik onayı değiştir",
 		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri belirleyin",
 		"readOnly": {
@@ -202,7 +216,14 @@
 			"description": "Göreve devam etmek için onay istemeden önce bu sayıda API isteği otomatik olarak yap.",
 			"unlimited": "Sınırsız"
 		},
-		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin"
+		"selectOptionsFirst": "Otomatik onayı etkinleştirmek için aşağıdan en az bir seçenek seçin",
+		"apiCostLimit": {
+			"unlimited": "Sınırsız",
+			"title": "Maksimum Maliyet"
+		},
+		"maxLimits": {
+			"description": "Bu sınırlara ulaşana kadar otomatik olarak istekleri yap, sonrasında devam etmek için onay iste."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "{{provider}} Dokümantasyonu",
@@ -226,15 +247,15 @@
 		"noProviderMatchFound": "Eşleşen sağlayıcı bulunamadı",
 		"noMatchFound": "Eşleşen profil bulunamadı",
 		"vscodeLmDescription": "VS Code Dil Modeli API'si, diğer VS Code uzantıları tarafından sağlanan modelleri çalıştırmanıza olanak tanır (GitHub Copilot dahil ancak bunlarla sınırlı değildir). Başlamanın en kolay yolu, VS Code Marketplace'ten Copilot ve Copilot Chat uzantılarını yüklemektir.",
+		"vscodeLmUnavailable": "VS Code dil modeli desteği yalnızca Visual Studio Code'da mevcuttur. VSCodium gibi fork'lar ve diğerleri çalışmayabilir. Ayrıca bu özellik JetBrains araçlarında mevcut değildir.",
+		"vscodeLmUnavailableInstructions": "Desteklenen bir araç kullandığınızdan ve VS Code Chat'in yüklü ve etkin olduğundan emin olun",
 		"awsCustomArnUse": "Kullanmak istediğiniz model için geçerli bir Amazon Bedrock ARN'si girin. Format örnekleri:",
 		"awsCustomArnDesc": "ARN içindeki bölgenin yukarıda seçilen AWS Bölgesiyle eşleştiğinden emin olun.",
 		"openRouterApiKey": "OpenRouter API Anahtarı",
 		"getOpenRouterApiKey": "OpenRouter API Anahtarı Al",
+		"vercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı",
+		"getVercelAiGatewayApiKey": "Vercel AI Gateway API Anahtarı Al",
 		"apiKeyStorageNotice": "API anahtarları VSCode'un Gizli Depolamasında güvenli bir şekilde saklanır",
-		"cerebras": {
-			"apiKey": "Cerebras API Anahtarı",
-			"getApiKey": "Cerebras API Anahtarı Al"
-		},
 		"glamaApiKey": "Glama API Anahtarı",
 		"getGlamaApiKey": "Glama API Anahtarı Al",
 		"useCustomBaseUrl": "Özel temel URL kullan",
@@ -254,22 +275,51 @@
 			"error": "Model listesi yenilenemedi. Lütfen tekrar deneyin."
 		},
 		"getRequestyApiKey": "Requesty API Anahtarı Al",
+		"getRequestyBaseUrl": "Temel URL",
+		"requestyUseCustomBaseUrl": "Özel temel URL kullan",
 		"openRouterTransformsText": "İstem ve mesaj zincirlerini bağlam boyutuna sıkıştır (<a>OpenRouter Dönüşümleri</a>)",
 		"anthropicApiKey": "Anthropic API Anahtarı",
 		"getAnthropicApiKey": "Anthropic API Anahtarı Al",
 		"anthropicUseAuthToken": "Anthropic API Anahtarını X-Api-Key yerine Authorization başlığı olarak geçir",
+		"anthropic1MContextBetaLabel": "1M bağlam penceresini etkinleştir (Beta)",
+		"anthropic1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
+		"awsBedrock1MContextBetaLabel": "1M bağlam penceresini etkinleştir (Beta)",
+		"awsBedrock1MContextBetaDescription": "Claude Sonnet 4 için bağlam penceresini 1 milyon token'a genişletir",
+		"cerebrasApiKey": "Cerebras API Anahtarı",
+		"getCerebrasApiKey": "Cerebras API Anahtarını Al",
 		"chutesApiKey": "Chutes API Anahtarı",
 		"getChutesApiKey": "Chutes API Anahtarı Al",
+		"fireworksApiKey": "Fireworks API Anahtarı",
+		"getFireworksApiKey": "Fireworks API Anahtarı Al",
+		"syntheticApiKey": "Synthetic API Anahtarı",
+		"getSyntheticApiKey": "Synthetic API Anahtarı Al",
+		"featherlessApiKey": "Featherless API Anahtarı",
+		"getFeatherlessApiKey": "Featherless API Anahtarı Al",
+		"ioIntelligenceApiKey": "IO Intelligence API Anahtarı",
+		"ioIntelligenceApiKeyPlaceholder": "IO Intelligence API anahtarınızı girin",
+		"getIoIntelligenceApiKey": "IO Intelligence API Anahtarı Al",
 		"deepSeekApiKey": "DeepSeek API Anahtarı",
 		"getDeepSeekApiKey": "DeepSeek API Anahtarı Al",
+		"doubaoApiKey": "Doubao API Anahtarı",
+		"getDoubaoApiKey": "Doubao API Anahtarı Al",
 		"moonshotApiKey": "Moonshot API Anahtarı",
 		"getMoonshotApiKey": "Moonshot API Anahtarı Al",
 		"moonshotBaseUrl": "Moonshot Giriş Noktası",
+		"zaiApiKey": "Z AI API Anahtarı",
+		"getZaiApiKey": "Z AI API Anahtarı Al",
+		"zaiEntrypoint": "Z AI Giriş Noktası",
+		"zaiEntrypointDescription": "Konumunuza göre uygun API giriş noktasını seçin. Çin'de iseniz open.bigmodel.cn'yi seçin. Aksi takdirde api.z.ai'yi seçin.",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
+		"getSambaNovaApiKey": "SambaNova API Anahtarı Al",
+		"sambaNovaApiKey": "SambaNova API Anahtarı",
 		"getHuggingFaceApiKey": "Hugging Face API Anahtarı Al",
 		"huggingFaceApiKey": "Hugging Face API Anahtarı",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı Al",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Anahtarı",
+		"ovhCloudAiEndpointsBaseUrl": "Temel URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Özel temel URL kullan",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Yükleniyor...",
 		"huggingFaceModelsCount": "({{count}} model)",
@@ -313,6 +363,16 @@
 		"cacheUsageNote": "Not: Önbellek kullanımını görmüyorsanız, farklı bir model seçip ardından istediğiniz modeli tekrar seçmeyi deneyin.",
 		"vscodeLmModel": "Dil Modeli",
 		"vscodeLmWarning": "Not: Bu çok deneysel bir entegrasyondur ve sağlayıcı desteği değişebilir. Bir modelin desteklenmediğine dair bir hata alırsanız, bu sağlayıcı tarafındaki bir sorundur.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "URL bağlamını etkinleştir",
+				"description": "Yanıtlar oluşturulurken ek bağlam için Gemini'nin URL'lere erişmesine ve işlemesine izin verir. Web içeriği analizi gerektiren görevler için faydalıdır."
+			},
+			"groundingSearch": {
+				"title": "Google Aramasıyla Grounding Etkinleştir",
+				"description": "Gemini'nin güncel bilgileri almak için Google'da arama yapmasına ve yanıtları gerçek zamanlı verilere dayandırmasına izin verir. Güncel bilgi gerektiren sorgular için kullanışlıdır."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Google Cloud Vertex AI'yi kullanmak için şunları yapmanız gerekir:",
 			"step1": "1. Google Cloud hesabı oluşturun, Vertex AI API'sini etkinleştirin ve istediğiniz Claude modellerini etkinleştirin.",
@@ -336,6 +396,11 @@
 		"ollama": {
 			"baseUrl": "Temel URL (İsteğe bağlı)",
 			"modelId": "Model Kimliği",
+			"apiKey": "Ollama API Anahtarı",
+			"apiKeyPlaceholder": "API anahtarınızı girin",
+			"apiKeyHelp": "Kimlik doğrulamalı Ollama örnekleri veya bulut hizmetleri için isteğe bağlı API anahtarı. Yerel kurulumlar için boş bırakın.",
+			"numCtx": "Bağlam Penceresi Boyutu (num_ctx)",
+			"numCtxHelp": "Modelin varsayılan bağlam penceresi boyutunu geçersiz kılar. Modelin Modelfile yapılandırmasını kullanmak için boş bırakın. Minimum değer 128'dir.",
 			"description": "Ollama, modelleri bilgisayarınızda yerel olarak çalıştırmanıza olanak tanır. Başlamak için hızlı başlangıç kılavuzlarına bakın.",
 			"warning": "Not: Kilo Code karmaşık istemler kullanır ve Claude modelleriyle en iyi şekilde çalışır. Daha az yetenekli modeller beklendiği gibi çalışmayabilir."
 		},
@@ -346,6 +411,10 @@
 		"humanRelay": {
 			"description": "API anahtarı gerekmez, ancak kullanıcının bilgileri web sohbet yapay zekasına kopyalayıp yapıştırması gerekir.",
 			"instructions": "Kullanım sırasında bir iletişim kutusu açılacak ve mevcut mesaj otomatik olarak panoya kopyalanacaktır. Bunları web yapay zekalarına (ChatGPT veya Claude gibi) yapıştırmanız, ardından yapay zekanın yanıtını iletişim kutusuna kopyalayıp onay düğmesine tıklamanız gerekir."
+		},
+		"roo": {
+			"authenticatedMessage": "Roo Code Cloud hesabın üzerinden güvenli bir şekilde kimlik doğrulandı.",
+			"connectButton": "Roo Code Cloud'a Bağlan"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -408,9 +477,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Model Akıl Yürütme Çabası",
+			"minimal": "Minimal (en hızlı)",
 			"high": "Yüksek",
 			"medium": "Orta",
 			"low": "Düşük"
+		},
+		"verbosity": {
+			"label": "Çıktı Ayrıntı Düzeyi",
+			"high": "Yüksek",
+			"medium": "Orta",
+			"low": "Düşük",
+			"description": "Modelin yanıtlarının ne kadar ayrıntılı olduğunu kontrol eder. Düşük ayrıntı düzeyi kısa yanıtlar üretirken, yüksek ayrıntı düzeyi kapsamlı açıklamalar sunar."
 		},
 		"setReasoningLevel": "Akıl Yürütme Çabasını Etkinleştir",
 		"claudeCode": {
@@ -434,6 +511,13 @@
 			"requirement4": "API anahtarları kullanmaz - kimlik doğrulama OAuth ile yapılır",
 			"requirement5": "Gemini CLI aracının önce yüklenmesi ve kimlik doğrulaması yapılması gerekir",
 			"freeAccess": "OAuth kimlik doğrulaması ile ücretsiz erişim"
+		},
+		"qwenCode": {
+			"oauthPath": "OAuth Kimlik Bilgileri Yolu (isteğe bağlı)",
+			"oauthPathDescription": "OAuth kimlik bilgileri dosyasının yolu. Varsayılan konumu kullanmak için boş bırakın (~/.qwen/oauth_creds.json).",
+			"description": "Bu sağlayıcı Qwen hizmetinden OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
+			"instructions": "Yetkilendirme dosyasını almak ve belirtilen yola yerleştirmek için lütfen resmi belgeleri takip edin.",
+			"setupLink": "Qwen Resmi Belgeleri"
 		}
 	},
 	"browser": {
@@ -551,6 +635,16 @@
 			"profileDescription": "Sadece bu profil için özel eşik (küresel varsayılanı geçersiz kılar)",
 			"inheritDescription": "Bu profil küresel varsayılan eşiği miras alır ({{threshold}}%)",
 			"usesGlobal": "(küresel {{threshold}}% kullanır)"
+		},
+		"maxImageFileSize": {
+			"label": "Maksimum görüntü dosyası boyutu",
+			"mb": "MB",
+			"description": "Dosya okuma aracı tarafından işlenebilecek görüntü dosyaları için maksimum boyut (MB cinsinden)."
+		},
+		"maxTotalImageSize": {
+			"label": "Maksimum toplam görüntü boyutu",
+			"mb": "MB",
+			"description": "Tek bir read_file işleminde işlenen tüm görüntüler için maksimum kümülatif boyut sınırı (MB cinsinden). Birden çok görüntü okurken, her görüntünün boyutu toplama eklenir. Başka bir görüntü eklemek bu sınırı aşacaksa, atlanacaktır."
 		}
 	},
 	"terminal": {
@@ -672,18 +766,56 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Eşzamanlı dosya düzenlemelerini etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir."
+			"description": "Etkinleştirildiğinde, Kilo Code tek bir istekte birden fazla dosyayı düzenleyebilir. Devre dışı bırakıldığında, Kilo Code dosyaları tek tek düzenlemek zorundadır. Bunu devre dışı bırakmak, daha az yetenekli modellerle çalışırken veya dosya değişiklikleri üzerinde daha fazla kontrol istediğinde yardımcı olabilir。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Morph Fast Apply'ı etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları Morph Fast Apply kullanarak düzenleyebilir.",
+			"name": "Fast Apply'ı etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları kod değişiklikleri için optimize edilmiş özel modellerle Fast Apply kullanarak düzenleyebilir. Kilo Gateway Provider, OpenRouter veya bir Morph API anahtarı gerektirir.",
 			"apiKey": "Morph API anahtarı (isteğe bağlı)",
 			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
-			"warning": "Bir Morph API anahtarı yapılandırmazsanız, Fast Apply'ı yine de Kilo Code veya OpenRouter ile kullanabilirsiniz. Hesabınızdan model kullanımı için ücret alınacaktır, bu şu anda uzantı arayüzünde gösterilmemektedir."
+			"modelLabel": "Model Seçimi",
+			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
+			"models": {
+				"auto": "Otomatik (Varsayılan - en uygun olanı seçer)",
+				"morphFast": "Morph v3 Fast (Daha hızlı, düşük maliyet)",
+				"morphLarge": "Morph v3 Large (Daha yetenekli)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Arka plan düzenleme",
+			"description": "Etkinleştirildiğinde editör odak kesintisini önler. Dosya düzenlemeleri diff görünümlerini açmadan veya odağı çalmadan arka planda gerçekleşir. Kilo Code değişiklikler yaparken kesintisiz çalışmaya devam edebilirsiniz. Dosyalar tanılamayı yakalamak için odaksız açılabilir veya tamamen kapalı kalabilir."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Yeni mesaj ayrıştırıcıyı kullan",
+			"description": "Uzun yanıtları daha verimli işleyerek hızlandıran deneysel akış mesaj ayrıştırıcısını etkinleştir."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Yeni görevler için 'todos' listesi gerektir",
+			"description": "Etkinleştirildiğinde, new_task aracı bir todos parametresi sağlanmasını gerektirir. Bu, tüm yeni görevlerin net bir hedef listesiyle başlamasını sağlar. Devre dışı bırakıldığında (varsayılan), todos parametresi geriye dönük uyumluluk için isteğe bağlı kalır."
+		},
+		"IMAGE_GENERATION": {
+			"name": "AI görüntü üretimini etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code metin istemlerinden görüntüler üretebilir. Yapılandırılmış bir Kilo Code veya OpenRouter API anahtarı gerektirir.",
+			"apiProvider": "API Sağlayıcı",
+			"openRouterApiKeyLabel": "OpenRouter API Anahtarı",
+			"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
+			"kiloCodeApiKeyLabel": "Kilo Code API Anahtarı",
+			"kiloCodeApiKeyPlaceholder": "Kilo Code API anahtarınızı girin",
+			"kiloCodeApiKeyPaste": "Mevcut Kilo Code API anahtarını yapıştır",
+			"getApiKeyText": "API anahtarınızı alın",
+			"modelSelectionLabel": "Görüntü Üretim Modeli",
+			"modelSelectionDescription": "Görüntü üretimi için kullanılacak modeli seçin",
+			"warningMissingKey": "⚠️ Görüntü üretimi için bir API anahtarı gereklidir, lütfen yukarıda yapılandırın.",
+			"successConfigured": "✓ Görüntü üretimi yapılandırılmış ve kullanıma hazır"
 		},
 		"INLINE_ASSIST": {
-			"name": "Satır İçi Asistan",
-			"description": "Düzenleyicinizde doğrudan hızlı kod önerileri ve iyileştirmeleri için Satır İçi Yardımcı özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Satır İçi Görev (Cmd+I) ve bağlamsal iyileştirmeler için Otomatik Satır İçi Görev içerir."
+			"name": "Autocomplete",
+			"description": "Editörünüzde doğrudan hızlı kod önerileri ve iyileştirmeler için Autocomplete özelliklerini etkinleştirin. Hedeflenen değişiklikler için Hızlı Görev (Cmd+I) ve bağlamsal iyileştirmeler için Autocomplete içerir."
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Model tarafından başlatılan slash komutlarını etkinleştir",
+			"description": "Etkinleştirildiğinde, Kilo Code iş akışlarını yürütmek için slash komutlarınızı çalıştırabilir."
 		}
 	},
 	"promptCaching": {
@@ -702,6 +834,7 @@
 		"noComputerUse": "Bilgisayar kullanımını desteklemez",
 		"supportsPromptCache": "İstem önbelleğini destekler",
 		"noPromptCache": "İstem önbelleğini desteklemez",
+		"contextWindow": "Bağlam Penceresi:",
 		"maxOutput": "Maksimum çıktı",
 		"inputPrice": "Giriş fiyatı",
 		"outputPrice": "Çıkış fiyatı",
@@ -754,9 +887,11 @@
 			"regionMismatch": "Uyarı: ARN'nizdeki bölge ({{arnRegion}}) seçtiğiniz bölge ({{region}}) ile eşleşmiyor. Bu erişim sorunlarına neden olabilir. Sağlayıcı, ARN'deki bölgeyi kullanacak."
 		},
 		"modelAvailability": "Sağladığınız model kimliği ({{modelId}}) kullanılamıyor. Lütfen başka bir model seçin.",
+		"modelDeprecated": "Bu model artık kullanılamıyor. Lütfen farklı bir model seçin.",
 		"providerNotAllowed": "Sağlayıcı '{{provider}}' kuruluşunuz tarafından izin verilmiyor",
 		"modelNotAllowed": "Model '{{model}}' sağlayıcı '{{provider}}' için kuruluşunuz tarafından izin verilmiyor",
-		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor"
+		"profileInvalid": "Bu profil, kuruluşunuz tarafından izin verilmeyen bir sağlayıcı veya model içeriyor",
+		"qwenCodeOauthPath": "Geçerli bir OAuth kimlik bilgileri yolu sağlamalısın"
 	},
 	"placeholders": {
 		"apiKey": "API anahtarını girin...",
@@ -795,11 +930,51 @@
 		"taskTimeline": {
 			"description": "Görev mesajlarını türe göre renklendirilmiş görsel bir zaman çizelgesi olarak görüntüleyin, böylece görevin ilerlemesini hızlıca görebilir ve görevin geçmişindeki belirli noktalara geri dönmek için kaydırabilirsiniz.",
 			"label": "Görev zaman çizelgesini göster"
+		},
+		"sendMessageOnEnter": {
+			"label": "Enter ile mesaj gönder",
+			"description": "Etkinleştirildiğinde, Enter'a basarak mesaj gönderin ve yeni satır için Shift+Enter kullanın. Kapatmak için Shift+Enter ile göndermek yerine Enter ile göndermeyi kullanın."
+		},
+		"costThreshold": {
+			"label": "Eşik değerin altındaki maliyeti gizle",
+			"description": "Sadece bu miktarın üzerindeki istek maliyetlerini göster. Ayrıntılar paneli açıkken maliyetler her zaman görünür.",
+			"currentValue": "Mevcut eşik: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zaman damgalarını göster",
+			"description": "Sohbet görünümündeki her mesaj için zaman damgası göster"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Otomatik tamamlama sırasında kenar çubuğu animasyonunu göster",
+			"description": "Otomatik tamamlama çalışırken editörün kenar çubuğunda animasyonlu gösterge görüntüle",
+			"preview": "Animasyon önizlemesi"
 		}
 	},
 	"includeMaxOutputTokens": "Maksimum çıktı tokenlerini dahil et",
 	"includeMaxOutputTokensDescription": "API isteklerinde maksimum çıktı token parametresini gönder. Bazı sağlayıcılar bunu desteklemeyebilir.",
 	"limitMaxTokensDescription": "Yanıttaki maksimum token sayısını sınırla",
 	"maxOutputTokensLabel": "Maksimum çıktı tokenları",
-	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı"
+	"maxTokensGenerateDescription": "Yanıtta oluşturulacak maksimum token sayısı",
+	"serviceTier": {
+		"label": "Hizmet seviyesi",
+		"tooltip": "Daha hızlı API isteği işleme için öncelikli işleme hizmeti seviyesini deneyin. Daha düşük gecikme süresiyle daha düşük fiyatlar için esnek işleme seviyesini deneyin.",
+		"standard": "Standart",
+		"flex": "Esnek",
+		"priority": "Öncelik",
+		"pricingTableTitle": "Hizmet seviyesine göre fiyatlandırma (1 milyon token başına fiyat)",
+		"columns": {
+			"tier": "Seviye",
+			"input": "Giriş",
+			"output": "Çıkış",
+			"cacheReads": "Önbellek okumaları"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Düşünme mesajlarını varsayılan olarak daralt",
+			"description": "Etkinleştirildiğinde, düşünme blokları siz onlarla etkileşime girene kadar varsayılan olarak daraltılır"
+		}
+	}
 }

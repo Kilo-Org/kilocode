@@ -11,7 +11,18 @@
 		"title": "¡Advertencia de Crédito Bajo!",
 		"message": "¡Comprueba si puedes recargar con créditos gratuitos o comprar más!"
 	},
-	"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}",
+	"task": {
+		"noAssistantMessages": "La respuesta del modelo terminó inesperadamente (sin mensajes del asistente). Esto puede ser una señal de limitación de tasa.",
+		"notLoggedInError": "No se puede completar la solicitud, asegúrate de que estás conectado y has iniciado sesión con el proveedor seleccionado.\n\n{{error}}",
+		"maxCompletionTokens": "Se alcanzó el número máximo de tokens de finalización.",
+		"disableApplyDiff": "Si este error sigue ocurriendo, por favor desactiva la Edición a través de Diferencias en Configuración Avanzada.",
+		"disableEditFile": "Si este error sigue ocurriendo, por favor desactiva la función experimental de Aplicación Rápida."
+	},
+	"checkpoints": {
+		"nestedGitRepos": "Los puntos de control no están disponibles porque se detectó un repositorio Git anidado en: {{path}}. Por favor, elimine o reubique los repositorios Git anidados para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"protectedPaths": "Los puntos de control no están disponibles en {{workspaceDir}}. Por favor, abra una subcarpeta como espacio de trabajo para usar la función de puntos de control o desactive los puntos de control en la configuración para suprimir esta advertencia.",
+		"dismissWarning": "Descartar"
+	},
 	"rules": {
 		"actions": {
 			"delete": "Eliminar",
@@ -49,19 +60,54 @@
 		"generationFailed": "Kilo: Error al generar mensaje de confirmación: {{errorMessage}}",
 		"generatingFromUnstaged": "Kilo: Generando mensaje usando cambios no preparados",
 		"providerRegistered": "Kilo: Proveedor de mensajes de confirmación registrado",
-		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}"
+		"activationFailed": "Kilo: Error al activar el generador de mensajes: {{error}}",
+		"errors": {
+			"noProject": "Ningún proyecto disponible",
+			"connectionFailed": "Error al conectar con la extensión de Kilo Code",
+			"missingMessage": "No se recibió mensaje de confirmación desde la extensión",
+			"invalidResponse": "Formato de respuesta inválido recibido de la extensión",
+			"noChanges": "No se encontraron cambios para confirmar",
+			"timeout": "La solicitud agotó el tiempo de espera después de 30 segundos",
+			"noWorkspacePath": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"processingError": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"workspaceNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git"
+		},
+		"error": {
+			"title": "Error",
+			"workspacePathNotFound": "No se pudo determinar la ruta del espacio de trabajo para el repositorio Git",
+			"unknown": "Error desconocido",
+			"processingFailed": "Error al procesar la generación del mensaje de confirmación: {{error}}",
+			"generationFailed": "Fallo al generar mensaje de confirmación: {{error}}"
+		},
+		"dialogs": {
+			"info": "Mensaje de Commit de IA",
+			"error": "Error",
+			"success": "Éxito",
+			"title": "Mensaje de Commit de IA"
+		},
+		"progress": {
+			"analyzing": "Analizando cambios...",
+			"title": "Generando Mensaje de Commit",
+			"connecting": "Conectando con Kilo Code...",
+			"generating": "Generando mensaje de commit..."
+		},
+		"ui": {
+			"generateButtonTooltip": "Genera mensaje de commit usando IA para analizar tus cambios en el código",
+			"generateButton": "Generar Mensaje de Commit"
+		}
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Asistente Integrado Kilo",
-			"disabled": "$(circle-slash) Asistencia en línea Kilo",
-			"warning": "$(warning) Asistencia Integrada Kilo",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Asistencia Integrada Kilo Code",
-				"disabled": "Asistente Integrado Kilo Code (desactivado)",
-				"tokenError": "Se debe establecer un token válido para usar Inline Assist",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (deshabilitado)",
+				"tokenError": "Se debe establecer un token válido para usar Autocomplete",
 				"lastCompletion": "Última sugerencia:",
 				"sessionTotal": "Costo total de la sesión:",
+				"provider": "Proveedor:",
 				"model": "Modelo:"
 			},
 			"cost": {
@@ -69,42 +115,38 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Asistente Integrado Kilo {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
-			"analyzing": "Analizando su código...",
-			"generating": "Generando sugerencias de edición...",
+			"title": "Kilo Code",
+			"analyzing": "Analizando tu código...",
+			"generating": "Generando ediciones sugeridas...",
 			"processing": "Procesando ediciones sugeridas...",
-			"showing": "Mostrando ediciones sugeridas...",
-			"title": "Kilo Code"
+			"showing": "Mostrando ediciones sugeridas..."
 		},
 		"input": {
 			"title": "Kilo Code: Tarea Rápida",
-			"placeholder": "p. ej., 'refactorizar esta función para que sea más eficiente'"
+			"placeholder": "ej., 'refactoriza esta función para que sea más eficiente'"
 		},
 		"commands": {
+			"generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",
 			"displaySuggestions": "Mostrar Ediciones Sugeridas",
 			"cancelSuggestions": "Cancelar Ediciones Sugeridas",
-			"generateSuggestions": "Kilo Code: Generar Ediciones Sugeridas",
-			"applyCurrentSuggestion": "Aplicar edición sugerida actual",
-			"applyAllSuggestions": "Aplicar todas las ediciones sugeridas",
-			"promptCodeSuggestion": "Tarea Rápida de Prompt",
+			"applyCurrentSuggestion": "Aplicar Edición Sugerida Actual",
+			"applyAllSuggestions": "Aplicar Todas las Ediciones Sugeridas",
 			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Ediciones sugeridas"
+			"title": "Kilo Code: Ediciones Sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agente",
-			"description": "Puedo ayudarte con tareas rápidas y ediciones sugeridas.",
-			"name": "Agente"
-		},
-		"messages": {
-			"provideCodeSuggestions": "Proporcionando sugerencias de código..."
+			"fullName": "Kilo Code Agent",
+			"name": "Agent",
+			"description": "Puedo ayudarte con tareas rápidas y ediciones sugeridas."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "La Asistencia Integrada de Kilo Code está siendo bloqueada por un conflicto con GitHub Copilot. Para solucionar esto, debes deshabilitar las sugerencias integradas de Copilot.",
-			"disableCopilot": "Deshabilitar Copilot",
-			"disableInlineAssist": "Deshabilitar Asistencia Integrada"
+			"message": "El Kilo Code Autocomplete está siendo bloqueado por un conflicto con GitHub Copilot. Para solucionarlo, debes desactivar las sugerencias en línea de Copilot.",
+			"disableCopilot": "Desactivar Copilot",
+			"disableInlineAssist": "Desactivar Autocomplete"
 		}
 	},
 	"terminalCommandGenerator": {
@@ -121,5 +163,11 @@
 			"cancelButton": "Cancelar"
 		},
 		"tipMessage": "Kilo: Presiona {{shortcut}} para generar comandos de terminal"
+	},
+	"seeNewChanges": {
+		"title": "Mostrando nuevos cambios",
+		"checkpointsUnavailable": "No se pueden mostrar nuevos cambios, los puntos de control no están disponibles.",
+		"noChanges": "No se pueden mostrar nuevos cambios, no se encontraron cambios.",
+		"error": "No se pueden mostrar nuevos cambios, ocurrió un error."
 	}
 }

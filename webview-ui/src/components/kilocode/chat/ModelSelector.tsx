@@ -26,20 +26,23 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 	const modelIdKey = getModelIdKey({ provider })
 
 	const modelsIds = usePreferredModels(providerModels)
-	const options = useMemo(
-		() =>
-			modelsIds.map((modelId) => ({
-				value: modelId,
-				label: prettyModelName(modelId),
-				type: DropdownOptionType.ITEM,
-			})),
-		[modelsIds],
-	)
+	const options = useMemo(() => {
+		const missingModelIds = modelsIds.indexOf(selectedModelId) >= 0 ? [] : [selectedModelId]
+		return missingModelIds.concat(modelsIds).map((modelId) => ({
+			value: modelId,
+			label: providerModels[modelId]?.displayName ?? prettyModelName(modelId),
+			type: DropdownOptionType.ITEM,
+		}))
+	}, [modelsIds, providerModels, selectedModelId])
 
 	const disabled = isLoading || isError
 
 	const onChange = (value: string) => {
 		if (!currentApiConfigName) {
+			return
+		}
+		if (apiConfiguration[modelIdKey] === value) {
+			// don't reset openRouterSpecificProvider
 			return
 		}
 		vscode.postMessage({

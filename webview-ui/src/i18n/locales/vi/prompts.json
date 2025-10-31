@@ -16,6 +16,11 @@
 		"title": "Cấu hình API",
 		"select": "Chọn cấu hình API nào để sử dụng cho chế độ này"
 	},
+	"organizationMode": {
+		"title": "Chế độ của tổ chức",
+		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Kilo Code Dashboard.",
+		"cannotEdit": "Không thể chỉnh sửa các chế độ của tổ chức"
+	},
 	"tools": {
 		"title": "Công cụ có sẵn",
 		"builtInModesText": "Công cụ cho các chế độ tích hợp sẵn không thể được sửa đổi",
@@ -50,7 +55,7 @@
 		"title": "Hướng dẫn tùy chỉnh dành riêng cho chế độ (tùy chọn)",
 		"resetToDefault": "Đặt lại về mặc định",
 		"description": "Thêm hướng dẫn hành vi dành riêng cho chế độ {{modeName}}.",
-		"loadFromFile": "Hướng dẫn tùy chỉnh dành riêng cho chế độ {{mode}} cũng có thể được tải từ thư mục <span>.kilocode/rules-{{slug}}/</span> trong không gian làm việc của bạn (.kilocoderules-{{slug}} và .clinerules-{{slug}} đã lỗi thời và sẽ sớm ngừng hoạt động)."
+		"loadFromFile": "Hướng dẫn tùy chỉnh cụ thể cho chế độ {{mode}} cũng có thể được tải từ thư mục <span>.kilocode/rules-{{slug}}/</span> trong không gian làm việc của bạn hoặc từ toàn cục <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} và .clinerules-{{slug}} đã lỗi thời và sẽ ngừng hoạt động sớm)."
 	},
 	"exportMode": {
 		"title": "Xuất chế độ",
@@ -60,7 +65,7 @@
 	"globalCustomInstructions": {
 		"title": "Hướng dẫn tùy chỉnh cho tất cả các chế độ",
 		"description": "Những hướng dẫn này áp dụng cho tất cả các chế độ. Chúng cung cấp một bộ hành vi cơ bản có thể được nâng cao bởi hướng dẫn dành riêng cho chế độ bên dưới. <0>Tìm hiểu thêm</0>",
-		"loadFromFile": "Hướng dẫn cũng có thể được tải từ thư mục <span>.kilocode/rules/</span> trong không gian làm việc của bạn (.kilocoderules và .clinerules đã lỗi thời và sẽ sớm ngừng hoạt động)."
+		"loadFromFile": "Hướng dẫn cũng có thể được tải từ thư mục <span>.kilocode/rules/</span> trong không gian làm việc của bạn hoặc từ toàn cục <0>.kilocode/rules/</0> (.kilocoderules và .clinerules đã lỗi thời và sẽ ngừng hoạt động sớm)."
 	},
 	"importMode": {
 		"selectLevel": "Chọn nơi để nhập chế độ này:",
@@ -90,7 +95,9 @@
 			"useCurrentConfig": "Sử dụng cấu hình API hiện tại đã chọn",
 			"testPromptPlaceholder": "Nhập lời nhắc để kiểm tra việc nâng cao",
 			"previewButton": "Xem trước nâng cao lời nhắc",
-			"testEnhancement": "Kiểm tra cải tiến"
+			"testEnhancement": "Kiểm tra cải tiến",
+			"includeTaskHistory": "Bao gồm lịch sử tác vụ làm ngữ cảnh",
+			"includeTaskHistoryDescription": "Khi được bật, 10 tin nhắn cuối cùng từ cuộc trò chuyện hiện tại sẽ được bao gồm làm ngữ cảnh khi nâng cao lời nhắc, giúp tạo ra các gợi ý phù hợp và nhận thức ngữ cảnh hơn."
 		},
 		"condense": {
 			"apiConfiguration": "Cấu hình API để cô đọng ngữ cảnh",
@@ -133,6 +140,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Giải thích lệnh terminal",
 				"description": "Nhận giải thích chi tiết về lệnh terminal và đầu ra của chúng. Có sẵn trong menu ngữ cảnh terminal (nhấp chuột phải vào nội dung terminal đã chọn)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Tạo lệnh terminal",
+				"description": "Hỗ trợ tạo lệnh terminal dựa trên mô tả."
 			},
 			"NEW_TASK": {
 				"label": "Bắt đầu tác vụ mới",

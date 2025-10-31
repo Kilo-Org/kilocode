@@ -1,7 +1,11 @@
-import { describe, test, expect } from "vitest"
+import {
+	type ModelInfo,
+	type ProviderSettings,
+	CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS,
+	ANTHROPIC_DEFAULT_MAX_TOKENS,
+} from "@roo-code/types"
+
 import { getModelMaxOutputTokens, shouldUseReasoningBudget, shouldUseReasoningEffort } from "../api"
-import type { ModelInfo, ProviderSettings } from "@roo-code/types"
-import { CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS, ANTHROPIC_DEFAULT_MAX_TOKENS } from "@roo-code/types"
 
 describe("getModelMaxOutputTokens", () => {
 	const mockModel: ModelInfo = {
@@ -25,11 +29,13 @@ describe("getModelMaxOutputTokens", () => {
 		expect(result).toBe(16384)
 	})
 
-	test("should return model maxTokens when not using claude-code provider", () => {
+	test("should return model maxTokens when not using claude-code provider and maxTokens is within 20% of context window", () => {
 		const settings: ProviderSettings = {
 			apiProvider: "anthropic",
 		}
 
+		// mockModel has maxTokens: 8192 and contextWindow: 200000
+		// 8192 is 4.096% of 200000, which is <= 20%, so it should use model.maxTokens
 		const result = getModelMaxOutputTokens({
 			modelId: "claude-3-5-sonnet-20241022",
 			model: mockModel,
@@ -106,7 +112,7 @@ describe("getModelMaxOutputTokens", () => {
 		}
 
 		const result = getModelMaxOutputTokens({ modelId: anthropicModelId, model, settings })
-		expect(result).toBe(ANTHROPIC_DEFAULT_MAX_TOKENS) // Should be 8192, not 64_000
+		expect(result).toBe(40_000 /*kilocode_change*/) // Should be 8192, not 64_000
 	})
 
 	test("should return model.maxTokens for non-Anthropic models that support reasoning budget but aren't using it", () => {
@@ -115,7 +121,7 @@ describe("getModelMaxOutputTokens", () => {
 			contextWindow: 1_048_576,
 			supportsPromptCache: false,
 			supportsReasoningBudget: true,
-			maxTokens: 65_535,
+			maxTokens: 65_535, // 65_535 is ~6.25% of 1_048_576, which is <= 20%
 		}
 
 		const settings: ProviderSettings = {
@@ -124,7 +130,157 @@ describe("getModelMaxOutputTokens", () => {
 		}
 
 		const result = getModelMaxOutputTokens({ modelId: geminiModelId, model, settings })
-		expect(result).toBe(65_535) // Should use model.maxTokens, not ANTHROPIC_DEFAULT_MAX_TOKENS
+		expect(result).toBe(65_535) // Should use model.maxTokens since it's within 20% threshold
+	})
+
+	test("should clamp maxTokens to 20% of context window when maxTokens exceeds threshold", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: false,
+			maxTokens: 50_000, // 50% of context window, exceeds 20% threshold
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "openai",
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "gpt-4",
+			model,
+			settings,
+			format: "openai",
+		})
+		// Should clamp to 20% of context window: 100_000 * 0.2 = 20_000
+		expect(result).toBe(20_000)
+	})
+
+	test("should clamp maxTokens to 20% of context window for Anthropic models when maxTokens exceeds threshold", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: true,
+			maxTokens: 50_000, // 50% of context window, exceeds 20% threshold
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "anthropic",
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "claude-3-5-sonnet-20241022",
+			model,
+			settings,
+		})
+		// Should clamp to 20% of context window: 100_000 * 0.2 = 20_000
+		expect(result).toBe(20_000)
+	})
+
+	test("should use model.maxTokens when exactly at 20% threshold", () => {
+		const model: ModelInfo = {
+			contextWindow: 100_000,
+			supportsPromptCache: false,
+			maxTokens: 20_000, // Exactly 20% of context window
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "openai",
+		}
+
+		const result = getModelMaxOutputTokens({
+			modelId: "gpt-4",
+			model,
+			settings,
+			format: "openai",
+		})
+		expect(result).toBe(20_000) // Should use model.maxTokens since it's exactly at 20%
+	})
+
+	test("should bypass 20% cap for GPT-5 models and use exact configured max tokens", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: false,
+			maxTokens: 128_000, // 64% of context window, normally would be capped
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "openai",
+		}
+
+		// Test various GPT-5 model IDs
+		const gpt5ModelIds = ["gpt-5", "gpt-5-turbo", "GPT-5", "openai/gpt-5-preview", "gpt-5-32k", "GPT-5-TURBO"]
+
+		gpt5ModelIds.forEach((modelId) => {
+			const result = getModelMaxOutputTokens({
+				modelId,
+				model,
+				settings,
+				format: "openai",
+			})
+			// Should use full 128k tokens, not capped to 20% (40k)
+			expect(result).toBe(128_000)
+		})
+	})
+
+	test("should still apply 20% cap to non-GPT-5 models", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: false,
+			maxTokens: 128_000, // 64% of context window, should be capped
+		}
+
+		const settings: ProviderSettings = {
+			apiProvider: "openai",
+		}
+
+		// Test non-GPT-5 model IDs
+		const nonGpt5ModelIds = ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo", "claude-3-5-sonnet", "gemini-pro"]
+
+		nonGpt5ModelIds.forEach((modelId) => {
+			const result = getModelMaxOutputTokens({
+				modelId,
+				model,
+				settings,
+				format: "openai",
+			})
+			// Should be capped to 20% of context window: 200_000 * 0.2 = 40_000
+			expect(result).toBe(40_000)
+		})
+	})
+
+	test("should handle GPT-5 models with various max token configurations", () => {
+		const testCases = [
+			{
+				maxTokens: 128_000,
+				contextWindow: 200_000,
+				expected: 128_000, // Uses full 128k
+			},
+			{
+				maxTokens: 64_000,
+				contextWindow: 200_000,
+				expected: 64_000, // Uses configured 64k
+			},
+			{
+				maxTokens: 256_000,
+				contextWindow: 400_000,
+				expected: 256_000, // Uses full 256k even though it's 64% of context
+			},
+		]
+
+		testCases.forEach(({ maxTokens, contextWindow, expected }) => {
+			const model: ModelInfo = {
+				contextWindow,
+				supportsPromptCache: false,
+				maxTokens,
+			}
+
+			const result = getModelMaxOutputTokens({
+				modelId: "gpt-5-turbo",
+				model,
+				settings: { apiProvider: "openai" },
+				format: "openai",
+			})
+
+			expect(result).toBe(expected)
+		})
 	})
 
 	test("should return modelMaxTokens from settings when reasoning budget is required", () => {
@@ -223,10 +379,39 @@ describe("shouldUseReasoningEffort", () => {
 			reasoningEffort: "medium",
 		}
 
-		// Should return true regardless of settings
+		// Should return true regardless of settings (unless explicitly disabled)
 		expect(shouldUseReasoningEffort({ model })).toBe(true)
 		expect(shouldUseReasoningEffort({ model, settings: {} })).toBe(true)
 		expect(shouldUseReasoningEffort({ model, settings: { reasoningEffort: undefined } })).toBe(true)
+	})
+
+	test("should return false when enableReasoningEffort is false, even if reasoningEffort is set", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: true,
+			supportsReasoningEffort: true,
+		}
+
+		const settings: ProviderSettings = {
+			enableReasoningEffort: false,
+			reasoningEffort: "medium",
+		}
+
+		expect(shouldUseReasoningEffort({ model, settings })).toBe(false)
+	})
+
+	test("should return false when enableReasoningEffort is false, even if model has reasoningEffort property", () => {
+		const model: ModelInfo = {
+			contextWindow: 200_000,
+			supportsPromptCache: true,
+			reasoningEffort: "medium",
+		}
+
+		const settings: ProviderSettings = {
+			enableReasoningEffort: false,
+		}
+
+		expect(shouldUseReasoningEffort({ model, settings })).toBe(false)
 	})
 
 	test("should return true when model supports reasoning effort and settings provide reasoning effort", () => {

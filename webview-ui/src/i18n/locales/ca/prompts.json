@@ -16,6 +16,11 @@
 		"title": "Configuració d'API",
 		"select": "Seleccioneu quina configuració d'API utilitzar per a aquest mode"
 	},
+	"organizationMode": {
+		"title": "Mode d'organització",
+		"description": "Aquest mode és proporcionat per la teva organització i no es pot editar aquí. Per modificar aquest mode, visita el Kilo Code Dashboard.",
+		"cannotEdit": "Els modes d'organització no es poden editar"
+	},
 	"tools": {
 		"title": "Eines disponibles",
 		"builtInModesText": "Les eines per a modes integrats no es poden modificar",
@@ -50,7 +55,7 @@
 		"title": "Instruccions personalitzades específiques del mode (opcional)",
 		"resetToDefault": "Restablir a valors predeterminats",
 		"description": "Afegiu directrius de comportament específiques per al mode {{modeName}}.",
-		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball (.kilocoderules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
+		"loadFromFile": "Les instruccions personalitzades específiques per al mode {{mode}} també es poden carregar des de la carpeta <span>.kilocode/rules-{{slug}}/</span> al vostre espai de treball o des del global <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} i .clinerules-{{slug}} estan obsolets i deixaran de funcionar aviat)."
 	},
 	"exportMode": {
 		"title": "Exportar mode",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Instruccions personalitzades per a tots els modes",
 		"description": "Aquestes instruccions s'apliquen a tots els modes. Proporcionen un conjunt bàsic de comportaments que es poden millorar amb instruccions específiques de cada mode a continuació. <0>Més informació</0>",
-		"loadFromFile": "Les instruccions també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball (.kilocoderules i .clinerules estan obsolets i deixaran de funcionar aviat)."
+		"loadFromFile": "Les instruccions també es poden carregar des de la carpeta <span>.kilocode/rules/</span> al vostre espai de treball o des del global <0>.kilocode/rules/</0> (.kilocoderules i .clinerules estan obsolets i deixaran de funcionar aviat)."
 	},
 	"systemPrompt": {
 		"preview": "Previsualització del prompt del sistema",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Utilitzar la configuració d'API seleccionada actualment",
 			"testPromptPlaceholder": "Introduïu un prompt per provar la millora",
 			"previewButton": "Previsualització de la millora del prompt",
-			"testEnhancement": "Prova la millora"
+			"testEnhancement": "Prova la millora",
+			"includeTaskHistory": "Inclou l'historial de tasques com a context",
+			"includeTaskHistoryDescription": "Quan està activat, els últims 10 missatges de la conversa actual s'inclouran com a context en millorar els prompts, ajudant a generar suggeriments més rellevants i conscients del context."
 		},
 		"condense": {
 			"apiConfiguration": "Configuració de l'API per a la condensació de context",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Explicar comanda del terminal",
 				"description": "Obtingueu explicacions detallades de les comandes del terminal i les seves sortides. Disponible al menú contextual del terminal (clic dret al contingut seleccionat del terminal)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generar comanda de terminal",
+				"description": "Ajuda a generar comandes de terminal basades en la descripció."
 			},
 			"NEW_TASK": {
 				"label": "Iniciar nova tasca",

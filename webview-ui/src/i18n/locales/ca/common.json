@@ -28,7 +28,8 @@
 		"customerSupport": "Suport al Client"
 	},
 	"ui": {
-		"search_placeholder": "Cerca..."
+		"search_placeholder": "Cerca...",
+		"no_results": "No s'han trobat resultats"
 	},
 	"mermaid": {
 		"loading": "Generant diagrama mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Error copiant la imatge"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Imatge"
+		},
+		"noData": "Sense dades d'imatge"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Format d'URI de dades no vàlid",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Eliminar aquest missatge eliminarà tots els missatges posteriors de la conversa. Vols continuar?",
 		"editMessage": "Editar missatge",
 		"editWarning": "Editar aquest missatge eliminarà tots els missatges posteriors de la conversa. Vols continuar?",
-		"proceed": "Continuar"
+		"editQuestionWithCheckpoint": "Editar aquest missatge eliminarà tots els missatges posteriors de la conversa. També vols desfer tots els canvis fins a aquest punt de control?",
+		"deleteQuestionWithCheckpoint": "Eliminar aquest missatge eliminarà tots els missatges posteriors de la conversa. També vols desfer tots els canvis fins a aquest punt de control?",
+		"editOnly": "No, només editar el missatge",
+		"deleteOnly": "No, només eliminar el missatge",
+		"restoreToCheckpoint": "Sí, restaurar el punt de control",
+		"proceed": "Continuar",
+		"dontShowAgain": "No tornis a mostrar això"
+	},
+	"time_ago": {
+		"just_now": "ara mateix",
+		"seconds_ago": "fa {{count}} segons",
+		"minute_ago": "fa un minut",
+		"minutes_ago": "fa {{count}} minuts",
+		"hour_ago": "fa una hora",
+		"hours_ago": "fa {{count}} hores",
+		"day_ago": "fa un dia",
+		"days_ago": "fa {{count}} dies",
+		"week_ago": "fa una setmana",
+		"weeks_ago": "fa {{count}} setmanes",
+		"month_ago": "fa un mes",
+		"months_ago": "fa {{count}} mesos",
+		"year_ago": "fa un any",
+		"years_ago": "fa {{count}} anys"
 	}
 }

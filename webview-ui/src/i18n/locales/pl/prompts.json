@@ -16,6 +16,11 @@
 		"title": "Konfiguracja API",
 		"select": "Wybierz, której konfiguracji API użyć dla tego trybu"
 	},
+	"organizationMode": {
+		"title": "Tryb organizacji",
+		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Kilo Code Dashboard.",
+		"cannotEdit": "Tryby organizacji nie mogą być edytowane"
+	},
 	"tools": {
 		"title": "Dostępne narzędzia",
 		"builtInModesText": "Narzędzia dla wbudowanych trybów nie mogą być modyfikowane",
@@ -50,7 +55,7 @@
 		"title": "Niestandardowe instrukcje dla trybu (opcjonalne)",
 		"resetToDefault": "Przywróć domyślne",
 		"description": "Dodaj wytyczne dotyczące zachowania specyficzne dla trybu {{modeName}}.",
-		"loadFromFile": "Niestandardowe instrukcje dla trybu {{mode}} mogą być również ładowane z folderu <span>.kilocode/rules-{{slug}}/</span> w Twoim obszarze roboczym (.kilocoderules-{{slug}} i .clinerules-{{slug}} są przestarzałe i wkrótce przestaną działać)."
+		"loadFromFile": "Niestandardowe instrukcje specyficzne dla trybu {{mode}} można również załadować z folderu <span>.kilocode/rules-{{slug}}/</span> w twoim obszarze roboczym lub z globalnego <0>.kilocode/rules-{{slug}}/</0> (.kilocoderules-{{slug}} i .clinerules-{{slug}} są przestarzałe i wkrótce przestaną działać)."
 	},
 	"exportMode": {
 		"title": "Eksportuj tryb",
@@ -76,7 +81,7 @@
 	"globalCustomInstructions": {
 		"title": "Niestandardowe instrukcje dla wszystkich trybów",
 		"description": "Te instrukcje dotyczą wszystkich trybów. Zapewniają podstawowy zestaw zachowań, które mogą być rozszerzone przez instrukcje specyficzne dla trybów poniżej. <0>Dowiedz się więcej</0>",
-		"loadFromFile": "Instrukcje mogą być również ładowane z folderu <span>.kilocode/rules/</span> w Twoim obszarze roboczym (.kilocoderules i .clinerules są przestarzałe i wkrótce przestaną działać)."
+		"loadFromFile": "Instrukcje można również załadować z folderu <span>.kilocode/rules/</span> w twoim obszarze roboczym lub z globalnego <0>.kilocode/rules/</0> (.kilocoderules i .clinerules są przestarzałe i wkrótce przestaną działać)."
 	},
 	"systemPrompt": {
 		"preview": "Podgląd podpowiedzi systemowej",
@@ -93,7 +98,9 @@
 			"useCurrentConfig": "Użyj aktualnie wybranej konfiguracji API",
 			"testPromptPlaceholder": "Wprowadź podpowiedź, aby przetestować ulepszenie",
 			"previewButton": "Podgląd ulepszenia podpowiedzi",
-			"testEnhancement": "Testuj ulepszenie"
+			"testEnhancement": "Testuj ulepszenie",
+			"includeTaskHistory": "Uwzględnij historię zadań jako kontekst",
+			"includeTaskHistoryDescription": "Gdy włączone, ostatnie 10 wiadomości z bieżącej rozmowy zostanie uwzględnione jako kontekst podczas ulepszania podpowiedzi, pomagając generować bardziej trafne i świadome kontekstu sugestie."
 		},
 		"condense": {
 			"apiConfiguration": "Konfiguracja API do kondensacji kontekstu",
@@ -136,6 +143,10 @@
 			"TERMINAL_EXPLAIN": {
 				"label": "Wyjaśnij polecenie terminala",
 				"description": "Uzyskaj szczegółowe wyjaśnienia poleceń terminala i ich wyników. Dostępne w menu kontekstowym terminala (prawy przycisk myszy na wybranej zawartości terminala)."
+			},
+			"TERMINAL_GENERATE": {
+				"label": "Generuj polecenie terminala",
+				"description": "Pomaga generować polecenia terminala na podstawie opisu."
 			},
 			"NEW_TASK": {
 				"label": "Rozpocznij nowe zadanie",

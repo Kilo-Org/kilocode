@@ -39,6 +39,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 	const { t } = useAppTranslation()
 	const { cwd } = useExtensionState()
 	const [showInstallModal, setShowInstallModal] = useState(false)
+	const [installModalVersion, setInstallModalVersion] = useState(0) // kilocode_change
 	const [showRemoveConfirm, setShowRemoveConfirm] = useState(false)
 	const [removeTarget, setRemoveTarget] = useState<"project" | "global">("project")
 	const [removeError, setRemoveError] = useState<string | null>(null)
@@ -85,6 +86,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 			itemName: item.name,
 		})
 
+		setInstallModalVersion((prev) => prev + 1) // kilocode_change
 		// Show modal for all item types (MCP and modes)
 		setShowInstallModal(true)
 	}
@@ -197,6 +199,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 
 			{/* Installation Modal - Outside the clickable card */}
 			<MarketplaceInstallModal
+				key={`install-modal-${item.id}-${installModalVersion}` /* kilocode_change */}
 				item={item}
 				isOpen={showInstallModal}
 				onClose={() => setShowInstallModal(false)}

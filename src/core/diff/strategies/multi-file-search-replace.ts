@@ -93,7 +93,7 @@ export class MultiFileSearchReplaceDiffStrategy implements DiffStrategy {
 	getToolDescription(args: { cwd: string; toolOptions?: { [key: string]: string } }): string {
 		return `## apply_diff
 
-Description: Request to apply targeted modifications to one or more files by searching for specific sections of content and replacing them. This tool supports both single-file and multi-file operations, allowing you to make changes across multiple files in a single request.
+Description: Request to apply PRECISE, TARGETED modifications to one or more files by searching for specific sections of content and replacing them. This tool is for SURGICAL EDITS ONLY - specific changes to existing code. This tool supports both single-file and multi-file operations, allowing you to make changes across multiple files in a single request.
 
 **IMPORTANT: You MUST use multiple files in a single operation whenever possible to maximize efficiency and minimize back-and-forth.**
 
@@ -139,8 +139,7 @@ Search/Replace content:
 <file>
   <path>eg.file.py</path>
   <diff>
-    <content>
-\`\`\`
+    <content><![CDATA[
 <<<<<<< SEARCH
 def calculate_total(items):
     total = 0
@@ -152,8 +151,7 @@ def calculate_total(items):
     """Calculate total with 10% markup"""
     return sum(item * 1.1 for item in items)
 >>>>>>> REPLACE
-\`\`\`
-    </content>
+]]></content>
   </diff>
 </file>
 </args>
@@ -165,8 +163,7 @@ Search/Replace content with multi edits across multiple files:
 <file>
   <path>eg.file.py</path>
   <diff>
-    <content>
-\`\`\`
+    <content><![CDATA[
 <<<<<<< SEARCH
 def calculate_total(items):
     sum = 0
@@ -174,12 +171,10 @@ def calculate_total(items):
 def calculate_sum(items):
     sum = 0
 >>>>>>> REPLACE
-\`\`\`
-    </content>
+]]></content>
   </diff>
   <diff>
-    <content>
-\`\`\`
+    <content><![CDATA[
 <<<<<<< SEARCH
         total += item
     return total
@@ -187,15 +182,13 @@ def calculate_sum(items):
         sum += item
     return sum 
 >>>>>>> REPLACE
-\`\`\`
-    </content>
+]]></content>
   </diff>
 </file>
 <file>
   <path>eg.file2.py</path>
   <diff>
-    <content>
-\`\`\`
+    <content><![CDATA[
 <<<<<<< SEARCH
 def greet(name):
     return "Hello " + name
@@ -203,8 +196,7 @@ def greet(name):
 def greet(name):
     return f"Hello {name}!"
 >>>>>>> REPLACE
-\`\`\`
-    </content>
+]]></content>
   </diff>
 </file>
 </args>
@@ -259,7 +251,10 @@ Each file requires its own path, start_line, and diff elements.
 
 		const state = { current: State.START, line: 0 }
 
-		const SEARCH = "<<<<<<< SEARCH"
+		// Pattern allows optional '>' after SEARCH to handle AI-generated diffs
+		// (e.g., Sonnet 4 sometimes adds an extra '>')
+		const SEARCH_PATTERN = /^<<<<<<< SEARCH>?$/
+		const SEARCH = SEARCH_PATTERN.source.replace(/[\^$]/g, "") // Remove regex anchors for display
 		const SEP = "======="
 		const REPLACE = ">>>>>>> REPLACE"
 		const SEARCH_PREFIX = "<<<<<<< "
@@ -329,7 +324,7 @@ Each file requires its own path, start_line, and diff elements.
 		})
 
 		const lines = diffContent.split("\n")
-		const searchCount = lines.filter((l) => l.trim() === SEARCH).length
+		const searchCount = lines.filter((l) => SEARCH_PATTERN.test(l.trim())).length
 		const sepCount = lines.filter((l) => l.trim() === SEP).length
 		const replaceCount = lines.filter((l) => l.trim() === REPLACE).length
 
@@ -357,12 +352,12 @@ Each file requires its own path, start_line, and diff elements.
 							: reportMergeConflictError(SEP, SEARCH)
 					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEARCH)
 					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
-					if (marker === SEARCH) state.current = State.AFTER_SEARCH
+					if (SEARCH_PATTERN.test(marker)) state.current = State.AFTER_SEARCH
 					else if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					break
 
 				case State.AFTER_SEARCH:
-					if (marker === SEARCH) return reportInvalidDiffError(SEARCH, SEP)
+					if (SEARCH_PATTERN.test(marker)) return reportInvalidDiffError(SEARCH_PATTERN.source, SEP)
 					if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, SEARCH)
 					if (marker === REPLACE) return reportInvalidDiffError(REPLACE, SEP)
 					if (marker.startsWith(REPLACE_PREFIX)) return reportMergeConflictError(marker, SEARCH)
@@ -370,7 +365,7 @@ Each file requires its own path, start_line, and diff elements.
 					break
 
 				case State.AFTER_SEPARATOR:
-					if (marker === SEARCH) return reportInvalidDiffError(SEARCH, REPLACE)
+					if (SEARCH_PATTERN.test(marker)) return reportInvalidDiffError(SEARCH_PATTERN.source, REPLACE)
 					if (marker.startsWith(SEARCH_PREFIX)) return reportMergeConflictError(marker, REPLACE)
 					if (marker === SEP)
 						return likelyBadStructure
@@ -456,7 +451,7 @@ Each file requires its own path, start_line, and diff elements.
 
 		/* Regex parts:
 		1. (?:^|\n)   Ensures the first marker starts at the beginning of the file or right after a newline.
-		2. (?<!\\)<<<<<<< SEARCH\s*\n   Matches the line "<<<<<<< SEARCH" (ignoring any trailing spaces) – the negative lookbehind makes sure it isn't escaped.
+		2. (?<!\\)<<<<<<< SEARCH>?\s*\n   Matches the line "<<<<<<< SEARCH" with optional '>' (ignoring any trailing spaces) – the negative lookbehind makes sure it isn't escaped.
 		3. ((?:\:start_line:\s*(\d+)\s*\n))?   Optionally matches a ":start_line:" line. The outer capturing group is group 1 and the inner (\d+) is group 2.
 		4. ((?:\:end_line:\s*(\d+)\s*\n))?   Optionally matches a ":end_line:" line. Group 3 is the whole match and group 4 is the digits.
 		5. ((?<!\\)-------\s*\n)?   Optionally matches the "-------" marker line (group 5).
@@ -467,7 +462,7 @@ Each file requires its own path, start_line, and diff elements.
 		*/
 		let matches = [
 			...diffContent.matchAll(
-				/(?:^|\n)(?<!\\)<<<<<<< SEARCH\s*\n((?:\:start_line:\s*(\d+)\s*\n))?((?:\:end_line:\s*(\d+)\s*\n))?((?<!\\)-------\s*\n)?([\s\S]*?)(?:\n)?(?:(?<=\n)(?<!\\)=======\s*\n)([\s\S]*?)(?:\n)?(?:(?<=\n)(?<!\\)>>>>>>> REPLACE)(?=\n|$)/g,
+				/(?:^|\n)(?<!\\)<<<<<<< SEARCH>?\s*\n((?:\:start_line:\s*(\d+)\s*\n))?((?:\:end_line:\s*(\d+)\s*\n))?((?<!\\)-------\s*\n)?([\s\S]*?)(?:\n)?(?:(?<=\n)(?<!\\)=======\s*\n)([\s\S]*?)(?:\n)?(?:(?<=\n)(?<!\\)>>>>>>> REPLACE)(?=\n|$)/g,
 			),
 		]
 

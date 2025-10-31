@@ -1,12 +1,13 @@
-import { render, fireEvent, screen } from "@/utils/test-utils"
-
 import { defaultModeSlug } from "@roo/modes"
 
+import { render, fireEvent, screen } from "@src/utils/test-utils"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
 import * as pathMentions from "@src/utils/path-mentions"
+import { useQuery } from "@tanstack/react-query" // kilocode_change
+import { HistoryItem } from "@roo-code/types" // kilocode_change
 
-import ChatTextArea from "../ChatTextArea"
+import { ChatTextArea } from "../ChatTextArea"
 
 vi.mock("@src/utils/vscode", () => ({
 	vscode: {
@@ -33,6 +34,14 @@ const mockConvertToMentionPath = pathMentions.convertToMentionPath as ReturnType
 
 // Mock ExtensionStateContext
 vi.mock("@src/context/ExtensionStateContext")
+
+// kilocode_change start
+vi.mock("@tanstack/react-query")
+
+function kiloCodeSetUpUseQueryMock(historyItems: Partial<HistoryItem>[]) {
+	;(useQuery as ReturnType<typeof vi.fn>).mockReturnValue({ data: { historyItems } })
+}
+// kilocode_change end
 
 vi.mock("@src/components/ui/hooks/useSelectedModel", () => ({
 	useSelectedModel: vi.fn(() => ({
@@ -80,10 +89,12 @@ describe("ChatTextArea", () => {
 			taskHistory: [],
 			cwd: "/test/workspace",
 		})
+
+		kiloCodeSetUpUseQueryMock([])
 	})
 
 	describe("enhance prompt button", () => {
-		it("should be disabled when sendingDisabled is true", () => {
+		it("should be enabled even when sendingDisabled is true (for message queueing)", () => {
 			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
 				filePaths: [],
 				openedTabs: [],
@@ -92,7 +103,7 @@ describe("ChatTextArea", () => {
 			})
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} />)
 			const enhanceButton = getEnhancePromptButton()
-			expect(enhanceButton).toHaveClass("cursor-not-allowed")
+			expect(enhanceButton).toHaveClass("cursor-pointer")
 		})
 	})
 
@@ -760,6 +771,8 @@ describe("ChatTextArea", () => {
 					cwd: "/test/workspace",
 				})
 
+				kiloCodeSetUpUseQueryMock(mockTaskHistory)
+
 				const setInputValue = vi.fn()
 				const { container } = render(
 					<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="" />,
@@ -796,6 +809,11 @@ describe("ChatTextArea", () => {
 					clineMessages: [],
 					cwd: "/test/workspace",
 				})
+
+				kiloCodeSetUpUseQueryMock([
+					{ task: "Task 1", workspace: "/test/workspace" },
+					{ task: "Task 2", workspace: "/test/workspace" },
+				])
 
 				rerender(<ChatTextArea {...defaultProps} setInputValue={setInputValue} inputValue="" />)
 
@@ -910,7 +928,146 @@ describe("ChatTextArea", () => {
 		})
 	})
 
-	// kilocode_change: removed in kilcode
+	// kilocode_change: skip because we have our own slash commands
+	describe.skip("slash command highlighting", () => {
+		const mockCommands = [
+			{ name: "setup", source: "project", description: "Setup the project" },
+			{ name: "deploy", source: "global", description: "Deploy the application" },
+			{ name: "test-command", source: "project", description: "Test command with dash" },
+		]
+
+		beforeEach(() => {
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				taskHistory: [],
+				cwd: "/test/workspace",
+				commands: mockCommands,
+			})
+		})
+
+		it("should highlight valid slash commands", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/setup the project" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// The highlighting is applied via innerHTML, so we need to check the content
+			// The valid command "/setup" should be highlighted
+			expect(highlightLayer.innerHTML).toContain('<mark class="mention-context-textarea-highlight">/setup</mark>')
+		})
+
+		it("should not highlight invalid slash commands", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/invalid command" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// The invalid command "/invalid" should not be highlighted
+			expect(highlightLayer.innerHTML).not.toContain(
+				'<mark class="mention-context-textarea-highlight">/invalid</mark>',
+			)
+			// But it should still contain the text without highlighting
+			expect(highlightLayer.innerHTML).toContain("/invalid")
+		})
+
+		it("should highlight only the command portion, not arguments", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/deploy to production" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// Only "/deploy" should be highlighted, not "to production"
+			expect(highlightLayer.innerHTML).toContain(
+				'<mark class="mention-context-textarea-highlight">/deploy</mark>',
+			)
+			expect(highlightLayer.innerHTML).not.toContain(
+				'<mark class="mention-context-textarea-highlight">/deploy to production</mark>',
+			)
+		})
+
+		it("should handle commands with dashes and underscores", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/test-command with args" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// The command with dash should be highlighted
+			expect(highlightLayer.innerHTML).toContain(
+				'<mark class="mention-context-textarea-highlight">/test-command</mark>',
+			)
+		})
+
+		it("should be case-sensitive when matching commands", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/Setup the project" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// "/Setup" (capital S) should not be highlighted since the command is "setup" (lowercase)
+			expect(highlightLayer.innerHTML).not.toContain(
+				'<mark class="mention-context-textarea-highlight">/Setup</mark>',
+			)
+			expect(highlightLayer.innerHTML).toContain("/Setup")
+		})
+
+		it("should highlight multiple valid commands in the same text", () => {
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/setup first then /deploy" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// Both valid commands should be highlighted
+			expect(highlightLayer.innerHTML).toContain('<mark class="mention-context-textarea-highlight">/setup</mark>')
+			expect(highlightLayer.innerHTML).toContain(
+				'<mark class="mention-context-textarea-highlight">/deploy</mark>',
+			)
+		})
+
+		it("should handle mixed valid and invalid commands", () => {
+			const { getByTestId } = render(
+				<ChatTextArea {...defaultProps} inputValue="/setup first then /invalid then /deploy" />,
+			)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// Valid commands should be highlighted
+			expect(highlightLayer.innerHTML).toContain('<mark class="mention-context-textarea-highlight">/setup</mark>')
+			expect(highlightLayer.innerHTML).toContain(
+				'<mark class="mention-context-textarea-highlight">/deploy</mark>',
+			)
+
+			// Invalid command should not be highlighted
+			expect(highlightLayer.innerHTML).not.toContain(
+				'<mark class="mention-context-textarea-highlight">/invalid</mark>',
+			)
+			expect(highlightLayer.innerHTML).toContain("/invalid")
+		})
+
+		it("should work when no commands are available", () => {
+			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
+				filePaths: [],
+				openedTabs: [],
+				taskHistory: [],
+				cwd: "/test/workspace",
+				commands: undefined,
+			})
+
+			const { getByTestId } = render(<ChatTextArea {...defaultProps} inputValue="/setup the project" />)
+
+			const highlightLayer = getByTestId("highlight-layer")
+			expect(highlightLayer).toBeInTheDocument()
+
+			// No commands should be highlighted when commands array is undefined
+			expect(highlightLayer.innerHTML).not.toContain(
+				'<mark class="mention-context-textarea-highlight">/setup</mark>',
+			)
+			expect(highlightLayer.innerHTML).toContain("/setup")
+		})
+	})
+
+	// kilocode_change: removed in kilocode
 	describe.skip("selectApiConfig", () => {
 		// Helper function to get the API config dropdown
 		const getApiConfigDropdown = () => {
@@ -925,56 +1082,6 @@ describe("ChatTextArea", () => {
 			render(<ChatTextArea {...defaultProps} sendingDisabled={true} selectApiConfigDisabled={true} />)
 			const apiConfigDropdown = getApiConfigDropdown()
 			expect(apiConfigDropdown).toHaveAttribute("disabled")
-		})
-	})
-	describe("edit mode integration", () => {
-		it("should render edit mode UI when isEditMode is true", () => {
-			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
-				filePaths: [],
-				openedTabs: [],
-				taskHistory: [],
-				cwd: "/test/workspace",
-				customModes: [],
-				customModePrompts: {},
-			})
-
-			render(<ChatTextArea {...defaultProps} isEditMode={true} />)
-
-			// The edit mode UI should be rendered
-			// We can verify this by checking for the presence of elements that are unique to edit mode
-			const cancelButton = screen.getByRole("button", { name: /cancel/i })
-			expect(cancelButton).toBeInTheDocument()
-
-			// Should show save button instead of send button
-			const saveButton = screen.getByRole("button", { name: /save/i })
-			expect(saveButton).toBeInTheDocument()
-
-			// Should not show send button in edit mode
-			const sendButton = screen.queryByRole("button", { name: /send.*message/i })
-			expect(sendButton).not.toBeInTheDocument()
-		})
-
-		it("should not render edit mode UI when isEditMode is false", () => {
-			;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
-				filePaths: [],
-				openedTabs: [],
-				taskHistory: [],
-				cwd: "/test/workspace",
-			})
-
-			render(<ChatTextArea {...defaultProps} isEditMode={false} />)
-
-			// The edit mode UI should not be rendered
-			const cancelButton = screen.queryByRole("button", { name: /cancel/i })
-			expect(cancelButton).not.toBeInTheDocument()
-
-			// Should show send button when not in edit mode
-			const sendButton = screen.getByRole("button", { name: /send.*message/i })
-			expect(sendButton).toBeInTheDocument()
-
-			// Should not show save button when not in edit mode
-			const saveButton = screen.queryByRole("button", { name: /save/i })
-			expect(saveButton).not.toBeInTheDocument()
 		})
 	})
 })

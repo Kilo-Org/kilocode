@@ -10,6 +10,8 @@ import type { ToolParamName, ToolResponse } from "../../shared/tools"
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
 import { getReadFileToolDescription, readFileTool } from "../tools/readFileTool"
+import { getSimpleReadFileToolDescription, simpleReadFileTool } from "../tools/simpleReadFileTool"
+import { shouldUseSingleFileRead } from "@roo-code/types"
 import { writeToFileTool } from "../tools/writeToFileTool"
 import { applyDiffTool } from "../tools/multiApplyDiffTool"
 import { insertContentTool } from "../tools/insertContentTool"
@@ -26,8 +28,9 @@ import { switchModeTool } from "../tools/switchModeTool"
 import { attemptCompletionTool } from "../tools/attemptCompletionTool"
 import { newTaskTool } from "../tools/newTaskTool"
 
-import { checkpointSave } from "../checkpoints"
 import { updateTodoListTool } from "../tools/updateTodoListTool"
+import { runSlashCommandTool } from "../tools/runSlashCommandTool"
+import { generateImageTool } from "../tools/generateImageTool"
 
 import { formatResponse } from "../prompts/responses"
 import { validateToolUse } from "../tools/validateToolUse"
@@ -38,7 +41,8 @@ import { condenseTool } from "../tools/condenseTool" // kilocode_change
 import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
-import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
+import { yieldPromise } from "../kilocode"
+import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -57,9 +61,7 @@ import { reportExcessiveRecursion, yieldPromise } from "../kilocode"
  * as it becomes available.
  */
 
-export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
-	reportExcessiveRecursion("presentAssistantMessage", recursionDepth) // kilocode_change
-
+export async function presentAssistantMessage(cline: Task) {
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}
@@ -163,7 +165,13 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					case "execute_command":
 						return `[${block.name} for '${block.params.command}']`
 					case "read_file":
-						return getReadFileToolDescription(block.name, block.params)
+						// Check if this model should use the simplified description
+						const modelId = cline.api.getModel().id
+						if (shouldUseSingleFileRead(modelId)) {
+							return getSimpleReadFileToolDescription(block.name, block.params)
+						} else {
+							return getReadFileToolDescription(block.name, block.params)
+						}
 					case "fetch_instructions":
 						return `[${block.name} for '${block.params.task}']`
 					case "write_to_file":
@@ -233,19 +241,33 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					case "condense":
 						return `[${block.name}]`
 					// kilocode_change end
+					case "run_slash_command":
+						return `[${block.name} for '${block.params.command}'${block.params.args ? ` with args: ${block.params.args}` : ""}]`
+					case "generate_image":
+						return `[${block.name} for '${block.params.path}']`
+				}
+			}
+
+			const pushToolResult_withToolUseId_kilocode = (
+				...items: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
+			) => {
+				if (block.toolUseId) {
+					cline.userMessageContent.push({ type: "tool_result", tool_use_id: block.toolUseId, content: items })
+				} else {
+					cline.userMessageContent.push(...items)
 				}
 			}
 
 			if (cline.didRejectTool) {
 				// Ignore any tool content after user has rejected tool once.
 				if (!block.partial) {
-					cline.userMessageContent.push({
+					pushToolResult_withToolUseId_kilocode({
 						type: "text",
 						text: `Skipping tool ${toolDescription()} due to user rejecting a previous tool.`,
 					})
 				} else {
 					// Partial tool after user rejected a previous tool.
-					cline.userMessageContent.push({
+					pushToolResult_withToolUseId_kilocode({
 						type: "text",
 						text: `Tool ${toolDescription()} was interrupted and not executed due to user rejecting a previous tool.`,
 					})
@@ -256,7 +278,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 
 			if (cline.didAlreadyUseTool) {
 				// Ignore any content after a tool has already been used.
-				cline.userMessageContent.push({
+				pushToolResult_withToolUseId_kilocode({
 					type: "text",
 					text: `Tool [${block.name}] was not executed because a tool has already been used in this message. Only one tool may be used per message. You must assess the first tool's result before proceeding to use the next tool.`,
 				})
@@ -265,13 +287,17 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			}
 
 			const pushToolResult = (content: ToolResponse) => {
-				cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
+				// kilocode_change start
+				const items = new Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>()
+				items.push({ type: "text", text: `${toolDescription()} Result:` })
 
 				if (typeof content === "string") {
-					cline.userMessageContent.push({ type: "text", text: content || "(tool did not return anything)" })
+					items.push({ type: "text", text: content || "(tool did not return anything)" })
 				} else {
-					cline.userMessageContent.push(...content)
+					items.push(...content)
 				}
+				pushToolResult_withToolUseId_kilocode(...items)
+				// kilocode_change end
 
 				// Once a tool result has been collected, ignore all other tool
 				// uses since we should only ever present one tool result per
@@ -285,6 +311,14 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				progressStatus?: ToolProgressStatus,
 				isProtected?: boolean,
 			) => {
+				// kilocode_change start: yolo mode
+
+				const state = await cline.providerRef.deref()?.getState()
+				if (state?.yoloMode) {
+					return true
+				}
+				// kilocode_change end
+
 				const { response, text, images } = await cline.ask(
 					type,
 					partialMessage,
@@ -403,7 +437,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 
 					if (response === "messageResponse") {
 						// Add user feedback to userContent.
-						cline.userMessageContent.push(
+						pushToolResult_withToolUseId_kilocode(
 							{
 								type: "text" as const,
 								text: `Tool repetition limit reached. User feedback: ${text}`,
@@ -428,8 +462,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				}
 			}
 
+			await checkpointSaveAndMark(cline) // kilocode_change: moved out of switch
 			switch (block.name) {
 				case "write_to_file":
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await writeToFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "update_todo_list":
@@ -449,8 +485,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					}
 
 					if (isMultiFileApplyDiffEnabled) {
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					} else {
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffToolLegacy(
 							cline,
 							block,
@@ -463,9 +501,11 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				}
 				case "insert_content":
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await insertContentTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "search_and_replace":
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
@@ -474,8 +514,20 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				// kilocode_change end
 				case "read_file":
-					await readFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
-
+					// Check if this model should use the simplified single-file read tool
+					const modelId = cline.api.getModel().id
+					if (shouldUseSingleFileRead(modelId)) {
+						await simpleReadFileTool(
+							cline,
+							block,
+							askApproval,
+							handleError,
+							pushToolResult,
+							removeClosingTag,
+						)
+					} else {
+						await readFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					}
 					break
 				case "fetch_instructions":
 					await fetchInstructionsTool(cline, block, askApproval, handleError, pushToolResult)
@@ -557,18 +609,15 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
+				case "run_slash_command":
+					await runSlashCommandTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "generate_image":
+					await generateImageTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
 			}
-			// kilocode_change end
 
 			break
-	}
-
-	const recentlyModifiedFiles = cline.fileContextTracker.getAndClearCheckpointPossibleFile()
-
-	if (recentlyModifiedFiles.length > 0) {
-		// TODO: We can track what file changes were made and only
-		// checkpoint those files, this will be save storage.
-		await checkpointSave(cline)
 	}
 
 	// Seeing out of bounds is fine, it means that the next too call is being
@@ -611,7 +660,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			// this function ourselves.
 			// kilocode_change start: prevent excessive recursion
 			await yieldPromise()
-			await presentAssistantMessage(cline, recursionDepth + 1)
+			await presentAssistantMessage(cline)
 			// kilocode_change end
 			return
 		}
@@ -621,7 +670,25 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 	if (cline.presentAssistantMessageHasPendingUpdates) {
 		// kilocode_change start: prevent excessive recursion
 		await yieldPromise()
-		await presentAssistantMessage(cline, recursionDepth + 1)
+		await presentAssistantMessage(cline)
 		// kilocode_change end
+	}
+}
+
+/**
+ * save checkpoint and mark done in the current streaming task.
+ * @param task The Task instance to checkpoint save and mark.
+ * @returns
+ */
+async function checkpointSaveAndMark(task: Task) {
+	if (task.currentStreamingDidCheckpoint) {
+		return
+	}
+	try {
+		// kilocode_change: order changed to prevent second execution while still awaiting the save
+		task.currentStreamingDidCheckpoint = true
+		await task.checkpointSave(true)
+	} catch (error) {
+		console.error(`[Task#presentAssistantMessage] Error saving checkpoint: ${error.message}`, error)
 	}
 }

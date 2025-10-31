@@ -1,13 +1,16 @@
-import { memo, useRef, useEffect, useCallback, useMemo } from "react"
-import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import type { ClineMessage } from "@roo-code/types"
-import { TaskTimelineMessage } from "./TaskTimelineMessage"
-import { MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
-import { calculateTaskTimelineSizes } from "../../utils/timeline/calculateTaskTimelineSizes"
-import { getTaskTimelineMessageColor } from "../../utils/messageColors"
-import { TooltipProvider } from "../ui/tooltip"
+import { forwardRef, memo, useCallback, useEffect, useMemo, useRef } from "react"
+import { useDrag } from "@use-gesture/react"
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import { useExtensionState } from "../../context/ExtensionStateContext"
+import { getTaskTimelineMessageColor } from "../../utils/messageColors"
+import {
+	calculateTaskTimelineSizes,
+	MAX_HEIGHT_PX as TASK_TIMELINE_MAX_HEIGHT_PX,
+} from "../../utils/timeline/calculateTaskTimelineSizes"
+import { consolidateMessagesForTimeline } from "../../utils/timeline/consolidateMessagesForTimeline"
+import { TooltipProvider } from "../ui/tooltip"
+import { TaskTimelineMessage } from "./TaskTimelineMessage"
 
 // We hide the scrollbars for the TaskTimeline by wrapping it in a container with
 // overflow hidden. This hides the scrollbars for the actual Virtuoso element
@@ -19,6 +22,56 @@ interface TaskTimelineProps {
 	onMessageClick?: (index: number) => void
 	isTaskActive?: boolean
 }
+
+// Translates vertical scrolling into horizontal scrolling and supports drag scrolling
+const HorizontalScroller = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+	({ style, children, className, ...props }, ref) => {
+		const bind = useDrag(
+			({ active, delta: [dx] }) => {
+				const element = (ref as React.MutableRefObject<HTMLDivElement>).current
+				if (!element) return
+
+				element.scrollLeft -= dx
+
+				if (active) {
+					element.style.cursor = "grabbing"
+					element.style.userSelect = "none"
+				} else {
+					element.style.cursor = "grab"
+					element.style.userSelect = "auto"
+				}
+			},
+			{
+				// Lock to horizontal axis only
+				axis: "x",
+				// Allow preventDefault to work properly
+				eventOptions: { passive: false },
+				// Prevent small drags from interfering with clicks
+				filterTaps: true,
+				// Use pointer events to capture mouse release outside element
+				pointer: { capture: true },
+				// Prevent conflicts with native browser scrolling on touch devices
+				touchAction: "pan-x",
+			},
+		)
+
+		return (
+			<div
+				{...props}
+				{...bind()}
+				ref={ref}
+				className={`overflow-x-auto overflow-y-hidden touch-none cursor-grab ${className || ""}`}
+				style={style}
+				onWheel={(e) => {
+					e.preventDefault()
+					// Handle both vertical and horizontal wheel events
+					;(ref as React.MutableRefObject<HTMLDivElement>).current!.scrollLeft += e.deltaY
+				}}>
+				{children}
+			</div>
+		)
+	},
+)
 
 export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessageClick, isTaskActive = false }) => {
 	const { setHoveringTaskTimeline } = useExtensionState()
@@ -90,6 +143,7 @@ export const TaskTimeline = memo<TaskTimelineProps>(({ groupedMessages, onMessag
 				<Virtuoso
 					ref={virtuosoRef}
 					data={timelineMessagesData}
+					components={{ Scroller: HorizontalScroller }}
 					itemContent={itemContent}
 					horizontalDirection={true}
 					initialTopMostItemIndex={timelineMessagesData.length - 1}

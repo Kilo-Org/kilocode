@@ -13,6 +13,12 @@
 			"placeholderMcp": "MCP'leri ara...",
 			"placeholderMode": "Modları ara..."
 		},
+		"installed": {
+			"label": "Duruma göre filtrele",
+			"all": "Tüm Öğeler",
+			"installed": "Yüklü",
+			"notInstalled": "Yüklü Değil"
+		},
 		"type": {
 			"label": "Türe göre filtrele:",
 			"all": "Tüm türler",
@@ -34,6 +40,10 @@
 			"clickToFilter": "Öğeleri filtrelemek için etiketlere tıklayın"
 		},
 		"none": "Hiçbiri"
+	},
+	"sections": {
+		"organizationMcps": "{{organization}} MCP'leri",
+		"marketplace": "Marketplace"
 	},
 	"type-group": {
 		"modes": "Modlar",

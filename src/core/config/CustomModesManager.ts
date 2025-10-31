@@ -5,6 +5,7 @@ import * as os from "os"
 
 import * as yaml from "yaml"
 import stripBom from "strip-bom"
+import axios from "axios" // kilocode_change
 
 import { type ModeConfig, type PromptComponent, customModesSettingsSchema, modeConfigSchema } from "@roo-code/types"
 
@@ -15,6 +16,10 @@ import { logger } from "../../utils/logging"
 import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
+// kilocode_change start
+import { getKiloUrlFromToken } from "@roo-code/types"
+import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
+// kilocode_change end
 
 const ROOMODES_FILENAME = ".kilocodemodes"
 
@@ -222,19 +227,35 @@ export class CustomModesManager {
 		}
 	}
 
-	private async mergeCustomModes(projectModes: ModeConfig[], globalModes: ModeConfig[]): Promise<ModeConfig[]> {
+	// kilocode_change start: Added organizationModes parameter and precedence logic
+	private async mergeCustomModes(
+		projectModes: ModeConfig[],
+		globalModes: ModeConfig[],
+		organizationModes: ModeConfig[] = [],
+	): Promise<ModeConfig[]> {
 		const slugs = new Set<string>()
 		const merged: ModeConfig[] = []
 
-		// Add project mode (takes precedence)
+		// Precedence order: organization > project > global
+
+		// Add organization modes (highest precedence)
+		for (const mode of organizationModes) {
+			if (!slugs.has(mode.slug)) {
+				slugs.add(mode.slug)
+				merged.push({ ...mode, source: "organization" })
+			}
+		}
+
+		// Add project modes (medium precedence)
 		for (const mode of projectModes) {
 			if (!slugs.has(mode.slug)) {
 				slugs.add(mode.slug)
 				merged.push({ ...mode, source: "project" })
 			}
 		}
+		// kilocode_change end
 
-		// Add non-duplicate global modes
+		// Add global modes (lowest precedence)
 		for (const mode of globalModes) {
 			if (!slugs.has(mode.slug)) {
 				slugs.add(mode.slug)
@@ -297,8 +318,17 @@ export class CustomModesManager {
 				const roomodesPath = await this.getWorkspaceRoomodes()
 				const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 
-				// Merge modes from both sources (.kilocodemodes takes precedence)
-				const mergedModes = await this.mergeCustomModes(roomodesModes, result.data.customModes)
+				// kilocode_change start Get organization modes from global state to preserve them
+				const storedModes = (await this.context.globalState.get<ModeConfig[]>("customModes")) || []
+				const organizationModes = storedModes.filter((mode) => mode.source === "organization")
+
+				// Merge modes from both sources with organization modes preserved
+				const mergedModes = await this.mergeCustomModes(
+					roomodesModes,
+					result.data.customModes,
+					organizationModes,
+				)
+				// kilocode_change end
 				await this.context.globalState.update("customModes", mergedModes)
 				this.clearCache()
 				await this.onUpdate()
@@ -323,9 +353,16 @@ export class CustomModesManager {
 				try {
 					const settingsModes = await this.loadModesFromFile(settingsPath)
 					const roomodesModes = await this.loadModesFromFile(roomodesPath)
-					// .roomodes takes precedence
-					const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
+
+					// Get organization modes from global state to preserve them
+					const storedModes = (await this.context.globalState.get<ModeConfig[]>("customModes")) || []
+					const organizationModes = storedModes.filter((mode) => mode.source === "organization")
+
+					// kilocode_change start
+					// Merge with organization modes preserved
+					const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
 					await this.context.globalState.update("customModes", mergedModes)
+					// kilocode_change end
 					this.clearCache()
 					await this.onUpdate()
 				} catch (error) {
@@ -340,7 +377,15 @@ export class CustomModesManager {
 					// When .roomodes is deleted, refresh with only settings modes
 					try {
 						const settingsModes = await this.loadModesFromFile(settingsPath)
-						await this.context.globalState.update("customModes", settingsModes)
+
+						//// kilocode_change start Get organization modes from global state to preserve them
+						const storedModes = (await this.context.globalState.get<ModeConfig[]>("customModes")) || []
+						const organizationModes = storedModes.filter((mode) => mode.source === "organization")
+
+						// Merge with organization modes preserved
+						const mergedModes = await this.mergeCustomModes([], settingsModes, organizationModes)
+						await this.context.globalState.update("customModes", mergedModes)
+						// kilocode_change end
 						this.clearCache()
 						await this.onUpdate()
 					} catch (error) {
@@ -368,29 +413,14 @@ export class CustomModesManager {
 		const roomodesPath = await this.getWorkspaceRoomodes()
 		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
 
-		// Create maps to store modes by source.
-		const projectModes = new Map<string, ModeConfig>()
-		const globalModes = new Map<string, ModeConfig>()
+		// kilocode_change start: Get organization modes from global state
+		// Get organization modes from global state (they were fetched from API)
+		const storedModes = (await this.context.globalState.get<ModeConfig[]>("customModes")) || []
+		const organizationModes = storedModes.filter((mode) => mode.source === "organization")
 
-		// Add project modes (they take precedence).
-		for (const mode of roomodesModes) {
-			projectModes.set(mode.slug, { ...mode, source: "project" as const })
-		}
-
-		// Add global modes.
-		for (const mode of settingsModes) {
-			if (!projectModes.has(mode.slug)) {
-				globalModes.set(mode.slug, { ...mode, source: "global" as const })
-			}
-		}
-
-		// Combine modes in the correct order: project modes first, then global modes.
-		const mergedModes = [
-			...roomodesModes.map((mode) => ({ ...mode, source: "project" as const })),
-			...settingsModes
-				.filter((mode) => !projectModes.has(mode.slug))
-				.map((mode) => ({ ...mode, source: "global" as const })),
-		]
+		// Merge all modes with proper precedence: project > organization > global
+		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
+		// kilocode_change end
 
 		await this.context.globalState.update("customModes", mergedModes)
 
@@ -405,9 +435,13 @@ export class CustomModesManager {
 			// Validate the mode configuration before saving
 			const validationResult = modeConfigSchema.safeParse(config)
 			if (!validationResult.success) {
-				const errors = validationResult.error.errors.map((e) => e.message).join(", ")
-				logger.error(`Invalid mode configuration for ${slug}`, { errors: validationResult.error.errors })
-				throw new Error(`Invalid mode configuration: ${errors}`)
+				const errorMessages = validationResult.error.errors
+					.map((err) => `${err.path.join(".")}: ${err.message}`)
+					.join(", ")
+				const errorMessage = `Invalid mode configuration: ${errorMessages}`
+				logger.error("Mode validation failed", { slug, errors: validationResult.error.errors })
+				vscode.window.showErrorMessage(t("common:customModes.errors.updateFailed", { error: errorMessage }))
+				return
 			}
 
 			const isProjectMode = config.source === "project"
@@ -493,7 +527,14 @@ export class CustomModesManager {
 
 		const settingsModes = await this.loadModesFromFile(settingsPath)
 		const roomodesModes = roomodesPath ? await this.loadModesFromFile(roomodesPath) : []
-		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes)
+
+		// // kilocode_change start Get organization modes from global state to preserve them
+		const storedModes = (await this.context.globalState.get<ModeConfig[]>("customModes")) || []
+		const organizationModes = storedModes.filter((mode) => mode.source === "organization")
+
+		// Merge with organization modes preserved
+		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
+		// kilocode_change end
 
 		await this.context.globalState.update("customModes", mergedModes)
 
@@ -785,14 +826,12 @@ export class CustomModesManager {
 							const filePath = path.join(modeRulesDir, entry.name)
 							const content = await fs.readFile(filePath, "utf-8")
 							if (content.trim()) {
-								// Calculate relative path based on mode source
-								const relativePath = isGlobalMode
-									? path.relative(baseDir, filePath)
-									: path.relative(
-											getProjectRooDirectoryForCwd(baseDir) /* kilochange_change */,
-											filePath,
-										)
-								rulesFiles.push({ relativePath, content: content.trim() })
+								// Calculate relative path from within the rules directory
+								// This excludes the rules-{slug} folder from the path
+								const relativePath = path.relative(modeRulesDir, filePath)
+								// Normalize path to use forward slashes for cross-platform compatibility
+								const normalizedRelativePath = relativePath.replace(/\\/g, "/")
+								rulesFiles.push({ relativePath: normalizedRelativePath, content: content.trim() })
 							}
 						}
 					}
@@ -887,11 +926,21 @@ export class CustomModesManager {
 					continue // Skip this file but continue with others
 				}
 
-				const targetPath = path.join(baseDir, normalizedRelativePath)
-				const normalizedTargetPath = path.normalize(targetPath)
-				const expectedBasePath = path.normalize(baseDir)
+				// Check if path starts with a rules-* folder (old export format)
+				let cleanedRelativePath = normalizedRelativePath
+				const rulesMatch = normalizedRelativePath.match(/^rules-[^\/\\]+[\/\\]/)
+				if (rulesMatch) {
+					// Strip the entire rules-* folder reference for backwards compatibility
+					cleanedRelativePath = normalizedRelativePath.substring(rulesMatch[0].length)
+					logger.info(`Detected old export format, stripping ${rulesMatch[0]} from path`)
+				}
 
-				// Ensure the resolved path stays within the base directory
+				// Use the rules folder path instead of base directory
+				const targetPath = path.join(rulesFolderPath, cleanedRelativePath)
+				const normalizedTargetPath = path.normalize(targetPath)
+				const expectedBasePath = path.normalize(rulesFolderPath)
+
+				// Ensure the resolved path stays within the rules folder
 				if (!normalizedTargetPath.startsWith(expectedBasePath)) {
 					logger.error(`Path traversal attempt detected: ${ruleFile.relativePath}`)
 					continue // Skip this file but continue with others
@@ -987,6 +1036,125 @@ export class CustomModesManager {
 			return { success: false, error: errorMessage }
 		}
 	}
+
+	// kilocode_change start: New method to fetch organization modes
+	/**
+	 * Fetches custom modes for a specific organization from the KiloCode API
+	 * @param kilocodeToken - The authentication token
+	 * @param organizationId - The organization ID (undefined for personal account)
+	 * @param kilocodeTesterWarningsDisabledUntil - Timestamp for suppressing tester warnings
+	 * @returns Array of organization-specific modes
+	 */
+	public async fetchOrganizationModes(
+		kilocodeToken: string,
+		organizationId?: string,
+		kilocodeTesterWarningsDisabledUntil?: number,
+	): Promise<ModeConfig[]> {
+		try {
+			// If no organization ID, return empty array (personal account has no org modes)
+			if (!organizationId) {
+				return []
+			}
+
+			const headers: Record<string, string> = {
+				Authorization: `Bearer ${kilocodeToken}`,
+				"Content-Type": "application/json",
+			}
+
+			headers[X_KILOCODE_ORGANIZATIONID] = organizationId
+
+			// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+			if (kilocodeTesterWarningsDisabledUntil && kilocodeTesterWarningsDisabledUntil > Date.now()) {
+				headers[X_KILOCODE_TESTER] = "SUPPRESS"
+			}
+
+			const url = getKiloUrlFromToken(
+				`https://api.kilocode.ai/api/organizations/${organizationId}/modes`,
+				kilocodeToken,
+			)
+			const response = await axios.get(url, { headers })
+
+			// Validate and parse the response
+			if (!response.data || !Array.isArray(response.data.modes)) {
+				logger.warn("Invalid response format from organization modes API", { organizationId })
+				return []
+			}
+
+			// Validate each mode and mark with organization source
+			const validatedModes: ModeConfig[] = []
+			for (const modeWrapper of response.data.modes) {
+				// Extract the config object and merge with top-level name and slug
+				const config = modeWrapper.config
+				if (!config) {
+					logger.warn("Mode wrapper missing config property", {
+						organizationId,
+						modeId: modeWrapper.id,
+					})
+					continue
+				}
+
+				// Merge top-level name and slug with config properties
+				const mode = {
+					...config,
+					name: modeWrapper.name,
+					slug: modeWrapper.slug,
+				}
+
+				const validationResult = modeConfigSchema.safeParse(mode)
+				if (validationResult.success) {
+					validatedModes.push({ ...validationResult.data, source: "organization" })
+				} else {
+					logger.warn("Invalid mode configuration from organization API", {
+						organizationId,
+						slug: mode.slug,
+						errors: validationResult.error.errors,
+					})
+				}
+			}
+
+			logger.info("Fetched organization modes", {
+				organizationId,
+				count: validatedModes.length,
+			})
+
+			return validatedModes
+		} catch (error) {
+			// Log error but don't throw - gracefully degrade to no organization modes
+			logger.error("Failed to fetch organization modes", {
+				organizationId,
+				error: error instanceof Error ? error.message : String(error),
+			})
+			return []
+		}
+	}
+	// kilocode_change end
+
+	// kilocode_change start: New method to refresh modes with organization modes
+	/**
+	 * Refreshes custom modes with organization-specific modes
+	 * @param organizationModes - Modes fetched from the organization API
+	 */
+	public async refreshWithOrganizationModes(organizationModes: ModeConfig[]): Promise<void> {
+		// Parallelize independent path fetching operations
+		const [settingsPath, roomodesPath] = await Promise.all([
+			this.getCustomModesFilePath(),
+			this.getWorkspaceRoomodes(),
+		])
+
+		// Parallelize independent file loading operations
+		const [settingsModes, roomodesModes] = await Promise.all([
+			this.loadModesFromFile(settingsPath),
+			roomodesPath ? this.loadModesFromFile(roomodesPath) : Promise.resolve([]),
+		])
+
+		// Merge with organization modes
+		const mergedModes = await this.mergeCustomModes(roomodesModes, settingsModes, organizationModes)
+
+		await this.context.globalState.update("customModes", mergedModes)
+		this.clearCache()
+		await this.onUpdate()
+	}
+	// kilocode_change end
 
 	private clearCache(): void {
 		this.cachedModes = null

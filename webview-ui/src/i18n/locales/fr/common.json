@@ -28,7 +28,8 @@
 		"customerSupport": "Support Client"
 	},
 	"ui": {
-		"search_placeholder": "Rechercher..."
+		"search_placeholder": "Rechercher...",
+		"no_results": "Aucun résultat trouvé"
 	},
 	"mermaid": {
 		"loading": "Génération du diagramme mermaid...",
@@ -66,6 +67,12 @@
 			"copyError": "Erreur lors de la copie de l'image"
 		}
 	},
+	"image": {
+		"tabs": {
+			"view": "Image"
+		},
+		"noData": "Aucune donnée d'image"
+	},
 	"file": {
 		"errors": {
 			"invalidDataUri": "Format d'URI de données invalide",
@@ -84,6 +91,28 @@
 		"deleteWarning": "Supprimer ce message supprimera tous les messages suivants dans la conversation. Voulez-vous continuer ?",
 		"editMessage": "Modifier le message",
 		"editWarning": "Modifier ce message supprimera tous les messages suivants dans la conversation. Voulez-vous continuer ?",
-		"proceed": "Continuer"
+		"editQuestionWithCheckpoint": "Modifier ce message supprimera tous les messages ultérieurs dans la conversation. Voulez-vous aussi annuler tous les changements jusqu'à ce point de contrôle ?",
+		"deleteQuestionWithCheckpoint": "Supprimer ce message supprimera tous les messages ultérieurs dans la conversation. Voulez-vous aussi annuler tous les changements jusqu'à ce point de contrôle ?",
+		"editOnly": "Non, modifier le message seulement",
+		"deleteOnly": "Non, supprimer le message seulement",
+		"restoreToCheckpoint": "Oui, restaurer le point de contrôle",
+		"proceed": "Continuer",
+		"dontShowAgain": "Ne plus afficher ceci"
+	},
+	"time_ago": {
+		"just_now": "à l'instant",
+		"seconds_ago": "il y a {{count}} secondes",
+		"minute_ago": "il y a une minute",
+		"minutes_ago": "il y a {{count}} minutes",
+		"hour_ago": "il y a une heure",
+		"hours_ago": "il y a {{count}} heures",
+		"day_ago": "il y a un jour",
+		"days_ago": "il y a {{count}} jours",
+		"week_ago": "il y a une semaine",
+		"weeks_ago": "il y a {{count}} semaines",
+		"month_ago": "il y a un mois",
+		"months_ago": "il y a {{count}} mois",
+		"year_ago": "il y a un an",
+		"years_ago": "il y a {{count}} ans"
 	}
 }

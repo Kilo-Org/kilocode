@@ -1,0 +1,51 @@
+{
+	// This is the configuration for plugins/base independent project, compiled separately from the outer project
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"module": "NodeNext",
+		"esModuleInterop": true,
+		"removeComments": false,
+		"preserveConstEnums": true,
+		"sourceMap": true,
+		"inlineSources": true,
+		"allowJs": true,
+		"resolveJsonModule": true,
+		"isolatedModules": false,
+		"outDir": "./dist",
+		"skipLibCheck": true, // Skip library file checking to avoid type conflicts
+		"declaration": true,
+		"declarationMap": true,
+		"types": [
+			"@types/mocha",
+			"@types/semver",
+			"@types/sinon",
+			"@types/trusted-types",
+			"@types/winreg",
+			"@types/wicg-file-system-access"
+		]
+	},
+	"include": [
+		"src/**/*.ts", // Include all TS files under src
+		"src/**/*.js",
+		"electron.d.ts",
+		"deps/vscode/typings",
+		"deps/vscode/vs/workbench/api/node",
+		"deps/vscode/vs/workbench/contrib/debug/common/debugProtocol.d.ts",
+		"deps/vscode/vscode-dts/vscode.d.ts",
+		"deps/vscode/vscode-dts/vscode.proposed.*.d.ts",
+		"deps/vscode/vs/base/common/marked",
+		"deps/vscode/vs/base/common/semver"
+	],
+	"exclude": [
+		"node_modules",
+		".vscode-test",
+		"webview-ui",
+		"deps/vscode/**/test/**/*.ts",
+		"deps/vscode/**/test/**/*.js",
+		"deps/vscode/**/fixtures/**/*.js",
+		"deps/vscode/**/fixtures/**/*.ts",
+		"node_modules/@types/vscode",
+		"node_modules/@types/electron",
+		"dist/**/*"
+	]
+}

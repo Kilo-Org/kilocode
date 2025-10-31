@@ -5,6 +5,9 @@ import { t } from "../../../i18n"
 import { WebviewMessage } from "../../../shared/WebviewMessage"
 import { Task } from "../../task/Task"
 import axios from "axios"
+import { getKiloUrlFromToken } from "@roo-code/types"
+
+const shownNativeNotificationIds = new Set<string>()
 
 // Helper function to delete messages for resending
 const deleteMessagesForResend = async (cline: Task, originalMessageIndex: number, originalMessageTs: number) => {
@@ -33,7 +36,7 @@ const resendMessageSequence = async (
 	images?: string[],
 ): Promise<boolean> => {
 	// 1. Get the current cline instance before deletion
-	const currentCline = provider.getCurrentCline()
+	const currentCline = provider.getCurrentTask()
 	if (!currentCline || currentCline.taskId !== taskId) {
 		provider.log(`[Edit Message] Error: Could not get current cline instance before deletion for task ${taskId}.`)
 		vscode.window.showErrorMessage(t("kilocode:userFeedback.message_update_failed"))
@@ -52,7 +55,7 @@ const resendMessageSequence = async (
 		return false
 	}
 
-	const newCline = await provider.initClineWithHistoryItem(historyItem)
+	const newCline = await provider.createTaskWithHistoryItem(historyItem)
 	if (!newCline) {
 		provider.log(
 			`[Edit Message] Error: Failed to re-initialize Cline with updated history item for task ${taskId}.`,
@@ -70,7 +73,7 @@ const resendMessageSequence = async (
 
 export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider) => {
 	try {
-		const { apiConfiguration } = await provider.getState()
+		const { apiConfiguration, dismissedNotificationIds } = await provider.getState()
 		const kilocodeToken = apiConfiguration?.kilocodeToken
 
 		if (!kilocodeToken || apiConfiguration?.apiProvider !== "kilocode") {
@@ -81,18 +84,70 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			return
 		}
 
-		const response = await axios.get("https://kilocode.ai/api/users/notifications", {
-			headers: {
-				Authorization: `Bearer ${kilocodeToken}`,
-				"Content-Type": "application/json",
-			},
+		const headers: Record<string, string> = {
+			Authorization: `Bearer ${kilocodeToken}`,
+			"Content-Type": "application/json",
+		}
+
+		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+		if (
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
+			apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
+		) {
+			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+		}
+
+		const url = getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", kilocodeToken)
+		const response = await axios.get(url, {
+			headers,
 			timeout: 5000,
 		})
 
+		const notifications = response.data?.notifications || []
+		const dismissedIds = dismissedNotificationIds || []
+
+		// Filter notifications to only show new ones
+		const notificationsToShowAsNative = notifications.filter(
+			(notification: any) =>
+				!dismissedIds.includes(notification.id) &&
+				!shownNativeNotificationIds.has(notification.id) &&
+				(notification.showIn ?? []).includes("extension-native"),
+		)
+
 		provider.postMessageToWebview({
 			type: "kilocodeNotificationsResponse",
-			notifications: response.data?.notifications || [],
+			notifications: (response.data?.notifications || []).filter(
+				({ showIn }: { showIn?: string[] }) => !showIn || showIn.includes("extension"),
+			),
 		})
+
+		for (const notification of notificationsToShowAsNative) {
+			try {
+				const message = `${notification.title}: ${notification.message}`
+				const actionButton = notification.action?.actionText
+				const selection = await vscode.window.showInformationMessage(
+					message,
+					...(actionButton ? [actionButton] : []),
+				)
+				if (selection === actionButton) {
+					const currentDismissedIds = dismissedNotificationIds || []
+					if (!currentDismissedIds.includes(notification.id)) {
+						await provider.contextProxy.setValue("dismissedNotificationIds", [
+							...currentDismissedIds,
+							notification.id,
+						])
+					}
+
+					if (notification.action?.actionURL) {
+						await vscode.env.openExternal(vscode.Uri.parse(notification.action.actionURL))
+					}
+				}
+
+				shownNativeNotificationIds.add(notification.id)
+			} catch (error: any) {
+				provider.log(`Error displaying notification ${notification.id}: ${error.message}`)
+			}
+		}
 	} catch (error: any) {
 		provider.log(`Error fetching Kilocode notifications: ${error.message}`)
 		provider.postMessageToWebview({
@@ -111,7 +166,7 @@ export const editMessageHandler = async (provider: ClineProvider, message: Webvi
 	const revert = message.values.revert || false
 	const images = message.values.images
 
-	const currentCline = provider.getCurrentCline()
+	const currentCline = provider.getCurrentTask()
 	if (!currentCline) {
 		provider.log("[Edit Message] Error: No active Cline instance found.")
 		return

@@ -41,9 +41,14 @@ type RouterModelsQueryKey = {
 	openRouterApiKey?: string
 	lmStudioBaseUrl?: string
 	ollamaBaseUrl?: string
+	kilocodeOrganizationId?: string
+	deepInfraApiKey?: string
+	geminiApiKey?: string
+	googleGeminiBaseUrl?: string
+	chutesApiKey?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 
 export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
-	useQuery({ queryKey: ["routerModels", queryKey], queryFn: getRouterModels })
+	useQuery({ queryKey: ["routerModels", queryKey], queryFn: () => getRouterModels() })
 // kilocode_change end

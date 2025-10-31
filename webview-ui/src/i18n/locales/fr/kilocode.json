@@ -2,8 +2,8 @@
 	"welcome": {
 		"greeting": "Bienvenue dans Kilo Code !",
 		"introText1": "Kilo Code est un agent de codage IA gratuit et open source.",
-		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude 4 Sonnet, Gemini 2.5 Pro, GPT-4.1, et plus de 450 autres.",
-		"introText3": "Créez un compte gratuit et obtenez 20 $ en tokens à utiliser avec n'importe quel modèle d'IA.",
+		"introText2": "Il fonctionne avec les derniers modèles d'IA comme Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, et plus de 450 autres.",
+		"introText3": "Créez un compte gratuit et obtenez 20 $ de crédits bonus lors de votre première recharge.",
 		"ctaButton": "Commencer",
 		"manualModeButton": "Utilisez votre propre clé API",
 		"alreadySignedUp": "Déjà inscrit ?",
@@ -11,7 +11,26 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Ajouter du crédit",
-		"lowBalance": "Votre solde Kilo Code est bas"
+		"lowBalance": "Votre solde Kilo Code est bas",
+		"newOrganization": "Vous utilisez Kilo pour le travail ?"
+	},
+	"pagination": {
+		"previous": "Précédent",
+		"next": "Suivant",
+		"page": "Page {{page}} / {{count}}"
+	},
+	"invalidModel": {
+		"alphaPeriodEnded": "🎉 La période alpha pour {{model}} est terminée ! Changez vers un modèle différent pour continuer.",
+		"notAllowedForTeam": "⚠️ Votre organisation n'autorise pas l'utilisation du modèle {{model}}. Changez vers un modèle différent pour continuer.",
+		"modelUnavailable": "⚠️ Le modèle {{model}} n'est pas disponible. Changez vers un modèle différent pour continuer.",
+		"continueWith": "Continuer avec {{model}}",
+		"continue": "Continuer"
+	},
+	"pricing": {
+		"costUnknown": "coût inconnu",
+		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
+		"freeModelsDescription": "Les modèles gratuits peuvent avoir des limites de débit. Utilisez le lien ci-dessous pour optimiser votre utilisation des modèles gratuits !",
+		"freeModelsLink": "Découvrir les options de modèles gratuits et économiques"
 	},
 	"notifications": {
 		"toolRequest": "Demande d'outil en attente d'approbation",
@@ -27,9 +46,38 @@
 			"apiKey": "Clé API Kilo Code",
 			"login": "Se connecter à Kilo Code",
 			"logout": "Se déconnecter de Kilo Code",
+			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
 			"providerRouting": {
-				"title": "Kilo Code - Routage des fournisseurs OpenRouter",
-				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle."
+				"title": "Routage des fournisseurs",
+				"managedByOrganization": "Gérer le routage des fournisseurs au niveau de l'organisation",
+				"createOrganization": "Créer une organisation pour gérer le routage des fournisseurs",
+				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
+				"sorting": {
+					"default": "Tri des fournisseurs par défaut",
+					"price": "Préférer les fournisseurs avec un prix plus bas",
+					"throughput": "Préférer les fournisseurs avec un débit plus élevé",
+					"latency": "Préférer les fournisseurs avec une latence plus faible"
+				},
+				"dataCollection": {
+					"default": "Aucune politique de données définie",
+					"allowFree": "Autoriser l'entraînement des prompts (gratuit uniquement)",
+					"allow": "Autoriser l'entraînement des prompts",
+					"deny": "Refuser l'entraînement des prompts",
+					"zdr": "Rétention zéro des données"
+				}
+			}
+		},
+		"modelInfo": {
+			"contextWindow": "Fenêtre de contexte",
+			"providerBreakdown": "Répartition des prix et capacités par fournisseur",
+			"averageKiloCodeCost": "Il s'agit de la dépense réelle moyenne pour Kilo Code utilisant ce modèle au cours de la semaine dernière. Elle peut être inférieure au prix affiché en raison de l'utilisation du cache de prompts.",
+			"table": {
+				"provider": "Fournisseur",
+				"context": "Le point de terminaison peut traiter ce nombre de tokens (entrée + sortie).",
+				"inputPrice": "Coût par million de tokens pour le prompt.",
+				"outputPrice": "Coût par million de tokens pour la complétion.",
+				"cacheReadPrice": "Coût par million de tokens pour lire depuis le cache.",
+				"cacheWritePrice": "Coût par million de tokens pour écrire dans le cache."
 			}
 		},
 		"contextManagement": {
@@ -56,11 +104,22 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Style d'Appel d'Outil",
+		"description": "Choisissez comment les appels d'outils sont formatés dans le prompt système. JSON est actuellement expérimental et principalement destiné aux utilisateurs intéressés à contribuer à son développement.",
+		"automatic": "Laisser Kilo décider",
+		"xml": "XML",
+		"json": "JSON (expérimental)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code souhaite condenser votre conversation",
 			"condenseConversation": "Condenser la Conversation"
-		}
+		},
+		"seeNewChanges": "Afficher les nouvelles modifications",
+		"revertNewChanges": "Annuler les nouvelles modifications",
+		"confirmRevertChanges": "Confirmer l'annulation des modifications",
+		"cancelRevertChanges": "Annuler l'annulation des modifications"
 	},
 	"newTaskPreview": {
 		"task": "Tâche"
@@ -71,13 +130,17 @@
 		"logOut": "Se déconnecter",
 		"currentBalance": "SOLDE ACTUEL",
 		"loading": "Chargement...",
+		"organization": "Organisation",
+		"personal": "Personnel",
 		"shop": {
 			"title": "Acheter des Crédits",
 			"popular": "Populaire",
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
 			"viewAll": "Voir toutes les options de prix"
-		}
+		},
+		"detailedUsage": "Utilisation détaillée",
+		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"
 	},
 	"docs": "Documentation",
 	"rules": {
@@ -153,24 +216,30 @@
 		}
 	},
 	"ghost": {
-		"title": "Assistance en ligne",
+		"title": "Autocomplete",
 		"settings": {
-			"enableQuickInlineTaskKeybinding": {
-				"label": "Tâche Rapide en Ligne",
-				"description": "Besoin d'une modification rapide ? Sélectionnez du code (ou pas !) et appuyez sur Cmd+I. Décrivez votre objectif en langage courant (\"créer un composant React avec ces props\", \"ajouter une gestion d'erreurs à cette fonction\"), et obtenez plusieurs suggestions prêtes à l'emploi directement dans votre éditeur. <DocsLink>Voir le raccourci</DocsLink>"
-			},
-			"enableAutoInlineTaskKeybinding": {
-				"label": "Tâche automatique en ligne",
-				"description": "Besoin d'une correction rapide, d'une complétion ou d'une refactorisation ? Kilo utilisera le contexte environnant pour proposer des améliorations immédiates, vous permettant de rester dans votre flux de travail. <DocsLink>Voir le raccourci</DocsLink>"
-			},
-			"provider": "Fournisseur",
-			"apiConfigId": {
-				"label": "Configuration API",
-				"current": "Utiliser la configuration API actuellement sélectionnée",
-				"description": "Sélectionnez une configuration d'API à utiliser pour les invites d'assistance en ligne, ou utilisez simplement celle qui est actuellement sélectionnée"
-			},
 			"triggers": "Déclencheurs",
-			"keybindingDescription": "Les fonctionnalités d'Inline Assist sont déclenchées par des commandes. Vous pouvez configurer les <DocsLink>raccourcis clavier ici</DocsLink>."
+			"keybindingDescription": "Les fonctionnalités Autocomplete peuvent être déclenchées par des commandes. Tu peux configurer les <DocsLink>Raccourcis Clavier ici</DocsLink>.",
+			"enableAutoTrigger": {
+				"label": "Pause pour Compléter",
+				"description": "Quand activé, Kilo Code déclenchera automatiquement Autocomplete quand tu arrêtes de taper. Cela peut être utile pour des corrections rapides et des suggestions."
+			},
+			"autoTriggerDelay": {
+				"label": "Délai de Déclenchement Automatique",
+				"description": "Le délai en secondes avant que Kilo Code déclenche Autocomplete après que tu aies arrêté de taper. Un délai plus court signifie des suggestions plus rapides, mais peut être plus intensif en ressources."
+			},
+			"enableQuickInlineTaskKeybinding": {
+				"label": "Tâche rapide ({{keybinding}})",
+				"description": "Tu n'as besoin que d'un changement rapide ? Sélectionne du code (ou pas !) et appuie sur Cmd+I. Décris ton objectif en français simple (\"créer un composant React avec ces props\", \"ajouter la gestion d'erreurs à cette fonction\"), et obtiens plusieurs suggestions prêtes à l'emploi directement dans ton éditeur. <DocsLink>Modifier le raccourci</DocsLink>"
+			},
+			"enableSmartInlineTaskKeybinding": {
+				"label": "Saisie automatique manuelle ({{keybinding}})",
+				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Modifier le raccourci</DocsLink>"
+			},
+			"keybindingNotFound": "introuvable",
+			"noModelConfigured": "Aucun modèle d'autocomplétion approprié trouvé. Configure un fournisseur dans les paramètres API.",
+			"model": "Modèle",
+			"provider": "Fournisseur"
 		}
 	},
 	"virtualProvider": {
@@ -183,7 +252,7 @@
 		"removeProfile": "Supprimer le profil",
 		"selectProfilePlaceholder": "Sélectionner le profil...",
 		"addProfile": "Ajouter un profil",
-		"noProfilesAvailable": "Aucun profil disponible. Veuillez d'abord configurer au moins un profil de fournisseur non virtuel.",
+		"noProfilesAvailable": "Aucun profil disponible. Veuillez configurer d'abord au moins un profil de fournisseur non virtuel.",
 		"dangerZoneTitle": "Zone de Danger",
 		"dangerZoneDescription": "Ces actions sont destructives et ne peuvent pas être annulées.",
 		"clearUsageData": "Effacer les Données d'Utilisation",
@@ -194,5 +263,24 @@
 		"perMinute": "Par minute",
 		"requestsLabel": "Demandes",
 		"perDay": "Par jour"
+	},
+	"memoryWarning": {
+		"message": "L'utilisation de la mémoire est à {{percentage}}%. Veuillez redémarrer votre IDE pour éviter les plantages."
+	},
+	"imageWarnings": {
+		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
+		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",
+		"imagesRemovedNoSupport": "Images supprimées, non prises en charge par le modèle."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Ces serveurs MCP sont maintenus par la communauté. Cliquez <1>ici</1> pour modifier vos propres paramètres MCP."
+		},
+		"modes": {
+			"description": "Ces modes sont disponibles auprès de la communauté. Cliquez <1>ici</1> pour modifier vos propres modes personnalisés."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nouveau : Partagez des modes en créant une organisation"
 	}
 }

@@ -7,7 +7,7 @@ import * as fs from "fs"
 import { fileURLToPath } from "url"
 import { camelCase } from "change-case"
 import { setupConsoleLogging, cleanLogMessage } from "../helpers/console-logging"
-import { closeAllTabs } from "../helpers"
+import { closeAllTabs, executeVSCodeCommand, freezeGifs, waitForDOMStability } from "../helpers"
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url)
@@ -194,19 +194,15 @@ export const test = base.extend<TestFixtures>({
 	takeScreenshot: async ({ workbox: page }, use) => {
 		await use(async (name?: string) => {
 			await closeAllTabs(page)
+			await executeVSCodeCommand(page, "Notifications:Clear")
+			await freezeGifs(page)
+			await waitForDOMStability(page)
 
-			const activatingStatus = page.locator("text=Activating Extensions")
-			const activatingStatusCount = await activatingStatus.count()
-			if (activatingStatusCount > 0) {
-				console.log("⌛️ Waiting for `Activating Extensions` to go away...")
-				await activatingStatus.waitFor({ state: "hidden", timeout: 10000 })
-			}
-
-			const testInfo = test.info()
 			// Extract test suite from the test file name or use a default
+			const testInfo = test.info()
 			const fileName = testInfo.file.split("/").pop()?.replace(".test.ts", "") || "unknown"
-			const testSuite = camelCase(fileName)
 			const testName = testInfo.title || "Unknown Test"
+			const testSuite = camelCase(fileName)
 
 			// Create a hierarchical name: TestSuite__TestName__ScreenshotName
 			const screenshotName = name || `screenshot-${Date.now()}`

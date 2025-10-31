@@ -26,6 +26,7 @@ import { isPathInIgnoredDirectory } from "../../glob/ignore-utils"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { Package } from "../../../shared/package"
 
 /**
  * Implementation of the file watcher interface
@@ -38,6 +39,7 @@ export class FileWatcher implements IFileWatcher {
 	private batchProcessDebounceTimer?: NodeJS.Timeout
 	private readonly BATCH_DEBOUNCE_DELAY_MS = 500
 	private readonly FILE_PROCESSING_CONCURRENCY_LIMIT = 10
+	private readonly batchSegmentThreshold: number
 
 	private readonly _onDidStartBatchProcessing = new vscode.EventEmitter<string[]>()
 	private readonly _onBatchProgressUpdate = new vscode.EventEmitter<{
@@ -78,10 +80,25 @@ export class FileWatcher implements IFileWatcher {
 		private vectorStore?: IVectorStore,
 		ignoreInstance?: Ignore,
 		ignoreController?: RooIgnoreController,
+		batchSegmentThreshold?: number,
 	) {
 		this.ignoreController = ignoreController || new RooIgnoreController(workspacePath)
 		if (ignoreInstance) {
 			this.ignoreInstance = ignoreInstance
+		}
+		// Get the configurable batch size from VSCode settings, fallback to default
+		// If not provided in constructor, try to get from VSCode settings
+		if (batchSegmentThreshold !== undefined) {
+			this.batchSegmentThreshold = batchSegmentThreshold
+		} else {
+			try {
+				this.batchSegmentThreshold = vscode.workspace
+					.getConfiguration(Package.name)
+					.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
+			} catch {
+				// In test environment, vscode.workspace might not be available
+				this.batchSegmentThreshold = BATCH_SEGMENT_THRESHOLD
+			}
 		}
 	}
 
@@ -204,15 +221,20 @@ export class FileWatcher implements IFileWatcher {
 						currentFile: path,
 					})
 				}
-			} catch (error) {
-				overallBatchError = error as Error
+			} catch (error: any) {
+				const errorStatus = error?.status || error?.response?.status || error?.statusCode
+				const errorMessage = error instanceof Error ? error.message : String(error)
+
 				// Log telemetry for deletion error
 				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-					error: sanitizeErrorMessage(overallBatchError.message),
+					error: sanitizeErrorMessage(errorMessage),
 					location: "deletePointsByMultipleFilePaths",
 					errorType: "deletion_error",
+					errorStatus: errorStatus,
 				})
 
+				// Mark all paths as error
+				overallBatchError = error as Error
 				for (const path of pathsToExplicitlyDelete) {
 					batchResults.push({ path, status: "error", error: error as Error })
 					processedCountInBatch++
@@ -336,8 +358,8 @@ export class FileWatcher implements IFileWatcher {
 	): Promise<Error | undefined> {
 		if (pointsForBatchUpsert.length > 0 && this.vectorStore && !overallBatchError) {
 			try {
-				for (let i = 0; i < pointsForBatchUpsert.length; i += BATCH_SEGMENT_THRESHOLD) {
-					const batch = pointsForBatchUpsert.slice(i, i + BATCH_SEGMENT_THRESHOLD)
+				for (let i = 0; i < pointsForBatchUpsert.length; i += this.batchSegmentThreshold) {
+					const batch = pointsForBatchUpsert.slice(i, i + this.batchSegmentThreshold)
 					let retryCount = 0
 					let upsertError: Error | undefined
 

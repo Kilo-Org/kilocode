@@ -28,11 +28,16 @@
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
+		"slashCommands": "Lệnh Gạch Chéo",
 		"prompts": "Lời nhắc",
+		"ui": "UI",
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
 		"display": "Hiển thị"
+	},
+	"slashCommands": {
+		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
 	},
 	"prompts": {
 		"description": "Cấu hình các lời nhắc hỗ trợ được sử dụng cho các hành động nhanh như cải thiện lời nhắc, giải thích mã và khắc phục sự cố. Những lời nhắc này giúp Kilo Code cung cấp hỗ trợ tốt hơn cho các tác vụ phát triển phổ biến."
@@ -51,6 +56,9 @@
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Khóa API:",
 		"mistralApiKeyPlaceholder": "Nhập khóa API Mistral của bạn",
+		"vercelAiGatewayProvider": "Vercel AI Gateway",
+		"vercelAiGatewayApiKeyLabel": "Khóa API",
+		"vercelAiGatewayApiKeyPlaceholder": "Nhập khóa API Vercel AI Gateway của bạn",
 		"openaiCompatibleProvider": "Tương thích OpenAI",
 		"openAiKeyLabel": "Khóa API OpenAI",
 		"openAiKeyPlaceholder": "Nhập khóa API OpenAI của bạn",
@@ -114,6 +122,7 @@
 			"modelDimensionRequired": "Yêu cầu kích thước mô hình",
 			"geminiApiKeyRequired": "Yêu cầu khóa API Gemini",
 			"mistralApiKeyRequired": "Cần có khóa API của Mistral",
+			"vercelAiGatewayApiKeyRequired": "Cần có khóa API Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Yêu cầu URL cơ sở Ollama",
 			"baseUrlRequired": "Yêu cầu URL cơ sở",
 			"modelDimensionMinValue": "Kích thước mô hình phải lớn hơn 0"
@@ -124,10 +133,14 @@
 		"searchMinScoreResetTooltip": "Đặt lại về giá trị mặc định (0.4)",
 		"searchMaxResultsLabel": "Số Kết Quả Tìm Kiếm Tối Đa",
 		"searchMaxResultsDescription": "Số lượng kết quả tìm kiếm tối đa được trả về khi truy vấn chỉ mục cơ sở mã. Giá trị cao hơn cung cấp nhiều ngữ cảnh hơn nhưng có thể bao gồm các kết quả ít liên quan hơn.",
-		"resetToDefault": "Đặt lại về mặc định"
+		"resetToDefault": "Đặt lại về mặc định",
+		"cancelling": "Đang hủy...",
+		"cancelIndexingButton": "Hủy lập chỉ mục"
 	},
 	"autoApprove": {
+		"toggleShortcut": "Bạn có thể định cấu hình một phím tắt chung cho cài đặt này <SettingsLink>trong tùy chọn IDE của bạn</SettingsLink>.",
 		"description": "Cho phép Kilo Code tự động thực hiện các hoạt động mà không cần phê duyệt. Chỉ bật những cài đặt này nếu bạn hoàn toàn tin tưởng AI và hiểu rõ các rủi ro bảo mật liên quan.",
+		"enabled": "Phê duyệt tự động đã bật",
 		"toggleAriaLabel": "Chuyển đổi tự động phê duyệt",
 		"disabledAriaLabel": "Tự động phê duyệt bị vô hiệu hóa - hãy chọn các tùy chọn trước",
 		"readOnly": {
@@ -202,7 +215,14 @@
 			"description": "Tự động thực hiện số lượng API request này trước khi yêu cầu phê duyệt để tiếp tục với nhiệm vụ.",
 			"unlimited": "Không giới hạn"
 		},
-		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt"
+		"selectOptionsFirst": "Chọn ít nhất một tùy chọn bên dưới để bật tự động phê duyệt",
+		"apiCostLimit": {
+			"title": "Chi phí tối đa",
+			"unlimited": "Không giới hạn"
+		},
+		"maxLimits": {
+			"description": "Tự động thực hiện các yêu cầu lên đến các giới hạn này trước khi xin phê duyệt để tiếp tục."
+		}
 	},
 	"providers": {
 		"providerDocumentation": "Tài liệu {{provider}}",
@@ -226,15 +246,15 @@
 		"noProviderMatchFound": "Không tìm thấy nhà cung cấp",
 		"noMatchFound": "Không tìm thấy hồ sơ phù hợp",
 		"vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
+		"vscodeLmUnavailable": "Hỗ trợ Mô hình Ngôn ngữ VS Code chỉ có trên Visual Studio Code. Các bản fork như VSCodium và các công cụ khác có thể không hoạt động. Ngoài ra, tính năng này không có trong các công cụ JetBrains.",
+		"vscodeLmUnavailableInstructions": "Hãy đảm bảo bạn đang sử dụng công cụ được hỗ trợ và VS Code Chat đã được cài đặt và kích hoạt",
 		"awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",
 		"getOpenRouterApiKey": "Lấy khóa API OpenRouter",
+		"vercelAiGatewayApiKey": "Khóa API Vercel AI Gateway",
+		"getVercelAiGatewayApiKey": "Lấy khóa API Vercel AI Gateway",
 		"apiKeyStorageNotice": "Khóa API được lưu trữ an toàn trong Bộ lưu trữ bí mật của VSCode",
-		"cerebras": {
-			"apiKey": "Khóa API Cerebras",
-			"getApiKey": "Lấy khóa API Cerebras"
-		},
 		"glamaApiKey": "Khóa API Glama",
 		"getGlamaApiKey": "Lấy khóa API Glama",
 		"useCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
@@ -254,22 +274,51 @@
 			"error": "Không thể làm mới danh sách mô hình. Vui lòng thử lại."
 		},
 		"getRequestyApiKey": "Lấy khóa API Requesty",
+		"getRequestyBaseUrl": "URL cơ sở",
+		"requestyUseCustomBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"openRouterTransformsText": "Nén lời nhắc và chuỗi tin nhắn theo kích thước ngữ cảnh (<a>OpenRouter Transforms</a>)",
 		"anthropicApiKey": "Khóa API Anthropic",
 		"getAnthropicApiKey": "Lấy khóa API Anthropic",
 		"anthropicUseAuthToken": "Truyền khóa API Anthropic dưới dạng tiêu đề Authorization thay vì X-Api-Key",
+		"anthropic1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
+		"anthropic1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
+		"awsBedrock1MContextBetaLabel": "Bật cửa sổ ngữ cảnh 1M (Beta)",
+		"awsBedrock1MContextBetaDescription": "Mở rộng cửa sổ ngữ cảnh lên 1 triệu token cho Claude Sonnet 4",
+		"cerebrasApiKey": "Khóa API Cerebras",
+		"getCerebrasApiKey": "Lấy khóa API Cerebras",
 		"chutesApiKey": "Khóa API Chutes",
 		"getChutesApiKey": "Lấy khóa API Chutes",
+		"fireworksApiKey": "Khóa API Fireworks",
+		"getFireworksApiKey": "Lấy khóa API Fireworks",
+		"syntheticApiKey": "Khóa API Synthetic",
+		"getSyntheticApiKey": "Lấy khóa API Synthetic",
+		"featherlessApiKey": "Khóa API Featherless",
+		"getFeatherlessApiKey": "Lấy khóa API Featherless",
+		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
+		"ioIntelligenceApiKeyPlaceholder": "Nhập khóa API IO Intelligence của bạn",
+		"getIoIntelligenceApiKey": "Lấy khóa API IO Intelligence",
 		"deepSeekApiKey": "Khóa API DeepSeek",
 		"getDeepSeekApiKey": "Lấy khóa API DeepSeek",
+		"doubaoApiKey": "Khóa API Doubao",
+		"getDoubaoApiKey": "Lấy khóa API Doubao",
 		"moonshotApiKey": "Khóa API Moonshot",
 		"getMoonshotApiKey": "Lấy khóa API Moonshot",
 		"moonshotBaseUrl": "Điểm vào Moonshot",
+		"zaiApiKey": "Khóa API Z AI",
+		"getZaiApiKey": "Lấy khóa API Z AI",
+		"zaiEntrypoint": "Điểm vào Z AI",
+		"zaiEntrypointDescription": "Vui lòng chọn điểm vào API phù hợp dựa trên vị trí của bạn. Nếu bạn ở Trung Quốc, hãy chọn open.bigmodel.cn. Ngược lại, hãy chọn api.z.ai.",
 		"geminiApiKey": "Khóa API Gemini",
 		"getGroqApiKey": "Lấy khóa API Groq",
 		"groqApiKey": "Khóa API Groq",
+		"getSambaNovaApiKey": "Lấy khóa API SambaNova",
+		"sambaNovaApiKey": "Khóa API SambaNova",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Lấy Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL Cơ sở",
+		"getOvhCloudAiEndpointsBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"huggingFaceModelId": "ID Mô hình",
 		"huggingFaceLoading": "Đang tải...",
 		"huggingFaceModelsCount": "({{count}} mô hình)",
@@ -313,6 +362,16 @@
 		"cacheUsageNote": "Lưu ý: Nếu bạn không thấy việc sử dụng bộ nhớ đệm, hãy thử chọn một mô hình khác và sau đó chọn lại mô hình mong muốn của bạn.",
 		"vscodeLmModel": "Mô hình ngôn ngữ",
 		"vscodeLmWarning": "Lưu ý: Đây là tích hợp thử nghiệm và hỗ trợ nhà cung cấp có thể khác nhau. Nếu bạn nhận được lỗi về mô hình không được hỗ trợ, đó là vấn đề từ phía nhà cung cấp.",
+		"geminiParameters": {
+			"urlContext": {
+				"title": "Bật ngữ cảnh URL",
+				"description": "Cho phép Gemini truy cập và xử lý URL để có thêm ngữ cảnh khi tạo phản hồi. Hữu ích cho các tác vụ yêu cầu phân tích nội dung web."
+			},
+			"groundingSearch": {
+				"title": "Bật grounding với tìm kiếm Google",
+				"description": "Cho phép Gemini tìm kiếm trên Google để lấy thông tin mới nhất và căn cứ phản hồi dựa trên dữ liệu thời gian thực. Hữu ích cho các truy vấn yêu cầu thông tin cập nhật."
+			}
+		},
 		"googleCloudSetup": {
 			"title": "Để sử dụng Google Cloud Vertex AI, bạn cần:",
 			"step1": "1. Tạo tài khoản Google Cloud, kích hoạt Vertex AI API và kích hoạt các mô hình Claude mong muốn.",
@@ -336,6 +395,11 @@
 		"ollama": {
 			"baseUrl": "URL cơ sở (tùy chọn)",
 			"modelId": "ID mô hình",
+			"apiKey": "Khóa API Ollama",
+			"apiKeyPlaceholder": "Nhập khóa API của bạn",
+			"apiKeyHelp": "Khóa API tùy chọn cho các phiên bản Ollama đã xác thực hoặc dịch vụ đám mây. Để trống cho cài đặt cục bộ.",
+			"numCtx": "Kích thước cửa sổ ngữ cảnh (num_ctx)",
+			"numCtxHelp": "Ghi đè kích thước cửa sổ ngữ cảnh mặc định của mô hình. Để trống để sử dụng cấu hình Modelfile của mô hình. Giá trị tối thiểu là 128.",
 			"description": "Ollama cho phép bạn chạy các mô hình cục bộ trên máy tính của bạn. Để biết hướng dẫn về cách bắt đầu, xem hướng dẫn nhanh của họ.",
 			"warning": "Lưu ý: Kilo Code sử dụng các lời nhắc phức tạp và hoạt động tốt nhất với các mô hình Claude. Các mô hình kém mạnh hơn có thể không hoạt động như mong đợi."
 		},
@@ -346,6 +410,10 @@
 		"humanRelay": {
 			"description": "Không cần khóa API, nhưng người dùng cần giúp sao chép và dán thông tin vào AI trò chuyện web.",
 			"instructions": "Trong quá trình sử dụng, một hộp thoại sẽ xuất hiện và tin nhắn hiện tại sẽ được tự động sao chép vào clipboard. Bạn cần dán chúng vào các phiên bản web của AI (như ChatGPT hoặc Claude), sau đó sao chép phản hồi của AI trở lại hộp thoại và nhấp vào nút xác nhận."
+		},
+		"roo": {
+			"authenticatedMessage": "Đã xác thực an toàn thông qua tài khoản Roo Code Cloud của bạn.",
+			"connectButton": "Kết nối với Roo Code Cloud"
 		},
 		"openRouter": {
 			"providerRouting": {
@@ -408,9 +476,17 @@
 		},
 		"reasoningEffort": {
 			"label": "Nỗ lực suy luận của mô hình",
+			"minimal": "Tối thiểu (nhanh nhất)",
 			"high": "Cao",
 			"medium": "Trung bình",
 			"low": "Thấp"
+		},
+		"verbosity": {
+			"label": "Mức độ chi tiết đầu ra",
+			"high": "Cao",
+			"medium": "Trung bình",
+			"low": "Thấp",
+			"description": "Kiểm soát mức độ chi tiết của các câu trả lời của mô hình. Mức độ chi tiết thấp tạo ra các câu trả lời ngắn gọn, trong khi mức độ chi tiết cao cung cấp giải thích kỹ lưỡng."
 		},
 		"setReasoningLevel": "Kích hoạt nỗ lực suy luận",
 		"claudeCode": {
@@ -434,6 +510,13 @@
 			"requirement4": "Không sử dụng khóa API - xác thực được xử lý qua OAuth",
 			"requirement5": "Yêu cầu công cụ Gemini CLI được cài đặt và xác thực trước",
 			"freeAccess": "Truy cập miễn phí qua xác thực OAuth"
+		},
+		"qwenCode": {
+			"oauthPath": "Đường dẫn Thông tin xác thực OAuth (tùy chọn)",
+			"oauthPathDescription": "Đường dẫn đến tệp thông tin xác thực OAuth. Để trống để sử dụng vị trí mặc định (~/.qwen/oauth_creds.json).",
+			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ dịch vụ Qwen và không yêu cầu khóa API.",
+			"instructions": "Vui lòng làm theo tài liệu chính thức để lấy tệp ủy quyền và đặt nó trong đường dẫn được chỉ định.",
+			"setupLink": "Tài liệu chính thức Qwen"
 		}
 	},
 	"browser": {
@@ -551,6 +634,16 @@
 			"profileDescription": "Ngưỡng tùy chỉnh chỉ cho hồ sơ này (ghi đè mặc định toàn cục)",
 			"inheritDescription": "Hồ sơ này kế thừa ngưỡng mặc định toàn cục ({{threshold}}%)",
 			"usesGlobal": "(sử dụng toàn cục {{threshold}}%)"
+		},
+		"maxImageFileSize": {
+			"label": "Kích thước tối đa của tệp hình ảnh",
+			"mb": "MB",
+			"description": "Kích thước tối đa (tính bằng MB) cho các tệp hình ảnh có thể được xử lý bởi công cụ đọc tệp."
+		},
+		"maxTotalImageSize": {
+			"label": "Kích thước tổng tối đa của hình ảnh",
+			"mb": "MB",
+			"description": "Giới hạn kích thước tích lũy tối đa (tính bằng MB) cho tất cả hình ảnh được xử lý trong một thao tác read_file duy nhất. Khi đọc nhiều hình ảnh, kích thước của mỗi hình ảnh được cộng vào tổng. Nếu việc thêm một hình ảnh khác sẽ vượt quá giới hạn này, nó sẽ bị bỏ qua."
 		}
 	},
 	"terminal": {
@@ -674,16 +767,54 @@
 			"name": "Bật chỉnh sửa tệp đồng thời",
 			"description": "Khi được bật, Kilo Code có thể chỉnh sửa nhiều tệp trong một yêu cầu duy nhất. Khi bị tắt, Kilo Code phải chỉnh sửa từng tệp một. Tắt tính năng này có thể hữu ích khi làm việc với các mô hình kém khả năng hơn hoặc khi bạn muốn kiểm soát nhiều hơn đối với các thay đổi tệp."
 		},
-		"MORPH_FAST_APPLY": {
-			"name": "Bật Morph Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Morph Fast Apply.",
-			"apiKey": "Khóa API Morph (tùy chọn)",
-			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
-			"warning": "Nếu bạn không cấu hình khóa API Morph, bạn vẫn có thể sử dụng Fast Apply với Kilo Code hoặc OpenRouter. Tài khoản của bạn sẽ bị tính phí cho việc sử dụng mô hình, điều này hiện không được hiển thị trong giao diện tiện ích mở rộng."
+		"PREVENT_FOCUS_DISRUPTION": {
+			"name": "Chỉnh sửa nền",
+			"description": "Khi được bật, ngăn chặn gián đoạn tiêu điểm trình soạn thảo. Việc chỉnh sửa tệp diễn ra ở nền mà không mở chế độ xem diff hoặc chiếm tiêu điểm. Bạn có thể tiếp tục làm việc không bị gián đoạn trong khi Kilo Code thực hiện thay đổi. Các tệp có thể được mở mà không có tiêu điểm để thu thập chẩn đoán hoặc giữ hoàn toàn đóng."
+		},
+		"ASSISTANT_MESSAGE_PARSER": {
+			"name": "Dùng bộ phân tích tin nhắn mới",
+			"description": "Bật bộ phân tích tin nhắn streaming thử nghiệm. Tính năng này tăng tốc phản hồi dài bằng cách xử lý tin nhắn hiệu quả hơn."
+		},
+		"NEW_TASK_REQUIRE_TODOS": {
+			"name": "Yêu cầu danh sách 'todos' cho các nhiệm vụ mới",
+			"description": "Khi được bật, công cụ new_task sẽ yêu cầu cung cấp tham số todos. Điều này đảm bảo tất cả các nhiệm vụ mới bắt đầu với một danh sách mục tiêu rõ ràng. Khi bị tắt (mặc định), tham số todos vẫn là tùy chọn để tương thích ngược."
+		},
+		"IMAGE_GENERATION": {
+			"name": "Bật tạo hình ảnh AI",
+			"description": "Khi được bật, Kilo Code có thể tạo hình ảnh từ lời nhắc văn bản. Yêu cầu khóa API Kilo Code hoặc OpenRouter được cấu hình.",
+			"apiProvider": "Nhà cung cấp API",
+			"openRouterApiKeyLabel": "Khóa API OpenRouter",
+			"openRouterApiKeyPlaceholder": "Nhập khóa API OpenRouter của bạn",
+			"kiloCodeApiKeyLabel": "Khóa API Kilo Code",
+			"kiloCodeApiKeyPlaceholder": "Nhập khóa API Kilo Code của bạn",
+			"kiloCodeApiKeyPaste": "Dán khóa API Kilo Code hiện tại",
+			"getApiKeyText": "Lấy khóa API của bạn từ",
+			"modelSelectionLabel": "Mô hình tạo hình ảnh",
+			"modelSelectionDescription": "Chọn mô hình để sử dụng cho việc tạo hình ảnh",
+			"warningMissingKey": "⚠️ Khóa API là bắt buộc để tạo hình ảnh, vui lòng cấu hình ở trên.",
+			"successConfigured": "✓ Tạo hình ảnh đã được cấu hình và sẵn sàng sử dụng"
 		},
 		"INLINE_ASSIST": {
-			"name": "Trợ lý Nội dòng",
-			"description": "Bật tính năng Trợ giúp nội tuyến (Inline Assist) để nhận gợi ý và cải tiến mã nhanh chóng ngay trong trình soạn thảo của bạn. Bao gồm Tác vụ nội tuyến nhanh (Cmd+I) cho những thay đổi có mục tiêu và Tác vụ nội tuyến tự động cho những cải tiến theo ngữ cảnh."
+			"name": "Autocomplete",
+			"description": "Bật các tính năng Autocomplete cho gợi ý mã nhanh và cải tiến trực tiếp trong editor của bạn. Bao gồm Tác Vụ Nhanh (Cmd+I) cho các thay đổi có mục tiêu và Autocomplete cho các cải tiến theo ngữ cảnh."
+		},
+		"MORPH_FAST_APPLY": {
+			"name": "Bật Fast Apply",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
+			"apiKey": "Khóa API Morph (tùy chọn)",
+			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
+			"modelLabel": "Lựa chọn mô hình",
+			"modelDescription": "Chọn mô hình Fast Apply nào để sử dụng cho việc chỉnh sửa tệp",
+			"models": {
+				"auto": "Tự động (Mặc định - chọn tốt nhất có sẵn)",
+				"morphFast": "Morph v3 Fast (Nhanh hơn, chi phí thấp hơn)",
+				"morphLarge": "Morph v3 Large (Khả năng cao hơn)",
+				"relace": "Relace Apply v3"
+			}
+		},
+		"RUN_SLASH_COMMAND": {
+			"name": "Bật lệnh slash do mô hình khởi tạo",
+			"description": "Khi được bật, Kilo Code có thể chạy các lệnh slash của bạn để thực hiện các quy trình làm việc."
 		}
 	},
 	"promptCaching": {
@@ -702,6 +833,7 @@
 		"noComputerUse": "Không hỗ trợ sử dụng máy tính",
 		"supportsPromptCache": "Hỗ trợ bộ nhớ đệm lời nhắc",
 		"noPromptCache": "Không hỗ trợ bộ nhớ đệm lời nhắc",
+		"contextWindow": "Cửa sổ ngữ cảnh:",
 		"maxOutput": "Đầu ra tối đa",
 		"inputPrice": "Giá đầu vào",
 		"outputPrice": "Giá đầu ra",
@@ -754,9 +886,11 @@
 			"regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
 		},
 		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác.",
+		"modelDeprecated": "Mô hình này không còn khả dụng. Vui lòng chọn một mô hình khác.",
 		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
 		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
-		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn"
+		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn",
+		"qwenCodeOauthPath": "Bạn phải cung cấp đường dẫn thông tin xác thực OAuth hợp lệ"
 	},
 	"placeholders": {
 		"apiKey": "Nhập khóa API...",
@@ -795,11 +929,51 @@
 		"taskTimeline": {
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		},
+		"sendMessageOnEnter": {
+			"label": "Gửi tin nhắn bằng Enter",
+			"description": "Khi được bật, nhấn Enter để gửi và Shift+Enter cho dòng mới. Tắt để sử dụng Shift+Enter để gửi."
+		},
+		"costThreshold": {
+			"label": "Ẩn chi phí dưới ngưỡng",
+			"description": "Chỉ hiển thị chi phí yêu cầu trên mức này. Chi phí luôn được hiển thị khi khung thông tin chi tiết được mở.",
+			"currentValue": "Ngưỡng hiện tại: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Hiển thị dấu thời gian",
+			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
+		}
+	},
+	"ghost": {
+		"showGutterAnimation": {
+			"label": "Hiển thị hoạt ảnh lề khi tự động hoàn thành",
+			"description": "Hiển thị chỉ báo hoạt ảnh trong lề trình soạn thảo khi tự động hoàn thành đang chạy",
+			"preview": "Xem trước hoạt ảnh"
 		}
 	},
 	"includeMaxOutputTokens": "Bao gồm token đầu ra tối đa",
 	"includeMaxOutputTokensDescription": "Gửi tham số token đầu ra tối đa trong các yêu cầu API. Một số nhà cung cấp có thể không hỗ trợ điều này.",
 	"limitMaxTokensDescription": "Giới hạn số lượng token tối đa trong phản hồi",
 	"maxOutputTokensLabel": "Token đầu ra tối đa",
-	"maxTokensGenerateDescription": "Token tối đa để tạo trong phản hồi"
+	"maxTokensGenerateDescription": "Token tối đa để tạo trong phản hồi",
+	"serviceTier": {
+		"label": "Cấp độ dịch vụ",
+		"tooltip": "Để xử lý các yêu cầu API nhanh hơn, hãy thử cấp độ dịch vụ xử lý ưu tiên. Để có giá thấp hơn với độ trễ cao hơn, hãy thử cấp độ xử lý linh hoạt.",
+		"standard": "Tiêu chuẩn",
+		"flex": "Linh hoạt",
+		"priority": "Ưu tiên",
+		"pricingTableTitle": "Giá theo cấp độ dịch vụ (giá mỗi 1 triệu token)",
+		"columns": {
+			"tier": "Cấp độ",
+			"input": "Đầu vào",
+			"output": "Đầu ra",
+			"cacheReads": "Lượt đọc bộ nhớ đệm"
+		}
+	},
+	"ui": {
+		"collapseThinking": {
+			"label": "Thu gọn tin nhắn Suy nghĩ theo mặc định",
+			"description": "Khi được bật, các khối suy nghĩ sẽ được thu gọn theo mặc định cho đến khi bạn tương tác với chúng"
+		}
+	}
 }

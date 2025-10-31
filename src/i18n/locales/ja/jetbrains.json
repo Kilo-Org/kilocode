@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js環境が見つかりません",
+			"message": "Node.js環境が検出されませんでした。Node.jsをインストールして再度お試しください。推奨バージョン：{{minVersion}}以上。"
+		},
+		"nodejsVersionLow": {
+			"title": "Node.jsバージョンが古すぎます",
+			"message": "現在のNode.js（{{nodePath}}）バージョンは{{nodeVersion}}です。互換性を向上させるため、{{minVersion}}以上にアップグレードしてください。"
+		}
+	},
+	"dialog": {
+		"cancel": "キャンセル"
+	},
+	"ui": {
+		"initializing": "Kilo Codeを初期化しています...",
+		"systemInformation": "システム情報"
+	}
+}

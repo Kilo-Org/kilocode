@@ -42,6 +42,7 @@
 		"checkpoint_timeout": "尝试恢复检查点时超时。",
 		"checkpoint_failed": "恢复检查点失败。",
 		"git_not_installed": "存档点功能需要 Git。请安装 Git 以启用存档点。",
+		"nested_git_repos_warning": "存档点已禁用，因为在 {{path}} 检测到嵌套的 git 仓库。要使用存档点，请移除或重新定位此嵌套的 git 仓库。",
 		"no_workspace": "请先打开项目文件夹",
 		"update_support_prompt": "更新支持消息失败",
 		"reset_support_prompt": "重置支持消息失败",
@@ -74,6 +75,7 @@
 		"no_internet": "无网络连接。请检查网络连接并重试。",
 		"url_forbidden": "访问此网站被禁止。该网站可能阻止自动访问或需要身份验证。",
 		"url_page_not_found": "页面未找到。请检查 URL 是否正确。",
+		"url_request_aborted": "获取 URL 的请求被中止。如果网站阻止自动访问、需要身份验证或存在网络问题，就可能发生这种情况。请重试或检查 URL 是否可以在普通浏览器中访问。",
 		"url_fetch_failed": "获取 URL 内容失败：{{error}}",
 		"url_fetch_error_with_url": "获取 {{url}} 内容时出错：{{error}}",
 		"command_timeout": "命令执行超时，{{seconds}} 秒后",
@@ -84,12 +86,20 @@
 		"share_task_not_found": "未找到任务或访问被拒绝。",
 		"mode_import_failed": "导入模式失败：{{error}}",
 		"delete_rules_folder_failed": "删除规则文件夹失败：{{rulesFolderPath}}。错误：{{error}}",
+		"command_not_found": "未找到命令 '{{name}}'",
+		"open_command_file": "打开命令文件失败",
+		"delete_command": "删除命令失败",
+		"no_workspace_for_project_command": "未找到项目命令的工作区文件夹",
+		"command_already_exists": "命令 \"{{commandName}}\" 已存在",
+		"create_command_failed": "创建命令失败",
+		"command_template_content": "---\ndescription: \"此命令功能的简要描述\"\n---\n\n这是一个新的斜杠命令。编辑此文件以自定义命令行为。",
 		"claudeCode": {
 			"processExited": "Claude Code 进程退出，退出码：{{exitCode}}。",
 			"errorOutput": "错误输出：{{output}}",
 			"processExitedWithError": "Claude Code 进程退出，退出码：{{exitCode}}。错误输出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
-			"apiKeyModelPlanMismatch": "API 密钥和订阅计划支持不同的模型。请确保所选模型包含在您的计划中。"
+			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}",
@@ -100,7 +110,44 @@
 			"badRequest": "请求错误：{{details}}",
 			"apiError": "Gemini CLI API 错误：{{error}}",
 			"completionError": "Gemini CLI 补全错误：{{error}}"
-		}
+		},
+		"message": {
+			"no_active_task_to_delete": "没有可删除消息的活跃任务",
+			"invalid_timestamp_for_deletion": "删除操作的消息时间戳无效",
+			"cannot_delete_missing_timestamp": "无法删除消息：缺少时间戳",
+			"cannot_delete_invalid_timestamp": "无法删除消息：时间戳无效",
+			"message_not_found": "未找到时间戳为 {{messageTs}} 的消息",
+			"error_deleting_message": "删除消息时出错：{{error}}",
+			"error_editing_message": "编辑消息时出错：{{error}}"
+		},
+		"gemini": {
+			"generate_stream": "Gemini 生成上下文流错误：{{error}}",
+			"generate_complete_prompt": "Gemini 完成错误：{{error}}",
+			"sources": "来源："
+		},
+		"cerebras": {
+			"authenticationFailed": "Cerebras API 身份验证失败。请检查你的 API 密钥是否有效且未过期。",
+			"accessForbidden": "Cerebras API 访问被禁止。你的 API 密钥可能无法访问请求的模型或功能。",
+			"rateLimitExceeded": "Cerebras API 速率限制已超出。请稍等后再发起另一个请求。",
+			"serverError": "Cerebras API 服务器错误 ({{status}})。请稍后重试。",
+			"genericError": "Cerebras API 错误 ({{status}})：{{message}}",
+			"noResponseBody": "Cerebras API 错误：无响应主体",
+			"completionError": "Cerebras 完成错误：{{error}}"
+		},
+		"qwenCode": {
+			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}"
+		},
+		"roo": {
+			"authenticationRequired": "Roo 提供商需要云认证。请登录 Roo Code Cloud。"
+		},
+		"api": {
+			"invalidKeyInvalidChars": "API 密钥包含无效字符。"
+		},
+		"manual_url_empty": "请输入有效的回调 URL",
+		"manual_url_no_query": "无效的回调 URL：缺少查询参数",
+		"manual_url_missing_params": "无效的回调 URL：缺少必需参数（code 和 state）",
+		"manual_url_auth_failed": "手动 URL 身份验证失败",
+		"manual_url_auth_error": "身份验证失败"
 	},
 	"warnings": {
 		"no_terminal_content": "没有选择终端内容",
@@ -139,6 +186,10 @@
 		"deleted": "任务失败：它已被用户停止并删除。",
 		"incomplete": "任务 #{{taskNumber}} (未完成)",
 		"no_messages": "任务 #{{taskNumber}} (无消息)"
+	},
+	"interruption": {
+		"responseInterruptedByUser": "响应被用户中断",
+		"responseInterruptedByApiError": "响应被 API 错误中断"
 	},
 	"storage": {
 		"prompt_custom_path": "输入自定义会话历史存储路径，留空以使用默认位置",
@@ -185,9 +236,17 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "您的组织需要 Kilo Code Cloud 身份验证。请登录以继续。",
-			"organization_mismatch": "您必须使用组织的 Kilo Code Cloud 账户进行身份验证。",
+			"cloud_auth_required": "您的组织需要 Roo Code Cloud 身份验证。请登录以继续。",
+			"organization_mismatch": "您必须使用组织的 Roo Code Cloud 账户进行身份验证。",
+			"manual_url_empty": "请输入有效的回调 URL",
+			"manual_url_no_query": "无效的回调 URL：缺少查询参数",
+			"manual_url_missing_params": "无效的回调 URL：缺少必需参数（code 和 state）",
+			"manual_url_auth_failed": "手动 URL 身份验证失败",
+			"manual_url_auth_error": "身份验证失败",
 			"verification_failed": "无法验证组织身份验证。"
+		},
+		"info": {
+			"organization_requires_auth": "您的组织需要身份验证。"
 		}
 	},
 	"prompts": {
@@ -202,5 +261,17 @@
 		"preventCompletionWithOpenTodos": {
 			"description": "当待办事项列表中有未完成的待办事项时阻止任务完成"
 		}
+	},
+	"docsLink": {
+		"label": "Docs",
+		"url": "https://kilocode.ai/docs"
+	},
+	"errorBoundary": {
+		"title": "错误",
+		"reportText": "请报告此错误以帮助我们改进应用程序。",
+		"githubText": "在 GitHub 上报告",
+		"copyInstructions": "复制下方的错误详情:",
+		"errorStack": "错误堆栈",
+		"componentStack": "组件堆栈"
 	}
 }

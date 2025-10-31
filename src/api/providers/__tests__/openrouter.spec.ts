@@ -99,9 +99,11 @@ describe("OpenRouterHandler", () => {
 			})
 
 			const result = await handler.fetchModel()
-			expect(result.maxTokens).toBe(128000) // Use actual implementation value
-			expect(result.reasoningBudget).toBeUndefined() // Use actual implementation value
-			expect(result.temperature).toBe(0) // Use actual implementation value
+			// With the new clamping logic, 128000 tokens (64% of 200000 context window)
+			// gets clamped to 20% of context window: 200000 * 0.2 = 40000
+			expect(result.maxTokens).toBe(40000)
+			expect(result.reasoningBudget).toBeUndefined()
+			expect(result.temperature).toBe(0)
 		})
 
 		it("does not honor custom maxTokens for non-thinking models", async () => {
@@ -287,14 +289,17 @@ describe("OpenRouterHandler", () => {
 
 			expect(result).toBe("test completion")
 
-			expect(mockCreate).toHaveBeenCalledWith({
-				model: mockOptions.openRouterModelId,
-				max_tokens: 8192,
-				thinking: undefined,
-				temperature: 0,
-				messages: [{ role: "user", content: "test prompt" }],
-				stream: false,
-			})
+			expect(mockCreate).toHaveBeenCalledWith(
+				{
+					model: mockOptions.openRouterModelId,
+					max_tokens: 8192,
+					thinking: undefined,
+					temperature: 0,
+					messages: [{ role: "user", content: "test prompt" }],
+					stream: false,
+				},
+				undefined, // kilocode_change options
+			)
 		})
 
 		it("handles API errors", async () => {

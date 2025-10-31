@@ -1,0 +1,19 @@
+{
+	"errors": {
+		"nodejsMissing": {
+			"title": "Node.js वातावरण गुम है",
+			"message": "Node.js वातावरण का पता नहीं चला, कृपया Node.js इंस्टॉल करें और पुनः प्रयास करें। अनुशंसित संस्करण: {{minVersion}} या उससे अधिक।"
+		},
+		"nodejsVersionLow": {
+			"title": "Node.js संस्करण बहुत कम है",
+			"message": "वर्तमान Node.js ({{nodePath}}) संस्करण {{nodeVersion}} है, बेहतर संगतता के लिए कृपया {{minVersion}} या उससे अधिक में अपग्रेड करें।"
+		}
+	},
+	"dialog": {
+		"cancel": "रद्द करें"
+	},
+	"ui": {
+		"initializing": "Kilo Code प्रारंभ हो रहा है...",
+		"systemInformation": "सिस्टम की जानकारी"
+	}
+}

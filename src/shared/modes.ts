@@ -64,7 +64,7 @@ export function getToolsForMode(groups: readonly GroupEntry[]): string[] {
 export const modes = DEFAULT_MODES
 
 // Export the default mode slug
-export const defaultModeSlug = modes[0].slug
+export const defaultModeSlug = "code" // kilocode_change: set default to code
 
 // Helper functions
 export function getModeBySlug(slug: string, customModes?: ModeConfig[]): ModeConfig | undefined {

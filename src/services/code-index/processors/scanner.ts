@@ -29,15 +29,50 @@ import { isPathInIgnoredDirectory } from "../../glob/ignore-utils"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import { Package } from "../../../shared/package"
 
 export class DirectoryScanner implements IDirectoryScanner {
+	private _cancelled = false // kilocode_change
+	private readonly batchSegmentThreshold: number
+
 	constructor(
 		private readonly embedder: IEmbedder,
 		private readonly qdrantClient: IVectorStore,
 		private readonly codeParser: ICodeParser,
 		private readonly cacheManager: CacheManager,
 		private readonly ignoreInstance: Ignore,
-	) {}
+		batchSegmentThreshold?: number,
+	) {
+		// Get the configurable batch size from VSCode settings, fallback to default
+		// If not provided in constructor, try to get from VSCode settings
+		if (batchSegmentThreshold !== undefined) {
+			this.batchSegmentThreshold = batchSegmentThreshold
+		} else {
+			try {
+				this.batchSegmentThreshold = vscode.workspace
+					.getConfiguration(Package.name)
+					.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
+			} catch {
+				// In test environment, vscode.workspace might not be available
+				this.batchSegmentThreshold = BATCH_SEGMENT_THRESHOLD
+			}
+		}
+	}
+
+	// kilocode_change start
+	/**
+	 * Request cooperative cancellation of any in-flight scanning work.
+	 * The scanDirectory and batch operations periodically check this flag
+	 * and will exit as soon as practical.
+	 */
+	public cancel(): void {
+		this._cancelled = true
+	}
+
+	public get isCancelled(): boolean {
+		return this._cancelled
+	}
+	// kilocode_change end
 
 	/**
 	 * Recursively scans a directory for code blocks in supported files.
@@ -53,6 +88,11 @@ export class DirectoryScanner implements IDirectoryScanner {
 		onBlocksIndexed?: (indexedCount: number) => void,
 		onFileParsed?: (fileBlockCount: number) => void,
 	): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+		// kilocode_change start
+		// reset cooperative cancel flag on new full scan
+		this._cancelled = false
+		// kilocode_change end
+
 		const directoryPath = directory
 		// Capture workspace context at scan start
 		const scanWorkspace = getWorkspacePathForContext(directoryPath)
@@ -107,9 +147,22 @@ export class DirectoryScanner implements IDirectoryScanner {
 		// Process all files in parallel with concurrency control
 		const parsePromises = supportedPaths.map((filePath) =>
 			parseLimiter(async () => {
+				// kilocode_change start
+				// Early exit if cancellation requested
+				if (this._cancelled) {
+					return
+				}
+				// kilocode_change end
+
 				try {
 					// Check file size
 					const stats = await stat(filePath)
+					// kilocode_change start
+					if (this._cancelled) {
+						return
+					}
+					// kilocode_change end
+
 					if (stats.size > MAX_FILE_SIZE_BYTES) {
 						skippedCount++ // Skip large files
 						return
@@ -119,6 +172,12 @@ export class DirectoryScanner implements IDirectoryScanner {
 					const content = await vscode.workspace.fs
 						.readFile(vscode.Uri.file(filePath))
 						.then((buffer) => Buffer.from(buffer).toString("utf-8"))
+
+					// kilocode_change start
+					if (this._cancelled) {
+						return
+					}
+					// kilocode_change end
 
 					// Calculate current hash
 					const currentFileHash = createHash("sha256").update(content).digest("hex")
@@ -135,6 +194,13 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 					// File is new or changed - parse it using the injected parser function
 					const blocks = await this.codeParser.parseFile(filePath, { content, fileHash: currentFileHash })
+
+					// kilocode_change start
+					if (this._cancelled) {
+						return
+					}
+					// kilocode_change end
+
 					const fileBlockCount = blocks.length
 					onFileParsed?.(fileBlockCount)
 					processedCount++
@@ -144,21 +210,35 @@ export class DirectoryScanner implements IDirectoryScanner {
 						// Add to batch accumulators
 						let addedBlocksFromFile = false
 						for (const block of blocks) {
+							if (this._cancelled) break // kilocode_change
 							const trimmedContent = block.content.trim()
 							if (trimmedContent) {
 								const release = await mutex.acquire()
 								try {
+									// kilocode_change start
+									if (this._cancelled) {
+										// Abort adding more items if cancelled
+										break
+									}
+									// kilocode_change end
 									currentBatchBlocks.push(block)
 									currentBatchTexts.push(trimmedContent)
 									addedBlocksFromFile = true
 
 									// Check if batch threshold is met
-									if (currentBatchBlocks.length >= BATCH_SEGMENT_THRESHOLD) {
+									if (currentBatchBlocks.length >= this.batchSegmentThreshold) {
 										// Wait if we've reached the maximum pending batches
 										while (pendingBatchCount >= MAX_PENDING_BATCHES) {
+											if (this._cancelled) break // kilocode_change
 											// Wait for at least one batch to complete
 											await Promise.race(activeBatchPromises)
 										}
+
+										// kilocode_change start
+										if (this._cancelled) {
+											break
+										}
+										// kilocode_change end
 
 										// Copy current batch data and clear accumulators
 										const batchBlocks = [...currentBatchBlocks]
@@ -239,7 +319,8 @@ export class DirectoryScanner implements IDirectoryScanner {
 		await Promise.all(parsePromises)
 
 		// Process any remaining items in batch
-		if (currentBatchBlocks.length > 0) {
+		// kilocode_change: add !this._cancelled
+		if (!this._cancelled && currentBatchBlocks.length > 0) {
 			const release = await mutex.acquire()
 			try {
 				// Copy current batch data and clear accumulators
@@ -269,8 +350,20 @@ export class DirectoryScanner implements IDirectoryScanner {
 			}
 		}
 
-		// Wait for all batch processing to complete
-		await Promise.all(activeBatchPromises)
+		// kilocode_change start
+		// Short-circuit if cancelled before handling deletions
+		if (this._cancelled) {
+			return {
+				stats: {
+					processed: processedCount,
+					skipped: skippedCount,
+				},
+				totalBlockCount,
+			}
+		} else {
+			await Promise.all(activeBatchPromises)
+		}
+		// kilocode_change end
 
 		// Handle deleted files
 		const oldHashes = this.cacheManager.getAllHashes()
@@ -281,17 +374,24 @@ export class DirectoryScanner implements IDirectoryScanner {
 					try {
 						await this.qdrantClient.deletePointsByFilePath(cachedFilePath)
 						await this.cacheManager.deleteHash(cachedFilePath)
-					} catch (error) {
+					} catch (error: any) {
+						const errorStatus = error?.status || error?.response?.status || error?.statusCode
+						const errorMessage = error instanceof Error ? error.message : String(error)
+
 						console.error(
 							`[DirectoryScanner] Failed to delete points for ${cachedFilePath} in workspace ${scanWorkspace}:`,
 							error,
 						)
+
 						TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-							error: sanitizeErrorMessage(error instanceof Error ? error.message : String(error)),
+							error: sanitizeErrorMessage(errorMessage),
 							stack: error instanceof Error ? sanitizeErrorMessage(error.stack || "") : undefined,
 							location: "scanDirectory:deleteRemovedFiles",
+							errorStatus: errorStatus,
 						})
+
 						if (onError) {
+							// Report error to error handler
 							onError(
 								error instanceof Error
 									? new Error(
@@ -304,7 +404,8 @@ export class DirectoryScanner implements IDirectoryScanner {
 										),
 							)
 						}
-						// Decide if we should re-throw or just log
+						// Log error and continue processing instead of re-throwing
+						console.error(`Failed to delete points for removed file: ${cachedFilePath}`, error)
 					}
 				}
 			}
@@ -327,7 +428,19 @@ export class DirectoryScanner implements IDirectoryScanner {
 		onError?: (error: Error) => void,
 		onBlocksIndexed?: (indexedCount: number) => void,
 	): Promise<void> {
-		if (batchBlocks.length === 0) return
+		// kilocode_change start
+		// Respect cooperative cancellation
+		if (this._cancelled || batchBlocks.length === 0) return
+
+		if (batchBlocks.length === 0) {
+			console.debug("[DirectoryScanner] Skipping empty batch processing")
+			return
+		}
+
+		console.debug(
+			`[DirectoryScanner] Starting to process batch of ${batchBlocks.length} blocks in workspace ${scanWorkspace}`,
+		)
+		// kilocode_change end
 
 		let attempts = 0
 		let success = false
@@ -335,8 +448,18 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 		while (attempts < MAX_BATCH_RETRIES && !success) {
 			attempts++
+
+			// kilocode_change start
+			if (this._cancelled) return
+
+			console.debug(
+				`[DirectoryScanner] Processing batch attempt ${attempts}/${MAX_BATCH_RETRIES} for ${batchBlocks.length} blocks`,
+			)
+			// kilocode_change end
+
 			try {
 				// --- Deletion Step ---
+				console.debug("[DirectoryScanner] Starting deletion step for modified files") // kilocode_change
 				const uniqueFilePaths = [
 					...new Set(
 						batchFileInfos
@@ -344,28 +467,44 @@ export class DirectoryScanner implements IDirectoryScanner {
 							.map((info) => info.filePath),
 					),
 				]
+				// kilocode_change start
+				console.debug(
+					`[DirectoryScanner] Identified ${uniqueFilePaths.length} modified files to delete points for`,
+				)
+				// kilocode_change end
+
 				if (uniqueFilePaths.length > 0) {
 					try {
 						await this.qdrantClient.deletePointsByMultipleFilePaths(uniqueFilePaths)
-					} catch (deleteError) {
+						// kilocode_change start
+						console.debug(
+							`[DirectoryScanner] Successfully deleted points for ${uniqueFilePaths.length} files`,
+						)
+						// kilocode_change end
+					} catch (deleteError: any) {
+						const errorStatus =
+							deleteError?.status || deleteError?.response?.status || deleteError?.statusCode
+						const errorMessage = deleteError instanceof Error ? deleteError.message : String(deleteError)
+
 						console.error(
 							`[DirectoryScanner] Failed to delete points for ${uniqueFilePaths.length} files before upsert in workspace ${scanWorkspace}:`,
 							deleteError,
 						)
+
 						TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-							error: sanitizeErrorMessage(
-								deleteError instanceof Error ? deleteError.message : String(deleteError),
-							),
+							error: sanitizeErrorMessage(errorMessage),
 							stack:
 								deleteError instanceof Error
 									? sanitizeErrorMessage(deleteError.stack || "")
 									: undefined,
 							location: "processBatch:deletePointsByMultipleFilePaths",
 							fileCount: uniqueFilePaths.length,
+							errorStatus: errorStatus,
 						})
-						// Re-throw the error with workspace context
+
+						// Re-throw with workspace context
 						throw new Error(
-							`Failed to delete points for ${uniqueFilePaths.length} files. Workspace: ${scanWorkspace}. ${deleteError instanceof Error ? deleteError.message : String(deleteError)}`,
+							`Failed to delete points for ${uniqueFilePaths.length} files. Workspace: ${scanWorkspace}. ${errorMessage}`,
 							{ cause: deleteError },
 						)
 					}
@@ -373,9 +512,15 @@ export class DirectoryScanner implements IDirectoryScanner {
 				// --- End Deletion Step ---
 
 				// Create embeddings for batch
+				if (this._cancelled) return // kilocode_change
+
+				console.debug(`[DirectoryScanner] Creating embeddings for ${batchTexts.length} texts`) // kilocode_change
+
 				const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+				console.debug(`[DirectoryScanner] Successfully created ${embeddings.length} embeddings`) // kilocode_change
 
 				// Prepare points for Qdrant
+				console.debug("[DirectoryScanner] Preparing points for Qdrant upsert") // kilocode_change
 				const points = batchBlocks.map((block, index) => {
 					const normalizedAbsolutePath = generateNormalizedAbsolutePath(block.file_path, scanWorkspace)
 
@@ -394,16 +539,30 @@ export class DirectoryScanner implements IDirectoryScanner {
 						},
 					}
 				})
+				console.debug(`[DirectoryScanner] Prepared ${points.length} points for Qdrant`) // kilocode_change
 
 				// Upsert points to Qdrant
+				if (this._cancelled) return // kilocode_change
+
+				console.debug("[DirectoryScanner] Starting Qdrant upsert") // kilocode_change
+
 				await this.qdrantClient.upsertPoints(points)
+				console.debug("[DirectoryScanner] Completed Qdrant upsert") // kilocode_change
 				onBlocksIndexed?.(batchBlocks.length)
 
 				// Update hashes for successfully processed files in this batch
+				console.debug("[DirectoryScanner] Updating file hashes in cache") // kilocode_change
 				for (const fileInfo of batchFileInfos) {
 					await this.cacheManager.updateHash(fileInfo.filePath, fileInfo.fileHash)
 				}
+				console.debug("[DirectoryScanner] Completed updating file hashes in cache") // kilocode_change
+
 				success = true
+				// kilocode_change start
+				console.debug(
+					`[DirectoryScanner] Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`,
+				)
+				// kilocode_change end
 			} catch (error) {
 				lastError = error as Error
 				console.error(
@@ -420,6 +579,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
 				if (attempts < MAX_BATCH_RETRIES) {
 					const delay = INITIAL_RETRY_DELAY_MS * Math.pow(2, attempts - 1)
+					console.debug(`[DirectoryScanner] Retrying batch in ${delay}ms`) // kilocode_change
 					await new Promise((resolve) => setTimeout(resolve, delay))
 				}
 			}

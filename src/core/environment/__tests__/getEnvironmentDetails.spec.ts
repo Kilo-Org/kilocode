@@ -78,7 +78,7 @@ describe("getEnvironmentDetails", () => {
 			experiments: {},
 			customInstructions: "test instructions",
 			language: "en",
-			showRooIgnoredFiles: true,
+			showRooIgnoredFiles: false,
 		}
 
 		mockProvider = {
@@ -173,7 +173,7 @@ describe("getEnvironmentDetails", () => {
 			["file1.ts", "file2.ts"],
 			false,
 			mockCline.rooIgnoreController,
-			true,
+			false,
 		)
 	})
 
@@ -360,5 +360,34 @@ describe("getEnvironmentDetails", () => {
 		;(mockCline.fileContextTracker!.getAndClearRecentlyModifiedFiles as Mock).mockReturnValue([])
 
 		await expect(getEnvironmentDetails(mockCline as Task)).resolves.not.toThrow()
+	})
+	it("should include REMINDERS section when todoListEnabled is true", async () => {
+		mockProvider.getState.mockResolvedValue({
+			...mockState,
+			apiConfiguration: { todoListEnabled: true },
+		})
+		const cline = { ...mockCline, todoList: [{ content: "test", status: "pending" }] }
+		const result = await getEnvironmentDetails(cline as Task)
+		expect(result).toContain("REMINDERS")
+	})
+
+	it("should NOT include REMINDERS section when todoListEnabled is false", async () => {
+		mockProvider.getState.mockResolvedValue({
+			...mockState,
+			apiConfiguration: { todoListEnabled: false },
+		})
+		const cline = { ...mockCline, todoList: [{ content: "test", status: "pending" }] }
+		const result = await getEnvironmentDetails(cline as Task)
+		expect(result).not.toContain("REMINDERS")
+	})
+
+	it("should include REMINDERS section when todoListEnabled is undefined", async () => {
+		mockProvider.getState.mockResolvedValue({
+			...mockState,
+			apiConfiguration: {},
+		})
+		const cline = { ...mockCline, todoList: [{ content: "test", status: "pending" }] }
+		const result = await getEnvironmentDetails(cline as Task)
+		expect(result).toContain("REMINDERS")
 	})
 })

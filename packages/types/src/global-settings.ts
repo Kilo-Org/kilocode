@@ -14,7 +14,7 @@ import { telemetrySettingsSchema } from "./telemetry.js"
 import { modeConfigSchema } from "./mode.js"
 import { customModePromptsSchema, customSupportPromptsSchema } from "./mode.js"
 import { languagesSchema } from "./vscode.js"
-import { ghostServiceSettingsSchema } from "./kilocode.js" // kilocode_change
+import { fastApplyModelSchema, ghostServiceSettingsSchema } from "./kilocode/kilocode.js"
 
 /**
  * Default delay in milliseconds after writes to allow diagnostics to detect potential problems.
@@ -42,11 +42,18 @@ export const globalSettingsSchema = z.object({
 	lastShownAnnouncementId: z.string().optional(),
 	customInstructions: z.string().optional(),
 	taskHistory: z.array(historyItemSchema).optional(),
+	dismissedUpsells: z.array(z.string()).optional(),
+
+	// Image generation settings (experimental) - flattened for simplicity
+	openRouterImageApiKey: z.string().optional(),
+	openRouterImageGenerationSelectedModel: z.string().optional(),
+	kiloCodeImageApiKey: z.string().optional(),
 
 	condensingApiConfigId: z.string().optional(),
 	customCondensingPrompt: z.string().optional(),
 
 	autoApprovalEnabled: z.boolean().optional(),
+	yoloMode: z.boolean().optional(), // kilocode_change
 	alwaysAllowReadOnly: z.boolean().optional(),
 	alwaysAllowReadOnlyOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWrite: z.boolean().optional(),
@@ -69,6 +76,7 @@ export const globalSettingsSchema = z.object({
 	commandTimeoutAllowlist: z.array(z.string()).optional(),
 	preventCompletionWithOpenTodos: z.boolean().optional(),
 	allowedMaxRequests: z.number().nullish(),
+	allowedMaxCost: z.number().nullish(),
 	autoCondenseContext: z.boolean().optional(),
 	autoCondenseContextPercent: z.number().optional(),
 	maxConcurrentFileReads: z.number().optional(),
@@ -89,6 +97,9 @@ export const globalSettingsSchema = z.object({
 	browserViewportSize: z.string().optional(),
 	showAutoApproveMenu: z.boolean().optional(), // kilocode_change
 	showTaskTimeline: z.boolean().optional(), // kilocode_change
+	sendMessageOnEnter: z.boolean().optional(), // kilocode_change: Enter key behavior
+	showTimestamps: z.boolean().optional(), // kilocode_change
+	hideCostBelowThreshold: z.number().min(0).optional(), // kilocode_change
 	localWorkflowToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	globalWorkflowToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
 	localRulesToggles: z.record(z.string(), z.boolean()).optional(), // kilocode_change
@@ -110,6 +121,8 @@ export const globalSettingsSchema = z.object({
 	maxWorkspaceFiles: z.number().optional(),
 	showRooIgnoredFiles: z.boolean().optional(),
 	maxReadFileLine: z.number().optional(),
+	maxImageFileSize: z.number().optional(),
+	maxTotalImageSize: z.number().optional(),
 
 	terminalOutputLineLimit: z.number().optional(),
 	terminalOutputCharacterLimit: z.number().optional(),
@@ -129,6 +142,11 @@ export const globalSettingsSchema = z.object({
 	diffEnabled: z.boolean().optional(),
 	fuzzyMatchThreshold: z.number().optional(),
 	experiments: experimentsSchema.optional(),
+
+	// kilocode_change start: Morph fast apply
+	morphApiKey: z.string().optional(),
+	fastApplyModel: fastApplyModelSchema.optional(),
+	// kilocode_change end
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
 	codebaseIndexConfig: codebaseIndexConfigSchema.optional(),
@@ -151,7 +169,10 @@ export const globalSettingsSchema = z.object({
 	commitMessageApiConfigId: z.string().optional(), // kilocode_change
 	terminalCommandApiConfigId: z.string().optional(), // kilocode_change
 	ghostServiceSettings: ghostServiceSettingsSchema, // kilocode_change
+	hasPerformedOrganizationAutoSwitch: z.boolean().optional(), // kilocode_change
+	includeTaskHistoryInEnhance: z.boolean().optional(),
 	historyPreviewCollapsed: z.boolean().optional(),
+	reasoningBlockCollapsed: z.boolean().optional(),
 	profileThresholds: z.record(z.string(), z.number()).optional(),
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
@@ -182,9 +203,12 @@ export const SECRET_STATE_KEYS = [
 	"awsSecretKey",
 	"awsSessionToken",
 	"openAiApiKey",
+	"ollamaApiKey",
 	"geminiApiKey",
 	"openAiNativeApiKey",
+	"cerebrasApiKey",
 	"deepSeekApiKey",
+	"doubaoApiKey",
 	"moonshotApiKey",
 	"mistralApiKey",
 	"unboundApiKey",
@@ -193,18 +217,44 @@ export const SECRET_STATE_KEYS = [
 	"groqApiKey",
 	"chutesApiKey",
 	"litellmApiKey",
+	"deepInfraApiKey",
 	"codeIndexOpenAiKey",
 	"codeIndexQdrantApiKey",
-	"kilocodeToken", // kilocode_change
+	// kilocode_change start
+	"kilocodeToken",
+	"syntheticApiKey",
+	// kilocode_change end
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",
 	"codebaseIndexMistralApiKey",
+	"codebaseIndexVercelAiGatewayApiKey",
 	"huggingFaceApiKey",
-] as const satisfies readonly (keyof ProviderSettings)[]
-export type SecretState = Pick<ProviderSettings, (typeof SECRET_STATE_KEYS)[number]>
+	"sambaNovaApiKey",
+	"zaiApiKey",
+	"fireworksApiKey",
+	"featherlessApiKey",
+	"ioIntelligenceApiKey",
+	"vercelAiGatewayApiKey",
+	"ovhCloudAiEndpointsApiKey", // kilocode_change
+] as const
+
+// Global secrets that are part of GlobalSettings (not ProviderSettings)
+export const GLOBAL_SECRET_KEYS = [
+	"openRouterImageApiKey", // For image generation
+	"kiloCodeImageApiKey",
+] as const
+
+// Type for the actual secret storage keys
+type ProviderSecretKey = (typeof SECRET_STATE_KEYS)[number]
+type GlobalSecretKey = (typeof GLOBAL_SECRET_KEYS)[number]
+
+// Type representing all secrets that can be stored
+export type SecretState = Pick<ProviderSettings, Extract<ProviderSecretKey, keyof ProviderSettings>> & {
+	[K in GlobalSecretKey]?: string
+}
 
 export const isSecretStateKey = (key: string): key is Keys<SecretState> =>
-	SECRET_STATE_KEYS.includes(key as Keys<SecretState>)
+	SECRET_STATE_KEYS.includes(key as ProviderSecretKey) || GLOBAL_SECRET_KEYS.includes(key as GlobalSecretKey)
 
 /**
  * GlobalState
@@ -213,7 +263,7 @@ export const isSecretStateKey = (key: string): key is Keys<SecretState> =>
 export type GlobalState = Omit<RooCodeSettings, Keys<SecretState>>
 
 export const GLOBAL_STATE_KEYS = [...GLOBAL_SETTINGS_KEYS, ...PROVIDER_SETTINGS_KEYS].filter(
-	(key: Keys<RooCodeSettings>) => !SECRET_STATE_KEYS.includes(key as Keys<SecretState>),
+	(key: Keys<RooCodeSettings>) => !isSecretStateKey(key),
 ) as Keys<GlobalState>[]
 
 export const isGlobalStateKey = (key: string): key is Keys<GlobalState> =>
