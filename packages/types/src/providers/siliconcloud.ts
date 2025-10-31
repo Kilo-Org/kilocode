@@ -42,6 +42,17 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		maxTokens: 202752,
 		preferredIndex: 2,
 	},
+	"MiniMaxAI/MiniMax-M2": {
+		contextWindow: 131072,
+		inputPrice: 0.3,
+		outputPrice: 1.18,
+		description:
+			"MiniMax-M2 为智能体重新定义了效率。它是一款紧凑、快速且经济高效的 MoE 模型，拥有 2300 亿总参数和 100 亿激活参数，专为编码和智能体任务的顶级性能而打造，同时保持强大的通用智能。仅需 100 亿激活参数，MiniMax-M2 就能提供当今领先模型所期望的复杂端到端工具使用性能，但其外形尺寸更为精简，使得部署和扩展比以往任何时候都更容易",
+		supportsPromptCache: false,
+		supportsReasoningBudget: true,
+		maxTokens: 131072,
+		preferredIndex: 3,
+	},
 	"deepseek-ai/DeepSeek-V3.1-Terminus": {
 		contextWindow: 163840,
 		inputPrice: 0.56,
@@ -51,7 +62,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		supportsPromptCache: false,
 		supportsReasoningBudget: true,
 		maxTokens: 163840,
-		preferredIndex: 3,
+		preferredIndex: 4,
 	},
 	"moonshotai/Kimi-K2-Instruct-0905": {
 		contextWindow: 262144,
@@ -60,7 +71,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		description:
 			"Kimi K2-Instruct-0905 是 Kimi K2 最新、最强大的版本。它是一款顶尖的混合专家（MoE）语言模型，拥有 1 万亿的总参数和 320 亿的激活参数。该模型的主要特性包括：增强的智能体编码智能，在公开基准测试和真实世界的编码智能体任务中表现出显著的性能提升；改进的前端编码体验，在前端编程的美观性和实用性方面均有进步",
 		supportsPromptCache: false,
-		preferredIndex: 4,
+		preferredIndex: 5,
 	},
 	"Qwen/Qwen3-VL-235B-A22B-Instruct": {
 		contextWindow: 262144,
@@ -70,7 +81,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 			"Qwen3-VL-235B-A22B-Instruct 是一个拥有 2350 亿参数的混合专家（MoE）视觉语言模型，其中激活的参数量为 220 亿。它是 Qwen3-VL-235B-A22B 的指令微调版本，专为聊天应用进行了优化。Qwen3-VL 是一系列接受文本和图像输入的多模态模型，经过大量数据训练。它在理解和推理文本与图像方面表现出先进的能力",
 		supportsImages: true,
 		supportsPromptCache: false,
-		preferredIndex: 5,
+		preferredIndex: 6,
 	},
 	"Qwen/Qwen3-VL-235B-A22B-Thinking": {
 		contextWindow: 262144,
@@ -80,7 +91,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 			"Qwen3-VL 是通义千问系列迄今最强大的视觉语言模型。该系列在文本理解与生成、视觉感知与推理、上下文长度、空间关系和视频动态理解以及 AI Agent 交互方面均实现了全面升级。Qwen3-VL-235B-A22B-Thinking 是该系列的旗舰模型之一，为推理增强的“思考”版本，在数学、因果分析和逻辑推理等多个多模态推理基准测试中取得了业界顶尖（SOTA）的表现。该模型是一个混合专家（MoE）架构，总参数量为 235B，激活参数量为 22B。它原生支持 256K 的上下文长度，并可扩展至 100 万，能够处理整本教科书或数小时的视频内容。此外，该模型具备强大的视觉 Agent 能力，可以操作桌面及移动端图形界面（GUI）、将草图转换为代码，并支持 3D 接地，为复杂的空间推理和具身智能应用奠定了基础",
 		supportsImages: true,
 		supportsPromptCache: false,
-		preferredIndex: 6,
+		preferredIndex: 7,
 	},
 	"zai-org/GLM-4.5": {
 		contextWindow: 131072,
@@ -91,7 +102,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		supportsPromptCache: false,
 		supportsReasoningBudget: true,
 		maxTokens: 131072,
-		preferredIndex: 7,
+		preferredIndex: 8,
 	},
 	"Qwen/Qwen3-Coder-480B-A35B-Instruct": {
 		contextWindow: 262144,
@@ -100,7 +111,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		description:
 			"Qwen3-Coder-480B-A35B-Instruct 是由阿里巴巴发布的、迄今为止最具代理（Agentic）能力的代码模型。它是一个拥有 4800 亿总参数和 350 亿激活参数的混合专家（MoE）模型，在效率和性能之间取得了平衡。该模型原生支持 256K（约 26 万） tokens 的上下文长度，并可通过 YaRN 等外推方法扩展至 100 万 tokens，使其能够处理大规模代码库和复杂的编程任务。Qwen3-Coder 专为代理式编码工作流设计，不仅能生成代码，还能与开发工具和环境自主交互，以解决复杂的编程问题。在多个编码和代理任务的基准测试中，该模型在开源模型中取得了顶尖水平，其性能可与 Claude Sonnet 4 等领先模型相媲美。此外，阿里还开源了配套的命令行工具 Qwen Code，以充分释放其强大的代理编程能力",
 		supportsPromptCache: false,
-		preferredIndex: 8,
+		preferredIndex: 9,
 	},
 	"Pro/deepseek-ai/DeepSeek-R1": {
 		contextWindow: 163840,
@@ -110,7 +121,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 			"DeepSeek-R1-0528 是一款强化学习（RL）驱动的推理模型，解决了模型中的重复性和可读性问题。在 RL 之前，DeepSeek-R1 引入了冷启动数据，进一步优化了推理性能。它在数学、代码和推理任务中与 OpenAI-o1 表现相当，并且通过精心设计的训练方法，提升了整体效果",
 		supportsPromptCache: false,
 		supportsReasoningBudget: true,
-		preferredIndex: 9,
+		preferredIndex: 10,
 	},
 	"deepseek-ai/DeepSeek-R1": {
 		contextWindow: 163840,
@@ -120,7 +131,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 			"DeepSeek-R1-0528 是一款强化学习（RL）驱动的推理模型，解决了模型中的重复性和可读性问题。在 RL 之前，DeepSeek-R1 引入了冷启动数据，进一步优化了推理性能。它在数学、代码和推理任务中与 OpenAI-o1 表现相当，并且通过精心设计的训练方法，提升了整体效果",
 		supportsPromptCache: false,
 		supportsReasoningBudget: true,
-		preferredIndex: 10,
+		preferredIndex: 11,
 	},
 }
 
@@ -188,7 +199,7 @@ const siliconCloudInternationalModels: Record<string, ModelInfo> = {
 		description:
 			"gpt-oss-120b is OpenAI's open-weight large language model with ~117B parameters (5.1B active), using a Mixture-of-Experts (MoE) design and MXFP4 quantization to run on a single 80 GB GPU. It delivers o4-mini-level or better performance in reasoning, coding, health, and math benchmarks, with full Chain-of-Thought (CoT), tool use, and Apache 2.0-licensed commercial deployment support.",
 		supportsPromptCache: false,
-		preferredIndex: 11,
+		preferredIndex: 12,
 	},
 }
 
