@@ -1,7 +1,7 @@
-import React from "react"
 import { render, screen, fireEvent } from "@/utils/test-utils"
 import { SiliconCloud } from "../SiliconCloud"
 import { ProviderSettings } from "@roo-code/types"
+import { mergeSiliconCloudModels } from "@/utils/model-utils"
 
 // Mock the VSCode webview toolkit components
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
@@ -84,8 +84,8 @@ vi.mock("../../ModelPicker", () => ({
 		models,
 		modelIdKey,
 		serviceName,
-		serviceUrl,
-		organizationAllowList,
+		_serviceUrl,
+		_organizationAllowList,
 		errorMessage,
 	}: any) => (
 		<div data-testid="model-picker">
@@ -665,7 +665,7 @@ describe("SiliconCloud Component", () => {
 			)
 
 			// Verify mergeSiliconCloudModels was called
-			expect(require("@/utils/model-utils").mergeSiliconCloudModels).toHaveBeenCalledWith(
+			expect(mergeSiliconCloudModels).toHaveBeenCalledWith(
 				mockRouterModels.siliconcloud,
 				apiConfiguration.siliconCloudApiLine,
 			)
