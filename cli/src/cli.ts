@@ -11,6 +11,9 @@ import { loadConfigAtom, mappedExtensionStateAtom, providersAtom } from "./state
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
+import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
+import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
+import { taskResumedViaContinueAtom } from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -24,6 +27,7 @@ export interface CLIOptions {
 	json?: boolean
 	prompt?: string
 	timeout?: number
+	continue?: boolean
 	parallel?: boolean
 	worktreeBranch?: string | undefined
 }
@@ -131,7 +135,12 @@ export class CLI {
 			})
 
 			// Request router models after configuration is injected
-			void this.requestRouterModels()
+			await this.requestRouterModels()
+
+			// Resume conversation if continue mode is enabled
+			if (this.options.continue) {
+				await this.resumeLastConversation()
+			}
 
 			if (!this.options.ci && !this.options.prompt) {
 				// Fetch Kilocode notifications if provider is kilocode
@@ -356,6 +365,81 @@ export class CLI {
 			logs.error("Failed to fetch notifications", "CLI", { error })
 		} finally {
 			this.store.set(notificationsLoadingAtom, false)
+		}
+	}
+
+	/**
+	 * Resume the last conversation from the current workspace
+	 */
+	private async resumeLastConversation(): Promise<void> {
+		if (!this.service || !this.store) {
+			logs.error("Cannot resume conversation: service or store not available", "CLI")
+			throw new Error("Service or store not initialized")
+		}
+
+		const workspace = this.options.workspace || process.cwd()
+
+		try {
+			logs.info("Attempting to resume last conversation", "CLI", { workspace })
+
+			// Update filters to current workspace and newest sort
+			await this.store.set(updateTaskHistoryFiltersAtom, {
+				workspace: "current",
+				sort: "newest",
+				favoritesOnly: false,
+			})
+
+			// Send task history request to extension
+			await this.store.set(sendWebviewMessageAtom, {
+				type: "taskHistoryRequest",
+				payload: {
+					requestId: Date.now().toString(),
+					workspace: "current",
+					sort: "newest",
+					favoritesOnly: false,
+					pageIndex: 0,
+				},
+			})
+
+			// Wait for the data to arrive (the response will update taskHistoryDataAtom through effects)
+			await new Promise((resolve) => setTimeout(resolve, 2000))
+
+			// Get the task history data
+			const taskHistoryData = this.store.get(taskHistoryDataAtom)
+
+			if (!taskHistoryData || !taskHistoryData.historyItems || taskHistoryData.historyItems.length === 0) {
+				logs.warn("No previous tasks found for workspace", "CLI", { workspace })
+				console.error("\nNo previous tasks found for this workspace. Please start a new conversation.\n")
+				process.exit(1)
+				return // TypeScript doesn't know process.exit stops execution
+			}
+
+			// Find the most recent task (first in the list since we sorted by newest)
+			const lastTask = taskHistoryData.historyItems[0]
+
+			if (!lastTask) {
+				logs.warn("No valid task found in history", "CLI", { workspace })
+				console.error("\nNo valid task found to resume. Please start a new conversation.\n")
+				process.exit(1)
+				return
+			}
+
+			logs.debug("Found last task", "CLI", { taskId: lastTask.id, task: lastTask.task })
+
+			// Send message to resume the task
+			await this.store.set(sendWebviewMessageAtom, {
+				type: "showTaskWithId",
+				text: lastTask.id,
+			})
+
+			// Mark that the task was resumed via --continue to prevent showing "Task ready to resume" message
+			this.store.set(taskResumedViaContinueAtom, true)
+
+			logs.info("Task resume initiated", "CLI", { taskId: lastTask.id, task: lastTask.task })
+		} catch (error) {
+			logs.error("Failed to resume conversation", "CLI", { error, workspace })
+			console.error("\nFailed to resume conversation. Please try starting a new conversation.\n")
+			process.exit(1)
 		}
 	}
 

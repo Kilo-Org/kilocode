@@ -28,6 +28,7 @@ program
 	.option("-m, --mode <mode>", `Set the mode of operation (${validModes.join(", ")})`)
 	.option("-w, --workspace <path>", "Path to the workspace directory", process.cwd())
 	.option("-a, --auto", "Run in autonomous mode (non-interactive)", false)
+	.option("-c, --continue", "Resume the last conversation from this workspace", false)
 	.option("-j, --json", "Output messages as JSON (requires --auto)", false)
 	.option("-t, --timeout <seconds>", "Timeout in seconds for autonomous mode (requires --auto)", parseInt)
 	.option(
@@ -56,7 +57,9 @@ program
 		}
 
 		// Validate that piped stdin requires autonomous mode
-		if (!process.stdin.isTTY && !options.auto) {
+		// Check if stdin is actually being piped (not just isTTY being undefined)
+		const isStdinPiped = process.stdin.isTTY === false
+		if (isStdinPiped && !options.auto) {
 			console.error("Error: Piped input requires --auto flag to be enabled")
 			process.exit(1)
 		}
@@ -69,7 +72,7 @@ program
 
 		// Read from stdin if no prompt argument is provided and stdin is piped
 		let finalPrompt = prompt || ""
-		if (!finalPrompt && !process.stdin.isTTY) {
+		if (!finalPrompt && isStdinPiped) {
 			// Read from stdin
 			const chunks: Buffer[] = []
 			for await (const chunk of process.stdin) {
@@ -95,6 +98,18 @@ program
 		// Validate timeout is a positive number
 		if (options.timeout && (isNaN(options.timeout) || options.timeout <= 0)) {
 			console.error("Error: --timeout must be a positive number")
+			process.exit(1)
+		}
+
+		// Validate that continue mode is not used with autonomous mode
+		if (options.continue && options.auto) {
+			console.error("Error: --continue option cannot be used with --auto flag")
+			process.exit(1)
+		}
+
+		// Validate that continue mode is not used with a prompt
+		if (options.continue && finalPrompt) {
+			console.error("Error: --continue option cannot be used with a prompt argument")
 			process.exit(1)
 		}
 
@@ -137,6 +152,7 @@ program
 			json: options.json,
 			prompt: finalPrompt,
 			timeout: options.timeout,
+			continue: options.continue,
 			parallel: options.parallel,
 			worktreeBranch,
 		})

@@ -5,6 +5,7 @@
 import type { RouterModels } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
+import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
 
 export interface Command {
 	name: string
@@ -55,6 +56,18 @@ export interface CommandContext {
 	balanceData: BalanceData | null
 	profileLoading: boolean
 	balanceLoading: boolean
+	// Task history context
+	taskHistoryData: TaskHistoryData | null
+	taskHistoryFilters: TaskHistoryFilters
+	taskHistoryLoading: boolean
+	taskHistoryError: string | null
+	fetchTaskHistory: () => Promise<void>
+	updateTaskHistoryFilters: (filters: Partial<TaskHistoryFilters>) => Promise<TaskHistoryData>
+	changeTaskHistoryPage: (pageIndex: number) => Promise<TaskHistoryData>
+	nextTaskHistoryPage: () => Promise<TaskHistoryData>
+	previousTaskHistoryPage: () => Promise<TaskHistoryData>
+	sendWebviewMessage: (message: any) => Promise<void>
+	refreshTerminal: () => Promise<void>
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void
@@ -115,6 +128,7 @@ export interface ArgumentProviderContext {
 		profileLoading: boolean
 		updateProviderModel: (modelId: string) => Promise<void>
 		refreshRouterModels: () => Promise<void>
+		taskHistoryData: TaskHistoryData | null
 	}
 }
 

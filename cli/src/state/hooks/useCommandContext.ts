@@ -10,6 +10,7 @@ import type { CliMessage } from "../../types/cli.js"
 import {
 	addMessageAtom,
 	clearMessagesAtom,
+	refreshTerminalAtom,
 	replaceMessagesAtom,
 	setMessageCutoffTimestampAtom,
 	isCommittingParallelModeAtom,
@@ -18,8 +19,17 @@ import { setModeAtom, providerAtom, updateProviderAtom } from "../atoms/config.j
 import { routerModelsAtom, extensionStateAtom, isParallelModeAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
+import {
+	taskHistoryDataAtom,
+	taskHistoryFiltersAtom,
+	taskHistoryLoadingAtom,
+	taskHistoryErrorAtom,
+} from "../atoms/taskHistory.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
+import { useTaskHistory } from "./useTaskHistory.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
+
+const TERMINAL_CLEAR_DELAY_MS = 500
 
 /**
  * Factory function type for creating CommandContext
@@ -66,6 +76,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const updateProvider = useSetAtom(updateProviderAtom)
 	const refreshRouterModels = useSetAtom(requestRouterModelsAtom)
 	const setMessageCutoffTimestamp = useSetAtom(setMessageCutoffTimestampAtom)
+	const refreshTerminal = useSetAtom(refreshTerminalAtom)
 	const setCommittingParallelMode = useSetAtom(isCommittingParallelModeAtom)
 	const { sendMessage, clearTask } = useWebviewMessage()
 
@@ -82,6 +93,19 @@ export function useCommandContext(): UseCommandContextReturn {
 	const profileLoading = useAtomValue(profileLoadingAtom)
 	const balanceLoading = useAtomValue(balanceLoadingAtom)
 
+	// Get task history state and functions
+	const taskHistoryData = useAtomValue(taskHistoryDataAtom)
+	const taskHistoryFilters = useAtomValue(taskHistoryFiltersAtom)
+	const taskHistoryLoading = useAtomValue(taskHistoryLoadingAtom)
+	const taskHistoryError = useAtomValue(taskHistoryErrorAtom)
+	const {
+		fetchTaskHistory,
+		updateFilters: updateTaskHistoryFiltersAndFetch,
+		changePage: changeTaskHistoryPageAndFetch,
+		nextPage: nextTaskHistoryPage,
+		previousPage: previousTaskHistoryPage,
+	} = useTaskHistory()
+
 	// Create the factory function
 	const createContext = useCallback<CommandContextFactory>(
 		(input: string, args: string[], options: Record<string, any>, onExit: () => void): CommandContext => {
@@ -97,6 +121,14 @@ export function useCommandContext(): UseCommandContextReturn {
 				},
 				clearMessages: () => {
 					clearMessages()
+				},
+				refreshTerminal: () => {
+					return new Promise<void>((resolve) => {
+						refreshTerminal()
+						setTimeout(() => {
+							resolve()
+						}, TERMINAL_CLEAR_DELAY_MS)
+					})
 				},
 				replaceMessages: (messages: CliMessage[]) => {
 					replaceMessages(messages)
@@ -143,6 +175,17 @@ export function useCommandContext(): UseCommandContextReturn {
 				balanceData,
 				profileLoading,
 				balanceLoading,
+				// Task history context
+				taskHistoryData,
+				taskHistoryFilters,
+				taskHistoryLoading,
+				taskHistoryError,
+				fetchTaskHistory,
+				updateTaskHistoryFilters: updateTaskHistoryFiltersAndFetch,
+				changeTaskHistoryPage: changeTaskHistoryPageAndFetch,
+				nextTaskHistoryPage,
+				previousTaskHistoryPage,
+				sendWebviewMessage: sendMessage,
 			}
 		},
 		[
@@ -151,6 +194,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			setMode,
 			sendMessage,
 			clearTask,
+			refreshTerminal,
 			routerModels,
 			currentProvider,
 			kilocodeDefaultModel,
@@ -162,6 +206,15 @@ export function useCommandContext(): UseCommandContextReturn {
 			balanceData,
 			profileLoading,
 			balanceLoading,
+			taskHistoryData,
+			taskHistoryFilters,
+			taskHistoryLoading,
+			taskHistoryError,
+			fetchTaskHistory,
+			updateTaskHistoryFiltersAndFetch,
+			changeTaskHistoryPageAndFetch,
+			nextTaskHistoryPage,
+			previousTaskHistoryPage,
 			setCommittingParallelMode,
 			isParallelMode,
 		],
