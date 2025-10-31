@@ -810,6 +810,7 @@ export const webviewMessageHandler = async (
 				requesty: {},
 				unbound: {},
 				glama: {},
+				"nano-gpt": {}, //kilocode_change
 				chutes: {}, // kilocode_change
 				ollama: {},
 				lmstudio: {},
@@ -877,6 +878,16 @@ export const webviewMessageHandler = async (
 						baseUrl: apiConfiguration.deepInfraBaseUrl,
 					},
 				},
+				//kilocode_change start
+				{
+					key: "nano-gpt",
+					options: {
+						provider: "nano-gpt",
+						apiKey: apiConfiguration.nanoGptApiKey,
+						nanoGptModelList: apiConfiguration.nanoGptModelList,
+					},
+				},
+				//kilocode_change end
 				// kilocode_change start
 				{
 					key: "ovhcloud",

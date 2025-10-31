@@ -437,6 +437,14 @@
 		"getDoubaoApiKey": "Отримати ключ API Doubao",
 		"zaiApiKey": "Ключ API Z.AI",
 		"getZaiApiKey": "Отримати ключ API Z.AI",
+		"nanoGptApiKey": "Ключ API Nano-GPT",
+		"getNanoGptApiKey": "Отримати ключ API Nano-GPT",
+		"nanoGptModelList": "Список моделей",
+		"nanoGptModelListOptions": {
+			"all": "Усі моделі",
+			"personalized": "Персоналізовані моделі",
+			"subscription": "Моделі підписки"
+		},
 		"sambaNovaApiKey": "Ключ API SambaNova",
 		"getSambaNovaApiKey": "Отримати ключ API SambaNova",
 		"customModel": {

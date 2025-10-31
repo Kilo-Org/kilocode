@@ -196,6 +196,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				chutesApiKey: "chutes-key",
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
+				nanoGptApiKey: "nano-gpt-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				// kilocode_change end
 			},
@@ -237,6 +238,11 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			apiKey: "gemini-key",
 			baseUrl: "https://gemini.example.com",
 		})
+		expect(mockGetModels).toHaveBeenCalledWith({
+			provider: "nano-gpt",
+			apiKey: "nano-gpt-key",
+			nanoGptModelList: undefined,
+		})
 		// kilocode_change end
 		expect(mockGetModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(mockGetModels).toHaveBeenCalledWith({
@@ -260,6 +266,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				chutes: mockModels, // kilocode_change
 				litellm: mockModels,
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
@@ -319,6 +326,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
+				nanoGptApiKey: "nano-gpt-key",
 				// kilocode_change end
 				// Missing litellm config
 			},
@@ -360,6 +368,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				chutes: mockModels, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
@@ -392,6 +401,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
 			.mockResolvedValueOnce(mockModels) // deepinfra
+			.mockResolvedValueOnce(mockModels) // nano-gpt // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
@@ -412,6 +422,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				chutes: {}, // kilocode_change
 				litellm: {},
 				"kilocode-openrouter": mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: {},
 				ovhcloud: mockModels, // kilocode_change
 				lmstudio: {},
@@ -466,6 +477,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
+			.mockRejectedValueOnce(new Error("Nano-GPT API error")) // nano-gpt // kilocode_change
 			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
 
@@ -541,14 +553,14 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "deepinfra" },
 		})
 
+		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
-			error: "LiteLLM connection failed",
-			values: { provider: "litellm" },
+			error: "Nano-GPT API error",
+			values: { provider: "nano-gpt" },
 		})
 
-		// kilocode_change start
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -556,6 +568,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "ovhcloud" },
 		})
 		// kilocode_change end
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "LiteLLM connection failed",
+			values: { provider: "litellm" },
+		})
 	})
 
 	it("prefers config values over message values for LiteLLM", async () => {

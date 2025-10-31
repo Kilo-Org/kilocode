@@ -423,6 +423,14 @@
 		"getDoubaoApiKey": "รับคีย์ API ของ Doubao",
 		"zaiApiKey": "คีย์ API ของ Z.AI",
 		"getZaiApiKey": "รับคีย์ API ของ Z.AI",
+		"nanoGptApiKey": "คีย์ API ของ Nano-GPT",
+		"getNanoGptApiKey": "รับคีย์ API ของ Nano-GPT",
+		"nanoGptModelList": "รายการโมเดล",
+		"nanoGptModelListOptions": {
+			"all": "โมเดลทั้งหมด",
+			"personalized": "โมเดลส่วนบุคคล",
+			"subscription": "โมเดลแบบสมัครสมาชิก"
+		},
 		"sambaNovaApiKey": "คีย์ API ของ SambaNova",
 		"getSambaNovaApiKey": "รับคีย์ API ของ SambaNova",
 		"customModel": {
