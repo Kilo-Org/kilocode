@@ -342,9 +342,22 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 	// Read the selected model from state
 	const selectedModel = state.fastApplyModel || "auto"
 
+	// Read fastApplyApiProvider from state when use current Api Configuration
+	let fastApplyApiProvider: string | undefined = state.apiConfiguration?.apiProvider
+
+	const useCurrentApiConfiguration = state.fastApplyApiProvider === "-"
+
+	if (!useCurrentApiConfiguration) {
+		// Read fastApplyApiProvider provider from fast apply setting
+		fastApplyApiProvider = state.fastApplyApiProvider
+	}
+
 	// Priority 1: Use direct Morph API key if available
 	// Allow human-relay for debugging
-	if (state.morphApiKey || state.apiConfiguration?.apiProvider === "human-relay") {
+	if (
+		(fastApplyApiProvider === "morph" && state.morphApiKey) ||
+		state.apiConfiguration?.apiProvider === "human-relay"
+	) {
 		const [org, model] = selectedModel.split("/")
 		return {
 			available: true,
@@ -355,8 +368,8 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 	}
 
 	// Priority 2: Use KiloCode provider
-	if (state.apiConfiguration?.apiProvider === "kilocode") {
-		const token = state.apiConfiguration.kilocodeToken
+	if (fastApplyApiProvider === "kilocode") {
+		const token = useCurrentApiConfiguration ? state.apiConfiguration.kilocodeToken : state.morphApiKey
 		if (!token) {
 			return { available: false, error: "No KiloCode token available to use Fast Apply" }
 		}
@@ -372,15 +385,17 @@ function getFastApplyConfiguration(state: ClineProviderState): FastApplyConfigur
 	}
 
 	// Priority 3: Use OpenRouter provider
-	if (state.apiConfiguration?.apiProvider === "openrouter") {
-		const token = state.apiConfiguration.openRouterApiKey
+	if (fastApplyApiProvider === "openrouter") {
+		const token = useCurrentApiConfiguration ? state.apiConfiguration.openRouterApiKey : state.morphApiKey
 		if (!token) {
 			return { available: false, error: "No OpenRouter API token available to use Fast Apply" }
 		}
 		return {
 			available: true,
 			apiKey: token,
-			baseUrl: state.apiConfiguration.openRouterBaseUrl || "https://openrouter.ai/api/v1",
+			baseUrl: useCurrentApiConfiguration
+				? state.apiConfiguration.openRouterBaseUrl
+				: "https://openrouter.ai/api/v1",
 			model: selectedModel === "auto" ? "morph/morph-v3-large" : selectedModel, // Use selected model
 		}
 	}

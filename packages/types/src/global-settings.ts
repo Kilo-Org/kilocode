@@ -146,6 +146,7 @@ export const globalSettingsSchema = z.object({
 	// kilocode_change start: Morph fast apply
 	morphApiKey: z.string().optional(),
 	fastApplyModel: fastApplyModelSchema.optional(),
+	fastApplyApiProvider: z.string().optional(),
 	// kilocode_change end
 
 	codebaseIndexModels: codebaseIndexModelsSchema.optional(),
