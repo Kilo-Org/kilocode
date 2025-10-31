@@ -35,16 +35,14 @@ export class TestRunner {
 	async runTest(testCase: TestCase): Promise<TestResult> {
 		try {
 			const startTime = performance.now()
-			const completion = await this.strategyTester.getCompletion(testCase.input)
+			const { prefix, completion, suffix } = await this.strategyTester.getCompletion(
+				testCase.input,
+				testCase.name,
+			)
 			const llmRequestDuration = performance.now() - startTime
+			let actualValue: string = prefix + completion + suffix
 
-			const modifiedCode = this.strategyTester.parseCompletion(testCase.input, completion)
-
-			let actualValue: string
-
-			if (modifiedCode !== null) {
-				actualValue = modifiedCode
-			} else {
+			if (completion === "") {
 				actualValue = "(no changes parsed)"
 			}
 
@@ -146,7 +144,7 @@ export class TestRunner {
 						console.log("    " + "─".repeat(76))
 
 						if (this.verbose && result.completion) {
-							console.log("    Full XML Response:")
+							console.log("    Full LLM Response:")
 							console.log(
 								result.completion
 									.split("\n")
@@ -329,23 +327,15 @@ export class TestRunner {
 		}
 
 		if (lastResult.completion) {
-			const modifiedCode = this.strategyTester.parseCompletion(lastResult.testCase.input, lastResult.completion)
-			if (modifiedCode !== null) {
-				console.log("\nModified Code:")
-				console.log("  " + "─".repeat(78))
-				console.log(
-					modifiedCode
-						.split("\n")
-						.map((l) => "  " + l)
-						.join("\n"),
-				)
-				console.log("  " + "─".repeat(78))
-			} else {
-				console.log("\nNo changes were parsed from the response")
-			}
-
-			console.log("\nFull LLM Response:")
-			console.log(lastResult.completion)
+			console.log("\nCompletion:")
+			console.log("  " + "─".repeat(78))
+			console.log(
+				lastResult.completion
+					.split("\n")
+					.map((l) => "  " + l)
+					.join("\n"),
+			)
+			console.log("  " + "─".repeat(78))
 		}
 
 		console.log("\n" + "═".repeat(80) + "\n")

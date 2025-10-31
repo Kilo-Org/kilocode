@@ -1,0 +1,3 @@
+const config = {
+  // Your configuration properties here
+}

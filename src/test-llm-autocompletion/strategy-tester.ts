@@ -1,6 +1,6 @@
 import { LLMClient } from "./llm-client.js"
 import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
-import { GhostSuggestionContext, AutocompleteInput, extractPrefixSuffix } from "../services/ghost/types.js"
+import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
 import { parseGhostResponse } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
@@ -20,7 +20,7 @@ export class StrategyTester {
 	 * Converts test input to GhostSuggestionContext
 	 * Extracts cursor position from CURSOR_MARKER in the code
 	 */
-	private createContext(code: string): GhostSuggestionContext {
+	private createContext(code: string, testCaseName: string): GhostSuggestionContext {
 		const lines = code.split("\n")
 		let cursorLine = 0
 		let cursorCharacter = 0
@@ -39,8 +39,13 @@ export class StrategyTester {
 		// the code will add it back at the correct position
 		const codeWithoutMarker = code.replace(CURSOR_MARKER, "")
 
-		const uri = vscode.Uri.parse("file:///test.js")
+		// Extract language from test case name (e.g., "class-constructor.rb" -> ".rb")
+		const fileExtension = this.getFileExtensionFromTestName(testCaseName)
+		const languageId = this.getLanguageIdFromExtension(fileExtension)
+
+		const uri = vscode.Uri.parse(`file:///test${fileExtension}`)
 		const document = new MockTextDocument(uri, codeWithoutMarker)
+		document.languageId = languageId
 		const position = new vscode.Position(cursorLine, cursorCharacter)
 		const range = new vscode.Range(position, position)
 
@@ -54,8 +59,54 @@ export class StrategyTester {
 		}
 	}
 
-	async getCompletion(code: string): Promise<string> {
-		const context = this.createContext(code)
+	/**
+	 * Extract file extension from test case name
+	 * e.g., "class-constructor.rb" -> ".rb"
+	 * e.g., "class-constructor" -> ".js"
+	 */
+	private getFileExtensionFromTestName(testCaseName: string): string {
+		const match = testCaseName.match(/\.([a-z]+)$/i)
+		return match ? `.${match[1]}` : ".js"
+	}
+
+	/**
+	 * Map file extension to VSCode languageId
+	 */
+	private getLanguageIdFromExtension(extension: string): string {
+		const languageMap: Record<string, string> = {
+			".js": "javascript",
+			".ts": "typescript",
+			".jsx": "javascriptreact",
+			".tsx": "typescriptreact",
+			".py": "python",
+			".rb": "ruby",
+			".java": "java",
+			".go": "go",
+			".rs": "rust",
+			".cpp": "cpp",
+			".c": "c",
+			".cs": "csharp",
+			".php": "php",
+			".swift": "swift",
+			".kt": "kotlin",
+			".scala": "scala",
+			".html": "html",
+			".css": "css",
+			".json": "json",
+			".xml": "xml",
+			".yaml": "yaml",
+			".yml": "yaml",
+			".md": "markdown",
+			".sh": "shellscript",
+		}
+		return languageMap[extension] || "javascript"
+	}
+
+	async getCompletion(
+		code: string,
+		testCaseName: string = "test",
+	): Promise<{ prefix: string; completion: string; suffix: string }> {
+		const context = this.createContext(code, testCaseName)
 
 		// Extract prefix, suffix, and languageId
 		const position = context.range?.start ?? new vscode.Position(0, 0)
@@ -83,35 +134,18 @@ export class StrategyTester {
 		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
-		return response.content
-	}
 
-	parseCompletion(originalContent: string, xmlResponse: string): string | null {
-		try {
-			const cursorIndex = originalContent.indexOf(CURSOR_MARKER)
-			const prefix = originalContent.substring(0, cursorIndex)
-			const suffix = originalContent.substring(cursorIndex + CURSOR_MARKER.length)
+		// Parse the response to extract the completion from XML tags
+		const parseResult = parseGhostResponse(response.content, prefix, suffix)
+		const suggestion = parseResult.suggestions.getFillInAtCursor()
 
-			const result = parseGhostResponse(xmlResponse, prefix, suffix)
+		// Use parsed completion only if available
+		const completion = suggestion?.text || ""
 
-			// Check if we have any suggestions
-			if (!result.suggestions.hasSuggestions()) {
-				console.warn("No suggestions found")
-				return null
-			}
-
-			// Get the FIM suggestion
-			const fimSuggestion = result.suggestions.getFillInAtCursor()
-			if (!fimSuggestion) {
-				console.warn("No FIM suggestion found")
-				return null
-			}
-
-			// Reconstruct the complete content with the FIM text inserted
-			return fimSuggestion.prefix + fimSuggestion.text + fimSuggestion.suffix
-		} catch (error) {
-			console.warn("Failed to parse completion:", error)
-			return null
+		return {
+			prefix,
+			completion,
+			suffix,
 		}
 	}
 
