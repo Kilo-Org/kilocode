@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Скасувати Пропозиції Редагування",
 	"ghost.commands.applyCurrentSuggestion": "Застосувати Поточну Пропозицію Редагування",
 	"ghost.commands.applyAllSuggestions": "Застосувати Всі Пропозиції Редагування",
-	"ghost.commands.promptCodeSuggestion": "Швидке Завдання",
 	"ghost.commands.goToNextSuggestion": "Перейти до Наступної Пропозиції",
 	"ghost.commands.goToPreviousSuggestion": "Перейти до Попередньої Пропозиції"
 }

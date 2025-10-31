@@ -13,16 +13,15 @@ import {
 	isCommandInput as checkIsCommandInput,
 } from "../../services/autocomplete.js"
 import {
-	inputValueAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
-	selectedSuggestionIndexAtom,
+	selectedIndexAtom,
 	suggestionCountAtom,
 	isCommandInputAtom,
 	commandQueryAtom,
-	setInputValueAtom,
-	clearInputAtom,
+	updateTextBufferAtom,
+	clearTextBufferAtom,
 	setSuggestionsAtom,
 	setArgumentSuggestionsAtom,
 	selectNextSuggestionAtom,
@@ -31,9 +30,11 @@ import {
 	showAutocompleteMenuAtom,
 	getSelectedSuggestionAtom,
 } from "../atoms/ui.js"
+import { textBufferStringAtom } from "../atoms/textBuffer.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
+import { profileDataAtom, profileLoadingAtom } from "../atoms/profile.js"
 import { getModelIdKey } from "../../constants/providers/models.js"
 
 /**
@@ -129,11 +130,11 @@ export interface UseCommandInputReturn {
  */
 export function useCommandInput(): UseCommandInputReturn {
 	// Read atoms
-	const inputValue = useAtomValue(inputValueAtom)
+	const inputValue = useAtomValue(textBufferStringAtom)
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)
-	const selectedIndex = useAtomValue(selectedSuggestionIndexAtom)
+	const selectedIndex = useAtomValue(selectedIndexAtom)
 	const suggestionCount = useAtomValue(suggestionCountAtom)
 	const isCommand = useAtomValue(isCommandInputAtom)
 	const commandQuery = useAtomValue(commandQueryAtom)
@@ -144,10 +145,12 @@ export function useCommandInput(): UseCommandInputReturn {
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
+	const profileData = useAtomValue(profileDataAtom)
+	const profileLoading = useAtomValue(profileLoadingAtom)
 
 	// Write atoms
-	const setInputAction = useSetAtom(setInputValueAtom)
-	const clearInputAction = useSetAtom(clearInputAtom)
+	const setInputAction = useSetAtom(updateTextBufferAtom)
+	const clearInputAction = useSetAtom(clearTextBufferAtom)
 	const setSuggestionsAction = useSetAtom(setSuggestionsAtom)
 	const setArgumentSuggestionsAction = useSetAtom(setArgumentSuggestionsAtom)
 	const selectNextAction = useSetAtom(selectNextSuggestionAtom)
@@ -205,6 +208,8 @@ export function useCommandInput(): UseCommandInputReturn {
 				routerModels,
 				currentProvider: currentProvider || null,
 				kilocodeDefaultModel,
+				profileData,
+				profileLoading,
 				updateProviderModel: async (modelId: string) => {
 					if (!currentProvider) {
 						throw new Error("No provider configured")
@@ -234,6 +239,8 @@ export function useCommandInput(): UseCommandInputReturn {
 		routerModels,
 		currentProvider,
 		kilocodeDefaultModel,
+		profileData,
+		profileLoading,
 		updateProvider,
 		refreshRouterModels,
 	])

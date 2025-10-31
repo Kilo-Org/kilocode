@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Añadir Crédito",
-		"lowBalance": "Tu saldo de Kilo Code es bajo"
+		"lowBalance": "Tu saldo de Kilo Code es bajo",
+		"newOrganization": "¿Usas Kilo para el trabajo?"
 	},
 	"pagination": {
 		"previous": "Anterior",
@@ -41,7 +42,8 @@
 			"automaticFetch": "Los modelos más recientes están disponibles automáticamente en Kilo Code. Si no estás seguro de qué modelo elegir, Kilo Code funciona mejor con los modelos recomendados que aparecen en la parte superior en <strong>negrita</strong>.",
 			"providerRouting": {
 				"title": "Enrutamiento de proveedores",
-				"managedByOrganization": "La configuración de enrutamiento de proveedores está gestionada por tu organización.",
+				"managedByOrganization": "Gestionar enrutamiento de proveedores a nivel de organización",
+				"createOrganization": "Crear organización para gestionar enrutamiento de proveedores",
 				"description": "Kilo Code enruta las solicitudes a los mejores proveedores disponibles para su modelo. De forma predeterminada, las solicitudes se equilibran en carga entre los principales proveedores para maximizar el tiempo de actividad. Sin embargo, puede elegir un proveedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenación de proveedor predeterminada",
@@ -95,6 +97,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Estilo de Llamada de Herramientas",
+		"description": "Elige cómo se formatean las llamadas de herramientas en el prompt del sistema. JSON es actualmente experimental y está destinado principalmente a usuarios interesados en contribuir a su desarrollo.",
+		"automatic": "Dejar que Kilo decida",
+		"xml": "XML",
+		"json": "JSON (experimental)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code quiere condensar tu conversación",
@@ -122,7 +131,9 @@
 			"credits": "créditos",
 			"action": "Comprar Ahora",
 			"viewAll": "Ver todas las opciones de precio"
-		}
+		},
+		"detailedUsage": "Uso detallado",
+		"createOrganization": "Crear organización para rastrear uso detallado"
 	},
 	"docs": "Documentos",
 	"rules": {
@@ -218,7 +229,10 @@
 				"label": "Autocompletado Manual ({{keybinding}})",
 				"description": "¿Necesitas una corrección rápida, completado o refactorización? Kilo usará el contexto circundante para ofrecer mejoras inmediatas, manteniéndote en el flujo. <DocsLink>Editar atajo</DocsLink>"
 			},
-			"keybindingNotFound": "no encontrado"
+			"keybindingNotFound": "no encontrado",
+			"noModelConfigured": "No se encontró ningún modelo de autocompletado adecuado. Por favor, configura un proveedor en la configuración de API.",
+			"model": "Modelo",
+			"provider": "Proveedor"
 		}
 	},
 	"virtualProvider": {
@@ -231,7 +245,7 @@
 		"removeProfile": "Eliminar perfil",
 		"selectProfilePlaceholder": "Seleccionar perfil...",
 		"addProfile": "Añadir perfil",
-		"noProfilesAvailable": "No hay perfiles disponibles. Por favor configure primero al menos un perfil de proveedor no virtual.",
+		"noProfilesAvailable": "No hay perfiles disponibles. Por favor, configure primero al menos un perfil de proveedor no virtual.",
 		"dangerZoneTitle": "Zona de Peligro",
 		"dangerZoneDescription": "Estas acciones son destructivas y no se pueden deshacer.",
 		"clearUsageData": "Limpiar Datos de Uso",
@@ -254,5 +268,19 @@
 		"modelNoImageSupport": "Las imágenes no son compatibles con el modelo actual.",
 		"maxImagesReached": "Máximo de 20 imágenes por mensaje. Elimina algunas imágenes para añadir más.",
 		"imagesRemovedNoSupport": "Imágenes eliminadas, no compatibles con el modelo."
+	},
+	"memoryWarning": {
+		"message": "El uso de memoria está al {{percentage}}%. Por favor reinicia tu IDE para evitar fallos."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Estos servidores MCP son mantenidos por la comunidad. Haga clic <1>aquí</1> para editar sus propios ajustes de MCP."
+		},
+		"modes": {
+			"description": "Estos modos están disponibles en la comunidad. Haz clic <1>aquí</1> para editar tus propios modos personalizados."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nuevo: Comparte modos creando una organización"
 	}
 }

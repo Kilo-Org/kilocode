@@ -247,6 +247,8 @@
 		"searchProviderPlaceholder": "Cerca fornitori",
 		"noProviderMatchFound": "Nessun fornitore trovato",
 		"vscodeLmDescription": "L'API del Modello di Linguaggio di VS Code consente di eseguire modelli forniti da altre estensioni di VS Code (incluso, ma non limitato a, GitHub Copilot). Il modo più semplice per iniziare è installare le estensioni Copilot e Copilot Chat dal VS Code Marketplace.",
+		"vscodeLmUnavailable": "Il supporto ai Language Model di VS Code è disponibile solo in Visual Studio Code. Fork come VSCodium e altri potrebbero non funzionare. Inoltre, questa funzionalità non è disponibile negli strumenti JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assicurati di utilizzare uno strumento supportato e che VS Code Chat sia installato e abilitato",
 		"awsCustomArnUse": "Inserisci un ARN Amazon Bedrock valido per il modello che desideri utilizzare. Esempi di formato:",
 		"awsCustomArnDesc": "Assicurati che la regione nell'ARN corrisponda alla regione AWS selezionata sopra.",
 		"openRouterApiKey": "Chiave API OpenRouter",
@@ -799,7 +801,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Abilita Fast Apply",
-			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede il provider API Kilo Code, OpenRouter o una chiave API Morph.",
+			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede Kilo Gateway Provider, OpenRouter o una chiave API Morph.",
 			"apiKey": "Chiave API Morph (opzionale)",
 			"placeholder": "Inserisci la tua chiave API Morph (opzionale)",
 			"modelLabel": "Selezione modello",
@@ -928,6 +930,10 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"sendMessageOnEnter": {
+			"label": "Invia messaggio con Invio",
+			"description": "Quando abilitato, premi Invio per inviare e Maiusc+Invio per una nuova riga. Disattiva per usare Maiusc+Invio per inviare invece."
 		},
 		"costThreshold": {
 			"label": "Nascondi costo sotto la soglia",

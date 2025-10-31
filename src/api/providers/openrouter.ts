@@ -7,6 +7,7 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	getActiveToolUseStyle,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -29,6 +30,7 @@ import type {
 	SingleCompletionHandler,
 } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
@@ -223,6 +225,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(reasoning && { reasoning }),
 		}
 
+		// kilocode_change start: Add native tool call support when toolStyle is "json"
+		addNativeToolCallsToParams(completionParams, this.options, metadata)
+		// kilocode_change end
+
 		let stream
 		try {
 			stream = await this.client.chat.completions.create(
@@ -234,12 +240,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
 				throw error
 			}
-			const rawError = safeJsonParse(error?.error?.metadata?.raw) as { error?: OpenAI.ErrorObject } | undefined
-			if (rawError?.error?.message) {
-				throw new Error(`${this.providerName} error: ${rawError.error.message}`)
-			}
+			throw new Error(makeOpenRouterErrorReadable(error))
 			// kilocode_change end
-			throw handleOpenAIError(error, this.providerName)
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
@@ -277,9 +279,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
 
-				if (delta && (delta.tool_calls?.length ?? 0) > 0) {
-					console.error("Model tried to use native tool calls", delta.tool_calls)
-				}
+				// Handle native tool calls when toolStyle is "json"
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
 				if (delta?.content) {
@@ -509,8 +510,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
+	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
+	const parsedJson = safeJsonParse(metadata?.raw)
+	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+
 	if (error?.code !== 429 && error?.code !== 418) {
-		return `OpenRouter API Error: ${error?.message || error}`
+		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 
 	try {

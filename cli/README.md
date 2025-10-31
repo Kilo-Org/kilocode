@@ -5,7 +5,7 @@ Terminal User Interface for Kilo Code
 ## Installation
 
 ```bash
-npm install -g @kilocode/cli@alpha
+npm install -g @kilocode/cli
 ```
 
 Then, make sure you place your Kilo Code API token in the CLI config:
@@ -45,24 +45,44 @@ kilocode --mode architect
 kilocode --workspace /path/to/project
 ```
 
-### CI Mode (Non-Interactive)
+### Parallel mode
 
-CI mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
 
 ```bash
-# Run in CI mode with a prompt
-kilocode --ci "Implement feature X"
+# Prerequisite: must be within a valid git repository
 
-# Run in CI mode with piped input
-echo "Fix the bug in app.ts" | kilocode --ci
+# In interactive mode, changes will be committed on /exit
+# Terminal 1
+kilocode --parallel "improve xyz"
+# Terminal 2
+kilocode --parallel "improve abc"
 
-# Run in CI mode with timeout (in seconds)
-kilocode --ci "Run tests" --timeout 300
+# Pairs great with auto mode 🚀
+# Terminal 1
+kilocode --parallel --auto "improve xyz"
+# Terminal 2
+kilocode --parallel --auto "improve abc"
 ```
 
-#### CI Mode Behavior
+### Autonomous mode (Non-Interactive)
 
-When running in CI mode (`--ci` flag):
+Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+
+```bash
+# Run in autonomous mode with a prompt
+kilocode --auto "Implement feature X"
+
+# Run in autonomous mode with piped input
+echo "Fix the bug in app.ts" | kilocode --auto
+
+# Run in autonomous mode with timeout (in seconds)
+kilocode --auto "Run tests" --timeout 300
+```
+
+#### Autonomous mode Behavior
+
+When running in Autonomous mode (`--auto` flag):
 
 1. **No User Interaction**: All approval requests are handled automatically based on configuration
 2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
@@ -71,7 +91,7 @@ When running in CI mode (`--ci` flag):
 
 #### Auto-Approval Configuration
 
-CI mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
+Autonomous mode respects your auto-approval configuration. Edit your config file with `kilocode config` to customize:
 
 ```json
 {
@@ -136,11 +156,58 @@ CI mode respects your auto-approval configuration. Edit your config file with `k
 - `retry`: Auto-approve API retry requests
 - `todo`: Auto-approve todo list updates
 
-#### CI Mode Follow-up Questions
+#### Command Approval Patterns
 
-In CI mode, when the AI asks a follow-up question, it receives this response:
+The `execute.allowed` and `execute.denied` lists support hierarchical pattern matching:
 
-> "This process is running in non-interactive CI mode. The user cannot make decisions, so you should make the decision autonomously."
+- **Base command**: `"git"` matches any git command (e.g., `git status`, `git commit`, `git push`)
+- **Command + subcommand**: `"git status"` matches any git status command (e.g., `git status --short`, `git status -v`)
+- **Full command**: `"git status --short"` only matches exactly `git status --short`
+
+**Example:**
+
+```json
+{
+	"execute": {
+		"enabled": true,
+		"allowed": [
+			"npm", // Allows all npm commands
+			"git status", // Allows all git status commands
+			"ls -la" // Only allows exactly "ls -la"
+		],
+		"denied": [
+			"git push --force" // Denies this specific command even if "git" is allowed
+		]
+	}
+}
+```
+
+#### Interactive Command Approval
+
+When running in interactive mode, command approval requests now show hierarchical options:
+
+```
+[!] Action Required:
+> ✓ Run Command (y)
+  ✓ Always run git (1)
+  ✓ Always run git status (2)
+  ✓ Always run git status --short --branch (3)
+  ✗ Reject (n)
+```
+
+Selecting an "Always run" option will:
+
+1. Approve and execute the current command
+2. Add the pattern to your `execute.allowed` list in the config
+3. Auto-approve matching commands in the future
+
+This allows you to progressively build your auto-approval rules without manually editing the config file.
+
+#### Autonomous mode Follow-up Questions
+
+In Autonomous mode, when the AI asks a follow-up question, it receives this response:
+
+> "This process is running in non-interactive Autonomous mode. The user cannot make decisions, so you should make the decision autonomously."
 
 This instructs the AI to proceed without user input.
 
@@ -156,7 +223,7 @@ This instructs the AI to proceed without user input.
 # GitHub Actions example
 - name: Run Kilo Code
   run: |
-      echo "Implement the new feature" | kilocode --ci --timeout 600
+      echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
 
 ## Proxy Configuration

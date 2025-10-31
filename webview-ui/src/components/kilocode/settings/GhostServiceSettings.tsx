@@ -8,11 +8,9 @@ import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
 import { SetCachedStateField } from "../../settings/types"
-import { Slider } from "@src/components/ui"
 import { vscode } from "@/utils/vscode"
 import { ControlledCheckbox } from "../common/ControlledCheckbox"
 import { useKeybindings } from "@/hooks/useKeybindings"
-import { normalizeAutoTriggerDelay, DELAY_VALUES, formatDelay } from "@/utils/delayUtils"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -26,26 +24,14 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, autoTriggerDelay, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding } =
+	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding, provider, model } =
 		ghostServiceSettings || {}
-	const keybindings = useKeybindings(["kilo-code.ghost.promptCodeSuggestion", "kilo-code.ghost.generateSuggestions"])
-
-	const normalizedDelay = normalizeAutoTriggerDelay(autoTriggerDelay)
-	const currentDelayIndex = DELAY_VALUES.indexOf(normalizedDelay)
-	const validIndex = currentDelayIndex === -1 ? DELAY_VALUES.indexOf(3000) : currentDelayIndex
+	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = (newValue: boolean) => {
 		setCachedStateField("ghostServiceSettings", {
 			...ghostServiceSettings,
 			enableAutoTrigger: newValue,
-		})
-	}
-
-	const onAutoTriggerDelayChange = (newValue: number[]) => {
-		const delayMs = DELAY_VALUES[newValue[0]]
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			autoTriggerDelay: delayMs,
 		})
 	}
 
@@ -94,38 +80,13 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 
-					{enableAutoTrigger && (
-						<div className="flex flex-col gap-1">
-							<label className="block font-medium text-sm">
-								{t("kilocode:ghost.settings.autoTriggerDelay.label")}
-							</label>
-							<div className="flex items-center gap-3">
-								<Slider
-									value={[validIndex]}
-									onValueChange={onAutoTriggerDelayChange}
-									min={0}
-									max={DELAY_VALUES.length - 1}
-									step={1}
-									className="flex-1"
-									disabled={!enableAutoTrigger}
-								/>
-								<span className="text-sm text-vscode-descriptionForeground w-12 text-right">
-									{formatDelay(normalizedDelay)}
-								</span>
-							</div>
-							<div className="text-vscode-descriptionForeground text-xs mt-1">
-								<Trans i18nKey="kilocode:ghost.settings.autoTriggerDelay.description" />
-							</div>
-						</div>
-					)}
-
 					<div className="flex flex-col gap-1">
 						<ControlledCheckbox
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
 								{t("kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label", {
-									keybinding: keybindings["kilo-code.ghost.promptCodeSuggestion"],
+									keybinding: keybindings["kilo-code.addToContextAndFocus"],
 								})}
 							</span>
 						</ControlledCheckbox>
@@ -136,9 +97,7 @@ export const GhostServiceSettingsView = ({
 									DocsLink: (
 										<a
 											href="#"
-											onClick={() =>
-												openGlobalKeybindings("kilo-code.ghost.promptCodeSuggestion")
-											}
+											onClick={() => openGlobalKeybindings("kilo-code.addToContextAndFocus")}
 											className="text-[var(--vscode-list-highlightForeground)] hover:underline cursor-pointer"></a>
 									),
 								}}
@@ -168,6 +127,34 @@ export const GhostServiceSettingsView = ({
 									),
 								}}
 							/>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-1">
+						<div className="flex items-center gap-2 font-bold">
+							<Bot className="w-4" />
+							<div>{t("kilocode:ghost.settings.model")}</div>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-2">
+						<div className="text-sm">
+							{provider && model ? (
+								<>
+									<div className="text-vscode-descriptionForeground">
+										<span className="font-medium">{t("kilocode:ghost.settings.provider")}:</span>{" "}
+										{provider}
+									</div>
+									<div className="text-vscode-descriptionForeground">
+										<span className="font-medium">{t("kilocode:ghost.settings.model")}:</span>{" "}
+										{model}
+									</div>
+								</>
+							) : (
+								<div className="text-vscode-errorForeground">
+									{t("kilocode:ghost.settings.noModelConfigured")}
+								</div>
+							)}
 						</div>
 					</div>
 				</div>

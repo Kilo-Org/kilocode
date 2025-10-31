@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Guthaben hinzufügen",
-		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig"
+		"lowBalance": "Ihr Kilo Code Guthaben ist niedrig",
+		"newOrganization": "Verwendest du Kilo für die Arbeit?"
 	},
 	"pagination": {
 		"previous": "Zurück",
@@ -48,7 +49,8 @@
 			"automaticFetch": "Die neuesten Modelle sind automatisch in Kilo Code verfügbar. Wenn du dir nicht sicher bist, welches Modell du wählen sollst, funktioniert Kilo Code am besten mit den empfohlenen Modellen, die oben in <strong>fetter Schrift</strong> aufgeführt sind.",
 			"providerRouting": {
 				"title": "Anbieter-Routing",
-				"managedByOrganization": "Die Anbieter-Routing-Einstellungen werden von deiner Organisation verwaltet.",
+				"managedByOrganization": "Anbieter-Routing auf Organisationsebene verwalten",
+				"createOrganization": "Organisation erstellen, um Anbieter-Routing zu verwalten",
 				"description": "Kilo Code leitet Anfragen an die besten verfügbaren Anbieter für dein Modell weiter. Standardmäßig werden Anfragen über die Top-Anbieter verteilt, um die Betriebszeit zu maximieren. Du kannst jedoch einen bestimmten Anbieter für dieses Modell auswählen.",
 				"sorting": {
 					"default": "Standard-Anbieter-Sortierung",
@@ -129,7 +131,9 @@
 			"credits": "Credits",
 			"action": "Jetzt kaufen",
 			"viewAll": "Alle Preisoptionen anzeigen"
-		}
+		},
+		"detailedUsage": "Detaillierte Nutzung",
+		"createOrganization": "Organisation erstellen, um detaillierte Nutzung zu verfolgen"
 	},
 	"docs": "Dokumentation",
 	"rules": {
@@ -208,6 +212,8 @@
 		"title": "Autocomplete",
 		"settings": {
 			"triggers": "Auslöser",
+			"model": "Modell",
+			"provider": "Provider",
 			"enableAutoTrigger": {
 				"label": "Pausieren zum Vervollständigen",
 				"description": "Wenn aktiviert, löst Kilo Code automatisch Autocomplete aus, wenn du aufhörst zu tippen. Dies kann für schnelle Korrekturen und Vorschläge nützlich sein."
@@ -224,7 +230,8 @@
 				"label": "Manuelle Autovervollständigung ({{keybinding}})",
 				"description": "Brauchst du eine schnelle Korrektur, Vervollständigung oder Refaktorierung? Kilo wird den umgebenden Kontext nutzen, um sofortige Verbesserungen anzubieten und dich im Flow zu halten. <DocsLink>Tastenkombination bearbeiten</DocsLink>"
 			},
-			"keybindingNotFound": "nicht gefunden"
+			"keybindingNotFound": "nicht gefunden",
+			"noModelConfigured": "Kein geeignetes Autocomplete-Modell gefunden. Bitte konfiguriere einen Provider in den API-Einstellungen."
 		}
 	},
 	"virtualProvider": {
@@ -237,7 +244,7 @@
 		"removeProfile": "Profil entfernen",
 		"selectProfilePlaceholder": "Profil auswählen...",
 		"addProfile": "Profil hinzufügen",
-		"noProfilesAvailable": "Keine Profileprofile verfügbar. Bitte konfiguriere zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
+		"noProfilesAvailable": "Keine Profile verfügbar. Bitte konfigurieren Sie zuerst mindestens ein nicht-virtuelles Anbieterprofil.",
 		"dangerZoneTitle": "Gefahrenbereich",
 		"dangerZoneDescription": "Diese Aktionen sind destruktiv und können nicht rückgängig gemacht werden.",
 		"clearUsageData": "Nutzungsdaten löschen",
@@ -249,9 +256,30 @@
 		"requestsLabel": "Anfragen",
 		"perDay": "Pro Tag"
 	},
+	"toolCallStyle": {
+		"title": "Tool-Call-Stil",
+		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind.",
+		"automatic": "Lass Kilo entscheiden",
+		"xml": "XML",
+		"json": "JSON (experimentell)"
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",
 		"maxImagesReached": "Maximal 20 Bilder pro Nachricht. Entfernen Sie einige Bilder, um weitere hinzuzufügen.",
 		"imagesRemovedNoSupport": "Bilder entfernt, vom Modell nicht unterstützt."
+	},
+	"memoryWarning": {
+		"message": "Speicherauslastung liegt bei {{percentage}}%. Bitte starte deine IDE neu, um Abstürze zu vermeiden."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Diese MCP-Server werden von der Community gepflegt. Klicken Sie <1>hier</1>, um Ihre eigenen MCP-Einstellungen zu bearbeiten."
+		},
+		"modes": {
+			"description": "Diese Modi werden von der Community bereitgestellt. Klicken Sie <1>hier</1>, um Ihre eigenen benutzerdefinierten Modi zu bearbeiten."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Neu: Modi teilen durch Erstellen einer Organisation"
 	}
 }

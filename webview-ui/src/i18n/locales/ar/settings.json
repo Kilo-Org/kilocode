@@ -255,6 +255,8 @@
 		"noProviderMatchFound": "لم يتم العثور على مزوّدين",
 		"noMatchFound": "ما فيه ملفات مطابقة",
 		"vscodeLmDescription": "واجهة VS Code Language Model تسمح بتشغيل نماذج من إضافات أخرى مثل GitHub Copilot.",
+		"vscodeLmUnavailable": "دعم نماذج اللغة الخاصة بـ VS Code متاح فقط على Visual Studio Code. قد لا تعمل النسخ الفرعية مثل VSCodium وغيرها. علاوة على ذلك، هذه الميزة غير متوفرة في أدوات JetBrains.",
+		"vscodeLmUnavailableInstructions": "تأكد من أنك تستخدم أداة مدعومة وأن VS Code Chat مثبت ومُمكّن",
 		"awsCustomArnUse": "أدخل ARN صحيح لنموذج Amazon Bedrock. أمثلة:",
 		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
 		"openRouterApiKey": "مفتاح OpenRouter",
@@ -602,6 +604,10 @@
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
 		},
+		"sendMessageOnEnter": {
+			"label": "إرسال رسالة باستخدام Enter",
+			"description": "عند التمكين، اضغط على Enter للإرسال و Shift+Enter لسطر جديد. قم بإيقاف التشغيل لاستخدام Shift+Enter للإرسال بدلاً من ذلك."
+		},
 		"costThreshold": {
 			"label": "إخفاء التكلفة أقل من الحد الأدنى",
 			"currentValue": "الحد الحالي: ${{value}}",
@@ -833,8 +839,8 @@
 			"description": "يحرر عدة ملفات في طلب واحد."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "تفعيل التطبيق السريع",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"name": "تفعيل Fast Apply",
+			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
 			"placeholder": "أدخل مفتاح Morph API (اختياري)",
 			"modelLabel": "اختيار النموذج",

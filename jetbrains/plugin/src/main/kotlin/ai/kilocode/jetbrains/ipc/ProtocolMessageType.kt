@@ -13,52 +13,53 @@ enum class ProtocolMessageType(val value: Int) {
      * Undefined
      */
     NONE(0),
-    
+
     /**
      * Regular message
      */
     REGULAR(1),
-    
+
     /**
      * Control message
      */
     CONTROL(2),
-    
+
     /**
      * Acknowledgment message
      */
     ACK(3),
-    
+
     /**
      * Disconnect message
      */
     DISCONNECT(5),
-    
+
     /**
      * Replay request message
      */
     REPLAY_REQUEST(6),
-    
+
     /**
      * Pause message
      */
     PAUSE(7),
-    
+
     /**
      * Resume message
      */
     RESUME(8),
-    
+
     /**
      * Keep alive message
      */
-    KEEP_ALIVE(9);
-    
+    KEEP_ALIVE(9),
+    ;
+
     /**
      * Get string description of enum type
      * @return String description
      */
-    fun toTypeString(): String = when(this) {
+    fun toTypeString(): String = when (this) {
         NONE -> "None"
         REGULAR -> "Regular"
         CONTROL -> "Control"
@@ -69,7 +70,7 @@ enum class ProtocolMessageType(val value: Int) {
         RESUME -> "ResumeWriting"
         KEEP_ALIVE -> "KeepAlive"
     }
-    
+
     companion object {
         /**
          * Get corresponding enum by integer value

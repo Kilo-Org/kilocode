@@ -33,6 +33,10 @@ export type { UseTaskManagementReturn, TodoFilter } from "./useTaskManagement.js
 export { useModelSelection } from "./useModelSelection.js"
 export type { UseModelSelectionReturn } from "./useModelSelection.js"
 
+// Profile hooks
+export { useProfile } from "./useProfile.js"
+export type { UseProfileReturn } from "./useProfile.js"
+
 // Command input hooks
 export { useCommandInput } from "./useCommandInput.js"
 export type { UseCommandInputReturn } from "./useCommandInput.js"
@@ -50,10 +54,6 @@ export type { UseMessageHandlerReturn } from "./useMessageHandler.js"
 export { useTaskState } from "./useTaskState.js"
 export type { UseTaskStateReturn } from "./useTaskState.js"
 
-// Config hooks
-export { useConfig } from "./useConfig.js"
-export type { UseConfigReturn } from "./useConfig.js"
-
 // Theme hooks
 export { useTheme } from "./useTheme.js"
 
@@ -61,10 +61,11 @@ export { useTheme } from "./useTheme.js"
 export { useApprovalHandler } from "./useApprovalHandler.js"
 export type { UseApprovalHandlerOptions, UseApprovalHandlerReturn } from "./useApprovalHandler.js"
 
-export { useApprovalEffect } from "./useApprovalEffect.js"
+export { useApprovalMonitor } from "./useApprovalMonitor.js"
 
 export { useFollowupSuggestions } from "./useFollowupSuggestions.js"
 export type { UseFollowupSuggestionsReturn } from "./useFollowupSuggestions.js"
 
 export { useFollowupCIResponse } from "./useFollowupCIResponse.js"
+export { useTerminal } from "./useTerminal.js"
 export { useFollowupHandler } from "./useFollowupHandler.js"

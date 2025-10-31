@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "सुझाए गए संपादन रद्द करें",
 	"ghost.commands.applyCurrentSuggestion": "वर्तमान सुझाया गया संपादन लागू करें",
 	"ghost.commands.applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
-	"ghost.commands.promptCodeSuggestion": "त्वरित कार्य",
 	"ghost.commands.goToNextSuggestion": "अगले सुझाव पर जाएं",
 	"ghost.commands.goToPreviousSuggestion": "पिछले सुझाव पर जाएं"
 }

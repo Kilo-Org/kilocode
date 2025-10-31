@@ -1,2 +1,0 @@
-# Description: Should complete method call after dot
-const result = items.<<<CURSOR>>>map(x => x * 2);

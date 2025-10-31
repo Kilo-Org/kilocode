@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "クレジットを追加",
-		"lowBalance": "Kilo Codeの残高が少なくなっています"
+		"lowBalance": "Kilo Codeの残高が少なくなっています",
+		"newOrganization": "仕事でKiloを使用していますか？"
 	},
 	"pagination": {
 		"previous": "前へ",
@@ -47,7 +48,8 @@
 			"logout": "Kilo Codeからログアウト",
 			"providerRouting": {
 				"title": "プロバイダールーティング",
-				"managedByOrganization": "プロバイダールーティング設定はあなたの組織によって管理されています。",
+				"managedByOrganization": "組織レベルのプロバイダールーティングを管理",
+				"createOrganization": "プロバイダールーティングを管理する組織を作成",
 				"description": "Kilo Codeは、モデルに最適な利用可能なプロバイダーにリクエストをルーティングします。デフォルトでは、稼働時間を最大化するために、リクエストはトッププロバイダー間で負荷分散されます。ただし、このモデルに使用する特定のプロバイダーを選択できます。",
 				"sorting": {
 					"default": "デフォルトプロバイダーソート",
@@ -102,6 +104,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "ツール呼び出しスタイル",
+		"description": "システムプロンプトでツール呼び出しをどのようにフォーマットするかを選択します。JSONは現在実験的であり、主にその開発に貢献することに興味のあるユーザーを対象としています。",
+		"automatic": "Kiloに任せる",
+		"xml": "XML",
+		"json": "JSON（実験的）"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Codeは会話を要約したいと思っています",
@@ -129,7 +138,9 @@
 			"credits": "クレジット",
 			"action": "今すぐ購入",
 			"viewAll": "すべての価格オプションを表示"
-		}
+		},
+		"detailedUsage": "詳細な使用状況",
+		"createOrganization": "詳細な使用状況を追跡する組織を作成"
 	},
 	"docs": "ドキュメント",
 	"rules": {
@@ -225,7 +236,10 @@
 				"label": "手動オートコンプリート ({{keybinding}})",
 				"description": "素早い修正、補完、またはリファクタリングが必要？Kiloは周囲のコンテキストを使用して即座の改善を提供し、フローを維持します。<DocsLink>ショートカットを見る</DocsLink>"
 			},
-			"keybindingNotFound": "見つかりません"
+			"keybindingNotFound": "見つかりません",
+			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
+			"model": "モデル",
+			"provider": "プロバイダー"
 		}
 	},
 	"virtualProvider": {
@@ -238,7 +252,7 @@
 		"removeProfile": "プロフィールを削除",
 		"selectProfilePlaceholder": "プロフィールを選択...",
 		"addProfile": "プロフィールを追加",
-		"noProfilesAvailable": "利用可能なプロファイルがありません。まず、少なくとも1つの非仮想プロバイダープロファイルを構成してください。",
+		"noProfilesAvailable": "プロファイルが利用できません。最初に少なくとも1つの非仮想プロバイダープロファイルを設定してください。",
 		"dangerZoneTitle": "危険ゾーン",
 		"dangerZoneDescription": "これらのアクションは破壊的で、元に戻すことはできません。",
 		"clearUsageData": "使用データをクリア",
@@ -254,5 +268,19 @@
 		"modelNoImageSupport": "画像は現在のモデルではサポートされていません。",
 		"maxImagesReached": "メッセージあたり最大20枚の画像。さらに追加するには一部の画像を削除してください。",
 		"imagesRemovedNoSupport": "画像削除、モデルによる非対応。"
+	},
+	"memoryWarning": {
+		"message": "メモリ使用率が{{percentage}}%に達しています。クラッシュを防ぐためにIDEを再起動してください。"
+	},
+	"marketplace": {
+		"modes": {
+			"description": "これらのモードはコミュニティから提供されています。独自のカスタムモードを編集するには<1>こちら</1>をクリックしてください。"
+		},
+		"mcp": {
+			"description": "これらのMCPサーバーはコミュニティによって管理されています。<1>こちら</1>をクリックして、あなた自身のMCP設定を編集してください。"
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "新機能: 組織を作成してモードを共有"
 	}
 }

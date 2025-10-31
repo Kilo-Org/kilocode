@@ -17,11 +17,12 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class TabStateManager(var project: Project) {
     private val logger = Logger.getInstance(TabStateManager::class.java)
+
     // MARK: - State storage
     private var state = TabsState()
     private val tabHandles = ConcurrentHashMap<String, TabHandle>()
     private val groupHandles = ConcurrentHashMap<Int, TabGroupHandle>()
-    private val tabStateService :TabStateService
+    private val tabStateService: TabStateService
     init {
         tabStateService = TabStateService(project)
     }
@@ -47,7 +48,7 @@ class TabStateManager(var project: Project) {
             groupId = groupId,
             isActive = isActive,
             viewColumn = viewColumn,
-            tabs = emptyList()
+            tabs = emptyList(),
         )
         state.groups[groupId] = group
 
@@ -63,7 +64,7 @@ class TabStateManager(var project: Project) {
         // Create tab group handle
         val handle = TabGroupHandle(
             groupId = groupId,
-            manager = this
+            manager = this,
         )
         groupHandles[groupId] = handle
 
@@ -108,45 +109,47 @@ class TabStateManager(var project: Project) {
      * @return Handle to the created tab
      */
     internal suspend fun createTab(groupId: Int, input: TabInputBase, options: TabOptions): TabHandle {
-        if(input is EditorTabInput){
+        if (input is EditorTabInput) {
             logger.info("create tab s" + input.uri?.path)
         }
-        if(input is TextDiffTabInput){
+        if (input is TextDiffTabInput) {
             logger.info("create tab d" + input.modified.path)
         }
         val group = state.groups[groupId] ?: error("Group not found: $groupId")
 // Create tab
-val tab = EditorTabDto(
-    id = UUID.randomUUID().toString(),
-    label = "", // Compatibility with Roocode 0.61+: API request gets stuck without label field
-    input = input,
-    isActive = options.isActive,
-    isPinned = options.isPinned,
-    isPreview = !options.isPinned,
-    isDirty = false
-)
+        val tab = EditorTabDto(
+            id = UUID.randomUUID().toString(),
+            label = "", // Compatibility with Roocode 0.61+: API request gets stuck without label field
+            input = input,
+            isActive = options.isActive,
+            isPinned = options.isPinned,
+            isPreview = !options.isPinned,
+            isDirty = false,
+        )
 
 // Add to group
-val newTabs = group.tabs + tab
-val newGroup = group.copy(tabs = newTabs)
-state.groups[groupId] = newGroup
+        val newTabs = group.tabs + tab
+        val newGroup = group.copy(tabs = newTabs)
+        state.groups[groupId] = newGroup
 
 // Create tab handle
-val handle = TabHandle(
-    id = tab.id,
-    groupId = groupId,
-    manager = this
-)
-tabHandles[tab.id] = handle
+        val handle = TabHandle(
+            id = tab.id,
+            groupId = groupId,
+            manager = this,
+        )
+        tabHandles[tab.id] = handle
 
         // Send tab operation event and group update event
-        tabStateService.acceptTabOperation(TabOperation(
-            groupId = groupId,
-            index = newTabs.size - 1,
-            tabDto = tab,
-            kind = TabModelOperationKind.TAB_OPEN.value,
-            oldIndex = null
-        ))
+        tabStateService.acceptTabOperation(
+            TabOperation(
+                groupId = groupId,
+                index = newTabs.size - 1,
+                tabDto = tab,
+                kind = TabModelOperationKind.TAB_OPEN.value,
+                oldIndex = null,
+            ),
+        )
         tabStateService.acceptTabGroupUpdate(newGroup)
         return handle
     }
@@ -157,7 +160,7 @@ tabHandles[tab.id] = handle
      * @param id ID of the tab to remove
      * @return Handle to the removed tab, or null if not found
      */
-    internal fun removeTab(id: String) :TabHandle?{
+    internal fun removeTab(id: String): TabHandle? {
         val handle = tabHandles[id] ?: return null
         val group = state.groups[handle.groupId] ?: return null
 
@@ -166,10 +169,10 @@ tabHandles[tab.id] = handle
         if (index != -1) {
             val tab = group.tabs[index]
 
-            if(tab.input is EditorTabInput){
+            if (tab.input is EditorTabInput) {
                 logger.info("remove tab s" + tab.input.uri?.path)
             }
-            if(tab.input is TextDiffTabInput){
+            if (tab.input is TextDiffTabInput) {
                 logger.info("remove tab d" + tab.input.modified.path)
             }
 
@@ -180,16 +183,18 @@ tabHandles[tab.id] = handle
             tabHandles.remove(id)
 
             // Send tab operation event and group update event
-            tabStateService.acceptTabOperation(TabOperation(
-                groupId = handle.groupId,
-                index = index,
-                tabDto = tab,
-                kind = TabModelOperationKind.TAB_CLOSE.value,
-                oldIndex = null
-            ))
+            tabStateService.acceptTabOperation(
+                TabOperation(
+                    groupId = handle.groupId,
+                    index = index,
+                    tabDto = tab,
+                    kind = TabModelOperationKind.TAB_CLOSE.value,
+                    oldIndex = null,
+                ),
+            )
             tabStateService.acceptTabGroupUpdate(newGroup)
         }
-        return handle;
+        return handle
     }
 
     /**
@@ -210,13 +215,15 @@ tabHandles[tab.id] = handle
             state.groups[handle.groupId] = group.copy(tabs = newTabs)
 
             // Send tab operation event and group update event
-            tabStateService.acceptTabOperation(TabOperation(
-                groupId = handle.groupId,
-                index = index,
-                tabDto = tab,
-                kind = TabModelOperationKind.TAB_UPDATE.value,
-                oldIndex = null
-            ))
+            tabStateService.acceptTabOperation(
+                TabOperation(
+                    groupId = handle.groupId,
+                    index = index,
+                    tabDto = tab,
+                    kind = TabModelOperationKind.TAB_UPDATE.value,
+                    oldIndex = null,
+                ),
+            )
 //            tabStateService.acceptEditorTabModel(state.groups.values.toList())
         }
     }
@@ -247,13 +254,15 @@ tabHandles[tab.id] = handle
                 state.groups[handle.groupId] = fromGroup.copy(tabs = newTabs)
 
                 // Send tab operation event and group update event
-                tabStateService.acceptTabOperation(TabOperation(
-                    groupId = handle.groupId,
-                    index = toIndex,
-                    tabDto = tab,
-                    kind = TabModelOperationKind.TAB_MOVE.value,
-                    oldIndex = fromIndex
-                ))
+                tabStateService.acceptTabOperation(
+                    TabOperation(
+                        groupId = handle.groupId,
+                        index = toIndex,
+                        tabDto = tab,
+                        kind = TabModelOperationKind.TAB_MOVE.value,
+                        oldIndex = fromIndex,
+                    ),
+                )
 //                tabStateService.acceptEditorTabModel(state.groups.values.toList())
             } else {
                 // Moving between groups
@@ -266,13 +275,15 @@ tabHandles[tab.id] = handle
                 handle.groupId = toGroupId
 
                 // Send tab operation event and group update event
-                tabStateService.acceptTabOperation(TabOperation(
-                    groupId = toGroupId,
-                    index = toIndex,
-                    tabDto = tab,
-                    kind = TabModelOperationKind.TAB_MOVE.value,
-                    oldIndex = fromIndex
-                ))
+                tabStateService.acceptTabOperation(
+                    TabOperation(
+                        groupId = toGroupId,
+                        index = toIndex,
+                        tabDto = tab,
+                        kind = TabModelOperationKind.TAB_MOVE.value,
+                        oldIndex = fromIndex,
+                    ),
+                )
 //                tabStateService.acceptEditorTabModel(state.groups.values.toList())
             }
         }
@@ -290,14 +301,14 @@ tabHandles[tab.id] = handle
         id: String,
         isActive: Boolean? = null,
         isDirty: Boolean? = null,
-        isPinned: Boolean? = null
+        isPinned: Boolean? = null,
     ) {
         updateTab(id) { tab ->
             tab.copy(
                 isActive = isActive ?: tab.isActive,
                 isDirty = isDirty ?: tab.isDirty,
                 isPinned = isPinned ?: tab.isPinned,
-                isPreview = if (isPinned != null) !isPinned else tab.isPreview
+                isPreview = if (isPinned != null) !isPinned else tab.isPreview,
             )
         }
     }
@@ -354,7 +365,7 @@ tabHandles[tab.id] = handle
  * Holds the state of all tab groups
  */
 data class TabsState(
-    val groups: MutableMap<Int, EditorTabGroupDto> = ConcurrentHashMap()
+    val groups: MutableMap<Int, EditorTabGroupDto> = ConcurrentHashMap(),
 )
 
 /**
@@ -364,7 +375,7 @@ data class TabsState(
 data class TabOptions(
     val isActive: Boolean = false,
     val isPinned: Boolean = false,
-    val isPreview: Boolean = false
+    val isPreview: Boolean = false,
 ) {
     companion object {
         val DEFAULT = TabOptions()
@@ -387,7 +398,7 @@ class TabGroupHandle(
     /**
      * The TabStateManager instance managing this group.
      */
-    private val manager: TabStateManager
+    private val manager: TabStateManager,
 ) {
 
     /**
@@ -463,7 +474,7 @@ class TabHandle(
     /**
      * The TabStateManager instance managing this tab.
      */
-    private val manager: TabStateManager
+    private val manager: TabStateManager,
 ) {
 
     /**

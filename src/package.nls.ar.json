@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "إلغاء التعديلات المقترحة",
 	"ghost.commands.applyCurrentSuggestion": "تطبيق التعديل المقترح الحالي",
 	"ghost.commands.applyAllSuggestions": "تطبيق جميع التعديلات المقترحة",
-	"ghost.commands.promptCodeSuggestion": "مهمة سريعة",
 	"ghost.commands.goToNextSuggestion": "انتقل إلى الاقتراح التالي",
 	"ghost.commands.goToPreviousSuggestion": "انتقل إلى الاقتراح السابق"
 }

@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { ToolMessageProps } from "../types.js"
 import { getToolIcon, formatFilePath, truncateText } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display content insertion at specific line
@@ -41,7 +41,7 @@ export const ToolInsertContentMessage: React.FC<ToolMessageProps> = ({ toolData 
 
 			{toolData.diff && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					flexDirection="column"
 					borderStyle="single"
 					borderColor={theme.ui.border.default}

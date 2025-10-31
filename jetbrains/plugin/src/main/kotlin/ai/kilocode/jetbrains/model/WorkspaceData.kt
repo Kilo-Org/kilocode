@@ -5,7 +5,6 @@
 package ai.kilocode.jetbrains.model
 
 import ai.kilocode.jetbrains.util.URI
-import ai.kilocode.jetbrains.util.URIComponents
 
 /**
  * Workspace base data
@@ -16,7 +15,7 @@ data class StaticWorkspaceData(
     val name: String,
     val transient: Boolean? = null,
     val configuration: URI? = null,
-    val isUntitled: Boolean? = null
+    val isUntitled: Boolean? = null,
 )
 
 /**
@@ -26,7 +25,7 @@ data class StaticWorkspaceData(
 data class WorkspaceFolder(
     val uri: URI,
     val name: String,
-    val index: Int
+    val index: Int,
 )
 
 /**
@@ -39,7 +38,7 @@ data class WorkspaceData(
     val transient: Boolean? = null,
     val configuration: URI? = null,
     val isUntitled: Boolean? = null,
-    val folders: List<WorkspaceFolder> = emptyList()
+    val folders: List<WorkspaceFolder> = emptyList(),
 ) {
     // Create WorkspaceData from StaticWorkspaceData
     constructor(staticData: StaticWorkspaceData, folders: List<WorkspaceFolder> = emptyList()) : this(
@@ -48,6 +47,6 @@ data class WorkspaceData(
         transient = staticData.transient,
         configuration = staticData.configuration,
         isUntitled = staticData.isUntitled,
-        folders = folders
+        folders = folders,
     )
 }

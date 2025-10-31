@@ -14,9 +14,9 @@ import com.intellij.openapi.project.ProjectManager
  * Used to encapsulate notification functionality for the plugin
  */
 object NotificationUtil {
-    
+
     private const val NOTIFICATION_GROUP_ID = "kilocode"
-    
+
     /**
      * Show error notification
      * @param title Notification title
@@ -26,7 +26,7 @@ object NotificationUtil {
     fun showError(title: String, content: String, project: Project? = null) {
         showNotification(title, content, NotificationType.ERROR, project)
     }
-    
+
     /**
      * Show warning notification
      * @param title Notification title
@@ -36,7 +36,7 @@ object NotificationUtil {
     fun showWarning(title: String, content: String, project: Project? = null) {
         showNotification(title, content, NotificationType.WARNING, project)
     }
-    
+
     /**
      * Show info notification
      * @param title Notification title
@@ -46,7 +46,7 @@ object NotificationUtil {
     fun showInfo(title: String, content: String, project: Project? = null) {
         showNotification(title, content, NotificationType.INFORMATION, project)
     }
-    
+
     /**
      * Show notification
      * @param title Notification title
@@ -57,9 +57,7 @@ object NotificationUtil {
     private fun showNotification(title: String, content: String, type: NotificationType, project: Project?) {
         val targetProject = project ?: ProjectManager.getInstance().defaultProject
         val notificationGroup = NotificationGroupManager.getInstance().getNotificationGroup(NOTIFICATION_GROUP_ID)
-        
+
         notificationGroup?.createNotification(title, content, type)?.notify(targetProject)
     }
-    
-
-} 
+}

@@ -5,7 +5,7 @@
 package ai.kilocode.jetbrains.webview
 
 import com.intellij.openapi.diagnostic.Logger
-import io.ktor.http.*
+import io.ktor.http.decodeURLPart
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.callback.CefCallback
@@ -17,18 +17,16 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.io.File
 
-
-class LocalResHandler(val resourcePath:String , val request: CefRequest?) : CefResourceRequestHandlerAdapter() {
+class LocalResHandler(val resourcePath: String, val request: CefRequest?) : CefResourceRequestHandlerAdapter() {
     private val logger = Logger.getInstance(LocalResHandler::class.java)
 
     override fun getResourceHandler(browser: CefBrowser?, frame: CefFrame?, request: CefRequest?): CefResourceHandler {
-        logger.info("getResourceHandler,resourcePath:${resourcePath},request:${request?.url}")
-        return LocalCefResHandle(resourcePath,request)
+        logger.info("getResourceHandler,resourcePath:$resourcePath,request:${request?.url}")
+        return LocalCefResHandle(resourcePath, request)
     }
-
 }
 
-class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) : CefResourceHandler{
+class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) : CefResourceHandler {
     private val logger = Logger.getInstance(LocalCefResHandle::class.java)
 
     private var file: File? = null
@@ -36,8 +34,8 @@ class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) 
     private var offset = 0
 
     init {
-        val requestPath = request?.url?.decodeURLPart()?.replace("http://localhost:","")?.substringAfter("/")?.substringBefore("?")
-        logger.info("init LocalCefResHandle,requestPath:${requestPath},resourceBasePath:${resourceBasePath}")
+        val requestPath = request?.url?.decodeURLPart()?.replace("http://localhost:", "")?.substringAfter("/")?.substringBefore("?")
+        logger.info("init LocalCefResHandle,requestPath:$requestPath,resourceBasePath:$resourceBasePath")
         requestPath?.let {
             val filePath = if (requestPath.isEmpty()) {
                 "$resourceBasePath/index.html"
@@ -50,7 +48,7 @@ class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) 
                 try {
                     fileContent = file!!.readBytes()
                 } catch (e: Exception) {
-                    logger.warn("cannot get fileContent,e:${e}")
+                    logger.warn("cannot get fileContent,e:$e")
                     file = null
                     fileContent = null
                 }
@@ -58,10 +56,9 @@ class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) 
                 file = null
                 fileContent = null
             }
-            logger.info("init LocalCefResHandle,filePath:${filePath},file:${file},exists:${file?.exists()}")
+            logger.info("init LocalCefResHandle,filePath:$filePath,file:$file,exists:${file?.exists()}")
         }
     }
-
 
     override fun processRequest(p0: CefRequest?, callback: CefCallback?): Boolean {
         callback?.Continue()
@@ -126,5 +123,4 @@ class LocalCefResHandle(val resourceBasePath: String, val request: CefRequest?) 
         fileContent = null
         offset = 0
     }
-
 }

@@ -1,14 +1,13 @@
-import { GhostServiceSettings } from "@roo-code/types"
+import {
+	AUTOCOMPLETE_PROVIDER_MODELS,
+	defaultProviderUsabilityChecker,
+	modelIdKeysByProvider,
+	ProviderSettingsEntry,
+} from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
-import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
 import { ApiStreamChunk } from "../../api/transform/stream"
-
-const KILOCODE_DEFAULT_MODEL = "mistralai/codestral-2508"
-const MISTRAL_DEFAULT_MODEL = "codestral-latest"
-
-const SUPPORTED_DEFAULT_PROVIDERS = ["mistral", "kilocode", "openrouter"]
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
@@ -20,55 +19,55 @@ export class GhostModel {
 			this.loaded = true
 		}
 	}
+	private cleanup(): void {
+		this.apiHandler = null
+		this.loaded = false
+	}
 
-	public async reload(settings: GhostServiceSettings, providerSettingsManager: ProviderSettingsManager) {
+	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
 		const profiles = await providerSettingsManager.listConfig()
-		const validProfiles = profiles
-			.filter((x) => x.apiProvider && SUPPORTED_DEFAULT_PROVIDERS.includes(x.apiProvider))
-			.sort((a, b) => {
-				if (!a.apiProvider) {
-					return 1 // Place undefined providers at the end
-				}
-				if (!b.apiProvider) {
-					return -1 // Place undefined providers at the beginning
-				}
-				return (
-					SUPPORTED_DEFAULT_PROVIDERS.indexOf(a.apiProvider) -
-					SUPPORTED_DEFAULT_PROVIDERS.indexOf(b.apiProvider)
-				)
-			})
+		const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS) as Array<
+			keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
+		>
 
-		const selectedProfile = validProfiles[0] || null
-		if (selectedProfile) {
-			const profile = await providerSettingsManager.getProfile({
-				id: selectedProfile.id,
-			})
-			const profileProvider = profile.apiProvider
-			let modelDefinition = {}
-			if (profileProvider === "kilocode") {
-				modelDefinition = {
-					kilocodeModel: KILOCODE_DEFAULT_MODEL,
-				}
-			} else if (profileProvider === "openrouter") {
-				modelDefinition = {
-					openRouterModelId: KILOCODE_DEFAULT_MODEL,
-				}
-			} else if (profileProvider === "mistral") {
-				modelDefinition = {
-					apiModelId: MISTRAL_DEFAULT_MODEL,
-				}
+		this.cleanup()
+
+		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		for (const provider of supportedProviders) {
+			const selectedProfile = profiles.find(
+				(x): x is typeof x & { apiProvider: string } => x?.apiProvider === provider,
+			)
+			if (selectedProfile) {
+				const isUsable = await defaultProviderUsabilityChecker(provider, providerSettingsManager)
+				if (!isUsable) continue
+
+				this.loadProfile(providerSettingsManager, selectedProfile, provider)
+				this.loaded = true
+				return true
 			}
-			this.apiHandler = buildApiHandler({
-				...profile,
-				...modelDefinition,
-			})
 		}
+
+		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
+		return false
+	}
+
+	public async loadProfile(
+		providerSettingsManager: ProviderSettingsManager,
+		selectedProfile: ProviderSettingsEntry,
+		provider: keyof typeof AUTOCOMPLETE_PROVIDER_MODELS,
+	): Promise<void> {
+		const profile = await providerSettingsManager.getProfile({
+			id: selectedProfile.id,
+		})
+
+		this.apiHandler = buildApiHandler({
+			...profile,
+			[modelIdKeysByProvider[provider]]: AUTOCOMPLETE_PROVIDER_MODELS[provider],
+		})
 
 		if (this.apiHandler instanceof OpenRouterHandler) {
 			await this.apiHandler.fetchModel()
 		}
-
-		this.loaded = true
 	}
 
 	/**
@@ -131,11 +130,20 @@ export class GhostModel {
 	}
 
 	public getModelName(): string | null {
-		if (!this.apiHandler) {
-			return null
-		}
-		// Extract model name from API handler
+		if (!this.apiHandler) return null
+
 		return this.apiHandler.getModel().id ?? "unknown"
+	}
+
+	public getProviderDisplayName(): string | null {
+		if (!this.apiHandler) return null
+
+		const handler = this.apiHandler as any
+		if (handler.providerName && typeof handler.providerName === "string") {
+			return handler.providerName
+		} else {
+			return "unknown"
+		}
 	}
 
 	public hasValidCredentials(): boolean {

@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Aucun fournisseur trouvé",
 		"noMatchFound": "Aucun profil correspondant trouvé",
 		"vscodeLmDescription": "L'API du modèle de langage VS Code vous permet d'exécuter des modèles fournis par d'autres extensions VS Code (y compris, mais sans s'y limiter, GitHub Copilot). Le moyen le plus simple de commencer est d'installer les extensions Copilot et Copilot Chat depuis le VS Code Marketplace.",
+		"vscodeLmUnavailable": "La prise en charge des modèles linguistiques de VS Code est disponible uniquement dans Visual Studio Code. Des forks comme VSCodium et d'autres peuvent ne pas fonctionner. De plus, cette fonctionnalité n'est pas disponible dans les outils JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assurez-vous d'utiliser un outil pris en charge et que VS Code Chat est installé et activé",
 		"awsCustomArnUse": "Entrez un ARN Amazon Bedrock valide pour le modèle que vous souhaitez utiliser. Exemples de format :",
 		"awsCustomArnDesc": "Assurez-vous que la région dans l'ARN correspond à la région AWS sélectionnée ci-dessus.",
 		"openRouterApiKey": "Clé API OpenRouter",
@@ -766,7 +768,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Activer Fast Apply",
-			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite le fournisseur d'API Kilo Code, OpenRouter ou une clé API Morph.",
+			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite Kilo Gateway Provider, OpenRouter ou une clé API Morph.",
 			"apiKey": "Clé API Morph (optionnel)",
 			"placeholder": "Entrez votre clé API Morph (optionnel)",
 			"modelLabel": "Sélection du modèle",
@@ -926,6 +928,10 @@
 		"taskTimeline": {
 			"label": "Afficher la chronologie des tâches",
 			"description": "Afficher une chronologie visuelle des messages de tâches, colorés selon leur type, permettant de voir rapidement la progression des tâches et de revenir à des points spécifiques dans l'historique de la tâche."
+		},
+		"sendMessageOnEnter": {
+			"label": "Envoyer le message avec Entrée",
+			"description": "Lorsque cette option est activée, appuyez sur Entrée pour envoyer et sur Maj+Entrée pour une nouvelle ligne. Désactivez-la pour utiliser Maj+Entrée pour envoyer à la place."
 		},
 		"costThreshold": {
 			"label": "Masquer le coût en dessous du seuil",

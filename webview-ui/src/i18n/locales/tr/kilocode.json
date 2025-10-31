@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Kredi Ekle",
-		"lowBalance": "Kilo Code bakiyeniz düşük"
+		"lowBalance": "Kilo Code bakiyeniz düşük",
+		"newOrganization": "İş için mi kullanıyorsun?"
 	},
 	"pagination": {
 		"previous": "Önceki",
@@ -47,7 +48,8 @@
 			"automaticFetch": "En son modeller Kilo Code'da otomatik olarak kullanılabilir. Hangi modeli seçeceğinizden emin değilseniz, Kilo Code en üstte <strong>kalın yazı</strong> ile listelenen önerilen modellerle en iyi şekilde çalışır.",
 			"providerRouting": {
 				"title": "Sağlayıcı Yönlendirme",
-				"managedByOrganization": "Sağlayıcı Yönlendirme ayarları organizasyonunuz tarafından yönetiliyor.",
+				"managedByOrganization": "Organizasyon düzeyinde Sağlayıcı Yönlendirmeyi yönet",
+				"createOrganization": "Sağlayıcı Yönlendirmeyi yönetmek için Organizasyon oluştur",
 				"description": "Kilo Code, modeliniz için en iyi kullanılabilir sağlayıcılara istekleri yönlendirir. Varsayılan olarak, çalışma süresini en üst düzeye çıkarmak için istekler en iyi sağlayıcılar arasında yük dengelenir. Ancak, bu model için kullanılacak belirli bir sağlayıcı seçebilirsiniz.",
 				"sorting": {
 					"default": "Varsayılan sağlayıcı sıralaması",
@@ -95,6 +97,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Araç Çağrısı Stili",
+		"description": "Sistem isteminde araç çağrılarının nasıl biçimlendirileceğini seçin. JSON şu anda deneyseldir ve çoğunlukla geliştirilmesine katkıda bulunmak isteyen kullanıcılar için tasarlanmıştır.",
+		"automatic": "Kilo karar versin",
+		"xml": "XML",
+		"json": "JSON (deneysel)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code konuşmanı özetlemek istiyor",
@@ -122,7 +131,9 @@
 			"credits": "kredi",
 			"action": "Şimdi Satın Al",
 			"viewAll": "Tüm fiyatlandırma seçeneklerini göster"
-		}
+		},
+		"detailedUsage": "Detaylı Kullanım",
+		"createOrganization": "Detaylı Kullanımı takip etmek için Organizasyon oluştur"
 	},
 	"docs": "Belgeler",
 	"rules": {
@@ -218,7 +229,10 @@
 				"label": "Manuel Otomatik Tamamlama ({{keybinding}})",
 				"description": "Hızlı bir düzeltme, tamamlama veya yeniden düzenleme mi gerekiyor? Kilo çevredeki bağlamı kullanarak anında iyileştirmeler sunacak, seni akışta tutacak. <DocsLink>Kısayolu gör</DocsLink>"
 			},
-			"keybindingNotFound": "bulunamadı"
+			"keybindingNotFound": "bulunamadı",
+			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"model": "Model",
+			"provider": "Sağlayıcı"
 		}
 	},
 	"virtualProvider": {
@@ -248,11 +262,25 @@
 		"modelNoImageSupport": "Görüntüler mevcut model tarafından desteklenmiyor.",
 		"imagesRemovedNoSupport": "Resimler kaldırıldı, model tarafından desteklenmiyor."
 	},
+	"memoryWarning": {
+		"message": "Bellek kullanımı {{percentage}}% seviyesinde. Çökmeleri önlemek için lütfen IDE'nizi yeniden başlatın."
+	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 {{model}} için alfa dönemi sona erdi! Devam etmek için farklı bir model seçin.",
 		"notAllowedForTeam": "⚠️ Organizasyonunuz {{model}} modelinin kullanımına izin vermiyor. Devam etmek için farklı bir model seçin.",
 		"modelUnavailable": "⚠️ {{model}} modeli kullanılamıyor. Devam etmek için farklı bir model seçin.",
 		"continueWith": "{{model}} ile devam et",
 		"continue": "Devam et"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Bu MCP sunucuları topluluk tarafından yönetilmektedir. Kendi MCP ayarlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		},
+		"modes": {
+			"description": "Bu modlar topluluk tarafından sağlanmaktadır. Kendi özel modlarınızı düzenlemek için <1>buraya</1> tıklayın."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
 	}
 }

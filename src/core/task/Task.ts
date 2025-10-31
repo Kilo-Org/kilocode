@@ -35,6 +35,7 @@ import {
 	isInteractiveAsk,
 	isResumableAsk,
 	QueuedMessage,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
@@ -77,6 +78,7 @@ import { getWorkspacePath } from "../../utils/path"
 // prompts
 import { formatResponse } from "../prompts/responses"
 import { SYSTEM_PROMPT } from "../prompts/system"
+import { getAllowedJSONToolsForMode } from "../prompts/tools/native-tools/getAllowedJSONToolsForMode" // kilocode_change
 
 // core modules
 import { ToolRepetitionDetector } from "../tools/ToolRepetitionDetector"
@@ -120,6 +122,7 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
+import { getAppUrl } from "@roo-code/types"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -297,7 +300,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	assistantMessageContent: AssistantMessageContent[] = []
 	presentAssistantMessageLocked = false
 	presentAssistantMessageHasPendingUpdates = false
-	userMessageContent: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[] = []
+	userMessageContent: (
+		| Anthropic.TextBlockParam
+		| Anthropic.ImageBlockParam
+		| Anthropic.ToolResultBlockParam // kilocode_change
+	)[] = []
 	userMessageContentReady = false
 	didRejectTool = false
 	didAlreadyUseTool = false
@@ -726,6 +733,16 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		return undefined
 	}
 
+	async nextClineMessageTimestamp_kilocode() {
+		let ts = Date.now()
+		while (ts <= (this.clineMessages?.at(-1)?.ts ?? 0)) {
+			console.warn("nextClineMessageTimeStamp: timestamp already taken", ts)
+			await new Promise<void>((resolve) => setTimeout(() => resolve(), 1))
+			ts = Date.now()
+		}
+		return ts
+	}
+
 	// Note that `partial` has three valid states true (partial message),
 	// false (completion of partial message), undefined (individual complete
 	// message).
@@ -772,7 +789,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				} else {
 					// This is a new partial message, so add it with partial
 					// state.
-					askTs = Date.now()
+					askTs = await this.nextClineMessageTimestamp_kilocode()
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, partial, isProtected })
 					throw new Error("Current ask promise was ignored (#2)")
@@ -809,7 +826,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.askResponse = undefined
 					this.askResponseText = undefined
 					this.askResponseImages = undefined
-					askTs = Date.now()
+					askTs = await this.nextClineMessageTimestamp_kilocode()
 					this.lastMessageTs = askTs
 					await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 				}
@@ -819,10 +836,45 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.askResponse = undefined
 			this.askResponseText = undefined
 			this.askResponseImages = undefined
-			askTs = Date.now()
+			askTs = await this.nextClineMessageTimestamp_kilocode()
 			this.lastMessageTs = askTs
 			await this.addToClineMessages({ ts: askTs, type: "ask", ask: type, text, isProtected })
 		}
+
+		// kilocode_change start: YOLO mode auto-answer for follow-up questions
+		// Check if this is a follow-up question with suggestions in YOLO mode
+		if (type === "followup" && text && !partial) {
+			try {
+				const state = await this.providerRef.deref()?.getState()
+				if (state?.yoloMode) {
+					// Parse the follow-up JSON to extract suggestions
+					const followUpData = JSON.parse(text)
+					if (
+						followUpData.suggest &&
+						Array.isArray(followUpData.suggest) &&
+						followUpData.suggest.length > 0
+					) {
+						// Auto-select the first suggestion
+						const firstSuggestion = followUpData.suggest[0]
+						const autoAnswer = firstSuggestion.answer || firstSuggestion
+
+						// Immediately set the response as if the user clicked the first suggestion
+						this.handleWebviewAskResponse("messageResponse", autoAnswer, undefined)
+
+						// Return immediately with the auto-selected answer
+						const result = { response: this.askResponse!, text: autoAnswer, images: undefined }
+						this.askResponse = undefined
+						this.askResponseText = undefined
+						this.askResponseImages = undefined
+						return result
+					}
+				}
+			} catch (error) {
+				// If parsing fails or YOLO check fails, continue with normal flow
+				console.warn("Failed to auto-answer follow-up question in YOLO mode:", error)
+			}
+		}
+		// kilocode_change end
 
 		// The state is mutable if the message is complete and the task will
 		// block (via the `pWaitFor`).
@@ -1120,7 +1172,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new partial message, so add it with partial state.
-					const sayTs = Date.now()
+					const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 					if (!options.isNonInteractive) {
 						this.lastMessageTs = sayTs
@@ -1167,7 +1219,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					this.updateClineMessage(lastMessage)
 				} else {
 					// This is a new and complete message, so add it like normal.
-					const sayTs = Date.now()
+					const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 					if (!options.isNonInteractive) {
 						this.lastMessageTs = sayTs
@@ -1186,7 +1238,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 		} else {
 			// This is a new non-partial message, so add it like normal.
-			const sayTs = Date.now()
+			const sayTs = await this.nextClineMessageTimestamp_kilocode()
 
 			// A "non-interactive" message is a message is one that the user
 			// does not need to respond to. We don't want these message types
@@ -1225,7 +1277,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				relPath ? ` for '${relPath.toPosix()}'` : ""
 			} without value for required parameter '${paramName}'. ${kilocodeExtraText}Retrying...`,
 		)
-		return formatResponse.toolError(formatResponse.missingToolParameterError(paramName))
+		return formatResponse.toolError(
+			formatResponse.missingToolParameterError(
+				paramName,
+				getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+			),
+		)
 	}
 
 	// Lifecycle
@@ -1753,7 +1810,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [{ type: "text", text: formatResponse.noToolsUsed() }]
+				nextUserContent = [
+					{
+						type: "text",
+						text: formatResponse.noToolsUsed(
+							getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+						),
+					},
+				]
 				this.consecutiveMistakeCount++
 			}
 		}
@@ -1839,9 +1903,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			await this.say(
 				"api_req_started",
 				JSON.stringify({
-					request:
-						currentUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n") +
-						"\n\nLoading...",
 					apiProtocol,
 				}),
 			)
@@ -1891,7 +1952,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const lastApiReqIndex = findLastIndex(this.clineMessages, (m) => m.say === "api_req_started")
 
 			this.clineMessages[lastApiReqIndex].text = JSON.stringify({
-				request: finalUserContent.map((block) => formatContentBlockToMarkdown(block)).join("\n\n"),
 				apiProtocol,
 			} satisfies ClineApiReqInfo)
 
@@ -1993,6 +2053,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// limit error, which gets thrown on the first chunk).
 				const stream = this.attemptApiRequest()
 				let assistantMessage = ""
+				let assistantToolUses = new Array<Anthropic.Messages.ToolUseBlockParam>() // kilocode_change
 				let reasoningMessage = ""
 				let pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
@@ -2041,6 +2102,30 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									pendingGroundingSources.push(...chunk.sources)
 								}
 								break
+							//kilocode_change start
+							case "native_tool_calls": {
+								// Handle native OpenAI-format tool calls
+								// Process native tool calls through the parser
+								for (const toolUse of this.assistantMessageParser.processNativeToolCalls(
+									chunk.toolCalls,
+								)) {
+									assistantToolUses.push(toolUse)
+								}
+
+								// Update content blocks after processing native tool calls
+								const prevLength = this.assistantMessageContent.length
+								this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
+
+								if (this.assistantMessageContent.length > prevLength) {
+									// New content we need to present
+									this.userMessageContentReady = false
+								}
+
+								// Present content to user
+								presentAssistantMessage(this)
+								break
+							}
+							//kilocode_change end
 							case "text": {
 								assistantMessage += chunk.text
 
@@ -2376,7 +2461,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// able to save the assistant's response.
 				let didEndLoop = false
 
-				if (assistantMessage.length > 0) {
+				if (assistantMessage.length > 0 || assistantToolUses.length > 0 /* kilocode_change */) {
 					// Display grounding sources to the user if they exist
 					if (pendingGroundingSources.length > 0) {
 						const citationLinks = pendingGroundingSources.map((source, i) => `[${i + 1}](${source.url})`)
@@ -2387,10 +2472,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						})
 					}
 
+					// kilocode_change start: also add tool calls to history
+					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
+					if (assistantMessage) {
+						assistantMessageContent.push({ type: "text", text: assistantMessage })
+					}
+					assistantMessageContent.push(...assistantToolUses)
 					await this.addToApiConversationHistory({
 						role: "assistant",
-						content: [{ type: "text", text: assistantMessage }],
+						content: assistantMessageContent,
 					})
+					// kilocode_change end
 
 					TelemetryService.instance.captureConversationMessage(this.taskId, "assistant")
 
@@ -2417,7 +2509,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
 					if (!didToolUse) {
-						this.userMessageContent.push({ type: "text", text: formatResponse.noToolsUsed() })
+						this.userMessageContent.push({
+							type: "text",
+							text: formatResponse.noToolsUsed(
+								getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+							),
+						})
 						this.consecutiveMistakeCount++
 					}
 
@@ -2623,7 +2720,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				},
 				undefined, // todoList
 				this.api.getModel().id,
-				await provider.getState(), // kilocode_change
+				// kilocode_change start
+				getActiveToolUseStyle(apiConfiguration),
+				state,
+				// kilocode_change end
 			)
 		})()
 	}
@@ -2830,6 +2930,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			({ role, content }) => ({ role, content }),
 		)
 
+		// kilocode_change start
+		// Fetch project properties for KiloCode provider tracking
+		const kiloConfig = this.providerRef.deref()?.getKiloConfig()
+		// kilocode_change end
+
 		// Check auto-approval limits
 		const approvalResult = await this.autoApprovalHandler.checkAutoApprovalLimits(
 			state,
@@ -2876,7 +2981,34 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			...(previousResponseId && !this.skipPrevResponseIdOnce ? { previousResponseId } : {}),
 			// If a condense just occurred, explicitly suppress continuity fallback for the next call
 			...(this.skipPrevResponseIdOnce ? { suppressPreviousResponseId: true } : {}),
+			// kilocode_change start
+			// KiloCode-specific: pass projectId for backend tracking (ignored by other providers)
+			projectId: (await kiloConfig)?.project?.id,
+			// kilocode_change end
 		}
+
+		// kilocode_change start
+		// Add allowed tools for JSON tool style
+		if (getActiveToolUseStyle(apiConfiguration) === "json" && mode) {
+			try {
+				const provider = this.providerRef.deref()
+				const providerState = await provider?.getState()
+
+				const allowedTools = getAllowedJSONToolsForMode(
+					mode,
+					undefined, // codeIndexManager is private, not accessible here
+					providerState,
+					this.diffEnabled,
+					this.api?.getModel(),
+				)
+
+				metadata.allowedTools = allowedTools
+			} catch (error) {
+				console.error("[Task] Error getting allowed tools for mode:", error)
+				// Continue without allowedTools - will fall back to default behavior
+			}
+		}
+		// kilocode_change end
 
 		// Reset skip flag after applying (it only affects the immediate next call)
 		if (this.skipPrevResponseIdOnce) {
@@ -2903,7 +3035,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								title: error.error?.title ?? t("kilocode:lowCreditWarning.title"),
 								message: error.error?.message ?? t("kilocode:lowCreditWarning.message"),
 								balance: error.error?.balance ?? "0.00",
-								buyCreditsUrl: error.error?.buyCreditsUrl ?? "https://kilocode.ai/profile",
+								buyCreditsUrl: error.error?.buyCreditsUrl ?? getAppUrl("/profile"),
 							}),
 						)
 					: this.ask(

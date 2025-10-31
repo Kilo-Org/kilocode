@@ -210,7 +210,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		remoteBrowserEnabled,
 		maxReadFileLine,
 		showAutoApproveMenu, // kilocode_change
+		yoloMode, // kilocode_change
 		showTaskTimeline, // kilocode_change
+		sendMessageOnEnter, // kilocode_change
 		showTimestamps, // kilocode_change
 		hideCostBelowThreshold, // kilocode_change
 		maxImageFileSize,
@@ -445,6 +447,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "maxWorkspaceFiles", value: maxWorkspaceFiles ?? 200 })
 			vscode.postMessage({ type: "showRooIgnoredFiles", bool: showRooIgnoredFiles })
 			vscode.postMessage({ type: "showAutoApproveMenu", bool: showAutoApproveMenu }) // kilocode_change
+			vscode.postMessage({ type: "yoloMode", bool: yoloMode }) // kilocode_change
 			vscode.postMessage({ type: "maxReadFileLine", value: maxReadFileLine ?? -1 })
 			vscode.postMessage({ type: "maxImageFileSize", value: maxImageFileSize ?? 5 })
 			vscode.postMessage({ type: "maxTotalImageSize", value: maxTotalImageSize ?? 20 })
@@ -457,6 +460,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "alwaysAllowModeSwitch", bool: alwaysAllowModeSwitch })
 			vscode.postMessage({ type: "alwaysAllowSubtasks", bool: alwaysAllowSubtasks })
 			vscode.postMessage({ type: "showTaskTimeline", bool: showTaskTimeline }) // kilocode_change
+			vscode.postMessage({ type: "sendMessageOnEnter", bool: sendMessageOnEnter }) // kilocode_change
 			vscode.postMessage({ type: "showTimestamps", bool: showTimestamps }) // kilocode_change
 			vscode.postMessage({ type: "hideCostBelowThreshold", value: hideCostBelowThreshold }) // kilocode_change
 			vscode.postMessage({ type: "alwaysAllowFollowupQuestions", bool: alwaysAllowFollowupQuestions })
@@ -796,6 +800,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{activeTab === "autoApprove" && (
 						<AutoApproveSettings
 							showAutoApproveMenu={showAutoApproveMenu} // kilocode_change
+							yoloMode={yoloMode} // kilocode_change
 							alwaysAllowReadOnly={alwaysAllowReadOnly}
 							alwaysAllowReadOnlyOutsideWorkspace={alwaysAllowReadOnlyOutsideWorkspace}
 							alwaysAllowWrite={alwaysAllowWrite}
@@ -847,6 +852,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						<DisplaySettings
 							reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
 							showTaskTimeline={showTaskTimeline}
+							sendMessageOnEnter={sendMessageOnEnter}
 							showTimestamps={cachedState.showTimestamps} // kilocode_change
 							ghostServiceSettings={ghostServiceSettings}
 							hideCostBelowThreshold={hideCostBelowThreshold}

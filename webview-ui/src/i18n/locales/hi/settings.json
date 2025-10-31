@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "कोई प्रदाता नहीं मिला",
 		"noMatchFound": "कोई मिलान प्रोफ़ाइल नहीं मिला",
 		"vscodeLmDescription": "VS कोड भाषा मॉडल API आपको अन्य VS कोड एक्सटेंशन (जैसे GitHub Copilot) द्वारा प्रदान किए गए मॉडल चलाने की अनुमति देता है। शुरू करने का सबसे आसान तरीका VS कोड मार्केटप्लेस से Copilot और Copilot चैट एक्सटेंशन इंस्टॉल करना है।",
+		"vscodeLmUnavailable": "VS Code भाषा मॉडल समर्थन केवल Visual Studio Code में उपलब्ध है। VSCodium जैसे फोर्क और अन्य काम नहीं कर सकते। इसके अलावा, यह क्षमता JetBrains टूल में उपलब्ध नहीं है।",
+		"vscodeLmUnavailableInstructions": "सुनिश्चित करें कि आप किसी समर्थित टूल का उपयोग कर रहे हैं और VS Code Chat इंस्टॉल और सक्षम है",
 		"awsCustomArnUse": "आप जिस मॉडल का उपयोग करना चाहते हैं, उसके लिए एक वैध Amazon बेडरॉक ARN दर्ज करें। प्रारूप उदाहरण:",
 		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
 		"openRouterApiKey": "OpenRouter API कुंजी",
@@ -767,7 +769,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
+			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Gateway Provider, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
 			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
 			"modelLabel": "मॉडल चयन",
@@ -927,6 +929,10 @@
 		"taskTimeline": {
 			"label": "कार्य टाइमलाइन दिखाएँ",
 			"description": "कार्य संदेशों की एक दृश्य समयरेखा प्रदर्शित करें, जो प्रकार के अनुसार रंगीन हैं, जिससे आप कार्य की प्रगति को जल्दी से देख सकें और कार्य के इतिहास में विशिष्ट बिंदुओं पर वापस स्क्रॉल कर सकें।"
+		},
+		"sendMessageOnEnter": {
+			"label": "एंटर के साथ संदेश भेजें",
+			"description": "सक्षम होने पर, भेजने के लिए एंटर दबाएं और नई लाइन के लिए Shift+Enter दबाएं। इसके बजाय भेजने के लिए Shift+Enter का उपयोग करने के लिए इसे बंद करें।"
 		},
 		"costThreshold": {
 			"label": "थ्रेशोल्ड से नीचे की लागत छिपाएं",

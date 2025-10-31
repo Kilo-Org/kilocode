@@ -1,7 +1,7 @@
 import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
+import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

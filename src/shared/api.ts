@@ -7,6 +7,7 @@ import {
 	CLAUDE_CODE_DEFAULT_MAX_OUTPUT_TOKENS,
 	isDynamicProvider,
 	isLocalProvider,
+	ToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 
 // ApiHandlerOptions

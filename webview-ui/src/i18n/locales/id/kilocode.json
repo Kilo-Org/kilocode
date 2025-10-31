@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Tambah Kredit",
-		"lowBalance": "Saldo Kilo Code kamu rendah"
+		"lowBalance": "Saldo Kilo Code kamu rendah",
+		"newOrganization": "Menggunakan Kilo untuk pekerjaan?"
 	},
 	"pagination": {
 		"previous": "Sebelumnya",
@@ -41,7 +42,8 @@
 			"automaticFetch": "Model terbaru tersedia secara otomatis di Kilo Code. Jika Anda tidak yakin model mana yang harus dipilih, Kilo Code bekerja paling baik dengan model yang direkomendasikan yang tercantum di bagian atas dengan <strong>huruf tebal</strong>.",
 			"providerRouting": {
 				"title": "Perutean Penyedia",
-				"managedByOrganization": "Pengaturan Perutean Penyedia dikelola oleh organisasi Anda.",
+				"managedByOrganization": "Kelola Perutean Penyedia Tingkat Organisasi",
+				"createOrganization": "Buat Organisasi untuk Mengelola Perutean Penyedia",
 				"description": "Kilo Code merutekan permintaan ke penyedia terbaik yang tersedia untuk model Anda. Secara default, permintaan diseimbangkan bebannya di seluruh penyedia teratas untuk memaksimalkan waktu aktif. Namun, Anda dapat memilih penyedia tertentu untuk digunakan untuk model ini.",
 				"sorting": {
 					"default": "Pengurutan penyedia default",
@@ -122,7 +124,9 @@
 			"credits": "kredit",
 			"action": "Beli Sekarang",
 			"viewAll": "Lihat semua opsi harga"
-		}
+		},
+		"detailedUsage": "Penggunaan Terperinci",
+		"createOrganization": "Buat Organisasi untuk Melacak Penggunaan Terperinci"
 	},
 	"docs": "Dokumentasi",
 	"rules": {
@@ -218,7 +222,10 @@
 				"label": "Pelengkapan Otomatis Manual ({{keybinding}})",
 				"description": "Perlu perbaikan cepat, penyelesaian, atau refaktor? Kilo akan menggunakan konteks sekitar untuk menawarkan perbaikan langsung, menjaga Anda tetap dalam alur. <DocsLink>Lihat pintasan</DocsLink>"
 			},
-			"keybindingNotFound": "tidak ditemukan"
+			"keybindingNotFound": "tidak ditemukan",
+			"noModelConfigured": "Tidak ditemukan model autocomplete yang sesuai. Silakan konfigurasi penyedia di pengaturan API.",
+			"model": "Model",
+			"provider": "Penyedia"
 		}
 	},
 	"virtualProvider": {
@@ -231,7 +238,7 @@
 		"removeProfile": "Hapus profil",
 		"selectProfilePlaceholder": "Pilih profil...",
 		"addProfile": "Tambahkan profil",
-		"noProfilesAvailable": "Tidak ada profil tersedia. Silakan mengonfigurasi setidaknya satu profil penyedia non-virtual terlebih dahulu.",
+		"noProfilesAvailable": "Tidak ada profil tersedia. Harap konfigurasikan setidaknya satu profil penyedia non-virtual terlebih dahulu.",
 		"dangerZoneTitle": "Zona Bahaya",
 		"dangerZoneDescription": "Tindakan ini bersifat merusak dan tidak dapat dibatalkan.",
 		"clearUsageData": "Hapus Data Penggunaan",
@@ -254,5 +261,26 @@
 		"modelUnavailable": "⚠️ Model {{model}} tidak tersedia. Ganti ke model lain untuk melanjutkan.",
 		"continueWith": "Lanjutkan dengan {{model}}",
 		"continue": "Lanjutkan"
+	},
+	"memoryWarning": {
+		"message": "Penggunaan memori mencapai {{percentage}}%. Silakan restart IDE Anda untuk mencegah crash."
+	},
+	"toolCallStyle": {
+		"title": "Gaya Panggilan Tool",
+		"description": "Pilih bagaimana panggilan tool diformat dalam prompt sistem. JSON saat ini bersifat eksperimental dan sebagian besar ditujukan untuk pengguna yang tertarik berkontribusi pada pengembangannya.",
+		"automatic": "Biarkan Kilo yang memutuskan",
+		"xml": "XML",
+		"json": "JSON (eksperimental)"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Server MCP ini dipelihara oleh komunitas. Klik <1>di sini</1> untuk mengedit pengaturan MCP Anda sendiri."
+		},
+		"modes": {
+			"description": "Mode-mode ini tersedia dari komunitas. Klik <1>di sini</1> untuk mengedit mode kustom Anda sendiri."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
 	}
 }

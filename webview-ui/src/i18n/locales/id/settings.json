@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Tidak ada penyedia ditemukan",
 		"noMatchFound": "Tidak ada profil yang cocok ditemukan",
 		"vscodeLmDescription": " API Model Bahasa VS Code memungkinkan kamu menjalankan model yang disediakan oleh ekstensi VS Code lainnya (termasuk namun tidak terbatas pada GitHub Copilot). Cara termudah untuk memulai adalah menginstal ekstensi Copilot dan Copilot Chat dari VS Code Marketplace.",
+		"vscodeLmUnavailable": "Dukungan Model Bahasa VS Code hanya tersedia di Visual Studio Code. Fork seperti VSCodium dan lainnya mungkin tidak berfungsi. Selain itu, kemampuan ini tidak tersedia di alat JetBrains.",
+		"vscodeLmUnavailableInstructions": "Pastikan Anda menggunakan alat yang didukung dan bahwa VS Code Chat telah diinstal dan diaktifkan",
 		"awsCustomArnUse": "Masukkan ARN Amazon Bedrock yang valid untuk model yang ingin kamu gunakan. Contoh format:",
 		"awsCustomArnDesc": "Pastikan region di ARN cocok dengan AWS Region yang kamu pilih di atas.",
 		"openRouterApiKey": "OpenRouter API Key",
@@ -788,7 +790,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Gateway Provider, OpenRouter, atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
 			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
 			"modelLabel": "Pemilihan Model",
@@ -948,6 +950,10 @@
 		"taskTimeline": {
 			"label": "Tampilkan linimasa tugas",
 			"description": "Tampilkan timeline visual dari pesan-pesan tugas, diwarnai berdasarkan jenisnya, memungkinkan Anda untuk melihat kemajuan tugas dengan cepat dan menggulir kembali ke titik-titik tertentu dalam riwayat tugas."
+		},
+		"sendMessageOnEnter": {
+			"label": "Kirim pesan dengan Enter",
+			"description": "Saat diaktifkan, tekan Enter untuk mengirim dan Shift+Enter untuk baris baru. Matikan untuk menggunakan Shift+Enter untuk mengirim."
 		},
 		"costThreshold": {
 			"label": "Sembunyikan biaya di bawah ambang batas",

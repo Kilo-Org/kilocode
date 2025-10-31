@@ -15,7 +15,7 @@ import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelec
 import { DiffStrategy } from "../../shared/tools"
 import { formatLanguage } from "../../shared/language"
 import { isEmpty } from "../../utils/object"
-
+import { ToolUseStyle } from "../../../packages/types/src" // kilocode_change
 import { McpHub } from "../../services/mcp/McpHub"
 import { CodeIndexManager } from "../../services/code-index/manager"
 
@@ -69,6 +69,7 @@ async function generatePrompt(
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
 	modelId?: string,
+	toolUseStyle?: ToolUseStyle, // kilocode_change
 	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> {
 	if (!context) {
@@ -88,7 +89,7 @@ async function generatePrompt(
 	const shouldIncludeMcp = hasMcpGroup && hasMcpServers
 
 	const [modesSection, mcpServersSection] = await Promise.all([
-		getModesSection(context),
+		getModesSection(context, toolUseStyle /*kilocode_change*/),
 		shouldIncludeMcp
 			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
 			: Promise.resolve(""),
@@ -98,28 +99,32 @@ async function generatePrompt(
 
 	const basePrompt = `${roleDefinition}
 
-${markdownFormattingSection()}
+${markdownFormattingSection(toolUseStyle ?? "xml" /*kilocode_change*/)}
 
-${getSharedToolUseSection()}
+${getSharedToolUseSection(toolUseStyle /*kilocode_change*/)}
 
-${getToolDescriptionsForMode(
-	mode,
-	cwd,
-	supportsComputerUse,
-	codeIndexManager,
-	effectiveDiffStrategy,
-	browserViewportSize,
-	shouldIncludeMcp ? mcpHub : undefined,
-	customModeConfigs,
-	experiments,
-	partialReadsEnabled,
-	settings,
-	enableMcpServerCreation,
-	modelId,
-	clineProviderState, // kilocode_change
-)}
+${
+	toolUseStyle !== "json" // kilocode_change
+		? getToolDescriptionsForMode(
+				mode,
+				cwd,
+				supportsComputerUse,
+				codeIndexManager,
+				effectiveDiffStrategy,
+				browserViewportSize,
+				shouldIncludeMcp ? mcpHub : undefined,
+				customModeConfigs,
+				experiments,
+				partialReadsEnabled,
+				settings,
+				enableMcpServerCreation,
+				modelId,
+				clineProviderState, // kilocode_change
+			)
+		: ""
+}
 
-${getToolUseGuidelinesSection(codeIndexManager)}
+${getToolUseGuidelinesSection(codeIndexManager, toolUseStyle /*kilocode_change*/)}
 
 ${mcpServersSection}
 
@@ -127,7 +132,7 @@ ${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : u
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
+${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, clineProviderState, toolUseStyle /* kilocode_change */)}
 
 ${getSystemInfoSection(cwd)}
 
@@ -164,6 +169,7 @@ export const SYSTEM_PROMPT = async (
 	settings?: SystemPromptSettings,
 	todoList?: TodoItem[],
 	modelId?: string,
+	toolUseStyle?: ToolUseStyle, // kilocode_change
 	clineProviderState?: ClineProviderState, // kilocode_change
 ): Promise<string> => {
 	if (!context) {
@@ -240,6 +246,7 @@ ${customInstructions}`
 		settings,
 		todoList,
 		modelId,
+		toolUseStyle, // kilocode_change
 		clineProviderState, // kilocode_change
 	)
 }

@@ -247,6 +247,8 @@
 		"noProviderMatchFound": "找不到供應商",
 		"noMatchFound": "找不到符合的設定檔",
 		"vscodeLmDescription": "VS Code 語言模型 API 可以讓您使用其他擴充功能（如 GitHub Copilot）提供的模型。最簡單的方式是從 VS Code Marketplace 安裝 Copilot 和 Copilot Chat 擴充套件。",
+		"vscodeLmUnavailable": "VS Code 語言模型支援僅在 Visual Studio Code 可用。像 VSCodium 這類分支可能無法運作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "請確認您使用支援的工具，並且已安裝且啟用了 VS Code Chat",
 		"awsCustomArnUse": "輸入您要使用的模型的有效 Amazon Bedrock ARN。格式範例：",
 		"awsCustomArnDesc": "確保 ARN 中的區域與您上面選擇的 AWS 區域相符。",
 		"openRouterApiKey": "OpenRouter API 金鑰",
@@ -767,8 +769,8 @@
 			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "啟用快速套用",
-			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行快速套用編輯檔案。需要 Kilo Code API 供應商、OpenRouter 或 Morph API 金鑰。",
+			"name": "啟用 Fast Apply",
+			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）",
 			"modelLabel": "模型選擇",
@@ -808,11 +810,11 @@
 			"successConfigured": "✓ 圖像生成已設定完成並準備使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "啟用 Autocomplete 功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的 Autocomplete。"
+			"name": "自動補全",
+			"description": "啟用自動補全功能，在編輯器中直接提供快速程式碼建議和改進。包括針對性變更的快速工作（Cmd+I）和內容改進的自動補全"
 		},
 		"RUN_SLASH_COMMAND": {
-			"name": "啟用模型啟動的斜線命令",
+			"name": "啟用模型發起斜線命令",
 			"description": "啟用時，Kilo Code 可以執行您的斜線命令來執行工作流程。"
 		}
 	},
@@ -929,10 +931,14 @@
 			"label": "顯示任務時間軸",
 			"description": "顯示任務訊息的視覺化時間軸，按類型著色，讓您能夠快速查看任務進度並回滾到任務歷史中的特定節點。"
 		},
+		"sendMessageOnEnter": {
+			"label": "使用 Enter 鍵傳送訊息",
+			"description": "啟用後，按 Enter 鍵傳送訊息，Shift+Enter 鍵換行。停用後，使用 Shift+Enter 鍵傳送訊息。"
+		},
 		"costThreshold": {
-			"description": "仅显示超过此金额的请求费用。当详细信息面板打开时，费用始终可见。",
-			"label": "隐藏低于阈值的费用",
-			"currentValue": "当前阈值：${{value}}"
+			"description": "僅顯示超過此金額的請求費用。當詳細資訊儀錶板打開時，費用始終可見。",
+			"label": "隱藏低於閾值的費用",
+			"currentValue": "當前閾值：${{value}}"
 		},
 		"showTimestamps": {
 			"label": "顯示時間戳記",

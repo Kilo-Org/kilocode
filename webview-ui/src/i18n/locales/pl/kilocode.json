@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Dodaj kredyt",
-		"lowBalance": "Twój stan konta Kilo Code jest niski"
+		"lowBalance": "Twój stan konta Kilo Code jest niski",
+		"newOrganization": "Używasz Kilo do pracy?"
 	},
 	"pagination": {
 		"previous": "Poprzednia",
@@ -40,7 +41,8 @@
 			"logout": "Wyloguj się z Kilo Code",
 			"providerRouting": {
 				"title": "Routing dostawców",
-				"managedByOrganization": "Ustawienia routingu dostawców są zarządzane przez Twoją organizację.",
+				"managedByOrganization": "Zarządzaj routingiem dostawców na poziomie organizacji",
+				"createOrganization": "Utwórz organizację, aby zarządzać routingiem dostawców",
 				"description": "Kilo Code kieruje żądania do najlepszych dostępnych dostawców dla Twojego modelu. Domyślnie żądania są równoważone obciążeniem między najlepszymi dostawcami, aby zmaksymalizować czas działania. Możesz jednak wybrać konkretnego dostawcę do użycia dla tego modelu.",
 				"sorting": {
 					"default": "Domyślne sortowanie dostawców",
@@ -95,6 +97,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Styl Wywołań Narzędzi",
+		"description": "Wybierz sposób formatowania wywołań narzędzi w prompcie systemowym. JSON jest obecnie eksperymentalny i przeznaczony głównie dla użytkowników zainteresowanych wkładem w jego rozwój.",
+		"automatic": "Pozwól Kilo zdecydować",
+		"xml": "XML",
+		"json": "JSON (eksperymentalny)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code chce skondensować Twoją rozmowę",
@@ -122,7 +131,9 @@
 			"credits": "kredyty",
 			"action": "Kup Teraz",
 			"viewAll": "Zobacz wszystkie opcje cenowe"
-		}
+		},
+		"detailedUsage": "Szczegółowe użycie",
+		"createOrganization": "Utwórz organizację, aby śledzić szczegółowe użycie"
 	},
 	"docs": "Dokumentacja",
 	"rules": {
@@ -218,7 +229,10 @@
 				"label": "Ręczne uzupełnianie ({{keybinding}})",
 				"description": "Potrzebujesz szybkiej poprawki, uzupełnienia lub refaktoryzacji? Kilo użyje otaczającego kontekstu, aby zaoferować natychmiastowe ulepszenia, utrzymując cię w przepływie. <DocsLink>Zobacz skrót</DocsLink>"
 			},
-			"keybindingNotFound": "nie znaleziono"
+			"keybindingNotFound": "nie znaleziono",
+			"noModelConfigured": "Nie znaleziono odpowiedniego modelu autouzupełniania. Skonfiguruj dostawcę w ustawieniach API.",
+			"model": "Model",
+			"provider": "Dostawca"
 		}
 	},
 	"virtualProvider": {
@@ -231,7 +245,7 @@
 		"removeProfile": "Usuń profil",
 		"selectProfilePlaceholder": "Wybierz profil...",
 		"addProfile": "Dodaj profil",
-		"noProfilesAvailable": "Brak dostępnych profili. Skonfiguruj najpierw co najmniej jeden profil dostawcy niewirtualnego.",
+		"noProfilesAvailable": "Brak dostępnych profili. Najpierw skonfiguruj co najmniej jeden profil dostawcy niewirtualnego.",
 		"dangerZoneTitle": "Strefa Niebezpieczna",
 		"dangerZoneDescription": "Te działania są destrukcyjne i nie można ich cofnąć.",
 		"clearUsageData": "Wyczyść Dane Użytkowania",
@@ -254,5 +268,19 @@
 		"modelUnavailable": "⚠️ Model {{model}} jest niedostępny. Zmień na inny model, aby kontynuować.",
 		"continueWith": "Kontynuuj z {{model}}",
 		"continue": "Kontynuuj"
+	},
+	"memoryWarning": {
+		"message": "Użycie pamięci wynosi {{percentage}}%. Uruchom ponownie IDE, aby zapobiec awariom."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Te serwery MCP są utrzymywane przez społeczność. Kliknij <1>tutaj</1>, aby edytować własne ustawienia MCP."
+		},
+		"modes": {
+			"description": "Te tryby są dostępne ze społeczności. Kliknij <1>tutaj</1>, aby edytować swoje własne niestandardowe tryby."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nowość: Udostępniaj tryby tworząc organizację"
 	}
 }

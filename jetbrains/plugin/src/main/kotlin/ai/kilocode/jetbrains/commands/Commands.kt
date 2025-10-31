@@ -11,29 +11,29 @@ import com.intellij.openapi.project.Project
  * Commands are used to define executable actions that can be registered and invoked.
  */
 interface ICommand {
-   /**
-    * Gets the unique identifier for this command.
-    * @return The command ID as a string
-    */
-   fun getId(): String
-   
-   /**
-    * Gets the method name that should be invoked when this command is executed.
-    * @return The method name as a string
-    */
-   fun getMethod(): String
-   
-   /**
-    * Gets the handler object that contains the method to be invoked.
-    * @return The handler object
-    */
-   fun handler(): Any
-   
-   /**
-    * Gets the return type of the command, if any.
-    * @return The return type as a string, or null if the command doesn't return a value
-    */
-   fun returns(): String?
+    /**
+     * Gets the unique identifier for this command.
+     * @return The command ID as a string
+     */
+    fun getId(): String
+
+    /**
+     * Gets the method name that should be invoked when this command is executed.
+     * @return The method name as a string
+     */
+    fun getMethod(): String
+
+    /**
+     * Gets the handler object that contains the method to be invoked.
+     * @return The handler object
+     */
+    fun handler(): Any
+
+    /**
+     * Gets the return type of the command, if any.
+     * @return The return type as a string, or null if the command doesn't return a value
+     */
+    fun returns(): String?
 }
 
 /**
@@ -46,27 +46,27 @@ interface ICommandRegistry {
      * @param id The ID of the registered command
      */
     fun onDidRegisterCommand(id: String)
-    
+
     /**
      * Registers a command in the registry.
      * @param command The command to register
      */
     fun registerCommand(command: ICommand)
-    
+
     /**
      * Registers an alias for an existing command.
      * @param oldId The ID of the existing command
      * @param newId The new alias ID for the command
      */
     fun registerCommandAlias(oldId: String, newId: String)
-    
+
     /**
      * Gets a command by its ID.
      * @param id The ID of the command to retrieve
      * @return The command, or null if not found
      */
     fun getCommand(id: String): ICommand?
-    
+
     /**
      * Gets all registered commands.
      * @return A map of command IDs to commands

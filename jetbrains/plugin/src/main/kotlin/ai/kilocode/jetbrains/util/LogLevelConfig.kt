@@ -4,7 +4,7 @@
 
 package ai.kilocode.jetbrains.logging
 
-import ai.kilocode.jetbrains.plugin.DEBUG_MODE
+import ai.kilocode.jetbrains.plugin.DebugMode
 import ai.kilocode.jetbrains.plugin.WecoderPluginService
 
 /**
@@ -15,8 +15,9 @@ enum class LogLevel(val value: Int) {
     LOG(1),
     INFO(2),
     WARN(3),
-    ERROR(4);
-    
+    ERROR(4),
+    ;
+
     companion object {
         fun fromString(level: String): LogLevel {
             return when (level.lowercase()) {
@@ -35,7 +36,7 @@ enum class LogLevel(val value: Int) {
  * Configuration for dynamic log level filtering based on debug mode
  */
 object LogLevelConfig {
-    
+
     /**
      * Get the minimum log level that should be logged based on current debug mode
      * - DEBUG/ALL mode: Show all logs (DEBUG and above)
@@ -44,16 +45,16 @@ object LogLevelConfig {
     fun getMinimumLogLevel(): LogLevel {
         return when (WecoderPluginService.getDebugMode()) {
             // Debug mode: show all log levels including debug, log, info
-            DEBUG_MODE.ALL, DEBUG_MODE.IDEA -> { 
+            DebugMode.ALL, DebugMode.IDEA -> {
                 LogLevel.DEBUG
             }
             // Production mode: only show warnings and errors
-            DEBUG_MODE.NONE -> {
-                LogLevel.WARN 
+            DebugMode.NONE -> {
+                LogLevel.WARN
             }
         }
     }
-    
+
     /**
      * Check if a log level should be logged based on current configuration
      * @param level The log level to check
@@ -62,7 +63,7 @@ object LogLevelConfig {
     fun shouldLog(level: LogLevel): Boolean {
         return level.value >= getMinimumLogLevel().value
     }
-    
+
     /**
      * Check if a log level should be logged based on current configuration
      * @param levelString The log level string to check

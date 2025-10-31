@@ -4,15 +4,14 @@
 
 package ai.kilocode.jetbrains.actors
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.LocalFileSystem
 import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.editor.EditorHolder
 import ai.kilocode.jetbrains.editor.WorkspaceEdit
 import ai.kilocode.jetbrains.ipc.proxy.SerializableObjectWithBuffers
-import kotlinx.coroutines.delay
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.LocalFileSystem
 import java.io.File
 import java.nio.file.Files
 /**
@@ -39,7 +38,7 @@ interface MainThreadBulkEditsShape {
  */
 class MainThreadBulkEdits(val project: Project) : MainThreadBulkEditsShape {
     val logger = Logger.getInstance(MainThreadBulkEditsShape::class.java)
-    
+
     /**
      * Attempts to apply a workspace edit by processing file operations and text edits.
      *
@@ -53,7 +52,7 @@ class MainThreadBulkEdits(val project: Project) : MainThreadBulkEditsShape {
         logger.info("[Bulk Edit] Starting process: $json")
         val cto = WorkspaceEdit.from(json)
         var allSuccess = true
-        
+
         // Process file edits - using background thread to avoid EDT violations
         cto.files.forEach { fileEdit ->
             if (fileEdit.oldResource != null && fileEdit.newResource != null) {
@@ -117,12 +116,12 @@ class MainThreadBulkEdits(val project: Project) : MainThreadBulkEditsShape {
                 allSuccess = false
                 return@forEach
             }
-            
-            var handle:EditorHolder? = null;
+
+            var handle: EditorHolder? = null
             try {
-                handle = project.getService(EditorAndDocManager::class.java).getEditorHandleByUri(textEdit.resource,true)
+                handle = project.getService(EditorAndDocManager::class.java).getEditorHandleByUri(textEdit.resource, true)
                 if (handle == null) {
-                    handle = project.getService(EditorAndDocManager::class.java).sync2ExtHost(textEdit.resource,true)
+                    handle = project.getService(EditorAndDocManager::class.java).sync2ExtHost(textEdit.resource, true)
                 }
             } catch (e: Exception) {
                 logger.info("[Bulk Edit] Failed to get editor handle: ${textEdit.resource.path}", e)

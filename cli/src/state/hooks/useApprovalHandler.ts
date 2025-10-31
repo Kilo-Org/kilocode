@@ -1,5 +1,5 @@
 import { useAtomValue, useSetAtom, useStore } from "jotai"
-import { useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import {
 	pendingApprovalAtom,
 	approvalOptionsAtom,
@@ -8,15 +8,23 @@ import {
 	selectNextApprovalAtom,
 	selectPreviousApprovalAtom,
 	isApprovalPendingAtom,
+	approvalSetTimestampAtom,
 	startApprovalProcessingAtom,
 	completeApprovalProcessingAtom,
 	approvalProcessingAtom,
+	approveCallbackAtom,
+	rejectCallbackAtom,
+	executeSelectedCallbackAtom,
 	type ApprovalOption,
 } from "../atoms/approval.js"
+import { addAllowedCommandAtom, autoApproveExecuteAllowedAtom } from "../atoms/config.js"
+import { updateChatMessageByTsAtom } from "../atoms/extension.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import { logs } from "../../services/logs.js"
 import { useApprovalTelemetry } from "./useApprovalTelemetry.js"
+
+const APPROVAL_MENU_DELAY_MS = 500
 
 /**
  * Options for useApprovalHandler hook
@@ -83,10 +91,21 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 	const approvalOptions = useAtomValue(approvalOptionsAtom)
 	const selectedIndex = useAtomValue(selectedApprovalIndexAtom)
 	const selectedOption = useAtomValue(selectedApprovalOptionAtom)
-	const isApprovalPending = useAtomValue(isApprovalPendingAtom)
+	const approvalSetTimestamp = useAtomValue(approvalSetTimestampAtom)
+	const isApprovalPendingImmediate = useAtomValue(isApprovalPendingAtom)
+
+	// Use state to manage delayed visibility
+	const [showApprovalMenu, setShowApprovalMenu] = useState(false)
+
+	// Compute if approval is pending with delay
+	const isApprovalPending = isApprovalPendingImmediate && showApprovalMenu
 
 	const selectNext = useSetAtom(selectNextApprovalAtom)
 	const selectPrevious = useSetAtom(selectPreviousApprovalAtom)
+
+	const setApproveCallback = useSetAtom(approveCallbackAtom)
+	const setRejectCallback = useSetAtom(rejectCallbackAtom)
+	const setExecuteSelectedCallback = useSetAtom(executeSelectedCallbackAtom)
 
 	const { sendAskResponse } = useWebviewMessage()
 	const approvalTelemetry = useApprovalTelemetry()
@@ -126,6 +145,14 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 					ask: currentPendingApproval.ask,
 					ts: currentPendingApproval.ts,
 				})
+
+				// Mark message as answered locally BEFORE sending response
+				// This prevents lastAskMessageAtom from returning it again
+				const answeredMessage: ExtensionChatMessage = {
+					...currentPendingApproval,
+					isAnswered: true,
+				}
+				store.set(updateChatMessageByTsAtom, answeredMessage)
 
 				await sendAskResponse({
 					response: "yesButtonClicked",
@@ -184,6 +211,14 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 			try {
 				logs.debug("Rejecting request", "useApprovalHandler", { ask: currentPendingApproval.ask })
 
+				// Mark message as answered locally BEFORE sending response
+				// This prevents lastAskMessageAtom from returning it again
+				const answeredMessage: ExtensionChatMessage = {
+					...currentPendingApproval,
+					isAnswered: true,
+				}
+				store.set(updateChatMessageByTsAtom, answeredMessage)
+
 				await sendAskResponse({
 					response: "noButtonClicked",
 					...(text && { text }),
@@ -216,16 +251,62 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 
 			if (selectedOption.action === "approve") {
 				await approve(text, images)
+			} else if (selectedOption.action === "approve-and-remember") {
+				// First add the command pattern to config
+				if (selectedOption.commandPattern) {
+					try {
+						logs.info("Adding command pattern to auto-approval list", "useApprovalHandler", {
+							pattern: selectedOption.commandPattern,
+						})
+						await store.set(addAllowedCommandAtom, selectedOption.commandPattern)
+
+						// Verify the config was updated
+						const updatedAllowed = store.get(autoApproveExecuteAllowedAtom)
+						logs.info("Command pattern added successfully - current allowed list", "useApprovalHandler", {
+							pattern: selectedOption.commandPattern,
+							allowedList: updatedAllowed,
+						})
+					} catch (error) {
+						logs.error("Failed to add command pattern to config", "useApprovalHandler", { error })
+					}
+				}
+				// Then approve the current command
+				await approve(text, images)
 			} else {
 				await reject(text, images)
 			}
 		},
-		[selectedOption, approve, reject],
+		[selectedOption, approve, reject, store],
 	)
 
-	// Note: All auto-approval logic has been moved to useApprovalEffect hook
-	// and the approvalDecision service. This hook now only handles manual
-	// approve/reject actions triggered by user interaction.
+	// Set callbacks for keyboard handler to use
+	useEffect(() => {
+		setApproveCallback(() => approve)
+		setRejectCallback(() => reject)
+		setExecuteSelectedCallback(() => executeSelected)
+	}, [approve, reject, executeSelected, setApproveCallback, setRejectCallback, setExecuteSelectedCallback])
+
+	// Manage delayed visibility of approval menu
+	useEffect(() => {
+		if (approvalSetTimestamp === null) {
+			// No pending approval, hide menu
+			setShowApprovalMenu(false)
+			return
+		}
+
+		// Calculate remaining time for delay
+		const elapsed = Date.now() - approvalSetTimestamp
+		const remaining = Math.max(0, APPROVAL_MENU_DELAY_MS - elapsed)
+
+		// Set timeout to show menu after delay
+		const timeoutId = setTimeout(() => {
+			setShowApprovalMenu(true)
+		}, remaining)
+
+		return () => {
+			clearTimeout(timeoutId)
+		}
+	}, [approvalSetTimestamp, isApprovalPendingImmediate])
 
 	return {
 		pendingApproval,

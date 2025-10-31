@@ -19,6 +19,8 @@ Kilo Code 需要 AI 模型提供商的 API 密钥才能运行。
 
 ## 使用其他 API 提供商
 
+_即将登陆 Kilo Code Teams 和 Enterprise 平台！_
+
 ### 获取您的API密钥
 
 #### 选项1：LLM路由器

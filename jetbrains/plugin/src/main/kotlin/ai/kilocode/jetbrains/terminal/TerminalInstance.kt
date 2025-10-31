@@ -4,20 +4,19 @@
 
 package ai.kilocode.jetbrains.terminal
 
+import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostTerminalShellIntegrationProxy
+import ai.kilocode.jetbrains.ipc.proxy.interfaces.ShellLaunchConfigDto
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.terminal.JBTerminalWidget
 import com.intellij.terminal.ui.TerminalWidget
 import com.pty4j.PtyProcess
-import ai.kilocode.jetbrains.core.ServiceProxyRegistry
-import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
-import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostTerminalShellIntegrationProxy
-import ai.kilocode.jetbrains.ipc.proxy.interfaces.ShellLaunchConfigDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,7 +47,7 @@ class TerminalInstance(
     val numericId: Int,
     val project: Project,
     private val config: TerminalConfig,
-    private val rpcProtocol: IRPCProtocol
+    private val rpcProtocol: IRPCProtocol,
 ) : Disposable {
 
     companion object {
@@ -150,7 +149,7 @@ class TerminalInstance(
 
         // 🎯 Add terminalWidget to Terminal tool window
         addToTerminalToolWindow()
-        
+
         notifyTerminalOpened()
         notifyShellIntegrationChange()
         handleInitialText()
@@ -178,7 +177,7 @@ class TerminalInstance(
             terminalWidget = customRunner.startShellTerminalWidget(
                 this, // parent disposable
                 startupOptions,
-                false  // deferSessionStartUntilUiShown - start session immediately, must be false
+                false, // deferSessionStartUntilUiShown - start session immediately, must be false
             )
 
             logger.info("✅ startShellTerminalWidget call complete, returned widget: ${terminalWidget?.javaClass?.name}")
@@ -187,7 +186,6 @@ class TerminalInstance(
             setupTerminalCloseListener()
 
             logger.info("✅ Terminal widget created successfully")
-
         } catch (e: Exception) {
             logger.error("❌ Failed to create terminal widget", e)
             throw e
@@ -211,7 +209,7 @@ class TerminalInstance(
 
             override fun createShellTerminalWidget(
                 parent: Disposable,
-                startupOptions: ShellStartupOptions
+                startupOptions: ShellStartupOptions,
             ): TerminalWidget {
                 logger.info("🔧 Custom createShellTerminalWidget method called...")
                 return super.createShellTerminalWidget(parent, startupOptions)
@@ -314,7 +312,7 @@ class TerminalInstance(
             rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostTerminalService)
         extHostTerminalServiceProxy.acceptTerminalProcessData(
             id = numericId,
-            data = data
+            data = data,
         )
         logger.debug("✅ Sent raw data to exthost: ${data.length} chars (terminal: $extHostTerminalId)")
     }
@@ -331,6 +329,9 @@ class TerminalInstance(
         ApplicationManager.getApplication().invokeLater {
             try {
                 showTerminalToolWindow()
+                // Note: show() method is deprecated but there's no direct replacement in the current API
+                // The terminal visibility is now managed through the tool window
+                @Suppress("DEPRECATION")
                 shellWidget?.show(preserveFocus)
                 logger.info("✅ Terminal shown: $extHostTerminalId")
             } catch (e: Exception) {
@@ -351,6 +352,9 @@ class TerminalInstance(
         ApplicationManager.getApplication().invokeLater {
             try {
                 hideTerminalToolWindow()
+                // Note: hide() method is deprecated but there's no direct replacement in the current API
+                // The terminal visibility is now managed through the tool window
+                @Suppress("DEPRECATION")
                 shellWidget?.hide()
                 logger.info("✅ Terminal hidden: $extHostTerminalId")
             } catch (e: Exception) {
@@ -383,16 +387,16 @@ class TerminalInstance(
         try {
             val terminalToolWindowManager = org.jetbrains.plugins.terminal.TerminalToolWindowManager.getInstance(project)
             val toolWindow = ToolWindowManager.getInstance(project).getToolWindow(TERMINAL_TOOL_WINDOW_ID)
-            
+
             if (toolWindow == null) {
                 logger.warn("Terminal tool window does not exist")
                 return
             }
-            
+
             // Use TerminalToolWindowManager's newTab method to create new Content
             val content = terminalToolWindowManager.newTab(toolWindow, terminalWidget!!)
             content.displayName = config.name ?: DEFAULT_TERMINAL_NAME
-            
+
             logger.info("✅ Added terminalWidget to Terminal tool window: ${content.displayName}")
         } catch (e: Exception) {
             logger.error("❌ Failed to add terminalWidget to tool window", e)
@@ -448,7 +452,7 @@ class TerminalInstance(
                 id = numericId,
                 extHostTerminalId = extHostTerminalId,
                 name = config.name ?: DEFAULT_TERMINAL_NAME,
-                shellLaunchConfig = shellLaunchConfigDto
+                shellLaunchConfig = shellLaunchConfigDto,
             )
 
             logger.info("✅ Successfully notified exthost process terminal opened: $extHostTerminalId")
@@ -487,7 +491,7 @@ class TerminalInstance(
                     instanceId = numericId,
                     shellEnvKeys = envKeys,
                     shellEnvValues = envValues,
-                    isTrusted = true
+                    isTrusted = true,
                 )
 
                 logger.info("✅ Notified exthost environment variable change: ${env.size} variables (terminal: $extHostTerminalId)")
@@ -527,7 +531,7 @@ class TerminalInstance(
             extHostTerminalServiceProxy.acceptTerminalClosed(
                 id = numericId,
                 exitCode = null,
-                exitReason = numericId
+                exitReason = numericId,
             )
 
             logger.info("✅ Successfully notified exthost process terminal closed: $extHostTerminalId")
@@ -544,7 +548,7 @@ class TerminalInstance(
         try {
             // 🎯 Mark as disposed first to avoid repeated calls in callbacks
             state.markDisposed()
-            
+
             callbackManager.clear()
             scope.cancel()
 
@@ -588,12 +592,13 @@ data class TerminalConfig(
     val hideFromUser: Boolean? = null,
     val isFeatureTerminal: Boolean? = null,
     val forceShellIntegration: Boolean? = null,
-    val initialText: String? = null
+    val initialText: String? = null,
 ) {
     companion object {
         /**
          * Create TerminalConfig from Map
          */
+        @Suppress("UNCHECKED_CAST")
         fun fromMap(config: Map<String, Any?>): TerminalConfig {
             return TerminalConfig(
                 name = config["name"] as? String,
@@ -605,7 +610,7 @@ data class TerminalConfig(
                 hideFromUser = config["hideFromUser"] as? Boolean,
                 isFeatureTerminal = config["isFeatureTerminal"] as? Boolean,
                 forceShellIntegration = config["forceShellIntegration"] as? Boolean,
-                initialText = config["initialText"] as? String
+                initialText = config["initialText"] as? String,
             )
         }
     }
@@ -626,7 +631,7 @@ data class TerminalConfig(
             type = null,
             isFeatureTerminal = isFeatureTerminal,
             tabActions = null,
-            shellIntegrationEnvironmentReporting = forceShellIntegration
+            shellIntegrationEnvironmentReporting = forceShellIntegration,
         )
     }
 }

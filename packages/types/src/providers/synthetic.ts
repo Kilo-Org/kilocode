@@ -3,6 +3,8 @@
 import type { ModelInfo } from "../model.js"
 
 export type SyntheticModelId =
+	| "hf:MiniMaxAI/MiniMax-M2"
+	| "hf:zai-org/GLM-4.6"
 	| "hf:zai-org/GLM-4.5"
 	| "hf:openai/gpt-oss-120b"
 	| "hf:moonshotai/Kimi-K2-Instruct-0905"
@@ -22,9 +24,19 @@ export type SyntheticModelId =
 	| "hf:Qwen/Qwen3-235B-A22B-Thinking-2507"
 	| "hf:Qwen/Qwen3-235B-A22B-Instruct-2507"
 
-export const syntheticDefaultModelId: SyntheticModelId = "hf:zai-org/GLM-4.5"
+export const syntheticDefaultModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 
 export const syntheticModels = {
+	"hf:MiniMaxAI/MiniMax-M2": {
+		maxTokens: 192608,
+		contextWindow: 192608,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.55,
+		outputPrice: 2.19,
+		description:
+			"MiniMax's latest hybrid reasoning model: it's fast, it thinks before it responds, it's great at using tools via the API, and it's a strong coding model. 192k-token context.",
+	},
 	"hf:moonshotai/Kimi-K2-Instruct-0905": {
 		maxTokens: 262144,
 		contextWindow: 262144,
@@ -46,6 +58,14 @@ export const syntheticModels = {
 	"hf:zai-org/GLM-4.5": {
 		maxTokens: 128000,
 		contextWindow: 128000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.55,
+		outputPrice: 2.19,
+	},
+	"hf:zai-org/GLM-4.6": {
+		maxTokens: 200000,
+		contextWindow: 200000,
 		supportsImages: false,
 		supportsPromptCache: false,
 		inputPrice: 0.55,

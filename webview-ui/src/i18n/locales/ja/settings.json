@@ -247,6 +247,8 @@
 		"noProviderMatchFound": "プロバイダーが見つかりません",
 		"noMatchFound": "一致するプロファイルが見つかりません",
 		"vscodeLmDescription": "VS Code言語モデルAPIを使用すると、他のVS Code拡張機能（GitHub Copilotなど）が提供するモデルを実行できます。最も簡単な方法は、VS Code MarketplaceからCopilotおよびCopilot Chat拡張機能をインストールすることです。",
+		"vscodeLmUnavailable": "VS Code の言語モデルのサポートは Visual Studio Code でのみ利用可能です。VSCodium のようなフォークでは動作しない可能性があります。さらに、この機能は JetBrains ツールでは利用できません。",
+		"vscodeLmUnavailableInstructions": "使用しているツールがサポート対象であり、VS Code Chat がインストールされ有効になっていることを確認してください。",
 		"awsCustomArnUse": "使用したいモデルの有効なAmazon Bedrock ARNを入力してください。形式の例:",
 		"awsCustomArnDesc": "ARN内のリージョンが上で選択したAWSリージョンと一致していることを確認してください。",
 		"openRouterApiKey": "OpenRouter APIキー",
@@ -799,7 +801,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Applyを有効化",
-			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Code APIプロバイダー、OpenRouter、またはMorph APIキーが必要です。",
+			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Gateway Provider、OpenRouter、またはMorph APIキーが必要です。",
 			"apiKey": "Morph APIキー（オプション）",
 			"placeholder": "Morph APIキーを入力してください（オプション）",
 			"modelLabel": "モデル選択",
@@ -928,6 +930,10 @@
 		"taskTimeline": {
 			"label": "タスクのタイムラインを表示",
 			"description": "タスクメッセージの視覚的なタイムラインを表示し、種類ごとに色分けすることで、タスクの進捗状況を素早く確認したり、タスク履歴の特定のポイントまでスクロールバックしたりすることができます。"
+		},
+		"sendMessageOnEnter": {
+			"label": "Enterでメッセージを送信",
+			"description": "有効にすると、Enterキーで送信し、Shift+Enterで改行します。代わりにShift+Enterで送信するにはオフにします。"
 		},
 		"costThreshold": {
 			"label": "しきい値以下のコストを非表示にする",

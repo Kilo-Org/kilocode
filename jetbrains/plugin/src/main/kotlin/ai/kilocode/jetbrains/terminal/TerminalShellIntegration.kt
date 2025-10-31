@@ -4,10 +4,10 @@
 
 package ai.kilocode.jetbrains.terminal
 
-import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
+import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
 import ai.kilocode.jetbrains.util.URI
+import com.intellij.openapi.diagnostic.Logger
 
 /**
  * Terminal shell integration manager
@@ -20,9 +20,9 @@ import ai.kilocode.jetbrains.util.URI
 class TerminalShellIntegration(
     private val extHostTerminalId: String,
     private val numericId: Int,
-    private val rpcProtocol: IRPCProtocol
+    private val rpcProtocol: IRPCProtocol,
 ) {
-    
+
     companion object {
         private const val HIGH_CONFIDENCE = 2
         private const val DEFAULT_EXIT_CODE = 0
@@ -39,7 +39,7 @@ class TerminalShellIntegration(
     private val logger = Logger.getInstance(TerminalShellIntegration::class.java)
     private var shellIntegrationState: ShellIntegrationOutputState? = null
     private var shellEventListener: ShellEventListener? = null
-    
+
     /**
      * Lazy delegate for getting ExtHost terminal shell integration proxy
      */
@@ -54,10 +54,10 @@ class TerminalShellIntegration(
     fun setupShellIntegration() {
         runCatching {
             logger.info("$LOG_PREFIX_SETUP Setting up shell integration (terminal: $extHostTerminalId)...")
-            
+
             initializeShellEventListener()
             initializeShellIntegrationState()
-            
+
             logger.info("$LOG_PREFIX_SUCCESS Shell integration setup complete (terminal: $extHostTerminalId)")
         }.onFailure { exception ->
             logger.error("$LOG_PREFIX_ERROR Failed to setup shell integration (terminal: $extHostTerminalId)", exception)
@@ -69,7 +69,7 @@ class TerminalShellIntegration(
      */
     fun dispose() {
         logger.info("$LOG_PREFIX_DISPOSE Disposing shell integration: $extHostTerminalId")
-        
+
         runCatching {
             shellIntegrationState?.apply {
                 terminate()
@@ -77,7 +77,7 @@ class TerminalShellIntegration(
             }
             shellEventListener = null
             shellIntegrationState = null
-            
+
             logger.info("$LOG_PREFIX_SUCCESS Shell integration disposed: $extHostTerminalId")
         }.onFailure { exception ->
             logger.error("$LOG_PREFIX_ERROR Failed to dispose shell integration: $extHostTerminalId", exception)
@@ -127,56 +127,56 @@ class TerminalShellIntegration(
      * Handles various shell command execution events
      */
     private inner class TerminalShellEventListener : ShellEventListener {
-        
+
         override fun onShellExecutionStart(commandLine: String, cwd: String) {
             logger.info("$LOG_PREFIX_START Command execution started: '$commandLine' in directory '$cwd' (terminal: $extHostTerminalId)")
-            
+
             safeRpcCall("Notify ExtHost command start") {
                 extHostProxy.shellExecutionStart(
                     instanceId = numericId,
                     commandLineValue = commandLine,
                     commandLineConfidence = HIGH_CONFIDENCE,
                     isTrusted = true,
-                    cwd = URI.file(cwd)
+                    cwd = URI.file(cwd),
                 )
             }
         }
-        
+
         override fun onShellExecutionEnd(commandLine: String, exitCode: Int?) {
             val actualExitCode = exitCode ?: DEFAULT_EXIT_CODE
             logger.info("$LOG_PREFIX_END Command execution finished: '$commandLine' (exit code: $actualExitCode) (terminal: $extHostTerminalId)")
-            
+
             safeRpcCall("Notify ExtHost command end") {
                 extHostProxy.shellExecutionEnd(
                     instanceId = numericId,
                     commandLineValue = commandLine,
                     commandLineConfidence = HIGH_CONFIDENCE,
                     isTrusted = true,
-                    exitCode = actualExitCode
+                    exitCode = actualExitCode,
                 )
             }
         }
-        
+
         override fun onShellExecutionData(data: String) {
             logger.debug("$LOG_PREFIX_DATA Clean output data: ${data.length} chars (terminal: $extHostTerminalId)")
-            
+
             safeRpcCall("Send shellExecutionData") {
                 extHostProxy.shellExecutionData(
                     instanceId = numericId,
-                    data = data
+                    data = data,
                 )
             }
         }
-        
+
         override fun onCwdChange(cwd: String) {
             logger.info("$LOG_PREFIX_CWD Working directory changed to: '$cwd' (terminal: $extHostTerminalId)")
-            
+
             safeRpcCall("Notify ExtHost directory change") {
                 extHostProxy.cwdChange(
                     instanceId = numericId,
-                    cwd = URI.file(cwd)
+                    cwd = URI.file(cwd),
                 )
             }
         }
     }
-} 
+}

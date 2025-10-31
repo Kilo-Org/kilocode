@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { MarkdownText } from "../../../components/MarkdownText.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L1 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display error messages with red bordered box
@@ -12,9 +12,9 @@ export const SayErrorMessage: React.FC<MessageComponentProps> = ({ message }) =>
 	const theme = useTheme()
 	return (
 		<Box
-			width={BOX_L1}
+			width={getBoxWidth(1)}
 			flexDirection="column"
-			borderStyle="single"
+			borderStyle="round"
 			borderColor={theme.semantic.error}
 			paddingX={1}
 			marginY={1}>

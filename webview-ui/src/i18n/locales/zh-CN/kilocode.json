@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加额度",
-		"lowBalance": "你的 Kilo Code 余额不足"
+		"lowBalance": "你的 Kilo Code 余额不足",
+		"newOrganization": "在工作中使用 Kilo？"
 	},
 	"pagination": {
 		"previous": "上一页",
@@ -61,7 +62,8 @@
 			"automaticFetch": "最新模型在 Kilo Code 中自动可用。如果您不确定选择哪个模型，Kilo Code 与顶部<strong>粗体</strong>显示的推荐模型配合最佳。",
 			"providerRouting": {
 				"title": "提供商路由",
-				"managedByOrganization": "提供商路由设置由您的组织管理。",
+				"managedByOrganization": "管理组织级提供商路由",
+				"createOrganization": "创建组织以管理提供商路由",
 				"description": "Kilo Code 将请求路由到您模型的最佳可用提供商。默认情况下，请求会在顶级提供商之间进行负载均衡，以最大限度地延长正常运行时间。但是，您可以选择要用于此模型的特定提供商。",
 				"sorting": {
 					"default": "默认提供商排序",
@@ -102,6 +104,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "工具调用样式",
+		"description": "选择系统提示中工具调用的格式。JSON 格式目前处于实验阶段，主要面向有兴趣参与开发的用户。",
+		"automatic": "让 Kilo 决定",
+		"xml": "XML",
+		"json": "JSON（实验性）"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code 想要压缩你的对话",
@@ -129,7 +138,9 @@
 			"credits": "Credits",
 			"action": "立即购买",
 			"viewAll": "查看所有价格选项"
-		}
+		},
+		"detailedUsage": "详细使用情况",
+		"createOrganization": "创建组织以跟踪详细使用情况"
 	},
 	"docs": "文档",
 	"rules": {
@@ -205,27 +216,30 @@
 		}
 	},
 	"ghost": {
-		"title": "Autocomplete",
+		"title": "自动补全",
 		"settings": {
 			"triggers": "触发器",
-			"keybindingDescription": "Autocomplete 功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
+			"keybindingDescription": "自动补全功能可以通过命令触发。你可以在<DocsLink>这里配置键盘快捷键</DocsLink>。",
 			"enableAutoTrigger": {
-				"label": "启用 Autocomplete",
-				"description": "启用后，当你停止输入时 Kilo Code 将自动触发 Autocomplete。这对快速修复和建议很有用。"
+				"label": "启用自动补全",
+				"description": "启用后，当你停止输入时 Kilo Code 将自动触发自动补全。这对快速修复和建议很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自动触发延迟",
-				"description": "你停止输入后 Kilo Code 触发 Autocomplete 前的秒数延迟。延迟越短建议越快，但可能更消耗资源。"
+				"description": "你停止输入后 Kilo Code 触发自动补全前的秒数延迟。延迟越短建议获取速度越快，但可能更消耗资源。"
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速任务 ({{keybinding}})",
 				"description": "只需要快速更改？选择一些代码（或不选！）然后按 Cmd+I。用简单的中文描述你的目标（\"用这些 props 创建 React 组件\"，\"给这个函数添加错误处理\"），在编辑器中直接获得多个即用建议。<DocsLink>查看快捷键</DocsLink>"
 			},
 			"enableSmartInlineTaskKeybinding": {
-				"label": "手动自动完成（{{keybinding}}）",
+				"label": "手动自动补全（{{keybinding}}）",
 				"description": "需要快速修复、补全或重构？Kilo 将使用周围上下文提供即时改进，保持你的工作流。<DocsLink>查看快捷键</DocsLink>"
 			},
-			"keybindingNotFound": "未找到"
+			"keybindingNotFound": "未找到",
+			"noModelConfigured": "未找到合适的自动补全模型。请在 API 设置中配置提供商。",
+			"model": "模型",
+			"provider": "提供商"
 		}
 	},
 	"virtualProvider": {
@@ -238,7 +252,7 @@
 		"removeProfile": "移除个人资料",
 		"selectProfilePlaceholder": "选择个人资料...",
 		"addProfile": "添加简介",
-		"noProfilesAvailable": "没有配置文件可用。请先配置至少一个非虚拟提供商配置文件。",
+		"noProfilesAvailable": "没有可用的配置文件。请先配置至少一个非虚拟提供商配置文件。",
 		"dangerZoneTitle": "危险区域",
 		"dangerZoneDescription": "这些操作具有破坏性且无法撤销。",
 		"clearUsageData": "清除使用数据",
@@ -254,5 +268,19 @@
 		"maxImagesReached": "每条消息最多 20 张图片。删除一些图片以添加更多。",
 		"modelNoImageSupport": "当前模型不支持图像。",
 		"imagesRemovedNoSupport": "图片已移除，模型不支持。"
+	},
+	"memoryWarning": {
+		"message": "内存使用率已达 {{percentage}}%。请重启 IDE 以防止崩溃。"
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "这些 MCP 服务器由社区维护。点击<1>此处</1>编辑您自己的 MCP 设置。"
+		},
+		"modes": {
+			"description": "这些模式来自社区。点击<1>此处</1>编辑您自己的自定义模式。"
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
 	}
 }

@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Keine Anbieter gefunden",
 		"noMatchFound": "Keine passenden Profile gefunden",
 		"vscodeLmDescription": "Die VS Code Language Model API ermöglicht das Ausführen von Modellen, die von anderen VS Code-Erweiterungen bereitgestellt werden (einschließlich, aber nicht beschränkt auf GitHub Copilot). Der einfachste Weg, um zu starten, besteht darin, die Erweiterungen Copilot und Copilot Chat aus dem VS Code Marketplace zu installieren.",
+		"vscodeLmUnavailable": "Die Unterstützung von VS Code Language Models ist nur in Visual Studio Code verfügbar. Forks wie VSCodium und andere funktionieren möglicherweise nicht. Außerdem ist diese Funktion in JetBrains-Tools nicht verfügbar.",
+		"vscodeLmUnavailableInstructions": "Stellen Sie sicher, dass Sie ein unterstütztes Tool verwenden und dass VS Code Chat installiert und aktiviert ist",
 		"awsCustomArnUse": "Gib eine gültige Amazon Bedrock ARN für das Modell ein, das du verwenden möchtest. Formatbeispiele:",
 		"awsCustomArnDesc": "Stelle sicher, dass die Region in der ARN mit Ihrer oben ausgewählten AWS-Region übereinstimmt.",
 		"openRouterApiKey": "OpenRouter API-Schlüssel",
@@ -766,7 +768,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Änderungen optimiert sind. Erfordert den Kilo Code API-Anbieter, OpenRouter oder einen Morph API-Schlüssel.",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Modifikationen optimiert sind. Erfordert den Kilo Gateway Provider, OpenRouter oder einen Morph API-Schlüssel.",
 			"apiKey": "Morph API-Schlüssel (optional)",
 			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)",
 			"modelLabel": "Modellauswahl",
@@ -922,6 +924,10 @@
 		"taskTimeline": {
 			"label": "Aufgabenzeitplan anzeigen",
 			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass du den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen kannst."
+		},
+		"sendMessageOnEnter": {
+			"label": "Nachricht mit Enter senden",
+			"description": "Wenn aktiviert, drücke Enter zum Senden und Shift+Enter für eine neue Zeile. Deaktiviere dies, um stattdessen Shift+Enter zum Senden zu verwenden."
 		},
 		"costThreshold": {
 			"label": "Kosten unter Schwellenwert ausblenden",

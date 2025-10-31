@@ -1,7 +1,6 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { ToolMessageProps } from "../types.js"
-import { useApprovalEffect } from "../../../../state/hooks/useApprovalEffect.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import {
 	ToolEditedExistingFileMessage,
@@ -25,16 +24,10 @@ import {
 
 /**
  * Routes tool data to the appropriate component based on tool type
- *
- * RACE CONDITION FIX:
- * - Removed duplicate approval logic (now handled by useApprovalEffect)
- * - This component only handles routing and rendering
+ * Approval is handled centrally by useApprovalMonitor in UI.tsx
  */
 export const ToolRouter: React.FC<ToolMessageProps> = ({ message, toolData }) => {
 	const theme = useTheme()
-	// Use centralized approval orchestration
-	// This handles all approval logic including auto-approval
-	useApprovalEffect(message)
 
 	switch (toolData.tool) {
 		case "editedExistingFile":

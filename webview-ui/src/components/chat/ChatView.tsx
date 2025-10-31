@@ -135,6 +135,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		soundVolume,
 		// cloudIsAuthenticated, // kilocode_change
 		messageQueue = [],
+		sendMessageOnEnter, // kilocode_change
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -2207,6 +2208,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				mode={mode}
 				setMode={setMode}
 				modeShortcutText={modeShortcutText}
+				sendMessageOnEnter={sendMessageOnEnter} // kilocode_change
 			/>
 			{/* kilocode_change: added settings toggle the profile and model selection */}
 			<BottomControls showApiConfig />

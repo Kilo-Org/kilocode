@@ -1,21 +1,19 @@
 import { LLMClient } from "./llm-client.js"
-import { PromptStrategyManager } from "../services/ghost/PromptStrategyManager.js"
-import { GhostSuggestionContext } from "../services/ghost/types.js"
+import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
+import { GhostSuggestionContext, AutocompleteInput, extractPrefixSuffix } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
-import { CURSOR_MARKER } from "../services/ghost/ghostConstants.js"
-import { GhostStreamingParser } from "../services/ghost/GhostStreamingParser.js"
+import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
+import { parseGhostResponse } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
 import * as vscode from "vscode"
+import crypto from "crypto"
 
 export class StrategyTester {
 	private llmClient: LLMClient
-	private strategyManager: PromptStrategyManager
+	private autoTriggerStrategy: AutoTriggerStrategy
 
-	constructor(llmClient: LLMClient, options?: { overrideStrategy?: string }) {
+	constructor(llmClient: LLMClient) {
 		this.llmClient = llmClient
-		this.strategyManager = new PromptStrategyManager({
-			debug: false,
-			overrideStrategy: options?.overrideStrategy,
-		})
+		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
 
 	/**
@@ -38,7 +36,7 @@ export class StrategyTester {
 		}
 
 		// Remove the cursor marker from the code before creating the document
-		// formatDocumentWithCursor will add it back at the correct position
+		// the code will add it back at the correct position
 		const codeWithoutMarker = code.replace(CURSOR_MARKER, "")
 
 		const uri = vscode.Uri.parse("file:///test.js")
@@ -58,33 +56,69 @@ export class StrategyTester {
 
 	async getCompletion(code: string): Promise<string> {
 		const context = this.createContext(code)
-		const { systemPrompt, userPrompt, strategy } = this.strategyManager.buildPrompt(context)
+
+		// Extract prefix, suffix, and languageId
+		const position = context.range?.start ?? new vscode.Position(0, 0)
+		const offset = context.document.offsetAt(position)
+		const text = context.document.getText()
+		const prefix = text.substring(0, offset)
+		const suffix = text.substring(offset)
+		const languageId = context.document.languageId || "javascript"
+
+		// Create AutocompleteInput
+		const autocompleteInput: AutocompleteInput = {
+			isUntitledFile: false,
+			completionId: crypto.randomUUID(),
+			filepath: context.document.uri.fsPath,
+			pos: { line: position.line, character: position.character },
+			recentlyVisitedRanges: [],
+			recentlyEditedRanges: [],
+		}
+
+		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
+			autocompleteInput,
+			prefix,
+			suffix,
+			languageId,
+		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 		return response.content
 	}
 
-	parseCompletion(xmlResponse: string): { search: string; replace: string }[] {
-		const parser = new GhostStreamingParser()
+	parseCompletion(originalContent: string, xmlResponse: string): string | null {
+		try {
+			const cursorIndex = originalContent.indexOf(CURSOR_MARKER)
+			const prefix = originalContent.substring(0, cursorIndex)
+			const suffix = originalContent.substring(cursorIndex + CURSOR_MARKER.length)
 
-		const dummyContext: GhostSuggestionContext = {
-			document: new MockTextDocument(vscode.Uri.parse("file:///test.js"), "") as any,
-			range: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)) as any,
+			const result = parseGhostResponse(xmlResponse, prefix, suffix)
+
+			// Check if we have any suggestions
+			if (!result.suggestions.hasSuggestions()) {
+				console.warn("No suggestions found")
+				return null
+			}
+
+			// Get the FIM suggestion
+			const fimSuggestion = result.suggestions.getFillInAtCursor()
+			if (!fimSuggestion) {
+				console.warn("No FIM suggestion found")
+				return null
+			}
+
+			// Reconstruct the complete content with the FIM text inserted
+			return fimSuggestion.prefix + fimSuggestion.text + fimSuggestion.suffix
+		} catch (error) {
+			console.warn("Failed to parse completion:", error)
+			return null
 		}
-
-		parser.initialize(dummyContext)
-		parser.processChunk(xmlResponse)
-		parser.finishStream()
-
-		return parser.getCompletedChanges()
 	}
 
 	/**
-	 * Get the type of the strategy that would be selected for the given code
+	 * Get the type of the strategy (always auto-trigger now)
 	 */
-	getSelectedStrategyName(code: string): string {
-		const context = this.createContext(code)
-		const strategy = this.strategyManager.selectStrategy(context)
-		return strategy.name
+	getSelectedStrategyName(): string {
+		return "auto-trigger"
 	}
 }

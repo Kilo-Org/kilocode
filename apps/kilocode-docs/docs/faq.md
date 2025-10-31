@@ -41,11 +41,21 @@ Kilo Code can help with a variety of coding tasks, including:
 
 ### Is Kilo Code free to use?
 
-The Kilo Code extension itself is free and open-source. If you're looking to earn some credits, you could join our <a href={DISCORD_URL} target='_blank'>Discord</a> where we sometimes have promotional offers!
+The Kilo Code extension itself is free and open-source. In order for Kilo Code to be useful, you need an AI model to respond to your queries. Models are hosted by providers and most charge for access.
 
-After that, you can add a credit card to buy more tokens (securely processed through Stripe. Our pricing matches Anthropic's API rates exactly. We don't take any cut, either per token or per top-up. In the future we'll add more LLM providers.
+There are some models available for free. The set of free models if constantly changing based on provider pricing decisions.
 
-Alternatively, you can "Bring Your Own API" (like [Anthropic](providers/anthropic), [OpenAI](providers/openai), [OpenRouter](providers/openrouter), [Requesty](providers/requesty), etc.) for its AI capabilities. These providers typically charge for API usage based on the number of tokens processed. You will need to create an account and obtain an API key from your chosen provider. See [Setting Up Your First AI Provider](getting-started/connecting-api-provider) for details.
+You can also use Kilo Code with a [local model](advanced-usage/local-models) or "Bring Your Own API Key" for [another model provider](getting-started/connecting-api-provider) (like [Anthropic](providers/anthropic), [OpenAI](providers/openai), [OpenRouter](providers/openrouter), [Requesty](providers/requesty), etc.).
+
+### How do I pay for model usage via Kilo Code?
+
+If you choose to pay for models via Kilo Code, you do so by buying Kilo Credits. You can [buy Kilo Credits](basic-usage/adding-credits) securely via Stripe with a credit card. We do not charge a markup on Kilo Credits. $1 you give us is $1 in Kilo Credits.
+
+Model usage is metered by the providers in terms of different kinds of tokens. When you use a model, we debit your Kilo credits by the amount the provider charges us -- with no markup.
+
+You can use any models you like as long as you have credits in your account. When you run out of credits, you can add more. It's that simple!
+
+If you're looking to earn some credits, you could join our <a href={DISCORD_URL} target='_blank'>Discord</a> where we sometimes have promotional offers!
 
 ### What are the risks of using Kilo Code?
 

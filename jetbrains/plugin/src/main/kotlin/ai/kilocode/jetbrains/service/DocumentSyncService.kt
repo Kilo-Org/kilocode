@@ -4,17 +4,17 @@
 
 package ai.kilocode.jetbrains.service
 
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.editor.Document
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.vfs.VirtualFile
 import ai.kilocode.jetbrains.core.PluginContext
 import ai.kilocode.jetbrains.core.ServiceProxyRegistry
 import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.editor.ModelAddedData
 import ai.kilocode.jetbrains.editor.createURI
 import ai.kilocode.jetbrains.ipc.proxy.interfaces.ExtHostDocumentsProxy
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.editor.Document
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.vfs.VirtualFile
 
 class DocumentSyncService(private val project: Project) {
 
@@ -43,7 +43,7 @@ class DocumentSyncService(private val project: Project) {
                 "authority" to "",
                 "path" to virtualFile.path,
                 "query" to "",
-                "fragment" to ""
+                "fragment" to "",
             )
             val uri = createURI(uriMap)
 
@@ -69,7 +69,7 @@ class DocumentSyncService(private val project: Project) {
                         EOL = handle.document.EOL,
                         languageId = handle.document.languageId,
                         isDirty = false, // Set to false after save
-                        encoding = handle.document.encoding
+                        encoding = handle.document.encoding,
                     )
 
                     // Update document state in EditorHolder
@@ -93,14 +93,14 @@ class DocumentSyncService(private val project: Project) {
     fun shouldHandleFileEvent(virtualFile: VirtualFile): Boolean {
         // Filter: only process real files (non-directory) and not temporary files
         return !virtualFile.isDirectory &&
-                virtualFile.isInLocalFileSystem &&
-                !virtualFile.path.contains("/.idea/") && // Exclude IDE configuration files
-                !virtualFile.path.contains("/target/") && // Exclude build output files
-                !virtualFile.path.contains("/build/") &&
-                !virtualFile.path.contains("/node_modules/") &&
-                virtualFile.extension != null && // Ensure file has extension
-                !isTooLargeForSyncing(virtualFile) && // Exclude files that are too large for syncing
-                !isForSimpleWidget(virtualFile) // Exclude simple widget files
+            virtualFile.isInLocalFileSystem &&
+            !virtualFile.path.contains("/.idea/") && // Exclude IDE configuration files
+            !virtualFile.path.contains("/target/") && // Exclude build output files
+            !virtualFile.path.contains("/build/") &&
+            !virtualFile.path.contains("/node_modules/") &&
+            virtualFile.extension != null && // Ensure file has extension
+            !isTooLargeForSyncing(virtualFile) && // Exclude files that are too large for syncing
+            !isForSimpleWidget(virtualFile) // Exclude simple widget files
     }
 
     /**
@@ -126,29 +126,29 @@ class DocumentSyncService(private val project: Project) {
             // Exclude special file types
             val fileName = virtualFile.name.lowercase()
             val extension = virtualFile.extension?.lowercase()
-            
+
             // Temporary files, cache files, backup files, etc.
             fileName.startsWith(".") ||
-            fileName.endsWith(".tmp") ||
-            fileName.endsWith(".temp") ||
-            fileName.endsWith(".bak") ||
-            fileName.endsWith(".backup") ||
-            fileName.contains("~") ||
-            // Binary file extensions
-            extension in setOf(
-                "exe", "dll", "so", "dylib", "bin", "obj", "o", "a", "lib",
-                "zip", "tar", "gz", "rar", "7z", "jar", "war", "ear",
-                "png", "jpg", "jpeg", "gif", "bmp", "ico", "tiff",
-                "mp3", "mp4", "avi", "mov", "wav", "flv", "wmv",
-                "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"
-            ) ||
-            // Special paths
-            virtualFile.path.contains("/.git/") ||
-            virtualFile.path.contains("/.svn/") ||
-            virtualFile.path.contains("/.hg/") ||
-            virtualFile.path.contains("/vendor/") ||
-            virtualFile.path.contains("/dist/") ||
-            virtualFile.path.contains("/out/")
+                fileName.endsWith(".tmp") ||
+                fileName.endsWith(".temp") ||
+                fileName.endsWith(".bak") ||
+                fileName.endsWith(".backup") ||
+                fileName.contains("~") ||
+                // Binary file extensions
+                extension in setOf(
+                    "exe", "dll", "so", "dylib", "bin", "obj", "o", "a", "lib",
+                    "zip", "tar", "gz", "rar", "7z", "jar", "war", "ear",
+                    "png", "jpg", "jpeg", "gif", "bmp", "ico", "tiff",
+                    "mp3", "mp4", "avi", "mov", "wav", "flv", "wmv",
+                    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+                ) ||
+                // Special paths
+                virtualFile.path.contains("/.git/") ||
+                virtualFile.path.contains("/.svn/") ||
+                virtualFile.path.contains("/.hg/") ||
+                virtualFile.path.contains("/vendor/") ||
+                virtualFile.path.contains("/dist/") ||
+                virtualFile.path.contains("/out/")
         } catch (e: Exception) {
             logger.warn("Failed to check if file is for simple widget: ${virtualFile.path}", e)
             false
@@ -158,4 +158,4 @@ class DocumentSyncService(private val project: Project) {
     fun dispose() {
         extHostDocumentsProxy = null
     }
-} 
+}

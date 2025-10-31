@@ -53,7 +53,6 @@
 	"ghost.commands.cancelSuggestions": "Batalkan Saran Pengeditan",
 	"ghost.commands.applyCurrentSuggestion": "Terapkan Saran Pengeditan Saat Ini",
 	"ghost.commands.applyAllSuggestions": "Terapkan Semua Saran Pengeditan",
-	"ghost.commands.promptCodeSuggestion": "Tugas Cepat",
 	"ghost.commands.goToNextSuggestion": "Pergi ke Saran Berikutnya",
 	"ghost.commands.goToPreviousSuggestion": "Pergi ke Saran Sebelumnya"
 }

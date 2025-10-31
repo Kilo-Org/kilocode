@@ -148,7 +148,7 @@ describe("generatePackageJson", () => {
 					{
 						command: "roo-code-nightly.plusButtonClicked",
 						title: "%command.newTask.title%",
-						icon: "$(edit)",
+						icon: "$(add)",
 					},
 					{
 						command: "roo-code-nightly.openInNewTab",

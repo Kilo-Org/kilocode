@@ -5,11 +5,6 @@
 
 package ai.kilocode.jetbrains.core
 
-import com.google.gson.Gson
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.application.ApplicationInfo
 import ai.kilocode.jetbrains.editor.EditorAndDocManager
 import ai.kilocode.jetbrains.ipc.NodeSocket
 import ai.kilocode.jetbrains.ipc.PersistentProtocol
@@ -18,6 +13,13 @@ import ai.kilocode.jetbrains.util.PluginConstants
 import ai.kilocode.jetbrains.util.PluginResourceUtil
 import ai.kilocode.jetbrains.util.URI
 import ai.kilocode.jetbrains.workspace.WorkspaceFileChangeManager
+import com.google.gson.Gson
+import com.intellij.ide.plugins.PluginManagerCore
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.project.Project
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,8 +27,6 @@ import kotlinx.coroutines.cancel
 import java.net.Socket
 import java.nio.channels.SocketChannel
 import java.nio.file.Paths
-import com.intellij.ide.plugins.PluginManagerCore
-import com.intellij.openapi.extensions.PluginId
 
 /**
  * Extension host manager, responsible for communication with extension processes.
@@ -39,60 +39,61 @@ class ExtensionHostManager : Disposable {
 
     private val project: Project
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
-     // Communication protocol
+
+    // Communication protocol
     private var nodeSocket: NodeSocket
     private var protocol: PersistentProtocol? = null
-    
-     // RPC manager
+
+    // RPC manager
     private var rpcManager: RPCManager? = null
-    
-     // Extension manager
+
+    // Extension manager
     private var extensionManager: ExtensionManager? = null
-    
-     // Plugin identifier
+
+    // Plugin identifier
     private var rooCodeIdentifier: String? = null
-    
-     // JSON serialization
+
+    // JSON serialization
     private val gson = Gson()
-    
-     // Last diagnostic log time
+
+    // Last diagnostic log time
     private var lastDiagnosticLogTime = 0L
 
-    private var  projectPath: String? = null
-    
-     // Support Socket constructor
-    constructor(clientSocket: Socket, projectPath: String,project: Project) {
+    private var projectPath: String? = null
+
+    // Support Socket constructor
+    constructor(clientSocket: Socket, projectPath: String, project: Project) {
         clientSocket.tcpNoDelay = true
         this.nodeSocket = NodeSocket(clientSocket, "extension-host")
         this.projectPath = projectPath
         this.project = project
     }
-     // Support SocketChannel constructor
-    constructor(clientChannel: SocketChannel, projectPath: String , project: Project) {
+
+    // Support SocketChannel constructor
+    constructor(clientChannel: SocketChannel, projectPath: String, project: Project) {
         this.nodeSocket = NodeSocket(clientChannel, "extension-host")
         this.projectPath = projectPath
         this.project = project
     }
-    
+
     /**
      * Start communication with the extension process.
      */
     fun start() {
         try {
-             // Initialize extension manager
+            // Initialize extension manager
             extensionManager = ExtensionManager()
             val extensionPath = PluginResourceUtil.getResourcePath(PluginConstants.PLUGIN_ID, PluginConstants.PLUGIN_CODE_DIR)
             rooCodeIdentifier = extensionPath?.let { extensionManager!!.registerExtension(it).identifier.value }
-             // Create protocol
+            // Create protocol
             protocol = PersistentProtocol(
                 PersistentProtocol.PersistentProtocolOptions(
                     socket = nodeSocket,
                     initialChunk = null,
                     loadEstimator = null,
-                    sendKeepAlive = true
+                    sendKeepAlive = true,
                 ),
-                this::handleMessage
+                this::handleMessage,
             )
 
             LOG.info("ExtensionHostManager started successfully")
@@ -101,14 +102,14 @@ class ExtensionHostManager : Disposable {
             dispose()
         }
     }
-    
+
     /**
      * Get RPC responsive state.
      * @return Responsive state, or null if RPC manager is not initialized.
      */
     fun getResponsiveState(): ResponsiveState? {
         val currentTime = System.currentTimeMillis()
-         // Limit diagnostic log frequency, at most once every 60 seconds
+        // Limit diagnostic log frequency, at most once every 60 seconds
         val shouldLogDiagnostics = currentTime - lastDiagnosticLogTime > 60000
         if (rpcManager == null) {
             if (shouldLogDiagnostics) {
@@ -117,7 +118,7 @@ class ExtensionHostManager : Disposable {
             }
             return null
         }
-         // Log connection diagnostic information
+        // Log connection diagnostic information
         if (shouldLogDiagnostics) {
             val socketInfo = buildString {
                 append("NodeSocket: ")
@@ -129,7 +130,7 @@ class ExtensionHostManager : Disposable {
                 append(", disposed=")
                 append(nodeSocket.isDisposed())
             }
-            
+
             val protocolInfo = protocol?.let { proto ->
                 "Protocol: ${if (proto.isDisposed()) "disposed" else "active"}"
             } ?: "Protocol is null"
@@ -138,14 +139,14 @@ class ExtensionHostManager : Disposable {
         }
         return rpcManager?.getRPCProtocol()?.responsiveState
     }
-    
+
     /**
      * Handle messages from the extension process.
      */
     private fun handleMessage(data: ByteArray) {
-         // Check if data is a single-byte message (extension host protocol message)
+        // Check if data is a single-byte message (extension host protocol message)
         if (data.size == 1) {
-             // Try to parse as extension host message type
+            // Try to parse as extension host message type
 
             when (ExtensionHostMessageType.fromData(data)) {
                 ExtensionHostMessageType.Ready -> handleReadyMessage()
@@ -157,18 +158,18 @@ class ExtensionHostManager : Disposable {
             LOG.debug("Received message with length ${data.size}, not handling as extension host message")
         }
     }
-    
+
     /**
      * Handle Ready message, send initialization data.
      */
     private fun handleReadyMessage() {
         LOG.info("Received Ready message from extension host")
-        
+
         try {
-             // Build initialization data
+            // Build initialization data
             val initData = createInitData()
-            
-             // Send initialization data
+
+            // Send initialization data
             val jsonData = gson.toJson(initData).toByteArray()
 
             protocol?.send(jsonData)
@@ -177,20 +178,20 @@ class ExtensionHostManager : Disposable {
             LOG.error("Failed to handle Ready message", e)
         }
     }
-    
+
     /**
      * Handle Initialized message, create RPC manager and activate plugin.
      */
     private fun handleInitializedMessage() {
         LOG.info("Received Initialized message from extension host")
-        
+
         try {
             // Get protocol
             val protocol = this.protocol ?: throw IllegalStateException("Protocol is not initialized")
             val extensionManager = this.extensionManager ?: throw IllegalStateException("ExtensionManager is not initialized")
 
             // Create RPC manager
-            rpcManager = RPCManager(protocol, extensionManager,null, project)
+            rpcManager = RPCManager(protocol, extensionManager, null, project)
 
             // Start initialization process
             rpcManager?.startInitialize()
@@ -199,7 +200,7 @@ class ExtensionHostManager : Disposable {
             project.getService(WorkspaceFileChangeManager::class.java)
 //            WorkspaceFileChangeManager.getInstance()
             project.getService(EditorAndDocManager::class.java).initCurrentIdeaEditor()
-             // Activate RooCode plugin
+            // Activate RooCode plugin
             val rooCodeId = rooCodeIdentifier ?: throw IllegalStateException("RooCode identifier is not initialized")
             extensionManager.activateExtension(rooCodeId, rpcManager!!.getRPCProtocol())
                 .whenComplete { _, error ->
@@ -215,7 +216,7 @@ class ExtensionHostManager : Disposable {
             LOG.error("Failed to handle Initialized message", e)
         }
     }
-    
+
     /**
      * Create initialization data.
      * Corresponds to the initData object in main.js.
@@ -223,7 +224,7 @@ class ExtensionHostManager : Disposable {
     private fun createInitData(): Map<String, Any?> {
         val pluginDir = getPluginDir()
         val basePath = projectPath
-        
+
         return mapOf(
             "commit" to "development",
             "version" to getIDEVersion(),
@@ -236,8 +237,8 @@ class ExtensionHostManager : Disposable {
                 "appLanguage" to "en",
                 "appUriScheme" to "vscode",
                 "appRoot" to uriFromPath(pluginDir),
-                "globalStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"),".kilocode", "globalStorage").toString()),
-                "workspaceStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"),".kilocode", "workspaceStorage").toString()),
+                "globalStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"), ".kilocode", "globalStorage").toString()),
+                "workspaceStorageHome" to uriFromPath(Paths.get(System.getProperty("user.home"), ".kilocode", "workspaceStorage").toString()),
                 "extensionDevelopmentLocationURI" to null,
                 "extensionTestsLocationURI" to null,
                 "useHostProxy" to false,
@@ -249,20 +250,22 @@ class ExtensionHostManager : Disposable {
                 "name" to "IntelliJ Workspace",
                 "transient" to false,
                 "configuration" to null,
-                "isUntitled" to false
+                "isUntitled" to false,
             ),
             "remote" to mapOf(
                 "authority" to null,
                 "connectionData" to null,
-                "isRemote" to false
+                "isRemote" to false,
             ),
             "extensions" to mapOf<String, Any>(
                 "versionId" to 1,
                 "allExtensions" to (extensionManager?.getAllExtensionDescriptions() ?: emptyList<Any>()),
                 "myExtensions" to (extensionManager?.getAllExtensionDescriptions()?.map { it.identifier } ?: emptyList<Any>()),
-                "activationEvents" to (extensionManager?.getAllExtensionDescriptions()?.associate { ext ->
-                    ext.identifier.value to (ext.activationEvents ?: emptyList<String>())
-                } ?: emptyMap())
+                "activationEvents" to (
+                    extensionManager?.getAllExtensionDescriptions()?.associate { ext ->
+                        ext.identifier.value to (ext.activationEvents ?: emptyList<String>())
+                    } ?: emptyMap()
+                    ),
             ),
             "telemetryInfo" to mapOf(
                 "sessionId" to "intellij-session",
@@ -270,7 +273,7 @@ class ExtensionHostManager : Disposable {
                 "sqmId" to "",
                 "devDeviceId" to "",
                 "firstSessionDate" to java.time.Instant.now().toString(),
-                "msftInternal" to false
+                "msftInternal" to false,
             ),
             "logLevel" to 0, // Info level
             "loggers" to emptyList<Any>(),
@@ -278,12 +281,12 @@ class ExtensionHostManager : Disposable {
             "autoStart" to true,
             "consoleForward" to mapOf(
                 "includeStack" to false,
-                "logNative" to false
+                "logNative" to false,
             ),
-            "uiKind" to 1 // Desktop
+            "uiKind" to 1, // Desktop
         )
     }
-    
+
     /**
      * Get current IDE name.
      */
@@ -291,12 +294,12 @@ class ExtensionHostManager : Disposable {
         val applicationInfo = ApplicationInfo.getInstance()
         val productCode = applicationInfo.build.productCode
         val version = applicationInfo.shortVersion ?: "1.0.0"
-        
+
         // Return in the format: wrapper|jetbrains|productCode
         val result = "wrapper|jetbrains|$productCode|$version"
         return result
     }
-    
+
     /**
      * Get current IDE version.
      */
@@ -314,7 +317,7 @@ class ExtensionHostManager : Disposable {
 
         return version
     }
-    
+
     /**
      * Get plugin directory.
      */
@@ -322,33 +325,33 @@ class ExtensionHostManager : Disposable {
         return PluginResourceUtil.getResourcePath(PluginConstants.PLUGIN_ID, "")
             ?: throw IllegalStateException("Unable to get plugin directory")
     }
-    
+
     /**
      * Create URI object.
      */
     private fun uriFromPath(path: String): URI {
         return URI.file(path)
     }
-    
+
     /**
      * Resource disposal.
      */
     override fun dispose() {
         LOG.info("Disposing ExtensionHostManager")
-        
+
         // Cancel coroutines
         coroutineScope.cancel()
-        
+
         // Release RPC manager
         rpcManager = null
-        
+
         // Release protocol
         protocol?.dispose()
         protocol = null
-        
+
         // Release socket
         nodeSocket.dispose()
 
         LOG.info("ExtensionHostManager disposed")
     }
-} 
+}

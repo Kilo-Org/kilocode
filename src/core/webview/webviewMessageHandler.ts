@@ -6,12 +6,15 @@ import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 // kilocode_change start
 import axios from "axios"
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
+import { getKiloUrlFromToken, isGlobalStateKey } from "@roo-code/types"
+import { getAppUrl } from "@roo-code/types"
 import {
+	MaybeTypedWebviewMessage,
 	ProfileData,
 	SeeNewChangesPayload,
 	TaskHistoryRequestPayload,
 	TasksByIdRequestPayload,
+	UpdateGlobalStateMessage,
 } from "../../shared/WebviewMessage"
 // kilocode_change end
 
@@ -85,7 +88,7 @@ import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } f
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
-	message: WebviewMessage,
+	message: MaybeTypedWebviewMessage, // kilocode_change switch to MaybeTypedWebviewMessage for better type-safety
 	marketplaceManager?: MarketplaceManager,
 ) => {
 	// Utility functions provided for concise get/update of global state via contextProxy API.
@@ -1751,6 +1754,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("showTaskTimeline", message.bool ?? false)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start
+		case "sendMessageOnEnter":
+			await updateGlobalState("sendMessageOnEnter", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "showTimestamps":
 			await updateGlobalState("showTimestamps", message.bool ?? false)
 			await provider.postStateToWebview()
@@ -1863,6 +1872,12 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("autoApprovalEnabled", message.bool ?? false)
 			await provider.postStateToWebview()
 			break
+		// kilocode_change start: yolo mode
+		case "yoloMode":
+			await updateGlobalState("yoloMode", message.bool ?? false)
+			await provider.postStateToWebview()
+			break
+		// kilocode_change end
 		case "enhancePrompt":
 			if (message.text) {
 				try {
@@ -1973,7 +1988,7 @@ export const webviewMessageHandler = async (
 			} else if (answer === discordText) {
 				await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
 			} else if (answer === customerSupport) {
-				await vscode.env.openExternal(vscode.Uri.parse("https://kilocode.ai/support"))
+				await vscode.env.openExternal(vscode.Uri.parse(getAppUrl("/support")))
 			}
 			break
 		}
@@ -2032,6 +2047,7 @@ export const webviewMessageHandler = async (
 					await provider.providerSettingsManager.saveConfig(message.text, message.apiConfiguration)
 					const listApiConfig = await provider.providerSettingsManager.listConfig()
 					await updateGlobalState("listApiConfigMeta", listApiConfig)
+					vscode.commands.executeCommand("kilo-code.ghost.reload") // kilocode_change: Reload ghost model when API provider settings change
 				} catch (error) {
 					provider.log(
 						`Error save api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2593,12 +2609,8 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(
-					`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile`,
-					{
-						headers,
-					},
-				)
+				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken)
+				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
 				const organizationExists = (response.data.organizations ?? []).some(
@@ -2693,10 +2705,8 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const response = await axios.get(`${getKiloBaseUriFromToken(kilocodeToken)}/api/profile/balance`, {
-					// Original path for balance
-					headers,
-				})
+				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", kilocodeToken)
+				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type
 					payload: { success: true, data: response.data },
@@ -2724,9 +2734,12 @@ export const webviewMessageHandler = async (
 				const uiKind = message.values?.uiKind || "Desktop"
 				const source = uiKind === "Web" ? "web" : uriScheme
 
-				const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+				const url = getKiloUrlFromToken(
+					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					kilocodeToken,
+				)
 				const response = await axios.post(
-					`${baseUrl}/payments/topup?origin=extension&source=${source}&amount=${credits}`,
+					url,
 					{},
 					{
 						headers: {
@@ -3498,6 +3511,16 @@ export const webviewMessageHandler = async (
 			break
 		}
 		// kilocode_change end
+		// kilocode_change start: Type-safe global state handler
+		case "updateGlobalState": {
+			const { stateKey, stateValue } = message as UpdateGlobalStateMessage
+			if (stateKey !== undefined && stateValue !== undefined && isGlobalStateKey(stateKey)) {
+				await updateGlobalState(stateKey, stateValue)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+		// kilocode_change end: Type-safe global state handler
 		case "insertTextToChatArea":
 			provider.postMessageToWebview({ type: "insertTextToChatArea", text: message.text })
 			break

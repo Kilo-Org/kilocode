@@ -22,12 +22,16 @@ export const ApprovalMenu: React.FC<ApprovalMenuProps> = ({ options, selectedInd
 	}
 
 	return (
-		<Box flexDirection="column" borderStyle="single" borderColor={theme.actions.pending} paddingX={1}>
+		<Box flexDirection="column" borderStyle="round" borderColor={theme.actions.pending} paddingX={1}>
 			<Text bold color={theme.actions.pending}>
 				[!] Action Required:
 			</Text>
 			{options.map((option, index) => (
-				<ApprovalOptionRow key={option.action} option={option} isSelected={index === selectedIndex} />
+				<ApprovalOptionRow
+					key={option.key || `${option.action}-${index}`}
+					option={option}
+					isSelected={index === selectedIndex}
+				/>
 			))}
 		</Box>
 	)

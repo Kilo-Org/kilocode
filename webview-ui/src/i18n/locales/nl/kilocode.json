@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
-		"lowBalance": "Uw Kilo Code-saldo is laag"
+		"lowBalance": "Uw Kilo Code-saldo is laag",
+		"newOrganization": "Gebruik je Kilo voor werk?"
 	},
 	"pagination": {
 		"previous": "Vorige",
@@ -48,7 +49,8 @@
 			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
 			"providerRouting": {
 				"title": "Provider Routing",
-				"managedByOrganization": "De Provider Routing instellingen worden beheerd door je organisatie.",
+				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",
+				"createOrganization": "Maak organisatie aan om Provider Routing te beheren",
 				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 				"sorting": {
 					"default": "Standaard provider sortering",
@@ -102,6 +104,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Tool Call Stijl",
+		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan.",
+		"automatic": "Laat Kilo beslissen",
+		"xml": "XML",
+		"json": "JSON (experimenteel)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
@@ -129,7 +138,9 @@
 			"credits": "credits",
 			"action": "Nu Kopen",
 			"viewAll": "Alle prijs opties bekijken"
-		}
+		},
+		"detailedUsage": "Gedetailleerd gebruik",
+		"createOrganization": "Maak organisatie aan om gedetailleerd gebruik bij te houden"
 	},
 	"docs": "Documentatie",
 	"rules": {
@@ -225,7 +236,10 @@
 				"label": "Handmatige Automatische Aanvulling ({{keybinding}})",
 				"description": "Heb je een snelle fix, voltooiing of refactor nodig? Kilo zal de omringende context gebruiken om onmiddellijke verbeteringen aan te bieden, waardoor je in de flow blijft. <DocsLink>Sneltoets bewerken</DocsLink>"
 			},
-			"keybindingNotFound": "niet gevonden"
+			"keybindingNotFound": "niet gevonden",
+			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
+			"model": "Model",
+			"provider": "Provider"
 		}
 	},
 	"virtualProvider": {
@@ -238,7 +252,7 @@
 		"removeProfile": "Profiel verwijderen",
 		"selectProfilePlaceholder": "Selecteer profiel...",
 		"addProfile": "Profiel toevoegen",
-		"noProfilesAvailable": "Geen profielprofielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
+		"noProfilesAvailable": "Geen profielen beschikbaar. Configureer eerst ten minste één niet-virtueel providerprofiel.",
 		"dangerZoneTitle": "Gevaarzone",
 		"dangerZoneDescription": "Deze acties zijn destructief en kunnen niet ongedaan worden gemaakt.",
 		"clearUsageData": "Gebruiksgegevens Wissen",
@@ -250,9 +264,23 @@
 		"perDay": "Per dag",
 		"requestsLabel": "Verzoeken"
 	},
+	"memoryWarning": {
+		"message": "Geheugengebruik is {{percentage}}%. Start je IDE opnieuw op om crashes te voorkomen."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Afbeeldingen worden niet ondersteund door het huidige model.",
 		"maxImagesReached": "Maximaal 20 afbeeldingen per bericht. Verwijder enkele afbeeldingen om meer toe te voegen.",
 		"imagesRemovedNoSupport": "Afbeeldingen verwijderd, niet ondersteund door model."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Deze MCP-servers worden onderhouden door de gemeenschap. Klik <1>hier</1> om je eigen MCP-instellingen te bewerken."
+		},
+		"modes": {
+			"description": "Deze modi zijn beschikbaar via de gemeenschap. Klik <1>hier</1> om je eigen aangepaste modi te bewerken."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nieuw: Deel modi door een organisatie aan te maken"
 	}
 }

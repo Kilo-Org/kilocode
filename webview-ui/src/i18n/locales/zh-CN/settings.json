@@ -247,6 +247,8 @@
 		"noProviderMatchFound": "未找到提供商",
 		"noMatchFound": "未找到匹配的配置文件",
 		"vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
+		"vscodeLmUnavailable": "VS Code 语言模型支持仅在 Visual Studio Code 中可用。VSCodium 等分支可能无法工作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "请确保您使用的是受支持的工具，并且已安装并启用 VS Code Chat",
 		"awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
 		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
 		"openRouterApiKey": "OpenRouter API 密钥",
@@ -798,12 +800,12 @@
 			"successConfigured": "✓ 图像生成已配置完成，可以使用"
 		},
 		"INLINE_ASSIST": {
-			"name": "Autocomplete",
-			"description": "启用 Autocomplete 功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的 Autocomplete。"
+			"name": "自动补全",
+			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "启用快速应用",
-			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行快速应用编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
+			"name": "启用 Fast Apply",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
 			"apiKey": "Morph API 密钥（可选）",
 			"placeholder": "输入您的 Morph API 密钥（可选）",
 			"modelLabel": "模型选择",
@@ -932,6 +934,10 @@
 		"taskTimeline": {
 			"label": "显示任务时间轴",
 			"description": "显示任务消息的可视化时间线，按类型进行颜色区分，让您能够快速查看任务进度并滚动回溯到任务历史中的特定节点。"
+		},
+		"sendMessageOnEnter": {
+			"label": "使用回车键发送消息",
+			"description": "启用后，按回车键发送消息，Shift+回车键换行。禁用后，使用Shift+回车键发送消息。"
 		},
 		"costThreshold": {
 			"label": "隐藏低于阈值的费用",

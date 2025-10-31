@@ -65,6 +65,7 @@ export const toolParamNames = [
 	"target_file",
 	"instructions",
 	"code_edit",
+	"files",
 	// kilocode_change end
 	"args",
 	"start_line",
@@ -84,6 +85,7 @@ export interface ToolUse {
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
+	toolUseId?: string // kilocode_change
 }
 
 export interface ExecuteCommandToolUse extends ToolUse {

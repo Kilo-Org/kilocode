@@ -41,6 +41,7 @@ import {
 	DEFAULT_WRITE_DELAY_MS,
 	ORGANIZATION_ALLOW_ALL,
 	DEFAULT_MODES,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -104,6 +105,8 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
+import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
+import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -693,6 +696,39 @@ export class ClineProvider
 			return
 		}
 
+		//kilocode_change start
+		if (command === "addToContextAndFocus") {
+			let messageText = prompt
+
+			const editor = vscode.window.activeTextEditor
+			if (editor) {
+				const fullContent = editor.document.getText()
+				const filePath = params.filePath as string
+
+				messageText = `
+For context, we are working within this file:
+
+'${filePath}' (see below for file content)
+<file_content path="${filePath}">
+${fullContent}
+</file_content>
+
+Heed this prompt:
+
+${prompt}
+`
+			}
+
+			await visibleProvider.postMessageToWebview({
+				type: "invoke",
+				invoke: "setChatBoxMessage",
+				text: messageText,
+			})
+			await vscode.commands.executeCommand("kilo-code.focusChatInput")
+			return
+		}
+		// kilocode_change end
+
 		await visibleProvider.createTask(prompt)
 	}
 
@@ -1078,6 +1114,7 @@ export class ClineProvider
 						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1154,6 +1191,7 @@ export class ClineProvider
 				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -1881,6 +1919,7 @@ export class ClineProvider
 			language,
 			showAutoApproveMenu, // kilocode_change
 			showTaskTimeline, // kilocode_change
+			sendMessageOnEnter, // kilocode_change
 			showTimestamps, // kilocode_change
 			hideCostBelowThreshold, // kilocode_change
 			maxReadFileLine,
@@ -1918,6 +1957,7 @@ export class ClineProvider
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			yoloMode, // kilocode_change
 		} = await this.getState()
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
@@ -1962,6 +2002,7 @@ export class ClineProvider
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
@@ -2034,6 +2075,7 @@ export class ClineProvider
 			showRooIgnoredFiles: showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: sendMessageOnEnter ?? true, // kilocode_change
 			showTimestamps: showTimestamps ?? true, // kilocode_change
 			hideCostBelowThreshold, // kilocode_change
 			language, // kilocode_change
@@ -2219,6 +2261,7 @@ export class ClineProvider
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
+			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
@@ -2286,6 +2329,7 @@ export class ClineProvider
 			showRooIgnoredFiles: stateValues.showRooIgnoredFiles ?? false,
 			showAutoApproveMenu: stateValues.showAutoApproveMenu ?? false, // kilocode_change
 			showTaskTimeline: stateValues.showTaskTimeline ?? true, // kilocode_change
+			sendMessageOnEnter: stateValues.sendMessageOnEnter ?? true, // kilocode_change
 			showTimestamps: stateValues.showTimestamps ?? true, // kilocode_change
 			hideCostBelowThreshold: stateValues.hideCostBelowThreshold ?? 0, // kilocode_change
 			maxReadFileLine: stateValues.maxReadFileLine ?? -1,
@@ -2500,6 +2544,7 @@ export class ClineProvider
 			...config,
 			provider: this,
 			sessionId: vscode.env.sessionId,
+			isCloudAgent: CloudService.instance.isCloudAgent,
 		})
 
 		const bridge = BridgeOrchestrator.getInstance()
@@ -2928,6 +2973,7 @@ export class ClineProvider
 			language,
 			mode,
 			taskId: task?.taskId,
+			parentTaskId: task?.parentTask?.taskId,
 			apiProvider: apiConfiguration?.apiProvider,
 			diffStrategy: task?.diffStrategy?.getName(),
 			isSubtask: task ? !!task.parentTask : undefined,
@@ -2935,6 +2981,7 @@ export class ClineProvider
 			// kilocode_change start
 			currentTaskSize: task?.clineMessages.length,
 			taskHistorySize: this.kiloCodeTaskHistorySizeForTelemetryOnly || undefined,
+			toolStyle: getActiveToolUseStyle(apiConfiguration),
 			// kilocode_change end
 		}
 	}
@@ -2950,6 +2997,18 @@ export class ClineProvider
 	public get gitProperties(): GitProperties | undefined {
 		return this._gitProperties
 	}
+
+	// kilocode_change start
+	private _kiloConfig: KilocodeConfig | null = null
+	public async getKiloConfig(): Promise<KilocodeConfig | null> {
+		if (this._kiloConfig === null) {
+			const { repositoryUrl } = await this.getGitProperties()
+			this._kiloConfig = await getKilocodeConfig(this.cwd, repositoryUrl)
+			console.log("getKiloConfig", this._kiloConfig)
+		}
+		return this._kiloConfig
+	}
+	// kilocode_change end
 
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start

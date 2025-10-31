@@ -1,5 +1,0 @@
-function initialize() {
-  const config = loadConfig();
-  const processedConfig = processConfig(config);
-  return config;
-}

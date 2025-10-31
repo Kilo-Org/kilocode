@@ -460,3 +460,34 @@ export const updateAutoApprovalSettingAtom = atom(
 		logs.info(`Auto approval ${category} setting updated`, "ConfigAtoms")
 	},
 )
+
+/**
+ * Action atom to add a command pattern to the auto-approval allowed list
+ */
+export const addAllowedCommandAtom = atom(null, async (get, set, commandPattern: string) => {
+	const config = get(configAtom)
+	const currentAllowed = config.autoApproval?.execute?.allowed ?? []
+
+	// Don't add if already exists
+	if (currentAllowed.includes(commandPattern)) {
+		logs.debug("Command pattern already in allowed list", "ConfigAtoms", { commandPattern })
+		return
+	}
+
+	const updatedConfig = {
+		...config,
+		autoApproval: {
+			...config.autoApproval,
+			execute: {
+				...config.autoApproval?.execute,
+				enabled: true, // Enable execute auto-approval when adding patterns
+				allowed: [...currentAllowed, commandPattern],
+			},
+		},
+	}
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Added command pattern to allowed list: ${commandPattern}`, "ConfigAtoms")
+})

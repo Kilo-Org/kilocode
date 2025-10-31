@@ -1,6 +1,52 @@
 import type { ProviderName } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
 
+// Import model definitions from @roo-code/types
+import {
+	anthropicModels,
+	anthropicDefaultModelId,
+	bedrockModels,
+	bedrockDefaultModelId,
+	vertexModels,
+	vertexDefaultModelId,
+	openAiNativeModels,
+	openAiNativeDefaultModelId,
+	geminiModels,
+	geminiDefaultModelId,
+	mistralModels,
+	mistralDefaultModelId,
+	moonshotModels,
+	moonshotDefaultModelId,
+	deepSeekModels,
+	deepSeekDefaultModelId,
+	doubaoModels,
+	doubaoDefaultModelId,
+	qwenCodeModels,
+	qwenCodeDefaultModelId,
+	xaiModels,
+	xaiDefaultModelId,
+	groqModels,
+	groqDefaultModelId,
+	chutesModels,
+	chutesDefaultModelId,
+	cerebrasModels,
+	cerebrasDefaultModelId,
+	sambaNovaModels,
+	sambaNovaDefaultModelId,
+	internationalZAiModels,
+	internationalZAiDefaultModelId,
+	fireworksModels,
+	fireworksDefaultModelId,
+	featherlessModels,
+	featherlessDefaultModelId,
+	rooModels,
+	rooDefaultModelId,
+	claudeCodeModels,
+	claudeCodeDefaultModelId,
+	geminiCliModels,
+	geminiCliDefaultModelId,
+} from "@roo-code/types"
+
 /**
  * RouterName type - mirrors the one from src/shared/api.ts
  */
@@ -167,41 +213,40 @@ export const getModelFieldForProvider = (provider: ProviderName): string | null 
  * For providers without router support, these are fallback defaults
  */
 export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
-	anthropic: "claude-sonnet-4.5",
-	bedrock: "anthropic.claude-sonnet-4-5-20250929-v1:0",
-	vertex: "claude-4.5-sonnet",
-	gemini: "gemini-2.5-flash-preview-04-17",
-	deepseek: "deepseek-chat",
-	"openai-native": "gpt-5-chat-latest",
-	mistral: "magistral-medium-latest",
-	xai: "grok-code-fast-1",
-	groq: "llama-3.3-70b-versatile",
-	chutes: "deepseek-ai/DeepSeek-R1-0528",
-	cerebras: "qwen-3-coder-480b-free",
+	anthropic: anthropicDefaultModelId,
+	bedrock: bedrockDefaultModelId,
+	vertex: vertexDefaultModelId,
+	gemini: geminiDefaultModelId,
+	deepseek: deepSeekDefaultModelId,
+	"openai-native": openAiNativeDefaultModelId,
+	mistral: mistralDefaultModelId,
+	xai: xaiDefaultModelId,
+	groq: groqDefaultModelId,
+	chutes: chutesDefaultModelId,
+	cerebras: cerebrasDefaultModelId,
 	"vscode-lm": "gpt-3.5-turbo",
 	openrouter: "anthropic/claude-sonnet-4.5",
 	requesty: "anthropic/claude-sonnet-4.5",
 	glama: "anthropic/claude-sonnet-4.5",
 	unbound: "anthropic/claude-sonnet-4.5",
 	litellm: "gpt-4",
-	"qwen-code": "qwen3-coder-plus",
-	"claude-code": "claude-sonnet-4-5",
-	doubao: "doubao-seed-1-6-250615",
-	fireworks: "accounts/fireworks/models/kimi-k2-instruct-0905",
+	"qwen-code": qwenCodeDefaultModelId,
+	"claude-code": claudeCodeDefaultModelId,
+	doubao: doubaoDefaultModelId,
+	fireworks: fireworksDefaultModelId,
 	"io-intelligence": "deepseek-ai/DeepSeek-R1-0528",
-	moonshot: "kimi-k2-0711-preview",
-	sambanova: "Meta-Llama-3.1-8B-Instruct",
-	featherless: "deepseek-ai/DeepSeek-V3-0324",
+	moonshot: moonshotDefaultModelId,
+	sambanova: sambaNovaDefaultModelId,
+	featherless: featherlessDefaultModelId,
 	deepinfra: "deepseek-ai/DeepSeek-R1-0528",
+	zai: internationalZAiDefaultModelId,
+	roo: rooDefaultModelId,
+	"gemini-cli": geminiCliDefaultModelId,
 }
 
 /**
  * Get models for a specific provider
  * Mirrors the logic from webview-ui/src/components/kilocode/hooks/useProviderModels.ts
- *
- * Note: For CLI, we only support router-based providers. Static providers (anthropic, gemini, etc.)
- * would require importing from @roo-code/types which causes runtime issues. Users should configure
- * these providers through the extension UI.
  */
 export function getModelsByProvider(params: {
 	provider: ProviderName
@@ -220,11 +265,119 @@ export function getModelsByProvider(params: {
 		}
 	}
 
-	// For providers without router support, return empty
-	// These providers should be configured through the extension UI
-	return {
-		models: {},
-		defaultModel: DEFAULT_MODEL_IDS[provider] || "",
+	// Handle non-router providers with static model definitions
+	switch (provider) {
+		case "anthropic":
+			return {
+				models: anthropicModels as ModelRecord,
+				defaultModel: anthropicDefaultModelId,
+			}
+		case "bedrock":
+			return {
+				models: bedrockModels as ModelRecord,
+				defaultModel: bedrockDefaultModelId,
+			}
+		case "vertex":
+			return {
+				models: vertexModels as ModelRecord,
+				defaultModel: vertexDefaultModelId,
+			}
+		case "openai-native":
+			return {
+				models: openAiNativeModels as ModelRecord,
+				defaultModel: openAiNativeDefaultModelId,
+			}
+		case "gemini":
+			return {
+				models: geminiModels as ModelRecord,
+				defaultModel: geminiDefaultModelId,
+			}
+		case "mistral":
+			return {
+				models: mistralModels as ModelRecord,
+				defaultModel: mistralDefaultModelId,
+			}
+		case "moonshot":
+			return {
+				models: moonshotModels as ModelRecord,
+				defaultModel: moonshotDefaultModelId,
+			}
+		case "deepseek":
+			return {
+				models: deepSeekModels as ModelRecord,
+				defaultModel: deepSeekDefaultModelId,
+			}
+		case "doubao":
+			return {
+				models: doubaoModels as ModelRecord,
+				defaultModel: doubaoDefaultModelId,
+			}
+		case "qwen-code":
+			return {
+				models: qwenCodeModels as ModelRecord,
+				defaultModel: qwenCodeDefaultModelId,
+			}
+		case "xai":
+			return {
+				models: xaiModels as ModelRecord,
+				defaultModel: xaiDefaultModelId,
+			}
+		case "groq":
+			return {
+				models: groqModels as ModelRecord,
+				defaultModel: groqDefaultModelId,
+			}
+		case "chutes":
+			return {
+				models: chutesModels as ModelRecord,
+				defaultModel: chutesDefaultModelId,
+			}
+		case "cerebras":
+			return {
+				models: cerebrasModels as ModelRecord,
+				defaultModel: cerebrasDefaultModelId,
+			}
+		case "sambanova":
+			return {
+				models: sambaNovaModels as ModelRecord,
+				defaultModel: sambaNovaDefaultModelId,
+			}
+		case "zai":
+			return {
+				models: internationalZAiModels as ModelRecord,
+				defaultModel: internationalZAiDefaultModelId,
+			}
+		case "fireworks":
+			return {
+				models: fireworksModels as ModelRecord,
+				defaultModel: fireworksDefaultModelId,
+			}
+		case "featherless":
+			return {
+				models: featherlessModels as ModelRecord,
+				defaultModel: featherlessDefaultModelId,
+			}
+		case "roo":
+			return {
+				models: rooModels as ModelRecord,
+				defaultModel: rooDefaultModelId,
+			}
+		case "claude-code":
+			return {
+				models: claudeCodeModels as ModelRecord,
+				defaultModel: claudeCodeDefaultModelId,
+			}
+		case "gemini-cli":
+			return {
+				models: geminiCliModels as ModelRecord,
+				defaultModel: geminiCliDefaultModelId,
+			}
+		default:
+			// For providers without static models (e.g., vscode-lm, human-relay, fake-ai, virtual-quota-fallback)
+			return {
+				models: {},
+				defaultModel: DEFAULT_MODEL_IDS[provider] || "",
+			}
 	}
 }
 

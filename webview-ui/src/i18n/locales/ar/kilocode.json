@@ -11,7 +11,11 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "شحن الرصيد",
-		"lowBalance": "رصيدك في Kilo Code منخفض"
+		"lowBalance": "رصيدك في Kilo Code منخفض",
+		"newOrganization": "تستخدم Kilo للعمل؟"
+	},
+	"memoryWarning": {
+		"message": "استخدام الذاكرة عند {{percentage}}%. يرجى إعادة تشغيل بيئة التطوير لمنع التعطل."
 	},
 	"pagination": {
 		"previous": "السابق",
@@ -41,7 +45,8 @@
 			"automaticFetch": "أحدث النماذج متاحة تلقائيًا في Kilo Code. إذا لم تكن متأكدًا من النموذج الذي تريد اختياره، يعمل Kilo Code بشكل أفضل مع النماذج الموصى بها المدرجة في الأعلى <strong>بخط عريض</strong>.",
 			"providerRouting": {
 				"title": "توجيه المزود",
-				"managedByOrganization": "إعدادات توجيه المزود تُدار من قِبل مؤسستك.",
+				"managedByOrganization": "إدارة توجيه المزود على مستوى المؤسسة",
+				"createOrganization": "إنشاء مؤسسة لإدارة توجيه المزود",
 				"sorting": {
 					"default": "ترتيب المزود الافتراضي",
 					"price": "تفضيل مزودين بأسعار أقل",
@@ -94,6 +99,13 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "نمط استدعاء الأداة",
+		"description": "اختر كيفية تنسيق استدعاءات الأدوات في موجه النظام. JSON حالياً تجريبي ومخصص بشكل أساسي للمستخدمين المهتمين بالمساهمة في تطويره.",
+		"automatic": "دع Kilo يقرر",
+		"xml": "XML",
+		"json": "JSON (تجريبي)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code يقترح تلخيص المحادثة",
@@ -121,7 +133,9 @@
 			"credits": "رصيد",
 			"action": "اشتري الآن",
 			"viewAll": "عرض جميع خيارات الأسعار"
-		}
+		},
+		"detailedUsage": "الاستخدام التفصيلي",
+		"createOrganization": "إنشاء مؤسسة لتتبع الاستخدام التفصيلي"
 	},
 	"docs": "التوثيق",
 	"rules": {
@@ -217,7 +231,10 @@
 				"label": "الإكمال التلقائي اليدوي ({{keybinding}})",
 				"description": "تحتاج إصلاحاً سريعاً أو إكمالاً أو إعادة هيكلة؟ سيستخدم Kilo السياق المحيط لتقديم تحسينات فورية، مما يبقيك في التدفق. <DocsLink>عرض الاختصار</DocsLink>"
 			},
-			"keybindingNotFound": "غير موجود"
+			"keybindingNotFound": "غير موجود",
+			"noModelConfigured": "لم يتم العثور على نموذج إكمال تلقائي مناسب. يرجى تكوين مزود في إعدادات API.",
+			"model": "النموذج",
+			"provider": "المزود"
 		}
 	},
 	"virtualProvider": {
@@ -230,7 +247,7 @@
 		"removeProfile": "إزالة الملف الشخصي",
 		"selectProfilePlaceholder": "حدد الملف الشخصي...",
 		"addProfile": "إضافة ملف تعريفي",
-		"noProfilesAvailable": "لا تتوفر ملفات تعريف للملف الشخصي. يرجى تكوين ملف تعريف لمزود غير افتراضي واحد على الأقل أولاً.",
+		"noProfilesAvailable": "لا توجد ملفات تعريف متاحة. يرجى إعداد ملف تعريف واحد على الأقل لمزود غير افتراضي أولاً.",
 		"dangerZoneTitle": "منطقة الخطر",
 		"dangerZoneDescription": "هذه الإجراءات مدمرة ولا يمكن التراجع عنها.",
 		"clearUsageData": "مسح بيانات الاستخدام",
@@ -253,5 +270,16 @@
 		"modelNoImageSupport": "الصور غير مدعومة بواسطة النموذج الحالي.",
 		"maxImagesReached": "الحد الأقصى 20 صورة لكل رسالة. قم بإزالة بعض الصور لإضافة المزيد.",
 		"imagesRemovedNoSupport": "تمت إزالة الصور، غير مدعومة من قِبل النموذج."
+	},
+	"marketplace": {
+		"modes": {
+			"description": "هذه الأوضاع متاحة من المجتمع. انقر <1>هنا</1> لتحرير الأوضاع المخصصة الخاصة بك."
+		},
+		"mcp": {
+			"description": "يتم صيانة خوادم MCP هذه من قبل المجتمع. انقر <1>هنا</1> لتعديل إعدادات MCP الخاصة بك."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "جديد: مشاركة الأوضاع عن طريق إنشاء منظمة"
 	}
 }

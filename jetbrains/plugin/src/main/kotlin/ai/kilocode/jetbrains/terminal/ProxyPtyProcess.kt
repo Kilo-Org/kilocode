@@ -5,7 +5,6 @@
 package ai.kilocode.jetbrains.terminal
 
 import com.pty4j.PtyProcess
-import com.intellij.openapi.diagnostic.Logger
 import com.pty4j.WinSize
 
 /**
@@ -27,28 +26,28 @@ interface ProxyPtyProcessCallback {
  */
 class ProxyPtyProcess(
     private val originalProcess: PtyProcess,
-    private val callback: ProxyPtyProcessCallback? = null
+    private val callback: ProxyPtyProcessCallback? = null,
 ) : PtyProcess() {
 
     // Create proxy input stream (process standard output)
     private val proxyInputStream: ProxyInputStream = ProxyInputStream(
         originalProcess.inputStream,
         "STDOUT",
-        callback
+        callback,
     )
 
     // Create proxy error stream (process error output)
     private val proxyErrorStream: ProxyInputStream = ProxyInputStream(
         originalProcess.errorStream,
         "STDERR",
-        callback
+        callback,
     )
 
     // Override methods that require special handling
     override fun getInputStream(): java.io.InputStream = proxyInputStream
     override fun getErrorStream(): java.io.InputStream = proxyErrorStream
     override fun getOutputStream(): java.io.OutputStream = originalProcess.outputStream
-    
+
     // Delegate all other methods to the original process
     override fun isAlive(): Boolean = originalProcess.isAlive()
     override fun pid(): Long = originalProcess.pid()
@@ -64,7 +63,7 @@ class ProxyPtyProcess(
     override fun setWinSize(winSize: WinSize) = originalProcess.setWinSize(winSize)
     override fun toHandle(): ProcessHandle = originalProcess.toHandle()
     override fun onExit(): java.util.concurrent.CompletableFuture<Process> = originalProcess.onExit()
-    
+
     // PtyProcess specific methods
     override fun getWinSize(): WinSize = originalProcess.winSize
     override fun isConsoleMode(): Boolean = originalProcess.isConsoleMode
@@ -77,9 +76,9 @@ class ProxyPtyProcess(
 class ProxyInputStream(
     private val originalStream: java.io.InputStream,
     private val streamType: String,
-    private val callback: ProxyPtyProcessCallback?
+    private val callback: ProxyPtyProcessCallback?,
 ) : java.io.InputStream() {
-    
+
     override fun read(): Int {
         val result = originalStream.read()
         if (result != -1 && callback != null) {
@@ -89,7 +88,7 @@ class ProxyInputStream(
         }
         return result
     }
-    
+
     override fun read(b: ByteArray): Int {
         val result = originalStream.read(b)
         if (result > 0 && callback != null) {
@@ -99,7 +98,7 @@ class ProxyInputStream(
         }
         return result
     }
-    
+
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         val result = originalStream.read(b, off, len)
         if (result > 0 && callback != null) {
@@ -109,7 +108,7 @@ class ProxyInputStream(
         }
         return result
     }
-    
+
     // Delegate other methods to the original stream
     override fun available(): Int = originalStream.available()
     override fun close() = originalStream.close()

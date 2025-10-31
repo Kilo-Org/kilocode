@@ -99,7 +99,7 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 	if (loadedConfig.providers && Array.isArray(loadedConfig.providers)) {
 		merged.providers = loadedConfig.providers.map((loadedProvider) => {
 			// Find matching default provider by id
-			const defaultProvider = DEFAULT_CONFIG.providers.find((p) => p.id === loadedProvider.id)
+			const defaultProvider = DEFAULT_CONFIG.providers.find((p) => p.provider === loadedProvider.provider)
 			if (defaultProvider) {
 				// Merge loaded provider with default to fill in missing fields
 				return deepMerge(defaultProvider, loadedProvider)
@@ -116,10 +116,7 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 	try {
 		await ensureConfigDir()
 
-		// Check if config file exists
-		try {
-			await fs.access(configFile)
-		} catch {
+		if (!(await configExists())) {
 			// File doesn't exist, write default config directly without validation
 			// (DEFAULT_CONFIG may have empty credentials which is ok for initial setup)
 			await fs.writeFile(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2))
@@ -166,14 +163,16 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 	}
 }
 
-export async function saveConfig(config: CLIConfig): Promise<void> {
+export async function saveConfig(config: CLIConfig, skipValidation: boolean = false): Promise<void> {
 	try {
 		await ensureConfigDir()
 
-		// Validate before saving
-		const validation = await validateConfig(config)
-		if (!validation.valid) {
-			throw new Error(`Invalid config: ${validation.errors?.join(", ")}`)
+		// Validate before saving (unless explicitly skipped for initial config creation)
+		if (!skipValidation) {
+			const validation = await validateConfig(config)
+			if (!validation.valid) {
+				throw new Error(`Invalid config: ${validation.errors?.join(", ")}`)
+			}
 		}
 
 		// Write config with pretty formatting
