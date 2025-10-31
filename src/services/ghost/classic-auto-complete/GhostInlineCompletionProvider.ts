@@ -10,6 +10,12 @@ import { GhostGutterAnimation } from "../GhostGutterAnimation"
 import { GhostServiceSettings } from "@roo-code/types"
 
 const MAX_SUGGESTIONS_HISTORY = 20
+const MAX_FAILED_CACHE_SIZE = 50
+
+interface FailedLookup {
+	prefix: string
+	suffix: string
+}
 
 export type CostTrackingCallback = (
 	cost: number,
@@ -68,6 +74,7 @@ export interface LLMRetrievalResult {
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
+	private failedLookupsCache: FailedLookup[] = []
 	private autoTriggerStrategy: AutoTriggerStrategy
 	private isRequestCancelled: boolean = false
 	private model: GhostModel
@@ -91,6 +98,36 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	public updateSettings(settings: GhostServiceSettings | null): void {
 		this.settings = settings
+	}
+
+	/**
+	 * Check if this prefix/suffix combination is in the failed lookups cache
+	 * @param prefix - The text before the cursor position
+	 * @param suffix - The text after the cursor position
+	 * @returns True if this combination previously failed, false otherwise
+	 */
+	private isFailedLookup(prefix: string, suffix: string): boolean {
+		return this.failedLookupsCache.some((failed) => failed.prefix === prefix && failed.suffix === suffix)
+	}
+
+	/**
+	 * Add a failed lookup to the cache
+	 * @param prefix - The text before the cursor position
+	 * @param suffix - The text after the cursor position
+	 */
+	private addFailedLookup(prefix: string, suffix: string): void {
+		// Check if already in cache
+		if (this.isFailedLookup(prefix, suffix)) {
+			return
+		}
+
+		// Add to the end of the array (most recent)
+		this.failedLookupsCache.push({ prefix, suffix })
+
+		// Remove oldest if we exceed the limit
+		if (this.failedLookupsCache.length > MAX_FAILED_CACHE_SIZE) {
+			this.failedLookupsCache.shift()
+		}
 	}
 
 	/**
@@ -158,6 +195,19 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			}
 		}
 
+		// Check if this prefix/suffix previously failed
+		if (this.isFailedLookup(prefix, suffix)) {
+			// Return empty result if this combination previously failed
+			return {
+				suggestions: new GhostSuggestionsState(),
+				cost: 0,
+				inputTokens: 0,
+				outputTokens: 0,
+				cacheWriteTokens: 0,
+				cacheReadTokens: 0,
+			}
+		}
+
 		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
 			autocompleteInput,
 			prefix,
@@ -210,6 +260,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		if (finalParseResult.suggestions.getFillInAtCursor()) {
 			console.info("Final suggestion:", finalParseResult.suggestions.getFillInAtCursor())
+		} else {
+			// No suggestion was generated - cache this as a failed lookup
+			this.addFailedLookup(prefix, suffix)
 		}
 
 		return {
@@ -276,8 +329,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				// Hide cursor animation after generation
 				this.cursorAnimation.hide()
 
-				// Track costs
-				if (this.costTrackingCallback) {
+				// Track costs only if there were actual costs (not from cache)
+				if (this.costTrackingCallback && result.cost > 0) {
 					this.costTrackingCallback(
 						result.cost,
 						result.inputTokens,
