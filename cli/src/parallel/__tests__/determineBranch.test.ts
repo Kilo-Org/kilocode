@@ -55,7 +55,7 @@ describe("determineParallelBranch", () => {
 			}
 
 			await expect(determineParallelBranch(input)).rejects.toThrow(
-				"Error: parallel mode requires the current working directory to be a git repository",
+				"Parallel mode requires the current working directory to be a git repository",
 			)
 		})
 
@@ -111,9 +111,7 @@ describe("determineParallelBranch", () => {
 				existingBranch,
 			}
 
-			await expect(determineParallelBranch(input)).rejects.toThrow(
-				`Error: Branch "${existingBranch}" does not exist`,
-			)
+			await expect(determineParallelBranch(input)).rejects.toThrow(`Branch "${existingBranch}" does not exist`)
 
 			expect(branchExists).toHaveBeenCalledWith(mockCwd, existingBranch)
 		})
