@@ -255,6 +255,8 @@
 		"noProviderMatchFound": "Nebyli nalezeni žádní poskytovatelé",
 		"noMatchFound": "Nebyly nalezeny žádné odpovídající profily",
 		"vscodeLmDescription": "API jazykového modelu VS Code vám umožňuje spouštět modely poskytované jinými rozšířeními VS Code (včetně, ale nejen, GitHub Copilot). Nejjednodušší způsob, jak začít, je nainstalovat rozšíření Copilot a Copilot Chat z VS Code Marketplace.",
+		"vscodeLmUnavailable": "Podpora jazykových modelů VS Code je dostupná pouze ve Visual Studio Code. Forky jako VSCodium a další nemusí fungovat. Dále tato funkce není dostupná v nástrojích JetBrains.",
+		"vscodeLmUnavailableInstructions": "Ujistěte se, že používáte podporovaný nástroj a že máte nainstalovaný a povolený VS Code Chat",
 		"awsCustomArnUse": "Zadejte platný Amazon Bedrock ARN pro model, který chcete použít. Příklady formátu:",
 		"awsCustomArnDesc": "Ujistěte se, že region v ARN odpovídá výše vybranému regionu AWS.",
 		"openRouterApiKey": "Klíč API OpenRouter",

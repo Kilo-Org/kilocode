@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Tidak ada penyedia ditemukan",
 		"noMatchFound": "Tidak ada profil yang cocok ditemukan",
 		"vscodeLmDescription": " API Model Bahasa VS Code memungkinkan kamu menjalankan model yang disediakan oleh ekstensi VS Code lainnya (termasuk namun tidak terbatas pada GitHub Copilot). Cara termudah untuk memulai adalah menginstal ekstensi Copilot dan Copilot Chat dari VS Code Marketplace.",
+		"vscodeLmUnavailable": "Dukungan Model Bahasa VS Code hanya tersedia di Visual Studio Code. Fork seperti VSCodium dan lainnya mungkin tidak berfungsi. Selain itu, kemampuan ini tidak tersedia di alat JetBrains.",
+		"vscodeLmUnavailableInstructions": "Pastikan Anda menggunakan alat yang didukung dan bahwa VS Code Chat telah diinstal dan diaktifkan",
 		"awsCustomArnUse": "Masukkan ARN Amazon Bedrock yang valid untuk model yang ingin kamu gunakan. Contoh format:",
 		"awsCustomArnDesc": "Pastikan region di ARN cocok dengan AWS Region yang kamu pilih di atas.",
 		"openRouterApiKey": "OpenRouter API Key",

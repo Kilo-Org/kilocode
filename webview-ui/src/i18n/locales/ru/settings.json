@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Провайдеры не найдены",
 		"noMatchFound": "Совпадений не найдено",
 		"vscodeLmDescription": "API языковой модели VS Code позволяет запускать модели, предоставляемые другими расширениями VS Code (включая, но не ограничиваясь GitHub Copilot). Для начала установите расширения Copilot и Copilot Chat из VS Code Marketplace.",
+		"vscodeLmUnavailable": "Поддержка языковых моделей VS Code доступна только в Visual Studio Code. Форки, такие как VSCodium и другие, могут не работать. Кроме того, эта возможность недоступна в инструментах JetBrains.",
+		"vscodeLmUnavailableInstructions": "Убедитесь, что вы используете поддерживаемый инструмент и что VS Code Chat установлен и включён",
 		"awsCustomArnUse": "Введите действительный Amazon Bedrock ARN для используемой модели. Примеры формата:",
 		"awsCustomArnDesc": "Убедитесь, что регион в ARN совпадает с выбранным выше регионом AWS.",
 		"openRouterApiKey": "OpenRouter API-ключ",
