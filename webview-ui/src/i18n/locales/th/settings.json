@@ -252,6 +252,8 @@
 		"noProviderMatchFound": "ไม่พบผู้ให้บริการ",
 		"noMatchFound": "ไม่พบโปรไฟล์ที่ตรงกัน",
 		"vscodeLmDescription": "API โมเดลภาษาของ VS Code ช่วยให้คุณสามารถรันโมเดลที่จัดหาโดยส่วนขยาย VS Code อื่นๆ (รวมถึงแต่ไม่จำกัดเฉพาะ GitHub Copilot) วิธีที่ง่ายที่สุดในการเริ่มต้นคือการติดตั้งส่วนขยาย Copilot และ Copilot Chat จาก VS Code Marketplace",
+		"vscodeLmUnavailable": "การรองรับโมเดลภาษาของ VS Code มีเฉพาะใน Visual Studio Code เท่านั้น โฟร์กอย่าง VSCodium และเครื่องมืออื่นๆ อาจใช้งานไม่ได้ นอกจากนี้ ความสามารถนี้ไม่มีในเครื่องมือของ JetBrains",
+		"vscodeLmUnavailableInstructions": "ตรวจสอบให้แน่ใจว่าคุณกำลังใช้เครื่องมือที่รองรับ และได้ติดตั้งและเปิดใช้งาน VS Code Chat แล้ว",
 		"awsCustomArnUse": "ป้อน Amazon Bedrock ARN ที่ถูกต้องสำหรับโมเดลที่คุณต้องการใช้ ตัวอย่างรูปแบบ:",
 		"awsCustomArnDesc": "ตรวจสอบให้แน่ใจว่าภูมิภาคใน ARN ตรงกับภูมิภาค AWS ที่คุณเลือกด้านบน",
 		"openRouterApiKey": "คีย์ API ของ OpenRouter",

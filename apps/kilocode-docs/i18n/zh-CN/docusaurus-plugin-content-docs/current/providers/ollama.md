@@ -2,9 +2,10 @@
 侧边栏标签: Ollama
 ---
 
-# 在Kilo Code中使用Ollama  
+# 在Kilo Code中使用Ollama
 
-Kilo Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护、离线访问能力，并可能降低成本，但需要更多设置且依赖高性能计算机。  
+Kilo Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护、离线访问能力，并可能降低成本，但需要更多设置且依赖高性能计算机。
+
 **官方网站：** [https://ollama.com/](https://ollama.com/)
 
 <img src="/docs/img/providers/ollama-devstral-snake.png" alt="使用 devstral 编写贪吃蛇游戏" width="500" />
@@ -12,129 +13,86 @@ Kilo Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护�
 
 ## 管理期望
 
-本地 LLM 比高级云托管 LLM（如 Claude 和 Gemini）小得多，结果也会逊色得多。
-它们更容易陷入循环，无法正确使用工具或在代码中产生语法错误。
-需要更多的试错才能找到正确的提示。
-本地 LLM 通常速度也不是很快。
-使用简单的提示、保持对话简短和禁用 MCP 工具可以提高速度。
-
+可以在本地运行的LLM通常比云端托管的LLM（如Claude和GPT）要小得多，因此结果也会逊色不少。
+它们更容易陷入循环、无法正确使用工具或在代码中产生语法错误。
+要找到合适的提示词通常需要更多的反复试验。
+本地运行LLM通常也不够快。
+使用简单的提示词、保持对话简短并禁用MCP工具可以提高运行速度。
 
 ## 硬件要求
 
-您将需要大量的 RAM（32GB 或更多）和强大的 CPU（例如 Ryzen 9000 系列）才能运行下面列出的模型。
-GPU 可以更快地运行 LLM，但需要大量的 VRAM（24GB 或更多），这在消费级 GPU 上并不常见。
-较小的模型可以在更普通的 GPU 上运行，但效果不佳。
-具有足够统一内存的 MacBook 可以使用 GPU 加速，但在我们的测试中，其性能不如高端桌面 CPU。
-
+你需要一块拥有大量显存（24GB或以上）的GPU，或者一台拥有大量统一内存（32GB或以上）的MacBook，才能以良好的速度运行下面讨论的模型。
 
 ## 选择模型
 
 Ollama 支持许多不同的模型。
-您可以在 [Ollama 网站](https://ollama.com/library)上找到可用模型列表。
-选择适合您的用例、在您的硬件配置上运行并达到所需速度的模型需要一些试错。
-以下规则和启发式方法可用于查找模型：
+你可以在 [Ollama 网站](https://ollama.com/library) 上找到可用模型的列表。
 
-*   必须至少有 32k 的上下文窗口（这是 Kilo Code 的要求）。
-*   列出为支持工具。
-*   参数数量在 7b 到 24b 范围内。
-*   优先选择流行模型。
-*   优先选择较新的模型。
+对于 Kilo Code 代理，当前推荐使用 `qwen3-coder:30b`。`qwen3-coder:30b` 有时无法正确调用工具（相比完整版 `qwen3-coder:480b` 模型，这个问题更常见）。作为一个混合专家模型，这可能是因为它激活了错误的专家。每当发生这种情况时，尝试更改你的提示词或使用“增强提示”按钮。
 
-
-### Kilo Code 推荐
-
-我们使用以下提示测试了一些模型：
-
-```
-创建一个简单的网页，其中包含一个按钮，单击时会向用户问好。
-```
-
-如果模型在几次尝试内产生了一个可用的结果，则认为它通过。我们发现可以正常工作的模型是：
-
-| 模型名称 | 完成时间 |
-| --- | --- |
-| qwen2.5-coder:7b | 1x（基线） |
-| devstral:24b | 2x |
-| gemma3:12b | 4x |
-| qwen3-8b | 12x |
-
-我们的建议是，如果您的硬件能够处理，请使用 **devstral:24b**，因为它比 qwen2.5-coder:7b 犯的错误更少。
-qwen2.5-coder:7b 值得考虑，因为它速度快，如果您能忍受它的错误。
-该表还显示速度难以预测，因为专用 devstral:24b 在这里优于较小的通用模型 gemma3:12b 和 qwen3-8b。
-gemma3:12b 的结果引人注目，因为它能够正确使用工具（至少有时），而 Ollama 网站上并未将其列为适合工具使用的模型。
-
-devstral:24b 产生的结果如下：
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>问候用户按钮</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <button onclick="greetUser()">问候我！</button>
-
-    <script>
-        function greetUser() {
-            alert('你好！欢迎来到我们的网站。');
-        }
-    </script>
-</body>
-</html>
-```
-
-以下模型看起来是合理的选择，但发现与 Kilo Code 的默认配置**不**兼容：
-
-| 模型名称 | 失败原因 |
-| --- | --- |
-| deepseek-r1:7b | 无法正确使用工具 |
-| deepseek-r1:8b | 陷入推理循环 |
-
+`qwen3-coder:30b` 的替代方案是 `devstral:24b`。对于 Kilo Code 的其他功能，如增强提示或提交信息生成，较小的模型可能就足够了。
 
 ## 设置 Ollama
 
-1.  **下载并安装 Ollama：** 从 [Ollama 网站](https://ollama.com/)下载适用于您操作系统的 Ollama 安装程序。按照安装说明进行操作，并*设置 `OLLAMA_CONTEXT_LENGTH` 环境变量*以防止 Ollama 截断提示。确保 Ollama 正在运行：
+要设置 Ollama 以与 Kilo Code 一起使用，请按照以下说明操作。
 
-    ```bash
-    OLLAMA_CONTEXT_LENGTH=131072 ollama serve
-    ```
+### 下载并安装 Ollama
 
-2.  **下载模型：** 下载模型后，您可以离线使用 Kilo Code 和该模型。要下载模型，请打开终端并运行：
+从 [Ollama 网站](https://ollama.com/) 下载 Ollama 安装程序（或使用你操作系统的包管理器）。按照安装说明操作，然后确保 Ollama 正在运行：
 
-    ```bash
-    ollama pull <model_name>
-    ```
+```bash
+ollama serve
+```
 
-    例如：
+### 下载模型
 
-    ```bash
-    ollama pull devstral:24b
-    ```
+要下载模型，请打开第二个终端（`ollama serve` 需要正在运行）并运行：
 
-4.  **配置 Kilo Code：**
-    *   打开 Kilo Code 侧边栏（<img src="/docs/img/kilo-v1.svg" width="12" /> 图标）。
-    *   单击设置齿轮图标（<Codicon name="gear" />）。
-    *   选择“ollama”作为 API 提供商。
-    *   输入模型名称。
-    *   （可选）如果您在不同的机器上运行 Ollama，则可以配置基本 URL。默认值为 `http://localhost:11434`。
+```bash
+ollama pull <model_name>
+```
 
+例如：
+
+```bash
+ollama pull qwen3-coder:30b
+```
+
+### 配置上下文长度
+
+默认情况下，Ollama 会将提示截断为非常短的长度，[如这里所述](https://github.com/ollama/ollama/blob/4383a3ab7a075eff78b31f7dc84c747e2fcd22b8/docs/faq.md#how-can-i-specify-the-context-window-size)。
+
+你需要至少 32k 才能获得不错的结果，但增加上下文长度会增加内存使用量，并可能降低性能，具体取决于你的硬件。
+要配置模型，你需要设置其参数并保存一个副本。
+
+加载模型（我们将使用 `qwen3-coder:30b` 作为示例）：
+
+```bash
+ollama run qwen3-coder:30b
+```
+
+更改上下文大小参数：
+
+```bash
+/set parameter num_ctx 32768
+```
+
+保存模型并命名为新名称：
+
+```bash
+/save qwen3-coder-30b-c32k
+```
+
+你也可以设置 `OLLAMA_CONTEXT_LENGTH` 环境变量，
+但不推荐这样做，因为它会改变所有模型的上下文，而且该环境变量需要对 Ollama 服务器和 IDE 都可见。
+
+### 配置 Kilo Code
+
+- 打开 Kilo Code 侧边栏（<img src="/docs/img/kilo-v1.svg" width="12" /> 图标）。
+- 点击设置齿轮图标（<Codicon name="gear" />）。
+- 选择 "Ollama" 作为 API 提供商。
+- 选择在上一步中配置的模型。
+- （可选）如果你在不同的机器上运行 Ollama，可以配置基础 URL。默认值为 `http://localhost:11434`。
 
 ## 进一步阅读
 
