@@ -6,7 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
+import { GhostServiceSettings, TelemetryEventName, RooCodeEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { GhostContext } from "./GhostContext"
@@ -70,6 +70,23 @@ export class GhostServiceManager {
 		vscode.window.onDidChangeTextEditorSelection(this.onDidChangeTextEditorSelection, this, context.subscriptions)
 		vscode.window.onDidChangeActiveTextEditor(this.onDidChangeActiveTextEditor, this, context.subscriptions)
 
+		// Listen for configuration changes that might affect autocomplete model availability
+		vscode.workspace.onDidChangeConfiguration(
+			async (e) => {
+				// Reload when API provider settings change (e.g., after login or profile update)
+				if (e.affectsConfiguration("kilo-code")) {
+					await this.load()
+				}
+			},
+			this,
+			context.subscriptions,
+		)
+
+		// Listen for provider profile changes from ClineProvider
+		cline.on(RooCodeEventName.ProviderProfileChanged, async () => {
+			await this.load()
+		})
+
 		void this.load()
 
 		// Initialize cursor animation with settings after load
@@ -113,12 +130,24 @@ export class GhostServiceManager {
 
 	public async load() {
 		this.settings = this.loadSettings()
-		await this.model.reload(this.providerSettingsManager)
+		const modelFound = await this.model.reload(this.providerSettingsManager)
 		this.cursorAnimation.updateSettings(this.settings || undefined)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
 		await this.saveSettings()
+
+		// If no model was found on first attempt, retry after a delay
+		// This handles race conditions where profile/auth state is still being updated
+		if (!modelFound) {
+			setTimeout(async () => {
+				const retryModelFound = await this.model.reload(this.providerSettingsManager)
+				if (retryModelFound) {
+					this.updateStatusBar()
+					await this.saveSettings()
+				}
+			}, 1000) // 1 second delay to allow auth state to settle
+		}
 	}
 
 	/**

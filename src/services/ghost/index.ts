@@ -11,6 +11,8 @@ export const registerGhostProvider = (context: vscode.ExtensionContext, cline: C
 	context.subscriptions.push(
 		vscode.commands.registerCommand("kilo-code.ghost.reload", async () => {
 			await ghost.load()
+			// Ensure webview state is updated after reload to reflect new model info
+			await cline.postStateToWebview()
 		}),
 	)
 	context.subscriptions.push(
