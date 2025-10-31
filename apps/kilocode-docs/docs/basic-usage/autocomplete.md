@@ -5,7 +5,7 @@ sidebar_position: 4
 
 # Autocomplete
 
-Kilo Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
+Axon Code's autocomplete feature provides intelligent code suggestions and completions while you're typing, helping you write code faster and more efficiently. It offers both automatic and manual triggering options.
 
 ## How Autocomplete Works
 
@@ -22,7 +22,7 @@ The feature uses your selected AI provider to generate intelligent suggestions t
 
 ### Pause to Complete
 
-When enabled, Kilo Code automatically triggers autocomplete when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
+When enabled, Axon Code automatically triggers autocomplete when you pause typing. This provides a seamless coding experience where suggestions appear naturally as you work.
 
 - **Auto Trigger Delay**: Configure the delay (in seconds) before autocomplete triggers after you stop typing
 - Default is 3 seconds, but this can be adjusted up or down
@@ -52,7 +52,7 @@ For more control over when suggestions appear:
 
 1. Position your cursor where you need assistance
 2. Press `Cmd+L` (Mac) or `Ctrl+L` (Windows/Linux)
-3. Kilo Code analyzes the surrounding context
+3. Axon Code analyzes the surrounding context
 4. Receive immediate improvements or completions
 
 This is ideal for:
@@ -66,7 +66,7 @@ You can customize this keyboard shortcut as well in your VS Code settings.
 
 ## Disable Rival Autocomplete
 
-We recommend disabling rival autocompletes to optimize your experience with Kilo Code. To disable GitHub Copilot autocomplete in VSCode, go to **Settings** and navigate to **GitHub** > **Copilot: Advanced** (or search for 'copilot').
+We recommend disabling rival autocompletes to optimize your experience with Axon Code. To disable GitHub Copilot autocomplete in VSCode, go to **Settings** and navigate to **GitHub** > **Copilot: Advanced** (or search for 'copilot').
 
 Then, toggle to 'disabled':
 

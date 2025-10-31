@@ -21,7 +21,7 @@
 		"sharePublicly": "공개적으로 공유",
 		"sharePubliclyDescription": "링크가 있는 누구나 액세스할 수 있습니다",
 		"connectToCloud": "클라우드에 연결",
-		"connectToCloudDescription": "작업을 공유하려면 Kilo Code Cloud에 로그인하세요",
+		"connectToCloudDescription": "작업을 공유하려면 Axon Code Cloud에 로그인하세요",
 		"sharingDisabledByOrganization": "조직에서 공유가 비활성화됨",
 		"shareSuccessOrganization": "조직 링크가 클립보드에 복사되었습니다",
 		"shareSuccessPublic": "공개 링크가 클립보드에 복사되었습니다",
@@ -336,7 +336,7 @@
 	"profileViolationWarning": "현재 프로필이 조직 설정과 호환되지 않습니다",
 	"shellIntegration": {
 		"title": "명령 실행 경고",
-		"description": "명령이 VSCode 터미널 쉘 통합 없이 실행되고 있습니다. 이 경고를 숨기려면 <settingsLink>Kilo Code 설정</settingsLink>의 <strong>Terminal</strong> 섹션에서 쉘 통합을 비활성화하거나 아래 링크를 사용하여 VSCode 터미널 통합 문제를 해결하세요.",
+		"description": "명령이 VSCode 터미널 쉘 통합 없이 실행되고 있습니다. 이 경고를 숨기려면 <settingsLink>Axon Code 설정</settingsLink>의 <strong>Terminal</strong> 섹션에서 쉘 통합을 비활성화하거나 아래 링크를 사용하여 VSCode 터미널 통합 문제를 해결하세요.",
 		"troubleshooting": "쉘 통합 문서를 보려면 여기를 클릭하세요."
 	},
 	"ask": {

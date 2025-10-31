@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "Chào mừng bạn đến với Kilo Code!",
-		"introText1": "Kilo Code là một agent lập trình AI miễn phí và mã nguồn mở.",
+		"greeting": "Chào mừng bạn đến với Axon Code!",
+		"introText1": "Axon Code là một agent lập trình AI miễn phí và mã nguồn mở.",
 		"introText2": "Hoạt động với các mô hình AI mới nhất như Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, và hơn 450 mô hình khác.",
 		"introText3": "Tạo tài khoản miễn phí và nhận $20 tín dụng thưởng khi nạp tiền lần đầu.",
 		"ctaButton": "Bắt đầu",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
-		"lowBalance": "Số dư Kilo Code của bạn thấp",
+		"lowBalance": "Số dư Axon Code của bạn thấp",
 		"newOrganization": "Sử dụng Kilo cho công việc?"
 	},
 	"pagination": {
@@ -44,19 +44,19 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Cho phép đọc tệp rất lớn",
-				"description": "Khi bật, Kilo Code sẽ thực hiện đọc tệp hoặc đầu ra MCP rất lớn ngay cả khi có khả năng cao làm tràn cửa sổ ngữ cảnh (kích thước nội dung >80% cửa sổ ngữ cảnh)."
+				"description": "Khi bật, Axon Code sẽ thực hiện đọc tệp hoặc đầu ra MCP rất lớn ngay cả khi có khả năng cao làm tràn cửa sổ ngữ cảnh (kích thước nội dung >80% cửa sổ ngữ cảnh)."
 			}
 		},
 		"provider": {
-			"account": "Tài khoản Kilo Code",
-			"apiKey": "Khóa API Kilo Code",
-			"login": "Đăng nhập vào Kilo Code",
-			"logout": "Đăng xuất khỏi Kilo Code",
+			"account": "Tài khoản Axon Code",
+			"apiKey": "Khóa API Axon Code",
+			"login": "Đăng nhập vào Axon Code",
+			"logout": "Đăng xuất khỏi Axon Code",
 			"providerRouting": {
 				"title": "Định tuyến nhà cung cấp",
 				"managedByOrganization": "Quản lý Định tuyến nhà cung cấp cấp tổ chức",
 				"createOrganization": "Tạo tổ chức để quản lý Định tuyến nhà cung cấp",
-				"description": "Kilo Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
+				"description": "Axon Code định tuyến các yêu cầu đến các nhà cung cấp tốt nhất có sẵn cho mô hình của bạn. Theo mặc định, các yêu cầu được cân bằng tải trên các nhà cung cấp hàng đầu để tối đa hóa thời gian hoạt động. Tuy nhiên, bạn có thể chọn một nhà cung cấp cụ thể để sử dụng cho mô hình này.",
 				"sorting": {
 					"default": "Sắp xếp nhà cung cấp mặc định",
 					"price": "Ưu tiên nhà cung cấp có giá thấp hơn",
@@ -71,12 +71,12 @@
 					"zdr": "Không lưu trữ dữ liệu"
 				}
 			},
-			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Kilo Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Kilo Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
+			"automaticFetch": "Các mô hình mới nhất được tự động cung cấp trong Axon Code. Nếu bạn không chắc chắn nên chọn mô hình nào, Axon Code hoạt động tốt nhất với các mô hình được khuyến nghị được liệt kê ở đầu bằng <strong>chữ đậm</strong>."
 		},
 		"modelInfo": {
 			"contextWindow": "Cửa sổ ngữ cảnh",
 			"providerBreakdown": "Phân tích Giá và Khả năng của Nhà cung cấp",
-			"averageKiloCodeCost": "Đây là chi phí thực tế trung bình mà Kilo Code đã chi tiêu khi sử dụng mô hình này trong tuần qua. Chi phí này có thể thấp hơn giá niêm yết do việc sử dụng bộ nhớ đệm prompt.",
+			"averageKiloCodeCost": "Đây là chi phí thực tế trung bình mà Axon Code đã chi tiêu khi sử dụng mô hình này trong tuần qua. Chi phí này có thể thấp hơn giá niêm yết do việc sử dụng bộ nhớ đệm prompt.",
 			"table": {
 				"provider": "Nhà cung cấp",
 				"context": "Điểm cuối có thể xử lý số lượng token này (đầu vào + đầu ra).",
@@ -88,10 +88,10 @@
 		},
 		"systemNotifications": {
 			"label": "Bật thông báo hệ thống",
-			"description": "Khi bật, Kilo Code sẽ gửi thông báo hệ thống cho các sự kiện quan trọng như hoàn thành nhiệm vụ hoặc lỗi.",
+			"description": "Khi bật, Axon Code sẽ gửi thông báo hệ thống cho các sự kiện quan trọng như hoàn thành nhiệm vụ hoặc lỗi.",
 			"testButton": "Kiểm tra thông báo",
-			"testTitle": "Kilo Code",
-			"testMessage": "Đây là thông báo kiểm tra từ Kilo Code."
+			"testTitle": "Axon Code",
+			"testMessage": "Đây là thông báo kiểm tra từ Axon Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -106,7 +106,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code muốn tóm tắt cuộc trò chuyện của bạn",
+			"wantsToCondense": "Axon Code muốn tóm tắt cuộc trò chuyện của bạn",
 			"condenseConversation": "Tóm tắt cuộc trò chuyện"
 		},
 		"seeNewChanges": "Hiển thị thay đổi mới",
@@ -137,15 +137,15 @@
 	},
 	"docs": "Tài liệu",
 	"rules": {
-		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Kilo Code",
-		"ariaLabel": "Quy tắc Kilo Code",
+		"tooltip": "Quản lý Quy tắc & Quy trình làm việc Axon Code",
+		"ariaLabel": "Quy tắc Axon Code",
 		"tabs": {
 			"rules": "Quy tắc",
 			"workflows": "Quy trình làm việc"
 		},
 		"description": {
-			"rules": "Quy tắc cho phép bạn cung cấp hướng dẫn cho Kilo Code mà nó phải tuân theo trong tất cả các chế độ và cho tất cả các prompt. Chúng là một cách bền vững để bao gồm ngữ cảnh và tùy chọn cho tất cả các cuộc trò chuyện trong workspace của bạn hoặc toàn cầu.",
-			"workflows": "Quy trình làm việc là một mẫu được chuẩn bị cho một cuộc trò chuyện. Quy trình làm việc cho phép bạn xác định các prompt mà bạn sử dụng thường xuyên, và có thể bao gồm một loạt các bước để hướng dẫn Kilo Code thông qua các tác vụ lặp đi lặp lại, chẳng hạn như triển khai dịch vụ hoặc gửi PR. Để gọi quy trình làm việc, hãy nhập",
+			"rules": "Quy tắc cho phép bạn cung cấp hướng dẫn cho Axon Code mà nó phải tuân theo trong tất cả các chế độ và cho tất cả các prompt. Chúng là một cách bền vững để bao gồm ngữ cảnh và tùy chọn cho tất cả các cuộc trò chuyện trong workspace của bạn hoặc toàn cầu.",
+			"workflows": "Quy trình làm việc là một mẫu được chuẩn bị cho một cuộc trò chuyện. Quy trình làm việc cho phép bạn xác định các prompt mà bạn sử dụng thường xuyên, và có thể bao gồm một loạt các bước để hướng dẫn Axon Code thông qua các tác vụ lặp đi lặp lại, chẳng hạn như triển khai dịch vụ hoặc gửi PR. Để gọi quy trình làm việc, hãy nhập",
 			"workflowsInChat": "trong chat."
 		},
 		"sections": {
@@ -215,11 +215,11 @@
 			"keybindingDescription": "Các tính năng Autocomplete có thể được kích hoạt bằng lệnh. Bạn có thể cấu hình <DocsLink>Phím Tắt ở đây</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Bật Autocomplete",
-				"description": "Khi được bật, Kilo Code sẽ tự động kích hoạt Autocomplete khi bạn ngừng gõ. Điều này có thể hữu ích cho các sửa chữa nhanh và gợi ý."
+				"description": "Khi được bật, Axon Code sẽ tự động kích hoạt Autocomplete khi bạn ngừng gõ. Điều này có thể hữu ích cho các sửa chữa nhanh và gợi ý."
 			},
 			"autoTriggerDelay": {
 				"label": "Độ Trễ Kích Hoạt Tự Động",
-				"description": "Độ trễ tính bằng giây trước khi Kilo Code kích hoạt Autocomplete sau khi bạn ngừng gõ. Độ trễ ngắn hơn có nghĩa là gợi ý nhanh hơn, nhưng có thể tốn nhiều tài nguyên hơn."
+				"description": "Độ trễ tính bằng giây trước khi Axon Code kích hoạt Autocomplete sau khi bạn ngừng gõ. Độ trễ ngắn hơn có nghĩa là gợi ý nhanh hơn, nhưng có thể tốn nhiều tài nguyên hơn."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tác vụ nhanh ({{keybinding}})",

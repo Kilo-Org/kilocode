@@ -19,7 +19,7 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Using Kilo Code",
+			label: "Using Axon Code",
 			items: [
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
@@ -122,7 +122,7 @@ const sidebars: SidebarsConfig = {
 				"advanced-usage/prompt-engineering",
 				{
 					type: "category",
-					label: "Customizing Kilo Code",
+					label: "Customizing Axon Code",
 					items: [
 						"advanced-usage/custom-rules",
 						"advanced-usage/custom-instructions",
@@ -160,7 +160,7 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Extending Kilo Code",
+			label: "Extending Axon Code",
 			items: [
 				"advanced-usage/local-models",
 				{

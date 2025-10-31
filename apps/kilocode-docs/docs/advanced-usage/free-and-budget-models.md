@@ -2,15 +2,15 @@
 sidebar_label: Free & Budget Models
 ---
 
-# Using Kilo Code for Free and on a Budget
+# Using Axon Code for Free and on a Budget
 
-**Why this matters:** AI model costs can add up quickly during development. This guide shows you how to use Kilo Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
+**Why this matters:** AI model costs can add up quickly during development. This guide shows you how to use Axon Code effectively while minimizing or eliminating costs through free models, budget-friendly alternatives, and smart usage strategies.
 
 ## Completely Free Options
 
 ### Grok Code Fast 1
 
-This frontier AI model is 100% free in Kilo Code for a limited time. [See the blog post for more details](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free).
+This frontier AI model is 100% free in Axon Code for a limited time. [See the blog post for more details](https://blog.matterai.so/p/grok-code-fast-get-this-frontier-ai-model-free).
 
 ### OpenRouter Free Tier Models
 
@@ -20,7 +20,7 @@ OpenRouter offers several models with generous free tiers. **Note:** You'll need
 
 1. Create a free [OpenRouter account](https://openrouter.ai)
 2. Get your API key from the dashboard
-3. Configure Kilo Code with the OpenRouter provider
+3. Configure Axon Code with the OpenRouter provider
 
 **Available free models:**
 
@@ -241,7 +241,7 @@ When you need more capability than free models provide, these options deliver ex
 ### Quick Setup Guide
 
 1. **Create OpenRouter account** for free models
-2. **Configure multiple providers** in Kilo Code
+2. **Configure multiple providers** in Axon Code
 3. **Set up API Configuration Profiles** for easy switching
 4. **Escalate to budget models** when needed
 5. **Reserve premium models** for complex work

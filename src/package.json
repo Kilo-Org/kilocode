@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.113.1",
+	"version": "4.114.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -17,13 +17,13 @@
 		"workspace"
 	],
 	"author": {
-		"name": "Kilo Code"
+		"name": "Axon Code"
 	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/Kilo-Org/kilocode"
 	},
-	"homepage": "https://kilocode.ai",
+	"homepage": "https://matterai.so",
 	"categories": [
 		"AI",
 		"Chat",
@@ -45,7 +45,7 @@
 		"sonnet",
 		"ai",
 		"llama",
-		"Kilo Code",
+		"Axon Code",
 		"kilocode"
 	],
 	"activationEvents": [
@@ -57,13 +57,13 @@
 		"walkthroughs": [
 			{
 				"id": "kiloCodeWalkthrough",
-				"title": "5 ways Kilo Code helps you code",
+				"title": "5 ways Axon Code helps you code",
 				"description": "You now have a personal AI coding assistant.",
 				"steps": [
 					{
 						"id": "welcome",
 						"title": "Write code for you",
-						"description": "Describe what you want to build. Kilo Code will write it from scratch, generate the files, and run them for you.",
+						"description": "Describe what you want to build. Axon Code will write it from scratch, generate the files, and run them for you.",
 						"media": {
 							"markdown": "./dist/walkthrough/step1.md"
 						}
@@ -71,7 +71,7 @@
 					{
 						"id": "getting-started",
 						"title": "Understand your codebase",
-						"description": "Need clarity on how something works? Ask Kilo Code about any part of your files and get a clear explanation.",
+						"description": "Need clarity on how something works? Ask Axon Code about any part of your files and get a clear explanation.",
 						"media": {
 							"markdown": "./dist/walkthrough/step2.md"
 						},
@@ -82,7 +82,7 @@
 					{
 						"id": "modes",
 						"title": "Get things working again",
-						"description": "Stuck on an error? Kilo Code can find the issue, fix it, and get your code running.",
+						"description": "Stuck on an error? Axon Code can find the issue, fix it, and get your code running.",
 						"media": {
 							"markdown": "./dist/walkthrough/step3.md"
 						}
@@ -111,8 +111,8 @@
 				{
 					"id": "kilo-code-ActivityBar",
 					"title": "%views.activitybar.title%",
-					"icon": "assets/icons/kilo.png",
-					"darkIcon": "assets/icons/kilo-dark.png"
+					"icon": "assets/icons/axon-code.png",
+					"darkIcon": "assets/icons/axon-code.png"
 				}
 			]
 		},
@@ -122,8 +122,8 @@
 					"type": "webview",
 					"id": "kilo-code.SidebarProvider",
 					"name": "%views.sidebar.name%",
-					"icon": "assets/icons/kilo.png",
-					"darkIcon": "assets/icons/kilo-dark.png"
+					"icon": "assets/icons/axon-code.png",
+					"darkIcon": "assets/icons/axon-code.png"
 				}
 			]
 		},

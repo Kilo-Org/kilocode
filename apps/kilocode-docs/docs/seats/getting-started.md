@@ -17,7 +17,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
 
 ### Step 1: Create Your Organization
 
-1. Visit [app.kilocode.ai](https://app.kilocode.ai)
+1. Visit [app.matterai.so](https://app.matterai.so)
 2. Sign up using your company Google Workspaces or GitHub account
     - Note: We recommend starting with your GitHub account rather than a personal Google account, but we can change it later.
 3. Click **Organizations** in the left sidebar and then **Create New Organization**
@@ -49,7 +49,7 @@ seats for Kilo in the Teams or Enterprise subscription brings transparent AI cod
 Team members receive invitation emails with these steps:
 
 1. Accept the team invitation
-2. Install Kilo Code from [VS Code Marketplace](vscode:extension/kilocode.kilo-code)
+2. Install Axon Code from [VS Code Marketplace](vscode:extension/kilocode.kilo-code)
 3. Sign in with their invited email
 4. Start coding with AI assistance
 

@@ -1,24 +1,24 @@
 import Image from '@site/src/components/Image';
 
-# Chatting with Kilo Code
+# Chatting with Axon Code
 
 :::tip
 
-**Bottom line:** Kilo Code is an AI coding assistant that lives in VS Code. You chat with it in plain English, and it writes, edits, and explains code for you.
+**Bottom line:** Axon Code is an AI coding assistant that lives in VS Code. You chat with it in plain English, and it writes, edits, and explains code for you.
 
 :::
 
 ## Quick Setup
 
-Find the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
+Find the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
 
-**Lost the panel?** Go to View > Open View... and search for "Kilo Code"
+**Lost the panel?** Go to View > Open View... and search for "Axon Code"
 
-## How to Talk to Kilo Code
+## How to Talk to Axon Code
 
 **The key insight:** Just type what you want in normal English. No special commands needed.
 
-<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="Example of typing a request in Kilo Code" width="600" />
+<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="Example of typing a request in Axon Code" width="600" />
 
 **Good requests:**
 
@@ -35,11 +35,11 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 ```
 
 **What makes requests work:**
+
 - **Be specific** - "Fix the bug in `calculateTotal` that returns incorrect results" beats "Fix the code"
 - **Use @ mentions** - Reference files and code directly with `@filename`
 - **One task at a time** - Break complex work into manageable steps
 - **Include examples** - Show the style or format you want
-
 
 ## The Chat Interface
 
@@ -50,6 +50,7 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 />
 
 **Essential controls:**
+
 - **Chat history** - See your conversation and task history
 - **Input field** - Type your requests here (press Enter to send)
 - **Action buttons** - Approve or reject Kilo's proposed changes
@@ -59,25 +60,27 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 ## Quick Interactions
 
 **Click to act:**
+
 - File paths → Opens the file
 - URLs → Opens in browser
 - Messages → Expand/collapse details
 - Code blocks → Copy button appears
 
 **Status signals:**
+
 - Spinning → Kilo is working
 - Red → Error occurred
 - Green → Success
 
 ## Common Mistakes to Avoid
 
-| Instead of this... | Try this |
-|-------------------|----------|
-| "Fix the code" | "Fix the bug in `calculateTotal` that returns incorrect results" |
-| Assuming Kilo knows context | Use `@` to reference specific files |
-| Multiple unrelated tasks | Submit one focused request at a time |
-| Technical jargon overload | Clear, straightforward language works best |
+| Instead of this...          | Try this                                                         |
+| --------------------------- | ---------------------------------------------------------------- |
+| "Fix the code"              | "Fix the bug in `calculateTotal` that returns incorrect results" |
+| Assuming Kilo knows context | Use `@` to reference specific files                              |
+| Multiple unrelated tasks    | Submit one focused request at a time                             |
+| Technical jargon overload   | Clear, straightforward language works best                       |
 
-**Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
+**Why it matters:** Axon Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 
 Ready to start coding? Open the chat panel and describe what you want to build!

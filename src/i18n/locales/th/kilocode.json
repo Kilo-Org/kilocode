@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "ตัวสร้างข้อความคอมมิต Kilo Code เปิดใช้งานแล้ว",
+		"activated": "ตัวสร้างข้อความคอมมิต Axon Code เปิดใช้งานแล้ว",
 		"gitNotFound": "⚠️ ไม่พบที่เก็บ Git หรือ git ไม่พร้อมใช้งาน",
 		"gitInitError": "⚠️ ข้อผิดพลาดในการเริ่มต้น Git: {{error}}",
 		"generating": "Kilo: กำลังสร้างข้อความคอมมิต...",
@@ -64,7 +64,7 @@
 		"errors": {
 			"noProject": "ไม่มีโครงการที่ใช้งานได้",
 			"timeout": "คำขอหมดเวลาหลังจาก 30 วินาที",
-			"connectionFailed": "ไม่สามารถเชื่อมต่อกับส่วนขยาย Kilo Code",
+			"connectionFailed": "ไม่สามารถเชื่อมต่อกับส่วนขยาย Axon Code",
 			"noChanges": "ไม่พบการเปลี่ยนแปลงที่จะคอมมิต",
 			"missingMessage": "ไม่ได้รับข้อความคอมมิตจากส่วนขยาย",
 			"invalidResponse": "ได้รับรูปแบบการตอบกลับที่ไม่ถูกต้องจากส่วนขยาย",
@@ -88,7 +88,7 @@
 		"progress": {
 			"analyzing": "กำลังวิเคราะห์การเปลี่ยนแปลง...",
 			"title": "กำลังสร้างข้อความคอมมิต",
-			"connecting": "กำลังเชื่อมต่อกับ Kilo Code...",
+			"connecting": "กำลังเชื่อมต่อกับ Axon Code...",
 			"generating": "กำลังสร้างข้อความคอมมิต..."
 		},
 		"ui": {
@@ -104,12 +104,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (ปิดใช้งาน)",
 				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
 				"lastCompletion": "คำแนะนำล่าสุด:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
@@ -121,36 +121,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "กำลังวิเคราะห์โค้ดของคุณ...",
 			"generating": "กำลังสร้างการแก้ไขที่แนะนำ...",
 			"processing": "กำลังประมวลผลการแก้ไขที่แนะนำ...",
 			"showing": "กำลังแสดงการแก้ไขที่แนะนำ..."
 		},
 		"input": {
-			"title": "Kilo Code: งานด่วน",
+			"title": "Axon Code: งานด่วน",
 			"placeholder": "เช่น 'ปรับโครงสร้างฟังก์ชันนี้ให้มีประสิทธิภาพมากขึ้น'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: สร้างการแก้ไขที่แนะนำ",
+			"generateSuggestions": "Axon Code: สร้างการแก้ไขที่แนะนำ",
 			"displaySuggestions": "แสดงการแก้ไขที่แนะนำ",
 			"cancelSuggestions": "ยกเลิกการแก้ไขที่แนะนำ",
 			"applyCurrentSuggestion": "ใช้การแก้ไขที่แนะนำปัจจุบัน",
 			"applyAllSuggestions": "ใช้การแก้ไขที่แนะนำทั้งหมด",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: การแก้ไขที่แนะนำ"
+			"title": "Axon Code: การแก้ไขที่แนะนำ"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "ฉันสามารถช่วยคุณในงานด่วนและการแก้ไขที่แนะนำได้"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot เพื่อแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำแบบอินไลน์ของ Copilot",
+			"message": "Axon Code Autocomplete ถูกบล็อกโดยความขัดแย้งกับ GitHub Copilot เพื่อแก้ไขปัญหานี้ คุณต้องปิดใช้งานคำแนะนำแบบอินไลน์ของ Copilot",
 			"disableCopilot": "ปิดใช้งาน Copilot",
 			"disableInlineAssist": "ปิดใช้งาน Autocomplete"
 		}

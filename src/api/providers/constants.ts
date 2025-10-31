@@ -4,7 +4,7 @@ import { getAppUrl } from "@roo-code/types"
 
 export const DEFAULT_HEADERS = {
 	"HTTP-Referer": getAppUrl(),
-	"X-Title": "Kilo Code",
+	"X-Title": "Axon Code",
 	[X_KILOCODE_VERSION]: Package.version,
 	"User-Agent": `Kilo-Code/${Package.version}`,
 }

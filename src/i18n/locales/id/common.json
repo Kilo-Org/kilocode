@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Asisten coding AI Open Source untuk merencanakan, membangun, dan memperbaiki kode."
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Proses Claude Code keluar dengan kode {{exitCode}}. Output error: {{output}}",
 			"stoppedWithReason": "Claude Code berhenti karena alasan: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Gagal memuat kredensial OAuth. Silakan autentikasi terlebih dahulu: {{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "Tidak ada konten terminal yang dipilih",
 		"missing_task_files": "File tugas ini hilang. Apakah kamu ingin menghapusnya dari daftar tugas?",
-		"auto_import_failed": "Gagal mengimpor pengaturan Kilo Code secara otomatis: {{error}}"
+		"auto_import_failed": "Gagal mengimpor pengaturan Axon Code secara otomatis: {{error}}"
 	},
 	"info": {
 		"no_changes": "Tidak ada perubahan ditemukan.",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "Path penyimpanan kustom diatur: {{path}}",
 		"default_storage_path": "Kembali menggunakan path penyimpanan default",
 		"settings_imported": "Pengaturan berhasil diimpor.",
-		"auto_import_success": "Pengaturan Kilo Code berhasil diimpor secara otomatis dari {{filename}}",
+		"auto_import_success": "Pengaturan Axon Code berhasil diimpor secara otomatis dari {{filename}}",
 		"share_link_copied": "Link bagikan disalin ke clipboard",
 		"image_copied_to_clipboard": "Data URI gambar disalin ke clipboard",
 		"image_saved": "Gambar disimpan ke {{path}}",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "Silakan masukkan path yang valid"
 	},
 	"input": {
-		"task_prompt": "Apa yang harus Kilo Code lakukan?",
+		"task_prompt": "Apa yang harus Axon Code lakukan?",
 		"task_placeholder": "Ketik tugas kamu di sini"
 	},
 	"settings": {
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Error",

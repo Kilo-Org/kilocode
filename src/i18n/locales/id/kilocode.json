@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generator pesan komit Kilo Code diaktifkan",
+		"activated": "Generator pesan komit Axon Code diaktifkan",
 		"gitNotFound": "⚠️ Repositori Git tidak ditemukan atau git tidak tersedia",
 		"gitInitError": "⚠️ Kesalahan inisialisasi Git: {{error}}",
 		"generating": "Kilo: Menghasilkan pesan komit...",
@@ -63,7 +63,7 @@
 		"providerRegistered": "Kilo: Penyedia pesan komit terdaftar",
 		"errors": {
 			"noProject": "Tidak ada proyek yang tersedia",
-			"connectionFailed": "Gagal terhubung ke ekstensi Kilo Code",
+			"connectionFailed": "Gagal terhubung ke ekstensi Axon Code",
 			"timeout": "Permintaan waktu habis setelah 30 detik",
 			"invalidResponse": "Format respons tidak valid diterima dari ekstensi",
 			"noChanges": "Tidak ada perubahan ditemukan untuk di-commit",
@@ -88,7 +88,7 @@
 		"progress": {
 			"title": "Membuat Pesan Commit",
 			"analyzing": "Menganalisis perubahan...",
-			"connecting": "Menghubungkan ke Kilo Code...",
+			"connecting": "Menghubungkan ke Axon Code...",
 			"generating": "Menghasilkan pesan commit..."
 		},
 		"ui": {
@@ -98,12 +98,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (dinonaktifkan)",
 				"tokenError": "Token yang valid harus diatur untuk menggunakan Autocomplete",
 				"lastCompletion": "Saran terakhir:",
 				"sessionTotal": "Total biaya sesi:",
@@ -115,36 +115,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "Menganalisis kode Anda...",
 			"generating": "Menghasilkan suntingan yang disarankan...",
 			"processing": "Memproses suntingan yang disarankan...",
 			"showing": "Menampilkan suntingan yang disarankan..."
 		},
 		"input": {
-			"title": "Kilo Code: Tugas Cepat",
+			"title": "Axon Code: Tugas Cepat",
 			"placeholder": "mis., 'refaktor fungsi ini agar lebih efisien'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Hasilkan Suntingan yang Disarankan",
+			"generateSuggestions": "Axon Code: Hasilkan Suntingan yang Disarankan",
 			"displaySuggestions": "Tampilkan Suntingan yang Disarankan",
 			"cancelSuggestions": "Batalkan Suntingan yang Disarankan",
 			"applyCurrentSuggestion": "Terapkan Suntingan yang Disarankan Saat Ini",
 			"applyAllSuggestions": "Terapkan Semua Suntingan yang Disarankan",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Suntingan yang Disarankan"
+			"title": "Axon Code: Suntingan yang Disarankan"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "Saya dapat membantu Anda dengan tugas cepat dan suntingan yang disarankan."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete diblokir oleh konflik dengan GitHub Copilot. Untuk memperbaiki ini, Anda harus menonaktifkan saran inline Copilot.",
+			"message": "Axon Code Autocomplete diblokir oleh konflik dengan GitHub Copilot. Untuk memperbaiki ini, Anda harus menonaktifkan saran inline Copilot.",
 			"disableCopilot": "Nonaktifkan Copilot",
 			"disableInlineAssist": "Nonaktifkan Autocomplete"
 		}

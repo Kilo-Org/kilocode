@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Organisations-Modus",
-		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das Kilo Code Dashboard.",
+		"description": "Dieser Modus wird von deiner Organisation bereitgestellt und kann hier nicht bearbeitet werden. Um diesen Modus zu ändern, besuche bitte das Axon Code Dashboard.",
 		"cannotEdit": "Organisations-Modi können nicht bearbeitet werden"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Rollendefinition",
 		"resetToDefault": "Auf Standardwerte zurücksetzen",
-		"description": "Definiere Kilo Codes Expertise und Persönlichkeit für diesen Modus. Diese Beschreibung prägt, wie Kilo Code sich präsentiert und an Aufgaben herangeht."
+		"description": "Definiere Kilo Codes Expertise und Persönlichkeit für diesen Modus. Diese Beschreibung prägt, wie Axon Code sich präsentiert und an Aufgaben herangeht."
 	},
 	"description": {
 		"title": "Kurzbeschreibung (für Menschen)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Prompt verbessern",
-				"description": "Verwende die Prompt-Verbesserung, um maßgeschneiderte Vorschläge oder Verbesserungen für deine Eingaben zu erhalten. Dies stellt sicher, dass Kilo Code deine Absicht versteht und die bestmöglichen Antworten liefert. Verfügbar über das ✨-Symbol im Chat."
+				"description": "Verwende die Prompt-Verbesserung, um maßgeschneiderte Vorschläge oder Verbesserungen für deine Eingaben zu erhalten. Dies stellt sicher, dass Axon Code deine Absicht versteht und die bestmöglichen Antworten liefert. Verfügbar über das ✨-Symbol im Chat."
 			},
 			"CONDENSE": {
 				"label": "Kontextverdichtung",

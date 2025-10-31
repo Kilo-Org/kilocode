@@ -33,7 +33,7 @@
 		"ui": "UI",
 		"experimental": "실험적",
 		"language": "언어",
-		"about": "Kilo Code 정보",
+		"about": "Axon Code 정보",
 		"display": "디스플레이"
 	},
 	"slashCommands": {
@@ -793,13 +793,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI 이미지 생성 활성화",
-			"description": "활성화하면 Kilo Code는 텍스트 프롬프트에서 이미지를 생성할 수 있습니다. Kilo Code 또는 OpenRouter API 키 구성이 필요합니다.",
+			"description": "활성화하면 Kilo Code는 텍스트 프롬프트에서 이미지를 생성할 수 있습니다. Axon Code 또는 OpenRouter API 키 구성이 필요합니다.",
 			"apiProvider": "API 제공자",
 			"openRouterApiKeyLabel": "OpenRouter API 키",
 			"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
-			"kiloCodeApiKeyLabel": "Kilo Code API 키",
-			"kiloCodeApiKeyPlaceholder": "Kilo Code API 키를 입력하세요",
-			"kiloCodeApiKeyPaste": "현재 Kilo Code API 키 붙여넣기",
+			"kiloCodeApiKeyLabel": "Axon Code API 키",
+			"kiloCodeApiKeyPlaceholder": "Axon Code API 키를 입력하세요",
+			"kiloCodeApiKeyPaste": "현재 Axon Code API 키 붙여넣기",
 			"getApiKeyText": "API 키를 받을 곳",
 			"modelSelectionLabel": "이미지 생성 모델",
 			"modelSelectionDescription": "이미지 생성에 사용할 모델을 선택하세요",
@@ -856,11 +856,11 @@
 		"useCustomModel": "사용자 정의 사용: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>kilocode.ai/discord</discordLink>에 가입하세요",
-		"support": "재무 관련 문의는 <supportLink>https://kilocode.ai/support</supportLink>로 고객 지원팀에 문의하세요",
+		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>matterai.so/discord</discordLink>에 가입하세요",
+		"support": "재무 관련 문의는 <supportLink>https://matterai.so/support</supportLink>로 고객 지원팀에 문의하세요",
 		"telemetry": {
 			"label": "오류 및 사용 보고 허용",
-			"description": "사용 데이터 및 오류 보고서를 보내 Kilo Code 개선에 도움을 주세요. 코드, 프롬프트 또는 개인 정보는 절대 전송되지 않습니다. 자세한 내용은 개인정보 보호정책을 참조하세요."
+			"description": "사용 데이터 및 오류 보고서를 보내 Axon Code 개선에 도움을 주세요. 코드, 프롬프트 또는 개인 정보는 절대 전송되지 않습니다. 자세한 내용은 개인정보 보호정책을 참조하세요."
 		},
 		"settings": {
 			"import": "가져오기",

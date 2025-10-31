@@ -2,16 +2,16 @@
 	"title": "MCP Servers",
 	"done": "เสร็จสิ้น",
 	"marketplace": "MCP Marketplace",
-	"description": "<0>Model Context Protocol</0> ช่วยให้สามารถสื่อสารกับ MCP servers ที่ทำงานในเครื่องซึ่งให้เครื่องมือและทรัพยากรเพิ่มเติมเพื่อขยายความสามารถของ Kilo Code คุณสามารถใช้ <1>servers ที่สร้างโดยชุมชน</1> หรือขอให้ Kilo Code สร้างเครื่องมือใหม่ที่เฉพาะเจาะจงกับ workflow ของคุณ (เช่น \"เพิ่มเครื่องมือที่ดึง npm docs ล่าสุด\")",
+	"description": "<0>Model Context Protocol</0> ช่วยให้สามารถสื่อสารกับ MCP servers ที่ทำงานในเครื่องซึ่งให้เครื่องมือและทรัพยากรเพิ่มเติมเพื่อขยายความสามารถของ Axon Code คุณสามารถใช้ <1>servers ที่สร้างโดยชุมชน</1> หรือขอให้ Axon Code สร้างเครื่องมือใหม่ที่เฉพาะเจาะจงกับ workflow ของคุณ (เช่น \"เพิ่มเครื่องมือที่ดึง npm docs ล่าสุด\")",
 	"instructions": "คำแนะนำ",
 	"enableToggle": {
 		"title": "เปิดใช้งาน MCP Servers",
-		"description": "เปิดสิ่งนี้เพื่อให้ Kilo Code ใช้เครื่องมือจาก MCP servers ที่เชื่อมต่อ ซึ่งจะให้ความสามารถเพิ่มเติมแก่ Kilo Code หากคุณไม่วางแผนที่จะใช้เครื่องมือเพิ่มเติมเหล่านี้ ให้ปิดเพื่อช่วยลดค่าใช้จ่าย API token"
+		"description": "เปิดสิ่งนี้เพื่อให้ Axon Code ใช้เครื่องมือจาก MCP servers ที่เชื่อมต่อ ซึ่งจะให้ความสามารถเพิ่มเติมแก่ Axon Code หากคุณไม่วางแผนที่จะใช้เครื่องมือเพิ่มเติมเหล่านี้ ให้ปิดเพื่อช่วยลดค่าใช้จ่าย API token"
 	},
 	"enableServerCreation": {
 		"title": "เปิดใช้งานการสร้าง MCP Server",
-		"description": "เปิดใช้งานนี้เพื่อให้ Kilo Code ช่วยคุณสร้าง custom MCP servers <1>ใหม่</1> <0>เรียนรู้เกี่ยวกับการสร้าง server</0>",
-		"hint": "คำแนะนำ: เพื่อลดค่าใช้จ่าย API token ให้ปิดการตั้งค่านี้เมื่อคุณไม่ได้ขอให้ Kilo Code สร้าง MCP server ใหม่อย่างแข็งขัน"
+		"description": "เปิดใช้งานนี้เพื่อให้ Axon Code ช่วยคุณสร้าง custom MCP servers <1>ใหม่</1> <0>เรียนรู้เกี่ยวกับการสร้าง server</0>",
+		"hint": "คำแนะนำ: เพื่อลดค่าใช้จ่าย API token ให้ปิดการตั้งค่านี้เมื่อคุณไม่ได้ขอให้ Axon Code สร้าง MCP server ใหม่อย่างแข็งขัน"
 	},
 	"editGlobalMCP": "แก้ไข Global MCP",
 	"editProjectMCP": "แก้ไข Project MCP",

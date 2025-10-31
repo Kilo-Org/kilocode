@@ -30,7 +30,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		options = {
 			...options,
 			openRouterBaseUrl: getKiloUrlFromToken(
-				"https://api.kilocode.ai/api/openrouter/",
+				"https://api.matterai.so/api/openrouter/",
 				options.kilocodeToken ?? "",
 			),
 			openRouterApiKey: options.kilocodeToken,

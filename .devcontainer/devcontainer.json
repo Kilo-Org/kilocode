@@ -1,13 +1,11 @@
 {
-	"name": "Kilo Code Development",
+	"name": "Axon Code Development",
 	"dockerFile": "Dockerfile",
 	"context": "..",
-
 	"features": {
 		"ghcr.io/devcontainers/features/git:1": {},
 		"ghcr.io/devcontainers/features/github-cli:1": {}
 	},
-
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -31,7 +29,6 @@
 			}
 		}
 	},
-
 	"forwardPorts": [3000, 5173, 8080],
 	"portsAttributes": {
 		"3000": {
@@ -47,12 +44,9 @@
 			"onAutoForward": "silent"
 		}
 	},
-
 	"postCreateCommand": "bash .devcontainer/setup.sh",
-	"postStartCommand": "echo '🚀 Kilo Code devcontainer is ready!'",
-
+	"postStartCommand": "echo '🚀 Axon Code devcontainer is ready!'",
 	"remoteUser": "root",
 	"containerUser": "root",
-
 	"mounts": ["source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached"]
 }

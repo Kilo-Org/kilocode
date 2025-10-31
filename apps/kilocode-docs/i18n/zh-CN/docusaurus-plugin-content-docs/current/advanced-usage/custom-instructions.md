@@ -1,6 +1,6 @@
 # 自定义指令
 
-自定义指令允许你个性化 Kilo Code 的行为，提供特定的指导来塑造响应、编码风格和决策过程。
+自定义指令允许你个性化 Axon Code 的行为，提供特定的指导来塑造响应、编码风格和决策过程。
 
 ## 什么是自定义指令？
 
@@ -14,8 +14,8 @@
 
 **如何设置：**
 
-<img src="/docs/img/custom-instructions/custom-instructions.png" alt="Kilo Code 提示标签显示全局自定义指令界面" width="600" />
-1.  **打开提示标签：** 点击 Kilo Code 顶部菜单栏中的 <Codicon name="notebook" /> 图标
+<img src="/docs/img/custom-instructions/custom-instructions.png" alt="Axon Code 提示标签显示全局自定义指令界面" width="600" />
+1.  **打开提示标签：** 点击 Axon Code 顶部菜单栏中的 <Codicon name="notebook" /> 图标
 2.  **找到部分：** 找到 "所有模式的自定义指令" 部分
 3.  **输入指令：** 在文本区域输入你的指令
 4.  **保存更改：** 点击 "完成" 保存你的更改
@@ -24,8 +24,8 @@
 
 模式特定指令可以使用提示标签设置
 
-    <img src="/docs/img/custom-instructions/custom-instructions-3.png" alt="Kilo Code 提示标签显示模式特定自定义指令界面" width="600" />
-    * **打开标签：** 点击 Kilo Code 顶部菜单栏中的 <Codicon name="notebook" /> 图标
+    <img src="/docs/img/custom-instructions/custom-instructions-3.png" alt="Axon Code 提示标签显示模式特定自定义指令界面" width="600" />
+    * **打开标签：** 点击 Axon Code 顶部菜单栏中的 <Codicon name="notebook" /> 图标
     * **选择模式：** 在模式标题下，点击你想要自定义的模式按钮
     * **输入指令：** 在 "模式特定自定义指令（可选）" 下的文本区域输入你的指令
     * **保存更改：** 点击 "完成" 保存你的更改
@@ -33,7 +33,6 @@
         :::info 全局模式规则
         如果模式本身是全局的（非工作区特定），你为其设置的任何自定义指令也将全局适用于所有工作区的该模式。
         :::
-
 
 ## 相关功能
 

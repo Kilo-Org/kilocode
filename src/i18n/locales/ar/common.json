@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "أداة ذكاء اصطناعي مفتوحة المصدر تساعدك في تخطيط وبناء وتعديل الأكواد."
 	},
 	"number_format": {
@@ -99,7 +99,7 @@
 			"processExitedWithError": "العملية طلعت بكود {{exitCode}}. المخرجات: {{output}}",
 			"stoppedWithReason": "Claude Code توقف والسبب: {{reason}}",
 			"apiKeyModelPlanMismatch": "مفاتيح API وخطط الاشتراك تدعم نماذج مختلفة. تأكد إن النموذج المحدد داخل ضمن خطتك.",
-			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Kilo Code تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
+			"notFound": "ملف Claude Code التنفيذي '{{claudePath}}' غير موجود.\n\nرجاءً ثبت Claude Code CLI:\n1. زر {{installationUrl}} لتحميل Claude Code\n2. اتبع تعليمات التثبيت لنظام التشغيل\n3. تأكد إن أمر 'claude' متاح في PATH\n4. أو اضبط مسار مخصص في إعدادات Axon Code تحت 'مسار Claude Code'\n\nالخطأ الأصلي: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "فشل تحميل بيانات OAuth. لازم تسوي تسجيل دخول أول: {{error}}",
@@ -152,7 +152,7 @@
 	"warnings": {
 		"no_terminal_content": "ما تم تحديد أي محتوى من الطرفية",
 		"missing_task_files": "ملفات المهمة ناقصة. تبي نحذفها من القائمة؟",
-		"auto_import_failed": "فشل الاستيراد التلقائي لإعدادات Kilo Code: {{error}}"
+		"auto_import_failed": "فشل الاستيراد التلقائي لإعدادات Axon Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "ما تم العثور على تغييرات.",
@@ -166,7 +166,7 @@
 		"public_share_link_copied": "تم نسخ رابط المشاركة العام!",
 		"image_copied_to_clipboard": "تم نسخ بيانات الصورة إلى الحافظة",
 		"image_saved": "تم حفظ الصورة في {{path}}",
-		"auto_import_success": "تم استيراد إعدادات Kilo Code تلقائياً من {{filename}}",
+		"auto_import_success": "تم استيراد إعدادات Axon Code تلقائياً من {{filename}}",
 		"mode_exported": "تم تصدير الوضع '{{mode}}' بنجاح",
 		"mode_imported": "تم استيراد الوضع بنجاح"
 	},
@@ -195,7 +195,7 @@
 		"enter_valid_path": "رجاءً أدخل مسار صحيح"
 	},
 	"input": {
-		"task_prompt": "وش تبي Kilo Code يسوي؟",
+		"task_prompt": "وش تبي Axon Code يسوي؟",
 		"task_placeholder": "ابنِ، ابحث، اسأل عن شي"
 	},
 	"customModes": {
@@ -222,8 +222,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "منظمتك تتطلب تسجيل دخول Kilo Code Cloud. سجل دخولك عشان تكمل.",
-			"organization_mismatch": "لازم تسجل دخول بحساب المنظمة في Kilo Code Cloud.",
+			"cloud_auth_required": "منظمتك تتطلب تسجيل دخول Axon Code Cloud. سجل دخولك عشان تكمل.",
+			"organization_mismatch": "لازم تسجل دخول بحساب المنظمة في Axon Code Cloud.",
 			"verification_failed": "فشل التحقق من تسجيل الدخول للمنظمة."
 		},
 		"info": {

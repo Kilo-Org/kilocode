@@ -19,7 +19,7 @@ This tool searches through your indexed codebase using semantic similarity rathe
 
 ## When is it used?
 
-- When Kilo Code needs to find code related to specific functionality across your project
+- When Axon Code needs to find code related to specific functionality across your project
 - When looking for implementation patterns or similar code structures
 - When searching for error handling, authentication, or other conceptual code patterns
 - When exploring unfamiliar codebases to understand how features are implemented
@@ -61,39 +61,39 @@ When the `codebase_search` tool is invoked, it follows this process:
 
 1. **Availability Validation**:
 
-   - Verifies that the CodeIndexManager is available and initialized
-   - Confirms codebase indexing is enabled in settings
-   - Checks that indexing is properly configured (API keys, Qdrant URL)
-   - Validates the current index state allows searching
+    - Verifies that the CodeIndexManager is available and initialized
+    - Confirms codebase indexing is enabled in settings
+    - Checks that indexing is properly configured (API keys, Qdrant URL)
+    - Validates the current index state allows searching
 
 2. **Query Processing**:
 
-   - Takes your natural language query and generates an embedding vector
-   - Uses the same embedding provider configured for indexing (OpenAI or Ollama)
-   - Converts the semantic meaning of your query into a mathematical representation
+    - Takes your natural language query and generates an embedding vector
+    - Uses the same embedding provider configured for indexing (OpenAI or Ollama)
+    - Converts the semantic meaning of your query into a mathematical representation
 
 3. **Vector Search Execution**:
 
-   - Searches the Qdrant vector database for similar code embeddings
-   - Uses cosine similarity to find the most relevant code blocks
-   - Applies the minimum similarity threshold (0.4) to filter results
-   - Limits results to 50 matches for optimal performance
+    - Searches the Qdrant vector database for similar code embeddings
+    - Uses cosine similarity to find the most relevant code blocks
+    - Applies the minimum similarity threshold (0.4) to filter results
+    - Limits results to 50 matches for optimal performance
 
 4. **Path Filtering** (if specified):
 
-   - Filters results to only include files within the specified directory path
-   - Uses normalized path comparison for accurate filtering
-   - Maintains relevance ranking within the filtered scope
+    - Filters results to only include files within the specified directory path
+    - Uses normalized path comparison for accurate filtering
+    - Maintains relevance ranking within the filtered scope
 
 5. **Result Processing and Formatting**:
 
-   - Converts absolute file paths to workspace-relative paths
-   - Structures results with file paths, line ranges, similarity scores, and code content
-   - Formats for both AI consumption and UI display with syntax highlighting
+    - Converts absolute file paths to workspace-relative paths
+    - Structures results with file paths, line ranges, similarity scores, and code content
+    - Formats for both AI consumption and UI display with syntax highlighting
 
 6. **Dual Output Format**:
-   - **AI Output**: Structured text format with query, file paths, scores, and code chunks
-   - **UI Output**: JSON format with syntax highlighting and navigation capabilities
+    - **AI Output**: Structured text format with query, file paths, scores, and code chunks
+    - **UI Output**: JSON format with syntax highlighting and navigation capabilities
 
 ## Search Query Best Practices
 
@@ -189,10 +189,10 @@ Each search result includes:
 
 ## Examples When Used
 
-- When implementing a new feature, Kilo Code searches for "authentication middleware" to understand existing patterns before writing new code.
-- When debugging an issue, Kilo Code searches for "error handling in API calls" to find related error patterns across the codebase.
-- When refactoring code, Kilo Code searches for "database transaction patterns" to ensure consistency across all database operations.
-- When onboarding to a new codebase, Kilo Code searches for "configuration loading" to understand how the application bootstraps.
+- When implementing a new feature, Axon Code searches for "authentication middleware" to understand existing patterns before writing new code.
+- When debugging an issue, Axon Code searches for "error handling in API calls" to find related error patterns across the codebase.
+- When refactoring code, Axon Code searches for "database transaction patterns" to ensure consistency across all database operations.
+- When onboarding to a new codebase, Axon Code searches for "configuration loading" to understand how the application bootstraps.
 
 ## Usage Examples
 

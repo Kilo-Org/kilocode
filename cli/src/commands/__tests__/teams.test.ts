@@ -139,7 +139,7 @@ describe("/teams command", () => {
 
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.type).toBe("system")
-			expect(message.content).toContain("https://app.kilocode.ai/get-started/teams")
+			expect(message.content).toContain("https://app.matterai.so/get-started/teams")
 		})
 
 		it("should list all teams including organizations", async () => {
@@ -268,7 +268,7 @@ describe("/teams command", () => {
 				organizations: [
 					{
 						id: "org-456",
-						name: "Kilo Code",
+						name: "Axon Code",
 						role: "admin",
 					},
 				],
@@ -285,7 +285,7 @@ describe("/teams command", () => {
 			)
 			expect(successMessage).toBeDefined()
 			if (successMessage) {
-				expect(successMessage[0].content).toContain("Kilo Code")
+				expect(successMessage[0].content).toContain("Axon Code")
 			}
 		})
 

@@ -1,5 +1,5 @@
 {
-  description = "Kilo Code development environment";
+  description = "Axon Code development environment";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";

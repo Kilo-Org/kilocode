@@ -1,5 +1,5 @@
 {
-	"greeting": "¿Qué puede hacer Kilo Code por ti?",
+	"greeting": "¿Qué puede hacer Axon Code por ti?",
 	"task": {
 		"title": "Tarea",
 		"expand": "Expandir tarea",
@@ -21,7 +21,7 @@
 		"sharePublicly": "Compartir públicamente",
 		"sharePubliclyDescription": "Cualquiera con el enlace puede acceder",
 		"connectToCloud": "Conectar al Cloud",
-		"connectToCloudDescription": "Inicia sesión en Kilo Code Cloud para compartir tareas",
+		"connectToCloudDescription": "Inicia sesión en Axon Code Cloud para compartir tareas",
 		"sharingDisabledByOrganization": "Compartir deshabilitado por la organización",
 		"shareSuccessOrganization": "Enlace de organización copiado al portapapeles",
 		"shareSuccessPublic": "Enlace público copiado al portapapeles",
@@ -92,7 +92,7 @@
 	},
 	"scrollToBottom": "Desplazarse al final del chat",
 	"about": "Genera, refactoriza y depura código con asistencia de IA. Consulta nuestra <DocsLink>documentación</DocsLink> para obtener más información.",
-	"onboarding": "<strong>Tu lista de tareas en este espacio de trabajo está vacía.</strong> Comienza escribiendo una tarea abajo. ¿No estás seguro cómo empezar? Lee más sobre lo que Kilo Code puede hacer por ti en <DocsLink>la documentación</DocsLink>.",
+	"onboarding": "<strong>Tu lista de tareas en este espacio de trabajo está vacía.</strong> Comienza escribiendo una tarea abajo. ¿No estás seguro cómo empezar? Lee más sobre lo que Axon Code puede hacer por ti en <DocsLink>la documentación</DocsLink>.",
 	"rooTips": {
 		"boomerangTasks": {
 			"title": "Orquestación de Tareas",
@@ -128,7 +128,7 @@
 		"title": "Modos",
 		"marketplace": "Marketplace de Modos",
 		"settings": "Configuración de Modos",
-		"description": "Personalidades especializadas que adaptan el comportamiento de Kilo Code.",
+		"description": "Personalidades especializadas que adaptan el comportamiento de Axon Code.",
 		"searchPlaceholder": "Buscar modos...",
 		"noResults": "No se encontraron resultados",
 		"organizationModes": "Modos de organización"
@@ -143,7 +143,7 @@
 	"diffError": {
 		"title": "Edición fallida"
 	},
-	"troubleMessage": "Kilo Code está teniendo problemas...",
+	"troubleMessage": "Axon Code está teniendo problemas...",
 	"apiRequest": {
 		"title": "Solicitud API",
 		"failed": "Solicitud API falló",
@@ -168,46 +168,46 @@
 		"current": "Actual"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code quiere obtener instrucciones detalladas para ayudar con la tarea actual"
+		"wantsToFetch": "Axon Code quiere obtener instrucciones detalladas para ayudar con la tarea actual"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code quiere leer este archivo",
-		"wantsToReadOutsideWorkspace": "Kilo Code quiere leer este archivo fuera del espacio de trabajo",
-		"didRead": "Kilo Code leyó este archivo",
-		"wantsToEdit": "Kilo Code quiere editar este archivo",
-		"wantsToEditOutsideWorkspace": "Kilo Code quiere editar este archivo fuera del espacio de trabajo",
-		"wantsToEditProtected": "Kilo Code quiere editar un archivo de configuración protegido",
-		"wantsToCreate": "Kilo Code quiere crear un nuevo archivo",
-		"wantsToSearchReplace": "Kilo Code quiere realizar búsqueda y reemplazo en este archivo",
-		"didSearchReplace": "Kilo Code realizó búsqueda y reemplazo en este archivo",
-		"wantsToInsert": "Kilo Code quiere insertar contenido en este archivo",
-		"wantsToInsertWithLineNumber": "Kilo Code quiere insertar contenido en este archivo en la línea {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code quiere añadir contenido al final de este archivo",
-		"wantsToReadAndXMore": "Kilo Code quiere leer este archivo y {{count}} más",
-		"wantsToReadMultiple": "Kilo Code quiere leer varios archivos",
-		"wantsToApplyBatchChanges": "Kilo Code quiere aplicar cambios a múltiples archivos",
-		"wantsToGenerateImage": "Kilo Code quiere generar una imagen",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code quiere generar una imagen fuera del espacio de trabajo",
-		"wantsToGenerateImageProtected": "Kilo Code quiere generar una imagen en una ubicación protegida",
-		"didGenerateImage": "Kilo Code generó una imagen"
+		"wantsToRead": "Axon Code quiere leer este archivo",
+		"wantsToReadOutsideWorkspace": "Axon Code quiere leer este archivo fuera del espacio de trabajo",
+		"didRead": "Axon Code leyó este archivo",
+		"wantsToEdit": "Axon Code quiere editar este archivo",
+		"wantsToEditOutsideWorkspace": "Axon Code quiere editar este archivo fuera del espacio de trabajo",
+		"wantsToEditProtected": "Axon Code quiere editar un archivo de configuración protegido",
+		"wantsToCreate": "Axon Code quiere crear un nuevo archivo",
+		"wantsToSearchReplace": "Axon Code quiere realizar búsqueda y reemplazo en este archivo",
+		"didSearchReplace": "Axon Code realizó búsqueda y reemplazo en este archivo",
+		"wantsToInsert": "Axon Code quiere insertar contenido en este archivo",
+		"wantsToInsertWithLineNumber": "Axon Code quiere insertar contenido en este archivo en la línea {{lineNumber}}",
+		"wantsToInsertAtEnd": "Axon Code quiere añadir contenido al final de este archivo",
+		"wantsToReadAndXMore": "Axon Code quiere leer este archivo y {{count}} más",
+		"wantsToReadMultiple": "Axon Code quiere leer varios archivos",
+		"wantsToApplyBatchChanges": "Axon Code quiere aplicar cambios a múltiples archivos",
+		"wantsToGenerateImage": "Axon Code quiere generar una imagen",
+		"wantsToGenerateImageOutsideWorkspace": "Axon Code quiere generar una imagen fuera del espacio de trabajo",
+		"wantsToGenerateImageProtected": "Axon Code quiere generar una imagen en una ubicación protegida",
+		"didGenerateImage": "Axon Code generó una imagen"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code quiere ver los archivos de nivel superior en este directorio",
-		"didViewTopLevel": "Kilo Code vio los archivos de nivel superior en este directorio",
-		"wantsToViewRecursive": "Kilo Code quiere ver recursivamente todos los archivos en este directorio",
-		"didViewRecursive": "Kilo Code vio recursivamente todos los archivos en este directorio",
-		"wantsToViewDefinitions": "Kilo Code quiere ver nombres de definiciones de código fuente utilizados en este directorio",
-		"didViewDefinitions": "Kilo Code vio nombres de definiciones de código fuente utilizados en este directorio",
-		"wantsToSearch": "Kilo Code quiere buscar en este directorio <code>{{regex}}</code>",
-		"didSearch": "Kilo Code buscó en este directorio <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Kilo Code quiere buscar en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Kilo Code buscó en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code quiere ver los archivos de nivel superior en este directorio (fuera del espacio de trabajo)",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code vio los archivos de nivel superior en este directorio (fuera del espacio de trabajo)",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code quiere ver recursivamente todos los archivos en este directorio (fuera del espacio de trabajo)",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code vio recursivamente todos los archivos en este directorio (fuera del espacio de trabajo)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code quiere ver nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo)",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code vio nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo)"
+		"wantsToViewTopLevel": "Axon Code quiere ver los archivos de nivel superior en este directorio",
+		"didViewTopLevel": "Axon Code vio los archivos de nivel superior en este directorio",
+		"wantsToViewRecursive": "Axon Code quiere ver recursivamente todos los archivos en este directorio",
+		"didViewRecursive": "Axon Code vio recursivamente todos los archivos en este directorio",
+		"wantsToViewDefinitions": "Axon Code quiere ver nombres de definiciones de código fuente utilizados en este directorio",
+		"didViewDefinitions": "Axon Code vio nombres de definiciones de código fuente utilizados en este directorio",
+		"wantsToSearch": "Axon Code quiere buscar en este directorio <code>{{regex}}</code>",
+		"didSearch": "Axon Code buscó en este directorio <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Axon Code quiere buscar en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Axon Code buscó en este directorio (fuera del espacio de trabajo) <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Axon Code quiere ver los archivos de nivel superior en este directorio (fuera del espacio de trabajo)",
+		"didViewTopLevelOutsideWorkspace": "Axon Code vio los archivos de nivel superior en este directorio (fuera del espacio de trabajo)",
+		"wantsToViewRecursiveOutsideWorkspace": "Axon Code quiere ver recursivamente todos los archivos en este directorio (fuera del espacio de trabajo)",
+		"didViewRecursiveOutsideWorkspace": "Axon Code vio recursivamente todos los archivos en este directorio (fuera del espacio de trabajo)",
+		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code quiere ver nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo)",
+		"didViewDefinitionsOutsideWorkspace": "Axon Code vio nombres de definiciones de código fuente utilizados en este directorio (fuera del espacio de trabajo)"
 	},
 	"commandOutput": "Salida del comando",
 	"commandExecution": {
@@ -235,18 +235,18 @@
 		"youSaid": "Has dicho"
 	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code quiere usar una herramienta en el servidor MCP {{serverName}}",
-		"wantsToAccessResource": "Kilo Code quiere acceder a un recurso en el servidor MCP {{serverName}}"
+		"wantsToUseTool": "Axon Code quiere usar una herramienta en el servidor MCP {{serverName}}",
+		"wantsToAccessResource": "Axon Code quiere acceder a un recurso en el servidor MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code quiere cambiar a modo <code>{{mode}}</code>",
-		"wantsToSwitchWithReason": "Kilo Code quiere cambiar a modo <code>{{mode}}</code> porque: {{reason}}",
-		"didSwitch": "Kilo Code cambió a modo <code>{{mode}}</code>",
-		"didSwitchWithReason": "Kilo Code cambió a modo <code>{{mode}}</code> porque: {{reason}}"
+		"wantsToSwitch": "Axon Code quiere cambiar a modo <code>{{mode}}</code>",
+		"wantsToSwitchWithReason": "Axon Code quiere cambiar a modo <code>{{mode}}</code> porque: {{reason}}",
+		"didSwitch": "Axon Code cambió a modo <code>{{mode}}</code>",
+		"didSwitchWithReason": "Axon Code cambió a modo <code>{{mode}}</code> porque: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code quiere crear una nueva subtarea en modo <code>{{mode}}</code>",
-		"wantsToFinish": "Kilo Code quiere finalizar esta subtarea",
+		"wantsToCreate": "Axon Code quiere crear una nueva subtarea en modo <code>{{mode}}</code>",
+		"wantsToFinish": "Axon Code quiere finalizar esta subtarea",
 		"newTaskContent": "Instrucciones de la subtarea",
 		"completionContent": "Subtarea completada",
 		"resultContent": "Resultados de la subtarea",
@@ -254,7 +254,7 @@
 		"completionInstructions": "¡Subtarea completada! Puedes revisar los resultados y sugerir correcciones o próximos pasos. Si todo se ve bien, confirma para devolver el resultado a la tarea principal."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code tiene una pregunta"
+		"hasQuestion": "Axon Code tiene una pregunta"
 	},
 	"taskCompleted": "Tarea completada",
 	"powershell": {
@@ -304,7 +304,7 @@
 		"socialLinks": "Únete a nosotros en <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code quiere usar el navegador",
+		"rooWantsToUse": "Axon Code quiere usar el navegador",
 		"consoleLogs": "Registros de la consola",
 		"noNewLogs": "(No hay nuevos registros)",
 		"screenshot": "Captura de pantalla del navegador",
@@ -336,24 +336,24 @@
 	"profileViolationWarning": "El perfil actual no es compatible con la configuración de tu organización",
 	"shellIntegration": {
 		"title": "Advertencia de ejecución de comandos",
-		"description": "Tu comando se está ejecutando sin la integración de shell de terminal de VSCode. Para suprimir esta advertencia, puedes desactivar la integración de shell en la sección <strong>Terminal</strong> de la <settingsLink>configuración de Kilo Code</settingsLink> o solucionar problemas de integración de terminal de VSCode usando el enlace de abajo.",
+		"description": "Tu comando se está ejecutando sin la integración de shell de terminal de VSCode. Para suprimir esta advertencia, puedes desactivar la integración de shell en la sección <strong>Terminal</strong> de la <settingsLink>configuración de Axon Code</settingsLink> o solucionar problemas de integración de terminal de VSCode usando el enlace de abajo.",
 		"troubleshooting": "Haz clic aquí para ver la documentación de integración de shell."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Límite de Solicitudes Auto-aprobadas Alcanzado",
-			"description": "Kilo Code ha alcanzado el límite auto-aprobado de {{count}} solicitud(es) API. ¿Deseas reiniciar el contador y continuar con la tarea?",
+			"description": "Axon Code ha alcanzado el límite auto-aprobado de {{count}} solicitud(es) API. ¿Deseas reiniciar el contador y continuar con la tarea?",
 			"button": "Reiniciar y Continuar"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Límite de Costo Auto-Aprobado Alcanzado",
-			"description": "Kilo Code ha alcanzado el límite de costo autoaprobado de ${{count}}. ¿Le gustaría reiniciar el costo y continuar con la tarea?",
+			"description": "Axon Code ha alcanzado el límite de costo autoaprobado de ${{count}}. ¿Le gustaría reiniciar el costo y continuar con la tarea?",
 			"button": "Reiniciar y continuar"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code quiere buscar en la base de código <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Kilo Code quiere buscar en la base de código <code>{{query}}</code> en <code>{{path}}</code>",
+		"wantsToSearch": "Axon Code quiere buscar en la base de código <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Axon Code quiere buscar en la base de código <code>{{query}}</code> en <code>{{path}}</code>",
 		"didSearch_one": "Se encontró 1 resultado",
 		"didSearch_other": "Se encontraron {{count}} resultados",
 		"resultTooltip": "Puntuación de similitud: {{score}} (haz clic para abrir el archivo)"
@@ -418,7 +418,7 @@
 		"clickToEdit": "Haz clic para editar el mensaje"
 	},
 	"slashCommand": {
-		"wantsToRun": "Kilo Code quiere ejecutar un comando slash",
-		"didRun": "Kilo Code ejecutó un comando slash"
+		"wantsToRun": "Axon Code quiere ejecutar un comando slash",
+		"didRun": "Axon Code ejecutó un comando slash"
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "用於規劃、建置和修復程式碼的開源 AI 編碼助理。"
 	},
 	"number_format": {
@@ -93,7 +93,7 @@
 			"processExitedWithError": "Claude Code 程序退出，退出碼：{{exitCode}}。錯誤輸出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
 			"apiKeyModelPlanMismatch": "API 金鑰和訂閱方案允許不同的模型。請確保所選模型包含在您的方案中。",
-			"notFound": "找不到 Claude Code 可執行檔案 '{{claudePath}}'。\n\n請安裝 Claude Code CLI：\n1. 造訪 {{installationUrl}} 下載 Claude Code\n2. 依照作業系統的安裝說明進行操作\n3. 確保 'claude' 指令在 PATH 中可用\n4. 或者在 Kilo Code 設定中的 'Claude Code 路徑' 下設定自訂路徑\n\n原始錯誤：{{originalError}}"
+			"notFound": "找不到 Claude Code 可執行檔案 '{{claudePath}}'。\n\n請安裝 Claude Code CLI：\n1. 造訪 {{installationUrl}} 下載 Claude Code\n2. 依照作業系統的安裝說明進行操作\n3. 確保 'claude' 指令在 PATH 中可用\n4. 或者在 Axon Code 設定中的 'Claude Code 路徑' 下設定自訂路徑\n\n原始錯誤：{{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "無法載入 OAuth 憑證。請先進行驗證：{{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "沒有選擇終端機內容",
 		"missing_task_files": "此任務的檔案遺失。您想從任務列表中刪除它嗎？",
-		"auto_import_failed": "自動匯入 Kilo Code 設定失敗：{{error}}"
+		"auto_import_failed": "自動匯入 Axon Code 設定失敗：{{error}}"
 	},
 	"info": {
 		"no_changes": "沒有找到更改。",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "自訂儲存路徑已設定：{{path}}",
 		"default_storage_path": "已恢復使用預設儲存路徑",
 		"settings_imported": "設定已成功匯入。",
-		"auto_import_success": "已自動匯入 Kilo Code 設定：{{filename}}",
+		"auto_import_success": "已自動匯入 Axon Code 設定：{{filename}}",
 		"share_link_copied": "分享連結已複製到剪貼簿",
 		"image_copied_to_clipboard": "圖片資料 URI 已複製到剪貼簿",
 		"image_saved": "圖片已儲存至 {{path}}",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "請輸入有效的路徑"
 	},
 	"input": {
-		"task_prompt": "Kilo Code 該做什麼？",
+		"task_prompt": "Axon Code 該做什麼？",
 		"task_placeholder": "在這裡輸入任務"
 	},
 	"settings": {
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "錯誤",

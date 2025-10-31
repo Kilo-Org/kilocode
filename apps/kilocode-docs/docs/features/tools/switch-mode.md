@@ -1,6 +1,6 @@
 # switch_mode
 
-The `switch_mode` tool enables Kilo Code to change between different operational modes, each with specialized capabilities for specific types of tasks. This allows seamless transitions between modes like Code, Architect, Ask, or Debug when the current task requires different expertise.
+The `switch_mode` tool enables Axon Code to change between different operational modes, each with specialized capabilities for specific types of tasks. This allows seamless transitions between modes like Code, Architect, Ask, or Debug when the current task requires different expertise.
 
 ## Parameters
 
@@ -11,7 +11,7 @@ The tool accepts these parameters:
 
 ## What It Does
 
-This tool requests a mode change when the current task would be better handled by another mode's capabilities. It maintains context while shifting Kilo Code's focus and available toolsets to match the requirements of the new task phase.
+This tool requests a mode change when the current task would be better handled by another mode's capabilities. It maintains context while shifting Axon Code's focus and available toolsets to match the requirements of the new task phase.
 
 ## When is it used?
 
@@ -46,25 +46,28 @@ This tool requests a mode change when the current task would be better handled b
 When the `switch_mode` tool is invoked, it follows this process:
 
 1. **Request Validation**:
-   - Validates that the requested mode exists in the system
-   - Checks that the `mode_slug` parameter is provided and valid
-   - Verifies the user isn't already in the requested mode
-   - Ensures the `reason` parameter (if provided) is properly formatted
+
+    - Validates that the requested mode exists in the system
+    - Checks that the `mode_slug` parameter is provided and valid
+    - Verifies the user isn't already in the requested mode
+    - Ensures the `reason` parameter (if provided) is properly formatted
 
 2. **Mode Transition Preparation**:
-   - Packages the mode change request with the provided reason
-   - Presents the change request to the user for approval
+
+    - Packages the mode change request with the provided reason
+    - Presents the change request to the user for approval
 
 3. **Mode Activation (Upon User Approval)**:
-   - Updates the UI to reflect the new mode
-   - Adjusts available tools based on the mode's tool group configuration
-   - Applies the mode-specific prompt and behavior
-   - Applies a 500ms delay to allow the change to take effect before executing next tool
-   - Enforces any file restrictions specific to the mode
+
+    - Updates the UI to reflect the new mode
+    - Adjusts available tools based on the mode's tool group configuration
+    - Applies the mode-specific prompt and behavior
+    - Applies a 500ms delay to allow the change to take effect before executing next tool
+    - Enforces any file restrictions specific to the mode
 
 4. **Continuation**:
-   - Proceeds with the task using the capabilities of the new mode
-   - Retains relevant context from the previous interaction
+    - Proceeds with the task using the capabilities of the new mode
+    - Retains relevant context from the previous interaction
 
 ## Tool Group Association
 
@@ -112,13 +115,14 @@ Different modes may have specific file type restrictions:
 
 ## Examples When Used
 
-- When discussing a new feature, Kilo Code switches from Ask mode to Architect mode to help design the system structure.
-- After completing architecture planning in Architect mode, Kilo Code switches to Code mode to implement the designed features.
-- When encountering bugs during development, Kilo Code switches from Code mode to Debug mode for systematic troubleshooting.
+- When discussing a new feature, Axon Code switches from Ask mode to Architect mode to help design the system structure.
+- After completing architecture planning in Architect mode, Axon Code switches to Code mode to implement the designed features.
+- When encountering bugs during development, Axon Code switches from Code mode to Debug mode for systematic troubleshooting.
 
 ## Usage Examples
 
 Switching to Code mode for implementation:
+
 ```
 <switch_mode>
 <mode_slug>code</mode_slug>
@@ -127,6 +131,7 @@ Switching to Code mode for implementation:
 ```
 
 Switching to Architect mode for design:
+
 ```
 <switch_mode>
 <mode_slug>architect</mode_slug>
@@ -135,6 +140,7 @@ Switching to Architect mode for design:
 ```
 
 Switching to Debug mode for troubleshooting:
+
 ```
 <switch_mode>
 <mode_slug>debug</mode_slug>
@@ -143,6 +149,7 @@ Switching to Debug mode for troubleshooting:
 ```
 
 Switching to Ask mode for information:
+
 ```
 <switch_mode>
 <mode_slug>ask</mode_slug>

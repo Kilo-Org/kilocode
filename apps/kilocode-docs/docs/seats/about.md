@@ -4,15 +4,15 @@ sidebar_label: About Kilo for Teams and Enterprise
 
 # About Kilo for Teams and Enterprise
 
-Kilo Code accelerates development with AI-driven code generation and task automation. You can use Kilo Code as an open source extension in VS Code or JetBrains IDEs.
+Axon Code accelerates development with AI-driven code generation and task automation. You can use Axon Code as an open source extension in VS Code or JetBrains IDEs.
 
 Organizations adopting AI accelerated coding at scale often want a better way to monitor, manage, and collaborate on their AI-drive practices.
 
-Kilo Code seats, available via either the Teams or Enterprise subscriptions, are the solution for these organizations.
+Axon Code seats, available via either the Teams or Enterprise subscriptions, are the solution for these organizations.
 
 :::note
 
-Kilo Code seats purchases of Teams or Enterprise are separate from model provider credits.
+Axon Code seats purchases of Teams or Enterprise are separate from model provider credits.
 
 No credits are included with a Teams or Enterprise purchase.
 

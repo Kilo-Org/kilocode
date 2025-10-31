@@ -1,5 +1,5 @@
 /**
- * Theme type definitions for Kilo Code CLI
+ * Theme type definitions for Axon Code CLI
  *
  * Defines the structure for color themes used throughout the CLI interface.
  */

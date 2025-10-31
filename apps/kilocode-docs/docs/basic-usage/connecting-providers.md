@@ -4,9 +4,9 @@ sidebar_label: Overview
 
 # API Providers Overview
 
-**Bottom line**: Kilo Code, like any agentic AI coding tool, needs AI model providers to function. You can use our [built-in provider](/providers/kilocode) (easiest) or connect your own API keys from **30+ providers**.
+**Bottom line**: Axon Code, like any agentic AI coding tool, needs AI model providers to function. You can use our [built-in provider](/providers/kilocode) (easiest) or connect your own API keys from **30+ providers**.
 
-## Kilo Code Extension vs. API Provider
+## Axon Code Extension vs. API Provider
 
 ### The Extension
 
@@ -21,7 +21,7 @@ sidebar_label: Overview
 - Google sign-in with free credits included
 - No API key management required
 - Access to frontier coding models
-- [Competitive pricing](https://kilocode.ai/pricing)
+- [Competitive pricing](https://matterai.so/pricing)
 
 **Key point**: The extension works with any provider—our API service is just the "batteries included" option.
 
@@ -31,7 +31,7 @@ sidebar_label: Overview
 
 ✅ **Fastest setup**
 
-- Sign in with Google or GitHub at kilocode.ai
+- Sign in with Google or GitHub at matterai.so
 - Free credits included for your first top-up
 - Zero API key management
 - Latest models available
@@ -44,7 +44,7 @@ sidebar_label: Overview
 
 1. Choose from 30+ supported providers
 2. Get API key from your provider
-3. Configure in Kilo Code settings
+3. Configure in Axon Code settings
 
 ## Why Use Multiple Providers?
 

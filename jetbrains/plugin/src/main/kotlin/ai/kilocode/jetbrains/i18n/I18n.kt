@@ -4,7 +4,7 @@ import com.intellij.DynamicBundle
 import com.intellij.openapi.diagnostic.Logger
 
 /**
- * Dynamic translation system for Kilo Code JetBrains plugin
+ * Dynamic translation system for Axon Code JetBrains plugin
  *
  * Supports named parameter substitution and auto-discovery of translation bundles.
  * Maintains API compatibility with the TypeScript i18n system.

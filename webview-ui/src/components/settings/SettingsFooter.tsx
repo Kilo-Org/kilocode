@@ -24,11 +24,11 @@ export const SettingsFooter = ({ version, className, ...props }: SettingsFooterP
 		</p>
 		<p style={{ wordWrap: "break-word", margin: 0, padding: 0 }}>
 			Regarding financial questions, please contact Customer Service at{" "}
-			<VSCodeLink href="mail:hi@kilocode.ai" style={{ display: "inline" }}>
-				hi@kilocode.ai
+			<VSCodeLink href="mail:hi@matterai.so" style={{ display: "inline" }}>
+				hi@matterai.so
 			</VSCodeLink>{" "}
 		</p>
-		<p className="italic">Kilo Code v{version}</p>
+		<p className="italic">Axon Code v{version}</p>
 		<div className="flex justify-between items-center gap-3">
 			<p>Reset all global state and secret storage in the extension.</p>
 			<VSCodeButton

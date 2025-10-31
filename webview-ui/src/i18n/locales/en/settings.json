@@ -34,7 +34,7 @@
 		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
-		"about": "About Kilo Code"
+		"about": "About Axon Code"
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -46,7 +46,7 @@
 		}
 	},
 	"prompts": {
-		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Kilo Code provide better assistance for common development tasks."
+		"description": "Configure support prompts that are used for quick actions like enhancing prompts, explaining code, and fixing issues. These prompts help Axon Code provide better assistance for common development tasks."
 	},
 	"codeIndex": {
 		"title": "Codebase Indexing",
@@ -149,10 +149,10 @@
 		"enabled": "Auto-Approve Enabled",
 		"readOnly": {
 			"label": "Read",
-			"description": "When enabled, Kilo Code will automatically view directory contents and read files without requiring you to click the Approve button.",
+			"description": "When enabled, Axon Code will automatically view directory contents and read files without requiring you to click the Approve button.",
 			"outsideWorkspace": {
 				"label": "Include files outside workspace",
-				"description": "Allow Kilo Code to read files outside the current workspace without requiring approval."
+				"description": "Allow Axon Code to read files outside the current workspace without requiring approval."
 			}
 		},
 		"write": {
@@ -161,11 +161,11 @@
 			"delayLabel": "Delay after writes to allow diagnostics to detect potential problems",
 			"outsideWorkspace": {
 				"label": "Include files outside workspace",
-				"description": "Allow Kilo Code to create and edit files outside the current workspace without requiring approval."
+				"description": "Allow Axon Code to create and edit files outside the current workspace without requiring approval."
 			},
 			"protected": {
 				"label": "Include protected files",
-				"description": "Allow Kilo Code to create and edit protected files (like .kilocodeignore and .kilocode/ configuration files) without requiring approval."
+				"description": "Allow Axon Code to create and edit protected files (like .kilocodeignore and .kilocode/ configuration files) without requiring approval."
 			}
 		},
 		"browser": {
@@ -393,7 +393,7 @@
 			"draftModelDesc": "Draft model must be from the same model family for speculative decoding to work correctly.",
 			"selectDraftModel": "Select Draft Model",
 			"noModelsFound": "No draft models found. Please ensure LM Studio is running with Server Mode enabled.",
-			"description": "LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their <a>quickstart guide</a>. You will also need to start LM Studio's <b>local server</b> feature to use it with this extension. <span>Note:</span> Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
+			"description": "LM Studio allows you to run models locally on your computer. For instructions on how to get started, see their <a>quickstart guide</a>. You will also need to start LM Studio's <b>local server</b> feature to use it with this extension. <span>Note:</span> Axon Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
 		"ollama": {
 			"baseUrl": "Base URL (optional)",
@@ -404,7 +404,7 @@
 			"numCtx": "Context Window Size (num_ctx)",
 			"numCtxHelp": "Override the model's default context window size. Leave empty to use the model's Modelfile configuration. Minimum value is 128.",
 			"description": "Ollama allows you to run models locally on your computer. For instructions on how to get started, see their quickstart guide.",
-			"warning": "Note: Kilo Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
+			"warning": "Note: Axon Code uses complex prompts and works best with Claude models. Less capable models may not work as expected."
 		},
 		"unboundApiKey": "Unbound API Key",
 		"getUnboundApiKey": "Get Unbound API Key",
@@ -426,7 +426,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how Kilo Code performs.",
+			"capabilities": "Configure the capabilities and pricing for your custom OpenAI-compatible model. Be careful when specifying the model capabilities, as they can affect how Axon Code performs.",
 			"maxTokens": {
 				"label": "Max Output Tokens",
 				"description": "Maximum number of tokens the model can generate in a response. (Specify -1 to allow the server to set the max tokens.)"
@@ -473,7 +473,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Error & Repetition Limit",
-			"description": "Number of consecutive errors or repeated actions before showing 'Kilo Code is having trouble' dialog",
+			"description": "Number of consecutive errors or repeated actions before showing 'Axon Code is having trouble' dialog",
 			"unlimitedDescription": "Unlimited retries enabled (auto-proceed). The dialog will never appear.",
 			"warning": "⚠️ Setting to 0 allows unlimited retries which may consume significant API usage"
 		},
@@ -525,7 +525,7 @@
 	"browser": {
 		"enable": {
 			"label": "Enable browser tool",
-			"description": "When enabled, Kilo Code can use a browser to interact with websites when using models that support computer use. <0>Learn more</0>"
+			"description": "When enabled, Axon Code can use a browser to interact with websites when using models that support computer use. <0>Learn more</0>"
 		},
 		"viewport": {
 			"label": "Viewport size",
@@ -553,7 +553,7 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Enable automatic checkpoints",
-			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
+			"description": "When enabled, Axon Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
 		}
 	},
 	"display": {
@@ -585,12 +585,12 @@
 	"notifications": {
 		"sound": {
 			"label": "Enable sound effects",
-			"description": "When enabled, Kilo Code will play sound effects for notifications and events.",
+			"description": "When enabled, Axon Code will play sound effects for notifications and events.",
 			"volumeLabel": "Volume"
 		},
 		"tts": {
 			"label": "Enable text-to-speech",
-			"description": "When enabled, Kilo Code will read aloud its responses using text-to-speech.",
+			"description": "When enabled, Axon Code will read aloud its responses using text-to-speech.",
 			"speedLabel": "Speed"
 		}
 	},
@@ -598,7 +598,7 @@
 		"description": "Control what information is included in the AI's context window, affecting token usage and response quality",
 		"autoCondenseContextPercent": {
 			"label": "Threshold to trigger intelligent context condensing",
-			"description": "When the context window reaches this threshold, Kilo Code will automatically condense it."
+			"description": "When the context window reaches this threshold, Axon Code will automatically condense it."
 		},
 		"condensingApiConfiguration": {
 			"label": "API Configuration for Context Condensing",
@@ -614,7 +614,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Automatically trigger intelligent context condensing",
-			"description": "When enabled, Kilo Code will automatically condense the context when the threshold is reached. When disabled, you can still manually trigger context condensing."
+			"description": "When enabled, Axon Code will automatically condense the context when the threshold is reached. When disabled, you can still manually trigger context condensing."
 		},
 		"openTabs": {
 			"label": "Open tabs context limit",
@@ -634,7 +634,7 @@
 		},
 		"maxReadFile": {
 			"label": "File read auto-truncate threshold",
-			"description": "Kilo Code reads this number of lines when the model omits start/end values. If this number is less than the file's total, Kilo Code generates a line number index of code definitions. Special cases: -1 instructs Kilo Code to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
+			"description": "Axon Code reads this number of lines when the model omits start/end values. If this number is less than the file's total, Axon Code generates a line number index of code definitions. Special cases: -1 instructs Axon Code to read the entire file (without indexing), and 0 instructs it to read no lines and provides line indexes only for minimal context. Lower values minimize initial context usage, enabling precise subsequent line-range reads. Explicit start/end requests are not limited by this setting.",
 			"lines": "lines",
 			"always_full_read": "Always read entire file"
 		},
@@ -738,7 +738,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Enable editing through diffs",
-			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 4 Sonnet model.",
+			"description": "When enabled, Axon Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 4 Sonnet model.",
 			"strategy": {
 				"label": "Diff strategy",
 				"options": {
@@ -759,7 +759,7 @@
 		},
 		"todoList": {
 			"label": "Enable todo list tool",
-			"description": "When enabled, Kilo Code can create and manage todo lists to track task progress. This helps organize complex tasks into manageable steps."
+			"description": "When enabled, Axon Code can create and manage todo lists to track task progress. This helps organize complex tasks into manageable steps."
 		}
 	},
 	"experimental": {
@@ -769,23 +769,23 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Use experimental search and replace tool",
-			"description": "Enable the experimental search and replace tool, allowing Kilo Code to replace multiple instances of a search term in one request."
+			"description": "Enable the experimental search and replace tool, allowing Axon Code to replace multiple instances of a search term in one request."
 		},
 		"INSERT_BLOCK": {
 			"name": "Use experimental insert content tool",
-			"description": "Enable the experimental insert content tool, allowing Kilo Code to insert content at specific line numbers without needing to create a diff."
+			"description": "Enable the experimental insert content tool, allowing Axon Code to insert content at specific line numbers without needing to create a diff."
 		},
 		"POWER_STEERING": {
 			"name": "Use experimental \"power steering\" mode",
-			"description": "When enabled, Kilo Code will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
+			"description": "When enabled, Axon Code will remind the model about the details of its current mode definition more frequently. This will lead to stronger adherence to role definitions and custom instructions, but will use more tokens per message."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Enable concurrent file reads",
-			"description": "When enabled, Kilo Code can read multiple files in a single request. When disabled, Kilo Code must read files one at a time. Disabling this can help when working with less capable models or when you want more control over file access."
+			"description": "When enabled, Axon Code can read multiple files in a single request. When disabled, Axon Code must read files one at a time. Disabling this can help when working with less capable models or when you want more control over file access."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Use experimental multi block diff tool",
-			"description": "When enabled, Kilo Code will use multi block diff tool. This will try to update multiple code blocks in the file in one request."
+			"description": "When enabled, Axon Code will use multi block diff tool. This will try to update multiple code blocks in the file in one request."
 		},
 		"MARKETPLACE": {
 			"name": "Enable Marketplace",
@@ -793,11 +793,11 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Enable concurrent file edits",
-			"description": "When enabled, Kilo Code can edit multiple files in a single request. When disabled, Kilo Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
+			"description": "When enabled, Axon Code can edit multiple files in a single request. When disabled, Axon Code must edit files one at a time. Disabling this can help when working with less capable models or when you want more control over file modifications."
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
+			"description": "When enabled, Axon Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)",
 			"modelLabel": "Model Selection",
@@ -811,7 +811,7 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Background editing",
-			"description": "Prevent editor focus disruption when enabled. File edits happen in the background without opening diff views or stealing focus. You can continue working uninterrupted while Kilo Code makes changes. Files can be opened without focus to capture diagnostics or kept closed entirely."
+			"description": "Prevent editor focus disruption when enabled. File edits happen in the background without opening diff views or stealing focus. You can continue working uninterrupted while Axon Code makes changes. Files can be opened without focus to capture diagnostics or kept closed entirely."
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Use new message parser",
@@ -823,13 +823,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Enable AI image generation",
-			"description": "When enabled, Kilo Code can generate images from text prompts. Requires a Kilo Code or OpenRouter API key to be configured.",
+			"description": "When enabled, Axon Code can generate images from text prompts. Requires a Axon Code or OpenRouter API key to be configured.",
 			"apiProvider": "API Provider",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
-			"kiloCodeApiKeyLabel": "Kilo Code API Key",
-			"kiloCodeApiKeyPlaceholder": "Enter your Kilo Code API key",
-			"kiloCodeApiKeyPaste": "Paste current Kilo Code API Key",
+			"kiloCodeApiKeyLabel": "Axon Code API Key",
+			"kiloCodeApiKeyPlaceholder": "Enter your Axon Code API key",
+			"kiloCodeApiKeyPaste": "Paste current Axon Code API Key",
 			"getApiKeyText": "Get your API key from",
 			"modelSelectionLabel": "Image Generation Model",
 			"modelSelectionDescription": "Select the model to use for image generation",
@@ -838,12 +838,12 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Enable model-initiated slash commands",
-			"description": "When enabled, Kilo Code can run your slash commands to execute workflows."
+			"description": "When enabled, Axon Code can run your slash commands to execute workflows."
 		}
 	},
 	"promptCaching": {
 		"label": "Disable prompt caching",
-		"description": "When checked, Kilo Code will not use prompt caching for this model."
+		"description": "When checked, Axon Code will not use prompt caching for this model."
 	},
 	"temperature": {
 		"useCustom": "Use custom temperature",
@@ -875,18 +875,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Kilo Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"automaticFetch": "The extension automatically fetches the latest list of models available on <serviceLink>{{serviceName}}</serviceLink>. If you're unsure which model to choose, Axon Code works best with <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Search",
 		"noMatchFound": "No match found",
 		"useCustomModel": "Use custom: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "For financial questions, please contact Customer Support at <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>matterai.so/discord</discordLink>.",
+		"support": "For financial questions, please contact Customer Support at <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Allow error and usage reporting",
-			"description": "Help improve Kilo Code by sending usage data and error reports. No code, prompts, or personal information is ever sent. See our privacy policy for more details."
+			"description": "Help improve Axon Code by sending usage data and error reports. No code, prompts, or personal information is ever sent. See our privacy policy for more details."
 		},
 		"settings": {
 			"import": "Import",

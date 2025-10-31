@@ -2,7 +2,7 @@ import Codicon from '@site/src/components/Codicon';
 
 # 代码库索引
 
-代码库索引通过 AI 嵌入实现对整个项目的语义代码搜索。它不是搜索精确的文本匹配，而是理解您查询的*含义*，帮助 Kilo Code 找到相关代码，即使您不知道特定的函数名称或文件位置。
+代码库索引通过 AI 嵌入实现对整个项目的语义代码搜索。它不是搜索精确的文本匹配，而是理解您查询的*含义*，帮助 Axon Code 找到相关代码，即使您不知道特定的函数名称或文件位置。
 
 <img src="/docs/img/codebase-indexing/codebase-indexing.png" alt="代码库索引设置" width="800" />
 
@@ -13,14 +13,14 @@ import Codicon from '@site/src/components/Codicon';
 1.  **使用 Tree-sitter 解析您的代码**以识别语义块（函数、类、方法）
 2.  **使用 AI 模型创建每个代码块的嵌入**
 3.  **将向量存储在 Qdrant 数据库中**以进行快速相似性搜索
-4.  **为 Kilo Code 提供 [`codebase_search`](/advanced-usage/available-tools/codebase-search) 工具**以进行智能代码发现
+4.  **为 Axon Code 提供 [`codebase_search`](/advanced-usage/available-tools/codebase-search) 工具**以进行智能代码发现
 
 这使得自然语言查询（如“用户身份验证逻辑”或“数据库连接处理”）能够查找整个项目中的相关代码。
 
 ## 主要优点
 
 - **语义搜索**：通过含义查找代码，而不仅仅是关键字
-- **增强 AI 理解**：Kilo Code 可以更好地理解和使用您的代码库
+- **增强 AI 理解**：Axon Code 可以更好地理解和使用您的代码库
 - **跨项目发现**：搜索所有文件，而不仅仅是打开的文件
 - **模式识别**：查找相似的实现和代码模式
 
@@ -72,16 +72,16 @@ docker run -p 6333:6333 qdrant/qdrant
 **使用 Docker Compose：**
 
 ```yaml
-version: '3.8'
+version: "3.8"
 services:
-  qdrant:
-    image: qdrant/qdrant
-    ports:
-      - '6333:6333'
-    volumes:
-      - qdrant_storage:/qdrant/storage
+    qdrant:
+        image: qdrant/qdrant
+        ports:
+            - "6333:6333"
+        volumes:
+            - qdrant_storage:/qdrant/storage
 volumes:
-  qdrant_storage:
+    qdrant_storage:
 ```
 
 ### 生产部署
@@ -94,7 +94,7 @@ volumes:
 
 ## 配置
 
-1.  打开 Kilo Code 设置（<Codicon name="gear" /> 图标）
+1.  打开 Axon Code 设置（<Codicon name="gear" /> 图标）
 2.  导航到 **代码库索引** 部分
 3.  使用切换开关启用 **“启用代码库索引”**
 4.  配置您的嵌入提供商：
@@ -186,7 +186,7 @@ volumes:
 
 ## 使用搜索功能
 
-索引后，Kilo Code 可以使用 [`codebase_search`](/advanced-usage/available-tools/codebase-search) 工具查找相关代码：
+索引后，Axon Code 可以使用 [`codebase_search`](/advanced-usage/available-tools/codebase-search) 工具查找相关代码：
 
 **示例查询：**
 
@@ -195,7 +195,7 @@ volumes:
 - “错误处理模式”
 - “API 端点定义”
 
-该工具为 Kilo Code 提供：
+该工具为 Axon Code 提供：
 
 - 相关代码片段（最多达到您配置的最大结果限制）
 - 文件路径和行号

@@ -1,6 +1,6 @@
 {
-	"greeting": "Hoi, ik ben Kilo Code!",
-	"introduction": "<strong>Kilo Code is de toonaangevende autonome programmeeragent.</strong> Maak je klaar om te ontwerpen, coderen, debuggen en je productiviteit te verhogen als nooit tevoren. Om door te gaan, heeft Kilo Code een API-sleutel nodig.",
+	"greeting": "Hoi, ik ben Axon Code!",
+	"introduction": "<strong>Axon Code is de toonaangevende autonome programmeeragent.</strong> Maak je klaar om te ontwerpen, coderen, debuggen en je productiviteit te verhogen als nooit tevoren. Om door te gaan, heeft Axon Code een API-sleutel nodig.",
 	"notice": "Om te beginnen heeft deze extensie een API-provider nodig.",
 	"start": "Aan de slag!",
 	"routers": {
@@ -16,12 +16,12 @@
 			"incentive": "Probeer Roo gratis uit"
 		}
 	},
-	"chooseProvider": "Om zijn magie te doen, heeft Kilo Code een API-sleutel nodig.",
+	"chooseProvider": "Om zijn magie te doen, heeft Axon Code een API-sleutel nodig.",
 	"startRouter": "We raden aan om een LLM-router te gebruiken:",
 	"startCustom": "Of je kunt je eigen API-sleutel gebruiken:",
 	"telemetry": {
-		"helpImprove": "Help Kilo Code verbeteren",
-		"helpImproveMessage": "Kilo Code verzamelt fout- en gebruiksgegevens om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt geen code, prompts of persoonlijke gegevens. Je kunt dit uitschakelen in de <settingsLink>instellingen</settingsLink>."
+		"helpImprove": "Help Axon Code verbeteren",
+		"helpImproveMessage": "Axon Code verzamelt fout- en gebruiksgegevens om ons te helpen bugs op te lossen en de extensie te verbeteren. Deze telemetrie verzamelt geen code, prompts of persoonlijke gegevens. Je kunt dit uitschakelen in de <settingsLink>instellingen</settingsLink>."
 	},
 	"importSettings": "Instellingen importeren"
 }

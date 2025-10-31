@@ -34,7 +34,7 @@
 		"ui": "Uživatelské rozhraní",
 		"experimental": "Experimentální",
 		"language": "Jazyk",
-		"about": "O Kilo Code"
+		"about": "O Axon Code"
 	},
 	"slashCommands": {
 		"description": "Spravujte své slash příkazy pro rychlé spouštění vlastních pracovních postupů a akcí. <DocsLink>Více informací</DocsLink>"
@@ -46,7 +46,7 @@
 		}
 	},
 	"prompts": {
-		"description": "Nakonfigurujte podpůrné výzvy, které se používají pro rychlé akce, jako je vylepšení výzev, vysvětlení kódu a oprava problémů. Tyto výzvy pomáhají Kilo Code poskytovat lepší pomoc při běžných vývojových úkolech."
+		"description": "Nakonfigurujte podpůrné výzvy, které se používají pro rychlé akce, jako je vylepšení výzev, vysvětlení kódu a oprava problémů. Tyto výzvy pomáhají Axon Code poskytovat lepší pomoc při běžných vývojových úkolech."
 	},
 	"codeIndex": {
 		"title": "Indexování kódové báze",
@@ -145,18 +145,18 @@
 	},
 	"autoApproval": {
 		"title": "Automatické schválení",
-		"description": "Povolit Kilo Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům."
+		"description": "Povolit Axon Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům."
 	},
 	"autoApprove": {
-		"description": "Povolit Kilo Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům.",
+		"description": "Povolit Axon Code automaticky provádět operace bez nutnosti schválení. Povolte tato nastavení pouze v případě, že plně důvěřujete AI a rozumíte souvisejícím bezpečnostním rizikům.",
 		"toggleShortcut": "Můžete nakonfigurovat klávesovou zkratku pro toto nastavení <SettingsLink>v nastaveních vašeho IDE</SettingsLink>.",
 		"enabled": "Automatické schválení povoleno",
 		"readOnly": {
 			"label": "Číst",
-			"description": "Pokud je povoleno, Kilo Code automaticky zobrazí obsah adresáře a přečte soubory, aniž byste museli klikat na tlačítko Schválit.",
+			"description": "Pokud je povoleno, Axon Code automaticky zobrazí obsah adresáře a přečte soubory, aniž byste museli klikat na tlačítko Schválit.",
 			"outsideWorkspace": {
 				"label": "Zahrnout soubory mimo pracovní prostor",
-				"description": "Povolit Kilo Code číst soubory mimo aktuální pracovní prostor bez nutnosti schválení."
+				"description": "Povolit Axon Code číst soubory mimo aktuální pracovní prostor bez nutnosti schválení."
 			}
 		},
 		"write": {
@@ -165,11 +165,11 @@
 			"delayLabel": "Zpoždění po zápisu, aby diagnostika mohla detekovat potenciální problémy",
 			"outsideWorkspace": {
 				"label": "Zahrnout soubory mimo pracovní prostor",
-				"description": "Povolit Kilo Code vytvářet a upravovat soubory mimo aktuální pracovní prostor bez nutnosti schválení."
+				"description": "Povolit Axon Code vytvářet a upravovat soubory mimo aktuální pracovní prostor bez nutnosti schválení."
 			},
 			"protected": {
 				"label": "Zahrnout chráněné soubory",
-				"description": "Povolit Kilo Code vytvářet a upravovat chráněné soubory (jako .kilocodeignore a konfigurační soubory .kilocode/) bez nutnosti schválení."
+				"description": "Povolit Axon Code vytvářet a upravovat chráněné soubory (jako .kilocodeignore a konfigurační soubory .kilocode/) bez nutnosti schválení."
 			}
 		},
 		"browser": {
@@ -409,7 +409,7 @@
 			"draftModelDesc": "Model konceptu musí být ze stejné rodiny modelů, aby spekulativní dekódování fungovalo správně.",
 			"selectDraftModel": "Vybrat model konceptu",
 			"noModelsFound": "Nebyly nalezeny žádné modely konceptu. Ujistěte se, že LM Studio běží s povoleným režimem serveru.",
-			"description": "LM Studio vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich <a>průvodci rychlým startem</a>. Budete také muset spustit funkci <b>lokálního serveru</b> LM Studio, abyste jej mohli používat s tímto rozšířením. <span>Poznámka:</span> Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
+			"description": "LM Studio vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich <a>průvodci rychlým startem</a>. Budete také muset spustit funkci <b>lokálního serveru</b> LM Studio, abyste jej mohli používat s tímto rozšířením. <span>Poznámka:</span> Axon Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
 		"ollama": {
 			"baseUrl": "Základní URL (volitelné)",
@@ -421,7 +421,7 @@
 			"numCtx": "Velikost kontextového okna (num_ctx)",
 			"numCtxHelp": "Přepsat výchozí velikost kontextového okna modelu. Ponechte prázdné pro použití konfigurace Modelfile modelu. Minimální hodnota je 128.",
 			"description": "Ollama vám umožňuje spouštět modely lokálně na vašem počítači. Pokyny k zahájení práce naleznete v jejich průvodci rychlým startem.",
-			"warning": "Poznámka: Kilo Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
+			"warning": "Poznámka: Axon Code používá složité výzvy a nejlépe funguje s modely Claude. Méně schopné modely nemusí fungovat podle očekávání."
 		},
 		"unboundApiKey": "Klíč API Unbound",
 		"getUnboundApiKey": "Získat klíč API Unbound",
@@ -443,7 +443,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Nakonfigurujte schopnosti a ceny pro váš vlastní model kompatibilní s OpenAI. Při zadávání schopností modelu buďte opatrní, protože mohou ovlivnit výkon Kilo Code.",
+			"capabilities": "Nakonfigurujte schopnosti a ceny pro váš vlastní model kompatibilní s OpenAI. Při zadávání schopností modelu buďte opatrní, protože mohou ovlivnit výkon Axon Code.",
 			"maxTokens": {
 				"label": "Maximální počet výstupních tokenů",
 				"description": "Maximální počet tokenů, které může model vygenerovat v odpovědi. (Zadejte -1, aby server mohl nastavit maximální počet tokenů.)"
@@ -490,7 +490,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limit chyb a opakování",
-			"description": "Počet po sobě jdoucích chyb nebo opakovaných akcí před zobrazením dialogu 'Kilo Code má problémy'",
+			"description": "Počet po sobě jdoucích chyb nebo opakovaných akcí před zobrazením dialogu 'Axon Code má problémy'",
 			"unlimitedDescription": "Neomezené opakování povoleno (automatické pokračování). Dialog se nikdy nezobrazí.",
 			"warning": "⚠️ Nastavení na 0 umožňuje neomezené opakování, což může spotřebovat značné množství API využití"
 		},
@@ -566,7 +566,7 @@
 	"browser": {
 		"enable": {
 			"label": "Povolit nástroj prohlížeče",
-			"description": "Pokud je povoleno, Kilo Code může používat prohlížeč k interakci s webovými stránkami při používání modelů, které podporují používání počítače. <0>Dozvědět se více</0>"
+			"description": "Pokud je povoleno, Axon Code může používat prohlížeč k interakci s webovými stránkami při používání modelů, které podporují používání počítače. <0>Dozvědět se více</0>"
 		},
 		"viewport": {
 			"label": "Velikost zobrazení",
@@ -594,7 +594,7 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Povolit automatické kontrolní body",
-			"description": "Pokud je povoleno, Kilo Code automaticky vytvoří kontrolní body během provádění úkolu, což usnadní kontrolu změn nebo návrat do předchozích stavů. <0>Dozvědět se více</0>"
+			"description": "Pokud je povoleno, Axon Code automaticky vytvoří kontrolní body během provádění úkolu, což usnadní kontrolu změn nebo návrat do předchozích stavů. <0>Dozvědět se více</0>"
 		}
 	},
 	"display": {
@@ -626,12 +626,12 @@
 	"notifications": {
 		"sound": {
 			"label": "Povolit zvukové efekty",
-			"description": "Pokud je povoleno, Kilo Code bude přehrávat zvukové efekty pro oznámení a události.",
+			"description": "Pokud je povoleno, Axon Code bude přehrávat zvukové efekty pro oznámení a události.",
 			"volumeLabel": "Hlasitost"
 		},
 		"tts": {
 			"label": "Povolit převod textu na řeč",
-			"description": "Pokud je povoleno, Kilo Code bude nahlas číst své odpovědi pomocí převodu textu na řeč.",
+			"description": "Pokud je povoleno, Axon Code bude nahlas číst své odpovědi pomocí převodu textu na řeč.",
 			"speedLabel": "Rychlost"
 		}
 	},
@@ -639,7 +639,7 @@
 		"description": "Kontrolujte, jaké informace jsou zahrnuty v kontextovém okně AI, což ovlivňuje využití tokenů a kvalitu odpovědi",
 		"autoCondenseContextPercent": {
 			"label": "Prahová hodnota pro spuštění inteligentního zhušťování kontextu",
-			"description": "Když kontextové okno dosáhne této prahové hodnoty, Kilo Code jej automaticky zhušťí."
+			"description": "Když kontextové okno dosáhne této prahové hodnoty, Axon Code jej automaticky zhušťí."
 		},
 		"condensingApiConfiguration": {
 			"label": "Konfigurace API pro zhušťování kontextu",
@@ -655,7 +655,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Automaticky spouštět inteligentní zhušťování kontextu",
-			"description": "Pokud je povoleno, Kilo Code automaticky zhušťí kontext, když je dosaženo prahové hodnoty. Pokud je zakázáno, můžete stále ručně spouštět zhušťování kontextu."
+			"description": "Pokud je povoleno, Axon Code automaticky zhušťí kontext, když je dosaženo prahové hodnoty. Pokud je zakázáno, můžete stále ručně spouštět zhušťování kontextu."
 		},
 		"openTabs": {
 			"label": "Limit kontextu otevřených karet",
@@ -675,7 +675,7 @@
 		},
 		"maxReadFile": {
 			"label": "Prahová hodnota automatického zkrácení při čtení souboru",
-			"description": "Kilo Code načte tento počet řádků, když model vynechá počáteční/koncové hodnoty. Pokud je toto číslo menší než celkový počet řádků souboru, Kilo Code vygeneruje index čísel řádků definic kódu. Speciální případy: -1 instruuje Kilo Code, aby přečetl celý soubor (bez indexování), a 0 ho instruuje, aby nenačítal žádné řádky a poskytoval pouze indexy řádků pro minimální kontext. Nižší hodnoty minimalizují počáteční využití kontextu, což umožňuje přesné následné čtení rozsahu řádků. Explicitní požadavky na začátek/konec nejsou tímto nastavením omezeny.",
+			"description": "Axon Code načte tento počet řádků, když model vynechá počáteční/koncové hodnoty. Pokud je toto číslo menší než celkový počet řádků souboru, Axon Code vygeneruje index čísel řádků definic kódu. Speciální případy: -1 instruuje Axon Code, aby přečetl celý soubor (bez indexování), a 0 ho instruuje, aby nenačítal žádné řádky a poskytoval pouze indexy řádků pro minimální kontext. Nižší hodnoty minimalizují počáteční využití kontextu, což umožňuje přesné následné čtení rozsahu řádků. Explicitní požadavky na začátek/konec nejsou tímto nastavením omezeny.",
 			"lines": "řádky",
 			"always_full_read": "Vždy číst celý soubor"
 		},
@@ -790,7 +790,7 @@
 		"maxTokensDescription": "Maximální počet tokenů v odpovědi",
 		"diff": {
 			"label": "Povolit úpravy prostřednictvím diffů",
-			"description": "Pokud je povoleno, Kilo Code bude moci rychleji upravovat soubory a automaticky odmítne zkrácené zápisy celých souborů. Nejlépe funguje s nejnovějším modelem Claude 4 Sonnet.",
+			"description": "Pokud je povoleno, Axon Code bude moci rychleji upravovat soubory a automaticky odmítne zkrácené zápisy celých souborů. Nejlépe funguje s nejnovějším modelem Claude 4 Sonnet.",
 			"strategy": {
 				"label": "Strategie diff",
 				"options": {
@@ -811,7 +811,7 @@
 		},
 		"todoList": {
 			"label": "Povolit nástroj seznamu úkolů",
-			"description": "Pokud je povoleno, Kilo Code může vytvářet a spravovat seznamy úkolů pro sledování průběhu úkolu. To pomáhá organizovat složité úkoly do zvládnutelných kroků."
+			"description": "Pokud je povoleno, Axon Code může vytvářet a spravovat seznamy úkolů pro sledování průběhu úkolu. To pomáhá organizovat složité úkoly do zvládnutelných kroků."
 		}
 	},
 	"experimental": {
@@ -821,7 +821,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Povolit Fast Apply",
-			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Fast Apply se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter nebo klíč API Morph.",
+			"description": "Pokud je povoleno, Axon Code může upravovat soubory pomocí Fast Apply se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter nebo klíč API Morph.",
 			"apiKey": "Klíč API Morph (volitelné)",
 			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
 			"modelLabel": "Výběr modelu",
@@ -835,23 +835,23 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Použít experimentální nástroj hledání a nahrazování",
-			"description": "Povolit experimentální nástroj hledání a nahrazování, který umožňuje Kilo Code nahradit více výskytů hledaného výrazu v jednom požadavku."
+			"description": "Povolit experimentální nástroj hledání a nahrazování, který umožňuje Axon Code nahradit více výskytů hledaného výrazu v jednom požadavku."
 		},
 		"INSERT_BLOCK": {
 			"name": "Použít experimentální nástroj vkládání obsahu",
-			"description": "Povolit experimentální nástroj vkládání obsahu, který umožňuje Kilo Code vkládat obsah na konkrétní čísla řádků bez nutnosti vytvářet diff."
+			"description": "Povolit experimentální nástroj vkládání obsahu, který umožňuje Axon Code vkládat obsah na konkrétní čísla řádků bez nutnosti vytvářet diff."
 		},
 		"POWER_STEERING": {
 			"name": "Použít experimentální režim \"posilovače řízení\"",
-			"description": "Pokud je povoleno, Kilo Code bude modelu častěji připomínat podrobnosti jeho aktuální definice režimu. To povede k silnějšímu dodržování definic rolí a vlastních instrukcí, ale použije více tokenů na zprávu."
+			"description": "Pokud je povoleno, Axon Code bude modelu častěji připomínat podrobnosti jeho aktuální definice režimu. To povede k silnějšímu dodržování definic rolí a vlastních instrukcí, ale použije více tokenů na zprávu."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Povolit souběžné čtení souborů",
-			"description": "Pokud je povoleno, Kilo Code může číst více souborů v jednom požadavku. Pokud je zakázáno, Kilo Code musí číst soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad přístupem k souborům."
+			"description": "Pokud je povoleno, Axon Code může číst více souborů v jednom požadavku. Pokud je zakázáno, Axon Code musí číst soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad přístupem k souborům."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Použít experimentální nástroj diff s více bloky",
-			"description": "Pokud je povoleno, Kilo Code bude používat nástroj diff s více bloky. To se pokusí aktualizovat více bloků kódu v souboru v jednom požadavku."
+			"description": "Pokud je povoleno, Axon Code bude používat nástroj diff s více bloky. To se pokusí aktualizovat více bloků kódu v souboru v jednom požadavku."
 		},
 		"MARKETPLACE": {
 			"name": "Povolit Marketplace",
@@ -859,11 +859,11 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Povolit souběžné úpravy souborů",
-			"description": "Pokud je povoleno, Kilo Code může upravovat více souborů v jednom požadavku. Pokud je zakázáno, Kilo Code musí upravovat soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad úpravami souborů."
+			"description": "Pokud je povoleno, Axon Code může upravovat více souborů v jednom požadavku. Pokud je zakázáno, Axon Code musí upravovat soubory jeden po druhém. Zakázání může pomoci při práci s méně schopnými modely nebo když chcete mít větší kontrolu nad úpravami souborů."
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Úpravy na pozadí",
-			"description": "Zabránit narušení zaměření editoru, když je povoleno. Úpravy souborů probíhají na pozadí bez otevírání diff zobrazení nebo krádeže zaměření. Můžete pokračovat v práci bez přerušení, zatímco Kilo Code provádí změny. Soubory mohou být otevřeny bez zaměření pro zachycení diagnostiky nebo zůstat zcela zavřené."
+			"description": "Zabránit narušení zaměření editoru, když je povoleno. Úpravy souborů probíhají na pozadí bez otevírání diff zobrazení nebo krádeže zaměření. Můžete pokračovat v práci bez přerušení, zatímco Axon Code provádí změny. Soubory mohou být otevřeny bez zaměření pro zachycení diagnostiky nebo zůstat zcela zavřené."
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Použít nový parser zpráv",
@@ -875,13 +875,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Povolit AI generování obrázků",
-			"description": "Když je povoleno, Kilo Code může generovat obrázky z textových podnětů. Vyžaduje Kilo Code nebo OpenRouter API klíč.",
+			"description": "Když je povoleno, Axon Code může generovat obrázky z textových podnětů. Vyžaduje Axon Code nebo OpenRouter API klíč.",
 			"apiProvider": "Poskytovatel API",
 			"openRouterApiKeyLabel": "OpenRouter API Key",
 			"openRouterApiKeyPlaceholder": "Zadejte svůj OpenRouter API klíč",
-			"kiloCodeApiKeyLabel": "Kilo Code API klíč",
-			"kiloCodeApiKeyPlaceholder": "Zadejte svůj Kilo Code API klíč",
-			"kiloCodeApiKeyPaste": "Vložte aktuální Kilo Code API klíč",
+			"kiloCodeApiKeyLabel": "Axon Code API klíč",
+			"kiloCodeApiKeyPlaceholder": "Zadejte svůj Axon Code API klíč",
+			"kiloCodeApiKeyPaste": "Vložte aktuální Axon Code API klíč",
 			"getApiKeyText": "Získejte API klíč z",
 			"modelSelectionLabel": "Model pro generování obrázků",
 			"modelSelectionDescription": "Vyberte model pro použití při generování obrázků",
@@ -890,7 +890,7 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Povolit slash příkazy iniciované modelem",
-			"description": "Když je povoleno, Kilo Code může spouštět vaše slash příkazy k provedení pracovních toků."
+			"description": "Když je povoleno, Axon Code může spouštět vaše slash příkazy k provedení pracovních toků."
 		},
 		"INLINE_ASSIST": {
 			"name": "Autocomplete",
@@ -899,7 +899,7 @@
 	},
 	"promptCaching": {
 		"label": "Zakázat ukládání výzev do mezipaměti",
-		"description": "Pokud je zaškrtnuto, Kilo Code nebude používat ukládání výzev do mezipaměti pro tento model."
+		"description": "Pokud je zaškrtnuto, Axon Code nebude používat ukládání výzev do mezipaměti pro tento model."
 	},
 	"temperature": {
 		"useCustom": "Použít vlastní teplotu",
@@ -931,18 +931,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "Rozšíření automaticky načítá nejnovější seznam modelů dostupných na <serviceLink>{{serviceName}}</serviceLink>. Pokud si nejste jisti, který model vybrat, Kilo Code funguje nejlépe s <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"automaticFetch": "Rozšíření automaticky načítá nejnovější seznam modelů dostupných na <serviceLink>{{serviceName}}</serviceLink>. Pokud si nejste jisti, který model vybrat, Axon Code funguje nejlépe s <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Model",
 		"searchPlaceholder": "Hledat",
 		"noMatchFound": "Nebyla nalezena žádná shoda",
 		"useCustomModel": "Použít vlastní: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>kilocode.ai/discord</discordLink>.",
-		"support": "Pro finanční dotazy kontaktujte prosím zákaznickou podporu na <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>matterai.so/discord</discordLink>.",
+		"support": "Pro finanční dotazy kontaktujte prosím zákaznickou podporu na <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Povolit hlášení chyb a používání",
-			"description": "Pomozte vylepšit Kilo Code odesíláním dat o používání a hlášení chyb. Nikdy se neodesílá žádný kód, výzvy ani osobní informace. Další podrobnosti najdete v našich zásadách ochrany osobních údajů."
+			"description": "Pomozte vylepšit Axon Code odesíláním dat o používání a hlášení chyb. Nikdy se neodesílá žádný kód, výzvy ani osobní informace. Další podrobnosti najdete v našich zásadách ochrany osobních údajů."
 		},
 		"settings": {
 			"import": "Importovat",

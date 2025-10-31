@@ -9,7 +9,7 @@
 		"editModesConfig": "Edit konfigurasi mode",
 		"editGlobalModes": "Edit Mode Global",
 		"editProjectModes": "Edit Mode Proyek (.kilocodemodes)",
-		"createModeHelpText": "Mode adalah persona khusus yang menyesuaikan perilaku Kilo Code. <0>Pelajari tentang Menggunakan Mode</0> atau <1>Menyesuaikan Mode.</1>",
+		"createModeHelpText": "Mode adalah persona khusus yang menyesuaikan perilaku Axon Code. <0>Pelajari tentang Menggunakan Mode</0> atau <1>Menyesuaikan Mode.</1>",
 		"selectMode": "Cari mode"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Mode Organisasi",
-		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Kilo Code Dashboard.",
+		"description": "Mode ini disediakan oleh organisasi kamu dan tidak dapat diedit di sini. Untuk memodifikasi mode ini, silakan kunjungi Axon Code Dashboard.",
 		"cannotEdit": "Mode organisasi tidak dapat diedit"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definisi Peran",
 		"resetToDefault": "Reset ke default",
-		"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini. Deskripsi ini membentuk bagaimana Kilo Code mempresentasikan dirinya dan mendekati tugas."
+		"description": "Tentukan keahlian dan kepribadian Axon Code untuk mode ini. Deskripsi ini membentuk bagaimana Axon Code mempresentasikan dirinya dan mendekati tugas."
 	},
 	"description": {
 		"title": "Deskripsi singkat (untuk manusia)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Tingkatkan Prompt",
-				"description": "Gunakan peningkatan prompt untuk mendapatkan saran atau perbaikan yang disesuaikan untuk input Anda. Ini memastikan Kilo Code memahami maksud Anda dan memberikan respons terbaik. Tersedia melalui ikon ✨ di chat."
+				"description": "Gunakan peningkatan prompt untuk mendapatkan saran atau perbaikan yang disesuaikan untuk input Anda. Ini memastikan Axon Code memahami maksud Anda dan memberikan respons terbaik. Tersedia melalui ikon ✨ di chat."
 			},
 			"CONDENSE": {
 				"label": "Peringkasan Konteks",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definisi Peran",
-			"description": "Tentukan keahlian dan kepribadian Kilo Code untuk mode ini."
+			"description": "Tentukan keahlian dan kepribadian Axon Code untuk mode ini."
 		},
 		"description": {
 			"label": "Deskripsi singkat (untuk manusia)",

@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Generátor zpráv pro commit Kilo Code aktivován",
+		"activated": "Generátor zpráv pro commit Axon Code aktivován",
 		"gitNotFound": "⚠️ Git repozitář nebyl nalezen nebo git není dostupný",
 		"gitInitError": "⚠️ Chyba inicializace Gitu: {{error}}",
 		"generating": "Kilo: Generuji zprávu commitu...",
@@ -63,7 +63,7 @@
 		"providerRegistered": "Kilo: Poskytovatel zpráv commitů zaregistrován",
 		"errors": {
 			"noProject": "Žádný projekt k dispozici",
-			"connectionFailed": "Nepodařilo se připojit k rozšíření Kilo Code",
+			"connectionFailed": "Nepodařilo se připojit k rozšíření Axon Code",
 			"timeout": "Časový limit požadavku vypršel po 30 sekundách",
 			"invalidResponse": "Neplatný formát odpovědi obdržen od rozšíření",
 			"missingMessage": "Z rozšíření nebyla přijata žádná zpráva o commitu",
@@ -87,7 +87,7 @@
 		},
 		"progress": {
 			"title": "Generování Commit Message",
-			"connecting": "Připojování k Kilo Code...",
+			"connecting": "Připojování k Axon Code...",
 			"analyzing": "Analyzuji změny...",
 			"generating": "Generuji zprávu commitu..."
 		},
@@ -104,12 +104,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (zakázáno)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (zakázáno)",
 				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
 				"lastCompletion": "Poslední návrh:",
 				"sessionTotal": "Celkové náklady relace:",
@@ -121,36 +121,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "Analyzuji tvůj kód...",
 			"generating": "Generuji navrhované úpravy...",
 			"processing": "Zpracovávám navrhované úpravy...",
 			"showing": "Zobrazuji navrhované úpravy..."
 		},
 		"input": {
-			"title": "Kilo Code: Rychlý úkol",
+			"title": "Axon Code: Rychlý úkol",
 			"placeholder": "např. 'refaktoruj tuto funkci, aby byla efektivnější'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Generovat navrhované úpravy",
+			"generateSuggestions": "Axon Code: Generovat navrhované úpravy",
 			"displaySuggestions": "Zobrazit navrhované úpravy",
 			"cancelSuggestions": "Zrušit navrhované úpravy",
 			"applyCurrentSuggestion": "Použít aktuální navrhovanou úpravu",
 			"applyAllSuggestions": "Použít všechny navrhované úpravy",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Navrhované úpravy"
+			"title": "Axon Code: Navrhované úpravy"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "Mohu ti pomoci s rychlými úkoly a navrženými úpravami."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete je blokováno konfliktem s GitHub Copilot. Pro vyřešení tohoto problému musíš zakázat inline návrhy Copilot.",
+			"message": "Axon Code Autocomplete je blokováno konfliktem s GitHub Copilot. Pro vyřešení tohoto problému musíš zakázat inline návrhy Copilot.",
 			"disableCopilot": "Zakázat Copilot",
 			"disableInlineAssist": "Zakázat Autocomplete"
 		}

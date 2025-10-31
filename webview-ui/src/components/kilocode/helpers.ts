@@ -32,5 +32,5 @@ export function getKiloCodeBackendSignUpUrl(
 	kiloCodeWrapperProperties?: KiloCodeWrapperProperties,
 ) {
 	const source = uiKind === "Web" ? "web" : getKiloCodeSource(uriScheme, kiloCodeWrapperProperties)
-	return getAppUrl(`/users/sign_up?source=${source}`)
+	return getAppUrl(`/v1/auth/sign_up?source=${source}`)
 }

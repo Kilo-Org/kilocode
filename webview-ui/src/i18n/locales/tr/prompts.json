@@ -9,7 +9,7 @@
 		"editModesConfig": "Mod yapılandırmasını düzenle",
 		"editGlobalModes": "Global modları düzenle",
 		"editProjectModes": "Proje modlarını düzenle (.kilocodemodes)",
-		"createModeHelpText": "Modlar, Kilo Code'nun davranışını uyarlayan özel kişiliklerdir. <0>Modları Kullanma Hakkında Bilgi Edinin</0> veya <1>Modları Özelleştirme.</1>",
+		"createModeHelpText": "Modlar, Axon Code'nun davranışını uyarlayan özel kişiliklerdir. <0>Modları Kullanma Hakkında Bilgi Edinin</0> veya <1>Modları Özelleştirme.</1>",
 		"selectMode": "Modları Ara"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Kuruluş Modu",
-		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Kilo Code Dashboard'u ziyaret et.",
+		"description": "Bu mod kuruluşun tarafından sağlanır ve burada düzenlenemez. Bu modu değiştirmek için Axon Code Dashboard'u ziyaret et.",
 		"cannotEdit": "Kuruluş modları düzenlenemez"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Rol Tanımı",
 		"resetToDefault": "Varsayılana sıfırla",
-		"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın. Bu açıklama, Kilo Code'nun kendini nasıl sunduğunu ve görevlere nasıl yaklaştığını şekillendirir."
+		"description": "Bu mod için Axon Code'nun uzmanlığını ve kişiliğini tanımlayın. Bu açıklama, Axon Code'nun kendini nasıl sunduğunu ve görevlere nasıl yaklaştığını şekillendirir."
 	},
 	"description": {
 		"title": "Kısa açıklama (insanlar için)",
@@ -107,7 +107,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Promptu Geliştir",
-				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, Kilo Code'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
+				"description": "Girdileriniz için özel öneriler veya iyileştirmeler almak için prompt geliştirmeyi kullanın. Bu, Axon Code'nun niyetinizi anlamasını ve mümkün olan en iyi yanıtları sağlamasını garanti eder. Sohbetteki ✨ simgesi aracılığıyla kullanılabilir."
 			},
 			"CONDENSE": {
 				"label": "Bağlam Yoğunlaştırma",
@@ -184,7 +184,7 @@
 		},
 		"roleDefinition": {
 			"label": "Rol Tanımı",
-			"description": "Bu mod için Kilo Code'nun uzmanlığını ve kişiliğini tanımlayın."
+			"description": "Bu mod için Axon Code'nun uzmanlığını ve kişiliğini tanımlayın."
 		},
 		"whenToUse": {
 			"label": "Ne zaman kullanılmalı (isteğe bağlı)",

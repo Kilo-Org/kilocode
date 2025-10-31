@@ -13,20 +13,20 @@ It's the perfect solution for users who leverage multiple LLM services and want 
 The Virtual Quota Fallback provider does not connect to an LLM service directly. Instead, it acts as a manager for your other configured provider profiles.
 
 - **Prioritized List:** You create a prioritized list of your existing provider profiles. The provider at the top of the list is used first.
-- **Usage Tracking:** You can set custom limits for each provider based on the number of tokens or requests per minute, hour, or day. Kilo Code tracks the usage for each provider against these limits.
+- **Usage Tracking:** You can set custom limits for each provider based on the number of tokens or requests per minute, hour, or day. Axon Code tracks the usage for each provider against these limits.
 - **Automatic Fallback:** When the currently active provider exceeds one of its defined limits or returns an API error, the system automatically deactivates it temporarily and switches to the next available provider in your list.
 - **Notifications:** You will receive an information message in VS Code whenever an automatic switch occurs, keeping you informed of which provider is currently active.
 
 ## Prerequisites
 
-Before configuring this provider, you must have at least one other API provider already configured as a separate profile in Kilo Code. This provider is only useful if there are other profiles for it to manage.
+Before configuring this provider, you must have at least one other API provider already configured as a separate profile in Axon Code. This provider is only useful if there are other profiles for it to manage.
 
-## Configuration in Kilo Code
+## Configuration in Axon Code
 
-1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1.  **Open Axon Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Axon Code panel.
 2.  **Select Provider:** Choose "Virtual Quota Fallback" from the "API Provider" dropdown. This will open its dedicated configuration panel.
 
-<img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="virtuaQuotaFallback dropdown selection in Kilo Code settings" width="600" />
+<img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="virtuaQuotaFallback dropdown selection in Axon Code settings" width="600" />
 
 3.  **Add a Provider Profile:**
 
@@ -46,7 +46,7 @@ Before configuring this provider, you must have at least one other API provider 
 
 6.  **Add More Providers:** Repeat steps 3-5 to build your complete fallback chain. You can add as many profiles as you have configured.
 
-<img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="virtuaQuotaFallback configuration in Kilo Code settings" width="600" />
+<img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="virtuaQuotaFallback configuration in Axon Code settings" width="600" />
 
 ## Usage Monitoring
 
@@ -69,7 +69,7 @@ Imagine you have two profiles configured:
 - Place "OpenAI Paid" second in the list, with no limits defined.
 
 **Result:**
-Kilo Code will send all requests to Chutes AI. Once your usage exceeds 5,000 tokens within an hour, it will automatically switch to your OpenAI account. The system will switch back to Chutes AI in the next hour when its quota window has reset.
+Axon Code will send all requests to Chutes AI. Once your usage exceeds 5,000 tokens within an hour, it will automatically switch to your OpenAI account. The system will switch back to Chutes AI in the next hour when its quota window has reset.
 
 ## Tips and Notes
 

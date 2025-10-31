@@ -1,12 +1,12 @@
 <p align="center">
   <a href="https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code"><img src="https://img.shields.io/visual-studio-marketplace/v/kilocode.Kilo-Code.svg?label=VS%20Code%20Marketplace" alt="VS Code Marketplace"></a>
   <a href="https://x.com/kilocode"><img src="https://img.shields.io/twitter/follow/kilocode?style=flat&logo=x&color=555" alt="X (Twitter)"></a>
-  <a href="https://blog.kilocode.ai"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Substack Blog"></a>
-  <a href="https://kilocode.ai/discord"><img src="https://img.shields.io/discord/1349288496988160052?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://blog.matterai.so"><img src="https://img.shields.io/badge/Blog-555?style=flat&logo=substack&logoColor=white" alt="Substack Blog"></a>
+  <a href="https://matterai.so/discord"><img src="https://img.shields.io/discord/1349288496988160052?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://www.reddit.com/r/kilocode/"><img src="https://img.shields.io/reddit/subreddit-subscribers/kilocode?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>
 
-# 🚀 Kilo Code
+# 🚀 Axon Code
 
 > Kilo is an open-source VS Code AI agent. We frequently merge features from open-source projects while building our own vision.
 
@@ -22,8 +22,8 @@
   <img src="https://raw.githubusercontent.com/Kilo-Org/kilocode/refs/heads/main/kilo.gif" width="100%" />
 </p>
 
-- [VS Code Marketplace](https://kilocode.ai/vscode-marketplace?utm_source=Readme) (download)
-- [Official KiloCode.ai Home page](https://kilocode.ai) (learn more)
+- [VS Code Marketplace](https://matterai.so/vscode-marketplace?utm_source=Readme) (download)
+- [Official matterai.so Home page](https://matterai.so) (learn more)
 
 ## Key Features
 
@@ -33,11 +33,11 @@
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## How to get started with Kilo Code
+## How to get started with Axon Code
 
-1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
+1. Install the Axon Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2. Create your account to access 400+ cutting-edge AI models including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
-3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo Code in action:
+3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Axon Code in action:
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
@@ -47,7 +47,7 @@ For details on building and developing the extension, see [DEVELOPMENT.md](/DEVE
 
 ## Contributors to Kilo
 
-Thanks to all the contributors who help make Kilo Code better!
+Thanks to all the contributors who help make Axon Code better!
 
 <table>
   <tr>
@@ -92,7 +92,7 @@ Thanks to all the contributors who help make Kilo Code better!
       </a>
     </td>    <td align="center">
       <!-- added this line to test github action -->
-      <a href="https://kilocode.ai/#contributors">
+      <a href="https://matterai.so/#contributors">
         <b>more ...</b>
       </a>
     </td>

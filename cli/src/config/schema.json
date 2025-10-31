@@ -1,7 +1,7 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"title": "Kilo Code CLI Configuration",
-	"description": "Configuration file for Kilo Code CLI",
+	"title": "Axon Code CLI Configuration",
+	"description": "Configuration file for Axon Code CLI",
 	"type": "object",
 	"required": ["version", "mode", "telemetry", "provider", "providers"],
 	"properties": {

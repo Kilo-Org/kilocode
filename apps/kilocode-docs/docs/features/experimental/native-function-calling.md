@@ -2,7 +2,7 @@
 
 ## Context
 
-Historically, Kilo Code has relied on XML-style function and tool definitions embedded in the system prompt to inform the model about tools available to accomplish tasks. The model was given instructions and examples about how to use these tools:
+Historically, Axon Code has relied on XML-style function and tool definitions embedded in the system prompt to inform the model about tools available to accomplish tasks. The model was given instructions and examples about how to use these tools:
 
 ```xml
 <attempt_completion>
@@ -18,7 +18,7 @@ However, it also suffers from numerous downsides. Its effective replacement is J
 
 ## What
 
-Kilo Code recently implemented _experimental_ support for native function calling in 4.106.0.
+Axon Code recently implemented _experimental_ support for native function calling in 4.106.0.
 
 ## Why?
 
@@ -41,10 +41,10 @@ Because of these risks and considerations, this capability is experiment, and of
 
 To enable and use native function calling, consider and perform the following:
 
-1. Ensure you are using a provider that has been enabled in Kilo Code for this experiment. As of Oct 16, 2025, they include:
+1. Ensure you are using a provider that has been enabled in Axon Code for this experiment. As of Oct 16, 2025, they include:
 
 - OpenRouter
-- Kilo Code
+- Axon Code
 - LM Studio
 - OpenAI Compatible
 
@@ -55,7 +55,7 @@ Change the Tool Calling Style to `JSON`, and save the profile.
 ## Caveats
 
 This feature is currently experimental and mostly intended for users interested in contributing to its development.
-It is so far only supported when using OpenRouter or Kilo Code providers. There are possible issues including, but not limited to:
+It is so far only supported when using OpenRouter or Axon Code providers. There are possible issues including, but not limited to:
 
 - Missing tools
 - Tools calls not updating the UI until they are complete

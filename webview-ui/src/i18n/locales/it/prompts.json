@@ -9,7 +9,7 @@
 		"editModesConfig": "Modifica configurazione modalità",
 		"editGlobalModes": "Modifica modalità globali",
 		"editProjectModes": "Modifica modalità di progetto (.kilocodemodes)",
-		"createModeHelpText": "Le modalità sono personas specializzate che personalizzano il comportamento di Kilo Code. <0>Scopri di più sull'uso delle modalità</0> o <1>sulla personalizzazione delle modalità.</1>",
+		"createModeHelpText": "Le modalità sono personas specializzate che personalizzano il comportamento di Axon Code. <0>Scopri di più sull'uso delle modalità</0> o <1>sulla personalizzazione delle modalità.</1>",
 		"selectMode": "Cerca modalità"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Modalità dell'organizzazione",
-		"description": "Questa modalità è fornita dalla tua organizzazione e non può essere modificata qui. Per modificare questa modalità, visita il Kilo Code Dashboard.",
+		"description": "Questa modalità è fornita dalla tua organizzazione e non può essere modificata qui. Per modificare questa modalità, visita il Axon Code Dashboard.",
 		"cannotEdit": "Le modalità dell'organizzazione non possono essere modificate"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definizione del ruolo",
 		"resetToDefault": "Ripristina predefiniti",
-		"description": "Definisci l'esperienza e la personalità di Kilo Code per questa modalità. Questa descrizione modella come Kilo Code si presenta e affronta i compiti."
+		"description": "Definisci l'esperienza e la personalità di Axon Code per questa modalità. Questa descrizione modella come Axon Code si presenta e affronta i compiti."
 	},
 	"description": {
 		"title": "Descrizione breve (per umani)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Migliora prompt",
-				"description": "Utilizza il miglioramento dei prompt per ottenere suggerimenti o miglioramenti personalizzati per i tuoi input. Questo assicura che Kilo Code comprenda la tua intenzione e fornisca le migliori risposte possibili. Disponibile tramite l'icona ✨ nella chat."
+				"description": "Utilizza il miglioramento dei prompt per ottenere suggerimenti o miglioramenti personalizzati per i tuoi input. Questo assicura che Axon Code comprenda la tua intenzione e fornisca le migliori risposte possibili. Disponibile tramite l'icona ✨ nella chat."
 			},
 			"CONDENSE": {
 				"label": "Condensazione del contesto",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definizione del ruolo",
-			"description": "Definisci l'esperienza e la personalità di Kilo Code per questa modalità."
+			"description": "Definisci l'esperienza e la personalità di Axon Code per questa modalità."
 		},
 		"description": {
 			"label": "Descrizione breve (per umani)",

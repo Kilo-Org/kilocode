@@ -1,6 +1,6 @@
 import React from "react"
 import { ButtonLink } from "./ButtonLink"
-import { ButtonSecondary } from "./ButtonSecondary"
+// import { ButtonSecondary } from "./ButtonSecondary"
 import Logo from "./Logo"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { getKiloCodeBackendSignUpUrl } from "../helpers"
@@ -36,11 +36,11 @@ const KiloCodeAuth: React.FC<KiloCodeAuthProps> = ({ onManualConfigClick, classN
 					{t("kilocode:welcome.ctaButton")}
 				</ButtonLink>
 
-				{!!onManualConfigClick && (
+				{/* {!!onManualConfigClick && (
 					<ButtonSecondary onClick={() => onManualConfigClick && onManualConfigClick()}>
 						{t("kilocode:welcome.manualModeButton")}
 					</ButtonSecondary>
-				)}
+				)} */}
 			</div>
 		</div>
 	)

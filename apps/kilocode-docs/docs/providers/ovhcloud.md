@@ -2,7 +2,7 @@
 sidebar_label: OVHcloud AI Endpoints
 ---
 
-# Using OVHcloud AI Endpoints with Kilo Code
+# Using OVHcloud AI Endpoints with Axon Code
 
 OVHcloud is a French leading Cloud provider in Europe with data sovereignty and privacy.
 
@@ -24,13 +24,13 @@ You can report any bugs or feedbacks by chatting with us in our [Discord server]
 
 ## Supported Models
 
-Kilo Code will automatically fetch our models from our API. It will be up-to-date.
+Axon Code will automatically fetch our models from our API. It will be up-to-date.
 
 You can browse our [catalog](https://endpoints.ai.cloud.ovh.net/catalog) to see a detail of all our models.
 
-## Configuration in Kilo Code
+## Configuration in Axon Code
 
-1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1.  **Open Axon Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Axon Code panel.
 2.  **Select Provider:** Choose "OVHcloud AI Endpoints" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your AI Endpoints API key into the "OVHcloud AI Endpoints API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.

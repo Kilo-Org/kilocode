@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "Bem-vindo ao Kilo Code!",
-		"introText1": "Kilo Code é um agente de codificação AI gratuito e de código aberto.",
+		"greeting": "Bem-vindo ao Axon Code!",
+		"introText1": "Axon Code é um agente de codificação AI gratuito e de código aberto.",
 		"introText2": "Funciona com os mais recentes modelos de IA como Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e mais de 450 outros.",
 		"introText3": "Crie uma conta gratuita e receba $20 em créditos bônus ao recarregar pela primeira vez.",
 		"ctaButton": "Começar",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Adicionar crédito",
-		"lowBalance": "Seu saldo do Kilo Code está baixo",
+		"lowBalance": "Seu saldo do Axon Code está baixo",
 		"newOrganization": "Usando o Kilo para trabalho?"
 	},
 	"pagination": {
@@ -42,16 +42,16 @@
 			"mcp": "Servidores MCP"
 		},
 		"provider": {
-			"account": "Conta Kilo Code",
-			"apiKey": "Chave de API do Kilo Code",
-			"login": "Entrar no Kilo Code",
-			"logout": "Sair do Kilo Code",
-			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Kilo Code. Se você não tem certeza de qual modelo escolher, o Kilo Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
+			"account": "Conta Axon Code",
+			"apiKey": "Chave de API do Axon Code",
+			"login": "Entrar no Axon Code",
+			"logout": "Sair do Axon Code",
+			"automaticFetch": "Os modelos mais recentes estão automaticamente disponíveis no Axon Code. Se você não tem certeza de qual modelo escolher, o Axon Code funciona melhor com os modelos recomendados listados no topo em <strong>negrito</strong>.",
 			"providerRouting": {
 				"title": "Roteamento de Provedor",
 				"managedByOrganization": "Gerenciar roteamento de provedor em nível de organização",
 				"createOrganization": "Criar organização para gerenciar roteamento de provedor",
-				"description": "O Kilo Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
+				"description": "O Axon Code roteia as solicitações para os melhores provedores disponíveis para o seu modelo. Por padrão, as solicitações são balanceadas em carga entre os principais provedores para maximizar o tempo de atividade. No entanto, você pode escolher um provedor específico para usar para este modelo.",
 				"sorting": {
 					"default": "Ordenação padrão do provedor",
 					"price": "Preferir provedores com menor preço",
@@ -70,7 +70,7 @@
 		"modelInfo": {
 			"contextWindow": "Janela de contexto",
 			"providerBreakdown": "Detalhamento de Preços e Capacidades do Provedor",
-			"averageKiloCodeCost": "Este é o valor médio realmente gasto pelo Kilo Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
+			"averageKiloCodeCost": "Este é o valor médio realmente gasto pelo Axon Code usando este modelo na última semana. Pode ser menor que o preço listado devido à utilização do cache de prompts.",
 			"table": {
 				"provider": "Provedor",
 				"context": "O endpoint pode processar este número de tokens (entrada + saída).",
@@ -83,15 +83,15 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Permitir leituras de arquivos muito grandes",
-				"description": "Quando ativado, o Kilo Code realizará leituras de arquivos ou saídas MCP muito grandes mesmo que haja uma alta probabilidade de exceder a janela de contexto (tamanho do conteúdo >80% da janela de contexto)."
+				"description": "Quando ativado, o Axon Code realizará leituras de arquivos ou saídas MCP muito grandes mesmo que haja uma alta probabilidade de exceder a janela de contexto (tamanho do conteúdo >80% da janela de contexto)."
 			}
 		},
 		"systemNotifications": {
 			"label": "Ativar notificações do sistema",
-			"description": "Quando ativado, o Kilo Code enviará notificações do sistema para eventos importantes como conclusão de tarefas ou erros.",
+			"description": "Quando ativado, o Axon Code enviará notificações do sistema para eventos importantes como conclusão de tarefas ou erros.",
 			"testButton": "Testar notificação",
-			"testTitle": "Kilo Code",
-			"testMessage": "Esta é uma notificação de teste do Kilo Code."
+			"testTitle": "Axon Code",
+			"testMessage": "Esta é uma notificação de teste do Axon Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -106,7 +106,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code quer condensar sua conversa",
+			"wantsToCondense": "Axon Code quer condensar sua conversa",
 			"condenseConversation": "Condensar Conversa"
 		},
 		"seeNewChanges": "Ver Novas Alterações",
@@ -137,15 +137,15 @@
 	},
 	"docs": "Documentação",
 	"rules": {
-		"tooltip": "Gerenciar Regras e Fluxos de Trabalho do Kilo Code",
-		"ariaLabel": "Regras do Kilo Code",
+		"tooltip": "Gerenciar Regras e Fluxos de Trabalho do Axon Code",
+		"ariaLabel": "Regras do Axon Code",
 		"tabs": {
 			"rules": "Regras",
 			"workflows": "Fluxos de Trabalho"
 		},
 		"description": {
-			"rules": "As regras permitem fornecer ao Kilo Code instruções que ele deve seguir em todos os modos e para todos os prompts. Elas são uma forma persistente de incluir contexto e preferências para todas as conversas em seu workspace ou globalmente.",
-			"workflows": "Os fluxos de trabalho são um modelo preparado para uma conversa. Os fluxos de trabalho permitem definir prompts que você usa frequentemente, e podem incluir uma série de passos para guiar o Kilo Code através de tarefas repetitivas, como implantar um serviço ou enviar um PR. Para invocar um fluxo de trabalho, digite",
+			"rules": "As regras permitem fornecer ao Axon Code instruções que ele deve seguir em todos os modos e para todos os prompts. Elas são uma forma persistente de incluir contexto e preferências para todas as conversas em seu workspace ou globalmente.",
+			"workflows": "Os fluxos de trabalho são um modelo preparado para uma conversa. Os fluxos de trabalho permitem definir prompts que você usa frequentemente, e podem incluir uma série de passos para guiar o Axon Code através de tarefas repetitivas, como implantar um serviço ou enviar um PR. Para invocar um fluxo de trabalho, digite",
 			"workflowsInChat": "no chat."
 		},
 		"sections": {
@@ -215,11 +215,11 @@
 			"keybindingDescription": "As funcionalidades do Autocomplete podem ser ativadas por comandos. Você pode configurar os <DocsLink>Atalhos de Teclado aqui</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Habilitar Autocomplete",
-				"description": "Quando habilitado, o Kilo Code ativará automaticamente o Autocomplete quando você parar de digitar. Isso pode ser útil para correções rápidas e sugestões."
+				"description": "Quando habilitado, o Axon Code ativará automaticamente o Autocomplete quando você parar de digitar. Isso pode ser útil para correções rápidas e sugestões."
 			},
 			"autoTriggerDelay": {
 				"label": "Atraso da Ativação Automática",
-				"description": "O atraso em segundos antes do Kilo Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
+				"description": "O atraso em segundos antes do Axon Code ativar o Autocomplete depois que você parar de digitar. Um atraso menor significa sugestões mais rápidas, mas pode ser mais intensivo em recursos."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Tarefa Rápida ({{keybinding}})",

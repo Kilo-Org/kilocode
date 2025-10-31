@@ -64,9 +64,9 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 **Step 3: Team Migration**
 
 1. **Invite team members** to Kilo
-2. **Install Kilo Code extension** alongside Cursor initially
+2. **Install Axon Code extension** alongside Cursor initially
 3. **Migrate projects gradually** starting with non-critical work
-4. **Train team** on Kilo Code features and workflows
+4. **Train team** on Axon Code features and workflows
 
 **Step 4: Full Transition**
 
@@ -110,13 +110,13 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 **Phase 1: Parallel Usage (Week 1-2)**
 
 1. **Keep GitHub Copilot** active during transition
-2. **Install Kilo Code** extension for team members
-3. **Start with simple tasks** in Kilo Code
+2. **Install Axon Code** extension for team members
+3. **Start with simple tasks** in Axon Code
 4. **Compare results** and team satisfaction
 
 **Phase 2: Gradual Transition (Week 3-4)**
 
-1. **Use Kilo Code** for new projects
+1. **Use Axon Code** for new projects
 2. **Migrate existing projects** one at a time
 3. **Train team** on advanced features
 4. **Optimize usage patterns** based on analytics
@@ -175,7 +175,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 - [ ] Set up Kilo for Teams or Enterprise organization
 - [ ] Configure team settings and policies
 - [ ] Invite team members and assign roles
-- [ ] Install Kilo Code extension across team
+- [ ] Install Axon Code extension across team
 - [ ] Start with pilot projects or non-critical work
 
 **Post-Migration Optimization**
@@ -226,7 +226,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 **Week 1: Basics**
 
-- Kilo Code extension installation and setup
+- Axon Code extension installation and setup
 - Basic chat interface and mode usage
 - Understanding transparent pricing model
 - Team dashboard overview
@@ -328,7 +328,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 ### Getting Migration Help
 
-- **Email:** migrations@kilocode.ai
+- **Email:** migrations@matterai.so
 - **Discord:** Join our migration support channel
 - **Consultation:** Schedule free migration planning call
 - **Documentation:** Comprehensive migration guides
@@ -362,4 +362,4 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 - [Explore team management features](/seats/team-management)
 - [Understand billing and pricing](/seats/billing)
 
-Ready to make the switch? Contact our migration team at migrations@kilocode.ai to plan your transition to transparent AI coding.
+Ready to make the switch? Contact our migration team at migrations@matterai.so to plan your transition to transparent AI coding.

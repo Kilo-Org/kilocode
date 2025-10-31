@@ -780,13 +780,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "AI画像生成を有効にする",
-			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Kilo Code または OpenRouter API キーの設定が必要です。",
+			"description": "有効にすると、Kilo Codeはテキストプロンプトから画像を生成できます。Axon Code または OpenRouter API キーの設定が必要です。",
 			"apiProvider": "APIプロバイダー",
 			"openRouterApiKeyLabel": "OpenRouter APIキー",
 			"openRouterApiKeyPlaceholder": "OpenRouter APIキーを入力してください",
-			"kiloCodeApiKeyLabel": "Kilo Code APIキー",
-			"kiloCodeApiKeyPlaceholder": "Kilo Code APIキーを入力してください",
-			"kiloCodeApiKeyPaste": "現在の Kilo Code API キーを貼り付け",
+			"kiloCodeApiKeyLabel": "Axon Code APIキー",
+			"kiloCodeApiKeyPlaceholder": "Axon Code APIキーを入力してください",
+			"kiloCodeApiKeyPaste": "現在の Axon Code API キーを貼り付け",
 			"getApiKeyText": "APIキーを取得する場所",
 			"modelSelectionLabel": "画像生成モデル",
 			"modelSelectionDescription": "画像生成に使用するモデルを選択",
@@ -857,8 +857,8 @@
 		"useCustomModel": "カスタムを使用: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>kilocode.ai/discord</discordLink>に参加してください",
-		"support": "財務に関するご質問は、<supportLink>https://kilocode.ai/support</supportLink>のカスタマーサポートまでお問い合わせください",
+		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>matterai.so/discord</discordLink>に参加してください",
+		"support": "財務に関するご質問は、<supportLink>https://matterai.so/support</supportLink>のカスタマーサポートまでお問い合わせください",
 		"telemetry": {
 			"label": "匿名のエラーと使用状況レポートを許可",
 			"description": "匿名の使用データとエラーレポートを送信してKilo Codeの改善にご協力ください。コード、プロンプト、個人情報が送信されることはありません。詳細については、プライバシーポリシーをご覧ください。"

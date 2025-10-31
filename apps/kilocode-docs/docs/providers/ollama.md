@@ -2,9 +2,9 @@
 sidebar_label: Ollama
 ---
 
-# Using Ollama With Kilo Code
+# Using Ollama With Axon Code
 
-Kilo Code supports running models locally using Ollama. This provides privacy, offline access, and potentially lower costs, but requires more setup and a powerful computer.
+Axon Code supports running models locally using Ollama. This provides privacy, offline access, and potentially lower costs, but requires more setup and a powerful computer.
 
 **Website:** [https://ollama.com/](https://ollama.com/)
 
@@ -28,13 +28,13 @@ You will need a GPU with a large amount of VRAM (24GB or more) or a MacBook with
 Ollama supports many different models.
 You can find a list of available models on the [Ollama website](https://ollama.com/library).
 
-For the Kilo Code agent the current recommendation is `qwen3-coder:30b`. `qwen3-coder:30b` sometimes fails to call tools correctly (it is much more likely to have this problem than the full `qwen3-coder:480b` model). As a mixture-of-experts model, this could be because it activated the wrong experts. Whenever this happens, try changing your prompt or use the Enhance Prompt button.
+For the Axon Code agent the current recommendation is `qwen3-coder:30b`. `qwen3-coder:30b` sometimes fails to call tools correctly (it is much more likely to have this problem than the full `qwen3-coder:480b` model). As a mixture-of-experts model, this could be because it activated the wrong experts. Whenever this happens, try changing your prompt or use the Enhance Prompt button.
 
-An alternative to `qwen3-coder:30b` is `devstral:24b`. For other features of Kilo Code such as Enhance Prompt or Commit Message Generation smaller models may suffice.
+An alternative to `qwen3-coder:30b` is `devstral:24b`. For other features of Axon Code such as Enhance Prompt or Commit Message Generation smaller models may suffice.
 
 ## Setting up Ollama
 
-To set up Ollama for use with Kilo Code, follow the instructions below.
+To set up Ollama for use with Axon Code, follow the instructions below.
 
 ### Download and Install Ollama
 
@@ -68,11 +68,11 @@ To configure the context window, set "Context Window Size (num_ctx)" in the API 
 
 ### Configure the Timout
 
-By default, API requests time out after 10 minutes. Local models can be slow, if you hit this timeout you can consider increasing it here: VS Code Extensions panel > Kilo Code gear menu > Settings > API Request Timeout.
+By default, API requests time out after 10 minutes. Local models can be slow, if you hit this timeout you can consider increasing it here: VS Code Extensions panel > Axon Code gear menu > Settings > API Request Timeout.
 
-### Configure Kilo Code
+### Configure Axon Code
 
-- Open the Kilo Code sidebar (<img src="/docs/img/kilo-v1.svg" width="12" /> icon).
+- Open the Axon Code sidebar (<img src="/docs/img/axon-code-icon.svg" width="12" /> icon).
 - Click the Settings gear icon (<Codicon name="gear" />).
 - Select "Ollama" as the API Provider.
 - Select the model configured in the previous step.

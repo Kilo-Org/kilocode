@@ -2,16 +2,16 @@
 	"title": "Servidors MCP",
 	"done": "Fet",
 	"marketplace": "Mercat de MCP",
-	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de Kilo Code. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a Kilo Code que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
+	"description": "El <0>Model Context Protocol</0> permet la comunicació amb servidors MCP que s'executen localment i proporcionen eines i recursos addicionals per ampliar les capacitats de Axon Code. Pots utilitzar <1>servidors creats per la comunitat</1> o demanar a Axon Code que creï noves eines específiques per al teu flux de treball (per exemple, \"afegir una eina que obtingui la documentació més recent de npm\").",
 	"instructions": "Instruccions",
 	"enableToggle": {
 		"title": "Activa els servidors MCP",
-		"description": "Activa-ho perquè Kilo Code pugui utilitzar eines dels servidors MCP connectats. Això dóna més capacitats a Kilo Code. Si no vols utilitzar aquestes eines addicionals, desactiva-ho per ajudar a reduir el cost dels tokens API."
+		"description": "Activa-ho perquè Axon Code pugui utilitzar eines dels servidors MCP connectats. Això dóna més capacitats a Axon Code. Si no vols utilitzar aquestes eines addicionals, desactiva-ho per ajudar a reduir el cost dels tokens API."
 	},
 	"enableServerCreation": {
 		"title": "Activa la creació de servidors MCP",
-		"description": "Activa-ho perquè Kilo Code t'ajudi a crear <1>nous</1> servidors MCP personalitzats. <0>Més informació sobre la creació de servidors</0>",
-		"hint": "Consell: Per reduir el cost dels tokens API, desactiva aquesta opció quan no demanis a Kilo Code que creï un nou servidor MCP."
+		"description": "Activa-ho perquè Axon Code t'ajudi a crear <1>nous</1> servidors MCP personalitzats. <0>Més informació sobre la creació de servidors</0>",
+		"hint": "Consell: Per reduir el cost dels tokens API, desactiva aquesta opció quan no demanis a Axon Code que creï un nou servidor MCP."
 	},
 	"editGlobalMCP": "Edita MCP global",
 	"editProjectMCP": "Edita MCP del projecte",

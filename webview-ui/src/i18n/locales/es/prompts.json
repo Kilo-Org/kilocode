@@ -9,7 +9,7 @@
 		"editModesConfig": "Editar configuración de modos",
 		"editGlobalModes": "Editar modos globales",
 		"editProjectModes": "Editar modos del proyecto (.kilocodemodes)",
-		"createModeHelpText": "Los modos son personas especializadas que adaptan el comportamiento de Kilo Code. <0>Aprende sobre el uso de modos</0> o <1>Personalización de modos.</1>",
+		"createModeHelpText": "Los modos son personas especializadas que adaptan el comportamiento de Axon Code. <0>Aprende sobre el uso de modos</0> o <1>Personalización de modos.</1>",
 		"selectMode": "Buscar modos"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Modo de organización",
-		"description": "Este modo es proporcionado por tu organización y no se puede editar aquí. Para modificar este modo, visita el Kilo Code Dashboard.",
+		"description": "Este modo es proporcionado por tu organización y no se puede editar aquí. Para modificar este modo, visita el Axon Code Dashboard.",
 		"cannotEdit": "Los modos de organización no se pueden editar"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definición de rol",
 		"resetToDefault": "Restablecer a valores predeterminados",
-		"description": "Define la experiencia y personalidad de Kilo Code para este modo. Esta descripción determina cómo Kilo Code se presenta y aborda las tareas."
+		"description": "Define la experiencia y personalidad de Axon Code para este modo. Esta descripción determina cómo Axon Code se presenta y aborda las tareas."
 	},
 	"description": {
 		"title": "Descripción breve (para humanos)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Mejorar solicitud",
-				"description": "Utiliza la mejora de solicitudes para obtener sugerencias o mejoras personalizadas para tus entradas. Esto asegura que Kilo Code entienda tu intención y proporcione las mejores respuestas posibles. Disponible a través del icono ✨ en el chat."
+				"description": "Utiliza la mejora de solicitudes para obtener sugerencias o mejoras personalizadas para tus entradas. Esto asegura que Axon Code entienda tu intención y proporcione las mejores respuestas posibles. Disponible a través del icono ✨ en el chat."
 			},
 			"CONDENSE": {
 				"label": "Condensación de contexto",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definición de rol",
-			"description": "Define la experiencia y personalidad de Kilo Code para este modo."
+			"description": "Define la experiencia y personalidad de Axon Code para este modo."
 		},
 		"whenToUse": {
 			"label": "Cuándo usar (opcional)",

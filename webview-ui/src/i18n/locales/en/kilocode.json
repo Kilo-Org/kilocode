@@ -1,8 +1,8 @@
 {
 	"welcome": {
-		"greeting": "Welcome to Kilo Code!",
-		"introText1": "Kilo Code is a free, open source AI coding agent.",
-		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
+		"greeting": "Welcome to Axon Code!",
+		"introText1": "Axon Code is a free, open source AI coding agent.",
+		"introText2": "Axon Code is powered by Axon models developed by MatterAI.",
 		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
 		"manualModeButton": "Use your own API key",
@@ -11,8 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
-		"lowBalance": "Your Kilo Code balance is low",
-		"newOrganization": "Using Kilo for work?"
+		"lowBalance": "Your Axon Code balance is low",
+		"newOrganization": "Using Axon for work?"
 	},
 	"memoryWarning": {
 		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
@@ -50,10 +50,10 @@
 			"mcp": "MCP Servers"
 		},
 		"provider": {
-			"account": "Kilo Code Account",
-			"apiKey": "Kilo Code API Key",
-			"login": "Log in at Kilo Code",
-			"logout": "Log out from Kilo Code",
+			"account": "Axon Code Account",
+			"apiKey": "Axon Code API Key",
+			"login": "Log in at Axon Code",
+			"logout": "Log out from Axon Code",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Manage Organization-level Provider Routing",
@@ -72,12 +72,12 @@
 					"zdr": "Zero data retention"
 				}
 			},
-			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+			"automaticFetch": "The latest models are automatically available in Axon Code. If you're unsure which model to choose, Axon Code works best with the recommended models listed at the top in <strong>bold face</strong>."
 		},
 		"modelInfo": {
 			"contextWindow": "Context window",
 			"providerBreakdown": "Provider Price and Capability Breakdown",
-			"averageKiloCodeCost": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
+			"averageKiloCodeCost": "This is the average actual spent for Axon Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
 			"table": {
 				"provider": "Provider",
 				"context": "The endpoint can process this number of tokens (input + output).",
@@ -90,15 +90,15 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Allow very large file reads",
-				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
+				"description": "When enabled, Axon Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
 			}
 		},
 		"systemNotifications": {
 			"label": "Enable System Notifications",
-			"description": "When enabled, Kilo Code will send system notifications for important events like task completion or errors.",
+			"description": "When enabled, Axon Code will send system notifications for important events like task completion or errors.",
 			"testButton": "Test Notification",
-			"testTitle": "Kilo Code",
-			"testMessage": "This is a test notification from Kilo Code."
+			"testTitle": "Axon Code",
+			"testMessage": "This is a test notification from Axon Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -113,7 +113,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code wants to condense your conversation",
+			"wantsToCondense": "Axon Code wants to condense your conversation",
 			"condenseConversation": "Condense Conversation"
 		},
 		"seeNewChanges": "See New Changes",
@@ -144,15 +144,15 @@
 	},
 	"docs": "Docs",
 	"rules": {
-		"tooltip": "Manage Kilo Code Rules & Workflows",
-		"ariaLabel": "Kilo Code Rules",
+		"tooltip": "Manage Axon Code Rules & Workflows",
+		"ariaLabel": "Axon Code Rules",
 		"tabs": {
 			"rules": "Rules",
 			"workflows": "Workflows"
 		},
 		"description": {
-			"rules": "Rules allow you to provide Kilo Code with instructions it should follow in all modes and for all prompts. They are a persistent way to include context and preferences for all conversations in your workspace or globally.",
-			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Kilo Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
+			"rules": "Rules allow you to provide Axon Code with instructions it should follow in all modes and for all prompts. They are a persistent way to include context and preferences for all conversations in your workspace or globally.",
+			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Axon Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
 			"workflowsInChat": "in the chat."
 		},
 		"sections": {
@@ -230,11 +230,11 @@
 			"provider": "Provider",
 			"enableAutoTrigger": {
 				"label": "Pause to Complete",
-				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
+				"description": "When enabled, Axon Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto Trigger Delay",
-				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "The delay in seconds before Axon Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Quick Task ({{keybinding}})",

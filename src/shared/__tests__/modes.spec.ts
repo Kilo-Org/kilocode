@@ -391,7 +391,7 @@ describe("FileRestrictionError", () => {
 				slug: "debug",
 				name: "Debug", // kilocode_change
 				roleDefinition:
-					"You are Kilo Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
+					"You are Axon Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
 				groups: ["read", "edit", "browser", "command", "mcp"],
 			})
 			expect(debugMode?.customInstructions).toContain(
@@ -412,7 +412,7 @@ describe("FileRestrictionError", () => {
 				slug: "debug",
 				name: "Debug", // kilocode_change
 				roleDefinition:
-					"You are Kilo Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
+					"You are Axon Code, an expert software debugger specializing in systematic problem diagnosis and resolution.",
 			})
 		})
 

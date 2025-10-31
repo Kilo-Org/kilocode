@@ -8,7 +8,7 @@ export const GITHUB_ISSUES_URL = `${GITHUB_REPO_URL}/issues`
 export const GITHUB_NEW_ISSUE_URL = `${GITHUB_ISSUES_URL}/new`
 
 // Community links
-export const DISCORD_URL = "https://kilocode.ai/discord"
+export const DISCORD_URL = "https://matterai.so/discord"
 export const REDDIT_URL = "https://www.reddit.com/r/kilocode/"
 export const TWITTER_URL = "https://x.com/kilocode"
 export const YOUTUBE_URL = "https://www.youtube.com/@Kilo-Code"
@@ -23,7 +23,7 @@ export const VSCODE_MARKETPLACE_URL = "https://marketplace.visualstudio.com/item
 export const OPEN_VSX_URL = "https://open-vsx.org/extension/kilocode/kilo-code"
 
 // Company links
-export const CONTACT_EMAIL = "mailto:hi@kilocode.ai"
-export const CAREERS_URL = "https://kilocode.ai"
-export const WEBSITE_PRIVACY_URL = "https://kilocode.ai/privacy"
+export const CONTACT_EMAIL = "mailto:hi@matterai.so"
+export const CAREERS_URL = "https://matterai.so"
+export const WEBSITE_PRIVACY_URL = "https://matterai.so/privacy"
 export const EXTENSION_PRIVACY_URL = `${GITHUB_MAIN_REPO_URL}/blob/main/PRIVACY.md`

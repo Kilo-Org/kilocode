@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "用于规划、构建和修复代码的开源 AI 编码助手。"
 	},
 	"number_format": {
@@ -99,7 +99,7 @@
 			"processExitedWithError": "Claude Code 进程退出，退出码：{{exitCode}}。错误输出：{{output}}",
 			"stoppedWithReason": "Claude Code 停止，原因：{{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "加载 OAuth 凭据失败。请先进行身份验证：{{error}}",
@@ -152,7 +152,7 @@
 	"warnings": {
 		"no_terminal_content": "没有选择终端内容",
 		"missing_task_files": "此任务的文件丢失。您想从任务列表中删除它吗？",
-		"auto_import_failed": "自动导入 Kilo Code 设置失败：{{error}}"
+		"auto_import_failed": "自动导入 Axon Code 设置失败：{{error}}"
 	},
 	"info": {
 		"no_changes": "未找到更改。",
@@ -161,7 +161,7 @@
 		"custom_storage_path_set": "自定义存储路径已设置：{{path}}",
 		"default_storage_path": "已恢复使用默认存储路径",
 		"settings_imported": "设置已成功导入。",
-		"auto_import_success": "已自动导入 Kilo Code 设置：{{filename}}",
+		"auto_import_success": "已自动导入 Axon Code 设置：{{filename}}",
 		"share_link_copied": "分享链接已复制到剪贴板",
 		"image_copied_to_clipboard": "图片数据 URI 已复制到剪贴板",
 		"image_saved": "图片已保存到 {{path}}",
@@ -264,7 +264,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "错误",

@@ -4,7 +4,7 @@
   url="https://youtu.be/GF0vjB8NxYg"
 />
 
-Custom rules provide a powerful way to define project-specific and global behaviors and constraints for the Kilo Code AI agent. With custom rules, you can ensure consistent formatting, restrict access to sensitive files, enforce coding standards, and customize the AI's behavior for your specific project needs or across all projects.
+Custom rules provide a powerful way to define project-specific and global behaviors and constraints for the Axon Code AI agent. With custom rules, you can ensure consistent formatting, restrict access to sensitive files, enforce coding standards, and customize the AI's behavior for your specific project needs or across all projects.
 
 ## Overview
 
@@ -16,11 +16,11 @@ Custom rules can be written in plain text, but Markdown format is recommended fo
 
 - Use Markdown headers (`#`, `##`, etc.) to define rule categories
 - Use lists (`-`, `*`) to enumerate specific items or constraints
-- Use code blocks (``` ```) to include code examples when needed
+- Use code blocks (` `) to include code examples when needed
 
 ## Rule Types
 
-Kilo Code supports two types of custom rules:
+Axon Code supports two types of custom rules:
 
 - **Project Rules**: Apply only to the current project workspace
 - **Global Rules**: Apply across all projects and workspaces
@@ -60,7 +60,7 @@ Global rules are stored in your home directory and apply to all projects:
 
 ## Managing Rules Through the UI
 
-Kilo Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Kilo Code window.
+Axon Code provides a built-in interface for managing your custom rules without manually editing files in the `.kilocode/rules/` directories. To access the UI, click on the <Codicon name="law" /> icon in the **bottom right corner** of the Axon Code window.
 
 You can access the rules management UI to:
 
@@ -78,9 +78,9 @@ Rules are loaded in the following priority order:
 1. **Global rules** from `~/.kilocode/rules/` directory
 2. **Project rules** from `.kilocode/rules/` directory
 3. **Legacy fallback files** (for backward compatibility):
-   - `.roorules`
-   - `.clinerules`
-   - `.kilocoderules` (deprecated)
+    - `.roorules`
+    - `.clinerules`
+    - `.kilocoderules` (deprecated)
 
 When both global and project rules exist, they are combined with project rules taking precedence over global rules for conflicting directives.
 
@@ -102,11 +102,11 @@ When both generic rules and mode-specific rules exist, the mode-specific rules a
 
 ### Using the UI Interface
 
-<img src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Kilo Code" width="400" />
+<img src="/docs/img/custom-rules/rules-ui.png" alt="Rules tab in Axon Code" width="400" />
 
 The easiest way to create and manage rules is through the built-in UI:
 
-1. Access the rules management interface from the Kilo Code panel
+1. Access the rules management interface from the Axon Code panel
 2. Choose between creating project-specific or global rules
 3. Use the interface to create, edit, or toggle rules
 4. Rules are automatically saved and applied immediately
@@ -116,18 +116,20 @@ The easiest way to create and manage rules is through the built-in UI:
 To create rules manually:
 
 **For Project Rules:**
+
 1. Create the `.kilocode/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
 
 **For Global Rules:**
+
 1. Create the `~/.kilocode/rules/` directory if it doesn't already exist
 2. Create a new Markdown file with a descriptive name in this directory
 3. Write your rule using Markdown formatting
 4. Save the file
 
-Rules will be automatically applied to all future Kilo Code interactions. Any new changes will be applied immediately.
+Rules will be automatically applied to all future Axon Code interactions. Any new changes will be applied immediately.
 
 ## Example Rules
 
@@ -135,6 +137,7 @@ Rules will be automatically applied to all future Kilo Code interactions. Any ne
 
 ```markdown
 # Tables
+
 When printing tables, always add an exclamation mark to each column header
 ```
 
@@ -144,7 +147,9 @@ This simple rule instructs the AI to add exclamation marks to all table column h
 
 ```markdown
 # Restricted files
+
 Files in the list contain sensitive data, they MUST NOT be read
+
 - supersecrets.txt
 - credentials.json
 - .env
@@ -152,7 +157,7 @@ Files in the list contain sensitive data, they MUST NOT be read
 
 This rule prevents the AI from reading or accessing sensitive files, even if explicitly requested to do so.
 
-<img src="/docs/img/custom-rules/custom-rules.png" alt="Kilo Code ignores request to read sensitive file" width="600" />
+<img src="/docs/img/custom-rules/custom-rules.png" alt="Axon Code ignores request to read sensitive file" width="600" />
 
 ## Use Cases
 
@@ -168,14 +173,14 @@ Custom rules can be applied to a wide variety of scenarios:
 
 ## Examples of Custom Rules
 
-* "Strictly follow code style guide [your project-specific code style guide]"
-* "Always use spaces for indentation, with a width of 4 spaces"
-* "Use camelCase for variable names"
-* "Write unit tests for all new functions"
-* "Explain your reasoning before providing code"
-* "Focus on code readability and maintainability"
-* "Prioritize using the most common library in the community"
-* "When adding new features to websites, ensure they are responsive and accessible"
+- "Strictly follow code style guide [your project-specific code style guide]"
+- "Always use spaces for indentation, with a width of 4 spaces"
+- "Use camelCase for variable names"
+- "Write unit tests for all new functions"
+- "Explain your reasoning before providing code"
+- "Focus on code readability and maintainability"
+- "Prioritize using the most common library in the community"
+- "When adding new features to websites, ensure they are responsive and accessible"
 
 ## Best Practices
 
@@ -204,9 +209,9 @@ If your custom rules aren't being properly followed:
 1. **Check rule status in the UI**: Use the rules management interface to verify that your rules are active and properly loaded
 1. **Verify rule formatting**: Ensure that your rules are properly formatted with clear Markdown structure
 1. **Check rule locations**: Ensure that your rules are located in supported locations:
-   - Global rules: `~/.kilocode/rules/` directory
-   - Project rules: `.kilocode/rules/` directory
-   - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
+    - Global rules: `~/.kilocode/rules/` directory
+    - Project rules: `.kilocode/rules/` directory
+    - Legacy files: `.kilocoderules`, `.roorules`, or `.clinerules`
 1. **Rule specificity**: Verify that the rules are specific and unambiguous
 1. **Restart VS Code**: Restart VS Code to ensure the rules are properly loaded
 

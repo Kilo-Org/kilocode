@@ -11,11 +11,11 @@ describe("DEFAULT_HEADERS", () => {
 	})
 
 	it("should have correct HTTP-Referer value", () => {
-		expect(DEFAULT_HEADERS["HTTP-Referer"]).toBe("https://kilocode.ai")
+		expect(DEFAULT_HEADERS["HTTP-Referer"]).toBe("https://matterai.so")
 	})
 
 	it("should have correct X-Title value", () => {
-		expect(DEFAULT_HEADERS["X-Title"]).toBe("Kilo Code")
+		expect(DEFAULT_HEADERS["X-Title"]).toBe("Axon Code")
 	})
 
 	it("should have correct User-Agent format", () => {

@@ -13,7 +13,7 @@
 		"cancel": "取消"
 	},
 	"ui": {
-		"initializing": "Kilo Code 正在初始化...",
+		"initializing": "Axon Code 正在初始化...",
 		"systemInformation": "系统信息"
 	}
 }

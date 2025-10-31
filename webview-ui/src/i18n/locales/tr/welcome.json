@@ -1,6 +1,6 @@
 {
-	"greeting": "Merhaba, ben Kilo Code!",
-	"introduction": "<strong>Kilo Code, önde gelen otonom kodlama aracıdır.</strong> Daha önce hiç görmediğin şekilde mimari tasarım yapmaya, kod yazmaya, hata ayıklamaya ve üretkenliğini artırmaya hazırlan. Devam etmek için Kilo Code'un bir API anahtarına ihtiyacı var.",
+	"greeting": "Merhaba, ben Axon Code!",
+	"introduction": "<strong>Axon Code, önde gelen otonom kodlama aracıdır.</strong> Daha önce hiç görmediğin şekilde mimari tasarım yapmaya, kod yazmaya, hata ayıklamaya ve üretkenliğini artırmaya hazırlan. Devam etmek için Axon Code'un bir API anahtarına ihtiyacı var.",
 	"notice": "Başlamak için bu eklentinin bir API sağlayıcısına ihtiyacı var.",
 	"start": "Hadi başlayalım!",
 	"routers": {
@@ -16,12 +16,12 @@
 			"incentive": "Roo'yu ücretsiz dene"
 		}
 	},
-	"chooseProvider": "Sihirini yapabilmesi için Kilo Code'nun bir API anahtarına ihtiyacı var.",
+	"chooseProvider": "Sihirini yapabilmesi için Axon Code'nun bir API anahtarına ihtiyacı var.",
 	"startRouter": "Bir LLM yönlendiricisi kullanmanı öneririz:",
 	"startCustom": "Veya kendi API anahtarını kullanabilirsin:",
 	"telemetry": {
-		"helpImprove": "Kilo Code'u Geliştirmeye Yardım Et",
-		"helpImproveMessage": "Kilo Code, hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri toplar. Bu telemetri kod, prompts veya kişisel bilgi toplamaz. Bunu <settingsLink>ayarlar</settingsLink>da kapatabilirsin."
+		"helpImprove": "Axon Code'u Geliştirmeye Yardım Et",
+		"helpImproveMessage": "Axon Code, hataları düzeltmemize ve eklentiyi geliştirmemize yardımcı olmak için hata ve kullanım verileri toplar. Bu telemetri kod, prompts veya kişisel bilgi toplamaz. Bunu <settingsLink>ayarlar</settingsLink>da kapatabilirsin."
 	},
 	"importSettings": "Ayarları İçe Aktar"
 }

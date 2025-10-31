@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Kod planlama, oluşturma ve düzeltme için açık kaynaklı yapay zeka kodlama asistanı."
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Claude Code işlemi {{exitCode}} koduyla çıktı. Hata çıktısı: {{output}}",
 			"stoppedWithReason": "Claude Code şu nedenle durdu: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth kimlik bilgileri yüklenemedi. Lütfen önce kimlik doğrulaması yapın: {{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "Seçili terminal içeriği yok",
 		"missing_task_files": "Bu görevin dosyaları eksik. Görev listesinden kaldırmak istiyor musunuz?",
-		"auto_import_failed": "Kilo Code ayarları otomatik olarak içe aktarılamadı: {{error}}"
+		"auto_import_failed": "Axon Code ayarları otomatik olarak içe aktarılamadı: {{error}}"
 	},
 	"info": {
 		"no_changes": "Değişiklik bulunamadı.",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "Özel depolama yolu ayarlandı: {{path}}",
 		"default_storage_path": "Varsayılan depolama yoluna geri dönüldü",
 		"settings_imported": "Ayarlar başarıyla içe aktarıldı.",
-		"auto_import_success": "Kilo Code ayarları {{filename}} dosyasından otomatik olarak içe aktarıldı",
+		"auto_import_success": "Axon Code ayarları {{filename}} dosyasından otomatik olarak içe aktarıldı",
 		"share_link_copied": "Paylaşım bağlantısı panoya kopyalandı",
 		"image_copied_to_clipboard": "Resim veri URI'si panoya kopyalandı",
 		"image_saved": "Resim {{path}} konumuna kaydedildi",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "Lütfen geçerli bir yol girin"
 	},
 	"input": {
-		"task_prompt": "Kilo Code ne yapsın?",
+		"task_prompt": "Axon Code ne yapsın?",
 		"task_placeholder": "Görevini buraya yaz"
 	},
 	"settings": {
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Hata",
