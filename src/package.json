@@ -642,6 +642,8 @@
 		"@roo-code/ipc": "workspace:^",
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
+		"@sap-ai-sdk/foundation-models": "^2.0.0",
+		"@sap-ai-sdk/orchestration": "^2.0.0",
 		"@vscode/codicons": "^0.0.36",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.12.0",
