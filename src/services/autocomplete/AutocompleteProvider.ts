@@ -13,6 +13,7 @@ import { ClineProvider } from "../../core/webview/ClineProvider"
 import { MinimalConfigProvider } from "../continuedev/core/autocomplete/MinimalConfig"
 import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
 import { ContinueCompletionProvider } from "../continuedev/core/vscode-test-harness/src/autocomplete/completionProvider"
+import OpenRouter from "../continuedev/core/llm/llms/OpenRouter"
 
 export class AutocompleteProvider {
 	private static instance: AutocompleteProvider | null = null

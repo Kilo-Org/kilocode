@@ -15,7 +15,7 @@ import {
 	TabAutocompleteOptions,
 	Usage,
 } from "../index.js"
-import type { ILLMInteractionLog, ILLMLogger } from "../index.js"
+import type { CacheBehavior, ILLMInteractionLog, ILLMLogger } from "../index.js"
 import { mergeJson } from "../util/merge.js"
 import { renderChatMessage } from "../util/messageContent.js"
 import { TokensBatchingService } from "../util/TokensBatchingService.js"
@@ -86,6 +86,7 @@ export abstract class BaseLLM implements ILLM {
 	llmRequestHook?: (model: string, prompt: string) => any
 	apiKey?: string
 	apiBase?: string
+	cacheBehavior?: CacheBehavior
 	capabilities?: ModelCapability
 
 	lastRequestId: string | undefined
