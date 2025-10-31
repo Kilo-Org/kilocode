@@ -554,22 +554,22 @@ export class McpHub {
 	// Get project-level MCP configuration path
 	private async getProjectMcpPath(): Promise<string | null> {
 		const workspacePath = this.providerRef.deref()?.cwd ?? getWorkspacePath()
-		const projectMcpDir = path.join(workspacePath, ".kilocode")
-		const projectMcpPath = path.join(projectMcpDir, "mcp.json")
+		const mcpPaths = [
+			path.join(workspacePath, ".kilocode", "mcp.json"),
+			path.join(workspacePath, ".cursor", "mcp.json"),
+			path.join(workspacePath, ".mcp.json"),
+		]
 
-		try {
-			await fs.access(projectMcpPath)
-			return projectMcpPath
-		} catch {
-			// If not found in .kilocode/, fall back to .mcp.json in root directory
-			const rootMcpPath = path.join(workspacePath, ".mcp.json")
+		for (const mcpPath of mcpPaths) {
 			try {
-				await fs.access(rootMcpPath)
-				return rootMcpPath
+				await fs.access(mcpPath)
+				return mcpPath
 			} catch {
-				return null
+				// Ignore errors and try the next path
 			}
 		}
+
+		return null
 	}
 
 	// Initialize project-level MCP servers
