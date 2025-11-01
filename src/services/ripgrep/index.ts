@@ -6,10 +6,10 @@ import * as vscode from "vscode"
 
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
 import { fileExistsAtPath } from "../../utils/fs"
+
 /*
 This file provides functionality to perform regex searches on files using ripgrep.
 Inspired by: https://github.com/DiscreteTom/vscode-ripgrep-utils
-
 Key components:
 1. getBinPath: Locates the ripgrep binary within the VSCode installation.
 2. execRipgrep: Executes the ripgrep command and returns the output.
@@ -20,15 +20,12 @@ Key components:
      * regex: The regular expression to search for (Rust regex syntax)
      * filePattern: Optional glob pattern to filter files (default: '*')
    - Returns: A formatted string containing search results with context
-
 The search results include:
 - Relative file paths
 - 2 lines of context before and after each match
 - Matches formatted with pipe characters for easy reading
-
 Usage example:
 const results = await regexSearchFiles('/path/to/cwd', '/path/to/search', 'TODO:', '*.ts');
-
 rel/path/to/app.ts
 │----
 │function processData(data: any) {
@@ -37,7 +34,6 @@ rel/path/to/app.ts
 │  return processedData;
 │}
 │----
-
 rel/path/to/helper.ts
 │----
 │  let result = 0;
@@ -79,21 +75,31 @@ const MAX_LINE_LENGTH = 500
 export function truncateLine(line: string, maxLength: number = MAX_LINE_LENGTH): string {
 	return line.length > maxLength ? line.substring(0, maxLength) + " [truncated...]" : line
 }
+
 /**
  * Get the path to the ripgrep binary within the VSCode installation
+ * It correctly finds the @vscode/ripgrep package even when dependencies are hoisted
+ * by package managers like bun or npm.
  */
-export async function getBinPath(vscodeAppRoot: string): Promise<string | undefined> {
-	const checkPath = async (pkgFolder: string) => {
-		const fullPath = path.join(vscodeAppRoot, pkgFolder, binName)
-		return (await fileExistsAtPath(fullPath)) ? fullPath : undefined
-	}
+export async function getBinPath(): Promise<string | undefined> {
+	try {
+		const rgPackageJsonPath = require.resolve("@vscode/ripgrep/package.json")
 
-	return (
-		(await checkPath("node_modules/@vscode/ripgrep/bin/")) ||
-		(await checkPath("node_modules/vscode-ripgrep/bin")) ||
-		(await checkPath("node_modules.asar.unpacked/vscode-ripgrep/bin/")) ||
-		(await checkPath("node_modules.asar.unpacked/@vscode/ripgrep/bin/"))
-	)
+		const rgPackageDir = path.dirname(rgPackageJsonPath)
+
+		const binPath = path.join(rgPackageDir, "bin", binName)
+
+		if (await fileExistsAtPath(binPath)) {
+			return binPath
+		}
+
+		// This should ideally not be reached if the package is installed correctly.
+		return undefined
+	} catch (error) {
+		// require.resolve() will throw an error if the package is not found at all.
+		console.error("Kilo Code Patcher: Failed to resolve @vscode/ripgrep package.", error)
+		return undefined
+	}
 }
 
 async function execRipgrep(bin: string, args: string[]): Promise<string> {
@@ -143,8 +149,7 @@ export async function regexSearchFiles(
 	filePattern?: string,
 	rooIgnoreController?: RooIgnoreController,
 ): Promise<string> {
-	const vscodeAppRoot = vscode.env.appRoot
-	const rgPath = await getBinPath(vscodeAppRoot)
+	const rgPath = await getBinPath()
 
 	if (!rgPath) {
 		throw new Error("Could not find ripgrep binary")
@@ -209,8 +214,6 @@ export async function regexSearchFiles(
 			}
 		}
 	})
-
-	// console.log(results)
 
 	// Filter results using RooIgnoreController if provided
 	const filteredResults = rooIgnoreController
