@@ -240,6 +240,14 @@ export class VirtualQuotaFallbackHandler implements ApiHandler {
 		// No valid handler found
 		if (this.activeProfileId) {
 			await this.notifyHandlerSwitch(undefined, "No Valid Provider")
+
+			// No valid handler found - reduce all cooldowns by 1 minute to gradually
+			// allow providers to become available again instead of blocking indefinitely
+			await Promise.all(
+				this.handlerConfigs.map((c) =>
+					this.usage.reduceCooldown(c.profileId, 1 * 60 * 1000)
+				)
+			);
 		}
 		this.activeHandler = undefined
 		this.activeProfileId = undefined
