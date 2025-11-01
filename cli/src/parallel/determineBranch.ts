@@ -27,7 +27,7 @@ export async function determineParallelBranch({
 	const { isRepo, branch } = await getGitInfo(cwd)
 
 	if (!isRepo) {
-		const errorMessage = "Error: parallel mode requires the current working directory to be a git repository"
+		const errorMessage = "Parallel mode requires the current working directory to be a git repository"
 		logs.error(errorMessage, "ParallelMode")
 		throw new Error(errorMessage)
 	}
@@ -46,7 +46,7 @@ export async function determineParallelBranch({
 		const exists = await branchExists(cwd, existingBranch)
 
 		if (!exists) {
-			const errorMessage = `Error: Branch "${existingBranch}" does not exist`
+			const errorMessage = `Branch "${existingBranch}" does not exist`
 			logs.error(errorMessage, "ParallelMode")
 			throw new Error(errorMessage)
 		}

@@ -55,7 +55,6 @@ export class CompletionProvider {
 			return undefined
 		}
 
-
 		// Temporary fix for JetBrains autocomplete bug as described in https://github.com/continuedev/continue/pull/3022
 		if (llm.model === undefined && llm.completionOptions?.model !== undefined) {
 			llm.model = llm.completionOptions.model
@@ -76,7 +75,6 @@ export class CompletionProvider {
 			llm.useLegacyCompletionsEndpoint = true
 		}
 
-		console.log('using LLM', llm)
 		return llm
 	}
 
@@ -123,7 +121,7 @@ export class CompletionProvider {
 
 		// Enable static contextualization if defined.
 		if (config?.experimental?.enableStaticContextualization) {
-			options.experimental_enableStaticContextualization = true
+			options.experimental_enableStaticContextualization = false
 		}
 
 		return options
@@ -138,7 +136,6 @@ export class CompletionProvider {
 			// Create abort signal if not given
 			if (!token) {
 				const controller = this.loggingService.createAbortController(input.completionId)
-				console.log('creating abort token because none given')
 				token = controller.signal
 			}
 			const startTime = Date.now()
@@ -214,11 +211,8 @@ export class CompletionProvider {
 
 				// Don't postprocess if aborted
 				if (token.aborted) {
-					console.log('aborted')
 					return undefined
 				}
-
-				console.log('raw completion', completion)
 
 				const processedCompletion = helper.options.transform
 					? postprocessCompletion({

@@ -31,7 +31,7 @@ describe("AutocompleteModel", () => {
 				expect(result).toBeDefined()
 				expect(Mistral).toHaveBeenCalledWith(
 					expect.objectContaining({
-						model: "codestral-latest",
+						model: "codestral-2501",
 						apiKey: "test-mistral-key",
 						apiBase: "https://custom.mistral.ai/v1/",
 						contextLength: 32000,
@@ -78,7 +78,7 @@ describe("AutocompleteModel", () => {
 				expect(result).toBeDefined()
 				expect(OpenAI).toHaveBeenCalledWith(
 					expect.objectContaining({
-						model: "mistralai/codestral-2508",
+						model: "codestral-2501",
 						apiKey: "test-kilocode-token",
 					}),
 				)
@@ -109,7 +109,7 @@ describe("AutocompleteModel", () => {
 				expect(result).toBeDefined()
 				expect(OpenAI).toHaveBeenCalledWith(
 					expect.objectContaining({
-						model: "mistralai/codestral-2508",
+						model: "mistralai/codestral-2501",
 						apiKey: "test-openrouter-key",
 						apiBase: "https://custom.openrouter.ai/api/v1",
 					}),

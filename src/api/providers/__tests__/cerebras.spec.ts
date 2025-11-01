@@ -56,7 +56,7 @@ describe("CerebrasHandler", () => {
 		it("should fallback to default model when apiModelId is not provided", () => {
 			const handlerWithoutModel = new CerebrasHandler({ cerebrasApiKey: "test" })
 			const { id } = handlerWithoutModel.getModel()
-			expect(id).toBe("qwen-3-coder-480b") // cerebrasDefaultModelId (routed)
+			expect(id).toBe("gpt-oss-120b") // cerebrasDefaultModelId
 		})
 	})
 

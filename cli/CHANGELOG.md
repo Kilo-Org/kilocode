@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.0.16
+
+### Patch Changes
+
+- [#3426](https://github.com/Kilo-Org/kilocode/pull/3426) [`15243f1`](https://github.com/Kilo-Org/kilocode/commit/15243f118ae4c4ac8a8f89fc6de11d6713f0a6f0) Thanks [@iscekic](https://github.com/iscekic)! - Improves error message clarity when initiating parallel mode
+
 ## 0.0.15
 
 ### Patch Changes

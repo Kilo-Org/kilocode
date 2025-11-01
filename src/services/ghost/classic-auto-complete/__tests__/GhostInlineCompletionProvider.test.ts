@@ -238,6 +238,7 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockCostTrackingCallback: CostTrackingCallback
 	let mockGhostContext: GhostContext
 	let mockCursorAnimation: GhostGutterAnimation
+	let mockSettings: { enableAutoTrigger: boolean } | null
 
 	beforeEach(() => {
 		mockDocument = new MockTextDocument(vscode.Uri.file("/test.ts"), "const x = 1\nconst y = 2")
@@ -247,6 +248,7 @@ describe("GhostInlineCompletionProvider", () => {
 			selectedCompletionInfo: undefined,
 		} as vscode.InlineCompletionContext
 		mockToken = {} as vscode.CancellationToken
+		mockSettings = { enableAutoTrigger: true }
 
 		// Create mock dependencies
 		mockModel = {
@@ -278,6 +280,7 @@ describe("GhostInlineCompletionProvider", () => {
 			mockCostTrackingCallback,
 			mockGhostContext,
 			mockCursorAnimation,
+			() => mockSettings,
 		)
 	})
 
@@ -892,6 +895,119 @@ describe("GhostInlineCompletionProvider", () => {
 			)) as vscode.InlineCompletionItem[]
 			expect(result).toHaveLength(1)
 			expect(result[0].insertText).toBe("new content")
+		})
+	})
+
+	describe("auto-trigger settings", () => {
+		it("should respect enableAutoTrigger setting when auto-triggered", async () => {
+			// Set auto-trigger to false
+			mockSettings = { enableAutoTrigger: false }
+
+			// Change context to automatic trigger
+			const autoContext = {
+				triggerKind: vscode.InlineCompletionTriggerKind.Automatic,
+				selectedCompletionInfo: undefined,
+			} as vscode.InlineCompletionContext
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				autoContext,
+				mockToken,
+			)
+
+			// Should return empty array because auto-trigger is disabled
+			expect(result).toEqual([])
+			// Model should not be called
+			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should block manual trigger when auto-trigger is disabled (defense in depth)", async () => {
+			// Set auto-trigger to false
+			mockSettings = { enableAutoTrigger: false }
+
+			// Manual trigger (Invoke)
+			const manualContext = {
+				triggerKind: vscode.InlineCompletionTriggerKind.Invoke,
+				selectedCompletionInfo: undefined,
+			} as vscode.InlineCompletionContext
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				manualContext,
+				mockToken,
+			)
+
+			// Should return empty array as defense in depth, even for manual triggers
+			// The provider should be deregistered at the manager level when disabled
+			expect(result).toEqual([])
+			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should read settings dynamically on each call", async () => {
+			// Start with auto-trigger enabled
+			mockSettings = { enableAutoTrigger: true }
+
+			const autoContext = {
+				triggerKind: vscode.InlineCompletionTriggerKind.Automatic,
+				selectedCompletionInfo: undefined,
+			} as vscode.InlineCompletionContext
+
+			// First call with auto-trigger enabled
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, autoContext, mockToken)
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+
+			// Change settings to disable auto-trigger
+			mockSettings = { enableAutoTrigger: false }
+
+			// Second call should respect the new settings
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				autoContext,
+				mockToken,
+			)
+
+			// Should not call model again because auto-trigger is now disabled
+			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
+			expect(result).toEqual([])
+		})
+
+		it("should handle null settings gracefully", async () => {
+			// Set settings to null
+			mockSettings = null
+
+			const autoContext = {
+				triggerKind: vscode.InlineCompletionTriggerKind.Automatic,
+				selectedCompletionInfo: undefined,
+			} as vscode.InlineCompletionContext
+
+			const result = await provider.provideInlineCompletionItems(
+				mockDocument,
+				mockPosition,
+				autoContext,
+				mockToken,
+			)
+
+			// Should default to false (disabled) when settings are null
+			expect(result).toEqual([])
+			expect(mockModel.generateResponse).not.toHaveBeenCalled()
+		})
+
+		it("should allow auto-trigger when explicitly enabled", async () => {
+			// Set auto-trigger to true
+			mockSettings = { enableAutoTrigger: true }
+
+			const autoContext = {
+				triggerKind: vscode.InlineCompletionTriggerKind.Automatic,
+				selectedCompletionInfo: undefined,
+			} as vscode.InlineCompletionContext
+
+			await provider.provideInlineCompletionItems(mockDocument, mockPosition, autoContext, mockToken)
+
+			// Model should be called because auto-trigger is enabled
+			expect(mockModel.generateResponse).toHaveBeenCalled()
 		})
 	})
 })
