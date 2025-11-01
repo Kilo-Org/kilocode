@@ -1,8 +1,6 @@
 # kilo-code
 
-## 4.114.1
-
-### Patch Changes
+## [v4.114.1]
 
 - [#3188](https://github.com/Kilo-Org/kilocode/pull/3188) [`131fa0e`](https://github.com/Kilo-Org/kilocode/commit/131fa0ee68d6f47172a968489129071a7da88de3) Thanks [@NikoDi2000](https://github.com/NikoDi2000)! - Add missing enable/disable word wrap tooltips
 
