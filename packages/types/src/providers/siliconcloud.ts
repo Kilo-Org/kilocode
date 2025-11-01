@@ -43,14 +43,14 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		preferredIndex: 2,
 	},
 	"MiniMaxAI/MiniMax-M2": {
-		contextWindow: 131072,
+		contextWindow: 202752,
 		inputPrice: 0.3,
 		outputPrice: 1.18,
 		description:
 			"MiniMax-M2 为智能体重新定义了效率。它是一款紧凑、快速且经济高效的 MoE 模型，拥有 2300 亿总参数和 100 亿激活参数，专为编码和智能体任务的顶级性能而打造，同时保持强大的通用智能。仅需 100 亿激活参数，MiniMax-M2 就能提供当今领先模型所期望的复杂端到端工具使用性能，但其外形尺寸更为精简，使得部署和扩展比以往任何时候都更容易",
 		supportsPromptCache: false,
 		supportsReasoningBudget: true,
-		maxTokens: 131072,
+		maxTokens: 202752,
 		preferredIndex: 3,
 	},
 	"deepseek-ai/DeepSeek-V3.1-Terminus": {
