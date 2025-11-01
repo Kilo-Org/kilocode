@@ -40,6 +40,7 @@ import {
 	vercelAiGatewayDefaultModelId,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	aiStupidLevelDefaultModelId,
 	nativeFunctionCallingProviders, // kilocode_change: Added import for native function calling providers
 } from "@roo-code/types"
 
@@ -107,6 +108,7 @@ import {
 	VercelAiGateway,
 	DeepInfra,
 	OvhCloudAiEndpoints, // kilocode_change
+	AIStupidLevel,
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -411,6 +413,7 @@ const ApiOptions = ({
 				kilocode: { field: "kilocodeModel", default: kilocodeDefaultModel },
 				"gemini-cli": { field: "apiModelId", default: geminiCliDefaultModelId },
 				// kilocode_change end
+				aistupidlevel: { field: "aiStupidLevelModelId", default: aiStupidLevelDefaultModelId },
 			}
 
 			const config = PROVIDER_MODEL_CONFIG[value]
@@ -738,6 +741,16 @@ const ApiOptions = ({
 
 			{selectedProvider === "vercel-ai-gateway" && (
 				<VercelAiGateway
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+
+			{selectedProvider === "aistupidlevel" && (
+				<AIStupidLevel
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
 					routerModels={routerModels}

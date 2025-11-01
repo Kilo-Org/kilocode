@@ -31,6 +31,7 @@ import { getGeminiModels } from "./gemini"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { getAIStupidLevelModels } from "./aistupidlevel" // kilocode_change
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -136,6 +137,11 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			// kilocode_change start
 			case "ovhcloud":
 				models = await getOvhCloudAiEndpointsModels()
+				break
+			// kilocode_change end
+			// kilocode_change start
+			case "aistupidlevel":
+				models = await getAIStupidLevelModels(options.apiKey)
 				break
 			// kilocode_change end
 			default: {
