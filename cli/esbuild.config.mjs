@@ -103,6 +103,8 @@ const __dirname = __dirname__(__filename);
 		"get-folder-size",
 		"google-auth-library",
 		"gray-matter",
+		"http-proxy-agent",
+		"https-proxy-agent",
 		"i18next",
 		"ignore",
 		"ink",
