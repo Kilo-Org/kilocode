@@ -1,7 +1,7 @@
 import { EventEmitter } from "events"
 import { createVSCodeAPIMock, type IdentityInfo } from "./VSCode.js"
 import { logs } from "../services/logs.js"
-import type { ExtensionMessage, WebviewMessage, ExtensionState } from "../types/messages.js"
+import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/messages.js"
 import { getTelemetryService } from "../services/telemetry/index.js"
 
 export interface ExtensionHostOptions {
@@ -9,6 +9,7 @@ export interface ExtensionHostOptions {
 	extensionBundlePath: string // Direct path to extension.js
 	extensionRootPath: string // Root path for extension assets
 	identity?: IdentityInfo // Identity information for VSCode environment
+	customModes?: ModeConfig[] // Custom modes configuration
 }
 
 export interface ExtensionAPI {
@@ -674,7 +675,7 @@ export class ExtensionHost extends EventEmitter {
 			},
 			chatMessages: [],
 			mode: "code",
-			customModes: [],
+			customModes: this.options.customModes || [],
 			taskHistoryFullLength: 0,
 			taskHistoryVersion: 0,
 			renderContext: "cli",

@@ -2,7 +2,7 @@
  * Command system type definitions
  */
 
-import type { RouterModels } from "../../types/messages.js"
+import type { RouterModels, ModeConfig } from "../../types/messages.js"
 import type { ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 
@@ -55,6 +55,8 @@ export interface CommandContext {
 	balanceData: BalanceData | null
 	profileLoading: boolean
 	balanceLoading: boolean
+	// Custom modes context
+	customModes: ModeConfig[]
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void

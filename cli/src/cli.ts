@@ -17,6 +17,8 @@ import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
 import { isGitWorktree } from "./utils/git.js"
 
+import type { ModeConfig } from "./types/messages.js"
+
 export interface CLIOptions {
 	mode?: string
 	workspace?: string
@@ -24,6 +26,7 @@ export interface CLIOptions {
 	json?: boolean
 	prompt?: string
 	timeout?: number
+	customModes?: ModeConfig[]
 	parallel?: boolean
 	worktreeBranch?: string | undefined
 }
@@ -94,6 +97,10 @@ export class CLI {
 					sessionId: identity.sessionId,
 					cliUserId: identity.cliUserId,
 				}
+			}
+
+			if (this.options.customModes) {
+				serviceOptions.customModes = this.options.customModes
 			}
 
 			this.service = createExtensionService(serviceOptions)

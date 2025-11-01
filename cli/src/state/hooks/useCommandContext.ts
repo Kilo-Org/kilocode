@@ -74,6 +74,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
+	const customModes = extensionState?.customModes || []
 	const isParallelMode = useAtomValue(isParallelModeAtom)
 
 	// Get profile state
@@ -143,6 +144,8 @@ export function useCommandContext(): UseCommandContextReturn {
 				balanceData,
 				profileLoading,
 				balanceLoading,
+				// Custom modes context
+				customModes,
 			}
 		},
 		[
@@ -162,6 +165,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			balanceData,
 			profileLoading,
 			balanceLoading,
+			customModes,
 			setCommittingParallelMode,
 			isParallelMode,
 		],
