@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Geen providers gevonden",
 		"noMatchFound": "Geen overeenkomende profielen gevonden",
 		"vscodeLmDescription": "De VS Code Language Model API stelt je in staat modellen te draaien die door andere VS Code-extensies worden geleverd (waaronder GitHub Copilot). De eenvoudigste manier om te beginnen is door de Copilot- en Copilot Chat-extensies te installeren vanuit de VS Code Marketplace.",
+		"vscodeLmUnavailable": "Ondersteuning voor VS Code Language Models is alleen beschikbaar in Visual Studio Code. Forks zoals VSCodium en anderen werken mogelijk niet. Bovendien is deze functionaliteit niet beschikbaar in JetBrains-tools.",
+		"vscodeLmUnavailableInstructions": "Zorg dat u een ondersteunde tool gebruikt en dat VS Code Chat is geïnstalleerd en ingeschakeld",
 		"awsCustomArnUse": "Voer een geldige Amazon Bedrock ARN in voor het model dat je wilt gebruiken. Voorbeeldformaten:",
 		"awsCustomArnDesc": "Zorg ervoor dat de regio in de ARN overeenkomt met je geselecteerde AWS-regio hierboven.",
 		"openRouterApiKey": "OpenRouter API-sleutel",

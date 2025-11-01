@@ -247,6 +247,8 @@
 		"noProviderMatchFound": "Eşleşen sağlayıcı bulunamadı",
 		"noMatchFound": "Eşleşen profil bulunamadı",
 		"vscodeLmDescription": "VS Code Dil Modeli API'si, diğer VS Code uzantıları tarafından sağlanan modelleri çalıştırmanıza olanak tanır (GitHub Copilot dahil ancak bunlarla sınırlı değildir). Başlamanın en kolay yolu, VS Code Marketplace'ten Copilot ve Copilot Chat uzantılarını yüklemektir.",
+		"vscodeLmUnavailable": "VS Code dil modeli desteği yalnızca Visual Studio Code'da mevcuttur. VSCodium gibi fork'lar ve diğerleri çalışmayabilir. Ayrıca bu özellik JetBrains araçlarında mevcut değildir.",
+		"vscodeLmUnavailableInstructions": "Desteklenen bir araç kullandığınızdan ve VS Code Chat'in yüklü ve etkin olduğundan emin olun",
 		"awsCustomArnUse": "Kullanmak istediğiniz model için geçerli bir Amazon Bedrock ARN'si girin. Format örnekleri:",
 		"awsCustomArnDesc": "ARN içindeki bölgenin yukarıda seçilen AWS Bölgesiyle eşleştiğinden emin olun.",
 		"openRouterApiKey": "OpenRouter API Anahtarı",

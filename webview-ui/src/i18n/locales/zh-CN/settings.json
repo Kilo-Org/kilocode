@@ -247,6 +247,8 @@
 		"noProviderMatchFound": "未找到提供商",
 		"noMatchFound": "未找到匹配的配置文件",
 		"vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
+		"vscodeLmUnavailable": "VS Code 语言模型支持仅在 Visual Studio Code 中可用。VSCodium 等分支可能无法工作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "请确保您使用的是受支持的工具，并且已安装并启用 VS Code Chat",
 		"awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
 		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
 		"openRouterApiKey": "OpenRouter API 密钥",

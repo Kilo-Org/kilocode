@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Afegir crèdit",
-		"lowBalance": "El teu saldo de Kilo Code és baix"
+		"lowBalance": "El teu saldo de Kilo Code és baix",
+		"newOrganization": "Utilitzes Kilo per a la feina?"
 	},
 	"pagination": {
 		"previous": "Anterior",

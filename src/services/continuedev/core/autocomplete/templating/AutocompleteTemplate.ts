@@ -373,15 +373,16 @@ export function getTemplateForModel(model: string): AutocompleteTemplate {
 		return codegeexFimTemplate
 	}
 
-	if (
-		lowerCaseModel.includes("gpt") ||
-		lowerCaseModel.includes("davinci-002") ||
-		lowerCaseModel.includes("claude") ||
-		lowerCaseModel.includes("granite3") ||
-		lowerCaseModel.includes("granite-3")
-	) {
-		return holeFillerTemplate
-	}
+	// if (
+	// 	lowerCaseModel.includes("gpt") ||
+	// 	lowerCaseModel.includes("davinci-002") ||
+	// 	lowerCaseModel.includes("claude") ||
+	// 	lowerCaseModel.includes("granite3") ||
+	// 	lowerCaseModel.includes("granite-3")
+	// ) {
+	// Default Fallback Mode
+	return holeFillerTemplate
+	//}
 
-	return stableCodeFimTemplate
+	//return stableCodeFimTemplate
 }

@@ -9,6 +9,7 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { isStreamingAtom, errorAtom, addMessageAtom, messageResetCounterAtom } from "../state/atoms/ui.js"
 import { setCIModeAtom } from "../state/atoms/ci.js"
 import { configValidationAtom } from "../state/atoms/config.js"
+import { isParallelModeAtom } from "../state/atoms/index.js"
 import { addToHistoryAtom, resetHistoryNavigationAtom, exitHistoryModeAtom } from "../state/atoms/history.js"
 import { MessageDisplay } from "./messages/MessageDisplay.js"
 import { JsonRenderer } from "./JsonRenderer.js"
@@ -55,6 +56,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const addToHistory = useSetAtom(addToHistoryAtom)
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
+	const setIsParallelMode = useSetAtom(isParallelModeAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -96,6 +98,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			})
 		}
 	}, [options.ci, options.timeout, setCIMode])
+
+	// Set parallel mode flag
+	useEffect(() => {
+		if (options.parallel) {
+			setIsParallelMode(true)
+		}
+	}, [options.parallel, setIsParallelMode])
 
 	// Handle CI mode exit
 	useEffect(() => {
@@ -164,10 +173,15 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 					clearScreen: !options.ci && configValidation.valid,
 					showInstructions: !options.ci || !options.prompt,
 					instructions: createConfigErrorInstructions(configValidation),
+					...(options.parallel &&
+						options.worktreeBranch && {
+							worktreeBranch: options.worktreeBranch,
+							workspace: options.workspace,
+						}),
 				}),
 			)
 		}
-	}, [options.ci, options.prompt, addMessage, configValidation])
+	}, [addMessage, options.ci, configValidation, options.prompt, options.parallel, options.worktreeBranch])
 
 	useEffect(() => {
 		const checkVersion = async () => {

@@ -3,7 +3,7 @@
  */
 
 import React from "react"
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { render } from "ink-testing-library"
 import { StatusBar } from "../StatusBar.js"
 import * as atoms from "../../../state/atoms/index.js"
@@ -16,6 +16,9 @@ vi.mock("jotai")
 
 vi.mock("../../../state/hooks/useGitInfo.js")
 vi.mock("../../../state/hooks/useContextUsage.js")
+vi.mock("../../../utils/git.js", () => ({
+	isGitWorktree: vi.fn(),
+}))
 
 describe("StatusBar", () => {
 	beforeEach(() => {
@@ -24,6 +27,7 @@ describe("StatusBar", () => {
 		// Setup default mock implementations
 		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
 			if (atom === atoms.cwdAtom) return "/home/user/kilocode"
+			if (atom === atoms.isParallelModeAtom) return false
 			if (atom === atoms.extensionModeAtom) return "code"
 			if (atom === atoms.apiConfigurationAtom)
 				return {
@@ -201,5 +205,72 @@ describe("StatusBar", () => {
 		// Verify component renders successfully
 		expect(frame).toBeTruthy()
 		expect(frame).toContain("test-project")
+	})
+
+	describe("parallel mode", () => {
+		let isGitWorktreeMock: any
+
+		beforeEach(async () => {
+			const gitModule = await import("../../../utils/git.js")
+			isGitWorktreeMock = vi.mocked(gitModule.isGitWorktree)
+		})
+		let originalCwd: () => string
+
+		beforeEach(() => {
+			// Store original process.cwd
+			originalCwd = process.cwd
+		})
+
+		afterEach(() => {
+			// Restore original process.cwd after each test
+			process.cwd = originalCwd
+		})
+
+		it("should render project name with git worktree suffix in parallel mode", async () => {
+			// Mock isGitWorktree to return true immediately
+			isGitWorktreeMock.mockResolvedValue(true)
+
+			// Mock process.cwd() to return the actual project directory
+			process.cwd = vi.fn(() => "/home/user/kilocode")
+
+			vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+				if (atom === atoms.cwdAtom) return "/tmp/worktree/kilocode-task-123"
+				if (atom === atoms.isParallelModeAtom) return true
+				if (atom === atoms.extensionModeAtom) return "code"
+				if (atom === atoms.apiConfigurationAtom)
+					return {
+						apiProvider: "anthropic",
+						apiModelId: "claude-sonnet-4",
+					}
+				if (atom === atoms.chatMessagesAtom) return []
+				if (atom === atoms.routerModelsAtom) return null
+				return null
+			})
+
+			vi.mocked(useGitInfoHook.useGitInfo).mockReturnValue({
+				branch: "main",
+				isClean: true,
+				isRepo: true,
+				loading: false,
+			})
+
+			vi.mocked(useContextUsageHook.useContextUsage).mockReturnValue({
+				percentage: 45,
+				tokensUsed: 90000,
+				maxTokens: 200000,
+				reservedForOutput: 8192,
+				availableSize: 101808,
+			})
+
+			const { lastFrame } = render(<StatusBar />)
+
+			await vi.waitFor(
+				() => {
+					const frame = lastFrame()
+					expect(frame).toContain("kilocode (git worktree)")
+				},
+				{ timeout: 1000, interval: 50 },
+			)
+		})
 	})
 })

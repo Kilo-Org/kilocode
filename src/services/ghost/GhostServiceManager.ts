@@ -26,7 +26,6 @@ export class GhostServiceManager {
 	private ghostContext: GhostContext
 	private cursorAnimation: GhostGutterAnimation
 
-	private enabled: boolean = true
 	private taskId: string | null = null
 	private isProcessing: boolean = false
 
@@ -60,6 +59,7 @@ export class GhostServiceManager {
 			this.updateCostTracking.bind(this),
 			this.ghostContext,
 			this.cursorAnimation,
+			() => this.settings,
 		)
 
 		// Register document event handlers
@@ -94,7 +94,7 @@ export class GhostServiceManager {
 
 	// Settings Management
 	private loadSettings() {
-		const state = ContextProxy.instance?.getValues?.()
+		const state = ContextProxy.instance.getValues()
 		return state.ghostServiceSettings
 	}
 
@@ -107,7 +107,7 @@ export class GhostServiceManager {
 			provider: this.getCurrentProviderName(),
 			model: this.getCurrentModelName(),
 		}
-		await ContextProxy.instance?.setValues?.({ ghostServiceSettings: settingsWithModelInfo })
+		await ContextProxy.instance.setValues({ ghostServiceSettings: settingsWithModelInfo })
 		await this.cline.postStateToWebview()
 	}
 
@@ -121,22 +121,21 @@ export class GhostServiceManager {
 		await this.saveSettings()
 	}
 
-	/**
-	 * Update the inline completion provider with current settings
-	 */
 	private async updateInlineCompletionProviderRegistration() {
-		// Always keep the provider registered so manual triggers (cmd-L) work
-		// The provider will check enableAutoTrigger internally to decide whether to auto-trigger
-		if (!this.inlineCompletionProviderDisposable) {
+		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+
+		if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
+			// Register the provider
 			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
 				"*",
 				this.inlineCompletionProvider,
 			)
 			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
+		} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
+			// Deregister the provider
+			this.inlineCompletionProviderDisposable.dispose()
+			this.inlineCompletionProviderDisposable = null
 		}
-
-		// Update the provider's settings
-		this.inlineCompletionProvider.updateSettings(this.settings)
 	}
 
 	public async disable() {
@@ -165,7 +164,7 @@ export class GhostServiceManager {
 
 	// VsCode Event Handlers
 	private onDidCloseTextDocument(document: vscode.TextDocument): void {
-		if (!this.enabled || document.uri.scheme !== "file") {
+		if (document.uri.scheme !== "file") {
 			return
 		}
 		this.documentStore.removeDocument(document.uri)
@@ -195,7 +194,7 @@ export class GhostServiceManager {
 	}
 
 	private async onDidOpenTextDocument(document: vscode.TextDocument): Promise<void> {
-		if (!this.enabled || document.uri.scheme !== "file") {
+		if (document.uri.scheme !== "file") {
 			return
 		}
 		await this.documentStore.storeDocument({
@@ -204,7 +203,7 @@ export class GhostServiceManager {
 	}
 
 	private async onDidChangeTextDocument(event: vscode.TextDocumentChangeEvent): Promise<void> {
-		if (!this.enabled || event.document.uri.scheme !== "file") {
+		if (event.document.uri.scheme !== "file") {
 			return
 		}
 
@@ -242,14 +241,11 @@ export class GhostServiceManager {
 	}
 
 	private async onDidChangeTextEditorSelection(event: vscode.TextEditorSelectionChangeEvent): Promise<void> {
-		if (!this.enabled) {
-			return
-		}
 		this.cursorAnimation.update()
 	}
 
 	private async onDidChangeActiveTextEditor(editor: vscode.TextEditor | undefined) {
-		if (!this.enabled || !editor) {
+		if (!editor) {
 			return
 		}
 		// Update global context when switching editors
@@ -261,9 +257,6 @@ export class GhostServiceManager {
 	}
 
 	public async codeSuggestion() {
-		if (!this.enabled) {
-			return
-		}
 		const editor = vscode.window.activeTextEditor
 		if (!editor) {
 			return
@@ -284,8 +277,41 @@ export class GhostServiceManager {
 			await this.load()
 		}
 
-		// Trigger the inline completion provider
-		await vscode.commands.executeCommand("editor.action.inlineSuggest.trigger")
+		// Call the inline completion provider directly with manual trigger context
+		const position = editor.selection.active
+		const context: vscode.InlineCompletionContext = {
+			triggerKind: vscode.InlineCompletionTriggerKind.Invoke,
+			selectedCompletionInfo: undefined,
+		}
+		const tokenSource = new vscode.CancellationTokenSource()
+
+		try {
+			const completions = await this.inlineCompletionProvider.provideInlineCompletionItems_Internal(
+				document,
+				position,
+				context,
+				tokenSource.token,
+			)
+
+			// If we got completions, directly insert the first one
+			if (completions && (Array.isArray(completions) ? completions.length > 0 : completions.items.length > 0)) {
+				const items = Array.isArray(completions) ? completions : completions.items
+				const firstCompletion = items[0]
+
+				if (firstCompletion && firstCompletion.insertText) {
+					const insertText =
+						typeof firstCompletion.insertText === "string"
+							? firstCompletion.insertText
+							: firstCompletion.insertText.value
+
+					await editor.edit((editBuilder) => {
+						editBuilder.insert(position, insertText)
+					})
+				}
+			}
+		} finally {
+			tokenSource.dispose()
+		}
 	}
 
 	private async updateGlobalContext() {
@@ -303,9 +329,6 @@ export class GhostServiceManager {
 	}
 
 	private initializeStatusBar() {
-		if (!this.enabled) {
-			return
-		}
 		this.statusBar = new GhostStatusBar({
 			enabled: false,
 			model: "loading...",

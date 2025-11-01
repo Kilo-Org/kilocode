@@ -197,19 +197,21 @@ export async function getQueryForFile(filepathOrUri: string, queryPath: string):
 		return undefined
 	}
 
-	// Resolve the query file from consolidated tree-sitter directory.
-	// Prefer repo-root/tree-sitter in tests and runtime, but also fall back to core-local layout.
+	// Resolve the query file from tree-sitter directory.
+	// The tree-sitter directory is at src/services/continuedev/tree-sitter/
 	const repoRoot = path.resolve(__dirname, "..", "..", "..", "..")
-	const baseRoots = [
-		// In tests (running from src): src/services/continuedev/core/util -> src/services/continuedev
-		path.resolve(__dirname, "..", ".."),
-		// In production (dist): dist/services/continuedev/core/util -> src/services/continuedev
-		path.join(repoRoot, "src", "services", "continuedev"),
-		// Fallback: repo root
-		repoRoot,
+
+	const candidatePaths: string[] = [
+		// Development: from src/services/continuedev/core/util -> src/services/continuedev/tree-sitter
+		path.join(__dirname, "..", "..", "tree-sitter", queryPath),
+		// Production: tree-sitter might be copied alongside compiled code
+		path.join(__dirname, "tree-sitter", queryPath),
+		// Alternative: from repo root
+		path.join(repoRoot, "src", "services", "continuedev", "tree-sitter", queryPath),
+		// Fallback: dist directory
+		path.join(repoRoot, "dist", "tree-sitter", queryPath),
 	]
 
-	const candidatePaths = baseRoots.map((root) => path.join(root, "tree-sitter", queryPath))
 	const sourcePath = findExistingPath(candidatePaths)
 
 	if (!sourcePath) {
