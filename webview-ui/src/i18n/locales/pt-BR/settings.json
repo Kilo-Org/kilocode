@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Restaurar Padrões"
 		},
+		"rateLimitAfter": {
+			"label": "Limite de taxa no fim",
+			"description": "Comece a limitar a taxa depois que o fluxo da API terminar."
+		},
 		"rateLimitSeconds": {
 			"label": "Limite de taxa",
 			"description": "Tempo mínimo entre requisições de API."

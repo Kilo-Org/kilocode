@@ -465,6 +465,10 @@
 			},
 			"resetDefaults": "デフォルトにリセット"
 		},
+		"rateLimitAfter": {
+			"label": "終了時のレート制限",
+			"description": "API ストリームが終了した後にレート制限を開始します。"
+		},
 		"rateLimitSeconds": {
 			"label": "レート制限",
 			"description": "APIリクエスト間の最小時間。"

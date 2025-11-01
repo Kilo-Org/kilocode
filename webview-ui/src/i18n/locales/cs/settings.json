@@ -486,6 +486,10 @@
 			},
 			"resetDefaults": "Obnovit výchozí"
 		},
+		"rateLimitAfter": {
+			"label": "Omezení rychlosti na konci",
+			"description": "Začněte omezovat rychlost poté, co stream API skončí."
+		},
 		"rateLimitSeconds": {
 			"label": "Omezení rychlosti",
 			"description": "Minimální čas mezi požadavky API."

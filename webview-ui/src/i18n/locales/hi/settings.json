@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "डिफ़ॉल्ट पर रीसेट करें"
 		},
+		"rateLimitAfter": {
+			"label": "अंत में दर सीमा",
+			"description": "API स्ट्रीम समाप्त होने के बाद दर सीमा लगाना शुरू करें."
+		},
 		"rateLimitSeconds": {
 			"label": "दर सीमा",
 			"description": "API अनुरोधों के बीच न्यूनतम समय।"

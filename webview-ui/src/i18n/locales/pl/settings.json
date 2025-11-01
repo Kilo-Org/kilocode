@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Przywróć domyślne"
 		},
+		"rateLimitAfter": {
+			"label": "Limit prędkości na końcu",
+			"description": "Rozpocznij ograniczanie prędkości po zakończeniu strumienia API."
+		},
 		"rateLimitSeconds": {
 			"label": "Limit szybkości",
 			"description": "Minimalny czas między żądaniami API."

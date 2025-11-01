@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Reset ke Default"
 		},
+		"rateLimitAfter": {
+			"label": "Batas laju di akhir",
+			"description": "Mulai membatasi laju setelah aliran API berakhir."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Waktu minimum antara permintaan API."

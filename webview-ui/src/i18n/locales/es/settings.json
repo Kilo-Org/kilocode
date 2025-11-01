@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Restablecer valores predeterminados"
 		},
+		"rateLimitAfter": {
+			"label": "Límite de tasa al final",
+			"description": "Empieza a limitar la tasa después de que termine el flujo de la API."
+		},
 		"rateLimitSeconds": {
 			"label": "Límite de tasa",
 			"description": "Tiempo mínimo entre solicitudes de API."

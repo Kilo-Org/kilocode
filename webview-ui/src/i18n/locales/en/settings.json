@@ -469,6 +469,10 @@
 			},
 			"resetDefaults": "Reset to Defaults"
 		},
+		"rateLimitAfter": {
+			"label": "Rate limit on end",
+			"description": "Start rate limiting after the API stream ends."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Minimum time between API requests."

@@ -465,6 +465,10 @@
 			},
 			"resetDefaults": "重設為預設值"
 		},
+		"rateLimitAfter": {
+			"label": "在結束時速率限制",
+			"description": "在 API 流結束後開始速率限制。"
+		},
 		"rateLimitSeconds": {
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"

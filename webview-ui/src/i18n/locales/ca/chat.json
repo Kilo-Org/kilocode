@@ -329,6 +329,8 @@
 		"tooltips": {
 			"expand": "Expandir bloc de codi",
 			"collapse": "Contraure bloc de codi",
+			"enable_wrap": "Activar ajust de línia",
+			"disable_wrap": "Desactivar ajust de línia",
 			"copy_code": "Copiar codi"
 		}
 	},
