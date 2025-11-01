@@ -1,5 +1,13 @@
 # kilo-code
 
+## [v4.114.1]
+
+- [#3188](https://github.com/Kilo-Org/kilocode/pull/3188) [`131fa0e`](https://github.com/Kilo-Org/kilocode/commit/131fa0ee68d6f47172a968489129071a7da88de3) Thanks [@NikoDi2000](https://github.com/NikoDi2000)! - Add missing enable/disable word wrap tooltips
+
+- [#2817](https://github.com/Kilo-Org/kilocode/pull/2817) [`0da1bc7`](https://github.com/Kilo-Org/kilocode/commit/0da1bc772a700874f8ec3fbad039fed1ea4d89dc) Thanks [@dennismeister93](https://github.com/dennismeister93)! - Updated MCP SDK to 1.13.3
+
+- [#2849](https://github.com/Kilo-Org/kilocode/pull/2849) [`642cec5`](https://github.com/Kilo-Org/kilocode/commit/642cec502c9fecd297dce8cb1cc708ad3e9c7d12) Thanks [@Ralph-Abejuela](https://github.com/Ralph-Abejuela)! - Added option to start rate limiting after the API stream ends
+
 ## [v4.114.0]
 
 - [#3435](https://github.com/Kilo-Org/kilocode/pull/3435) [`bd4f19d`](https://github.com/Kilo-Org/kilocode/commit/bd4f19da040462b6477087d76cffe1006ef8d444) Thanks [@markijbema](https://github.com/markijbema)! - Cmd-L now directly inserts instead of showing as ghost text
