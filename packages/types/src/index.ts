@@ -13,6 +13,7 @@ export * from "./mcp.js"
 export * from "./message.js"
 export * from "./mode.js"
 export * from "./model.js"
+export * from "./profile-type.js" // kilocode_change
 export * from "./provider-settings.js"
 export * from "./single-file-read-models.js"
 export * from "./task.js"

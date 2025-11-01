@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Автодоповнення: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (вимкнено)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Остання пропозиція:",
 				"sessionTotal": "Загальна вартість сесії:",
 				"provider": "Провайдер:",
-				"model": "Модель:"
+				"model": "Модель:",
+				"profile": "Профіль: ",
+				"defaultProfile": "За замовчуванням",
+				"autocompleteLabel": "(Автодоповнення)"
 			},
 			"cost": {
 				"zero": "$0.00",

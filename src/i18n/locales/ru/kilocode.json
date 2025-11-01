@@ -96,6 +96,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Автодополнение: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (отключено)",
@@ -103,7 +104,10 @@
 				"lastCompletion": "Последнее предложение:",
 				"sessionTotal": "Общая стоимость сессии:",
 				"provider": "Провайдер:",
-				"model": "Модель:"
+				"model": "Модель:",
+				"profile": "Профиль: ",
+				"defaultProfile": "По умолчанию",
+				"autocompleteLabel": "(Автодополнение)"
 			},
 			"cost": {
 				"zero": "$0.00",

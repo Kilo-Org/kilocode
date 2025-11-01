@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Tự động hoàn thành: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (đã tắt)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Gợi ý cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"provider": "Nhà cung cấp:",
-				"model": "Mô hình:"
+				"model": "Mô hình:",
+				"profile": "Hồ sơ: ",
+				"defaultProfile": "Mặc định",
+				"autocompleteLabel": "(Tự động hoàn thành)"
 			},
 			"cost": {
 				"zero": "$0.00",

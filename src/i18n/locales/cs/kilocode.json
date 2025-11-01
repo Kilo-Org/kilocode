@@ -107,6 +107,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Automatické dokončování: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (zakázáno)",
@@ -114,7 +115,10 @@
 				"lastCompletion": "Poslední návrh:",
 				"sessionTotal": "Celkové náklady relace:",
 				"provider": "Poskytovatel:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Výchozí",
+				"autocompleteLabel": "(Automatické dokončování)"
 			},
 			"cost": {
 				"zero": "$0.00",

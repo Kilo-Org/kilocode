@@ -11,6 +11,8 @@ import { ApiStreamChunk } from "../../api/transform/stream"
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
+	private profileName: string | null = null
+	private profileType: string | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -21,6 +23,8 @@ export class GhostModel {
 	}
 	private cleanup(): void {
 		this.apiHandler = null
+		this.profileName = null
+		this.profileType = null
 		this.loaded = false
 	}
 
@@ -32,7 +36,18 @@ export class GhostModel {
 
 		this.cleanup()
 
-		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		// First, try to find a profile specifically marked as autocomplete
+		const autocompleteProfile = profiles.find((x) => x.profileType === "autocomplete")
+		if (autocompleteProfile && autocompleteProfile.apiProvider) {
+			const provider = autocompleteProfile.apiProvider as keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
+			if (supportedProviders.includes(provider)) {
+				await this.loadProfile(providerSettingsManager, autocompleteProfile, provider)
+				this.loaded = true
+				return true
+			}
+		}
+
+		// Fallback: Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
 		for (const provider of supportedProviders) {
 			const selectedProfile = profiles.find(
 				(x): x is typeof x & { apiProvider: string } => x?.apiProvider === provider,
@@ -41,7 +56,7 @@ export class GhostModel {
 				const isUsable = await defaultProviderUsabilityChecker(provider, providerSettingsManager)
 				if (!isUsable) continue
 
-				this.loadProfile(providerSettingsManager, selectedProfile, provider)
+				await this.loadProfile(providerSettingsManager, selectedProfile, provider)
 				this.loaded = true
 				return true
 			}
@@ -60,10 +75,19 @@ export class GhostModel {
 			id: selectedProfile.id,
 		})
 
-		this.apiHandler = buildApiHandler({
-			...profile,
-			[modelIdKeysByProvider[provider]]: AUTOCOMPLETE_PROVIDER_MODELS[provider],
-		})
+		this.profileName = selectedProfile.name || null
+		this.profileType = selectedProfile.profileType || null
+
+		const isExplicitAutocompleteProfile = selectedProfile.profileType === "autocomplete"
+
+		this.apiHandler = buildApiHandler(
+			isExplicitAutocompleteProfile
+				? profile
+				: {
+						...profile,
+						[modelIdKeysByProvider[provider]]: AUTOCOMPLETE_PROVIDER_MODELS[provider],
+					},
+		)
 
 		if (this.apiHandler instanceof OpenRouterHandler) {
 			await this.apiHandler.fetchModel()
@@ -148,5 +172,17 @@ export class GhostModel {
 
 	public hasValidCredentials(): boolean {
 		return this.apiHandler !== null && this.loaded
+	}
+
+	public getProfileName(): string | null {
+		return this.profileName
+	}
+
+	public getProfileType(): string | null {
+		return this.profileType
+	}
+
+	public isAutocompleteProfile(): boolean {
+		return this.profileType === "autocomplete"
 	}
 }

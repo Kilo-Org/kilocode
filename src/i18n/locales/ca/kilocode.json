@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Autocompletat: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desactivat)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Últim suggeriment:",
 				"sessionTotal": "Cost total de la sessió:",
 				"provider": "Proveïdor:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Perfil: ",
+				"defaultProfile": "Per defecte",
+				"autocompleteLabel": "(Autocompletat)"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -6,6 +6,7 @@ import { mentionRegex, mentionRegexGlobal, unescapeSpaces } from "@roo/context-m
 import { WebviewMessage } from "@roo/WebviewMessage"
 import { Mode, getAllModes } from "@roo/modes"
 import { ExtensionMessage } from "@roo/ExtensionMessage"
+import type { ProfileType } from "@roo-code/types" // kilocode_change - autocomplete profile type system
 
 import { vscode } from "@/utils/vscode"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -114,14 +115,28 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			clineMessages,
 		} = useExtensionState()
 
+		// kilocode_change start - autocomplete profile type system
+		// Filter out autocomplete profiles - only show chat profiles in the chat interface
+		const chatProfiles = useMemo(() => {
+			return (
+				listApiConfigMeta?.filter((config) => {
+					const profileType = (config as { profileType?: ProfileType }).profileType
+					return profileType !== "autocomplete"
+				}) ?? []
+			)
+		}, [listApiConfigMeta])
+		// kilocode_change end
+
+		// kilocode_change start - autocomplete profile type system
 		// Find the ID and display text for the currently selected API configuration
 		const { currentConfigId, displayName } = useMemo(() => {
-			const currentConfig = listApiConfigMeta?.find((config) => config.name === currentApiConfigName)
+			const currentConfig = chatProfiles?.find((config) => config.name === currentApiConfigName)
 			return {
 				currentConfigId: currentConfig?.id || "",
 				displayName: currentApiConfigName || "", // Use the name directly for display
 			}
-		}, [listApiConfigMeta, currentApiConfigName])
+		}, [chatProfiles, currentApiConfigName])
+		// kilocode_change end
 
 		const [gitCommits, setGitCommits] = useState<any[]>([])
 		const [showDropdown, setShowDropdown] = useState(false)
@@ -1115,7 +1130,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		// Helper function to get API config dropdown options
 		// kilocode_change: unused
 		const _getApiConfigOptions = useMemo(() => {
-			const pinnedConfigs = (listApiConfigMeta || [])
+			const pinnedConfigs = (chatProfiles || []) // kilocode_change - autocomplete profile type system
 				.filter((config) => pinnedApiConfigs && pinnedApiConfigs[config.id])
 				.map((config) => ({
 					value: config.id,
@@ -1126,7 +1141,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				}))
 				.sort((a, b) => a.label.localeCompare(b.label))
 
-			const unpinnedConfigs = (listApiConfigMeta || [])
+			const unpinnedConfigs = (chatProfiles || []) // kilocode_change - autocomplete profile type system
 				.filter((config) => !pinnedApiConfigs || !pinnedApiConfigs[config.id])
 				.map((config) => ({
 					value: config.id,
@@ -1162,7 +1177,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					type: DropdownOptionType.ACTION,
 				},
 			]
-		}, [listApiConfigMeta, pinnedApiConfigs, t])
+		}, [chatProfiles, pinnedApiConfigs, t]) // kilocode_change - autocomplete profile type system
 
 		// Helper function to handle API config change
 		// kilocode_change: unused
@@ -1186,7 +1201,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					return label
 				}
 
-				const config = listApiConfigMeta?.find((c) => c.id === value)
+				const config = chatProfiles?.find((c) => c.id === value) // kilocode_change - autocomplete profile type system
 				const isCurrentConfig = config?.name === currentApiConfigName
 
 				return (
@@ -1228,7 +1243,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 					</div>
 				)
 			},
-			[listApiConfigMeta, currentApiConfigName, t, togglePinnedApiConfig],
+			[chatProfiles, currentApiConfigName, t, togglePinnedApiConfig], // kilocode_change - autocomplete profile type system
 		)
 
 		// Helper function to render the text area section
@@ -1610,7 +1625,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									currentConfigId={currentConfigId}
 									currentApiConfigName={currentApiConfigName}
 									displayName={displayName}
-									listApiConfigMeta={listApiConfigMeta}
+									listApiConfigMeta={chatProfiles} // kilocode_change - autocomplete profile type system
 									pinnedApiConfigs={pinnedApiConfigs}
 									togglePinnedApiConfig={togglePinnedApiConfig}
 									selectApiConfigDisabled={selectApiConfigDisabled}

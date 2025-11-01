@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "自動完成: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已停用）",
@@ -108,7 +109,10 @@
 				"lastCompletion": "最後建議:",
 				"sessionTotal": "工作階段總費用:",
 				"provider": "提供者:",
-				"model": "模型:"
+				"model": "模型:",
+				"profile": "設定檔: ",
+				"defaultProfile": "預設",
+				"autocompleteLabel": "(自動完成)"
 			},
 			"cost": {
 				"zero": "$0.00",

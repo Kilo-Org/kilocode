@@ -157,6 +157,9 @@ export const GhostServiceSettingsView = ({
 									{t("kilocode:ghost.settings.noModelConfigured")}
 								</div>
 							)}
+							<div className="text-vscode-descriptionForeground mt-2">
+								{t("kilocode:ghost.settings.configureAutocompleteProfile")}
+							</div>
 						</div>
 					</div>
 				</div>

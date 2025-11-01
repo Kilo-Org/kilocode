@@ -321,5 +321,237 @@ describe("GhostModel", () => {
 			expect(providerName).toBeTruthy()
 			expect(typeof providerName).toBe("string")
 		})
+
+		describe("profile information", () => {
+			it("returns null for profile name when no profile is loaded", () => {
+				const model = new GhostModel()
+				expect(model.getProfileName()).toBeNull()
+			})
+
+			it("returns null for profile type when no profile is loaded", () => {
+				const model = new GhostModel()
+				expect(model.getProfileType()).toBeNull()
+			})
+
+			it("returns false for isAutocompleteProfile when no profile is loaded", () => {
+				const model = new GhostModel()
+				expect(model.isAutocompleteProfile()).toBe(false)
+			})
+
+			it("stores and returns profile name after loading", async () => {
+				const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+				const profiles = [
+					{
+						id: "1",
+						name: "My Autocomplete Profile",
+						apiProvider: supportedProviders[0],
+						profileType: "autocomplete",
+					},
+				] as any
+
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+				vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+					id: "1",
+					name: "My Autocomplete Profile",
+					apiProvider: supportedProviders[0],
+					profileType: "autocomplete",
+					mistralApiKey: "test-key",
+				} as any)
+
+				const model = new GhostModel()
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.getProfileName()).toBe("My Autocomplete Profile")
+			})
+
+			it("stores and returns profile type after loading", async () => {
+				const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+				const profiles = [
+					{ id: "1", name: "My Profile", apiProvider: supportedProviders[0], profileType: "autocomplete" },
+				] as any
+
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+				vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+					id: "1",
+					name: "My Profile",
+					apiProvider: supportedProviders[0],
+					profileType: "autocomplete",
+					mistralApiKey: "test-key",
+				} as any)
+
+				const model = new GhostModel()
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.getProfileType()).toBe("autocomplete")
+			})
+
+			it("returns true for isAutocompleteProfile when autocomplete profile is loaded", async () => {
+				const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+				const profiles = [
+					{ id: "1", name: "My Profile", apiProvider: supportedProviders[0], profileType: "autocomplete" },
+				] as any
+
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+				vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+					id: "1",
+					name: "My Profile",
+					apiProvider: supportedProviders[0],
+					profileType: "autocomplete",
+					mistralApiKey: "test-key",
+				} as any)
+
+				const model = new GhostModel()
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.isAutocompleteProfile()).toBe(true)
+			})
+
+			it("returns false for isAutocompleteProfile when non-autocomplete profile is loaded", async () => {
+				const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+				const profiles = [
+					{ id: "1", name: "My Profile", apiProvider: supportedProviders[0], profileType: "chat" },
+				] as any
+
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+				vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+					id: "1",
+					name: "My Profile",
+					apiProvider: supportedProviders[0],
+					profileType: "chat",
+					mistralApiKey: "test-key",
+				} as any)
+
+				const model = new GhostModel()
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.isAutocompleteProfile()).toBe(false)
+			})
+
+			it("clears profile information on cleanup", async () => {
+				const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+				const profiles = [
+					{ id: "1", name: "My Profile", apiProvider: supportedProviders[0], profileType: "autocomplete" },
+				] as any
+
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
+				vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+					id: "1",
+					name: "My Profile",
+					apiProvider: supportedProviders[0],
+					profileType: "autocomplete",
+					mistralApiKey: "test-key",
+				} as any)
+
+				const model = new GhostModel()
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.getProfileName()).toBe("My Profile")
+				expect(model.getProfileType()).toBe("autocomplete")
+
+				// Reload with empty profiles to trigger cleanup
+				vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue([])
+				await model.reload(mockProviderSettingsManager)
+
+				expect(model.getProfileName()).toBeNull()
+				expect(model.getProfileType()).toBeNull()
+			})
+		})
+	})
+
+	describe("loadProfile model override behavior", () => {
+		it("should not override model for explicit autocomplete profiles", async () => {
+			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const provider = supportedProviders[0] as keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
+			const customModelId = "custom-autocomplete-model"
+
+			const autocompleteProfile = {
+				id: "1",
+				name: "My Autocomplete Profile",
+				apiProvider: provider,
+				profileType: "autocomplete",
+			} as any
+
+			// Mock getProfile to return a profile with a custom model
+			// For mistral provider, the model key is apiModelId
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "My Autocomplete Profile",
+				apiProvider: provider,
+				profileType: "autocomplete",
+				mistralApiKey: "test-key",
+				apiModelId: customModelId, // Custom model set by user
+			} as any)
+
+			const model = new GhostModel()
+			await model.loadProfile(mockProviderSettingsManager, autocompleteProfile, provider)
+
+			// The model should use the custom model from the profile, not the default autocomplete model
+			const modelName = model.getModelName()
+			expect(modelName).toBe(customModelId)
+			expect(modelName).not.toBe(AUTOCOMPLETE_PROVIDER_MODELS[provider])
+		})
+
+		it("should override model for automatically detected profiles", async () => {
+			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const provider = supportedProviders[0] as keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
+			const customModelId = "custom-chat-model"
+
+			const chatProfile = {
+				id: "1",
+				name: "My Chat Profile",
+				apiProvider: provider,
+				profileType: "chat", // Not an autocomplete profile
+			} as any
+
+			// Mock getProfile to return a profile with a custom model
+			// For mistral provider, the model key is apiModelId
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "My Chat Profile",
+				apiProvider: provider,
+				profileType: "chat",
+				mistralApiKey: "test-key",
+				apiModelId: customModelId, // Custom model set by user
+			} as any)
+
+			const model = new GhostModel()
+			await model.loadProfile(mockProviderSettingsManager, chatProfile, provider)
+
+			// The model should be overridden with the default autocomplete model
+			const modelName = model.getModelName()
+			expect(modelName).toBe(AUTOCOMPLETE_PROVIDER_MODELS[provider])
+			expect(modelName).not.toBe(customModelId)
+		})
+
+		it("should override model for profiles without profileType", async () => {
+			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const provider = supportedProviders[0] as keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
+			const customModelId = "custom-model"
+
+			const genericProfile = {
+				id: "1",
+				name: "My Generic Profile",
+				apiProvider: provider,
+				// No profileType specified
+			} as any
+
+			// Mock getProfile to return a profile with a custom model
+			// For mistral provider, the model key is apiModelId
+			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
+				id: "1",
+				name: "My Generic Profile",
+				apiProvider: provider,
+				mistralApiKey: "test-key",
+				apiModelId: customModelId, // Custom model set by user
+			} as any)
+
+			const model = new GhostModel()
+			await model.loadProfile(mockProviderSettingsManager, genericProfile, provider)
+
+			// The model should be overridden with the default autocomplete model
+			const modelName = model.getModelName()
+			expect(modelName).toBe(AUTOCOMPLETE_PROVIDER_MODELS[provider])
+			expect(modelName).not.toBe(customModelId)
+		})
 	})
 })

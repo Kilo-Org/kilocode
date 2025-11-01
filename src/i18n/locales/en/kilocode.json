@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Autocomplete: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (disabled)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
 				"provider": "Provider:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profile: ",
+				"defaultProfile": "Default",
+				"autocompleteLabel": "(Autocomplete)"
 			},
 			"cost": {
 				"zero": "$0.00",

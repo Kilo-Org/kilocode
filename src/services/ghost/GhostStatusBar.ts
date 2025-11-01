@@ -5,6 +5,8 @@ interface GhostStatusBarStateProps {
 	enabled?: boolean
 	model?: string
 	provider?: string
+	profileName?: string | null
+	isAutocompleteProfile?: boolean
 	hasValidToken?: boolean
 	totalSessionCost?: number
 	lastCompletionCost?: number
@@ -15,6 +17,8 @@ export class GhostStatusBar {
 	enabled: boolean
 	model: string
 	provider: string
+	profileName: string | null
+	isAutocompleteProfile: boolean
 	hasValidToken: boolean
 	totalSessionCost?: number
 	lastCompletionCost?: number
@@ -24,6 +28,8 @@ export class GhostStatusBar {
 		this.enabled = params.enabled || false
 		this.model = params.model || "default"
 		this.provider = params.provider || "default"
+		this.profileName = params.profileName || null
+		this.isAutocompleteProfile = params.isAutocompleteProfile || false
 		this.hasValidToken = params.hasValidToken || false
 		this.totalSessionCost = params.totalSessionCost
 		this.lastCompletionCost = params.lastCompletionCost
@@ -59,6 +65,9 @@ export class GhostStatusBar {
 		this.enabled = params.enabled !== undefined ? params.enabled : this.enabled
 		this.model = params.model !== undefined ? params.model : this.model
 		this.provider = params.provider !== undefined ? params.provider : this.provider
+		this.profileName = params.profileName !== undefined ? params.profileName : this.profileName
+		this.isAutocompleteProfile =
+			params.isAutocompleteProfile !== undefined ? params.isAutocompleteProfile : this.isAutocompleteProfile
 		this.hasValidToken = params.hasValidToken !== undefined ? params.hasValidToken : this.hasValidToken
 		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
 		this.lastCompletionCost =
@@ -76,14 +85,33 @@ export class GhostStatusBar {
 	private renderDefault() {
 		const totalCostFormatted = this.humanFormatCost(this.totalSessionCost || 0)
 		const lastCompletionCostFormatted = this.lastCompletionCost?.toFixed(5) || 0
-		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${totalCostFormatted})`
-		this.statusBar.tooltip = `\
-${t("kilocode:ghost.statusBar.tooltip.basic")}
-• ${t("kilocode:ghost.statusBar.tooltip.lastCompletion")} $${lastCompletionCostFormatted}
-• ${t("kilocode:ghost.statusBar.tooltip.sessionTotal")} ${totalCostFormatted}
-• ${t("kilocode:ghost.statusBar.tooltip.provider")} ${this.provider}
-• ${t("kilocode:ghost.statusBar.tooltip.model")} ${this.model}\
-`
+
+		let statusText = t("kilocode:ghost.statusBar.enabled")
+		if (this.isAutocompleteProfile && this.profileName) {
+			statusText = `$(sparkle) ${t("kilocode:ghost.statusBar.autocompletePrefix")}${this.profileName}`
+		} else if (this.profileName) {
+			statusText = `$(sparkle) ${this.profileName}`
+		}
+		this.statusBar.text = `${statusText} (${totalCostFormatted})`
+
+		let tooltipLines = [t("kilocode:ghost.statusBar.tooltip.basic")]
+
+		if (this.isAutocompleteProfile) {
+			tooltipLines.push(
+				`• ${t("kilocode:ghost.statusBar.tooltip.profile")}${this.profileName || t("kilocode:ghost.statusBar.tooltip.defaultProfile")} ${t("kilocode:ghost.statusBar.tooltip.autocompleteLabel")}`,
+			)
+		} else if (this.profileName) {
+			tooltipLines.push(`• ${t("kilocode:ghost.statusBar.tooltip.profile")}${this.profileName}`)
+		}
+
+		tooltipLines.push(
+			`• ${t("kilocode:ghost.statusBar.tooltip.lastCompletion")} $${lastCompletionCostFormatted}`,
+			`• ${t("kilocode:ghost.statusBar.tooltip.sessionTotal")} ${totalCostFormatted}`,
+			`• ${t("kilocode:ghost.statusBar.tooltip.provider")} ${this.provider}`,
+			`• ${t("kilocode:ghost.statusBar.tooltip.model")} ${this.model}`,
+		)
+
+		this.statusBar.tooltip = tooltipLines.join("\n")
 	}
 
 	public render() {

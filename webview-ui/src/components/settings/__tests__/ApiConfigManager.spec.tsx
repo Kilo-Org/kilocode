@@ -69,18 +69,18 @@ vitest.mock("@/components/ui", () => ({
 			{children}
 		</div>
 	),
-	// Keep old components for backward compatibility
-	Select: ({ value, onValueChange }: any) => (
+	// kilocode_change start - autocomplete profile type system
+	Select: ({ value, onValueChange, children }: any) => (
 		<select
 			value={value}
 			onChange={(e) => {
 				if (onValueChange) onValueChange(e.target.value)
 			}}
-			data-testid="select-component">
-			<option value="Default Config">Default Config</option>
-			<option value="Another Config">Another Config</option>
+			data-testid="profile-type-select">
+			{children}
 		</select>
 	),
+	// kilocode_change end
 	SelectTrigger: ({ children }: any) => <div className="select-trigger-mock">{children}</div>,
 	SelectValue: ({ children }: any) => <div className="select-value-mock">{children}</div>,
 	SelectContent: ({ children }: any) => <div className="select-content-mock">{children}</div>,
@@ -156,7 +156,7 @@ describe("ApiConfigManager", () => {
 		const createButton = screen.getByText("settings:providers.createProfile")
 		fireEvent.click(createButton)
 
-		expect(mockOnUpsertConfig).toHaveBeenCalledWith("New Profile")
+		expect(mockOnUpsertConfig).toHaveBeenCalledWith("New Profile", "chat") // kilocode_change - autocomplete profile type system
 	})
 
 	it("shows error when creating profile with existing name", () => {
@@ -205,8 +205,9 @@ describe("ApiConfigManager", () => {
 		const renameButton = screen.getByTestId("rename-profile-button")
 		fireEvent.click(renameButton)
 
-		// Find input and enter new name
-		const input = screen.getByDisplayValue("Default Config")
+		// Find input in rename form specifically
+		const renameForm = getRenameForm()
+		const input = within(renameForm).getByDisplayValue("Default Config")
 		fireEvent.input(input, { target: { value: "New Name" } })
 
 		// Save
@@ -223,8 +224,9 @@ describe("ApiConfigManager", () => {
 		const renameButton = screen.getByTestId("rename-profile-button")
 		fireEvent.click(renameButton)
 
-		// Find input and enter existing name
-		const input = screen.getByDisplayValue("Default Config")
+		// Find input in rename form and enter existing name
+		const renameForm = getRenameForm()
+		const input = within(renameForm).getByDisplayValue("Default Config")
 		fireEvent.input(input, { target: { value: "Another Config" } })
 
 		// Save to trigger validation
@@ -232,7 +234,6 @@ describe("ApiConfigManager", () => {
 		fireEvent.click(saveButton)
 
 		// Verify error message
-		const renameForm = getRenameForm()
 		const errorMessage = within(renameForm).getByTestId("error-message")
 		expect(errorMessage).toHaveTextContent("settings:providers.nameExists")
 		expect(mockOnRenameConfig).not.toHaveBeenCalled()
@@ -245,8 +246,9 @@ describe("ApiConfigManager", () => {
 		const renameButton = screen.getByTestId("rename-profile-button")
 		fireEvent.click(renameButton)
 
-		// Find input and enter empty name
-		const input = screen.getByDisplayValue("Default Config")
+		// Find input in rename form and enter empty name
+		const renameForm = getRenameForm()
+		const input = within(renameForm).getByDisplayValue("Default Config")
 		fireEvent.input(input, { target: { value: "   " } })
 
 		// Verify save button is disabled
@@ -291,8 +293,9 @@ describe("ApiConfigManager", () => {
 		const renameButton = screen.getByTestId("rename-profile-button")
 		fireEvent.click(renameButton)
 
-		// Find input and enter new name
-		const input = screen.getByDisplayValue("Default Config")
+		// Find input in rename form and enter new name
+		const renameForm = getRenameForm()
+		const input = within(renameForm).getByDisplayValue("Default Config")
 		fireEvent.input(input, { target: { value: "New Name" } })
 
 		// Cancel
@@ -318,7 +321,7 @@ describe("ApiConfigManager", () => {
 		// Test Enter key
 		fireEvent.input(input, { target: { value: "New Profile" } })
 		fireEvent.keyDown(input, { key: "Enter" })
-		expect(mockOnUpsertConfig).toHaveBeenCalledWith("New Profile")
+		expect(mockOnUpsertConfig).toHaveBeenCalledWith("New Profile", "chat") // kilocode_change - autocomplete profile type system
 
 		// Test Escape key
 		fireEvent.keyDown(input, { key: "Escape" })
@@ -332,7 +335,8 @@ describe("ApiConfigManager", () => {
 		const renameButton = screen.getByTestId("rename-profile-button")
 		fireEvent.click(renameButton)
 
-		const input = screen.getByDisplayValue("Default Config")
+		const renameForm = getRenameForm()
+		const input = within(renameForm).getByDisplayValue("Default Config")
 
 		// Test Enter key
 		fireEvent.input(input, { target: { value: "New Name" } })

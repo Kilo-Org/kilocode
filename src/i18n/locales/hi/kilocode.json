@@ -107,6 +107,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "ऑटोकम्पलीट: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (अक्षम)",
@@ -114,7 +115,10 @@
 				"lastCompletion": "अंतिम सुझाव:",
 				"sessionTotal": "सत्र की कुल लागत:",
 				"provider": "प्रदाता:",
-				"model": "मॉडल:"
+				"model": "मॉडल:",
+				"profile": "प्रोफ़ाइल: ",
+				"defaultProfile": "डिफ़ॉल्ट",
+				"autocompleteLabel": "(ऑटोकम्पलीट)"
 			},
 			"cost": {
 				"zero": "$0.00",

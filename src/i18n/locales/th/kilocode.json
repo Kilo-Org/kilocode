@@ -107,6 +107,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "เติมข้อความอัตโนมัติ: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
@@ -114,7 +115,10 @@
 				"lastCompletion": "คำแนะนำล่าสุด:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
-				"model": "โมเดล:"
+				"model": "โมเดล:",
+				"profile": "โปรไฟล์: ",
+				"defaultProfile": "ค่าเริ่มต้น",
+				"autocompleteLabel": "(เติมข้อความอัตโนมัติ)"
 			},
 			"cost": {
 				"zero": "$0.00",

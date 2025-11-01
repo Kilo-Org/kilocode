@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Otomatik Tamamlama: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (devre dışı)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Varsayılan",
+				"autocompleteLabel": "(Otomatik Tamamlama)"
 			},
 			"cost": {
 				"zero": "$0.00",

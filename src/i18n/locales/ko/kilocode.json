@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "자동 완성: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (비활성화됨)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "마지막 제안:",
 				"sessionTotal": "세션 총 비용:",
 				"provider": "제공업체:",
-				"model": "모델:"
+				"model": "모델:",
+				"profile": "프로필: ",
+				"defaultProfile": "기본값",
+				"autocompleteLabel": "(자동 완성)"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -101,6 +101,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "Pelengkapan Otomatis: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
@@ -108,7 +109,10 @@
 				"lastCompletion": "Saran terakhir:",
 				"sessionTotal": "Total biaya sesi:",
 				"provider": "Penyedia:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Default",
+				"autocompleteLabel": "(Pelengkapan Otomatis)"
 			},
 			"cost": {
 				"zero": "$0.00",

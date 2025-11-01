@@ -107,6 +107,7 @@
 			"enabled": "$(sparkle) Kilo Code Autocomplete",
 			"disabled": "$(circle-slash) Kilo Code Autocomplete",
 			"warning": "$(warning) Kilo Code Autocomplete",
+			"autocompletePrefix": "自动补全: ",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已禁用）",
@@ -114,7 +115,10 @@
 				"lastCompletion": "最后建议:",
 				"sessionTotal": "会话总费用:",
 				"provider": "提供商:",
-				"model": "模型:"
+				"model": "模型:",
+				"profile": "配置: ",
+				"defaultProfile": "默认",
+				"autocompleteLabel": "(自动补全)"
 			},
 			"cost": {
 				"zero": "$0.00",
