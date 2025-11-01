@@ -1,23 +1,19 @@
 /**
- * Dark theme for Kilo Code CLI
+ * ANSI theme for Kilo Code CLI
  *
- * The default dark theme using standard terminal colors for maximum compatibility.
+ * Based on the ANSI color scheme using standard terminal colors
  */
 
 import type { Theme } from "../../types/theme.js"
 
-/**
- * Dark theme implementation
- * Uses standard terminal colors for maximum compatibility
- */
-export const alphaTheme: Theme = {
-	id: "alpha",
-	name: "Alpha",
+export const ansiTheme: Theme = {
+	id: "ansi",
+	name: "ANSI",
 	type: "Dark",
 
 	brand: {
-		primary: "#faf74f", // Kilo Code yellow
-		secondary: "cyan",
+		primary: "cyan", // Use first gradient color for banner
+		secondary: "green",
 	},
 
 	semantic: {
@@ -31,15 +27,15 @@ export const alphaTheme: Theme = {
 	interactive: {
 		prompt: "cyan",
 		selection: "green",
-		hover: "white",
+		hover: "bluebright",
 		disabled: "gray",
-		focus: "yellow",
+		focus: "cyan",
 	},
 
 	messages: {
-		user: "blue",
+		user: "bluebright",
 		assistant: "green",
-		system: "gray",
+		system: "white",
 		error: "red",
 	},
 
@@ -55,7 +51,7 @@ export const alphaTheme: Theme = {
 		deletion: "red",
 		modification: "yellow",
 		context: "gray",
-		lineNumber: "cyan",
+		lineNumber: "gray",
 	},
 
 	ui: {
@@ -68,8 +64,8 @@ export const alphaTheme: Theme = {
 		text: {
 			primary: "white",
 			secondary: "gray",
-			dimmed: "gray", // Use with dimColor prop in Ink
-			highlight: "yellow",
+			dimmed: "gray",
+			highlight: "cyan",
 		},
 		background: {
 			default: "default",

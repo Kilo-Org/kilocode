@@ -4,6 +4,8 @@ import { DEFAULT_CONFIG } from "../../config/defaults.js"
 import { loadConfig, saveConfig } from "../../config/persistence.js"
 import { mapConfigToExtensionState } from "../../config/mapper.js"
 import type { ValidationResult } from "../../config/validation.js"
+import { addCustomTheme, removeCustomTheme, updateCustomTheme } from "../../constants/themes/custom.js"
+import type { Theme } from "../../types/theme.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
 
@@ -213,6 +215,30 @@ export const setModeAtom = atom(null, async (get, set, mode: string) => {
 	const { syncConfigToExtensionEffectAtom } = await import("./config-sync.js")
 
 	// Trigger sync to extension after mode change
+	await set(syncConfigToExtensionEffectAtom)
+})
+
+// Action atom to update theme in config and persist
+export const setThemeAtom = atom(null, async (get, set, theme: string) => {
+	const config = get(configAtom)
+	const previousTheme = config.theme || "dark"
+	const updatedConfig = {
+		...config,
+		theme,
+	}
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Theme updated to: ${theme}`, "ConfigAtoms")
+
+	// Track theme change
+	getTelemetryService().trackThemeChanged?.(previousTheme, theme)
+
+	// Import from config-sync to avoid circular dependency
+	const { syncConfigToExtensionEffectAtom } = await import("./config-sync.js")
+
+	// Trigger sync to extension after theme change
 	await set(syncConfigToExtensionEffectAtom)
 })
 
@@ -490,4 +516,89 @@ export const addAllowedCommandAtom = atom(null, async (get, set, commandPattern:
 	await set(saveConfigAtom, updatedConfig)
 
 	logs.info(`Added command pattern to allowed list: ${commandPattern}`, "ConfigAtoms")
+})
+
+// ============================================================================
+// Custom Theme Management Atoms
+// ============================================================================
+
+/**
+ * Action atom to add a custom theme
+ */
+export const addCustomThemeAtom = atom(null, async (get, set, themeId: string, theme: Theme) => {
+	const config = get(configAtom)
+
+	// Check if theme ID already exists (either built-in or custom)
+	const existingThemes = config.customThemes || {}
+	const builtInThemeIds = [
+		"dark",
+		"light",
+		"alpha",
+		"ansi",
+		"ansi-light",
+		"atom-one-dark",
+		"ayu-dark",
+		"ayu-light",
+		"dracula",
+		"github-dark",
+		"github-light",
+		"googlecode",
+		"shades-of-purple",
+		"xcode",
+	]
+
+	if (builtInThemeIds.includes(themeId) || existingThemes[themeId]) {
+		throw new Error(`Theme "${themeId}" already exists`)
+	}
+
+	const updatedConfig = addCustomTheme(config, themeId, theme)
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Custom theme "${themeId}" added`, "ConfigAtoms")
+})
+
+/**
+ * Action atom to remove a custom theme
+ */
+export const removeCustomThemeAtom = atom(null, async (get, set, themeId: string) => {
+	const config = get(configAtom)
+
+	if (!config.customThemes || !config.customThemes[themeId]) {
+		throw new Error(`Custom theme "${themeId}" not found`)
+	}
+
+	const updatedConfig = removeCustomTheme(config, themeId)
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Custom theme "${themeId}" removed`, "ConfigAtoms")
+})
+
+/**
+ * Action atom to update a custom theme
+ */
+export const updateCustomThemeAtom = atom(null, async (get, set, themeId: string, updates: Partial<Theme>) => {
+	const config = get(configAtom)
+
+	if (!config.customThemes || !config.customThemes[themeId]) {
+		throw new Error(`Custom theme "${themeId}" not found`)
+	}
+
+	const updatedConfig = updateCustomTheme(config, themeId, updates)
+
+	set(configAtom, updatedConfig)
+	await set(saveConfigAtom, updatedConfig)
+
+	logs.info(`Custom theme "${themeId}" updated`, "ConfigAtoms")
+})
+
+/**
+ * Derived atom to get all custom themes
+ */
+export const customThemesAtom = atom((get) => {
+	const config = get(configAtom)
+	return config.customThemes || {}
 })

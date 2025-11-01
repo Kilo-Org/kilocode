@@ -5,6 +5,11 @@
  */
 
 /**
+ * Theme type for categorization
+ */
+export type ThemeType = "Dark" | "Light" | "Custom"
+
+/**
  * Core theme interface defining all color categories
  */
 export interface Theme {
@@ -12,6 +17,8 @@ export interface Theme {
 	id: string
 	/** Theme display name */
 	name: string
+	/** Theme type for categorization */
+	type: ThemeType
 
 	/** Brand identity colors */
 	brand: {

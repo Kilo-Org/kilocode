@@ -39,6 +39,7 @@ export interface CommandContext {
 	setMessageCutoffTimestamp: (timestamp: number) => void
 	clearTask: () => Promise<void>
 	setMode: (mode: string) => void
+	setTheme: (theme: string) => Promise<void>
 	exit: () => void
 	setCommittingParallelMode: (isCommitting: boolean) => void
 	isParallelMode: boolean

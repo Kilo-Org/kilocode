@@ -14,7 +14,7 @@ import {
 	setMessageCutoffTimestampAtom,
 	isCommittingParallelModeAtom,
 } from "../atoms/ui.js"
-import { setModeAtom, providerAtom, updateProviderAtom } from "../atoms/config.js"
+import { setModeAtom, setThemeAtom, providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { routerModelsAtom, extensionStateAtom, isParallelModeAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
@@ -63,6 +63,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const clearMessages = useSetAtom(clearMessagesAtom)
 	const replaceMessages = useSetAtom(replaceMessagesAtom)
 	const setMode = useSetAtom(setModeAtom)
+	const setTheme = useSetAtom(setThemeAtom)
 	const updateProvider = useSetAtom(updateProviderAtom)
 	const refreshRouterModels = useSetAtom(requestRouterModelsAtom)
 	const setMessageCutoffTimestamp = useSetAtom(setMessageCutoffTimestampAtom)
@@ -110,6 +111,9 @@ export function useCommandContext(): UseCommandContextReturn {
 				setMode: async (mode: string) => {
 					await setMode(mode)
 				},
+				setTheme: async (theme: string) => {
+					await setTheme(theme)
+				},
 				exit: () => {
 					onExit()
 				},
@@ -149,6 +153,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			addMessage,
 			clearMessages,
 			setMode,
+			setTheme,
 			sendMessage,
 			clearTask,
 			routerModels,

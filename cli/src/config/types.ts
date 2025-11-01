@@ -1,5 +1,5 @@
 import type { ProviderName } from "../types/messages.js"
-import type { ThemeId } from "../types/theme.js"
+import type { ThemeId, Theme } from "../types/theme.js"
 
 /**
  * Auto approval configuration for read operations
@@ -103,6 +103,7 @@ export interface CLIConfig {
 	providers: ProviderConfig[]
 	autoApproval?: AutoApprovalConfig
 	theme?: ThemeId
+	customThemes?: Record<string, Theme>
 }
 
 export interface ProviderConfig {
