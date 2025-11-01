@@ -1,7 +1,7 @@
 import { type ToolName, toolNames } from "@roo-code/types"
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
-import { NativeToolCall, parseDoubleEncodedParams } from "./kilocode/native-tool-call"
+import { extractMcpToolInfo, NativeToolCall, parseDoubleEncodedParams } from "./kilocode/native-tool-call"
 import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
@@ -119,8 +119,11 @@ export class AssistantMessageParser {
 			if (toolCall.function?.name) {
 				const toolName = toolCall.function.name
 
-				// Validate that this is a recognized tool name
-				if (!toolNames.includes(toolName as ToolName)) {
+				// Check if it's a dynamic MCP tool or a recognized static tool name
+				const mcpToolInfo = extractMcpToolInfo(toolName)
+				const isValidTool = mcpToolInfo !== null || toolNames.includes(toolName as ToolName)
+
+				if (!isValidTool) {
 					console.warn("[AssistantMessageParser] Unknown tool name in native call:", toolName)
 					continue
 				}
@@ -176,17 +179,46 @@ export class AssistantMessageParser {
 			// Tool call is complete - convert it to ToolUse format
 			if (isComplete) {
 				const toolName = accumulatedCall.function!.name
+
 				// Finalize any current text content before adding tool use
 				if (this.currentTextContent) {
 					this.currentTextContent.partial = false
 					this.currentTextContent = undefined
 				}
 
+				// Normalize dynamic MCP tool names to "use_mcp_tool"
+				// Dynamic tools have format: use_mcp_tool_{serverName}_{toolName}
+				const mcpToolInfo = extractMcpToolInfo(toolName)
+				let normalizedToolName: ToolName
+				let normalizedParams = parsedArgs
+
+				if (mcpToolInfo) {
+					// Dynamic MCP tool - normalize to "use_mcp_tool"
+					// Tool name format: use_mcp_tool___{serverName}___{toolName}
+					normalizedToolName = "use_mcp_tool"
+
+					// Extract toolInputProps and convert to JSON string for the arguments parameter
+					// The model provides: { server_name, tool_name, toolInputProps: {...actual args...} }
+					// We need: { server_name, tool_name, arguments: "{...actual args as JSON string...}" }
+					const toolInputProps = (parsedArgs as any).toolInputProps || {}
+					const argumentsJson = JSON.stringify(toolInputProps)
+
+					// Add server_name, tool_name, and arguments to params
+					normalizedParams = {
+						server_name: parsedArgs.server_name || mcpToolInfo.serverName,
+						tool_name: parsedArgs.tool_name || mcpToolInfo.toolName,
+						arguments: argumentsJson,
+					}
+				} else {
+					// Standard tool
+					normalizedToolName = toolName as ToolName
+				}
+
 				// Create a ToolUse block from the native tool call
 				const toolUse: ToolUse = {
 					type: "tool_use",
-					name: toolName as ToolName,
-					params: parsedArgs,
+					name: normalizedToolName,
+					params: normalizedParams,
 					partial: false, // Now complete after accumulation
 					toolUseId: accumulatedCall.id,
 				}
@@ -207,6 +239,7 @@ export class AssistantMessageParser {
 			}
 		}
 	}
+
 	// kilocode_change end
 
 	/**

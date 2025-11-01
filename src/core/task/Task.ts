@@ -2992,17 +2992,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		if (getActiveToolUseStyle(apiConfiguration) === "json" && mode) {
 			try {
 				const provider = this.providerRef.deref()
-				const providerState = await provider?.getState()
-
-				const allowedTools = getAllowedJSONToolsForMode(
+				metadata.allowedTools = await getAllowedJSONToolsForMode(
 					mode,
-					undefined, // codeIndexManager is private, not accessible here
-					providerState,
+					provider,
 					this.diffEnabled,
 					this.api?.getModel(),
 				)
-
-				metadata.allowedTools = allowedTools
 			} catch (error) {
 				console.error("[Task] Error getting allowed tools for mode:", error)
 				// Continue without allowedTools - will fall back to default behavior

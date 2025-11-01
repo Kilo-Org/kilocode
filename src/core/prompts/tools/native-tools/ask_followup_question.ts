@@ -15,9 +15,9 @@ export default {
 					description: "Clear, specific question that captures the missing information you need",
 				},
 				follow_up: {
-					type: ["array", "null"],
+					type: "array",
 					description:
-						"Optional list of 2-4 suggested responses; each suggestion must be a complete, actionable answer and may include a mode switch",
+						"Required list of 2-4 suggested responses; each suggestion must be a complete, actionable answer and may include a mode switch",
 					items: {
 						type: "object",
 						properties: {
