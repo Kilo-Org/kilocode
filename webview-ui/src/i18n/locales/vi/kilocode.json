@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Thêm tín dụng",
-		"lowBalance": "Số dư Kilo Code của bạn thấp"
+		"lowBalance": "Số dư Kilo Code của bạn thấp",
+		"newOrganization": "Sử dụng Kilo cho công việc?"
 	},
 	"pagination": {
 		"previous": "Trước",

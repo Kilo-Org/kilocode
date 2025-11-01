@@ -3,9 +3,18 @@ import type { ModelInfo } from "../model.js"
 // https://inference-docs.cerebras.ai/api-reference/chat-completions
 export type CerebrasModelId = keyof typeof cerebrasModels
 
-export const cerebrasDefaultModelId: CerebrasModelId = "qwen-3-coder-480b-free"
+export const cerebrasDefaultModelId: CerebrasModelId = "gpt-oss-120b"
 
 export const cerebrasModels = {
+	"zai-glm-4.6": {
+		maxTokens: 16_384,
+		contextWindow: 128000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description: "Highly intelligent general-purpose model with ~2000 tokens/s",
+	},
 	"qwen-3-coder-480b-free": {
 		maxTokens: 40000,
 		contextWindow: 64000,
@@ -14,7 +23,7 @@ export const cerebrasModels = {
 		inputPrice: 0,
 		outputPrice: 0,
 		description:
-			"SOTA coding model with ~2000 tokens/s ($0 free tier)\n\n• Use this if you don't have a Cerebras subscription\n• 64K context window\n• Rate limits: 150K TPM, 1M TPH/TPD, 10 RPM, 100 RPH/RPD\n\nUpgrade for higher limits: [https://cloud.cerebras.ai/?utm=roocode](https://cloud.cerebras.ai/?utm=roocode)",
+			"[SOON TO BE DEPRECATED] SOTA coding model with ~2000 tokens/s ($0 free tier)\n\n• Use this if you don't have a Cerebras subscription\n• 64K context window\n• Rate limits: 150K TPM, 1M TPH/TPD, 10 RPM, 100 RPH/RPD\n\nUpgrade for higher limits: [https://cloud.cerebras.ai/?utm=roocode](https://cloud.cerebras.ai/?utm=roocode)",
 	},
 	"qwen-3-coder-480b": {
 		maxTokens: 40000,
@@ -24,7 +33,7 @@ export const cerebrasModels = {
 		inputPrice: 0,
 		outputPrice: 0,
 		description:
-			"SOTA coding model with ~2000 tokens/s ($50/$250 paid tiers)\n\n• Use this if you have a Cerebras subscription\n• 131K context window with higher rate limits",
+			"[SOON TO BE DEPRECATED] SOTA coding model with ~2000 tokens/s ($50/$250 paid tiers)\n\n• Use this if you have a Cerebras subscription\n• 131K context window with higher rate limits",
 	},
 	"qwen-3-235b-a22b-instruct-2507": {
 		maxTokens: 64000,

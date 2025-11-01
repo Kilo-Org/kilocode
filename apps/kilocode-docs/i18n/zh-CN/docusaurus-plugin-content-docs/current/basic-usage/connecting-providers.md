@@ -9,12 +9,14 @@ sidebar_label: Overview
 ## Kilo Code 扩展与 API 提供商
 
 ### 扩展
+
 - 您从市场安装的 VS Code 工具
 - 处理 UI、文件操作和工作流管理
 - [开源](https://github.com/Kilo-Org/kilocode)
 - 连接到任何 AI 提供商
 
 ### Kilo Code API 提供商
+
 - **内置选项**，随扩展一起提供
 - 包含免费积分的 Google 登录
 - 无需 API 密钥管理
@@ -26,16 +28,20 @@ sidebar_label: Overview
 ## 入门：两条路径
 
 ### 选项 1：内置提供商（推荐）
-✅ **最快设置**
-- 在 kilocode.ai 使用 Google 登录
-- 包含免费积分
-- 零 API 密钥管理
-- 提供最新模型
+
+✅ **快速设置**
+
+- 在 kilocode.ai 使用 Google 或 GitHub 登录
+- 首次充值包含免费积分
+- 无需 API 密钥管理
+- 可使用最新模型
 
 → [完整设置指南](/providers/kilocode)
 
 ### 选项 2：您自己的提供商
+
 **更多控制，更多设置**
+
 1. 从 30 多个受支持的提供商中选择
 2. 从您的提供商处获取 API 密钥
 3. 在 Kilo Code 设置中配置
@@ -51,14 +57,18 @@ sidebar_label: Overview
 ## 本节内容
 
 ### [连接您的第一个 AI 提供商](/getting-started/connecting-api-provider)
+
 **面向初学者**：分步设置，包括：
+
 - 推荐的提供商
 - 如何获取 API 密钥
 - 初始 VS Code 配置
 - 开始您的第一个 AI 聊天
 
 ### [API 配置配置文件](/features/api-configuration-profiles)
+
 **面向高级用户**：高级管理，包括：
+
 - 多个提供商配置
 - 模型切换策略
 - 安全的 API 密钥管理

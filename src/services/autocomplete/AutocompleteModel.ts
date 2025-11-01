@@ -1,5 +1,4 @@
 import {
-	AUTOCOMPLETE_PROVIDER_MODELS,
 	AutocompleteProviderKey,
 	defaultProviderUsabilityChecker,
 	getKiloBaseUriFromToken,
@@ -14,7 +13,15 @@ import { ApiStreamChunk } from "../../api/transform/stream"
 import { ILLM, LLMOptions } from "../continuedev/core/index.js"
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../continuedev/core/util/parameters.js"
 import Mistral from "../continuedev/core/llm/llms/Mistral"
-import { OpenAI } from "../continuedev/core/llm/llms/OpenAI"
+import OpenRouter from "../continuedev/core/llm/llms/OpenRouter"
+import KiloCode from "../continuedev/core/llm/llms/KiloCode"
+
+export const AUTOCOMPLETE_PROVIDER_MODELS = {
+	mistral: "codestral-2501",
+	kilocode: "codestral-2501",
+	openrouter: "mistralai/codestral-2501",
+	bedrock: "mistral.codestral-2501-v1:0",
+} as const
 
 export class AutocompleteModel {
 	private apiHandler: ApiHandler | null = null
@@ -118,6 +125,16 @@ export class AutocompleteModel {
 					useCache: false, // Disable caching for autocomplete
 				},
 				uniqueId: `autocomplete-${provider}-${Date.now()}`,
+				// Add env for KiloCode metadata (organizationId and tester suppression)
+				env: config.organizationId
+					? {
+							kilocodeOrganizationId: config.organizationId,
+							// Add tester suppression if configured
+							...(this.profile?.kilocodeTesterWarningsDisabledUntil && {
+								kilocodeTesterWarningsDisabledUntil: this.profile.kilocodeTesterWarningsDisabledUntil,
+							}),
+						}
+					: undefined,
 			}
 
 			// Create appropriate LLM instance based on provider
@@ -131,7 +148,12 @@ export class AutocompleteModel {
 	/**
 	 * Extracts provider-specific configuration (API key, base URL, model) from this.profile
 	 */
-	private extractProviderConfig(): { apiKey: string; apiBase: string; model: string } | null {
+	private extractProviderConfig(): {
+		apiKey: string
+		apiBase: string
+		model: string
+		organizationId?: string
+	} | null {
 		if (!this.profile?.apiProvider) {
 			return null
 		}
@@ -158,8 +180,9 @@ export class AutocompleteModel {
 				}
 				return {
 					apiKey: this.profile.kilocodeToken,
-					apiBase: `${getKiloBaseUriFromToken(this.profile.kilocodeToken)}/openrouter/api/v1`,
+					apiBase: `${getKiloBaseUriFromToken(this.profile.kilocodeToken)}/api/openrouter/v1`,
 					model,
+					organizationId: this.profile.kilocodeOrganizationId,
 				}
 
 			case "openrouter":
@@ -194,9 +217,12 @@ export class AutocompleteModel {
 				return new Mistral(options)
 
 			case "kilocode":
+				// Use dedicated KiloCode class with custom headers and routing
+				return new KiloCode(options)
+
 			case "openrouter":
-				// Both use OpenAI-compatible API
-				return new OpenAI(options)
+				// Use standard OpenRouter
+				return new OpenRouter(options)
 
 			case "bedrock":
 				// Bedrock would need a custom implementation

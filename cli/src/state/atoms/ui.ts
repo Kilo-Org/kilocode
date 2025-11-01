@@ -4,12 +4,14 @@
  */
 
 import { atom } from "jotai"
+import { atomWithReset } from "jotai/utils"
 import type { CliMessage } from "../../types/cli.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
 import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
+import { commitCompletionTimeout } from "../../parallel/parallel.js"
 
 /**
  * Unified message type that can represent both CLI and extension messages
@@ -45,6 +47,18 @@ export const messageCutoffTimestampAtom = atom<number>(0)
  * Atom to hold UI error messages
  */
 export const errorAtom = atom<string | null>(null)
+
+/**
+ * Atom to track when parallel mode is committing changes
+ * Used to disable input and show "Committing your changes..." message
+ */
+export const isCommittingParallelModeAtom = atom<boolean>(false)
+
+/**
+ * Atom to track countdown timer for parallel mode commit (in seconds)
+ * Starts at 60 and counts down to 0
+ */
+export const commitCountdownSecondsAtom = atomWithReset<number>(commitCompletionTimeout / 1000)
 
 /**
  * Derived atom to check if the extension is currently streaming/processing
