@@ -115,17 +115,18 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 
 	return isReasoningBudgetSupported && !!modelInfo.maxTokens ? (
 		<>
-			{!isReasoningBudgetRequired && (
-				<div className="flex flex-col gap-1">
-					<Checkbox
-						checked={enableReasoningEffort}
-						onChange={(checked: boolean) =>
-							setApiConfigurationField("enableReasoningEffort", checked === true)
-						}>
-						{t("settings:providers.useReasoning")}
-					</Checkbox>
-				</div>
-			)}
+			{!isReasoningBudgetRequired &&
+				apiConfiguration.apiProvider !== "virtual-quota-fallback" /*kilocode_change*/ && (
+					<div className="flex flex-col gap-1">
+						<Checkbox
+							checked={enableReasoningEffort}
+							onChange={(checked: boolean) =>
+								setApiConfigurationField("enableReasoningEffort", checked === true)
+							}>
+							{t("settings:providers.useReasoning")}
+						</Checkbox>
+					</div>
+				)}
 			{(isReasoningBudgetRequired || enableReasoningEffort) && (
 				<>
 					<div className="flex flex-col gap-1">

@@ -93,7 +93,7 @@ import { useOllamaModels } from "./useOllamaModels"
 export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 	const provider = apiConfiguration?.apiProvider || "anthropic"
 	// kilocode_change start
-	const { kilocodeDefaultModel } = useExtensionState()
+	const { kilocodeDefaultModel, virtualQuotaActiveModel } = useExtensionState()
 	const lmStudioModelId = provider === "lmstudio" ? apiConfiguration?.lmStudioModelId : undefined
 	const ollamaModelId = provider === "ollama" ? apiConfiguration?.ollamaModelId : undefined
 
@@ -123,6 +123,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 					lmStudioModels: lmStudioModels.data,
 					kilocodeDefaultModel,
 					ollamaModels: ollamaModels.data,
+					virtualQuotaActiveModel, // kilocode_change: Pass virtual quota active model
 				})
 			: { id: anthropicDefaultModelId, info: undefined }
 
@@ -149,6 +150,7 @@ function getSelectedModel({
 	lmStudioModels,
 	kilocodeDefaultModel,
 	ollamaModels,
+	virtualQuotaActiveModel, //kilocode_change
 }: {
 	provider: ProviderName
 	apiConfiguration: ProviderSettings
@@ -157,6 +159,7 @@ function getSelectedModel({
 	lmStudioModels: ModelRecord | undefined
 	kilocodeDefaultModel: string
 	ollamaModels: ModelRecord | undefined
+	virtualQuotaActiveModel?: { id: string; info: ModelInfo } //kilocode_change
 }): { id: string; info: ModelInfo | undefined } {
 	// the `undefined` case are used to show the invalid selection to prevent
 	// users from seeing the default model if their selection is invalid
@@ -375,11 +378,17 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "virtual-quota-fallback": {
+			if (virtualQuotaActiveModel) {
+				return virtualQuotaActiveModel
+			}
+			// Fallback if no profiles or settings found
 			return {
-				id: apiConfiguration.apiModelId ?? anthropicDefaultModelId,
-				info: anthropicModels[
-					(apiConfiguration.apiModelId ?? anthropicDefaultModelId) as keyof typeof anthropicModels
-				],
+				id: "",
+				info: {
+					maxTokens: 1,
+					contextWindow: 1,
+					supportsPromptCache: false,
+				},
 			}
 		}
 		// kilocode_change end
