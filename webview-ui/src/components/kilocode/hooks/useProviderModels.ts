@@ -1,3 +1,4 @@
+import { mergeSiliconCloudModels } from "@/utils/model-utils" // kilocode_change
 import {
 	type ProviderName,
 	type ProviderSettings,
@@ -50,6 +51,11 @@ import {
 	cerebrasModels,
 	cerebrasDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	// kilocode_change start
+	siliconCloudDefaultModelId,
+	siliconCloudModelsByApiLine,
+	siliconCloudDefaultApiLine,
+	// kilocode_change end
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -64,10 +70,12 @@ export const getModelsByProvider = ({
 	provider,
 	routerModels,
 	kilocodeDefaultModel,
+	apiConfiguration, // kilocode_change
 }: {
 	provider: ProviderName
 	routerModels: RouterModels
 	kilocodeDefaultModel: string
+	apiConfiguration?: ProviderSettings // kilocode_change
 }): { models: ModelRecord; defaultModel: string } => {
 	switch (provider) {
 		case "openrouter": {
@@ -284,6 +292,17 @@ export const getModelsByProvider = ({
 				defaultModel: ovhCloudAiEndpointsDefaultModelId,
 			}
 		}
+		case "siliconcloud": {
+			const dynamicModels = routerModels.siliconcloud ?? {}
+			const apiLine = apiConfiguration?.siliconCloudApiLine || siliconCloudDefaultApiLine
+			const staticModels = siliconCloudModelsByApiLine[apiLine]
+			const mergedModels = mergeSiliconCloudModels(dynamicModels, staticModels)
+
+			return {
+				models: mergedModels,
+				defaultModel: siliconCloudDefaultModelId,
+			}
+		}
 		// kilocode_change end
 		default:
 			return {
@@ -306,6 +325,8 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		chutesApiKey: apiConfiguration?.chutesApiKey,
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		siliconCloudApiKey: apiConfiguration?.siliconCloudApiKey,
+		siliconCloudApiLine: apiConfiguration?.siliconCloudApiLine,
 		// kilocode_change end
 	})
 
@@ -315,6 +336,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 					provider,
 					routerModels: routerModels.data,
 					kilocodeDefaultModel,
+					apiConfiguration, // kilocode_change
 				})
 			: FALLBACK_MODELS
 

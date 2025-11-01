@@ -27,6 +27,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 import { getChutesModels } from "./chutes"
 import { getGeminiModels } from "./gemini"
+import { getSiliconCloudModels } from "./siliconcloud"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -136,6 +137,14 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			// kilocode_change start
 			case "ovhcloud":
 				models = await getOvhCloudAiEndpointsModels()
+				break
+			// kilocode_change start
+			case "siliconcloud":
+				models = await getSiliconCloudModels(
+					options.apiKey,
+					options.apiLine,
+					options.siliconCloudCustomModelInfo,
+				)
 				break
 			// kilocode_change end
 			default: {
