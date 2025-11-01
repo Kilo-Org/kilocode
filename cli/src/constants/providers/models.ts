@@ -45,6 +45,8 @@ import {
 	claudeCodeDefaultModelId,
 	geminiCliModels,
 	geminiCliDefaultModelId,
+	minimaxModels,
+	minimaxDefaultModelId,
 } from "@roo-code/types"
 
 /**
@@ -117,6 +119,7 @@ export const PROVIDER_TO_ROUTER_NAME: Record<ProviderName, RouterName | null> = 
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
+	minimax: null,
 	"qwen-code": null,
 	"human-relay": null,
 	"fake-ai": null,
@@ -162,6 +165,7 @@ export const PROVIDER_MODEL_FIELD: Record<ProviderName, string | null> = {
 	moonshot: null,
 	deepseek: null,
 	doubao: null,
+	minimax: null,
 	"qwen-code": null,
 	"human-relay": null,
 	"fake-ai": null,
@@ -239,6 +243,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	sambanova: sambaNovaDefaultModelId,
 	featherless: featherlessDefaultModelId,
 	deepinfra: "deepseek-ai/DeepSeek-R1-0528",
+	minimax: "MiniMax-M2",
 	zai: internationalZAiDefaultModelId,
 	roo: rooDefaultModelId,
 	"gemini-cli": geminiCliDefaultModelId,
@@ -301,6 +306,11 @@ export function getModelsByProvider(params: {
 			return {
 				models: moonshotModels as ModelRecord,
 				defaultModel: moonshotDefaultModelId,
+			}
+		case "minimax":
+			return {
+				models: minimaxModels as ModelRecord,
+				defaultModel: minimaxDefaultModelId,
 			}
 		case "deepseek":
 			return {

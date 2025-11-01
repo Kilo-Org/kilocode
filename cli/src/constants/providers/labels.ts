@@ -36,6 +36,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"qwen-code": "Qwen Code",
 	"gemini-cli": "Gemini CLI",
 	zai: "Zai",
+	minimax: "MiniMax",
 	unbound: "Unbound",
 	requesty: "Requesty",
 	roo: "Roo",

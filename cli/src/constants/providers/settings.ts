@@ -410,6 +410,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter API line...",
 	},
 
+	// Minimax fields
+	minimaxBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter MiniMax base URL...",
+	},
+	minimaxApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter MiniMax API key...",
+	},
+
 	// Unbound fields
 	unboundApiKey: {
 		label: "API Key",
@@ -767,7 +779,11 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					type: "text",
 				},
 			]
-
+		case "minimax":
+			return [
+				createFieldConfig("minimaxBaseUrl", config, "https://api.minimax.io/anthropic"),
+				createFieldConfig("minimaxApiKey", config),
+			]
 		case "fake-ai":
 			return [
 				{
@@ -825,6 +841,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"vercel-ai-gateway": "gpt-4o",
 	"virtual-quota-fallback": "gpt-4o",
 	"human-relay": "human",
+	minimax: "MiniMax-M2",
 	"fake-ai": "fake-model",
 }
 

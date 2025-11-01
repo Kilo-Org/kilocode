@@ -22,6 +22,7 @@ import {
 	geminiCliDefaultModelId,
 	deepSeekDefaultModelId,
 	moonshotDefaultModelId,
+	minimaxDefaultModelId,
 	mistralDefaultModelId,
 	xaiDefaultModelId,
 	groqDefaultModelId,
@@ -102,6 +103,7 @@ import {
 	Synthetic,
 	// kilocode_change end
 	ZAi,
+	MiniMax,
 	Fireworks,
 	Featherless,
 	VercelAiGateway,
@@ -397,6 +399,7 @@ const ApiOptions = ({
 							? mainlandZAiDefaultModelId
 							: internationalZAiDefaultModelId,
 				},
+				minimax: { field: "apiModelId", default: minimaxDefaultModelId },
 				fireworks: { field: "apiModelId", default: fireworksDefaultModelId },
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId }, // kilocode_change
 				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
@@ -439,7 +442,16 @@ const ApiOptions = ({
 
 		// kilocode_change start
 		// Providers that don't have documentation pages yet
-		const excludedProviders = ["gemini-cli", "moonshot", "chutes", "cerebras", "litellm", "zai", "qwen-code"]
+		const excludedProviders = [
+			"gemini-cli",
+			"moonshot",
+			"chutes",
+			"cerebras",
+			"litellm",
+			"zai",
+			"qwen-code",
+			"minimax",
+		]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
 		if (excludedProviders.includes(selectedProvider)) {
@@ -671,6 +683,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "xai" && (
 				<XAI apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "minimax" && (
+				<MiniMax apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "groq" && (

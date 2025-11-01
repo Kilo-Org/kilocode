@@ -257,6 +257,7 @@
 						"qwen-code",
 						"gemini-cli",
 						"zai",
+						"minimax",
 						"unbound",
 						"requesty",
 						"roo",
@@ -1209,6 +1210,27 @@
 				},
 				{
 					"if": {
+						"properties": { "provider": { "const": "minimax" } }
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": {
+								"type": "string",
+								"description": "MiniMax base URL"
+							},
+							"minimaxApiKey": {
+								"type": "string",
+								"description": "MiniMax API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "MiniMax model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
 						"properties": { "provider": { "const": "doubao" } }
 					},
 					"then": {
@@ -1284,6 +1306,48 @@
 					"if": {
 						"properties": {
 							"provider": { "const": "moonshot" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxApiKey"]
+					},
+					"then": {
+						"properties": {
+							"minimaxApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
 							"apiModelId": { "type": "string", "minLength": 1 }
 						},
 						"required": ["apiModelId"]

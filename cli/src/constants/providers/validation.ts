@@ -44,4 +44,5 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	vertex: [], // Has special validation logic (either/or fields)
 	"vscode-lm": [], // Has nested object validation
 	"virtual-quota-fallback": [], // Has array validation
+	minimax: ["minimaxBaseUrl", "minimaxApiKey", "apiModelId"],
 }

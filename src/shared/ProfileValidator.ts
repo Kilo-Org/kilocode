@@ -66,6 +66,7 @@ export class ProfileValidator {
 			case "deepseek":
 			case "xai":
 			case "zai":
+			case "minimax":
 			case "groq":
 			case "sambanova":
 			case "chutes":

@@ -9,6 +9,8 @@ export type ApiStreamChunk =
 	| ApiStreamReasoningChunk
 	| ApiStreamGroundingChunk
 	| ApiStreamError
+	| ApiStreamAnthropicThinkingChunk
+	| ApiStreamAnthropicRedactedThinkingChunk
 
 export interface ApiStreamError {
 	type: "error"
@@ -24,6 +26,17 @@ export interface ApiStreamTextChunk {
 export interface ApiStreamReasoningChunk {
 	type: "reasoning"
 	text: string
+}
+
+export interface ApiStreamAnthropicThinkingChunk {
+	type: "ant_thinking"
+	thinking: string
+	signature: string
+}
+
+export interface ApiStreamAnthropicRedactedThinkingChunk {
+	type: "ant_redacted_thinking"
+	data: string
 }
 
 export interface ApiStreamUsageChunk {

@@ -41,6 +41,7 @@ import {
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
+	MiniMaxHandler,
 	SyntheticHandler, // kilocode_change
 	RooHandler,
 	FeatherlessHandler,
@@ -202,6 +203,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FeatherlessHandler(options)
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
+		case "minimax":
+			return new MiniMaxHandler(options)
 		// kilocode_change start
 		case "ovhcloud":
 			return new OVHcloudAIEndpointsHandler(options)
