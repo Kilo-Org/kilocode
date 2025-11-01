@@ -31,6 +31,7 @@ import { getGeminiModels } from "./gemini"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
+import { getInceptionModels } from "./inception"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -132,6 +133,9 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				break
 			case "huggingface":
 				models = await getHuggingFaceModels()
+				break
+			case "inception":
+				models = await getInceptionModels()
 				break
 			// kilocode_change start
 			case "ovhcloud":

@@ -43,6 +43,7 @@ type ModelIdKey = keyof Pick<
 	| "ovhCloudAiEndpointsModelId"
 	// kilocode_change end
 	| "deepInfraModelId"
+	| "inceptionLabsModelId"
 	| "ioIntelligenceModelId"
 	| "vercelAiGatewayModelId"
 >

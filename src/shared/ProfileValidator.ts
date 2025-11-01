@@ -100,6 +100,8 @@ export class ProfileValidator {
 			// kilocode_change end
 			case "human-relay":
 			case "fake-ai":
+			case "inception":
+				return profile.inceptionLabsModelId
 			default:
 				return undefined
 		}

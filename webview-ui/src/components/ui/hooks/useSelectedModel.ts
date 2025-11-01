@@ -64,6 +64,7 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	inceptionDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -457,6 +458,11 @@ function getSelectedModel({
 			return { id, info }
 		}
 		// kilocode_change end
+		case "inception": {
+			const id = apiConfiguration.inceptionLabsModelId ?? inceptionDefaultModelId
+			const info = routerModels.inception[id]
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "human-relay":
 		// case "fake-ai":

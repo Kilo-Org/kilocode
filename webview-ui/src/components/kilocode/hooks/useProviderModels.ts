@@ -50,6 +50,7 @@ import {
 	cerebrasModels,
 	cerebrasDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	inceptionDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -285,6 +286,12 @@ export const getModelsByProvider = ({
 			}
 		}
 		// kilocode_change end
+		case "inception": {
+			return {
+				models: routerModels.inception,
+				defaultModel: inceptionDefaultModelId,
+			}
+		}
 		default:
 			return {
 				models: {},

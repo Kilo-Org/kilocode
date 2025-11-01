@@ -19,6 +19,7 @@ export const nativeFunctionCallingProviders = [
 	"zai",
 	"synthetic",
 	"human-relay",
+	"inception",
 ] satisfies ProviderName[] as ProviderName[]
 
 const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5"]

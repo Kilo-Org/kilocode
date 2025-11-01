@@ -2709,6 +2709,8 @@ describe("ClineProvider - Router Models", () => {
 				googleGeminiBaseUrl: "https://gemini.example.com",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				// kilocode_change end
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 			},
 		} as any)
 
@@ -2748,6 +2750,11 @@ describe("ClineProvider - Router Models", () => {
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
+			provider: "inception",
+			apiKey: "inception-key",
+			baseUrl: "https://api.inceptionlabs.ai/v1/",
+		})
+		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
 			baseUrl: "http://localhost:4000",
@@ -2770,6 +2777,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2794,6 +2802,8 @@ describe("ClineProvider - Router Models", () => {
 				googleGeminiBaseUrl: "https://gemini.example.com",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				// kilocode_change end
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 			},
 		} as any)
 
@@ -2813,8 +2823,9 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
-			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockResolvedValueOnce(mockModels) // deepinfra success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
+			.mockResolvedValueOnce(mockModels) // inception success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2836,6 +2847,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2978,6 +2990,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels,
 				huggingface: {},
 				"io-intelligence": {},
 			},
