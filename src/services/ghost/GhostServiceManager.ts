@@ -144,7 +144,7 @@ export class GhostServiceManager {
 			enableAutoTrigger: false,
 			enableSmartInlineTaskKeybinding: false,
 			enableQuickInlineTaskKeybinding: false,
-			showGutterAnimation: true,
+			showGutterAnimation: false,
 		}
 		await this.saveSettings()
 		await this.load()
@@ -156,7 +156,7 @@ export class GhostServiceManager {
 			enableAutoTrigger: true,
 			enableSmartInlineTaskKeybinding: true,
 			enableQuickInlineTaskKeybinding: true,
-			showGutterAnimation: true,
+			showGutterAnimation: false,
 		}
 		await this.saveSettings()
 		await this.load()
