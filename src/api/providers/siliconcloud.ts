@@ -40,7 +40,7 @@ export class SiliconCloudHandler extends BaseOpenAiCompatibleProvider<string> {
 	) {
 		const {
 			id: model,
-			info: { maxTokens: max_tokens, supportsReasoningBudget },
+			info: { maxTokens: max_tokens, supportsReasoningBudget, requiredReasoningBudget },
 		} = this.getModel()
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
@@ -55,7 +55,7 @@ export class SiliconCloudHandler extends BaseOpenAiCompatibleProvider<string> {
 		}
 
 		if (supportsReasoningBudget) {
-			if (this.options.enableReasoningEffort) {
+			if (this.options.enableReasoningEffort && !requiredReasoningBudget) {
 				// @ts-ignore
 				params.enable_thinking = true
 			}
