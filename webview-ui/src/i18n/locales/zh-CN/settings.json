@@ -465,6 +465,10 @@
 			},
 			"resetDefaults": "重置为默认值"
 		},
+		"rateLimitAfter": {
+			"label": "在结束时速率限制",
+			"description": "在 API 流结束后开始速率限制。"
+		},
 		"rateLimitSeconds": {
 			"label": "API 请求频率限制",
 			"description": "设置API请求的最小间隔时间"

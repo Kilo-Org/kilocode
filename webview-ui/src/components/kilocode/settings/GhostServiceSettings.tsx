@@ -1,5 +1,5 @@
 //kilocode_change - new file
-import { HTMLAttributes } from "react"
+import { HTMLAttributes, useCallback } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
 import { Bot, Zap } from "lucide-react"
@@ -7,19 +7,21 @@ import { cn } from "@/lib/utils"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
-import { SetCachedStateField } from "../../settings/types"
 import { vscode } from "@/utils/vscode"
-import { ControlledCheckbox } from "../common/ControlledCheckbox"
+import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
-	setCachedStateField: SetCachedStateField<"ghostServiceSettings">
+	onGhostServiceSettingsChange: <K extends keyof NonNullable<GhostServiceSettings>>(
+		field: K,
+		value: NonNullable<GhostServiceSettings>[K],
+	) => void
 }
 
 export const GhostServiceSettingsView = ({
 	ghostServiceSettings,
-	setCachedStateField,
+	onGhostServiceSettingsChange,
 	className,
 	...props
 }: GhostServiceSettingsViewProps) => {
@@ -28,26 +30,26 @@ export const GhostServiceSettingsView = ({
 		ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
-	const onEnableAutoTriggerChange = (newValue: boolean) => {
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			enableAutoTrigger: newValue,
-		})
-	}
+	const onEnableAutoTriggerChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableAutoTrigger", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
 
-	const onEnableQuickInlineTaskKeybindingChange = (newValue: boolean) => {
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			enableQuickInlineTaskKeybinding: newValue,
-		})
-	}
+	const onEnableQuickInlineTaskKeybindingChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableQuickInlineTaskKeybinding", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
 
-	const onEnableSmartInlineTaskKeybindingChange = (newValue: boolean) => {
-		setCachedStateField("ghostServiceSettings", {
-			...ghostServiceSettings,
-			enableSmartInlineTaskKeybinding: newValue,
-		})
-	}
+	const onEnableSmartInlineTaskKeybindingChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("enableSmartInlineTaskKeybinding", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
 
 	const openGlobalKeybindings = (filter?: string) => {
 		vscode.postMessage({ type: "openGlobalKeybindings", text: filter })
@@ -72,16 +74,16 @@ export const GhostServiceSettingsView = ({
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<ControlledCheckbox checked={enableAutoTrigger || false} onChange={onEnableAutoTriggerChange}>
+						<VSCodeCheckbox checked={enableAutoTrigger || false} onChange={onEnableAutoTriggerChange}>
 							<span className="font-medium">{t("kilocode:ghost.settings.enableAutoTrigger.label")}</span>
-						</ControlledCheckbox>
+						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans i18nKey="kilocode:ghost.settings.enableAutoTrigger.description" />
 						</div>
 					</div>
 
 					<div className="flex flex-col gap-1">
-						<ControlledCheckbox
+						<VSCodeCheckbox
 							checked={enableQuickInlineTaskKeybinding || false}
 							onChange={onEnableQuickInlineTaskKeybindingChange}>
 							<span className="font-medium">
@@ -89,7 +91,7 @@ export const GhostServiceSettingsView = ({
 									keybinding: keybindings["kilo-code.addToContextAndFocus"],
 								})}
 							</span>
-						</ControlledCheckbox>
+						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans
 								i18nKey="kilocode:ghost.settings.enableQuickInlineTaskKeybinding.description"
@@ -105,7 +107,7 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 					<div className="flex flex-col gap-1">
-						<ControlledCheckbox
+						<VSCodeCheckbox
 							checked={enableSmartInlineTaskKeybinding || false}
 							onChange={onEnableSmartInlineTaskKeybindingChange}>
 							<span className="font-medium">
@@ -113,7 +115,7 @@ export const GhostServiceSettingsView = ({
 									keybinding: keybindings["kilo-code.ghost.generateSuggestions"],
 								})}
 							</span>
-						</ControlledCheckbox>
+						</VSCodeCheckbox>
 						<div className="text-vscode-descriptionForeground text-sm mt-1">
 							<Trans
 								i18nKey="kilocode:ghost.settings.enableSmartInlineTaskKeybinding.description"

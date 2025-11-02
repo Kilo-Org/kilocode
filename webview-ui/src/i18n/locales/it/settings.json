@@ -465,6 +465,10 @@
 			},
 			"resetDefaults": "Ripristina valori predefiniti"
 		},
+		"rateLimitAfter": {
+			"label": "Limite di velocità alla fine",
+			"description": "Inizia a limitare la velocità dopo che lo stream API termina."
+		},
 		"rateLimitSeconds": {
 			"label": "Limite di frequenza",
 			"description": "Tempo minimo tra le richieste API."

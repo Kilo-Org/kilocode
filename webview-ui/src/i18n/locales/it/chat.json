@@ -329,6 +329,8 @@
 		"tooltips": {
 			"expand": "Espandi blocco di codice",
 			"collapse": "Comprimi blocco di codice",
+			"enable_wrap": "Abilita a capo automatico",
+			"disable_wrap": "Disabilita a capo automatico",
 			"copy_code": "Copia codice"
 		}
 	},

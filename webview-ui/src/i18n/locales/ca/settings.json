@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Restablir als valors per defecte"
 		},
+		"rateLimitAfter": {
+			"label": "Límit de taxa al final",
+			"description": "Comenceu a limitar la taxa un cop acaba el flux de l’API."
+		},
 		"rateLimitSeconds": {
 			"label": "Límit de freqüència",
 			"description": "Temps mínim entre sol·licituds d'API."

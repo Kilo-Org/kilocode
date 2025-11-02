@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Đặt lại về mặc định"
 		},
+		"rateLimitAfter": {
+			"label": "Giới hạn tỷ lệ ở cuối",
+			"description": "Bắt đầu hạn chế tỷ lệ sau khi luồng API kết thúc."
+		},
 		"rateLimitSeconds": {
 			"label": "Giới hạn tốc độ",
 			"description": "Thời gian tối thiểu giữa các yêu cầu API."

@@ -467,6 +467,10 @@
 			},
 			"resetDefaults": "รีเซ็ตเป็นค่าเริ่มต้น"
 		},
+		"rateLimitAfter": {
+			"label": "จำกัดอัตราที่จุดสิ้นสุด",
+			"description": "เริ่มจำกัดอัตราหลังจากที่สตรีม API สิ้นสุด."
+		},
 		"rateLimitSeconds": {
 			"label": "ขีดจำกัดอัตรา",
 			"description": "เวลาน้อยที่สุดระหว่างการร้องขอ API"

@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Auf Standardwerte zurücksetzen"
 		},
+		"rateLimitAfter": {
+			"label": "Ratenbegrenzung am Ende",
+			"description": "Beginnen Sie mit der Ratenbegrenzung, nachdem der API-Stream endet."
+		},
 		"rateLimitSeconds": {
 			"label": "Ratenbegrenzung",
 			"description": "Minimale Zeit zwischen API-Anfragen."

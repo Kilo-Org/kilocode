@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "Réinitialiser les valeurs par défaut"
 		},
+		"rateLimitAfter": {
+			"label": "Limite de débit en fin",
+			"description": "Commencez à limiter le débit après la fin du flux API."
+		},
 		"rateLimitSeconds": {
 			"label": "Limite de débit",
 			"description": "Temps minimum entre les requêtes API."

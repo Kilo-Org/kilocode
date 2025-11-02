@@ -464,6 +464,10 @@
 			},
 			"resetDefaults": "기본값으로 재설정"
 		},
+		"rateLimitAfter": {
+			"label": "종료 시 속도 제한",
+			"description": "API 스트림이 끝난 후 속도 제한을 시작합니다."
+		},
 		"rateLimitSeconds": {
 			"label": "속도 제한",
 			"description": "API 요청 간 최소 시간."

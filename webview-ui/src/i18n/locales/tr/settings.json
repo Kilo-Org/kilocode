@@ -465,6 +465,10 @@
 			},
 			"resetDefaults": "Varsayılanlara Sıfırla"
 		},
+		"rateLimitAfter": {
+			"label": "Bitişte oran sınırı",
+			"description": "API akışı sona erdikten sonra oran sınırlandırmaya başlayın."
+		},
 		"rateLimitSeconds": {
 			"label": "Hız sınırı",
 			"description": "API istekleri arasındaki minimum süre."
