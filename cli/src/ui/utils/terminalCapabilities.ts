@@ -9,7 +9,6 @@
  */
 let kittyDetected = false
 let kittySupported = false
-const kittyEnabled = false
 
 export async function detectKittyProtocolSupport(): Promise<boolean> {
 	if (kittyDetected) {

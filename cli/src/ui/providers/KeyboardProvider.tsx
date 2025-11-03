@@ -147,7 +147,8 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		const usePassthrough =
 			nodeMajorVersion < 20 ||
 			process.env["PASTE_WORKAROUND"] === "1" ||
-			process.env["PASTE_WORKAROUND"] === "true"
+			process.env["PASTE_WORKAROUND"] === "true" ||
+			isKittyEnabled
 
 		// Setup streams
 		const keypressStream = usePassthrough ? new PassThrough() : stdin
@@ -332,6 +333,45 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 			let pos = 0
 
 			while (pos < dataStr.length) {
+				// When Kitty is enabled, check for Kitty sequences first
+				if (isKittyEnabled && dataStr[pos] === ESC && pos + 1 < dataStr.length && dataStr[pos + 1] === "[") {
+					// Try to find the end of the Kitty sequence
+					let seqEnd = pos + 2
+					while (seqEnd < dataStr.length) {
+						const char = dataStr[seqEnd]
+						if (!char) break // Safety check
+
+						// Kitty sequences end with 'u', '~', or letter (A-Z)
+						if (char === "u" || char === "~" || (char >= "A" && char <= "Z")) {
+							seqEnd++
+							break
+						}
+						// Continue if it's a digit or semicolon (part of the sequence)
+						if ((char >= "0" && char <= "9") || char === ";") {
+							seqEnd++
+							continue
+						}
+						// Invalid sequence, stop
+						break
+					}
+
+					// If we found a complete sequence, try to parse it
+					if (seqEnd > pos + 2) {
+						const sequence = dataStr.slice(pos, seqEnd)
+						const result = parseKittySequence(sequence)
+
+						if (result.key) {
+							// Successfully parsed Kitty sequence, broadcast it directly
+							if (isDebugEnabled) {
+								logs.debug("Kitty sequence from raw data", "KeyboardProvider", { key: result.key })
+							}
+							broadcastKey(result.key)
+							pos = seqEnd
+							continue
+						}
+					}
+				}
+
 				// Check for paste mode prefix
 				const prefixPos = dataStr.indexOf(PASTE_MODE_PREFIX, pos)
 				const suffixPos = dataStr.indexOf(PASTE_MODE_SUFFIX, pos)
