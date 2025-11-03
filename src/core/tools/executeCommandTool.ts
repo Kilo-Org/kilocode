@@ -30,8 +30,12 @@ export async function executeCommandTool(
 ) {
 	let command: string | undefined = block.params.command
 	const customCwd: string | undefined = block.params.cwd
-	const runInBackgroundRequested: boolean = block.params.run_in_background === "true" // kilocode_change
-	let runInBackground: boolean = runInBackgroundRequested // kilocode_change
+	// kilocode_change start - runInBackground
+	const runInBackgroundParam = block.params.run_in_background
+	const runInBackgroundRequested: boolean =
+		typeof runInBackgroundParam === "boolean" ? runInBackgroundParam : runInBackgroundParam === "true"
+	let runInBackground: boolean = runInBackgroundRequested
+	// kilocode_change end - runInBackground
 
 	try {
 		if (block.partial) {

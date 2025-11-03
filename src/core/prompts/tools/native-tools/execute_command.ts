@@ -18,8 +18,14 @@ export default {
 					type: ["string", "null"],
 					description: "Optional working directory for the command, relative or absolute",
 				},
+				// kilocode_change start - run_in_background
+				run_in_background: {
+					type: ["boolean", "null"],
+					description: "Set to true to run the command in the background without waiting for completion",
+				},
 			},
-			required: ["command", "cwd"],
+			required: ["command", "cwd", "run_in_background"],
+			// kilocode_change end - run_in_background
 			additionalProperties: false,
 		},
 	},

@@ -13,8 +13,15 @@ export async function terminalKillTool(
 	pushToolResult: PushToolResult,
 	_removeClosingTag: RemoveClosingTag,
 ) {
-	const terminalId: string | undefined = block.params.terminal_id
-	if (!terminalId) {
+	const terminalIdParam = block.params.terminal_id
+	const terminalId: number | undefined =
+		typeof terminalIdParam === "number"
+			? terminalIdParam
+			: terminalIdParam
+				? parseInt(terminalIdParam, 10)
+				: undefined
+
+	if (terminalId === undefined || isNaN(terminalId)) {
 		task.consecutiveMistakeCount++
 		task.recordToolError("terminal_kill")
 		pushToolResult(await task.sayAndCreateMissingParamError("terminal_kill", "terminal_id"))
@@ -24,7 +31,7 @@ export async function terminalKillTool(
 	await task.say("text", `Killing process in terminal ${terminalId}...`)
 
 	try {
-		const result = await TerminalRegistry.killTerminal(parseInt(terminalId))
+		const result = await TerminalRegistry.killTerminal(terminalId)
 		pushToolResult(formatResponse.toolResult(result))
 	} catch (error) {
 		await handleError("killing terminal process", error)
