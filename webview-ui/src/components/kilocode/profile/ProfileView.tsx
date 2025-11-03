@@ -187,18 +187,20 @@ const ProfileView: React.FC<ProfileViewProps> = ({ onDone }) => {
 											{t("kilocode:profile.detailedUsage")}
 										</VSCodeButtonLink>
 									) : (
-										<VSCodeButtonLink
-											onClick={() => {
-												telemetryClient.capture(
-													TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED,
-													{ origin: "usage-details" },
-												)
-											}}
-											href={getAppUrl("/organizations/new")}
-											appearance="primary"
-											className="w-full">
-											{t("kilocode:profile.createOrganization")}
-										</VSCodeButtonLink>
+										(profileData.organizations?.length ?? 0) === 0 && (
+											<VSCodeButtonLink
+												onClick={() => {
+													telemetryClient.capture(
+														TelemetryEventName.CREATE_ORGANIZATION_LINK_CLICKED,
+														{ origin: "usage-details" },
+													)
+												}}
+												href={getAppUrl("/organizations/new")}
+												appearance="primary"
+												className="w-full">
+												{t("kilocode:profile.createOrganization")}
+											</VSCodeButtonLink>
+										)
 									)}
 								</div>
 

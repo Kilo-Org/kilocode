@@ -258,6 +258,3 @@ Use `/teams select` and start typing the team name to switch teams.
 
 The process is the same when switching into a Team or Enterprise organization.
 The process is the same when switching into a Team or Enterprise organization.
-
-
-

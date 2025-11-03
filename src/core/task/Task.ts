@@ -3146,11 +3146,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// stream.
 		yield* iterator
 
-        // kilocode_change start
+		// kilocode_change start
 		if (apiConfiguration?.rateLimitAfter) {
 			Task.lastGlobalApiRequestTime = performance.now()
 		}
-        // kilocode_change end
+		// kilocode_change end
 	}
 
 	// Checkpoints
