@@ -70,6 +70,7 @@
 		"i18next": "^25.0.0",
 		"ignore": "^7.0.3",
 		"ink": "^6.3.1",
+		"ink-link": "^5.0.0",
 		"ink-select-input": "^6.2.0",
 		"ink-spinner": "^5.0.0",
 		"ink-table": "^3.1.0",

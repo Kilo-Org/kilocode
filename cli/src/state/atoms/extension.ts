@@ -197,10 +197,7 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		const incomingMessages = state.clineMessages || state.chatMessages || []
 
 		// Reconcile with current messages to preserve streaming state
-		let reconciledMessages = reconcileMessages(currentMessages, incomingMessages, versionMap, streamingSet)
-
-		// Auto-complete orphaned partial ask messages (CLI-only workaround for extension bug)
-		reconciledMessages = autoCompleteOrphanedPartialAsks(reconciledMessages)
+		const reconciledMessages = reconcileMessages(currentMessages, incomingMessages, versionMap, streamingSet)
 
 		set(chatMessagesAtom, reconciledMessages)
 
@@ -457,57 +454,6 @@ function getMessageContentLength(msg: ExtensionChatMessage): number {
 	if (msg.say) length += msg.say.length
 	if (msg.ask) length += msg.ask.length
 	return length
-}
-
-/**
- * Auto-complete orphaned partial ask messages (CLI-only workaround)
- *
- * This handles the extension bug where ask messages can get stuck with partial=true
- * when other messages (like checkpoint_saved) are added between the partial message
- * and its completion, causing the extension to create a new message instead of updating.
- *
- * Detection logic:
- * - If an ask message has partial=true
- * - AND there's a subsequent message with a later timestamp
- * - AND that subsequent message is NOT command_output (which is expected during command execution)
- * - THEN mark the partial ask as complete (partial=false)
- *
- * This ensures messages don't get stuck in partial state indefinitely.
- */
-function autoCompleteOrphanedPartialAsks(messages: ExtensionChatMessage[]): ExtensionChatMessage[] {
-	const result = [...messages]
-
-	for (let i = 0; i < result.length; i++) {
-		const msg = result[i]
-
-		// Only process partial ask messages
-		if (!msg || msg.type !== "ask" || !msg.partial) {
-			continue
-		}
-
-		// Check if there's a subsequent message (not command_output)
-		let hasSubsequentMessage = false
-		for (let j = i + 1; j < result.length; j++) {
-			const nextMsg = result[j]
-			if (!nextMsg) continue
-
-			// Skip command_output messages as they're expected during command execution
-			if (nextMsg.ask === "command_output") {
-				continue
-			}
-
-			// Found a subsequent non-command_output message
-			hasSubsequentMessage = true
-			break
-		}
-
-		// If there's a subsequent message, this partial ask is orphaned - mark it complete
-		if (hasSubsequentMessage) {
-			result[i] = { ...msg, partial: false }
-		}
-	}
-
-	return result
 }
 
 /**

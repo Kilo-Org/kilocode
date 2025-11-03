@@ -308,38 +308,6 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 // ============================================================================
 
 /**
- * Helper function to get the completion text (only the missing part to append)
- */
-function getCompletionText(currentInput: string, suggestion: CommandSuggestion | ArgumentSuggestion): string {
-	if ("command" in suggestion) {
-		// CommandSuggestion - complete the command name
-		const commandName = suggestion.command.name
-		const currentText = currentInput.startsWith("/") ? currentInput.slice(1) : currentInput
-
-		// If the command name starts with what user typed, return only the missing part
-		if (commandName.toLowerCase().startsWith(currentText.toLowerCase())) {
-			return commandName.slice(currentText.length)
-		}
-
-		// Otherwise return the full command (shouldn't happen in normal flow)
-		return commandName
-	} else {
-		// ArgumentSuggestion - complete the last argument
-		const parts = currentInput.split(" ")
-		const lastPart = parts[parts.length - 1] || ""
-		const suggestionValue = suggestion.value
-
-		// If suggestion starts with what user typed, return only the missing part
-		if (suggestionValue.toLowerCase().startsWith(lastPart.toLowerCase())) {
-			return suggestionValue.slice(lastPart.length)
-		}
-
-		// Otherwise return the full value
-		return suggestionValue
-	}
-}
-
-/**
  * Helper function to format autocomplete suggestions for display/submission
  */
 function formatSuggestion(suggestion: CommandSuggestion | ArgumentSuggestion, currentInput: string): string {
@@ -487,11 +455,10 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 				const suggestion = allSuggestions[selectedIndex]
 				const currentText = get(textBufferStringAtom)
 
-				// Get only the missing part to append
-				const completionText = getCompletionText(currentText, suggestion)
-
-				// Insert the completion text
-				set(insertTextAtom, completionText)
+				// Always replace the entire input with formatted suggestion
+				// This handles both commands and arguments correctly
+				const newText = formatSuggestion(suggestion, currentText)
+				set(setTextAtom, newText)
 			}
 			return
 

@@ -154,14 +154,20 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 				}
 				store.set(updateChatMessageByTsAtom, answeredMessage)
 
+				// Determine response type based on ask type
+				// payment_required_prompt needs special "retry_clicked" response
+				const responseType =
+					currentPendingApproval.ask === "payment_required_prompt" ? "retry_clicked" : "yesButtonClicked"
+
 				await sendAskResponse({
-					response: "yesButtonClicked",
+					response: responseType,
 					...(text && { text }),
 					...(images && { images }),
 				})
 
 				logs.debug("Approval response sent successfully", "useApprovalHandler", {
 					ts: currentPendingApproval.ts,
+					responseType,
 				})
 
 				// Track manual approval

@@ -42,6 +42,8 @@ to start the CLI and begin a new task with your preferred model and relevant mod
 | `/model list`   | List available models                                            |                             |
 | `/model info`   | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v` |
 | `/model select` | Select and switch to a new model                                 |                             |
+| `/teams`        | List all organizations you can switch into                       |                             |
+| `/teams select` | Switch to a different organization                               |                             |
 | `/config`       | Open configuration editor (same as `kilocode config`)            |                             |
 | `/new`          | Start a new task with the agent with a clean slate               |                             |
 | `/help`         | List available commands and how to use them                      |                             |
@@ -254,4 +256,5 @@ Use the `/teams` command to see a list of all organizations you can switch into.
 
 Use `/teams select` and start typing the team name to switch teams.
 
+The process is the same when switching into a Team or Enterprise organization.
 The process is the same when switching into a Team or Enterprise organization.

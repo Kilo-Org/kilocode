@@ -1,3 +1,4 @@
+import { z } from "zod"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 import type { ToolData, McpServerData, FollowUpData, ApiReqInfo, ImageData } from "./types.js"
 
@@ -21,10 +22,32 @@ export function parseToolData(message: ExtensionChatMessage): ToolData | null {
 }
 
 /**
- * Parse MCP server data from message
+ * Zod schema for MCP server data validation
+ */
+const McpServerDataSchema = z.object({
+	type: z.enum(["use_mcp_tool", "access_mcp_resource"]),
+	serverName: z.string(),
+	toolName: z.string().optional(),
+	arguments: z.string().optional(),
+	uri: z.string().optional(),
+	response: z.any().optional(),
+})
+
+/**
+ * Type guard to check if an object is valid McpServerData
+ * Uses Zod for validation
+ */
+export function isMcpServerData(obj: unknown): obj is McpServerData {
+	return McpServerDataSchema.safeParse(obj).success
+}
+
+/**
+ * Parse MCP server data from message with Zod validation
  */
 export function parseMcpServerData(message: ExtensionChatMessage): McpServerData | null {
-	return parseMessageJson<McpServerData>(message.text)
+	const parsed = parseMessageJson(message.text)
+	const result = McpServerDataSchema.safeParse(parsed)
+	return result.success ? (result.data as McpServerData) : null
 }
 
 /**
@@ -209,4 +232,123 @@ export function hasJsonContent(message: ExtensionChatMessage): boolean {
 	} catch {
 		return false
 	}
+}
+
+/**
+ * Format JSON string with indentation
+ */
+export function formatJson(jsonString: string, indent: number = 2): string | null {
+	try {
+		const parsed = JSON.parse(jsonString)
+		return JSON.stringify(parsed, null, indent)
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Approximate byte size of string for display purposes
+ * Uses 3x multiplier as conservative estimate (handles ASCII, UTF-8, emoji)
+ *
+ * @param str - The string to measure
+ * @returns Approximate byte size
+ */
+function approximateByteSize(str: string): number {
+	return str.length * 3
+}
+
+/**
+ * Format content with JSON detection and optional preview
+ */
+export interface FormattedContent {
+	isJson: boolean
+	content: string
+	lineCount: number
+	charCount: number
+	byteSize: number
+	isPreview: boolean
+	hiddenLines: number
+}
+
+export function formatContentWithMetadata(
+	text: string,
+	maxLines: number = 20,
+	previewLines: number = 5
+): FormattedContent {
+	if (!text) {
+		return {
+			isJson: false,
+			content: "",
+			lineCount: 0,
+			charCount: 0,
+			byteSize: 0,
+			isPreview: false,
+			hiddenLines: 0,
+		}
+	}
+
+	// Try to format as JSON
+	let content = text
+	let isJson = false
+	const formatted = formatJson(text)
+	if (formatted) {
+		content = formatted
+		isJson = true
+	}
+
+	// Count lines
+	const lines = content.split("\n")
+	const lineCount = lines.length
+	const charCount = content.length
+	const byteSize = approximateByteSize(content)
+
+	// Determine if preview is needed
+	const isPreview = lineCount > maxLines
+	const hiddenLines = isPreview ? lineCount - previewLines : 0
+
+	// Create preview if needed
+	if (isPreview) {
+		const previewContent = lines.slice(0, previewLines).join("\n")
+		content = previewContent
+	}
+
+	return {
+		isJson,
+		content,
+		lineCount,
+		charCount,
+		byteSize,
+		isPreview,
+		hiddenLines,
+	}
+}
+
+/**
+ * Format byte size for display
+ * Adds ~ prefix for approximations (KB/MB)
+ */
+export function formatByteSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`
+	if (bytes < 1024 * 1024) return `~${(bytes / 1024).toFixed(1)} KB`
+	return `~${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+/**
+ * Build metadata string for content
+ */
+export function buildMetadataString(metadata: FormattedContent): string {
+	const parts: string[] = []
+
+	// Content type
+	parts.push(metadata.isJson ? "JSON" : "Text")
+
+	// Line count
+	parts.push(`${metadata.lineCount} line${metadata.lineCount !== 1 ? "s" : ""}`)
+
+	// Size if > 1KB
+	if (metadata.byteSize >= 1024) {
+		parts.push(formatByteSize(metadata.byteSize))
+	}
+
+	return parts.join(", ")
 }

@@ -187,6 +187,8 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 
 			return options
 		}
+	} else if (pendingMessage.ask === "payment_required_prompt") {
+		approveLabel = "Retry"
 	}
 
 	return [
