@@ -247,6 +247,8 @@
 		"searchProviderPlaceholder": "Cerca fornitori",
 		"noProviderMatchFound": "Nessun fornitore trovato",
 		"vscodeLmDescription": "L'API del Modello di Linguaggio di VS Code consente di eseguire modelli forniti da altre estensioni di VS Code (incluso, ma non limitato a, GitHub Copilot). Il modo più semplice per iniziare è installare le estensioni Copilot e Copilot Chat dal VS Code Marketplace.",
+		"vscodeLmUnavailable": "Il supporto ai Language Model di VS Code è disponibile solo in Visual Studio Code. Fork come VSCodium e altri potrebbero non funzionare. Inoltre, questa funzionalità non è disponibile negli strumenti JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assicurati di utilizzare uno strumento supportato e che VS Code Chat sia installato e abilitato",
 		"awsCustomArnUse": "Inserisci un ARN Amazon Bedrock valido per il modello che desideri utilizzare. Esempi di formato:",
 		"awsCustomArnDesc": "Assicurati che la regione nell'ARN corrisponda alla regione AWS selezionata sopra.",
 		"openRouterApiKey": "Chiave API OpenRouter",
@@ -289,6 +291,8 @@
 		"getChutesApiKey": "Ottieni chiave API Chutes",
 		"fireworksApiKey": "Chiave API Fireworks",
 		"getFireworksApiKey": "Ottieni chiave API Fireworks",
+		"syntheticApiKey": "Chiave API Synthetic",
+		"getSyntheticApiKey": "Ottieni chiave API Synthetic",
 		"featherlessApiKey": "Chiave API Featherless",
 		"getFeatherlessApiKey": "Ottieni chiave API Featherless",
 		"ioIntelligenceApiKey": "Chiave API IO Intelligence",
@@ -312,6 +316,10 @@
 		"sambaNovaApiKey": "Chiave API SambaNova",
 		"getHuggingFaceApiKey": "Ottieni chiave API Hugging Face",
 		"huggingFaceApiKey": "Chiave API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Ottieni chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chiave API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL di base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usa un URL di base personalizzato",
 		"huggingFaceModelId": "ID modello",
 		"huggingFaceLoading": "Caricamento...",
 		"huggingFaceModelsCount": "({{count}} modelli)",
@@ -456,6 +464,10 @@
 				}
 			},
 			"resetDefaults": "Ripristina valori predefiniti"
+		},
+		"rateLimitAfter": {
+			"label": "Limite di velocità alla fine",
+			"description": "Inizia a limitare la velocità dopo che lo stream API termina."
 		},
 		"rateLimitSeconds": {
 			"label": "Limite di frequenza",
@@ -793,7 +805,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Abilita Fast Apply",
-			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede il provider API Kilo Code, OpenRouter o una chiave API Morph.",
+			"description": "Quando abilitato, Kilo Code può modificare i file utilizzando Fast Apply con modelli specializzati ottimizzati per le modifiche al codice. Richiede Kilo Gateway Provider, OpenRouter o una chiave API Morph.",
 			"apiKey": "Chiave API Morph (opzionale)",
 			"placeholder": "Inserisci la tua chiave API Morph (opzionale)",
 			"modelLabel": "Selezione modello",
@@ -879,6 +891,7 @@
 			"regionMismatch": "Attenzione: La regione nel tuo ARN ({{arnRegion}}) non corrisponde alla regione selezionata ({{region}}). Questo potrebbe causare problemi di accesso. Il provider utilizzerà la regione dall'ARN."
 		},
 		"modelAvailability": "L'ID modello ({{modelId}}) fornito non è disponibile. Seleziona un modello diverso.",
+		"modelDeprecated": "Questo modello non è più disponibile. Seleziona un modello diverso.",
 		"providerNotAllowed": "Il fornitore '{{provider}}' non è consentito dalla tua organizzazione",
 		"modelNotAllowed": "Il modello '{{model}}' non è consentito per il fornitore '{{provider}}' dalla tua organizzazione.",
 		"profileInvalid": "Questo profilo contiene un fornitore o un modello non consentito dalla tua organizzazione.",
@@ -921,6 +934,19 @@
 		"taskTimeline": {
 			"label": "Mostra cronologia attività",
 			"description": "Visualizza una cronologia visiva dei messaggi delle attività, colorati per tipologia, permettendoti di visualizzare rapidamente i progressi delle attività e scorrere indietro fino a punti specifici nella cronologia dell'attività."
+		},
+		"sendMessageOnEnter": {
+			"label": "Invia messaggio con Invio",
+			"description": "Quando abilitato, premi Invio per inviare e Maiusc+Invio per una nuova riga. Disattiva per usare Maiusc+Invio per inviare invece."
+		},
+		"costThreshold": {
+			"label": "Nascondi costo sotto la soglia",
+			"currentValue": "Soglia attuale: ${{value}}",
+			"description": "Mostra solo i costi delle richieste superiori a questo importo. I costi sono sempre visibili quando il riquadro dei dettagli è aperto."
+		},
+		"showTimestamps": {
+			"label": "Mostra timestamp",
+			"description": "Mostra il timestamp per ogni messaggio nella vista chat"
 		}
 	},
 	"ghost": {

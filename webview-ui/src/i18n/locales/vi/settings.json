@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Không tìm thấy nhà cung cấp",
 		"noMatchFound": "Không tìm thấy hồ sơ phù hợp",
 		"vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
+		"vscodeLmUnavailable": "Hỗ trợ Mô hình Ngôn ngữ VS Code chỉ có trên Visual Studio Code. Các bản fork như VSCodium và các công cụ khác có thể không hoạt động. Ngoài ra, tính năng này không có trong các công cụ JetBrains.",
+		"vscodeLmUnavailableInstructions": "Hãy đảm bảo bạn đang sử dụng công cụ được hỗ trợ và VS Code Chat đã được cài đặt và kích hoạt",
 		"awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",
@@ -288,6 +290,8 @@
 		"getChutesApiKey": "Lấy khóa API Chutes",
 		"fireworksApiKey": "Khóa API Fireworks",
 		"getFireworksApiKey": "Lấy khóa API Fireworks",
+		"syntheticApiKey": "Khóa API Synthetic",
+		"getSyntheticApiKey": "Lấy khóa API Synthetic",
 		"featherlessApiKey": "Khóa API Featherless",
 		"getFeatherlessApiKey": "Lấy khóa API Featherless",
 		"ioIntelligenceApiKey": "Khóa API IO Intelligence",
@@ -311,6 +315,10 @@
 		"sambaNovaApiKey": "Khóa API SambaNova",
 		"getHuggingFaceApiKey": "Lấy Khóa API Hugging Face",
 		"huggingFaceApiKey": "Khóa API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Lấy Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Khóa API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL Cơ sở",
+		"getOvhCloudAiEndpointsBaseUrl": "Sử dụng URL cơ sở tùy chỉnh",
 		"huggingFaceModelId": "ID Mô hình",
 		"huggingFaceLoading": "Đang tải...",
 		"huggingFaceModelsCount": "({{count}} mô hình)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "Đặt lại về mặc định"
+		},
+		"rateLimitAfter": {
+			"label": "Giới hạn tỷ lệ ở cuối",
+			"description": "Bắt đầu hạn chế tỷ lệ sau khi luồng API kết thúc."
 		},
 		"rateLimitSeconds": {
 			"label": "Giới hạn tốc độ",
@@ -792,7 +804,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Bật Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Nhà cung cấp API Kilo Code, OpenRouter hoặc khóa API Morph.",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
 			"apiKey": "Khóa API Morph (tùy chọn)",
 			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
 			"modelLabel": "Lựa chọn mô hình",
@@ -878,6 +890,7 @@
 			"regionMismatch": "Cảnh báo: Vùng trong ARN của bạn ({{arnRegion}}) không khớp với vùng bạn đã chọn ({{region}}). Điều này có thể gây ra vấn đề truy cập. Nhà cung cấp sẽ sử dụng vùng từ ARN."
 		},
 		"modelAvailability": "ID mô hình ({{modelId}}) bạn đã cung cấp không khả dụng. Vui lòng chọn một mô hình khác.",
+		"modelDeprecated": "Mô hình này không còn khả dụng. Vui lòng chọn một mô hình khác.",
 		"providerNotAllowed": "Nhà cung cấp '{{provider}}' không được phép bởi tổ chức của bạn",
 		"modelNotAllowed": "Mô hình '{{model}}' không được phép cho nhà cung cấp '{{provider}}' bởi tổ chức của bạn",
 		"profileInvalid": "Hồ sơ này chứa một nhà cung cấp hoặc mô hình không được phép bởi tổ chức của bạn",
@@ -920,6 +933,19 @@
 		"taskTimeline": {
 			"label": "Hiển thị dòng thời gian công việc",
 			"description": "Hiển thị dòng thời gian trực quan của các tin nhắn công việc, được phân loại theo màu sắc theo từng loại, cho phép bạn nhanh chóng xem tiến độ công việc và cuộn lại các điểm cụ thể trong lịch sử của công việc."
+		},
+		"sendMessageOnEnter": {
+			"label": "Gửi tin nhắn bằng Enter",
+			"description": "Khi được bật, nhấn Enter để gửi và Shift+Enter cho dòng mới. Tắt để sử dụng Shift+Enter để gửi."
+		},
+		"costThreshold": {
+			"label": "Ẩn chi phí dưới ngưỡng",
+			"description": "Chỉ hiển thị chi phí yêu cầu trên mức này. Chi phí luôn được hiển thị khi khung thông tin chi tiết được mở.",
+			"currentValue": "Ngưỡng hiện tại: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Hiển thị dấu thời gian",
+			"description": "Hiển thị dấu thời gian cho mỗi tin nhắn trong giao diện chat"
 		}
 	},
 	"ghost": {

@@ -16,13 +16,13 @@ fun createRawURITransformer(remoteAuthority: String): IRawURITransformer {
                     scheme = "file",
                     path = uri.path,
                     query = uri.query,
-                    fragment = uri.fragment
+                    fragment = uri.fragment,
                 )
                 "file" -> UriParts(
                     scheme = "vscode-local",
                     path = uri.path,
                     query = uri.query,
-                    fragment = uri.fragment
+                    fragment = uri.fragment,
                 )
                 else -> uri
             }
@@ -35,13 +35,13 @@ fun createRawURITransformer(remoteAuthority: String): IRawURITransformer {
                     authority = remoteAuthority,
                     path = uri.path,
                     query = uri.query,
-                    fragment = uri.fragment
+                    fragment = uri.fragment,
                 )
                 "vscode-local" -> UriParts(
                     scheme = "file",
                     path = uri.path,
                     query = uri.query,
-                    fragment = uri.fragment
+                    fragment = uri.fragment,
                 )
                 else -> uri
             }
@@ -70,17 +70,18 @@ fun createURITransformer(remoteAuthority: String): IURITransformer {
  * Used for conversion between string and URI
  */
 class UriReplacer(private val transformer: IURITransformer) : (String, Any?) -> Any? {
-    
+
     override fun invoke(key: String, value: Any?): Any? {
         if (value is String && (
-            key == "uri" || 
-            key == "documentUri" || 
-            key == "targetUri" || 
-            key == "sourceUri" || 
-            key.endsWith("Uri"))
+                key == "uri" ||
+                    key == "documentUri" ||
+                    key == "targetUri" ||
+                    key == "sourceUri" ||
+                    key.endsWith("Uri")
+                )
         ) {
             return transformer.transformOutgoingURI(value)
         }
         return value
     }
-} 
+}

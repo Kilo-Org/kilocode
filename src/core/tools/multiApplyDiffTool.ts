@@ -2,7 +2,10 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import {
+	DEFAULT_WRITE_DELAY_MS,
+	getActiveToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -15,8 +18,9 @@ import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { parseXmlForDiff } from "../../utils/xml"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "./applyDiffTool"
+import { applyNativeDiffTool } from "./kilocode/applyNativeDiffTool"
 
-interface DiffOperation {
+export /*kilocode_change*/ interface DiffOperation {
 	path: string
 	diff: Array<{
 		content: string
@@ -25,7 +29,7 @@ interface DiffOperation {
 }
 
 // Track operation status
-interface OperationResult {
+export /*kilocode_change*/ interface OperationResult {
 	path: string
 	status: "pending" | "approved" | "denied" | "blocked" | "error"
 	error?: string
@@ -50,7 +54,25 @@ interface ParsedXmlResult {
 	file: ParsedFile | ParsedFile[]
 }
 
+// kilocode_change: native tool calling
 export async function applyDiffTool(
+	cline: Task,
+	block: ToolUse,
+	askApproval: AskApproval,
+	handleError: HandleError,
+	pushToolResult: PushToolResult,
+	removeClosingTag: RemoveClosingTag,
+) {
+	if (getActiveToolUseStyle(cline.apiConfiguration) === "json") {
+		console.log("Using native multi-file apply diff tool")
+		return applyNativeDiffTool(cline, block, askApproval, handleError, pushToolResult)
+	}
+	console.log("Using XML multi-file apply diff tool")
+	return applyXMLDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+}
+// kilocode_change end
+
+/* kilocode_change: rename */ async function applyXMLDiffTool(
 	cline: Task,
 	block: ToolUse,
 	askApproval: AskApproval,

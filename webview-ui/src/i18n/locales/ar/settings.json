@@ -255,6 +255,8 @@
 		"noProviderMatchFound": "لم يتم العثور على مزوّدين",
 		"noMatchFound": "ما فيه ملفات مطابقة",
 		"vscodeLmDescription": "واجهة VS Code Language Model تسمح بتشغيل نماذج من إضافات أخرى مثل GitHub Copilot.",
+		"vscodeLmUnavailable": "دعم نماذج اللغة الخاصة بـ VS Code متاح فقط على Visual Studio Code. قد لا تعمل النسخ الفرعية مثل VSCodium وغيرها. علاوة على ذلك، هذه الميزة غير متوفرة في أدوات JetBrains.",
+		"vscodeLmUnavailableInstructions": "تأكد من أنك تستخدم أداة مدعومة وأن VS Code Chat مثبت ومُمكّن",
 		"awsCustomArnUse": "أدخل ARN صحيح لنموذج Amazon Bedrock. أمثلة:",
 		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
 		"openRouterApiKey": "مفتاح OpenRouter",
@@ -306,6 +308,8 @@
 		"getFeatherlessApiKey": "احصل على مفتاح Featherless API",
 		"fireworksApiKey": "مفتاح Fireworks",
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
+		"syntheticApiKey": "مفتاح Synthetic API",
+		"getSyntheticApiKey": "احصل على مفتاح Synthetic API",
 		"zaiApiKey": "مفتاح Z.AI",
 		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"moonshotApiKey": "مفتاح Moonshot",
@@ -322,6 +326,10 @@
 		"openAiApiKey": "مفتاح OpenAI",
 		"getHuggingFaceApiKey": "احصل على مفتاح Hugging Face API",
 		"huggingFaceApiKey": "مفتاح Hugging Face API",
+		"getOvhCloudAiEndpointsApiKey": "احصل على مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "مفتاح OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL الأساسي",
+		"getOvhCloudAiEndpointsBaseUrl": "استخدام URL أساسي مخصص",
 		"huggingFaceModelId": "معرّف النموذج",
 		"huggingFaceLoading": "جارٍ التحميل...",
 		"huggingFaceModelsCount": "({{count}} نموذج)",
@@ -474,6 +482,10 @@
 			},
 			"resetDefaults": "رجع للإعدادات الافتراضية"
 		},
+		"rateLimitAfter": {
+			"label": "تحديد الحدّ الأقصى عند النهاية",
+			"description": "ابدأ تقييد المعدل بعد انتهاء تدفّق واجهة برمجة التطبيقات."
+		},
 		"rateLimitSeconds": {
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
@@ -595,6 +607,19 @@
 		"taskTimeline": {
 			"label": "إظهار خط الزمن للمهمة",
 			"description": "يعرض مخطط زمني ملون لرسائل المهمة لتتبع التقدّم بسرعة."
+		},
+		"sendMessageOnEnter": {
+			"label": "إرسال رسالة باستخدام Enter",
+			"description": "عند التمكين، اضغط على Enter للإرسال و Shift+Enter لسطر جديد. قم بإيقاف التشغيل لاستخدام Shift+Enter للإرسال بدلاً من ذلك."
+		},
+		"costThreshold": {
+			"label": "إخفاء التكلفة أقل من الحد الأدنى",
+			"currentValue": "الحد الحالي: ${{value}}",
+			"description": "إظهار تكاليف الطلب فقط عندما تتجاوز هذا المبلغ. التكاليف تكون مرئية دائمًا عندما تكون لوحة التفاصيل مفتوحة."
+		},
+		"showTimestamps": {
+			"label": "إظهار الطوابع الزمنية",
+			"description": "إظهار الطابع الزمني لكل رسالة في عرض المحادثة"
 		}
 	},
 	"ghost": {
@@ -818,8 +843,8 @@
 			"description": "يحرر عدة ملفات في طلب واحد."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "تفعيل التطبيق السريع",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"name": "تفعيل Fast Apply",
+			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
 			"placeholder": "أدخل مفتاح Morph API (اختياري)",
 			"modelLabel": "اختيار النموذج",
@@ -939,7 +964,8 @@
 		"providerNotAllowed": "المزوّد '{{provider}}' غير مسموح به.",
 		"modelNotAllowed": "النموذج '{{model}}' غير مسموح به للمزوّد '{{provider}}'.",
 		"profileInvalid": "الملف يحتوي مزوّد أو نموذج غير مسموح.",
-		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth."
+		"qwenCodeOauthPath": "يجب توفير مسار صالح لبيانات OAuth.",
+		"modelDeprecated": "هذا النموذج لم يعد متوفرًا. يرجى اختيار نموذج آخر."
 	},
 	"placeholders": {
 		"apiKey": "اكتب مفتاح API...",

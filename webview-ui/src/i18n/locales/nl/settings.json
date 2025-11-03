@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Geen providers gevonden",
 		"noMatchFound": "Geen overeenkomende profielen gevonden",
 		"vscodeLmDescription": "De VS Code Language Model API stelt je in staat modellen te draaien die door andere VS Code-extensies worden geleverd (waaronder GitHub Copilot). De eenvoudigste manier om te beginnen is door de Copilot- en Copilot Chat-extensies te installeren vanuit de VS Code Marketplace.",
+		"vscodeLmUnavailable": "Ondersteuning voor VS Code Language Models is alleen beschikbaar in Visual Studio Code. Forks zoals VSCodium en anderen werken mogelijk niet. Bovendien is deze functionaliteit niet beschikbaar in JetBrains-tools.",
+		"vscodeLmUnavailableInstructions": "Zorg dat u een ondersteunde tool gebruikt en dat VS Code Chat is geïnstalleerd en ingeschakeld",
 		"awsCustomArnUse": "Voer een geldige Amazon Bedrock ARN in voor het model dat je wilt gebruiken. Voorbeeldformaten:",
 		"awsCustomArnDesc": "Zorg ervoor dat de regio in de ARN overeenkomt met je geselecteerde AWS-regio hierboven.",
 		"openRouterApiKey": "OpenRouter API-sleutel",
@@ -288,6 +290,8 @@
 		"getChutesApiKey": "Chutes API-sleutel ophalen",
 		"fireworksApiKey": "Fireworks API-sleutel",
 		"getFireworksApiKey": "Fireworks API-sleutel ophalen",
+		"syntheticApiKey": "Synthetic API-sleutel",
+		"getSyntheticApiKey": "Synthetic API-sleutel ophalen",
 		"featherlessApiKey": "Featherless API-sleutel",
 		"getFeatherlessApiKey": "Featherless API-sleutel ophalen",
 		"ioIntelligenceApiKey": "IO Intelligence API-sleutel",
@@ -312,6 +316,10 @@
 		"getGeminiApiKey": "Gemini API-sleutel ophalen",
 		"getHuggingFaceApiKey": "Hugging Face API-sleutel ophalen",
 		"huggingFaceApiKey": "Hugging Face API-sleutel",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel ophalen",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-sleutel",
+		"ovhCloudAiEndpointsBaseUrl": "Basis-URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Aangepaste basis-URL gebruiken",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Laden...",
 		"huggingFaceModelsCount": "({{count}} modellen)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "Standaardwaarden herstellen"
+		},
+		"rateLimitAfter": {
+			"label": "Snelheidslimiet aan het eind",
+			"description": "Begin met snelheidsbeperking nadat de API-stream is beëindigd."
 		},
 		"rateLimitSeconds": {
 			"label": "Snelheidslimiet",
@@ -761,7 +773,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Code API Provider, OpenRouter, of een Morph API-sleutel.",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
 			"apiKey": "Morph API-sleutel (optioneel)",
 			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
 			"modelLabel": "Modelselectie",
@@ -878,6 +890,7 @@
 			"regionMismatch": "Waarschuwing: De regio in je ARN ({{arnRegion}}) komt niet overeen met je geselecteerde regio ({{region}}). Dit kan toegangsfouten veroorzaken. De provider gebruikt de regio uit de ARN."
 		},
 		"modelAvailability": "Het opgegeven model-ID ({{modelId}}) is niet beschikbaar. Kies een ander model.",
+		"modelDeprecated": "Dit model is niet meer beschikbaar. Kies een ander model.",
 		"providerNotAllowed": "Provider '{{provider}}' is niet toegestaan door je organisatie",
 		"modelNotAllowed": "Model '{{model}}' is niet toegestaan voor provider '{{provider}}' door je organisatie",
 		"profileInvalid": "Dit profiel bevat een provider of model dat niet is toegestaan door je organisatie",
@@ -920,6 +933,19 @@
 		"taskTimeline": {
 			"label": "Taaktijdlijn weergeven",
 			"description": "Toon een visuele tijdlijn van taakmeldingen, gekleurd per type, waardoor je snel de voortgang van taken kunt bekijken en terug kunt scrollen naar specifieke punten in de geschiedenis van de taak."
+		},
+		"sendMessageOnEnter": {
+			"label": "Bericht verzenden met Enter",
+			"description": "Indien ingeschakeld, druk op Enter om te verzenden en Shift+Enter voor een nieuwe regel. Schakel uit om in plaats daarvan Shift+Enter te gebruiken om te verzenden."
+		},
+		"costThreshold": {
+			"label": "Kosten onder drempel verbergen",
+			"currentValue": "Huidige drempelwaarde: ${{value}}",
+			"description": "Toon alleen aanvraagkosten hoger dan dit bedrag. Kosten zijn altijd zichtbaar wanneer het detailpaneel is geopend."
+		},
+		"showTimestamps": {
+			"label": "Tijdstempels weergeven",
+			"description": "Toon tijdstempel voor elk bericht in de chatweergave"
 		}
 	},
 	"ghost": {

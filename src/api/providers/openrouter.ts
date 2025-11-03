@@ -7,6 +7,7 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	getActiveToolUseStyle,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -29,17 +30,22 @@ import type {
 	SingleCompletionHandler,
 } from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
 	order?: string[]
 	only?: string[]
-	ignore?: string[] // kilocode_change
 	allow_fallbacks?: boolean
 	data_collection?: "allow" | "deny"
 	sort?: "price" | "throughput" | "latency"
+	zdr?: boolean
 }
+
+import { safeJsonParse } from "../../shared/safeJsonParse"
+import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 // kilocode_change end
+
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
 // Image generation types
@@ -106,8 +112,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	protected endpoints: ModelRecord = {}
 
 	// kilocode_change start property
-	protected get providerName() {
-		return "OpenRouter"
+	protected get providerName(): "OpenRouter" | "KiloCode" {
+		return "OpenRouter" as const
 	}
 	// kilocode_change end
 
@@ -142,14 +148,20 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					only: [this.options.openRouterSpecificProvider],
 					allow_fallbacks: false,
 					data_collection: this.options.openRouterProviderDataCollection,
+					zdr: this.options.openRouterZdr,
 				},
 			}
 		}
-		if (this.options.openRouterProviderDataCollection || this.options.openRouterProviderSort) {
+		if (
+			this.options.openRouterProviderDataCollection ||
+			this.options.openRouterProviderSort ||
+			this.options.openRouterZdr
+		) {
 			return {
 				provider: {
 					data_collection: this.options.openRouterProviderDataCollection,
 					sort: this.options.openRouterProviderSort,
+					zdr: this.options.openRouterZdr,
 				},
 			}
 		}
@@ -189,15 +201,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			openAiMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
 		}
 
-		// https://openrouter.ai/docs/features/prompt-caching
-		// TODO: Add a `promptCacheStratey` field to `ModelInfo`.
-		if (OPEN_ROUTER_PROMPT_CACHING_MODELS.has(modelId)) {
-			if (modelId.startsWith("google")) {
-				addGeminiCacheBreakpoints(systemPrompt, openAiMessages)
-			} else {
-				addAnthropicCacheBreakpoints(systemPrompt, openAiMessages)
-			}
+		// kilocode_change start
+		if (modelId.startsWith("google/gemini")) {
+			addGeminiCacheBreakpoints(systemPrompt, openAiMessages)
+		} else if (modelId.startsWith("anthropic/claude") || OPEN_ROUTER_PROMPT_CACHING_MODELS.has(modelId)) {
+			addAnthropicCacheBreakpoints(systemPrompt, openAiMessages)
 		}
+		// kilocode_change end
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
@@ -215,6 +225,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...(reasoning && { reasoning }),
 		}
 
+		// kilocode_change start: Add native tool call support when toolStyle is "json"
+		addNativeToolCallsToParams(completionParams, this.options, metadata)
+		// kilocode_change end
+
 		let stream
 		try {
 			stream = await this.client.chat.completions.create(
@@ -222,10 +236,16 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				this.customRequestOptions(metadata), // kilocode_change
 			)
 		} catch (error) {
-			throw handleOpenAIError(error, this.providerName)
+			// kilocode_change start
+			if (this.providerName == "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
+				throw error
+			}
+			throw new Error(makeOpenRouterErrorReadable(error))
+			// kilocode_change end
 		}
 
 		let lastUsage: CompletionUsage | undefined = undefined
+		let inferenceProvider: string | undefined // kilocode_change
 
 		try {
 			for await (const chunk of stream) {
@@ -235,6 +255,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
 					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
 				}
+
+				// kilocode_change start
+				if ("provider" in chunk && typeof chunk.provider === "string") {
+					inferenceProvider = chunk.provider
+				}
+				// kilocode_change end
 
 				verifyFinishReason(chunk.choices[0]) // kilocode_change
 				const delta = chunk.choices[0]?.delta
@@ -253,9 +279,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
 
-				if (delta && (delta.tool_calls?.length ?? 0) > 0) {
-					console.error("Model tried to use native tool calls", delta.tool_calls)
-				}
+				// Handle native tool calls when toolStyle is "json"
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
 				if (delta?.content) {
@@ -278,7 +303,10 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				outputTokens: lastUsage.completion_tokens || 0,
 				cacheReadTokens: lastUsage.prompt_tokens_details?.cached_tokens,
 				reasoningTokens: lastUsage.completion_tokens_details?.reasoning_tokens,
-				totalCost: this.getTotalCost(lastUsage), // kilocode_change
+				// kilocode_change start
+				totalCost: this.getTotalCost(lastUsage),
+				inferenceProvider,
+				// kilocode_change end
 			}
 		}
 	}
@@ -488,8 +516,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
+	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
+	const parsedJson = safeJsonParse(metadata?.raw)
+	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+
 	if (error?.code !== 429 && error?.code !== 418) {
-		return `OpenRouter API Error: ${error?.message || error}`
+		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 
 	try {

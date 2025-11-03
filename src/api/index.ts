@@ -1,4 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk"
+import OpenAI from "openai" // kilocode_change
 
 import type { ProviderSettings, ModelInfo } from "@roo-code/types"
 
@@ -40,10 +41,12 @@ import {
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
+	SyntheticHandler, // kilocode_change
 	RooHandler,
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
 	DeepInfraHandler,
+	OVHcloudAIEndpointsHandler, // kilocode_change
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
@@ -72,6 +75,19 @@ export interface ApiHandlerCreateMessageMetadata {
 	 * @default true
 	 */
 	store?: boolean
+	// kilocode_change start
+	/**
+	 * Array of allowed tools for the current mode when using JSON tool style.
+	 * This contains the full tool definitions (function schemas) that the model can use.
+	 */
+	allowedTools?: OpenAI.Chat.ChatCompletionTool[]
+	/**
+	 * KiloCode-specific: The project ID for the current workspace (derived from git origin remote).
+	 * Used by KiloCodeOpenrouterHandler for backend tracking. Ignored by other providers.
+	 * @kilocode-only
+	 */
+	projectId?: string
+	// kilocode_change end
 }
 
 export interface ApiHandler {
@@ -172,6 +188,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new ZAiHandler(options)
 		case "fireworks":
 			return new FireworksHandler(options)
+		// kilocode_change start
+		case "synthetic":
+			return new SyntheticHandler(options)
+		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)
 		case "roo":
@@ -182,6 +202,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 			return new FeatherlessHandler(options)
 		case "vercel-ai-gateway":
 			return new VercelAiGatewayHandler(options)
+		// kilocode_change start
+		case "ovhcloud":
+			return new OVHcloudAIEndpointsHandler(options)
+		// kilocode_change end
 		default:
 			apiProvider satisfies "gemini-cli" | undefined
 			return new AnthropicHandler(options)

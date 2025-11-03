@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "कोई प्रदाता नहीं मिला",
 		"noMatchFound": "कोई मिलान प्रोफ़ाइल नहीं मिला",
 		"vscodeLmDescription": "VS कोड भाषा मॉडल API आपको अन्य VS कोड एक्सटेंशन (जैसे GitHub Copilot) द्वारा प्रदान किए गए मॉडल चलाने की अनुमति देता है। शुरू करने का सबसे आसान तरीका VS कोड मार्केटप्लेस से Copilot और Copilot चैट एक्सटेंशन इंस्टॉल करना है।",
+		"vscodeLmUnavailable": "VS Code भाषा मॉडल समर्थन केवल Visual Studio Code में उपलब्ध है। VSCodium जैसे फोर्क और अन्य काम नहीं कर सकते। इसके अलावा, यह क्षमता JetBrains टूल में उपलब्ध नहीं है।",
+		"vscodeLmUnavailableInstructions": "सुनिश्चित करें कि आप किसी समर्थित टूल का उपयोग कर रहे हैं और VS Code Chat इंस्टॉल और सक्षम है",
 		"awsCustomArnUse": "आप जिस मॉडल का उपयोग करना चाहते हैं, उसके लिए एक वैध Amazon बेडरॉक ARN दर्ज करें। प्रारूप उदाहरण:",
 		"awsCustomArnDesc": "सुनिश्चित करें कि ARN में क्षेत्र ऊपर चयनित AWS क्षेत्र से मेल खाता है।",
 		"openRouterApiKey": "OpenRouter API कुंजी",
@@ -288,6 +290,8 @@
 		"getChutesApiKey": "Chutes API कुंजी प्राप्त करें",
 		"fireworksApiKey": "Fireworks API कुंजी",
 		"getFireworksApiKey": "Fireworks API कुंजी प्राप्त करें",
+		"syntheticApiKey": "Synthetic API कुंजी",
+		"getSyntheticApiKey": "Synthetic API कुंजी प्राप्त करें",
 		"featherlessApiKey": "Featherless API कुंजी",
 		"getFeatherlessApiKey": "Featherless API कुंजी प्राप्त करें",
 		"ioIntelligenceApiKey": "IO Intelligence API कुंजी",
@@ -311,6 +315,10 @@
 		"sambaNovaApiKey": "SambaNova API कुंजी",
 		"getHuggingFaceApiKey": "Hugging Face API कुंजी प्राप्त करें",
 		"huggingFaceApiKey": "Hugging Face API कुंजी",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी प्राप्त करें",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API कुंजी",
+		"ovhCloudAiEndpointsBaseUrl": "आधार URL",
+		"getOvhCloudAiEndpointsBaseUrl": "कस्टम आधार URL का उपयोग करें",
 		"huggingFaceModelId": "मॉडल ID",
 		"huggingFaceLoading": "लोड हो रहा है...",
 		"huggingFaceModelsCount": "({{count}} मॉडल)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "डिफ़ॉल्ट पर रीसेट करें"
+		},
+		"rateLimitAfter": {
+			"label": "अंत में दर सीमा",
+			"description": "API स्ट्रीम समाप्त होने के बाद दर सीमा लगाना शुरू करें."
 		},
 		"rateLimitSeconds": {
 			"label": "दर सीमा",
@@ -761,7 +773,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply सक्षम करें",
-			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Code API प्रदाता, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
+			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Gateway Provider, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
 			"apiKey": "Morph API कुंजी (वैकल्पिक)",
 			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
 			"modelLabel": "मॉडल चयन",
@@ -878,6 +890,7 @@
 			"regionMismatch": "चेतावनी: आपके ARN में क्षेत्र ({{arnRegion}}) आपके चयनित क्षेत्र ({{region}}) से मेल नहीं खाता। इससे पहुंच संबंधी समस्याएं हो सकती हैं। प्रदाता ARN से क्षेत्र का उपयोग करेगा।"
 		},
 		"modelAvailability": "आपके द्वारा प्रदान की गई मॉडल ID ({{modelId}}) उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
+		"modelDeprecated": "यह मॉडल अब उपलब्ध नहीं है। कृपया कोई अन्य मॉडल चुनें।",
 		"providerNotAllowed": "प्रदाता '{{provider}}' आपके संगठन द्वारा अनुमत नहीं है",
 		"modelNotAllowed": "मॉडल '{{model}}' प्रदाता '{{provider}}' के लिए आपके संगठन द्वारा अनुमत नहीं है",
 		"profileInvalid": "इस प्रोफ़ाइल में एक प्रदाता या मॉडल शामिल है जो आपके संगठन द्वारा अनुमत नहीं है",
@@ -920,6 +933,19 @@
 		"taskTimeline": {
 			"label": "कार्य टाइमलाइन दिखाएँ",
 			"description": "कार्य संदेशों की एक दृश्य समयरेखा प्रदर्शित करें, जो प्रकार के अनुसार रंगीन हैं, जिससे आप कार्य की प्रगति को जल्दी से देख सकें और कार्य के इतिहास में विशिष्ट बिंदुओं पर वापस स्क्रॉल कर सकें।"
+		},
+		"sendMessageOnEnter": {
+			"label": "एंटर के साथ संदेश भेजें",
+			"description": "सक्षम होने पर, भेजने के लिए एंटर दबाएं और नई लाइन के लिए Shift+Enter दबाएं। इसके बजाय भेजने के लिए Shift+Enter का उपयोग करने के लिए इसे बंद करें।"
+		},
+		"costThreshold": {
+			"label": "थ्रेशोल्ड से नीचे की लागत छिपाएं",
+			"currentValue": "वर्तमान थ्रेशोल्ड: ${{value}}",
+			"description": "केवल इस राशि से अधिक के अनुरोध की लागतों को दिखाएं। जब विवरण पेन खुला होता है, तो लागतें हमेशा दिखाई देती हैं।"
+		},
+		"showTimestamps": {
+			"label": "टाइमस्टैम्प दिखाएं",
+			"description": "चैट दृश्य में प्रत्येक संदेश के लिए टाइमस्टैम्प दिखाएं"
 		}
 	},
 	"ghost": {

@@ -1,2 +1,2 @@
 # Description: Should suggest common variable assignments
-const userName = <<<CURSOR>>>
+const userName = <<<AUTOCOMPLETE_HERE>>>

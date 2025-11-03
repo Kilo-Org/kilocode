@@ -4,7 +4,6 @@
 
 package ai.kilocode.jetbrains.actors
 
-import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -13,9 +12,6 @@ import com.intellij.openapi.diagnostic.Logger
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.nio.file.StandardOpenOption
 
 /**
  * Secret state management service interface.
@@ -53,11 +49,11 @@ class MainThreadSecretState : MainThreadSecretStateShape {
     private val logger = Logger.getInstance(MainThreadSecretState::class.java)
     private val gson = GsonBuilder().setPrettyPrinting().create()
     private val mutex = Mutex()
-    
+
     // Configuration file path
     private val secretsDir = File(System.getProperty("user.home"), ".kilocode")
     private val secretsFile = File(secretsDir, "secrets.json")
-    
+
     init {
         // Ensure the directory exists
         if (!secretsDir.exists()) {
@@ -71,16 +67,16 @@ class MainThreadSecretState : MainThreadSecretStateShape {
             if (!secretsFile.exists()) {
                 return null
             }
-            
+
             val jsonContent = secretsFile.readText()
             if (jsonContent.isBlank()) {
                 return null
             }
-            
+
             val jsonObject = JsonParser.parseString(jsonContent).asJsonObject
             val extensionObject = jsonObject.getAsJsonObject(extensionId) ?: return null
             val passwordElement = extensionObject.get(key) ?: return null
-            
+
             return passwordElement.asString
         } catch (e: Exception) {
             logger.warn("Failed to get secret: extensionId=$extensionId, key=$key", e)
@@ -95,16 +91,16 @@ class MainThreadSecretState : MainThreadSecretStateShape {
             } else {
                 JsonObject()
             }
-            
+
             val extensionObject = jsonObject.getAsJsonObject(extensionId) ?: JsonObject().also {
                 jsonObject.add(extensionId, it)
             }
-            
+
             extensionObject.addProperty(key, value)
-            
+
             val jsonString = gson.toJson(jsonObject)
             secretsFile.writeText(jsonString)
-            
+
             logger.info("Successfully set secret: extensionId=$extensionId, key=$key")
         } catch (e: Exception) {
             logger.error("Failed to set secret: extensionId=$extensionId, key=$key", e)
@@ -117,25 +113,25 @@ class MainThreadSecretState : MainThreadSecretStateShape {
             if (!secretsFile.exists()) {
                 return
             }
-            
+
             val jsonContent = secretsFile.readText()
             if (jsonContent.isBlank()) {
                 return
             }
-            
+
             val jsonObject = JsonParser.parseString(jsonContent).asJsonObject
             val extensionObject = jsonObject.getAsJsonObject(extensionId) ?: return
-            
+
             extensionObject.remove(key)
-            
+
             // If extension object is empty, delete the entire extension
             if (extensionObject.size() == 0) {
                 jsonObject.remove(extensionId)
             }
-            
+
             val jsonString = gson.toJson(jsonObject)
             secretsFile.writeText(jsonString)
-            
+
             logger.info("Successfully deleted secret: extensionId=$extensionId, key=$key")
         } catch (e: Exception) {
             logger.error("Failed to delete secret: extensionId=$extensionId, key=$key", e)
@@ -147,4 +143,4 @@ class MainThreadSecretState : MainThreadSecretStateShape {
         logger.info("Disposing MainThreadSecretState resources")
         // JSON file storage doesn't require special resource disposal
     }
-} 
+}

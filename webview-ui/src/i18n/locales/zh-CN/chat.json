@@ -67,7 +67,7 @@
 		"tooltip": "批准此操作"
 	},
 	"runCommand": {
-		"title": "命令",
+		"title": "运行",
 		"tooltip": "执行此命令"
 	},
 	"proceedWhileRunning": {
@@ -130,7 +130,8 @@
 		"settings": "模式设置",
 		"description": "专门定制Kilo Code行为的角色。",
 		"searchPlaceholder": "搜索模式...",
-		"noResults": "未找到结果"
+		"noResults": "未找到结果",
+		"organizationModes": "组织模式"
 	},
 	"errorReadingFile": "读取文件时出错",
 	"noValidImages": "没有处理有效图片",
@@ -329,6 +330,8 @@
 		"tooltips": {
 			"expand": "展开代码块",
 			"collapse": "收起代码块",
+			"enable_wrap": "启用换行",
+			"disable_wrap": "禁用换行",
 			"copy_code": "复制代码"
 		}
 	},

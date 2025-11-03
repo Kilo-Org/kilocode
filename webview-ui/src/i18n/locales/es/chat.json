@@ -130,7 +130,8 @@
 		"settings": "Configuración de Modos",
 		"description": "Personalidades especializadas que adaptan el comportamiento de Kilo Code.",
 		"searchPlaceholder": "Buscar modos...",
-		"noResults": "No se encontraron resultados"
+		"noResults": "No se encontraron resultados",
+		"organizationModes": "Modos de organización"
 	},
 	"errorReadingFile": "Error al leer el archivo",
 	"noValidImages": "No se procesaron imágenes válidas",
@@ -328,6 +329,8 @@
 		"tooltips": {
 			"expand": "Expandir bloque de código",
 			"collapse": "Contraer bloque de código",
+			"enable_wrap": "Activar ajuste de línea",
+			"disable_wrap": "Desactivar ajuste de línea",
 			"copy_code": "Copiar código"
 		}
 	},

@@ -9,8 +9,8 @@ import { XmlMatcher } from "../../utils/xml-matcher"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
 // kilocode_change start
-import { fetchWithTimeout } from "./kilocode/fetchWithTimeout"
-const OLLAMA_TIMEOUT_MS = 3_600_000
+import { fetchWithTimeout, HeadersTimeoutError } from "./kilocode/fetchWithTimeout"
+import { getApiRequestTimeout } from "./utils/timeout-config"
 
 const TOKEN_ESTIMATION_FACTOR = 4 //Industry standard technique for estimating token counts without actually implementing a parser/tokenizer
 
@@ -178,7 +178,7 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 				this.client = new Ollama({
 					host: this.options.ollamaBaseUrl || "http://localhost:11434",
 					// kilocode_change start
-					fetch: fetchWithTimeout(OLLAMA_TIMEOUT_MS, headers),
+					fetch: fetchWithTimeout(getApiRequestTimeout(), headers),
 					headers: headers,
 					// kilocode_change end
 				})
@@ -292,6 +292,12 @@ export class NativeOllamaHandler extends BaseProvider implements SingleCompletio
 			// Enhance error reporting
 			const statusCode = error.status || error.statusCode
 			const errorMessage = error.message || "Unknown error"
+
+			// kilocode_change start
+			if (error.cause instanceof HeadersTimeoutError) {
+				throw new Error("Headers timeout", { cause: error })
+			}
+			// kilocode_change end
 
 			if (error.code === "ECONNREFUSED") {
 				throw new Error(

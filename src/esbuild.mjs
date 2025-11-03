@@ -64,6 +64,9 @@ async function main() {
 					// Copy walkthrough files to dist directory
 					copyPaths([["walkthrough", "walkthrough"]], srcDir, distDir)
 
+					// Copy tree-sitter files to dist directory
+					copyPaths([["services/continuedev/tree-sitter", "tree-sitter"]], srcDir, distDir)
+
 					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
 					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")
 
@@ -121,7 +124,7 @@ async function main() {
 		plugins,
 		entryPoints: ["extension.ts"],
 		outfile: "dist/extension.js",
-		external: ["vscode"],
+		external: ["vscode", "sqlite3"],
 	}
 
 	/**

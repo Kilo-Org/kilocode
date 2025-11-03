@@ -130,7 +130,8 @@
 		"settings": "모드 설정",
 		"description": "Kilo Code의 행동을 맞춤화하는 전문화된 페르소나.",
 		"searchPlaceholder": "모드 검색...",
-		"noResults": "결과를 찾을 수 없습니다"
+		"noResults": "결과를 찾을 수 없습니다",
+		"organizationModes": "조직 모드"
 	},
 	"errorReadingFile": "파일 읽기 오류",
 	"noValidImages": "처리된 유효한 이미지가 없습니다",
@@ -328,6 +329,8 @@
 		"tooltips": {
 			"expand": "코드 블록 확장",
 			"collapse": "코드 블록 축소",
+			"enable_wrap": "줄 바꿈 활성화",
+			"disable_wrap": "줄 바꿈 비활성화",
 			"copy_code": "코드 복사"
 		}
 	},

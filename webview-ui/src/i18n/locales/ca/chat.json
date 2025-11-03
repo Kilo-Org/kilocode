@@ -130,7 +130,8 @@
 		"settings": "Configuració de Modes",
 		"description": "Personalitats especialitzades que adapten el comportament de Kilo Code.",
 		"searchPlaceholder": "Cerca modes...",
-		"noResults": "No s'han trobat resultats"
+		"noResults": "No s'han trobat resultats",
+		"organizationModes": "Modes d'organització"
 	},
 	"errorReadingFile": "Error en llegir el fitxer",
 	"noValidImages": "No s'ha processat cap imatge vàlida",
@@ -328,6 +329,8 @@
 		"tooltips": {
 			"expand": "Expandir bloc de codi",
 			"collapse": "Contraure bloc de codi",
+			"enable_wrap": "Activar ajust de línia",
+			"disable_wrap": "Desactivar ajust de línia",
 			"copy_code": "Copiar codi"
 		}
 	},

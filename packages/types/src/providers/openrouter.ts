@@ -41,10 +41,6 @@ export const OPEN_ROUTER_PROMPT_CACHING_MODELS = new Set([
 	"anthropic/claude-sonnet-4.5",
 	"anthropic/claude-opus-4",
 	"anthropic/claude-opus-4.1",
-	// kilocode_change start
-	"google/gemini-2.5-pro",
-	"google/gemini-2.5-pro-preview",
-	// kilocode_change end
 	"google/gemini-2.5-flash-preview",
 	"google/gemini-2.5-flash-preview:thinking",
 	"google/gemini-2.5-flash-preview-05-20",
@@ -88,6 +84,7 @@ export const OPEN_ROUTER_REASONING_BUDGET_MODELS = new Set([
 	"anthropic/claude-opus-4.1",
 	"anthropic/claude-sonnet-4",
 	"anthropic/claude-sonnet-4.5",
+	"anthropic/claude-haiku-4.5",
 	"google/gemini-2.5-pro-preview",
 	"google/gemini-2.5-pro",
 	"google/gemini-2.5-flash-preview-05-20",

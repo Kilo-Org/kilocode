@@ -61,6 +61,11 @@ describe("Model Validation Functions", () => {
 		"io-intelligence": {},
 		"vercel-ai-gateway": {},
 		huggingface: {},
+		// kilocode_change start
+		ovhcloud: {},
+		chutes: {},
+		gemini: {},
+		// kilocode_change end
 	}
 
 	const allowAllOrganization: OrganizationAllowList = {

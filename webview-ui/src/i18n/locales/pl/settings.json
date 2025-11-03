@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Nie znaleziono dostawców",
 		"noMatchFound": "Nie znaleziono pasujących profili",
 		"vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
+		"vscodeLmUnavailable": "Obsługa modeli językowych VS Code jest dostępna tylko w Visual Studio Code. Forki takie jak VSCodium i inne mogą nie działać. Ponadto ta funkcja nie jest dostępna w narzędziach JetBrains.",
+		"vscodeLmUnavailableInstructions": "Upewnij się, że używasz obsługiwanego narzędzia oraz że VS Code Chat jest zainstalowany i włączony",
 		"awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
 		"awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
 		"openRouterApiKey": "Klucz API OpenRouter",
@@ -288,6 +290,8 @@
 		"getChutesApiKey": "Uzyskaj klucz API Chutes",
 		"fireworksApiKey": "Klucz API Fireworks",
 		"getFireworksApiKey": "Uzyskaj klucz API Fireworks",
+		"syntheticApiKey": "Klucz API Synthetic",
+		"getSyntheticApiKey": "Uzyskaj klucz API Synthetic",
 		"featherlessApiKey": "Klucz API Featherless",
 		"getFeatherlessApiKey": "Uzyskaj klucz API Featherless",
 		"ioIntelligenceApiKey": "Klucz API IO Intelligence",
@@ -312,6 +316,10 @@
 		"getGeminiApiKey": "Uzyskaj klucz API Gemini",
 		"getHuggingFaceApiKey": "Uzyskaj klucz API Hugging Face",
 		"huggingFaceApiKey": "Klucz API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Uzyskaj klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Klucz API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "Bazowy URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Użyj niestandardowego bazowego URL",
 		"huggingFaceModelId": "ID modelu",
 		"huggingFaceLoading": "Ładowanie...",
 		"huggingFaceModelsCount": "({{count}} modeli)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "Przywróć domyślne"
+		},
+		"rateLimitAfter": {
+			"label": "Limit prędkości na końcu",
+			"description": "Rozpocznij ograniczanie prędkości po zakończeniu strumienia API."
 		},
 		"rateLimitSeconds": {
 			"label": "Limit szybkości",
@@ -760,8 +772,8 @@
 			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Włącz szybkie stosowanie",
-			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą szybkiego stosowania ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
+			"name": "Włącz Fast Apply",
+			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
 			"apiKey": "Klucz API Morph (opcjonalnie)",
 			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
 			"modelLabel": "Wybór modelu",
@@ -878,6 +890,7 @@
 			"regionMismatch": "Ostrzeżenie: Region w Twoim ARN ({{arnRegion}}) nie zgadza się z wybranym regionem ({{region}}). Może to powodować problemy z dostępem. Dostawca użyje regionu z ARN."
 		},
 		"modelAvailability": "Podane ID modelu ({{modelId}}) jest niedostępne. Wybierz inny model.",
+		"modelDeprecated": "Ten model nie jest już dostępny. Wybierz inny model.",
 		"providerNotAllowed": "Dostawca '{{provider}}' nie jest dozwolony przez Twoją organizację",
 		"modelNotAllowed": "Model '{{model}}' nie jest dozwolony dla dostawcy '{{provider}}' przez Twoją organizację",
 		"profileInvalid": "Ten profil zawiera dostawcę lub model, który nie jest dozwolony przez Twoją organizację",
@@ -920,6 +933,19 @@
 		"taskTimeline": {
 			"label": "Pokaż oś czasu zadania",
 			"description": "Wyświetlaj wizualną oś czasu wiadomości zadania, oznaczoną kolorami według typu, co pozwala na szybki przegląd postępu zadania i przewijanie do określonych punktów w historii zadania."
+		},
+		"sendMessageOnEnter": {
+			"label": "Wyślij wiadomość klawiszem Enter",
+			"description": "Gdy włączone, naciśnij Enter, aby wysłać i Shift+Enter, aby dodać nową linię. Wyłącz, aby użyć Shift+Enter do wysłania."
+		},
+		"costThreshold": {
+			"currentValue": "Aktualny próg: ${{value}}",
+			"label": "Ukryj koszt poniżej progu",
+			"description": "Pokaż koszty zapytań tylko powyżej tej kwoty. Koszty są zawsze widoczne, gdy panel szczegółów jest otwarty."
+		},
+		"showTimestamps": {
+			"label": "Pokaż znaczniki czasu",
+			"description": "Pokaż znacznik czasu dla każdej wiadomości w widoku czatu"
 		}
 	},
 	"ghost": {

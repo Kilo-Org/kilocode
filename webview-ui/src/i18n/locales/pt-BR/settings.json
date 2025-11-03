@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Nenhum provedor encontrado",
 		"noMatchFound": "Nenhum perfil correspondente encontrado",
 		"vscodeLmDescription": "A API do Modelo de Linguagem do VS Code permite executar modelos fornecidos por outras extensões do VS Code (incluindo, mas não se limitando, ao GitHub Copilot). A maneira mais fácil de começar é instalar as extensões Copilot e Copilot Chat no VS Code Marketplace.",
+		"vscodeLmUnavailable": "O suporte a Modelos de Linguagem do VS Code está disponível apenas no Visual Studio Code. Forks como o VSCodium e outros podem não funcionar. Além disso, esse recurso não está disponível em ferramentas JetBrains.",
+		"vscodeLmUnavailableInstructions": "Certifique-se de estar usando uma ferramenta compatível e de que o VS Code Chat esteja instalado e habilitado",
 		"awsCustomArnUse": "Insira um ARN Amazon Bedrock válido para o modelo que deseja usar. Exemplos de formato:",
 		"awsCustomArnDesc": "Certifique-se de que a região no ARN corresponde à região AWS selecionada acima.",
 		"openRouterApiKey": "Chave de API OpenRouter",
@@ -288,6 +290,8 @@
 		"getChutesApiKey": "Obter chave de API Chutes",
 		"fireworksApiKey": "Chave de API Fireworks",
 		"getFireworksApiKey": "Obter chave de API Fireworks",
+		"syntheticApiKey": "Chave de API Synthetic",
+		"getSyntheticApiKey": "Obter chave de API Synthetic",
 		"featherlessApiKey": "Chave de API Featherless",
 		"getFeatherlessApiKey": "Obter chave de API Featherless",
 		"ioIntelligenceApiKey": "Chave de API IO Intelligence",
@@ -312,6 +316,10 @@
 		"getGeminiApiKey": "Obter chave de API Gemini",
 		"getHuggingFaceApiKey": "Obter chave de API Hugging Face",
 		"huggingFaceApiKey": "Chave de API Hugging Face",
+		"getOvhCloudAiEndpointsApiKey": "Obter chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsApiKey": "Chave de API OVHcloud AI Endpoints",
+		"ovhCloudAiEndpointsBaseUrl": "URL base",
+		"getOvhCloudAiEndpointsBaseUrl": "Usar uma URL base personalizada",
 		"huggingFaceModelId": "ID do modelo",
 		"huggingFaceLoading": "Carregando...",
 		"huggingFaceModelsCount": "({{count}} modelos)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "Restaurar Padrões"
+		},
+		"rateLimitAfter": {
+			"label": "Limite de taxa no fim",
+			"description": "Comece a limitar a taxa depois que o fluxo da API terminar."
 		},
 		"rateLimitSeconds": {
 			"label": "Limite de taxa",
@@ -761,7 +773,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
-			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Provedor de API Kilo Code, OpenRouter ou uma chave de API Morph.",
+			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Kilo Gateway Provider, OpenRouter ou uma chave de API Morph.",
 			"apiKey": "Chave de API Morph (opcional)",
 			"placeholder": "Digite sua chave de API Morph (opcional)",
 			"modelLabel": "Seleção de Modelo",
@@ -878,6 +890,7 @@
 			"regionMismatch": "Aviso: A região em seu ARN ({{arnRegion}}) não corresponde à região selecionada ({{region}}). Isso pode causar problemas de acesso. O provedor usará a região do ARN."
 		},
 		"modelAvailability": "O ID do modelo ({{modelId}}) que você forneceu não está disponível. Por favor, escolha outro modelo.",
+		"modelDeprecated": "Este modelo não está mais disponível. Por favor, selecione um modelo diferente.",
 		"providerNotAllowed": "O provedor '{{provider}}' não é permitido pela sua organização",
 		"modelNotAllowed": "O modelo '{{model}}' não é permitido para o provedor '{{provider}}' pela sua organização",
 		"profileInvalid": "Este perfil contém um provedor ou modelo que não é permitido pela sua organização",
@@ -920,6 +933,19 @@
 		"taskTimeline": {
 			"label": "Mostrar linha do tempo da tarefa",
 			"description": "Exibe uma linha do tempo visual das mensagens de tarefas, coloridas por tipo, permitindo que você visualize rapidamente o progresso da tarefa e volte para pontos específicos no histórico da tarefa."
+		},
+		"sendMessageOnEnter": {
+			"label": "Enviar mensagem com Enter",
+			"description": "Quando ativado, pressione Enter para enviar e Shift+Enter para uma nova linha. Desative para usar Shift+Enter para enviar."
+		},
+		"costThreshold": {
+			"label": "Ocultar custo abaixo do limite",
+			"currentValue": "Limiar atual: ${{value}}",
+			"description": "Apenas mostrar custos de solicitação acima deste valor. Os custos estão sempre visíveis quando o painel de detalhes está aberto."
+		},
+		"showTimestamps": {
+			"label": "Mostrar carimbos de tempo",
+			"description": "Mostrar carimbo de tempo para cada mensagem na visualização do chat"
 		}
 	},
 	"ghost": {

@@ -246,6 +246,8 @@
 		"noProviderMatchFound": "Keine Anbieter gefunden",
 		"noMatchFound": "Keine passenden Profile gefunden",
 		"vscodeLmDescription": "Die VS Code Language Model API ermöglicht das Ausführen von Modellen, die von anderen VS Code-Erweiterungen bereitgestellt werden (einschließlich, aber nicht beschränkt auf GitHub Copilot). Der einfachste Weg, um zu starten, besteht darin, die Erweiterungen Copilot und Copilot Chat aus dem VS Code Marketplace zu installieren.",
+		"vscodeLmUnavailable": "Die Unterstützung von VS Code Language Models ist nur in Visual Studio Code verfügbar. Forks wie VSCodium und andere funktionieren möglicherweise nicht. Außerdem ist diese Funktion in JetBrains-Tools nicht verfügbar.",
+		"vscodeLmUnavailableInstructions": "Stellen Sie sicher, dass Sie ein unterstütztes Tool verwenden und dass VS Code Chat installiert und aktiviert ist",
 		"awsCustomArnUse": "Gib eine gültige Amazon Bedrock ARN für das Modell ein, das du verwenden möchtest. Formatbeispiele:",
 		"awsCustomArnDesc": "Stelle sicher, dass die Region in der ARN mit Ihrer oben ausgewählten AWS-Region übereinstimmt.",
 		"openRouterApiKey": "OpenRouter API-Schlüssel",
@@ -290,6 +292,8 @@
 		"getChutesApiKey": "Chutes API-Schlüssel erhalten",
 		"fireworksApiKey": "Fireworks API-Schlüssel",
 		"getFireworksApiKey": "Fireworks API-Schlüssel erhalten",
+		"syntheticApiKey": "Synthetic API-Schlüssel",
+		"getSyntheticApiKey": "Synthetic API-Schlüssel erhalten",
 		"featherlessApiKey": "Featherless API-Schlüssel",
 		"getFeatherlessApiKey": "Featherless API-Schlüssel erhalten",
 		"ioIntelligenceApiKey": "IO Intelligence API-Schlüssel",
@@ -311,6 +315,10 @@
 		"sambaNovaApiKey": "SambaNova API-Schlüssel",
 		"getHuggingFaceApiKey": "Hugging Face API-Schlüssel erhalten",
 		"huggingFaceApiKey": "Hugging Face API-Schlüssel",
+		"getOvhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-Schlüssel erhalten",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API-Schlüssel",
+		"ovhCloudAiEndpointsBaseUrl": "Basis-URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Benutzerdefinierte Basis-URL verwenden",
 		"huggingFaceModelId": "Modell-ID",
 		"huggingFaceLoading": "Lädt...",
 		"huggingFaceModelsCount": "({{count}} Modelle)",
@@ -455,6 +463,10 @@
 				}
 			},
 			"resetDefaults": "Auf Standardwerte zurücksetzen"
+		},
+		"rateLimitAfter": {
+			"label": "Ratenbegrenzung am Ende",
+			"description": "Beginnen Sie mit der Ratenbegrenzung, nachdem der API-Stream endet."
 		},
 		"rateLimitSeconds": {
 			"label": "Ratenbegrenzung",
@@ -760,7 +772,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Änderungen optimiert sind. Erfordert den Kilo Code API-Anbieter, OpenRouter oder einen Morph API-Schlüssel.",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Modifikationen optimiert sind. Erfordert den Kilo Gateway Provider, OpenRouter oder einen Morph API-Schlüssel.",
 			"apiKey": "Morph API-Schlüssel (optional)",
 			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)",
 			"modelLabel": "Modellauswahl",
@@ -873,6 +885,7 @@
 			"regionMismatch": "Warnung: Die Region in deiner ARN ({{arnRegion}}) stimmt nicht mit deiner ausgewählten Region ({{region}}) überein. Dies kann zu Zugriffsproblemen führen. Der Anbieter wird die Region aus der ARN verwenden."
 		},
 		"modelAvailability": "Die von dir angegebene Modell-ID ({{modelId}}) ist nicht verfügbar. Bitte wähle ein anderes Modell.",
+		"modelDeprecated": "Dieses Modell ist nicht mehr verfügbar. Bitte wähle ein anderes Modell.",
 		"providerNotAllowed": "Anbieter '{{provider}}' ist von deiner Organisation nicht erlaubt",
 		"modelNotAllowed": "Modell '{{model}}' ist für Anbieter '{{provider}}' von deiner Organisation nicht erlaubt",
 		"profileInvalid": "Dieses Profil enthält einen Anbieter oder ein Modell, das von deiner Organisation nicht erlaubt ist",
@@ -915,6 +928,19 @@
 		"taskTimeline": {
 			"label": "Aufgabenzeitplan anzeigen",
 			"description": "Zeigt eine visuelle Zeitleiste der Aufgabennachrichten an, farblich nach Typ gekennzeichnet, sodass du den Fortschritt der Aufgabe schnell überblicken und zu bestimmten Punkten in der Aufgabenhistorie zurückspringen kannst."
+		},
+		"sendMessageOnEnter": {
+			"label": "Nachricht mit Enter senden",
+			"description": "Wenn aktiviert, drücke Enter zum Senden und Shift+Enter für eine neue Zeile. Deaktiviere dies, um stattdessen Shift+Enter zum Senden zu verwenden."
+		},
+		"costThreshold": {
+			"label": "Kosten unter Schwellenwert ausblenden",
+			"description": "Nur Anforderungskosten über diesem Betrag anzeigen. Kosten sind immer sichtbar, wenn der Detailbereich geöffnet ist.",
+			"currentValue": "Aktueller Schwellenwert: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Zeitstempel anzeigen",
+			"description": "Zeitstempel für jede Nachricht in der Chat-Ansicht anzeigen"
 		}
 	},
 	"ghost": {

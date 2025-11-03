@@ -42,6 +42,7 @@ import { codebaseSearchTool } from "../tools/codebaseSearchTool"
 import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 import { yieldPromise } from "../kilocode"
+import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -60,7 +61,7 @@ import { yieldPromise } from "../kilocode"
  * as it becomes available.
  */
 
-export async function presentAssistantMessage(cline: Task, recursionDepth: number = 0 /*kilocode_change*/) {
+export async function presentAssistantMessage(cline: Task) {
 	if (cline.abort) {
 		throw new Error(`[Task#presentAssistantMessage] task ${cline.taskId}.${cline.instanceId} aborted`)
 	}
@@ -247,16 +248,26 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				}
 			}
 
+			const pushToolResult_withToolUseId_kilocode = (
+				...items: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
+			) => {
+				if (block.toolUseId) {
+					cline.userMessageContent.push({ type: "tool_result", tool_use_id: block.toolUseId, content: items })
+				} else {
+					cline.userMessageContent.push(...items)
+				}
+			}
+
 			if (cline.didRejectTool) {
 				// Ignore any tool content after user has rejected tool once.
 				if (!block.partial) {
-					cline.userMessageContent.push({
+					pushToolResult_withToolUseId_kilocode({
 						type: "text",
 						text: `Skipping tool ${toolDescription()} due to user rejecting a previous tool.`,
 					})
 				} else {
 					// Partial tool after user rejected a previous tool.
-					cline.userMessageContent.push({
+					pushToolResult_withToolUseId_kilocode({
 						type: "text",
 						text: `Tool ${toolDescription()} was interrupted and not executed due to user rejecting a previous tool.`,
 					})
@@ -267,7 +278,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 
 			if (cline.didAlreadyUseTool) {
 				// Ignore any content after a tool has already been used.
-				cline.userMessageContent.push({
+				pushToolResult_withToolUseId_kilocode({
 					type: "text",
 					text: `Tool [${block.name}] was not executed because a tool has already been used in this message. Only one tool may be used per message. You must assess the first tool's result before proceeding to use the next tool.`,
 				})
@@ -276,13 +287,17 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			}
 
 			const pushToolResult = (content: ToolResponse) => {
-				cline.userMessageContent.push({ type: "text", text: `${toolDescription()} Result:` })
+				// kilocode_change start
+				const items = new Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>()
+				items.push({ type: "text", text: `${toolDescription()} Result:` })
 
 				if (typeof content === "string") {
-					cline.userMessageContent.push({ type: "text", text: content || "(tool did not return anything)" })
+					items.push({ type: "text", text: content || "(tool did not return anything)" })
 				} else {
-					cline.userMessageContent.push(...content)
+					items.push(...content)
 				}
+				pushToolResult_withToolUseId_kilocode(...items)
+				// kilocode_change end
 
 				// Once a tool result has been collected, ignore all other tool
 				// uses since we should only ever present one tool result per
@@ -296,6 +311,14 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				progressStatus?: ToolProgressStatus,
 				isProtected?: boolean,
 			) => {
+				// kilocode_change start: yolo mode
+
+				const state = await cline.providerRef.deref()?.getState()
+				if (state?.yoloMode) {
+					return true
+				}
+				// kilocode_change end
+
 				const { response, text, images } = await cline.ask(
 					type,
 					partialMessage,
@@ -414,7 +437,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 
 					if (response === "messageResponse") {
 						// Add user feedback to userContent.
-						cline.userMessageContent.push(
+						pushToolResult_withToolUseId_kilocode(
 							{
 								type: "text" as const,
 								text: `Tool repetition limit reached. User feedback: ${text}`,
@@ -439,9 +462,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 				}
 			}
 
+			await checkpointSaveAndMark(cline) // kilocode_change: moved out of switch
 			switch (block.name) {
 				case "write_to_file":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await writeToFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "update_todo_list":
@@ -461,10 +485,10 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					}
 
 					if (isMultiFileApplyDiffEnabled) {
-						await checkpointSaveAndMark(cline)
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					} else {
-						await checkpointSaveAndMark(cline)
+						// await checkpointSaveAndMark(cline) // kilocode_change
 						await applyDiffToolLegacy(
 							cline,
 							block,
@@ -477,16 +501,15 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					break
 				}
 				case "insert_content":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await insertContentTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "search_and_replace":
-					await checkpointSaveAndMark(cline)
+					// await checkpointSaveAndMark(cline) // kilocode_change
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":
-					await checkpointSaveAndMark(cline)
 					await editFileTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change end
@@ -564,7 +587,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await newTaskTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "attempt_completion":
-					await checkpointSaveAndMark(cline) // kilocode_change for "See new changes"
 					await attemptCompletionTool(
 						cline,
 						block,
@@ -594,7 +616,6 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 					await generateImageTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 			}
-			// kilocode_change end
 
 			break
 	}
@@ -639,7 +660,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 			// this function ourselves.
 			// kilocode_change start: prevent excessive recursion
 			await yieldPromise()
-			await presentAssistantMessage(cline, recursionDepth + 1)
+			await presentAssistantMessage(cline)
 			// kilocode_change end
 			return
 		}
@@ -649,7 +670,7 @@ export async function presentAssistantMessage(cline: Task, recursionDepth: numbe
 	if (cline.presentAssistantMessageHasPendingUpdates) {
 		// kilocode_change start: prevent excessive recursion
 		await yieldPromise()
-		await presentAssistantMessage(cline, recursionDepth + 1)
+		await presentAssistantMessage(cline)
 		// kilocode_change end
 	}
 }
@@ -664,8 +685,9 @@ async function checkpointSaveAndMark(task: Task) {
 		return
 	}
 	try {
-		await task.checkpointSave(true)
+		// kilocode_change: order changed to prevent second execution while still awaiting the save
 		task.currentStreamingDidCheckpoint = true
+		await task.checkpointSave(true)
 	} catch (error) {
 		console.error(`[Task#presentAssistantMessage] Error saving checkpoint: ${error.message}`, error)
 	}

@@ -14,7 +14,7 @@ import { readLines } from "../../integrations/misc/read-lines"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { parseXml } from "../../utils/xml"
-import { blockFileReadWhenTooLarge } from "./kilocode"
+import { blockFileReadWhenTooLarge, getNativeReadFileToolDescription, parseNativeFiles } from "./kilocode"
 import {
 	DEFAULT_MAX_IMAGE_FILE_SIZE_MB,
 	DEFAULT_MAX_TOTAL_IMAGE_SIZE_MB,
@@ -26,7 +26,11 @@ import {
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
-	if (blockParams.args) {
+	// kilocode_change start
+	if (blockParams.files && Array.isArray(blockParams.files)) {
+		return getNativeReadFileToolDescription(blockName, parseNativeFiles(blockParams.files))
+		// kilocode_change end
+	} else if (blockParams.args) {
 		try {
 			const parsed = parseXml(blockParams.args) as any
 			const files = Array.isArray(parsed.file) ? parsed.file : [parsed.file].filter(Boolean)
@@ -93,6 +97,8 @@ export async function readFileTool(
 	const legacyStartLineStr: string | undefined = block.params.start_line
 	const legacyEndLineStr: string | undefined = block.params.end_line
 
+	const nativeFiles: any[] | undefined = (block.params as any).files // kilocode_change: Native JSON format from OpenAI-style tool calls
+
 	// Check if the current model supports images at the beginning
 	const modelInfo = cline.api.getModel().info
 	const supportsImages = modelInfo.supportsImages ?? false
@@ -126,7 +132,12 @@ export async function readFileTool(
 
 	const fileEntries: FileEntry[] = []
 
-	if (argsXmlTag) {
+	// kilocode_change start
+	// Handle native JSON format first (from OpenAI-style tool calls)
+	if (nativeFiles && Array.isArray(nativeFiles)) {
+		fileEntries.push(...parseNativeFiles(nativeFiles))
+		// kilocode_change end
+	} else if (argsXmlTag) {
 		// Parse file entries from XML (new multi-file format)
 		try {
 			const parsed = parseXml(argsXmlTag) as any
@@ -206,6 +217,11 @@ export async function readFileTool(
 			fileResults[index] = { ...fileResults[index], ...updates }
 		}
 	}
+
+	// kilocode_change start: yolo mode
+	const state = await cline.providerRef.deref()?.getState()
+	const isYoloMode = state?.yoloMode ?? false
+	// kilocode_change end
 
 	try {
 		// First validate all files and prepare for batch approval
@@ -305,7 +321,11 @@ export async function readFileTool(
 				batchFiles,
 			} satisfies ClineSayTool)
 
-			const { response, text, images } = await cline.ask("tool", completeMessage, false)
+			// kilocode_change start: yolo mode
+			const { response, text, images } = isYoloMode
+				? { response: "yesButtonClicked" }
+				: await cline.ask("tool", completeMessage, false)
+			// kilocode_change end
 
 			// Process batch response
 			if (response === "yesButtonClicked") {
@@ -405,7 +425,11 @@ export async function readFileTool(
 				reason: lineSnippet,
 			} satisfies ClineSayTool)
 
-			const { response, text, images } = await cline.ask("tool", completeMessage, false)
+			// kilocode_change start: yolo mode
+			const { response, text, images } = isYoloMode
+				? { response: "yesButtonClicked" }
+				: await cline.ask("tool", completeMessage, false)
+			// kilocode_change end
 
 			if (response !== "yesButtonClicked") {
 				// Handle both messageResponse and noButtonClicked with text

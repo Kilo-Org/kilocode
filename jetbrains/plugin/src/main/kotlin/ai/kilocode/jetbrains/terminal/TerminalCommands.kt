@@ -4,17 +4,13 @@
 
 package ai.kilocode.jetbrains.terminal
 
-import com.intellij.openapi.components.service
-import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.wm.ToolWindow
-import com.intellij.openapi.wm.ToolWindowManager
-import com.intellij.ui.content.Content
 import ai.kilocode.jetbrains.actors.MainThreadClipboard
 import ai.kilocode.jetbrains.commands.CommandRegistry
 import ai.kilocode.jetbrains.commands.ICommand
+import com.intellij.openapi.diagnostic.Logger
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindowManager
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
-
 
 /**
  * Registers commands related to terminal API operations
@@ -40,7 +36,7 @@ fun registerTerminalAPICommands(project: Project, registry: CommandRegistry) {
             override fun returns(): String? {
                 return "void"
             }
-        }
+        },
     )
 }
 
@@ -50,7 +46,7 @@ fun registerTerminalAPICommands(project: Project, registry: CommandRegistry) {
 class TerminalAPICommands(val project: Project) {
     private val logger = Logger.getInstance(TerminalAPICommands::class.java)
     private val clipboard = MainThreadClipboard()
-    
+
     /**
      * Copies the last command output from the current terminal to clipboard
      *
@@ -58,24 +54,24 @@ class TerminalAPICommands(val project: Project) {
      */
     suspend fun workbench_action_terminal_copySelection(): Any? {
         logger.info("Copying terminal output to clipboard")
-        
+
         val textToCopy = try {
             getTerminalText() ?: ""
         } catch (e: Exception) {
             logger.error("Failed to copy terminal output to clipboard", e)
             ""
         }
-        
+
         clipboard.writeText(textToCopy)
         if (textToCopy.isNotEmpty()) {
             logger.info("Successfully copied terminal output to clipboard")
         } else {
             logger.info("Copied empty terminal output to clipboard")
         }
-        
+
         return null
     }
-    
+
     /**
      * Get terminal text content
      *
@@ -85,14 +81,13 @@ class TerminalAPICommands(val project: Project) {
         val window = ToolWindowManager.getInstance(project)
             .getToolWindow("Terminal") // or TerminalToolWindowFactory.TOOL_WINDOW_ID
             ?: return null
-            
+
         val selected = window.getContentManager().getSelectedContent()
             ?: return null
-            
+
         val widget = TerminalToolWindowManager.getWidgetByContent(selected)
             ?: return null
-            
+
         return widget.text.takeIf { it.isNotEmpty() }
     }
-    
 }

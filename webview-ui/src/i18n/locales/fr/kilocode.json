@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Ajouter du crédit",
-		"lowBalance": "Votre solde Kilo Code est bas"
+		"lowBalance": "Votre solde Kilo Code est bas",
+		"newOrganization": "Vous utilisez Kilo pour le travail ?"
 	},
 	"pagination": {
 		"previous": "Précédent",
@@ -29,9 +30,7 @@
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
 		"freeModelsDescription": "Les modèles gratuits peuvent avoir des limites de débit. Utilisez le lien ci-dessous pour optimiser votre utilisation des modèles gratuits !",
-		"freeModelsLink": "Découvrir les options de modèles gratuits et économiques",
-		"openRouterMarkup": "Le fournisseur Kilo Code inclut tous les modèles OpenRouter, sans majoration et avec 0% de commission !",
-		"switchToKiloCode": "Passer à Kilo Code"
+		"freeModelsLink": "Découvrir les options de modèles gratuits et économiques"
 	},
 	"notifications": {
 		"toolRequest": "Demande d'outil en attente d'approbation",
@@ -50,7 +49,8 @@
 			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
 			"providerRouting": {
 				"title": "Routage des fournisseurs",
-				"managedByOrganization": "Les paramètres de routage des fournisseurs sont gérés par votre organisation.",
+				"managedByOrganization": "Gérer le routage des fournisseurs au niveau de l'organisation",
+				"createOrganization": "Créer une organisation pour gérer le routage des fournisseurs",
 				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
 				"sorting": {
 					"default": "Tri des fournisseurs par défaut",
@@ -60,8 +60,10 @@
 				},
 				"dataCollection": {
 					"default": "Aucune politique de données définie",
-					"allow": "Autoriser la collecte de données du fournisseur",
-					"deny": "Refuser la collecte de données du fournisseur"
+					"allowFree": "Autoriser l'entraînement des prompts (gratuit uniquement)",
+					"allow": "Autoriser l'entraînement des prompts",
+					"deny": "Refuser l'entraînement des prompts",
+					"zdr": "Rétention zéro des données"
 				}
 			}
 		},
@@ -102,12 +104,22 @@
 			}
 		}
 	},
+	"toolCallStyle": {
+		"title": "Style d'Appel d'Outil",
+		"description": "Choisissez comment les appels d'outils sont formatés dans le prompt système. JSON est actuellement expérimental et principalement destiné aux utilisateurs intéressés à contribuer à son développement.",
+		"automatic": "Laisser Kilo décider",
+		"xml": "XML",
+		"json": "JSON (expérimental)"
+	},
 	"chat": {
 		"condense": {
 			"wantsToCondense": "Kilo Code souhaite condenser votre conversation",
 			"condenseConversation": "Condenser la Conversation"
 		},
-		"seeNewChanges": "Afficher les nouvelles modifications"
+		"seeNewChanges": "Afficher les nouvelles modifications",
+		"revertNewChanges": "Annuler les nouvelles modifications",
+		"confirmRevertChanges": "Confirmer l'annulation des modifications",
+		"cancelRevertChanges": "Annuler l'annulation des modifications"
 	},
 	"newTaskPreview": {
 		"task": "Tâche"
@@ -126,7 +138,9 @@
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
 			"viewAll": "Voir toutes les options de prix"
-		}
+		},
+		"detailedUsage": "Utilisation détaillée",
+		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"
 	},
 	"docs": "Documentation",
 	"rules": {
@@ -222,17 +236,10 @@
 				"label": "Saisie automatique manuelle ({{keybinding}})",
 				"description": "Besoin d'une correction rapide, d'un complément ou d'une refactorisation ? Kilo utilisera le contexte environnant pour offrir des améliorations immédiates, te gardant dans le flux. <DocsLink>Modifier le raccourci</DocsLink>"
 			},
-			"enableCustomProvider": {
-				"label": "Utiliser un fournisseur personnalisé",
-				"description": "Autocomplete utilise tes identifiants Kilo Code / OpenRouter / Mistral pour utiliser le modèle Codestral par défaut"
-			},
-			"provider": "Fournisseur",
-			"apiConfigId": {
-				"label": "Configuration API",
-				"current": "Utiliser la configuration API actuellement sélectionnée",
-				"description": "Sélectionne une configuration API à utiliser pour les prompts Autocomplete, ou utilise simplement celle qui est actuellement sélectionnée"
-			},
-			"keybindingNotFound": "introuvable"
+			"keybindingNotFound": "introuvable",
+			"noModelConfigured": "Aucun modèle d'autocomplétion approprié trouvé. Configure un fournisseur dans les paramètres API.",
+			"model": "Modèle",
+			"provider": "Fournisseur"
 		}
 	},
 	"virtualProvider": {
@@ -245,7 +252,7 @@
 		"removeProfile": "Supprimer le profil",
 		"selectProfilePlaceholder": "Sélectionner le profil...",
 		"addProfile": "Ajouter un profil",
-		"noProfilesAvailable": "Aucun profil disponible. Veuillez d'abord configurer au moins un profil de fournisseur non virtuel.",
+		"noProfilesAvailable": "Aucun profil disponible. Veuillez configurer d'abord au moins un profil de fournisseur non virtuel.",
 		"dangerZoneTitle": "Zone de Danger",
 		"dangerZoneDescription": "Ces actions sont destructives et ne peuvent pas être annulées.",
 		"clearUsageData": "Effacer les Données d'Utilisation",
@@ -257,9 +264,23 @@
 		"requestsLabel": "Demandes",
 		"perDay": "Par jour"
 	},
+	"memoryWarning": {
+		"message": "L'utilisation de la mémoire est à {{percentage}}%. Veuillez redémarrer votre IDE pour éviter les plantages."
+	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
 		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",
 		"imagesRemovedNoSupport": "Images supprimées, non prises en charge par le modèle."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Ces serveurs MCP sont maintenus par la communauté. Cliquez <1>ici</1> pour modifier vos propres paramètres MCP."
+		},
+		"modes": {
+			"description": "Ces modes sont disponibles auprès de la communauté. Cliquez <1>ici</1> pour modifier vos propres modes personnalisés."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nouveau : Partagez des modes en créant une organisation"
 	}
 }

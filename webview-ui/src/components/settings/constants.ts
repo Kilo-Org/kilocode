@@ -7,8 +7,8 @@ import {
 	claudeCodeModels,
 	deepSeekModels,
 	moonshotModels,
-	geminiModels,
 	// kilocode_change start
+	// geminiModels,
 	geminiCliModels,
 	// kilocode_change end
 	mistralModels,
@@ -17,11 +17,12 @@ import {
 	vertexModels,
 	xaiModels,
 	groqModels,
-	chutesModels,
+	// chutesModels, // kilocode_change
 	sambaNovaModels,
 	doubaoModels,
 	internationalZAiModels,
 	fireworksModels,
+	syntheticModels, // kilocode_change
 	rooModels,
 	featherlessModels,
 } from "@roo-code/types"
@@ -34,8 +35,8 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	deepseek: deepSeekModels,
 	doubao: doubaoModels,
 	moonshot: moonshotModels,
-	gemini: geminiModels,
 	// kilocode_change start
+	// gemini: geminiModels,
 	"gemini-cli": geminiCliModels,
 	// kilocode_change end
 	mistral: mistralModels,
@@ -44,10 +45,11 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	vertex: vertexModels,
 	xai: xaiModels,
 	groq: groqModels,
-	chutes: chutesModels,
+	// chutes: chutesModels, // kilocode_change
 	sambanova: sambaNovaModels,
 	zai: internationalZAiModels,
 	fireworks: fireworksModels,
+	synthetic: syntheticModels, // kilocode_change
 	roo: rooModels,
 	featherless: featherlessModels,
 }
@@ -76,6 +78,7 @@ export const PROVIDERS = [
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },
 	{ value: "ollama", label: "Ollama" },
+	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" }, // kilocode_change
 	{ value: "unbound", label: "Unbound" },
 	{ value: "requesty", label: "Requesty" },
 	{ value: "human-relay", label: "Human Relay" },
@@ -87,6 +90,7 @@ export const PROVIDERS = [
 	{ value: "sambanova", label: "SambaNova" },
 	{ value: "zai", label: "Z AI" },
 	{ value: "fireworks", label: "Fireworks AI" },
+	{ value: "synthetic", label: "Synthetic" }, // kilocode_change
 	{ value: "featherless", label: "Featherless AI" },
 	{ value: "io-intelligence", label: "IO Intelligence" },
 	// kilocode_change start
@@ -95,4 +99,4 @@ export const PROVIDERS = [
 	{ value: "vercel-ai-gateway", label: "Vercel AI Gateway" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
-PROVIDERS.unshift({ value: "kilocode", label: "Kilo Code" }) // kilocode_change
+PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change

@@ -1,4 +1,10 @@
-import { DEEP_SEEK_DEFAULT_TEMPERATURE, type ChutesModelId, chutesDefaultModelId, chutesModels } from "@roo-code/types"
+import {
+	DEEP_SEEK_DEFAULT_TEMPERATURE,
+	type ChutesModelId,
+	chutesDefaultModelId,
+	chutesModels,
+	getActiveToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
@@ -9,6 +15,8 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
 
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { ApiHandlerCreateMessageMetadata } from ".." // kilocode_change
 
 export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 	constructor(options: ApiHandlerOptions) {
@@ -26,6 +34,7 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 	private getCompletionParams(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
 	): OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming {
 		const {
 			id: model,
@@ -34,22 +43,36 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 
 		const temperature = this.options.modelTemperature ?? this.getModel().info.temperature
 
-		return {
-			model,
-			max_tokens,
-			temperature,
-			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
-			stream: true,
-			stream_options: { include_usage: true },
-		}
+		// kilocode_change start: addNativeToolCallsToParams
+		return addNativeToolCallsToParams(
+			{
+				model,
+				max_tokens,
+				temperature,
+				messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
+				stream: true,
+				stream_options: { include_usage: true },
+			},
+			this.options,
+			metadata,
+		)
+		// kilocode_change end
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
+	): ApiStream {
 		const model = this.getModel()
 
 		if (model.id.includes("DeepSeek-R1")) {
 			const stream = await this.client.chat.completions.create({
-				...this.getCompletionParams(systemPrompt, messages),
+				...this.getCompletionParams(
+					systemPrompt,
+					messages,
+					metadata, // kilocode_change
+				),
 				messages: convertToR1Format([{ role: "user", content: systemPrompt }, ...messages]),
 			})
 
@@ -64,6 +87,8 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 
 			for await (const chunk of stream) {
 				const delta = chunk.choices[0]?.delta
+
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 				if (delta?.content) {
 					for (const processedChunk of matcher.update(delta.content)) {
@@ -85,7 +110,11 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 				yield processedChunk
 			}
 		} else {
-			yield* super.createMessage(systemPrompt, messages)
+			yield* super.createMessage(
+				systemPrompt,
+				messages,
+				metadata, // kilocode_change
+			)
 		}
 	}
 

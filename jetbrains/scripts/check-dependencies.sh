@@ -61,32 +61,32 @@ check_java() {
     
     if ! command_exists java; then
         print_error "Java is not installed or not in PATH"
-        echo "  Install Java 17 (recommended - SDKMAN):"
+        echo "  Install Java 21 (recommended - SDKMAN):"
         echo "  - curl -s \"https://get.sdkman.io\" | bash"
         echo "  - source ~/.sdkman/bin/sdkman-init.sh"
-        echo "  - sdk install java 17.0.12-tem"
-        echo "  - sdk use java 17.0.12-tem"
+        echo "  - sdk install java 21.0.5-tem"
+        echo "  - sdk use java 21.0.5-tem"
         echo ""
         echo "  Alternative installations:"
-        echo "  - macOS: brew install openjdk@17"
-        echo "  - Linux: sudo apt install openjdk-17-jdk"
-        echo "  - Windows: Download from https://openjdk.org/projects/jdk/17/"
+        echo "  - macOS: brew install openjdk@21"
+        echo "  - Linux: sudo apt install openjdk-21-jdk"
+        echo "  - Windows: Download from https://openjdk.org/projects/jdk/21/"
         return 1
     fi
     
     JAVA_VERSION=$(java -version 2>&1 | head -n1 | cut -d'"' -f2 | cut -d'.' -f1)
-    if [[ "$JAVA_VERSION" != "17" ]]; then
-        print_error "Java version is $JAVA_VERSION, but Java 17 is required"
+    if [[ "$JAVA_VERSION" != "21" ]]; then
+        print_error "Java version is $JAVA_VERSION, but Java 21 is required"
         echo "  Current Java: $(java -version 2>&1 | head -n1)"
         echo "  Recommended fix (SDKMAN):"
-        echo "  - sdk install java 17.0.12-tem"
-        echo "  - sdk use java 17.0.12-tem"
+        echo "  - sdk install java 21.0.5-tem"
+        echo "  - sdk use java 21.0.5-tem"
         echo ""
-        echo "  Alternative: Set JAVA_HOME to Java 17 installation"
+        echo "  Alternative: Set JAVA_HOME to Java 21 installation"
         return 1
     fi
     
-    print_success "Java 17 is installed and active"
+    print_success "Java 21 is installed and active"
     java -version 2>&1 | head -n1 | sed 's/^/  /'
     return 0
 }

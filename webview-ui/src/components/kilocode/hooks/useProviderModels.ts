@@ -19,7 +19,7 @@ import {
 	xaiModels,
 	groqModels,
 	groqDefaultModelId,
-	chutesModels,
+	// chutesModels, // kilocode_change
 	chutesDefaultModelId,
 	vscodeLlmModels,
 	vscodeLlmDefaultModelId,
@@ -37,6 +37,8 @@ import {
 	doubaoDefaultModelId,
 	fireworksModels,
 	fireworksDefaultModelId,
+	syntheticModels, // kilocode_change
+	syntheticDefaultModelId, // kilocode_change
 	ioIntelligenceDefaultModelId,
 	moonshotModels,
 	moonshotDefaultModelId,
@@ -47,6 +49,7 @@ import {
 	deepInfraDefaultModelId,
 	cerebrasModels,
 	cerebrasDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -111,7 +114,7 @@ export const getModelsByProvider = ({
 		}
 		case "chutes": {
 			return {
-				models: chutesModels,
+				models: routerModels.chutes, // kilocode_change
 				defaultModel: chutesDefaultModelId,
 			}
 		}
@@ -135,7 +138,12 @@ export const getModelsByProvider = ({
 		}
 		case "gemini": {
 			return {
-				models: geminiModels,
+				// kilocode_change start
+				models:
+					routerModels.gemini && Object.keys(routerModels.gemini).length > 0
+						? routerModels.gemini
+						: geminiModels,
+				// kilocode_change end
 				defaultModel: geminiDefaultModelId,
 			}
 		}
@@ -231,6 +239,14 @@ export const getModelsByProvider = ({
 				defaultModel: fireworksDefaultModelId,
 			}
 		}
+		// kilocode_change start
+		case "synthetic": {
+			return {
+				models: syntheticModels,
+				defaultModel: syntheticDefaultModelId,
+			}
+		}
+		// kilocode_change end
 		case "io-intelligence": {
 			return {
 				models: routerModels["io-intelligence"],
@@ -261,6 +277,14 @@ export const getModelsByProvider = ({
 				defaultModel: deepInfraDefaultModelId,
 			}
 		}
+		// kilocode_change start
+		case "ovhcloud": {
+			return {
+				models: routerModels.ovhcloud,
+				defaultModel: ovhCloudAiEndpointsDefaultModelId,
+			}
+		}
+		// kilocode_change end
 		default:
 			return {
 				models: {},
@@ -278,6 +302,11 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
 		openRouterApiKey: apiConfiguration?.apiKey,
 		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		// kilocode_change start
+		chutesApiKey: apiConfiguration?.chutesApiKey,
+		geminiApiKey: apiConfiguration?.geminiApiKey,
+		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		// kilocode_change end
 	})
 
 	const { models, defaultModel } =

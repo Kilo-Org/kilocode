@@ -1,19 +1,36 @@
 import { useCallback } from "react"
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 
-import type { ProviderSettings } from "@roo-code/types"
-
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { VSCodeButtonLink } from "@src/components/common/VSCodeButtonLink"
 
 import { inputEventTransform } from "../transforms"
 
+// kilocode_change start
+import { type ProviderSettings, type OrganizationAllowList, chutesDefaultModelId } from "@roo-code/types"
+import type { RouterModels } from "@roo/api"
+import { ModelPicker } from "../ModelPicker"
+// kilocode_change end
+
 type ChutesProps = {
 	apiConfiguration: ProviderSettings
 	setApiConfigurationField: (field: keyof ProviderSettings, value: ProviderSettings[keyof ProviderSettings]) => void
+	// kilocode_change start
+	routerModels?: RouterModels
+	organizationAllowList: OrganizationAllowList
+	modelValidationError?: string
+	// kilocode_change end
 }
 
-export const Chutes = ({ apiConfiguration, setApiConfigurationField }: ChutesProps) => {
+export const Chutes = ({
+	apiConfiguration,
+	setApiConfigurationField,
+	// kilocode_change start
+	routerModels,
+	organizationAllowList,
+	modelValidationError,
+	// kilocode_change end
+}: ChutesProps) => {
 	const { t } = useAppTranslation()
 
 	const handleInputChange = useCallback(
@@ -45,6 +62,21 @@ export const Chutes = ({ apiConfiguration, setApiConfigurationField }: ChutesPro
 					{t("settings:providers.getChutesApiKey")}
 				</VSCodeButtonLink>
 			)}
+			{
+				// kilocode_change start
+				<ModelPicker
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					defaultModelId={chutesDefaultModelId}
+					models={routerModels?.chutes ?? {}}
+					modelIdKey="apiModelId"
+					serviceName="Chutes.AI"
+					serviceUrl="https://chutes.ai"
+					organizationAllowList={organizationAllowList}
+					errorMessage={modelValidationError}
+				/>
+				// kilocode_change end
+			}
 		</>
 	)
 }

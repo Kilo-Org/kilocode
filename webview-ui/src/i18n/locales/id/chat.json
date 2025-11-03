@@ -130,7 +130,8 @@
 		"settings": "Pengaturan Mode",
 		"description": "Persona khusus yang menyesuaikan perilaku Kilo Code.",
 		"searchPlaceholder": "Cari mode...",
-		"noResults": "Tidak ada hasil yang ditemukan"
+		"noResults": "Tidak ada hasil yang ditemukan",
+		"organizationModes": "Mode Organisasi"
 	},
 	"addImages": "Tambahkan gambar ke pesan",
 	"sendMessage": "Kirim pesan",
@@ -343,6 +344,8 @@
 		"tooltips": {
 			"expand": "Perluas blok kode",
 			"collapse": "Tutup blok kode",
+			"enable_wrap": "Aktifkan pembungkusan",
+			"disable_wrap": "Nonaktifkan pembungkusan",
 			"copy_code": "Salin kode"
 		}
 	},

@@ -6,7 +6,6 @@ package ai.kilocode.jetbrains.actors
 
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.vfs.VirtualFile
 import java.io.File
 import java.net.URI
 import java.nio.file.Files
@@ -22,7 +21,7 @@ enum class FileType {
     UNKNOWN,
     FILE,
     DIRECTORY,
-    SYMBOLIC_LINK
+    SYMBOLIC_LINK,
 }
 
 /**
@@ -38,7 +37,7 @@ data class FileStat(
     val type: FileType,
     val ctime: Long,
     val mtime: Long,
-    val size: Long
+    val size: Long,
 )
 
 /**
@@ -66,7 +65,7 @@ data class FileSystemProviderCapabilities(
     val hasOpenReadWriteCloseCapability: Boolean,
     val hasLegacyWatchCapability: Boolean,
     val hasDiffCapability: Boolean,
-    val hasFileChangeCapability: Boolean
+    val hasFileChangeCapability: Boolean,
 )
 
 /**
@@ -76,7 +75,7 @@ data class FileSystemProviderCapabilities(
  * @property overwrite Whether to overwrite existing files
  */
 data class FileOverwriteOptions(
-    val overwrite: Boolean
+    val overwrite: Boolean,
 )
 
 /**
@@ -88,7 +87,7 @@ data class FileOverwriteOptions(
  */
 data class FileDeleteOptions(
     val recursive: Boolean,
-    val useTrash: Boolean
+    val useTrash: Boolean,
 )
 
 /**
@@ -100,7 +99,7 @@ data class FileDeleteOptions(
  */
 data class FileChangeDto(
     val type: Int, // 1: ADDED, 2: UPDATED, 3: DELETED
-    val resource: Map<String, Any?>
+    val resource: Map<String, Any?>,
 )
 
 /**
@@ -233,7 +232,7 @@ interface MainThreadFileSystemShape : Disposable {
  */
 class MainThreadFileSystem : MainThreadFileSystemShape {
     private val logger = Logger.getInstance(MainThreadFileSystem::class.java)
-    
+
     // Registered file system providers mapped by their handles
     private val providers = ConcurrentHashMap<Int, String>()
 
@@ -246,11 +245,11 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun registerFileSystemProvider(handle: Int, scheme: String) {
         logger.info("Registering file system provider: handle=$handle, scheme=$scheme")
-        
+
         try {
             // Store provider information
             providers[handle] = scheme
-            
+
             // Actual implementation would need to integrate with IDEA's VFS
             // based on the scheme
         } catch (e: Exception) {
@@ -267,11 +266,11 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun unregisterProvider(handle: Int) {
         logger.info("Unregistering file system provider: handle=$handle")
-        
+
         try {
             // Remove provider information
             providers.remove(handle)
-            
+
             // Actual implementation would need to unregister the corresponding file system provider
         } catch (e: Exception) {
             logger.error("Failed to unregister file system provider: $e")
@@ -288,25 +287,25 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun stat(resource: URI): FileStat {
         logger.info("Getting file status information: $resource")
-        
+
         try {
             val path = getPathFromUriComponents(resource)
             val file = File(path)
-            
+
             if (!file.exists()) {
                 throw Exception("File does not exist: $path")
             }
-            
+
             val type = when {
                 file.isDirectory -> FileType.DIRECTORY
                 Files.isSymbolicLink(Paths.get(file.toURI())) -> FileType.SYMBOLIC_LINK
                 else -> FileType.FILE
             }
-            
+
             val ctime = file.lastModified()
             val mtime = file.lastModified()
             val size = file.length()
-            
+
             return FileStat(type, ctime, mtime, size)
         } catch (e: Exception) {
             logger.error("Failed to get file status information: $e")
@@ -323,17 +322,17 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun readdir(resource: URI): List<Pair<String, String>> {
         logger.info("Reading directory contents: $resource")
-        
+
         try {
             val path = getPathFromUriComponents(resource)
             val file = File(path)
-            
+
             if (!file.exists() || !file.isDirectory) {
                 throw Exception("Directory does not exist or is not a directory: $path")
             }
-            
+
             // Read directory contents
-            return file.listFiles()?.map { 
+            return file.listFiles()?.map {
                 Pair(it.name, if (it.isDirectory) FileType.DIRECTORY.ordinal.toString() else FileType.FILE.ordinal.toString())
             } ?: emptyList()
         } catch (e: Exception) {
@@ -351,15 +350,15 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun readFile(uri: URI): ByteArray {
         logger.info("Reading file content: $uri")
-        
+
         try {
             val path = getPathFromUriComponents(uri)
             val file = File(path)
-            
+
             if (!file.exists() || file.isDirectory) {
                 throw Exception("File does not exist or is a directory: $path")
             }
-            
+
             // Read file content
             return file.readBytes()
         } catch (e: Exception) {
@@ -379,14 +378,14 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun writeFile(uri: URI, content: ByteArray, overwrite: Boolean): ByteArray {
         logger.info("Writing file content: $uri, content size: ${content.size} bytes")
-        
+
         try {
             val path = getPathFromUriComponents(uri)
             val file = File(path)
-            
+
             // Ensure parent directory exists
             file.parentFile?.mkdirs()
-            
+
             // Write file content
             file.writeBytes(content)
             return content
@@ -406,33 +405,33 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun rename(source: URI, target: URI, options: Map<String, Any>) {
         logger.info("Renaming: $source -> $target")
-        
+
         try {
             val sourcePath = getPathFromUriComponents(source)
             val targetPath = getPathFromUriComponents(target)
             val overwrite = options["overwrite"] as? Boolean ?: false
-            
+
             val sourceFile = File(sourcePath)
             val targetFile = File(targetPath)
-            
+
             if (!sourceFile.exists()) {
                 throw Exception("Source file does not exist: $sourcePath")
             }
-            
+
             if (targetFile.exists() && !overwrite) {
                 throw Exception("Target file already exists and overwrite is not allowed: $targetPath")
             }
-            
+
             // Ensure parent directory exists
             targetFile.parentFile?.mkdirs()
-            
+
             // Perform rename operation
             if (!sourceFile.renameTo(targetFile)) {
                 // If simple rename fails, try copy then delete
                 Files.move(
                     Paths.get(sourcePath),
                     Paths.get(targetPath),
-                    if (overwrite) StandardCopyOption.REPLACE_EXISTING else StandardCopyOption.ATOMIC_MOVE
+                    if (overwrite) StandardCopyOption.REPLACE_EXISTING else StandardCopyOption.ATOMIC_MOVE,
                 )
             }
         } catch (e: Exception) {
@@ -451,26 +450,26 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun copy(source: URI, target: URI, options: Map<String, Any>) {
         logger.info("Copying: $source -> $target")
-        
+
         try {
             val sourcePath = getPathFromUriComponents(source)
             val targetPath = getPathFromUriComponents(target)
             val overwrite = options["overwrite"] as? Boolean ?: false
-            
+
             val sourceFile = File(sourcePath)
             val targetFile = File(targetPath)
-            
+
             if (!sourceFile.exists()) {
                 throw Exception("Source file does not exist: $sourcePath")
             }
-            
+
             if (targetFile.exists() && !overwrite) {
                 throw Exception("Target file already exists and overwrite is not allowed: $targetPath")
             }
-            
+
             // Ensure parent directory exists
             targetFile.parentFile?.mkdirs()
-            
+
             if (sourceFile.isDirectory) {
                 // Copy directory recursively
                 sourceFile.copyRecursively(targetFile, overwrite)
@@ -479,7 +478,7 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
                 Files.copy(
                     Paths.get(sourcePath),
                     Paths.get(targetPath),
-                    if (overwrite) StandardCopyOption.REPLACE_EXISTING else StandardCopyOption.COPY_ATTRIBUTES
+                    if (overwrite) StandardCopyOption.REPLACE_EXISTING else StandardCopyOption.COPY_ATTRIBUTES,
                 )
             }
         } catch (e: Exception) {
@@ -496,15 +495,15 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun mkdir(uri: URI) {
         logger.info("Creating directory: $uri")
-        
+
         try {
             val path = getPathFromUriComponents(uri)
             val file = File(path)
-            
+
             if (file.exists()) {
                 throw Exception("File or directory already exists: $path")
             }
-            
+
             // Create directory
             if (!file.mkdirs()) {
                 throw Exception("Failed to create directory: $path")
@@ -524,24 +523,24 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun delete(uri: URI, options: Map<String, Any>) {
         logger.info("Deleting: $uri, options: $options")
-        
+
         try {
             val path = getPathFromUriComponents(uri)
             val file = File(path)
             val recursive = options["recursive"] as? Boolean ?: false
             val useTrash = options["useTrash"] as? Boolean ?: false
-            
+
             if (!file.exists()) {
                 // If file doesn't exist, consider deletion successful
                 return
             }
-            
+
             if (useTrash) {
                 // TODO: Implement trash deletion based on platform
                 // Currently performs direct deletion, should move to trash in actual implementation
                 logger.warn("Trash deletion not implemented, performing direct deletion")
             }
-            
+
             if (file.isDirectory && recursive) {
                 // Recursively delete directory
                 file.deleteRecursively()
@@ -565,7 +564,7 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun ensureActivation(scheme: String) {
         logger.info("Ensuring activation: $scheme")
-        
+
         try {
             // This should handle file system activation
             // Actual implementation may need to notify IDEA's VFS to refresh
@@ -584,7 +583,7 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
      */
     override fun onFileSystemChange(handle: Int, resources: List<FileChangeDto>) {
         logger.info("File system change notification: handle=$handle, resources=${resources.joinToString { it.resource.toString() }}")
-        
+
         try {
             // This should handle file system change notifications
             // Actual implementation may need to notify IDEA's VFS to refresh
@@ -593,7 +592,7 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
             throw e
         }
     }
-    
+
     /**
      * Gets file system path from URI components.
      * Converts a URI to a local file system path.
@@ -604,7 +603,7 @@ class MainThreadFileSystem : MainThreadFileSystemShape {
     private fun getPathFromUriComponents(uri: URI): String {
         return File(uri).path
     }
-    
+
     /**
      * Disposes of resources.
      * Cleans up resources when this service is no longer needed.

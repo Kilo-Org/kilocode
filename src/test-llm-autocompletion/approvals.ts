@@ -5,7 +5,7 @@ import readline from "readline"
 const APPROVALS_DIR = "approvals"
 
 export interface ApprovalResult {
-	approved: boolean
+	isApproved: boolean
 	newOutput: boolean
 }
 
@@ -64,14 +64,20 @@ async function askUserApproval(category: string, testName: string, input: string
 		console.log("\n" + "═".repeat(80))
 		console.log(`\n🔍 New output detected for: ${category}/${testName}\n`)
 		console.log("Input:")
-		console.log(input.replace(/\n/g, "\\n"))
+		console.log("─".repeat(80))
+		console.log(input)
+		console.log("─".repeat(80))
 		console.log("\nOutput:")
-		console.log(output.replace(/\n/g, "\\n"))
+		console.log("─".repeat(80))
+		console.log(output)
+		console.log("─".repeat(80))
 		console.log("\n" + "─".repeat(80))
 
-		rl.question("\nIs this acceptable? (y/n): ", (answer) => {
+		rl.question("\nIs this acceptable? [Y/n]: ", (answer) => {
 			rl.close()
-			resolve(answer.toLowerCase() === "y" || answer.toLowerCase() === "yes")
+			const trimmed = answer.trim().toLowerCase()
+			const isApproved = trimmed === "" || trimmed === "y" || trimmed === "yes"
+			resolve(isApproved)
 		})
 	})
 }
@@ -81,17 +87,23 @@ export async function checkApproval(
 	testName: string,
 	input: string,
 	output: string,
+	skipApproval: boolean = false,
 ): Promise<ApprovalResult> {
 	const categoryDir = getCategoryPath(category)
 
 	const approvedMatch = findMatchingFile(categoryDir, testName, "approved", output)
 	if (approvedMatch) {
-		return { approved: true, newOutput: false }
+		return { isApproved: true, newOutput: false }
 	}
 
 	const rejectedMatch = findMatchingFile(categoryDir, testName, "rejected", output)
 	if (rejectedMatch) {
-		return { approved: false, newOutput: false }
+		return { isApproved: false, newOutput: false }
+	}
+
+	// If skipApproval is true, mark as unknown (new output)
+	if (skipApproval) {
+		return { isApproved: false, newOutput: true }
 	}
 
 	const isApproved = await askUserApproval(category, testName, input, output)
@@ -106,5 +118,5 @@ export async function checkApproval(
 
 	fs.writeFileSync(filePath, output, "utf-8")
 
-	return { approved: isApproved, newOutput: true }
+	return { isApproved, newOutput: true }
 }

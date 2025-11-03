@@ -5,14 +5,12 @@
 
 package ai.kilocode.jetbrains.core
 
+import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
+import ai.kilocode.jetbrains.util.URI
+import ai.kilocode.jetbrains.util.toCompletableFuture
 import com.google.gson.Gson
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.diagnostic.Logger
-import ai.kilocode.jetbrains.ipc.proxy.IRPCProtocol
-import ai.kilocode.jetbrains.ipc.proxy.ProxyIdentifier
-import ai.kilocode.jetbrains.ipc.proxy.createProxyIdentifier
-import ai.kilocode.jetbrains.util.URI
-import ai.kilocode.jetbrains.util.toCompletableFuture
 import java.io.File
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
@@ -26,10 +24,10 @@ class ExtensionManager : Disposable {
     companion object {
         val LOG = Logger.getInstance(ExtensionManager::class.java)
     }
-    
+
     // Registered extensions
     private val extensions = ConcurrentHashMap<String, ExtensionDescription>()
-    
+
     // Gson instance
     private val gson = Gson()
 
@@ -40,22 +38,22 @@ class ExtensionManager : Disposable {
      */
     private fun parseExtensionDescription(extensionPath: String): ExtensionDescription {
         LOG.info("Parsing extension: $extensionPath")
-        
+
         // Read package.json file
         val packageJsonPath = Paths.get(extensionPath, "package.json").toString()
         val packageJsonContent = File(packageJsonPath).readText()
         val packageJson = gson.fromJson(packageJsonContent, PackageJson::class.java)
-        
+
         // Create extension identifier
         val name = packageJson.name
         val publisher = "Kilo Code"
         val extensionIdentifier = ExtensionIdentifier("$publisher.$name")
-        
+
         // Create extension description
         return ExtensionDescription(
-            id = "${publisher}.${name}",
+            id = "$publisher.$name",
             identifier = extensionIdentifier,
-            name = "${publisher}.${name}",
+            name = "$publisher.$name",
             displayName = packageJson.displayName,
             description = packageJson.description,
             version = packageJson.version ?: "1.0.0",
@@ -67,7 +65,7 @@ class ExtensionManager : Disposable {
             isBuiltin = false,
             isUserBuiltin = false,
             isUnderDevelopment = false,
-            engines = packageJson.engines?.let { 
+            engines = packageJson.engines?.let {
                 mapOf("vscode" to (it.vscode ?: "^1.0.0"))
             } ?: mapOf("vscode" to "^1.0.0"),
             preRelease = false,
@@ -75,7 +73,7 @@ class ExtensionManager : Disposable {
             extensionDependencies = packageJson.extensionDependencies ?: emptyList(),
         )
     }
-    
+
     /**
      * Get all parsed extension descriptions
      * @return Extension description array
@@ -83,7 +81,7 @@ class ExtensionManager : Disposable {
     fun getAllExtensionDescriptions(): List<ExtensionDescription> {
         return extensions.values.toList()
     }
-    
+
     /**
      * Get description information for the specified extension
      * @param extensionId Extension ID
@@ -92,7 +90,7 @@ class ExtensionManager : Disposable {
     fun getExtensionDescription(extensionId: String): ExtensionDescription? {
         return extensions[extensionId]
     }
-    
+
     /**
      * Register extension
      * @param extensionPath Extension path
@@ -104,7 +102,7 @@ class ExtensionManager : Disposable {
         LOG.info("Extension registered: ${extensionDescription.name}")
         return extensionDescription
     }
-    
+
     /**
      * Activate extension
      * @param extensionId Extension ID
@@ -113,7 +111,7 @@ class ExtensionManager : Disposable {
      */
     fun activateExtension(extensionId: String, rpcProtocol: IRPCProtocol): CompletableFuture<Boolean> {
         LOG.info("Activating extension: $extensionId")
-        
+
         try {
             // Get extension description
             val extension = extensions[extensionId]
@@ -128,16 +126,16 @@ class ExtensionManager : Disposable {
             val activationParams = mapOf(
                 "startup" to true,
                 "extensionId" to extension.identifier,
-                "activationEvent" to "api"
+                "activationEvent" to "api",
             )
 
             // Get proxy of ExtHostExtensionServiceShape type
             val extHostService = rpcProtocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostExtensionService)
-            
+
             try {
                 // Get LazyPromise instance and convert it to CompletableFuture<Boolean>
                 val lazyPromise = extHostService.activate(extension.identifier.value, activationParams)
-                
+
                 return lazyPromise.toCompletableFuture<Any?>().thenApply { result ->
                     val boolResult = when (result) {
                         is Boolean -> result
@@ -155,7 +153,6 @@ class ExtensionManager : Disposable {
                 future.completeExceptionally(e)
                 return future
             }
-            
         } catch (e: Exception) {
             LOG.error("Failed to activate extension: $extensionId", e)
             val future = CompletableFuture<Boolean>()
@@ -186,7 +183,7 @@ data class PackageJson(
     val engines: Engines? = null,
     val activationEvents: List<String>? = null,
     val main: String? = null,
-    val extensionDependencies: List<String>? = null
+    val extensionDependencies: List<String>? = null,
 )
 
 /**
@@ -195,7 +192,7 @@ data class PackageJson(
  */
 data class Engines(
     val vscode: String? = null,
-    val node: String? = null
+    val node: String? = null,
 )
 
 /**
@@ -245,6 +242,6 @@ fun ExtensionDescription.toMap(): Map<String, Any?> {
         "engines" to this.engines,
         "preRelease" to this.preRelease,
         "capabilities" to this.capabilities,
-        "extensionDependencies" to this.extensionDependencies
+        "extensionDependencies" to this.extensionDependencies,
     )
-} 
+}

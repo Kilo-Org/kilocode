@@ -1,2 +1,0 @@
-# Description: Should add semicolon after variable declaration
-const x = 42<<<CURSOR>>>

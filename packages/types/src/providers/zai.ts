@@ -8,20 +8,6 @@ import { ZaiApiLine } from "../provider-settings.js"
 export type InternationalZAiModelId = keyof typeof internationalZAiModels
 export const internationalZAiDefaultModelId: InternationalZAiModelId = "glm-4.6" // kilocode_change: overwrite the entire file on merge conflicts
 export const internationalZAiModels = {
-	// kilocode_change start: overwrite the entire file on merge conflicts
-	"glm-4.6": {
-		maxTokens: 131_072,
-		contextWindow: 204_800,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0.6,
-		outputPrice: 2.2,
-		cacheWritesPrice: 0,
-		cacheReadsPrice: 0.11,
-		description:
-			"GLM-4.6 is Zhipu's latest SOTA models for reasoning, code, and agentsUpgraded across 8 authoritative benchmarks. With a 355B-parameter MoE architecture and 200K context, it surpasses GLM-4.5 in coding, reasoning, search, writing, and agent applications.",
-	},
-	// kilocode_change end
 	"glm-4.5": {
 		maxTokens: 98_304,
 		contextWindow: 131_072,
@@ -56,45 +42,23 @@ export const internationalZAiModels = {
 		cacheReadsPrice: 0,
 		description: "Zhipu's most advanced free model to date.",
 	},
+	"glm-4.6": {
+		maxTokens: 98_304,
+		contextWindow: 204_800,
+		supportsImages: false,
+		supportsPromptCache: true,
+		inputPrice: 0.6,
+		outputPrice: 2.2,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0.11,
+		description:
+			"GLM-4.6 is Zhipu's newest model with an extended context window of up to 200k tokens, providing enhanced capabilities for processing longer documents and conversations.",
+	},
 } as const satisfies Record<string, ModelInfo>
 
 export type MainlandZAiModelId = keyof typeof mainlandZAiModels
 export const mainlandZAiDefaultModelId: MainlandZAiModelId = "glm-4.6" // kilocode_change: overwrite the entire file on merge conflicts
 export const mainlandZAiModels = {
-	// kilocode_change start: overwrite the entire file on merge conflicts
-	"glm-4.6": {
-		maxTokens: 131_072,
-		contextWindow: 204_800,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0.29,
-		outputPrice: 1.14,
-		cacheWritesPrice: 0,
-		cacheReadsPrice: 0.057,
-		description:
-			"GLM-4.6 is Zhipu's latest SOTA models for reasoning, code, and agentsUpgraded across 8 authoritative benchmarks. With a 355B-parameter MoE architecture and 200K context, it surpasses GLM-4.5 in coding, reasoning, search, writing, and agent applications.",
-		tiers: [
-			{
-				contextWindow: 32_000,
-				inputPrice: 0.21,
-				outputPrice: 1.0,
-				cacheReadsPrice: 0.043,
-			},
-			{
-				contextWindow: 200_000,
-				inputPrice: 0.29,
-				outputPrice: 1.14,
-				cacheReadsPrice: 0.057,
-			},
-			{
-				contextWindow: Infinity,
-				inputPrice: 0.29,
-				outputPrice: 1.14,
-				cacheReadsPrice: 0.057,
-			},
-		],
-	},
-	// kilocode_change end
 	"glm-4.5": {
 		maxTokens: 98_304,
 		contextWindow: 131_072,
@@ -169,6 +133,44 @@ export const mainlandZAiModels = {
 		cacheReadsPrice: 0,
 		description: "Zhipu's most advanced free model to date.",
 	},
+	"glm-4.6": {
+		maxTokens: 98_304,
+		contextWindow: 204_800,
+		supportsImages: false,
+		supportsPromptCache: true,
+		inputPrice: 0.29,
+		outputPrice: 1.14,
+		cacheWritesPrice: 0,
+		cacheReadsPrice: 0.057,
+		description:
+			"GLM-4.6 is Zhipu's newest model with an extended context window of up to 200k tokens, providing enhanced capabilities for processing longer documents and conversations.",
+		tiers: [
+			{
+				contextWindow: 32_000,
+				inputPrice: 0.21,
+				outputPrice: 1.0,
+				cacheReadsPrice: 0.043,
+			},
+			{
+				contextWindow: 128_000,
+				inputPrice: 0.29,
+				outputPrice: 1.14,
+				cacheReadsPrice: 0.057,
+			},
+			{
+				contextWindow: 200_000,
+				inputPrice: 0.29,
+				outputPrice: 1.14,
+				cacheReadsPrice: 0.057,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 0.29,
+				outputPrice: 1.14,
+				cacheReadsPrice: 0.057,
+			},
+		],
+	},
 } as const satisfies Record<string, ModelInfo>
 
 export const ZAI_DEFAULT_TEMPERATURE = 0
@@ -179,7 +181,9 @@ export const zaiApiLineConfigs = {
 		baseUrl: "https://api.z.ai/api/coding/paas/v4",
 		isChina: false,
 	},
-	international: { name: "International Standard", baseUrl: "https://api.z.ai/api/paas/v4", isChina: false },
-	china_coding: { name: "China Coding Plan", baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4", isChina: true },
-	china: { name: "China Standard", baseUrl: "https://open.bigmodel.cn/api/paas/v4", isChina: true },
+	china_coding: {
+		name: "China Coding Plan",
+		baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
+		isChina: true,
+	},
 } satisfies Record<ZaiApiLine, { name: string; baseUrl: string; isChina: boolean }>

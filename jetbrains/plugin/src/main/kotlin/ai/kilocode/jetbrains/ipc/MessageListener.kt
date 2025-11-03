@@ -8,9 +8,9 @@ package ai.kilocode.jetbrains.ipc
  * Message listener
  */
 fun interface MessageListener {
-   /**
-    * Handle received message
-    * @param data Received message data
-    */
+    /**
+     * Handle received message
+     * @param data Received message data
+     */
     fun onMessage(data: ByteArray)
-} 
+}

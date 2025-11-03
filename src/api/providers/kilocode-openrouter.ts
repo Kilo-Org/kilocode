@@ -3,11 +3,16 @@ import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "../../shared/kilocode/token"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
-import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TASKID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
+import {
+	X_KILOCODE_ORGANIZATIONID,
+	X_KILOCODE_TASKID,
+	X_KILOCODE_PROJECTID,
+	X_KILOCODE_TESTER,
+} from "../../shared/kilocode/headers"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -18,14 +23,16 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	defaultModel: string = openRouterDefaultModelId
 
 	protected override get providerName() {
-		return "KiloCode"
+		return "KiloCode" as const
 	}
 
 	constructor(options: ApiHandlerOptions) {
-		const baseUri = getKiloBaseUriFromToken(options.kilocodeToken ?? "")
 		options = {
 			...options,
-			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
+			openRouterBaseUrl: getKiloUrlFromToken(
+				"https://api.kilocode.ai/api/openrouter/",
+				options.kilocodeToken ?? "",
+			),
 			openRouterApiKey: options.kilocodeToken,
 		}
 
@@ -43,6 +50,10 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 		if (kilocodeOptions.kilocodeOrganizationId) {
 			headers[X_KILOCODE_ORGANIZATIONID] = kilocodeOptions.kilocodeOrganizationId
+
+			if (metadata?.projectId) {
+				headers[X_KILOCODE_PROJECTID] = metadata.projectId
+			}
 		}
 
 		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
@@ -65,6 +76,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		if (lastUsage.is_byok) {
 			return lastUsage.cost_details?.upstream_inference_cost || 0
 		}
+
 		return lastUsage.cost || 0
 	}
 

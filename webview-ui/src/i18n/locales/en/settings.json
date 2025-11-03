@@ -251,6 +251,8 @@
 		"noProviderMatchFound": "No providers found",
 		"noMatchFound": "No matching profiles found",
 		"vscodeLmDescription": " The VS Code Language Model API allows you to run models provided by other VS Code extensions (including but not limited to GitHub Copilot). The easiest way to get started is to install the Copilot and Copilot Chat extensions from the VS Code Marketplace.",
+		"vscodeLmUnavailable": "VS Code Language Model support is only available on Visual Studio Code. Forks such as VSCodium and others may not work. Further, this capability is not available in JetBrains tools.",
+		"vscodeLmUnavailableInstructions": "Ensure you are using a supported tool and that VS Code Chat is installed and enabled",
 		"awsCustomArnUse": "Enter a valid Amazon Bedrock ARN for the model you want to use. Format examples:",
 		"awsCustomArnDesc": "Make sure the region in the ARN matches your selected AWS Region above.",
 		"openRouterApiKey": "OpenRouter API Key",
@@ -293,6 +295,8 @@
 		"getChutesApiKey": "Get Chutes API Key",
 		"fireworksApiKey": "Fireworks API Key",
 		"getFireworksApiKey": "Get Fireworks API Key",
+		"syntheticApiKey": "Synthetic API Key",
+		"getSyntheticApiKey": "Get Synthetic API Key",
 		"featherlessApiKey": "Featherless API Key",
 		"getFeatherlessApiKey": "Get Featherless API Key",
 		"ioIntelligenceApiKey": "IO Intelligence API Key",
@@ -316,6 +320,10 @@
 		"sambaNovaApiKey": "SambaNova API Key",
 		"getHuggingFaceApiKey": "Get Hugging Face API Key",
 		"huggingFaceApiKey": "Hugging Face API Key",
+		"getOvhCloudAiEndpointsApiKey": "Get OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsApiKey": "OVHcloud AI Endpoints API Key",
+		"ovhCloudAiEndpointsBaseUrl": "Base URL",
+		"getOvhCloudAiEndpointsBaseUrl": "Use a custom base URL",
 		"huggingFaceModelId": "Model ID",
 		"huggingFaceLoading": "Loading...",
 		"huggingFaceModelsCount": "({{count}} models)",
@@ -461,6 +469,10 @@
 			},
 			"resetDefaults": "Reset to Defaults"
 		},
+		"rateLimitAfter": {
+			"label": "Rate limit on end",
+			"description": "Start rate limiting after the API stream ends."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Minimum time between API requests."
@@ -554,6 +566,19 @@
 		"taskTimeline": {
 			"label": "Show task timeline",
 			"description": "Display a visual timeline of task messages, colorized by type, allowing you to quickly view task progress and scroll back to specific points in the task's history."
+		},
+		"sendMessageOnEnter": {
+			"label": "Send message with Enter",
+			"description": "When enabled, press Enter to send and Shift+Enter for a new line. Turn off to use Shift+Enter to send instead."
+		},
+		"costThreshold": {
+			"label": "Hide cost below threshold",
+			"description": "Only show request costs above this amount. Costs are always visible when the details pane is open.",
+			"currentValue": "Current threshold: ${{value}}"
+		},
+		"showTimestamps": {
+			"label": "Show timestamps",
+			"description": "Show timestamp for every message in the chat view"
 		}
 	},
 	"ghost": {
@@ -778,7 +803,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Code API Provider, OpenRouter, or a Morph API key.",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)",
 			"modelLabel": "Model Selection",
@@ -891,6 +916,7 @@
 			"regionMismatch": "Warning: The region in your ARN ({{arnRegion}}) does not match your selected region ({{region}}). This may cause access issues. The provider will use the region from the ARN."
 		},
 		"modelAvailability": "The model ID ({{modelId}}) you provided is not available. Please choose a different model.",
+		"modelDeprecated": "This model is no longer available. Please select a different model.",
 		"providerNotAllowed": "Provider '{{provider}}' is not allowed by your organization",
 		"modelNotAllowed": "Model '{{model}}' is not allowed for provider '{{provider}}' by your organization",
 		"profileInvalid": "This profile contains a provider or model that is not allowed by your organization",

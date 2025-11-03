@@ -1,3 +1,0 @@
-# Description: Should suggest async operations
-async function fetchData() {
-	const response = await <<<CURSOR>>>

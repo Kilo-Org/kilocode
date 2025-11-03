@@ -204,7 +204,7 @@ When you need more capability than free models provide, these options deliver ex
 
 ### Track Your Usage
 
-**Monitor token consumption:**
+**Monitor credit consumption:**
 
 - Check cost estimates in chat history
 - Review monthly usage patterns

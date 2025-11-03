@@ -132,7 +132,8 @@
 		"settings": "Mode Settings",
 		"description": "Specialized personas that tailor Kilo Code's behavior.",
 		"searchPlaceholder": "Search modes...",
-		"noResults": "No results found"
+		"noResults": "No results found",
+		"organizationModes": "Organization Modes"
 	},
 	"enhancePromptDescription": "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
 	"addImages": "Add images to message",
@@ -345,6 +346,8 @@
 		"tooltips": {
 			"expand": "Expand code block",
 			"collapse": "Collapse code block",
+			"enable_wrap": "Enable word wrap",
+			"disable_wrap": "Disable word wrap",
 			"copy_code": "Copy code"
 		}
 	},

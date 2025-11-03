@@ -1,8 +1,0 @@
-# Description: Should handle object properties with inline comments and suggest next property
-const creditConfig = {
-	credit_category: 'credits',
-	description: 'Free credits as a reward',
-	amount_usd: 5, // inlined from FREE CREDITS<<<CURSOR>>>
-	is_idempotent: true,
-	expiry: "2 months",
-	

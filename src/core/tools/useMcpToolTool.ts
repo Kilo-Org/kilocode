@@ -212,6 +212,18 @@ async function processToolContent(task: Task, toolResult: McpToolCallResponse): 
 				const { blob: _, ...rest } = item.resource
 				return JSON.stringify(rest, null, 2)
 			}
+			// kilocode_change start
+			if (item.type === "resource_link") {
+				const { uri, name, description, mimeType } = item
+				return `Resource Link: ${name || uri}${description ? ` - ${description}` : ""}${mimeType ? ` (${mimeType})` : ""}`
+			}
+			if (item.type === "image") {
+				return `[Image: ${item.mimeType}]`
+			}
+			if (item.type === "audio") {
+				return `[Audio: ${item.mimeType}]`
+			}
+			// kilocode_change end
 			return ""
 		})
 		.filter(Boolean)

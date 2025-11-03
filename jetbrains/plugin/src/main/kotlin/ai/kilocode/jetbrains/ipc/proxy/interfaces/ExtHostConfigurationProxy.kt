@@ -14,13 +14,13 @@ interface ExtHostConfigurationProxy {
      * @param configModel Configuration model
      */
     fun initializeConfiguration(configModel: Map<String, Any?>)
-    
+
     /**
      * Update configuration
      * @param configModel Configuration model
      */
     fun updateConfiguration(configModel: Map<String, Any?>)
-    
+
     /**
      * Get configuration
      * @param key Configuration key
@@ -29,4 +29,4 @@ interface ExtHostConfigurationProxy {
      * @return Configuration value
      */
     fun getConfiguration(key: String, section: String?, scopeToLanguage: Boolean): Any?
-} 
+}

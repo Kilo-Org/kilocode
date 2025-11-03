@@ -4,7 +4,6 @@
  */
 
 import i18n from "../../../i18n/setup"
-import { isAnyRecognizedKiloCodeError } from "../../../shared/kilocode/errorUtils"
 
 /**
  * Handles OpenAI client errors and transforms them into user-friendly messages
@@ -13,12 +12,6 @@ import { isAnyRecognizedKiloCodeError } from "../../../shared/kilocode/errorUtil
  * @returns The original error or a transformed user-friendly error
  */
 export function handleOpenAIError(error: unknown, providerName: string): Error {
-	// kilocode_change start
-	if (providerName === "KiloCode" && isAnyRecognizedKiloCodeError(error)) {
-		throw error
-	}
-	// kilocode_change end
-
 	if (error instanceof Error) {
 		const msg = error.message || ""
 
