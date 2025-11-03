@@ -119,8 +119,8 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 
 	return (
 		<TooltipProvider delayDuration={300}>
-			{/* kilocode_change: add className relative */}
-			<Tab className="relative">
+			{/* kilocode_change: header conditionally className relative or fixed */}
+			<Tab className={cn(hideHeader ? "relative" : "fixed")}>
 				{/*  kilocode_change: display header conditionally */}
 				<TabHeader
 					style={{ display: hideHeader ? "none" : "flex" }}
