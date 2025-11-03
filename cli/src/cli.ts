@@ -16,6 +16,7 @@ import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } f
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
 import { isGitWorktree } from "./utils/git.js"
+import { Package } from "./constants/package.js"
 
 export interface CLIOptions {
 	mode?: string
@@ -56,6 +57,7 @@ export class CLI {
 
 		try {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
+			logs.info(`Version: ${Package.version}`, "CLI")
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
