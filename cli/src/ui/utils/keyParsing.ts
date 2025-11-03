@@ -197,26 +197,7 @@ export function parseKittySequence(buffer: string): ParseResult {
 
 		// Handle CSI-u format
 		if (terminator === KITTY_CSI_U_TERMINATOR) {
-			// Special case: Ctrl+letter combinations (ASCII codes 1-26)
-			// These represent Ctrl+A through Ctrl+Z
-			// Character codes 1-26 correspond to ctrl being held with letters a-z
-			if (keyCode >= 1 && keyCode <= 26) {
-				// Convert ASCII control code to letter (1=a, 2=b, ..., 26=z)
-				const letter = String.fromCharCode(keyCode + 96) // 96 = 'a' - 1
-				return {
-					key: {
-						name: letter,
-						ctrl: true,
-						meta: alt,
-						shift,
-						paste: false,
-						sequence: buffer.slice(0, match[0].length),
-						kittyProtocol: true,
-					},
-					consumedLength: match[0].length,
-				}
-			}
-
+			// First, check for special keys that have specific keycodes
 			const kittyKeyCodeToName: Record<number, string> = {
 				[CHAR_CODE_ESC]: "escape",
 				[KITTY_KEYCODE_TAB]: "tab",
@@ -240,25 +221,13 @@ export function parseKittySequence(buffer: string): ParseResult {
 				}
 			}
 
-			// Special handling for Enter with modifiers (keyCode 13)
-			if (keyCode === 13) {
-				return {
-					key: {
-						name: "return",
-						ctrl,
-						meta: alt,
-						shift,
-						paste: false,
-						sequence: buffer.slice(0, match[0].length),
-						kittyProtocol: true,
-					},
-					consumedLength: match[0].length,
-				}
-			}
+			const isChar =
+				(keyCode >= "a".charCodeAt(0) && keyCode <= "z".charCodeAt(0)) ||
+				(keyCode >= "A".charCodeAt(0) && keyCode <= "Z".charCodeAt(0))
 
 			// Handle Ctrl/Alt + letters
-			if ((ctrl || alt) && keyCode >= "a".charCodeAt(0) && keyCode <= "z".charCodeAt(0)) {
-				const letter = String.fromCharCode(keyCode)
+			if ((ctrl || alt) && isChar) {
+				const letter = String.fromCharCode(keyCode).toLowerCase()
 				return {
 					key: {
 						name: letter,
