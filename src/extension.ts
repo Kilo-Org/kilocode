@@ -248,7 +248,7 @@ export async function activate(context: vscode.ExtensionContext) {
 	if (!context.globalState.get("firstInstallCompleted")) {
 		outputChannel.appendLine("First installation detected, opening Axon Code sidebar!")
 		try {
-			await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+			await vscode.commands.executeCommand("axon-code.SidebarProvider.focus")
 
 			outputChannel.appendLine("Opening Axon Code walkthrough")
 

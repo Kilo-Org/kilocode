@@ -37,11 +37,11 @@ export class CommitMessageProvider implements vscode.Disposable {
 		this.outputChannel.appendLine(t("kilocode:commitMessage.activated"))
 
 		const disposables = [
-			vscode.commands.registerCommand("kilo-code.vsc.generateCommitMessage", (vsRequest?: VscGenerationRequest) =>
+			vscode.commands.registerCommand("axon-code.vsc.generateCommitMessage", (vsRequest?: VscGenerationRequest) =>
 				this.handleVSCodeCommand(vsRequest),
 			),
 			vscode.commands.registerCommand(
-				"kilo-code.jetbrains.generateCommitMessage",
+				"axon-code.jetbrains.generateCommitMessage",
 				(...args: JetbrainsGenerationRequest): Promise<CommitMessageResult> => {
 					return this.handleJetBrainsCommand(...args)
 				},

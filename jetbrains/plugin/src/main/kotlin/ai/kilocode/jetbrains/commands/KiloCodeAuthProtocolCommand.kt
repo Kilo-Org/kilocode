@@ -106,7 +106,7 @@ class KiloCodeAuthProtocolCommand : JBProtocolCommand("ai.kilocode.jetbrains.aut
                 // Execute a command to handle the URI - this simulates what happens when VSCode receives a URL
                 // We'll use a special command that the VSCode extension can handle
                 extHostCommands.executeContributedCommand(
-                    "kilo-code.handleExternalUri",
+                    "axon-code.handleExternalUri",
                     listOf(vscodeUriString),
                 )
 

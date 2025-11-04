@@ -8,12 +8,12 @@ export const registerAutocompleteProvider = (context: vscode.ExtensionContext, c
 	context.subscriptions.push(ghost)
 
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.enable", async () => {
+		vscode.commands.registerCommand("axon-code.ghost.enable", async () => {
 			await ghost.enable()
 		}),
 	)
 	context.subscriptions.push(
-		vscode.commands.registerCommand("kilo-code.ghost.disable", async () => {
+		vscode.commands.registerCommand("axon-code.ghost.disable", async () => {
 			await ghost.disable()
 		}),
 	)

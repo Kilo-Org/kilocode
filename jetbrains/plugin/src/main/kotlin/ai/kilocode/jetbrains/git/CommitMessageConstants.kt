@@ -11,7 +11,7 @@ object CommitMessageConstants {
     /**
      * VSCode extension command ID for external commit message generation.
      */
-    const val EXTERNAL_COMMAND_ID = "kilo-code.jetbrains.generateCommitMessage"
+    const val EXTERNAL_COMMAND_ID = "axon-code.jetbrains.generateCommitMessage"
     
     /**
      * Default timeout in milliseconds for commit message generation requests.
