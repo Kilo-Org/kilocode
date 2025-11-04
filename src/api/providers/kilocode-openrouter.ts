@@ -5,7 +5,7 @@ import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
-import { getModelEndpoints } from "./fetchers/modelEndpointCache"
+// import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
 import {
 	X_KILOCODE_ORGANIZATIONID,
@@ -104,22 +104,17 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
 
-		const [models, endpoints, defaultModel] = await Promise.all([
+		const [models, defaultModel] = await Promise.all([
 			getModels({
 				provider: "kilocode-openrouter",
 				kilocodeToken: this.options.kilocodeToken,
 				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
-			getModelEndpoints({
-				router: "openrouter",
-				modelId: this.options.kilocodeModel,
-				endpoint: this.options.openRouterSpecificProvider,
-			}),
 			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId, this.options),
 		])
 
 		this.models = models
-		this.endpoints = endpoints
+		// Removed endpoints assignment as we only have 1 provider
 		this.defaultModel = defaultModel
 		return this.getModel()
 	}

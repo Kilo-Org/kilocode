@@ -48,6 +48,38 @@ import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
+function stripThinkingTokens(text: string): string {
+	// Remove <think>...</think> blocks entirely, including nested ones
+	return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim()
+}
+
+function flattenMessageContent(content: any): string {
+	if (typeof content === "string") {
+		return content
+	}
+
+	if (Array.isArray(content)) {
+		return content
+			.map((part) => {
+				if (typeof part === "string") {
+					return part
+				}
+				if (part.type === "text") {
+					return part.text || ""
+				}
+				if (part.type === "image_url") {
+					return "[Image]" // Placeholder for images since Cerebras doesn't support images
+				}
+				return ""
+			})
+			.filter(Boolean)
+			.join("\n")
+	}
+
+	// Fallback for any other content types
+	return String(content || "")
+}
+
 // Image generation types
 interface ImageGenerationResponse {
 	choices?: Array<{
@@ -121,10 +153,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		super()
 		this.options = options
 
-		const baseURL = this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1"
+		const baseURL = this.options.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
-		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
+		console.log("baseURL", baseURL)
+		console.log("apiKey", apiKey)
+
+		this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
 	// kilocode_change start
@@ -178,36 +213,27 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let { id: modelId, maxTokens, temperature, topP, reasoning } = model
 
-		// OpenRouter sends reasoning tokens by default for Gemini 2.5 Pro
-		// Preview even if you don't request them. This is not the default for
-		// other providers (including Gemini), so we need to explicitly disable
-		// i We should generalize this using the logic in `getModelParams`, but
-		// this is easier for now.
-		if (
-			(modelId === "google/gemini-2.5-pro-preview" || modelId === "google/gemini-2.5-pro") &&
-			typeof reasoning === "undefined"
-		) {
-			reasoning = { exclude: true }
-		}
-
 		// Convert Anthropic messages to OpenAI format.
 		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
 			{ role: "system", content: systemPrompt },
 			...convertToOpenAiMessages(messages),
 		]
 
-		// DeepSeek highly recommends using user instead of system role.
-		if (modelId.startsWith("deepseek/deepseek-r1") || modelId === "perplexity/sonar-reasoning") {
-			openAiMessages = convertToR1Format([{ role: "user", content: systemPrompt }, ...messages])
-		}
+		openAiMessages = openAiMessages
+			.map((msg: any) => {
+				let content = flattenMessageContent(msg.content)
 
-		// kilocode_change start
-		if (modelId.startsWith("google/gemini")) {
-			addGeminiCacheBreakpoints(systemPrompt, openAiMessages)
-		} else if (modelId.startsWith("anthropic/claude") || OPEN_ROUTER_PROMPT_CACHING_MODELS.has(modelId)) {
-			addAnthropicCacheBreakpoints(systemPrompt, openAiMessages)
-		}
-		// kilocode_change end
+				// Strip thinking tokens from assistant messages to prevent confusion
+				if (msg.role === "assistant") {
+					content = stripThinkingTokens(content)
+				}
+
+				return {
+					role: msg.role,
+					content,
+				}
+			})
+			.filter((msg: any) => msg.content.trim() !== "")
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
@@ -405,7 +431,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		try {
 			const response = await fetch(
-				`${this.options.openRouterBaseUrl || "https://openrouter.ai/api/v1/"}chat/completions`, // kilocode_change: support baseUrl
+				`${this.options.openRouterBaseUrl || "https://api.matterai.so/v1/web"}chat/completions`, // kilocode_change: support baseUrl
 				{
 					method: "POST",
 					headers: {

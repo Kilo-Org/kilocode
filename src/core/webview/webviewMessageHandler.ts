@@ -800,20 +800,7 @@ export const webviewMessageHandler = async (
 
 			const routerModels: Record<RouterName, ModelRecord> = {
 				openrouter: {},
-				gemini: {}, // kilocode_change
-				"vercel-ai-gateway": {},
-				huggingface: {},
-				litellm: {},
-				"kilocode-openrouter": {}, // kilocode_change
-				deepinfra: {},
-				"io-intelligence": {},
-				requesty: {},
-				unbound: {},
-				glama: {},
-				chutes: {}, // kilocode_change
-				ollama: {},
-				lmstudio: {},
-				ovhcloud: {}, // kilocode_change
+				"kilocode-openrouter": {},
 			}
 
 			const safeGetModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
@@ -838,27 +825,6 @@ export const webviewMessageHandler = async (
 					key: "openrouter",
 					options: { provider: "openrouter", apiKey: openRouterApiKey, baseUrl: openRouterBaseUrl },
 				},
-				// kilocode_change start
-				{
-					key: "gemini",
-					options: {
-						provider: "gemini",
-						apiKey: apiConfiguration.geminiApiKey,
-						baseUrl: apiConfiguration.googleGeminiBaseUrl,
-					},
-				},
-				// kilocode_change end
-				{
-					key: "requesty",
-					options: {
-						provider: "requesty",
-						apiKey: apiConfiguration.requestyApiKey,
-						baseUrl: apiConfiguration.requestyBaseUrl,
-					},
-				},
-				{ key: "glama", options: { provider: "glama" } },
-				{ key: "unbound", options: { provider: "unbound", apiKey: apiConfiguration.unboundApiKey } },
-				{ key: "chutes", options: { provider: "chutes", apiKey: apiConfiguration.chutesApiKey } }, // kilocode_change
 				{
 					key: "kilocode-openrouter",
 					options: {
@@ -867,51 +833,8 @@ export const webviewMessageHandler = async (
 						kilocodeOrganizationId: apiConfiguration.kilocodeOrganizationId,
 					},
 				},
-				{ key: "ollama", options: { provider: "ollama", baseUrl: apiConfiguration.ollamaBaseUrl } },
-				{ key: "vercel-ai-gateway", options: { provider: "vercel-ai-gateway" } },
-				{
-					key: "deepinfra",
-					options: {
-						provider: "deepinfra",
-						apiKey: apiConfiguration.deepInfraApiKey,
-						baseUrl: apiConfiguration.deepInfraBaseUrl,
-					},
-				},
-				// kilocode_change start
-				{
-					key: "ovhcloud",
-					options: {
-						provider: "ovhcloud",
-						apiKey: apiConfiguration.ovhCloudAiEndpointsApiKey,
-						baseUrl: apiConfiguration.ovhCloudAiEndpointsBaseUrl,
-					},
-				},
-				// kilocode_change end
 			]
 			// kilocode_change end
-
-			// Add IO Intelligence if API key is provided.
-			const ioIntelligenceApiKey = apiConfiguration.ioIntelligenceApiKey
-
-			if (ioIntelligenceApiKey) {
-				modelFetchPromises.push({
-					key: "io-intelligence",
-					options: { provider: "io-intelligence", apiKey: ioIntelligenceApiKey },
-				})
-			}
-
-			// Don't fetch Ollama and LM Studio models by default anymore.
-			// They have their own specific handlers: requestOllamaModels and requestLmStudioModels.
-
-			const litellmApiKey = apiConfiguration.litellmApiKey || message?.values?.litellmApiKey
-			const litellmBaseUrl = apiConfiguration.litellmBaseUrl || message?.values?.litellmBaseUrl
-
-			if (litellmApiKey && litellmBaseUrl) {
-				modelFetchPromises.push({
-					key: "litellm",
-					options: { provider: "litellm", apiKey: litellmApiKey, baseUrl: litellmBaseUrl },
-				})
-			}
 
 			const results = await Promise.allSettled(
 				modelFetchPromises.map(async ({ key, options }) => {
@@ -925,19 +848,6 @@ export const webviewMessageHandler = async (
 
 				if (result.status === "fulfilled") {
 					routerModels[routerName] = result.value.models
-
-					// Ollama and LM Studio settings pages still need these events.
-					if (routerName === "ollama" && Object.keys(result.value.models).length > 0) {
-						provider.postMessageToWebview({
-							type: "ollamaModels",
-							ollamaModels: result.value.models,
-						})
-					} else if (routerName === "lmstudio" && Object.keys(result.value.models).length > 0) {
-						provider.postMessageToWebview({
-							type: "lmStudioModels",
-							lmStudioModels: result.value.models,
-						})
-					}
 				} else {
 					// Handle rejection: Post a specific error message for this provider.
 					const errorMessage = result.reason instanceof Error ? result.reason.message : String(result.reason)
@@ -956,53 +866,6 @@ export const webviewMessageHandler = async (
 
 			provider.postMessageToWebview({ type: "routerModels", routerModels })
 			break
-		case "requestOllamaModels": {
-			// Specific handler for Ollama models only.
-			const { apiConfiguration: ollamaApiConfig } = await provider.getState()
-			try {
-				// Flush cache first to ensure fresh models.
-				await flushModels("ollama")
-
-				const ollamaModels = await getModels({
-					provider: "ollama",
-					baseUrl: ollamaApiConfig.ollamaBaseUrl,
-					apiKey: ollamaApiConfig.ollamaApiKey,
-					numCtx: ollamaApiConfig.ollamaNumCtx, // kilocode_change
-				})
-
-				if (Object.keys(ollamaModels).length > 0) {
-					provider.postMessageToWebview({ type: "ollamaModels", ollamaModels: ollamaModels })
-				}
-			} catch (error) {
-				// Silently fail - user hasn't configured Ollama yet
-				console.debug("Ollama models fetch failed:", error)
-			}
-			break
-		}
-		case "requestLmStudioModels": {
-			// Specific handler for LM Studio models only.
-			const { apiConfiguration: lmStudioApiConfig } = await provider.getState()
-			try {
-				// Flush cache first to ensure fresh models.
-				await flushModels("lmstudio")
-
-				const lmStudioModels = await getModels({
-					provider: "lmstudio",
-					baseUrl: lmStudioApiConfig.lmStudioBaseUrl,
-				})
-
-				if (Object.keys(lmStudioModels).length > 0) {
-					provider.postMessageToWebview({
-						type: "lmStudioModels",
-						lmStudioModels: lmStudioModels,
-					})
-				}
-			} catch (error) {
-				// Silently fail - user hasn't configured LM Studio yet.
-				console.debug("LM Studio models fetch failed:", error)
-			}
-			break
-		}
 		case "requestOpenAiModels":
 			if (message?.values?.baseUrl && message?.values?.apiKey) {
 				const openAiModels = await getOpenAiModels(

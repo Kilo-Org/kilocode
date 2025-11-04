@@ -102,14 +102,16 @@ export async function getOpenRouterModels(
 	options?: ApiHandlerOptions & { headers?: Record<string, string> }, // kilocode_change: added headers
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = options?.openRouterBaseUrl || "https://api.matterai.so/v1/web"
+	const baseURL = "https://api.matterai.so/v1/web"
 
 	try {
-		// kilocode_change: use fetch, added headers
-		const response = await fetch(`${baseURL}/models`, {
+		// kilocode_change: use axios with timeout instead of fetch
+		const response = await axios.get(`${baseURL}/models`, {
 			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) },
+			timeout: 120000, // 60 seconds timeout
 		})
-		const json = await response.json()
+
+		const json = response.data
 		const result = openRouterModelsResponseSchema.safeParse(json)
 		const data = result.success ? result.data.data : json.data
 		// kilocode_change end
@@ -159,10 +161,12 @@ export async function getOpenRouterModelEndpoints(
 	options?: ApiHandlerOptions,
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = options?.openRouterBaseUrl || "https://api.matterai.so/v1/web"
+	const baseURL = "https://api.matterai.so/v1/web"
 
 	try {
-		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}`)
+		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}`, {
+			timeout: 120000, // 60 seconds timeout
+		})
 		const result = openRouterModelEndpointsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
 

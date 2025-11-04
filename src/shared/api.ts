@@ -29,7 +29,7 @@ export type ApiHandlerOptions = Omit<ProviderSettings, "apiProvider"> & {
 
 // RouterName
 
-export type RouterName = DynamicProvider | LocalProvider
+export type RouterName = any
 
 export const isRouterName = (value: string): value is RouterName => isDynamicProvider(value) || isLocalProvider(value)
 
@@ -154,25 +154,12 @@ type CommonFetchParams = {
 // If a new dynamic provider is added in packages/types, this will fail to compile
 // until a corresponding entry is added here.
 const dynamicProviderExtras = {
-	gemini: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
 	openrouter: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	litellm: {} as { apiKey: string; baseUrl: string },
 	"kilocode-openrouter": {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
-	deepinfra: {} as { apiKey?: string; baseUrl?: string },
-	"io-intelligence": {} as { apiKey: string },
-	requesty: {} as { apiKey?: string; baseUrl?: string },
-	unbound: {} as { apiKey?: string },
-	glama: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	ollama: {} as { numCtx?: number }, // kilocode_change
-	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
-	ovhcloud: {} as { apiKey?: string }, // kilocode_change
-	chutes: {} as { apiKey?: string }, // kilocode_change
 } as const satisfies Record<RouterName, object>
 
 // Build the dynamic options union from the map, intersected with CommonFetchParams
 // so extra fields are always allowed while required ones are enforced.
-export type GetModelsOptions = {
-	[P in keyof typeof dynamicProviderExtras]: ({ provider: P } & (typeof dynamicProviderExtras)[P]) & CommonFetchParams
-}[RouterName]
+export type GetModelsOptions = RouterName extends string
+	? (typeof dynamicProviderExtras)[keyof typeof dynamicProviderExtras] & CommonFetchParams
+	: any
