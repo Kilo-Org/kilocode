@@ -439,6 +439,7 @@ function createProviderContext(
 
 	if (commandContext) {
 		baseContext.commandContext = {
+			config: commandContext.config,
 			routerModels: commandContext.routerModels || null,
 			currentProvider: commandContext.currentProvider || null,
 			kilocodeDefaultModel: commandContext.kilocodeDefaultModel || "",
@@ -446,6 +447,7 @@ function createProviderContext(
 			profileLoading: commandContext.profileLoading || false,
 			updateProviderModel: commandContext.updateProviderModel,
 			refreshRouterModels: commandContext.refreshRouterModels,
+			taskHistoryData: commandContext.taskHistoryData || null,
 		}
 	}
 

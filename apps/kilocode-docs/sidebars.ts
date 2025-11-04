@@ -150,6 +150,7 @@ const sidebars: SidebarsConfig = {
 					],
 				},
 				"features/auto-launch-configuration",
+				"advanced-usage/auto-cleanup",
 				"features/experimental/experimental-features",
 			],
 		},

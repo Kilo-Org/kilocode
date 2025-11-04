@@ -2708,6 +2708,8 @@ describe("ClineProvider - Router Models", () => {
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 				// kilocode_change end
 			},
 		} as any)
@@ -2740,13 +2742,18 @@ describe("ClineProvider - Router Models", () => {
 			apiKey: "gemini-key",
 			baseUrl: "https://gemini.example.com",
 		})
+		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" })
+		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" })
+		expect(getModels).toHaveBeenCalledWith({
+			provider: "inception",
+			apiKey: "inception-key",
+			baseUrl: "https://api.inceptionlabs.ai/v1/",
+		})
 		// kilocode_change end
 		expect(getModels).toHaveBeenCalledWith({ provider: "requesty", apiKey: "requesty-key" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "glama" })
 		expect(getModels).toHaveBeenCalledWith({ provider: "unbound", apiKey: "unbound-key" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "chutes", apiKey: "chutes-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({ provider: "vercel-ai-gateway" })
-		expect(getModels).toHaveBeenCalledWith({ provider: "ovhcloud", apiKey: "ovhcloud-key" }) // kilocode_change
 		expect(getModels).toHaveBeenCalledWith({
 			provider: "litellm",
 			apiKey: "litellm-key",
@@ -2770,6 +2777,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2793,6 +2801,8 @@ describe("ClineProvider - Router Models", () => {
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
+				inceptionLabsApiKey: "inception-key",
+				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
 				// kilocode_change end
 			},
 		} as any)
@@ -2813,8 +2823,9 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Kilocode-OpenRouter API error")) // kilocode-openrouter fail
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
-			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockResolvedValueOnce(mockModels) // deepinfra success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
+			.mockResolvedValueOnce(mockModels) // kilocode_change: inception success
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
 
 		await messageHandler({ type: "requestRouterModels" })
@@ -2836,6 +2847,7 @@ describe("ClineProvider - Router Models", () => {
 				"kilocode-openrouter": {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2978,6 +2990,7 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
+				inception: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},

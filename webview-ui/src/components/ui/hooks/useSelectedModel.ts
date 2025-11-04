@@ -17,6 +17,10 @@ import {
 	// kilocode_change start
 	geminiCliDefaultModelId,
 	geminiCliModels,
+	syntheticModels,
+	syntheticDefaultModelId,
+	ovhCloudAiEndpointsDefaultModelId,
+	inceptionDefaultModelId,
 	// kilocode_change end
 	mistralDefaultModelId,
 	mistralModels,
@@ -50,8 +54,6 @@ import {
 	mainlandZAiModels,
 	fireworksModels,
 	fireworksDefaultModelId,
-	syntheticModels, // kilocode_change
-	syntheticDefaultModelId, // kilocode_change
 	featherlessModels,
 	featherlessDefaultModelId,
 	ioIntelligenceDefaultModelId,
@@ -63,7 +65,6 @@ import {
 	vercelAiGatewayDefaultModelId,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
-	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -454,6 +455,11 @@ function getSelectedModel({
 		case "ovhcloud": {
 			const id = apiConfiguration.ovhCloudAiEndpointsModelId ?? ovhCloudAiEndpointsDefaultModelId
 			const info = routerModels.ovhcloud[id]
+			return { id, info }
+		}
+		case "inception": {
+			const id = apiConfiguration.inceptionLabsModelId ?? inceptionDefaultModelId
+			const info = routerModels.inception[id]
 			return { id, info }
 		}
 		// kilocode_change end

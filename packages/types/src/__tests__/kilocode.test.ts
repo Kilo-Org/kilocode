@@ -4,7 +4,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import {
 	ghostServiceSettingsSchema,
 	checkKilocodeBalance,
-	getApiUrl,
 	getAppUrl,
 	getKiloUrlFromToken,
 	getExtensionConfigUrl,
@@ -184,36 +183,6 @@ describe("URL functions", () => {
 		})
 	})
 
-	describe("getApiUrl", () => {
-		it("should handle production URLs correctly", () => {
-			// API URLs using /api path structure
-			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
-			expect(getApiUrl("/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
-			expect(getApiUrl("/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
-			expect(getApiUrl("/profile/balance")).toBe("https://kilocode.ai/api/profile/balance")
-			expect(getApiUrl()).toBe("https://kilocode.ai/api")
-		})
-
-		it("should handle development environment", () => {
-			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
-
-			expect(getApiUrl("/extension-config.json")).toBe("http://localhost:3000/api/extension-config.json")
-			expect(getApiUrl("/marketplace/modes")).toBe("http://localhost:3000/api/marketplace/modes")
-			expect(getApiUrl("/marketplace/mcps")).toBe("http://localhost:3000/api/marketplace/mcps")
-			expect(getApiUrl()).toBe("http://localhost:3000/api")
-		})
-
-		it("should handle paths without leading slash", () => {
-			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
-			expect(getApiUrl("extension-config.json")).toBe("http://localhost:3000/api/extension-config.json")
-		})
-
-		it("should handle empty and root paths", () => {
-			expect(getApiUrl("")).toBe("https://kilocode.ai/api")
-			expect(getApiUrl("/")).toBe("https://kilocode.ai/api/")
-		})
-	})
-
 	describe("getAppUrl", () => {
 		it("should handle production URLs correctly", () => {
 			expect(getAppUrl()).toBe("https://kilocode.ai")
@@ -300,8 +269,8 @@ describe("URL functions", () => {
 	describe("Real-world URL patterns from application", () => {
 		it("should correctly handle marketplace endpoints", () => {
 			// These are the actual endpoints used in RemoteConfigLoader
-			expect(getApiUrl("/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
-			expect(getApiUrl("/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
+			expect(getAppUrl("/api/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
+			expect(getAppUrl("/api/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
 		})
 
 		it("should correctly handle app navigation URLs", () => {
@@ -326,25 +295,25 @@ describe("URL functions", () => {
 
 		it("should maintain backwards compatibility for legacy endpoints", () => {
 			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
-			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
-			expect(getApiUrl("/extension-config.json")).not.toBe(getExtensionConfigUrl())
+			expect(getAppUrl("/api/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
+			expect(getAppUrl("/api/extension-config.json")).not.toBe(getExtensionConfigUrl())
 		})
 	})
 
 	describe("Edge cases and error handling", () => {
 		it("should handle various localhost configurations", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:8080"
-			expect(getApiUrl("/test")).toBe("http://localhost:8080/api/test")
+			expect(getAppUrl("/api/test")).toBe("http://localhost:8080/api/test")
 
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://127.0.0.1:3000"
-			expect(getApiUrl("/test")).toBe("http://127.0.0.1:3000/api/test")
+			expect(getAppUrl("/api/test")).toBe("http://127.0.0.1:3000/api/test")
 		})
 
 		it("should handle custom backend URLs", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "https://staging.example.com"
 
 			expect(getAppUrl()).toBe("https://staging.example.com")
-			expect(getApiUrl("/test")).toBe("https://staging.example.com/api/test")
+			expect(getAppUrl("/api/test")).toBe("https://staging.example.com/api/test")
 			expect(getAppUrl("/dashboard")).toBe("https://staging.example.com/dashboard")
 		})
 	})

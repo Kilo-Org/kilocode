@@ -51,6 +51,7 @@ import {
 } from "./providers"
 // kilocode_change start
 import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
+import { InceptionLabsHandler } from "./providers/inception"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
 
@@ -192,6 +193,10 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 		// kilocode_change start
 		case "synthetic":
 			return new SyntheticHandler(options)
+		case "inception":
+			return new InceptionLabsHandler(options)
+		case "ovhcloud":
+			return new OVHcloudAIEndpointsHandler(options)
 		// kilocode_change end
 		case "io-intelligence":
 			return new IOIntelligenceHandler(options)

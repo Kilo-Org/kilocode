@@ -25,101 +25,8 @@ describe("AutoTriggerStrategy", () => {
 		strategy = new AutoTriggerStrategy()
 	})
 
-	describe("shouldTreatAsComment", () => {
-		it("should return true when current line is a comment", () => {
-			const prefix = "// TODO: implement"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(true)
-		})
-
-		it("should return true when current line is empty and previous line is a comment", () => {
-			const prefix = "// TODO: implement\n"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(true)
-		})
-
-		it("should return false when current line is not a comment", () => {
-			const prefix = "const x = 1;"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(false)
-		})
-
-		it("should return false when current line is empty and previous line is not a comment", () => {
-			const prefix = "const x = 1;\n"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(false)
-		})
-
-		it("should return false when prefix is empty", () => {
-			const prefix = ""
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(false)
-		})
-
-		it("should handle Python comments", () => {
-			const prefix = "# TODO: implement"
-			const result = strategy.shouldTreatAsComment(prefix, "python")
-			expect(result).toBe(true)
-		})
-
-		it("should handle block comments", () => {
-			const prefix = "/* TODO: implement */"
-			const result = strategy.shouldTreatAsComment(prefix, "javascript")
-			expect(result).toBe(true)
-		})
-
-		it("should handle multi-line prefix with comment on last line", () => {
-			const prefix = "const x = 1;\nconst y = 2;\n// TODO: implement sum"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(true)
-		})
-
-		it("should handle multi-line prefix with empty last line after comment", () => {
-			const prefix = "const x = 1;\n// TODO: implement sum\n"
-			const result = strategy.shouldTreatAsComment(prefix, "typescript")
-			expect(result).toBe(true)
-		})
-	})
-
-	describe("getPrompts - comment-driven behavior", () => {
-		it("should use comment-specific prompts when cursor is on empty line after comment", () => {
-			const { systemPrompt, userPrompt } = strategy.getPrompts(
-				createAutocompleteInput("/test.ts", 1, 0),
-				"// TODO: implement sum function\n",
-				"",
-				"typescript",
-			)
-
-			// Verify system prompt contains comment-specific keywords
-			expect(systemPrompt.toLowerCase()).toContain("comment")
-			expect(systemPrompt).toContain("TODO")
-			expect(systemPrompt).toContain("implement")
-
-			// Verify user prompt contains comment context
-			expect(userPrompt).toContain("Comment-Driven Development")
-			expect(userPrompt).toContain("implement sum function")
-		})
-
-		it("should use comment-specific prompts when cursor is on comment line", () => {
-			const { systemPrompt, userPrompt } = strategy.getPrompts(
-				createAutocompleteInput("/test.ts", 0, 26),
-				"// FIXME: handle edge case",
-				"\n",
-				"typescript",
-			)
-
-			// Verify system prompt contains comment-specific keywords
-			expect(systemPrompt.toLowerCase()).toContain("comment")
-			expect(systemPrompt).toContain("FIXME")
-
-			// Verify user prompt contains comment context
-			expect(userPrompt).toContain("Comment-Driven")
-			expect(userPrompt).toContain("handle edge case")
-		})
-	})
-
-	describe("getPrompts - auto-trigger behavior", () => {
-		it("should use auto-trigger prompts for regular code completion", () => {
+	describe("getPrompts", () => {
+		it("should generate prompts with QUERY/FILL_HERE format", () => {
 			const { systemPrompt, userPrompt } = strategy.getPrompts(
 				createAutocompleteInput("/test.ts", 0, 13),
 				"const x = 1;\n",
@@ -131,22 +38,84 @@ describe("AutoTriggerStrategy", () => {
 			expect(systemPrompt).toContain("Auto-Completion")
 			expect(systemPrompt).toContain("non-intrusive")
 
-			// Verify user prompt contains auto-trigger instructions
-			expect(userPrompt).toContain("minimal, obvious completion")
-			expect(userPrompt).toContain("Single line preferred")
+			// Verify user prompt uses QUERY/FILL_HERE format
+			expect(userPrompt).toContain("<QUERY>")
+			expect(userPrompt).toContain("{{FILL_HERE}}")
+			expect(userPrompt).toContain("</QUERY>")
+			expect(userPrompt).toContain("COMPLETION")
 		})
 
-		it("should not treat empty line without preceding comment as comment-driven", () => {
+		it("should document context tags in system prompt", () => {
 			const { systemPrompt } = strategy.getPrompts(
-				createAutocompleteInput("/test.ts", 1, 0),
+				createAutocompleteInput("/test.ts", 0, 13),
 				"const x = 1;\n",
-				"\n",
+				"",
 				"typescript",
 			)
 
-			// Should use auto-trigger, not comment-driven
+			// Verify system prompt documents the XML tags
+			expect(systemPrompt).toContain("Context Tags")
+			expect(systemPrompt).toContain("<LANGUAGE>")
+			expect(systemPrompt).toContain("<RECENT_EDITS>")
+			expect(systemPrompt).toContain("<QUERY>")
+		})
+
+		it("should include language ID in prompt with XML tags", () => {
+			const { userPrompt } = strategy.getPrompts(
+				createAutocompleteInput("/test.ts", 0, 13),
+				"const x = 1;\n",
+				"",
+				"typescript",
+			)
+
+			expect(userPrompt).toContain("<LANGUAGE>typescript</LANGUAGE>")
+		})
+
+		it("should include recently edited ranges in prompt with XML tags", () => {
+			const input = createAutocompleteInput("/test.ts", 5, 0)
+			input.recentlyEditedRanges = [
+				{
+					filepath: "/test.ts",
+					range: { start: { line: 2, character: 0 }, end: { line: 3, character: 0 } },
+					timestamp: Date.now(),
+					lines: ["function sum(a, b) {"],
+					symbols: new Set(["sum"]),
+				},
+			]
+
+			const { userPrompt } = strategy.getPrompts(input, "const x = 1;\n", "", "typescript")
+
+			expect(userPrompt).toContain("<RECENT_EDITS>")
+			expect(userPrompt).toContain("</RECENT_EDITS>")
+			expect(userPrompt).toContain("Edited /test.ts at line 2")
+		})
+
+		it("should handle empty recently edited ranges", () => {
+			const { userPrompt } = strategy.getPrompts(
+				createAutocompleteInput("/test.ts", 0, 13),
+				"const x = 1;\n",
+				"",
+				"typescript",
+			)
+
+			expect(userPrompt).not.toContain("<RECENT_EDITS>")
+			expect(userPrompt).toContain("<LANGUAGE>typescript</LANGUAGE>")
+		})
+
+		it("should handle comments in code", () => {
+			const { systemPrompt, userPrompt } = strategy.getPrompts(
+				createAutocompleteInput("/test.ts", 1, 0),
+				"// TODO: implement sum function\n",
+				"",
+				"typescript",
+			)
+
+			// Should use same prompt format
 			expect(systemPrompt).toContain("Auto-Completion")
-			expect(systemPrompt).not.toContain("Comment-Driven")
+			expect(userPrompt).toContain("<QUERY>")
+			expect(userPrompt).toContain("{{FILL_HERE}}")
+			expect(userPrompt).toContain("</QUERY>")
+			expect(userPrompt).toContain("COMPLETION")
 		})
 	})
 })

@@ -9,6 +9,7 @@ import type { Theme } from "../../types/theme.js"
 export const lightTheme: Theme = {
 	id: "light",
 	name: "Light",
+	type: "light",
 
 	brand: {
 		primary: "#616161",

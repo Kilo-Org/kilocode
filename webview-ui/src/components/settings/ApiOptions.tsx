@@ -101,6 +101,8 @@ import {
 	GeminiCli,
 	VirtualQuotaFallbackProvider,
 	Synthetic,
+	OvhCloudAiEndpoints,
+	Inception,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
@@ -403,6 +405,7 @@ const ApiOptions = ({
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId }, // kilocode_change
 				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId }, // kilocode_change
+				inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId }, // kilocode_change
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
@@ -574,6 +577,19 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "inception" && (
+				<Inception
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "anthropic" && (
 				<Anthropic apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />

@@ -53,6 +53,7 @@ export const dynamicProviders = [
 	"ovhcloud",
 	"chutes",
 	"gemini",
+	"inception",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -150,6 +151,7 @@ export const providerNames = [
 	"gemini-cli",
 	"virtual-quota-fallback",
 	"synthetic",
+	"inception",
 	// kilocode_change end
 	"sambanova",
 	"vertex",
@@ -414,6 +416,12 @@ const sambaNovaSchema = apiModelIdProviderModelSchema.extend({
 })
 
 // kilocode_change start
+const inceptionSchema = apiModelIdProviderModelSchema.extend({
+	inceptionLabsBaseUrl: z.string().optional(),
+	inceptionLabsApiKey: z.string().optional(),
+	inceptionLabsModelId: z.string().optional(),
+})
+
 const ovhcloudSchema = baseProviderSettingsSchema.extend({
 	ovhCloudAiEndpointsApiKey: z.string().optional(),
 	ovhCloudAiEndpointsModelId: z.string().optional(),
@@ -530,6 +538,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	kilocodeSchema.merge(z.object({ apiProvider: z.literal("kilocode") })),
 	virtualQuotaFallbackSchema.merge(z.object({ apiProvider: z.literal("virtual-quota-fallback") })),
 	syntheticSchema.merge(z.object({ apiProvider: z.literal("synthetic") })),
+	inceptionSchema.merge(z.object({ apiProvider: z.literal("inception") })),
 	// kilocode_change end
 	groqSchema.merge(z.object({ apiProvider: z.literal("groq") })),
 	huggingFaceSchema.merge(z.object({ apiProvider: z.literal("huggingface") })),
@@ -566,6 +575,8 @@ export const providerSettingsSchema = z.object({
 	...kilocodeSchema.shape,
 	...virtualQuotaFallbackSchema.shape,
 	...syntheticSchema.shape,
+	...ovhcloudSchema.shape,
+	...inceptionSchema.shape,
 	// kilocode_change end
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
@@ -593,7 +604,6 @@ export const providerSettingsSchema = z.object({
 	...vercelAiGatewaySchema.shape,
 	...aiStupidLevelSchema.shape,
 	...codebaseIndexProviderSchema.shape,
-	...ovhcloudSchema.shape, // kilocode_change
 })
 
 export type ProviderSettings = z.infer<typeof providerSettingsSchema>
@@ -818,9 +828,10 @@ export const MODELS_BY_PROVIDER: Record<
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
-	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] }, // kilocode_change
 
 	// kilocode_change start
+	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] },
+	inception: { id: "inception", label: "Inception", models: [] },
 	kilocode: { id: "kilocode", label: "Kilocode", models: [] },
 	"kilocode-openrouter": { id: "kilocode-openrouter", label: "Kilocode", models: [] }, // temporarily needed to satisfy because we're using 2 inconsistent names apparently
 	"virtual-quota-fallback": { id: "virtual-quota-fallback", label: "Virtual Quota Fallback", models: [] },

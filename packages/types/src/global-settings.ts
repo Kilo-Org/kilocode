@@ -111,6 +111,15 @@ export const globalSettingsSchema = z.object({
 
 	enableCheckpoints: z.boolean().optional(),
 
+	// kilocode_change start - Auto-purge settings
+	autoPurgeEnabled: z.boolean().optional(),
+	autoPurgeDefaultRetentionDays: z.number().min(1).optional(),
+	autoPurgeFavoritedTaskRetentionDays: z.number().min(1).nullable().optional(),
+	autoPurgeCompletedTaskRetentionDays: z.number().min(1).optional(),
+	autoPurgeIncompleteTaskRetentionDays: z.number().min(1).optional(),
+	autoPurgeLastRunTimestamp: z.number().optional(),
+	// kilocode_change end
+
 	ttsEnabled: z.boolean().optional(),
 	ttsSpeed: z.number().optional(),
 	soundEnabled: z.boolean().optional(),
@@ -223,6 +232,8 @@ export const SECRET_STATE_KEYS = [
 	// kilocode_change start
 	"kilocodeToken",
 	"syntheticApiKey",
+	"ovhCloudAiEndpointsApiKey",
+	"inceptionLabsApiKey",
 	// kilocode_change end
 	"codebaseIndexOpenAiCompatibleApiKey",
 	"codebaseIndexGeminiApiKey",
@@ -235,7 +246,6 @@ export const SECRET_STATE_KEYS = [
 	"featherlessApiKey",
 	"ioIntelligenceApiKey",
 	"vercelAiGatewayApiKey",
-	"ovhCloudAiEndpointsApiKey", // kilocode_change
 ] as const
 
 // Global secrets that are part of GlobalSettings (not ProviderSettings)
@@ -335,6 +345,14 @@ export const EVALS_SETTINGS: RooCodeSettings = {
 	fuzzyMatchThreshold: 1,
 
 	enableCheckpoints: false,
+
+	// kilocode_change start - Auto-purge defaults
+	autoPurgeEnabled: false,
+	autoPurgeDefaultRetentionDays: 30,
+	autoPurgeFavoritedTaskRetentionDays: null, // null = never purge
+	autoPurgeCompletedTaskRetentionDays: 30,
+	autoPurgeIncompleteTaskRetentionDays: 7,
+	// kilocode_change end
 
 	rateLimitSeconds: 0,
 	maxOpenTabsContext: 20,

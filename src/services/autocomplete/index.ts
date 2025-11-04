@@ -4,7 +4,7 @@ import { AutocompleteProvider } from "./AutocompleteProvider"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 
 export const registerAutocompleteProvider = (context: vscode.ExtensionContext, cline: ClineProvider) => {
-	const ghost = AutocompleteProvider.initialize(context, cline)
+	const ghost = new AutocompleteProvider(context, cline)
 	context.subscriptions.push(ghost)
 
 	context.subscriptions.push(

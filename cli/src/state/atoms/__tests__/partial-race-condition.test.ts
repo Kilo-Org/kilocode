@@ -98,6 +98,50 @@ describe("Partial Race Condition Bug Fix", () => {
 		expect(messages[0]?.text).toBe("git status")
 	})
 
+	it("should auto-complete orphaned partial ask when subsequent messages arrive (CLI workaround)", () => {
+		// Simulate the extension bug: partial ask message followed by other messages
+		// without ever sending a partial=false update
+		const stateWithOrphanedPartial: ExtensionState = {
+			version: "1.0.0",
+			apiConfiguration: {},
+			chatMessages: [
+				{
+					ts: 1000,
+					type: "ask",
+					ask: "command",
+					text: "git status",
+					partial: true, // Orphaned - never completed by extension
+				},
+				{
+					ts: 2000,
+					type: "say",
+					say: "checkpoint_saved",
+					text: "abc123",
+				},
+				{
+					ts: 3000,
+					type: "say",
+					say: "text",
+					text: "Command executed",
+				},
+			],
+			mode: "code",
+			customModes: [],
+			taskHistoryFullLength: 0,
+			taskHistoryVersion: 0,
+			renderContext: "cli",
+			telemetrySetting: "disabled",
+		}
+
+		store.set(updateExtensionStateAtom, stateWithOrphanedPartial)
+
+		// CLI should auto-complete the orphaned partial ask
+		const messages = store.get(chatMessagesAtom)
+		expect(messages).toHaveLength(3)
+		expect(messages[0]?.partial).toBe(false) // Auto-completed!
+		expect(messages[0]?.ask).toBe("command")
+	})
+
 	it("should handle the race condition for any ask message type", () => {
 		// Test with followup message
 		const initialState: ExtensionState = {

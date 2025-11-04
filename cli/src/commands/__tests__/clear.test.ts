@@ -32,6 +32,21 @@ describe("clearCommand", () => {
 			balanceData: null,
 			profileLoading: false,
 			balanceLoading: false,
+			refreshTerminal: vi.fn().mockResolvedValue(undefined),
+			taskHistoryData: null,
+			taskHistoryFilters: {
+				workspace: "current",
+				sort: "newest",
+				favoritesOnly: false,
+			},
+			taskHistoryLoading: false,
+			taskHistoryError: null,
+			fetchTaskHistory: vi.fn().mockResolvedValue(undefined),
+			updateTaskHistoryFilters: vi.fn().mockResolvedValue(null),
+			changeTaskHistoryPage: vi.fn().mockResolvedValue(null),
+			nextTaskHistoryPage: vi.fn().mockResolvedValue(null),
+			previousTaskHistoryPage: vi.fn().mockResolvedValue(null),
+			sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
 		}
 	})
 

@@ -65,6 +65,7 @@ describe("Model Validation Functions", () => {
 		ovhcloud: {},
 		chutes: {},
 		gemini: {},
+		inception: {},
 		// kilocode_change end
 	}
 

@@ -1,9 +1,7 @@
 import type { CliMessage, WelcomeMessageOptions } from "../../types/cli.js"
 import type { ValidationResult } from "../../config/validation.js"
 import { getConfigPath } from "../../config/persistence.js"
-
-// Counter to ensure unique IDs even when created in the same millisecond
-let messageCounter = 0
+import { generateMessage } from "./messages.js"
 
 /**
  * Converts validation errors into user-friendly instructions
@@ -42,14 +40,11 @@ export function createConfigErrorInstructions(validation: ValidationResult): str
  * @returns A CliMessage of type "welcome"
  */
 export function createWelcomeMessage(options?: WelcomeMessageOptions): CliMessage {
-	const timestamp = Date.now()
-	const id = `welcome-${timestamp}-${messageCounter++}`
-
 	return {
-		id,
+		...generateMessage(),
 		type: "welcome",
 		content: "", // Content is rendered by WelcomeMessageContent component
-		ts: timestamp,
+		ts: 1, // Welcome message should show at the top
 		metadata: {
 			welcomeOptions: options,
 		},

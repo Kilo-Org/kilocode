@@ -186,7 +186,8 @@ export const McpExecution = ({
 				<div className="flex flex-row items-center gap-1 flex-wrap">
 					<Server size={16} className="text-vscode-descriptionForeground" />
 					<div className="flex items-center gap-1 flex-wrap">
-						{serverName && <span className="font-bold text-vscode-foreground">{serverName}</span>}
+						{/* kilocode_change: Show tool name instead of server name since server is already shown above */}
+						{toolName && <span className="font-bold text-vscode-foreground">{toolName}</span>}
 					</div>
 				</div>
 				<div className="flex flex-row items-center justify-between gap-2 px-1">

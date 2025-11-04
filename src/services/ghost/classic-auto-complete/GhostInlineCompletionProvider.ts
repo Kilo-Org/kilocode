@@ -40,9 +40,13 @@ export function findMatchingSuggestion(
 			return fillInAtCursor.text
 		}
 
-		// If no exact match, check for partial typing
+		// If no exact match, but suggestion is available, check for partial typing
 		// The user may have started typing the suggested text
-		if (prefix.startsWith(fillInAtCursor.prefix) && suffix === fillInAtCursor.suffix) {
+		if (
+			fillInAtCursor.text !== "" &&
+			prefix.startsWith(fillInAtCursor.prefix) &&
+			suffix === fillInAtCursor.suffix
+		) {
 			// Extract what the user has typed between the original prefix and current position
 			const typedContent = prefix.substring(fillInAtCursor.prefix.length)
 
@@ -91,23 +95,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
 
-	/**
-	 * Check if a cached suggestion is available for the given prefix and suffix
-	 * @param prefix - The text before the cursor position
-	 * @param suffix - The text after the cursor position
-	 * @returns True if a matching suggestion exists, false otherwise
-	 */
-	public cachedSuggestionAvailable(prefix: string, suffix: string): boolean {
-		return findMatchingSuggestion(prefix, suffix, this.suggestionsHistory) !== null
-	}
-
-	public updateSuggestions(suggestions: GhostSuggestionsState): void {
-		const fillInAtCursor = suggestions.getFillInAtCursor()
-
-		if (!fillInAtCursor) {
-			return
-		}
-
+	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
 		const isDuplicate = this.suggestionsHistory.some(
 			(existing) =>
 				existing.text === fillInAtCursor.text &&
@@ -143,9 +131,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 		const languageId = context.document.languageId
 
-		// Check cache before making API call
-		if (this.cachedSuggestionAvailable(prefix, suffix)) {
-			// Return empty result if cached suggestion is available
+		// Check cache before making API call (includes both successful and failed lookups)
+		const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		if (cachedResult !== null) {
+			// Return empty result if we have a cached entry (either success or failure)
 			return {
 				suggestions: new GhostSuggestionsState(),
 				cost: 0,
@@ -254,6 +243,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 		if (matchingText !== null) {
+			if (matchingText === "") {
+				return []
+			}
+
 			const item: vscode.InlineCompletionItem = {
 				insertText: matchingText,
 				range: new vscode.Range(position, position),
@@ -278,8 +271,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				// Hide cursor animation after generation
 				this.cursorAnimation.hide()
 
-				// Track costs
-				if (this.costTrackingCallback) {
+				if (this.costTrackingCallback && result.cost > 0) {
 					this.costTrackingCallback(
 						result.cost,
 						result.inputTokens,
@@ -289,17 +281,20 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 					)
 				}
 
-				// Update suggestions history
-				this.updateSuggestions(result.suggestions)
-
-				// Return the new suggestion if available
 				const fillInAtCursor = result.suggestions.getFillInAtCursor()
+
 				if (fillInAtCursor) {
+					this.updateSuggestions(fillInAtCursor)
 					const item: vscode.InlineCompletionItem = {
 						insertText: fillInAtCursor.text,
 						range: new vscode.Range(position, position),
 					}
 					return [item]
+				} else {
+					// Store empty suggestion to prevent re-requesting
+					this.updateSuggestions({ text: "", prefix, suffix })
+
+					return []
 				}
 			} catch (error) {
 				this.cursorAnimation.hide()

@@ -2,6 +2,7 @@ import { getKiloUrlFromToken } from "@roo-code/types"
 import { logs } from "../services/logs.js"
 import type { KilocodeNotification } from "../state/atoms/notifications.js"
 import type { ProviderConfig } from "../config/types.js"
+import { generateMessage } from "../ui/utils/messages.js"
 
 /**
  * Response from the Kilocode notifications API
@@ -72,8 +73,6 @@ export function supportsNotifications(provider: ProviderConfig): boolean {
  * @returns A CLI message object
  */
 export function generateNotificationMessage(notification: KilocodeNotification) {
-	const timestamp = Date.now()
-
 	let content = `## ${notification.title}\n\n${notification.message}`
 
 	if (notification.action) {
@@ -81,8 +80,7 @@ export function generateNotificationMessage(notification: KilocodeNotification) 
 	}
 
 	return {
-		id: `notification-${notification.id}-${timestamp}`,
-		ts: timestamp,
+		...generateMessage(),
 		type: "system" as const,
 		content,
 	}

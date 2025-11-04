@@ -150,6 +150,12 @@ export interface ExtensionMessage {
 		| "kilocodeNotificationsResponse" // kilocode_change
 		| "usageDataResponse" // kilocode_change
 		| "keybindingsResponse" // kilocode_change
+		| "autoPurgeEnabled" // kilocode_change
+		| "autoPurgeDefaultRetentionDays" // kilocode_change
+		| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
+		| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
+		| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
+		| "manualPurge" // kilocode_change
 		| "commands"
 		| "insertTextIntoTextarea"
 		| "dismissedUpsells"
@@ -355,6 +361,12 @@ export type ExtensionState = Pick<
 	| "terminalCommandApiConfigId" // kilocode_change
 	| "dismissedNotificationIds" // kilocode_change
 	| "ghostServiceSettings" // kilocode_change
+	| "autoPurgeEnabled" // kilocode_change
+	| "autoPurgeDefaultRetentionDays" // kilocode_change
+	| "autoPurgeFavoritedTaskRetentionDays" // kilocode_change
+	| "autoPurgeCompletedTaskRetentionDays" // kilocode_change
+	| "autoPurgeIncompleteTaskRetentionDays" // kilocode_change
+	| "autoPurgeLastRunTimestamp" // kilocode_change
 	| "condensingApiConfigId"
 	| "customCondensingPrompt"
 	| "codebaseIndexConfig"

@@ -119,7 +119,6 @@ import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rule
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { Gpt5Metadata, ClineMessageWithMetadata } from "./types"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
-import { findPartialAskMessage, findPartialSayMessage } from "../kilocode/task/message-utils" // kilocode_change
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
@@ -769,13 +768,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		let askTs: number
 
 		if (partial !== undefined) {
-			// kilocode_change start: Fix orphaned partial asks by searching backwards
-			// Search for the most recent partial ask of this type, handling cases where
-			// non-interactive messages (like checkpoint_saved) are inserted during streaming
-			const partialResult = findPartialAskMessage(this.clineMessages, type)
-			const lastMessage = partialResult?.message
-			const isUpdatingPreviousPartial = lastMessage !== undefined
-			// kilocode_change end
+			const lastMessage = this.clineMessages.at(-1)
+
+			const isUpdatingPreviousPartial =
+				lastMessage && lastMessage.partial && lastMessage.type === "ask" && lastMessage.ask === type
 
 			if (partial) {
 				if (isUpdatingPreviousPartial) {
@@ -1161,12 +1157,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		if (partial !== undefined) {
-			// kilocode_change start: Fix orphaned partial says by searching backwards
-			// Search for the most recent partial say of this type
-			const partialResult = findPartialSayMessage(this.clineMessages, type)
-			const lastMessage = partialResult?.message
-			const isUpdatingPreviousPartial = lastMessage !== undefined
-			// kilocode_change end
+			const lastMessage = this.clineMessages.at(-1)
+
+			const isUpdatingPreviousPartial =
+				lastMessage && lastMessage.partial && lastMessage.type === "say" && lastMessage.say === type
 
 			if (partial) {
 				if (isUpdatingPreviousPartial) {
