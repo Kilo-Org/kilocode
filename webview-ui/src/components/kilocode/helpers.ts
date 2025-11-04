@@ -32,5 +32,5 @@ export function getKiloCodeBackendSignUpUrl(
 	kiloCodeWrapperProperties?: KiloCodeWrapperProperties,
 ) {
 	const source = uiKind === "Web" ? "web" : getKiloCodeSource(uriScheme, kiloCodeWrapperProperties)
-	return getAppUrl(`/v1/auth/sign_up?source=${source}`)
+	return `https://app.matterai.so/authentication/sign-in?loginType=extension&source=${source}`
 }

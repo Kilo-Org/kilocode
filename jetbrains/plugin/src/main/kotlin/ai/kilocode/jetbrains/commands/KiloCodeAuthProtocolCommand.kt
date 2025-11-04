@@ -101,7 +101,7 @@ class KiloCodeAuthProtocolCommand : JBProtocolCommand("ai.kilocode.jetbrains.aut
                 val extHostCommands = protocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostCommands)
 
                 // Create the VSCode URI string that would normally be handled by handleUri
-                val vscodeUriString = "vscode://kilocode.kilo-code/kilocode?token=$token"
+                val vscodeUriString = "vscode://matterai.axon-code/axoncode?token=$token"
 
                 // Execute a command to handle the URI - this simulates what happens when VSCode receives a URL
                 // We'll use a special command that the VSCode extension can handle

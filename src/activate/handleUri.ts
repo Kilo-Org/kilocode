@@ -28,7 +28,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 			}
 			break
 		}
-		case "/kilocode": {
+		case "/axoncode": {
 			const token = query.get("token")
 			if (token) {
 				await visibleProvider.handleKiloCodeCallback(token)
@@ -36,7 +36,7 @@ export const handleUri = async (uri: vscode.Uri) => {
 			break
 		}
 		// kilocode_change start
-		case "/kilocode/profile": {
+		case "/axoncode/profile": {
 			await visibleProvider.postMessageToWebview({
 				type: "action",
 				action: "profileButtonClicked",

@@ -43,7 +43,7 @@ export const fastApplyModelSchema = z.enum([
 
 export type FastApplyModel = z.infer<typeof fastApplyModelSchema>
 
-export const DEFAULT_KILOCODE_BACKEND_URL = "https://matterai.so"
+export const DEFAULT_KILOCODE_BACKEND_URL = "https://api.matterai.so"
 
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 	if (kilocodeToken) {

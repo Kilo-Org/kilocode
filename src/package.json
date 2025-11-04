@@ -1,8 +1,8 @@
 {
-	"name": "kilo-code",
+	"name": "axon-code",
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
-	"publisher": "kilocode",
+	"publisher": "matterai",
 	"version": "4.114.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {

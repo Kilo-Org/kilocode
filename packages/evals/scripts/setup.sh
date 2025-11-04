@@ -328,8 +328,8 @@ code --install-extension redhat.java &>/dev/null || exit 1
 code --install-extension ms-python.python&>/dev/null || exit 1
 code --install-extension rust-lang.rust-analyzer &>/dev/null || exit 1
 
-if ! code --list-extensions 2>/dev/null | grep -q "kilocode.Kilo-Code"; then
-  code --install-extension kilocode.Kilo-Code &>/dev/null || exit 1
+if ! code --list-extensions 2>/dev/null | grep -q "matterai.axon-code"; then
+  code --install-extension matterai.axon-code &>/dev/null || exit 1
 fi
 
 echo "✅ Done"

@@ -29,10 +29,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	constructor(options: ApiHandlerOptions) {
 		options = {
 			...options,
-			openRouterBaseUrl: getKiloUrlFromToken(
-				"https://api.matterai.so/api/openrouter/",
-				options.kilocodeToken ?? "",
-			),
+			openRouterBaseUrl: getKiloUrlFromToken("https://api.matterai.so/api/v1/", options.kilocodeToken ?? ""),
 			openRouterApiKey: options.kilocodeToken,
 		}
 
@@ -103,7 +100,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	}
 
 	public override async fetchModel() {
-		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
+		if (!this.options.kilocodeToken) {
 			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
 

@@ -258,8 +258,8 @@ describe("URL functions", () => {
 			expect(getKiloUrlFromToken("https://api.matterai.so/api/organizations/123/defaults", prodToken)).toBe(
 				"https://api.matterai.so/api/organizations/123/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/openrouter/", prodToken)).toBe(
-				"https://api.matterai.so/api/openrouter/",
+			expect(getKiloUrlFromToken("https://api.matterai.so/api/v1/web/", prodToken)).toBe(
+				"https://api.matterai.so/api/v1/web/",
 			)
 			expect(getKiloUrlFromToken("https://api.matterai.so/api/users/notifications", prodToken)).toBe(
 				"https://api.matterai.so/api/users/notifications",
@@ -279,8 +279,8 @@ describe("URL functions", () => {
 			expect(getKiloUrlFromToken("https://api.matterai.so/api/organizations/456/defaults", devToken)).toBe(
 				"http://localhost:3000/api/organizations/456/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/openrouter/", devToken)).toBe(
-				"http://localhost:3000/api/openrouter/",
+			expect(getKiloUrlFromToken("https://api.matterai.so/api/v1/web/", devToken)).toBe(
+				"http://localhost:3000/api/v1/web/",
 			)
 			expect(getKiloUrlFromToken("https://api.matterai.so/api/users/notifications", devToken)).toBe(
 				"http://localhost:3000/api/users/notifications",
