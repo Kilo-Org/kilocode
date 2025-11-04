@@ -47,7 +47,7 @@
 		"@dotenvx/dotenvx": "^1.34.0",
 		"@roo-code/config-typescript": "workspace:^",
 		"@types/glob": "^9.0.0",
-		"@types/node": "^24.1.0",
+		"@types/node": "20.x",
 		"@vscode/vsce": "3.3.2",
 		"esbuild": "^0.25.0",
 		"eslint": "^9.27.0",
