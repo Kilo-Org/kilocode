@@ -46,7 +46,7 @@ You can remove empty seats at any time. Your next payment will reflect the small
 
 Your next billing date will not change.
 
-To fill empty seats or remove members ahead of seat deletion, see the [team management](/seats/team-management) page.
+To fill empty seats or remove members ahead of seat deletion, see the [team management](/plans/team-management) page.
 
 ### Adding Seats
 
@@ -63,7 +63,7 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 3. **Select seats to remove** (must remove team members first)
 4. **Confirm reduction**
 
-To fill empty seats or remove members ahead of seat deletion, see the [team management](/seats/team-management) page.
+To fill empty seats or remove members ahead of seat deletion, see the [team management](/plans/team-management) page.
 
 ## Invoices
 
@@ -80,6 +80,6 @@ If payment fails repeatedly:
 
 ## Next Steps
 
-- [Explore usage analytics](/seats/analytics)
-- [Learn about team roles and permissions](/seats/team-management)
-- [Learn about team management](/seats/team-management)
+- [Explore usage analytics](/plans/analytics)
+- [Learn about team roles and permissions](/plans/team-management)
+- [Learn about team management](/plans/team-management)

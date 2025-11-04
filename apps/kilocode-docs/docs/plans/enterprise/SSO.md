@@ -4,7 +4,7 @@ sidebar_label: Single Sign-On (SSO) (Enterprise Only)
 
 # Single Sign-On (SSO) (Enterprise Only)
 
-Kilo for Enterprise lets your organization securely manage access using **Single Sign-On (SSO)**. With SSO enabled, team members can sign in to Kilo using your company’s existing identity provider, such as Okta, Github, Google Workspace, etc.
+Kilo Enterprise lets your organization securely manage access using **Single Sign-On (SSO)**. With SSO enabled, team members can sign in to Kilo using your company’s existing identity provider, such as Okta, Github, Google Workspace, etc.
 
 ## Why Enable SSO?
 
@@ -36,5 +36,5 @@ Fill in your contact information and someone from our team will reach out soon t
 After enabling SSO:
 
 - Invite new users with their company email domain.
-- Manage team access and roles from the **[Organization](/seats/dashboard)** tab.
-- View user activity across the team in the **[Audit Logs](/seats/enterprise/audit-logs)** tab
+- Manage team access and roles from the **[Organization](/plans/dashboard)** tab.
+- View user activity across the team in the **[Audit Logs](/plans/enterprise/audit-logs)** tab

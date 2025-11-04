@@ -4,7 +4,7 @@ sidebar_label: Migrating from Other Tools
 
 # Migrating from Other Tools
 
-Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
+Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and experience transparent pricing, no vendor lock-in, and superior team management capabilities.
 
 ## Why Teams Switch to Kilo
 
@@ -12,19 +12,19 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 **Other AI coding vendors** hide their true costs behind opaque subscription models, leaving you wondering what you're actually paying for.
 
-**Kilo for Teams** and **Kilo for Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
+**Kilo Teams** and **Kilo Enterprise** show you exactly what each AI request costs - no markup, no hidden fees, complete transparency.
 
 ### No Rate Limiting
 
 **Other tools** slow you down with rate limits and model switching when you need AI most.
 
-**Kilo for Teams** and **Kilo for Enterprise** never limit your usage - pay for what you use, use what you need.
+**Kilo Teams** and **Kilo Enterprise** never limit your usage - pay for what you use, use what you need.
 
 ### True Team Management
 
 **Other solutions** offer basic user management with limited visibility.
 
-**Kilo for Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights, while **Kilo for Enterprise** adds advanced governance, audit logging, and enterprise-level security controls.
+**Kilo Teams** provides comprehensive team analytics, role-based permissions, and detailed usage insights, while **Kilo Enterprise** adds advanced governance, audit logging, and enterprise-level security controls.
 
 ## Migrating from Cursor
 
@@ -36,7 +36,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 - **Vendor lock-in** with proprietary systems
 - **Hidden model switching** that degrades quality
 
-### What You Gain with Kilo for Teams or Enterprise
+### What You Gain with Kilo Teams or Kilo Enterprise
 
 - **Transparent AI costs** - See exactly what providers charge
 - **No rate limiting** - Use AI when you need it most
@@ -77,7 +77,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 ### Cursor Feature Mapping
 
-| Cursor Feature         | Kilo for Teams / Enterprise Equivalent                         |
+| Cursor Feature         | Kilo Equivalent                                                |
 | ---------------------- | -------------------------------------------------------------- |
 | AI Chat                | Chat interface with multiple modes                             |
 | Code Generation        | Code mode with advanced tools                                  |
@@ -96,7 +96,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 - **Microsoft ecosystem lock-in** - Tied to Microsoft services
 - **Limited customization** - Few options for team-specific needs
 
-### Kilo for Teams and Enterprise Advantages
+### Kilo Advantages
 
 - **Multiple AI providers** - Choose from 18+ model providers
 - **Advanced team management** - Roles, permissions, and analytics
@@ -125,12 +125,12 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 1. **Disable GitHub Copilot** for most team members
 2. **Cancel GitHub Copilot** subscriptions
-3. **Optimize Kilo for Teams or Enterprise** settings
+3. **Optimize Kilo Plan** settings
 4. **Document new workflows** and best practices
 
 ### GitHub Copilot Feature Comparison
 
-| GitHub Copilot   | Kilo for Teams / Enterprise      | Advantage                     |
+| GitHub Copilot   | Kilo                             | Advantage                     |
 | ---------------- | -------------------------------- | ----------------------------- |
 | Code suggestions | AI-powered code generation       | ✅ More model choices         |
 | Chat interface   | Multi-mode chat system           | ✅ Specialized modes          |
@@ -172,7 +172,7 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 **Migration Execution**
 
-- [ ] Set up Kilo for Teams or Enterprise organization
+- [ ] Set up Kilo Organization
 - [ ] Configure team settings and policies
 - [ ] Invite team members and assign roles
 - [ ] Install Kilo Code extension across team
@@ -358,8 +358,8 @@ Switch to **Kilo for Teams** or **Kilo for Enterprise** from other AI coding too
 
 ## Next Steps
 
-- [Get started with your team](/seats/getting-started)
-- [Explore team management features](/seats/team-management)
-- [Understand billing and pricing](/seats/billing)
+- [Get started with your team](/plans/getting-started)
+- [Explore team management features](/plans/team-management)
+- [Understand billing and pricing](/plans/billing)
 
 Ready to make the switch? Contact our migration team at migrations@kilocode.ai to plan your transition to transparent AI coding.

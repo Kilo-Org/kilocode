@@ -91,7 +91,7 @@ Interactive graphs displaying:
 
 ## Billing Tab
 
-Complete financial management for your Kilo for Teams subscription.
+Complete financial management for your Kilo Teams subscription.
 
 - **Available credits** remaining
 - **Downloadable invoices** for expense reporting
@@ -108,11 +108,11 @@ Complete financial management for your Kilo for Teams subscription.
 
 ## Subscriptions Tab
 
-Manage your Kilo for Teams plan and seat allocation.
+Manage your Kilo Teams plan and seat allocation.
 
 ### Current Plan Details
 
-- **Plan type** (Kilo for Teams)
+- **Plan type** (Kilo Teams)
 - **Monthly cost** per seat ($29/user/month)
 - **Billing cycle** dates and next charge
 - **Plan benefits** and included features
@@ -163,6 +163,6 @@ Manage your Kilo for Teams plan and seat allocation.
 
 ## Next Steps
 
-- [Learn about team management](/seats/team-management)
-- [Understand billing and credits](/seats/billing)
-- [Explore usage analytics](/seats/analytics)
+- [Learn about team management](/plans/team-management)
+- [Understand billing and credits](/plans/billing)
+- [Explore usage analytics](/plans/analytics)

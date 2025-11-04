@@ -1,24 +1,24 @@
 ---
-sidebar_label: About Kilo for Teams and Enterprise
+sidebar_label: About Kilo Paid Plans
 ---
 
-# About Kilo for Teams and Enterprise
+# About Kilo Paid Plans
 
 Kilo Code accelerates development with AI-driven code generation and task automation. You can use Kilo Code as an open source extension in VS Code or JetBrains IDEs.
 
 Organizations adopting AI accelerated coding at scale often want a better way to monitor, manage, and collaborate on their AI-drive practices.
 
-Kilo Code seats, available via either the Teams or Enterprise subscriptions, are the solution for these organizations.
+Kilo Code's paid plans, Teams and Enterprise, are the solution for these organizations.
 
 :::note
 
-Kilo Code seats purchases of Teams or Enterprise are separate from model provider credits.
+Purchases of Kilo Code's paid plans are separate from model provider credits.
 
-No credits are included with a Teams or Enterprise purchase.
+No credits are included with a Teams or Enterprise plan purchase.
 
 :::
 
-## What You Get from Teams
+## What You Get from Kilo Teams
 
 - **Zero markup** on AI provider costs - pay exactly what providers charge
 - **No rate limiting** or quality degradation during peak usage
@@ -28,7 +28,7 @@ No credits are included with a Teams or Enterprise purchase.
 
 **Cost:** $29 per user per month
 
-## What You Get from Enterprise
+## What You Get from Kilo Enterprise
 
 **Everything from Teams** plus...
 

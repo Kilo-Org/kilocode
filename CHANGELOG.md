@@ -1,5 +1,19 @@
 # kilo-code
 
+## [v4.114.1]
+
+- [#3188](https://github.com/Kilo-Org/kilocode/pull/3188) [`131fa0e`](https://github.com/Kilo-Org/kilocode/commit/131fa0ee68d6f47172a968489129071a7da88de3) Thanks [@NikoDi2000](https://github.com/NikoDi2000)! - Add missing enable/disable word wrap tooltips
+
+- [#3357](https://github.com/Kilo-Org/kilocode/pull/3357) [`d2bb122`](https://github.com/Kilo-Org/kilocode/commit/d2bb122a8b0e80044a66fe141de39489f7098bb5) Thanks [@mollux](https://github.com/mollux)! - Now only available MCP server capabilities are fetched
+
+- [#2817](https://github.com/Kilo-Org/kilocode/pull/2817) [`0da1bc7`](https://github.com/Kilo-Org/kilocode/commit/0da1bc772a700874f8ec3fbad039fed1ea4d89dc) Thanks [@dennismeister93](https://github.com/dennismeister93)! - Updated MCP SDK to 1.13.3
+
+- [#2849](https://github.com/Kilo-Org/kilocode/pull/2849) [`642cec5`](https://github.com/Kilo-Org/kilocode/commit/642cec502c9fecd297dce8cb1cc708ad3e9c7d12) Thanks [@Ralph-Abejuela](https://github.com/Ralph-Abejuela)! - Added option to start rate limiting after the API stream ends
+
+- [#3468](https://github.com/Kilo-Org/kilocode/pull/3468) [`8f8ef10`](https://github.com/Kilo-Org/kilocode/commit/8f8ef107dd2751e4141473d33e098d6f28faa6d1) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Resolve orphaned partial ask messages
+
+- [#3213](https://github.com/Kilo-Org/kilocode/pull/3213) [`7238628`](https://github.com/Kilo-Org/kilocode/commit/7238628bc24058eb352ff231090c08d99a8a8961) Thanks [@siulong](https://github.com/siulong)! - Fixed the GitHub feedback link at the bottom of the marketplace not being clickable.
+
 ## [v4.114.0]
 
 - [#3435](https://github.com/Kilo-Org/kilocode/pull/3435) [`bd4f19d`](https://github.com/Kilo-Org/kilocode/commit/bd4f19da040462b6477087d76cffe1006ef8d444) Thanks [@markijbema](https://github.com/markijbema)! - Cmd-L now directly inserts instead of showing as ghost text
