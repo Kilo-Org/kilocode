@@ -18,42 +18,43 @@ const defaultsSchema = z.object({
 const fetcher = fetchWithTimeout(5000)
 
 async function fetchKilocodeDefaultModel(
-	kilocodeToken: KilocodeToken,
-	organizationId?: OrganizationId,
-	providerSettings?: ProviderSettings,
+	_kilocodeToken: KilocodeToken,
+	_organizationId?: OrganizationId,
+	_providerSettings?: ProviderSettings,
 ): Promise<string> {
-	try {
-		const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
-		const url = getKiloUrlFromToken(`https://api.matterai.so/api${path}`, kilocodeToken)
+	return openRouterDefaultModelId
+	// try {
+	// 	const path = organizationId ? `/organizations/${organizationId}/defaults` : `/defaults`
+	// 	const url = getKiloUrlFromToken(`https://api.matterai.so${path}`, kilocodeToken)
 
-		const headers: Record<string, string> = {
-			...DEFAULT_HEADERS,
-			Authorization: `Bearer ${kilocodeToken}`,
-		}
+	// 	const headers: Record<string, string> = {
+	// 		...DEFAULT_HEADERS,
+	// 		Authorization: `Bearer ${kilocodeToken}`,
+	// 	}
 
-		// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-		if (
-			providerSettings?.kilocodeTesterWarningsDisabledUntil &&
-			providerSettings.kilocodeTesterWarningsDisabledUntil > Date.now()
-		) {
-			headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-		}
+	// 	// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
+	// 	if (
+	// 		providerSettings?.kilocodeTesterWarningsDisabledUntil &&
+	// 		providerSettings.kilocodeTesterWarningsDisabledUntil > Date.now()
+	// 	) {
+	// 		headers["X-KILOCODE-TESTER"] = "SUPPRESS"
+	// 	}
 
-		const response = await fetcher(url, { headers })
-		if (!response.ok) {
-			throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
-		}
-		const defaultModel = (await defaultsSchema.parseAsync(await response.json())).defaultModel
-		if (!defaultModel) {
-			throw new Error(`Default model from ${url} was empty`)
-		}
-		console.info(`Fetched default model from ${url}: ${defaultModel}`)
-		return defaultModel
-	} catch (err) {
-		console.error("Failed to get default model", err)
-		TelemetryService.instance.captureException(err, { context: "getKilocodeDefaultModel" })
-		return openRouterDefaultModelId
-	}
+	// 	const response = await fetcher(url, { headers })
+	// 	if (!response.ok) {
+	// 		throw new Error(`Fetching default model from ${url} failed: ${response.status}`)
+	// 	}
+	// 	const defaultModel = (await defaultsSchema.parseAsync(await response.json())).defaultModel
+	// 	if (!defaultModel) {
+	// 		throw new Error(`Default model from ${url} was empty`)
+	// 	}
+	// 	console.info(`Fetched default model from ${url}: ${defaultModel}`)
+	// 	return defaultModel
+	// } catch (err) {
+	// 	console.error("Failed to get default model", err)
+	// 	TelemetryService.instance.captureException(err, { context: "getKilocodeDefaultModel" })
+	// 	return openRouterDefaultModelId
+	// }
 }
 
 export async function getKilocodeDefaultModel(

@@ -248,7 +248,7 @@
 	"response": "Response",
 	"arguments": "Arguments",
 	"text": {
-		"rooSaid": "Kilo said"
+		"rooSaid": "Response"
 	},
 	"feedback": {
 		"youSaid": "You said"

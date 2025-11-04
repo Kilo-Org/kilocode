@@ -1810,15 +1810,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [
-					{
-						type: "text",
-						text: formatResponse.noToolsUsed(
-							getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
-						),
-					},
-				]
-				this.consecutiveMistakeCount++
+				// nextUserContent = [
+				// 	{
+				// 		type: "text",
+				// 		text: formatResponse.noToolsUsed(
+				// 			getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+				// 		),
+				// 	},
+				// ]
+				// this.consecutiveMistakeCount++
 			}
 		}
 	}
@@ -2508,15 +2508,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// either use a tool or attempt_completion.
 					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
-					if (!didToolUse) {
-						this.userMessageContent.push({
-							type: "text",
-							text: formatResponse.noToolsUsed(
-								getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
-							),
-						})
-						this.consecutiveMistakeCount++
-					}
+					// if (!didToolUse) {
+					// 	this.userMessageContent.push({
+					// 		type: "text",
+					// 		text: formatResponse.noToolsUsed(
+					// 			getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+					// 		),
+					// 	})
+					// 	this.consecutiveMistakeCount++
+					// }
 
 					if (this.userMessageContent.length > 0) {
 						stack.push({

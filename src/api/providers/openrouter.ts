@@ -219,23 +219,25 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...convertToOpenAiMessages(messages),
 		]
 
-		openAiMessages = openAiMessages
-			.map((msg: any) => {
-				let content = flattenMessageContent(msg.content)
+		// openAiMessages = openAiMessages
+		// 	.map((msg: any) => {
+		// 		let content = flattenMessageContent(msg.content)
 
-				// Strip thinking tokens from assistant messages to prevent confusion
-				if (msg.role === "assistant") {
-					content = stripThinkingTokens(content)
-				}
+		// 		// Strip thinking tokens from assistant messages to prevent confusion
+		// 		if (msg.role === "assistant") {
+		// 			content = stripThinkingTokens(content)
+		// 		}
 
-				return {
-					role: msg.role,
-					content,
-				}
-			})
-			.filter((msg: any) => msg.content.trim() !== "")
+		// 		return {
+		// 			role: msg.role,
+		// 			content,
+		// 		}
+		// 	})
+		// 	.filter((msg: any) => msg.content.trim() !== "")
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
+
+		console.log("openAiMessages", openAiMessages)
 
 		// https://openrouter.ai/docs/transforms
 		const completionParams: OpenRouterChatCompletionParams = {
@@ -274,6 +276,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		let inferenceProvider: string | undefined // kilocode_change
 
 		try {
+			let fullContent = ""
+
 			for await (const chunk of stream) {
 				// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
 				if ("error" in chunk) {
@@ -288,36 +292,89 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 				// kilocode_change end
 
-				verifyFinishReason(chunk.choices[0]) // kilocode_change
-				const delta = chunk.choices[0]?.delta
-
-				if (
-					delta /* kilocode_change */ &&
-					"reasoning" in delta &&
-					delta.reasoning &&
-					typeof delta.reasoning === "string"
-				) {
-					yield { type: "reasoning", text: delta.reasoning }
+				// Handle usage data which can be present even when choices is empty
+				if (chunk.usage) {
+					lastUsage = chunk.usage
 				}
 
-				// kilocode_change start
-				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
-					yield { type: "reasoning", text: delta.reasoning_content }
+				// Get delta from choices, but handle case where choices might be empty
+				const delta = chunk.choices[0]?.delta
+
+				// Add defensive check for delta being undefined (e.g., final chunk with only usage data)
+				if (!delta) {
+					// Skip delta processing but continue to allow usage processing at the end of the loop
+					continue
+				}
+
+				verifyFinishReason(chunk.choices[0]) // kilocode_change
+
+				// if (
+				// 	delta /* kilocode_change */ &&
+				// 	"reasoning" in delta &&
+				// 	delta.reasoning &&
+				// 	typeof delta.reasoning === "string"
+				// ) {
+				// 	yield { type: "reasoning", text: delta.reasoning }
+				// }
+
+				let isThinking = false
+
+				if (delta.content) {
+					let newText = delta.content
+					if (fullContent && newText.startsWith(fullContent)) {
+						newText = newText.substring(fullContent.length)
+					}
+					fullContent = delta.content
+
+					// pending items
+					// 1. Thinking block bug
+					// 2. Pricing
+					// 3. Use Cursor prompt + tool calling
+
+					if (newText) {
+						if (newText.includes("<think>")) {
+							isThinking = true
+						}
+						// Check for thinking blocks
+						if (newText.includes("<think>") || newText.includes("</think>") || isThinking) {
+							if (newText.includes("</think>")) {
+								isThinking = false
+							}
+
+							newText = newText.replace(/<\/?think>/g, "")
+							newText = newText.replace(/<think>/g, "")
+							newText = newText.trim()
+
+							yield {
+								type: "reasoning",
+								text: newText,
+							}
+						} else {
+							yield {
+								type: "text",
+								text: newText,
+							}
+						}
+					}
+				}
+
+				if ("reasoning_content" in delta && delta.reasoning_content) {
+					yield {
+						type: "reasoning",
+						text: (delta.reasoning_content as string | undefined) || "",
+					}
 				}
 
 				// Handle native tool calls when toolStyle is "json"
 				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
-				if (delta?.content) {
-					yield { type: "text", text: delta.content }
-				}
-
-				if (chunk.usage) {
-					lastUsage = chunk.usage
-				}
+				// if (delta?.content) {
+				// 	yield { type: "text", text: delta.content }
+				// }
 			}
 		} catch (error) {
+			console.error("OpenRouter API Error:", error)
 			let errorMessage = makeOpenRouterErrorReadable(error)
 			throw new Error(errorMessage)
 		}
@@ -536,23 +593,80 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 // kilocode_change start
 function makeOpenRouterErrorReadable(error: any) {
-	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
-	const parsedJson = safeJsonParse(metadata?.raw)
-	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
-
-	if (error?.code !== 429 && error?.code !== 418) {
-		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
-		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
-	}
-
 	try {
-		const parsedJson = JSON.parse(error.error.metadata?.raw)
-		const retryAfter = parsedJson?.error?.details.map((detail: any) => detail.retryDelay).filter((r: any) => r)[0]
-		if (retryAfter) {
-			return `Rate limit exceeded, try again in ${retryAfter}.`
-		}
-	} catch (e) {}
+		// Add logging to help debug the issue
+		console.debug("makeOpenRouterErrorReadable called with error:", JSON.stringify(error, null, 2))
 
-	return `Rate limit exceeded, try again later.\n${error?.message || error}`
+		const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
+		const parsedJson = safeJsonParse(metadata?.raw)
+		const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+
+		if (error?.code !== 429 && error?.code !== 418) {
+			// Safely extract error message, handling cases where rawError?.error might be an object
+			let errorMessage: string | undefined
+
+			if (rawError?.error?.message) {
+				errorMessage = rawError.error.message
+			} else if (typeof rawError?.error === "string") {
+				errorMessage = rawError.error
+			} else if (rawError?.detail) {
+				errorMessage = rawError.detail
+			} else if (error?.message) {
+				errorMessage = error.message
+			} else {
+				// Handle case where error.error might be an object with undefined properties
+				try {
+					// If rawError?.error is an object, we need to safely stringify it
+					if (rawError?.error && typeof rawError.error === "object") {
+						errorMessage =
+							JSON.stringify(rawError.error, (key, value) => {
+								// Replace undefined values with a placeholder to avoid serialization issues
+								return value === undefined ? "[undefined]" : value
+							}) || "unknown error"
+					} else {
+						errorMessage = JSON.stringify(rawError?.error) || "unknown error"
+					}
+				} catch (e) {
+					console.debug("Error stringifying rawError?.error:", e)
+					errorMessage = "unknown error"
+				}
+			}
+
+			// Ensure errorMessage is a string and doesn't contain problematic content
+			if (typeof errorMessage !== "string") {
+				try {
+					errorMessage = JSON.stringify(errorMessage) || "unknown error"
+				} catch (e) {
+					errorMessage = "unknown error"
+				}
+			}
+
+			const providerName = metadata?.provider_name ?? "Provider"
+
+			// Ensure providerName is a string
+			const safeProviderName = typeof providerName === "string" ? providerName : "Provider"
+
+			return `${safeProviderName} error: ${errorMessage}`
+		}
+
+		try {
+			const parsedJson = JSON.parse(error.error.metadata?.raw)
+			const retryAfter = parsedJson?.error?.details
+				?.map((detail: any) => detail.retryDelay)
+				.filter((r: any) => r)[0]
+			if (retryAfter) {
+				return `Rate limit exceeded, try again in ${retryAfter}.`
+			}
+		} catch (e) {
+			console.debug("Error parsing rate limit info:", e)
+		}
+
+		const fallbackMessage = error?.message || error
+		return `Rate limit exceeded, try again later.\n${typeof fallbackMessage === "string" ? fallbackMessage : "Unknown error"}`
+	} catch (e) {
+		// If anything goes wrong in our error handling, return a safe default
+		console.error("Error in makeOpenRouterErrorReadable:", e)
+		return "Provider error: An unexpected error occurred while processing the API response"
+	}
 }
 // kilocode_change end

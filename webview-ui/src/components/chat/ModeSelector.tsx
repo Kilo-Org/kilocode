@@ -1,22 +1,22 @@
-import React from "react"
 import { Fzf } from "fzf"
-import { Check, X } from "lucide-react"
+import { Check } from "lucide-react"
+import React from "react"
 
-import { type ModeConfig, type CustomModePrompts, TelemetryEventName } from "@roo-code/types"
+import { type CustomModePrompts, type ModeConfig, TelemetryEventName } from "@roo-code/types"
 
 import { type Mode, getAllModes } from "@roo/modes"
 
-import { vscode } from "@/utils/vscode"
-import { telemetryClient } from "@/utils/TelemetryClient"
-import { cn } from "@/lib/utils"
+import { Popover, PopoverContent, PopoverTrigger, StandardTooltip } from "@/components/ui"
+import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { useRooPortal } from "@/components/ui/hooks/useRooPortal"
-import { Popover, PopoverContent, PopoverTrigger, StandardTooltip } from "@/components/ui"
+import { cn } from "@/lib/utils"
+import { telemetryClient } from "@/utils/TelemetryClient"
+import { vscode } from "@/utils/vscode"
 
 import { IconButton } from "./IconButton"
 
-const SEARCH_THRESHOLD = 6
+// const SEARCH_THRESHOLD = 6
 
 interface ModeSelectorProps {
 	value: Mode
@@ -36,10 +36,8 @@ export const ModeSelector = ({
 	disabled = false,
 	title,
 	triggerClassName = "",
-	modeShortcutText,
 	customModes,
 	customModePrompts,
-	disableSearch = false,
 }: ModeSelectorProps) => {
 	const [open, setOpen] = React.useState(false)
 	const [searchValue, setSearchValue] = React.useState("")
@@ -123,10 +121,10 @@ export const ModeSelector = ({
 		return combinedResults
 	}, [modes, searchValue, nameFzfInstance, descriptionFzfInstance])
 
-	const onClearSearch = React.useCallback(() => {
-		setSearchValue("")
-		searchInputRef.current?.focus()
-	}, [])
+	// const onClearSearch = React.useCallback(() => {
+	// 	setSearchValue("")
+	// 	searchInputRef.current?.focus()
+	// }, [])
 
 	const handleSelect = React.useCallback(
 		(modeSlug: string) => {
@@ -186,10 +184,10 @@ export const ModeSelector = ({
 	}, [open])
 
 	// Determine if search should be shown.
-	const showSearch = !disableSearch && modes.length > SEARCH_THRESHOLD
+	// const showSearch = !disableSearch && modes.length > SEARCH_THRESHOLD
 
 	// Combine instruction text for tooltip.
-	const instructionText = `${t("chat:modeSelector.description")} ${modeShortcutText}`
+	// const instructionText = `${t("chat:modeSelector.description")} ${modeShortcutText}`
 
 	return (
 		<Popover open={open} onOpenChange={onOpenChange} data-testid="mode-selector-root">
@@ -219,7 +217,7 @@ export const ModeSelector = ({
 				className="p-0 overflow-hidden min-w-80 max-w-9/10">
 				<div className="flex flex-col w-full">
 					{/* Show search bar only when there are more than SEARCH_THRESHOLD items, otherwise show info blurb */}
-					{showSearch ? (
+					{/* {showSearch ? (
 						<div className="relative p-2 border-b border-vscode-dropdown-border">
 							<input
 								aria-label="Search modes"
@@ -243,7 +241,7 @@ export const ModeSelector = ({
 						<div className="p-3 border-b border-vscode-dropdown-border">
 							<p className="m-0 text-xs text-vscode-descriptionForeground">{instructionText}</p>
 						</div>
-					)}
+					)} */}
 
 					{/* Mode List */}
 					<div ref={scrollContainerRef} className="max-h-[300px] overflow-y-auto">
@@ -313,7 +311,7 @@ export const ModeSelector = ({
 						</div>
 
 						{/* Info icon and title on the right - only show info icon when search bar is visible */}
-						<div className="flex items-center gap-1 pr-1">
+						{/* <div className="flex items-center gap-1 pr-1">
 							{showSearch && (
 								<StandardTooltip content={instructionText}>
 									<span className="codicon codicon-info text-xs text-vscode-descriptionForeground opacity-70 hover:opacity-100 cursor-help" />
@@ -322,7 +320,7 @@ export const ModeSelector = ({
 							<h4 className="m-0 font-medium text-sm text-vscode-descriptionForeground">
 								{t("chat:modeSelector.title")}
 							</h4>
-						</div>
+						</div> */}
 					</div>
 				</div>
 			</PopoverContent>

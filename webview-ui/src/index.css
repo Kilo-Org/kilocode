@@ -86,10 +86,8 @@
 
 	--color-vscode-input-foreground: var(--vscode-input-foreground);
 	--color-vscode-input-background: var(--vscode-input-background);
-	--color-vscode-input-border: var(
-		--vscode-input-border,
-		transparent
-	); /* Some themes don't have a border color, so we can fallback to transparent */
+	--color-vscode-input-border: var(--vscode-input-border, transparent);
+	/* Some themes don't have a border color, so we can fallback to transparent */
 
 	--color-vscode-focusBorder: var(--vscode-focusBorder);
 
@@ -165,7 +163,8 @@
 		--accent-foreground: var(--vscode-list-hoverForeground);
 		--destructive: var(--vscode-errorForeground);
 		--destructive-foreground: var(--vscode-button-foreground);
-		--border: var(--vscode-input-border, transparent); /* --border gets theme value or transparent fallback */
+		--border: var(--vscode-input-border, transparent);
+		/* --border gets theme value or transparent fallback */
 		--input: var(--vscode-input-background);
 		--ring: var(--vscode-input-border);
 		--chart-1: var(--vscode-charts-red);
@@ -187,6 +186,7 @@
 	a {
 		color: var(--vscode-textLink-foreground);
 	}
+
 	/* kilocode_change end */
 }
 
@@ -217,11 +217,12 @@
 /* Form Element Focus States */
 
 textarea:focus {
-	outline: 1.5px solid var(--vscode-focusBorder, #007fd4);
+	outline: 1px solid rgb(255 255 255 / 0.01);
 }
 
 .focus\:outline-0 {
-	outline: 0 !important; /* Allow tailwind to override the `textarea:focus` rule */
+	outline: 0 !important;
+	/* Allow tailwind to override the `textarea:focus` rule */
 }
 
 /**
@@ -322,12 +323,15 @@ body:focus-within .code-block-scrollable {
  */
 
 .scrollbar-hide {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	/* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-	display: none; /* Chrome, Safari and Opera */
+	display: none;
+	/* Chrome, Safari and Opera */
 }
 
 /**
@@ -452,6 +456,7 @@ input[cmdk-input]:focus {
 	from {
 		transform: translateX(100%);
 	}
+
 	to {
 		transform: translateX(0);
 	}
@@ -465,6 +470,7 @@ input[cmdk-input]:focus {
 	from {
 		opacity: 0;
 	}
+
 	to {
 		opacity: 1;
 	}
@@ -479,6 +485,7 @@ input[cmdk-input]:focus {
 	100% {
 		opacity: 1;
 	}
+
 	50% {
 		opacity: 0.7;
 	}

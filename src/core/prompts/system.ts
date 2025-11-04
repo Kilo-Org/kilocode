@@ -99,10 +99,6 @@ async function generatePrompt(
 
 	const basePrompt = `${roleDefinition}
 
-${markdownFormattingSection(toolUseStyle ?? "xml" /*kilocode_change*/)}
-
-${getSharedToolUseSection(toolUseStyle /*kilocode_change*/)}
-
 ${
 	toolUseStyle !== "json" // kilocode_change
 		? getToolDescriptionsForMode(
@@ -124,27 +120,12 @@ ${
 		: ""
 }
 
-${getToolUseGuidelinesSection(codeIndexManager, toolUseStyle /*kilocode_change*/)}
-
 ${mcpServersSection}
-
-${getCapabilitiesSection(cwd, supportsComputerUse, shouldIncludeMcp ? mcpHub : undefined, effectiveDiffStrategy, codeIndexManager, clineProviderState /* kilocode_change */)}
 
 ${modesSection}
 
-${getRulesSection(cwd, supportsComputerUse, effectiveDiffStrategy, codeIndexManager, clineProviderState, toolUseStyle /* kilocode_change */)}
-
 ${getSystemInfoSection(cwd)}
-
-${getObjectiveSection(codeIndexManager, experiments)}
-
-${await addCustomInstructions(baseInstructions, globalCustomInstructions || "", cwd, mode, {
-	language: language ?? formatLanguage(vscode.env.language),
-	rooIgnoreInstructions,
-	localRulesToggleState: context.workspaceState.get("localRulesToggles"), // kilocode_change
-	globalRulesToggleState: context.globalState.get("globalRulesToggles"), // kilocode_change
-	settings,
-})}`
+`
 
 	return basePrompt
 }
