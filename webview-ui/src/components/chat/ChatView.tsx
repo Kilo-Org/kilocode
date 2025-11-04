@@ -1543,8 +1543,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [modifiedMessages.length, isStreaming, isHidden])
 
-	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
-
 	const switchToMode = useCallback(
 		(modeSlug: string): void => {
 			// Update local state and notify extension to sync mode change.
@@ -2194,7 +2192,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setInputValue={setInputValue}
 				sendingDisabled={sendingDisabled || isProfileDisabled}
 				selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"}
-				placeholderText={placeholderText}
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
 				onSend={() => handleSendMessage(inputValue, selectedImages)}

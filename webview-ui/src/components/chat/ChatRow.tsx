@@ -1204,7 +1204,6 @@ export const ChatRowContent = ({
 											setInputValue={setEditedContent}
 											sendingDisabled={false}
 											selectApiConfigDisabled={true}
-											placeholderText={t("chat:editMessage.placeholder")}
 											selectedImages={editImages}
 											setSelectedImages={setEditImages}
 											onSend={handleSaveEdit}
