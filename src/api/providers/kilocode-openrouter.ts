@@ -29,7 +29,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	constructor(options: ApiHandlerOptions) {
 		options = {
 			...options,
-			openRouterBaseUrl: getKiloUrlFromToken("https://api.matterai.so/api/v1/", options.kilocodeToken ?? ""),
+			openRouterBaseUrl: getKiloUrlFromToken("https://api.matterai.so/v1/web/", options.kilocodeToken ?? ""),
 			openRouterApiKey: options.kilocodeToken,
 		}
 

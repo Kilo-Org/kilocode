@@ -60,7 +60,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.matterai.so/api/profile/balance",
+			"https://api.matterai.so/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,
@@ -98,7 +98,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken, mockOrgId)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.matterai.so/api/profile/balance",
+			"https://api.matterai.so/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,
@@ -249,20 +249,20 @@ describe("URL functions", () => {
 			const prodToken = createProdToken()
 
 			// Token-based URLs using api.matterai.so subdomain
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile", prodToken)).toBe(
-				"https://api.matterai.so/api/profile",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", prodToken)).toBe(
+				"https://api.matterai.so/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile/balance", prodToken)).toBe(
-				"https://api.matterai.so/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", prodToken)).toBe(
+				"https://api.matterai.so/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/organizations/123/defaults", prodToken)).toBe(
-				"https://api.matterai.so/api/organizations/123/defaults",
+			expect(getKiloUrlFromToken("https://api.matterai.so/organizations/123/defaults", prodToken)).toBe(
+				"https://api.matterai.so/organizations/123/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/v1/web/", prodToken)).toBe(
-				"https://api.matterai.so/api/v1/web/",
+			expect(getKiloUrlFromToken("https://api.matterai.so/v1/web/", prodToken)).toBe(
+				"https://api.matterai.so/v1/web/",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/users/notifications", prodToken)).toBe(
-				"https://api.matterai.so/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", prodToken)).toBe(
+				"https://api.matterai.so/users/notifications",
 			)
 		})
 
@@ -270,19 +270,19 @@ describe("URL functions", () => {
 			const devToken = createDevToken()
 
 			// Development token should map to localhost:3000
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", devToken)).toBe(
 				"http://localhost:3000/api/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile/balance", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", devToken)).toBe(
 				"http://localhost:3000/api/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/organizations/456/defaults", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/organizations/456/defaults", devToken)).toBe(
 				"http://localhost:3000/api/organizations/456/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/v1/web/", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/v1/web/", devToken)).toBe(
 				"http://localhost:3000/api/v1/web/",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/users/notifications", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", devToken)).toBe(
 				"http://localhost:3000/api/users/notifications",
 			)
 		})
@@ -290,8 +290,8 @@ describe("URL functions", () => {
 		it("should handle invalid tokens gracefully", () => {
 			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 			// Use a token that looks like JWT but has invalid JSON payload
-			const result = getKiloUrlFromToken("https://api.matterai.so/api/test", "header.invalid-json.signature")
-			expect(result).toBe("https://api.matterai.so/api/test")
+			const result = getKiloUrlFromToken("https://api.matterai.so/test", "header.invalid-json.signature")
+			expect(result).toBe("https://api.matterai.so/test")
 			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Axon Code token")
 			consoleSpy.mockRestore()
 		})
@@ -313,14 +313,14 @@ describe("URL functions", () => {
 		it("should correctly handle token-based API calls", () => {
 			// These are the actual API endpoints used throughout the application
 			const prodToken = createProdToken()
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile", prodToken)).toBe(
-				"https://api.matterai.so/api/profile",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", prodToken)).toBe(
+				"https://api.matterai.so/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/profile/balance", prodToken)).toBe(
-				"https://api.matterai.so/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", prodToken)).toBe(
+				"https://api.matterai.so/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.matterai.so/api/users/notifications", prodToken)).toBe(
-				"https://api.matterai.so/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", prodToken)).toBe(
+				"https://api.matterai.so/users/notifications",
 			)
 		})
 

@@ -102,7 +102,7 @@ export async function getOpenRouterModels(
 	options?: ApiHandlerOptions & { headers?: Record<string, string> }, // kilocode_change: added headers
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
+	const baseURL = options?.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 
 	try {
 		// kilocode_change: use fetch, added headers
@@ -159,10 +159,10 @@ export async function getOpenRouterModelEndpoints(
 	options?: ApiHandlerOptions,
 ): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = options?.openRouterBaseUrl || "https://openrouter.ai/api/v1"
+	const baseURL = options?.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 
 	try {
-		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}/endpoints`)
+		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}`)
 		const result = openRouterModelEndpointsResponseSchema.safeParse(response.data)
 		const data = result.success ? result.data.data : response.data.data
 

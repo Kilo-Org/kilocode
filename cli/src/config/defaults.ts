@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG = {
 			id: "default",
 			provider: "kilocode",
 			kilocodeToken: "",
-			kilocodeModel: "anthropic/claude-sonnet-4.5",
+			kilocodeModel: "axon-code",
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,

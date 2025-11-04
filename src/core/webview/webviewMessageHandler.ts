@@ -2609,7 +2609,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.matterai.so/api/profile", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.matterai.so/profile", kilocodeToken)
 				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
 
 				// Go back to Personal when no longer part of the current set organization
@@ -2705,7 +2705,7 @@ export const webviewMessageHandler = async (
 					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
 				}
 
-				const url = getKiloUrlFromToken("https://api.matterai.so/api/profile/balance", kilocodeToken)
+				const url = getKiloUrlFromToken("https://api.matterai.so/profile/balance", kilocodeToken)
 				const response = await axios.get(url, { headers })
 				provider.postMessageToWebview({
 					type: "balanceDataResponse", // New response type

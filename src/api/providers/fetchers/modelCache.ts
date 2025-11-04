@@ -96,8 +96,8 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 			// kilocode_change start
 			case "kilocode-openrouter": {
 				const backendUrl = options.kilocodeOrganizationId
-					? `https://api.matterai.so/api/organizations/${options.kilocodeOrganizationId}`
-					: "https://api.matterai.so/api/openrouter"
+					? `https://api.matterai.so/organizations/${options.kilocodeOrganizationId}`
+					: "https://api.matterai.so/v1/web"
 				const openRouterBaseUrl = getKiloUrlFromToken(backendUrl, options.kilocodeToken ?? "")
 				models = await getOpenRouterModels({
 					openRouterBaseUrl,

@@ -35,28 +35,8 @@ export default async function authWizard() {
 					message: "API Key:",
 				},
 			])
-			providerSpecificConfig = { kilocodeToken, kilocodeModel: "anthropic/claude-sonnet-4.5" }
+			providerSpecificConfig = { kilocodeToken, kilocodeModel: "axon-code" }
 			break
-		}
-		case "zai": {
-			const { zaiApiKey } = await inquirer.prompt<{ zaiApiKey: string }>([
-				{
-					type: "password",
-					name: "zaiApiKey",
-					message: "Please enter your zAI token:",
-				},
-			])
-			providerSpecificConfig = { zaiApiKey }
-			break
-		}
-		case "other": {
-			console.info("Please manually add your provider setttings to the config file.")
-			console.info(
-				"Check out https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md to see potential configuration options",
-			)
-			await wait(1500)
-			await openConfigFile()
-			return
 		}
 	}
 

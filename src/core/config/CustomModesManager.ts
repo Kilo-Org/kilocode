@@ -1069,7 +1069,7 @@ export class CustomModesManager {
 			}
 
 			const url = getKiloUrlFromToken(
-				`https://api.matterai.so/api/organizations/${organizationId}/modes`,
+				`https://api.matterai.so/organizations/${organizationId}/modes`,
 				kilocodeToken,
 			)
 			const response = await axios.get(url, { headers })

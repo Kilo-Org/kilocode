@@ -94,7 +94,7 @@ export const KiloModelInfoView = ({
 		queryFn: async () => {
 			try {
 				const url = getKiloUrlFromToken(
-					"https://api.matterai.so/api/modelstats",
+					"https://api.matterai.so/modelstats",
 					apiConfiguration.kilocodeToken ?? "",
 				)
 				return (await fetch(url)).json()

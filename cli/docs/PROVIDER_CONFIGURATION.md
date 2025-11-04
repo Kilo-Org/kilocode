@@ -71,7 +71,7 @@ The official Axon Code provider for accessing Axon Code's managed AI services.
 **Required Fields**:
 
 - `kilocodeToken` (password): Your Axon Code authentication token
-- `kilocodeModel` (text): The model to use (default: `anthropic/claude-sonnet-4.5`)
+- `kilocodeModel` (text): The model to use (default: `axon-code`)
 
 **Optional Fields**:
 

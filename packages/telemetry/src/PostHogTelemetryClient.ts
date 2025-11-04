@@ -129,7 +129,7 @@ export class PostHogTelemetryClient extends BaseTelemetryClient {
 		}
 		const id = ++this.counter
 		try {
-			const response = await fetch("https://api.matterai.so/api/profile", {
+			const response = await fetch("https://api.matterai.so/profile", {
 				headers: {
 					Authorization: `Bearer ${kilocodeToken}`,
 					"Content-Type": "application/json",

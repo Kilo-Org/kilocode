@@ -67,7 +67,7 @@ describe("Provider Merging", () => {
 					id: "default",
 					provider: "kilocode",
 					kilocodeToken: "test-token-1234567890",
-					kilocodeModel: "anthropic/claude-sonnet-4.5",
+					kilocodeModel: "axon-code",
 				},
 			],
 			theme: "dark",

@@ -53,7 +53,7 @@ async function getOpenRouterProvidersForModel(modelId: string, baseUrl?: string,
 	try {
 		// kilocode_change start: baseUrl, apiKey
 		const response = await axios.get(
-			`${baseUrl?.trim() || "https://openrouter.ai/api/v1"}/models/${modelId}/endpoints`,
+			`${baseUrl?.trim() || "https://api.matterai.so/v1/web"}/models/${modelId}`,
 			apiKey ? { headers: { Authorization: `Bearer ${apiKey}` } } : undefined,
 		)
 		// kilocode_change end
