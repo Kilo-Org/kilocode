@@ -1057,15 +1057,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	// kilocode_change - add terminalId
 	async handleTerminalOperation(terminalOperation: "continue" | "abort", terminalId?: number) {
 		if (terminalOperation === "continue") {
 			this.terminalProcess?.continue()
 		} else if (terminalOperation === "abort") {
+			// kilocode_change start - add terminalId and TerminalRegistry support
 			if (terminalId === undefined) {
 				this.terminalProcess?.abort()
 			} else {
 				await TerminalRegistry.killTerminal(terminalId)
 			}
+			// kilocode_change end - add terminalId and TerminalRegistry support
 		}
 	}
 

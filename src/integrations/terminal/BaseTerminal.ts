@@ -30,7 +30,7 @@ export abstract class BaseTerminal implements RooTerminal {
 		this.initialCwd = cwd
 		this.busy = false
 		this.running = false
-		this.killRequested = false
+		this.killRequested = false // kilocode_change
 		this.streamClosed = false
 	}
 

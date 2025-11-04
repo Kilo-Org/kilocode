@@ -37,9 +37,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 
 		try {
 			this.isHot = true
-
-			// Mark terminal as busy immediately
-			this.terminal.busy = true
+			this.terminal.busy = true // kilocode_change
 
 			this.subprocess = execa({
 				shell: true,
@@ -57,14 +55,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 			})`${command}`
 
 			this.pid = this.subprocess.pid
-
-			// Emit shell_execution_started immediately after subprocess creation
-			try {
-				this.emit("shell_execution_started", this.pid)
-			} catch (error) {
-				console.error(`🚀 [ExecaTerminalProcess] Error during shell_execution_started emit:`, error)
-				throw error
-			}
+			this.emit("shell_execution_started", this.pid) // kilocode_change
 
 			// When using shell: true, the PID is for the shell, not the actual command
 			// Find the actual command PID after a small delay
@@ -76,9 +67,6 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 								// Update PID to the first child (the actual command)
 								const actualPid = parseInt(children[0].PID)
 								if (!isNaN(actualPid)) {
-									console.log(
-										`🚀 [ExecaTerminalProcess] Updated PID from ${this.pid} to ${actualPid}`,
-									)
 									this.pid = actualPid
 								}
 							}
@@ -88,7 +76,6 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				})
 			}
 
-			// Start background monitoring (non-blocking)
 			const rawStream = this.subprocess.iterable({ from: "all", preserveNewlines: true })
 
 			// Wrap the stream to ensure all chunks are strings (execa can return Uint8Array)
@@ -98,42 +85,26 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				}
 			})()
 
-			// Start monitoring the stream immediately and synchronously
-			// Set active stream for terminal integration
 			this.terminal.setActiveStream(stream, this.pid)
 
-			// Start immediate stream processing in background (don't await to avoid blocking)
+			// kilocode_change - Start immediate stream processing in background (don't await to avoid blocking)
 			this.startBackgroundStreamMonitoring(stream)
-
-			// Emit continue immediately after starting monitoring
 			this.emit("continue") // Signal run() completion for background execution
 		} catch (error) {
-			console.error(
-				`🚀 [ExecaTerminalProcess] startup error: ${error instanceof Error ? error.message : String(error)}`,
-			)
 			this.emit("shell_execution_complete", { exitCode: 1 })
 		}
 	}
 
 	public override continue() {
-		console.log(
-			`🚀 [ExecaTerminalProcess] continue() called for UI detachment - subprocess continues in background: ${this.command}`,
-		)
-
-		// Stop UI output listening only
-		this.emitRemainingBufferIfListening()
+		this.emitRemainingBufferIfListening() // kilocode_change
 		this.isListening = false
 		this.removeAllListeners("line")
-
-		// Signal UI detachment complete (note: this is different from the initial continue in run())
 		this.emit("continue")
-
-		// Subprocess keeps running via detached:true - no additional logic needed!
 	}
 
 	public override abort() {
 		this.aborted = true
-		this.removeAllListeners("line")
+		this.removeAllListeners("line") // kilocode_change
 
 		// Function to perform the kill operations
 		const performKill = () => {
@@ -191,9 +162,7 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				}
 			})
 		}
-
-		// Perform cleanup immediately for aborted processes
-		this.performCleanup()
+		this.performCleanup() // kilocode_change
 	}
 
 	public override hasUnretrievedOutput() {
@@ -231,24 +200,17 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		}
 	}
 
+	// kilocode_change start - startBackgroundStreamMonitoring
 	private async startBackgroundStreamMonitoring(stream: AsyncIterable<string>) {
-		// Set active stream for terminal integration
 		this.terminal.setActiveStream(stream, this.pid)
 
 		try {
 			let streamLineCount = 0
 			let hasEmittedFirstLine = false
+			let streamError: Error | undefined
 
 			for await (const line of stream) {
 				streamLineCount++
-
-				if (streamLineCount <= 3) {
-					// Only log first few lines to avoid spam
-					console.log(
-						`🚀 [ExecaTerminalProcess] Background stream line ${streamLineCount}: ${line.slice(0, 100)}...`,
-					)
-				}
-
 				if (this.aborted) {
 					break
 				}
@@ -276,60 +238,49 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				this.startHotTimer(line)
 			}
 
-			console.log(
-				`🚀 [ExecaTerminalProcess] Terminal ${this.terminal.id} stream monitoring complete, waiting for subprocess`,
-			)
-
-			// Wait for subprocess completion if not aborted
 			if (!this.aborted && this.subprocess) {
 				try {
 					const result = await this.subprocess
 					this.emit("shell_execution_complete", { exitCode: result.exitCode ?? 0 })
 				} catch (error) {
 					if (error instanceof ExecaError) {
-						console.error(`🚀 [ExecaTerminalProcess] background subprocess error: ${error.message}`)
 						this.emit("shell_execution_complete", {
 							exitCode: error.exitCode ?? 1,
 							signalName: error.signal,
 						})
 					} else {
-						console.error(
-							`🚀 [ExecaTerminalProcess] background monitoring error: ${error instanceof Error ? error.message : String(error)}`,
-						)
 						this.emit("shell_execution_complete", { exitCode: 1 })
 					}
 				}
-			} else if (this.aborted) {
-				// Handle aborted subprocess cleanup
-				if (this.subprocess) {
-					let timeoutId: NodeJS.Timeout | undefined
+			} else if (this.aborted && this.subprocess) {
+				let timeoutId: NodeJS.Timeout | undefined
 
-					const kill = new Promise<void>((resolve) => {
-						timeoutId = setTimeout(() => {
-							try {
-								this.subprocess?.kill("SIGKILL")
-							} catch (e) {}
+				const kill = new Promise<void>((resolve) => {
+					timeoutId = setTimeout(() => {
+						try {
+							this.subprocess?.kill("SIGKILL")
+						} catch (e) {}
 
-							resolve()
-						}, 5_000)
-					})
+						resolve()
+					}, 5_000)
+				})
 
-					try {
-						await Promise.race([this.subprocess, kill])
-					} catch (error) {
-						console.log(
-							`🚀 [ExecaTerminalProcess] subprocess termination error: ${error instanceof Error ? error.message : String(error)}`,
-						)
-					}
+				try {
+					await Promise.race([this.subprocess, kill])
+				} catch (_error) {}
 
-					if (timeoutId) {
-						clearTimeout(timeoutId)
-					}
+				if (timeoutId) {
+					clearTimeout(timeoutId)
 				}
 			}
-		} catch (error) {
-			console.error(`🚀 [ExecaTerminalProcess] background monitoring error:`, error)
 
+			// If we had a stream error but subprocess completed, log it
+			if (streamError) {
+				console.warn("[ExecaTerminalProcess] Stream error occurred but subprocess completed:", streamError)
+			}
+		} catch (error) {
+			// Unexpected error in monitoring logic
+			console.error("[ExecaTerminalProcess] Unexpected error in background monitoring:", error)
 			if (error instanceof ExecaError) {
 				this.emit("shell_execution_complete", {
 					exitCode: error.exitCode ?? 1,
@@ -339,33 +290,29 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 				this.emit("shell_execution_complete", { exitCode: 1 })
 			}
 		} finally {
-			// Final cleanup when subprocess actually completes
 			this.performFinalCleanup()
 		}
 	}
-
 	private performCleanup() {
 		this.terminal.setActiveStream(undefined)
 		this.stopHotTimer()
 		this.removeAllListeners("line")
 		this.subprocess = undefined
 	}
-
 	private performFinalCleanup() {
-		// Clear terminal references
 		this.terminal.setActiveStream(undefined)
 		this.stopHotTimer()
-		this.removeAllListeners("line")
+		this.removeAllListeners()
 
 		// Clear subprocess reference (process may still be running detached)
 		this.subprocess = undefined
 
-		// Mark terminal as not busy - use synchronization to prevent races
-		if (this.terminal.process === this) {
+		// Mark terminal as not busy - atomic check to prevent race conditions
+		// Only clear busy flag if this process is still the active process
+		if (this.terminal.process === this && this.terminal.busy) {
 			this.terminal.busy = false
 		}
-
-		// Emit completion for any listeners
 		this.emit("completed", this.fullOutput)
 	}
+	// kilocode_change end - startBackgroundStreamMonitoring
 }

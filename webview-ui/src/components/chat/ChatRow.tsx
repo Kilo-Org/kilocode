@@ -1655,7 +1655,6 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
-					// kilocode_change: Remove isOrganization prop
 					return <LowCreditWarning message={message} />
 				}
 				case "invalid_model": {

@@ -253,14 +253,12 @@ export class TerminalProcess extends BaseTerminalProcess {
 		// command is finished, we still want to consider it 'hot' in case
 		// so that api request stalls to let diagnostics catch up").
 		this.stopHotTimer()
-		// Clean up listeners when process actually completes
-		this.removeAllListeners("line")
+		this.removeAllListeners("line") // kilocode_change
 		this.emit("completed", this.removeEscapeSequences(this.fullOutput))
 		this.emit("continue")
 	}
 
 	public override continue() {
-		console.log("🚀 ~ TerminalProcess ~ continue ~ continue:")
 		this.emitRemainingBufferIfListening()
 		this.isListening = false
 		// Don't remove listeners here - process continues in background
@@ -268,9 +266,7 @@ export class TerminalProcess extends BaseTerminalProcess {
 	}
 
 	public override abort() {
-		// Clean up listeners when aborting
-		this.removeAllListeners("line")
-
+		this.removeAllListeners("line") // kilocode_change
 		if (this.isListening) {
 			// Send SIGINT using CTRL+C
 			this.terminal.terminal.sendText("\x03")

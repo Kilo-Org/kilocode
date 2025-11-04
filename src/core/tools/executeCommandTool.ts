@@ -30,12 +30,12 @@ export async function executeCommandTool(
 ) {
 	let command: string | undefined = block.params.command
 	const customCwd: string | undefined = block.params.cwd
-	// kilocode_change start - runInBackground
+	// kilocode_change start - runInBackground support
 	const runInBackgroundParam = block.params.run_in_background
 	const runInBackgroundRequested: boolean =
 		typeof runInBackgroundParam === "boolean" ? runInBackgroundParam : runInBackgroundParam === "true"
 	let runInBackground: boolean = runInBackgroundRequested
-	// kilocode_change end - runInBackground
+	// kilocode_change end - runInBackground support
 
 	try {
 		if (block.partial) {
@@ -225,13 +225,14 @@ export async function executeCommand(
 				terminalOutputCharacterLimit,
 			)
 
-			// kilocode_change start: Don't wake agent if running in background
+			// kilocode_change start: only show command output if not runInBackground
 			if (!runInBackground) {
 				task.say("command_output", result)
 			}
-			// kilocode_change end: Don't wake agent if running in background
+			// kilocode_change end: only show command output if not runInBackground
 			completed = true
 		},
+		// kilocode_change - add process param
 		onShellExecutionStarted: (pid: number | undefined, process: RooTerminalProcess) => {
 			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
 			const status: CommandExecutionStatus = {
@@ -239,16 +240,16 @@ export async function executeCommand(
 				status: "started",
 				pid,
 				command,
-				runInBackground,
-				terminalId: terminal.id,
+				runInBackground, // kilocode_change - add runInBackground
+				terminalId: terminal.id, // kilocode_change - add terminalId
 			}
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 
-			// kilocode_change start- automatically continue the process
+			// kilocode_change start - automatically continue the process
 			if (runInBackground) {
 				process.continue()
 			}
-			// kilocode_change end
+			// kilocode_change end - automatically continue the process
 		},
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }

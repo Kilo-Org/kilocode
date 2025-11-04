@@ -331,7 +331,6 @@ describe("executeCommandTool", () => {
 			const lastCall = mockExecuteCommand.mock.calls[mockExecuteCommand.mock.calls.length - 1]
 			expect(lastCall[3]).toBe(true) // run_in_background parameter should be true
 		})
-
 		it("should default run_in_background to false when parameter is missing", async () => {
 			mockToolUse.params.command = "echo test"
 

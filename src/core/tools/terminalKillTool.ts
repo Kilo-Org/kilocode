@@ -1,6 +1,5 @@
 // kilocode_change - new file: Terminal control tool for managing background processes
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
-import { Terminal } from "../../integrations/terminal/Terminal"
 import { formatResponse } from "../prompts/responses"
 import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
@@ -28,6 +27,20 @@ export async function terminalKillTool(
 		return
 	}
 
+	// Verify terminal exists
+	const terminal = TerminalRegistry.findTerminal(terminalId)
+	if (!terminal) {
+		task.consecutiveMistakeCount++
+		task.recordToolError("terminal_kill")
+		pushToolResult(formatResponse.toolError(`Terminal ${terminalId} not found.`))
+		return
+	}
+
+	// Verify terminal is actually running a process
+	if (!terminal.busy && !terminal.process) {
+		pushToolResult(formatResponse.toolResult(`Terminal ${terminalId} is not running any process.`))
+		return
+	}
 	await task.say("text", `Killing process in terminal ${terminalId}...`)
 
 	try {

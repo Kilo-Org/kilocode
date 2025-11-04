@@ -76,7 +76,7 @@ export const toolParamNames = [
 	"prompt",
 	"image",
 	"run_in_background", // kilocode_change
-	"terminal_id", // kilocode_change: for terminal killing
+	"terminal_id", // kilocode_change
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]

@@ -162,11 +162,13 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 					<div className="flex flex-row items-center gap-1">
 						{status?.status === "started" && (
 							<div className="flex flex-row items-center gap-2 font-mono text-xs">
+								{/* kilocode_change start - runInBackground*/}
 								{status.runInBackground && (
 									<div className="bg-vscode-button-background text-vscode-button-foreground px-2 py-1 rounded text-xs font-medium">
 										background
 									</div>
 								)}
+								{/* kilocode_change end - runInBackground*/}
 								{status.pid && <div className="whitespace-nowrap">(PID: {status.pid})</div>}
 								<StandardTooltip content={t("chat:commandExecution.abort")}>
 									<Button
@@ -176,7 +178,7 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 											vscode.postMessage({
 												type: "terminalOperation",
 												terminalOperation: "abort",
-												terminalId: status.terminalId,
+												terminalId: status.terminalId, // kilocode_change
 											})
 										}>
 										<OctagonX className="size-4" />

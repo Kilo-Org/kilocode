@@ -13,7 +13,7 @@ export class ExecaTerminal extends BaseTerminal {
 	 */
 	public override isClosed(): boolean {
 		// Terminal is closed if it's not busy and has no processes with output
-		return !this.busy && this.getProcessesWithOutput().length === 0
+		return !this.busy && this.getProcessesWithOutput().length === 0 // kilocode_change
 	}
 
 	public override runCommand(command: string, callbacks: RooTerminalCallbacks): RooTerminalProcessResultPromise {
