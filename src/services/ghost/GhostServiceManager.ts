@@ -6,6 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
+import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
@@ -37,6 +38,7 @@ export class GhostServiceManager {
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public inlineCompletionProvider: GhostInlineCompletionProvider
+	private newAutocompleteProvider: NewAutocompleteProvider | null = null
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	private ignoreController?: Promise<RooIgnoreController>
@@ -123,18 +125,36 @@ export class GhostServiceManager {
 
 	private async updateInlineCompletionProviderRegistration() {
 		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
+		const useNewAutocomplete = this.settings?.useNewAutocomplete ?? false
 
-		if (shouldBeRegistered && !this.inlineCompletionProviderDisposable) {
-			// Register the provider
-			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-				"*",
-				this.inlineCompletionProvider,
-			)
-			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
-		} else if (!shouldBeRegistered && this.inlineCompletionProviderDisposable) {
-			// Deregister the provider
+		// First, dispose any existing registration
+		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
 			this.inlineCompletionProviderDisposable = null
+		}
+
+		// Dispose new autocomplete provider if switching away from it
+		if (!useNewAutocomplete && this.newAutocompleteProvider) {
+			this.newAutocompleteProvider.dispose()
+			this.newAutocompleteProvider = null
+		}
+
+		if (shouldBeRegistered) {
+			if (useNewAutocomplete) {
+				// Initialize new autocomplete provider if not already created
+				if (!this.newAutocompleteProvider) {
+					this.newAutocompleteProvider = new NewAutocompleteProvider(this.context, this.cline)
+					await this.newAutocompleteProvider.load()
+				}
+				// New autocomplete provider registers itself internally
+			} else {
+				// Register classic provider
+				this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
+					"*",
+					this.inlineCompletionProvider,
+				)
+				this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
+			}
 		}
 	}
 
@@ -269,6 +289,15 @@ export class GhostServiceManager {
 
 		const document = editor.document
 		if (!(await this.hasAccess(document))) {
+			return
+		}
+
+		// Check if using new autocomplete
+		const useNewAutocomplete = this.settings?.useNewAutocomplete ?? false
+
+		if (useNewAutocomplete) {
+			// New autocomplete doesn't support manual code suggestion yet
+			// Just return for now
 			return
 		}
 
@@ -416,7 +445,13 @@ export class GhostServiceManager {
 
 	public cancelRequest() {
 		this.stopProcessing()
-		this.inlineCompletionProvider.cancelRequest()
+		// Check which provider is active and cancel appropriately
+		const useNewAutocomplete = this.settings?.useNewAutocomplete ?? false
+		if (useNewAutocomplete) {
+			// New autocomplete doesn't have a cancel method yet
+		} else {
+			this.inlineCompletionProvider.cancelRequest()
+		}
 	}
 
 	/**
@@ -432,6 +467,12 @@ export class GhostServiceManager {
 		if (this.inlineCompletionProviderDisposable) {
 			this.inlineCompletionProviderDisposable.dispose()
 			this.inlineCompletionProviderDisposable = null
+		}
+
+		// Dispose new autocomplete provider if it exists
+		if (this.newAutocompleteProvider) {
+			this.newAutocompleteProvider.dispose()
+			this.newAutocompleteProvider = null
 		}
 
 		this.disposeIgnoreController()

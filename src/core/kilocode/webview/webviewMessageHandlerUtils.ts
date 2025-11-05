@@ -125,11 +125,12 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 			try {
 				const message = `${notification.title}: ${notification.message}`
 				const actionButton = notification.action?.actionText
+				const dismissButton = "Do not show again"
 				const selection = await vscode.window.showInformationMessage(
 					message,
-					...(actionButton ? [actionButton] : []),
+					...(actionButton ? [actionButton, dismissButton] : [dismissButton]),
 				)
-				if (selection === actionButton) {
+				if (selection) {
 					const currentDismissedIds = dismissedNotificationIds || []
 					if (!currentDismissedIds.includes(notification.id)) {
 						await provider.contextProxy.setValue("dismissedNotificationIds", [
@@ -137,7 +138,8 @@ export const fetchKilocodeNotificationsHandler = async (provider: ClineProvider)
 							notification.id,
 						])
 					}
-
+				}
+				if (selection === actionButton) {
 					if (notification.action?.actionURL) {
 						await vscode.env.openExternal(vscode.Uri.parse(notification.action.actionURL))
 					}

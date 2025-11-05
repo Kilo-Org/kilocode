@@ -83,6 +83,27 @@ async function validateParams(
 	}
 }
 
+/**
+ * Reverses property renaming applied in schema generation (native tool calling).
+ * Properties named `renamed_*` are converted back to their original names.
+ */
+function reversePropertyRenaming_kilocode(
+	args: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
+	if (!args) {
+		return args
+	}
+	const reversed: Record<string, unknown> = {}
+	for (const [key, value] of Object.entries(args)) {
+		if (key.startsWith("renamed_")) {
+			reversed[key.substring("renamed_".length)] = value
+		} else {
+			reversed[key] = value
+		}
+	}
+	return reversed
+}
+
 async function validateToolExists(
 	cline: Task,
 	serverName: string,
@@ -251,7 +272,10 @@ async function executeToolAndProcessResult(
 		toolName,
 	})
 
-	const toolResult = await cline.providerRef.deref()?.getMcpHub()?.callTool(serverName, toolName, parsedArguments)
+	const toolResult = await cline.providerRef
+		.deref()
+		?.getMcpHub()
+		?.callTool(serverName, toolName, reversePropertyRenaming_kilocode(parsedArguments))
 
 	let toolResultPretty = "(No response)"
 

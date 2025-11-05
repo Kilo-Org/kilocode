@@ -26,8 +26,14 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding, provider, model } =
-		ghostServiceSettings || {}
+	const {
+		enableAutoTrigger,
+		enableQuickInlineTaskKeybinding,
+		enableSmartInlineTaskKeybinding,
+		useNewAutocomplete,
+		provider,
+		model,
+	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
 
 	const onEnableAutoTriggerChange = useCallback(
@@ -47,6 +53,13 @@ export const GhostServiceSettingsView = ({
 	const onEnableSmartInlineTaskKeybindingChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("enableSmartInlineTaskKeybinding", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onUseNewAutocompleteChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("useNewAutocomplete", e.target.checked)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -131,6 +144,18 @@ export const GhostServiceSettingsView = ({
 							/>
 						</div>
 					</div>
+
+					{process.env.NODE_ENV === "development" && (
+						<div className="flex flex-col gap-1">
+							<VSCodeCheckbox checked={useNewAutocomplete || false} onChange={onUseNewAutocompleteChange}>
+								<span className="font-medium">[DEV ONLY] Use Experimental New Autocomplete</span>
+							</VSCodeCheckbox>
+							<div className="text-vscode-descriptionForeground text-sm mt-1">
+								⚠️ <strong>EXPERIMENTAL</strong>: Use the new autocomplete engine based on Continue.dev.
+								This is highly experimental and may not work as expected.
+							</div>
+						</div>
+					)}
 
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">

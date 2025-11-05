@@ -1,33 +1,18 @@
 import * as vscode from "vscode"
-import { AutocompleteModel } from "./AutocompleteModel"
-import {
-	AUTOCOMPLETE_PROVIDER_MODELS,
-	AutocompleteProviderKey,
-	GhostServiceSettings,
-	modelIdKeysByProvider,
-	ProviderSettingsEntry,
-} from "@roo-code/types"
-import { ContextProxy } from "../../core/config/ContextProxy"
-import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
-import { ClineProvider } from "../../core/webview/ClineProvider"
-import { MinimalConfigProvider } from "../continuedev/core/autocomplete/MinimalConfig"
-import { VsCodeIde } from "../continuedev/core/vscode-test-harness/src/VSCodeIde"
-import { ContinueCompletionProvider } from "../continuedev/core/vscode-test-harness/src/autocomplete/completionProvider"
-import OpenRouter from "../continuedev/core/llm/llms/OpenRouter"
+import { NewAutocompleteModel } from "./NewAutocompleteModel"
+import { GhostServiceSettings } from "@roo-code/types"
+import { ContextProxy } from "../../../core/config/ContextProxy"
+import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
+import { ClineProvider } from "../../../core/webview/ClineProvider"
+import { MinimalConfigProvider } from "../../continuedev/core/autocomplete/MinimalConfig"
+import { VsCodeIde } from "../../continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { ContinueCompletionProvider } from "../../continuedev/core/vscode-test-harness/src/autocomplete/completionProvider"
 
-export class AutocompleteProvider {
+export class NewAutocompleteProvider {
 	private completionProviderDisposable: vscode.Disposable | null = null
-	private model: AutocompleteModel
+	private model: NewAutocompleteModel
 	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
-
-	private enabled: boolean = true
-	private taskId: string | null = null
-	private isProcessing: boolean = false
-	private isRequestCancelled: boolean = false
-
-	// VSCode Providers
-	public inlineCompletionProvider: any
 
 	constructor(
 		private context: vscode.ExtensionContext,
@@ -35,17 +20,9 @@ export class AutocompleteProvider {
 	) {
 		// Register Internal Components
 		this.providerSettingsManager = new ProviderSettingsManager(context)
-		this.model = new AutocompleteModel()
+		this.model = new NewAutocompleteModel()
 
 		void this.load()
-	}
-
-	// Instance is created and managed by the registration function
-
-	// Settings Management
-	private loadSettings() {
-		const state = ContextProxy.instance.getValues()
-		return state.ghostServiceSettings
 	}
 
 	private async saveSettings() {
@@ -74,7 +51,7 @@ export class AutocompleteProvider {
 			// The model.reload() has already loaded the profile, so we can get the ILLM
 			const llm = this.model.getILLM()
 			if (!llm) {
-				console.warn("[AutocompleteProvider] No valid autocomplete provider found")
+				console.warn("[NewAutocompleteProvider] No valid autocomplete provider found")
 				return
 			}
 
@@ -94,14 +71,14 @@ export class AutocompleteProvider {
 			)
 			this.context.subscriptions.push(this.completionProviderDisposable)
 
-			console.log("[AutocompleteProvider] Successfully registered autocomplete")
+			console.log("[NewAutocompleteProvider] Successfully registered autocomplete")
 		} catch (error) {
-			console.error("[AutocompleteProvider] Error loading code completion:", error)
+			console.error("[NewAutocompleteProvider] Error loading code completion:", error)
 		}
 	}
 
 	public async load() {
-		this.settings = this.loadSettings()
+		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings")
 		await this.model.reload(this.providerSettingsManager)
 		await this.saveSettings()
 		this.loadCodeCompletion()
@@ -146,7 +123,7 @@ export class AutocompleteProvider {
 	}
 
 	/**
-	 * Dispose of all resources used by the AutocompleteProvider
+	 * Dispose of all resources used by the NewAutocompleteProvider
 	 */
 	public dispose(): void {
 		if (this.completionProviderDisposable) {

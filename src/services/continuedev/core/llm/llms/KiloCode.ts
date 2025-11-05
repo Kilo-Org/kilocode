@@ -37,6 +37,7 @@ class KiloCode extends OpenRouter {
 	private organizationId?: string
 	private testerSuppressUntil?: number
 	private apiFIMBase?: string
+	private tokenProvider?: () => string
 
 	constructor(options: LLMOptions) {
 		// Extract KiloCode-specific config from env
@@ -56,6 +57,21 @@ class KiloCode extends OpenRouter {
 		this.organizationId = organizationId
 		this.testerSuppressUntil = testerSuppressUntil
 		this.apiFIMBase = getKiloUrlFromToken("https://api.kilocode.ai/api/", kilocodeToken)
+		this.tokenProvider = (options as any)?.env?.kilocodeTokenProvider
+	}
+
+	// Ensure base URLs and adapter reflect latest apiKey/token at call-time
+	private refreshAuthDerived() {
+		const token = this.tokenProvider?.() ?? this.apiKey ?? ""
+		if (token === this.apiKey) return
+
+		const newApiBase = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/v1/", token)
+		const newFimBase = getKiloUrlFromToken("https://api.kilocode.ai/api/", token)
+
+		this.apiKey = token
+		this.apiBase = newApiBase
+		this.apiFIMBase = newFimBase
+		this.openaiAdapter = this.createOpenAiAdapter()
 	}
 
 	/**
@@ -71,6 +87,7 @@ class KiloCode extends OpenRouter {
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
+		this.refreshAuthDerived()
 
 		try {
 			// Call parent implementation
@@ -94,6 +111,7 @@ class KiloCode extends OpenRouter {
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
+		this.refreshAuthDerived()
 
 		try {
 			yield* super._streamComplete(prompt, signal, options)
@@ -117,6 +135,7 @@ class KiloCode extends OpenRouter {
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
+		this.refreshAuthDerived()
 
 		const endpoint = new URL("fim/completions", this.apiFIMBase)
 
@@ -159,6 +178,8 @@ class KiloCode extends OpenRouter {
 	 * Reads from both static (organizationId) and per-request (taskId, projectId) metadata
 	 */
 	protected override _getHeaders() {
+		this.refreshAuthDerived()
+
 		const baseHeaders = super._getHeaders()
 
 		// Build KiloCode-specific headers

@@ -10,82 +10,75 @@ describe("GhostStreamingParser", () => {
 			const response = "<COMPLETION>return 42</COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.isComplete).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
-
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("return 42")
-			expect(suggestion?.prefix).toBe(prefix)
-			expect(suggestion?.suffix).toBe(suffix)
+			expect(result.text).toBe("return 42")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle multiline content in COMPLETION tags", () => {
 			const response = "<COMPLETION>const x = 1;\nconst y = 2;\nreturn x + y;</COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
-
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("const x = 1;\nconst y = 2;\nreturn x + y;")
+			expect(result.text).toBe("const x = 1;\nconst y = 2;\nreturn x + y;")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle incomplete COMPLETION tag (streaming)", () => {
 			const response = "<COMPLETION>return 42"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
-
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBeUndefined()
+			// Incomplete tags should return empty string
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should remove any accidental tag remnants", () => {
 			const response = "<COMPLETION>return 42<COMPLETION></COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("return 42")
+			expect(result.text).toBe("return 42")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle case-insensitive tags", () => {
 			const response = "<completion>return 42</completion>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("return 42")
+			expect(result.text).toBe("return 42")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 	})
 
 	describe("Response parsing without COMPLETION tags (no suggestions)", () => {
-		it("should NOT create suggestions when no tags present", () => {
+		it("should return empty string when no tags present", () => {
 			const response = "return 42"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
-		it("should NOT create suggestions for multiline response without tags", () => {
+		it("should return empty string for multiline response without tags", () => {
 			const response = "const x = 1;\nconst y = 2;\nreturn x + y;"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
-		it("should NOT create suggestions for markdown code blocks without tags", () => {
+		it("should return empty string for markdown code blocks without tags", () => {
 			const response = "```typescript\nreturn 42\n```"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 	})
 
@@ -94,17 +87,18 @@ describe("GhostStreamingParser", () => {
 			const response = ""
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.isComplete).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
-		it("should NOT create suggestions for whitespace-only response without tags", () => {
+		it("should return empty string for whitespace-only response without tags", () => {
 			const response = "   \n\t  "
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle custom prefix/suffix with COMPLETION tags", () => {
@@ -114,47 +108,45 @@ describe("GhostStreamingParser", () => {
 
 			const result = parseGhostResponse(response, customPrefix, customSuffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
-
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe('"Hello, World!"')
-			expect(suggestion?.prefix).toBe(customPrefix)
-			expect(suggestion?.suffix).toBe(customSuffix)
+			expect(result.text).toBe('"Hello, World!"')
+			expect(result.prefix).toBe(customPrefix)
+			expect(result.suffix).toBe(customSuffix)
 		})
 
 		it("should handle empty COMPLETION tags", () => {
 			const response = "<COMPLETION></COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(false)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle whitespace-only content in COMPLETION tags", () => {
 			const response = "<COMPLETION>   </COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.text).toBe("   ")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle response with extra text before COMPLETION tag", () => {
 			const response = "Here is the code:\n<COMPLETION>return 42</COMPLETION>"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("return 42")
+			expect(result.text).toBe("return 42")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 
 		it("should handle response with extra text after COMPLETION tag", () => {
 			const response = "<COMPLETION>return 42</COMPLETION>\nThat's the code!"
 			const result = parseGhostResponse(response, prefix, suffix)
 
-			expect(result.hasNewSuggestions).toBe(true)
-			const suggestion = result.suggestions.getFillInAtCursor()
-			expect(suggestion?.text).toBe("return 42")
+			expect(result.text).toBe("return 42")
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 	})
 
@@ -168,7 +160,9 @@ describe("GhostStreamingParser", () => {
 			const endTime = performance.now()
 
 			expect(endTime - startTime).toBeLessThan(100)
-			expect(result.hasNewSuggestions).toBe(true)
+			expect(result.text).toBe(largeContent)
+			expect(result.prefix).toBe(prefix)
+			expect(result.suffix).toBe(suffix)
 		})
 	})
 })

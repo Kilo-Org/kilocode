@@ -108,7 +108,7 @@ describe("GhostServiceManager", () => {
 			const position = context.range?.start ?? context.document.positionAt(0)
 			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 			const result = parseGhostResponse("", prefix, suffix)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
 		})
 
 		it("should handle invalid COMPLETION format", async () => {
@@ -119,7 +119,7 @@ describe("GhostServiceManager", () => {
 			const position = context.range?.start ?? context.document.positionAt(0)
 			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 			const result = parseGhostResponse(invalidCOMPLETION, prefix, suffix)
-			expect(result.suggestions.hasSuggestions()).toBe(false)
+			expect(result.text).toBe("")
 		})
 
 		it("should handle file not found in context", async () => {
@@ -138,7 +138,7 @@ console.log('test');</COMPLETION>`
 			const position = context.range?.start ?? context.document.positionAt(0)
 			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
 			const result = parseGhostResponse(completionResponse, prefix, suffix)
-			expect(result.suggestions.hasSuggestions()).toBe(true)
+			expect(result.text).toBe("// Added comment\nconsole.log('test');")
 		})
 	})
 

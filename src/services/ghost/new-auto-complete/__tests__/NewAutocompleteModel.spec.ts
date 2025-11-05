@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { AutocompleteModel } from "../AutocompleteModel"
+import { NewAutocompleteModel } from "../NewAutocompleteModel"
 import { ProviderSettings } from "@roo-code/types"
-import Mistral from "../../continuedev/core/llm/llms/Mistral"
-import { OpenAI } from "../../continuedev/core/llm/llms/OpenAI"
+import Mistral from "../../../continuedev/core/llm/llms/Mistral"
+import { OpenAI } from "../../../continuedev/core/llm/llms/OpenAI"
 
 // Mock the LLM classes
-vi.mock("../../continuedev/core/llm/llms/Mistral")
-vi.mock("../../continuedev/core/llm/llms/OpenAI")
+vi.mock("../../../continuedev/core/llm/llms/Mistral")
+vi.mock("../../../continuedev/core/llm/llms/OpenAI")
 
-describe("AutocompleteModel", () => {
-	let model: AutocompleteModel
+describe("NewAutocompleteModel", () => {
+	let model: NewAutocompleteModel
 
 	beforeEach(() => {
-		model = new AutocompleteModel()
+		model = new NewAutocompleteModel()
 		vi.clearAllMocks()
 	})
 

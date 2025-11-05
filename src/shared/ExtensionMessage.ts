@@ -2,6 +2,7 @@ import type {
 	GlobalSettings,
 	ProviderSettingsEntry,
 	ProviderSettings,
+	ModelInfo, // kilocode_change
 	HistoryItem,
 	ModeConfig,
 	TelemetrySetting,
@@ -454,6 +455,7 @@ export type ExtensionState = Pick<
 	remoteControlEnabled: boolean
 	taskSyncEnabled: boolean
 	featureRoomoteControlEnabled: boolean
+	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
 }
 

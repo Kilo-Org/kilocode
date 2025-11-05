@@ -45,7 +45,6 @@ import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
-import { registerAutocompleteProvider } from "./services/autocomplete" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -322,8 +321,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	if (!kiloCodeWrapped) {
 		// Only use autocomplete in VS Code
 		registerGhostProvider(context, provider)
-		// Experimental
-		// registerAutocompleteProvider(context, provider)
 	} else {
 		// Only foward logs in Jetbrains
 		registerMainThreadForwardingLogger(context)

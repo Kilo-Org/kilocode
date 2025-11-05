@@ -137,10 +137,9 @@ export class StrategyTester {
 
 		// Parse the response to extract the completion from XML tags
 		const parseResult = parseGhostResponse(response.content, prefix, suffix)
-		const suggestion = parseResult.suggestions.getFillInAtCursor()
 
-		// Use parsed completion only if available
-		const completion = suggestion?.text || ""
+		// Use parsed completion text directly
+		const completion = parseResult.text
 
 		return {
 			prefix,

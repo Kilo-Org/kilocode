@@ -31,6 +31,13 @@ interface McpExecutionProps {
 	initiallyExpanded?: boolean // kilocode_change: For Storybook stories only
 }
 
+function removeRenamedPrefix_kilocode(text: string): string {
+	// Remove "renamed_" prefix from property names in JSON (native tool calling)
+	const prefix = "renamed_"
+	if (!text || !text.startsWith(prefix)) return text
+	return text.substring(prefix.length)
+}
+
 export const McpExecution = ({
 	executionId,
 	text,
@@ -276,7 +283,7 @@ export const McpExecution = ({
 							"mt-1 pt-1":
 								!isArguments && (useMcpServer?.type === "use_mcp_tool" || (toolName && serverName)),
 						})}>
-						<CodeBlock source={formattedArgumentsText} language="json" />
+						<CodeBlock source={removeRenamedPrefix_kilocode(formattedArgumentsText)} language="json" />
 					</div>
 				)}
 

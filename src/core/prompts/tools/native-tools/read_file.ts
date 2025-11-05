@@ -28,7 +28,6 @@ export const read_file_multi = {
 									type: "string",
 									pattern: "^\\d+-\\d+$",
 								},
-								minItems: 1,
 							},
 						},
 						required: ["path", "line_ranges"],

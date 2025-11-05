@@ -15,8 +15,8 @@ export default {
 					description: "Directory path to inspect, relative to the workspace",
 				},
 				recursive: {
-					type: ["boolean", "null"],
-					description: "Set true to list contents recursively; omit or false to show only the top level",
+					type: ["boolean"],
+					description: "Set true to list contents recursively; false to show only the top level",
 				},
 			},
 			required: ["path", "recursive"],

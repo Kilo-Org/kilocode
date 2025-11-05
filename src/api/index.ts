@@ -110,6 +110,8 @@ export interface ApiHandler {
 	 * @returns A promise resolving to the token count
 	 */
 	countTokens(content: Array<Anthropic.Messages.ContentBlockParam>): Promise<number>
+
+	contextWindow?: number // kilocode_change: Add contextWindow property for virtual quota fallback
 }
 
 export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
