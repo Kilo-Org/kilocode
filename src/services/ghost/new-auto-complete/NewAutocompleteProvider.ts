@@ -90,7 +90,6 @@ export class NewAutocompleteProvider {
 			enableAutoTrigger: false,
 			enableSmartInlineTaskKeybinding: false,
 			enableQuickInlineTaskKeybinding: false,
-			showGutterAnimation: true,
 		}
 		await this.saveSettings()
 		await this.load()
@@ -102,7 +101,6 @@ export class NewAutocompleteProvider {
 			enableAutoTrigger: true,
 			enableSmartInlineTaskKeybinding: true,
 			enableQuickInlineTaskKeybinding: true,
-			showGutterAnimation: true,
 		}
 		await this.saveSettings()
 		await this.load()

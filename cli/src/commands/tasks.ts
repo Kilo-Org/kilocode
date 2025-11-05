@@ -271,8 +271,6 @@ async function changePage(context: any, pageNum: string): Promise<void> {
  */
 async function nextPage(context: any): Promise<void> {
 	const { taskHistoryData, nextTaskHistoryPage, addMessage } = context
-	const now = Date.now()
-
 	if (!taskHistoryData) {
 		addMessage({
 			...generateMessage(),

@@ -15,7 +15,6 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameter
 import Mistral from "../../continuedev/core/llm/llms/Mistral"
 import OpenRouter from "../../continuedev/core/llm/llms/OpenRouter"
 import KiloCode from "../../continuedev/core/llm/llms/KiloCode"
-import { ContextProxy } from "../../../core/config/ContextProxy"
 
 export const AUTOCOMPLETE_PROVIDER_MODELS = {
 	mistral: "codestral-2501",
@@ -126,21 +125,10 @@ export class NewAutocompleteModel {
 					useCache: false, // Disable caching for autocomplete
 				},
 				uniqueId: `autocomplete-${provider}-${Date.now()}`,
-				// Add env for KiloCode metadata (organizationId, tester suppression) and live token provider
+				// Add env for KiloCode metadata (organizationId and tester suppression)
 				env: {
 					kilocodeTesterWarningsDisabledUntil: this.profile.kilocodeTesterWarningsDisabledUntil,
 					kilocodeOrganizationId: config.organizationId,
-					// Provide live token via ContextProxy when available; fall back to this.profile
-					kilocodeTokenProvider: () => {
-						try {
-							// ContextProxy.instance throws if not initialized
-							// Read from in-memory cache (no async) for hot path safety
-							const live = ContextProxy.instance?.getValue?.("kilocodeToken")
-							return typeof live === "string" && live ? live : (this.profile?.kilocodeToken ?? "")
-						} catch {
-							return this.profile?.kilocodeToken ?? ""
-						}
-					},
 				},
 			}
 
@@ -225,7 +213,11 @@ export class NewAutocompleteModel {
 
 			case "kilocode":
 				// Use dedicated KiloCode class with custom headers and routing
-				return new KiloCode(options)
+				// Pass the existing apiHandler as fimProvider if available
+				return new KiloCode({
+					...options,
+					fimProvider: this.apiHandler || undefined,
+				})
 
 			case "openrouter":
 				// Use standard OpenRouter

@@ -19,6 +19,7 @@ export const nativeFunctionCallingProviders = [
 	"zai",
 	"synthetic",
 	"human-relay",
+	"qwen-code",
 	"inception",
 ] satisfies ProviderName[] as ProviderName[]
 

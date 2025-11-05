@@ -7,7 +7,12 @@ import { atom } from "jotai"
 import { atomWithReset } from "jotai/utils"
 import type { CliMessage } from "../../types/cli.js"
 import type { ExtensionChatMessage } from "../../types/messages.js"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
+import type {
+	CommandSuggestion,
+	ArgumentSuggestion,
+	FileMentionSuggestion,
+	FileMentionContext,
+} from "../../services/autocomplete.js"
 import { chatMessagesAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
@@ -180,6 +185,16 @@ export const suggestionsAtom = atom<CommandSuggestion[]>([])
 export const argumentSuggestionsAtom = atom<ArgumentSuggestion[]>([])
 
 /**
+ * Atom to hold file mention suggestions for autocomplete
+ */
+export const fileMentionSuggestionsAtom = atom<FileMentionSuggestion[]>([])
+
+/**
+ * Atom to hold file mention context (when cursor is in @ mention)
+ */
+export const fileMentionContextAtom = atom<FileMentionContext | null>(null)
+
+/**
  * @deprecated Use selectedIndexAtom instead - this is now shared across all selection contexts
  * This atom is kept for backward compatibility but will be removed in a future version.
  */
@@ -219,12 +234,16 @@ export const selectedFollowupIndexAtom = selectedIndexAtom
 // ============================================================================
 
 /**
- * Derived atom to get the total count of suggestions (command or argument)
+ * Derived atom to get the total count of suggestions (command, argument, or file mention)
  */
 export const suggestionCountAtom = atom<number>((get) => {
 	const commandSuggestions = get(suggestionsAtom)
 	const argumentSuggestions = get(argumentSuggestionsAtom)
-	return commandSuggestions.length > 0 ? commandSuggestions.length : argumentSuggestions.length
+	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
+
+	if (fileMentionSuggestions.length > 0) return fileMentionSuggestions.length
+	if (commandSuggestions.length > 0) return commandSuggestions.length
+	return argumentSuggestions.length
 })
 
 /**
@@ -382,6 +401,29 @@ export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: Arg
 })
 
 /**
+ * Action atom to set file mention suggestions
+ */
+export const setFileMentionSuggestionsAtom = atom(null, (get, set, suggestions: FileMentionSuggestion[]) => {
+	set(fileMentionSuggestionsAtom, suggestions)
+	set(selectedIndexAtom, 0)
+})
+
+/**
+ * Action atom to set file mention context
+ */
+export const setFileMentionContextAtom = atom(null, (get, set, context: FileMentionContext | null) => {
+	set(fileMentionContextAtom, context)
+})
+
+/**
+ * Action atom to clear file mention state
+ */
+export const clearFileMentionAtom = atom(null, (get, set) => {
+	set(fileMentionSuggestionsAtom, [])
+	set(fileMentionContextAtom, null)
+})
+
+/**
  * Action atom to select the next suggestion
  */
 export const selectNextSuggestionAtom = atom(null, (get, set) => {
@@ -444,21 +486,28 @@ export const showAutocompleteMenuAtom = atom(null, (get, set) => {
 /**
  * Action atom to get the currently selected suggestion
  */
-export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSuggestion | null>((get) => {
-	const commandSuggestions = get(suggestionsAtom)
-	const argumentSuggestions = get(argumentSuggestionsAtom)
-	const selectedIndex = get(selectedIndexAtom)
+export const getSelectedSuggestionAtom = atom<CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion | null>(
+	(get) => {
+		const commandSuggestions = get(suggestionsAtom)
+		const argumentSuggestions = get(argumentSuggestionsAtom)
+		const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
+		const selectedIndex = get(selectedIndexAtom)
 
-	if (commandSuggestions.length > 0) {
-		return commandSuggestions[selectedIndex] ?? null
-	}
+		if (fileMentionSuggestions.length > 0) {
+			return fileMentionSuggestions[selectedIndex] ?? null
+		}
 
-	if (argumentSuggestions.length > 0) {
-		return argumentSuggestions[selectedIndex] ?? null
-	}
+		if (commandSuggestions.length > 0) {
+			return commandSuggestions[selectedIndex] ?? null
+		}
 
-	return null
-})
+		if (argumentSuggestions.length > 0) {
+			return argumentSuggestions[selectedIndex] ?? null
+		}
+
+		return null
+	},
+)
 
 /**
  * Derived atom that merges CLI messages and extension messages chronologically

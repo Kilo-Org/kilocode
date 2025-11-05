@@ -6,8 +6,8 @@ import { AutoTriggerStrategy } from "./AutoTriggerStrategy"
 import { GhostModel } from "../GhostModel"
 import { GhostContext } from "../GhostContext"
 import { ApiStreamChunk } from "../../../api/transform/stream"
-import { GhostGutterAnimation } from "../GhostGutterAnimation"
 import type { GhostServiceSettings } from "@roo-code/types"
+import { refuseUselessSuggestion } from "./uselessSuggestionFilter"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 
@@ -77,20 +77,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private ghostContext: GhostContext
-	private cursorAnimation: GhostGutterAnimation
 	private getSettings: () => GhostServiceSettings | null
 
 	constructor(
 		model: GhostModel,
 		costTrackingCallback: CostTrackingCallback,
 		ghostContext: GhostContext,
-		cursorAnimation: GhostGutterAnimation,
 		getSettings: () => GhostServiceSettings | null,
 	) {
 		this.model = model
 		this.costTrackingCallback = costTrackingCallback
 		this.ghostContext = ghostContext
-		this.cursorAnimation = cursorAnimation
 		this.getSettings = getSettings
 		this.autoTriggerStrategy = new AutoTriggerStrategy()
 	}
@@ -193,9 +190,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 
 		// Parse the response using the standalone function
-		const fillInAtCursorSuggestion = parseGhostResponse(response, prefix, suffix)
+		let fillInAtCursorSuggestion = parseGhostResponse(response, prefix, suffix)
 
-		if (fillInAtCursorSuggestion.text) {
+		// Check if the suggestion is useless and clear it if so
+		if (fillInAtCursorSuggestion.text && refuseUselessSuggestion(fillInAtCursorSuggestion.text, prefix, suffix)) {
+			fillInAtCursorSuggestion = { text: "", prefix, suffix }
+		} else if (fillInAtCursorSuggestion.text) {
 			console.info("Final suggestion:", fillInAtCursorSuggestion)
 		}
 
@@ -257,9 +257,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		// No cached suggestion available - invoke LLM
 		if (this.model && this.ghostContext) {
-			// Show cursor animation while generating
-			this.cursorAnimation.active()
-
 			const context: GhostSuggestionContext = {
 				document,
 				range: new vscode.Range(position, position),
@@ -268,9 +265,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			const fullContext = await this.ghostContext.generate(context)
 			try {
 				const result = await this.getFromLLM(fullContext, this.model)
-
-				// Hide cursor animation after generation
-				this.cursorAnimation.hide()
 
 				if (this.costTrackingCallback && result.cost > 0) {
 					this.costTrackingCallback(
@@ -296,7 +290,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 					return []
 				}
 			} catch (error) {
-				this.cursorAnimation.hide()
 				console.error("Error getting inline completion from LLM:", error)
 				return []
 			}

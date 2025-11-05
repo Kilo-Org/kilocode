@@ -4,13 +4,14 @@
 
 import React from "react"
 import { Box, Text } from "ink"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
+import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../services/autocomplete.js"
 import { useTheme } from "../../state/hooks/useTheme.js"
 
 interface AutocompleteMenuProps {
-	type: "command" | "argument" | "none"
+	type: "command" | "argument" | "file-mention" | "none"
 	commandSuggestions?: CommandSuggestion[]
 	argumentSuggestions?: ArgumentSuggestion[]
+	fileMentionSuggestions?: FileMentionSuggestion[]
 	selectedIndex: number
 	visible: boolean
 }
@@ -19,6 +20,7 @@ export const AutocompleteMenu: React.FC<AutocompleteMenuProps> = ({
 	type,
 	commandSuggestions,
 	argumentSuggestions,
+	fileMentionSuggestions,
 	selectedIndex,
 	visible,
 }) => {
@@ -34,12 +36,18 @@ export const AutocompleteMenu: React.FC<AutocompleteMenuProps> = ({
 		return <SuggestionsMenu type="argument" suggestions={argumentSuggestions} selectedIndex={selectedIndex} />
 	}
 
+	if (type === "file-mention" && fileMentionSuggestions && fileMentionSuggestions.length > 0) {
+		return (
+			<SuggestionsMenu type="file-mention" suggestions={fileMentionSuggestions} selectedIndex={selectedIndex} />
+		)
+	}
+
 	return null
 }
 
 interface SuggestionsMenuProps {
-	type: "command" | "argument"
-	suggestions: CommandSuggestion[] | ArgumentSuggestion[]
+	type: "command" | "argument" | "file-mention"
+	suggestions: CommandSuggestion[] | ArgumentSuggestion[] | FileMentionSuggestion[]
 	selectedIndex: number
 }
 
@@ -60,7 +68,7 @@ const SuggestionsMenu: React.FC<SuggestionsMenuProps> = ({ type, suggestions, se
 	const windowEnd = Math.min(windowStart + VISIBLE_ITEMS, totalItems)
 	const displaySuggestions = suggestions.slice(windowStart, windowEnd)
 
-	const title = type === "command" ? "Commands:" : "Arguments:"
+	const title = type === "command" ? "Commands:" : type === "argument" ? "Arguments:" : "Files:"
 	const borderColor = type === "command" ? theme.ui.border.default : theme.ui.border.active
 
 	return (
@@ -70,13 +78,16 @@ const SuggestionsMenu: React.FC<SuggestionsMenuProps> = ({ type, suggestions, se
 			</Text>
 			{displaySuggestions.map((suggestion, displayIndex) => {
 				const actualIndex = windowStart + displayIndex
+				const key =
+					type === "command"
+						? (suggestion as CommandSuggestion).command.name
+						: type === "file-mention"
+							? (suggestion as FileMentionSuggestion).value
+							: (suggestion as ArgumentSuggestion).value || actualIndex.toString()
+
 				return (
 					<SuggestionRow
-						key={
-							type === "command"
-								? (suggestion as CommandSuggestion).command.name
-								: (suggestion as ArgumentSuggestion).value || actualIndex
-						}
+						key={key}
 						type={type}
 						suggestion={suggestion}
 						isSelected={actualIndex === selectedIndex}
@@ -88,13 +99,57 @@ const SuggestionsMenu: React.FC<SuggestionsMenuProps> = ({ type, suggestions, se
 }
 
 interface SuggestionRowProps {
-	type: "command" | "argument"
-	suggestion: CommandSuggestion | ArgumentSuggestion
+	type: "command" | "argument" | "file-mention"
+	suggestion: CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion
 	isSelected: boolean
 }
 
 const SuggestionRow: React.FC<SuggestionRowProps> = ({ type, suggestion, isSelected }) => {
 	const theme = useTheme()
+
+	// Handle file mention suggestions
+	if (type === "file-mention") {
+		const fileSuggestion = suggestion as FileMentionSuggestion
+		// Extract just the filename from the full path
+		const parts = fileSuggestion.value.split("/")
+		const filename = parts[parts.length - 1] || fileSuggestion.value
+
+		return (
+			<Box>
+				{isSelected && (
+					<Text color={theme.semantic.success} bold>
+						{">"}{" "}
+					</Text>
+				)}
+				{!isSelected && <Text>{"  "}</Text>}
+
+				{/* Show file/folder icon */}
+				<Text color={theme.ui.text.dimmed}>{fileSuggestion.type === "folder" ? "📁 " : "📄 "}</Text>
+
+				<Text color={isSelected ? theme.semantic.success : theme.ui.text.primary} bold={isSelected}>
+					{filename}
+				</Text>
+
+				{fileSuggestion.description && (
+					<>
+						<Text color={theme.ui.text.dimmed}> - </Text>
+						<Text color={isSelected ? theme.ui.text.primary : theme.ui.text.dimmed}>
+							{fileSuggestion.description}
+						</Text>
+					</>
+				)}
+
+				{fileSuggestion.error && (
+					<>
+						<Text color={theme.ui.text.dimmed}> - </Text>
+						<Text color={theme.semantic.error}>{fileSuggestion.error}</Text>
+					</>
+				)}
+			</Box>
+		)
+	}
+
+	// Handle command and argument suggestions
 	return (
 		<Box>
 			{isSelected && (

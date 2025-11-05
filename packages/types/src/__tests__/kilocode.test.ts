@@ -15,7 +15,6 @@ describe("ghostServiceSettingsSchema", () => {
 			enableAutoTrigger: true,
 			enableQuickInlineTaskKeybinding: false,
 			enableSmartInlineTaskKeybinding: true,
-			showGutterAnimation: false,
 		})
 		expect(result.success).toBe(true)
 	})
@@ -25,7 +24,6 @@ describe("ghostServiceSettingsSchema", () => {
 			enableAutoTrigger: true,
 			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
-			showGutterAnimation: true,
 		})
 		expect(result.success).toBe(true)
 	})

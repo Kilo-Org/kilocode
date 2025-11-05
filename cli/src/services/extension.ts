@@ -74,6 +74,7 @@ export class ExtensionService extends EventEmitter {
 	private options: Required<Omit<ExtensionServiceOptions, "identity">> & { identity?: IdentityInfo }
 	private isInitialized = false
 	private isDisposed = false
+	private isActivated = false
 
 	constructor(options: ExtensionServiceOptions = {}) {
 		super()
@@ -117,6 +118,7 @@ export class ExtensionService extends EventEmitter {
 		// Extension host events
 		this.extensionHost.on("activated", (api: ExtensionAPI) => {
 			logs.info("Extension host activated", "ExtensionService")
+			this.isActivated = true
 			this.emit("ready", api)
 		})
 
@@ -229,6 +231,10 @@ export class ExtensionService extends EventEmitter {
 			throw new Error("ExtensionService not initialized. Call initialize() first.")
 		}
 
+		if (!this.isActivated) {
+			throw new Error("ExtensionService not ready. Extension host not activated yet.")
+		}
+
 		if (this.isDisposed) {
 			throw new Error("Cannot send message on disposed ExtensionService")
 		}
@@ -301,10 +307,10 @@ export class ExtensionService extends EventEmitter {
 	}
 
 	/**
-	 * Check if the service is initialized
+	 * Check if the service is initialized and activated
 	 */
 	isReady(): boolean {
-		return this.isInitialized && !this.isDisposed
+		return this.isInitialized && this.isActivated && !this.isDisposed
 	}
 
 	/**
@@ -331,6 +337,7 @@ export class ExtensionService extends EventEmitter {
 
 			this.isDisposed = true
 			this.isInitialized = false
+			this.isActivated = false
 
 			// Emit disposed event
 			this.emit("disposed")

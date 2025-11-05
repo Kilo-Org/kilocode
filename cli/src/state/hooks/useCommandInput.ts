@@ -5,17 +5,26 @@
 
 import { useAtomValue, useSetAtom } from "jotai"
 import { useMemo, useCallback, useEffect } from "react"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
+import type {
+	CommandSuggestion,
+	ArgumentSuggestion,
+	FileMentionSuggestion,
+	FileMentionContext,
+} from "../../services/autocomplete.js"
 import {
 	getSuggestions,
 	getArgumentSuggestions,
 	detectInputState,
 	isCommandInput as checkIsCommandInput,
+	detectFileMentionContext,
+	getFileMentionSuggestions,
 } from "../../services/autocomplete.js"
 import {
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
+	fileMentionSuggestionsAtom,
+	fileMentionContextAtom,
 	selectedIndexAtom,
 	suggestionCountAtom,
 	isCommandInputAtom,
@@ -24,13 +33,16 @@ import {
 	clearTextBufferAtom,
 	setSuggestionsAtom,
 	setArgumentSuggestionsAtom,
+	setFileMentionSuggestionsAtom,
+	setFileMentionContextAtom,
+	clearFileMentionAtom,
 	selectNextSuggestionAtom,
 	selectPreviousSuggestionAtom,
 	hideAutocompleteAtom,
 	showAutocompleteMenuAtom,
 	getSelectedSuggestionAtom,
 } from "../atoms/ui.js"
-import { textBufferStringAtom } from "../atoms/textBuffer.js"
+import { textBufferStringAtom, textBufferCursorAtom } from "../atoms/textBuffer.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { providerAtom, updateProviderAtom } from "../atoms/config.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
@@ -50,6 +62,10 @@ export interface UseCommandInputReturn {
 	commandSuggestions: CommandSuggestion[]
 	/** Argument suggestions (empty if showing command suggestions) */
 	argumentSuggestions: ArgumentSuggestion[]
+	/** File mention suggestions (empty if not in file mention context) */
+	fileMentionSuggestions: FileMentionSuggestion[]
+	/** File mention context (null if not in file mention) */
+	fileMentionContext: FileMentionContext | null
 	/** Index of currently selected suggestion */
 	selectedIndex: number
 	/** Total count of suggestions */
@@ -59,7 +75,7 @@ export interface UseCommandInputReturn {
 	/** Command query (input without leading /) */
 	commandQuery: string
 	/** Currently selected suggestion */
-	selectedSuggestion: CommandSuggestion | ArgumentSuggestion | null
+	selectedSuggestion: CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion | null
 	/** Set input value and update suggestions */
 	setInput: (value: string) => void
 	/** Clear input and hide autocomplete */
@@ -132,9 +148,12 @@ export interface UseCommandInputReturn {
 export function useCommandInput(): UseCommandInputReturn {
 	// Read atoms
 	const inputValue = useAtomValue(textBufferStringAtom)
+	const cursor = useAtomValue(textBufferCursorAtom)
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)
+	const fileMentionSuggestions = useAtomValue(fileMentionSuggestionsAtom)
+	const fileMentionContext = useAtomValue(fileMentionContextAtom)
 	const selectedIndex = useAtomValue(selectedIndexAtom)
 	const suggestionCount = useAtomValue(suggestionCountAtom)
 	const isCommand = useAtomValue(isCommandInputAtom)
@@ -149,12 +168,16 @@ export function useCommandInput(): UseCommandInputReturn {
 	const profileData = useAtomValue(profileDataAtom)
 	const profileLoading = useAtomValue(profileLoadingAtom)
 	const taskHistoryData = useAtomValue(taskHistoryDataAtom)
+	const cwd = extensionState?.cwd || process.cwd()
 
 	// Write atoms
 	const setInputAction = useSetAtom(updateTextBufferAtom)
 	const clearInputAction = useSetAtom(clearTextBufferAtom)
 	const setSuggestionsAction = useSetAtom(setSuggestionsAtom)
 	const setArgumentSuggestionsAction = useSetAtom(setArgumentSuggestionsAtom)
+	const setFileMentionSuggestionsAction = useSetAtom(setFileMentionSuggestionsAtom)
+	const setFileMentionContextAction = useSetAtom(setFileMentionContextAtom)
+	const clearFileMentionAction = useSetAtom(clearFileMentionAtom)
 	const selectNextAction = useSetAtom(selectNextSuggestionAtom)
 	const selectPreviousAction = useSetAtom(selectPreviousSuggestionAtom)
 	const hideAutocompleteAction = useSetAtom(hideAutocompleteAtom)
@@ -191,6 +214,30 @@ export function useCommandInput(): UseCommandInputReturn {
 	}, [showAutocompleteAction])
 
 	const updateSuggestions = useCallback(async () => {
+		// Calculate cursor position in the text (convert row/col to absolute position)
+		const lines = inputValue.split("\n")
+		let cursorPosition = 0
+		for (let i = 0; i < cursor.row && i < lines.length; i++) {
+			cursorPosition += (lines[i]?.length || 0) + 1 // +1 for newline
+		}
+		cursorPosition += cursor.column
+
+		// Check for file mention context first (highest priority)
+		const fileMentionCtx = detectFileMentionContext(inputValue, cursorPosition)
+		if (fileMentionCtx?.isInMention) {
+			// Get file suggestions
+			const suggestions = await getFileMentionSuggestions(fileMentionCtx.query, cwd)
+			setFileMentionSuggestionsAction(suggestions)
+			setFileMentionContextAction(fileMentionCtx)
+			setSuggestionsAction([])
+			setArgumentSuggestionsAction([])
+			return
+		}
+
+		// Clear file mention state if not in context
+		clearFileMentionAction()
+
+		// Fall back to command/argument detection
 		if (!checkIsCommandInput(inputValue)) {
 			setSuggestionsAction([])
 			setArgumentSuggestionsAction([])
@@ -237,8 +284,13 @@ export function useCommandInput(): UseCommandInputReturn {
 		}
 	}, [
 		inputValue,
+		cursor,
+		cwd,
 		setSuggestionsAction,
 		setArgumentSuggestionsAction,
+		setFileMentionSuggestionsAction,
+		setFileMentionContextAction,
+		clearFileMentionAction,
 		routerModels,
 		currentProvider,
 		kilocodeDefaultModel,
@@ -253,20 +305,22 @@ export function useCommandInput(): UseCommandInputReturn {
 		return detectInputState(inputValue)
 	}, [inputValue])
 
-	// Auto-update suggestions when input changes
+	// Auto-update suggestions when input or cursor changes
 	useEffect(() => {
-		if (checkIsCommandInput(inputValue)) {
-			updateSuggestions()
-		}
-	}, [inputValue, updateSuggestions])
+		// Always update suggestions to ensure proper cleanup
+		// The updateSuggestions function handles clearing state when not in mention/command context
+		updateSuggestions()
+	}, [inputValue, cursor, updateSuggestions])
 
 	// Memoize return value
 	return useMemo(
 		() => ({
 			inputValue,
-			isAutocompleteVisible: showAutocomplete,
+			isAutocompleteVisible: showAutocomplete || fileMentionSuggestions.length > 0,
 			commandSuggestions,
 			argumentSuggestions,
+			fileMentionSuggestions,
+			fileMentionContext,
 			selectedIndex,
 			suggestionCount,
 			isCommand,
@@ -286,6 +340,8 @@ export function useCommandInput(): UseCommandInputReturn {
 			showAutocomplete,
 			commandSuggestions,
 			argumentSuggestions,
+			fileMentionSuggestions,
+			fileMentionContext,
 			selectedIndex,
 			suggestionCount,
 			isCommand,

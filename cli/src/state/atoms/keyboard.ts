@@ -4,12 +4,14 @@
 
 import { atom } from "jotai"
 import type { Key, KeypressHandler } from "../../types/keyboard.js"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../services/autocomplete.js"
+import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../services/autocomplete.js"
 import {
 	clearTextBufferAtom,
 	showAutocompleteAtom,
 	suggestionsAtom,
 	argumentSuggestionsAtom,
+	fileMentionSuggestionsAtom,
+	fileMentionContextAtom,
 	selectedIndexAtom,
 	followupSuggestionsAtom,
 	showFollowupSuggestionsAtom,
@@ -27,6 +29,7 @@ import {
 	moveRightAtom,
 	moveToLineStartAtom,
 	moveToLineEndAtom,
+	moveToAtom,
 	insertCharAtom,
 	insertTextAtom,
 	insertNewlineAtom,
@@ -308,12 +311,57 @@ export const submitInputAtom = atom(null, (get, set, text: string | Buffer) => {
 // ============================================================================
 
 /**
+ * Calculate row and column position from an absolute character position in text
+ * @param text - The text to calculate position in
+ * @param absolutePosition - The absolute character position (0-indexed)
+ * @returns Object with row and column (both 0-indexed)
+ */
+function calculateRowColumnFromPosition(text: string, absolutePosition: number): { row: number; column: number } {
+	const lines = text.split("\n")
+	let pos = 0
+	let row = 0
+	let col = 0
+
+	for (let i = 0; i < lines.length; i++) {
+		const lineLength = lines[i]?.length || 0
+		if (pos + lineLength >= absolutePosition) {
+			row = i
+			col = absolutePosition - pos
+			break
+		}
+		pos += lineLength + 1 // +1 for newline
+	}
+
+	return { row, column: col }
+}
+
+/**
  * Helper function to format autocomplete suggestions for display/submission
  */
-function formatSuggestion(suggestion: CommandSuggestion | ArgumentSuggestion, currentInput: string): string {
+function formatSuggestion(
+	suggestion: CommandSuggestion | ArgumentSuggestion | FileMentionSuggestion,
+	currentInput: string,
+	fileMentionContext?: { mentionStart: number; query: string } | null,
+): string {
 	if ("command" in suggestion) {
 		// CommandSuggestion - return full command with slash
 		return `/${suggestion.command.name}`
+	} else if ("type" in suggestion && (suggestion.type === "file" || suggestion.type === "folder")) {
+		// FileMentionSuggestion - insert file path at @ position with proper escaping
+		const fileSuggestion = suggestion as FileMentionSuggestion
+
+		if (!fileMentionContext) {
+			return currentInput
+		}
+
+		// Escape spaces in file path
+		const escapedPath = fileSuggestion.value.replace(/ /g, "\\ ")
+
+		// Replace from @ to cursor with the file path
+		const beforeMention = currentInput.slice(0, fileMentionContext.mentionStart)
+		const afterMention = currentInput.slice(fileMentionContext.mentionStart + 1 + fileMentionContext.query.length)
+
+		return beforeMention + "@" + escapedPath + " " + afterMention
 	} else {
 		// ArgumentSuggestion - replace last part with suggestion value
 		const parts = currentInput.split(" ")
@@ -435,7 +483,9 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 	const selectedIndex = get(selectedIndexAtom)
 	const commandSuggestions = get(suggestionsAtom)
 	const argumentSuggestions = get(argumentSuggestionsAtom)
-	const allSuggestions = [...commandSuggestions, ...argumentSuggestions]
+	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
+	const fileMentionContext = get(fileMentionContextAtom)
+	const allSuggestions = [...fileMentionSuggestions, ...commandSuggestions, ...argumentSuggestions]
 
 	switch (key.name) {
 		case "down":
@@ -455,10 +505,24 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 				const suggestion = allSuggestions[selectedIndex]
 				const currentText = get(textBufferStringAtom)
 
-				// Always replace the entire input with formatted suggestion
-				// This handles both commands and arguments correctly
-				const newText = formatSuggestion(suggestion, currentText)
+				// Format the suggestion (handles commands, arguments, and file mentions)
+				const newText = formatSuggestion(suggestion, currentText, fileMentionContext)
 				set(setTextAtom, newText)
+
+				// For file mentions, set cursor after the inserted path + space
+				if (
+					"type" in suggestion &&
+					(suggestion.type === "file" || suggestion.type === "folder") &&
+					fileMentionContext
+				) {
+					const fileSuggestion = suggestion as FileMentionSuggestion
+					const escapedPath = fileSuggestion.value.replace(/ /g, "\\ ")
+					const cursorPosition = fileMentionContext.mentionStart + 1 + escapedPath.length + 1 // @ + path + space
+
+					// Calculate row and column from absolute position and set cursor
+					const { row, column } = calculateRowColumnFromPosition(newText, cursorPosition)
+					set(moveToAtom, { row, column })
+				}
 			}
 			return
 
@@ -466,13 +530,42 @@ function handleAutocompleteKeys(get: any, set: any, key: Key): void {
 			if (!key.shift && !key.meta && allSuggestions[selectedIndex]) {
 				const suggestion = allSuggestions[selectedIndex]
 				const currentText = get(textBufferStringAtom)
-				const newText = formatSuggestion(suggestion, currentText)
+
+				// For file mentions, Enter should insert (like Tab), not submit
+				if ("type" in suggestion && (suggestion.type === "file" || suggestion.type === "folder")) {
+					// Format the suggestion
+					const newText = formatSuggestion(suggestion, currentText, fileMentionContext)
+					set(setTextAtom, newText)
+
+					// Set cursor after the inserted path + space
+					if (fileMentionContext) {
+						const fileSuggestion = suggestion as FileMentionSuggestion
+						const escapedPath = fileSuggestion.value.replace(/ /g, "\\ ")
+						const cursorPosition = fileMentionContext.mentionStart + 1 + escapedPath.length + 1 // @ + path + space
+
+						// Calculate row and column from absolute position and set cursor
+						const { row, column } = calculateRowColumnFromPosition(newText, cursorPosition)
+						set(moveToAtom, { row, column })
+					}
+					return
+				}
+
+				// For commands and arguments, Enter submits
+				const newText = formatSuggestion(suggestion, currentText, fileMentionContext)
 				set(submitInputAtom, newText)
 				return
 			}
 			break
 
 		case "escape":
+			// For file mentions, clear suggestions and add a space, but keep the buffer
+			if (fileMentionSuggestions.length > 0) {
+				// Clear file mention suggestions
+				set(fileMentionSuggestionsAtom, [])
+				// Add a space to the buffer
+				set(insertCharAtom, " ")
+				return
+			}
 			set(clearTextBufferAtom)
 			return
 	}
@@ -680,16 +773,20 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 	const isApprovalPending = get(isApprovalPendingAtom)
 	const isFollowupVisible = get(showFollowupSuggestionsAtom)
 	const isAutocompleteVisible = get(showAutocompleteAtom)
+	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)
 
-	// Mode priority: approval > followup > history > autocomplete > normal
+	// Check if we have file mention suggestions (this means we're in file mention mode)
+	const hasFileMentions = fileMentionSuggestions.length > 0
+
+	// Mode priority: approval > followup > history > autocomplete (including file mentions) > normal
 	// History has higher priority than autocomplete because when navigating history,
 	// the text buffer may contain commands that start with "/" which would trigger autocomplete
 	let mode: InputMode = "normal"
 	if (isApprovalPending) mode = "approval"
 	else if (isFollowupVisible) mode = "followup"
 	else if (isInHistoryMode) mode = "history"
-	else if (isAutocompleteVisible) mode = "autocomplete"
+	else if (hasFileMentions || isAutocompleteVisible) mode = "autocomplete"
 
 	// Update mode atom
 	set(inputModeAtom, mode)

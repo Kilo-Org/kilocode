@@ -147,10 +147,22 @@ export const hasActiveTaskAtom = atom<boolean>((get) => {
 })
 
 /**
+ * Atom to track if the task was resumed via --continue flag
+ * Prevents showing "Task ready to resume" message when already resumed
+ */
+export const taskResumedViaContinueAtom = atom<boolean>(false)
+
+/**
  * Derived atom to check if there's a resume_task ask pending
  * This checks if the last message is a resume_task or resume_completed_task
+ * But doesn't show the message if the task was already resumed via --continue
  */
 export const hasResumeTaskAtom = atom<boolean>((get) => {
+	const taskResumedViaContinue = get(taskResumedViaContinueAtom)
+	if (taskResumedViaContinue) {
+		return false
+	}
+
 	const lastMessage = get(lastChatMessageAtom)
 	return lastMessage?.ask === "resume_task" || lastMessage?.ask === "resume_completed_task"
 })

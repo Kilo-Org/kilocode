@@ -33,7 +33,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	const theme = useTheme()
 
 	// Use the command input hook for autocomplete functionality
-	const { isAutocompleteVisible, commandSuggestions, argumentSuggestions } = useCommandInput()
+	const { isAutocompleteVisible, commandSuggestions, argumentSuggestions, fileMentionSuggestions } = useCommandInput()
 
 	// Use the approval handler hook for approval functionality
 	// This hook sets up the approval callbacks that the keyboard handler uses
@@ -78,7 +78,13 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 
 	// Determine suggestion type for autocomplete menu
 	const suggestionType =
-		commandSuggestions.length > 0 ? "command" : argumentSuggestions.length > 0 ? "argument" : "none"
+		fileMentionSuggestions.length > 0
+			? "file-mention"
+			: commandSuggestions.length > 0
+				? "command"
+				: argumentSuggestions.length > 0
+					? "argument"
+					: "none"
 
 	// Determine if input should be disabled (during approval, when explicitly disabled, or when committing parallel mode)
 	const isInputDisabled = disabled || isApprovalPending || isCommittingParallelMode
@@ -140,6 +146,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 					type={suggestionType}
 					commandSuggestions={commandSuggestions}
 					argumentSuggestions={argumentSuggestions}
+					fileMentionSuggestions={fileMentionSuggestions}
 					selectedIndex={sharedSelectedIndex}
 					visible={isAutocompleteVisible}
 				/>

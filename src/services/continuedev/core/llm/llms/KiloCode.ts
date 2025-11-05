@@ -1,15 +1,9 @@
 import { ChatMessage, CompletionOptions, LLMOptions } from "../../index.js"
-import { getKiloUrlFromToken } from "@roo-code/types"
-import {
-	X_KILOCODE_VERSION,
-	X_KILOCODE_ORGANIZATIONID,
-	X_KILOCODE_TASKID,
-	X_KILOCODE_PROJECTID,
-	X_KILOCODE_TESTER,
-} from "../../../../../shared/kilocode/headers"
+import { X_KILOCODE_VERSION } from "../../../../../shared/kilocode/headers"
 import { Package } from "../../../../../shared/package"
 import OpenRouter from "./OpenRouter"
-import { streamSse } from "../../fetch/stream.js"
+import { IFimProvider } from "../../../../../api/providers/kilocode/IFimProvider"
+import { getKiloUrlFromToken } from "@roo-code/types"
 
 /**
  * Extended CompletionOptions to include KiloCode-specific per-request metadata
@@ -34,44 +28,25 @@ class KiloCode extends OpenRouter {
 	// Instance variables to store per-request metadata
 	private currentTaskId?: string
 	private currentProjectId?: string
-	private organizationId?: string
-	private testerSuppressUntil?: number
-	private apiFIMBase?: string
-	private tokenProvider?: () => string
+	public fimProvider?: IFimProvider
 
 	constructor(options: LLMOptions) {
 		// Extract KiloCode-specific config from env
 		const kilocodeToken = options.apiKey ?? ""
-		const organizationId = options.env?.kilocodeOrganizationId as string | undefined
-		const testerSuppressUntil = options.env?.kilocodeTesterWarningsDisabledUntil as number | undefined
+
+		// Extract fimProvider before passing to parent
+		const { fimProvider, ...parentOptions } = options
 
 		// Transform apiBase to use KiloCode backend
 		const transformedOptions = {
-			...options,
+			...parentOptions,
 			apiBase: getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/v1/", kilocodeToken),
 		}
 
 		super(transformedOptions)
 
-		// Store static metadata
-		this.organizationId = organizationId
-		this.testerSuppressUntil = testerSuppressUntil
-		this.apiFIMBase = getKiloUrlFromToken("https://api.kilocode.ai/api/", kilocodeToken)
-		this.tokenProvider = (options as any)?.env?.kilocodeTokenProvider
-	}
-
-	// Ensure base URLs and adapter reflect latest apiKey/token at call-time
-	private refreshAuthDerived() {
-		const token = this.tokenProvider?.() ?? this.apiKey ?? ""
-		if (token === this.apiKey) return
-
-		const newApiBase = getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/v1/", token)
-		const newFimBase = getKiloUrlFromToken("https://api.kilocode.ai/api/", token)
-
-		this.apiKey = token
-		this.apiBase = newApiBase
-		this.apiFIMBase = newFimBase
-		this.openaiAdapter = this.createOpenAiAdapter()
+		// Use provided handler or create a new one if not provided
+		this.fimProvider = fimProvider
 	}
 
 	/**
@@ -87,7 +62,6 @@ class KiloCode extends OpenRouter {
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
-		this.refreshAuthDerived()
 
 		try {
 			// Call parent implementation
@@ -111,7 +85,6 @@ class KiloCode extends OpenRouter {
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
-		this.refreshAuthDerived()
 
 		try {
 			yield* super._streamComplete(prompt, signal, options)
@@ -123,7 +96,8 @@ class KiloCode extends OpenRouter {
 	}
 
 	/**
-	 * Override _streamFim to support per-request metadata
+	 * Override _streamFim to delegate to IFimProvider
+	 * This reuses the FIM implementation from the API handler
 	 */
 	protected override async *_streamFim(
 		prefix: string,
@@ -131,41 +105,18 @@ class KiloCode extends OpenRouter {
 		signal: AbortSignal,
 		options: CompletionOptions,
 	): AsyncGenerator<string> {
+		if (!this.fimProvider) {
+			throw new Error("FIM provider not initialized")
+		}
+
 		// Extract metadata (same pattern as _streamChat)
 		const kilocodeOptions = options as KiloCodeCompletionOptions
 		this.currentTaskId = kilocodeOptions.kilocodeTaskId
 		this.currentProjectId = kilocodeOptions.kilocodeProjectId
-		this.refreshAuthDerived()
-
-		const endpoint = new URL("fim/completions", this.apiFIMBase)
 
 		try {
-			const resp = await fetch(endpoint, {
-				method: "POST",
-				body: JSON.stringify({
-					model: options.model,
-					prompt: prefix,
-					suffix,
-					max_tokens: options.maxTokens,
-					temperature: options.temperature,
-					top_p: options.topP,
-					frequency_penalty: options.frequencyPenalty,
-					presence_penalty: options.presencePenalty,
-					stop: options.stop,
-					stream: true,
-					...this.extraBodyProperties(),
-				}),
-				headers: {
-					"Content-Type": "application/json",
-					Accept: "application/json",
-					"x-api-key": this.apiKey ?? "",
-					Authorization: `Bearer ${this.apiKey}`,
-				},
-				signal,
-			})
-			for await (const chunk of streamSse(resp)) {
-				yield chunk.choices[0].delta.content
-			}
+			// Delegate to FIM provider's streamFim method
+			yield* this.fimProvider.streamFim(prefix, suffix, this.currentTaskId)
 		} finally {
 			// Clear metadata
 			this.currentTaskId = undefined
@@ -175,36 +126,28 @@ class KiloCode extends OpenRouter {
 
 	/**
 	 * Override _getHeaders to inject KiloCode-specific headers
-	 * Reads from both static (organizationId) and per-request (taskId, projectId) metadata
+	 * Delegates to FIM provider's customRequestOptions() for consistency
 	 */
 	protected override _getHeaders() {
-		this.refreshAuthDerived()
-
 		const baseHeaders = super._getHeaders()
 
-		// Build KiloCode-specific headers
+		// Always add version header
 		const kilocodeHeaders: Record<string, string> = {
 			[X_KILOCODE_VERSION]: Package.version,
 		}
 
-		// Add organization ID (static, from LLMOptions.env)
-		if (this.organizationId) {
-			kilocodeHeaders[X_KILOCODE_ORGANIZATIONID] = this.organizationId
-		}
+		// Delegate to FIM provider's customRequestOptions for other KiloCode headers
+		// Only call if we have a taskId (required by the metadata interface)
+		if (this.fimProvider && this.currentTaskId) {
+			const customOptions = this.fimProvider.customRequestOptions({
+				taskId: this.currentTaskId,
+				projectId: this.currentProjectId,
+				mode: "code", // Default mode for LLM operations
+			})
 
-		// Add task ID (per-request, from options)
-		if (this.currentTaskId) {
-			kilocodeHeaders[X_KILOCODE_TASKID] = this.currentTaskId
-		}
-
-		// Add project ID (per-request, only if organizationId is set)
-		if (this.organizationId && this.currentProjectId) {
-			kilocodeHeaders[X_KILOCODE_PROJECTID] = this.currentProjectId
-		}
-
-		// Add tester suppression header if configured
-		if (this.testerSuppressUntil && this.testerSuppressUntil > Date.now()) {
-			kilocodeHeaders[X_KILOCODE_TESTER] = "SUPPRESS"
+			if (customOptions?.headers) {
+				Object.assign(kilocodeHeaders, customOptions.headers)
+			}
 		}
 
 		return {
@@ -214,10 +157,7 @@ class KiloCode extends OpenRouter {
 	}
 
 	override supportsFim(): boolean {
-		if (this.model.includes("codestral")) {
-			return true
-		}
-		return false
+		return this.fimProvider?.supportsFim() || false
 	}
 }
 

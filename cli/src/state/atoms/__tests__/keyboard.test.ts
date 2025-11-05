@@ -6,13 +6,14 @@ import {
 	suggestionsAtom,
 	argumentSuggestionsAtom,
 	selectedIndexAtom,
+	fileMentionSuggestionsAtom,
 } from "../ui.js"
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom } from "../history.js"
 import type { Key } from "../../../types/keyboard.js"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
+import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
 
 describe("keypress atoms", () => {
@@ -886,6 +887,97 @@ describe("keypress atoms", () => {
 			expect(store.get(historyModeAtom)).toBe(false)
 			// Text should remain unchanged
 			expect(store.get(textBufferStringAtom)).toBe("hi")
+		})
+	})
+
+	describe("file mention suggestions", () => {
+		it("should clear suggestions and add space on ESC without clearing buffer", () => {
+			// Type some text first
+			const input = "check @confi"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify initial buffer
+			expect(store.get(textBufferStringAtom)).toBe("check @confi")
+
+			// Set up file mention suggestions (simulating file autocomplete)
+			const mockFileSuggestion: FileMentionSuggestion = {
+				type: "file",
+				value: "config.json",
+				description: "Configuration file",
+				matchScore: 90,
+				highlightedValue: "config.json",
+			}
+			store.set(fileMentionSuggestionsAtom, [mockFileSuggestion])
+
+			// Verify suggestions are set
+			expect(store.get(fileMentionSuggestionsAtom).length).toBe(1)
+
+			// Press ESC
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, escapeKey)
+
+			// File mention suggestions should be cleared
+			expect(store.get(fileMentionSuggestionsAtom).length).toBe(0)
+
+			// Buffer should have a space added (not cleared)
+			expect(store.get(textBufferStringAtom)).toBe("check @confi ")
+
+			// Cursor should be after the space
+			const cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(13) // "check @confi " has 13 characters
+		})
+
+		it("should clear buffer on ESC when no file mention suggestions", () => {
+			// Type some text
+			const input = "some text"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify buffer has content
+			expect(store.get(textBufferStringAtom)).toBe("some text")
+
+			// Ensure no file mention suggestions
+			store.set(fileMentionSuggestionsAtom, [])
+
+			// Press ESC
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, escapeKey)
+
+			// Buffer should be cleared (normal ESC behavior)
+			expect(store.get(textBufferStringAtom)).toBe("")
 		})
 	})
 })
