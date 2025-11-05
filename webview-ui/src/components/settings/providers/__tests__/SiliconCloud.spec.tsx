@@ -175,6 +175,7 @@ describe("SiliconCloud Component", () => {
 		ovhcloud: {},
 		chutes: {},
 		gemini: {},
+		inception: {},
 		siliconcloud: {
 			"custom-model": {
 				displayName: "Custom Model",
