@@ -25,6 +25,12 @@ export class NewAutocompleteProvider {
 		void this.load()
 	}
 
+	// Settings Management
+	private loadSettings() {
+		const state = ContextProxy.instance.getValues()
+		return state.ghostServiceSettings
+	}
+
 	private async saveSettings() {
 		if (!this.settings) {
 			return
@@ -78,7 +84,7 @@ export class NewAutocompleteProvider {
 	}
 
 	public async load() {
-		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings")
+		this.settings = this.loadSettings()
 		await this.model.reload(this.providerSettingsManager)
 		await this.saveSettings()
 		this.loadCodeCompletion()

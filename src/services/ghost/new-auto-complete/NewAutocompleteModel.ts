@@ -15,7 +15,6 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameter
 import Mistral from "../../continuedev/core/llm/llms/Mistral"
 import OpenRouter from "../../continuedev/core/llm/llms/OpenRouter"
 import KiloCode from "../../continuedev/core/llm/llms/KiloCode"
-import { ContextProxy } from "../../../core/config/ContextProxy"
 
 export const AUTOCOMPLETE_PROVIDER_MODELS = {
 	mistral: "codestral-2501",
@@ -126,22 +125,16 @@ export class NewAutocompleteModel {
 					useCache: false, // Disable caching for autocomplete
 				},
 				uniqueId: `autocomplete-${provider}-${Date.now()}`,
-				// Add env for KiloCode metadata (organizationId, tester suppression) and live token provider
-				env: {
-					kilocodeTesterWarningsDisabledUntil: this.profile.kilocodeTesterWarningsDisabledUntil,
-					kilocodeOrganizationId: config.organizationId,
-					// Provide live token via ContextProxy when available; fall back to this.profile
-					kilocodeTokenProvider: () => {
-						try {
-							// ContextProxy.instance throws if not initialized
-							// Read from in-memory cache (no async) for hot path safety
-							const live = ContextProxy.instance?.getValue?.("kilocodeToken")
-							return typeof live === "string" && live ? live : (this.profile?.kilocodeToken ?? "")
-						} catch {
-							return this.profile?.kilocodeToken ?? ""
+				// Add env for KiloCode metadata (organizationId and tester suppression)
+				env: config.organizationId
+					? {
+							kilocodeOrganizationId: config.organizationId,
+							// Add tester suppression if configured
+							...(this.profile?.kilocodeTesterWarningsDisabledUntil && {
+								kilocodeTesterWarningsDisabledUntil: this.profile.kilocodeTesterWarningsDisabledUntil,
+							}),
 						}
-					},
-				},
+					: undefined,
 			}
 
 			// Create appropriate LLM instance based on provider

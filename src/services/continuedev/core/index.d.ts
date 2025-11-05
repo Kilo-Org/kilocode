@@ -344,7 +344,7 @@ export interface LLMOptions {
 	apiBase?: string
 	useLegacyCompletionsEndpoint?: boolean
 	capabilities?: ModelCapability
-	env?: Record<string, any>
+	env?: Record<string, string | number | boolean>
 	promptTemplates?: Partial<Record<keyof PromptTemplates, PromptTemplate>>
 }
 
