@@ -43,7 +43,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		preferredIndex: 2,
 	},
 	"MiniMaxAI/MiniMax-M2": {
-		contextWindow: 131072,
+		contextWindow: 196608,
 		inputPrice: 0.3,
 		outputPrice: 1.18,
 		description:
