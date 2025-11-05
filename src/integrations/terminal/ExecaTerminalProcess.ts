@@ -205,23 +205,13 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		this.terminal.setActiveStream(stream, this.pid)
 
 		try {
-			let streamLineCount = 0
-			let hasEmittedFirstLine = false
-			let streamError: Error | undefined
-
 			for await (const line of stream) {
-				streamLineCount++
 				if (this.aborted) {
 					break
 				}
 
 				// Continue collecting output
 				this.fullOutput += line
-
-				// Emit line events for listeners (like tests)
-				if (!hasEmittedFirstLine) {
-					hasEmittedFirstLine = true
-				}
 
 				// Always emit line events for listeners during testing/monitoring
 				this.emit("line", line)
@@ -273,11 +263,6 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 					clearTimeout(timeoutId)
 				}
 			}
-
-			// If we had a stream error but subprocess completed, log it
-			if (streamError) {
-				console.warn("[ExecaTerminalProcess] Stream error occurred but subprocess completed:", streamError)
-			}
 		} catch (error) {
 			// Unexpected error in monitoring logic
 			console.error("[ExecaTerminalProcess] Unexpected error in background monitoring:", error)
@@ -302,7 +287,6 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 	private performFinalCleanup() {
 		this.terminal.setActiveStream(undefined)
 		this.stopHotTimer()
-		this.removeAllListeners()
 
 		// Clear subprocess reference (process may still be running detached)
 		this.subprocess = undefined
@@ -312,7 +296,12 @@ export class ExecaTerminalProcess extends BaseTerminalProcess {
 		if (this.terminal.process === this && this.terminal.busy) {
 			this.terminal.busy = false
 		}
+
+		// IMPORTANT: Emit completed event BEFORE removing listeners
 		this.emit("completed", this.fullOutput)
+
+		// Remove all listeners AFTER emitting completed event
+		this.removeAllListeners()
 	}
 	// kilocode_change end - startBackgroundStreamMonitoring
 }

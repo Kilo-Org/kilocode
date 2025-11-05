@@ -131,7 +131,7 @@ describe("ExecaTerminalProcess", () => {
 		})
 	})
 
-	describe.skip("basic functionality", () => {
+	describe("basic functionality (legacy synchronous behavior)", () => {
 		it("should create instance with terminal reference", () => {
 			expect(terminalProcess).toBeInstanceOf(ExecaTerminalProcess)
 			expect(terminalProcess.terminal).toBe(mockTerminal)
@@ -139,20 +139,38 @@ describe("ExecaTerminalProcess", () => {
 
 		it("should emit shell_execution_complete with exitCode 0", async () => {
 			const spy = vitest.fn()
+			const completedSpy = vitest.fn()
+
 			terminalProcess.on("shell_execution_complete", spy)
+			terminalProcess.on("completed", completedSpy)
+
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(spy).toHaveBeenCalledWith({ exitCode: 0 })
+			expect(completedSpy).toHaveBeenCalledWith("test output\n")
 		})
 
 		it("should emit completed event with full output", async () => {
 			const spy = vitest.fn()
 			terminalProcess.on("completed", spy)
+
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(spy).toHaveBeenCalledWith("test output\n")
 		})
 
 		it("should set and clear active stream", async () => {
 			await terminalProcess.run("echo test")
+
+			// Wait for background processing to complete
+			await new Promise((resolve) => setTimeout(resolve, 50))
+
 			expect(mockTerminal.setActiveStream).toHaveBeenCalledWith(expect.any(Object), mockPid)
 			expect(mockTerminal.setActiveStream).toHaveBeenLastCalledWith(undefined)
 		})
