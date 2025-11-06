@@ -440,7 +440,7 @@ function getSelectedModel({
 		// case "fake-ai":
 		case "oca": {
 			const id = apiConfiguration.apiModelId ?? ""
-			const info = undefined
+			const info = id && routerModels?.oca ? routerModels.oca[id] : undefined
 			return { id, info }
 		}
 		default: {

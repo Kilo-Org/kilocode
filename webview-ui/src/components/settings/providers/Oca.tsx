@@ -5,8 +5,7 @@ import { OCAModelService } from "@src/services/OCAModelService"
 import { OCA_MSG } from "@src/services/ocaMessages"
 import { postOcaStatus, ocaLogin, ocaLogout, requestRouterModels } from "@src/services/ocaOutgoing"
 
-import type { ProviderSettings, OrganizationAllowList } from "@roo-code/types"
-import type { RouterModels } from "@roo/api"
+import type { ProviderSettings, OrganizationAllowList, ModelInfo } from "@roo-code/types"
 
 import { ModelPicker } from "../ModelPicker"
 import OcaAcknowledgeModal from "../../kilocode/common/OcaAcknowledgeModal"
@@ -20,9 +19,6 @@ type OCAProps = {
 		value: ProviderSettings[K],
 		isUserAction?: boolean,
 	) => void
-	routerModels?: RouterModels
-	routerModelsLoading?: boolean
-	refetchRouterModels?: () => void
 	organizationAllowList: OrganizationAllowList
 	modelValidationError?: string
 }
@@ -30,9 +26,6 @@ type OCAProps = {
 export function OCA({
 	apiConfiguration,
 	setApiConfigurationField,
-	routerModels,
-	routerModelsLoading,
-	refetchRouterModels,
 	organizationAllowList,
 	modelValidationError,
 }: OCAProps) {
@@ -45,7 +38,9 @@ export function OCA({
 		Boolean(((vscode.getState() as any) || {})[OCA_STATE_KEY]),
 	)
 
-	const ocaModels = React.useMemo(() => routerModels?.oca ?? {}, [routerModels?.oca])
+	const [ocaModels, setOcaModels] = React.useState<Record<string, ModelInfo>>({})
+	const [modelsLoading, setModelsLoading] = React.useState(false)
+	const ocaErrorJustReceived = React.useRef(false)
 	const firstOcaModelId = React.useMemo(() => Object.keys(ocaModels)[0] || "", [ocaModels])
 	const defaultModelId = React.useMemo(() => {
 		const saved = OCAModelService.getOcaSelectedModelId()
@@ -53,11 +48,11 @@ export function OCA({
 	}, [apiConfiguration.apiModelId, firstOcaModelId])
 
 	const requestOcaModels = React.useCallback(() => {
+		ocaErrorJustReceived.current = false
+		setError(null)
+		setModelsLoading(true)
 		requestRouterModels()
-		if (typeof refetchRouterModels === "function") {
-			refetchRouterModels()
-		}
-	}, [refetchRouterModels])
+	}, [])
 
 	const activatedRef = React.useRef(activated)
 	React.useEffect(() => {
@@ -68,6 +63,25 @@ export function OCA({
 	React.useEffect(() => {
 		requestOcaModelsRef.current = requestOcaModels
 	}, [requestOcaModels])
+
+	// Listen for routerModels responses and extract OCA models locally (similar to OpenAICompatible pattern)
+	React.useEffect(() => {
+		const onRouterModels = (ev: MessageEvent) => {
+			const m = ev.data as any
+			if (m?.type === "routerModels") {
+				const oca = (m.routerModels?.oca ?? {}) as Record<string, ModelInfo>
+				setOcaModels(oca)
+				setModelsLoading(false)
+			} else if (m?.type === "singleRouterModelFetchResponse" && m?.values?.provider === "oca") {
+				// Stop spinner even if the fetch failed for OCA
+				setModelsLoading(false)
+				ocaErrorJustReceived.current = true
+				setError(m.error ?? "Failed to fetch models")
+			}
+		}
+		window.addEventListener("message", onRouterModels)
+		return () => window.removeEventListener("message", onRouterModels)
+	}, [])
 
 	React.useEffect(() => {
 		const h = (ev: MessageEvent) => {
@@ -99,9 +113,12 @@ export function OCA({
 					}
 					break
 				case OCA_MSG.STATUS:
-					if (activatedRef.current && m.authenticated) {
+					if (m.authenticated) {
+						setActivated(true)
 						setStatus("done")
-					} else if (!activatedRef.current) {
+						requestOcaModelsRef.current?.()
+					} else {
+						setActivated(false)
 						setStatus("idle")
 					}
 					break
@@ -226,13 +243,12 @@ export function OCA({
 					<p>After completing sign-in, return here. This page will update automatically.</p>
 				</>
 			)}
-			{status === "done" && activated && routerModelsLoading && (
+			{status === "done" && activated && modelsLoading && (
 				<div className="text-sm text-vscode-descriptionForeground flex items-center gap-2 mt-2">
 					<span className="codicon codicon-loading codicon-modifier-spin" />
 					<span>Fetching models…</span>
 				</div>
 			)}
-
 			{status === "done" && activated && Object.keys(ocaModels).length > 0 && (
 				<div className="mt-3 oca-model-picker">
 					<div className="flex items-center gap-2 flex-nowrap overflow-x-auto">

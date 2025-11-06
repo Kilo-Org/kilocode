@@ -209,20 +209,12 @@ const ApiOptions = ({
 	} = useSelectedModel(apiConfiguration)
 
 	// kilocode_change start: queryKey
-	const routerModelsEnabled = selectedProvider !== "oca"
-	const {
-		data: routerModels,
-		refetch: refetchRouterModels,
-		isFetching: routerModelsLoading,
-	} = useRouterModels(
-		{
-			openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
-			openRouterApiKey: apiConfiguration?.openRouterApiKey,
-			kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
-			deepInfraApiKey: apiConfiguration?.deepInfraApiKey,
-		},
-		routerModelsEnabled,
-	)
+	const { data: routerModels, refetch: refetchRouterModels } = useRouterModels({
+		openRouterBaseUrl: apiConfiguration?.openRouterBaseUrl,
+		openRouterApiKey: apiConfiguration?.openRouterApiKey,
+		kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId ?? "personal",
+		deepInfraApiKey: apiConfiguration?.deepInfraApiKey,
+	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
 	//	apiConfiguration?.openRouterModelId,
@@ -521,9 +513,6 @@ const ApiOptions = ({
 				<OCA
 					apiConfiguration={apiConfiguration}
 					setApiConfigurationField={setApiConfigurationField}
-					routerModels={routerModels}
-					routerModelsLoading={routerModelsLoading}
-					refetchRouterModels={refetchRouterModels}
 					organizationAllowList={organizationAllowList}
 					modelValidationError={modelValidationError}
 				/>

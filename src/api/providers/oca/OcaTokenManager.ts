@@ -30,7 +30,7 @@ type TokenRecord = {
 }
 
 const SECRET_STORAGE_KEY = "ocaTokenRecord"
-const RENEW_TOKEN_BUFFER_SEC = 5 * 60 * 1000
+const RENEW_TOKEN_BUFFER_SEC = 180
 const IDCS_URL = DEFAULT_INTERNAL_IDCS_URL.replace(/\/+$/, "")
 const REDIRECT_URI_TEMPLATE = (port: number) => `http://localhost:${port}/callback`
 
