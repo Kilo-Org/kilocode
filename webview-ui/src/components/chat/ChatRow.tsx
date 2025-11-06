@@ -52,7 +52,6 @@ import {
 	ListTree,
 	MessageCircleQuestionMark,
 	PocketKnife,
-	SquareArrowOutUpRight,
 	TerminalSquare,
 	Trash2,
 } from "lucide-react"
@@ -370,7 +369,7 @@ export const ChatRowContent = ({
 		display: "flex",
 		alignItems: "center",
 		gap: "2px",
-		marginBottom: "10px",
+		marginBottom: "4px",
 		wordBreak: "break-word",
 	}
 
@@ -614,9 +613,9 @@ export const ChatRowContent = ({
 
 				// Regular single file read request
 				return (
-					<>
+					<div className="">
 						<div style={headerStyle}>
-							<FileCode2 className="w-3 shrink-0" aria-label="Read file icon" />
+							<FileCode2 className="w-3 h-3 shrink-0" aria-label="Read file icon" />
 							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
@@ -629,7 +628,7 @@ export const ChatRowContent = ({
 									: t("chat:fileOperations.didRead")}
 							</span>
 						</div>
-						<div className="pl-0">
+						<div className="">
 							<ToolUseBlock>
 								<ToolUseBlockHeader
 									className="group"
@@ -639,15 +638,10 @@ export const ChatRowContent = ({
 										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
 										{tool.reason}
 									</span>
-									<div style={{ flexGrow: 1 }}></div>
-									<SquareArrowOutUpRight
-										className="w-4 shrink-0 codicon codicon-link-external opacity-0 group-hover:opacity-100 transition-opacity"
-										style={{ fontSize: 13.5, margin: "1px 0" }}
-									/>
 								</ToolUseBlockHeader>
 							</ToolUseBlock>
 						</div>
-					</>
+					</div>
 				)
 			case "fetchInstructions":
 				return (

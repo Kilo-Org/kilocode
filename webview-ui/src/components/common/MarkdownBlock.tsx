@@ -44,8 +44,8 @@ const StyledMarkdown = styled.div`
 		font-family: var(--vscode-editor-font-family, monospace);
 		font-size: 0.85em;
 		filter: saturation(110%) brightness(95%);
-		color: var(--vscode-textPreformat-foreground) !important;
-		background-color: var(--vscode-textPreformat-background) !important;
+		color: color-mix(in srgb, var(--color-matterai-green) 80%, transparent) !important;
+		background-color: color-mix(in srgb, var(--color-matterai-green) 10%, transparent) !important;
 		padding: 1px 2px;
 		white-space: pre-line;
 		word-break: break-word;

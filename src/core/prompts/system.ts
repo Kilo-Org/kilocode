@@ -1,40 +1,23 @@
-import * as vscode from "vscode"
 import * as os from "os"
+import * as vscode from "vscode"
 
-import type {
-	ModeConfig,
-	PromptComponent,
-	CustomModePrompts,
-	TodoItem,
-	Experiments, // kilocode_change
-} from "@roo-code/types"
+import type { CustomModePrompts, Experiments, ModeConfig, PromptComponent, TodoItem } from "@roo-code/types"
 
 import type { SystemPromptSettings } from "./types"
 
-import { Mode, modes, defaultModeSlug, getModeBySlug, getGroupName, getModeSelection } from "../../shared/modes"
-import { DiffStrategy } from "../../shared/tools"
-import { formatLanguage } from "../../shared/language"
-import { isEmpty } from "../../utils/object"
 import { ToolUseStyle } from "../../../packages/types/src" // kilocode_change
-import { McpHub } from "../../services/mcp/McpHub"
 import { CodeIndexManager } from "../../services/code-index/manager"
+import { McpHub } from "../../services/mcp/McpHub"
+import { formatLanguage } from "../../shared/language"
+import { Mode, defaultModeSlug, getGroupName, getModeBySlug, getModeSelection, modes } from "../../shared/modes"
+import { DiffStrategy } from "../../shared/tools"
+import { isEmpty } from "../../utils/object"
 
 import { PromptVariables, loadSystemPromptFile } from "./sections/custom-system-prompt"
 
-import { getToolDescriptionsForMode } from "./tools"
-import {
-	getRulesSection,
-	getSystemInfoSection,
-	getObjectiveSection,
-	getSharedToolUseSection,
-	getMcpServersSection,
-	getToolUseGuidelinesSection,
-	getCapabilitiesSection,
-	getModesSection,
-	addCustomInstructions,
-	markdownFormattingSection,
-} from "./sections"
 import { type ClineProviderState } from "../webview/ClineProvider" // kilocode_change
+import { addCustomInstructions, getMcpServersSection, getSystemInfoSection } from "./sections"
+import { getToolDescriptionsForMode } from "./tools"
 
 // Helper function to get prompt component, filtering out empty objects
 export function getPromptComponent(
@@ -59,15 +42,15 @@ async function generatePrompt(
 	browserViewportSize?: string,
 	promptComponent?: PromptComponent,
 	customModeConfigs?: ModeConfig[],
-	globalCustomInstructions?: string,
+	_globalCustomInstructions?: string,
 	diffEnabled?: boolean,
 	experiments?: Record<string, boolean>,
 	enableMcpServerCreation?: boolean,
-	language?: string,
-	rooIgnoreInstructions?: string,
+	_language?: string,
+	_rooIgnoreInstructions?: string,
 	partialReadsEnabled?: boolean,
 	settings?: SystemPromptSettings,
-	todoList?: TodoItem[],
+	_todoList?: TodoItem[],
 	modelId?: string,
 	toolUseStyle?: ToolUseStyle, // kilocode_change
 	clineProviderState?: ClineProviderState, // kilocode_change
@@ -88,8 +71,8 @@ async function generatePrompt(
 	const hasMcpServers = mcpHub && mcpHub.getServers().length > 0
 	const shouldIncludeMcp = hasMcpGroup && hasMcpServers
 
-	const [modesSection, mcpServersSection] = await Promise.all([
-		getModesSection(context, toolUseStyle /*kilocode_change*/),
+	const [mcpServersSection] = await Promise.all([
+		// getModesSection(context, toolUseStyle /*kilocode_change*/),
 		shouldIncludeMcp
 			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
 			: Promise.resolve(""),
@@ -121,8 +104,6 @@ ${
 }
 
 ${mcpServersSection}
-
-${modesSection}
 
 ${getSystemInfoSection(cwd)}
 `

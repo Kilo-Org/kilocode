@@ -95,7 +95,7 @@ const CodeBlockButtonWrapper = styled.div`
 const CodeBlockContainer = styled.div`
 	position: relative;
 	overflow: hidden;
-	background-color: ${CODE_BLOCK_BG_COLOR};
+	background-color: ${CODE_BLOCK_BG_COLOR} rounded-xl;
 `
 
 export const StyledPre = styled.div<{

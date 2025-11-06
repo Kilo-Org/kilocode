@@ -1,36 +1,26 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
-import {
-	openRouterDefaultModelId,
-	openRouterDefaultModelInfo,
-	OPENROUTER_DEFAULT_PROVIDER_NAME,
-	OPEN_ROUTER_PROMPT_CACHING_MODELS,
-	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	getActiveToolUseStyle,
-} from "@roo-code/types"
+import { getActiveToolUseStyle, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 
-import { convertToOpenAiMessages } from "../transform/openai-format"
-import { ApiStreamChunk } from "../transform/stream"
-import { convertToR1Format } from "../transform/r1-format"
-import { addCacheBreakpoints as addAnthropicCacheBreakpoints } from "../transform/caching/anthropic"
-import { addCacheBreakpoints as addGeminiCacheBreakpoints } from "../transform/caching/gemini"
-import type { OpenRouterReasoningParams } from "../transform/reasoning"
 import { getModelParams } from "../transform/model-params"
+import { convertToOpenAiMessages } from "../transform/openai-format"
+import type { OpenRouterReasoningParams } from "../transform/reasoning"
+import { ApiStreamChunk } from "../transform/stream"
 
 import { getModels } from "./fetchers/modelCache"
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 
-import { DEFAULT_HEADERS } from "./constants"
-import { BaseProvider } from "./base-provider"
 import type {
 	ApiHandlerCreateMessageMetadata, // kilocode_change
 	SingleCompletionHandler,
 } from "../index"
-import { verifyFinishReason } from "./kilocode/verifyFinishReason"
+import { BaseProvider } from "./base-provider"
+import { DEFAULT_HEADERS } from "./constants"
 import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { verifyFinishReason } from "./kilocode/verifyFinishReason"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
@@ -42,8 +32,8 @@ type OpenRouterProviderParams = {
 	zdr?: boolean
 }
 
-import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+import { safeJsonParse } from "../../shared/safeJsonParse"
 // kilocode_change end
 
 import { handleOpenAIError } from "./utils/openai-error-handler"
@@ -159,8 +149,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		console.log("baseURL", baseURL)
 		console.log("apiKey", apiKey)
 
-		// this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
-		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
+		this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
+		// this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
 	// kilocode_change start
@@ -208,7 +198,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): AsyncGenerator<ApiStreamChunk> {
 		const model = await this.fetchModel()
 
@@ -235,9 +225,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		// 	})
 		// 	.filter((msg: any) => msg.content.trim() !== "")
 
-		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
+		// const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
-		// console.log("convertedMessages", convertedMessages)
+		console.log("convertedMessages", convertedMessages)
 
 		// https://openrouter.ai/docs/transforms
 		// const completionParams: OpenRouterChatCompletionParams = {
@@ -254,20 +244,19 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		// }
 
 		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
-			model: model.id,
+			model: modelId,
 			temperature: 0,
-			top_p: topP,
 			messages: convertedMessages,
 			stream: true,
 			stream_options: { include_usage: true },
-			max_completion_tokens: model.info.maxTokens,
+			max_tokens: model.maxTokens,
 		}
 
 		addNativeToolCallsToParams(requestOptions, this.options, metadata)
 
 		let stream
 		try {
-			// console.log("requestOptions", requestOptions)
+			console.log("requestOptions", requestOptions)
 			// console.log("customRequestOptions", this.customRequestOptions(metadata))
 			stream = await this.client.chat.completions.create(
 				requestOptions,
@@ -432,17 +421,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			info = this.endpoints[this.options.openRouterSpecificProvider]
 		}
 
-		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
-
 		const params = getModelParams({
 			format: "openrouter",
 			modelId: id,
 			model: info,
 			settings: this.options,
-			defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0,
+			defaultTemperature: 0,
 		})
 
-		return { id, info, topP: isDeepSeekR1 ? 0.95 : undefined, ...params }
+		return { id, info, topP: 0.95, ...params }
 	}
 
 	async completePrompt(prompt: string) {

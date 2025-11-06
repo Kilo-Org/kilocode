@@ -1408,7 +1408,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const lastClineMessage = this.clineMessages
 			.slice()
 			.reverse()
-			.find((m) => !(m.ask === "resume_task" || m.ask === "resume_completed_task")) // Could be multiple resume tasks.
+			.find((m) => !(m.ask === "resume_task")) // Could be multiple resume tasks.
 
 		let askType: ClineAsk
 		if (lastClineMessage?.ask === "completion_result") {

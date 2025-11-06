@@ -86,17 +86,15 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			info = this.endpoints[this.options.openRouterSpecificProvider]
 		}
 
-		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
-
 		const params = getModelParams({
 			format: "openrouter",
 			modelId: id,
 			model: info,
 			settings: this.options,
-			defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0,
+			defaultTemperature: 0,
 		})
 
-		return { id, info, topP: isDeepSeekR1 ? 0.95 : undefined, ...params }
+		return { id, info, topP: 0.95, ...params }
 	}
 
 	public override async fetchModel() {

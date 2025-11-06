@@ -410,33 +410,33 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setPrimaryButtonText(t("chat:approve.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
-						case "completion_result":
-							// extension waiting for feedback. but we can just present a new task button
-							if (!isPartial) {
-								playSound("celebration")
-							}
-							setSendingDisabled(isPartial)
-							setClineAsk("completion_result")
-							setEnableButtons(!isPartial)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
-							setSecondaryButtonText(undefined)
-							break
-						case "resume_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_task")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:resumeTask.title"))
-							setSecondaryButtonText(t("chat:terminate.title"))
-							setDidClickCancel(false) // special case where we reset the cancel button state
-							break
-						case "resume_completed_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_completed_task")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
-							setSecondaryButtonText(undefined)
-							setDidClickCancel(false)
-							break
+						// case "completion_result":
+						// 	// extension waiting for feedback. but we can just present a new task button
+						// 	if (!isPartial) {
+						// 		playSound("celebration")
+						// 	}
+						// 	setSendingDisabled(isPartial)
+						// 	setClineAsk("completion_result")
+						// 	setEnableButtons(!isPartial)
+						// 	setPrimaryButtonText(t("chat:startNewTask.title"))
+						// 	setSecondaryButtonText(undefined)
+						// 	break
+						// case "resume_task":
+						// 	setSendingDisabled(false)
+						// 	setClineAsk("resume_task")
+						// 	setEnableButtons(true)
+						// 	setPrimaryButtonText(t("chat:resumeTask.title"))
+						// 	setSecondaryButtonText(t("chat:terminate.title"))
+						// 	setDidClickCancel(false) // special case where we reset the cancel button state
+						// 	break
+						// case "resume_completed_task":
+						// 	setSendingDisabled(false)
+						// 	setClineAsk("resume_completed_task")
+						// 	setEnableButtons(true)
+						// 	setPrimaryButtonText(t("chat:startNewTask.title"))
+						// 	setSecondaryButtonText(undefined)
+						// 	setDidClickCancel(false)
+						// 	break
 						// kilocode_change begin
 						case "report_bug":
 							if (!isPartial) {
@@ -2111,7 +2111,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					</div>
 					{areButtonsVisible && (
 						<div
-							className={`flex h-9 items-center mb-1 px-[15px] ${
+							className={`flex h-9 items-center justify-end mb-1 px-[15px] ${
 								showScrollToBottom
 									? "opacity-100"
 									: enableButtons || (isStreaming && !didClickCancel)
@@ -2122,7 +2122,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								<StandardTooltip content={t("chat:scrollToBottom")}>
 									<VSCodeButton
 										appearance="secondary"
-										className="flex-[2]"
+										className="flex-[2] rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit"
 										onClick={() => {
 											scrollToBottomSmooth()
 											disableAutoScrollRef.current = false
@@ -2143,22 +2143,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 															? t("chat:approve.tooltip")
 															: primaryButtonText === t("chat:runCommand.title")
 																? t("chat:runCommand.tooltip")
-																: primaryButtonText === t("chat:startNewTask.title")
-																	? t("chat:startNewTask.tooltip")
-																	: primaryButtonText === t("chat:resumeTask.title")
-																		? t("chat:resumeTask.tooltip")
-																		: primaryButtonText ===
-																			  t("chat:proceedAnyways.title")
-																			? t("chat:proceedAnyways.tooltip")
-																			: primaryButtonText ===
-																				  t("chat:proceedWhileRunning.title")
-																				? t("chat:proceedWhileRunning.tooltip")
-																				: undefined
+																: primaryButtonText === t("chat:proceedAnyways.title")
+																	? t("chat:proceedAnyways.tooltip")
+																	: primaryButtonText ===
+																		  t("chat:proceedWhileRunning.title")
+																		? t("chat:proceedWhileRunning.tooltip")
+																		: undefined
 											}>
 											<VSCodeButton
 												appearance="primary"
 												disabled={!enableButtons}
-												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
+												className={`${secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"} rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit`}
 												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
 												{primaryButtonText}
 											</VSCodeButton>
@@ -2180,7 +2175,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											<VSCodeButton
 												appearance="secondary"
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
-												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
+												className={`${isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"} rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit`}
 												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</VSCodeButton>

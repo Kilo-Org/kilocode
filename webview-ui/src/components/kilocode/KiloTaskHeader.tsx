@@ -1,26 +1,17 @@
 // kilocode_change: new file
-import { memo, useRef, useState } from "react"
-import { useWindowSize } from "react-use"
-import { useTranslation } from "react-i18next"
-import { CloudUpload, CloudDownload, FoldVertical } from "lucide-react"
 import { validateSlashCommand } from "@/utils/slash-commands"
+import { memo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
 import type { ClineMessage } from "@roo-code/types"
 
-import { getModelMaxOutputTokens } from "@roo/api"
-
-import { formatLargeNumber } from "@src/utils/format"
-import { cn } from "@src/lib/utils"
+import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { Button, StandardTooltip } from "@src/components/ui"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { cn } from "@src/lib/utils"
 
 import Thumbnails from "../common/Thumbnails"
 
-import { TaskActions } from "../chat/TaskActions"
-import { ShareButton } from "../chat/ShareButton"
-import { ContextWindowProgress } from "../chat/ContextWindowProgress"
-import { TaskTimeline } from "../chat/TaskTimeline"
 import { mentionRegexGlobal } from "@roo/context-mentions"
 
 import { vscode } from "@/utils/vscode"
@@ -34,7 +25,7 @@ export interface TaskHeaderProps {
 	cacheReads?: number
 	totalCost: number
 	contextTokens: number
-	buttonsDisabled: boolean
+	// buttonsDisabled: boolean
 	handleCondenseContext: (taskId: string) => void
 	onClose: () => void
 	groupedMessages: (ClineMessage | ClineMessage[])[]
@@ -45,54 +36,52 @@ export interface TaskHeaderProps {
 
 const KiloTaskHeader = ({
 	task,
-	tokensIn,
-	tokensOut,
-	cacheWrites,
-	cacheReads,
-	totalCost,
-	contextTokens,
-	buttonsDisabled,
-	handleCondenseContext,
+	// tokensIn,
+	// tokensOut,
+	// cacheWrites,
+	// cacheReads,
+	// totalCost,
+	// contextTokens,
+	// buttonsDisabled,
+	// handleCondenseContext,
 	onClose,
-	groupedMessages,
-	onMessageClick,
-	isTaskActive = false,
+	// groupedMessages,
+	// onMessageClick,
+	// isTaskActive = false,
 	todos,
 }: TaskHeaderProps) => {
 	const { t } = useTranslation()
-	const { showTaskTimeline } = useExtensionState()
-	const { apiConfiguration, currentTaskItem, customModes } = useExtensionState()
-	const { id: modelId, info: model } = useSelectedModel(apiConfiguration)
+	// const { showTaskTimeline } = useExtensionState()
+	const { apiConfiguration, customModes } = useExtensionState()
+	const { info: model } = useSelectedModel(apiConfiguration)
 	const [isTaskExpanded, setIsTaskExpanded] = useState(false)
 
 	const textContainerRef = useRef<HTMLDivElement>(null)
 	const textRef = useRef<HTMLDivElement>(null)
 	const contextWindow = model?.contextWindow || 1
 
-	const { width: windowWidth } = useWindowSize()
+	// const { width: windowWidth } = useWindowSize()
 
-	const condenseButton = (
-		<StandardTooltip content={t("chat:task.condenseContext")}>
-			<button
-				disabled={buttonsDisabled}
-				onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
-				className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
-				<FoldVertical size={16} />
-			</button>
-		</StandardTooltip>
-	)
+	// const condenseButton = (
+	// 	<StandardTooltip content={t("chat:task.condenseContext")}>
+	// 		<button
+	// 			disabled={buttonsDisabled}
+	// 			onClick={() => currentTaskItem && handleCondenseContext(currentTaskItem.id)}
+	// 			className="shrink-0 min-h-[20px] min-w-[20px] p-[2px] cursor-pointer disabled:cursor-not-allowed opacity-85 hover:opacity-100 bg-transparent border-none rounded-md">
+	// 			<FoldVertical size={16} />
+	// 		</button>
+	// 	</StandardTooltip>
+	// )
 
-	const hasTodos = todos && Array.isArray(todos) && todos.length > 0
+	// const hasTodos = todos && Array.isArray(todos) && todos.length > 0
 
 	return (
 		<div className="py-2 px-3">
 			<div
 				className={cn(
 					"p-2.5 flex flex-col relative z-1 border",
-					hasTodos ? "rounded-t-xs border-b-0" : "rounded-xs",
-					isTaskExpanded
-						? "border-vscode-panel-border text-vscode-foreground"
-						: "border-vscode-panel-border/80 text-vscode-foreground/80",
+					"rounded-xl",
+					"border border-white/20 outline-none",
 				)}>
 				<div className="flex justify-between items-center gap-2">
 					<div
@@ -120,15 +109,15 @@ const KiloTaskHeader = ({
 				{/* Collapsed state: Track context and cost if we have any */}
 				{!isTaskExpanded && contextWindow > 0 && (
 					<div className={`w-full flex flex-col gap-1 h-auto`}>
-						{showTaskTimeline && (
+						{/* {showTaskTimeline && (
 							<TaskTimeline
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
 								isTaskActive={isTaskActive}
 							/>
-						)}
+						)} */}
 
-						<div className="flex flex-row items-center gap-1">
+						{/* <div className="flex flex-row items-center gap-1">
 							<ContextWindowProgress
 								contextWindow={contextWindow}
 								contextTokens={contextTokens || 0}
@@ -141,7 +130,7 @@ const KiloTaskHeader = ({
 							{condenseButton}
 							<ShareButton item={currentTaskItem} disabled={buttonsDisabled} />
 							{!!totalCost && <span>${totalCost.toFixed(2)}</span>}
-						</div>
+						</div> */}
 					</div>
 				)}
 				{/* Expanded state: Show task text and images */}
@@ -163,15 +152,15 @@ const KiloTaskHeader = ({
 						</div>
 						{task.images && task.images.length > 0 && <Thumbnails images={task.images} />}
 
-						{showTaskTimeline && (
+						{/* {showTaskTimeline && (
 							<TaskTimeline
 								groupedMessages={groupedMessages}
 								onMessageClick={onMessageClick}
 								isTaskActive={isTaskActive}
 							/>
-						)}
+						)} */}
 
-						<div className="flex flex-col gap-1">
+						{/* <div className="flex flex-col gap-1">
 							{isTaskExpanded && contextWindow > 0 && (
 								<div
 									className={`w-full flex ${windowWidth < 400 ? "flex-col" : "flex-row"} gap-1 h-auto`}>
@@ -186,10 +175,10 @@ const KiloTaskHeader = ({
 										maxTokens={
 											model
 												? getModelMaxOutputTokens({
-														modelId,
-														model,
-														settings: apiConfiguration,
-													})
+													modelId,
+													model,
+													settings: apiConfiguration,
+												})
 												: undefined
 										}
 									/>
@@ -217,22 +206,22 @@ const KiloTaskHeader = ({
 
 							{((typeof cacheReads === "number" && cacheReads > 0) ||
 								(typeof cacheWrites === "number" && cacheWrites > 0)) && (
-								<div className="flex items-center gap-1 flex-wrap h-[20px]">
-									<span className="font-bold">{t("chat:task.cache")}</span>
-									{typeof cacheWrites === "number" && cacheWrites > 0 && (
-										<span className="flex items-center gap-0.5">
-											<CloudUpload size={16} />
-											{formatLargeNumber(cacheWrites)}
-										</span>
-									)}
-									{typeof cacheReads === "number" && cacheReads > 0 && (
-										<span className="flex items-center gap-0.5">
-											<CloudDownload size={16} />
-											{formatLargeNumber(cacheReads)}
-										</span>
-									)}
-								</div>
-							)}
+									<div className="flex items-center gap-1 flex-wrap h-[20px]">
+										<span className="font-bold">{t("chat:task.cache")}</span>
+										{typeof cacheWrites === "number" && cacheWrites > 0 && (
+											<span className="flex items-center gap-0.5">
+												<CloudUpload size={16} />
+												{formatLargeNumber(cacheWrites)}
+											</span>
+										)}
+										{typeof cacheReads === "number" && cacheReads > 0 && (
+											<span className="flex items-center gap-0.5">
+												<CloudDownload size={16} />
+												{formatLargeNumber(cacheReads)}
+											</span>
+										)}
+									</div>
+								)}
 
 							{!!totalCost && (
 								<div className="flex justify-between items-center h-[20px]">
@@ -243,7 +232,7 @@ const KiloTaskHeader = ({
 									<TaskActions item={currentTaskItem} buttonsDisabled={buttonsDisabled} />
 								</div>
 							)}
-						</div>
+						</div> */}
 					</>
 				)}
 			</div>
