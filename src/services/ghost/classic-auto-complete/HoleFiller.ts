@@ -1,7 +1,17 @@
 import { AutocompleteInput } from "../types"
-import { CURSOR_MARKER } from "./ghostConstants"
 import type { TextDocument, Range } from "vscode"
 import { GhostContextProvider } from "./GhostContextProvider"
+
+/**
+ * Special marker used to indicate where completions should occur in the document
+ */
+export const CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
+
+export interface FillInAtCursorSuggestion {
+	text: string
+	prefix: string
+	suffix: string
+}
 
 export function getBaseSystemInstructions(): string {
 	return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
@@ -107,7 +117,32 @@ export function addCursorMarker(document: TextDocument, range?: Range): string {
 	return `${beforeCursor}${CURSOR_MARKER}${afterCursor}`
 }
 
-export class AutoTriggerStrategy {
+/**
+ * Parse the response - only handles responses with <COMPLETION> tags
+ * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
+ */
+export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+	let fimText: string = ""
+
+	// Match content strictly between <COMPLETION> and </COMPLETION> tags
+	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
+
+	if (completionMatch) {
+		// Extract the captured group (content between tags)
+		fimText = completionMatch[1] || ""
+	}
+	// Remove any accidentally captured tag remnants
+	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
+
+	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
+	return {
+		text: fimText,
+		prefix,
+		suffix,
+	}
+}
+
+export class HoleFiller {
 	constructor(private contextProvider?: GhostContextProvider) {}
 
 	async getPrompts(

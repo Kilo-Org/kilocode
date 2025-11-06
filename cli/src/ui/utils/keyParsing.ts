@@ -14,6 +14,8 @@ import {
 	MODIFIER_ALT_BIT,
 	MODIFIER_CTRL_BIT,
 	CHAR_CODE_ESC,
+	CHAR_CODE_EXCLAMATION,
+	CHAR_CODE_DIGIT_1,
 	KITTY_KEYCODE_TAB,
 	KITTY_KEYCODE_BACKSPACE,
 	KITTY_KEYCODE_ENTER,
@@ -236,6 +238,22 @@ export function parseKittySequence(buffer: string): ParseResult {
 				}
 			}
 
+			// Handle Shift+1/Shift+! for shell mode toggle
+			if (shift && (keyCode === CHAR_CODE_DIGIT_1 || keyCode === CHAR_CODE_EXCLAMATION)) {
+				return {
+					key: {
+						name: "shift-1",
+						ctrl,
+						meta: alt,
+						shift: true,
+						paste: false,
+						sequence: buffer.slice(0, match[0].length),
+						kittyProtocol: true,
+					},
+					consumedLength: match[0].length,
+				}
+			}
+
 			// Handle Ctrl/Alt + letters
 			if ((ctrl || alt) && keyCode >= "a".charCodeAt(0) && keyCode <= "z".charCodeAt(0)) {
 				const letter = String.fromCharCode(keyCode)
@@ -325,8 +343,29 @@ export function mapAltKeyCharacter(char: string): string | null {
  */
 export function parseReadlineKey(key: any): Key {
 	// Handle the key object from readline
+	const keyName = key.name || (key.sequence.length === 1 ? key.sequence : "")
+
+	// Detect Shift+1/! - since readline doesn't properly detect shift for these characters,
+	// we assume '!' is always Shift+1, and we'll also check for explicit Shift+1
+	const isShift1 =
+		key.sequence === "!" ||
+		(key.sequence === "1" && key.shift) ||
+		(key.name === "exclamation" && key.shift) ||
+		(key.name === "!" && key.shift)
+
+	if (isShift1) {
+		return {
+			name: "shift-1",
+			ctrl: key.ctrl || false,
+			meta: key.meta || false,
+			shift: true,
+			paste: false,
+			sequence: key.sequence || "",
+		}
+	}
+
 	return {
-		name: key.name || (key.sequence.length === 1 ? key.sequence : ""),
+		name: keyName,
 		ctrl: key.ctrl || false,
 		meta: key.meta || false,
 		shift: key.shift || false,

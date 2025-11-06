@@ -51,6 +51,22 @@ import {
 	navigateHistoryUpAtom,
 	navigateHistoryDownAtom,
 } from "./history.js"
+import {
+	shellModeActiveAtom,
+	toggleShellModeAtom,
+	navigateShellHistoryUpAtom,
+	navigateShellHistoryDownAtom,
+	executeShellCommandAtom,
+} from "./shell.js"
+
+// Export shell atoms for backward compatibility
+export {
+	shellModeActiveAtom,
+	toggleShellModeAtom,
+	navigateShellHistoryUpAtom,
+	navigateShellHistoryDownAtom,
+	executeShellCommandAtom,
+}
 
 // ============================================================================
 // Core State Atoms
@@ -607,6 +623,46 @@ function handleHistoryKeys(get: any, set: any, key: Key): void {
 }
 
 /**
+ * Shell mode keyboard handler
+ * Handles shell command input and execution using existing text buffer
+ */
+async function handleShellKeys(get: any, set: any, key: Key): Promise<void> {
+	const currentInput = get(textBufferStringAtom)
+
+	switch (key.name) {
+		case "up": {
+			// Navigate shell history up
+			set(navigateShellHistoryUpAtom)
+			return
+		}
+
+		case "down": {
+			// Navigate shell history down
+			set(navigateShellHistoryDownAtom)
+			return
+		}
+
+		case "return":
+			if (!key.shift && !key.meta) {
+				// Execute shell command
+				set(executeShellCommandAtom, currentInput)
+				return
+			}
+			break
+
+		case "escape":
+			// Exit shell mode
+			set(toggleShellModeAtom)
+			return
+
+		default:
+			// Character input - let the default text input handlers deal with it
+			handleTextInputKeys(get, set, key)
+			return
+	}
+}
+
+/**
  * Unified text input keyboard handler
  * Handles both normal (single-line) and multiline text input
  */
@@ -755,6 +811,17 @@ function handleGlobalHotkeys(get: any, set: any, key: Key): boolean {
 				return true
 			}
 			break
+		case "shift-1": {
+			// Toggle shell mode with Shift+1 or Shift+! only if input is empty
+			const isEmpty = get(textBufferIsEmptyAtom)
+			if (isEmpty) {
+				// Input is empty, toggle shell mode
+				set(toggleShellModeAtom)
+				return true
+			}
+			// Input has text, don't consume the key - let it be inserted as "!"
+			return false
+		}
 	}
 	return false
 }
@@ -775,15 +842,17 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 	const isAutocompleteVisible = get(showAutocompleteAtom)
 	const fileMentionSuggestions = get(fileMentionSuggestionsAtom)
 	const isInHistoryMode = get(historyModeAtom)
+	const isShellModeActive = get(shellModeActiveAtom)
 
 	// Check if we have file mention suggestions (this means we're in file mention mode)
 	const hasFileMentions = fileMentionSuggestions.length > 0
 
-	// Mode priority: approval > followup > history > autocomplete (including file mentions) > normal
+	// Mode priority: shell > approval > followup > history > autocomplete (including file mentions) > normal
 	// History has higher priority than autocomplete because when navigating history,
 	// the text buffer may contain commands that start with "/" which would trigger autocomplete
 	let mode: InputMode = "normal"
-	if (isApprovalPending) mode = "approval"
+	if (isShellModeActive) mode = "shell"
+	else if (isApprovalPending) mode = "approval"
 	else if (isFollowupVisible) mode = "followup"
 	else if (isInHistoryMode) mode = "history"
 	else if (hasFileMentions || isAutocompleteVisible) mode = "autocomplete"
@@ -793,6 +862,8 @@ export const keyboardHandlerAtom = atom(null, async (get, set, key: Key) => {
 
 	// Route to appropriate handler
 	switch (mode) {
+		case "shell":
+			return await handleShellKeys(get, set, key)
 		case "approval":
 			return handleApprovalKeys(get, set, key)
 		case "followup":
