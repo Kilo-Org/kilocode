@@ -10,7 +10,7 @@ import { OpenRouterHandler } from "../../api/providers"
 import { ApiStreamChunk } from "../../api/transform/stream"
 
 export class GhostModel {
-	private apiHandler: ApiHandler | null = null
+	protected apiHandler: ApiHandler | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -19,7 +19,7 @@ export class GhostModel {
 			this.loaded = true
 		}
 	}
-	private cleanup(): void {
+	protected cleanup(): void {
 		this.apiHandler = null
 		this.loaded = false
 	}
