@@ -1,6 +1,6 @@
 import type * as vscode from "vscode"
 import { OcaTokenManager } from "./oca/OcaTokenManager"
-import { DEFAULT_OCA_BASE_URL } from "./oca/constants"
+import { DEFAULT_OCA_BASE_URL } from "./oca/utils/constants"
 
 /**
  * Callback used to publish the interactive authorization URL

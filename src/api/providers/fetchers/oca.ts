@@ -3,6 +3,7 @@ import axios from "axios"
 import { DEFAULT_HEADERS } from "../constants"
 import { getOcaClientInfo } from "../utils/getOcaClientInfo"
 import type { ModelRecord } from "../../../shared/api"
+import type { ModelInfo } from "@roo-code/types"
 
 export function getAxiosSettings(): { adapter?: any } {
 	return { adapter: "fetch" as any }
@@ -40,59 +41,14 @@ export function buildOcaHeaders(apiKey?: string, openAiHeaders?: Record<string, 
 	return headers
 }
 
-export interface OcaModelEntry {
-	id: string
-	banner?: string
-}
-
-export function parseOcaModelInfoResponse(data: any): OcaModelEntry[] {
-	const arr = data?.data
-	if (!Array.isArray(arr)) return []
-
-	const byId = new Map<string, OcaModelEntry>()
-	for (const m of arr) {
-		const id = typeof m?.id === "string" ? m.id : undefined
-		if (!id) continue
-		const banner = typeof m?.banner === "string" ? m.banner : undefined
-		const existing = byId.get(id)
-		if (!existing || (banner && !existing.banner)) {
-			byId.set(id, { id, banner })
-		}
-	}
-	return Array.from(byId.values())
-}
-
-export function toModelRecord(entries: OcaModelEntry[]): ModelRecord {
-	const record: ModelRecord = {}
-	for (const { id, banner } of entries) {
-		const info: any = {
-			maxTokens: 8192,
-			contextWindow: 200000,
-			supportsPromptCache: false,
-			description: `${id} via OCA`,
-		}
-		if (banner) info.banner = banner
-		record[id] = info
-	}
-	return record
-}
-
-export function normalizeOcaModelsError(error: unknown): Error {
-	if (axios.isAxiosError(error)) {
-		const status = error.response?.status
-		const statusText = error.response?.statusText
-		if (status) {
-			return new Error(`Failed to fetch OCA models: ${status} ${statusText || ""}`.trim())
-		}
-		if (error.request) {
-			return new Error("Failed to fetch OCA models: No response from server. Check server status and base URL.")
-		}
-		return new Error(`Failed to fetch OCA models: ${error.message}`)
-	}
-	return new Error(`Failed to fetch OCA models: ${error instanceof Error ? error.message : String(error)}`)
-}
-
 const DEFAULT_TIMEOUT_MS = 5000
+
+function parsePrice(price: any): number | undefined {
+	if (price) {
+		return parseFloat(price) * 1_000_000
+	}
+	return undefined
+}
 
 export async function getOCAModels(
 	baseUrl: string,
@@ -104,23 +60,50 @@ export async function getOCAModels(
 		return {}
 	}
 
-	try {
-		const url = resolveOcaModelInfoUrl(baseUrl)
-		const headers = buildOcaHeaders(apiKey, openAiHeaders)
+	const url = resolveOcaModelInfoUrl(baseUrl)
+	const headers = buildOcaHeaders(apiKey, openAiHeaders)
 
-		const resp = await httpClient.get(url, {
+	try {
+		const response = await httpClient.get(url, {
 			headers,
 			timeout: DEFAULT_TIMEOUT_MS,
 			...getAxiosSettings(),
 		})
 
-		const entries = parseOcaModelInfoResponse(resp?.data)
-		if (entries.length === 0) {
-			// Treat empty data as an error so callers can surface a useful message
-			throw new Error("No models returned from /v1/model/info")
+		const dataArray: any[] = Array.isArray(response?.data?.data) ? response.data.data : []
+
+		const models: ModelRecord = {}
+
+		for (const model of dataArray) {
+			const modelId = model?.litellm_params?.model
+			if (typeof modelId !== "string" || !modelId) continue
+
+			const info = model?.model_info || {}
+
+			const maxTokens =
+				typeof model?.litellm_params?.max_tokens === "number" ? model.litellm_params.max_tokens : -1
+			const contextWindow =
+				typeof info?.context_window === "number" && info.context_window > 0 ? info.context_window : 0
+
+			const baseInfo: ModelInfo = {
+				maxTokens,
+				contextWindow,
+				supportsImages: !!info?.supports_vision,
+				supportsPromptCache: !!info?.supports_caching,
+				inputPrice: parsePrice(info?.input_price),
+				outputPrice: parsePrice(info?.output_price),
+				cacheWritesPrice: parsePrice(info?.caching_price),
+				cacheReadsPrice: parsePrice(info?.cached_price),
+				description: info?.description,
+				banner: info?.banner,
+			}
+
+			models[modelId] = baseInfo
 		}
-		return toModelRecord(entries)
+
+		return models
 	} catch (error) {
-		throw normalizeOcaModelsError(error)
+		console.error("Failed to fetch models", error)
+		throw error
 	}
 }

@@ -82,7 +82,7 @@ import { UsageTracker } from "../../utils/usage-tracker"
 import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
 import { OcaTokenManager } from "../../api/providers/oca/OcaTokenManager"
-import { DEFAULT_OCA_BASE_URL } from "../../api/providers/oca/constants"
+import { DEFAULT_OCA_BASE_URL } from "../../api/providers/oca/utils/constants"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,

@@ -9,11 +9,12 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
 import { OcaTokenManager } from "./oca/OcaTokenManager"
-import { DEFAULT_OCA_BASE_URL } from "./oca/constants"
+import { DEFAULT_OCA_BASE_URL } from "./oca/utils/constants"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 import { getOcaClientInfo } from "./utils/getOcaClientInfo"
 
 import { DEFAULT_HEADERS as BASE_HEADERS } from "./constants"
+import { getModelsFromCache } from "./fetchers/modelCache"
 
 const DEFAULT_HEADERS = {
 	...BASE_HEADERS,
@@ -112,14 +113,22 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 
 	override getModel() {
 		const id = this.options.apiModelId || "auto"
+		const cached = getModelsFromCache("oca")
+		const selected = id !== "auto" ? cached?.[id] : undefined
+
 		const info: ModelInfo = {
-			maxTokens: this.options.modelMaxTokens || 4096,
-			contextWindow: 128000,
-			supportsImages: true,
-			supportsPromptCache: false,
-			inputPrice: 0,
-			outputPrice: 0,
+			maxTokens: this.options.modelMaxTokens ?? selected?.maxTokens ?? 4096,
+			contextWindow: selected?.contextWindow ?? 128000,
+			supportsImages: selected?.supportsImages ?? true,
+			supportsPromptCache: selected?.supportsPromptCache ?? false,
+			inputPrice: selected?.inputPrice ?? 0,
+			outputPrice: selected?.outputPrice ?? 0,
+			cacheWritesPrice: selected?.cacheWritesPrice,
+			cacheReadsPrice: selected?.cacheReadsPrice,
+			description: selected?.description,
+			banner: selected?.banner,
 		}
+
 		return { id, info }
 	}
 }

@@ -27,7 +27,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 
 import { getDeepInfraModels } from "./deepinfra"
 import { getHuggingFaceModels } from "./huggingface"
-import { DEFAULT_OCA_BASE_URL } from "../oca/constants"
+import { DEFAULT_OCA_BASE_URL } from "../oca/utils/constants"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 

@@ -3,12 +3,12 @@ import { URL } from "url"
 import * as vscode from "vscode"
 import { ContextProxy } from "../../../core/config/ContextProxy"
 import {
-	DEFAULT_IDCS_CLIENT_ID,
-	DEFAULT_IDCS_URL,
-	DEFAULT_IDSC_SCOPES,
-	DEFAULT_IDCS_PORT_CANDIDATES,
-	DEFAULT_USE_PKCE,
-} from "./constants"
+	DEFAULT_INTERNAL_IDCS_CLIENT_ID,
+	DEFAULT_INTERNAL_IDCS_URL,
+	DEFAULT_INTERNAL_IDCS_SCOPES,
+	DEFAULT_INTERNAL_IDCS_PORT_CANDIDATES,
+	DEFAULT_INTERNAL_USE_PKCE,
+} from "./utils/constants"
 import {
 	discovery,
 	buildAuthorizationUrl,
@@ -30,21 +30,9 @@ type TokenRecord = {
 }
 
 const SECRET_STORAGE_KEY = "ocaTokenRecord"
-const RENEW_TOKEN_BUFFER_SEC = 180
-
-const IDCS_URL = (process.env.IDCS_URL ?? DEFAULT_IDCS_URL).replace(/\/+$/, "")
-const CLIENT_ID = process.env.CLIENT_ID ?? DEFAULT_IDCS_CLIENT_ID
-const SCOPES = process.env.SCOPES ?? DEFAULT_IDSC_SCOPES
-const PORT_CANDIDATES = process.env.PORT ? [Number(process.env.PORT)] : DEFAULT_IDCS_PORT_CANDIDATES
-const REDIRECT_URI_TEMPLATE = (port: number) => process.env.REDIRECT_URI ?? `http://localhost:${port}/callback`
-const USE_PKCE = String(process.env.USE_PKCE ?? "").toLowerCase() === "false" ? false : DEFAULT_USE_PKCE
-
-if (!IDCS_URL) {
-	throw new Error("Missing IDCS_URL environment variable")
-}
-if (!CLIENT_ID) {
-	throw new Error("Missing CLIENT_ID environment variable")
-}
+const RENEW_TOKEN_BUFFER_SEC = 5 * 60 * 1000
+const IDCS_URL = DEFAULT_INTERNAL_IDCS_URL.replace(/\/+$/, "")
+const REDIRECT_URI_TEMPLATE = (port: number) => `http://localhost:${port}/callback`
 
 /**
  * Manages Oracle Code Assist OAuth tokens:
@@ -82,7 +70,7 @@ export class OcaTokenManager {
 	private static async tryRefresh(token: TokenRecord): Promise<TokenRecord | null> {
 		try {
 			const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
-			const config = await discovery(discoveryUrl, CLIENT_ID)
+			const config = await discovery(discoveryUrl, DEFAULT_INTERNAL_IDCS_CLIENT_ID)
 			const res = await refreshTokenGrant(config, token.refresh_token!)
 			const nowSec = Math.floor(Date.now() / 1000)
 			const next: TokenRecord = {
@@ -144,12 +132,17 @@ export class OcaTokenManager {
 	}
 
 	private static async runInteractiveLogin(postAuthUrl: (url: string) => void): Promise<TokenRecord> {
-		const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
-		const config = await discovery(discoveryUrl, CLIENT_ID)
+		let config
+		try {
+			const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
+			config = await discovery(discoveryUrl, DEFAULT_INTERNAL_IDCS_CLIENT_ID)
+		} catch (e) {
+			throw new Error(formatOcaError(e))
+		}
 
 		let code_verifier: string | undefined
 		let code_challenge: string | undefined
-		if (USE_PKCE) {
+		if (DEFAULT_INTERNAL_USE_PKCE) {
 			code_verifier = randomPKCECodeVerifier()
 			code_challenge = await calculatePKCECodeChallenge(code_verifier)
 		}
@@ -162,8 +155,10 @@ export class OcaTokenManager {
 				// Build authorization URL for this port
 				const authUrl = buildAuthorizationUrl(config, {
 					redirect_uri: redirectUri,
-					scope: SCOPES,
-					...(USE_PKCE && code_challenge ? { code_challenge, code_challenge_method: "S256" as const } : {}),
+					scope: DEFAULT_INTERNAL_IDCS_SCOPES,
+					...(DEFAULT_INTERNAL_USE_PKCE && code_challenge
+						? { code_challenge, code_challenge_method: "S256" as const }
+						: {}),
 				})
 
 				const server = http.createServer(async (req, res) => {
@@ -177,7 +172,7 @@ export class OcaTokenManager {
 						const t = await authorizationCodeGrant(
 							config,
 							currentUrl,
-							USE_PKCE && code_verifier ? { pkceCodeVerifier: code_verifier } : {},
+							DEFAULT_INTERNAL_USE_PKCE && code_verifier ? { pkceCodeVerifier: code_verifier } : {},
 						)
 
 						res.statusCode = 200
@@ -225,20 +220,23 @@ export class OcaTokenManager {
 
 		let tokens: TokenEndpointResponse | null = null
 		let lastError: unknown = null
-		for (const p of PORT_CANDIDATES) {
+		for (const p of DEFAULT_INTERNAL_IDCS_PORT_CANDIDATES) {
 			try {
 				tokens = await attemptOnPort(p)
 				break
 			} catch (err: any) {
 				lastError = err
+				// Keep trying other ports if the current port is in use
 				if (err?.code === "EADDRINUSE") {
 					continue
 				}
-				throw err
+				throw new Error(formatOcaError(err))
 			}
 		}
 		if (!tokens) {
-			throw lastError ?? new Error("Failed to start local callback server on any configured port")
+			throw new Error(
+				formatOcaError(lastError ?? new Error("Failed to start local callback server on any configured port")),
+			)
 		}
 
 		// Compute expires_at for local validity checks and persist
@@ -269,4 +267,26 @@ export class OcaTokenManager {
 			console.error("OCA: logout failed:", e)
 		}
 	}
+}
+
+function formatOcaError(err: unknown): string {
+	const anyErr = err as any
+	const raw = anyErr?.error_description || anyErr?.message || String(anyErr)
+	const msg = typeof raw === "string" ? raw : "Authentication failed. Please try again."
+	const lower = msg.toLowerCase()
+
+	if (anyErr?.code === "EADDRINUSE") {
+		return "Login failed: local callback port is in use. Close other sign-in attempts or try again."
+	}
+	if (
+		lower.includes("getaddrinfo") ||
+		lower.includes("econnrefused") ||
+		lower.includes("network") ||
+		lower.includes("fetch failed") ||
+		lower.includes("dns")
+	)
+		return "Cannot reach Oracle IDCS. Check Proxy/Internet/VPN connectivity, follow OCA troubleshooting gudlines and try again."
+	if (lower.includes("openid-configuration") || lower.includes("well-known"))
+		return "Failed to discover identity configuration. Verify the IDCS URL and network connectivity."
+	return msg
 }
