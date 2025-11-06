@@ -17,11 +17,12 @@ import { FollowUpData, SuggestionItem } from "@roo-code/types"
 import { findLast } from "@roo/array"
 import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
-import { ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
+import { ClineApiReqInfo, ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
 import { getApiMetrics } from "@roo/getApiMetrics"
 import { McpServer, McpTool } from "@roo/mcp"
 import { getAllModes } from "@roo/modes"
 import { ProfileValidator } from "@roo/ProfileValidator"
+import { safeJsonParse } from "@roo/safeJsonParse"
 import { getLatestTodo } from "@roo/todo"
 import { AudioType } from "@roo/WebviewMessage"
 
@@ -900,6 +901,24 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useMount(() => textAreaRef.current?.focus())
 
 	const visibleMessages = useMemo(() => {
+		const shouldHideApiReqStartedMessage = (message: ClineMessage): boolean => {
+			if (message.say !== "api_req_started" || message.text === null || message.text === undefined) {
+				return false
+			}
+
+			const info = safeJsonParse<ClineApiReqInfo>(message.text)
+			if (!info) {
+				return false
+			}
+
+			return (
+				info.cost !== undefined &&
+				info.cost !== null &&
+				info.cancelReason === undefined &&
+				info.streamingFailedMessage === undefined
+			)
+		}
+
 		// Pre-compute checkpoint hashes that have associated user messages for O(1) lookup
 		const userMessageCheckpointHashes = new Set<string>()
 		modifiedMessages.forEach((msg) => {
@@ -916,6 +935,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Remove the 500-message limit to prevent array index shifting
 		// Virtuoso is designed to efficiently handle large lists through virtualization
 		const newVisibleMessages = modifiedMessages.filter((message) => {
+			if (shouldHideApiReqStartedMessage(message)) {
+				everVisibleMessagesTsRef.current.delete(message.ts)
+				return false
+			}
+
 			// Filter out checkpoint_saved messages that should be suppressed
 			if (message.say === "checkpoint_saved") {
 				// Check if this checkpoint has the suppressMessage flag set

@@ -21,8 +21,8 @@ import writeToFile from "./write_to_file"
 import { apply_diff_single_file, apply_diff_multi_file } from "./apply_diff"
 
 export const nativeTools = [
-	apply_diff_single_file,
-	apply_diff_multi_file,
+	// apply_diff_single_file,
+	// apply_diff_multi_file,
 	askFollowupQuestion,
 	attemptCompletion,
 	browserAction,

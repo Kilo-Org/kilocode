@@ -49,14 +49,14 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 			<div
 				className="flex items-center justify-start gap-1 pr-2 cursor-pointer select-none opacity-40 hover:opacity-100"
 				onClick={handleToggle}>
-				<div className="flex items-center gap-2">
-					{/* <Lightbulb className="w-4" /> */}
-					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+				<div className="flex items-center gap-1">
+					{/* <Lightbulb className="w-3" /> */}
+					<span className="text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
 					{elapsed > 0 && (
 						<span className="text-sm text-vscode-descriptionForeground mt-0.5">{secondsLabel}</span>
 					)}
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<ChevronUp
 						className={cn("w-4 transition-all group-hover:opacity-100", isCollapsed && "-rotate-180")}
 					/>

@@ -159,6 +159,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		console.log("baseURL", baseURL)
 		console.log("apiKey", apiKey)
 
+		// this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
@@ -211,13 +212,12 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	): AsyncGenerator<ApiStreamChunk> {
 		const model = await this.fetchModel()
 
+		const systemMessage: OpenAI.Chat.ChatCompletionSystemMessageParam = {
+			role: "system",
+			content: systemPrompt,
+		}
 		let { id: modelId, maxTokens, temperature, topP, reasoning } = model
-
-		// Convert Anthropic messages to OpenAI format.
-		let openAiMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-			{ role: "system", content: systemPrompt },
-			...convertToOpenAiMessages(messages),
-		]
+		const convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages)]
 
 		// openAiMessages = openAiMessages
 		// 	.map((msg: any) => {
@@ -237,30 +237,40 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
 
-		console.log("openAiMessages", openAiMessages)
+		// console.log("convertedMessages", convertedMessages)
 
 		// https://openrouter.ai/docs/transforms
-		const completionParams: OpenRouterChatCompletionParams = {
-			model: modelId,
-			...(maxTokens && maxTokens > 0 && { max_tokens: maxTokens }),
-			temperature,
+		// const completionParams: OpenRouterChatCompletionParams = {
+		// 	model: modelId,
+		// 	...(maxTokens && maxTokens > 0 && { max_tokens: maxTokens }),
+		// 	temperature,
+		// 	top_p: topP,
+		// 	messages: convertedMessages,
+		// 	stream: true,
+		// 	stream_options: { include_usage: true },
+		// 	...this.getProviderParams(), // kilocode_change: original expression was moved into function
+		// 	...(transforms && { transforms }),
+		// 	...(reasoning && { reasoning }),
+		// }
+
+		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			model: model.id,
+			temperature: 0,
 			top_p: topP,
-			messages: openAiMessages,
+			messages: convertedMessages,
 			stream: true,
 			stream_options: { include_usage: true },
-			...this.getProviderParams(), // kilocode_change: original expression was moved into function
-			...(transforms && { transforms }),
-			...(reasoning && { reasoning }),
+			max_completion_tokens: model.info.maxTokens,
 		}
 
-		// kilocode_change start: Add native tool call support when toolStyle is "json"
-		addNativeToolCallsToParams(completionParams, this.options, metadata)
-		// kilocode_change end
+		addNativeToolCallsToParams(requestOptions, this.options, metadata)
 
 		let stream
 		try {
+			// console.log("requestOptions", requestOptions)
+			// console.log("customRequestOptions", this.customRequestOptions(metadata))
 			stream = await this.client.chat.completions.create(
-				completionParams,
+				requestOptions,
 				this.customRequestOptions(metadata), // kilocode_change
 			)
 		} catch (error) {
@@ -277,6 +287,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		try {
 			let fullContent = ""
+
+			let isThinking = false
 
 			for await (const chunk of stream) {
 				// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
@@ -317,8 +329,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				// 	yield { type: "reasoning", text: delta.reasoning }
 				// }
 
-				let isThinking = false
-
 				if (delta.content) {
 					let newText = delta.content
 					if (fullContent && newText.startsWith(fullContent)) {
@@ -330,6 +340,9 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					// 1. Thinking block bug
 					// 2. Pricing
 					// 3. Use Cursor prompt + tool calling
+
+					console.log("newText", newText)
+					console.log("isThinking", isThinking)
 
 					if (newText) {
 						if (newText.includes("<think>")) {

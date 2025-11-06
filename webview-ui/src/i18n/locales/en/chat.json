@@ -183,10 +183,10 @@
 		"wantsToFetch": "Axon Code wants to fetch detailed instructions to assist with the current task"
 	},
 	"fileOperations": {
-		"wantsToRead": "Axon Code wants to read this file",
-		"wantsToReadMultiple": "Axon Code wants to read multiple files",
-		"wantsToReadAndXMore": "Axon Code wants to read this file and {{count}} more",
-		"wantsToReadOutsideWorkspace": "Axon Code wants to read this file outside of the workspace",
+		"wantsToRead": "read file",
+		"wantsToReadMultiple": "read multiple files",
+		"wantsToReadAndXMore": "read this file and {{count}} more",
+		"wantsToReadOutsideWorkspace": "read this file outside of the workspace",
 		"didRead": "Axon Code read this file",
 		"wantsToEdit": "Axon Code wants to edit this file",
 		"wantsToEditOutsideWorkspace": "Axon Code wants to edit this file outside of the workspace",
@@ -196,8 +196,8 @@
 		"wantsToGenerateImageOutsideWorkspace": "Axon Code wants to generate an image outside of the workspace",
 		"wantsToGenerateImageProtected": "Axon Code wants to generate an image in a protected location",
 		"didGenerateImage": "Axon Code generated an image",
-		"wantsToCreate": "Axon Code wants to create a new file",
-		"wantsToSearchReplace": "Axon Code wants to search and replace in this file",
+		"wantsToCreate": "create new file",
+		"wantsToSearchReplace": "search and replace",
 		"didSearchReplace": "Axon Code performed search and replace on this file",
 		"wantsToInsert": "Axon Code wants to insert content into this file",
 		"wantsToInsertWithLineNumber": "Axon Code wants to insert content into this file at line {{lineNumber}}",
@@ -312,7 +312,7 @@
 		"socialLinks": "Join us on <xLink>X</xLink>, <discordLink>Discord</discordLink>, or <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"reasoning": {
-		"thinking": "Thinking",
+		"thinking": "Reasoning",
 		"seconds": "{{count}}s"
 	},
 	"followUpSuggest": {

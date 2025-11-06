@@ -54,7 +54,7 @@ import { ClineApiReqCancelReason, ClineApiReqInfo } from "../../shared/Extension
 import { getApiMetrics, hasTokenUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug } from "../../shared/modes"
-import { DiffStrategy } from "../../shared/tools"
+import { DiffStrategy, ToolUse } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
 
@@ -1936,11 +1936,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 			// kilocode_change end
 
-			const environmentDetails = await getEnvironmentDetails(this, currentIncludeFileDetails)
-
-			// Add environment details as its own text block, separate from tool
-			// results.
-			const finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
+			// Only add environment details on the first iteration (when includeFileDetails is true)
+			// For subsequent iterations with tool results, don't add environment details to avoid duplication
+			let finalUserContent: Anthropic.Messages.ContentBlockParam[]
+			if (currentIncludeFileDetails) {
+				const environmentDetails = await getEnvironmentDetails(this, currentIncludeFileDetails)
+				// Add environment details as its own text block, separate from tool results
+				finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
+			} else {
+				// For tool results, don't add environment details
+				finalUserContent = parsedUserContent
+			}
 
 			await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
 			TelemetryService.instance.captureConversationMessage(this.taskId, "user")
@@ -2106,10 +2112,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							case "native_tool_calls": {
 								// Handle native OpenAI-format tool calls
 								// Process native tool calls through the parser
+								let yieldedCount = 0
 								for (const toolUse of this.assistantMessageParser.processNativeToolCalls(
 									chunk.toolCalls,
 								)) {
 									assistantToolUses.push(toolUse)
+									yieldedCount++
 								}
 
 								// Update content blocks after processing native tool calls
@@ -2420,6 +2428,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this.assistantMessageParser.finalizeContentBlocks()
 				this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
 
+				// kilocode_change start: Extract any newly finalized tool uses that weren't captured during streaming
+				// This can happen when native tool calls arrive in a single complete chunk
+				const toolUsesFromFinalizedContent = this.assistantMessageContent
+					.filter((block): block is ToolUse => block.type === "tool_use")
+					.map(
+						(toolUse): Anthropic.Messages.ToolUseBlockParam => ({
+							type: "tool_use",
+							name: toolUse.name,
+							id: toolUse.toolUseId ?? "",
+							input: toolUse.params,
+						}),
+					)
+
+				// Add any tool uses that aren't already in assistantToolUses
+				const existingToolUseIds = new Set(assistantToolUses.map((tu) => tu.id))
+				for (const toolUse of toolUsesFromFinalizedContent) {
+					if (!existingToolUseIds.has(toolUse.id)) {
+						assistantToolUses.push(toolUse)
+					}
+				}
+				// kilocode_change end
+
 				if (partialBlocks.length > 0) {
 					// If there is content to update then it will complete and
 					// update `this.userMessageContentReady` to true, which we
@@ -2506,7 +2536,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// If the model did not tool use, then we need to tell it to
 					// either use a tool or attempt_completion.
-					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
+					// const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
 					// if (!didToolUse) {
 					// 	this.userMessageContent.push({
@@ -2526,9 +2556,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 						// Add periodic yielding to prevent blocking
 						await new Promise((resolve) => setImmediate(resolve))
+
+						// Continue to next iteration instead of setting didEndLoop from recursive call
+						continue
 					}
-					// Continue to next iteration instead of setting didEndLoop from recursive call
-					continue
+
+					// No tool results to process, end both inner and outer task loops
+					// This prevents the outer loop from repeating with the same user message
+					return true
 				} else {
 					// If there's no assistant_responses, that means we got no text
 					// or tool_use content blocks from API which we should assume is

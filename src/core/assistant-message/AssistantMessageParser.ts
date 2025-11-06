@@ -400,6 +400,10 @@ export class AssistantMessageParser {
 	 * Should be called after processing the last chunk.
 	 */
 	public finalizeContentBlocks(): void {
+		// kilocode_change start: Finalize any accumulated native tool calls
+		this.finalizeNativeToolCalls()
+		// kilocode_change end
+
 		// Mark all partial blocks as complete
 		for (const block of this.contentBlocks) {
 			if (block.partial) {
@@ -410,4 +414,62 @@ export class AssistantMessageParser {
 			}
 		}
 	}
+
+	// kilocode_change start
+	/**
+	 * Finalize any accumulated native tool calls that haven't been yielded yet.
+	 * This is called at the end of streaming to ensure all tool calls are processed,
+	 * even if the JSON was complete but not yielded during streaming.
+	 */
+	private finalizeNativeToolCalls(): void {
+		// Process any remaining accumulated tool calls
+		for (const [toolCallId, accumulatedCall] of this.nativeToolCallsAccumulator.entries()) {
+			// Skip if already processed
+			if (this.processedNativeToolCallIds.has(toolCallId)) {
+				continue
+			}
+
+			// Try to parse the arguments one final time
+			let parsedArgs: Record<string, any> = {}
+			try {
+				if (accumulatedCall.function?.arguments?.trim()) {
+					parsedArgs = JSON.parse(accumulatedCall.function.arguments)
+					parsedArgs = parseDoubleEncodedParams(parsedArgs)
+				}
+			} catch (error) {
+				// Arguments are still not valid JSON, skip this tool call
+				console.warn(
+					`[AssistantMessageParser] Failed to parse accumulated tool call at finalization: ${toolCallId}`,
+					error,
+				)
+				continue
+			}
+
+			// Finalize any current text content before adding tool use
+			if (this.currentTextContent) {
+				this.currentTextContent.partial = false
+				this.currentTextContent = undefined
+			}
+
+			const toolName = accumulatedCall.function!.name
+			// Create a ToolUse block from the native tool call
+			const toolUse: ToolUse = {
+				type: "tool_use",
+				name: toolName as ToolName,
+				params: parsedArgs,
+				partial: false,
+				toolUseId: accumulatedCall.id,
+			}
+
+			// Add the tool use to content blocks
+			this.contentBlocks.push(toolUse)
+
+			// Mark this tool call as processed
+			this.processedNativeToolCallIds.add(toolCallId)
+		}
+
+		// Clear the accumulator after finalization
+		this.nativeToolCallsAccumulator.clear()
+	}
+	// kilocode_change end
 }
