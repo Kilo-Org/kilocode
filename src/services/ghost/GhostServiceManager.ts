@@ -6,7 +6,7 @@ import { GhostModel } from "./GhostModel"
 import { GhostStatusBar } from "./GhostStatusBar"
 import { GhostCodeActionProvider } from "./GhostCodeActionProvider"
 import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInlineCompletionProvider"
-import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
+//import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
@@ -36,7 +36,7 @@ export class GhostServiceManager {
 	// VSCode Providers
 	public codeActionProvider: GhostCodeActionProvider
 	public inlineCompletionProvider: GhostInlineCompletionProvider
-	private newAutocompleteProvider: NewAutocompleteProvider | null = null
+	//private newAutocompleteProvider: NewAutocompleteProvider | null = null
 	private inlineCompletionProviderDisposable: vscode.Disposable | null = null
 
 	private ignoreController?: Promise<RooIgnoreController>
@@ -126,18 +126,18 @@ export class GhostServiceManager {
 		}
 
 		// Dispose new autocomplete provider if switching away from it
-		if (!useNewAutocomplete && this.newAutocompleteProvider) {
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
+		//if (!useNewAutocomplete && this.newAutocompleteProvider) {
+		//	this.newAutocompleteProvider.dispose()
+		//	this.newAutocompleteProvider = null
+		//}
 
 		if (shouldBeRegistered) {
 			if (useNewAutocomplete) {
 				// Initialize new autocomplete provider if not already created
-				if (!this.newAutocompleteProvider) {
-					this.newAutocompleteProvider = new NewAutocompleteProvider(this.context, this.cline)
-					await this.newAutocompleteProvider.load()
-				}
+				//if (!this.newAutocompleteProvider) {
+				//	this.newAutocompleteProvider = new NewAutocompleteProvider(this.context, this.cline)
+				//	await this.newAutocompleteProvider.load()
+				//}
 				// New autocomplete provider registers itself internally
 			} else {
 				// Register classic provider
@@ -458,10 +458,10 @@ export class GhostServiceManager {
 		}
 
 		// Dispose new autocomplete provider if it exists
-		if (this.newAutocompleteProvider) {
-			this.newAutocompleteProvider.dispose()
-			this.newAutocompleteProvider = null
-		}
+		//if (this.newAutocompleteProvider) {
+		//	this.newAutocompleteProvider.dispose()
+		//	this.newAutocompleteProvider = null
+		//}
 
 		this.disposeIgnoreController()
 
