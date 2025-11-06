@@ -78,7 +78,7 @@ describe("NewAutocompleteModel", () => {
 				expect(result).toBeDefined()
 				expect(OpenAI).toHaveBeenCalledWith(
 					expect.objectContaining({
-						model: "codestral-2501",
+						model: "mistralai/codestral-2501",
 						apiKey: "test-kilocode-token",
 					}),
 				)

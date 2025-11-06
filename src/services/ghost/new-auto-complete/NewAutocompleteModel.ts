@@ -18,7 +18,7 @@ import KiloCode from "../../continuedev/core/llm/llms/KiloCode"
 
 export const AUTOCOMPLETE_PROVIDER_MODELS = {
 	mistral: "codestral-2501",
-	kilocode: "codestral-2501",
+	kilocode: "mistralai/codestral-2501",
 	openrouter: "mistralai/codestral-2501",
 	bedrock: "mistral.codestral-2501-v1:0",
 } as const
