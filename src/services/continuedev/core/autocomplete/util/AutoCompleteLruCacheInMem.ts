@@ -45,7 +45,7 @@ export class AutoCompleteLruCacheInMem {
 		// Then try fuzzy matching - find keys where prefix starts with the key
 		// If the query is "co" and we have "c" -> "ontinue" in the cache,
 		// we should return "ntinue" as the completion.
-		// Have to make sure we take the key with shortest length
+		// Have to make sure we take the key with longest length for best match
 		let bestMatch: { key: string; value: string } | null = null
 		let longestKeyLength = 0
 
@@ -60,6 +60,8 @@ export class AutoCompleteLruCacheInMem {
 		if (bestMatch) {
 			// Validate that the cached completion is a valid completion for the prefix
 			if (bestMatch.value.startsWith(truncated.slice(bestMatch.key.length))) {
+				// Update LRU timestamp for the matched key by accessing it
+				this.cache.get(bestMatch.key)
 				// Return the portion of the value that extends beyond the current prefix
 				return bestMatch.value.slice(truncated.length - bestMatch.key.length)
 			}
