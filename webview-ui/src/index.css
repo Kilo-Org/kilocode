@@ -143,6 +143,8 @@
 
 	--color-vscode-banner-background: var(--vscode-banner-background);
 	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
+
+	--color-matterai-green: #3affa3;
 }
 
 @layer base {
@@ -392,21 +394,29 @@ vscode-dropdown::part(listbox) {
 /* Context mentions */
 
 .mention-context-textarea-highlight {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	color: transparent;
+	text-align: center;
+	display: inline-block;
+	padding-bottom: 1px;
+	padding-left: 1px;
+	padding-right: 1px;
+	margin-top: 3px;
 }
 
 .mention-context-highlight {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
+	text-align: center;
 }
 
 .mention-context-highlight-with-shadow {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	text-align: center;
 }
 
 /**

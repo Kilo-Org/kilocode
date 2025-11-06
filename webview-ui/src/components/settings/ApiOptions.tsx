@@ -1,13 +1,9 @@
-import React, { memo, useCallback, useEffect, useState } from "react" // kilocode_change Fragment
+import React, { memo, useEffect, useState } from "react" // kilocode_change Fragment
 import { useDebounce } from "react-use"
 import { convertHeadersToObject } from "./utils/headers"
 // import { ExternalLinkIcon } from "@radix-ui/react-icons" // kilocode_change
 
-import {
-	type ProviderSettings,
-	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT, // kilocode_change
-	nativeFunctionCallingProviders,
-} from "@roo-code/types"
+import { type ProviderSettings } from "@roo-code/types"
 
 import { useRouterModels } from "@src/components/ui/hooks/useRouterModels"
 import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
@@ -23,16 +19,9 @@ import { vscode } from "@src/utils/vscode"
 // kilocode_change start
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@src/components/ui"
 
-import { inputEventTransform, noTransform } from "./transforms"
 // import { ModelPicker } from "./ModelPicker" // kilocode_change
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { ApiErrorMessage } from "./ApiErrorMessage"
-import { ConsecutiveMistakeLimitControl } from "./ConsecutiveMistakeLimitControl"
-import { DiffSettingsControl } from "./DiffSettingsControl"
-import { ToolUseControl } from "./kilocode/ToolUseControl" // kilocode_change
-import { KiloProviderRouting, KiloProviderRoutingManagedByOrganization } from "./providers/KiloProviderRouting"
-import { RateLimitSecondsControl } from "./RateLimitSecondsControl"
-import { TemperatureControl } from "./TemperatureControl"
 import { ThinkingBudget } from "./ThinkingBudget"
 import { TodoListSettingsControl } from "./TodoListSettingsControl"
 import { Verbosity } from "./Verbosity"
@@ -103,16 +92,16 @@ const ApiOptions = ({
 
 	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
 
-	const handleInputChange = useCallback(
-		<K extends keyof ProviderSettings, E>(
-			field: K,
-			transform: (event: E) => ProviderSettings[K] = inputEventTransform,
-		) =>
-			(event: E | Event) => {
-				setApiConfigurationField(field, transform(event as E))
-			},
-		[setApiConfigurationField],
-	)
+	// const handleInputChange = useCallback(
+	// 	<K extends keyof ProviderSettings, E>(
+	// 		field: K,
+	// 		transform: (event: E) => ProviderSettings[K] = inputEventTransform,
+	// 	) =>
+	// 		(event: E | Event) => {
+	// 			setApiConfigurationField(field, transform(event as E))
+	// 		},
+	// 	[setApiConfigurationField],
+	// )
 
 	const {
 		provider: selectedProvider,
@@ -433,23 +422,23 @@ const ApiOptions = ({
 					modelInfo={selectedModelInfo}
 				/>
 			)}
-
+			{/* 
 			{
 				// kilocode_change start
 				(selectedProvider === "kilocode" || selectedProvider === "openrouter") &&
-					(apiConfiguration.kilocodeOrganizationId ? (
-						<KiloProviderRoutingManagedByOrganization
-							organizationId={apiConfiguration.kilocodeOrganizationId}
-						/>
-					) : (
-						<KiloProviderRouting
-							apiConfiguration={apiConfiguration}
-							setApiConfigurationField={setApiConfigurationField}
-							kilocodeDefaultModel={kilocodeDefaultModel}
-						/>
-					))
+				(apiConfiguration.kilocodeOrganizationId ? (
+					<KiloProviderRoutingManagedByOrganization
+						organizationId={apiConfiguration.kilocodeOrganizationId}
+					/>
+				) : (
+					<KiloProviderRouting
+						apiConfiguration={apiConfiguration}
+						setApiConfigurationField={setApiConfigurationField}
+						kilocodeDefaultModel={kilocodeDefaultModel}
+					/>
+				))
 				// kilocode_change end
-			}
+			} */}
 
 			{!fromWelcomeView && (
 				<Collapsible open={isAdvancedSettingsOpen} onOpenChange={setIsAdvancedSettingsOpen}>
@@ -462,17 +451,7 @@ const ApiOptions = ({
 							todoListEnabled={apiConfiguration.todoListEnabled}
 							onChange={(field, value) => setApiConfigurationField(field, value)}
 						/>
-						{
-							// kilocode_change start
-							nativeFunctionCallingProviders.includes(selectedProvider) && (
-								<ToolUseControl
-									toolStyle={apiConfiguration.toolStyle}
-									onChange={(field, value) => setApiConfigurationField(field, value)}
-								/>
-							)
-							// kilocode_change end
-						}
-						<DiffSettingsControl
+						{/* <DiffSettingsControl
 							diffEnabled={apiConfiguration.diffEnabled}
 							fuzzyMatchThreshold={apiConfiguration.fuzzyMatchThreshold}
 							onChange={(field, value) => setApiConfigurationField(field, value)}
@@ -495,7 +474,7 @@ const ApiOptions = ({
 									: DEFAULT_CONSECUTIVE_MISTAKE_LIMIT
 							}
 							onChange={(value) => setApiConfigurationField("consecutiveMistakeLimit", value)}
-						/>
+						/> */}
 						{/* kilocode_change start
 						selectedProvider === "openrouter" &&
 							openRouterModelProviders &&

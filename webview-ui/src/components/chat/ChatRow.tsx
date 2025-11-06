@@ -57,7 +57,7 @@ import {
 	Eye,
 	FileDiff,
 	ListTree,
-	User,
+	// User,
 	Edit,
 	Trash2,
 	MessageCircleQuestionMark,
@@ -66,7 +66,7 @@ import {
 	PocketKnife,
 	FolderTree,
 	TerminalSquare,
-	MessageCircle,
+	// MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
@@ -1166,11 +1166,11 @@ export const ChatRowContent = ({
 				case "text":
 					return (
 						<div>
-							<div style={headerStyle}>
+							{/* <div style={headerStyle}>
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
-							</div>
-							<div className="pl-6">
+							</div> */}
+							<div className="">
 								<Markdown markdown={message.text} partial={message.partial} />
 								{message.images && message.images.length > 0 && (
 									<div style={{ marginTop: "10px" }}>
@@ -1185,17 +1185,15 @@ export const ChatRowContent = ({
 				case "user_feedback":
 					return (
 						<div className="group">
-							<div style={headerStyle}>
+							{/* <div style={headerStyle}>
 								<User className="w-4 shrink-0" aria-label="User icon" />
 								<span style={{ fontWeight: "bold" }}>{t("chat:feedback.youSaid")}</span>
-							</div>
+							</div> */}
 							<div
 								className={cn(
-									"ml-6 border rounded-sm whitespace-pre-wrap",
+									"border rounded-lg whitespace-pre-wrap",
 									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
-									isEditing
-										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
+									isEditing ? "text-vscode-editor-foreground" : "cursor-text p-1",
 								)}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
