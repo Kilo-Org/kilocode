@@ -14,11 +14,11 @@ import { renderPromptWithTokenLimit } from "./templating/index.js"
 import { GetLspDefinitionsFunction } from "./types.js"
 import { AutocompleteDebouncer } from "./util/AutocompleteDebouncer.js"
 import { AutocompleteLoggingService } from "./util/AutocompleteLoggingService.js"
-import { AutocompleteLruCache } from "./util/AutocompleteLruCache.js"
+import { AutoCompleteLruCacheInMem } from "./util/AutoCompleteLruCacheInMem.js"
 import { HelperVars } from "./util/HelperVars.js"
 import { AutocompleteInput, AutocompleteOutcome } from "./util/types.js"
 
-const autocompleteCache = AutocompleteLruCache.get()
+const autocompleteCache = AutoCompleteLruCacheInMem.get()
 
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
@@ -29,7 +29,7 @@ const ERRORS_TO_IGNORE = [
 ]
 
 export class CompletionProvider {
-	private autocompleteCache = AutocompleteLruCache.get()
+	private autocompleteCache = AutoCompleteLruCacheInMem.get()
 	public errorsShown: Set<string> = new Set()
 	private bracketMatchingService = new BracketMatchingService()
 	private debouncer = new AutocompleteDebouncer()
