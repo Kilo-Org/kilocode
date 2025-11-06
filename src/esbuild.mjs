@@ -110,42 +110,51 @@ async function main() {
 						console.warn(`[${name}] sqlite source not found at: ${sqliteSource}`)
 					}
 
-					// Copy bindings package (required by sqlite3)
-					// Find bindings package dynamically to avoid hardcoding version
-					let bindingsSource = null
-					try {
-						const require = createRequire(import.meta.url)
-						const bindingsModulePath = require.resolve("bindings/package.json")
-						bindingsSource = path.dirname(bindingsModulePath)
-					} catch (err) {
-						// Fallback: try to find it in pnpm structure by searching for bindings directories
-						const pnpmDir = path.join(srcDir, "../node_modules/.pnpm")
-						if (fs.existsSync(pnpmDir)) {
-							const entries = fs.readdirSync(pnpmDir)
-							for (const entry of entries) {
-								if (entry.startsWith("bindings@")) {
-									const bindingsPath = path.join(pnpmDir, entry, "node_modules/bindings")
-									if (fs.existsSync(bindingsPath)) {
-										bindingsSource = bindingsPath
-										break
+					// Helper function to find and copy a package
+					const copyPackage = (packageName) => {
+						let packageSource = null
+						try {
+							const require = createRequire(import.meta.url)
+							const packagePath = require.resolve(`${packageName}/package.json`)
+							packageSource = path.dirname(packagePath)
+						} catch (err) {
+							// Fallback: try to find it in pnpm structure
+							const pnpmDir = path.join(srcDir, "../node_modules/.pnpm")
+							if (fs.existsSync(pnpmDir)) {
+								const entries = fs.readdirSync(pnpmDir)
+								for (const entry of entries) {
+									if (entry.startsWith(`${packageName}@`)) {
+										const packagePath = path.join(pnpmDir, entry, "node_modules", packageName)
+										if (fs.existsSync(packagePath)) {
+											packageSource = packagePath
+											break
+										}
 									}
 								}
 							}
 						}
-					}
 
-					const bindingsDest = path.join(distDir, "node_modules/bindings")
-
-					if (bindingsSource && fs.existsSync(bindingsSource)) {
-						try {
-							fs.cpSync(bindingsSource, bindingsDest, { recursive: true })
-							console.log(`[${name}] Copied bindings package to dist/node_modules/bindings`)
-						} catch (err) {
-							console.error(`[${name}] Failed to copy bindings package:`, err)
+						if (packageSource && fs.existsSync(packageSource)) {
+							const packageDest = path.join(distDir, "node_modules", packageName)
+							try {
+								fs.cpSync(packageSource, packageDest, { recursive: true })
+								console.log(`[${name}] Copied ${packageName} package to dist/node_modules/${packageName}`)
+								return true
+							} catch (err) {
+								console.error(`[${name}] Failed to copy ${packageName} package:`, err)
+								return false
+							}
+						} else {
+							console.warn(`[${name}] ${packageName} source not found`)
+							return false
 						}
-					} else {
-						console.warn(`[${name}] bindings source not found`)
 					}
+
+					// Copy bindings package (required by sqlite3)
+					copyPackage("bindings")
+
+					// Copy file-uri-to-path (required by bindings)
+					copyPackage("file-uri-to-path")
 
 					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
 					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")
