@@ -35,7 +35,37 @@ export class AutoCompleteLruCacheInMem {
 
 	async get(prefix: string): Promise<string | undefined> {
 		const truncated = truncatePrefix(prefix)
-		return this.cache.get(truncated)
+
+		// First try exact match (faster)
+		const exactMatch = this.cache.get(truncated)
+		if (exactMatch !== undefined) {
+			return exactMatch
+		}
+
+		// Then try fuzzy matching - find keys where prefix starts with the key
+		// If the query is "co" and we have "c" -> "ontinue" in the cache,
+		// we should return "ntinue" as the completion.
+		// Have to make sure we take the key with shortest length
+		let bestMatch: { key: string; value: string } | null = null
+		let longestKeyLength = 0
+
+		for (const [key, value] of this.cache.entries()) {
+			// Check if truncated prefix starts with this key
+			if (truncated.startsWith(key) && key.length > longestKeyLength) {
+				bestMatch = { key, value }
+				longestKeyLength = key.length
+			}
+		}
+
+		if (bestMatch) {
+			// Validate that the cached completion is a valid completion for the prefix
+			if (bestMatch.value.startsWith(truncated.slice(bestMatch.key.length))) {
+				// Return the portion of the value that extends beyond the current prefix
+				return bestMatch.value.slice(truncated.length - bestMatch.key.length)
+			}
+		}
+
+		return undefined
 	}
 
 	async put(prefix: string, completion: string) {

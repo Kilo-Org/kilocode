@@ -56,6 +56,69 @@ describe("AutoCompleteLruCacheInMem", () => {
 		})
 	})
 
+	describe("fuzzy matching", () => {
+		it("should return completion when prefix extends a cached key", async () => {
+			// Cache "c" -> "ontinue"
+			await cache.put("c", "ontinue")
+			// Query "co" should return "ntinue" (completion minus what we already have)
+			const result = await cache.get("co")
+			expect(result).toBe("ntinue")
+		})
+
+		it("should prefer longest matching key", async () => {
+			// Cache multiple overlapping keys
+			await cache.put("h", "ello world")
+			await cache.put("he", "llo world")
+			await cache.put("hel", "lo world")
+
+			// Query "hello" should match "hel" (longest key)
+			// User typed "hello" = "hel" + "lo", cached completion is "lo world"
+			// So return " world" (the part not yet typed)
+			const result = await cache.get("hello")
+			expect(result).toBe(" world")
+		})
+
+		it("should validate cached completion starts correctly", async () => {
+			// Cache "c" -> "ontinue"
+			await cache.put("c", "ontinue")
+			// Query "cx" doesn't match the completion pattern, should return undefined
+			const result = await cache.get("cx")
+			expect(result).toBeUndefined()
+		})
+
+		it("should return exact match if available", async () => {
+			// Cache both exact and partial keys
+			await cache.put("co", "mplete")
+			await cache.put("c", "ontinue")
+
+			// Exact match should be preferred
+			const result = await cache.get("co")
+			expect(result).toBe("mplete")
+		})
+
+		it("should handle multiple partial matches correctly", async () => {
+			// Cache overlapping prefixes
+			await cache.put("fun", "ction")
+			await cache.put("f", "unction")
+
+			// Query "func" should match "fun" (longest) and return "ction"
+			const result = await cache.get("func")
+			expect(result).toBe("tion")
+		})
+
+		it("should return undefined when no fuzzy match exists", async () => {
+			await cache.put("hello", "world")
+			// "goodbye" doesn't start with "hello"
+			const result = await cache.get("goodbye")
+			expect(result).toBeUndefined()
+		})
+
+		it("should handle empty cache for fuzzy matching", async () => {
+			const result = await cache.get("anyprefix")
+			expect(result).toBeUndefined()
+		})
+	})
+
 	describe("LRU eviction", () => {
 		it("should evict oldest entry when capacity is reached", async () => {
 			// Create a fresh cache for this test
