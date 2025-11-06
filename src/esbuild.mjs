@@ -29,6 +29,9 @@ async function main() {
 		format: "cjs",
 		sourcesContent: false,
 		platform: "node",
+		loader: {
+			".node": "file",
+		},
 	}
 
 	const srcDir = __dirname
@@ -66,6 +69,46 @@ async function main() {
 
 					// Copy tree-sitter files to dist directory
 					copyPaths([["services/continuedev/tree-sitter", "tree-sitter"]], srcDir, distDir)
+
+					// Copy sqlite3 and sqlite native bindings to dist directory
+					// This is necessary because they are marked as external in esbuild
+					// and contain platform-specific .node binaries that must be included
+					const sqlite3Source = path.join(
+						srcDir,
+						"../node_modules/.pnpm/sqlite3@5.1.7/node_modules/sqlite3",
+					)
+					const sqlite3Dest = path.join(distDir, "node_modules/sqlite3")
+
+					const sqliteSource = path.join(
+						srcDir,
+						"../node_modules/.pnpm/sqlite@5.1.1/node_modules/sqlite",
+					)
+					const sqliteDest = path.join(distDir, "node_modules/sqlite")
+
+					if (fs.existsSync(sqlite3Source)) {
+						try {
+							// Copy the entire sqlite3 module to preserve directory structure
+							// This includes build/Release/node_sqlite3.node and package.json
+							fs.cpSync(sqlite3Source, sqlite3Dest, { recursive: true })
+							console.log(`[${name}] Copied sqlite3 bindings to dist/node_modules/sqlite3`)
+						} catch (err) {
+							console.error(`[${name}] Failed to copy sqlite3 bindings:`, err)
+						}
+					} else {
+						console.warn(`[${name}] sqlite3 source not found at: ${sqlite3Source}`)
+					}
+
+					if (fs.existsSync(sqliteSource)) {
+						try {
+							// Copy the sqlite wrapper module
+							fs.cpSync(sqliteSource, sqliteDest, { recursive: true })
+							console.log(`[${name}] Copied sqlite wrapper to dist/node_modules/sqlite`)
+						} catch (err) {
+							console.error(`[${name}] Failed to copy sqlite wrapper:`, err)
+						}
+					} else {
+						console.warn(`[${name}] sqlite source not found at: ${sqliteSource}`)
+					}
 
 					// Copy JSDOM xhr-sync-worker.js to fix runtime resolution
 					const jsdomWorkerDest = path.join(distDir, "xhr-sync-worker.js")

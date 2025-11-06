@@ -13,6 +13,10 @@
 # Include the built extension
 !dist
 
+# Include sqlite3 and sqlite native bindings
+!dist/node_modules/sqlite3/**
+!dist/node_modules/sqlite/**
+
 # Include the built webview
 !**/*.map
 !webview-ui/audio
