@@ -75,7 +75,7 @@ export const GhostServiceSettingsView = ({
 					<Bot className="w-4" />
 					<div>{t("kilocode:ghost.title")}</div>
 				</div>
-				IK BEN MARK 2
+				IK BEN MARK 3
 			</SectionHeader>
 
 			<Section className="flex flex-col gap-5">
