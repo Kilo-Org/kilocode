@@ -72,7 +72,7 @@ export const KiloModeSelector = ({
 					value: mode.slug,
 					label: mode.name,
 					codicon: mode.iconName || "codicon-organization",
-					description: mode.description,
+					// description: mode.description,
 					type: DropdownOptionType.ITEM,
 				})),
 			)
@@ -89,23 +89,23 @@ export const KiloModeSelector = ({
 				value: mode.slug,
 				label: mode.name,
 				codicon: mode.iconName,
-				description: mode.description,
+				// description: mode.description,
 				type: DropdownOptionType.ITEM,
 			})),
 		)
 
-		opts.push(
-			{
-				value: "sep-1",
-				label: t("chat:separator"),
-				type: DropdownOptionType.SEPARATOR,
-			},
-			{
-				value: "promptsButtonClicked",
-				label: t("chat:edit"),
-				type: DropdownOptionType.ACTION,
-			},
-		)
+		// opts.push(
+		// 	{
+		// 		value: "sep-1",
+		// 		label: t("chat:separator"),
+		// 		type: DropdownOptionType.SEPARATOR,
+		// 	},
+		// 	{
+		// 		value: "promptsButtonClicked",
+		// 		label: t("chat:edit"),
+		// 		type: DropdownOptionType.ACTION,
+		// 	},
+		// )
 
 		return opts
 	}, [organizationModes, otherModes, modeShortcutText, t])

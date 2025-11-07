@@ -190,14 +190,14 @@ export const ModeSelector = ({
 	// const instructionText = `${t("chat:modeSelector.description")} ${modeShortcutText}`
 
 	return (
-		<Popover open={open} onOpenChange={onOpenChange} data-testid="mode-selector-root">
+		<Popover open={open} onOpenChange={onOpenChange} data-testid="mode-selector-root outline-none">
 			<StandardTooltip content={title}>
 				<PopoverTrigger
 					disabled={disabled}
 					data-testid="mode-selector-trigger"
 					className={cn(
-						"inline-flex items-center relative whitespace-nowrap px-1.5 py-1 text-xs",
-						"bg-transparent border border-[rgba(255,255,255,0.08)] rounded-md text-vscode-foreground",
+						"inline-flex items-center relative whitespace-nowrap px-1.5 py-1 text-xs outline-none",
+						"bg-transparent border border-[rgba(255,255,255,0.08)] rounded-xl text-vscode-foreground",
 						"transition-all duration-150 focus:outline-none focus-visible:ring-1 focus-visible:ring-vscode-focusBorder focus-visible:ring-inset",
 						disabled
 							? "opacity-50 cursor-not-allowed"

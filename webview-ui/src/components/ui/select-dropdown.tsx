@@ -1,14 +1,12 @@
-import * as React from "react"
 import { CaretUpIcon } from "@radix-ui/react-icons"
-import { Check, X } from "lucide-react"
 import { Fzf } from "fzf"
-import { useTranslation } from "react-i18next"
+import { Check } from "lucide-react"
+import * as React from "react"
 
+import { Popover, PopoverContent, PopoverTrigger, StandardTooltip } from "@/components/ui"
 import { cn } from "@/lib/utils"
-import { useRooPortal } from "./hooks/useRooPortal"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui"
-import { StandardTooltip } from "@/components/ui"
 import { IconProps } from "@radix-ui/react-icons/dist/types" // kilocode_change
+import { useRooPortal } from "./hooks/useRooPortal"
 
 export enum DropdownOptionType {
 	ITEM = "item",
@@ -69,10 +67,10 @@ export const SelectDropdown = React.memo(
 			},
 			ref,
 		) => {
-			const { t } = useTranslation()
+			// const { t } = useTranslation()
 			const [open, setOpen] = React.useState(initiallyOpen) // kilocode_change
 			const [searchValue, setSearchValue] = React.useState("")
-			const searchInputRef = React.useRef<HTMLInputElement>(null)
+			// const searchInputRef = React.useRef<HTMLInputElement>(null)
 			const portalContainer = useRooPortal("roo-portal")
 
 			// kilocode_change start
@@ -102,11 +100,11 @@ export const SelectDropdown = React.memo(
 				}
 			}, [])
 
-			// Clear search and focus input
-			const onClearSearch = React.useCallback(() => {
-				setSearchValue("")
-				searchInputRef.current?.focus()
-			}, [])
+			// // Clear search and focus input
+			// const onClearSearch = React.useCallback(() => {
+			// 	setSearchValue("")
+			// 	searchInputRef.current?.focus()
+			// }, [])
 
 			// Filter options based on search value using Fzf for fuzzy search
 			// Memoize searchable items to avoid recreating them on every search
@@ -238,7 +236,7 @@ export const SelectDropdown = React.memo(
 						className={cn("p-0 overflow-hidden", contentClassName)}>
 						<div className="flex flex-col w-full">
 							{/* Search input */}
-							{!disableSearch && (
+							{/* {!disableSearch && (
 								<div className="relative p-2 border-b border-vscode-dropdown-border">
 									<input
 										aria-label="Search"
@@ -257,7 +255,7 @@ export const SelectDropdown = React.memo(
 										</div>
 									)}
 								</div>
-							)}
+							)} */}
 
 							{/* Dropdown items - Use windowing for large lists */}
 							{/* kilocode_change: different max height: max-h-82 */}

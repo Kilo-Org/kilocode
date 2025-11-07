@@ -1506,6 +1506,10 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									"mb-2",
 									"filter",
 									"drop-shadow-md",
+									"rounded-xl",
+									"border",
+									"border-white/20",
+									"outline-none",
 								)}>
 								<ContextMenu
 									onSelect={handleMentionSelect}

@@ -287,11 +287,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 				ref={menuRef}
 				style={{
 					backgroundColor: "var(--vscode-dropdown-background)",
+					borderRadius: "12px",
 					border: "1px solid var(--vscode-editorGroup-border)",
-					borderRadius: "3px",
+					outline: "none",
 					boxShadow: "0 4px 10px rgba(0, 0, 0, 0.25)",
 					zIndex: 1000,
 					display: "flex",
+					padding: "4px",
 					flexDirection: "column",
 					maxHeight: "300px",
 					overflowY: "auto",
