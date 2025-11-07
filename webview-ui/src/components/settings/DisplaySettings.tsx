@@ -16,7 +16,6 @@ type DisplaySettingsProps = HTMLAttributes<HTMLDivElement> & {
 	showTaskTimeline?: boolean
 	sendMessageOnEnter?: boolean // kilocode_change
 	showTimestamps?: boolean
-	ghostServiceSettings?: any
 	reasoningBlockCollapsed: boolean
 	setCachedStateField: SetCachedStateField<
 		| "showTaskTimeline"
@@ -33,7 +32,6 @@ export const DisplaySettings = ({
 	showTaskTimeline,
 	showTimestamps,
 	sendMessageOnEnter,
-	ghostServiceSettings,
 	setCachedStateField,
 	reasoningBlockCollapsed,
 	hideCostBelowThreshold,

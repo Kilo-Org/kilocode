@@ -512,10 +512,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 function makeOpenRouterErrorReadable(error: any) {
 	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
 	const parsedJson = safeJsonParse(metadata?.raw)
-	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+	const rawError = parsedJson as
+		| { error?: string & { message?: string }; detail?: string; message?: string }
+		| undefined
 
 	if (error?.code !== 429 && error?.code !== 418) {
-		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		const errorMessage =
+			rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? rawError?.message ?? error?.message
 		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 
