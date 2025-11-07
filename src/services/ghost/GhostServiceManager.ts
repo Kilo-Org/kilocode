@@ -47,7 +47,7 @@ export class GhostServiceManager {
 
 		// Register Internal Components
 		this.documentStore = new GhostDocumentStore()
-		this.providerSettingsManager = new ProviderSettingsManager(context)
+		this.providerSettingsManager = cline.providerSettingsManager
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 
