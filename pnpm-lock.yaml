@@ -1328,6 +1328,9 @@ importers:
       p-all:
         specifier: ^1.0.0
         version: 1.0.0
+      patch-package:
+        specifier: ^8.0.0
+        version: 8.0.1
       path-browserify:
         specifier: ^1.0.1
         version: 1.0.1
@@ -8197,6 +8200,9 @@ packages:
   '@xtuc/long@4.2.2':
     resolution: {integrity: sha512-NuHqBY1PB/D8xU6s/thBgOAiAP7HOYDQ32+BFZILJ8ivkUkAHQnWfn6WhL79Owj1qmUnoN/YPhktdIoucipkAQ==}
 
+  '@yarnpkg/lockfile@1.1.0':
+    resolution: {integrity: sha512-GpSwvyXOcOOlV70vbnzjj4fW5xW/FdUF6nQEt1ENy7m4ZCczi1+/buVUPAqmGfqznsORNFzUMjctTIp8a9tuCQ==}
+
   abab@2.0.6:
     resolution: {integrity: sha512-j2afSsaIENvHZN2B8GOpF566vZ5WVk5opAiMTvWgaQT8DkbOqsTfvNAvHoRGU2zzP8cPoqys+xHTRDWW8L+/BA==}
     deprecated: Use your platform's native atob() and btoa() methods instead
@@ -11309,6 +11315,9 @@ packages:
     resolution: {integrity: sha512-YyZM99iHrqLKjmt4LJDj58KI+fYyufRLBSYcqycxf//KpBk9FoewoGX0450m9nB44qrZnovzC2oeP5hUibxc/g==}
     engines: {node: '>=18'}
 
+  find-yarn-workspace-root@2.0.0:
+    resolution: {integrity: sha512-1IMnbjt4KzsQfnhnzNd8wUEgXZ44IzZaZmnLYx7D5FZlaHt2gW20Cri8Q+E/t5tIj4+epTBub+2Zxu/vNILzqQ==}
+
   findup-sync@2.0.0:
     resolution: {integrity: sha512-vs+3unmJT45eczmcAZ6zMJtxN3l/QXeccaXQx5cu/MeJMhewVfoWZqibRkOxPnmoR59+Zy5hjabfQc6JLSah4g==}
     engines: {node: '>= 0.10'}
@@ -13209,6 +13218,10 @@ packages:
   json-stable-stringify-without-jsonify@1.0.1:
     resolution: {integrity: sha512-Bdboy+l7tA3OGW6FjyFHWkP5LuByj1Tk33Ljyq0axyzdk9//JSi2u3fP1QSmd1KNwq6VOKYGlAu87CisVir6Pw==}
 
+  json-stable-stringify@1.3.0:
+    resolution: {integrity: sha512-qtYiSSFlwot9XHtF9bD9c7rwKjr+RecWT//ZnPvSmEjpV5mmPOCN4j8UjY5hbjNkOwZ/jQv3J6R1/pL7RwgMsg==}
+    engines: {node: '>= 0.4'}
+
   json-stringify-safe@5.0.1:
     resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
 
@@ -13225,6 +13238,9 @@ packages:
 
   jsonfile@6.2.0:
     resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
+
+  jsonify@0.0.1:
+    resolution: {integrity: sha512-2/Ki0GcmuqSrgFyelQq9M05y7PS0mEwuIzrf3f1fPqkVDVRvZrPZtVSMHxdgo8Aq0sxAOb/cr2aqqA3LeWHVPg==}
 
   jsonschema@1.5.0:
     resolution: {integrity: sha512-K+A9hhqbn0f3pJX17Q/7H6yQfD/5OXgdrR5UE12gMXCiN9D5Xq2o5mddV2QEcX/bjla99ASsAAQUyMCCRWAEhw==}
@@ -14852,6 +14868,10 @@ packages:
     resolution: {integrity: sha512-cxN6aIDPz6rm8hbebcP7vrQNhvRcveZoJU72Y7vskh4oIm+BZwBECnx5nTmrlres1Qapvx27Qo1Auukpf8PKXw==}
     engines: {node: '>=18'}
 
+  open@7.4.2:
+    resolution: {integrity: sha512-MVHddDVweXZF3awtlAS+6pgKLlm/JgxZ90+/NBurBoQctVOOB/zDdVjcyPzQ+0laDGbsWgrRkflI65sQeOgT9Q==}
+    engines: {node: '>=8'}
+
   open@8.4.2:
     resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
@@ -15169,6 +15189,11 @@ packages:
   patch-console@2.0.0:
     resolution: {integrity: sha512-0YNdUceMdaQwoKce1gatDScmMo5pu/tfABfnzEqeG0gtTmd7mh/WcwgUjtAeOU7N8nFFlbQBnFK2gXW5fGvmMA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  patch-package@8.0.1:
+    resolution: {integrity: sha512-VsKRIA8f5uqHQ7NGhwIna6Bx6D9s/1iXlA1hthBVBEbkq+t4kXD0HHt+rJhf/Z+Ci0F/HCB2hvn0qLdLG+Qxlw==}
+    engines: {node: '>=14', npm: '>5'}
+    hasBin: true
 
   path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
@@ -17124,6 +17149,10 @@ packages:
   skin-tone@2.0.0:
     resolution: {integrity: sha512-kUMbT1oBJCpgrnKoSr0o6wPtvRWT9W9UKvGLwfJYO2WuahZRHOpEyL1ckyMGgMWh0UdpmaoFqKKD29WTomNEGA==}
     engines: {node: '>=8'}
+
+  slash@2.0.0:
+    resolution: {integrity: sha512-ZYKh3Wh2z1PpEXWr0MpSBZ0V6mZHAQfYevttO11c51CaWjGTaadiKZ+wVt1PbMlDV5qhMFslpZCemhwOK7C89A==}
+    engines: {node: '>=6'}
 
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
@@ -27317,6 +27346,8 @@ snapshots:
 
   '@xtuc/long@4.2.2': {}
 
+  '@yarnpkg/lockfile@1.1.0': {}
+
   abab@2.0.6: {}
 
   abbrev@1.1.1:
@@ -30888,6 +30919,10 @@ snapshots:
       path-exists: 5.0.0
       unicorn-magic: 0.1.0
 
+  find-yarn-workspace-root@2.0.0:
+    dependencies:
+      micromatch: 4.0.8
+
   findup-sync@2.0.0:
     dependencies:
       detect-file: 1.0.0
@@ -33363,6 +33398,14 @@ snapshots:
 
   json-stable-stringify-without-jsonify@1.0.1: {}
 
+  json-stable-stringify@1.3.0:
+    dependencies:
+      call-bind: 1.0.8
+      call-bound: 1.0.4
+      isarray: 2.0.5
+      jsonify: 0.0.1
+      object-keys: 1.1.1
+
   json-stringify-safe@5.0.1: {}
 
   json5@2.2.3: {}
@@ -33378,6 +33421,8 @@ snapshots:
       universalify: 2.0.1
     optionalDependencies:
       graceful-fs: 4.2.11
+
+  jsonify@0.0.1: {}
 
   jsonschema@1.5.0: {}
 
@@ -35522,6 +35567,11 @@ snapshots:
       is-inside-container: 1.0.0
       is-wsl: 3.1.0
 
+  open@7.4.2:
+    dependencies:
+      is-docker: 2.2.1
+      is-wsl: 2.2.0
+
   open@8.4.2:
     dependencies:
       define-lazy-prop: 2.0.0
@@ -35880,6 +35930,23 @@ snapshots:
   pascalcase@0.1.1: {}
 
   patch-console@2.0.0: {}
+
+  patch-package@8.0.1:
+    dependencies:
+      '@yarnpkg/lockfile': 1.1.0
+      chalk: 4.1.2
+      ci-info: 3.9.0
+      cross-spawn: 7.0.6
+      find-yarn-workspace-root: 2.0.0
+      fs-extra: 10.1.0
+      json-stable-stringify: 1.3.0
+      klaw-sync: 6.0.0
+      minimist: 1.2.8
+      open: 7.4.2
+      semver: 7.7.3
+      slash: 2.0.0
+      tmp: 0.2.4
+      yaml: 2.8.0
 
   path-browserify@1.0.1: {}
 
@@ -38211,6 +38278,8 @@ snapshots:
   skin-tone@2.0.0:
     dependencies:
       unicode-emoji-modifier-base: 1.0.0
+
+  slash@2.0.0: {}
 
   slash@3.0.0: {}
 
