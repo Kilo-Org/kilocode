@@ -1,19 +1,17 @@
 import { LLMClient } from "./llm-client.js"
-import { AutoTriggerStrategy } from "../services/ghost/classic-auto-complete/AutoTriggerStrategy.js"
+import { HoleFiller, CURSOR_MARKER, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
-import { CURSOR_MARKER } from "../services/ghost/classic-auto-complete/ghostConstants.js"
-import { parseGhostResponse } from "../services/ghost/classic-auto-complete/GhostStreamingParser.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
 
 export class StrategyTester {
 	private llmClient: LLMClient
-	private autoTriggerStrategy: AutoTriggerStrategy
+	private holeFiller: HoleFiller
 
 	constructor(llmClient: LLMClient) {
 		this.llmClient = llmClient
-		this.autoTriggerStrategy = new AutoTriggerStrategy()
+		this.holeFiller = new HoleFiller()
 	}
 
 	/**
@@ -126,12 +124,7 @@ export class StrategyTester {
 			recentlyEditedRanges: [],
 		}
 
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
-			autocompleteInput,
-			prefix,
-			suffix,
-			languageId,
-		)
+		const { systemPrompt, userPrompt } = this.holeFiller.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 

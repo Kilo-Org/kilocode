@@ -4,7 +4,7 @@ import {
 	findMatchingSuggestion,
 	CostTrackingCallback,
 } from "../GhostInlineCompletionProvider"
-import { FillInAtCursorSuggestion } from "../GhostSuggestions"
+import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
 import { GhostContext } from "../../GhostContext"

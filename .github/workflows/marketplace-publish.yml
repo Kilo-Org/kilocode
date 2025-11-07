@@ -1,5 +1,7 @@
 name: Publish Extension
 on:
+    pull_request:
+        types: [closed]
     workflow_dispatch:
 
 env:
@@ -14,6 +16,11 @@ jobs:
         runs-on: ubuntu-latest
         permissions:
             contents: write # Required for pushing tags.
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -103,6 +110,11 @@ jobs:
     publish-jetbrains:
         needs: publish-extension
         runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -165,11 +177,11 @@ jobs:
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
             - name: JetBrains Marketplace Publisher
               run: |
-                  curl \
-                  -X POST \
-                  -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
-                  -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
-                  -F "pluginId=28350" \
-                  -F "channel=stable" \
-                  -F "isHidden=false" \
-                  https://plugins.jetbrains.com/plugin/uploadPlugin
+                 curl \
+                 -X POST \
+                 -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
+                 -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
+                 -F "pluginId=28350" \
+                 -F "channel=stable" \
+                 -F "isHidden=false" \
+                 https://plugins.jetbrains.com/plugin/uploadPlugin

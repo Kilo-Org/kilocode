@@ -3,11 +3,17 @@
  * Updated to use useCommandInput, useWebviewMessage, useApprovalHandler, and useFollowupSuggestions hooks
  */
 
-import React, { useEffect } from "react"
+import React, { useCallback, useEffect } from "react"
 import { Box, Text } from "ink"
 import { useSetAtom, useAtomValue, useAtom } from "jotai"
 import { submissionCallbackAtom } from "../../state/atoms/keyboard.js"
-import { selectedIndexAtom, isCommittingParallelModeAtom, commitCountdownSecondsAtom } from "../../state/atoms/ui.js"
+import {
+	selectedIndexAtom,
+	inputModeAtom,
+	isCommittingParallelModeAtom,
+	commitCountdownSecondsAtom,
+} from "../../state/atoms/ui.js"
+import { shellModeActiveAtom, executeShellCommandAtom } from "../../state/atoms/keyboard.js"
 import { MultilineTextInput } from "./MultilineTextInput.js"
 import { useCommandInput } from "../../state/hooks/useCommandInput.js"
 import { useApprovalHandler } from "../../state/hooks/useApprovalHandler.js"
@@ -31,6 +37,11 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 }) => {
 	// Get theme colors
 	const theme = useTheme()
+
+	// Get shell mode state
+	const isShellModeActive = useAtomValue(shellModeActiveAtom)
+	const inputMode = useAtomValue(inputModeAtom)
+	const executeShellCommand = useSetAtom(executeShellCommandAtom)
 
 	// Use the command input hook for autocomplete functionality
 	const { isAutocompleteVisible, commandSuggestions, argumentSuggestions, fileMentionSuggestions } = useCommandInput()
@@ -71,11 +82,6 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 		return () => clearInterval(interval)
 	}, [isCommittingParallelMode, setCountdownSeconds, resetCountdownSeconds])
 
-	// Set the submission callback so keyboard handler can trigger onSubmit
-	useEffect(() => {
-		setSubmissionCallback({ callback: onSubmit })
-	}, [onSubmit, setSubmissionCallback])
-
 	// Determine suggestion type for autocomplete menu
 	const suggestionType =
 		fileMentionSuggestions.length > 0
@@ -89,43 +95,72 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 	// Determine if input should be disabled (during approval, when explicitly disabled, or when committing parallel mode)
 	const isInputDisabled = disabled || isApprovalPending || isCommittingParallelMode
 
+	// Enhanced submission handler for shell mode
+	const handleSubmit = useCallback(
+		(value: string) => {
+			if (isShellModeActive) {
+				// Execute as shell command
+				executeShellCommand(value)
+			} else {
+				// Normal submission
+				onSubmit(value)
+			}
+		},
+		[isShellModeActive, executeShellCommand, onSubmit],
+	)
+
+	// Set the submission callback so keyboard handler can trigger onSubmit
+	useEffect(() => {
+		setSubmissionCallback({ callback: handleSubmit })
+	}, [handleSubmit, setSubmissionCallback])
+
+	// Determine styling based on mode (priority: parallel mode > shell mode > approval > normal)
+	const isShellMode = inputMode === "shell"
+	const borderColor = isCommittingParallelMode
+		? theme.ui.border.active
+		: isShellMode
+			? theme.semantic.warning
+			: isApprovalPending
+				? theme.actions.pending
+				: theme.ui.border.active
+	const promptColor = isCommittingParallelMode
+		? theme.ui.border.active
+		: isShellMode
+			? theme.semantic.warning
+			: isApprovalPending
+				? theme.actions.pending
+				: theme.ui.border.active
+	const promptSymbol = isCommittingParallelMode ? "⏳ " : isShellMode ? "$ " : isApprovalPending ? "[!] " : "> "
+	const inputPlaceholder = isCommittingParallelMode
+		? `Committing your changes... (${countdownSeconds}s)`
+		: isShellMode
+			? "Type shell command..."
+			: isApprovalPending
+				? "Awaiting approval..."
+				: placeholder
+
 	return (
 		<Box flexDirection="column">
 			{/* Input field */}
-			<Box
-				borderStyle="round"
-				borderColor={
-					isCommittingParallelMode
-						? theme.ui.border.active
-						: isApprovalPending
-							? theme.actions.pending
-							: theme.ui.border.active
-				}
-				paddingX={1}>
-				<Text
-					color={
-						isCommittingParallelMode
-							? theme.ui.border.active
-							: isApprovalPending
-								? theme.actions.pending
-								: theme.ui.border.active
-					}
-					bold>
-					{isCommittingParallelMode ? "⏳ " : isApprovalPending ? "[!] " : "> "}
-				</Text>
-				<MultilineTextInput
-					placeholder={
-						isCommittingParallelMode
-							? `Committing your changes... (${countdownSeconds}s)`
-							: isApprovalPending
-								? "Awaiting approval..."
-								: placeholder
-					}
-					showCursor={!isInputDisabled}
-					maxLines={5}
-					width={Math.max(10, process.stdout.columns - 6)}
-					focus={!isInputDisabled}
-				/>
+			<Box borderStyle="round" borderColor={borderColor} paddingX={1}>
+				<Box flexDirection="row" alignItems="center">
+					<Text color={promptColor} bold>
+						{isShellMode && !isCommittingParallelMode && (
+							<>
+								<Text color={promptColor}>shell</Text>
+								<Text> </Text>
+							</>
+						)}
+						{promptSymbol}
+					</Text>
+					<MultilineTextInput
+						placeholder={inputPlaceholder}
+						showCursor={!isInputDisabled}
+						maxLines={5}
+						width={Math.max(10, isShellMode ? process.stdout.columns - 12 : process.stdout.columns - 6)}
+						focus={!isInputDisabled}
+					/>
+				</Box>
 			</Box>
 
 			{/* Approval menu - shown above input when approval is pending */}

@@ -244,6 +244,14 @@ This instructs the AI to proceed without user input.
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
 
+## Environment Variable Overrides
+
+The CLI supports overriding config values with environment variables. The supported environment variables are:
+
+- `KILO_PROVIDER`: Override the active provider ID
+- For `kilocode` provider: `KILOCODE_<FIELD_NAME>` (e.g., `KILOCODE_MODEL` → `kilocodeModel`)
+- For other providers: `KILO_<FIELD_NAME>` (e.g., `KILO_API_KEY` → `apiKey`)
+
 ## Local Development
 
 ### DevTools
@@ -256,5 +264,4 @@ Use the `/teams` command to see a list of all organizations you can switch into.
 
 Use `/teams select` and start typing the team name to switch teams.
 
-The process is the same when switching into a Team or Enterprise organization.
 The process is the same when switching into a Team or Enterprise organization.

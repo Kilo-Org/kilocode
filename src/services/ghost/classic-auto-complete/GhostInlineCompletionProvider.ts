@@ -1,8 +1,6 @@
 import * as vscode from "vscode"
-import { FillInAtCursorSuggestion } from "./GhostSuggestions"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
-import { parseGhostResponse } from "./GhostStreamingParser"
-import { AutoTriggerStrategy } from "./AutoTriggerStrategy"
+import { parseGhostResponse, HoleFiller, FillInAtCursorSuggestion } from "./HoleFiller"
 import { GhostModel } from "../GhostModel"
 import { GhostContext } from "../GhostContext"
 import { ApiStreamChunk } from "../../../api/transform/stream"
@@ -72,7 +70,7 @@ export interface LLMRetrievalResult {
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
-	private autoTriggerStrategy: AutoTriggerStrategy
+	private holeFiller: HoleFiller
 	private isRequestCancelled: boolean = false
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
@@ -89,7 +87,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.costTrackingCallback = costTrackingCallback
 		this.ghostContext = ghostContext
 		this.getSettings = getSettings
-		this.autoTriggerStrategy = new AutoTriggerStrategy()
+		this.holeFiller = new HoleFiller()
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -142,12 +140,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			}
 		}
 
-		const { systemPrompt, userPrompt } = this.autoTriggerStrategy.getPrompts(
-			autocompleteInput,
-			prefix,
-			suffix,
-			languageId,
-		)
+		const { systemPrompt, userPrompt } = this.holeFiller.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		if (this.isRequestCancelled) {
 			return {

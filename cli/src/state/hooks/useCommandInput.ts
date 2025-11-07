@@ -42,6 +42,7 @@ import {
 	showAutocompleteMenuAtom,
 	getSelectedSuggestionAtom,
 } from "../atoms/ui.js"
+import { shellModeActiveAtom } from "../atoms/shell.js"
 import { textBufferStringAtom, textBufferCursorAtom } from "../atoms/textBuffer.js"
 import { routerModelsAtom, extensionStateAtom } from "../atoms/extension.js"
 import { providerAtom, updateProviderAtom } from "../atoms/config.js"
@@ -150,6 +151,7 @@ export function useCommandInput(): UseCommandInputReturn {
 	const inputValue = useAtomValue(textBufferStringAtom)
 	const cursor = useAtomValue(textBufferCursorAtom)
 	const showAutocomplete = useAtomValue(showAutocompleteAtom)
+	const isShellMode = useAtomValue(shellModeActiveAtom)
 	const commandSuggestions = useAtomValue(suggestionsAtom)
 	const argumentSuggestions = useAtomValue(argumentSuggestionsAtom)
 	const fileMentionSuggestions = useAtomValue(fileMentionSuggestionsAtom)
@@ -214,6 +216,17 @@ export function useCommandInput(): UseCommandInputReturn {
 	}, [showAutocompleteAction])
 
 	const updateSuggestions = useCallback(async () => {
+		// In shell mode, disable all autocomplete
+		// Shell commands use @ (emails, SSH), / (paths), and other special chars
+		// that shouldn't trigger autocomplete suggestions
+		if (isShellMode) {
+			// Clear all suggestion state
+			clearFileMentionAction()
+			setSuggestionsAction([])
+			setArgumentSuggestionsAction([])
+			return
+		}
+
 		// Calculate cursor position in the text (convert row/col to absolute position)
 		const lines = inputValue.split("\n")
 		let cursorPosition = 0
@@ -234,7 +247,6 @@ export function useCommandInput(): UseCommandInputReturn {
 			return
 		}
 
-		// Clear file mention state if not in context
 		clearFileMentionAction()
 
 		// Fall back to command/argument detection
@@ -286,6 +298,7 @@ export function useCommandInput(): UseCommandInputReturn {
 		inputValue,
 		cursor,
 		cwd,
+		isShellMode,
 		setSuggestionsAction,
 		setArgumentSuggestionsAction,
 		setFileMentionSuggestionsAction,

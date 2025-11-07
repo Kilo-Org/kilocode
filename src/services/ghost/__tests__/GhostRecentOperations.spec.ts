@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { GhostContext } from "../GhostContext"
 import { GhostDocumentStore } from "../GhostDocumentStore"
-import { AutoTriggerStrategy } from "../classic-auto-complete/AutoTriggerStrategy"
+import { HoleFiller } from "../classic-auto-complete/HoleFiller"
 import { GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { MockTextDocument } from "../../mocking/MockTextDocument"
 
@@ -78,13 +78,13 @@ vi.mock("diff", async (importOriginal) => {
 describe("GhostRecentOperations", () => {
 	let documentStore: GhostDocumentStore
 	let context: GhostContext
-	let autoTriggerStrategy: AutoTriggerStrategy
+	let holeFiller: HoleFiller
 	let mockDocument: MockTextDocument
 
 	beforeEach(() => {
 		documentStore = new GhostDocumentStore()
 		context = new GhostContext(documentStore)
-		autoTriggerStrategy = new AutoTriggerStrategy()
+		holeFiller = new HoleFiller()
 
 		// Create a mock document
 		const uri = vscode.Uri.parse("file:///test-file.ts")
@@ -121,7 +121,7 @@ describe("GhostRecentOperations", () => {
 		const prefix = enrichedContext.document.getText()
 		const suffix = ""
 		const languageId = enrichedContext.document.languageId
-		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
+		const { userPrompt } = holeFiller.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt includes the recent operations section
 		// The strategy system uses "<RECENT_EDITS>" XML format
@@ -143,7 +143,7 @@ describe("GhostRecentOperations", () => {
 		const prefix = enrichedContext.document.getText()
 		const suffix = ""
 		const languageId = enrichedContext.document.languageId
-		const { userPrompt } = autoTriggerStrategy.getPrompts(autocompleteInput, prefix, suffix, languageId)
+		const { userPrompt } = holeFiller.getPrompts(autocompleteInput, prefix, suffix, languageId)
 
 		// Verify that the prompt does not include recent operations section
 		// The current document content will still be in the prompt, so we should only check
