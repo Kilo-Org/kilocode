@@ -1614,7 +1614,7 @@ ${prompt}
 			apiProvider: "kilocode",
 			kilocodeToken: token,
 		})
-
+		vscode.commands.executeCommand("kilo-code.ghost.reload")
 		vscode.window.showInformationMessage("Kilo Code successfully configured!")
 
 		if (this.getCurrentTask()) {
