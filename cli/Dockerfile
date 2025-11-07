@@ -15,7 +15,7 @@ LABEL org.opencontainers.image.description="Docker image for Axon Code CLI with 
 LABEL org.opencontainers.image.vendor="Axon Code"
 LABEL org.opencontainers.image.url="https://matterai.so/docs/cli"
 LABEL org.opencontainers.image.documentation="https://matterai.so/docs/cli"
-LABEL org.opencontainers.image.source="https://github.com/Kilo-Org/kilocode"
+LABEL org.opencontainers.image.source="https://github.com/MatterAIOrg/AxonCode"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 # Install system dependencies and clean up in one layer

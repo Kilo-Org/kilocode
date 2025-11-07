@@ -1847,7 +1847,7 @@ export const webviewMessageHandler = async (
 			)
 
 			if (answer === githubIssuesText) {
-				await vscode.env.openExternal(vscode.Uri.parse("https://github.com/Kilo-Org/kilocode/issues"))
+				await vscode.env.openExternal(vscode.Uri.parse("https://github.com/MatterAIOrg/AxonCode/issues"))
 			} else if (answer === discordText) {
 				await vscode.env.openExternal(vscode.Uri.parse("https://discord.gg/fxrhCFGhkP"))
 			} else if (answer === customerSupport) {

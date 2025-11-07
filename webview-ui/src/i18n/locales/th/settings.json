@@ -917,7 +917,7 @@
 		"useCustomModel": "ใช้แบบกำหนดเอง: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "หากคุณมีคำถามหรือข้อเสนอแนะ โปรดเปิด issue ที่ <githubLink>github.com/Kilo-Org/kilocode</githubLink> หรือเข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>matterai.so/discord</discordLink>",
+		"feedback": "หากคุณมีคำถามหรือข้อเสนอแนะ โปรดเปิด issue ที่ <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> หรือเข้าร่วม <redditLink>reddit.com/r/kilocode</redditLink> หรือ <discordLink>matterai.so/discord</discordLink>",
 		"support": "สำหรับคำถามด้านการเงิน โปรดติดต่อฝ่ายสนับสนุนลูกค้าที่ <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "อนุญาตการรายงานข้อผิดพลาดและการใช้งาน",

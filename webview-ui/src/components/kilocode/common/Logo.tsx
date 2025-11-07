@@ -8,7 +8,7 @@ export default function Logo({ width = 80, height = 80 }: { width?: number; heig
 
 	return (
 		<img
-			src={iconsBaseUri + "/axon-code.svg"}
+			src={iconsBaseUri + "/matterai-ic.svg"}
 			alt="Axon Code Logo"
 			width={width}
 			height={height}

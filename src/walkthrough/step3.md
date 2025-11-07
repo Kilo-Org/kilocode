@@ -1,7 +1,7 @@
-# Debug mode
+# Plan mode
 
-  <img src="images/unknown_error_stripe_rb.png" alt="Fixing an Unknown Error" />
+<img src="images/design_patterns.png" alt="design patterns" />
 
-Running into errors? Switch to Debug mode and describe the problem. Axon Code will analyze the code, find the issue, and apply a fix.
+Need to plan before writing code? Switch to Architect mode and ask high-level questions about structure, patterns, or logic.
 
-You can paste error messages or point to a file. Axon Code will take it from there.
+Use it to break down features, map out components, or design how everything should work before diving in.

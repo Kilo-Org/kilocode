@@ -6,7 +6,7 @@ body:
       attributes:
           value: |
               Thank you for contributing! Please search similar issues first to see if your bug is already known:
-              https://github.com/Kilo-Org/kilocode/issues
+              https://github.com/MatterAIOrg/AxonCode/issues
 
     - type: dropdown
       id: plugin-type

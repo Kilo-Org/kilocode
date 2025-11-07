@@ -61,14 +61,7 @@ describe("DisplaySettings", () => {
 	})
 
 	it("renders all display settings components", () => {
-		render(
-			<DisplaySettings
-				showTaskTimeline={true}
-				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
-				setCachedStateField={mockSetCachedStateField}
-			/>,
-		)
+		render(<DisplaySettings showTimestamps={false} setCachedStateField={mockSetCachedStateField} />)
 
 		expect(screen.getByText("Display")).toBeInTheDocument()
 		expect(screen.getByText("Show task timeline")).toBeInTheDocument()
@@ -79,9 +72,9 @@ describe("DisplaySettings", () => {
 	it("renders task timeline checkbox with correct initial state", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -95,9 +88,9 @@ describe("DisplaySettings", () => {
 	it("renders showTimestamps checkbox with correct initial state", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -111,9 +104,9 @@ describe("DisplaySettings", () => {
 	it("calls setCachedStateField when task timeline checkbox is toggled", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -129,9 +122,9 @@ describe("DisplaySettings", () => {
 	it("calls setCachedStateField when showTimestamps checkbox is toggled", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -147,9 +140,9 @@ describe("DisplaySettings", () => {
 	it("renders task timeline preview with sample data", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -161,9 +154,9 @@ describe("DisplaySettings", () => {
 	it("renders descriptions for both settings", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -175,9 +168,9 @@ describe("DisplaySettings", () => {
 	it("handles both checkboxes being checked", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={true}
+				// showTaskTimeline={true}
 				showTimestamps={true}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)
@@ -195,9 +188,9 @@ describe("DisplaySettings", () => {
 	it("handles both checkboxes being unchecked", () => {
 		render(
 			<DisplaySettings
-				showTaskTimeline={false}
+				// showTaskTimeline={false}
 				showTimestamps={false}
-				reasoningBlockCollapsed={false} // kilocode_change
+				// reasoningBlockCollapsed={false} // kilocode_change
 				setCachedStateField={mockSetCachedStateField}
 			/>,
 		)

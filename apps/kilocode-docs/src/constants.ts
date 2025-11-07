@@ -14,7 +14,7 @@ export const TWITTER_URL = "https://x.com/kilocode"
 export const YOUTUBE_URL = "https://www.youtube.com/@Kilo-Code"
 
 // GitHub links
-export const GITHUB_MAIN_REPO_URL = "https://github.com/Kilo-Org/kilocode"
+export const GITHUB_MAIN_REPO_URL = "https://github.com/MatterAIOrg/AxonCode"
 export const GITHUB_ISSUES_MAIN_URL = `${GITHUB_MAIN_REPO_URL}/issues`
 export const GITHUB_FEATURES_URL = `${GITHUB_MAIN_REPO_URL}/discussions/categories/ideas`
 

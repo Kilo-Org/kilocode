@@ -9,7 +9,7 @@ The following features, available in the VS Code version of Axon Code, are not c
 - **Autocomplete/QuickTasks**
 - **Git Commit Message Generation** This feature is missing but will be added soon!
 
-We're actively working on bringing feature parity between the VS Code and JetBrains versions. Check our [GitHub repository](https://github.com/Kilo-Org/kilocode) for updates on development progress.
+We're actively working on bringing feature parity between the VS Code and JetBrains versions. Check our [GitHub repository](https://github.com/MatterAIOrg/AxonCode) for updates on development progress.
 
 ## Node.js Requirements
 

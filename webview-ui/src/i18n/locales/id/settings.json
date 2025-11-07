@@ -877,7 +877,7 @@
 		"useCustomModel": "Gunakan kustom: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/Kilo-Org/kilocode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>matterai.so/discord</discordLink>",
+		"feedback": "Jika kamu punya pertanyaan atau feedback, jangan ragu untuk membuka issue di <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> atau bergabung <redditLink>reddit.com/r/kilocode</redditLink> atau <discordLink>matterai.so/discord</discordLink>",
 		"support": "Untuk pertanyaan keuangan, silakan hubungi Customer Support di <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Izinkan pelaporan error dan penggunaan",

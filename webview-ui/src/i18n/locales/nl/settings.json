@@ -856,7 +856,7 @@
 		"useCustomModel": "Aangepast gebruiken: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/Kilo-Org/kilocode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>matterai.so/discord</discordLink>",
+		"feedback": "Heb je vragen of feedback? Open gerust een issue op <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> of sluit je aan bij <redditLink>reddit.com/r/kilocode</redditLink> of <discordLink>matterai.so/discord</discordLink>",
 		"support": "Voor financiële vragen kunt u contact opnemen met de klantenservice via <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Fout- en gebruiksrapportage toestaan",

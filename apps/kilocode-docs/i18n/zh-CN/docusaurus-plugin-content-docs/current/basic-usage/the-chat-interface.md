@@ -10,7 +10,7 @@ import Image from '@site/src/components/Image';
 
 ## 快速设置
 
-在 VS Code 的主侧边栏中找到 Axon Code 图标（<img src="/docs/img/axon-code-icon.svg" width="12" />）。单击它以打开聊天面板。
+在 VS Code 的主侧边栏中找到 Axon Code 图标（<img src="/docs/img/matterai-ic.svg" width="12" />）。单击它以打开聊天面板。
 
 **找不到面板？** 转到“视图”>“打开视图...”并搜索“Axon Code”
 

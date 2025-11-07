@@ -1,16 +1,16 @@
 //kilocode_change - new file
-import { HTMLAttributes } from "react"
-import { useAppTranslation } from "@/i18n/TranslationContext"
-import { Trans } from "react-i18next"
-import { Bot, Zap } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { SectionHeader } from "../../settings/SectionHeader"
-import { Section } from "../../settings/Section"
-import { GhostServiceSettings } from "@roo-code/types"
-import { SetCachedStateField } from "../../settings/types"
-import { vscode } from "@/utils/vscode"
-import { ControlledCheckbox } from "../common/ControlledCheckbox"
 import { useKeybindings } from "@/hooks/useKeybindings"
+import { useAppTranslation } from "@/i18n/TranslationContext"
+import { cn } from "@/lib/utils"
+import { vscode } from "@/utils/vscode"
+import { GhostServiceSettings } from "@roo-code/types"
+import { Bot, Zap } from "lucide-react"
+import { HTMLAttributes } from "react"
+import { Trans } from "react-i18next"
+import { Section } from "../../settings/Section"
+import { SectionHeader } from "../../settings/SectionHeader"
+import { SetCachedStateField } from "../../settings/types"
+import { ControlledCheckbox } from "../common/ControlledCheckbox"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -24,7 +24,7 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
-	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding, provider, model } =
+	const { enableAutoTrigger, enableQuickInlineTaskKeybinding, enableSmartInlineTaskKeybinding } =
 		ghostServiceSettings || {}
 	const keybindings = useKeybindings(["axon-code.addToContextAndFocus", "axon-code.ghost.generateSuggestions"])
 
@@ -129,15 +129,15 @@ export const GhostServiceSettingsView = ({
 							/>
 						</div>
 					</div>
-
+					{/* 
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">
 							<Bot className="w-4" />
 							<div>{t("kilocode:ghost.settings.model")}</div>
 						</div>
-					</div>
+					</div> */}
 
-					<div className="flex flex-col gap-2">
+					{/* <div className="flex flex-col gap-2">
 						<div className="text-sm">
 							{provider && model ? (
 								<>
@@ -156,7 +156,7 @@ export const GhostServiceSettingsView = ({
 								</div>
 							)}
 						</div>
-					</div>
+					</div> */}
 				</div>
 			</Section>
 		</div>

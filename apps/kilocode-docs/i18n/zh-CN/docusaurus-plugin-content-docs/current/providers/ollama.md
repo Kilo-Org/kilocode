@@ -125,7 +125,7 @@ devstral:24b 产生的结果如下：
     ```
 
 3.  **配置 Axon Code：**
-    - 打开 Axon Code 侧边栏（<img src="/docs/img/axon-code-icon.svg" width="12" /> 图标）。
+    - 打开 Axon Code 侧边栏（<img src="/docs/img/matterai-ic.svg" width="12" /> 图标）。
     - 单击设置齿轮图标（<Codicon name="gear" />）。
     - 选择“ollama”作为 API 提供商。
     - 输入模型名称。

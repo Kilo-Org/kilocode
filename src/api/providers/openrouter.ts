@@ -149,8 +149,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		console.log("baseURL", baseURL)
 		console.log("apiKey", apiKey)
 
-		this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
-		// this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
+		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
 	// kilocode_change start

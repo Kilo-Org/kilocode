@@ -9,7 +9,7 @@ Before you begin, choose one of the following development environment options:
 ### Option 1: Native Development (Recommended for MacOS/Linux/Windows Subsystem for Linux)
 
 1. **Git** - For version control
-2. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
+2. **Node.js** (version [v20.19.2](https://github.com/MatterAIOrg/AxonCode/blob/main/.nvmrc) recommended)
 3. **pnpm** - Package manager (https://pnpm.io/)
 4. **Visual Studio Code** - Our recommended IDE for development
 
@@ -38,7 +38,7 @@ Before you begin, choose one of the following development environment options:
 1. **Fork and Clone the Repository**:
 
     - **Fork the Repository**:
-        - Visit the [Axon Code GitHub repository](https://github.com/Kilo-Org/kilocode)
+        - Visit the [Axon Code GitHub repository](https://github.com/MatterAIOrg/AxonCode)
         - Click the "Fork" button in the top-right corner to create your own copy.
     - **Clone Your Fork**:
         ```bash
@@ -63,7 +63,7 @@ While not strictly necessary for running the extension, these extensions are rec
 - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - Integrates ESLint into VS Code.
 - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - Integrates Prettier into VS Code.
 
-The full list of recommended extensions is [here](https://github.com/Kilo-Org/kilocode/blob/main/.vscode/extensions.json)
+The full list of recommended extensions is [here](https://github.com/MatterAIOrg/AxonCode/blob/main/.vscode/extensions.json)
 
 #### Devcontainer Setup (Recommended for Windows)
 
@@ -264,11 +264,11 @@ This automatically sets the `KILOCODE_BACKEND_BASE_URL` environment variable, ma
 
 We welcome contributions to Axon Code! Here's how you can help:
 
-1. **Report an issue** using [GitHub Issues](https://github.com/Kilo-Org/kilocode/issues)
+1. **Report an issue** using [GitHub Issues](https://github.com/MatterAIOrg/AxonCode/issues)
 2. **Find an issue** and submit a Pull Request with your fix
 3. **Write tests** to improve Code Coverage
 4. **Improve Documentation** at [matterai.so/docs](https://matterai.so/docs)
-5. **Suggest a new feature** using [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions/categories/ideas)!
+5. **Suggest a new feature** using [GitHub Discussions](https://github.com/MatterAIOrg/AxonCode/discussions/categories/ideas)!
 6. Want to **implement something new**? Awesome! We'd be glad to support you on [Discord](https://discord.gg/Ja6BkfyTzJ)!
 
 ## Community

@@ -856,7 +856,7 @@
 		"useCustomModel": "사용자 정의 사용: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/Kilo-Org/kilocode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>matterai.so/discord</discordLink>에 가입하세요",
+		"feedback": "질문이나 피드백이 있으시면 <githubLink>github.com/MatterAIOrg/AxonCode</githubLink>에서 이슈를 열거나 <redditLink>reddit.com/r/kilocode</redditLink> 또는 <discordLink>matterai.so/discord</discordLink>에 가입하세요",
 		"support": "재무 관련 문의는 <supportLink>https://matterai.so/support</supportLink>로 고객 지원팀에 문의하세요",
 		"telemetry": {
 			"label": "오류 및 사용 보고 허용",

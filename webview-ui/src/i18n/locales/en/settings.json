@@ -882,7 +882,7 @@
 		"useCustomModel": "Use custom: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/Kilo-Org/kilocode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>matterai.so/discord</discordLink>.",
+		"feedback": "If you have any questions or feedback, feel free to open an issue at <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> or join <redditLink>reddit.com/r/kilocode</redditLink> or <discordLink>matterai.so/discord</discordLink>.",
 		"support": "For financial questions, please contact Customer Support at <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Allow error and usage reporting",

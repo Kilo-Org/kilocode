@@ -3,8 +3,8 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "matterai",
-	"version": "4.114.0",
-	"icon": "assets/icons/logo-outline-black.png",
+	"version": "4.115.0",
+	"icon": "assets/icons/matterai-ic.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
 		"theme": "light"
@@ -17,11 +17,11 @@
 		"workspace"
 	],
 	"author": {
-		"name": "Axon Code"
+		"name": "MatterAI"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Kilo-Org/kilocode"
+		"url": "https://github.com/MatterAIOrg/AxonCode"
 	},
 	"homepage": "https://matterai.so",
 	"categories": [
@@ -33,20 +33,17 @@
 		"Testing"
 	],
 	"keywords": [
-		"kilo",
-		"claude",
-		"dev",
+		"matterai",
+		"axonllm",
+		"axon-code",
 		"mcp",
-		"openrouter",
+		"axoncode",
 		"coding",
 		"agent",
 		"autonomous",
-		"chatgpt",
-		"sonnet",
 		"ai",
-		"llama",
-		"Axon Code",
-		"kilocode"
+		"MatterAI",
+		"Axon Code"
 	],
 	"activationEvents": [
 		"onLanguage",
@@ -56,9 +53,9 @@
 	"contributes": {
 		"walkthroughs": [
 			{
-				"id": "kiloCodeWalkthrough",
-				"title": "5 ways Axon Code helps you code",
-				"description": "You now have a personal AI coding assistant.",
+				"id": "matteraiCodeWalkthrough",
+				"title": "How to use Axon Code to code faster!",
+				"description": "Axon Code is your personal AI coding assistant.",
 				"steps": [
 					{
 						"id": "welcome",
@@ -80,27 +77,11 @@
 						}
 					},
 					{
-						"id": "modes",
-						"title": "Get things working again",
-						"description": "Stuck on an error? Axon Code can find the issue, fix it, and get your code running.",
-						"media": {
-							"markdown": "./dist/walkthrough/step3.md"
-						}
-					},
-					{
 						"id": "code-actions",
 						"title": "Plan your logic",
 						"description": "Not sure where to start? Map out your logic and structure before writing a single line of code.",
 						"media": {
-							"markdown": "./dist/walkthrough/step4.md"
-						}
-					},
-					{
-						"id": "advanced-features",
-						"title": "And more",
-						"description": "Improve your prompt, add context, or create your own custom modes.",
-						"media": {
-							"markdown": "./dist/walkthrough/step5.md"
+							"markdown": "./dist/walkthrough/step3.md"
 						}
 					}
 				]
@@ -111,8 +92,8 @@
 				{
 					"id": "kilo-code-ActivityBar",
 					"title": "%views.activitybar.title%",
-					"icon": "assets/icons/axon-code.png",
-					"darkIcon": "assets/icons/axon-code.png"
+					"icon": "assets/icons/matterai-ic.png",
+					"darkIcon": "assets/icons/matterai-ic.png"
 				}
 			]
 		},
@@ -122,8 +103,8 @@
 					"type": "webview",
 					"id": "axon-code.SidebarProvider",
 					"name": "%views.sidebar.name%",
-					"icon": "assets/icons/axon-code.png",
-					"darkIcon": "assets/icons/axon-code.png"
+					"icon": "assets/icons/matterai-ic.png",
+					"darkIcon": "assets/icons/matterai-ic.png"
 				}
 			]
 		},

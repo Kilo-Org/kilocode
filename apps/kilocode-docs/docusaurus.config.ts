@@ -175,13 +175,13 @@ const config: Config = {
 	],
 
 	themeConfig: {
-		image: "img/axon-code-icon.svg",
+		image: "img/matterai-ic.svg",
 		navbar: {
 			title: "Axon Code",
 			logo: {
 				alt: "Axon Code Logo",
-				src: "img/axon-code-icon.svg",
-				srcDark: "img/axon-code-icon.svg",
+				src: "img/matterai-ic.svg",
+				srcDark: "img/matterai-ic.svg",
 				href: "/",
 				target: "_self",
 			},

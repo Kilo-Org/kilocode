@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest"
 // This is needed to enable act(...) function in React Testing Library
 globalThis.process = globalThis.process || {}
 globalThis.process.env = globalThis.process.env || {}
-globalThis.process.env.NODE_ENV = "test" // kilocode_change force test mode instead for: https://github.com/Kilo-Org/kilocode/blob/2c46e913bba7699eb3bc1425dbe898217f7ee9fe/webview-ui/src/components/settings/SettingsView.tsx#L429
+globalThis.process.env.NODE_ENV = "test" // kilocode_change force test mode instead for: https://github.com/MatterAIOrg/AxonCode/blob/2c46e913bba7699eb3bc1425dbe898217f7ee9fe/webview-ui/src/components/settings/SettingsView.tsx#L429
 
 class MockResizeObserver {
 	observe() {}

@@ -1331,6 +1331,6 @@ Fake AI provider for testing and development.
 
 For issues or questions about provider configuration:
 
-- Open an issue on [GitHub](https://github.com/kilo-org/kilocode)
+- Open an issue on [GitHub](https://github.com/MatterAIOrg/AxonCode)
 - Join our [Discord community](https://discord.gg/kilocode)
 - Check the [FAQ](https://docs.kilocode.com/faq)

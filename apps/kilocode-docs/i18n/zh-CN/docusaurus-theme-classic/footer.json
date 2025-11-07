@@ -29,11 +29,11 @@
 	},
 	"link.item.label.Issues": {
 		"message": "问题与反馈",
-		"description": "The label of footer link with label=Issues linking to https://github.com/Kilo-Org/kilocode/issues"
+		"description": "The label of footer link with label=Issues linking to https://github.com/MatterAIOrg/AxonCode/issues"
 	},
 	"link.item.label.Feature Requests": {
 		"message": "功能建议",
-		"description": "The label of footer link with label=Feature Requests linking to https://github.com/Kilo-Org/kilocode/discussions/categories/ideas"
+		"description": "The label of footer link with label=Feature Requests linking to https://github.com/MatterAIOrg/AxonCode/discussions/categories/ideas"
 	},
 	"link.item.label.VS Code Marketplace": {
 		"message": "VS Code 扩展市场",
@@ -57,6 +57,6 @@
 	},
 	"link.item.label.Extension Privacy Policy": {
 		"message": "扩展隐私政策",
-		"description": "The label of footer link with label=Extension Privacy Policy linking to https://github.com/Kilo-Org/kilocode/blob/main/PRIVACY.md"
+		"description": "The label of footer link with label=Extension Privacy Policy linking to https://github.com/MatterAIOrg/AxonCode/blob/main/PRIVACY.md"
 	}
 }

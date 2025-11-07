@@ -40,7 +40,7 @@ These are starting points – it's important to [experiment with different setti
 
 ## How to Adjust Temperature
 
-1.  **Open the Axon Code Panel:** Click the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in the VS Code Side Bar
+1.  **Open the Axon Code Panel:** Click the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in the VS Code Side Bar
 2.  **Open Settings:** Click the <Codicon name="gear" /> icon in the top right corner
 3.  **Find Temperature Control:** Navigate to the Providers section
 4.  **Enable Custom Temperature:** Check the "Use custom temperature" box

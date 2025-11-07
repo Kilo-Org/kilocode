@@ -12,7 +12,7 @@ sidebar_label: Overview
 
 - VS Code tool you install from the marketplace
 - Handles UI, file operations, and workflow management
-- [Open source](https://github.com/Kilo-Org/kilocode)
+- [Open source](https://github.com/MatterAIOrg/AxonCode)
 - Connects to any AI provider
 
 ### Kilo Gateway Provider

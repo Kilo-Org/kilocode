@@ -9,8 +9,8 @@ Axon Code 允许您创建**自定义模式**，以根据特定任务或工作流
 - **实验：** 安全地尝试不同的提示和配置，而不会影响其他模式
 - **团队协作：** 与您的团队共享自定义模式以标准化工作流
 
-      <img src="/docs/img/custom-modes/custom-modes.png" alt="自定义模式界面概述" width="400" />
-      *Axon Code 用于创建和管理自定义模式的界面。*
+          <img src="/docs/img/custom-modes/custom-modes.png" alt="自定义模式界面概述" width="400" />
+          *Axon Code 用于创建和管理自定义模式的界面。*
 
 ## 自定义模式中包含什么？
 
@@ -304,4 +304,4 @@ Kilo will generate the appropriate pattern with proper escaping for JSON configu
 
 ## Community Gallery
 
-Ready to explore more? Check out the [Show and Tell](https://github.com/Kilo-Org/kilocode/discussions/categories/show-and-tell) to discover and share custom modes created by the community!
+Ready to explore more? Check out the [Show and Tell](https://github.com/MatterAIOrg/AxonCode/discussions/categories/show-and-tell) to discover and share custom modes created by the community!

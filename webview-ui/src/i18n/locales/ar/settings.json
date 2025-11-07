@@ -927,7 +927,7 @@
 		"useCustomModel": "استخدام مخصص: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/Kilo-Org/kilocode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>matterai.so/discord</discordLink>.",
+		"feedback": "عندك سؤال أو ملاحظة؟ افتح تذكرة في <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> أو انضم لـ <redditLink>r/kilocode</redditLink> أو <discordLink>matterai.so/discord</discordLink>.",
 		"support": "للاستفسارات المالية: <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "السماح بتقارير الأخطاء والاستخدام",

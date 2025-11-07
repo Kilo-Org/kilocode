@@ -938,7 +938,7 @@
 		"useCustomModel": "Použít vlastní: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/Kilo-Org/kilocode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>matterai.so/discord</discordLink>.",
+		"feedback": "Pokud máte nějaké dotazy nebo zpětnou vazbu, neváhejte otevřít problém na <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> nebo se připojte k <redditLink>reddit.com/r/kilocode</redditLink> nebo <discordLink>matterai.so/discord</discordLink>.",
 		"support": "Pro finanční dotazy kontaktujte prosím zákaznickou podporu na <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Povolit hlášení chyb a používání",

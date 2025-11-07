@@ -24,7 +24,7 @@ async function showMacOSNotification(options: NotificationOptions): Promise<void
 
 		// Add Axon Code logo
 		const extensionUri = vscode.extensions.getExtension(`kilocode.kilo-code`)!.extensionUri
-		const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "axon-code.png").fsPath
+		const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "matterai-ic.png").fsPath
 		args.push("-appIcon", iconPath)
 
 		await execa("terminal-notifier", args)

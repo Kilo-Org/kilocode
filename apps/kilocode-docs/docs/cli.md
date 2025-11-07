@@ -51,7 +51,7 @@ to start the CLI and begin a new task with your preferred model and relevant mod
 
 Kilo gives you the ability to bring your own keys for a number of model providers and AI gateways, like OpenRouter and Vercel AI Gateway. Each provider has unique configuration options and some let you set environment variables.
 
-You can reference the [Provider Configuration Guide](https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit .config files manually. You can also run:
+You can reference the [Provider Configuration Guide](https://github.com/MatterAIOrg/AxonCode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md) for examples if you want to edit .config files manually. You can also run:
 
 `kilocode config`
 

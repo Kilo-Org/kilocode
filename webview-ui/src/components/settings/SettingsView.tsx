@@ -1,3 +1,19 @@
+import {
+	AlertTriangle,
+	Bell, // kilocode_change
+	Bot,
+	CheckCheck,
+	Database,
+	GitBranch,
+	Globe,
+	Info,
+	LucideIcon,
+	Monitor,
+	Server,
+	SquareMousePointer,
+	SquareTerminal,
+	Webhook,
+} from "lucide-react"
 import React, {
 	forwardRef,
 	memo,
@@ -9,74 +25,52 @@ import React, {
 	useRef,
 	useState,
 } from "react"
-import {
-	CheckCheck,
-	SquareMousePointer,
-	Webhook,
-	GitBranch,
-	Bell,
-	Database,
-	SquareTerminal,
-	FlaskConical,
-	AlertTriangle,
-	Globe,
-	Info,
-	Server, // kilocode_change
-	Bot, // kilocode_change
-	MessageSquare,
-	Monitor,
-	LucideIcon,
-	// SquareSlash, // kilocode_change
-	// Glasses, // kilocode_change
-} from "lucide-react"
 
 // kilocode_change
 import { ensureBodyPointerEventsRestored } from "@/utils/fixPointerEvents"
 
-import type { ProviderSettings, ExperimentId, TelemetrySetting } from "@roo-code/types"
+import type { ProviderSettings, TelemetrySetting } from "@roo-code/types"
 
-import { vscode } from "@src/utils/vscode"
-import { cn } from "@src/lib/utils"
-import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { ExtensionStateContextType, useExtensionState } from "@src/context/ExtensionStateContext"
 import {
 	AlertDialog,
-	AlertDialogContent,
-	AlertDialogTitle,
-	AlertDialogDescription,
-	AlertDialogCancel,
 	AlertDialogAction,
-	AlertDialogHeader,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
 	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
 	Button,
+	StandardTooltip,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-	StandardTooltip,
 } from "@src/components/ui"
+import { ExtensionStateContextType, useExtensionState } from "@src/context/ExtensionStateContext"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
+import { cn } from "@src/lib/utils"
+import { vscode } from "@src/utils/vscode"
 
 import { Tab, TabContent, TabHeader, TabList, TabTrigger } from "../common/Tab"
-import { SetCachedStateField, SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
+import { SetCachedStateField } from "./types"
 // import ApiConfigManager from "./ApiConfigManager"
+import deepEqual from "fast-deep-equal" // kilocode_change
+import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
+import McpView from "../kilocodeMcp/McpView" // kilocode_change
+import { About } from "./About"
 import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
 import { BrowserSettings } from "./BrowserSettings"
 import { CheckpointSettings } from "./CheckpointSettings"
-import { DisplaySettings } from "./DisplaySettings" // kilocode_change
-import { NotificationSettings } from "./NotificationSettings"
 import { ContextManagementSettings } from "./ContextManagementSettings"
-import { TerminalSettings } from "./TerminalSettings"
-import { ExperimentalSettings } from "./ExperimentalSettings"
+import { DisplaySettings } from "./DisplaySettings" // kilocode_change
 import { LanguageSettings } from "./LanguageSettings"
-import { About } from "./About"
+import { NotificationSettings } from "./NotificationSettings"
 import { Section } from "./Section"
-import PromptsSettings from "./PromptsSettings"
-import McpView from "../kilocodeMcp/McpView" // kilocode_change
-import deepEqual from "fast-deep-equal" // kilocode_change
-import { GhostServiceSettingsView } from "../kilocode/settings/GhostServiceSettings" // kilocode_change
 import { SlashCommandsSettings } from "./SlashCommandsSettings"
+import { TerminalSettings } from "./TerminalSettings"
 import { UISettings } from "./UISettings"
 
 export const settingsTabsContainer = "flex flex-1 overflow-hidden [&.narrow_.tab-label]:hidden"
@@ -330,16 +324,16 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		[],
 	)
 
-	const setExperimentEnabled: SetExperimentEnabled = useCallback((id: ExperimentId, enabled: boolean) => {
-		setCachedState((prevState) => {
-			if (prevState.experiments?.[id] === enabled) {
-				return prevState
-			}
+	// const setExperimentEnabled: SetExperimentEnabled = useCallback((id: ExperimentId, enabled: boolean) => {
+	// 	setCachedState((prevState) => {
+	// 		if (prevState.experiments?.[id] === enabled) {
+	// 			return prevState
+	// 		}
 
-			setChangeDetected(true)
-			return { ...prevState, experiments: { ...prevState.experiments, [id]: enabled } }
-		})
-	}, [])
+	// 		setChangeDetected(true)
+	// 		return { ...prevState, experiments: { ...prevState.experiments, [id]: enabled } }
+	// 	})
+	// }, [])
 
 	const setTelemetrySetting = useCallback((setting: TelemetrySetting) => {
 		setCachedState((prevState) => {
@@ -352,46 +346,46 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		})
 	}, [])
 
-	const setOpenRouterImageApiKey = useCallback((apiKey: string) => {
-		setCachedState((prevState) => {
-			// Only set change detected if value actually changed
-			if (prevState.openRouterImageApiKey !== apiKey) {
-				setChangeDetected(true)
-			}
-			return { ...prevState, openRouterImageApiKey: apiKey }
-		})
-	}, [])
+	// const setOpenRouterImageApiKey = useCallback((apiKey: string) => {
+	// 	setCachedState((prevState) => {
+	// 		// Only set change detected if value actually changed
+	// 		if (prevState.openRouterImageApiKey !== apiKey) {
+	// 			setChangeDetected(true)
+	// 		}
+	// 		return { ...prevState, openRouterImageApiKey: apiKey }
+	// 	})
+	// }, [])
 
-	const setKiloCodeImageApiKey = useCallback((apiKey: string) => {
-		setCachedState((prevState) => {
-			setChangeDetected(true)
-			return { ...prevState, kiloCodeImageApiKey: apiKey }
-		})
-	}, [])
+	// const setKiloCodeImageApiKey = useCallback((apiKey: string) => {
+	// 	setCachedState((prevState) => {
+	// 		setChangeDetected(true)
+	// 		return { ...prevState, kiloCodeImageApiKey: apiKey }
+	// 	})
+	// }, [])
 
-	const setImageGenerationSelectedModel = useCallback((model: string) => {
-		setCachedState((prevState) => {
-			// Only set change detected if value actually changed
-			if (prevState.openRouterImageGenerationSelectedModel !== model) {
-				setChangeDetected(true)
-			}
-			return { ...prevState, openRouterImageGenerationSelectedModel: model }
-		})
-	}, [])
+	// const setImageGenerationSelectedModel = useCallback((model: string) => {
+	// 	setCachedState((prevState) => {
+	// 		// Only set change detected if value actually changed
+	// 		if (prevState.openRouterImageGenerationSelectedModel !== model) {
+	// 			setChangeDetected(true)
+	// 		}
+	// 		return { ...prevState, openRouterImageGenerationSelectedModel: model }
+	// 	})
+	// }, [])
 
-	const setCustomSupportPromptsField = useCallback((prompts: Record<string, string | undefined>) => {
-		setCachedState((prevState) => {
-			const previousStr = JSON.stringify(prevState.customSupportPrompts)
-			const newStr = JSON.stringify(prompts)
+	// const setCustomSupportPromptsField = useCallback((prompts: Record<string, string | undefined>) => {
+	// 	setCachedState((prevState) => {
+	// 		const previousStr = JSON.stringify(prevState.customSupportPrompts)
+	// 		const newStr = JSON.stringify(prompts)
 
-			if (previousStr === newStr) {
-				return prevState
-			}
+	// 		if (previousStr === newStr) {
+	// 			return prevState
+	// 		}
 
-			setChangeDetected(true)
-			return { ...prevState, customSupportPrompts: prompts }
-		})
-	}, [])
+	// 		setChangeDetected(true)
+	// 		return { ...prevState, customSupportPrompts: prompts }
+	// 	})
+	// }, [])
 
 	const isSettingValid = !errorMessage
 
@@ -593,9 +587,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			{ id: "notifications", icon: Bell },
 			{ id: "contextManagement", icon: Database },
 			{ id: "terminal", icon: SquareTerminal },
-			{ id: "prompts", icon: MessageSquare },
+			// { id: "prompts", icon: MessageSquare },
 			// { id: "ui", icon: Glasses }, // kilocode_change: we have our own display section
-			{ id: "experimental", icon: FlaskConical },
+			// { id: "experimental", icon: FlaskConical },
 			{ id: "language", icon: Globe },
 			{ id: "mcp", icon: Server },
 			{ id: "about", icon: Info },
@@ -850,12 +844,9 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					{/* kilocode_change start display section */}
 					{activeTab === "display" && (
 						<DisplaySettings
-							reasoningBlockCollapsed={reasoningBlockCollapsed ?? true}
-							showTaskTimeline={showTaskTimeline}
 							sendMessageOnEnter={sendMessageOnEnter}
 							showTimestamps={cachedState.showTimestamps} // kilocode_change
 							ghostServiceSettings={ghostServiceSettings}
-							hideCostBelowThreshold={hideCostBelowThreshold}
 							setCachedStateField={setCachedStateField}
 						/>
 					)}
@@ -922,7 +913,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					)}
 
 					{/* Prompts Section */}
-					{activeTab === "prompts" && (
+					{/* {activeTab === "prompts" && (
 						<PromptsSettings
 							customSupportPrompts={customSupportPrompts || {}}
 							setCustomSupportPrompts={setCustomSupportPromptsField}
@@ -931,7 +922,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								setCachedStateField("includeTaskHistoryInEnhance", value)
 							}
 						/>
-					)}
+					)} */}
 
 					{/* UI Section */}
 					{activeTab === "ui" && (
@@ -942,7 +933,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 					)}
 
 					{/* Experimental Section */}
-					{activeTab === "experimental" && (
+					{/* {activeTab === "experimental" && (
 						<ExperimentalSettings
 							setExperimentEnabled={setExperimentEnabled}
 							experiments={experiments}
@@ -963,7 +954,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							setImageGenerationSelectedModel={setImageGenerationSelectedModel}
 							currentProfileKilocodeToken={apiConfiguration.kilocodeToken}
 						/>
-					)}
+					)} */}
 
 					{/* Language Section */}
 					{activeTab === "language" && (

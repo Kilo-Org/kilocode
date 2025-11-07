@@ -104,7 +104,7 @@ SPDX-License-Identifier: Apache-2.0
         </action>
 
         <action id="kilocode.generateCommitMessage"
-                icon="/icons/axon-code.svg"
+                icon="/icons/matterai-ic.svg"
                 class="ai.kilocode.jetbrains.actions.GitCommitMessageAction"
                 text="Generate Commit Message"
                 description="Generate AI-powered commit message">
@@ -119,7 +119,7 @@ SPDX-License-Identifier: Apache-2.0
             <reference ref="kilocode.settingsButtonClicked" />
         </group>
 
-        <group id="kilocode.RightClickMenu" text="Axon Code" description="kilocode main menu"  icon="/icons/axon-code.svg" popup="true">
+        <group id="kilocode.RightClickMenu" text="Axon Code" description="kilocode main menu"  icon="/icons/matterai-ic.svg" popup="true">
             <group id="kilocode.RightClick.Chat" class="ai.kilocode.jetbrains.actions.RightClickChatActionGroup"
                    text="Chat" description="kilocode chat tool"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>

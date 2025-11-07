@@ -80,7 +80,7 @@ _OpenAI platform with "Create new secret key" button. Name your key and copy it 
 
 Once you have your API key:
 
-1. Open the Axon Code sidebar by clicking the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in the VS Code Side Bar
+1. Open the Axon Code sidebar by clicking the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in the VS Code Side Bar
 2. In the welcome screen, select your API provider from the dropdown
 3. Paste your API key into the appropriate field
 4. Select your model:

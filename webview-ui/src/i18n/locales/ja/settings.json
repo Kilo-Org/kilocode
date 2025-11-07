@@ -857,7 +857,7 @@
 		"useCustomModel": "カスタムを使用: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/Kilo-Org/kilocode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>matterai.so/discord</discordLink>に参加してください",
+		"feedback": "質問やフィードバックがある場合は、<githubLink>github.com/MatterAIOrg/AxonCode</githubLink>で問題を開くか、<redditLink>reddit.com/r/kilocode</redditLink>や<discordLink>matterai.so/discord</discordLink>に参加してください",
 		"support": "財務に関するご質問は、<supportLink>https://matterai.so/support</supportLink>のカスタマーサポートまでお問い合わせください",
 		"telemetry": {
 			"label": "匿名のエラーと使用状況レポートを許可",

@@ -132,11 +132,11 @@
 	},
 	"homepage": "https://matterai.so/cli",
 	"bugs": {
-		"url": "https://github.com/Kilo-Org/kilocode/issues"
+		"url": "https://github.com/MatterAIOrg/AxonCode/issues"
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Kilo-Org/kilocode.git",
+		"url": "git+https://github.com/MatterAIOrg/AxonCode.git",
 		"directory": "cli"
 	},
 	"license": "Apache-2.0",

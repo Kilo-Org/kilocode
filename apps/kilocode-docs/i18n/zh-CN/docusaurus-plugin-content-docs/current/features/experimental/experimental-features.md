@@ -34,6 +34,6 @@ Axon Code 包含一些仍在开发中的实验性功能。这些功能可能不�
 
 ## 提供反馈
 
-如果你在使用实验性功能时遇到任何问题，或有改进建议，请在 [Axon Code Code GitHub Issues 页面](https://github.com/Kilo-Org/kilocode) 上报告。
+如果你在使用实验性功能时遇到任何问题，或有改进建议，请在 [Axon Code Code GitHub Issues 页面](https://github.com/MatterAIOrg/AxonCode) 上报告。
 
 你的反馈对我们非常宝贵，将帮助我们改进 Axon Code！

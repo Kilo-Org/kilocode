@@ -12,7 +12,7 @@ sidebar_label: Overview
 
 - 您从市场安装的 VS Code 工具
 - 处理 UI、文件操作和工作流管理
-- [开源](https://github.com/Kilo-Org/kilocode)
+- [开源](https://github.com/MatterAIOrg/AxonCode)
 - 连接到任何 AI 提供商
 
 ### Axon Code API 提供商

@@ -57,7 +57,7 @@ export const NotificationSettings = ({
 			</SectionHeader>
 
 			<Section>
-				<div>
+				{/* <div>
 					<VSCodeCheckbox
 						checked={ttsEnabled}
 						onChange={(e: any) => setCachedStateField("ttsEnabled", e.target.checked)}
@@ -88,7 +88,7 @@ export const NotificationSettings = ({
 							</div>
 						</div>
 					</div>
-				)}
+				)} */}
 
 				<div>
 					<VSCodeCheckbox

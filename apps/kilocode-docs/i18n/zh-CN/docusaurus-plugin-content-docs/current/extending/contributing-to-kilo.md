@@ -57,7 +57,7 @@ git checkout -b your-branch-name
     git push origin your-branch-name
     ```
 
-2. 前往 [Axon Code 仓库](https://github.com/Kilo-Org/kilocode)
+2. 前往 [Axon Code 仓库](https://github.com/MatterAIOrg/AxonCode)
 
 3. 点击 "New Pull Request" 并选择 "compare across forks"
 
@@ -77,7 +77,7 @@ git checkout -b your-branch-name
 
 2. 彻底测试你的模式
 
-3. 通过提交 [GitHub Discussion](https://github.com/Kilo-Org/kilocode/discussions) 与社区分享你的模式
+3. 通过提交 [GitHub Discussion](https://github.com/MatterAIOrg/AxonCode/discussions) 与社区分享你的模式
 
 ## 文档贡献
 
@@ -107,14 +107,14 @@ git checkout -b your-branch-name
 - 保持尊重和包容
 - 提供建设性的反馈
 - 帮助新手入门
-- 遵守 [行为准则](https://github.com/Kilo-Org/kilocode/blob/main/CODE_OF_CONDUCT.md)
+- 遵守 [行为准则](https://github.com/MatterAIOrg/AxonCode/blob/main/CODE_OF_CONDUCT.md)
 
 ## 获取帮助
 
 如果你需要帮助：
 
 - 加入我们的 [Discord 社区](https://matterai.so/discord) 获取实时支持
-- 在 [GitHub Discussions](https://github.com/Kilo-Org/kilocode/discussions) 上提问
+- 在 [GitHub Discussions](https://github.com/MatterAIOrg/AxonCode/discussions) 上提问
 - 访问我们的 [Reddit 社区](https://www.reddit.com/r/KiloCode)
 
 ## 致谢

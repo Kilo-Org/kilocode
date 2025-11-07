@@ -10,7 +10,7 @@ import Image from '@site/src/components/Image';
 
 ## Quick Setup
 
-Find the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
+Find the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
 
 **Lost the panel?** Go to View > Open View... and search for "Axon Code"
 

@@ -1,6 +1,6 @@
 # 开发环境
 
-<!-- 请参考主仓库中的 [DEVELOPMENT.md](https://github.com/Kilo-Org/kilocode/blob/main/DEVELOPMENT.md) 指南，获取详细的开发环境设置说明。 -->
+<!-- 请参考主仓库中的 [DEVELOPMENT.md](https://github.com/MatterAIOrg/AxonCode/blob/main/DEVELOPMENT.md) 指南，获取详细的开发环境设置说明。 -->
 
 本文档将帮助你设置开发环境，并了解如何与代码库一起工作。无论你是修复错误、添加功能，还是仅仅探索代码，本指南都将帮助你入门。
 
@@ -9,7 +9,7 @@
 在开始之前，请确保已安装以下内容：
 
 1. **Git** - 用于版本控制
-2. **Node.js**（建议使用 [v20.18.1](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) 或更高版本）和 npm
+2. **Node.js**（建议使用 [v20.18.1](https://github.com/MatterAIOrg/AxonCode/blob/main/.nvmrc) 或更高版本）和 npm
 3. **Visual Studio Code** - 我们推荐的开发 IDE
 
 ## 入门
@@ -19,7 +19,7 @@
 1. **Fork 并克隆仓库**：
 
     - **Fork 仓库**：
-        - 访问 [Axon Code GitHub 仓库](https://github.com/Kilo-Org/kilocode)
+        - 访问 [Axon Code GitHub 仓库](https://github.com/MatterAIOrg/AxonCode)
         - 点击右上角的 "Fork" 按钮，创建你自己的副本。
     - **克隆你的 Fork**：
         ```bash
@@ -44,7 +44,7 @@
 - [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) - 将 ESLint 集成到 VS Code 中。
 - [Prettier - Code formatter](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) - 将 Prettier 集成到 VS Code 中。
 
-推荐的扩展完整列表在[这里](https://github.com/Kilo-Org/kilocode/blob/main/.vscode/extensions.json)
+推荐的扩展完整列表在[这里](https://github.com/MatterAIOrg/AxonCode/blob/main/.vscode/extensions.json)
 
 ### 项目结构
 
@@ -143,7 +143,7 @@ E2E 测试验证扩展在 VSCode 中是否正确工作：
     npm run test:integration
     ```
 
-有关 E2E 测试的更多详细信息，请参阅 [e2e/VSCODE_INTEGRATION_TESTS.md](https://github.com/Kilo-Org/kilocode/blob/main/e2e/VSCODE_INTEGRATION_TESTS.md)。
+有关 E2E 测试的更多详细信息，请参阅 [e2e/VSCODE_INTEGRATION_TESTS.md](https://github.com/MatterAIOrg/AxonCode/blob/main/e2e/VSCODE_INTEGRATION_TESTS.md)。
 
 ## 代码检查和类型检查
 

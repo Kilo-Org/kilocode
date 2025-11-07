@@ -14,7 +14,7 @@ After you [set up Axon Code](/getting-started/setting-up), follow these steps:
 
 ## Step 1: Open the Axon Code Panel
 
-Click the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in the VS Code Primary Side Bar (vertical bar on the side of the window) to open the chat interface. If you don't see the icon, verify the extension is [installed](/getting-started/installing) and enabled.
+Click the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in the VS Code Primary Side Bar (vertical bar on the side of the window) to open the chat interface. If you don't see the icon, verify the extension is [installed](/getting-started/installing) and enabled.
 
 <img src="/docs/img/your-first-task/your-first-task.png" alt="Axon Code icon in VS Code Primary Side Bar" width="800" />
 

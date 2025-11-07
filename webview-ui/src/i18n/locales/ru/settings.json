@@ -856,7 +856,7 @@
 		"useCustomModel": "Использовать пользовательскую: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/Kilo-Org/kilocode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>matterai.so/discord</discordLink>",
+		"feedback": "Если у вас есть вопросы или предложения, откройте issue на <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> или присоединяйтесь к <redditLink>reddit.com/r/kilocode</redditLink> или <discordLink>matterai.so/discord</discordLink>",
 		"support": "По финансовым вопросам обращайтесь в службу поддержки по адресу <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Разрешить отправку ошибок и статистики использования",

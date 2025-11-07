@@ -72,7 +72,7 @@ By default, API requests time out after 10 minutes. Local models can be slow, if
 
 ### Configure Axon Code
 
-- Open the Axon Code sidebar (<img src="/docs/img/axon-code-icon.svg" width="12" /> icon).
+- Open the Axon Code sidebar (<img src="/docs/img/matterai-ic.svg" width="12" /> icon).
 - Click the Settings gear icon (<Codicon name="gear" />).
 - Select "Ollama" as the API Provider.
 - Select the model configured in the previous step.

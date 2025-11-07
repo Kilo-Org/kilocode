@@ -27,7 +27,7 @@ alternatively, you can:
 4. Select "Axon Code" by Axon Code and click **Install**
 5. Reload VS Code if prompted
 
-After installation, find the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in the Side Bar to open the Axon Code panel.
+After installation, find the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in the Side Bar to open the Axon Code panel.
 
 <img src="/docs/img/installing/installing.png" alt="VS Code marketplace with Axon Code extension ready to install" width="400" />
 *VS Code marketplace with Axon Code extension ready to install*
@@ -48,7 +48,7 @@ alternatively, you can:
 4. Select "Axon Code" by Axon Code and click **Install**
 5. Reload Cursor if prompted
 
-After installation, find the Axon Code icon (<img src="/docs/img/axon-code-icon.svg" width="12" />) in the Side Bar to open the Axon Code panel.
+After installation, find the Axon Code icon (<img src="/docs/img/matterai-ic.svg" width="12" />) in the Side Bar to open the Axon Code panel.
 
 ## Open VSX Registry
 
@@ -73,8 +73,8 @@ If you prefer to download and install the VSIX file directly:
 
 1. **Download the VSIX file:**
 
-    - Find official releases on the [Axon Code GitHub Releases page](https://github.com/Kilo-Org/kilocode/releases)
-    - Download the `.vsix` file from the [latest release](https://github.com/Kilo-Org/kilocode/releases/latest)
+    - Find official releases on the [Axon Code GitHub Releases page](https://github.com/MatterAIOrg/AxonCode/releases)
+    - Download the `.vsix` file from the [latest release](https://github.com/MatterAIOrg/AxonCode/releases/latest)
 
 2. **Install in VS Code:**
     - Open VS Code
@@ -106,5 +106,5 @@ If you prefer to download and install the VSIX file directly:
 If you encounter issues not covered here:
 
 - Join our [Discord community](https://matterai.so/discord) for real-time support
-- Submit issues on [GitHub](https://github.com/Kilo-Org/kilocode/issues)
+- Submit issues on [GitHub](https://github.com/MatterAIOrg/AxonCode/issues)
 - Visit our [Reddit community](https://www.reddit.com/r/KiloCode)

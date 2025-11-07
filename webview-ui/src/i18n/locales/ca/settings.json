@@ -855,7 +855,7 @@
 		"useCustomModel": "Utilitzar personalitzat: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>matterai.so/discord</discordLink>",
+		"feedback": "Si teniu qualsevol pregunta o comentari, no dubteu a obrir un issue a <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> o unir-vos a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>matterai.so/discord</discordLink>",
 		"support": "Per a qüestions financeres, poseu-vos en contacte amb el Suport al Client a <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Permetre informes d'errors i ús",

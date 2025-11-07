@@ -857,7 +857,7 @@
 		"useCustomModel": "使用自訂模型：{{modelId}}"
 	},
 	"footer": {
-		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>matterai.so/discord</discordLink> 討論。",
+		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/MatterAIOrg/AxonCode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>matterai.so/discord</discordLink> 討論。",
 		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "允許匿名錯誤與使用情況回報",
