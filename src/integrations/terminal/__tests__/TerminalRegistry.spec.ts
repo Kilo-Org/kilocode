@@ -20,7 +20,7 @@ describe("TerminalRegistry", () => {
 			(...args: any[]) =>
 				({
 					exitStatus: undefined,
-					name: "Kilo Code",
+					name: "Axon Code",
 					processId: Promise.resolve(123),
 					creationOptions: {},
 					state: {
@@ -44,7 +44,7 @@ describe("TerminalRegistry", () => {
 
 			expect(mockCreateTerminal).toHaveBeenCalledWith({
 				cwd: "/test/path",
-				name: "Kilo Code",
+				name: "Axon Code",
 				iconPath: expect.any(Object),
 				env: {
 					PAGER,
@@ -65,7 +65,7 @@ describe("TerminalRegistry", () => {
 
 				expect(mockCreateTerminal).toHaveBeenCalledWith({
 					cwd: "/test/path",
-					name: "Kilo Code",
+					name: "Axon Code",
 					iconPath: expect.any(Object),
 					env: {
 						PAGER,
@@ -88,7 +88,7 @@ describe("TerminalRegistry", () => {
 
 				expect(mockCreateTerminal).toHaveBeenCalledWith({
 					cwd: "/test/path",
-					name: "Kilo Code",
+					name: "Axon Code",
 					iconPath: expect.any(Object),
 					env: {
 						PAGER,
@@ -110,7 +110,7 @@ describe("TerminalRegistry", () => {
 
 				expect(mockCreateTerminal).toHaveBeenCalledWith({
 					cwd: "/test/path",
-					name: "Kilo Code",
+					name: "Axon Code",
 					iconPath: expect.any(Object),
 					env: {
 						PAGER,

@@ -32,7 +32,7 @@ export async function fetchKilocodeNotifications({
 		return []
 	}
 
-	const url = getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", kilocodeToken)
+	const url = getKiloUrlFromToken("https://api.matterai.so/users/notifications", kilocodeToken)
 
 	logs.debug("Fetching Kilocode notifications", "NotificationsUtil", { url })
 

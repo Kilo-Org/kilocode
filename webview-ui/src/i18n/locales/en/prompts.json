@@ -8,7 +8,7 @@
 		"editModesConfig": "Edit modes configuration",
 		"editGlobalModes": "Edit Global Modes",
 		"editProjectModes": "Edit Project Modes (.kilocodemodes)",
-		"createModeHelpText": "Modes are specialized personas that tailor Kilo Code's behavior. <0>Learn about Using Modes</0> or <1>Customizing Modes.</1>",
+		"createModeHelpText": "Modes are specialized personas that tailor Axon Code's behavior. <0>Learn about Using Modes</0> or <1>Customizing Modes.</1>",
 		"selectMode": "Search modes",
 		"noMatchFound": "No modes found"
 	},
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Organization Mode",
-		"description": "This mode is provided by your organization and cannot be edited here. To modify this mode, please visit the Kilo Code Dashboard.",
+		"description": "This mode is provided by your organization and cannot be edited here. To modify this mode, please visit the Axon Code Dashboard.",
 		"cannotEdit": "Organization modes cannot be edited"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Role Definition",
 		"resetToDefault": "Reset to default",
-		"description": "Define Kilo Code's expertise and personality for this mode. This description shapes how Kilo Code presents itself and approaches tasks."
+		"description": "Define Axon Code's expertise and personality for this mode. This description shapes how Axon Code presents itself and approaches tasks."
 	},
 	"description": {
 		"title": "Short description (for humans)",
@@ -48,7 +48,7 @@
 	},
 	"whenToUse": {
 		"title": "When to Use (optional)",
-		"description": "Guidance for Kilo Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task.",
+		"description": "Guidance for Axon Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task.",
 		"resetToDefault": "Reset to default 'When to Use' description"
 	},
 	"customInstructions": {
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Enhance Prompt",
-				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Kilo Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
+				"description": "Use prompt enhancement to get tailored suggestions or improvements for your inputs. This ensures Axon Code understands your intent and provides the best possible responses. Available via the ✨ icon in chat."
 			},
 			"CONDENSE": {
 				"label": "Context Condensing",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Role Definition",
-			"description": "Define Kilo Code's expertise and personality for this mode."
+			"description": "Define Axon Code's expertise and personality for this mode."
 		},
 		"description": {
 			"label": "Short description (for humans)",
@@ -195,7 +195,7 @@
 		},
 		"whenToUse": {
 			"label": "When to Use (optional)",
-			"description": "Guidance for Kilo Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task."
+			"description": "Guidance for Axon Code for when this mode should be used. This helps the Orchestrator choose the right mode for a task."
 		},
 		"tools": {
 			"label": "Available Tools",

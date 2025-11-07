@@ -33,14 +33,14 @@
 		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Idioma",
-		"about": "Acerca de Kilo Code",
+		"about": "Acerca de Axon Code",
 		"display": "Mostrar"
 	},
 	"slashCommands": {
 		"description": "Gestiona tus comandos de barra para ejecutar rápidamente flujos de trabajo y acciones personalizadas. <DocsLink>Saber más</DocsLink>"
 	},
 	"prompts": {
-		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Kilo Code a brindar mejor asistencia para tareas comunes de desarrollo."
+		"description": "Configura indicaciones de soporte que se utilizan para acciones rápidas como mejorar indicaciones, explicar código y solucionar problemas. Estas indicaciones ayudan a Axon Code a brindar mejor asistencia para tareas comunes de desarrollo."
 	},
 	"codeIndex": {
 		"title": "Indexación de código",
@@ -139,16 +139,16 @@
 	},
 	"autoApprove": {
 		"toggleShortcut": "Puedes configurar un atajo global para esta configuración <SettingsLink>en las preferencias de tu IDE</SettingsLink>.",
-		"description": "Permitir que Kilo Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
+		"description": "Permitir que Axon Code realice operaciones automáticamente sin requerir aprobación. Habilite esta configuración solo si confía plenamente en la IA y comprende los riesgos de seguridad asociados.",
 		"enabled": "Auto-aprobación habilitada",
 		"toggleAriaLabel": "Alternar aprobación automática",
 		"disabledAriaLabel": "Aprobación automática desactivada: seleccione primero las opciones",
 		"readOnly": {
 			"label": "Lectura",
-			"description": "Cuando está habilitado, Kilo Code verá automáticamente el contenido del directorio y leerá archivos sin que necesite hacer clic en el botón Aprobar.",
+			"description": "Cuando está habilitado, Axon Code verá automáticamente el contenido del directorio y leerá archivos sin que necesite hacer clic en el botón Aprobar.",
 			"outsideWorkspace": {
 				"label": "Incluir archivos fuera del espacio de trabajo",
-				"description": "Permitir a Kilo Code leer archivos fuera del espacio de trabajo actual sin requerir aprobación."
+				"description": "Permitir a Axon Code leer archivos fuera del espacio de trabajo actual sin requerir aprobación."
 			}
 		},
 		"write": {
@@ -157,11 +157,11 @@
 			"delayLabel": "Retraso después de escritura para permitir que los diagnósticos detecten posibles problemas",
 			"outsideWorkspace": {
 				"label": "Incluir archivos fuera del espacio de trabajo",
-				"description": "Permitir a Kilo Code crear y editar archivos fuera del espacio de trabajo actual sin requerir aprobación."
+				"description": "Permitir a Axon Code crear y editar archivos fuera del espacio de trabajo actual sin requerir aprobación."
 			},
 			"protected": {
 				"label": "Incluir archivos protegidos",
-				"description": "Permitir a Kilo Code crear y editar archivos protegidos (como .kilocodeignore y archivos de configuración .kilocode/) sin requerir aprobación."
+				"description": "Permitir a Axon Code crear y editar archivos protegidos (como .kilocodeignore y archivos de configuración .kilocode/) sin requerir aprobación."
 			}
 		},
 		"browser": {
@@ -388,7 +388,7 @@
 			"draftModelDesc": "El modelo borrador debe ser de la misma familia de modelos para que la decodificación especulativa funcione correctamente.",
 			"selectDraftModel": "Seleccionar modelo borrador",
 			"noModelsFound": "No se encontraron modelos borrador. Asegúrese de que LM Studio esté ejecutándose con el Modo Servidor habilitado.",
-			"description": "LM Studio le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte su <a>guía de inicio rápido</a>. También necesitará iniciar la función de <b>servidor local</b> de LM Studio para usarlo con esta extensión. <span>Nota:</span> Kilo Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
+			"description": "LM Studio le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte su <a>guía de inicio rápido</a>. También necesitará iniciar la función de <b>servidor local</b> de LM Studio para usarlo con esta extensión. <span>Nota:</span> Axon Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
 		},
 		"ollama": {
 			"baseUrl": "URL base (opcional)",
@@ -399,7 +399,7 @@
 			"numCtx": "Tamaño de la ventana de contexto (num_ctx)",
 			"numCtxHelp": "Sobrescribe el tamaño de la ventana de contexto predeterminado del modelo. Déjelo vacío para usar la configuración del Modelfile del modelo. El valor mínimo es 128.",
 			"description": "Ollama le permite ejecutar modelos localmente en su computadora. Para obtener instrucciones sobre cómo comenzar, consulte la guía de inicio rápido.",
-			"warning": "Nota: Kilo Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
+			"warning": "Nota: Axon Code utiliza prompts complejos y funciona mejor con modelos Claude. Los modelos menos capaces pueden no funcionar como se espera."
 		},
 		"unboundApiKey": "Clave API de Unbound",
 		"getUnboundApiKey": "Obtener clave API de Unbound",
@@ -421,7 +421,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "Configure las capacidades y precios para su modelo personalizado compatible con OpenAI. Tenga cuidado al especificar las capacidades del modelo, ya que pueden afectar cómo funciona Kilo Code.",
+			"capabilities": "Configure las capacidades y precios para su modelo personalizado compatible con OpenAI. Tenga cuidado al especificar las capacidades del modelo, ya que pueden afectar cómo funciona Axon Code.",
 			"maxTokens": {
 				"label": "Tokens máximos de salida",
 				"description": "Número máximo de tokens que el modelo puede generar en una respuesta. (Especifique -1 para permitir que el servidor establezca los tokens máximos.)"
@@ -468,7 +468,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Límite de errores y repeticiones",
-			"description": "Número de errores consecutivos o acciones repetidas antes de mostrar el diálogo 'Kilo Code está teniendo problemas'",
+			"description": "Número de errores consecutivos o acciones repetidas antes de mostrar el diálogo 'Axon Code está teniendo problemas'",
 			"unlimitedDescription": "Reintentos ilimitados habilitados (proceder automáticamente). El diálogo nunca aparecerá.",
 			"warning": "⚠️ Establecer en 0 permite reintentos ilimitados que pueden consumir un uso significativo de la API"
 		},
@@ -520,7 +520,7 @@
 	"browser": {
 		"enable": {
 			"label": "Habilitar herramienta de navegador",
-			"description": "Cuando está habilitado, Kilo Code puede usar un navegador para interactuar con sitios web cuando se utilizan modelos que admiten el uso del ordenador. <0>Más información</0>"
+			"description": "Cuando está habilitado, Axon Code puede usar un navegador para interactuar con sitios web cuando se utilizan modelos que admiten el uso del ordenador. <0>Más información</0>"
 		},
 		"viewport": {
 			"label": "Tamaño del viewport",
@@ -548,18 +548,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "Habilitar puntos de control automáticos",
-			"description": "Cuando está habilitado, Kilo Code creará automáticamente puntos de control durante la ejecución de tareas, facilitando la revisión de cambios o la reversión a estados anteriores. <0>Más información</0>"
+			"description": "Cuando está habilitado, Axon Code creará automáticamente puntos de control durante la ejecución de tareas, facilitando la revisión de cambios o la reversión a estados anteriores. <0>Más información</0>"
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "Habilitar efectos de sonido",
-			"description": "Cuando está habilitado, Kilo Code reproducirá efectos de sonido para notificaciones y eventos.",
+			"description": "Cuando está habilitado, Axon Code reproducirá efectos de sonido para notificaciones y eventos.",
 			"volumeLabel": "Volumen"
 		},
 		"tts": {
 			"label": "Habilitar texto a voz",
-			"description": "Cuando está habilitado, Kilo Code leerá en voz alta sus respuestas usando texto a voz.",
+			"description": "Cuando está habilitado, Axon Code leerá en voz alta sus respuestas usando texto a voz.",
 			"speedLabel": "Velocidad"
 		}
 	},
@@ -567,7 +567,7 @@
 		"description": "Controle qué información se incluye en la ventana de contexto de la IA, afectando el uso de token y la calidad de respuesta",
 		"autoCondenseContextPercent": {
 			"label": "Umbral para activar la condensación inteligente de contexto",
-			"description": "Cuando la ventana de contexto alcanza este umbral, Kilo Code la condensará automáticamente."
+			"description": "Cuando la ventana de contexto alcanza este umbral, Axon Code la condensará automáticamente."
 		},
 		"condensingApiConfiguration": {
 			"label": "Configuración de API para condensación de contexto",
@@ -583,7 +583,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "Activar automáticamente la condensación inteligente de contexto",
-			"description": "Cuando está habilitado, Kilo Code condensará automáticamente el contexto cuando se alcance el umbral. Cuando está deshabilitado, aún puedes activar manualmente la condensación de contexto."
+			"description": "Cuando está habilitado, Axon Code condensará automáticamente el contexto cuando se alcance el umbral. Cuando está deshabilitado, aún puedes activar manualmente la condensación de contexto."
 		},
 		"openTabs": {
 			"label": "Límite de contexto de pestañas abiertas",
@@ -599,7 +599,7 @@
 		},
 		"maxReadFile": {
 			"label": "Umbral de auto-truncado de lectura de archivos",
-			"description": "Kilo Code lee este número de líneas cuando el modelo omite valores de inicio/fin. Si este número es menor que el total del archivo, Kilo Code genera un índice de números de línea de las definiciones de código. Casos especiales: -1 indica a Kilo Code que lea el archivo completo (sin indexación), y 0 indica que no lea líneas y proporcione solo índices de línea para un contexto mínimo. Valores más bajos minimizan el uso inicial de contexto, permitiendo lecturas posteriores de rangos de líneas precisos. Las solicitudes con inicio/fin explícitos no están limitadas por esta configuración.",
+			"description": "Axon Code lee este número de líneas cuando el modelo omite valores de inicio/fin. Si este número es menor que el total del archivo, Axon Code genera un índice de números de línea de las definiciones de código. Casos especiales: -1 indica a Axon Code que lea el archivo completo (sin indexación), y 0 indica que no lea líneas y proporcione solo índices de línea para un contexto mínimo. Valores más bajos minimizan el uso inicial de contexto, permitiendo lecturas posteriores de rangos de líneas precisos. Las solicitudes con inicio/fin explícitos no están limitadas por esta configuración.",
 			"lines": "líneas",
 			"always_full_read": "Siempre leer el archivo completo"
 		},
@@ -707,7 +707,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edición a través de diffs",
-			"description": "Cuando está habilitado, Kilo Code podrá editar archivos más rápidamente y rechazará automáticamente escrituras completas de archivos truncados. Funciona mejor con el último modelo Claude 4 Sonnet.",
+			"description": "Cuando está habilitado, Axon Code podrá editar archivos más rápidamente y rechazará automáticamente escrituras completas de archivos truncados. Funciona mejor con el último modelo Claude 4 Sonnet.",
 			"strategy": {
 				"label": "Estrategia de diff",
 				"options": {
@@ -728,7 +728,7 @@
 		},
 		"todoList": {
 			"label": "Habilitar herramienta de lista de tareas",
-			"description": "Cuando está habilitado, Kilo Code puede crear y gestionar listas de tareas para hacer seguimiento del progreso. Esto ayuda a organizar tareas complejas en pasos manejables."
+			"description": "Cuando está habilitado, Axon Code puede crear y gestionar listas de tareas para hacer seguimiento del progreso. Esto ayuda a organizar tareas complejas en pasos manejables."
 		}
 	},
 	"experimental": {
@@ -738,23 +738,23 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "Usar herramienta experimental de búsqueda y reemplazo",
-			"description": "Habilitar la herramienta experimental de búsqueda y reemplazo, permitiendo a Kilo Code reemplazar múltiples instancias de un término de búsqueda en una sola solicitud."
+			"description": "Habilitar la herramienta experimental de búsqueda y reemplazo, permitiendo a Axon Code reemplazar múltiples instancias de un término de búsqueda en una sola solicitud."
 		},
 		"INSERT_BLOCK": {
 			"name": "Usar herramienta experimental de inserción de contenido",
-			"description": "Habilitar la herramienta experimental de inserción de contenido, permitiendo a Kilo Code insertar contenido en números de línea específicos sin necesidad de crear un diff."
+			"description": "Habilitar la herramienta experimental de inserción de contenido, permitiendo a Axon Code insertar contenido en números de línea específicos sin necesidad de crear un diff."
 		},
 		"POWER_STEERING": {
 			"name": "Usar modo experimental de \"dirección asistida\"",
-			"description": "Cuando está habilitado, Kilo Code recordará al modelo los detalles de su definición de modo actual con más frecuencia. Esto llevará a una mayor adherencia a las definiciones de roles e instrucciones personalizadas, pero usará más tokens por mensaje."
+			"description": "Cuando está habilitado, Axon Code recordará al modelo los detalles de su definición de modo actual con más frecuencia. Esto llevará a una mayor adherencia a las definiciones de roles e instrucciones personalizadas, pero usará más tokens por mensaje."
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "Usar herramienta experimental de diff de bloques múltiples",
-			"description": "Cuando está habilitado, Kilo Code usará la herramienta de diff de bloques múltiples. Esto intentará actualizar múltiples bloques de código en el archivo en una sola solicitud."
+			"description": "Cuando está habilitado, Axon Code usará la herramienta de diff de bloques múltiples. Esto intentará actualizar múltiples bloques de código en el archivo en una sola solicitud."
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "Habilitar lectura concurrente de archivos",
-			"description": "Cuando está habilitado, Kilo Code puede leer múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe leer archivos uno a la vez. Deshabilitarlo puede ayudar cuando se trabaja con modelos menos capaces o cuando deseas más control sobre el acceso a archivos."
+			"description": "Cuando está habilitado, Axon Code puede leer múltiples archivos en una sola solicitud. Cuando está deshabilitado, Axon Code debe leer archivos uno a la vez. Deshabilitarlo puede ayudar cuando se trabaja con modelos menos capaces o cuando deseas más control sobre el acceso a archivos."
 		},
 		"MARKETPLACE": {
 			"name": "Habilitar Marketplace",
@@ -762,11 +762,11 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "Habilitar ediciones de archivos concurrentes",
-			"description": "Cuando está habilitado, Kilo Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Kilo Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
+			"description": "Cuando está habilitado, Axon Code puede editar múltiples archivos en una sola solicitud. Cuando está deshabilitado, Axon Code debe editar archivos de uno en uno. Deshabilitar esto puede ayudar cuando trabajas con modelos menos capaces o cuando quieres más control sobre las modificaciones de archivos."
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
-			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Fast Apply con modelos especializados optimizados para modificaciones de código. Requiere Kilo Gateway Provider, OpenRouter o una clave API de Morph.",
+			"description": "Cuando está habilitado, Axon Code puede editar archivos usando Fast Apply con modelos especializados optimizados para modificaciones de código. Requiere Kilo Gateway Provider, OpenRouter o una clave API de Morph.",
 			"apiKey": "Clave API de Morph (opcional)",
 			"placeholder": "Introduce tu clave API de Morph (opcional)",
 			"modelLabel": "Selección de modelo",
@@ -780,7 +780,7 @@
 		},
 		"PREVENT_FOCUS_DISRUPTION": {
 			"name": "Edición en segundo plano",
-			"description": "Previene la interrupción del foco del editor cuando está habilitado. Las ediciones de archivos ocurren en segundo plano sin abrir vistas de diferencias o robar el foco. Puedes continuar trabajando sin interrupciones mientras Kilo Code realiza cambios. Los archivos pueden abrirse sin foco para capturar diagnósticos o mantenerse completamente cerrados."
+			"description": "Previene la interrupción del foco del editor cuando está habilitado. Las ediciones de archivos ocurren en segundo plano sin abrir vistas de diferencias o robar el foco. Puedes continuar trabajando sin interrupciones mientras Axon Code realiza cambios. Los archivos pueden abrirse sin foco para capturar diagnósticos o mantenerse completamente cerrados."
 		},
 		"ASSISTANT_MESSAGE_PARSER": {
 			"name": "Usar el nuevo analizador de mensajes",
@@ -792,13 +792,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "Habilitar generación de imágenes con IA",
-			"description": "Cuando esté habilitado, Kilo Code puede generar imágenes a partir de prompts de texto. Requiere que se configure una clave de API de Kilo Code u OpenRouter.",
+			"description": "Cuando esté habilitado, Axon Code puede generar imágenes a partir de prompts de texto. Requiere que se configure una clave de API de Axon Code u OpenRouter.",
 			"apiProvider": "Proveedor de API",
 			"openRouterApiKeyLabel": "Clave API de OpenRouter",
 			"openRouterApiKeyPlaceholder": "Introduce tu clave API de OpenRouter",
-			"kiloCodeApiKeyLabel": "Clave API de Kilo Code",
-			"kiloCodeApiKeyPlaceholder": "Introduce tu clave API de Kilo Code",
-			"kiloCodeApiKeyPaste": "Pegar clave API actual de Kilo Code",
+			"kiloCodeApiKeyLabel": "Clave API de Axon Code",
+			"kiloCodeApiKeyPlaceholder": "Introduce tu clave API de Axon Code",
+			"kiloCodeApiKeyPaste": "Pegar clave API actual de Axon Code",
 			"getApiKeyText": "Obtén tu clave API de",
 			"modelSelectionLabel": "Modelo de generación de imágenes",
 			"modelSelectionDescription": "Selecciona el modelo para la generación de imágenes",
@@ -811,12 +811,12 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "Habilitar comandos slash iniciados por el modelo",
-			"description": "Cuando está habilitado, Kilo Code puede ejecutar tus comandos slash para ejecutar flujos de trabajo."
+			"description": "Cuando está habilitado, Axon Code puede ejecutar tus comandos slash para ejecutar flujos de trabajo."
 		}
 	},
 	"promptCaching": {
 		"label": "Desactivar caché de prompts",
-		"description": "Cuando está marcado, Kilo Code no utilizará el caché de prompts para este modelo."
+		"description": "Cuando está marcado, Axon Code no utilizará el caché de prompts para este modelo."
 	},
 	"temperature": {
 		"useCustom": "Usar temperatura personalizada",
@@ -848,18 +848,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "La extensión obtiene automáticamente la lista más reciente de modelos disponibles en <serviceLink>{{serviceName}}</serviceLink>. Si no está seguro de qué modelo elegir, Kilo Code funciona mejor con <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
+		"automaticFetch": "La extensión obtiene automáticamente la lista más reciente de modelos disponibles en <serviceLink>{{serviceName}}</serviceLink>. Si no está seguro de qué modelo elegir, Axon Code funciona mejor con <defaultModelLink>{{defaultModelId}}</defaultModelLink>.",
 		"label": "Modelo",
 		"searchPlaceholder": "Buscar",
 		"noMatchFound": "No se encontraron coincidencias",
 		"useCustomModel": "Usar personalizado: {{modelId}}"
 	},
 	"footer": {
-		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirse a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>kilocode.ai/discord</discordLink>",
-		"support": "Para preguntas financieras, por favor contacte a Soporte al Cliente en <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "Si tiene alguna pregunta o comentario, no dude en abrir un issue en <githubLink>github.com/Kilo-Org/kilocode</githubLink> o unirse a <redditLink>reddit.com/r/kilocode</redditLink> o <discordLink>matterai.so/discord</discordLink>",
+		"support": "Para preguntas financieras, por favor contacte a Soporte al Cliente en <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "Permitir informes de errores y uso",
-			"description": "Ayuda a mejorar Kilo Code enviando datos de uso e informes de errores. Nunca se envía código, prompts o información personal. Consulta nuestra política de privacidad para más detalles."
+			"description": "Ayuda a mejorar Axon Code enviando datos de uso e informes de errores. Nunca se envía código, prompts o información personal. Consulta nuestra política de privacidad para más detalles."
 		},
 		"settings": {
 			"import": "Importar",

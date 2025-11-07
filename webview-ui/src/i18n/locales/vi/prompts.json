@@ -9,7 +9,7 @@
 		"editModesConfig": "Chỉnh sửa cấu hình chế độ",
 		"editGlobalModes": "Chỉnh sửa chế độ toàn cục",
 		"editProjectModes": "Chỉnh sửa chế độ dự án (.kilocodemodes)",
-		"createModeHelpText": "Chế độ là các vai trò chuyên biệt điều chỉnh hành vi của Kilo Code. <0>Tìm hiểu về Sử dụng Chế độ</0> hoặc <1>Tùy chỉnh Chế độ.</1>",
+		"createModeHelpText": "Chế độ là các vai trò chuyên biệt điều chỉnh hành vi của Axon Code. <0>Tìm hiểu về Sử dụng Chế độ</0> hoặc <1>Tùy chỉnh Chế độ.</1>",
 		"selectMode": "Tìm kiếm chế độ"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Chế độ của tổ chức",
-		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Kilo Code Dashboard.",
+		"description": "Chế độ này do tổ chức của bạn cung cấp và không thể chỉnh sửa tại đây. Để sửa đổi chế độ này, hãy truy cập Axon Code Dashboard.",
 		"cannotEdit": "Không thể chỉnh sửa các chế độ của tổ chức"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Định nghĩa vai trò",
 		"resetToDefault": "Đặt lại về mặc định",
-		"description": "Xác định chuyên môn và tính cách của Kilo Code cho chế độ này. Mô tả này định hình cách Kilo Code giới thiệu bản thân và tiếp cận nhiệm vụ."
+		"description": "Xác định chuyên môn và tính cách của Axon Code cho chế độ này. Mô tả này định hình cách Axon Code giới thiệu bản thân và tiếp cận nhiệm vụ."
 	},
 	"description": {
 		"title": "Mô tả ngắn (cho con người)",
@@ -107,7 +107,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Nâng cao lời nhắc",
-				"description": "Sử dụng nâng cao lời nhắc để nhận đề xuất hoặc cải tiến phù hợp cho đầu vào của bạn. Điều này đảm bảo Kilo Code hiểu ý định của bạn và cung cấp phản hồi tốt nhất có thể. Có sẵn thông qua biểu tượng ✨ trong chat."
+				"description": "Sử dụng nâng cao lời nhắc để nhận đề xuất hoặc cải tiến phù hợp cho đầu vào của bạn. Điều này đảm bảo Axon Code hiểu ý định của bạn và cung cấp phản hồi tốt nhất có thể. Có sẵn thông qua biểu tượng ✨ trong chat."
 			},
 			"CONDENSE": {
 				"label": "Cô đọng ngữ cảnh",
@@ -184,7 +184,7 @@
 		},
 		"roleDefinition": {
 			"label": "Định nghĩa vai trò",
-			"description": "Xác định chuyên môn và tính cách của Kilo Code cho chế độ này."
+			"description": "Xác định chuyên môn và tính cách của Axon Code cho chế độ này."
 		},
 		"whenToUse": {
 			"label": "Khi nào nên sử dụng (tùy chọn)",

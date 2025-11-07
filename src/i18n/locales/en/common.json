@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Open Source AI coding assistant for planning, building, and fixing code."
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Claude Code process exited with code {{exitCode}}. Error output: {{output}}",
 			"stoppedWithReason": "Claude Code stopped with reason: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Failed to load OAuth credentials. Please authenticate first: {{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "No terminal content selected",
 		"missing_task_files": "This task's files are missing. Would you like to remove it from the task list?",
-		"auto_import_failed": "Failed to auto-import Kilo Code settings: {{error}}"
+		"auto_import_failed": "Failed to auto-import Axon Code settings: {{error}}"
 	},
 	"info": {
 		"no_changes": "No changes found.",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "Custom storage path set: {{path}}",
 		"default_storage_path": "Reverted to using default storage path",
 		"settings_imported": "Settings imported successfully.",
-		"auto_import_success": "Kilo Code settings automatically imported from {{filename}}",
+		"auto_import_success": "Axon Code settings automatically imported from {{filename}}",
 		"share_link_copied": "Share link copied to clipboard",
 		"organization_share_link_copied": "Organization share link copied to clipboard!",
 		"public_share_link_copied": "Public share link copied to clipboard!",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "Please enter a valid path"
 	},
 	"input": {
-		"task_prompt": "What should Kilo Code do?",
+		"task_prompt": "What should Axon Code do?",
 		"task_placeholder": "Build, find, ask something"
 	},
 	"customModes": {
@@ -220,8 +220,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Your organization requires Kilo Code Cloud authentication. Please sign in to continue.",
-			"organization_mismatch": "You must be authenticated with your organization's Kilo Code Cloud account.",
+			"cloud_auth_required": "Your organization requires Axon Code Cloud authentication. Please sign in to continue.",
+			"organization_mismatch": "You must be authenticated with your organization's Axon Code Cloud account.",
 			"verification_failed": "Unable to verify organization authentication."
 		},
 		"info": {
@@ -243,7 +243,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Error",

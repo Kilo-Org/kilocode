@@ -1,15 +1,15 @@
 ---
-title: Using MCP in Kilo Code
-sidebar_label: Using MCP in Kilo Code
+title: Using MCP in Axon Code
+sidebar_label: Using MCP in Axon Code
 ---
 
-# Using MCP in Kilo Code
+# Using MCP in Axon Code
 
-Model Context Protocol (MCP) extends Kilo Code's capabilities by connecting to external tools and services. This guide covers everything you need to know about using MCP with Kilo Code.
+Model Context Protocol (MCP) extends Axon Code's capabilities by connecting to external tools and services. This guide covers everything you need to know about using MCP with Axon Code.
 
 <YouTubeEmbed
   url="https://youtu.be/6O9RQoQRX8A"
-  caption="Demostrating MCP installation in Kilo Code"
+  caption="Demostrating MCP installation in Axon Code"
 />
 
 ## Configuring MCP Servers
@@ -17,20 +17,20 @@ Model Context Protocol (MCP) extends Kilo Code's capabilities by connecting to e
 MCP server configurations can be managed at two levels:
 
 1.  **Global Configuration**: Stored in the `mcp_settings.json` file, accessible via VS Code settings (see below). These settings apply across all your workspaces unless overridden by a project-level configuration.
-2.  **Project-level Configuration**: Defined in a `.kilocode/mcp.json` file within your project's root directory. This allows you to set up project-specific servers and share configurations with your team by committing the file to version control. Kilo Code automatically detects and loads this file if it exists.
+2.  **Project-level Configuration**: Defined in a `.kilocode/mcp.json` file within your project's root directory. This allows you to set up project-specific servers and share configurations with your team by committing the file to version control. Axon Code automatically detects and loads this file if it exists.
 
 **Precedence**: If a server name exists in both global and project configurations, the **project-level configuration takes precedence**.
 
 ### Editing MCP Settings Files
 
-You can edit both global and project-level MCP configuration files directly from the Kilo Code MCP settings view.
+You can edit both global and project-level MCP configuration files directly from the Axon Code MCP settings view.
 
-1. Click the <Codicon name="gear" /> icon in the top navigation of the Kilo Code pane to open `Settings`.
+1. Click the <Codicon name="gear" /> icon in the top navigation of the Axon Code pane to open `Settings`.
 2. Click the `MCP Servers` tab on the left side
 3. Choose the `Installed` servers
 4. Click the appropriate button:
     - **`Edit Global MCP`**: Opens the global `mcp_settings.json` file.
-    - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Kilo Code will create it for you.
+    - **`Edit Project MCP`**: Opens the project-specific `.kilocode/mcp.json` file. If this file doesn't exist, Axon Code will create it for you.
 
   <img src="/docs/img/using-mcp-in-kilo-code/mcp-installed-config.png" alt="Edit Global MCP and Edit Project MCP buttons" width="600" />
 
@@ -52,7 +52,7 @@ Both files use a JSON format with a `mcpServers` object containing named server 
 }
 ```
 
-_Example of MCP Server config in Kilo Code (STDIO Transport)_
+_Example of MCP Server config in Axon Code (STDIO Transport)_
 
 ### Understanding Transport Types
 
@@ -179,24 +179,24 @@ MCP tool auto-approval works on a per-tool basis and is disabled by default. To 
 
 <img src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-7.png" alt="Always allow checkbox for MCP tools" width="120" />
 
-When enabled, Kilo Code will automatically approve this specific tool without prompting. Note that the global "Use MCP servers" setting takes precedence - if it's disabled, no MCP tools will be auto-approved.
+When enabled, Axon Code will automatically approve this specific tool without prompting. Note that the global "Use MCP servers" setting takes precedence - if it's disabled, no MCP tools will be auto-approved.
 
 ## Finding and Installing MCP Servers
 
-Kilo Code does not come with any pre-installed MCP servers. You'll need to find and install them separately.
+Axon Code does not come with any pre-installed MCP servers. You'll need to find and install them separately.
 
 - **Community Repositories:** Check for community-maintained lists of MCP servers on GitHub
-- **Ask Kilo Code:** You can ask Kilo Code to help you find or even create MCP servers
-- **Build Your Own:** Create custom MCP servers using the SDK to extend Kilo Code with your own tools
+- **Ask Axon Code:** You can ask Axon Code to help you find or even create MCP servers
+- **Build Your Own:** Create custom MCP servers using the SDK to extend Axon Code with your own tools
 
 For full SDK documentation, visit the [MCP GitHub repository](https://github.com/modelcontextprotocol/).
 
 ## Using MCP Tools in Your Workflow
 
-After configuring an MCP server, Kilo Code will automatically detect available tools and resources. To use them:
+After configuring an MCP server, Axon Code will automatically detect available tools and resources. To use them:
 
-1. Type your request in the Kilo Code chat interface
-2. Kilo Code will identify when an MCP tool can help with your task
+1. Type your request in the Axon Code chat interface
+2. Axon Code will identify when an MCP tool can help with your task
 3. Approve the tool use when prompted (or use auto-approval)
 
 Example: "Analyze the performance of my API" might use an MCP tool that tests API endpoints.

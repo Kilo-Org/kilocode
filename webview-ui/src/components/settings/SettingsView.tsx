@@ -59,7 +59,7 @@ import {
 import { Tab, TabContent, TabHeader, TabList, TabTrigger } from "../common/Tab"
 import { SetCachedStateField, SetExperimentEnabled } from "./types"
 import { SectionHeader } from "./SectionHeader"
-import ApiConfigManager from "./ApiConfigManager"
+// import ApiConfigManager from "./ApiConfigManager"
 import ApiOptions from "./ApiOptions"
 import { AutoApproveSettings } from "./AutoApproveSettings"
 import { BrowserSettings } from "./BrowserSettings"
@@ -757,7 +757,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							</SectionHeader>
 
 							<Section>
-								<ApiConfigManager
+								{/* <ApiConfigManager
 									currentApiConfigName={currentApiConfigName}
 									listApiConfigMeta={listApiConfigMeta}
 									onSelectConfig={(configName: string) =>
@@ -783,7 +783,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 											apiConfiguration,
 										})
 									}
-								/>
+								/> */}
 								<ApiOptions
 									uriScheme={uriScheme}
 									apiConfiguration={apiConfiguration}

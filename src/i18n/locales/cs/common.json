@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Open Source AI asistent pro kódování pro plánování, vytváření a opravy kódu."
 	},
 	"number_format": {
@@ -99,7 +99,7 @@
 			"processExitedWithError": "Proces Claude Code skončil s kódem {{exitCode}}. Chybový výstup: {{output}}",
 			"stoppedWithReason": "Claude Code se zastavil s důvodem: {{reason}}",
 			"apiKeyModelPlanMismatch": "API klíče a plány předplatného umožňují různé modely. Ujisti se, že vybraný model je zahrnut v tvém plánu.",
-			"notFound": "Spustitelný soubor Claude Code '{{claudePath}}' nebyl nalezen.\n\nNainstalujte prosím Claude Code CLI:\n1. Navštivte {{installationUrl}} pro stažení Claude Code\n2. Postupujte podle pokynů pro instalaci pro váš operační systém\n3. Ujistěte se, že příkaz 'claude' je dostupný v PATH\n4. Alternativně nakonfigurujte vlastní cestu v nastavení Kilo Code pod 'Cesta Claude Code'\n\nPůvodní chyba: {{originalError}}"
+			"notFound": "Spustitelný soubor Claude Code '{{claudePath}}' nebyl nalezen.\n\nNainstalujte prosím Claude Code CLI:\n1. Navštivte {{installationUrl}} pro stažení Claude Code\n2. Postupujte podle pokynů pro instalaci pro váš operační systém\n3. Ujistěte se, že příkaz 'claude' je dostupný v PATH\n4. Alternativně nakonfigurujte vlastní cestu v nastavení Axon Code pod 'Cesta Claude Code'\n\nPůvodní chyba: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Nepodařilo se načíst OAuth přihlašovací údaje. Nejprve se prosím autentizujte: {{error}}",
@@ -152,7 +152,7 @@
 	"warnings": {
 		"no_terminal_content": "Není vybrán žádný obsah terminálu",
 		"missing_task_files": "Soubory této úlohy chybí. Chceš ji odstranit ze seznamu úloh?",
-		"auto_import_failed": "Automatický import nastavení Kilo Code selhal: {{error}}"
+		"auto_import_failed": "Automatický import nastavení Axon Code selhal: {{error}}"
 	},
 	"info": {
 		"no_changes": "Nebyly nalezeny žádné změny.",
@@ -161,7 +161,7 @@
 		"custom_storage_path_set": "Nastavena vlastní cesta úložiště: {{path}}",
 		"default_storage_path": "Návrat k použití výchozí cesty úložiště",
 		"settings_imported": "Nastavení byla úspěšně importována.",
-		"auto_import_success": "Nastavení Kilo Code byla automaticky importována ze souboru {{filename}}",
+		"auto_import_success": "Nastavení Axon Code byla automaticky importována ze souboru {{filename}}",
 		"share_link_copied": "Odkaz pro sdílení zkopírován do schránky",
 		"organization_share_link_copied": "Odkaz pro sdílení organizace zkopírován do schránky!",
 		"public_share_link_copied": "Veřejný odkaz pro sdílení zkopírován do schránky!",
@@ -195,7 +195,7 @@
 		"enter_valid_path": "Prosím zadej platnou cestu"
 	},
 	"input": {
-		"task_prompt": "Co by měl Kilo Code udělat?",
+		"task_prompt": "Co by měl Axon Code udělat?",
 		"task_placeholder": "Vytvořit, najít, zeptat se na něco"
 	},
 	"customModes": {
@@ -222,8 +222,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Kilo Code Cloud. Prosím přihlas se pro pokračování.",
-			"organization_mismatch": "Musíš být autentizován s účtem Kilo Code Cloud tvé organizace.",
+			"cloud_auth_required": "Tvá organizace vyžaduje autentizaci Axon Code Cloud. Prosím přihlas se pro pokračování.",
+			"organization_mismatch": "Musíš být autentizován s účtem Axon Code Cloud tvé organizace.",
 			"verification_failed": "Nelze ověřit autentizaci organizace."
 		},
 		"info": {
@@ -249,7 +249,7 @@
 	},
 	"docsLink": {
 		"label": "Dokumentace",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Chyba",

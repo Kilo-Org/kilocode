@@ -1,10 +1,10 @@
 # Improve your prompt
 
-Click the magic wand icon to make your prompt clearer and more complete. Kilo Code will rewrite it to get better results.
+Click the magic wand icon to make your prompt clearer and more complete. Axon Code will rewrite it to get better results.
 
 # Add files or folders for context
 
-Mention files or folders in your prompt. Kilo Code will use them to better understand and respond to your request.
+Mention files or folders in your prompt. Axon Code will use them to better understand and respond to your request.
 
 Click the paperclip in the text area or use @ to add context.
 

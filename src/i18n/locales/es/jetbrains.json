@@ -13,7 +13,7 @@
 		"cancel": "Cancelar"
 	},
 	"ui": {
-		"initializing": "Kilo Code se está inicializando...",
+		"initializing": "Axon Code se está inicializando...",
 		"systemInformation": "Información del sistema"
 	}
 }

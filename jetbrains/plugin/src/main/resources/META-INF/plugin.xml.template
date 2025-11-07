@@ -11,10 +11,10 @@ SPDX-License-Identifier: Apache-2.0
 
     <!-- Public plugin name should be written in Title Case.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-    <name>Kilo Code</name>
+    <name>Axon Code</name>
 
     <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
-    <vendor url="https://kilocode.ai">Kilo Code</vendor>
+    <vendor url="https://matterai.so">Axon Code</vendor>
 
     <!-- Resource bundles for internationalization -->
     <resource-bundle>messages.JetbrainsBundle</resource-bundle>
@@ -24,7 +24,7 @@ SPDX-License-Identifier: Apache-2.0
          Simple HTML elements (text formatting, paragraphs, and lists) can be added inside of <![CDATA[ ]]> tag.
          Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
     <description><![CDATA[
-        <h1>Kilo Code AI Agent</h1>
+        <h1>Axon Code AI Agent</h1>
         <p>Open Source AI coding assistant for planning, building, and fixing code.</p>
    ]]></description>
    
@@ -46,7 +46,7 @@ SPDX-License-Identifier: Apache-2.0
         <postStartupActivity implementation="ai.kilocode.jetbrains.plugin.WecoderPlugin"/>
         <editorFactoryListener implementation="ai.kilocode.jetbrains.editor.EditorListener"/>
         <toolWindow factoryClass="ai.kilocode.jetbrains.ui.RooToolWindowFactory"
-                    id="Kilo Code"
+                    id="Axon Code"
                     secondary="true"
                     icon="/icons/kilo-dark.svg"
                     anchor="right" />
@@ -104,7 +104,7 @@ SPDX-License-Identifier: Apache-2.0
         </action>
 
         <action id="kilocode.generateCommitMessage"
-                icon="/icons/kilo-dark-small.svg"
+                icon="/icons/axon-code.svg"
                 class="ai.kilocode.jetbrains.actions.GitCommitMessageAction"
                 text="Generate Commit Message"
                 description="Generate AI-powered commit message">
@@ -119,7 +119,7 @@ SPDX-License-Identifier: Apache-2.0
             <reference ref="kilocode.settingsButtonClicked" />
         </group>
 
-        <group id="kilocode.RightClickMenu" text="Kilo Code" description="kilocode main menu"  icon="/icons/kilo-dark-small.svg" popup="true">
+        <group id="kilocode.RightClickMenu" text="Axon Code" description="kilocode main menu"  icon="/icons/axon-code.svg" popup="true">
             <group id="kilocode.RightClick.Chat" class="ai.kilocode.jetbrains.actions.RightClickChatActionGroup"
                    text="Chat" description="kilocode chat tool"/>
             <add-to-group group-id="EditorPopupMenu" anchor="first"/>

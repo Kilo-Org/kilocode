@@ -46,7 +46,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code commit mesajı oluşturucu etkinleştirildi",
+		"activated": "Axon Code commit mesajı oluşturucu etkinleştirildi",
 		"gitNotFound": "⚠️ Git deposu bulunamadı veya git kullanılamıyor",
 		"gitInitError": "⚠️ Git başlatma hatası: {{error}}",
 		"generating": "Kilo: Commit mesajı oluşturuluyor...",
@@ -58,7 +58,7 @@
 		"providerRegistered": "Kilo: Commit mesajı sağlayıcısı kaydedildi",
 		"errors": {
 			"noProject": "Proje mevcut değil",
-			"connectionFailed": "Kilo Code uzantısına bağlanılamadı",
+			"connectionFailed": "Axon Code uzantısına bağlanılamadı",
 			"timeout": "İstek 30 saniye sonra zaman aşımına uğradı",
 			"noChanges": "Kaydedilecek değişiklik bulunamadı",
 			"missingMessage": "Uzantıdan taahhüt mesajı alınmadı",
@@ -84,7 +84,7 @@
 			"title": "Commit Mesajı Oluşturuluyor",
 			"analyzing": "Değişiklikler inceleniyor...",
 			"generating": "Taahhüt mesajı oluşturuluyor...",
-			"connecting": "Kilo Code'a bağlanıyor..."
+			"connecting": "Axon Code'a bağlanıyor..."
 		},
 		"ui": {
 			"generateButton": "Commit Mesajı Oluştur",
@@ -98,12 +98,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (devre dışı)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (devre dışı)",
 				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
 				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
@@ -115,36 +115,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "Kodun analiz ediliyor...",
 			"generating": "Önerilen düzenlemeler oluşturuluyor...",
 			"processing": "Önerilen düzenlemeler işleniyor...",
 			"showing": "Önerilen düzenlemeler gösteriliyor..."
 		},
 		"input": {
-			"title": "Kilo Code: Hızlı Görev",
+			"title": "Axon Code: Hızlı Görev",
 			"placeholder": "örn., 'bu fonksiyonu daha verimli olacak şekilde yeniden düzenle'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Önerilen Düzenlemeler Oluştur",
+			"generateSuggestions": "Axon Code: Önerilen Düzenlemeler Oluştur",
 			"displaySuggestions": "Önerilen Düzenlemeleri Göster",
 			"cancelSuggestions": "Önerilen Düzenlemeleri İptal Et",
 			"applyCurrentSuggestion": "Mevcut Önerilen Düzenlemeyi Uygula",
 			"applyAllSuggestions": "Tüm Önerilen Düzenlemeleri Uygula",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Önerilen Düzenlemeler"
+			"title": "Axon Code: Önerilen Düzenlemeler"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "Hızlı görevler ve önerilen düzenlemeler konusunda sana yardımcı olabilirim."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete, GitHub Copilot ile bir çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısın.",
+			"message": "Axon Code Autocomplete, GitHub Copilot ile bir çakışma nedeniyle engelleniyor. Bunu düzeltmek için Copilot'un satır içi önerilerini devre dışı bırakmalısın.",
 			"disableCopilot": "Copilot'u Devre Dışı Bırak",
 			"disableInlineAssist": "Autocomplete'i Devre Dışı Bırak"
 		}

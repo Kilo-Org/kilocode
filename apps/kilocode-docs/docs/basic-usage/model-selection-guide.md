@@ -2,13 +2,13 @@
 sidebar_label: "Model Selection Guide"
 ---
 
-# Kilo Code Model Selection Guide
+# Axon Code Model Selection Guide
 
 Last updated: September 3, 2025.
 
-The AI model landscape evolves rapidly, so this guide focuses on what's delivering excellent results with Kilo Code right now. We update this regularly as new models emerge and performance shifts.
+The AI model landscape evolves rapidly, so this guide focuses on what's delivering excellent results with Axon Code right now. We update this regularly as new models emerge and performance shifts.
 
-## Kilo Code Top Performers
+## Axon Code Top Performers
 
 | Model                | Context Window | SWE-Bench Verified | Human Eval | LiveCodeBench | Input Price\* | Output Price\* | Best For                                    |
 | -------------------- | -------------- | ------------------ | ---------- | ------------- | ------------- | -------------- | ------------------------------------------- |
@@ -81,4 +81,4 @@ Optimizing for different project scales:
 
 ## Community Choice
 
-The AI model landscape changes quicky to stay up to date [**👉 check Kilo Code Community Favorites on OpenRouter**](https://openrouter.ai/apps?url=https%3A%2F%2Fkilocode.ai%2F)
+The AI model landscape changes quicky to stay up to date [**👉 check Axon Code Community Favorites on OpenRouter**](https://openrouter.ai/apps?url=https%3A%2F%2Fmatterai.so%2F)

@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Assistente di programmazione AI open source per la pianificazione, la creazione e la correzione del codice."
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Il processo Claude Code è terminato con codice {{exitCode}}. Output di errore: {{output}}",
 			"stoppedWithReason": "Claude Code si è fermato per il motivo: {{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Impossibile caricare le credenziali OAuth. Autenticati prima: {{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "Nessun contenuto del terminale selezionato",
 		"missing_task_files": "I file di questa attività sono mancanti. Vuoi rimuoverla dall'elenco delle attività?",
-		"auto_import_failed": "Importazione automatica delle impostazioni Kilo Code fallita: {{error}}"
+		"auto_import_failed": "Importazione automatica delle impostazioni Axon Code fallita: {{error}}"
 	},
 	"info": {
 		"no_changes": "Nessuna modifica trovata.",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "Percorso di archiviazione personalizzato impostato: {{path}}",
 		"default_storage_path": "Tornato al percorso di archiviazione predefinito",
 		"settings_imported": "Impostazioni importate con successo.",
-		"auto_import_success": "Impostazioni Kilo Code importate automaticamente da {{filename}}",
+		"auto_import_success": "Impostazioni Axon Code importate automaticamente da {{filename}}",
 		"share_link_copied": "Link di condivisione copiato negli appunti",
 		"image_copied_to_clipboard": "URI dati dell'immagine copiato negli appunti",
 		"image_saved": "Immagine salvata in {{path}}",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "Inserisci un percorso valido"
 	},
 	"input": {
-		"task_prompt": "Cosa deve fare Kilo Code?",
+		"task_prompt": "Cosa deve fare Axon Code?",
 		"task_placeholder": "Scrivi il tuo compito qui"
 	},
 	"settings": {
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Errore",

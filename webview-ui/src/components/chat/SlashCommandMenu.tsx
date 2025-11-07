@@ -51,7 +51,7 @@ const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
 
 	return (
 		<div
-			className="absolute bottom-[calc(100%-10px)] left-[15px] right-[15px] overflow-x-hidden z-[1000]"
+			className="absolute bottom-[calc(100%-10px)] left-[15px] right-[15px] overflow-x-hidden z-[1000] rounded-lg border border-white/20 outline-none"
 			onMouseDown={onMouseDown}>
 			<div
 				ref={menuRef}

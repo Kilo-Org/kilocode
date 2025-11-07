@@ -47,7 +47,7 @@ export const DEFAULT_AUTO_APPROVAL: AutoApprovalConfig = {
 
 export const DEFAULT_CONFIG = {
 	version: "1.0.0",
-	mode: "code",
+	mode: "agent",
 	telemetry: true,
 	provider: "default",
 	providers: [
@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG = {
 			id: "default",
 			provider: "kilocode",
 			kilocodeToken: "",
-			kilocodeModel: "anthropic/claude-sonnet-4.5",
+			kilocodeModel: "axon-code",
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,

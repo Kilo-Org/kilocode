@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Replace "Roo Code" with "Kilo Code" in all translation files
+# Replace "Roo Code" with "Axon Code" in all translation files
 # This includes both i18n locale files and package.nls files
 
 # Fix i18n locale JSON files

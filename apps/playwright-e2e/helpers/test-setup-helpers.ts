@@ -6,7 +6,7 @@ export async function setupTestEnvironment(page: Page): Promise<void> {
 	await waitForAllExtensionActivation(page)
 
 	await verifyExtensionInstalled(page)
-	await waitForWebviewText(page, "Welcome to Kilo Code!")
+	await waitForWebviewText(page, "Welcome to Axon Code!")
 
 	await configureApiKeyThroughUI(page)
 	await waitForWebviewText(page, "Generate, refactor, and debug code with AI assistance")

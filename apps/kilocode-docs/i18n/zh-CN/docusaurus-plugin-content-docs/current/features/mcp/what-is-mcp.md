@@ -28,9 +28,9 @@ MCP 采用客户端-服务端架构：
 
 - **如何保障安全性？** 用户可自主控制连接哪些 MCP 服务器，以及授予这些服务器哪些权限。与任何访问数据或服务的工具一样，请使用可信来源并配置适当的访问控制。
 
-## Kilo Code 中的 MCP
+## Axon Code 中的 MCP
 
-Kilo Code 通过实现模型上下文协议来：
+Axon Code 通过实现模型上下文协议来：
 
 - 同时连接本地和远程 MCP 服务器
 - 提供访问工具的统一接口
@@ -44,6 +44,6 @@ MCP 为 AI 系统与外部工具服务的交互提供了标准化方式，使复
 准备好深入探索了吗？请查阅以下指南：
 
 - [MCP 概述](/features/mcp/overview) - 快速了解 MCP 文档结构
-- [在 Kilo Code 中使用 MCP](/features/mcp/using-mcp-in-kilo-code) - 包含创建简单服务器的入门指导
+- [在 Axon Code 中使用 MCP](/features/mcp/using-mcp-in-kilo-code) - 包含创建简单服务器的入门指导
 - [MCP vs 传统 API](/features/mcp/mcp-vs-api) - 相比传统 API 的技术优势
 - [STDIO 与 SSE 传输协议](/features/mcp/server-transports) - 本地与云端部署模式对比

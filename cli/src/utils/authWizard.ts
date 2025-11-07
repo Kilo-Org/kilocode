@@ -8,7 +8,7 @@ export default async function authWizard() {
 	let providerSpecificConfig: Record<string, string> = {}
 
 	const providerOptions = [
-		{ name: "Kilo Code", value: "kilocode" },
+		{ name: "Axon Code", value: "kilocode" },
 		{ name: "zAI", value: "zai" },
 		{ name: "Other", value: "other" },
 	] as const
@@ -26,7 +26,7 @@ export default async function authWizard() {
 	switch (provider) {
 		case "kilocode": {
 			console.info(
-				"\nPlease navigate to https://app.kilocode.ai and copy your API key from the bottom of the page!\n",
+				"\nPlease navigate to https://app.matterai.so and copy your API key from the bottom of the page!\n",
 			)
 			const { kilocodeToken } = await inquirer.prompt<{ kilocodeToken: string }>([
 				{
@@ -35,28 +35,8 @@ export default async function authWizard() {
 					message: "API Key:",
 				},
 			])
-			providerSpecificConfig = { kilocodeToken, kilocodeModel: "anthropic/claude-sonnet-4.5" }
+			providerSpecificConfig = { kilocodeToken, kilocodeModel: "axon-code" }
 			break
-		}
-		case "zai": {
-			const { zaiApiKey } = await inquirer.prompt<{ zaiApiKey: string }>([
-				{
-					type: "password",
-					name: "zaiApiKey",
-					message: "Please enter your zAI token:",
-				},
-			])
-			providerSpecificConfig = { zaiApiKey }
-			break
-		}
-		case "other": {
-			console.info("Please manually add your provider setttings to the config file.")
-			console.info(
-				"Check out https://github.com/Kilo-Org/kilocode/blob/main/cli/docs/PROVIDER_CONFIGURATION.md to see potential configuration options",
-			)
-			await wait(1500)
-			await openConfigFile()
-			return
 		}
 	}
 

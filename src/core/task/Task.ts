@@ -54,7 +54,7 @@ import { ClineApiReqCancelReason, ClineApiReqInfo } from "../../shared/Extension
 import { getApiMetrics, hasTokenUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
 import { defaultModeSlug } from "../../shared/modes"
-import { DiffStrategy } from "../../shared/tools"
+import { DiffStrategy, ToolUse } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
 
@@ -1153,7 +1153,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		contextCondense?: ContextCondense,
 	): Promise<undefined> {
 		if (this.abort) {
-			throw new Error(`[Kilo Code#say] task ${this.taskId}.${this.instanceId} aborted`)
+			throw new Error(`[Axon Code#say] task ${this.taskId}.${this.instanceId} aborted`)
 		}
 
 		if (partial !== undefined) {
@@ -1273,7 +1273,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		})()
 		await this.say(
 			"error",
-			`Kilo Code tried to use ${toolName}${
+			`Axon Code tried to use ${toolName}${
 				relPath ? ` for '${relPath.toPosix()}'` : ""
 			} without value for required parameter '${paramName}'. ${kilocodeExtraText}Retrying...`,
 		)
@@ -1408,7 +1408,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const lastClineMessage = this.clineMessages
 			.slice()
 			.reverse()
-			.find((m) => !(m.ask === "resume_task" || m.ask === "resume_completed_task")) // Could be multiple resume tasks.
+			.find((m) => !(m.ask === "resume_task")) // Could be multiple resume tasks.
 
 		let askType: ClineAsk
 		if (lastClineMessage?.ask === "completion_result") {
@@ -1433,41 +1433,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Make sure that the api conversation history can be resumed by the API,
 		// even if it goes out of sync with cline messages.
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
-
-		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
-		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
-			if (Array.isArray(message.content)) {
-				const newContent = message.content.map((block) => {
-					if (block.type === "tool_use") {
-						// It's important we convert to the new tool schema
-						// format so the model doesn't get confused about how to
-						// invoke tools.
-						const inputAsXml = Object.entries(block.input as Record<string, string>)
-							.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
-							.join("\n")
-						return {
-							type: "text",
-							text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
-						} as Anthropic.Messages.TextBlockParam
-					} else if (block.type === "tool_result") {
-						// Convert block.content to text block array, removing images
-						const contentAsTextBlocks = Array.isArray(block.content)
-							? block.content.filter((item) => item.type === "text")
-							: [{ type: "text", text: block.content }]
-						const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
-						const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
-						return {
-							type: "text",
-							text: `[${toolName} Result]\n\n${textContent}`,
-						} as Anthropic.Messages.TextBlockParam
-					}
-					return block
-				})
-				return { ...message, content: newContent }
-			}
-			return message
-		})
-		existingApiConversationHistory = conversationWithoutToolBlocks
 
 		// FIXME: remove tool use blocks altogether
 
@@ -1810,15 +1775,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// the user hits max requests and denies resetting the count.
 				break
 			} else {
-				nextUserContent = [
-					{
-						type: "text",
-						text: formatResponse.noToolsUsed(
-							getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
-						),
-					},
-				]
-				this.consecutiveMistakeCount++
+				// nextUserContent = [
+				// 	{
+				// 		type: "text",
+				// 		text: formatResponse.noToolsUsed(
+				// 			getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+				// 		),
+				// 	},
+				// ]
+				// this.consecutiveMistakeCount++
 			}
 		}
 	}
@@ -1936,11 +1901,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			}
 			// kilocode_change end
 
-			const environmentDetails = await getEnvironmentDetails(this, currentIncludeFileDetails)
-
-			// Add environment details as its own text block, separate from tool
-			// results.
-			const finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
+			// Only add environment details on the first iteration (when includeFileDetails is true)
+			// For subsequent iterations with tool results, don't add environment details to avoid duplication
+			let finalUserContent: Anthropic.Messages.ContentBlockParam[]
+			if (currentIncludeFileDetails) {
+				const environmentDetails = await getEnvironmentDetails(this, currentIncludeFileDetails)
+				// Add environment details as its own text block, separate from tool results
+				finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
+			} else {
+				// For tool results, don't add environment details
+				finalUserContent = parsedUserContent
+			}
 
 			await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
 			TelemetryService.instance.captureConversationMessage(this.taskId, "user")
@@ -2106,10 +2077,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							case "native_tool_calls": {
 								// Handle native OpenAI-format tool calls
 								// Process native tool calls through the parser
+								let yieldedCount = 0
 								for (const toolUse of this.assistantMessageParser.processNativeToolCalls(
 									chunk.toolCalls,
 								)) {
 									assistantToolUses.push(toolUse)
+									yieldedCount++
 								}
 
 								// Update content blocks after processing native tool calls
@@ -2420,6 +2393,28 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				this.assistantMessageParser.finalizeContentBlocks()
 				this.assistantMessageContent = this.assistantMessageParser.getContentBlocks()
 
+				// kilocode_change start: Extract any newly finalized tool uses that weren't captured during streaming
+				// This can happen when native tool calls arrive in a single complete chunk
+				const toolUsesFromFinalizedContent = this.assistantMessageContent
+					.filter((block): block is ToolUse => block.type === "tool_use")
+					.map(
+						(toolUse): Anthropic.Messages.ToolUseBlockParam => ({
+							type: "tool_use",
+							name: toolUse.name,
+							id: toolUse.toolUseId ?? "",
+							input: toolUse.params,
+						}),
+					)
+
+				// Add any tool uses that aren't already in assistantToolUses
+				const existingToolUseIds = new Set(assistantToolUses.map((tu) => tu.id))
+				for (const toolUse of toolUsesFromFinalizedContent) {
+					if (!existingToolUseIds.has(toolUse.id)) {
+						assistantToolUses.push(toolUse)
+					}
+				}
+				// kilocode_change end
+
 				if (partialBlocks.length > 0) {
 					// If there is content to update then it will complete and
 					// update `this.userMessageContentReady` to true, which we
@@ -2506,17 +2501,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// If the model did not tool use, then we need to tell it to
 					// either use a tool or attempt_completion.
-					const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
+					// const didToolUse = this.assistantMessageContent.some((block) => block.type === "tool_use")
 
-					if (!didToolUse) {
-						this.userMessageContent.push({
-							type: "text",
-							text: formatResponse.noToolsUsed(
-								getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
-							),
-						})
-						this.consecutiveMistakeCount++
-					}
+					// if (!didToolUse) {
+					// 	this.userMessageContent.push({
+					// 		type: "text",
+					// 		text: formatResponse.noToolsUsed(
+					// 			getActiveToolUseStyle(this.apiConfiguration), // kilocode_change
+					// 		),
+					// 	})
+					// 	this.consecutiveMistakeCount++
+					// }
 
 					if (this.userMessageContent.length > 0) {
 						stack.push({
@@ -2526,9 +2521,14 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 						// Add periodic yielding to prevent blocking
 						await new Promise((resolve) => setImmediate(resolve))
+
+						// Continue to next iteration instead of setting didEndLoop from recursive call
+						continue
 					}
-					// Continue to next iteration instead of setting didEndLoop from recursive call
-					continue
+
+					// No tool results to process, end both inner and outer task loops
+					// This prevents the outer loop from repeating with the same user message
+					return true
 				} else {
 					// If there's no assistant_responses, that means we got no text
 					// or tool_use content blocks from API which we should assume is

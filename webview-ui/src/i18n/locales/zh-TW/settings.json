@@ -33,7 +33,7 @@
 		"ui": "UI",
 		"experimental": "實驗性",
 		"language": "語言",
-		"about": "關於 Kilo Code",
+		"about": "關於 Axon Code",
 		"display": "顯示",
 		"ghost": "Ghost"
 	},
@@ -41,7 +41,7 @@
 		"description": "管理您的斜線命令，以便快速執行自訂工作流程和動作。 <DocsLink>了解更多</DocsLink>"
 	},
 	"prompts": {
-		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Kilo Code 為常見開發工作提供更好的支援。"
+		"description": "設定用於快速操作的支援提示詞，如增強提示詞、解釋程式碼和修復問題。這些提示詞幫助 Axon Code 為常見開發工作提供更好的支援。"
 	},
 	"codeIndex": {
 		"title": "程式碼庫索引",
@@ -140,16 +140,16 @@
 	},
 	"autoApprove": {
 		"toggleShortcut": "您可以<SettingsLink>在 IDE 偏好設定中</SettingsLink>為此設定設定全域快捷鍵。",
-		"description": "允許 Kilo Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
+		"description": "允許 Axon Code 無需核准即執行操作。僅在您完全信任 AI 並了解相關安全風險時啟用這些設定。",
 		"enabled": "自動核准已啟用",
 		"toggleAriaLabel": "切換自動核准",
 		"disabledAriaLabel": "自動核准已停用 - 請先選取選項",
 		"readOnly": {
 			"label": "讀取",
-			"description": "啟用後，Kilo Code 將自動檢視目錄內容並讀取檔案，無需點選核准按鈕。",
+			"description": "啟用後，Axon Code 將自動檢視目錄內容並讀取檔案，無需點選核准按鈕。",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
-				"description": "允許 Kilo Code 讀取目前工作區外的檔案，無需核准。"
+				"description": "允許 Axon Code 讀取目前工作區外的檔案，無需核准。"
 			}
 		},
 		"write": {
@@ -158,11 +158,11 @@
 			"delayLabel": "寫入後延遲以允許診斷偵測潛在問題",
 			"outsideWorkspace": {
 				"label": "包含工作區外的檔案",
-				"description": "允許 Kilo Code 在目前工作區外建立和編輯檔案，無需核准。"
+				"description": "允許 Axon Code 在目前工作區外建立和編輯檔案，無需核准。"
 			},
 			"protected": {
 				"label": "包含受保護的檔案",
-				"description": "允許 Kilo Code 建立和編輯受保護的檔案（如 .kilocodeignore 和 .kilocode/ 設定檔），無需核准。"
+				"description": "允許 Axon Code 建立和編輯受保護的檔案（如 .kilocodeignore 和 .kilocode/ 設定檔），無需核准。"
 			}
 		},
 		"browser": {
@@ -389,7 +389,7 @@
 			"draftModelDesc": "草稿模型必須來自相同模型系列才能正確運作。",
 			"selectDraftModel": "選擇草稿模型",
 			"noModelsFound": "未找到草稿模型。請確保 LM Studio 以伺服器模式執行。",
-			"description": "LM Studio 允許您在本機電腦執行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本機伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"description": "LM Studio 允許您在本機電腦執行模型。詳細資訊請參閱快速入門指南。您需要啟動 LM Studio 的本機伺服器功能才能與此擴充功能搭配使用。<span>注意：</span> Axon Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"ollama": {
 			"baseUrl": "基礎 URL（選用）",
@@ -400,7 +400,7 @@
 			"numCtx": "上下文視窗大小 (num_ctx)",
 			"numCtxHelp": "覆寫模型的預設上下文視窗大小。留空以使用模型的 Modelfile 設定。最小值為 128。",
 			"description": "Ollama 允許您在本機電腦執行模型。請參閱快速入門指南。",
-			"warning": "注意：Kilo Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
+			"warning": "注意：Axon Code 使用複雜提示，與 Claude 模型搭配最佳。功能較弱的模型可能無法正常運作。"
 		},
 		"unboundApiKey": "Unbound API 金鑰",
 		"getUnboundApiKey": "取得 Unbound API 金鑰",
@@ -422,7 +422,7 @@
 			}
 		},
 		"customModel": {
-			"capabilities": "設定自訂 OpenAI 相容模型的功能和定價。請謹慎設定模型功能，因為這會影響 Kilo Code 的運作方式。",
+			"capabilities": "設定自訂 OpenAI 相容模型的功能和定價。請謹慎設定模型功能，因為這會影響 Axon Code 的運作方式。",
 			"maxTokens": {
 				"label": "最大輸出 Token",
 				"description": "模型能在一則回應中產生的最大 Token 數量。（設為 -1 則由伺服器決定最大值）"
@@ -469,7 +469,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "錯誤和重複限制",
-			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
+			"description": "在顯示「Axon Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
 			"unlimitedDescription": "已啟用無限重試（自動繼續）。對話方塊將永遠不會出現。",
 			"warning": "⚠️ 設定為 0 允許無限重試，這可能會消耗大量 API 使用量"
 		},
@@ -521,7 +521,7 @@
 	"browser": {
 		"enable": {
 			"label": "啟用瀏覽器工具",
-			"description": "啟用後，Kilo Code 可在使用支援電腦使用的模型時使用瀏覽器與網站互動。 <0>了解更多</0>"
+			"description": "啟用後，Axon Code 可在使用支援電腦使用的模型時使用瀏覽器與網站互動。 <0>了解更多</0>"
 		},
 		"viewport": {
 			"label": "視窗大小",
@@ -549,18 +549,18 @@
 	"checkpoints": {
 		"enable": {
 			"label": "啟用自動檢查點",
-			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
+			"description": "啟用後，Axon Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
 		}
 	},
 	"notifications": {
 		"sound": {
 			"label": "啟用音效",
-			"description": "啟用後，Kilo Code 將為通知和事件播放音效。",
+			"description": "啟用後，Axon Code 將為通知和事件播放音效。",
 			"volumeLabel": "音量"
 		},
 		"tts": {
 			"label": "啟用文字轉語音",
-			"description": "啟用後，Kilo Code 將使用文字轉語音功能朗讀其回應。",
+			"description": "啟用後，Axon Code 將使用文字轉語音功能朗讀其回應。",
 			"speedLabel": "速度"
 		}
 	},
@@ -568,7 +568,7 @@
 		"description": "控制 AI 上下文視窗中要包含哪些資訊，會影響 token 用量和回應品質",
 		"autoCondenseContextPercent": {
 			"label": "觸發智慧上下文壓縮的閾值",
-			"description": "當上下文視窗達到此閾值時，Kilo Code 將自動壓縮它。"
+			"description": "當上下文視窗達到此閾值時，Axon Code 將自動壓縮它。"
 		},
 		"condensingApiConfiguration": {
 			"label": "上下文壓縮的 API 設定",
@@ -584,7 +584,7 @@
 		},
 		"autoCondenseContext": {
 			"name": "自動觸發智慧上下文壓縮",
-			"description": "啟用時，Kilo Code 會在達到閾值時自動壓縮上下文。停用時，您仍可手動觸發上下文壓縮。"
+			"description": "啟用時，Axon Code 會在達到閾值時自動壓縮上下文。停用時，您仍可手動觸發上下文壓縮。"
 		},
 		"openTabs": {
 			"label": "開啟分頁的上下文限制",
@@ -600,7 +600,7 @@
 		},
 		"maxReadFile": {
 			"label": "檔案讀取自動截斷閾值",
-			"description": "當模型未指定起始/結束值時，Kilo Code 讀取的行數。如果此數值小於檔案總行數，Kilo Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Kilo Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>了解更多</0>",
+			"description": "當模型未指定起始/結束值時，Axon Code 讀取的行數。如果此數值小於檔案總行數，Axon Code 將產生程式碼定義的行號索引。特殊情況：-1 指示 Axon Code 讀取整個檔案（不建立索引），0 指示不讀取任何行並僅提供行索引以取得最小上下文。較低的值可最小化初始上下文使用，允許後續精確的行範圍讀取。明確指定起始/結束的請求不受此設定限制。 <0>了解更多</0>",
 			"lines": "行",
 			"always_full_read": "始終讀取整個檔案"
 		},
@@ -709,7 +709,7 @@
 	"advanced": {
 		"diff": {
 			"label": "透過差異比對編輯",
-			"description": "啟用後，Kilo Code 可更快速地編輯檔案，並自動拒絕不完整的整檔覆寫。搭配最新的 Claude 4 Sonnet 模型效果最佳。",
+			"description": "啟用後，Axon Code 可更快速地編輯檔案，並自動拒絕不完整的整檔覆寫。搭配最新的 Claude 4 Sonnet 模型效果最佳。",
 			"strategy": {
 				"label": "差異比對策略",
 				"options": {
@@ -730,7 +730,7 @@
 		},
 		"todoList": {
 			"label": "啟用待辦事項清單工具",
-			"description": "啟用後，Kilo Code 可以建立和管理待辦事項清單來追蹤任務進度。這有助於將複雜任務組織成可管理的步驟。"
+			"description": "啟用後，Axon Code 可以建立和管理待辦事項清單來追蹤任務進度。這有助於將複雜任務組織成可管理的步驟。"
 		}
 	},
 	"experimental": {
@@ -740,23 +740,23 @@
 		},
 		"SEARCH_AND_REPLACE": {
 			"name": "使用實驗性搜尋與取代工具",
-			"description": "啟用實驗性的搜尋與取代工具，允許 Kilo Code 在單一請求中取代多個符合的內容。"
+			"description": "啟用實驗性的搜尋與取代工具，允許 Axon Code 在單一請求中取代多個符合的內容。"
 		},
 		"INSERT_BLOCK": {
 			"name": "使用實驗性插入內容工具",
-			"description": "啟用實驗性的插入內容工具，允許 Kilo Code 直接在指定行號插入內容，而無需產生差異比對。"
+			"description": "啟用實驗性的插入內容工具，允許 Axon Code 直接在指定行號插入內容，而無需產生差異比對。"
 		},
 		"POWER_STEERING": {
 			"name": "使用實驗性「動力輔助」模式",
-			"description": "啟用後，Kilo Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
+			"description": "啟用後，Axon Code 將更頻繁地提醒模型目前模式的詳細設定。這能讓模型更嚴格遵守角色定義和自訂指令，但每則訊息會使用更多 token。"
 		},
 		"MULTI_SEARCH_AND_REPLACE": {
 			"name": "使用實驗性多區塊差異比對工具",
-			"description": "啟用後，Kilo Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
+			"description": "啟用後，Axon Code 將使用多區塊差異比對工具，嘗試在單一請求中更新檔案內的多個程式碼區塊。"
 		},
 		"CONCURRENT_FILE_READS": {
 			"name": "啟用並行檔案讀取",
-			"description": "啟用後，Kilo Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Kilo Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
+			"description": "啟用後，Axon Code 可以在單一請求中讀取多個檔案（最多 15 個檔案）。停用後，Axon Code 必須逐一讀取檔案。在使用能力較弱的模型或希望對檔案存取有更多控制時，停用此功能可能會有所幫助。"
 		},
 		"MARKETPLACE": {
 			"name": "啟用 Marketplace",
@@ -764,11 +764,11 @@
 		},
 		"MULTI_FILE_APPLY_DIFF": {
 			"name": "啟用並行檔案編輯",
-			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
+			"description": "啟用後 Axon Code 可在單個請求中編輯多個檔案。停用後 Axon Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "啟用 Fast Apply",
-			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
+			"description": "啟用後，Axon Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）",
 			"modelLabel": "模型選擇",
@@ -794,13 +794,13 @@
 		},
 		"IMAGE_GENERATION": {
 			"name": "啟用 AI 圖像生成",
-			"description": "啟用後，Kilo Code 可以從文字提示生成圖像。需要設定 Kilo Code 或 OpenRouter API 金鑰。",
+			"description": "啟用後，Axon Code 可以從文字提示生成圖像。需要設定 Axon Code 或 OpenRouter API 金鑰。",
 			"apiProvider": "API 供應商",
 			"openRouterApiKeyLabel": "OpenRouter API 金鑰",
 			"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
-			"kiloCodeApiKeyLabel": "Kilo Code API 金鑰",
-			"kiloCodeApiKeyPlaceholder": "輸入您的 Kilo Code API 金鑰",
-			"kiloCodeApiKeyPaste": "貼上目前的 Kilo Code API 金鑰",
+			"kiloCodeApiKeyLabel": "Axon Code API 金鑰",
+			"kiloCodeApiKeyPlaceholder": "輸入您的 Axon Code API 金鑰",
+			"kiloCodeApiKeyPaste": "貼上目前的 Axon Code API 金鑰",
 			"getApiKeyText": "取得您的 API 金鑰從",
 			"modelSelectionLabel": "圖像生成模型",
 			"modelSelectionDescription": "選擇用於圖像生成的模型",
@@ -813,12 +813,12 @@
 		},
 		"RUN_SLASH_COMMAND": {
 			"name": "啟用模型發起斜線命令",
-			"description": "啟用時，Kilo Code 可以執行您的斜線命令來執行工作流程。"
+			"description": "啟用時，Axon Code 可以執行您的斜線命令來執行工作流程。"
 		}
 	},
 	"promptCaching": {
 		"label": "停用提示詞快取",
-		"description": "勾選後，Kilo Code 將不會為此模型使用提示詞快取。"
+		"description": "勾選後，Axon Code 將不會為此模型使用提示詞快取。"
 	},
 	"temperature": {
 		"useCustom": "使用自訂溫度",
@@ -850,18 +850,18 @@
 		}
 	},
 	"modelPicker": {
-		"automaticFetch": "此擴充功能會自動從 <serviceLink>{{serviceName}}</serviceLink> 取得最新的可用模型清單。如果不確定要選哪個模型，建議使用 <defaultModelLink>{{defaultModelId}}</defaultModelLink>，這是與 Kilo Code 最佳搭配的模型。",
+		"automaticFetch": "此擴充功能會自動從 <serviceLink>{{serviceName}}</serviceLink> 取得最新的可用模型清單。如果不確定要選哪個模型，建議使用 <defaultModelLink>{{defaultModelId}}</defaultModelLink>，這是與 Axon Code 最佳搭配的模型。",
 		"label": "模型",
 		"searchPlaceholder": "搜尋",
 		"noMatchFound": "找不到符合的項目",
 		"useCustomModel": "使用自訂模型：{{modelId}}"
 	},
 	"footer": {
-		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>kilocode.ai/discord</discordLink> 討論。",
-		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>https://kilocode.ai/support</supportLink>",
+		"feedback": "若您有任何問題或建議，歡迎至 <githubLink>github.com/Kilo-Org/kilocode</githubLink> 提出 issue，或加入 <redditLink>reddit.com/r/kilocode</redditLink> 或 <discordLink>matterai.so/discord</discordLink> 討論。",
+		"support": "如有財務相關問題，請聯絡客戶支援 <supportLink>https://matterai.so/support</supportLink>",
 		"telemetry": {
 			"label": "允許匿名錯誤與使用情況回報",
-			"description": "透過傳送匿名的使用資料與錯誤回報，協助改善 Kilo Code。我們絕不會傳送您的程式碼、提示或個人資訊。詳細資訊請參閱我們的隱私權政策。"
+			"description": "透過傳送匿名的使用資料與錯誤回報，協助改善 Axon Code。我們絕不會傳送您的程式碼、提示或個人資訊。詳細資訊請參閱我們的隱私權政策。"
 		},
 		"settings": {
 			"import": "匯入",

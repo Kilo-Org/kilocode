@@ -9,7 +9,7 @@
 		"editModesConfig": "Editar configuració de modes",
 		"editGlobalModes": "Editar modes globals",
 		"editProjectModes": "Editar modes de projecte (.kilocodemodes)",
-		"createModeHelpText": "Els modes són persones especialitzades que adapten el comportament de Kilo Code. <0>Aprèn sobre l'ús de modes</0> o <1>Personalització de modes.</1>",
+		"createModeHelpText": "Els modes són persones especialitzades que adapten el comportament de Axon Code. <0>Aprèn sobre l'ús de modes</0> o <1>Personalització de modes.</1>",
 		"selectMode": "Cerqueu modes"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Mode d'organització",
-		"description": "Aquest mode és proporcionat per la teva organització i no es pot editar aquí. Per modificar aquest mode, visita el Kilo Code Dashboard.",
+		"description": "Aquest mode és proporcionat per la teva organització i no es pot editar aquí. Per modificar aquest mode, visita el Axon Code Dashboard.",
 		"cannotEdit": "Els modes d'organització no es poden editar"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definició de rol",
 		"resetToDefault": "Restablir a valors predeterminats",
-		"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode. Aquesta descripció determina com Kilo Code es presenta i aborda les tasques."
+		"description": "Definiu l'experiència i personalitat de Axon Code per a aquest mode. Aquesta descripció determina com Axon Code es presenta i aborda les tasques."
 	},
 	"description": {
 		"title": "Descripció curta (per a humans)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Millorar prompt",
-				"description": "Utilitzeu la millora de prompts per obtenir suggeriments o millores personalitzades per a les vostres entrades. Això assegura que Kilo Code entengui la vostra intenció i proporcioni les millors respostes possibles. Disponible a través de la icona ✨ al xat."
+				"description": "Utilitzeu la millora de prompts per obtenir suggeriments o millores personalitzades per a les vostres entrades. Això assegura que Axon Code entengui la vostra intenció i proporcioni les millors respostes possibles. Disponible a través de la icona ✨ al xat."
 			},
 			"CONDENSE": {
 				"label": "Condensació de context",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definició de rol",
-			"description": "Definiu l'experiència i personalitat de Kilo Code per a aquest mode."
+			"description": "Definiu l'experiència i personalitat de Axon Code per a aquest mode."
 		},
 		"whenToUse": {
 			"label": "Quan utilitzar (opcional)",

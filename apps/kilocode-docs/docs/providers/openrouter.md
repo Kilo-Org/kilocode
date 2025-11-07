@@ -2,7 +2,7 @@
 sidebar_label: OpenRouter
 ---
 
-# Using OpenRouter With Kilo Code
+# Using OpenRouter With Axon Code
 
 OpenRouter is an AI platform that provides access to a wide variety of language models from different providers, all through a single API. This can simplify setup and allow you to easily experiment with different models.
 
@@ -16,11 +16,11 @@ OpenRouter is an AI platform that provides access to a wide variety of language 
 
 ## Supported Models
 
-OpenRouter supports a large and growing number of models. Kilo Code automatically fetches the list of available models. Refer to the [OpenRouter Models page](https://openrouter.ai/models) for the complete and up-to-date list.
+OpenRouter supports a large and growing number of models. Axon Code automatically fetches the list of available models. Refer to the [OpenRouter Models page](https://openrouter.ai/models) for the complete and up-to-date list.
 
-## Configuration in Kilo Code
+## Configuration in Axon Code
 
-1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1.  **Open Axon Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Axon Code panel.
 2.  **Select Provider:** Choose "OpenRouter" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your OpenRouter API key into the "OpenRouter API Key" field.
 4.  **Select Model:** Choose your desired model from the "Model" dropdown.

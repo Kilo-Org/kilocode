@@ -2,16 +2,16 @@
 	"title": "MCP Sunucuları",
 	"done": "Tamam",
 	"marketplace": "MCP Pazaryeri",
-	"description": "<0>Model Context Protocol</0>, Kilo Code'nun yeteneklerini genişletmek için ek araçlar ve kaynaklar sağlayan yerel olarak çalışan MCP sunucularıyla iletişim kurmanızı sağlar. <1>Topluluk tarafından oluşturulan sunucuları</1> kullanabilir veya Kilo Code'dan iş akışınıza özel yeni araçlar oluşturmasını isteyebilirsiniz (örneğin, \"en son npm belgelerini alan bir araç ekle\").",
+	"description": "<0>Model Context Protocol</0>, Axon Code'nun yeteneklerini genişletmek için ek araçlar ve kaynaklar sağlayan yerel olarak çalışan MCP sunucularıyla iletişim kurmanızı sağlar. <1>Topluluk tarafından oluşturulan sunucuları</1> kullanabilir veya Axon Code'dan iş akışınıza özel yeni araçlar oluşturmasını isteyebilirsiniz (örneğin, \"en son npm belgelerini alan bir araç ekle\").",
 	"instructions": "Talimatlar",
 	"enableToggle": {
 		"title": "MCP Sunucularını Etkinleştir",
-		"description": "Bunu AÇ, böylece Kilo Code bağlı MCP sunucularından araçlar kullanabilir. Kilo Code'ya daha fazla yetenek kazandırır. Ekstra araçları kullanmayacaksan, API token maliyetini azaltmak için bunu KAPAT."
+		"description": "Bunu AÇ, böylece Axon Code bağlı MCP sunucularından araçlar kullanabilir. Axon Code'ya daha fazla yetenek kazandırır. Ekstra araçları kullanmayacaksan, API token maliyetini azaltmak için bunu KAPAT."
 	},
 	"enableServerCreation": {
 		"title": "MCP Sunucu Oluşturmayı Etkinleştir",
-		"description": "Bunu AÇ, Kilo Code'nun <1>yeni</1> özel MCP sunucuları oluşturmanda sana yardımcı olmasını sağlar. <0>Sunucu oluşturma hakkında bilgi al</0>",
-		"hint": "İpucu: API token maliyetini azaltmak için Kilo Code'dan yeni bir MCP sunucusu oluşturmasını istemediğinde bu ayarı kapat."
+		"description": "Bunu AÇ, Axon Code'nun <1>yeni</1> özel MCP sunucuları oluşturmanda sana yardımcı olmasını sağlar. <0>Sunucu oluşturma hakkında bilgi al</0>",
+		"hint": "İpucu: API token maliyetini azaltmak için Axon Code'dan yeni bir MCP sunucusu oluşturmasını istemediğinde bu ayarı kapat."
 	},
 	"editGlobalMCP": "Global MCP'yi Düzenle",
 	"editProjectMCP": "Proje MCP'sini Düzenle",

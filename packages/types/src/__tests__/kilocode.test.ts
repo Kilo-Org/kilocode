@@ -60,7 +60,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.kilocode.ai/api/profile/balance",
+			"https://api.matterai.so/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,
@@ -98,7 +98,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken, mockOrgId)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.kilocode.ai/api/profile/balance",
+			"https://api.matterai.so/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,
@@ -180,18 +180,18 @@ describe("URL functions", () => {
 			expect(getExtensionConfigUrl()).toBe("http://localhost:3000/extension-config.json")
 		})
 		it("should use subdomain structure for production", () => {
-			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
+			expect(getExtensionConfigUrl()).toBe("https://api.matterai.so/extension-config.json")
 		})
 	})
 
 	describe("getApiUrl", () => {
 		it("should handle production URLs correctly", () => {
 			// API URLs using /api path structure
-			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
-			expect(getApiUrl("/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
-			expect(getApiUrl("/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
-			expect(getApiUrl("/profile/balance")).toBe("https://kilocode.ai/api/profile/balance")
-			expect(getApiUrl()).toBe("https://kilocode.ai/api")
+			expect(getApiUrl("/extension-config.json")).toBe("https://matterai.so/api/extension-config.json")
+			expect(getApiUrl("/marketplace/modes")).toBe("https://matterai.so/api/marketplace/modes")
+			expect(getApiUrl("/marketplace/mcps")).toBe("https://matterai.so/api/marketplace/mcps")
+			expect(getApiUrl("/profile/balance")).toBe("https://matterai.so/api/profile/balance")
+			expect(getApiUrl()).toBe("https://matterai.so/api")
 		})
 
 		it("should handle development environment", () => {
@@ -209,19 +209,19 @@ describe("URL functions", () => {
 		})
 
 		it("should handle empty and root paths", () => {
-			expect(getApiUrl("")).toBe("https://kilocode.ai/api")
-			expect(getApiUrl("/")).toBe("https://kilocode.ai/api/")
+			expect(getApiUrl("")).toBe("https://matterai.so/api")
+			expect(getApiUrl("/")).toBe("https://matterai.so/api/")
 		})
 	})
 
 	describe("getAppUrl", () => {
 		it("should handle production URLs correctly", () => {
-			expect(getAppUrl()).toBe("https://kilocode.ai")
-			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
-			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
-			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
+			expect(getAppUrl()).toBe("https://matterai.so")
+			expect(getAppUrl("/profile")).toBe("https://matterai.so/profile")
+			expect(getAppUrl("/support")).toBe("https://matterai.so/support")
+			expect(getAppUrl("/sign-in-to-editor")).toBe("https://matterai.so/sign-in-to-editor")
 			expect(getAppUrl("/sign-in-to-editor?source=vscode")).toBe(
-				"https://kilocode.ai/sign-in-to-editor?source=vscode",
+				"https://matterai.so/sign-in-to-editor?source=vscode",
 			)
 		})
 
@@ -239,8 +239,8 @@ describe("URL functions", () => {
 		})
 
 		it("should handle empty and root paths", () => {
-			expect(getAppUrl("")).toBe("https://kilocode.ai")
-			expect(getAppUrl("/")).toBe("https://kilocode.ai")
+			expect(getAppUrl("")).toBe("https://matterai.so")
+			expect(getAppUrl("/")).toBe("https://matterai.so")
 		})
 	})
 
@@ -248,21 +248,21 @@ describe("URL functions", () => {
 		it("should handle production token URLs correctly", () => {
 			const prodToken = createProdToken()
 
-			// Token-based URLs using api.kilocode.ai subdomain
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile",
+			// Token-based URLs using api.matterai.so subdomain
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", prodToken)).toBe(
+				"https://api.matterai.so/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", prodToken)).toBe(
+				"https://api.matterai.so/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/organizations/123/defaults", prodToken)).toBe(
-				"https://api.kilocode.ai/api/organizations/123/defaults",
+			expect(getKiloUrlFromToken("https://api.matterai.so/organizations/123/defaults", prodToken)).toBe(
+				"https://api.matterai.so/organizations/123/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", prodToken)).toBe(
-				"https://api.kilocode.ai/api/openrouter/",
+			expect(getKiloUrlFromToken("https://api.matterai.so/v1/web/", prodToken)).toBe(
+				"https://api.matterai.so/v1/web/",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", prodToken)).toBe(
-				"https://api.kilocode.ai/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", prodToken)).toBe(
+				"https://api.matterai.so/users/notifications",
 			)
 		})
 
@@ -270,19 +270,19 @@ describe("URL functions", () => {
 			const devToken = createDevToken()
 
 			// Development token should map to localhost:3000
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", devToken)).toBe(
 				"http://localhost:3000/api/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", devToken)).toBe(
 				"http://localhost:3000/api/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/organizations/456/defaults", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/organizations/456/defaults", devToken)).toBe(
 				"http://localhost:3000/api/organizations/456/defaults",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/openrouter/", devToken)).toBe(
-				"http://localhost:3000/api/openrouter/",
+			expect(getKiloUrlFromToken("https://api.matterai.so/v1/web/", devToken)).toBe(
+				"http://localhost:3000/api/v1/web/",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", devToken)).toBe(
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", devToken)).toBe(
 				"http://localhost:3000/api/users/notifications",
 			)
 		})
@@ -290,9 +290,9 @@ describe("URL functions", () => {
 		it("should handle invalid tokens gracefully", () => {
 			const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
 			// Use a token that looks like JWT but has invalid JSON payload
-			const result = getKiloUrlFromToken("https://api.kilocode.ai/api/test", "header.invalid-json.signature")
-			expect(result).toBe("https://api.kilocode.ai/api/test")
-			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Kilo Code token")
+			const result = getKiloUrlFromToken("https://api.matterai.so/test", "header.invalid-json.signature")
+			expect(result).toBe("https://api.matterai.so/test")
+			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Axon Code token")
 			consoleSpy.mockRestore()
 		})
 	})
@@ -300,33 +300,33 @@ describe("URL functions", () => {
 	describe("Real-world URL patterns from application", () => {
 		it("should correctly handle marketplace endpoints", () => {
 			// These are the actual endpoints used in RemoteConfigLoader
-			expect(getApiUrl("/marketplace/modes")).toBe("https://kilocode.ai/api/marketplace/modes")
-			expect(getApiUrl("/marketplace/mcps")).toBe("https://kilocode.ai/api/marketplace/mcps")
+			expect(getApiUrl("/marketplace/modes")).toBe("https://matterai.so/api/marketplace/modes")
+			expect(getApiUrl("/marketplace/mcps")).toBe("https://matterai.so/api/marketplace/mcps")
 		})
 
 		it("should correctly handle app navigation URLs", () => {
 			// These are the actual URLs used in Task.ts and webviewMessageHandler.ts
-			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
-			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
+			expect(getAppUrl("/profile")).toBe("https://matterai.so/profile")
+			expect(getAppUrl("/support")).toBe("https://matterai.so/support")
 		})
 
 		it("should correctly handle token-based API calls", () => {
 			// These are the actual API endpoints used throughout the application
 			const prodToken = createProdToken()
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile", prodToken)).toBe(
+				"https://api.matterai.so/profile",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", prodToken)).toBe(
-				"https://api.kilocode.ai/api/profile/balance",
+			expect(getKiloUrlFromToken("https://api.matterai.so/profile/balance", prodToken)).toBe(
+				"https://api.matterai.so/profile/balance",
 			)
-			expect(getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", prodToken)).toBe(
-				"https://api.kilocode.ai/api/users/notifications",
+			expect(getKiloUrlFromToken("https://api.matterai.so/users/notifications", prodToken)).toBe(
+				"https://api.matterai.so/users/notifications",
 			)
 		})
 
 		it("should maintain backwards compatibility for legacy endpoints", () => {
-			expect(getExtensionConfigUrl()).toBe("https://api.kilocode.ai/extension-config.json")
-			expect(getApiUrl("/extension-config.json")).toBe("https://kilocode.ai/api/extension-config.json")
+			expect(getExtensionConfigUrl()).toBe("https://api.matterai.so/extension-config.json")
+			expect(getApiUrl("/extension-config.json")).toBe("https://matterai.so/api/extension-config.json")
 			expect(getApiUrl("/extension-config.json")).not.toBe(getExtensionConfigUrl())
 		})
 	})

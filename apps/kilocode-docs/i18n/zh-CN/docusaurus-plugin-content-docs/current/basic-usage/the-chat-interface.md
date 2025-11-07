@@ -1,24 +1,24 @@
 import Image from '@site/src/components/Image';
 
-# 与 Kilo Code 聊天
+# 与 Axon Code 聊天
 
 :::tip
 
-**总结：** Kilo Code 是一个 AI 编码助手，它存在于 VS Code 中。您可以用简单的英语与它聊天，它会为您编写、编辑和解释代码。
+**总结：** Axon Code 是一个 AI 编码助手，它存在于 VS Code 中。您可以用简单的英语与它聊天，它会为您编写、编辑和解释代码。
 
 :::
 
 ## 快速设置
 
-在 VS Code 的主侧边栏中找到 Kilo Code 图标（<img src="/docs/img/kilo-v1.svg" width="12" />）。单击它以打开聊天面板。
+在 VS Code 的主侧边栏中找到 Axon Code 图标（<img src="/docs/img/axon-code-icon.svg" width="12" />）。单击它以打开聊天面板。
 
-**找不到面板？** 转到“视图”>“打开视图...”并搜索“Kilo Code”
+**找不到面板？** 转到“视图”>“打开视图...”并搜索“Axon Code”
 
-## 如何与 Kilo Code 对话
+## 如何与 Axon Code 对话
 
 **关键见解：** 只需用普通英语输入您想要的内容。无需特殊命令。
 
-<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="在 Kilo Code 中输入请求的示例" width="600" />
+<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="在 Axon Code 中输入请求的示例" width="600" />
 
 **好的请求：**
 
@@ -35,11 +35,11 @@ import Image from '@site/src/components/Image';
 ```
 
 **使请求生效的因素：**
+
 - **具体** - “修复 `calculateTotal` 中返回不正确结果的错误”胜过“修复代码”
 - **使用 @ 提及** - 使用 `@filename` 直接引用文件和代码
 - **一次一个任务** - 将复杂工作分解为可管理的步骤
 - **包含示例** - 显示您想要的样式或格式
-
 
 ## 聊天界面
 
@@ -50,6 +50,7 @@ import Image from '@site/src/components/Image';
 />
 
 **基本控件：**
+
 - **聊天历史记录** - 查看您的对话和任务历史记录
 - **输入字段** - 在此处输入您的请求（按 Enter 发送）
 - **操作按钮** - 批准或拒绝 Kilo 的提议更改
@@ -59,25 +60,27 @@ import Image from '@site/src/components/Image';
 ## 快速交互
 
 **点击操作：**
+
 - 文件路径 → 打开文件
 - URL → 在浏览器中打开
 - 消息 → 展开/折叠详细信息
 - 代码块 → 出现复制按钮
 
 **状态信号：**
+
 - 旋转 → Kilo 正在工作
 - 红色 → 发生错误
 - 绿色 → 成功
 
 ## 需要避免的常见错误
 
-| 替代这个...        | 尝试这个 |
-|----------------|----------|
-| "Fix the code" | "修复 `calculateTotal` 中返回不正确结果的错误" |
-| 假设 Kilo 知道上下文  | 使用 `@` 引用特定文件 |
-| 多个不相关的任务       | 一次提交一个重点突出的请求 |
-| 技术术语过多         | 清晰、直接的语言效果最好 |
+| 替代这个...          | 尝试这个                                       |
+| -------------------- | ---------------------------------------------- |
+| "Fix the code"       | "修复 `calculateTotal` 中返回不正确结果的错误" |
+| 假设 Kilo 知道上下文 | 使用 `@` 引用特定文件                          |
+| 多个不相关的任务     | 一次提交一个重点突出的请求                     |
+| 技术术语过多         | 清晰、直接的语言效果最好                       |
 
-**重要的原因：** 当您像与需要明确指导的聪明队友交谈一样进行交流时，Kilo Code 的效果最佳。
+**重要的原因：** 当您像与需要明确指导的聪明队友交谈一样进行交流时，Axon Code 的效果最佳。
 
 准备好开始编码了吗？打开聊天面板并描述您想要构建的内容！

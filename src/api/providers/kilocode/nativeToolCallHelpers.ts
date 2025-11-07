@@ -69,10 +69,11 @@
  * - `openrouter.ts` - OpenRouter implementation
  */
 
+import { ProviderSettings, ToolUseStyle } from "@roo-code/types"
 import OpenAI from "openai"
+import { nativeTools } from "../../../core/prompts/tools/native-tools"
 import type { ApiHandlerCreateMessageMetadata } from "../../index"
 import type { ApiStreamNativeToolCallsChunk } from "../../transform/kilocode/api-stream-native-tool-calls-chunk"
-import { getActiveToolUseStyle, ProviderSettings, ToolUseStyle } from "@roo-code/types"
 
 /**
  * Adds native tool call parameters to OpenAI chat completion params when toolStyle is "json"
@@ -87,13 +88,16 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
 	options: ProviderSettings,
 	metadata?: ApiHandlerCreateMessageMetadata,
 ): T {
-	// When toolStyle is "json" and allowedTools exist, add them to params
-	if (getActiveToolUseStyle(options) === "json" && metadata?.allowedTools) {
-		params.tools = metadata.allowedTools
+	// When toolStyle is "json", always add all native tools
+
+	// Use allowedTools if provided, otherwise use all native tools
+	const tools = metadata?.allowedTools || nativeTools
+	if (tools && tools.length > 0) {
+		params.tools = tools
 		//optimally we'd have tool_choice as 'required', but many providers, especially
 		// those using SGlang dont properly handle that setting and barf with a 400.
 		params.tool_choice = "auto" as const
-		params.parallel_tool_calls = false
+		params.parallel_tool_calls = true
 	}
 
 	return params
@@ -112,32 +116,32 @@ export function* processNativeToolCallsFromDelta(
 ): Generator<ApiStreamNativeToolCallsChunk, void, undefined> {
 	// Check if delta contains tool calls
 	if (delta && delta.tool_calls && delta.tool_calls.length > 0) {
-		// Only process tool calls when toolStyle is "json"
-		if (toolStyle === "json") {
-			// Filter tool calls to keep only those with function data
-			// Map to the ApiStreamNativeToolCallsChunk format
-			const validToolCalls = delta.tool_calls
-				.filter((tc) => tc.function) // Keep any delta with function data
-				.map((tc) => ({
-					index: tc.index, // Use index to track across deltas
-					id: tc.id, // Only present in first delta
-					type: tc.type,
-					function: {
-						name: tc.function!.name || "", // Name only in first delta
-						arguments: tc.function!.arguments || "", // Arguments accumulate across deltas
-					},
-				}))
+		// Filter tool calls to keep only those with function data
+		// Map to the ApiStreamNativeToolCallsChunk format
+		const validToolCalls = delta.tool_calls
+			.filter((tc) => tc.function) // Keep any delta with function data
+			.map((tc) => ({
+				index: tc.index, // Use index to track across deltas
+				id: tc.id, // Only present in first delta
+				type: tc.type,
+				function: {
+					name: tc.function!.name || "", // Name only in first delta
+					arguments: tc.function!.arguments || "", // Arguments accumulate across deltas
+				},
+			}))
 
-			// If we have valid tool calls, yield them as a chunk
-			if (validToolCalls.length > 0) {
-				yield {
-					type: "native_tool_calls",
-					toolCalls: validToolCalls,
-				}
+		if (validToolCalls.length > 0) {
+			if (toolStyle !== "json") {
+				console.warn(
+					"Model produced native tool calls while toolStyle is not 'json'; proceeding to process anyway",
+					delta.tool_calls,
+				)
 			}
-		} else {
-			// Log error when model tries to use native tool calls but toolStyle is not "json"
-			console.error("Model tried to use native tool calls but toolStyle is not 'json'", delta.tool_calls)
+
+			yield {
+				type: "native_tool_calls",
+				toolCalls: validToolCalls,
+			}
 		}
 	}
 }

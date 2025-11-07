@@ -2,9 +2,9 @@
 sidebar_label: Requesty
 ---
 
-# 在 Kilo Code 中使用 Requesty
+# 在 Axon Code 中使用 Requesty
 
-Kilo Code 支持通过 [Requesty](https://www.requesty.ai/) AI 平台访问模型。Requesty 提供了一个简单且优化的 API，用于与 150+ 大型语言模型 (LLMs) 进行交互。
+Axon Code 支持通过 [Requesty](https://www.requesty.ai/) AI 平台访问模型。Requesty 提供了一个简单且优化的 API，用于与 150+ 大型语言模型 (LLMs) 进行交互。
 
 **网站:** [https://www.requesty.ai/](https://www.requesty.ai/)
 
@@ -15,11 +15,11 @@ Kilo Code 支持通过 [Requesty](https://www.requesty.ai/) AI 平台访问模�
 
 ## 支持的模型
 
-Requesty 提供了对多种模型的访问。Kilo Code 会自动获取最新的可用模型列表。您可以在 [模型列表](https://app.requesty.ai/router/list) 页面上查看所有可用模型的完整列表。
+Requesty 提供了对多种模型的访问。Axon Code 会自动获取最新的可用模型列表。您可以在 [模型列表](https://app.requesty.ai/router/list) 页面上查看所有可用模型的完整列表。
 
-## 在 Kilo Code 中配置
+## 在 Axon Code 中配置
 
-1. **打开 Kilo Code 设置:** 点击 Kilo Code 面板中的齿轮图标 (<Codicon name="gear" />)。
+1. **打开 Axon Code 设置:** 点击 Axon Code 面板中的齿轮图标 (<Codicon name="gear" />)。
 2. **选择提供商:** 从 "API 提供商" 下拉菜单中选择 "Requesty"。
 3. **输入 API 密钥:** 将您的 Requesty API 密钥粘贴到 "Requesty API 密钥" 字段中。
 4. **选择模型:** 从 "模型" 下拉菜单中选择您想要的模型。

@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code कमिट संदेश जनरेटर सक्रिय",
+		"activated": "Axon Code कमिट संदेश जनरेटर सक्रिय",
 		"gitNotFound": "⚠️ Git रिपॉजिटरी नहीं मिली या Git उपलब्ध नहीं है",
 		"gitInitError": "⚠️ Git इनिशियलाइज़ेशन त्रुटि: {{error}}",
 		"generating": "Kilo: कमिट संदेश उत्पन्न कर रहा है...",
@@ -64,7 +64,7 @@
 		"errors": {
 			"noProject": "कोई प्रोजेक्ट उपलब्ध नहीं है",
 			"timeout": "30 सेकंड के बाद अनुरोध का समय समाप्त हो गया",
-			"connectionFailed": "Kilo Code एक्सटेंशन से कनेक्ट करने में विफल",
+			"connectionFailed": "Axon Code एक्सटेंशन से कनेक्ट करने में विफल",
 			"invalidResponse": "एक्सटेंशन से अमान्य प्रतिक्रिया प्रारूप प्राप्त हुआ",
 			"missingMessage": "एक्सटेंशन से कोई कमिट संदेश प्राप्त नहीं हुआ",
 			"noChanges": "कमिट करने के लिए कोई परिवर्तन नहीं मिला",
@@ -88,7 +88,7 @@
 		"progress": {
 			"title": "कमिट संदेश जनरेट कर रहा है",
 			"analyzing": "बदलावों का विश्लेषण किया जा रहा है...",
-			"connecting": "Kilo Code से कनेक्ट हो रहा है...",
+			"connecting": "Axon Code से कनेक्ट हो रहा है...",
 			"generating": "कमिट संदेश जनरेट हो रहा है..."
 		},
 		"ui": {
@@ -104,12 +104,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (अक्षम)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (अक्षम)",
 				"tokenError": "Autocomplete का उपयोग करने के लिए एक वैध टोकन सेट करना होगा",
 				"lastCompletion": "अंतिम सुझाव:",
 				"sessionTotal": "सत्र की कुल लागत:",
@@ -121,36 +121,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "आपके कोड का विश्लेषण कर रहे हैं...",
 			"generating": "सुझाए गए संपादन बना रहे हैं...",
 			"processing": "सुझाए गए संपादन प्रोसेस कर रहे हैं...",
 			"showing": "सुझाए गए संपादन दिखा रहे हैं..."
 		},
 		"input": {
-			"title": "Kilo Code: त्वरित कार्य",
+			"title": "Axon Code: त्वरित कार्य",
 			"placeholder": "जैसे, 'इस फ़ंक्शन को अधिक कुशल बनाने के लिए रिफैक्टर करें'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: सुझाए गए संपादन जेनरेट करें",
+			"generateSuggestions": "Axon Code: सुझाए गए संपादन जेनरेट करें",
 			"displaySuggestions": "सुझाए गए संपादन दिखाएं",
 			"cancelSuggestions": "सुझाए गए संपादन रद्द करें",
 			"applyCurrentSuggestion": "वर्तमान सुझाए गए संपादन लागू करें",
 			"applyAllSuggestions": "सभी सुझाए गए संपादन लागू करें",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: सुझाए गए संपादन"
+			"title": "Axon Code: सुझाए गए संपादन"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "मैं त्वरित कार्यों और सुझाए गए संपादनों में आपकी सहायता कर सकता हूं।"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete को GitHub Copilot के साथ संघर्ष के कारण ब्लॉक किया जा रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
+			"message": "Axon Code Autocomplete को GitHub Copilot के साथ संघर्ष के कारण ब्लॉक किया जा रहा है। इसे ठीक करने के लिए, आपको Copilot के इनलाइन सुझावों को अक्षम करना होगा।",
 			"disableCopilot": "Copilot अक्षम करें",
 			"disableInlineAssist": "Autocomplete अक्षम करें"
 		}

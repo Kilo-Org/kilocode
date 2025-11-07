@@ -13,7 +13,7 @@
 		"cancel": "Отмена"
 	},
 	"ui": {
-		"initializing": "Kilo Code инициализируется...",
+		"initializing": "Axon Code инициализируется...",
 		"systemInformation": "Информация о системе"
 	}
 }

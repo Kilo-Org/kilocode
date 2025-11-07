@@ -85,7 +85,7 @@ export async function reportBugTool(
 					params.set("title", title)
 					params.set(
 						"description",
-						`${description}\n\n**System Information:**\n- Provider & Model: ${providerAndModel}\n- Operating System: ${operatingSystem}\n- Kilo Code Version: ${kilocodeVersion}\n- ${systemInfo}`,
+						`${description}\n\n**System Information:**\n- Provider & Model: ${providerAndModel}\n- Operating System: ${operatingSystem}\n- Axon Code Version: ${kilocodeVersion}\n- ${systemInfo}`,
 					)
 
 					// Use our utility function to create and open the GitHub issue URL

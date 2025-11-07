@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Open-Source-KI-Codierungsassistent zum Planen, Erstellen und Korrigieren von Code."
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Claude Code Prozess wurde mit Code {{exitCode}} beendet. Fehlerausgabe: {{output}}",
 			"stoppedWithReason": "Claude Code wurde mit Grund gestoppt: {{reason}}",
 			"apiKeyModelPlanMismatch": "API-Schlüssel und Abonnement-Pläne erlauben verschiedene Modelle. Stelle sicher, dass das ausgewählte Modell in deinem Plan enthalten ist.",
-			"notFound": "Claude Code ausführbare Datei '{{claudePath}}' nicht gefunden.\n\nBitte installiere Claude Code CLI:\n1. Besuche {{installationUrl}} um Claude Code herunterzuladen\n2. Folge den Installationsanweisungen für dein Betriebssystem\n3. Stelle sicher, dass der 'claude' Befehl in deinem PATH verfügbar ist\n4. Alternativ konfiguriere einen benutzerdefinierten Pfad in den Kilo Code-Einstellungen unter 'Claude Code Pfad'\n\nUrsprünglicher Fehler: {{originalError}}"
+			"notFound": "Claude Code ausführbare Datei '{{claudePath}}' nicht gefunden.\n\nBitte installiere Claude Code CLI:\n1. Besuche {{installationUrl}} um Claude Code herunterzuladen\n2. Folge den Installationsanweisungen für dein Betriebssystem\n3. Stelle sicher, dass der 'claude' Befehl in deinem PATH verfügbar ist\n4. Alternativ konfiguriere einen benutzerdefinierten Pfad in den Axon Code-Einstellungen unter 'Claude Code Pfad'\n\nUrsprünglicher Fehler: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "Fehler beim Laden der OAuth-Anmeldedaten. Bitte authentifiziere dich zuerst: {{error}}",
@@ -147,7 +147,7 @@
 	"warnings": {
 		"no_terminal_content": "Kein Terminal-Inhalt ausgewählt",
 		"missing_task_files": "Die Dateien dieser Aufgabe fehlen. Möchtest du sie aus der Aufgabenliste entfernen?",
-		"auto_import_failed": "Fehler beim automatischen Import der Kilo Code-Einstellungen: {{error}}"
+		"auto_import_failed": "Fehler beim automatischen Import der Axon Code-Einstellungen: {{error}}"
 	},
 	"info": {
 		"no_changes": "Keine Änderungen gefunden.",
@@ -156,7 +156,7 @@
 		"custom_storage_path_set": "Benutzerdefinierter Speicherpfad festgelegt: {{path}}",
 		"default_storage_path": "Auf Standardspeicherpfad zurückgesetzt",
 		"settings_imported": "Einstellungen erfolgreich importiert.",
-		"auto_import_success": "Kilo Code-Einstellungen automatisch importiert aus {{filename}}",
+		"auto_import_success": "Axon Code-Einstellungen automatisch importiert aus {{filename}}",
 		"share_link_copied": "Share-Link in die Zwischenablage kopiert",
 		"image_copied_to_clipboard": "Bild-Daten-URI in die Zwischenablage kopiert",
 		"image_saved": "Bild gespeichert unter {{path}}",
@@ -193,7 +193,7 @@
 		"enter_valid_path": "Bitte gib einen gültigen Pfad ein"
 	},
 	"input": {
-		"task_prompt": "Was soll Kilo Code tun?",
+		"task_prompt": "Was soll Axon Code tun?",
 		"task_placeholder": "Gib deine Aufgabe hier ein"
 	},
 	"settings": {
@@ -231,8 +231,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Deine Organisation erfordert eine Kilo Code Cloud-Authentifizierung. Bitte melde dich an, um fortzufahren.",
-			"organization_mismatch": "Du musst mit dem Kilo Code Cloud-Konto deiner Organisation authentifiziert sein.",
+			"cloud_auth_required": "Deine Organisation erfordert eine Axon Code Cloud-Authentifizierung. Bitte melde dich an, um fortzufahren.",
+			"organization_mismatch": "Du musst mit dem Axon Code Cloud-Konto deiner Organisation authentifiziert sein.",
 			"verification_failed": "Die Organisationsauthentifizierung konnte nicht verifiziert werden."
 		},
 		"info": {
@@ -254,7 +254,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Fehler",

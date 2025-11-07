@@ -1,40 +1,41 @@
-import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
-import { useDeepCompareEffect, useEvent, useMount } from "react-use"
+import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import debounce from "debounce"
+import { LRUCache } from "lru-cache"
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
+import { useDeepCompareEffect, useEvent, useMount } from "react-use"
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso"
 import removeMd from "remove-markdown"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 import useSound from "use-sound"
-import { LRUCache } from "lru-cache"
-import { Trans, useTranslation } from "react-i18next"
 
-import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 import { appendImages } from "@src/utils/imageUtils"
+import { useDebounceEffect } from "@src/utils/useDebounceEffect"
 
 import type { ClineAsk, ClineMessage, McpServerUse } from "@roo-code/types"
 
-import { ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
-import { McpServer, McpTool } from "@roo/mcp"
-import { findLast } from "@roo/array"
 import { FollowUpData, SuggestionItem } from "@roo-code/types"
+import { findLast } from "@roo/array"
 import { combineApiRequests } from "@roo/combineApiRequests"
 import { combineCommandSequences } from "@roo/combineCommandSequences"
+import { ClineApiReqInfo, ClineSayBrowserAction, ClineSayTool, ExtensionMessage } from "@roo/ExtensionMessage"
 import { getApiMetrics } from "@roo/getApiMetrics"
-import { AudioType } from "@roo/WebviewMessage"
+import { McpServer, McpTool } from "@roo/mcp"
 import { getAllModes } from "@roo/modes"
 import { ProfileValidator } from "@roo/ProfileValidator"
+import { safeJsonParse } from "@roo/safeJsonParse"
 import { getLatestTodo } from "@roo/todo"
+import { AudioType } from "@roo/WebviewMessage"
 
-import { vscode } from "@src/utils/vscode"
+import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
 import {
-	getCommandDecision,
 	CommandDecision,
 	findLongestPrefixMatch,
+	getCommandDecision,
 	parseCommand,
 } from "@src/utils/command-validation"
-import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { useSelectedModel } from "@src/components/ui/hooks/useSelectedModel"
+import { vscode } from "@src/utils/vscode"
 // import RooHero from "@src/components/welcome/RooHero" // kilocode_change: unused
 // import RooTips from "@src/components/welcome/RooTips" // kilocode_change: unused
 import { StandardTooltip } from "@src/components/ui"
@@ -52,17 +53,16 @@ import BrowserSessionRow from "./BrowserSessionRow"
 import ChatRow from "./ChatRow"
 import { ChatTextArea } from "./ChatTextArea"
 // import TaskHeader from "./TaskHeader"// kilocode_change
+import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
+import BottomControls from "../kilocode/BottomControls" // kilocode_change
 import KiloTaskHeader from "../kilocode/KiloTaskHeader" // kilocode_change
 import AutoApproveMenu from "./AutoApproveMenu"
-import BottomControls from "../kilocode/BottomControls" // kilocode_change
 import SystemPromptWarning from "./SystemPromptWarning"
-import { showSystemNotification } from "@/kilocode/helpers" // kilocode_change
 // import ProfileViolationWarning from "./ProfileViolationWarning" kilocode_change: unused
-import { CheckpointWarning } from "./CheckpointWarning"
 import { IdeaSuggestionsBox } from "../kilocode/chat/IdeaSuggestionsBox" // kilocode_change
 import { KilocodeNotifications } from "../kilocode/KilocodeNotifications" // kilocode_change
+import { CheckpointWarning } from "./CheckpointWarning"
 import { QueuedMessages } from "./QueuedMessages"
-import { buildDocLink } from "@/utils/docLinks"
 // import DismissibleUpsell from "../common/DismissibleUpsell" // kilocode_change: unused
 // import { useCloudUpsell } from "@src/hooks/useCloudUpsell" // kilocode_change: unused
 // import { Cloud } from "lucide-react" // kilocode_change: unused
@@ -418,25 +418,25 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSendingDisabled(isPartial)
 							setClineAsk("completion_result")
 							setEnableButtons(!isPartial)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
+							// setPrimaryButtonText(t("chat:startNewTask.title"))
 							setSecondaryButtonText(undefined)
 							break
-						case "resume_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_task")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:resumeTask.title"))
-							setSecondaryButtonText(t("chat:terminate.title"))
-							setDidClickCancel(false) // special case where we reset the cancel button state
-							break
-						case "resume_completed_task":
-							setSendingDisabled(false)
-							setClineAsk("resume_completed_task")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:startNewTask.title"))
-							setSecondaryButtonText(undefined)
-							setDidClickCancel(false)
-							break
+						// case "resume_task":
+						// 	setSendingDisabled(false)
+						// 	setClineAsk("resume_task")
+						// 	setEnableButtons(true)
+						// 	setPrimaryButtonText(t("chat:resumeTask.title"))
+						// 	setSecondaryButtonText(t("chat:terminate.title"))
+						// 	setDidClickCancel(false) // special case where we reset the cancel button state
+						// 	break
+						// case "resume_completed_task":
+						// 	setSendingDisabled(false)
+						// 	setClineAsk("resume_completed_task")
+						// 	setEnableButtons(true)
+						// 	setPrimaryButtonText(t("chat:startNewTask.title"))
+						// 	setSecondaryButtonText(undefined)
+						// 	setDidClickCancel(false)
+						// 	break
 						// kilocode_change begin
 						case "report_bug":
 							if (!isPartial) {
@@ -901,6 +901,24 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	useMount(() => textAreaRef.current?.focus())
 
 	const visibleMessages = useMemo(() => {
+		const shouldHideApiReqStartedMessage = (message: ClineMessage): boolean => {
+			if (message.say !== "api_req_started" || message.text === null || message.text === undefined) {
+				return false
+			}
+
+			const info = safeJsonParse<ClineApiReqInfo>(message.text)
+			if (!info) {
+				return false
+			}
+
+			return (
+				info.cost !== undefined &&
+				info.cost !== null &&
+				info.cancelReason === undefined &&
+				info.streamingFailedMessage === undefined
+			)
+		}
+
 		// Pre-compute checkpoint hashes that have associated user messages for O(1) lookup
 		const userMessageCheckpointHashes = new Set<string>()
 		modifiedMessages.forEach((msg) => {
@@ -917,6 +935,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// Remove the 500-message limit to prevent array index shifting
 		// Virtuoso is designed to efficiently handle large lists through virtualization
 		const newVisibleMessages = modifiedMessages.filter((message) => {
+			if (shouldHideApiReqStartedMessage(message)) {
+				everVisibleMessagesTsRef.current.delete(message.ts)
+				return false
+			}
+
 			// Filter out checkpoint_saved messages that should be suppressed
 			if (message.say === "checkpoint_saved") {
 				// Check if this checkpoint has the suppressMessage flag set
@@ -1543,8 +1566,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [modifiedMessages.length, isStreaming, isHidden])
 
-	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
-
 	const switchToMode = useCallback(
 		(modeSlug: string): void => {
 			// Update local state and notify extension to sync mode change.
@@ -1947,7 +1968,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						cacheReads={apiMetrics.totalCacheReads}
 						totalCost={apiMetrics.totalCost}
 						contextTokens={apiMetrics.contextTokens}
-						buttonsDisabled={sendingDisabled}
 						handleCondenseContext={handleCondenseContext}
 						onClose={handleTaskCloseButtonClick}
 						groupedMessages={groupedMessages}
@@ -2010,7 +2030,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						)}
 						<div className="flex flex-grow flex-col justify-center gap-4">
 							{/* kilocode_change end */}
-							<p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
+							{/* <p className="text-vscode-editor-foreground leading-normal font-vscode-font-family text-center text-balance max-w-[380px] mx-auto my-0">
 								<Trans
 									i18nKey="chat:about"
 									components={{
@@ -2024,7 +2044,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 										),
 									}}
 								/>
-							</p>
+							</p> */}
 							{taskHistoryFullLength === 0 && <IdeaSuggestionsBox />} {/* kilocode_change */}
 							{/*<div className="mb-2.5">
 								{cloudIsAuthenticated || taskHistory.length < 4 ? <RooTips /> : <RooCloudCTA />}
@@ -2090,7 +2110,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 					</div>
 					{areButtonsVisible && (
 						<div
-							className={`flex h-9 items-center mb-1 px-[15px] ${
+							className={`flex h-9 items-center justify-end mb-1 px-[15px] ${
 								showScrollToBottom
 									? "opacity-100"
 									: enableButtons || (isStreaming && !didClickCancel)
@@ -2101,7 +2121,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 								<StandardTooltip content={t("chat:scrollToBottom")}>
 									<VSCodeButton
 										appearance="secondary"
-										className="flex-[2]"
+										className="flex-[2] rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit"
 										onClick={() => {
 											scrollToBottomSmooth()
 											disableAutoScrollRef.current = false
@@ -2122,22 +2142,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 															? t("chat:approve.tooltip")
 															: primaryButtonText === t("chat:runCommand.title")
 																? t("chat:runCommand.tooltip")
-																: primaryButtonText === t("chat:startNewTask.title")
-																	? t("chat:startNewTask.tooltip")
-																	: primaryButtonText === t("chat:resumeTask.title")
-																		? t("chat:resumeTask.tooltip")
-																		: primaryButtonText ===
-																			  t("chat:proceedAnyways.title")
-																			? t("chat:proceedAnyways.tooltip")
-																			: primaryButtonText ===
-																				  t("chat:proceedWhileRunning.title")
-																				? t("chat:proceedWhileRunning.tooltip")
-																				: undefined
+																: primaryButtonText === t("chat:proceedAnyways.title")
+																	? t("chat:proceedAnyways.tooltip")
+																	: primaryButtonText ===
+																		  t("chat:proceedWhileRunning.title")
+																		? t("chat:proceedWhileRunning.tooltip")
+																		: undefined
 											}>
 											<VSCodeButton
 												appearance="primary"
 												disabled={!enableButtons}
-												className={secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"}
+												className={`${secondaryButtonText ? "flex-1 mr-[6px]" : "flex-[2] mr-0"} rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit`}
 												onClick={() => handlePrimaryButtonClick(inputValue, selectedImages)}>
 												{primaryButtonText}
 											</VSCodeButton>
@@ -2148,18 +2163,16 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											content={
 												isStreaming
 													? t("chat:cancel.tooltip")
-													: secondaryButtonText === t("chat:startNewTask.title")
-														? t("chat:startNewTask.tooltip")
-														: secondaryButtonText === t("chat:reject.title")
-															? t("chat:reject.tooltip")
-															: secondaryButtonText === t("chat:terminate.title")
-																? t("chat:terminate.tooltip")
-																: undefined
+													: secondaryButtonText === t("chat:reject.title")
+														? t("chat:reject.tooltip")
+														: secondaryButtonText === t("chat:terminate.title")
+															? t("chat:terminate.tooltip")
+															: undefined
 											}>
 											<VSCodeButton
 												appearance="secondary"
 												disabled={!enableButtons && !(isStreaming && !didClickCancel)}
-												className={isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"}
+												className={`${isStreaming ? "flex-[2] ml-0" : "flex-1 ml-[6px]"} rounded-lg border border-white/10 outline-none bg-vscode-input-background max-w-fit`}
 												onClick={() => handleSecondaryButtonClick(inputValue, selectedImages)}>
 												{isStreaming ? t("chat:cancel.title") : secondaryButtonText}
 											</VSCodeButton>
@@ -2194,7 +2207,6 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				setInputValue={setInputValue}
 				sendingDisabled={sendingDisabled || isProfileDisabled}
 				selectApiConfigDisabled={sendingDisabled && clineAsk !== "api_req_failed"}
-				placeholderText={placeholderText}
 				selectedImages={selectedImages}
 				setSelectedImages={setSelectedImages}
 				onSend={() => handleSendMessage(inputValue, selectedImages)}

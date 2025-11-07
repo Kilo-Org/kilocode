@@ -2,7 +2,7 @@
 sidebar_label: OVHcloud AI 端点
 ---
 
-# 在 Kilo Code 中使用 OVHcloud AI 端点
+# 在 Axon Code 中使用 OVHcloud AI 端点
 
 OVHcloud 是欧洲领先的法国云服务提供商，注重数据主权和隐私保护。
 
@@ -24,13 +24,13 @@ OVHcloud 是欧洲领先的法国云服务提供商，注重数据主权和隐�
 
 ## 支持的模型
 
-Kilo Code 会自动从我们的 API 获取模型，并保持最新状态。
+Axon Code 会自动从我们的 API 获取模型，并保持最新状态。
 
 您可以浏览我们的 [模型目录](https://endpoints.ai.cloud.ovh.net/catalog) 来查看所有模型的详细信息。
 
-## 在 Kilo Code 中进行配置
+## 在 Axon Code 中进行配置
 
-1.  **打开 Kilo Code 设置：** 点击 Kilo Code 面板中的齿轮图标 (<Codicon name="gear" />)。
+1.  **打开 Axon Code 设置：** 点击 Axon Code 面板中的齿轮图标 (<Codicon name="gear" />)。
 2.  **选择提供商：** 在 “API Provider”（API 提供商）下拉菜单中选择 “OVHcloud AI Endpoints”。
 3.  **输入 API 密钥：** 将您的 AI Endpoints API 密钥粘贴到 “OVHcloud AI Endpoints API Key” 字段中。
 4.  **选择模型：** 从 “Model”（模型）下拉菜单中选择您需要的模型。

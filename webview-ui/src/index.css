@@ -86,10 +86,8 @@
 
 	--color-vscode-input-foreground: var(--vscode-input-foreground);
 	--color-vscode-input-background: var(--vscode-input-background);
-	--color-vscode-input-border: var(
-		--vscode-input-border,
-		transparent
-	); /* Some themes don't have a border color, so we can fallback to transparent */
+	--color-vscode-input-border: var(--vscode-input-border, transparent);
+	/* Some themes don't have a border color, so we can fallback to transparent */
 
 	--color-vscode-focusBorder: var(--vscode-focusBorder);
 
@@ -145,6 +143,8 @@
 
 	--color-vscode-banner-background: var(--vscode-banner-background);
 	--color-vscode-banner-foreground: var(--vscode-banner-foreground);
+
+	--color-matterai-green: #3affa3;
 }
 
 @layer base {
@@ -165,7 +165,8 @@
 		--accent-foreground: var(--vscode-list-hoverForeground);
 		--destructive: var(--vscode-errorForeground);
 		--destructive-foreground: var(--vscode-button-foreground);
-		--border: var(--vscode-input-border, transparent); /* --border gets theme value or transparent fallback */
+		--border: var(--vscode-input-border, transparent);
+		/* --border gets theme value or transparent fallback */
 		--input: var(--vscode-input-background);
 		--ring: var(--vscode-input-border);
 		--chart-1: var(--vscode-charts-red);
@@ -187,6 +188,7 @@
 	a {
 		color: var(--vscode-textLink-foreground);
 	}
+
 	/* kilocode_change end */
 }
 
@@ -217,11 +219,12 @@
 /* Form Element Focus States */
 
 textarea:focus {
-	outline: 1.5px solid var(--vscode-focusBorder, #007fd4);
+	outline: 1px solid rgb(255 255 255 / 0.01);
 }
 
 .focus\:outline-0 {
-	outline: 0 !important; /* Allow tailwind to override the `textarea:focus` rule */
+	outline: 0 !important;
+	/* Allow tailwind to override the `textarea:focus` rule */
 }
 
 /**
@@ -322,12 +325,15 @@ body:focus-within .code-block-scrollable {
  */
 
 .scrollbar-hide {
-	-ms-overflow-style: none; /* IE and Edge */
-	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none;
+	/* IE and Edge */
+	scrollbar-width: none;
+	/* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-	display: none; /* Chrome, Safari and Opera */
+	display: none;
+	/* Chrome, Safari and Opera */
 }
 
 /**
@@ -366,6 +372,18 @@ vscode-dropdown::part(listbox) {
 	scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
 }
 
+vscode-text-field {
+	--border-width: 1px;
+	--corner-radius-round: 12;
+	border-radius: 12px;
+}
+
+vscode-text-field::part(control),
+vscode-text-field::part(input) {
+	border-radius: 8px !important;
+	border: 1px solid var(--vscode-input-border);
+}
+
 /* Faded icon buttons in textfields */
 .input-icon-button {
 	cursor: pointer;
@@ -388,21 +406,29 @@ vscode-dropdown::part(listbox) {
 /* Context mentions */
 
 .mention-context-textarea-highlight {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	color: transparent;
+	text-align: center;
+	display: inline-block;
+	padding-bottom: 1px;
+	padding-left: 1px;
+	padding-right: 1px;
+	margin-top: 3px;
 }
 
 .mention-context-highlight {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
+	text-align: center;
 }
 
 .mention-context-highlight-with-shadow {
-	background-color: color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
 	border-radius: 3px;
-	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--vscode-badge-foreground) 30%, transparent);
+	box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+	text-align: center;
 }
 
 /**
@@ -417,6 +443,28 @@ vscode-dropdown::part(listbox) {
 	min-width: 16px;
 	min-height: 16px;
 }
+
+vscode-button {
+	border-radius: 0.5rem;
+	border: 1px solid var(--vscode-input-border);
+	background-color: var(--vscode-input-background);
+	max-width: fit-content;
+}
+
+/**
+ * VSCodeButton Global Overrides
+ * 
+ * To override default classes for all VSCodeButton components globally,
+ * add CSS rules here targeting the vscode-button web component.
+ * 
+ * Example:
+
+ * 
+ * Or use CSS custom properties to override specific parts:
+ * vscode-button::part(control) {
+ *   /* your styles here *\/
+ * }
+ */
 
 /**
  * @shadcn/ui Overrides / Hacks
@@ -452,6 +500,7 @@ input[cmdk-input]:focus {
 	from {
 		transform: translateX(100%);
 	}
+
 	to {
 		transform: translateX(0);
 	}
@@ -465,6 +514,7 @@ input[cmdk-input]:focus {
 	from {
 		opacity: 0;
 	}
+
 	to {
 		opacity: 1;
 	}
@@ -479,6 +529,7 @@ input[cmdk-input]:focus {
 	100% {
 		opacity: 1;
 	}
+
 	50% {
 		opacity: 0.7;
 	}

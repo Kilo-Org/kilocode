@@ -16,7 +16,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * JetBrains Protocol Command for handling Kilo Code authentication URLs
+ * JetBrains Protocol Command for handling Axon Code authentication URLs
  *
  * Handles URLs in the format: jetbrains://idea/ai.kilocode.jetbrains.auth?token=HERE
  * and forwards them to the VSCode extension via RPC protocol
@@ -49,7 +49,7 @@ class KiloCodeAuthProtocolCommand : JBProtocolCommand("ai.kilocode.jetbrains.aut
      * @return null on success, error message on failure
      */
     override suspend fun execute(target: String?, parameters: Map<String, String>, fragment: String?): String? {
-        logger.info("Handling Kilo Code auth protocol command: target=$target, parameters=$parameters")
+        logger.info("Handling Axon Code auth protocol command: target=$target, parameters=$parameters")
 
         return try {
             // Extract token from parameters
@@ -67,7 +67,7 @@ class KiloCodeAuthProtocolCommand : JBProtocolCommand("ai.kilocode.jetbrains.aut
 
             null // Success
         } catch (e: Exception) {
-            val errorMsg = "Error handling Kilo Code auth protocol command: ${e.message}"
+            val errorMsg = "Error handling Axon Code auth protocol command: ${e.message}"
             logger.error(errorMsg, e)
             errorMsg
         }
@@ -101,12 +101,12 @@ class KiloCodeAuthProtocolCommand : JBProtocolCommand("ai.kilocode.jetbrains.aut
                 val extHostCommands = protocol.getProxy(ServiceProxyRegistry.ExtHostContext.ExtHostCommands)
 
                 // Create the VSCode URI string that would normally be handled by handleUri
-                val vscodeUriString = "vscode://kilocode.kilo-code/kilocode?token=$token"
+                val vscodeUriString = "vscode://matterai.axon-code/axoncode?token=$token"
 
                 // Execute a command to handle the URI - this simulates what happens when VSCode receives a URL
                 // We'll use a special command that the VSCode extension can handle
                 extHostCommands.executeContributedCommand(
-                    "kilo-code.handleExternalUri",
+                    "axon-code.handleExternalUri",
                     listOf(vscodeUriString),
                 )
 

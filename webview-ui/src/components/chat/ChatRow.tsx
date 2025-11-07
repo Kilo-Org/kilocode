@@ -1,8 +1,8 @@
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useSize } from "react-use"
-import { useTranslation, Trans } from "react-i18next"
-import deepEqual from "fast-deep-equal"
 import { VSCodeBadge } from "@vscode/webview-ui-toolkit/react"
+import deepEqual from "fast-deep-equal"
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Trans, useTranslation } from "react-i18next"
+import { useSize } from "react-use"
 
 import type { ClineMessage, FollowUpData, SuggestionItem } from "@roo-code/types"
 import { Mode } from "@roo/modes"
@@ -12,65 +12,62 @@ import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
 import { safeJsonParse } from "@roo/safeJsonParse"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
-import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
-import { vscode } from "@src/utils/vscode"
-import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
 import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
+import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
+import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
+import { vscode } from "@src/utils/vscode"
 
-import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
-import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import CodeAccordian from "../common/CodeAccordian"
-import MarkdownBlock from "../common/MarkdownBlock"
-import { ReasoningBlock } from "./ReasoningBlock"
-import Thumbnails from "../common/Thumbnails"
 import ImageBlock from "../common/ImageBlock"
+import MarkdownBlock from "../common/MarkdownBlock"
+import Thumbnails from "../common/Thumbnails"
+import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 import ErrorRow from "./ErrorRow"
+import { ReasoningBlock } from "./ReasoningBlock"
+import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 
 import McpResourceRow from "../mcp/McpResourceRow"
 
-import { Mention } from "./Mention"
-import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
-import { FollowUpSuggest } from "./FollowUpSuggest"
 import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning" // kilocode_change
-import { BatchFilePermission } from "./BatchFilePermission"
 import { BatchDiffApproval } from "./BatchDiffApproval"
-import { ProgressIndicator } from "./ProgressIndicator"
-import { Markdown } from "./Markdown"
+import { BatchFilePermission } from "./BatchFilePermission"
 import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
+import { FollowUpSuggest } from "./FollowUpSuggest"
+import { Markdown } from "./Markdown"
+import { Mention } from "./Mention"
+import { ProgressIndicator } from "./ProgressIndicator"
 import ReportBugPreview from "./ReportBugPreview"
+import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 
-import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
-import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar" // kilocode_change
-import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
-import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
-import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
-import { StandardTooltip } from "../ui" // kilocode_change
-import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
-import { appendImages } from "@src/utils/imageUtils"
-import { McpExecution } from "./McpExecution"
-import { ChatTextArea } from "./ChatTextArea"
-import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
-import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
-import { useSelectedModel } from "../ui/hooks/useSelectedModel"
-import {
-	Eye,
-	FileDiff,
-	ListTree,
-	User,
-	Edit,
-	Trash2,
-	MessageCircleQuestionMark,
-	SquareArrowOutUpRight,
-	FileCode2,
-	PocketKnife,
-	FolderTree,
-	TerminalSquare,
-	MessageCircle,
-} from "lucide-react"
 import { cn } from "@/lib/utils"
-import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
+import { appendImages } from "@src/utils/imageUtils"
+import {
+	// User,
+	Edit,
+	Eye,
+	FileCode2,
+	FileDiff,
+	FolderTree,
+	ListTree,
+	MessageCircleQuestionMark,
+	PocketKnife,
+	TerminalSquare,
+	Trash2,
+} from "lucide-react"
+import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
+import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
+import { StandardTooltip } from "../ui" // kilocode_change
+import { useSelectedModel } from "../ui/hooks/useSelectedModel"
+import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
+import { ChatTextArea } from "./ChatTextArea"
 import ChatTimestamps from "./ChatTimestamps" // kilocode_change
+import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
+import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
+import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
+import { McpExecution } from "./McpExecution"
+import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
+import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -95,7 +92,7 @@ interface ChatRowContentProps extends Omit<ChatRowProps, "onHeightChange"> {}
 const ChatRow = memo(
 	(props: ChatRowProps) => {
 		const { highlighted } = props // kilocode_change: Add highlighted prop
-		const { showTaskTimeline } = useExtensionState() // kilocode_change: Used by KiloChatRowGutterBar
+		// const { showTaskTimeline } = useExtensionState() // kilocode_change: Used by KiloChatRowGutterBar
 		const { isLast, onHeightChange, message } = props
 		// Store the previous height to compare with the current height
 		// This allows us to detect changes without causing re-renders
@@ -105,9 +102,9 @@ const ChatRow = memo(
 			<div
 				// kilocode_change: add highlighted className
 				className={cn(
-					`px-[15px] py-[10px] pr-[6px] relative ${highlighted ? "animate-message-highlight" : ""}`,
+					`px-[15px] py-[2px] pr-[6px] relative ${highlighted ? "animate-message-highlight" : ""}`,
 				)}>
-				{showTaskTimeline && <KiloChatRowGutterBar message={message} />}
+				{/* {showTaskTimeline && <KiloChatRowGutterBar message={message} />} */}
 				<ChatRowContent {...props} />
 			</div>,
 		)
@@ -255,7 +252,7 @@ export const ChatRowContent = ({
 
 	const normalColor = "var(--vscode-foreground)"
 	const errorColor = "var(--vscode-errorForeground)"
-	const successColor = "var(--vscode-charts-green)"
+	const successColor = "var(--color-matterai-green)"
 	const cancelledColor = "var(--vscode-descriptionForeground)"
 
 	const [icon, title] = useMemo(() => {
@@ -270,9 +267,7 @@ export const ChatRowContent = ({
 					) : (
 						<TerminalSquare className="size-4" aria-label="Terminal icon" />
 					),
-					<span style={{ color: normalColor, fontWeight: "bold" }}>
-						{t("chat:commandExecution.running")}
-					</span>,
+					<span style={{ color: normalColor }}>{t("chat:commandExecution.running")}</span>,
 				]
 			case "use_mcp_server":
 				const mcpServerUse = safeJsonParse<ClineAskUseMcpServer>(message.text)
@@ -287,7 +282,7 @@ export const ChatRowContent = ({
 							className="codicon codicon-server"
 							style={{ color: normalColor, marginBottom: "-1.5px" }}></span>
 					),
-					<span style={{ color: normalColor, fontWeight: "bold" }}>
+					<span style={{ color: normalColor }}>
 						{mcpServerUse.type === "use_mcp_tool"
 							? t("chat:mcp.wantsToUseTool", { serverName: mcpServerUse.serverName })
 							: t("chat:mcp.wantsToAccessResource", { serverName: mcpServerUse.serverName })}
@@ -295,10 +290,8 @@ export const ChatRowContent = ({
 				]
 			case "completion_result":
 				return [
-					<span
-						className="codicon codicon-check"
-						style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
-					<span style={{ color: successColor, fontWeight: "bold" }}>{t("chat:taskCompleted")}</span>,
+					<span style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
+					<span style={{ color: successColor }}>{t("chat:taskCompleted")}</span>,
 				]
 			case "api_req_retry_delayed":
 				return []
@@ -334,13 +327,9 @@ export const ChatRowContent = ({
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
-							<span style={{ color: normalColor, fontWeight: "bold" }}>
-								{t("chat:apiRequest.cancelled")}
-							</span>
+							<span style={{ color: normalColor }}>{t("chat:apiRequest.cancelled")}</span>
 						) : (
-							<span style={{ color: errorColor, fontWeight: "bold" }}>
-								{t("chat:apiRequest.streamingFailed")}
-							</span>
+							<span style={{ color: errorColor }}>{t("chat:apiRequest.streamingFailed")}</span>
 						)
 					) : cost !== null && cost !== undefined ? (
 						// kilocode_change start: tooltip
@@ -357,7 +346,7 @@ export const ChatRowContent = ({
 			case "followup":
 				return [
 					<MessageCircleQuestionMark className="w-4 shrink-0" aria-label="Question icon" />,
-					<span style={{ color: normalColor, fontWeight: "bold" }}>{t("chat:questions.hasQuestion")}</span>,
+					<span style={{ color: normalColor }}>{t("chat:questions.hasQuestion")}</span>,
 				]
 			default:
 				return [null, null]
@@ -377,8 +366,8 @@ export const ChatRowContent = ({
 	const headerStyle: React.CSSProperties = {
 		display: "flex",
 		alignItems: "center",
-		gap: "10px",
-		marginBottom: "10px",
+		gap: "2px",
+		marginBottom: "4px",
 		wordBreak: "break-word",
 	}
 
@@ -410,9 +399,7 @@ export const ChatRowContent = ({
 						<>
 							<div style={headerStyle}>
 								<FileDiff className="w-4 shrink-0" aria-label="Batch diff icon" />
-								<span style={{ fontWeight: "bold" }}>
-									{t("chat:fileOperations.wantsToApplyBatchChanges")}
-								</span>
+								<span style={{}}>{t("chat:fileOperations.wantsToApplyBatchChanges")}</span>
 							</div>
 							<BatchDiffApproval files={tool.batchDiffs} ts={message.ts} />
 						</>
@@ -431,7 +418,7 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon(tool.tool === "appliedDiff" ? "diff" : "edit")
 							)}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{tool.isProtected
 									? t("chat:fileOperations.wantsToEditProtected")
 									: tool.isOutsideWorkspace
@@ -439,7 +426,7 @@ export const ChatRowContent = ({
 										: t("chat:fileOperations.wantsToEdit")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.content ?? tool.diff}
@@ -469,7 +456,7 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("insert")
 							)}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{tool.isProtected
 									? t("chat:fileOperations.wantsToEditProtected")
 									: tool.isOutsideWorkspace
@@ -481,7 +468,7 @@ export const ChatRowContent = ({
 												})}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.diff}
@@ -506,7 +493,7 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("replace")
 							)}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{tool.isProtected && message.type === "ask"
 									? t("chat:fileOperations.wantsToEditProtected")
 									: message.type === "ask"
@@ -514,7 +501,7 @@ export const ChatRowContent = ({
 										: t("chat:fileOperations.didSearchReplace")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.diff}
@@ -531,7 +518,7 @@ export const ChatRowContent = ({
 				return (
 					<div style={headerStyle}>
 						{toolIcon("search")}
-						<span style={{ fontWeight: "bold" }}>
+						<span style={{}}>
 							{tool.path ? (
 								<Trans
 									i18nKey="chat:codebaseSearch.wantsToSearchWithPath"
@@ -576,13 +563,13 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("new-file")
 							)}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{tool.isProtected
 									? t("chat:fileOperations.wantsToEditProtected")
 									: t("chat:fileOperations.wantsToCreate")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.content}
@@ -609,9 +596,7 @@ export const ChatRowContent = ({
 						<>
 							<div style={headerStyle}>
 								<Eye className="w-4 shrink-0" aria-label="View files icon" />
-								<span style={{ fontWeight: "bold" }}>
-									{t("chat:fileOperations.wantsToReadMultiple")}
-								</span>
+								<span style={{}}>{t("chat:fileOperations.wantsToReadMultiple")}</span>
 							</div>
 							<BatchFilePermission
 								files={tool.batchFiles || []}
@@ -626,10 +611,10 @@ export const ChatRowContent = ({
 
 				// Regular single file read request
 				return (
-					<>
+					<div className="">
 						<div style={headerStyle}>
-							<FileCode2 className="w-4 shrink-0" aria-label="Read file icon" />
-							<span style={{ fontWeight: "bold" }}>
+							<FileCode2 className="w-3 h-3 shrink-0" aria-label="Read file icon" />
+							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
 										? t("chat:fileOperations.wantsToReadOutsideWorkspace")
@@ -641,7 +626,7 @@ export const ChatRowContent = ({
 									: t("chat:fileOperations.didRead")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<ToolUseBlock>
 								<ToolUseBlockHeader
 									className="group"
@@ -651,24 +636,19 @@ export const ChatRowContent = ({
 										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
 										{tool.reason}
 									</span>
-									<div style={{ flexGrow: 1 }}></div>
-									<SquareArrowOutUpRight
-										className="w-4 shrink-0 codicon codicon-link-external opacity-0 group-hover:opacity-100 transition-opacity"
-										style={{ fontSize: 13.5, margin: "1px 0" }}
-									/>
 								</ToolUseBlockHeader>
 							</ToolUseBlock>
 						</div>
-					</>
+					</div>
 				)
 			case "fetchInstructions":
 				return (
 					<>
 						<div style={headerStyle}>
 							{toolIcon("file-code")}
-							<span style={{ fontWeight: "bold" }}>{t("chat:instructions.wantsToFetch")}</span>
+							<span style={{}}>{t("chat:instructions.wantsToFetch")}</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								code={tool.content}
 								language="markdown"
@@ -684,7 +664,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							<ListTree className="w-4 shrink-0" aria-label="List files icon" />
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
 										? t("chat:directoryOperations.wantsToViewTopLevelOutsideWorkspace")
@@ -694,7 +674,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewTopLevel")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.content}
@@ -710,7 +690,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							<FolderTree className="w-4 shrink-0" aria-label="Folder tree icon" />
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
 										? t("chat:directoryOperations.wantsToViewRecursiveOutsideWorkspace")
@@ -720,7 +700,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewRecursive")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.content}
@@ -736,7 +716,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							{toolIcon("file-code")}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask"
 									? tool.isOutsideWorkspace
 										? t("chat:directoryOperations.wantsToViewDefinitionsOutsideWorkspace")
@@ -746,7 +726,7 @@ export const ChatRowContent = ({
 										: t("chat:directoryOperations.didViewDefinitions")}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path}
 								code={tool.content}
@@ -762,7 +742,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							{toolIcon("search")}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask" ? (
 									<Trans
 										i18nKey={
@@ -786,7 +766,7 @@ export const ChatRowContent = ({
 								)}
 							</span>
 						</div>
-						<div className="pl-6">
+						<div className="">
 							<CodeAccordian
 								path={tool.path! + (tool.filePattern ? `/(${tool.filePattern})` : "")}
 								code={tool.content}
@@ -802,7 +782,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							<PocketKnife className="w-4 shrink-0" aria-label="Switch mode icon" />
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask" ? (
 									<>
 										{tool.reason ? (
@@ -845,7 +825,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							{toolIcon("tasklist")}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								<Trans
 									i18nKey="chat:subtasks.wantsToCreate"
 									components={{ code: <code>{tool.mode}</code> }}
@@ -867,7 +847,7 @@ export const ChatRowContent = ({
 									padding: "9px 10px 9px 14px",
 									backgroundColor: "var(--vscode-badge-background)",
 									borderBottom: "1px solid var(--vscode-editorGroup-border)",
-									fontWeight: "bold",
+
 									fontSize: "var(--vscode-font-size)",
 									color: "var(--vscode-badge-foreground)",
 									display: "flex",
@@ -888,7 +868,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							{toolIcon("check-all")}
-							<span style={{ fontWeight: "bold" }}>{t("chat:subtasks.wantsToFinish")}</span>
+							<span style={{}}>{t("chat:subtasks.wantsToFinish")}</span>
 						</div>
 						<div
 							style={{
@@ -904,7 +884,7 @@ export const ChatRowContent = ({
 									padding: "9px 10px 9px 14px",
 									backgroundColor: "var(--vscode-badge-background)",
 									borderBottom: "1px solid var(--vscode-editorGroup-border)",
-									fontWeight: "bold",
+
 									fontSize: "var(--vscode-font-size)",
 									color: "var(--vscode-badge-foreground)",
 									display: "flex",
@@ -926,7 +906,7 @@ export const ChatRowContent = ({
 					<>
 						<div style={headerStyle}>
 							{toolIcon("play")}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask"
 									? t("chat:slashCommand.wantsToRun")
 									: t("chat:slashCommand.didRun")}
@@ -1003,7 +983,7 @@ export const ChatRowContent = ({
 							) : (
 								toolIcon("file-media")
 							)}
-							<span style={{ fontWeight: "bold" }}>
+							<span style={{}}>
 								{message.type === "ask"
 									? tool.isProtected
 										? t("chat:fileOperations.wantsToGenerateImageProtected")
@@ -1014,7 +994,7 @@ export const ChatRowContent = ({
 							</span>
 						</div>
 						{message.type === "ask" && (
-							<div className="pl-6">
+							<div className="">
 								<CodeAccordian
 									path={tool.path}
 									code={tool.content}
@@ -1060,7 +1040,7 @@ export const ChatRowContent = ({
 										padding: "9px 10px 9px 14px",
 										backgroundColor: "var(--vscode-badge-background)",
 										borderBottom: "1px solid var(--vscode-editorGroup-border)",
-										fontWeight: "bold",
+
 										fontSize: "var(--vscode-font-size)",
 										color: "var(--vscode-badge-foreground)",
 										display: "flex",
@@ -1166,11 +1146,11 @@ export const ChatRowContent = ({
 				case "text":
 					return (
 						<div>
-							<div style={headerStyle}>
+							{/* <div style={headerStyle}>
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
-								<span style={{ fontWeight: "bold" }}>{t("chat:text.rooSaid")}</span>
-							</div>
-							<div className="pl-6">
+								<span style={{}}>{t("chat:text.rooSaid")}</span>
+							</div> */}
+							<div className="">
 								<Markdown markdown={message.text} partial={message.partial} />
 								{message.images && message.images.length > 0 && (
 									<div style={{ marginTop: "10px" }}>
@@ -1185,17 +1165,15 @@ export const ChatRowContent = ({
 				case "user_feedback":
 					return (
 						<div className="group">
-							<div style={headerStyle}>
+							{/* <div style={headerStyle}>
 								<User className="w-4 shrink-0" aria-label="User icon" />
-								<span style={{ fontWeight: "bold" }}>{t("chat:feedback.youSaid")}</span>
-							</div>
+								<span style={{}}>{t("chat:feedback.youSaid")}</span>
+							</div> */}
 							<div
 								className={cn(
-									"ml-6 border rounded-sm whitespace-pre-wrap",
+									"border rounded-lg whitespace-pre-wrap",
 									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
-									isEditing
-										? "bg-vscode-editor-background text-vscode-editor-foreground"
-										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
+									isEditing ? "text-vscode-editor-foreground" : "cursor-text p-1",
 								)}>
 								{isEditing ? (
 									<div className="flex flex-col gap-2">
@@ -1204,7 +1182,6 @@ export const ChatRowContent = ({
 											setInputValue={setEditedContent}
 											sendingDisabled={false}
 											selectApiConfigDisabled={true}
-											placeholderText={t("chat:editMessage.placeholder")}
 											selectedImages={editImages}
 											setSelectedImages={setEditImages}
 											onSend={handleSaveEdit}
@@ -1400,9 +1377,9 @@ export const ChatRowContent = ({
 												color: "var(--vscode-foreground)",
 												marginBottom: "-1.5px",
 											}}></span>
-										<span style={{ fontWeight: "bold" }}>{t("chat:slashCommand.didRun")}</span>
+										<span style={{}}>{t("chat:slashCommand.didRun")}</span>
 									</div>
-									<div className="pl-6">
+									<div className="">
 										<ToolUseBlock>
 											<ToolUseBlockHeader
 												style={{
@@ -1621,7 +1598,7 @@ export const ChatRowContent = ({
 										color: normalColor,
 										marginBottom: "-1.5px",
 									}}></span>
-								<span style={{ color: normalColor, fontWeight: "bold" }}>
+								<span style={{ color: normalColor }}>
 									{t("kilocode:chat.condense.wantsToCondense")}
 								</span>
 							</div>
@@ -1650,9 +1627,7 @@ export const ChatRowContent = ({
 										color: normalColor,
 										marginBottom: "-1.5px",
 									}}></span>
-								<span style={{ color: normalColor, fontWeight: "bold" }}>
-									KiloCode wants to create a Github issue:
-								</span>
+								<span style={{ color: normalColor }}>KiloCode wants to create a Github issue:</span>
 							</div>
 							<ReportBugPreview data={message.text || ""} />
 						</>

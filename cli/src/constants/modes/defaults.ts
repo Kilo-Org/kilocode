@@ -23,18 +23,18 @@ export const DEFAULT_MODES: ModeConfig[] = [
 		description: "Get explanations and answers",
 		source: "global",
 	},
-	{
-		slug: "debug",
-		name: "Debug",
-		description: "Troubleshoot and fix issues",
-		source: "global",
-	},
-	{
-		slug: "orchestrator",
-		name: "Orchestrator",
-		description: "Coordinate complex multi-step projects",
-		source: "global",
-	},
+	// {
+	// 	slug: "debug",
+	// 	name: "Debug",
+	// 	description: "Troubleshoot and fix issues",
+	// 	source: "global",
+	// },
+	// {
+	// 	slug: "orchestrator",
+	// 	name: "Orchestrator",
+	// 	description: "Coordinate complex multi-step projects",
+	// 	source: "global",
+	// },
 ]
 
 /**

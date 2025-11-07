@@ -9,7 +9,7 @@
 		"editModesConfig": "Editar configuração de modos",
 		"editGlobalModes": "Editar modos globais",
 		"editProjectModes": "Editar modos do projeto (.kilocodemodes)",
-		"createModeHelpText": "Modos são personas especializadas que adaptam o comportamento do Kilo Code. <0>Saiba mais sobre o uso de modos</0> ou <1>Personalização de modos.</1>",
+		"createModeHelpText": "Modos são personas especializadas que adaptam o comportamento do Axon Code. <0>Saiba mais sobre o uso de modos</0> ou <1>Personalização de modos.</1>",
 		"selectMode": "Buscar modos"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Modo da organização",
-		"description": "Este modo é fornecido pela sua organização e não pode ser editado aqui. Para modificar este modo, visite o Kilo Code Dashboard.",
+		"description": "Este modo é fornecido pela sua organização e não pode ser editado aqui. Para modificar este modo, visite o Axon Code Dashboard.",
 		"cannotEdit": "Modos da organização não podem ser editados"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definição de função",
 		"resetToDefault": "Restaurar para padrão",
-		"description": "Defina a expertise e personalidade do Kilo Code para este modo. Esta descrição molda como o Kilo Code se apresenta e aborda tarefas."
+		"description": "Defina a expertise e personalidade do Axon Code para este modo. Esta descrição molda como o Axon Code se apresenta e aborda tarefas."
 	},
 	"description": {
 		"title": "Descrição curta (para humanos)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Aprimorar Prompt",
-				"description": "Use o aprimoramento de prompt para obter sugestões ou melhorias personalizadas para suas entradas. Isso garante que o Kilo Code entenda sua intenção e forneça as melhores respostas possíveis. Disponível através do ícone ✨ no chat."
+				"description": "Use o aprimoramento de prompt para obter sugestões ou melhorias personalizadas para suas entradas. Isso garante que o Axon Code entenda sua intenção e forneça as melhores respostas possíveis. Disponível através do ícone ✨ no chat."
 			},
 			"CONDENSE": {
 				"label": "Condensação de Contexto",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definição de função",
-			"description": "Defina a expertise e personalidade do Kilo Code para este modo."
+			"description": "Defina a expertise e personalidade do Axon Code para este modo."
 		},
 		"whenToUse": {
 			"label": "Quando usar (opcional)",

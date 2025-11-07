@@ -2,16 +2,16 @@
 	"title": "Máy chủ MCP",
 	"done": "Hoàn thành",
 	"marketplace": "Chợ MCP",
-	"description": "<0>Giao thức ngữ cảnh mô hình</0> cho phép giao tiếp với các máy chủ MCP đang chạy cục bộ, cung cấp các công cụ và tài nguyên bổ sung để mở rộng khả năng của Kilo Code. Bạn có thể sử dụng <1>các máy chủ do cộng đồng tạo</1> hoặc yêu cầu Kilo Code tạo các công cụ mới dành riêng cho quy trình làm việc của bạn (ví dụ: \"thêm công cụ lấy tài liệu npm mới nhất\").",
+	"description": "<0>Giao thức ngữ cảnh mô hình</0> cho phép giao tiếp với các máy chủ MCP đang chạy cục bộ, cung cấp các công cụ và tài nguyên bổ sung để mở rộng khả năng của Axon Code. Bạn có thể sử dụng <1>các máy chủ do cộng đồng tạo</1> hoặc yêu cầu Axon Code tạo các công cụ mới dành riêng cho quy trình làm việc của bạn (ví dụ: \"thêm công cụ lấy tài liệu npm mới nhất\").",
 	"instructions": "Hướng dẫn",
 	"enableToggle": {
 		"title": "Bật máy chủ MCP",
-		"description": "Bật lên để Kilo Code dùng công cụ từ các máy chủ MCP đã kết nối. Kilo Code sẽ có nhiều khả năng hơn. Nếu không dùng các công cụ này, hãy tắt để tiết kiệm chi phí token API."
+		"description": "Bật lên để Axon Code dùng công cụ từ các máy chủ MCP đã kết nối. Axon Code sẽ có nhiều khả năng hơn. Nếu không dùng các công cụ này, hãy tắt để tiết kiệm chi phí token API."
 	},
 	"enableServerCreation": {
 		"title": "Bật tạo máy chủ MCP",
-		"description": "Bật lên để Kilo Code giúp bạn tạo <1>máy chủ MCP mới</1> tuỳ chỉnh. <0>Tìm hiểu về tạo máy chủ</0>",
-		"hint": "Mẹo: Để giảm chi phí token API, hãy tắt khi không cần Kilo Code tạo máy chủ MCP mới."
+		"description": "Bật lên để Axon Code giúp bạn tạo <1>máy chủ MCP mới</1> tuỳ chỉnh. <0>Tìm hiểu về tạo máy chủ</0>",
+		"hint": "Mẹo: Để giảm chi phí token API, hãy tắt khi không cần Axon Code tạo máy chủ MCP mới."
 	},
 	"editGlobalMCP": "Chỉnh sửa MCP toàn cục",
 	"editProjectMCP": "Chỉnh sửa MCP dự án",

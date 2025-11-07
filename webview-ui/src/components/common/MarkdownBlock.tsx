@@ -1,11 +1,12 @@
 import React, { memo, useMemo } from "react"
 import ReactMarkdown from "react-markdown"
+import rehypeKatex from "rehype-katex"
+import remarkGfm from "remark-gfm"
+import remarkMath from "remark-math"
 import styled from "styled-components"
 import { visit } from "unist-util-visit"
-import rehypeKatex from "rehype-katex"
-import remarkMath from "remark-math"
-import remarkGfm from "remark-gfm"
 
+import { mentionRegexGlobal } from "@roo/context-mentions"
 import { vscode } from "@src/utils/vscode"
 
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
@@ -13,6 +14,21 @@ import MermaidBlock from "./MermaidBlock"
 
 interface MarkdownBlockProps {
 	markdown?: string
+}
+
+// Function to extract filename from file path for display
+const getDisplayTextForMention = (mentionText: string): string => {
+	if (mentionText.startsWith("/") && !mentionText.startsWith("//")) {
+		// Extract just the filename from the path for display
+		const pathSegments = mentionText.split("/").filter((segment) => segment.length > 0)
+		if (pathSegments.length > 0) {
+			let displayText = pathSegments[pathSegments.length - 1]
+			// Unescape spaces for display
+			displayText = displayText.replace(/\\ /g, " ")
+			return displayText
+		}
+	}
+	return mentionText
 }
 
 const StyledMarkdown = styled.div`
@@ -28,8 +44,8 @@ const StyledMarkdown = styled.div`
 		font-family: var(--vscode-editor-font-family, monospace);
 		font-size: 0.85em;
 		filter: saturation(110%) brightness(95%);
-		color: var(--vscode-textPreformat-foreground) !important;
-		background-color: var(--vscode-textPreformat-background) !important;
+		color: color-mix(in srgb, var(--color-matterai-green) 80%, transparent) !important;
+		background-color: color-mix(in srgb, var(--color-matterai-green) 10%, transparent) !important;
 		padding: 1px 2px;
 		white-space: pre-line;
 		word-break: break-word;
@@ -201,6 +217,19 @@ const StyledMarkdown = styled.div`
 	tr:hover {
 		background-color: var(--vscode-list-hoverBackground);
 	}
+
+	.mention-context-highlight {
+		background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+		border-radius: 3px;
+		text-align: center;
+	}
+
+	.mention-context-highlight-with-shadow {
+		background-color: color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+		border-radius: 3px;
+		box-shadow: 0 0 0 0.5px color-mix(in srgb, var(--color-matterai-green) 30%, transparent);
+		text-align: center;
+	}
 `
 
 const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
@@ -318,11 +347,92 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 									node.lang = node.lang.split(".").slice(-1)[0]
 								}
 							})
+
+							// Process text nodes to handle mentions
+							visit(tree, ["text", "html"], (node: any) => {
+								if (node.type === "text" && node.value && mentionRegexGlobal.test(node.value)) {
+									// Reset regex index
+									mentionRegexGlobal.lastIndex = 0
+
+									// Create new children array
+									const newChildren = []
+									let lastIndex = 0
+									let match
+
+									// Find all mentions and split the text
+									while ((match = mentionRegexGlobal.exec(node.value)) !== null) {
+										// Add text before the mention
+										if (match.index > lastIndex) {
+											newChildren.push({
+												type: "text",
+												value: node.value.slice(lastIndex, match.index),
+											})
+										}
+
+										// Add the mention as HTML
+										const mentionText = match[1] // The captured group without @
+										const displayText = getDisplayTextForMention(mentionText)
+										newChildren.push({
+											type: "html",
+											value: `<span class="mention-context-highlight cursor-pointer" data-mention="${mentionText}">@${displayText}</span>`,
+										})
+
+										lastIndex = match.index + match[0].length
+									}
+
+									// Add remaining text after the last mention
+									if (lastIndex < node.value.length) {
+										newChildren.push({
+											type: "text",
+											value: node.value.slice(lastIndex),
+										})
+									}
+
+									// Replace the node's value and add children
+									if (newChildren.length > 0) {
+										node.value = ""
+										node.children = newChildren
+									}
+								}
+							})
 						}
 					},
 				]}
 				rehypePlugins={[rehypeKatex as any]}
-				components={components}>
+				components={{
+					...components,
+					// Handle the HTML mentions we created
+					span: ({ node, ...props }: any) => {
+						// Check if this is our mention span
+						if (
+							props.className &&
+							props.className.includes("mention-context-highlight") &&
+							props["data-mention"]
+						) {
+							const mentionText = props["data-mention"]
+							const displayText = getDisplayTextForMention(mentionText)
+
+							const handleClick = (e: React.MouseEvent<HTMLSpanElement>) => {
+								e.stopPropagation()
+								vscode.postMessage({
+									type: "openMention",
+									text: mentionText,
+								})
+							}
+
+							return (
+								<span
+									{...props}
+									onClick={handleClick}
+									style={{ cursor: "pointer" }}
+									className={props.className}>
+									@{displayText}
+								</span>
+							)
+						}
+						return <span {...props} />
+					},
+				}}>
 				{markdown || ""}
 			</ReactMarkdown>
 		</StyledMarkdown>

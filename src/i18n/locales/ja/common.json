@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "コードの計画、構築、修正のためのオープンソース AI コーディング アシスタント。"
 	},
 	"number_format": {
@@ -94,7 +94,7 @@
 			"processExitedWithError": "Claude Code プロセスがコード {{exitCode}} で終了しました。エラー出力：{{output}}",
 			"stoppedWithReason": "Claude Code が理由により停止しました：{{reason}}",
 			"apiKeyModelPlanMismatch": "API keys and subscription plans allow different models. Make sure the selected model is included in your plan.",
-			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Kilo Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
+			"notFound": "Claude Code executable '{{claudePath}}' not found.\n\nPlease install Claude Code CLI:\n1. Visit {{installationUrl}} to download Claude Code\n2. Follow the installation instructions for your operating system\n3. Ensure the 'claude' command is available in your PATH\n4. Alternatively, configure a custom path in Axon Code settings under 'Claude Code Path'\n\nOriginal error: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "OAuth認証情報の読み込みに失敗しました。まず認証してください: {{error}}",
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "エラー",

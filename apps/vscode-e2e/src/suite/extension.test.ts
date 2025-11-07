@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 
 import { setDefaultSuiteTimeout } from "./test-utils"
 
-suite("Kilo Code Extension", function () {
+suite("Axon Code Extension", function () {
 	setDefaultSuiteTimeout(this)
 
 	test("Commands should be registered", async () => {
@@ -35,7 +35,7 @@ suite("Kilo Code Extension", function () {
 		const commands = new Set((await vscode.commands.getCommands(true)).filter((cmd) => cmd.startsWith("kilo-code")))
 
 		for (const command of expectedCommands) {
-			assert.ok(commands.has(`kilo-code.${command}`), `Command ${command} should be registered`)
+			assert.ok(commands.has(`axon-code.${command}`), `Command ${command} should be registered`)
 		}
 	})
 })

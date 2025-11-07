@@ -1,5 +1,5 @@
 /**
- * Dark theme for Kilo Code CLI
+ * Dark theme for Axon Code CLI
  *
  * The default dark theme using standard terminal colors for maximum compatibility.
  */
@@ -15,7 +15,7 @@ export const alphaTheme: Theme = {
 	name: "Alpha",
 
 	brand: {
-		primary: "#faf74f", // Kilo Code yellow
+		primary: "#faf74f", // Axon Code yellow
 		secondary: "cyan",
 	},
 

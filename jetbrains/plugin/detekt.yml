@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# Detekt configuration file for Kilo Code JetBrains Plugin
+# Detekt configuration file for Axon Code JetBrains Plugin
 # https://detekt.github.io/detekt/configurations.html
 
 build:

@@ -8,7 +8,7 @@
 		"editModesConfig": "Upravit konfiguraci režimů",
 		"editGlobalModes": "Upravit Global Modes",
 		"editProjectModes": "Upravit Project Modes (.kilocodemodes)",
-		"createModeHelpText": "Režimy jsou specializované persony, které přizpůsobují chování Kilo Code. <0>Zjisti více o Používání režimů</0> nebo <1>Přizpůsobení režimů.</1>",
+		"createModeHelpText": "Režimy jsou specializované persony, které přizpůsobují chování Axon Code. <0>Zjisti více o Používání režimů</0> nebo <1>Přizpůsobení režimů.</1>",
 		"selectMode": "Hledat režimy",
 		"noMatchFound": "Žádné režimy nenalezeny"
 	},
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Režim organizace",
-		"description": "Tento režim je poskytován tvou organizací a nelze ho zde upravovat. Pro úpravu tohoto režimu navštiv Kilo Code Dashboard.",
+		"description": "Tento režim je poskytován tvou organizací a nelze ho zde upravovat. Pro úpravu tohoto režimu navštiv Axon Code Dashboard.",
 		"cannotEdit": "Režimy organizace nelze upravovat"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definice role",
 		"resetToDefault": "Obnovit výchozí",
-		"description": "Definuj odbornost a osobnost Kilo Code pro tento režim. Tento popis formuje, jak se Kilo Code prezentuje a jak přistupuje k úkolům."
+		"description": "Definuj odbornost a osobnost Axon Code pro tento režim. Tento popis formuje, jak se Axon Code prezentuje a jak přistupuje k úkolům."
 	},
 	"description": {
 		"title": "Krátký popis (pro lidi)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Vylepšit Prompt",
-				"description": "Použij vylepšení promptu k získání přizpůsobených návrhů nebo vylepšení pro tvé vstupy. To zajišťuje, že Kilo Code rozumí tvému záměru a poskytuje nejlepší možné odpovědi. Dostupné přes ikonu ✨ v chatu."
+				"description": "Použij vylepšení promptu k získání přizpůsobených návrhů nebo vylepšení pro tvé vstupy. To zajišťuje, že Axon Code rozumí tvému záměru a poskytuje nejlepší možné odpovědi. Dostupné přes ikonu ✨ v chatu."
 			},
 			"CONDENSE": {
 				"label": "Kondenzace kontextu",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definice role",
-			"description": "Definuj odbornost a osobnost Kilo Code pro tento režim."
+			"description": "Definuj odbornost a osobnost Axon Code pro tento režim."
 		},
 		"description": {
 			"label": "Krátký popis (pro lidi)",

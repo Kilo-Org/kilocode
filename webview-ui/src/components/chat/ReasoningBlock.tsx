@@ -1,10 +1,10 @@
+import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { useExtensionState } from "@src/context/ExtensionStateContext"
 
-import MarkdownBlock from "../common/MarkdownBlock"
-import { Lightbulb, ChevronUp } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { ChevronUp } from "lucide-react"
+import MarkdownBlock from "../common/MarkdownBlock"
 
 interface ReasoningBlockProps {
 	content: string
@@ -47,28 +47,23 @@ export const ReasoningBlock = ({ content, isStreaming, isLast }: ReasoningBlockP
 	return (
 		<div className="group">
 			<div
-				className="flex items-center justify-between mb-2.5 pr-2 cursor-pointer select-none"
+				className="flex items-center justify-start gap-1 pr-2 cursor-pointer select-none opacity-40 hover:opacity-100"
 				onClick={handleToggle}>
-				<div className="flex items-center gap-2">
-					<Lightbulb className="w-4" />
-					<span className="font-bold text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
+				<div className="flex items-center gap-1">
+					{/* <Lightbulb className="w-3" /> */}
+					<span className="text-vscode-foreground">{t("chat:reasoning.thinking")}</span>
 					{elapsed > 0 && (
 						<span className="text-sm text-vscode-descriptionForeground mt-0.5">{secondsLabel}</span>
 					)}
 				</div>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<ChevronUp
-						className={cn(
-							"w-4 transition-all opacity-0 group-hover:opacity-100",
-							isCollapsed && "-rotate-180",
-						)}
+						className={cn("w-4 transition-all group-hover:opacity-100", isCollapsed && "-rotate-180")}
 					/>
 				</div>
 			</div>
 			{(content?.trim()?.length ?? 0) > 0 && !isCollapsed && (
-				<div
-					ref={contentRef}
-					className="border-l border-vscode-descriptionForeground/20 ml-2 pl-4 pb-1 text-vscode-descriptionForeground">
+				<div ref={contentRef} className="text-vscode-descriptionForeground">
 					<MarkdownBlock markdown={content} />
 				</div>
 			)}

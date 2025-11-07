@@ -29,7 +29,7 @@ fun executeCommand(commandId: String, project: Project?) {
  */
 class PlusButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(PlusButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.plusButtonClicked"
+    private val commandId: String = "axon-code.plusButtonClicked"
 
     /**
      * Performs the action when the Plus button is clicked.
@@ -48,7 +48,7 @@ class PlusButtonClickAction : AnAction() {
  */
 class PromptsButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(PromptsButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.promptsButtonClicked"
+    private val commandId: String = "axon-code.promptsButtonClicked"
 
     /**
      * Performs the action when the Prompts button is clicked.
@@ -67,7 +67,7 @@ class PromptsButtonClickAction : AnAction() {
  */
 class MCPButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(MCPButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.mcpButtonClicked"
+    private val commandId: String = "axon-code.mcpButtonClicked"
 
     /**
      * Performs the action when the MCP button is clicked.
@@ -86,7 +86,7 @@ class MCPButtonClickAction : AnAction() {
  */
 class HistoryButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(HistoryButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.historyButtonClicked"
+    private val commandId: String = "axon-code.historyButtonClicked"
 
     /**
      * Performs the action when the History button is clicked.
@@ -101,7 +101,7 @@ class HistoryButtonClickAction : AnAction() {
 
 class ProfileButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(ProfileButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.profileButtonClicked"
+    private val commandId: String = "axon-code.profileButtonClicked"
 
     /**
      * Performs the action when the Profile button is clicked.
@@ -120,7 +120,7 @@ class ProfileButtonClickAction : AnAction() {
  */
 class SettingsButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(SettingsButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.settingsButtonClicked"
+    private val commandId: String = "axon-code.settingsButtonClicked"
 
     /**
      * Performs the action when the Settings button is clicked.
@@ -139,7 +139,7 @@ class SettingsButtonClickAction : AnAction() {
  */
 class MarketplaceButtonClickAction : AnAction() {
     private val logger: Logger = Logger.getInstance(MarketplaceButtonClickAction::class.java)
-    private val commandId: String = "kilo-code.marketplaceButtonClicked"
+    private val commandId: String = "axon-code.marketplaceButtonClicked"
 
     /**
      * Performs the action when the Marketplace button is clicked.

@@ -42,8 +42,8 @@
 			"mcp": "MCPサーバー"
 		},
 		"provider": {
-			"account": "Kilo Code アカウント",
-			"apiKey": "Kilo Code APIキー",
+			"account": "Axon Code アカウント",
+			"apiKey": "Axon Code APIキー",
 			"login": "Kilo Codeにログイン",
 			"logout": "Kilo Codeからログアウト",
 			"providerRouting": {
@@ -90,7 +90,7 @@
 			"label": "システム通知を有効にする",
 			"description": "有効にすると、Kilo Codeはタスクの完了やエラーなどの重要なイベントについてシステム通知を送信します。",
 			"testButton": "通知をテスト",
-			"testTitle": "Kilo Code",
+			"testTitle": "Axon Code",
 			"testMessage": "これはKilo Codeからのテスト通知です。"
 		},
 		"terminal": {

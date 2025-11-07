@@ -1,10 +1,10 @@
 {
 	"input": {
-		"task_prompt": "Què vols que faci Kilo Code?",
+		"task_prompt": "Què vols que faci Axon Code?",
 		"task_placeholder": "Assistent de codificació de IA de codi obert per planificar, crear i corregir codi."
 	},
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Tot un equip de desenvolupadors d'IA al teu editor."
 	},
 	"number_format": {
@@ -97,7 +97,7 @@
 			"processExitedWithError": "El procés Claude Code ha sortit amb codi {{exitCode}}. Sortida d'error: {{output}}",
 			"stoppedWithReason": "Claude Code s'ha aturat per la raó: {{reason}}",
 			"apiKeyModelPlanMismatch": "Les claus API i els plans de subscripció permeten models diferents. Assegura't que el model seleccionat estigui inclòs al teu pla.",
-			"notFound": "No s'ha trobat l'executable Claude Code '{{claudePath}}'.\n\nInstal·la Claude Code CLI:\n1. Visita {{installationUrl}} per descarregar Claude Code\n2. Segueix les instruccions d'instal·lació per al teu sistema operatiu\n3. Assegura't que la comanda 'claude' estigui disponible al teu PATH\n4. Alternativament, configura una ruta personalitzada a la configuració de Kilo Code sota 'Ruta de Claude Code'\n\nError original: {{originalError}}"
+			"notFound": "No s'ha trobat l'executable Claude Code '{{claudePath}}'.\n\nInstal·la Claude Code CLI:\n1. Visita {{installationUrl}} per descarregar Claude Code\n2. Segueix les instruccions d'instal·lació per al teu sistema operatiu\n3. Assegura't que la comanda 'claude' estigui disponible al teu PATH\n4. Alternativament, configura una ruta personalitzada a la configuració de Axon Code sota 'Ruta de Claude Code'\n\nError original: {{originalError}}"
 		},
 		"geminiCli": {
 			"oauthLoadFailed": "No s'han pogut carregar les credencials OAuth. Si us plau, autentica't primer: {{error}}",
@@ -151,7 +151,7 @@
 	"warnings": {
 		"no_terminal_content": "No s'ha seleccionat contingut de terminal",
 		"missing_task_files": "Els fitxers d'aquesta tasca falten. Vols eliminar-la de la llista de tasques?",
-		"auto_import_failed": "Ha fallat la importació automàtica de la configuració de Kilo Code: {{error}}"
+		"auto_import_failed": "Ha fallat la importació automàtica de la configuració de Axon Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "No s'han trobat canvis.",
@@ -160,7 +160,7 @@
 		"custom_storage_path_set": "Ruta d'emmagatzematge personalitzada establerta: {{path}}",
 		"default_storage_path": "S'ha reprès l'ús de la ruta d'emmagatzematge predeterminada",
 		"settings_imported": "Configuració importada correctament.",
-		"auto_import_success": "Configuració de Kilo Code importada automàticament des de {{filename}}",
+		"auto_import_success": "Configuració de Axon Code importada automàticament des de {{filename}}",
 		"share_link_copied": "Enllaç de compartició copiat al portapapers",
 		"image_copied_to_clipboard": "URI de dades de la imatge copiada al portapapers",
 		"image_saved": "Imatge desada a {{path}}",
@@ -259,7 +259,7 @@
 	},
 	"docsLink": {
 		"label": "Docs",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Error",

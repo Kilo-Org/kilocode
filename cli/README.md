@@ -1,6 +1,6 @@
-# Kilo Code CLI
+# Axon Code CLI
 
-Terminal User Interface for Kilo Code
+Terminal User Interface for Axon Code
 
 ## Installation
 
@@ -8,13 +8,13 @@ Terminal User Interface for Kilo Code
 npm install -g @kilocode/cli
 ```
 
-Then, make sure you place your Kilo Code API token in the CLI config:
+Then, make sure you place your Axon Code API token in the CLI config:
 
 ```bash
 kilocode config # this opens up your editor
 ```
 
-You can find your Kilo Code API token on your profile page at [app.kilocode.ai](https://app.kilocode.ai), and place it in the `kilocodeToken` field in the CLI config.
+You can find your Axon Code API token on your profile page at [app.matterai.so](https://app.matterai.so), and place it in the `kilocodeToken` field in the CLI config.
 
 ## Known Issues
 
@@ -24,7 +24,7 @@ We don't detect the theme of your terminal, and are aware the the current theme 
 
 ### Outdated dependency warnings
 
-When installing Kilo Code CLI you'll be greeted by some scary looking dependency deprecation warnings. We're aware of the issue and will resolve it shortly.
+When installing Axon Code CLI you'll be greeted by some scary looking dependency deprecation warnings. We're aware of the issue and will resolve it shortly.
 
 ### Windows Support
 
@@ -47,7 +47,7 @@ kilocode --workspace /path/to/project
 
 ### Autonomous mode (Non-Interactive)
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Autonomous mode allows Axon Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
 ```bash
 # Run in autonomous mode with a prompt
@@ -201,7 +201,7 @@ This instructs the AI to proceed without user input.
 
 ```yaml
 # GitHub Actions example
-- name: Run Kilo Code
+- name: Run Axon Code
   run: |
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```

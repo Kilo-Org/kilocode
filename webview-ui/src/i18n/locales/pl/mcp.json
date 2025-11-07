@@ -2,16 +2,16 @@
 	"title": "Serwery MCP",
 	"done": "Gotowe",
 	"marketplace": "Marketplace MCP",
-	"description": "<0>Model Context Protocol</0> umożliwia komunikację z lokalnie uruchomionymi serwerami MCP, które zapewniają dodatkowe narzędzia i zasoby rozszerzające możliwości Kilo Code. Możesz korzystać z <1>serwerów stworzonych przez społeczność</1> lub poprosić Kilo Code o utworzenie nowych narzędzi specyficznych dla twojego przepływu pracy (np. \"dodaj narzędzie, które pobiera najnowszą dokumentację npm\").",
+	"description": "<0>Model Context Protocol</0> umożliwia komunikację z lokalnie uruchomionymi serwerami MCP, które zapewniają dodatkowe narzędzia i zasoby rozszerzające możliwości Axon Code. Możesz korzystać z <1>serwerów stworzonych przez społeczność</1> lub poprosić Axon Code o utworzenie nowych narzędzi specyficznych dla twojego przepływu pracy (np. \"dodaj narzędzie, które pobiera najnowszą dokumentację npm\").",
 	"instructions": "Instrukcje",
 	"enableToggle": {
 		"title": "Włącz serwery MCP",
-		"description": "Włącz to, aby Kilo Code mógł korzystać z narzędzi połączonych serwerów MCP. Daje to Kilo Code więcej możliwości. Jeśli nie planujesz korzystać z tych dodatkowych narzędzi, wyłącz to, aby zmniejszyć koszty tokenów API."
+		"description": "Włącz to, aby Axon Code mógł korzystać z narzędzi połączonych serwerów MCP. Daje to Axon Code więcej możliwości. Jeśli nie planujesz korzystać z tych dodatkowych narzędzi, wyłącz to, aby zmniejszyć koszty tokenów API."
 	},
 	"enableServerCreation": {
 		"title": "Włącz tworzenie serwerów MCP",
-		"description": "Włącz to, aby Kilo Code mógł pomóc ci tworzyć <1>nowe</1> niestandardowe serwery MCP. <0>Dowiedz się więcej o tworzeniu serwerów</0>",
-		"hint": "Wskazówka: Aby zmniejszyć koszty tokenów API, wyłącz tę opcję, gdy nie prosisz Kilo Code o utworzenie nowego serwera MCP."
+		"description": "Włącz to, aby Axon Code mógł pomóc ci tworzyć <1>nowe</1> niestandardowe serwery MCP. <0>Dowiedz się więcej o tworzeniu serwerów</0>",
+		"hint": "Wskazówka: Aby zmniejszyć koszty tokenów API, wyłącz tę opcję, gdy nie prosisz Axon Code o utworzenie nowego serwera MCP."
 	},
 	"editGlobalMCP": "Edytuj globalny MCP",
 	"editProjectMCP": "Edytuj MCP projektu",

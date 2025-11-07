@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "Welkom bij Kilo Code!",
-		"introText1": "Kilo Code is een gratis, open source AI coding agent.",
+		"greeting": "Welkom bij Axon Code!",
+		"introText1": "Axon Code is een gratis, open source AI coding agent.",
 		"introText2": "Het werkt met de nieuwste AI modellen zoals Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, en meer dan 450 andere.",
 		"introText3": "Maak een gratis account aan en krijg $20 bonuskrediet bij je eerste opwaardering.",
 		"ctaButton": "Aan de slag",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Krediet toevoegen",
-		"lowBalance": "Uw Kilo Code-saldo is laag",
+		"lowBalance": "Uw Axon Code-saldo is laag",
 		"newOrganization": "Gebruik je Kilo voor werk?"
 	},
 	"pagination": {
@@ -42,16 +42,16 @@
 			"mcp": "MCP-servers"
 		},
 		"provider": {
-			"account": "Kilo Code Account",
-			"apiKey": "Kilo Code API-sleutel",
-			"login": "Inloggen bij Kilo Code",
-			"logout": "Uitloggen bij Kilo Code",
-			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Kilo Code. Als je niet zeker weet welk model je moet kiezen, werkt Kilo Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
+			"account": "Axon Code Account",
+			"apiKey": "Axon Code API-sleutel",
+			"login": "Inloggen bij Axon Code",
+			"logout": "Uitloggen bij Axon Code",
+			"automaticFetch": "De nieuwste modellen zijn automatisch beschikbaar in Axon Code. Als je niet zeker weet welk model je moet kiezen, werkt Axon Code het beste met de aanbevolen modellen die bovenaan in <strong>vetgedrukte tekst</strong> staan.",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Beheer Provider Routing op organisatieniveau",
 				"createOrganization": "Maak organisatie aan om Provider Routing te beheren",
-				"description": "Kilo Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
+				"description": "Axon Code routeert verzoeken naar de beste beschikbare providers voor uw model. Standaard worden verzoeken verdeeld over de beste providers om de uptime te maximaliseren. U kunt echter een specifieke provider kiezen om voor dit model te gebruiken.",
 				"sorting": {
 					"default": "Standaard provider sortering",
 					"price": "Voorkeur voor providers met lagere prijs",
@@ -70,7 +70,7 @@
 		"modelInfo": {
 			"contextWindow": "Context venster",
 			"providerBreakdown": "Provider Prijs en Capaciteit Overzicht",
-			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Kilo Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
+			"averageKiloCodeCost": "Dit zijn de gemiddelde daadwerkelijke kosten voor Axon Code bij gebruik van dit model over de afgelopen week. Deze kunnen lager zijn dan de vermelde prijs door gebruik van prompt cache.",
 			"table": {
 				"provider": "Provider",
 				"context": "Het eindpunt kan dit aantal tokens verwerken (input + output).",
@@ -83,15 +83,15 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Sta zeer grote bestandslezingen toe",
-				"description": "Wanneer ingeschakeld, zal Kilo Code zeer grote bestands- of MCP-outputlezingen uitvoeren, zelfs als er een grote kans is dat het contextvenster overloopt (inhoudsgrootte >80% van het contextvenster)."
+				"description": "Wanneer ingeschakeld, zal Axon Code zeer grote bestands- of MCP-outputlezingen uitvoeren, zelfs als er een grote kans is dat het contextvenster overloopt (inhoudsgrootte >80% van het contextvenster)."
 			}
 		},
 		"systemNotifications": {
 			"label": "Systeemmeldingen inschakelen",
-			"description": "Wanneer ingeschakeld, zal Kilo Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
+			"description": "Wanneer ingeschakeld, zal Axon Code systeemmeldingen sturen voor belangrijke gebeurtenissen zoals taakvoltooing of fouten.",
 			"testButton": "Testmelding",
-			"testTitle": "Kilo Code",
-			"testMessage": "Dit is een testmelding van Kilo Code."
+			"testTitle": "Axon Code",
+			"testMessage": "Dit is een testmelding van Axon Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -113,7 +113,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code wil je gesprek samenvatten",
+			"wantsToCondense": "Axon Code wil je gesprek samenvatten",
 			"condenseConversation": "Gesprek samenvatten"
 		},
 		"seeNewChanges": "Toon Nieuwe Wijzigingen",
@@ -144,15 +144,15 @@
 	},
 	"docs": "Documentatie",
 	"rules": {
-		"tooltip": "Beheer Kilo Code Regels & Workflows",
-		"ariaLabel": "Kilo Code Regels",
+		"tooltip": "Beheer Axon Code Regels & Workflows",
+		"ariaLabel": "Axon Code Regels",
 		"tabs": {
 			"rules": "Regels",
 			"workflows": "Workflows"
 		},
 		"description": {
-			"rules": "Regels stellen je in staat om Kilo Code instructies te geven die het moet volgen in alle modi en voor alle prompts. Ze zijn een persistente manier om context en voorkeuren op te nemen voor alle gesprekken in je workspace of globaal.",
-			"workflows": "Workflows zijn een voorbereid sjabloon voor een gesprek. Workflows stellen je in staat om prompts te definiëren die je vaak gebruikt, en kunnen een reeks stappen bevatten om Kilo Code te begeleiden door repetitieve taken, zoals het implementeren van een service of het indienen van een PR. Om een workflow aan te roepen, typ",
+			"rules": "Regels stellen je in staat om Axon Code instructies te geven die het moet volgen in alle modi en voor alle prompts. Ze zijn een persistente manier om context en voorkeuren op te nemen voor alle gesprekken in je workspace of globaal.",
+			"workflows": "Workflows zijn een voorbereid sjabloon voor een gesprek. Workflows stellen je in staat om prompts te definiëren die je vaak gebruikt, en kunnen een reeks stappen bevatten om Axon Code te begeleiden door repetitieve taken, zoals het implementeren van een service of het indienen van een PR. Om een workflow aan te roepen, typ",
 			"workflowsInChat": "in de chat."
 		},
 		"sections": {
@@ -222,11 +222,11 @@
 			"keybindingDescription": "Autocomplete-functies kunnen worden geactiveerd door commando's. Je kunt de <DocsLink>Toetsenbordsnelkoppelingen hier</DocsLink> configureren.",
 			"enableAutoTrigger": {
 				"label": "Pauze om te Voltooien",
-				"description": "Wanneer ingeschakeld, zal Kilo Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
+				"description": "Wanneer ingeschakeld, zal Axon Code automatisch Autocomplete activeren wanneer je stopt met typen. Dit kan nuttig zijn voor snelle fixes en suggesties."
 			},
 			"autoTriggerDelay": {
 				"label": "Automatische Activeringsvertraging",
-				"description": "De vertraging in seconden voordat Kilo Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
+				"description": "De vertraging in seconden voordat Axon Code Autocomplete activeert nadat je bent gestopt met typen. Een kortere vertraging betekent snellere suggesties, maar kan meer resource-intensief zijn."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Snelle Taak ({{keybinding}})",

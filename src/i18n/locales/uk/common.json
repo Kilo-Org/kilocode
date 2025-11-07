@@ -1,6 +1,6 @@
 {
 	"extension": {
-		"name": "Kilo Code",
+		"name": "Axon Code",
 		"description": "Помічник з кодування AI з відкритим кодом для планування, створення та виправлення коду."
 	},
 	"number_format": {
@@ -152,7 +152,7 @@
 	"warnings": {
 		"no_terminal_content": "Не вибрано вміст терміналу",
 		"missing_task_files": "Файли цього завдання відсутні. Хочеш видалити його зі списку завдань?",
-		"auto_import_failed": "Не вдалося автоматично імпортувати налаштування Kilo Code: {{error}}"
+		"auto_import_failed": "Не вдалося автоматично імпортувати налаштування Axon Code: {{error}}"
 	},
 	"info": {
 		"no_changes": "Змін не знайдено.",
@@ -161,7 +161,7 @@
 		"custom_storage_path_set": "Встановлено користувацький шлях зберігання: {{path}}",
 		"default_storage_path": "Повернуто до використання шляху зберігання за замовчуванням",
 		"settings_imported": "Налаштування успішно імпортовано.",
-		"auto_import_success": "Налаштування Kilo Code автоматично імпортовано з {{filename}}",
+		"auto_import_success": "Налаштування Axon Code автоматично імпортовано з {{filename}}",
 		"share_link_copied": "Посилання для поділу скопійовано в буфер обміну",
 		"organization_share_link_copied": "Посилання для поділу організації скопійовано в буфер обміну!",
 		"public_share_link_copied": "Публічне посилання для поділу скопійовано в буфер обміну!",
@@ -195,7 +195,7 @@
 		"enter_valid_path": "Будь ласка, введи дійсний шлях"
 	},
 	"input": {
-		"task_prompt": "Що має зробити Kilo Code?",
+		"task_prompt": "Що має зробити Axon Code?",
 		"task_placeholder": "Створити, знайти, запитати щось"
 	},
 	"customModes": {
@@ -222,8 +222,8 @@
 	},
 	"mdm": {
 		"errors": {
-			"cloud_auth_required": "Твоя організація вимагає автентифікації Kilo Code Cloud. Будь ласка, увійди, щоб продовжити.",
-			"organization_mismatch": "Ти повинен бути автентифікований з обліковим записом Kilo Code Cloud твоєї організації.",
+			"cloud_auth_required": "Твоя організація вимагає автентифікації Axon Code Cloud. Будь ласка, увійди, щоб продовжити.",
+			"organization_mismatch": "Ти повинен бути автентифікований з обліковим записом Axon Code Cloud твоєї організації.",
 			"verification_failed": "Не вдалося перевірити автентифікацію організації."
 		},
 		"info": {
@@ -249,7 +249,7 @@
 	},
 	"docsLink": {
 		"label": "Документація",
-		"url": "https://kilocode.ai/docs"
+		"url": "https://matterai.so/docs"
 	},
 	"errorBoundary": {
 		"title": "Помилка",

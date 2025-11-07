@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "歡迎使用 Kilo Code！",
-		"introText1": "Kilo Code 是一個免費的開源 AI 程式設計代理。",
+		"greeting": "歡迎使用 Axon Code！",
+		"introText1": "Axon Code 是一個免費的開源 AI 程式設計代理。",
 		"introText2": "它適用於最新的 AI 模型，如 Claude Sonnet 4.5、Gemini 2.5 Pro、GPT-5 以及 450 多個其他模型。",
 		"introText3": "建立免費帳戶，首次儲值即可獲得 20 美元獎勵額度。",
 		"ctaButton": "開始使用",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "添加額度",
-		"lowBalance": "你的 Kilo Code 餘額不足",
+		"lowBalance": "你的 Axon Code 餘額不足",
 		"newOrganization": "將 Kilo 用於工作？"
 	},
 	"invalidModel": {
@@ -39,26 +39,26 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "允許超大檔案讀取",
-				"description": "啟用後，Kilo Code 將執行超大檔案或 MCP 輸出讀取，即使存在高機率溢出上下文視窗（內容大小 >80% 的上下文視窗）。"
+				"description": "啟用後，Axon Code 將執行超大檔案或 MCP 輸出讀取，即使存在高機率溢出上下文視窗（內容大小 >80% 的上下文視窗）。"
 			}
 		},
 		"systemNotifications": {
 			"label": "啟用系統通知",
-			"description": "啟用後 Kilo Code 將發送系統通知，提醒工作完成或錯誤等重要事件。",
+			"description": "啟用後 Axon Code 將發送系統通知，提醒工作完成或錯誤等重要事件。",
 			"testButton": "測試通知",
-			"testTitle": "Kilo Code",
-			"testMessage": "這是來自 Kilo Code 的測試通知。"
+			"testTitle": "Axon Code",
+			"testMessage": "這是來自 Axon Code 的測試通知。"
 		},
 		"provider": {
-			"account": "Kilo Code 帳戶",
-			"apiKey": "Kilo Code API 金鑰",
-			"login": "登入 Kilo Code",
-			"logout": "登出 Kilo Code",
+			"account": "Axon Code 帳戶",
+			"apiKey": "Axon Code API 金鑰",
+			"login": "登入 Axon Code",
+			"logout": "登出 Axon Code",
 			"providerRouting": {
 				"title": "供應商路由",
 				"managedByOrganization": "管理組織層級供應商路由",
 				"createOrganization": "建立組織以管理供應商路由",
-				"description": "Kilo Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。",
+				"description": "Axon Code 將請求路由到您模型的最佳可用供應商。預設情況下，請求會在頂級供應商之間進行負載平衡，以最大化正常執行時間。但是，您可以選擇要用於此模型的特定供應商。",
 				"sorting": {
 					"default": "預設供應商排序",
 					"price": "偏好較低價格的供應商",
@@ -73,12 +73,12 @@
 					"zdr": "零資料保留"
 				}
 			},
-			"automaticFetch": "最新模型會自動在 Kilo Code 中提供。如果您不確定要選擇哪個模型，Kilo Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
+			"automaticFetch": "最新模型會自動在 Axon Code 中提供。如果您不確定要選擇哪個模型，Axon Code 與列在頂部<strong>粗體</strong>顯示的推薦模型搭配使用效果最佳。"
 		},
 		"modelInfo": {
 			"contextWindow": "上下文視窗",
 			"providerBreakdown": "供應商價格與功能明細",
-			"averageKiloCodeCost": "這是過去一週 Kilo Code 使用此模型的平均實際花費。由於提示詞快取的使用，可能低於列出的價格。",
+			"averageKiloCodeCost": "這是過去一週 Axon Code 使用此模型的平均實際花費。由於提示詞快取的使用，可能低於列出的價格。",
 			"table": {
 				"provider": "供應商",
 				"context": "端點可以處理這個數量的 Token（輸入 + 輸出）。",
@@ -108,7 +108,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code 想要壓縮你的對話",
+			"wantsToCondense": "Axon Code 想要壓縮你的對話",
 			"condenseConversation": "壓縮對話"
 		},
 		"seeNewChanges": "顯示新變更",
@@ -139,15 +139,15 @@
 	},
 	"docs": "文件",
 	"rules": {
-		"tooltip": "管理 Kilo Code 規則和工作流程",
-		"ariaLabel": "Kilo Code 規則",
+		"tooltip": "管理 Axon Code 規則和工作流程",
+		"ariaLabel": "Axon Code 規則",
 		"tabs": {
 			"rules": "規則",
 			"workflows": "工作流程"
 		},
 		"description": {
-			"rules": "規則允許你為 Kilo Code 提供在所有模式和所有提示中都應遵循的指令。它們是在你的工作空間或全域範圍內為所有對話包含上下文和偏好的持久方式。",
-			"workflows": "工作流程是為對話準備的範本。工作流程允許你定義經常使用的提示，並可以包含一系列步驟來指導 Kilo Code 完成重複性任務，如部署服務或提交 PR。要調用工作流程，請輸入",
+			"rules": "規則允許你為 Axon Code 提供在所有模式和所有提示中都應遵循的指令。它們是在你的工作空間或全域範圍內為所有對話包含上下文和偏好的持久方式。",
+			"workflows": "工作流程是為對話準備的範本。工作流程允許你定義經常使用的提示，並可以包含一系列步驟來指導 Axon Code 完成重複性任務，如部署服務或提交 PR。要調用工作流程，請輸入",
 			"workflowsInChat": "在聊天中。"
 		},
 		"sections": {
@@ -217,11 +217,11 @@
 			"keybindingDescription": "自動補全功能可以透過指令觸發。你可以在<DocsLink>這裡設定鍵盤快速鍵</DocsLink>。",
 			"enableAutoTrigger": {
 				"label": "啟用自動補全",
-				"description": "啟用後，當你停止輸入時 Kilo Code 將自動觸發自動補全。這對快速修正和建議很有用。"
+				"description": "啟用後，當你停止輸入時 Axon Code 將自動觸發自動補全。這對快速修正和建議很有用。"
 			},
 			"autoTriggerDelay": {
 				"label": "自動觸發延遲",
-				"description": "你停止輸入後 Kilo Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
+				"description": "你停止輸入後 Axon Code 觸發自動補全前的秒數延遲。延遲越短建議獲取速度越快，但可能更耗費資源。"
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "快速任務 ({{keybinding}})",

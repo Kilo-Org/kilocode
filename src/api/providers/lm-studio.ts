@@ -158,7 +158,7 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 			}
 			// kilocode_change end
 			throw new Error(
-				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Kilo Code's prompts.",
+				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Axon Code's prompts.",
 			)
 		}
 	}
@@ -202,7 +202,7 @@ export class LmStudioHandler extends BaseProvider implements SingleCompletionHan
 			return response.choices[0]?.message.content || ""
 		} catch (error) {
 			throw new Error(
-				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Kilo Code's prompts.",
+				"Please check the LM Studio developer logs to debug what went wrong. You may need to load the model with a larger context length to work with Axon Code's prompts.",
 			)
 		}
 	}

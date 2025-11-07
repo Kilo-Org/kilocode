@@ -1,16 +1,14 @@
-import { useState, useCallback, useEffect, useRef, Fragment } from "react" // kilocode_change Fragment
-import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
-import { Trans } from "react-i18next"
-import { ChevronsUpDown, Check, X } from "lucide-react"
+import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Fragment, useCallback, useEffect, useRef, useState } from "react" // kilocode_change Fragment
 
-import type { ProviderSettings, ModelInfo, OrganizationAllowList } from "@roo-code/types"
+import type { ModelInfo, OrganizationAllowList, ProviderSettings } from "@roo-code/types"
 
-import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
 import { usePreferredModels } from "@/components/ui/hooks/kilocode/usePreferredModels" // kilocode_change
+import { useSelectedModel } from "@/components/ui/hooks/useSelectedModel"
+import { useAppTranslation } from "@src/i18n/TranslationContext"
 // import { filterModels } from "./utils/organizationFilters" // kilocode_change: not doing this
-import { cn } from "@src/lib/utils"
 import {
+	Button,
 	Command,
 	CommandEmpty,
 	CommandGroup,
@@ -20,14 +18,12 @@ import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-	Button,
 	SelectSeparator, // kilocode_change
 } from "@src/components/ui"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
+import { cn } from "@src/lib/utils"
 
-import { ModelInfoView } from "./ModelInfoView"
 import { ApiErrorMessage } from "./ApiErrorMessage"
-import { KiloModelInfoView } from "../kilocode/settings/KiloModelInfoView"
 
 type ModelIdKey = keyof Pick<
 	ProviderSettings,
@@ -67,8 +63,8 @@ export const ModelPicker = ({
 	defaultModelId,
 	models,
 	modelIdKey,
-	serviceName,
-	serviceUrl,
+	// serviceName,
+	// serviceUrl,
 	apiConfiguration,
 	setApiConfigurationField,
 	// organizationAllowList, // kilocode_change: unused
@@ -77,7 +73,7 @@ export const ModelPicker = ({
 	const { t } = useAppTranslation()
 
 	const [open, setOpen] = useState(false)
-	const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+	// const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 	const isInitialized = useRef(false)
 	const searchInputRef = useRef<HTMLInputElement>(null)
 	const selectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -85,10 +81,10 @@ export const ModelPicker = ({
 
 	// kilocode_change start
 	const modelIds = usePreferredModels(models)
-	const [isPricingExpanded, setIsPricingExpanded] = useState(false)
+	// const [isPricingExpanded, setIsPricingExpanded] = useState(false)
 	// kilocode_change end
 
-	const { id: selectedModelId, info: selectedModelInfo } = useSelectedModel(apiConfiguration)
+	const { id: selectedModelId } = useSelectedModel(apiConfiguration)
 
 	const [searchValue, setSearchValue] = useState("")
 
@@ -243,50 +239,6 @@ export const ModelPicker = ({
 				</Popover>
 			</div>
 			{errorMessage && <ApiErrorMessage errorMessage={errorMessage} />}
-			{
-				// kilocode_change start
-				selectedModelId &&
-					selectedModelInfo &&
-					(apiConfiguration.apiProvider === "kilocode" || apiConfiguration.apiProvider === "openrouter" ? (
-						<KiloModelInfoView
-							apiConfiguration={apiConfiguration}
-							modelId={selectedModelId}
-							model={selectedModelInfo}
-							isDescriptionExpanded={isDescriptionExpanded}
-							setIsDescriptionExpanded={setIsDescriptionExpanded}
-							isPricingExpanded={isPricingExpanded}
-							setIsPricingExpanded={setIsPricingExpanded}
-						/>
-					) : (
-						<ModelInfoView
-							apiProvider={apiConfiguration.apiProvider}
-							selectedModelId={selectedModelId}
-							modelInfo={selectedModelInfo}
-							isDescriptionExpanded={isDescriptionExpanded}
-							setIsDescriptionExpanded={setIsDescriptionExpanded}
-						/>
-					))
-				// kilocode_change end
-			}
-			<div className="text-sm text-vscode-descriptionForeground">
-				{
-					/*kilocode_change start*/
-					apiConfiguration.apiProvider === "kilocode" ? (
-						<Trans i18nKey="kilocode:settings.provider.automaticFetch" />
-					) : (
-						<Trans
-							i18nKey="settings:modelPicker.automaticFetch"
-							components={{
-								serviceLink: <VSCodeLink href={serviceUrl} className="text-sm" />,
-								defaultModelLink: (
-									<VSCodeLink onClick={() => onSelect(defaultModelId)} className="text-sm" />
-								),
-							}}
-							values={{ serviceName, defaultModelId }}
-						/>
-					) /*kilocode_change end*/
-				}
-			</div>
 		</>
 	)
 }

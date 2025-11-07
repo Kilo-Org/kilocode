@@ -1,8 +1,8 @@
-# Kilo Code CLI
+# Axon Code CLI
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
-The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
+The Axon Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
 ## Install
 
@@ -23,7 +23,7 @@ kilocode --workspace /path/to/project
 
 to start the CLI and begin a new task with your preferred model and relevant mode.
 
-## What you can do with Kilo Code CLI
+## What you can do with Axon Code CLI
 
 - **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
 - **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
@@ -63,7 +63,7 @@ You can also use the `/config` slash command during an interactive session, whic
 
 ## Autonomous mode (Non-Interactive)
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Autonomous mode allows Axon Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
 ```bash
 # Run in autonomous mode with a prompt
@@ -217,7 +217,7 @@ This instructs the AI to proceed without user input.
 
 ```yaml
 # GitHub Actions example
-- name: Run Kilo Code
+- name: Run Axon Code
   run: |
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```

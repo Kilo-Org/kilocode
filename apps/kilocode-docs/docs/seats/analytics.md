@@ -11,7 +11,7 @@ Using Kilo seats with an Enterprise or Teams subscription provides detailed usag
 Access your organization’s usage analytics through the **Usage Details** section in your dashboard. The analytics show comprehensive data about your team's usage of the Kilo Gateway provider.
 
 :::info Usage Scope
-This usage overview includes all of your usage of the Kilo Gateway provider. It does **NOT** include any usage made via the Kilo Code extension to other, non-Kilo Code providers. You can choose which API provider to use from the extension's main settings page.
+This usage overview includes all of your usage of the Kilo Gateway provider. It does **NOT** include any usage made via the Axon Code extension to other, non-Axon Code providers. You can choose which API provider to use from the extension's main settings page.
 :::
 
 ## Summary Metrics

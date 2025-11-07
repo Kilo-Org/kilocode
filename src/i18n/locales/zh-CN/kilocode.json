@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code: 提交信息生成器已启动",
+		"activated": "Axon Code: 提交信息生成器已启动",
 		"gitNotFound": "⚠️ Git 仓库未找到或 git 不可用",
 		"gitInitError": "⚠️ Git 初始化错误：{{error}}",
 		"generating": "Kilo: 正在生成提交信息...",
@@ -63,7 +63,7 @@
 		"activationFailed": "Kilo：消息生成器激活失败：{{error}}",
 		"errors": {
 			"noProject": "没有可用项目",
-			"connectionFailed": "连接到 Kilo Code 扩展失败",
+			"connectionFailed": "连接到 Axon Code 扩展失败",
 			"missingMessage": "未从扩展接收到提交信息",
 			"invalidResponse": "从扩展程序收到的响应格式无效",
 			"timeout": "请求在 30 秒后超时",
@@ -89,7 +89,7 @@
 			"title": "生成提交信息",
 			"analyzing": "分析更改中...",
 			"generating": "生成提交消息中...",
-			"connecting": "连接到 Kilo Code..."
+			"connecting": "连接到 Axon Code..."
 		},
 		"ui": {
 			"generateButton": "生成提交信息",
@@ -104,12 +104,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete（已禁用）",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete（已禁用）",
 				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
 				"lastCompletion": "最后建议:",
 				"sessionTotal": "会话总费用:",
@@ -121,36 +121,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "正在分析你的代码...",
 			"generating": "正在生成建议编辑...",
 			"processing": "正在处理建议编辑...",
 			"showing": "正在显示建议编辑..."
 		},
 		"input": {
-			"title": "Kilo Code: 快速任务",
+			"title": "Axon Code: 快速任务",
 			"placeholder": "例如：'重构这个函数使其更高效'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: 生成建议编辑",
+			"generateSuggestions": "Axon Code: 生成建议编辑",
 			"displaySuggestions": "显示建议编辑",
 			"cancelSuggestions": "取消建议编辑",
 			"applyCurrentSuggestion": "应用当前建议编辑",
 			"applyAllSuggestions": "应用所有建议编辑",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: 建议编辑"
+			"title": "Axon Code: 建议编辑"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "我可以帮助你完成快速任务和建议编辑。"
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Kilo Code Autocomplete 被与 GitHub Copilot 的冲突阻止。要解决此问题，你必须禁用 Copilot 的内联建议。",
+			"message": "Axon Code Autocomplete 被与 GitHub Copilot 的冲突阻止。要解决此问题，你必须禁用 Copilot 的内联建议。",
 			"disableCopilot": "禁用 Copilot",
 			"disableInlineAssist": "禁用 Autocomplete"
 		}
@@ -168,6 +168,6 @@
 			"okButton": "我明白",
 			"cancelButton": "取消"
 		},
-		"tipMessage": "Kilo Code: 按下 {{shortcut}} 生成终端命令"
+		"tipMessage": "Axon Code: 按下 {{shortcut}} 生成终端命令"
 	}
 }

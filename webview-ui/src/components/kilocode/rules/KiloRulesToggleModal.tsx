@@ -118,7 +118,7 @@ const KiloRulesToggleModal: React.FC = () => {
 
 			{isVisible && (
 				<div
-					className="fixed left-[15px] right-[15px] border border-[var(--vscode-editorGroup-border)] p-3 rounded z-[1000] overflow-y-auto"
+					className="fixed left-[15px] right-[15px] border border-[var(--vscode-editorGroup-border)] p-3 rounded z-[1000] rounded-xl border border-white/20 outline-none overflow-y-auto"
 					style={{
 						bottom: `calc(100vh - ${menuPosition}px + 6px)`,
 						background: "var(--vscode-editor-background)",
@@ -160,13 +160,13 @@ const KiloRulesToggleModal: React.FC = () => {
 					<div className="text-xs text-[var(--vscode-descriptionForeground)] mb-4">
 						{currentView === "rule" ? (
 							<DescriptionWithLink
-								href="https://kilocode.ai/docs/advanced-usage/custom-rules"
+								href="https://matterai.so/docs/advanced-usage/custom-rules"
 								linkText={t("kilocode:docs")}>
 								{t("kilocode:rules.description.rules")}
 							</DescriptionWithLink>
 						) : (
 							<DescriptionWithLink
-								href="https://kilocode.ai/docs/features/slash-commands/workflows"
+								href="https://matterai.so/docs/features/slash-commands/workflows"
 								linkText={t("kilocode:docs")}>
 								{t("kilocode:rules.description.workflows")}{" "}
 								<span className="text-[var(--vscode-foreground)] font-bold">/workflow-name</span>{" "}

@@ -1,5 +1,5 @@
 {
-	"greeting": "Kilo Code は何をお手伝いできますか？",
+	"greeting": "Axon Code は何をお手伝いできますか？",
 	"task": {
 		"title": "タスク",
 		"expand": "タスクを展開",
@@ -183,7 +183,7 @@
 		"wantsToInsert": "Kilo Codeはこのファイルにコンテンツを挿入したい",
 		"wantsToInsertWithLineNumber": "Kilo Codeはこのファイルの{{lineNumber}}行目にコンテンツを挿入したい",
 		"wantsToInsertAtEnd": "Kilo Codeはこのファイルの末尾にコンテンツを追加したい",
-		"wantsToReadAndXMore": "Kilo Code はこのファイルと他に {{count}} 個のファイルを読み込もうとしています",
+		"wantsToReadAndXMore": "Axon Code はこのファイルと他に {{count}} 個のファイルを読み込もうとしています",
 		"wantsToReadMultiple": "Kilo Codeは複数のファイルを読み取ろうとしています",
 		"wantsToApplyBatchChanges": "Kilo Codeは複数のファイルに変更を適用したい",
 		"wantsToGenerateImage": "Kilo Codeは画像を生成したい",
@@ -235,8 +235,8 @@
 		"youSaid": "あなたの発言"
 	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code{{serverName}}でツールを使用したい",
-		"wantsToAccessResource": "Kilo Code{{serverName}}のリソースにアクセスしたい"
+		"wantsToUseTool": "Axon Code{{serverName}}でツールを使用したい",
+		"wantsToAccessResource": "Axon Code{{serverName}}のリソースにアクセスしたい"
 	},
 	"modes": {
 		"wantsToSwitch": "Kilo Codeは<code>{{mode}}</code>モードに切り替えたい",
@@ -245,7 +245,7 @@
 		"didSwitchWithReason": "Kilo Codeは次の理由で<code>{{mode}}</code>モードに切り替えました: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code<code>{{mode}}</code>モードで新しいサブタスクを作成したい",
+		"wantsToCreate": "Axon Code<code>{{mode}}</code>モードで新しいサブタスクを作成したい",
 		"wantsToFinish": "Kilo Codeはこのサブタスクを終了したい",
 		"newTaskContent": "サブタスク指示",
 		"completionContent": "サブタスク完了",

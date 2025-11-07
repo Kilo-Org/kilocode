@@ -269,7 +269,7 @@ describe("ExtensionMessageRow", () => {
 				ts: Date.now(),
 				type: "say",
 				say: "text",
-				text: "Hello! I'm Kilo Code",
+				text: "Hello! I'm Axon Code",
 				partial: true,
 			}
 
@@ -279,7 +279,7 @@ describe("ExtensionMessageRow", () => {
 			// The icon (>) should be followed by a space before the text
 			// This regex checks for the icon followed by whitespace and then text
 			expect(lastFrame()).toMatch(/>\s+Hello/)
-			expect(lastFrame()).toContain("Hello! I'm Kilo Code")
+			expect(lastFrame()).toContain("Hello! I'm Axon Code")
 		})
 
 		it("should preserve spacing even when text starts streaming from empty", () => {

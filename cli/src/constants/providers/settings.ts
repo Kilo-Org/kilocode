@@ -28,9 +28,9 @@ export interface FieldMetadata {
 export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 	// Kilocode fields
 	kilocodeToken: {
-		label: "Kilo Code Token",
+		label: "Axon Code Token",
 		type: "password",
-		placeholder: "Enter your Kilo Code token...",
+		placeholder: "Enter your Axon Code token...",
 	},
 	kilocodeOrganizationId: {
 		label: "Organization ID",
@@ -558,225 +558,7 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 			return [
 				createFieldConfig("kilocodeToken", config),
 				createFieldConfig("kilocodeOrganizationId", config, "personal"),
-				createFieldConfig("kilocodeModel", config, "anthropic/claude-sonnet-4"),
-			]
-
-		case "anthropic":
-			return [
-				createFieldConfig("apiKey", config),
-				createFieldConfig("apiModelId", config, "claude-3-5-sonnet-20241022"),
-				createFieldConfig("anthropicBaseUrl", config, "Default"),
-			]
-
-		case "openrouter":
-			return [
-				createFieldConfig("openRouterApiKey", config),
-				createFieldConfig("openRouterModelId", config, "anthropic/claude-3-5-sonnet"),
-				createFieldConfig("openRouterBaseUrl", config, "Default"),
-			]
-
-		case "openai-native":
-			return [
-				createFieldConfig("openAiNativeApiKey", config),
-				createFieldConfig("apiModelId", config, "gpt-4o"),
-				createFieldConfig("openAiNativeBaseUrl", config, "Default"),
-			]
-
-		case "bedrock":
-			return [
-				createFieldConfig("awsAccessKey", config),
-				createFieldConfig("awsSecretKey", config),
-				createFieldConfig("awsSessionToken", config),
-				createFieldConfig("awsRegion", config, "us-east-1"),
-				createFieldConfig("awsUseCrossRegionInference", config),
-			]
-
-		case "gemini":
-			return [
-				createFieldConfig("geminiApiKey", config),
-				createFieldConfig("googleGeminiBaseUrl", config, "Default"),
-			]
-
-		case "vertex":
-			return [
-				createFieldConfig("vertexJsonCredentials", config),
-				createFieldConfig("vertexKeyFile", config),
-				createFieldConfig("vertexProjectId", config),
-				createFieldConfig("vertexRegion", config, "us-central1"),
-			]
-
-		case "claude-code":
-			return [
-				createFieldConfig("claudeCodePath", config),
-				createFieldConfig("claudeCodeMaxOutputTokens", config, "8000"),
-			]
-
-		case "mistral":
-			return [
-				createFieldConfig("mistralApiKey", config),
-				createFieldConfig("mistralCodestralUrl", config, "Default"),
-			]
-
-		case "groq":
-			return [createFieldConfig("groqApiKey", config)]
-
-		case "deepseek":
-			return [createFieldConfig("deepSeekApiKey", config)]
-
-		case "xai":
-			return [createFieldConfig("xaiApiKey", config)]
-
-		case "cerebras":
-			return [createFieldConfig("cerebrasApiKey", config)]
-
-		case "ollama":
-			return [
-				createFieldConfig("ollamaBaseUrl", config, "http://localhost:11434"),
-				createFieldConfig("ollamaModelId", config, "llama3.2"),
-				createFieldConfig("ollamaApiKey", config),
-			]
-
-		case "lmstudio":
-			return [
-				createFieldConfig("lmStudioBaseUrl", config, "http://localhost:1234/v1"),
-				createFieldConfig("lmStudioModelId", config, "local-model"),
-				createFieldConfig("lmStudioSpeculativeDecodingEnabled", config),
-			]
-
-		case "vscode-lm":
-			return [
-				{
-					field: "vsCodeLmModelSelector",
-					label: "Model Selector",
-					value: config.vsCodeLmModelSelector
-						? `${config.vsCodeLmModelSelector.vendor}/${config.vsCodeLmModelSelector.family}`
-						: "Not set",
-					actualValue: config.vsCodeLmModelSelector ? JSON.stringify(config.vsCodeLmModelSelector) : "",
-					type: "text",
-				},
-			]
-
-		case "openai":
-			return [createFieldConfig("openAiApiKey", config), createFieldConfig("openAiBaseUrl", config, "Default")]
-
-		case "glama":
-			return [
-				createFieldConfig("glamaApiKey", config),
-				createFieldConfig("glamaModelId", config, "llama-3.1-70b-versatile"),
-			]
-
-		case "huggingface":
-			return [
-				createFieldConfig("huggingFaceApiKey", config),
-				createFieldConfig("huggingFaceModelId", config, "meta-llama/Llama-2-70b-chat-hf"),
-				createFieldConfig("huggingFaceInferenceProvider", config, "auto"),
-			]
-
-		case "litellm":
-			return [
-				createFieldConfig("litellmBaseUrl", config),
-				createFieldConfig("litellmApiKey", config),
-				createFieldConfig("litellmModelId", config, "gpt-4o"),
-			]
-
-		case "moonshot":
-			return [
-				createFieldConfig("moonshotBaseUrl", config, "https://api.moonshot.ai/v1"),
-				createFieldConfig("moonshotApiKey", config),
-			]
-
-		case "doubao":
-			return [createFieldConfig("doubaoApiKey", config)]
-
-		case "chutes":
-			return [createFieldConfig("chutesApiKey", config)]
-
-		case "sambanova":
-			return [createFieldConfig("sambaNovaApiKey", config)]
-
-		case "fireworks":
-			return [createFieldConfig("fireworksApiKey", config)]
-
-		case "featherless":
-			return [createFieldConfig("featherlessApiKey", config)]
-
-		case "deepinfra":
-			return [
-				createFieldConfig("deepInfraApiKey", config),
-				createFieldConfig("deepInfraModelId", config, "meta-llama/Meta-Llama-3.1-70B-Instruct"),
-			]
-
-		case "io-intelligence":
-			return [
-				createFieldConfig("ioIntelligenceApiKey", config),
-				createFieldConfig("ioIntelligenceModelId", config, "gpt-4o"),
-			]
-
-		case "qwen-code":
-			return [createFieldConfig("qwenCodeOauthPath", config, "~/.qwen/oauth_creds.json")]
-
-		case "gemini-cli":
-			return [
-				createFieldConfig("geminiCliOAuthPath", config, "~/.gemini/oauth_creds.json"),
-				createFieldConfig("geminiCliProjectId", config),
-			]
-
-		case "zai":
-			return [
-				createFieldConfig("zaiApiKey", config),
-				createFieldConfig("zaiApiLine", config, "international_coding"),
-			]
-
-		case "unbound":
-			return [createFieldConfig("unboundApiKey", config), createFieldConfig("unboundModelId", config, "gpt-4o")]
-
-		case "requesty":
-			return [
-				createFieldConfig("requestyApiKey", config),
-				createFieldConfig("requestyBaseUrl", config, "Default"),
-				createFieldConfig("requestyModelId", config, "gpt-4o"),
-			]
-
-		case "roo":
-			return [createFieldConfig("apiModelId", config, "gpt-4o")]
-
-		case "vercel-ai-gateway":
-			return [
-				createFieldConfig("vercelAiGatewayApiKey", config),
-				createFieldConfig("vercelAiGatewayModelId", config, "gpt-4o"),
-			]
-
-		case "virtual-quota-fallback":
-			return [
-				{
-					field: "profiles",
-					label: "Profiles Configuration",
-					value: config.profiles ? `${config.profiles.length} profile(s)` : "Not configured",
-					actualValue: config.profiles ? JSON.stringify(config.profiles) : "",
-					type: "text",
-				},
-			]
-
-		case "human-relay":
-			return [
-				{
-					field: "apiModelId",
-					label: "Model",
-					value: "human",
-					actualValue: "human",
-					type: "text",
-				},
-			]
-
-		case "fake-ai":
-			return [
-				{
-					field: "apiModelId",
-					label: "Model",
-					value: "fake-model",
-					actualValue: "fake-model",
-					type: "text",
-				},
+				createFieldConfig("kilocodeModel", config, "axon-code"),
 			]
 
 		default:
@@ -788,7 +570,7 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
  * Provider-specific default models
  */
 export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
-	kilocode: "anthropic/claude-sonnet-4",
+	kilocode: "axon-code",
 	anthropic: "claude-3-5-sonnet-20241022",
 	"openai-native": "gpt-4o",
 	openrouter: "anthropic/claude-3-5-sonnet",

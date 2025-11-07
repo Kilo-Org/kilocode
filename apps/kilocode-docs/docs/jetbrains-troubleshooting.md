@@ -1,10 +1,10 @@
 # JetBrains Plugin Troubleshooting
 
-This guide covers common issues when using Kilo Code in JetBrains IDEs (IntelliJ IDEA, Android Studio, WebStorm, PyCharm, etc.).
+This guide covers common issues when using Axon Code in JetBrains IDEs (IntelliJ IDEA, Android Studio, WebStorm, PyCharm, etc.).
 
 ## Known Missing Features
 
-The following features, available in the VS Code version of Kilo Code, are not currently implemented in the JetBrains version:
+The following features, available in the VS Code version of Axon Code, are not currently implemented in the JetBrains version:
 
 - **Autocomplete/QuickTasks**
 - **Git Commit Message Generation** This feature is missing but will be added soon!
@@ -15,7 +15,7 @@ We're actively working on bringing feature parity between the VS Code and JetBra
 
 ### Why Node.js is Required
 
-The JetBrains Kilo Extension requires Node.js to be installed on your system. Node.js is used to run the extension's backend services and handle communication between the IDE and Kilo Code's AI features.
+The JetBrains Kilo Extension requires Node.js to be installed on your system. Node.js is used to run the extension's backend services and handle communication between the IDE and Axon Code's AI features.
 
 ### Installing Node.js
 
@@ -38,7 +38,7 @@ Both commands should return version numbers.
 
 ### What is JCEF?
 
-JCEF (Java Chromium Embedded Framework) is required for Kilo Code's web-based interface to display properly in JetBrains IDEs. Most JetBrains IDEs include JCEF support by default, but some configurations may need manual activation.
+JCEF (Java Chromium Embedded Framework) is required for Axon Code's web-based interface to display properly in JetBrains IDEs. Most JetBrains IDEs include JCEF support by default, but some configurations may need manual activation.
 
 ## Fixing JCEF Issues by IDE
 
@@ -64,7 +64,7 @@ JCEF is available in Android Studio but may need to be enabled manually:
     - Close and reopen Android Studio for the changes to take effect
 
 5. **Verify:**
-    - Open Kilo Code panel
+    - Open Axon Code panel
     - The JCEF warning should be gone, and the interface should load properly
 
 **Visual Guide:**
@@ -111,4 +111,4 @@ For WebStorm, PyCharm, PhpStorm, RubyMine, CLion, GoLand, DataGrip, and Rider:
     - Navigate to Advanced Settings
     - Enable any JCEF-related options
 
-_For general Kilo Code support and documentation, visit [kilocode.ai/docs](https://kilocode.ai/docs)_
+_For general Axon Code support and documentation, visit [matterai.so/docs](https://matterai.so/docs)_

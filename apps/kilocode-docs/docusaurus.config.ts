@@ -20,12 +20,12 @@ import {
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-	title: "Kilo Code Docs",
-	tagline: "Kilo Code Documentation",
+	title: "Axon Code Docs",
+	tagline: "Axon Code Documentation",
 	favicon: "img/favicon.ico",
 
 	// Set the production url of your site here
-	url: "https://kilocode.ai",
+	url: "https://matterai.so",
 	// Set the /<baseUrl>/ pathname under which your site is served
 	// For GitHub pages deployment, it is often '/<projectName>/'
 	baseUrl: "/docs",
@@ -175,13 +175,13 @@ const config: Config = {
 	],
 
 	themeConfig: {
-		image: "img/kilo-v1.svg",
+		image: "img/axon-code-icon.svg",
 		navbar: {
-			title: "Kilo Code",
+			title: "Axon Code",
 			logo: {
-				alt: "Kilo Code Logo",
-				src: "img/kilo-v1.svg",
-				srcDark: "img/kilo-v1-white.svg",
+				alt: "Axon Code Logo",
+				src: "img/axon-code-icon.svg",
+				srcDark: "img/axon-code-icon.svg",
 				href: "/",
 				target: "_self",
 			},

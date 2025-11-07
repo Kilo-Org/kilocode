@@ -2,15 +2,15 @@
 	"title": "MCP 伺服器",
 	"done": "完成",
 	"marketplace": "MCP 市集",
-	"description": "<0>模型內容協定 (Model Context Protocol)</0> 能夠與在本機執行的 MCP 伺服器進行通訊，提供額外的工具和資源來擴展 Kilo Code 的功能。您可以使用<1>社群開發的伺服器</1>，或請 Kilo Code 為您的工作流程建立新工具 (例如：「建立一個能取得最新 npm 文件的工具」)。",
+	"description": "<0>模型內容協定 (Model Context Protocol)</0> 能夠與在本機執行的 MCP 伺服器進行通訊，提供額外的工具和資源來擴展 Axon Code 的功能。您可以使用<1>社群開發的伺服器</1>，或請 Axon Code 為您的工作流程建立新工具 (例如：「建立一個能取得最新 npm 文件的工具」)。",
 	"instructions": "使用說明",
 	"enableToggle": {
 		"title": "啟用 MCP 伺服器",
-		"description": "啟用此選項後，Kilo Code 將可使用已連線 MCP 伺服器所提供的工具，進一步提升功能。如果您暫無使用這些額外工具的需求，建議關閉此選項以協助降低 API Token 費用。"
+		"description": "啟用此選項後，Axon Code 將可使用已連線 MCP 伺服器所提供的工具，進一步提升功能。如果您暫無使用這些額外工具的需求，建議關閉此選項以協助降低 API Token 費用。"
 	},
 	"enableServerCreation": {
 		"title": "啟用 MCP 伺服器建立功能",
-		"description": "啟用此選項後，Kilo Code 可協助您建立<1>全新</1>自訂 MCP 伺服器。<0>深入了解伺服器建立流程</0>",
+		"description": "啟用此選項後，Axon Code 可協助您建立<1>全新</1>自訂 MCP 伺服器。<0>深入了解伺服器建立流程</0>",
 		"hint": "提示：若您暫無建立新 MCP 伺服器的需求，建議停用此設定，以協助降低 API Token 費用。"
 	},
 	"editGlobalMCP": "編輯全域 MCP",

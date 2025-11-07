@@ -1,5 +1,5 @@
 {
-	"greeting": "Welkom bij Kilo Code",
+	"greeting": "Welkom bij Axon Code",
 	"task": {
 		"title": "Taak",
 		"expand": "Taak uitvouwen",
@@ -21,7 +21,7 @@
 		"sharePublicly": "Openbaar delen",
 		"sharePubliclyDescription": "Iedereen met de link kan toegang krijgen",
 		"connectToCloud": "Verbind met Cloud",
-		"connectToCloudDescription": "Meld je aan bij Kilo Code Cloud om taken te delen",
+		"connectToCloudDescription": "Meld je aan bij Axon Code Cloud om taken te delen",
 		"sharingDisabledByOrganization": "Delen uitgeschakeld door organisatie",
 		"shareSuccessOrganization": "Organisatielink gekopieerd naar klembord",
 		"shareSuccessPublic": "Openbare link gekopieerd naar klembord",
@@ -120,7 +120,7 @@
 		"title": "Modi",
 		"marketplace": "Modus Marktplaats",
 		"settings": "Modus Instellingen",
-		"description": "Gespecialiseerde persona's die het gedrag van Kilo Code aanpassen.",
+		"description": "Gespecialiseerde persona's die het gedrag van Axon Code aanpassen.",
 		"searchPlaceholder": "Zoek modi...",
 		"noResults": "Geen resultaten gevonden",
 		"organizationModes": "Organisatiemodi"
@@ -163,46 +163,46 @@
 		"current": "Huidig"
 	},
 	"instructions": {
-		"wantsToFetch": "Kilo Code wil gedetailleerde instructies ophalen om te helpen met de huidige taak"
+		"wantsToFetch": "Axon Code wil gedetailleerde instructies ophalen om te helpen met de huidige taak"
 	},
 	"fileOperations": {
-		"wantsToRead": "Kilo Code wil dit bestand lezen",
-		"wantsToReadOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte lezen",
-		"didRead": "Kilo Code heeft dit bestand gelezen",
-		"wantsToEdit": "Kilo Code wil dit bestand bewerken",
-		"wantsToEditOutsideWorkspace": "Kilo Code wil dit bestand buiten de werkruimte bewerken",
-		"wantsToEditProtected": "Kilo Code wil een beveiligd configuratiebestand bewerken",
-		"wantsToCreate": "Kilo Code wil een nieuw bestand aanmaken",
-		"wantsToSearchReplace": "Kilo Code wil zoeken en vervangen in dit bestand",
-		"didSearchReplace": "Kilo Code heeft zoeken en vervangen uitgevoerd op dit bestand",
-		"wantsToInsert": "Kilo Code wil inhoud invoegen in dit bestand",
-		"wantsToInsertWithLineNumber": "Kilo Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code wil inhoud toevoegen aan het einde van dit bestand",
-		"wantsToReadAndXMore": "Kilo Code wil dit bestand en nog {{count}} andere lezen",
-		"wantsToReadMultiple": "Kilo Code wil meerdere bestanden lezen",
-		"wantsToApplyBatchChanges": "Kilo Code wil wijzigingen toepassen op meerdere bestanden",
-		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren",
-		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte",
-		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie",
-		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd"
+		"wantsToRead": "Axon Code wil dit bestand lezen",
+		"wantsToReadOutsideWorkspace": "Axon Code wil dit bestand buiten de werkruimte lezen",
+		"didRead": "Axon Code heeft dit bestand gelezen",
+		"wantsToEdit": "Axon Code wil dit bestand bewerken",
+		"wantsToEditOutsideWorkspace": "Axon Code wil dit bestand buiten de werkruimte bewerken",
+		"wantsToEditProtected": "Axon Code wil een beveiligd configuratiebestand bewerken",
+		"wantsToCreate": "Axon Code wil een nieuw bestand aanmaken",
+		"wantsToSearchReplace": "Axon Code wil zoeken en vervangen in dit bestand",
+		"didSearchReplace": "Axon Code heeft zoeken en vervangen uitgevoerd op dit bestand",
+		"wantsToInsert": "Axon Code wil inhoud invoegen in dit bestand",
+		"wantsToInsertWithLineNumber": "Axon Code wil inhoud invoegen in dit bestand op regel {{lineNumber}}",
+		"wantsToInsertAtEnd": "Axon Code wil inhoud toevoegen aan het einde van dit bestand",
+		"wantsToReadAndXMore": "Axon Code wil dit bestand en nog {{count}} andere lezen",
+		"wantsToReadMultiple": "Axon Code wil meerdere bestanden lezen",
+		"wantsToApplyBatchChanges": "Axon Code wil wijzigingen toepassen op meerdere bestanden",
+		"wantsToGenerateImage": "Axon Code wil een afbeelding genereren",
+		"wantsToGenerateImageOutsideWorkspace": "Axon Code wil een afbeelding genereren buiten de werkruimte",
+		"wantsToGenerateImageProtected": "Axon Code wil een afbeelding genereren op een beschermde locatie",
+		"didGenerateImage": "Axon Code heeft een afbeelding gegenereerd"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken",
-		"didViewTopLevel": "Kilo Code heeft de bovenliggende bestanden in deze map bekeken",
-		"wantsToViewRecursive": "Kilo Code wil alle bestanden in deze map recursief bekijken",
-		"didViewRecursive": "Kilo Code heeft alle bestanden in deze map recursief bekeken",
-		"wantsToViewDefinitions": "Kilo Code wil broncode-definitienamen bekijken die in deze map worden gebruikt",
-		"didViewDefinitions": "Kilo Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt",
-		"wantsToSearch": "Kilo Code wil deze map doorzoeken op <code>{{regex}}</code>",
-		"didSearch": "Kilo Code heeft deze map doorzocht op <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Kilo Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Kilo Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken",
-		"didViewTopLevelOutsideWorkspace": "Kilo Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken",
-		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken",
-		"didViewRecursiveOutsideWorkspace": "Kilo Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken",
-		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt",
-		"didViewDefinitionsOutsideWorkspace": "Kilo Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt"
+		"wantsToViewTopLevel": "Axon Code wil de bovenliggende bestanden in deze map bekijken",
+		"didViewTopLevel": "Axon Code heeft de bovenliggende bestanden in deze map bekeken",
+		"wantsToViewRecursive": "Axon Code wil alle bestanden in deze map recursief bekijken",
+		"didViewRecursive": "Axon Code heeft alle bestanden in deze map recursief bekeken",
+		"wantsToViewDefinitions": "Axon Code wil broncode-definitienamen bekijken die in deze map worden gebruikt",
+		"didViewDefinitions": "Axon Code heeft broncode-definitienamen bekeken die in deze map worden gebruikt",
+		"wantsToSearch": "Axon Code wil deze map doorzoeken op <code>{{regex}}</code>",
+		"didSearch": "Axon Code heeft deze map doorzocht op <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Axon Code wil deze map (buiten werkruimte) doorzoeken op <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Axon Code heeft deze map (buiten werkruimte) doorzocht op <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Axon Code wil de bovenliggende bestanden in deze map (buiten werkruimte) bekijken",
+		"didViewTopLevelOutsideWorkspace": "Axon Code heeft de bovenliggende bestanden in deze map (buiten werkruimte) bekeken",
+		"wantsToViewRecursiveOutsideWorkspace": "Axon Code wil alle bestanden in deze map (buiten werkruimte) recursief bekijken",
+		"didViewRecursiveOutsideWorkspace": "Axon Code heeft alle bestanden in deze map (buiten werkruimte) recursief bekeken",
+		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code wil broncode-definitienamen bekijken die in deze map (buiten werkruimte) worden gebruikt",
+		"didViewDefinitionsOutsideWorkspace": "Axon Code heeft broncode-definitienamen bekeken die in deze map (buiten werkruimte) worden gebruikt"
 	},
 	"commandOutput": "Commando-uitvoer",
 	"commandExecution": {
@@ -230,18 +230,18 @@
 		"youSaid": "Jij zei"
 	},
 	"mcp": {
-		"wantsToUseTool": "Kilo Code wil een tool gebruiken op de {{serverName}} MCP-server",
-		"wantsToAccessResource": "Kilo Code wil een bron benaderen op de {{serverName}} MCP-server"
+		"wantsToUseTool": "Axon Code wil een tool gebruiken op de {{serverName}} MCP-server",
+		"wantsToAccessResource": "Axon Code wil een bron benaderen op de {{serverName}} MCP-server"
 	},
 	"modes": {
-		"wantsToSwitch": "Kilo Code wil overschakelen naar {{mode}} modus",
-		"wantsToSwitchWithReason": "Kilo Code wil overschakelen naar {{mode}} modus omdat: {{reason}}",
-		"didSwitch": "Kilo Code is overgeschakeld naar {{mode}} modus",
-		"didSwitchWithReason": "Kilo Code is overgeschakeld naar {{mode}} modus omdat: {{reason}}"
+		"wantsToSwitch": "Axon Code wil overschakelen naar {{mode}} modus",
+		"wantsToSwitchWithReason": "Axon Code wil overschakelen naar {{mode}} modus omdat: {{reason}}",
+		"didSwitch": "Axon Code is overgeschakeld naar {{mode}} modus",
+		"didSwitchWithReason": "Axon Code is overgeschakeld naar {{mode}} modus omdat: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Kilo Code wil een nieuwe subtaak aanmaken in {{mode}} modus",
-		"wantsToFinish": "Kilo Code wil deze subtaak voltooien",
+		"wantsToCreate": "Axon Code wil een nieuwe subtaak aanmaken in {{mode}} modus",
+		"wantsToFinish": "Axon Code wil deze subtaak voltooien",
 		"newTaskContent": "Subtaak-instructies",
 		"completionContent": "Subtaak voltooid",
 		"resultContent": "Subtaakresultaten",
@@ -249,14 +249,14 @@
 		"completionInstructions": "Subtaak voltooid! Je kunt de resultaten bekijken en eventuele correcties of volgende stappen voorstellen. Als alles goed is, bevestig dan om het resultaat terug te sturen naar de hoofdtaak."
 	},
 	"questions": {
-		"hasQuestion": "Kilo Code heeft een vraag"
+		"hasQuestion": "Axon Code heeft een vraag"
 	},
 	"taskCompleted": "Taak voltooid",
 	"error": "Fout",
 	"diffError": {
 		"title": "Bewerking mislukt"
 	},
-	"troubleMessage": "Kilo Code ondervindt problemen...",
+	"troubleMessage": "Axon Code ondervindt problemen...",
 	"powershell": {
 		"issues": "Het lijkt erop dat je problemen hebt met Windows PowerShell, zie deze"
 	},
@@ -304,7 +304,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Kilo Code wil de browser gebruiken",
+		"rooWantsToUse": "Axon Code wil de browser gebruiken",
 		"consoleLogs": "Console-logboeken",
 		"noNewLogs": "(Geen nieuwe logboeken)",
 		"screenshot": "Browserschermopname",
@@ -336,24 +336,24 @@
 	"profileViolationWarning": "Het huidige profiel is niet compatibel met de instellingen van uw organisatie",
 	"shellIntegration": {
 		"title": "Waarschuwing commando-uitvoering",
-		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Kilo Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
+		"description": "Je commando wordt uitgevoerd zonder VSCode-terminal shell-integratie. Om deze waarschuwing te onderdrukken kun je shell-integratie uitschakelen in het gedeelte <strong>Terminal</strong> van de <settingsLink>Axon Code-instellingen</settingsLink> of de VSCode-terminalintegratie oplossen via de onderstaande link.",
 		"troubleshooting": "Klik hier voor shell-integratie documentatie."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Limiet voor automatisch goedgekeurde verzoeken bereikt",
-			"description": "Kilo Code heeft de automatisch goedgekeurde limiet van {{count}} API-verzoek(en) bereikt. Wil je de teller resetten en doorgaan met de taak?",
+			"description": "Axon Code heeft de automatisch goedgekeurde limiet van {{count}} API-verzoek(en) bereikt. Wil je de teller resetten en doorgaan met de taak?",
 			"button": "Resetten en doorgaan"
 		},
 		"autoApprovedCostLimitReached": {
 			"title": "Limiet voor automatisch goedgekeurde kosten bereikt",
 			"button": "Resetten en doorgaan",
-			"description": "Kilo Code heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?"
+			"description": "Axon Code heeft de automatisch goedgekeurde kostenlimiet van ${{count}} bereikt. Wilt u de kosten resetten en doorgaan met de taak?"
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Kilo Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>",
+		"wantsToSearch": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Axon Code wil de codebase doorzoeken op <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "1 resultaat gevonden",
 		"didSearch_other": "{{count}} resultaten gevonden",
 		"resultTooltip": "Gelijkenisscore: {{score}} (klik om bestand te openen)"
@@ -418,7 +418,7 @@
 		"clickToEdit": "Klik om bericht te bewerken"
 	},
 	"slashCommand": {
-		"wantsToRun": "Kilo Code wil een slash commando uitvoeren",
-		"didRun": "Kilo Code heeft een slash commando uitgevoerd"
+		"wantsToRun": "Axon Code wil een slash commando uitvoeren",
+		"didRun": "Axon Code heeft een slash commando uitgevoerd"
 	}
 }

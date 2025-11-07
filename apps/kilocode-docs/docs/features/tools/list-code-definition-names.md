@@ -1,6 +1,6 @@
 # list_code_definition_names
 
-The `list_code_definition_names` tool provides a structural overview of your codebase by listing code definitions from source files at the top level of a specified directory. It helps Kilo Code understand code architecture by displaying line numbers and definition snippets.
+The `list_code_definition_names` tool provides a structural overview of your codebase by listing code definitions from source files at the top level of a specified directory. It helps Axon Code understand code architecture by displaying line numbers and definition snippets.
 
 ## Parameters
 
@@ -14,8 +14,8 @@ This tool scans source code files at the top level of a specified directory and 
 
 ## When is it used?
 
-- When Kilo Code needs to understand your codebase architecture quickly
-- When Kilo Code needs to locate important code constructs across multiple files
+- When Axon Code needs to understand your codebase architecture quickly
+- When Axon Code needs to locate important code constructs across multiple files
 - When planning refactoring or extensions to existing code
 - Before diving into implementation details with other tools
 - When identifying relationships between different parts of your codebase
@@ -55,9 +55,9 @@ When the `list_code_definition_names` tool is invoked, it follows this process:
 4. **File Filtering**: Limits processing to a maximum of 50 files
 5. **Language Detection**: Identifies file types based on extensions (.js, .jsx, .ts, .tsx, .py, .rs, .go, .cpp, .hpp, .c, .h, .cs, .rb, .java, .php, .swift, .kt, .kts)
 6. **Code Parsing**: Uses Tree-sitter to parse code and extract definitions through these steps:
-   - Parsing file content into an Abstract Syntax Tree (AST)
-   - Creating a query using a language-specific query string
-   - Sorting the captures by their position in the file
+    - Parsing file content into an Abstract Syntax Tree (AST)
+    - Creating a query using a language-specific query string
+    - Sorting the captures by their position in the file
 7. **Result Formatting**: Outputs definitions with line numbers and actual source code
 
 ## Output Format
@@ -77,6 +77,7 @@ src/models/User.js:
 ```
 
 Each line displays:
+
 - The start and end line numbers of the definition
 - The pipe symbol (|) as a separator
 - The actual source code of the definition
@@ -85,16 +86,17 @@ This output format helps you quickly see both where definitions are located in t
 
 ## Examples When Used
 
-- When starting a new task, Kilo Code first lists key code definitions to understand the overall structure of your project.
-- When planning refactoring work, Kilo Code uses this tool to identify classes and functions that might be affected.
-- When exploring unfamiliar codebases, Kilo Code maps the important code constructs before diving into implementation details.
-- When adding new features, Kilo Code identifies existing patterns and relevant code definitions to maintain consistency.
-- When troubleshooting bugs, Kilo Code maps the codebase structure to locate potential sources of the issue.
-- When planning architecture changes, Kilo Code identifies all affected components across files.
+- When starting a new task, Axon Code first lists key code definitions to understand the overall structure of your project.
+- When planning refactoring work, Axon Code uses this tool to identify classes and functions that might be affected.
+- When exploring unfamiliar codebases, Axon Code maps the important code constructs before diving into implementation details.
+- When adding new features, Axon Code identifies existing patterns and relevant code definitions to maintain consistency.
+- When troubleshooting bugs, Axon Code maps the codebase structure to locate potential sources of the issue.
+- When planning architecture changes, Axon Code identifies all affected components across files.
 
 ## Usage Examples
 
 Listing code definitions in the current directory:
+
 ```
 <list_code_definition_names>
 <path>.</path>
@@ -102,6 +104,7 @@ Listing code definitions in the current directory:
 ```
 
 Examining a specific module's structure:
+
 ```
 <list_code_definition_names>
 <path>src/components</path>
@@ -109,6 +112,7 @@ Examining a specific module's structure:
 ```
 
 Exploring a utility library:
+
 ```
 <list_code_definition_names>
 <path>lib/utils</path>

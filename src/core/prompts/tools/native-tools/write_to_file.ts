@@ -5,7 +5,7 @@ export default {
 	function: {
 		name: "write_to_file",
 		description:
-			"Create a new file or completely overwrite an existing file with the exact content provided. Use only when a full rewrite is intended; the tool will create missing directories automatically.",
+			"Create a new file. Use only when creating a new file. the tool will create missing directories automatically.",
 		strict: true,
 		parameters: {
 			type: "object",

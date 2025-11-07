@@ -9,7 +9,7 @@
 		"editModesConfig": "Edytuj konfigurację trybów",
 		"editGlobalModes": "Edytuj tryby globalne",
 		"editProjectModes": "Edytuj tryby projektu (.kilocodemodes)",
-		"createModeHelpText": "Tryby to wyspecjalizowane persony, które dostosowują zachowanie Kilo Code. <0>Dowiedz się o używaniu trybów</0> lub <1>dostosowywaniu trybów.</1>",
+		"createModeHelpText": "Tryby to wyspecjalizowane persony, które dostosowują zachowanie Axon Code. <0>Dowiedz się o używaniu trybów</0> lub <1>dostosowywaniu trybów.</1>",
 		"selectMode": "Szukaj trybów"
 	},
 	"apiConfiguration": {
@@ -18,7 +18,7 @@
 	},
 	"organizationMode": {
 		"title": "Tryb organizacji",
-		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Kilo Code Dashboard.",
+		"description": "Ten tryb jest dostarczany przez twoją organizację i nie może być edytowany tutaj. Aby zmodyfikować ten tryb, odwiedź Axon Code Dashboard.",
 		"cannotEdit": "Tryby organizacji nie mogą być edytowane"
 	},
 	"tools": {
@@ -39,7 +39,7 @@
 	"roleDefinition": {
 		"title": "Definicja roli",
 		"resetToDefault": "Przywróć domyślne",
-		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu. Ten opis kształtuje, jak Kilo Code prezentuje się i podchodzi do zadań."
+		"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Axon Code dla tego trybu. Ten opis kształtuje, jak Axon Code prezentuje się i podchodzi do zadań."
 	},
 	"description": {
 		"title": "Krótki opis (dla ludzi)",
@@ -110,7 +110,7 @@
 		"types": {
 			"ENHANCE": {
 				"label": "Ulepsz podpowiedź",
-				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że Kilo Code rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
+				"description": "Użyj ulepszenia podpowiedzi, aby uzyskać dostosowane sugestie lub ulepszenia dla swoich danych wejściowych. Zapewnia to, że Axon Code rozumie Twoje intencje i dostarcza najlepsze możliwe odpowiedzi. Dostępne za pośrednictwem ikony ✨ w czacie."
 			},
 			"CONDENSE": {
 				"label": "Kondensacja kontekstu",
@@ -187,7 +187,7 @@
 		},
 		"roleDefinition": {
 			"label": "Definicja roli",
-			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Kilo Code dla tego trybu."
+			"description": "Zdefiniuj wiedzę specjalistyczną i osobowość Axon Code dla tego trybu."
 		},
 		"whenToUse": {
 			"label": "Kiedy używać (opcjonalne)",

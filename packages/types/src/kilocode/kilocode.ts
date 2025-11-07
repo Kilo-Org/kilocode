@@ -43,13 +43,13 @@ export const fastApplyModelSchema = z.enum([
 
 export type FastApplyModel = z.infer<typeof fastApplyModelSchema>
 
-export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
+export const DEFAULT_KILOCODE_BACKEND_URL = "https://api.matterai.so"
 
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 	if (kilocodeToken) {
 		try {
 			const payload_string = kilocodeToken.split(".")[1]
-			if (!payload_string) return "https://api.kilocode.ai"
+			if (!payload_string) return "https://api.matterai.so"
 
 			const payload_json =
 				typeof atob !== "undefined" ? atob(payload_string) : Buffer.from(payload_string, "base64").toString()
@@ -57,10 +57,10 @@ export function getKiloBaseUriFromToken(kilocodeToken?: string) {
 			//note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker; e.g. we should not read uri's from the JWT directly.
 			if (payload.env === "development") return "http://localhost:3000"
 		} catch (_error) {
-			console.warn("Failed to get base URL from Kilo Code token")
+			console.warn("Failed to get base URL from Axon Code token")
 		}
 	}
-	return "https://api.kilocode.ai"
+	return "https://api.matterai.so"
 }
 
 /**
@@ -116,14 +116,14 @@ function buildUrl(path: string = ""): string {
 		return removeTrailingSlash(result.toString(), result.pathname)
 	} catch (error) {
 		console.warn("Failed to build URL:", path, error)
-		return `https://kilocode.ai${path ? ensureLeadingSlash(path) : ""}`
+		return `https://matterai.so${path ? ensureLeadingSlash(path) : ""}`
 	}
 }
 
 /**
  * Gets the app/web URL for the current environment.
  * In development: http://localhost:3000
- * In production: https://kilocode.ai
+ * In production: https://matterai.so
  */
 export function getAppUrl(path: string = ""): string {
 	return buildUrl(path)
@@ -132,7 +132,7 @@ export function getAppUrl(path: string = ""): string {
 /**
  * Gets the API base URL for the current environment.
  * In development: http://localhost:3000/api
- * In production: https://kilocode.ai/api
+ * In production: https://matterai.so/api
  */
 export function getApiUrl(path: string = ""): string {
 	return buildUrl(`/api${path ? ensureLeadingSlash(path) : ""}`)
@@ -141,7 +141,7 @@ export function getApiUrl(path: string = ""): string {
 /**
  * Gets the extension config URL, which uses a legacy subdomain structure.
  * In development: http://localhost:3000/extension-config.json
- * In production: https://api.kilocode.ai/extension-config.json
+ * In production: https://api.matterai.so/extension-config.json
  */
 export function getExtensionConfigUrl(): string {
 	try {
@@ -149,11 +149,11 @@ export function getExtensionConfigUrl(): string {
 		if (backend.includes("localhost")) {
 			return getAppUrl("/extension-config.json")
 		} else {
-			return "https://api.kilocode.ai/extension-config.json"
+			return "https://api.matterai.so/extension-config.json"
 		}
 	} catch (error) {
 		console.warn("Failed to build extension config URL:", error)
-		return "https://api.kilocode.ai/extension-config.json"
+		return "https://api.matterai.so/extension-config.json"
 	}
 }
 

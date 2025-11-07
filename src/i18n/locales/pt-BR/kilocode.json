@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Gerador de mensagens de commit Kilo Code ativado",
+		"activated": "Gerador de mensagens de commit Axon Code ativado",
 		"gitNotFound": "⚠️ Repositório Git não encontrado ou git indisponível",
 		"gitInitError": "⚠️ Erro de inicialização do Git: {{error}}",
 		"generating": "Kilo: Gerando mensagem de commit...",
@@ -63,7 +63,7 @@
 		"providerRegistered": "Kilo: Provedor de mensagens de commit registrado",
 		"errors": {
 			"noProject": "Nenhum projeto disponível",
-			"connectionFailed": "Falha ao conectar com a extensão Kilo Code",
+			"connectionFailed": "Falha ao conectar com a extensão Axon Code",
 			"invalidResponse": "Formato de resposta inválido recebido da extensão",
 			"missingMessage": "Nenhuma mensagem de commit recebida da extensão",
 			"timeout": "Solicitação excedeu o tempo limite após 30 segundos",
@@ -88,7 +88,7 @@
 		"progress": {
 			"analyzing": "Analisando mudanças...",
 			"title": "Gerando Mensagem de Commit",
-			"connecting": "Conectando ao Kilo Code...",
+			"connecting": "Conectando ao Axon Code...",
 			"generating": "Gerando mensagem de commit..."
 		},
 		"ui": {
@@ -98,12 +98,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Axon Code Autocomplete",
+			"disabled": "$(circle-slash) Axon Code Autocomplete",
+			"warning": "$(warning) Axon Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (desabilitado)",
+				"basic": "Axon Code Autocomplete",
+				"disabled": "Axon Code Autocomplete (desabilitado)",
 				"tokenError": "Um token válido deve ser definido para usar o Autocomplete",
 				"lastCompletion": "Última sugestão:",
 				"sessionTotal": "Custo total da sessão:",
@@ -115,36 +115,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Axon Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Axon Code",
 			"analyzing": "Analisando seu código...",
 			"generating": "Gerando edições sugeridas...",
 			"processing": "Processando edições sugeridas...",
 			"showing": "Exibindo edições sugeridas..."
 		},
 		"input": {
-			"title": "Kilo Code: Tarefa Rápida",
+			"title": "Axon Code: Tarefa Rápida",
 			"placeholder": "ex., 'refatore esta função para ser mais eficiente'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Gerar Edições Sugeridas",
+			"generateSuggestions": "Axon Code: Gerar Edições Sugeridas",
 			"displaySuggestions": "Exibir Edições Sugeridas",
 			"cancelSuggestions": "Cancelar Edições Sugeridas",
 			"applyCurrentSuggestion": "Aplicar Edição Sugerida Atual",
 			"applyAllSuggestions": "Aplicar Todas as Edições Sugeridas",
-			"category": "Kilo Code"
+			"category": "Axon Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Edições Sugeridas"
+			"title": "Axon Code: Edições Sugeridas"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Axon Code Agent",
 			"name": "Agent",
 			"description": "Posso te ajudar com tarefas rápidas e edições sugeridas."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "O Kilo Code Autocomplete está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
+			"message": "O Axon Code Autocomplete está sendo bloqueado por um conflito com o GitHub Copilot. Para corrigir isso, você deve desabilitar as sugestões inline do Copilot.",
 			"disableCopilot": "Desabilitar Copilot",
 			"disableInlineAssist": "Desabilitar Autocomplete"
 		}

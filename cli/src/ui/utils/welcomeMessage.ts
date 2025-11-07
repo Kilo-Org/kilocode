@@ -30,7 +30,7 @@ export function createConfigErrorInstructions(validation: ValidationResult): str
 		`  1. Run: kilocode config`,
 		`  2. Or edit: ${configPath}`,
 		"\n",
-		"The CLI will exit now. Please configure your Kilo Code and try again.",
+		"The CLI will exit now. Please configure your Axon Code and try again.",
 	)
 
 	return instructions

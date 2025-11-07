@@ -13,7 +13,7 @@
 		"cancel": "Zrušit"
 	},
 	"ui": {
-		"initializing": "Kilo Code se inicializuje...",
+		"initializing": "Axon Code se inicializuje...",
 		"systemInformation": "Informace o systému"
 	}
 }

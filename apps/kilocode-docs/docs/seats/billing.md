@@ -8,7 +8,7 @@ Kilo seats uses a transparent, two-part billing system: a monthly subscription p
 
 :::note
 
-Kilo Code seats purchases of Teams or Enterprise are separate from Kilo credits.
+Axon Code seats purchases of Teams or Enterprise are separate from Kilo credits.
 
 No Kilo credits are included with a Teams or Enterprise purchase.
 
@@ -16,9 +16,9 @@ No Kilo credits are included with a Teams or Enterprise purchase.
 
 ## Organization Credits
 
-Organization Owners can purchase Kilo credits on the [Organization dashboard](https://app.kilocode.ai).
+Organization Owners can purchase Kilo credits on the [Organization dashboard](https://app.matterai.so).
 
-Organization credits are purchased on behalf of all users in the organization. Every member of the organization can use the credits in the organization's balance with the Kilo Code model provider.
+Organization credits are purchased on behalf of all users in the organization. Every member of the organization can use the credits in the organization's balance with the Axon Code model provider.
 
 Using organization credits works exactly like spending [individual credits](/basic-usage/adding-credits), except that the credits come from the organization's credit balance, rather than the individuals.
 
@@ -32,13 +32,13 @@ Using organization credits works exactly like spending [individual credits](/bas
 
 ### Using Organization Credits
 
-Organization members can use organization credits by choosing the correct organization profile in the dropdown in the Profiles tab of the Kilo Code extension.
+Organization members can use organization credits by choosing the correct organization profile in the dropdown in the Profiles tab of the Axon Code extension.
 
 <img src="/docs/img/teams/org_credits.png" alt="Dropdown showing different organizations available" width="600" />
 
 ## Managing Seats Subscriptions
 
-In order to add Members to your Kilo Code Organization, you must have seat(s) available for them.
+In order to add Members to your Axon Code Organization, you must have seat(s) available for them.
 
 You can purchase more seats at any time during your billing cycle and will pay a pro-rated amount for the number of days left in your billing cycle.
 
@@ -67,7 +67,7 @@ To fill empty seats or remove members ahead of seat deletion, see the [team mana
 
 ## Invoices
 
-Invoices for any payment on the Kilo Code platform, for seats or credits, will be available in the Invoices tab.
+Invoices for any payment on the Axon Code platform, for seats or credits, will be available in the Invoices tab.
 
 ### Service Suspension
 

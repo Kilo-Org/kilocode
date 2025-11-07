@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "Benvenuto in Kilo Code!",
-		"introText1": "Kilo Code è un agente di coding AI gratuito e open source.",
+		"greeting": "Benvenuto in Axon Code!",
+		"introText1": "Axon Code è un agente di coding AI gratuito e open source.",
 		"introText2": "Funziona con i più recenti modelli AI come Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, e oltre 450 altri.",
 		"introText3": "Crea un account gratuito e ottieni $20 di crediti bonus quando ricarichi per la prima volta.",
 		"ctaButton": "Inizia",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Aggiungi credito",
-		"lowBalance": "Il tuo saldo Kilo Code è basso",
+		"lowBalance": "Il tuo saldo Axon Code è basso",
 		"newOrganization": "Usi Kilo per lavoro?"
 	},
 	"pagination": {
@@ -42,16 +42,16 @@
 			"mcp": "Server MCP"
 		},
 		"provider": {
-			"account": "Account Kilo Code",
-			"apiKey": "Chiave API Kilo Code",
-			"login": "Accedi a Kilo Code",
-			"logout": "Disconnetti da Kilo Code",
-			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Kilo Code. Se non sei sicuro di quale modello scegliere, Kilo Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
+			"account": "Account Axon Code",
+			"apiKey": "Chiave API Axon Code",
+			"login": "Accedi a Axon Code",
+			"logout": "Disconnetti da Axon Code",
+			"automaticFetch": "I modelli più recenti sono automaticamente disponibili in Axon Code. Se non sei sicuro di quale modello scegliere, Axon Code funziona meglio con i modelli consigliati elencati in alto in <strong>grassetto</strong>.",
 			"providerRouting": {
 				"title": "Routing dei provider",
 				"managedByOrganization": "Gestisci routing dei provider a livello di organizzazione",
 				"createOrganization": "Crea organizzazione per gestire routing dei provider",
-				"description": "Kilo Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello.",
+				"description": "Axon Code instrada le richieste ai migliori provider disponibili per il tuo modello. Per impostazione predefinita, le richieste vengono bilanciate tra i provider principali per massimizzare i tempi di attività. Tuttavia, puoi scegliere un provider specifico da utilizzare per questo modello.",
 				"sorting": {
 					"default": "Ordinamento predefinito dei provider",
 					"price": "Preferisci provider con prezzo più basso",
@@ -70,7 +70,7 @@
 		"modelInfo": {
 			"contextWindow": "Finestra di contesto",
 			"providerBreakdown": "Ripartizione Prezzi e Funzionalità dei Provider",
-			"averageKiloCodeCost": "Questo è il costo medio effettivo sostenuto da Kilo Code utilizzando questo modello nell'ultima settimana. Potrebbe essere inferiore al prezzo indicato grazie all'utilizzo della cache dei prompt.",
+			"averageKiloCodeCost": "Questo è il costo medio effettivo sostenuto da Axon Code utilizzando questo modello nell'ultima settimana. Potrebbe essere inferiore al prezzo indicato grazie all'utilizzo della cache dei prompt.",
 			"table": {
 				"provider": "Provider",
 				"context": "L'endpoint può elaborare questo numero di token (input + output).",
@@ -83,15 +83,15 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Consenti letture di file molto grandi",
-				"description": "Quando abilitato, Kilo Code eseguirà letture di file o output MCP molto grandi anche se c'è un'alta probabilità di superare la finestra di contesto (dimensione del contenuto >80% della finestra di contesto)."
+				"description": "Quando abilitato, Axon Code eseguirà letture di file o output MCP molto grandi anche se c'è un'alta probabilità di superare la finestra di contesto (dimensione del contenuto >80% della finestra di contesto)."
 			}
 		},
 		"systemNotifications": {
 			"label": "Attiva notifiche di sistema",
-			"description": "Quando abilitato, Kilo Code invierà notifiche di sistema per eventi importanti come il completamento di attività o errori.",
+			"description": "Quando abilitato, Axon Code invierà notifiche di sistema per eventi importanti come il completamento di attività o errori.",
 			"testButton": "Testa notifica",
-			"testTitle": "Kilo Code",
-			"testMessage": "Questa è una notifica di test da Kilo Code."
+			"testTitle": "Axon Code",
+			"testMessage": "Questa è una notifica di test da Axon Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -106,7 +106,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Kilo Code vuole condensare la tua conversazione",
+			"wantsToCondense": "Axon Code vuole condensare la tua conversazione",
 			"condenseConversation": "Condensa Conversazione"
 		},
 		"seeNewChanges": "Mostra Nuove Modifiche",
@@ -137,15 +137,15 @@
 	},
 	"docs": "Documentazione",
 	"rules": {
-		"tooltip": "Gestisci Regole e Flussi di Lavoro di Kilo Code",
-		"ariaLabel": "Regole di Kilo Code",
+		"tooltip": "Gestisci Regole e Flussi di Lavoro di Axon Code",
+		"ariaLabel": "Regole di Axon Code",
 		"tabs": {
 			"rules": "Regole",
 			"workflows": "Flussi di Lavoro"
 		},
 		"description": {
-			"rules": "Le regole ti permettono di fornire a Kilo Code istruzioni che deve seguire in tutte le modalità e per tutti i prompt. Sono un modo persistente per includere contesto e preferenze per tutte le conversazioni nel tuo workspace o globalmente.",
-			"workflows": "I flussi di lavoro sono un template preparato per una conversazione. I flussi di lavoro ti permettono di definire prompt che usi frequentemente, e possono includere una serie di passaggi per guidare Kilo Code attraverso attività ripetitive, come distribuire un servizio o inviare una PR. Per invocare un flusso di lavoro, digita",
+			"rules": "Le regole ti permettono di fornire a Axon Code istruzioni che deve seguire in tutte le modalità e per tutti i prompt. Sono un modo persistente per includere contesto e preferenze per tutte le conversazioni nel tuo workspace o globalmente.",
+			"workflows": "I flussi di lavoro sono un template preparato per una conversazione. I flussi di lavoro ti permettono di definire prompt che usi frequentemente, e possono includere una serie di passaggi per guidare Axon Code attraverso attività ripetitive, come distribuire un servizio o inviare una PR. Per invocare un flusso di lavoro, digita",
 			"workflowsInChat": "nella chat."
 		},
 		"sections": {
@@ -215,11 +215,11 @@
 			"keybindingDescription": "Le funzionalità Autocomplete possono essere attivate tramite comandi. Puoi configurare le <DocsLink>Scorciatoie da Tastiera qui</DocsLink>.",
 			"enableAutoTrigger": {
 				"label": "Pausa per Completare",
-				"description": "Quando abilitato, Kilo Code attiverà automaticamente Autocomplete quando smetti di digitare. Questo può essere utile per correzioni rapide e suggerimenti."
+				"description": "Quando abilitato, Axon Code attiverà automaticamente Autocomplete quando smetti di digitare. Questo può essere utile per correzioni rapide e suggerimenti."
 			},
 			"autoTriggerDelay": {
 				"label": "Ritardo Attivazione Automatica",
-				"description": "Il ritardo in secondi prima che Kilo Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
+				"description": "Il ritardo in secondi prima che Axon Code attivi Autocomplete dopo che hai smesso di digitare. Un ritardo più breve significa suggerimenti più veloci, ma può essere più intensivo in termini di risorse."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Attività Rapida ({{keybinding}})",

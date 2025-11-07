@@ -5,7 +5,7 @@ import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
-import { getModelEndpoints } from "./fetchers/modelEndpointCache"
+// import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
 import {
 	X_KILOCODE_ORGANIZATIONID,
@@ -29,10 +29,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	constructor(options: ApiHandlerOptions) {
 		options = {
 			...options,
-			openRouterBaseUrl: getKiloUrlFromToken(
-				"https://api.kilocode.ai/api/openrouter/",
-				options.kilocodeToken ?? "",
-			),
+			openRouterBaseUrl: getKiloUrlFromToken("https://api.matterai.so/v1/web/", options.kilocodeToken ?? ""),
 			openRouterApiKey: options.kilocodeToken,
 		}
 
@@ -89,40 +86,33 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			info = this.endpoints[this.options.openRouterSpecificProvider]
 		}
 
-		const isDeepSeekR1 = id.startsWith("deepseek/deepseek-r1") || id === "perplexity/sonar-reasoning"
-
 		const params = getModelParams({
 			format: "openrouter",
 			modelId: id,
 			model: info,
 			settings: this.options,
-			defaultTemperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0,
+			defaultTemperature: 0,
 		})
 
-		return { id, info, topP: isDeepSeekR1 ? 0.95 : undefined, ...params }
+		return { id, info, topP: 0.95, ...params }
 	}
 
 	public override async fetchModel() {
-		if (!this.options.kilocodeToken || !this.options.openRouterBaseUrl) {
+		if (!this.options.kilocodeToken) {
 			throw new Error("KiloCode token + baseUrl is required to fetch models")
 		}
 
-		const [models, endpoints, defaultModel] = await Promise.all([
+		const [models, defaultModel] = await Promise.all([
 			getModels({
 				provider: "kilocode-openrouter",
 				kilocodeToken: this.options.kilocodeToken,
 				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
-			getModelEndpoints({
-				router: "openrouter",
-				modelId: this.options.kilocodeModel,
-				endpoint: this.options.openRouterSpecificProvider,
-			}),
 			getKilocodeDefaultModel(this.options.kilocodeToken, this.options.kilocodeOrganizationId, this.options),
 		])
 
 		this.models = models
-		this.endpoints = endpoints
+		// Removed endpoints assignment as we only have 1 provider
 		this.defaultModel = defaultModel
 		return this.getModel()
 	}

@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { getModelId, ProviderName, ProviderSettings } from "../provider-settings.js"
+import { ProviderName, ProviderSettings } from "../provider-settings.js"
 
 export const toolUseStyles = ["xml", "json"] as const
 
@@ -21,21 +21,6 @@ export const nativeFunctionCallingProviders = [
 	"human-relay",
 ] satisfies ProviderName[] as ProviderName[]
 
-const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5"]
-
-export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {
-	if (
-		!settings ||
-		(settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider as ProviderName))
-	) {
-		return "xml"
-	}
-	if (settings.toolStyle) {
-		return settings.toolStyle
-	}
-	const model = getModelId(settings)?.toLowerCase()
-	if (model && modelsDefaultingToJsonKeywords.some((keyword) => model.includes(keyword))) {
-		return "json"
-	}
-	return "xml"
+export function getActiveToolUseStyle(_settings: ProviderSettings | undefined): ToolUseStyle {
+	return "json"
 }
