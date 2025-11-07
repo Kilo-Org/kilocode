@@ -2158,10 +2158,7 @@ ${prompt}
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
-			ghostServiceSettings: ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: ghostServiceSettings,
 			// kilocode_change end
 			organizationSettingsVersion,
 			condensingApiConfigId,
@@ -2390,10 +2387,7 @@ ${prompt}
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: stateValues.ghostServiceSettings,
 			// kilocode_change end
 			// kilocode_change start - Auto-purge settings
 			autoPurgeEnabled: stateValues.autoPurgeEnabled ?? false,
