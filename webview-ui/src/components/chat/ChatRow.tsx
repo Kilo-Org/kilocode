@@ -252,7 +252,7 @@ export const ChatRowContent = ({
 
 	const normalColor = "var(--vscode-foreground)"
 	const errorColor = "var(--vscode-errorForeground)"
-	const successColor = "var(--vscode-charts-green)"
+	const successColor = "var(--color-matterai-green)"
 	const cancelledColor = "var(--vscode-descriptionForeground)"
 
 	const [icon, title] = useMemo(() => {
@@ -290,9 +290,7 @@ export const ChatRowContent = ({
 				]
 			case "completion_result":
 				return [
-					<span
-						className="codicon codicon-check"
-						style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
+					<span style={{ color: successColor, marginBottom: "-1.5px" }}></span>,
 					<span style={{ color: successColor }}>{t("chat:taskCompleted")}</span>,
 				]
 			case "api_req_retry_delayed":

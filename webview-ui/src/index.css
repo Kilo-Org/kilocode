@@ -432,6 +432,28 @@ vscode-dropdown::part(listbox) {
 	min-height: 16px;
 }
 
+vscode-button {
+	border-radius: 0.5rem;
+	border: 1px solid var(--vscode-input-border);
+	background-color: var(--vscode-input-background);
+	max-width: fit-content;
+}
+
+/**
+ * VSCodeButton Global Overrides
+ * 
+ * To override default classes for all VSCodeButton components globally,
+ * add CSS rules here targeting the vscode-button web component.
+ * 
+ * Example:
+
+ * 
+ * Or use CSS custom properties to override specific parts:
+ * vscode-button::part(control) {
+ *   /* your styles here *\/
+ * }
+ */
+
 /**
  * @shadcn/ui Overrides / Hacks
  */

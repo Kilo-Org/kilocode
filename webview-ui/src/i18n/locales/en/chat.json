@@ -180,50 +180,50 @@
 		"tokens": "tokens"
 	},
 	"instructions": {
-		"wantsToFetch": "Axon Code wants to fetch detailed instructions to assist with the current task"
+		"wantsToFetch": "fetch instructions"
 	},
 	"fileOperations": {
 		"wantsToRead": "read file",
 		"wantsToReadMultiple": "read multiple files",
-		"wantsToReadAndXMore": "read this file and {{count}} more",
-		"wantsToReadOutsideWorkspace": "read this file outside of the workspace",
-		"didRead": "Axon Code read this file",
-		"wantsToEdit": "Axon Code wants to edit this file",
-		"wantsToEditOutsideWorkspace": "Axon Code wants to edit this file outside of the workspace",
-		"wantsToEditProtected": "Axon Code wants to edit a protected configuration file",
-		"wantsToApplyBatchChanges": "Axon Code wants to apply changes to multiple files",
-		"wantsToGenerateImage": "Axon Code wants to generate an image",
-		"wantsToGenerateImageOutsideWorkspace": "Axon Code wants to generate an image outside of the workspace",
-		"wantsToGenerateImageProtected": "Axon Code wants to generate an image in a protected location",
-		"didGenerateImage": "Axon Code generated an image",
+		"wantsToReadAndXMore": "read file and {{count}} more",
+		"wantsToReadOutsideWorkspace": "read file(outside of the workspace)",
+		"didRead": "read file",
+		"wantsToEdit": "edit file",
+		"wantsToEditOutsideWorkspace": "edit file(outside of the workspace)",
+		"wantsToEditProtected": "edit protected configuration file",
+		"wantsToApplyBatchChanges": "apply changes to multiple files",
+		"wantsToGenerateImage": "generate image",
+		"wantsToGenerateImageOutsideWorkspace": "generate image(outside of the workspace)",
+		"wantsToGenerateImageProtected": "generate image(protected location)",
+		"didGenerateImage": "generated image",
 		"wantsToCreate": "create new file",
 		"wantsToSearchReplace": "search and replace",
-		"didSearchReplace": "Axon Code performed search and replace on this file",
-		"wantsToInsert": "Axon Code wants to insert content into this file",
-		"wantsToInsertWithLineNumber": "Axon Code wants to insert content into this file at line {{lineNumber}}",
-		"wantsToInsertAtEnd": "Axon Code wants to append content to the end of this file"
+		"didSearchReplace": "performed search and replace on this file",
+		"wantsToInsert": "insert content into this file",
+		"wantsToInsertWithLineNumber": "insert content into this file at line {{lineNumber}}",
+		"wantsToInsertAtEnd": "append content to the end of this file"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Axon Code wants to view the top level files in this directory",
-		"didViewTopLevel": "Axon Code viewed the top level files in this directory",
-		"wantsToViewTopLevelOutsideWorkspace": "Axon Code wants to view the top level files in this directory (outside workspace)",
-		"didViewTopLevelOutsideWorkspace": "Axon Code viewed the top level files in this directory (outside workspace)",
-		"wantsToViewRecursive": "Axon Code wants to recursively view all files in this directory",
-		"didViewRecursive": "Axon Code recursively viewed all files in this directory",
-		"wantsToViewRecursiveOutsideWorkspace": "Axon Code wants to recursively view all files in this directory (outside workspace)",
-		"didViewRecursiveOutsideWorkspace": "Axon Code recursively viewed all files in this directory (outside workspace)",
-		"wantsToViewDefinitions": "Axon Code wants to view source code definition names used in this directory",
-		"didViewDefinitions": "Axon Code viewed source code definition names used in this directory",
-		"wantsToViewDefinitionsOutsideWorkspace": "Axon Code wants to view source code definition names used in this directory (outside workspace)",
-		"didViewDefinitionsOutsideWorkspace": "Axon Code viewed source code definition names used in this directory (outside workspace)",
-		"wantsToSearch": "Axon Code wants to search this directory for <code>{{regex}}</code>",
-		"didSearch": "Axon Code searched this directory for <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Axon Code wants to search this directory (outside workspace) for <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Axon Code searched this directory (outside workspace) for <code>{{regex}}</code>"
+		"wantsToViewTopLevel": "explore files",
+		"didViewTopLevel": "explored files",
+		"wantsToViewTopLevelOutsideWorkspace": "explore files(outside of the workspace)",
+		"didViewTopLevelOutsideWorkspace": "explored files(outside of the workspace)",
+		"wantsToViewRecursive": "explore files(recursively)",
+		"didViewRecursive": "explored files(recursively)",
+		"wantsToViewRecursiveOutsideWorkspace": "explore files(recursively)(outside of the workspace)",
+		"didViewRecursiveOutsideWorkspace": "explored files(recursively)(outside of the workspace)",
+		"wantsToViewDefinitions": "view source code definition names used in this directory",
+		"didViewDefinitions": "viewed source code definition names used in this directory",
+		"wantsToViewDefinitionsOutsideWorkspace": "view source code definition names used in this directory(outside of the workspace)",
+		"didViewDefinitionsOutsideWorkspace": "viewed source code definition names used in this directory(outside of the workspace)",
+		"wantsToSearch": "search this directory for <code>{{regex}}</code>",
+		"didSearch": "searched this directory for <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "search this directory(outside of the workspace) for <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "searched this directory(outside of the workspace) for <code>{{regex}}</code>"
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Axon Code wants to search the codebase for <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Axon Code wants to search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
+		"wantsToSearch": "search the codebase for <code>{{query}}</code>",
+		"wantsToSearchWithPath": "search the codebase for <code>{{query}}</code> in <code>{{path}}</code>",
 		"didSearch_one": "Found 1 result",
 		"didSearch_other": "Found {{count}} results",
 		"resultTooltip": "Similarity score: {{score}} (click to open file)"
@@ -254,18 +254,18 @@
 		"youSaid": "You said"
 	},
 	"mcp": {
-		"wantsToUseTool": "Axon Code wants to use a tool on the {{serverName}} MCP server",
-		"wantsToAccessResource": "Axon Code wants to access a resource on the {{serverName}} MCP server"
+		"wantsToUseTool": "using tool {{serverName}} MCP server",
+		"wantsToAccessResource": "accessing resource {{serverName}} MCP server"
 	},
 	"modes": {
-		"wantsToSwitch": "Axon Code wants to switch to {{mode}} mode",
-		"wantsToSwitchWithReason": "Axon Code wants to switch to {{mode}} mode because: {{reason}}",
-		"didSwitch": "Axon Code switched to {{mode}} mode",
-		"didSwitchWithReason": "Axon Code switched to {{mode}} mode because: {{reason}}"
+		"wantsToSwitch": "switch to {{mode}} mode",
+		"wantsToSwitchWithReason": "switching to {{mode}} mode because: {{reason}}",
+		"didSwitch": "switched to {{mode}} mode",
+		"didSwitchWithReason": "switched to {{mode}} mode because: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Axon Code wants to create a new subtask in {{mode}} mode",
-		"wantsToFinish": "Axon Code wants to finish this subtask",
+		"wantsToCreate": "create a new subtask in {{mode}} mode",
+		"wantsToFinish": "finish this subtask",
 		"newTaskContent": "Subtask Instructions",
 		"completionContent": "Subtask Completed",
 		"resultContent": "Subtask Results",
@@ -273,9 +273,9 @@
 		"completionInstructions": "Subtask completed! You can review the results and suggest any corrections or next steps. If everything looks good, confirm to return the result to the parent task."
 	},
 	"questions": {
-		"hasQuestion": "Axon Code has a question"
+		"hasQuestion": "question"
 	},
-	"taskCompleted": "Task Completed",
+	"taskCompleted": "Completed",
 	"error": "Error",
 	"diffError": {
 		"title": "Edit Unsuccessful"
@@ -321,7 +321,7 @@
 		"countdownDisplay": "{{count}}s"
 	},
 	"browser": {
-		"rooWantsToUse": "Axon Code wants to use the browser",
+		"rooWantsToUse": "use browser",
 		"consoleLogs": "Console Logs",
 		"noNewLogs": "(No new logs)",
 		"screenshot": "Browser screenshot",
@@ -402,7 +402,7 @@
 		}
 	},
 	"slashCommand": {
-		"wantsToRun": "Axon Code wants to run a slash command",
+		"wantsToRun": "run a slash command",
 		"didRun": "Axon Code ran a slash command"
 	},
 	"queuedMessages": {

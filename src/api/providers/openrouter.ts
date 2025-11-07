@@ -325,14 +325,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 					}
 					fullContent = delta.content
 
-					// pending items
-					// 1. Thinking block bug
-					// 2. Pricing
-					// 3. Use Cursor prompt + tool calling
-
-					console.log("newText", newText)
-					console.log("isThinking", isThinking)
-
 					if (newText) {
 						if (newText.includes("<think>")) {
 							isThinking = true

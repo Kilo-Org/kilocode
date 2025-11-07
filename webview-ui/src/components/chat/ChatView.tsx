@@ -410,17 +410,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setPrimaryButtonText(t("chat:approve.title"))
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
-						// case "completion_result":
-						// 	// extension waiting for feedback. but we can just present a new task button
-						// 	if (!isPartial) {
-						// 		playSound("celebration")
-						// 	}
-						// 	setSendingDisabled(isPartial)
-						// 	setClineAsk("completion_result")
-						// 	setEnableButtons(!isPartial)
-						// 	setPrimaryButtonText(t("chat:startNewTask.title"))
-						// 	setSecondaryButtonText(undefined)
-						// 	break
+						case "completion_result":
+							// extension waiting for feedback. but we can just present a new task button
+							if (!isPartial) {
+								playSound("celebration")
+							}
+							setSendingDisabled(isPartial)
+							setClineAsk("completion_result")
+							setEnableButtons(!isPartial)
+							// setPrimaryButtonText(t("chat:startNewTask.title"))
+							setSecondaryButtonText(undefined)
+							break
 						// case "resume_task":
 						// 	setSendingDisabled(false)
 						// 	setClineAsk("resume_task")
@@ -2164,13 +2164,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 											content={
 												isStreaming
 													? t("chat:cancel.tooltip")
-													: secondaryButtonText === t("chat:startNewTask.title")
-														? t("chat:startNewTask.tooltip")
-														: secondaryButtonText === t("chat:reject.title")
-															? t("chat:reject.tooltip")
-															: secondaryButtonText === t("chat:terminate.title")
-																? t("chat:terminate.tooltip")
-																: undefined
+													: secondaryButtonText === t("chat:reject.title")
+														? t("chat:reject.tooltip")
+														: secondaryButtonText === t("chat:terminate.title")
+															? t("chat:terminate.tooltip")
+															: undefined
 											}>
 											<VSCodeButton
 												appearance="secondary"

@@ -1434,41 +1434,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// even if it goes out of sync with cline messages.
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
 
-		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
-		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
-			if (Array.isArray(message.content)) {
-				const newContent = message.content.map((block) => {
-					if (block.type === "tool_use") {
-						// It's important we convert to the new tool schema
-						// format so the model doesn't get confused about how to
-						// invoke tools.
-						const inputAsXml = Object.entries(block.input as Record<string, string>)
-							.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
-							.join("\n")
-						return {
-							type: "text",
-							text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
-						} as Anthropic.Messages.TextBlockParam
-					} else if (block.type === "tool_result") {
-						// Convert block.content to text block array, removing images
-						const contentAsTextBlocks = Array.isArray(block.content)
-							? block.content.filter((item) => item.type === "text")
-							: [{ type: "text", text: block.content }]
-						const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
-						const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
-						return {
-							type: "text",
-							text: `[${toolName} Result]\n\n${textContent}`,
-						} as Anthropic.Messages.TextBlockParam
-					}
-					return block
-				})
-				return { ...message, content: newContent }
-			}
-			return message
-		})
-		existingApiConversationHistory = conversationWithoutToolBlocks
-
 		// FIXME: remove tool use blocks altogether
 
 		// if the last message is an assistant message, we need to check if there's tool use since every tool use has to have a tool response

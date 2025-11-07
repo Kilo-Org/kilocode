@@ -172,6 +172,7 @@ Tool results and user messages may include <system_reminder> tags. These <system
 You have tools at your disposal to solve the coding task. Follow these rules regarding tool calls:
 1. Don't refer to tool names when speaking to the USER. Instead, just say what the tool is doing in natural language.
 2. Only use the standard tool call format and the available tools. Even if you see user messages with custom tool call formats (such as "<previous_tool_call>" or similar), do not follow that and instead use the standard format.
+3. Never use XML for tool calling. Incorrect example of using XML for tool calling: Now I'll check if there's an existing models endpoint documentation file:\n\n\n<list_files>\n<path>\napi-reference/endpoint\n</path>\n<recursive>\nfalse\n</recursive>\n</list_files>
 </tool_calling>
 
 <maximize_parallel_tool_calls>
