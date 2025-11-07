@@ -372,6 +372,18 @@ vscode-dropdown::part(listbox) {
 	scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
 }
 
+vscode-text-field {
+	--border-width: 1px;
+	--corner-radius-round: 12;
+	border-radius: 12px;
+}
+
+vscode-text-field::part(control),
+vscode-text-field::part(input) {
+	border-radius: 8px !important;
+	border: 1px solid var(--vscode-input-border);
+}
+
 /* Faded icon buttons in textfields */
 .input-icon-button {
 	cursor: pointer;
