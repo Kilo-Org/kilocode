@@ -18,7 +18,8 @@ import { AutoCompleteLruCacheInMem } from "./util/AutoCompleteLruCacheInMem.js"
 import { HelperVars } from "./util/HelperVars.js"
 import { AutocompleteInput, AutocompleteOutcome } from "./util/types.js"
 
-const autocompleteCache = AutoCompleteLruCacheInMem.get()
+// Sqlite AutoCompleteLruCache also has constant initialization
+// const autocompleteCache = AutoCompleteLruCache.get()
 
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
@@ -184,7 +185,7 @@ export class CompletionProvider {
 			// Completion
 			let completion: string | undefined = ""
 
-			const cache = await autocompleteCache
+			const cache = await this.autocompleteCache
 			const cachedCompletion = helper.options.useCache ? await cache.get(helper.prunedPrefix) : undefined
 			let cacheHit = false
 			if (cachedCompletion) {
