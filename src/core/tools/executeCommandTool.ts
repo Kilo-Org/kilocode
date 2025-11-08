@@ -19,30 +19,30 @@ import { Package } from "../../shared/package"
 import { t } from "../../i18n"
 
 /**
- * Erreur levée lorsque l'intégration du shell échoue
- * Cette erreur est utilisée pour basculer vers le mode de secours (fallback)
+ * Error thrown when shell integration fails
+ * This error is used to switch to fallback mode
  */
 class ShellIntegrationError extends Error {}
 
 /**
- * Outil principal pour l'exécution de commandes dans KiloCode
+ * Main tool for executing commands in KiloCode
  *
- * Cette fonction gère l'exécution de commandes shell avec support pour :
- * - Validation des commandes via RooIgnore
- * - Approbation utilisateur
- * - Mode YOLO pour contourner les approbations
- * - Gestion des timeouts de commande
- * - Intégration avec le terminal VSCode
- * - Mode fallback en cas d'erreur d'intégration
+ * This function handles shell command execution with support for:
+ * - Command validation via RooIgnore
+ * - User approval
+ * - YOLO mode to bypass approvals
+ * - Command timeout management
+ * - VSCode terminal integration
+ * - Fallback mode in case of integration error
  *
- * @param task - Instance de la tâche en cours d'exécution
- * @param block - Bloc d'outil contenant les paramètres de la commande
- * @param askApproval - Fonction pour demander l'approbation utilisateur
- * @param handleError - Fonction pour gérer les erreurs
- * @param pushToolResult - Fonction pour pousser les résultats
- * @param removeClosingTag - Fonction pour retirer les balises de fermeture
+ * @param task - Instance of the currently running task
+ * @param block - Tool block containing command parameters
+ * @param askApproval - Function to request user approval
+ * @param handleError - Function to handle errors
+ * @param pushToolResult - Function to push results
+ * @param removeClosingTag - Function to remove closing tags
  *
- * @returns Promise<void> - Les résultats sont poussés via pushToolResult
+ * @returns Promise<void> - Results are pushed via pushToolResult
  *
  * @example
  * ```typescript
@@ -172,39 +172,39 @@ export async function executeCommandTool(
 }
 
 /**
- * Options de configuration pour l'exécution de commandes
+ * Configuration options for command execution
  */
 export type ExecuteCommandOptions = {
-	/** Identifiant unique pour cette exécution de commande */
+	/** Unique identifier for this command execution */
 	executionId: string
-	/** Commande à exécuter */
+	/** Command to execute */
 	command: string
-	/** Répertoire de travail personnalisé (optionnel) */
+	/** Custom working directory (optional) */
 	customCwd?: string
-	/** Désactiver l'intégration du shell terminal */
+	/** Disable terminal shell integration */
 	terminalShellIntegrationDisabled?: boolean
-	/** Limite de lignes pour la sortie du terminal */
+	/** Line limit for terminal output */
 	terminalOutputLineLimit?: number
-	/** Limite de caractères pour la sortie du terminal */
+	/** Character limit for terminal output */
 	terminalOutputCharacterLimit?: number
-	/** Timeout d'exécution en millisecondes (0 = pas de timeout) */
+	/** Execution timeout in milliseconds (0 = no timeout) */
 	commandExecutionTimeout?: number
 }
 
 /**
- * Exécute une commande système avec gestion complète du cycle de vie
+ * Executes a system command with full lifecycle management
  *
- * Cette fonction gère l'exécution de commandes avec :
- * - Validation du répertoire de travail
- * - Configuration du terminal (VSCode ou execa)
- * - Gestion des timeouts
- * - Suivi de l'état d'exécution
- * - Capture de la sortie en temps réel
- * - Gestion des codes de sortie
+ * This function handles command execution with:
+ * - Working directory validation
+ * - Terminal configuration (VSCode or execa)
+ * - Timeout management
+ * - Execution status tracking
+ * - Real-time output capture
+ * - Exit code handling
  *
- * @param task - Instance de la tâche en cours d'exécution
- * @param options - Options de configuration pour l'exécution
- * @returns Promise<[boolean, ToolResponse]> - Tuple contenant [rejeté, résultat]
+ * @param task - Instance of the currently running task
+ * @param options - Configuration options for execution
+ * @returns Promise<[boolean, ToolResponse]> - Tuple containing [rejected, result]
  *
  * @example
  * ```typescript
@@ -258,14 +258,14 @@ export async function executeCommand(
 
 	let accumulatedOutput = ""
 	/**
-	 * Callbacks pour le suivi de l'exécution de la commande
+	 * Callbacks for tracking command execution
 	 */
 	const callbacks: RooTerminalCallbacks = {
 		/**
-		 * Callback appelé lors de la réception de nouvelles lignes de sortie
+		 * Callback called when receiving new output lines
 		 *
-		 * @param lines - Lignes de sortie reçues du terminal
-		 * @param process - Processus terminal pour contrôler l'exécution
+		 * @param lines - Output lines received from terminal
+		 * @param process - Terminal process to control execution
 		 */
 		onLine: async (lines: string, process: RooTerminalProcess) => {
 			accumulatedOutput += lines
@@ -292,9 +292,9 @@ export async function executeCommand(
 			} catch (_error) {}
 		},
 		/**
-		 * Callback appelé lorsque l'exécution de la commande est terminée
+		 * Callback called when command execution is completed
 		 *
-		 * @param output - Sortie finale de la commande
+		 * @param output - Final output of the command
 		 */
 		onCompleted: (output: string | undefined) => {
 			result = Terminal.compressTerminalOutput(
@@ -307,9 +307,9 @@ export async function executeCommand(
 			completed = true
 		},
 		/**
-		 * Callback appelé lorsque l'exécution du shell démarre
+		 * Callback called when shell execution starts
 		 *
-		 * @param pid - ID du processus du shell (si disponible)
+		 * @param pid - Shell process ID (if available)
 		 */
 		onShellExecutionStarted: (pid: number | undefined) => {
 			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
@@ -317,9 +317,9 @@ export async function executeCommand(
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 		},
 		/**
-		 * Callback appelé lorsque l'exécution du shell se termine
+		 * Callback called when shell execution ends
 		 *
-		 * @param details - Détails de la sortie du processus
+		 * @param details - Process exit details
 		 */
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }
@@ -330,9 +330,9 @@ export async function executeCommand(
 
 	if (terminalProvider === "vscode") {
 		/**
-		 * Callback appelé lorsque l'intégration du shell échoue
+		 * Callback called when shell integration fails
 		 *
-		 * @param error - Message d'erreur d'intégration
+		 * @param error - Integration error message
 		 */
 		callbacks.onNoShellIntegration = async (error: string) => {
 			TelemetryService.instance.captureShellIntegrationError(task.taskId)
