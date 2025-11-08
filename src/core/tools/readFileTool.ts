@@ -24,6 +24,21 @@ import {
 	ImageMemoryTracker,
 } from "./helpers/imageHelpers"
 
+/**
+ * Génère une description formatée pour l'outil de lecture de fichiers
+ *
+ * @param blockName - Nom du bloc d'outil (généralement "read_file")
+ * @param blockParams - Paramètres du bloc contenant les informations sur les fichiers à lire
+ * @returns Une chaîne de caractères décrivant l'opération de lecture en cours
+ *
+ * @example
+ * ```typescript
+ * const description = getReadFileToolDescription("read_file", {
+ *   files: [{ path: "src/app.ts" }, { path: "src/utils.ts" }]
+ * });
+ * // Résultat: "[read_file for 'src/app.ts', 'src/utils.ts']"
+ * ```
+ */
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
 	// kilocode_change start
@@ -60,30 +75,91 @@ export function getReadFileToolDescription(blockName: string, blockParams: any):
 	}
 }
 // Types
+
+/**
+ * Interface représentant une plage de lignes pour la lecture sélective de fichier
+ */
 interface LineRange {
+	/** Numéro de la ligne de départ (inclus) */
 	start: number
+	/** Numéro de la ligne de fin (inclus) */
 	end: number
 }
 
+/**
+ * Interface représentant une entrée de fichier à traiter
+ */
 interface FileEntry {
+	/** Chemin relatif du fichier à lire */
 	path?: string
+	/** Tableau des plages de lignes à lire (optionnel) */
 	lineRanges?: LineRange[]
 }
 
-// New interface to track file processing state
+/**
+ * Interface pour suivre l'état de traitement d'un fichier
+ */
 interface FileResult {
+	/** Chemin du fichier traité */
 	path: string
+	/** Éat actuel du traitement du fichier */
 	status: "approved" | "denied" | "blocked" | "error" | "pending"
+	/** Contenu texte du fichier (si applicable) */
 	content?: string
+	/** Message d'erreur (si le traitement a échoué) */
 	error?: string
+	/** Message d'information ou d'avertissement */
 	notice?: string
+	/** Plages de lignes demandées (si applicable) */
 	lineRanges?: LineRange[]
-	xmlContent?: string // Final XML content for this file
-	imageDataUrl?: string // Image data URL for image files
-	feedbackText?: string // User feedback text from approval/denial
-	feedbackImages?: any[] // User feedback images from approval/denial
+	/** Contenu XML final pour ce fichier */
+	xmlContent?: string
+	/** URL de données pour les fichiers image */
+	imageDataUrl?: string
+	/** Texte de feedback utilisateur suite à approbation/refus */
+	feedbackText?: string
+	/** Images de feedback utilisateur suite à approbation/refus */
+	feedbackImages?: any[]
 }
 
+/**
+ * Outil principal pour la lecture de fichiers dans KiloCode
+ *
+ * Cette fonction gère la lecture d'un ou plusieurs fichiers avec support pour :
+ * - Lecture multiple de fichiers simultanée
+ * - Plages de lignes spécifiques
+ * - Fichiers binaires (images, PDF, etc.)
+ * - Validation et approbation utilisateur
+ * - Mode YOLO pour contourner les approbations
+ * - Limites de taille et gestion mémoire
+ *
+ * @param cline - Instance de la tâche en cours d'exécution
+ * @param block - Bloc d'outil contenant les paramètres de lecture
+ * @param askApproval - Fonction pour demander l'approbation utilisateur
+ * @param handleError - Fonction pour gérer les erreurs
+ * @param pushToolResult - Fonction pour pousser les résultats
+ * @param _removeClosingTag - Fonction pour retirer les balises de fermeture (non utilisée)
+ *
+ * @returns Promise<void> - Les résultats sont poussés via pushToolResult
+ *
+ * @example
+ * ```typescript
+ * // Lecture d'un seul fichier
+ * await readFileTool(task, {
+ *   params: { files: [{ path: "src/app.ts" }] }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ *
+ * // Lecture avec plages de lignes
+ * await readFileTool(task, {
+ *   params: {
+ *     files: [{
+ *       path: "src/app.ts",
+ *       lineRanges: [{ start: 10, end: 20 }]
+ *     }]
+ *   }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ * ```
+ */
 export async function readFileTool(
 	cline: Task,
 	block: ToolUse,
@@ -210,7 +286,12 @@ export async function readFileTool(
 		lineRanges: entry.lineRanges,
 	}))
 
-	// Function to update file result status
+	/**
+	 * Met à jour le statut d'un résultat de fichier dans le tableau des résultats
+	 *
+	 * @param path - Chemin du fichier à mettre à jour
+	 * @param updates - Mises à jour partielles à appliquer au résultat
+	 */
 	const updateFileResult = (path: string, updates: Partial<FileResult>) => {
 		const index = fileResults.findIndex((result) => result.path === path)
 		if (index !== -1) {
