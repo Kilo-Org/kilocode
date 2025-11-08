@@ -1,5 +1,13 @@
 # @kilocode/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- [#3528](https://github.com/Kilo-Org/kilocode/pull/3528) [`77438f1`](https://github.com/Kilo-Org/kilocode/commit/77438f1dfe2e9b5cfc5faccc314130d82c299842) Thanks [@iscekic](https://github.com/iscekic)! - add shell mode
+
+- [#3556](https://github.com/Kilo-Org/kilocode/pull/3556) [`0fd4e8f`](https://github.com/Kilo-Org/kilocode/commit/0fd4e8f3b130f86ae5932c33ab647a2a08742c55) Thanks [@iscekic](https://github.com/iscekic)! - adds support for overriding config with env vars
+
 ## 0.1.2
 
 ### Patch Changes

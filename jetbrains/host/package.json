@@ -70,6 +70,7 @@
 	"devDependencies": {
 		"@roo-code/config-eslint": "file:../../packages/config-eslint",
 		"@playwright/test": "^1.56.1",
+		"patch-package": "^8.0.0",
 		"@types/cookie": "^0.3.3",
 		"@types/debug": "^4.1.5",
 		"@types/gulp-svgmin": "^1.2.1",

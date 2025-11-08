@@ -1,10 +1,4 @@
 import { AutocompleteInput } from "../types"
-import type { TextDocument, Range } from "vscode"
-
-/**
- * Special marker used to indicate where completions should occur in the document
- */
-export const CURSOR_MARKER = "<<<AUTOCOMPLETE_HERE>>>"
 
 export interface FillInAtCursorSuggestion {
 	text: string
@@ -101,17 +95,6 @@ function hypothenuse(a, b) {
 <COMPLETION>a ** 2 + </COMPLETION>
 
 `
-}
-
-export function addCursorMarker(document: TextDocument, range?: Range): string {
-	if (!range) return document.getText()
-
-	const fullText = document.getText()
-	const cursorOffset = document.offsetAt(range.start)
-	const beforeCursor = fullText.substring(0, cursorOffset)
-	const afterCursor = fullText.substring(cursorOffset)
-
-	return `${beforeCursor}${CURSOR_MARKER}${afterCursor}`
 }
 
 /**

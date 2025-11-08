@@ -1,9 +1,10 @@
 import { LLMClient } from "./llm-client.js"
-import { HoleFiller, CURSOR_MARKER, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
+import { HoleFiller, parseGhostResponse } from "../services/ghost/classic-auto-complete/HoleFiller.js"
 import { GhostSuggestionContext, AutocompleteInput } from "../services/ghost/types.js"
 import { MockTextDocument } from "../services/mocking/MockTextDocument.js"
 import * as vscode from "vscode"
 import crypto from "crypto"
+import { CURSOR_MARKER } from "./test-cases.js"
 
 export class StrategyTester {
 	private llmClient: LLMClient

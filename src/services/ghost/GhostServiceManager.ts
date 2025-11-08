@@ -9,7 +9,6 @@ import { GhostInlineCompletionProvider } from "./classic-auto-complete/GhostInli
 //import { NewAutocompleteProvider } from "./new-auto-complete/NewAutocompleteProvider"
 import { GhostServiceSettings, TelemetryEventName } from "@roo-code/types"
 import { ContextProxy } from "../../core/config/ContextProxy"
-import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { GhostContext } from "./GhostContext"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
@@ -21,7 +20,6 @@ export class GhostServiceManager {
 	private model: GhostModel
 	private cline: ClineProvider
 	private context: vscode.ExtensionContext
-	private providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 	private ghostContext: GhostContext
 
@@ -47,7 +45,6 @@ export class GhostServiceManager {
 
 		// Register Internal Components
 		this.documentStore = new GhostDocumentStore()
-		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new GhostModel()
 		this.ghostContext = new GhostContext(this.documentStore)
 
@@ -74,29 +71,24 @@ export class GhostServiceManager {
 	// Singleton Management
 	public static initialize(context: vscode.ExtensionContext, cline: ClineProvider): GhostServiceManager {
 		if (GhostServiceManager.instance) {
-			throw new Error("GhostServiceManager is already initialized. Use getInstance() instead.")
+			throw new Error(
+				"GhostServiceManager is already initialized. Restart VS code, or change this to return the cached instance.",
+			)
 		}
 		GhostServiceManager.instance = new GhostServiceManager(context, cline)
 		return GhostServiceManager.instance
 	}
 
-	public static getInstance(): GhostServiceManager {
-		if (!GhostServiceManager.instance) {
-			throw new Error("GhostServiceManager is not initialized. Call initialize() first.")
+	public async load() {
+		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
+			enableQuickInlineTaskKeybinding: true,
+			enableSmartInlineTaskKeybinding: true,
 		}
-		return GhostServiceManager.instance
-	}
-
-	// Settings Management
-	private loadSettings() {
-		const state = ContextProxy.instance.getValues()
-		return state.ghostServiceSettings
-	}
-
-	private async saveSettings() {
-		if (!this.settings) {
-			return
-		}
+		await this.cline.providerSettingsManager.initialize() // avoid race condition with settings migrations
+		await this.model.reload(this.cline.providerSettingsManager)
+		await this.updateGlobalContext()
+		this.updateStatusBar()
+		await this.updateInlineCompletionProviderRegistration()
 		const settingsWithModelInfo = {
 			...this.settings,
 			provider: this.getCurrentProviderName(),
@@ -106,18 +98,9 @@ export class GhostServiceManager {
 		await this.cline.postStateToWebview()
 	}
 
-	public async load() {
-		this.settings = this.loadSettings()
-		await this.model.reload(this.providerSettingsManager)
-		await this.updateGlobalContext()
-		this.updateStatusBar()
-		await this.updateInlineCompletionProviderRegistration()
-		await this.saveSettings()
-	}
-
 	private async updateInlineCompletionProviderRegistration() {
 		const shouldBeRegistered = this.settings?.enableAutoTrigger ?? false
-		const useNewAutocomplete = this.settings?.useNewAutocomplete ?? false
+		const useNewAutocomplete = false // this.settings?.useNewAutocomplete ?? false
 
 		// First, dispose any existing registration
 		if (this.inlineCompletionProviderDisposable) {
@@ -151,24 +134,16 @@ export class GhostServiceManager {
 	}
 
 	public async disable() {
-		this.settings = {
-			...this.settings,
-			enableAutoTrigger: false,
-			enableSmartInlineTaskKeybinding: false,
-			enableQuickInlineTaskKeybinding: false,
-		}
-		await this.saveSettings()
-		await this.load()
-	}
+		const settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {}
+		await ContextProxy.instance.setValues({
+			ghostServiceSettings: {
+				...settings,
+				enableAutoTrigger: false,
+				enableSmartInlineTaskKeybinding: false,
+				enableQuickInlineTaskKeybinding: false,
+			},
+		})
 
-	public async enable() {
-		this.settings = {
-			...this.settings,
-			enableAutoTrigger: true,
-			enableSmartInlineTaskKeybinding: true,
-			enableQuickInlineTaskKeybinding: true,
-		}
-		await this.saveSettings()
 		await this.load()
 	}
 
@@ -358,18 +333,18 @@ export class GhostServiceManager {
 		})
 	}
 
-	private getCurrentModelName(): string {
+	private getCurrentModelName(): string | undefined {
 		if (!this.model.loaded) {
-			return "loading..."
+			return
 		}
-		return this.model.getModelName() ?? "unknown"
+		return this.model.getModelName()
 	}
 
-	private getCurrentProviderName(): string {
+	private getCurrentProviderName(): string | undefined {
 		if (!this.model.loaded) {
-			return "loading..."
+			return
 		}
-		return this.model.getProviderDisplayName() ?? "unknown"
+		return this.model.getProviderDisplayName()
 	}
 
 	private hasValidApiToken(): boolean {
