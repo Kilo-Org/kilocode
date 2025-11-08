@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "kilocode",
-	"version": "4.109.2",
+	"version": "4.117.0",
 	"icon": "assets/icons/logo-outline-black.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -255,7 +255,7 @@
 				"category": "%configuration.title%"
 			},
 			{
-				"command": "kilo-code.generateCommitMessage",
+				"command": "kilo-code.vsc.generateCommitMessage",
 				"title": "%command.generateCommitMessage.title%",
 				"icon": {
 					"light": "assets/icons/kilo-light.svg",
@@ -415,13 +415,13 @@
 			],
 			"scm/input": [
 				{
-					"command": "kilo-code.generateCommitMessage",
+					"command": "kilo-code.vsc.generateCommitMessage",
 					"group": "navigation"
 				}
 			],
 			"scm/title": [
 				{
-					"command": "kilo-code.generateCommitMessage",
+					"command": "kilo-code.vsc.generateCommitMessage",
 					"when": "scmProvider == git",
 					"group": "navigation"
 				}
@@ -433,21 +433,6 @@
 				"key": "ctrl+shift+a",
 				"mac": "cmd+shift+a",
 				"when": "true"
-			},
-			{
-				"command": "editor.action.inlineSuggest.commit",
-				"key": "tab",
-				"when": "inlineSuggestionVisible && editorTextFocus && !editorTabMovesFocus && !inSnippetMode && !suggestWidgetVisible && editorLangId != 'markdown' && !shiftKey && !ctrlKey && !altKey && !metaKey"
-			},
-			{
-				"command": "kilo-code.ghost.applyAllSuggestions",
-				"key": "shift+tab",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
-			},
-			{
-				"command": "kilo-code.ghost.applyCurrentSuggestions",
-				"key": "tab",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
 			},
 			{
 				"command": "kilo-code.ghost.cancelRequest",
@@ -651,7 +636,7 @@
 		"@google/genai": "^1.0.0",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
-		"@modelcontextprotocol/sdk": "1.12.0",
+		"@modelcontextprotocol/sdk": "1.13.3",
 		"@qdrant/js-client-rest": "^1.14.0",
 		"@roo-code/cloud": "workspace:^",
 		"@roo-code/ipc": "workspace:^",
@@ -680,6 +665,7 @@
 		"ignore": "^7.0.3",
 		"is-wsl": "^3.1.0",
 		"isbinaryfile": "^5.0.2",
+		"js-tiktoken": "^1.0.8",
 		"jsdom": "^26.0.0",
 		"json5": "^2.2.3",
 		"jwt-decode": "^4.0.0",
@@ -701,6 +687,7 @@
 		"ps-tree": "^1.2.0",
 		"puppeteer-chromium-resolver": "^24.0.0",
 		"puppeteer-core": "^23.4.0",
+		"quick-lru": "^7.0.0",
 		"reconnecting-eventsource": "^1.6.4",
 		"sanitize-filename": "^1.6.3",
 		"say": "^0.16.0",
@@ -709,6 +696,8 @@
 		"simple-git": "^3.27.0",
 		"socket.io-client": "^4.8.1",
 		"sound-play": "^1.1.0",
+		"sqlite": "^5.1.1",
+		"sqlite3": "^5.1.7",
 		"stream-json": "^1.8.0",
 		"string-similarity": "^4.0.4",
 		"strip-ansi": "^7.1.0",
@@ -756,6 +745,7 @@
 		"execa": "^9.5.2",
 		"glob": "^11.0.1",
 		"mkdirp": "^3.0.1",
+		"myers-diff": "^2.1.0",
 		"nock": "^14.0.4",
 		"npm-run-all2": "^8.0.1",
 		"ovsx": "0.10.4",

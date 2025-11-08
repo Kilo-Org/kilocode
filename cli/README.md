@@ -43,6 +43,31 @@ kilocode --mode architect
 
 # Start with a specific workspace
 kilocode --workspace /path/to/project
+
+# Resume the last conversation from this workspace
+kilocode -c
+# or
+kilocode --continue
+```
+
+### Parallel mode
+
+Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
+
+```bash
+# Prerequisite: must be within a valid git repository
+
+# In interactive mode, changes will be committed on /exit
+# Terminal 1
+kilocode --parallel "improve xyz"
+# Terminal 2
+kilocode --parallel "improve abc"
+
+# Pairs great with auto mode 🚀
+# Terminal 1
+kilocode --parallel --auto "improve xyz"
+# Terminal 2
+kilocode --parallel --auto "improve abc"
 ```
 
 ### Autonomous mode (Non-Interactive)

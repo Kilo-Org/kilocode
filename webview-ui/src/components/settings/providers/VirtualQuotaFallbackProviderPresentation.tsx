@@ -5,7 +5,7 @@ import { PlusIcon, TrashIcon } from "@radix-ui/react-icons"
 import { ChevronUp, ChevronDown } from "lucide-react"
 
 import { type ProviderSettingsEntry } from "@roo-code/types"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, LabeledProgress } from "@src/components/ui"
+import { LabeledProgress, SearchableSelect } from "@src/components/ui"
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -108,23 +108,19 @@ export const VirtualQuotaFallbackProviderPresentation = ({
 									)}
 								</div>
 							</div>
-
-							<Select
+							<SearchableSelect
 								value={profile.profileId || ""}
 								onValueChange={(value) => onProfileSelect(index, value)}
-								disabled={availableForThisSlot.length === 0}>
-								<SelectTrigger className="w-full">
-									<SelectValue placeholder={t("kilocode:virtualProvider.selectProfilePlaceholder")} />
-								</SelectTrigger>
-								<SelectContent>
-									{availableForThisSlot.map((profile) => (
-										<SelectItem key={profile.id} value={profile.id}>
-											{profile.name}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-
+								disabled={availableForThisSlot.length === 0}
+								options={availableForThisSlot.map((p) => ({
+									value: p.id,
+									label: p.name,
+								}))}
+								placeholder={t("kilocode:virtualProvider.selectProfilePlaceholder")}
+								searchPlaceholder={t("settings:providers.searchPlaceholder")}
+								emptyMessage={t("settings:providers.noMatchFound")}
+								className="w-full"
+							/>
 							<VirtualLimitInputsPresentation
 								profile={profile}
 								index={index}

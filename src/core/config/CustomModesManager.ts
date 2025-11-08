@@ -17,7 +17,7 @@ import { GlobalFileNames } from "../../shared/globalFileNames"
 import { ensureSettingsDirectoryExists } from "../../utils/globalContext"
 import { t } from "../../i18n"
 // kilocode_change start
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
 // kilocode_change end
 
@@ -1056,7 +1056,6 @@ export class CustomModesManager {
 				return []
 			}
 
-			const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 			const headers: Record<string, string> = {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
@@ -1069,7 +1068,11 @@ export class CustomModesManager {
 				headers[X_KILOCODE_TESTER] = "SUPPRESS"
 			}
 
-			const response = await axios.get(`${baseUrl}/api/organizations/${organizationId}/modes`, { headers })
+			const url = getKiloUrlFromToken(
+				`https://api.kilocode.ai/api/organizations/${organizationId}/modes`,
+				kilocodeToken,
+			)
+			const response = await axios.get(url, { headers })
 
 			// Validate and parse the response
 			if (!response.data || !Array.isArray(response.data.modes)) {

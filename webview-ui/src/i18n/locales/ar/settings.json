@@ -34,7 +34,8 @@
 		"ui": "واجهة المستخدم",
 		"experimental": "تجريبي",
 		"language": "اللغة",
-		"about": "عن Kilo Code"
+		"about": "عن Kilo Code",
+		"autoPurge": "التنظيف التلقائي"
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
@@ -255,6 +256,8 @@
 		"noProviderMatchFound": "لم يتم العثور على مزوّدين",
 		"noMatchFound": "ما فيه ملفات مطابقة",
 		"vscodeLmDescription": "واجهة VS Code Language Model تسمح بتشغيل نماذج من إضافات أخرى مثل GitHub Copilot.",
+		"vscodeLmUnavailable": "دعم نماذج اللغة الخاصة بـ VS Code متاح فقط على Visual Studio Code. قد لا تعمل النسخ الفرعية مثل VSCodium وغيرها. علاوة على ذلك، هذه الميزة غير متوفرة في أدوات JetBrains.",
+		"vscodeLmUnavailableInstructions": "تأكد من أنك تستخدم أداة مدعومة وأن VS Code Chat مثبت ومُمكّن",
 		"awsCustomArnUse": "أدخل ARN صحيح لنموذج Amazon Bedrock. أمثلة:",
 		"awsCustomArnDesc": "تأكد إن المنطقة في ARN تطابق المنطقة المختارة.",
 		"openRouterApiKey": "مفتاح OpenRouter",
@@ -480,6 +483,10 @@
 			},
 			"resetDefaults": "رجع للإعدادات الافتراضية"
 		},
+		"rateLimitAfter": {
+			"label": "تحديد الحدّ الأقصى عند النهاية",
+			"description": "ابدأ تقييد المعدل بعد انتهاء تدفّق واجهة برمجة التطبيقات."
+		},
 		"rateLimitSeconds": {
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
@@ -595,6 +602,38 @@
 		"enable": {
 			"label": "تفعيل نقاط الحفظ التلقائية",
 			"description": "ينشئ نقاط حفظ آليًا أثناء التنفيذ. <0>تعرف أكثر</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "تفعيل تنظيف المهام التلقائي",
+			"description": "حذف المهام القديمة تلقائياً لتحرير مساحة القرص وتحسين الأداء. يتم تصنيف المهام حسب النوع والعمر لتحديد متى يجب إزالتها."
+		},
+		"defaultRetention": {
+			"label": "فترة الاحتفاظ الافتراضية (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام قبل أن تصبح مؤهلة للتنظيف"
+		},
+		"neverPurgeFavorited": {
+			"label": "عدم حذف المهام المفضلة أبداً",
+			"description": "عند التفعيل، لن يتم حذف المهام المفضلة تلقائياً بغض النظر عن العمر"
+		},
+		"favoritedRetention": {
+			"label": "الاحتفاظ بالمهام المفضلة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام المفضلة (ينطبق فقط عند تعطيل 'عدم حذف المهام المفضلة أبداً')"
+		},
+		"completedRetention": {
+			"label": "الاحتفاظ بالمهام المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي تم إكمالها بنجاح"
+		},
+		"incompleteRetention": {
+			"label": "الاحتفاظ بالمهام غير المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي لم يتم إكمالها (عادة أقصر من المهام المكتملة)"
+		},
+		"lastRun": {
+			"label": "آخر تنظيف"
+		},
+		"manualPurge": {
+			"button": "تشغيل التنظيف الآن"
 		}
 	},
 	"display": {
@@ -837,8 +876,8 @@
 			"description": "يحرر عدة ملفات في طلب واحد."
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "تفعيل التطبيق السريع",
-			"description": "عند التفعيل، يمكن لـ Kilo Code تعديل الملفات باستخدام التطبيق السريع مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب مزود Kilo Code API أو OpenRouter أو مفتاح Morph API.",
+			"name": "تفعيل Fast Apply",
+			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
 			"apiKey": "مفتاح Morph API (اختياري)",
 			"placeholder": "أدخل مفتاح Morph API (اختياري)",
 			"modelLabel": "اختيار النموذج",

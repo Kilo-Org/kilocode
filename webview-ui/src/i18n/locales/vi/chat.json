@@ -330,6 +330,8 @@
 		"tooltips": {
 			"expand": "Mở rộng khối mã",
 			"collapse": "Thu gọn khối mã",
+			"enable_wrap": "Bật ngắt dòng",
+			"disable_wrap": "Tắt ngắt dòng",
 			"copy_code": "Sao chép mã"
 		}
 	},

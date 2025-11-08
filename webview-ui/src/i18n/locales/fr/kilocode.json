@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Ajouter du crédit",
-		"lowBalance": "Votre solde Kilo Code est bas"
+		"lowBalance": "Votre solde Kilo Code est bas",
+		"newOrganization": "Vous utilisez Kilo pour le travail ?"
 	},
 	"pagination": {
 		"previous": "Précédent",
@@ -48,7 +49,8 @@
 			"automaticFetch": "Les derniers modèles sont automatiquement disponibles dans Kilo Code. Si vous ne savez pas quel modèle choisir, Kilo Code fonctionne mieux avec les modèles recommandés listés en haut en <strong>gras</strong>.",
 			"providerRouting": {
 				"title": "Routage des fournisseurs",
-				"managedByOrganization": "Les paramètres de routage des fournisseurs sont gérés par votre organisation.",
+				"managedByOrganization": "Gérer le routage des fournisseurs au niveau de l'organisation",
+				"createOrganization": "Créer une organisation pour gérer le routage des fournisseurs",
 				"description": "Kilo Code achemine les demandes vers les meilleurs fournisseurs disponibles pour votre modèle. Par défaut, les demandes sont réparties entre les principaux fournisseurs afin de maximiser le temps de disponibilité. Cependant, vous pouvez choisir un fournisseur spécifique à utiliser pour ce modèle.",
 				"sorting": {
 					"default": "Tri des fournisseurs par défaut",
@@ -136,7 +138,9 @@
 			"credits": "crédits",
 			"action": "Acheter Maintenant",
 			"viewAll": "Voir toutes les options de prix"
-		}
+		},
+		"detailedUsage": "Utilisation détaillée",
+		"createOrganization": "Créer une organisation pour suivre l'utilisation détaillée"
 	},
 	"docs": "Documentation",
 	"rules": {
@@ -267,5 +271,16 @@
 		"modelNoImageSupport": "Les images ne sont pas prises en charge par le modèle actuel.",
 		"maxImagesReached": "Maximum de 20 images par message. Supprimez quelques images pour en ajouter d'autres.",
 		"imagesRemovedNoSupport": "Images supprimées, non prises en charge par le modèle."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "Ces serveurs MCP sont maintenus par la communauté. Cliquez <1>ici</1> pour modifier vos propres paramètres MCP."
+		},
+		"modes": {
+			"description": "Ces modes sont disponibles auprès de la communauté. Cliquez <1>ici</1> pour modifier vos propres modes personnalisés."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "Nouveau : Partagez des modes en créant une organisation"
 	}
 }

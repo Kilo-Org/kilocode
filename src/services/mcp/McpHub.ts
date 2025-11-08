@@ -847,9 +847,7 @@ export class McpHub {
 			this.kiloNotificationService.connect(name, connection.client)
 
 			// Initial fetch of tools and resources
-			connection.server.tools = await this.fetchToolsList(name, source)
-			connection.server.resources = await this.fetchResourcesList(name, source)
-			connection.server.resourceTemplates = await this.fetchResourceTemplatesList(name, source)
+			await this.fetchAvailableServerCapabilities(name, source) // kilocode_change: logic moved into method
 		} catch (error) {
 			// Update status with error
 			const connection = this.findConnection(name, source)
@@ -913,6 +911,30 @@ export class McpHub {
 		)
 	}
 
+	// kilocode_change start: method added
+	/**
+	 * Helper method to set the supported server capabilities
+	 * @param serverName The name of the server to find
+	 * @param source Optional source to filter by (global or project)
+	 */
+	private async fetchAvailableServerCapabilities(serverName: string, source?: "global" | "project") {
+		// Use the helper method to find the connection
+		const connection = this.findConnection(serverName, source)
+
+		if (!connection || connection.type !== "connected") {
+			return
+		}
+
+		if (connection.client.getServerCapabilities()?.tools) {
+			connection.server.tools = await this.fetchToolsList(serverName, source)
+		}
+		if (connection.client.getServerCapabilities()?.resources) {
+			connection.server.resources = await this.fetchResourcesList(serverName, source)
+			connection.server.resourceTemplates = await this.fetchResourceTemplatesList(serverName, source)
+		}
+	}
+	// kilocode_change end
+
 	private async fetchToolsList(serverName: string, source?: "global" | "project"): Promise<McpTool[]> {
 		try {
 			// Use the helper method to find the connection
@@ -921,6 +943,13 @@ export class McpHub {
 			if (!connection || connection.type !== "connected") {
 				return []
 			}
+
+			// kilocode_change start
+			// Only proceed of the server defined the tools capability.
+			if (!connection.client.getServerCapabilities()?.tools) {
+				return []
+			}
+			// kilocode_change end
 
 			const response = await connection.client.request({ method: "tools/list" }, ListToolsResultSchema)
 
@@ -976,6 +1005,14 @@ export class McpHub {
 			if (!connection || connection.type !== "connected") {
 				return []
 			}
+
+			// kilocode_change start
+			// Only proceed of the server defined the resources capability.
+			if (!connection.client.getServerCapabilities()?.resources) {
+				return []
+			}
+			// kilocode_change end
+
 			const response = await connection.client.request({ method: "resources/list" }, ListResourcesResultSchema)
 			return response?.resources || []
 		} catch (error) {
@@ -993,6 +1030,14 @@ export class McpHub {
 			if (!connection || connection.type !== "connected") {
 				return []
 			}
+
+			// kilocode_change start
+			// Only proceed of the server defined the resources capability.
+			if (!connection.client.getServerCapabilities()?.resources) {
+				return []
+			}
+			// kilocode_change end
+
 			const response = await connection.client.request(
 				{ method: "resources/templates/list" },
 				ListResourceTemplatesResultSchema,
@@ -1389,12 +1434,7 @@ export class McpHub {
 						await this.connectToServer(serverName, config, serverSource)
 					} else if (connection.server.status === "connected") {
 						// Only refresh capabilities if connected
-						connection.server.tools = await this.fetchToolsList(serverName, serverSource)
-						connection.server.resources = await this.fetchResourcesList(serverName, serverSource)
-						connection.server.resourceTemplates = await this.fetchResourceTemplatesList(
-							serverName,
-							serverSource,
-						)
+						await this.fetchAvailableServerCapabilities(serverName, serverSource) // kilocode_change: logic moved into method
 					}
 				} catch (error) {
 					console.error(`Failed to refresh capabilities for ${serverName}:`, error)

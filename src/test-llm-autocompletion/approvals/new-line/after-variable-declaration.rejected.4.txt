@@ -1,6 +1,0 @@
-function initialize() {
-  const config = loadConfig();
-  const settings = parseSettings(config);
-<<<AUTOCOMPLETE_HERE>>>
-  return config;
-}

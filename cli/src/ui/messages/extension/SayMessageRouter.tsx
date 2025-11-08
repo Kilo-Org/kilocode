@@ -23,6 +23,7 @@ import {
 	SayUserEditTodosMessage,
 	SayImageMessage,
 	SayMcpServerRequestStartedMessage,
+	SayMcpServerResponseMessage,
 	SayApiReqFinishedMessage,
 	SayApiReqRetryDelayedMessage,
 	SayCommandOutputMessage,
@@ -107,6 +108,9 @@ export const SayMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 
 		case "mcp_server_request_started":
 			return <SayMcpServerRequestStartedMessage message={message} />
+
+		case "mcp_server_response":
+			return <SayMcpServerResponseMessage message={message} />
 
 		case "api_req_finished":
 			return <SayApiReqFinishedMessage message={message} />

@@ -38,7 +38,7 @@ ${allModes
 
 	// kilocode_change: toolUseStyle
 	modesContent += `
-If the user asks you to create or edit a new mode for this project, you should read the instructions${toolUseStyle !== "json" ? " by using the fetch_instructions tool, like this:\n<fetch_instructions>\n<task>create_mode</task>\n</fetch_instructions>" : "."}`
+If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool${toolUseStyle !== "json" ? ", like this:\n<fetch_instructions>\n<task>create_mode</task>\n</fetch_instructions>" : "."}`
 
 	return modesContent
 }

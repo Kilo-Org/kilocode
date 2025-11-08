@@ -6,6 +6,7 @@
 import { atom } from "jotai"
 import type { WebviewMessage } from "../../types/messages.js"
 import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from "./service.js"
+import { resetMessageCutoffAtom } from "./ui.js"
 import { logs } from "../../services/logs.js"
 
 /**
@@ -43,6 +44,10 @@ export const sendWebviewMessageAtom = atom(null, async (get, set, message: Webvi
  * Action atom to send a new task to the extension
  */
 export const sendTaskAtom = atom(null, async (get, set, params: { text: string; images?: string[]; mode?: string }) => {
+	// Reset the message cutoff timestamp when starting a new task
+	// This ensures all messages are visible for the new task
+	set(resetMessageCutoffAtom)
+
 	const message: WebviewMessage = {
 		type: "newTask",
 		text: params.text,

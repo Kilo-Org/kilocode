@@ -10,6 +10,12 @@ import OpenAI from "openai"
 import { KilocodeOpenrouterHandler } from "../kilocode-openrouter"
 import { ApiHandlerOptions } from "../../../shared/api"
 import { X_KILOCODE_TASKID, X_KILOCODE_ORGANIZATIONID, X_KILOCODE_PROJECTID } from "../../../shared/kilocode/headers"
+import { streamSse } from "../../../services/continuedev/core/fetch/stream"
+
+// Mock the stream module
+vitest.mock("../../../services/continuedev/core/fetch/stream", () => ({
+	streamSse: vitest.fn(),
+}))
 
 // Mock dependencies
 vitest.mock("openai")
@@ -194,6 +200,94 @@ describe("KilocodeOpenrouterHandler", () => {
 					},
 				}),
 			)
+		})
+	})
+
+	describe("FIM support", () => {
+		it("supportsFim returns true for codestral models", () => {
+			const handler = new KilocodeOpenrouterHandler({
+				...mockOptions,
+				kilocodeModel: "mistral/codestral-latest",
+			})
+
+			expect(handler.supportsFim()).toBe(true)
+		})
+
+		it("supportsFim returns false for non-codestral models", () => {
+			const handler = new KilocodeOpenrouterHandler({
+				...mockOptions,
+				kilocodeModel: "anthropic/claude-sonnet-4",
+			})
+
+			expect(handler.supportsFim()).toBe(false)
+		})
+
+		it("completeFim handles errors correctly", async () => {
+			const handler = new KilocodeOpenrouterHandler({
+				...mockOptions,
+				kilocodeModel: "mistral/codestral-latest",
+			})
+
+			const mockResponse = {
+				ok: false,
+				status: 500,
+				statusText: "Internal Server Error",
+				text: vitest.fn().mockResolvedValue("Error details"),
+			}
+
+			global.fetch = vitest.fn().mockResolvedValue(mockResponse)
+
+			await expect(handler.completeFim("prefix", "suffix")).rejects.toThrow(
+				"FIM streaming failed: 500 Internal Server Error - Error details",
+			)
+		})
+
+		it("streamFim yields chunks correctly", async () => {
+			const handler = new KilocodeOpenrouterHandler({
+				...mockOptions,
+				kilocodeModel: "mistral/codestral-latest",
+			})
+
+			// Mock streamSse to return the expected data
+			;(streamSse as any).mockImplementation(async function* () {
+				yield { choices: [{ delta: { content: "chunk1" } }] }
+				yield { choices: [{ delta: { content: "chunk2" } }] }
+			})
+
+			const mockResponse = {
+				ok: true,
+				status: 200,
+				statusText: "OK",
+			} as Response
+
+			global.fetch = vitest.fn().mockResolvedValue(mockResponse)
+
+			const chunks: string[] = []
+			for await (const chunk of handler.streamFim("prefix", "suffix")) {
+				chunks.push(chunk)
+			}
+
+			expect(chunks).toEqual(["chunk1", "chunk2"])
+			expect(streamSse).toHaveBeenCalledWith(mockResponse)
+		})
+
+		it("streamFim handles errors correctly", async () => {
+			const handler = new KilocodeOpenrouterHandler({
+				...mockOptions,
+				kilocodeModel: "mistral/codestral-latest",
+			})
+
+			const mockResponse = {
+				ok: false,
+				status: 400,
+				statusText: "Bad Request",
+				text: vitest.fn().mockResolvedValue("Invalid request"),
+			}
+
+			global.fetch = vitest.fn().mockResolvedValue(mockResponse)
+
+			const generator = handler.streamFim("prefix", "suffix")
+			await expect(generator.next()).rejects.toThrow("FIM streaming failed: 400 Bad Request - Invalid request")
 		})
 	})
 })

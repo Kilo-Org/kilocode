@@ -58,16 +58,19 @@ export type McpToolCallResponse = {
 		| {
 				type: "text"
 				text: string
+				_meta?: Record<string, any> // kilocode_change
 		  }
 		| {
 				type: "image"
 				data: string
 				mimeType: string
+				_meta?: Record<string, any> // kilocode_change
 		  }
 		| {
 				type: "audio"
 				data: string
 				mimeType: string
+				_meta?: Record<string, any> // kilocode_change
 		  }
 		| {
 				type: "resource"
@@ -76,8 +79,21 @@ export type McpToolCallResponse = {
 					mimeType?: string
 					text?: string
 					blob?: string
+					_meta?: Record<string, any> // kilocode_change
 				}
+				_meta?: Record<string, any> // kilocode_change
 		  }
+		// kilocode_change start
+		| {
+				type: "resource_link"
+				uri: string
+				name?: string
+				description?: string
+				mimeType?: string
+				_meta?: Record<string, any>
+		  }
+		  // kilocode_change end
 	>
+	structuredContent?: Record<string, any> // kilocode_change
 	isError?: boolean
 }

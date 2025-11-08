@@ -25,6 +25,7 @@
 		"autoApprove": "Aprovação",
 		"browser": "Navegador",
 		"checkpoints": "Checkpoints",
+		"display": "Exibir",
 		"notifications": "Notificações",
 		"contextManagement": "Contexto",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre",
-		"display": "Exibir"
+		"autoPurge": "Auto-limpeza"
 	},
 	"slashCommands": {
 		"description": "Gerencie seus comandos de barra para executar rapidamente fluxos de trabalho e ações personalizadas. <DocsLink>Saiba mais</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Nenhum provedor encontrado",
 		"noMatchFound": "Nenhum perfil correspondente encontrado",
 		"vscodeLmDescription": "A API do Modelo de Linguagem do VS Code permite executar modelos fornecidos por outras extensões do VS Code (incluindo, mas não se limitando, ao GitHub Copilot). A maneira mais fácil de começar é instalar as extensões Copilot e Copilot Chat no VS Code Marketplace.",
+		"vscodeLmUnavailable": "O suporte a Modelos de Linguagem do VS Code está disponível apenas no Visual Studio Code. Forks como o VSCodium e outros podem não funcionar. Além disso, esse recurso não está disponível em ferramentas JetBrains.",
+		"vscodeLmUnavailableInstructions": "Certifique-se de estar usando uma ferramenta compatível e de que o VS Code Chat esteja instalado e habilitado",
 		"awsCustomArnUse": "Insira um ARN Amazon Bedrock válido para o modelo que deseja usar. Exemplos de formato:",
 		"awsCustomArnDesc": "Certifique-se de que a região no ARN corresponde à região AWS selecionada acima.",
 		"openRouterApiKey": "Chave de API OpenRouter",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Restaurar Padrões"
 		},
+		"rateLimitAfter": {
+			"label": "Limite de taxa no fim",
+			"description": "Comece a limitar a taxa depois que o fluxo da API terminar."
+		},
 		"rateLimitSeconds": {
 			"label": "Limite de taxa",
 			"description": "Tempo mínimo entre requisições de API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Ativar pontos de verificação automáticos",
 			"description": "Quando ativado, o Kilo Code criará automaticamente pontos de verificação durante a execução de tarefas, facilitando a revisão de alterações ou o retorno a estados anteriores. <0>Saiba mais</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Ativar limpeza automática de tarefas",
+			"description": "Excluir automaticamente tarefas antigas para liberar espaço em disco e melhorar o desempenho. As tarefas são classificadas por tipo e idade para determinar quando devem ser removidas."
+		},
+		"defaultRetention": {
+			"label": "Período de retenção padrão (dias)",
+			"description": "Número de dias para manter as tarefas antes que sejam elegíveis para limpeza"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nunca excluir tarefas favoritas",
+			"description": "Quando ativado, tarefas favoritas nunca serão excluídas automaticamente independentemente da idade"
+		},
+		"favoritedRetention": {
+			"label": "Retenção de tarefas favoritas (dias)",
+			"description": "Número de dias para manter tarefas favoritas (aplica-se apenas quando 'Nunca excluir tarefas favoritas' está desativado)"
+		},
+		"completedRetention": {
+			"label": "Retenção de tarefas concluídas (dias)",
+			"description": "Número de dias para manter tarefas que foram concluídas com sucesso"
+		},
+		"incompleteRetention": {
+			"label": "Retenção de tarefas incompletas (dias)",
+			"description": "Número de dias para manter tarefas que não foram concluídas (tipicamente mais curto que tarefas concluídas)"
+		},
+		"lastRun": {
+			"label": "Última limpeza"
+		},
+		"manualPurge": {
+			"button": "Executar limpeza agora"
 		}
 	},
 	"notifications": {
@@ -767,7 +806,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
-			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Provedor de API Kilo Code, OpenRouter ou uma chave de API Morph.",
+			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Kilo Gateway Provider, OpenRouter ou uma chave de API Morph.",
 			"apiKey": "Chave de API Morph (opcional)",
 			"placeholder": "Digite sua chave de API Morph (opcional)",
 			"modelLabel": "Seleção de Modelo",

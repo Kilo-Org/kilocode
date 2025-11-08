@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-aprovació",
 		"browser": "Accés a l'ordinador",
 		"checkpoints": "Punts de control",
+		"display": "Mostrar",
 		"notifications": "Notificacions",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Experimental",
 		"language": "Idioma",
 		"about": "Sobre Kilo Code",
-		"display": "Mostrar"
+		"autoPurge": "Auto-neteja"
 	},
 	"slashCommands": {
 		"description": "Gestiona les teves comandes de barra per executar ràpidament fluxos de treball i accions personalitzades. <DocsLink>Aprèn-ne més</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "No s'han trobat proveïdors",
 		"noMatchFound": "No s'han trobat perfils coincidents",
 		"vscodeLmDescription": "L'API del model de llenguatge de VS Code us permet executar models proporcionats per altres extensions de VS Code (incloent-hi però limitat a, GitHub Copilot). La manera més senzilla de començar és instal·lar les extensions Copilot i Copilot Chat des del VS Code Marketplace.",
+		"vscodeLmUnavailable": "El suport de models de llenguatge de VS Code només està disponible a Visual Studio Code. Els forks com VSCodium i altres poden no funcionar. A més, aquesta capacitat no està disponible a les eines JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assegureu-vos que utilitzeu una eina compatible i que VS Code Chat estigui instal·lat i habilitat",
 		"awsCustomArnUse": "Introduïu un ARN vàlid d'Amazon Bedrock per al model que voleu utilitzar. Exemples de format:",
 		"awsCustomArnDesc": "Assegureu-vos que la regió a l'ARN coincideix amb la regió d'AWS seleccionada anteriorment.",
 		"openRouterApiKey": "Clau API d'OpenRouter",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Restablir als valors per defecte"
 		},
+		"rateLimitAfter": {
+			"label": "Límit de taxa al final",
+			"description": "Comenceu a limitar la taxa un cop acaba el flux de l’API."
+		},
 		"rateLimitSeconds": {
 			"label": "Límit de freqüència",
 			"description": "Temps mínim entre sol·licituds d'API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Habilitar punts de control automàtics",
 			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors. <0>Més informació</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Activar neteja automàtica de tasques",
+			"description": "Eliminar automàticament tasques antigues per alliberar espai de disc i millorar el rendiment. Les tasques es classifiquen per tipus i edat per determinar quan s'han d'eliminar."
+		},
+		"defaultRetention": {
+			"label": "Període de retenció per defecte (dies)",
+			"description": "Nombre de dies per mantenir les tasques abans que siguin elegibles per a la neteja"
+		},
+		"neverPurgeFavorited": {
+			"label": "Mai eliminar tasques favorites",
+			"description": "Quan està activat, les tasques favorites mai s'eliminaran automàticament independentment de l'edat"
+		},
+		"favoritedRetention": {
+			"label": "Retenció de tasques favorites (dies)",
+			"description": "Nombre de dies per mantenir tasques favorites (només s'aplica quan 'Mai eliminar tasques favorites' està desactivat)"
+		},
+		"completedRetention": {
+			"label": "Retenció de tasques completades (dies)",
+			"description": "Nombre de dies per mantenir tasques que s'han completat amb èxit"
+		},
+		"incompleteRetention": {
+			"label": "Retenció de tasques incompletes (dies)",
+			"description": "Nombre de dies per mantenir tasques que no es van completar (normalment més curt que les tasques completades)"
+		},
+		"lastRun": {
+			"label": "Última neteja"
+		},
+		"manualPurge": {
+			"button": "Executar neteja ara"
 		}
 	},
 	"notifications": {
@@ -797,8 +836,8 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
-			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix el proveïdor d'API de Kilo Code, OpenRouter o una clau d'API de Morph.",
-			"apiKey": "Clau d'API de Morph (opcional)",
+			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
+			"apiKey": "Clau API de Morph (opcional)",
 			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
 			"modelLabel": "Selecció de model",
 			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",

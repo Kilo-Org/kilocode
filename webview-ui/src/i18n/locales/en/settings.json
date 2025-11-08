@@ -34,7 +34,8 @@
 		"ui": "UI",
 		"experimental": "Experimental",
 		"language": "Language",
-		"about": "About Kilo Code"
+		"about": "About Kilo Code",
+		"autoPurge": "Auto-Cleanup"
 	},
 	"slashCommands": {
 		"description": "Manage your slash commands to quickly execute custom workflows and actions. <DocsLink>Learn more</DocsLink>"
@@ -251,6 +252,8 @@
 		"noProviderMatchFound": "No providers found",
 		"noMatchFound": "No matching profiles found",
 		"vscodeLmDescription": " The VS Code Language Model API allows you to run models provided by other VS Code extensions (including but not limited to GitHub Copilot). The easiest way to get started is to install the Copilot and Copilot Chat extensions from the VS Code Marketplace.",
+		"vscodeLmUnavailable": "VS Code Language Model support is only available on Visual Studio Code. Forks such as VSCodium and others may not work. Further, this capability is not available in JetBrains tools.",
+		"vscodeLmUnavailableInstructions": "Ensure you are using a supported tool and that VS Code Chat is installed and enabled",
 		"awsCustomArnUse": "Enter a valid Amazon Bedrock ARN for the model you want to use. Format examples:",
 		"awsCustomArnDesc": "Make sure the region in the ARN matches your selected AWS Region above.",
 		"openRouterApiKey": "OpenRouter API Key",
@@ -467,6 +470,10 @@
 			},
 			"resetDefaults": "Reset to Defaults"
 		},
+		"rateLimitAfter": {
+			"label": "Rate limit on end",
+			"description": "Start rate limiting after the API stream ends."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Minimum time between API requests."
@@ -554,6 +561,38 @@
 		"enable": {
 			"label": "Enable automatic checkpoints",
 			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Enable automatic task cleanup",
+			"description": "Automatically delete old tasks to free up disk space and improve performance. Tasks are classified by type and age to determine when they should be removed."
+		},
+		"defaultRetention": {
+			"label": "Default retention period (days)",
+			"description": "Number of days to keep tasks before they are eligible for cleanup"
+		},
+		"neverPurgeFavorited": {
+			"label": "Never delete favorited tasks",
+			"description": "When enabled, favorited tasks will never be automatically deleted regardless of age"
+		},
+		"favoritedRetention": {
+			"label": "Favorited task retention (days)",
+			"description": "Number of days to keep favorited tasks (only applies when 'Never delete favorited tasks' is disabled)"
+		},
+		"completedRetention": {
+			"label": "Completed task retention (days)",
+			"description": "Number of days to keep tasks that have been completed successfully"
+		},
+		"incompleteRetention": {
+			"label": "Incomplete task retention (days)",
+			"description": "Number of days to keep tasks that were not completed (typically shorter than completed tasks)"
+		},
+		"lastRun": {
+			"label": "Last cleanup"
+		},
+		"manualPurge": {
+			"button": "Run Cleanup Now"
 		}
 	},
 	"display": {
@@ -797,7 +836,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
-			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Code API Provider, OpenRouter, or a Morph API key.",
+			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
 			"apiKey": "Morph API key (optional)",
 			"placeholder": "Enter your Morph API key (optional)",
 			"modelLabel": "Model Selection",

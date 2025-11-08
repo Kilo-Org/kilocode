@@ -4,7 +4,13 @@ import OpenAI from "openai"
 import * as os from "os"
 import * as path from "path"
 
-import { type ModelInfo, type QwenCodeModelId, qwenCodeModels, qwenCodeDefaultModelId } from "@roo-code/types"
+import {
+	type ModelInfo,
+	type QwenCodeModelId,
+	qwenCodeModels,
+	qwenCodeDefaultModelId,
+	getActiveToolUseStyle, // kilocode_change
+} from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -12,7 +18,11 @@ import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
 
 import { BaseProvider } from "./base-provider"
-import type { SingleCompletionHandler } from "../index"
+import type {
+	ApiHandlerCreateMessageMetadata, // kilocode_change
+	SingleCompletionHandler,
+} from "../index"
+import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 const QWEN_OAUTH_BASE_URL = "https://chat.qwen.ai"
 const QWEN_OAUTH_TOKEN_ENDPOINT = `${QWEN_OAUTH_BASE_URL}/api/v1/oauth2/token`
@@ -201,7 +211,11 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		}
 	}
 
-	override async *createMessage(systemPrompt: string, messages: Anthropic.Messages.MessageParam[]): ApiStream {
+	override async *createMessage(
+		systemPrompt: string,
+		messages: Anthropic.Messages.MessageParam[],
+		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
+	): ApiStream {
 		await this.ensureAuthenticated()
 		const client = this.ensureClient()
 		const model = this.getModel()
@@ -221,6 +235,8 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 			stream_options: { include_usage: true },
 			max_completion_tokens: model.info.maxTokens,
 		}
+
+		addNativeToolCallsToParams(requestOptions, this.options, metadata) // kilocode_change
 
 		const stream = await this.callApiWithRetry(() => client.chat.completions.create(requestOptions))
 
@@ -273,6 +289,8 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 					text: (delta.reasoning_content as string | undefined) || "",
 				}
 			}
+
+			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 			if (apiChunk.usage) {
 				yield {

@@ -25,6 +25,7 @@
 		"autoApprove": "自动批准",
 		"browser": "计算机交互",
 		"checkpoints": "存档点",
+		"display": "显示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "终端",
@@ -35,7 +36,7 @@
 		"language": "语言",
 		"about": "关于 Kilo Code",
 		"mcp": "MCP 服务器",
-		"display": "显示"
+		"autoPurge": "自动清理"
 	},
 	"slashCommands": {
 		"description": "管理您的斜杠命令，以快速执行自定义工作流和操作。 <DocsLink>了解更多</DocsLink>"
@@ -247,6 +248,8 @@
 		"noProviderMatchFound": "未找到提供商",
 		"noMatchFound": "未找到匹配的配置文件",
 		"vscodeLmDescription": "VS Code 语言模型 API 允许您运行由其他 VS Code 扩展（包括但不限于 GitHub Copilot）提供的模型。最简单的方法是从 VS Code 市场安装 Copilot 和 Copilot Chat 扩展。",
+		"vscodeLmUnavailable": "VS Code 语言模型支持仅在 Visual Studio Code 中可用。VSCodium 等分支可能无法工作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "请确保您使用的是受支持的工具，并且已安装并启用 VS Code Chat",
 		"awsCustomArnUse": "请输入有效的 Amazon Bedrock ARN（Amazon资源名称），格式示例：",
 		"awsCustomArnDesc": "请确保ARN中的区域与上方选择的AWS区域一致。",
 		"openRouterApiKey": "OpenRouter API 密钥",
@@ -463,6 +466,10 @@
 			},
 			"resetDefaults": "重置为默认值"
 		},
+		"rateLimitAfter": {
+			"label": "在结束时速率限制",
+			"description": "在 API 流结束后开始速率限制。"
+		},
 		"rateLimitSeconds": {
 			"label": "API 请求频率限制",
 			"description": "设置API请求的最小间隔时间"
@@ -550,6 +557,38 @@
 		"enable": {
 			"label": "启用自动存档点",
 			"description": "开启后自动创建任务存档点，方便回溯修改。 <0>了解更多</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "启用自动任务清理",
+			"description": "自动删除旧任务以释放磁盘空间并提高性能。任务按类型和时间分类，以确定何时应该删除。"
+		},
+		"defaultRetention": {
+			"label": "默认保留期（天）",
+			"description": "任务在符合清理条件之前保留的天数"
+		},
+		"neverPurgeFavorited": {
+			"label": "永不删除收藏任务",
+			"description": "启用后，收藏任务无论多久都不会被自动删除"
+		},
+		"favoritedRetention": {
+			"label": "收藏任务保留期（天）",
+			"description": "收藏任务的保留天数（仅在「永不删除收藏任务」禁用时适用）"
+		},
+		"completedRetention": {
+			"label": "已完成任务保留期（天）",
+			"description": "成功完成的任务保留天数"
+		},
+		"incompleteRetention": {
+			"label": "未完成任务保留期（天）",
+			"description": "未完成任务的保留天数（通常比已完成任务更短）"
+		},
+		"lastRun": {
+			"label": "上次清理"
+		},
+		"manualPurge": {
+			"button": "立即执行清理"
 		}
 	},
 	"notifications": {
@@ -802,8 +841,8 @@
 			"description": "启用自动补全功能，在编辑器中直接提供快速代码建议和改进。包括针对性更改的快速任务（Cmd+I）和上下文改进的自动补全。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "启用快速应用",
-			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行快速应用编辑文件。需要 Kilo Code API 提供商、OpenRouter 或 Morph API 密钥。",
+			"name": "启用 Fast Apply",
+			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
 			"apiKey": "Morph API 密钥（可选）",
 			"placeholder": "输入您的 Morph API 密钥（可选）",
 			"modelLabel": "模型选择",

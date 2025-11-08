@@ -3,10 +3,12 @@
 import type { ModelInfo } from "../model.js"
 
 export type SyntheticModelId =
+	| "hf:MiniMaxAI/MiniMax-M2"
 	| "hf:zai-org/GLM-4.6"
 	| "hf:zai-org/GLM-4.5"
 	| "hf:openai/gpt-oss-120b"
 	| "hf:moonshotai/Kimi-K2-Instruct-0905"
+	| "hf:moonshotai/Kimi-K2-Thinking"
 	| "hf:reissbaker/llama-3.1-70b-abliterated-lora"
 	| "hf:meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8"
 	| "hf:deepseek-ai/DeepSeek-V3.1"
@@ -26,6 +28,26 @@ export type SyntheticModelId =
 export const syntheticDefaultModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 
 export const syntheticModels = {
+	"hf:MiniMaxAI/MiniMax-M2": {
+		maxTokens: 192608,
+		contextWindow: 192608,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.55,
+		outputPrice: 2.19,
+		description:
+			"MiniMax's latest hybrid reasoning model: it's fast, it thinks before it responds, it's great at using tools via the API, and it's a strong coding model. 192k-token context.",
+	},
+	"hf:moonshotai/Kimi-K2-Thinking": {
+		maxTokens: 262144,
+		contextWindow: 262144,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0.55,
+		outputPrice: 2.19,
+		description:
+			"Moonshot's latest hybrid reasoner. Extremely good at math — it saturates the AIME25 math benchmark — and competitive with GPT-5 and Claude 4.5 at tool use and codegen. 256k-token context.",
+	},
 	"hf:moonshotai/Kimi-K2-Instruct-0905": {
 		maxTokens: 262144,
 		contextWindow: 262144,

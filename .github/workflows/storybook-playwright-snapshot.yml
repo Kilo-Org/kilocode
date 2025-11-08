@@ -31,13 +31,7 @@ jobs:
     storybook-playwright-snapshot:
         runs-on: ubuntu-latest
         timeout-minutes: 45
-        if: |
-            ${{
-              inputs.should_run == true ||
-              contains(github.event.head_commit.message, '[storybook]') ||
-              contains(github.event.head_commit.message, '[chromatic]') ||
-              contains(github.event.head_commit.message, '[screnshot')
-            }}
+        if: ${{ inputs.should_run == true }}
 
         steps:
             - name: Checkout repository

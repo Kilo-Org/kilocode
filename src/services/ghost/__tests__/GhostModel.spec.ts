@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { GhostModel } from "../GhostModel"
 import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
-import { AUTOCOMPLETE_PROVIDER_MODELS } from "@roo-code/types"
+import { AUTOCOMPLETE_PROVIDER_MODELS } from "../utils/kilocode-utils"
+import * as apiIndex from "../../../api"
 
 describe("GhostModel", () => {
 	let mockProviderSettingsManager: ProviderSettingsManager
@@ -15,7 +16,7 @@ describe("GhostModel", () => {
 
 	describe("reload", () => {
 		it("sorts profiles by supportedProviders index order", async () => {
-			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
 			const profiles = [
 				{ id: "3", name: "profile3", apiProvider: supportedProviders[2] },
 				{ id: "1", name: "profile1", apiProvider: supportedProviders[0] },
@@ -37,7 +38,7 @@ describe("GhostModel", () => {
 		})
 
 		it("filters out profiles without apiProvider", async () => {
-			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
 			const profiles = [
 				{ id: "1", name: "profile1", apiProvider: undefined },
 				{ id: "2", name: "profile2", apiProvider: supportedProviders[0] },
@@ -58,7 +59,7 @@ describe("GhostModel", () => {
 		})
 
 		it("filters out profiles with unsupported apiProvider", async () => {
-			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
 			const profiles = [
 				{ id: "1", name: "profile1", apiProvider: "unsupported" },
 				{ id: "2", name: "profile2", apiProvider: supportedProviders[0] },
@@ -90,7 +91,7 @@ describe("GhostModel", () => {
 		})
 
 		it("returns true when profile found", async () => {
-			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
 			const profiles = [{ id: "1", name: "profile1", apiProvider: supportedProviders[0] }] as any
 
 			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
@@ -297,13 +298,13 @@ describe("GhostModel", () => {
 	})
 
 	describe("getProviderDisplayName", () => {
-		it("returns null when no provider is loaded", () => {
+		it("returns undefined when no provider is loaded", () => {
 			const model = new GhostModel()
-			expect(model.getProviderDisplayName()).toBeNull()
+			expect(model.getProviderDisplayName()).toBeUndefined()
 		})
 
 		it("returns provider name from API handler when provider is loaded", async () => {
-			const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS)
+			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
 			const profiles = [{ id: "1", name: "profile1", apiProvider: supportedProviders[0] }] as any
 
 			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
@@ -314,12 +315,25 @@ describe("GhostModel", () => {
 				mistralApiKey: "test-key",
 			} as any)
 
+			// Mock buildApiHandler to return a handler with providerName
+			const mockApiHandler = {
+				providerName: "Test Provider",
+				getModel: vi.fn().mockReturnValue({ id: "test-model", info: {} }),
+				createMessage: vi.fn(),
+				countTokens: vi.fn(),
+			}
+			vi.spyOn(apiIndex, "buildApiHandler").mockReturnValue(mockApiHandler as any)
+
 			const model = new GhostModel()
 			await model.reload(mockProviderSettingsManager)
 
 			const providerName = model.getProviderDisplayName()
 			expect(providerName).toBeTruthy()
 			expect(typeof providerName).toBe("string")
+			expect(providerName).toBe("Test Provider")
+
+			// Restore the spy
+			vi.restoreAllMocks()
 		})
 	})
 })

@@ -15,8 +15,8 @@ export default {
 					description: "Slug of the mode to switch to (e.g., code, ask, architect)",
 				},
 				reason: {
-					type: ["string", "null"],
-					description: "Optional explanation for why the mode switch is needed",
+					type: "string",
+					description: "Explanation for why the mode switch is needed",
 				},
 			},
 			required: ["mode_slug", "reason"],

@@ -96,10 +96,31 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 	// Memoize filtered tags
 	const filteredTags = useMemo(() => allTags, [allTags])
 
+	// kilocode_change start - Header messages for each tab
+	const modesHeaderMessage = useMemo(
+		() => ({
+			translationKey: "kilocode:marketplace.modes.description",
+			onLinkClick: () => {
+				vscode.postMessage({ type: "switchTab", tab: "modes" })
+			},
+		}),
+		[],
+	)
+	const mcpHeaderMessage = useMemo(
+		() => ({
+			translationKey: "kilocode:marketplace.mcp.description",
+			onLinkClick: () => {
+				vscode.postMessage({ type: "switchTab", tab: "mcp" })
+			},
+		}),
+		[],
+	)
+	// kilocode_change end - Header messages for each tab
+
 	return (
 		<TooltipProvider delayDuration={300}>
-			{/* kilocode_change: add className relative */}
-			<Tab className="relative">
+			{/* kilocode_change: header conditionally className relative or fixed */}
+			<Tab className={cn(hideHeader ? "relative" : "fixed")}>
 				{/*  kilocode_change: display header conditionally */}
 				<TabHeader
 					style={{ display: hideHeader ? "none" : "flex" }}
@@ -153,6 +174,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 							allTags={allTags}
 							filteredTags={filteredTags}
 							filterByType="mcp"
+							headerMessage={mcpHeaderMessage} // kilocode_change
 						/>
 					)}
 					{state.activeTab === "mode" && (
@@ -161,6 +183,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 							allTags={allTags}
 							filteredTags={filteredTags}
 							filterByType="mode"
+							headerMessage={modesHeaderMessage} // kilocode_change
 						/>
 					)}
 				</TabContent>

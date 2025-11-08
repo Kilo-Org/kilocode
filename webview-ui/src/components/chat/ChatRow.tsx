@@ -1191,7 +1191,8 @@ export const ChatRowContent = ({
 							</div>
 							<div
 								className={cn(
-									"ml-6 border rounded-sm overflow-hidden whitespace-pre-wrap",
+									"ml-6 border rounded-sm whitespace-pre-wrap",
+									isEditing ? "overflow-visible" : "overflow-hidden", // kilocode_change
 									isEditing
 										? "bg-vscode-editor-background text-vscode-editor-foreground"
 										: "cursor-text p-1 bg-vscode-editor-foreground/70 text-vscode-editor-background",
@@ -1629,7 +1630,12 @@ export const ChatRowContent = ({
 					)
 
 				case "payment_required_prompt": {
-					return <LowCreditWarning message={message} />
+					return (
+						<LowCreditWarning
+							message={message}
+							isOrganization={!!apiConfiguration.kilocodeOrganizationId}
+						/>
+					)
 				}
 				case "invalid_model": {
 					return <InvalidModelWarning message={message} isLast={isLast} />

@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-zatwierdzanie",
 		"browser": "Dostęp komputera",
 		"checkpoints": "Punkty kontrolne",
+		"display": "Wyświetl",
 		"notifications": "Powiadomienia",
 		"contextManagement": "Kontekst",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Eksperymentalne",
 		"language": "Język",
 		"about": "O Kilo Code",
-		"display": "Wyświetl"
+		"autoPurge": "Auto-czyszczenie"
 	},
 	"slashCommands": {
 		"description": "Zarządzaj poleceniami slash, aby szybko wykonywać niestandardowe przepływy pracy i akcje. <DocsLink>Dowiedz się więcej</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Nie znaleziono dostawców",
 		"noMatchFound": "Nie znaleziono pasujących profili",
 		"vscodeLmDescription": "Interfejs API modelu językowego VS Code umożliwia uruchamianie modeli dostarczanych przez inne rozszerzenia VS Code (w tym, ale nie tylko, GitHub Copilot). Najłatwiejszym sposobem na rozpoczęcie jest zainstalowanie rozszerzeń Copilot i Copilot Chat z VS Code Marketplace.",
+		"vscodeLmUnavailable": "Obsługa modeli językowych VS Code jest dostępna tylko w Visual Studio Code. Forki takie jak VSCodium i inne mogą nie działać. Ponadto ta funkcja nie jest dostępna w narzędziach JetBrains.",
+		"vscodeLmUnavailableInstructions": "Upewnij się, że używasz obsługiwanego narzędzia oraz że VS Code Chat jest zainstalowany i włączony",
 		"awsCustomArnUse": "Wprowadź prawidłowy Amazon Bedrock ARN dla modelu, którego chcesz użyć. Przykłady formatu:",
 		"awsCustomArnDesc": "Upewnij się, że region w ARN odpowiada wybranemu powyżej regionowi AWS.",
 		"openRouterApiKey": "Klucz API OpenRouter",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Przywróć domyślne"
 		},
+		"rateLimitAfter": {
+			"label": "Limit prędkości na końcu",
+			"description": "Rozpocznij ograniczanie prędkości po zakończeniu strumienia API."
+		},
 		"rateLimitSeconds": {
 			"label": "Limit szybkości",
 			"description": "Minimalny czas między żądaniami API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Włącz automatyczne punkty kontrolne",
 			"description": "Gdy włączone, Kilo Code automatycznie utworzy punkty kontrolne podczas wykonywania zadań, ułatwiając przeglądanie zmian lub powrót do wcześniejszych stanów. <0>Dowiedz się więcej</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Włącz automatyczne czyszczenie zadań",
+			"description": "Automatycznie usuwaj stare zadania, aby zwolnić miejsce na dysku i poprawić wydajność. Zadania są klasyfikowane według typu i wieku, aby określić, kiedy powinny zostać usunięte."
+		},
+		"defaultRetention": {
+			"label": "Domyślny okres przechowywania (dni)",
+			"description": "Liczba dni przechowywania zadań przed ich kwalifikacją do czyszczenia"
+		},
+		"neverPurgeFavorited": {
+			"label": "Nigdy nie usuwaj ulubionych zadań",
+			"description": "Gdy włączone, ulubione zadania nigdy nie będą automatycznie usuwane niezależnie od wieku"
+		},
+		"favoritedRetention": {
+			"label": "Przechowywanie ulubionych zadań (dni)",
+			"description": "Liczba dni przechowywania ulubionych zadań (dotyczy tylko gdy 'Nigdy nie usuwaj ulubionych zadań' jest wyłączone)"
+		},
+		"completedRetention": {
+			"label": "Przechowywanie ukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które zostały pomyślnie ukończone"
+		},
+		"incompleteRetention": {
+			"label": "Przechowywanie nieukończonych zadań (dni)",
+			"description": "Liczba dni przechowywania zadań, które nie zostały ukończone (zazwyczaj krócej niż ukończone zadania)"
+		},
+		"lastRun": {
+			"label": "Ostatnie czyszczenie"
+		},
+		"manualPurge": {
+			"button": "Uruchom czyszczenie teraz"
 		}
 	},
 	"notifications": {
@@ -766,8 +805,8 @@
 			"description": "Gdy włączone, Kilo Code może edytować wiele plików w jednym żądaniu. Gdy wyłączone, Kilo Code musi edytować pliki jeden po drugim. Wyłączenie tego może pomóc podczas pracy z mniej zdolnymi modelami lub gdy chcesz mieć większą kontrolę nad modyfikacjami plików。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "Włącz szybkie stosowanie",
-			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą szybkiego stosowania ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga dostawcy API Kilo Code, OpenRouter lub klucza API Morph.",
+			"name": "Włącz Fast Apply",
+			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
 			"apiKey": "Klucz API Morph (opcjonalnie)",
 			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
 			"modelLabel": "Wybór modelu",

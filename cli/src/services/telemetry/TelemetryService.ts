@@ -352,6 +352,17 @@ export class TelemetryService {
 		})
 	}
 
+	public trackThemeChanged(previousTheme: string, newTheme: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.THEME_CHANGED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			previousTheme,
+			newTheme,
+		})
+	}
+
 	// ============================================================================
 	// Tool Tracking
 	// ============================================================================
@@ -556,6 +567,48 @@ export class TelemetryService {
 		this.client.capture(TelemetryEvent.CI_MODE_TIMEOUT, {
 			mode: this.currentMode,
 			ciMode: true,
+		})
+	}
+
+	// ============================================================================
+	// Parallel Mode Tracking
+	// ============================================================================
+
+	public parallelModeStart = 0
+
+	public trackParallelModeStarted(isExistingBranch: boolean, promptLength: number, timeoutSeconds?: number): void {
+		if (!this.client) return
+
+		this.parallelModeStart = Date.now()
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_STARTED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			isExistingBranch,
+			promptLength,
+			timeoutSeconds,
+		})
+	}
+
+	public trackParallelModeCompleted(): void {
+		if (!this.client) return
+
+		const duration = Date.now() - this.parallelModeStart
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_COMPLETED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			duration,
+		})
+	}
+
+	public trackParallelModeErrored(errorMessage: string): void {
+		if (!this.client) return
+
+		this.client.capture(TelemetryEvent.PARALLEL_MODE_ERRORED, {
+			mode: this.currentMode,
+			ciMode: this.currentCIMode,
+			errorMessage,
 		})
 	}
 

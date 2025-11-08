@@ -344,6 +344,8 @@
 		"tooltips": {
 			"expand": "Perluas blok kode",
 			"collapse": "Tutup blok kode",
+			"enable_wrap": "Aktifkan pembungkusan",
+			"disable_wrap": "Nonaktifkan pembungkusan",
 			"copy_code": "Salin kode"
 		}
 	},

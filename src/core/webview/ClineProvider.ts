@@ -54,8 +54,7 @@ import type { ExtensionMessage, ExtensionState, MarketplaceInstalledMetadata } f
 import { Mode, defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import { experimentDefault } from "../../shared/experiments"
 import { formatLanguage } from "../../shared/language"
-// kilocode_change: add BalanceDataResponsePayload
-import { WebviewMessage, BalanceDataResponsePayload } from "../../shared/WebviewMessage"
+import { WebviewMessage } from "../../shared/WebviewMessage"
 import { EMBEDDING_MODEL_PROFILES } from "../../shared/embeddingModels"
 import { ProfileValidator } from "../../shared/ProfileValidator"
 
@@ -106,7 +105,7 @@ import { stringifyError } from "../../shared/kilocode/errorUtils"
 import isWsl from "is-wsl"
 import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocodeDefaultModel"
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
 import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
@@ -154,10 +153,9 @@ export class ClineProvider
 	private taskCreationCallback: (task: Task) => void
 	private taskEventListeners: WeakMap<Task, Array<() => void>> = new WeakMap()
 	private currentWorkspacePath: string | undefined
-	private creditsStatusBar?: any // kilocode_change
+	private autoPurgeScheduler?: any // kilocode_change - (Any) Prevent circular import
 
 	private recentTasksCache?: string[]
-	private balanceHandlers: Array<(data: BalanceDataResponsePayload) => void> = [] // kilocode_change
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
 	private static readonly PENDING_OPERATION_TIMEOUT_MS = 30000 // 30 seconds
 
@@ -259,6 +257,7 @@ export class ClineProvider
 			const onTaskUserMessage = (taskId: string) => this.emit(RooCodeEventName.TaskUserMessage, taskId)
 			const onTaskTokenUsageUpdated = (taskId: string, tokenUsage: TokenUsage) =>
 				this.emit(RooCodeEventName.TaskTokenUsageUpdated, taskId, tokenUsage)
+			const onModelChanged = () => this.postStateToWebview() // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Attach the listeners.
 			instance.on(RooCodeEventName.TaskStarted, onTaskStarted)
@@ -275,6 +274,7 @@ export class ClineProvider
 			instance.on(RooCodeEventName.TaskSpawned, onTaskSpawned)
 			instance.on(RooCodeEventName.TaskUserMessage, onTaskUserMessage)
 			instance.on(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated)
+			instance.on("modelChanged", onModelChanged) // kilocode_change: Listen for model changes in virtual quota fallback
 
 			// Store the cleanup functions for later removal.
 			this.taskEventListeners.set(instance, [
@@ -292,6 +292,7 @@ export class ClineProvider
 				() => instance.off(RooCodeEventName.TaskUnpaused, onTaskUnpaused),
 				() => instance.off(RooCodeEventName.TaskSpawned, onTaskSpawned),
 				() => instance.off(RooCodeEventName.TaskTokenUsageUpdated, onTaskTokenUsageUpdated),
+				() => instance.off("modelChanged", onModelChanged), // kilocode_change: Clean up model change listener
 			])
 		}
 
@@ -303,7 +304,52 @@ export class ClineProvider
 		} else {
 			this.log("CloudService not ready, deferring cloud profile sync")
 		}
+
+		// kilocode_change start - Initialize auto-purge scheduler
+		this.initializeAutoPurgeScheduler()
+		// kilocode_change end
 	}
+
+	// kilocode_change start
+	/**
+	 * Initialize the auto-purge scheduler
+	 */
+	private async initializeAutoPurgeScheduler() {
+		try {
+			const { AutoPurgeScheduler } = await import("../../services/auto-purge")
+			this.autoPurgeScheduler = new AutoPurgeScheduler(this.contextProxy.globalStorageUri.fsPath)
+
+			// Start the scheduler with functions to get current settings and task history
+			this.autoPurgeScheduler.start(
+				async () => {
+					const state = await this.getState()
+					return {
+						enabled: state.autoPurgeEnabled ?? false,
+						defaultRetentionDays: state.autoPurgeDefaultRetentionDays ?? 30,
+						favoritedTaskRetentionDays: state.autoPurgeFavoritedTaskRetentionDays ?? null,
+						completedTaskRetentionDays: state.autoPurgeCompletedTaskRetentionDays ?? 30,
+						incompleteTaskRetentionDays: state.autoPurgeIncompleteTaskRetentionDays ?? 7,
+						lastRunTimestamp: state.autoPurgeLastRunTimestamp,
+					}
+				},
+				async () => {
+					return this.getTaskHistory()
+				},
+				() => this.getCurrentTask()?.taskId,
+				async (taskId: string) => {
+					// Remove task from state when purged
+					await this.deleteTaskFromState(taskId)
+				},
+			)
+
+			this.log("Auto-purge scheduler initialized")
+		} catch (error) {
+			this.log(
+				`Failed to initialize auto-purge scheduler: ${error instanceof Error ? error.message : String(error)}`,
+			)
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Override EventEmitter's on method to match TaskProviderLike interface
@@ -628,6 +674,14 @@ export class ClineProvider
 		this.mcpHub = undefined
 		this.marketplaceManager?.cleanup()
 		this.customModesManager?.dispose()
+
+		// kilocode_change start - Stop auto-purge scheduler
+		if (this.autoPurgeScheduler) {
+			this.autoPurgeScheduler.stop()
+			this.autoPurgeScheduler = undefined
+		}
+		// kilocode_change end
+
 		this.log("Disposed all disposables")
 		ClineProvider.activeInstances.delete(this)
 
@@ -1114,9 +1168,9 @@ ${prompt}
 					<link href="${codiconsUri}" rel="stylesheet" />
 					<script nonce="${nonce}">
 						window.IMAGES_BASE_URI = "${imagesUri}"
-						window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 						window.AUDIO_BASE_URI = "${audioUri}"
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
 					<title>Kilo Code</title>
 				</head>
@@ -1190,9 +1244,9 @@ ${prompt}
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
 				window.IMAGES_BASE_URI = "${imagesUri}"
-				window.ICONS_BASE_URI = "${iconsUri}" // kilocode_change
 				window.AUDIO_BASE_URI = "${audioUri}"
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
+				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
             <title>Kilo Code</title>
           </head>
@@ -1305,12 +1359,6 @@ ${prompt}
 
 	// Provider Profile Management
 
-	// kilocode_change start
-	public setCreditsStatusBar(creditsStatusBar: any): void {
-		this.creditsStatusBar = creditsStatusBar
-	}
-	// kilocode_change end
-
 	getProviderProfileEntries(): ProviderSettingsEntry[] {
 		return this.contextProxy.getValues().listApiConfigMeta || []
 	}
@@ -1329,11 +1377,6 @@ ${prompt}
 		activate: boolean = true,
 	): Promise<string | undefined> {
 		try {
-			// kilocode_change start
-			const oldOrgId = this.contextProxy.getProviderSettings().kilocodeOrganizationId
-			const newOrgId = providerSettings.kilocodeOrganizationId
-			// kilocode_change end
-
 			// TODO: Do we need to be calling `activateProfile`? It's not
 			// clear to me what the source of truth should be; in some cases
 			// we rely on the `ContextProxy`'s data store and in other cases
@@ -1360,15 +1403,6 @@ ${prompt}
 					this.providerSettingsManager.setModeConfig(mode, id),
 					this.contextProxy.setProviderSettings(providerSettings),
 				])
-
-				// kilocode_change start
-				if (oldOrgId !== newOrgId && this.creditsStatusBar) {
-					this.log(
-						`[upsertProviderProfile] Organization ID changed from ${oldOrgId} to ${newOrgId}, notifying CreditsStatusBar`,
-					)
-					await this.creditsStatusBar.clearAndRefresh()
-				}
-				// kilocode_change end
 
 				// Change the provider for the current task.
 				// TODO: We should rename `buildApiHandler` for clarity (e.g. `getProviderClient`).
@@ -1978,7 +2012,15 @@ ${prompt}
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			yoloMode, // kilocode_change
 		} = await this.getState()
+
+		// kilocode_change start: Get active model for virtual quota fallback UI display
+		const virtualQuotaActiveModel =
+			apiConfiguration?.apiProvider === "virtual-quota-fallback" && this.getCurrentTask()
+				? this.getCurrentTask()!.api.getModel()
+				: undefined
+		// kilocode_change end
 
 		let cloudOrganizations: CloudOrganizationMembership[] = []
 
@@ -2022,6 +2064,7 @@ ${prompt}
 			alwaysAllowModeSwitch: alwaysAllowModeSwitch ?? true,
 			alwaysAllowSubtasks: alwaysAllowSubtasks ?? true,
 			alwaysAllowUpdateTodoList: alwaysAllowUpdateTodoList ?? true,
+			yoloMode: yoloMode ?? false, // kilocode_change
 			allowedMaxRequests,
 			allowedMaxCost,
 			autoCondenseContext: autoCondenseContext ?? true,
@@ -2115,10 +2158,7 @@ ${prompt}
 			sharingEnabled: sharingEnabled ?? false,
 			organizationAllowList,
 			// kilocode_change start
-			ghostServiceSettings: ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: ghostServiceSettings,
 			// kilocode_change end
 			organizationSettingsVersion,
 			condensingApiConfigId,
@@ -2153,10 +2193,25 @@ ${prompt}
 			taskSyncEnabled,
 			remoteControlEnabled,
 			openRouterImageApiKey,
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: await this.getState().then((s) => s.autoPurgeEnabled),
+			autoPurgeDefaultRetentionDays: await this.getState().then((s) => s.autoPurgeDefaultRetentionDays),
+			autoPurgeFavoritedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeFavoritedTaskRetentionDays,
+			),
+			autoPurgeCompletedTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeCompletedTaskRetentionDays,
+			),
+			autoPurgeIncompleteTaskRetentionDays: await this.getState().then(
+				(s) => s.autoPurgeIncompleteTaskRetentionDays,
+			),
+			autoPurgeLastRunTimestamp: await this.getState().then((s) => s.autoPurgeLastRunTimestamp),
+			// kilocode_change end
 			kiloCodeImageApiKey,
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 		}
 	}
 
@@ -2280,6 +2335,7 @@ ${prompt}
 			alwaysAllowSubtasks: stateValues.alwaysAllowSubtasks ?? true,
 			alwaysAllowFollowupQuestions: stateValues.alwaysAllowFollowupQuestions ?? false,
 			alwaysAllowUpdateTodoList: stateValues.alwaysAllowUpdateTodoList ?? true, // kilocode_change
+			yoloMode: stateValues.yoloMode ?? false, // kilocode_change
 			followupAutoApproveTimeoutMs: stateValues.followupAutoApproveTimeoutMs ?? 60000,
 			diagnosticsEnabled: stateValues.diagnosticsEnabled ?? true,
 			allowedMaxRequests: stateValues.allowedMaxRequests,
@@ -2331,10 +2387,15 @@ ${prompt}
 			commitMessageApiConfigId: stateValues.commitMessageApiConfigId, // kilocode_change
 			terminalCommandApiConfigId: stateValues.terminalCommandApiConfigId, // kilocode_change
 			// kilocode_change start
-			ghostServiceSettings: stateValues.ghostServiceSettings ?? {
-				enableQuickInlineTaskKeybinding: true,
-				enableSmartInlineTaskKeybinding: true,
-			},
+			ghostServiceSettings: stateValues.ghostServiceSettings,
+			// kilocode_change end
+			// kilocode_change start - Auto-purge settings
+			autoPurgeEnabled: stateValues.autoPurgeEnabled ?? false,
+			autoPurgeDefaultRetentionDays: stateValues.autoPurgeDefaultRetentionDays ?? 30,
+			autoPurgeFavoritedTaskRetentionDays: stateValues.autoPurgeFavoritedTaskRetentionDays ?? null,
+			autoPurgeCompletedTaskRetentionDays: stateValues.autoPurgeCompletedTaskRetentionDays ?? 30,
+			autoPurgeIncompleteTaskRetentionDays: stateValues.autoPurgeIncompleteTaskRetentionDays ?? 7,
+			autoPurgeLastRunTimestamp: stateValues.autoPurgeLastRunTimestamp,
 			// kilocode_change end
 			experiments: stateValues.experiments ?? experimentDefault,
 			autoApprovalEnabled: stateValues.autoApprovalEnabled ?? true,
@@ -3326,95 +3387,6 @@ Here is the project's README to help you get started:\n\n${mcpDetails.readmeCont
 
 	public getTaskHistory(): HistoryItem[] {
 		return this.getGlobalState("taskHistory") || []
-	}
-
-	/**
-	 * Register a balance data handler that will be called when balance data is fetched
-	 * @param handler - Function to call with balance data
-	 * @returns Disposable that can be used to unregister the handler
-	 */
-	public registerBalanceHandler(handler: (data: BalanceDataResponsePayload) => void): vscode.Disposable {
-		this.balanceHandlers.push(handler)
-
-		return new vscode.Disposable(() => {
-			const index = this.balanceHandlers.indexOf(handler)
-			if (index > -1) {
-				this.balanceHandlers.splice(index, 1)
-			}
-		})
-	}
-
-	/**
-	 * Fetch balance data from the Kilo Code API
-	 * @returns Promise with BalanceDataResponsePayload
-	 */
-	public async fetchBalanceData(): Promise<BalanceDataResponsePayload> {
-		try {
-			const { apiConfiguration } = await this.getState()
-			const { kilocodeToken, kilocodeOrganizationId } = apiConfiguration
-
-			if (!kilocodeToken) {
-				const error = "No Kilo Code token available"
-				this.log(`[fetchBalanceData] ${error}`)
-				const result: BalanceDataResponsePayload = { success: false, error }
-				this.balanceHandlers.forEach((handler) => handler(result))
-				return result
-			}
-
-			const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
-			const url = `${baseUrl}/api/profile/balance`
-
-			this.log(`[fetchBalanceData] Fetching balance from: ${url}`)
-
-			const response = await axios.get(url, {
-				headers: {
-					Authorization: `Bearer ${kilocodeToken}`,
-					"Content-Type": "application/json",
-					"X-KiloCode-OrganizationId": kilocodeOrganizationId,
-				},
-				timeout: 10000,
-			})
-
-			if (response.data) {
-				const result: BalanceDataResponsePayload = {
-					success: true,
-					data: response.data,
-				}
-
-				// Notify all registered handlers
-				this.balanceHandlers.forEach((handler) => {
-					try {
-						handler(result)
-					} catch (error) {
-						this.log(`[fetchBalanceData] Error in balance handler: ${error}`)
-					}
-				})
-
-				this.log(`[fetchBalanceData] Successfully fetched balance data`)
-				return result
-			} else {
-				throw new Error("Invalid response from balance API")
-			}
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			this.log(`[fetchBalanceData] Error fetching balance: ${errorMessage}`)
-
-			const result: BalanceDataResponsePayload = {
-				success: false,
-				error: errorMessage,
-			}
-
-			// Notify all registered handlers of the error
-			this.balanceHandlers.forEach((handler) => {
-				try {
-					handler(result)
-				} catch (handlerError) {
-					this.log(`[fetchBalanceData] Error in balance handler: ${handlerError}`)
-				}
-			})
-
-			return result
-		}
 	}
 	// kilocode_change end
 

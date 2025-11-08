@@ -41,11 +41,23 @@ vi.mock("@/utils/vscode", () => ({
 	},
 }))
 
-// Mock ControlledCheckbox
-vi.mock("../../common/ControlledCheckbox", () => ({
-	ControlledCheckbox: ({ children, checked, onChange }: any) => (
+// Mock useKeybindings hook
+vi.mock("@/hooks/useKeybindings", () => ({
+	useKeybindings: () => ({
+		"kilo-code.addToContextAndFocus": "Cmd+K",
+		"kilo-code.ghost.generateSuggestions": "Cmd+Shift+G",
+	}),
+}))
+
+// Mock VSCodeCheckbox to render as regular HTML checkbox for testing
+vi.mock("@vscode/webview-ui-toolkit/react", () => ({
+	VSCodeCheckbox: ({ checked, onChange, children }: any) => (
 		<label>
-			<input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+			<input
+				type="checkbox"
+				checked={checked}
+				onChange={(e) => onChange({ target: { checked: e.target.checked } })}
+			/>
 			{children}
 		</label>
 	),
@@ -74,7 +86,6 @@ vi.mock("../../settings/Section", () => ({
 
 const defaultGhostServiceSettings: GhostServiceSettings = {
 	enableAutoTrigger: false,
-	autoTriggerDelay: 3,
 	enableQuickInlineTaskKeybinding: false,
 	enableSmartInlineTaskKeybinding: false,
 	provider: "openrouter",
@@ -84,7 +95,7 @@ const defaultGhostServiceSettings: GhostServiceSettings = {
 const renderComponent = (props = {}) => {
 	const defaultProps = {
 		ghostServiceSettings: defaultGhostServiceSettings,
-		setCachedStateField: vi.fn(),
+		onGhostServiceSettingsChange: vi.fn(),
 		...props,
 	}
 
@@ -120,117 +131,43 @@ describe("GhostServiceSettingsView", () => {
 	})
 
 	it("toggles auto trigger checkbox correctly", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({ setCachedStateField })
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
 
-		// Find and click the auto trigger checkbox
-		const checkbox = screen
-			.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/)
-			.closest("label")
-			?.querySelector("input[type='checkbox']")
+		const checkboxLabel = screen.getByText(/kilocode:ghost.settings.enableAutoTrigger.label/).closest("label")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
-		if (checkbox) {
-			fireEvent.click(checkbox)
-		}
+		fireEvent.click(checkbox)
 
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				enableAutoTrigger: true,
-			}),
-		)
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableAutoTrigger", true)
 	})
 
 	it("toggles quick inline task keybinding checkbox correctly", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({ setCachedStateField })
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
 
-		// Find and click the quick inline task keybinding checkbox
-		const checkbox = screen
+		const checkboxLabel = screen
 			.getByText(/kilocode:ghost.settings.enableQuickInlineTaskKeybinding.label/)
 			.closest("label")
-			?.querySelector("input[type='checkbox']")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
-		if (checkbox) {
-			fireEvent.click(checkbox)
-		}
+		fireEvent.click(checkbox)
 
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				enableQuickInlineTaskKeybinding: true,
-			}),
-		)
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableQuickInlineTaskKeybinding", true)
 	})
 
 	it("toggles smart inline task keybinding checkbox correctly", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({ setCachedStateField })
+		const onGhostServiceSettingsChange = vi.fn()
+		renderComponent({ onGhostServiceSettingsChange })
 
-		// Find and click the smart inline task keybinding checkbox
-		const checkbox = screen
+		const checkboxLabel = screen
 			.getByText(/kilocode:ghost.settings.enableSmartInlineTaskKeybinding.label/)
 			.closest("label")
-			?.querySelector("input[type='checkbox']")
+		const checkbox = checkboxLabel?.querySelector('input[type="checkbox"]') as HTMLInputElement
 
-		if (checkbox) {
-			fireEvent.click(checkbox)
-		}
+		fireEvent.click(checkbox)
 
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				enableSmartInlineTaskKeybinding: true,
-			}),
-		)
-	})
-
-	it("shows auto-trigger delay slider when auto-trigger is enabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: true,
-			},
-		})
-
-		// Check that the delay slider is visible
-		expect(screen.getByText(/kilocode:ghost.settings.autoTriggerDelay.label/)).toBeInTheDocument()
-		expect(screen.getByRole("slider")).toBeInTheDocument()
-	})
-
-	it("hides auto-trigger delay slider when auto-trigger is disabled", () => {
-		renderComponent({
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: false,
-			},
-		})
-
-		// Check that the delay slider is not visible
-		expect(screen.queryByText(/kilocode:ghost.settings.autoTriggerDelay.label/)).not.toBeInTheDocument()
-		expect(screen.queryByRole("slider")).not.toBeInTheDocument()
-	})
-
-	it("updates auto-trigger delay via slider", () => {
-		const setCachedStateField = vi.fn()
-		renderComponent({
-			setCachedStateField,
-			ghostServiceSettings: {
-				...defaultGhostServiceSettings,
-				enableAutoTrigger: true,
-			},
-		})
-
-		// Find and change the slider value
-		const slider = screen.getByRole("slider")
-		fireEvent.change(slider, { target: { value: "5" } })
-
-		expect(setCachedStateField).toHaveBeenCalledWith(
-			"ghostServiceSettings",
-			expect.objectContaining({
-				autoTriggerDelay: 500,
-			}),
-		)
+		expect(onGhostServiceSettingsChange).toHaveBeenCalledWith("enableSmartInlineTaskKeybinding", true)
 	})
 
 	it("renders Trans components with proper structure", () => {

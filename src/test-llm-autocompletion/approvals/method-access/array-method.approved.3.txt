@@ -1,2 +1,2 @@
 const arr = [1, 2, 3];
-arr.map(<<<AUTOCOMPLETE_HERE>>>)
+arr.map((x) => x * 2)

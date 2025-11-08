@@ -1,6 +1,0 @@
-<change><search><![CDATA[function add(a, b) {
-	return a + b
-}]]></search><replace><![CDATA[function add(a, b) {
-	// Add two numbers
-	return a + b
-}]]></replace></change>

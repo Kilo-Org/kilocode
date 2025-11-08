@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-goedkeuren",
 		"browser": "Browser",
 		"checkpoints": "Checkpoints",
+		"display": "Weergeven",
 		"notifications": "Meldingen",
 		"contextManagement": "Context",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Experimenteel",
 		"language": "Taal",
 		"about": "Over Kilo Code",
-		"display": "Weergeven"
+		"autoPurge": "Auto-opruimen"
 	},
 	"slashCommands": {
 		"description": "Beheer je slash-commando's om snel aangepaste workflows en acties uit te voeren. <DocsLink>Meer informatie</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Geen providers gevonden",
 		"noMatchFound": "Geen overeenkomende profielen gevonden",
 		"vscodeLmDescription": "De VS Code Language Model API stelt je in staat modellen te draaien die door andere VS Code-extensies worden geleverd (waaronder GitHub Copilot). De eenvoudigste manier om te beginnen is door de Copilot- en Copilot Chat-extensies te installeren vanuit de VS Code Marketplace.",
+		"vscodeLmUnavailable": "Ondersteuning voor VS Code Language Models is alleen beschikbaar in Visual Studio Code. Forks zoals VSCodium en anderen werken mogelijk niet. Bovendien is deze functionaliteit niet beschikbaar in JetBrains-tools.",
+		"vscodeLmUnavailableInstructions": "Zorg dat u een ondersteunde tool gebruikt en dat VS Code Chat is geïnstalleerd en ingeschakeld",
 		"awsCustomArnUse": "Voer een geldige Amazon Bedrock ARN in voor het model dat je wilt gebruiken. Voorbeeldformaten:",
 		"awsCustomArnDesc": "Zorg ervoor dat de regio in de ARN overeenkomt met je geselecteerde AWS-regio hierboven.",
 		"openRouterApiKey": "OpenRouter API-sleutel",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Standaardwaarden herstellen"
 		},
+		"rateLimitAfter": {
+			"label": "Snelheidslimiet aan het eind",
+			"description": "Begin met snelheidsbeperking nadat de API-stream is beëindigd."
+		},
 		"rateLimitSeconds": {
 			"label": "Snelheidslimiet",
 			"description": "Minimale tijd tussen API-verzoeken."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Automatische checkpoints inschakelen",
 			"description": "Indien ingeschakeld, maakt Kilo Code automatisch checkpoints tijdens het uitvoeren van taken, zodat je eenvoudig wijzigingen kunt bekijken of terugzetten. <0>Meer informatie</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Automatische taakopruiming inschakelen",
+			"description": "Oude taken automatisch verwijderen om schijfruimte vrij te maken en prestaties te verbeteren. Taken worden geclassificeerd op type en leeftijd om te bepalen wanneer ze moeten worden verwijderd."
+		},
+		"defaultRetention": {
+			"label": "Standaard bewaartermijn (dagen)",
+			"description": "Aantal dagen om taken te bewaren voordat ze geschikt zijn voor opruiming"
+		},
+		"neverPurgeFavorited": {
+			"label": "Favoriete taken nooit verwijderen",
+			"description": "Wanneer ingeschakeld, worden favoriete taken nooit automatisch verwijderd ongeacht de leeftijd"
+		},
+		"favoritedRetention": {
+			"label": "Bewaring favoriete taken (dagen)",
+			"description": "Aantal dagen om favoriete taken te bewaren (geldt alleen wanneer 'Favoriete taken nooit verwijderen' is uitgeschakeld)"
+		},
+		"completedRetention": {
+			"label": "Bewaring voltooide taken (dagen)",
+			"description": "Aantal dagen om taken te bewaren die succesvol zijn voltooid"
+		},
+		"incompleteRetention": {
+			"label": "Bewaring onvoltooide taken (dagen)",
+			"description": "Aantal dagen om taken te bewaren die niet zijn voltooid (meestal korter dan voltooide taken)"
+		},
+		"lastRun": {
+			"label": "Laatste opruiming"
+		},
+		"manualPurge": {
+			"button": "Opruiming nu uitvoeren"
 		}
 	},
 	"notifications": {
@@ -767,7 +806,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
-			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Code API Provider, OpenRouter, of een Morph API-sleutel.",
+			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
 			"apiKey": "Morph API-sleutel (optioneel)",
 			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
 			"modelLabel": "Modelselectie",

@@ -11,7 +11,8 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
-		"lowBalance": "Your Kilo Code balance is low"
+		"lowBalance": "Your Kilo Code balance is low",
+		"newOrganization": "Using Kilo for work?"
 	},
 	"memoryWarning": {
 		"message": "Memory usage is at {{percentage}}%. Please restart your IDE to prevent crashes."
@@ -55,7 +56,8 @@
 			"logout": "Log out from Kilo Code",
 			"providerRouting": {
 				"title": "Provider Routing",
-				"managedByOrganization": "The Provider Routing settings are managed by your organization.",
+				"managedByOrganization": "Manage Organization-level Provider Routing",
+				"createOrganization": "Create an Organization to Manage Provider Routing",
 				"sorting": {
 					"default": "Default provider sorting",
 					"price": "Prefer providers with lower price",
@@ -136,7 +138,9 @@
 			"credits": "credits",
 			"action": "Buy Now",
 			"viewAll": "View all pricing options"
-		}
+		},
+		"detailedUsage": "Detailed Usage",
+		"createOrganization": "Create an Organization to Track Detailed Usage"
 	},
 	"docs": "Docs",
 	"rules": {
@@ -265,5 +269,16 @@
 		"clearUsageData": "Clear Usage Data",
 		"confirmClearTitle": "Are you sure?",
 		"confirmClearDescription": "This will permanently delete all stored usage data for virtual providers. This action cannot be undone."
+	},
+	"marketplace": {
+		"mcp": {
+			"description": "These MCP servers are maintained by the community. Click <1>here</1> to edit your own MCP settings."
+		},
+		"modes": {
+			"description": "These modes are available from the community. Click <1>here</1> to edit your own custom modes."
+		}
+	},
+	"modes": {
+		"shareModesNewBanner": "New: Share modes by creating an organization"
 	}
 }

@@ -25,6 +25,7 @@
 		"autoApprove": "자동 승인",
 		"browser": "컴퓨터 접근",
 		"checkpoints": "체크포인트",
+		"display": "디스플레이",
 		"notifications": "알림",
 		"contextManagement": "컨텍스트",
 		"terminal": "터미널",
@@ -34,7 +35,7 @@
 		"experimental": "실험적",
 		"language": "언어",
 		"about": "Kilo Code 정보",
-		"display": "디스플레이"
+		"autoPurge": "자동 정리"
 	},
 	"slashCommands": {
 		"description": "사용자 지정 워크플로와 작업을 신속하게 실행하기 위해 슬래시 명령을 관리합니다. <DocsLink>더 알아보기</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "공급자를 찾을 수 없습니다",
 		"noMatchFound": "일치하는 프로필이 없습니다",
 		"vscodeLmDescription": "VS Code 언어 모델 API를 사용하면 GitHub Copilot을 포함한 기타 VS Code 확장 프로그램이 제공하는 모델을 실행할 수 있습니다. 시작하려면 VS Code 마켓플레이스에서 Copilot 및 Copilot Chat 확장 프로그램을 설치하는 것이 가장 쉽습니다.",
+		"vscodeLmUnavailable": "VS Code 언어 모델 기능은 Visual Studio Code에서만 제공됩니다. VSCodium과 같은 포크에서는 작동하지 않을 수 있습니다. 또한 이 기능은 JetBrains 도구에서는 사용할 수 없습니다.",
+		"vscodeLmUnavailableInstructions": "지원되는 도구를 사용 중인지 확인하고 VS Code Chat이 설치되어 활성화되어 있는지 확인하세요",
 		"awsCustomArnUse": "사용하려는 모델의 유효한 Amazon Bedrock ARN을 입력하세요. 형식 예시:",
 		"awsCustomArnDesc": "ARN의 리전이 위에서 선택한 AWS 리전과 일치하는지 확인하세요.",
 		"openRouterApiKey": "OpenRouter API 키",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "기본값으로 재설정"
 		},
+		"rateLimitAfter": {
+			"label": "종료 시 속도 제한",
+			"description": "API 스트림이 끝난 후 속도 제한을 시작합니다."
+		},
 		"rateLimitSeconds": {
 			"label": "속도 제한",
 			"description": "API 요청 간 최소 시간."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "자동 체크포인트 활성화",
 			"description": "활성화되면 Kilo Code는 작업 실행 중에 자동으로 체크포인트를 생성하여 변경 사항을 검토하거나 이전 상태로 되돌리기 쉽게 합니다. <0>더 알아보기</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "자동 작업 정리 활성화",
+			"description": "디스크 공간을 확보하고 성능을 향상시키기 위해 오래된 작업을 자동으로 삭제합니다. 작업은 유형과 경과 시간에 따라 분류되어 제거 시기가 결정됩니다."
+		},
+		"defaultRetention": {
+			"label": "기본 보존 기간 (일)",
+			"description": "작업이 정리 대상이 되기 전까지 보존할 일수"
+		},
+		"neverPurgeFavorited": {
+			"label": "즐겨찾기 작업 삭제 안 함",
+			"description": "활성화하면 즐겨찾기 작업은 경과 시간에 관계없이 자동으로 삭제되지 않습니다"
+		},
+		"favoritedRetention": {
+			"label": "즐겨찾기 작업 보존 (일)",
+			"description": "즐겨찾기 작업을 보존할 일수 ('즐겨찾기 작업 삭제 안 함'이 비활성화된 경우에만 적용)"
+		},
+		"completedRetention": {
+			"label": "완료된 작업 보존 (일)",
+			"description": "성공적으로 완료된 작업을 보존할 일수"
+		},
+		"incompleteRetention": {
+			"label": "미완료 작업 보존 (일)",
+			"description": "완료되지 않은 작업을 보존할 일수 (일반적으로 완료된 작업보다 짧음)"
+		},
+		"lastRun": {
+			"label": "마지막 정리"
+		},
+		"manualPurge": {
+			"button": "지금 정리 실행"
 		}
 	},
 	"notifications": {
@@ -767,7 +806,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply 활성화",
-			"description": "활성화하면 Kilo Code는 코드 수정에 최적화된 특수 모델을 사용하여 Fast Apply로 파일을 편집할 수 있습니다. Kilo Code API 제공자, OpenRouter 또는 Morph API 키가 필요합니다.",
+			"description": "활성화하면 Kilo Code는 코드 수정에 최적화된 특수 모델을 사용하여 Fast Apply로 파일을 편집할 수 있습니다. Kilo Gateway Provider, OpenRouter 또는 Morph API 키가 필요합니다.",
 			"apiKey": "Morph API 키 (선택사항)",
 			"placeholder": "Morph API 키를 입력하세요 (선택사항)",
 			"modelLabel": "모델 선택",

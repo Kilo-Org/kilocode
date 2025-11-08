@@ -329,6 +329,8 @@
 		"tooltips": {
 			"expand": "Code-Block erweitern",
 			"collapse": "Code-Block reduzieren",
+			"enable_wrap": "Zeilenumbruch aktivieren",
+			"disable_wrap": "Zeilenumbruch deaktivieren",
 			"copy_code": "Code kopieren"
 		}
 	},

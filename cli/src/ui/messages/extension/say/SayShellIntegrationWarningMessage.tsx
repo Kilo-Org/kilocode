@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
 import { MarkdownText } from "../../../components/MarkdownText.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L1 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display shell integration warnings
@@ -12,7 +12,7 @@ export const SayShellIntegrationWarningMessage: React.FC<MessageComponentProps> 
 	const theme = useTheme()
 	return (
 		<Box
-			width={BOX_L1}
+			width={getBoxWidth(1)}
 			flexDirection="column"
 			borderStyle="single"
 			borderColor={theme.semantic.warning}

@@ -95,6 +95,7 @@ const __dirname = __dirname__(__filename);
 		"eventemitter3",
 		"exceljs",
 		"fast-deep-equal",
+		"fast-glob",
 		"fast-xml-parser",
 		"fastest-levenshtein",
 		"fs-extra",

@@ -40,6 +40,7 @@ import {
 	vercelAiGatewayDefaultModelId,
 	deepInfraDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId, // kilocode_change
+	inceptionDefaultModelId, // kilocode_change
 	nativeFunctionCallingProviders, // kilocode_change: Added import for native function calling providers
 } from "@roo-code/types"
 
@@ -100,13 +101,14 @@ import {
 	GeminiCli,
 	VirtualQuotaFallbackProvider,
 	Synthetic,
+	OvhCloudAiEndpoints,
+	Inception,
 	// kilocode_change end
 	ZAi,
 	Fireworks,
 	Featherless,
 	VercelAiGateway,
 	DeepInfra,
-	OvhCloudAiEndpoints, // kilocode_change
 } from "./providers"
 
 import { MODELS_BY_PROVIDER, PROVIDERS } from "./constants"
@@ -126,6 +128,7 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting, KiloProviderRoutingManagedByOrganization } from "./providers/KiloProviderRouting"
+import { RateLimitAfterControl } from "./RateLimitAfterSettings" // kilocode_change
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -400,6 +403,7 @@ const ApiOptions = ({
 				synthetic: { field: "apiModelId", default: syntheticDefaultModelId }, // kilocode_change
 				featherless: { field: "apiModelId", default: featherlessDefaultModelId },
 				ovhcloud: { field: "ovhCloudAiEndpointsModelId", default: ovhCloudAiEndpointsDefaultModelId }, // kilocode_change
+				inception: { field: "inceptionLabsModelId", default: inceptionDefaultModelId }, // kilocode_change
 				"io-intelligence": { field: "ioIntelligenceModelId", default: ioIntelligenceDefaultModelId },
 				roo: { field: "apiModelId", default: rooDefaultModelId },
 				"vercel-ai-gateway": { field: "vercelAiGatewayModelId", default: vercelAiGatewayDefaultModelId },
@@ -570,6 +574,19 @@ const ApiOptions = ({
 					modelValidationError={modelValidationError}
 				/>
 			)}
+
+			{/* kilocode_change start */}
+			{selectedProvider === "inception" && (
+				<Inception
+					apiConfiguration={apiConfiguration}
+					setApiConfigurationField={setApiConfigurationField}
+					routerModels={routerModels}
+					refetchRouterModels={refetchRouterModels}
+					organizationAllowList={organizationAllowList}
+					modelValidationError={modelValidationError}
+				/>
+			)}
+			{/* kilocode_change end */}
 
 			{selectedProvider === "anthropic" && (
 				<Anthropic apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
@@ -874,7 +891,9 @@ const ApiOptions = ({
 				// kilocode_change start
 				(selectedProvider === "kilocode" || selectedProvider === "openrouter") &&
 					(apiConfiguration.kilocodeOrganizationId ? (
-						<KiloProviderRoutingManagedByOrganization />
+						<KiloProviderRoutingManagedByOrganization
+							organizationId={apiConfiguration.kilocodeOrganizationId}
+						/>
 					) : (
 						<KiloProviderRouting
 							apiConfiguration={apiConfiguration}
@@ -885,7 +904,7 @@ const ApiOptions = ({
 				// kilocode_change end
 			}
 
-			{!fromWelcomeView && (
+			{!fromWelcomeView && selectedProvider !== "virtual-quota-fallback" /*kilocode_change*/ && (
 				<Collapsible open={isAdvancedSettingsOpen} onOpenChange={setIsAdvancedSettingsOpen}>
 					<CollapsibleTrigger className="flex items-center gap-1 w-full cursor-pointer hover:opacity-80 mb-2">
 						<span className={`codicon codicon-chevron-${isAdvancedSettingsOpen ? "down" : "right"}`}></span>
@@ -918,6 +937,14 @@ const ApiOptions = ({
 								maxValue={2}
 							/>
 						)}
+						{
+							// kilocode_change start
+							<RateLimitAfterControl
+								rateLimitAfterEnabled={apiConfiguration.rateLimitAfter}
+								onChange={(field, value) => setApiConfigurationField(field, value)}
+							/>
+							// kilocode_change end
+						}
 						<RateLimitSecondsControl
 							value={apiConfiguration.rateLimitSeconds || 0}
 							onChange={(value) => setApiConfigurationField("rateLimitSeconds", value)}

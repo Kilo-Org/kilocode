@@ -25,6 +25,7 @@
 		"autoApprove": "Phê duyệt",
 		"browser": "Trình duyệt",
 		"checkpoints": "Điểm kiểm tra",
+		"display": "Hiển thị",
 		"notifications": "Thông báo",
 		"contextManagement": "Ngữ cảnh",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Thử nghiệm",
 		"language": "Ngôn ngữ",
 		"about": "Giới thiệu",
-		"display": "Hiển thị"
+		"autoPurge": "Tự động dọn dẹp"
 	},
 	"slashCommands": {
 		"description": "Quản lý các lệnh slash của bạn để thực thi nhanh các quy trình công việc và hành động tùy chỉnh. <DocsLink>Tìm hiểu thêm</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Không tìm thấy nhà cung cấp",
 		"noMatchFound": "Không tìm thấy hồ sơ phù hợp",
 		"vscodeLmDescription": "API Mô hình Ngôn ngữ VS Code cho phép bạn chạy các mô hình được cung cấp bởi các tiện ích mở rộng khác của VS Code (bao gồm nhưng không giới hạn ở GitHub Copilot). Cách dễ nhất để bắt đầu là cài đặt các tiện ích mở rộng Copilot và Copilot Chat từ VS Code Marketplace.",
+		"vscodeLmUnavailable": "Hỗ trợ Mô hình Ngôn ngữ VS Code chỉ có trên Visual Studio Code. Các bản fork như VSCodium và các công cụ khác có thể không hoạt động. Ngoài ra, tính năng này không có trong các công cụ JetBrains.",
+		"vscodeLmUnavailableInstructions": "Hãy đảm bảo bạn đang sử dụng công cụ được hỗ trợ và VS Code Chat đã được cài đặt và kích hoạt",
 		"awsCustomArnUse": "Nhập một ARN Amazon Bedrock hợp lệ cho mô hình bạn muốn sử dụng. Ví dụ về định dạng:",
 		"awsCustomArnDesc": "Đảm bảo rằng vùng trong ARN khớp với vùng AWS đã chọn ở trên.",
 		"openRouterApiKey": "Khóa API OpenRouter",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Đặt lại về mặc định"
 		},
+		"rateLimitAfter": {
+			"label": "Giới hạn tỷ lệ ở cuối",
+			"description": "Bắt đầu hạn chế tỷ lệ sau khi luồng API kết thúc."
+		},
 		"rateLimitSeconds": {
 			"label": "Giới hạn tốc độ",
 			"description": "Thời gian tối thiểu giữa các yêu cầu API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Bật điểm kiểm tra tự động",
 			"description": "Khi được bật, Kilo Code sẽ tự động tạo các điểm kiểm tra trong quá trình thực hiện nhiệm vụ, giúp dễ dàng xem lại các thay đổi hoặc quay lại trạng thái trước đó. <0>Tìm hiểu thêm</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Bật tự động dọn dẹp nhiệm vụ",
+			"description": "Tự động xóa các nhiệm vụ cũ để giải phóng dung lượng đĩa và cải thiện hiệu suất. Các nhiệm vụ được phân loại theo loại và tuổi để xác định thời điểm nên xóa."
+		},
+		"defaultRetention": {
+			"label": "Thời gian lưu giữ mặc định (ngày)",
+			"description": "Số ngày lưu giữ nhiệm vụ trước khi chúng đủ điều kiện để dọn dẹp"
+		},
+		"neverPurgeFavorited": {
+			"label": "Không bao giờ xóa nhiệm vụ yêu thích",
+			"description": "Khi được bật, các nhiệm vụ yêu thích sẽ không bao giờ bị xóa tự động bất kể tuổi"
+		},
+		"favoritedRetention": {
+			"label": "Lưu giữ nhiệm vụ yêu thích (ngày)",
+			"description": "Số ngày lưu giữ nhiệm vụ yêu thích (chỉ áp dụng khi 'Không bao giờ xóa nhiệm vụ yêu thích' bị tắt)"
+		},
+		"completedRetention": {
+			"label": "Lưu giữ nhiệm vụ đã hoàn thành (ngày)",
+			"description": "Số ngày lưu giữ các nhiệm vụ đã được hoàn thành thành công"
+		},
+		"incompleteRetention": {
+			"label": "Lưu giữ nhiệm vụ chưa hoàn thành (ngày)",
+			"description": "Số ngày lưu giữ các nhiệm vụ chưa được hoàn thành (thường ngắn hơn các nhiệm vụ đã hoàn thành)"
+		},
+		"lastRun": {
+			"label": "Lần dọn dẹp cuối"
+		},
+		"manualPurge": {
+			"button": "Chạy dọn dẹp ngay"
 		}
 	},
 	"notifications": {
@@ -798,7 +837,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Bật Fast Apply",
-			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Nhà cung cấp API Kilo Code, OpenRouter hoặc khóa API Morph.",
+			"description": "Khi được bật, Kilo Code có thể chỉnh sửa tệp bằng Fast Apply với các mô hình chuyên biệt được tối ưu hóa cho việc sửa đổi mã. Yêu cầu Kilo Gateway Provider, OpenRouter hoặc khóa API Morph.",
 			"apiKey": "Khóa API Morph (tùy chọn)",
 			"placeholder": "Nhập khóa API Morph của bạn (tùy chọn)",
 			"modelLabel": "Lựa chọn mô hình",

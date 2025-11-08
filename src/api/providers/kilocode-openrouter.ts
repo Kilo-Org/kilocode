@@ -3,7 +3,7 @@ import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
 import { getModels } from "./fetchers/modelCache"
 import { DEEP_SEEK_DEFAULT_TEMPERATURE, openRouterDefaultModelId, openRouterDefaultModelInfo } from "@roo-code/types"
-import { getKiloBaseUriFromToken } from "@roo-code/types"
+import { getKiloUrlFromToken } from "@roo-code/types"
 import { ApiHandlerCreateMessageMetadata } from ".."
 import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 import { getKilocodeDefaultModel } from "./kilocode/getKilocodeDefaultModel"
@@ -13,6 +13,8 @@ import {
 	X_KILOCODE_PROJECTID,
 	X_KILOCODE_TESTER,
 } from "../../shared/kilocode/headers"
+import { DEFAULT_HEADERS } from "./constants"
+import { streamSse } from "../../services/continuedev/core/fetch/stream"
 
 /**
  * A custom OpenRouter handler that overrides the getModel function
@@ -21,20 +23,24 @@ import {
 export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	protected override models: ModelRecord = {}
 	defaultModel: string = openRouterDefaultModelId
+	private apiFIMBase: string
 
 	protected override get providerName() {
 		return "KiloCode" as const
 	}
 
 	constructor(options: ApiHandlerOptions) {
-		const baseUri = getKiloBaseUriFromToken(options.kilocodeToken ?? "")
+		const baseApiUrl = getKiloUrlFromToken("https://api.kilocode.ai/api/", options.kilocodeToken ?? "")
+
 		options = {
 			...options,
-			openRouterBaseUrl: `${baseUri}/api/openrouter/`,
+			openRouterBaseUrl: `${baseApiUrl}openrouter/`,
 			openRouterApiKey: options.kilocodeToken,
 		}
 
 		super(options)
+
+		this.apiFIMBase = baseApiUrl
 	}
 
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
@@ -74,6 +80,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		if (lastUsage.is_byok) {
 			return lastUsage.cost_details?.upstream_inference_cost || 0
 		}
+
 		return lastUsage.cost || 0
 	}
 
@@ -122,5 +129,59 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		this.endpoints = endpoints
 		this.defaultModel = defaultModel
 		return this.getModel()
+	}
+
+	supportsFim(): boolean {
+		const modelId = this.options.kilocodeModel ?? this.defaultModel
+		return modelId.includes("codestral")
+	}
+
+	async completeFim(prefix: string, suffix: string, taskId?: string): Promise<string> {
+		let result = ""
+		for await (const chunk of this.streamFim(prefix, suffix, taskId)) {
+			result += chunk
+		}
+		return result
+	}
+
+	async *streamFim(prefix: string, suffix: string, taskId?: string): AsyncGenerator<string> {
+		const model = await this.fetchModel()
+		const endpoint = new URL("fim/completions", this.apiFIMBase)
+
+		// Build headers using customRequestOptions for consistency
+		const headers: Record<string, string> = {
+			...DEFAULT_HEADERS,
+			"Content-Type": "application/json",
+			Accept: "application/json",
+			"x-api-key": this.options.kilocodeToken ?? "",
+			Authorization: `Bearer ${this.options.kilocodeToken}`,
+			...this.customRequestOptions(taskId ? { taskId, mode: "code" } : undefined)?.headers,
+		}
+
+		const response = await fetch(endpoint, {
+			method: "POST",
+			body: JSON.stringify({
+				model: model.id,
+				prompt: prefix,
+				suffix,
+				max_tokens: model.maxTokens,
+				temperature: model.temperature,
+				top_p: model.topP,
+				stream: true,
+			}),
+			headers,
+		})
+
+		if (!response.ok) {
+			const errorText = await response.text()
+			throw new Error(`FIM streaming failed: ${response.status} ${response.statusText} - ${errorText}`)
+		}
+
+		for await (const data of streamSse(response)) {
+			const content = data.choices?.[0]?.delta?.content
+			if (content) {
+				yield content
+			}
+		}
 	}
 }

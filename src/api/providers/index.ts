@@ -31,6 +31,7 @@ export { VertexHandler } from "./vertex"
 export { GeminiCliHandler } from "./gemini-cli"
 export { VirtualQuotaFallbackHandler } from "./virtual-quota-fallback"
 export { SyntheticHandler } from "./synthetic"
+export { InceptionLabsHandler } from "./inception"
 // kilocode_change end
 export { VsCodeLmHandler } from "./vscode-lm"
 export { XAIHandler } from "./xai"

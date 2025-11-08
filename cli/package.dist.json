@@ -1,6 +1,6 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.0.8",
+	"version": "0.2.0",
 	"description": "Terminal User Interface for Kilo Code",
 	"type": "module",
 	"main": "index.js",
@@ -37,6 +37,7 @@
 		"eventemitter3": "^5.0.1",
 		"exceljs": "^4.4.0",
 		"fast-deep-equal": "^3.1.3",
+		"fast-glob": "^3.3.2",
 		"fast-xml-parser": "^5.0.0",
 		"fastest-levenshtein": "^1.0.16",
 		"fs-extra": "^11.2.0",

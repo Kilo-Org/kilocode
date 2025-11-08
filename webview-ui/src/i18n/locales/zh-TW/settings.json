@@ -25,6 +25,7 @@
 		"autoApprove": "自動核准",
 		"browser": "電腦存取",
 		"checkpoints": "檢查點",
+		"display": "顯示",
 		"notifications": "通知",
 		"contextManagement": "上下文",
 		"terminal": "終端機",
@@ -34,7 +35,7 @@
 		"experimental": "實驗性",
 		"language": "語言",
 		"about": "關於 Kilo Code",
-		"display": "顯示",
+		"autoPurge": "自動清理",
 		"ghost": "Ghost"
 	},
 	"slashCommands": {
@@ -247,6 +248,8 @@
 		"noProviderMatchFound": "找不到供應商",
 		"noMatchFound": "找不到符合的設定檔",
 		"vscodeLmDescription": "VS Code 語言模型 API 可以讓您使用其他擴充功能（如 GitHub Copilot）提供的模型。最簡單的方式是從 VS Code Marketplace 安裝 Copilot 和 Copilot Chat 擴充套件。",
+		"vscodeLmUnavailable": "VS Code 語言模型支援僅在 Visual Studio Code 可用。像 VSCodium 這類分支可能無法運作。此外，此功能在 JetBrains 工具中不可用。",
+		"vscodeLmUnavailableInstructions": "請確認您使用支援的工具，並且已安裝且啟用了 VS Code Chat",
 		"awsCustomArnUse": "輸入您要使用的模型的有效 Amazon Bedrock ARN。格式範例：",
 		"awsCustomArnDesc": "確保 ARN 中的區域與您上面選擇的 AWS 區域相符。",
 		"openRouterApiKey": "OpenRouter API 金鑰",
@@ -463,6 +466,10 @@
 			},
 			"resetDefaults": "重設為預設值"
 		},
+		"rateLimitAfter": {
+			"label": "在結束時速率限制",
+			"description": "在 API 流結束後開始速率限制。"
+		},
 		"rateLimitSeconds": {
 			"label": "速率限制",
 			"description": "API 請求間的最短時間"
@@ -550,6 +557,38 @@
 		"enable": {
 			"label": "啟用自動檢查點",
 			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "啟用自動任務清理",
+			"description": "自動刪除舊任務以釋放磁碟空間並提升效能。任務會依類型和時間分類，以決定何時應該移除。"
+		},
+		"defaultRetention": {
+			"label": "預設保留期間（天）",
+			"description": "任務在符合清理條件前的保留天數"
+		},
+		"neverPurgeFavorited": {
+			"label": "永不刪除我的最愛任務",
+			"description": "啟用後，我的最愛任務無論多久都不會被自動刪除"
+		},
+		"favoritedRetention": {
+			"label": "我的最愛任務保留期（天）",
+			"description": "我的最愛任務的保留天數（僅在「永不刪除我的最愛任務」停用時適用）"
+		},
+		"completedRetention": {
+			"label": "已完成任務保留期（天）",
+			"description": "成功完成的任務保留天數"
+		},
+		"incompleteRetention": {
+			"label": "未完成任務保留期（天）",
+			"description": "未完成任務的保留天數（通常比已完成任務更短）"
+		},
+		"lastRun": {
+			"label": "上次清理"
+		},
+		"manualPurge": {
+			"button": "立即執行清理"
 		}
 	},
 	"notifications": {
@@ -767,8 +806,8 @@
 			"description": "啟用後 Kilo Code 可在單個請求中編輯多個檔案。停用後 Kilo Code 必須逐個編輯檔案。停用此功能有助於使用能力較弱的模型或需要更精確控制檔案修改時。"
 		},
 		"MORPH_FAST_APPLY": {
-			"name": "啟用快速套用",
-			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行快速套用編輯檔案。需要 Kilo Code API 供應商、OpenRouter 或 Morph API 金鑰。",
+			"name": "啟用 Fast Apply",
+			"description": "啟用後，Kilo Code 可使用專為程式碼修改最佳化的特殊模型進行 Fast Apply 編輯檔案。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 金鑰。",
 			"apiKey": "Morph API 金鑰（選用）",
 			"placeholder": "輸入您的 Morph API 金鑰（選用）",
 			"modelLabel": "模型選擇",

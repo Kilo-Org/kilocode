@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-approbation",
 		"browser": "Accès ordinateur",
 		"checkpoints": "Points de contrôle",
+		"display": "Afficher",
 		"notifications": "Notifications",
 		"contextManagement": "Contexte",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Expérimental",
 		"language": "Langue",
 		"about": "À propos de Kilo Code",
-		"display": "Afficher"
+		"autoPurge": "Auto-nettoyage"
 	},
 	"slashCommands": {
 		"description": "Gérez vos commandes slash pour exécuter rapidement des flux de travail et des actions personnalisées. <DocsLink>En savoir plus</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Aucun fournisseur trouvé",
 		"noMatchFound": "Aucun profil correspondant trouvé",
 		"vscodeLmDescription": "L'API du modèle de langage VS Code vous permet d'exécuter des modèles fournis par d'autres extensions VS Code (y compris, mais sans s'y limiter, GitHub Copilot). Le moyen le plus simple de commencer est d'installer les extensions Copilot et Copilot Chat depuis le VS Code Marketplace.",
+		"vscodeLmUnavailable": "La prise en charge des modèles linguistiques de VS Code est disponible uniquement dans Visual Studio Code. Des forks comme VSCodium et d'autres peuvent ne pas fonctionner. De plus, cette fonctionnalité n'est pas disponible dans les outils JetBrains.",
+		"vscodeLmUnavailableInstructions": "Assurez-vous d'utiliser un outil pris en charge et que VS Code Chat est installé et activé",
 		"awsCustomArnUse": "Entrez un ARN Amazon Bedrock valide pour le modèle que vous souhaitez utiliser. Exemples de format :",
 		"awsCustomArnDesc": "Assurez-vous que la région dans l'ARN correspond à la région AWS sélectionnée ci-dessus.",
 		"openRouterApiKey": "Clé API OpenRouter",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Réinitialiser les valeurs par défaut"
 		},
+		"rateLimitAfter": {
+			"label": "Limite de débit en fin",
+			"description": "Commencez à limiter le débit après la fin du flux API."
+		},
 		"rateLimitSeconds": {
 			"label": "Limite de débit",
 			"description": "Temps minimum entre les requêtes API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Activer les points de contrôle automatiques",
 			"description": "Lorsque cette option est activée, Kilo Code créera automatiquement des points de contrôle pendant l'exécution des tâches, facilitant la révision des modifications ou le retour à des états antérieurs. <0>En savoir plus</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Activer le nettoyage automatique des tâches",
+			"description": "Supprimer automatiquement les anciennes tâches pour libérer de l'espace disque et améliorer les performances. Les tâches sont classées par type et âge pour déterminer quand elles doivent être supprimées."
+		},
+		"defaultRetention": {
+			"label": "Période de rétention par défaut (jours)",
+			"description": "Nombre de jours pour conserver les tâches avant qu'elles soient éligibles au nettoyage"
+		},
+		"neverPurgeFavorited": {
+			"label": "Ne jamais supprimer les tâches favorites",
+			"description": "Lorsque activé, les tâches favorites ne seront jamais supprimées automatiquement quel que soit leur âge"
+		},
+		"favoritedRetention": {
+			"label": "Rétention des tâches favorites (jours)",
+			"description": "Nombre de jours pour conserver les tâches favorites (s'applique uniquement lorsque 'Ne jamais supprimer les tâches favorites' est désactivé)"
+		},
+		"completedRetention": {
+			"label": "Rétention des tâches terminées (jours)",
+			"description": "Nombre de jours pour conserver les tâches qui ont été terminées avec succès"
+		},
+		"incompleteRetention": {
+			"label": "Rétention des tâches incomplètes (jours)",
+			"description": "Nombre de jours pour conserver les tâches qui n'ont pas été terminées (généralement plus court que les tâches terminées)"
+		},
+		"lastRun": {
+			"label": "Dernier nettoyage"
+		},
+		"manualPurge": {
+			"button": "Exécuter le nettoyage maintenant"
 		}
 	},
 	"notifications": {
@@ -766,7 +805,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Activer Fast Apply",
-			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite le fournisseur d'API Kilo Code, OpenRouter ou une clé API Morph.",
+			"description": "Lorsque cette option est activée, Kilo Code peut éditer des fichiers en utilisant Fast Apply avec des modèles spécialisés optimisés pour les modifications de code. Nécessite Kilo Gateway Provider, OpenRouter ou une clé API Morph.",
 			"apiKey": "Clé API Morph (optionnel)",
 			"placeholder": "Entrez votre clé API Morph (optionnel)",
 			"modelLabel": "Sélection du modèle",

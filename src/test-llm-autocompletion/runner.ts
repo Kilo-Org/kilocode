@@ -35,18 +35,14 @@ export class TestRunner {
 	async runTest(testCase: TestCase): Promise<TestResult> {
 		try {
 			const startTime = performance.now()
-			const completion = await this.strategyTester.getCompletion(testCase.input)
+			const { prefix, completion, suffix } = await this.strategyTester.getCompletion(
+				testCase.input,
+				testCase.name,
+			)
 			const llmRequestDuration = performance.now() - startTime
+			let actualValue: string = prefix + completion + suffix
 
-			const changes = this.strategyTester.parseCompletion(completion)
-
-			let actualValue: string
-
-			if (changes.length > 0) {
-				// Apply the change: replace search with replace in the input
-				const change = changes[0]
-				actualValue = testCase.input.replace(change.search, change.replace)
-			} else {
+			if (completion === "") {
 				actualValue = "(no changes parsed)"
 			}
 
@@ -108,7 +104,7 @@ export class TestRunner {
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				const strategyName = this.strategyTester.getSelectedStrategyName(testCase.input)
+				const strategyName = this.strategyTester.getSelectedStrategyName()
 				process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
 
 				const result = await this.runTest(testCase)
@@ -148,7 +144,7 @@ export class TestRunner {
 						console.log("    " + "─".repeat(76))
 
 						if (this.verbose && result.completion) {
-							console.log("    Full XML Response:")
+							console.log("    Full LLM Response:")
 							console.log(
 								result.completion
 									.split("\n")
@@ -331,39 +327,15 @@ export class TestRunner {
 		}
 
 		if (lastResult.completion) {
-			const changes = this.strategyTester.parseCompletion(lastResult.completion)
-			if (changes.length > 0) {
-				console.log("\nParsed Changes:")
-				changes.forEach((change, i) => {
-					console.log(`Change ${i + 1}:`)
-					console.log("  Search:")
-					console.log("  " + "─".repeat(78))
-					console.log(
-						change.search
-							.split("\n")
-							.map((l) => "  " + l)
-							.join("\n"),
-					)
-					console.log("  " + "─".repeat(78))
-					console.log("  Replace:")
-					console.log("  " + "─".repeat(78))
-					console.log(
-						change.replace
-							.split("\n")
-							.map((l) => "  " + l)
-							.join("\n"),
-					)
-					console.log("  " + "─".repeat(78))
-
-					const extracted = change.replace.replace(testCase.input, "").trim()
-					console.log("  Extracted for test:", extracted || "(full replacement)")
-				})
-			} else {
-				console.log("\nNo changes were parsed from the response")
-			}
-
-			console.log("\nFull LLM Response:")
-			console.log(lastResult.completion)
+			console.log("\nCompletion:")
+			console.log("  " + "─".repeat(78))
+			console.log(
+				lastResult.completion
+					.split("\n")
+					.map((l) => "  " + l)
+					.join("\n"),
+			)
+			console.log("  " + "─".repeat(78))
 		}
 
 		console.log("\n" + "═".repeat(80) + "\n")

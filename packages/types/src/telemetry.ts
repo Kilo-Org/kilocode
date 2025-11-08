@@ -32,8 +32,13 @@ export enum TelemetryEventName {
 	WEBVIEW_MEMORY_USAGE = "Webview Memory Usage",
 	MEMORY_WARNING_SHOWN = "Memory Warning Shown",
 	FREE_MODELS_LINK_CLICKED = "Free Models Link Clicked",
+	CREATE_ORGANIZATION_LINK_CLICKED = "Create Organization Link Clicked",
 	SUGGESTION_BUTTON_CLICKED = "Suggestion Button Clicked",
 	NO_ASSISTANT_MESSAGES = "No Assistant Messages",
+	AUTO_PURGE_STARTED = "Auto Purge Started",
+	AUTO_PURGE_COMPLETED = "Auto Purge Completed",
+	AUTO_PURGE_FAILED = "Auto Purge Failed",
+	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -197,6 +202,10 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION, // kilocode_change
 			TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION, // kilocode_change
 			TelemetryEventName.WEBVIEW_MEMORY_USAGE, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_STARTED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
+			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
+			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

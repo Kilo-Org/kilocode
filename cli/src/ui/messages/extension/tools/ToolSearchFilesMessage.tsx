@@ -3,7 +3,7 @@ import { Box, Text } from "ink"
 import type { ToolMessageProps } from "../types.js"
 import { getToolIcon, formatFilePath, truncateText } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
-import { BOX_L3 } from "../../../utils/width.js"
+import { getBoxWidth } from "../../../utils/width.js"
 
 /**
  * Display regex file search results
@@ -48,7 +48,7 @@ export const ToolSearchFilesMessage: React.FC<ToolMessageProps> = ({ toolData })
 
 			{results.length > 0 && (
 				<Box
-					width={BOX_L3}
+					width={getBoxWidth(3)}
 					flexDirection="column"
 					borderStyle="single"
 					borderColor={theme.ui.border.default}

@@ -1,6 +1,0 @@
-function processItems(items) {
-    // Process each item in the array
-    items.forEach(item => {
-        // Add your item processing logic here
-    });
-}

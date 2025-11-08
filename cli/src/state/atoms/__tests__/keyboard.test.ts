@@ -6,13 +6,14 @@ import {
 	suggestionsAtom,
 	argumentSuggestionsAtom,
 	selectedIndexAtom,
+	fileMentionSuggestionsAtom,
 } from "../ui.js"
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
 import { historyDataAtom, historyModeAtom, historyIndexAtom } from "../history.js"
 import type { Key } from "../../../types/keyboard.js"
-import type { CommandSuggestion, ArgumentSuggestion } from "../../../services/autocomplete.js"
+import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
 
 describe("keypress atoms", () => {
@@ -354,12 +355,64 @@ describe("keypress atoms", () => {
 			}
 			store.set(keyboardHandlerAtom, tabKey)
 
-			// Should append only 'de' to complete '/mode'
+			// Should complete to '/mode'
 			const text = store.get(textBufferStringAtom)
 			expect(text).toBe("/mode")
 		})
 
-		it("should complete argument by appending only missing part", () => {
+		it("should complete command even when user types wrong letters", () => {
+			// Type '/modl' - typo, but 'model' should still be suggested
+			const chars = ["/", "m", "o", "d", "l"]
+			for (const char of chars) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Autocomplete should now be visible
+			expect(store.get(showAutocompleteAtom)).toBe(true)
+
+			// Set up autocomplete suggestions
+			const mockCommand: Command = {
+				name: "model",
+				description: "Manage models",
+				aliases: [],
+				usage: "/model <subcommand>",
+				examples: ["/model info"],
+				category: "settings",
+				handler: vi.fn(),
+			}
+			const mockSuggestion: CommandSuggestion = {
+				command: mockCommand,
+				matchScore: 70,
+				highlightedName: "model",
+			}
+			store.set(suggestionsAtom, [mockSuggestion])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should replace '/modl' with '/model' (not '/modlmodel')
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/model")
+		})
+
+		it("should complete argument by replacing partial text", () => {
 			// Type '/mode tes' - this will automatically trigger autocomplete
 			const input = "/mode tes"
 			for (const char of input) {
@@ -398,9 +451,94 @@ describe("keypress atoms", () => {
 			}
 			store.set(keyboardHandlerAtom, tabKey)
 
-			// Should append only 't' to complete '/mode test'
+			// Should replace 'tes' with 'test' to complete '/mode test'
 			const text = store.get(textBufferStringAtom)
 			expect(text).toBe("/mode test")
+		})
+
+		it("should replace partial argument with full suggestion", () => {
+			// Bug fix: Type '/model info gpt' with suggestion 'openai/gpt-5'
+			// This test verifies the fix where Tab was incorrectly appending instead of replacing
+			const input = "/model info gpt"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up argument suggestions
+			const mockArgumentSuggestion: ArgumentSuggestion = {
+				value: "openai/gpt-5",
+				description: "OpenAI GPT-5 model",
+				matchScore: 90,
+				highlightedValue: "openai/gpt-5",
+			}
+			store.set(argumentSuggestionsAtom, [mockArgumentSuggestion])
+			store.set(suggestionsAtom, []) // No command suggestions
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should replace 'gpt' with 'openai/gpt-5' (not append to get 'gptopenai/gpt-5')
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/model info openai/gpt-5")
+		})
+
+		it("should complete argument from empty with trailing space", () => {
+			// Type '/model info ' (with trailing space)
+			const input = "/model info "
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Set up argument suggestions
+			const mockArgumentSuggestion: ArgumentSuggestion = {
+				value: "openai/gpt-4",
+				description: "OpenAI GPT-4 model",
+				matchScore: 100,
+				highlightedValue: "openai/gpt-4",
+			}
+			store.set(argumentSuggestionsAtom, [mockArgumentSuggestion])
+			store.set(suggestionsAtom, [])
+			store.set(selectedIndexAtom, 0)
+
+			// Press Tab
+			const tabKey: Key = {
+				name: "tab",
+				sequence: "\t",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, tabKey)
+
+			// Should add the full suggestion value
+			const text = store.get(textBufferStringAtom)
+			expect(text).toBe("/model info openai/gpt-4")
 		})
 
 		it("should handle exact match completion", () => {
@@ -749,6 +887,97 @@ describe("keypress atoms", () => {
 			expect(store.get(historyModeAtom)).toBe(false)
 			// Text should remain unchanged
 			expect(store.get(textBufferStringAtom)).toBe("hi")
+		})
+	})
+
+	describe("file mention suggestions", () => {
+		it("should clear suggestions and add space on ESC without clearing buffer", () => {
+			// Type some text first
+			const input = "check @confi"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify initial buffer
+			expect(store.get(textBufferStringAtom)).toBe("check @confi")
+
+			// Set up file mention suggestions (simulating file autocomplete)
+			const mockFileSuggestion: FileMentionSuggestion = {
+				type: "file",
+				value: "config.json",
+				description: "Configuration file",
+				matchScore: 90,
+				highlightedValue: "config.json",
+			}
+			store.set(fileMentionSuggestionsAtom, [mockFileSuggestion])
+
+			// Verify suggestions are set
+			expect(store.get(fileMentionSuggestionsAtom).length).toBe(1)
+
+			// Press ESC
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, escapeKey)
+
+			// File mention suggestions should be cleared
+			expect(store.get(fileMentionSuggestionsAtom).length).toBe(0)
+
+			// Buffer should have a space added (not cleared)
+			expect(store.get(textBufferStringAtom)).toBe("check @confi ")
+
+			// Cursor should be after the space
+			const cursor = store.get(cursorPositionAtom)
+			expect(cursor.col).toBe(13) // "check @confi " has 13 characters
+		})
+
+		it("should clear buffer on ESC when no file mention suggestions", () => {
+			// Type some text
+			const input = "some text"
+			for (const char of input) {
+				const key: Key = {
+					name: char,
+					sequence: char,
+					ctrl: false,
+					meta: false,
+					shift: false,
+					paste: false,
+				}
+				store.set(keyboardHandlerAtom, key)
+			}
+
+			// Verify buffer has content
+			expect(store.get(textBufferStringAtom)).toBe("some text")
+
+			// Ensure no file mention suggestions
+			store.set(fileMentionSuggestionsAtom, [])
+
+			// Press ESC
+			const escapeKey: Key = {
+				name: "escape",
+				sequence: "\x1b",
+				ctrl: false,
+				meta: false,
+				shift: false,
+				paste: false,
+			}
+			store.set(keyboardHandlerAtom, escapeKey)
+
+			// Buffer should be cleared (normal ESC behavior)
+			expect(store.get(textBufferStringAtom)).toBe("")
 		})
 	})
 })

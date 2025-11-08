@@ -25,6 +25,7 @@
 		"autoApprove": "Auto-Approve",
 		"browser": "Browser",
 		"checkpoints": "Checkpoint",
+		"display": "Tampilkan",
 		"notifications": "Notifikasi",
 		"contextManagement": "Konteks",
 		"terminal": "Terminal",
@@ -34,7 +35,7 @@
 		"experimental": "Eksperimental",
 		"language": "Bahasa",
 		"about": "Tentang Kilo Code",
-		"display": "Tampilkan"
+		"autoPurge": "Pembersihan Otomatis"
 	},
 	"slashCommands": {
 		"description": "Kelola perintah slash kamu untuk mengeksekusi alur kerja dan tindakan kustom dengan cepat. <DocsLink>Pelajari lebih lanjut</DocsLink>"
@@ -246,6 +247,8 @@
 		"noProviderMatchFound": "Tidak ada penyedia ditemukan",
 		"noMatchFound": "Tidak ada profil yang cocok ditemukan",
 		"vscodeLmDescription": " API Model Bahasa VS Code memungkinkan kamu menjalankan model yang disediakan oleh ekstensi VS Code lainnya (termasuk namun tidak terbatas pada GitHub Copilot). Cara termudah untuk memulai adalah menginstal ekstensi Copilot dan Copilot Chat dari VS Code Marketplace.",
+		"vscodeLmUnavailable": "Dukungan Model Bahasa VS Code hanya tersedia di Visual Studio Code. Fork seperti VSCodium dan lainnya mungkin tidak berfungsi. Selain itu, kemampuan ini tidak tersedia di alat JetBrains.",
+		"vscodeLmUnavailableInstructions": "Pastikan Anda menggunakan alat yang didukung dan bahwa VS Code Chat telah diinstal dan diaktifkan",
 		"awsCustomArnUse": "Masukkan ARN Amazon Bedrock yang valid untuk model yang ingin kamu gunakan. Contoh format:",
 		"awsCustomArnDesc": "Pastikan region di ARN cocok dengan AWS Region yang kamu pilih di atas.",
 		"openRouterApiKey": "OpenRouter API Key",
@@ -462,6 +465,10 @@
 			},
 			"resetDefaults": "Reset ke Default"
 		},
+		"rateLimitAfter": {
+			"label": "Batas laju di akhir",
+			"description": "Mulai membatasi laju setelah aliran API berakhir."
+		},
 		"rateLimitSeconds": {
 			"label": "Rate limit",
 			"description": "Waktu minimum antara permintaan API."
@@ -549,6 +556,38 @@
 		"enable": {
 			"label": "Aktifkan checkpoint otomatis",
 			"description": "Ketika diaktifkan, Kilo Code akan secara otomatis membuat checkpoint selama eksekusi tugas, memudahkan untuk meninjau perubahan atau kembali ke state sebelumnya. <0>Pelajari lebih lanjut</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "Aktifkan pembersihan tugas otomatis",
+			"description": "Secara otomatis menghapus tugas lama untuk membebaskan ruang disk dan meningkatkan kinerja. Tugas diklasifikasikan berdasarkan jenis dan usia untuk menentukan kapan harus dihapus."
+		},
+		"defaultRetention": {
+			"label": "Periode retensi default (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas sebelum memenuhi syarat untuk dibersihkan"
+		},
+		"neverPurgeFavorited": {
+			"label": "Jangan pernah hapus tugas favorit",
+			"description": "Ketika diaktifkan, tugas favorit tidak akan pernah dihapus secara otomatis terlepas dari usia"
+		},
+		"favoritedRetention": {
+			"label": "Retensi tugas favorit (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas favorit (hanya berlaku ketika 'Jangan pernah hapus tugas favorit' dinonaktifkan)"
+		},
+		"completedRetention": {
+			"label": "Retensi tugas selesai (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang telah berhasil diselesaikan"
+		},
+		"incompleteRetention": {
+			"label": "Retensi tugas tidak lengkap (hari)",
+			"description": "Jumlah hari untuk menyimpan tugas yang tidak diselesaikan (biasanya lebih pendek dari tugas yang selesai)"
+		},
+		"lastRun": {
+			"label": "Pembersihan terakhir"
+		},
+		"manualPurge": {
+			"button": "Jalankan Pembersihan Sekarang"
 		}
 	},
 	"notifications": {
@@ -788,7 +827,7 @@
 		},
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
-			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Code API Provider, OpenRouter, atau kunci API Morph.",
+			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Gateway Provider, OpenRouter, atau kunci API Morph.",
 			"apiKey": "Kunci API Morph (opsional)",
 			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
 			"modelLabel": "Pemilihan Model",
