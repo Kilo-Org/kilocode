@@ -1,0 +1,62 @@
+{
+	"version.label": {
+		"message": "Suivant",
+		"description": "The label for version current"
+	},
+	"sidebar.tutorialSidebar.category.Getting Started": {
+		"message": "Premiers pas",
+		"description": "The label for category Getting Started in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Using Kilo Code": {
+		"message": "Utiliser Kilo Code",
+		"description": "The label for category Using Kilo Code in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Basic Features": {
+		"message": "Fonctionnalités de base",
+		"description": "The label for category Basic Features in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Core Concepts": {
+		"message": "Concepts fondamentaux",
+		"description": "The label for category Core Concepts in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Advanced Usage": {
+		"message": "Utilisation avancée",
+		"description": "The label for category Advanced Usage in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Customizing Kilo Code": {
+		"message": "Personnaliser Kilo Code",
+		"description": "The label for category Customizing Kilo Code in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Advanced Context Features": {
+		"message": "Fonctionnalités de contexte avancées",
+		"description": "The label for category Advanced Context Features in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Advanced AI Features": {
+		"message": "Fonctionnalités IA avancées",
+		"description": "The label for category Advanced AI Features in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Customization": {
+		"message": "Personnalisation",
+		"description": "The label for category Customization in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Extending Kilo Code": {
+		"message": "Étendre Kilo Code",
+		"description": "The label for category Extending Kilo Code in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Model Providers": {
+		"message": "Fournisseurs de modèles",
+		"description": "The label for category Model Providers in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Model Context Protocol (MCP)": {
+		"message": "Protocole de Contexte de Modèle (MCP)",
+		"description": "The label for category Model Context Protocol (MCP) in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.category.Tools Reference": {
+		"message": "Référence des outils",
+		"description": "The label for category Tools Reference in sidebar tutorialSidebar"
+	},
+	"sidebar.tutorialSidebar.doc.Setup": {
+		"message": "Configuration",
+		"description": "The label for the doc item Setup in sidebar tutorialSidebar, linking to the doc getting-started/setting-up"
+	}
+}

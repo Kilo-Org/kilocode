@@ -267,6 +267,8 @@
 		"toggle": "Basculer l'approbation automatique",
 		"all": "Tout",
 		"none": "Aucun",
+		"selectAll": "Tout sélectionner",
+		"selectNone": "Ne rien sélectionner",
 		"description": "Exécutez ces actions sans demander la permission. N'activez cette option que pour les actions en lesquelles vous avez entièrement confiance.",
 		"selectOptionsFirst": "Sélectionnez au moins une option ci-dessous pour activer l'approbation automatique",
 		"toggleAriaLabel": "Basculer l'approbation automatique",
@@ -356,6 +358,7 @@
 	"codebaseSearch": {
 		"wantsToSearch": "Kilo Code veut rechercher dans la base de code <code>{{query}}</code>",
 		"wantsToSearchWithPath": "Kilo Code veut rechercher dans la base de code <code>{{query}}</code> dans <code>{{path}}</code>",
+		"didSearch": "Recherche effectuée",
 		"didSearch_one": "1 résultat trouvé",
 		"didSearch_other": "{{count}} résultats trouvés",
 		"resultTooltip": "Score de similarité : {{score}} (cliquer pour ouvrir le fichier)"

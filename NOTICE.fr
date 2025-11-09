@@ -1,0 +1,10 @@
+Kilo Code
+Copyright 2025- Kilo Code LLC
+
+Ce produit est un fork de Roo Code, qui est un fork de Cline.
+
+Travail original : Copyright 2025 Cline Bot Inc.
+
+Travail modifié (Roo Code) : Copyright 2025 Roo Veterinary Inc.
+
+Travail modifié (Kilo Code) : Copyright 2025- Kilo Code LLC.
