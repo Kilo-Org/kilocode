@@ -33,11 +33,12 @@ export function normalizeProjectId(projectId?: KilocodeConfigProject["id"]): str
 	}
 
 	// Check if it looks like a git URL (https or ssh)
-	const httpsGitPattern = /^https?:\/\/.+\.git$/i
-	const sshGitPattern = /^git@.+\.git$/i
+	// Patterns match with or without .git extension
+	const httpsGitPattern = /^https?:\/\/.+\/.+/i
+	const sshGitPattern = /^git@.+:.+/i
 
 	if (httpsGitPattern.test(projectId) || sshGitPattern.test(projectId)) {
-		// Extract the last path component and remove .git extension
+		// Extract the last path component and remove .git extension if present
 		const parts = projectId.split("/")
 		const lastPart = parts[parts.length - 1]
 		return lastPart.replace(/\.git$/i, "")
