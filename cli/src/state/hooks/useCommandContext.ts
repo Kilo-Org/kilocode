@@ -16,7 +16,7 @@ import {
 	refreshTerminalAtom,
 } from "../atoms/ui.js"
 import { setModeAtom, setThemeAtom, providerAtom, updateProviderAtom, configAtom } from "../atoms/config.js"
-import { routerModelsAtom, extensionStateAtom, isParallelModeAtom } from "../atoms/extension.js"
+import { routerModelsAtom, extensionStateAtom, isParallelModeAtom, chatMessagesAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
 import {
@@ -88,6 +88,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const kilocodeDefaultModel = extensionState?.kilocodeDefaultModel || ""
 	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const config = useAtomValue(configAtom)
+	const chatMessages = useAtomValue(chatMessagesAtom)
 
 	// Get profile state
 	const profileData = useAtomValue(profileDataAtom)
@@ -192,6 +193,7 @@ export function useCommandContext(): UseCommandContextReturn {
 				nextTaskHistoryPage,
 				previousTaskHistoryPage,
 				sendWebviewMessage: sendMessage,
+				chatMessages,
 			}
 		},
 		[
@@ -225,6 +227,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			changeTaskHistoryPageAndFetch,
 			nextTaskHistoryPage,
 			previousTaskHistoryPage,
+			chatMessages,
 		],
 	)
 

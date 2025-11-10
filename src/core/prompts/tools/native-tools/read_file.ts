@@ -26,7 +26,7 @@ export const read_file_multi = {
 									"Optional 1-based inclusive ranges to read (format: start-end). Use multiple ranges for non-contiguous sections and keep ranges tight to the needed context.",
 								items: {
 									type: "string",
-									pattern: "^\\d+-\\d+$",
+									pattern: "^[0-9]+-[0-9]+$",
 								},
 							},
 						},

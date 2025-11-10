@@ -287,7 +287,14 @@ export const lastAskMessageAtom = atom<ExtensionChatMessage | null>((get) => {
 	const messages = get(chatMessagesAtom)
 
 	// Ask types that require user approval
-	const approvalAskTypes = ["tool", "command", "browser_action_launch", "use_mcp_server", "payment_required_prompt"]
+	const approvalAskTypes = [
+		"tool",
+		"command",
+		"browser_action_launch",
+		"use_mcp_server",
+		"payment_required_prompt",
+		"checkpoint_restore",
+	]
 
 	const lastMessage = messages[messages.length - 1]
 	if (

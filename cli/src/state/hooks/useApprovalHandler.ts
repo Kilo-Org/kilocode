@@ -107,7 +107,7 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 	const setRejectCallback = useSetAtom(rejectCallbackAtom)
 	const setExecuteSelectedCallback = useSetAtom(executeSelectedCallbackAtom)
 
-	const { sendAskResponse } = useWebviewMessage()
+	const { sendAskResponse, sendMessage } = useWebviewMessage()
 	const approvalTelemetry = useApprovalTelemetry()
 
 	const approve = useCallback(
@@ -154,24 +154,57 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 				}
 				store.set(updateChatMessageByTsAtom, answeredMessage)
 
-				// Determine response type based on ask type
-				// payment_required_prompt needs special "retry_clicked" response
-				const responseType =
-					currentPendingApproval.ask === "payment_required_prompt" ? "retry_clicked" : "yesButtonClicked"
+				// Handle checkpoint restore separately - send direct webview message instead of ask response
+				if (currentPendingApproval.ask === "checkpoint_restore") {
+					try {
+						// Parse checkpoint data from the message text
+						const checkpointData = JSON.parse(currentPendingApproval.text || "{}")
+						const { commitHash, checkpointTs } = checkpointData
 
-				await sendAskResponse({
-					response: responseType,
-					...(text && { text }),
-					...(images && { images }),
-				})
+						logs.debug("Sending checkpoint restore message", "useApprovalHandler", {
+							commitHash,
+							checkpointTs,
+						})
 
-				logs.debug("Approval response sent successfully", "useApprovalHandler", {
-					ts: currentPendingApproval.ts,
-					responseType,
-				})
+						// Send direct webview message to trigger restore
+						await sendMessage({
+							type: "checkpointRestore",
+							payload: {
+								ts: checkpointTs,
+								commitHash: commitHash,
+								mode: "restore",
+							},
+						})
 
-				// Track manual approval
-				approvalTelemetry.trackManualApproval(currentPendingApproval)
+						logs.debug("Checkpoint restore message sent successfully", "useApprovalHandler", {
+							ts: currentPendingApproval.ts,
+						})
+					} catch (error) {
+						logs.error("Failed to parse checkpoint data or send restore message", "useApprovalHandler", {
+							error,
+						})
+						throw error
+					}
+				} else {
+					// Determine response type based on ask type
+					// payment_required_prompt needs special "retry_clicked" response
+					const responseType =
+						currentPendingApproval.ask === "payment_required_prompt" ? "retry_clicked" : "yesButtonClicked"
+
+					await sendAskResponse({
+						response: responseType,
+						...(text && { text }),
+						...(images && { images }),
+					})
+
+					logs.debug("Approval response sent successfully", "useApprovalHandler", {
+						ts: currentPendingApproval.ts,
+						responseType,
+					})
+
+					// Track manual approval
+					approvalTelemetry.trackManualApproval(currentPendingApproval)
+				}
 
 				// Complete processing atomically - this clears both pending and processing state
 				store.set(completeApprovalProcessingAtom)
@@ -182,7 +215,7 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 				throw error
 			}
 		},
-		[store, sendAskResponse, approvalTelemetry],
+		[store, sendAskResponse, sendMessage, approvalTelemetry],
 	)
 
 	const reject = useCallback(
@@ -225,16 +258,19 @@ export function useApprovalHandler(): UseApprovalHandlerReturn {
 				}
 				store.set(updateChatMessageByTsAtom, answeredMessage)
 
-				await sendAskResponse({
-					response: "noButtonClicked",
-					...(text && { text }),
-					...(images && { images }),
-				})
+				// For checkpoint_restore, we don't need to send any message on cancel - just mark as answered
+				if (currentPendingApproval.ask !== "checkpoint_restore") {
+					await sendAskResponse({
+						response: "noButtonClicked",
+						...(text && { text }),
+						...(images && { images }),
+					})
 
-				logs.debug("Rejection response sent successfully", "useApprovalHandler")
+					logs.debug("Rejection response sent successfully", "useApprovalHandler")
 
-				// Track manual rejection
-				approvalTelemetry.trackManualRejection(currentPendingApproval)
+					// Track manual rejection
+					approvalTelemetry.trackManualRejection(currentPendingApproval)
+				}
 
 				// Complete processing atomically - this clears both pending and processing state
 				store.set(completeApprovalProcessingAtom)

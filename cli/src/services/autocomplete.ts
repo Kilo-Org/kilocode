@@ -481,6 +481,7 @@ function createProviderContext(
 			updateProviderModel: commandContext.updateProviderModel,
 			refreshRouterModels: commandContext.refreshRouterModels,
 			taskHistoryData: commandContext.taskHistoryData || null,
+			chatMessages: commandContext.chatMessages || [],
 		}
 	}
 

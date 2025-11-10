@@ -44,6 +44,7 @@ export const clineAsks = [
 	"invalid_model",
 	"report_bug",
 	"condense",
+	"checkpoint_restore", // Added for checkpoint restore approval
 	// kilocode_change end
 ] as const
 

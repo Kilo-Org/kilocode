@@ -2,7 +2,7 @@
  * Command system type definitions
  */
 
-import type { RouterModels } from "../../types/messages.js"
+import type { ExtensionMessage, RouterModels } from "../../types/messages.js"
 import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
@@ -70,6 +70,7 @@ export interface CommandContext {
 	previousTaskHistoryPage: () => Promise<TaskHistoryData>
 	sendWebviewMessage: (message: any) => Promise<void>
 	refreshTerminal: () => Promise<void>
+	chatMessages: ExtensionMessage[]
 }
 
 export type CommandHandler = (context: CommandContext) => Promise<void> | void
@@ -132,6 +133,7 @@ export interface ArgumentProviderContext {
 		updateProviderModel: (modelId: string) => Promise<void>
 		refreshRouterModels: () => Promise<void>
 		taskHistoryData: TaskHistoryData | null
+		chatMessages: ExtensionMessage[]
 	}
 }
 

@@ -126,9 +126,12 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 
 	// Determine button labels based on ask type
 	let approveLabel = "Approve"
-	const rejectLabel = "Reject"
+	let rejectLabel = "Reject"
 
-	if (pendingMessage.ask === "tool") {
+	if (pendingMessage.ask === "checkpoint_restore") {
+		approveLabel = "Restore Checkpoint"
+		rejectLabel = "Cancel"
+	} else if (pendingMessage.ask === "tool") {
 		try {
 			const toolData = JSON.parse(pendingMessage.text || "{}")
 			const tool = toolData.tool
