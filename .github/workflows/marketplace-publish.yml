@@ -21,6 +21,8 @@ jobs:
             github.event.pull_request.base.ref == 'main' &&
             contains(github.event.pull_request.title, 'Changeset version bump') ) ||
             github.event_name == 'workflow_dispatch'
+        outputs:
+            version: ${{ steps.get-version.outputs.version }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -43,6 +45,12 @@ jobs:
                   git config user.email "github-actions[bot]@users.noreply.github.com"
             - name: Create .env file
               run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
+            - name: Get version
+              id: get-version
+              run: |
+                  current_package_version=$(node -p "require('./src/package.json').version")
+                  echo "version=${current_package_version}" >> $GITHUB_OUTPUT
+                  echo "Version: ${current_package_version}"
             - name: Package Extension
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
@@ -106,6 +114,11 @@ jobs:
                     --target ${{ env.GIT_REF }} \
                     bin/kilo-code-${current_package_version}.vsix
                   echo "Successfully created GitHub Release v${current_package_version}"
+            - name: Upload VSIX artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: kilo-code-vsix
+                  path: bin/kilo-code-${{ steps.get-version.outputs.version }}.vsix
 
     publish-jetbrains:
         needs: publish-extension
@@ -177,11 +190,11 @@ jobs:
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
             - name: JetBrains Marketplace Publisher
               run: |
-                 curl \
-                 -X POST \
-                 -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
-                 -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
-                 -F "pluginId=28350" \
-                 -F "channel=stable" \
-                 -F "isHidden=false" \
-                 https://plugins.jetbrains.com/plugin/uploadPlugin
+                  curl \
+                  -X POST \
+                  -H "Authorization: Bearer ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}" \
+                  -F "file=@jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}" \
+                  -F "pluginId=28350" \
+                  -F "channel=stable" \
+                  -F "isHidden=false" \
+                  https://plugins.jetbrains.com/plugin/uploadPlugin
