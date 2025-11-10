@@ -74,38 +74,49 @@ jobs:
             - name: Create and Push Git Tag
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
-                  git tag -a "v${current_package_version}" -m "Release v${current_package_version}"
-                  git push origin "v${current_package_version}" --no-verify
-                  echo "Successfully created and pushed git tag v${current_package_version}"
+
+                  # Check if tag already exists remotely
+                  if git ls-remote --tags origin | grep -q "refs/tags/v${current_package_version}$"; then
+                    echo "Tag v${current_package_version} already exists remotely, skipping tag creation"
+                  else
+                    git tag -a "v${current_package_version}" -m "Release v${current_package_version}"
+                    git push origin "v${current_package_version}" --no-verify
+                    echo "Successfully created and pushed git tag v${current_package_version}"
+                  fi
             - name: Create GitHub Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
 
-                  # Extract changelog for current version
-                  echo "Extracting changelog for version ${current_package_version}"
-                  # Try with 'v' prefix first (newer format), then without (older format)
-                  changelog_content=$(sed -n "/## \\[v${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
-                  if [ -z "$changelog_content" ]; then
-                    changelog_content=$(sed -n "/## \\[${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
-                  fi
-
-                  # If changelog extraction failed, use a default message
-                  if [ -z "$changelog_content" ]; then
-                    echo "Warning: No changelog section found for version ${current_package_version}"
-                    changelog_content="Release v${current_package_version}"
+                  # Check if release already exists
+                  if gh release view "v${current_package_version}" >/dev/null 2>&1; then
+                    echo "Release v${current_package_version} already exists, skipping release creation"
                   else
-                    echo "Found changelog section for version ${current_package_version}"
-                  fi
+                    # Extract changelog for current version
+                    echo "Extracting changelog for version ${current_package_version}"
+                    # Try with 'v' prefix first (newer format), then without (older format)
+                    changelog_content=$(sed -n "/## \\[v${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
+                    if [ -z "$changelog_content" ]; then
+                      changelog_content=$(sed -n "/## \\[${current_package_version}\\]/,/## \\[/p" CHANGELOG.md | sed '$d')
+                    fi
 
-                  # Create release with changelog content
-                  gh release create "v${current_package_version}" \
-                    --title "Release v${current_package_version}" \
-                    --notes "$changelog_content" \
-                    --target ${{ env.GIT_REF }} \
-                    bin/kilo-code-${current_package_version}.vsix
-                  echo "Successfully created GitHub Release v${current_package_version}"
+                    # If changelog extraction failed, use a default message
+                    if [ -z "$changelog_content" ]; then
+                      echo "Warning: No changelog section found for version ${current_package_version}"
+                      changelog_content="Release v${current_package_version}"
+                    else
+                      echo "Found changelog section for version ${current_package_version}"
+                    fi
+
+                    # Create release with changelog content
+                    gh release create "v${current_package_version}" \
+                      --title "Release v${current_package_version}" \
+                      --notes "$changelog_content" \
+                      --target ${{ env.GIT_REF }} \
+                      bin/kilo-code-${current_package_version}.vsix
+                    echo "Successfully created GitHub Release v${current_package_version}"
+                  fi
             - name: Upload VSIX artifact
               uses: actions/upload-artifact@v4
               with:
@@ -142,6 +153,7 @@ jobs:
                   name: kilo-code-vsix
                   path: bin/
             - name: Publish to VS Code Marketplace
+              continue-on-error: true
               env:
                   VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
                   OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
@@ -199,7 +211,7 @@ jobs:
               run: pnpm install
             - name: Create .env file
               run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
-            - name: Build
+            - name: Build JetBrains Plugin
               run: pnpm run jetbrains:bundle
               shell: bash
             - name: Get bundle name
@@ -209,16 +221,18 @@ jobs:
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                  current_package_version=$(node -p "require('./src/package.json').version")
+                  current_package_version="${{ needs.create-release.outputs.version }}"
                   gh release upload "v${current_package_version}" \
-                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}#JetBrains Plugin"
+                    "jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}#JetBrains Plugin" \
+                    --clobber
                   echo "Successfully attached JetBrains plugin to GitHub Release v${current_package_version}"
             - name: Upload artifact
               uses: actions/upload-artifact@v4
               with:
                   name: ${{ env.BUNDLE_NAME }}
                   path: jetbrains/plugin/build/distributions/${{ env.BUNDLE_NAME }}
-            - name: JetBrains Marketplace Publisher
+            - name: Publish to JetBrains Marketplace
+              continue-on-error: true
               run: |
                   curl \
                   -X POST \
@@ -228,3 +242,4 @@ jobs:
                   -F "channel=stable" \
                   -F "isHidden=false" \
                   https://plugins.jetbrains.com/plugin/uploadPlugin
+                  echo "Successfully published to JetBrains Marketplace"
