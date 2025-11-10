@@ -135,6 +135,7 @@ export function getToolDescriptionsForMode(
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	if (
 		!codeIndexManager ||
+		!codeIndexManager?.isManagedIndexingAvailable || // kilocode_change
 		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 	) {
 		tools.delete("codebase_search")

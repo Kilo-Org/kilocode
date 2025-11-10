@@ -185,8 +185,7 @@ ${jsonResult.results
 		(result) => `File path: ${result.filePath}
 Score: ${result.score}
 Lines: ${result.startLine}-${result.endLine}
-Code Chunk: ${result.codeChunk}
-`,
+${result.codeChunk ? `Code Chunk: ${result.codeChunk}\n` : ""}`, // kilocode_change - don't include code chunk managed indexing
 	)
 	.join("\n")}`
 
