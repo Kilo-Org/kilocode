@@ -12,10 +12,10 @@ env:
     TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 jobs:
-    publish-extension:
+    create-release:
         runs-on: ubuntu-latest
         permissions:
-            contents: write # Required for pushing tags.
+            contents: write # Required for pushing tags and creating releases
         if: >
             ( github.event_name == 'pull_request' &&
             github.event.pull_request.base.ref == 'main' &&
@@ -77,14 +77,6 @@ jobs:
                   git tag -a "v${current_package_version}" -m "Release v${current_package_version}"
                   git push origin "v${current_package_version}" --no-verify
                   echo "Successfully created and pushed git tag v${current_package_version}"
-            - name: Publish Extension
-              env:
-                  VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
-                  OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
-              run: |
-                  current_package_version=$(node -p "require('./src/package.json').version")
-                  pnpm --filter kilo-code publish:marketplace
-                  echo "Successfully published version $current_package_version to VS Code Marketplace"
             - name: Create GitHub Release
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -120,8 +112,46 @@ jobs:
                   name: kilo-code-vsix
                   path: bin/kilo-code-${{ steps.get-version.outputs.version }}.vsix
 
+    publish-vscode:
+        needs: create-release
+        runs-on: ubuntu-latest
+        if: >
+            ( github.event_name == 'pull_request' &&
+            github.event.pull_request.base.ref == 'main' &&
+            contains(github.event.pull_request.title, 'Changeset version bump') ) ||
+            github.event_name == 'workflow_dispatch'
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ env.GIT_REF }}
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
+            - name: Install dependencies
+              run: pnpm install
+            - name: Download VSIX artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: kilo-code-vsix
+                  path: bin/
+            - name: Publish to VS Code Marketplace
+              env:
+                  VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
+                  OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
+              run: |
+                  current_package_version="${{ needs.create-release.outputs.version }}"
+                  pnpm --filter kilo-code publish:marketplace
+                  echo "Successfully published version $current_package_version to VS Code Marketplace"
+
     publish-jetbrains:
-        needs: publish-extension
+        needs: create-release
         runs-on: ubuntu-latest
         if: >
             ( github.event_name == 'pull_request' &&
