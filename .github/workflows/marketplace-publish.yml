@@ -3,9 +3,14 @@ on:
     pull_request:
         types: [closed]
     workflow_dispatch:
+        inputs:
+            rollback_source_version:
+                description: "[Rollback] Source git tag (e.g., v4.115.0) - leave empty for normal publish"
+                required: false
+                type: string
 
 env:
-    GIT_REF: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main' }}
+    GIT_REF: ${{ inputs.rollback_source_version || (github.event_name == 'pull_request' && github.event.pull_request.head.sha || 'main') }}
     NODE_VERSION: 20.19.2
     PNPM_VERSION: 10.8.1
     TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
@@ -22,10 +27,32 @@ jobs:
             contains(github.event.pull_request.title, 'Changeset version bump') ) ||
             github.event_name == 'workflow_dispatch'
         steps:
+            - name: Validate rollback tag
+              if: ${{ inputs.rollback_source_version != '' }}
+              run: |
+                  TAG="${{ inputs.rollback_source_version }}"
+
+                  # Auto-fix: add 'v' prefix if missing
+                  if [[ ! "$TAG" =~ ^v ]]; then
+                    TAG="v$TAG"
+                    echo "Auto-fixed tag: $TAG (added 'v' prefix)"
+                  fi
+
+                  # Verify tag exists
+                  if ! git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+                    echo "❌ Error: Tag '$TAG' does not exist"
+                    echo ""
+                    echo "Available recent tags:"
+                    git ls-remote --tags origin | grep -o 'refs/tags/v[0-9].*' | sed 's|refs/tags/||' | sort -V | tail -10
+                    exit 1
+                  fi
+
+                  echo "✅ Tag '$TAG' exists"
+                  echo "VALIDATED_TAG=$TAG" >> $GITHUB_ENV
             - name: Checkout code
               uses: actions/checkout@v4
               with:
-                  ref: ${{ env.GIT_REF }}
+                  ref: ${{ env.VALIDATED_TAG || env.GIT_REF }}
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
@@ -41,6 +68,9 @@ jobs:
               run: |
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
+            - name: Set rollback version
+              if: ${{ inputs.rollback_source_version != '' }}
+              run: node scripts/set-rollback-version.js ${{ inputs.rollback_source_version }}
             - name: Create .env file
               run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
             - name: Package Extension
@@ -106,6 +136,14 @@ jobs:
                     --target ${{ env.GIT_REF }} \
                     bin/kilo-code-${current_package_version}.vsix
                   echo "Successfully created GitHub Release v${current_package_version}"
+            - name: Create rollback version PR
+              if: ${{ inputs.rollback_source_version != '' }}
+              run: node scripts/create-rollback-pr.js
+              env:
+                  GITHUB_TOKEN: ${{ secrets.CROSS_REPO_ACCESS_TOKEN }}
+                  GITHUB_REPOSITORY: ${{ github.repository }}
+                  SOURCE_TAG: ${{ inputs.rollback_source_version }}
+                  GITHUB_SHA: ${{ github.sha }}
 
     publish-jetbrains:
         needs: publish-extension
@@ -119,8 +157,12 @@ jobs:
             - name: Checkout code
               uses: actions/checkout@v4
               with:
+                  ref: ${{ env.VALIDATED_TAG || env.GIT_REF }}
                   submodules: recursive
                   lfs: true
+            - name: Set rollback version
+              if: ${{ inputs.rollback_source_version != '' }}
+              run: node scripts/set-rollback-version.js ${{ inputs.rollback_source_version }}
             - name: Install pnpm
               uses: pnpm/action-setup@v4
               with:
