@@ -22,6 +22,43 @@ export type CostTrackingCallback = (
 ) => void
 
 /**
+ * Check if a suggestion matches the current prefix and suffix, handling partial typing
+ * @param fillInAtCursor - The suggestion to check
+ * @param currentPrefix - The text before the cursor position
+ * @param currentSuffix - The text after the cursor position
+ * @returns The matching suggestion text (adjusted for partial typing), or null if no match
+ */
+export function matchSuggestion(
+	fillInAtCursor: FillInAtCursorSuggestion,
+	currentPrefix: string,
+	currentSuffix: string,
+): string | null {
+	// First, try exact prefix/suffix match
+	if (currentPrefix === fillInAtCursor.prefix && currentSuffix === fillInAtCursor.suffix) {
+		return fillInAtCursor.text
+	}
+
+	// If no exact match, but suggestion is available, check for partial typing
+	// The user may have started typing the suggested text
+	if (
+		fillInAtCursor.text !== "" &&
+		currentPrefix.startsWith(fillInAtCursor.prefix) &&
+		currentSuffix === fillInAtCursor.suffix
+	) {
+		// Extract what the user has typed between the original prefix and current position
+		const typedContent = currentPrefix.substring(fillInAtCursor.prefix.length)
+
+		// Check if the typed content matches the beginning of the suggestion
+		if (fillInAtCursor.text.startsWith(typedContent)) {
+			// Return the remaining part of the suggestion (with already-typed portion removed)
+			return fillInAtCursor.text.substring(typedContent.length)
+		}
+	}
+
+	return null
+}
+
+/**
  * Find a matching suggestion from the history based on current prefix and suffix
  * @param prefix - The text before the cursor position
  * @param suffix - The text after the cursor position
@@ -36,27 +73,9 @@ export function findMatchingSuggestion(
 	// Search from most recent to least recent
 	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
 		const fillInAtCursor = suggestionsHistory[i]
-
-		// First, try exact prefix/suffix match
-		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return fillInAtCursor.text
-		}
-
-		// If no exact match, but suggestion is available, check for partial typing
-		// The user may have started typing the suggested text
-		if (
-			fillInAtCursor.text !== "" &&
-			prefix.startsWith(fillInAtCursor.prefix) &&
-			suffix === fillInAtCursor.suffix
-		) {
-			// Extract what the user has typed between the original prefix and current position
-			const typedContent = prefix.substring(fillInAtCursor.prefix.length)
-
-			// Check if the typed content matches the beginning of the suggestion
-			if (fillInAtCursor.text.startsWith(typedContent)) {
-				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return fillInAtCursor.text.substring(typedContent.length)
-			}
+		const match = matchSuggestion(fillInAtCursor, prefix, suffix)
+		if (match !== null) {
+			return match
 		}
 	}
 
@@ -327,14 +346,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 				// Always update suggestions, even if text is empty (for caching)
 				this.updateSuggestions(result.suggestion)
 
-				if (result.suggestion.text) {
+				// Validate that the debounced result still matches the current prefix/suffix
+				// This is important because the debounced result might be from a previous request
+				const matchedText = matchSuggestion(result.suggestion, prefix, suffix)
+
+				if (matchedText !== null && matchedText !== "") {
 					const item: vscode.InlineCompletionItem = {
-						insertText: result.suggestion.text,
+						insertText: matchedText,
 						range: new vscode.Range(position, position),
 					}
 					return [item]
 				} else {
-					// Empty text means no suggestion to show
+					// No match or empty text means no suggestion to show
 					return []
 				}
 			} catch (error) {
