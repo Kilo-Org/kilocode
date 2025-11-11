@@ -136,7 +136,7 @@ const StyledMarkdown = styled.div`
 
 	p {
 		white-space: pre-wrap;
-		margin: 1em 0 0.25em;
+		margin: 0.25em 0 0.25em;
 	}
 
 	/* Prevent layout shifts during streaming */

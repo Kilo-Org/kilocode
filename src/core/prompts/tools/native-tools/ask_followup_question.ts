@@ -28,7 +28,7 @@ export default {
 							mode: {
 								type: ["string", "null"],
 								description:
-									"Optional mode slug to switch to if this suggestion is chosen (e.g., code, architect)",
+									"Optional mode slug to switch to if this suggestion is chosen (e.g., agent, plan)",
 							},
 						},
 						required: ["text", "mode"],

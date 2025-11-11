@@ -272,7 +272,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	private askResponse?: ClineAskResponse
 	private askResponseText?: string
 	private askResponseImages?: string[]
+	private isWaitingForAskResponse = false
 	public lastMessageTs?: number
+	private manualMessageQueue: Array<{ text: string; images?: string[] }> = []
+	private isProcessingManualMessages = false
 
 	// Tool Use
 	consecutiveMistakeCount: number = 0
@@ -943,7 +946,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		// Wait for askResponse to be set.
-		await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })
+		this.isWaitingForAskResponse = true
+		try {
+			await pWaitFor(() => this.askResponse !== undefined || this.lastMessageTs !== askTs, { interval: 100 })
+		} finally {
+			this.isWaitingForAskResponse = false
+		}
 
 		if (this.lastMessageTs !== askTs) {
 			// Could happen if we send multiple asks in a row i.e. with
@@ -969,6 +977,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		this.emit(RooCodeEventName.TaskAskResponded)
+		void this.processManualMessageQueue()
 		return result
 	}
 
@@ -977,6 +986,11 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	handleWebviewAskResponse(askResponse: ClineAskResponse, text?: string, images?: string[]) {
+		if (!this.isWaitingForAskResponse && askResponse === "messageResponse") {
+			void this.enqueueManualUserMessage(text, images)
+			return
+		}
+
 		// this.askResponse = askResponse kilocode_change
 		this.askResponseText = text
 		this.askResponseImages = images
@@ -1019,6 +1033,109 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	public denyAsk({ text, images }: { text?: string; images?: string[] } = {}) {
 		this.handleWebviewAskResponse("noButtonClicked", text, images)
+	}
+
+	private async enqueueManualUserMessage(text?: string, images?: string[]): Promise<void> {
+		const trimmedText = text?.trim() ?? ""
+		const hasImages = Array.isArray(images) && images.length > 0
+
+		if (!trimmedText && !hasImages) {
+			return
+		}
+
+		this.manualMessageQueue.push({
+			text: trimmedText,
+			images: hasImages ? [...(images as string[])] : undefined,
+		})
+
+		try {
+			await this.processManualMessageQueue()
+		} catch (error) {
+			console.error("Failed to process manual user message queue:", error)
+		}
+	}
+
+	private async processManualMessageQueue(): Promise<void> {
+		if (this.isProcessingManualMessages) {
+			return
+		}
+
+		if (this.manualMessageQueue.length === 0) {
+			return
+		}
+
+		if (this.isStreaming || this.isWaitingForAskResponse) {
+			return
+		}
+
+		this.isProcessingManualMessages = true
+
+		try {
+			while (this.manualMessageQueue.length > 0) {
+				if (this.isStreaming || this.isWaitingForAskResponse) {
+					break
+				}
+
+				const nextMessage = this.manualMessageQueue.shift()
+
+				if (!nextMessage) {
+					break
+				}
+
+				await this.handleManualUserMessage(nextMessage)
+			}
+		} finally {
+			this.isProcessingManualMessages = false
+		}
+
+		if (!this.isStreaming && !this.isWaitingForAskResponse && this.manualMessageQueue.length > 0) {
+			void this.processManualMessageQueue()
+		}
+	}
+
+	private async handleManualUserMessage(message: { text: string; images?: string[] }): Promise<void> {
+		const { text, images } = message
+
+		try {
+			await this.checkpointSave(false, true)
+		} catch (error) {
+			console.error("Failed to checkpoint before manual user message:", error)
+		}
+
+		try {
+			await this.say("user_feedback", text, images)
+		} catch (error) {
+			console.error("Failed to append manual user message to conversation:", error)
+		}
+
+		this.emit(RooCodeEventName.TaskUserMessage, this.taskId)
+
+		const userContent: Anthropic.Messages.ContentBlockParam[] = []
+
+		if (text.length > 0) {
+			userContent.push({
+				type: "text",
+				text: `<user_message>\n${text}\n</user_message>`,
+			})
+		} else if (images && images.length > 0) {
+			userContent.push({
+				type: "text",
+				text: "[User provided images]",
+			})
+		}
+
+		if (images && images.length > 0) {
+			userContent.push(...formatResponse.imageBlocks(images))
+		}
+
+		this.userMessageContent = []
+		this.userMessageContentReady = false
+
+		try {
+			await this.recursivelyMakeClineRequests(userContent, false)
+		} catch (error) {
+			console.error("Failed to process manual user follow-up message:", error)
+		}
 	}
 
 	public async submitUserMessage(
@@ -2365,6 +2482,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 				} finally {
 					this.isStreaming = false
+					void this.processManualMessageQueue()
 				}
 
 				// Need to call here in case the stream was aborted.

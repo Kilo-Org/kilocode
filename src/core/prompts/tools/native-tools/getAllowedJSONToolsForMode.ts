@@ -55,7 +55,13 @@ export function getAllowedJSONToolsForMode(
 
 	if (isFastApplyAvailable(clineProviderState)) {
 		// When Morph is enabled, disable traditional editing tools
-		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		const traditionalEditingTools = [
+			"apply_diff",
+			"file_edit",
+			"write_to_file",
+			"insert_content",
+			"search_and_replace",
+		]
 		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	} else {
 		tools.delete("edit_file")

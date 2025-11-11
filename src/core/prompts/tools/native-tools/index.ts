@@ -3,7 +3,6 @@ import askFollowupQuestion from "./ask_followup_question"
 import attemptCompletion from "./attempt_completion"
 import browserAction from "./browser_action"
 import codebaseSearch from "./codebase_search"
-// import editFile from "./edit_file"
 import executeCommand from "./execute_command"
 import fetchInstructions from "./fetch_instructions"
 import generateImage from "./generate_image"
@@ -19,18 +18,21 @@ import searchFiles from "./search_files"
 import updateTodoList from "./update_todo_list"
 import writeToFile from "./write_to_file"
 import { apply_diff_single_file, apply_diff_multi_file } from "./apply_diff"
+import editFile from "./edit_file"
+import fileEdit from "./file_edit"
 
 export const nativeTools = [
-	apply_diff_single_file,
-	apply_diff_multi_file,
+	// apply_diff_single_file,
+	// apply_diff_multi_file,
+	fileEdit,
 	askFollowupQuestion,
 	attemptCompletion,
-	browserAction,
-	codebaseSearch,
+	// browserAction,
+	// codebaseSearch,
 	// editFile,
 	executeCommand,
 	fetchInstructions,
-	generateImage,
+	// generateImage,
 	insertContent,
 	listCodeDefinitionNames,
 	listFiles,

@@ -7,6 +7,7 @@ export const apply_diff_single_file = {
 		description: `
 Apply precise, targeted modifications to an existing file using one or more search/replace blocks. This tool is for surgical edits only; the 'SEARCH' block must exactly match the existing content, including whitespace and indentation. To make multiple targeted changes, provide multiple SEARCH/REPLACE blocks in the 'diff' parameter. Use the 'read_file' tool first if you are not confident in the exact content to search for.
 `,
+		strict: true,
 		parameters: {
 			type: "object",
 			properties: {
@@ -41,6 +42,7 @@ export const apply_diff_multi_file = {
 		name: "apply_diff",
 		description:
 			"Apply precise, targeted modifications to one or more files by searching for specific sections of content and replacing them. This tool is for surgical edits only and supports making changes across multiple files in a single request. The 'SEARCH' block must exactly match the existing content, including whitespace and indentation. You must use this tool to edit multiple files in a single operation whenever possible.",
+		strict: true,
 		parameters: {
 			type: "object",
 			properties: {

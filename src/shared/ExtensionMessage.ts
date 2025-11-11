@@ -462,6 +462,7 @@ export interface ClineSayTool {
 		| "finishTask"
 		| "searchAndReplace"
 		| "insertContent"
+		| "fileEdit"
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
@@ -479,6 +480,7 @@ export interface ClineSayTool {
 	replace?: string
 	useRegex?: boolean
 	ignoreCase?: boolean
+	replaceAll?: boolean
 	startLine?: number
 	endLine?: number
 	lineNumber?: number

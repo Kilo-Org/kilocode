@@ -16,6 +16,7 @@ import { writeToFileTool } from "../tools/writeToFileTool"
 import { applyDiffTool } from "../tools/multiApplyDiffTool"
 import { insertContentTool } from "../tools/insertContentTool"
 import { searchAndReplaceTool } from "../tools/searchAndReplaceTool"
+import { fileEditTool } from "../tools/fileEditTool"
 import { editFileTool } from "../tools/editFileTool" // kilocode_change: Morph fast apply
 import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesTool"
 import { searchFilesTool } from "../tools/searchFilesTool"
@@ -201,6 +202,8 @@ export async function presentAssistantMessage(cline: Task) {
 						}]`
 					case "insert_content":
 						return `[${block.name} for '${block.params.path}']`
+					case "file_edit":
+						return `[${block.name} for '${block.params.target_file}']`
 					case "search_and_replace":
 						return `[${block.name} for '${block.params.path}']`
 					// kilocode_change start: Morph fast apply
@@ -507,6 +510,9 @@ export async function presentAssistantMessage(cline: Task) {
 				case "search_and_replace":
 					// await checkpointSaveAndMark(cline) // kilocode_change
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					break
+				case "file_edit":
+					await fileEditTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":

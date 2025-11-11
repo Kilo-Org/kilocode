@@ -421,22 +421,22 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							// setPrimaryButtonText(t("chat:startNewTask.title"))
 							setSecondaryButtonText(undefined)
 							break
-						// case "resume_task":
-						// 	setSendingDisabled(false)
-						// 	setClineAsk("resume_task")
-						// 	setEnableButtons(true)
-						// 	setPrimaryButtonText(t("chat:resumeTask.title"))
-						// 	setSecondaryButtonText(t("chat:terminate.title"))
-						// 	setDidClickCancel(false) // special case where we reset the cancel button state
-						// 	break
-						// case "resume_completed_task":
-						// 	setSendingDisabled(false)
-						// 	setClineAsk("resume_completed_task")
-						// 	setEnableButtons(true)
-						// 	setPrimaryButtonText(t("chat:startNewTask.title"))
-						// 	setSecondaryButtonText(undefined)
-						// 	setDidClickCancel(false)
-						// 	break
+						case "resume_task":
+							setSendingDisabled(false)
+							setClineAsk("resume_task")
+							// setEnableButtons(true)
+							// 	setPrimaryButtonText(t("chat:resumeTask.title"))
+							// 	setSecondaryButtonText(t("chat:terminate.title"))
+							// 	setDidClickCancel(false) // special case where we reset the cancel button state
+							break
+						case "resume_completed_task":
+							setSendingDisabled(false)
+							setClineAsk("resume_completed_task")
+							// setEnableButtons(true)
+							// 	setPrimaryButtonText(t("chat:startNewTask.title"))
+							// 	setSecondaryButtonText(undefined)
+							// 	setDidClickCancel(false)
+							break
 						// kilocode_change begin
 						case "report_bug":
 							if (!isPartial) {
@@ -475,12 +475,17 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 						case "api_req_finished":
 						case "error":
 						case "text":
+							setSendingDisabled(false)
+							break
 						case "browser_action":
 						case "browser_action_result":
 						case "command_output":
 						case "mcp_server_request_started":
 						case "mcp_server_response":
 						case "completion_result":
+							break
+						default:
+							setSendingDisabled(false)
 							break
 					}
 					break
@@ -628,11 +633,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 	const handleSendMessage = useCallback(
 		(text: string, images: string[]) => {
 			text = text.trim()
-
 			if (text || images.length > 0) {
 				if (sendingDisabled) {
 					try {
-						console.log("queueMessage", text, images)
 						vscode.postMessage({ type: "queueMessage", text, images })
 						setInputValue("")
 						setSelectedImages([])

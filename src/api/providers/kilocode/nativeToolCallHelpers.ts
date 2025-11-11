@@ -85,13 +85,13 @@ import type { ApiStreamNativeToolCallsChunk } from "../../transform/kilocode/api
  */
 export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionCreateParams>(
 	params: T,
-	options: ProviderSettings,
-	metadata?: ApiHandlerCreateMessageMetadata,
+	_options: ProviderSettings,
+	_metadata?: ApiHandlerCreateMessageMetadata,
 ): T {
 	// When toolStyle is "json", always add all native tools
 
 	// Use allowedTools if provided, otherwise use all native tools
-	const tools = metadata?.allowedTools || nativeTools
+	const tools = nativeTools
 	if (tools && tools.length > 0) {
 		params.tools = tools
 		//optimally we'd have tool_choice as 'required', but many providers, especially

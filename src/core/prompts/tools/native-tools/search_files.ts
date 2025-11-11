@@ -19,7 +19,7 @@ export default {
 				},
 				file_pattern: {
 					type: ["string", "null"],
-					description: "Optional glob to limit which files are searched (e.g., *.ts)",
+					description: "Optional string glob to limit which files are searched (e.g., '*.ts')",
 				},
 			},
 			required: ["path", "regex", "file_pattern"],

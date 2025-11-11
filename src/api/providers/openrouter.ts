@@ -146,15 +146,19 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const baseURL = this.options.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
-		console.log("baseURL", baseURL)
-		console.log("apiKey", apiKey)
-
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
+		// this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
 	// kilocode_change start
-	customRequestOptions(_metadata?: ApiHandlerCreateMessageMetadata): { headers: Record<string, string> } | undefined {
-		return undefined
+	customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata): { headers: Record<string, string> } | undefined {
+		const headers: Record<string, string> = {}
+
+		if (metadata?.taskId) {
+			headers["X-AXON-TASK-ID"] = metadata.taskId
+		}
+
+		return Object.keys(headers).length > 0 ? { headers } : undefined
 	}
 
 	getCustomRequestHeaders(taskId?: string) {
@@ -208,40 +212,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		let { id: modelId, maxTokens, temperature, topP, reasoning } = model
 		const convertedMessages = [systemMessage, ...convertToOpenAiMessages(messages)]
 
-		// openAiMessages = openAiMessages
-		// 	.map((msg: any) => {
-		// 		let content = flattenMessageContent(msg.content)
-
-		// 		// Strip thinking tokens from assistant messages to prevent confusion
-		// 		if (msg.role === "assistant") {
-		// 			content = stripThinkingTokens(content)
-		// 		}
-
-		// 		return {
-		// 			role: msg.role,
-		// 			content,
-		// 		}
-		// 	})
-		// 	.filter((msg: any) => msg.content.trim() !== "")
-
-		// const transforms = (this.options.openRouterUseMiddleOutTransform ?? true) ? ["middle-out"] : undefined
-
-		console.log("convertedMessages", convertedMessages)
-
-		// https://openrouter.ai/docs/transforms
-		// const completionParams: OpenRouterChatCompletionParams = {
-		// 	model: modelId,
-		// 	...(maxTokens && maxTokens > 0 && { max_tokens: maxTokens }),
-		// 	temperature,
-		// 	top_p: topP,
-		// 	messages: convertedMessages,
-		// 	stream: true,
-		// 	stream_options: { include_usage: true },
-		// 	...this.getProviderParams(), // kilocode_change: original expression was moved into function
-		// 	...(transforms && { transforms }),
-		// 	...(reasoning && { reasoning }),
-		// }
-
 		const requestOptions: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model: modelId,
 			temperature: 0,
@@ -256,7 +226,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		let stream
 		try {
 			console.log("requestOptions", requestOptions)
-			// console.log("customRequestOptions", this.customRequestOptions(metadata))
+			console.log("metadata", metadata)
 			stream = await this.client.chat.completions.create(
 				requestOptions,
 				this.customRequestOptions(metadata), // kilocode_change
