@@ -8,7 +8,6 @@ import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
 import { refuseUselessSuggestion } from "./uselessSuggestionFilter"
-import debounce from "lodash.debounce"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -99,7 +98,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private getSettings: () => GhostServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
-	private debouncedFetchAndCacheSuggestion: (document: vscode.TextDocument, position: vscode.Position) => void
+	private debounceTimer: NodeJS.Timeout | null = null
+	private pendingFetch: { document: vscode.TextDocument; position: vscode.Position } | null = null
 
 	constructor(
 		model: GhostModel,
@@ -120,11 +120,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		} else {
 			throw new Error("GhostContextProvider with IDE is required for tracking services")
 		}
-
-		// Create debounced version of fetchAndCacheSuggestion
-		this.debouncedFetchAndCacheSuggestion = debounce((document: vscode.TextDocument, position: vscode.Position) => {
-			this.fetchAndCacheSuggestion(document, position)
-		}, DEBOUNCE_DELAY_MS)
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -247,6 +242,29 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 		return stringToInlineCompletions(cachedText ?? "", position)
+	}
+
+	/**
+	 * Debounced version of fetchAndCacheSuggestion.
+	 * Cancels any pending fetch and schedules a new one after DEBOUNCE_DELAY_MS.
+	 */
+	private debouncedFetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): void {
+		// Clear any existing timer
+		if (this.debounceTimer !== null) {
+			clearTimeout(this.debounceTimer)
+		}
+
+		// Store the pending fetch parameters
+		this.pendingFetch = { document, position }
+
+		// Schedule the fetch
+		this.debounceTimer = setTimeout(() => {
+			if (this.pendingFetch) {
+				this.fetchAndCacheSuggestion(this.pendingFetch.document, this.pendingFetch.position)
+				this.pendingFetch = null
+			}
+			this.debounceTimer = null
+		}, DEBOUNCE_DELAY_MS)
 	}
 
 	private async fetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): Promise<void> {
