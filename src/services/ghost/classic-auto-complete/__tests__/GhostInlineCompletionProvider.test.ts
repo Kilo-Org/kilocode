@@ -1075,7 +1075,7 @@ describe("GhostInlineCompletionProvider", () => {
 				}
 			})
 
-			// First call - triggers debounced LLM call but returns empty immediately (debounced behavior)
+			// First call - waits for debounced LLM call and returns the result
 			const result1 = (await provideWithDebounce(
 				mockDocument,
 				mockPosition,
@@ -1083,8 +1083,8 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
 
-			// With debouncing, first call returns empty, LLM is called in background
-			expect(result1.length).toBe(0)
+			// With the new implementation, first call waits and returns the result
+			expect(result1.length).toBeGreaterThan(0)
 			expect(callCount).toBe(1)
 
 			// Second call with same prefix/suffix - should use suggestion cache populated by first call
@@ -1303,7 +1303,7 @@ describe("GhostInlineCompletionProvider", () => {
 				}
 			})
 
-			// First call triggers debounced LLM call but returns empty immediately
+			// First call waits for debounced LLM call and returns the useful suggestion
 			const result1 = (await provideWithDebounce(
 				mockDocument,
 				mockPosition,
@@ -1311,7 +1311,8 @@ describe("GhostInlineCompletionProvider", () => {
 				mockToken,
 			)) as vscode.InlineCompletionItem[]
 
-			expect(result1).toHaveLength(0)
+			expect(result1).toHaveLength(1)
+			expect(result1[0].insertText).toBe("\nconsole.log('useful');")
 			expect(mockModel.generateResponse).toHaveBeenCalledTimes(1)
 
 			// Second call should return the cached useful suggestion

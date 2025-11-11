@@ -247,12 +247,22 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return stringToInlineCompletions(matchingText, position)
 		}
 
-		// Start the debounced fetch but don't await it - we want to return quickly
-		// The fetch will update the cache in the background
-		this.debouncedFetchAndCacheSuggestion(document, position)
+		// If we have a pending promise for the same prefix/suffix, reuse it
+		const cacheKey = `${prefix}|||${suffix}`
+		if (this.pendingPromise) {
+			// Wait for the pending operation to complete
+			await this.pendingPromise
+			// Check cache again after the pending operation
+			const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			return stringToInlineCompletions(cachedText ?? "", position)
+		}
 
-		// For now, return empty - the next call will get the cached result
-		return []
+		// Start the debounced fetch and wait for it
+		await this.debouncedFetchAndCacheSuggestion(document, position)
+
+		// Check cache after fetch completes
+		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		return stringToInlineCompletions(cachedText ?? "", position)
 	}
 
 	/**
