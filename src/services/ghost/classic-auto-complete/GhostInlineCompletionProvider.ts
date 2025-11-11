@@ -100,6 +100,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
 	private pendingFetch: { document: vscode.TextDocument; position: vscode.Position } | null = null
+	private pendingPromise: Promise<void> | null = null
 
 	constructor(
 		model: GhostModel,
@@ -199,6 +200,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	public dispose(): void {
+		// Clear any pending debounce timer to prevent execution after disposal
+		if (this.debounceTimer !== null) {
+			clearTimeout(this.debounceTimer)
+			this.debounceTimer = null
+		}
+		this.pendingFetch = null
+		this.pendingPromise = null
+		
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 	}
@@ -238,17 +247,20 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return stringToInlineCompletions(matchingText, position)
 		}
 
+		// Start the debounced fetch but don't await it - we want to return quickly
+		// The fetch will update the cache in the background
 		this.debouncedFetchAndCacheSuggestion(document, position)
 
-		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
-		return stringToInlineCompletions(cachedText ?? "", position)
+		// For now, return empty - the next call will get the cached result
+		return []
 	}
 
 	/**
 	 * Debounced version of fetchAndCacheSuggestion.
 	 * Cancels any pending fetch and schedules a new one after DEBOUNCE_DELAY_MS.
+	 * Returns a promise that resolves when the fetch completes.
 	 */
-	private debouncedFetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): void {
+	private debouncedFetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): Promise<void> {
 		// Clear any existing timer
 		if (this.debounceTimer !== null) {
 			clearTimeout(this.debounceTimer)
@@ -257,14 +269,21 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		// Store the pending fetch parameters
 		this.pendingFetch = { document, position }
 
-		// Schedule the fetch
-		this.debounceTimer = setTimeout(() => {
-			if (this.pendingFetch) {
-				this.fetchAndCacheSuggestion(this.pendingFetch.document, this.pendingFetch.position)
-				this.pendingFetch = null
-			}
-			this.debounceTimer = null
-		}, DEBOUNCE_DELAY_MS)
+		// Create a new promise for this debounced operation
+		this.pendingPromise = new Promise<void>((resolve) => {
+			// Schedule the fetch
+			this.debounceTimer = setTimeout(async () => {
+				if (this.pendingFetch) {
+					await this.fetchAndCacheSuggestion(this.pendingFetch.document, this.pendingFetch.position)
+					this.pendingFetch = null
+				}
+				this.debounceTimer = null
+				this.pendingPromise = null
+				resolve()
+			}, DEBOUNCE_DELAY_MS)
+		})
+
+		return this.pendingPromise
 	}
 
 	private async fetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): Promise<void> {

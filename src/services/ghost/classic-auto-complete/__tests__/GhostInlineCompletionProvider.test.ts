@@ -878,6 +878,30 @@ describe("GhostInlineCompletionProvider", () => {
 				expect(result).toHaveLength(0)
 			})
 		})
+
+		describe("dispose", () => {
+			it("should clear pending debounce timer when disposed", async () => {
+				// Start a debounced fetch
+				provider.provideInlineCompletionItems(mockDocument, mockPosition, mockContext, mockToken)
+
+				// Verify timer is set
+				const timerCountBeforeDispose = vi.getTimerCount()
+				expect(timerCountBeforeDispose).toBeGreaterThan(0)
+
+				// Dispose the provider
+				provider.dispose()
+
+				// Verify timer is cleared
+				const timerCountAfterDispose = vi.getTimerCount()
+				expect(timerCountAfterDispose).toBeLessThan(timerCountBeforeDispose)
+
+				// Advance time to ensure timer doesn't fire
+				await vi.advanceTimersByTimeAsync(300)
+
+				// Model should never be called since we disposed before timer fired
+				expect(mockModel.generateResponse).not.toHaveBeenCalled()
+			})
+		})
 	})
 
 	describe("updateSuggestions", () => {
