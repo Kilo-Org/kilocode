@@ -142,7 +142,9 @@
 		"manual_url_no_query": "URL de callback invalide : paramètres de requête manquants",
 		"manual_url_missing_params": "URL de callback invalide : paramètres requis manquants (code et state)",
 		"manual_url_auth_failed": "Authentification par URL manuelle échouée",
-		"manual_url_auth_error": "Échec de l'authentification"
+		"manual_url_auth_error": "Échec de l'authentification",
+		"invalid_line_limit": "Limite de lignes invalide",
+		"invalid_character_limit": "Limite de caractères invalide"
 	},
 	"warnings": {
 		"no_terminal_content": "Aucun contenu de terminal sélectionné",
@@ -163,7 +165,8 @@
 		"organization_share_link_copied": "Lien de partage d'organisation copié dans le presse-papiers !",
 		"public_share_link_copied": "Lien de partage public copié dans le presse-papiers !",
 		"mode_exported": "Mode '{{mode}}' exporté avec succès",
-		"mode_imported": "Mode importé avec succès"
+		"mode_imported": "Mode importé avec succès",
+		"path_copied_to_clipboard": "Chemin copié dans le presse-papiers"
 	},
 	"answers": {
 		"yes": "Oui",

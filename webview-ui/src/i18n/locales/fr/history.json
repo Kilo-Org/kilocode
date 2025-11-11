@@ -52,5 +52,7 @@
 		"mostTokens": "Plus de tokens",
 		"mostRelevant": "Plus pertinentes"
 	},
-	"viewAllHistory": "Voir tout l'historique"
+	"viewAllHistory": "Voir tout l'historique",
+	"favoriteTask": "Ajouter aux favoris",
+	"unfavoriteTask": "Retirer des favoris"
 }

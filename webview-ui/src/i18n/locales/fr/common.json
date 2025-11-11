@@ -114,5 +114,22 @@
 		"months_ago": "il y a {{count}} mois",
 		"year_ago": "il y a un an",
 		"years_ago": "il y a {{count}} ans"
+	},
+	"docsLink": {
+		"label": "Documentation"
+	},
+	"dismiss": "Ignorer",
+	"dismissAndDontShowAgain": "Ignorer et ne plus afficher",
+	"cancel": "Annuler",
+	"confirm": "Confirmer",
+	"gemini": {
+		"sources": "Sources :"
+	},
+	"errors": {
+		"invalid_line_limit": "Limite de lignes invalide",
+		"invalid_character_limit": "Limite de caractères invalide"
+	},
+	"info": {
+		"path_copied_to_clipboard": "Chemin copié dans le presse-papiers"
 	}
 }

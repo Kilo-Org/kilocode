@@ -1,0 +1,86 @@
+---
+sidebar_label: Welcome
+---
+
+import { DISCORD_URL, REDDIT_URL, GITHUB_ISSUES_MAIN_URL, GITHUB_FEATURES_URL, YOUTUBE_URL } from '@site/src/constants.ts'
+import Image from '@site/src/components/Image';
+
+# Documentation Kilo Code
+
+Kilo Code **accélère** le développement avec la génération de code alimentée par l'IA et l'automatisation des tâches. Cette extension open source s'intègre directement à VS Code.
+
+## Que peut faire Kilo Code ?
+
+- 🚀 **Générer du code** à partir de descriptions en langage naturel
+- 🔧 **Refactoriser et déboguer** le code existant
+- 📝 **Rédiger et mettre à jour** la documentation
+- 🤔 **Répondre aux questions** sur votre base de code
+- 🔄 **Automatiser** les tâches répétitives
+- 🏗️ **Créer** de nouveaux fichiers et projets
+
+## Démarrage rapide
+
+1. [Installer Kilo Code](/getting-started/installing)
+2. [Configurer Kilo Code](/getting-started/setting-up)
+3. [Essayer votre première tâche](/getting-started/your-first-task)
+
+## Fonctionnalités
+
+<Image src="/docs/img/kilogif.gif" alt="GIF montrant certaines des capacités de Kilo Code" width="600" />
+
+### Bases
+
+Utilisez [l'interface de chat](/basic-usage/the-chat-interface) pour indiquer à Kilo Code ce dont vous avez besoin. Il s'appuie sur des modèles d'IA optimisés pour le codage pour compléter chaque demande.
+
+- Changez de [modes](/basic-usage/using-modes) pour adapter la tâche
+- Contrôlez les [actions](/features/auto-approving-actions) autorisées
+- Exécutez des [actions de code](/features/code-actions) directes
+
+### Utilisation de Kilo Code
+
+#### Modes multiples
+Kilo Code s'adapte à vos besoins avec des [modes](/basic-usage/using-modes) spécialisés :
+- [**Mode Code :**](/basic-usage/using-modes#code-mode-default) Pour les tâches de codage généralistes
+- [**Mode Architecte :**](/basic-usage/using-modes#architect-mode) Pour la planification et le leadership technique
+- [**Mode Question :**](/basic-usage/using-modes#ask-mode) Pour répondre aux questions et fournir des informations
+- [**Mode Débogage :**](/basic-usage/using-modes#debug-mode) Pour le diagnostic systématique des problèmes
+- **[Modes personnalisés](/features/custom-modes) :** Créez des personas spécialisés illimités pour l'audit de sécurité, l'optimisation des performances, la documentation ou toute autre tâche
+
+#### Outils principaux
+Kilo Code est livré avec des [outils](/features/tools/tool-use-overview) puissants qui peuvent :
+- [Lire](/features/tools/read-file) et [écrire](/features/tools/write-to-file) des fichiers dans votre projet
+- [Exécuter des commandes](/features/tools/execute-command) dans votre terminal VS Code
+- [Contrôler un navigateur web](/features/tools/browser-action)
+- [Poser des questions de suivi](/features/tools/ask-followup-question)
+- [Rechercher dans votre base de code](/features/tools/search-files)
+
+Consultez la [Référence des outils](/features/tools/tool-use-overview) complète pour tous les outils disponibles.
+
+### Extension de Kilo Code
+- **[MCP (Model Context Protocol)](/features/mcp/overview) :** Ajoutez des outils personnalisés illimités, intégrez-vous à des API externes, connectez-vous à des bases de données ou créez des outils de développement spécialisés
+- **[Modèles locaux](/advanced-usage/local-models) :** Exécutez Kilo Code avec des modèles d'IA locaux pour une utilisation hors ligne ou une confidentialité améliorée
+
+### Personnalisation de Kilo Code
+Faites travailler Kilo Code à votre manière avec :
+- [Gestion des paramètres](/features/settings-management) pour configurer votre expérience
+- [Modes personnalisés](/features/custom-modes) pour des tâches spécialisées
+- [Règles personnalisées](/advanced-usage/custom-rules) pour des règles spécifiques au projet
+- [Instructions personnalisées](/advanced-usage/custom-instructions) pour des instructions globales à l'échelle du plugin
+- [Profils de configuration API](/features/api-configuration-profiles) pour différents fournisseurs de modèles
+- [Paramètres d'approbation automatique](/features/auto-approving-actions) pour des workflows plus rapides
+
+## Ressources
+
+### Documentation
+- [Utilisation de Kilo Code](/basic-usage/the-chat-interface) - Apprenez les bases
+- [Concepts principaux](/features/auto-approving-actions) - Maîtrisez les fonctionnalités clés
+- [Utilisation avancée](/advanced-usage/prompt-engineering) - Poussez vos compétences plus loin
+- [Questions fréquentes](/faq) - Obtenez des réponses aux questions courantes
+
+### Communauté
+- **Discord :** <a href={DISCORD_URL} target="_blank">Rejoignez notre serveur Discord</a> pour de l'aide et des discussions en temps réel
+- **Reddit :** <a href={REDDIT_URL} target="_blank">Visitez notre subreddit</a> pour partager des expériences et des astuces
+- **YouTube :** <a href={YOUTUBE_URL} target="_blank">Consultez notre YouTube</a> pour apprendre des compétences pratiques lors de l'utilisation de Kilo Code
+- **GitHub :** Signalez des <a href={GITHUB_ISSUES_MAIN_URL} target="_blank">problèmes</a> ou demandez des <a href={GITHUB_FEATURES_URL} target="_blank">fonctionnalités</a>
+
+Prêt à commencer ? Cliquez sur le bouton **Suivant** ci-dessous pour commencer votre voyage avec Kilo Code !

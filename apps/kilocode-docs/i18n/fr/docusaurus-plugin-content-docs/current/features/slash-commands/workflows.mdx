@@ -1,0 +1,88 @@
+---
+title: "Workflows"
+sidebarTitle: "Workflows"
+---
+
+Les workflows automatisent les tâches répétitives en définissant des instructions étape par étape pour que Kilo Code les exécute. Invoquez n'importe quel workflow en tapant `/[nom-workflow.md]` dans le chat.
+
+<img src="/docs/img/slash-commands/workflows.png" alt="Onglet Workflows dans Kilo Code" width="600" />
+
+## Créer des Workflows
+
+Les workflows sont des fichiers markdown stockés dans `.kilocode/workflows/` :
+- **Workflows globaux** : `~/.kilocode/workflows/` (disponibles dans tous les projets)
+- **Workflows projet** : `[projet]/.kilocode/workflows/` (spécifiques au projet)
+
+### Configuration de Base
+
+1. Créez un fichier `.md` avec des instructions étape par étape
+2. Sauvegardez-le dans votre répertoire workflows
+3. Tapez `/nomfichier.md` pour l'exécuter
+
+### Capacités des Workflows
+
+Les workflows peuvent exploiter :
+- [Outils intégrés](/features/tools/tool-use-overview): [`read_file()`](/features/tools/read-file), [`search_files()`](/features/tools/search-files), [`execute_command()`](/features/tools/execute-command)
+- Outils CLI : `gh`, `docker`, `npm`, scripts personnalisés
+- [Intégrations MCP](/features/mcp/overview): Slack, bases de données, APIs
+- [Basculement de mode](/basic-usage/using-modes): [`new_task()`](/features/tools/new-task) pour des contextes spécialisés
+
+## Motifs de Workflows Communs
+
+**Gestion de Version**
+```markdown
+1. Rassembler les PRs fusionnés depuis la dernière version
+2. Générer le changelog à partir des messages de commit
+3. Mettre à jour les numéros de version
+4. Créer la branche de version et le tag
+5. Déployer vers l'environnement de staging
+```
+
+**Configuration de Projet**
+```markdown
+1. Cloner le modèle de référentiel
+2. Installer les dépendances (`npm install`, `pip install -r requirements.txt`)
+3. Configurer les fichiers d'environnement
+4. Initialiser la base de données/services
+5. Exécuter les tests initiaux
+```
+
+**Préparation de Révision de Code**
+```markdown
+1. Rechercher les commentaires TODO et les instructions de débogage
+2. Exécuter le linting et le formatage
+3. Exécuter la suite de tests
+4. Générer la description PR à partir des commits récents
+```
+
+## Exemple : Workflow de Soumission de PR
+
+Parcourons la création d'un workflow pour soumettre une pull request. Ce workflow gère tout le processus de la révision de code à la notification de déploiement.
+
+Créez un fichier appelé `submit-pr.md` dans votre répertoire `.kilocode/workflows` :
+
+```markdown
+# Workflow de Soumission de PR
+
+Vous aidez à soumettre une pull request. Suivez ces étapes :
+
+1. D'abord, utilisez `search_files` pour vérifier s'il y a des commentaires TODO ou des instructions console.log qui ne devraient pas être committés
+2. Exécutez les tests en utilisant `execute_command` avec `npm test` ou la commande de test appropriée
+3. Si les tests passent, stagez et commitez les changements avec un message de commit descriptif
+4. Poussez la branche et créez une pull request en utilisant `gh pr create`
+5. Utilisez `ask_followup_question` pour obtenir le titre PR et la description de l'utilisateur
+
+Paramètres nécessaires (demandez s'ils ne sont pas fournis) :
+- Nom de branche
+- Réviseurs à assigner
+```
+
+Maintenant vous pouvez déclencher ce workflow en tapant `/submit-pr.md` dans le chat. Kilo Code va :
+
+- Scanner votre code pour les problèmes courants avant de commiter
+- Exécuter votre suite de tests pour attraper les problèmes tôt
+- Gérer les opérations Git et la création de PR
+- Notifier votre équipe automatiquement
+- Configurer les tâches de suivi pour le déploiement
+
+Cela vous évite d'exécuter manuellement le même processus en 7 étapes à chaque fois que vous voulez soumettre du code pour révision.

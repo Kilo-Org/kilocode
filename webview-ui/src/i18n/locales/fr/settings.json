@@ -272,7 +272,8 @@
 			"hint": "Veuillez rouvrir les paramètres pour voir les modèles les plus récents.",
 			"loading": "Actualisation de la liste des modèles...",
 			"success": "Liste des modèles actualisée avec succès !",
-			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer."
+			"error": "Échec de l'actualisation de la liste des modèles. Veuillez réessayer.",
+			"missingConfig": "Configuration manquante pour l'actualisation des modèles"
 		},
 		"getRequestyApiKey": "Obtenir la clé API Requesty",
 		"getRequestyBaseUrl": "URL de base",
