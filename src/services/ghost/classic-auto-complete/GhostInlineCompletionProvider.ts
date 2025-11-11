@@ -247,16 +247,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return stringToInlineCompletions(matchingText, position)
 		}
 
-		// If we have a pending promise for the same prefix/suffix, reuse it
-		const cacheKey = `${prefix}|||${suffix}`
-		if (this.pendingPromise) {
-			// Wait for the pending operation to complete
-			await this.pendingPromise
-			// Check cache again after the pending operation
-			const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
-			return stringToInlineCompletions(cachedText ?? "", position)
-		}
-
 		// Start the debounced fetch and wait for it
 		await this.debouncedFetchAndCacheSuggestion(document, position)
 
@@ -297,6 +287,16 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	private async fetchAndCacheSuggestion(document: vscode.TextDocument, position: vscode.Position): Promise<void> {
+		// Check cache one more time right before fetching
+		// This handles the case where a previous debounced fetch completed while we were waiting
+		const { prefix, suffix } = extractPrefixSuffix(document, position)
+		const cachedResult = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		
+		if (cachedResult !== null) {
+			// Cache hit - no need to fetch
+			return
+		}
+
 		// Build complete context with all tracking data
 		const recentlyVisitedRanges = this.recentlyVisitedRangesService.getSnippets()
 		const recentlyEditedRanges = await this.recentlyEditedTracker.getRecentlyEditedRanges()
