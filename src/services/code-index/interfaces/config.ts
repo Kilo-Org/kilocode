@@ -8,6 +8,7 @@ export interface CodeIndexConfig {
 	isConfigured: boolean
 	embedderProvider: EmbedderProvider
 	modelId?: string
+	codebaseIndexEmbedderTimeoutMS?: number
 	modelDimension?: number // Generic dimension property for all providers
 	openAiOptions?: ApiHandlerOptions
 	ollamaOptions?: ApiHandlerOptions
@@ -29,6 +30,7 @@ export type PreviousConfigSnapshot = {
 	configured: boolean
 	embedderProvider: EmbedderProvider
 	modelId?: string
+	codebaseIndexEmbedderTimeoutMS?: number
 	modelDimension?: number // Generic dimension property
 	openAiKey?: string
 	ollamaBaseUrl?: string
