@@ -30,6 +30,12 @@ export async function executeCommandTool(
 ) {
 	let command: string | undefined = block.params.command
 	const customCwd: string | undefined = block.params.cwd
+	// kilocode_change start - runInBackground support
+	const runInBackgroundParam = block.params.run_in_background
+	const runInBackgroundRequested: boolean =
+		typeof runInBackgroundParam === "boolean" ? runInBackgroundParam : runInBackgroundParam === "true"
+	let runInBackground: boolean = runInBackgroundRequested
+	// kilocode_change end - runInBackground support
 
 	try {
 		if (block.partial) {
@@ -94,6 +100,7 @@ export async function executeCommandTool(
 				terminalOutputLineLimit,
 				terminalOutputCharacterLimit,
 				commandExecutionTimeout,
+				runInBackground, // kilocode_change
 			}
 
 			try {
@@ -141,6 +148,7 @@ export type ExecuteCommandOptions = {
 	terminalOutputLineLimit?: number
 	terminalOutputCharacterLimit?: number
 	commandExecutionTimeout?: number
+	runInBackground?: boolean // kilocode_change
 }
 
 export async function executeCommand(
@@ -150,6 +158,7 @@ export async function executeCommand(
 		command,
 		customCwd,
 		terminalShellIntegrationDisabled = true, // kilocode_change: default
+		runInBackground: runInBackgroundRequested = false, // kilocode_change
 		terminalOutputLineLimit = 500,
 		terminalOutputCharacterLimit = DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT,
 		commandExecutionTimeout = 0,
@@ -174,7 +183,7 @@ export async function executeCommand(
 	}
 
 	let message: { text?: string; images?: string[] } | undefined
-	let runInBackground = false
+	let runInBackground = runInBackgroundRequested // kilocode_change
 	let completed = false
 	let result: string = ""
 	let exitDetails: ExitCodeDetails | undefined
@@ -216,13 +225,31 @@ export async function executeCommand(
 				terminalOutputCharacterLimit,
 			)
 
-			task.say("command_output", result)
+			// kilocode_change start: only show command output if not runInBackground
+			if (!runInBackground) {
+				task.say("command_output", result)
+			}
+			// kilocode_change end: only show command output if not runInBackground
 			completed = true
 		},
-		onShellExecutionStarted: (pid: number | undefined) => {
+		// kilocode_change - add process param
+		onShellExecutionStarted: (pid: number | undefined, process: RooTerminalProcess) => {
 			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
-			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
+			const status: CommandExecutionStatus = {
+				executionId,
+				status: "started",
+				pid,
+				command,
+				runInBackground, // kilocode_change - add runInBackground
+				terminalId: terminal.id, // kilocode_change - add terminalId
+			}
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
+
+			// kilocode_change start - automatically continue the process
+			if (runInBackground) {
+				process.continue()
+			}
+			// kilocode_change end - automatically continue the process
 		},
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }

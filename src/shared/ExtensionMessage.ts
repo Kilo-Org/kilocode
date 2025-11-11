@@ -479,6 +479,7 @@ export interface ClineSayTool {
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
+		| "terminal_kill" // kilocode_change
 	path?: string
 	diff?: string
 	content?: string
