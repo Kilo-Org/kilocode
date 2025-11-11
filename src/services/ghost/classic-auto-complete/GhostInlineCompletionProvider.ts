@@ -1,4 +1,5 @@
 import * as vscode from "vscode"
+import debounce from "lodash.debounce"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput } from "../types"
 import { GhostContextProvider } from "./GhostContextProvider"
 import { parseGhostResponse, HoleFiller, FillInAtCursorSuggestion } from "./HoleFiller"
@@ -81,6 +82,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private getSettings: () => GhostServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
+	private pendingLLMRequest: Promise<LLMRetrievalResult> | null = null
+	private debouncedGetFromLLM: ReturnType<
+		typeof debounce<(context: GhostSuggestionContext, model: GhostModel) => Promise<LLMRetrievalResult>>
+	>
 
 	constructor(
 		model: GhostModel,
@@ -103,6 +108,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		} else {
 			throw new Error("GhostContextProvider with IDE is required for tracking services")
 		}
+
+		// Create debounced version of getFromLLM with 100ms delay
+		this.debouncedGetFromLLM = debounce(
+			async (context: GhostSuggestionContext, model: GhostModel) => {
+				return this.getFromLLM(context, model)
+			},
+			100,
+			{ leading: false, trailing: true },
+		)
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -234,11 +248,15 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	public cancelRequest(): void {
 		this.isRequestCancelled = true
+		// Cancel any pending debounced calls
+		this.debouncedGetFromLLM.cancel()
 	}
 
 	public dispose(): void {
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
+		// Clean up debounced function
+		this.debouncedGetFromLLM.cancel()
 	}
 
 	public async provideInlineCompletionItems(
@@ -279,7 +297,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return [item]
 		}
 
-		// No cached suggestion available - invoke LLM
+		// No cached suggestion available - invoke LLM with debouncing
 		if (this.model && this.ghostContext) {
 			const context: GhostSuggestionContext = {
 				document,
@@ -288,7 +306,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			const fullContext = await this.ghostContext.generate(context)
 			try {
-				const result = await this.getFromLLM(fullContext, this.model)
+				// Use the debounced version to prevent overloading the LLM
+				const result = await this.debouncedGetFromLLM(fullContext, this.model)
+
+				// Debounced function can return undefined if cancelled
+				if (!result) {
+					return []
+				}
 
 				if (this.costTrackingCallback && result.cost > 0) {
 					this.costTrackingCallback(
