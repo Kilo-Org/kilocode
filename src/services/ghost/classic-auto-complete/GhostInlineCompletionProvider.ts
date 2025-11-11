@@ -8,8 +8,10 @@ import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
 import { refuseUselessSuggestion } from "./uselessSuggestionFilter"
+import debounce from "lodash.debounce"
 
 const MAX_SUGGESTIONS_HISTORY = 20
+const DEBOUNCE_DELAY_MS = 300
 
 export type CostTrackingCallback = (
 	cost: number,
@@ -97,6 +99,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private getSettings: () => GhostServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
+	private debouncedFetchAndCacheSuggestion: (document: vscode.TextDocument, position: vscode.Position) => void
 
 	constructor(
 		model: GhostModel,
@@ -117,6 +120,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		} else {
 			throw new Error("GhostContextProvider with IDE is required for tracking services")
 		}
+
+		// Create debounced version of fetchAndCacheSuggestion
+		this.debouncedFetchAndCacheSuggestion = debounce((document: vscode.TextDocument, position: vscode.Position) => {
+			this.fetchAndCacheSuggestion(document, position)
+		}, DEBOUNCE_DELAY_MS)
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -235,7 +243,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return stringToInlineCompletions(matchingText, position)
 		}
 
-		await this.fetchAndCacheSuggestion(document, position)
+		this.debouncedFetchAndCacheSuggestion(document, position)
 
 		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 		return stringToInlineCompletions(cachedText ?? "", position)
