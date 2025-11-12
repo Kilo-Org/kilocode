@@ -47,8 +47,8 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		if (provider !== "oca") return
 		try {
 			OCAModelService.setOcaModels(providerModels as any)
-		} catch {
-			// best-effort
+		} catch (err) {
+			console.debug("ModelSelector: failure setting OCA models", err)
 		}
 
 		const saved = OCAModelService.getOcaSelectedModelId()
@@ -69,8 +69,8 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		})
 		try {
 			OCAModelService.setOcaSelectedModelId(target)
-		} catch {
-			// best-effort
+		} catch (err) {
+			console.debug("ModelSelector: failure setting selected OCA model", err)
 		}
 	}, [provider, providerModels, selectedModelId, currentApiConfigName, apiConfiguration])
 
@@ -87,8 +87,8 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 		if (provider === "oca") {
 			try {
 				OCAModelService.setOcaSelectedModelId(value)
-			} catch {
-				// best-effort
+			} catch (err) {
+				console.debug("ModelSelector: failure setting selected OCA model on change", err)
 			}
 		}
 
@@ -104,12 +104,7 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 	}
 
 	const onAcknowledge = () => {
-		if (!currentApiConfigName || !pendingModelId) {
-			setAckOpen(false)
-			setPendingModelId(null)
-			return
-		}
-		if (apiConfiguration[modelIdKey] === pendingModelId) {
+		if (!currentApiConfigName || !pendingModelId || apiConfiguration[modelIdKey] === pendingModelId) {
 			setAckOpen(false)
 			setPendingModelId(null)
 			return
@@ -127,8 +122,8 @@ export const ModelSelector = ({ currentApiConfigName, apiConfiguration, fallback
 			if (provider === "oca") {
 				OCAModelService.setOcaSelectedModelId(pendingModelId)
 			}
-		} catch {
-			// best-effort
+		} catch (err) {
+			console.debug("ModelSelector: failure setting selected OCA model on acknowledge", err)
 		}
 		setAckOpen(false)
 		setPendingModelId(null)

@@ -873,10 +873,10 @@ export const webviewMessageHandler = async (
 						} as GetModelsOptions,
 					})
 				} else {
-					console.debug("Skipping OCA model fetch (no token present; user must Sign in).")
+					console.debug("OCA model fetch skipped: user must Sign in.")
 				}
 			} catch (e) {
-				console.debug("Skipping OCA model fetch (error while checking token).", e)
+				console.debug("OCA model fetch skipped: error occurred while validating IDCS token..", e)
 			}
 
 			// Add IO Intelligence if API key is provided.

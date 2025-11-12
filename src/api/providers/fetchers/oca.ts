@@ -18,11 +18,9 @@ const defaultHttpClient: HttpClient = {
 }
 
 export function resolveOcaModelInfoUrl(baseUrl: string): string {
-	const normalized = new URL(baseUrl)
-	const basePath = normalized.pathname.replace(/\/+$/, "").replace(/\/+/g, "/")
-	const urlModelInfo = new URL(normalized.href)
-	urlModelInfo.pathname = `${basePath}/v1/model/info`
-	return urlModelInfo.href
+	const url = new URL(baseUrl)
+	url.pathname = `${url.pathname.replace(/\/+$/, "")}/v1/model/info`
+	return url.toString()
 }
 
 export function buildOcaHeaders(apiKey?: string, openAiHeaders?: Record<string, string>): Record<string, string> {
