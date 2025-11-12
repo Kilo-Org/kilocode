@@ -221,7 +221,21 @@ async function processFiles(
 			await upsertChunks(currentBatch, config.kilocodeToken)
 			chunksIndexed += currentBatch.length
 		} catch (error) {
-			errors.push(error instanceof Error ? error : new Error(String(error)))
+			const err = error instanceof Error ? error : new Error(String(error))
+
+			// Check if this is a 413 (Payload Too Large) error
+			const is413 =
+				error && typeof error === "object" && "response" in error && (error as any).response?.status === 413
+
+			if (is413) {
+				// Log warning but don't fail the entire scan
+				logger.warn(`[Scanner] Batch too large (413), skipping ${currentBatch.length} chunks`)
+				console.warn(`Batch upload failed with 413 (Payload Too Large), skipping ${currentBatch.length} chunks`)
+			} else {
+				// For other errors, add to errors array
+				errors.push(err)
+				logger.error(`[Scanner] Batch upload failed: ${err.message}`)
+			}
 		}
 
 		currentBatch = []

@@ -32,7 +32,7 @@ export const GEMINI_MAX_ITEM_TOKENS = 2048
 
 // kilocode_change start
 /**Managed Indexing */
-export const MANAGED_MAX_CHUNK_CHARS = 1000
+export const MANAGED_MAX_CHUNK_CHARS = 8192 * 1.2
 export const MANAGED_MIN_CHUNK_CHARS = 50
 export const MANAGED_OVERLAP_LINES = 5
 export const MANAGED_BATCH_SIZE = 60

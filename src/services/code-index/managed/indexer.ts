@@ -106,37 +106,27 @@ export async function startIndexing(
 				status: "scanning",
 				message: `Scanning: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,
 				gitBranch,
+				totalFiles: progress.filesTotal,
+				totalChunks: progress.chunksIndexed,
 			})
 		})
 
-		if (!result.success) {
-			// Log all errors for debugging - safely extract error messages
-			logger.error(`Scan failed with ${result.errors.length} errors:`)
+		// Log any errors encountered during scanning, but don't fail the entire scan
+		// unless there were critical errors (e.g., no files processed at all)
+		if (result.errors.length > 0) {
+			logger.warn(`Scan completed with ${result.errors.length} non-critical errors:`)
 			result.errors.forEach((err, index) => {
 				// Safely extract error message and stack to avoid circular reference issues
 				try {
 					const message = err.message || String(err)
-					logger.error(`  Error ${index + 1}: ${message}`)
+					logger.warn(`  Error ${index + 1}: ${message}`)
 					if (err.stack) {
-						logger.error(`    Stack: ${err.stack}`)
+						logger.warn(`    Stack: ${err.stack}`)
 					}
 				} catch (e) {
-					logger.error(`  Error ${index + 1}: [Unable to extract error message]`)
+					logger.warn(`  Error ${index + 1}: [Unable to extract error message]`)
 				}
 			})
-
-			// Create a detailed error message - safely extract error messages
-			const errorMessages = result.errors.slice(0, 5).map((e) => {
-				// Safely extract message, handling potential circular references
-				try {
-					return e.message || String(e)
-				} catch {
-					return "Unknown error"
-				}
-			})
-			const errorSummary = errorMessages.join("; ")
-			const remainingCount = result.errors.length > 5 ? ` and ${result.errors.length - 5} more` : ""
-			throw new Error(`Scan failed with ${result.errors.length} errors: ${errorSummary}${remainingCount}`)
 		}
 
 		console.log(

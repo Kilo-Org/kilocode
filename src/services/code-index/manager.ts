@@ -568,6 +568,19 @@ export class CodeIndexManager {
 				}
 
 				this._stateManager.setSystemState(systemState, state.message, state.manifest, state.gitBranch)
+
+				// For scanning state, also report file progress if available
+				// The managed indexer tracks files processed vs total files
+				if (state.status === "scanning" && state.totalFiles !== undefined) {
+					// Extract processed count from the message if available
+					// Message format: "Scanning: X/Y files (Z chunks)"
+					const match = state.message.match(/Scanning: (\d+)\/(\d+) files/)
+					if (match) {
+						const filesProcessed = parseInt(match[1], 10)
+						const filesTotal = parseInt(match[2], 10)
+						this._stateManager.reportFileQueueProgress(filesProcessed, filesTotal)
+					}
+				}
 			})
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error)
