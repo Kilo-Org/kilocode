@@ -32,6 +32,7 @@
 	"deleteItems": "{{count}} Öğeyi Sil",
 	"showAllWorkspaces": "Tüm çalışma alanlarından görevleri göster",
 	"showFavoritesOnly": "Sadece favorileri göster",
+	"newAgent": "Yeni Ajan",
 	"workspace": {
 		"prefix": "Çalışma Alanı:",
 		"current": "Mevcut",

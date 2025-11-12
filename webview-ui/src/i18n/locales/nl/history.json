@@ -32,6 +32,7 @@
 	"deleteItems": "Verwijder {{count}} items",
 	"showAllWorkspaces": "Toon taken van alle werkruimtes",
 	"showFavoritesOnly": "Toon alleen favorieten",
+	"newAgent": "Nieuwe Agent",
 	"workspace": {
 		"prefix": "Werkruimte:",
 		"current": "Huidig",

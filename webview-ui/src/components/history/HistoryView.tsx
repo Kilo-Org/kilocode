@@ -220,6 +220,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							{t("history:showFavoritesOnly")}
 						</label>
 					</div>
+					<Button variant="secondary" onClick={onDone} className="w-full" data-testid="new-agent-button">
+						<span className="codicon codicon-add mr-1" />
+						{t("history:newAgent")}
+					</Button>
 					{/* kilocode_change end */}
 					{/* Select all control in selection mode */}
 					{isSelectionMode && tasks.length > 0 && (

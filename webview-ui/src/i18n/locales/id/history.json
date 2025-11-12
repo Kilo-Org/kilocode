@@ -39,6 +39,7 @@
 	"deleteItems": "Hapus {{count}} Item",
 	"showAllWorkspaces": "Tampilkan tugas dari semua ruang kerja",
 	"showFavoritesOnly": "Tampilkan hanya favorit",
+	"newAgent": "Agen Baru",
 	"workspace": {
 		"prefix": "Ruang Kerja:",
 		"current": "Saat Ini",

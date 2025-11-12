@@ -32,6 +32,7 @@
 	"deleteItems": "ลบ {{count}} รายการ",
 	"showAllWorkspaces": "แสดงงานจากทุก workspace",
 	"showFavoritesOnly": "แสดงเฉพาะรายการโปรด",
+	"newAgent": "ตัวแทนใหม่",
 	"workspace": {
 		"prefix": "Workspace:",
 		"current": "ปัจจุบัน",

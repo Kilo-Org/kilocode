@@ -32,6 +32,7 @@
 	"deleteItems": "{{count}} आइटम हटाएं",
 	"showAllWorkspaces": "सभी वर्कस्पेस से कार्य दिखाएं",
 	"showFavoritesOnly": "केवल पसंदीदा दिखाएं",
+	"newAgent": "नया एजेंट",
 	"workspace": {
 		"prefix": "कार्यस्थान:",
 		"current": "वर्तमान",

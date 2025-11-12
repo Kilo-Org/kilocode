@@ -32,6 +32,7 @@
 	"deleteItems": "刪除 {{count}} 個項目",
 	"showAllWorkspaces": "顯示所有工作區的工作",
 	"showFavoritesOnly": "僅顯示收藏",
+	"newAgent": "新增代理",
 	"workspace": {
 		"prefix": "工作區：",
 		"current": "目前",

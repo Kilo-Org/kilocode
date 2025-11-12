@@ -32,6 +32,7 @@
 	"deleteItems": "Smazat {{count}} položek",
 	"showAllWorkspaces": "Zobrazit úkoly ze všech pracovních prostorů",
 	"showFavoritesOnly": "Zobrazit pouze oblíbené",
+	"newAgent": "Nový agent",
 	"workspace": {
 		"prefix": "Pracovní prostor:",
 		"current": "Aktuální",

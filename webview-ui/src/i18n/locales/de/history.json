@@ -39,6 +39,7 @@
 	"deleteItems": "{{count}} Elemente löschen",
 	"showAllWorkspaces": "Aufgaben aus allen Arbeitsbereichen anzeigen",
 	"showFavoritesOnly": "Nur Favoriten anzeigen",
+	"newAgent": "Neuer Agent",
 	"workspace": {
 		"prefix": "Arbeitsbereich:",
 		"current": "Aktuell",

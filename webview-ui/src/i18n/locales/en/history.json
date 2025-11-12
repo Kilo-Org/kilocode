@@ -32,6 +32,7 @@
 	"deleteItems": "Delete {{count}} Items",
 	"showAllWorkspaces": "Show tasks from all workspaces",
 	"showFavoritesOnly": "Show favorites only",
+	"newAgent": "New Agent",
 	"workspace": {
 		"prefix": "Workspace:",
 		"current": "Current",

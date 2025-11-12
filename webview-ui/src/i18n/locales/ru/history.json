@@ -32,6 +32,7 @@
 	"deleteItems": "Удалить {{count}} элементов",
 	"showAllWorkspaces": "Показать задачи из всех рабочих пространств",
 	"showFavoritesOnly": "Показать только избранное",
+	"newAgent": "Новый агент",
 	"workspace": {
 		"prefix": "Рабочая область:",
 		"current": "Текущая",

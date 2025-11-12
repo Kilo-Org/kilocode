@@ -32,6 +32,7 @@
 	"deleteItems": "{{count}} 項目を削除",
 	"showAllWorkspaces": "すべてのワークスペースのタスクを表示",
 	"showFavoritesOnly": "お気に入りのみ表示",
+	"newAgent": "新しいエージェント",
 	"workspace": {
 		"prefix": "ワークスペース:",
 		"current": "現在",

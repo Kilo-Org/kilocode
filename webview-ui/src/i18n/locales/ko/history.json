@@ -32,6 +32,7 @@
 	"deleteItems": "{{count}}개 항목 삭제",
 	"showAllWorkspaces": "모든 워크스페이스의 작업 표시",
 	"showFavoritesOnly": "즐겨찾기만 표시",
+	"newAgent": "새 에이전트",
 	"workspace": {
 		"prefix": "워크스페이스:",
 		"current": "현재",

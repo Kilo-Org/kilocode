@@ -32,6 +32,7 @@
 	"deleteItems": "حذف {{count}} عنصر",
 	"showAllWorkspaces": "عرض المهام من جميع المساحات",
 	"showFavoritesOnly": "عرض المفضلة فقط",
+	"newAgent": "وكيل جديد",
 	"workspace": {
 		"prefix": "المساحة:",
 		"current": "الحالية",
