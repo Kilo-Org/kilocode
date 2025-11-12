@@ -159,7 +159,9 @@ jobs:
                   OVSX_PAT: ${{ secrets.OVSX_TOKEN }}
               run: |
                   current_package_version="${{ needs.create-release.outputs.version }}"
-                  pnpm --filter kilo-code publish:marketplace
+                  cd src
+                  npx vsce publish --packagePath ../bin/kilo-code-${current_package_version}.vsix
+                  npx ovsx publish ../bin/kilo-code-${current_package_version}.vsix
                   echo "Successfully published version $current_package_version to VS Code Marketplace"
 
     publish-jetbrains:
