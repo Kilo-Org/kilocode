@@ -466,6 +466,8 @@ export type ExtensionState = Pick<
 	featureRoomoteControlEnabled: boolean
 	virtualQuotaActiveModel?: { id: string; info: ModelInfo } // kilocode_change: Add virtual quota active model for UI display
 	showTimestamps?: boolean // kilocode_change: Show timestamps in chat messages
+	isGitRepository?: boolean // kilocode_change: Whether the current workspace is a git repository
+	currentWorktreeMode?: string // kilocode_change: Current worktree mode (current or parallel)
 }
 
 export interface ClineSayTool {

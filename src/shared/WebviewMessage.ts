@@ -215,6 +215,7 @@ export interface WebviewMessage {
 		| "includeCurrentCost"
 		| "searchFiles"
 		| "setHistoryPreviewCollapsed"
+		| "setWorktreeMode" // kilocode_change
 		| "showFeedbackOptions" // kilocode_change
 		| "toggleApiConfigPin"
 		| "fetchMcpMarketplace" // kilocode_change

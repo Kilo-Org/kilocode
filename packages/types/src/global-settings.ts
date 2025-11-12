@@ -218,6 +218,7 @@ export const globalSettingsSchema = z.object({
 	hasOpenedModeSelector: z.boolean().optional(),
 	lastModeExportPath: z.string().optional(),
 	lastModeImportPath: z.string().optional(),
+	currentWorktreeMode: z.string().optional(), // kilocode_change: Current worktree mode (current or parallel)
 })
 
 export type GlobalSettings = z.infer<typeof globalSettingsSchema>

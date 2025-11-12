@@ -2075,6 +2075,12 @@ ${prompt}
 		this.kiloCodeTaskHistorySizeForTelemetryOnly = taskHistory.length
 		// kilocode_change end
 
+		// kilocode_change start: Check if we're in a git repository
+		const gitInfo = await getWorkspaceGitInfo()
+		const isGitRepository = !!gitInfo.repositoryUrl || !!gitInfo.defaultBranch
+		const currentWorktreeMode = this.getGlobalState("currentWorktreeMode") ?? "current"
+		// kilocode_change end
+
 		return {
 			version: this.context.extension?.packageJSON?.version ?? "",
 			apiConfiguration,
@@ -2241,6 +2247,8 @@ ${prompt}
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			isGitRepository, // kilocode_change
+			currentWorktreeMode, // kilocode_change
 		}
 	}
 

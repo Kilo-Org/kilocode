@@ -25,6 +25,7 @@ import Thumbnails from "../common/Thumbnails"
 import { ModeSelector } from "./ModeSelector"
 import KiloModeSelector from "../kilocode/KiloModeSelector"
 import { KiloProfileSelector } from "../kilocode/chat/KiloProfileSelector" // kilocode_change
+import { KiloWorktreePicker } from "../kilocode/KiloWorktreePicker" // kilocode_change
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
 import ContextMenu from "./ContextMenu"
 import { ImageWarningBanner } from "./ImageWarningBanner" // kilocode_change
@@ -1594,7 +1595,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							ref={containerRef}
 							// kilocode_change end
 							className={cn("flex", "justify-between", "items-center", "mt-auto")}>
-							<div className={cn("flex", "items-center", "gap-1", "min-w-0")}>
+							<div className={cn("flex", "items-center", "gap-1", "min-w-0", "flex-1")}>
 								<div className="shrink-0">
 									{/* kilocode_change start: KiloModeSelector instead of ModeSelector */}
 									<KiloModeSelector
@@ -1606,15 +1607,22 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 									{/* kilocode_change end */}
 								</div>
 
-								<KiloProfileSelector
-									currentConfigId={currentConfigId}
-									currentApiConfigName={currentApiConfigName}
-									displayName={displayName}
-									listApiConfigMeta={listApiConfigMeta}
-									pinnedApiConfigs={pinnedApiConfigs}
-									togglePinnedApiConfig={togglePinnedApiConfig}
-									selectApiConfigDisabled={selectApiConfigDisabled}
-								/>
+								<div className="shrink-0">
+									<KiloProfileSelector
+										currentConfigId={currentConfigId}
+										currentApiConfigName={currentApiConfigName}
+										displayName={displayName}
+										listApiConfigMeta={listApiConfigMeta}
+										pinnedApiConfigs={pinnedApiConfigs}
+										togglePinnedApiConfig={togglePinnedApiConfig}
+										selectApiConfigDisabled={selectApiConfigDisabled}
+									/>
+								</div>
+
+								<div className="shrink-0">
+									{/* kilocode_change: WorktreePicker */}
+									<KiloWorktreePicker />
+								</div>
 							</div>
 
 							{/* kilocode_change: hidden on small containerWidth

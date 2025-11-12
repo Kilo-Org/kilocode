@@ -1897,6 +1897,10 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("historyPreviewCollapsed", message.bool ?? false)
 			// No need to call postStateToWebview here as the UI already updated optimistically
 			break
+		case "setWorktreeMode": // kilocode_change
+			await updateGlobalState("currentWorktreeMode", message.text ?? "current")
+			await provider.postStateToWebview()
+			break
 		case "setReasoningBlockCollapsed":
 			await updateGlobalState("reasoningBlockCollapsed", message.bool ?? true)
 			// No need to call postStateToWebview here as the UI already updated optimistically

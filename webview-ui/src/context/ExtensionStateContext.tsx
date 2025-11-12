@@ -47,6 +47,9 @@ export interface ExtensionStateContextType extends ExtensionState {
 	dismissedNotificationIds: string[] // kilocode_change
 	yoloMode?: boolean // kilocode_change
 	setYoloMode: (value: boolean) => void // kilocode_Change
+	isGitRepository?: boolean // kilocode_change
+	currentWorktreeMode?: string // kilocode_change
+	setCurrentWorktreeMode: (value: string) => void // kilocode_change
 	// kilocode_change start - Auto-purge settings
 	autoPurgeEnabled?: boolean
 	setAutoPurgeEnabled: (value: boolean) => void
@@ -346,6 +349,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		includeCurrentCost: true,
 	})
 
+	const [isGitRepository, setIsGitRepository] = useState<boolean>(false) // kilocode_change
+	const [currentWorktreeMode, setCurrentWorktreeMode] = useState<string>("current") // kilocode_change
+
 	const [didHydrateState, setDidHydrateState] = useState(false)
 	const [showWelcome, setShowWelcome] = useState(false)
 	const [theme, setTheme] = useState<any>(undefined)
@@ -418,6 +424,14 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 					if ((newState as any).includeCurrentCost !== undefined) {
 						setIncludeCurrentCost((newState as any).includeCurrentCost)
 					}
+					// kilocode_change start: Update git repository state
+					if ((newState as any).isGitRepository !== undefined) {
+						setIsGitRepository((newState as any).isGitRepository)
+					}
+					if ((newState as any).currentWorktreeMode !== undefined) {
+						setCurrentWorktreeMode((newState as any).currentWorktreeMode)
+					}
+					// kilocode_change end
 					// Handle marketplace data if present in state message
 					if (newState.marketplaceItems !== undefined) {
 						setMarketplaceItems(newState.marketplaceItems)
@@ -732,6 +746,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		setIncludeCurrentTime,
 		includeCurrentCost,
 		setIncludeCurrentCost,
+		isGitRepository, // kilocode_change
+		currentWorktreeMode, // kilocode_change
+		setCurrentWorktreeMode, // kilocode_change
 	}
 
 	return <ExtensionStateContext.Provider value={contextValue}>{children}</ExtensionStateContext.Provider>
