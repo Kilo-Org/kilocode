@@ -1010,13 +1010,20 @@ Qwen Code AI models.
 
 Gemini CLI integration.
 
-**Description**: Use Google's Gemini models through CLI with OAuth authentication.
+**Description**: Use Google's Gemini models through CLI with OAuth authentication. Features intelligent model routing that automatically selects optimal models based on task complexity.
 
 **Required Fields**:
 
 - `geminiCliOAuthPath` (text): Path to OAuth credentials file (default: `~/.gemini/oauth_creds.json`)
 - `geminiCliProjectId` (text): Google Cloud project ID
 - `apiModelId` (text): The model to use (default: `gemini-2.5-flash-preview-04-17`)
+
+**Optional Fields**:
+
+- `geminiCliRouting` (object): Intelligent model routing configuration
+    - `enabled` (boolean): Enable automatic model routing based on task complexity (default: `true`)
+    - `simpleThreshold` (number): Complexity threshold 0-100 for routing decisions (default: `50`)
+    - `showComplexity` (boolean): Display complexity score in responses (default: `true`)
 
 **Example Configuration**:
 
@@ -1026,7 +1033,12 @@ Gemini CLI integration.
 	"provider": "gemini-cli",
 	"geminiCliOAuthPath": "~/.gemini/oauth_creds.json",
 	"geminiCliProjectId": "my-project-123",
-	"apiModelId": "gemini-2.5-flash-preview-04-17"
+	"apiModelId": "gemini-2.5-flash-preview-04-17",
+	"geminiCliRouting": {
+		"enabled": true,
+		"simpleThreshold": 50,
+		"showComplexity": true
+	}
 }
 ```
 
@@ -1036,6 +1048,11 @@ Gemini CLI integration.
 
 - Requires OAuth credentials file
 - Requires Google Cloud project
+- **Intelligent Model Router**: Automatically selects optimal models based on task complexity:
+    - Simple tasks (< threshold) use `gemini-2.5-flash` (faster, cheaper)
+    - Complex tasks (≥ threshold) use `gemini-2.5-pro` (more capable)
+    - Pattern based on Gemini CLI v0.11.2+ graduation
+    - Can be disabled by setting `geminiCliRouting.enabled` to `false`
 
 ---
 
@@ -1056,19 +1073,16 @@ ZAI AI platform.
 The `zaiApiLine` parameter determines which API endpoint and region to use:
 
 - `international_coding` (default): International Coding Plan
-
     - Base URL: `https://api.z.ai/api/coding/paas/v4`
     - Region: International
     - Optimized for coding tasks
 
 - `international`: International Standard
-
     - Base URL: `https://api.z.ai/api/paas/v4`
     - Region: International
     - General-purpose API
 
 - `china_coding`: China Coding Plan
-
     - Base URL: `https://open.bigmodel.cn/api/coding/paas/v4`
     - Region: China
     - Optimized for coding tasks

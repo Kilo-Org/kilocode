@@ -327,6 +327,13 @@ const geminiSchema = apiModelIdProviderModelSchema.extend({
 const geminiCliSchema = apiModelIdProviderModelSchema.extend({
 	geminiCliOAuthPath: z.string().optional(),
 	geminiCliProjectId: z.string().optional(),
+	geminiCliRouting: z
+		.object({
+			enabled: z.boolean().optional(),
+			simpleThreshold: z.number().min(0).max(100).optional(),
+			showComplexity: z.boolean().optional(),
+		})
+		.optional(),
 })
 // kilocode_change end
 

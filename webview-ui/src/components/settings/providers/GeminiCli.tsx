@@ -1,5 +1,5 @@
 import { useCallback } from "react"
-import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeTextField, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 
 import type { ProviderSettings } from "@roo-code/types"
 
@@ -27,6 +27,43 @@ export const GeminiCli = ({ apiConfiguration, setApiConfigurationField }: Gemini
 		[setApiConfigurationField],
 	)
 
+	const routingEnabled = apiConfiguration?.geminiCliRouting?.enabled ?? true
+	const simpleThreshold = apiConfiguration?.geminiCliRouting?.simpleThreshold ?? 50
+	const showComplexity = apiConfiguration?.geminiCliRouting?.showComplexity ?? true
+
+	const handleRoutingEnabledChange = useCallback(
+		(e: any) => {
+			const checked = e.target.checked
+			setApiConfigurationField("geminiCliRouting", {
+				...apiConfiguration?.geminiCliRouting,
+				enabled: checked,
+			})
+		},
+		[apiConfiguration?.geminiCliRouting, setApiConfigurationField],
+	)
+
+	const handleThresholdChange = useCallback(
+		(e: any) => {
+			const value = parseInt(e.target.value, 10)
+			setApiConfigurationField("geminiCliRouting", {
+				...apiConfiguration?.geminiCliRouting,
+				simpleThreshold: value,
+			})
+		},
+		[apiConfiguration?.geminiCliRouting, setApiConfigurationField],
+	)
+
+	const handleShowComplexityChange = useCallback(
+		(e: any) => {
+			const checked = e.target.checked
+			setApiConfigurationField("geminiCliRouting", {
+				...apiConfiguration?.geminiCliRouting,
+				showComplexity: checked,
+			})
+		},
+		[apiConfiguration?.geminiCliRouting, setApiConfigurationField],
+	)
+
 	return (
 		<>
 			<VSCodeTextField
@@ -38,6 +75,61 @@ export const GeminiCli = ({ apiConfiguration, setApiConfigurationField }: Gemini
 			</VSCodeTextField>
 			<div className="text-sm text-vscode-descriptionForeground -mt-2">
 				{t("settings:providers.geminiCli.oauthPathDescription")}
+			</div>
+
+			<div className="mt-4 p-3 bg-vscode-editorWidget-background border border-vscode-editorWidget-border rounded">
+				<div className="flex items-center gap-2 mb-3">
+					<i className="codicon codicon-lightbulb text-vscode-notificationsInfoIcon-foreground" />
+					<span className="font-semibold text-sm">Intelligent Model Router</span>
+				</div>
+				<div className="text-sm text-vscode-descriptionForeground mb-3">
+					Automatically selects the optimal model based on task complexity. Simple tasks use gemini-2.5-flash
+					(faster, cheaper), while complex tasks use gemini-2.5-pro (more capable).
+				</div>
+
+				<VSCodeCheckbox checked={routingEnabled} onChange={handleRoutingEnabledChange} className="mt-2">
+					Enable Intelligent Routing
+				</VSCodeCheckbox>
+				<div className="text-xs text-vscode-descriptionForeground mt-1 ml-6">
+					When enabled, tasks are automatically routed to the best model for their complexity
+				</div>
+
+				{routingEnabled && (
+					<>
+						<div className="mt-3 ml-6">
+							<label className="block text-sm font-medium mb-2">
+								Complexity Threshold: {simpleThreshold}%
+							</label>
+							<input
+								type="range"
+								min="0"
+								max="100"
+								value={simpleThreshold}
+								onInput={handleThresholdChange}
+								className="w-full"
+								style={{ accentColor: "var(--vscode-button-background)" }}
+							/>
+							<div className="flex justify-between text-xs text-vscode-descriptionForeground mt-1">
+								<span>← Flash (Simple)</span>
+								<span>Pro (Complex) →</span>
+							</div>
+							<div className="text-xs text-vscode-descriptionForeground mt-1">
+								Tasks below {simpleThreshold}% complexity use gemini-2.5-flash, others use
+								gemini-2.5-pro
+							</div>
+						</div>
+
+						<VSCodeCheckbox
+							checked={showComplexity}
+							onChange={handleShowComplexityChange}
+							className="mt-3 ml-6">
+							Show complexity score in responses
+						</VSCodeCheckbox>
+						<div className="text-xs text-vscode-descriptionForeground mt-1 ml-12">
+							Display [auto] indicator with model and complexity percentage
+						</div>
+					</>
+				)}
 			</div>
 
 			<div className="text-sm text-vscode-descriptionForeground mt-3">

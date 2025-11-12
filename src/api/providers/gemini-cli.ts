@@ -18,6 +18,7 @@ import { getModelParams } from "../transform/model-params"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { BaseProvider } from "./base-provider"
 import { getExtensionConfigUrl } from "@roo-code/types"
+import { routeGeminiModel, shouldRouteModel, type RoutingResult } from "../modelRouter"
 
 // OAuth2 Configuration (from Cline implementation)
 const OAUTH_REDIRECT_URI = "http://localhost:45289"
@@ -45,6 +46,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 	private credentials: OAuthCredentials | null = null
 	private oauthClientId: string | null = null
 	private oauthClientSecret: string | null = null
+	private routingResult: RoutingResult | null = null
 
 	constructor(options: ApiHandlerOptions) {
 		super()
@@ -278,7 +280,39 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 		await this.ensureAuthenticated()
 		const projectId = await this.discoverProjectId()
 
-		const { id: model, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
+		// Get the original model selection
+		const { id: originalModel, info, reasoning: thinkingConfig, maxTokens } = this.getModel()
+		let model = originalModel
+
+		// Route model based on task complexity if routing is enabled
+		const routingEnabled = this.options.geminiCliRouting?.enabled !== false
+		if (routingEnabled && shouldRouteModel(originalModel)) {
+			// Extract task from messages to analyze complexity
+			const lastMessage = messages[messages.length - 1]
+			let task = systemInstruction
+
+			if (lastMessage && Array.isArray(lastMessage.content)) {
+				// Extract text from content blocks
+				const textContent = lastMessage.content
+					.filter((block: any) => block.type === "text")
+					.map((block: any) => block.text)
+					.join("\n")
+				if (textContent) {
+					task = textContent
+				}
+			} else if (lastMessage && typeof lastMessage.content === "string") {
+				task = lastMessage.content
+			}
+
+			// Route to optimal model
+			this.routingResult = await routeGeminiModel(task, {
+				enabled: routingEnabled,
+				simpleThreshold: this.options.geminiCliRouting?.simpleThreshold ?? 50,
+				showComplexity: this.options.geminiCliRouting?.showComplexity ?? true,
+			})
+			this.routingResult.originalModel = originalModel
+			model = this.routingResult.selectedModel
+		}
 
 		// Convert messages to Gemini format
 		const contents = messages.map(convertAnthropicMessageToGemini)
@@ -460,5 +494,13 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 		// For OAuth/free tier, we can't use the token counting API
 		// Fall back to the base provider's tiktoken implementation
 		return super.countTokens(content)
+	}
+
+	/**
+	 * Get the routing information from the last createMessage call
+	 * Returns null if routing was not used or no message has been created yet
+	 */
+	getRoutingInfo(): RoutingResult | null {
+		return this.routingResult
 	}
 }

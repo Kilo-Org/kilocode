@@ -1688,6 +1688,29 @@
 								"type": "string",
 								"description": "Gemini CLI project ID"
 							},
+							"geminiCliRouting": {
+								"type": "object",
+								"description": "Intelligent model routing configuration",
+								"properties": {
+									"enabled": {
+										"type": "boolean",
+										"description": "Enable intelligent model routing",
+										"default": true
+									},
+									"simpleThreshold": {
+										"type": "number",
+										"description": "Complexity threshold (0-100) for routing",
+										"minimum": 0,
+										"maximum": 100,
+										"default": 50
+									},
+									"showComplexity": {
+										"type": "boolean",
+										"description": "Show complexity score in responses",
+										"default": true
+									}
+								}
+							},
 							"apiModelId": {
 								"type": "string",
 								"description": "Gemini CLI model ID"
