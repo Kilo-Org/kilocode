@@ -1,0 +1,148 @@
+name: Emergency Rollback
+
+on:
+    workflow_dispatch:
+        inputs:
+            source_tag:
+                description: "🔄 Source tag to rollback to (e.g., v4.115.0)"
+                required: true
+                type: string
+
+jobs:
+    prepare-rollback:
+        runs-on: ubuntu-latest
+        outputs:
+            rollback_version: ${{ steps.calculate.outputs.rollback_version }}
+            validated_tag: ${{ steps.validate.outputs.validated_tag }}
+        steps:
+            - name: Validate source tag
+              id: validate
+              run: |
+                  TAG="${{ inputs.source_tag }}"
+
+                  # Auto-fix: add 'v' prefix if missing
+                  if [[ ! "$TAG" =~ ^v ]]; then
+                    TAG="v$TAG"
+                    echo "Auto-fixed tag: $TAG (added v prefix)"
+                  fi
+
+                  # Fetch tags to ensure we have the latest
+                  git fetch --tags
+
+                  # Verify tag exists
+                  if ! git tag -l | grep -q "^${TAG}$"; then
+                    echo "Error: Tag '$TAG' does not exist"
+                    echo ""
+                    echo "Available recent tags:"
+                    git tag -l 'v*' | sort -V | tail -10
+                    exit 1
+                  fi
+
+                  echo "Tag '$TAG' exists"
+                  echo "validated_tag=$TAG" >> $GITHUB_OUTPUT
+
+            - name: Checkout code at tag
+              uses: actions/checkout@v4
+              with:
+                  ref: ${{ steps.validate.outputs.validated_tag }}
+
+            - name: Calculate rollback version
+              id: calculate
+              run: |
+                  echo "Calculating rollback version..."
+
+                  # Get current version from main branch
+                  MAIN_VERSION=$(git show origin/main:src/package.json | jq -r '.version')
+                  echo "Current version on main: $MAIN_VERSION"
+
+                  # Parse version components
+                  IFS='.' read -r MAJOR MINOR PATCH <<< "$MAIN_VERSION"
+
+                  # Increment patch and add -rollback suffix
+                  NEW_PATCH=$((PATCH + 1))
+                  ROLLBACK_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}-rollback"
+
+                  echo ""
+                  echo "Rollback version: $ROLLBACK_VERSION"
+                  echo "Version ordering: $MAIN_VERSION < $ROLLBACK_VERSION < ${MAJOR}.${MINOR}.${NEW_PATCH}"
+                  echo ""
+
+                  # Update package.json
+                  jq ".version = \"$ROLLBACK_VERSION\"" src/package.json > src/package.json.tmp
+                  mv src/package.json.tmp src/package.json
+
+                  echo "Updated src/package.json to version $ROLLBACK_VERSION"
+
+                  # Commit the version change
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git add src/package.json
+                  git commit -m "chore: bump version to $ROLLBACK_VERSION for rollback"
+                  git push origin HEAD:refs/heads/rollback-temp-${{ github.run_id }}
+
+                  echo "rollback_version=$ROLLBACK_VERSION" >> $GITHUB_OUTPUT
+
+    publish:
+        needs: prepare-rollback
+        uses: ./.github/workflows/_build-and-publish.yml
+        with:
+            version: ${{ needs.prepare-rollback.outputs.rollback_version }}
+            git_ref: rollback-temp-${{ github.run_id }}
+        secrets:
+            POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+            VSCE_TOKEN: ${{ secrets.VSCE_TOKEN }}
+            OVSX_TOKEN: ${{ secrets.OVSX_TOKEN }}
+            JETBRAINS_MARKETPLACE_TOKEN: ${{ secrets.JETBRAINS_MARKETPLACE_TOKEN }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+            TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
+    sync-main:
+        needs: [prepare-rollback, publish]
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  ref: rollback-temp-${{ github.run_id }}
+
+            - name: Create sync PR
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  echo "Creating PR to sync main branch with rollback version..."
+
+                  BRANCH_NAME="rollback-sync-${{ needs.prepare-rollback.outputs.rollback_version }}"
+                  SOURCE_TAG="${{ needs.prepare-rollback.outputs.validated_tag }}"
+                  VERSION="${{ needs.prepare-rollback.outputs.rollback_version }}"
+
+                  # Create permanent branch
+                  git checkout -b "$BRANCH_NAME"
+                  git push origin "$BRANCH_NAME"
+
+                  # Update CHANGELOG
+                  TODAY=$(date +%Y-%m-%d)
+                  echo "## [v${VERSION}] - ${TODAY}" > CHANGELOG.tmp
+                  echo "" >> CHANGELOG.tmp
+                  echo "🔄 **Rollback Release**: Restored stable functionality from \`${SOURCE_TAG}\`" >> CHANGELOG.tmp
+                  echo "" >> CHANGELOG.tmp
+                  cat CHANGELOG.md >> CHANGELOG.tmp
+                  mv CHANGELOG.tmp CHANGELOG.md
+
+                  git add CHANGELOG.md
+                  git commit -m "docs: add rollback entry to changelog"
+                  git push origin "$BRANCH_NAME"
+
+                  # Create PR
+                  gh pr create \
+                    --title "chore: sync rollback version $VERSION" \
+                    --body "Rollback sync from ${SOURCE_TAG} to version ${VERSION}" \
+                    --base main \
+                    --head "$BRANCH_NAME"
+
+                  echo "Created rollback sync PR"
+
+            - name: Cleanup temp branch
+              if: always()
+              run: |
+                  git push origin --delete rollback-temp-${{ github.run_id }} || true
