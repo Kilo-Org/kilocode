@@ -155,8 +155,8 @@
 			},
 			{
 				"command": "kilo-code.historyButtonClicked",
-				"title": "%command.history.title%",
-				"icon": "$(history)"
+				"title": "%command.agentManagement.title%",
+				"icon": "$(robot)"
 			},
 			{
 				"command": "kilo-code.marketplaceButtonClicked",

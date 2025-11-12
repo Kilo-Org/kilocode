@@ -23,7 +23,7 @@
 	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "Máy Chủ MCP",
 	"command.prompts.title": "Chế Độ",
-	"command.history.title": "Lịch Sử",
+	"command.agentManagement.title": "Quản Lý Đại Lý",
 	"command.marketplace.title": "Marketplace",
 	"command.openInEditor.title": "Mở trong Trình Soạn Thảo",
 	"command.cloud.title": "Cloud",

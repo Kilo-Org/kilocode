@@ -8,7 +8,7 @@
 	"command.newTask.title": "งานใหม่",
 	"command.mcpServers.title": "เซิร์ฟเวอร์ MCP",
 	"command.prompts.title": "โหมด",
-	"command.history.title": "ประวัติ",
+	"command.agentManagement.title": "การจัดการเอเจนต์",
 	"command.marketplace.title": "ตลาด",
 	"command.openInEditor.title": "เปิดในตัวแก้ไข",
 	"command.cloud.title": "คลาวด์",

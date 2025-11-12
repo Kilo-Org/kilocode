@@ -23,7 +23,7 @@
 	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "एमसीपी सर्वर",
 	"command.prompts.title": "मोड्स",
-	"command.history.title": "इतिहास",
+	"command.agentManagement.title": "एजेंट प्रबंधन",
 	"command.marketplace.title": "मार्केटप्लेस",
 	"command.openInEditor.title": "एडिटर में खोलें",
 	"command.cloud.title": "Cloud",

@@ -110,7 +110,7 @@ export const CheckpointMenu = ({ ts, commitHash, checkpoint, onOpenChange }: Che
 				<StandardTooltip content={t("chat:checkpoint.menu.restore")}>
 					<PopoverTrigger asChild>
 						<Button variant="ghost" size="icon" aria-label={t("chat:checkpoint.menu.restore")}>
-							<span className="codicon codicon-history" />
+							<span className="codicon codicon-robot" />
 						</Button>
 					</PopoverTrigger>
 				</StandardTooltip>

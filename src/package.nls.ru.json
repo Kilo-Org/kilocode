@@ -8,7 +8,7 @@
 	"command.newTask.title": "Новая задача",
 	"command.mcpServers.title": "MCP серверы",
 	"command.prompts.title": "Режимы",
-	"command.history.title": "История",
+	"command.agentManagement.title": "Управление агентами",
 	"command.marketplace.title": "Маркетплейс",
 	"command.openInEditor.title": "Открыть в редакторе",
 	"command.cloud.title": "Cloud",

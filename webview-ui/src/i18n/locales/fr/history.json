@@ -4,7 +4,7 @@
 	"tokens": "Tokens: ↑{{in}} ↓{{out}}",
 	"cache": "Cache: +{{writes}} → {{reads}}",
 	"apiCost": "Coût API: ${{cost}}",
-	"history": "Historique",
+	"agentManagement": "Gestion des Agents",
 	"exitSelectionMode": "Quitter le mode sélection",
 	"enterSelectionMode": "Entrer en mode sélection",
 	"done": "Terminé",

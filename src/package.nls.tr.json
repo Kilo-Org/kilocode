@@ -23,7 +23,7 @@
 	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "MCP Sunucuları",
 	"command.prompts.title": "Modlar",
-	"command.history.title": "Geçmiş",
+	"command.agentManagement.title": "Ajan Yönetimi",
 	"command.marketplace.title": "Marketplace",
 	"command.openInEditor.title": "Düzenleyicide Aç",
 	"command.cloud.title": "Cloud",

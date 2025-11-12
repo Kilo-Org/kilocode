@@ -8,7 +8,7 @@
 	"command.newTask.title": "New Task",
 	"command.mcpServers.title": "MCP Servers",
 	"command.prompts.title": "Modes",
-	"command.history.title": "History",
+	"command.agentManagement.title": "Agent Management",
 	"command.marketplace.title": "Marketplace",
 	"command.openInEditor.title": "Open in Editor",
 	"command.cloud.title": "Cloud",

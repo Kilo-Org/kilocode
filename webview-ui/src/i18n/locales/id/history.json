@@ -4,7 +4,7 @@
 	"tokens": "Token: ↑{{in}} ↓{{out}}",
 	"cache": "Cache: +{{writes}} → {{reads}}",
 	"apiCost": "Biaya API: ${{cost}}",
-	"history": "Riwayat",
+	"agentManagement": "Manajemen Agen",
 	"exitSelectionMode": "Keluar Mode Seleksi",
 	"enterSelectionMode": "Masuk Mode Seleksi",
 	"done": "Selesai",

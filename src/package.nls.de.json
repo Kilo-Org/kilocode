@@ -23,7 +23,7 @@
 	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "MCP Server",
 	"command.prompts.title": "Modi",
-	"command.history.title": "Verlauf",
+	"command.agentManagement.title": "Agentenverwaltung",
 	"command.marketplace.title": "Marktplatz",
 	"command.openInEditor.title": "Im Editor Öffnen",
 	"command.cloud.title": "Cloud",

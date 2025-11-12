@@ -8,7 +8,7 @@
 	"command.newTask.title": "Nový úkol",
 	"command.mcpServers.title": "MCP servery",
 	"command.prompts.title": "Režimy",
-	"command.history.title": "Historie",
+	"command.agentManagement.title": "Správa Agentů",
 	"command.marketplace.title": "Tržiště",
 	"command.openInEditor.title": "Otevřít v editoru",
 	"command.cloud.title": "Cloud",

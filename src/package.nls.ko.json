@@ -23,7 +23,7 @@
 	"views.sidebar.name": "Kilo Code",
 	"command.mcpServers.title": "MCP 서버",
 	"command.prompts.title": "모드",
-	"command.history.title": "기록",
+	"command.agentManagement.title": "에이전트 관리",
 	"command.marketplace.title": "마켓플레이스",
 	"command.openInEditor.title": "에디터에서 열기",
 	"command.cloud.title": "Cloud",
