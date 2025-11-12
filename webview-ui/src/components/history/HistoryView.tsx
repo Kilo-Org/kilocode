@@ -17,6 +17,7 @@ import {
 	StandardTooltip,
 } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
+import { vscode } from "@/utils/vscode"
 
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
@@ -220,7 +221,14 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							{t("history:showFavoritesOnly")}
 						</label>
 					</div>
-					<Button variant="secondary" onClick={onDone} className="w-full" data-testid="new-agent-button">
+					<Button
+						variant="secondary"
+						onClick={() => {
+							vscode.postMessage({ type: "clearTask" })
+							onDone()
+						}}
+						className="w-full"
+						data-testid="new-agent-button">
 						<span className="codicon codicon-add mr-1" />
 						{t("history:newAgent")}
 					</Button>
