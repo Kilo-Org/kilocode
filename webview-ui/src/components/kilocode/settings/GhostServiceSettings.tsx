@@ -34,6 +34,19 @@ export const GhostServiceSettingsView = ({
 	// Debug: log the profiles
 	console.log("[GhostServiceSettings] listApiConfigMeta:", listApiConfigMeta)
 	
+	// Debug: log the dropdown options
+	const profileOptions = useMemo(() => {
+		const opts = [
+			{ value: "", label: "Auto-detect (use first available)" },
+			...(listApiConfigMeta || []).map((config) => ({
+				value: config.id,
+				label: config.name,
+			})),
+		]
+		console.log("[GhostServiceSettings] Profile dropdown options:", opts)
+		return opts
+	}, [listApiConfigMeta])
+	
 	const {
 		enableAutoTrigger,
 		enableQuickInlineTaskKeybinding,
@@ -216,13 +229,7 @@ export const GhostServiceSettingsView = ({
 							<SelectDropdown
 								value={autocompleteProfileId || ""}
 								onChange={onAutocompleteProfileChange}
-								options={[
-									{ value: "", label: "Auto-detect (use first available)" },
-									...(listApiConfigMeta || []).map((config) => ({
-										value: config.id,
-										label: config.name,
-									})),
-								]}
+								options={profileOptions}
 								placeholder="Select profile..."
 							/>
 							<div className="text-vscode-descriptionForeground text-xs">
