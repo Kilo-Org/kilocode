@@ -13,6 +13,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { ApplyDiffParametersSchema, convertToDiff } from "../prompts/tools/native-tools/simple_apply_diff"
 
 export async function applyDiffToolLegacy(
 	cline: Task,
@@ -22,11 +23,20 @@ export async function applyDiffToolLegacy(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
-	const relPath: string | undefined = block.params.path
+	let relPath: string | undefined = block.params.path
 	let diffContent: string | undefined = block.params.diff
 
-	if (diffContent && !cline.api.getModel().id.includes("claude")) {
-		diffContent = unescapeHtmlEntities(diffContent)
+	//if (diffContent && !cline.api.getModel().id.includes("claude")) {
+	//	diffContent = unescapeHtmlEntities(diffContent)
+	//}
+
+	const params = ApplyDiffParametersSchema.safeParse(block.params)
+	if (params.data) {
+		console.info("Found apply_diff parameters", params.data)
+		relPath = params.data.path
+		diffContent = convertToDiff(params.data.diffs)
+	} else {
+		console.warn("No apply_diff parameters", params.error)
 	}
 
 	const sharedMessageProps: ClineSayTool = {

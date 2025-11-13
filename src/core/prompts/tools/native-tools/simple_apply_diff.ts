@@ -1,36 +1,79 @@
 import type OpenAI from "openai"
 import { z } from "zod/v4"
 
+export const DiffSchema = z.object({
+	startLine: z.number().describe("Indicates the starting line number of the original content."),
+	originalContent: z
+		.string()
+		.describe(
+			"The exact original content to search for. Must match the existing content exactly, including whitespace and indentation. Use the 'read_file' tool first if you are not confident in the exact content to search for.",
+		),
+	replacement: z.string("The new content to replace the original content with."),
+})
+
+export type Diff = z.infer<typeof DiffSchema>
+
+export function convertToDiff(diffs: Diff[]) {
+	// this makes no sense, but for laziness reasons convert it to the original format
+	// this could cause issues when escaping is required
+	return diffs
+		.map((diff) =>
+			[
+				"<<<<<<< SEARCH",
+				`:start_line:${diff.startLine}`,
+				diff.originalContent,
+				"=======",
+				diff.replacement,
+				">>>>>>> REPLACE",
+			].join("\n"),
+		)
+		.join("\n")
+}
+
+export const ApplyDiffParametersSchema = z.object({
+	path: z.string().describe("The path of the file to modify, relative to the current workspace directory."),
+	diffs: z
+		.array(DiffSchema)
+		.min(1)
+		.describe("An array containing one or more search/replace blocks defining the changes."),
+})
+
+export type ApplyDiffParameters = z.infer<typeof ApplyDiffParametersSchema>
+
+const example = {
+	path: "path/to/file.py",
+	diffs: [
+		{
+			startLine: 1,
+			originalContent: "def calculate_total(items):\n    sum = 0",
+			replacement: "def calculate_sum(items):\n    sum = 0",
+		},
+		{
+			startLine: 5,
+			originalContent: "        total += item\n    return total",
+			replacement: "        sum += item\n    return sum",
+		},
+	],
+} satisfies ApplyDiffParameters
+
 export default {
 	type: "function",
 	function: {
 		name: "apply_diff",
-		description: `
-Apply precise, targeted modifications to an existing file using one or more search/replace blocks. This tool is for surgical edits only; the 'SEARCH' block must exactly match the existing content, including whitespace and indentation. To make multiple targeted changes, provide multiple SEARCH/REPLACE blocks in the 'diff' parameter. Use the 'read_file' tool first if you are not confident in the exact content to search for.
-`,
-		parameters: {
-			type: "object",
-			properties: {
-				path: {
-					type: "string",
-					description: "The path of the file to modify, relative to the current workspace directory.",
-				},
-				diff: {
-					type: "string",
-					description: `
-A string containing one or more search/replace blocks defining the changes. The ':start_line:' is required and indicates the starting line number of the original content.  You must not add a start line for the replacement content. Each block must follow this format:
-<<<<<<< SEARCH
-:start_line:[line_number]
--------
-[exact content to find]
-=======
-[new content to replace with]
->>>>>>> REPLACE
-`,
-				},
-			},
-			required: ["path", "diff"],
-			additionalProperties: false,
-		},
+		description: `Apply precise, targeted modifications to an existing file using one or more search/replace blocks.
+
+Example usage:
+
+Original file:
+\`\`\`
+1 | def calculate_total(items):
+2 |     total = 0
+3 |     for item in items:
+4 |         total += item
+5 |     return total
+\`\`\`
+
+Search/replace content with multiple edits: ${JSON.stringify(example)}`,
+		parameters: z.toJSONSchema(ApplyDiffParametersSchema),
 	},
 } satisfies OpenAI.Chat.ChatCompletionTool
