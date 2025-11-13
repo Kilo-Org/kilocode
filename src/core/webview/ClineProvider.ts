@@ -2911,7 +2911,7 @@ ${prompt}
 		})
 
 		if (isBackgroundTask) {
-			// TODO: VS notification
+			vscode.window.showInformationMessage(`Task started in worktree: ${workingDirectory}`)
 		} else {
 			await this.addClineToStack(task)
 		}
