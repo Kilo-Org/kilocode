@@ -53,6 +53,7 @@ const siliconCloudChinaModels: Record<string, ModelInfo> = {
 		requiredReasoningBudget: true,
 		maxTokens: 131072,
 		preferredIndex: 3,
+		preserveReasoning: true,
 	},
 	"deepseek-ai/DeepSeek-V3.1-Terminus": {
 		contextWindow: 163840,
