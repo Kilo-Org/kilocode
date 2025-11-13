@@ -2887,7 +2887,6 @@ ${prompt}
 			workingDirectory = worktree.directoryPath
 		}
 
-		// TODO: task should make edits in the background
 		// TODO: task needs to be visible in the history
 		const task = new Task({
 			provider: this,
