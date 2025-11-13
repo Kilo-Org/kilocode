@@ -146,6 +146,7 @@ export class ClineProvider
 	private webviewDisposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
+	private backgroundTasks = new Map<string, Task>()
 	private codeIndexStatusSubscription?: vscode.Disposable
 	private codeIndexManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
@@ -2516,6 +2517,7 @@ ${prompt}
 					return false
 				}
 			})(),
+			currentWorktreeMode: stateValues.currentWorktreeMode,
 		}
 	}
 
@@ -2861,11 +2863,16 @@ ${prompt}
 			experiments,
 			cloudUserInfo,
 			remoteControlEnabled,
+			currentWorktreeMode,
 		} = await this.getState()
+
+		const isBackgroundTask = currentWorktreeMode === "parallel"
 
 		if (!ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList)) {
 			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))
 		}
+
+		// TODO: point task to worktree
 
 		const task = new Task({
 			provider: this,
@@ -2888,7 +2895,13 @@ ${prompt}
 			...options,
 		})
 
-		await this.addClineToStack(task)
+		if (isBackgroundTask) {
+			this.backgroundTasks.set(task.taskId, task)
+
+			// TODO: VS notification
+		} else {
+			await this.addClineToStack(task)
+		}
 
 		this.log(
 			`[createTask] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
