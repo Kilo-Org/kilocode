@@ -1,15 +1,18 @@
 //kilocode_change - new file
-import { HTMLAttributes, useCallback } from "react"
+import { HTMLAttributes, useCallback, useMemo } from "react"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { Trans } from "react-i18next"
-import { Bot, Zap } from "lucide-react"
+import { Bot, Zap, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
 import { GhostServiceSettings } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
+import { useExtensionState } from "@/context/ExtensionStateContext"
+import { SelectDropdown } from "../../ui/select-dropdown"
+import { MODELS_BY_PROVIDER } from "@roo-code/types"
 
 type GhostServiceSettingsViewProps = HTMLAttributes<HTMLDivElement> & {
 	ghostServiceSettings: GhostServiceSettings
@@ -26,6 +29,7 @@ export const GhostServiceSettingsView = ({
 	...props
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
+	const { listApiConfigMeta } = useExtensionState()
 	const {
 		enableAutoTrigger,
 		enableQuickInlineTaskKeybinding,
@@ -33,8 +37,25 @@ export const GhostServiceSettingsView = ({
 		useNewAutocomplete,
 		provider,
 		model,
+		autocompleteProfileId,
+		autocompleteProvider,
+		autocompleteModel,
 	} = ghostServiceSettings || {}
 	const keybindings = useKeybindings(["kilo-code.addToContextAndFocus", "kilo-code.ghost.generateSuggestions"])
+
+	// Get the selected profile details
+	const selectedProfile = useMemo(() => {
+		if (!autocompleteProfileId) return null
+		return listApiConfigMeta?.find((config) => config.id === autocompleteProfileId)
+	}, [autocompleteProfileId, listApiConfigMeta])
+
+	// Get available providers for dropdown
+	const providerOptions = useMemo(() => {
+		return Object.entries(MODELS_BY_PROVIDER).map(([key, value]) => ({
+			value: key,
+			label: value.label,
+		}))
+	}, [])
 
 	const onEnableAutoTriggerChange = useCallback(
 		(e: any) => {
@@ -60,6 +81,27 @@ export const GhostServiceSettingsView = ({
 	const onUseNewAutocompleteChange = useCallback(
 		(e: any) => {
 			onGhostServiceSettingsChange("useNewAutocomplete", e.target.checked)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onAutocompleteProfileChange = useCallback(
+		(profileId: string) => {
+			onGhostServiceSettingsChange("autocompleteProfileId", profileId || undefined)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onAutocompleteProviderChange = useCallback(
+		(provider: string) => {
+			onGhostServiceSettingsChange("autocompleteProvider", provider || undefined)
+		},
+		[onGhostServiceSettingsChange],
+	)
+
+	const onAutocompleteModelChange = useCallback(
+		(e: any) => {
+			onGhostServiceSettingsChange("autocompleteModel", e.target.value || undefined)
 		},
 		[onGhostServiceSettingsChange],
 	)
@@ -156,6 +198,72 @@ export const GhostServiceSettingsView = ({
 							</div>
 						</div>
 					)}
+
+					<div className="flex flex-col gap-1">
+						<div className="flex items-center gap-2 font-bold">
+							<Settings className="w-4" />
+							<div>Autocomplete Configuration</div>
+						</div>
+					</div>
+
+					<div className="flex flex-col gap-3">
+						<div className="flex flex-col gap-2">
+							<label className="text-sm font-medium">Profile</label>
+							<SelectDropdown
+								value={autocompleteProfileId || ""}
+								onChange={onAutocompleteProfileChange}
+								options={[
+									{ value: "", label: "Auto-detect (use first available)" },
+									...(listApiConfigMeta || []).map((config) => ({
+										value: config.id,
+										label: config.name,
+									})),
+								]}
+								placeholder="Select profile..."
+							/>
+							<div className="text-vscode-descriptionForeground text-xs">
+								Select a specific profile to use for autocomplete, or leave as auto-detect to use the
+								first available profile with a supported provider.
+							</div>
+						</div>
+
+						{autocompleteProfileId && (
+							<>
+								<div className="flex flex-col gap-2">
+									<label className="text-sm font-medium">Provider Override (Optional)</label>
+									<SelectDropdown
+										value={autocompleteProvider || ""}
+										onChange={onAutocompleteProviderChange}
+										options={[
+											{
+												value: "",
+												label: `Use profile default (${selectedProfile?.apiProvider || "none"})`,
+											},
+											...providerOptions,
+										]}
+										placeholder="Select provider..."
+									/>
+									<div className="text-vscode-descriptionForeground text-xs">
+										Override the provider from the selected profile. Leave empty to use the
+										profile's configured provider.
+									</div>
+								</div>
+
+								<div className="flex flex-col gap-2">
+									<label className="text-sm font-medium">Model Override (Optional)</label>
+									<VSCodeTextField
+										value={autocompleteModel || ""}
+										onInput={onAutocompleteModelChange}
+										placeholder={`Use profile default (${selectedProfile?.modelId || "auto"})`}
+									/>
+									<div className="text-vscode-descriptionForeground text-xs">
+										Override the model from the selected profile. Leave empty to use the profile's
+										configured model or auto-detect.
+									</div>
+								</div>
+							</>
+						)}
+					</div>
 
 					<div className="flex flex-col gap-1">
 						<div className="flex items-center gap-2 font-bold">

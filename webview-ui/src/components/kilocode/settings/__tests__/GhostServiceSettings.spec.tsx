@@ -27,6 +27,9 @@ vi.mock("@/i18n/TranslationContext", () => ({
 vi.mock("lucide-react", () => ({
 	Bot: ({ className }: any) => <span className={className}>Bot Icon</span>,
 	Zap: ({ className }: any) => <span className={className}>Zap Icon</span>,
+	Settings: ({ className }: any) => <span className={className}>Settings Icon</span>,
+	Check: ({ className }: any) => <span className={className}>Check Icon</span>,
+	X: ({ className }: any) => <span className={className}>X Icon</span>,
 }))
 
 // Mock cn utility
@@ -49,7 +52,17 @@ vi.mock("@/hooks/useKeybindings", () => ({
 	}),
 }))
 
-// Mock VSCodeCheckbox to render as regular HTML checkbox for testing
+// Mock ExtensionStateContext
+vi.mock("@/context/ExtensionStateContext", () => ({
+	useExtensionState: () => ({
+		listApiConfigMeta: [
+			{ id: "profile1", name: "Profile 1", apiProvider: "anthropic" },
+			{ id: "profile2", name: "Profile 2", apiProvider: "openrouter" },
+		],
+	}),
+}))
+
+// Mock VSCodeCheckbox and VSCodeTextField to render as regular HTML elements for testing
 vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 	VSCodeCheckbox: ({ checked, onChange, children }: any) => (
 		<label>
@@ -61,19 +74,39 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 			{children}
 		</label>
 	),
+	VSCodeTextField: ({ value, onInput, placeholder }: any) => (
+		<input type="text" value={value} onInput={onInput} placeholder={placeholder} />
+	),
+}))
+
+// Mock SelectDropdown first to avoid circular dependency
+vi.mock("../../ui/select-dropdown", () => ({
+	SelectDropdown: ({ value, onChange, options, placeholder }: any) => (
+		<select value={value} onChange={(e) => onChange(e.target.value)} data-testid="select-dropdown">
+			{options.map((opt: any) => (
+				<option key={opt.value} value={opt.value}>
+					{opt.label}
+				</option>
+			))}
+		</select>
+	),
 }))
 
 // Mock the UI components
-vi.mock("@src/components/ui", () => ({
-	Slider: ({ value, onValueChange, disabled }: any) => (
-		<input
-			type="range"
-			value={value?.[0] || 0}
-			onChange={(e) => onValueChange?.([parseInt(e.target.value)])}
-			disabled={disabled}
-		/>
-	),
-}))
+vi.mock("@src/components/ui", async (importOriginal) => {
+	const actual: any = await importOriginal()
+	return {
+		...actual,
+		Slider: ({ value, onValueChange, disabled }: any) => (
+			<input
+				type="range"
+				value={value?.[0] || 0}
+				onChange={(e) => onValueChange?.([parseInt(e.target.value)])}
+				disabled={disabled}
+			/>
+		),
+	}
+})
 
 // Mock the settings components
 vi.mock("../../settings/SectionHeader", () => ({
@@ -229,5 +262,63 @@ describe("GhostServiceSettingsView", () => {
 		})
 
 		expect(screen.getByText(/kilocode:ghost.settings.noModelConfigured/)).toBeInTheDocument()
+	})
+
+	describe("Autocomplete Configuration", () => {
+		it("renders autocomplete profile selector", () => {
+			renderComponent()
+
+			const triggers = screen.getAllByTestId("dropdown-trigger")
+			expect(triggers.length).toBeGreaterThan(0)
+			expect(screen.getByText("Autocomplete Configuration")).toBeInTheDocument()
+		})
+
+		it("shows profile selector with auto-detect as default", () => {
+			renderComponent()
+
+			expect(screen.getByText("Auto-detect (use first available)")).toBeInTheDocument()
+		})
+
+		it("shows provider and model overrides when profile is selected", () => {
+			renderComponent({
+				ghostServiceSettings: {
+					...defaultGhostServiceSettings,
+					autocompleteProfileId: "profile1",
+				},
+			})
+
+			// Should show provider override and model input
+			expect(screen.getByText("Provider Override (Optional)")).toBeInTheDocument()
+			expect(screen.getByText("Model Override (Optional)")).toBeInTheDocument()
+
+			// Check for model input
+			const modelInput = screen.getByPlaceholderText(/Use profile default/)
+			expect(modelInput).toBeInTheDocument()
+		})
+
+		it("hides provider and model overrides when no profile is selected", () => {
+			renderComponent({
+				ghostServiceSettings: {
+					...defaultGhostServiceSettings,
+					autocompleteProfileId: undefined,
+				},
+			})
+
+			// Provider and model overrides should not be present
+			expect(screen.queryByText("Provider Override (Optional)")).not.toBeInTheDocument()
+			expect(screen.queryByText("Model Override (Optional)")).not.toBeInTheDocument()
+			expect(screen.queryByPlaceholderText(/Use profile default/)).not.toBeInTheDocument()
+		})
+
+		it("displays selected profile name", () => {
+			renderComponent({
+				ghostServiceSettings: {
+					...defaultGhostServiceSettings,
+					autocompleteProfileId: "profile1",
+				},
+			})
+
+			expect(screen.getByText("Profile 1")).toBeInTheDocument()
+		})
 	})
 })

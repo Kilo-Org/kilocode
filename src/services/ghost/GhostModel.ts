@@ -1,4 +1,4 @@
-import { modelIdKeysByProvider, ProviderSettingsEntry } from "@roo-code/types"
+import { modelIdKeysByProvider, ProviderSettingsEntry, GhostServiceSettings } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
@@ -20,12 +20,68 @@ export class GhostModel {
 		this.loaded = false
 	}
 
-	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
+	public async reload(
+		providerSettingsManager: ProviderSettingsManager,
+		autocompleteConfig?: GhostServiceSettings,
+	): Promise<boolean> {
 		const profiles = await providerSettingsManager.listConfig()
 
 		this.cleanup()
 
-		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		// First, check if there's a dedicated autocomplete configuration
+		if (autocompleteConfig?.autocompleteProfileId) {
+			try {
+				const profile = await providerSettingsManager.getProfile({
+					id: autocompleteConfig.autocompleteProfileId,
+				})
+
+				// Apply provider override if specified
+				let finalProfile = { ...profile }
+				if (autocompleteConfig.autocompleteProvider) {
+					finalProfile.apiProvider = autocompleteConfig.autocompleteProvider as any
+				}
+
+				// Apply model override if specified
+				if (autocompleteConfig.autocompleteModel && finalProfile.apiProvider) {
+					const modelKey =
+						modelIdKeysByProvider[finalProfile.apiProvider as keyof typeof modelIdKeysByProvider]
+					if (modelKey) {
+						finalProfile = { ...finalProfile, [modelKey]: autocompleteConfig.autocompleteModel }
+					}
+				}
+
+				// Validate kilocode balance if using kilocode provider
+				if (finalProfile.apiProvider === "kilocode") {
+					if (!finalProfile.kilocodeToken) {
+						console.warn("Kilocode provider selected but no token found")
+					} else if (
+						!(await checkKilocodeBalance(finalProfile.kilocodeToken, finalProfile.kilocodeOrganizationId))
+					) {
+						console.warn("Kilocode provider selected but balance is zero")
+					} else {
+						this.apiHandler = buildApiHandler(finalProfile)
+						if (this.apiHandler instanceof OpenRouterHandler) {
+							await this.apiHandler.fetchModel()
+						}
+						this.loaded = true
+						return true
+					}
+				} else {
+					// For non-kilocode providers, build handler directly
+					this.apiHandler = buildApiHandler(finalProfile)
+					if (this.apiHandler instanceof OpenRouterHandler) {
+						await this.apiHandler.fetchModel()
+					}
+					this.loaded = true
+					return true
+				}
+			} catch (error) {
+				console.error("Failed to load autocomplete profile:", error)
+				// Fall through to auto-detection
+			}
+		}
+
+		// Fallback: Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
 		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
 			const selectedProfile = profiles.find((x) => x?.apiProvider === provider)
 			if (!selectedProfile) continue

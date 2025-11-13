@@ -81,7 +81,7 @@ export class GhostServiceManager {
 			enableSmartInlineTaskKeybinding: true,
 		}
 		await this.cline.providerSettingsManager.initialize() // avoid race condition with settings migrations
-		await this.model.reload(this.cline.providerSettingsManager)
+		await this.model.reload(this.cline.providerSettingsManager, this.settings)
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()

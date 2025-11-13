@@ -76,7 +76,7 @@ export class NewAutocompleteProvider {
 
 	public async load() {
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings")
-		await this.model.reload(this.providerSettingsManager)
+		await this.model.reload(this.providerSettingsManager, this.settings)
 		await this.saveSettings()
 		this.loadCodeCompletion()
 	}

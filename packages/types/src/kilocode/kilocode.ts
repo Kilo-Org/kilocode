@@ -14,6 +14,10 @@ export const ghostServiceSettingsSchema = z
 		useNewAutocomplete: z.boolean().optional(),
 		provider: z.string().optional(),
 		model: z.string().optional(),
+		// Autocomplete profile configuration
+		autocompleteProfileId: z.string().optional(),
+		autocompleteProvider: z.string().optional(),
+		autocompleteModel: z.string().optional(),
 	})
 	.optional()
 
