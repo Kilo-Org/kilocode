@@ -161,7 +161,7 @@ describe("SiliconCloud Component", () => {
 	}
 	const mockRouterModels = {
 		openrouter: {},
-		"kilocode-openrouter": {},
+		kilocode: {},
 		glama: {},
 		requesty: {},
 		unbound: {},
@@ -176,6 +176,7 @@ describe("SiliconCloud Component", () => {
 		chutes: {},
 		gemini: {},
 		inception: {},
+		roo: {},
 		siliconcloud: {
 			"custom-model": {
 				displayName: "Custom Model",
