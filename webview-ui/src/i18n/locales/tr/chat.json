@@ -156,6 +156,9 @@
 		"initializingWarning": "Kontrol noktası hala başlatılıyor... Bu çok uzun sürerse, <settingsLink>ayarlar</settingsLink> bölümünden kontrol noktalarını devre dışı bırakabilir ve görevinizi yeniden başlatabilirsiniz.",
 		"menu": {
 			"viewDiff": "Farkları Görüntüle",
+			"more": "Daha fazla seçenek",
+			"viewDiffFromInit": "Tüm Değişiklikleri Görüntüle",
+			"viewDiffWithCurrent": "Bu Kontrol Noktasından Bu Yana Değişiklikleri Görüntüle",
 			"restore": "Kontrol Noktasını Geri Yükle",
 			"restoreFiles": "Dosyaları Geri Yükle",
 			"restoreFilesDescription": "Projenizin dosyalarını bu noktada alınan bir anlık görüntüye geri yükler.",
@@ -273,6 +276,7 @@
 		"toggleAriaLabel": "Otomatik onayı aç/kapat",
 		"disabledAriaLabel": "Otomatik onay devre dışı - önce seçenekleri seçin",
 		"triggerLabelOff": "Otomatik onay kapalı",
+		"triggerLabelOffShort": "Kapalı",
 		"triggerLabel_zero": "0 otomatik onaylandı",
 		"triggerLabel_one": "1 otomatik onaylandı",
 		"triggerLabel_other": "{{count}} otomatik onaylandı",
@@ -302,6 +306,19 @@
 			"selectModel": "Başlamak için Ayarlar'da Roo Code Cloud sağlayıcısından <code>roo/code-supernova</code>'yı seçin.",
 			"goToSettingsButton": "Ayarlar'a Git"
 		},
+		"release": {
+			"heading": "Uzantıdaki yenilikler:",
+			"openRouterEmbeddings": "OpenRouter gömme modelleri desteği",
+			"chutesDynamic": "Chutes artık en son modelleri dinamik olarak yüklüyor",
+			"queuedMessagesFix": "Sıradaki mesajların kaybolması için düzeltmeler"
+		},
+		"cloudAgents": {
+			"heading": "Cloud'daki yenilikler:",
+			"prFixer": "PR Reviewer'ı tamamlamak için <bold>PR Fixer</bold> bulut ajanını tanıtıyoruz.",
+			"prFixerDescription": "Roo Code'un PR Fixer'ı, PR'larınıza doğrudan GitHub'dan yüksek kaliteli değişiklikler uygular. Bir PR yorumu aracılığıyla çağırın ve bağlamı, anlaşmaları ve ödünleri anlamak için tüm yorum geçmişini okuyacak - sonra doğru düzeltmeyi uygulayacaktır.",
+			"tryPrFixerButton": "PR Fixer'ı Dene"
+		},
+		"careers": "Ayrıca, <careersLink>işe alım yapıyoruz!</careersLink>",
 		"socialLinks": "Bize <xLink>X</xLink>, <discordLink>Discord</discordLink>, veya <redditLink>r/RooCode</redditLink>'da katılın 🚀"
 	},
 	"browser": {

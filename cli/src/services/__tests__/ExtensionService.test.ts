@@ -95,7 +95,16 @@ describe("ExtensionService", () => {
 
 		// Create a mock extension module
 		mockExtensionModule = {
-			activate: vi.fn(async () => {
+			activate: vi.fn(async (context) => {
+				// Register a mock webview provider immediately to prevent hanging
+				// This simulates the extension registering its provider during activation
+				if ((global as any).__extensionHost) {
+					const mockProvider = {
+						handleCLIMessage: vi.fn(async () => {}),
+					}
+					;(global as any).__extensionHost.registerWebviewProvider("kilo-code.SidebarProvider", mockProvider)
+				}
+
 				// Return a mock API
 				return {
 					getState: vi.fn(() => ({
@@ -256,6 +265,9 @@ describe("ExtensionService", () => {
 		it("should emit stateChange event when state changes", async () => {
 			await service.initialize()
 
+			// Mark webview as ready to allow messages to be processed
+			service.getExtensionHost().markWebviewReady()
+
 			const stateChangeHandler = vi.fn()
 			service.on("stateChange", stateChangeHandler)
 
@@ -274,6 +286,9 @@ describe("ExtensionService", () => {
 
 		it("should emit message event for extension messages", async () => {
 			await service.initialize()
+
+			// Mark webview as ready to allow messages to be processed
+			service.getExtensionHost().markWebviewReady()
 
 			const messageHandler = vi.fn()
 			service.on("message", messageHandler)

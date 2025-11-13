@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "टूल्स",
 		"resources": "संसाधन",
-		"errors": "त्रुटियाँ"
+		"logs": "लॉग्स"
 	},
 	"emptyState": {
 		"noTools": "कोई टूल नहीं मिला",
 		"noResources": "कोई संसाधन नहीं मिला",
-		"noErrors": "कोई त्रुटि नहीं मिली"
+		"noLogs": "अभी तक कोई लॉग नहीं"
 	},
 	"networkTimeout": {
 		"label": "नेटवर्क टाइमआउट",

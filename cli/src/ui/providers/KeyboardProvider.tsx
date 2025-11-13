@@ -51,7 +51,9 @@ interface KeyboardProviderProps {
 }
 
 export function KeyboardProvider({ children, config = {} }: KeyboardProviderProps) {
-	const { debugKeystrokeLogging = false, escapeCodeTimeout = 0 } = config
+	// Default escapeCodeTimeout to 500ms to allow proper parsing of Kitty protocol sequences
+	// When set to 0, readline immediately processes each character, breaking up escape sequences
+	const { debugKeystrokeLogging = false, escapeCodeTimeout = 500 } = config
 
 	// Get stdin and raw mode control
 	const { stdin, setRawMode } = useStdin()

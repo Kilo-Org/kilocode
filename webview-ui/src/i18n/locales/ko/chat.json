@@ -156,6 +156,9 @@
 		"initializingWarning": "체크포인트 초기화 중... 시간이 너무 오래 걸리면 <settingsLink>설정</settingsLink>에서 체크포인트를 비활성화하고 작업을 다시 시작할 수 있습니다.",
 		"menu": {
 			"viewDiff": "차이점 보기",
+			"more": "더 많은 옵션",
+			"viewDiffFromInit": "모든 변경 사항 보기",
+			"viewDiffWithCurrent": "이 체크포인트 이후 변경 사항 보기",
 			"restore": "체크포인트 복원",
 			"restoreFiles": "파일 복원",
 			"restoreFilesDescription": "프로젝트 파일을 이 시점에 찍힌 스냅샷으로 복원합니다.",
@@ -272,6 +275,7 @@
 		"toggleAriaLabel": "자동 승인 전환",
 		"disabledAriaLabel": "자동 승인 비활성화됨 - 먼저 옵션을 선택하십시오",
 		"triggerLabelOff": "자동 승인 꺼짐",
+		"triggerLabelOffShort": "꺼짐",
 		"triggerLabel_zero": "0개 자동 승인됨",
 		"triggerLabel_one": "1개 자동 승인됨",
 		"triggerLabel_other": "{{count}}개 자동 승인됨",
@@ -301,6 +305,19 @@
 			"selectModel": "설정에서 Roo Code Cloud 제공업체의 <code>roo/code-supernova</code>를 선택하여 시작하세요.",
 			"goToSettingsButton": "설정으로 이동"
 		},
+		"release": {
+			"heading": "확장 프로그램의 새로운 기능:",
+			"openRouterEmbeddings": "OpenRouter 임베딩 모델 지원",
+			"chutesDynamic": "Chutes가 이제 최신 모델을 동적으로 로드합니다",
+			"queuedMessagesFix": "대기 중인 메시지가 손실되는 문제 수정"
+		},
+		"cloudAgents": {
+			"heading": "클라우드의 새로운 기능:",
+			"prFixer": "PR 리뷰어를 보완하는 <bold>PR Fixer</bold> 클라우드 에이전트를 소개합니다.",
+			"prFixerDescription": "Roo Code의 PR Fixer는 GitHub에서 직접 PR에 고품질 변경사항을 적용합니다. PR 댓글을 통해 호출하면 전체 댓글 기록을 읽어 컨텍스트, 합의사항 및 트레이드오프를 이해한 다음 올바른 수정을 구현합니다.",
+			"tryPrFixerButton": "PR Fixer 사용해보기"
+		},
+		"careers": "그리고, <careersLink>채용 중입니다!</careersLink>",
 		"socialLinks": "<xLink>X</xLink>, <discordLink>Discord</discordLink>, 또는 <redditLink>r/RooCode</redditLink>에서 만나요 🚀"
 	},
 	"browser": {

@@ -58,6 +58,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 金鑰",
 		"vercelAiGatewayApiKeyPlaceholder": "輸入您的 Vercel AI Gateway API 金鑰",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API 金鑰",
+		"openRouterApiKeyPlaceholder": "輸入您的 OpenRouter API 金鑰",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API 金鑰：",
 		"mistralApiKeyPlaceholder": "輸入您的 Mistral API 金鑰",
@@ -127,7 +130,8 @@
 			"vercelAiGatewayApiKeyRequired": "需要 Vercel AI Gateway API 金鑰",
 			"ollamaBaseUrlRequired": "需要 Ollama 基礎 URL",
 			"baseUrlRequired": "需要基礎 URL",
-			"modelDimensionMinValue": "模型維度必須大於 0"
+			"modelDimensionMinValue": "模型維度必須大於 0",
+			"openRouterApiKeyRequired": "OpenRouter API 密鑰是必需的"
 		},
 		"advancedConfigLabel": "進階設定",
 		"searchMinScoreLabel": "搜尋分數閾值",
@@ -310,6 +314,9 @@
 		"getZaiApiKey": "取得 Z AI API 金鑰",
 		"zaiEntrypoint": "Z AI 服務端點",
 		"zaiEntrypointDescription": "請根據您的位置選擇適當的 API 服務端點。如果您在中國，請選擇 open.bigmodel.cn。否則，請選擇 api.z.ai。",
+		"minimaxApiKey": "MiniMax API 金鑰",
+		"getMiniMaxApiKey": "取得 MiniMax API 金鑰",
+		"minimaxBaseUrl": "MiniMax 服務端點",
 		"geminiApiKey": "Gemini API 金鑰",
 		"getGroqApiKey": "取得 Groq API 金鑰",
 		"groqApiKey": "Groq API 金鑰",
@@ -363,7 +370,7 @@
 		"enablePromptCachingTitle": "啟用提示快取以提升支援的模型效能並降低成本。",
 		"cacheUsageNote": "注意：如果您沒有看到快取使用情況，請嘗試選擇其他模型，然後重新選擇您想要的模型。",
 		"vscodeLmModel": "語言模型",
-		"vscodeLmWarning": "注意：此整合功能仍處於實驗階段，各供應商的支援程度可能不同。如果出現模型不支援的錯誤，通常是供應商方面的問題。",
+		"vscodeLmWarning": "注意：透過 VS Code Language Model API 存取的模型可能由供應商封裝或微調，因此其行為可能與直接從一般供應商或路由器使用相同模型時不同。要使用「Language Model」下拉式選單中的模型，請先切換到該模型，然後在 Copilot Chat 提示中點擊「接受」；否則可能會出現 400「The requested model is not supported」等錯誤。",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "啟用 URL 上下文",
@@ -440,7 +447,7 @@
 			},
 			"computerUse": {
 				"label": "電腦使用",
-				"description": "此模型是否能夠與瀏覽器互動？（例如 Claude 3.7 Sonnet）"
+				"description": "此模型是否能夠與瀏覽器互動？（例如 Claude Sonnet）"
 			},
 			"promptCache": {
 				"label": "提示快取",
@@ -482,6 +489,7 @@
 		},
 		"reasoningEffort": {
 			"label": "模型推理強度",
+			"none": "無",
 			"minimal": "最小 (最快)",
 			"high": "高",
 			"medium": "中",
@@ -554,6 +562,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "檢查點初始化逾時（秒）",
+			"description": "檢查點服務初始化的最長等待時間。預設為 15 秒。範圍：10-60 秒。"
+		},
 		"enable": {
 			"label": "啟用自動檢查點",
 			"description": "啟用後，Kilo Code 將在工作執行期間自動建立檢查點，使審核變更或回到早期狀態變得容易。 <0>了解更多</0>"
@@ -682,6 +694,14 @@
 			"label": "圖片總大小上限",
 			"mb": "MB",
 			"description": "單次 read_file 操作中處理的所有圖片的最大累計大小限制（MB）。讀取多張圖片時，每張圖片的大小會累加到總大小中。如果包含另一張圖片會超過此限制，則會跳過該圖片。"
+		},
+		"includeCurrentTime": {
+			"label": "在上下文中包含目前時間",
+			"description": "啟用後，目前時間和時區資訊將包含在系統提示中。如果模型因時間問題停止工作，請停用此選項。"
+		},
+		"includeCurrentCost": {
+			"label": "在上下文中包含目前成本",
+			"description": "啟用後，目前 API 使用成本將包含在系統提示中。如果模型因成本問題停止工作，請停用此選項。"
 		}
 	},
 	"terminal": {
@@ -691,55 +711,55 @@
 		},
 		"advanced": {
 			"label": "終端機設定：進階",
-			"description": "以下選項可能需要重新啟動終端機才能套用設定"
+			"description": "這些設定僅在「使用內嵌終端機」停用時適用。僅影響 VS Code 終端機，可能需要重啟 IDE。"
 		},
 		"outputLineLimit": {
-			"label": "終端機輸出行數限制",
-			"description": "執行命令時終端機輸出的最大行數。超過此限制時，會從中間移除多餘的行數，以節省 token 用量。 <0>了解更多</0>"
+			"label": "終端機輸出限制",
+			"description": "保留首尾行並丟棄中間行以保持在限制內。降低可節省 token；提高可為 Kilo 提供更多中間細節。Kilo 看到內容被跳過的佔位符。<0>了解更多</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "終端機字元限制",
-			"description": "執行指令時在終端輸出中包含的最大字元數。此限制優先於行數限制，以防止因行過長而導致的記憶體問題。超過後，輸出將被截斷。 <0>了解更多</0>"
+			"description": "透過強制限制輸出大小來覆寫行限制以防止記憶體問題。如果超出，保留開頭和結尾並向 Kilo 顯示內容被跳過的佔位符。<0>了解更多</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "終端機 Shell 整合逾時",
-			"description": "執行命令前等待 Shell 整合初始化的最長時間。如果您的 Shell 啟動較慢，且終端機出現「Shell 整合無法使用」的錯誤訊息，可能需要提高此數值。 <0>了解更多</0>"
+			"label": "終端機 shell 整合逾時",
+			"description": "執行命令前等待 VS Code shell 整合的時間。如果 shell 啟動緩慢或看到 'Shell Integration Unavailable' 錯誤，請提高此值。<0>了解更多</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "停用終端機 Shell 整合",
-			"description": "如果終端機指令無法正常運作或看到 'Shell Integration Unavailable' 錯誤，請啟用此項。這會使用較簡單的方法執行指令，繞過一些進階終端機功能。 <0>了解更多</0>"
+			"label": "使用內嵌終端機（建議）",
+			"description": "在內嵌終端機（聊天）中執行命令以繞過 shell 設定檔/整合，實現更快、更可靠的執行。停用時，Kilo 使用 VS Code 終端機及您的 shell 設定檔、提示和外掛程式。<0>了解更多</0>"
 		},
 		"commandDelay": {
 			"label": "終端機命令延遲",
-			"description": "命令執行後添加的延遲時間（毫秒）。預設值為 0 時完全停用延遲。這可以幫助確保在有計時問題的終端機中完整擷取命令輸出。在大多數終端機中，這是透過設定 `PROMPT_COMMAND='sleep N'` 實現的，而 PowerShell 會在每個命令結尾加入 `start-sleep`。最初是為了解決 VSCode 錯誤#237208，現在可能不再需要。 <0>了解更多</0>"
+			"description": "在每個命令後新增短暫暫停，以便 VS Code 終端機刷新所有輸出（bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep）。僅在看到缺少尾部輸出時使用；否則保持為 0。<0>了解更多</0>"
 		},
 		"compressProgressBar": {
 			"label": "壓縮進度條輸出",
-			"description": "啟用後，將處理包含歸位字元 (\\r) 的終端機輸出，模擬真實終端機顯示內容的方式。這會移除進度條的中間狀態，只保留最終狀態，為更重要的資訊節省上下文空間。 <0>了解更多</0>"
+			"description": "折疊進度條/旋轉器，僅保留最終狀態（節省 token）。<0>了解更多</0>"
 		},
 		"powershellCounter": {
 			"label": "啟用 PowerShell 計數器解決方案",
-			"description": "啟用後，會在 PowerShell 命令中加入計數器以確保命令正確執行。這有助於解決可能存在輸出擷取問題的 PowerShell 終端機。 <0>了解更多</0>"
+			"description": "當 PowerShell 輸出遺失或重複時啟用此選項；它會為每個命令附加一個小計數器以穩定輸出。如果輸出已正常，請保持關閉。<0>了解更多</0>"
 		},
 		"zshClearEolMark": {
-			"label": "清除 ZSH 行尾標記",
-			"description": "啟用後，透過設定 PROMPT_EOL_MARK='' 清除 ZSH 行尾標記。這可以防止命令輸出以特殊字元（如 '%'）結尾時的解析問題。 <0>了解更多</0>"
+			"label": "清除 ZSH EOL 標記",
+			"description": "當您在行尾看到零散的 % 或解析看起來錯誤時啟用此選項；它會省略 Zsh 的行尾標記（%）。<0>了解更多</0>"
 		},
 		"zshOhMy": {
 			"label": "啟用 Oh My Zsh 整合",
-			"description": "啟用後，設定 ITERM_SHELL_INTEGRATION_INSTALLED=Yes 以啟用 Oh My Zsh shell 整合功能。套用此設定可能需要重新啟動 IDE。 <0>了解更多</0>"
+			"description": "當您的 Oh My Zsh 主題/外掛程式期望 shell 整合時啟用此選項；它會設定 ITERM_SHELL_INTEGRATION_INSTALLED=Yes。關閉此選項以避免設定該變數。<0>了解更多</0>"
 		},
 		"zshP10k": {
 			"label": "啟用 Powerlevel10k 整合",
-			"description": "啟用後，設定 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true 以啟用 Powerlevel10k shell 整合功能。 <0>了解更多</0>"
+			"description": "使用 Powerlevel10k shell 整合時啟用此選項。<0>了解更多</0>"
 		},
 		"zdotdir": {
 			"label": "啟用 ZDOTDIR 處理",
-			"description": "啟用後將建立暫存目錄用於 ZDOTDIR，以正確處理 zsh shell 整合。這確保 VSCode shell 整合能與 zsh 正常運作，同時保留您的 zsh 設定。 <0>了解更多</0>"
+			"description": "當 zsh shell 整合失敗或與您的 dotfiles 衝突時啟用此選項。<0>了解更多</0>"
 		},
 		"inheritEnv": {
 			"label": "繼承環境變數",
-			"description": "啟用後，終端機將從 VSCode 父程序繼承環境變數，如使用者設定檔中定義的 shell 整合設定。這直接切換 VSCode 全域設定 `terminal.integrated.inheritEnv`。 <0>了解更多</0>"
+			"description": "啟用此選項以從父 VS Code 程序繼承環境變數。<0>了解更多</0>"
 		}
 	},
 	"advancedSettings": {
@@ -748,7 +768,7 @@
 	"advanced": {
 		"diff": {
 			"label": "透過差異比對編輯",
-			"description": "啟用後，Kilo Code 可更快速地編輯檔案，並自動拒絕不完整的整檔覆寫。搭配最新的 Claude 4 Sonnet 模型效果最佳。",
+			"description": "啟用後，Kilo Code 可更快速地編輯檔案，並自動拒絕不完整的整檔覆寫",
 			"strategy": {
 				"label": "差異比對策略",
 				"options": {
@@ -776,10 +796,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "使用實驗性統一差異比對策略",
 			"description": "啟用實驗性的統一差異比對策略。此策略可能減少因模型錯誤而導致的重試次數，但也可能導致意外行為或錯誤的編輯。請務必了解風險，並願意仔細檢查所有變更後再啟用。"
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "使用實驗性搜尋與取代工具",
-			"description": "啟用實驗性的搜尋與取代工具，允許 Kilo Code 在單一請求中取代多個符合的內容。"
 		},
 		"INSERT_BLOCK": {
 			"name": "使用實驗性插入內容工具",
@@ -867,8 +883,6 @@
 	"modelInfo": {
 		"supportsImages": "支援影像",
 		"noImages": "不支援影像",
-		"supportsComputerUse": "支援電腦使用",
-		"noComputerUse": "不支援電腦使用",
 		"supportsPromptCache": "支援提示快取",
 		"noPromptCache": "不支援提示快取",
 		"contextWindow": "上下文視窗:",

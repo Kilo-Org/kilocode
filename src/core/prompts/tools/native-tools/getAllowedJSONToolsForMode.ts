@@ -88,14 +88,21 @@ export async function getAllowedJSONToolsForMode(
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	if (
 		!codeIndexManager ||
-		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
+		// kilcode_change start
+		!(
+			codeIndexManager.isFeatureEnabled &&
+			codeIndexManager.isFeatureConfigured &&
+			codeIndexManager.isInitialized &&
+			codeIndexManager.isManagedIndexingAvailable
+		)
+		// kilcode_change end
 	) {
 		tools.delete("codebase_search")
 	}
 
 	if (isFastApplyAvailable(providerState)) {
 		// When Fast Apply is enabled, disable traditional editing tools
-		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content", "search_and_replace"]
+		const traditionalEditingTools = ["apply_diff", "write_to_file", "insert_content"]
 		traditionalEditingTools.forEach((tool) => tools.delete(tool))
 	} else {
 		tools.delete("edit_file")

@@ -48,6 +48,7 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 	const minThinkingTokens = isGemini25Pro ? GEMINI_25_PRO_MIN_THINKING_TOKENS : 1024
 
 	// Check model capabilities
+	const isReasoningSupported = !!modelInfo && modelInfo.supportsReasoningBinary
 	const isReasoningBudgetSupported = !!modelInfo && modelInfo.supportsReasoningBudget
 	const isReasoningBudgetRequired = !!modelInfo && modelInfo.requiredReasoningBudget
 	const isReasoningEffortSupported = !!modelInfo && modelInfo.supportsReasoningEffort
@@ -111,6 +112,21 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 
 	if (!modelInfo) {
 		return null
+	}
+
+	// Models with supportsReasoningBinary (binary reasoning) show a simple on/off toggle
+	if (isReasoningSupported) {
+		return (
+			<div className="flex flex-col gap-1">
+				<Checkbox
+					checked={enableReasoningEffort}
+					onChange={(checked: boolean) =>
+						setApiConfigurationField("enableReasoningEffort", checked === true)
+					}>
+					{t("settings:providers.useReasoning")}
+				</Checkbox>
+			</div>
+		)
 	}
 
 	return isReasoningBudgetSupported && !!modelInfo.maxTokens ? (

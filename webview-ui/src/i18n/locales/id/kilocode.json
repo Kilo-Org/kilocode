@@ -22,7 +22,6 @@
 	"pricing": {
 		"costUnknown": "biaya tidak diketahui",
 		"costUnknownDescription": "Penyedia API tidak memberikan data biaya atau permintaan dibatalkan.",
-		"freeModelsDescription": "Model gratis mungkin memiliki batas penggunaan. Gunakan tautan di bawah ini untuk mengoptimalkan penggunaan model gratis kamu!",
 		"freeModelsLink": "Temukan opsi model gratis dan hemat biaya"
 	},
 	"notifications": {

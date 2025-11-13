@@ -114,5 +114,9 @@
 		"months_ago": "{{count}} miesięcy temu",
 		"year_ago": "rok temu",
 		"years_ago": "{{count}} lat temu"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "Czekałeś {{timeout}} sekund na inicjalizację punktu kontrolnego. Jeśli nie potrzebujesz tej funkcji, wyłącz ją w <settingsLink>ustawieniach punktu kontrolnego</settingsLink>.",
+		"init_checkpoint_fail_long_time": "Inicjalizacja punktu kontrolnego trwała ponad {{timeout}} sekund, więc punkty kontrolne zostały wyłączone dla tego zadania. Możesz wyłączyć punkty kontrolne lub wydłużyć czas oczekiwania w <settingsLink>ustawieniach punktu kontrolnego</settingsLink>."
 	}
 }

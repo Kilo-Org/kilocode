@@ -8,6 +8,15 @@ import { exec } from "child_process"
 import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.js"
 
 // ============================================================================
+// Workspace Path Atom
+// ============================================================================
+
+/**
+ * The workspace directory where shell commands should be executed
+ */
+export const workspacePathAtom = atom<string | null>(null)
+
+// ============================================================================
 // Shell Mode Atoms
 // ============================================================================
 
@@ -134,9 +143,13 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 
 	// Execute the command immediately (no approval needed)
 	try {
+		// Get the workspace path for command execution
+		const workspacePath = get(workspacePathAtom)
+		const executionDir = workspacePath || process.cwd()
+
 		// Execute command and capture output
 		const childProcess = exec(command, {
-			cwd: process.cwd(),
+			cwd: executionDir,
 			timeout: 30000, // 30 second timeout
 		})
 

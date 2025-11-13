@@ -26,12 +26,12 @@
 	"tabs": {
 		"tools": "เครื่องมือ",
 		"resources": "ทรัพยากร",
-		"errors": "ข้อผิดพลาด"
+		"logs": "บันทึก"
 	},
 	"emptyState": {
 		"noTools": "ไม่พบเครื่องมือ",
 		"noResources": "ไม่พบทรัพยากร",
-		"noErrors": "ไม่พบข้อผิดพลาด"
+		"noLogs": "ยังไม่มีบันทึก"
 	},
 	"networkTimeout": {
 		"label": "Network Timeout",

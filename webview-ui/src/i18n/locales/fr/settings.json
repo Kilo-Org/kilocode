@@ -62,6 +62,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Clé API",
 		"vercelAiGatewayApiKeyPlaceholder": "Entrez votre clé API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Clé d'API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Entrez votre clé d'API OpenRouter",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clé d'API:",
 		"mistralApiKeyPlaceholder": "Entrez votre clé API Mistral",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "La clé API Vercel AI Gateway est requise",
 			"ollamaBaseUrlRequired": "L'URL de base Ollama est requise",
 			"baseUrlRequired": "L'URL de base est requise",
-			"modelDimensionMinValue": "La dimension du modèle doit être supérieure à 0"
+			"modelDimensionMinValue": "La dimension du modèle doit être supérieure à 0",
+			"openRouterApiKeyRequired": "Clé API OpenRouter est requise"
 		},
 		"advancedConfigLabel": "Configuration avancée",
 		"searchMinScoreLabel": "Seuil de score de recherche",
@@ -309,6 +313,9 @@
 		"getZaiApiKey": "Obtenir la clé API Z AI",
 		"zaiEntrypoint": "Point d'entrée Z AI",
 		"zaiEntrypointDescription": "Veuillez sélectionner le point d'entrée API approprié en fonction de votre emplacement. Si vous êtes en Chine, choisissez open.bigmodel.cn. Sinon, choisissez api.z.ai.",
+		"minimaxApiKey": "Clé API MiniMax",
+		"getMiniMaxApiKey": "Obtenir la clé API MiniMax",
+		"minimaxBaseUrl": "Point d'entrée MiniMax",
 		"geminiApiKey": "Clé API Gemini",
 		"getGroqApiKey": "Obtenir la clé API Groq",
 		"groqApiKey": "Clé API Groq",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "Activer la mise en cache des prompts pour améliorer les performances et réduire les coûts pour les modèles pris en charge.",
 		"cacheUsageNote": "Remarque : Si vous ne voyez pas l'utilisation du cache, essayez de sélectionner un modèle différent puis de sélectionner à nouveau votre modèle souhaité.",
 		"vscodeLmModel": "Modèle de langage",
-		"vscodeLmWarning": "Remarque : Il s'agit d'une intégration très expérimentale et le support des fournisseurs variera. Si vous recevez une erreur concernant un modèle non pris en charge, c'est un problème du côté du fournisseur.",
+		"vscodeLmWarning": "Remarque : Les modèles accessibles via l’API VS Code Language Model peuvent être encapsulés ou ajustés par le fournisseur ; leur comportement peut donc différer de l’utilisation directe du même modèle auprès d’un fournisseur ou routeur classique. Pour utiliser un modèle depuis la liste « Language Model », bascule d’abord sur ce modèle puis clique sur « Accepter » dans l’invite de Copilot Chat ; sinon, une erreur telle que 400 « The requested model is not supported » peut apparaître.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Activer le contexte d'URL",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "Utilisation de l'ordinateur",
-				"description": "Ce modèle est-il capable d'interagir avec un navigateur ? (ex. Claude 3.7 Sonnet)"
+				"description": "Ce modèle est-il capable d'interagir avec un navigateur ?"
 			},
 			"promptCache": {
 				"label": "Mise en cache des prompts",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Effort de raisonnement du modèle",
+			"none": "Aucun",
 			"minimal": "Minimal (le plus rapide)",
 			"high": "Élevé",
 			"medium": "Moyen",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Délai d'initialisation du point de contrôle (secondes)",
+			"description": "Temps d'attente maximum pour l'initialisation du service de points de contrôle. Par défaut : 15 secondes. Plage : 10-60 secondes."
+		},
 		"enable": {
 			"label": "Activer les points de contrôle automatiques",
 			"description": "Lorsque cette option est activée, Kilo Code créera automatiquement des points de contrôle pendant l'exécution des tâches, facilitant la révision des modifications ou le retour à des états antérieurs. <0>En savoir plus</0>"
@@ -680,6 +692,14 @@
 			"profileDescription": "Seuil personnalisé pour ce profil uniquement (remplace le défaut global)",
 			"inheritDescription": "Ce profil hérite du seuil par défaut global ({{threshold}}%)",
 			"usesGlobal": "(utilise global {{threshold}}%)"
+		},
+		"includeCurrentTime": {
+			"label": "Inclure l'heure actuelle dans le contexte",
+			"description": "Lorsque cette option est activée, l'heure actuelle et les informations de fuseau horaire seront incluses dans le prompt système. Désactivez cette option si les modèles cessent de fonctionner en raison de problèmes liés à l'heure."
+		},
+		"includeCurrentCost": {
+			"label": "Inclure le coût actuel dans le contexte",
+			"description": "Lorsque cette option est activée, le coût d'utilisation actuel de l'API sera inclus dans le prompt système. Désactivez cette option si les modèles cessent de fonctionner en raison de problèmes de coût."
 		}
 	},
 	"terminal": {
@@ -689,55 +709,55 @@
 		},
 		"advanced": {
 			"label": "Paramètres du terminal : Avancé",
-			"description": "Les options suivantes peuvent nécessiter un redémarrage du terminal pour appliquer le paramètre."
+			"description": "Ces paramètres s'appliquent uniquement lorsque 'Utiliser le terminal en ligne' est désactivé. Ils affectent uniquement le terminal VS Code et peuvent nécessiter un redémarrage de l'IDE."
 		},
 		"outputLineLimit": {
 			"label": "Limite de sortie du terminal",
-			"description": "Nombre maximum de lignes à inclure dans la sortie du terminal lors de l'exécution de commandes. Lorsque ce nombre est dépassé, les lignes seront supprimées du milieu, économisant des token. <0>En savoir plus</0>"
+			"description": "Conserve les premières et dernières lignes et supprime celles du milieu pour rester sous la limite. Réduire pour économiser des jetons ; augmenter pour donner à Kilo plus de détails intermédiaires. Kilo voit un espace réservé là où le contenu est ignoré.<0>En savoir plus</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Limite de caractères du terminal",
-			"description": "Nombre maximum de caractères à inclure dans la sortie du terminal lors de l'exécution de commandes. Cette limite prévaut sur la limite de lignes pour éviter les problèmes de mémoire avec des lignes extrêmement longues. Lorsque cette limite est dépassée, la sortie sera tronquée. <0>En savoir plus</0>"
+			"description": "Remplace la limite de lignes pour éviter les problèmes de mémoire en imposant un plafond strict sur la taille de sortie. Si dépassé, conserve le début et la fin et affiche un espace réservé à Kilo là où le contenu est ignoré. <0>En savoir plus</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "Délai d'intégration du shell du terminal",
-			"description": "Temps maximum d'attente pour l'initialisation de l'intégration du shell avant d'exécuter des commandes. Pour les utilisateurs avec des temps de démarrage de shell longs, cette valeur peut nécessiter d'être augmentée si vous voyez des erreurs \"Shell Integration Unavailable\" dans le terminal. <0>En savoir plus</0>"
+			"label": "Délai d'attente d'intégration du shell du terminal",
+			"description": "Temps d'attente de l'intégration du shell de VS Code avant d'exécuter des commandes. Augmentez si votre shell démarre lentement ou si vous voyez des erreurs 'Intégration du Shell Indisponible'. <0>En savoir plus</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Désactiver l'intégration du shell du terminal",
-			"description": "Active ceci si les commandes du terminal ne fonctionnent pas correctement ou si tu vois des erreurs 'Shell Integration Unavailable'. Cela utilise une méthode plus simple pour exécuter les commandes, en contournant certaines fonctionnalités avancées du terminal. <0>En savoir plus</0>"
+			"label": "Utiliser le terminal en ligne (recommandé)",
+			"description": "Exécute des commandes dans le terminal en ligne (chat) pour contourner les profils/intégration du shell pour des exécutions plus rapides et fiables. Lorsque désactivé, Kilo utilise le terminal VS Code avec votre profil de shell, invites et plugins. <0>En savoir plus</0>"
 		},
 		"commandDelay": {
 			"label": "Délai de commande du terminal",
-			"description": "Délai en millisecondes à ajouter après l'exécution de la commande. Le paramètre par défaut de 0 désactive complètement le délai. Cela peut aider à garantir que la sortie de la commande est entièrement capturée dans les terminaux avec des problèmes de synchronisation. Dans la plupart des terminaux, cela est implémenté en définissant `PROMPT_COMMAND='sleep N'` et Powershell ajoute `start-sleep` à la fin de chaque commande. À l'origine, c'était une solution pour le bug VSCode#237208 et peut ne pas être nécessaire. <0>En savoir plus</0>"
+			"description": "Ajoute une courte pause après chaque commande pour que le terminal VS Code puisse vider toute la sortie (bash/zsh : PROMPT_COMMAND sleep ; PowerShell : start-sleep). Utilisez uniquement si vous voyez une sortie de fin manquante ; sinon laissez à 0. <0>En savoir plus</0>"
 		},
 		"compressProgressBar": {
-			"label": "Compresser la sortie des barres de progression",
-			"description": "Lorsque activé, traite la sortie du terminal avec des retours chariot (\\r) pour simuler l'affichage d'un terminal réel. Cela supprime les états intermédiaires des barres de progression, ne conservant que l'état final, ce qui économise de l'espace de contexte pour des informations plus pertinentes. <0>En savoir plus</0>"
+			"label": "Compresser la sortie de barre de progression",
+			"description": "Réduit les barres de progression/spinners pour ne conserver que l'état final (économise des jetons). <0>En savoir plus</0>"
 		},
 		"powershellCounter": {
-			"label": "Activer le contournement du compteur PowerShell",
-			"description": "Lorsqu'activé, ajoute un compteur aux commandes PowerShell pour assurer une exécution correcte des commandes. Cela aide avec les terminaux PowerShell qui peuvent avoir des problèmes de capture de sortie. <0>En savoir plus</0>"
+			"label": "Activer la solution de contournement du compteur PowerShell",
+			"description": "Activez lorsque la sortie PowerShell est manquante ou dupliquée ; ajoute un petit compteur à chaque commande pour stabiliser la sortie. Laissez désactivé si la sortie semble déjà correcte. <0>En savoir plus</0>"
 		},
 		"zshClearEolMark": {
-			"label": "Effacer la marque de fin de ligne ZSH",
-			"description": "Lorsqu'activé, efface la marque de fin de ligne ZSH en définissant PROMPT_EOL_MARK=''. Cela évite les problèmes d'interprétation de la sortie des commandes lorsqu'elle se termine par des caractères spéciaux comme '%'. <0>En savoir plus</0>"
+			"label": "Effacer la marque EOL ZSH",
+			"description": "Activez lorsque vous voyez des % égarés en fin de ligne ou que l'analyse semble incorrecte ; omet la marque de fin de ligne (%) de Zsh. <0>En savoir plus</0>"
 		},
 		"zshOhMy": {
 			"label": "Activer l'intégration Oh My Zsh",
-			"description": "Lorsqu'activé, définit ITERM_SHELL_INTEGRATION_INSTALLED=Yes pour activer les fonctionnalités d'intégration du shell Oh My Zsh. L'application de ce paramètre peut nécessiter le redémarrage de l'IDE. <0>En savoir plus</0>"
+			"description": "Activez lorsque votre thème/plugins Oh My Zsh attendent l'intégration du shell ; définit ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Désactivez pour éviter de définir cette variable. <0>En savoir plus</0>"
 		},
 		"zshP10k": {
 			"label": "Activer l'intégration Powerlevel10k",
-			"description": "Lorsqu'activé, définit POWERLEVEL9K_TERM_SHELL_INTEGRATION=true pour activer les fonctionnalités d'intégration du shell Powerlevel10k. <0>En savoir plus</0>"
+			"description": "Activez lorsque vous utilisez l'intégration du shell Powerlevel10k. <0>En savoir plus</0>"
 		},
 		"zdotdir": {
 			"label": "Activer la gestion ZDOTDIR",
-			"description": "Lorsque activé, crée un répertoire temporaire pour ZDOTDIR afin de gérer correctement l'intégration du shell zsh. Cela garantit le bon fonctionnement de l'intégration du shell VSCode avec zsh tout en préservant votre configuration zsh. <0>En savoir plus</0>"
+			"description": "Activez lorsque l'intégration du shell zsh échoue ou entre en conflit avec vos dotfiles. <0>En savoir plus</0>"
 		},
 		"inheritEnv": {
 			"label": "Hériter des variables d'environnement",
-			"description": "Lorsqu'activé, le terminal hérite des variables d'environnement du processus parent VSCode, comme les paramètres d'intégration du shell définis dans le profil utilisateur. Cela bascule directement le paramètre global VSCode `terminal.integrated.inheritEnv`. <0>En savoir plus</0>"
+			"description": "Activez pour hériter des variables d'environnement du processus parent VS Code. <0>En savoir plus</0>"
 		}
 	},
 	"advancedSettings": {
@@ -746,7 +766,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Activer l'édition via des diffs",
-			"description": "Lorsque cette option est activée, Kilo Code pourra éditer des fichiers plus rapidement et rejettera automatiquement les écritures de fichiers complets tronqués. Fonctionne mieux avec le dernier modèle Claude 4 Sonnet.",
+			"description": "Lorsque cette option est activée, Kilo Code pourra éditer des fichiers plus rapidement et rejettera automatiquement les écritures de fichiers complets tronqués",
 			"strategy": {
 				"label": "Stratégie de diff",
 				"options": {
@@ -774,10 +794,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Utiliser la stratégie diff unifiée expérimentale",
 			"description": "Activer la stratégie diff unifiée expérimentale. Cette stratégie pourrait réduire le nombre de tentatives causées par des erreurs de modèle, mais peut provoquer des comportements inattendus ou des modifications incorrectes. Activez-la uniquement si vous comprenez les risques et êtes prêt à examiner attentivement tous les changements."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Utiliser l'outil de recherche et remplacement expérimental",
-			"description": "Activer l'outil de recherche et remplacement expérimental, permettant à Kilo Code de remplacer plusieurs occurrences d'un terme de recherche en une seule requête."
 		},
 		"INSERT_BLOCK": {
 			"name": "Utiliser l'outil d'insertion de contenu expérimental",
@@ -865,8 +881,6 @@
 	"modelInfo": {
 		"supportsImages": "Prend en charge les images",
 		"noImages": "Ne prend pas en charge les images",
-		"supportsComputerUse": "Prend en charge l'utilisation de l'ordinateur",
-		"noComputerUse": "Ne prend pas en charge l'utilisation de l'ordinateur",
 		"supportsPromptCache": "Prend en charge la mise en cache des prompts",
 		"noPromptCache": "Ne prend pas en charge la mise en cache des prompts",
 		"contextWindow": "Fenêtre de contexte :",

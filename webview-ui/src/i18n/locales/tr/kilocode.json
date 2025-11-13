@@ -22,7 +22,6 @@
 	"pricing": {
 		"costUnknown": "maliyet bilinmiyor",
 		"costUnknownDescription": "API Sağlayıcısı herhangi bir maliyet verisi sağlamadı veya istek iptal edildi.",
-		"freeModelsDescription": "Ücretsiz modellerin hız limitleri olabilir. Ücretsiz model kullanımını optimize etmek için aşağıdaki bağlantıyı kullan!",
 		"freeModelsLink": "Ücretsiz ve bütçe dostu model seçeneklerini keşfet"
 	},
 	"notifications": {

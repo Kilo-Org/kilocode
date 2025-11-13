@@ -3,7 +3,7 @@ export const EXTERNAL_LINKS = {
 	GITHUB_DISCUSSIONS: "https://github.com/RooCodeInc/Roo-Code/discussions",
 	DISCORD: "https://discord.gg/roocode",
 	REDDIT: "https://reddit.com/r/RooCode",
-	X: "https://x.com/roo_code",
+	X: "https://x.com/roocode",
 	LINKEDIN: "https://www.linkedin.com/company/roo-code",
 	TIKTOK: "https://www.tiktok.com/@roo.code",
 	BLUESKY: "https://bsky.app/profile/roocode.bsky.social",
@@ -26,6 +26,7 @@ export const EXTERNAL_LINKS = {
 	TESTIMONIALS: "https://roocode.com/#testimonials",
 	CLOUD_APP_LOGIN: "https://app.roocode.com/sign-in",
 	CLOUD_APP_SIGNUP: "https://app.roocode.com/sign-up",
+	CLOUD_APP_SIGNUP_PRO: "https://app.roocode.com/sign-up?redirect_url=/cloud-agents/welcome",
 }
 
 export const INTERNAL_LINKS = {

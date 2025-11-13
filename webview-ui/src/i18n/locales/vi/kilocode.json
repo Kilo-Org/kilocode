@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "chi phí không xác định",
 		"costUnknownDescription": "Nhà cung cấp API không cung cấp dữ liệu chi phí hoặc yêu cầu đã bị hủy.",
-		"freeModelsDescription": "Các mô hình miễn phí có thể có giới hạn tốc độ. Sử dụng liên kết dưới đây để tối ưu hóa việc sử dụng mô hình miễn phí của bạn!",
 		"freeModelsLink": "Khám phá các tùy chọn mô hình miễn phí"
 	},
 	"notifications": {

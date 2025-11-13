@@ -4,10 +4,16 @@ import { VSCodeCheckbox, VSCodeLink, VSCodeTextField, VSCodeButton } from "@vsco
 import { GitBranch, Trash2, Clock } from "lucide-react" // kilocode_change
 import { Trans } from "react-i18next"
 import { buildDocLink } from "@src/utils/docLinks"
+import { Slider } from "@/components/ui"
 
 import { SetCachedStateField } from "./types"
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
+import {
+	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	MAX_CHECKPOINT_TIMEOUT_SECONDS,
+	MIN_CHECKPOINT_TIMEOUT_SECONDS,
+} from "@roo-code/types"
 
 type CheckpointSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	enableCheckpoints?: boolean
@@ -25,9 +31,11 @@ type CheckpointSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "autoPurgeFavoritedTaskRetentionDays"
 		| "autoPurgeCompletedTaskRetentionDays"
 		| "autoPurgeIncompleteTaskRetentionDays"
+		| "checkpointTimeout"
 	>
 	onManualPurge?: () => void
 	// kilocode_change end
+	checkpointTimeout?: number
 }
 
 export const CheckpointSettings = ({
@@ -39,9 +47,10 @@ export const CheckpointSettings = ({
 	autoPurgeCompletedTaskRetentionDays,
 	autoPurgeIncompleteTaskRetentionDays,
 	autoPurgeLastRunTimestamp,
-	setCachedStateField,
 	onManualPurge,
 	// kilocode_change end
+	checkpointTimeout,
+	setCachedStateField,
 	...props
 }: CheckpointSettingsProps) => {
 	const { t } = useAppTranslation()
@@ -73,6 +82,33 @@ export const CheckpointSettings = ({
 						</Trans>
 					</div>
 				</div>
+
+				{enableCheckpoints && (
+					<div className="mt-4">
+						<label className="block text-sm font-medium mb-2">
+							{t("settings:checkpoints.timeout.label")}
+						</label>
+						<div className="flex items-center gap-2">
+							<Slider
+								min={MIN_CHECKPOINT_TIMEOUT_SECONDS}
+								max={MAX_CHECKPOINT_TIMEOUT_SECONDS}
+								step={1}
+								defaultValue={[checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS]}
+								onValueChange={([value]) => {
+									setCachedStateField("checkpointTimeout", value)
+								}}
+								className="flex-1"
+								data-testid="checkpoint-timeout-slider"
+							/>
+							<span className="w-12 text-center">
+								{checkpointTimeout ?? DEFAULT_CHECKPOINT_TIMEOUT_SECONDS}
+							</span>
+						</div>
+						<div className="text-vscode-descriptionForeground text-sm mt-1">
+							{t("settings:checkpoints.timeout.description")}
+						</div>
+					</div>
+				)}
 			</Section>
 			{/* kilocode_change start - Auto-Purge Settings Section */}
 			<SectionHeader>

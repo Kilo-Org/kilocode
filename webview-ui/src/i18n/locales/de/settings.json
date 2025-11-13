@@ -62,6 +62,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API-Schlüssel",
 		"vercelAiGatewayApiKeyPlaceholder": "Gib deinen Vercel AI Gateway API-Schlüssel ein",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API-Schlüssel",
+		"openRouterApiKeyPlaceholder": "Gib deinen OpenRouter API-Schlüssel ein",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-Schlüssel:",
 		"mistralApiKeyPlaceholder": "Gib deinen Mistral-API-Schlüssel ein",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API-Schlüssel ist erforderlich",
 			"ollamaBaseUrlRequired": "Ollama-Basis-URL ist erforderlich",
 			"baseUrlRequired": "Basis-URL ist erforderlich",
-			"modelDimensionMinValue": "Modellabmessung muss größer als 0 sein"
+			"modelDimensionMinValue": "Modellabmessung muss größer als 0 sein",
+			"openRouterApiKeyRequired": "OpenRouter API-Schlüssel ist erforderlich"
 		},
 		"advancedConfigLabel": "Erweiterte Konfiguration",
 		"searchMinScoreLabel": "Suchergebnis-Schwellenwert",
@@ -308,7 +312,10 @@
 		"zaiApiKey": "Z AI API-Schlüssel",
 		"getZaiApiKey": "Z AI API-Schlüssel erhalten",
 		"zaiEntrypoint": "Z AI Einstiegspunkt",
-		"zaiEntrypointDescription": "Bitte wähle den entsprechenden API-Einstiegspunkt basierend auf deinem Standort aus. Wenn du dich in China befindest, wähle open.bigmodel.cn. Andernfalls wähle api.z.ai.",
+		"zaiEntrypointDescription": "Bitte wählen Sie den entsprechenden API-Einstiegspunkt basierend auf Ihrem Standort. Wenn Sie sich in China befinden, wählen Sie open.bigmodel.cn. Andernfalls wählen Sie api.z.ai.",
+		"minimaxApiKey": "MiniMax API-Schlüssel",
+		"getMiniMaxApiKey": "MiniMax API-Schlüssel erhalten",
+		"minimaxBaseUrl": "MiniMax-Einstiegspunkt",
 		"geminiApiKey": "Gemini API-Schlüssel",
 		"getGroqApiKey": "Groq API-Schlüssel erhalten",
 		"groqApiKey": "Groq API-Schlüssel",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "Prompt-Caching aktivieren, um die Leistung zu verbessern und Kosten für unterstützte Modelle zu reduzieren.",
 		"cacheUsageNote": "Hinweis: Wenn du keine Cache-Nutzung siehst, versuche ein anderes Modell auszuwählen und dann dein gewünschtes Modell erneut auszuwählen.",
 		"vscodeLmModel": "Sprachmodell",
-		"vscodeLmWarning": "Hinweis: Dies ist eine sehr experimentelle Integration und die Anbieterunterstützung variiert. Wenn du einen Fehler über ein nicht unterstütztes Modell erhälst, liegt das Problem auf Anbieterseite.",
+		"vscodeLmWarning": "Hinweis: Über die VS Code Language Model API abgerufene Modelle können vom Anbieter ummantelt oder feinabgestimmt sein. Daher kann sich ihr Verhalten von der direkten Nutzung desselben Modells bei einem typischen Anbieter oder Router unterscheiden. Um ein Modell aus der Auswahlliste „Language Model“ zu verwenden, wechsle zunächst zu diesem Modell und klicke dann im Copilot‑Chat auf „Akzeptieren“; andernfalls kann ein Fehler wie 400 „The requested model is not supported“ auftreten.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URL-Kontext aktivieren",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "Computer-Nutzung",
-				"description": "Ist dieses Modell in der Lage, mit einem Browser zu interagieren? (z.B. Claude 3.7 Sonnet)"
+				"description": "Ist dieses Modell in der Lage, mit einem Browser zu interagieren?"
 			},
 			"promptCache": {
 				"label": "Prompt-Caching",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Modell-Denkaufwand",
+			"none": "Keine",
 			"minimal": "Minimal (schnellste)",
 			"high": "Hoch",
 			"medium": "Mittel",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Timeout für Checkpoint-Initialisierung (Sekunden)",
+			"description": "Maximale Wartezeit für die Initialisierung des Checkpoint-Dienstes. Standard ist 15 Sekunden. Bereich: 10-60 Sekunden."
+		},
 		"enable": {
 			"label": "Automatische Kontrollpunkte aktivieren",
 			"description": "Wenn aktiviert, erstellt Kilo Code automatisch Kontrollpunkte während der Aufgabenausführung, was die Überprüfung von Änderungen oder die Rückkehr zu früheren Zuständen erleichtert. <0>Mehr erfahren</0>"
@@ -637,8 +649,8 @@
 			"description": "Wenn aktiviert, werden Dateien, die mit Mustern in .kilocodeignore übereinstimmen, in Listen mit einem Schlosssymbol angezeigt. Wenn deaktiviert, werden diese Dateien vollständig aus Dateilisten und Suchen ausgeblendet."
 		},
 		"maxConcurrentFileReads": {
-			"label": "Concurrent file reads limit",
-			"description": "Maximum number of files the 'read_file' tool can process concurrently. Higher values may speed up reading multiple small files but increase memory usage."
+			"label": "Gleichzeitige Dateilesungen Limit",
+			"description": "Maximale Anzahl von Dateien, die das 'read_file'-Tool gleichzeitig verarbeiten kann. Höhere Werte können das Lesen mehrerer kleiner Dateien beschleunigen, erhöhen aber den Speicherverbrauch."
 		},
 		"maxReadFile": {
 			"label": "Schwellenwert für automatische Dateilesekürzung",
@@ -679,7 +691,15 @@
 		"maxTotalImageSize": {
 			"label": "Maximale Gesamtbildgröße",
 			"mb": "MB",
-			"description": "Maximales kumulatives Größenlimit (in MB) für alle Bilder, die in einer einzelnen read_file-Operation verarbeitet werden. Beim Lesen mehrerer Bilder wird die Größe jedes Bildes zur Gesamtsumme addiert. Wenn das Einbeziehen eines weiteren Bildes dieses Limit überschreitten würde, wird es übersprungen."
+			"description": "Maximales kumulatives Größenlimit (in MB) für alle Bilder, die in einer einzelnen read_file-Operation verarbeitet werden. Beim Lesen mehrerer Bilder wird die Größe jedes Bildes zur Gesamtsumme addiert. Wenn das Einbeziehen eines weiteren Bildes dieses Limit überschreiten würde, wird es übersprungen."
+		},
+		"includeCurrentTime": {
+			"label": "Aktuelle Uhrzeit in den Kontext einbeziehen",
+			"description": "Wenn aktiviert, werden die aktuelle Uhrzeit und Zeitzoneninformationen in den System-Prompt aufgenommen. Deaktiviere diese Option, wenn Modelle aufgrund von Zeitbedenken die Arbeit einstellen."
+		},
+		"includeCurrentCost": {
+			"label": "Aktuelle Kosten in den Kontext einbeziehen",
+			"description": "Wenn aktiviert, werden die aktuellen API-Nutzungskosten in den System-Prompt aufgenommen. Deaktiviere diese Option, wenn Modelle aufgrund von Kostenbedenken die Arbeit einstellen."
 		}
 	},
 	"terminal": {
@@ -689,55 +709,55 @@
 		},
 		"advanced": {
 			"label": "Terminal-Einstellungen: Erweitert",
-			"description": "Die folgenden Optionen erfordern möglicherweise einen Terminal-Neustart, um die Einstellung zu übernehmen."
+			"description": "Diese Einstellungen gelten nur, wenn 'Inline-Terminal verwenden' deaktiviert ist. Sie betreffen nur das VS Code-Terminal und können einen IDE-Neustart erfordern."
 		},
 		"outputLineLimit": {
 			"label": "Terminal-Ausgabelimit",
-			"description": "Maximale Anzahl von Zeilen, die in der Terminal-Ausgabe bei der Ausführung von Befehlen enthalten sein sollen. Bei Überschreitung werden Zeilen aus der Mitte entfernt, wodurch Token gespart werden. <0>Mehr erfahren</0>"
+			"description": "Behält erste und letzte Zeilen und verwirft die mittleren, um unter dem Limit zu bleiben. Niedriger für Token-Ersparnis; höher für mehr Details aus der Mitte für Kilo. Kilo sieht einen Platzhalter, wo Inhalt übersprungen wird.<0>Mehr erfahren</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Terminal-Zeichenlimit",
-			"description": "Maximale Anzahl von Zeichen, die in die Terminalausgabe bei der Ausführung von Befehlen aufgenommen werden sollen. Dieses Limit hat Vorrang vor dem Zeilenlimit, um Speicherprobleme durch extrem lange Zeilen zu vermeiden. Bei Überschreitung wird die Ausgabe abgeschnitten. <0>Mehr erfahren</0>"
+			"description": "Überschreibt das Zeilenlimit, um Speicherprobleme durch eine harte Obergrenze für die Ausgabegröße zu vermeiden. Bei Überschreitung behält es Anfang und Ende und zeigt Kilo einen Platzhalter, wo Inhalt übersprungen wird. <0>Mehr erfahren</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "Terminal-Shell-Integrationszeit-Limit",
-			"description": "Maximale Wartezeit für die Shell-Integration, bevor Befehle ausgeführt werden. Für Benutzer mit langen Shell-Startzeiten musst du diesen Wert möglicherweise erhöhen, wenn du Fehler vom Typ \"Shell Integration Unavailable\" im Terminal siehst. <0>Mehr erfahren</0>"
+			"label": "Terminal-Shell-Integrations-Timeout",
+			"description": "Wie lange auf VS Code Shell-Integration gewartet wird, bevor Befehle ausgeführt werden. Erhöhe den Wert, wenn deine Shell langsam startet oder du 'Shell-Integration nicht verfügbar'-Fehler siehst. <0>Mehr erfahren</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Terminal-Shell-Integration deaktivieren",
-			"description": "Aktiviere dies, wenn Terminalbefehle nicht korrekt funktionieren oder du Fehler wie 'Shell Integration Unavailable' siehst. Dies verwendet eine einfachere Methode zur Ausführung von Befehlen und umgeht einige erweiterte Terminalfunktionen. <0>Mehr erfahren</0>"
+			"label": "Inline-Terminal verwenden (empfohlen)",
+			"description": "Führe Befehle im Inline-Terminal (Chat) aus, um Shell-Profile/Integration für schnellere, zuverlässigere Läufe zu umgehen. Wenn deaktiviert, nutzt Kilo das VS Code-Terminal mit deinem Shell-Profil, Prompts und Plugins. <0>Mehr erfahren</0>"
 		},
 		"commandDelay": {
 			"label": "Terminal-Befehlsverzögerung",
-			"description": "Verzögerung in Millisekunden, die nach der Befehlsausführung hinzugefügt wird. Die Standardeinstellung von 0 deaktiviert die Verzögerung vollständig. Dies kann dazu beitragen, dass die Befehlsausgabe in Terminals mit Timing-Problemen vollständig erfasst wird. In den meisten Terminals wird dies durch Setzen von `PROMPT_COMMAND='sleep N'` und Powershell fügt `start-sleep` am Ende jedes Befehls hinzu. Ursprünglich war dies eine Lösung für VSCode-Bug#237208 und ist möglicherweise nicht mehr erforderlich. <0>Mehr erfahren</0>"
+			"description": "Fügt nach jedem Befehl eine kurze Pause hinzu, damit das VS Code-Terminal alle Ausgaben leeren kann (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Verwende dies nur, wenn du fehlende Tail-Ausgabe siehst; sonst lass es bei 0. <0>Mehr erfahren</0>"
 		},
 		"compressProgressBar": {
 			"label": "Fortschrittsbalken-Ausgabe komprimieren",
-			"description": "Wenn aktiviert, verarbeitet diese Option Terminal-Ausgaben mit Wagenrücklaufzeichen (\\r), um zu simulieren, wie ein echtes Terminal Inhalte anzeigen würde. Dies entfernt Zwischenzustände von Fortschrittsbalken und behält nur den Endzustand bei, wodurch Kontextraum für relevantere Informationen gespart wird. <0>Mehr erfahren</0>"
+			"description": "Klappt Fortschrittsbalken/Spinner zusammen, sodass nur der Endzustand erhalten bleibt (spart Token). <0>Mehr erfahren</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell-Zähler-Workaround aktivieren",
-			"description": "Wenn aktiviert, fügt einen Zähler zu PowerShell-Befehlen hinzu, um die korrekte Befehlsausführung sicherzustellen. Dies hilft bei PowerShell-Terminals, die Probleme mit der Ausgabeerfassung haben könnten. <0>Mehr erfahren</0>"
+			"description": "Schalte dies ein, wenn PowerShell-Ausgabe fehlt oder dupliziert wird; es fügt jedem Befehl einen kleinen Zähler hinzu, um die Ausgabe zu stabilisieren. Lass es ausgeschaltet, wenn die Ausgabe bereits korrekt aussieht. <0>Mehr erfahren</0>"
 		},
 		"zshClearEolMark": {
-			"label": "ZSH-Zeilenende-Markierung löschen",
-			"description": "Wenn aktiviert, wird die ZSH-Zeilenende-Markierung durch Setzen von PROMPT_EOL_MARK='' gelöscht. Dies verhindert Probleme bei der Interpretation der Befehlsausgabe, wenn diese mit Sonderzeichen wie '%' endet. <0>Mehr erfahren</0>"
+			"label": "ZSH-EOL-Markierung löschen",
+			"description": "Schalte dies ein, wenn du verirrte % am Zeilenende siehst oder das Parsen falsch aussieht; es lässt Zshs Zeilenende-Markierung (%) weg. <0>Mehr erfahren</0>"
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh-Integration aktivieren",
-			"description": "Wenn aktiviert, wird ITERM_SHELL_INTEGRATION_INSTALLED=Yes gesetzt, um die Shell-Integrationsfunktionen von Oh My Zsh zu aktivieren. Das Anwenden dieser Einstellung erfordert möglicherweise einen Neustart der IDE. <0>Mehr erfahren</0>"
+			"description": "Schalte dies ein, wenn dein Oh My Zsh-Theme/Plugins Shell-Integration erwarten; es setzt ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Schalte dies aus, um das Setzen dieser Variable zu vermeiden. <0>Mehr erfahren</0>"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k-Integration aktivieren",
-			"description": "Wenn aktiviert, wird POWERLEVEL9K_INSTANT_PROMPT=quiet gesetzt, um die Powerlevel10k-Integration zu aktivieren. Dies kann die Leistung verbessern, indem der Prompt sofort angezeigt wird. <0>Mehr erfahren</0>"
+			"description": "Schalte dies ein, wenn du Powerlevel10k-Shell-Integration verwendest. <0>Mehr erfahren</0>"
 		},
 		"zdotdir": {
-			"label": "ZDOTDIR Handhabung aktivieren",
-			"description": "Wenn aktiviert, wird ein temporäres Verzeichnis für ZDOTDIR erstellt, um die Zsh-Shell-Integration ordnungsgemäß zu handhaben. Dies stellt sicher, dass die VSCode-Shell-Integration mit Zsh korrekt funktioniert, während deine Zsh-Konfiguration erhalten bleibt. <0>Mehr erfahren</0>"
+			"label": "ZDOTDIR-Handhabung aktivieren",
+			"description": "Schalte dies ein, wenn zsh-Shell-Integration fehlschlägt oder mit deinen Dotfiles kollidiert. <0>Mehr erfahren</0>"
 		},
 		"inheritEnv": {
 			"label": "Umgebungsvariablen erben",
-			"description": "Wenn aktiviert, erbt das Terminal Umgebungsvariablen aus dem übergeordneten Prozess von VSCode, wie z.B. benutzerdefinierte Shell-Integrationseinstellungen. Dies schaltet direkt die globale VSCode-Einstellung `terminal.integrated.inheritEnv` um. <0>Mehr erfahren</0>"
+			"description": "Schalte dies ein, um Umgebungsvariablen vom übergeordneten VS Code-Prozess zu erben. <0>Mehr erfahren</0>"
 		}
 	},
 	"advancedSettings": {
@@ -746,7 +766,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Bearbeitung durch Diffs aktivieren",
-			"description": "Wenn aktiviert, kann Kilo Code Dateien schneller bearbeiten und lehnt automatisch abgeschnittene vollständige Dateischreibvorgänge ab. Funktioniert am besten mit dem neuesten Claude 3.7 Sonnet-Modell.",
+			"description": "Wenn aktiviert, kann Kilo Code Dateien schneller bearbeiten und lehnt automatisch abgeschnittene vollständige Dateischreibvorgänge ab",
 			"strategy": {
 				"label": "Diff-Strategie",
 				"options": {
@@ -774,10 +794,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentelle einheitliche Diff-Strategie verwenden",
 			"description": "Aktiviere die experimentelle einheitliche Diff-Strategie. Diese Strategie könnte die Anzahl der durch Modellfehler verursachten Wiederholungsversuche reduzieren, kann aber zu unerwartetem Verhalten oder falschen Bearbeitungen führen. Aktiviere sie nur, wenn du die Risiken verstehst und bereit bist, alle Änderungen sorgfältig zu überprüfen."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Experimentelles Such- und Ersetzungswerkzeug verwenden",
-			"description": "Aktiviere das experimentelle Such- und Ersetzungswerkzeug, mit dem Kilo Code mehrere Instanzen eines Suchbegriffs in einer Anfrage ersetzen kann."
 		},
 		"INSERT_BLOCK": {
 			"name": "Experimentelles Inhalts-Einfügewerkzeug verwenden",
@@ -861,8 +877,6 @@
 	"modelInfo": {
 		"supportsImages": "Unterstützt Bilder",
 		"noImages": "Unterstützt keine Bilder",
-		"supportsComputerUse": "Unterstützt Computernutzung",
-		"noComputerUse": "Unterstützt keine Computernutzung",
 		"supportsPromptCache": "Unterstützt Prompt-Cache",
 		"noPromptCache": "Unterstützt keinen Prompt-Cache",
 		"contextWindow": "Kontextfenster:",

@@ -22,7 +22,7 @@ export const codebaseIndexConfigSchema = z.object({
 	codebaseIndexEnabled: z.boolean().optional(),
 	codebaseIndexQdrantUrl: z.string().optional(),
 	codebaseIndexEmbedderProvider: z
-		.enum(["openai", "ollama", "openai-compatible", "gemini", "mistral", "vercel-ai-gateway"])
+		.enum(["openai", "ollama", "openai-compatible", "gemini", "mistral", "vercel-ai-gateway", "openrouter"])
 		.optional(),
 	codebaseIndexEmbedderBaseUrl: z.string().optional(),
 	codebaseIndexEmbedderModelId: z.string().optional(),
@@ -51,6 +51,7 @@ export const codebaseIndexModelsSchema = z.object({
 	gemini: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	mistral: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 	"vercel-ai-gateway": z.record(z.string(), z.object({ dimension: z.number() })).optional(),
+	openrouter: z.record(z.string(), z.object({ dimension: z.number() })).optional(),
 })
 
 export type CodebaseIndexModels = z.infer<typeof codebaseIndexModelsSchema>
@@ -68,6 +69,7 @@ export const codebaseIndexProviderSchema = z.object({
 	codebaseIndexGeminiApiKey: z.string().optional(),
 	codebaseIndexMistralApiKey: z.string().optional(),
 	codebaseIndexVercelAiGatewayApiKey: z.string().optional(),
+	codebaseIndexOpenRouterApiKey: z.string().optional(),
 })
 
 export type CodebaseIndexProvider = z.infer<typeof codebaseIndexProviderSchema>

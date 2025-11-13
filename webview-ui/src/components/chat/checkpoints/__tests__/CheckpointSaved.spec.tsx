@@ -1,20 +1,30 @@
 // npx vitest run src/components/chat/checkpoints/__tests__/CheckpointSaved.spec.tsx
 
+// Capture onOpenChange from Popover to control open/close in tests
+let lastOnOpenChange: ((open: boolean) => void) | undefined
+
 vi.mock("@/components/ui", () => {
 	// Minimal UI primitives to ensure deterministic behavior in tests
 	return {
 		Button: ({ children, ...rest }: any) => <button {...rest}>{children}</button>,
 		StandardTooltip: ({ children }: any) => <>{children}</>,
-		Popover: ({ children, onOpenChange, open }: any) => {
-			lastOnOpenChange = onOpenChange
+		Popover: (props: any) => {
+			const { children, onOpenChange, open, ...rest } = props
+			if (rest["data-testid"] === "restore-popover") {
+				lastOnOpenChange = onOpenChange
+			}
 			return (
-				<div data-testid="popover-root" data-open={open}>
+				<div data-testid={rest["data-testid"]} data-open={open}>
 					{children}
 				</div>
 			)
 		},
 		PopoverTrigger: ({ children }: any) => <div data-testid="popover-trigger">{children}</div>,
-		PopoverContent: ({ children }: any) => <div data-testid="popover-content">{children}</div>,
+		PopoverContent: ({ children, className, ...rest }: any) => (
+			<div data-testid="popover-content" className={className} {...rest}>
+				{children}
+			</div>
+		),
 	}
 })
 
@@ -22,9 +32,6 @@ import { render, waitFor, screen } from "@/utils/test-utils"
 import React from "react"
 import userEvent from "@testing-library/user-event"
 import { CheckpointSaved } from "../CheckpointSaved"
-
-// Capture onOpenChange from Popover to control open/close in tests
-let lastOnOpenChange: ((open: boolean) => void) | undefined
 
 const waitForOpenHandler = async () => {
 	await waitFor(() => {
@@ -101,7 +108,7 @@ describe("CheckpointSaved popover visibility", () => {
 	it("closes popover after preview and after confirm restore", async () => {
 		const { getByTestId } = render(<CheckpointSaved {...baseProps} />)
 
-		const popoverRoot = () => getByTestId("popover-root")
+		const popoverRoot = () => getByTestId("restore-popover")
 		const menuContainer = () => getByTestId("checkpoint-menu-container")
 
 		// Open

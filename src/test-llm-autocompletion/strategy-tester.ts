@@ -51,10 +51,6 @@ export class StrategyTester {
 		return {
 			document: document as any,
 			range: range as any,
-			recentOperations: [],
-			diagnostics: [],
-			openFiles: [],
-			userInput: undefined,
 		}
 	}
 
@@ -125,7 +121,12 @@ export class StrategyTester {
 			recentlyEditedRanges: [],
 		}
 
-		const { systemPrompt, userPrompt } = this.holeFiller.getPrompts(autocompleteInput, prefix, suffix, languageId)
+		const { systemPrompt, userPrompt } = await this.holeFiller.getPrompts(
+			autocompleteInput,
+			prefix,
+			suffix,
+			languageId,
+		)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 

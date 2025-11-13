@@ -410,6 +410,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter API line...",
 	},
 
+	// Minimax fields
+	minimaxBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter MiniMax base URL...",
+	},
+	minimaxApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter MiniMax API key...",
+	},
+
 	// Unbound fields
 	unboundApiKey: {
 		label: "API Key",
@@ -447,6 +459,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter Vercel AI Gateway API key...",
 	},
 	vercelAiGatewayModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
+	// OVHcloud AI Endpoints fields
+	ovhCloudAiEndpointsApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter OVHcloud AI Endpoints API key...",
+	},
+	ovhCloudAiEndpointsModelId: {
 		label: "Model ID",
 		type: "text",
 		placeholder: "Enter model ID...",
@@ -767,7 +791,11 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					type: "text",
 				},
 			]
-
+		case "minimax":
+			return [
+				createFieldConfig("minimaxBaseUrl", config, "https://api.minimax.io/anthropic"),
+				createFieldConfig("minimaxApiKey", config),
+			]
 		case "fake-ai":
 			return [
 				{
@@ -777,6 +805,12 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					actualValue: "fake-model",
 					type: "text",
 				},
+			]
+
+		case "ovhcloud":
+			return [
+				createFieldConfig("ovhCloudAiEndpointsApiKey", config),
+				createFieldConfig("ovhCloudAiEndpointsModelId", config, "gpt-oss-120b"),
 			]
 
 		default:
@@ -825,7 +859,9 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"vercel-ai-gateway": "gpt-4o",
 	"virtual-quota-fallback": "gpt-4o",
 	"human-relay": "human",
+	minimax: "MiniMax-M2",
 	"fake-ai": "fake-model",
+	ovhcloud: "gpt-oss-120b",
 }
 
 /**

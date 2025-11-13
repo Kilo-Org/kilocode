@@ -311,7 +311,6 @@ export const checkpointCommand: Command = {
 				await handleList(context)
 				break
 
-
 			case "restore":
 				if (!hash) {
 					logs.warn("Hash required for restore command", "checkpoint")

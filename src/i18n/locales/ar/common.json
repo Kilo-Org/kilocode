@@ -42,6 +42,12 @@
 		"checkpoint_timeout": "انتهى الوقت أثناء محاولة استرجاع الحالة.",
 		"checkpoint_failed": "فشل في استرجاع الحالة.",
 		"git_not_installed": "Git مطلوب لميزة نقاط الحفظ. رجاءً ثبت Git لتفعيل نقاط الحفظ.",
+		"checkpoint_no_first": "لا توجد نقطة حفظ أولى للمقارنة.",
+		"checkpoint_no_previous": "لا توجد نقطة حفظ سابقة للمقارنة.",
+		"checkpoint_no_changes": "لم يتم العثور على تغييرات.",
+		"checkpoint_diff_with_next": "التغييرات مقارنة بنقطة الحفظ التالية",
+		"checkpoint_diff_since_first": "التغييرات منذ نقطة الحفظ الأولى",
+		"checkpoint_diff_to_current": "التغييرات إلى مساحة العمل الحالية",
 		"nested_git_repos_warning": "تحذير: تم العثور على مستودعات git متداخلة في هذه المسارات. قد يسبب هذا سلوك غير متوقع مع نقاط الحفظ: {{paths}}",
 		"no_workspace": "افتح مجلد مشروع أولاً",
 		"update_support_prompt": "فشل تحديث الرسالة المساعدة",
@@ -249,7 +255,7 @@
 	},
 	"docsLink": {
 		"label": "مستندات",
-		"url": "https://docs.roocode.com"
+		"url": "https://kilocode.ai/docs"
 	},
 	"errorBoundary": {
 		"title": "خطأ",

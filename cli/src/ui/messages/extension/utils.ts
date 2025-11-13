@@ -273,7 +273,7 @@ export interface FormattedContent {
 export function formatContentWithMetadata(
 	text: string,
 	maxLines: number = 20,
-	previewLines: number = 5
+	previewLines: number = 5,
 ): FormattedContent {
 	if (!text) {
 		return {

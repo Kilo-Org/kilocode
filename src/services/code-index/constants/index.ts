@@ -29,3 +29,14 @@ export const BATCH_PROCESSING_CONCURRENCY = 10
 
 /**Gemini Embedder */
 export const GEMINI_MAX_ITEM_TOKENS = 2048
+
+// kilocode_change start
+/**Managed Indexing */
+export const MANAGED_MAX_CHUNK_CHARS = 1000
+export const MANAGED_MIN_CHUNK_CHARS = 50
+export const MANAGED_OVERLAP_LINES = 5
+export const MANAGED_BATCH_SIZE = 60
+export const MANAGED_FILE_WATCH_DEBOUNCE_MS = 500
+export const MANAGED_MAX_CONCURRENT_FILES = 10
+export const MANAGED_MAX_CONCURRENT_BATCHES = 50
+// kilocode_change end

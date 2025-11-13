@@ -71,6 +71,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Klíč API",
 		"vercelAiGatewayApiKeyPlaceholder": "Zadejte svůj klíč API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Klíč API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Zadejte svůj klíč API OpenRouter",
 		"openaiCompatibleProvider": "Kompatibilní s OpenAI",
 		"openAiKeyLabel": "Klíč API OpenAI",
 		"openAiKeyPlaceholder": "Zadejte svůj klíč API OpenAI",
@@ -137,6 +140,7 @@
 			"geminiApiKeyRequired": "Klíč API Gemini je povinný",
 			"mistralApiKeyRequired": "Klíč API Mistral je povinný",
 			"vercelAiGatewayApiKeyRequired": "Je vyžadován klíč API Vercel AI Gateway",
+			"openRouterApiKeyRequired": "Klíč API OpenRouter je povinný",
 			"ollamaBaseUrlRequired": "Základní URL Ollama je povinné",
 			"baseUrlRequired": "Základní URL je povinné",
 			"modelDimensionMinValue": "Dimenze modelu musí být větší než 0"
@@ -316,8 +320,14 @@
 		"moonshotApiKey": "Klíč API Moonshot",
 		"getMoonshotApiKey": "Získat klíč API Moonshot",
 		"moonshotBaseUrl": "Vstupní bod Moonshot",
+		"minimaxApiKey": "Klíč API MiniMax",
+		"getMiniMaxApiKey": "Získat klíč API MiniMax",
+		"minimaxBaseUrl": "Vstupní bod MiniMax",
 		"zaiEntrypoint": "Vstupní bod Z AI",
 		"zaiEntrypointDescription": "Vyberte prosím vhodný vstupní bod API podle vaší polohy. Pokud jste v Číně, vyberte open.bigmodel.cn. Jinak vyberte api.z.ai.",
+		"minimaxApiKey": "Klíč API MiniMax",
+		"getMiniMaxApiKey": "Získat klíč API MiniMax",
+		"minimaxBaseUrl": "Vstupní bod MiniMax",
 		"geminiApiKey": "Klíč API Gemini",
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
@@ -503,10 +513,11 @@
 		},
 		"reasoningEffort": {
 			"label": "Úsilí modelu při uvažování",
+			"none": "Žádné",
 			"minimal": "Minimální (nejrychlejší)",
-			"high": "Vysoké",
+			"low": "Nízké",
 			"medium": "Střední",
-			"low": "Nízké"
+			"high": "Vysoké"
 		},
 		"verbosity": {
 			"label": "Podrobnost výstupu",
@@ -599,6 +610,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Časový limit inicializace kontrolního bodu (sekundy)",
+			"description": "Maximální doba čekání na inicializaci služby kontrolních bodů. Výchozí je 15 sekund. Rozsah: 10-60 sekund."
+		},
 		"enable": {
 			"label": "Povolit automatické kontrolní body",
 			"description": "Pokud je povoleno, Kilo Code automaticky vytvoří kontrolní body během provádění úkolu, což usnadní kontrolu změn nebo návrat do předchozích stavů. <0>Dozvědět se více</0>"
@@ -718,6 +733,16 @@
 			"lines": "řádky",
 			"always_full_read": "Vždy číst celý soubor"
 		},
+		"maxImageFileSize": {
+			"label": "Maximální velikost souboru obrázku",
+			"mb": "MB",
+			"description": "Maximální velikost (v MB) pro soubory obrázků, které může nástroj pro čtení souborů zpracovat."
+		},
+		"maxTotalImageSize": {
+			"label": "Maximální celková velikost obrázků",
+			"mb": "MB",
+			"description": "Maximální kumulativní limit velikosti (v MB) pro všechny obrázky zpracované v jedné operaci read_file. Při čtení více obrázků se velikost každého obrázku přičte k celkové velikosti. Pokud by zahrnutí dalšího obrázku překročilo tento limit, bude přeskočen."
+		},
 		"condensingThreshold": {
 			"label": "Prahová hodnota spouštění zhušťování",
 			"selectProfile": "Nakonfigurovat prahovou hodnotu pro profil",
@@ -743,15 +768,13 @@
 				"description": "Čas čekání po zápisu souborů před pokračováním (v milisekundách). Vyšší hodnoty mohou zlepšit přesnost, ale zpomalují detekci chyb."
 			}
 		},
-		"maxImageFileSize": {
-			"label": "Maximální velikost souboru obrázku",
-			"mb": "MB",
-			"description": "Maximální velikost (v MB) pro soubory obrázků, které mohou být zahrnuty do požadavků. Větší soubory budou automaticky změněny na menší velikost."
+		"includeCurrentTime": {
+			"label": "Zahrnout aktuální čas do kontextu",
+			"description": "Pokud je povoleno, aktuální čas a informace o časovém pásmu budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o čas."
 		},
-		"maxTotalImageSize": {
-			"label": "Maximální celková velikost obrázků",
-			"mb": "MB",
-			"description": "Maximální kumulativní limit velikosti (v MB) pro všechny obrázky v jednom požadavku. Při překročení budou obrázky změněny na menší velikost, aby se vešly do tohoto limitu."
+		"includeCurrentCost": {
+			"label": "Zahrnout aktuální náklady do kontextu",
+			"description": "Pokud je povoleno, aktuální náklady na využití API budou zahrnuty do systémové výzvy. Zakažte toto, pokud modely přestávají pracovat kvůli obavám o náklady."
 		}
 	},
 	"terminal": {
@@ -871,10 +894,6 @@
 				"morphLarge": "Morph v3 Large (schopnější)",
 				"relace": "Relace Apply v3"
 			}
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Použít experimentální nástroj hledání a nahrazování",
-			"description": "Povolit experimentální nástroj hledání a nahrazování, který umožňuje Kilo Code nahradit více výskytů hledaného výrazu v jednom požadavku."
 		},
 		"INSERT_BLOCK": {
 			"name": "Použít experimentální nástroj vkládání obsahu",

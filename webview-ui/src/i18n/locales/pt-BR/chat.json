@@ -156,6 +156,9 @@
 		"initializingWarning": "Ainda inicializando ponto de verificação... Se isso demorar muito, você pode desativar os pontos de verificação nas <settingsLink>configurações</settingsLink> e reiniciar sua tarefa.",
 		"menu": {
 			"viewDiff": "Ver diferenças",
+			"more": "Mais opções",
+			"viewDiffFromInit": "Ver todas as alterações",
+			"viewDiffWithCurrent": "Ver alterações desde este ponto de verificação",
 			"restore": "Restaurar ponto de verificação",
 			"restoreFiles": "Restaurar arquivos",
 			"restoreFilesDescription": "Restaura os arquivos do seu projeto para um snapshot feito neste ponto.",
@@ -272,6 +275,7 @@
 		"toggleAriaLabel": "Alternar aprovação automática",
 		"disabledAriaLabel": "Aprovação automática desativada - selecione as opções primeiro",
 		"triggerLabelOff": "Aprovação automática desativada",
+		"triggerLabelOffShort": "Desativada",
 		"triggerLabel_zero": "0 aprovados automaticamente",
 		"triggerLabel_one": "1 aprovado automaticamente",
 		"triggerLabel_other": "{{count}} aprovados automaticamente",
@@ -301,6 +305,19 @@
 			"selectModel": "Selecione <code>roo/code-supernova</code> do provedor Roo Code Cloud em Configurações para começar.",
 			"goToSettingsButton": "Ir para Configurações"
 		},
+		"release": {
+			"heading": "Novidades na Extensão:",
+			"openRouterEmbeddings": "Suporte para modelos de embedding do OpenRouter",
+			"chutesDynamic": "Chutes agora carrega os modelos mais recentes dinamicamente",
+			"queuedMessagesFix": "Correções para mensagens enfileiradas que se perdiam"
+		},
+		"cloudAgents": {
+			"heading": "Novidades na Nuvem:",
+			"prFixer": "Apresentando o agente em nuvem <bold>PR Fixer</bold> para complementar o Revisor de PR.",
+			"prFixerDescription": "O PR Fixer do Roo Code aplica alterações de alta qualidade aos seus PRs, diretamente do GitHub. Invoque via comentário de PR e ele lerá todo o histórico de comentários para entender contexto, acordos e compromissos - depois implementa a correção certa.",
+			"tryPrFixerButton": "Experimentar PR Fixer"
+		},
+		"careers": "Além disso, <careersLink>estamos contratando!</careersLink>",
 		"socialLinks": "Junte-se a nós no <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {

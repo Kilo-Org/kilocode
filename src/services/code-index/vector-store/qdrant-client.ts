@@ -1,10 +1,10 @@
 import { QdrantClient, Schemas } from "@qdrant/js-client-rest"
 import { createHash } from "crypto"
 import * as path from "path"
-import { getWorkspacePath } from "../../../utils/path"
+import { v5 as uuidv5 } from "uuid"
 import { IVectorStore } from "../interfaces/vector-store"
 import { Payload, VectorStoreSearchResult } from "../interfaces"
-import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "../constants"
+import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE, QDRANT_CODE_BLOCK_NAMESPACE } from "../constants"
 import { t } from "../../../i18n"
 
 /**
@@ -296,6 +296,23 @@ export class QdrantVectorStore implements IVectorStore {
 	 * Creates payload indexes for the collection, handling errors gracefully.
 	 */
 	private async _createPayloadIndexes(): Promise<void> {
+		// Create index for the 'type' field to enable metadata filtering
+		try {
+			await this.client.createPayloadIndex(this.collectionName, {
+				field_name: "type",
+				field_schema: "keyword",
+			})
+		} catch (indexError: any) {
+			const errorMessage = (indexError?.message || "").toLowerCase()
+			if (!errorMessage.includes("already exists")) {
+				console.warn(
+					`[QdrantVectorStore] Could not create payload index for type on ${this.collectionName}. Details:`,
+					indexError?.message || indexError,
+				)
+			}
+		}
+
+		// Create indexes for pathSegments fields
 		for (let i = 0; i <= 4; i++) {
 			try {
 				await this.client.createPayloadIndex(this.collectionName, {
@@ -386,7 +403,12 @@ export class QdrantVectorStore implements IVectorStore {
 		maxResults?: number,
 	): Promise<VectorStoreSearchResult[]> {
 		try {
-			let filter = undefined
+			let filter:
+				| {
+						must: Array<{ key: string; match: { value: string } }>
+						must_not?: Array<{ key: string; match: { value: string } }>
+				  }
+				| undefined = undefined
 
 			if (directoryPrefix) {
 				// Check if the path represents current directory
@@ -412,9 +434,18 @@ export class QdrantVectorStore implements IVectorStore {
 				}
 			}
 
+			// Always exclude metadata points at query-time to avoid wasting top-k
+			const metadataExclusion = {
+				must_not: [{ key: "type", match: { value: "metadata" } }],
+			}
+
+			const mergedFilter = filter
+				? { ...filter, must_not: [...(filter.must_not || []), ...metadataExclusion.must_not] }
+				: metadataExclusion
+
 			const searchRequest = {
 				query: queryVector,
-				filter,
+				filter: mergedFilter,
 				score_threshold: minScore ?? DEFAULT_SEARCH_MIN_SCORE,
 				limit: maxResults ?? DEFAULT_MAX_SEARCH_RESULTS,
 				params: {
@@ -547,5 +578,107 @@ export class QdrantVectorStore implements IVectorStore {
 	async collectionExists(): Promise<boolean> {
 		const collectionInfo = await this.getCollectionInfo()
 		return collectionInfo !== null
+	}
+
+	/**
+	 * Checks if the collection exists and has indexed points
+	 * @returns Promise resolving to boolean indicating if the collection exists and has points
+	 */
+	async hasIndexedData(): Promise<boolean> {
+		try {
+			const collectionInfo = await this.getCollectionInfo()
+			if (!collectionInfo) {
+				return false
+			}
+			// Check if the collection has any points indexed
+			const pointsCount = collectionInfo.points_count ?? 0
+			if (pointsCount === 0) {
+				return false
+			}
+
+			// Check if the indexing completion marker exists
+			// Use a deterministic UUID generated from a constant string
+			const metadataId = uuidv5("__indexing_metadata__", QDRANT_CODE_BLOCK_NAMESPACE)
+			const metadataPoints = await this.client.retrieve(this.collectionName, {
+				ids: [metadataId],
+			})
+
+			// If marker exists, use it to determine completion status
+			if (metadataPoints.length > 0) {
+				return metadataPoints[0].payload?.indexing_complete === true
+			}
+
+			// Backward compatibility: No marker exists (old index or pre-marker version)
+			// Fall back to old logic - assume complete if collection has points
+			console.log(
+				"[QdrantVectorStore] No indexing metadata marker found. Using backward compatibility mode (checking points_count > 0).",
+			)
+			return pointsCount > 0
+		} catch (error) {
+			console.warn("[QdrantVectorStore] Failed to check if collection has data:", error)
+			return false
+		}
+	}
+
+	/**
+	 * Marks the indexing process as complete by storing metadata
+	 * Should be called after a successful full workspace scan or incremental scan
+	 */
+	async markIndexingComplete(): Promise<void> {
+		try {
+			// Create a metadata point with a deterministic UUID to mark indexing as complete
+			// Use uuidv5 to generate a consistent UUID from a constant string
+			const metadataId = uuidv5("__indexing_metadata__", QDRANT_CODE_BLOCK_NAMESPACE)
+
+			await this.client.upsert(this.collectionName, {
+				points: [
+					{
+						id: metadataId,
+						vector: new Array(this.vectorSize).fill(0),
+						payload: {
+							type: "metadata",
+							indexing_complete: true,
+							completed_at: Date.now(),
+						},
+					},
+				],
+				wait: true,
+			})
+			console.log("[QdrantVectorStore] Marked indexing as complete")
+		} catch (error) {
+			console.error("[QdrantVectorStore] Failed to mark indexing as complete:", error)
+			throw error
+		}
+	}
+
+	/**
+	 * Marks the indexing process as incomplete by storing metadata
+	 * Should be called at the start of indexing to indicate work in progress
+	 */
+	async markIndexingIncomplete(): Promise<void> {
+		try {
+			// Create a metadata point with a deterministic UUID to mark indexing as incomplete
+			// Use uuidv5 to generate a consistent UUID from a constant string
+			const metadataId = uuidv5("__indexing_metadata__", QDRANT_CODE_BLOCK_NAMESPACE)
+
+			await this.client.upsert(this.collectionName, {
+				points: [
+					{
+						id: metadataId,
+						vector: new Array(this.vectorSize).fill(0),
+						payload: {
+							type: "metadata",
+							indexing_complete: false,
+							started_at: Date.now(),
+						},
+					},
+				],
+				wait: true,
+			})
+			console.log("[QdrantVectorStore] Marked indexing as incomplete (in progress)")
+		} catch (error) {
+			console.error("[QdrantVectorStore] Failed to mark indexing as incomplete:", error)
+			throw error
+		}
 	}
 }

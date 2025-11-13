@@ -43,7 +43,6 @@ export const parseLMStudioModel = (rawModel: LLMInstanceInfo | LLMInfo): ModelIn
 		contextWindow: contextLength,
 		supportsPromptCache: true,
 		supportsImages: rawModel.vision,
-		supportsComputerUse: false,
 		maxTokens: contextLength,
 	})
 

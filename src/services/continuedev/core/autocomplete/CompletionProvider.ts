@@ -14,11 +14,12 @@ import { renderPromptWithTokenLimit } from "./templating/index.js"
 import { GetLspDefinitionsFunction } from "./types.js"
 import { AutocompleteDebouncer } from "./util/AutocompleteDebouncer.js"
 import { AutocompleteLoggingService } from "./util/AutocompleteLoggingService.js"
-import { AutocompleteLruCache } from "./util/AutocompleteLruCache.js"
+import { AutocompleteLruCacheInMem } from "./util/AutocompleteLruCacheInMem.js"
 import { HelperVars } from "./util/HelperVars.js"
 import { AutocompleteInput, AutocompleteOutcome } from "./util/types.js"
 
-const autocompleteCache = AutocompleteLruCache.get()
+// Sqlite AutoCompleteLruCache also has constant initialization
+// const autocompleteCache = AutoCompleteLruCache.get()
 
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
@@ -29,7 +30,7 @@ const ERRORS_TO_IGNORE = [
 ]
 
 export class CompletionProvider {
-	private autocompleteCache = AutocompleteLruCache.get()
+	private autocompleteCache = AutocompleteLruCacheInMem.get()
 	public errorsShown: Set<string> = new Set()
 	private bracketMatchingService = new BracketMatchingService()
 	private debouncer = new AutocompleteDebouncer()
@@ -184,7 +185,7 @@ export class CompletionProvider {
 			// Completion
 			let completion: string | undefined = ""
 
-			const cache = await autocompleteCache
+			const cache = await this.autocompleteCache
 			const cachedCompletion = helper.options.useCache ? await cache.get(helper.prunedPrefix) : undefined
 			let cacheHit = false
 			if (cachedCompletion) {

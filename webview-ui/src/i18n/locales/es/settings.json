@@ -62,6 +62,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Clave API",
 		"vercelAiGatewayApiKeyPlaceholder": "Introduce tu clave API de Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Clave de API de OpenRouter",
+		"openRouterApiKeyPlaceholder": "Introduce tu clave de API de OpenRouter",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "Clave API:",
 		"mistralApiKeyPlaceholder": "Introduce tu clave de API de Mistral",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Se requiere la clave API de Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Se requiere la URL base de Ollama",
 			"baseUrlRequired": "Se requiere la URL base",
-			"modelDimensionMinValue": "La dimensión del modelo debe ser mayor que 0"
+			"modelDimensionMinValue": "La dimensión del modelo debe ser mayor que 0",
+			"openRouterApiKeyRequired": "Se requiere la clave API de OpenRouter"
 		},
 		"advancedConfigLabel": "Configuración avanzada",
 		"searchMinScoreLabel": "Umbral de puntuación de búsqueda",
@@ -309,6 +313,9 @@
 		"getZaiApiKey": "Obtener clave API de Z AI",
 		"zaiEntrypoint": "Punto de entrada de Z AI",
 		"zaiEntrypointDescription": "Por favor, seleccione el punto de entrada de API apropiado según su ubicación. Si está en China, elija open.bigmodel.cn. De lo contrario, elija api.z.ai.",
+		"minimaxApiKey": "Clave API de MiniMax",
+		"getMiniMaxApiKey": "Obtener clave API de MiniMax",
+		"minimaxBaseUrl": "Punto de entrada de MiniMax",
 		"geminiApiKey": "Clave API de Gemini",
 		"getGroqApiKey": "Obtener clave API de Groq",
 		"groqApiKey": "Clave API de Groq",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "Habilitar el caché de prompts para mejorar el rendimiento y reducir costos para modelos compatibles.",
 		"cacheUsageNote": "Nota: Si no ve el uso del caché, intente seleccionar un modelo diferente y luego seleccionar nuevamente su modelo deseado.",
 		"vscodeLmModel": "Modelo de lenguaje",
-		"vscodeLmWarning": "Nota: Esta es una integración muy experimental y el soporte del proveedor variará. Si recibe un error sobre un modelo no compatible, es un problema del proveedor.",
+		"vscodeLmWarning": "Nota: Los modelos a los que se accede a través de la API de modelos de lenguaje de VS Code pueden estar envueltos o ajustados por el proveedor, por lo que su comportamiento puede diferir del uso directo del mismo modelo desde un proveedor o enrutador típico. Para usar un modelo del menú desplegable «Language Model», primero cambia a ese modelo y luego haz clic en «Aceptar» en el aviso de Copilot Chat; de lo contrario, puedes ver un error como 400 «The requested model is not supported».",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Habilitar contexto de URL",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "Uso del ordenador",
-				"description": "¿Es este modelo capaz de interactuar con un navegador? (ej. Claude 3.7 Sonnet)"
+				"description": "¿Es este modelo capaz de interactuar con un navegador?"
 			},
 			"promptCache": {
 				"label": "Caché de prompts",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Esfuerzo de razonamiento del modelo",
+			"none": "Ninguno",
 			"minimal": "Mínimo (el más rápido)",
 			"high": "Alto",
 			"medium": "Medio",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Tiempo de espera para inicializar el punto de control (segundos)",
+			"description": "Tiempo máximo de espera para inicializar el servicio de puntos de control. El valor por defecto es 15 segundos. Rango: 10-60 segundos."
+		},
 		"enable": {
 			"label": "Habilitar puntos de control automáticos",
 			"description": "Cuando está habilitado, Kilo Code creará automáticamente puntos de control durante la ejecución de tareas, facilitando la revisión de cambios o la reversión a estados anteriores. <0>Más información</0>"
@@ -680,6 +692,14 @@
 			"profileDescription": "Umbral personalizado solo para este perfil (anula el predeterminado global)",
 			"inheritDescription": "Este perfil hereda el umbral predeterminado global ({{threshold}}%)",
 			"usesGlobal": "(usa global {{threshold}}%)"
+		},
+		"includeCurrentTime": {
+			"label": "Incluir hora actual en el contexto",
+			"description": "Cuando está habilitado, la hora actual y la información de la zona horaria se incluirán en el prompt del sistema. Deshabilítelo si los modelos dejan de funcionar por problemas de tiempo."
+		},
+		"includeCurrentCost": {
+			"label": "Incluir costo actual en el contexto",
+			"description": "Cuando está habilitado, el costo de uso actual de la API se incluirá en el prompt del sistema. Deshabilítelo si los modelos dejan de funcionar por problemas de costos."
 		}
 	},
 	"terminal": {
@@ -689,55 +709,55 @@
 		},
 		"advanced": {
 			"label": "Configuración del terminal: Avanzada",
-			"description": "Las siguientes opciones pueden requerir reiniciar el terminal para aplicar la configuración."
+			"description": "Estos ajustes solo se aplican cuando 'Usar terminal en línea' está desactivado. Afectan solo al terminal de VS Code y pueden requerir reiniciar el IDE."
 		},
 		"outputLineLimit": {
-			"label": "Límite de salida de terminal",
-			"description": "Número máximo de líneas a incluir en la salida del terminal al ejecutar comandos. Cuando se excede, se eliminarán líneas del medio, ahorrando token. <0>Más información</0>"
+			"label": "Límite de salida del terminal",
+			"description": "Mantiene las primeras y últimas líneas y descarta las intermedias para mantenerse bajo el límite. Reduce para ahorrar tokens; aumenta para dar a Kilo más detalles intermedios. Kilo ve un marcador donde se omite el contenido.<0>Más información</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Límite de caracteres del terminal",
-			"description": "Número máximo de caracteres a incluir en la salida del terminal al ejecutar comandos. Este límite tiene prioridad sobre el límite de líneas para evitar problemas de memoria con líneas extremadamente largas. Cuando se excede, la salida se truncará. <0>Aprende más</0>"
+			"description": "Anula el límite de líneas para evitar problemas de memoria imponiendo un límite estricto al tamaño de salida. Si se excede, mantiene el inicio y el final y muestra un marcador a Kilo donde se omite el contenido. <0>Más información</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Tiempo de espera de integración del shell del terminal",
-			"description": "Tiempo máximo de espera para la inicialización de la integración del shell antes de ejecutar comandos. Para usuarios con tiempos de inicio de shell largos, este valor puede necesitar ser aumentado si ve errores \"Shell Integration Unavailable\" en el terminal. <0>Más información</0>"
+			"description": "Cuánto tiempo esperar la integración del shell de VS Code antes de ejecutar comandos. Aumenta si tu shell inicia lentamente o ves errores 'Integración del Shell No Disponible'. <0>Más información</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Desactivar la integración del shell del terminal",
-			"description": "Activa esto si los comandos del terminal no funcionan correctamente o si ves errores de 'Shell Integration Unavailable'. Esto utiliza un método más simple para ejecutar comandos, omitiendo algunas funciones avanzadas del terminal. <0>Más información</0>"
+			"label": "Usar terminal en línea (recomendado)",
+			"description": "Ejecuta comandos en el terminal en línea (chat) para evitar perfiles/integración del shell para ejecuciones más rápidas y confiables. Cuando está desactivado, Kilo usa el terminal de VS Code con tu perfil de shell, prompts y plugins. <0>Más información</0>"
 		},
 		"commandDelay": {
 			"label": "Retraso de comando del terminal",
-			"description": "Retraso en milisegundos para añadir después de la ejecución del comando. La configuración predeterminada de 0 desactiva completamente el retraso. Esto puede ayudar a asegurar que la salida del comando se capture completamente en terminales con problemas de temporización. En la mayoría de terminales se implementa estableciendo `PROMPT_COMMAND='sleep N'` y Powershell añade `start-sleep` al final de cada comando. Originalmente era una solución para el error VSCode#237208 y puede no ser necesario. <0>Más información</0>"
+			"description": "Añade una pausa breve después de cada comando para que el terminal de VS Code pueda vaciar toda la salida (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Usa solo si ves salida final faltante; si no, deja en 0. <0>Más información</0>"
 		},
 		"compressProgressBar": {
-			"label": "Comprimir salida de barras de progreso",
-			"description": "Cuando está habilitado, procesa la salida del terminal con retornos de carro (\\r) para simular cómo un terminal real mostraría el contenido. Esto elimina los estados intermedios de las barras de progreso, conservando solo el estado final, lo que ahorra espacio de contexto para información más relevante. <0>Más información</0>"
+			"label": "Comprimir salida de barra de progreso",
+			"description": "Colapsa barras de progreso/spinners para que solo se mantenga el estado final (ahorra tokens). <0>Más información</0>"
 		},
 		"powershellCounter": {
-			"label": "Habilitar solución temporal del contador de PowerShell",
-			"description": "Cuando está habilitado, agrega un contador a los comandos de PowerShell para garantizar la ejecución correcta de los comandos. Esto ayuda con las terminales PowerShell que pueden tener problemas con la captura de salida de comandos. <0>Más información</0>"
+			"label": "Activar solución del contador de PowerShell",
+			"description": "Activa cuando falta o se duplica la salida de PowerShell; añade un pequeño contador a cada comando para estabilizar la salida. Mantén desactivado si la salida ya se ve correcta. <0>Más información</0>"
 		},
 		"zshClearEolMark": {
-			"label": "Limpiar marca de fin de línea de ZSH",
-			"description": "Cuando está habilitado, limpia la marca de fin de línea de ZSH estableciendo PROMPT_EOL_MARK=''. Esto evita problemas con la interpretación de la salida de comandos cuando termina con caracteres especiales como '%'. <0>Más información</0>"
+			"label": "Limpiar marca EOL de ZSH",
+			"description": "Activa cuando veas % extraviados al final de líneas o el análisis parezca incorrecto; omite la marca de final de línea (%) de Zsh. <0>Más información</0>"
 		},
 		"zshOhMy": {
-			"label": "Habilitar integración Oh My Zsh",
-			"description": "Cuando está habilitado, establece ITERM_SHELL_INTEGRATION_INSTALLED=Yes para habilitar las características de integración del shell Oh My Zsh. Aplicar esta configuración puede requerir reiniciar el IDE. <0>Más información</0>"
+			"label": "Activar integración con Oh My Zsh",
+			"description": "Activa cuando tu tema/plugins de Oh My Zsh esperen integración del shell; establece ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Desactiva para evitar establecer esa variable. <0>Más información</0>"
 		},
 		"zshP10k": {
-			"label": "Habilitar integración Powerlevel10k",
-			"description": "Cuando está habilitado, establece POWERLEVEL9K_TERM_SHELL_INTEGRATION=true para habilitar las características de integración del shell Powerlevel10k. <0>Más información</0>"
+			"label": "Activar integración con Powerlevel10k",
+			"description": "Activa cuando uses integración del shell de Powerlevel10k. <0>Más información</0>"
 		},
 		"zdotdir": {
-			"label": "Habilitar gestión de ZDOTDIR",
-			"description": "Cuando está habilitado, crea un directorio temporal para ZDOTDIR para manejar correctamente la integración del shell zsh. Esto asegura que la integración del shell de VSCode funcione correctamente con zsh mientras preserva tu configuración de zsh. <0>Más información</0>"
+			"label": "Activar manejo de ZDOTDIR",
+			"description": "Activa cuando la integración del shell de zsh falle o entre en conflicto con tus dotfiles. <0>Más información</0>"
 		},
 		"inheritEnv": {
 			"label": "Heredar variables de entorno",
-			"description": "Cuando está habilitado, el terminal hereda las variables de entorno del proceso padre de VSCode, como la configuración de integración del shell definida en el perfil del usuario. Esto alterna directamente la configuración global de VSCode `terminal.integrated.inheritEnv`. <0>Más información</0>"
+			"description": "Activa para heredar variables de entorno del proceso padre de VS Code. <0>Más información</0>"
 		}
 	},
 	"advancedSettings": {
@@ -746,7 +766,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edición a través de diffs",
-			"description": "Cuando está habilitado, Kilo Code podrá editar archivos más rápidamente y rechazará automáticamente escrituras completas de archivos truncados. Funciona mejor con el último modelo Claude 4 Sonnet.",
+			"description": "Cuando está habilitado, Kilo Code podrá editar archivos más rápidamente y rechazará automáticamente escrituras completas de archivos truncados",
 			"strategy": {
 				"label": "Estrategia de diff",
 				"options": {
@@ -774,10 +794,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Usar estrategia de diff unificada experimental",
 			"description": "Habilitar la estrategia de diff unificada experimental. Esta estrategia podría reducir el número de reintentos causados por errores del modelo, pero puede causar comportamientos inesperados o ediciones incorrectas. Habilítela solo si comprende los riesgos y está dispuesto a revisar cuidadosamente todos los cambios."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Usar herramienta experimental de búsqueda y reemplazo",
-			"description": "Habilitar la herramienta experimental de búsqueda y reemplazo, permitiendo a Kilo Code reemplazar múltiples instancias de un término de búsqueda en una sola solicitud."
 		},
 		"INSERT_BLOCK": {
 			"name": "Usar herramienta experimental de inserción de contenido",
@@ -865,8 +881,6 @@
 	"modelInfo": {
 		"supportsImages": "Soporta imágenes",
 		"noImages": "No soporta imágenes",
-		"supportsComputerUse": "Soporta uso del ordenador",
-		"noComputerUse": "No soporta uso del ordenador",
 		"supportsPromptCache": "Soporta caché de prompts",
 		"noPromptCache": "No soporta caché de prompts",
 		"contextWindow": "Ventana de contexto",

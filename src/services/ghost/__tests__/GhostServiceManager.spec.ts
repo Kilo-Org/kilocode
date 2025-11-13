@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { MockWorkspace } from "./MockWorkspace"
 import * as vscode from "vscode"
 import { parseGhostResponse } from "../classic-auto-complete/HoleFiller"
-import { GhostSuggestionContext, extractPrefixSuffix } from "../types"
+import { extractPrefixSuffix } from "../types"
 
 vi.mock("vscode", () => ({
 	Uri: {
@@ -80,7 +80,7 @@ describe("GhostServiceManager", () => {
 		})
 	})
 
-	// Helper function to set up test document and context
+	// Helper function to set up test document
 	async function setupTestDocument(filename: string, content: string) {
 		const testUri = vscode.Uri.parse(`file://${filename}`)
 		mockWorkspace.addDocument(testUri, content)
@@ -91,33 +91,28 @@ describe("GhostServiceManager", () => {
 		const mockDocument = await mockWorkspace.openTextDocument(testUri)
 		;(mockDocument as any).uri = testUri
 
-		const context: GhostSuggestionContext = {
-			document: mockDocument,
-			openFiles: [mockDocument],
-		}
-
-		return { testUri, context, mockDocument }
+		return { testUri, mockDocument }
 	}
 
 	describe("Error Handling", () => {
 		it("should handle empty responses", async () => {
 			const initialContent = `console.log('test');`
-			const { context } = await setupTestDocument("empty.js", initialContent)
+			const { mockDocument } = await setupTestDocument("empty.js", initialContent)
 
 			// Test empty response
-			const position = context.range?.start ?? context.document.positionAt(0)
-			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const position = new vscode.Position(0, 0)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
 			const result = parseGhostResponse("", prefix, suffix)
 			expect(result.text).toBe("")
 		})
 
 		it("should handle invalid COMPLETION format", async () => {
 			const initialContent = `console.log('test');`
-			const { context } = await setupTestDocument("invalid.js", initialContent)
+			const { mockDocument } = await setupTestDocument("invalid.js", initialContent)
 
 			const invalidCOMPLETION = "This is not a valid COMPLETION format"
-			const position = context.range?.start ?? context.document.positionAt(0)
-			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const position = new vscode.Position(0, 0)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
 			const result = parseGhostResponse(invalidCOMPLETION, prefix, suffix)
 			expect(result.text).toBe("")
 		})
@@ -126,17 +121,11 @@ describe("GhostServiceManager", () => {
 			const initialContent = `console.log('test');`
 			const { mockDocument } = await setupTestDocument("missing.js", initialContent)
 
-			// Create context without the file in openFiles
-			const context: GhostSuggestionContext = {
-				document: mockDocument,
-				openFiles: [],
-			}
-
 			const completionResponse = `<COMPLETION>// Added comment
 console.log('test');</COMPLETION>`
 
-			const position = context.range?.start ?? context.document.positionAt(0)
-			const { prefix, suffix } = extractPrefixSuffix(context.document, position)
+			const position = new vscode.Position(0, 0)
+			const { prefix, suffix } = extractPrefixSuffix(mockDocument, position)
 			const result = parseGhostResponse(completionResponse, prefix, suffix)
 			expect(result.text).toBe("// Added comment\nconsole.log('test');")
 		})

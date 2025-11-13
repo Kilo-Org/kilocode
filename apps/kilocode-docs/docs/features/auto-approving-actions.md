@@ -293,3 +293,24 @@ This setting allows Kilo Code to automatically update task progress and todo lis
 
 This is particularly useful when combined with the Subtasks permission, as it allows Kilo Code to maintain a complete picture of project progress without constant approval requests.
 :::
+
+## YOLO mode
+
+:::danger YOLO Mode (Risk: Maximum)
+
+**"You Only Live Once"** mode enables _all_ auto-approve permissions at once using the master toggle. This gives Kilo Code complete autonomy to read files, write code, execute commands, and perform any operation without asking for permission.
+
+**When to use:**
+
+- Rapid prototyping in isolated environments
+- Trusted, low-stakes projects
+- When you want maximum AI autonomy
+
+**When NOT to use:**
+
+- Production code or sensitive projects
+- Working with important data
+- Any situation where mistakes could be costly
+
+This is the fastest way to work with Kilo Code, but also the riskiest. Use it only when you fully trust the AI and are prepared for the consequences.
+:::

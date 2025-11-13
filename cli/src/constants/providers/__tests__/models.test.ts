@@ -30,7 +30,6 @@ describe("Static Provider Models", () => {
 			"bedrock",
 			"vertex",
 			"openai-native",
-			"gemini",
 			"mistral",
 			"moonshot",
 			"deepseek",
@@ -38,13 +37,12 @@ describe("Static Provider Models", () => {
 			"qwen-code",
 			"xai",
 			"groq",
-			"chutes",
 			"cerebras",
 			"sambanova",
 			"zai",
+			"minimax",
 			"fireworks",
 			"featherless",
-			"roo",
 			"claude-code",
 			"gemini-cli",
 		]
@@ -213,10 +211,11 @@ describe("Static Provider Models", () => {
 			glama: {},
 			unbound: {},
 			requesty: {},
-			"kilocode-openrouter": {},
+			kilocode: {},
 			"io-intelligence": {},
 			deepinfra: {},
 			"vercel-ai-gateway": {},
+			ovhcloud: {},
 		}
 
 		it("should return router models for openrouter provider", () => {

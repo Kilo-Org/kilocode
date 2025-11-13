@@ -42,6 +42,7 @@
 	"settings.customStoragePath.description": "Caminho de armazenamento personalizado. Deixe vazio para usar o local padrão. Suporta caminhos absolutos (ex: 'D:\\KiloCodeStorage')",
 	"settings.enableCodeActions.description": "Habilitar correções rápidas do Kilo Code.",
 	"settings.autoImportSettingsPath.description": "Caminho para um arquivo de configuração do Kilo Code para importar automaticamente na inicialização da extensão. Suporta caminhos absolutos e caminhos relativos ao diretório inicial (por exemplo, '~/Documents/kilo-code-settings.json'). Deixe em branco para desativar a importação automática.",
+	"settings.maximumIndexedFilesForFileSearch.description": "Número máximo de arquivos a indexar para a funcionalidade de busca de arquivos @. Valores maiores fornecem melhores resultados de busca em projetos grandes, mas podem consumir mais memória. Padrão: 10.000.",
 	"settings.useAgentRules.description": "Habilita o carregamento de arquivos AGENTS.md para regras específicas do agente (consulte https://agent-rules.org/)",
 	"settings.apiRequestTimeout.description": "Tempo máximo em segundos de espera pelas respostas da API (0 = sem tempo limite, 1-86400s, padrão: 600s). Valores mais altos são recomendados para provedores locais como LM Studio e Ollama que podem precisar de mais tempo de processamento.",
 	"settings.newTaskRequireTodos.description": "Exigir parâmetro todos ao criar novas tarefas com a ferramenta new_task",

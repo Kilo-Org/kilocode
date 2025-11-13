@@ -4,7 +4,6 @@ import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
 import { Package } from "@roo/package"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
-import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { vscode } from "@src/utils/vscode"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@src/components/ui"
 import { Button } from "@src/components/ui"
@@ -25,7 +24,6 @@ interface AnnouncementProps {
 const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 	const { t } = useAppTranslation()
 	const [open, setOpen] = useState(true)
-	const { cloudIsAuthenticated } = useExtensionState()
 
 	return (
 		<Dialog
@@ -42,55 +40,50 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 					<DialogTitle>{t("chat:announcement.title", { version: Package.version })}</DialogTitle>
 				</DialogHeader>
 				<div>
-					<div className="mb-3">
-						<Trans
-							i18nKey="chat:announcement.stealthModel.feature"
-							components={{
-								bold: <b />,
-							}}
-						/>
+					{/* Regular Release Highlights */}
+					<div className="mb-4">
+						<p className="mb-3">{t("chat:announcement.release.heading")}</p>
+						<ul className="list-disc list-inside text-sm space-y-1">
+							<li>{t("chat:announcement.release.openRouterEmbeddings")}</li>
+							<li>{t("chat:announcement.release.chutesDynamic")}</li>
+							<li>{t("chat:announcement.release.queuedMessagesFix")}</li>
+						</ul>
 					</div>
 
-					<p className="mt-3 text-sm text-vscode-descriptionForeground">
-						{t("chat:announcement.stealthModel.note")}
-					</p>
+					{/* Horizontal Rule */}
+					<hr className="my-4 border-vscode-widget-border" />
 
-					<div className="mt-4">
-						{!cloudIsAuthenticated ? (
+					{/* Cloud Agents Section */}
+					<div>
+						<p className="mb-3">{t("chat:announcement.cloudAgents.heading")}</p>
+
+						<div className="mb-3">
+							<Trans
+								i18nKey="chat:announcement.cloudAgents.prFixer"
+								components={{
+									bold: <b />,
+								}}
+							/>
+						</div>
+
+						<p className="mb-3 text-sm text-vscode-descriptionForeground">
+							{t("chat:announcement.cloudAgents.prFixerDescription")}
+						</p>
+
+						<div className="mt-4">
 							<Button
 								onClick={() => {
 									vscode.postMessage({
-										type: "cloudLandingPageSignIn",
-										text: "supernova",
+										type: "openExternal",
+										url: "https://roocode.com/pr-fixer?utm_source=roocode&utm_medium=extension&utm_campaign=announcement",
 									})
+									setOpen(false)
+									hideAnnouncement()
 								}}
 								className="w-full">
-								{t("chat:announcement.stealthModel.connectButton")}
+								{t("chat:announcement.cloudAgents.tryPrFixerButton")}
 							</Button>
-						) : (
-							<>
-								<p className="mb-3">
-									<Trans
-										i18nKey="chat:announcement.stealthModel.selectModel"
-										components={{
-											code: <code />,
-										}}
-									/>
-								</p>
-								<Button
-									onClick={() => {
-										setOpen(false)
-										hideAnnouncement()
-										vscode.postMessage({
-											type: "switchTab",
-											tab: "settings",
-										})
-									}}
-									className="w-full">
-									{t("chat:announcement.stealthModel.goToSettingsButton")}
-								</Button>
-							</>
-						)}
+						</div>
 					</div>
 
 					<div className="mt-4 text-sm text-center">
@@ -103,6 +96,16 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 							}}
 						/>
 					</div>
+
+					{/* Careers Section */}
+					<div className="mt-2 text-sm text-center">
+						<Trans
+							i18nKey="chat:announcement.careers"
+							components={{
+								careersLink: <CareersLink />,
+							}}
+						/>
+					</div>
 				</div>
 			</DialogContent>
 		</Dialog>
@@ -111,10 +114,10 @@ const Announcement = ({ hideAnnouncement }: AnnouncementProps) => {
 
 const XLink = () => (
 	<VSCodeLink
-		href="https://x.com/roo_code"
+		href="https://x.com/roocode"
 		onClick={(e) => {
 			e.preventDefault()
-			vscode.postMessage({ type: "openExternal", url: "https://x.com/roo_code" })
+			vscode.postMessage({ type: "openExternal", url: "https://x.com/roocode" })
 		}}>
 		X
 	</VSCodeLink>
@@ -139,6 +142,17 @@ const RedditLink = () => (
 			vscode.postMessage({ type: "openExternal", url: "https://www.reddit.com/r/RooCode/" })
 		}}>
 		r/RooCode
+	</VSCodeLink>
+)
+
+const CareersLink = ({ children }: { children?: React.ReactNode }) => (
+	<VSCodeLink
+		href="https://careers.roocode.com"
+		onClick={(e) => {
+			e.preventDefault()
+			vscode.postMessage({ type: "openExternal", url: "https://careers.roocode.com" })
+		}}>
+		{children}
 	</VSCodeLink>
 )
 

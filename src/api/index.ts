@@ -33,6 +33,9 @@ import {
 	// kilocode_change start
 	VirtualQuotaFallbackHandler,
 	GeminiCliHandler,
+	SyntheticHandler,
+	OVHcloudAIEndpointsHandler,
+	MiniMaxAnthropicHandler,
 	// kilocode_change end
 	ClaudeCodeHandler,
 	QwenCodeHandler,
@@ -41,7 +44,6 @@ import {
 	DoubaoHandler,
 	ZAiHandler,
 	FireworksHandler,
-	SyntheticHandler, // kilocode_change
 	RooHandler,
 	FeatherlessHandler,
 	VercelAiGatewayHandler,
@@ -120,8 +122,6 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 	switch (apiProvider) {
 		// kilocode_change start
 		case "kilocode":
-			return new KilocodeOpenrouterHandler(options)
-		case "kilocode-openrouter": // temp typing fix
 			return new KilocodeOpenrouterHandler(options)
 		case "gemini-cli":
 			return new GeminiCliHandler(options)

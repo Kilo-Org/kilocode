@@ -60,6 +60,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Clau API",
 		"vercelAiGatewayApiKeyPlaceholder": "Introduïu la vostra clau API de Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Clau de l'API d'OpenRouter",
+		"openRouterApiKeyPlaceholder": "Introduïu la vostra clau de l'API d'OpenRouter",
 		"openaiCompatibleProvider": "Compatible amb OpenAI",
 		"openAiKeyLabel": "Clau API OpenAI",
 		"openAiKeyPlaceholder": "Introduïu la vostra clau API OpenAI",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Es requereix la clau API de Vercel AI Gateway",
 			"ollamaBaseUrlRequired": "Cal una URL base d'Ollama",
 			"baseUrlRequired": "Cal una URL base",
-			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0"
+			"modelDimensionMinValue": "La dimensió del model ha de ser superior a 0",
+			"openRouterApiKeyRequired": "Clau API d'OpenRouter és requerida"
 		},
 		"advancedConfigLabel": "Configuració avançada",
 		"searchMinScoreLabel": "Llindar de puntuació de cerca",
@@ -309,6 +313,9 @@
 		"getZaiApiKey": "Obtenir clau API de Z AI",
 		"zaiEntrypoint": "Punt d'entrada de Z AI",
 		"zaiEntrypointDescription": "Si us plau, seleccioneu el punt d'entrada de l'API apropiat segons la vostra ubicació. Si sou a la Xina, trieu open.bigmodel.cn. Altrament, trieu api.z.ai.",
+		"minimaxApiKey": "Clau API de MiniMax",
+		"getMiniMaxApiKey": "Obtenir clau API de MiniMax",
+		"minimaxBaseUrl": "Punt d'entrada de MiniMax",
 		"geminiApiKey": "Clau API de Gemini",
 		"getGroqApiKey": "Obtenir clau API de Groq",
 		"groqApiKey": "Clau API de Groq",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "Habilitar l'emmagatzematge en caché de prompts per millorar el rendiment i reduir els costos per als models compatibles.",
 		"cacheUsageNote": "Nota: Si no veieu l'ús de la caché, proveu de seleccionar un model diferent i després tornar a seleccionar el model desitjat.",
 		"vscodeLmModel": "Model de llenguatge",
-		"vscodeLmWarning": "Nota: Aquesta és una integració molt experimental i el suport del proveïdor variarà. Si rebeu un error sobre un model no compatible, és un problema del proveïdor.",
+		"vscodeLmWarning": "Nota: Els models accessibles a través de l’API VS Code Language Model poden estar encapsulats o ajustats pel proveïdor; per tant, el comportament pot diferir de l’ús directe del mateix model des d’un proveïdor o enrutador típic. Per utilitzar un model del desplegable «Language Model», primer canvia a aquest model i després fes clic a «Acceptar» a l’avís de Copilot Chat; en cas contrari pots veure un error com 400 «The requested model is not supported».",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Activa el context d'URL",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "Ús de l'ordinador",
-				"description": "Aquest model és capaç d'interactuar amb un navegador? (com Claude 3.7 Sonnet)"
+				"description": "Aquest model és capaç d'interactuar amb un navegador?"
 			},
 			"promptCache": {
 				"label": "Emmagatzematge en caché de prompts",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Esforç de raonament del model",
+			"none": "Cap",
 			"minimal": "Mínim (el més ràpid)",
 			"high": "Alt",
 			"medium": "Mitjà",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Temps d'espera per inicialitzar el punt de control (segons)",
+			"description": "Temps màxim d'espera per inicialitzar el servei de punts de control. El valor per defecte és 15 segons. Rang: 10-60 segons."
+		},
 		"enable": {
 			"label": "Habilitar punts de control automàtics",
 			"description": "Quan està habilitat, Kilo Code crearà automàticament punts de control durant l'execució de tasques, facilitant la revisió de canvis o la reversió a estats anteriors. <0>Més informació</0>"
@@ -680,6 +692,14 @@
 			"label": "Mida total màxima d'imatges",
 			"mb": "MB",
 			"description": "Límit de mida acumulativa màxima (en MB) per a totes les imatges processades en una sola operació read_file. Quan es llegeixen múltiples imatges, la mida de cada imatge s'afegeix al total. Si incloure una altra imatge excediria aquest límit, serà omesa."
+		},
+		"includeCurrentTime": {
+			"label": "Inclou l'hora actual en el context",
+			"description": "Quan està activat, l'hora actual i la informació del fus horari s'inclouran a la indicació del sistema. Desactiveu-ho si els models deixen de funcionar per problemes amb l'hora."
+		},
+		"includeCurrentCost": {
+			"label": "Inclou el cost actual en el context",
+			"description": "Quan està activat, el cost d'ús actual de l'API s'inclourà a la indicació del sistema. Desactiveu-ho si els models deixen de funcionar per problemes amb el cost."
 		}
 	},
 	"terminal": {
@@ -688,56 +708,56 @@
 			"description": "Configuració bàsica del terminal"
 		},
 		"advanced": {
-			"label": "Configuració del terminal: Avançada",
-			"description": "Les següents opcions poden requerir reiniciar el terminal per aplicar la configuració."
+			"label": "Configuració del terminal: Avançat",
+			"description": "Aquests paràmetres només s'apliquen quan 'Utilitza terminal en línia' està desactivat. Només afecten el terminal de VS Code i poden requerir reiniciar l'IDE."
 		},
 		"outputLineLimit": {
-			"label": "Límit de sortida de terminal",
-			"description": "Nombre màxim de línies a incloure a la sortida del terminal en executar comandes. Quan s'excedeix, s'eliminaran línies del mig, estalviant token. <0>Més informació</0>"
+			"label": "Límit de sortida del terminal",
+			"description": "Conserva les primeres i últimes línies i descarta les del mig per mantenir-se sota el límit. Redueix per estalviar tokens; augmenta per donar a Kilo més detalls del mig. Kilo veu un marcador on s'ha omès el contingut.<0>Aprèn-ne més</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Límit de caràcters del terminal",
-			"description": "Nombre màxim de caràcters a incloure en la sortida del terminal en executar ordres. Aquest límit té precedència sobre el límit de línies per evitar problemes de memòria amb línies extremadament llargues. Quan se superi, la sortida es truncarà. <0>Més informació</0>"
+			"description": "Anul·la el límit de línies per evitar problemes de memòria imposant un límit dur a la mida de sortida. Si se supera, manté l'inici i el final i mostra un marcador a Kilo on s'ha omès el contingut. <0>Aprèn-ne més</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "Temps d'espera d'integració de shell del terminal",
-			"description": "Temps màxim d'espera per a la inicialització de la integració de shell abans d'executar comandes. Per a usuaris amb temps d'inici de shell llargs, aquest valor pot necessitar ser augmentat si veieu errors \"Shell Integration Unavailable\" al terminal. <0>Més informació</0>"
+			"label": "Temps d'espera d'integració del shell del terminal",
+			"description": "Quant de temps esperar la integració del shell de VS Code abans d'executar comandes. Augmenta si el teu shell s'inicia lentament o veus errors 'Integració del Shell No Disponible'. <0>Aprèn-ne més</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Desactiva la integració de l'intèrpret d'ordres del terminal",
-			"description": "Activa això si les ordres del terminal no funcionen correctament o si veus errors de 'Shell Integration Unavailable'. Això utilitza un mètode més senzill per executar ordres, evitant algunes funcions avançades del terminal. <0>Més informació</0>"
+			"label": "Utilitza terminal en línia (recomanat)",
+			"description": "Executa comandes al terminal en línia (xat) per evitar perfils/integració del shell per a execucions més ràpides i fiables. Quan està desactivat, Kilo usa el terminal de VS Code amb el teu perfil de shell, prompts i connectors. <0>Aprèn-ne més</0>"
 		},
 		"commandDelay": {
 			"label": "Retard de comanda del terminal",
-			"description": "Retard en mil·lisegons a afegir després de l'execució de la comanda. La configuració predeterminada de 0 desactiva completament el retard. Això pot ajudar a assegurar que la sortida de la comanda es capturi completament en terminals amb problemes de temporització. En la majoria de terminals s'implementa establint `PROMPT_COMMAND='sleep N'` i Powershell afegeix `start-sleep` al final de cada comanda. Originalment era una solució per al error VSCode#237208 i pot no ser necessari. <0>Més informació</0>"
+			"description": "Afegeix una pausa breu després de cada comanda perquè el terminal de VS Code pugui buidar tota la sortida (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Usa només si veus que falta sortida final; altrament deixa a 0. <0>Aprèn-ne més</0>"
 		},
 		"compressProgressBar": {
-			"label": "Comprimir sortida de barra de progrés",
-			"description": "Quan està habilitat, processa la sortida del terminal amb retorns de carro (\\r) per simular com un terminal real mostraria el contingut. Això elimina els estats intermedis de les barres de progrés, mantenint només l'estat final, la qual cosa conserva espai de context per a informació més rellevant. <0>Més informació</0>"
+			"label": "Comprimeix sortida de barra de progrés",
+			"description": "Col·lapsa barres de progrés/spinners perquè només es mantingui l'estat final (estalvia tokens). <0>Aprèn-ne més</0>"
 		},
 		"powershellCounter": {
-			"label": "Habilita la solució temporal del comptador PowerShell",
-			"description": "Quan està habilitat, afegeix un comptador a les comandes PowerShell per assegurar l'execució correcta de les comandes. Això ajuda amb els terminals PowerShell que poden tenir problemes amb la captura de sortida. <0>Més informació</0>"
+			"label": "Activa solució de comptador de PowerShell",
+			"description": "Activa quan falta o es duplica la sortida de PowerShell; afegeix un petit comptador a cada comanda per estabilitzar la sortida. Mantén desactivat si la sortida ja es veu correcta. <0>Aprèn-ne més</0>"
 		},
 		"zshClearEolMark": {
-			"label": "Neteja la marca EOL de ZSH",
-			"description": "Quan està habilitat, neteja la marca de final de línia de ZSH establint PROMPT_EOL_MARK=''. Això evita problemes amb la interpretació de la sortida de comandes quan acaba amb caràcters especials com '%'. <0>Més informació</0>"
+			"label": "Neteja marca EOL de ZSH",
+			"description": "Activa quan vegis % extraviats al final de línies o l'anàlisi sembli incorrecta; omet la marca de final de línia (%) de Zsh. <0>Aprèn-ne més</0>"
 		},
 		"zshOhMy": {
-			"label": "Habilita la integració Oh My Zsh",
-			"description": "Quan està habilitat, estableix ITERM_SHELL_INTEGRATION_INSTALLED=Yes per habilitar les característiques d'integració del shell Oh My Zsh. Aplicar aquesta configuració pot requerir reiniciar l'IDE. <0>Més informació</0>"
+			"label": "Activa integració amb Oh My Zsh",
+			"description": "Activa quan el teu tema/connectors d'Oh My Zsh esperin integració del shell; estableix ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Desactiva per evitar establir aquesta variable. <0>Aprèn-ne més</0>"
 		},
 		"zshP10k": {
-			"label": "Habilita la integració Powerlevel10k",
-			"description": "Quan està habilitat, estableix POWERLEVEL9K_TERM_SHELL_INTEGRATION=true per habilitar les característiques d'integració del shell Powerlevel10k. <0>Més informació</0>"
+			"label": "Activa integració amb Powerlevel10k",
+			"description": "Activa quan usis integració del shell de Powerlevel10k. <0>Aprèn-ne més</0>"
 		},
 		"zdotdir": {
-			"label": "Habilitar gestió de ZDOTDIR",
-			"description": "Quan està habilitat, crea un directori temporal per a ZDOTDIR per gestionar correctament la integració del shell zsh. Això assegura que la integració del shell de VSCode funcioni correctament amb zsh mentre es preserva la teva configuració de zsh. <0>Més informació</0>"
+			"label": "Activa gestió de ZDOTDIR",
+			"description": "Activa quan la integració del shell de zsh falli o entri en conflicte amb els teus dotfiles. <0>Aprèn-ne més</0>"
 		},
 		"inheritEnv": {
 			"label": "Hereta variables d'entorn",
-			"description": "Quan està habilitat, el terminal hereta les variables d'entorn del procés pare de VSCode, com ara la configuració d'integració del shell definida al perfil d'usuari. Això commuta directament la configuració global de VSCode `terminal.integrated.inheritEnv`. <0>Més informació</0>"
+			"description": "Activa per heretar variables d'entorn del procés pare de VS Code. <0>Aprèn-ne més</0>"
 		}
 	},
 	"advancedSettings": {
@@ -746,7 +766,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Habilitar edició mitjançant diffs",
-			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats. Funciona millor amb l'últim model Claude 4 Sonnet.",
+			"description": "Quan està habilitat, Kilo Code podrà editar fitxers més ràpidament i rebutjarà automàticament escriptures completes de fitxers truncats",
 			"strategy": {
 				"label": "Estratègia de diff",
 				"options": {
@@ -774,10 +794,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Utilitzar estratègia diff unificada experimental",
 			"description": "Activar l'estratègia diff unificada experimental. Aquesta estratègia podria reduir el nombre de reintents causats per errors del model, però pot causar comportaments inesperats o edicions incorrectes. Activeu-la només si enteneu els riscos i esteu disposats a revisar acuradament tots els canvis."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Utilitzar eina de cerca i reemplaçament experimental",
-			"description": "Activar l'eina de cerca i reemplaçament experimental, permetent a Kilo Code reemplaçar múltiples instàncies d'un terme de cerca en una sola petició."
 		},
 		"INSERT_BLOCK": {
 			"name": "Utilitzar eina d'inserció de contingut experimental",
@@ -865,8 +881,6 @@
 	"modelInfo": {
 		"supportsImages": "Suporta imatges",
 		"noImages": "No suporta imatges",
-		"supportsComputerUse": "Suporta ús de l'ordinador",
-		"noComputerUse": "No suporta ús de l'ordinador",
 		"supportsPromptCache": "Suporta emmagatzematge en caché de prompts",
 		"noPromptCache": "No suporta emmagatzematge en caché de prompts",
 		"contextWindow": "Finestra de context:",

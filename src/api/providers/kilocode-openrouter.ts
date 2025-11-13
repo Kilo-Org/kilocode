@@ -113,7 +113,7 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 
 		const [models, endpoints, defaultModel] = await Promise.all([
 			getModels({
-				provider: "kilocode-openrouter",
+				provider: "kilocode",
 				kilocodeToken: this.options.kilocodeToken,
 				kilocodeOrganizationId: this.options.kilocodeOrganizationId,
 			}),
@@ -157,14 +157,14 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
 			...this.customRequestOptions(taskId ? { taskId, mode: "code" } : undefined)?.headers,
 		}
-
+		const max_max_tokens = 1000
 		const response = await fetch(endpoint, {
 			method: "POST",
 			body: JSON.stringify({
 				model: model.id,
 				prompt: prefix,
 				suffix,
-				max_tokens: model.maxTokens,
+				max_tokens: Math.min(max_max_tokens, model.maxTokens ?? max_max_tokens),
 				temperature: model.temperature,
 				top_p: model.topP,
 				stream: true,

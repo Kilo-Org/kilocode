@@ -10,19 +10,16 @@ import { ContinueCompletionProvider } from "../../continuedev/core/vscode-test-h
 
 export class NewAutocompleteProvider {
 	private completionProviderDisposable: vscode.Disposable | null = null
-	private model: NewAutocompleteModel
-	private providerSettingsManager: ProviderSettingsManager
+	private readonly model: NewAutocompleteModel
+	private readonly providerSettingsManager: ProviderSettingsManager
 	private settings: GhostServiceSettings | null = null
 
 	constructor(
 		private context: vscode.ExtensionContext,
 		private cline: ClineProvider,
 	) {
-		// Register Internal Components
 		this.providerSettingsManager = new ProviderSettingsManager(context)
 		this.model = new NewAutocompleteModel()
-
-		void this.load()
 	}
 
 	private async saveSettings() {

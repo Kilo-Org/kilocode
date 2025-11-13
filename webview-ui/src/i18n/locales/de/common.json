@@ -114,5 +114,9 @@
 		"months_ago": "vor {{count}} Monaten",
 		"year_ago": "vor einem Jahr",
 		"years_ago": "vor {{count}} Jahren"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "Du hast {{timeout}} Sekunden auf die Initialisierung des Checkpoints gewartet. Wenn du die Checkpoint-Funktion nicht brauchst, kannst du sie in den <settingsLink>Checkpoint-Einstellungen</settingsLink> ausschalten.",
+		"init_checkpoint_fail_long_time": "Die Initialisierung des Checkpoints dauert länger als {{timeout}} Sekunden, deshalb sind Checkpoints für diese Aufgabe deaktiviert. Du kannst Checkpoints ausschalten oder die Wartezeit in den <settingsLink>Checkpoint-Einstellungen</settingsLink> verlängern."
 	}
 }

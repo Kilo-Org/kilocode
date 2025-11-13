@@ -45,6 +45,7 @@ This guide provides detailed information on how to configure each provider in Ki
     - [Virtual Quota Fallback](#virtual-quota-fallback)
     - [Human Relay](#human-relay)
     - [Fake AI](#fake-ai)
+    - [OVHcloud AI Endpoints](#ovhcloud-ai-endpoints)
 
 ## Introduction
 
@@ -1319,6 +1320,41 @@ Fake AI provider for testing and development.
 - Used for testing and development
 - Returns mock responses without calling any actual AI service
 - Useful for integration testing
+
+---
+
+### OVHcloud AI Endpoints
+
+OVHcloud AI Endpoints inference provider.
+
+**Description**: Use OVHcloud leading cloud computing for accessing various open-source models, with GDPR compliance and data sovreignty.
+
+**Required Field**:
+
+- `ovhCloudAiEndpointsModelId` (text): Model identifier (default: `gpt-oss-120b`)
+
+**Optional Field**:
+
+- `ovhCloudAiEndpointsApiKey` (password): Your OVHcloud AI Endpoints API key
+  If you do not provide the API key, you can use our service for free with a rate limit.
+
+**Example Configuration**:
+
+```json
+{
+	"id": "default",
+	"provider": "ovhcloud",
+	"ovhCloudAiEndpointsApiKey": "your-api-key", // optional
+	"ovhCloudAiEndpointsModelId": "gpt-oss-120b"
+}
+```
+
+**Default Model**: `gpt-oss-120b`
+
+**Notes**:
+
+- Get your API key from https://ovh.com/manager in `Public Cloud > AI & Machine Learning` section, then in `AI Endpoints`.
+- You can browse our [catalog](https://www.ovhcloud.com/en/public-cloud/ai-endpoints/catalog/) to discover all of our models.
 
 ---
 

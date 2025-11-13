@@ -176,7 +176,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 				maxTokens: 8000,
 				contextWindow: 100000,
 				supportsImages: false,
-				supportsComputerUse: false,
 				supportsPromptCache: false,
 				inputPrice: 2500000,
 				outputPrice: 10000000,
@@ -222,7 +221,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 			})
 
 			expect(result.supportsImages).toBe(VERCEL_AI_GATEWAY_VISION_ONLY_MODELS.has("anthropic/claude-3.5-haiku"))
-			expect(result.supportsComputerUse).toBe(false)
 		})
 
 		it("detects vision and tools models", () => {
@@ -238,9 +236,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 			})
 
 			expect(result.supportsImages).toBe(
-				VERCEL_AI_GATEWAY_VISION_AND_TOOLS_MODELS.has("anthropic/claude-sonnet-4"),
-			)
-			expect(result.supportsComputerUse).toBe(
 				VERCEL_AI_GATEWAY_VISION_AND_TOOLS_MODELS.has("anthropic/claude-sonnet-4"),
 			)
 		})
@@ -298,7 +293,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 						model: { ...baseModel, id: modelId },
 					})
 					expect(result.supportsImages).toBe(true)
-					expect(result.supportsComputerUse).toBe(false)
 				}
 			})
 
@@ -309,7 +303,6 @@ describe("Vercel AI Gateway Fetchers", () => {
 						model: { ...baseModel, id: modelId },
 					})
 					expect(result.supportsImages).toBe(true)
-					expect(result.supportsComputerUse).toBe(true)
 				}
 			})
 		})

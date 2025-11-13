@@ -201,7 +201,7 @@ describe("SyntheticHandler", () => {
 		expect(mockCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				model: modelId,
-				max_tokens: modelInfo.maxTokens,
+				max_tokens: 0.2 * modelInfo.maxTokens,
 				temperature: 0.5,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,

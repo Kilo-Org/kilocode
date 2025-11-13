@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "coût inconnu",
 		"costUnknownDescription": "Le fournisseur d'API n'a pas fourni de données de coût ou la demande a été annulée.",
-		"freeModelsDescription": "Les modèles gratuits peuvent avoir des limites de débit. Utilisez le lien ci-dessous pour optimiser votre utilisation des modèles gratuits !",
 		"freeModelsLink": "Découvrir les options de modèles gratuits et économiques"
 	},
 	"notifications": {

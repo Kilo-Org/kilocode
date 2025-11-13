@@ -43,7 +43,7 @@ export const SayMcpServerResponseMessage: React.FC<MessageComponentProps> = ({ m
 		// Format content with metadata
 		const formatted = useMemo(
 			() => (responseText ? formatContentWithMetadata(responseText, MAX_LINES, PREVIEW_LINES) : null),
-			[responseText]
+			[responseText],
 		)
 
 		if (!responseText || !formatted) {
@@ -80,8 +80,7 @@ export const SayMcpServerResponseMessage: React.FC<MessageComponentProps> = ({ m
 					borderStyle="single"
 					borderColor={theme.ui.border.default}
 					paddingX={1}
-					flexDirection="column"
-					>
+					flexDirection="column">
 					{formatted.content.split("\n").map((line, index) => (
 						<Text key={index} color={formatted.isJson ? theme.ui.text.dimmed : theme.ui.text.primary}>
 							{line}
@@ -106,9 +105,7 @@ export const SayMcpServerResponseMessage: React.FC<MessageComponentProps> = ({ m
 					</Text>
 				</Box>
 				<Box marginLeft={2} marginTop={1}>
-					<Text color={theme.ui.text.dimmed}>
-						An error occurred while formatting the response.
-					</Text>
+					<Text color={theme.ui.text.dimmed}>An error occurred while formatting the response.</Text>
 				</Box>
 			</Box>
 		)

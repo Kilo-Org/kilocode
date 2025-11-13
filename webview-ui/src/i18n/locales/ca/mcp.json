@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "Eines",
 		"resources": "Recursos",
-		"errors": "Errors"
+		"logs": "Registres"
 	},
 	"emptyState": {
 		"noTools": "No s'han trobat eines",
 		"noResources": "No s'han trobat recursos",
-		"noErrors": "No s'han trobat errors"
+		"noLogs": "Encara no hi ha registres"
 	},
 	"networkTimeout": {
 		"label": "Temps d'espera de xarxa",

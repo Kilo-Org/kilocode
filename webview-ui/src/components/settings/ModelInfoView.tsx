@@ -49,12 +49,6 @@ export const ModelInfoView = ({
 			supportsLabel={t("settings:modelInfo.supportsImages")}
 			doesNotSupportLabel={t("settings:modelInfo.noImages")}
 		/>,
-		/* kilocode_change: supports computer use => supports browser
-		<ModelInfoSupportsItem
-			isSupported={modelInfo?.supportsComputerUse ?? false}
-			supportsLabel={t("settings:modelInfo.supportsComputerUse")}
-			doesNotSupportLabel={t("settings:modelInfo.noComputerUse")}
-		/>,*/
 		<ModelInfoSupportsItem
 			isSupported={modelInfo?.supportsPromptCache ?? false}
 			supportsLabel={t("settings:modelInfo.supportsPromptCache")}

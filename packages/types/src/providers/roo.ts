@@ -1,53 +1,49 @@
+import { z } from "zod"
+
 import type { ModelInfo } from "../model.js"
 
-export type RooModelId =
-	| "xai/grok-code-fast-1"
-	| "roo/code-supernova-1-million"
-	| "xai/grok-4-fast"
-	| "deepseek/deepseek-chat-v3.1"
+/**
+ * Roo Code Cloud is a dynamic provider - models are loaded from the /v1/models API endpoint.
+ * Default model ID used as fallback when no model is specified.
+ */
+export const rooDefaultModelId = "xai/grok-code-fast-1"
 
-export const rooDefaultModelId: RooModelId = "xai/grok-code-fast-1"
+/**
+ * Empty models object maintained for type compatibility.
+ * All model data comes dynamically from the API.
+ */
+export const rooModels = {} as const satisfies Record<string, ModelInfo>
 
-export const rooModels = {
-	"xai/grok-code-fast-1": {
-		maxTokens: 16_384,
-		contextWindow: 262_144,
-		supportsImages: false,
-		supportsPromptCache: true,
-		inputPrice: 0,
-		outputPrice: 0,
-		description:
-			"A reasoning model that is blazing fast and excels at agentic coding, accessible for free through Roo Code Cloud for a limited time. (Note: the free prompts and completions are logged by xAI and used to improve the model.)",
-	},
-	"roo/code-supernova-1-million": {
-		maxTokens: 30_000,
-		contextWindow: 1_000_000,
-		supportsImages: true,
-		supportsPromptCache: true,
-		inputPrice: 0,
-		outputPrice: 0,
-		description:
-			"A versatile agentic coding stealth model with a 1M token context window that supports image inputs, accessible for free through Roo Code Cloud for a limited time. (Note: the free prompts and completions are logged by the model provider and used to improve the model.)",
-	},
-	"xai/grok-4-fast": {
-		maxTokens: 30_000,
-		contextWindow: 2_000_000,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description:
-			"Grok 4 Fast is xAI's latest multimodal model with SOTA cost-efficiency and a 2M token context window. (Note: prompts and completions are logged by xAI and used to improve the model.)",
-		deprecated: true,
-	},
-	"deepseek/deepseek-chat-v3.1": {
-		maxTokens: 16_384,
-		contextWindow: 163_840,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0,
-		outputPrice: 0,
-		description:
-			"DeepSeek-V3.1 is a large hybrid reasoning model (671B parameters, 37B active). It extends the DeepSeek-V3 base with a two-phase long-context training process, reaching up to 128K tokens, and uses FP8 microscaling for efficient inference.",
-	},
-} as const satisfies Record<string, ModelInfo>
+/**
+ * Roo Code Cloud API response schemas
+ */
+
+export const RooPricingSchema = z.object({
+	input: z.string(),
+	output: z.string(),
+	input_cache_read: z.string().optional(),
+	input_cache_write: z.string().optional(),
+})
+
+export const RooModelSchema = z.object({
+	id: z.string(),
+	object: z.literal("model"),
+	created: z.number(),
+	owned_by: z.string(),
+	name: z.string(),
+	description: z.string(),
+	context_window: z.number(),
+	max_tokens: z.number(),
+	type: z.literal("language"),
+	tags: z.array(z.string()).optional(),
+	pricing: RooPricingSchema,
+	deprecated: z.boolean().optional(),
+})
+
+export const RooModelsResponseSchema = z.object({
+	object: z.literal("list"),
+	data: z.array(RooModelSchema),
+})
+
+export type RooModel = z.infer<typeof RooModelSchema>
+export type RooModelsResponse = z.infer<typeof RooModelsResponseSchema>

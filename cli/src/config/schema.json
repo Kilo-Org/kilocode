@@ -257,13 +257,15 @@
 						"qwen-code",
 						"gemini-cli",
 						"zai",
+						"minimax",
 						"unbound",
 						"requesty",
 						"roo",
 						"vercel-ai-gateway",
 						"virtual-quota-fallback",
 						"human-relay",
-						"fake-ai"
+						"fake-ai",
+						"ovhcloud"
 					]
 				}
 			},
@@ -1209,6 +1211,27 @@
 				},
 				{
 					"if": {
+						"properties": { "provider": { "const": "minimax" } }
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": {
+								"type": "string",
+								"description": "MiniMax base URL"
+							},
+							"minimaxApiKey": {
+								"type": "string",
+								"description": "MiniMax API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "MiniMax model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
 						"properties": { "provider": { "const": "doubao" } }
 					},
 					"then": {
@@ -1284,6 +1307,48 @@
 					"if": {
 						"properties": {
 							"provider": { "const": "moonshot" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxBaseUrl": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxBaseUrl"]
+					},
+					"then": {
+						"properties": {
+							"minimaxBaseUrl": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
+							"minimaxApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["minimaxApiKey"]
+					},
+					"then": {
+						"properties": {
+							"minimaxApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "minimax" },
 							"apiModelId": { "type": "string", "minLength": 1 }
 						},
 						"required": ["apiModelId"]
@@ -2063,6 +2128,48 @@
 									"family": { "minLength": 1 }
 								}
 							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints API key"
+							},
+							"ovhCloudAiEndpointsModelId": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": { "type": "string" }
+						},
+						"required": []
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ovhcloud" },
+							"ovhCloudAiEndpointsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ovhCloudAiEndpointsModelId"]
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsModelId": { "minLength": 1 }
 						}
 					}
 				}

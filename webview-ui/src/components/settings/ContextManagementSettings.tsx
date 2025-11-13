@@ -28,6 +28,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	includeDiagnosticMessages?: boolean
 	maxDiagnosticMessages?: number
 	writeDelayMs: number
+	includeCurrentTime?: boolean
+	includeCurrentCost?: boolean
 	setCachedStateField: SetCachedStateField<
 		| "autoCondenseContext"
 		| "autoCondenseContextPercent"
@@ -43,6 +45,8 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "includeDiagnosticMessages"
 		| "maxDiagnosticMessages"
 		| "writeDelayMs"
+		| "includeCurrentTime"
+		| "includeCurrentCost"
 	>
 }
 
@@ -63,6 +67,8 @@ export const ContextManagementSettings = ({
 	includeDiagnosticMessages,
 	maxDiagnosticMessages,
 	writeDelayMs,
+	includeCurrentTime,
+	includeCurrentCost,
 	className,
 	...props
 }: ContextManagementSettingsProps) => {
@@ -371,6 +377,34 @@ export const ContextManagementSettings = ({
 					</div>
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:contextManagement.diagnostics.delayAfterWrite.description")}
+					</div>
+				</div>
+
+				<div>
+					<VSCodeCheckbox
+						checked={includeCurrentTime}
+						onChange={(e: any) => setCachedStateField("includeCurrentTime", e.target.checked)}
+						data-testid="include-current-time-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.includeCurrentTime.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.includeCurrentTime.description")}
+					</div>
+				</div>
+
+				<div>
+					<VSCodeCheckbox
+						checked={includeCurrentCost}
+						onChange={(e: any) => setCachedStateField("includeCurrentCost", e.target.checked)}
+						data-testid="include-current-cost-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.includeCurrentCost.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.includeCurrentCost.description")}
 					</div>
 				</div>
 			</Section>

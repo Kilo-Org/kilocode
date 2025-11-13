@@ -1,4 +1,5 @@
 import { AutocompleteInput } from "../types"
+import { GhostContextProvider } from "./GhostContextProvider"
 
 export interface FillInAtCursorSuggestion {
 	text: string
@@ -9,8 +10,15 @@ export interface FillInAtCursorSuggestion {
 export function getBaseSystemInstructions(): string {
 	return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
 
-## Context Tags
-<LANGUAGE>: file language | <RECENT_EDITS>: recent changes | <QUERY>: code with {{FILL_HERE}}
+## CRITICAL RULES
+- NEVER repeat or duplicate content that appears immediately before {{FILL_HERE}}
+- If {{FILL_HERE}} is at the end of a comment line, start your completion with a newline and new code
+- Maintain proper indentation matching the surrounding code
+
+## Context Format
+<LANGUAGE>: file language
+<QUERY>: contains commented reference code (// Path: file.ts) followed by code with {{FILL_HERE}}
+Comments provide context from related files, recent edits, imports, etc.
 
 ## EXAMPLE QUERY:
 
@@ -123,18 +131,21 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 }
 
 export class HoleFiller {
-	getPrompts(
+	constructor(private contextProvider?: GhostContextProvider) {}
+
+	async getPrompts(
 		autocompleteInput: AutocompleteInput,
 		prefix: string,
 		suffix: string,
 		languageId: string,
-	): {
+	): Promise<{
 		systemPrompt: string
 		userPrompt: string
-	} {
+	}> {
+		const userPrompt = await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId)
 		return {
 			systemPrompt: this.getSystemInstructions(),
-			userPrompt: this.getUserPrompt(autocompleteInput, prefix, suffix, languageId),
+			userPrompt,
 		}
 	}
 
@@ -149,22 +160,30 @@ Provide a subtle, non-intrusive completion after a typing pause.
 	}
 
 	/**
-	 * Build minimal prompt for auto-trigger
+	 * Build minimal prompt for auto-trigger with optional context
 	 */
-	getUserPrompt(autocompleteInput: AutocompleteInput, prefix: string, suffix: string, languageId: string): string {
+	async getUserPrompt(
+		autocompleteInput: AutocompleteInput,
+		prefix: string,
+		suffix: string,
+		languageId: string,
+	): Promise<string> {
 		let prompt = `<LANGUAGE>${languageId}</LANGUAGE>\n\n`
 
-		if (autocompleteInput.recentlyEditedRanges && autocompleteInput.recentlyEditedRanges.length > 0) {
-			prompt += "<RECENT_EDITS>\n"
-			autocompleteInput.recentlyEditedRanges.forEach((range, index) => {
-				const description = `Edited ${range.filepath} at line ${range.range.start.line}`
-				prompt += `${index + 1}. ${description}\n`
-			})
-			prompt += "</RECENT_EDITS>\n\n"
+		let formattedContext = ""
+		if (this.contextProvider && autocompleteInput.filepath) {
+			try {
+				formattedContext = await this.contextProvider.getFormattedContext(
+					autocompleteInput,
+					autocompleteInput.filepath,
+				)
+			} catch (error) {
+				console.warn("Failed to get formatted context:", error)
+			}
 		}
 
 		prompt += `<QUERY>
-${prefix}{{FILL_HERE}}${suffix}
+${formattedContext}${prefix}{{FILL_HERE}}${suffix}
 </QUERY>
 
 TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.

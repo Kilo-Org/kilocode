@@ -100,11 +100,11 @@ export async function autoEnableKittyProtocol(): Promise<boolean> {
 	const isSupported = await detectKittyProtocolSupport()
 
 	if (isSupported) {
-		// Enable Kitty keyboard protocol
-		// CSI > 1 u - Enable disambiguate escape codes
+		// Enable Kitty keyboard protocol with flag 1 (disambiguate escape codes)
+		// CSI > <flags> u - Enable keyboard protocol with specified flags
+		// Using only flag 1 for maximum compatibility across terminals (Kitty, Ghostty, Alacritty, WezTerm)
+		// See: https://sw.kovidgoyal.net/kitty/keyboard-protocol/#progressive-enhancement
 		process.stdout.write("\x1b[>1u")
-		// CSI = 1 ; 1 u - Push keyboard flags, enable disambiguate
-		process.stdout.write("\x1b[=1;1u")
 
 		process.on("exit", disableKittyProtocol)
 		process.on("SIGTERM", disableKittyProtocol)
@@ -116,7 +116,9 @@ export async function autoEnableKittyProtocol(): Promise<boolean> {
 
 /**
  * Disable Kitty keyboard protocol
+ * Must use the same flag value as enable (flag 1)
  */
 export function disableKittyProtocol(): void {
-	process.stdout.write("\x1b[<u")
+	// CSI < <flags> u - Disable keyboard protocol with specified flags
+	process.stdout.write("\x1b[<1u")
 }

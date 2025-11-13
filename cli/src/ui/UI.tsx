@@ -32,6 +32,7 @@ import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/wel
 import { generateUpdateAvailableMessage, getAutoUpdateStatus } from "../utils/auto-update.js"
 import { generateNotificationMessage } from "../utils/notifications.js"
 import { notificationsAtom } from "../state/atoms/notifications.js"
+import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 
 // Initialize commands on module load
@@ -58,6 +59,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
+	const setWorkspacePath = useSetAtom(workspacePathAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -109,6 +111,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			setIsParallelMode(true)
 		}
 	}, [options.parallel, setIsParallelMode])
+
+	// Initialize workspace path for shell commands
+	useEffect(() => {
+		if (options.workspace) {
+			setWorkspacePath(options.workspace)
+		}
+	}, [options.workspace, setWorkspacePath])
 
 	// Handle CI mode exit
 	useEffect(() => {

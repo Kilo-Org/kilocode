@@ -88,6 +88,8 @@ function getModelIdForProvider(provider: ProviderConfig): string {
 			return provider.vercelAiGatewayModelId || ""
 		case "io-intelligence":
 			return provider.ioIntelligenceModelId || ""
+		case "ovhcloud":
+			return provider.ovhCloudAiEndpointsModelId || ""
 		default:
 			return provider.apiModelId || provider.modelId || ""
 	}

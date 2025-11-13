@@ -72,6 +72,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "Ключ API",
 		"vercelAiGatewayApiKeyPlaceholder": "Введіть ваш ключ API Vercel AI Gateway",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "Ключ API OpenRouter",
+		"openRouterApiKeyPlaceholder": "Введіть ваш ключ API OpenRouter",
 		"openaiCompatibleProvider": "Сумісний з OpenAI",
 		"openAiKeyLabel": "Ключ API OpenAI",
 		"openAiKeyPlaceholder": "Введіть ваш ключ API OpenAI",
@@ -146,7 +149,8 @@
 			"ollamaBaseUrlRequired": "Базовий URL Ollama є обов'язковим",
 			"baseUrlRequired": "Базовий URL є обов'язковим",
 			"modelDimensionMinValue": "Розмірність моделі повинна бути більше 0",
-			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим"
+			"vercelAiGatewayApiKeyRequired": "Ключ API Vercel AI Gateway є обов'язковим",
+			"openRouterApiKeyRequired": "Ключ API OpenRouter є обов'язковим"
 		},
 		"cancelling": "Скасування...",
 		"cancelIndexingButton": "Скасувати індексацію"
@@ -315,8 +319,14 @@
 		"moonshotApiKey": "Ключ API Moonshot",
 		"getMoonshotApiKey": "Отримати ключ API Moonshot",
 		"moonshotBaseUrl": "Точка входу Moonshot",
+		"minimaxApiKey": "Ключ API MiniMax",
+		"getMiniMaxApiKey": "Отримати ключ API MiniMax",
+		"minimaxBaseUrl": "Точка входу MiniMax",
 		"zaiEntrypoint": "Точка входу Z AI",
 		"zaiEntrypointDescription": "Будь ласка, виберіть відповідну точку входу API залежно від вашого місцезнаходження. Якщо ви в Китаї, виберіть open.bigmodel.cn. Інакше виберіть api.z.ai.",
+		"minimaxApiKey": "Ключ API MiniMax",
+		"getMiniMaxApiKey": "Отримати ключ API MiniMax",
+		"minimaxBaseUrl": "Точка входу MiniMax",
 		"geminiApiKey": "Ключ API Gemini",
 		"geminiUrlContext": "Включати URL у контекст",
 		"geminiUrlContextDescription": "Коли увімкнено, URL будуть включені в контекст при надсиланні запитів до Gemini",
@@ -498,6 +508,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Зусилля з міркування моделі",
+			"none": "Немає",
 			"minimal": "Мінімальний (найшвидший)",
 			"high": "Високий",
 			"medium": "Середній",
@@ -594,6 +605,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Тайм-аут ініціалізації контрольної точки (секунди)",
+			"description": "Максимальний час очікування ініціалізації служби контрольних точок. За замовчуванням 15 секунд. Діапазон: 10-60 секунд."
+		},
 		"enable": {
 			"label": "Увімкнути автоматичні контрольні точки",
 			"description": "Якщо ввімкнено, Kilo Code автоматично створюватиме контрольні точки під час виконання завдання, що полегшить перегляд змін або повернення до попередніх станів. <0>Дізнатися більше</0>"
@@ -752,6 +767,14 @@
 			"label": "Максимальний загальний розмір зображень",
 			"mb": "МБ",
 			"description": "Максимальний кумулятивний ліміт розміру (у МБ) для всіх зображень в одному запиті. При перевищенні зображення будуть змінені на менший розмір, щоб поміститися в цей ліміт."
+		},
+		"includeCurrentTime": {
+			"label": "Включати поточний час у контекст",
+			"description": "Якщо ввімкнено, поточний час та інформація про часовий пояс будуть включені в системну підказку. Вимкніть це, якщо моделі припиняють роботу через занепокоєння часом."
+		},
+		"includeCurrentCost": {
+			"label": "Включати поточну вартість у контекст",
+			"description": "Якщо ввімкнено, поточна вартість використання API буде включена в системну підказку. Вимкніть це, якщо моделі припиняють роботу через занепокоєння вартістю."
 		}
 	},
 	"terminal": {
@@ -846,10 +869,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Використовувати експериментальну уніфіковану стратегію diff",
 			"description": "Увімкнути експериментальну уніфіковану стратегію diff. Ця стратегія може зменшити кількість повторних спроб, спричинених помилками моделі, але може викликати несподівану поведінку або неправильні редагування. Вмикайте лише якщо ти розумієш ризики та готовий ретельно переглядати всі зміни."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Використовувати експериментальний інструмент пошуку та заміни",
-			"description": "Увімкнути експериментальний інструмент пошуку та заміни, що дозволяє Kilo Code замінювати кілька екземплярів пошукового терміна за один запит."
 		},
 		"INSERT_BLOCK": {
 			"name": "Використовувати експериментальний інструмент вставки вмісту",

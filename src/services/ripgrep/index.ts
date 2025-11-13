@@ -150,7 +150,15 @@ export async function regexSearchFiles(
 		throw new Error("Could not find ripgrep binary")
 	}
 
-	const args = ["--json", "-e", regex, "--glob", filePattern || "*", "--context", "1", "--no-messages", directoryPath]
+	const args = ["--json", "-e", regex]
+
+	// Only add --glob if a specific file pattern is provided
+	// Using --glob "*" overrides .gitignore behavior, so we omit it when no pattern is specified
+	if (filePattern) {
+		args.push("--glob", filePattern)
+	}
+
+	args.push("--context", "1", "--no-messages", directoryPath)
 
 	let output: string
 	try {

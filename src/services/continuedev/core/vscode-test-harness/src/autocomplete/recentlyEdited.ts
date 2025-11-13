@@ -21,9 +21,11 @@ export class RecentlyEditedTracker {
 
 	private recentlyEditedDocuments: VsCodeRecentlyEditedDocument[] = []
 	private static maxRecentlyEditedDocuments = 10
+	private disposable: vscode.Disposable | undefined
+	private cleanupInterval: NodeJS.Timeout | undefined
 
 	constructor(private ide: IDE) {
-		vscode.workspace.onDidChangeTextDocument((event) => {
+		this.disposable = vscode.workspace.onDidChangeTextDocument((event) => {
 			event.contentChanges.forEach((change) => {
 				const editedRange = {
 					uri: event.document.uri,
@@ -39,7 +41,7 @@ export class RecentlyEditedTracker {
 			this.insertDocument(event.document.uri)
 		})
 
-		setInterval(() => {
+		this.cleanupInterval = setInterval(() => {
 			this.removeOldEntries()
 		}, 1000 * 15)
 	}
@@ -127,5 +129,14 @@ export class RecentlyEditedTracker {
 				filepath: entry.uri.toString(),
 			}
 		})
+	}
+
+	public dispose(): void {
+		this.disposable?.dispose()
+		if (this.cleanupInterval) {
+			clearInterval(this.cleanupInterval)
+		}
+		this.recentlyEditedRanges = []
+		this.recentlyEditedDocuments = []
 	}
 }

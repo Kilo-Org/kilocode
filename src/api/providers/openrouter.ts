@@ -44,6 +44,7 @@ type OpenRouterProviderParams = {
 
 import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+import { ReasoningDetail } from "../transform/kilocode/reasoning-details"
 // kilocode_change end
 
 import { handleOpenAIError } from "./utils/openai-error-handler"
@@ -275,6 +276,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 
 				// kilocode_change start
+
+				// OpenRouter passes reasoning details that we can pass back unmodified in api requests to preserve reasoning traces for model
+				// See: https://openrouter.ai/docs/use-cases/reasoning-tokens#preserving-reasoning-blocks
+				if (delta && "reasoning_details" in delta && delta.reasoning_details) {
+					yield {
+						type: "reasoning_details",
+						reasoning_details: delta.reasoning_details as ReasoningDetail,
+					}
+				}
 				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}

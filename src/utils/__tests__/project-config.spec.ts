@@ -33,6 +33,10 @@ describe("project-config", () => {
 			expect(normalizeProjectId("git@github.com:Kilo-Org/handbook.git")).toBe("handbook")
 		})
 
+		it("extracts repository name from SSH git URL without .git extension", () => {
+			expect(normalizeProjectId("git@github.com:brianc/node-postgres")).toBe("node-postgres")
+		})
+
 		it("returns plain project ID as-is", () => {
 			expect(normalizeProjectId("my-project")).toBe("my-project")
 		})

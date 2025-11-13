@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "Araçlar",
 		"resources": "Kaynaklar",
-		"errors": "Hatalar"
+		"logs": "Günlükler"
 	},
 	"emptyState": {
 		"noTools": "Araç bulunamadı",
 		"noResources": "Kaynak bulunamadı",
-		"noErrors": "Hata bulunamadı"
+		"noLogs": "Henüz günlük yok"
 	},
 	"networkTimeout": {
 		"label": "Ağ Zaman Aşımı",

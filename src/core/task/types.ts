@@ -12,18 +12,6 @@ export interface Gpt5Metadata {
 	 * Used to maintain conversation continuity in subsequent requests
 	 */
 	previous_response_id?: string
-
-	/**
-	 * The system instructions/prompt used for this response
-	 * Stored to track what instructions were active when the response was generated
-	 */
-	instructions?: string
-
-	/**
-	 * The reasoning summary from GPT-5's reasoning process
-	 * Contains the model's internal reasoning if reasoning mode was enabled
-	 */
-	reasoning_summary?: string
 }
 
 /**

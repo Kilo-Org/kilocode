@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "kosten onbekend",
 		"costUnknownDescription": "De API-provider heeft geen kostengegevens verstrekt of het verzoek is geannuleerd.",
-		"freeModelsDescription": "Gratis modellen kunnen snelheidslimieten hebben. Gebruik de link hieronder om je gebruik van gratis modellen te optimaliseren!",
 		"freeModelsLink": "Ontdek gratis en budget modelopties"
 	},
 	"notifications": {

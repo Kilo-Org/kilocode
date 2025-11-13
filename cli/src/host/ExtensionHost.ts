@@ -25,6 +25,9 @@ export class ExtensionHost extends EventEmitter {
 	private extensionAPI: any = null
 	private vscodeAPI: any = null
 	private webviewProviders: Map<string, any> = new Map()
+	private webviewInitialized = false
+	private pendingMessages: WebviewMessage[] = []
+	private isInitialSetup = true
 	private originalConsole: {
 		log: typeof console.log
 		error: typeof console.error
@@ -270,6 +273,13 @@ export class ExtensionHost extends EventEmitter {
 
 			if (!this.isActivated) {
 				logs.warn("Extension not activated, ignoring message", "ExtensionHost")
+				return
+			}
+
+			// Queue messages if webview not initialized
+			if (!this.webviewInitialized) {
+				this.pendingMessages.push(message)
+				logs.debug(`Queued message ${message.type} - webview not ready`, "ExtensionHost")
 				return
 			}
 
@@ -888,12 +898,52 @@ export class ExtensionHost extends EventEmitter {
 	// Methods for webview provider registration (called from VSCode API mock)
 	registerWebviewProvider(viewId: string, provider: any): void {
 		this.webviewProviders.set(viewId, provider)
-		logs.debug(`Registered webview provider: ${viewId}`, "ExtensionHost")
+		logs.info(`Webview provider registered: ${viewId}`, "ExtensionHost")
 	}
 
 	unregisterWebviewProvider(viewId: string): void {
 		this.webviewProviders.delete(viewId)
 		logs.debug(`Unregistered webview provider: ${viewId}`, "ExtensionHost")
+	}
+
+	/**
+	 * Mark webview as ready and flush pending messages
+	 * Called by VSCode mock after resolveWebviewView completes
+	 */
+	public markWebviewReady(): void {
+		this.webviewInitialized = true
+		this.isInitialSetup = false
+		logs.info("Webview marked as ready, flushing pending messages", "ExtensionHost")
+		this.flushPendingMessages()
+	}
+
+	/**
+	 * Flush all pending messages that were queued before webview was ready
+	 */
+	private flushPendingMessages(): void {
+		const messages = [...this.pendingMessages]
+		this.pendingMessages = []
+
+		logs.info(`Flushing ${messages.length} pending messages`, "ExtensionHost")
+		for (const message of messages) {
+			logs.debug(`Flushing pending message: ${message.type}`, "ExtensionHost")
+			// Use void to explicitly ignore the promise
+			void this.sendWebviewMessage(message)
+		}
+	}
+
+	/**
+	 * Check if webview is ready to receive messages
+	 */
+	public isWebviewReady(): boolean {
+		return this.webviewInitialized
+	}
+
+	/**
+	 * Check if this is the initial setup phase
+	 */
+	public isInInitialSetup(): boolean {
+		return this.isInitialSetup
 	}
 }
 

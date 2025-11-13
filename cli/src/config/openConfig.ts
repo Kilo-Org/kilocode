@@ -48,16 +48,42 @@ export default async function openConfigFile() {
 			}
 		}
 
+		// Track if we should try nano fallback on Linux
+		const shouldTryNanoFallback = !editor && platform() === "linux" && editorCommand === "xdg-open"
+
 		// Spawn the editor process
 		const editorProcess = spawn(editorCommand, editorArgs, {
 			stdio: "inherit",
 		})
 
 		editorProcess.on("error", (error) => {
-			console.error(`Failed to open editor: ${error.message}`)
-			console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
-			console.error(`\nYou can manually edit the config file at: ${configPath}`)
-			process.exit(1)
+			// On Linux, if xdg-open fails and no EDITOR is set, try nano as fallback
+			if (shouldTryNanoFallback) {
+				console.log(`xdg-open failed, trying nano as fallback...`)
+				const nanoProcess = spawn("nano", [configPath], {
+					stdio: "inherit",
+				})
+
+				nanoProcess.on("error", (nanoError) => {
+					console.error(`Failed to open editor: ${error.message}`)
+					console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
+					console.error(`Nano fallback also failed: ${nanoError.message}`)
+					console.error(`\nYou can manually edit the config file at: ${configPath}`)
+					process.exit(1)
+				})
+
+				nanoProcess.on("exit", (code) => {
+					if (code !== 0 && code !== null) {
+						console.error(`Nano exited with code ${code}`)
+						console.error(`Config file location: ${configPath}`)
+					}
+				})
+			} else {
+				console.error(`Failed to open editor: ${error.message}`)
+				console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
+				console.error(`\nYou can manually edit the config file at: ${configPath}`)
+				process.exit(1)
+			}
 		})
 
 		editorProcess.on("exit", (code) => {

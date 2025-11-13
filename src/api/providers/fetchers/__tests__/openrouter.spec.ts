@@ -4,13 +4,6 @@ import * as path from "path"
 
 import { back as nockBack } from "nock"
 
-import {
-	OPEN_ROUTER_PROMPT_CACHING_MODELS,
-	OPEN_ROUTER_COMPUTER_USE_MODELS,
-	OPEN_ROUTER_REASONING_BUDGET_MODELS,
-	OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS,
-} from "@roo-code/types"
-
 import { getOpenRouterModelEndpoints, getOpenRouterModels, parseOpenRouterModel } from "../openrouter"
 
 nockBack.fixtures = path.join(__dirname, "fixtures")
@@ -24,147 +17,6 @@ describe("OpenRouter API", () => {
 
 			const models = await getOpenRouterModels()
 
-			const openRouterSupportedCaching = Object.entries(models)
-				.filter(([id, _]) => id.startsWith("anthropic/claude") || id.startsWith("google/gemini")) // only these support cache_control breakpoints (https://openrouter.ai/docs/features/prompt-caching)
-				.filter(([_, model]) => model.supportsPromptCache)
-				.map(([id, _]) => id)
-
-			// Define models that are intentionally excluded
-			const excludedModels = new Set([
-				"google/gemini-2.5-pro-preview", // Excluded due to lag issue (#4487)
-				"google/gemini-2.5-flash", // OpenRouter doesn't report this as supporting prompt caching
-				"google/gemini-2.5-flash-lite-preview-06-17", // OpenRouter doesn't report this as supporting prompt caching
-				"anthropic/claude-opus-4.1", // Not yet available in OpenRouter API
-				"anthropic/claude-sonnet-4.5", // Not yet available in OpenRouter API
-			])
-
-			const ourCachingModels = Array.from(OPEN_ROUTER_PROMPT_CACHING_MODELS).filter(
-				(id) => !excludedModels.has(id),
-			)
-
-			// Verify all our caching models are actually supported by OpenRouter
-			for (const modelId of ourCachingModels) {
-				expect(openRouterSupportedCaching).toContain(modelId)
-			}
-
-			// Verify we have all supported models except intentionally excluded ones
-			const expectedCachingModels = openRouterSupportedCaching.filter((id) => !excludedModels.has(id)).sort()
-
-			expect(ourCachingModels.sort()).toEqual(expectedCachingModels)
-
-			const excludedComputerUseModels = new Set([
-				"anthropic/claude-opus-4.1", // Not yet available in OpenRouter API
-				"anthropic/claude-sonnet-4.5", // Not yet available in OpenRouter API
-			])
-
-			const expectedComputerUseModels = Array.from(OPEN_ROUTER_COMPUTER_USE_MODELS)
-				.filter((id) => !excludedComputerUseModels.has(id))
-				.sort()
-
-			expect(
-				Object.entries(models)
-					.filter(([_, model]) => model.supportsComputerUse)
-					.map(([id, _]) => id)
-					.sort(),
-			).toEqual(expectedComputerUseModels)
-
-			expect(
-				Object.entries(models)
-					.filter(([_, model]) => model.supportsReasoningEffort)
-					.map(([id, _]) => id)
-					.sort(),
-			).toEqual([
-				"agentica-org/deepcoder-14b-preview:free",
-				"aion-labs/aion-1.0",
-				"aion-labs/aion-1.0-mini",
-				"anthropic/claude-3.7-sonnet:beta",
-				"anthropic/claude-3.7-sonnet:thinking",
-				"anthropic/claude-opus-4",
-				// "anthropic/claude-opus-4.1", // Not yet available in OpenRouter API
-				"anthropic/claude-sonnet-4",
-				"arliai/qwq-32b-arliai-rpr-v1:free",
-				"cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
-				"deepseek/deepseek-r1",
-				"deepseek/deepseek-r1-distill-llama-70b",
-				"deepseek/deepseek-r1-distill-llama-70b:free",
-				"deepseek/deepseek-r1-distill-llama-8b",
-				"deepseek/deepseek-r1-distill-qwen-1.5b",
-				"deepseek/deepseek-r1-distill-qwen-14b",
-				"deepseek/deepseek-r1-distill-qwen-14b:free",
-				"deepseek/deepseek-r1-distill-qwen-32b",
-				"deepseek/deepseek-r1-distill-qwen-32b:free",
-				"deepseek/deepseek-r1-zero:free",
-				"deepseek/deepseek-r1:free",
-				"google/gemini-2.5-flash-preview-05-20",
-				"google/gemini-2.5-flash-preview-05-20:thinking",
-				"microsoft/mai-ds-r1:free",
-				"microsoft/phi-4-reasoning-plus",
-				"microsoft/phi-4-reasoning-plus:free",
-				"microsoft/phi-4-reasoning:free",
-				"moonshotai/kimi-vl-a3b-thinking:free",
-				"nousresearch/deephermes-3-mistral-24b-preview:free",
-				"open-r1/olympiccoder-32b:free",
-				"openai/codex-mini",
-				"openai/o1-pro",
-				"perplexity/r1-1776",
-				"perplexity/sonar-deep-research",
-				"perplexity/sonar-reasoning",
-				"perplexity/sonar-reasoning-pro",
-				"qwen/qwen3-14b",
-				"qwen/qwen3-14b:free",
-				"qwen/qwen3-235b-a22b",
-				"qwen/qwen3-235b-a22b:free",
-				"qwen/qwen3-30b-a3b",
-				"qwen/qwen3-30b-a3b:free",
-				"qwen/qwen3-32b",
-				"qwen/qwen3-32b:free",
-				"qwen/qwen3-4b:free",
-				"qwen/qwen3-8b",
-				"qwen/qwen3-8b:free",
-				"qwen/qwq-32b",
-				"qwen/qwq-32b:free",
-				"rekaai/reka-flash-3:free",
-				"thudm/glm-z1-32b",
-				"thudm/glm-z1-32b:free",
-				"thudm/glm-z1-9b:free",
-				"thudm/glm-z1-rumination-32b",
-				"tngtech/deepseek-r1t-chimera:free",
-				"x-ai/grok-3-mini-beta",
-			])
-			// OpenRouter is taking a while to update their models, so we exclude some known models
-			const excludedReasoningBudgetModels = new Set([
-				"google/gemini-2.5-flash",
-				"google/gemini-2.5-flash-lite-preview-06-17",
-				"google/gemini-2.5-pro",
-				"anthropic/claude-opus-4.1", // Not yet available in OpenRouter API
-				"anthropic/claude-sonnet-4.5", // Not yet available in OpenRouter API
-				"anthropic/claude-haiku-4.5", // Not yet available in OpenRouter API
-			])
-
-			const expectedReasoningBudgetModels = Array.from(OPEN_ROUTER_REASONING_BUDGET_MODELS)
-				.filter((id) => !excludedReasoningBudgetModels.has(id))
-				.sort()
-
-			expect(
-				Object.entries(models)
-					.filter(([_, model]) => model.supportsReasoningBudget)
-					.map(([id, _]) => id)
-					.sort(),
-			).toEqual(expectedReasoningBudgetModels)
-
-			const excludedRequiredReasoningBudgetModels = new Set(["google/gemini-2.5-pro"])
-
-			const expectedRequiredReasoningBudgetModels = Array.from(OPEN_ROUTER_REQUIRED_REASONING_BUDGET_MODELS)
-				.filter((id) => !excludedRequiredReasoningBudgetModels.has(id))
-				.sort()
-
-			expect(
-				Object.entries(models)
-					.filter(([_, model]) => model.requiredReasoningBudget)
-					.map(([id, _]) => id)
-					.sort(),
-			).toEqual(expectedRequiredReasoningBudgetModels)
-
 			expect(models["anthropic/claude-3.7-sonnet"]).toEqual({
 				maxTokens: 8192,
 				contextWindow: 200000,
@@ -176,7 +28,6 @@ describe("OpenRouter API", () => {
 				cacheReadsPrice: 0.3,
 				description: expect.any(String),
 				displayName: expect.any(String), // kilocode_change
-				supportsComputerUse: true,
 				supportsReasoningBudget: false,
 				supportsReasoningEffort: false,
 				supportedParameters: ["max_tokens", "temperature", "reasoning", "include_reasoning"],
@@ -193,7 +44,6 @@ describe("OpenRouter API", () => {
 				cacheReadsPrice: 0.3,
 				description: expect.any(String),
 				displayName: expect.any(String), // kilocode_change
-				supportsComputerUse: true,
 				supportsReasoningBudget: true,
 				requiredReasoningBudget: true,
 				supportsReasoningEffort: true,

@@ -26,12 +26,12 @@
 	"tabs": {
 		"tools": "Інструменти",
 		"resources": "Ресурси",
-		"errors": "Помилки"
+		"logs": "Логи"
 	},
 	"emptyState": {
 		"noTools": "Інструменти не знайдено",
 		"noResources": "Ресурси не знайдено",
-		"noErrors": "Помилки не знайдено"
+		"noLogs": "Логів ще немає"
 	},
 	"networkTimeout": {
 		"label": "Таймаут мережі",

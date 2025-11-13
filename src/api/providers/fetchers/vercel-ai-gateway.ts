@@ -102,13 +102,11 @@ export const parseVercelAiGatewayModel = ({ id, model }: { id: string; model: Ve
 	const supportsPromptCache = typeof cacheWritesPrice !== "undefined" && typeof cacheReadsPrice !== "undefined"
 	const supportsImages =
 		VERCEL_AI_GATEWAY_VISION_ONLY_MODELS.has(id) || VERCEL_AI_GATEWAY_VISION_AND_TOOLS_MODELS.has(id)
-	const supportsComputerUse = VERCEL_AI_GATEWAY_VISION_AND_TOOLS_MODELS.has(id)
 
 	const modelInfo: ModelInfo = {
 		maxTokens: model.max_tokens,
 		contextWindow: model.context_window,
 		supportsImages,
-		supportsComputerUse,
 		supportsPromptCache,
 		inputPrice: parseApiPrice(model.pricing?.input),
 		outputPrice: parseApiPrice(model.pricing?.output),

@@ -24,7 +24,6 @@
 	"pricing": {
 		"costUnknown": "費用未知",
 		"costUnknownDescription": "API 提供商未提供任何費用資料或請求已取消。",
-		"freeModelsDescription": "免費模型可能有速率限制。使用下方連結來優化你的免費模型使用！",
 		"freeModelsLink": "探索免費模型選項"
 	},
 	"notifications": {

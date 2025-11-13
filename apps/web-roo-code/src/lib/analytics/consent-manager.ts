@@ -5,6 +5,7 @@
 
 import { getCookieConsentValue } from "react-cookie-consent"
 import { CONSENT_COOKIE_NAME } from "@roo-code/types"
+import posthog from "posthog-js"
 
 export const CONSENT_EVENT = "cookieConsentChanged"
 
@@ -44,4 +45,28 @@ export function onConsentChange(callback: (consented: boolean) => void): () => v
 
 	window.addEventListener(CONSENT_EVENT, handler)
 	return () => window.removeEventListener(CONSENT_EVENT, handler)
+}
+
+/**
+ * Handle user accepting cookies
+ * Opts PostHog back into cookie-based tracking
+ */
+export function handleConsentAccept(): void {
+	if (typeof window !== "undefined" && posthog.__loaded) {
+		// User accepted - ensure localStorage+cookie persistence is enabled
+		posthog.opt_in_capturing()
+		posthog.set_config({
+			persistence: "localStorage+cookie",
+		})
+	}
+	dispatchConsentEvent(true)
+}
+
+/**
+ * Handle user rejecting cookies
+ * Switches PostHog to cookieless (memory-only) mode
+ */
+export function handleConsentReject(): void {
+	// User rejected - stick to cookieless mode
+	dispatchConsentEvent(false)
 }

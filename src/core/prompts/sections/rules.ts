@@ -23,7 +23,6 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 	}
 
 	availableTools.push("insert_content (for adding lines to files)")
-	availableTools.push("search_and_replace (for finding and replacing individual pieces of text)")
 
 	// Base editing instruction mentioning all available tools
 	if (availableTools.length > 1) {
@@ -33,10 +32,6 @@ function getEditingInstructions(diffStrategy?: DiffStrategy): string {
 	// Additional details for experimental features
 	instructions.push(
 		"- The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.",
-	)
-
-	instructions.push(
-		"- The search_and_replace tool finds and replaces text or regex in files. This tool allows you to search for a specific regex pattern or text and replace it with another value. Be cautious when using this tool to ensure you are replacing the correct text. It can support multiple operations at once.",
 	)
 
 	if (availableTools.length > 1) {
@@ -61,10 +56,13 @@ export function getRulesSection(
 	toolUseStyle?: ToolUseStyle, // kilocode_change
 ): string {
 	const isCodebaseSearchAvailable =
-		codeIndexManager &&
-		codeIndexManager.isFeatureEnabled &&
-		codeIndexManager.isFeatureConfigured &&
-		codeIndexManager.isInitialized
+		// kilocode_change start
+		codeIndexManager?.isManagedIndexingAvailable ||
+		(codeIndexManager &&
+			codeIndexManager.isFeatureEnabled &&
+			codeIndexManager.isFeatureConfigured &&
+			codeIndexManager.isInitialized)
+	// kilocode_change end
 
 	const codebaseSearchRule = isCodebaseSearchAvailable
 		? "- **CRITICAL: For ANY exploration of code you haven't examined yet in this conversation, you MUST use the `codebase_search` tool FIRST before using search_files or other file exploration tools.** This requirement applies throughout the entire conversation, not just when starting a task. The codebase_search tool uses semantic search to find relevant code based on meaning, not just keywords, making it much more effective for understanding how features are implemented. Even if you've already explored some parts of the codebase, any new area or functionality you need to understand requires using codebase_search first.\n"

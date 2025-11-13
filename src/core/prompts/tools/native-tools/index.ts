@@ -13,7 +13,6 @@ import listFiles from "./list_files"
 import newTask from "./new_task"
 import { read_file_single, read_file_multi } from "./read_file"
 import runSlashCommand from "./run_slash_command"
-import searchAndReplace from "./search_and_replace"
 import searchFiles from "./search_files"
 import switchMode from "./switch_mode"
 import updateTodoList from "./update_todo_list"
@@ -38,7 +37,6 @@ export const nativeTools = [
 	read_file_single,
 	read_file_multi,
 	runSlashCommand,
-	searchAndReplace,
 	searchFiles,
 	switchMode,
 	updateTodoList,

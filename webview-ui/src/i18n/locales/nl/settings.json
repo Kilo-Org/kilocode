@@ -57,6 +57,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API-sleutel",
 		"vercelAiGatewayApiKeyPlaceholder": "Voer uw Vercel AI Gateway API-sleutel in",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API-sleutel",
+		"openRouterApiKeyPlaceholder": "Voer uw OpenRouter API-sleutel in",
 		"mistralProvider": "Mistral",
 		"mistralApiKeyLabel": "API-sleutel:",
 		"mistralApiKeyPlaceholder": "Voer uw Mistral API-sleutel in",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API-sleutel is vereist",
 			"ollamaBaseUrlRequired": "Ollama basis-URL is vereist",
 			"baseUrlRequired": "Basis-URL is vereist",
-			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0"
+			"modelDimensionMinValue": "Modelafmeting moet groter zijn dan 0",
+			"openRouterApiKeyRequired": "OpenRouter API-sleutel is vereist"
 		},
 		"advancedConfigLabel": "Geavanceerde configuratie",
 		"searchMinScoreLabel": "Zoekscore drempel",
@@ -309,6 +313,9 @@
 		"getZaiApiKey": "Z AI API-sleutel ophalen",
 		"zaiEntrypoint": "Z AI-ingangspunt",
 		"zaiEntrypointDescription": "Selecteer het juiste API-ingangspunt op basis van uw locatie. Als u zich in China bevindt, kies dan open.bigmodel.cn. Anders kiest u api.z.ai.",
+		"minimaxApiKey": "MiniMax API-sleutel",
+		"getMiniMaxApiKey": "MiniMax API-sleutel ophalen",
+		"minimaxBaseUrl": "MiniMax-ingangspunt",
 		"geminiApiKey": "Gemini API-sleutel",
 		"getGroqApiKey": "Groq API-sleutel ophalen",
 		"groqApiKey": "Groq API-sleutel",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "Schakel prompt caching in om de prestaties te verbeteren en de kosten te verlagen voor ondersteunde modellen.",
 		"cacheUsageNote": "Let op: als je geen cachegebruik ziet, probeer dan een ander model te selecteren en vervolgens weer je gewenste model.",
 		"vscodeLmModel": "Taalmodel",
-		"vscodeLmWarning": "Let op: dit is een zeer experimentele integratie en ondersteuning door providers kan variëren. Krijg je een foutmelding dat een model niet wordt ondersteund, dan ligt dat aan de provider.",
+		"vscodeLmWarning": "Let op: Modellen die via de VS Code Language Model API worden benaderd kunnen door de provider worden verpakt of fijn‑afgesteld, waardoor het gedrag kan afwijken van het rechtstreeks gebruiken van hetzelfde model bij een typische provider of router. Om een model uit de keuzelijst ‘Language Model’ te gebruiken, schakel eerst naar dat model en klik vervolgens op ‘Accepteren’ in de Copilot Chat‑prompt; anders kun je een fout zien zoals 400 ‘The requested model is not supported’.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URL-context inschakelen",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "Computergebruik",
-				"description": "Kan dit model met een browser werken? (bijv. Claude 3.7 Sonnet)."
+				"description": "Kan dit model met een browser werken?"
 			},
 			"promptCache": {
 				"label": "Prompt caching",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Model redeneervermogen",
+			"none": "Geen",
 			"minimal": "Minimaal (Snelst)",
 			"high": "Hoog",
 			"medium": "Middel",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Timeout voor checkpoint-initialisatie (seconden)",
+			"description": "Maximale wachttijd voor het initialiseren van de checkpointservice. Standaard is 15 seconden. Bereik: 10-60 seconden."
+		},
 		"enable": {
 			"label": "Automatische checkpoints inschakelen",
 			"description": "Indien ingeschakeld, maakt Kilo Code automatisch checkpoints tijdens het uitvoeren van taken, zodat je eenvoudig wijzigingen kunt bekijken of terugzetten. <0>Meer informatie</0>"
@@ -681,6 +693,14 @@
 			"profileDescription": "Aangepaste drempelwaarde alleen voor dit profiel (overschrijft globale standaard)",
 			"inheritDescription": "Dit profiel erft de globale standaard drempelwaarde ({{threshold}}%)",
 			"usesGlobal": "(gebruikt globaal {{threshold}}%)"
+		},
+		"includeCurrentTime": {
+			"label": "Huidige tijd opnemen in context",
+			"description": "Indien ingeschakeld, worden de huidige tijd en tijdzone-informatie opgenomen in de systeemprompt. Schakel dit uit als modellen stoppen met werken vanwege tijdproblemen."
+		},
+		"includeCurrentCost": {
+			"label": "Huidige kosten opnemen in context",
+			"description": "Indien ingeschakeld, worden de huidige API-gebruikskosten opgenomen in de systeemprompt. Schakel dit uit als modellen stoppen met werken vanwege kostenproblemen."
 		}
 	},
 	"terminal": {
@@ -690,55 +710,55 @@
 		},
 		"advanced": {
 			"label": "Terminalinstellingen: Geavanceerd",
-			"description": "De volgende opties vereisen mogelijk een herstart van de terminal om de instelling toe te passen."
+			"description": "Deze instellingen gelden alleen wanneer 'Inline Terminal gebruiken' is uitgeschakeld. Ze beïnvloeden alleen de VS Code-terminal en kunnen een IDE-herstart vereisen."
 		},
 		"outputLineLimit": {
 			"label": "Terminaluitvoerlimiet",
-			"description": "Maximaal aantal regels dat wordt opgenomen in de terminaluitvoer bij het uitvoeren van commando's. Overtollige regels worden uit het midden verwijderd om tokens te besparen. <0>Meer informatie</0>"
+			"description": "Behoudt eerste en laatste regels en verwijdert middelste om onder de limiet te blijven. Verlaag om tokens te besparen; verhoog om Kilo meer tussendetails te geven. Kilo ziet een placeholder waar inhoud wordt overgeslagen.<0>Meer informatie</0>"
 		},
 		"outputCharacterLimit": {
-			"label": "Tekenlimiet terminal",
-			"description": "Maximaal aantal tekens dat moet worden opgenomen in de terminaluitvoer bij het uitvoeren van commando's. Deze limiet heeft voorrang op de regellimiet om geheugenproblemen door extreem lange regels te voorkomen. Bij overschrijding wordt de uitvoer afgekapt. <0>Meer informatie</0>"
+			"label": "Terminal-tekenlimiet",
+			"description": "Overschrijft de regellimiet om geheugenproblemen te voorkomen door een harde limiet op uitvoergrootte af te dwingen. Bij overschrijding behoudt het begin en einde en toont een placeholder aan Kilo waar inhoud wordt overgeslagen. <0>Meer informatie</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "Terminal shell-integratie timeout",
-			"description": "Maximale wachttijd voor het initialiseren van shell-integratie voordat commando's worden uitgevoerd. Voor gebruikers met lange shell-opstarttijden moet deze waarde mogelijk worden verhoogd als je 'Shell Integration Unavailable'-fouten ziet in de terminal. <0>Meer informatie</0>"
+			"label": "Terminal-shell-integratie timeout",
+			"description": "Hoe lang te wachten op VS Code-shell-integratie voordat commando's worden uitgevoerd. Verhoog als je shell traag opstart of je 'Shell-Integratie Niet Beschikbaar'-fouten ziet. <0>Meer informatie</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Terminal shell-integratie uitschakelen",
-			"description": "Schakel dit in als terminalcommando's niet correct werken of als je 'Shell Integration Unavailable'-fouten ziet. Dit gebruikt een eenvoudigere methode om commando's uit te voeren en omzeilt enkele geavanceerde terminalfuncties. <0>Meer informatie</0>"
+			"label": "Inline Terminal gebruiken (aanbevolen)",
+			"description": "Voer commando's uit in de Inline Terminal (chat) om shell-profielen/integratie te omzeilen voor snellere, betrouwbaardere runs. Wanneer uitgeschakeld gebruikt Kilo de VS Code-terminal met je shell-profiel, prompts en plugins. <0>Meer informatie</0>"
 		},
 		"commandDelay": {
-			"label": "Terminalcommando-vertraging",
-			"description": "Vertraging in milliseconden na het uitvoeren van een commando. De standaardinstelling van 0 schakelt de vertraging volledig uit. Dit kan helpen om te zorgen dat de uitvoer volledig wordt vastgelegd in terminals met timingproblemen. In de meeste terminals wordt dit geïmplementeerd door `PROMPT_COMMAND='sleep N'` te zetten en in Powershell wordt `start-sleep` toegevoegd aan het einde van elk commando. Oorspronkelijk was dit een workaround voor VSCode bug#237208 en is mogelijk niet meer nodig. <0>Meer informatie</0>"
+			"label": "Terminal-commandovertraging",
+			"description": "Voegt korte pauze toe na elk commando zodat VS Code-terminal alle uitvoer kan flushen (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Gebruik alleen als je ontbrekende tail-uitvoer ziet; anders op 0 laten. <0>Meer informatie</0>"
 		},
 		"compressProgressBar": {
 			"label": "Voortgangsbalk-uitvoer comprimeren",
-			"description": "Indien ingeschakeld, verwerkt Kilo Code terminaluitvoer met carriage returns (\r) om te simuleren hoe een echte terminal inhoud weergeeft. Dit verwijdert tussenliggende voortgangsbalken en behoudt alleen de eindstatus, waardoor er meer contextruimte overblijft. <0>Meer informatie</0>"
+			"description": "Klapt voortgangsbalken/spinners in zodat alleen eindstatus behouden blijft (bespaart tokens). <0>Meer informatie</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell-teller workaround inschakelen",
-			"description": "Indien ingeschakeld, voegt Kilo Code een teller toe aan PowerShell-commando's om correcte uitvoering te garanderen. Dit helpt bij PowerShell-terminals die problemen hebben met het vastleggen van uitvoer. <0>Meer informatie</0>"
+			"description": "Schakel in wanneer PowerShell-uitvoer ontbreekt of gedupliceerd wordt; voegt kleine teller toe aan elk commando om uitvoer te stabiliseren. Laat uit als uitvoer al correct lijkt. <0>Meer informatie</0>"
 		},
 		"zshClearEolMark": {
-			"label": "ZSH EOL-markering wissen",
-			"description": "Indien ingeschakeld, wist Kilo Code de ZSH end-of-line markering door PROMPT_EOL_MARK='' te zetten. Dit voorkomt problemen met de interpretatie van uitvoer die eindigt met speciale tekens zoals '%'. <0>Meer informatie</0>"
+			"label": "ZSH-EOL-markering wissen",
+			"description": "Schakel in wanneer je verdwaalde % aan regeleinden ziet of parsing verkeerd lijkt; laat Zsh's einde-van-regel-markering (%) weg. <0>Meer informatie</0>"
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh-integratie inschakelen",
-			"description": "Indien ingeschakeld, zet Kilo Code ITERM_SHELL_INTEGRATION_INSTALLED=Yes om Oh My Zsh shell-integratiefuncties te activeren. Het toepassen van deze instelling kan een herstart van de IDE vereisen. <0>Meer informatie</0>"
+			"description": "Schakel in wanneer je Oh My Zsh-thema/plugins shell-integratie verwachten; stelt ITERM_SHELL_INTEGRATION_INSTALLED=Yes in. Schakel uit om instellen van die variabele te vermijden. <0>Meer informatie</0>"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k-integratie inschakelen",
-			"description": "Indien ingeschakeld, zet Kilo Code POWERLEVEL9K_TERM_SHELL_INTEGRATION=true om Powerlevel10k shell-integratiefuncties te activeren. <0>Meer informatie</0>"
+			"description": "Schakel in wanneer je Powerlevel10k-shell-integratie gebruikt. <0>Meer informatie</0>"
 		},
 		"zdotdir": {
 			"label": "ZDOTDIR-afhandeling inschakelen",
-			"description": "Indien ingeschakeld, maakt Kilo Code een tijdelijke map aan voor ZDOTDIR om zsh shell-integratie correct af te handelen. Dit zorgt ervoor dat VSCode shell-integratie goed werkt met zsh en je zsh-configuratie behouden blijft. <0>Meer informatie</0>"
+			"description": "Schakel in wanneer zsh-shell-integratie mislukt of conflicteert met je dotfiles. <0>Meer informatie</0>"
 		},
 		"inheritEnv": {
 			"label": "Omgevingsvariabelen overnemen",
-			"description": "Indien ingeschakeld, neemt de terminal omgevingsvariabelen over van het bovenliggende VSCode-proces, zoals shell-integratie-instellingen uit het gebruikersprofiel. Dit schakelt direct de VSCode-instelling `terminal.integrated.inheritEnv` om. <0>Meer informatie</0>"
+			"description": "Schakel in om omgevingsvariabelen over te nemen van het bovenliggende VS Code-proces. <0>Meer informatie</0>"
 		}
 	},
 	"advancedSettings": {
@@ -747,7 +767,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Bewerken via diffs inschakelen",
-			"description": "Indien ingeschakeld kan Kilo Code sneller bestanden bewerken en worden afgekorte volledige-bestandswijzigingen automatisch geweigerd. Werkt het beste met het nieuwste Claude 4 Sonnet-model.",
+			"description": "Indien ingeschakeld kan Kilo Code sneller bestanden bewerken en worden afgekorte volledige-bestandswijzigingen automatisch geweigerd",
 			"strategy": {
 				"label": "Diff-strategie",
 				"options": {
@@ -775,10 +795,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Experimentele unified diff-strategie gebruiken",
 			"description": "Schakel de experimentele unified diff-strategie in. Deze strategie kan het aantal herhalingen door model fouten verminderen, maar kan onverwacht gedrag of onjuiste bewerkingen veroorzaken. Alleen inschakelen als je de risico's begrijpt en wijzigingen zorgvuldig wilt controleren."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Experimentele zoek-en-vervang-tool gebruiken",
-			"description": "Schakel de experimentele zoek-en-vervang-tool in, waarmee Kilo Code meerdere instanties van een zoekterm in één verzoek kan vervangen."
 		},
 		"INSERT_BLOCK": {
 			"name": "Experimentele inhoud-invoeg-tool gebruiken",
@@ -866,8 +882,6 @@
 	"modelInfo": {
 		"supportsImages": "Ondersteunt afbeeldingen",
 		"noImages": "Ondersteunt geen afbeeldingen",
-		"supportsComputerUse": "Ondersteunt computergebruik",
-		"noComputerUse": "Ondersteunt geen computergebruik",
 		"supportsPromptCache": "Ondersteunt prompt caching",
 		"noPromptCache": "Ondersteunt geen prompt caching",
 		"contextWindow": "Contextvenster:",

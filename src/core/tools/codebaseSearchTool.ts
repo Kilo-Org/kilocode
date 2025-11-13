@@ -75,12 +75,16 @@ export async function codebaseSearchTool(
 			throw new Error("CodeIndexManager is not available.")
 		}
 
-		if (!manager.isFeatureEnabled) {
-			throw new Error("Code Indexing is disabled in the settings.")
+		// kilcode_change start
+		if (!manager.isManagedIndexingAvailable) {
+			if (!manager.isFeatureEnabled) {
+				throw new Error("Code Indexing is disabled in the settings.")
+			}
+			if (!manager.isFeatureConfigured) {
+				throw new Error("Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).")
+			}
 		}
-		if (!manager.isFeatureConfigured) {
-			throw new Error("Code Indexing is not configured (Missing OpenAI Key or Qdrant URL).")
-		}
+		// kilcode_change end
 
 		// kilocode_change start
 		const status = manager.getCurrentStatus()
@@ -185,8 +189,7 @@ ${jsonResult.results
 		(result) => `File path: ${result.filePath}
 Score: ${result.score}
 Lines: ${result.startLine}-${result.endLine}
-Code Chunk: ${result.codeChunk}
-`,
+${result.codeChunk ? `Code Chunk: ${result.codeChunk}\n` : ""}`, // kilocode_change - don't include code chunk managed indexing
 	)
 	.join("\n")}`
 

@@ -73,6 +73,7 @@ interface LocalCodeIndexSettings {
 	codebaseIndexGeminiApiKey?: string
 	codebaseIndexMistralApiKey?: string
 	codebaseIndexVercelAiGatewayApiKey?: string
+	codebaseIndexOpenRouterApiKey?: string
 }
 
 // Validation schema for codebase index settings
@@ -149,6 +150,16 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
 			})
 
+		case "openrouter":
+			return baseSchema.extend({
+				codebaseIndexOpenRouterApiKey: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.openRouterApiKeyRequired")),
+				codebaseIndexEmbedderModelId: z
+					.string()
+					.min(1, t("settings:codeIndex.validation.modelSelectionRequired")),
+			})
+
 		default:
 			return baseSchema
 	}
@@ -194,6 +205,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexGeminiApiKey: "",
 		codebaseIndexMistralApiKey: "",
 		codebaseIndexVercelAiGatewayApiKey: "",
+		codebaseIndexOpenRouterApiKey: "",
 	})
 
 	// Initial settings state - stores the settings when popover opens
@@ -229,6 +241,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 				codebaseIndexGeminiApiKey: "",
 				codebaseIndexMistralApiKey: "",
 				codebaseIndexVercelAiGatewayApiKey: "",
+				codebaseIndexOpenRouterApiKey: "",
 			}
 			setInitialSettings(settings)
 			setCurrentSettings(settings)
@@ -345,6 +358,14 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 							? SECRET_PLACEHOLDER
 							: ""
 					}
+					if (
+						!prev.codebaseIndexOpenRouterApiKey ||
+						prev.codebaseIndexOpenRouterApiKey === SECRET_PLACEHOLDER
+					) {
+						updated.codebaseIndexOpenRouterApiKey = secretStatus.hasOpenRouterApiKey
+							? SECRET_PLACEHOLDER
+							: ""
+					}
 
 					return updated
 				}
@@ -418,7 +439,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					key === "codebaseIndexOpenAiCompatibleApiKey" ||
 					key === "codebaseIndexGeminiApiKey" ||
 					key === "codebaseIndexMistralApiKey" ||
-					key === "codebaseIndexVercelAiGatewayApiKey"
+					key === "codebaseIndexVercelAiGatewayApiKey" ||
+					key === "codebaseIndexOpenRouterApiKey"
 				) {
 					dataToValidate[key] = "placeholder-valid"
 				}
@@ -679,6 +701,9 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												</SelectItem>
 												<SelectItem value="vercel-ai-gateway">
 													{t("settings:codeIndex.vercelAiGatewayProvider")}
+												</SelectItem>
+												<SelectItem value="openrouter">
+													{t("settings:codeIndex.openRouterProvider")}
 												</SelectItem>
 											</SelectContent>
 										</Select>
@@ -1097,6 +1122,71 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 												{formErrors.codebaseIndexVercelAiGatewayApiKey && (
 													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
 														{formErrors.codebaseIndexVercelAiGatewayApiKey}
+													</p>
+												)}
+											</div>
+
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.modelLabel")}
+												</label>
+												<VSCodeDropdown
+													value={currentSettings.codebaseIndexEmbedderModelId}
+													onChange={(e: any) =>
+														updateSetting("codebaseIndexEmbedderModelId", e.target.value)
+													}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexEmbedderModelId,
+													})}>
+													<VSCodeOption value="" className="p-2">
+														{t("settings:codeIndex.selectModel")}
+													</VSCodeOption>
+													{getAvailableModels().map((modelId) => {
+														const model =
+															codebaseIndexModels?.[
+																currentSettings.codebaseIndexEmbedderProvider
+															]?.[modelId]
+														return (
+															<VSCodeOption key={modelId} value={modelId} className="p-2">
+																{modelId}{" "}
+																{model
+																	? t("settings:codeIndex.modelDimensions", {
+																			dimension: model.dimension,
+																		})
+																	: ""}
+															</VSCodeOption>
+														)
+													})}
+												</VSCodeDropdown>
+												{formErrors.codebaseIndexEmbedderModelId && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexEmbedderModelId}
+													</p>
+												)}
+											</div>
+										</>
+									)}
+
+									{currentSettings.codebaseIndexEmbedderProvider === "openrouter" && (
+										<>
+											<div className="space-y-2">
+												<label className="text-sm font-medium">
+													{t("settings:codeIndex.openRouterApiKeyLabel")}
+												</label>
+												<VSCodeTextField
+													type="password"
+													value={currentSettings.codebaseIndexOpenRouterApiKey || ""}
+													onInput={(e: any) =>
+														updateSetting("codebaseIndexOpenRouterApiKey", e.target.value)
+													}
+													placeholder={t("settings:codeIndex.openRouterApiKeyPlaceholder")}
+													className={cn("w-full", {
+														"border-red-500": formErrors.codebaseIndexOpenRouterApiKey,
+													})}
+												/>
+												{formErrors.codebaseIndexOpenRouterApiKey && (
+													<p className="text-xs text-vscode-errorForeground mt-1 mb-0">
+														{formErrors.codebaseIndexOpenRouterApiKey}
 													</p>
 												)}
 											</div>

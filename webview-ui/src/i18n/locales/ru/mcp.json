@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "Инструменты",
 		"resources": "Ресурсы",
-		"errors": "Ошибки"
+		"logs": "Логи"
 	},
 	"emptyState": {
 		"noTools": "Инструменты не найдены",
 		"noResources": "Ресурсы не найдены",
-		"noErrors": "Ошибки не найдены"
+		"noLogs": "Логов пока нет"
 	},
 	"networkTimeout": {
 		"label": "Тайм-аут сети",

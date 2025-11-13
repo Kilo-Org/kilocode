@@ -34,6 +34,8 @@ export type ChutesModelId =
 	| "zai-org/GLM-4.5-FP8"
 	| "zai-org/GLM-4.5-turbo"
 	| "zai-org/GLM-4.6-FP8"
+	| "zai-org/GLM-4.6-turbo"
+	| "meituan-longcat/LongCat-Flash-Thinking-FP8"
 	| "moonshotai/Kimi-K2-Instruct-75k"
 	| "moonshotai/Kimi-K2-Instruct-0905"
 	| "Qwen/Qwen3-235B-A22B-Thinking-2507"
@@ -41,7 +43,7 @@ export type ChutesModelId =
 	| "Qwen/Qwen3-Next-80B-A3B-Thinking"
 	| "Qwen/Qwen3-VL-235B-A22B-Thinking"
 
-export const chutesDefaultModelId: ChutesModelId = "zai-org/GLM-4.6-FP8" // kilocode_change
+export const chutesDefaultModelId: ChutesModelId = "deepseek-ai/DeepSeek-R1-0528"
 
 export const chutesModels = {
 	"deepseek-ai/DeepSeek-R1-0528": {
@@ -329,6 +331,25 @@ export const chutesModels = {
 		description:
 			"GLM-4.6 introduces major upgrades over GLM-4.5, including a longer 200K-token context window for complex tasks, stronger coding performance in benchmarks and real-world tools (such as Claude Code, Cline, Roo Code, and Kilo Code), improved reasoning with tool use during inference, more capable and efficient agent integration, and refined writing that better matches human style, readability, and natural role-play scenarios.",
 	},
+	"zai-org/GLM-4.6-turbo": {
+		maxTokens: 202752, // From Chutes /v1/models: max_output_length
+		contextWindow: 202752,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 1.15,
+		outputPrice: 3.25,
+		description: "GLM-4.6-turbo model with 200K-token context window, optimized for fast inference.",
+	},
+	"meituan-longcat/LongCat-Flash-Thinking-FP8": {
+		maxTokens: 32768,
+		contextWindow: 128000,
+		supportsImages: false,
+		supportsPromptCache: false,
+		inputPrice: 0,
+		outputPrice: 0,
+		description:
+			"LongCat Flash Thinking FP8 model with 128K context window, optimized for complex reasoning and coding tasks.",
+	},
 	"Qwen/Qwen3-Coder-480B-A35B-Instruct-FP8": {
 		maxTokens: 32768,
 		contextWindow: 262144,
@@ -396,3 +417,5 @@ export const chutesModels = {
 			"Qwen3‑VL‑235B‑A22B‑Thinking is an open‑weight MoE vision‑language model (235B total, ~22B activated) optimized for deliberate multi‑step reasoning with strong text‑image‑video understanding and long‑context capabilities.",
 	},
 } as const satisfies Record<string, ModelInfo>
+
+export const chutesDefaultModelInfo: ModelInfo = chutesModels[chutesDefaultModelId]

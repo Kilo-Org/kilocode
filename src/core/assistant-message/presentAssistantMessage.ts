@@ -6,6 +6,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse } from "../../shared/tools"
+import { evaluateGatekeeperApproval } from "./kilocode/gatekeeper" // kilocode_change: AI gatekeeper for YOLO mode
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
@@ -15,7 +16,6 @@ import { shouldUseSingleFileRead } from "@roo-code/types"
 import { writeToFileTool } from "../tools/writeToFileTool"
 import { applyDiffTool } from "../tools/multiApplyDiffTool"
 import { insertContentTool } from "../tools/insertContentTool"
-import { searchAndReplaceTool } from "../tools/searchAndReplaceTool"
 import { editFileTool } from "../tools/editFileTool" // kilocode_change: Morph fast apply
 import { listCodeDefinitionNamesTool } from "../tools/listCodeDefinitionNamesTool"
 import { searchFilesTool } from "../tools/searchFilesTool"
@@ -201,8 +201,6 @@ export async function presentAssistantMessage(cline: Task) {
 						}]`
 					case "insert_content":
 						return `[${block.name} for '${block.params.path}']`
-					case "search_and_replace":
-						return `[${block.name} for '${block.params.path}']`
 					// kilocode_change start: Morph fast apply
 					case "edit_file":
 						return `[${block.name} for '${block.params.target_file}']`
@@ -311,10 +309,17 @@ export async function presentAssistantMessage(cline: Task) {
 				progressStatus?: ToolProgressStatus,
 				isProtected?: boolean,
 			) => {
-				// kilocode_change start: yolo mode
-
+				// kilocode_change start: YOLO mode with AI gatekeeper
 				const state = await cline.providerRef.deref()?.getState()
 				if (state?.yoloMode) {
+					// If gatekeeper is configured, use it to evaluate the approval
+					const approved = await evaluateGatekeeperApproval(cline, block.name, block.params)
+					if (!approved) {
+						// Gatekeeper denied the action
+						pushToolResult(formatResponse.toolDenied())
+						cline.didRejectTool = true
+						return false
+					}
 					return true
 				}
 				// kilocode_change end
@@ -503,10 +508,6 @@ export async function presentAssistantMessage(cline: Task) {
 				case "insert_content":
 					// await checkpointSaveAndMark(cline) // kilocode_change
 					await insertContentTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
-					break
-				case "search_and_replace":
-					// await checkpointSaveAndMark(cline) // kilocode_change
-					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":

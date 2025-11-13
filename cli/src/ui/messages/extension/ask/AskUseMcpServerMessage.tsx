@@ -1,12 +1,7 @@
 import React from "react"
 import { Box, Text } from "ink"
 import type { MessageComponentProps } from "../types.js"
-import {
-	getMessageIcon,
-	parseMcpServerData,
-	formatContentWithMetadata,
-	buildMetadataString,
-} from "../utils.js"
+import { getMessageIcon, parseMcpServerData, formatContentWithMetadata, buildMetadataString } from "../utils.js"
 import { useTheme } from "../../../../state/hooks/useTheme.js"
 import { getBoxWidth } from "../../../utils/width.js"
 
@@ -38,7 +33,9 @@ export const AskUseMcpServerMessage: React.FC<MessageComponentProps> = ({ messag
 		const title = isToolUse ? "Use MCP Tool" : "Access MCP Resource"
 
 		// Format arguments if present
-		const formattedArgs = mcpData.arguments ? formatContentWithMetadata(mcpData.arguments, MAX_LINES, PREVIEW_LINES) : null
+		const formattedArgs = mcpData.arguments
+			? formatContentWithMetadata(mcpData.arguments, MAX_LINES, PREVIEW_LINES)
+			: null
 
 		return (
 			<Box flexDirection="column" marginY={1}>
@@ -81,8 +78,7 @@ export const AskUseMcpServerMessage: React.FC<MessageComponentProps> = ({ messag
 							borderStyle="single"
 							borderColor={theme.ui.border.default}
 							paddingX={1}
-							flexDirection="column"
-							>
+							flexDirection="column">
 							{formattedArgs.content.split("\n").map((line, index) => (
 								<Text key={index} color={theme.ui.text.dimmed} dimColor>
 									{line}

@@ -133,7 +133,7 @@ export class InceptionLabsHandler extends RouterProvider implements SingleComple
 
 		const totalCost = modelInfo
 			? calculateApiCostOpenAI(modelInfo, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens)
-			: 0
+			: undefined
 
 		return {
 			type: "usage",
@@ -141,7 +141,7 @@ export class InceptionLabsHandler extends RouterProvider implements SingleComple
 			outputTokens,
 			cacheWriteTokens: cacheWriteTokens || undefined,
 			cacheReadTokens: cacheReadTokens || undefined,
-			totalCost,
+			totalCost: totalCost?.totalCost || undefined,
 		}
 	}
 }

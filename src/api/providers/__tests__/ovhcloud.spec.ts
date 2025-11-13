@@ -180,7 +180,7 @@ describe("OVHcloudAIEndpointsHandler", () => {
 				type: "usage",
 				inputTokens: 15,
 				outputTokens: 25,
-				totalCost: calculateApiCostOpenAI(info, 15, 25),
+				totalCost: calculateApiCostOpenAI(info, 15, 25).totalCost || undefined,
 			})
 		})
 

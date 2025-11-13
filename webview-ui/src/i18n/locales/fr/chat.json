@@ -156,6 +156,9 @@
 		"initializingWarning": "Initialisation du point de contrôle en cours... Si cela prend trop de temps, tu peux désactiver les points de contrôle dans les <settingsLink>paramètres</settingsLink> et redémarrer ta tâche.",
 		"menu": {
 			"viewDiff": "Voir les différences",
+			"more": "Plus d'options",
+			"viewDiffFromInit": "Voir toutes les modifications",
+			"viewDiffWithCurrent": "Voir les modifications depuis ce point de contrôle",
 			"restore": "Restaurer le point de contrôle",
 			"restoreFiles": "Restaurer les fichiers",
 			"restoreFilesDescription": "Restaure les fichiers de votre projet à un instantané pris à ce moment.",
@@ -272,6 +275,7 @@
 		"toggleAriaLabel": "Basculer l'approbation automatique",
 		"disabledAriaLabel": "Approbation automatique désactivée - sélectionnez d'abord les options",
 		"triggerLabelOff": "Approbation automatique désactivée",
+		"triggerLabelOffShort": "Désactivé",
 		"triggerLabel_zero": "0 approuvé automatiquement",
 		"triggerLabel_one": "1 approuvé automatiquement",
 		"triggerLabel_other": "{{count}} approuvés automatiquement",
@@ -301,6 +305,19 @@
 			"selectModel": "Sélectionnez <code>roo/code-supernova</code> du fournisseur Roo Code Cloud dans Paramètres pour commencer.",
 			"goToSettingsButton": "Aller aux Paramètres"
 		},
+		"release": {
+			"heading": "Nouveautés dans l'Extension :",
+			"openRouterEmbeddings": "Prise en charge des modèles d'embeddings OpenRouter",
+			"chutesDynamic": "Chutes charge maintenant les derniers modèles dynamiquement",
+			"queuedMessagesFix": "Corrections pour les messages en file d'attente qui se perdent"
+		},
+		"cloudAgents": {
+			"heading": "Nouveautés dans le Cloud :",
+			"prFixer": "Présentation de l'agent cloud <bold>PR Fixer</bold> pour compléter le Réviseur de PR.",
+			"prFixerDescription": "Le PR Fixer de Roo Code applique des modifications de haute qualité à vos PR, directement depuis GitHub. Invoquez-le via un commentaire de PR et il lira tout l'historique des commentaires pour comprendre le contexte, les accords et les compromis - puis implémentera la bonne correction.",
+			"tryPrFixerButton": "Essayer le PR Fixer"
+		},
+		"careers": "Aussi, <careersLink>on recrute !</careersLink>",
 		"socialLinks": "Rejoins-nous sur <xLink>X</xLink>, <discordLink>Discord</discordLink>, ou <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {

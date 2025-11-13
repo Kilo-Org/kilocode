@@ -149,9 +149,9 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			expect(refreshOrganizationModes).toHaveBeenCalled()
 
 			// Verify models were flushed and refetched (via upsertApiConfiguration handler)
-			expect(flushModels).toHaveBeenCalledWith("kilocode-openrouter")
+			expect(flushModels).toHaveBeenCalledWith("kilocode")
 			expect(getModels).toHaveBeenCalledWith({
-				provider: "kilocode-openrouter",
+				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
 				kilocodeToken: "test-token",
 			})
@@ -217,11 +217,11 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			})
 
 			// Verify flushModels was called (via upsertApiConfiguration)
-			expect(flushModels).toHaveBeenCalledWith("kilocode-openrouter")
+			expect(flushModels).toHaveBeenCalledWith("kilocode")
 
 			// Verify getModels was called with organization ID (via upsertApiConfiguration)
 			expect(getModels).toHaveBeenCalledWith({
-				provider: "kilocode-openrouter",
+				provider: "kilocode",
 				kilocodeOrganizationId: "org-1",
 				kilocodeToken: "test-token",
 			})
@@ -229,7 +229,7 @@ describe("webviewMessageHandler - Automatic Organization Switching", () => {
 			// Verify models were sent to webview (via upsertApiConfiguration)
 			expect(mockPostMessageToWebview).toHaveBeenCalledWith({
 				type: "routerModels",
-				routerModels: { "kilocode-openrouter": { "model-1": {}, "model-2": {} } },
+				routerModels: { kilocode: { "model-1": {}, "model-2": {} } },
 			})
 		})
 	})

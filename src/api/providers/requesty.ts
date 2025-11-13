@@ -85,9 +85,9 @@ export class RequestyHandler extends BaseProvider implements SingleCompletionHan
 		const outputTokens = requestyUsage?.completion_tokens || 0
 		const cacheWriteTokens = requestyUsage?.prompt_tokens_details?.caching_tokens || 0
 		const cacheReadTokens = requestyUsage?.prompt_tokens_details?.cached_tokens || 0
-		const totalCost = modelInfo
+		const { totalCost } = modelInfo
 			? calculateApiCostOpenAI(modelInfo, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens)
-			: 0
+			: { totalCost: 0 }
 
 		return {
 			type: "usage",

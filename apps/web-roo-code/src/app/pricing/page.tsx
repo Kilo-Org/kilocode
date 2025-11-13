@@ -6,13 +6,14 @@ import { Button } from "@/components/ui"
 import { AnimatedBackground } from "@/components/homepage"
 import { ContactForm } from "@/components/enterprise/contact-form"
 import { SEO } from "@/lib/seo"
+import { ogImageUrl } from "@/lib/og"
 import { EXTERNAL_LINKS } from "@/lib/constants"
 
-const TITLE = "Pricing - Roo Code Cloud"
+const TITLE = "Roo Code Cloud Pricing"
 const DESCRIPTION =
 	"Simple, transparent pricing for Roo Code Cloud. The VS Code extension is free forever. Choose the cloud plan that fits your needs."
+const OG_DESCRIPTION = ""
 const PATH = "/pricing"
-const OG_IMAGE = SEO.ogImage
 
 const PRICE_CREDITS = 5
 
@@ -29,10 +30,10 @@ export const metadata: Metadata = {
 		siteName: SEO.name,
 		images: [
 			{
-				url: OG_IMAGE.url,
-				width: OG_IMAGE.width,
-				height: OG_IMAGE.height,
-				alt: OG_IMAGE.alt,
+				url: ogImageUrl(TITLE, OG_DESCRIPTION),
+				width: 1200,
+				height: 630,
+				alt: TITLE,
 			},
 		],
 		locale: SEO.locale,
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
 		card: SEO.twitterCard,
 		title: TITLE,
 		description: DESCRIPTION,
-		images: [OG_IMAGE.url],
+		images: [ogImageUrl(TITLE, OG_DESCRIPTION)],
 	},
 	keywords: [
 		...SEO.keywords,

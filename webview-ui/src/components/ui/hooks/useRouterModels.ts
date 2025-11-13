@@ -5,7 +5,12 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 
 import { vscode } from "@src/utils/vscode"
 
-const getRouterModels = async () =>
+type UseRouterModelsOptions = {
+	provider?: string // single provider filter (e.g. "roo")
+	enabled?: boolean // gate fetching entirely
+}
+
+const getRouterModels = async (provider?: string) =>
 	new Promise<RouterModels>((resolve, reject) => {
 		const cleanup = () => {
 			window.removeEventListener("message", handler)
@@ -20,6 +25,14 @@ const getRouterModels = async () =>
 			const message: ExtensionMessage = event.data
 
 			if (message.type === "routerModels") {
+				const msgProvider = message?.values?.provider as string | undefined
+
+				// Verify response matches request
+				if (provider !== msgProvider) {
+					// Not our response; ignore and wait for the matching one
+					return
+				}
+
 				clearTimeout(timeout)
 				cleanup()
 
@@ -32,7 +45,11 @@ const getRouterModels = async () =>
 		}
 
 		window.addEventListener("message", handler)
-		vscode.postMessage({ type: "requestRouterModels" })
+		if (provider) {
+			vscode.postMessage({ type: "requestRouterModels", values: { provider } })
+		} else {
+			vscode.postMessage({ type: "requestRouterModels" })
+		}
 	})
 
 // kilocode_change start
@@ -48,7 +65,13 @@ type RouterModelsQueryKey = {
 	chutesApiKey?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
-
-export const useRouterModels = (queryKey: RouterModelsQueryKey) =>
-	useQuery({ queryKey: ["routerModels", queryKey], queryFn: () => getRouterModels() })
 // kilocode_change end
+
+export const useRouterModels = (queryKey: RouterModelsQueryKey, opts: UseRouterModelsOptions = {}) => {
+	const provider = opts.provider || undefined
+	return useQuery({
+		queryKey: ["routerModels", provider || "all", queryKey],
+		queryFn: () => getRouterModels(provider),
+		enabled: opts.enabled !== false,
+	})
+}

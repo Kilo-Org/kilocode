@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "コスト不明",
 		"costUnknownDescription": "APIプロバイダーがコストデータを提供しなかったか、リクエストがキャンセルされました。",
-		"freeModelsDescription": "無料モデルにはレート制限がある場合があります。下のリンクを使って無料モデルの使用を最適化しよう！",
 		"freeModelsLink": "無料・格安モデルのオプションを見る"
 	},
 	"notifications": {

@@ -32,7 +32,6 @@
 	"pricing": {
 		"costUnknown": "cost unknown",
 		"costUnknownDescription": "The API Provider did not provide any cost data or the request was canceled.",
-		"freeModelsDescription": "Free models may have rate limits. Use the link below to optimize your free model usage!",
 		"freeModelsLink": "Discover free and budget model options"
 	},
 	"notifications": {

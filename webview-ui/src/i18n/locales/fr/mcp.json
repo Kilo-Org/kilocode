@@ -25,12 +25,12 @@
 	"tabs": {
 		"tools": "Outils",
 		"resources": "Ressources",
-		"errors": "Erreurs"
+		"logs": "Journaux"
 	},
 	"emptyState": {
 		"noTools": "Aucun outil trouvé",
 		"noResources": "Aucune ressource trouvée",
-		"noErrors": "Aucune erreur trouvée"
+		"noLogs": "Pas encore de journaux"
 	},
 	"networkTimeout": {
 		"label": "Délai d'attente réseau",

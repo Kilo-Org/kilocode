@@ -49,6 +49,7 @@ export class NewAutocompleteModel {
 				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
 			}
 
+			this.profile = profile
 			this.apiHandler = buildApiHandler({ ...profile, [modelIdKeysByProvider[provider]]: model })
 
 			if (this.apiHandler instanceof OpenRouterHandler) {

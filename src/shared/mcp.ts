@@ -92,7 +92,7 @@ export type McpToolCallResponse = {
 				mimeType?: string
 				_meta?: Record<string, any>
 		  }
-		  // kilocode_change end
+		// kilocode_change end
 	>
 	structuredContent?: Record<string, any> // kilocode_change
 	isError?: boolean

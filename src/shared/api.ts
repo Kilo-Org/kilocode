@@ -159,7 +159,7 @@ const dynamicProviderExtras = {
 	"vercel-ai-gateway": {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	huggingface: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	litellm: {} as { apiKey: string; baseUrl: string },
-	"kilocode-openrouter": {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
+	kilocode: {} as { kilocodeToken?: string; kilocodeOrganizationId?: string }, // kilocode_change
 	deepinfra: {} as { apiKey?: string; baseUrl?: string },
 	"io-intelligence": {} as { apiKey: string },
 	requesty: {} as { apiKey?: string; baseUrl?: string },

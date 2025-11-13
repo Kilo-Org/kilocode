@@ -16,7 +16,6 @@ export async function getGlamaModels(): Promise<Record<string, ModelInfo>> {
 				maxTokens: rawModel.maxTokensOutput,
 				contextWindow: rawModel.maxTokensInput,
 				supportsImages: rawModel.capabilities?.includes("input:image"),
-				supportsComputerUse: rawModel.capabilities?.includes("computer_use"),
 				supportsPromptCache: rawModel.capabilities?.includes("caching"),
 				inputPrice: parseApiPrice(rawModel.pricePerToken?.input),
 				outputPrice: parseApiPrice(rawModel.pricePerToken?.output),

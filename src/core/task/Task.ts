@@ -36,6 +36,9 @@ import {
 	isResumableAsk,
 	QueuedMessage,
 	getActiveToolUseStyle, // kilocode_change
+	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	MAX_CHECKPOINT_TIMEOUT_SECONDS,
+	MIN_CHECKPOINT_TIMEOUT_SECONDS,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator } from "@roo-code/cloud"
@@ -54,7 +57,7 @@ import { t } from "../../i18n"
 import { ClineApiReqCancelReason, ClineApiReqInfo } from "../../shared/ExtensionMessage"
 import { getApiMetrics, hasTokenUsageChanged } from "../../shared/getApiMetrics"
 import { ClineAskResponse } from "../../shared/WebviewMessage"
-import { defaultModeSlug } from "../../shared/modes"
+import { defaultModeSlug, getModeBySlug, getGroupName } from "../../shared/modes"
 import { DiffStrategy } from "../../shared/tools"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { getModelMaxOutputTokens } from "../../shared/api"
@@ -73,7 +76,7 @@ import { RooTerminalProcess } from "../../integrations/terminal/types"
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 
 // utils
-import { calculateApiCostAnthropic } from "../../shared/cost"
+import { calculateApiCostAnthropic, calculateApiCostOpenAI } from "../../shared/cost"
 import { getWorkspacePath } from "../../utils/path"
 
 // prompts
@@ -124,6 +127,8 @@ import { MessageQueueService } from "../message-queue/MessageQueueService"
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
+import { maybeRemoveReasoningDetails_kilocode, ReasoningDetail } from "../../api/transform/kilocode/reasoning-details"
+import { mergeApiMessages } from "./kilocode"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -136,6 +141,7 @@ export interface TaskOptions extends CreateTaskOptions {
 	apiConfiguration: ProviderSettings
 	enableDiff?: boolean
 	enableCheckpoints?: boolean
+	checkpointTimeout?: number
 	enableBridge?: boolean
 	fuzzyMatchThreshold?: number
 	consecutiveMistakeLimit?: number
@@ -283,6 +289,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 	// Checkpoints
 	enableCheckpoints: boolean
+	checkpointTimeout: number
 	checkpointService?: RepoPerTaskCheckpointService
 	checkpointServiceInitializing = false
 
@@ -324,6 +331,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		apiConfiguration,
 		enableDiff = false,
 		enableCheckpoints = true,
+		checkpointTimeout = DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 		enableBridge = false,
 		fuzzyMatchThreshold = 1.0,
 		consecutiveMistakeLimit = DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
@@ -343,6 +351,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		if (startTask && !task && !images && !historyItem) {
 			throw new Error("Either historyItem or task/images must be provided")
+		}
+
+		if (
+			!checkpointTimeout ||
+			checkpointTimeout > MAX_CHECKPOINT_TIMEOUT_SECONDS ||
+			checkpointTimeout < MIN_CHECKPOINT_TIMEOUT_SECONDS
+		) {
+			throw new Error(
+				"checkpointTimeout must be between " +
+					MIN_CHECKPOINT_TIMEOUT_SECONDS +
+					" and " +
+					MAX_CHECKPOINT_TIMEOUT_SECONDS +
+					" seconds",
+			)
 		}
 
 		this.taskId = historyItem ? historyItem.id : crypto.randomUUID()
@@ -392,6 +414,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
 		this.enableCheckpoints = enableCheckpoints
+		this.checkpointTimeout = checkpointTimeout
 		this.enableBridge = enableBridge
 
 		this.parentTask = parentTask
@@ -618,6 +641,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	private async addToApiConversationHistory(message: Anthropic.MessageParam) {
+		// kilocode_change start: prevent consecutive same-role messages, this happens when returning from subtask
+		const lastMessage = this.apiConversationHistory.at(-1)
+		if (lastMessage && lastMessage.role === message.role) {
+			this.apiConversationHistory[this.apiConversationHistory.length - 1] = mergeApiMessages(lastMessage, message)
+			await this.saveApiConversationHistory()
+			return
+		}
+		// kilocode_change end
+
 		const messageWithTs = { ...message, ts: Date.now() }
 		this.apiConversationHistory.push(messageWithTs)
 		await this.saveApiConversationHistory()
@@ -891,6 +923,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		const isMessageQueued = !this.messageQueueService.isEmpty()
 		const isStatusMutable = !partial && isBlocking && !isMessageQueued
 		let statusMutationTimeouts: NodeJS.Timeout[] = []
+		const statusMutationTimeout = 5_000
 
 		if (isStatusMutable) {
 			console.log(`Task#ask will block -> type: ${type}`)
@@ -904,7 +937,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							this.interactiveAsk = message
 							this.emit(RooCodeEventName.TaskInteractive, this.taskId)
 						}
-					}, 1_000),
+					}, statusMutationTimeout),
 				)
 			} else if (isResumableAsk(type)) {
 				statusMutationTimeouts.push(
@@ -915,7 +948,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							this.resumableAsk = message
 							this.emit(RooCodeEventName.TaskResumable, this.taskId)
 						}
-					}, 1_000),
+					}, statusMutationTimeout),
 				)
 			} else if (isIdleAsk(type)) {
 				statusMutationTimeouts.push(
@@ -926,7 +959,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							this.idleAsk = message
 							this.emit(RooCodeEventName.TaskIdle, this.taskId)
 						}
-					}, 1_000),
+					}, statusMutationTimeout),
 				)
 			}
 		} else if (isMessageQueued) {
@@ -935,17 +968,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			const message = this.messageQueueService.dequeueMessage()
 
 			if (message) {
-				// Check if this is a tool approval ask that needs to be handled
+				// Check if this is a tool approval ask that needs to be handled.
 				if (
 					type === "tool" ||
 					type === "command" ||
 					type === "browser_action_launch" ||
 					type === "use_mcp_server"
 				) {
-					// For tool approvals, we need to approve first, then send the message if there's text/images
+					// For tool approvals, we need to approve first, then send
+					// the message if there's text/images.
 					this.handleWebviewAskResponse("yesButtonClicked", message.text, message.images)
 				} else {
-					// For other ask types (like followup), fulfill the ask directly
+					// For other ask types (like followup), fulfill the ask
+					// directly.
 					this.setMessageResponse(message.text, message.images)
 				}
 			}
@@ -1146,6 +1181,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			{ isNonInteractive: true } /* options */,
 			contextCondense,
 		)
+
+		// Process any queued messages after condensing completes
+		this.processQueuedMessages()
 	}
 
 	async say(
@@ -1444,39 +1482,41 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		let existingApiConversationHistory: ApiMessage[] = await this.getSavedApiConversationHistory()
 
 		// v2.0 xml tags refactor caveat: since we don't use tools anymore, we need to replace all tool use blocks with a text block since the API disallows conversations with tool uses and no tool schema
-		const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
-			if (Array.isArray(message.content)) {
-				const newContent = message.content.map((block) => {
-					if (block.type === "tool_use") {
-						// It's important we convert to the new tool schema
-						// format so the model doesn't get confused about how to
-						// invoke tools.
-						const inputAsXml = Object.entries(block.input as Record<string, string>)
-							.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
-							.join("\n")
-						return {
-							type: "text",
-							text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
-						} as Anthropic.Messages.TextBlockParam
-					} else if (block.type === "tool_result") {
-						// Convert block.content to text block array, removing images
-						const contentAsTextBlocks = Array.isArray(block.content)
-							? block.content.filter((item) => item.type === "text")
-							: [{ type: "text", text: block.content }]
-						const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
-						const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
-						return {
-							type: "text",
-							text: `[${toolName} Result]\n\n${textContent}`,
-						} as Anthropic.Messages.TextBlockParam
-					}
-					return block
-				})
-				return { ...message, content: newContent }
-			}
-			return message
-		})
-		existingApiConversationHistory = conversationWithoutToolBlocks
+		// kilocode_change start
+		//const conversationWithoutToolBlocks = existingApiConversationHistory.map((message) => {
+		//	if (Array.isArray(message.content)) {
+		//		const newContent = message.content.map((block) => {
+		//			if (block.type === "tool_use") {
+		//				// It's important we convert to the new tool schema
+		//				// format so the model doesn't get confused about how to
+		//				// invoke tools.
+		//				const inputAsXml = Object.entries(block.input as Record<string, string>)
+		//					.map(([key, value]) => `<${key}>\n${value}\n</${key}>`)
+		//					.join("\n")
+		//				return {
+		//					type: "text",
+		//					text: `<${block.name}>\n${inputAsXml}\n</${block.name}>`,
+		//				} as Anthropic.Messages.TextBlockParam
+		//			} else if (block.type === "tool_result") {
+		//				// Convert block.content to text block array, removing images
+		//				const contentAsTextBlocks = Array.isArray(block.content)
+		//					? block.content.filter((item) => item.type === "text")
+		//					: [{ type: "text", text: block.content }]
+		//				const textContent = contentAsTextBlocks.map((item) => item.text).join("\n\n")
+		//				const toolName = findToolName(block.tool_use_id, existingApiConversationHistory)
+		//				return {
+		//					type: "text",
+		//					text: `[${toolName} Result]\n\n${textContent}`,
+		//				} as Anthropic.Messages.TextBlockParam
+		//			}
+		//			return block
+		//		})
+		//		return { ...message, content: newContent }
+		//	}
+		//	return message
+		//})
+		//existingApiConversationHistory = conversationWithoutToolBlocks
+		// kilocode_change end
 
 		// FIXME: remove tool use blocks altogether
 
@@ -1839,9 +1879,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		interface StackItem {
 			userContent: Anthropic.Messages.ContentBlockParam[]
 			includeFileDetails: boolean
+			retryAttempt?: number
 		}
 
-		const stack: StackItem[] = [{ userContent, includeFileDetails }]
+		const stack: StackItem[] = [{ userContent, includeFileDetails, retryAttempt: 0 }]
 
 		while (stack.length > 0) {
 			const currentItem = stack.pop()!
@@ -1993,21 +2034,35 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 
 					const existingData = JSON.parse(this.clineMessages[lastApiReqIndex].text || "{}")
+
+					// Calculate total tokens and cost using provider-aware function
+					const modelId = getModelId(this.apiConfiguration)
+					const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
+
+					const costResult =
+						apiProtocol === "anthropic"
+							? calculateApiCostAnthropic(
+									this.api.getModel().info,
+									inputTokens,
+									outputTokens,
+									cacheWriteTokens,
+									cacheReadTokens,
+								)
+							: calculateApiCostOpenAI(
+									this.api.getModel().info,
+									inputTokens,
+									outputTokens,
+									cacheWriteTokens,
+									cacheReadTokens,
+								)
+
 					this.clineMessages[lastApiReqIndex].text = JSON.stringify({
 						...existingData,
-						tokensIn: inputTokens,
-						tokensOut: outputTokens,
+						tokensIn: costResult.totalInputTokens,
+						tokensOut: costResult.totalOutputTokens,
 						cacheWrites: cacheWriteTokens,
 						cacheReads: cacheReadTokens,
-						cost:
-							totalCost ??
-							calculateApiCostAnthropic(
-								this.api.getModel().info,
-								inputTokens,
-								outputTokens,
-								cacheWriteTokens,
-								cacheReadTokens,
-							),
+						cost: totalCost ?? costResult.totalCost,
 						// kilocode_change start
 						usageMissing,
 						inferenceProvider,
@@ -2062,10 +2117,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				// limit error, which gets thrown on the first chunk).
 				const stream = this.attemptApiRequest()
 				let assistantMessage = ""
-				let assistantToolUses = new Array<Anthropic.Messages.ToolUseBlockParam>() // kilocode_change
 				let reasoningMessage = ""
 				let pendingGroundingSources: GroundingSource[] = []
 				this.isStreaming = true
+
+				// kilocode_change start
+				const assistantToolUses = new Array<Anthropic.Messages.ToolUseBlockParam>()
+				const reasoningDetails = new Array<ReasoningDetail>()
+				const antThinkingContent = new Array<
+					Anthropic.Messages.RedactedThinkingBlock | Anthropic.Messages.ThinkingBlock
+				>()
+				// kilocode_change end
 
 				try {
 					const iterator = stream[Symbol.asyncIterator]()
@@ -2111,7 +2173,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									pendingGroundingSources.push(...chunk.sources)
 								}
 								break
-							//kilocode_change start
+							// kilocode_change start
+							case "reasoning_details":
+								// reasoning_details may be an array of 0 or 1 items depending on how openrouter returns it
+								if (Array.isArray(chunk.reasoning_details)) {
+									reasoningDetails.push(...chunk.reasoning_details)
+								} else {
+									reasoningDetails.push(chunk.reasoning_details)
+								}
+								break
 							case "native_tool_calls": {
 								// Handle native OpenAI-format tool calls
 								// Process native tool calls through the parser
@@ -2134,7 +2204,20 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 								presentAssistantMessage(this)
 								break
 							}
-							//kilocode_change end
+							case "ant_thinking":
+								antThinkingContent.push({
+									type: "thinking",
+									thinking: chunk.thinking,
+									signature: chunk.signature,
+								})
+								break
+							case "ant_redacted_thinking":
+								antThinkingContent.push({
+									type: "redacted_thinking",
+									data: chunk.data,
+								})
+								break
+							// kilocode_change end
 							case "text": {
 								assistantMessage += chunk.text
 
@@ -2197,7 +2280,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					const drainStreamInBackgroundToFindAllUsage = async (apiReqIndex: number) => {
 						const timeoutMs = DEFAULT_USAGE_COLLECTION_TIMEOUT_MS
-						const startTime = Date.now()
+						const startTime = performance.now()
 						const modelId = getModelId(this.apiConfiguration)
 
 						// Local variables to accumulate usage data without affecting the main flow
@@ -2255,21 +2338,34 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 									await this.updateClineMessage(apiReqMessage)
 								}
 
-								// Capture telemetry
+								// Capture telemetry with provider-aware cost calculation
+								const modelId = getModelId(this.apiConfiguration)
+								const apiProtocol = getApiProtocol(this.apiConfiguration.apiProvider, modelId)
+
+								// Use the appropriate cost function based on the API protocol
+								const costResult =
+									apiProtocol === "anthropic"
+										? calculateApiCostAnthropic(
+												this.api.getModel().info,
+												tokens.input,
+												tokens.output,
+												tokens.cacheWrite,
+												tokens.cacheRead,
+											)
+										: calculateApiCostOpenAI(
+												this.api.getModel().info,
+												tokens.input,
+												tokens.output,
+												tokens.cacheWrite,
+												tokens.cacheRead,
+											)
+
 								TelemetryService.instance.captureLlmCompletion(this.taskId, {
-									inputTokens: tokens.input,
-									outputTokens: tokens.output,
+									inputTokens: costResult.totalInputTokens,
+									outputTokens: costResult.totalOutputTokens,
 									cacheWriteTokens: tokens.cacheWrite,
 									cacheReadTokens: tokens.cacheRead,
-									cost:
-										tokens.total ??
-										calculateApiCostAnthropic(
-											this.api.getModel().info,
-											tokens.input,
-											tokens.output,
-											tokens.cacheWrite,
-											tokens.cacheRead,
-										),
+									cost: tokens.total ?? costResult.totalCost,
 									// kilocode_change start
 									completionTime: performance.now() - apiRequestStartTime,
 									inferenceProvider,
@@ -2286,7 +2382,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 							// Use the same iterator that the main loop was using
 							while (!item.done) {
 								// Check for timeout
-								if (Date.now() - startTime > timeoutMs) {
+								if (performance.now() - startTime > timeoutMs) {
 									console.warn(
 										`[Background Usage Collection] Timed out after ${timeoutMs}ms for model: ${modelId}, processed ${chunkCount} chunks`,
 									)
@@ -2376,28 +2472,58 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					// Cline instance to finish aborting (error is thrown here when
 					// any function in the for loop throws due to this.abort).
 					if (!this.abandoned) {
-						// If the stream failed, there's various states the task
-						// could be in (i.e. could have streamed some tools the user
-						// may have executed), so we just resort to replicating a
-						// cancel task.
-
-						// Determine cancellation reason BEFORE aborting to ensure correct persistence
+						// Determine cancellation reason
 						const cancelReason: ClineApiReqCancelReason = this.abort ? "user_cancelled" : "streaming_failed"
 
 						const streamingFailedMessage = this.abort
 							? undefined
 							: (error.message ?? JSON.stringify(serializeError(error), null, 2))
 
-						// Persist interruption details first to both UI and API histories
+						// Clean up partial state
 						await abortStream(cancelReason, streamingFailedMessage)
 
-						// Record reason for provider to decide rehydration path
-						this.abortReason = cancelReason
+						if (this.abort) {
+							// User cancelled - abort the entire task
+							this.abortReason = cancelReason
+							await this.abortTask()
+						} else {
+							// Stream failed - log the error and retry with the same content
+							// The existing rate limiting will prevent rapid retries
+							console.error(
+								`[Task#${this.taskId}.${this.instanceId}] Stream failed, will retry: ${streamingFailedMessage}`,
+							)
 
-						// Now abort (emits TaskAborted which provider listens to)
-						await this.abortTask()
+							// Apply exponential backoff similar to first-chunk errors when auto-resubmit is enabled
+							const stateForBackoff = await this.providerRef.deref()?.getState()
+							if (stateForBackoff?.autoApprovalEnabled && stateForBackoff?.alwaysApproveResubmit) {
+								await this.backoffAndAnnounce(
+									currentItem.retryAttempt ?? 0,
+									error,
+									streamingFailedMessage,
+								)
 
-						// Do not rehydrate here; provider owns rehydration to avoid duplication races
+								// Check if task was aborted during the backoff
+								if (this.abort) {
+									console.log(
+										`[Task#${this.taskId}.${this.instanceId}] Task aborted during mid-stream retry backoff`,
+									)
+									// Abort the entire task
+									this.abortReason = "user_cancelled"
+									await this.abortTask()
+									break
+								}
+							}
+
+							// Push the same content back onto the stack to retry, incrementing the retry attempt counter
+							stack.push({
+								userContent: currentUserContent,
+								includeFileDetails: false,
+								retryAttempt: (currentItem.retryAttempt ?? 0) + 1,
+							})
+
+							// Continue to retry the request
+							continue
+						}
 					}
 				} finally {
 					this.isStreaming = false
@@ -2457,7 +2583,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					}
 				}
 
-				await this.persistGpt5Metadata(reasoningMessage)
+				await this.persistGpt5Metadata()
 				await this.saveClineMessages()
 				await this.providerRef.deref()?.postStateToWebview()
 
@@ -2481,10 +2607,18 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 						})
 					}
 
-					// kilocode_change start: also add tool calls to history
+					// Check if we should preserve reasoning in the assistant message
+					let finalAssistantMessage = assistantMessage
+					// kilocode_change start: also add tool calls, reasoning_details to history
 					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
-					if (assistantMessage) {
-						assistantMessageContent.push({ type: "text", text: assistantMessage })
+					assistantMessageContent.push(...antThinkingContent)
+					if (finalAssistantMessage || reasoningDetails.length > 0) {
+						assistantMessageContent.push({
+							type: "text",
+							text: finalAssistantMessage,
+							// @ts-ignore-next-line OpenRouter-specific property
+							reasoning_details: reasoningDetails.length > 0 ? reasoningDetails : undefined,
+						})
 					}
 					assistantMessageContent.push(...assistantToolUses)
 					await this.addToApiConversationHistory({
@@ -2701,15 +2835,25 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				throw new Error("Provider not available")
 			}
 
+			// Align browser tool enablement with generateSystemPrompt: require model image support,
+			// mode to include the browser group, and the user setting to be enabled.
+			const modeConfig = getModeBySlug(mode ?? defaultModeSlug, customModes)
+			const modeSupportsBrowser = modeConfig?.groups.some((group) => getGroupName(group) === "browser") ?? false
+
+			// Check if model supports browser capability (images)
+			const modelInfo = this.api.getModel().info
+			const modelSupportsBrowser = (modelInfo as any)?.supportsImages === true
+
+			const canUseBrowserTool = modelSupportsBrowser && modeSupportsBrowser && (browserToolEnabled ?? true)
+
 			return SYSTEM_PROMPT(
 				provider.context,
 				this.cwd,
-				// kilocode_change: supports images => supports browser
-				(this.api.getModel().info.supportsImages ?? false) && (browserToolEnabled ?? true),
+				canUseBrowserTool,
 				mcpHub,
 				this.diffStrategy,
-				browserViewportSize,
-				mode,
+				browserViewportSize ?? "900x600",
+				mode ?? defaultModeSlug,
 				customModePrompts,
 				customModes,
 				customInstructions,
@@ -2852,19 +2996,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		// Use the shared timestamp so that subtasks respect the same rate-limit
 		// window as their parent tasks.
 		if (Task.lastGlobalApiRequestTime) {
-			const now = performance.now() // kilocode_change
+			const now = performance.now()
 			const timeSinceLastRequest = now - Task.lastGlobalApiRequestTime
 			const rateLimit = apiConfiguration?.rateLimitSeconds || 0
-			rateLimitDelay = Math.ceil(Math.max(0, rateLimit * 1000 - timeSinceLastRequest) / 1000)
-
-			// kilocode_change start
-			if (rateLimitDelay > rateLimit) {
-				console.warn(
-					`rateLimitDelay ${rateLimitDelay}s is larger than the configured rateLimit ${rateLimit}s; this makes no sense`,
-				)
-				rateLimitDelay = rateLimit
-			}
-			// kilocode_change end
+			rateLimitDelay = Math.ceil(Math.min(rateLimit, Math.max(0, rateLimit * 1000 - timeSinceLastRequest) / 1000))
 		}
 
 		// Only show rate limiting message if we're not retrying. If retrying, we'll include the delay there.
@@ -2879,7 +3014,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		// Update last request time before making the request so that subsequent
 		// requests — even from new subtasks — will honour the provider's rate-limit.
-		Task.lastGlobalApiRequestTime = performance.now() // kilocode_change
+		Task.lastGlobalApiRequestTime = performance.now()
 
 		const systemPrompt = await this.getSystemPrompt()
 		this.lastUsedInstructions = systemPrompt
@@ -2946,8 +3081,9 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		const messagesSinceLastSummary = getMessagesSinceLastSummary(this.apiConversationHistory)
-		let cleanConversationHistory = maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(
-			({ role, content }) => ({ role, content }),
+		let cleanConversationHistory = maybeRemoveReasoningDetails_kilocode(
+			maybeRemoveImageBlocks(messagesSinceLastSummary, this.api).map(({ role, content }) => ({ role, content })),
+			apiConfiguration?.apiProvider,
 		)
 
 		// kilocode_change start
@@ -3086,45 +3222,17 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					errorMsg = "Unknown error"
 				}
 
-				const baseDelay = requestDelaySeconds || 5
-				let exponentialDelay = Math.min(
-					Math.ceil(baseDelay * Math.pow(2, retryAttempt)),
-					MAX_EXPONENTIAL_BACKOFF_SECONDS,
-				)
+				// Apply shared exponential backoff and countdown UX
+				await this.backoffAndAnnounce(retryAttempt, error, errorMsg)
 
-				// If the error is a 429, and the error details contain a retry delay, use that delay instead of exponential backoff
-				if (error.status === 429) {
-					const geminiRetryDetails = error.errorDetails?.find(
-						(detail: any) => detail["@type"] === "type.googleapis.com/google.rpc.RetryInfo",
+				// CRITICAL: Check if task was aborted during the backoff countdown
+				// This prevents infinite loops when users cancel during auto-retry
+				// Without this check, the recursive call below would continue even after abort
+				if (this.abort) {
+					throw new Error(
+						`[Task#attemptApiRequest] task ${this.taskId}.${this.instanceId} aborted during retry`,
 					)
-					if (geminiRetryDetails) {
-						const match = geminiRetryDetails?.retryDelay?.match(/^(\d+)s$/)
-						if (match) {
-							exponentialDelay = Number(match[1]) + 1
-						}
-					}
 				}
-
-				// Wait for the greater of the exponential delay or the rate limit delay
-				const finalDelay = Math.max(exponentialDelay, rateLimitDelay)
-
-				// Show countdown timer with exponential backoff
-				for (let i = finalDelay; i > 0; i--) {
-					await this.say(
-						"api_req_retry_delayed",
-						`${errorMsg}\n\nRetry attempt ${retryAttempt + 1}\nRetrying in ${i} seconds...`,
-						undefined,
-						true,
-					)
-					await delay(1000)
-				}
-
-				await this.say(
-					"api_req_retry_delayed",
-					`${errorMsg}\n\nRetry attempt ${retryAttempt + 1}\nRetrying now...`,
-					undefined,
-					false,
-				)
 
 				// Delegate generator output from the recursive call with
 				// incremented retry count.
@@ -3166,6 +3274,79 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			Task.lastGlobalApiRequestTime = performance.now()
 		}
 		// kilocode_change end
+	}
+
+	// Shared exponential backoff for retries (first-chunk and mid-stream)
+	private async backoffAndAnnounce(retryAttempt: number, error: any, header?: string): Promise<void> {
+		try {
+			const state = await this.providerRef.deref()?.getState()
+			const baseDelay = state?.requestDelaySeconds || 5
+
+			let exponentialDelay = Math.min(
+				Math.ceil(baseDelay * Math.pow(2, retryAttempt)),
+				MAX_EXPONENTIAL_BACKOFF_SECONDS,
+			)
+
+			// Respect provider rate limit window
+			let rateLimitDelay = 0
+			const rateLimit = state?.apiConfiguration?.rateLimitSeconds || 0
+			if (Task.lastGlobalApiRequestTime && rateLimit > 0) {
+				const elapsed = performance.now() - Task.lastGlobalApiRequestTime
+				rateLimitDelay = Math.ceil(Math.min(rateLimit, Math.max(0, rateLimit * 1000 - elapsed) / 1000))
+			}
+
+			// Prefer RetryInfo on 429 if present
+			if (error?.status === 429) {
+				const retryInfo = error?.errorDetails?.find(
+					(d: any) => d["@type"] === "type.googleapis.com/google.rpc.RetryInfo",
+				)
+				const match = retryInfo?.retryDelay?.match?.(/^(\d+)s$/)
+				if (match) {
+					exponentialDelay = Number(match[1]) + 1
+				}
+			}
+
+			const finalDelay = Math.max(exponentialDelay, rateLimitDelay)
+			if (finalDelay <= 0) return
+
+			// Build header text; fall back to error message if none provided
+			let headerText = header
+			if (!headerText) {
+				if (error?.error?.metadata?.raw) {
+					headerText = JSON.stringify(error.error.metadata.raw, null, 2)
+				} else if (error?.message) {
+					headerText = error.message
+				} else {
+					headerText = "Unknown error"
+				}
+			}
+			headerText = headerText ? `${headerText}\n\n` : ""
+
+			// Show countdown timer with exponential backoff
+			for (let i = finalDelay; i > 0; i--) {
+				// Check abort flag during countdown to allow early exit
+				if (this.abort) {
+					throw new Error(`[Task#${this.taskId}] Aborted during retry countdown`)
+				}
+
+				await this.say(
+					"api_req_retry_delayed",
+					`${headerText}Retry attempt ${retryAttempt + 1}\nRetrying in ${i} seconds...`,
+					undefined,
+					true,
+				)
+				await delay(1000)
+			}
+
+			await this.say(
+				"api_req_retry_delayed",
+				`${headerText}Retry attempt ${retryAttempt + 1}\nRetrying now...`,
+				undefined,
+				false,
+			)
+		} catch (err) {
+			console.error("Exponential backoff failed:", err)
+		}
 	}
 
 	// Checkpoints
@@ -3214,10 +3395,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	/**
-	 * Persist GPT-5 per-turn metadata (previous_response_id, instructions, reasoning_summary)
+	 * Persist GPT-5 per-turn metadata (previous_response_id only)
 	 * onto the last complete assistant say("text") message.
+	 *
+	 * Note: We do not persist system instructions or reasoning summaries.
 	 */
-	private async persistGpt5Metadata(reasoningMessage?: string): Promise<void> {
+	private async persistGpt5Metadata(): Promise<void> {
 		try {
 			const modelId = this.api.getModel().id
 			if (!modelId || !modelId.startsWith("gpt-5")) return
@@ -3236,9 +3419,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				}
 				const gpt5Metadata: Gpt5Metadata = {
 					...(msg.metadata.gpt5 ?? {}),
-					previous_response_id: lastResponseId,
-					instructions: this.lastUsedInstructions,
-					reasoning_summary: (reasoningMessage ?? "").trim() || undefined,
+					...(lastResponseId ? { previous_response_id: lastResponseId } : {}),
 				}
 				msg.metadata.gpt5 = gpt5Metadata
 			}

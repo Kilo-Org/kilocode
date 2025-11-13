@@ -25,7 +25,6 @@ import { getLMStudioModels } from "./lmstudio"
 import { getIOIntelligenceModels } from "./io-intelligence"
 // kilocode_change start
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
-import { getChutesModels } from "./chutes"
 import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
 // kilocode_change end
@@ -96,7 +95,7 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getLiteLLMModels(options.apiKey, options.baseUrl)
 				break
 			// kilocode_change start
-			case "kilocode-openrouter": {
+			case "kilocode": {
 				const backendUrl = options.kilocodeOrganizationId
 					? `https://api.kilocode.ai/api/organizations/${options.kilocodeOrganizationId}`
 					: "https://api.kilocode.ai/api/openrouter"
@@ -107,9 +106,6 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				})
 				break
 			}
-			case "chutes":
-				models = await getChutesModels(options.apiKey)
-				break
 			case "gemini":
 				models = await getGeminiModels({
 					apiKey: options.apiKey,

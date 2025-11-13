@@ -156,6 +156,9 @@
 		"initializingWarning": "チェックポイントの初期化中... 時間がかかりすぎる場合は、<settingsLink>設定</settingsLink>でチェックポイントを無効にしてタスクを再開できます。",
 		"menu": {
 			"viewDiff": "差分を表示",
+			"more": "その他のオプション",
+			"viewDiffFromInit": "すべての変更を表示",
+			"viewDiffWithCurrent": "このチェックポイント以降の変更を表示",
 			"restore": "チェックポイントを復元",
 			"restoreFiles": "ファイルを復元",
 			"restoreFilesDescription": "この時点で撮影されたスナップショットにプロジェクトのファイルを復元します。",
@@ -272,6 +275,7 @@
 		"toggleAriaLabel": "自動承認を切り替える",
 		"disabledAriaLabel": "自動承認が無効です - 最初にオプションを選択してください",
 		"triggerLabelOff": "自動承認オフ",
+		"triggerLabelOffShort": "オフ",
 		"triggerLabel_zero": "0個の自動承認",
 		"triggerLabel_one": "1個の自動承認済み",
 		"triggerLabel_other": "{{count}}個の自動承認済み",
@@ -301,6 +305,19 @@
 			"selectModel": "設定で Roo Code Cloud プロバイダーから <code>roo/code-supernova</code> を選択して開始してください。",
 			"goToSettingsButton": "設定に移動"
 		},
+		"release": {
+			"heading": "拡張機能の新機能:",
+			"openRouterEmbeddings": "OpenRouter埋め込みモデルのサポート",
+			"chutesDynamic": "Chutesが最新モデルを動的にロード",
+			"queuedMessagesFix": "キューメッセージが失われる問題の修正"
+		},
+		"cloudAgents": {
+			"heading": "クラウドの新機能:",
+			"prFixer": "PRレビューアを補完するクラウドエージェント<bold>PR Fixer</bold>を導入します。",
+			"prFixerDescription": "Roo CodeのPR FixerはGitHubから直接、高品質な変更をPRに適用します。PRコメントから呼び出すと、コメント履歴全体を読んでコンテキスト、合意、トレードオフを理解し、適切な修正を実装します。",
+			"tryPrFixerButton": "PR Fixerを試す"
+		},
+		"careers": "また、<careersLink>採用中です！</careersLink>",
 		"socialLinks": "<xLink>X</xLink>、<discordLink>Discord</discordLink>、または<redditLink>r/RooCode</redditLink>でフォローしてください 🚀"
 	},
 	"browser": {

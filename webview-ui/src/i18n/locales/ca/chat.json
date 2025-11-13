@@ -156,6 +156,9 @@
 		"initializingWarning": "Encara s'està inicialitzant el punt de control... Si això triga massa, pots desactivar els punts de control a la <settingsLink>configuració</settingsLink> i reiniciar la teva tasca.",
 		"menu": {
 			"viewDiff": "Veure diferències",
+			"more": "Més opcions",
+			"viewDiffFromInit": "Veure tots els canvis",
+			"viewDiffWithCurrent": "Veure els canvis des d'aquest punt de control",
 			"restore": "Restaurar punt de control",
 			"restoreFiles": "Restaurar arxius",
 			"restoreFilesDescription": "Restaura els arxius del teu projecte a una instantània presa en aquest punt.",
@@ -272,6 +275,7 @@
 		"toggleAriaLabel": "Commuta l'aprovació automàtica",
 		"disabledAriaLabel": "Aprovació automàtica desactivada - selecciona primer les opcions",
 		"triggerLabelOff": "Aprovació automàtica desactivada",
+		"triggerLabelOffShort": "Off",
 		"triggerLabel_zero": "0 aprovacions automàtiques",
 		"triggerLabel_one": "1 aprovació automàtica",
 		"triggerLabel_other": "{{count}} aprovacions automàtiques",
@@ -301,6 +305,19 @@
 			"selectModel": "Selecciona <code>roo/code-supernova</code> del proveïdor Roo Code Cloud a Configuració per començar.",
 			"goToSettingsButton": "Anar a Configuració"
 		},
+		"release": {
+			"heading": "Novetats a l'extensió:",
+			"openRouterEmbeddings": "Suport per a models d'incrustació d'OpenRouter",
+			"chutesDynamic": "Chutes ara carrega els últims models de forma dinàmica",
+			"queuedMessagesFix": "Correccions per a missatges en cua que es perden"
+		},
+		"cloudAgents": {
+			"heading": "Novetats al núvol:",
+			"prFixer": "Presentem l'agent al núvol <bold>PR Fixer</bold> per complementar el Revisor de PR.",
+			"prFixerDescription": "El PR Fixer de Roo Code aplica canvis d'alta qualitat a les teves PR directament des de GitHub. Invoca'l mitjançant un comentari a la PR i llegirà tot l'historial de comentaris per entendre el context, els acords i els compromisos, i després implementarà la solució correcta.",
+			"tryPrFixerButton": "Prova el PR Fixer"
+		},
+		"careers": "A més, <careersLink>estem contractant!</careersLink>",
 		"socialLinks": "Uneix-te a nosaltres a <xLink>X</xLink>, <discordLink>Discord</discordLink>, o <redditLink>r/RooCode</redditLink> 🚀"
 	},
 	"browser": {

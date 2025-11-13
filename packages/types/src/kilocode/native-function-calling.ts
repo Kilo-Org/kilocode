@@ -21,23 +21,28 @@ export const nativeFunctionCallingProviders = [
 	"human-relay",
 	"qwen-code",
 	"inception",
+	"minimax",
+	"anthropic",
+	"moonshot",
 ] satisfies ProviderName[] as ProviderName[]
 
-const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5"]
+const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5", "minimax-m2"]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {
-	if (
-		!settings ||
-		(settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider as ProviderName))
-	) {
+	if (!settings) {
+		console.error("getActiveToolUseStyle: settings missing, returning xml")
+		return "xml"
+	}
+	if (settings.apiProvider && !nativeFunctionCallingProviders.includes(settings.apiProvider as ProviderName)) {
 		return "xml"
 	}
 	if (settings.toolStyle) {
 		return settings.toolStyle
 	}
 	const model = getModelId(settings)?.toLowerCase()
-	if (model && modelsDefaultingToJsonKeywords.some((keyword) => model.includes(keyword))) {
-		return "json"
+	if (!model) {
+		console.error("getActiveToolUseStyle: model missing, returning xml")
+		return "xml"
 	}
-	return "xml"
+	return modelsDefaultingToJsonKeywords.some((keyword) => model.includes(keyword)) ? "json" : "xml"
 }

@@ -2,7 +2,14 @@
  * Defines profiles for different embedding models, including their dimensions.
  */
 
-export type EmbedderProvider = "openai" | "ollama" | "openai-compatible" | "gemini" | "mistral" | "vercel-ai-gateway" // Add other providers as needed
+export type EmbedderProvider =
+	| "openai"
+	| "ollama"
+	| "openai-compatible"
+	| "gemini"
+	| "mistral"
+	| "vercel-ai-gateway"
+	| "openrouter" // Add other providers as needed
 
 export interface EmbeddingModelProfile {
 	dimension: number
@@ -69,6 +76,19 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		// Mistral models
 		"mistral/codestral-embed": { dimension: 1536, scoreThreshold: 0.4 },
 		"mistral/mistral-embed": { dimension: 1024, scoreThreshold: 0.4 },
+	},
+	openrouter: {
+		// OpenAI models via OpenRouter
+		"openai/text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
+		"openai/text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },
+		"openai/text-embedding-ada-002": { dimension: 1536, scoreThreshold: 0.4 },
+		// Google models via OpenRouter
+		"google/gemini-embedding-001": { dimension: 3072, scoreThreshold: 0.4 },
+		// Mistral models via OpenRouter
+		"mistralai/mistral-embed-2312": { dimension: 1024, scoreThreshold: 0.4 },
+		"mistralai/codestral-embed-2505": { dimension: 3072, scoreThreshold: 0.4 },
+		// Qwen models via OpenRouter
+		"qwen/qwen3-embedding-8b": { dimension: 4096, scoreThreshold: 0.4 },
 	},
 }
 
@@ -161,6 +181,9 @@ export function getDefaultModelId(provider: EmbedderProvider): string {
 			return "codestral-embed-2505"
 
 		case "vercel-ai-gateway":
+			return "openai/text-embedding-3-large"
+
+		case "openrouter":
 			return "openai/text-embedding-3-large"
 
 		default:

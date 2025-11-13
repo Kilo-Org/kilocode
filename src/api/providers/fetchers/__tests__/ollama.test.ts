@@ -21,7 +21,6 @@ describe("Ollama Fetcher", () => {
 				maxTokens: 4096, // kilocode_change
 				contextWindow: 4096, // kilocode_change
 				supportsImages: false,
-				supportsComputerUse: false,
 				supportsPromptCache: true,
 				inputPrice: 0,
 				outputPrice: 0,
@@ -46,7 +45,6 @@ describe("Ollama Fetcher", () => {
 				maxTokens: 4096, // kilocode_change
 				contextWindow: 4096, // kilocode_change
 				supportsImages: false,
-				supportsComputerUse: false,
 				supportsPromptCache: true,
 				inputPrice: 0,
 				outputPrice: 0,

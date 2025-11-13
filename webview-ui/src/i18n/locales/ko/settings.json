@@ -60,6 +60,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API 키",
 		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API 키를 입력하세요",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API 키",
+		"openRouterApiKeyPlaceholder": "OpenRouter API 키를 입력하세요",
 		"openaiCompatibleProvider": "OpenAI 호환",
 		"openAiKeyLabel": "OpenAI API 키",
 		"openAiKeyPlaceholder": "OpenAI API 키를 입력하세요",
@@ -126,7 +129,8 @@
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API 키가 필요합니다",
 			"ollamaBaseUrlRequired": "Ollama 기본 URL이 필요합니다",
 			"baseUrlRequired": "기본 URL이 필요합니다",
-			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다"
+			"modelDimensionMinValue": "모델 차원은 0보다 커야 합니다",
+			"openRouterApiKeyRequired": "OpenRouter API 키가 필요합니다"
 		},
 		"advancedConfigLabel": "고급 구성",
 		"searchMinScoreLabel": "검색 점수 임계값",
@@ -309,6 +313,9 @@
 		"getZaiApiKey": "Z AI API 키 받기",
 		"zaiEntrypoint": "Z AI 엔트리포인트",
 		"zaiEntrypointDescription": "위치에 따라 적절한 API 엔트리포인트를 선택하세요. 중국에 있다면 open.bigmodel.cn을 선택하세요. 그렇지 않으면 api.z.ai를 선택하세요.",
+		"minimaxApiKey": "MiniMax API 키",
+		"getMiniMaxApiKey": "MiniMax API 키 받기",
+		"minimaxBaseUrl": "MiniMax 엔트리포인트",
 		"geminiApiKey": "Gemini API 키",
 		"getGroqApiKey": "Groq API 키 받기",
 		"groqApiKey": "Groq API 키",
@@ -362,7 +369,7 @@
 		"enablePromptCachingTitle": "지원되는 모델의 성능을 향상시키고 비용을 절감하기 위해 프롬프트 캐시를 활성화합니다.",
 		"cacheUsageNote": "참고: 캐시 사용이 표시되지 않는 경우, 다른 모델을 선택한 다음 원하는 모델을 다시 선택해 보세요.",
 		"vscodeLmModel": "언어 모델",
-		"vscodeLmWarning": "참고: 이는 매우 실험적인 통합이며, 공급자 지원은 다를 수 있습니다. 모델이 지원되지 않는다는 오류가 발생하면, 이는 공급자 측의 문제입니다.",
+		"vscodeLmWarning": "참고: VS Code Language Model API를 통해 액세스되는 모델은 공급자가 래핑하거나 미세 조정했을 수 있어, 일반적인 공급자나 라우터에서 동일한 모델을 직접 사용할 때와 동작이 다를 수 있습니다. ‘Language Model’ 드롭다운의 모델을 사용하려면 먼저 해당 모델로 전환한 다음 Copilot Chat 프롬프트에서 ‘허용(수락)’을 클릭하세요. 그렇지 않으면 400 ‘The requested model is not supported’와 같은 오류가 발생할 수 있습니다.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URL 컨텍스트 활성화",
@@ -439,7 +446,7 @@
 			},
 			"computerUse": {
 				"label": "컴퓨터 사용",
-				"description": "이 모델이 브라우저와 상호 작용할 수 있습니까? (예: Claude 3.7 Sonnet)"
+				"description": "이 모델이 브라우저와 상호 작용할 수 있습니까?"
 			},
 			"promptCache": {
 				"label": "프롬프트 캐시",
@@ -481,6 +488,7 @@
 		},
 		"reasoningEffort": {
 			"label": "모델 추론 노력",
+			"none": "없음",
 			"minimal": "최소 (가장 빠름)",
 			"high": "높음",
 			"medium": "중간",
@@ -553,6 +561,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "체크포인트 초기화 타임아웃(초)",
+			"description": "체크포인트 서비스 초기화를 기다리는 최대 시간입니다. 기본값은 15초. 범위: 10~60초."
+		},
 		"enable": {
 			"label": "자동 체크포인트 활성화",
 			"description": "활성화되면 Kilo Code는 작업 실행 중에 자동으로 체크포인트를 생성하여 변경 사항을 검토하거나 이전 상태로 되돌리기 쉽게 합니다. <0>더 알아보기</0>"
@@ -681,6 +693,14 @@
 			"label": "최대 총 이미지 크기",
 			"mb": "MB",
 			"description": "단일 read_file 작업에서 처리되는 모든 이미지의 최대 누적 크기 제한(MB 단위)입니다. 여러 이미지를 읽을 때 각 이미지의 크기가 총계에 추가됩니다. 다른 이미지를 포함하면 이 제한을 초과하는 경우 해당 이미지는 건너뜁니다."
+		},
+		"includeCurrentTime": {
+			"label": "컨텍스트에 현재 시간 포함",
+			"description": "활성화하면 현재 시간과 시간대 정보가 시스템 프롬프트에 포함됩니다. 시간 문제로 모델이 작동을 멈추면 비활성화하세요."
+		},
+		"includeCurrentCost": {
+			"label": "컨텍스트에 현재 비용 포함",
+			"description": "활성화하면 현재 API 사용 비용이 시스템 프롬프트에 포함됩니다. 비용 문제로 모델이 작동을 멈추면 비활성화하세요."
 		}
 	},
 	"terminal": {
@@ -690,55 +710,55 @@
 		},
 		"advanced": {
 			"label": "터미널 설정: 고급",
-			"description": "다음 옵션들은 설정을 적용하기 위해 터미널 재시작이 필요할 수 있습니다"
+			"description": "이 설정은 '인라인 터미널 사용'이 비활성화된 경우에만 적용됩니다. VS Code 터미널에만 영향을 미치며 IDE를 다시 시작해야 할 수 있습니다."
 		},
 		"outputLineLimit": {
 			"label": "터미널 출력 제한",
-			"description": "명령 실행 시 터미널 출력에 포함할 최대 라인 수. 초과 시 중간에서 라인이 제거되어 token이 절약됩니다. <0>더 알아보기</0>"
+			"description": "제한 내로 유지하기 위해 첫 줄과 마지막 줄을 유지하고 중간을 삭제합니다. 토큰을 절약하려면 낮추고; Kilo에게 더 많은 중간 세부 정보를 제공하려면 높입니다. Kilo는 콘텐츠가 건너뛴 곳에 자리 표시자를 봅니다.<0>자세히 알아보기</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "터미널 문자 제한",
-			"description": "명령을 실행할 때 터미널 출력에 포함할 최대 문자 수입니다. 이 제한은 매우 긴 줄로 인한 메모리 문제를 방지하기 위해 줄 제한보다 우선합니다. 초과하면 출력이 잘립니다. <0>더 알아보기</0>"
+			"description": "출력 크기에 대한 엄격한 상한을 적용하여 메모리 문제를 방지하기 위해 줄 제한을 재정의합니다. 초과하면 시작과 끝을 유지하고 내용이 생략된 곳에 Kilo에게 자리 표시자를 표시합니다. <0>자세히 알아보기</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "터미널 쉘 통합 타임아웃",
-			"description": "명령을 실행하기 전에 쉘 통합이 초기화될 때까지 기다리는 최대 시간. 쉘 시작 시간이 긴 사용자의 경우, 터미널에서 \"Shell Integration Unavailable\" 오류가 표시되면 이 값을 늘려야 할 수 있습니다. <0>더 알아보기</0>"
+			"label": "터미널 셸 통합 시간 초과",
+			"description": "명령을 실행하기 전에 VS Code 셸 통합을 기다리는 시간입니다. 셸이 느리게 시작되거나 '셸 통합을 사용할 수 없음' 오류가 표시되면 이 값을 늘리십시오. <0>자세히 알아보기</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "터미널 셸 통합 비활성화",
-			"description": "터미널 명령이 올바르게 작동하지 않거나 '셸 통합을 사용할 수 없음' 오류가 표시되는 경우 이 옵션을 활성화합니다. 이렇게 하면 일부 고급 터미널 기능을 우회하여 명령을 실행하는 더 간단한 방법을 사용합니다. <0>더 알아보기</0>"
+			"label": "인라인 터미널 사용(권장)",
+			"description": "더 빠르고 안정적인 실행을 위해 셸 프로필/통합��� 우회하려면 인라인 터미널(채팅)에�� 명령을 실행하십시오. 비활성화하면 Kilo는 셸 프로필, 프롬프트 및 플러그인과 함께 VS Code 터미널을 사용합니다. <0>자세히 알아보기</0>"
 		},
 		"commandDelay": {
 			"label": "터미널 명령 지연",
-			"description": "명령 실행 후 추가할 지연 시간(밀리초). 기본값 0은 지연을 완전히 비활성화합니다. 이는 타이밍 문제가 있는 터미널에서 명령 출력을 완전히 캡처하는 데 도움이 될 수 있습니다. 대부분의 터미널에서는 `PROMPT_COMMAND='sleep N'`을 설정하여 구현되며, PowerShell은 각 명령 끝에 `start-sleep`을 추가합니다. 원래는 VSCode 버그#237208에 대한 해결책이었으며 필요하지 않을 수 있습니다. <0>더 알아보기</0>"
+			"description": "VS Code 터미널이 모든 출력을 플러시할 수 있도록 각 명령 후에 짧은 일시 중지를 추가합니다(bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). 누락된 꼬리 출력이 표시되는 경우에만 사용하고, 그렇지 않으면 0으로 둡니다. <0>자세히 알아보기</0>"
 		},
 		"compressProgressBar": {
-			"label": "진행 표시줄 출력 압축",
-			"description": "활성화하면 캐리지 리턴(\\r)이 포함된 터미널 출력을 처리하여 실제 터미널이 콘텐츠를 표시하는 방식을 시뮬레이션합니다. 이는 진행 표시줄의 중간 상태를 제거하고 최종 상태만 유지하여 더 관련성 있는 정보를 위한 컨텍스트 공간을 절약합니다. <0>더 알아보기</0>"
+			"label": "진행률 표시줄 출력 압축",
+			"description": "진행률 표시줄/스피너를 축소하여 최종 상태만 유지합니다(토큰 절약). <0>자세히 알아보기</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell 카운터 해결 방법 활성화",
-			"description": "활성화하면 PowerShell 명령에 카운터를 추가하여 명령이 올바르게 실행되도록 합니다. 이는 명령 출력 캡처에 문제가 있을 수 있는 PowerShell 터미널에서 도움이 됩니다. <0>더 알아보기</0>"
+			"description": "PowerShell 출력이 누락되거나 중복될 때 이 기능을 켜십시오. 출력을 안정화하기 위해 각 명령에 작은 카운터를 추가합니다. 출력이 이미 올바르게 표시되면 이 기능을 끄십시오. <0>자세히 알아보기</0>"
 		},
 		"zshClearEolMark": {
-			"label": "ZSH 줄 끝 표시 지우기",
-			"description": "활성화하면 PROMPT_EOL_MARK=''를 설정하여 ZSH 줄 끝 표시를 지웁니다. 이는 '%'와 같은 특수 문자로 끝나는 명령 출력 해석의 문제를 방지합니다. <0>더 알아보기</0>"
+			"label": "ZSH EOL 표시 지우기",
+			"description": "줄 끝에 떠도는 %가 보이거나 구문 분석이 잘못된 것 같을 때 이 기능을 켜십시오. Zsh의 줄 끝 표시(%)를 생략합니다. <0>자세히 알아보기</0>"
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh 통합 활성화",
-			"description": "활성화하면 ITERM_SHELL_INTEGRATION_INSTALLED=Yes를 설정하여 Oh My Zsh 셸 통합 기능을 활성화합니다. 이 설정을 적용하려면 IDE를 다시 시작해야 할 수 있습니다. <0>더 알아보기</0>"
+			"description": "Oh My Zsh 테마/플러그인이 셸 통합을 예상할 때 이 기능을 켜십시오. ITERM_SHELL_INTEGRATION_INSTALLED=Yes를 설정합니다. 해당 변수를 설정하지 않으려면 이 기능을 끄십시오. <0>자세히 알아보기</0>"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k 통합 활성화",
-			"description": "활성화하면 POWERLEVEL9K_TERM_SHELL_INTEGRATION=true를 설정하여 Powerlevel10k 셸 통합 기능을 활성화합니다. <0>더 알아보기</0>"
+			"description": "Powerlevel10k 셸 통합을 사용할 때 이 기능을 켜십시오. <0>자세히 알아보기</0>"
 		},
 		"zdotdir": {
 			"label": "ZDOTDIR 처리 활성화",
-			"description": "활성화하면 zsh 셸 통합을 올바르게 처리하기 위한 ZDOTDIR용 임시 디렉터리를 생성합니다. 이를 통해 zsh 구성을 유지하면서 VSCode 셸 통합이 zsh와 올바르게 작동합니다. <0>더 알아보기</0>"
+			"description": "zsh 셸 통합이 실패하거나 점 파일과 충돌할 때 이 기능을 켜십시오. <0>자세히 알아보기</0>"
 		},
 		"inheritEnv": {
 			"label": "환경 변수 상속",
-			"description": "활성화하면 터미널이 VSCode 부모 프로세스로부터 환경 변수를 상속받습니다. 사용자 프로필에 정의된 셸 통합 설정 등이 포함됩니다. 이는 VSCode 전역 설정 `terminal.integrated.inheritEnv`를 직접 전환합니다. <0>더 알아보기</0>"
+			"description": "부모 VS Code 프로세���에서 환경 변수를 상속하려면 이 기능을 켜십시오. <0>자세히 알아보기</0>"
 		}
 	},
 	"advancedSettings": {
@@ -747,7 +767,7 @@
 	"advanced": {
 		"diff": {
 			"label": "diff를 통한 편집 활성화",
-			"description": "활성화되면 Kilo Code는 파일을 더 빠르게 편집할 수 있으며 잘린 전체 파일 쓰기를 자동으로 거부합니다. 최신 Claude 4 Sonnet 모델에서 가장 잘 작동합니다.",
+			"description": "활성화되면 Kilo Code는 파일을 더 빠르게 편집할 수 있으며 잘린 전체 파일 쓰기를 자동으로 거부합니다",
 			"strategy": {
 				"label": "Diff 전략",
 				"options": {
@@ -775,10 +795,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "실험적 통합 diff 전략 사용",
 			"description": "실험적 통합 diff 전략을 활성화합니다. 이 전략은 모델 오류로 인한 재시도 횟수를 줄일 수 있지만 예기치 않은 동작이나 잘못된 편집을 일으킬 수 있습니다. 위험을 이해하고 모든 변경 사항을 신중하게 검토할 의향이 있는 경우에만 활성화하십시오."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "실험적 검색 및 바꾸기 도구 사용",
-			"description": "실험적 검색 및 바꾸기 도구를 활성화하여 Kilo Code가 하나의 요청에서 검색어의 여러 인스턴스를 바꿀 수 있게 합니다."
 		},
 		"INSERT_BLOCK": {
 			"name": "실험적 콘텐츠 삽입 도구 사용",
@@ -866,8 +882,6 @@
 	"modelInfo": {
 		"supportsImages": "이미지 지원",
 		"noImages": "이미지 지원 안 함",
-		"supportsComputerUse": "컴퓨터 사용 지원",
-		"noComputerUse": "컴퓨터 사용 지원 안 함",
 		"supportsPromptCache": "프롬프트 캐시 지원",
 		"noPromptCache": "프롬프트 캐시 지원 안 함",
 		"contextWindow": "컨텍스트 창:",

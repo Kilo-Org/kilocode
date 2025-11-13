@@ -197,24 +197,32 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 		details += terminalDetails
 	}
 
-	// Add current time information with timezone.
-	const now = new Date()
+	// Get settings for time and cost display
+	const { includeCurrentTime = true, includeCurrentCost = true } = state ?? {}
 
-	const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
-	const timeZoneOffset = -now.getTimezoneOffset() / 60 // Convert to hours and invert sign to match conventional notation
-	const timeZoneOffsetHours = Math.floor(Math.abs(timeZoneOffset))
-	const timeZoneOffsetMinutes = Math.abs(Math.round((Math.abs(timeZoneOffset) - timeZoneOffsetHours) * 60))
-	const timeZoneOffsetStr = `${timeZoneOffset >= 0 ? "+" : "-"}${timeZoneOffsetHours}:${timeZoneOffsetMinutes.toString().padStart(2, "0")}`
-	details += `\n\n# Current Time\nCurrent time in ISO 8601 UTC format: ${now.toISOString()}\nUser time zone: ${timeZone}, UTC${timeZoneOffsetStr}`
+	// Add current time information with timezone (if enabled).
+	if (includeCurrentTime) {
+		const now = new Date()
 
-	// Add context tokens information.
-	const { contextTokens, totalCost } = getApiMetrics(cline.clineMessages)
+		const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+		const timeZoneOffset = -now.getTimezoneOffset() / 60 // Convert to hours and invert sign to match conventional notation
+		const timeZoneOffsetHours = Math.floor(Math.abs(timeZoneOffset))
+		const timeZoneOffsetMinutes = Math.abs(Math.round((Math.abs(timeZoneOffset) - timeZoneOffsetHours) * 60))
+		const timeZoneOffsetStr = `${timeZoneOffset >= 0 ? "+" : "-"}${timeZoneOffsetHours}:${timeZoneOffsetMinutes.toString().padStart(2, "0")}`
+		details += `\n\n# Current Time\nCurrent time in ISO 8601 UTC format: ${now.toISOString()}\nUser time zone: ${timeZone}, UTC${timeZoneOffsetStr}`
+	}
+
+	// Add context tokens information (if enabled).
+	if (includeCurrentCost) {
+		const { totalCost } = getApiMetrics(cline.clineMessages)
+		details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
+	}
 
 	// kilocode_change start
 	// Be sure to fetch the model information before we need it.
-	if (cline.api instanceof OpenRouterHandler || cline.api instanceof NativeOllamaHandler) {
+	if (cline.api instanceof OpenRouterHandler || ("fetchModel" in cline.api && cline.api.fetchModel)) {
 		try {
-			await cline.api.fetchModel()
+			await (cline.api.fetchModel as () => Promise<unknown>)()
 		} catch (e) {
 			TelemetryService.instance.captureException(e, { context: "getEnvironmentDetails" })
 			await cline.say(
@@ -226,9 +234,7 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 	}
 	// kilocode_change end
 
-	const { id: modelId, info: modelInfo } = cline.api.getModel()
-
-	details += `\n\n# Current Cost\n${totalCost !== null ? `$${totalCost.toFixed(2)}` : "(Not available)"}`
+	const { id: modelId } = cline.api.getModel()
 
 	// Add current mode and any mode-specific warnings.
 	const {

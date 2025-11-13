@@ -29,6 +29,11 @@ async function main() {
 		format: "cjs",
 		sourcesContent: false,
 		platform: "node",
+		// kilocode_change start: for ps-list
+		banner: {
+			js: "const __importMetaUrl = typeof __filename !== 'undefined' ? require('url').pathToFileURL(__filename).href : undefined;",
+		},
+		// kilocode_change end
 	}
 
 	const srcDir = __dirname
@@ -44,6 +49,24 @@ async function main() {
 	 * @type {import('esbuild').Plugin[]}
 	 */
 	const plugins = [
+		// kilocode_change start
+		{
+			name: "import-meta-url-plugin",
+			setup(build) {
+				build.onLoad({ filter: /\.js$/ }, async (args) => {
+					const fs = await import("fs")
+					let contents = await fs.promises.readFile(args.path, "utf8")
+
+					// Replace import.meta.url with our polyfill
+					if (contents.includes("import.meta.url")) {
+						contents = contents.replace(/import\.meta\.url/g, "__importMetaUrl")
+					}
+
+					return { contents, loader: "js" }
+				})
+			},
+		},
+		// kilocode_change end
 		{
 			name: "copyFiles",
 			setup(build) {

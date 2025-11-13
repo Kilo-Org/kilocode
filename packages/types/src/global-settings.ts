@@ -31,6 +31,21 @@ export const DEFAULT_WRITE_DELAY_MS = 1000
 export const DEFAULT_TERMINAL_OUTPUT_CHARACTER_LIMIT = 50_000
 
 /**
+ * Minimum checkpoint timeout in seconds.
+ */
+export const MIN_CHECKPOINT_TIMEOUT_SECONDS = 10
+
+/**
+ * Maximum checkpoint timeout in seconds.
+ */
+export const MAX_CHECKPOINT_TIMEOUT_SECONDS = 60
+
+/**
+ * Default checkpoint timeout in seconds.
+ */
+export const DEFAULT_CHECKPOINT_TIMEOUT_SECONDS = 15
+
+/**
  * GlobalSettings
  */
 
@@ -54,6 +69,7 @@ export const globalSettingsSchema = z.object({
 
 	autoApprovalEnabled: z.boolean().optional(),
 	yoloMode: z.boolean().optional(), // kilocode_change
+	yoloGatekeeperApiConfigId: z.string().optional(), // kilocode_change: AI gatekeeper for YOLO mode
 	alwaysAllowReadOnly: z.boolean().optional(),
 	alwaysAllowReadOnlyOutsideWorkspace: z.boolean().optional(),
 	alwaysAllowWrite: z.boolean().optional(),
@@ -83,6 +99,17 @@ export const globalSettingsSchema = z.object({
 	allowVeryLargeReads: z.boolean().optional(), // kilocode_change
 
 	/**
+	 * Whether to include current time in the environment details
+	 * @default true
+	 */
+	includeCurrentTime: z.boolean().optional(),
+	/**
+	 * Whether to include current cost in the environment details
+	 * @default true
+	 */
+	includeCurrentCost: z.boolean().optional(),
+
+	/**
 	 * Whether to include diagnostic messages (errors, warnings) in tool outputs
 	 * @default true
 	 */
@@ -110,6 +137,12 @@ export const globalSettingsSchema = z.object({
 	cachedChromeHostUrl: z.string().optional(),
 
 	enableCheckpoints: z.boolean().optional(),
+	checkpointTimeout: z
+		.number()
+		.int()
+		.min(MIN_CHECKPOINT_TIMEOUT_SECONDS)
+		.max(MAX_CHECKPOINT_TIMEOUT_SECONDS)
+		.optional(),
 
 	// kilocode_change start - Auto-purge settings
 	autoPurgeEnabled: z.boolean().optional(),
@@ -220,6 +253,7 @@ export const SECRET_STATE_KEYS = [
 	"doubaoApiKey",
 	"moonshotApiKey",
 	"mistralApiKey",
+	"minimaxApiKey",
 	"unboundApiKey",
 	"requestyApiKey",
 	"xaiApiKey",
@@ -230,6 +264,7 @@ export const SECRET_STATE_KEYS = [
 	"codeIndexOpenAiKey",
 	"codeIndexQdrantApiKey",
 	// kilocode_change start
+	"minimaxApiKey",
 	"kilocodeToken",
 	"syntheticApiKey",
 	"ovhCloudAiEndpointsApiKey",
@@ -239,6 +274,7 @@ export const SECRET_STATE_KEYS = [
 	"codebaseIndexGeminiApiKey",
 	"codebaseIndexMistralApiKey",
 	"codebaseIndexVercelAiGatewayApiKey",
+	"codebaseIndexOpenRouterApiKey",
 	"huggingFaceApiKey",
 	"sambaNovaApiKey",
 	"zaiApiKey",

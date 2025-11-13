@@ -201,13 +201,13 @@ function createMockCline(): any {
 		recordToolUsage: vi.fn().mockReturnValue(undefined),
 		recordToolError: vi.fn().mockReturnValue(undefined),
 		didRejectTool: false,
+		getTokenUsage: vi.fn().mockReturnValue({
+			contextTokens: 10000,
+		}),
 		// CRITICAL: Always ensure image support is enabled
 		api: {
 			getModel: vi.fn().mockReturnValue({
-				info: {
-					supportsImages: true,
-					contextWindow: 100000, // Add context window for token limit calculations
-				},
+				info: { supportsImages: true, contextWindow: 200000 },
 			}),
 			countTokens: vi.fn().mockResolvedValue(100), // Mock countTokens to return a small number
 		},
@@ -418,6 +418,61 @@ describe("read_file tool with maxReadFileLine setting", () => {
 			expect(result).toContain(`<content lines="1-3">`)
 			expect(result).toContain(`<list_code_definition_names>`)
 			expect(result).toContain("<notice>Showing only 3 of 5 total lines")
+		})
+
+		it("should truncate code definitions when file exceeds maxReadFileLine", async () => {
+			// Setup - file with 100 lines but we'll only read first 30
+			const content = "Line 1\nLine 2\nLine 3"
+			const numberedContent = "1 | Line 1\n2 | Line 2\n3 | Line 3"
+			const fullDefinitions = `# file.txt
+10--20 | function foo() {
+50--60 | function bar() {
+80--90 | function baz() {`
+			const truncatedDefinitions = `# file.txt
+10--20 | function foo() {`
+
+			mockedReadLines.mockResolvedValue(content)
+			mockedParseSourceCodeDefinitionsForFile.mockResolvedValue(fullDefinitions)
+			addLineNumbersMock.mockReturnValue(numberedContent)
+
+			// Execute with maxReadFileLine = 30
+			const result = await executeReadFileTool({}, { maxReadFileLine: 30, totalLines: 100 })
+
+			// Verify that only definitions within the first 30 lines are included
+			expect(result).toContain(`<file><path>${testFilePath}</path>`)
+			expect(result).toContain(`<content lines="1-30">`)
+			expect(result).toContain(`<list_code_definition_names>`)
+
+			// Should include foo (starts at line 10) but not bar (starts at line 50) or baz (starts at line 80)
+			expect(result).toContain("10--20 | function foo()")
+			expect(result).not.toContain("50--60 | function bar()")
+			expect(result).not.toContain("80--90 | function baz()")
+
+			expect(result).toContain("<notice>Showing only 30 of 100 total lines")
+		})
+
+		it("should handle truncation when all definitions are beyond the line limit", async () => {
+			// Setup - all definitions start after maxReadFileLine
+			const content = "Line 1\nLine 2\nLine 3"
+			const numberedContent = "1 | Line 1\n2 | Line 2\n3 | Line 3"
+			const fullDefinitions = `# file.txt
+50--60 | function foo() {
+80--90 | function bar() {`
+
+			mockedReadLines.mockResolvedValue(content)
+			mockedParseSourceCodeDefinitionsForFile.mockResolvedValue(fullDefinitions)
+			addLineNumbersMock.mockReturnValue(numberedContent)
+
+			// Execute with maxReadFileLine = 30
+			const result = await executeReadFileTool({}, { maxReadFileLine: 30, totalLines: 100 })
+
+			// Verify that only the header is included (all definitions filtered out)
+			expect(result).toContain(`<file><path>${testFilePath}</path>`)
+			expect(result).toContain(`<content lines="1-30">`)
+			expect(result).toContain(`<list_code_definition_names>`)
+			expect(result).toContain("# file.txt")
+			expect(result).not.toContain("50--60 | function foo()")
+			expect(result).not.toContain("80--90 | function bar()")
 		})
 	})
 

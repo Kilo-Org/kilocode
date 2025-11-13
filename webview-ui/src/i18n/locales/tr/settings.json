@@ -61,6 +61,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API Anahtarı",
 		"vercelAiGatewayApiKeyPlaceholder": "Vercel AI Gateway API anahtarınızı girin",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API Anahtarı",
+		"openRouterApiKeyPlaceholder": "OpenRouter API anahtarınızı girin",
 		"openaiCompatibleProvider": "OpenAI Uyumlu",
 		"openAiKeyLabel": "OpenAI API Anahtarı",
 		"openAiKeyPlaceholder": "OpenAI API anahtarınızı girin",
@@ -127,7 +130,8 @@
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API anahtarı gereklidir",
 			"ollamaBaseUrlRequired": "Ollama temel URL'si gereklidir",
 			"baseUrlRequired": "Temel URL'si gereklidir",
-			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır"
+			"modelDimensionMinValue": "Model boyutu 0'dan büyük olmalıdır",
+			"openRouterApiKeyRequired": "OpenRouter API anahtarı gereklidir"
 		},
 		"advancedConfigLabel": "Gelişmiş Yapılandırma",
 		"searchMinScoreLabel": "Arama Skoru Eşiği",
@@ -310,6 +314,9 @@
 		"getZaiApiKey": "Z AI API Anahtarı Al",
 		"zaiEntrypoint": "Z AI Giriş Noktası",
 		"zaiEntrypointDescription": "Konumunuza göre uygun API giriş noktasını seçin. Çin'de iseniz open.bigmodel.cn'yi seçin. Aksi takdirde api.z.ai'yi seçin.",
+		"minimaxApiKey": "MiniMax API Anahtarı",
+		"getMiniMaxApiKey": "MiniMax API Anahtarı Al",
+		"minimaxBaseUrl": "MiniMax Giriş Noktası",
 		"geminiApiKey": "Gemini API Anahtarı",
 		"getGroqApiKey": "Groq API Anahtarı Al",
 		"groqApiKey": "Groq API Anahtarı",
@@ -363,7 +370,7 @@
 		"enablePromptCachingTitle": "Desteklenen modeller için performansı artırmak ve maliyetleri azaltmak için istem önbelleğini etkinleştir.",
 		"cacheUsageNote": "Not: Önbellek kullanımını görmüyorsanız, farklı bir model seçip ardından istediğiniz modeli tekrar seçmeyi deneyin.",
 		"vscodeLmModel": "Dil Modeli",
-		"vscodeLmWarning": "Not: Bu çok deneysel bir entegrasyondur ve sağlayıcı desteği değişebilir. Bir modelin desteklenmediğine dair bir hata alırsanız, bu sağlayıcı tarafındaki bir sorundur.",
+		"vscodeLmWarning": "Not: VS Code Language Model API üzerinden erişilen modeller sağlayıcı tarafından sarılmış veya ince ayarlanmış olabilir; bu nedenle davranış, aynı modelin tipik bir sağlayıcı ya da yönlendirici üzerinden doğrudan kullanılmasından farklı olabilir. «Language Model» açılır menüsünden bir model kullanmak için önce o modele geçin ve ardından Copilot Chat isteminde «Kabul Et»e tıklayın; aksi takdirde 400 «The requested model is not supported» gibi bir hata görebilirsiniz.",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "URL bağlamını etkinleştir",
@@ -440,7 +447,7 @@
 			},
 			"computerUse": {
 				"label": "Bilgisayar Kullanımı",
-				"description": "Bu model bir tarayıcıyla etkileşim kurabilir mi? (örn. Claude 3.7 Sonnet)"
+				"description": "Bu model bir tarayıcıyla etkileşim kurabilir mi?"
 			},
 			"promptCache": {
 				"label": "İstem Önbelleği",
@@ -482,6 +489,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Model Akıl Yürütme Çabası",
+			"none": "Yok",
 			"minimal": "Minimal (en hızlı)",
 			"high": "Yüksek",
 			"medium": "Orta",
@@ -554,6 +562,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Kontrol noktası başlatma zaman aşımı (saniye)",
+			"description": "Kontrol noktası servisini başlatmak için maksimum bekleme süresi. Varsayılan 15 saniye. Aralık: 10-60 saniye."
+		},
 		"enable": {
 			"label": "Otomatik kontrol noktalarını etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code görev yürütme sırasında otomatik olarak kontrol noktaları oluşturarak değişiklikleri gözden geçirmeyi veya önceki durumlara dönmeyi kolaylaştırır. <0>Daha fazla bilgi</0>"
@@ -682,6 +694,14 @@
 			"label": "Maksimum toplam görüntü boyutu",
 			"mb": "MB",
 			"description": "Tek bir read_file işleminde işlenen tüm görüntüler için maksimum kümülatif boyut sınırı (MB cinsinden). Birden çok görüntü okurken, her görüntünün boyutu toplama eklenir. Başka bir görüntü eklemek bu sınırı aşacaksa, atlanacaktır."
+		},
+		"includeCurrentTime": {
+			"label": "Mevcut zamanı bağlama dahil et",
+			"description": "Etkinleştirildiğinde, mevcut zaman ve saat dilimi bilgileri sistem istemine dahil edilecektir. Modeller zaman endişeleri nedeniyle çalışmayı durdurursa bunu devre dışı bırakın."
+		},
+		"includeCurrentCost": {
+			"label": "Mevcut maliyeti bağlama dahil et",
+			"description": "Etkinleştirildiğinde, mevcut API kullanım maliyeti sistem istemine dahil edilecektir. Modeller maliyet endişeleri nedeniyle çalışmayı durdurursa bunu devre dışı bırakın."
 		}
 	},
 	"terminal": {
@@ -691,55 +711,55 @@
 		},
 		"advanced": {
 			"label": "Terminal Ayarları: Gelişmiş",
-			"description": "Aşağıdaki seçeneklerin uygulanması için terminalin yeniden başlatılması gerekebilir."
+			"description": "Bu ayarlar yalnızca 'Satır İçi Terminal Kullan' devre dışı bırakıldığında geçerlidir. Sadece VS Code terminalini etkiler ve IDE'nin yeniden başlatılmasını gerektirebilir."
 		},
 		"outputLineLimit": {
-			"label": "Terminal çıktısı sınırı",
-			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum satır sayısı. Aşıldığında, token tasarrufu sağlayarak satırlar ortadan kaldırılacaktır. <0>Daha fazla bilgi</0>"
+			"label": "Terminal çıktı sınırı",
+			"description": "Sınırın altında kalmak için ilk ve son satırları tutar ve ortadakileri atar. Jetonları kaydetmek için düşürün; Kilo'ya daha fazla orta ayrıntı vermek için yükseltin. Kilo, içeriğin atlandığı yerde bir yer tutucu görür.<0>Daha fazla bilgi edinin</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Terminal karakter sınırı",
-			"description": "Komutları yürütürken terminal çıktısına dahil edilecek maksimum karakter sayısı. Bu sınır, aşırı uzun satırlardan kaynaklanan bellek sorunlarını önlemek için satır sınırına göre önceliklidir. Aşıldığında, çıktı kesilir. <0>Daha fazla bilgi edinin</0>"
+			"description": "Çıktı boyutuna katı bir üst sınır uygulayarak bellek sorunlarını önlemek için satır sınırını geçersiz kılar. Aşılırsa, başlangıcı ve sonu tutar ve içeriğin atlandığı yerde Kilo'ya bir yer tutucu gösterir. <0>Daha fazla bilgi edinin</0>"
 		},
 		"shellIntegrationTimeout": {
-			"label": "Terminal kabuk entegrasyonu zaman aşımı",
-			"description": "Komutları yürütmeden önce kabuk entegrasyonunun başlatılması için beklenecek maksimum süre. Kabuk başlatma süresi uzun olan kullanıcılar için, terminalde \"Shell Integration Unavailable\" hatalarını görürseniz bu değerin artırılması gerekebilir. <0>Daha fazla bilgi</0>"
+			"label": "Terminal shell entegrasyon timeout",
+			"description": "Komut çalıştırmadan önce VS Code shell entegrasyonunu bekleme süresi. Shell yavaş başlıyorsa veya 'Shell Integration Unavailable' hatası görüyorsanız artırın. <0>Daha fazla bilgi edinin</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Terminal kabuk entegrasyonunu devre dışı bırak",
-			"description": "Terminal komutları düzgün çalışmıyorsa veya 'Shell Integration Unavailable' hataları görüyorsanız bunu etkinleştirin. Bu, bazı gelişmiş terminal özelliklerini atlayarak komutları çalıştırmak için daha basit bir yöntem kullanır. <0>Daha fazla bilgi</0>"
+			"label": "Satır İçi Terminal Kullan (önerilir)",
+			"description": "Daha hızlı, daha güvenilir çalıştırmalar için kabuk profillerini/entegrasyonunu atlamak için Satır İçi Terminal'de (sohbet) komutları çalıştırın. Devre dışı bırakıldığında Kilo, kabuk profiliniz, istemleriniz ve eklentilerinizle VS Code terminalini kullanır. <0>Daha fazla bilgi edinin</0>"
 		},
 		"commandDelay": {
-			"label": "Terminal komut gecikmesi",
-			"description": "Komut yürütmesinden sonra eklenecek gecikme süresi (milisaniye). 0 varsayılan ayarı gecikmeyi tamamen devre dışı bırakır. Bu, zamanlama sorunları olan terminallerde komut çıktısının tam olarak yakalanmasını sağlamaya yardımcı olabilir. Çoğu terminalde bu, `PROMPT_COMMAND='sleep N'` ayarlanarak uygulanır ve PowerShell her komutun sonuna `start-sleep` ekler. Başlangıçta VSCode hata#237208 için bir geçici çözümdü ve gerekli olmayabilir. <0>Daha fazla bilgi</0>"
+			"label": "Terminal komut delay",
+			"description": "VS Code terminalin tüm outputu flush edebilmesi için her komuttan sonra kısa pause ekler (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Sadece tail output eksikse kullan; yoksa 0'da bırak. <0>Daha fazla bilgi edinin</0>"
 		},
 		"compressProgressBar": {
 			"label": "İlerleme çubuğu çıktısını sıkıştır",
-			"description": "Etkinleştirildiğinde, satır başı karakteri (\\r) içeren terminal çıktısını işleyerek gerçek bir terminalin içeriği nasıl göstereceğini simüle eder. Bu, ilerleme çubuğunun ara durumlarını kaldırır, yalnızca son durumu korur ve daha alakalı bilgiler için bağlam alanından tasarruf sağlar. <0>Daha fazla bilgi</0>"
+			"description": "İlerleme çubukları/spinner'ları daraltır, sadece son durumu tutar (token tasarrufu). <0>Daha fazla bilgi edinin</0>"
 		},
 		"powershellCounter": {
 			"label": "PowerShell sayaç geçici çözümünü etkinleştir",
-			"description": "Etkinleştirildiğinde, komutların doğru şekilde yürütülmesini sağlamak için PowerShell komutlarına bir sayaç ekler. Bu, çıktı yakalama sorunları yaşayabilecek PowerShell terminallerinde yardımcı olur. <0>Daha fazla bilgi</0>"
+			"description": "PowerShell çıktısı eksik veya yineleniyorsa bunu açın; çıktıyı stabilize etmek için her komuta küçük bir sayaç ekler. Çıktı zaten doğru görünüyorsa bunu kapalı tutun. <0>Daha fazla bilgi edinin</0>"
 		},
 		"zshClearEolMark": {
-			"label": "ZSH satır sonu işaretini temizle",
-			"description": "Etkinleştirildiğinde, PROMPT_EOL_MARK='' ayarlanarak ZSH satır sonu işaretini temizler. Bu, '%' gibi özel karakterlerle biten komut çıktılarının yorumlanmasında sorun yaşanmasını önler. <0>Daha fazla bilgi</0>"
+			"label": "ZSH EOL işaretini temizle",
+			"description": "Satırların sonunda başıboş % gördüğünüzde veya ayrıştırma yanlış göründüğünde bunu açın; Zsh'nin satır sonu işaretini (%) atlar. <0>Daha fazla bilgi edinin</0>"
 		},
 		"zshOhMy": {
 			"label": "Oh My Zsh entegrasyonunu etkinleştir",
-			"description": "Etkinleştirildiğinde, Oh My Zsh kabuk entegrasyon özelliklerini etkinleştirmek için ITERM_SHELL_INTEGRATION_INSTALLED=Yes ayarlar. Bu ayarın uygulanması IDE'nin yeniden başlatılmasını gerektirebilir. <0>Daha fazla bilgi</0>"
+			"description": "Oh My Zsh temanız/eklentileriniz kabuk entegrasyonu beklediğinde bunu açın; ITERM_SHELL_INTEGRATION_INSTALLED=Yes ayarlar. Bu değişkeni ayarlamaktan kaçınmak için bunu kapatın. <0>Daha fazla bilgi edinin</0>"
 		},
 		"zshP10k": {
 			"label": "Powerlevel10k entegrasyonunu etkinleştir",
-			"description": "Etkinleştirildiğinde, Powerlevel10k kabuk entegrasyon özelliklerini etkinleştirmek için POWERLEVEL9K_TERM_SHELL_INTEGRATION=true ayarlar. <0>Daha fazla bilgi</0>"
+			"description": "Powerlevel10k kabuk entegrasyonunu kullanırken bunu açın. <0>Daha fazla bilgi edinin</0>"
 		},
 		"zdotdir": {
 			"label": "ZDOTDIR işlemeyi etkinleştir",
-			"description": "Etkinleştirildiğinde, zsh kabuğu entegrasyonunu düzgün şekilde işlemek için ZDOTDIR için geçici bir dizin oluşturur. Bu, zsh yapılandırmanızı korurken VSCode kabuk entegrasyonunun zsh ile düzgün çalışmasını sağlar. <0>Daha fazla bilgi</0>"
+			"description": "zsh kabuk entegrasyonu başarısız olduğunda veya dotfiles'larınızla çakıştığında bunu açın. <0>Daha fazla bilgi edinin</0>"
 		},
 		"inheritEnv": {
 			"label": "Ortam değişkenlerini devral",
-			"description": "Etkinleştirildiğinde, terminal VSCode üst işleminden ortam değişkenlerini devralır, örneğin kullanıcı profilinde tanımlanan kabuk entegrasyon ayarları gibi. Bu, VSCode'un global ayarı olan `terminal.integrated.inheritEnv` değerini doğrudan değiştirir. <0>Daha fazla bilgi</0>"
+			"description": "Ana VS Code işleminden ortam değişkenlerini devralmak için bunu açın. <0>Daha fazla bilgi edinin</0>"
 		}
 	},
 	"advancedSettings": {
@@ -748,7 +768,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Diff'ler aracılığıyla düzenlemeyi etkinleştir",
-			"description": "Etkinleştirildiğinde, Kilo Code dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir. En son Claude 4 Sonnet modeliyle en iyi şekilde çalışır.",
+			"description": "Etkinleştirildiğinde, Kilo Code dosyaları daha hızlı düzenleyebilecek ve kesik tam dosya yazımlarını otomatik olarak reddedecektir",
 			"strategy": {
 				"label": "Diff stratejisi",
 				"options": {
@@ -776,10 +796,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Deneysel birleştirilmiş diff stratejisini kullan",
 			"description": "Deneysel birleştirilmiş diff stratejisini etkinleştir. Bu strateji, model hatalarından kaynaklanan yeniden deneme sayısını azaltabilir, ancak beklenmeyen davranışlara veya hatalı düzenlemelere neden olabilir. Yalnızca riskleri anlıyorsanız ve tüm değişiklikleri dikkatlice incelemeye istekliyseniz etkinleştirin."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Deneysel arama ve değiştirme aracını kullan",
-			"description": "Deneysel arama ve değiştirme aracını etkinleştir, Kilo Code'nun tek bir istekte bir arama teriminin birden fazla örneğini değiştirmesine olanak tanır."
 		},
 		"INSERT_BLOCK": {
 			"name": "Deneysel içerik ekleme aracını kullan",
@@ -867,8 +883,6 @@
 	"modelInfo": {
 		"supportsImages": "Görüntüleri destekler",
 		"noImages": "Görüntüleri desteklemez",
-		"supportsComputerUse": "Bilgisayar kullanımını destekler",
-		"noComputerUse": "Bilgisayar kullanımını desteklemez",
 		"supportsPromptCache": "İstem önbelleğini destekler",
 		"noPromptCache": "İstem önbelleğini desteklemez",
 		"contextWindow": "Bağlam Penceresi:",

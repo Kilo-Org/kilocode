@@ -71,6 +71,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "API Key",
 		"vercelAiGatewayApiKeyPlaceholder": "Enter your Vercel AI Gateway API key",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "OpenRouter API Key",
+		"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
 		"openaiCompatibleProvider": "OpenAI Compatible",
 		"openAiKeyLabel": "OpenAI API Key",
 		"openAiKeyPlaceholder": "Enter your OpenAI API key",
@@ -137,6 +140,7 @@
 			"geminiApiKeyRequired": "Gemini API key is required",
 			"mistralApiKeyRequired": "Mistral API key is required",
 			"vercelAiGatewayApiKeyRequired": "Vercel AI Gateway API key is required",
+			"openRouterApiKeyRequired": "OpenRouter API key is required",
 			"ollamaBaseUrlRequired": "Ollama base URL is required",
 			"baseUrlRequired": "Base URL is required",
 			"modelDimensionMinValue": "Model dimension must be greater than 0"
@@ -281,7 +285,7 @@
 			"success": "Models list refreshed successfully!",
 			"error": "Failed to refresh models list. Please try again."
 		},
-		"getRequestyApiKey": "Get Requesty API Key",
+		"getRequestyApiKey": "Create new Requesty API Key",
 		"getRequestyBaseUrl": "Base URL",
 		"requestyUseCustomBaseUrl": "Use custom base URL",
 		"openRouterTransformsText": "Compress prompts and message chains to the context size (<a>OpenRouter Transforms</a>)",
@@ -312,10 +316,16 @@
 		"moonshotApiKey": "Moonshot API Key",
 		"getMoonshotApiKey": "Get Moonshot API Key",
 		"moonshotBaseUrl": "Moonshot Entrypoint",
+		"minimaxApiKey": "MiniMax API Key",
+		"getMiniMaxApiKey": "Get MiniMax API Key",
+		"minimaxBaseUrl": "MiniMax Entrypoint",
 		"zaiApiKey": "Z AI API Key",
 		"getZaiApiKey": "Get Z AI API Key",
 		"zaiEntrypoint": "Z AI Entrypoint",
 		"zaiEntrypointDescription": "Please select the appropriate API entrypoint based on your location. If you are in China, choose open.bigmodel.cn. Otherwise, choose api.z.ai.",
+		"minimaxApiKey": "MiniMax API Key",
+		"getMiniMaxApiKey": "Get MiniMax API Key",
+		"minimaxBaseUrl": "MiniMax Entrypoint",
 		"geminiApiKey": "Gemini API Key",
 		"getGroqApiKey": "Get Groq API Key",
 		"groqApiKey": "Groq API Key",
@@ -369,7 +379,7 @@
 		"enablePromptCachingTitle": "Enable prompt caching to improve performance and reduce costs for supported models.",
 		"cacheUsageNote": "Note: If you don't see cache usage, try selecting a different model and then selecting your desired model again.",
 		"vscodeLmModel": "Language Model",
-		"vscodeLmWarning": "Note: This is a very experimental integration and provider support will vary. If you get an error about a model not being supported, that's an issue on the provider's end.",
+		"vscodeLmWarning": "Note: Models accessed via the VS Code Language Model API may be wrapped or fine-tuned by the provider, so behavior can differ from using the same model directly from a typical provider or router. To use a model from the Language Model dropdown, first switch to that model and then click Accept in the Copilot Chat prompt; otherwise you may see an error such as 400 \"The requested model is not supported\".",
 		"geminiParameters": {
 			"urlContext": {
 				"title": "Enable URL context",
@@ -446,7 +456,7 @@
 			},
 			"computerUse": {
 				"label": "Computer Use",
-				"description": "Is this model capable of interacting with a browser? (e.g. Claude 3.7 Sonnet)."
+				"description": "Is this model capable of interacting with a browser?"
 			},
 			"promptCache": {
 				"label": "Prompt Caching",
@@ -488,6 +498,7 @@
 		},
 		"reasoningEffort": {
 			"label": "Model Reasoning Effort",
+			"none": "None",
 			"minimal": "Minimal (Fastest)",
 			"low": "Low",
 			"medium": "Medium",
@@ -560,6 +571,10 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "Checkpoint initialization timeout (seconds)",
+			"description": "Maximum time to wait for checkpoint service initialization. Default is 15 seconds. Range: 10-60 seconds."
+		},
 		"enable": {
 			"label": "Enable automatic checkpoints",
 			"description": "When enabled, Kilo Code will automatically create checkpoints during task execution, making it easy to review changes or revert to earlier states. <0>Learn more</0>"
@@ -713,6 +728,14 @@
 			"profileDescription": "Custom threshold for this profile only (overrides global default)",
 			"inheritDescription": "This profile inherits the global default threshold ({{threshold}}%)",
 			"usesGlobal": "(uses global {{threshold}}%)"
+		},
+		"includeCurrentTime": {
+			"label": "Include current time in context",
+			"description": "When enabled, the current time and timezone information will be included in the system prompt. Disable this if models are stopping work due to time concerns."
+		},
+		"includeCurrentCost": {
+			"label": "Include current cost in context",
+			"description": "When enabled, the current API usage cost will be included in the system prompt. Disable this if models are stopping work due to cost concerns."
 		}
 	},
 	"terminal": {
@@ -722,55 +745,55 @@
 		},
 		"advanced": {
 			"label": "Terminal Settings: Advanced",
-			"description": "The following options may require a terminal restart to apply the setting."
+			"description": "These settings apply only when 'Use Inline Terminal' is disabled. They affect the VS Code terminal only and may require restarting the IDE."
 		},
 		"outputLineLimit": {
 			"label": "Terminal output limit",
-			"description": "Maximum number of lines to include in terminal output when executing commands. When exceeded lines will be removed from the middle, saving tokens. <0>Learn more</0>"
+			"description": "Keeps the first and last lines and drops the middle to stay under the limit. Lower to save tokens; raise to give Kilo more middle detail. Kilo sees a placeholder where the content is skipped.<0>Learn more</0>"
 		},
 		"outputCharacterLimit": {
 			"label": "Terminal character limit",
-			"description": "Maximum number of characters to include in terminal output when executing commands. This limit takes precedence over the line limit to prevent memory issues from extremely long lines. When exceeded, output will be truncated. <0>Learn more</0>"
+			"description": "Overrides the line limit to prevent memory issues by enforcing a hard cap on output size. If exceeded, keeps the beginning and end and shows a placeholder to Kilo where content is skipped. <0>Learn more</0>"
 		},
 		"shellIntegrationTimeout": {
 			"label": "Terminal shell integration timeout",
-			"description": "Maximum time to wait for shell integration to initialize before executing commands. For users with long shell startup times, this value may need to be increased if you see \"Shell Integration Unavailable\" errors in the terminal. <0>Learn more</0>"
+			"description": "How long to wait for VS Code shell integration before running commands. Raise if your shell starts slowly or you see 'Shell Integration Unavailable' errors. <0>Learn more</0>"
 		},
 		"shellIntegrationDisabled": {
-			"label": "Disable terminal shell integration",
-			"description": "Enable this if terminal commands aren't working correctly or you see 'Shell Integration Unavailable' errors. This uses a simpler method to run commands, bypassing some advanced terminal features. <0>Learn more</0>"
+			"label": "Use Inline Terminal (recommended)",
+			"description": "Run commands in the Inline Terminal (chat) to bypass shell profiles/integration for faster, more reliable runs. When disabled Kilo uses the VS Code terminal with your shell profile, prompts, and plugins. <0>Learn more</0>"
 		},
 		"commandDelay": {
 			"label": "Terminal command delay",
-			"description": "Delay in milliseconds to add after command execution. The default setting of 0 disables the delay completely. This can help ensure command output is fully captured in terminals with timing issues. In most terminals it is implemented by setting `PROMPT_COMMAND='sleep N'` and Powershell appends `start-sleep` to the end of each command. Originally was workaround for VSCode bug#237208 and may not be needed. <0>Learn more</0>"
+			"description": "Adds a short pause after each command so the VS Code terminal can flush all output (bash/zsh: PROMPT_COMMAND sleep; PowerShell: start-sleep). Use only if you see missing tail output; otherwise leave at 0. <0>Learn more</0>"
 		},
 		"compressProgressBar": {
 			"label": "Compress progress bar output",
-			"description": "When enabled, processes terminal output with carriage returns (\\r) to simulate how a real terminal would display content. This removes intermediate progress bar states, retaining only the final state, which conserves context space for more relevant information. <0>Learn more</0>"
+			"description": "Collapses progress bars/spinners so only the final state is kept (saves tokens). <0>Learn more</0>"
 		},
 		"powershellCounter": {
 			"label": "Enable PowerShell counter workaround",
-			"description": "When enabled, adds a counter to PowerShell commands to ensure proper command execution. This helps with PowerShell terminals that might have issues with command output capture. <0>Learn more</0>"
+			"description": "Turn this on when PowerShell output is missing or duplicated; it appends a tiny counter to each command to stabilize output. Keep this off if output already looks correct. <0>Learn more</0>"
 		},
 		"zshClearEolMark": {
 			"label": "Clear ZSH EOL mark",
-			"description": "When enabled, clears the ZSH end-of-line mark by setting PROMPT_EOL_MARK=''. This prevents issues with command output interpretation when output ends with special characters like '%'. <0>Learn more</0>"
+			"description": "Turn this on when you see stray % at the end of lines or parsing looks wrong; it omits Zsh’s end‑of‑line mark (%). <0>Learn more</0>"
 		},
 		"zshOhMy": {
 			"label": "Enable Oh My Zsh integration",
-			"description": "When enabled, sets ITERM_SHELL_INTEGRATION_INSTALLED=Yes to enable Oh My Zsh shell integration features. Applying this setting might require restarting the IDE. <0>Learn more</0>"
+			"description": "Turn this on when your Oh My Zsh theme/plugins expect shell integration; it sets ITERM_SHELL_INTEGRATION_INSTALLED=Yes. Turn this off to avoid setting that variable. <0>Learn more</0>"
 		},
 		"zshP10k": {
 			"label": "Enable Powerlevel10k integration",
-			"description": "When enabled, sets POWERLEVEL9K_TERM_SHELL_INTEGRATION=true to enable Powerlevel10k shell integration features. <0>Learn more</0>"
+			"description": "Turn this on when using Powerlevel10k shell integration. <0>Learn more</0>"
 		},
 		"zdotdir": {
 			"label": "Enable ZDOTDIR handling",
-			"description": "When enabled, creates a temporary directory for ZDOTDIR to handle zsh shell integration properly. This ensures VSCode shell integration works correctly with zsh while preserving your zsh configuration. <0>Learn more</0>"
+			"description": "Turn this on when zsh shell integration fails or conflicts with your dotfiles. <0>Learn more</0>"
 		},
 		"inheritEnv": {
 			"label": "Inherit environment variables",
-			"description": "When enabled, the terminal will inherit environment variables from VSCode's parent process, such as user-profile-defined shell integration settings. This directly toggles VSCode global setting `terminal.integrated.inheritEnv`. <0>Learn more</0>"
+			"description": "Turn this on to inherit environment variables from the parent VS Code process. <0>Learn more</0>"
 		}
 	},
 	"advancedSettings": {
@@ -779,7 +802,7 @@
 	"advanced": {
 		"diff": {
 			"label": "Enable editing through diffs",
-			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes. Works best with the latest Claude 4 Sonnet model.",
+			"description": "When enabled, Kilo Code will be able to edit files more quickly and will automatically reject truncated full-file writes",
 			"strategy": {
 				"label": "Diff strategy",
 				"options": {
@@ -807,10 +830,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "Use experimental unified diff strategy",
 			"description": "Enable the experimental unified diff strategy. This strategy might reduce the number of retries caused by model errors but may cause unexpected behavior or incorrect edits. Only enable if you understand the risks and are willing to carefully review all changes."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "Use experimental search and replace tool",
-			"description": "Enable the experimental search and replace tool, allowing Kilo Code to replace multiple instances of a search term in one request."
 		},
 		"INSERT_BLOCK": {
 			"name": "Use experimental insert content tool",
@@ -894,8 +913,6 @@
 	"modelInfo": {
 		"supportsImages": "Supports images",
 		"noImages": "Does not support images",
-		"supportsComputerUse": "Supports computer use",
-		"noComputerUse": "Does not support computer use",
 		"supportsPromptCache": "Supports prompt caching",
 		"noPromptCache": "Does not support prompt caching",
 		"contextWindow": "Context Window:",

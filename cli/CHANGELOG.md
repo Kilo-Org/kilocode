@@ -1,10 +1,78 @@
 # @kilocode/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- [#3562](https://github.com/Kilo-Org/kilocode/pull/3562) [`2a08b8d`](https://github.com/Kilo-Org/kilocode/commit/2a08b8dd4464432f9863c62e9ce7b416cd87843c) Thanks [@eliasto](https://github.com/eliasto)! - Add OVHcloud AI Endpoints provider to Kilocode CLI
+
+### Patch Changes
+
+- [#3648](https://github.com/Kilo-Org/kilocode/pull/3648) [`ff2ccee`](https://github.com/Kilo-Org/kilocode/commit/ff2ccee6564ae2e80259128043f4db26e86cf953) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix initialization race conditions on auto mode
+
+- [#3672](https://github.com/Kilo-Org/kilocode/pull/3672) [`1bb9cab`](https://github.com/Kilo-Org/kilocode/commit/1bb9cabd872e82f2eef6667d5895eb7e75074ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix file write/read race condition
+
+- [#3694](https://github.com/Kilo-Org/kilocode/pull/3694) [`0253f12`](https://github.com/Kilo-Org/kilocode/commit/0253f125d5f1c146e6c3d08e651d266583f639ff) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Kitty protocol keyboard support
+
+## 0.3.0
+
+### Minor Changes
+
+- [#3623](https://github.com/Kilo-Org/kilocode/pull/3623) [`ef6bcac`](https://github.com/Kilo-Org/kilocode/commit/ef6bcac79ed5708996e80c0c943d52f12c0fe3b2) Thanks [@Sureshkumars](https://github.com/Sureshkumars)! - # Checkpoint Restore
+
+    Allows users to restore their conversation to a previous point in time.
+
+    ## What do we have here?
+
+    ### View your checkpoints
+
+    `/checkpoint list`
+
+    This shows all available restore points with:
+    Hash for the checkpoint
+    When it was created
+
+    ### Restore to a checkpoint
+
+    `/checkpoint restore abc123...`
+
+    You'll see a confirmation showing:
+    Which checkpoint you're going back to
+    How many messages will be removed
+    What will happen to your current work
+
+    Choose `Restore` to go back, or `Cancel` to keep working.
+
+    ### Example
+
+    Let's say you asked Kilo CLI to refactor some code, but you don't like the result:
+
+    Run `/checkpoint list` to see earlier save points
+
+    Find the checkpoint from before the refactoring
+
+    Run `/checkpoint restore <hash>` with that checkpoint's hash
+
+    Confirm the restore
+    Your conversation is now back to before the refactoring happened
+
+    ### Why use checkpoints?
+
+    1. Undo mistakes - Go back if something went wrong
+    2. Try different approaches - Restore and try a different solution
+    3. Keep working states - Return to a point where everything was working
+
+### Patch Changes
+
+- [#3500](https://github.com/Kilo-Org/kilocode/pull/3500) [`2e1a536`](https://github.com/Kilo-Org/kilocode/commit/2e1a53678fc1c331d98a63f0ab15b02b53fc1625) Thanks [@iscekic](https://github.com/iscekic)! - improves windows support
+
+- [#3641](https://github.com/Kilo-Org/kilocode/pull/3641) [`94bc43a`](https://github.com/Kilo-Org/kilocode/commit/94bc43af224fed36023d0f3571d39c04d21aa660) Thanks [@KrtinShet](https://github.com/KrtinShet)! - Fix workspace path resolution when using relative paths with --workspace flag. Bash commands now execute in the correct directory.
+
 ## 0.2.0
 
 ### Minor Changes
 
-- [#3528](https://github.com/Kilo-Org/kilocode/pull/3528) [`77438f1`](https://github.com/Kilo-Org/kilocode/commit/77438f1dfe2e9b5cfc5faccc314130d82c299842) Thanks [@iscekic](https://github.com/iscekic)! - add shell mode
+- [#3528](https://github.com/Kilo-Org/kilocode/pull/3528) [`77438f1`](https://github.com/Kilo-Org/kilocode/commit/77438f1dfe2e9b5cfc5faccc314130d82c299842) Thanks [@KrtinShet](https://github.com/KrtinShet) [@iscekic](https://github.com/iscekic)! - add shell mode
 
 - [#3556](https://github.com/Kilo-Org/kilocode/pull/3556) [`0fd4e8f`](https://github.com/Kilo-Org/kilocode/commit/0fd4e8f3b130f86ae5932c33ab647a2a08742c55) Thanks [@iscekic](https://github.com/iscekic)! - adds support for overriding config with env vars
 
