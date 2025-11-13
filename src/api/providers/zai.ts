@@ -1,18 +1,19 @@
 // kilocode_change - provider added
 
-import { zaiApiLineConfigs, zaiCodingModels, zaiCodingDefaultModelId, ZAI_DEFAULT_TEMPERATURE } from "@roo-code/types"
+import {
+	type zaiModelId,
+	zaiApiLineConfigs,
+	zaiCodingModels,
+	zaiCodingDefaultModelId,
+	ZAI_DEFAULT_TEMPERATURE,
+} from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
 
-export class ZAiHandler extends BaseOpenAiCompatibleProvider<typeof zaiCodingDefaultModelId> {
+export class ZAiHandler extends BaseOpenAiCompatibleProvider<zaiModelId> {
 	constructor(options: ApiHandlerOptions) {
-		// Add thinking parameter if reasoning is enabled and model supports it
-		// const { id: modelId, info: modelInfo } = this.getModel()
-		// if (options.enableReasoningEffort && modelInfo.supportsReasoningBinary) {
-		// 	; (params as any).thinking = { type: "enabled" }
-		// }
 		super({
 			...options,
 			providerName: "Z AI",

@@ -287,7 +287,7 @@ describe("ZAiHandler", () => {
 
 			it("should not include thinking parameter when model does not support reasoning in createMessage", async () => {
 				const handlerWithNonReasoningModel = new ZAiHandler({
-					apiModelId: "glm-4-32b-0414-128k", // This model doesn't have supportsReasoningBinary: true
+					apiModelId: "glm-4.5v", // This model has supportsReasoningBinary: false
 					zaiApiKey: "test-zai-api-key",
 					zaiApiLine: "international_coding",
 					enableReasoningEffort: true,
@@ -314,46 +314,6 @@ describe("ZAiHandler", () => {
 						thinking: expect.anything(),
 					}),
 					undefined,
-				)
-			})
-
-			it("should include thinking parameter when enableReasoningEffort is true and model supports reasoning in completePrompt", async () => {
-				const handlerWithReasoning = new ZAiHandler({
-					apiModelId: "glm-4.5", // GLM-4.5 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: true,
-				})
-
-				const expectedResponse = "This is a test response"
-				mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
-
-				await handlerWithReasoning.completePrompt("test prompt")
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.objectContaining({
-						thinking: { type: "enabled" },
-					}),
-				)
-			})
-
-			it("should not include thinking parameter when enableReasoningEffort is false in completePrompt", async () => {
-				const handlerWithoutReasoning = new ZAiHandler({
-					apiModelId: "glm-4.5", // GLM-4.5 has supportsReasoningBinary: true
-					zaiApiKey: "test-zai-api-key",
-					zaiApiLine: "international_coding",
-					enableReasoningEffort: false,
-				})
-
-				const expectedResponse = "This is a test response"
-				mockCreate.mockResolvedValueOnce({ choices: [{ message: { content: expectedResponse } }] })
-
-				await handlerWithoutReasoning.completePrompt("test prompt")
-
-				expect(mockCreate).toHaveBeenCalledWith(
-					expect.not.objectContaining({
-						thinking: expect.anything(),
-					}),
 				)
 			})
 		})

@@ -8,6 +8,8 @@ import { ZaiApiLine } from "../provider-settings.js"
 // https://docs.z.ai/guides/overview/pricing
 
 export const zaiCodingDefaultModelId: keyof typeof zaiCodingModels = "glm-4.6"
+export type zaiModelId = "glm-4.5" | "glm-4.5v" | "glm-4.5-air" | "glm-4.6"
+
 export const zaiCodingModels = {
 	"glm-4.5": {
 		maxTokens: 98_304,

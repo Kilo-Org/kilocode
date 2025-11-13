@@ -310,7 +310,6 @@ function getSelectedModel({
 			return { id, info }
 		}
 		case "zai": {
-			const isChina = apiConfiguration.zaiApiLine === "china_coding"
 			const models = zaiCodingModels
 			const defaultModelId = zaiCodingDefaultModelId
 			const id = apiConfiguration.apiModelId ?? defaultModelId
