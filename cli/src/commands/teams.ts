@@ -255,15 +255,18 @@ export const teamsCommand: Command = {
 	aliases: ["team", "org", "orgs"],
 	description: "Manage team/organization selection",
 	usage: "/teams [subcommand] [args]",
-	examples: ["/teams", "/teams select personal", "/teams select kilo-code", "/teams select my-team"],
+	examples: ["/teams", "/teams list", "/teams select personal", "/teams select kilo-code", "/teams select my-team"],
 	category: "settings",
 	priority: 10,
 	arguments: [
 		{
 			name: "subcommand",
-			description: "Subcommand: select",
+			description: "Subcommand: list, select",
 			required: false,
-			values: [{ value: "select", description: "Switch to a different team" }],
+			values: [
+				{ value: "list", description: "List all available teams" },
+				{ value: "select", description: "Switch to a different team" },
+			],
 		},
 		{
 			name: "team-name",
@@ -298,6 +301,10 @@ export const teamsCommand: Command = {
 
 		// Handle subcommands
 		switch (subcommand) {
+			case "list":
+				await listTeams(context)
+				break
+
 			case "select":
 				if (args.length < 2 || !args[1]) {
 					context.addMessage({

@@ -42,7 +42,14 @@ export class GhostServiceManager {
 
 		// Register Internal Components
 		this.model = new GhostModel()
-		this.ghostContextProvider = new GhostContextProvider(context, this.model)
+
+		this.ignoreController = (async () => {
+			const ignoreController = new RooIgnoreController(cline.cwd)
+			await ignoreController.initialize()
+			return ignoreController
+		})()
+
+		this.ghostContextProvider = new GhostContextProvider(this.context, this.model, this.ignoreController)
 
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
@@ -51,6 +58,7 @@ export class GhostServiceManager {
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.ghostContextProvider,
+			this.ignoreController,
 		)
 
 		void this.load()
@@ -110,7 +118,7 @@ export class GhostServiceManager {
 		} else {
 			// Register classic provider
 			this.inlineCompletionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
-				"*",
+				{ scheme: "file" },
 				this.inlineCompletionProvider,
 			)
 			this.context.subscriptions.push(this.inlineCompletionProviderDisposable)
@@ -131,28 +139,12 @@ export class GhostServiceManager {
 		await this.load()
 	}
 
-	// VsCode Event Handlers
-	private initializeIgnoreController() {
-		if (!this.ignoreController) {
-			this.ignoreController = (async () => {
-				const ignoreController = new RooIgnoreController(this.cline.cwd)
-				await ignoreController.initialize()
-				return ignoreController
-			})()
-		}
-		return this.ignoreController
-	}
-
 	private async disposeIgnoreController() {
 		if (this.ignoreController) {
 			const ignoreController = this.ignoreController
 			delete this.ignoreController
 			;(await ignoreController).dispose()
 		}
-	}
-
-	private async hasAccess(document: vscode.TextDocument) {
-		return document.isUntitled || (await this.initializeIgnoreController()).validateAccess(document.fileName)
 	}
 
 	public async codeSuggestion() {
@@ -167,9 +159,6 @@ export class GhostServiceManager {
 		})
 
 		const document = editor.document
-		if (!(await this.hasAccess(document))) {
-			return
-		}
 
 		// Check if using new autocomplete
 		if (this.settings?.useNewAutocomplete) {
@@ -327,13 +316,14 @@ export class GhostServiceManager {
 
 		// Dispose inline completion provider resources
 		this.inlineCompletionProvider.dispose()
+
 		// Dispose new autocomplete provider if it exists
 		if (this.newAutocompleteProvider) {
 			this.newAutocompleteProvider.dispose()
 			this.newAutocompleteProvider = null
 		}
 
-		this.disposeIgnoreController()
+		void this.disposeIgnoreController()
 
 		GhostServiceManager.instance = null // Reset singleton
 	}

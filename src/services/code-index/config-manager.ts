@@ -26,10 +26,45 @@ export class CodeIndexConfigManager {
 	private searchMinScore?: number
 	private searchMaxResults?: number
 
+	// kilocode_change start: Kilo org indexing props
+	private _kiloOrgProps: {
+		organizationId: string
+		kilocodeToken: string
+		projectId: string
+	} | null = null
+	// kilocode_change end
+
 	constructor(private readonly contextProxy: ContextProxy) {
 		// Initialize with current configuration to avoid false restart triggers
 		this._loadAndSetConfiguration()
 	}
+
+	// kilocode_change start: Kilo org indexing methods
+	/**
+	 * Sets Kilo organization properties for cloud-based indexing
+	 */
+	public setKiloOrgProps(props: { organizationId: string; kilocodeToken: string; projectId: string }) {
+		this._kiloOrgProps = props
+	}
+
+	/**
+	 * Gets Kilo organization properties
+	 */
+	public getKiloOrgProps() {
+		return this._kiloOrgProps
+	}
+
+	/**
+	 * Checks if Kilo org mode is available (has valid credentials)
+	 */
+	public get isKiloOrgMode(): boolean {
+		return !!(
+			this._kiloOrgProps?.organizationId &&
+			this._kiloOrgProps?.kilocodeToken &&
+			this._kiloOrgProps?.projectId
+		)
+	}
+	// kilocode_change end
 
 	/**
 	 * Gets the context proxy instance
@@ -210,8 +245,15 @@ export class CodeIndexConfigManager {
 
 	/**
 	 * Checks if the service is properly configured based on the embedder type.
+	 * kilocode_change: Also returns true if Kilo org mode is available
 	 */
 	public isConfigured(): boolean {
+		// kilocode_change start: Allow Kilo org mode as configured
+		if (this.isKiloOrgMode) {
+			return true
+		}
+		// kilocode_change end
+
 		if (this.embedderProvider === "openai") {
 			const openAiKey = this.openAiOptions?.openAiNativeApiKey
 			const qdrantUrl = this.qdrantUrl

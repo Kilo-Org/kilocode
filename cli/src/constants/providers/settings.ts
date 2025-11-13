@@ -464,6 +464,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter model ID...",
 	},
 
+	// OVHcloud AI Endpoints fields
+	ovhCloudAiEndpointsApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter OVHcloud AI Endpoints API key...",
+	},
+	ovhCloudAiEndpointsModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
 	// Virtual Quota Fallback fields
 	profiles: {
 		label: "Profiles Configuration",
@@ -795,6 +807,12 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 				},
 			]
 
+		case "ovhcloud":
+			return [
+				createFieldConfig("ovhCloudAiEndpointsApiKey", config),
+				createFieldConfig("ovhCloudAiEndpointsModelId", config, "gpt-oss-120b"),
+			]
+
 		default:
 			return []
 	}
@@ -843,6 +861,7 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"human-relay": "human",
 	minimax: "MiniMax-M2",
 	"fake-ai": "fake-model",
+	ovhcloud: "gpt-oss-120b",
 }
 
 /**

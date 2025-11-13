@@ -128,6 +128,7 @@ import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
 import { maybeRemoveReasoningDetails_kilocode, ReasoningDetail } from "../../api/transform/kilocode/reasoning-details"
+import { mergeApiMessages } from "./kilocode"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -640,6 +641,15 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	private async addToApiConversationHistory(message: Anthropic.MessageParam) {
+		// kilocode_change start: prevent consecutive same-role messages, this happens when returning from subtask
+		const lastMessage = this.apiConversationHistory.at(-1)
+		if (lastMessage && lastMessage.role === message.role) {
+			this.apiConversationHistory[this.apiConversationHistory.length - 1] = mergeApiMessages(lastMessage, message)
+			await this.saveApiConversationHistory()
+			return
+		}
+		// kilocode_change end
+
 		const messageWithTs = { ...message, ts: Date.now() }
 		this.apiConversationHistory.push(messageWithTs)
 		await this.saveApiConversationHistory()

@@ -135,7 +135,11 @@ export function getToolDescriptionsForMode(
 		!codeIndexManager ||
 		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 	) {
-		tools.delete("codebase_search")
+		// kilocode_change start
+		if (!codeIndexManager?.isManagedIndexingAvailable) {
+			tools.delete("codebase_search")
+		}
+		// kilocode_change end
 	}
 
 	// kilocode_change start: Morph fast apply

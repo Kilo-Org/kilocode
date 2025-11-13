@@ -215,6 +215,7 @@ describe("Static Provider Models", () => {
 			"io-intelligence": {},
 			deepinfra: {},
 			"vercel-ai-gateway": {},
+			ovhcloud: {},
 		}
 
 		it("should return router models for openrouter provider", () => {

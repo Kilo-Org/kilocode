@@ -41,6 +41,7 @@ describe("/model command", () => {
 		"io-intelligence": {},
 		deepinfra: {},
 		"vercel-ai-gateway": {},
+		ovhcloud: {},
 	}
 
 	const mockProvider: ProviderConfig = {
@@ -404,6 +405,7 @@ describe("/model command", () => {
 				"io-intelligence": {},
 				deepinfra: {},
 				"vercel-ai-gateway": {},
+				ovhcloud: {},
 			}
 			mockContext.args = ["list"]
 

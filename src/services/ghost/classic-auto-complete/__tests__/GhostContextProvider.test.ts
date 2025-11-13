@@ -3,6 +3,7 @@ import { GhostContextProvider } from "../GhostContextProvider"
 import { AutocompleteInput } from "../../types"
 import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/snippets/types"
 import { GhostModel } from "../../GhostModel"
+import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
 import * as vscode from "vscode"
 import crypto from "crypto"
 
@@ -93,6 +94,7 @@ describe("GhostContextProvider", () => {
 	let contextProvider: GhostContextProvider
 	let mockContext: vscode.ExtensionContext
 	let mockModel: GhostModel
+	let mockIgnoreController: Promise<RooIgnoreController> | undefined
 
 	beforeEach(() => {
 		vi.clearAllMocks()
@@ -108,7 +110,9 @@ describe("GhostContextProvider", () => {
 			getModelName: vi.fn().mockReturnValue("codestral"),
 		} as any
 
-		contextProvider = new GhostContextProvider(mockContext, mockModel)
+		mockIgnoreController = undefined
+
+		contextProvider = new GhostContextProvider(mockContext, mockModel, mockIgnoreController)
 	})
 
 	describe("getFormattedContext", () => {
@@ -195,6 +199,153 @@ describe("GhostContextProvider", () => {
 			const input = createAutocompleteInput("/test.ts")
 
 			await expect(contextProvider.getFormattedContext(input, "/test.ts")).rejects.toThrow("Test error")
+		})
+	})
+
+	describe("with RooIgnoreController", () => {
+		beforeEach(() => {
+			const mockController = {
+				validateAccess: vi.fn().mockReturnValue(true),
+				initialize: vi.fn(),
+				dispose: vi.fn(),
+				filterPaths: vi.fn(),
+				validateCommand: vi.fn(),
+				getInstructions: vi.fn(),
+			} as any
+
+			mockIgnoreController = Promise.resolve(mockController)
+
+			contextProvider = new GhostContextProvider(mockContext, mockModel, mockIgnoreController)
+		})
+
+		it("should filter out blocked files", async () => {
+			const { getAllSnippetsWithoutRace } = await import(
+				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+			)
+
+			// Mock validateAccess to block /blocked.ts
+			const controller = await mockIgnoreController!
+			;(controller as any).validateAccess.mockImplementation((path: string) => {
+				return !path.includes("blocked.ts")
+			})
+			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
+				recentlyOpenedFileSnippets: [
+					{
+						filepath: "/allowed.ts",
+						content: "const allowed = 1;",
+						type: AutocompleteSnippetType.Code,
+					},
+					{
+						filepath: "/blocked.ts",
+						content: "const blocked = 2;",
+						type: AutocompleteSnippetType.Code,
+					},
+				],
+				importDefinitionSnippets: [],
+				rootPathSnippets: [],
+				recentlyEditedRangeSnippets: [],
+				recentlyVisitedRangesSnippets: [],
+				diffSnippets: [],
+				clipboardSnippets: [],
+				ideSnippets: [],
+				staticSnippet: [],
+			})
+
+			const input = createAutocompleteInput("/test.ts")
+			const formatted = await contextProvider.getFormattedContext(input, "/test.ts")
+
+			// Should only contain the allowed file
+			expect(formatted).toContain("allowed.ts")
+			expect(formatted).not.toContain("blocked.ts")
+			expect(formatted).toContain("const allowed = 1;")
+			expect(formatted).not.toContain("const blocked = 2;")
+		})
+
+		it("should keep snippets without file paths", async () => {
+			const { getAllSnippetsWithoutRace } = await import(
+				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+			)
+
+			const controller = await mockIgnoreController!
+			;(controller as any).validateAccess.mockReturnValue(false) // Block all files
+			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
+				recentlyOpenedFileSnippets: [
+					{
+						filepath: "/blocked.ts",
+						content: "const blocked = 1;",
+						type: AutocompleteSnippetType.Code,
+					},
+				],
+				importDefinitionSnippets: [],
+				rootPathSnippets: [],
+				recentlyEditedRangeSnippets: [],
+				recentlyVisitedRangesSnippets: [],
+				diffSnippets: [
+					{
+						content: "diff content",
+						type: AutocompleteSnippetType.Diff,
+					},
+				],
+				clipboardSnippets: [
+					{
+						content: "clipboard content",
+						type: AutocompleteSnippetType.Clipboard,
+						copiedAt: "2024-01-01",
+					},
+				],
+				ideSnippets: [],
+				staticSnippet: [],
+			})
+
+			const { getSnippets } = await import("../../../continuedev/core/autocomplete/templating/filtering")
+			;(getSnippets as any).mockImplementation((_helper: any, payload: any) => [
+				...payload.recentlyOpenedFileSnippets,
+				...payload.diffSnippets,
+				...payload.clipboardSnippets,
+			])
+
+			const input = createAutocompleteInput("/test.ts")
+			const formatted = await contextProvider.getFormattedContext(input, "/test.ts")
+
+			// Should not contain blocked file
+			expect(formatted).not.toContain("blocked.ts")
+			// But should contain snippets without file paths
+			expect(formatted).toContain("diff content")
+			expect(formatted).toContain("clipboard content")
+		})
+
+		it("should allow all files when no ignore controller is provided", async () => {
+			// Create provider without ignore controller
+			contextProvider = new GhostContextProvider(mockContext, mockModel)
+
+			const { getAllSnippetsWithoutRace } = await import(
+				"../../../continuedev/core/autocomplete/snippets/getAllSnippets"
+			)
+
+			;(getAllSnippetsWithoutRace as any).mockResolvedValueOnce({
+				recentlyOpenedFileSnippets: [
+					{
+						filepath: "/any-file.ts",
+						content: "const any = 1;",
+						type: AutocompleteSnippetType.Code,
+					},
+				],
+				importDefinitionSnippets: [],
+				rootPathSnippets: [],
+				recentlyEditedRangeSnippets: [],
+				recentlyVisitedRangesSnippets: [],
+				diffSnippets: [],
+				clipboardSnippets: [],
+				ideSnippets: [],
+				staticSnippet: [],
+			})
+
+			const input = createAutocompleteInput("/test.ts")
+			const formatted = await contextProvider.getFormattedContext(input, "/test.ts")
+
+			// Should contain all files when no controller
+			expect(formatted).toContain("any-file.ts")
+			expect(formatted).toContain("const any = 1;")
 		})
 	})
 })

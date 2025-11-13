@@ -104,6 +104,7 @@ export type ProviderName =
 	| "roo"
 	| "vercel-ai-gateway"
 	| "minimax"
+	| "ovhcloud"
 
 // Provider Settings Entry for profile metadata
 export interface ProviderSettingsEntry {
@@ -324,6 +325,10 @@ export interface ProviderSettings {
 	// MiniMax AI
 	minimaxBaseUrl?: "https://api.minimax.io/anthropic" | "https://api.minimaxi.com/anthropic"
 	minimaxApiKey?: string
+
+	// OVHcloud AI Endpoints
+	ovhCloudAiEndpointsApiKey?: string
+	ovhCloudAiEndpointsModelId?: string
 
 	// Allow additional fields for extensibility
 	[key: string]: any

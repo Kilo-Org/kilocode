@@ -88,7 +88,14 @@ export async function getAllowedJSONToolsForMode(
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	if (
 		!codeIndexManager ||
-		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
+		// kilcode_change start
+		!(
+			codeIndexManager.isFeatureEnabled &&
+			codeIndexManager.isFeatureConfigured &&
+			codeIndexManager.isInitialized &&
+			codeIndexManager.isManagedIndexingAvailable
+		)
+		// kilcode_change end
 	) {
 		tools.delete("codebase_search")
 	}

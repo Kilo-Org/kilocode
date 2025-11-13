@@ -37,6 +37,7 @@ async function ensureRouterModels(context: any): Promise<boolean> {
 		"deepinfra",
 		"io-intelligence",
 		"vercel-ai-gateway",
+		"ovhcloud",
 	].includes(routerName)
 
 	if (!needsRouterModels) {

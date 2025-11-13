@@ -1,5 +1,19 @@
 # @kilocode/cli
 
+## 0.4.0
+
+### Minor Changes
+
+- [#3562](https://github.com/Kilo-Org/kilocode/pull/3562) [`2a08b8d`](https://github.com/Kilo-Org/kilocode/commit/2a08b8dd4464432f9863c62e9ce7b416cd87843c) Thanks [@eliasto](https://github.com/eliasto)! - Add OVHcloud AI Endpoints provider to Kilocode CLI
+
+### Patch Changes
+
+- [#3648](https://github.com/Kilo-Org/kilocode/pull/3648) [`ff2ccee`](https://github.com/Kilo-Org/kilocode/commit/ff2ccee6564ae2e80259128043f4db26e86cf953) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix initialization race conditions on auto mode
+
+- [#3672](https://github.com/Kilo-Org/kilocode/pull/3672) [`1bb9cab`](https://github.com/Kilo-Org/kilocode/commit/1bb9cabd872e82f2eef6667d5895eb7e75074ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix file write/read race condition
+
+- [#3694](https://github.com/Kilo-Org/kilocode/pull/3694) [`0253f12`](https://github.com/Kilo-Org/kilocode/commit/0253f125d5f1c146e6c3d08e651d266583f639ff) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Kitty protocol keyboard support
+
 ## 0.3.0
 
 ### Minor Changes

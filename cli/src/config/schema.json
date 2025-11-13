@@ -264,7 +264,8 @@
 						"vercel-ai-gateway",
 						"virtual-quota-fallback",
 						"human-relay",
-						"fake-ai"
+						"fake-ai",
+						"ovhcloud"
 					]
 				}
 			},
@@ -2127,6 +2128,48 @@
 									"family": { "minLength": 1 }
 								}
 							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints API key"
+							},
+							"ovhCloudAiEndpointsModelId": {
+								"type": "string",
+								"description": "OVHcloud AI Endpoints model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "ovhcloud" } }
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsApiKey": { "type": "string" }
+						},
+						"required": []
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "ovhcloud" },
+							"ovhCloudAiEndpointsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["ovhCloudAiEndpointsModelId"]
+					},
+					"then": {
+						"properties": {
+							"ovhCloudAiEndpointsModelId": { "minLength": 1 }
 						}
 					}
 				}

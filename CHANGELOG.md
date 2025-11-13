@@ -1,5 +1,69 @@
 # kilo-code
 
+## [v4.119.0]
+
+- [#3498](https://github.com/Kilo-Org/kilocode/pull/3498) [`10fe57d`](https://github.com/Kilo-Org/kilocode/commit/10fe57dab94217c80ed03835ed71162d8a64c91e) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Include changes from Roo Code v3.29.0-v3.30.0
+
+    - Add token-budget based file reading with intelligent preview to avoid context overruns (thanks @daniel-lxs!)
+    - Fix: Respect nested .gitignore files in search_files (#7921 by @hannesrudolph, PR by @daniel-lxs)
+    - Fix: Preserve trailing newlines in stripLineNumbers for apply_diff (#8020 by @liyi3c, PR by @app/roomote)
+    - Fix: Exclude max tokens field for models that don't support it in export (#7944 by @hannesrudolph, PR by @elianiva)
+    - Retry API requests on stream failures instead of aborting task (thanks @daniel-lxs!)
+    - Improve auto-approve button responsiveness (thanks @daniel-lxs!)
+    - Add checkpoint initialization timeout settings and fix checkpoint timeout warnings (#7843 by @NaccOll, PR by @NaccOll)
+    - Always show checkpoint restore options regardless of change detection (thanks @daniel-lxs!)
+    - Improve checkpoint menu translations (thanks @daniel-lxs!)
+    - Update Mistral Medium model name (#8362 by @ThomsenDrake, PR by @ThomsenDrake)
+    - Remove GPT-5 instructions/reasoning_summary from UI message metadata to prevent ui_messages.json bloat (thanks @hannesrudolph!)
+    - Normalize docs-extractor audience tags; remove admin/stakeholder; strip tool invocations (thanks @hannesrudolph!)
+    - Try 5s status mutation timeout (thanks @cte!)
+    - Fix: Clean up max output token calculations to prevent context window overruns (#8821 by @enerage, PR by @roomote)
+    - Fix: Change Add to Context keybinding to avoid Redo conflict (#8652 by @swythan, PR by @roomote)
+    - Fix provider model loading race conditions (thanks @mrubens!)
+    - Fix: Remove specific Claude model version from settings descriptions to avoid outdated references (#8435 by @rwydaegh, PR by @roomote)
+    - Fix: Ensure free models don't display pricing information in the UI (thanks @mrubens!)
+    - Add reasoning support for Z.ai GLM binary thinking mode (#8465 by @BeWater799, PR by @daniel-lxs)
+    - Add settings to configure time and cost display in system prompt (#8450 by @jaxnb, PR by @roomote)
+    - Fix: Use max_output_tokens when available in LiteLLM fetcher (#8454 by @fabb, PR by @roomote)
+    - Fix: Process queued messages after context condensing completes (#8477 by @JosXa, PR by @roomote)
+    - Fix: Resolve checkpoint menu popover overflow (thanks @daniel-lxs!)
+    - Fix: LiteLLM test failures after merge (thanks @daniel-lxs!)
+    - Improve UX: Focus textbox and add newlines after adding to context (thanks @mrubens!)
+    - Fix: prevent infinite loop when canceling during auto-retry (#8901 by @mini2s, PR by @app/roomote)
+    - Fix: Enhanced codebase index recovery and reuse ('Start Indexing' button now reuses existing Qdrant index) (#8129 by @jaroslaw-weber, PR by @heyseth)
+    - Fix: make code index initialization non-blocking at activation (#8777 by @cjlawson02, PR by @daniel-lxs)
+    - Fix: remove search_and_replace tool from codebase (#8891 by @hannesrudolph, PR by @app/roomote)
+    - Fix: custom modes under custom path not showing (#8122 by @hannesrudolph, PR by @elianiva)
+    - Fix: prevent MCP server restart when toggling tool permissions (#8231 by @hannesrudolph, PR by @heyseth)
+    - Fix: truncate type definition to match max read line (#8149 by @chenxluo, PR by @elianiva)
+    - Fix: auto-sync enableReasoningEffort with reasoning dropdown selection (thanks @daniel-lxs!)
+    - Prevent a noisy cloud agent exception (thanks @cte!)
+    - Feat: improve @ file search for large projects (#5721 by @Naituw, PR by @daniel-lxs)
+    - Feat: rename MCP Errors tab to Logs for mixed-level messages (#8893 by @hannesrudolph, PR by @app/roomote)
+    - docs(vscode-lm): clarify VS Code LM API integration warning (thanks @hannesrudolph!)
+    - Fix: Resolve Qdrant codebase_search error by adding keyword index for type field (#8963 by @rossdonald, PR by @app/roomote)
+    - Fix cost and token tracking between provider styles to ensure accurate usage metrics (thanks @mrubens!)
+    - Feat: Add OpenRouter embedding provider support (#8972 by @dmarkey, PR by @dmarkey)
+    - Feat: Add GLM-4.6 model to Fireworks provider (#8752 by @mmealman, PR by @app/roomote)
+    - Feat: Add MiniMax M2 model to Fireworks provider (#8961 by @dmarkey, PR by @app/roomote)
+    - Feat: Add preserveReasoning flag to include reasoning in API history (thanks @daniel-lxs!)
+    - Fix: Prevent message loss during queue drain race condition (#8536 by @hannesrudolph, PR by @daniel-lxs)
+    - Fix: Capture the reasoning content in base-openai-compatible for GLM 4.6 (thanks @mrubens!)
+    - Fix: Create new Requesty profile during OAuth (thanks @Thibault00!)
+    - Fix: Cleanup terminal settings tab and change default terminal to inline (thanks @hannesrudolph!)
+
+- [#3643](https://github.com/Kilo-Org/kilocode/pull/3643) [`89d5135`](https://github.com/Kilo-Org/kilocode/commit/89d513569481ed1a6c1cfb5f7cd049dc8276a72c) Thanks [@iscekic](https://github.com/iscekic)! - add smart yolo mode
+
+### Patch Changes
+
+- [#3659](https://github.com/Kilo-Org/kilocode/pull/3659) [`44732df`](https://github.com/Kilo-Org/kilocode/commit/44732dff31b4d3737203548ac4022eccfd21e354) Thanks [@Maosghoul](https://github.com/Maosghoul)! - MiniMax M2 now uses JSON-style tools by default
+
+- [#3653](https://github.com/Kilo-Org/kilocode/pull/3653) [`c79efb1`](https://github.com/Kilo-Org/kilocode/commit/c79efb1b19399ef0572d10829843732e08cd08e8) Thanks [@ctsstc](https://github.com/ctsstc)! - Added GLM 4.6 to Fireworks provider
+
+- [#3693](https://github.com/Kilo-Org/kilocode/pull/3693) [`825e7c4`](https://github.com/Kilo-Org/kilocode/commit/825e7c41f9ceeb3abcc7b1fa68a586c9f1cad384) Thanks [@chrarnoldus](https://github.com/chrarnoldus)! - Fix API error when returning from subtask with native tool calls enabled
+
+- [#3680](https://github.com/Kilo-Org/kilocode/pull/3680) [`fc76487`](https://github.com/Kilo-Org/kilocode/commit/fc7648749bacc2f4e1b4988af3011b399b392027) Thanks [@markijbema](https://github.com/markijbema)! - Dont show autocomplete suggestions which aren't useful
+
 ## [v4.118.0]
 
 - [#3638](https://github.com/Kilo-Org/kilocode/pull/3638) [`49e44fc`](https://github.com/Kilo-Org/kilocode/commit/49e44fc1c3c02648a534f737c6df0d7d4964810c) Thanks [@mcowger](https://github.com/mcowger)! - Enable Moonshot for native tool calling

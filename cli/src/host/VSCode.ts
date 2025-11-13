@@ -1129,6 +1129,51 @@ export class WorkspaceAPI {
 				// Write back to file
 				const newContent = lines.join("\n")
 				fs.writeFileSync(filePath, newContent, "utf-8")
+
+				// Update the in-memory document object to reflect the new content
+				// This is critical for CLI mode where DiffViewProvider reads from the document object
+				const document = this.textDocuments.find((doc: any) => doc.uri.fsPath === filePath)
+				if (document) {
+					const newLines = newContent.split("\n")
+
+					// Update document properties with new content
+					document.lineCount = newLines.length
+					document.getText = (range?: Range) => {
+						if (!range) {
+							return newContent
+						}
+						return newLines.slice(range.start.line, range.end.line + 1).join("\n")
+					}
+					document.lineAt = (line: number) => {
+						const text = newLines[line] || ""
+						return {
+							text,
+							range: new Range(new Position(line, 0), new Position(line, text.length)),
+							rangeIncludingLineBreak: new Range(new Position(line, 0), new Position(line + 1, 0)),
+							firstNonWhitespaceCharacterIndex: text.search(/\S/),
+							isEmptyOrWhitespace: text.trim().length === 0,
+						}
+					}
+					document.offsetAt = (position: Position) => {
+						let offset = 0
+						for (let i = 0; i < position.line && i < newLines.length; i++) {
+							offset += (newLines[i]?.length || 0) + 1 // +1 for newline
+						}
+						offset += position.character
+						return offset
+					}
+					document.positionAt = (offset: number) => {
+						let currentOffset = 0
+						for (let i = 0; i < newLines.length; i++) {
+							const lineLength = (newLines[i]?.length || 0) + 1 // +1 for newline
+							if (currentOffset + lineLength > offset) {
+								return new Position(i, offset - currentOffset)
+							}
+							currentOffset += lineLength
+						}
+						return new Position(newLines.length - 1, newLines[newLines.length - 1]?.length || 0)
+					}
+				}
 			}
 			return true
 		} catch (error) {

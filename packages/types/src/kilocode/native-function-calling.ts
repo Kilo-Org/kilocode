@@ -26,7 +26,7 @@ export const nativeFunctionCallingProviders = [
 	"moonshot",
 ] satisfies ProviderName[] as ProviderName[]
 
-const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5"]
+const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5", "minimax-m2"]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {
 	if (!settings) {

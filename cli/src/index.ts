@@ -14,6 +14,7 @@ import openConfigFile from "./config/openConfig.js"
 import authWizard from "./utils/authWizard.js"
 import { configExists } from "./config/persistence.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
+import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
 
 const program = new Command()
 let cli: CLI | null = null
@@ -171,6 +172,26 @@ program
 	.description("Open the configuration file in your default editor")
 	.action(async () => {
 		await openConfigFile()
+	})
+
+// Debug command - checks hardware and OS compatibility
+program
+	.command("debug")
+	.description("Run a system compatibility check for the Kilo Code CLI")
+	.argument("[mode]", `The mode to debug (${DEBUG_MODES.join(", ")})`, "")
+	.action(async (mode: string) => {
+		if (!mode || !DEBUG_MODES.includes(mode)) {
+			console.error(`Error: Invalid debug mode. Valid modes are: ${DEBUG_MODES.join(", ")}`)
+			process.exit(1)
+		}
+
+		const debugFunction = DEBUG_FUNCTIONS[mode as keyof typeof DEBUG_FUNCTIONS]
+		if (!debugFunction) {
+			console.error(`Error: Debug function not implemented for mode: ${mode}`)
+			process.exit(1)
+		}
+
+		await debugFunction()
 	})
 
 // Handle process termination signals

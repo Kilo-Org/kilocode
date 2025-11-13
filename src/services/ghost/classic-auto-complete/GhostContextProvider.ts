@@ -9,16 +9,20 @@ import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameter
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
+import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
 
 export class GhostContextProvider {
 	private contextService: ContextRetrievalService
 	private ide: VsCodeIde
 	private model: GhostModel
+	private ignoreController?: Promise<RooIgnoreController>
 
-	constructor(context: vscode.ExtensionContext, model: GhostModel) {
+	constructor(context: vscode.ExtensionContext, model: GhostModel, ignoreController?: Promise<RooIgnoreController>) {
 		this.ide = new VsCodeIde(context)
 		this.contextService = new ContextRetrievalService(this.ide)
 		this.model = model
+		this.ignoreController = ignoreController
 	}
 
 	/**
@@ -26,6 +30,56 @@ export class GhostContextProvider {
 	 */
 	public getIde(): VsCodeIde {
 		return this.ide
+	}
+
+	private uriToFsPath(filepath: string): string {
+		if (filepath.startsWith("file://")) {
+			return vscode.Uri.parse(filepath).fsPath
+		}
+		return filepath
+	}
+
+	private hasFilepath(snippet: AutocompleteSnippet): snippet is AutocompleteSnippet & { filepath?: string } {
+		return snippet.type === AutocompleteSnippetType.Code || snippet.type === AutocompleteSnippetType.Static
+	}
+
+	private async filterSnippetsByAccess(snippets: AutocompleteSnippet[]): Promise<AutocompleteSnippet[]> {
+		if (!this.ignoreController) {
+			return snippets
+		}
+
+		try {
+			// Try to get the controller, but don't wait too long
+			const controller = await Promise.race([
+				this.ignoreController,
+				new Promise<null>((resolve) => setTimeout(() => resolve(null), 100)),
+			])
+
+			if (!controller) {
+				// If promise hasn't resolved yet, assume files are ignored (as per requirement)
+				return snippets.filter((snippet) => {
+					// Only keep snippets without file paths (Diff, Clipboard)
+					return !this.hasFilepath(snippet) || !snippet.filepath
+				})
+			}
+
+			return snippets.filter((snippet) => {
+				if (this.hasFilepath(snippet) && snippet.filepath) {
+					const fsPath = this.uriToFsPath(snippet.filepath)
+					const hasAccess = controller.validateAccess(fsPath)
+					return hasAccess
+				}
+
+				// Keep all other snippet types (Diff, Clipboard) that don't have file paths
+				return true
+			})
+		} catch (error) {
+			console.error("[GhostContextProvider] Error filtering snippets by access:", error)
+			// On error, be conservative and filter out file-based snippets
+			return snippets.filter((snippet) => {
+				return !this.hasFilepath(snippet) || !snippet.filepath
+			})
+		}
 	}
 
 	/**
@@ -60,8 +114,11 @@ export class GhostContextProvider {
 
 		const filteredSnippets = getSnippets(helper, snippetPayload)
 
+		// Apply access filtering to remove snippets from blocked files
+		const accessibleSnippets = await this.filterSnippetsByAccess(filteredSnippets)
+
 		// Convert all snippet filepaths to URIs
-		const snippetsWithUris = filteredSnippets.map((snippet: any) => ({
+		const snippetsWithUris = accessibleSnippets.map((snippet: any) => ({
 			...snippet,
 			filepath: snippet.filepath?.startsWith("file://")
 				? snippet.filepath

@@ -62,4 +62,8 @@ If you're creating a completely new file that doesn't exist in Roo, add this com
 ### Kilocode specific file - these rules take precedence over all other rules above
 
 - if the filename or directory name contains kilocode no marking with comments is required
-- if the file lives inside of the jetbrains/ or cli/ root folder, no marking with comments is required
+- all the following folders are kilocode-specific and need no marking with comments:
+    - jetbrains/
+    - cli/
+    - src/services/ghost/
+    - src/services/continuedev/
