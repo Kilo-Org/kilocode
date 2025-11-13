@@ -15,6 +15,7 @@
 		"deps:freeze": "npm shrinkwrap --prefix ./dist",
 		"shrinkwrap": "pnpm run deps:install && pnpm run deps:freeze && cp ./dist/npm-shrinkwrap.json ./npm-shrinkwrap.dist.json",
 		"start": "node dist/index.js",
+		"start:dev": "pnpm build && pnpm start",
 		"clean": "rimraf dist",
 		"test": "vitest run",
 		"test:watch": "vitest",
