@@ -49,10 +49,6 @@ import {
 	sambaNovaDefaultModelId,
 	doubaoModels,
 	doubaoDefaultModelId,
-	internationalZAiDefaultModelId,
-	mainlandZAiDefaultModelId,
-	internationalZAiModels,
-	mainlandZAiModels,
 	fireworksModels,
 	fireworksDefaultModelId,
 	featherlessModels,
@@ -66,6 +62,8 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
 	isDynamicProvider,
+	zaiCodingModels,
+	zaiCodingDefaultModelId,
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -313,8 +311,8 @@ function getSelectedModel({
 		}
 		case "zai": {
 			const isChina = apiConfiguration.zaiApiLine === "china_coding"
-			const models = isChina ? mainlandZAiModels : internationalZAiModels
-			const defaultModelId = isChina ? mainlandZAiDefaultModelId : internationalZAiDefaultModelId
+			const models = zaiCodingModels
+			const defaultModelId = zaiCodingDefaultModelId
 			const id = apiConfiguration.apiModelId ?? defaultModelId
 			const info = models[id as keyof typeof models]
 			return { id, info }

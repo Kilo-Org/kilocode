@@ -25,7 +25,7 @@ import {
 	vertexModels,
 	vscodeLlmModels,
 	xaiModels,
-	internationalZAiModels,
+	zaiCodingModels,
 	minimaxModels,
 } from "./providers/index.js"
 import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
@@ -829,7 +829,7 @@ export const MODELS_BY_PROVIDER: Record<
 		models: Object.keys(vscodeLlmModels),
 	},
 	xai: { id: "xai", label: "xAI (Grok)", models: Object.keys(xaiModels) },
-	zai: { id: "zai", label: "Zai", models: Object.keys(internationalZAiModels) },
+	zai: { id: "zai", label: "Zai", models: Object.keys(zaiCodingModels) },
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },

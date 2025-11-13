@@ -20,7 +20,7 @@ import {
 	groqModels,
 	sambaNovaModels,
 	doubaoModels,
-	internationalZAiModels,
+	zaiCodingModels,
 	fireworksModels,
 	rooModels,
 	featherlessModels,
@@ -48,7 +48,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	groq: groqModels,
 	// chutes: chutesModels, // kilocode_change
 	sambanova: sambaNovaModels,
-	zai: internationalZAiModels,
+	zai: zaiCodingModels,
 	fireworks: fireworksModels,
 	roo: rooModels,
 	featherless: featherlessModels,
