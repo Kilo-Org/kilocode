@@ -2877,13 +2877,17 @@ ${prompt}
 			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))
 		}
 
+		let workingDirectory: string | undefined
+
 		// TODO: point task to worktree
 		if (isBackgroundTask) {
 			const worktree = await createWorktree(text || "kilo-task")
 
-			console.log(worktree)
+			workingDirectory = worktree.directoryPath
 		}
 
+		// TODO: task should make edits in the background
+		// TODO: task needs to be visible in the history
 		const task = new Task({
 			provider: this,
 			context: this.context, // kilocode_change
@@ -2902,6 +2906,7 @@ ${prompt}
 			onCreated: this.taskCreationCallback,
 			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, remoteControlEnabled),
 			initialTodos: options.initialTodos,
+			workspacePath: workingDirectory,
 			...options,
 		})
 
