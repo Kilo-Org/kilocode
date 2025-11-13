@@ -30,6 +30,10 @@ export const GhostServiceSettingsView = ({
 }: GhostServiceSettingsViewProps) => {
 	const { t } = useAppTranslation()
 	const { listApiConfigMeta } = useExtensionState()
+	
+	// Debug: log the profiles
+	console.log("[GhostServiceSettings] listApiConfigMeta:", listApiConfigMeta)
+	
 	const {
 		enableAutoTrigger,
 		enableQuickInlineTaskKeybinding,
