@@ -265,7 +265,9 @@
 						"virtual-quota-fallback",
 						"human-relay",
 						"fake-ai",
-						"ovhcloud"
+						"ovhcloud",
+						"inception",
+						"synthetic"
 					]
 				}
 			},
@@ -982,7 +984,10 @@
 								"description": "OpenAI API key"
 							},
 							"openAiBaseUrl": { "type": "string" },
-							"apiModelId": { "type": "string" }
+							"openAiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							}
 						}
 					}
 				},
@@ -997,6 +1002,20 @@
 					"then": {
 						"properties": {
 							"openAiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai" },
+							"openAiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiModelId"]
+					},
+					"then": {
+						"properties": {
+							"openAiModelId": { "minLength": 1 }
 						}
 					}
 				},
@@ -2170,6 +2189,100 @@
 					"then": {
 						"properties": {
 							"ovhCloudAiEndpointsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "inception" } }
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": {
+								"type": "string",
+								"description": "Inception Labs API key"
+							},
+							"inceptionLabsBaseUrl": {
+								"type": "string",
+								"description": "Inception Labs base URL"
+							},
+							"inceptionLabsModelId": {
+								"type": "string",
+								"description": "Inception Labs model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsApiKey"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsModelId"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "synthetic" } }
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": {
+								"type": "string",
+								"description": "Synthetic API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Synthetic model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"syntheticApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["syntheticApiKey"]
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
 						}
 					}
 				}

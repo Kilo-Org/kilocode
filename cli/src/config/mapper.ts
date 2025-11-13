@@ -74,7 +74,7 @@ function getModelIdForProvider(provider: ProviderConfig): string {
 		case "lmstudio":
 			return provider.lmStudioModelId || ""
 		case "openai":
-			return provider.apiModelId || ""
+			return provider.openAiModelId || ""
 		case "glama":
 			return provider.glamaModelId || ""
 		case "litellm":
@@ -114,8 +114,9 @@ function getModelIdForProvider(provider: ProviderConfig): string {
 		case "roo":
 		case "claude-code":
 		case "synthetic":
-		case "virtual-quota-fallback":
 			return provider.apiModelId || ""
+		case "virtual-quota-fallback":
+			return provider.profiles && provider.profiles.length > 0 ? `${provider.profiles.length} profile(s)` : ""
 		case "vscode-lm":
 			if (provider.vsCodeLmModelSelector) {
 				return `${provider.vsCodeLmModelSelector.vendor}/${provider.vsCodeLmModelSelector.family}`

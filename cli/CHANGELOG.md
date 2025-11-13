@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 0.4.2
+
+### Patch Changes
+
+- [#3744](https://github.com/Kilo-Org/kilocode/pull/3744) [`e1442ff`](https://github.com/Kilo-Org/kilocode/commit/e1442ffa934bea546cbf251ab19caf271c514c65) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix OpenAI compatible provider config
+
+- [#3739](https://github.com/Kilo-Org/kilocode/pull/3739) [`d7a3204`](https://github.com/Kilo-Org/kilocode/commit/d7a3204b166d7e709e83f222f6858966e418828b) Thanks [@iscekic](https://github.com/iscekic)! - fix diff command
+
+- [#3701](https://github.com/Kilo-Org/kilocode/pull/3701) [`7c8f30c`](https://github.com/Kilo-Org/kilocode/commit/7c8f30c12e541b3c3da56c208664571126fb031d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Auth Wizard for KiloCode
+
 ## 0.4.1
 
 ### Patch Changes

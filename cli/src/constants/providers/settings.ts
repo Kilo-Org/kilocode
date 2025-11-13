@@ -475,6 +475,37 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		type: "text",
 		placeholder: "Enter model ID...",
 	},
+	ovhCloudAiEndpointsBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
+
+	// Inception Labs fields
+	inceptionLabsApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Inception Labs API key...",
+	},
+	inceptionLabsBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
+	inceptionLabsModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
+	// Synthetic fields
+	syntheticApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Synthetic API key...",
+	},
 
 	// Virtual Quota Fallback fields
 	profiles: {
@@ -812,6 +843,20 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 			return [
 				createFieldConfig("ovhCloudAiEndpointsApiKey", config),
 				createFieldConfig("ovhCloudAiEndpointsModelId", config, "gpt-oss-120b"),
+				createFieldConfig("ovhCloudAiEndpointsBaseUrl", config, "Default"),
+			]
+
+		case "inception":
+			return [
+				createFieldConfig("inceptionLabsApiKey", config),
+				createFieldConfig("inceptionLabsBaseUrl", config, "Default"),
+				createFieldConfig("inceptionLabsModelId", config, "gpt-4o"),
+			]
+
+		case "synthetic":
+			return [
+				createFieldConfig("syntheticApiKey", config),
+				createFieldConfig("apiModelId", config, "synthetic-model"),
 			]
 
 		default:
