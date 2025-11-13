@@ -31,22 +31,6 @@ export const GhostServiceSettingsView = ({
 	const { t } = useAppTranslation()
 	const { listApiConfigMeta } = useExtensionState()
 	
-	// Debug: log the profiles
-	console.log("[GhostServiceSettings] listApiConfigMeta:", listApiConfigMeta)
-	
-	// Debug: log the dropdown options
-	const profileOptions = useMemo(() => {
-		const opts = [
-			{ value: "", label: "Auto-detect (use first available)" },
-			...(listApiConfigMeta || []).map((config) => ({
-				value: config.id,
-				label: config.name,
-			})),
-		]
-		console.log("[GhostServiceSettings] Profile dropdown options:", opts)
-		return opts
-	}, [listApiConfigMeta])
-	
 	const {
 		enableAutoTrigger,
 		enableQuickInlineTaskKeybinding,
@@ -66,8 +50,19 @@ export const GhostServiceSettingsView = ({
 		return listApiConfigMeta?.find((config) => config.id === autocompleteProfileId)
 	}, [autocompleteProfileId, listApiConfigMeta])
 
-	// Get available providers for dropdown
-	const providerOptions = useMemo(() => {
+	// Get available profile options for autocomplete profile dropdown
+	const autocompleteProfileOptions = useMemo(() => {
+		return [
+			{ value: "", label: "Auto-detect (use first available)" },
+			...(listApiConfigMeta || []).map((config) => ({
+				value: config.id,
+				label: config.name,
+			})),
+		]
+	}, [listApiConfigMeta])
+
+	// Get available providers for provider override dropdown
+	const providerOverrideOptions = useMemo(() => {
 		return Object.entries(MODELS_BY_PROVIDER).map(([key, value]) => ({
 			value: key,
 			label: value.label,
@@ -229,7 +224,7 @@ export const GhostServiceSettingsView = ({
 							<SelectDropdown
 								value={autocompleteProfileId || ""}
 								onChange={onAutocompleteProfileChange}
-								options={profileOptions}
+								options={autocompleteProfileOptions}
 								placeholder="Select profile..."
 							/>
 							<div className="text-vscode-descriptionForeground text-xs">
@@ -250,7 +245,7 @@ export const GhostServiceSettingsView = ({
 												value: "",
 												label: `Use profile default (${selectedProfile?.apiProvider || "none"})`,
 											},
-											...providerOptions,
+											...providerOverrideOptions,
 										]}
 										placeholder="Select provider..."
 									/>
