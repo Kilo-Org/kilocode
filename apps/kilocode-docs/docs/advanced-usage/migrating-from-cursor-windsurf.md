@@ -198,17 +198,29 @@ alwaysApply: false
 
 ### Handling Glob Patterns
 
-Cursor's `globs` metadata specifies which files a rule applies to. In Kilo Code:
+Cursor's `globs` metadata specifies which files a rule applies to. Kilo Code handles this differently:
 
-- **General rules** apply to all interactions (no file filtering)
-- **Mode-specific rules** can restrict file access using `fileRegex` in custom modes
-- **File restrictions** can be enforced through custom mode configurations
+- **Rule files don't have glob patterns** - rules apply to all interactions in their mode
+- **File restrictions are set at the mode level** - custom modes can use `fileRegex` in their configuration to restrict which files can be edited
+- **Mode-specific rules** load different rules for different modes (e.g., `.kilocode/rules-code/` only loads in Code mode)
 
-If you need file-specific rules, consider:
+If you need file-specific workflows similar to Cursor's globs, you have two options:
 
-1. **Creating a custom mode** with file restrictions (see [Custom Modes](/docs/features/custom-modes))
-2. **Using descriptive rule names** that indicate scope (e.g., `typescript-standards.md`, `react-patterns.md`)
-3. **Organizing rules by concern** in separate files
+1. **Create a custom mode** with `fileRegex` restrictions (e.g., a "Docs" mode that only edits `.md` files) - see [Custom Modes](/docs/features/custom-modes)
+2. **Organize rules by concern** in separate files with descriptive names (e.g., `typescript-standards.md`, `react-patterns.md`)
+
+**Example of `fileRegex` in a custom mode:**
+
+```yaml
+modes:
+    - slug: docs
+      name: Documentation Editor
+      roleDefinition: You edit documentation files
+      groups:
+          - read
+          - [edit, { fileRegex: '\\.md$', description: "Markdown files only" }]
+          - ask
+```
 
 ## Mode-Specific Rules (Kilo Code Exclusive)
 

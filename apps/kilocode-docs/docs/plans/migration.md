@@ -86,21 +86,6 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 | Team Management        | Comprehensive team dashboard (Enterprise adds SSO, audit logs) |
 | Usage Analytics        | Detailed usage and cost analytics                              |
 
-### Technical Migration: Rules and Configurations
-
-Kilo Code uses a compatible rules system that supports Cursor and Windsurf patterns. Migrating your custom rules and configurations is straightforward and typically takes 5-10 minutes per project.
-
-**Quick Overview:**
-
-- **Project rules**: `.cursor/rules/*.mdc` → `.kilocode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
-- **Legacy rules**: `.cursorrules` → `.kilocode/rules/legacy-rules.md`
-- **AGENTS.md**: Works identically in Kilo Code (no conversion needed)
-- **Global rules**: Recreate in `~/.kilocode/rules/*.md` directory
-
-Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
-
-**👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/docs/advanced-usage/migrating-from-cursor-windsurf).**
-
 ## Migrating from GitHub Copilot
 
 ### Limitations You're Escaping
@@ -200,6 +185,21 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - [ ] Train team on advanced features
 - [ ] Cancel previous AI coding tool subscriptions
 - [ ] Document new workflows and best practices
+
+## Technical Migration: Rules and Configurations
+
+Kilo Code uses a compatible rules system that supports Cursor and Windsurf patterns. Migrating your custom rules and configurations is straightforward and typically takes 5-10 minutes per project.
+
+**Quick Overview:**
+
+- **Project rules**: `.cursor/rules/*.mdc` → `.kilocode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
+- **Legacy rules**: `.cursorrules` → `.kilocode/rules/legacy-rules.md`
+- **AGENTS.md**: Works identically in Kilo Code (no conversion needed)
+- **Global rules**: Recreate in `~/.kilocode/rules/*.md` directory
+
+Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
+
+**👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/docs/advanced-usage/migrating-from-cursor-windsurf).**
 
 ## Cost Comparison Analysis
 
