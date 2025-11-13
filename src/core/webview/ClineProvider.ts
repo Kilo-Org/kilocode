@@ -109,6 +109,7 @@ import { getKilocodeDefaultModel } from "../../api/providers/kilocode/getKilocod
 import { getKiloCodeWrapperProperties } from "../../core/kilocode/wrapper"
 import { getKiloUrlFromToken } from "@roo-code/types" // kilocode_change
 import { getKilocodeConfig, getWorkspaceProjectId, KilocodeConfig } from "../../utils/kilo-config-file" // kilocode_change
+import { createWorktree } from "../../utils/kilo-worktree-utils"
 
 export type ClineProviderState = Awaited<ReturnType<ClineProvider["getState"]>>
 // kilocode_change end
@@ -2873,6 +2874,11 @@ ${prompt}
 		}
 
 		// TODO: point task to worktree
+		if (isBackgroundTask) {
+			const worktree = await createWorktree(text || "kilo-task")
+
+			console.log(worktree)
+		}
 
 		const task = new Task({
 			provider: this,
