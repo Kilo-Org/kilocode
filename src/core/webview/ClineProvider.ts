@@ -146,7 +146,6 @@ export class ClineProvider
 	private webviewDisposables: vscode.Disposable[] = []
 	private view?: vscode.WebviewView | vscode.WebviewPanel
 	private clineStack: Task[] = []
-	private backgroundTasks = new Map<string, Task>()
 	private codeIndexStatusSubscription?: vscode.Disposable
 	private codeIndexManager?: CodeIndexManager
 	private _workspaceTracker?: WorkspaceTracker // workSpaceTracker read-only for access outside this class
@@ -2873,13 +2872,15 @@ ${prompt}
 
 		const isBackgroundTask = currentWorktreeMode === "parallel"
 
+		// Force background editing (preventFocusDisruption) for background tasks
+		const taskExperiments = isBackgroundTask ? { ...experiments, preventFocusDisruption: true } : experiments
+
 		if (!ProfileValidator.isProfileAllowed(apiConfiguration, organizationAllowList)) {
 			throw new OrganizationAllowListViolationError(t("common:errors.violated_organization_allowlist"))
 		}
 
 		let workingDirectory: string | undefined
 
-		// TODO: point task to worktree
 		if (isBackgroundTask) {
 			const worktree = await createWorktree(text || "kilo-task")
 
@@ -2899,7 +2900,7 @@ ${prompt}
 			consecutiveMistakeLimit: apiConfiguration.consecutiveMistakeLimit,
 			task: text,
 			images,
-			experiments,
+			experiments: taskExperiments,
 			rootTask: this.clineStack.length > 0 ? this.clineStack[0] : undefined,
 			parentTask,
 			taskNumber: this.clineStack.length + 1,
@@ -2911,8 +2912,6 @@ ${prompt}
 		})
 
 		if (isBackgroundTask) {
-			this.backgroundTasks.set(task.taskId, task)
-
 			// TODO: VS notification
 		} else {
 			await this.addClineToStack(task)
