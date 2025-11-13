@@ -7,18 +7,19 @@ import os from "os"
 export function sanitizeName(input: string): string {
 	return (
 		input
+			// Convert camelCase to dash-case
+			.replace(/([a-z])([A-Z])/g, "$1-$2")
+			.toLowerCase()
 			// Replace any character that is not alphanumeric (a-z, A-Z, 0-9) or dash with a dash
-			.replace(/[^a-zA-Z0-9-]/g, "-")
+			.replace(/[^a-z0-9-]/g, "-")
 			// Replace multiple consecutive dashes with a single dash
 			.replace(/-+/g, "-")
-			// Remove leading and trailing dashes
-			.replace(/^-|-$/g, "")
 			// Limit the result to the first 50 characters
 			.slice(0, 50)
-			// Remove trailing dash if truncation created one
-			.replace(/-$/, "") ||
+			// Remove leading and trailing dashes
+			.replace(/^-|-$/g, "") ||
 		// Fallback to a random UUID if the sanitized result is empty
-		crypto.randomUUID()
+		`kilo-${crypto.randomUUID()}`
 	)
 }
 

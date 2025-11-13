@@ -55,25 +55,31 @@ describe("sanitizeName", () => {
 
 	it("should handle empty string by returning a UUID", () => {
 		const result = sanitizeName("")
-		// Should return a valid UUID format
-		expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+		// Should return a valid UUID format with kilo- prefix
+		expect(result).toMatch(/^kilo-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 	})
 
 	it("should handle string with only special characters by returning a UUID", () => {
 		const result = sanitizeName("@#$%^&*()")
-		// Should return a valid UUID format
-		expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+		// Should return a valid UUID format with kilo- prefix
+		expect(result).toMatch(/^kilo-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 	})
 
 	it("should handle string with only dashes by returning a UUID", () => {
 		const result = sanitizeName("-----")
-		// Should return a valid UUID format
-		expect(result).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
+		// Should return a valid UUID format with kilo- prefix
+		expect(result).toMatch(/^kilo-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 	})
 
-	it("should preserve uppercase letters", () => {
-		expect(sanitizeName("MyBranchName")).toBe("MyBranchName")
-		expect(sanitizeName("UPPERCASE-branch")).toBe("UPPERCASE-branch")
+	it("should convert camelCase to dash-case", () => {
+		expect(sanitizeName("myBranchName")).toBe("my-branch-name")
+		expect(sanitizeName("MyBranchName")).toBe("my-branch-name")
+		expect(sanitizeName("camelCaseTest")).toBe("camel-case-test")
+	})
+
+	it("should convert to lowercase", () => {
+		expect(sanitizeName("UPPERCASE-branch")).toBe("uppercase-branch")
+		expect(sanitizeName("MixedCase")).toBe("mixed-case")
 	})
 
 	it("should handle unicode characters by replacing them with dashes", () => {
@@ -95,8 +101,9 @@ describe("sanitizeName", () => {
 	})
 
 	it("should handle mixed case with numbers", () => {
-		expect(sanitizeName("Feature123Test456")).toBe("Feature123Test456")
+		expect(sanitizeName("Feature123Test456")).toBe("feature123test456")
 		expect(sanitizeName("v1.2.3-beta")).toBe("v1-2-3-beta")
+		expect(sanitizeName("testCamelCase123")).toBe("test-camel-case123")
 	})
 
 	it("should truncate at 50 chars and remove trailing dash if created by truncation", () => {
@@ -351,8 +358,8 @@ describe("createWorktree", () => {
 
 			const result = await createWorktree("@#$%^&*()", mockUri)
 
-			// Should use UUID + timestamp
-			expect(result.branchName).toBe(`${mockUUID}-1234567890`)
+			// Should use kilo-UUID + timestamp
+			expect(result.branchName).toBe(`kilo-${mockUUID}-1234567890`)
 		})
 
 		it("should handle multiple worktrees created in quick succession", async () => {
