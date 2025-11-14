@@ -12,7 +12,7 @@
 		"message": "Check to see if you can top up with free credits or purchase some more!"
 	},
 	"task": {
-		"noAssistantMessages": "The model's response ended unexpectedly (no assistant messages). This may be a sign of rate limiting.",
+		"noAssistantMessages": "Encountered an error while generating a response. Trying auto-repair, if I'm unable to repair the error, please send a 'Continue' message.",
 		"notLoggedInError": "Cannot complete request, make sure you are connected and logged in with the selected provider.\n\n{{error}}",
 		"maxCompletionTokens": "The maximum number of completion tokens was reached.",
 		"disableApplyDiff": "If this error keep reoccuring, please disable Editing Through Diffs in Advanced Settings.",

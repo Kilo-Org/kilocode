@@ -394,11 +394,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 							setSecondaryButtonText(t("chat:reject.title"))
 							break
 						case "command_output":
-							setSendingDisabled(false)
+							// setSendingDisabled(false)
 							setClineAsk("command_output")
-							setEnableButtons(true)
-							setPrimaryButtonText(t("chat:proceedWhileRunning.title"))
-							setSecondaryButtonText(t("chat:killCommand.title"))
+							// setEnableButtons(false)
+							// setPrimaryButtonText(t("chat:proceedWhileRunning.title"))
+							// setSecondaryButtonText(t("chat:killCommand.title"))
 							break
 						case "use_mcp_server":
 							if (!isAutoApproved(lastMessage) && !isPartial) {
@@ -2146,11 +2146,11 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 															: primaryButtonText === t("chat:runCommand.title")
 																? t("chat:runCommand.tooltip")
 																: primaryButtonText === t("chat:proceedAnyways.title")
-																	? t("chat:proceedAnyways.tooltip")
-																	: primaryButtonText ===
-																		  t("chat:proceedWhileRunning.title")
-																		? t("chat:proceedWhileRunning.tooltip")
-																		: undefined
+												// ? t("chat:proceedAnyways.tooltip")
+												// : primaryButtonText ===
+												// 	t("chat:proceedWhileRunning.title")
+												// 	? t("chat:proceedWhileRunning.tooltip")
+												// 	: undefined
 											}>
 											<VSCodeButton
 												appearance="primary"

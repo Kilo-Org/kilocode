@@ -291,6 +291,48 @@ Before submitting, verify:
 ### Remember
 
 **Always quote the file_pattern value or use null. Never use bare/unquoted glob patterns.**
+
+## execute_command
+
+### Common CLI packages
+
+- \`npm\` - Node Package Manager
+- \`yarn\` - Yarn Package Manager
+- \`pnpm\` - PNPM Package Manager
+- \`git\` - Git Version Control System
+- \`docker\` - Docker Container Management
+- \`kubectl\` - Kubernetes Command Line Tool
+- \`helm\` - Helm Package Manager
+- \`kubectl\` - Kubernetes Command Line Tool
+- \`aws\` - AWS Command Line Tool
+- \`gcloud\` - Google Cloud Command Line Tool
+- \`az\` - Azure Command Line Tool
+- \`heroku\` - Heroku Command Line Tool
+- \`terraform\` - Terraform Command Line Tool
+- \`ansible\` - Ansible Command Line Tool
+- \`chef\` - Chef Command Line Tool
+- \`puppet\` - Puppet Command Line Tool
+- \`java\` - Java Development Kit
+- \`javac\` - Java Compiler
+- \`javap\` - Java Decompiler
+- \`javapackager\` - Java Packager
+- \`javapackager\` - Java Packager
+- \`python\` - Python Programming Language
+- \`pip\` - Python Package Manager
+- \`pipenv\` - Python Package Manager
+- \`poetry\` - Python Package Manager
+- \`virtualenv\` - Python Virtual Environment
+
+
+CRITICAL:
+1. A command never starts with \`:\`
+2. A command never uses <|tool_call_argument_begin|> OR any <> TAG
+3. A command is never empty or \`:\`
+4. A command is never a single word or a single word with a space
+5. Commands are always valid for the user's operating system
+6. Commands are always valid for the user's shell
+7. Commands are always valid with executable permissions
+8. Commands are always valid with the user's current working directory
 `
 
 async function generatePrompt(

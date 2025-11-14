@@ -146,7 +146,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const baseURL = this.options.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
-		// this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
