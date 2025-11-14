@@ -21,6 +21,7 @@ export const nativeFunctionCallingProviders = [
 	"human-relay",
 	"qwen-code",
 	"inception",
+	"litellm",
 	"minimax",
 	"anthropic",
 	"moonshot",
