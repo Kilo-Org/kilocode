@@ -18,8 +18,46 @@ import { Terminal } from "../../integrations/terminal/Terminal"
 import { Package } from "../../shared/package"
 import { t } from "../../i18n"
 
+/**
+ * Error thrown when shell integration fails
+ * This error is used to switch to fallback mode
+ */
 class ShellIntegrationError extends Error {}
 
+/**
+ * Main tool for executing commands in KiloCode
+ *
+ * This function handles shell command execution with support for:
+ * - Command validation via RooIgnore
+ * - User approval
+ * - YOLO mode to bypass approvals
+ * - Command timeout management
+ * - VSCode terminal integration
+ * - Fallback mode in case of integration error
+ *
+ * @param task - Instance of the currently running task
+ * @param block - Tool block containing command parameters
+ * @param askApproval - Function to request user approval
+ * @param handleError - Function to handle errors
+ * @param pushToolResult - Function to push results
+ * @param removeClosingTag - Function to remove closing tags
+ *
+ * @returns Promise<void> - Results are pushed via pushToolResult
+ *
+ * @example
+ * ```typescript
+ * await executeCommandTool(task, {
+ *   params: { command: "npm install" }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ *
+ * await executeCommandTool(task, {
+ *   params: {
+ *     command: "ls -la",
+ *     cwd: "/home/user/project"
+ *   }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ * ```
+ */
 export async function executeCommandTool(
 	task: Task,
 	block: ToolUse,
@@ -133,16 +171,51 @@ export async function executeCommandTool(
 	}
 }
 
+/**
+ * Configuration options for command execution
+ */
 export type ExecuteCommandOptions = {
+	/** Unique identifier for this command execution */
 	executionId: string
+	/** Command to execute */
 	command: string
+	/** Custom working directory (optional) */
 	customCwd?: string
+	/** Disable terminal shell integration */
 	terminalShellIntegrationDisabled?: boolean
+	/** Line limit for terminal output */
 	terminalOutputLineLimit?: number
+	/** Character limit for terminal output */
 	terminalOutputCharacterLimit?: number
+	/** Execution timeout in milliseconds (0 = no timeout) */
 	commandExecutionTimeout?: number
 }
 
+/**
+ * Executes a system command with full lifecycle management
+ *
+ * This function handles command execution with:
+ * - Working directory validation
+ * - Terminal configuration (VSCode or execa)
+ * - Timeout management
+ * - Execution status tracking
+ * - Real-time output capture
+ * - Exit code handling
+ *
+ * @param task - Instance of the currently running task
+ * @param options - Configuration options for execution
+ * @returns Promise<[boolean, ToolResponse]> - Tuple containing [rejected, result]
+ *
+ * @example
+ * ```typescript
+ * const [rejected, result] = await executeCommand(task, {
+ *   executionId: "cmd-123",
+ *   command: "npm test",
+ *   customCwd: "./project",
+ *   commandExecutionTimeout: 30000
+ * });
+ * ```
+ */
 export async function executeCommand(
 	task: Task,
 	{
@@ -184,7 +257,16 @@ export async function executeCommand(
 	const provider = await task.providerRef.deref()
 
 	let accumulatedOutput = ""
+	/**
+	 * Callbacks for tracking command execution
+	 */
 	const callbacks: RooTerminalCallbacks = {
+		/**
+		 * Callback called when receiving new output lines
+		 *
+		 * @param lines - Output lines received from terminal
+		 * @param process - Terminal process to control execution
+		 */
 		onLine: async (lines: string, process: RooTerminalProcess) => {
 			accumulatedOutput += lines
 			const compressedOutput = Terminal.compressTerminalOutput(
@@ -209,6 +291,11 @@ export async function executeCommand(
 				}
 			} catch (_error) {}
 		},
+		/**
+		 * Callback called when command execution is completed
+		 *
+		 * @param output - Final output of the command
+		 */
 		onCompleted: (output: string | undefined) => {
 			result = Terminal.compressTerminalOutput(
 				output ?? "",
@@ -219,11 +306,21 @@ export async function executeCommand(
 			task.say("command_output", result)
 			completed = true
 		},
+		/**
+		 * Callback called when shell execution starts
+		 *
+		 * @param pid - Shell process ID (if available)
+		 */
 		onShellExecutionStarted: (pid: number | undefined) => {
 			console.log(`[executeCommand] onShellExecutionStarted: ${pid}`)
 			const status: CommandExecutionStatus = { executionId, status: "started", pid, command }
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
 		},
+		/**
+		 * Callback called when shell execution ends
+		 *
+		 * @param details - Process exit details
+		 */
 		onShellExecutionComplete: (details: ExitCodeDetails) => {
 			const status: CommandExecutionStatus = { executionId, status: "exited", exitCode: details.exitCode }
 			provider?.postMessageToWebview({ type: "commandExecutionStatus", text: JSON.stringify(status) })
@@ -232,6 +329,11 @@ export async function executeCommand(
 	}
 
 	if (terminalProvider === "vscode") {
+		/**
+		 * Callback called when shell integration fails
+		 *
+		 * @param error - Integration error message
+		 */
 		callbacks.onNoShellIntegration = async (error: string) => {
 			TelemetryService.instance.captureShellIntegrationError(task.taskId)
 			shellIntegrationError = error

@@ -26,6 +26,21 @@ import {
 import { validateFileTokenBudget, truncateFileContent } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
 
+/**
+ * Generates a formatted description for the file reading tool
+ *
+ * @param blockName - Name of the tool block (usually "read_file")
+ * @param blockParams - Block parameters containing information about files to read
+ * @returns A string describing the current read operation
+ *
+ * @example
+ * ```typescript
+ * const description = getReadFileToolDescription("read_file", {
+ *   files: [{ path: "src/app.ts" }, { path: "src/utils.ts" }]
+ * });
+ * // Result: "[read_file for 'src/app.ts', 'src/utils.ts']"
+ * ```
+ */
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
 	// kilocode_change start
@@ -62,30 +77,91 @@ export function getReadFileToolDescription(blockName: string, blockParams: any):
 	}
 }
 // Types
+
+/**
+ * Interface representing a line range for selective file reading
+ */
 interface LineRange {
+	/** Starting line number (inclusive) */
 	start: number
+	/** Ending line number (inclusive) */
 	end: number
 }
 
+/**
+ * Interface representing a file entry to be processed
+ */
 interface FileEntry {
+	/** Relative path of the file to read */
 	path?: string
+	/** Array of line ranges to read (optional) */
 	lineRanges?: LineRange[]
 }
 
-// New interface to track file processing state
+/**
+ * Interface to track the processing status of a file
+ */
 interface FileResult {
+	/** Path of the processed file */
 	path: string
+	/** Current processing status of the file */
 	status: "approved" | "denied" | "blocked" | "error" | "pending"
+	/** Text content of the file (if applicable) */
 	content?: string
+	/** Error message (if processing failed) */
 	error?: string
+	/** Information or warning message */
 	notice?: string
+	/** Requested line ranges (if applicable) */
 	lineRanges?: LineRange[]
-	xmlContent?: string // Final XML content for this file
-	imageDataUrl?: string // Image data URL for image files
-	feedbackText?: string // User feedback text from approval/denial
-	feedbackImages?: any[] // User feedback images from approval/denial
+	/** Final XML content for this file */
+	xmlContent?: string
+	/** Data URL for image files */
+	imageDataUrl?: string
+	/** User feedback text after approval/denial */
+	feedbackText?: string
+	/** User feedback images after approval/denial */
+	feedbackImages?: any[]
 }
 
+/**
+ * Main tool for reading files in KiloCode
+ *
+ * This function handles reading one or more files with support for:
+ * - Simultaneous multiple file reading
+ * - Specific line ranges
+ * - Binary files (images, PDFs, etc.)
+ * - User validation and approval
+ * - YOLO mode to bypass approvals
+ * - Size limits and memory management
+ *
+ * @param cline - Instance of the currently running task
+ * @param block - Tool block containing read parameters
+ * @param askApproval - Function to request user approval
+ * @param handleError - Function to handle errors
+ * @param pushToolResult - Function to push results
+ * @param _removeClosingTag - Function to remove closing tags (unused)
+ *
+ * @returns Promise<void> - Results are pushed via pushToolResult
+ *
+ * @example
+ * ```typescript
+ * // Reading a single file
+ * await readFileTool(task, {
+ *   params: { files: [{ path: "src/app.ts" }] }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ *
+ * // Reading with line ranges
+ * await readFileTool(task, {
+ *   params: {
+ *     files: [{
+ *       path: "src/app.ts",
+ *       lineRanges: [{ start: 10, end: 20 }]
+ *     }]
+ *   }
+ * }, askApproval, handleError, pushToolResult, removeClosingTag);
+ * ```
+ */
 export async function readFileTool(
 	cline: Task,
 	block: ToolUse,
@@ -212,7 +288,12 @@ export async function readFileTool(
 		lineRanges: entry.lineRanges,
 	}))
 
-	// Function to update file result status
+	/**
+	 * Updates the status of a file result in the results array
+	 *
+	 * @param path - Path of the file to update
+	 * @param updates - Partial updates to apply to the result
+	 */
 	const updateFileResult = (path: string, updates: Partial<FileResult>) => {
 		const index = fileResults.findIndex((result) => result.path === path)
 		if (index !== -1) {
