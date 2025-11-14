@@ -22,3 +22,18 @@ export interface CliMessage {
 	}
 	payload?: unknown
 }
+
+export interface CLIOptions {
+	mode?: string
+	workspace?: string
+	ci?: boolean
+	json?: boolean
+	prompt?: string
+	timeout?: number
+	parallel?: boolean
+	worktreeBranch?: string | undefined
+	continue?: boolean
+	provider?: string
+	model?: string
+	noSplash?: boolean
+}

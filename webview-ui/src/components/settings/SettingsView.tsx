@@ -151,10 +151,6 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	useEffect(() => {
 		ensureBodyPointerEventsRestored()
 	}, [isDiscardDialogShow])
-
-	useEffect(() => {
-		setChangeDetected(JSON.stringify(cachedState) !== JSON.stringify(extensionState))
-	}, [cachedState, extensionState])
 	// kilocode_change end
 
 	const {

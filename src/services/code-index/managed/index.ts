@@ -24,7 +24,7 @@
  *   workspacePath
  * )
  *
- * // Start indexing
+ * // Start indexing with state change callback
  * const disposable = await startIndexing(config, context, (state) => {
  *   console.log('State:', state)
  * })
@@ -41,7 +41,7 @@
 export { startIndexing, search, getIndexerState, createManagedIndexingConfig } from "./indexer"
 
 // Scanner functions (for advanced usage)
-export { scanDirectory, indexFile, handleFileDeleted } from "./scanner"
+export { scanDirectory } from "./scanner"
 
 // Watcher functions
 export { createGitWatcher } from "./git-watcher"

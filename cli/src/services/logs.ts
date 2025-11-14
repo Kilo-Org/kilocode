@@ -2,6 +2,7 @@ import { appendFileSync } from "fs"
 import * as fs from "fs-extra"
 import * as path from "path"
 import { KiloCodePaths } from "../utils/paths.js"
+import { safeStringify } from "../utils/safe-stringify.js"
 
 export type LogLevel = "info" | "debug" | "error" | "warn"
 
@@ -68,49 +69,14 @@ export class LogsService {
 	}
 
 	/**
-	 * Serialize an error object to a plain object with all relevant properties
-	 */
-	private serializeError(error: unknown): unknown {
-		if (error instanceof Error) {
-			return {
-				message: error.message,
-				name: error.name,
-				stack: error.stack,
-				// Include any additional enumerable properties
-				...Object.getOwnPropertyNames(error)
-					.filter((key) => key !== "message" && key !== "name" && key !== "stack")
-					.reduce(
-						(acc, key) => {
-							acc[key] = (error as unknown as Record<string, unknown>)[key]
-							return acc
-						},
-						{} as Record<string, unknown>,
-					),
-			}
-		}
-		return error
-	}
-
-	/**
-	 * Serialize context object, handling Error objects specially
+	 * Serialize context object, handling Error objects and circular references
 	 */
 	private serializeContext(context?: Record<string, unknown>): Record<string, unknown> | undefined {
 		if (!context) {
 			return undefined
 		}
 
-		const serialized: Record<string, unknown> = {}
-		for (const [key, value] of Object.entries(context)) {
-			if (value instanceof Error) {
-				serialized[key] = this.serializeError(value)
-			} else if (typeof value === "object" && value !== null) {
-				// Recursively handle nested objects that might contain errors
-				serialized[key] = this.serializeContext(value as Record<string, unknown>) || value
-			} else {
-				serialized[key] = value
-			}
-		}
-		return serialized
+		return safeStringify(context) as Record<string, unknown>
 	}
 
 	/**
@@ -225,7 +191,18 @@ export class LogsService {
 		const ts = new Date(entry.ts).toISOString()
 		const source = entry.source ? `[${entry.source}]` : ""
 		const prefix = `${ts} ${source}`
-		const contextStr = entry.context ? ` ${JSON.stringify(entry.context)}` : ""
+
+		// Use safe stringify to handle circular references
+		let contextStr = ""
+		if (entry.context) {
+			try {
+				const safeContext = safeStringify(entry.context)
+				contextStr = ` ${JSON.stringify(safeContext)}`
+			} catch (_error) {
+				// Fallback if even safe stringify fails
+				contextStr = " [Context serialization failed]"
+			}
+		}
 
 		switch (entry.level) {
 			case "error":

@@ -64,6 +64,7 @@ const sidebars: SidebarsConfig = {
 								"providers/groq",
 								"providers/human-relay",
 								"providers/lmstudio",
+								"providers/minimax",
 								"providers/mistral",
 								"providers/ollama",
 								"providers/openai",

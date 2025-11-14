@@ -7,7 +7,7 @@ import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
-import { loadConfigAtom, mappedExtensionStateAtom, providersAtom } from "./state/atoms/config.js"
+import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
@@ -20,18 +20,10 @@ import { fetchKilocodeNotifications } from "./utils/notifications.js"
 import { finishParallelMode } from "./parallel/parallel.js"
 import { isGitWorktree } from "./utils/git.js"
 import { Package } from "./constants/package.js"
-
-export interface CLIOptions {
-	mode?: string
-	workspace?: string
-	ci?: boolean
-	json?: boolean
-	prompt?: string
-	timeout?: number
-	parallel?: boolean
-	worktreeBranch?: string | undefined
-	continue?: boolean
-}
+import type { CLIOptions } from "./types/cli.js"
+import type { CLIConfig, ProviderConfig } from "./config/types.js"
+import { getModelIdKey } from "./constants/providers/models.js"
+import type { ProviderName } from "./types/messages.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -73,8 +65,16 @@ export class CLI {
 			logs.debug("Jotai store created", "CLI")
 
 			// Initialize telemetry service first to get identity
-			const config = await this.store.set(loadConfigAtom, this.options.mode)
+			let config = await this.store.set(loadConfigAtom, this.options.mode)
 			logs.debug("CLI configuration loaded", "CLI", { mode: this.options.mode })
+
+			// Apply provider and model overrides from CLI
+			if (this.options.provider || this.options.model) {
+				config = await this.applyProviderModelOverrides(config)
+				// Save the updated config to persist changes
+				await this.store.set(saveConfigAtom, config)
+				logs.info("Provider/model overrides applied and saved", "CLI")
+			}
 
 			const telemetryService = getTelemetryService()
 			await telemetryService.initialize(config, {
@@ -190,6 +190,7 @@ export class CLI {
 					...(this.options.timeout !== undefined && { timeout: this.options.timeout }),
 					parallel: this.options.parallel || false,
 					worktreeBranch: this.options.worktreeBranch || undefined,
+					noSplash: this.options.noSplash || false,
 				},
 				onExit: () => this.dispose(),
 			}),
@@ -203,6 +204,44 @@ export class CLI {
 
 		// Wait for UI to exit
 		await this.ui.waitUntilExit()
+	}
+
+	/**
+	 * Apply provider and model overrides from CLI options
+	 */
+	private async applyProviderModelOverrides(config: CLIConfig): Promise<CLIConfig> {
+		const updatedConfig = { ...config }
+
+		// Apply provider override
+		if (this.options.provider) {
+			const provider = config.providers.find((p) => p.id === this.options.provider)
+			if (provider) {
+				updatedConfig.provider = this.options.provider
+				logs.info(`Provider overridden to: ${this.options.provider}`, "CLI")
+			}
+		}
+
+		// Apply model override
+		if (this.options.model) {
+			const activeProviderId = updatedConfig.provider
+			const providerIndex = updatedConfig.providers.findIndex((p) => p.id === activeProviderId)
+
+			if (providerIndex !== -1) {
+				const provider = updatedConfig.providers[providerIndex]
+				if (provider) {
+					const modelField = getModelIdKey(provider.provider as ProviderName)
+
+					// Update the provider's model field
+					updatedConfig.providers[providerIndex] = {
+						...provider,
+						[modelField]: this.options.model,
+					} as ProviderConfig
+					logs.info(`Model overridden to: ${this.options.model} for provider ${activeProviderId}`, "CLI")
+				}
+			}
+		}
+
+		return updatedConfig
 	}
 
 	private isDisposing = false
@@ -357,9 +396,7 @@ export class CLI {
 			}
 
 			this.store.set(notificationsLoadingAtom, true)
-
 			const notifications = await fetchKilocodeNotifications(provider)
-
 			this.store.set(notificationsAtom, notifications)
 		} catch (error) {
 			const err = error instanceof Error ? error : new Error(String(error))

@@ -1,12 +1,12 @@
 {
 	"name": "@kilocode/cli",
-	"version": "0.2.0",
+	"version": "0.4.2",
 	"lockfileVersion": 3,
 	"requires": true,
 	"packages": {
 		"": {
 			"name": "@kilocode/cli",
-			"version": "0.2.0",
+			"version": "0.4.2",
 			"license": "Apache-2.0",
 			"dependencies": {
 				"@anthropic-ai/bedrock-sdk": "^0.22.0",
@@ -2387,7 +2387,6 @@
 				}
 			],
 			"license": "MIT",
-			"peer": true,
 			"engines": {
 				"node": ">=18"
 			},
@@ -2410,7 +2409,6 @@
 				}
 			],
 			"license": "MIT",
-			"peer": true,
 			"engines": {
 				"node": ">=18"
 			}
@@ -2651,7 +2649,6 @@
 			"resolved": "https://registry.npmjs.org/@modelcontextprotocol/sdk/-/sdk-1.12.0.tgz",
 			"integrity": "sha512-m//7RlINx1F3sz3KqwY1WWzVgTcYX52HYk4bJ1hkBXV3zccAEth+jRvG8DBRrdaQuRsPAJOx2MH3zaHNCKL7Zg==",
 			"license": "MIT",
-			"peer": true,
 			"dependencies": {
 				"ajv": "^6.12.6",
 				"content-type": "^1.0.5",
@@ -4957,7 +4954,6 @@
 			"resolved": "https://registry.npmjs.org/@types/node/-/node-24.8.1.tgz",
 			"integrity": "sha512-alv65KGRadQVfVcG69MuB4IzdYVpRwMG/mq8KWOaoOdyY617P5ivaDiMCGOFDWD2sAn5Q0mR3mRtUOgm99hL9Q==",
 			"license": "MIT",
-			"peer": true,
 			"dependencies": {
 				"undici-types": "~7.14.0"
 			}
@@ -6784,8 +6780,7 @@
 			"version": "0.0.1367902",
 			"resolved": "https://registry.npmjs.org/devtools-protocol/-/devtools-protocol-0.0.1367902.tgz",
 			"integrity": "sha512-XxtPuC3PGakY6PD7dG66/o8KwJ/LkH2/EKe19Dcw58w53dv4/vSQEkn/SzuyhHE2q4zPgCkxQBxus3VV4ql+Pg==",
-			"license": "BSD-3-Clause",
-			"peer": true
+			"license": "BSD-3-Clause"
 		},
 		"node_modules/diff": {
 			"version": "5.2.0",
@@ -7447,7 +7442,6 @@
 			"resolved": "https://registry.npmjs.org/express/-/express-5.1.0.tgz",
 			"integrity": "sha512-DT9ck5YIRU+8GYzzU5kT3eHGA5iL+1Zd0EutOmTE9Dtk+Tvuzd23VBU+ec7HPNSTxXYO55gPV/hq4pSBJDjFpA==",
 			"license": "MIT",
-			"peer": true,
 			"dependencies": {
 				"accepts": "^2.0.0",
 				"body-parser": "^2.2.0",
@@ -8600,7 +8594,6 @@
 			"resolved": "https://registry.npmjs.org/ink/-/ink-6.3.1.tgz",
 			"integrity": "sha512-3wGwITGrzL6rkWsi2gEKzgwdafGn4ZYd3u4oRp+sOPvfoxEHlnoB5Vnk9Uy5dMRUhDOqF3hqr4rLQ4lEzBc2sQ==",
 			"license": "MIT",
-			"peer": true,
 			"dependencies": {
 				"@alcalzone/ansi-tokenize": "^0.2.0",
 				"ansi-escapes": "^7.0.0",
@@ -9638,7 +9631,6 @@
 			"resolved": "https://registry.npmjs.org/marked/-/marked-11.2.0.tgz",
 			"integrity": "sha512-HR0m3bvu0jAPYiIvLUUQtdg1g6D247//lvcekpHO1WMvbwDlwSkZAX9Lw4F4YHE1T0HaaNve0tuAWuV1UJ6vtw==",
 			"license": "MIT",
-			"peer": true,
 			"bin": {
 				"marked": "bin/marked.js"
 			},
@@ -11179,8 +11171,7 @@
 			"version": "0.0.1508733",
 			"resolved": "https://registry.npmjs.org/devtools-protocol/-/devtools-protocol-0.0.1508733.tgz",
 			"integrity": "sha512-QJ1R5gtck6nDcdM+nlsaJXcelPEI7ZxSMw1ujHpO1c4+9l+Nue5qlebi9xO1Z2MGr92bFOQTW7/rrheh5hHxDg==",
-			"license": "BSD-3-Clause",
-			"peer": true
+			"license": "BSD-3-Clause"
 		},
 		"node_modules/puppeteer-chromium-resolver/node_modules/puppeteer-core": {
 			"version": "24.25.0",
@@ -11334,7 +11325,6 @@
 			"resolved": "https://registry.npmjs.org/react/-/react-19.2.0.tgz",
 			"integrity": "sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==",
 			"license": "MIT",
-			"peer": true,
 			"engines": {
 				"node": ">=0.10.0"
 			}
@@ -11344,7 +11334,6 @@
 			"resolved": "https://registry.npmjs.org/react-devtools-core/-/react-devtools-core-6.1.5.tgz",
 			"integrity": "sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==",
 			"license": "MIT",
-			"peer": true,
 			"dependencies": {
 				"shell-quote": "^1.6.1",
 				"ws": "^7"
@@ -13749,7 +13738,6 @@
 			"resolved": "https://registry.npmjs.org/zod/-/zod-3.25.76.tgz",
 			"integrity": "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==",
 			"license": "MIT",
-			"peer": true,
 			"funding": {
 				"url": "https://github.com/sponsors/colinhacks"
 			}

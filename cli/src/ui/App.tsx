@@ -16,6 +16,7 @@ export interface AppOptions {
 	timeout?: number
 	parallel?: boolean
 	worktreeBranch?: string | undefined
+	noSplash?: boolean
 }
 
 export interface AppProps {
