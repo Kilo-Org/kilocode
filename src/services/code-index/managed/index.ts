@@ -41,7 +41,7 @@
 export { startIndexing, search, getIndexerState, createManagedIndexingConfig } from "./indexer"
 
 // Scanner functions (for advanced usage)
-export { scanDirectory, indexFile, handleFileDeleted } from "./scanner"
+export { scanDirectory } from "./scanner"
 
 // Watcher functions
 export { createGitWatcher } from "./git-watcher"

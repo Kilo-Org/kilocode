@@ -29,13 +29,11 @@ import { TelemetryEventName } from "@roo-code/types"
  * 4. Reports progress via state callback
  *
  * @param config Managed indexing configuration
- * @param context VSCode extension context
  * @param onStateChange State change callback
  * @returns Disposable that stops the indexer when disposed
  */
 export async function startIndexing(
 	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
 	onStateChange: (state: IndexerState) => void,
 ): Promise<vscode.Disposable> {
 	try {
@@ -47,7 +45,11 @@ export async function startIndexing(
 				message: "Not a git repository",
 				error: error.message,
 			})
-			throw error
+			return vscode.Disposable.from({
+				dispose: () => {
+					logger.info("[Managed Indexing] Disposable called (not a git repository)")
+				},
+			})
 		}
 
 		// Check for detached HEAD state
@@ -101,7 +103,7 @@ export async function startIndexing(
 		})
 
 		// Perform initial scan with manifest for intelligent delta indexing
-		const result = await scanDirectory(config, context, manifest, (progress) => {
+		const result = await scanDirectory(config, manifest, (progress) => {
 			onStateChange({
 				status: "scanning",
 				message: `Scanning: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,
@@ -184,7 +186,7 @@ export async function startIndexing(
 		let gitWatcher: vscode.Disposable | undefined
 		try {
 			console.log("[Managed Indexing] Calling createGitWatcher...")
-			gitWatcher = await createGitWatcher(config, context, onStateChange)
+			gitWatcher = await createGitWatcher(config, onStateChange)
 			console.log("[Managed Indexing] ✓ Git watcher created successfully")
 			logger.info("[Managed Indexing] Git watcher started successfully")
 		} catch (error) {
@@ -236,13 +238,6 @@ export async function startIndexing(
 		})
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))
-		logger.error(`Failed to start indexing: ${err.message}`)
-
-		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-			error: err.message,
-			stack: err.stack,
-			location: "startIndexing",
-		})
 
 		onStateChange({
 			status: "error",
@@ -319,13 +314,9 @@ export async function search(query: string, config: ManagedIndexingConfig, path?
  * Gets the current indexer state
  *
  * @param config Managed indexing configuration
- * @param context VSCode extension context
  * @returns Current indexer state
  */
-export async function getIndexerState(
-	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
-): Promise<IndexerState> {
+export async function getIndexerState(config: ManagedIndexingConfig): Promise<IndexerState> {
 	try {
 		if (!(await isGitRepository(config.workspacePath))) {
 			return {

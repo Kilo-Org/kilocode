@@ -42,13 +42,11 @@ interface GitStateSnapshot {
  * - Disables indexing in detached HEAD state
  *
  * @param config Managed indexing configuration
- * @param context VSCode extension context
  * @param onStateChange Callback when git state changes
  * @returns Disposable watcher instance
  */
 export async function createGitWatcher(
 	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
 	onStateChange: (state: IndexerState) => void,
 ): Promise<vscode.Disposable> {
 	const disposables: vscode.Disposable[] = []
@@ -114,13 +112,13 @@ export async function createGitWatcher(
 				}
 
 				if (branchChanged) {
-					await handleBranchChange(newState.branch, config, context, onStateChange)
+					await handleBranchChange(newState.branch, config, onStateChange)
 				} else if (commitChanged) {
-					await handleCommit(newState.branch, config, context, onStateChange)
+					await handleCommit(newState.branch, config, onStateChange)
 				}
 			} else {
 				// First time seeing a valid state (recovered from detached HEAD)
-				await handleBranchChange(newState.branch, config, context, onStateChange)
+				await handleBranchChange(newState.branch, config, onStateChange)
 			}
 
 			currentState = newState
@@ -141,7 +139,6 @@ export async function createGitWatcher(
 	const handleBranchChange = async (
 		newBranch: string,
 		config: ManagedIndexingConfig,
-		context: vscode.ExtensionContext,
 		onStateChange: (state: IndexerState) => void,
 	) => {
 		try {
@@ -171,7 +168,7 @@ export async function createGitWatcher(
 				gitBranch: newBranch,
 			})
 
-			const result = await scanDirectory(config, context, manifest, (progress) => {
+			const result = await scanDirectory(config, manifest, (progress) => {
 				onStateChange({
 					status: "scanning",
 					message: `Scanning: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,
@@ -228,7 +225,6 @@ export async function createGitWatcher(
 	const handleCommit = async (
 		branch: string,
 		config: ManagedIndexingConfig,
-		context: vscode.ExtensionContext,
 		onStateChange: (state: IndexerState) => void,
 	) => {
 		try {
@@ -252,7 +248,7 @@ export async function createGitWatcher(
 			}
 
 			// Re-scan to pick up committed changes
-			const result = await scanDirectory(config, context, manifest, (progress) => {
+			const result = await scanDirectory(config, manifest, (progress) => {
 				onStateChange({
 					status: "scanning",
 					message: `Updating: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,

@@ -491,7 +491,15 @@ export class CodeIndexManager {
 	} | null = null
 
 	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
-		console.log("setKiloOrgCodeIndexProps", props)
+		// this gets called more often than you'd expect so only actually kick off a new manager if things change
+		if (
+			props.kilocodeToken === this._kiloOrgCodeIndexProps?.kilocodeToken &&
+			props.organizationId === this._kiloOrgCodeIndexProps?.organizationId &&
+			props.projectId === this._kiloOrgCodeIndexProps?.projectId
+		) {
+			// No change in token, no need to restart indexing
+			return
+		}
 
 		this._kiloOrgCodeIndexProps = props
 
@@ -524,7 +532,7 @@ export class CodeIndexManager {
 	 * This is the new standalone indexing system that uses delta-based indexing
 	 */
 	public async startManagedIndexing(): Promise<void> {
-		console.info("[BMC DEBUG] - [CodeIndexManager] Starting managed indexing due to Kilo org props set")
+		console.info("[CodeIndexManager] Starting managed indexing due to Kilo org props set")
 		if (!this._kiloOrgCodeIndexProps) {
 			throw new Error("Managed indexing requires organization credentials")
 		}
@@ -541,7 +549,7 @@ export class CodeIndexManager {
 			)
 
 			// Start indexing
-			this._managedIndexerDisposable = await startManagedIndexing(config, this.context, (state) => {
+			this._managedIndexerDisposable = await startManagedIndexing(config, (state) => {
 				this._managedIndexerState = state
 				// Emit state change event through state manager
 				// Map managed indexer states to system states:
