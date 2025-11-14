@@ -504,7 +504,6 @@ export class CodeIndexManager {
 		}
 
 		// Start managed indexing automatically
-		console.info("[BMC DEBUG] - [CodeIndexManager] Starting managed indexing due to Kilo org props set")
 		this.startManagedIndexing().catch((error) => {
 			const err = error instanceof Error ? error : new Error(String(error))
 			console.error("[CodeIndexManager] Failed to start managed indexing:", err.message)
@@ -528,6 +527,7 @@ export class CodeIndexManager {
 	 * This is the new standalone indexing system that uses delta-based indexing
 	 */
 	public async startManagedIndexing(): Promise<void> {
+		console.info("[BMC DEBUG] - [CodeIndexManager] Starting managed indexing due to Kilo org props set")
 		if (!this._kiloOrgCodeIndexProps) {
 			throw new Error("Managed indexing requires organization credentials")
 		}
