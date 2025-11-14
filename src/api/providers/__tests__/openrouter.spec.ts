@@ -63,7 +63,7 @@ describe("OpenRouterHandler", () => {
 			defaultHeaders: {
 				"HTTP-Referer": "https://matterai.so",
 				"X-Title": "Axon Code",
-				"X-KiloCode-Version": Package.version,
+				"X-AxonCode-Version": Package.version,
 				"User-Agent": `Kilo-Code/${Package.version}`,
 			},
 		})

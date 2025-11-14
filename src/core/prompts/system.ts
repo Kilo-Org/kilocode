@@ -154,6 +154,143 @@ The tool accepts these parameters:
 
 - \`command\` (required): The CLI command to execute. Must be valid for the user's operating system.
 - \`cwd\` (optional): The working directory to execute the command in. If not provided, the current working directory is used. Ensure this is always an absolute path, starting with \`/\`. If you are running the command in the root directly, skip this parameter. The command executor is defaulted to run in the root directory. You already have the Current Workspace Directory in <environment_details>.
+
+## search_files
+
+The \`search_files\` tool allows you to search for patterns across files in a directory using regex.
+
+### Parameters
+
+1. **path** (string, required): Directory to search recursively, relative to workspace
+2. **regex** (string, required): Rust-compatible regular expression pattern
+3. **file_pattern** (string or null, required): Glob pattern to filter files OR null
+
+### CRITICAL: file_pattern Must Be a String or null
+
+**The \`file_pattern\` parameter MUST ALWAYS be:**
+- A properly quoted string: \`"*.js"\`, \`"*.tsx"\`, \`"**/*.json"\`
+- OR explicitly \`null\` if you want to search all files
+
+**NEVER provide an unquoted value like \`*.js\` - this will cause a JSON parsing error.**
+
+### Correct Examples
+\`\`\`json
+// Search for "import" in all TypeScript files
+{
+  "path": "src",
+  "regex": "import.*from",
+  "file_pattern": "*.ts"
+}
+
+// Search for "TODO" in all files (no filter)
+{
+  "path": "src",
+  "regex": "TODO:",
+  "file_pattern": null
+}
+
+// Search in JSX/TSX files only
+{
+  "path": "src/components",
+  "regex": "useState",
+  "file_pattern": "*.{jsx,tsx}"
+}
+
+// Search in nested directories
+{
+  "path": ".",
+  "regex": "API_KEY",
+  "file_pattern": "**/*.env*"
+}
+\`\`\`
+
+### ❌ INCORRECT Examples
+\`\`\`json
+// WRONG - Unquoted file_pattern (will cause JSON error)
+{
+  "path": "src",
+  "regex": "import",
+  "file_pattern": *.js
+}
+
+// WRONG - Missing file_pattern entirely
+{
+  "path": "src",
+  "regex": "import"
+}
+
+// WRONG - Empty string instead of null
+{
+  "path": "src",
+  "regex": "import",
+  "file_pattern": ""
+}
+\`\`\`
+
+### Regex Pattern Tips
+
+- Use Rust regex syntax (similar to PCRE)
+- Escape special characters: \`\.\`, \`\(\`, \`\[\`, etc.
+- Common patterns:
+  - \`"word"\` - literal match
+  - \`"\\bword\\b"\` - word boundary match
+  - \`"function\\s+\\w+"\` - function declarations
+  - \`"import.*from\\s+['\"].*['\"]"\` - import statements
+
+### File Pattern Glob Syntax
+
+When using a string value for \`file_pattern\`:
+- \`"*.js"\` - All .js files in directory
+- \`"*.{js,ts}"\` - All .js and .ts files
+- \`"**/*.json"\` - All .json files recursively
+- \`"test_*.py"\` - Files starting with test_
+- \`"src/**/*.tsx"\` - All .tsx files under src/
+
+**When in doubt, use \`null\` to search all files.**
+
+### Common Use Cases
+\`\`\`json
+// Find all TODO comments
+{
+  "path": "src",
+  "regex": "TODO:|FIXME:",
+  "file_pattern": null
+}
+
+// Find specific function calls
+{
+  "path": "src",
+  "regex": "localStorage\\.(get|set)Item",
+  "file_pattern": "*.{js,jsx,ts,tsx}"
+}
+
+// Find imports of a specific module
+{
+  "path": ".",
+  "regex": "from ['\"]react['\"]",
+  "file_pattern": "**/*.tsx"
+}
+
+// Find environment variable usage
+{
+  "path": "src",
+  "regex": "process\\.env\\.",
+  "file_pattern": "*.js"
+}
+\`\`\`
+
+### Parameter Validation Checklist
+
+Before submitting, verify:
+- ✅ \`path\` is a string (directory path)
+- ✅ \`regex\` is a string (valid Rust regex)
+- ✅ \`file_pattern\` is EITHER a quoted string OR null
+- ✅ All three parameters are present
+- ✅ No unquoted glob patterns like \`*.js\`
+
+### Remember
+
+**Always quote the file_pattern value or use null. Never use bare/unquoted glob patterns.**
 `
 
 async function generatePrompt(

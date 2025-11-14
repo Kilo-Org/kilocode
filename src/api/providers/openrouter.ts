@@ -146,8 +146,8 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const baseURL = this.options.openRouterBaseUrl || "https://api.matterai.so/v1/web"
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
+		// this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
-		// this.client = new OpenAI({ baseURL: "http://localhost:4064/v1/web", apiKey, defaultHeaders: DEFAULT_HEADERS })
 	}
 
 	// kilocode_change start
@@ -306,7 +306,6 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 							newText = newText.replace(/<\/?think>/g, "")
 							newText = newText.replace(/<think>/g, "")
-							newText = newText.trim()
 
 							yield {
 								type: "reasoning",

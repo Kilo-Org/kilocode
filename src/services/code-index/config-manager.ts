@@ -20,10 +20,12 @@ export class CodeIndexConfigManager {
 	private geminiOptions?: { apiKey: string }
 	private mistralOptions?: { apiKey: string }
 	private vercelAiGatewayOptions?: { apiKey: string }
+	private openRouterApiKey?: string
 	private qdrantUrl?: string = "http://localhost:6333"
 	private qdrantApiKey?: string
 	private searchMinScore?: number
 	private searchMaxResults?: number
+	private matterAiOptions?: { apiKey: string }
 
 	constructor(private readonly contextProxy: ContextProxy) {
 		// Initialize with current configuration to avoid false restart triggers
@@ -65,6 +67,8 @@ export class CodeIndexConfigManager {
 
 		const openAiKey = this.contextProxy?.getSecret("codeIndexOpenAiKey") ?? ""
 		const qdrantApiKey = this.contextProxy?.getSecret("codeIndexQdrantApiKey") ?? ""
+		// Get openRouterApiKey from main API configuration, not as separate secret
+		const openRouterApiKey = this.contextProxy?.getSecret("openRouterApiKey") ?? ""
 		// Fix: Read OpenAI Compatible settings from the correct location within codebaseIndexConfig
 		const openAiCompatibleBaseUrl = codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl ?? ""
 		const openAiCompatibleApiKey = this.contextProxy?.getSecret("codebaseIndexOpenAiCompatibleApiKey") ?? ""
@@ -76,6 +80,7 @@ export class CodeIndexConfigManager {
 		this.codebaseIndexEnabled = codebaseIndexEnabled ?? true
 		this.qdrantUrl = codebaseIndexQdrantUrl
 		this.qdrantApiKey = qdrantApiKey ?? ""
+		this.openRouterApiKey = openRouterApiKey
 		this.searchMinScore = codebaseIndexSearchMinScore
 		this.searchMaxResults = codebaseIndexSearchMaxResults
 
@@ -395,10 +400,12 @@ export class CodeIndexConfigManager {
 			geminiOptions: this.geminiOptions,
 			mistralOptions: this.mistralOptions,
 			vercelAiGatewayOptions: this.vercelAiGatewayOptions,
+			openRouterApiKey: this.openRouterApiKey,
 			qdrantUrl: this.qdrantUrl,
 			qdrantApiKey: this.qdrantApiKey,
-			searchMinScore: this.currentSearchMinScore,
-			searchMaxResults: this.currentSearchMaxResults,
+			searchMinScore: this.searchMinScore,
+			searchMaxResults: this.searchMaxResults,
+			matterAiOptions: this.matterAiOptions,
 		}
 	}
 

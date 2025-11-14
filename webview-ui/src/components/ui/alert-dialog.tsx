@@ -36,7 +36,7 @@ function AlertDialogContent({ className, ...props }: React.ComponentProps<typeof
 			<AlertDialogPrimitive.Content
 				data-slot="alert-dialog-content"
 				className={cn(
-					"bg-vscode-editor-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-sm border border-vscode-panel-border p-4 shadow-lg duration-200 sm:max-w-md",
+					"bg-vscode-editor-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-min max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-xl border border-vscode-panel-border p-4 shadow-lg duration-200 sm:max-w-md",
 					className,
 				)}
 				{...props}
@@ -90,7 +90,7 @@ function AlertDialogAction({ className, ...props }: React.ComponentProps<typeof 
 		<AlertDialogPrimitive.Action
 			className={cn(
 				buttonVariants(),
-				"bg-vscode-button-background text-vscode-button-foreground hover:bg-vscode-button-hoverBackground h-6 px-3 py-1 border",
+				"bg-vscode-button-background text-vscode-button-foreground hover:bg-vscode-button-hoverBackground h-6 px-3 py-1 border w-min min-w-56",
 				className,
 			)}
 			{...props}
@@ -103,7 +103,7 @@ function AlertDialogCancel({ className, ...props }: React.ComponentProps<typeof 
 		<AlertDialogPrimitive.Cancel
 			className={cn(
 				buttonVariants({ variant: "outline" }),
-				"bg-vscode-button-secondaryBackground text-vscode-button-secondaryForeground hover:bg-vscode-button-secondaryHoverBackground h-6 px-3 py-1 border",
+				"bg-vscode-button-secondaryBackground text-vscode-button-secondaryForeground hover:bg-vscode-button-secondaryHoverBackground h-6 px-3 py-1 border w-min min-w-56",
 				className,
 			)}
 			{...props}

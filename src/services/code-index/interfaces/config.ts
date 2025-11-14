@@ -15,10 +15,12 @@ export interface CodeIndexConfig {
 	geminiOptions?: { apiKey: string }
 	mistralOptions?: { apiKey: string }
 	vercelAiGatewayOptions?: { apiKey: string }
+	openRouterApiKey?: string // Add OpenRouter API key field
 	qdrantUrl?: string
 	qdrantApiKey?: string
 	searchMinScore?: number
 	searchMaxResults?: number
+	matterAiOptions?: { apiKey: string }
 }
 
 /**

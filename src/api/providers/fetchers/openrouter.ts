@@ -164,6 +164,7 @@ export async function getOpenRouterModelEndpoints(
 	const baseURL = "https://api.matterai.so/v1/web"
 
 	try {
+		console.log("getOpenRouterModelEndpoints 1", baseURL, modelId)
 		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}`, {
 			timeout: 120000, // 60 seconds timeout
 		})

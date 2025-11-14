@@ -18,6 +18,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { Package } from "../../shared/package"
 import { BATCH_SEGMENT_THRESHOLD } from "./constants"
+import { MatterAiEmbedder } from "./embedders/matterai"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -36,51 +37,14 @@ export class CodeIndexServiceFactory {
 		const config = this.configManager.getConfig()
 
 		const provider = config.embedderProvider as EmbedderProvider
-
-		if (provider === "openai") {
-			const apiKey = config.openAiOptions?.openAiNativeApiKey
-
-			if (!apiKey) {
-				throw new Error(t("embeddings:serviceFactory.openAiConfigMissing"))
+		if (provider === "matterai") {
+			// Use the same API key source as OpenRouter provider
+			const openRouterApiKey = config.openRouterApiKey
+			if (!openRouterApiKey) {
+				throw new Error(t("embeddings:serviceFactory.matteraiConfigMissing"))
 			}
-			return new OpenAiEmbedder({
-				...config.openAiOptions,
-				openAiEmbeddingModelId: config.modelId,
-			})
-		} else if (provider === "ollama") {
-			if (!config.ollamaOptions?.ollamaBaseUrl) {
-				throw new Error(t("embeddings:serviceFactory.ollamaConfigMissing"))
-			}
-			return new CodeIndexOllamaEmbedder({
-				...config.ollamaOptions,
-				ollamaModelId: config.modelId,
-			})
-		} else if (provider === "openai-compatible") {
-			if (!config.openAiCompatibleOptions?.baseUrl || !config.openAiCompatibleOptions?.apiKey) {
-				throw new Error(t("embeddings:serviceFactory.openAiCompatibleConfigMissing"))
-			}
-			return new OpenAICompatibleEmbedder(
-				config.openAiCompatibleOptions.baseUrl,
-				config.openAiCompatibleOptions.apiKey,
-				config.modelId,
-			)
-		} else if (provider === "gemini") {
-			if (!config.geminiOptions?.apiKey) {
-				throw new Error(t("embeddings:serviceFactory.geminiConfigMissing"))
-			}
-			return new GeminiEmbedder(config.geminiOptions.apiKey, config.modelId)
-		} else if (provider === "mistral") {
-			if (!config.mistralOptions?.apiKey) {
-				throw new Error(t("embeddings:serviceFactory.mistralConfigMissing"))
-			}
-			return new MistralEmbedder(config.mistralOptions.apiKey, config.modelId)
-		} else if (provider === "vercel-ai-gateway") {
-			if (!config.vercelAiGatewayOptions?.apiKey) {
-				throw new Error(t("embeddings:serviceFactory.vercelAiGatewayConfigMissing"))
-			}
-			return new VercelAiGatewayEmbedder(config.vercelAiGatewayOptions.apiKey, config.modelId)
+			return new MatterAiEmbedder(openRouterApiKey, config.modelId)
 		}
-
 		throw new Error(
 			t("embeddings:serviceFactory.invalidEmbedderType", { embedderProvider: config.embedderProvider }),
 		)

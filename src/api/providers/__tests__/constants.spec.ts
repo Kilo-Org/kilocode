@@ -55,6 +55,6 @@ describe("DEFAULT_HEADERS", () => {
 	it("should have exactly 4 headers", () => {
 		const headerKeys = Object.keys(DEFAULT_HEADERS)
 		expect(headerKeys).toHaveLength(4)
-		expect(headerKeys).toEqual(["HTTP-Referer", "X-Title", "X-KiloCode-Version", "User-Agent"])
+		expect(headerKeys).toEqual(["HTTP-Referer", "X-Title", "X-AxonCode-Version", "User-Agent"])
 	})
 })

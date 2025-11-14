@@ -98,7 +98,7 @@ const CodeBlockButtonWrapper = styled.div`
 const CodeBlockContainer = styled.div`
 	position: relative;
 	overflow: hidden;
-	background-color: ${CODE_BLOCK_BG_COLOR};
+	background-color: ${CODE_BLOCK_BG_COLOR} !important;
 
 	${CodeBlockButtonWrapper} {
 		opacity: 0;
@@ -119,7 +119,7 @@ export const StyledPre = styled.div<{
 	windowshade?: "true" | "false"
 	collapsedHeight?: number
 }>`
-	background-color: ${CODE_BLOCK_BG_COLOR};
+	background-color: ${CODE_BLOCK_BG_COLOR} !important;
 	max-height: ${({ windowshade, collapsedHeight }) =>
 		windowshade === "true" ? `${collapsedHeight || WINDOW_SHADE_SETTINGS.collapsedHeight}px` : "none"};
 	overflow-y: auto;
@@ -128,7 +128,7 @@ export const StyledPre = styled.div<{
 	${({ preStyle }) => preStyle && { ...preStyle }}
 
 	pre {
-		background-color: ${CODE_BLOCK_BG_COLOR};
+		background-color: ${CODE_BLOCK_BG_COLOR} !important;
 		border-radius: 5px;
 		margin: 0;
 		padding: 10px;
@@ -160,8 +160,8 @@ export const StyledPre = styled.div<{
 	}
 
 	.hljs {
-		color: var(--vscode-editor-foreground, #fff);
-		background-color: ${CODE_BLOCK_BG_COLOR};
+		color: var(--vscode-editor-foreground, #fff) !important;
+		background-color: ${CODE_BLOCK_BG_COLOR} !important;
 	}
 `
 

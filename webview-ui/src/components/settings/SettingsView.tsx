@@ -984,12 +984,14 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={() => onConfirmDialogResult(false)}>
-							{t("settings:unsavedChangesDialog.cancelButton")}
-						</AlertDialogCancel>
-						<AlertDialogAction onClick={() => onConfirmDialogResult(true)}>
-							{t("settings:unsavedChangesDialog.discardButton")}
-						</AlertDialogAction>
+						<div className="flex gap-1 flex-col">
+							<AlertDialogCancel onClick={() => onConfirmDialogResult(false)}>
+								{t("settings:unsavedChangesDialog.cancelButton")}
+							</AlertDialogCancel>
+							<AlertDialogAction onClick={() => onConfirmDialogResult(true)}>
+								{t("settings:unsavedChangesDialog.discardButton")}
+							</AlertDialogAction>
+						</div>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>

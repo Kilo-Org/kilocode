@@ -10,6 +10,6 @@ export const Package = {
 	publisher,
 	name: process.env.PKG_NAME || name,
 	version: process.env.PKG_VERSION || version,
-	outputChannel: process.env.PKG_OUTPUT_CHANNEL || "Kilo-Code",
+	outputChannel: process.env.PKG_OUTPUT_CHANNEL || "AxonCode",
 	sha: process.env.PKG_SHA,
 } as const

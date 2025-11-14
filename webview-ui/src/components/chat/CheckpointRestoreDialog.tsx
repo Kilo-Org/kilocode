@@ -51,7 +51,7 @@ export const CheckpointRestoreDialog: React.FC<CheckpointRestoreDialogProps> = (
 					<AlertDialogTitle className="text-lg">{title}</AlertDialogTitle>
 					<AlertDialogDescription className="text-base">{description}</AlertDialogDescription>
 				</AlertDialogHeader>
-				<AlertDialogFooter className="flex-col gap-2">
+				<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 					<AlertDialogCancel className="bg-vscode-button-secondaryBackground hover:bg-vscode-button-secondaryHoverBackground text-vscode-button-secondaryForeground border-vscode-button-border">
 						{t("common:answers.cancel")}
 					</AlertDialogCancel>

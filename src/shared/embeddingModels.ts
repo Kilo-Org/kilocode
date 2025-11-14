@@ -2,7 +2,14 @@
  * Defines profiles for different embedding models, including their dimensions.
  */
 
-export type EmbedderProvider = "openai" | "ollama" | "openai-compatible" | "gemini" | "mistral" | "vercel-ai-gateway" // Add other providers as needed
+export type EmbedderProvider =
+	| "openai"
+	| "ollama"
+	| "openai-compatible"
+	| "gemini"
+	| "mistral"
+	| "vercel-ai-gateway"
+	| "matterai" // Add other providers as needed
 
 export interface EmbeddingModelProfile {
 	dimension: number
@@ -19,6 +26,9 @@ export type EmbeddingModelProfiles = {
 
 // Example profiles - expand this list as needed
 export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
+	matterai: {
+		"matterai-embedding-large": { dimension: 3072, scoreThreshold: 0.4 },
+	},
 	openai: {
 		"text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
 		"text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },

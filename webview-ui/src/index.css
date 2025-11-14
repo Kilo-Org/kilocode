@@ -207,7 +207,9 @@
 	/* Code Block Styles */
 	pre,
 	code {
-		background-color: var(--vscode-textCodeBlock-background);
+		background-color: var(--vscode-input-background) !important;
+		padding-left: 0.1rem;
+		padding-right: 0.1rem;
 	}
 
 	/* Search result highlighting */

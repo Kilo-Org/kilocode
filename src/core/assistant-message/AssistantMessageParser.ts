@@ -161,7 +161,14 @@ export class AssistantMessageParser {
 
 			try {
 				if (accumulatedCall.function!.arguments.trim()) {
-					parsedArgs = JSON.parse(accumulatedCall.function!.arguments)
+					// Fix common JSON formatting issues before parsing
+					let fixedArgs = accumulatedCall.function!.arguments
+
+					// Fix unquoted string values in JSON (e.g., file_pattern:*.js -> file_pattern:"*.js")
+					// This regex looks for property names followed by colon and unquoted values that contain word characters, dots, asterisks, etc.
+					fixedArgs = fixedArgs.replace(/("([^"]+)"\s*:\s*)([a-zA-Z0-9_.*\/\\-]+)(?=\s*[,\]}])/g, '$1"$3"')
+
+					parsedArgs = JSON.parse(fixedArgs)
 
 					// Fix any double-encoded parameters
 					parsedArgs = parseDoubleEncodedParams(parsedArgs)

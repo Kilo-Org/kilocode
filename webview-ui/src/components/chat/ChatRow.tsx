@@ -52,6 +52,7 @@ import {
 	ListTree,
 	MessageCircleQuestionMark,
 	PocketKnife,
+	Search,
 	TerminalSquare,
 	Trash2,
 } from "lucide-react"
@@ -779,7 +780,7 @@ export const ChatRowContent = ({
 				return (
 					<>
 						<div style={headerStyle}>
-							{toolIcon("search")}
+							<Search className="w-3 h-3 shrink-0" aria-label="Search icon" />
 							<span style={{}}>
 								{message.type === "ask" ? (
 									<Trans
@@ -1188,7 +1189,7 @@ export const ChatRowContent = ({
 								<MessageCircle className="w-4 shrink-0" aria-label="Speech bubble icon" />
 								<span style={{}}>{t("chat:text.rooSaid")}</span>
 							</div> */}
-							<div className="mb-4">
+							<div className="">
 								<Markdown markdown={message.text} partial={message.partial} />
 								{message.images && message.images.length > 0 && (
 									<div style={{ marginTop: "0px" }}>

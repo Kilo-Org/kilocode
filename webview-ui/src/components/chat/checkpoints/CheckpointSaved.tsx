@@ -1,10 +1,10 @@
-import { useMemo, useRef, useState, useEffect } from "react"
-import { useTranslation } from "react-i18next"
 import { cn } from "@/lib/utils"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 
+import { CornerDownRight } from "lucide-react"
 import { CheckpointMenu } from "./CheckpointMenu"
 import { checkpointSchema } from "./schema"
-import { GitCommitVertical } from "lucide-react"
 
 type CheckpointSavedProps = {
 	ts: number
@@ -77,7 +77,7 @@ export const CheckpointSaved = ({ checkpoint, ...props }: CheckpointSavedProps) 
 	return (
 		<div className="group flex items-center justify-between gap-2 py-2">
 			<div className="flex items-center text-white whitespace-nowrap opacity-40">
-				<GitCommitVertical className="w-4" />
+				<CornerDownRight className="w-4 mr-1 mb-1" />
 				<span className="font-semibold">{t("chat:checkpoint.regular")}</span>
 				{isCurrent && <span className="text-muted">({t("chat:checkpoint.current")})</span>}
 			</div>
