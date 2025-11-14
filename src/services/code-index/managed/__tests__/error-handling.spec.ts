@@ -84,7 +84,7 @@ describe("Managed Indexing Error Handling", () => {
 		})
 
 		// Attempt to start indexing
-		await expect(startIndexing(config, mockContext)).rejects.toThrow(/Scan failed with 3 errors/)
+		await expect(startIndexing(config, mockContext, () => {})).rejects.toThrow(/Scan failed with 3 errors/)
 	})
 
 	it("should include error details in thrown error message", async () => {
@@ -99,7 +99,7 @@ describe("Managed Indexing Error Handling", () => {
 		})
 
 		try {
-			await startIndexing(config, mockContext)
+			await startIndexing(config, mockContext, () => {})
 			expect.fail("Should have thrown an error")
 		} catch (error) {
 			expect(error).toBeInstanceOf(Error)
@@ -122,7 +122,7 @@ describe("Managed Indexing Error Handling", () => {
 		})
 
 		try {
-			await startIndexing(config, mockContext)
+			await startIndexing(config, mockContext, () => {})
 			expect.fail("Should have thrown an error")
 		} catch (error) {
 			expect(error).toBeInstanceOf(Error)

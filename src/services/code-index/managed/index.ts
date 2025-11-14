@@ -24,7 +24,7 @@
  *   workspacePath
  * )
  *
- * // Start indexing
+ * // Start indexing with state change callback
  * const disposable = await startIndexing(config, context, (state) => {
  *   console.log('State:', state)
  * })

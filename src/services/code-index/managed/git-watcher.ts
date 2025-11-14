@@ -43,13 +43,13 @@ interface GitStateSnapshot {
  *
  * @param config Managed indexing configuration
  * @param context VSCode extension context
- * @param onStateChange Optional callback when git state changes
+ * @param onStateChange Callback when git state changes
  * @returns Disposable watcher instance
  */
 export async function createGitWatcher(
 	config: ManagedIndexingConfig,
 	context: vscode.ExtensionContext,
-	onStateChange?: (state: IndexerState) => void,
+	onStateChange: (state: IndexerState) => void,
 ): Promise<vscode.Disposable> {
 	const disposables: vscode.Disposable[] = []
 	let currentState: GitStateSnapshot | null = null
@@ -64,7 +64,7 @@ export async function createGitWatcher(
 			if (gitState) {
 				currentState = gitState
 			} else {
-				onStateChange?.({
+				onStateChange({
 					status: "idle",
 					message: "Detached HEAD state - indexing disabled",
 					gitBranch: undefined,
@@ -89,7 +89,7 @@ export async function createGitWatcher(
 			// Check for detached HEAD
 			if (await isDetachedHead(config.workspacePath)) {
 				currentState = null
-				onStateChange?.({
+				onStateChange({
 					status: "idle",
 					message: "Detached HEAD state - indexing disabled",
 					gitBranch: undefined,
@@ -142,10 +142,10 @@ export async function createGitWatcher(
 		newBranch: string,
 		config: ManagedIndexingConfig,
 		context: vscode.ExtensionContext,
-		onStateChange?: (state: IndexerState) => void,
+		onStateChange: (state: IndexerState) => void,
 	) => {
 		try {
-			onStateChange?.({
+			onStateChange({
 				status: "scanning",
 				message: `Branch changed to ${newBranch}, fetching manifest...`,
 				gitBranch: newBranch,
@@ -165,14 +165,14 @@ export async function createGitWatcher(
 			}
 
 			// Trigger re-scan with manifest
-			onStateChange?.({
+			onStateChange({
 				status: "scanning",
 				message: `Scanning branch ${newBranch}...`,
 				gitBranch: newBranch,
 			})
 
 			const result = await scanDirectory(config, context, manifest, (progress) => {
-				onStateChange?.({
+				onStateChange({
 					status: "scanning",
 					message: `Scanning: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,
 					gitBranch: newBranch,
@@ -193,7 +193,7 @@ export async function createGitWatcher(
 					logger.warn("[GitWatcher] Failed to fetch updated manifest after scan")
 				}
 
-				onStateChange?.({
+				onStateChange({
 					status: "watching",
 					message: `Branch ${newBranch} indexed successfully`,
 					gitBranch: newBranch,
@@ -213,7 +213,7 @@ export async function createGitWatcher(
 			}
 		} catch (error) {
 			logger.error(`[GitWatcher] Failed to handle branch change:`, error)
-			onStateChange?.({
+			onStateChange({
 				status: "error",
 				message: `Failed to index branch ${newBranch}: ${error instanceof Error ? error.message : String(error)}`,
 				error: error instanceof Error ? error.message : String(error),
@@ -229,10 +229,10 @@ export async function createGitWatcher(
 		branch: string,
 		config: ManagedIndexingConfig,
 		context: vscode.ExtensionContext,
-		onStateChange?: (state: IndexerState) => void,
+		onStateChange: (state: IndexerState) => void,
 	) => {
 		try {
-			onStateChange?.({
+			onStateChange({
 				status: "scanning",
 				message: `New commit detected, updating index...`,
 				gitBranch: branch,
@@ -253,7 +253,7 @@ export async function createGitWatcher(
 
 			// Re-scan to pick up committed changes
 			const result = await scanDirectory(config, context, manifest, (progress) => {
-				onStateChange?.({
+				onStateChange({
 					status: "scanning",
 					message: `Updating: ${progress.filesProcessed}/${progress.filesTotal} files (${progress.chunksIndexed} chunks)`,
 					gitBranch: branch,
@@ -274,7 +274,7 @@ export async function createGitWatcher(
 					logger.warn("[GitWatcher] Failed to fetch updated manifest after commit")
 				}
 
-				onStateChange?.({
+				onStateChange({
 					status: "watching",
 					message: `Index updated after commit`,
 					gitBranch: branch,
@@ -294,7 +294,7 @@ export async function createGitWatcher(
 			}
 		} catch (error) {
 			logger.error(`[GitWatcher] Failed to handle commit:`, error)
-			onStateChange?.({
+			onStateChange({
 				status: "error",
 				message: `Failed to update index after commit: ${error instanceof Error ? error.message : String(error)}`,
 				error: error instanceof Error ? error.message : String(error),
