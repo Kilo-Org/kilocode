@@ -7,7 +7,7 @@ The `ask_followup_question` tool enables interactive communication by asking spe
 The tool accepts these parameters:
 
 - `question` (required): The specific question to ask the user
-- `follow_up` (optional): A list of 2-4 suggested answers that help guide user responses, each within `<suggest>` tags
+- `follow_up` (required): A list of 2-4 suggested answers that help guide user responses, each within `<suggest>` tags
 
 ## What It Does
 
