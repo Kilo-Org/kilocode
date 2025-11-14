@@ -1,3 +1,5 @@
+# Development Guide
+
 ## Local development on the CLI
 
 We use `pnpm` for package management. Please make sure `pnpm` is installed.
@@ -18,6 +20,11 @@ The CLI is currently built by bundling the extension core and replacing the vsco
 
 ## Publishing to NPM
 
-## Debugging
-
-TODO: document how to start debugger if someone figures out how. `console.log` driven development is the soup du jour for now.
+- Merge the latest `Changeset version bump` PR to make sure that all changes are included in the CHANGELOG.
+- Wait for the `Build CLI Package` job to finish building on `main`.
+- When the job is done, an artifact will be attached to the action, download and extract the `.tgz` file inside of it.
+- Install the CLI through `npm install -g ./kilocode-cli-1.1.1.tgz`.
+- Make sure that the CLI works (Changes in the extension can sometimes conflict with the CLI):
+    - Make the CLI increase a number in a JSON file.
+    - Ask the CLI to describe the `kilocode` project.
+- Run `npm publish` to publish the version after testing is complete.
