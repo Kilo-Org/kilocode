@@ -7,7 +7,7 @@ The `switch_mode` tool enables Kilo Code to change between different operational
 The tool accepts these parameters:
 
 - `mode_slug` (required): The slug of the mode to switch to (e.g., "code", "ask", "architect")
-- `reason` (optional): The reason for switching modes, providing context for the user
+- `reason` (required): The reason for switching modes, providing context for the user
 
 ## What It Does
 
