@@ -17,7 +17,14 @@ import {
 	isCommittingParallelModeAtom,
 	refreshTerminalAtom,
 } from "../atoms/ui.js"
-import { setModeAtom, setThemeAtom, providerAtom, updateProviderAtom, configAtom } from "../atoms/config.js"
+import {
+	setModeAtom,
+	setThemeAtom,
+	providerAtom,
+	updateProviderAtom,
+	selectProviderAtom,
+	configAtom,
+} from "../atoms/config.js"
 import { routerModelsAtom, extensionStateAtom, isParallelModeAtom, chatMessagesAtom } from "../atoms/extension.js"
 import { requestRouterModelsAtom } from "../atoms/actions.js"
 import { profileDataAtom, balanceDataAtom, profileLoadingAtom, balanceLoadingAtom } from "../atoms/profile.js"
@@ -77,6 +84,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const setMode = useSetAtom(setModeAtom)
 	const setTheme = useSetAtom(setThemeAtom)
 	const updateProvider = useSetAtom(updateProviderAtom)
+	const selectProvider = useSetAtom(selectProviderAtom)
 	const refreshRouterModels = useSetAtom(requestRouterModelsAtom)
 	const setMessageCutoffTimestamp = useSetAtom(setMessageCutoffTimestampAtom)
 	const setCommittingParallelMode = useSetAtom(isCommittingParallelModeAtom)
@@ -184,6 +192,10 @@ export function useCommandContext(): UseCommandContextReturn {
 				updateProvider: async (providerId: string, updates: Partial<ProviderConfig>) => {
 					await updateProvider(providerId, updates)
 				},
+				// Provider selection function
+				selectProvider: async (providerId: string) => {
+					await selectProvider(providerId)
+				},
 				// Profile data context
 				profileData,
 				balanceData,
@@ -216,6 +228,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			currentProvider,
 			kilocodeDefaultModel,
 			updateProvider,
+			selectProvider,
 			refreshRouterModels,
 			replaceMessages,
 			setMessageCutoffTimestamp,

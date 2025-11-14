@@ -125,6 +125,12 @@ export const selectProviderAtom = atom(null, async (get, set, providerId: string
 	set(configAtom, updatedConfig)
 	await set(saveConfigAtom, updatedConfig)
 
+	// Import from config-sync to avoid circular dependency
+	const { syncConfigToExtensionEffectAtom } = await import("./config-sync.js")
+
+	// Trigger sync to extension after provider update
+	await set(syncConfigToExtensionEffectAtom)
+
 	// Track provider change
 	getTelemetryService().trackProviderChanged(
 		previousProvider,
