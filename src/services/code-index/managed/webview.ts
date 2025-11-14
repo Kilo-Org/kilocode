@@ -60,9 +60,6 @@ export async function tryStartManagedIndexing(provider: ClineProvider): Promise<
  * This should be called whenever the API configuration changes
  */
 export async function updateCodeIndexWithKiloProps(provider: ClineProvider): Promise<void> {
-	// ClineProvider is too big to log
-	//console.log("updateCodeIndexWithKiloProps", provider)
-
 	try {
 		const { apiConfiguration } = await provider.getState()
 

@@ -38,6 +38,22 @@ const messageBufferAtom = atom<ExtensionMessage[]>([])
  */
 const isProcessingBufferAtom = atom<boolean>(false)
 
+// Indexing status types
+export interface IndexingStatus {
+	systemStatus: string
+	message?: string
+	processedItems: number
+	totalItems: number
+	currentItemUnit?: string
+	workspacePath?: string
+	gitBranch?: string // Current git branch being indexed
+	manifest?: {
+		totalFiles: number
+		totalChunks: number
+		lastUpdated: string
+	}
+}
+
 /**
  * Effect atom to initialize the ExtensionService
  * This sets up event listeners and activates the service
@@ -229,6 +245,15 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			case "invoke":
 				// Invoke messages trigger specific UI actions
 				break
+
+			case "indexingStatusUpdate": {
+				// logs.debug('indexing status', 'effects', message.values)
+				// const indexingMsg: IndexingStatus = message.values as unknown as IndexingStatus
+				// Indexing status updates are handled by the code index manager
+				// const logMsg = `Indexing Status - processed: ${indexingMsg.processedItems}. total: ${indexingMsg.totalItems}. status: ${indexingMsg.systemStatus}`
+				// logs.debug(logMsg)
+				break
+			}
 
 			default:
 				logs.debug(`Unhandled message type: ${message.type}`, "effects")

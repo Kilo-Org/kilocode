@@ -552,8 +552,6 @@ export class ExtensionHost extends EventEmitter {
 
 	private async activateExtension(): Promise<void> {
 		try {
-			logs.info("Calling extension activate function...", "ExtensionHost")
-
 			// Call the extension's activate function with our mocked context
 			// Use safeExecute to catch and handle any errors without crashing the CLI
 			this.extensionAPI =
@@ -562,6 +560,7 @@ export class ExtensionHost extends EventEmitter {
 						if (!this.extensionModule || !this.vscodeAPI) {
 							throw new Error("Extension module or VSCode API not initialized")
 						}
+						logs.info("Calling extension activate function...", "ExtensionHost")
 						return await this.extensionModule.activate(this.vscodeAPI.context)
 					},
 					"extension.activate",
