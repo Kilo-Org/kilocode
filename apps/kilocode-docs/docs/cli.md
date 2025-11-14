@@ -19,6 +19,11 @@ kilocode --mode architect
 
 # Start with a specific workspace
 kilocode --workspace /path/to/project
+
+# Resume the last conversation from this workspace
+kilocode -c
+# or
+kilocode --continue
 ```
 
 to start the CLI and begin a new task with your preferred model and relevant mode.
