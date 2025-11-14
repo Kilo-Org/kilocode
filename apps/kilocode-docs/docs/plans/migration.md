@@ -199,7 +199,7 @@ Kilo Code uses a compatible rules system that supports Cursor and Windsurf patte
 
 Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
 
-**👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/docs/advanced-usage/migrating-from-cursor-windsurf).**
+**👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/advanced-usage/migrating-from-cursor-windsurf).**
 
 ## Cost Comparison Analysis
 
@@ -308,7 +308,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 **Rules and Configuration Migration**
 
 - **Issue:** Custom rules and configurations not migrating automatically
-- **Solution:** Follow the [technical migration guide](/docs/advanced-usage/migrating-from-cursor-windsurf) to manually migrate rules
+- **Solution:** Follow the [technical migration guide](/advanced-usage/migrating-from-cursor-windsurf) to manually migrate rules
 - **Prevention:** Audit rules before migration, use version control for rules
 
 ### Organizational Challenges
@@ -343,7 +343,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 ### Self-Service Resources
 
 - **Migration guides** for specific tools
-- **[Technical migration guide](/docs/advanced-usage/migrating-from-cursor-windsurf)** for rules and configurations (Cursor/Windsurf)
+- **[Technical migration guide](/advanced-usage/migrating-from-cursor-windsurf)** for rules and configurations (Cursor/Windsurf)
 - **Video tutorials** for common migration scenarios
 - **Community support** through Discord and forums
 - **Documentation** and best practices
@@ -355,7 +355,7 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - **Consultation:** Schedule free migration planning call
 - **Documentation:**
     - [Business migration guide](/plans/migration) (this page)
-    - [Technical migration guide](/docs/advanced-usage/migrating-from-cursor-windsurf) (rules and configurations)
+    - [Technical migration guide](/advanced-usage/migrating-from-cursor-windsurf) (rules and configurations)
 
 ## Success Stories
 
@@ -385,6 +385,6 @@ Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which C
 - [Get started with your team](/plans/getting-started)
 - [Explore team management features](/plans/team-management)
 - [Understand billing and pricing](/plans/billing)
-- [Migrate your rules and configurations](/docs/advanced-usage/migrating-from-cursor-windsurf) (technical guide)
+- [Migrate your rules and configurations](/advanced-usage/migrating-from-cursor-windsurf) (technical guide)
 
 Ready to make the switch? Contact our migration team at migrations@kilocode.ai to plan your transition to transparent AI coding.
