@@ -247,11 +247,8 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				break
 
 			case "indexingStatusUpdate": {
-				// logs.debug('indexing status', 'effects', message.values)
-				// const indexingMsg: IndexingStatus = message.values as unknown as IndexingStatus
-				// Indexing status updates are handled by the code index manager
-				// const logMsg = `Indexing Status - processed: ${indexingMsg.processedItems}. total: ${indexingMsg.totalItems}. status: ${indexingMsg.systemStatus}`
-				// logs.debug(logMsg)
+				// this message fires rapidly as the scanner is progressing and we don't have a UI for it in the
+				// CLI at this point, so just quietly ignore it. Eventually we can add more CLI info about indexing.
 				break
 			}
 
