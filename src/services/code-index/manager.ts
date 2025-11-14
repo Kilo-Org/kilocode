@@ -292,10 +292,7 @@ export class CodeIndexManager {
 			this.stopWatcher()
 		}
 		// kilocode_change start
-		if (this._managedIndexerDisposable) {
-			this._managedIndexerDisposable.dispose()
-			this._managedIndexerDisposable = undefined
-		}
+		this.stopManagedIndexing()
 		// kilocode_change end
 		this._stateManager.dispose()
 	}
@@ -587,6 +584,8 @@ export class CodeIndexManager {
 			this._managedIndexerDisposable.dispose()
 			this._managedIndexerDisposable = undefined
 			this._managedIndexerState = undefined
+		} else {
+			console.info("[CodeIndexManager] - [stopManagedIndexing] No managed indexer to stop")
 		}
 	}
 
