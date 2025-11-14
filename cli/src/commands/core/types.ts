@@ -54,6 +54,8 @@ export interface CommandContext {
 	refreshRouterModels: () => Promise<void>
 	// Provider update function for teams command
 	updateProvider: (providerId: string, updates: Partial<ProviderConfig>) => Promise<void>
+	// Provider selection function
+	selectProvider: (providerId: string) => Promise<void>
 	// Profile data context
 	profileData: ProfileData | null
 	balanceData: BalanceData | null

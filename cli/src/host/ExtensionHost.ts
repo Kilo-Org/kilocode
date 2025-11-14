@@ -3,6 +3,7 @@ import { createVSCodeAPIMock, type IdentityInfo, type ExtensionContext } from ".
 import { logs } from "../services/logs.js"
 import type { ExtensionMessage, WebviewMessage, ExtensionState } from "../types/messages.js"
 import { getTelemetryService } from "../services/telemetry/index.js"
+import { argsToMessage } from "../utils/safe-stringify.js"
 
 export interface ExtensionHostOptions {
 	workspacePath: string
@@ -389,29 +390,29 @@ export class ExtensionHost extends EventEmitter {
 		}
 
 		// Override console methods to forward to LogsService ONLY (no console output)
-		// IMPORTANT: Use original console methods to avoid circular dependency
+		// IMPORTANT: Use safe serialization to avoid circular reference errors
 		console.log = (...args: unknown[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+			const message = argsToMessage(args)
 			logs.info(message, "Extension")
 		}
 
 		console.error = (...args: unknown[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+			const message = argsToMessage(args)
 			logs.error(message, "Extension")
 		}
 
 		console.warn = (...args: unknown[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+			const message = argsToMessage(args)
 			logs.warn(message, "Extension")
 		}
 
 		console.debug = (...args: unknown[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+			const message = argsToMessage(args)
 			logs.debug(message, "Extension")
 		}
 
 		console.info = (...args: unknown[]) => {
-			const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+			const message = argsToMessage(args)
 			logs.info(message, "Extension")
 		}
 	}
@@ -498,25 +499,26 @@ export class ExtensionHost extends EventEmitter {
 			} as unknown as NodeModule
 
 			// Store the intercepted console in global for module injection
+			// Use safe serialization to avoid circular reference errors
 			;(global as unknown as { __interceptedConsole: Console }).__interceptedConsole = {
 				log: (...args: unknown[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+					const message = argsToMessage(args)
 					logs.info(message, "Extension")
 				},
 				error: (...args: unknown[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+					const message = argsToMessage(args)
 					logs.error(message, "Extension")
 				},
 				warn: (...args: unknown[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+					const message = argsToMessage(args)
 					logs.warn(message, "Extension")
 				},
 				debug: (...args: unknown[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+					const message = argsToMessage(args)
 					logs.debug(message, "Extension")
 				},
 				info: (...args: unknown[]) => {
-					const message = args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")
+					const message = argsToMessage(args)
 					logs.info(message, "Extension")
 				},
 			} as Console
@@ -550,8 +552,6 @@ export class ExtensionHost extends EventEmitter {
 
 	private async activateExtension(): Promise<void> {
 		try {
-			logs.info("Calling extension activate function...", "ExtensionHost")
-
 			// Call the extension's activate function with our mocked context
 			// Use safeExecute to catch and handle any errors without crashing the CLI
 			this.extensionAPI =
@@ -560,6 +560,7 @@ export class ExtensionHost extends EventEmitter {
 						if (!this.extensionModule || !this.vscodeAPI) {
 							throw new Error("Extension module or VSCode API not initialized")
 						}
+						logs.info("Calling extension activate function...", "ExtensionHost")
 						return await this.extensionModule.activate(this.vscodeAPI.context)
 					},
 					"extension.activate",

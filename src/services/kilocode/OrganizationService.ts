@@ -3,7 +3,9 @@ import axios from "axios"
 import { getKiloUrlFromToken } from "@roo-code/types"
 import { X_KILOCODE_ORGANIZATIONID, X_KILOCODE_TESTER } from "../../shared/kilocode/headers"
 import { KiloOrganization, KiloOrganizationSchema } from "../../shared/kilocode/organization"
-import { logger } from "../../utils/logging"
+import { CompactLogger } from "../../utils/logging/CompactLogger"
+
+const logger = new CompactLogger()
 
 /**
  * Service for fetching and managing Kilo Code organization settings
@@ -54,7 +56,7 @@ export class OrganizationService {
 					organizationId,
 					errors: validationResult.error.errors,
 				})
-				return null
+				return response.data
 			}
 
 			logger.info("[OrganizationService] Successfully fetched organization", {

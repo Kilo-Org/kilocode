@@ -1,7 +1,7 @@
 import { type ToolName, toolNames } from "@roo-code/types"
 import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
-import { extractMcpToolInfo, NativeToolCall, parseDoubleEncodedParams } from "./kilocode/native-tool-call"
+import { extractMcpToolInfo, NativeToolCall } from "./kilocode/native-tool-call"
 import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
@@ -165,10 +165,6 @@ export class AssistantMessageParser {
 			try {
 				if (accumulatedCall.function!.arguments.trim()) {
 					parsedArgs = JSON.parse(accumulatedCall.function!.arguments)
-
-					// Fix any double-encoded parameters
-					parsedArgs = parseDoubleEncodedParams(parsedArgs)
-
 					isComplete = true
 				}
 			} catch (error) {

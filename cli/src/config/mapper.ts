@@ -59,7 +59,7 @@ function mapProviderToApiConfig(provider: ProviderConfig): ProviderSettings {
 	return config
 }
 
-function getModelIdForProvider(provider: ProviderConfig): string {
+export function getModelIdForProvider(provider: ProviderConfig): string {
 	switch (provider.provider) {
 		case "kilocode":
 			return provider.kilocodeModel || ""

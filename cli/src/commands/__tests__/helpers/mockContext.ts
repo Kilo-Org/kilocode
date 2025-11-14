@@ -49,6 +49,7 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		updateProviderModel: vi.fn().mockResolvedValue(undefined),
 		refreshRouterModels: vi.fn().mockResolvedValue(undefined),
 		updateProvider: vi.fn().mockResolvedValue(undefined),
+		selectProvider: vi.fn().mockResolvedValue(undefined),
 		profileData: null,
 		balanceData: null,
 		profileLoading: false,

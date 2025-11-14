@@ -1195,8 +1195,13 @@ export class FileSystemAPI {
 		try {
 			const content = fs.readFileSync(uri.fsPath)
 			return new Uint8Array(content)
-		} catch {
-			throw new Error(`Failed to read file: ${uri.fsPath}`)
+		} catch (error) {
+			// Check if it's a file not found error (ENOENT)
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				throw FileSystemError.FileNotFound(uri)
+			}
+			// For other errors, throw a generic FileSystemError
+			throw new FileSystemError(`Failed to read file: ${uri.fsPath}`)
 		}
 	}
 

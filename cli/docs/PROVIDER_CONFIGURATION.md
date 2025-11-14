@@ -80,6 +80,15 @@ The official Kilo Code provider for accessing Kilo Code's managed AI services.
 **Optional Fields**:
 
 - `kilocodeOrganizationId` (text): Organization ID for team accounts (leave empty for personal use)
+- `openRouterSpecificProvider` (text): Specific OpenRouter provider to use when routing through OpenRouter
+- `openRouterProviderDataCollection` (text): OpenRouter provider data collection preference
+    - `allow`: Allow data collection by the provider
+    - `deny`: Deny data collection by the provider
+- `openRouterProviderSort` (text): OpenRouter provider sorting preference for model selection
+    - `price`: Sort by price (lowest first)
+    - `throughput`: Sort by throughput (highest first)
+    - `latency`: Sort by latency (lowest first)
+- `openRouterZdr` (boolean): Enable OpenRouter Zero Data Retention for enhanced privacy
 
 **Example Configuration**:
 
@@ -94,6 +103,11 @@ The official Kilo Code provider for accessing Kilo Code's managed AI services.
 ```
 
 **Default Model**: `anthropic/claude-sonnet-4.5`
+
+**Notes**:
+
+- OpenRouter-related fields are used when Kilocode routes requests through OpenRouter
+- Zero Data Retention (ZDR) ensures that no request data is stored by OpenRouter
 
 ---
 
@@ -111,6 +125,8 @@ Direct integration with Anthropic's Claude API.
 **Optional Fields**:
 
 - `anthropicBaseUrl` (text): Custom base URL for API requests (leave empty for default)
+- `anthropicUseAuthToken` (boolean): Use authentication token instead of API key for requests. When enabled, the system will use token-based authentication instead of the standard API key authentication method.
+- `anthropicBeta1MContext` (boolean): Enable beta 1M context window support. This allows access to extended context windows for supported models, enabling processing of larger documents and conversations.
 
 **Example Configuration**:
 
@@ -120,7 +136,9 @@ Direct integration with Anthropic's Claude API.
 	"provider": "anthropic",
 	"apiKey": "sk-ant-...",
 	"apiModelId": "claude-sonnet-4.5",
-	"anthropicBaseUrl": ""
+	"anthropicBaseUrl": "",
+	"anthropicUseAuthToken": false,
+	"anthropicBeta1MContext": false
 }
 ```
 
@@ -130,6 +148,8 @@ Direct integration with Anthropic's Claude API.
 
 - Requires an Anthropic API key from https://console.anthropic.com/
 - Supports all Claude 3 and Claude 3.5 models
+- The `anthropicUseAuthToken` option is useful for enterprise deployments with custom authentication systems
+- The `anthropicBeta1MContext` feature requires beta access and may incur additional costs
 
 ---
 
@@ -147,6 +167,11 @@ Native OpenAI API integration.
 **Optional Fields**:
 
 - `openAiNativeBaseUrl` (text): Custom base URL for API requests (leave empty for default)
+- `openAiNativeServiceTier` (text): Service tier for request prioritization and latency optimization
+    - `auto` (default): Let OpenAI automatically select the best tier based on current system load and model availability
+    - `default`: Use standard processing with balanced performance and cost
+    - `flex`: Cost-optimized processing with variable latency, ideal for non-time-sensitive workloads
+    - `priority`: Fastest processing with higher priority in the queue, recommended for latency-sensitive applications
 
 **Example Configuration**:
 
@@ -156,7 +181,8 @@ Native OpenAI API integration.
 	"provider": "openai-native",
 	"openAiNativeApiKey": "sk-...",
 	"apiModelId": "gpt-5-chat-latest",
-	"openAiNativeBaseUrl": ""
+	"openAiNativeBaseUrl": "",
+	"openAiNativeServiceTier": "auto"
 }
 ```
 
@@ -166,6 +192,8 @@ Native OpenAI API integration.
 
 - Requires an OpenAI API key from https://platform.openai.com/
 - Supports GPT-4, GPT-4 Turbo, and GPT-3.5 models
+- Service tiers allow you to optimize for either cost (flex) or latency (priority) based on your use case
+- The `auto` tier is recommended for most users as it balances performance and cost automatically
 
 ---
 
@@ -183,6 +211,16 @@ Access multiple AI models through OpenRouter's unified API.
 **Optional Fields**:
 
 - `openRouterBaseUrl` (text): Custom base URL (leave empty for default)
+- `openRouterSpecificProvider` (text): Specific OpenRouter provider to use for routing requests. When specified, OpenRouter will route your request to this specific provider instead of automatically selecting one. Useful when you want to ensure requests go to a particular infrastructure provider.
+- `openRouterUseMiddleOutTransform` (boolean): Enable middle-out transform for optimized request routing. This feature can improve routing efficiency and reduce latency by using advanced request transformation techniques.
+- `openRouterProviderDataCollection` (text): OpenRouter provider data collection preference
+    - `allow`: Allow data collection by the provider for model improvement and analytics
+    - `deny`: Deny data collection by the provider to maintain stricter privacy controls
+- `openRouterProviderSort` (text): OpenRouter provider sorting preference for model selection
+    - `price`: Sort by price (lowest first) - optimizes for cost efficiency
+    - `throughput`: Sort by throughput (highest first) - optimizes for maximum tokens per second
+    - `latency`: Sort by latency (lowest first) - optimizes for fastest response time
+- `openRouterZdr` (boolean): Enable OpenRouter Zero Data Retention (ZDR) for enhanced privacy. When enabled, OpenRouter will not store any request or response data, ensuring maximum privacy and compliance with data protection requirements.
 
 **Example Configuration**:
 
@@ -192,7 +230,12 @@ Access multiple AI models through OpenRouter's unified API.
 	"provider": "openrouter",
 	"openRouterApiKey": "sk-or-...",
 	"openRouterModelId": "anthropic/claude-3-5-sonnet",
-	"openRouterBaseUrl": ""
+	"openRouterBaseUrl": "",
+	"openRouterSpecificProvider": "anthropic",
+	"openRouterUseMiddleOutTransform": false,
+	"openRouterProviderDataCollection": "deny",
+	"openRouterProviderSort": "latency",
+	"openRouterZdr": true
 }
 ```
 
@@ -202,6 +245,9 @@ Access multiple AI models through OpenRouter's unified API.
 
 - Get your API key from https://openrouter.ai/
 - Supports models from Anthropic, OpenAI, Google, Meta, and more
+- Zero Data Retention (ZDR) ensures that no request data is stored by OpenRouter, providing maximum privacy
+- Provider sorting allows you to optimize for your specific use case (cost, speed, or throughput)
+- Specific provider routing is useful when you need consistent infrastructure or have provider-specific requirements
 
 ---
 
@@ -221,7 +267,17 @@ AWS Bedrock for accessing foundation models on AWS infrastructure.
 **Optional Fields**:
 
 - `awsSessionToken` (password): AWS session token for temporary credentials
-- `awsUseCrossRegionInference` (boolean): Enable cross-region inference
+- `awsUseCrossRegionInference` (boolean): Enable cross-region inference to access models in different AWS regions
+- `awsUsePromptCache` (boolean): Enable prompt caching to reduce costs and latency for repeated prompts. When enabled, Bedrock caches portions of your prompts that are reused across requests, significantly reducing both API costs and response times for subsequent requests with similar context.
+- `awsProfile` (string): AWS profile name from your credentials file (typically `~/.aws/credentials`). Use this to specify which AWS profile to use for authentication instead of providing access keys directly.
+- `awsUseProfile` (boolean): Use AWS profile from credentials file instead of access keys. When enabled, the system will authenticate using the profile specified in `awsProfile` rather than `awsAccessKey` and `awsSecretKey`.
+- `awsApiKey` (string): AWS API key for alternative authentication methods. This is used for specific authentication scenarios that require API key-based access.
+- `awsUseApiKey` (boolean): Use API key authentication instead of access keys. Enable this when you want to authenticate using `awsApiKey` rather than the standard AWS access key/secret key pair.
+- `awsCustomArn` (string): Custom Amazon Resource Name (ARN) for cross-account access or custom model access. Use this when you need to access models in a different AWS account or when using custom fine-tuned models.
+- `awsModelContextWindow` (number): Override the model's default context window size. Specify a custom token limit for the context window. Must be a positive integer. Use this when you need to limit or extend the context size beyond the model's default.
+- `awsBedrockEndpointEnabled` (boolean): Enable custom Bedrock endpoint. Set to true when you want to use a custom endpoint URL instead of the standard AWS Bedrock endpoint.
+- `awsBedrockEndpoint` (string): Custom Bedrock endpoint URL. Specify a custom endpoint when using VPC endpoints, private endpoints, or region-specific endpoints. Only used when `awsBedrockEndpointEnabled` is true.
+- `awsBedrock1MContext` (boolean): Enable 1M token context window support for compatible models. When enabled, allows access to extended context windows (up to 1 million tokens) for models that support this feature, enabling processing of extremely large documents and conversations.
 
 **Example Configuration**:
 
@@ -234,7 +290,39 @@ AWS Bedrock for accessing foundation models on AWS infrastructure.
 	"awsRegion": "us-east-1",
 	"apiModelId": "anthropic.claude-sonnet-4.5-20250929-v1:0",
 	"awsSessionToken": "",
-	"awsUseCrossRegionInference": false
+	"awsUseCrossRegionInference": false,
+	"awsUsePromptCache": true,
+	"awsBedrock1MContext": false
+}
+```
+
+**Example Configuration with AWS Profile**:
+
+```json
+{
+	"id": "bedrock-profile",
+	"provider": "bedrock",
+	"awsProfile": "my-aws-profile",
+	"awsUseProfile": true,
+	"awsRegion": "us-east-1",
+	"apiModelId": "anthropic.claude-sonnet-4.5-20250929-v1:0",
+	"awsUsePromptCache": true
+}
+```
+
+**Example Configuration with Custom Endpoint**:
+
+```json
+{
+	"id": "bedrock-custom",
+	"provider": "bedrock",
+	"awsAccessKey": "AKIA...",
+	"awsSecretKey": "...",
+	"awsRegion": "us-east-1",
+	"apiModelId": "anthropic.claude-sonnet-4.5-20250929-v1:0",
+	"awsBedrockEndpointEnabled": true,
+	"awsBedrockEndpoint": "https://bedrock-runtime.us-east-1.amazonaws.com",
+	"awsModelContextWindow": 200000
 }
 ```
 
@@ -245,6 +333,14 @@ AWS Bedrock for accessing foundation models on AWS infrastructure.
 - Requires AWS account with Bedrock access
 - Supports Claude, Llama, Mistral, and other foundation models
 - Cross-region inference allows access to models in different regions
+- **Authentication Options**: You can authenticate using either:
+    - Direct credentials (`awsAccessKey` and `awsSecretKey`)
+    - AWS profile (`awsProfile` with `awsUseProfile` enabled)
+    - API key (`awsApiKey` with `awsUseApiKey` enabled)
+- **Prompt Caching**: Significantly reduces costs for applications with repeated context. The first request pays full price, but subsequent requests with cached content can be up to 90% cheaper.
+- **Custom ARN**: Useful for accessing models in different AWS accounts or using custom fine-tuned models deployed in your organization.
+- **Custom Endpoints**: Use VPC endpoints for enhanced security or region-specific endpoints for compliance requirements.
+- **Extended Context**: The 1M context window feature requires model support and may incur additional costs. Check AWS Bedrock documentation for compatible models.
 
 ---
 
@@ -262,6 +358,8 @@ Google's Gemini AI models via direct API access.
 **Optional Fields**:
 
 - `googleGeminiBaseUrl` (text): Custom base URL (leave empty for default)
+- `enableUrlContext` (boolean): Allows the model to access and process URLs in prompts. When enabled, the model can fetch and analyze content from URLs provided in the conversation, enabling web-based research and content analysis capabilities.
+- `enableGrounding` (boolean): Enables Google Search grounding for factual responses. When enabled, the model can use Google Search to ground its responses in real-time information, improving accuracy for factual queries and reducing hallucinations.
 
 **Example Configuration**:
 
@@ -271,7 +369,22 @@ Google's Gemini AI models via direct API access.
 	"provider": "gemini",
 	"geminiApiKey": "AIza...",
 	"apiModelId": "gemini-2.5-flash-preview-04-17",
-	"googleGeminiBaseUrl": ""
+	"googleGeminiBaseUrl": "",
+	"enableUrlContext": false,
+	"enableGrounding": false
+}
+```
+
+**Example Configuration with URL Context and Grounding**:
+
+```json
+{
+	"id": "gemini-enhanced",
+	"provider": "gemini",
+	"geminiApiKey": "AIza...",
+	"apiModelId": "gemini-2.5-flash-preview-04-17",
+	"enableUrlContext": true,
+	"enableGrounding": true
 }
 ```
 
@@ -281,6 +394,9 @@ Google's Gemini AI models via direct API access.
 
 - Get your API key from https://makersuite.google.com/app/apikey
 - Supports Gemini Pro and Gemini Ultra models
+- **URL Context**: Enables the model to fetch and process web content directly from URLs in prompts. Useful for analyzing web pages, documentation, or online resources.
+- **Grounding**: Connects the model to Google Search for real-time information retrieval. This feature helps ensure responses are based on current, factual information and can significantly reduce hallucinations for knowledge-based queries.
+- Both URL Context and Grounding features may incur additional costs and require appropriate API permissions.
 
 ---
 
@@ -301,6 +417,11 @@ Google Cloud Vertex AI for enterprise-grade AI deployment.
 - `vertexJsonCredentials` (password): JSON service account credentials
 - `vertexKeyFile` (text): Path to service account key file
 
+**Optional Fields**:
+
+- `enableUrlContext` (boolean): Allows the model to access and process URLs in prompts. When enabled, the model can fetch and analyze content from URLs provided in the conversation, enabling web-based research and content analysis capabilities.
+- `enableGrounding` (boolean): Enables Google Search grounding for factual responses. When enabled, the model can use Google Search to ground its responses in real-time information, improving accuracy for factual queries and reducing hallucinations.
+
 **Example Configuration**:
 
 ```json
@@ -311,7 +432,24 @@ Google Cloud Vertex AI for enterprise-grade AI deployment.
 	"vertexRegion": "us-central1",
 	"apiModelId": "claude-4.5-sonnet",
 	"vertexJsonCredentials": "{...}",
-	"vertexKeyFile": ""
+	"vertexKeyFile": "",
+	"enableUrlContext": false,
+	"enableGrounding": false
+}
+```
+
+**Example Configuration with URL Context and Grounding**:
+
+```json
+{
+	"id": "vertex-enhanced",
+	"provider": "vertex",
+	"vertexProjectId": "my-project-123",
+	"vertexRegion": "us-central1",
+	"apiModelId": "claude-4.5-sonnet",
+	"vertexJsonCredentials": "{...}",
+	"enableUrlContext": true,
+	"enableGrounding": true
 }
 ```
 
@@ -322,6 +460,9 @@ Google Cloud Vertex AI for enterprise-grade AI deployment.
 - Requires Google Cloud project with Vertex AI enabled
 - Supports Claude, Gemini, and other models through Vertex AI
 - Use either JSON credentials or key file path, not both
+- **URL Context**: Enables the model to fetch and process web content directly from URLs in prompts. Useful for analyzing web pages, documentation, or online resources.
+- **Grounding**: Connects the model to Google Search for real-time information retrieval. This feature helps ensure responses are based on current, factual information and can significantly reduce hallucinations for knowledge-based queries.
+- Both URL Context and Grounding features may incur additional costs and require appropriate API permissions in your Google Cloud project.
 
 ---
 
@@ -533,6 +674,13 @@ Local Ollama instance for running models locally.
 **Optional Fields**:
 
 - `ollamaApiKey` (password): API key if authentication is enabled
+- `ollamaNumCtx` (number): Context window size for the model. Controls the maximum number of tokens the model can process at once. Common values include:
+    - `2048`: Small context, lower memory usage
+    - `4096`: Standard context for most tasks
+    - `8192`: Extended context for longer conversations
+    - `16384`: Large context for complex tasks
+    - `32768`: Very large context (requires significant memory)
+      Higher values allow processing longer conversations and larger documents but require more memory. If not specified, Ollama uses the model's default context size.
 
 **Example Configuration**:
 
@@ -542,7 +690,8 @@ Local Ollama instance for running models locally.
 	"provider": "ollama",
 	"ollamaBaseUrl": "http://localhost:11434",
 	"ollamaModelId": "llama3.2",
-	"ollamaApiKey": ""
+	"ollamaApiKey": "",
+	"ollamaNumCtx": 8192
 }
 ```
 
@@ -554,6 +703,7 @@ Local Ollama instance for running models locally.
 - Download from https://ollama.ai/
 - Supports many open-source models (Llama, Mistral, CodeLlama, etc.)
 - No API key required for local usage
+- The `ollamaNumCtx` parameter directly affects memory usage - ensure your system has sufficient RAM for larger context windows
 
 ---
 
@@ -570,9 +720,23 @@ LM Studio for local model inference.
 
 **Optional Fields**:
 
-- `lmStudioSpeculativeDecodingEnabled` (boolean): Enable speculative decoding for faster inference
+- `lmStudioDraftModelId` (string): Draft model ID for speculative decoding. Specifies a smaller, faster model that generates initial token predictions which are then verified by the main model. This can significantly improve inference speed while maintaining output quality. The draft model should be compatible with the main model's vocabulary and typically be a smaller version of the same model family.
+- `lmStudioSpeculativeDecodingEnabled` (boolean): Enable speculative decoding for faster inference. When enabled along with a draft model, uses a two-stage generation process: the draft model proposes multiple tokens ahead, and the main model verifies them in parallel. This technique can reduce latency by 2-3x for compatible model pairs without sacrificing quality.
 
 **Example Configuration**:
+
+```json
+{
+	"id": "default",
+	"provider": "lmstudio",
+	"lmStudioBaseUrl": "http://localhost:1234/v1",
+	"lmStudioModelId": "local-model",
+	"lmStudioDraftModelId": "local-model-draft",
+	"lmStudioSpeculativeDecodingEnabled": true
+}
+```
+
+**Example Configuration without Speculative Decoding**:
 
 ```json
 {
@@ -591,7 +755,14 @@ LM Studio for local model inference.
 - Requires LM Studio to be installed and running
 - Download from https://lmstudio.ai/
 - Supports various quantized models
-- Speculative decoding can improve inference speed
+- **Speculative Decoding**: This advanced technique can dramatically improve inference speed (2-3x faster) by using a smaller "draft" model to predict tokens ahead of time, which are then verified by the main model in parallel. This works best when:
+    - The draft model is from the same model family as the main model
+    - The draft model is significantly smaller/faster (e.g., 7B draft for 70B main model)
+    - Both models share the same tokenizer and vocabulary
+- To use speculative decoding, you must:
+    1. Set `lmStudioSpeculativeDecodingEnabled` to `true`
+    2. Specify a compatible draft model in `lmStudioDraftModelId`
+    3. Ensure both models are loaded in LM Studio
 
 ---
 
@@ -632,7 +803,7 @@ VSCode's built-in language model API.
 
 OpenAI API integration (alternative configuration).
 
-**Description**: Alternative OpenAI integration with simplified configuration.
+**Description**: Alternative OpenAI integration with simplified configuration and support for Azure OpenAI Service.
 
 **Required Fields**:
 
@@ -641,7 +812,13 @@ OpenAI API integration (alternative configuration).
 
 **Optional Fields**:
 
-- `openAiBaseUrl` (text): Custom base URL (leave empty for default)
+- `openAiBaseUrl` (text): Custom base URL for OpenAI API requests (leave empty for default). When using Azure OpenAI, set this to your Azure endpoint URL (e.g., `https://your-resource.openai.azure.com`)
+- `openAiLegacyFormat` (boolean): Use legacy API format for compatibility with older OpenAI API versions. Enable this if you're using an older API version or a proxy that expects the legacy format.
+- `openAiR1FormatEnabled` (boolean): Enable R1 format for reasoning models that support extended thinking capabilities. This format is optimized for models like o1 and o1-mini that perform chain-of-thought reasoning.
+- `openAiUseAzure` (boolean): Use Azure OpenAI Service instead of standard OpenAI API. When enabled, ensure you set `openAiBaseUrl` to your Azure endpoint and `azureApiVersion` to a valid API version.
+- `azureApiVersion` (string): Azure OpenAI API version (e.g., `2024-02-15-preview`, `2023-05-15`). Required when `openAiUseAzure` is true. See [Azure OpenAI API versions](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference) for available versions.
+- `openAiStreamingEnabled` (boolean): Enable streaming responses for real-time token generation. When enabled, responses are streamed as they're generated rather than waiting for the complete response.
+- `openAiHeaders` (object): Custom HTTP headers to include in OpenAI API requests. Useful for adding authentication headers, tracking headers, or other custom metadata. Example: `{"X-Custom-Header": "value", "X-Request-ID": "123"}`
 
 **Example Configuration**:
 
@@ -651,7 +828,43 @@ OpenAI API integration (alternative configuration).
 	"provider": "openai",
 	"openAiApiKey": "sk-...",
 	"openAiModelId": "gpt-4o",
-	"openAiBaseUrl": ""
+	"openAiBaseUrl": "",
+	"openAiLegacyFormat": false,
+	"openAiR1FormatEnabled": false,
+	"openAiUseAzure": false,
+	"azureApiVersion": "",
+	"openAiStreamingEnabled": true,
+	"openAiHeaders": {}
+}
+```
+
+**Example Azure OpenAI Configuration**:
+
+```json
+{
+	"id": "azure-openai",
+	"provider": "openai",
+	"openAiApiKey": "your-azure-api-key",
+	"openAiModelId": "gpt-4",
+	"openAiBaseUrl": "https://your-resource.openai.azure.com",
+	"openAiUseAzure": true,
+	"azureApiVersion": "2024-02-15-preview",
+	"openAiStreamingEnabled": true
+}
+```
+
+**Example Configuration with Custom Headers**:
+
+```json
+{
+	"id": "openai-with-headers",
+	"provider": "openai",
+	"openAiApiKey": "sk-...",
+	"openAiModelId": "gpt-4o",
+	"openAiHeaders": {
+		"X-Organization-ID": "org-123456",
+		"X-Request-Source": "kilocode-cli"
+	}
 }
 ```
 
@@ -660,7 +873,11 @@ OpenAI API integration (alternative configuration).
 **Notes**:
 
 - Similar to openai-native but with different configuration structure
-- Supports all OpenAI models
+- Supports all OpenAI models including GPT-4, GPT-4 Turbo, and GPT-3.5
+- Azure OpenAI Service provides enterprise-grade security and compliance
+- R1 format is specifically designed for reasoning models and may not work with standard chat models
+- Streaming is recommended for better user experience with long responses
+- Custom headers can be used for request tracking, authentication, or integration with proxy services
 
 ---
 
@@ -736,6 +953,10 @@ LiteLLM proxy for unified model access.
 - `litellmApiKey` (password): API key for the proxy
 - `litellmModelId` (text): Model identifier (default: `gpt-4o`)
 
+**Optional Fields**:
+
+- `litellmUsePromptCache` (boolean): Enable prompt caching to reduce costs and improve performance for repeated prompts. When enabled, LiteLLM caches portions of your prompts that are reused across requests, significantly reducing both API costs and response times for subsequent requests with similar context. This is particularly beneficial for applications with repeated system prompts, documentation, or other static context.
+
 **Example Configuration**:
 
 ```json
@@ -744,7 +965,21 @@ LiteLLM proxy for unified model access.
 	"provider": "litellm",
 	"litellmBaseUrl": "http://localhost:8000",
 	"litellmApiKey": "...",
-	"litellmModelId": "gpt-4o"
+	"litellmModelId": "gpt-4o",
+	"litellmUsePromptCache": true
+}
+```
+
+**Example Configuration without Prompt Caching**:
+
+```json
+{
+	"id": "litellm-no-cache",
+	"provider": "litellm",
+	"litellmBaseUrl": "http://localhost:8000",
+	"litellmApiKey": "...",
+	"litellmModelId": "gpt-4o",
+	"litellmUsePromptCache": false
 }
 ```
 
@@ -755,6 +990,12 @@ LiteLLM proxy for unified model access.
 - Requires LiteLLM proxy to be running
 - See https://docs.litellm.ai/ for setup
 - Supports 100+ LLM providers through a single interface
+- **Prompt Caching**: Significantly reduces costs for applications with repeated context. The first request pays full price, but subsequent requests with cached content can be up to 90% cheaper and respond faster. This feature is especially useful when:
+    - Using the same system prompts across multiple requests
+    - Processing documents or code with similar context
+    - Building applications with consistent instruction sets
+    - Working with large context windows that remain mostly unchanged
+- Prompt caching availability and pricing may vary depending on the underlying provider being accessed through LiteLLM
 
 ---
 
@@ -932,6 +1173,10 @@ DeepInfra's serverless AI inference.
 - `deepInfraApiKey` (password): Your DeepInfra API key
 - `deepInfraModelId` (text): Model identifier (default: `meta-llama/Meta-Llama-3.1-70B-Instruct`)
 
+**Optional Fields**:
+
+- `deepInfraBaseUrl` (text): Custom base URL for DeepInfra API requests. Use this when you need to connect to a different DeepInfra endpoint or a custom proxy. Leave empty to use the default DeepInfra API URL (`https://api.deepinfra.com/v1/openai`).
+
 **Example Configuration**:
 
 ```json
@@ -943,12 +1188,28 @@ DeepInfra's serverless AI inference.
 }
 ```
 
+**Example Configuration with Custom Base URL**:
+
+```json
+{
+	"id": "deepinfra-custom",
+	"provider": "deepinfra",
+	"deepInfraApiKey": "...",
+	"deepInfraModelId": "meta-llama/Meta-Llama-3.1-70B-Instruct",
+	"deepInfraBaseUrl": "https://custom-endpoint.deepinfra.com/v1/openai"
+}
+```
+
 **Default Model**: `meta-llama/Meta-Llama-3.1-70B-Instruct`
 
 **Notes**:
 
 - Get your API key from https://deepinfra.com/
 - Supports many open-source models
+- The custom base URL is useful when:
+    - Using a proxy or gateway for DeepInfra requests
+    - Connecting to a self-hosted DeepInfra-compatible endpoint
+    - Testing against a staging or development environment
 
 ---
 
@@ -1336,10 +1597,11 @@ OVHcloud AI Endpoints inference provider.
 
 - `ovhCloudAiEndpointsModelId` (text): Model identifier (default: `gpt-oss-120b`)
 
-**Optional Field**:
+**Optional Fields**:
 
 - `ovhCloudAiEndpointsApiKey` (password): Your OVHcloud AI Endpoints API key
   If you do not provide the API key, you can use our service for free with a rate limit.
+- `ovhCloudAiEndpointsBaseUrl` (text): Custom base URL for OVHcloud AI Endpoints API requests. Use this when you need to connect to a different OVHcloud region or a custom endpoint. Leave empty to use the default OVHcloud AI Endpoints URL.
 
 **Example Configuration**:
 
@@ -1347,8 +1609,20 @@ OVHcloud AI Endpoints inference provider.
 {
 	"id": "default",
 	"provider": "ovhcloud",
-	"ovhCloudAiEndpointsApiKey": "your-api-key", // optional
+	"ovhCloudAiEndpointsApiKey": "your-api-key",
 	"ovhCloudAiEndpointsModelId": "gpt-oss-120b"
+}
+```
+
+**Example Configuration with Custom Base URL**:
+
+```json
+{
+	"id": "ovhcloud-custom",
+	"provider": "ovhcloud",
+	"ovhCloudAiEndpointsApiKey": "your-api-key",
+	"ovhCloudAiEndpointsModelId": "gpt-oss-120b",
+	"ovhCloudAiEndpointsBaseUrl": "https://custom-endpoint.ovhcloud.com/v1"
 }
 ```
 
@@ -1358,6 +1632,10 @@ OVHcloud AI Endpoints inference provider.
 
 - Get your API key from https://ovh.com/manager in `Public Cloud > AI & Machine Learning` section, then in `AI Endpoints`.
 - You can browse our [catalog](https://www.ovhcloud.com/en/public-cloud/ai-endpoints/catalog/) to discover all of our models.
+- The custom base URL is useful when:
+    - Connecting to a specific OVHcloud region for lower latency
+    - Using a private or VPC endpoint for enhanced security
+    - Testing against a staging or development environment
 
 ---
 

@@ -1,5 +1,23 @@
 # @kilocode/cli
 
+## 0.5.0
+
+### Minor Changes
+
+- [#3774](https://github.com/Kilo-Org/kilocode/pull/3774) [`0dd8458`](https://github.com/Kilo-Org/kilocode/commit/0dd8458abb0f7c6247b7b9447c6d77cd96f687d7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - New '/provider' command to switch beteen configured providers
+
+- [#3783](https://github.com/Kilo-Org/kilocode/pull/3783) [`6d3911c`](https://github.com/Kilo-Org/kilocode/commit/6d3911cc0f571479cd6b0b12d3958996aab21342) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Configure the CLI using ENV variables
+
+- [#3774](https://github.com/Kilo-Org/kilocode/pull/3774) [`0dd8458`](https://github.com/Kilo-Org/kilocode/commit/0dd8458abb0f7c6247b7b9447c6d77cd96f687d7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - provider (-pv/--provider) and model (-mo/--model) command arguments
+
+### Patch Changes
+
+- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@RSO](https://github.com/RSO)! - Support installing CLI with bun
+
+- [#3769](https://github.com/Kilo-Org/kilocode/pull/3769) [`eff6f2b`](https://github.com/Kilo-Org/kilocode/commit/eff6f2b9e8161f4016a378a28cd0b9a4df9d5ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update providers configurations
+
+- [#3777](https://github.com/Kilo-Org/kilocode/pull/3777) [`bad3bbe`](https://github.com/Kilo-Org/kilocode/commit/bad3bbef8968a10c0dcf32f576fa7f983341c08e) Thanks [@catrielmuller](https://github.com/catrielmuller)! - --nosplash argument to hide welcome screen and notifications
+
 ## 0.4.2
 
 ### Patch Changes
