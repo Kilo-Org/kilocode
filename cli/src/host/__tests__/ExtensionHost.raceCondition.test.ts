@@ -2,6 +2,14 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { ExtensionHost } from "../ExtensionHost.js"
 import type { WebviewMessage } from "../../types/messages.js"
 
+// Type for accessing private members in tests
+interface ExtensionHostInternal {
+	initializeState: () => void
+	isActivated: boolean
+	pendingMessages: WebviewMessage[]
+	webviewProviders: Map<string, { handleCLIMessage?: (message: WebviewMessage) => Promise<void> }>
+}
+
 describe("ExtensionHost Race Condition Fix", () => {
 	let extensionHost: ExtensionHost
 
@@ -13,9 +21,9 @@ describe("ExtensionHost Race Condition Fix", () => {
 		})
 
 		// Initialize state and mark as activated for testing
-		const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+		const initializeState = (extensionHost as unknown as ExtensionHostInternal).initializeState.bind(extensionHost)
 		initializeState()
-		;(extensionHost as any).isActivated = true
+		;(extensionHost as unknown as ExtensionHostInternal).isActivated = true
 	})
 
 	afterEach(() => {
@@ -36,7 +44,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 			await extensionHost.sendWebviewMessage(message)
 
 			// Verify message was queued (check internal state)
-			const pendingMessages = (extensionHost as any).pendingMessages
+			const pendingMessages = (extensionHost as unknown as ExtensionHostInternal).pendingMessages
 			expect(pendingMessages).toHaveLength(1)
 			expect(pendingMessages[0]).toEqual(message)
 		})
@@ -54,7 +62,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 			}
 
 			// Verify all messages were queued
-			const pendingMessages = (extensionHost as any).pendingMessages
+			const pendingMessages = (extensionHost as unknown as ExtensionHostInternal).pendingMessages
 			expect(pendingMessages).toHaveLength(3)
 			expect(pendingMessages).toEqual(messages)
 		})
@@ -72,13 +80,16 @@ describe("ExtensionHost Race Condition Fix", () => {
 			const mockProvider = {
 				handleCLIMessage: vi.fn(),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Send message - it should not be queued
 			await extensionHost.sendWebviewMessage(message)
 
 			// Verify message was not queued
-			const pendingMessages = (extensionHost as any).pendingMessages
+			const pendingMessages = (extensionHost as unknown as ExtensionHostInternal).pendingMessages
 			expect(pendingMessages).toHaveLength(0)
 
 			// Verify message was sent directly
@@ -99,13 +110,16 @@ describe("ExtensionHost Race Condition Fix", () => {
 			}
 
 			// Verify messages are queued
-			expect((extensionHost as any).pendingMessages).toHaveLength(2)
+			expect((extensionHost as unknown as ExtensionHostInternal).pendingMessages).toHaveLength(2)
 
 			// Mock the webview provider
 			const mockProvider = {
 				handleCLIMessage: vi.fn(),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Mark webview as ready - this should flush messages
 			extensionHost.markWebviewReady()
@@ -114,7 +128,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 			await new Promise((resolve) => setTimeout(resolve, 10))
 
 			// Verify pending messages were cleared
-			expect((extensionHost as any).pendingMessages).toHaveLength(0)
+			expect((extensionHost as unknown as ExtensionHostInternal).pendingMessages).toHaveLength(0)
 
 			// Verify all messages were sent
 			expect(mockProvider.handleCLIMessage).toHaveBeenCalledTimes(2)
@@ -135,11 +149,14 @@ describe("ExtensionHost Race Condition Fix", () => {
 			// Mock the webview provider to track call order
 			const callOrder: string[] = []
 			const mockProvider = {
-				handleCLIMessage: vi.fn((msg: WebviewMessage) => {
+				handleCLIMessage: vi.fn(async (msg: WebviewMessage) => {
 					callOrder.push(msg.type)
 				}),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Mark webview as ready
 			extensionHost.markWebviewReady()
@@ -192,7 +209,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 			await extensionHost.sendWebviewMessage(newTaskMessage)
 
 			// Verify message is queued, not processed
-			const pendingMessages = (extensionHost as any).pendingMessages
+			const pendingMessages = (extensionHost as unknown as ExtensionHostInternal).pendingMessages
 			expect(pendingMessages).toHaveLength(1)
 			expect(pendingMessages[0].type).toBe("newTask")
 
@@ -200,7 +217,10 @@ describe("ExtensionHost Race Condition Fix", () => {
 			const mockProvider = {
 				handleCLIMessage: vi.fn(),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Now mark webview as ready (simulating resolveWebviewView completion)
 			extensionHost.markWebviewReady()
@@ -210,7 +230,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 
 			// Verify the newTask message was sent AFTER webview was ready
 			expect(mockProvider.handleCLIMessage).toHaveBeenCalledWith(newTaskMessage)
-			expect((extensionHost as any).pendingMessages).toHaveLength(0)
+			expect((extensionHost as unknown as ExtensionHostInternal).pendingMessages).toHaveLength(0)
 		})
 
 		it("should handle configuration injection before task creation", async () => {
@@ -229,17 +249,20 @@ describe("ExtensionHost Race Condition Fix", () => {
 			await extensionHost.sendWebviewMessage(taskMessage)
 
 			// Both should be queued
-			const pendingMessages = (extensionHost as any).pendingMessages
+			const pendingMessages = (extensionHost as unknown as ExtensionHostInternal).pendingMessages
 			expect(pendingMessages).toHaveLength(2)
 
 			// Mock provider
 			const callOrder: string[] = []
 			const mockProvider = {
-				handleCLIMessage: vi.fn((msg: WebviewMessage) => {
+				handleCLIMessage: vi.fn(async (msg: WebviewMessage) => {
 					callOrder.push(msg.type)
 				}),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Mark ready
 			extensionHost.markWebviewReady()
@@ -262,7 +285,7 @@ describe("ExtensionHost Race Condition Fix", () => {
 
 		it("should handle empty pending messages queue", () => {
 			// Mark ready with no pending messages
-			expect((extensionHost as any).pendingMessages).toHaveLength(0)
+			expect((extensionHost as unknown as ExtensionHostInternal).pendingMessages).toHaveLength(0)
 
 			// Should not throw
 			expect(() => extensionHost.markWebviewReady()).not.toThrow()
@@ -283,7 +306,10 @@ describe("ExtensionHost Race Condition Fix", () => {
 					}
 				}),
 			}
-			;(extensionHost as any).webviewProviders.set("kilo-code.SidebarProvider", mockProvider)
+			;(extensionHost as unknown as ExtensionHostInternal).webviewProviders.set(
+				"kilo-code.SidebarProvider",
+				mockProvider,
+			)
 
 			// Mark ready and flush
 			extensionHost.markWebviewReady()

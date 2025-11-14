@@ -13,9 +13,9 @@ vi.mock("../../utils/extension-paths.js", () => ({
 
 describe("ExtensionService", () => {
 	let service: ExtensionService
-	let mockExtensionModule: any
-	let originalRequire: any
-	let mockVSCodeAPI: any
+	let mockExtensionModule: unknown
+	let originalRequire: unknown
+	let mockVSCodeAPI: unknown
 
 	beforeAll(() => {
 		// Create a mock VSCode API
@@ -95,14 +95,17 @@ describe("ExtensionService", () => {
 
 		// Create a mock extension module
 		mockExtensionModule = {
-			activate: vi.fn(async (context) => {
+			activate: vi.fn(async (_context) => {
 				// Register a mock webview provider immediately to prevent hanging
 				// This simulates the extension registering its provider during activation
-				if ((global as any).__extensionHost) {
+				const globalWithHost = global as {
+					__extensionHost?: { registerWebviewProvider: (id: string, provider: unknown) => void }
+				}
+				if (globalWithHost.__extensionHost) {
 					const mockProvider = {
 						handleCLIMessage: vi.fn(async () => {}),
 					}
-					;(global as any).__extensionHost.registerWebviewProvider("kilo-code.SidebarProvider", mockProvider)
+					globalWithHost.__extensionHost.registerWebviewProvider("kilo-code.SidebarProvider", mockProvider)
 				}
 
 				// Return a mock API
@@ -144,18 +147,18 @@ describe("ExtensionService", () => {
 		const Module = require("module")
 		originalRequire = Module.prototype.require
 
-		Module.prototype.require = function (this: any, id: string) {
+		Module.prototype.require = function (this: unknown, id: string) {
 			if (id === "/mock/extension/dist/extension.js") {
 				return mockExtensionModule
 			}
 			if (id === "vscode" || id === "vscode-mock") {
 				return mockVSCodeAPI
 			}
-			return originalRequire.call(this, id)
+			return (originalRequire as (id: string) => unknown).call(this, id)
 		}
 
 		// Set global vscode
-		;(global as any).vscode = mockVSCodeAPI
+		;(global as unknown as { vscode: unknown }).vscode = mockVSCodeAPI
 	})
 
 	afterAll(() => {
@@ -166,7 +169,7 @@ describe("ExtensionService", () => {
 			Module.prototype.require = originalRequire
 		}
 		// Clean up global vscode
-		delete (global as any).vscode
+		delete (global as unknown as { vscode?: unknown }).vscode
 	})
 
 	afterEach(async () => {

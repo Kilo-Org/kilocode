@@ -37,7 +37,7 @@ export interface UseModelSelectionReturn {
 	/** Check if a specific provider is configured */
 	isProviderConfigured: (provider: string) => boolean
 	/** Get model info by ID from router models */
-	getModelInfo: (modelId: string) => any | null
+	getModelInfo: (modelId: string) => unknown | null
 }
 
 /**
@@ -127,7 +127,7 @@ export function useModelSelection(): UseModelSelectionReturn {
 			// Search through all routers
 			for (const [routerName, models] of Object.entries(routerModels)) {
 				if (routerName === "default") continue
-				const modelRecord = models as Record<string, any>
+				const modelRecord = models as Record<string, unknown>
 				if (modelRecord[modelId]) {
 					return modelRecord[modelId]
 				}

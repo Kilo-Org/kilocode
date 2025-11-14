@@ -64,7 +64,8 @@ export async function validateConfig(config: unknown): Promise<ValidationResult>
  * Helper function to validate a required field
  */
 function validateRequiredField(provider: ProviderConfig, fieldName: string, errors: string[]): void {
-	if (!provider[fieldName] || provider[fieldName].length === 0) {
+	const value = provider[fieldName]
+	if (!value || (typeof value === "string" && value.length === 0)) {
 		errors.push(`${fieldName} is required and cannot be empty for selected provider`)
 	}
 }
@@ -74,10 +75,12 @@ function validateRequiredField(provider: ProviderConfig, fieldName: string, erro
  */
 function handleSpecialValidations(provider: ProviderConfig, errors: string[]): void {
 	switch (provider.provider) {
-		case "vertex":
+		case "vertex": {
 			// At least one of vertexJsonCredentials or vertexKeyFile must be provided
-			const hasJsonCredentials = provider.vertexJsonCredentials && provider.vertexJsonCredentials.length > 0
-			const hasKeyFile = provider.vertexKeyFile && provider.vertexKeyFile.length > 0
+			const jsonCreds = provider.vertexJsonCredentials as string | undefined
+			const keyFile = provider.vertexKeyFile as string | undefined
+			const hasJsonCredentials = jsonCreds && jsonCreds.length > 0
+			const hasKeyFile = keyFile && keyFile.length > 0
 
 			if (!hasJsonCredentials && !hasKeyFile) {
 				errors.push(
@@ -90,25 +93,30 @@ function handleSpecialValidations(provider: ProviderConfig, errors: string[]): v
 			validateRequiredField(provider, "vertexRegion", errors)
 			validateRequiredField(provider, "apiModelId", errors)
 			break
+		}
 
-		case "vscode-lm":
-			if (!provider.vsCodeLmModelSelector) {
+		case "vscode-lm": {
+			const selector = provider.vsCodeLmModelSelector as { vendor?: string; family?: string } | undefined
+			if (!selector) {
 				errors.push("vsCodeLmModelSelector is required for selected provider")
 			} else {
-				if (!provider.vsCodeLmModelSelector.vendor || provider.vsCodeLmModelSelector.vendor.length === 0) {
+				if (!selector.vendor || selector.vendor.length === 0) {
 					errors.push("vsCodeLmModelSelector.vendor is required and cannot be empty for selected provider")
 				}
-				if (!provider.vsCodeLmModelSelector.family || provider.vsCodeLmModelSelector.family.length === 0) {
+				if (!selector.family || selector.family.length === 0) {
 					errors.push("vsCodeLmModelSelector.family is required and cannot be empty for selected provider")
 				}
 			}
 			break
+		}
 
-		case "virtual-quota-fallback":
-			if (!provider.profiles || !Array.isArray(provider.profiles) || provider.profiles.length === 0) {
+		case "virtual-quota-fallback": {
+			const profiles = provider.profiles as unknown[] | undefined
+			if (!profiles || !Array.isArray(profiles) || profiles.length === 0) {
 				errors.push("profiles is required and must be a non-empty array for selected provider")
 			}
 			break
+		}
 	}
 }
 

@@ -28,7 +28,7 @@ export async function fetchKilocodeNotifications({
 		return []
 	}
 
-	if (!kilocodeToken) {
+	if (!kilocodeToken || typeof kilocodeToken !== "string") {
 		logs.debug("No kilocode token found, skipping notification fetch", "fetchKilocodeNotifications")
 		return []
 	}

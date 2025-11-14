@@ -13,11 +13,12 @@ export interface WelcomeMessageOptions {
 
 export interface CliMessage {
 	id: string
-	type: "user" | "assistant" | "system" | "error" | "welcome" | "empty"
+	type: "user" | "assistant" | "system" | "error" | "welcome" | "empty" | "requestCheckpointRestoreApproval"
 	content: string
 	ts: number
 	partial?: boolean | undefined
 	metadata?: {
 		welcomeOptions?: WelcomeMessageOptions | undefined
 	}
+	payload?: unknown
 }

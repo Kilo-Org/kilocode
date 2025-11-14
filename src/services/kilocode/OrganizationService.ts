@@ -54,7 +54,7 @@ export class OrganizationService {
 					organizationId,
 					errors: validationResult.error.errors,
 				})
-				return null
+				return response.data
 			}
 
 			logger.info("[OrganizationService] Successfully fetched organization", {
@@ -76,10 +76,10 @@ export class OrganizationService {
 	/**
 	 * Checks if code indexing is enabled for an organization
 	 * @param organization - The organization object
-	 * @returns true if code indexing is enabled (defaults to true if not specified)
+	 * @returns true if code indexing is enabled (defaults to false if not specified)
 	 */
 	public static isCodeIndexingEnabled(organization: KiloOrganization | null): boolean {
 		// Default to true if organization is null or setting is not specified
-		return organization?.settings?.code_indexing_enabled ?? true
+		return organization?.settings?.code_indexing_enabled ?? false
 	}
 }

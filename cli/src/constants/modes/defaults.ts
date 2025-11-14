@@ -1,45 +1,10 @@
 import type { ModeConfig } from "../../types/messages.js"
+import { DEFAULT_MODES as DEFAULT_MODES_KILO } from "@roo-code/types"
 
 /**
- * Default mode configurations
- * These are the built-in modes available in the application
+ * Default mode
  */
-export const DEFAULT_MODES: ModeConfig[] = [
-	{
-		slug: "architect",
-		name: "Architect",
-		description: "Plan and design system architecture",
-		source: "global",
-	},
-	{
-		slug: "code",
-		name: "Code",
-		description: "Write, modify, and refactor code",
-		source: "global",
-	},
-	{
-		slug: "ask",
-		name: "Ask",
-		description: "Get explanations and answers",
-		source: "global",
-	},
-	{
-		slug: "debug",
-		name: "Debug",
-		description: "Troubleshoot and fix issues",
-		source: "global",
-	},
-	{
-		slug: "orchestrator",
-		name: "Orchestrator",
-		description: "Coordinate complex multi-step projects",
-		source: "global",
-	},
-]
-
-/**
- * Default mode slug
- */
+export const DEFAULT_MODES = DEFAULT_MODES_KILO
 export const DEFAULT_MODE_SLUG = "code"
 
 /**

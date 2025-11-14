@@ -342,7 +342,6 @@ export function getApprovalDecision(
 
 		// Handle MCP server requests (extension uses this as ask type instead of "tool")
 		case "use_mcp_server":
-		case "access_mcp_resource":
 			if (config.mcp?.enabled) {
 				return { action: "auto-approve" }
 			}

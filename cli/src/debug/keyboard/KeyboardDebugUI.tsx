@@ -23,14 +23,22 @@ interface KeyboardDebugUIProps {
  */
 function escapeSequence(str: string): string {
 	return str
-		.replace(/\x1b/g, "\\x1b")
-		.replace(/\r/g, "\\r")
-		.replace(/\n/g, "\\n")
-		.replace(/\t/g, "\\t")
 		.split("")
 		.map((char) => {
 			const code = char.charCodeAt(0)
 			// Show non-printable characters as hex
+			if (code === 0x1b) {
+				return "\\x1b"
+			}
+			if (code === 0x0d) {
+				return "\\r"
+			}
+			if (code === 0x0a) {
+				return "\\n"
+			}
+			if (code === 0x09) {
+				return "\\t"
+			}
 			if (code < 32 || code > 126) {
 				return `\\x${code.toString(16).padStart(2, "0")}`
 			}

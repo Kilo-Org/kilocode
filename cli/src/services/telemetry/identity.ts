@@ -250,13 +250,13 @@ export class IdentityManager {
 	/**
 	 * Validate stored identity data
 	 */
-	private isValidStoredIdentity(data: any): data is StoredIdentity {
+	private isValidStoredIdentity(data: unknown): data is StoredIdentity {
 		return (
 			typeof data === "object" &&
 			data !== null &&
-			typeof data.cliUserId === "string" &&
-			typeof data.createdAt === "number" &&
-			typeof data.lastUsed === "number"
+			typeof (data as Record<string, unknown>).cliUserId === "string" &&
+			typeof (data as Record<string, unknown>).createdAt === "number" &&
+			typeof (data as Record<string, unknown>).lastUsed === "number"
 		)
 	}
 

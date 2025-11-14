@@ -23,8 +23,13 @@
 		"verbatimModuleSyntax": false,
 		"jsx": "react-jsx",
 		"jsxImportSource": "react",
-		"types": ["node"]
+		"types": ["node"],
+		"baseUrl": ".",
+		"paths": {
+			"@roo/*": ["../src/shared/*"]
+		},
+		"skipLibCheck": true
 	},
-	"include": ["src/**/*"],
+	"include": ["src"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
 }

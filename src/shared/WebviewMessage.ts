@@ -534,6 +534,7 @@ export type WebViewMessagePayload =
 	| SeeNewChangesPayload
 	| TasksByIdRequestPayload
 	| TaskHistoryRequestPayload
+	| RequestCheckpointRestoreApprovalPayload
 	// kilocode_change end
 	| CheckpointDiffPayload
 	| CheckpointRestorePayload

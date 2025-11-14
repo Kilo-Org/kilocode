@@ -3,7 +3,7 @@
  * Handles Kitty protocol, legacy ANSI sequences, and special key combinations
  */
 
-import type { Key } from "../../types/keyboard.js"
+import type { Key, ReadlineKey } from "../../types/keyboard.js"
 import {
 	ESC,
 	CSI,
@@ -341,7 +341,7 @@ export function mapAltKeyCharacter(char: string): string | null {
 /**
  * Parse a simple key from readline's keypress event
  */
-export function parseReadlineKey(key: any): Key {
+export function parseReadlineKey(key: ReadlineKey): Key {
 	// Handle the key object from readline
 	const keyName = key.name || (key.sequence.length === 1 ? key.sequence : "")
 

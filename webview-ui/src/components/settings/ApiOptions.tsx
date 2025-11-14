@@ -737,10 +737,6 @@ const ApiOptions = ({
 				/>
 			)}
 
-			{selectedProvider === "minimax" && (
-				<MiniMax apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
-			)}
-
 			{/* kilocode_change start */}
 			{selectedProvider === "gemini-cli" && (
 				<GeminiCli apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />

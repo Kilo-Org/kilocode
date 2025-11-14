@@ -273,7 +273,9 @@ async function loadAgentRulesFile(cwd: string): Promise<string> {
 					await resolveSymLink(agentPath, fileInfo, 0)
 
 					// Extract the resolved path from fileInfo
-					if (fileInfo.length > 0) {
+					// kilocode_change start - add null check for fileInfo[0]
+					if (fileInfo.length > 0 && fileInfo[0]) {
+						// kilocode_change end
 						resolvedPath = fileInfo[0].resolvedPath
 					}
 				}

@@ -65,7 +65,7 @@ export const extensionModeAtom = atom<string>("code")
 /**
  * Atom to hold custom modes
  */
-export const customModesAtom = atom<any[]>([])
+export const customModesAtom = atom<unknown[]>([])
 
 /**
  * Atom to hold MCP servers configuration

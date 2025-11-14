@@ -6,7 +6,7 @@ import * as os from "os"
 
 describe("WorkspaceAPI.applyEdit Document Synchronization", () => {
 	let tempDir: string
-	let vscodeAPI: any
+	let vscodeAPI: ReturnType<typeof createVSCodeAPIMock>
 	let testFilePath: string
 
 	beforeEach(() => {

@@ -11,7 +11,7 @@ import { getModelFieldForProvider } from "../constants/providers/models.js"
  */
 export const getSelectedModelId = (
 	provider: ProviderName | string,
-	apiConfiguration: Record<string, any> | undefined,
+	apiConfiguration: Record<string, unknown> | undefined,
 ): string => {
 	if (!apiConfiguration || !provider || provider === "unknown") {
 		return "unknown"
@@ -27,7 +27,7 @@ export const getSelectedModelId = (
 
 	// Special handling for vscode-lm provider
 	if (provider === "vscode-lm") {
-		const selector = apiConfiguration.vsCodeLmModelSelector
+		const selector = apiConfiguration.vsCodeLmModelSelector as { vendor?: string; family?: string } | undefined
 		if (selector && selector.vendor && selector.family) {
 			return `${selector.vendor}/${selector.family}`
 		}
@@ -38,5 +38,5 @@ export const getSelectedModelId = (
 	const modelId = apiConfiguration[modelField]
 
 	// Return the model ID or "unknown" if not set
-	return modelId || "unknown"
+	return typeof modelId === "string" ? modelId : "unknown"
 }

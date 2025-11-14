@@ -4,7 +4,8 @@
  */
 
 import { atom } from "jotai"
-import type { ExtensionMessage } from "../../types/messages.js"
+import type { ExtensionMessage, ExtensionChatMessage, RouterModels } from "../../types/messages.js"
+import type { HistoryItem } from "@roo-code/types"
 import { extensionServiceAtom, setServiceReadyAtom, setServiceErrorAtom, setIsInitializingAtom } from "./service.js"
 import { updateExtensionStateAtom, updateChatMessageByTsAtom, updateRouterModelsAtom } from "./extension.js"
 import { ciCompletionDetectedAtom } from "./ci.js"
@@ -15,6 +16,8 @@ import {
 	setBalanceLoadingAtom,
 	setProfileErrorAtom,
 	setBalanceErrorAtom,
+	type ProfileData,
+	type BalanceData,
 } from "./profile.js"
 import {
 	taskHistoryDataAtom,
@@ -39,7 +42,7 @@ const isProcessingBufferAtom = atom<boolean>(false)
  * Effect atom to initialize the ExtensionService
  * This sets up event listeners and activates the service
  */
-export const initializeServiceEffectAtom = atom(null, async (get, set, store?: any) => {
+export const initializeServiceEffectAtom = atom(null, async (get, set, store?: { set: typeof set }) => {
 	const service = get(extensionServiceAtom)
 
 	if (!service) {
@@ -49,7 +52,7 @@ export const initializeServiceEffectAtom = atom(null, async (get, set, store?: a
 	}
 
 	// Get the store reference - if not passed, we can't update atoms from event listeners
-	const atomStore = store || (get as any).store
+	const atomStore = store || (get as { store?: { set: typeof set } }).store
 	if (!atomStore) {
 		logs.error("No store available for event listeners", "effects")
 	}
@@ -137,42 +140,58 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				// Skip processing here to avoid duplication
 				break
 
-			case "messageUpdated":
-				if (message.chatMessage) {
-					set(updateChatMessageByTsAtom, message.chatMessage)
+			case "messageUpdated": {
+				const chatMessage = message.chatMessage as ExtensionChatMessage | undefined
+				if (chatMessage) {
+					set(updateChatMessageByTsAtom, chatMessage)
 				}
 				break
+			}
 
-			case "routerModels":
-				if (message.routerModels) {
-					set(updateRouterModelsAtom, message.routerModels)
+			case "routerModels": {
+				const routerModels = message.routerModels as RouterModels | undefined
+				if (routerModels) {
+					set(updateRouterModelsAtom, routerModels)
 				}
 				break
+			}
 
-			case "profileDataResponse":
+			case "profileDataResponse": {
 				set(setProfileLoadingAtom, false)
-				if (message.payload?.success) {
-					set(updateProfileDataAtom, message.payload.data)
+				const payload = message.payload as { success: boolean; data?: unknown; error?: string } | undefined
+				if (payload?.success) {
+					set(updateProfileDataAtom, payload.data as ProfileData)
 				} else {
-					set(setProfileErrorAtom, message.payload?.error || "Failed to fetch profile")
+					set(setProfileErrorAtom, payload?.error || "Failed to fetch profile")
 				}
 				break
+			}
 
-			case "balanceDataResponse":
+			case "balanceDataResponse": {
 				// Handle balance data response
 				set(setBalanceLoadingAtom, false)
-				if (message.payload?.success) {
-					set(updateBalanceDataAtom, message.payload.data)
+				const payload = message.payload as { success: boolean; data?: unknown; error?: string } | undefined
+				if (payload?.success) {
+					set(updateBalanceDataAtom, payload.data as BalanceData)
 				} else {
-					set(setBalanceErrorAtom, message.payload?.error || "Failed to fetch balance")
+					set(setBalanceErrorAtom, payload?.error || "Failed to fetch balance")
 				}
 				break
+			}
 
-			case "taskHistoryResponse":
+			case "taskHistoryResponse": {
 				// Handle task history response
 				set(taskHistoryLoadingAtom, false)
-				if (message.payload) {
-					const { historyItems, pageIndex, pageCount, requestId } = message.payload as any
+				const payload = message.payload as
+					| {
+							historyItems?: HistoryItem[]
+							pageIndex?: number
+							pageCount?: number
+							requestId?: string
+					  }
+					| undefined
+				if (payload) {
+					const { historyItems, pageIndex, pageCount, requestId } = payload
 					const data = {
 						historyItems: historyItems || [],
 						pageIndex: pageIndex || 0,
@@ -188,14 +207,16 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 				} else {
 					set(taskHistoryErrorAtom, "Failed to fetch task history")
 					// Reject any pending requests
-					if (message.payload?.requestId) {
+					const payloadWithRequestId = message.payload as { requestId?: string } | undefined
+					if (payloadWithRequestId?.requestId) {
 						set(resolveTaskHistoryRequestAtom, {
-							requestId: message.payload.requestId,
+							requestId: payloadWithRequestId.requestId,
 							error: "Failed to fetch task history",
 						})
 					}
 				}
 				break
+			}
 
 			case "action":
 				// Action messages are typically handled by the UI

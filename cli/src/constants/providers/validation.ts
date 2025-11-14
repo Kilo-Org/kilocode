@@ -40,7 +40,9 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	"vercel-ai-gateway": ["vercelAiGatewayApiKey", "vercelAiGatewayModelId"],
 	"human-relay": ["apiModelId"],
 	"fake-ai": ["apiModelId"],
-	ovhcloud: ["ovhCloudAiEndpointsModelId"],
+	ovhcloud: ["ovhCloudAiEndpointsApiKey", "ovhCloudAiEndpointsModelId"],
+	inception: ["inceptionLabsApiKey", "inceptionLabsModelId"],
+	synthetic: ["syntheticApiKey", "apiModelId"],
 	// Special cases handled separately in handleSpecialValidations
 	vertex: [], // Has special validation logic (either/or fields)
 	"vscode-lm": [], // Has nested object validation

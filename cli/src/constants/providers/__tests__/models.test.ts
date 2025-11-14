@@ -510,7 +510,7 @@ describe("Static Provider Models", () => {
 		})
 
 		it("should handle null price", () => {
-			expect(formatPrice(null as any)).toBe("N/A")
+			expect(formatPrice(null as unknown as number)).toBe("N/A")
 		})
 	})
 
@@ -617,7 +617,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				expect(model.contextWindow).toBeDefined()
 				expect(typeof model.contextWindow).toBe("number")
 				expect(model.contextWindow).toBeGreaterThan(0)
@@ -634,7 +634,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				if (model.inputPrice !== undefined) {
 					expect(typeof model.inputPrice).toBe("number")
 					expect(model.inputPrice).toBeGreaterThanOrEqual(0)
@@ -653,7 +653,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				if (model.maxTokens !== undefined && model.maxTokens !== null) {
 					expect(typeof model.maxTokens).toBe("number")
 					expect(model.maxTokens).toBeGreaterThan(0)

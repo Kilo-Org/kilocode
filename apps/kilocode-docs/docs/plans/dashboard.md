@@ -113,7 +113,7 @@ Manage your Kilo Teams plan and seat allocation.
 ### Current Plan Details
 
 - **Plan type** (Kilo Teams)
-- **Monthly cost** per seat ($29/user/month)
+- **Monthly cost** per seat ($15/user/month)
 - **Billing cycle** dates and next charge
 - **Plan benefits** and included features
 

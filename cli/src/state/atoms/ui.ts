@@ -486,7 +486,7 @@ export const hideAutocompleteAtom = atom(null, (get, set) => {
  * This atom is kept for backward compatibility but has no effect
  * @deprecated This atom is kept for backward compatibility but may be removed
  */
-export const showAutocompleteMenuAtom = atom(null, (get, set) => {
+export const showAutocompleteMenuAtom = atom(null, (_get, _set) => {
 	// No-op: autocomplete visibility is now derived from text buffer
 	// Kept for backward compatibility
 })

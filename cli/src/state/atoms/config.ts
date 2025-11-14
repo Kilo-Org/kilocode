@@ -1,5 +1,5 @@
 import { atom } from "jotai"
-import type { CLIConfig, ProviderConfig } from "../../config/types.js"
+import type { AutoApprovalConfig, CLIConfig, ProviderConfig } from "../../config/types.js"
 import { DEFAULT_CONFIG } from "../../config/defaults.js"
 import { loadConfig, saveConfig } from "../../config/persistence.js"
 import { mapConfigToExtensionState } from "../../config/mapper.js"
@@ -129,7 +129,7 @@ export const selectProviderAtom = atom(null, async (get, set, providerId: string
 	getTelemetryService().trackProviderChanged(
 		previousProvider,
 		providerId,
-		provider.apiModelId || provider.kilocodeModel,
+		(provider.apiModelId as string | undefined) || (provider.kilocodeModel as string | undefined),
 	)
 })
 
@@ -471,7 +471,7 @@ export const updateAutoApprovalAtom = atom(
  */
 export const updateAutoApprovalSettingAtom = atom(
 	null,
-	async (get, set, category: keyof import("../../config/types.js").AutoApprovalConfig, updates: any) => {
+	async (get, set, category: keyof AutoApprovalConfig, updates: Record<string, unknown>) => {
 		const config = get(configAtom)
 
 		const updatedConfig = {
@@ -479,7 +479,7 @@ export const updateAutoApprovalSettingAtom = atom(
 			autoApproval: {
 				...config.autoApproval,
 				[category]: {
-					...(config.autoApproval?.[category] as any),
+					...(config.autoApproval?.[category] as Record<string, unknown>),
 					...updates,
 				},
 			},
