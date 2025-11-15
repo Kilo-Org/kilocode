@@ -2627,6 +2627,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 					// Check if we should preserve reasoning in the assistant message
 					let finalAssistantMessage = assistantMessage
+					if (reasoningMessage && this.api.getModel().info.preserveReasoning) {
+						// Prepend reasoning in XML tags to the assistant message so it's included in API history
+						finalAssistantMessage = `<think>${reasoningMessage}</think>\n${assistantMessage}`
+					}
 					// kilocode_change start: also add tool calls, reasoning_details to history
 					const assistantMessageContent = new Array<Anthropic.Messages.ContentBlockParam>()
 					assistantMessageContent.push(...antThinkingContent)
