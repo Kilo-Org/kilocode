@@ -26,17 +26,16 @@ export async function applyDiffToolLegacy(
 	let relPath: string | undefined = block.params.path
 	let diffContent: string | undefined = block.params.diff
 
-	//if (diffContent && !cline.api.getModel().id.includes("claude")) {
-	//	diffContent = unescapeHtmlEntities(diffContent)
-	//}
+	if (diffContent && !cline.api.getModel().id.includes("claude")) {
+		diffContent = unescapeHtmlEntities(diffContent)
+	}
 
-	const params = ApplyDiffParametersSchema.safeParse(block.params)
-	if (params.data) {
-		console.info("Found apply_diff parameters", params.data)
-		relPath = params.data.path
-		diffContent = convertToDiff(params.data.diffs)
+	const nativeParams = ApplyDiffParametersSchema.safeParse(block.params)
+	if (nativeParams.data) {
+		console.info("Found apply_diff parameters", nativeParams.data)
+		relPath = nativeParams.data.path
 	} else {
-		console.warn("No apply_diff parameters", params.error)
+		console.warn("No apply_diff parameters", nativeParams.error)
 	}
 
 	const sharedMessageProps: ClineSayTool = {
@@ -71,7 +70,7 @@ export async function applyDiffToolLegacy(
 				return
 			}
 
-			if (!diffContent) {
+			if (!diffContent && !nativeParams.data) {
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("apply_diff")
 				pushToolResult(await cline.sayAndCreateMissingParamError("apply_diff", "diff"))
