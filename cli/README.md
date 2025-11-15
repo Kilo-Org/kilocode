@@ -32,6 +32,17 @@ We've only tested the CLI on Mac and Linux, and are aware that there are some is
 
 ## Usage
 
+### Shell Mode
+
+Kilo Code CLI includes a persistent shell mode that allows you to execute shell commands while maintaining directory changes and environment variables across commands. To enter shell mode, press `Shift+!` or type `!` when the input is empty.
+
+#### Features
+
+- **Persistent Session**: Directory changes (`cd`) and environment variable modifications persist for the duration of the shell session
+- **Workspace Propagation**: When you exit shell mode, the CLI's working directory is updated to match the shell's current directory, and the AI context is reinitialized for the new workspace
+- **Command History**: Navigate through previous commands using the up/down arrow keys
+- **Real-time Output**: Command output is displayed immediately in the CLI interface
+
 ### Interactive Mode
 
 ```bash

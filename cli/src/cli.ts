@@ -6,6 +6,8 @@ import { createExtensionService, ExtensionService } from "./services/extension.j
 import { App } from "./ui/App.js"
 import { logs } from "./services/logs.js"
 import { extensionServiceAtom } from "./state/atoms/service.js"
+import { addMessageAtom } from "./state/atoms/ui.js"
+import { disposeShellSessionAtom } from "./state/atoms/shell.js"
 import { initializeServiceEffectAtom } from "./state/atoms/effects.js"
 import { loadConfigAtom, mappedExtensionStateAtom, providersAtom, saveConfigAtom } from "./state/atoms/config.js"
 import { ciExitReasonAtom } from "./state/atoms/ci.js"
@@ -191,6 +193,7 @@ export class CLI {
 					parallel: this.options.parallel || false,
 					worktreeBranch: this.options.worktreeBranch || undefined,
 					noSplash: this.options.noSplash || false,
+					onWorkspaceChange: (newWorkspace: string) => this.handleWorkspaceChange(newWorkspace),
 				},
 				onExit: () => this.dispose(),
 			}),
@@ -311,6 +314,11 @@ export class CLI {
 				this.service = null
 			}
 
+			// Dispose shell session
+			if (this.store) {
+				this.store.set(disposeShellSessionAtom)
+			}
+
 			// Clear store reference
 			this.store = null
 
@@ -404,6 +412,86 @@ export class CLI {
 			logs.error("Failed to fetch notifications", "CLI", { error })
 		} finally {
 			this.store.set(notificationsLoadingAtom, false)
+		}
+	}
+
+	/**
+	 * Handle workspace changes from shell mode
+	 */
+	public async handleWorkspaceChange(newWorkspace: string): Promise<void> {
+		if (!this.store || !this.service) {
+			logs.warn("Cannot handle workspace change: service or store not available", "CLI")
+			return
+		}
+
+		try {
+			logs.info("Handling workspace change", "CLI", { oldWorkspace: this.options.workspace, newWorkspace })
+
+			// Update CLI options
+			this.options.workspace = newWorkspace
+
+			// Show system message about workspace change
+			const workspaceChangeMessage = {
+				id: `workspace-change-${Date.now()}`,
+				type: "system" as const,
+				ts: Date.now(),
+				content: `📁 Workspace changed to: ${newWorkspace}\nReinitializing AI context...`,
+				partial: false,
+			}
+			this.store.set(addMessageAtom, workspaceChangeMessage)
+
+			// Dispose current extension service
+			await this.service.dispose()
+			this.service = null
+
+			// Create new extension service with updated workspace
+			const telemetryService = getTelemetryService()
+			const identityManager = getIdentityManager()
+			const identity = identityManager.getIdentity()
+
+			const serviceOptions: Parameters<typeof createExtensionService>[0] = {
+				workspace: newWorkspace,
+				mode: this.options.mode || "code",
+			}
+
+			if (identity) {
+				serviceOptions.identity = {
+					machineId: identity.machineId,
+					sessionId: identity.sessionId,
+					cliUserId: identity.cliUserId,
+				}
+			}
+
+			this.service = createExtensionService(serviceOptions)
+
+			// Set service in store
+			this.store.set(extensionServiceAtom, this.service)
+
+			// Reinitialize service through effect atom
+			await this.store.set(initializeServiceEffectAtom, this.store)
+
+			// Re-inject configuration
+			await this.injectConfigurationToExtension()
+
+			// Re-request router models
+			await this.requestRouterModels()
+
+			// Update telemetry context (access private fields directly since there's no public update method)
+			;(telemetryService as unknown as { currentWorkspace: string }).currentWorkspace = newWorkspace
+
+			logs.info("Workspace change handled successfully", "CLI", { newWorkspace })
+		} catch (error) {
+			logs.error("Failed to handle workspace change", "CLI", { error, newWorkspace })
+
+			// Show error message
+			const errorMessage = {
+				id: `workspace-change-error-${Date.now()}`,
+				type: "error" as const,
+				ts: Date.now(),
+				content: `❌ Failed to change workspace: ${error instanceof Error ? error.message : error}`,
+				partial: false,
+			}
+			this.store.set(addMessageAtom, errorMessage)
 		}
 	}
 

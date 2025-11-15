@@ -4,8 +4,9 @@
 
 import { atom } from "jotai"
 import { addMessageAtom, inputModeAtom, type InputMode } from "./ui.js"
-import { exec } from "child_process"
 import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.js"
+import { ShellSession } from "../../services/shell/session.js"
+import { logs } from "../../services/logs.js"
 
 // ============================================================================
 // Workspace Path Atom
@@ -15,6 +16,16 @@ import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.
  * The workspace directory where shell commands should be executed
  */
 export const workspacePathAtom = atom<string | null>(null)
+
+/**
+ * Global shell session instance for persistent shell mode
+ */
+export const shellSessionAtom = atom<ShellSession | null>(null)
+
+/**
+ * Current directory of the persistent shell session
+ */
+export const currentShellDirectoryAtom = atom<string>(process.cwd())
 
 // ============================================================================
 // Shell Mode Atoms
@@ -36,6 +47,65 @@ export const shellHistoryAtom = atom<string[]>([])
 export const shellHistoryIndexAtom = atom<number>(-1)
 
 /**
+ * Action atom to initialize shell session
+ */
+export const initializeShellSessionAtom = atom(null, async (get, set) => {
+	const session = get(shellSessionAtom)
+	if (session) return // Already initialized
+
+	const workspacePath = get(workspacePathAtom) || process.cwd()
+	const newSession = new ShellSession()
+
+	await newSession.ensureSession(workspacePath)
+	set(shellSessionAtom, newSession)
+	set(currentShellDirectoryAtom, workspacePath)
+})
+
+/**
+ * Action atom to dispose shell session
+ */
+export const disposeShellSessionAtom = atom(null, (get, set) => {
+	const session = get(shellSessionAtom)
+	if (session) {
+		session.dispose()
+		set(shellSessionAtom, null)
+		set(currentShellDirectoryAtom, process.cwd())
+	}
+})
+
+/**
+ * Action atom to apply shell workspace changes when exiting shell mode
+ */
+export const applyShellWorkspaceAtom = atom(null, (get, set) => {
+	const session = get(shellSessionAtom)
+	if (!session || !session.isSessionReady()) return
+
+	const currentShellDir = session.getCurrentDirectory()
+	const currentWorkspaceDir = get(workspacePathAtom) || process.cwd()
+
+	// Only apply changes if the shell directory is different from the current workspace
+	if (currentShellDir !== currentWorkspaceDir) {
+		try {
+			// Change process cwd
+			process.chdir(currentShellDir)
+
+			// Update workspace path atom
+			set(workspacePathAtom, currentShellDir)
+
+			// Emit workspace change event (this will be handled by the CLI class)
+			// The event emission will be handled by the UI component that subscribes to this atom
+		} catch (_error) {
+			// If chdir fails (e.g., directory doesn't exist in tests), just update the workspace path
+			logs.warn(
+				`Failed to change working directory to ${currentShellDir}, updating workspace path only`,
+				"applyShellWorkspaceAtom",
+			)
+			set(workspacePathAtom, currentShellDir)
+		}
+	}
+})
+
+/**
  * Action atom to toggle shell mode
  * Only enters shell mode if input is empty, but always allows exiting
  */
@@ -49,6 +119,10 @@ export const toggleShellModeAtom = atom(null, (get, set) => {
 			// Don't enter shell mode if there's already text in the input
 			return
 		}
+
+		// Initialize shell session if needed (don't await to keep toggle synchronous)
+		set(initializeShellSessionAtom)
+
 		set(shellModeActiveAtom, true)
 		set(inputModeAtom, "shell" as InputMode)
 		set(shellHistoryIndexAtom, -1)
@@ -61,6 +135,9 @@ export const toggleShellModeAtom = atom(null, (get, set) => {
 		set(shellHistoryIndexAtom, -1)
 		// Clear text buffer when exiting shell mode
 		set(clearTextAtom)
+
+		// Apply shell workspace changes
+		set(applyShellWorkspaceAtom)
 	}
 })
 
@@ -141,46 +218,31 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 	// Clear the text buffer immediately for better UX
 	set(clearTextAtom)
 
-	// Execute the command immediately (no approval needed)
+	// Execute the command using the persistent shell session
 	try {
-		// Get the workspace path for command execution
-		const workspacePath = get(workspacePathAtom)
-		const executionDir = workspacePath || process.cwd()
+		let session = get(shellSessionAtom)
 
-		// Execute command and capture output
-		const childProcess = exec(command, {
-			cwd: executionDir,
-			timeout: 30000, // 30 second timeout
-		})
+		// Initialize session if it doesn't exist
+		if (!session) {
+			await set(initializeShellSessionAtom)
+			session = get(shellSessionAtom)
+		}
 
-		let stdout = ""
-		let stderr = ""
+		if (!session || !session.isSessionReady()) {
+			throw new Error("Shell session not ready")
+		}
 
-		// Collect output
-		childProcess.stdout?.on("data", (data) => {
-			stdout += data.toString()
-		})
+		// Execute command
+		const result = await session.run(command)
 
-		childProcess.stderr?.on("data", (data) => {
-			stderr += data.toString()
-		})
+		// Update current shell directory atom
+		set(currentShellDirectoryAtom, result.cwd)
 
-		// Wait for completion
-		await new Promise<void>((resolve, reject) => {
-			childProcess.on("close", (code) => {
-				if (code === 0) {
-					resolve()
-				} else {
-					reject(new Error(`Command exited with code ${code}`))
-				}
-			})
-
-			childProcess.on("error", (error) => {
-				reject(error)
-			})
-		})
-
-		const output = stdout || stderr || "Command executed successfully"
+		// Prepare output message
+		let output = ""
+		if (result.stdout) output += result.stdout
+		if (result.stderr) output += (output ? "\n" : "") + result.stderr
+		if (!output) output = "Command executed successfully"
 
 		// Display as system message for visibility in CLI
 		const systemMessage = {
@@ -194,7 +256,6 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		set(addMessageAtom, systemMessage)
 	} catch (error: unknown) {
 		// Handle errors and display them in the message system
-
 		const errorOutput = `❌ Error: ${error instanceof Error ? error.message : error}`
 
 		// Display as error message for visibility in CLI

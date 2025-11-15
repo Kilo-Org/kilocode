@@ -95,7 +95,11 @@ function getGlobalKilocodeBackendUrl(): string {
  * In production: https://kilocode.ai
  */
 export function getAppUrl(path: string = ""): string {
-	return new URL(path, getGlobalKilocodeBackendUrl()).toString()
+	const url = new URL(path, getGlobalKilocodeBackendUrl()).toString()
+	if (url.endsWith("/")) {
+		return url.slice(0, -1)
+	}
+	return url
 }
 
 /**
