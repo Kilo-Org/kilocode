@@ -2,7 +2,7 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import { DEFAULT_WRITE_DELAY_MS, getActiveToolUseStyle } from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -14,6 +14,11 @@ import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 
+// kilocode_change start
+import { ApplyDiffParametersSchema, convertToDiff } from "../prompts/tools/native-tools/simple_apply_diff"
+import { z } from "zod/v4"
+// kilocode_change end
+
 export async function applyDiffToolLegacy(
 	cline: Task,
 	block: ToolUse,
@@ -22,7 +27,7 @@ export async function applyDiffToolLegacy(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
-	const relPath: string | undefined = block.params.path
+	let relPath: string | undefined = block.params.path // kilocode_change let
 	let diffContent: string | undefined = block.params.diff
 
 	if (diffContent && !cline.api.getModel().id.includes("claude")) {
@@ -54,6 +59,27 @@ export async function applyDiffToolLegacy(
 
 			return
 		} else {
+			// kilocode_change start
+			if (getActiveToolUseStyle(cline.apiConfiguration) === "json") {
+				const data = ApplyDiffParametersSchema.safeParse(block.params)
+				if (data.success) {
+					relPath = data.data.path
+					console.debug("[apply_diff] parameters parsed", data.data)
+					diffContent = convertToDiff(data.data.diffs)
+					console.debug("[apply_diff] diff generated", diffContent)
+				} else {
+					cline.consecutiveMistakeCount++
+					cline.recordToolError("apply_diff")
+					const error = z.prettifyError(data.error)
+					pushToolResult(
+						"Error: the tool arguments do not follow the schema. Try again. The exact error is:\n" + error,
+					)
+					console.error("[apply_diff] error", error)
+					return
+				}
+			}
+			// kilocode_change end
+
 			if (!relPath) {
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("apply_diff")
