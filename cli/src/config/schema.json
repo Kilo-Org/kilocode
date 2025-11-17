@@ -31,6 +31,10 @@
 				"$ref": "#/definitions/provider"
 			}
 		},
+		"kilocodeApiKey": {
+			"type": "string",
+			"description": "Kilocode API key for backend session management"
+		},
 		"autoApproval": {
 			"type": "object",
 			"description": "Auto approval configuration for CLI operations",

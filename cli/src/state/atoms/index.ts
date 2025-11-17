@@ -124,6 +124,9 @@ export {
 	refreshStateAtom,
 	sendPrimaryButtonClickAtom,
 	sendSecondaryButtonClickAtom,
+
+	// Session management actions
+	initializeSessionAtom,
 } from "./actions.js"
 
 // ============================================================================
@@ -151,6 +154,25 @@ export {
 	// Config sync effect
 	syncConfigToExtensionEffectAtom,
 } from "./config-sync.js"
+
+// ============================================================================
+// Session Atoms - CLI session management
+// ============================================================================
+export {
+	// Core session atoms
+	sessionIdAtom,
+	isSessionInitializingAtom,
+	sessionErrorAtom,
+
+	// Derived session atoms
+	isSessionReadyAtom,
+
+	// Session action atoms
+	setSessionIdAtom,
+	setSessionErrorAtom,
+	setSessionInitializingAtom,
+	clearSessionAtom,
+} from "./session.js"
 
 // ============================================================================
 // Notifications Atoms - Kilocode notifications management

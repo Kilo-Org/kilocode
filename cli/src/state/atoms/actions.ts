@@ -9,6 +9,9 @@ import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from ".
 import { resetMessageCutoffAtom } from "./ui.js"
 import { logs } from "../../services/logs.js"
 
+// Re-export session initialization action
+export { initializeSessionAtom } from "./actions/session.js"
+
 /**
  * Action atom to send a webview message to the extension
  * This is the primary way to communicate with the extension

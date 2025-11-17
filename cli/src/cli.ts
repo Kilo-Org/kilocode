@@ -12,7 +12,7 @@ import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
-import { sendWebviewMessageAtom } from "./state/atoms/actions.js"
+import { sendWebviewMessageAtom, initializeSessionAtom } from "./state/atoms/actions.js"
 import { taskResumedViaContinueAtom } from "./state/atoms/extension.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
@@ -129,6 +129,19 @@ export class CLI {
 			// Inject CLI configuration into ExtensionHost
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
+
+			// Initialize CLI session with backend (if API key is configured)
+			try {
+				const sessionId = await this.store.set(initializeSessionAtom)
+				if (sessionId) {
+					// Display boot message with session ID
+					console.log(`\nStarting session ${sessionId}\n`)
+					logs.info("CLI session ready", "CLI", { sessionId })
+				}
+			} catch (error) {
+				// Session initialization is optional - continue without session
+				logs.warn("Session initialization failed, continuing without session", "CLI", { error })
+			}
 
 			const extensionHost = this.service.getExtensionHost()
 			extensionHost.sendWebviewMessage({
