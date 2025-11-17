@@ -4,311 +4,396 @@ sidebar_label: Migrating from Cursor or Windsurf
 
 # Migrating from Cursor or Windsurf
 
-This guide will help you migrate your custom rules, configurations, and workflows from Cursor or Windsurf to Kilo Code. This manual migration process is straightforward and typically takes just a few minutes per project.
+Quickly migrate your custom rules from Cursor or Windsurf to Kilo Code. The process typically takes just a few minutes per project.
 
-## Overview
+**Last Updated**: November 2025
 
-Kilo Code uses a flexible rules system that's compatible with common AI coding assistant patterns. Most rules from Cursor and Windsurf can be migrated with minimal changes, and many will work as-is.
+## Why Kilo Code's Rules System?
 
-### Key Differences
+Kilo Code simplifies AI configuration while adding powerful new capabilities:
 
-| Feature                 | Cursor                               | Windsurf                     | Kilo Code                     |
-| ----------------------- | ------------------------------------ | ---------------------------- | ----------------------------- |
-| **Project Rules**       | `.cursor/rules/*.mdc`                | Similar to Cursor            | `.kilocode/rules/*.md`        |
-| **Legacy Rules**        | `.cursorrules`                       | `.windsurfrules` (if exists) | `.kilocoderules` (deprecated) |
-| **Agent Rules**         | `AGENTS.md`                          | `AGENTS.md`                  | `AGENTS.md` ✅                |
-| **Global Rules**        | Cursor settings (UI)                 | Settings (UI)                | `~/.kilocode/rules/*.md`      |
-| **Rule Format**         | `.mdc` (YAML frontmatter + Markdown) | Similar to Cursor            | `.md` (Plain Markdown)        |
-| **Mode-Specific Rules** | Not supported                        | Not supported                | `.kilocode/rules-{mode}/` ✅  |
+- **Simple format**: Plain Markdown files—no YAML frontmatter or GUI configuration required
+- **Mode-specific rules**: Different rules for different workflows (Code, Debug, Ask, custom modes)
+- **Better version control**: All configuration lives in your repository as readable Markdown
+- **More control**: Custom modes let you define specialized workflows with their own rules and permissions
 
-## Understanding Cursor's Rules System
+## Quick Migration Guide
 
-### Project Rules (`.cursor/rules/`)
+Choose your current tool:
 
-Cursor stores project-specific rules in `.cursor/rules/` as `.mdc` files (Markdown with Configuration). Each file contains:
+- [Migrating from Cursor](#migrating-from-cursor) → Skip to Cursor migration
+- [Migrating from Windsurf](#migrating-from-windsurf) → Skip to Windsurf migration
 
-1. **YAML frontmatter** with metadata:
+## Migrating from Cursor
 
-    - `description`: Brief description of the rule
-    - `globs`: File patterns the rule applies to (optional)
-    - `alwaysApply`: Whether the rule always applies (optional)
+### What's Different in Kilo Code
 
-2. **Markdown content** with the actual rule instructions
+| Cursor                                      | Kilo Code                                 | Why It's Better                   |
+| ------------------------------------------- | ----------------------------------------- | --------------------------------- |
+| `.cursor/rules/*.mdc` with YAML frontmatter | `.kilocode/rules/*.md` plain Markdown     | Simpler to write and maintain     |
+| `alwaysApply: true/false` metadata          | File location determines scope            | More intuitive organization       |
+| `globs: ["*.ts"]` for file patterns         | Mode-specific directories or custom modes | More powerful and flexible        |
+| `description` for AI activation             | Clear file names and organization         | Explicit, predictable behavior    |
+| Global rules in UI settings                 | `~/.kilocode/rules/*.md` files            | Version-controllable and portable |
 
-**Example Cursor `.mdc` file:**
+### Migration Steps
 
-```mdc
----
-description: TypeScript coding standards
-globs: ["*.ts", "*.tsx"]
-alwaysApply: true
----
+**1. Identify your rules:**
 
-# TypeScript Standards
-
-- Always use TypeScript for new files
-- Prefer functional components in React
-- Use explicit return types for exported functions
+```bash
+ls -la .cursor/rules/        # Project rules
+ls -la .cursorrules          # Legacy file (if present)
 ```
 
-### Legacy Rules (`.cursorrules`)
-
-Older Cursor projects may use a single `.cursorrules` file at the project root. This is a plain text or Markdown file without metadata.
-
-### AGENTS.md
-
-Cursor supports `AGENTS.md` files at the project root, which provide high-level agent instructions. Kilo Code fully supports this format and will automatically load `AGENTS.md` files.
-
-## Understanding Windsurf's Rules System
-
-Windsurf uses a similar structure to Cursor:
-
-- **Project Rules**: Typically stored in `.windsurf/rules/` or similar directory
-- **Legacy Rules**: `.windsurfrules` file (if used)
-- **AGENTS.md**: Supported at project root
-
-The migration process for Windsurf is nearly identical to Cursor.
-
-## Manual Migration Process
-
-Follow these steps to migrate your rules from Cursor or Windsurf to Kilo Code:
-
-#### Step 1: Identify Your Rules
-
-1. **Check for project rules:**
-
-    ```bash
-    # Cursor
-    ls -la .cursor/rules/
-
-    # Windsurf
-    ls -la .windsurf/rules/
-    ```
-
-2. **Check for legacy files:**
-
-    ```bash
-    ls -la .cursorrules .windsurfrules AGENTS.md
-    ```
-
-3. **Note any global rules** you've configured in Cursor/Windsurf settings (you'll need to recreate these manually)
-
-#### Step 2: Create Kilo Code Rules Directory
+**2. Create Kilo Code directory:**
 
 ```bash
 mkdir -p .kilocode/rules
 ```
 
-#### Step 3: Convert `.mdc` Files to `.md`
+**3. Convert `.mdc` files to `.md`:**
 
-For each `.mdc` file in `.cursor/rules/`:
+For each file in `.cursor/rules/`, remove the YAML frontmatter and keep just the Markdown content.
 
-1. **Open the `.mdc` file** and review its content
-2. **Extract the Markdown content** (everything after the YAML frontmatter)
-3. **Optionally add metadata as a comment** at the top:
+**Cursor format:**
+
+```mdc
+---
+description: TypeScript coding standards
+globs: ["*.ts", "*.tsx"]
+alwaysApply: false
+---
+
+# TypeScript Standards
+- Always use TypeScript for new files
+- Prefer functional components in React
+```
+
+**Kilo Code format:**
 
 ```markdown
-<!--
-Migrated from Cursor
-Original file: typescript-standards.mdc
-Description: TypeScript coding standards
-Globs: ["*.ts", "*.tsx"]
--->
-
 # TypeScript Standards
 
 - Always use TypeScript for new files
 - Prefer functional components in React
-- Use explicit return types for exported functions
 ```
 
-4. **Save as `.md`** in `.kilocode/rules/`:
+**4. Migrate in one command:**
 
 ```bash
-# Example: converting typescript-standards.mdc
-cp .cursor/rules/typescript-standards.mdc .kilocode/rules/typescript-standards.md
-# Then edit to remove YAML frontmatter
+# Copy all files
+for file in .cursor/rules/*.mdc; do
+  basename="${file##*/}"
+  cp "$file" ".kilocode/rules/${basename%.mdc}.md"
+done
+
+# Then manually edit each file to remove YAML frontmatter (the --- section at the top)
 ```
 
-#### Step 4: Migrate Legacy Rules Files
+**5. Migrate global rules:**
 
-If you have a `.cursorrules` or `.windsurfrules` file:
+- Open `Cursor Settings → General → Rules for AI`
+- Copy the text content
+- Save to `~/.kilocode/rules/cursor-global.md`
+
+**6. Handle legacy `.cursorrules`:**
 
 ```bash
-# Copy to Kilo Code format
 cp .cursorrules .kilocode/rules/legacy-rules.md
-
-# Or create a new file with better organization
-# Split the content into logical files in .kilocode/rules/
 ```
 
-#### Step 5: Preserve AGENTS.md
+### Converting Cursor's `globs` Patterns
 
-`AGENTS.md` files work identically in Kilo Code - no conversion needed:
+Cursor's `globs` field specifies which files a rule applies to. Kilo Code handles this through **mode-specific directories** instead.
 
-```bash
-# If it doesn't exist, you're done
-# If it exists, it will be automatically loaded by Kilo Code
-```
-
-#### Step 6: Migrate Global Rules
-
-Global rules in Cursor/Windsurf are typically stored in application settings. To migrate them:
-
-1. **Export your Cursor/Windsurf settings** (if possible)
-2. **Create global Kilo Code rules directory:**
-
-```bash
-mkdir -p ~/.kilocode/rules
-```
-
-3. **Copy or recreate your global rules** as `.md` files in `~/.kilocode/rules/`
-
-## Converting Rule Formats
-
-### From Cursor `.mdc` to Kilo Code `.md`
-
-**Before (Cursor `.mdc`):**
+**Cursor approach:**
 
 ```mdc
 ---
-description: React component patterns
-globs: ["**/*.tsx", "**/*.jsx"]
-alwaysApply: false
+globs: ["*.ts", "*.tsx"]
 ---
-
-# React Component Guidelines
-
-- Use functional components with hooks
-- Prefer named exports
-- Include PropTypes or TypeScript types
+Rules for TypeScript files...
 ```
 
-**After (Kilo Code `.md`):**
-
-```markdown
-# React Component Guidelines
-
-- Use functional components with hooks
-- Prefer named exports
-- Include PropTypes or TypeScript types
-```
-
-**Note:** Kilo Code doesn't use YAML frontmatter or glob patterns in rule files. Rules apply to all interactions unless you use mode-specific rules (see below).
-
-### Handling Glob Patterns
-
-Cursor's `globs` metadata specifies which files a rule applies to. Kilo Code handles this differently:
-
-- **Rule files don't have glob patterns** - rules apply to all interactions in their mode
-- **File restrictions are set at the mode level** - custom modes can use `fileRegex` in their configuration to restrict which files can be edited
-- **Mode-specific rules** load different rules for different modes (e.g., `.kilocode/rules-code/` only loads in Code mode)
-
-If you need file-specific workflows similar to Cursor's globs, you have two options:
-
-1. **Create a custom mode** with `fileRegex` restrictions (e.g., a "Docs" mode that only edits `.md` files) - see [Custom Modes](/features/custom-modes)
-2. **Organize rules by concern** in separate files with descriptive names (e.g., `typescript-standards.md`, `react-patterns.md`)
-
-**Example of `fileRegex` in a custom mode:**
-
-```yaml
-modes:
-    - slug: docs
-      name: Documentation Editor
-      roleDefinition: You edit documentation files
-      groups:
-          - read
-          - [edit, { fileRegex: '\\.md$', description: "Markdown files only" }]
-          - ask
-```
-
-## Mode-Specific Rules (Kilo Code Exclusive)
-
-Kilo Code supports mode-specific rules, which Cursor and Windsurf don't have. This powerful feature allows you to:
-
-- Create rules that only apply in specific modes (e.g., "Code", "Debug", "Ask")
-- Restrict file access per mode
-- Customize AI behavior for different workflows
-
-### Creating Mode-Specific Rules
-
-After migrating your general rules, you can create mode-specific versions:
+**Kilo Code approach (Option 1 - Mode-specific directory):**
 
 ```bash
-# Create mode-specific rules directory
 mkdir -p .kilocode/rules-code
-mkdir -p .kilocode/rules-debug
-
-# Copy relevant rules
-cp .kilocode/rules/typescript-standards.md .kilocode/rules-code/
-cp .kilocode/rules/debugging-guidelines.md .kilocode/rules-debug/
+# Save TypeScript-specific rules here
 ```
 
-See [Custom Modes](/features/custom-modes) for more details.
+**Kilo Code approach (Option 2 - Custom mode):**
+
+```yaml
+# .kilocodemodes (at project root)
+- slug: typescript
+  name: TypeScript
+  roleDefinition: You work on TypeScript files
+  groups:
+      - read
+      - [edit, { fileRegex: '\\.tsx?$' }]
+      - ask
+```
+
+Then place rules in `.kilocode/rules-typescript/`
+
+### Flattening Nested Cursor Rules
+
+Cursor supports nested `.cursor/rules/` directories. Kilo Code uses flat structure with descriptive names:
+
+```bash
+# Cursor: .cursor/rules/backend/server/api-rules.mdc
+# Kilo Code: .kilocode/rules/backend-server-api-rules.md
+```
+
+## Migrating from Windsurf
+
+### What's Different in Kilo Code
+
+| Windsurf                                                       | Kilo Code                      | Why It's Better                 |
+| -------------------------------------------------------------- | ------------------------------ | ------------------------------- |
+| `.windsurf/rules/*.md`                                         | `.kilocode/rules/*.md`         | Same format! Easy migration     |
+| GUI configuration for activation modes                         | File location determines scope | No hidden GUI state             |
+| "Always On" mode (GUI)                                         | Place in `.kilocode/rules/`    | Explicit and version-controlled |
+| "Glob" mode (GUI)                                              | Mode-specific directories      | More powerful organization      |
+| 12,000 character limit per rule                                | No hard limit                  | Better for complex projects     |
+| Global rules in `~/.codeium/windsurf/memories/global_rules.md` | `~/.kilocode/rules/*.md`       | Clearer location                |
+
+### Migration Steps
+
+**1. Identify your rules:**
+
+```bash
+ls -la .windsurf/rules/      # Project rules
+ls -la .windsurfrules        # Legacy file (if present)
+```
+
+**2. Create Kilo Code directory:**
+
+```bash
+mkdir -p .kilocode/rules
+```
+
+**3. Copy files directly** (already Markdown):
+
+```bash
+cp .windsurf/rules/*.md .kilocode/rules/
+```
+
+**4. Migrate global rules:**
+
+```bash
+cp ~/.codeium/windsurf/memories/global_rules.md ~/.kilocode/rules/global-rules.md
+```
+
+**5. Handle legacy `.windsurfrules`:**
+
+```bash
+cp .windsurfrules .kilocode/rules/legacy-rules.md
+```
+
+**6. Split large rules if needed:**
+
+If you had rules approaching the 12,000 character limit, split them:
+
+```bash
+# Instead of one large file:
+# .windsurf/rules/all-conventions.md (11,500 chars)
+
+# Split into focused files:
+# .kilocode/rules/api-conventions.md
+# .kilocode/rules/testing-standards.md
+# .kilocode/rules/code-style.md
+```
+
+### Converting Windsurf's Activation Modes
+
+Windsurf configures activation through the GUI. In Kilo Code, file organization replaces GUI configuration:
+
+| Windsurf GUI Mode        | Kilo Code Equivalent                                        |
+| ------------------------ | ----------------------------------------------------------- |
+| **Always On**            | Place in `.kilocode/rules/` (default)                       |
+| **Glob** (file patterns) | Mode-specific directory or custom mode                      |
+| **Model Decision**       | Clear file names by concern (e.g., `testing-guidelines.md`) |
+| **Manual**               | Organize with descriptive names                             |
+
+**Example - Converting a Glob rule:**
+
+If you had a rule in Windsurf with Glob mode set to `*.test.ts`, create a custom test mode:
+
+```yaml
+# .kilocodemodes (at project root)
+- slug: test
+  name: Testing
+  roleDefinition: You write and maintain tests
+  groups:
+      - read
+      - [edit, { fileRegex: '\\.(test|spec)\\.(ts|js)$' }]
+      - ask
+```
+
+Then place the rule in `.kilocode/rules-test/`
+
+## AGENTS.md Support
+
+All three tools support the `AGENTS.md` standard. If you have one, it works in Kilo Code automatically:
+
+```bash
+# Verify it exists
+ls -la AGENTS.md
+
+# That's it - Kilo Code loads it automatically (enabled by default)
+```
+
+**Important:** Use uppercase `AGENTS.md` (not `agents.md`). Kilo Code also accepts `AGENT.md` (singular) as a fallback.
+
+**Note:** Both `AGENTS.md` and `AGENT.md` are write-protected files in Kilo Code and require user approval to modify.
+
+## Understanding Mode-Specific Rules
+
+This is Kilo Code's unique feature that replaces both Cursor's `globs` and Windsurf's activation modes.
+
+### Directory Structure
+
+```bash
+.kilocode/rules/              # Apply to ALL modes
+.kilocode/rules-code/         # Only in Code mode
+.kilocode/rules-debug/        # Only in Debug mode
+.kilocode/rules-ask/          # Only in Ask mode
+.kilocode/rules-{custom}/     # Only in your custom mode
+```
+
+### Real-World Example
+
+**From Cursor:**
+
+```mdc
+---
+description: Testing best practices
+globs: ["**/*.test.ts", "**/*.spec.ts"]
+---
+# Testing Rules
+- Write tests for all features
+- Maintain >80% coverage
+```
+
+**To Kilo Code:**
+
+```bash
+# 1. Create test mode directory
+mkdir -p .kilocode/rules-test
+
+# 2. Save rule as plain Markdown
+cat > .kilocode/rules-test/testing-standards.md << 'EOF'
+# Testing Rules
+- Write tests for all features
+- Maintain >80% coverage
+EOF
+
+# 3. Define the mode (optional - creates a custom mode)
+# Add to .kilocode/config.yaml:
+# modes:
+#   - slug: test
+#     name: Test Mode
+#     groups: [read, edit, ask]
+```
 
 ## Post-Migration Checklist
 
-After migrating your rules:
+After migration:
 
-- [ ] **Verify rules are loaded:** Open Kilo Code and check the Rules tab (law icon in bottom right)
-- [ ] **Test rule application:** Ask Kilo Code to perform a task that should follow your rules
-- [ ] **Review rule organization:** Consider splitting large rules into smaller, focused files
-- [ ] **Update team documentation:** Inform your team about the new rules location
-- [ ] **Add to version control:** Commit `.kilocode/rules/` to your repository
-- [ ] **Remove old rules:** Once verified, you can remove `.cursor/rules/` or `.windsurf/rules/`
+- [ ] **Verify rules loaded:** Click law icon (⚖️) in Kilo Code panel
+- [ ] **Test rule application:** Ask Kilo Code to perform tasks following your rules
+- [ ] **Organize rules:** Split large files, use clear names
+- [ ] **Set up mode-specific rules:** Create directories for specialized workflows
+- [ ] **Update team docs:** Document new `.kilocode/rules/` location
+- [ ] **Commit to version control:** `git add .kilocode/`
+- [ ] **Remove old directories:** Delete `.cursor/` or `.windsurf/` folders once verified
 
 ## Troubleshooting
 
 ### Rules Not Appearing
 
-If your migrated rules aren't showing up:
+**Check file location:**
 
-1. **Check file locations:**
+```bash
+ls -la .kilocode/rules/      # Project rules
+ls -la ~/.kilocode/rules/    # Global rules
+```
 
-    - Project rules: `.kilocode/rules/*.md`
-    - Global rules: `~/.kilocode/rules/*.md`
+**Verify file format:**
 
-2. **Verify file format:**
+- Can be any text file extension (`.md`, `.txt`, etc.) - binary files are automatically filtered out
+- Remove all YAML frontmatter from Cursor files
+- Ensure files are not cache/temp files (`.cache`, `.tmp`, `.log`, `.bak`, etc.)
 
-    - Files should be `.md` (Markdown)
-    - No YAML frontmatter (unless as comments)
-    - Valid Markdown syntax
+**Reload VS Code:**
 
-3. **Reload VS Code:**
+- `Cmd+R` (Mac) or `Ctrl+R` (Windows/Linux)
+- Or: Command Palette → "Developer: Reload Window"
 
-    - Press `Cmd+R` (Mac) or `Ctrl+R` (Windows/Linux)
-    - Or use Command Palette: "Developer: Reload Window"
+### Cursor Metadata Lost
 
-4. **Check Rules UI:**
-    - Click the law icon (⚖️) in the bottom right of Kilo Code panel
-    - Verify rules are listed and enabled
+Cursor's `globs`, `alwaysApply`, and `description` don't transfer automatically. Solutions:
 
-### Metadata Loss
+- **For file patterns:** Use mode-specific directories or custom modes
+- **For always-on rules:** Place in `.kilocode/rules/`
+- **For context-specific rules:** Use clear file names and organization
 
-If you need to preserve Cursor's metadata (globs, descriptions):
+### Windsurf Activation Modes Lost
 
-1. **Add as comments** at the top of the `.md` file
-2. **Document in rule content** itself
-3. **Use custom modes** for file-specific rules
+Windsurf's GUI activation modes (Always On/Glob/Model Decision/Manual) aren't stored in files. Solutions:
 
-### Global Rules Not Migrating
+- **Before migrating:** Document each rule's activation mode
+- **After migrating:** Organize files accordingly in Kilo Code
 
-Global rules from Cursor/Windsurf settings aren't automatically accessible. You'll need to:
+### Nested Rules Flattened
 
-1. **Manually recreate** them in `~/.kilocode/rules/`
-2. **Export from Cursor/Windsurf** if they provide an export feature
-3. **Document them** before migrating so you don't lose them
+Cursor's nested directories don't map to Kilo Code. Flatten with descriptive names:
 
-## Advanced: Custom Modes Migration
+```bash
+# Bad: .cursor/rules/backend/api/rules.mdc
+# Good: .kilocode/rules/backend-api-rules.md
+```
 
-If you've customized Cursor's behavior significantly, consider creating [Custom Modes](/features/custom-modes) in Kilo Code:
+### AGENTS.md Not Loading
 
-1. **Identify your Cursor workflows** (e.g., "code review", "documentation", "testing")
-2. **Create corresponding custom modes** in Kilo Code
-3. **Assign mode-specific rules** to each mode
-4. **Configure tool access** per mode (read-only, file restrictions, etc.)
+- **Verify filename:** Must be `AGENTS.md` or `AGENT.md` (uppercase)
+- **Check location:** Must be at project root
+- **Check setting:** Verify "Use Agent Rules" is enabled in Kilo Code settings (enabled by default)
+- **Reload:** Restart VS Code if needed
 
-This gives you more control than Cursor's rule system.
+## Advanced: Creating Custom Modes
+
+For complex workflows, define custom modes with their own rules and permissions:
+
+```yaml
+# .kilocodemodes (at project root)
+- slug: review
+  name: Code Review
+  roleDefinition: You review code and suggest improvements
+  groups:
+      - read
+      - ask
+      # Note: No edit permission - review mode is read-only
+
+- slug: docs
+  name: Documentation
+  roleDefinition: You write and maintain documentation
+  groups:
+      - read
+      - [edit, { fileRegex: '\\.md$', description: "Markdown files only" }]
+      - ask
+```
+
+Then create corresponding rule directories:
+
+```bash
+mkdir -p .kilocode/rules-review
+mkdir -p .kilocode/rules-docs
+```
+
+**Note:** `.kilocodemodes` can be in YAML (preferred) or JSON format. For global modes, edit the `custom_modes.yaml` file via Settings > Edit Global Modes.
 
 ## Next Steps
 
@@ -316,3 +401,21 @@ This gives you more control than Cursor's rule system.
 - [Explore Custom Modes](/features/custom-modes)
 - [Set up Custom Instructions](/advanced-usage/custom-instructions)
 - [Join our Discord](https://kilocode.ai/discord) for migration support
+
+## Additional Resources
+
+### Community Examples
+
+**Cursor users:**
+
+- [awesome-cursorrules](https://github.com/PatrickJS/awesome-cursorrules) - 700+ examples you can adapt
+
+**Windsurf users:**
+
+- [Official Rules Directory](https://windsurf.com/editor/directory)
+- [windsurfrules](https://github.com/kinopeee/windsurfrules)
+
+**Cross-tool:**
+
+- [AGENTS.md Specification](https://agents.md)
+- [dotagent](https://github.com/johnlindquist/dotagent) - Universal converter tool
