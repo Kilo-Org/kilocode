@@ -12,6 +12,7 @@ import { getTemplateForModel } from "../../continuedev/core/autocomplete/templat
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
+import { getLastNUriRelativePathParts, getShortestUniqueRelativeUriPaths } from "../../continuedev/core/util/uri"
 
 export class GhostContextProvider {
 	private contextService: ContextRetrievalService
@@ -176,5 +177,66 @@ export class GhostContextProvider {
 		}
 
 		return prefix
+	}
+
+	/**
+	 * Get FIM-formatted context for codestral models
+	 */
+	async getFimFormattedContext(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+		prefix: string,
+		suffix: string,
+	): Promise<{ prefix: string }> {
+		const { filepathUri, snippetsWithUris, workspaceDirs } = await this.getProcessedSnippets(
+			autocompleteInput,
+			filepath,
+		)
+
+		// Format with +++++ markers (codestral FIM format)
+		return this.formatFimContext(prefix, suffix, filepathUri, snippetsWithUris, workspaceDirs)
+	}
+
+	private formatFimContext(
+		prefix: string,
+		suffix: string,
+		filepath: string,
+		snippets: AutocompleteSnippet[],
+		workspaceUris: string[],
+	): { prefix: string } {
+		function getFileName(snippet: { uri: string; uniquePath: string }) {
+			return snippet.uri.startsWith("file://") ? snippet.uniquePath : snippet.uri
+		}
+
+		if (snippets.length === 0) {
+			if (suffix.trim().length === 0 && prefix.trim().length === 0) {
+				return {
+					prefix: `+++++ ${getLastNUriRelativePathParts(workspaceUris, filepath, 2)}\n${prefix}`,
+				}
+			}
+			return { prefix }
+		}
+
+		const relativePaths = getShortestUniqueRelativeUriPaths(
+			[
+				...snippets.map((snippet) => ("filepath" in snippet ? snippet.filepath : "file:///Untitled.txt")),
+				filepath,
+			],
+			workspaceUris,
+		)
+
+		const otherFiles = snippets
+			.map((snippet, i) => {
+				if (snippet.type === AutocompleteSnippetType.Diff) {
+					return snippet.content
+				}
+
+				return `+++++ ${getFileName(relativePaths[i])} \n${snippet.content}`
+			})
+			.join("\n\n")
+
+		return {
+			prefix: `${otherFiles}\n\n+++++ ${getFileName(relativePaths[relativePaths.length - 1])}\n${prefix}`,
+		}
 	}
 }
