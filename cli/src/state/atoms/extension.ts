@@ -12,7 +12,6 @@ import type {
 	ProviderSettings,
 	McpServer,
 } from "../../types/messages.js"
-import { addCliOutputMessageAtom } from "./message-batching.js"
 
 /**
  * Atom to hold the complete ExtensionState
@@ -234,16 +233,6 @@ export const updateExtensionStateAtom = atom(null, async (get, set, state: Exten
 		})
 		set(streamingMessagesSetAtom, newStreamingSet)
 
-		// Batch newly added agent messages to backend
-		// Find messages that are new (not in current messages) and are agent messages (say/ask types)
-		const currentTimestamps = new Set(currentMessages.map((m) => m.ts))
-		const newAgentMessages = reconciledMessages.filter((msg) => !currentTimestamps.has(msg.ts) && msg.text)
-
-		// Batch new agent messages
-		for (const msg of newAgentMessages) {
-			await set(addCliOutputMessageAtom, msg)
-		}
-
 		// Sync other derived atoms
 		set(currentTaskAtom, state.currentTaskItem || null)
 		set(taskTodosAtom, state.currentTaskTodos || [])
@@ -354,10 +343,6 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 			newStreamingSet.delete(updatedMessage.ts)
 		}
 		set(streamingMessagesSetAtom, newStreamingSet)
-
-		if (!updatedMessage.partial && updatedMessage.text) {
-			set(addCliOutputMessageAtom, updatedMessage)
-		}
 	}
 })
 
