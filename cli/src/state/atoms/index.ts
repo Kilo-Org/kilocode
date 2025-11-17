@@ -179,7 +179,6 @@ export {
 // ============================================================================
 export {
 	// Message batching action atoms
-	addUserInputMessageAtom,
 	addCliOutputMessageAtom,
 	flushMessagesAtom,
 	cleanupMessageBatchingAtom,

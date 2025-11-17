@@ -12,6 +12,7 @@ import type {
 	ProviderSettings,
 	McpServer,
 } from "../../types/messages.js"
+import { addCliOutputMessageAtom } from "./message-batching.js"
 
 /**
  * Atom to hold the complete ExtensionState
@@ -196,7 +197,7 @@ export const inProgressTodosCountAtom = atom<number>((get) => {
  * This syncs all derived atoms with the new state
  * Uses intelligent message reconciliation to prevent flickering during streaming
  */
-export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionState | null) => {
+export const updateExtensionStateAtom = atom(null, async (get, set, state: ExtensionState | null) => {
 	const currentRouterModels = get(routerModelsAtom)
 	const currentMessages = get(chatMessagesAtom)
 	const versionMap = get(messageVersionMapAtom)
@@ -232,6 +233,16 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 			}
 		})
 		set(streamingMessagesSetAtom, newStreamingSet)
+
+		// Batch newly added agent messages to backend
+		// Find messages that are new (not in current messages) and are agent messages (say/ask types)
+		const currentTimestamps = new Set(currentMessages.map((m) => m.ts))
+		const newAgentMessages = reconciledMessages.filter((msg) => !currentTimestamps.has(msg.ts) && msg.text)
+
+		// Batch new agent messages
+		for (const msg of newAgentMessages) {
+			await set(addCliOutputMessageAtom, msg)
+		}
 
 		// Sync other derived atoms
 		set(currentTaskAtom, state.currentTaskItem || null)
@@ -343,6 +354,10 @@ export const updateChatMessageByTsAtom = atom(null, (get, set, updatedMessage: E
 			newStreamingSet.delete(updatedMessage.ts)
 		}
 		set(streamingMessagesSetAtom, newStreamingSet)
+
+		if (!updatedMessage.partial && updatedMessage.text) {
+			set(addCliOutputMessageAtom, updatedMessage)
+		}
 	}
 })
 

@@ -196,7 +196,7 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		set(addMessageAtom, systemMessage)
 
 		// Add CLI output to message batch for backend sync
-		await set(addCliOutputMessageAtom, fullOutput)
+		await set(addCliOutputMessageAtom, { ...systemMessage, type: "say" })
 	} catch (error: unknown) {
 		// Handle errors and display them in the message system
 
@@ -215,7 +215,7 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		set(addMessageAtom, errorMessage)
 
 		// Add CLI error output to message batch for backend sync
-		await set(addCliOutputMessageAtom, fullErrorOutput)
+		await set(addCliOutputMessageAtom, { ...errorMessage, type: "say" })
 	}
 
 	// Reset history navigation index

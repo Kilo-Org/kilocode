@@ -6,7 +6,6 @@
 import { useSetAtom } from "jotai"
 import { useCallback, useState } from "react"
 import { addMessageAtom } from "../atoms/ui.js"
-import { addUserInputMessageAtom } from "../atoms/message-batching.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
 import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
@@ -59,7 +58,6 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const { ciMode = false } = options
 	const [isSending, setIsSending] = useState(false)
 	const addMessage = useSetAtom(addMessageAtom)
-	const addUserInputMessage = useSetAtom(addUserInputMessageAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
 
@@ -103,9 +101,6 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 						text: trimmedText,
 					})
 				}
-
-				// Add user input to message batch for backend sync
-				await addUserInputMessage(trimmedText)
 			} catch (error) {
 				// Add error message if sending failed
 				const errorMessage: CliMessage = {

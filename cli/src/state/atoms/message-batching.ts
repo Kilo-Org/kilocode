@@ -6,20 +6,13 @@ import { atom } from "jotai"
 import { sessionIdAtom } from "./session.js"
 import { logs } from "../../services/logs.js"
 import { configAtom } from "./config.js"
-
-/**
- * Message type for batching
- */
-export interface BatchMessage {
-	message_type: "user_input" | "cli_output"
-	message: unknown
-}
+import { ExtensionChatMessage } from "src/types/messages.js"
 
 /**
  * State for message batching
  */
 interface MessageBatchState {
-	messages: BatchMessage[]
+	messages: ExtensionChatMessage[]
 	lastFlushTime: number
 	flushTimer: NodeJS.Timeout | null
 }
@@ -42,7 +35,7 @@ const FLUSH_INTERVAL_MS = 1000
 /**
  * Send batched messages to backend
  */
-async function sendBatchedMessages(sessionId: string, messages: BatchMessage[], token: string): Promise<void> {
+async function sendBatchedMessages(sessionId: string, messages: ExtensionChatMessage[], token: string): Promise<void> {
 	if (messages.length === 0) {
 		return
 	}
@@ -137,7 +130,7 @@ export const flushMessagesAtom = atom(null, async (get, set) => {
 /**
  * Action atom to add a message to the batch
  */
-export const addMessageToBatchAtom = atom(null, async (get, set, message: BatchMessage) => {
+export const addMessageToBatchAtom = atom(null, async (get, set, message: ExtensionChatMessage) => {
 	const batchState = get(messageBatchStateAtom)
 
 	// Add message to batch
@@ -183,23 +176,10 @@ export const addMessageToBatchAtom = atom(null, async (get, set, message: BatchM
 })
 
 /**
- * Action atom to add a user input message to the batch
- */
-export const addUserInputMessageAtom = atom(null, async (get, set, message: unknown) => {
-	await set(addMessageToBatchAtom, {
-		message_type: "user_input",
-		message,
-	})
-})
-
-/**
  * Action atom to add a CLI output message to the batch
  */
-export const addCliOutputMessageAtom = atom(null, async (get, set, message: unknown) => {
-	await set(addMessageToBatchAtom, {
-		message_type: "cli_output",
-		message,
-	})
+export const addCliOutputMessageAtom = atom(null, async (get, set, message: ExtensionChatMessage) => {
+	await set(addMessageToBatchAtom, message)
 })
 
 /**
