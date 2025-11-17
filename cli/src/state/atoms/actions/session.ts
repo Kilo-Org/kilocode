@@ -15,15 +15,13 @@ import { configAtom } from "../config.js"
 export const initializeSessionAtom = atom(null, async (get, set) => {
 	const config = get(configAtom)
 
-	// Check if API key is configured
-	const apiKey = config?.kilocodeApiKey
+	const token = config?.kilocodeToken
 
-	if (!apiKey) {
-		logs.debug("Kilocode API key not configured, skipping session creation", "Session")
+	if (!token) {
+		logs.debug("Kilocode token not configured, skipping session creation", "Session")
 		return null
 	}
 
-	// Check if session is already initialized
 	const existingSessionId = get(sessionIdAtom)
 	if (existingSessionId) {
 		logs.debug("Session already initialized", "Session", { sessionId: existingSessionId })
@@ -34,14 +32,13 @@ export const initializeSessionAtom = atom(null, async (get, set) => {
 	logs.info("Initializing CLI session...", "Session")
 
 	try {
-		const apiBaseUrl = "https://api.kilocode.app"
+		const apiBaseUrl = process.env.KILOCODE_BACKEND_BASE_URL || "https://api.kilocode.ai"
 
-		// Create session via API
 		const response = await fetch(`${apiBaseUrl}/api/trpc/sessions.create`, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: `Bearer ${apiKey}`,
+				Authorization: `Bearer ${token}`,
 			},
 			body: JSON.stringify({ title: "..." }),
 		})
@@ -53,11 +50,13 @@ export const initializeSessionAtom = atom(null, async (get, set) => {
 
 		const data = await response.json()
 
-		if (!data.session || !data.session.id) {
+		const sessionId = data?.result?.data?.session_id
+
+		if (!sessionId) {
+			logs.error("Failed to parse session ID from response", "Session", { data })
 			throw new Error("Invalid session response from backend")
 		}
 
-		const sessionId = data.session.id
 		logs.info("CLI session created successfully", "Session", { sessionId })
 
 		set(setSessionIdAtom, sessionId)

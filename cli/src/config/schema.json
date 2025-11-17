@@ -31,9 +31,9 @@
 				"$ref": "#/definitions/provider"
 			}
 		},
-		"kilocodeApiKey": {
+		"kilocodeToken": {
 			"type": "string",
-			"description": "Kilocode API key for backend session management"
+			"description": "Kilocode API token for backend session management"
 		},
 		"autoApproval": {
 			"type": "object",

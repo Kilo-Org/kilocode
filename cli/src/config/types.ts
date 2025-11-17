@@ -103,7 +103,7 @@ export interface CLIConfig {
 	autoApproval?: AutoApprovalConfig
 	theme?: ThemeId
 	customThemes?: Record<string, Theme>
-	kilocodeApiKey?: string
+	kilocodeToken?: string
 }
 
 // Base provider config with common fields

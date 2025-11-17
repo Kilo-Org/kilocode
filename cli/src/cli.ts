@@ -130,16 +130,14 @@ export class CLI {
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
-			// Initialize CLI session with backend (if API key is configured)
+			// Initialize CLI session with backend (if token is configured)
 			try {
 				const sessionId = await this.store.set(initializeSessionAtom)
+
 				if (sessionId) {
-					// Display boot message with session ID
-					console.log(`\nStarting session ${sessionId}\n`)
 					logs.info("CLI session ready", "CLI", { sessionId })
 				}
 			} catch (error) {
-				// Session initialization is optional - continue without session
 				logs.warn("Session initialization failed, continuing without session", "CLI", { error })
 			}
 
