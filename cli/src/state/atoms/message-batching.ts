@@ -187,7 +187,7 @@ export function getMessageKey(message: UnifiedMessage): string {
 	return `${baseKey}-${content.length}-${partial}`
 }
 
-const seenMessageKeys: string[] = []
+const sentMessages = new Set<string>()
 
 /**
  * Effect atom that batches extension messages when new messages are added
@@ -197,21 +197,19 @@ const seenMessageKeys: string[] = []
 export const batchNewMessagesEffectAtom = atom(null, (get, set) => {
 	const messages = get(mergedMessagesAtom)
 
-	for (let i = 0; i < messages.length; i++) {
-		const message = messages[i]
-
-		if (message?.source === "cli" || !message) {
+	for (const message of messages) {
+		if (
+			message.source === "cli" ||
+			message.message.partial ||
+			!message.message.text ||
+			sentMessages.has(getMessageKey(message))
+		) {
 			continue
 		}
 
-		const messageKey = getMessageKey(message)
-		const seenMessageKey = seenMessageKeys[i]
+		sentMessages.add(getMessageKey(message))
 
-		if (messageKey !== seenMessageKey) {
-			set(addMessageToBatchAtom, message?.message)
-
-			seenMessageKeys[i] = messageKey
-		}
+		set(addMessageToBatchAtom, message?.message)
 	}
 })
 
