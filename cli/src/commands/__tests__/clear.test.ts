@@ -2,52 +2,18 @@
  * Tests for the /clear command
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, vi } from "vitest"
 import { clearCommand } from "../clear.js"
 import type { CommandContext } from "../core/types.js"
+import { createMockContext } from "./helpers/mockContext.js"
 
 describe("clearCommand", () => {
 	let mockContext: CommandContext
 
 	beforeEach(() => {
-		mockContext = {
+		mockContext = createMockContext({
 			input: "/clear",
-			args: [],
-			options: {},
-			sendMessage: vi.fn().mockResolvedValue(undefined),
-			addMessage: vi.fn(),
-			clearMessages: vi.fn(),
-			replaceMessages: vi.fn(),
-			setMessageCutoffTimestamp: vi.fn(),
-			clearTask: vi.fn().mockResolvedValue(undefined),
-			setMode: vi.fn(),
-			exit: vi.fn(),
-			routerModels: null,
-			currentProvider: null,
-			kilocodeDefaultModel: "",
-			updateProviderModel: vi.fn().mockResolvedValue(undefined),
-			refreshRouterModels: vi.fn().mockResolvedValue(undefined),
-			updateProvider: vi.fn().mockResolvedValue(undefined),
-			profileData: null,
-			balanceData: null,
-			profileLoading: false,
-			balanceLoading: false,
-			refreshTerminal: vi.fn().mockResolvedValue(undefined),
-			taskHistoryData: null,
-			taskHistoryFilters: {
-				workspace: "current",
-				sort: "newest",
-				favoritesOnly: false,
-			},
-			taskHistoryLoading: false,
-			taskHistoryError: null,
-			fetchTaskHistory: vi.fn().mockResolvedValue(undefined),
-			updateTaskHistoryFilters: vi.fn().mockResolvedValue(null),
-			changeTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			nextTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			previousTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
-		}
+		})
 	})
 
 	describe("command metadata", () => {
@@ -87,7 +53,7 @@ describe("clearCommand", () => {
 			const afterTime = Date.now()
 
 			expect(mockContext.setMessageCutoffTimestamp).toHaveBeenCalledTimes(1)
-			const timestamp = (mockContext.setMessageCutoffTimestamp as any).mock.calls[0][0]
+			const timestamp = (mockContext.setMessageCutoffTimestamp as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(timestamp).toBeGreaterThanOrEqual(beforeTime)
 			expect(timestamp).toBeLessThanOrEqual(afterTime)
 		})

@@ -5,6 +5,7 @@ import type { CLIConfig, AutoApprovalConfig } from "./types.js"
 import { DEFAULT_CONFIG, DEFAULT_AUTO_APPROVAL } from "./defaults.js"
 import { validateConfig, type ValidationResult } from "./validation.js"
 import { logs } from "../services/logs.js"
+import { buildConfigFromEnv, isEphemeralMode } from "./env-config.js"
 
 /**
  * Result of loading config, includes both the config and validation status
@@ -121,7 +122,30 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 	try {
 		await ensureConfigDir()
 
+		// Check if we can build config from environment variables
 		if (!(await configExists())) {
+			// Try to build config from environment variables
+			const envConfig = buildConfigFromEnv()
+
+			if (envConfig) {
+				logs.info("Using configuration from environment variables (ephemeral mode)", "ConfigPersistence")
+
+				// Validate the env config
+				const validation = await validateConfig(envConfig)
+
+				// Don't write to file in ephemeral mode
+				if (!isEphemeralMode()) {
+					logs.debug("Writing env-based config to file", "ConfigPersistence")
+					await fs.writeFile(configFile, JSON.stringify(envConfig, null, 2))
+				}
+
+				return {
+					config: envConfig,
+					validation,
+				}
+			}
+
+			// No env config available, create default config file
 			// File doesn't exist, write default config directly without validation
 			// (DEFAULT_CONFIG may have empty credentials which is ok for initial setup)
 			await fs.writeFile(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2))

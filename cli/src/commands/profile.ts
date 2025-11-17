@@ -2,13 +2,13 @@
  * /profile command - View user profile information
  */
 
-import type { Command } from "./core/types.js"
+import type { Command, CommandContext } from "./core/types.js"
 import type { UserOrganization } from "../state/atoms/profile.js"
 
 /**
  * Show user profile information
  */
-async function showProfile(context: any): Promise<void> {
+async function showProfile(context: CommandContext): Promise<void> {
 	const { currentProvider, addMessage, profileData, balanceData, profileLoading, balanceLoading } = context
 
 	// Check if user is authenticated with Kilocode
@@ -44,6 +44,16 @@ async function showProfile(context: any): Promise<void> {
 	}
 
 	// Display profile information
+	if (!profileData) {
+		addMessage({
+			id: Date.now().toString(),
+			type: "error",
+			content: "No profile data available",
+			ts: Date.now(),
+		})
+		return
+	}
+
 	const user = profileData.user
 
 	if (!user) {
@@ -73,7 +83,7 @@ async function showProfile(context: any): Promise<void> {
 
 	// Show current organization if set
 	const currentOrgId = currentProvider.kilocodeOrganizationId
-	if (currentOrgId && profileData.organizations) {
+	if (currentOrgId && profileData?.organizations) {
 		const currentOrg = profileData.organizations.find((org: UserOrganization) => org.id === currentOrgId)
 		if (currentOrg) {
 			content += `Teams: ${currentOrg.name} (${currentOrg.role})\n`

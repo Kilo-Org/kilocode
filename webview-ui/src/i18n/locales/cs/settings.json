@@ -242,6 +242,8 @@
 		"providerDocumentation": "Dokumentace {{provider}}",
 		"configProfile": "Konfigurační profil",
 		"description": "Uložte si různé konfigurace API pro rychlé přepínání mezi poskytovateli a nastaveními.",
+		"makeActiveProfile": "Nastavit jako aktivní profil",
+		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
 		"apiProvider": "Poskytovatel API",
 		"model": "Model",
 		"nameEmpty": "Jméno nemůže být prázdné",

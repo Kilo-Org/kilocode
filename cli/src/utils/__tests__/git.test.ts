@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { getGitInfo, getGitBranch, branchExists, generateBranchName, isGitWorktree } from "../git.js"
-import simpleGit from "simple-git"
+import simpleGit, { SimpleGit } from "simple-git"
 
 // Mock simple-git
 vi.mock("simple-git")
@@ -25,10 +25,10 @@ describe("git utilities", () => {
 		})
 
 		it("should return default info for non-git directory", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(false),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitInfo("/some/path")
 			expect(result).toEqual({
@@ -39,12 +39,12 @@ describe("git utilities", () => {
 		})
 
 		it("should return git info for clean repository", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				revparse: vi.fn().mockResolvedValue("main\n"),
 				status: vi.fn().mockResolvedValue({ files: [] }),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitInfo("/git/repo")
 			expect(result).toEqual({
@@ -55,14 +55,14 @@ describe("git utilities", () => {
 		})
 
 		it("should return git info for dirty repository", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				revparse: vi.fn().mockResolvedValue("feature-branch\n"),
 				status: vi.fn().mockResolvedValue({
 					files: [{ path: "file.txt", working_dir: "M" }],
 				}),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitInfo("/git/repo")
 			expect(result).toEqual({
@@ -73,10 +73,10 @@ describe("git utilities", () => {
 		})
 
 		it("should handle errors gracefully", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitInfo("/git/repo")
 			expect(result).toEqual({
@@ -94,31 +94,31 @@ describe("git utilities", () => {
 		})
 
 		it("should return null for non-git directory", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(false),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitBranch("/some/path")
 			expect(result).toBeNull()
 		})
 
 		it("should return branch name", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				revparse: vi.fn().mockResolvedValue("develop\n"),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitBranch("/git/repo")
 			expect(result).toBe("develop")
 		})
 
 		it("should handle errors gracefully", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await getGitBranch("/git/repo")
 			expect(result).toBeNull()
@@ -137,59 +137,59 @@ describe("git utilities", () => {
 		})
 
 		it("should return false for non-git directory", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(false),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await branchExists("/some/path", "main")
 			expect(result).toBe(false)
 		})
 
 		it("should return true when local branch exists", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				branch: vi.fn().mockResolvedValue({
 					all: ["main", "develop", "feature-branch"],
 				}),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await branchExists("/git/repo", "feature-branch")
 			expect(result).toBe(true)
 		})
 
 		it("should return true when remote branch exists", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				branch: vi.fn().mockResolvedValue({
 					all: ["main", "remotes/origin/feature-branch"],
 				}),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await branchExists("/git/repo", "feature-branch")
 			expect(result).toBe(true)
 		})
 
 		it("should return false when branch does not exist", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				branch: vi.fn().mockResolvedValue({
 					all: ["main", "develop"],
 				}),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await branchExists("/git/repo", "nonexistent")
 			expect(result).toBe(false)
 		})
 
 		it("should handle errors gracefully", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await branchExists("/git/repo", "main")
 			expect(result).toBe(false)
@@ -265,42 +265,42 @@ describe("git utilities", () => {
 		})
 
 		it("should return false for non-git directory", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(false),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await isGitWorktree("/some/path")
 			expect(result).toBe(false)
 		})
 
 		it("should return false for regular git repository", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				revparse: vi.fn().mockResolvedValue(".git\n"),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await isGitWorktree("/git/repo")
 			expect(result).toBe(false)
 		})
 
 		it("should return true for git worktree", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockResolvedValue(true),
 				revparse: vi.fn().mockResolvedValue("/path/to/.git/worktrees/feature-branch\n"),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await isGitWorktree("/git/worktree")
 			expect(result).toBe(true)
 		})
 
 		it("should handle errors gracefully", async () => {
-			const mockGit = {
+			const mockGit: Partial<SimpleGit> = {
 				checkIsRepo: vi.fn().mockRejectedValue(new Error("Git error")),
 			}
-			vi.mocked(simpleGit).mockReturnValue(mockGit as any)
+			vi.mocked(simpleGit).mockReturnValue(mockGit as SimpleGit)
 
 			const result = await isGitWorktree("/git/repo")
 			expect(result).toBe(false)

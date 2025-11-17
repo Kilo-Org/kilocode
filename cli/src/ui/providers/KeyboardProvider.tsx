@@ -9,7 +9,7 @@ import { useSetAtom, useAtomValue } from "jotai"
 import { useStdin } from "ink"
 import readline from "node:readline"
 import { PassThrough } from "node:stream"
-import type { KeyboardProviderConfig } from "../../types/keyboard.js"
+import type { KeyboardProviderConfig, ReadlineKey } from "../../types/keyboard.js"
 import { logs } from "../../services/logs.js"
 import {
 	broadcastKeyEventAtom,
@@ -162,7 +162,7 @@ export function KeyboardProvider({ children, config = {} }: KeyboardProviderProp
 		readline.emitKeypressEvents(keypressStream, rl)
 
 		// Handle keypress events from readline
-		const handleKeypress = (_: unknown, key: any) => {
+		const handleKeypress = (_: unknown, key: ReadlineKey) => {
 			if (!key) return
 
 			// Parse the key

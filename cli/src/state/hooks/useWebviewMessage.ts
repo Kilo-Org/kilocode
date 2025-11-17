@@ -5,7 +5,7 @@
 
 import { useSetAtom } from "jotai"
 import { useCallback, useMemo } from "react"
-import type { WebviewMessage } from "../../types/messages.js"
+import type { WebviewMessage, ClineAskResponse } from "../../types/messages.js"
 import {
 	sendWebviewMessageAtom,
 	sendTaskAtom,
@@ -42,8 +42,8 @@ export interface SendTaskParams {
  * Parameters for sending an ask response
  */
 export interface SendAskResponseParams {
-	/** The response text */
-	response?: string
+	/** The response type */
+	response?: ClineAskResponse
 	/** The action to take */
 	action?: string
 	/** Additional text */
@@ -57,7 +57,7 @@ export interface SendAskResponseParams {
  */
 export interface RespondToToolParams {
 	/** Whether to approve or reject */
-	response: "yesButtonTapped" | "noButtonTapped"
+	response: "yesButtonClicked" | "noButtonClicked"
 	/** Optional feedback text */
 	text?: string
 	/** Optional images */
@@ -87,7 +87,7 @@ export interface UseWebviewMessageReturn {
 	/** Respond to a tool use request */
 	respondToTool: (params: RespondToToolParams) => Promise<void>
 	/** Send API configuration */
-	sendApiConfiguration: (config: any) => Promise<void>
+	sendApiConfiguration: (config: unknown) => Promise<void>
 	/** Send custom instructions */
 	sendCustomInstructions: (instructions: string) => Promise<void>
 	/** Send always allow setting */
@@ -200,8 +200,8 @@ export function useWebviewMessage(): UseWebviewMessageReturn {
 	)
 
 	const sendApiConfiguration = useCallback(
-		async (config: any) => {
-			await sendApiConfigurationAction(config)
+		async (config: unknown) => {
+			await sendApiConfigurationAction(config as Parameters<typeof sendApiConfigurationAction>[0])
 		},
 		[sendApiConfigurationAction],
 	)

@@ -48,7 +48,6 @@ function arraysEqual<T>(a: T[], b: T[]): boolean {
  * - Feature branch: Only scans files changed from main (delta)
  *
  * @param config Managed indexing configuration
- * @param context VSCode extension context
  * @param manifest Optional server manifest for intelligent delta indexing
  * @param onProgress Optional progress callback
  * @param forceFullScan Force a full scan even on feature branches (used when server has no data)
@@ -56,7 +55,6 @@ function arraysEqual<T>(a: T[], b: T[]): boolean {
  */
 export async function scanDirectory(
 	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
 	manifest?: ServerManifest,
 	onProgress?: (progress: ScanProgress) => void,
 	forceFullScan: boolean = false,
@@ -79,7 +77,7 @@ export async function scanDirectory(
 		console.info(`Scanning ${filesToScan.length} files on branch ${currentBranch} (isBase: ${isBase})`)
 
 		// Process files with manifest for intelligent skipping
-		const result = await processFiles(filesToScan, config, context, currentBranch, isBase, manifest, onProgress)
+		const result = await processFiles(filesToScan, config, currentBranch, isBase, manifest, onProgress)
 
 		return {
 			success: result.errors.length === 0,
@@ -184,7 +182,6 @@ async function getAllSupportedFiles(workspacePath: string): Promise<string[]> {
  *
  * @param filePaths Files to process
  * @param config Indexing configuration
- * @param context VSCode extension context
  * @param gitBranch Current git branch
  * @param isBase Whether this is a base branch
  * @param manifest Optional server manifest for intelligent skipping
@@ -194,7 +191,6 @@ async function getAllSupportedFiles(workspacePath: string): Promise<string[]> {
 async function processFiles(
 	filePaths: string[],
 	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
 	gitBranch: string,
 	isBase: boolean,
 	manifest?: ServerManifest,
@@ -323,107 +319,5 @@ async function processFiles(
 		filesSkipped,
 		chunksIndexed,
 		errors,
-	}
-}
-
-/**
- * Indexes a single file
- *
- * This is used by the file watcher for incremental updates.
- *
- * @param filePath Absolute file path
- * @param config Indexing configuration
- * @param context VSCode extension context
- */
-export async function indexFile(
-	filePath: string,
-	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
-): Promise<void> {
-	try {
-		// Get current branch
-		const gitBranch = await getCurrentBranch(config.workspacePath)
-		const isBase = await checkIsBaseBranch(gitBranch, config.workspacePath)
-
-		// Check file size
-		const stats = await stat(filePath)
-		if (stats.size > MAX_FILE_SIZE_BYTES) {
-			console.warn(`Skipping large file: ${filePath} (${stats.size} bytes)`)
-			return
-		}
-
-		// Read file content
-		const content = await vscode.workspace.fs
-			.readFile(vscode.Uri.file(filePath))
-			.then((buffer) => Buffer.from(buffer).toString("utf-8"))
-
-		// Calculate file hash
-		const fileHash = calculateFileHash(content)
-
-		// Get relative path
-		const relativeFilePath = generateRelativeFilePath(filePath, config.workspacePath)
-
-		// Delete old chunks for this file on this branch
-		await deleteFiles([relativeFilePath], gitBranch, config.organizationId, config.projectId, config.kilocodeToken)
-
-		// Chunk the file
-		const chunks = chunkFile({
-			filePath: relativeFilePath,
-			content,
-			fileHash,
-			organizationId: config.organizationId,
-			projectId: config.projectId,
-			gitBranch,
-			isBaseBranch: isBase,
-			config: config.chunker,
-		})
-
-		// Upsert new chunks
-		await upsertChunks(chunks, config.kilocodeToken)
-
-		console.info(`Indexed file: ${relativeFilePath} (${chunks.length} chunks)`)
-	} catch (error) {
-		const err = error instanceof Error ? error : new Error(String(error))
-		console.error(`Failed to index file ${filePath}: ${err.message}`)
-		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-			error: err.message,
-			stack: err.stack,
-			location: "indexFile",
-			filePath,
-		})
-		throw err
-	}
-}
-
-/**
- * Handles file deletion
- *
- * @param filePath Absolute file path
- * @param config Indexing configuration
- * @param context VSCode extension context
- */
-export async function handleFileDeleted(
-	filePath: string,
-	config: ManagedIndexingConfig,
-	context: vscode.ExtensionContext,
-): Promise<void> {
-	try {
-		const gitBranch = await getCurrentBranch(config.workspacePath)
-		const relativeFilePath = generateRelativeFilePath(filePath, config.workspacePath)
-
-		// Delete chunks from server
-		await deleteFiles([relativeFilePath], gitBranch, config.organizationId, config.projectId, config.kilocodeToken)
-
-		console.info(`Deleted file from index: ${relativeFilePath}`)
-	} catch (error) {
-		const err = error instanceof Error ? error : new Error(String(error))
-		console.error(`Failed to handle file deletion ${filePath}: ${err.message}`)
-		TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-			error: err.message,
-			stack: err.stack,
-			location: "handleFileDeleted",
-			filePath,
-		})
-		throw err
 	}
 }

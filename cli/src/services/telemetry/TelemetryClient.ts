@@ -14,7 +14,7 @@ import { logs } from "../logs.js"
  */
 interface QueuedEvent {
 	event: string
-	properties: Record<string, any>
+	properties: Record<string, unknown>
 	timestamp: number
 	retryCount: number
 }
@@ -126,7 +126,7 @@ export class TelemetryClient {
 	/**
 	 * Capture a telemetry event
 	 */
-	public capture(event: TelemetryEvent, properties: Record<string, any> = {}): void {
+	public capture(event: TelemetryEvent, properties: Record<string, unknown> = {}): void {
 		if (!this.config.enabled || !this.client || !this.identity || this.isShuttingDown) {
 			return
 		}
@@ -164,7 +164,7 @@ export class TelemetryClient {
 	/**
 	 * Capture an exception
 	 */
-	public captureException(error: Error, properties: Record<string, any> = {}): void {
+	public captureException(error: Error, properties: Record<string, unknown> = {}): void {
 		this.capture(TelemetryEvent.EXCEPTION_CAUGHT, {
 			errorType: error.name,
 			errorMessage: error.message,
@@ -191,7 +191,12 @@ export class TelemetryClient {
 	/**
 	 * Track API request
 	 */
-	public trackApiRequest(provider: string, model: string, responseTime: number, tokens?: any): void {
+	public trackApiRequest(
+		provider: string,
+		model: string,
+		responseTime: number,
+		tokens?: Record<string, unknown>,
+	): void {
 		this.performanceMetrics.totalApiRequests++
 		this.performanceMetrics.apiResponseTimes.push(responseTime)
 
@@ -229,7 +234,7 @@ export class TelemetryClient {
 	/**
 	 * Get performance metrics
 	 */
-	public getPerformanceMetrics(): any {
+	public getPerformanceMetrics(): Record<string, unknown> {
 		const memory = process.memoryUsage()
 
 		return {

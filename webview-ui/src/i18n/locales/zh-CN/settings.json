@@ -234,6 +234,8 @@
 		"providerDocumentation": "{{provider}} 文档",
 		"configProfile": "配置文件",
 		"description": "保存多组API配置便于快速切换",
+		"makeActiveProfile": "设为活动配置",
+		"makeActiveTooltip": "激活此配置用于 API 请求",
 		"apiProvider": "API提供商",
 		"model": "模型",
 		"nameEmpty": "名称不能为空",

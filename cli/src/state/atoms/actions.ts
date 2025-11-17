@@ -4,7 +4,7 @@
  */
 
 import { atom } from "jotai"
-import type { WebviewMessage } from "../../types/messages.js"
+import type { WebviewMessage, ProviderSettings, ClineAskResponse } from "../../types/messages.js"
 import { extensionServiceAtom, isServiceReadyAtom, setServiceErrorAtom } from "./service.js"
 import { resetMessageCutoffAtom } from "./ui.js"
 import { logs } from "../../services/logs.js"
@@ -68,16 +68,22 @@ export const sendTaskAtom = atom(null, async (get, set, params: { text: string; 
  */
 export const sendAskResponseAtom = atom(
 	null,
-	async (get, set, params: { response?: string; action?: string; text?: string; images?: string[] }) => {
+	async (
+		get,
+		set,
+		params: {
+			response?: ClineAskResponse
+			action?: string
+			text?: string
+			images?: string[]
+		},
+	) => {
 		const message: WebviewMessage = {
 			type: "askResponse",
 		}
 
 		if (params.response) {
-			message.askResponse = params.response
-		}
-		if (params.action) {
-			message.action = params.action
+			message.askResponse = params.response || "messageResponse"
 		}
 		if (params.text) {
 			message.text = params.text
@@ -169,9 +175,14 @@ export const switchModeAtom = atom(null, async (get, set, mode: string) => {
  */
 export const respondToToolAtom = atom(
 	null,
-	async (get, set, params: { response: "yesButtonTapped" | "noButtonTapped"; text?: string; images?: string[] }) => {
+	async (
+		get,
+		set,
+		params: { response: "yesButtonClicked" | "noButtonClicked"; text?: string; images?: string[] },
+	) => {
 		const message: WebviewMessage = {
-			type: params.response,
+			type: "askResponse",
+			askResponse: params.response,
 			...(params.text && { text: params.text }),
 			...(params.images && { images: params.images }),
 		}
@@ -183,9 +194,10 @@ export const respondToToolAtom = atom(
 /**
  * Action atom to send API configuration
  */
-export const sendApiConfigurationAtom = atom(null, async (get, set, apiConfiguration: any) => {
+export const sendApiConfigurationAtom = atom(null, async (_get, set, apiConfiguration: ProviderSettings) => {
 	const message: WebviewMessage = {
-		type: "apiConfiguration",
+		type: "upsertApiConfiguration",
+		text: "default",
 		apiConfiguration,
 	}
 
@@ -209,7 +221,7 @@ export const sendCustomInstructionsAtom = atom(null, async (get, set, instructio
  */
 export const sendAlwaysAllowAtom = atom(null, async (get, set, alwaysAllow: boolean) => {
 	const message: WebviewMessage = {
-		type: "alwaysAllow",
+		type: "alwaysAllowMcp",
 		bool: alwaysAllow,
 	}
 
@@ -217,7 +229,7 @@ export const sendAlwaysAllowAtom = atom(null, async (get, set, alwaysAllow: bool
 })
 
 /**
- * Action atom to open a file in the editor
+ * Action atom to open a file in the editorMcp
  */
 export const openFileAtom = atom(null, async (get, set, filePath: string) => {
 	const message: WebviewMessage = {
@@ -233,7 +245,7 @@ export const openFileAtom = atom(null, async (get, set, filePath: string) => {
  */
 export const openSettingsAtom = atom(null, async (get, set) => {
 	const message: WebviewMessage = {
-		type: "openSettings",
+		type: "openExtensionSettings",
 	}
 
 	await set(sendWebviewMessageAtom, message)
@@ -267,7 +279,8 @@ export const refreshStateAtom = atom(null, async (get) => {
  */
 export const sendPrimaryButtonClickAtom = atom(null, async (get, set) => {
 	const message: WebviewMessage = {
-		type: "primaryButtonClick",
+		type: "askResponse",
+		askResponse: "yesButtonClicked",
 	}
 
 	await set(sendWebviewMessageAtom, message)
@@ -278,7 +291,8 @@ export const sendPrimaryButtonClickAtom = atom(null, async (get, set) => {
  */
 export const sendSecondaryButtonClickAtom = atom(null, async (get, set) => {
 	const message: WebviewMessage = {
-		type: "secondaryButtonClick",
+		type: "askResponse",
+		askResponse: "noButtonClicked",
 	}
 
 	await set(sendWebviewMessageAtom, message)

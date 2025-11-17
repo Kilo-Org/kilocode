@@ -233,6 +233,8 @@
 		"providerDocumentation": "Documentació de {{provider}}",
 		"configProfile": "Perfil de configuració",
 		"description": "Deseu diferents configuracions d'API per canviar ràpidament entre proveïdors i configuracions.",
+		"makeActiveProfile": "Fer perfil actiu",
+		"makeActiveTooltip": "Activa aquest perfil per utilitzar-lo per a sol·licituds d'API",
 		"apiProvider": "Proveïdor d'API",
 		"model": "Model",
 		"nameEmpty": "El nom no pot estar buit",

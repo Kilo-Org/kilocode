@@ -269,7 +269,7 @@
 		"description": "Pilih bagaimana panggilan tool diformat dalam prompt sistem. JSON saat ini bersifat eksperimental dan sebagian besar ditujukan untuk pengguna yang tertarik berkontribusi pada pengembangannya.",
 		"automatic": "Biarkan Kilo yang memutuskan",
 		"xml": "XML",
-		"json": "JSON (eksperimental)"
+		"json": "JSON"
 	},
 	"marketplace": {
 		"mcp": {

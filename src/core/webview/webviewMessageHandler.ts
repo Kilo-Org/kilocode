@@ -2202,8 +2202,12 @@ export const webviewMessageHandler = async (
 					// Config might not exist yet, that's fine
 				}
 
-				await provider.upsertProviderProfile(message.text, configToSave)
-				vscode.commands.executeCommand("kilo-code.ghost.reload") // kilocode_change: Reload ghost model when API provider settings change
+				// kilocode_change start: If we're updating the active profile, we need to activate it to ensure it's persisted
+				const currentApiConfigName = getGlobalState("currentApiConfigName")
+				const isActiveProfile = message.text === currentApiConfigName
+				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
+				vscode.commands.executeCommand("kilo-code.ghost.reload")
+				// kilocode_change end
 
 				// Ensure state is posted to webview after profile update to reflect organization mode changes
 				if (organizationChanged) {
@@ -2266,6 +2270,21 @@ export const webviewMessageHandler = async (
 				}
 			}
 			break
+		// kilocode_change start: Load profile configuration for editing without activating
+		case "getProfileConfigurationForEditing":
+			if (message.text) {
+				const { name: _, ...profileConfig } = await provider.providerSettingsManager.getProfile({
+					name: message.text,
+				})
+				// Send the configuration back to the webview without activating it
+				await provider.postMessageToWebview({
+					type: "profileConfigurationForEditing",
+					text: message.text,
+					apiConfiguration: profileConfig,
+				})
+			}
+			break
+		// kilocode_change end
 		case "deleteApiConfiguration":
 			if (message.text) {
 				const answer = await vscode.window.showInformationMessage(

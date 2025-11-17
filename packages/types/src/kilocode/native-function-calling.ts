@@ -21,12 +21,24 @@ export const nativeFunctionCallingProviders = [
 	"human-relay",
 	"qwen-code",
 	"inception",
+	"litellm",
 	"minimax",
 	"anthropic",
 	"moonshot",
 ] satisfies ProviderName[] as ProviderName[]
 
-const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5", "minimax-m2"]
+const modelsDefaultingToJsonKeywords = [
+	"claude-haiku-4.5",
+	"claude-haiku-4-5",
+	"gpt-5-codex",
+	"gpt-5.1-codex",
+	"minimax-m2",
+]
+
+//Specific providers that default to JSON tool use, regardless of model.
+const providersDefaultingToJsonKeywords = [
+	"synthetic", //All synthetic models support JSON tools, and their pricing model strongly encourages their use
+]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {
 	if (!settings) {
@@ -43,6 +55,9 @@ export function getActiveToolUseStyle(settings: ProviderSettings | undefined): T
 	if (!model) {
 		console.error("getActiveToolUseStyle: model missing, returning xml")
 		return "xml"
+	}
+	if (providersDefaultingToJsonKeywords.includes(settings.apiProvider as ProviderName)) {
+		return "json" //providers that always use json
 	}
 	return modelsDefaultingToJsonKeywords.some((keyword) => model.includes(keyword)) ? "json" : "xml"
 }

@@ -28,7 +28,8 @@ describe("ExtensionHost Error Isolation", () => {
 	describe("Error Classification", () => {
 		it("should identify task abortion errors as expected", () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const isExpectedError = (extensionHost as any).isExpectedError
+			const isExpectedError = (extensionHost as unknown as { isExpectedError: (error: unknown) => boolean })
+				.isExpectedError
 
 			const taskAbortError = new Error("[Task#presentAssistantMessage] task 123.456 aborted")
 			expect(isExpectedError(taskAbortError)).toBe(true)
@@ -36,7 +37,8 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should identify other errors as unexpected", () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const isExpectedError = (extensionHost as any).isExpectedError
+			const isExpectedError = (extensionHost as unknown as { isExpectedError: (error: unknown) => boolean })
+				.isExpectedError
 
 			const genericError = new Error("Something went wrong")
 			expect(isExpectedError(genericError)).toBe(false)
@@ -44,7 +46,8 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should handle null/undefined errors", () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const isExpectedError = (extensionHost as any).isExpectedError
+			const isExpectedError = (extensionHost as unknown as { isExpectedError: (error: unknown) => boolean })
+				.isExpectedError
 
 			expect(isExpectedError(null)).toBe(false)
 			expect(isExpectedError(undefined)).toBe(false)
@@ -54,7 +57,11 @@ describe("ExtensionHost Error Isolation", () => {
 	describe("Safe Execution", () => {
 		it("should execute successful operations normally", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
 			const result = await safeExecute(() => "success", "test-operation")
 			expect(result).toBe("success")
@@ -62,7 +69,11 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should catch and log unexpected errors", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
 			const errorSpy = vi.fn()
 			extensionHost.on("extension-error", errorSpy)
@@ -93,7 +104,11 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should not emit events for expected errors", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
 			const errorSpy = vi.fn()
 			extensionHost.on("extension-error", errorSpy)
@@ -113,9 +128,13 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should track error count", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
-			const health = (extensionHost as any).extensionHealth
+			const health = (extensionHost as unknown as { extensionHealth: { errorCount: number } }).extensionHealth
 			expect(health.errorCount).toBe(0)
 
 			await safeExecute(() => {
@@ -131,9 +150,15 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should update last error information", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
-			const health = (extensionHost as any).extensionHealth
+			const health = (
+				extensionHost as unknown as { extensionHealth: { lastError: Error | null; lastErrorTime: number } }
+			).extensionHealth
 			const testError = new Error("Test error")
 
 			await safeExecute(() => {
@@ -148,9 +173,13 @@ describe("ExtensionHost Error Isolation", () => {
 	describe("Error Event Handling", () => {
 		it("should emit extension-error events with correct structure", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
-			const errorEvents: any[] = []
+			const errorEvents: Array<{ context: string; error: Error; recoverable: boolean; timestamp: number }> = []
 			extensionHost.on("extension-error", (event) => errorEvents.push(event))
 
 			const testError = new Error("Test error")
@@ -169,7 +198,11 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should not emit legacy error events", async () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const safeExecute = (extensionHost as any).safeExecute.bind(extensionHost)
+			const safeExecute = (
+				extensionHost as unknown as {
+					safeExecute: <T>(fn: () => T, context: string, fallback?: T) => Promise<T>
+				}
+			).safeExecute.bind(extensionHost)
 
 			const errorSpy = vi.fn()
 			extensionHost.on("error", errorSpy)
@@ -186,7 +219,16 @@ describe("ExtensionHost Error Isolation", () => {
 	describe("Health Tracking", () => {
 		it("should initialize with healthy state", () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const health = (extensionHost as any).extensionHealth
+			const health = (
+				extensionHost as unknown as {
+					extensionHealth: {
+						isHealthy: boolean
+						errorCount: number
+						lastError: Error | null
+						lastErrorTime: number
+					}
+				}
+			).extensionHealth
 
 			expect(health.isHealthy).toBe(true)
 			expect(health.errorCount).toBe(0)
@@ -196,7 +238,17 @@ describe("ExtensionHost Error Isolation", () => {
 
 		it("should provide health information", () => {
 			extensionHost = new ExtensionHost(mockOptions)
-			const health = (extensionHost as any).extensionHealth
+			const health = (
+				extensionHost as unknown as {
+					extensionHealth: {
+						isHealthy: boolean
+						errorCount: number
+						lastError: Error | null
+						lastErrorTime: number
+						maxErrorsBeforeWarning: number
+					}
+				}
+			).extensionHealth
 
 			expect(health).toMatchObject({
 				isHealthy: true,

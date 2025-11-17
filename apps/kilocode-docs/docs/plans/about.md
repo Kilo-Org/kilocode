@@ -26,7 +26,7 @@ No credits are included with a Teams or Enterprise plan purchase.
 - **Complete transparency** - see every request, cost, and usage pattern
 - **Team management** - roles, permissions, and usage controls
 
-**Cost:** $29 per user per month
+**Cost:** $15 per user per month
 
 ## What You Get from Kilo Enterprise
 

@@ -2,7 +2,8 @@
  * /model command - View and manage AI models
  */
 
-import type { Command, ArgumentProviderContext } from "./core/types.js"
+import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
+import type { ModelInfo } from "../constants/providers/models.js"
 import {
 	getModelsByProvider,
 	getCurrentModelId,
@@ -16,7 +17,7 @@ import {
 /**
  * Ensure router models are loaded for the current provider
  */
-async function ensureRouterModels(context: any): Promise<boolean> {
+async function ensureRouterModels(context: CommandContext): Promise<boolean> {
 	const { currentProvider, routerModels, refreshRouterModels, addMessage } = context
 
 	if (!currentProvider) {
@@ -75,7 +76,7 @@ async function ensureRouterModels(context: any): Promise<boolean> {
 /**
  * Show current model information
  */
-async function showCurrentModel(context: any): Promise<void> {
+async function showCurrentModel(context: CommandContext): Promise<void> {
 	const { currentProvider, routerModels, kilocodeDefaultModel, addMessage } = context
 
 	if (!currentProvider) {
@@ -150,7 +151,7 @@ async function showCurrentModel(context: any): Promise<void> {
 /**
  * Show detailed model information
  */
-async function showModelInfo(context: any, modelId: string): Promise<void> {
+async function showModelInfo(context: CommandContext, modelId: string): Promise<void> {
 	const { currentProvider, routerModels, kilocodeDefaultModel, addMessage } = context
 
 	if (!currentProvider) {
@@ -249,7 +250,7 @@ async function showModelInfo(context: any, modelId: string): Promise<void> {
 /**
  * Select a different model
  */
-async function selectModel(context: any, modelId: string): Promise<void> {
+async function selectModel(context: CommandContext, modelId: string): Promise<void> {
 	const { currentProvider, routerModels, kilocodeDefaultModel, updateProviderModel, addMessage } = context
 
 	if (!currentProvider) {
@@ -317,7 +318,7 @@ async function selectModel(context: any, modelId: string): Promise<void> {
 /**
  * List all available models
  */
-async function listModels(context: any, filter?: string): Promise<void> {
+async function listModels(context: CommandContext, filter?: string): Promise<void> {
 	const { currentProvider, routerModels, kilocodeDefaultModel, addMessage } = context
 
 	if (!currentProvider) {
@@ -352,10 +353,13 @@ async function listModels(context: any, filter?: string): Promise<void> {
 	modelIds = sortModelsByPreference(
 		modelIds.reduce(
 			(acc, id) => {
-				acc[id] = models[id]
+				const model = models[id]
+				if (model) {
+					acc[id] = model
+				}
 				return acc
 			},
-			{} as Record<string, any>,
+			{} as Record<string, ModelInfo>,
 		),
 	)
 

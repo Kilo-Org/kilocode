@@ -219,7 +219,7 @@
 		"description": "Choose how tool calls are formatted in the system prompt. JSON is currently experimental and mostly intended for users interested in contributing to its development.",
 		"automatic": "Let Kilo decide",
 		"xml": "XML",
-		"json": "JSON (experimental)"
+		"json": "JSON"
 	},
 	"ghost": {
 		"title": "Autocomplete",

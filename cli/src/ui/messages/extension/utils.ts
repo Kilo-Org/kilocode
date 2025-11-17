@@ -5,7 +5,7 @@ import type { ToolData, McpServerData, FollowUpData, ApiReqInfo, ImageData } fro
 /**
  * Parse JSON from message text safely
  */
-export function parseMessageJson<T = any>(text?: string): T | null {
+export function parseMessageJson<T = unknown>(text?: string): T | null {
 	if (!text) return null
 	try {
 		return JSON.parse(text) as T

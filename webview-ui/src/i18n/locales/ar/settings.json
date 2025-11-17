@@ -242,6 +242,8 @@
 		"providerDocumentation": "توثيق {{provider}}",
 		"configProfile": "ملف الإعداد",
 		"description": "احفظ إعدادات متعددة للتبديل السريع بين مزوّدين ونماذج.",
+		"makeActiveProfile": "جعل الملف النشط",
+		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
 		"apiProvider": "مزود API",
 		"model": "النموذج",
 		"nameEmpty": "الاسم ما يصير فاضي",

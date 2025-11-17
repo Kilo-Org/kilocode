@@ -246,11 +246,24 @@ export async function presentAssistantMessage(cline: Task) {
 				}
 			}
 
+			let hasToolResult_kilocode = false
+
 			const pushToolResult_withToolUseId_kilocode = (
 				...items: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
 			) => {
 				if (block.toolUseId) {
-					cline.userMessageContent.push({ type: "tool_result", tool_use_id: block.toolUseId, content: items })
+					if (!hasToolResult_kilocode) {
+						cline.userMessageContent.push({
+							type: "tool_result",
+							tool_use_id: block.toolUseId,
+							content: items,
+						})
+						hasToolResult_kilocode = true
+					} else {
+						console.warn(
+							`[presentAssistantMessage] Skipping duplicate tool_result for tool_use_id: ${block.toolUseId}`,
+						)
+					}
 				} else {
 					cline.userMessageContent.push(...items)
 				}

@@ -11,10 +11,11 @@ import {
 import { textBufferStringAtom, textBufferStateAtom } from "../textBuffer.js"
 import { keyboardHandlerAtom, submissionCallbackAtom, submitInputAtom } from "../keyboard.js"
 import { pendingApprovalAtom } from "../approval.js"
-import { historyDataAtom, historyModeAtom, historyIndexAtom } from "../history.js"
+import { historyDataAtom, historyModeAtom, historyIndexAtom as _historyIndexAtom } from "../history.js"
 import type { Key } from "../../../types/keyboard.js"
 import type { CommandSuggestion, ArgumentSuggestion, FileMentionSuggestion } from "../../../services/autocomplete.js"
 import type { Command } from "../../../commands/core/types.js"
+import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 describe("keypress atoms", () => {
 	let store: ReturnType<typeof createStore>
@@ -266,7 +267,7 @@ describe("keypress atoms", () => {
 
 		it("should handle non-function callback gracefully", () => {
 			// Set callback to a non-function value
-			store.set(submissionCallbackAtom, { callback: "not a function" as any })
+			store.set(submissionCallbackAtom, { callback: "not a function" as unknown as (() => void) | null })
 
 			// Type 'hello'
 			const chars = ["h", "e", "l", "l", "o"]
@@ -300,7 +301,7 @@ describe("keypress atoms", () => {
 
 			// Submit a Buffer instead of string
 			const buffer = Buffer.from("/help")
-			store.set(submitInputAtom, buffer as any)
+			store.set(submitInputAtom, buffer as unknown as string)
 
 			// Should convert Buffer to string and call callback
 			expect(mockCallback).toHaveBeenCalledWith("/help")
@@ -650,12 +651,12 @@ describe("keypress atoms", () => {
 		it("should handle empty approvalOptions array without NaN", () => {
 			// Set up approval mode with a message that produces empty options
 			// (non-ask message type will result in empty approvalOptions)
-			const mockMessage: any = {
+			const mockMessage = {
 				ts: Date.now(),
 				type: "say", // Not "ask", so approvalOptions will be empty
 				say: "test",
 				text: "test message",
-			}
+			} as ExtensionChatMessage
 			store.set(pendingApprovalAtom, mockMessage)
 			store.set(selectedIndexAtom, 0)
 
@@ -678,12 +679,12 @@ describe("keypress atoms", () => {
 
 		it("should handle empty approvalOptions array on up arrow without NaN", () => {
 			// Set up approval mode with a message that produces empty options
-			const mockMessage: any = {
+			const mockMessage = {
 				ts: Date.now(),
 				type: "say", // Not "ask", so approvalOptions will be empty
 				say: "test",
 				text: "test message",
-			}
+			} as ExtensionChatMessage
 			store.set(pendingApprovalAtom, mockMessage)
 			store.set(selectedIndexAtom, 0)
 

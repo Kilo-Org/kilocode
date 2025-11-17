@@ -104,7 +104,7 @@ describe("getSelectedModelId", () => {
 
 	it("should handle mixed case provider names", () => {
 		const apiConfig = { kilocodeModel: "test-model" }
-		const result = getSelectedModelId("KiloCode" as any, apiConfig)
+		const result = getSelectedModelId("KiloCode", apiConfig)
 		expect(result).toBe("default") // Will be treated as unknown provider
 	})
 })

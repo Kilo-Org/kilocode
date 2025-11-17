@@ -265,7 +265,9 @@
 						"virtual-quota-fallback",
 						"human-relay",
 						"fake-ai",
-						"ovhcloud"
+						"ovhcloud",
+						"inception",
+						"synthetic"
 					]
 				}
 			},
@@ -284,7 +286,32 @@
 								"type": "string",
 								"description": "Kilocode model ID"
 							},
-							"kilocodeOrganizationId": { "type": "string" }
+							"kilocodeOrganizationId": {
+								"type": "string",
+								"description": "Organization ID for team accounts"
+							},
+							"openRouterSpecificProvider": {
+								"type": "string",
+								"description": "Specific OpenRouter provider to use"
+							},
+							"openRouterProviderDataCollection": {
+								"type": "string",
+								"enum": ["allow", "deny"],
+								"description": "OpenRouter provider data collection preference"
+							},
+							"openRouterProviderSort": {
+								"type": "string",
+								"enum": ["price", "throughput", "latency"],
+								"description": "OpenRouter provider sorting preference"
+							},
+							"openRouterZdr": {
+								"type": "boolean",
+								"description": "Enable OpenRouter Zero Data Retention"
+							},
+							"kilocodeTesterWarningsDisabledUntil": {
+								"type": "number",
+								"description": "Timestamp until which tester warnings are disabled"
+							}
 						}
 					}
 				},
@@ -330,7 +357,18 @@
 								"type": "string",
 								"description": "Anthropic model ID"
 							},
-							"anthropicBaseUrl": { "type": "string" }
+							"anthropicBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for Anthropic API requests"
+							},
+							"anthropicUseAuthToken": {
+								"type": "boolean",
+								"description": "Use authentication token instead of API key"
+							},
+							"anthropicBeta1MContext": {
+								"type": "boolean",
+								"description": "Enable beta 1M context window support"
+							}
 						}
 					}
 				},
@@ -376,7 +414,12 @@
 								"type": "string",
 								"description": "OpenAI model ID"
 							},
-							"openAiNativeBaseUrl": { "type": "string" }
+							"openAiNativeBaseUrl": { "type": "string" },
+							"openAiNativeServiceTier": {
+								"type": "string",
+								"enum": ["auto", "default", "flex", "priority"],
+								"description": "OpenAI service tier for request prioritization and latency optimization. 'auto' lets OpenAI choose the best tier, 'default' uses standard processing, 'flex' offers cost-optimized processing with variable latency, and 'priority' provides the fastest processing with higher priority."
+							}
 						}
 					}
 				},
@@ -408,7 +451,29 @@
 								"type": "string",
 								"description": "OpenRouter model ID"
 							},
-							"openRouterBaseUrl": { "type": "string" }
+							"openRouterBaseUrl": { "type": "string" },
+							"openRouterSpecificProvider": {
+								"type": "string",
+								"description": "Specific OpenRouter provider to use for routing requests"
+							},
+							"openRouterUseMiddleOutTransform": {
+								"type": "boolean",
+								"description": "Enable middle-out transform for optimized request routing"
+							},
+							"openRouterProviderDataCollection": {
+								"type": "string",
+								"enum": ["allow", "deny"],
+								"description": "OpenRouter provider data collection preference"
+							},
+							"openRouterProviderSort": {
+								"type": "string",
+								"enum": ["price", "throughput", "latency"],
+								"description": "OpenRouter provider sorting preference for model selection"
+							},
+							"openRouterZdr": {
+								"type": "boolean",
+								"description": "Enable OpenRouter Zero Data Retention for enhanced privacy"
+							}
 						}
 					}
 				},
@@ -465,6 +530,47 @@
 							"awsUseCrossRegionInference": {
 								"type": "boolean",
 								"description": "Use cross-region inference"
+							},
+							"awsUsePromptCache": {
+								"type": "boolean",
+								"description": "Enable prompt caching to reduce costs and latency for repeated prompts"
+							},
+							"awsProfile": {
+								"type": "string",
+								"description": "AWS profile name from credentials file"
+							},
+							"awsUseProfile": {
+								"type": "boolean",
+								"description": "Use AWS profile from credentials file instead of access keys"
+							},
+							"awsApiKey": {
+								"type": "string",
+								"description": "AWS API key for alternative authentication"
+							},
+							"awsUseApiKey": {
+								"type": "boolean",
+								"description": "Use API key authentication instead of access keys"
+							},
+							"awsCustomArn": {
+								"type": "string",
+								"description": "Custom ARN for cross-account or custom model access"
+							},
+							"awsModelContextWindow": {
+								"type": "number",
+								"minimum": 1,
+								"description": "Override the model's default context window size"
+							},
+							"awsBedrockEndpointEnabled": {
+								"type": "boolean",
+								"description": "Enable custom Bedrock endpoint"
+							},
+							"awsBedrockEndpoint": {
+								"type": "string",
+								"description": "Custom Bedrock endpoint URL"
+							},
+							"awsBedrock1MContext": {
+								"type": "boolean",
+								"description": "Enable 1M token context window support for compatible models"
 							},
 							"apiModelId": {
 								"type": "string",
@@ -543,7 +649,15 @@
 								"type": "string",
 								"description": "Gemini model ID"
 							},
-							"googleGeminiBaseUrl": { "type": "string" }
+							"googleGeminiBaseUrl": { "type": "string" },
+							"enableUrlContext": {
+								"type": "boolean",
+								"description": "Allows the model to access and process URLs in prompts"
+							},
+							"enableGrounding": {
+								"type": "boolean",
+								"description": "Enables Google Search grounding for factual responses"
+							}
 						}
 					}
 				},
@@ -600,6 +714,14 @@
 							"apiModelId": {
 								"type": "string",
 								"description": "Vertex AI model ID"
+							},
+							"enableUrlContext": {
+								"type": "boolean",
+								"description": "Allows the model to access and process URLs in prompts"
+							},
+							"enableGrounding": {
+								"type": "boolean",
+								"description": "Enables Google Search grounding for factual responses"
 							}
 						}
 					}
@@ -709,7 +831,12 @@
 								"type": "string",
 								"description": "Ollama model ID"
 							},
-							"ollamaApiKey": { "type": "string" }
+							"ollamaApiKey": { "type": "string" },
+							"ollamaNumCtx": {
+								"type": "number",
+								"minimum": 1,
+								"description": "Context window size for Ollama models. Controls the maximum number of tokens the model can process at once. Common values: 2048, 4096, 8192, 16384, 32768. Higher values allow processing longer conversations but require more memory."
+							}
 						}
 					}
 				},
@@ -727,9 +854,13 @@
 								"type": "string",
 								"description": "LM Studio model ID"
 							},
+							"lmStudioDraftModelId": {
+								"type": "string",
+								"description": "Draft model ID for speculative decoding. This smaller, faster model generates initial predictions that are verified by the main model, potentially improving inference speed."
+							},
 							"lmStudioSpeculativeDecodingEnabled": {
 								"type": "boolean",
-								"description": "Enable speculative decoding"
+								"description": "Enable speculative decoding for faster inference. When enabled with a draft model, uses a two-stage generation process where a smaller model proposes tokens that are verified by the main model."
 							}
 						}
 					}
@@ -981,8 +1112,41 @@
 								"type": "string",
 								"description": "OpenAI API key"
 							},
-							"openAiBaseUrl": { "type": "string" },
-							"apiModelId": { "type": "string" }
+							"openAiBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for OpenAI API requests"
+							},
+							"openAiModelId": {
+								"type": "string",
+								"description": "OpenAI model ID"
+							},
+							"openAiLegacyFormat": {
+								"type": "boolean",
+								"description": "Use legacy API format for compatibility with older OpenAI API versions"
+							},
+							"openAiR1FormatEnabled": {
+								"type": "boolean",
+								"description": "Enable R1 format for reasoning models that support extended thinking capabilities"
+							},
+							"openAiUseAzure": {
+								"type": "boolean",
+								"description": "Use Azure OpenAI Service instead of standard OpenAI API"
+							},
+							"azureApiVersion": {
+								"type": "string",
+								"description": "Azure OpenAI API version (e.g., '2024-02-15-preview'). Required when openAiUseAzure is true"
+							},
+							"openAiStreamingEnabled": {
+								"type": "boolean",
+								"description": "Enable streaming responses for real-time token generation"
+							},
+							"openAiHeaders": {
+								"type": "object",
+								"description": "Custom HTTP headers to include in OpenAI API requests",
+								"additionalProperties": {
+									"type": "string"
+								}
+							}
 						}
 					}
 				},
@@ -997,6 +1161,20 @@
 					"then": {
 						"properties": {
 							"openAiApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "openai" },
+							"openAiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["openAiModelId"]
+					},
+					"then": {
+						"properties": {
+							"openAiModelId": { "minLength": 1 }
 						}
 					}
 				},
@@ -1128,6 +1306,10 @@
 							"litellmModelId": {
 								"type": "string",
 								"description": "LiteLLM model ID"
+							},
+							"litellmUsePromptCache": {
+								"type": "boolean",
+								"description": "Enable prompt caching to reduce costs and improve performance for repeated prompts"
 							}
 						}
 					}
@@ -1524,6 +1706,10 @@
 							"deepInfraModelId": {
 								"type": "string",
 								"description": "DeepInfra model ID"
+							},
+							"deepInfraBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for DeepInfra API requests"
 							}
 						}
 					}
@@ -2144,6 +2330,10 @@
 							"ovhCloudAiEndpointsModelId": {
 								"type": "string",
 								"description": "OVHcloud AI Endpoints model ID"
+							},
+							"ovhCloudAiEndpointsBaseUrl": {
+								"type": "string",
+								"description": "Custom base URL for OVHcloud AI Endpoints API requests"
 							}
 						}
 					}
@@ -2170,6 +2360,100 @@
 					"then": {
 						"properties": {
 							"ovhCloudAiEndpointsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "inception" } }
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": {
+								"type": "string",
+								"description": "Inception Labs API key"
+							},
+							"inceptionLabsBaseUrl": {
+								"type": "string",
+								"description": "Inception Labs base URL"
+							},
+							"inceptionLabsModelId": {
+								"type": "string",
+								"description": "Inception Labs model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsApiKey"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "inception" },
+							"inceptionLabsModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["inceptionLabsModelId"]
+					},
+					"then": {
+						"properties": {
+							"inceptionLabsModelId": { "minLength": 1 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": { "provider": { "const": "synthetic" } }
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": {
+								"type": "string",
+								"description": "Synthetic API key"
+							},
+							"apiModelId": {
+								"type": "string",
+								"description": "Synthetic model ID"
+							}
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"syntheticApiKey": { "type": "string", "minLength": 1 }
+						},
+						"required": ["syntheticApiKey"]
+					},
+					"then": {
+						"properties": {
+							"syntheticApiKey": { "minLength": 10 }
+						}
+					}
+				},
+				{
+					"if": {
+						"properties": {
+							"provider": { "const": "synthetic" },
+							"apiModelId": { "type": "string", "minLength": 1 }
+						},
+						"required": ["apiModelId"]
+					},
+					"then": {
+						"properties": {
+							"apiModelId": { "minLength": 1 }
 						}
 					}
 				}

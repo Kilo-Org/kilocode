@@ -24,6 +24,7 @@ import {
 	type RouterModels,
 } from "../../constants/providers/models.js"
 import type { ProviderSettings } from "../../types/messages.js"
+import type { ProviderConfig } from "../../config/types.js"
 import path from "path"
 import { isGitWorktree } from "../../utils/git.js"
 
@@ -39,9 +40,10 @@ function getModelDisplayName(apiConfig: ProviderSettings | null, routerModels: R
 		// Get current model ID
 		const currentModelId = getCurrentModelId({
 			providerConfig: {
-				provider: apiConfig.apiProvider,
+				id: "default",
+				provider: apiConfig.apiProvider || "",
 				...apiConfig,
-			} as any,
+			} as ProviderConfig,
 			routerModels,
 			kilocodeDefaultModel: apiConfig.kilocodeModel || "",
 		})

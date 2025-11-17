@@ -25,7 +25,7 @@ describe("StatusBar", () => {
 		vi.clearAllMocks()
 
 		// Setup default mock implementations
-		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 			if (atom === atoms.cwdAtom) return "/home/user/kilocode"
 			if (atom === atoms.isParallelModeAtom) return false
 			if (atom === atoms.extensionModeAtom) return "code"
@@ -116,7 +116,7 @@ describe("StatusBar", () => {
 	})
 
 	it("should handle missing cwd", () => {
-		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 			if (atom === atoms.cwdAtom) return null
 			if (atom === atoms.extensionModeAtom) return "code"
 			if (atom === atoms.apiConfigurationAtom)
@@ -136,7 +136,7 @@ describe("StatusBar", () => {
 	})
 
 	it("should handle missing api config", () => {
-		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 			if (atom === atoms.cwdAtom) return "/home/user/project"
 			if (atom === atoms.extensionModeAtom) return "architect"
 			if (atom === atoms.apiConfigurationAtom) return null
@@ -150,7 +150,7 @@ describe("StatusBar", () => {
 	})
 
 	it("should capitalize mode name", () => {
-		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 			if (atom === atoms.cwdAtom) return "/home/user/project"
 			if (atom === atoms.extensionModeAtom) return "architect"
 			if (atom === atoms.apiConfigurationAtom)
@@ -187,7 +187,7 @@ describe("StatusBar", () => {
 	})
 
 	it("should render without errors with different modes", () => {
-		vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+		vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 			if (atom === atoms.cwdAtom) return "/home/user/test-project"
 			if (atom === atoms.extensionModeAtom) return "debug"
 			if (atom === atoms.apiConfigurationAtom)
@@ -208,7 +208,7 @@ describe("StatusBar", () => {
 	})
 
 	describe("parallel mode", () => {
-		let isGitWorktreeMock: any
+		let isGitWorktreeMock: ReturnType<typeof vi.fn>
 
 		beforeEach(async () => {
 			const gitModule = await import("../../../utils/git.js")
@@ -233,7 +233,7 @@ describe("StatusBar", () => {
 			// Mock process.cwd() to return the actual project directory
 			process.cwd = vi.fn(() => "/home/user/kilocode")
 
-			vi.mocked(useAtomValue).mockImplementation((atom: any) => {
+			vi.mocked(useAtomValue).mockImplementation((atom: unknown) => {
 				if (atom === atoms.cwdAtom) return "/tmp/worktree/kilocode-task-123"
 				if (atom === atoms.isParallelModeAtom) return true
 				if (atom === atoms.extensionModeAtom) return "code"
