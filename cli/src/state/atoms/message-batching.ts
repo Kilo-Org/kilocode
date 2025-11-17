@@ -7,6 +7,23 @@ import { sessionIdAtom } from "./session.js"
 import { logs } from "../../services/logs.js"
 import { configAtom } from "./config.js"
 import { ExtensionChatMessage } from "src/types/messages.js"
+import { mergedMessagesAtom, type UnifiedMessage } from "./ui.js"
+
+/**
+ * Generate a unique key for a message to track changes
+ * Exported for use in JsonRenderer and other components
+ */
+export function getMessageKey(message: UnifiedMessage): string {
+	const baseKey = `${message.source}-${message.message.ts}`
+	const content = message.source === "cli" ? message.message.content : message.message.text || ""
+	const partial = message.message.partial ? "partial" : "complete"
+	return `${baseKey}-${content.length}-${partial}`
+}
+
+/**
+ * Atom to track the last batched message keys
+ */
+const lastBatchedKeysAtom = atom<string[]>([])
 
 /**
  * State for message batching
@@ -176,10 +193,32 @@ export const addMessageToBatchAtom = atom(null, async (get, set, message: Extens
 })
 
 /**
- * Action atom to add a CLI output message to the batch
+ * Effect atom that batches extension messages when new messages are added
+ * Filters out CLI messages and only batches extension messages
+ * This should be triggered whenever messages change
  */
-export const addCliOutputMessageAtom = atom(null, async (get, set, message: ExtensionChatMessage) => {
-	await set(addMessageToBatchAtom, message)
+export const batchNewMessagesEffectAtom = atom(null, async (get, set) => {
+	const messages = get(mergedMessagesAtom)
+	const lastKeys = get(lastBatchedKeysAtom)
+
+	const currentKeys = messages.map(getMessageKey)
+
+	for (let i = 0; i < messages.length; i++) {
+		const message = messages[i]
+		const currentKey = currentKeys[i]
+		const lastKey = lastKeys[i]
+
+		if (!message || !currentKey) continue
+
+		// Skip CLI messages - only batch extension messages
+		if (message.source === "cli") continue
+
+		if (currentKey !== lastKey) {
+			await set(addMessageToBatchAtom, message.message)
+		}
+	}
+
+	set(lastBatchedKeysAtom, currentKeys)
 })
 
 /**

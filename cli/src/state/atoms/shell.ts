@@ -4,7 +4,6 @@
 
 import { atom } from "jotai"
 import { addMessageAtom, inputModeAtom, type InputMode } from "./ui.js"
-import { addCliOutputMessageAtom } from "./message-batching.js"
 import { exec } from "child_process"
 import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.js"
 
@@ -194,9 +193,6 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		}
 
 		set(addMessageAtom, systemMessage)
-
-		// Add CLI output to message batch for backend sync
-		await set(addCliOutputMessageAtom, { ...systemMessage, type: "say" })
 	} catch (error: unknown) {
 		// Handle errors and display them in the message system
 
@@ -213,9 +209,6 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		}
 
 		set(addMessageAtom, errorMessage)
-
-		// Add CLI error output to message batch for backend sync
-		await set(addCliOutputMessageAtom, { ...errorMessage, type: "say" })
 	}
 
 	// Reset history navigation index
