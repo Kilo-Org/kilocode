@@ -1,5 +1,18 @@
 import type OpenAI from "openai"
 
+const example = {
+	files: [
+		{
+			path: "src/app.ts",
+			line_ranges: ["1-50"],
+		},
+		{
+			path: "src/utils.ts",
+			line_ranges: ["1-50", "100-150"],
+		},
+	],
+}
+
 export const read_file_multi = {
 	type: "function",
 	function: {
@@ -36,6 +49,7 @@ export const read_file_multi = {
 					minItems: 1,
 				},
 			},
+			examples: [example],
 			required: ["files"],
 			additionalProperties: false,
 		},
