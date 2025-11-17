@@ -234,6 +234,8 @@
 		"providerDocumentation": "{{provider}} 說明文件",
 		"configProfile": "設定檔",
 		"description": "儲存不同的 API 設定以快速切換供應商和設定。",
+		"makeActiveProfile": "設為活動設定檔",
+		"makeActiveTooltip": "啟用此設定檔以用於 API 請求",
 		"apiProvider": "API 供應商",
 		"model": "模型",
 		"nameEmpty": "名稱不能為空",

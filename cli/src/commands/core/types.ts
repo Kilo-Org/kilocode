@@ -2,7 +2,8 @@
  * Command system type definitions
  */
 
-import type { ExtensionMessage, RouterModels } from "../../types/messages.js"
+import type { ExtensionMessage, RouterModels, WebviewMessage } from "../../types/messages.js"
+import type { CliMessage } from "../../types/cli.js"
 import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
 import type { TaskHistoryData, TaskHistoryFilters } from "../../state/atoms/taskHistory.js"
@@ -26,18 +27,18 @@ export interface CommandOption {
 	description: string
 	required?: boolean
 	type: "string" | "number" | "boolean"
-	default?: any
+	default?: string | number | boolean
 }
 
 export interface CommandContext {
 	input: string
 	args: string[]
-	options: Record<string, any>
+	options: Record<string, string | number | boolean>
 	config: CLIConfig
-	sendMessage: (message: any) => Promise<void>
-	addMessage: (message: any) => void
+	sendMessage: (message: CliMessage) => Promise<void>
+	addMessage: (message: CliMessage) => void
 	clearMessages: () => void
-	replaceMessages: (messages: any[]) => void
+	replaceMessages: (messages: CliMessage[]) => void
 	setMessageCutoffTimestamp: (timestamp: number) => void
 	clearTask: () => Promise<void>
 	setMode: (mode: string) => void
@@ -53,6 +54,8 @@ export interface CommandContext {
 	refreshRouterModels: () => Promise<void>
 	// Provider update function for teams command
 	updateProvider: (providerId: string, updates: Partial<ProviderConfig>) => Promise<void>
+	// Provider selection function
+	selectProvider: (providerId: string) => Promise<void>
 	// Profile data context
 	profileData: ProfileData | null
 	balanceData: BalanceData | null
@@ -68,7 +71,7 @@ export interface CommandContext {
 	changeTaskHistoryPage: (pageIndex: number) => Promise<TaskHistoryData>
 	nextTaskHistoryPage: () => Promise<TaskHistoryData>
 	previousTaskHistoryPage: () => Promise<TaskHistoryData>
-	sendWebviewMessage: (message: any) => Promise<void>
+	sendWebviewMessage: (message: WebviewMessage) => Promise<void>
 	refreshTerminal: () => Promise<void>
 	chatMessages: ExtensionMessage[]
 }
@@ -78,7 +81,7 @@ export type CommandHandler = (context: CommandContext) => Promise<void> | void
 export interface ParsedCommand {
 	command: string
 	args: string[]
-	options: Record<string, any>
+	options: Record<string, string | number | boolean>
 }
 
 // Argument autocompletion types
@@ -96,6 +99,19 @@ export interface ArgumentSuggestion {
 	error?: string
 }
 
+export interface ArgumentProviderCommandContext {
+	config: CLIConfig
+	routerModels: RouterModels | null
+	currentProvider: ProviderConfig | null
+	kilocodeDefaultModel: string
+	profileData: ProfileData | null
+	profileLoading: boolean
+	updateProviderModel: (modelId: string) => Promise<void>
+	refreshRouterModels: () => Promise<void>
+	taskHistoryData: TaskHistoryData | null
+	chatMessages: ExtensionMessage[]
+}
+
 /**
  * Context provided to argument providers
  */
@@ -107,7 +123,7 @@ export interface ArgumentProviderContext {
 
 	// Current state
 	currentArgs: string[]
-	currentOptions: Record<string, any>
+	currentOptions: Record<string, string | number | boolean>
 	partialInput: string
 
 	// Access to previous arguments by name
@@ -116,25 +132,14 @@ export interface ArgumentProviderContext {
 	// Access to all parsed values
 	parsedValues: {
 		args: Record<string, string>
-		options: Record<string, any>
+		options: Record<string, string | number | boolean>
 	}
 
 	// Metadata about the command
 	command: Command
 
 	// CommandContext properties for providers that need them
-	commandContext?: {
-		config: CLIConfig
-		routerModels: RouterModels | null
-		currentProvider: ProviderConfig | null
-		kilocodeDefaultModel: string
-		profileData: ProfileData | null
-		profileLoading: boolean
-		updateProviderModel: (modelId: string) => Promise<void>
-		refreshRouterModels: () => Promise<void>
-		taskHistoryData: TaskHistoryData | null
-		chatMessages: ExtensionMessage[]
-	}
+	commandContext?: ArgumentProviderCommandContext
 }
 
 /**

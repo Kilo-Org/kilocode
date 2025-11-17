@@ -260,7 +260,7 @@
 		"description": "Wähle aus, wie Tool-Calls im System-Prompt formatiert werden. JSON ist derzeit experimentell und hauptsächlich für Nutzer gedacht, die an der Weiterentwicklung interessiert sind.",
 		"automatic": "Lass Kilo entscheiden",
 		"xml": "XML",
-		"json": "JSON (experimentell)"
+		"json": "JSON"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Bilder werden vom aktuellen Modell nicht unterstützt.",

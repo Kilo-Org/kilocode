@@ -5,7 +5,7 @@ import type { ExtensionMessage, WebviewMessage } from "../types/messages.js"
 export interface IPCMessage {
 	id: string
 	type: "request" | "response" | "event"
-	data: any
+	data: unknown
 	ts: number
 }
 
@@ -35,7 +35,7 @@ export class IPCChannel extends EventEmitter {
 	/**
 	 * Send a request message and wait for response
 	 */
-	async request<T = any>(data: any): Promise<T> {
+	async request<T = unknown>(data: unknown): Promise<T> {
 		const id = this.generateMessageId()
 		const message: IPCMessage = {
 			id,
@@ -63,7 +63,7 @@ export class IPCChannel extends EventEmitter {
 	/**
 	 * Send a response to a request
 	 */
-	respond(requestId: string, data: any): void {
+	respond(requestId: string, data: unknown): void {
 		const message: IPCMessage = {
 			id: requestId,
 			type: "response",
@@ -81,7 +81,7 @@ export class IPCChannel extends EventEmitter {
 	/**
 	 * Send an event message (no response expected)
 	 */
-	event(data: any): void {
+	event(data: unknown): void {
 		const message: IPCMessage = {
 			id: this.generateMessageId(),
 			type: "event",
@@ -201,7 +201,7 @@ export class MessageBridge extends EventEmitter {
 	/**
 	 * Send a webview message from TUI to extension
 	 */
-	async sendWebviewMessage(message: WebviewMessage): Promise<any> {
+	async sendWebviewMessage(message: WebviewMessage): Promise<unknown> {
 		return this.tuiChannel.request({
 			type: "webviewMessage",
 			payload: message,

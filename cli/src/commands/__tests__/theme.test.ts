@@ -7,6 +7,7 @@ import { themeCommand } from "../theme.js"
 import type { CommandContext } from "../core/types.js"
 import type { Theme } from "../../types/theme.js"
 import type { CLIConfig } from "../../config/types.js"
+import { createMockContext } from "./helpers/mockContext.js"
 
 // Mock the generateMessage utility
 vi.mock("../../ui/utils/messages.js", () => ({
@@ -249,52 +250,14 @@ describe("/theme command", () => {
 			getBuiltinThemeIds: vi.fn(() => ["alpha", "dark", "dracula", "github-dark", "light", "github-light"]),
 		}))
 
-		mockContext = {
+		mockContext = createMockContext({
 			input: "/theme",
-			args: [],
-			options: {},
 			config: mockConfig,
-			sendMessage: vi.fn().mockResolvedValue(undefined),
 			addMessage: addMessageMock,
-			clearMessages: vi.fn(),
-			replaceMessages: vi.fn(),
-			setMessageCutoffTimestamp: vi.fn(),
-			clearTask: vi.fn().mockResolvedValue(undefined),
-			setMode: vi.fn(),
-			exit: vi.fn(),
 			setTheme: setThemeMock,
-			setCommittingParallelMode: vi.fn(),
-			isParallelMode: false,
 			refreshTerminal: refreshTerminalMock,
-			// Model-related context
-			routerModels: null,
-			currentProvider: null,
 			kilocodeDefaultModel: "default-model",
-			updateProviderModel: vi.fn().mockResolvedValue(undefined),
-			refreshRouterModels: vi.fn().mockResolvedValue(undefined),
-			// Provider update function for teams command
-			updateProvider: vi.fn().mockResolvedValue(undefined),
-			// Profile data context
-			profileData: null,
-			balanceData: null,
-			profileLoading: false,
-			balanceLoading: false,
-			// Task history context
-			taskHistoryData: null,
-			taskHistoryFilters: {
-				workspace: "current",
-				sort: "newest",
-				favoritesOnly: false,
-			},
-			taskHistoryLoading: false,
-			taskHistoryError: null,
-			fetchTaskHistory: vi.fn().mockResolvedValue(undefined),
-			updateTaskHistoryFilters: vi.fn().mockResolvedValue(null),
-			changeTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			nextTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			previousTaskHistoryPage: vi.fn().mockResolvedValue(null),
-			sendWebviewMessage: vi.fn().mockResolvedValue(undefined),
-		}
+		})
 	})
 
 	describe("Command metadata", () => {

@@ -233,6 +233,8 @@
 		"providerDocumentation": "Tài liệu {{provider}}",
 		"configProfile": "Hồ sơ cấu hình",
 		"description": "Lưu các cấu hình API khác nhau để nhanh chóng chuyển đổi giữa các nhà cung cấp và cài đặt.",
+		"makeActiveProfile": "Đặt làm hồ sơ hoạt động",
+		"makeActiveTooltip": "Kích hoạt hồ sơ này để sử dụng cho các yêu cầu API",
 		"apiProvider": "Nhà cung cấp API",
 		"model": "Mẫu",
 		"nameEmpty": "Tên không được để trống",

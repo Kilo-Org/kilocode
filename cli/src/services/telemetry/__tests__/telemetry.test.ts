@@ -184,7 +184,7 @@ describe("TelemetryService", () => {
 
 	beforeEach(() => {
 		// Reset singleton
-		;(TelemetryService as any).instance = null
+		;(TelemetryService as unknown as { instance: TelemetryService | null }).instance = null
 		service = TelemetryService.getInstance()
 	})
 
@@ -329,7 +329,7 @@ describe("IdentityManager", () => {
 
 	beforeEach(() => {
 		// Reset singleton
-		;(IdentityManager as any).instance = null
+		;(IdentityManager as unknown as { instance: IdentityManager | null }).instance = null
 		identityManager = IdentityManager.getInstance()
 	})
 

@@ -9,11 +9,11 @@ import { ExtensionMessage } from "../types/messages.js"
 /**
  * Interface for checkpoint message from chatMessages
  */
-interface CheckpointMessage {
+interface CheckpointMessage extends ExtensionMessage {
 	ts: number
 	type: "say"
-	say: string
-	text?: string
+	say: "checkpoint_saved"
+	text: string
 	metadata?: {
 		type?: string
 		fromHash?: string
@@ -27,7 +27,13 @@ interface CheckpointMessage {
  */
 function getCheckpointMessages(chatMessages: ExtensionMessage[]): CheckpointMessage[] {
 	return chatMessages
-		.filter((msg): msg is CheckpointMessage => msg.type === "say" && msg.say === "checkpoint_saved" && !!msg.text)
+		.filter(
+			(msg): msg is CheckpointMessage =>
+				msg.type === "say" &&
+				msg.say === "checkpoint_saved" &&
+				typeof msg.text === "string" &&
+				msg.text.length > 0,
+		)
 		.reverse() // Most recent first
 }
 
@@ -122,7 +128,7 @@ async function handleList(context: CommandContext): Promise<void> {
  * Handle /checkpoint restore
  */
 async function handleRestore(context: CommandContext, hash: string): Promise<void> {
-	const { chatMessages, addMessage, sendMessage } = context
+	const { chatMessages, addMessage, sendWebviewMessage } = context
 	const checkpoints = getCheckpointMessages(chatMessages)
 
 	logs.debug("Finding checkpoint for restore", "checkpoint", { hash, checkpointCount: checkpoints.length })
@@ -160,7 +166,7 @@ async function handleRestore(context: CommandContext, hash: string): Promise<voi
 		"**This cannot be undone.**",
 	]
 
-	await sendMessage({
+	await sendWebviewMessage({
 		type: "requestCheckpointRestoreApproval",
 		payload: {
 			commitHash: fullHash,

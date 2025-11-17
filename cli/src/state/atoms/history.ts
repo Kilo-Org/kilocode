@@ -116,7 +116,7 @@ export const loadHistoryAtom = atom(null, async (get, set) => {
 /**
  * Save history to disk
  */
-export const saveHistoryAtom = atom(null, async (get, set) => {
+export const saveHistoryAtom = atom(null, async (get, _set) => {
 	try {
 		const data = get(historyDataAtom)
 		await saveHistory(data)

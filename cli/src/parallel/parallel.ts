@@ -124,7 +124,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 
 					await service.sendWebviewMessage({
 						type: "askResponse",
-						askResponse: agentCommitInstruction,
+						askResponse: "messageResponse",
 						text: agentCommitInstruction,
 					})
 
@@ -158,7 +158,7 @@ export async function finishParallelMode(cli: CLI, worktreePath: string, worktre
 				`${green}✓${reset} ${bold}Parallel mode complete!${reset} Changes committed to: ${cyan}${worktreeBranch}${reset}`,
 			)
 			console.log(`\n${bold}Review and merge changes:${reset}`)
-			console.log(`  ${yellow}git diff ${worktreeBranch}${reset}`)
+			console.log(`  ${yellow}git diff ...${worktreeBranch}${reset}`)
 			console.log(`  ${yellow}git merge ${worktreeBranch}${reset}`)
 			console.log(`\n${bold}💡 Tip:${reset} Resume work with ${yellow}--existing-branch${reset}:`)
 			console.log(`  ${yellow}kilocode --parallel --existing-branch ${worktreeBranch} "<prompt>"${reset}`)

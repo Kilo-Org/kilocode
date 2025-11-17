@@ -292,10 +292,7 @@ export class CodeIndexManager {
 			this.stopWatcher()
 		}
 		// kilocode_change start
-		if (this._managedIndexerDisposable) {
-			this._managedIndexerDisposable.dispose()
-			this._managedIndexerDisposable = undefined
-		}
+		this.stopManagedIndexing()
 		// kilocode_change end
 		this._stateManager.dispose()
 	}
@@ -494,7 +491,15 @@ export class CodeIndexManager {
 	} | null = null
 
 	public setKiloOrgCodeIndexProps(props: NonNullable<typeof this._kiloOrgCodeIndexProps>) {
-		console.log("setKiloOrgCodeIndexProps", props)
+		// this gets called more often than you'd expect so only actually kick off a new manager if things change
+		if (
+			props.kilocodeToken === this._kiloOrgCodeIndexProps?.kilocodeToken &&
+			props.organizationId === this._kiloOrgCodeIndexProps?.organizationId &&
+			props.projectId === this._kiloOrgCodeIndexProps?.projectId
+		) {
+			// No change in token, no need to restart indexing
+			return
+		}
 
 		this._kiloOrgCodeIndexProps = props
 
@@ -527,16 +532,13 @@ export class CodeIndexManager {
 	 * This is the new standalone indexing system that uses delta-based indexing
 	 */
 	public async startManagedIndexing(): Promise<void> {
+		console.info("[CodeIndexManager] Starting managed indexing due to Kilo org props set")
 		if (!this._kiloOrgCodeIndexProps) {
 			throw new Error("Managed indexing requires organization credentials")
 		}
 
 		try {
-			// Stop any existing managed indexer
-			if (this._managedIndexerDisposable) {
-				this._managedIndexerDisposable.dispose()
-				this._managedIndexerDisposable = undefined
-			}
+			this.stopManagedIndexing()
 
 			// Create configuration
 			const config = createManagedIndexingConfig(
@@ -547,7 +549,7 @@ export class CodeIndexManager {
 			)
 
 			// Start indexing
-			this._managedIndexerDisposable = await startManagedIndexing(config, this.context, (state) => {
+			this._managedIndexerDisposable = await startManagedIndexing(config, (state) => {
 				this._managedIndexerState = state
 				// Emit state change event through state manager
 				// Map managed indexer states to system states:
@@ -586,9 +588,12 @@ export class CodeIndexManager {
 	 */
 	public stopManagedIndexing(): void {
 		if (this._managedIndexerDisposable) {
+			console.info("[CodeIndexManager] Stopping existing managed indexer")
 			this._managedIndexerDisposable.dispose()
 			this._managedIndexerDisposable = undefined
 			this._managedIndexerState = undefined
+		} else {
+			console.info("[CodeIndexManager] - [stopManagedIndexing] No managed indexer to stop")
 		}
 	}
 

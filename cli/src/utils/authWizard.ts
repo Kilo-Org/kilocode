@@ -2,6 +2,8 @@ import inquirer from "inquirer"
 import { loadConfig, saveConfig, CLIConfig } from "../config"
 import openConfigFile from "../config/openConfig"
 import wait from "../utils/wait"
+import { getKilocodeDefaultModel } from "./getKilocodeDefaultModel.js"
+import { getKilocodeProfile, INVALID_TOKEN_ERROR, type KilocodeProfileData } from "./getKilocodeProfile.js"
 
 export default async function authWizard() {
 	const config = await loadConfig()
@@ -28,14 +30,76 @@ export default async function authWizard() {
 			console.info(
 				"\nPlease navigate to https://app.kilocode.ai and copy your API key from the bottom of the page!\n",
 			)
-			const { kilocodeToken } = await inquirer.prompt<{ kilocodeToken: string }>([
-				{
-					type: "password",
-					name: "kilocodeToken",
-					message: "API Key:",
-				},
-			])
-			providerSpecificConfig = { kilocodeToken, kilocodeModel: "anthropic/claude-sonnet-4.5" }
+
+			let kilocodeToken: string = ""
+			let profileData: KilocodeProfileData | null = null
+			let isValidToken = false
+
+			// Loop until we get a valid token
+			while (!isValidToken) {
+				const { token } = await inquirer.prompt<{ token: string }>([
+					{
+						type: "password",
+						name: "token",
+						message: "API Key:",
+					},
+				])
+
+				kilocodeToken = token
+
+				try {
+					// Validate token by fetching profile
+					profileData = await getKilocodeProfile(kilocodeToken)
+					isValidToken = true
+				} catch (error) {
+					if (error instanceof Error && error.message === INVALID_TOKEN_ERROR) {
+						console.error("\n❌ Invalid API key. Please check your key and try again.\n")
+						// Loop will continue, prompting for token again
+					} else {
+						console.error("\n❌ Failed to validate API key. Please try again.\n")
+						console.error(`Error: ${error instanceof Error ? error.message : String(error)}\n`)
+						// Loop will continue, prompting for token again
+					}
+				}
+			}
+
+			// Token is valid, now handle organization selection
+			let kilocodeOrganizationId: string | undefined = undefined
+
+			if (profileData?.organizations && profileData.organizations.length > 0) {
+				// Build choices for account selection
+				const accountChoices = [
+					{ name: "Personal Account", value: "personal" },
+					...profileData.organizations.map((org) => ({
+						name: `${org.name} (${org.role})`,
+						value: org.id,
+					})),
+				]
+
+				const { accountType } = await inquirer.prompt<{ accountType: string }>([
+					{
+						type: "list",
+						name: "accountType",
+						message: "Select account type:",
+						choices: accountChoices,
+					},
+				])
+
+				// Store organization ID if not personal
+				if (accountType !== "personal") {
+					kilocodeOrganizationId = accountType
+				}
+			}
+
+			// Fetch the default model from Kilocode API with organization context
+			const kilocodeModel = await getKilocodeDefaultModel(kilocodeToken, kilocodeOrganizationId)
+
+			// Save config including organizationId if selected
+			providerSpecificConfig = {
+				kilocodeToken,
+				kilocodeModel,
+				...(kilocodeOrganizationId && { kilocodeOrganizationId }),
+			}
 			break
 		}
 		case "zai": {

@@ -14,7 +14,9 @@ describe("ExtensionHost Telemetry Configuration", () => {
 
 			// Access the private initializeState method through reflection
 			// This tests that the initial state is correctly set to "unset"
-			const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+			const initializeState = (extensionHost as unknown as { initializeState: () => void }).initializeState.bind(
+				extensionHost,
+			)
 			initializeState()
 
 			const api = extensionHost.getAPI()
@@ -31,7 +33,9 @@ describe("ExtensionHost Telemetry Configuration", () => {
 				extensionRootPath: "/test",
 			})
 
-			const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+			const initializeState = (extensionHost as unknown as { initializeState: () => void }).initializeState.bind(
+				extensionHost,
+			)
 			initializeState()
 
 			const api = extensionHost.getAPI()
@@ -43,7 +47,7 @@ describe("ExtensionHost Telemetry Configuration", () => {
 
 	describe("Configuration Injection", () => {
 		let extensionHost: ExtensionHost
-		let sendWebviewMessageSpy: any
+		let sendWebviewMessageSpy: ReturnType<typeof vi.fn>
 
 		beforeEach(() => {
 			extensionHost = new ExtensionHost({
@@ -53,11 +57,13 @@ describe("ExtensionHost Telemetry Configuration", () => {
 			})
 
 			// Initialize state
-			const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+			const initializeState = (extensionHost as unknown as { initializeState: () => void }).initializeState.bind(
+				extensionHost,
+			)
 			initializeState()
 
 			// Spy on sendWebviewMessage
-			sendWebviewMessageSpy = vi.spyOn(extensionHost, "sendWebviewMessage")
+			sendWebviewMessageSpy = vi.spyOn(extensionHost, "sendWebviewMessage") as ReturnType<typeof vi.fn>
 		})
 
 		it("should update state with telemetrySetting from config", async () => {
@@ -135,7 +141,9 @@ describe("ExtensionHost Telemetry Configuration", () => {
 			})
 
 			// Initialize state
-			const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+			const initializeState = (extensionHost as unknown as { initializeState: () => void }).initializeState.bind(
+				extensionHost,
+			)
 			initializeState()
 		})
 
@@ -194,7 +202,7 @@ describe("ExtensionHost Telemetry Configuration", () => {
 
 	describe("syncConfigurationMessages", () => {
 		let extensionHost: ExtensionHost
-		let sendWebviewMessageSpy: any
+		let sendWebviewMessageSpy: ReturnType<typeof vi.fn>
 
 		beforeEach(() => {
 			extensionHost = new ExtensionHost({
@@ -204,11 +212,13 @@ describe("ExtensionHost Telemetry Configuration", () => {
 			})
 
 			// Initialize state
-			const initializeState = (extensionHost as any).initializeState.bind(extensionHost)
+			const initializeState = (extensionHost as unknown as { initializeState: () => void }).initializeState.bind(
+				extensionHost,
+			)
 			initializeState()
 
 			// Spy on sendWebviewMessage
-			sendWebviewMessageSpy = vi.spyOn(extensionHost, "sendWebviewMessage")
+			sendWebviewMessageSpy = vi.spyOn(extensionHost, "sendWebviewMessage") as ReturnType<typeof vi.fn>
 		})
 
 		it("should send telemetrySetting message when telemetry is in config", async () => {

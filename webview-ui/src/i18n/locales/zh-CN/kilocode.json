@@ -108,7 +108,7 @@
 		"description": "选择系统提示中工具调用的格式。JSON 格式目前处于实验阶段，主要面向有兴趣参与开发的用户。",
 		"automatic": "让 Kilo 决定",
 		"xml": "XML",
-		"json": "JSON（实验性）"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {

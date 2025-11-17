@@ -8,6 +8,7 @@ import { getDefinitionsFromLsp } from "../../continuedev/core/vscode-test-harnes
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameters"
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
+import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
@@ -143,9 +144,39 @@ export class GhostContextProvider {
 
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 
-		console.log("[GhostContextProvider] - formattedContext:", formattedContext)
-
 		return formattedContext
+	}
+
+	/**
+	 * Get FIM-formatted context into compiled prefix for FIM-compatible models
+	 */
+	async getFimCompiledPrefix(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+		prefix: string,
+		suffix: string,
+	): Promise<string> {
+		const { filepathUri, snippetsWithUris, workspaceDirs } = await this.getProcessedSnippets(
+			autocompleteInput,
+			filepath,
+		)
+
+		const modelName = this.model.getModelName() ?? "codestral"
+		const template = getTemplateForModel(modelName)
+
+		if (template.compilePrefixSuffix) {
+			const [compiledPrefix] = template.compilePrefixSuffix(
+				prefix,
+				suffix,
+				filepathUri,
+				"", // reponame not used in our context
+				snippetsWithUris,
+				workspaceDirs,
+			)
+			return compiledPrefix
+		}
+
+		return prefix
 	}
 
 	/**

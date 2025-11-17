@@ -103,7 +103,7 @@
 		"description": "選擇系統提示中工具呼叫的格式化方式。JSON 目前為實驗性功能，主要供有興趣參與開發的使用者使用。",
 		"automatic": "讓 Kilo 決定",
 		"xml": "XML",
-		"json": "JSON（實驗性）"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {

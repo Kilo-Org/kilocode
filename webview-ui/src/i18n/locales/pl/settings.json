@@ -233,6 +233,8 @@
 		"providerDocumentation": "Dokumentacja {{provider}}",
 		"configProfile": "Profil konfiguracji",
 		"description": "Zapisz różne konfiguracje API, aby szybko przełączać się między dostawcami i ustawieniami.",
+		"makeActiveProfile": "Ustaw jako aktywny profil",
+		"makeActiveTooltip": "Aktywuj ten profil, aby używać go w żądaniach API",
 		"apiProvider": "Dostawca API",
 		"model": "Model",
 		"nameEmpty": "Nazwa nie może być pusta",

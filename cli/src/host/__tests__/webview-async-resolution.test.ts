@@ -73,7 +73,11 @@ describe("Webview Async Resolution", () => {
 		extensionHost.registerWebviewProvider("test-provider", mockProvider)
 
 		// Simulate the webview registration flow
-		const vscode = (global as any).vscode
+		const vscode = (
+			global as {
+				vscode?: { window?: { registerWebviewViewProvider: (viewId: string, provider: unknown) => void } }
+			}
+		).vscode
 		if (vscode && vscode.window) {
 			// This will trigger resolveWebviewView
 			vscode.window.registerWebviewViewProvider("test-provider", mockProvider)
@@ -116,7 +120,11 @@ describe("Webview Async Resolution", () => {
 		extensionHost.registerWebviewProvider("test-provider", mockProvider)
 
 		// Simulate the webview registration flow
-		const vscode = (global as any).vscode
+		const vscode = (
+			global as {
+				vscode?: { window?: { registerWebviewViewProvider: (viewId: string, provider: unknown) => void } }
+			}
+		).vscode
 		if (vscode && vscode.window) {
 			vscode.window.registerWebviewViewProvider("test-provider", mockProvider)
 		}
@@ -134,12 +142,12 @@ describe("Webview Async Resolution", () => {
 			resolvePromise = resolve
 		})
 
-		const receivedMessages: any[] = []
+		const receivedMessages: Array<{ type: string }> = []
 		const mockProvider = {
 			resolveWebviewView: vi.fn(async () => {
 				await asyncResolution
 			}),
-			handleCLIMessage: vi.fn((message: any) => {
+			handleCLIMessage: vi.fn(async (message: { type: string }) => {
 				receivedMessages.push(message)
 			}),
 		}
@@ -151,7 +159,11 @@ describe("Webview Async Resolution", () => {
 		extensionHost.registerWebviewProvider("kilo-code.SidebarProvider", mockProvider)
 
 		// Simulate the webview registration flow
-		const vscode = (global as any).vscode
+		const vscode = (
+			global as {
+				vscode?: { window?: { registerWebviewViewProvider: (viewId: string, provider: unknown) => void } }
+			}
+		).vscode
 		if (vscode && vscode.window) {
 			vscode.window.registerWebviewViewProvider("kilo-code.SidebarProvider", mockProvider)
 		}

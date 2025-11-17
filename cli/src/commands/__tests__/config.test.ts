@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { configCommand } from "../config.js"
 import type { CommandContext } from "../core/types.js"
 import openConfigFile from "../../config/openConfig.js"
+import { createMockContext } from "./helpers/mockContext.js"
 
 // Mock the openConfigFile function
 vi.mock("../../config/openConfig.js", () => ({
@@ -16,28 +17,10 @@ describe("configCommand", () => {
 		vi.clearAllMocks()
 		addMessageSpy = vi.fn()
 
-		mockContext = {
+		mockContext = createMockContext({
 			input: "/config",
-			args: [],
-			options: {},
-			sendMessage: vi.fn(),
 			addMessage: addMessageSpy,
-			clearMessages: vi.fn(),
-			replaceMessages: vi.fn(),
-			clearTask: vi.fn(),
-			setMode: vi.fn(),
-			exit: vi.fn(),
-			routerModels: null,
-			currentProvider: null,
-			kilocodeDefaultModel: "",
-			updateProviderModel: vi.fn(),
-			refreshRouterModels: vi.fn(),
-			updateProvider: vi.fn(),
-			profileData: null,
-			balanceData: null,
-			profileLoading: false,
-			balanceLoading: false,
-		}
+		})
 	})
 
 	it("should have correct metadata", () => {

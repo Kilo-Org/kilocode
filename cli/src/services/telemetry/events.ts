@@ -333,13 +333,13 @@ export interface FeatureUsageProperties extends BaseProperties {
 /**
  * Type guard to check if properties are valid
  */
-export function isValidEventProperties(properties: any): properties is BaseProperties {
+export function isValidEventProperties(properties: unknown): properties is BaseProperties {
 	return (
 		typeof properties === "object" &&
 		properties !== null &&
-		typeof properties.cliVersion === "string" &&
-		typeof properties.sessionId === "string" &&
-		typeof properties.mode === "string" &&
-		typeof properties.ciMode === "boolean"
+		typeof (properties as Record<string, unknown>).cliVersion === "string" &&
+		typeof (properties as Record<string, unknown>).sessionId === "string" &&
+		typeof (properties as Record<string, unknown>).mode === "string" &&
+		typeof (properties as Record<string, unknown>).ciMode === "boolean"
 	)
 }

@@ -269,7 +269,7 @@
 		"description": "Scegli come formattare le chiamate agli strumenti nel prompt di sistema. JSON è attualmente sperimentale e destinato principalmente agli utenti interessati a contribuire al suo sviluppo.",
 		"automatic": "Lascia decidere a Kilo",
 		"xml": "XML",
-		"json": "JSON (sperimentale)"
+		"json": "JSON"
 	},
 	"marketplace": {
 		"mcp": {

@@ -45,6 +45,8 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"human-relay": "Human Relay",
 	"fake-ai": "Fake AI",
 	ovhcloud: "OVHcloud AI Endpoints",
+	inception: "Inception",
+	synthetic: "Synthetic",
 }
 
 /**

@@ -233,6 +233,8 @@
 		"providerDocumentation": "Dokumentasi {{provider}}",
 		"configProfile": "Profil Konfigurasi",
 		"description": "Simpan konfigurasi API yang berbeda untuk beralih dengan cepat antara provider dan pengaturan.",
+		"makeActiveProfile": "Jadikan Profil Aktif",
+		"makeActiveTooltip": "Aktifkan profil ini untuk digunakan dalam permintaan API",
 		"apiProvider": "Provider API",
 		"model": "Model",
 		"nameEmpty": "Nama tidak boleh kosong",

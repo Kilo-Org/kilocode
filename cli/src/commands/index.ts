@@ -13,6 +13,7 @@ import { clearCommand } from "./clear.js"
 import { exitCommand } from "./exit.js"
 import { modeCommand } from "./mode.js"
 import { modelCommand } from "./model.js"
+import { providerCommand } from "./provider.js"
 import { profileCommand } from "./profile.js"
 import { teamsCommand } from "./teams.js"
 import { configCommand } from "./config.js"
@@ -31,6 +32,7 @@ export function initializeCommands(): void {
 	commandRegistry.register(exitCommand)
 	commandRegistry.register(modeCommand)
 	commandRegistry.register(modelCommand)
+	commandRegistry.register(providerCommand)
 	commandRegistry.register(profileCommand)
 	commandRegistry.register(teamsCommand)
 	commandRegistry.register(configCommand)

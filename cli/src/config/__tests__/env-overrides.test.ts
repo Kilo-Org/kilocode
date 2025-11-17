@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { applyEnvOverrides, PROVIDER_ENV_VAR, KILOCODE_PREFIX, KILO_PREFIX } from "../env-overrides.js"
+import { applyEnvOverrides, PROVIDER_ENV_VAR, KILOCODE_PREFIX, KILO_PREFIX } from "../env-config.js"
 import type { CLIConfig } from "../types.js"
 
 describe("env-overrides", () => {

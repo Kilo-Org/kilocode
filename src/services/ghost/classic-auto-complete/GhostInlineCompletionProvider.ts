@@ -95,7 +95,7 @@ export interface LLMRetrievalResult {
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
 	private holeFiller: HoleFiller
-	private contextProvider?: GhostContextProvider
+	private contextProvider: GhostContextProvider
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
 	private getSettings: () => GhostServiceSettings | null
@@ -108,7 +108,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		model: GhostModel,
 		costTrackingCallback: CostTrackingCallback,
 		getSettings: () => GhostServiceSettings | null,
-		contextProvider?: GhostContextProvider,
+		contextProvider: GhostContextProvider,
 		ignoreController?: Promise<RooIgnoreController>,
 	) {
 		this.model = model
@@ -118,14 +118,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.contextProvider = contextProvider
 		this.ignoreController = ignoreController
 
-		// Get IDE from context provider if available
-		const ide = contextProvider?.getIde()
-		if (ide) {
-			this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
-			this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
-		} else {
-			throw new Error("GhostContextProvider with IDE is required for tracking services")
-		}
+		// Initialize tracking services with IDE from context provider
+		const ide = contextProvider.getIde()
+		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
+		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -209,19 +205,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		let response = ""
 
-		// Create streaming callback
 		const onChunk = (chunk: ApiStreamChunk) => {
 			if (chunk.type === "text") {
 				response += chunk.text
 			}
 		}
 
-		// Start streaming generation
+		console.log("[HoleFiller] userPrompt:", userPrompt)
+
 		const usageInfo = await model.generateResponse(systemPrompt, userPrompt, onChunk)
 
 		console.log("response", response)
 
-		// Parse the response using the standalone function
 		const parsedSuggestion = parseGhostResponse(response, prefix, suffix)
 		const fillInAtCursorSuggestion = this.processSuggestion(parsedSuggestion.text, prefix, suffix, model)
 
@@ -246,14 +241,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		model: GhostModel,
 		autocompleteInput: AutocompleteInput,
 	): Promise<LLMRetrievalResult> {
-		const { prefix: formattedPrefix } = this.contextProvider
-			? await this.contextProvider.getFimFormattedContext(
-					autocompleteInput,
-					autocompleteInput.filepath,
-					prefix,
-					suffix,
-				)
-			: { prefix }
+		const formattedPrefix = await this.contextProvider.getFimCompiledPrefix(
+			autocompleteInput,
+			autocompleteInput.filepath,
+			prefix,
+			suffix,
+		)
+
+		console.log("[FIM] formattedPrefix:", formattedPrefix)
 
 		let response = ""
 		const onChunk = (text: string) => {
@@ -267,7 +262,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			autocompleteInput.completionId, // Pass completionId as taskId for tracking
 		)
 
-		console.log("FIM response", response)
+		console.log("[FIM] response:", response)
 
 		const fillInAtCursorSuggestion = this.processSuggestion(response, prefix, suffix, model)
 
@@ -275,7 +270,6 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			console.info("Final FIM suggestion:", fillInAtCursorSuggestion)
 		}
 
-		// Always return a FillInAtCursorSuggestion, even if text is empty
 		return {
 			suggestion: fillInAtCursorSuggestion,
 			cost: usageInfo.cost,

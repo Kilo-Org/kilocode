@@ -14,12 +14,290 @@ export interface IdentityInfo {
 // Basic VSCode API types and enums
 export type Thenable<T> = Promise<T>
 
+// TextDocument interface for VSCode API
+export interface TextDocument {
+	uri: Uri
+	fileName: string
+	languageId: string
+	version: number
+	isDirty: boolean
+	isClosed: boolean
+	lineCount: number
+	getText(range?: Range): string
+	lineAt(line: number): TextLine
+	offsetAt(position: Position): number
+	positionAt(offset: number): Position
+	save(): Thenable<boolean>
+	validateRange(range: Range): Range
+	validatePosition(position: Position): Position
+}
+
+export interface TextLine {
+	text: string
+	range: Range
+	rangeIncludingLineBreak: Range
+	firstNonWhitespaceCharacterIndex: number
+	isEmptyOrWhitespace: boolean
+}
+
+export interface WorkspaceFoldersChangeEvent {
+	added: WorkspaceFolder[]
+	removed: WorkspaceFolder[]
+}
+
+export interface TextDocumentChangeEvent {
+	document: TextDocument
+	contentChanges: readonly TextDocumentContentChangeEvent[]
+}
+
+export interface TextDocumentContentChangeEvent {
+	range: Range
+	rangeOffset: number
+	rangeLength: number
+	text: string
+}
+
+export interface ConfigurationChangeEvent {
+	affectsConfiguration(section: string, scope?: Uri): boolean
+}
+
+export interface ConfigurationInspect<T> {
+	key: string
+	defaultValue?: T
+	globalValue?: T
+	workspaceValue?: T
+	workspaceFolderValue?: T
+}
+
+export interface TextDocumentContentProvider {
+	provideTextDocumentContent(uri: Uri, token: CancellationToken): Thenable<string>
+	onDidChange?: (listener: (e: Uri) => void) => Disposable
+}
+
+export interface FileSystemWatcher extends Disposable {
+	onDidChange: (listener: (e: Uri) => void) => Disposable
+	onDidCreate: (listener: (e: Uri) => void) => Disposable
+	onDidDelete: (listener: (e: Uri) => void) => Disposable
+}
+
+export interface RelativePattern {
+	base: string
+	pattern: string
+}
+
+// TextEditor and related interfaces
+export interface TextEditor {
+	document: TextDocument
+	selection: Selection
+	selections: Selection[]
+	visibleRanges: Range[]
+	options: TextEditorOptions
+	viewColumn?: ViewColumn
+	edit(callback: (editBuilder: TextEditorEdit) => void): Thenable<boolean>
+	insertSnippet(
+		snippet: unknown,
+		location?: Position | Range | readonly Position[] | readonly Range[],
+	): Thenable<boolean>
+	setDecorations(decorationType: TextEditorDecorationType, rangesOrOptions: readonly Range[]): void
+	revealRange(range: Range, revealType?: TextEditorRevealType): void
+	show(column?: ViewColumn): void
+	hide(): void
+}
+
+export interface TextEditorOptions {
+	tabSize?: number
+	insertSpaces?: boolean
+	cursorStyle?: number
+	lineNumbers?: number
+}
+
+export interface TextEditorEdit {
+	replace(location: Position | Range | Selection, value: string): void
+	insert(location: Position, value: string): void
+	delete(location: Range | Selection): void
+	setEndOfLine(endOfLine: EndOfLine): void
+}
+
+export interface TextEditorSelectionChangeEvent {
+	textEditor: TextEditor
+	selections: readonly Selection[]
+	kind?: number
+}
+
+export interface TextDocumentShowOptions {
+	viewColumn?: ViewColumn
+	preserveFocus?: boolean
+	preview?: boolean
+	selection?: Range
+}
+
+export interface DecorationRenderOptions {
+	backgroundColor?: string | ThemeColor
+	border?: string
+	borderColor?: string | ThemeColor
+	borderRadius?: string
+	borderSpacing?: string
+	borderStyle?: string
+	borderWidth?: string
+	color?: string | ThemeColor
+	cursor?: string
+	fontStyle?: string
+	fontWeight?: string
+	gutterIconPath?: string | Uri
+	gutterIconSize?: string
+	isWholeLine?: boolean
+	letterSpacing?: string
+	opacity?: string
+	outline?: string
+	outlineColor?: string | ThemeColor
+	outlineStyle?: string
+	outlineWidth?: string
+	overviewRulerColor?: string | ThemeColor
+	overviewRulerLane?: OverviewRulerLane
+	rangeBehavior?: DecorationRangeBehavior
+	textDecoration?: string
+}
+
+export interface Terminal {
+	name: string
+	processId: Thenable<number | undefined>
+	creationOptions: Readonly<TerminalOptions>
+	exitStatus: TerminalExitStatus | undefined
+	state: TerminalState
+	sendText(text: string, addNewLine?: boolean): void
+	show(preserveFocus?: boolean): void
+	hide(): void
+	dispose(): void
+}
+
+export interface TerminalOptions {
+	name?: string
+	shellPath?: string
+	shellArgs?: string[] | string
+	cwd?: string | Uri
+	env?: { [key: string]: string | null | undefined }
+	iconPath?: Uri | ThemeIcon
+	hideFromUser?: boolean
+	message?: string
+	strictEnv?: boolean
+}
+
+export interface TerminalExitStatus {
+	code: number | undefined
+	reason: number
+}
+
+export interface TerminalState {
+	isInteractedWith: boolean
+}
+
+export interface TerminalDimensionsChangeEvent {
+	terminal: Terminal
+	dimensions: TerminalDimensions
+}
+
+export interface TerminalDimensions {
+	columns: number
+	rows: number
+}
+
+export interface TerminalDataWriteEvent {
+	terminal: Terminal
+	data: string
+}
+
+export interface WebviewViewProvider {
+	resolveWebviewView(
+		webviewView: WebviewView,
+		context: WebviewViewResolveContext,
+		token: CancellationToken,
+	): Thenable<void> | void
+}
+
+export interface WebviewView {
+	webview: Webview
+	viewType: string
+	title?: string
+	description?: string
+	badge?: ViewBadge
+	show(preserveFocus?: boolean): void
+	onDidChangeVisibility: (listener: () => void) => Disposable
+	onDidDispose: (listener: () => void) => Disposable
+	visible: boolean
+}
+
+export interface Webview {
+	html: string
+	options: WebviewOptions
+	cspSource: string
+	postMessage(message: unknown): Thenable<boolean>
+	onDidReceiveMessage: (listener: (message: unknown) => void) => Disposable
+	asWebviewUri(localResource: Uri): Uri
+}
+
+export interface WebviewOptions {
+	enableScripts?: boolean
+	enableForms?: boolean
+	localResourceRoots?: readonly Uri[]
+	portMapping?: readonly WebviewPortMapping[]
+}
+
+export interface WebviewPortMapping {
+	webviewPort: number
+	extensionHostPort: number
+}
+
+export interface ViewBadge {
+	tooltip: string
+	value: number
+}
+
+export interface WebviewViewResolveContext {
+	state?: unknown
+}
+
+export interface WebviewViewProviderOptions {
+	retainContextWhenHidden?: boolean
+}
+
+export interface UriHandler {
+	handleUri(uri: Uri): void
+}
+
+export interface QuickPickOptions {
+	placeHolder?: string
+	canPickMany?: boolean
+	ignoreFocusOut?: boolean
+	matchOnDescription?: boolean
+	matchOnDetail?: boolean
+}
+
+export interface InputBoxOptions {
+	value?: string
+	valueSelection?: [number, number]
+	prompt?: string
+	placeHolder?: string
+	password?: boolean
+	ignoreFocusOut?: boolean
+	validateInput?(value: string): string | undefined | null | Thenable<string | undefined | null>
+}
+
+export interface OpenDialogOptions {
+	defaultUri?: Uri
+	openLabel?: string
+	canSelectFiles?: boolean
+	canSelectFolders?: boolean
+	canSelectMany?: boolean
+	filters?: { [name: string]: string[] }
+	title?: string
+}
+
 // VSCode EventEmitter implementation
 export interface Disposable {
 	dispose(): void
 }
 
-type Listener<T> = (e: T) => any
+type Listener<T> = (e: T) => void
 
 export class EventEmitter<T> {
 	readonly #listeners = new Set<Listener<T>>()
@@ -27,7 +305,7 @@ export class EventEmitter<T> {
 	/**
 	 * The event listeners can subscribe to.
 	 */
-	event = (listener: (e: T) => any, thisArgs?: any, disposables?: Disposable[]): Disposable => {
+	event = (listener: (e: T) => void, thisArgs?: unknown, disposables?: Disposable[]): Disposable => {
 		const fn = thisArgs ? listener.bind(thisArgs) : listener
 		this.#listeners.add(fn)
 		const disposable = {
@@ -327,8 +605,8 @@ export interface DiagnosticCollection extends Disposable {
 	delete(uri: Uri): void
 	clear(): void
 	forEach(
-		callback: (uri: Uri, diagnostics: Diagnostic[], collection: DiagnosticCollection) => any,
-		thisArg?: any,
+		callback: (uri: Uri, diagnostics: Diagnostic[], collection: DiagnosticCollection) => void,
+		thisArg?: unknown,
 	): void
 	get(uri: Uri): Diagnostic[] | undefined
 	has(uri: Uri): boolean
@@ -472,13 +750,13 @@ export class ThemeIcon {
 // Cancellation Token mock
 export interface CancellationToken {
 	isCancellationRequested: boolean
-	onCancellationRequested: (listener: (e: any) => any) => Disposable
+	onCancellationRequested: (listener: (e: unknown) => void) => Disposable
 }
 
 export class CancellationTokenSource {
 	private _token: CancellationToken
 	private _isCancelled = false
-	private _onCancellationRequestedEmitter = new EventEmitter<any>()
+	private _onCancellationRequestedEmitter = new EventEmitter<void>()
 
 	constructor() {
 		this._token = {
@@ -494,7 +772,8 @@ export class CancellationTokenSource {
 	cancel(): void {
 		if (!this._isCancelled) {
 			this._isCancelled = true
-			;(this._token as any).isCancellationRequested = true
+			// Type assertion needed to modify readonly property
+			;(this._token as { isCancellationRequested: boolean }).isCancellationRequested = true
 			this._onCancellationRequestedEmitter.fire(undefined)
 		}
 	}
@@ -508,10 +787,10 @@ export class CancellationTokenSource {
 // CodeLens mock
 export class CodeLens {
 	public range: Range
-	public command?: { command: string; title: string; arguments?: any[] } | undefined
+	public command?: { command: string; title: string; arguments?: unknown[] } | undefined
 	public isResolved: boolean = false
 
-	constructor(range: Range, command?: { command: string; title: string; arguments?: any[] } | undefined) {
+	constructor(range: Range, command?: { command: string; title: string; arguments?: unknown[] } | undefined) {
 		this.range = range
 		this.command = command
 	}
@@ -526,14 +805,14 @@ export class LanguageModelToolCallPart {
 	constructor(
 		public callId: string,
 		public name: string,
-		public input: any,
+		public input: unknown,
 	) {}
 }
 
 export class LanguageModelToolResultPart {
 	constructor(
 		public callId: string,
-		public content: any[],
+		public content: unknown[],
 	) {}
 }
 
@@ -647,7 +926,7 @@ export class ExtensionContext {
 	public secrets: SecretStorage
 	public extensionUri: Uri
 	public extensionPath: string
-	public environmentVariableCollection: any
+	public environmentVariableCollection: Record<string, unknown> = {}
 	public storageUri: Uri | undefined
 	public storagePath: string | undefined
 	public globalStorageUri: Uri
@@ -682,8 +961,10 @@ export class ExtensionContext {
 
 		// Initialize state storage
 		this.workspaceState = new MemoryMemento(path.join(workspaceStoragePath, "workspace-state.json"))
-		this.globalState = new MemoryMemento(path.join(globalStoragePath, "global-state.json")) as any
-		this.globalState.setKeysForSync = () => {} // No-op for CLI
+		const globalMemento = new MemoryMemento(path.join(globalStoragePath, "global-state.json"))
+		this.globalState = Object.assign(globalMemento, {
+			setKeysForSync: () => {}, // No-op for CLI
+		})
 
 		this.secrets = new MockSecretStorage(globalStoragePath)
 	}
@@ -703,12 +984,12 @@ export class ExtensionContext {
 export interface Memento {
 	get<T>(key: string): T | undefined
 	get<T>(key: string, defaultValue: T): T
-	update(key: string, value: any): Thenable<void>
+	update(key: string, value: unknown): Thenable<void>
 	keys(): readonly string[]
 }
 
 class MemoryMemento implements Memento {
-	private data: Record<string, any> = {}
+	private data: Record<string, unknown> = {}
 	private filePath: string
 
 	constructor(filePath: string) {
@@ -742,10 +1023,11 @@ class MemoryMemento implements Memento {
 	}
 
 	get<T>(key: string, defaultValue?: T): T | undefined {
-		return this.data[key] !== undefined ? this.data[key] : defaultValue
+		const value = this.data[key]
+		return value !== undefined && value !== null ? (value as T) : defaultValue
 	}
 
-	async update(key: string, value: any): Promise<void> {
+	async update(key: string, value: unknown): Promise<void> {
 		if (value === undefined) {
 			delete this.data[key]
 		} else {
@@ -768,7 +1050,7 @@ export interface SecretStorage {
 
 class MockSecretStorage implements SecretStorage {
 	private secrets: Record<string, string> = {}
-	private _onDidChange = new EventEmitter<any>()
+	private _onDidChange = new EventEmitter<{ key: string }>()
 	private filePath: string
 
 	constructor(storagePath: string) {
@@ -913,8 +1195,13 @@ export class FileSystemAPI {
 		try {
 			const content = fs.readFileSync(uri.fsPath)
 			return new Uint8Array(content)
-		} catch {
-			throw new Error(`Failed to read file: ${uri.fsPath}`)
+		} catch (error) {
+			// Check if it's a file not found error (ENOENT)
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+				throw FileSystemError.FileNotFound(uri)
+			}
+			// For other errors, throw a generic FileSystemError
+			throw new FileSystemError(`Failed to read file: ${uri.fsPath}`)
 		}
 	}
 
@@ -949,11 +1236,11 @@ export class WorkspaceAPI {
 	public name: string | undefined
 	public workspaceFile: Uri | undefined
 	public fs: FileSystemAPI
-	public textDocuments: any[] = []
-	private _onDidChangeWorkspaceFolders = new EventEmitter<any>()
-	private _onDidOpenTextDocument = new EventEmitter<any>()
-	private _onDidChangeTextDocument = new EventEmitter<any>()
-	private _onDidCloseTextDocument = new EventEmitter<any>()
+	public textDocuments: TextDocument[] = []
+	private _onDidChangeWorkspaceFolders = new EventEmitter<WorkspaceFoldersChangeEvent>()
+	private _onDidOpenTextDocument = new EventEmitter<TextDocument>()
+	private _onDidChangeTextDocument = new EventEmitter<TextDocumentChangeEvent>()
+	private _onDidCloseTextDocument = new EventEmitter<TextDocument>()
 	private workspacePath: string
 	private context: ExtensionContext
 
@@ -971,26 +1258,26 @@ export class WorkspaceAPI {
 		this.fs = new FileSystemAPI()
 	}
 
-	onDidChangeWorkspaceFolders(listener: (event: any) => void): Disposable {
+	onDidChangeWorkspaceFolders(listener: (event: WorkspaceFoldersChangeEvent) => void): Disposable {
 		return this._onDidChangeWorkspaceFolders.event(listener)
 	}
 
-	onDidChangeConfiguration(listener: (event: any) => void): Disposable {
+	onDidChangeConfiguration(listener: (event: ConfigurationChangeEvent) => void): Disposable {
 		// Create a mock configuration change event emitter
-		const emitter = new EventEmitter<any>()
+		const emitter = new EventEmitter<ConfigurationChangeEvent>()
 		return emitter.event(listener)
 	}
 
-	onDidChangeTextDocument(listener: (event: any) => void): Disposable {
+	onDidChangeTextDocument(listener: (event: TextDocumentChangeEvent) => void): Disposable {
 		return this._onDidChangeTextDocument.event(listener)
 	}
 
-	onDidOpenTextDocument(listener: (event: any) => void): Disposable {
+	onDidOpenTextDocument(listener: (event: TextDocument) => void): Disposable {
 		logs.debug("Registering onDidOpenTextDocument listener", "VSCode.Workspace")
 		return this._onDidOpenTextDocument.event(listener)
 	}
 
-	onDidCloseTextDocument(listener: (event: any) => void): Disposable {
+	onDidCloseTextDocument(listener: (event: TextDocument) => void): Disposable {
 		return this._onDidCloseTextDocument.event(listener)
 	}
 
@@ -1003,7 +1290,7 @@ export class WorkspaceAPI {
 		return Promise.resolve([])
 	}
 
-	async openTextDocument(uri: Uri): Promise<any> {
+	async openTextDocument(uri: Uri): Promise<TextDocument> {
 		logs.debug(`openTextDocument called for: ${uri.fsPath}`, "VSCode.Workspace")
 
 		// Read file content
@@ -1132,7 +1419,7 @@ export class WorkspaceAPI {
 
 				// Update the in-memory document object to reflect the new content
 				// This is critical for CLI mode where DiffViewProvider reads from the document object
-				const document = this.textDocuments.find((doc: any) => doc.uri.fsPath === filePath)
+				const document = this.textDocuments.find((doc: TextDocument) => doc.uri.fsPath === filePath)
 				if (document) {
 					const newLines = newContent.split("\n")
 
@@ -1183,20 +1470,21 @@ export class WorkspaceAPI {
 	}
 
 	createFileSystemWatcher(
-		_globPattern: any,
+		_globPattern: string | RelativePattern,
 		_ignoreCreateEvents?: boolean,
 		_ignoreChangeEvents?: boolean,
 		_ignoreDeleteEvents?: boolean,
-	): any {
+	): FileSystemWatcher {
+		const emitter = new EventEmitter<Uri>()
 		return {
-			onDidChange: () => ({ dispose: () => {} }),
-			onDidCreate: () => ({ dispose: () => {} }),
-			onDidDelete: () => ({ dispose: () => {} }),
-			dispose: () => {},
+			onDidChange: (listener: (e: Uri) => void) => emitter.event(listener),
+			onDidCreate: (listener: (e: Uri) => void) => emitter.event(listener),
+			onDidDelete: (listener: (e: Uri) => void) => emitter.event(listener),
+			dispose: () => emitter.dispose(),
 		}
 	}
 
-	registerTextDocumentContentProvider(_scheme: string, _provider: any): Disposable {
+	registerTextDocumentContentProvider(_scheme: string, _provider: TextDocumentContentProvider): Disposable {
 		return { dispose: () => {} }
 	}
 }
@@ -1211,8 +1499,8 @@ export interface WorkspaceConfiguration {
 	get<T>(section: string): T | undefined
 	get<T>(section: string, defaultValue: T): T
 	has(section: string): boolean
-	inspect(section: string): any
-	update(section: string, value: any, configurationTarget?: ConfigurationTarget): Thenable<void>
+	inspect(section: string): ConfigurationInspect<unknown> | undefined
+	update(section: string, value: unknown, configurationTarget?: ConfigurationTarget): Thenable<void>
 }
 
 export class MockWorkspaceConfiguration implements WorkspaceConfiguration {
@@ -1274,7 +1562,7 @@ export class MockWorkspaceConfiguration implements WorkspaceConfiguration {
 		return this.workspaceMemento.get(fullSection) !== undefined || this.globalMemento.get(fullSection) !== undefined
 	}
 
-	inspect(section: string): any {
+	inspect(section: string): ConfigurationInspect<unknown> | undefined {
 		const fullSection = this.section ? `${this.section}.${section}` : section
 		const workspaceValue = this.workspaceMemento.get(fullSection)
 		const globalValue = this.globalMemento.get(fullSection)
@@ -1292,7 +1580,7 @@ export class MockWorkspaceConfiguration implements WorkspaceConfiguration {
 		return undefined
 	}
 
-	async update(section: string, value: any, configurationTarget?: ConfigurationTarget): Promise<void> {
+	async update(section: string, value: unknown, configurationTarget?: ConfigurationTarget): Promise<void> {
 		const fullSection = this.section ? `${this.section}.${section}` : section
 
 		try {
@@ -1324,10 +1612,10 @@ export class MockWorkspaceConfiguration implements WorkspaceConfiguration {
 	}
 
 	// Method to get all configuration data (useful for debugging and generic config loading)
-	public getAllConfig(): Record<string, any> {
+	public getAllConfig(): Record<string, unknown> {
 		const globalKeys = this.globalMemento.keys()
 		const workspaceKeys = this.workspaceMemento.keys()
-		const allConfig: Record<string, any> = {}
+		const allConfig: Record<string, unknown> = {}
 
 		// Add global settings first
 		for (const key of globalKeys) {
@@ -1431,7 +1719,7 @@ export class StatusBarItem implements Disposable {
 
 // Tab and TabGroup interfaces for VSCode API
 export interface Tab {
-	input: TabInputText | any
+	input: TabInputText | unknown
 	label: string
 	isActive: boolean
 	isDirty: boolean
@@ -1484,8 +1772,8 @@ export class TabGroupsAPI {
 // Window API mock
 export class WindowAPI {
 	public tabGroups: TabGroupsAPI
-	public visibleTextEditors: any[] = []
-	public _onDidChangeVisibleTextEditors = new EventEmitter<any[]>()
+	public visibleTextEditors: TextEditor[] = []
+	public _onDidChangeVisibleTextEditors = new EventEmitter<TextEditor[]>()
 	private _workspace?: WorkspaceAPI
 
 	constructor() {
@@ -1524,7 +1812,7 @@ export class WindowAPI {
 		return new StatusBarItem(actualAlignment, actualPriority)
 	}
 
-	createTextEditorDecorationType(_options: any): TextEditorDecorationType {
+	createTextEditorDecorationType(_options: DecorationRenderOptions): TextEditorDecorationType {
 		return new TextEditorDecorationType(`decoration-${Date.now()}`)
 	}
 
@@ -1538,7 +1826,7 @@ export class WindowAPI {
 		hideFromUser?: boolean
 		message?: string
 		strictEnv?: boolean
-	}): any {
+	}): Terminal {
 		// Return a mock terminal object
 		return {
 			name: options?.name || "Terminal",
@@ -1576,34 +1864,34 @@ export class WindowAPI {
 		return Promise.resolve(undefined)
 	}
 
-	showQuickPick(items: string[], _options?: any): Thenable<string | undefined> {
+	showQuickPick(items: string[], _options?: QuickPickOptions): Thenable<string | undefined> {
 		// Return first item for CLI
 		return Promise.resolve(items[0])
 	}
 
-	showInputBox(_options?: any): Thenable<string | undefined> {
+	showInputBox(_options?: InputBoxOptions): Thenable<string | undefined> {
 		// Return empty string for CLI
 		return Promise.resolve("")
 	}
 
-	showOpenDialog(_options?: any): Thenable<Uri[] | undefined> {
+	showOpenDialog(_options?: OpenDialogOptions): Thenable<Uri[] | undefined> {
 		// Return empty array for CLI
 		return Promise.resolve([])
 	}
 
 	async showTextDocument(
-		documentOrUri: any | Uri,
-		columnOrOptions?: ViewColumn | any,
+		documentOrUri: TextDocument | Uri,
+		columnOrOptions?: ViewColumn | TextDocumentShowOptions,
 		_preserveFocus?: boolean,
-	): Promise<any> {
+	): Promise<TextEditor> {
 		// Mock implementation for CLI
 		// In a real VSCode environment, this would open the document in an editor
 		const uri = documentOrUri instanceof Uri ? documentOrUri : documentOrUri.uri
 		logs.debug(`showTextDocument called for: ${uri?.toString() || "unknown"}`, "VSCode.Window")
 
 		// Create a placeholder editor first so it's in visibleTextEditors when onDidOpenTextDocument fires
-		const placeholderEditor = {
-			document: { uri },
+		const placeholderEditor: TextEditor = {
+			document: { uri } as TextDocument,
 			selection: new Selection(new Position(0, 0), new Position(0, 0)),
 			selections: [new Selection(new Position(0, 0), new Position(0, 0))],
 			visibleRanges: [new Range(new Position(0, 0), new Position(0, 0))],
@@ -1646,25 +1934,46 @@ export class WindowAPI {
 		return placeholderEditor
 	}
 
-	registerWebviewViewProvider(viewId: string, provider: any, _options?: any): Disposable {
+	registerWebviewViewProvider(
+		viewId: string,
+		provider: WebviewViewProvider,
+		_options?: WebviewViewProviderOptions,
+	): Disposable {
 		// Store the provider for later use by ExtensionHost
-		if ((global as any).__extensionHost) {
-			const extensionHost = (global as any).__extensionHost
+		if ((global as unknown as { __extensionHost?: unknown }).__extensionHost) {
+			const extensionHost = (
+				global as unknown as {
+					__extensionHost: {
+						registerWebviewProvider: (viewId: string, provider: WebviewViewProvider) => void
+						isInInitialSetup: () => boolean
+						markWebviewReady: () => void
+					}
+				}
+			).__extensionHost
 			extensionHost.registerWebviewProvider(viewId, provider)
 
 			// Set up webview mock that captures messages from the extension
 			const mockWebview = {
-				postMessage: (message: any) => {
+				postMessage: (message: unknown): Thenable<boolean> => {
 					// Forward extension messages to ExtensionHost for CLI consumption
-					if ((global as any).__extensionHost) {
-						;(global as any).__extensionHost.emit("extensionWebviewMessage", message)
+					if ((global as unknown as { __extensionHost?: unknown }).__extensionHost) {
+						;(
+							global as unknown as {
+								__extensionHost: { emit: (event: string, message: unknown) => void }
+							}
+						).__extensionHost.emit("extensionWebviewMessage", message)
 					}
+					return Promise.resolve(true)
 				},
-				onDidReceiveMessage: (listener: (message: any) => void) => {
+				onDidReceiveMessage: (listener: (message: unknown) => void) => {
 					// This is how the extension listens for messages from the webview
 					// We need to connect this to our message bridge
-					if ((global as any).__extensionHost) {
-						;(global as any).__extensionHost.on("webviewMessage", listener)
+					if ((global as unknown as { __extensionHost?: unknown }).__extensionHost) {
+						;(
+							global as unknown as {
+								__extensionHost: { on: (event: string, listener: (message: unknown) => void) => void }
+							}
+						).__extensionHost.on("webviewMessage", listener)
 					}
 					return { dispose: () => {} }
 				},
@@ -1681,11 +1990,11 @@ export class WindowAPI {
 			// Provide the mock webview to the provider
 			if (provider.resolveWebviewView) {
 				const mockWebviewView = {
-					webview: mockWebview,
+					webview: mockWebview as Webview,
 					viewType: viewId,
 					title: viewId,
-					description: undefined,
-					badge: undefined,
+					description: undefined as string | undefined,
+					badge: undefined as ViewBadge | undefined,
 					show: () => {},
 					onDidChangeVisibility: () => ({ dispose: () => {} }),
 					onDidDispose: () => ({ dispose: () => {} }),
@@ -1708,7 +2017,7 @@ export class WindowAPI {
 						)
 
 						// Await the result to ensure webview is fully initialized before marking ready
-						await provider.resolveWebviewView(mockWebviewView, context, {})
+						await provider.resolveWebviewView(mockWebviewView as WebviewView, {}, {} as CancellationToken)
 
 						// Mark webview as ready after resolution completes
 						extensionHost.markWebviewReady()
@@ -1721,60 +2030,64 @@ export class WindowAPI {
 		}
 		return {
 			dispose: () => {
-				if ((global as any).__extensionHost) {
-					;(global as any).__extensionHost.unregisterWebviewProvider(viewId)
+				if ((global as unknown as { __extensionHost?: unknown }).__extensionHost) {
+					;(
+						global as unknown as {
+							__extensionHost: { unregisterWebviewProvider: (viewId: string) => void }
+						}
+					).__extensionHost.unregisterWebviewProvider(viewId)
 				}
 			},
 		}
 	}
 
-	registerUriHandler(_handler: any): Disposable {
+	registerUriHandler(_handler: UriHandler): Disposable {
 		// Store the URI handler for later use
 		return {
 			dispose: () => {},
 		}
 	}
 
-	onDidChangeTextEditorSelection(listener: (event: any) => void): Disposable {
-		const emitter = new EventEmitter<any>()
+	onDidChangeTextEditorSelection(listener: (event: TextEditorSelectionChangeEvent) => void): Disposable {
+		const emitter = new EventEmitter<TextEditorSelectionChangeEvent>()
 		return emitter.event(listener)
 	}
 
-	onDidChangeActiveTextEditor(listener: (event: any) => void): Disposable {
-		const emitter = new EventEmitter<any>()
+	onDidChangeActiveTextEditor(listener: (event: TextEditor | undefined) => void): Disposable {
+		const emitter = new EventEmitter<TextEditor | undefined>()
 		return emitter.event(listener)
 	}
 
-	onDidChangeVisibleTextEditors(listener: (editors: any[]) => void): Disposable {
+	onDidChangeVisibleTextEditors(listener: (editors: TextEditor[]) => void): Disposable {
 		return this._onDidChangeVisibleTextEditors.event(listener)
 	}
 
 	// Terminal event handlers
-	onDidCloseTerminal(_listener: (terminal: any) => void): Disposable {
+	onDidCloseTerminal(_listener: (terminal: Terminal) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidOpenTerminal(_listener: (terminal: any) => void): Disposable {
+	onDidOpenTerminal(_listener: (terminal: Terminal) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidChangeActiveTerminal(_listener: (terminal: any) => void): Disposable {
+	onDidChangeActiveTerminal(_listener: (terminal: Terminal | undefined) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidChangeTerminalDimensions(_listener: (event: any) => void): Disposable {
+	onDidChangeTerminalDimensions(_listener: (event: TerminalDimensionsChangeEvent) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	onDidWriteTerminalData(_listener: (event: any) => void): Disposable {
+	onDidWriteTerminalData(_listener: (event: TerminalDataWriteEvent) => void): Disposable {
 		return { dispose: () => {} }
 	}
 
-	get activeTerminal(): any {
+	get activeTerminal(): Terminal | undefined {
 		return undefined
 	}
 
-	get terminals(): any[] {
+	get terminals(): Terminal[] {
 		return []
 	}
 }
@@ -1789,17 +2102,17 @@ export interface WorkspaceConfiguration {
 	get<T>(section: string): T | undefined
 	get<T>(section: string, defaultValue: T): T
 	has(section: string): boolean
-	inspect(_section: string): any
-	update(section: string, value: any, configurationTarget?: ConfigurationTarget): Thenable<void>
+	inspect(_section: string): ConfigurationInspect<unknown> | undefined
+	update(section: string, value: unknown, configurationTarget?: ConfigurationTarget): Thenable<void>
 }
 
 // Commands API mock
 
 // Commands API mock
 export class CommandsAPI {
-	private commands: Map<string, (...args: any[]) => any> = new Map()
+	private commands: Map<string, (...args: unknown[]) => unknown> = new Map()
 
-	registerCommand(command: string, callback: (...args: any[]) => any): Disposable {
+	registerCommand(command: string, callback: (...args: unknown[]) => unknown): Disposable {
 		this.commands.set(command, callback)
 		return {
 			dispose: () => {
@@ -1808,12 +2121,12 @@ export class CommandsAPI {
 		}
 	}
 
-	executeCommand<T = unknown>(command: string, ...rest: any[]): Thenable<T> {
+	executeCommand<T = unknown>(command: string, ...rest: unknown[]): Thenable<T> {
 		const handler = this.commands.get(command)
 		if (handler) {
 			try {
 				const result = handler(...rest)
-				return Promise.resolve(result)
+				return Promise.resolve(result as T)
 			} catch (error) {
 				return Promise.reject(error)
 			}
@@ -1828,14 +2141,24 @@ export class CommandsAPI {
 			case "vscode.diff":
 				// Simulate opening a diff view for the CLI
 				// The extension's DiffViewProvider expects this to create a diff editor
-				return this.handleDiffCommand(rest[0], rest[1], rest[2], rest[3]) as Thenable<T>
+				return this.handleDiffCommand(
+					rest[0] as Uri,
+					rest[1] as Uri,
+					rest[2] as string | undefined,
+					rest[3],
+				) as Thenable<T>
 			default:
 				logs.warn(`Unknown command: ${command}`, "VSCode.Commands")
 				return Promise.resolve(undefined as T)
 		}
 	}
 
-	private async handleDiffCommand(originalUri: Uri, modifiedUri: Uri, title?: string, _options?: any): Promise<void> {
+	private async handleDiffCommand(
+		originalUri: Uri,
+		modifiedUri: Uri,
+		title?: string,
+		_options?: unknown,
+	): Promise<void> {
 		// The DiffViewProvider is waiting for the modified document to appear in visibleTextEditors
 		// We need to simulate this by opening the document and adding it to visible editors
 
@@ -1851,8 +2174,8 @@ export class CommandsAPI {
 		}
 
 		// Get the workspace API to open the document
-		const workspace = (global as any).vscode?.workspace
-		const window = (global as any).vscode?.window
+		const workspace = (global as unknown as { vscode?: { workspace?: WorkspaceAPI } }).vscode?.workspace
+		const window = (global as unknown as { vscode?: { window?: WindowAPI } }).vscode?.window
 
 		if (!workspace || !window) {
 			logs.warn("[DIFF] VSCode APIs not available for diff command", "VSCode.Commands")
@@ -1868,7 +2191,7 @@ export class CommandsAPI {
 			// The document should already be open from the showTextDocument call
 			// Find it in the existing textDocuments
 			logs.info(`[DIFF] Looking for already-opened document: ${modifiedUri.fsPath}`, "VSCode.Commands")
-			let document = workspace.textDocuments.find((doc: any) => doc.uri.fsPath === modifiedUri.fsPath)
+			let document = workspace.textDocuments.find((doc: TextDocument) => doc.uri.fsPath === modifiedUri.fsPath)
 
 			if (!document) {
 				// If not found, open it now
@@ -1887,9 +2210,9 @@ export class CommandsAPI {
 				visibleRanges: [new Range(new Position(0, 0), new Position(0, 0))],
 				options: {},
 				viewColumn: ViewColumn.One,
-				edit: async (callback: (editBuilder: any) => void) => {
+				edit: async (callback: (editBuilder: TextEditorEdit) => void) => {
 					// Create a mock edit builder
-					const editBuilder = {
+					const editBuilder: TextEditorEdit = {
 						replace: (_range: Range, _text: string) => {
 							// In CLI mode, we don't actually edit here
 							// The DiffViewProvider will handle the actual edits
@@ -1900,6 +2223,9 @@ export class CommandsAPI {
 						},
 						delete: (_range: Range) => {
 							logs.debug("Mock edit builder delete called", "VSCode.Commands")
+						},
+						setEndOfLine: (_endOfLine: EndOfLine) => {
+							logs.debug("Mock edit builder setEndOfLine called", "VSCode.Commands")
 						},
 					}
 					callback(editBuilder)
@@ -1919,7 +2245,7 @@ export class CommandsAPI {
 
 			// Check if this editor is already in visibleTextEditors (from showTextDocument)
 			const existingEditor = window.visibleTextEditors.find(
-				(e: any) => e.document.uri.fsPath === modifiedUri.fsPath,
+				(e: TextEditor) => e.document.uri.fsPath === modifiedUri.fsPath,
 			)
 
 			if (existingEditor) {
@@ -2013,7 +2339,7 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 		StatusBarItem,
 		CancellationToken: class CancellationTokenClass implements CancellationToken {
 			isCancellationRequested = false
-			onCancellationRequested = (_listener: (e: any) => any) => ({ dispose: () => {} })
+			onCancellationRequested = (_listener: (e: unknown) => void) => ({ dispose: () => {} })
 		},
 		CancellationTokenSource,
 		CodeLens,
@@ -2105,8 +2431,8 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 						diagnostics.clear()
 					},
 					forEach: (
-						callback: (uri: Uri, diagnostics: Diagnostic[], collection: DiagnosticCollection) => any,
-						thisArg?: any,
+						callback: (uri: Uri, diagnostics: Diagnostic[], collection: DiagnosticCollection) => void,
+						thisArg?: unknown,
 					) => {
 						diagnostics.forEach((diags, uriString) => {
 							callback.call(thisArg, Uri.parse(uriString), diags, collection)
@@ -2160,9 +2486,9 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 			dispose = () => {}
 		},
 		// Add relative pattern
-		RelativePattern: class {
+		RelativePattern: class implements RelativePattern {
 			constructor(
-				public base: any,
+				public base: string,
 				public pattern: string,
 			) {}
 		},
@@ -2173,8 +2499,8 @@ export function createVSCodeAPIMock(extensionRootPath: string, workspacePath: st
 			Notification: 15,
 		},
 		// Add URI handler
-		UriHandler: class {
-			handleUri = () => {}
+		UriHandler: class implements UriHandler {
+			handleUri = (_uri: Uri) => {}
 		},
 	}
 }

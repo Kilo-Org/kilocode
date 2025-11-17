@@ -20,6 +20,7 @@ import type { ApiHandlerCreateMessageMetadata } from "../index"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
 import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
+import { addNativeToolCallsToParams } from "./kilocode/nativeToolCallHelpers"
 
 export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 	constructor(options: ApiHandlerOptions) {
@@ -73,7 +74,10 @@ export class ZAiHandler extends BaseOpenAiCompatibleProvider<string> {
 		}
 
 		try {
-			return this.client.chat.completions.create(params, requestOptions)
+			return this.client.chat.completions.create(
+				addNativeToolCallsToParams(params, this.options, metadata), // kilocode_change
+				requestOptions,
+			)
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}

@@ -3,8 +3,9 @@
  */
 
 import { generateMessage } from "../ui/utils/messages.js"
-import type { Command, ArgumentProviderContext } from "./core/types.js"
+import type { Command, ArgumentProviderContext, CommandContext } from "./core/types.js"
 import type { HistoryItem } from "@roo-code/types"
+import type { TaskHistoryData, TaskHistoryFilters } from "../state/atoms/taskHistory.js"
 
 /**
  * Map kebab-case sort options to camelCase
@@ -67,7 +68,7 @@ function truncate(text: string, maxLength: number): string {
 /**
  * Show current task history
  */
-async function showTaskHistory(context: any, dataOverride?: any): Promise<void> {
+async function showTaskHistory(context: CommandContext, dataOverride?: TaskHistoryData): Promise<void> {
 	const { taskHistoryData, taskHistoryLoading, taskHistoryError, fetchTaskHistory, addMessage } = context
 
 	// Use override data if provided, otherwise use context data
@@ -141,7 +142,7 @@ async function showTaskHistory(context: any, dataOverride?: any): Promise<void> 
 /**
  * Search tasks
  */
-async function searchTasks(context: any, query: string): Promise<void> {
+async function searchTasks(context: CommandContext, query: string): Promise<void> {
 	const { updateTaskHistoryFilters, addMessage } = context
 
 	if (!query) {
@@ -176,7 +177,7 @@ async function searchTasks(context: any, query: string): Promise<void> {
 /**
  * Select a task by ID
  */
-async function selectTask(context: any, taskId: string): Promise<void> {
+async function selectTask(context: CommandContext, taskId: string): Promise<void> {
 	const { sendWebviewMessage, addMessage, replaceMessages, refreshTerminal } = context
 
 	if (!taskId) {
@@ -223,7 +224,7 @@ async function selectTask(context: any, taskId: string): Promise<void> {
 /**
  * Change page
  */
-async function changePage(context: any, pageNum: string): Promise<void> {
+async function changePage(context: CommandContext, pageNum: string): Promise<void> {
 	const { taskHistoryData, changeTaskHistoryPage, addMessage } = context
 
 	if (!taskHistoryData) {
@@ -269,7 +270,7 @@ async function changePage(context: any, pageNum: string): Promise<void> {
 /**
  * Go to next page
  */
-async function nextPage(context: any): Promise<void> {
+async function nextPage(context: CommandContext): Promise<void> {
 	const { taskHistoryData, nextTaskHistoryPage, addMessage } = context
 	if (!taskHistoryData) {
 		addMessage({
@@ -312,7 +313,7 @@ async function nextPage(context: any): Promise<void> {
 /**
  * Go to previous page
  */
-async function previousPage(context: any): Promise<void> {
+async function previousPage(context: CommandContext): Promise<void> {
 	const { taskHistoryData, previousTaskHistoryPage, addMessage } = context
 
 	if (!taskHistoryData) {
@@ -356,7 +357,7 @@ async function previousPage(context: any): Promise<void> {
 /**
  * Change sort order
  */
-async function changeSortOrder(context: any, sortOption: string): Promise<void> {
+async function changeSortOrder(context: CommandContext, sortOption: string): Promise<void> {
 	const { updateTaskHistoryFilters, addMessage } = context
 
 	const validSorts = Object.keys(SORT_OPTION_MAP)
@@ -379,7 +380,7 @@ async function changeSortOrder(context: any, sortOption: string): Promise<void> 
 
 	try {
 		// Wait for the new data to arrive
-		const newData = await updateTaskHistoryFilters({ sort: mappedSort as any })
+		const newData = await updateTaskHistoryFilters({ sort: mappedSort as TaskHistoryFilters["sort"] })
 		// Now display the fresh data
 		await showTaskHistory(context, newData)
 	} catch (error) {
@@ -394,10 +395,10 @@ async function changeSortOrder(context: any, sortOption: string): Promise<void> 
 /**
  * Change filter
  */
-async function changeFilter(context: any, filterOption: string): Promise<void> {
+async function changeFilter(context: CommandContext, filterOption: string): Promise<void> {
 	const { updateTaskHistoryFilters, addMessage } = context
 
-	let filterUpdate: any
+	let filterUpdate: Partial<TaskHistoryFilters>
 	let loadingMessage: string
 
 	switch (filterOption) {

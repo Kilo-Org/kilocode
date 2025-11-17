@@ -261,7 +261,7 @@
 		"description": "Escolha como as chamadas de ferramentas são formatadas no prompt do sistema. JSON é atualmente experimental e destinado principalmente a usuários interessados em contribuir para seu desenvolvimento.",
 		"automatic": "Deixe o Kilo decidir",
 		"xml": "XML",
-		"json": "JSON (experimental)"
+		"json": "JSON"
 	},
 	"imageWarnings": {
 		"modelNoImageSupport": "Imagens não são suportadas pelo modelo atual.",

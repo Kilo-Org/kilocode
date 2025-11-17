@@ -55,7 +55,7 @@ export const DEFAULT_CONFIG = {
 			id: "default",
 			provider: "kilocode",
 			kilocodeToken: "",
-			kilocodeModel: "anthropic/claude-sonnet-4.5",
+			kilocodeModel: "x-ai/grok-code-fast-1",
 		},
 	],
 	autoApproval: DEFAULT_AUTO_APPROVAL,
