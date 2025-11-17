@@ -47,9 +47,11 @@ Axon Code delivers frontier models performance for coding and support all the ma
   </tbody>
 </table>
 
-### Usage Screenshots
+<p align="start">
+  <img src="https://res.cloudinary.com/dxvbskvxm/image/upload/v1763354370/axon-code_vvyi3g.gif" width="100%" />
+</p>
 
-<p align="center">
+<p align="start">
   <img src="https://res.cloudinary.com/dxvbskvxm/image/upload/v1762511078/axoncode-1_pdmrlp.png" width="45%" />
   <img src="https://res.cloudinary.com/dxvbskvxm/image/upload/v1762511078/axoncode-2_yrbs2r.png" width="45%" />
 </p>
