@@ -51,15 +51,16 @@ export const initializeSessionAtom = atom(null, async (get, set) => {
 		const data = await response.json()
 
 		const sessionId = data?.result?.data?.session_id
+		const sessionTitle = data?.result?.data?.title
 
 		if (!sessionId) {
 			logs.error("Failed to parse session ID from response", "Session", { data })
 			throw new Error("Invalid session response from backend")
 		}
 
-		logs.info("CLI session created successfully", "Session", { sessionId })
+		logs.info("CLI session created successfully", "Session", { sessionId, sessionTitle })
 
-		set(setSessionIdAtom, sessionId)
+		set(setSessionIdAtom, sessionId, sessionTitle)
 		return sessionId
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))

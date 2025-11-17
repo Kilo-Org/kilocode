@@ -12,6 +12,12 @@ import { atom } from "jotai"
 export const sessionIdAtom = atom<string | null>(null)
 
 /**
+ * Atom to hold the current session title
+ * This title is obtained from the backend during CLI initialization
+ */
+export const sessionTitleAtom = atom<string | null>(null)
+
+/**
  * Atom to track if session is being initialized
  */
 export const isSessionInitializingAtom = atom<boolean>(false)
@@ -33,10 +39,11 @@ export const isSessionReadyAtom = atom<boolean>((get) => {
 })
 
 /**
- * Action atom to set the session ID
+ * Action atom to set the session ID and title
  */
-export const setSessionIdAtom = atom(null, (get, set, sessionId: string | null) => {
+export const setSessionIdAtom = atom(null, (get, set, sessionId: string | null, sessionTitle?: string | null) => {
 	set(sessionIdAtom, sessionId)
+	set(sessionTitleAtom, sessionTitle ?? null)
 	set(isSessionInitializingAtom, false)
 
 	// Clear error when session is set
@@ -70,6 +77,7 @@ export const setSessionInitializingAtom = atom(null, (get, set, initializing: bo
  */
 export const clearSessionAtom = atom(null, (get, set) => {
 	set(sessionIdAtom, null)
+	set(sessionTitleAtom, null)
 	set(isSessionInitializingAtom, false)
 	set(sessionErrorAtom, null)
 })

@@ -3,6 +3,8 @@ import { Box, Text } from "ink"
 import { Logo } from "../../components/Logo.js"
 import type { WelcomeMessageOptions } from "../../../types/cli.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
+import { useAtomValue } from "jotai"
+import { sessionIdAtom, sessionTitleAtom } from "../../../state/atoms/session.js"
 import { stdout } from "process"
 
 interface WelcomeMessageProps {
@@ -16,17 +18,30 @@ const DEFAULT_INSTRUCTIONS = [
 
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) => {
 	const theme = useTheme()
+	const sessionId = useAtomValue(sessionIdAtom)
+	const sessionTitle = useAtomValue(sessionTitleAtom)
 	const showInstructions = options.showInstructions !== false
 	const instructions =
 		options.instructions && options.instructions.length > 0 ? options.instructions : DEFAULT_INSTRUCTIONS
 	const showParallelMessage = !!options.worktreeBranch
-	const contentHeight = 12 + (showInstructions ? instructions.length : 0) + (showParallelMessage ? 1 : 0)
+	const showSessionMessage = !!sessionId
+	const contentHeight =
+		12 + (showInstructions ? instructions.length : 0) + (showParallelMessage ? 1 : 0) + (showSessionMessage ? 1 : 0)
 	const marginTop = options.clearScreen ? Math.max(0, (stdout?.rows || 0) - contentHeight) : 0
 
 	return (
-		<Box flexDirection="column" gap={2} marginTop={marginTop}>
+		<Box flexDirection="column" gap={1} marginTop={marginTop}>
 			{/* Logo section - always shown */}
 			<Logo />
+
+			{/* Session message */}
+			{showSessionMessage && (
+				<Box flexDirection="column">
+					<Text color={theme.ui.text.dimmed}>
+						Session "{sessionTitle || "(untitled)"}" started: {sessionId}
+					</Text>
+				</Box>
+			)}
 
 			{/* Instructions section */}
 			{showInstructions && (
