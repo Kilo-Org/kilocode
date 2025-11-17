@@ -12,6 +12,7 @@ import { PopoverTrigger, StandardTooltip, Button } from "@src/components/ui"
 
 import { CodeIndexPopover } from "./CodeIndexPopover"
 import { ManagedCodeIndexPopover } from "./kilocode/ManagedCodeIndexPopover"
+import { useManagedCodeIndexingEnabled } from "./hooks/useManagedCodeIndexingEnabled"
 
 interface IndexingStatusBadgeProps {
 	className?: string
@@ -19,10 +20,10 @@ interface IndexingStatusBadgeProps {
 
 export const IndexingStatusBadge: React.FC<IndexingStatusBadgeProps> = ({ className }) => {
 	const { t } = useAppTranslation()
-	const { cwd, apiConfiguration } = useExtensionState()
+	const { cwd } = useExtensionState()
 
 	// Check if organization indexing is available
-	const hasOrganization = !!apiConfiguration?.kilocodeOrganizationId
+	const useManagedIndex = useManagedCodeIndexingEnabled() // kilocode_change
 
 	const [indexingStatus, setIndexingStatus] = useState<IndexingStatus>({
 		systemStatus: "Standby",
@@ -87,7 +88,7 @@ export const IndexingStatusBadge: React.FC<IndexingStatusBadgeProps> = ({ classN
 	}, [indexingStatus.systemStatus])
 
 	// Use ManagedCodeIndexPopover when organization is available, otherwise use regular CodeIndexPopover
-	const PopoverComponent = hasOrganization ? ManagedCodeIndexPopover : CodeIndexPopover
+	const PopoverComponent = useManagedIndex ? ManagedCodeIndexPopover : CodeIndexPopover
 
 	return (
 		<PopoverComponent indexingStatus={indexingStatus}>
