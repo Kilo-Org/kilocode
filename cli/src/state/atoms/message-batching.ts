@@ -10,22 +10,6 @@ import { ExtensionChatMessage } from "src/types/messages.js"
 import { mergedMessagesAtom, type UnifiedMessage } from "./ui.js"
 
 /**
- * Generate a unique key for a message to track changes
- * Exported for use in JsonRenderer and other components
- */
-export function getMessageKey(message: UnifiedMessage): string {
-	const baseKey = `${message.source}-${message.message.ts}`
-	const content = message.source === "cli" ? message.message.content : message.message.text || ""
-	const partial = message.message.partial ? "partial" : "complete"
-	return `${baseKey}-${content.length}-${partial}`
-}
-
-/**
- * Atom to track the last batched message keys
- */
-const lastBatchedKeysAtom = atom<string[]>([])
-
-/**
  * State for message batching
  */
 interface MessageBatchState {
@@ -95,7 +79,7 @@ async function sendBatchedMessages(sessionId: string, messages: ExtensionChatMes
 /**
  * Action atom to flush messages to backend
  */
-export const flushMessagesAtom = atom(null, async (get, set) => {
+const flushMessagesAtom = atom(null, async (get, set) => {
 	const batchState = get(messageBatchStateAtom)
 	const sessionId = get(sessionIdAtom)
 	const config = get(configAtom)
@@ -147,7 +131,7 @@ export const flushMessagesAtom = atom(null, async (get, set) => {
 /**
  * Action atom to add a message to the batch
  */
-export const addMessageToBatchAtom = atom(null, async (get, set, message: ExtensionChatMessage) => {
+const addMessageToBatchAtom = atom(null, async (get, set, message: ExtensionChatMessage) => {
 	const batchState = get(messageBatchStateAtom)
 
 	// Add message to batch
@@ -193,32 +177,41 @@ export const addMessageToBatchAtom = atom(null, async (get, set, message: Extens
 })
 
 /**
+ * Generate a unique key for a message to track changes
+ * Exported for use in JsonRenderer and other components
+ */
+export function getMessageKey(message: UnifiedMessage): string {
+	const baseKey = `${message.source}-${message.message.ts}`
+	const content = message.source === "cli" ? message.message.content : message.message.text || ""
+	const partial = message.message.partial ? "partial" : "complete"
+	return `${baseKey}-${content.length}-${partial}`
+}
+
+const seenMessages = new Set<string>()
+
+/**
  * Effect atom that batches extension messages when new messages are added
  * Filters out CLI messages and only batches extension messages
  * This should be triggered whenever messages change
  */
-export const batchNewMessagesEffectAtom = atom(null, async (get, set) => {
+export const batchNewMessagesEffectAtom = atom(null, (get, set) => {
 	const messages = get(mergedMessagesAtom)
-	const lastKeys = get(lastBatchedKeysAtom)
 
-	const currentKeys = messages.map(getMessageKey)
-
-	for (let i = 0; i < messages.length; i++) {
-		const message = messages[i]
-		const currentKey = currentKeys[i]
-		const lastKey = lastKeys[i]
-
-		if (!message || !currentKey) continue
-
-		// Skip CLI messages - only batch extension messages
-		if (message.source === "cli") continue
-
-		if (currentKey !== lastKey) {
-			await set(addMessageToBatchAtom, message.message)
+	for (const message of messages) {
+		if (message.source === "cli") {
+			continue
 		}
-	}
 
-	set(lastBatchedKeysAtom, currentKeys)
+		const messageKey = getMessageKey(message)
+
+		if (seenMessages.has(messageKey)) {
+			continue
+		}
+
+		seenMessages.add(messageKey)
+
+		set(addMessageToBatchAtom, message.message)
+	}
 })
 
 /**

@@ -34,6 +34,7 @@ import { generateNotificationMessage } from "../utils/notifications.js"
 import { notificationsAtom } from "../state/atoms/notifications.js"
 import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
+import { useMessageBatching } from "../state/hooks/useMessageBatching.js"
 
 // Initialize commands on module load
 initializeCommands()
@@ -81,6 +82,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// This clears the terminal and forces re-render of static components
 	useTerminal()
+
+	// Message batching hook for sending messages to backend
+	useMessageBatching()
 
 	// CI mode hook for automatic exit
 	const { shouldExit, exitReason } = useCIMode({

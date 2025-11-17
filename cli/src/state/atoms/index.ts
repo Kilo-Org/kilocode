@@ -179,8 +179,8 @@ export {
 // ============================================================================
 export {
 	// Message batching action atoms
-	flushMessagesAtom,
 	cleanupMessageBatchingAtom,
+	batchNewMessagesEffectAtom,
 } from "./message-batching.js"
 
 // ============================================================================
