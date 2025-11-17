@@ -843,8 +843,17 @@ export const webviewMessageHandler = async (
 			}
 
 			// kilocode_change start: openrouter auth, kilocode provider
-			const openRouterApiKey = apiConfiguration.openRouterApiKey || message?.values?.openRouterApiKey
-			const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || message?.values?.openRouterBaseUrl
+			// Prioritize the new value from the UI input over the saved configuration for live testing
+			const openRouterApiKey =
+				message?.values?.openRouterApiKey !== undefined
+					? message.values.openRouterApiKey
+					: apiConfiguration.openRouterApiKey
+			const openRouterBaseUrl =
+				message?.values?.openRouterBaseUrl !== undefined
+					? message.values.openRouterBaseUrl
+					: apiConfiguration.openRouterBaseUrl
+
+			await flushModels("openrouter") // force flush models cache when baseUrl changes
 
 			// Base candidates (only those handled by this aggregate fetcher)
 			const candidates: { key: RouterName; options: GetModelsOptions }[] = [

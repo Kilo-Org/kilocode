@@ -323,11 +323,17 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 	public async fetchModel() {
 		const [models, endpoints] = await Promise.all([
-			getModels({ provider: "openrouter" }),
+			getModels({
+				provider: "openrouter",
+				baseUrl: this.options.openRouterBaseUrl, // kilocode_change
+			}),
 			getModelEndpoints({
 				router: "openrouter",
 				modelId: this.options.openRouterModelId,
 				endpoint: this.options.openRouterSpecificProvider,
+				// kilocode_change start
+				baseUrl: this.options.openRouterBaseUrl,
+				// kilocode_change end
 			}),
 		])
 
