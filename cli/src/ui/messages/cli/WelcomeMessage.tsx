@@ -4,7 +4,7 @@ import { Logo } from "../../components/Logo.js"
 import type { WelcomeMessageOptions } from "../../../types/cli.js"
 import { useTheme } from "../../../state/hooks/useTheme.js"
 import { useAtomValue } from "jotai"
-import { sessionIdAtom, sessionTitleAtom } from "../../../state/atoms/session.js"
+import { sessionIdAtom } from "../../../state/atoms/session.js"
 import { stdout } from "process"
 
 interface WelcomeMessageProps {
@@ -19,7 +19,6 @@ const DEFAULT_INSTRUCTIONS = [
 export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) => {
 	const theme = useTheme()
 	const sessionId = useAtomValue(sessionIdAtom)
-	const sessionTitle = useAtomValue(sessionTitleAtom)
 	const showInstructions = options.showInstructions !== false
 	const instructions =
 		options.instructions && options.instructions.length > 0 ? options.instructions : DEFAULT_INSTRUCTIONS
@@ -37,9 +36,7 @@ export const WelcomeMessage: React.FC<WelcomeMessageProps> = ({ options = {} }) 
 			{/* Session message */}
 			{showSessionMessage && (
 				<Box flexDirection="column">
-					<Text color={theme.ui.text.dimmed}>
-						Session "{sessionTitle || "(untitled)"}" started: {sessionId}
-					</Text>
+					<Text color={theme.ui.text.dimmed}>Session started: {sessionId}</Text>
 				</Box>
 			)}
 

@@ -13,7 +13,6 @@ export const sessionIdAtom = atom<string | null>(null)
 
 /**
  * Atom to hold the current session title
- * This title is obtained from the backend during CLI initialization
  */
 export const sessionTitleAtom = atom<string | null>(null)
 
