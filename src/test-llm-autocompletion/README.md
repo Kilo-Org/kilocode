@@ -2,6 +2,15 @@
 
 Standalone test suite for AutoTriggerStrategy with real LLM calls using approval testing.
 
+## Setup
+
+1. Copy `.env.example` to `.env`:
+    ```bash
+    cd src/test-llm-autocompletion
+    cp .env.example .env
+    ```
+    Then configure your kilocode API key in `.env`:
+
 ## Approval Testing
 
 This test suite uses approval testing instead of regex pattern matching to validate LLM autocompletion outputs.

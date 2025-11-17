@@ -95,7 +95,7 @@ export class LLMClient {
 
 	async sendFimCompletion(prefix: string, suffix: string): Promise<FimResponse> {
 		try {
-			const apiKey = process.env.KILOCODE_TOKEN!
+			const apiKey = process.env.KILOCODE_API_KEY!
 			const baseUrl = getKiloBaseUriFromToken(apiKey)
 			const url = `${baseUrl}/api/fim/completions`
 
