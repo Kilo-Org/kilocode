@@ -55,10 +55,13 @@ export class CLI {
 			logs.info("Initializing Kilo Code CLI...", "CLI")
 			logs.info(`Version: ${Package.version}`, "CLI")
 
-			// Set terminal title - use process.cwd() in parallel mode to show original directory
-			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
-			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
-			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			// Only set terminal title when stdout is a TTY (skip for JSON mode or redirected output)
+			if (!this.options.json && process.stdout.isTTY) {
+				// Set terminal title - use process.cwd() in parallel mode to show original directory
+				const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
+				const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
+				process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
+			}
 
 			// Create Jotai store
 			this.store = createStore()

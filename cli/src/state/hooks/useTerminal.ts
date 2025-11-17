@@ -2,7 +2,12 @@ import { useAtomValue, useSetAtom } from "jotai"
 import { refreshTerminalCounterAtom, messageResetCounterAtom } from "../atoms/ui.js"
 import { useCallback, useEffect, useRef } from "react"
 
-export function useTerminal(): void {
+export function useTerminal(isJsonMode: boolean = false): void {
+	// Skip all terminal operations in JSON mode to prevent control sequences in output
+	if (isJsonMode) {
+		return
+	}
+
 	const width = useRef(process.stdout.columns)
 
 	const incrementResetCounter = useSetAtom(messageResetCounterAtom)
