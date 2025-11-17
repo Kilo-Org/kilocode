@@ -175,6 +175,17 @@ export {
 } from "./session.js"
 
 // ============================================================================
+// Message Batching Atoms - Batch messages to backend
+// ============================================================================
+export {
+	// Message batching action atoms
+	addUserInputMessageAtom,
+	addCliOutputMessageAtom,
+	flushMessagesAtom,
+	cleanupMessageBatchingAtom,
+} from "./message-batching.js"
+
+// ============================================================================
 // Notifications Atoms - Kilocode notifications management
 // ============================================================================
 export {

@@ -14,6 +14,7 @@ import { loadHistoryAtom } from "./state/atoms/history.js"
 import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
 import { sendWebviewMessageAtom, initializeSessionAtom } from "./state/atoms/actions.js"
 import { taskResumedViaContinueAtom } from "./state/atoms/extension.js"
+import { cleanupMessageBatchingAtom } from "./state/atoms/message-batching.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
 import { notificationsAtom, notificationsErrorAtom, notificationsLoadingAtom } from "./state/atoms/notifications.js"
 import { fetchKilocodeNotifications } from "./utils/notifications.js"
@@ -303,6 +304,16 @@ export class CLI {
 			// In parallel mode, we need to do manual git worktree cleanup
 			if (this.options.parallel) {
 				beforeExit = await finishParallelMode(this, this.options.workspace!, this.options.worktreeBranch!)
+			}
+
+			// Flush any remaining messages to backend before shutdown
+			if (this.store) {
+				try {
+					await this.store.set(cleanupMessageBatchingAtom)
+					logs.debug("Message batching cleaned up", "CLI")
+				} catch (error) {
+					logs.warn("Failed to cleanup message batching", "CLI", { error })
+				}
 			}
 
 			// Shutdown telemetry service before exiting

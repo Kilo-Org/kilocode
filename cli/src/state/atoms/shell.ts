@@ -4,6 +4,7 @@
 
 import { atom } from "jotai"
 import { addMessageAtom, inputModeAtom, type InputMode } from "./ui.js"
+import { addCliOutputMessageAtom } from "./message-batching.js"
 import { exec } from "child_process"
 import { clearTextAtom, setTextAtom, textBufferIsEmptyAtom } from "./textBuffer.js"
 
@@ -181,32 +182,40 @@ export const executeShellCommandAtom = atom(null, async (get, set, command: stri
 		})
 
 		const output = stdout || stderr || "Command executed successfully"
+		const fullOutput = `$ ${command}\n${output}`
 
 		// Display as system message for visibility in CLI
 		const systemMessage = {
 			id: `shell-${Date.now()}`,
 			type: "system" as const,
 			ts: Date.now(),
-			content: `$ ${command}\n${output}`,
+			content: fullOutput,
 			partial: false,
 		}
 
 		set(addMessageAtom, systemMessage)
+
+		// Add CLI output to message batch for backend sync
+		await set(addCliOutputMessageAtom, fullOutput)
 	} catch (error: unknown) {
 		// Handle errors and display them in the message system
 
 		const errorOutput = `❌ Error: ${error instanceof Error ? error.message : error}`
+		const fullErrorOutput = `$ ${command}\n${errorOutput}`
 
 		// Display as error message for visibility in CLI
 		const errorMessage = {
 			id: `shell-error-${Date.now()}`,
 			type: "error" as const,
 			ts: Date.now(),
-			content: `$ ${command}\n${errorOutput}`,
+			content: fullErrorOutput,
 			partial: false,
 		}
 
 		set(addMessageAtom, errorMessage)
+
+		// Add CLI error output to message batch for backend sync
+		await set(addCliOutputMessageAtom, fullErrorOutput)
 	}
 
 	// Reset history navigation index
