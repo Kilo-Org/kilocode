@@ -84,7 +84,9 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				if (!sessionId) {
 					logs.info("Initializing session on first message send", "useMessageHandler")
 					try {
-						const newSessionId = await initializeSession()
+						// Use first 140 characters of message as session title
+						const sessionTitle = trimmedText.slice(0, 140)
+						const newSessionId = await initializeSession(undefined, sessionTitle)
 						if (newSessionId) {
 							logs.info("Session created on first message", "useMessageHandler", {
 								sessionId: newSessionId,

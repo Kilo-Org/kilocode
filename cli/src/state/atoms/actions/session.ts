@@ -62,8 +62,9 @@ export const validateSessionAtom = atom(null, async (get, set, sessionId: string
  * This should be called during CLI initialization before allowing usage
  * Session is created regardless of provider if API key is present
  * If a sessionId is provided, it will be validated first
+ * If a title is provided, it will be used as the session title
  */
-export const initializeSessionAtom = atom(null, async (get, set, providedSessionId?: string) => {
+export const initializeSessionAtom = atom(null, async (get, set, providedSessionId?: string, title?: string) => {
 	const config = get(configAtom)
 
 	const token = config?.kilocodeToken
@@ -106,7 +107,7 @@ export const initializeSessionAtom = atom(null, async (get, set, providedSession
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
-			body: JSON.stringify({ title: "..." }),
+			body: JSON.stringify({ title: title || "" }),
 		})
 
 		if (!response.ok) {
