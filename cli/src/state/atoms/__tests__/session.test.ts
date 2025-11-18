@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest"
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest"
 import { createStore } from "jotai"
 import {
 	sessionIdAtom,
@@ -10,6 +10,9 @@ import {
 	setSessionInitializingAtom,
 	clearSessionAtom,
 } from "../session.js"
+import { validateSessionAtom, initializeSessionAtom } from "../actions/session.js"
+import { configAtom } from "../config.js"
+import type { CLIConfig } from "../../../config/types.js"
 
 describe("Session Atoms", () => {
 	let store: ReturnType<typeof createStore>
@@ -179,6 +182,190 @@ describe("Session Atoms", () => {
 			store.set(clearSessionAtom)
 			expect(store.get(isSessionReadyAtom)).toBe(false)
 			expect(store.get(sessionIdAtom)).toBeNull()
+		})
+	})
+
+	describe("validateSessionAtom", () => {
+		const mockConfig = (kilocodeToken: string | null = null): CLIConfig => ({
+			version: "1.0.0",
+			mode: "code",
+			telemetry: false,
+			provider: "test-provider",
+			providers: [],
+			kilocodeToken: kilocodeToken ?? undefined,
+		})
+
+		beforeEach(() => {
+			// Mock fetch globally
+			global.fetch = vi.fn() as Mock
+		})
+
+		it("should return null when no token is configured", async () => {
+			store.set(configAtom, mockConfig(null))
+
+			const result = await store.set(validateSessionAtom, "test-session-123")
+			expect(result).toBeNull()
+		})
+
+		it("should return session ID when validation succeeds", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			const mockResponse = {
+				ok: true,
+				json: async () => ({
+					result: {
+						data: {
+							session_id: "test-session-123",
+						},
+					},
+				}),
+			}
+			;(global.fetch as Mock).mockResolvedValue(mockResponse as Response)
+
+			const result = await store.set(validateSessionAtom, "test-session-123")
+			expect(result).toBe("test-session-123")
+			expect(global.fetch).toHaveBeenCalledWith(
+				expect.stringContaining("/api/trpc/sessions.get"),
+				expect.objectContaining({
+					method: "GET",
+					headers: expect.objectContaining({
+						Authorization: "Bearer test-token",
+					}),
+				}),
+			)
+		})
+
+		it("should return null when validation fails with HTTP error", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			const mockResponse = {
+				ok: false,
+				status: 404,
+			}
+			;(global.fetch as Mock).mockResolvedValue(mockResponse as Response)
+
+			const result = await store.set(validateSessionAtom, "invalid-session")
+			expect(result).toBeNull()
+		})
+
+		it("should return null when session ID mismatch", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			const mockResponse = {
+				ok: true,
+				json: async () => ({
+					result: {
+						data: {
+							session_id: "different-session",
+						},
+					},
+				}),
+			}
+			;(global.fetch as Mock).mockResolvedValue(mockResponse as Response)
+
+			const result = await store.set(validateSessionAtom, "test-session-123")
+			expect(result).toBeNull()
+		})
+
+		it("should return null when fetch throws error", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+			;(global.fetch as Mock).mockRejectedValue(new Error("Network error"))
+
+			const result = await store.set(validateSessionAtom, "test-session-123")
+			expect(result).toBeNull()
+		})
+	})
+
+	describe("initializeSessionAtom with provided session ID", () => {
+		const mockConfig = (kilocodeToken: string | null = null): CLIConfig => ({
+			version: "1.0.0",
+			mode: "code",
+			telemetry: false,
+			provider: "test-provider",
+			providers: [],
+			kilocodeToken: kilocodeToken ?? undefined,
+		})
+
+		beforeEach(() => {
+			global.fetch = vi.fn() as Mock
+		})
+
+		it("should use provided session ID when valid", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			// Mock successful validation
+			const mockValidationResponse = {
+				ok: true,
+				json: async () => ({
+					result: {
+						data: {
+							session_id: "existing-session",
+						},
+					},
+				}),
+			}
+			;(global.fetch as Mock).mockResolvedValue(mockValidationResponse as Response)
+
+			const result = await store.set(initializeSessionAtom, "existing-session")
+			expect(result).toBe("existing-session")
+			expect(store.get(sessionIdAtom)).toBe("existing-session")
+		})
+
+		it("should create new session when provided session ID is invalid", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			// Mock failed validation, then successful creation
+			;(global.fetch as Mock)
+				.mockResolvedValueOnce({
+					ok: false,
+					status: 404,
+				} as Response)
+				.mockResolvedValueOnce({
+					ok: true,
+					json: async () => ({
+						result: {
+							data: {
+								session_id: "new-session",
+								title: "...",
+							},
+						},
+					}),
+				} as Response)
+
+			const result = await store.set(initializeSessionAtom, "invalid-session")
+			expect(result).toBe("new-session")
+			expect(store.get(sessionIdAtom)).toBe("new-session")
+		})
+
+		it("should create new session when no session ID provided", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+
+			const mockCreateResponse = {
+				ok: true,
+				json: async () => ({
+					result: {
+						data: {
+							session_id: "new-session",
+							title: "...",
+						},
+					},
+				}),
+			}
+			;(global.fetch as Mock).mockResolvedValue(mockCreateResponse as Response)
+
+			const result = await store.set(initializeSessionAtom)
+			expect(result).toBe("new-session")
+			expect(store.get(sessionIdAtom)).toBe("new-session")
+		})
+
+		it("should return existing session when already initialized", async () => {
+			store.set(configAtom, mockConfig("test-token"))
+			store.set(setSessionIdAtom, "already-initialized")
+
+			const result = await store.set(initializeSessionAtom, "new-session")
+			expect(result).toBe("already-initialized")
+			// fetch should not be called since session already exists
+			expect(global.fetch).not.toHaveBeenCalled()
 		})
 	})
 })

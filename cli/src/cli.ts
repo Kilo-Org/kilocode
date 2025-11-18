@@ -133,7 +133,7 @@ export class CLI {
 
 			// Initialize CLI session with backend (if token is configured)
 			try {
-				const sessionId = await this.store.set(initializeSessionAtom)
+				const sessionId = await this.store.set(initializeSessionAtom, this.options.session)
 
 				if (sessionId) {
 					logs.info("CLI session ready", "CLI", { sessionId })
