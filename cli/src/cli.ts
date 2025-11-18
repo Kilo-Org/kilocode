@@ -139,28 +139,29 @@ export class CLI {
 			// Initialize CLI session with backend only if --session flag was provided
 			// Otherwise, session will be created on first message send
 			if (this.options.session) {
+				const sessionId = await this.store.set(initializeSessionAtom, this.options.session)
+
+				if (!sessionId) {
+					logs.error("Failed to resume session: session not found", "CLI", {
+						sessionId: this.options.session,
+					})
+					console.error(`\nFailed to resume session '${this.options.session}'. Session not found.\n`)
+					process.exit(1)
+				}
+
+				logs.info("CLI session ready from provided session ID", "CLI", { sessionId })
+
+				// Fetch all messages for the resumed session
 				try {
-					const sessionId = await this.store.set(initializeSessionAtom, this.options.session)
-
-					if (sessionId) {
-						logs.info("CLI session ready from provided session ID", "CLI", { sessionId })
-
-						// Fetch all messages for the resumed session
-						try {
-							const messages: SessionMessage[] = await this.store.set(
-								fetchAllSessionMessagesAtom,
-								sessionId,
-							)
-							logs.info("Session messages loaded", "CLI", {
-								sessionId,
-								messageCount: messages.length,
-							})
-						} catch (error) {
-							logs.warn("Failed to fetch session messages, continuing anyway", "CLI", { error })
-						}
-					}
+					const messages: SessionMessage[] = await this.store.set(fetchAllSessionMessagesAtom, sessionId)
+					logs.info("Session messages loaded", "CLI", {
+						sessionId,
+						messageCount: messages.length,
+					})
 				} catch (error) {
-					logs.warn("Session initialization failed, continuing without session", "CLI", { error })
+					logs.error("Failed to fetch session messages", "CLI", { error, sessionId })
+					console.error(`\nFailed to load messages for session '${sessionId}'.\n`)
+					process.exit(1)
 				}
 			} else {
 				logs.debug("Session initialization deferred to first message send", "CLI")
