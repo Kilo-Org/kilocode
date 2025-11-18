@@ -2,6 +2,15 @@
 
 Standalone test suite for AutoTriggerStrategy with real LLM calls using approval testing.
 
+## Setup
+
+1. Copy `.env.example` to `.env`:
+    ```bash
+    cd src/test-llm-autocompletion
+    cp .env.example .env
+    ```
+    Then configure your kilocode API key in `.env`:
+
 ## Approval Testing
 
 This test suite uses approval testing instead of regex pattern matching to validate LLM autocompletion outputs.
@@ -40,14 +49,19 @@ approvals/
 ## Running Tests
 
 ```bash
-# Run all tests
+# Run all tests (using HoleFiller strategy)
 pnpm run test
+
+# Run all tests using FIM strategy
+pnpm run test:fim
 
 # Run with verbose output
 pnpm run test:verbose
+pnpm run test:fim:verbose
 
 # Run without interactive approval (fail if not already approved)
 pnpm run test --skip-approval
+pnpm run test:fim --skip-approval
 
 # Run a single test
 pnpm run test closing-brace
@@ -57,7 +71,28 @@ pnpm run clean
 
 # Combine flags
 pnpm run test --verbose --skip-approval
+pnpm run test --fim --verbose --skip-approval
 ```
+
+### Completion Strategies
+
+The test suite supports two strategies for generating completions:
+
+- **HoleFiller** (default): Uses chat completion API with structured prompts containing `{{FILL_HERE}}` markers. This strategy sends a system prompt and user prompt to guide the LLM.
+- **FIM** (`--fim` flag): Uses the Fill-In-Middle (FIM) API endpoint directly with prefix/suffix, without any prompting.
+
+Both strategies run the same test cases and use the same approval system, allowing direct comparison of completion quality between approaches.
+
+```bash
+# Compare HoleFiller vs FIM performance
+pnpm run test              # Run with HoleFiller strategy
+pnpm run test:fim          # Run with FIM strategy
+```
+
+**Strategy Names in Output:**
+
+- `hole-filler` - HoleFiller strategy with chat completions
+- `fim` - FIM endpoint strategy
 
 ### Clean Command
 

@@ -108,7 +108,7 @@
 		"description": "시스템 프롬프트에서 도구 호출의 형식을 선택하세요. JSON은 현재 실험적이며 주로 개발에 기여하는 데 관심이 있는 사용자를 위한 것입니다.",
 		"automatic": "Kilo가 결정하도록",
 		"xml": "XML",
-		"json": "JSON (실험적)"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {

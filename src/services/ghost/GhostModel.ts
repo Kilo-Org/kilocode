@@ -2,8 +2,10 @@ import { modelIdKeysByProvider, ProviderSettingsEntry } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
+import { CompletionUsage } from "../../api/providers/openrouter"
 import { ApiStreamChunk } from "../../api/transform/stream"
 import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
+import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
@@ -48,6 +50,78 @@ export class GhostModel {
 
 		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
 		return false
+	}
+
+	public supportsFim(): boolean {
+		if (!this.apiHandler) {
+			return false
+		}
+
+		if (this.apiHandler instanceof KilocodeOpenrouterHandler) {
+			return this.apiHandler.supportsFim()
+		}
+
+		return false
+	}
+
+	/**
+	 * Generate FIM completion using the FIM API endpoint
+	 */
+	public async generateFimResponse(
+		prefix: string,
+		suffix: string,
+		onChunk: (text: string) => void,
+		taskId?: string,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> {
+		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
+			throw new Error("API handler is not initialized. Please check your configuration.")
+		}
+
+		if (!(this.apiHandler instanceof KilocodeOpenrouterHandler)) {
+			throw new Error("FIM is only supported for KiloCode provider")
+		}
+
+		if (!this.apiHandler.supportsFim()) {
+			throw new Error("Current model does not support FIM completions")
+		}
+
+		console.log("USED MODEL (FIM)", this.apiHandler.getModel())
+
+		let usage: CompletionUsage | undefined
+
+		try {
+			for await (const chunk of this.apiHandler.streamFim(prefix, suffix, taskId)) {
+				if (chunk.type === "content") {
+					onChunk(chunk.content)
+				} else if (chunk.type === "usage") {
+					usage = chunk.usage
+				}
+			}
+		} catch (error) {
+			console.error("Error streaming FIM completion:", error)
+			throw error
+		}
+
+		// Calculate cost from usage information
+		const cost = usage ? this.apiHandler.getTotalCost(usage) : 0
+		const inputTokens = usage?.prompt_tokens ?? 0
+		const outputTokens = usage?.completion_tokens ?? 0
+		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens ?? 0
+
+		return {
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens: 0, // FIM doesn't support cache writes
+			cacheReadTokens,
+		}
 	}
 
 	/**

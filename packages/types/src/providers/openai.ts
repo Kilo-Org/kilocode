@@ -3,9 +3,62 @@ import type { ModelInfo } from "../model.js"
 // https://openai.com/api/pricing/
 export type OpenAiNativeModelId = keyof typeof openAiNativeModels
 
-export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-5-2025-08-07"
+export const openAiNativeDefaultModelId: OpenAiNativeModelId = "gpt-5.1" // kilocode_change
 
 export const openAiNativeModels = {
+	// kilocode_change start
+	"gpt-5.1": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		inputPrice: 1.25,
+		outputPrice: 10.0,
+		cacheReadsPrice: 0.125,
+		description:
+			"GPT-5.1 is our flagship model for coding and agentic tasks with configurable reasoning and non-reasoning effort.",
+		supportsVerbosity: true,
+	},
+	"gpt-5.1-codex": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		inputPrice: 1.25,
+		outputPrice: 10.0,
+		cacheReadsPrice: 0.125,
+		description:
+			"GPT-5.1-Codex is a version of GPT-5 optimized for agentic coding tasks in Codex or similar environments.",
+		supportsVerbosity: true,
+	},
+	"gpt-5.1-codex-mini": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		inputPrice: 1.25,
+		outputPrice: 10.0,
+		cacheReadsPrice: 0.125,
+		description:
+			"GPT-5.1-Codex Mini is a version of GPT-5 optimized for agentic coding tasks in Codex or similar environments.",
+		supportsVerbosity: true,
+	},
+	"gpt-5.1-chat-latest": {
+		maxTokens: 128000,
+		contextWindow: 400000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: false,
+		inputPrice: 1.25,
+		outputPrice: 10.0,
+		cacheReadsPrice: 0.125,
+		description: "GPT-5.1 Chat Latest: Optimized for conversational AI and non-reasoning tasks",
+		supportsVerbosity: true,
+	},
+	// kilocode_change end
 	"gpt-5-chat-latest": {
 		maxTokens: 128000,
 		contextWindow: 400000,

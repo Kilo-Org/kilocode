@@ -1189,6 +1189,13 @@ describe("ClineProvider", () => {
 			listConfig: vi.fn().mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
 			saveConfig: vi.fn().mockResolvedValue("test-id"),
 			setModeConfig: vi.fn(),
+			// kilocode_change start
+			getProfile: vi.fn().mockResolvedValue({
+				name: "test-config",
+				apiProvider: "anthropic",
+				id: "test-id",
+			}),
+			//kilocode_change end
 		} as any
 
 		// Update API configuration
@@ -1198,8 +1205,10 @@ describe("ClineProvider", () => {
 			apiConfiguration: { apiProvider: "anthropic" },
 		})
 
-		// Should save config as default for current mode
-		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("code", "test-id")
+		// kilocode_change start
+		// upsertApiConfiguration now passes activate=false, so setModeConfig should NOT be called
+		expect(provider.providerSettingsManager.setModeConfig).not.toHaveBeenCalled()
+		// kilocode_change end
 	})
 
 	test("file content includes line numbers", async () => {
@@ -2070,6 +2079,14 @@ describe("ClineProvider", () => {
 				listConfig: vi
 					.fn()
 					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
+				// kilocode_change start
+				getProfile: vi.fn().mockResolvedValue({
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					id: "test-id",
+				}),
+				// kilocode_change end
 			} as any
 
 			const testApiConfig = {
@@ -2091,7 +2108,11 @@ describe("ClineProvider", () => {
 			expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
 				{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
 			])
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+
+			// kilocode_change start
+			// currentApiConfigName should NOT be updated when activate=false
+			expect(mockContext.globalState.update).not.toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change end
 
 			// Verify state was posted to webview
 			expect(mockPostMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "state" }))
@@ -2101,19 +2122,22 @@ describe("ClineProvider", () => {
 			await provider.resolveWebviewView(mockWebviewView)
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-			// Mock buildApiHandler to throw an error
-			const { buildApiHandler } = await import("../../../api")
-
-			;(buildApiHandler as any).mockImplementationOnce(() => {
-				throw new Error("API handler error")
-			})
+			// kilocode_change start
+			// Mock saveConfig to throw an error to test error handling
 			;(provider as any).providerSettingsManager = {
 				setModeConfig: vi.fn(),
-				saveConfig: vi.fn().mockResolvedValue(undefined),
+				saveConfig: vi.fn().mockRejectedValue(new Error("Failed to save config")),
 				listConfig: vi
 					.fn()
 					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
+				getProfile: vi.fn().mockResolvedValue({
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					id: "test-id",
+				}),
 			} as any
+			// kilocode_change end
 
 			// Setup Task instance with auto-mock from the top of the file
 			const mockCline = new Task(defaultTaskOptions) // Create a new mocked instance
@@ -2137,11 +2161,13 @@ describe("ClineProvider", () => {
 			)
 			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.create_api_config")
 
-			// Verify state was still updated
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
-				{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
-			])
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change start
+			// // Verify state was still updated
+			// expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
+			// 	{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
+			// ])
+			// expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change end
 		})
 
 		test("handles successful saveApiConfiguration", async () => {

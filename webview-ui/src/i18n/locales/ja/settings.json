@@ -234,6 +234,8 @@
 		"providerDocumentation": "{{provider}}のドキュメント",
 		"configProfile": "設定プロファイル",
 		"description": "異なるAPI設定を保存して、プロバイダーと設定をすばやく切り替えることができます。",
+		"makeActiveProfile": "アクティブプロファイルにする",
+		"makeActiveTooltip": "このプロファイルをアクティブにしてAPIリクエストに使用する",
 		"apiProvider": "APIプロバイダー",
 		"model": "モデル",
 		"nameEmpty": "名前を空にすることはできません",

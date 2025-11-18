@@ -370,6 +370,7 @@ describe("GhostInlineCompletionProvider", () => {
 		mockContextProvider = {
 			getIde: vi.fn().mockReturnValue(mockIde),
 			getFormattedContext: vi.fn().mockResolvedValue(""),
+			getFimFormattedContext: vi.fn().mockResolvedValue({ prefix: "" }),
 		}
 
 		// Create mock dependencies
@@ -382,6 +383,7 @@ describe("GhostInlineCompletionProvider", () => {
 				cacheReadTokens: 0,
 			}),
 			getModelName: vi.fn().mockReturnValue("test-model"),
+			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 

@@ -8,6 +8,7 @@ import { getDefinitionsFromLsp } from "../../continuedev/core/vscode-test-harnes
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameters"
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
 import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
+import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
@@ -82,11 +83,15 @@ export class GhostContextProvider {
 		}
 	}
 
-	/**
-	 * Get context snippets for the current autocomplete request
-	 * Returns comment-based formatted context that can be added to prompts
-	 */
-	async getFormattedContext(autocompleteInput: AutocompleteInput, filepath: string): Promise<string> {
+	private async getProcessedSnippets(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+	): Promise<{
+		filepathUri: string
+		helper: any
+		snippetsWithUris: AutocompleteSnippet[]
+		workspaceDirs: string[]
+	}> {
 		// Convert filepath to URI if it's not already one
 		const filepathUri = filepath.startsWith("file://") ? filepath : vscode.Uri.file(filepath).toString()
 
@@ -126,10 +131,50 @@ export class GhostContextProvider {
 		}))
 
 		const workspaceDirs = await this.ide.getWorkspaceDirs()
+
+		return { filepathUri, helper, snippetsWithUris, workspaceDirs }
+	}
+
+	/**
+	 * Returns comment-based formatted context that can be added to prompts
+	 */
+	async getFormattedContext(autocompleteInput: AutocompleteInput, filepath: string): Promise<string> {
+		const { helper, snippetsWithUris, workspaceDirs } = await this.getProcessedSnippets(autocompleteInput, filepath)
+
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 
-		console.log("[GhostContextProvider] - formattedContext:", formattedContext)
-
 		return formattedContext
+	}
+
+	/**
+	 * Get FIM-formatted context into compiled prefix for FIM-compatible models
+	 */
+	async getFimCompiledPrefix(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+		prefix: string,
+		suffix: string,
+	): Promise<string> {
+		const { filepathUri, snippetsWithUris, workspaceDirs } = await this.getProcessedSnippets(
+			autocompleteInput,
+			filepath,
+		)
+
+		const modelName = this.model.getModelName() ?? "codestral"
+		const template = getTemplateForModel(modelName)
+
+		if (template.compilePrefixSuffix) {
+			const [compiledPrefix] = template.compilePrefixSuffix(
+				prefix,
+				suffix,
+				filepathUri,
+				"", // reponame not used in our context
+				snippetsWithUris,
+				workspaceDirs,
+			)
+			return compiledPrefix
+		}
+
+		return prefix
 	}
 }

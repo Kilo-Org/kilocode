@@ -139,12 +139,18 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 	async completeFim(prefix: string, suffix: string, taskId?: string): Promise<string> {
 		let result = ""
 		for await (const chunk of this.streamFim(prefix, suffix, taskId)) {
-			result += chunk
+			if (chunk.type === "content") {
+				result += chunk.content
+			}
 		}
 		return result
 	}
 
-	async *streamFim(prefix: string, suffix: string, taskId?: string): AsyncGenerator<string> {
+	async *streamFim(
+		prefix: string,
+		suffix: string,
+		taskId?: string,
+	): AsyncGenerator<{ type: "content"; content: string } | { type: "usage"; usage: CompletionUsage }> {
 		const model = await this.fetchModel()
 		const endpoint = new URL("fim/completions", this.apiFIMBase)
 
@@ -157,15 +163,19 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
 			...this.customRequestOptions(taskId ? { taskId, mode: "code" } : undefined)?.headers,
 		}
-		const max_max_tokens = 1000
+
+		// temperature: 0.2 is mentioned as a sane example in mistral's docs and is what continue uses.
+		const temperature = 0.2
+		const maxTokens = 256
+
 		const response = await fetch(endpoint, {
 			method: "POST",
 			body: JSON.stringify({
 				model: model.id,
 				prompt: prefix,
 				suffix,
-				max_tokens: Math.min(max_max_tokens, model.maxTokens ?? max_max_tokens),
-				temperature: model.temperature,
+				max_tokens: Math.min(maxTokens, model.maxTokens ?? maxTokens),
+				temperature,
 				top_p: model.topP,
 				stream: true,
 			}),
@@ -180,7 +190,12 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		for await (const data of streamSse(response)) {
 			const content = data.choices?.[0]?.delta?.content
 			if (content) {
-				yield content
+				yield { type: "content", content }
+			}
+
+			// Yield usage information when available
+			if (data.usage) {
+				yield { type: "usage", usage: data.usage }
 			}
 		}
 	}

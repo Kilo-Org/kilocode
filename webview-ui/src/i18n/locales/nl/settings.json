@@ -233,6 +233,8 @@
 		"providerDocumentation": "{{provider}} documentatie",
 		"configProfile": "Configuratieprofiel",
 		"description": "Sla verschillende API-configuraties op om snel te wisselen tussen providers en instellingen.",
+		"makeActiveProfile": "Maak actief profiel",
+		"makeActiveTooltip": "Activeer dit profiel om het te gebruiken voor API-verzoeken",
 		"apiProvider": "API-provider",
 		"model": "Model",
 		"nameEmpty": "Naam mag niet leeg zijn",

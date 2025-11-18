@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.5.1
+
+### Patch Changes
+
+- [#3826](https://github.com/Kilo-Org/kilocode/pull/3826) [`70b956f`](https://github.com/Kilo-Org/kilocode/commit/70b956f79b9878e32f36c827faa490bcdcb889e7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Allow the user to type any custom follow up suggestion
+
 ## 0.5.0
 
 ### Minor Changes
@@ -12,7 +18,7 @@
 
 ### Patch Changes
 
-- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@RSO](https://github.com/RSO)! - Support installing CLI with bun
+- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@Eldevia](https://github.com/Eldevia)! - Support installing CLI with bun
 
 - [#3769](https://github.com/Kilo-Org/kilocode/pull/3769) [`eff6f2b`](https://github.com/Kilo-Org/kilocode/commit/eff6f2b9e8161f4016a378a28cd0b9a4df9d5ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update providers configurations
 

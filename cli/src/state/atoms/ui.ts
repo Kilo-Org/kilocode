@@ -397,7 +397,11 @@ export const clearTextBufferAtom = atom(null, (get, set) => {
  */
 export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSuggestion[]) => {
 	set(suggestionsAtom, suggestions)
-	set(selectedIndexAtom, 0)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
 })
 
 /**
@@ -405,7 +409,11 @@ export const setSuggestionsAtom = atom(null, (get, set, suggestions: CommandSugg
  */
 export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: ArgumentSuggestion[]) => {
 	set(argumentSuggestionsAtom, suggestions)
-	set(selectedIndexAtom, 0)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
 })
 
 /**
@@ -413,7 +421,11 @@ export const setArgumentSuggestionsAtom = atom(null, (get, set, suggestions: Arg
  */
 export const setFileMentionSuggestionsAtom = atom(null, (get, set, suggestions: FileMentionSuggestion[]) => {
 	set(fileMentionSuggestionsAtom, suggestions)
-	set(selectedIndexAtom, 0)
+	if (suggestions.length === 0) {
+		set(selectedIndexAtom, -1)
+	} else {
+		set(selectedIndexAtom, 0)
+	}
 })
 
 /**

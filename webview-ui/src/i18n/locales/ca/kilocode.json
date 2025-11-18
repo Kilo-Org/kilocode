@@ -262,7 +262,7 @@
 		"description": "Tria com es formaten les crides d'eina al prompt del sistema. JSON és actualment experimental i està principalment destinat a usuaris interessats a contribuir al seu desenvolupament.",
 		"automatic": "Deixa que Kilo decideixi",
 		"xml": "XML",
-		"json": "JSON (experimental)"
+		"json": "JSON"
 	},
 	"invalidModel": {
 		"alphaPeriodEnded": "🎉 El període alfa per a {{model}} ha finalitzat! Canvia a un model diferent per continuar.",
