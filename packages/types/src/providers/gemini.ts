@@ -249,7 +249,7 @@ export const geminiModels = {
         contextWindow: 1_048_576,
         supportsImages: true,
         supportsPromptCache: true,
-        inputPrice: 4,
+        inputPrice: 4, // This is the pricing for prompts above 200k tokens.
         outputPrice: 18,
         cacheReadsPrice: 0.4,
         cacheWritesPrice: 4.5,
