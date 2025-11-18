@@ -9,6 +9,10 @@ import { FillInAtCursorSuggestion } from "../HoleFiller"
 import { MockTextDocument } from "../../../mocking/MockTextDocument"
 import { GhostModel } from "../../GhostModel"
 import { RooIgnoreController } from "../../../../core/ignore/RooIgnoreController"
+import { CompletionStrategyManager } from "../../strategies/manager/CompletionStrategyManager"
+import { CompletionStrategyRegistry } from "../../strategies/registry/CompletionStrategyRegistry"
+import { HoleFillerStrategy } from "../../strategies/implementations/HoleFillerStrategy"
+import { FimStrategy } from "../../strategies/implementations/FimStrategy"
 
 // Mock vscode InlineCompletionTriggerKind enum and event listeners
 vi.mock("vscode", async () => {
@@ -334,6 +338,7 @@ describe("GhostInlineCompletionProvider", () => {
 	let mockSettings: { enableAutoTrigger: boolean } | null
 	let mockContextProvider: any
 	let mockIgnoreController: Promise<RooIgnoreController> | undefined
+	let mockStrategyManager: CompletionStrategyManager
 
 	// Helper to call provideInlineCompletionItems and advance timers
 	async function provideWithDebounce(
@@ -390,14 +395,24 @@ describe("GhostInlineCompletionProvider", () => {
 			}),
 			getModelName: vi.fn().mockReturnValue("test-model"),
 			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
+			hasValidCredentials: vi.fn().mockReturnValue(true),
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
+
+		// Create strategy system
+		const registry = new CompletionStrategyRegistry()
+		const holeFillerStrategy = new HoleFillerStrategy(mockContextProvider)
+		const fimStrategy = new FimStrategy()
+		registry.register(holeFillerStrategy)
+		registry.register(fimStrategy)
+		mockStrategyManager = new CompletionStrategyManager(registry, holeFillerStrategy)
 
 		provider = new GhostInlineCompletionProvider(
 			mockModel,
 			mockCostTrackingCallback,
 			() => mockSettings,
 			mockContextProvider,
+			mockStrategyManager,
 			mockIgnoreController,
 		)
 	})
@@ -1381,6 +1396,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				mockIgnoreController,
 			)
 
@@ -1413,6 +1429,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				mockIgnoreController,
 			)
 
@@ -1449,6 +1466,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				mockIgnoreController,
 			)
 
@@ -1492,6 +1510,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				undefined, // No ignore controller
 			)
 
@@ -1526,6 +1545,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				mockIgnoreController,
 			)
 
@@ -1557,6 +1577,7 @@ describe("GhostInlineCompletionProvider", () => {
 				mockCostTrackingCallback,
 				() => mockSettings,
 				mockContextProvider,
+				mockStrategyManager,
 				mockIgnoreController,
 			)
 

@@ -12,6 +12,10 @@ import { ContextProxy } from "../../core/config/ContextProxy"
 import { TelemetryService } from "@roo-code/telemetry"
 import { ClineProvider } from "../../core/webview/ClineProvider"
 import { RooIgnoreController } from "../../core/ignore/RooIgnoreController"
+import { CompletionStrategyRegistry } from "./strategies/registry/CompletionStrategyRegistry"
+import { CompletionStrategyManager } from "./strategies/manager/CompletionStrategyManager"
+import { HoleFillerStrategy } from "./strategies/implementations/HoleFillerStrategy"
+import { FimStrategy } from "./strategies/implementations/FimStrategy"
 
 export class GhostServiceManager {
 	private static instance: GhostServiceManager | null = null
@@ -27,6 +31,10 @@ export class GhostServiceManager {
 	private statusBar: GhostStatusBar | null = null
 	private sessionCost: number = 0
 	private lastCompletionCost: number = 0
+
+	// Strategy system
+	private strategyRegistry: CompletionStrategyRegistry
+	private strategyManager: CompletionStrategyManager
 
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
@@ -51,6 +59,11 @@ export class GhostServiceManager {
 
 		this.ghostContextProvider = new GhostContextProvider(this.context, this.model, this.ignoreController)
 
+		// Initialize strategy system
+		this.strategyRegistry = new CompletionStrategyRegistry()
+		this.initializeStrategies()
+		this.strategyManager = new CompletionStrategyManager(this.strategyRegistry)
+
 		// Register the providers
 		this.codeActionProvider = new GhostCodeActionProvider()
 		this.inlineCompletionProvider = new GhostInlineCompletionProvider(
@@ -58,10 +71,32 @@ export class GhostServiceManager {
 			this.updateCostTracking.bind(this),
 			() => this.settings,
 			this.ghostContextProvider,
+			this.strategyManager,
 			this.ignoreController,
 		)
 
 		void this.load()
+	}
+
+	/**
+	 * Initialize and register completion strategies
+	 */
+	private initializeStrategies(): void {
+		// Register HoleFiller strategy (fallback, priority 1)
+		const holeFillerStrategy = new HoleFillerStrategy(this.ghostContextProvider)
+		this.strategyRegistry.register(holeFillerStrategy)
+
+		// Register FIM strategy (preferred, priority 10)
+		const fimStrategy = new FimStrategy()
+		this.strategyRegistry.register(fimStrategy)
+
+		// Set HoleFiller as the fallback strategy
+		this.strategyManager = new CompletionStrategyManager(this.strategyRegistry, holeFillerStrategy)
+
+		console.info(
+			"Initialized completion strategies:",
+			this.strategyRegistry.getStrategies().map((s) => s.name),
+		)
 	}
 
 	// Singleton Management
@@ -322,6 +357,9 @@ export class GhostServiceManager {
 			this.newAutocompleteProvider.dispose()
 			this.newAutocompleteProvider = null
 		}
+
+		// Dispose strategy system
+		void this.strategyRegistry.disposeStrategies()
 
 		void this.disposeIgnoreController()
 
