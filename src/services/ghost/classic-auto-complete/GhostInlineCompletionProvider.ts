@@ -386,7 +386,13 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 	private async fetchAndCacheSuggestion(prompt: GhostPrompt): Promise<void> {
 		try {
-			const result = await this.getFromLLM(prompt, this.model)
+			let result: LLMRetrievalResult
+			if (this.model.supportsFim()) {
+				const { prefix, suffix, autocompleteInput } = prompt
+				result = await this.getFromFIM(prefix, suffix, this.model, autocompleteInput)
+			} else {
+				result = await this.getFromLLM(prompt, this.model)
+			}
 
 			if (this.costTrackingCallback && result.cost > 0) {
 				this.costTrackingCallback(
