@@ -12,6 +12,15 @@ import { logs } from "../../services/logs.js"
 // Re-export session initialization action
 export { initializeSessionAtom } from "./actions/session.js"
 
+// Re-export session messages actions
+export {
+	fetchSessionMessagesAtom,
+	fetchAllSessionMessagesAtom,
+	type SessionMessage,
+	type ListMessagesResponse,
+	type FetchMessagesOptions,
+} from "./actions/session-messages.js"
+
 /**
  * Action atom to send a webview message to the extension
  * This is the primary way to communicate with the extension
