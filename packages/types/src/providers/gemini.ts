@@ -244,6 +244,33 @@ export const geminiModels = {
 			},
 		],
 	},
+    "gemini-3.0-pro-preview": {
+        maxTokens: 64_000,
+        contextWindow: 1_048_576,
+        supportsImages: true,
+        supportsPromptCache: true,
+        inputPrice: 4,
+        outputPrice: 18,
+        cacheReadsPrice: 0.4,
+        cacheWritesPrice: 4.5,
+        maxThinkingTokens: 32_768,
+        supportsReasoningBudget: true,
+        requiredReasoningBudget: true,
+        tiers: [
+            {
+                contextWindow: 200_000,
+                inputPrice: 2,
+                outputPrice: 12,
+                cacheReadsPrice: 0.2,
+            },
+            {
+                contextWindow: Infinity,
+                inputPrice: 4,
+                outputPrice: 18,
+                cacheReadsPrice: 0.4,
+            },
+        ],
+    },
 
 	// 2.0 Flash models
 	"gemini-2.0-flash-lite-preview-02-05": {
