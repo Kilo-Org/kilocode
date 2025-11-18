@@ -12,7 +12,12 @@ import { ciExitReasonAtom } from "./state/atoms/ci.js"
 import { requestRouterModelsAtom } from "./state/atoms/actions.js"
 import { loadHistoryAtom } from "./state/atoms/history.js"
 import { taskHistoryDataAtom, updateTaskHistoryFiltersAtom } from "./state/atoms/taskHistory.js"
-import { sendWebviewMessageAtom, initializeSessionAtom } from "./state/atoms/actions.js"
+import {
+	sendWebviewMessageAtom,
+	initializeSessionAtom,
+	fetchAllSessionMessagesAtom,
+	type SessionMessage,
+} from "./state/atoms/actions.js"
 import { taskResumedViaContinueAtom } from "./state/atoms/extension.js"
 import { cleanupMessageBatchingAtom } from "./state/atoms/message-batching.js"
 import { getTelemetryService, getIdentityManager } from "./services/telemetry/index.js"
@@ -139,6 +144,20 @@ export class CLI {
 
 					if (sessionId) {
 						logs.info("CLI session ready from provided session ID", "CLI", { sessionId })
+
+						// Fetch all messages for the resumed session
+						try {
+							const messages: SessionMessage[] = await this.store.set(
+								fetchAllSessionMessagesAtom,
+								sessionId,
+							)
+							logs.info("Session messages loaded", "CLI", {
+								sessionId,
+								messageCount: messages.length,
+							})
+						} catch (error) {
+							logs.warn("Failed to fetch session messages, continuing anyway", "CLI", { error })
+						}
 					}
 				} catch (error) {
 					logs.warn("Session initialization failed, continuing without session", "CLI", { error })
