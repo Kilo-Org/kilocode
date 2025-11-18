@@ -28,13 +28,13 @@ Choose your current tool:
 
 ### What's Different in Kilo Code
 
-| Cursor                                      | Kilo Code                                 | Why It's Better                   |
-| ------------------------------------------- | ----------------------------------------- | --------------------------------- |
-| `.cursor/rules/*.mdc` with YAML frontmatter | `.kilocode/rules/*.md` plain Markdown     | Simpler to write and maintain     |
-| `alwaysApply: true/false` metadata          | File location determines scope            | More intuitive organization       |
-| `globs: ["*.ts"]` for file patterns         | Mode-specific directories or custom modes | More powerful and flexible        |
-| `description` for AI activation             | Clear file names and organization         | Explicit, predictable behavior    |
-| Global rules in UI settings                 | `~/.kilocode/rules/*.md` files            | Version-controllable and portable |
+| Cursor                                      | Kilo Code                                 | Key Difference                              |
+| ------------------------------------------- | ----------------------------------------- | ------------------------------------------- |
+| `.cursor/rules/*.mdc` with YAML frontmatter | `.kilocode/rules/*.md` plain Markdown     | No YAML metadata required                   |
+| `alwaysApply: true/false` metadata          | File location determines scope            | Scope controlled by directory structure     |
+| `globs: ["*.ts"]` for file patterns         | Mode-specific directories or custom modes | File patterns handled via custom modes      |
+| `description` for AI activation             | Clear file names and organization         | Relies on explicit file organization        |
+| Global rules in UI settings                 | `~/.kilocode/rules/*.md` files            | Global rules stored as files in home folder |
 
 ### Migration Steps
 
@@ -150,14 +150,14 @@ Cursor supports nested `.cursor/rules/` directories. Kilo Code uses flat structu
 
 ### What's Different in Kilo Code
 
-| Windsurf                                                       | Kilo Code                      | Why It's Better                 |
-| -------------------------------------------------------------- | ------------------------------ | ------------------------------- |
-| `.windsurf/rules/*.md`                                         | `.kilocode/rules/*.md`         | Same format! Easy migration     |
-| GUI configuration for activation modes                         | File location determines scope | No hidden GUI state             |
-| "Always On" mode (GUI)                                         | Place in `.kilocode/rules/`    | Explicit and version-controlled |
-| "Glob" mode (GUI)                                              | Mode-specific directories      | More powerful organization      |
-| 12,000 character limit per rule                                | No hard limit                  | Better for complex projects     |
-| Global rules in `~/.codeium/windsurf/memories/global_rules.md` | `~/.kilocode/rules/*.md`       | Clearer location                |
+| Windsurf                                                       | Kilo Code                      | Key Difference                              |
+| -------------------------------------------------------------- | ------------------------------ | ------------------------------------------- |
+| `.windsurf/rules/*.md`                                         | `.kilocode/rules/*.md`         | Same Markdown format                        |
+| GUI configuration for activation modes                         | File location determines scope | Scope controlled by directory structure     |
+| "Always On" mode (GUI)                                         | Place in `.kilocode/rules/`    | Rules stored as files, not GUI settings     |
+| "Glob" mode (GUI)                                              | Mode-specific directories      | File patterns handled via mode directories  |
+| 12,000 character limit per rule                                | No hard limit                  | No character limit on rule files            |
+| Global rules in `~/.codeium/windsurf/memories/global_rules.md` | `~/.kilocode/rules/*.md`       | Global rules in home folder, multiple files |
 
 ### Migration Steps
 
