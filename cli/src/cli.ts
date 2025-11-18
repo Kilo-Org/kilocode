@@ -153,10 +153,32 @@ export class CLI {
 
 				// Fetch all messages for the resumed session
 				try {
-					const messages: SessionMessage[] = await this.store.set(fetchAllSessionMessagesAtom, sessionId)
-					logs.info("Session messages loaded", "CLI", {
+					const sessionMessages: SessionMessage[] = await this.store.set(
+						fetchAllSessionMessagesAtom,
 						sessionId,
-						messageCount: messages.length,
+					)
+
+					if (sessionMessages.length === 0) {
+						logs.warn("No messages found for session", "CLI", { sessionId })
+					} else {
+						logs.info("Session messages loaded", "CLI", {
+							sessionId,
+							messageCount: sessionMessages.length,
+						})
+					}
+
+					const extensionMessages = sessionMessages.map((sm) => sm.message)
+
+					// Send restoreSession message to webview
+					await this.store.set(sendWebviewMessageAtom, {
+						type: "restoreSession",
+						sessionId,
+						messages: extensionMessages,
+					})
+
+					logs.info("Sent restoreSession message to webview", "CLI", {
+						sessionId,
+						messageCount: extensionMessages.length,
 					})
 				} catch (error) {
 					logs.error("Failed to fetch session messages", "CLI", { error, sessionId })

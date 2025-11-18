@@ -721,6 +721,27 @@ export const webviewMessageHandler = async (
 		case "showTaskWithId":
 			provider.showTaskWithId(message.text!)
 			break
+		case "restoreSession":
+			// Restore a CLI session by creating a task with the provided messages
+			try {
+				if (!message.messages || !Array.isArray(message.messages)) {
+					throw new Error("Invalid or missing messages for session restoration")
+				}
+
+				const sessionId = message.sessionId || "unknown-session"
+				provider.log(`Restoring CLI session: ${sessionId} with ${message.messages.length} messages`)
+
+				// Create a task with the pre-loaded messages
+				// The messages are already in ClineMessage format from the CLI
+				await provider.createTaskWithMessages(message.messages as ClineMessage[], sessionId)
+
+				provider.log(`Session restored successfully: ${sessionId}`)
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error)
+				provider.log(`Failed to restore session: ${errorMessage}`)
+				vscode.window.showErrorMessage(`Failed to restore session: ${errorMessage}`)
+			}
+			break
 		case "condenseTaskContextRequest":
 			provider.condenseTaskContext(message.text!)
 			break

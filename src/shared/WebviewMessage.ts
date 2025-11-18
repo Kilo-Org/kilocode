@@ -81,6 +81,7 @@ export interface WebviewMessage {
 		| "showTaskWithId"
 		| "deleteTaskWithId"
 		| "exportTaskWithId"
+		| "restoreSession"
 		| "importSettings"
 		| "toggleToolAutoApprove"
 		| "openExtensionSettings"
@@ -319,6 +320,8 @@ export interface WebviewMessage {
 		| "dismissUpsell"
 		| "getDismissedUpsells"
 	text?: string
+	sessionId?: string // kilocode_change
+	messages?: any[] // kilocode_change ClineMessage[] for restoreSession
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
 	disabled?: boolean
