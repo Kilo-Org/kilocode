@@ -131,15 +131,20 @@ export class CLI {
 			await this.injectConfigurationToExtension()
 			logs.debug("CLI configuration injected into extension", "CLI")
 
-			// Initialize CLI session with backend (if token is configured)
-			try {
-				const sessionId = await this.store.set(initializeSessionAtom, this.options.session)
+			// Initialize CLI session with backend only if --session flag was provided
+			// Otherwise, session will be created on first message send
+			if (this.options.session) {
+				try {
+					const sessionId = await this.store.set(initializeSessionAtom, this.options.session)
 
-				if (sessionId) {
-					logs.info("CLI session ready", "CLI", { sessionId })
+					if (sessionId) {
+						logs.info("CLI session ready from provided session ID", "CLI", { sessionId })
+					}
+				} catch (error) {
+					logs.warn("Session initialization failed, continuing without session", "CLI", { error })
 				}
-			} catch (error) {
-				logs.warn("Session initialization failed, continuing without session", "CLI", { error })
+			} else {
+				logs.debug("Session initialization deferred to first message send", "CLI")
 			}
 
 			const extensionHost = this.service.getExtensionHost()

@@ -17,6 +17,11 @@ export const sessionIdAtom = atom<string | null>(null)
 export const sessionTitleAtom = atom<string | null>(null)
 
 /**
+ * Atom to track if session was resumed via --session flag
+ */
+export const sessionResumedAtom = atom<boolean>(false)
+
+/**
  * Atom to track if session is being initialized
  */
 export const isSessionInitializingAtom = atom<boolean>(false)
@@ -40,16 +45,22 @@ export const isSessionReadyAtom = atom<boolean>((get) => {
 /**
  * Action atom to set the session ID and title
  */
-export const setSessionIdAtom = atom(null, (get, set, sessionId: string | null, sessionTitle?: string | null) => {
-	set(sessionIdAtom, sessionId)
-	set(sessionTitleAtom, sessionTitle ?? null)
-	set(isSessionInitializingAtom, false)
+export const setSessionIdAtom = atom(
+	null,
+	(get, set, sessionId: string | null, sessionTitle?: string | null, resumed?: boolean) => {
+		set(sessionIdAtom, sessionId)
+		set(sessionTitleAtom, sessionTitle ?? null)
+		set(isSessionInitializingAtom, false)
+		if (resumed !== undefined) {
+			set(sessionResumedAtom, resumed)
+		}
 
-	// Clear error when session is set
-	if (sessionId) {
-		set(sessionErrorAtom, null)
-	}
-})
+		// Clear error when session is set
+		if (sessionId) {
+			set(sessionErrorAtom, null)
+		}
+	},
+)
 
 /**
  * Action atom to set session error
@@ -79,4 +90,5 @@ export const clearSessionAtom = atom(null, (get, set) => {
 	set(sessionTitleAtom, null)
 	set(isSessionInitializingAtom, false)
 	set(sessionErrorAtom, null)
+	set(sessionResumedAtom, false)
 })

@@ -3,7 +3,7 @@
  * Provides a clean interface for sending user messages to the extension
  */
 
-import { useSetAtom } from "jotai"
+import { useSetAtom, useAtomValue } from "jotai"
 import { useCallback, useState } from "react"
 import { addMessageAtom } from "../atoms/ui.js"
 import { useWebviewMessage } from "./useWebviewMessage.js"
@@ -11,6 +11,8 @@ import { useTaskState } from "./useTaskState.js"
 import type { CliMessage } from "../../types/cli.js"
 import { logs } from "../../services/logs.js"
 import { getTelemetryService } from "../../services/telemetry/index.js"
+import { sessionIdAtom } from "../atoms/session.js"
+import { initializeSessionAtom } from "../atoms/actions/session.js"
 
 /**
  * Options for useMessageHandler hook
@@ -60,6 +62,8 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 	const addMessage = useSetAtom(addMessageAtom)
 	const { sendMessage, sendAskResponse } = useWebviewMessage()
 	const { hasActiveTask } = useTaskState()
+	const sessionId = useAtomValue(sessionIdAtom)
+	const initializeSession = useSetAtom(initializeSessionAtom)
 
 	const sendUserMessage = useCallback(
 		async (text: string): Promise<void> => {
@@ -76,6 +80,32 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 			setIsSending(true)
 
 			try {
+				// Initialize session on first message if not already initialized
+				if (!sessionId) {
+					logs.info("Initializing session on first message send", "useMessageHandler")
+					try {
+						const newSessionId = await initializeSession()
+						if (newSessionId) {
+							logs.info("Session created on first message", "useMessageHandler", {
+								sessionId: newSessionId,
+							})
+							// Add a system message to notify the user
+							const systemMessage: CliMessage = {
+								id: `session-${Date.now()}`,
+								type: "system",
+								content: `Session started: ${newSessionId}`,
+								ts: Date.now(),
+							}
+							addMessage(systemMessage)
+						}
+					} catch (error) {
+						logs.warn("Failed to initialize session, continuing without session", "useMessageHandler", {
+							error,
+						})
+						// Continue even if session creation fails
+					}
+				}
+
 				// Track user message
 				getTelemetryService().trackUserMessageSent(
 					trimmedText.length,
@@ -115,7 +145,7 @@ export function useMessageHandler(options: UseMessageHandlerOptions = {}): UseMe
 				setIsSending(false)
 			}
 		},
-		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask],
+		[addMessage, ciMode, sendMessage, sendAskResponse, hasActiveTask, sessionId, initializeSession],
 	)
 
 	return {

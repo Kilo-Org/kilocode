@@ -87,7 +87,7 @@ export const initializeSessionAtom = atom(null, async (get, set, providedSession
 
 		if (validatedSessionId) {
 			logs.info("Using validated session ID", "Session", { sessionId: validatedSessionId })
-			set(setSessionIdAtom, validatedSessionId)
+			set(setSessionIdAtom, validatedSessionId, undefined, true) // Mark as resumed
 			return validatedSessionId
 		}
 
@@ -126,7 +126,7 @@ export const initializeSessionAtom = atom(null, async (get, set, providedSession
 
 		logs.info("CLI session created successfully", "Session", { sessionId, sessionTitle })
 
-		set(setSessionIdAtom, sessionId, sessionTitle)
+		set(setSessionIdAtom, sessionId, sessionTitle, false) // Mark as new session
 		return sessionId
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error))
