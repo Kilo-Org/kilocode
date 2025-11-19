@@ -190,50 +190,45 @@ export class InteractiveRun {
  */
 export class TestRig {
 	bundlePath: string
-	testDir: string | null
+	testDir: string
 	testName: string
+	configDir: string
+	sourceDir: string
 
 	constructor(testName: string) {
-		// Point to the built CLI bundle
 		this.bundlePath = join(__dirname, "..", "dist/index.js")
-		this.testDir = null
 		this.testName = testName
+
+		this.setupTestDir()
+	}
+
+	setupTestDir() {
+		const sanitizedName = sanitizeTestName(this.testName)
+		const baseDir = join(tmpdir(), "kilocode-cli-tests")
+		this.testDir = join(baseDir, sanitizedName)
+
+		mkdirSync(this.testDir, { recursive: true })
+
+		this.configDir = join(this.testDir, ".kilocode")
+		mkdirSync(this.configDir, { recursive: true })
+
+		this.sourceDir = join(this.testDir, "src")
+		mkdirSync(this.sourceDir, { recursive: true })
 	}
 
 	/**
 	 * Set up test environment
 	 */
-	setup(
-		options: {
-			config?: Record<string, unknown>
-			env?: Record<string, string>
-		} = {},
-	) {
-		const sanitizedName = sanitizeTestName(this.testName)
-
-		// Create test directory in temp folder
-		const baseDir = join(tmpdir(), "kilocode-cli-tests")
-		this.testDir = join(baseDir, sanitizedName)
-		mkdirSync(this.testDir, { recursive: true })
-
-		// Create .kilocode directory for config
-		const kilocodeDir = join(this.testDir, ".kilocode")
-		mkdirSync(kilocodeDir, { recursive: true })
-
-		// Write config file if provided
-		if (options.config) {
-			const configPath = join(kilocodeDir, "config.json")
-			writeFileSync(configPath, JSON.stringify(options.config, null, 2))
-		}
-
-		return this.testDir
+	setup(config: Record<string, unknown>) {
+		const configPath = join(this.configDir, "config.json")
+		writeFileSync(configPath, JSON.stringify(config, null, 2))
 	}
 
 	/**
 	 * Create a file in the test workspace
 	 */
 	createFile(fileName: string, content: string): string {
-		const filePath = join(this.testDir!, fileName)
+		const filePath = join(this.sourceDir, fileName)
 		const fileDir = dirname(filePath)
 		mkdirSync(fileDir, { recursive: true })
 		writeFileSync(filePath, content)
@@ -244,14 +239,14 @@ export class TestRig {
 	 * Create a directory in the test workspace
 	 */
 	mkdir(dir: string) {
-		mkdirSync(join(this.testDir!, dir), { recursive: true })
+		mkdirSync(join(this.sourceDir, dir), { recursive: true })
 	}
 
 	/**
 	 * Read a file from the test workspace
 	 */
 	readFile(fileName: string): string {
-		const filePath = join(this.testDir!, fileName)
+		const filePath = join(this.sourceDir, fileName)
 		const content = readFileSync(filePath, "utf-8")
 		if (env["KEEP_OUTPUT"] === "true" || env["VERBOSE"] === "true") {
 			console.log(`--- FILE: ${filePath} ---`)
@@ -266,7 +261,7 @@ export class TestRig {
 	 */
 	sync() {
 		try {
-			execSync("sync", { cwd: this.testDir! })
+			execSync("sync", { cwd: this.sourceDir })
 		} catch {
 			// sync may not be available on all platforms
 		}
@@ -309,6 +304,7 @@ export class TestRig {
 				...options.env,
 				// Keep colors so we can see the logo properly
 				FORCE_COLOR: "1",
+				KILO_CONFIG_DIR: this.configDir,
 			} as { [key: string]: string },
 		}
 
@@ -361,7 +357,7 @@ export function createMinimalConfig(): Record<string, unknown> {
 				kilocodeOrganizationId: "9d278969-5453-4ae3-a51f-a8d2274a7b56",
 			},
 		],
-		currentProvider: "test-provider-1",
+		provider: "test-provider-1",
 		theme: "dark",
 	}
 }

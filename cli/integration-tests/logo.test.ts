@@ -14,7 +14,7 @@ describe("CLI Logo Display", () => {
 
 	it("should display the logo on startup with valid config", async () => {
 		const config = createMinimalConfig()
-		rig.setup({ config })
+		rig.setup(config)
 
 		const run = await rig.runInteractive([])
 
@@ -25,7 +25,7 @@ describe("CLI Logo Display", () => {
 
 	it("should not display the logo with --nosplash", async () => {
 		const config = createMinimalConfig()
-		rig.setup({ config })
+		rig.setup(config)
 
 		const run = await rig.runInteractive(["--nosplash"])
 

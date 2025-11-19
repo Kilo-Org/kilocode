@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config"
 export default defineConfig({
 	test: {
 		// Test file patterns
-		include: ["integration-tests/**/*.test.ts"],
+		include: ["src/__tests__/**/*.test.ts", "integration-tests/**/*.test.ts"],
 
 		// Timeout for tests (integration tests may take longer)
 		testTimeout: 30000,

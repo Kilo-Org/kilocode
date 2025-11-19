@@ -9,7 +9,7 @@ describe("Simple File Operations", () => {
 	beforeEach(({ task }) => {
 		rig = new TestRig(task.name)
 		const config = createMinimalConfig()
-		rig.setup({ config })
+		rig.setup(config)
 	})
 
 	afterEach(async () => {
@@ -25,6 +25,8 @@ describe("Simple File Operations", () => {
 			console.log(run.getStrippedOutput())
 		})
 		await run.type("Increase the version number in text.json with 1")
+
+		console.info(run.getStrippedOutput())
 
 		// await run.pressEnter()
 
