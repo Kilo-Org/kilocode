@@ -86,6 +86,13 @@ export interface LLMRetrievalResult {
 	cacheReadTokens: number
 }
 
+interface PendingSuggestion {
+	prefix: string
+	suffix: string
+	promise: Promise<LLMRetrievalResult>
+	abortController: AbortController
+}
+
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
 	private holeFiller: HoleFiller
@@ -97,6 +104,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
 	private ignoreController?: Promise<RooIgnoreController>
+	private pendingRequests: Map<string, PendingSuggestion> = new Map()
 
 	constructor(
 		model: GhostModel,
@@ -196,6 +204,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			clearTimeout(this.debounceTimer)
 			this.debounceTimer = null
 		}
+		// Cancel all pending requests
+		for (const pending of this.pendingRequests.values()) {
+			pending.abortController.abort()
+		}
+		this.pendingRequests.clear()
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 	}
@@ -293,29 +306,148 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		})
 	}
 
-	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
-		try {
-			// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
-			const curriedProcessSuggestion = (text: string) => this.processSuggestion(text, prefix, suffix, this.model)
+	/**
+	 * Create a cache key for request deduplication
+	 */
+	private getCacheKey(prefix: string, suffix: string): string {
+		return `${prefix}|||${suffix}`
+	}
 
-			const result =
-				prompt.strategy === "fim"
-					? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
-					: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
+	/**
+	 * Check if we can reuse a pending request for the current prefix/suffix
+	 */
+	private findReusablePendingRequest(prefix: string, suffix: string): PendingSuggestion | null {
+		const cacheKey = this.getCacheKey(prefix, suffix)
 
-			if (this.costTrackingCallback && result.cost > 0) {
-				this.costTrackingCallback(
-					result.cost,
-					result.inputTokens,
-					result.outputTokens,
-					result.cacheWriteTokens,
-					result.cacheReadTokens,
-				)
+		// Check for exact match first
+		const exactMatch = this.pendingRequests.get(cacheKey)
+		if (exactMatch) {
+			return exactMatch
+		}
+
+		// Check if we can reuse a request with a shorter prefix (user typed ahead)
+		for (const [key, pending] of this.pendingRequests.entries()) {
+			if (pending.suffix === suffix && prefix.startsWith(pending.prefix)) {
+				// User has typed ahead - we can potentially reuse this request
+				return pending
 			}
+		}
 
-			// Always update suggestions, even if text is empty (for caching)
-			this.updateSuggestions(result.suggestion)
+		return null
+	}
+
+	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+		const cacheKey = this.getCacheKey(prefix, suffix)
+
+		// Check if we can reuse an existing pending request
+		const reusable = this.findReusablePendingRequest(prefix, suffix)
+		if (reusable) {
+			try {
+				// Wait for the existing request to complete
+				const result = await reusable.promise
+
+				// Check if request was aborted while waiting
+				if (reusable.abortController.signal.aborted) {
+					return
+				}
+
+				// If user typed ahead, adjust the suggestion
+				if (prefix.startsWith(reusable.prefix) && prefix !== reusable.prefix) {
+					const typedAhead = prefix.substring(reusable.prefix.length)
+					if (result.suggestion.text.startsWith(typedAhead)) {
+						// Remove the already-typed portion from the suggestion
+						const adjustedSuggestion: FillInAtCursorSuggestion = {
+							text: result.suggestion.text.substring(typedAhead.length),
+							prefix,
+							suffix,
+						}
+						this.updateSuggestions(adjustedSuggestion)
+						return
+					}
+				}
+
+				// Use the result as-is if no adjustment needed
+				this.updateSuggestions(result.suggestion)
+				return
+			} catch (error) {
+				// If reused request failed or was aborted, fall through to create new request
+				if (error instanceof Error && error.name === "AbortError") {
+					return
+				}
+				console.warn("Reused request failed, creating new request:", error)
+			}
+		}
+
+		// Cancel any pending requests that are now obsolete
+		for (const [key, pending] of this.pendingRequests.entries()) {
+			// Cancel if different suffix or if prefix has diverged
+			if (
+				pending.suffix !== suffix ||
+				(!prefix.startsWith(pending.prefix) && !pending.prefix.startsWith(prefix))
+			) {
+				pending.abortController.abort()
+				this.pendingRequests.delete(key)
+			}
+		}
+
+		// Create new request with abort controller
+		const abortController = new AbortController()
+
+		const promise = (async (): Promise<LLMRetrievalResult> => {
+			try {
+				// Check if already aborted before starting
+				if (abortController.signal.aborted) {
+					throw new Error("Request aborted before starting")
+				}
+
+				// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
+				const curriedProcessSuggestion = (text: string) => this.processSuggestion(text, prefix, suffix, this.model)
+
+				const result =
+					prompt.strategy === "fim"
+						? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
+						: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
+
+				// Check if aborted after completion
+				if (abortController.signal.aborted) {
+					throw new Error("Request aborted after completion")
+				}
+
+				if (this.costTrackingCallback && result.cost > 0) {
+					this.costTrackingCallback(
+						result.cost,
+						result.inputTokens,
+						result.outputTokens,
+						result.cacheWriteTokens,
+						result.cacheReadTokens,
+					)
+				}
+
+				// Always update suggestions, even if text is empty (for caching)
+				this.updateSuggestions(result.suggestion)
+
+				return result
+			} finally {
+				// Clean up from pending requests map
+				this.pendingRequests.delete(cacheKey)
+			}
+		})()
+
+		// Store the pending request
+		this.pendingRequests.set(cacheKey, {
+			prefix,
+			suffix,
+			promise,
+			abortController,
+		})
+
+		try {
+			await promise
 		} catch (error) {
+			if (error instanceof Error && error.name === "AbortError") {
+				// Silently ignore aborted requests
+				return
+			}
 			console.error("Error getting inline completion from LLM:", error)
 		}
 	}
