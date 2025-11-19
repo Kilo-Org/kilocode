@@ -10,9 +10,9 @@ import type { IndexingStatus, IndexingStatusUpdateMessage } from "@roo/Extension
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { PopoverTrigger, StandardTooltip, Button } from "@src/components/ui"
 
-import { CodeIndexPopover } from "./CodeIndexPopover"
-import { ManagedCodeIndexPopover } from "./kilocode/ManagedCodeIndexPopover"
-import { useManagedCodeIndexingEnabled } from "./hooks/useManagedCodeIndexingEnabled"
+import { CodeIndexPopover } from "./CodeIndexPopover" // kilocode_change
+import { useManagedCodeIndexingEnabled } from "./hooks/useManagedCodeIndexingEnabled" // kilocode_change
+import { TabbedCodeIndexPopover } from "./kilocode/TabbedCodeIndexPopover" // kilocode_change
 
 interface IndexingStatusBadgeProps {
 	className?: string
@@ -88,7 +88,7 @@ export const IndexingStatusBadge: React.FC<IndexingStatusBadgeProps> = ({ classN
 	}, [indexingStatus.systemStatus])
 
 	// Use ManagedCodeIndexPopover when organization is available, otherwise use regular CodeIndexPopover
-	const PopoverComponent = useManagedIndex ? ManagedCodeIndexPopover : CodeIndexPopover
+	const PopoverComponent = useManagedIndex ? TabbedCodeIndexPopover : CodeIndexPopover // kilocode_change
 
 	return (
 		<PopoverComponent indexingStatus={indexingStatus}>

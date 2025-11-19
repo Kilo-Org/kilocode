@@ -9,18 +9,14 @@ import { vscode } from "@src/utils/vscode"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { buildDocLink } from "@src/utils/docLinks"
-import { Popover, PopoverContent } from "@src/components/ui"
-import { useRooPortal } from "@src/components/ui/hooks/useRooPortal"
 import { useEscapeKey } from "@src/hooks/useEscapeKey"
 import { OrganizationIndexingTab } from "./OrganizationIndexingTab"
 
 interface CodeIndexPopoverProps {
-	children: React.ReactNode
 	indexingStatus: IndexingStatus
 }
 
-export const ManagedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
-	children,
+export const ManagedCodeIndexPopoverContent: React.FC<CodeIndexPopoverProps> = ({
 	indexingStatus: externalIndexingStatus,
 }) => {
 	const { t } = useAppTranslation()
@@ -84,38 +80,25 @@ export const ManagedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		vscode.postMessage({ type: "cancelIndexing" })
 	}, [t])
 
-	const portalContainer = useRooPortal("roo-portal")
-
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			{children}
-			<PopoverContent
-				className="w-[calc(100vw-32px)] max-w-[450px] max-h-[80vh] overflow-y-auto p-0"
-				align="end"
-				alignOffset={0}
-				side="bottom"
-				sideOffset={5}
-				collisionPadding={16}
-				avoidCollisions={true}
-				container={portalContainer}>
-				<div className="p-3 border-b border-vscode-dropdown-border cursor-default">
-					<div className="flex flex-row items-center gap-1 p-0 mt-0 mb-1 w-full">
-						<h4 className="m-0 pb-2 flex-1">{t("settings:codeIndex.title")}</h4>
-					</div>
-					<p className="my-0 pr-4 text-sm w-full">
-						<Trans i18nKey="settings:codeIndex.description">
-							<VSCodeLink
-								href={buildDocLink("features/codebase-indexing", "settings")}
-								style={{ display: "inline" }}
-							/>
-						</Trans>
-					</p>
+		<>
+			<div className="p-3 border-b border-vscode-dropdown-border cursor-default">
+				<div className="flex flex-row items-center gap-1 p-0 mt-0 mb-1 w-full">
+					<h4 className="m-0 pb-2 flex-1">{t("settings:codeIndex.title")}</h4>
 				</div>
+				<p className="my-0 pr-4 text-sm w-full">
+					<Trans i18nKey="settings:codeIndex.description">
+						<VSCodeLink
+							href={buildDocLink("features/codebase-indexing", "settings")}
+							style={{ display: "inline" }}
+						/>
+					</Trans>
+				</p>
+			</div>
 
-				<div className="p-4">
-					<OrganizationIndexingTab indexingStatus={indexingStatus} onCancelIndexing={handleCancelIndexing} />
-				</div>
-			</PopoverContent>
-		</Popover>
+			<div className="p-4">
+				<OrganizationIndexingTab indexingStatus={indexingStatus} onCancelIndexing={handleCancelIndexing} />
+			</div>
+		</>
 	)
 }
