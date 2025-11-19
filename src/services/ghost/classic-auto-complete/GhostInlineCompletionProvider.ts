@@ -1,7 +1,7 @@
 import * as vscode from "vscode"
 import { extractPrefixSuffix, GhostSuggestionContext, contextToAutocompleteInput, AutocompleteInput } from "../types"
 import { GhostContextProvider } from "./GhostContextProvider"
-import { parseGhostResponse, HoleFiller, FillInAtCursorSuggestion } from "./HoleFiller"
+import { FillInAtCursorSuggestion } from "./HoleFiller"
 import { GhostModel } from "../GhostModel"
 import { ApiStreamChunk } from "../../../api/transform/stream"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
@@ -9,7 +9,8 @@ import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harnes
 import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
-import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { ICompletionStrategy } from "./strategies/ICompletionStrategy"
+import { StrategyFactory } from "./strategies/StrategyFactory"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -23,10 +24,10 @@ export type CostTrackingCallback = (
 ) => void
 
 export interface GhostPrompt {
-	systemPrompt: string
-	userPrompt: string
-	prefix: string
-	suffix: string
+	systemPrompt?: string
+	userPrompt?: string
+	formattedPrefix: string
+	formattedSuffix: string
 	autocompleteInput: AutocompleteInput
 }
 
@@ -95,7 +96,7 @@ export interface LLMRetrievalResult {
 
 export class GhostInlineCompletionProvider implements vscode.InlineCompletionItemProvider {
 	private suggestionsHistory: FillInAtCursorSuggestion[] = []
-	private holeFiller: HoleFiller
+	private strategy: ICompletionStrategy
 	private contextProvider: GhostContextProvider
 	private model: GhostModel
 	private costTrackingCallback: CostTrackingCallback
@@ -115,9 +116,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		this.model = model
 		this.costTrackingCallback = costTrackingCallback
 		this.getSettings = getSettings
-		this.holeFiller = new HoleFiller(contextProvider)
 		this.contextProvider = contextProvider
 		this.ignoreController = ignoreController
+
+		// Determine strategy at construction time based on model capabilities
+		this.strategy = StrategyFactory.createStrategy(model, contextProvider)
 
 		// Initialize tracking services with IDE from context provider
 		const ide = contextProvider.getIde()
@@ -163,14 +166,17 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { prefix, suffix } = extractPrefixSuffix(document, position)
 		const languageId = document.languageId
 
-		const { systemPrompt, userPrompt } = await this.holeFiller.getPrompts(
+		// Use strategy to get prompts
+		const modelName = this.model.getModelName()
+		const prompts = await this.strategy.getPrompts(
 			autocompleteInput,
 			prefix,
 			suffix,
 			languageId,
+			modelName ?? undefined,
 		)
 
-		return { systemPrompt, userPrompt, prefix, suffix, autocompleteInput }
+		return { ...prompts, autocompleteInput }
 	}
 
 	private processSuggestion(
@@ -198,90 +204,40 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	public async getFromLLM(prompt: GhostPrompt, model: GhostModel): Promise<LLMRetrievalResult> {
-		const { systemPrompt, userPrompt, prefix, suffix, autocompleteInput } = prompt
-
-		if (model.supportsFim()) {
-			return this.getFromFIM(prefix, suffix, model, autocompleteInput)
-		}
+		const { formattedPrefix, formattedSuffix, autocompleteInput } = prompt
 
 		let response = ""
 
-		const onChunk = (chunk: ApiStreamChunk) => {
-			if (chunk.type === "text") {
+		// Unified chunk handler that works for both ApiStreamChunk and string
+		const onChunk = (chunk: ApiStreamChunk | string) => {
+			if (typeof chunk === "string") {
+				response += chunk
+			} else if (chunk.type === "text") {
 				response += chunk.text
 			}
 		}
 
-		console.log("[HoleFiller] userPrompt:", userPrompt)
+		console.log("[Strategy] Using strategy:", this.strategy.constructor.name)
+		if (prompt.userPrompt) {
+			console.log("[Strategy] userPrompt:", prompt.userPrompt)
+		}
 
-		const usageInfo = await model.generateResponse(systemPrompt, userPrompt, onChunk)
+		// Use strategy to generate response
+		const usageInfo = await this.strategy.generateResponse(model, prompt, onChunk, autocompleteInput.completionId)
 
-		console.log("response", response)
+		console.log("[Strategy] response:", response)
 
-		const parsedSuggestion = parseGhostResponse(response, prefix, suffix)
-		const fillInAtCursorSuggestion = this.processSuggestion(parsedSuggestion.text, prefix, suffix, model)
+		// Use strategy to parse response
+		const parsedSuggestion = this.strategy.parseResponse(response, formattedPrefix, formattedSuffix)
+		const fillInAtCursorSuggestion = this.processSuggestion(
+			parsedSuggestion.text,
+			formattedPrefix,
+			formattedSuffix,
+			model,
+		)
 
 		if (fillInAtCursorSuggestion.text) {
 			console.info("Final suggestion:", fillInAtCursorSuggestion)
-		}
-
-		return {
-			suggestion: fillInAtCursorSuggestion,
-			cost: usageInfo.cost,
-			inputTokens: usageInfo.inputTokens,
-			outputTokens: usageInfo.outputTokens,
-			cacheWriteTokens: usageInfo.cacheWriteTokens,
-			cacheReadTokens: usageInfo.cacheReadTokens,
-		}
-	}
-
-	private async getFromFIM(
-		prefix: string,
-		suffix: string,
-		model: GhostModel,
-		autocompleteInput: AutocompleteInput,
-	): Promise<LLMRetrievalResult> {
-		const { filepathUri, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
-			autocompleteInput,
-			autocompleteInput.filepath,
-		)
-
-		const modelName = model.getModelName() ?? "codestral"
-		const template = getTemplateForModel(modelName)
-
-		let formattedPrefix = prefix
-		if (template.compilePrefixSuffix) {
-			const [compiledPrefix] = template.compilePrefixSuffix(
-				prefix,
-				suffix,
-				filepathUri,
-				"", // reponame not used in our context
-				snippetsWithUris,
-				workspaceDirs,
-			)
-			formattedPrefix = compiledPrefix
-		}
-
-		console.log("[FIM] formattedPrefix:", formattedPrefix)
-
-		let response = ""
-		const onChunk = (text: string) => {
-			response += text
-		}
-
-		const usageInfo = await model.generateFimResponse(
-			formattedPrefix,
-			suffix,
-			onChunk,
-			autocompleteInput.completionId, // Pass completionId as taskId for tracking
-		)
-
-		console.log("[FIM] response:", response)
-
-		const fillInAtCursorSuggestion = this.processSuggestion(response, prefix, suffix, model)
-
-		if (fillInAtCursorSuggestion.text) {
-			console.info("Final FIM suggestion:", fillInAtCursorSuggestion)
 		}
 
 		return {
