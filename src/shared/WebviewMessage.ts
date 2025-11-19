@@ -396,6 +396,8 @@ export interface WebviewMessage {
 			| "mistral"
 			| "vercel-ai-gateway"
 			| "openrouter"
+		codebaseIndexVectorStoreProvider?: "lancedb" | "qdrant"
+		codebaseIndexLancedbVectorStoreDirectory?: string
 		codebaseIndexEmbedderBaseUrl?: string
 		codebaseIndexEmbedderModelId: string
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers

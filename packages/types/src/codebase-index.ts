@@ -24,6 +24,8 @@ export const codebaseIndexConfigSchema = z.object({
 	codebaseIndexEmbedderProvider: z
 		.enum(["openai", "ollama", "openai-compatible", "gemini", "mistral", "vercel-ai-gateway", "openrouter"])
 		.optional(),
+	codebaseIndexVectorStoreProvider: z.enum(["lancedb", "qdrant"]).optional(),
+	codebaseIndexLancedbVectorStoreDirectory: z.string().optional(),
 	codebaseIndexEmbedderBaseUrl: z.string().optional(),
 	codebaseIndexEmbedderModelId: z.string().optional(),
 	codebaseIndexEmbedderModelDimension: z.number().optional(),

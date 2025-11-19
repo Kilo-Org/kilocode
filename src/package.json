@@ -636,6 +636,7 @@
 		"@aws-sdk/credential-providers": "^3.806.0",
 		"@cerebras/cerebras_cloud_sdk": "^1.35.0",
 		"@google/genai": "^1.0.0",
+		"@lancedb/lancedb": "^0.21.2",
 		"@lmstudio/sdk": "^1.1.1",
 		"@mistralai/mistralai": "^1.9.18",
 		"@modelcontextprotocol/sdk": "1.13.3",

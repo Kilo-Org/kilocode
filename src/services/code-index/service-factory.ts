@@ -8,6 +8,7 @@ import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
+import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
@@ -17,8 +18,8 @@ import { Ignore } from "ignore"
 import { t } from "../../i18n"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
-import { Package } from "../../shared/package"
-import { BATCH_SEGMENT_THRESHOLD } from "./constants"
+import { getLancedbVectorStoreDirectoryPath } from "../../utils/storage"
+import { LanceDBManager } from "../../utils/lancedb-manager"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -146,7 +147,20 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.vectorDimensionNotDetermined", { modelId, provider }))
 			}
 		}
-
+		// Use LacneDB
+		if (config.vectorStoreProvider === "lancedb") {
+			const { workspacePath } = this
+			const globalStorageUri = this.configManager.getContextProxy().globalStorageUri.fsPath
+			const lancedbVectorStoreDirectoryPlaceholder =
+				config.lancedbVectorStoreDirectoryPlaceholder || getLancedbVectorStoreDirectoryPath(globalStorageUri)
+			return new LanceDBVectorStore(
+				workspacePath,
+				vectorSize,
+				lancedbVectorStoreDirectoryPlaceholder,
+				new LanceDBManager(globalStorageUri),
+			)
+		}
+		// Use Qdrant
 		if (!config.qdrantUrl) {
 			throw new Error(t("embeddings:serviceFactory.qdrantUrlMissing"))
 		}
@@ -164,17 +178,7 @@ export class CodeIndexServiceFactory {
 		parser: ICodeParser,
 		ignoreInstance: Ignore,
 	): DirectoryScanner {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
-		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance, batchSize)
+		return new DirectoryScanner(embedder, vectorStore, parser, this.cacheManager, ignoreInstance)
 	}
 
 	/**
@@ -188,16 +192,6 @@ export class CodeIndexServiceFactory {
 		ignoreInstance: Ignore,
 		rooIgnoreController?: RooIgnoreController,
 	): IFileWatcher {
-		// Get the configurable batch size from VSCode settings
-		let batchSize: number
-		try {
-			batchSize = vscode.workspace
-				.getConfiguration(Package.name)
-				.get<number>("codeIndex.embeddingBatchSize", BATCH_SEGMENT_THRESHOLD)
-		} catch {
-			// In test environment, vscode.workspace might not be available
-			batchSize = BATCH_SEGMENT_THRESHOLD
-		}
 		return new FileWatcher(
 			this.workspacePath,
 			context,
@@ -206,7 +200,6 @@ export class CodeIndexServiceFactory {
 			vectorStore,
 			ignoreInstance,
 			rooIgnoreController,
-			batchSize,
 		)
 	}
 

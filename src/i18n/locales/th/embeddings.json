@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "ล้มเหลวในการเชื่อมต่อกับฐานข้อมูล Qdrant vector กรุณาตรวจสอบให้แน่ใจว่า Qdrant กำลังทำงานและสามารถเข้าถึงได้ที่ {{qdrantUrl}} ข้อผิดพลาด: {{errorMessage}}",
-		"vectorDimensionMismatch": "ล้มเหลวในการอัปเดตดัชนี vector สำหรับโมเดลใหม่ กรุณาลองล้างดัชนีและเริ่มใหม่อีกครั้ง รายละเอียด: {{errorMessage}}"
+		"vectorDimensionMismatch": "ล้มเหลวในการอัปเดตดัชนี vector สำหรับโมเดลใหม่ กรุณาลองล้างดัชนีและเริ่มใหม่อีกครั้ง รายละเอียด: {{errorMessage}}",
+		"lancedbStoreInitFailed": "ไม่สามารถเริ่มต้นที่เก็บเวกเตอร์ LanceDB ได้: {{errorMessage}}",
+		"lancedbLoadFailed": "ไม่สามารถโหลดโมดูล LanceDB ได้: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "การยืนยันตัวตนล้มเหลว กรุณาตรวจสอบ API key ของคุณในการตั้งค่า",
