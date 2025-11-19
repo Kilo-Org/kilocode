@@ -25,6 +25,7 @@ import {
 } from "./helpers/imageHelpers"
 import { validateFileTokenBudget, truncateFileContent } from "./helpers/fileTokenBudget"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export function getReadFileToolDescription(blockName: string, blockParams: any): string {
 	// Handle both single path and multiple files via args
@@ -201,7 +202,12 @@ export async function readFileTool(
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("read_file")
 		const errorMsg = await cline.sayAndCreateMissingParamError("read_file", "args (containing valid file paths)")
+
 		pushToolResult(`<files><error>${errorMsg}</error></files>`)
+		debugLogger("[readFileTool] Tool execution failed", {
+			reason: "args (containing valid file paths)",
+			toolCall: block,
+		})
 		return
 	}
 

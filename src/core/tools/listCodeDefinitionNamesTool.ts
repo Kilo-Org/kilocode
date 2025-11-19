@@ -9,6 +9,7 @@ import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { parseSourceCodeForDefinitionsTopLevel, parseSourceCodeDefinitionsForFile } from "../../services/tree-sitter"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { truncateDefinitionsToLineLimit } from "./helpers/truncateDefinitions"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function listCodeDefinitionNamesTool(
 	cline: Task,
@@ -40,6 +41,10 @@ export async function listCodeDefinitionNamesTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("list_code_definition_names")
 				pushToolResult(await cline.sayAndCreateMissingParamError("list_code_definition_names", "path"))
+				debugLogger("[listCodeDefinitionNamesTool] Tool execution failed", {
+					reason: "Path parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

@@ -19,6 +19,7 @@ import {
 	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function writeToFileTool(
 	cline: Task,
@@ -28,6 +29,9 @@ export async function writeToFileTool(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
+	debugLogger("[writeToFileTool] Tool execution started", {
+		toolCall: block,
+	})
 	const relPath: string | undefined = block.params.path
 	let newContent: string | undefined = block.params.content
 	let predictedLineCount: number | undefined = parseInt(block.params.line_count ?? "0")
@@ -41,6 +45,10 @@ export async function writeToFileTool(
 	if (!relPath) {
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("write_to_file")
+		debugLogger("[writeToFileTool] Tool execution failed", {
+			reason: "Missing 'path' parameter",
+			toolCall: block,
+		})
 		pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "path"))
 		await cline.diffViewProvider.reset()
 		return
@@ -49,6 +57,10 @@ export async function writeToFileTool(
 	if (newContent === undefined) {
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("write_to_file")
+		debugLogger("[writeToFileTool] Tool execution failed", {
+			reason: "Missing 'content'",
+			toolCall: block,
+		})
 		pushToolResult(await cline.sayAndCreateMissingParamError("write_to_file", "content"))
 		await cline.diffViewProvider.reset()
 		return
@@ -144,7 +156,10 @@ export async function writeToFileTool(
 
 				// Check if diffStrategy is enabled
 				const diffStrategyEnabled = !!cline.diffStrategy
-
+				debugLogger("[writeToFileTool] Tool execution failed", {
+					reason: "Incorrect Line Count",
+					toolCall: block,
+				})
 				// Use more specific error message for line_count that provides guidance based on the situation
 				await cline.say(
 					"error",

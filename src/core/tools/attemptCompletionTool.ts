@@ -18,6 +18,7 @@ import {
 import { formatResponse } from "../prompts/responses"
 import { Package } from "../../shared/package"
 import { getCommitRangeForNewCompletion } from "../checkpoints/kilocode/seeNewChanges"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 // kilocode_change start
 async function getClineMessageOptions(task: Task) {
@@ -106,6 +107,10 @@ export async function attemptCompletionTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("attempt_completion")
 				pushToolResult(await cline.sayAndCreateMissingParamError("attempt_completion", "result"))
+				debugLogger("[attemptCompletionTool] Tool execution failed", {
+					reason: "Result parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

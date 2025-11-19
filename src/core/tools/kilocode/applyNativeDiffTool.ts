@@ -14,6 +14,7 @@ import { RecordSource } from "../../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
 import { DiffOperation, OperationResult } from "../multiApplyDiffTool"
+import { debugLogger } from "../../../utils/outputChannelLogger"
 
 // Native tool format types for JSON-based tool calls
 interface NativeFileDiff {
@@ -49,6 +50,10 @@ export async function applyNativeDiffTool(
 		cline.recordToolError("apply_diff")
 		const errorMsg = await cline.sayAndCreateMissingParamError("apply_diff", "files (array of file operations)")
 		pushToolResult(errorMsg)
+		debugLogger("[applyNativeDiffTool] Tool execution failed", {
+			reason: "files (array of file operations)",
+			toolCall: block,
+		})
 		cline.processQueuedMessages()
 		return
 	}
@@ -70,6 +75,10 @@ Failed to parse apply_diff JSON arguments. This usually means:
 			cline.recordToolError("apply_diff")
 			TelemetryService.instance.captureDiffApplicationError(cline.taskId, cline.consecutiveMistakeCount)
 			await cline.say("diff_error", `Failed to parse apply_diff JSON: ${fallbackError}`)
+			debugLogger("[applyNativeDiffTool] Tool execution failed", {
+				reason: "Failed to parse apply_diff JSON",
+				toolCall: block,
+			})
 			pushToolResult(detailedError)
 			cline.processQueuedMessages()
 			return
@@ -89,6 +98,10 @@ Failed to parse apply_diff JSON arguments. This usually means:
 				"files (must be a non-empty array of file operations)",
 			),
 		)
+		debugLogger("[applyNativeDiffTool] Tool execution failed", {
+			reason: "files (must be a non-empty array of file operations)",
+			toolCall: block,
+		})
 		cline.processQueuedMessages()
 		return
 	}
@@ -132,6 +145,10 @@ Failed to parse apply_diff JSON arguments. This usually means:
 				"args.files (must contain at least one valid file with diffs)",
 			),
 		)
+		debugLogger("[applyNativeDiffTool] Tool execution failed", {
+			reason: "args.files (must contain at least one valid file with diffs)",
+			toolCall: block,
+		})
 		cline.processQueuedMessages()
 		return
 	}
@@ -354,6 +371,11 @@ Failed to parse apply_diff JSON arguments. This usually means:
 				originalContent = null
 
 				if (!diffResult.success) {
+					debugLogger("[applyNativeDiffTool] Tool execution failed", {
+						reason: "diff application failure",
+						toolCall: block,
+						diffResult: diffResult,
+					})
 					cline.consecutiveMistakeCount++
 					const currentCount = (cline.consecutiveMistakeCountForApplyDiff.get(relPath) || 0) + 1
 					cline.consecutiveMistakeCountForApplyDiff.set(relPath, currentCount)

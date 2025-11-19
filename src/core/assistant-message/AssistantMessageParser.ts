@@ -3,6 +3,7 @@ import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../share
 import { AssistantMessageContent } from "./parseAssistantMessage"
 import { extractMcpToolInfo, NativeToolCall } from "./kilocode/native-tool-call"
 import Anthropic from "@anthropic-ai/sdk" // kilocode_change
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 /**
  * Parser for assistant messages. Maintains state between chunks
@@ -93,22 +94,17 @@ export class AssistantMessageParser {
 					toolCallId = toolCall.id
 					this.nativeToolCallIndexToId.set(toolCall.index, toolCallId)
 				} else {
-					console.warn(
-						"[AssistantMessageParser] Skipping tool call: has index but no id in mapping:",
-						toolCall,
-					)
 					continue
 				}
 			} else if (toolCall.id) {
 				toolCallId = toolCall.id
 			} else {
-				console.warn("[AssistantMessageParser] Skipping tool call without index or ID:", toolCall)
 				continue
 			}
 
 			// Check if we've already processed this tool call
 			if (this.processedNativeToolCallIds.has(toolCallId)) {
-				console.log("[AssistantMessageParser] Tool call already processed:", toolCallId)
+				debugLogger("[AssistantMessageParser] Tool call already processed:", toolCallId)
 				continue
 			}
 
@@ -118,13 +114,14 @@ export class AssistantMessageParser {
 			// First delta: has function name (initialize accumulator)
 			if (toolCall.function?.name) {
 				const toolName = toolCall.function.name
+				debugLogger("[AssistantMessageParser] Processing function name delta:", toolName)
 
 				// Check if it's a dynamic MCP tool or a recognized static tool name
 				const mcpToolInfo = extractMcpToolInfo(toolName)
 				const isValidTool = mcpToolInfo !== null || toolNames.includes(toolName as ToolName)
 
 				if (!isValidTool) {
-					console.warn("[AssistantMessageParser] Unknown tool name in native call:", toolName)
+					debugLogger("[AssistantMessageParser] Unknown tool name in native call:", toolName)
 					continue
 				}
 
@@ -138,23 +135,30 @@ export class AssistantMessageParser {
 						},
 					}
 					this.nativeToolCallsAccumulator.set(toolCallId, accumulatedCall)
+					debugLogger(
+						"[AssistantMessageParser] Created new accumulator entry:",
+						JSON.stringify(accumulatedCall, null, 2),
+					)
 				} else {
 					// Shouldn't happen, but append arguments if it does
+					const oldArgs = accumulatedCall.function!.arguments
 					accumulatedCall.function!.arguments += toolCall.function.arguments || ""
 				}
 			}
 			// Subsequent deltas: only have arguments (append to existing accumulator)
 			else if (accumulatedCall) {
+				const oldArgs = accumulatedCall.function!.arguments
 				accumulatedCall.function!.arguments += toolCall.function?.arguments || ""
 			}
 			// Got arguments without ever getting a name - shouldn't happen
 			else {
-				console.warn("[AssistantMessageParser] Received arguments for unknown tool call:", toolCallId)
+				debugLogger("[AssistantMessageParser] Received arguments for unknown tool call:", toolCallId)
 				continue
 			}
 
 			// Only try to parse if we have an accumulator (shouldn't be undefined at this point)
 			if (!accumulatedCall) {
+				debugLogger("[AssistantMessageParser] No accumulator available, skipping")
 				continue
 			}
 
@@ -166,6 +170,9 @@ export class AssistantMessageParser {
 				if (accumulatedCall.function!.arguments.trim()) {
 					parsedArgs = JSON.parse(accumulatedCall.function!.arguments)
 					isComplete = true
+					debugLogger("[AssistantMessageParser] JSON parse successful:", JSON.stringify(parsedArgs, null, 2))
+				} else {
+					continue
 				}
 			} catch (error) {
 				// Arguments are not yet complete valid JSON, continue accumulating
@@ -175,6 +182,11 @@ export class AssistantMessageParser {
 			// Tool call is complete - convert it to ToolUse format
 			if (isComplete) {
 				const toolName = accumulatedCall.function!.name
+				debugLogger("[AssistantMessageParser] Tool call is complete, converting to ToolUse format:", {
+					toolName,
+					toolCallId,
+					parsedArgs: JSON.stringify(parsedArgs, null, 2),
+				})
 
 				// Finalize any current text content before adding tool use
 				if (this.currentTextContent) {
@@ -199,6 +211,15 @@ export class AssistantMessageParser {
 					const toolInputProps = (parsedArgs as any).toolInputProps || {}
 					const argumentsJson = JSON.stringify(toolInputProps)
 
+					debugLogger("[AssistantMessageParser] Processing MCP tool normalization:", {
+						originalToolName: toolName,
+						normalizedToolName,
+						toolInputProps: JSON.stringify(toolInputProps, null, 2),
+						argumentsJson,
+						serverName: parsedArgs.server_name || mcpToolInfo.serverName,
+						toolName: parsedArgs.tool_name || mcpToolInfo.toolName,
+					})
+
 					// Add server_name, tool_name, and arguments to params
 					normalizedParams = {
 						server_name: parsedArgs.server_name || mcpToolInfo.serverName,
@@ -208,6 +229,10 @@ export class AssistantMessageParser {
 				} else {
 					// Standard tool
 					normalizedToolName = toolName as ToolName
+					debugLogger("[AssistantMessageParser] Using standard tool normalization:", {
+						originalToolName: toolName,
+						normalizedToolName,
+					})
 				}
 
 				// Create a ToolUse block from the native tool call
@@ -219,8 +244,14 @@ export class AssistantMessageParser {
 					toolUseId: accumulatedCall.id,
 				}
 
+				debugLogger("[AssistantMessageParser] Created ToolUse block:", JSON.stringify(toolUse, null, 2))
+
 				// Add the tool use to content blocks
 				this.contentBlocks.push(toolUse)
+				debugLogger(
+					"[AssistantMessageParser] Added ToolUse to content blocks. Total blocks:",
+					this.contentBlocks.length,
+				)
 
 				// Mark this tool call as processed
 				this.processedNativeToolCallIds.add(toolCallId)
@@ -232,6 +263,8 @@ export class AssistantMessageParser {
 					id: toolUse.toolUseId ?? "",
 					input: toolUse.params,
 				}
+
+				debugLogger("[AssistantMessageParser] Yielded completed tool use:", toolUse.name, toolUse.toolUseId)
 			}
 		}
 	}

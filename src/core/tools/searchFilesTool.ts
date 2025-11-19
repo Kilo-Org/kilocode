@@ -6,6 +6,7 @@ import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { regexSearchFiles } from "../../services/ripgrep"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function searchFilesTool(
 	cline: Task,
@@ -40,6 +41,10 @@ export async function searchFilesTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("search_files")
 				pushToolResult(await cline.sayAndCreateMissingParamError("search_files", "path"))
+				debugLogger("[searchFilesTool] Tool execution failed", {
+					reason: "Missing 'path' parameter",
+					toolCall: block,
+				})
 				return
 			}
 
@@ -47,6 +52,10 @@ export async function searchFilesTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("search_files")
 				pushToolResult(await cline.sayAndCreateMissingParamError("search_files", "regex"))
+				debugLogger("[searchFilesTool] Tool execution failed", {
+					reason: "Missing 'regex' parameter",
+					toolCall: block,
+				})
 				return
 			}
 

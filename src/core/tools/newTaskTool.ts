@@ -10,6 +10,7 @@ import { formatResponse } from "../prompts/responses"
 import { t } from "../../i18n"
 import { parseMarkdownChecklist } from "./updateTodoListTool"
 import { Package } from "../../shared/package"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function newTaskTool(
 	task: Task,
@@ -40,6 +41,10 @@ export async function newTaskTool(
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "mode"))
+				debugLogger("[newTaskTool] Tool execution failed", {
+					reason: "Mode parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 
@@ -47,6 +52,10 @@ export async function newTaskTool(
 				task.consecutiveMistakeCount++
 				task.recordToolError("new_task")
 				pushToolResult(await task.sayAndCreateMissingParamError("new_task", "message"))
+				debugLogger("[newTaskTool] Tool execution failed", {
+					reason: "Message parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

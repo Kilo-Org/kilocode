@@ -136,6 +136,7 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		// cloudIsAuthenticated, // kilocode_change
 		messageQueue = [],
 		sendMessageOnEnter, // kilocode_change
+		debugMode, // kilocode_change: debug mode warning
 	} = useExtensionState()
 
 	const messagesRef = useRef(messages)
@@ -1534,7 +1535,9 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 		}
 	}, [modifiedMessages.length, isStreaming, isHidden, task])
 
-	const placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
+	const debugPrefix = debugMode ? "DEBUG LOGGING ENABLED\n" : ""
+	let placeholderText = task ? t("chat:typeMessage") : t("chat:typeTask")
+	placeholderText = debugPrefix + placeholderText
 
 	const switchToMode = useCallback(
 		(modeSlug: string): void => {

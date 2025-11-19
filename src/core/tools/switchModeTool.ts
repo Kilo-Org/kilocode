@@ -4,6 +4,7 @@ import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function switchModeTool(
 	cline: Task,
@@ -31,6 +32,10 @@ export async function switchModeTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("switch_mode")
 				pushToolResult(await cline.sayAndCreateMissingParamError("switch_mode", "mode_slug"))
+				debugLogger("[switchModeTool] Tool execution failed", {
+					reason: "Missing 'mode_slug' parameter",
+					toolCall: block,
+				})
 				return
 			}
 
@@ -42,6 +47,10 @@ export async function switchModeTool(
 			if (!targetMode) {
 				cline.recordToolError("switch_mode")
 				pushToolResult(formatResponse.toolError(`Invalid mode: ${mode_slug}`))
+				debugLogger("[switchModeTool] Tool execution failed", {
+					reason: "Invalid mode_slug",
+					toolCall: block,
+				})
 				return
 			}
 

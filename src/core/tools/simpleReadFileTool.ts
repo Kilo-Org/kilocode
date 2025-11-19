@@ -20,6 +20,7 @@ import {
 	validateImageForProcessing,
 	processImageFile,
 } from "./helpers/imageHelpers"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 /**
  * Simplified read file tool for models that only support single file reads
@@ -67,6 +68,10 @@ export async function simpleReadFileTool(
 		cline.recordToolError("read_file")
 		const errorMsg = await cline.sayAndCreateMissingParamError("read_file", "path")
 		pushToolResult(`<file><error>${errorMsg}</error></file>`)
+		debugLogger("[simpleReadFileTool] Tool execution failed", {
+			reason: "Missing 'path' parameter",
+			toolCall: block,
+		})
 		return
 	}
 

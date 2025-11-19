@@ -1,5 +1,6 @@
 import { ToolUse } from "../../shared/tools"
 import { t } from "../../i18n"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 /**
  * Class for detecting consecutive identical tool calls
@@ -58,6 +59,8 @@ export class ToolRepetitionDetector {
 			// Reset counters to allow recovery if user guides the AI past this point
 			this.consecutiveIdenticalToolCallCount = 0
 			this.previousToolCallJson = null
+
+			debugLogger("[ToolRepetitionDetector] Repetition limit reached for tool:", currentToolCallJson)
 
 			// Return result indicating execution should not be allowed
 			return {

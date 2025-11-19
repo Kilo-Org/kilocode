@@ -2,6 +2,7 @@ import { Task } from "../task/Task"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
 import { formatResponse } from "../prompts/responses"
 import { parseXml } from "../../utils/xml"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function askFollowupQuestionTool(
 	cline: Task,
@@ -23,6 +24,10 @@ export async function askFollowupQuestionTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("ask_followup_question")
 				pushToolResult(await cline.sayAndCreateMissingParamError("ask_followup_question", "question"))
+				debugLogger("[askFollowupQuestionTool] Tool execution failed", {
+					reason: "Question parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

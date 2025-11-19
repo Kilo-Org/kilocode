@@ -7,6 +7,7 @@ import { formatResponse } from "../prompts/responses"
 import { VectorStoreSearchResult } from "../../services/code-index/interfaces"
 import { AskApproval, HandleError, PushToolResult, RemoveClosingTag, ToolUse } from "../../shared/tools"
 import path from "path"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function codebaseSearchTool(
 	cline: Task,
@@ -51,6 +52,10 @@ export async function codebaseSearchTool(
 	if (!query) {
 		cline.consecutiveMistakeCount++
 		pushToolResult(await cline.sayAndCreateMissingParamError(toolName, "query"))
+		debugLogger("[codebaseSearchTool] Tool execution failed", {
+			reason: "Query parameter is missing",
+			toolCall: block,
+		})
 		return
 	}
 

@@ -6,6 +6,7 @@ import { McpExecutionStatus } from "@roo-code/types"
 import { t } from "../../i18n"
 import { McpToolCallResponse } from "../../shared/mcp" // kilocode_change
 import { summarizeSuccessfulMcpOutputWhenTooLong } from "./kilocode" // kilocode_change
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 interface McpToolParams {
 	server_name?: string
@@ -219,7 +220,13 @@ async function sendExecutionStatus(cline: Task, status: McpExecutionStatus): Pro
 }
 
 // kilocode_change: make async, add task parameter
+
 async function processToolContent(task: Task, toolResult: McpToolCallResponse): Promise<string> {
+	debugLogger("[useMcpToolTool] Processing tool content", {
+		hasContent: !!toolResult?.content,
+		contentLength: toolResult?.content?.length || 0,
+		isError: toolResult.isError,
+	})
 	if (!toolResult?.content || toolResult.content.length === 0) {
 		return ""
 	}
@@ -262,6 +269,13 @@ async function executeToolAndProcessResult(
 	executionId: string,
 	pushToolResult: PushToolResult,
 ): Promise<void> {
+	debugLogger("[useMcpToolTool] Starting tool execution", {
+		serverName,
+		toolName,
+		executionId,
+		hasArguments: !!parsedArguments,
+		argumentCount: Object.keys(parsedArguments || {}).length,
+	})
 	await cline.say("mcp_server_request_started")
 
 	// Send started status
@@ -308,7 +322,9 @@ async function executeToolAndProcessResult(
 			error: "No response from MCP server",
 		})
 	}
-
+	debugLogger("[useMcpToolTool] Finished tool execution", {
+		toolResultPretty,
+	})
 	await cline.say("mcp_server_response", toolResultPretty)
 	pushToolResult(formatResponse.toolResult(toolResultPretty))
 }

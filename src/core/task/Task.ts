@@ -8,6 +8,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import delay from "delay"
 import pWaitFor from "p-wait-for"
 import { serializeError } from "serialize-error"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 import {
 	type TaskLike,
@@ -3382,6 +3383,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	}
 
 	public recordToolError(toolName: ToolName, error?: string) {
+		debugLogger("[Task] Tool error", { toolName, error })
 		if (!this.toolUsage[toolName]) {
 			this.toolUsage[toolName] = { attempts: 0, failures: 0 }
 		}

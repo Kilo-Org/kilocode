@@ -6,6 +6,7 @@ import cloneDeep from "clone-deep"
 import crypto from "crypto"
 import { TodoItem, TodoStatus, todoStatusSchema } from "@roo-code/types"
 import { getLatestTodo } from "../../shared/todo"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 let approvedTodoList: TodoItem[] | undefined = undefined
 
@@ -178,6 +179,10 @@ export async function updateTodoListTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("update_todo_list")
 			pushToolResult(formatResponse.toolError("The todos parameter is not valid markdown checklist or JSON"))
+			debugLogger("[updateTodoListTool] Tool execution failed", {
+				reason: "The todos parameter is not valid markdown checklist or JSON",
+				toolCall: block,
+			})
 			return
 		}
 
@@ -186,6 +191,10 @@ export async function updateTodoListTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("update_todo_list")
 			pushToolResult(formatResponse.toolError(error || "todos parameter validation failed"))
+			debugLogger("[updateTodoListTool] Tool execution failed", {
+				reason: formatResponse.toolError(error || "todos parameter validation failed"),
+				toolCall: block,
+			})
 			return
 		}
 

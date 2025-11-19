@@ -598,6 +598,11 @@
 					"minimum": 1,
 					"maximum": 200,
 					"description": "%settings.codeIndex.embeddingBatchSize.description%"
+				},
+				"kilo-code.debugMode": {
+					"type": "boolean",
+					"default": false,
+					"description": "%settings.debugMode.description%"
 				}
 			}
 		},
@@ -645,6 +650,7 @@
 		"@roo-code/telemetry": "workspace:^",
 		"@roo-code/types": "workspace:^",
 		"@vscode/codicons": "^0.0.36",
+		"@zapier/secret-scrubber": "^1.1.2",
 		"async-mutex": "^0.5.0",
 		"axios": "^1.12.0",
 		"cheerio": "^1.0.0",

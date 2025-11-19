@@ -3,6 +3,7 @@ import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } f
 import { formatResponse } from "../prompts/responses"
 import { getCommand, getCommandNames } from "../../services/command/commands"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function runSlashCommandTool(
 	task: Task,
@@ -44,6 +45,10 @@ export async function runSlashCommandTool(
 				task.consecutiveMistakeCount++
 				task.recordToolError("run_slash_command")
 				pushToolResult(await task.sayAndCreateMissingParamError("run_slash_command", "command"))
+				debugLogger("[runSlashCommandTool] Tool execution failed", {
+					reason: "Missing 'command' parameter",
+					toolCall: block,
+				})
 				return
 			}
 
@@ -61,6 +66,10 @@ export async function runSlashCommandTool(
 						`Command '${commandName}' not found. Available commands: ${availableCommands.join(", ") || "(none)"}`,
 					),
 				)
+				debugLogger("[runSlashCommandTool] Tool execution failed", {
+					reason: "Invalid command name",
+					toolCall: block,
+				})
 				return
 			}
 

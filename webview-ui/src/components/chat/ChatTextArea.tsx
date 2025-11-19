@@ -111,6 +111,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			localWorkflows, // kilocode_change
 			globalWorkflows, // kilocode_change
 			taskHistoryVersion, // kilocode_change
+			debugMode, // kilocode_change: debug mode warning
 			clineMessages,
 		} = useExtensionState()
 
@@ -1342,6 +1343,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						"z-[2]",
 						"scrollbar-none",
 						"scrollbar-hide",
+						debugMode ? "bg-red-900" : "", // kilocode_change: debug mode warning
 						"pb-16", // kilocode_change: Increased padding to prevent overlap with control bar
 					)}
 					onScroll={() => updateHighlights()}

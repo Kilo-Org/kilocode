@@ -12,6 +12,7 @@ import { fileExistsAtPath } from "../../utils/fs"
 import { insertGroups } from "../diff/insert-groups"
 import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export async function insertContentTool(
 	cline: Task,
@@ -43,6 +44,10 @@ export async function insertContentTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")
 			pushToolResult(await cline.sayAndCreateMissingParamError("insert_content", "path"))
+			debugLogger("[insertContentTool] Tool execution failed", {
+				reason: "Path parameter is missing",
+				toolCall: block,
+			})
 			return
 		}
 
@@ -50,6 +55,10 @@ export async function insertContentTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")
 			pushToolResult(await cline.sayAndCreateMissingParamError("insert_content", "line"))
+			debugLogger("[insertContentTool] Tool execution failed", {
+				reason: "Line parameter is missing",
+				toolCall: block,
+			})
 			return
 		}
 
@@ -57,6 +66,10 @@ export async function insertContentTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")
 			pushToolResult(await cline.sayAndCreateMissingParamError("insert_content", "content"))
+			debugLogger("[insertContentTool] Tool execution failed", {
+				reason: "Content parameter is missing",
+				toolCall: block,
+			})
 			return
 		}
 
@@ -77,6 +90,10 @@ export async function insertContentTool(
 			cline.consecutiveMistakeCount++
 			cline.recordToolError("insert_content")
 			pushToolResult(formatResponse.toolError("Invalid line number. Must be a non-negative integer."))
+			debugLogger("[insertContentTool] Tool execution failed", {
+				reason: "Invalid line number. Must be a non-negative integer.",
+				toolCall: block,
+			})
 			return
 		}
 
@@ -89,6 +106,10 @@ export async function insertContentTool(
 				const formattedError = `Cannot insert content at line ${lineNumber} into a non-existent file. For new files, 'line' must be 0 (to append) or 1 (to insert at the beginning).`
 				await cline.say("error", formattedError)
 				pushToolResult(formattedError)
+				debugLogger("[insertContentTool] Tool execution failed", {
+					reason: `Cannot insert content at line ${lineNumber} into a non-existent file`,
+					toolCall: block,
+				})
 				return
 			}
 		} else {

@@ -7,6 +7,7 @@ import { listFiles } from "../../services/glob/list-files"
 import { getReadablePath } from "../../utils/path"
 import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 /**
  * Implements the list_files tool.
@@ -57,6 +58,10 @@ export async function listFilesTool(
 				cline.consecutiveMistakeCount++
 				cline.recordToolError("list_files")
 				pushToolResult(await cline.sayAndCreateMissingParamError("list_files", "path"))
+				debugLogger("[listFilesTool] Tool execution failed", {
+					reason: "Path parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

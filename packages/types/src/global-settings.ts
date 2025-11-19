@@ -66,6 +66,7 @@ export const globalSettingsSchema = z.object({
 
 	condensingApiConfigId: z.string().optional(),
 	customCondensingPrompt: z.string().optional(),
+	debugMode: z.boolean().optional(),
 
 	autoApprovalEnabled: z.boolean().optional(),
 	yoloMode: z.boolean().optional(), // kilocode_change

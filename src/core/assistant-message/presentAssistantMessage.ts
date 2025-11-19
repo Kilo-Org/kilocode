@@ -7,6 +7,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { defaultModeSlug, getModeBySlug } from "../../shared/modes"
 import type { ToolParamName, ToolResponse } from "../../shared/tools"
 import { evaluateGatekeeperApproval } from "./kilocode/gatekeeper" // kilocode_change: AI gatekeeper for YOLO mode
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 import { fetchInstructionsTool } from "../tools/fetchInstructionsTool"
 import { listFilesTool } from "../tools/listFilesTool"
@@ -271,6 +272,16 @@ export async function presentAssistantMessage(cline: Task) {
 
 			if (cline.didRejectTool) {
 				// Ignore any tool content after user has rejected tool once.
+				debugLogger(
+					"[presentAssistantMessage] Tool execution decision: Skipping tool due to previous rejection",
+					{
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						isPartial: block.partial,
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					},
+				)
 				if (!block.partial) {
 					pushToolResult_withToolUseId_kilocode({
 						type: "text",
@@ -289,6 +300,15 @@ export async function presentAssistantMessage(cline: Task) {
 
 			if (cline.didAlreadyUseTool) {
 				// Ignore any content after a tool has already been used.
+				debugLogger(
+					"[presentAssistantMessage] Tool execution decision: Skipping tool due to already used tool",
+					{
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					},
+				)
 				pushToolResult_withToolUseId_kilocode({
 					type: "text",
 					text: `Tool [${block.name}] was not executed because a tool has already been used in this message. Only one tool may be used per message. You must assess the first tool's result before proceeding to use the next tool.`,
@@ -296,6 +316,13 @@ export async function presentAssistantMessage(cline: Task) {
 
 				break
 			}
+
+			debugLogger("[presentAssistantMessage] Tool execution decision: Proceeding with tool execution", {
+				toolName: block.name,
+				toolDescription: toolDescription(),
+				taskId: cline.taskId,
+				instanceId: cline.instanceId,
+			})
 
 			const pushToolResult = (content: ToolResponse) => {
 				// kilocode_change start
@@ -325,18 +352,44 @@ export async function presentAssistantMessage(cline: Task) {
 				// kilocode_change start: YOLO mode with AI gatekeeper
 				const state = await cline.providerRef.deref()?.getState()
 				if (state?.yoloMode) {
+					debugLogger("[presentAssistantMessage] Approval flow: YOLO mode detected, using AI gatekeeper", {
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					})
 					// If gatekeeper is configured, use it to evaluate the approval
 					const approved = await evaluateGatekeeperApproval(cline, block.name, block.params)
 					if (!approved) {
 						// Gatekeeper denied the action
+						debugLogger("[presentAssistantMessage] Approval flow: AI gatekeeper denied tool execution", {
+							toolName: block.name,
+							toolDescription: toolDescription(),
+							taskId: cline.taskId,
+							instanceId: cline.instanceId,
+						})
 						pushToolResult(formatResponse.toolDenied())
 						cline.didRejectTool = true
 						return false
 					}
+					debugLogger("[presentAssistantMessage] Approval flow: AI gatekeeper approved tool execution", {
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					})
 					return true
 				}
 				// kilocode_change end
 
+				debugLogger("[presentAssistantMessage] Approval flow: Requesting user approval", {
+					toolName: block.name,
+					toolDescription: toolDescription(),
+					type,
+					isProtected: isProtected || false,
+					taskId: cline.taskId,
+					instanceId: cline.instanceId,
+				})
 				const { response, text, images } = await cline.ask(
 					type,
 					partialMessage,
@@ -348,9 +401,22 @@ export async function presentAssistantMessage(cline: Task) {
 				if (response !== "yesButtonClicked") {
 					// Handle both messageResponse and noButtonClicked with text.
 					if (text) {
+						debugLogger("[presentAssistantMessage] Approval flow: User denied with feedback", {
+							toolName: block.name,
+							toolDescription: toolDescription(),
+							userFeedback: text,
+							taskId: cline.taskId,
+							instanceId: cline.instanceId,
+						})
 						await cline.say("user_feedback", text, images)
 						pushToolResult(formatResponse.toolResult(formatResponse.toolDeniedWithFeedback(text), images))
 					} else {
+						debugLogger("[presentAssistantMessage] Approval flow: User denied without feedback", {
+							toolName: block.name,
+							toolDescription: toolDescription(),
+							taskId: cline.taskId,
+							instanceId: cline.instanceId,
+						})
 						pushToolResult(formatResponse.toolDenied())
 					}
 					cline.didRejectTool = true
@@ -359,8 +425,22 @@ export async function presentAssistantMessage(cline: Task) {
 
 				// Handle yesButtonClicked with text.
 				if (text) {
+					debugLogger("[presentAssistantMessage] Approval flow: User approved with feedback", {
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						userFeedback: text,
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					})
 					await cline.say("user_feedback", text, images)
 					pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
+				} else {
+					debugLogger("[presentAssistantMessage] Approval flow: User approved without feedback", {
+						toolName: block.name,
+						toolDescription: toolDescription(),
+						taskId: cline.taskId,
+						instanceId: cline.instanceId,
+					})
 				}
 
 				return true
@@ -377,6 +457,17 @@ export async function presentAssistantMessage(cline: Task) {
 
 			const handleError = async (action: string, error: Error) => {
 				const errorString = `Error ${action}: ${JSON.stringify(serializeError(error))}`
+
+				debugLogger("[presentAssistantMessage] Error handling: Tool execution failed", {
+					toolName: block.name,
+					toolDescription: toolDescription(),
+					action,
+					errorMessage: error.message,
+					errorStack: error.stack,
+					errorString,
+					taskId: cline.taskId,
+					instanceId: cline.instanceId,
+				})
 
 				await cline.say(
 					"error",

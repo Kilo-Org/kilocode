@@ -2,6 +2,7 @@ import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } f
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { summarizeConversation } from "../condense" // kilocode_change
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 export const condenseTool = async (
 	cline: Task,
@@ -20,6 +21,10 @@ export const condenseTool = async (
 			if (!context) {
 				cline.consecutiveMistakeCount++
 				pushToolResult(await cline.sayAndCreateMissingParamError("condense", "context"))
+				debugLogger("[condenseTool] Tool execution failed", {
+					reason: "Context parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 			cline.consecutiveMistakeCount = 0

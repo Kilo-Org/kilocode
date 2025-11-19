@@ -17,6 +17,7 @@ import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
 import { Terminal } from "../../integrations/terminal/Terminal"
 import { Package } from "../../shared/package"
 import { t } from "../../i18n"
+import { debugLogger } from "../../utils/outputChannelLogger"
 
 class ShellIntegrationError extends Error {}
 
@@ -40,6 +41,10 @@ export async function executeCommandTool(
 				task.consecutiveMistakeCount++
 				task.recordToolError("execute_command")
 				pushToolResult(await task.sayAndCreateMissingParamError("execute_command", "command"))
+				debugLogger("[executeCommandTool] Tool execution failed", {
+					reason: "Command parameter is missing",
+					toolCall: block,
+				})
 				return
 			}
 

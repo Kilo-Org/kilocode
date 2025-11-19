@@ -2242,6 +2242,7 @@ ${prompt}
 			openRouterImageGenerationSelectedModel,
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
+			debugMode: vscode.workspace.getConfiguration("kilo-code").get<boolean>("debugMode") ?? false,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
 		}
 	}
