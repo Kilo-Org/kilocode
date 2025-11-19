@@ -34,6 +34,8 @@ jobs:
                       ${{ runner.os }}-turbo-
             - name: Install dependencies
               run: pnpm install
+            - name: Create .env file
+              run: echo "KILOCODE_POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}" >> .env
             - name: Build CLI
               run: pnpm run cli:bundle
               shell: bash
