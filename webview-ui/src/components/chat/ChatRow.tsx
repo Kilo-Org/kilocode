@@ -372,10 +372,16 @@ export const ChatRowContent = ({
 		wordBreak: "break-word",
 	}
 
-	const tool = useMemo(
-		() => (message.ask === "tool" ? safeJsonParse<ClineSayTool>(message.text) : null),
-		[message.ask, message.text],
-	)
+	const tool = useMemo(() => {
+		const isToolAsk = message.type === "ask" && message.ask === "tool"
+		const isToolSay = message.type === "say" && (message.say as any) === "tool"
+
+		if (isToolAsk || isToolSay) {
+			return safeJsonParse<ClineSayTool>(message.text)
+		}
+
+		return null
+	}, [message.type, message.ask, message.say, message.text])
 
 	const followUpData = useMemo(() => {
 		if (message.type === "ask" && message.ask === "followup" && !message.partial) {
@@ -468,7 +474,7 @@ export const ChatRowContent = ({
 						<div className="">
 							<CodeAccordian
 								path={tool.path}
-								code={tool.content}
+								code={tool.content ?? tool.replace ?? ""}
 								language={getLanguageFromPath(tool.path || "") || "log"}
 								isLoading={message.partial}
 								isExpanded={isExpanded}

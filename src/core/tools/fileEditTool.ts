@@ -5,7 +5,7 @@ import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
-import { AskApproval, HandleError, PushToolResult, RemoveClosingTag, ToolUse } from "../../shared/tools"
+import { HandleError, PushToolResult, RemoveClosingTag, ToolUse } from "../../shared/tools"
 import { fileExistsAtPath } from "../../utils/fs"
 import { getReadablePath } from "../../utils/path"
 import { ClineSayTool } from "../../shared/ExtensionMessage"
@@ -24,7 +24,6 @@ const PREVIEW_LIMIT = 500
 export async function fileEditTool(
 	cline: Task,
 	block: ToolUse,
-	askApproval: AskApproval,
 	handleError: HandleError,
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
@@ -106,13 +105,6 @@ export async function fileEditTool(
 			return
 		}
 
-		const diff = formatResponse.createPrettyPatch(relPath, originalContent, newContent)
-
-		if (!diff) {
-			pushToolResult(`No changes needed for '${relPath}'.`)
-			return
-		}
-
 		const provider = cline.providerRef.deref()
 		const state = await provider?.getState()
 		const diagnosticsEnabled = state?.diagnosticsEnabled ?? true
@@ -125,40 +117,33 @@ export async function fileEditTool(
 		cline.diffViewProvider.editType = fileExists ? "modify" : "create"
 		cline.diffViewProvider.originalContent = originalContent
 
-		if (!isPreventFocusDisruptionEnabled) {
-			await cline.diffViewProvider.open(relPath)
-			await cline.diffViewProvider.update(newContent, true)
-			cline.diffViewProvider.scrollToFirstDiff()
-		}
+		await cline.diffViewProvider.saveDirectly(
+			relPath,
+			newContent,
+			!isPreventFocusDisruptionEnabled,
+			diagnosticsEnabled,
+			writeDelayMs,
+		)
 
-		const approvalMessage = JSON.stringify({
+		const sayMessageProps: ClineSayTool = {
 			tool: "fileEdit",
 			path: readablePath,
-			diff,
 			isProtected: isWriteProtected,
 			search: truncatePreview(oldString ?? "", PREVIEW_LIMIT),
 			replace: truncatePreview(newString ?? "", PREVIEW_LIMIT),
+			content: truncatePreview(newString ?? "", PREVIEW_LIMIT),
 			useRegex: false,
 			ignoreCase: false,
 			replaceAll,
-		} satisfies ClineSayTool)
-
-		const approved = await askApproval("tool", approvalMessage, undefined, isWriteProtected)
-
-		if (!approved) {
-			if (!isPreventFocusDisruptionEnabled) {
-				await cline.diffViewProvider.revertChanges()
-			}
-			pushToolResult("Changes were rejected by the user.")
-			await cline.diffViewProvider.reset()
-			return
 		}
 
-		if (isPreventFocusDisruptionEnabled) {
-			await cline.diffViewProvider.saveDirectly(relPath, newContent, false, diagnosticsEnabled, writeDelayMs)
-		} else {
-			await cline.diffViewProvider.saveChanges(diagnosticsEnabled, writeDelayMs)
-		}
+		await cline.say("tool" as any, JSON.stringify(sayMessageProps))
+		cline.fileEditReviewController.addEdit({
+			relPath,
+			absolutePath,
+			originalContent,
+			newContent,
+		})
 
 		await cline.fileContextTracker.trackFileContext(relPath, "roo_edited" as RecordSource)
 		cline.didEditFile = true
@@ -284,13 +269,6 @@ function countOccurrences(haystack: string, needle: string): number {
 		index += needle.length
 	}
 	return count
-}
-
-function truncatePreview(value: string, limit: number): string {
-	if (value.length <= limit) {
-		return value
-	}
-	return value.slice(0, limit) + "\n...(truncated)"
 }
 
 function* simpleReplacer(content: string, find: string): Generator<string, void, undefined> {
@@ -620,6 +598,13 @@ function extractBlock(content: string, lines: string[], start: number, end: numb
 	}
 
 	return content.substring(startIndex, endIndex)
+}
+
+function truncatePreview(value: string, limit: number): string {
+	if (value.length <= limit) {
+		return value
+	}
+	return value.slice(0, limit) + "\n...(truncated)"
 }
 
 function levenshtein(a: string, b: string): number {

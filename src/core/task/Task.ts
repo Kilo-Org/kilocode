@@ -67,6 +67,7 @@ import { RepoPerTaskCheckpointService } from "../../services/checkpoints"
 
 // integrations
 import { DiffViewProvider } from "../../integrations/editor/DiffViewProvider"
+import { FileEditReviewController } from "../../integrations/editor/FileEditReviewController"
 import { findToolName, formatContentBlockToMarkdown } from "../../integrations/misc/export-markdown"
 import { RooTerminalProcess } from "../../integrations/terminal/types"
 import { TerminalRegistry } from "../../integrations/terminal/TerminalRegistry"
@@ -263,6 +264,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	diffEnabled: boolean = false
 	fuzzyMatchThreshold: number
 	didEditFile: boolean = false
+	fileEditReviewController: FileEditReviewController
 
 	// LLM Messages & Chat Messages
 	apiConversationHistory: ApiMessage[] = []
@@ -386,6 +388,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		this.providerRef = new WeakRef(provider)
 		this.globalStoragePath = provider.context.globalStorageUri.fsPath
 		this.diffViewProvider = new DiffViewProvider(this.cwd, this)
+		this.fileEditReviewController = new FileEditReviewController(this.cwd)
 		this.enableCheckpoints = enableCheckpoints
 		this.enableBridge = enableBridge
 
@@ -1779,6 +1782,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 			this.fileContextTracker.dispose()
 		} catch (error) {
 			console.error("Error disposing file context tracker:", error)
+		}
+
+		try {
+			this.fileEditReviewController.dispose()
+		} catch (error) {
+			console.error("Error disposing file edit review controller:", error)
 		}
 
 		try {

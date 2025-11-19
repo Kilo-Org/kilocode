@@ -33,116 +33,27 @@ export function getPromptComponent(
 }
 
 const applyDiffToolDescription = `
-## apply_diff Tool Usage
+Common tool calls and explanations
 
-The \`apply_diff\` tool allows you to make precise, surgical edits to one or more files simultaneously.
+## file_edit
 
-### CRITICAL: Single Content Field with Complete Structure
+**Description**: Perform targeted text replacements within a single file without constructing manual diff blocks.
 
-**Each diff has ONLY TWO fields:**
-- \`content\`: A single string containing the complete SEARCH/REPLACE block
-- \`start_line\`: The line number where SEARCH begins
+**When to use**:
+- You know the exact text that should be replaced and its updated form.
+- You want a deterministic edit without invoking Fast Apply models.
+- You need to delete or rewrite a block of code but don't want to craft search/replace diff markers manually.
 
-**DO NOT create separate fields like \`search\`, \`replace\`, \`old\`, \`new\`, etc.**
+**Parameters**:
+1. \`target_file\` — Relative path to the file you want to modify.
+2. \`old_string\` — The current text you expect to replace. Provide enough context for a unique match; this can be empty to replace the entire file.
+3. \`new_string\` — The text that should replace the match. Use an empty string to delete the matched content.
+4. \`replace_all\` (optional, default false) — Set to true to replace every occurrence of the matched text. Leave false to replace only a single uniquely identified match.
 
-### REQUIRED Content Format
-
-The \`content\` field MUST contain this COMPLETE structure as a SINGLE STRING:
-\`\`\`
-<<<<<<< SEARCH
-[exact lines from original file]
-=======
-[new lines to replace with]
->>>>>>> REPLACE
-\`\`\`
-
-**All three markers must be present IN THE CONTENT STRING.**
-
-### Correct Example
-\`\`\`json
-{
-  "files": [
-    {
-      "path": "src/services/llmPricing.js",
-      "diffs": [
-        {
-          "content": "<<<<<<< SEARCH\n  \"accounts/fireworks/models/glm-4p5\": {\n    input: 0.55,\n    output: 2.19,\n  },\n  \"gpt-oss-120b\": {\n    input: 0.25,\n    output: 0.69,\n  },\n=======\n  \"accounts/fireworks/models/glm-4p5\": {\n    input: 0.55,\n    output: 2.19,\n  },\n  \"accounts/fireworks/models/glm-4.6\": {\n    input: 0.6,\n    output: 2.2,\n  },\n  \"gpt-oss-120b\": {\n    input: 0.25,\n    output: 0.69,\n  },\n>>>>>>> REPLACE",
-          "start_line": 30
-        }
-      ]
-    }
-  ]
-}
-\`\`\`
-
-### ❌ INCORRECT Examples
-\`\`\`json
-// WRONG - Incomplete content (missing ======= and >>>>>>> REPLACE)
-{
-  "content": "<<<<<<< SEARCH\n  old code\n",
-  "start_line": 30
-}
-
-// WRONG - Creating separate fields
-{
-  "content": "<<<<<<< SEARCH\n  old code\n",
-  "replace": "new code\n>>>>>>> REPLACE",
-  "start_line": 30
-}
-
-// WRONG - Using search/replace fields
-{
-  "search": "old code",
-  "replace": "new code",
-  "start_line": 30
-}
-\`\`\`
-
-### Step-by-Step Process
-
-When creating a diff:
-
-1. **Identify the exact lines** to change from the original file
-2. **Write the SEARCH block**: Include 2-3 lines of context before and after
-3. **Add the separator**: \`=======\` on its own line
-4. **Write the REPLACE block**: The new content (can include the context lines)
-5. **Close with marker**: \`>>>>>>> REPLACE\` on its own line
-6. **Combine into single string**: Put all of this into the \`content\` field
-7. **Add start_line**: The line number where your SEARCH block begins
-
-### JSON Schema Reminder
-\`\`\`typescript
-{
-  path: string,           // File path
-  diffs: [
-    {
-      content: string,    // COMPLETE "<<<<<<< SEARCH\n...\n=======\n...\n>>>>>>> REPLACE" block
-      start_line: number  // Line where SEARCH begins
-    }
-  ]
-}
-\`\`\`
-
-**Only these two fields exist in each diff object. Do not invent additional fields.**
-
-### Common Errors to Avoid
-
-- ❌ **Stopping the content string before \`=======\` and \`>>>>>>> REPLACE\`** (most common)
-- ❌ Creating \`replace\`, \`search\`, \`old\`, or \`new\` fields
-- ❌ Missing the \`=======\` separator line
-- ❌ Missing the \`>>>>>>> REPLACE\` closing marker
-- ❌ Not including enough context in SEARCH block
-- ❌ Whitespace mismatches between SEARCH and original file
-
-### Verification Checklist
-
-Before submitting, verify each diff has:
-- ✅ Single \`content\` field (not multiple fields)
-- ✅ Starts with \`<<<<<<< SEARCH\n\`
-- ✅ Contains \`=======\n\` in the middle
-- ✅ Ends with \`>>>>>>> REPLACE\`
-- ✅ SEARCH block matches original file exactly
-- ✅ Correct \`start_line\` number
+**Guidance**:
+- Prefer multi-line snippets for \`old_string\` to help the tool locate the correct section.
+- If multiple matches exist, either refine \`old_string\` or set \`replace_all\` to true when you intend to change every occurrence.
+- The tool shows a diff before applying changes so you can confirm the result.
 
 # execute_command
 
@@ -323,7 +234,6 @@ Before submitting, verify:
 - \`poetry\` - Python Package Manager
 - \`virtualenv\` - Python Virtual Environment
 
-
 CRITICAL:
 1. A command never starts with \`:\`
 2. A command never uses <|tool_call_argument_begin|> OR any <> TAG
@@ -333,6 +243,35 @@ CRITICAL:
 6. Commands are always valid for the user's shell
 7. Commands are always valid with executable permissions
 8. Commands are always valid with the user's current working directory
+
+
+## update_todo_list
+
+**Description:**
+Replace the entire TODO list with an updated checklist reflecting the current state. Always provide the full list; the system will overwrite the previous one. This tool is designed for step-by-step task tracking, allowing you to confirm completion of each step before updating, update multiple task statuses at once (e.g., mark one as completed and start the next), and dynamically add new todos discovered during long or complex tasks.
+
+**Checklist Format:**
+- Use a single-level markdown checklist (no nesting or subtasks).
+- List todos in the intended execution order.
+- Status options:
+	 - [ ] Task description (pending)
+	 - [x] Task description (completed)
+	 - [-] Task description (in progress)
+
+**Status Rules:**
+- [ ] = pending (not started)
+- [x] = completed (fully finished, no unresolved issues)
+- [-] = in_progress (currently being worked on)
+
+**Core Principles:**
+- Before updating, always confirm which todos have been completed since the last update.
+- You may update multiple statuses in a single update (e.g., mark the previous as completed and the next as in progress).
+- When a new actionable item is discovered during a long or complex task, add it to the todo list immediately.
+- Do not remove any unfinished todos unless explicitly instructed.
+- Always retain all unfinished tasks, updating their status as needed.
+- Only mark a task as completed when it is fully accomplished (no partials, no unresolved dependencies).
+- If a task is blocked, keep it as in_progress and add a new todo describing what needs to be resolved.
+- Remove tasks only if they are no longer relevant or if the user requests deletion.
 `
 
 async function generatePrompt(

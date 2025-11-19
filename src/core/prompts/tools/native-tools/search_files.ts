@@ -18,8 +18,8 @@ export default {
 					description: "Rust-compatible regular expression pattern to match",
 				},
 				file_pattern: {
-					type: ["string", "null"],
-					description: "Optional string glob to limit which files are searched (e.g., '*.ts')",
+					type: ["string"],
+					description: "String glob to limit which files are searched (e.g., '*.ts')",
 				},
 			},
 			required: ["path", "regex", "file_pattern"],

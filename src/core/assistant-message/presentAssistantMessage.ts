@@ -512,7 +512,7 @@ export async function presentAssistantMessage(cline: Task) {
 					await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "file_edit":
-					await fileEditTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					await fileEditTool(cline, block, handleError, pushToolResult, removeClosingTag)
 					break
 				// kilocode_change start: Morph fast apply
 				case "edit_file":

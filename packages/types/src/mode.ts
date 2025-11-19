@@ -371,7 +371,10 @@ for i in range(10):
 
 <inline_line_numbers>
 Code chunks that you receive (via tool calls or from user) may include inline line numbers in the form LINE_NUMBER|LINE_CONTENT. Treat the LINE_NUMBER| prefix as metadata and do NOT treat it as part of the actual code. LINE_NUMBER is right-aligned number padded with spaces to 6 characters.
-</inline_line_numbers>`,
+</inline_line_numbers>
+
+CRITICAL: For any task, small or big, you will always and always use the update_todo_list tool to create the TODO list, always keep is upto date with updates to the status and updating/editing the list as needed.
+`,
 		whenToUse:
 			"Use this mode when you need to write, modify, or refactor code. Ideal for implementing features, fixing bugs, creating new files, or making code improvements across any programming language or framework.",
 		description: "Write, modify, and refactor code",

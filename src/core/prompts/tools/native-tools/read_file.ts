@@ -5,7 +5,7 @@ export const read_file_multi = {
 	function: {
 		name: "read_file",
 		description:
-			"Read one or more files and return their contents with line numbers for diffing or discussion. Use line ranges when available to keep reads efficient and combine related files when possible.",
+			"Read one or more files and return their contents with line numbers for diffing or discussion. Use line ranges always to keep reads efficient and combine related files when possible. You will always read less thatn 100 lines at a time",
 		strict: true,
 		parameters: {
 			type: "object",
@@ -21,9 +21,9 @@ export const read_file_multi = {
 								description: "Path to the file to read, relative to the workspace",
 							},
 							line_ranges: {
-								type: ["array", "null"],
+								type: ["array"],
 								description:
-									"Optional 1-based inclusive ranges to read (format: start-end). Use multiple ranges for non-contiguous sections and keep ranges tight to the needed context.",
+									"Always required line ranges to read (format: start-end). If you are unsure about about the what line numbers to query, you can perform a search on the file to determine line numbers. You will never read more than 100 lines at a time!",
 								items: {
 									type: "string",
 									pattern: "^\\d+-\\d+$",

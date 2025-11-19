@@ -57,6 +57,7 @@ Axon Code delivers frontier models performance for coding and support all the ma
 </p>
 
 ### Agentic Tools Supported
+
 - `fileEdit`: A new advanced Diff-Patch apply tool
 - `web_search`: Search the web
 - `web_fetch`: Fetch specific link data from the web
@@ -75,9 +76,8 @@ Axon Code delivers frontier models performance for coding and support all the ma
 - `writeToFile`: Write to a file
 
 ### Support Models
+
 - `axon-mini`: Mini Axon Code model for everyday low-effort tasks
 - `axon-code`: High intelligence Axon Code model for all-day coding tasks
-- `axon-code-pro`: Heavily powerful Axon Code model for high-effort coding tasks
 
 You can read more about the models here: https://docs.matterai.so/axon-overview
-
