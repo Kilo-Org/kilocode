@@ -26,12 +26,10 @@ describe("Simple File Operations", () => {
 		})
 		await run.type("Increase the version number in text.json with 1")
 
-		console.info(run.getStrippedOutput())
+		await run.pressEnter()
 
-		// await run.pressEnter()
+		await poll(() => run.getStrippedOutput().includes("✓ Task Completed"), 60_000, 1_000)
 
-		// await poll(() => run.getStrippedOutput().includes("✓ Task Completed"), 60_000, 1_000)
-
-		// expect(rig.readFile("text.json")).toEqual(JSON.stringify({ version: 2 }))
+		expect(rig.readFile("text.json")).toEqual(JSON.stringify({ version: 2 }))
 	}, 120_000)
 })
