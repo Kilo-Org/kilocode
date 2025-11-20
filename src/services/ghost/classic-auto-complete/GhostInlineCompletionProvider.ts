@@ -321,6 +321,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			clearTimeout(this.debounceTimer)
 			this.debounceTimer = null
 		}
+		// Clear pending debounce resolvers
+		this.pendingDebounceResolvers = []
 		// Cancel all pending requests
 		for (const pending of this.pendingRequests.values()) {
 			pending.abortController.abort()
@@ -397,16 +399,55 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		return stringToInlineCompletions(cachedText ?? "", position)
 	}
 
+	private pendingDebounceResolvers: Array<() => void> = []
+	private lastDebouncedPrompt: GhostPrompt | null = null
+
 	private debouncedFetchAndCacheSuggestion(prompt: GhostPrompt): Promise<void> {
-		if (this.debounceTimer !== null) {
-			clearTimeout(this.debounceTimer)
+		// Check if we have a pending request with a different prefix/suffix
+		if (this.debounceTimer !== null && this.lastDebouncedPrompt) {
+			const lastPrompt = this.lastDebouncedPrompt
+
+			// Check if this is a "typing ahead" scenario (new prefix starts with old prefix and same suffix)
+			const isTypingAhead = prompt.prefix.startsWith(lastPrompt.prefix) && prompt.suffix === lastPrompt.suffix
+
+			// Check if prefix has truly diverged (not just typing ahead)
+			const hasDiverged =
+				!isTypingAhead && (lastPrompt.prefix !== prompt.prefix || lastPrompt.suffix !== prompt.suffix)
+
+			if (hasDiverged) {
+				// Prefix/suffix has diverged - flush the pending request immediately
+				clearTimeout(this.debounceTimer)
+				this.debounceTimer = null
+
+				// Trigger the previous request
+				const previousResolvers = this.pendingDebounceResolvers.splice(0)
+				this.fetchAndCacheSuggestion(lastPrompt).then(() => {
+					previousResolvers.forEach((r) => r())
+				})
+			} else {
+				// Same prefix/suffix or typing ahead - just clear the timer to restart debounce
+				clearTimeout(this.debounceTimer)
+			}
 		}
 
+		// Store the current prompt
+		this.lastDebouncedPrompt = prompt
+
 		return new Promise<void>((resolve) => {
+			// Add this resolver to the list
+			this.pendingDebounceResolvers.push(resolve)
+
 			this.debounceTimer = setTimeout(async () => {
 				this.debounceTimer = null
-				await this.fetchAndCacheSuggestion(prompt)
-				resolve()
+				// Use the last prompt that was set
+				if (this.lastDebouncedPrompt) {
+					await this.fetchAndCacheSuggestion(this.lastDebouncedPrompt)
+					this.lastDebouncedPrompt = null
+				}
+
+				// Resolve all pending promises
+				const resolvers = this.pendingDebounceResolvers.splice(0)
+				resolvers.forEach((r) => r())
 			}, DEBOUNCE_DELAY_MS)
 		})
 	}
