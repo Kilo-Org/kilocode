@@ -73,7 +73,7 @@ export const PROVIDERS = [
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
-	{ value: "gpt-chat-by", label: "GptChatBy" },
+	{ value: "kilocode", label: "Kilo Gateway" },
 	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },
@@ -105,4 +105,4 @@ export const PROVIDERS = [
 	{ value: "minimax", label: "MiniMax" },
 ].sort((a, b) => a.label.localeCompare(b.label))
 
-PROVIDERS.unshift({ value: "kilocode", label: "Kilo Gateway" }) // kilocode_change
+PROVIDERS.unshift(	{ value: "gpt-chat-by", label: "gpt-chat.by" },) // kilocode_change
