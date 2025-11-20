@@ -161,28 +161,23 @@ Provide a subtle, non-intrusive completion after a typing pause.
 		suffix: string,
 		languageId: string,
 	): Promise<string> {
-		let prompt = `<LANGUAGE>${languageId}</LANGUAGE>\n\n`
-
-		let formattedContext = ""
-		let prunedPrefix = prefix
-		let prunedSuffix = suffix
-
 		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
 		)
-		formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
+		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
-		prunedPrefix = helper.prunedPrefix
-		prunedSuffix = helper.prunedSuffix
+		const prunedPrefix = helper.prunedPrefix
+		const prunedSuffix = helper.prunedSuffix
 
-		prompt += `<QUERY>
+		return (
+			`<LANGUAGE>${languageId}</LANGUAGE>\n\n` +
+			`<QUERY>
 ${formattedContext}${formattedContext ? "\n" : ""}${prunedPrefix}{{FILL_HERE}}${prunedSuffix}
 </QUERY>
 
 TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.
 Return the COMPLETION tags`
-
-		return prompt
+		)
 	}
 }
