@@ -30,7 +30,6 @@ describe("Static Provider Models", () => {
 			"bedrock",
 			"vertex",
 			"openai-native",
-			"gemini",
 			"mistral",
 			"moonshot",
 			"deepseek",
@@ -38,13 +37,12 @@ describe("Static Provider Models", () => {
 			"qwen-code",
 			"xai",
 			"groq",
-			"chutes",
 			"cerebras",
 			"sambanova",
 			"zai",
+			"minimax",
 			"fireworks",
 			"featherless",
-			"roo",
 			"claude-code",
 			"gemini-cli",
 		]
@@ -116,7 +114,7 @@ describe("Static Provider Models", () => {
 				})
 
 				expect(result.models).toBeDefined()
-				expect(result.defaultModel).toBe("gemini-2.0-flash-001")
+				expect(result.defaultModel).toBe("gemini-3-pro-preview") // kilocode_change
 				expect(result.models[result.defaultModel]).toBeDefined()
 			})
 
@@ -213,10 +211,11 @@ describe("Static Provider Models", () => {
 			glama: {},
 			unbound: {},
 			requesty: {},
-			"kilocode-openrouter": {},
+			kilocode: {},
 			"io-intelligence": {},
 			deepinfra: {},
 			"vercel-ai-gateway": {},
+			ovhcloud: {},
 		}
 
 		it("should return router models for openrouter provider", () => {
@@ -511,7 +510,7 @@ describe("Static Provider Models", () => {
 		})
 
 		it("should handle null price", () => {
-			expect(formatPrice(null as any)).toBe("N/A")
+			expect(formatPrice(null as unknown as number)).toBe("N/A")
 		})
 	})
 
@@ -618,7 +617,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				expect(model.contextWindow).toBeDefined()
 				expect(typeof model.contextWindow).toBe("number")
 				expect(model.contextWindow).toBeGreaterThan(0)
@@ -635,7 +634,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				if (model.inputPrice !== undefined) {
 					expect(typeof model.inputPrice).toBe("number")
 					expect(model.inputPrice).toBeGreaterThanOrEqual(0)
@@ -654,7 +653,7 @@ describe("Static Provider Models", () => {
 				kilocodeDefaultModel: "",
 			})
 
-			Object.entries(result.models).forEach(([modelId, model]) => {
+			Object.entries(result.models).forEach(([_modelId, model]) => {
 				if (model.maxTokens !== undefined && model.maxTokens !== null) {
 					expect(typeof model.maxTokens).toBe("number")
 					expect(model.maxTokens).toBeGreaterThan(0)

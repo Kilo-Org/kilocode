@@ -77,6 +77,27 @@ describe("ThinkingBudget", () => {
 		expect(container.firstChild).toBeNull()
 	})
 
+	it("should render simple reasoning toggle when model has supportsReasoningBinary (binary reasoning)", () => {
+		render(
+			<ThinkingBudget
+				{...defaultProps}
+				modelInfo={{
+					...mockModelInfo,
+					supportsReasoningBinary: true,
+					supportsReasoningBudget: false,
+					supportsReasoningEffort: false,
+				}}
+			/>,
+		)
+
+		// Should show the reasoning checkbox (translation key)
+		expect(screen.getByText("settings:providers.useReasoning")).toBeInTheDocument()
+
+		// Should NOT show sliders or other complex reasoning controls
+		expect(screen.queryByTestId("reasoning-budget")).not.toBeInTheDocument()
+		expect(screen.queryByTestId("reasoning-effort")).not.toBeInTheDocument()
+	})
+
 	it("should render sliders when model supports thinking", () => {
 		render(<ThinkingBudget {...defaultProps} />)
 

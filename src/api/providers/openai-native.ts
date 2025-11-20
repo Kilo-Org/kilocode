@@ -99,8 +99,8 @@ export class OpenAiNativeHandler extends BaseProvider implements SingleCompletio
 		const effectiveInfo = this.applyServiceTierPricing(model.info, effectiveTier)
 
 		// Pass total input tokens directly to calculateApiCostOpenAI
-		// The function handles subtracting both cache reads and writes internally (see shared/cost.ts:46)
-		const totalCost = calculateApiCostOpenAI(
+		// The function handles subtracting both cache reads and writes internally
+		const { totalCost } = calculateApiCostOpenAI(
 			effectiveInfo,
 			totalInputTokens,
 			totalOutputTokens,

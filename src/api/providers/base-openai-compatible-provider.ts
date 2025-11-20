@@ -6,7 +6,8 @@ import {
 	type ModelInfo,
 } from "@roo-code/types"
 
-import type { ApiHandlerOptions } from "../../shared/api"
+import { type ApiHandlerOptions, getModelMaxOutputTokens } from "../../shared/api"
+import { XmlMatcher } from "../../utils/xml-matcher"
 import { ApiStream } from "../transform/stream"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 
@@ -81,10 +82,16 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 		metadata?: ApiHandlerCreateMessageMetadata,
 		requestOptions?: OpenAI.RequestOptions,
 	) {
-		const {
-			id: model,
-			info: { maxTokens: max_tokens },
-		} = this.getModel()
+		const { id: model, info } = this.getModel()
+
+		// Centralized cap: clamp to 20% of the context window (unless provider-specific exceptions apply)
+		const max_tokens =
+			getModelMaxOutputTokens({
+				modelId: model,
+				model: info,
+				settings: this.options,
+				format: "openai",
+			}) ?? undefined
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
 
@@ -114,16 +121,32 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 	): ApiStream {
 		const stream = await this.createStream(systemPrompt, messages, metadata)
 
+		const matcher = new XmlMatcher(
+			"think",
+			(chunk) =>
+				({
+					type: chunk.matched ? "reasoning" : "text",
+					text: chunk.data,
+				}) as const,
+		)
+
 		for await (const chunk of stream) {
-			verifyFinishReason(chunk.choices[0]) // kilocode_change
-			const delta = chunk.choices[0]?.delta
+			verifyFinishReason(chunk.choices?.[0]) // kilocode_change
+
+			const delta = chunk.choices?.[0]?.delta
 
 			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
 
 			if (delta?.content) {
-				yield {
-					type: "text",
-					text: delta.content,
+				for (const processedChunk of matcher.update(delta.content)) {
+					yield processedChunk
+				}
+			}
+
+			if (delta && "reasoning_content" in delta) {
+				const reasoning_content = (delta.reasoning_content as string | undefined) || ""
+				if (reasoning_content?.trim()) {
+					yield { type: "reasoning", text: reasoning_content }
 				}
 			}
 
@@ -134,6 +157,11 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 					outputTokens: chunk.usage.completion_tokens || 0,
 				}
 			}
+		}
+
+		// Process any remaining content
+		for (const processedChunk of matcher.final()) {
+			yield processedChunk
 		}
 	}
 

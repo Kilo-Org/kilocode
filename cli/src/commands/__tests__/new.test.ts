@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { newCommand } from "../new.js"
 import type { CommandContext } from "../core/types.js"
+import { createMockContext } from "./helpers/mockContext.js"
 
 describe("/new command", () => {
 	let mockContext: CommandContext
@@ -12,23 +13,9 @@ describe("/new command", () => {
 		// Mock process.stdout.write to capture terminal clearing
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true)
 
-		mockContext = {
+		mockContext = createMockContext({
 			input: "/new",
-			args: [],
-			options: {},
-			sendMessage: vi.fn(),
-			addMessage: vi.fn(),
-			clearMessages: vi.fn(),
-			replaceMessages: vi.fn(),
-			clearTask: vi.fn().mockResolvedValue(undefined),
-			setMode: vi.fn(),
-			exit: vi.fn(),
-			routerModels: null,
-			currentProvider: null,
-			kilocodeDefaultModel: "",
-			updateProviderModel: vi.fn(),
-			refreshRouterModels: vi.fn(),
-		}
+		})
 	})
 
 	describe("Command metadata", () => {
@@ -72,7 +59,7 @@ describe("/new command", () => {
 			await newCommand.handler(mockContext)
 
 			expect(mockContext.replaceMessages).toHaveBeenCalledTimes(1)
-			const replacedMessages = (mockContext.replaceMessages as any).mock.calls[0][0]
+			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
 
 			expect(replacedMessages).toHaveLength(1)
 			expect(replacedMessages[0]).toMatchObject({
@@ -139,7 +126,7 @@ describe("/new command", () => {
 			expect(mockContext.replaceMessages).toHaveBeenCalled()
 
 			// Verify welcome message was replaced
-			const replacedMessages = (mockContext.replaceMessages as any).mock.calls[0][0]
+			const replacedMessages = (mockContext.replaceMessages as ReturnType<typeof vi.fn>).mock.calls[0][0]
 			expect(replacedMessages).toHaveLength(1)
 			expect(replacedMessages[0].type).toBe("welcome")
 			expect(replacedMessages[0].metadata?.welcomeOptions?.showInstructions).toBe(true)

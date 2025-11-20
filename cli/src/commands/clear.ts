@@ -13,7 +13,7 @@ export const clearCommand: Command = {
 	category: "system",
 	priority: 8,
 	handler: async (context) => {
-		const { setMessageCutoffTimestamp, addMessage } = context
+		const { setMessageCutoffTimestamp, addMessage, refreshTerminal } = context
 		const now = Date.now()
 		setMessageCutoffTimestamp(now)
 		// Add Spacer message
@@ -23,5 +23,7 @@ export const clearCommand: Command = {
 			content: "",
 			ts: now + 1,
 		})
+		// Refresh terminal to clear screen
+		await refreshTerminal()
 	},
 }

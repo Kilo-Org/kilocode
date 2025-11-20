@@ -37,7 +37,7 @@ export function parseCommand(input: string): ParsedCommand | null {
 	const rest = tokens.slice(1)
 
 	// Parse options (--flag or -f)
-	const options: Record<string, any> = {}
+	const options: Record<string, string | number | boolean> = {}
 	const args: string[] = []
 
 	for (let i = 0; i < rest.length; i++) {
@@ -131,7 +131,7 @@ function tokenize(input: string): string[] {
 /**
  * Parse a value string into its appropriate type
  */
-function parseValue(value: string): any {
+function parseValue(value: string): string | number | boolean {
 	// Try to parse as number
 	if (/^-?\d+$/.test(value)) {
 		return parseInt(value, 10)

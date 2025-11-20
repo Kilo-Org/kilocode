@@ -1,0 +1,8 @@
+class DataService {
+  // TODO: Implement caching mechanism to reduce API calls
+  // TODO: Implement error handling and retry mechanism
+  // TODO: Implement rate limiting to avoid hitting API limits
+  async fetchData(id) {
+    return await api.get(`/data/${id}`);
+  }
+}

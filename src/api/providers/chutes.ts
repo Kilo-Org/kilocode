@@ -1,33 +1,33 @@
 import {
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	type ChutesModelId,
 	chutesDefaultModelId,
-	chutesModels,
+	chutesDefaultModelInfo,
 	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 import { Anthropic } from "@anthropic-ai/sdk"
 import OpenAI from "openai"
 
 import type { ApiHandlerOptions } from "../../shared/api"
+import { getModelMaxOutputTokens } from "../../shared/api"
 import { XmlMatcher } from "../../utils/xml-matcher"
 import { convertToR1Format } from "../transform/r1-format"
 import { convertToOpenAiMessages } from "../transform/openai-format"
 import { ApiStream } from "../transform/stream"
+import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 
-import { BaseOpenAiCompatibleProvider } from "./base-openai-compatible-provider"
+import { RouterProvider } from "./router-provider"
 import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
-import { ApiHandlerCreateMessageMetadata } from ".." // kilocode_change
 
-export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
+export class ChutesHandler extends RouterProvider implements SingleCompletionHandler {
 	constructor(options: ApiHandlerOptions) {
 		super({
-			...options,
-			providerName: "Chutes",
+			options,
+			name: "chutes",
 			baseURL: "https://llm.chutes.ai/v1",
 			apiKey: options.chutesApiKey,
-			defaultProviderModelId: chutesDefaultModelId,
-			providerModels: chutesModels,
-			defaultTemperature: 0.5,
+			modelId: options.apiModelId,
+			defaultModelId: chutesDefaultModelId,
+			defaultModelInfo: chutesDefaultModelInfo,
 		})
 	}
 
@@ -36,35 +36,41 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 		messages: Anthropic.Messages.MessageParam[],
 		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
 	): OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming {
-		const {
-			id: model,
-			info: { maxTokens: max_tokens },
-		} = this.getModel()
+		const { id: model, info } = this.getModel()
 
-		const temperature = this.options.modelTemperature ?? this.getModel().info.temperature
+		// Centralized cap: clamp to 20% of the context window (unless provider-specific exceptions apply)
+		const max_tokens =
+			getModelMaxOutputTokens({
+				modelId: model,
+				model: info,
+				settings: this.options,
+				format: "openai",
+			}) ?? undefined
 
-		// kilocode_change start: addNativeToolCallsToParams
-		return addNativeToolCallsToParams(
-			{
-				model,
-				max_tokens,
-				temperature,
-				messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
-				stream: true,
-				stream_options: { include_usage: true },
-			},
-			this.options,
-			metadata,
-		)
-		// kilocode_change end
+		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
+			model,
+			max_tokens,
+			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
+			stream: true,
+			stream_options: { include_usage: true },
+		}
+
+		// Only add temperature if model supports it
+		if (this.supportsTemperature(model)) {
+			params.temperature = this.options.modelTemperature ?? info.temperature
+		}
+
+		addNativeToolCallsToParams(params, this.options, metadata) // kilocode_change
+
+		return params
 	}
 
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): ApiStream {
-		const model = this.getModel()
+		const model = await this.fetchModel()
 
 		if (model.id.includes("DeepSeek-R1")) {
 			const stream = await this.client.chat.completions.create({
@@ -110,11 +116,73 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 				yield processedChunk
 			}
 		} else {
-			yield* super.createMessage(
-				systemPrompt,
-				messages,
-				metadata, // kilocode_change
+			// For non-DeepSeek-R1 models, use standard OpenAI streaming
+			const stream = await this.client.chat.completions.create(
+				this.getCompletionParams(
+					systemPrompt,
+					messages,
+					metadata, // kilocode_change
+				),
 			)
+
+			for await (const chunk of stream) {
+				const delta = chunk.choices[0]?.delta
+
+				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+
+				if (delta?.content) {
+					yield { type: "text", text: delta.content }
+				}
+
+				if (delta && "reasoning_content" in delta && delta.reasoning_content) {
+					yield { type: "reasoning", text: (delta.reasoning_content as string | undefined) || "" }
+				}
+
+				if (chunk.usage) {
+					yield {
+						type: "usage",
+						inputTokens: chunk.usage.prompt_tokens || 0,
+						outputTokens: chunk.usage.completion_tokens || 0,
+					}
+				}
+			}
+		}
+	}
+
+	async completePrompt(prompt: string): Promise<string> {
+		const model = await this.fetchModel()
+		const { id: modelId, info } = model
+
+		try {
+			// Centralized cap: clamp to 20% of the context window (unless provider-specific exceptions apply)
+			const max_tokens =
+				getModelMaxOutputTokens({
+					modelId,
+					model: info,
+					settings: this.options,
+					format: "openai",
+				}) ?? undefined
+
+			const requestParams: OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming = {
+				model: modelId,
+				messages: [{ role: "user", content: prompt }],
+				max_tokens,
+			}
+
+			// Only add temperature if model supports it
+			if (this.supportsTemperature(modelId)) {
+				const isDeepSeekR1 = modelId.includes("DeepSeek-R1")
+				const defaultTemperature = isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0.5
+				requestParams.temperature = this.options.modelTemperature ?? defaultTemperature
+			}
+
+			const response = await this.client.chat.completions.create(requestParams)
+			return response.choices[0]?.message.content || ""
+		} catch (error) {
+			if (error instanceof Error) {
+				throw new Error(`Chutes completion error: ${error.message}`)
+			}
+			throw error
 		}
 	}
 
@@ -125,7 +193,7 @@ export class ChutesHandler extends BaseOpenAiCompatibleProvider<ChutesModelId> {
 			...model,
 			info: {
 				...model.info,
-				temperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : this.defaultTemperature,
+				temperature: isDeepSeekR1 ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0.5,
 			},
 		}
 	}

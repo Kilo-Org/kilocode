@@ -14,7 +14,7 @@ export const newCommand: Command = {
 	category: "system",
 	priority: 9,
 	handler: async (context) => {
-		const { clearTask, replaceMessages } = context
+		const { clearTask, replaceMessages, refreshTerminal } = context
 
 		// Clear the extension task state (this also clears extension messages)
 		await clearTask()
@@ -32,5 +32,8 @@ export const newCommand: Command = {
 				],
 			}),
 		])
+
+		// Force terminal refresh to clear screen
+		await refreshTerminal()
 	},
 }

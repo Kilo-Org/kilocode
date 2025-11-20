@@ -34,7 +34,8 @@
 		"ui": "واجهة المستخدم",
 		"experimental": "تجريبي",
 		"language": "اللغة",
-		"about": "عن Kilo Code"
+		"about": "عن Kilo Code",
+		"autoPurge": "التنظيف التلقائي"
 	},
 	"slashCommands": {
 		"description": "إدارة أوامر الشرطة المائلة لتنفيذ سير العمل والإجراءات المخصصة بسرعة. <DocsLink>تعرف أكثر</DocsLink>"
@@ -70,6 +71,9 @@
 		"vercelAiGatewayProvider": "Vercel AI Gateway",
 		"vercelAiGatewayApiKeyLabel": "مفتاح API",
 		"vercelAiGatewayApiKeyPlaceholder": "أدخل مفتاح Vercel AI Gateway API",
+		"openRouterProvider": "OpenRouter",
+		"openRouterApiKeyLabel": "مفتاح OpenRouter API",
+		"openRouterApiKeyPlaceholder": "أدخل مفتاح OpenRouter API",
 		"openaiCompatibleProvider": "متوافق مع OpenAI",
 		"openAiKeyLabel": "مفتاح OpenAI API",
 		"openAiKeyPlaceholder": "أدخل مفتاح OpenAI API",
@@ -136,6 +140,7 @@
 			"geminiApiKeyRequired": "مفتاح Gemini API مطلوب",
 			"mistralApiKeyRequired": "مفتاح Mistral API مطلوب",
 			"vercelAiGatewayApiKeyRequired": "مفتاح Vercel AI Gateway API مطلوب",
+			"openRouterApiKeyRequired": "مفتاح OpenRouter API مطلوب",
 			"ollamaBaseUrlRequired": "رابط Ollama الأساسي مطلوب",
 			"baseUrlRequired": "الرابط الأساسي مطلوب",
 			"modelDimensionMinValue": "بُعد النموذج يجب أن يكون أكبر من 0"
@@ -237,6 +242,8 @@
 		"providerDocumentation": "توثيق {{provider}}",
 		"configProfile": "ملف الإعداد",
 		"description": "احفظ إعدادات متعددة للتبديل السريع بين مزوّدين ونماذج.",
+		"makeActiveProfile": "جعل الملف النشط",
+		"makeActiveTooltip": "تفعيل هذا الملف لاستخدامه في طلبات API",
 		"apiProvider": "مزود API",
 		"model": "النموذج",
 		"nameEmpty": "الاسم ما يصير فاضي",
@@ -310,13 +317,19 @@
 		"getFireworksApiKey": "احصل على مفتاح Fireworks",
 		"syntheticApiKey": "مفتاح Synthetic API",
 		"getSyntheticApiKey": "احصل على مفتاح Synthetic API",
-		"zaiApiKey": "مفتاح Z.AI",
-		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"moonshotApiKey": "مفتاح Moonshot",
 		"getMoonshotApiKey": "احصل على مفتاح Moonshot",
 		"moonshotBaseUrl": "نقطة دخول Moonshot",
+		"minimaxApiKey": "مفتاح MiniMax API",
+		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
+		"minimaxBaseUrl": "نقطة دخول MiniMax",
+		"zaiApiKey": "مفتاح Z.AI",
+		"getZaiApiKey": "احصل على مفتاح Z.AI",
 		"zaiEntrypoint": "نقطة دخول Z AI",
 		"zaiEntrypointDescription": "يرجى اختيار نقطة دخول API المناسبة حسب موقعك. إذا كنت في الصين، اختر open.bigmodel.cn. وإلا، اختر api.z.ai.",
+		"minimaxApiKey": "مفتاح MiniMax API",
+		"getMiniMaxApiKey": "احصل على مفتاح MiniMax API",
+		"minimaxBaseUrl": "نقطة دخول MiniMax",
 		"geminiApiKey": "مفتاح Gemini",
 		"getGroqApiKey": "احصل على مفتاح Groq",
 		"groqApiKey": "مفتاح Groq",
@@ -482,6 +495,10 @@
 			},
 			"resetDefaults": "رجع للإعدادات الافتراضية"
 		},
+		"rateLimitAfter": {
+			"label": "تحديد الحدّ الأقصى عند النهاية",
+			"description": "ابدأ تقييد المعدل بعد انتهاء تدفّق واجهة برمجة التطبيقات."
+		},
 		"rateLimitSeconds": {
 			"label": "معدل الطلب",
 			"description": "أقل وقت بين طلبات API."
@@ -493,11 +510,12 @@
 			"warning": "⚠️ تعيين القيمة إلى 0 يسمح بإعادة المحاولة غير المحدودة مما قد يستهلك استخدام API كبير"
 		},
 		"reasoningEffort": {
-			"label": "جهد الاستنتاج",
+			"label": "جهد الاستنتاج للنموذج",
+			"none": "لا شيء",
 			"minimal": "الحد الأدنى (الأسرع)",
-			"high": "عالي",
+			"low": "منخفض",
 			"medium": "متوسط",
-			"low": "منخفض"
+			"high": "عالي"
 		},
 		"verbosity": {
 			"label": "مستوى التفصيل في المخرجات",
@@ -594,9 +612,45 @@
 		}
 	},
 	"checkpoints": {
+		"timeout": {
+			"label": "مهلة تهيئة نقطة الحفظ (ثواني)",
+			"description": "أقصى وقت انتظار لتهيئة خدمة نقاط الحفظ. الافتراضي 15 ثانية. النطاق: 10-60 ثانية."
+		},
 		"enable": {
 			"label": "تفعيل نقاط الحفظ التلقائية",
 			"description": "ينشئ نقاط حفظ آليًا أثناء التنفيذ. <0>تعرف أكثر</0>"
+		}
+	},
+	"autoPurge": {
+		"enable": {
+			"label": "تفعيل تنظيف المهام التلقائي",
+			"description": "حذف المهام القديمة تلقائياً لتحرير مساحة القرص وتحسين الأداء. يتم تصنيف المهام حسب النوع والعمر لتحديد متى يجب إزالتها."
+		},
+		"defaultRetention": {
+			"label": "فترة الاحتفاظ الافتراضية (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام قبل أن تصبح مؤهلة للتنظيف"
+		},
+		"neverPurgeFavorited": {
+			"label": "عدم حذف المهام المفضلة أبداً",
+			"description": "عند التفعيل، لن يتم حذف المهام المفضلة تلقائياً بغض النظر عن العمر"
+		},
+		"favoritedRetention": {
+			"label": "الاحتفاظ بالمهام المفضلة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام المفضلة (ينطبق فقط عند تعطيل 'عدم حذف المهام المفضلة أبداً')"
+		},
+		"completedRetention": {
+			"label": "الاحتفاظ بالمهام المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي تم إكمالها بنجاح"
+		},
+		"incompleteRetention": {
+			"label": "الاحتفاظ بالمهام غير المكتملة (أيام)",
+			"description": "عدد الأيام للاحتفاظ بالمهام التي لم يتم إكمالها (عادة أقصر من المهام المكتملة)"
+		},
+		"lastRun": {
+			"label": "آخر تنظيف"
+		},
+		"manualPurge": {
+			"button": "تشغيل التنظيف الآن"
 		}
 	},
 	"display": {
@@ -699,6 +753,14 @@
 			"profileDescription": "نسبة مخصصة لهذا الملف فقط.",
 			"inheritDescription": "هذا الملف يرث النسبة العامة ({{threshold}}%)",
 			"usesGlobal": "(يستخدم {{threshold}}% عام)"
+		},
+		"includeCurrentTime": {
+			"label": "تضمين الوقت الحالي في السياق",
+			"description": "عند التفعيل، سيتم تضمين الوقت الحالي ومعلومات المنطقة الزمنية في موجه النظام. عطّل هذا إذا كانت النماذج تتوقف عن العمل بسبب مخاوف الوقت."
+		},
+		"includeCurrentCost": {
+			"label": "تضمين التكلفة الحالية في السياق",
+			"description": "عند التفعيل، سيتم تضمين تكلفة استخدام API الحالية في موجه النظام. عطّل هذا إذا كانت النماذج تتوقف عن العمل بسبب مخاوف التكلفة."
 		},
 		"diagnostics": {
 			"includeMessages": {
@@ -809,10 +871,6 @@
 		"DIFF_STRATEGY_UNIFIED": {
 			"name": "استخدم استراتيجية diff الموحدة التجريبية",
 			"description": "قد تقلل من الإعادات لكنها مخاطرة."
-		},
-		"SEARCH_AND_REPLACE": {
-			"name": "أداة بحث واستبدال تجريبية",
-			"description": "تمكّن استبدال متعدد في طلب واحد."
 		},
 		"INSERT_BLOCK": {
 			"name": "أداة إدراج محتوى تجريبية",

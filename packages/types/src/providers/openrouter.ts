@@ -7,7 +7,6 @@ export const openRouterDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,
 	contextWindow: 200_000,
 	supportsImages: true,
-	supportsComputerUse: true,
 	supportsPromptCache: true,
 	inputPrice: 3.0,
 	outputPrice: 15.0,
@@ -41,6 +40,7 @@ export const OPEN_ROUTER_PROMPT_CACHING_MODELS = new Set([
 	"anthropic/claude-sonnet-4.5",
 	"anthropic/claude-opus-4",
 	"anthropic/claude-opus-4.1",
+	"anthropic/claude-haiku-4.5",
 	"google/gemini-2.5-flash-preview",
 	"google/gemini-2.5-flash-preview:thinking",
 	"google/gemini-2.5-flash-preview-05-20",
@@ -50,19 +50,6 @@ export const OPEN_ROUTER_PROMPT_CACHING_MODELS = new Set([
 	"google/gemini-2.0-flash-001",
 	"google/gemini-flash-1.5",
 	"google/gemini-flash-1.5-8b",
-])
-
-// https://www.anthropic.com/news/3-5-models-and-computer-use
-export const OPEN_ROUTER_COMPUTER_USE_MODELS = new Set([
-	"anthropic/claude-3.5-sonnet",
-	"anthropic/claude-3.5-sonnet:beta",
-	"anthropic/claude-3.7-sonnet",
-	"anthropic/claude-3.7-sonnet:beta",
-	"anthropic/claude-3.7-sonnet:thinking",
-	"anthropic/claude-sonnet-4",
-	"anthropic/claude-sonnet-4.5",
-	"anthropic/claude-opus-4",
-	"anthropic/claude-opus-4.1",
 ])
 
 // When we first launched these models we didn't have support for

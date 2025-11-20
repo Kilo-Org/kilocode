@@ -13,8 +13,8 @@ import { isValidSnippet } from "./validation"
 
 const getRemainingTokenCount = (helper: HelperVars): number => {
 	const tokenCount = countTokens(helper.prunedCaretWindow, helper.modelName)
-
-	return helper.options.maxPromptTokens - tokenCount
+	const remainingTokens = helper.options.maxPromptTokens - tokenCount
+	return Math.min(remainingTokens, Math.floor(helper.options.maxPromptTokens * helper.options.maxSnippetPercentage))
 }
 
 const TOKEN_BUFFER = 10 // We may need extra tokens for snippet description etc.

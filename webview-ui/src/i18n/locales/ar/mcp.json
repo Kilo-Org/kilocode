@@ -26,12 +26,12 @@
 	"tabs": {
 		"tools": "الأدوات",
 		"resources": "الموارد",
-		"errors": "الأخطاء"
+		"logs": "السجلات"
 	},
 	"emptyState": {
 		"noTools": "ما فيه أدوات",
 		"noResources": "ما فيه موارد",
-		"noErrors": "ما فيه أخطاء"
+		"noLogs": "ما فيه سجلات بعد"
 	},
 	"networkTimeout": {
 		"label": "مهلة الشبكة",

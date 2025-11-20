@@ -2,6 +2,7 @@ import React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { SEO } from "@/lib/seo"
+import { ogImageUrl } from "@/lib/og"
 import { CookieConsentWrapper } from "@/components/CookieConsentWrapper"
 
 import { Providers } from "@/components/providers"
@@ -11,6 +12,9 @@ import Shell from "./shell"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
+
+const OG_TITLE = "Meet Roo Code"
+const OG_DESCRIPTION = "The AI dev team that gets things done."
 
 export const metadata: Metadata = {
 	metadataBase: new URL(SEO.url),
@@ -51,10 +55,10 @@ export const metadata: Metadata = {
 		siteName: SEO.name,
 		images: [
 			{
-				url: SEO.ogImage.url,
-				width: SEO.ogImage.width,
-				height: SEO.ogImage.height,
-				alt: SEO.ogImage.alt,
+				url: ogImageUrl(OG_TITLE, OG_DESCRIPTION),
+				width: 1200,
+				height: 630,
+				alt: OG_TITLE,
 			},
 		],
 		locale: SEO.locale,
@@ -64,7 +68,7 @@ export const metadata: Metadata = {
 		card: SEO.twitterCard,
 		title: SEO.title,
 		description: SEO.description,
-		images: [SEO.ogImage.url],
+		images: [ogImageUrl(OG_TITLE, OG_DESCRIPTION)],
 	},
 	robots: {
 		index: true,

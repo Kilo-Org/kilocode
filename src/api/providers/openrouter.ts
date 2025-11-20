@@ -44,6 +44,7 @@ type OpenRouterProviderParams = {
 
 import { safeJsonParse } from "../../shared/safeJsonParse"
 import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
+import { ReasoningDetail } from "../transform/kilocode/reasoning-details"
 // kilocode_change end
 
 import { handleOpenAIError } from "./utils/openai-error-handler"
@@ -275,6 +276,15 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				}
 
 				// kilocode_change start
+
+				// OpenRouter passes reasoning details that we can pass back unmodified in api requests to preserve reasoning traces for model
+				// See: https://openrouter.ai/docs/use-cases/reasoning-tokens#preserving-reasoning-blocks
+				if (delta && "reasoning_details" in delta && delta.reasoning_details) {
+					yield {
+						type: "reasoning_details",
+						reasoning_details: delta.reasoning_details as ReasoningDetail,
+					}
+				}
 				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
@@ -512,10 +522,18 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 function makeOpenRouterErrorReadable(error: any) {
 	const metadata = error?.error?.metadata as { raw?: string; provider_name?: string } | undefined
 	const parsedJson = safeJsonParse(metadata?.raw)
-	const rawError = parsedJson as { error?: string & { message?: string }; detail?: string } | undefined
+	const rawError = parsedJson as
+		| { error?: string & { message?: string }; detail?: string; message?: string }
+		| undefined
 
 	if (error?.code !== 429 && error?.code !== 418) {
-		const errorMessage = rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? error?.message
+		const errorMessage =
+			rawError?.error?.message ??
+			rawError?.error ??
+			rawError?.detail ??
+			rawError?.message ??
+			metadata?.raw ??
+			error?.message
 		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 

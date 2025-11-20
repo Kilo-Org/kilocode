@@ -45,13 +45,13 @@ describe("Hook Atoms", () => {
 			{
 				ts: Date.now(),
 				type: "say",
-				say: "test",
+				say: "text",
 				text: "Hello",
 			},
 			{
 				ts: Date.now() + 1000,
 				type: "ask",
-				ask: "question",
+				ask: "followup",
 				text: "What?",
 				isAnswered: false,
 			},
@@ -78,33 +78,31 @@ describe("Hook Atoms", () => {
 
 	describe("Task Management Atoms", () => {
 		const mockTask: HistoryItem = {
+			number: 1,
 			id: "task-1",
 			ts: Date.now(),
 			task: "Test task",
 			workspace: "/test",
+			totalCost: 0,
+			tokensIn: 0,
+			tokensOut: 0,
 		}
 
 		const mockTodos: TodoItem[] = [
 			{
 				id: "todo-1",
-				text: "Todo 1",
+				content: "Todo 1",
 				status: "pending",
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
 			},
 			{
 				id: "todo-2",
-				text: "Todo 2",
+				content: "Todo 2",
 				status: "in_progress",
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
 			},
 			{
 				id: "todo-3",
-				text: "Todo 3",
+				content: "Todo 3",
 				status: "completed",
-				createdAt: Date.now(),
-				updatedAt: Date.now(),
 			},
 		]
 

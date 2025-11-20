@@ -1,13 +1,11 @@
-import {
-	AUTOCOMPLETE_PROVIDER_MODELS,
-	defaultProviderUsabilityChecker,
-	modelIdKeysByProvider,
-	ProviderSettingsEntry,
-} from "@roo-code/types"
+import { modelIdKeysByProvider, ProviderSettingsEntry } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
+import { CompletionUsage } from "../../api/providers/openrouter"
 import { ApiStreamChunk } from "../../api/transform/stream"
+import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
+import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
@@ -26,47 +24,95 @@ export class GhostModel {
 
 	public async reload(providerSettingsManager: ProviderSettingsManager): Promise<boolean> {
 		const profiles = await providerSettingsManager.listConfig()
-		const supportedProviders = Object.keys(AUTOCOMPLETE_PROVIDER_MODELS) as Array<
-			keyof typeof AUTOCOMPLETE_PROVIDER_MODELS
-		>
 
 		this.cleanup()
 
 		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
-		for (const provider of supportedProviders) {
-			const selectedProfile = profiles.find(
-				(x): x is typeof x & { apiProvider: string } => x?.apiProvider === provider,
-			)
-			if (selectedProfile) {
-				const isUsable = await defaultProviderUsabilityChecker(provider, providerSettingsManager)
-				if (!isUsable) continue
+		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
+			const selectedProfile = profiles.find((x) => x?.apiProvider === provider)
+			if (!selectedProfile) continue
+			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
 
-				this.loadProfile(providerSettingsManager, selectedProfile, provider)
-				this.loaded = true
-				return true
+			if (provider === "kilocode") {
+				// For all other providers, assume they are usable
+				if (!profile.kilocodeToken) continue
+				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
 			}
+
+			this.apiHandler = buildApiHandler({ ...profile, [modelIdKeysByProvider[provider]]: model })
+
+			if (this.apiHandler instanceof OpenRouterHandler) {
+				await this.apiHandler.fetchModel()
+			}
+			this.loaded = true
+			return true
 		}
 
 		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
 		return false
 	}
 
-	public async loadProfile(
-		providerSettingsManager: ProviderSettingsManager,
-		selectedProfile: ProviderSettingsEntry,
-		provider: keyof typeof AUTOCOMPLETE_PROVIDER_MODELS,
-	): Promise<void> {
-		const profile = await providerSettingsManager.getProfile({
-			id: selectedProfile.id,
-		})
+	public supportsFim(): boolean {
+		if (!this.apiHandler) {
+			return false
+		}
 
-		this.apiHandler = buildApiHandler({
-			...profile,
-			[modelIdKeysByProvider[provider]]: AUTOCOMPLETE_PROVIDER_MODELS[provider],
-		})
+		if (this.apiHandler instanceof KilocodeOpenrouterHandler) {
+			return this.apiHandler.supportsFim()
+		}
 
-		if (this.apiHandler instanceof OpenRouterHandler) {
-			await this.apiHandler.fetchModel()
+		return false
+	}
+
+	/**
+	 * Generate FIM completion using the FIM API endpoint
+	 */
+	public async generateFimResponse(
+		prefix: string,
+		suffix: string,
+		onChunk: (text: string) => void,
+		taskId?: string,
+	): Promise<{
+		cost: number
+		inputTokens: number
+		outputTokens: number
+		cacheWriteTokens: number
+		cacheReadTokens: number
+	}> {
+		if (!this.apiHandler) {
+			console.error("API handler is not initialized")
+			throw new Error("API handler is not initialized. Please check your configuration.")
+		}
+
+		if (!(this.apiHandler instanceof KilocodeOpenrouterHandler)) {
+			throw new Error("FIM is only supported for KiloCode provider")
+		}
+
+		if (!this.apiHandler.supportsFim()) {
+			throw new Error("Current model does not support FIM completions")
+		}
+
+		console.log("USED MODEL (FIM)", this.apiHandler.getModel())
+
+		let usage: CompletionUsage | undefined
+
+		for await (const chunk of this.apiHandler.streamFim(prefix, suffix, taskId, (u) => {
+			usage = u
+		})) {
+			onChunk(chunk)
+		}
+
+		const cost = usage ? this.apiHandler.getTotalCost(usage) : 0
+		const inputTokens = usage?.prompt_tokens ?? 0
+		const outputTokens = usage?.completion_tokens ?? 0
+		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens ?? 0
+
+		return {
+			cost,
+			inputTokens,
+			outputTokens,
+			cacheWriteTokens: 0, // FIM doesn't support cache writes
+			cacheReadTokens,
 		}
 	}
 
@@ -129,21 +175,25 @@ export class GhostModel {
 		}
 	}
 
-	public getModelName(): string | null {
-		if (!this.apiHandler) return null
+	public getModelName(): string | undefined {
+		if (!this.apiHandler) return undefined
 
-		return this.apiHandler.getModel().id ?? "unknown"
+		return this.apiHandler.getModel().id ?? undefined
 	}
 
-	public getProviderDisplayName(): string | null {
-		if (!this.apiHandler) return null
+	public getProviderDisplayName(): string | undefined {
+		if (!this.apiHandler) return undefined
 
 		const handler = this.apiHandler as any
 		if (handler.providerName && typeof handler.providerName === "string") {
 			return handler.providerName
 		} else {
-			return "unknown"
+			return undefined
 		}
+	}
+
+	public getRolloutHash_IfLoggedInToKilo(): number | undefined {
+		return this.apiHandler instanceof KilocodeOpenrouterHandler ? this.apiHandler.getRolloutHash() : undefined
 	}
 
 	public hasValidCredentials(): boolean {

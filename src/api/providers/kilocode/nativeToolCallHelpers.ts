@@ -73,6 +73,7 @@ import OpenAI from "openai"
 import type { ApiHandlerCreateMessageMetadata } from "../../index"
 import type { ApiStreamNativeToolCallsChunk } from "../../transform/kilocode/api-stream-native-tool-calls-chunk"
 import { getActiveToolUseStyle, ProviderSettings, ToolUseStyle } from "@roo-code/types"
+import Anthropic from "@anthropic-ai/sdk"
 
 /**
  * Adds native tool call parameters to OpenAI chat completion params when toolStyle is "json"
@@ -140,4 +141,19 @@ export function* processNativeToolCallsFromDelta(
 			console.error("Model tried to use native tool calls but toolStyle is not 'json'", delta.tool_calls)
 		}
 	}
+}
+
+export function convertOpenAIToolsToAnthropic(allowedTools?: OpenAI.Chat.ChatCompletionTool[]): Anthropic.ToolUnion[] {
+	if (!allowedTools) return []
+
+	return allowedTools
+		.filter((tool) => tool.type === "function" && "function" in tool && !!tool.function)
+		.map((tool) => {
+			const func = (tool as any).function
+			return {
+				name: func.name,
+				description: func.description || "",
+				input_schema: func.parameters || { type: "object", properties: {} },
+			}
+		})
 }

@@ -121,6 +121,7 @@ const createMockNextEditOutcome = (overrides: Partial<NextEditOutcome> = {}): Ne
 		modelTimeout: 5000,
 		maxSuffixPercentage: 0.5,
 		prefixPercentage: 0.8,
+		maxSnippetPercentage: 0.5,
 		transform: true,
 		multilineCompletions: "auto",
 		slidingWindowPrefixPercentage: 0.5,

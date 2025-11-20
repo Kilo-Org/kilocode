@@ -410,6 +410,18 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		placeholder: "Enter API line...",
 	},
 
+	// Minimax fields
+	minimaxBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter MiniMax base URL...",
+	},
+	minimaxApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter MiniMax API key...",
+	},
+
 	// Unbound fields
 	unboundApiKey: {
 		label: "API Key",
@@ -450,6 +462,49 @@ export const FIELD_REGISTRY: Record<string, FieldMetadata> = {
 		label: "Model ID",
 		type: "text",
 		placeholder: "Enter model ID...",
+	},
+
+	// OVHcloud AI Endpoints fields
+	ovhCloudAiEndpointsApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter OVHcloud AI Endpoints API key...",
+	},
+	ovhCloudAiEndpointsModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+	ovhCloudAiEndpointsBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
+
+	// Inception Labs fields
+	inceptionLabsApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Inception Labs API key...",
+	},
+	inceptionLabsBaseUrl: {
+		label: "Base URL",
+		type: "text",
+		placeholder: "Enter base URL (or leave empty for default)...",
+		isOptional: true,
+	},
+	inceptionLabsModelId: {
+		label: "Model ID",
+		type: "text",
+		placeholder: "Enter model ID...",
+	},
+
+	// Synthetic fields
+	syntheticApiKey: {
+		label: "API Key",
+		type: "password",
+		placeholder: "Enter Synthetic API key...",
 	},
 
 	// Virtual Quota Fallback fields
@@ -526,7 +581,8 @@ export const isOptionalField = (field: string): boolean => {
  */
 const createFieldConfig = (field: string, config: ProviderSettings, defaultValue?: string): ProviderSettingConfig => {
 	const fieldInfo = getFieldInfo(field)
-	const actualValue = (config as any)[field] || ""
+	const rawValue = config[field as keyof ProviderSettings]
+	const actualValue = rawValue ?? ""
 
 	let displayValue: string
 	if (fieldInfo.type === "password") {
@@ -534,14 +590,14 @@ const createFieldConfig = (field: string, config: ProviderSettings, defaultValue
 	} else if (fieldInfo.type === "boolean") {
 		displayValue = actualValue ? "Enabled" : "Disabled"
 	} else {
-		displayValue = actualValue || defaultValue || "Not set"
+		displayValue = (typeof actualValue === "string" ? actualValue : "") || defaultValue || "Not set"
 	}
 
 	return {
 		field,
 		label: fieldInfo.label,
 		value: displayValue,
-		actualValue: fieldInfo.type === "boolean" ? (actualValue ? "true" : "false") : actualValue,
+		actualValue: fieldInfo.type === "boolean" ? (actualValue ? "true" : "false") : String(actualValue),
 		type: fieldInfo.type,
 	}
 }
@@ -767,7 +823,11 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					type: "text",
 				},
 			]
-
+		case "minimax":
+			return [
+				createFieldConfig("minimaxBaseUrl", config, "https://api.minimax.io/anthropic"),
+				createFieldConfig("minimaxApiKey", config),
+			]
 		case "fake-ai":
 			return [
 				{
@@ -777,6 +837,26 @@ export const getProviderSettings = (provider: ProviderName, config: ProviderSett
 					actualValue: "fake-model",
 					type: "text",
 				},
+			]
+
+		case "ovhcloud":
+			return [
+				createFieldConfig("ovhCloudAiEndpointsApiKey", config),
+				createFieldConfig("ovhCloudAiEndpointsModelId", config, "gpt-oss-120b"),
+				createFieldConfig("ovhCloudAiEndpointsBaseUrl", config, "Default"),
+			]
+
+		case "inception":
+			return [
+				createFieldConfig("inceptionLabsApiKey", config),
+				createFieldConfig("inceptionLabsBaseUrl", config, "Default"),
+				createFieldConfig("inceptionLabsModelId", config, "gpt-4o"),
+			]
+
+		case "synthetic":
+			return [
+				createFieldConfig("syntheticApiKey", config),
+				createFieldConfig("apiModelId", config, "synthetic-model"),
 			]
 
 		default:
@@ -825,7 +905,11 @@ export const PROVIDER_DEFAULT_MODELS: Record<ProviderName, string> = {
 	"vercel-ai-gateway": "gpt-4o",
 	"virtual-quota-fallback": "gpt-4o",
 	"human-relay": "human",
+	minimax: "MiniMax-M2",
 	"fake-ai": "fake-model",
+	ovhcloud: "gpt-oss-120b",
+	inception: "gpt-4o",
+	synthetic: "synthetic-model",
 }
 
 /**

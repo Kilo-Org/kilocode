@@ -74,6 +74,7 @@ export class ExtensionService extends EventEmitter {
 	private options: Required<Omit<ExtensionServiceOptions, "identity">> & { identity?: IdentityInfo }
 	private isInitialized = false
 	private isDisposed = false
+	private isActivated = false
 
 	constructor(options: ExtensionServiceOptions = {}) {
 		super()
@@ -117,23 +118,27 @@ export class ExtensionService extends EventEmitter {
 		// Extension host events
 		this.extensionHost.on("activated", (api: ExtensionAPI) => {
 			logs.info("Extension host activated", "ExtensionService")
+			this.isActivated = true
 			this.emit("ready", api)
 		})
 
 		// Handle new extension-error events (non-fatal errors from extension)
-		this.extensionHost.on("extension-error", (errorEvent: any) => {
-			const { context, error, recoverable } = errorEvent
+		this.extensionHost.on(
+			"extension-error",
+			(errorEvent: { context: string; error: Error; recoverable: boolean }) => {
+				const { context, error, recoverable } = errorEvent
 
-			if (recoverable) {
-				logs.warn(`Recoverable extension error in ${context}`, "ExtensionService", { error })
-				// Emit warning event instead of error to prevent crashes
-				this.emit("warning", { context, error })
-			} else {
-				logs.error(`Critical extension error in ${context}`, "ExtensionService", { error })
-				// Still emit error but don't crash
-				this.emit("error", error)
-			}
-		})
+				if (recoverable) {
+					logs.warn(`Recoverable extension error in ${context}`, "ExtensionService", { error })
+					// Emit warning event instead of error to prevent crashes
+					this.emit("warning", { context, error })
+				} else {
+					logs.error(`Critical extension error in ${context}`, "ExtensionService", { error })
+					// Still emit error but don't crash
+					this.emit("error", error)
+				}
+			},
+		)
 
 		// Keep backward compatibility for "error" events but don't propagate to prevent crashes
 		this.extensionHost.on("error", (error: Error) => {
@@ -173,12 +178,14 @@ export class ExtensionService extends EventEmitter {
 	/**
 	 * Handle TUI messages and return response
 	 */
-	private async handleTUIMessage(data: any): Promise<any> {
+	private async handleTUIMessage(data: unknown): Promise<unknown> {
 		try {
-			if (data.type === "webviewMessage") {
-				const message = data.payload
-				await this.extensionHost.sendWebviewMessage(message)
-				return { success: true }
+			if (typeof data === "object" && data !== null && "type" in data) {
+				const typedData = data as { type: string; payload?: WebviewMessage }
+				if (typedData.type === "webviewMessage" && typedData.payload) {
+					await this.extensionHost.sendWebviewMessage(typedData.payload)
+					return { success: true }
+				}
 			}
 
 			return { success: true }
@@ -227,6 +234,10 @@ export class ExtensionService extends EventEmitter {
 	async sendWebviewMessage(message: WebviewMessage): Promise<void> {
 		if (!this.isInitialized) {
 			throw new Error("ExtensionService not initialized. Call initialize() first.")
+		}
+
+		if (!this.isActivated) {
+			throw new Error("ExtensionService not ready. Extension host not activated yet.")
 		}
 
 		if (this.isDisposed) {
@@ -297,14 +308,20 @@ export class ExtensionService extends EventEmitter {
 		if (!this.extensionHost) {
 			return null
 		}
-		return (this.extensionHost as any).extensionHealth || null
+		return (
+			(
+				this.extensionHost as unknown as {
+					extensionHealth?: { isHealthy: boolean; errorCount: number; lastError: Error | null }
+				}
+			).extensionHealth || null
+		)
 	}
 
 	/**
-	 * Check if the service is initialized
+	 * Check if the service is initialized and activated
 	 */
 	isReady(): boolean {
-		return this.isInitialized && !this.isDisposed
+		return this.isInitialized && this.isActivated && !this.isDisposed
 	}
 
 	/**
@@ -331,6 +348,7 @@ export class ExtensionService extends EventEmitter {
 
 			this.isDisposed = true
 			this.isInitialized = false
+			this.isActivated = false
 
 			// Emit disposed event
 			this.emit("disposed")
@@ -346,11 +364,11 @@ export class ExtensionService extends EventEmitter {
 	 * Type-safe event emitter methods
 	 */
 	override on<K extends keyof ExtensionServiceEvents>(event: K, listener: ExtensionServiceEvents[K]): this {
-		return super.on(event, listener as any)
+		return super.on(event, listener as (...args: unknown[]) => void)
 	}
 
 	override once<K extends keyof ExtensionServiceEvents>(event: K, listener: ExtensionServiceEvents[K]): this {
-		return super.once(event, listener as any)
+		return super.once(event, listener as (...args: unknown[]) => void)
 	}
 
 	override emit<K extends keyof ExtensionServiceEvents>(
@@ -361,7 +379,7 @@ export class ExtensionService extends EventEmitter {
 	}
 
 	override off<K extends keyof ExtensionServiceEvents>(event: K, listener: ExtensionServiceEvents[K]): this {
-		return super.off(event, listener as any)
+		return super.off(event, listener as (...args: unknown[]) => void)
 	}
 }
 

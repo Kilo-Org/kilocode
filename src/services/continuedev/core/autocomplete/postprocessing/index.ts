@@ -1,8 +1,6 @@
 import { longestCommonSubsequence } from "../../util/lcs.js"
 import { lineIsRepeated } from "../util/textSimilarity.js"
 
-import type { ILLM } from "../../index.js"
-
 function rewritesLineAbove(completion: string, prefix: string): boolean {
 	const lineAbove = prefix
 		.split("\n")
@@ -94,7 +92,7 @@ export function postprocessCompletion({
 	suffix,
 }: {
 	completion: string
-	llm: ILLM
+	llm: { model: string }
 	prefix: string
 	suffix: string
 }): string | undefined {

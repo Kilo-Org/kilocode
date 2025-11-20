@@ -1,46 +1,29 @@
+import { ToolUseStyle } from "@roo-code/types"
 import type OpenAI from "openai"
+import z from "zod/v4"
+
+export function shouldUseSearchAndReplaceInsteadOfApplyDiff(toolStyle: ToolUseStyle, modelId: string) {
+	return toolStyle === "json" && !modelId.toLowerCase().includes("claude")
+}
+
+export const SearchAndReplaceParametersSchema = z.object({
+	path: z.string().describe("The path to the file to modify (relative to the current workspace directory)."),
+	old_str: z
+		.string()
+		.describe(
+			"The text to replace (must match exactly, including whitespace and indentation). Provide enough context to make a unique match.",
+		),
+	new_str: z.string().describe("The new text to insert in place of the old text."),
+})
+
+export type SearchAndReplaceParameters = z.infer<typeof SearchAndReplaceParametersSchema>
 
 export default {
 	type: "function",
 	function: {
-		name: "search_and_replace",
-		description:
-			"Find and replace text within a file using literal strings or regular expressions. Supports optional line ranges, regex mode, and case-insensitive matching, and shows a diff preview before applying changes.",
+		name: "apply_diff",
+		description: "Replace a specific string in a file with a new string. This is used for making precise edits.",
 		strict: true,
-		parameters: {
-			type: "object",
-			properties: {
-				path: {
-					type: "string",
-					description: "File path to modify, relative to the workspace",
-				},
-				search: {
-					type: "string",
-					description: "Text or pattern to search for",
-				},
-				replace: {
-					type: "string",
-					description: "Replacement text to insert for each match",
-				},
-				start_line: {
-					type: ["integer", "null"],
-					description: "Optional starting line (1-based) to limit replacements",
-				},
-				end_line: {
-					type: ["integer", "null"],
-					description: "Optional ending line (1-based) to limit replacements",
-				},
-				use_regex: {
-					type: ["boolean", "null"],
-					description: "Set true to treat the search parameter as a regular expression",
-				},
-				ignore_case: {
-					type: ["boolean", "null"],
-					description: "Set true to ignore case when matching",
-				},
-			},
-			required: ["path", "search", "replace", "start_line", "end_line", "use_regex", "ignore_case"],
-			additionalProperties: false,
-		},
+		parameters: z.toJSONSchema(SearchAndReplaceParametersSchema),
 	},
 } satisfies OpenAI.Chat.ChatCompletionTool

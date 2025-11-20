@@ -26,12 +26,12 @@
 	"tabs": {
 		"tools": "Tools",
 		"resources": "Resources",
-		"errors": "Error"
+		"logs": "Log"
 	},
 	"emptyState": {
 		"noTools": "Tidak ada tools ditemukan",
 		"noResources": "Tidak ada resources ditemukan",
-		"noErrors": "Tidak ada error ditemukan"
+		"noLogs": "Belum ada log"
 	},
 	"networkTimeout": {
 		"label": "Network Timeout",

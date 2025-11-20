@@ -126,9 +126,12 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 
 	// Determine button labels based on ask type
 	let approveLabel = "Approve"
-	const rejectLabel = "Reject"
+	let rejectLabel = "Reject"
 
-	if (pendingMessage.ask === "tool") {
+	if (pendingMessage.ask === "checkpoint_restore") {
+		approveLabel = "Restore Checkpoint"
+		rejectLabel = "Cancel"
+	} else if (pendingMessage.ask === "tool") {
 		try {
 			const toolData = JSON.parse(pendingMessage.text || "{}")
 			const tool = toolData.tool
@@ -187,6 +190,8 @@ export const approvalOptionsAtom = atom<ApprovalOption[]>((get) => {
 
 			return options
 		}
+	} else if (pendingMessage.ask === "payment_required_prompt") {
+		approveLabel = "Retry"
 	}
 
 	return [
@@ -360,7 +365,7 @@ export const executeSelectedCallbackAtom = atom<(() => Promise<void>) | null>(nu
  * Action atom to approve the pending request
  * Calls the callback set by the hook
  */
-export const approveAtom = atom(null, async (get, set) => {
+export const approveAtom = atom(null, async (get, _set) => {
 	const callback = get(approveCallbackAtom)
 	if (callback) {
 		await callback()
@@ -371,7 +376,7 @@ export const approveAtom = atom(null, async (get, set) => {
  * Action atom to reject the pending request
  * Calls the callback set by the hook
  */
-export const rejectAtom = atom(null, async (get, set) => {
+export const rejectAtom = atom(null, async (get, _set) => {
 	const callback = get(rejectCallbackAtom)
 	if (callback) {
 		await callback()
@@ -382,7 +387,7 @@ export const rejectAtom = atom(null, async (get, set) => {
  * Action atom to execute the currently selected option
  * Calls the callback set by the hook
  */
-export const executeSelectedAtom = atom(null, async (get, set) => {
+export const executeSelectedAtom = atom(null, async (get, _set) => {
 	const callback = get(executeSelectedCallbackAtom)
 	if (callback) {
 		await callback()

@@ -89,7 +89,6 @@ export const vercelAiGatewayDefaultModelInfo: ModelInfo = {
 	maxTokens: 64000,
 	contextWindow: 200000,
 	supportsImages: true,
-	supportsComputerUse: true,
 	supportsPromptCache: true,
 	inputPrice: 3,
 	outputPrice: 15,

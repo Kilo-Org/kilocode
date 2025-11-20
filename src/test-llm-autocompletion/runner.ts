@@ -3,7 +3,8 @@
 import fs from "fs"
 import path from "path"
 import { LLMClient } from "./llm-client.js"
-import { StrategyTester } from "./strategy-tester.js"
+import { HoleFillerTester } from "./hole-filler-tester.js"
+import { FimTester } from "./fim-tester.js"
 import { testCases, getCategories, TestCase } from "./test-cases.js"
 import { checkApproval } from "./approvals.js"
 
@@ -20,31 +21,28 @@ interface TestResult {
 
 export class TestRunner {
 	private llmClient: LLMClient
-	private strategyTester: StrategyTester
+	private tester: HoleFillerTester | FimTester
 	private verbose: boolean
 	private results: TestResult[] = []
 	private skipApproval: boolean
+	private useFim: boolean
 
-	constructor(verbose: boolean = false, skipApproval: boolean = false) {
+	constructor(verbose: boolean = false, skipApproval: boolean = false, useFim: boolean = false) {
 		this.verbose = verbose
 		this.skipApproval = skipApproval
-		this.llmClient = new LLMClient()
-		this.strategyTester = new StrategyTester(this.llmClient)
+		this.useFim = useFim
+		this.llmClient = new LLMClient(useFim)
+		this.tester = useFim ? new FimTester(this.llmClient) : new HoleFillerTester(this.llmClient)
 	}
 
 	async runTest(testCase: TestCase): Promise<TestResult> {
 		try {
 			const startTime = performance.now()
-			const completion = await this.strategyTester.getCompletion(testCase.input)
+			const { prefix, completion, suffix } = await this.tester.getCompletion(testCase.input, testCase.name)
 			const llmRequestDuration = performance.now() - startTime
+			let actualValue: string = prefix + completion + suffix
 
-			const modifiedCode = this.strategyTester.parseCompletion(testCase.input, completion)
-
-			let actualValue: string
-
-			if (modifiedCode !== null) {
-				actualValue = modifiedCode
-			} else {
+			if (completion === "") {
 				actualValue = "(no changes parsed)"
 			}
 
@@ -89,9 +87,10 @@ export class TestRunner {
 	}
 
 	async runAllTests(): Promise<void> {
-		console.log("\n🚀 Starting AutoTrigger Strategy LLM Tests\n")
+		console.log("\n🚀 Starting LLM Autocompletion Tests\n")
 		console.log("Provider:", this.llmClient["provider"])
 		console.log("Model:", this.llmClient["model"])
+		console.log("Strategy:", this.useFim ? "FIM" : "HoleFiller")
 		if (this.skipApproval) {
 			console.log("Skip Approval: enabled (tests will fail if not already approved)")
 		}
@@ -106,7 +105,7 @@ export class TestRunner {
 			const categoryTests = testCases.filter((tc) => tc.category === category)
 
 			for (const testCase of categoryTests) {
-				const strategyName = this.strategyTester.getSelectedStrategyName()
+				const strategyName = this.tester.getName()
 				process.stdout.write(`  Running ${testCase.name} [${strategyName}]... `)
 
 				const result = await this.runTest(testCase)
@@ -146,7 +145,7 @@ export class TestRunner {
 						console.log("    " + "─".repeat(76))
 
 						if (this.verbose && result.completion) {
-							console.log("    Full XML Response:")
+							console.log("    Full LLM Response:")
 							console.log(
 								result.completion
 									.split("\n")
@@ -329,23 +328,15 @@ export class TestRunner {
 		}
 
 		if (lastResult.completion) {
-			const modifiedCode = this.strategyTester.parseCompletion(lastResult.testCase.input, lastResult.completion)
-			if (modifiedCode !== null) {
-				console.log("\nModified Code:")
-				console.log("  " + "─".repeat(78))
-				console.log(
-					modifiedCode
-						.split("\n")
-						.map((l) => "  " + l)
-						.join("\n"),
-				)
-				console.log("  " + "─".repeat(78))
-			} else {
-				console.log("\nNo changes were parsed from the response")
-			}
-
-			console.log("\nFull LLM Response:")
-			console.log(lastResult.completion)
+			console.log("\nCompletion:")
+			console.log("  " + "─".repeat(78))
+			console.log(
+				lastResult.completion
+					.split("\n")
+					.map((l) => "  " + l)
+					.join("\n"),
+			)
+			console.log("  " + "─".repeat(78))
 		}
 
 		console.log("\n" + "═".repeat(80) + "\n")
@@ -414,10 +405,11 @@ async function main() {
 	const args = process.argv.slice(2)
 	const verbose = args.includes("--verbose") || args.includes("-v")
 	const skipApproval = args.includes("--skip-approval") || args.includes("-sa")
+	const useFim = args.includes("--fim")
 
 	const command = args.find((arg) => !arg.startsWith("-"))
 
-	const runner = new TestRunner(verbose, skipApproval)
+	const runner = new TestRunner(verbose, skipApproval, useFim)
 
 	try {
 		if (command === "clean") {

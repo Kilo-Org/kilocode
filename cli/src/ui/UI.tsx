@@ -23,6 +23,7 @@ import { useMessageHandler } from "../state/hooks/useMessageHandler.js"
 import { useFollowupHandler } from "../state/hooks/useFollowupHandler.js"
 import { useApprovalMonitor } from "../state/hooks/useApprovalMonitor.js"
 import { useProfile } from "../state/hooks/useProfile.js"
+import { useTaskHistory } from "../state/hooks/useTaskHistory.js"
 import { useCIMode } from "../state/hooks/useCIMode.js"
 import { useTheme } from "../state/hooks/useTheme.js"
 import { AppOptions } from "./App.js"
@@ -31,6 +32,7 @@ import { createConfigErrorInstructions, createWelcomeMessage } from "./utils/wel
 import { generateUpdateAvailableMessage, getAutoUpdateStatus } from "../utils/auto-update.js"
 import { generateNotificationMessage } from "../utils/notifications.js"
 import { notificationsAtom } from "../state/atoms/notifications.js"
+import { workspacePathAtom } from "../state/atoms/shell.js"
 import { useTerminal } from "../state/hooks/useTerminal.js"
 
 // Initialize commands on module load
@@ -57,6 +59,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
+	const setWorkspacePath = useSetAtom(workspacePathAtom)
 
 	// Use specialized hooks for command and message handling
 	const { executeCommand, isExecuting: isExecutingCommand } = useCommandHandler()
@@ -72,6 +75,9 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Profile hook for handling profile/balance data responses
 	useProfile()
+
+	// Task history hook for fetching task history
+	const { fetchTaskHistory } = useTaskHistory()
 
 	// This clears the terminal and forces re-render of static components
 	useTerminal()
@@ -105,6 +111,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			setIsParallelMode(true)
 		}
 	}, [options.parallel, setIsParallelMode])
+
+	// Initialize workspace path for shell commands
+	useEffect(() => {
+		if (options.workspace) {
+			setWorkspacePath(options.workspace)
+		}
+	}, [options.workspace, setWorkspacePath])
 
 	// Handle CI mode exit
 	useEffect(() => {
@@ -166,6 +179,11 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 
 	// Show welcome message as a CliMessage on first render
 	useEffect(() => {
+		// Skip if noSplash option is enabled
+		if (options.noSplash) {
+			return
+		}
+
 		if (!welcomeShownRef.current) {
 			welcomeShownRef.current = true
 			addMessage(
@@ -181,9 +199,21 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 				}),
 			)
 		}
-	}, [addMessage, options.ci, configValidation, options.prompt, options.parallel, options.worktreeBranch])
+	}, [
+		addMessage,
+		options.ci,
+		configValidation,
+		options.prompt,
+		options.parallel,
+		options.worktreeBranch,
+		options.noSplash,
+	])
 
 	useEffect(() => {
+		if (!options.noSplash) {
+			return
+		}
+
 		const checkVersion = async () => {
 			setVersionStatus(await getAutoUpdateStatus())
 		}
@@ -194,7 +224,13 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 		}
 	}, [])
 
+	// Show update or notification messages
 	useEffect(() => {
+		// Skip if noSplash option is enabled
+		if (options.noSplash) {
+			return
+		}
+
 		if (!versionStatus) return
 
 		if (versionStatus.isOutdated) {
@@ -203,7 +239,16 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			// Only show notification if there's no pending update
 			addMessage(generateNotificationMessage(notifications[0]))
 		}
-	}, [notifications, versionStatus])
+	}, [notifications, versionStatus, options.noSplash])
+
+	// Fetch task history on mount if not in CI mode
+	const taskHistoryFetchedRef = useRef(false)
+	useEffect(() => {
+		if (!taskHistoryFetchedRef.current && !options.ci && configValidation.valid) {
+			taskHistoryFetchedRef.current = true
+			fetchTaskHistory()
+		}
+	}, [options.ci, configValidation.valid, fetchTaskHistory])
 
 	// Exit if provider configuration is invalid
 	useEffect(() => {

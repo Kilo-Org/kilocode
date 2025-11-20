@@ -14,6 +14,7 @@ export class RecentlyVisitedRangesService {
 	private maxRecentFiles = 3
 	private maxSnippetsPerFile = 3
 	private isEnabled = true
+	private disposable: vscode.Disposable | undefined
 
 	constructor(private readonly ide: IDE) {
 		this.cache = new LRUCache<string, Array<AutocompleteCodeSnippet & { timestamp: number }>>({
@@ -32,7 +33,7 @@ export class RecentlyVisitedRangesService {
 			this.numSurroundingLines = recentlyVisitedRangesNumSurroundingLines
 		}
 
-		vscode.window.onDidChangeTextEditorSelection(this.cacheCurrentSelectionContext)
+		this.disposable = vscode.window.onDidChangeTextEditorSelection(this.cacheCurrentSelectionContext)
 	}
 
 	private cacheCurrentSelectionContext = async (event: vscode.TextEditorSelectionChangeEvent) => {
@@ -104,5 +105,10 @@ export class RecentlyVisitedRangesService {
 			)
 			.sort((a, b) => b.timestamp - a.timestamp)
 			.map(({ timestamp: _timestamp, ...snippet }) => snippet)
+	}
+
+	public dispose(): void {
+		this.disposable?.dispose()
+		this.cache.clear()
 	}
 }

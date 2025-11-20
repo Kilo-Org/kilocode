@@ -91,7 +91,12 @@ async function generatePrompt(
 	const [modesSection, mcpServersSection] = await Promise.all([
 		getModesSection(context, toolUseStyle /*kilocode_change*/),
 		shouldIncludeMcp
-			? getMcpServersSection(mcpHub, effectiveDiffStrategy, enableMcpServerCreation)
+			? getMcpServersSection(
+					mcpHub,
+					effectiveDiffStrategy,
+					enableMcpServerCreation,
+					toolUseStyle, // kilocode_change
+				)
 			: Promise.resolve(""),
 	])
 

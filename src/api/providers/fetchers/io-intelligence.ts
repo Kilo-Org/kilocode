@@ -75,7 +75,6 @@ function parseIOIntelligenceModel(model: IOIntelligenceModel): ModelInfo {
 		contextWindow: contextLength,
 		supportsImages,
 		supportsPromptCache: false,
-		supportsComputerUse: false,
 		description: `${model.id} via IO Intelligence`,
 	}
 }

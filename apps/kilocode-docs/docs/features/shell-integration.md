@@ -31,29 +31,32 @@ Kilo Code provides several settings to fine-tune shell integration. Access these
 ### Basic Settings
 
 #### Terminal Output Limit
+
 <img src="/docs/img/shell-integration/terminal-output-limit.png" alt="Terminal output limit slider set to 500" width="500" />
 Controls the maximum number of lines captured from terminal output. When exceeded, it keeps 20% of the beginning and 80% of the end with a truncation message in between. This prevents excessive token usage while maintaining context. Default: 500 lines.
 Controls the maximum number of lines captured from terminal output. When exceeded, lines are removed from the middle to save tokens. Default: 500 lines.
 
 #### Terminal Shell Integration Timeout
+
 <img src="/docs/img/shell-integration/shell-integration-timeout.png" alt="Terminal shell integration timeout slider set to 15s" width="500" />
 
 Maximum time to wait for shell integration to initialize before executing commands. Increase this value if you experience "Shell Integration Unavailable" errors. Default: 15 seconds.
 
 #### Terminal Command Delay
+
 <img src="/docs/img/shell-integration/terminal-command-delay.png" alt="Terminal command delay slider set to 0ms" width="500" />
 
 Adds a small pause after running commands to help Kilo Code capture all output correctly. This setting can significantly impact shell integration reliability due to VSCode's implementation of terminal integration across different operating systems and shell configurations:
 
 - **Default**: 0ms
 - **Common Values**:
-  * 0ms: Works best for some users with newer VSCode versions
-  * 50ms: Historical default, still effective for many users
-  * 150ms: Recommended for PowerShell users
+    - 0ms: Works best for some users with newer VSCode versions
+    - 50ms: Historical default, still effective for many users
+    - 150ms: Recommended for PowerShell users
 - **Note**: Different values may work better depending on your:
-  * VSCode version
-  * Shell customizations (oh-my-zsh, powerlevel10k, etc.)
-  * Operating system and environment
+    - VSCode version
+    - Shell customizations (oh-my-zsh, powerlevel10k, etc.)
+    - Operating system and environment
 
 ### Advanced Settings
 
@@ -69,26 +72,31 @@ Always restart all open terminals after changing any of these settings.
 :::
 
 #### PowerShell Counter Workaround
+
 <img src="/docs/img/shell-integration/power-shell-workaround.png" alt="PowerShell counter workaround checkbox" width="600" />
 
 Helps PowerShell run the same command multiple times in a row. Enable this if you notice Kilo Code can't run identical commands consecutively in PowerShell.
 
 #### Clear ZSH EOL Mark
+
 <img src="/docs/img/shell-integration/clear-zsh-eol-mark.png" alt="Clear ZSH EOL mark checkbox" width="600" />
 
 Prevents ZSH from adding special characters at the end of output lines that can confuse Kilo Code when reading terminal results.
 
 #### Oh My Zsh Integration
+
 <img src="/docs/img/shell-integration/oh-my-zsh.png" alt="Enable Oh My Zsh integration checkbox" width="600" />
 
 Makes Kilo Code work better with the popular [Oh My Zsh](https://ohmyz.sh/) shell customization framework. Turn this on if you use Oh My Zsh and experience terminal issues.
 
 #### Powerlevel10k Integration
+
 <img src="/docs/img/shell-integration/power10k.png" alt="Enable Powerlevel10k integration checkbox" width="600" />
 
 Improves compatibility if you use the Powerlevel10k theme for ZSH. Turn this on if your fancy terminal prompt causes issues with Kilo Code.
 
 #### ZDOTDIR Handling
+
 <img src="/docs/img/shell-integration/zdotdir.png" alt="Enable ZDOTDIR handling checkbox" width="600" />
 
 Helps Kilo Code work with custom ZSH configurations without interfering with your personal shell settings and customizations.
@@ -104,6 +112,7 @@ PowerShell restricts script execution by default. To configure:
 3. Set appropriate policy: `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 Common policies:
+
 - `Restricted`: No scripts allowed (default)
 - `RemoteSigned`: Local scripts can run; downloaded scripts need signing
 - `Unrestricted`: All scripts run with warnings
@@ -114,21 +123,25 @@ Common policies:
 If automatic integration fails, add the appropriate line to your shell configuration:
 
 **Bash** (`~/.bashrc`):
+
 ```bash
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path bash)"
 ```
 
 **Zsh** (`~/.zshrc`):
+
 ```bash
 [[ "$TERM_PROGRAM" == "vscode" ]] && . "$(code --locate-shell-integration-path zsh)"
 ```
 
 **PowerShell** (`$Profile`):
+
 ```powershell
 if ($env:TERM_PROGRAM -eq "vscode") { . "$(code --locate-shell-integration-path pwsh)" }
 ```
 
 **Fish** (`~/.config/fish/config.fish`):
+
 ```fish
 string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration-path fish)
 ```
@@ -138,6 +151,7 @@ string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration
 If you use terminal customization tools:
 
 **Powerlevel10k**:
+
 ```bash
 # Add before sourcing powerlevel10k in ~/.zshrc
 typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
@@ -150,6 +164,7 @@ typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 Confirm shell integration is active with these commands:
 
 **Bash**:
+
 ```bash
 set | grep -i '[16]33;'
 echo "$PROMPT_COMMAND" | grep vsc
@@ -157,24 +172,28 @@ trap -p DEBUG | grep vsc
 ```
 
 **Zsh**:
+
 ```zsh
 functions | grep -i vsc
 typeset -p precmd_functions preexec_functions
 ```
 
 **PowerShell**:
+
 ```powershell
 Get-Command -Name "*VSC*" -CommandType Function
 Get-Content Function:\Prompt | Select-String "VSCode"
 ```
 
 **Fish**:
+
 ```fish
 functions | grep -i vsc
 functions fish_prompt | grep -i vsc
 ```
 
 Visual indicators of active shell integration:
+
 1. Shell integration indicator in terminal title bar
 2. Command detection highlighting
 3. Working directory updates in terminal title
@@ -187,6 +206,7 @@ When using Windows Subsystem for Linux (WSL), there are two distinct ways to use
 ### Method 1: VSCode Windows with WSL Terminal
 
 In this setup:
+
 - VSCode runs natively in Windows
 - You use the WSL terminal integration feature in VSCode
 - Shell commands are executed through the WSL bridge
@@ -196,6 +216,7 @@ In this setup:
 ### Method 2: VSCode Running Within WSL
 
 In this setup:
+
 - You launch VSCode directly from within WSL using `code .`
 - VSCode server runs natively in the Linux environment
 - Direct access to Linux filesystem and tools
@@ -204,6 +225,7 @@ In this setup:
 - Recommended approach for WSL development
 
 For optimal shell integration with WSL, we recommend:
+
 1. Open your WSL distribution
 2. Navigate to your project directory
 3. Launch VSCode using `code .`
@@ -216,10 +238,12 @@ For optimal shell integration with WSL, we recommend:
 For fellow Windows users running Fish terminal within a Cygwin environment, here's how VS Code's shell integration works:
 
 1.  **(Optional) Locate the Shell Integration Script:**
-    Open your Fish terminal *within VS Code* and run the following command:
+    Open your Fish terminal _within VS Code_ and run the following command:
+
     ```bash
     code --locate-shell-integration-path fish
     ```
+
     This will output the path to the `shellIntegration.fish` script. Note down this path.
 
 2.  **Update Your Fish Configuration:**
@@ -239,7 +263,8 @@ For fellow Windows users running Fish terminal within a Cygwin environment, here
         # source "/cygdrive/c/Users/YourUser/.vscode/extensions/..../shellIntegration.fish"
     end
     ```
-    *Remember to replace the example path with the actual path from Step 1, correctly formatted for Cygwin.*
+
+    _Remember to replace the example path with the actual path from Step 1, correctly formatted for Cygwin._
 
 3.  **Configure VS Code Terminal Profile:**
     Open your VS Code `settings.json` file (Ctrl+Shift+P -> "Preferences: Open User Settings (JSON)"). Update or add the Fish profile under `terminal.integrated.profiles.windows` like this:
@@ -277,7 +302,8 @@ For fellow Windows users running Fish terminal within a Cygwin environment, here
       // ... other settings ...
     }
     ```
-    *Note: Using `bash.exe --login -i -c "exec fish"` is often more reliable in Cygwin environments for ensuring the correct environment setup before `fish` starts. However, if that approach doesn't work, try the `fish-direct` profile configuration.*
+
+    _Note: Using `bash.exe --login -i -c "exec fish"` is often more reliable in Cygwin environments for ensuring the correct environment setup before `fish` starts. However, if that approach doesn't work, try the `fish-direct` profile configuration._
 
 4.  **Restart VS Code:**
     Close and reopen Visual Studio Code completely to apply the changes.
@@ -287,28 +313,31 @@ For fellow Windows users running Fish terminal within a Cygwin environment, here
 
 This setup works reliably on Windows systems using Cygwin, Fish, and the Starship prompt, and should assist users with similar configurations.
 
-
 ### Shell Integration Failures After VSCode 1.98
 
 **Issue**: After VSCode updates beyond version 1.98, shell integration may fail with the error "VSCE output start escape sequence (]633;C or ]133;C) not received".
 
 **Solutions**:
+
 1. **Set Terminal Command Delay**:
-   - Set the Terminal Command Delay to 50ms in Kilo Code settings
-   - Restart all terminals after changing this setting
-   - This matches older default behavior and may resolve the issue, however some users have reported that a value of 0ms works better. This is a workaround for upstream VSCode problems.
+
+    - Set the Terminal Command Delay to 50ms in Kilo Code settings
+    - Restart all terminals after changing this setting
+    - This matches older default behavior and may resolve the issue, however some users have reported that a value of 0ms works better. This is a workaround for upstream VSCode problems.
 
 2. **Roll Back VSCode Version**:
-   - Download VSCode v1.98 from [VSCode Updates](https://code.visualstudio.com/updates/v1_98)
-   - Replace your current VSCode installation
-   - No backup of Kilo settings needed
+
+    - Download VSCode v1.98 from [VSCode Updates](https://code.visualstudio.com/updates/v1_98)
+    - Replace your current VSCode installation
+    - No backup of Kilo settings needed
 
 3. **WSL-Specific Workaround**:
-   - If using WSL, ensure you launch VSCode from within WSL using `code .`
+
+    - If using WSL, ensure you launch VSCode from within WSL using `code .`
 
 4. **ZSH Users**:
-   - Try enabling some or all ZSH-related workarounds in Kilo Code settings
-   - These settings can help regardless of your operating system
+    - Try enabling some or all ZSH-related workarounds in Kilo Code settings
+    - These settings can help regardless of your operating system
 
 ## Known Issues and Workarounds
 
@@ -340,37 +369,41 @@ This setup works reliably on Windows systems using Cygwin, Fish, and the Starshi
 ## Troubleshooting Resources
 
 ### Checking Debug Logs
+
 When shell integration issues occur, check the debug logs:
+
 1. Open Help → Toggle Developer Tools → Console
 2. Set "Show All Levels" to see all log messages
 3. Look for messages containing `[Terminal Process]`
 4. Check `preOutput` content in error messages:
-   - Empty preOutput (`''`) means VSCode sent no data
-   - This indicates a potential VSCode shell integration issue, or an upstream bug that is out of our control
-   - The absence of shell integration markers may require adjusting settings to work around possible upstream bugs or local workstation configuration issues related to shell initialization and VSCode's loading of special shell integration hooks
+    - Empty preOutput (`''`) means VSCode sent no data
+    - This indicates a potential VSCode shell integration issue, or an upstream bug that is out of our control
+    - The absence of shell integration markers may require adjusting settings to work around possible upstream bugs or local workstation configuration issues related to shell initialization and VSCode's loading of special shell integration hooks
 
 ### Using the VSCode Terminal Integration Test Extension
+
 The [VSCode Terminal Integration Test Extension](https://github.com/KJ7LNW/vsce-test-terminal-integration) helps diagnose shell integration issues by testing different settings combinations:
 
-
 1. **When Commands Stall**:
-   - If you see "command already running" warnings, click "Reset Stats" to reset the terminal state
-   - These warnings indicate shell integration is not working
-   - Try different settings combinations until you find one that works
-   - If it really gets stuck, restart the extension by closing the window and pressing F5
+
+    - If you see "command already running" warnings, click "Reset Stats" to reset the terminal state
+    - These warnings indicate shell integration is not working
+    - Try different settings combinations until you find one that works
+    - If it really gets stuck, restart the extension by closing the window and pressing F5
 
 2. **Testing Settings**:
-   - Systematically try different combinations of:
-     * Terminal Command Delay
-     * Shell Integration settings
-   - Document which combinations succeed or fail
-   - This helps identify patterns in shell integration issues
+
+    - Systematically try different combinations of:
+        - Terminal Command Delay
+        - Shell Integration settings
+    - Document which combinations succeed or fail
+    - This helps identify patterns in shell integration issues
 
 3. **Reporting Issues**:
-   - Once you find a problematic configuration
-   - Document the exact settings combination
-   - Note your environment (OS, VSCode version, shell, and any shell prompt customization)
-   - Open an issue with these details to help improve shell integration
+    - Once you find a problematic configuration
+    - Document the exact settings combination
+    - Note your environment (OS, VSCode version, shell, and any shell prompt customization)
+    - Open an issue with these details to help improve shell integration
 
 ## Support
 

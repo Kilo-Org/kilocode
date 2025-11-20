@@ -1,11 +1,17 @@
 import { ApiStreamNativeToolCallsChunk } from "./kilocode/api-stream-native-tool-calls-chunk"
+import { ReasoningDetail } from "./kilocode/reasoning-details"
 
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
 export type ApiStreamChunk =
+	// kilocode_change start
+	| ApiStreamNativeToolCallsChunk
+	| ApiStreamReasoningDetailsChunk
+	| ApiStreamAnthropicThinkingChunk
+	| ApiStreamAnthropicRedactedThinkingChunk
+	// kilocode_change end
 	| ApiStreamTextChunk
 	| ApiStreamUsageChunk
-	| ApiStreamNativeToolCallsChunk // kilocode_change
 	| ApiStreamReasoningChunk
 	| ApiStreamGroundingChunk
 	| ApiStreamError
@@ -25,6 +31,24 @@ export interface ApiStreamReasoningChunk {
 	type: "reasoning"
 	text: string
 }
+
+// kilocode_change start
+export interface ApiStreamAnthropicThinkingChunk {
+	type: "ant_thinking"
+	thinking: string
+	signature: string
+}
+
+export interface ApiStreamAnthropicRedactedThinkingChunk {
+	type: "ant_redacted_thinking"
+	data: string
+}
+
+export interface ApiStreamReasoningDetailsChunk {
+	type: "reasoning_details"
+	reasoning_details: ReasoningDetail
+}
+// kilocode_change end
 
 export interface ApiStreamUsageChunk {
 	type: "usage"

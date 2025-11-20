@@ -114,5 +114,9 @@
 		"months_ago": "{{count}} tháng trước",
 		"year_ago": "một năm trước",
 		"years_ago": "{{count}} năm trước"
+	},
+	"errors": {
+		"wait_checkpoint_long_time": "Bạn đã chờ {{timeout}} giây để khởi tạo điểm kiểm tra. Nếu không cần chức năng này, hãy tắt nó trong <settingsLink>cài đặt điểm kiểm tra</settingsLink>.",
+		"init_checkpoint_fail_long_time": "Khởi tạo điểm kiểm tra mất hơn {{timeout}} giây, vì vậy các điểm kiểm tra đã bị vô hiệu hóa cho tác vụ này. Bạn có thể tắt các điểm kiểm tra hoặc tăng thời gian chờ trong <settingsLink>cài đặt điểm kiểm tra</settingsLink>."
 	}
 }

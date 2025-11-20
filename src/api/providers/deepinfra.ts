@@ -142,9 +142,9 @@ export class DeepInfraHandler extends RouterProvider implements SingleCompletion
 		const cacheWriteTokens = usage?.prompt_tokens_details?.cache_write_tokens || 0
 		const cacheReadTokens = usage?.prompt_tokens_details?.cached_tokens || 0
 
-		const totalCost = modelInfo
+		const { totalCost } = modelInfo
 			? calculateApiCostOpenAI(modelInfo, inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens)
-			: 0
+			: { totalCost: 0 }
 
 		return {
 			type: "usage",

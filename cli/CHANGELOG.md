@@ -1,5 +1,188 @@
 # @kilocode/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- [#3886](https://github.com/Kilo-Org/kilocode/pull/3886) [`00e6fb5`](https://github.com/Kilo-Org/kilocode/commit/00e6fb59a42dcf827f7cfe72516052c561723cd0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update Dependencies
+
+## 0.5.1
+
+### Patch Changes
+
+- [#3826](https://github.com/Kilo-Org/kilocode/pull/3826) [`70b956f`](https://github.com/Kilo-Org/kilocode/commit/70b956f79b9878e32f36c827faa490bcdcb889e7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Allow the user to type any custom follow up suggestion
+
+## 0.5.0
+
+### Minor Changes
+
+- [#3774](https://github.com/Kilo-Org/kilocode/pull/3774) [`0dd8458`](https://github.com/Kilo-Org/kilocode/commit/0dd8458abb0f7c6247b7b9447c6d77cd96f687d7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - New '/provider' command to switch beteen configured providers
+
+- [#3783](https://github.com/Kilo-Org/kilocode/pull/3783) [`6d3911c`](https://github.com/Kilo-Org/kilocode/commit/6d3911cc0f571479cd6b0b12d3958996aab21342) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Configure the CLI using ENV variables
+
+- [#3774](https://github.com/Kilo-Org/kilocode/pull/3774) [`0dd8458`](https://github.com/Kilo-Org/kilocode/commit/0dd8458abb0f7c6247b7b9447c6d77cd96f687d7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - provider (-pv/--provider) and model (-mo/--model) command arguments
+
+### Patch Changes
+
+- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@Eldevia](https://github.com/Eldevia)! - Support installing CLI with bun
+
+- [#3769](https://github.com/Kilo-Org/kilocode/pull/3769) [`eff6f2b`](https://github.com/Kilo-Org/kilocode/commit/eff6f2b9e8161f4016a378a28cd0b9a4df9d5ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update providers configurations
+
+- [#3777](https://github.com/Kilo-Org/kilocode/pull/3777) [`bad3bbe`](https://github.com/Kilo-Org/kilocode/commit/bad3bbef8968a10c0dcf32f576fa7f983341c08e) Thanks [@catrielmuller](https://github.com/catrielmuller)! - --nosplash argument to hide welcome screen and notifications
+
+## 0.4.2
+
+### Patch Changes
+
+- [#3744](https://github.com/Kilo-Org/kilocode/pull/3744) [`e1442ff`](https://github.com/Kilo-Org/kilocode/commit/e1442ffa934bea546cbf251ab19caf271c514c65) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix OpenAI compatible provider config
+
+- [#3739](https://github.com/Kilo-Org/kilocode/pull/3739) [`d7a3204`](https://github.com/Kilo-Org/kilocode/commit/d7a3204b166d7e709e83f222f6858966e418828b) Thanks [@iscekic](https://github.com/iscekic)! - fix diff command
+
+- [#3701](https://github.com/Kilo-Org/kilocode/pull/3701) [`7c8f30c`](https://github.com/Kilo-Org/kilocode/commit/7c8f30c12e541b3c3da56c208664571126fb031d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Auth Wizard for KiloCode
+
+## 0.4.1
+
+### Patch Changes
+
+- [#3703](https://github.com/Kilo-Org/kilocode/pull/3703) [`4d4d3da`](https://github.com/Kilo-Org/kilocode/commit/4d4d3dad367bf02a9766d0369cd90176097deeb4) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix "/teams list" command
+
+## 0.4.0
+
+### Minor Changes
+
+- [#3562](https://github.com/Kilo-Org/kilocode/pull/3562) [`2a08b8d`](https://github.com/Kilo-Org/kilocode/commit/2a08b8dd4464432f9863c62e9ce7b416cd87843c) Thanks [@eliasto](https://github.com/eliasto)! - Add OVHcloud AI Endpoints provider to Kilocode CLI
+
+### Patch Changes
+
+- [#3648](https://github.com/Kilo-Org/kilocode/pull/3648) [`ff2ccee`](https://github.com/Kilo-Org/kilocode/commit/ff2ccee6564ae2e80259128043f4db26e86cf953) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix initialization race conditions on auto mode
+
+- [#3672](https://github.com/Kilo-Org/kilocode/pull/3672) [`1bb9cab`](https://github.com/Kilo-Org/kilocode/commit/1bb9cabd872e82f2eef6667d5895eb7e75074ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix file write/read race condition
+
+- [#3694](https://github.com/Kilo-Org/kilocode/pull/3694) [`0253f12`](https://github.com/Kilo-Org/kilocode/commit/0253f125d5f1c146e6c3d08e651d266583f639ff) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve Kitty protocol keyboard support
+
+## 0.3.0
+
+### Minor Changes
+
+- [#3623](https://github.com/Kilo-Org/kilocode/pull/3623) [`ef6bcac`](https://github.com/Kilo-Org/kilocode/commit/ef6bcac79ed5708996e80c0c943d52f12c0fe3b2) Thanks [@Sureshkumars](https://github.com/Sureshkumars)! - # Checkpoint Restore
+
+    Allows users to restore their conversation to a previous point in time.
+
+    ## What do we have here?
+
+    ### View your checkpoints
+
+    `/checkpoint list`
+
+    This shows all available restore points with:
+    Hash for the checkpoint
+    When it was created
+
+    ### Restore to a checkpoint
+
+    `/checkpoint restore abc123...`
+
+    You'll see a confirmation showing:
+    Which checkpoint you're going back to
+    How many messages will be removed
+    What will happen to your current work
+
+    Choose `Restore` to go back, or `Cancel` to keep working.
+
+    ### Example
+
+    Let's say you asked Kilo CLI to refactor some code, but you don't like the result:
+
+    Run `/checkpoint list` to see earlier save points
+
+    Find the checkpoint from before the refactoring
+
+    Run `/checkpoint restore <hash>` with that checkpoint's hash
+
+    Confirm the restore
+    Your conversation is now back to before the refactoring happened
+
+    ### Why use checkpoints?
+
+    1. Undo mistakes - Go back if something went wrong
+    2. Try different approaches - Restore and try a different solution
+    3. Keep working states - Return to a point where everything was working
+
+### Patch Changes
+
+- [#3500](https://github.com/Kilo-Org/kilocode/pull/3500) [`2e1a536`](https://github.com/Kilo-Org/kilocode/commit/2e1a53678fc1c331d98a63f0ab15b02b53fc1625) Thanks [@iscekic](https://github.com/iscekic)! - improves windows support
+
+- [#3641](https://github.com/Kilo-Org/kilocode/pull/3641) [`94bc43a`](https://github.com/Kilo-Org/kilocode/commit/94bc43af224fed36023d0f3571d39c04d21aa660) Thanks [@KrtinShet](https://github.com/KrtinShet)! - Fix workspace path resolution when using relative paths with --workspace flag. Bash commands now execute in the correct directory.
+
+## 0.2.0
+
+### Minor Changes
+
+- [#3528](https://github.com/Kilo-Org/kilocode/pull/3528) [`77438f1`](https://github.com/Kilo-Org/kilocode/commit/77438f1dfe2e9b5cfc5faccc314130d82c299842) Thanks [@KrtinShet](https://github.com/KrtinShet) [@iscekic](https://github.com/iscekic)! - add shell mode
+
+- [#3556](https://github.com/Kilo-Org/kilocode/pull/3556) [`0fd4e8f`](https://github.com/Kilo-Org/kilocode/commit/0fd4e8f3b130f86ae5932c33ab647a2a08742c55) Thanks [@iscekic](https://github.com/iscekic)! - adds support for overriding config with env vars
+
+## 0.1.2
+
+### Patch Changes
+
+- [#3259](https://github.com/Kilo-Org/kilocode/pull/3259) [`9e50bca`](https://github.com/Kilo-Org/kilocode/commit/9e50bcaebb93383eca1dac8e23ff02339c910ed9) Thanks [@stennkool](https://github.com/stennkool)! - Continue the last task conversation in the workspace (-c argument)
+
+- [#3491](https://github.com/Kilo-Org/kilocode/pull/3491) [`b884c9e`](https://github.com/Kilo-Org/kilocode/commit/b884c9ea220f3c4c3a9c147f0fece64a26c830b4) Thanks [@catrielmuller](https://github.com/catrielmuller)! - File mention suggestion - @my/file
+
+## 0.1.1
+
+### Patch Changes
+
+- [#3475](https://github.com/Kilo-Org/kilocode/pull/3475) [`623f8b7`](https://github.com/Kilo-Org/kilocode/commit/623f8b7583cd98cafd3b3a49563ffe05b87f2818) Thanks [@iscekic](https://github.com/iscekic)! - logs version on boot
+
+- [#3474](https://github.com/Kilo-Org/kilocode/pull/3474) [`e04b81a`](https://github.com/Kilo-Org/kilocode/commit/e04b81a258bac18abb640d265258a9551494c21d) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Streaming message typewriter rendering
+
+- [#3263](https://github.com/Kilo-Org/kilocode/pull/3263) [`97afc88`](https://github.com/Kilo-Org/kilocode/commit/97afc884060d8c9a15fd084bd8be6b1048ba9852) Thanks [@oliver-14203](https://github.com/oliver-14203)! - /theme command - Enjoy the colors! by: oliver-14203
+
+- [#3289](https://github.com/Kilo-Org/kilocode/pull/3289) [`6a64388`](https://github.com/Kilo-Org/kilocode/commit/6a64388f090f44c2b58c3e418da596413f59ef32) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Tasks history support
+
+- [#3497](https://github.com/Kilo-Org/kilocode/pull/3497) [`bb917a2`](https://github.com/Kilo-Org/kilocode/commit/bb917a2962093a54db7ac82f8d8561f87278e5be) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Fix Wellcome Message regression
+
+## 0.1.0
+
+### Minor Changes
+
+- [#3452](https://github.com/Kilo-Org/kilocode/pull/3452) [`127a255`](https://github.com/Kilo-Org/kilocode/commit/127a2551cfd67d57484e59615b13435e7610acce) Thanks [@Sureshkumars](https://github.com/Sureshkumars)! - This PR improves the display of MCP tool requests and responses in the CLI, addressing issues with truncated payloads, poor formatting, and lack of metadata.
+
+    - MCP request arguments were difficult to read (no formatting, no preview mode)
+    - MCP response payloads were displayed as raw text dumps, overwhelming the terminal
+    - No JSON detection or pretty-printing
+    - No metadata about content size or type
+    - Missing error handling for malformed data
+    - No indication when content is truncated/previewed
+
+    Created new `SayMcpServerResponseMessage` component for MCP responses and refactored `AskUseMcpServerMessage` to share formatting logic. Both will make use of newly added utility functions for JSON detection, formatting, and metadata display.
+    `formatContentWithMetadata()` - Detects JSON, formats it, handles preview logic (>20 lines → show 5)
+    `formatJson()` - Pretty-prints JSON with configurable indentation
+    `approximateByteSize()` - Estimates byte size using `str.length * 3`
+    `formatByteSize()`, `buildMetadataString()` - Display helpers
+
+    | before                                                                                                                               | after                                                                                                                               |
+    | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+    | <img width="1511" height="890" alt="before" src="https://github.com/user-attachments/assets/9b57d85c-1846-42d5-ba7b-2511a96e77b2" /> | <img width="1510" height="884" alt="after" src="https://github.com/user-attachments/assets/1a7599ce-4112-40d0-ac47-678d626cb51c" /> |
+
+    Run the KiloCode CLI and let it automatically use any configured MCP server.
+
+### Patch Changes
+
+- [#3463](https://github.com/Kilo-Org/kilocode/pull/3463) [`512f58a`](https://github.com/Kilo-Org/kilocode/commit/512f58aa8b62d4df931d542b2420e292f1a711b6) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Improve low balance message and added a retry action
+
+- [#3468](https://github.com/Kilo-Org/kilocode/pull/3468) [`8f8ef10`](https://github.com/Kilo-Org/kilocode/commit/8f8ef107dd2751e4141473d33e098d6f28faa6d1) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Resolve orphaned partial ask messages
+
+- [#3465](https://github.com/Kilo-Org/kilocode/pull/3465) [`bd0d51e`](https://github.com/Kilo-Org/kilocode/commit/bd0d51e5a43bb3ead7daeb1f45aa1d80cbbb78cc) Thanks [@iscekic](https://github.com/iscekic)! - improves autocomplete behavior
+
+## 0.0.16
+
+### Patch Changes
+
+- [#3426](https://github.com/Kilo-Org/kilocode/pull/3426) [`15243f1`](https://github.com/Kilo-Org/kilocode/commit/15243f118ae4c4ac8a8f89fc6de11d6713f0a6f0) Thanks [@iscekic](https://github.com/iscekic)! - Improves error message clarity when initiating parallel mode
+
 ## 0.0.15
 
 ### Patch Changes

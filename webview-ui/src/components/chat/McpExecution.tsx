@@ -31,6 +31,13 @@ interface McpExecutionProps {
 	initiallyExpanded?: boolean // kilocode_change: For Storybook stories only
 }
 
+function removeRenamedPrefix_kilocode(text: string): string {
+	// Remove "renamed_" prefix from property names in JSON (native tool calling)
+	const prefix = "renamed_"
+	if (!text || !text.startsWith(prefix)) return text
+	return text.substring(prefix.length)
+}
+
 export const McpExecution = ({
 	executionId,
 	text,
@@ -186,7 +193,8 @@ export const McpExecution = ({
 				<div className="flex flex-row items-center gap-1 flex-wrap">
 					<Server size={16} className="text-vscode-descriptionForeground" />
 					<div className="flex items-center gap-1 flex-wrap">
-						{serverName && <span className="font-bold text-vscode-foreground">{serverName}</span>}
+						{/* kilocode_change: Show tool name instead of server name since server is already shown above */}
+						{toolName && <span className="font-bold text-vscode-foreground">{toolName}</span>}
 					</div>
 				</div>
 				<div className="flex flex-row items-center justify-between gap-2 px-1">
@@ -275,7 +283,7 @@ export const McpExecution = ({
 							"mt-1 pt-1":
 								!isArguments && (useMcpServer?.type === "use_mcp_tool" || (toolName && serverName)),
 						})}>
-						<CodeBlock source={formattedArgumentsText} language="json" />
+						<CodeBlock source={removeRenamedPrefix_kilocode(formattedArgumentsText)} language="json" />
 					</div>
 				)}
 

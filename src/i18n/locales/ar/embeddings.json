@@ -47,6 +47,7 @@
 		"openAiCompatibleConfigMissing": "إعدادات OpenAI المتوافق مفقودة لإنشاء التضمين",
 		"geminiConfigMissing": "إعدادات Gemini مفقودة لإنشاء التضمين",
 		"mistralConfigMissing": "إعدادات Mistral مفقودة لإنشاء التضمين",
+		"openRouterConfigMissing": "إعدادات OpenRouter مفقودة لإنشاء التضمين",
 		"vercelAiGatewayConfigMissing": "إعدادات Vercel AI Gateway مفقودة لإنشاء التضمين",
 		"invalidEmbedderType": "نوع التضمين المُعدّ غير صالح: {{embedderProvider}}",
 		"vectorDimensionNotDeterminedOpenAiCompatible": "لا يمكن تحديد أبعاد المتجه للنموذج '{{modelId}}' مع المزوّد '{{provider}}'. يرجى التأكد من ضبط 'أبعاد التضمين' بشكل صحيح في إعدادات مزوّد OpenAI المتوافق.",

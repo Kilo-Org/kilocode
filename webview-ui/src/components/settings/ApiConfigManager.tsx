@@ -18,9 +18,11 @@ import {
 
 interface ApiConfigManagerProps {
 	currentApiConfigName?: string
+	activeApiConfigName?: string // kilocode_change: Track which profile is actually active
 	listApiConfigMeta?: ProviderSettingsEntry[]
 	organizationAllowList?: OrganizationAllowList
 	onSelectConfig: (configName: string) => void
+	onActivateConfig?: (configName: string) => void // kilocode_change: Explicit activation handler
 	onDeleteConfig: (configName: string) => void
 	onRenameConfig: (oldName: string, newName: string) => void
 	onUpsertConfig: (configName: string) => void
@@ -28,9 +30,11 @@ interface ApiConfigManagerProps {
 
 const ApiConfigManager = ({
 	currentApiConfigName = "",
+	activeApiConfigName, // kilocode_change: Track which profile is actually active
 	listApiConfigMeta = [],
 	organizationAllowList,
 	onSelectConfig,
+	onActivateConfig, // kilocode_change: Explicit activation handler
 	onDeleteConfig,
 	onRenameConfig,
 	onUpsertConfig,
@@ -180,6 +184,8 @@ const ApiConfigManager = ({
 
 	const isOnlyProfile = listApiConfigMeta?.length === 1
 
+	const isEditingDifferentProfile = activeApiConfigName && currentApiConfigName !== activeApiConfigName // kilocode_change: Check if we're editing a different profile than the active one
+
 	return (
 		<div className="flex flex-col gap-1">
 			<label className="block font-medium mb-1">{t("settings:providers.configProfile")}</label>
@@ -239,9 +245,10 @@ const ApiConfigManager = ({
 							onValueChange={handleSelectConfig}
 							options={listApiConfigMeta.map((config) => {
 								const valid = isProfileValid(config)
+								const isActive = config.name === activeApiConfigName // kilocode_change - added isActive
 								return {
 									value: config.name,
-									label: config.name,
+									label: isActive ? `${config.name} (Active)` : config.name, // kilocode_change - added active
 									disabled: !valid,
 									icon: !valid ? (
 										<StandardTooltip content={t("settings:validation.profileInvalid")}>
@@ -295,6 +302,19 @@ const ApiConfigManager = ({
 					<div className="text-vscode-descriptionForeground text-sm mt-1">
 						{t("settings:providers.description")}
 					</div>
+					{/* kilocode_change start Show "Make Active Profile" button when editing != active */}
+					{isEditingDifferentProfile && onActivateConfig && (
+						<StandardTooltip content={t("settings:providers.makeActiveTooltip")}>
+							<Button
+								variant="default"
+								className="mt-2"
+								onClick={() => onActivateConfig(currentApiConfigName)}
+								data-testid="activate-profile-button">
+								{t("settings:providers.makeActiveProfile")}
+							</Button>
+						</StandardTooltip>
+					)}
+					{/* kilocode_change end Show "Make Active Profile" button when editing != active */}
 				</>
 			)}
 

@@ -36,6 +36,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"qwen-code": "Qwen Code",
 	"gemini-cli": "Gemini CLI",
 	zai: "Zai",
+	minimax: "MiniMax",
 	unbound: "Unbound",
 	requesty: "Requesty",
 	roo: "Roo",
@@ -43,6 +44,9 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"virtual-quota-fallback": "Virtual Quota Fallback",
 	"human-relay": "Human Relay",
 	"fake-ai": "Fake AI",
+	ovhcloud: "OVHcloud AI Endpoints",
+	inception: "Inception",
+	synthetic: "Synthetic",
 }
 
 /**

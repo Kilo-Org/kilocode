@@ -231,42 +231,6 @@ Example for appending to the end of file:
 </insert_content>
 
 
-## search_and_replace
-Description: Use this tool to find and replace specific text strings or patterns (using regex) within a file. It's suitable for targeted replacements across multiple locations within the file. Supports literal text and regex patterns, case sensitivity options, and optional line ranges. Shows a diff preview before applying changes.
-
-Required Parameters:
-- path: The path of the file to modify (relative to the current workspace directory /test/path)
-- search: The text or pattern to search for
-- replace: The text to replace matches with
-
-Optional Parameters:
-- start_line: Starting line number for restricted replacement (1-based)
-- end_line: Ending line number for restricted replacement (1-based)
-- use_regex: Set to "true" to treat search as a regex pattern (default: false)
-- ignore_case: Set to "true" to ignore case when matching (default: false)
-
-Notes:
-- When use_regex is true, the search parameter is treated as a regular expression pattern
-- When ignore_case is true, the search is case-insensitive regardless of regex mode
-
-Examples:
-
-1. Simple text replacement:
-<search_and_replace>
-<path>example.ts</path>
-<search>oldText</search>
-<replace>newText</replace>
-</search_and_replace>
-
-2. Case-insensitive regex pattern:
-<search_and_replace>
-<path>example.ts</path>
-<search>oldw+</search>
-<replace>new$&</replace>
-<use_regex>true</use_regex>
-<ignore_case>true</ignore_case>
-</search_and_replace>
-
 ## execute_command
 Description: Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. For command chaining, use the appropriate chaining syntax for the user's shell. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Prefer relative commands and paths that avoid location sensitivity for terminal consistency, e.g: `touch ./testdata/example.file`, `dir ./examples/model1/data/yaml`, or `go test ./cmd/front --config ./cmd/front/config.yml`. If directed by the user, you may open a terminal in a different directory by using the `cwd` parameter.
 Parameters:
@@ -492,9 +456,8 @@ RULES
 - Before using the execute_command tool, you must first think about the SYSTEM INFORMATION context provided to understand the user's environment and tailor your commands to ensure they are compatible with their system. You must also consider if the command you need to run should be executed in a specific directory outside of the current working directory '/test/path', and if so prepend with `cd`'ing into that directory && then executing the command (as one command since you are stuck operating from '/test/path'). For example, if you needed to run `npm install` in a project outside of '/test/path', you would need to prepend with a `cd` i.e. pseudocode for this would be `cd (path to project) && (command, in this case npm install)`.
 - When using the search_files tool, craft your regex patterns carefully to balance specificity and flexibility. Based on the user's task you may use it to find code patterns, TODO comments, function definitions, or any text-based information across the project. The results include context, so analyze the surrounding code to better understand the matches. Leverage the search_files tool in combination with other tools for more comprehensive analysis. For example, use it to find specific code patterns, then use read_file to examine the full context of interesting matches before using write_to_file to make informed changes.
 - When creating a new project (such as an app, website, or any software project), organize all new files within a dedicated project directory unless the user specifies otherwise. Use appropriate file paths when writing files, as the write_to_file tool will automatically create any necessary directories. Structure the project logically, adhering to best practices for the specific type of project being created. Unless otherwise specified, new projects should be easily run without additional setup, for example most projects can be built in HTML, CSS, and JavaScript - which you can open in a browser.
-- For editing files, you have access to these tools: write_to_file (for creating new files or complete file rewrites), insert_content (for adding lines to files), search_and_replace (for finding and replacing individual pieces of text).
+- For editing files, you have access to these tools: write_to_file (for creating new files or complete file rewrites), insert_content (for adding lines to files).
 - The insert_content tool adds lines of text to files at a specific line number, such as adding a new function to a JavaScript file or inserting a new route in a Python file. Use line number 0 to append at the end of the file, or any positive number to insert before that line.
-- The search_and_replace tool finds and replaces text or regex in files. This tool allows you to search for a specific regex pattern or text and replace it with another value. Be cautious when using this tool to ensure you are replacing the correct text. It can support multiple operations at once.
 - You should always prefer using other editing tools over write_to_file when making changes to existing files since write_to_file is much slower and cannot handle large files.
 - When using the write_to_file tool to modify a file, use the tool directly with the desired content. You do not need to display the content before using the tool. ALWAYS provide the COMPLETE file content in your response. This is NON-NEGOTIABLE. Partial updates or placeholders like '// rest of code unchanged' are STRICTLY FORBIDDEN. You MUST include ALL parts of the file, even if they haven't been modified. Failure to do so will result in incomplete or broken code, severely impacting the user's project.
 - Some modes have restrictions on which files they can edit. If you attempt to edit a restricted file, the operation will be rejected with a FileRestrictionError that will specify which file patterns are allowed for the current mode.

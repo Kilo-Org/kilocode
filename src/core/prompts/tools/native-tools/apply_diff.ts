@@ -19,12 +19,12 @@ Apply precise, targeted modifications to an existing file using one or more sear
 					description: `
 A string containing one or more search/replace blocks defining the changes. The ':start_line:' is required and indicates the starting line number of the original content.  You must not add a start line for the replacement content. Each block must follow this format:
 <<<<<<< SEARCH
- :start_line:[line_number]
- -------
- [exact content to find]
- =======
- [new content to replace with]
- >>>>>>> REPLACE
+:start_line:[line_number]
+-------
+[exact content to find]
+=======
+[new content to replace with]
+>>>>>>> REPLACE
 `,
 				},
 			},

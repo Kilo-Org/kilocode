@@ -29,7 +29,6 @@
 	"pricing": {
 		"costUnknown": "费用未知",
 		"costUnknownDescription": "API 提供商未提供任何费用数据或请求已取消。",
-		"freeModelsDescription": "免费模型可能有请求频率限制。使用下方链接优化你的免费模型使用！",
 		"freeModelsLink": "探索免费模型选项"
 	},
 	"notifications": {
@@ -109,7 +108,7 @@
 		"description": "选择系统提示中工具调用的格式。JSON 格式目前处于实验阶段，主要面向有兴趣参与开发的用户。",
 		"automatic": "让 Kilo 决定",
 		"xml": "XML",
-		"json": "JSON（实验性）"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {

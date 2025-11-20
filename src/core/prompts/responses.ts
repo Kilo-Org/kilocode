@@ -71,8 +71,7 @@ Otherwise, if you have not completed the task and do not need additional informa
 		}
 
 		existingFileApproaches.push(
-			`${diffStrategyEnabled ? "3" : "2"}. Or use search_and_replace for specific text replacements`,
-			`${diffStrategyEnabled ? "4" : "3"}. Or use insert_content to add specific content at particular lines`,
+			`${diffStrategyEnabled ? "3" : "2"}. Or use insert_content to add specific content at particular lines`,
 		)
 
 		const existingFileGuidance =

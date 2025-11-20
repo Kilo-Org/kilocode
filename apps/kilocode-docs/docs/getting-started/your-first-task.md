@@ -18,15 +18,15 @@ Click the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in the
 
 <img src="/docs/img/your-first-task/your-first-task.png" alt="Kilo Code icon in VS Code Primary Side Bar" width="800" />
 
-*The Kilo Code icon in the Primary Side Bar opens the chat interface.*
+_The Kilo Code icon in the Primary Side Bar opens the chat interface._
 
 ## Step 2: Type Your Task
 
 Type a clear, concise description of what you want Kilo Code to do in the chat box at the bottom of the panel. Examples of effective tasks:
 
-* "Create a file named `hello.txt` containing 'Hello, world!'."
-* "Write a Python function that adds two numbers."
-* "Create an HTML file for a simple website with the title 'Kilo test'"
+- "Create a file named `hello.txt` containing 'Hello, world!'."
+- "Write a Python function that adds two numbers."
+- "Create an HTML file for a simple website with the title 'Kilo test'"
 
 No special commands or syntax needed—just use plain English.
 
@@ -41,21 +41,21 @@ Press Enter or click the Send icon (<Codicon name="send" />) to the right of the
 
 Kilo Code analyzes your request and proposes specific actions. These may include:
 
-* **Reading files:** Shows file contents it needs to access
-* **Writing to files:** Displays a diff with proposed changes (added lines in green, removed in red)
-* **Executing commands:** Shows the exact command to run in your terminal
-* **Using the Browser:** Outlines browser actions (click, type, etc.)
-* **Asking questions:** Requests clarification when needed to proceed
+- **Reading files:** Shows file contents it needs to access
+- **Writing to files:** Displays a diff with proposed changes (added lines in green, removed in red)
+- **Executing commands:** Shows the exact command to run in your terminal
+- **Using the Browser:** Outlines browser actions (click, type, etc.)
+- **Asking questions:** Requests clarification when needed to proceed
 
 <img src="/docs/img/your-first-task/your-first-task-7.png" alt="Reviewing a proposed file creation action" width="400" />
 *Kilo Code shows exactly what action it wants to perform and waits for your approval.*
 
-* In **Code** mode, writing capabilities are on by default.
-* In **Architect** and **Ask** modes, Kilo Code won't write code.
+- In **Code** mode, writing capabilities are on by default.
+- In **Architect** and **Ask** modes, Kilo Code won't write code.
 
 :::tip
 
-The level of autonomy is configurable, allowing you to make the agent more or less autonomous. 
+The level of autonomy is configurable, allowing you to make the agent more or less autonomous.
 
 You can learn more about [using modes](/basic-usage/using-modes) and [auto-approving actions](/features/auto-approving-actions).
 
@@ -72,8 +72,8 @@ Kilo Code works iteratively. After each action, it waits for your feedback befor
 
 You've completed your first task. Along the way you learned:
 
-* How to interact with Kilo Code using natural language
-* Why approval keeps you in control
-* How iteration lets the AI refine its work
+- How to interact with Kilo Code using natural language
+- Why approval keeps you in control
+- How iteration lets the AI refine its work
 
 Ready for more? Explore different [modes](/basic-usage/using-modes) or try [auto-approval](/features/auto-approving-actions) to speed up repetitive tasks.

@@ -26,12 +26,12 @@
 	"tabs": {
 		"tools": "Nástroje",
 		"resources": "Zdroje",
-		"errors": "Chyby"
+		"logs": "Logy"
 	},
 	"emptyState": {
 		"noTools": "Nenalezeny žádné nástroje",
 		"noResources": "Nenalezeny žádné zdroje",
-		"noErrors": "Nenalezeny žádné chyby"
+		"noLogs": "Zatím žádné logy"
 	},
 	"networkTimeout": {
 		"label": "Časový limit sítě",

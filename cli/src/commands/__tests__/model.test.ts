@@ -37,10 +37,11 @@ describe("/model command", () => {
 		glama: {},
 		unbound: {},
 		requesty: {},
-		"kilocode-openrouter": {},
+		kilocode: {},
 		"io-intelligence": {},
 		deepinfra: {},
 		"vercel-ai-gateway": {},
+		ovhcloud: {},
 	}
 
 	const mockProvider: ProviderConfig = {
@@ -400,10 +401,11 @@ describe("/model command", () => {
 				glama: {},
 				unbound: {},
 				requesty: {},
-				"kilocode-openrouter": {},
+				kilocode: {},
 				"io-intelligence": {},
 				deepinfra: {},
 				"vercel-ai-gateway": {},
+				ovhcloud: {},
 			}
 			mockContext.args = ["list"]
 
