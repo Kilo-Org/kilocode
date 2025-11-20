@@ -33,8 +33,12 @@ describe("GhostInlineCompletionProvider - Request Deduplication", () => {
 	// Helper to call provideInlineCompletionItems and advance timers
 	async function provideWithDebounce(doc: vscode.TextDocument, pos: vscode.Position) {
 		const promise = provider.provideInlineCompletionItems_Internal(doc, pos, {} as any, {} as any)
-		await vi.advanceTimersByTimeAsync(300) // Advance past debounce delay
-		return promise
+		// Wait a tick to let the promise chain set up
+		await Promise.resolve()
+		// Advance timers past debounce delay
+		await vi.advanceTimersByTimeAsync(300)
+		// Wait for the completion to finish
+		return await promise
 	}
 
 	beforeEach(() => {
@@ -49,9 +53,16 @@ describe("GhostInlineCompletionProvider - Request Deduplication", () => {
 
 		mockContextProvider = {
 			getIde: vi.fn().mockReturnValue(mockIde),
-			getFormattedContext: vi.fn().mockResolvedValue(""),
-			getFimFormattedContext: vi.fn().mockResolvedValue({ prefix: "" }),
-			getFimCompiledPrefix: vi.fn().mockResolvedValue(""),
+			getProcessedSnippets: vi.fn().mockResolvedValue({
+				filepathUri: "file:///test.ts",
+				helper: {
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "",
+					prunedSuffix: "",
+				},
+				snippetsWithUris: [],
+				workspaceDirs: [],
+			}),
 		}
 
 		mockModel = {
@@ -93,17 +104,25 @@ describe("GhostInlineCompletionProvider - Request Deduplication", () => {
 		let callCount = 0
 		vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
 			callCount++
-			onChunk({ type: "text", text: "test suggestion" })
+			onChunk({ type: "text", text: "<COMPLETION>test suggestion</COMPLETION>" })
 			return mockResponse
 		})
 
 		const document = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = \nconst y = 2")
 		const position = new vscode.Position(0, 10)
 
-		// Make two identical requests quickly
-		const promise1 = provideWithDebounce(document, position)
-		const promise2 = provideWithDebounce(document, position)
+		// Make two identical requests - the second should reuse the first's pending request
+		const promise1 = provider.provideInlineCompletionItems_Internal(document, position, {} as any, {} as any)
 
+		// Wait a tick to let the first request's debounce timer start
+		await Promise.resolve()
+
+		const promise2 = provider.provideInlineCompletionItems_Internal(document, position, {} as any, {} as any)
+
+		// Advance timers to trigger the debounce
+		await vi.advanceTimersByTimeAsync(300)
+
+		// Wait for both promises to complete
 		await Promise.all([promise1, promise2])
 
 		// Should only call the API once due to deduplication
@@ -122,20 +141,26 @@ describe("GhostInlineCompletionProvider - Request Deduplication", () => {
 		let callCount = 0
 		vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
 			callCount++
-			onChunk({ type: "text", text: "function test() {}" })
+			onChunk({ type: "text", text: "<COMPLETION>function test() {}</COMPLETION>" })
 			return mockResponse
 		})
 
 		const document = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = f\nconst y = 2")
 		const position1 = new vscode.Position(0, 11)
-		const position2 = new vscode.Position(0, 12) // User typed one more character
 
 		// Start first request
-		const promise1 = provideWithDebounce(document, position1)
+		const promise1 = provider.provideInlineCompletionItems_Internal(document, position1, {} as any, {} as any)
 
+		// Wait a tick
+		await Promise.resolve()
+
+		// User types ahead - new document with one more character
 		const document2 = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = fu\nconst y = 2")
+		const position2 = new vscode.Position(0, 12)
+		const promise2 = provider.provideInlineCompletionItems_Internal(document2, position2, {} as any, {} as any)
 
-		const promise2 = provideWithDebounce(document2, position2)
+		// Advance timers
+		await vi.advanceTimersByTimeAsync(300)
 
 		await Promise.all([promise1, promise2])
 
@@ -156,19 +181,25 @@ describe("GhostInlineCompletionProvider - Request Deduplication", () => {
 
 		vi.mocked(mockModel.generateResponse).mockImplementation(async (_sys, _user, onChunk) => {
 			callCount++
-			onChunk({ type: "text", text: "test suggestion" })
+			onChunk({ type: "text", text: "<COMPLETION>test suggestion</COMPLETION>" })
 			return mockResponse
 		})
 
 		const document1 = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = f\nconst y = 2")
-		const document2 = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = g\nconst y = 2")
-
 		const position = new vscode.Position(0, 11)
 
 		// Start first request
-		const promise1 = provideWithDebounce(document1, position)
+		const promise1 = provider.provideInlineCompletionItems_Internal(document1, position, {} as any, {} as any)
 
-		const promise2 = provideWithDebounce(document2, position)
+		// Wait a tick
+		await Promise.resolve()
+
+		// User changes to different prefix - this should cancel the first request
+		const document2 = new MockTextDocument(vscode.Uri.file("/test/file.ts"), "const x = g\nconst y = 2")
+		const promise2 = provider.provideInlineCompletionItems_Internal(document2, position, {} as any, {} as any)
+
+		// Advance timers
+		await vi.advanceTimersByTimeAsync(300)
 
 		await Promise.all([promise1, promise2])
 
