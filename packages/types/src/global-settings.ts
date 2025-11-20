@@ -249,6 +249,7 @@ export const SECRET_STATE_KEYS = [
 	"geminiApiKey",
 	"openAiNativeApiKey",
 	"cerebrasApiKey",
+	"gptChatByApiKey",
 	"deepSeekApiKey",
 	"doubaoApiKey",
 	"moonshotApiKey",

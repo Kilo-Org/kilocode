@@ -317,6 +317,12 @@ type DeepSeekProviderConfig = BaseProviderConfig & {
 	deepSeekApiKey?: string
 }
 
+type GptChatByProviderConfig = BaseProviderConfig & {
+	provider: "gpt-chat-by"
+	apiModelId?: string
+	gptChatByApiKey?: string
+}
+
 type DoubaoProviderConfig = BaseProviderConfig & {
 	provider: "doubao"
 	apiModelId?: string

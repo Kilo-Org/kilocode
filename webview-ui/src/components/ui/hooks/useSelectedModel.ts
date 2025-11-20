@@ -66,6 +66,7 @@ import {
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	deepInfraDefaultModelId,
 	isDynamicProvider,
+	gptChatByDefaultModelId, gptChatByModels
 } from "@roo-code/types"
 
 import type { ModelRecord, RouterModels } from "@roo/api"
@@ -294,6 +295,11 @@ function getSelectedModel({
 		case "deepseek": {
 			const id = apiConfiguration.apiModelId ?? deepSeekDefaultModelId
 			const info = deepSeekModels[id as keyof typeof deepSeekModels]
+			return { id, info }
+		}
+		case "gpt-chat-by": {
+			const id = apiConfiguration.apiModelId ?? gptChatByDefaultModelId
+			const info = gptChatByModels[id as keyof typeof gptChatByModels]
 			return { id, info }
 		}
 		case "doubao": {

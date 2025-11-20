@@ -52,6 +52,8 @@ import {
 	inceptionDefaultModelId,
 	minimaxModels,
 	minimaxDefaultModelId,
+	gptChatByModels,
+	gptChatByDefaultModelId,
 } from "@roo-code/types"
 import type { ModelRecord, RouterModels } from "@roo/api"
 import { useRouterModels } from "../../ui/hooks/useRouterModels"
@@ -151,6 +153,12 @@ export const getModelsByProvider = ({
 			return {
 				models: deepSeekModels,
 				defaultModel: deepSeekDefaultModelId,
+			}
+		}
+		case "gpt-chat-by": {
+			return {
+				models: gptChatByModels,
+				defaultModel: gptChatByDefaultModelId,
 			}
 		}
 		case "openai-native": {

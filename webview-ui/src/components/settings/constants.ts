@@ -6,6 +6,7 @@ import {
 	cerebrasModels,
 	claudeCodeModels,
 	deepSeekModels,
+	gptChatByModels,
 	moonshotModels,
 	// kilocode_change start
 	// geminiModels,
@@ -33,6 +34,7 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	bedrock: bedrockModels,
 	cerebras: cerebrasModels,
 	deepseek: deepSeekModels,
+	"gpt-chat-by": gptChatByModels,
 	doubao: doubaoModels,
 	moonshot: moonshotModels,
 	// kilocode_change start
@@ -71,6 +73,7 @@ export const PROVIDERS = [
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
+	{ value: "gpt-chat-by", label: "GptChatBy" },
 	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },

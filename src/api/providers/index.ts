@@ -1,3 +1,4 @@
+export { GtpChatByHandler } from "./gptchatby"
 export { AnthropicVertexHandler } from "./anthropic-vertex"
 export { AnthropicHandler } from "./anthropic"
 export { AwsBedrockHandler } from "./bedrock"

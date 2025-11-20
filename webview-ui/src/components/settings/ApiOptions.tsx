@@ -21,6 +21,7 @@ import {
 	geminiDefaultModelId,
 	geminiCliDefaultModelId,
 	deepSeekDefaultModelId,
+	gptChatByDefaultModelId,
 	moonshotDefaultModelId,
 	// kilocode_change start
 	syntheticDefaultModelId,
@@ -134,7 +135,8 @@ import { BedrockCustomArn } from "./providers/BedrockCustomArn"
 import { KiloCode } from "../kilocode/settings/providers/KiloCode" // kilocode_change
 import { buildDocLink } from "@src/utils/docLinks"
 import { KiloProviderRouting, KiloProviderRoutingManagedByOrganization } from "./providers/KiloProviderRouting"
-import { RateLimitAfterControl } from "./RateLimitAfterSettings" // kilocode_change
+import { RateLimitAfterControl } from "./RateLimitAfterSettings"
+import { GptChatBy } from "@/components/settings/providers/GptChatBy" // kilocode_change
 
 export interface ApiOptionsProps {
 	uriScheme: string | undefined
@@ -390,6 +392,7 @@ const ApiOptions = ({
 				"openai-native": { field: "apiModelId", default: openAiNativeDefaultModelId },
 				gemini: { field: "apiModelId", default: geminiDefaultModelId },
 				deepseek: { field: "apiModelId", default: deepSeekDefaultModelId },
+				"gpt-chat-by": { field: "apiModelId", default: gptChatByDefaultModelId },
 				doubao: { field: "apiModelId", default: doubaoDefaultModelId },
 				moonshot: { field: "apiModelId", default: moonshotDefaultModelId },
 				minimax: { field: "apiModelId", default: minimaxDefaultModelId },
@@ -680,6 +683,10 @@ const ApiOptions = ({
 
 			{selectedProvider === "deepseek" && (
 				<DeepSeek apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
+			)}
+
+			{selectedProvider === "gpt-chat-by" && (
+				<GptChatBy apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
 
 			{selectedProvider === "doubao" && (

@@ -1,5 +1,4 @@
 import { z } from "zod"
-import { kiloLanguages } from "./kilocode/kiloLanguages.js"
 
 /**
  * CodeAction
@@ -80,25 +79,8 @@ export type CommandId = (typeof commandIds)[number]
  */
 
 export const languages = [
-	...kiloLanguages,
-	"ca",
-	"de",
 	"en",
-	"es",
-	"fr",
-	"hi",
-	"id",
-	"it",
-	"ja",
-	"ko",
-	"nl",
-	"pl",
-	"pt-BR",
 	"ru",
-	"tr",
-	"vi",
-	"zh-CN",
-	"zh-TW",
 ] as const
 
 export const languagesSchema = z.enum(languages)

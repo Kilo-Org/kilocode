@@ -303,6 +303,7 @@
 		"ioIntelligenceApiKeyPlaceholder": "Введите свой ключ API IO Intelligence",
 		"getIoIntelligenceApiKey": "Получить IO Intelligence API-ключ",
 		"deepSeekApiKey": "DeepSeek API-ключ",
+		"gptChatByApiKey": "gpt-chat.by API-ключ",
 		"getDeepSeekApiKey": "Получить DeepSeek API-ключ",
 		"doubaoApiKey": "Doubao API-ключ",
 		"getDoubaoApiKey": "Получить Doubao API-ключ",

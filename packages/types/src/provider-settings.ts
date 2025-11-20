@@ -8,6 +8,7 @@ import {
 	cerebrasModels,
 	claudeCodeModels,
 	deepSeekModels,
+	gptChatByModels,
 	doubaoModels,
 	featherlessModels,
 	fireworksModels,
@@ -135,6 +136,7 @@ export const providerNames = [
 	"claude-code",
 	"doubao",
 	"deepseek",
+	"gpt-chat-by",
 	"featherless",
 	"fireworks",
 	"gemini",
@@ -348,6 +350,10 @@ const deepSeekSchema = apiModelIdProviderModelSchema.extend({
 	deepSeekApiKey: z.string().optional(),
 })
 
+const gptChatBySchema = apiModelIdProviderModelSchema.extend({
+	gptChatByApiKey: z.string().optional(),
+})
+
 const deepInfraSchema = apiModelIdProviderModelSchema.extend({
 	deepInfraBaseUrl: z.string().optional(),
 	deepInfraApiKey: z.string().optional(),
@@ -528,6 +534,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	ovhcloudSchema.merge(z.object({ apiProvider: z.literal("ovhcloud") })), // kilocode_change
 	mistralSchema.merge(z.object({ apiProvider: z.literal("mistral") })),
 	deepSeekSchema.merge(z.object({ apiProvider: z.literal("deepseek") })),
+	gptChatBySchema.merge(z.object({ apiProvider: z.literal("gpt-chat-by") })),
 	deepInfraSchema.merge(z.object({ apiProvider: z.literal("deepinfra") })),
 	doubaoSchema.merge(z.object({ apiProvider: z.literal("doubao") })),
 	moonshotSchema.merge(z.object({ apiProvider: z.literal("moonshot") })),
@@ -584,6 +591,7 @@ export const providerSettingsSchema = z.object({
 	...openAiNativeSchema.shape,
 	...mistralSchema.shape,
 	...deepSeekSchema.shape,
+	...gptChatBySchema.shape,
 	...deepInfraSchema.shape,
 	...doubaoSchema.shape,
 	...moonshotSchema.shape,
@@ -678,6 +686,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	moonshot: "apiModelId",
 	minimax: "apiModelId",
 	deepseek: "apiModelId",
+	"gpt-chat-by": "apiModelId",
 	deepinfra: "deepInfraModelId",
 	doubao: "apiModelId",
 	"qwen-code": "apiModelId",
@@ -757,6 +766,11 @@ export const MODELS_BY_PROVIDER: Record<
 		models: Object.keys(cerebrasModels),
 	},
 	"claude-code": { id: "claude-code", label: "Claude Code", models: Object.keys(claudeCodeModels) },
+	"gpt-chat-by": {
+		id: "gpt-chat-by",
+		label: "Gpt-Chat.BY",
+		models: Object.keys(gptChatByModels),
+	},
 	deepseek: {
 		id: "deepseek",
 		label: "DeepSeek",

@@ -55,6 +55,7 @@ import { KilocodeOpenrouterHandler } from "./providers/kilocode-openrouter"
 import { InceptionLabsHandler } from "./providers/inception"
 // kilocode_change end
 import { NativeOllamaHandler } from "./providers/native-ollama"
+import { GtpChatByHandler } from "./providers/gptchatby"
 
 export interface SingleCompletionHandler {
 	completePrompt(prompt: string): Promise<string>
@@ -120,6 +121,8 @@ export function buildApiHandler(configuration: ProviderSettings): ApiHandler {
 
 	switch (apiProvider) {
 		// kilocode_change start
+		case "gpt-chat-by":
+			return new GtpChatByHandler(options)
 		case "kilocode":
 			return new KilocodeOpenrouterHandler(options)
 		case "gemini-cli":

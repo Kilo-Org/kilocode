@@ -308,6 +308,7 @@
 		"ioIntelligenceApiKeyPlaceholder": "Enter your IO Intelligence API key",
 		"getIoIntelligenceApiKey": "Get IO Intelligence API Key",
 		"deepSeekApiKey": "DeepSeek API Key",
+		"gptChatByApiKey": "gpt-chat.by API Key",
 		"getDeepSeekApiKey": "Get DeepSeek API Key",
 		"doubaoApiKey": "Doubao API Key",
 		"getDoubaoApiKey": "Get Doubao API Key",
