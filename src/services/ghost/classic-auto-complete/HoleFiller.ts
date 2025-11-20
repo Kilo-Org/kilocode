@@ -45,10 +45,9 @@ export class HoleFiller {
 		systemPrompt: string
 		userPrompt: string
 	}> {
-		const userPrompt = await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId)
 		return {
 			systemPrompt: this.getSystemInstructions(),
-			userPrompt,
+			userPrompt: await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId),
 		}
 	}
 
