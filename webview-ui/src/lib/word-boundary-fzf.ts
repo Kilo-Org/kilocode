@@ -98,40 +98,54 @@ export class Fzf<T> {
 	 * Match query as an acronym against text.
 	 * For example, "clso" matches "Claude Sonnet" (Cl + So)
 	 * Each character in the query should match the start of a word in the text.
+	 * Supports backtracking to find matches that don't start at the beginning.
 	 */
 	private matchAcronym(text: string, query: string): { positions: Set<number> } | null {
 		const wordBoundaryRegex = /[\s\-_./\\]+/
 		const words = text.split(wordBoundaryRegex).filter((w) => w.length > 0)
 
-		let queryIndex = 0
-		let currentPos = 0
-		const positions = new Set<number>()
-
-		for (let wordIdx = 0; wordIdx < words.length && queryIndex < query.length; wordIdx++) {
-			const word = words[wordIdx]
-
-			// Try to match as many consecutive characters as possible from this word
-			let matchedInWord = 0
-			while (
-				queryIndex < query.length &&
-				matchedInWord < word.length &&
-				word[matchedInWord] === query[queryIndex]
-			) {
-				positions.add(currentPos + matchedInWord)
-				queryIndex++
-				matchedInWord++
-			}
-
-			// Move to next word position
-			if (wordIdx < words.length - 1) {
-				const nextWordIndex = text.indexOf(words[wordIdx + 1], currentPos + word.length)
-				currentPos = nextWordIndex
-			}
+		// Build word start positions in the original text
+		const wordStartPositions: number[] = []
+		let searchPos = 0
+		for (const word of words) {
+			const wordPos = text.indexOf(word, searchPos)
+			wordStartPositions.push(wordPos)
+			searchPos = wordPos + word.length
 		}
 
-		// Only match if we consumed the entire query
-		if (queryIndex === query.length) {
-			return { positions }
+		// Try starting the match from each word
+		for (let startWordIdx = 0; startWordIdx < words.length; startWordIdx++) {
+			let queryIndex = 0
+			const positions = new Set<number>()
+
+			// Try to match starting from this word
+			for (let wordIdx = startWordIdx; wordIdx < words.length && queryIndex < query.length; wordIdx++) {
+				const word = words[wordIdx]
+				const wordStartPos = wordStartPositions[wordIdx]
+
+				// Try to match as many consecutive characters as possible from this word
+				let matchedInWord = 0
+				while (
+					queryIndex < query.length &&
+					matchedInWord < word.length &&
+					word[matchedInWord] === query[queryIndex]
+				) {
+					positions.add(wordStartPos + matchedInWord)
+					queryIndex++
+					matchedInWord++
+				}
+
+				// If we matched something from this word, continue to next word
+				// If we didn't match anything, this starting position won't work
+				if (matchedInWord === 0 && wordIdx === startWordIdx) {
+					break
+				}
+			}
+
+			// If we consumed the entire query, we found a match
+			if (queryIndex === query.length) {
+				return { positions }
+			}
 		}
 
 		return null
