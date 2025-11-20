@@ -23,15 +23,27 @@ describe("HoleFiller", () => {
 	let holeFiller: HoleFiller
 
 	beforeEach(() => {
-		holeFiller = new HoleFiller()
+		// Create a minimal mock context provider for basic tests
+		const mockContextProvider = {
+			getProcessedSnippets: async () => ({
+				filepathUri: "file:///test.ts",
+				helper: {
+					filepath: "file:///test.ts",
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "const x = 1;\n",
+					prunedSuffix: "",
+				},
+				snippetsWithUris: [],
+				workspaceDirs: [],
+			}),
+		} as any
+		holeFiller = new HoleFiller(mockContextProvider)
 	})
 
 	describe("getPrompts", () => {
 		it("should generate prompts with QUERY/FILL_HERE format", async () => {
 			const { systemPrompt, userPrompt } = await holeFiller.getPrompts(
 				createAutocompleteInput("/test.ts", 0, 13),
-				"const x = 1;\n",
-				"",
 				"typescript",
 			)
 
@@ -42,6 +54,8 @@ describe("HoleFiller", () => {
 			const expected = `<LANGUAGE>typescript</LANGUAGE>
 
 <QUERY>
+
+// test.ts
 const x = 1;
 {{FILL_HERE}}
 </QUERY>
@@ -76,8 +90,6 @@ Return the COMPLETION tags`
 			const holeFillerWithContext = new HoleFiller(mockContextProvider)
 			const { userPrompt } = await holeFillerWithContext.getPrompts(
 				createAutocompleteInput("/app.ts", 5, 0),
-				"function calculate() {\n  ",
-				"\n}",
 				"typescript",
 			)
 

@@ -5,13 +5,28 @@ import * as vscode from "vscode"
 import crypto from "crypto"
 import { createContext } from "./utils.js"
 
+// Mock context provider for standalone testing
+function createMockContextProvider(prefix: string, suffix: string, filepath: string) {
+	return {
+		getProcessedSnippets: async () => ({
+			filepathUri: `file://${filepath}`,
+			helper: {
+				filepath: `file://${filepath}`,
+				lang: { name: "typescript", singleLineComment: "//" },
+				prunedPrefix: prefix,
+				prunedSuffix: suffix,
+			},
+			snippetsWithUris: [],
+			workspaceDirs: [],
+		}),
+	} as any
+}
+
 export class HoleFillerTester {
 	private llmClient: LLMClient
-	private holeFiller: HoleFiller
 
 	constructor(llmClient: LLMClient) {
 		this.llmClient = llmClient
-		this.holeFiller = new HoleFiller()
 	}
 
 	async getCompletion(
@@ -26,22 +41,22 @@ export class HoleFillerTester {
 		const prefix = text.substring(0, offset)
 		const suffix = text.substring(offset)
 		const languageId = context.document.languageId || "javascript"
+		const filepath = context.document.uri.fsPath
+
+		// Create a mock context provider with the current prefix/suffix
+		const mockContextProvider = createMockContextProvider(prefix, suffix, filepath)
+		const holeFiller = new HoleFiller(mockContextProvider)
 
 		const autocompleteInput: AutocompleteInput = {
 			isUntitledFile: false,
 			completionId: crypto.randomUUID(),
-			filepath: context.document.uri.fsPath,
+			filepath,
 			pos: { line: position.line, character: position.character },
 			recentlyVisitedRanges: [],
 			recentlyEditedRanges: [],
 		}
 
-		const { systemPrompt, userPrompt } = await this.holeFiller.getPrompts(
-			autocompleteInput,
-			prefix,
-			suffix,
-			languageId,
-		)
+		const { systemPrompt, userPrompt } = await holeFiller.getPrompts(autocompleteInput, languageId)
 
 		const response = await this.llmClient.sendPrompt(systemPrompt, userPrompt)
 

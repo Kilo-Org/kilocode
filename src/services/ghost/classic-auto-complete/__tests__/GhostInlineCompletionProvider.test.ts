@@ -372,7 +372,10 @@ describe("GhostInlineCompletionProvider", () => {
 			getProcessedSnippets: vi.fn().mockResolvedValue({
 				filepathUri: "file:///test.ts",
 				helper: {
+					filepath: "file:///test.ts",
 					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "const x = 1",
+					prunedSuffix: "\nconst y = 2",
 				},
 				snippetsWithUris: [],
 				workspaceDirs: [],

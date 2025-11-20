@@ -38,8 +38,6 @@ export class HoleFiller {
 
 	async getPrompts(
 		autocompleteInput: AutocompleteInput,
-		prefix: string,
-		suffix: string,
 		languageId: string,
 	): Promise<{
 		systemPrompt: string
@@ -47,7 +45,7 @@ export class HoleFiller {
 	}> {
 		return {
 			systemPrompt: this.getSystemInstructions(),
-			userPrompt: await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId),
+			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
 		}
 	}
 
@@ -155,12 +153,7 @@ Provide a subtle, non-intrusive completion after a typing pause.
 	/**
 	 * Build minimal prompt for auto-trigger with optional context
 	 */
-	async getUserPrompt(
-		autocompleteInput: AutocompleteInput,
-		prefix: string,
-		suffix: string,
-		languageId: string,
-	): Promise<string> {
+	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
 		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
 			autocompleteInput,
 			autocompleteInput.filepath,
