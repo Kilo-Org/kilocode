@@ -34,7 +34,7 @@ export function parseGhostResponse(fullResponse: string, prefix: string, suffix:
 }
 
 export class HoleFiller {
-	constructor(private contextProvider?: GhostContextProvider) {}
+	constructor(private contextProvider: GhostContextProvider) {}
 
 	async getPrompts(
 		autocompleteInput: AutocompleteInput,
@@ -166,7 +166,7 @@ Provide a subtle, non-intrusive completion after a typing pause.
 		let formattedContext = ""
 		let prunedPrefix = prefix
 		let prunedSuffix = suffix
-		if (this.contextProvider && autocompleteInput.filepath) {
+		if (autocompleteInput.filepath) {
 			try {
 				const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
 					autocompleteInput,
