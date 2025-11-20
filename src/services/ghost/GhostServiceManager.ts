@@ -87,7 +87,7 @@ export class GhostServiceManager {
 		// who have never explicitly toggled enableAutoTrigger.
 		if (this.settings.enableAutoTrigger == undefined) {
 			const rolloutHash = this.model.getRolloutHash_IfLoggedInToKilo()
-			if (rolloutHash != undefined && rolloutHash % 100 === 0) {
+			if (rolloutHash != undefined && rolloutHash % 100 < 10) {
 				this.settings.enableAutoTrigger = true
 			}
 		}
