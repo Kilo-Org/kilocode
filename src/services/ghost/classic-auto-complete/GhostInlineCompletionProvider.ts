@@ -7,9 +7,11 @@ import { ApiStreamChunk } from "../../../api/transform/stream"
 import { RecentlyVisitedRangesService } from "../../continuedev/core/vscode-test-harness/src/autocomplete/RecentlyVisitedRangesService"
 import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harness/src/autocomplete/recentlyEdited"
 import type { GhostServiceSettings } from "@roo-code/types"
+import { TelemetryEventName } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { TelemetryService } from "@roo-code/telemetry"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -104,6 +106,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private recentlyEditedTracker: RecentlyEditedTracker
 	private debounceTimer: NodeJS.Timeout | null = null
 	private ignoreController?: Promise<RooIgnoreController>
+	private lastShownSuggestion: { text: string; timestamp: number } | null = null
+	private acceptedCommand: vscode.Disposable | null = null
 
 	constructor(
 		model: GhostModel,
@@ -123,6 +127,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const ide = contextProvider.getIde()
 		this.recentlyVisitedRangesService = new RecentlyVisitedRangesService(ide)
 		this.recentlyEditedTracker = new RecentlyEditedTracker(ide)
+
+		// Register command for tracking acceptance
+		this.acceptedCommand = vscode.commands.registerCommand("kilocode.ghost.inlineAssist.accepted", () =>
+			this.handleSuggestionAccepted(),
+		)
 	}
 
 	public updateSuggestions(fillInAtCursor: FillInAtCursorSuggestion): void {
@@ -315,6 +324,10 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
+		if (this.acceptedCommand) {
+			this.acceptedCommand.dispose()
+			this.acceptedCommand = null
+		}
 	}
 
 	public async provideInlineCompletionItems(
@@ -374,6 +387,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
 
 		if (matchingText !== null) {
+			// Track acceptance when a suggestion is shown
+			this.trackSuggestionShown(matchingText)
 			return stringToInlineCompletions(matchingText, position)
 		}
 
@@ -381,6 +396,14 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		await this.debouncedFetchAndCacheSuggestion(prompt)
 
 		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+		if (cachedText) {
+			this.trackSuggestionShown(cachedText)
+		} else {
+			// No suggestion available - track as rejection immediately (if telemetry is available)
+			if (TelemetryService.hasInstance()) {
+				TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION)
+			}
+		}
 		return stringToInlineCompletions(cachedText ?? "", position)
 	}
 
@@ -416,6 +439,36 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			this.updateSuggestions(result.suggestion)
 		} catch (error) {
 			console.error("Error getting inline completion from LLM:", error)
+		}
+	}
+
+	private trackSuggestionShown(text: string): void {
+		// Store the suggestion for tracking
+		this.lastShownSuggestion = { text, timestamp: Date.now() }
+
+		// Track rejection after a timeout (if not accepted within 10 seconds)
+		setTimeout(() => {
+			if (
+				this.lastShownSuggestion &&
+				this.lastShownSuggestion.text === text &&
+				Date.now() - this.lastShownSuggestion.timestamp >= 10000
+			) {
+				this.trackSuggestionRejected()
+			}
+		}, 10000)
+	}
+
+	private handleSuggestionAccepted(): void {
+		if (this.lastShownSuggestion && TelemetryService.hasInstance()) {
+			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_ACCEPT_SUGGESTION)
+			this.lastShownSuggestion = null
+		}
+	}
+
+	private trackSuggestionRejected(): void {
+		if (this.lastShownSuggestion && TelemetryService.hasInstance()) {
+			TelemetryService.instance.captureEvent(TelemetryEventName.INLINE_ASSIST_REJECT_SUGGESTION)
+			this.lastShownSuggestion = null
 		}
 	}
 }
