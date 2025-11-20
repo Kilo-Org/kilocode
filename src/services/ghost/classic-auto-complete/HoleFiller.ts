@@ -167,13 +167,10 @@ Provide a subtle, non-intrusive completion after a typing pause.
 		)
 		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
-		const prunedPrefix = helper.prunedPrefix
-		const prunedSuffix = helper.prunedSuffix
-
 		return (
 			`<LANGUAGE>${languageId}</LANGUAGE>\n\n` +
 			`<QUERY>
-${formattedContext}${formattedContext ? "\n" : ""}${prunedPrefix}{{FILL_HERE}}${prunedSuffix}
+${formattedContext}${formattedContext ? "\n" : ""}${helper.prunedPrefix}{{FILL_HERE}}${helper.prunedSuffix}
 </QUERY>
 
 TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.
