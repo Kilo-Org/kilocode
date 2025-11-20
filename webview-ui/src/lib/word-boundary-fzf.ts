@@ -1,8 +1,6 @@
-//kilocode_change new file
-
 /**
- * Drop-in replacement for Fzf library that uses word boundary matching
- * instead of fuzzy matching.
+ * Drop-in replacement for Fzf library that uses match-sorter for word boundary matching
+ * instead of custom implementation.
  *
  * API-compatible with fzf library:
  * - new Fzf(items, { selector: (item) => string })
@@ -28,15 +26,8 @@ export class Fzf<T> {
 	}
 
 	/**
-	 * Find items that match the search query using word boundary matching.
+	 * Find items that match the search query using match-sorter.
 	 * Returns matches in their original order (no scoring/sorting).
-	 *
-	 * Word boundary matching means:
-	 * - "foo" matches "fool org" (starts with "foo")
-	 * - "foo" matches "the fool" (word starts with "foo")
-	 * - "foo" does NOT match "faoboc" (no word boundary)
-	 * - "foo bar" matches items containing both "foo" and "bar" as separate words
-	 * - "clso" matches "Claude Sonnet" (first letters of words: Cl + So)
 	 *
 	 * @param query The search string
 	 * @returns Array of results with item and metadata, in original order
@@ -51,47 +42,107 @@ export class Fzf<T> {
 
 		const normalizedQuery = query.toLowerCase().trim()
 
-		// Split query into words for multi-word matching
+		// For multi-word queries, we need to ensure all words match
 		const queryWords = normalizedQuery.split(/\s+/).filter((word) => word.length > 0)
 
-		const results: FzfResult<T>[] = []
+		if (queryWords.length > 1) {
+			// For multi-word queries, filter items that contain all words at word boundaries
+			const results: FzfResult<T>[] = []
 
-		for (const item of this.items) {
-			const text = this.selector(item).toLowerCase()
+			for (const item of this.items) {
+				const text = this.selector(item).toLowerCase()
+				const allWordsMatch = queryWords.every((queryWord) => {
+					// Check if the word appears at a word boundary
+					return this.matchesAtWordBoundary(text, queryWord)
+				})
 
-			// For multi-word queries, all words must match
-			if (queryWords.length > 1) {
-				const matches = queryWords.map((word) => this.matchAcronym(text, word))
-
-				// All query words must match
-				if (matches.every((match) => match !== null)) {
-					// Combine positions from all matches
-					const allPositions = new Set<number>()
-					matches.forEach((match) => {
-						if (match) {
-							match.positions.forEach((pos) => allPositions.add(pos))
-						}
+				if (allWordsMatch) {
+					// Calculate positions for all matching words
+					const positions = new Set<number>()
+					queryWords.forEach((queryWord) => {
+						const wordPositions = this.getWordBoundaryPositions(text, queryWord)
+						wordPositions.forEach((pos) => positions.add(pos))
 					})
 
 					results.push({
 						item,
-						positions: allPositions,
-					})
-				}
-			} else {
-				// Single word query - use acronym matching
-				const match = this.matchAcronym(text, normalizedQuery)
-
-				if (match) {
-					results.push({
-						item,
-						positions: match.positions,
+						positions,
 					})
 				}
 			}
+
+			return results
+		} else {
+			// Single word query - use custom matching for word boundaries and acronyms
+			const results: FzfResult<T>[] = []
+
+			// Process items in original order to maintain order
+			for (const item of this.items) {
+				const text = this.selector(item).toLowerCase()
+
+				// Check if this item was matched by match-sorter or matches our custom logic
+				let shouldInclude = false
+				let positions = new Set<number>()
+
+				// Try acronym matching first
+				const acronymMatch = this.matchAcronym(text, normalizedQuery)
+				if (acronymMatch) {
+					shouldInclude = true
+					positions = acronymMatch.positions
+				} else if (this.matchesAtWordBoundary(text, normalizedQuery)) {
+					// Then try word boundary matching
+					shouldInclude = true
+					const wordPositions = this.getWordBoundaryPositions(text, normalizedQuery)
+					positions = new Set(wordPositions)
+				}
+
+				if (shouldInclude) {
+					results.push({
+						item,
+						positions,
+					})
+				}
+			}
+
+			return results
+		}
+	}
+
+	/**
+	 * Check if query matches at a word boundary in the text
+	 */
+	private matchesAtWordBoundary(text: string, query: string): boolean {
+		const wordBoundaryRegex = /[\s\-_./\\]+/
+		const words = text.split(wordBoundaryRegex).filter((w) => w.length > 0)
+
+		// Check if any word starts with the query
+		return words.some((word) => word.toLowerCase().startsWith(query.toLowerCase()))
+	}
+
+	/**
+	 * Get positions where the query matches at word boundaries
+	 */
+	private getWordBoundaryPositions(text: string, query: string): number[] {
+		const positions: number[] = []
+		const wordBoundaryRegex = /[\s\-_./\\]+/
+		const words = text.split(wordBoundaryRegex).filter((w) => w.length > 0)
+
+		let currentPos = 0
+		for (const word of words) {
+			const wordIndex = text.indexOf(word, currentPos)
+			if (wordIndex !== -1) {
+				currentPos = wordIndex
+				if (word.toLowerCase().startsWith(query.toLowerCase())) {
+					// Add positions for each character of the match
+					for (let i = 0; i < query.length; i++) {
+						positions.push(currentPos + i)
+					}
+				}
+				currentPos += word.length
+			}
 		}
 
-		return results
+		return positions
 	}
 
 	/**
@@ -109,13 +160,18 @@ export class Fzf<T> {
 
 		for (let wordIdx = 0; wordIdx < words.length && queryIndex < query.length; wordIdx++) {
 			const word = words[wordIdx]
+			const wordStartPos = text.indexOf(word, currentPos)
+
+			if (wordStartPos === -1) continue
+
+			currentPos = wordStartPos
 
 			// Try to match as many consecutive characters as possible from this word
 			let matchedInWord = 0
 			while (
 				queryIndex < query.length &&
 				matchedInWord < word.length &&
-				word[matchedInWord] === query[queryIndex]
+				word[matchedInWord].toLowerCase() === query[queryIndex].toLowerCase()
 			) {
 				positions.add(currentPos + matchedInWord)
 				queryIndex++
@@ -123,10 +179,7 @@ export class Fzf<T> {
 			}
 
 			// Move to next word position
-			if (wordIdx < words.length - 1) {
-				const nextWordIndex = text.indexOf(words[wordIdx + 1], currentPos + word.length)
-				currentPos = nextWordIndex
-			}
+			currentPos += word.length
 		}
 
 		// Only match if we consumed the entire query

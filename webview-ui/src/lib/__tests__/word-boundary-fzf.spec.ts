@@ -1,4 +1,3 @@
-//kilocode_change new file
 import { describe, it, expect } from "vitest"
 import { Fzf } from "../word-boundary-fzf"
 
@@ -141,10 +140,11 @@ describe("Fzf - Word Boundary Matching", () => {
 			const fzf = new Fzf(items, { selector: (item) => item.name })
 			const results = fzf.find("test")
 
-			// Should match "test" and "testing" at word start, and "the test" at word boundary
-			expect(results).toHaveLength(2)
+			// Should match all three: "test", "testing" at word start, and "the test" at word boundary
+			expect(results).toHaveLength(3)
 			expect(results[0].item.id).toBe(1)
 			expect(results[1].item.id).toBe(2)
+			expect(results[2].item.id).toBe(3)
 		})
 
 		it("should preserve original order", () => {
