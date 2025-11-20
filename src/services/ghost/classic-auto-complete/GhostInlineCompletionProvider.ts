@@ -10,6 +10,7 @@ import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { getTemplateForModel } from "../../continuedev/core/autocomplete/templating/AutocompleteTemplate"
+import { SuggestionAdjuster } from "./SuggestionAdjuster"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -36,40 +37,14 @@ export interface GhostPrompt {
  * @param suffix - The text after the cursor position
  * @param suggestionsHistory - Array of previous suggestions (most recent last)
  * @returns The matching suggestion text, or null if no match found
+ * @deprecated Use SuggestionAdjuster.findInHistory instead
  */
 export function findMatchingSuggestion(
 	prefix: string,
 	suffix: string,
 	suggestionsHistory: FillInAtCursorSuggestion[],
 ): string | null {
-	// Search from most recent to least recent
-	for (let i = suggestionsHistory.length - 1; i >= 0; i--) {
-		const fillInAtCursor = suggestionsHistory[i]
-
-		// First, try exact prefix/suffix match
-		if (prefix === fillInAtCursor.prefix && suffix === fillInAtCursor.suffix) {
-			return fillInAtCursor.text
-		}
-
-		// If no exact match, but suggestion is available, check for partial typing
-		// The user may have started typing the suggested text
-		if (
-			fillInAtCursor.text !== "" &&
-			prefix.startsWith(fillInAtCursor.prefix) &&
-			suffix === fillInAtCursor.suffix
-		) {
-			// Extract what the user has typed between the original prefix and current position
-			const typedContent = prefix.substring(fillInAtCursor.prefix.length)
-
-			// Check if the typed content matches the beginning of the suggestion
-			if (fillInAtCursor.text.startsWith(typedContent)) {
-				// Return the remaining part of the suggestion (with already-typed portion removed)
-				return fillInAtCursor.text.substring(typedContent.length)
-			}
-		}
-	}
-
-	return null
+	return SuggestionAdjuster.findInHistory(prefix, suffix, suggestionsHistory)
 }
 
 export function stringToInlineCompletions(text: string, position: vscode.Position): vscode.InlineCompletionItem[] {
@@ -498,24 +473,18 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 					return
 				}
 
-				// If user typed ahead, adjust the suggestion
-				if (prefix.startsWith(reusable.prefix) && prefix !== reusable.prefix) {
-					const typedAhead = prefix.substring(reusable.prefix.length)
-					if (result.suggestion.text.startsWith(typedAhead)) {
-						// Remove the already-typed portion from the suggestion
-						const adjustedSuggestion: FillInAtCursorSuggestion = {
-							text: result.suggestion.text.substring(typedAhead.length),
-							prefix,
-							suffix,
-						}
-						this.updateSuggestions(adjustedSuggestion)
-						return
-					}
+				// Adjust the suggestion if user typed ahead
+				const adjustedSuggestion = SuggestionAdjuster.adjustSuggestion(result.suggestion, prefix, suffix)
+				if (adjustedSuggestion) {
+					this.updateSuggestions(adjustedSuggestion)
+					return
 				}
 
-				// Use the result as-is if no adjustment needed
-				this.updateSuggestions(result.suggestion)
-				return
+				// Use the result as-is if no adjustment needed (exact match case)
+				if (prefix === reusable.prefix && suffix === reusable.suffix) {
+					this.updateSuggestions(result.suggestion)
+					return
+				}
 			} catch (error) {
 				// If reused request failed or was aborted, fall through to create new request
 				if (error instanceof Error && error.name === "AbortError") {
