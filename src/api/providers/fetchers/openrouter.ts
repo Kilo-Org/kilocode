@@ -101,52 +101,33 @@ type OpenRouterModelEndpointsResponse = z.infer<typeof openRouterModelEndpointsR
 export async function getOpenRouterModels(
 	options?: ApiHandlerOptions & { headers?: Record<string, string> }, // kilocode_change: added headers
 ): Promise<Record<string, ModelInfo>> {
+	// Return static models instead of making API calls
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = "https://api.matterai.so/v1/web"
 
-	try {
-		// kilocode_change: use axios with timeout instead of fetch
-		const response = await axios.get(`${baseURL}/models`, {
-			headers: { ...DEFAULT_HEADERS, ...(options?.headers ?? {}) },
-			timeout: 120000, // 60 seconds timeout
+	// Import the static models from the shared file
+	const { KILO_CODE_MODELS } = await import("../kilocode-models")
+
+	for (const [id, model] of Object.entries(KILO_CODE_MODELS)) {
+		models[id] = parseOpenRouterModel({
+			id,
+			model: {
+				name: model.name,
+				description: model.description,
+				context_length: model.context_length,
+				max_completion_tokens: model.max_output_length,
+				pricing: {
+					prompt: model.pricing.prompt,
+					completion: model.pricing.completion,
+					input_cache_write: model.pricing.input_cache_writes,
+					input_cache_read: model.pricing.input_cache_reads,
+				},
+			},
+			displayName: model.name,
+			inputModality: model.input_modalities,
+			outputModality: model.output_modalities,
+			maxTokens: model.max_output_length,
+			supportedParameters: model.supported_sampling_parameters,
 		})
-
-		const json = response.data
-		const result = openRouterModelsResponseSchema.safeParse(json)
-		const data = result.success ? result.data.data : json.data
-		// kilocode_change end
-
-		if (!result.success) {
-			// kilocode_change start
-			throw new Error(
-				"OpenRouter models response is invalid: " + JSON.stringify(result.error.format(), undefined, 2),
-			)
-			// kilocode_change end
-		}
-
-		for (const model of data) {
-			const { id, architecture, top_provider, supported_parameters = [] } = model
-
-			// Skip image generation models (models that output images)
-			if (architecture?.output_modalities?.includes("image")) {
-				continue
-			}
-
-			models[id] = parseOpenRouterModel({
-				id,
-				model,
-				displayName: model.name, // kilocode_change
-				inputModality: architecture?.input_modalities,
-				outputModality: architecture?.output_modalities,
-				maxTokens: top_provider?.max_completion_tokens,
-				supportedParameters: supported_parameters,
-			})
-		}
-	} catch (error) {
-		console.error(
-			`Error fetching OpenRouter models: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-		)
-		throw error // kilocode_change
 	}
 
 	return models
@@ -160,43 +141,37 @@ export async function getOpenRouterModelEndpoints(
 	modelId: string,
 	options?: ApiHandlerOptions,
 ): Promise<Record<string, ModelInfo>> {
+	// Return static models instead of making API calls
 	const models: Record<string, ModelInfo> = {}
-	const baseURL = "https://api.matterai.so/v1/web"
 
-	try {
-		console.log("getOpenRouterModelEndpoints 1", baseURL, modelId)
-		const response = await axios.get<OpenRouterModelEndpointsResponse>(`${baseURL}/models/${modelId}`, {
-			timeout: 120000, // 60 seconds timeout
-		})
-		const result = openRouterModelEndpointsResponseSchema.safeParse(response.data)
-		const data = result.success ? result.data.data : response.data.data
+	// Import the static models from the shared file
+	const { KILO_CODE_MODELS } = await import("../kilocode-models")
 
-		if (!result.success) {
-			console.error("OpenRouter model endpoints response is invalid", result.error.format())
-		}
-
-		const { id, architecture, endpoints } = data
-
-		// Skip image generation models (models that output images)
-		if (architecture?.output_modalities?.includes("image")) {
-			return models
-		}
-
-		for (const endpoint of endpoints) {
-			models[endpoint.tag ?? endpoint.provider_name] = parseOpenRouterModel({
-				id,
-				model: endpoint,
-				displayName: endpoint.model_name, // kilocode_change
-				inputModality: architecture?.input_modalities,
-				outputModality: architecture?.output_modalities,
-				maxTokens: endpoint.max_completion_tokens,
-			})
-		}
-	} catch (error) {
-		console.error(
-			`Error fetching OpenRouter model endpoints: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-		)
+	const model = KILO_CODE_MODELS[modelId]
+	if (!model) {
+		return models
 	}
+
+	models["KiloCode"] = parseOpenRouterModel({
+		id: model.id,
+		model: {
+			name: model.name,
+			description: model.description,
+			context_length: model.context_length,
+			max_completion_tokens: model.max_output_length,
+			pricing: {
+				prompt: model.pricing.prompt,
+				completion: model.pricing.completion,
+				input_cache_write: model.pricing.input_cache_writes,
+				input_cache_read: model.pricing.input_cache_reads,
+			},
+		},
+		displayName: model.name,
+		inputModality: model.input_modalities,
+		outputModality: model.output_modalities,
+		maxTokens: model.max_output_length,
+		supportedParameters: model.supported_sampling_parameters,
+	})
 
 	return models
 }

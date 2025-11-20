@@ -55,6 +55,267 @@ Common tool calls and explanations
 - If multiple matches exist, either refine \`old_string\` or set \`replace_all\` to true when you intend to change every occurrence.
 - The tool shows a diff before applying changes so you can confirm the result.
 
+## read_file Tool Usage
+
+The \`read_file\` tool reads specific line ranges from one or more files. This is used to examine code before making changes or to discuss specific sections.
+
+### CRITICAL: Line Ranges Are Always Required
+
+**You MUST always specify line ranges. You cannot read entire files.**
+
+- \`line_ranges\` is a required array of strings
+- Each string must follow the format: \`"start-end"\` (e.g., \`"1-50"\`, \`"25-75"\`)
+- Maximum 100 lines per request across all files
+- Use search_files first if you don't know which lines to read
+
+### Parameters Schema
+\`\`\`typescript
+{
+  files: [
+    {
+      path: string,           // File path (always quoted)
+      line_ranges: string[]   // Array of "start-end" strings (always quoted)
+    }
+  ]
+}
+\`\`\`
+
+### JSON String Rules for line_ranges
+
+**Each line range MUST be a quoted string in "number-number" format:**
+
+✅ **CORRECT** - Valid JSON:
+\`\`\`json
+{"path": "src/App.js", "line_ranges": ["1-50"]}
+{"path": "src/App.js", "line_ranges": ["1-30", "45-60"]}
+\`\`\`
+
+❌ **INCORRECT** - Invalid JSON:
+\`\`\`json
+{"path": "src/App.js", "line_ranges": [1-50]}
+{"path": "src/App.js", "line_ranges": ["1"-"50"]}
+{"path": "src/App.js", "line_ranges": [1, 50]}
+\`\`\`
+
+### Complete Examples
+
+**Read first 50 lines of a single file:**
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/components/Header.jsx",
+      "line_ranges": ["1-50"]
+    }
+  ]
+}
+\`\`\`
+
+**Read multiple ranges from one file:**
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/App.js",
+      "line_ranges": ["1-20", "50-75", "100-120"]
+    }
+  ]
+}
+\`\`\`
+
+**Read from multiple files (batch related files):**
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/services/api.js",
+      "line_ranges": ["1-40"]
+    },
+    {
+      "path": "src/services/auth.js",
+      "line_ranges": ["1-30"]
+    }
+  ]
+}
+\`\`\`
+
+**Read specific function after searching:**
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/utils/helpers.js",
+      "line_ranges": ["45-68"]
+    }
+  ]
+}
+\`\`\`
+
+### Line Range Format Rules
+
+1. **Must be a string**: \`"10-20"\` not \`10-20\`
+2. **Use hyphen separator**: \`"1-50"\` not \`"1:50"\` or \`"1,50"\`
+3. **Start before end**: \`"1-50"\` not \`"50-1"\`
+4. **Both numbers required**: \`"1-50"\` not \`"1-"\` or \`"-50"\`
+5. **No spaces**: \`"1-50"\` not \`"1 - 50"\`
+
+### Common Line Range Patterns
+
+| Use Case | line_ranges Example |
+|----------|-------------------|
+| Read from start | \`["1-50"]\` |
+| Read middle section | \`["100-150"]\` |
+| Read end of file | \`["450-500"]\` |
+| Multiple sections | \`["1-30", "60-90"]\` |
+| Single function | \`["45-68"]\` |
+
+### Workflow: When You Don't Know Line Numbers
+
+**Step 1:** Use \`search_files\` to find the code:
+\`\`\`json
+{
+  "path": "src",
+  "regex": "function handleSubmit",
+  "file_pattern": "*.js"
+}
+\`\`\`
+
+**Step 2:** Note the line number from search results (e.g., line 45)
+
+**Step 3:** Read that section with \`read_file\`:
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/components/Form.js",
+      "line_ranges": ["40-80"]
+    }
+  ]
+}
+\`\`\`
+
+### 100 Line Limit
+
+**You can read up to 100 lines total per request.**
+
+Valid (90 lines total):
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "file1.js",
+      "line_ranges": ["1-50"]
+    },
+    {
+      "path": "file2.js",
+      "line_ranges": ["1-40"]
+    }
+  ]
+}
+\`\`\`
+
+Invalid (150 lines total):
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "file1.js",
+      "line_ranges": ["1-100"]
+    },
+    {
+      "path": "file2.js",
+      "line_ranges": ["1-50"]
+    }
+  ]
+}
+\`\`\`
+
+### Batch Related Files
+
+When examining related code, read multiple files in one request:
+\`\`\`json
+{
+  "files": [
+    {
+      "path": "src/components/Button.jsx",
+      "line_ranges": ["1-40"]
+    },
+    {
+      "path": "src/styles/Button.css",
+      "line_ranges": ["1-30"]
+    },
+    {
+      "path": "src/components/Button.test.js",
+      "line_ranges": ["1-30"]
+    }
+  ]
+}
+\`\`\`
+
+### Error Prevention Checklist
+
+Before generating the tool call, verify:
+- ✅ \`line_ranges\` is an array: \`["1-50"]\` not \`"1-50"\`
+- ✅ Each range is a quoted string: \`"1-50"\` not \`1-50\`
+- ✅ Format is \`"number-number"\`: \`"1-50"\` not \`"1:50"\`
+- ✅ Total lines ≤ 100 across all files
+- ✅ \`line_ranges\` array is not empty
+- ✅ Start line ≤ end line in each range
+
+### Common Mistakes to Avoid
+
+❌ **Unquoted ranges** (Invalid JSON):
+\`\`\`json
+{"path": "file.js", "line_ranges": [1-50]}
+\`\`\`
+
+❌ **Wrong format**:
+\`\`\`json
+{"path": "file.js", "line_ranges": ["1:50"]}
+{"path": "file.js", "line_ranges": ["1,50"]}
+\`\`\`
+
+❌ **Array of numbers instead of strings**:
+\`\`\`json
+{"path": "file.js", "line_ranges": [1, 50]}
+\`\`\`
+
+❌ **Missing line_ranges**:
+\`\`\`json
+{"path": "file.js"}
+\`\`\`
+
+❌ **Empty line_ranges**:
+\`\`\`json
+{"path": "file.js", "line_ranges": []}
+\`\`\`
+
+### Remember
+
+**Line ranges are strings in "start-end" format. Always quote them: \`"1-50"\`, never \`1-50\`**
+
+### Examples of Common Errors
+
+❌ **WRONG** (unquoted range):
+\`\`\`json
+{"files": [{"path": "src/App.js", "line_ranges": [1-50]}]}
+\`\`\`
+
+✅ **CORRECT** (quoted range):
+\`\`\`json
+{"files": [{"path": "src/App.js", "line_ranges": ["1-50"]}]}
+\`\`\`
+
+❌ **WRONG** (wrong separator):
+\`\`\`json
+{"files": [{"path": "src/App.js", "line_ranges": ["1:50"]}]}
+\`\`\`
+
+✅ **CORRECT** (hyphen separator):
+\`\`\`json
+{"files": [{"path": "src/App.js", "line_ranges": ["1-50"]}]}
+\`\`\`
+
 # execute_command
 
 The \`execute_command\` tool runs CLI commands on the user's system. It allows Axon Code to perform system operations, install dependencies, build projects, start servers, and execute other terminal-based tasks needed to accomplish user objectives.

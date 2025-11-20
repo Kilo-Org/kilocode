@@ -1,3 +1,10 @@
+// Hardcoded credits information for Axon models
+const AXON_MODEL_CREDITS: Record<string, string> = {
+	"axon-mini": "(0.5x)",
+	"axon-code": "(1x)",
+	// "axon-code-pro": "(1.25x)",
+}
+
 export const prettyModelName = (modelId: string): string => {
 	if (!modelId) {
 		return ""
@@ -19,4 +26,14 @@ export const prettyModelName = (modelId: string): string => {
 	const formattedTag = tag ? `(${tag.charAt(0).toUpperCase() + tag.slice(1)})` : ""
 
 	return [[formattedProject, formattedName].filter(Boolean).join(" / "), formattedTag].join(" ")
+}
+
+// Function to get credits for Axon models
+export const getModelCredits = (modelId: string): string | null => {
+	// Check if this is an Axon model
+	if (modelId.startsWith("axon-") || modelId === "axon-code" || modelId === "axon-code-pro") {
+		return AXON_MODEL_CREDITS[modelId] || null
+	}
+
+	return null
 }
