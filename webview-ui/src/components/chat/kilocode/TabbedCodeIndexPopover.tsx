@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import React, { useState } from "react"
+import React, { useState, useRef } from "react"
 import { Trans } from "react-i18next"
 import { VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 
@@ -20,14 +20,26 @@ interface CodeIndexPopoverProps {
 
 export const TabbedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({ children, indexingStatus }) => {
 	const [open, setOpen] = useState(false)
+	const closeHandlerRef = useRef<() => void>(() => setOpen(false))
 
-	// Use the shared ESC key handler hook
-	useEscapeKey(open, () => setOpen(false))
+	const handlePopoverOpenChange = (newOpen: boolean) => {
+		if (newOpen) {
+			setOpen(true)
+		} else {
+			// Don't close immediately - ask child to handle it if registered
+			closeHandlerRef.current?.()
+		}
+	}
+
+	// Use the shared ESC key handler hook - delegate to child if possible
+	useEscapeKey(open, () => {
+		closeHandlerRef.current?.()
+	})
 
 	const portalContainer = useRooPortal("roo-portal")
 
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
+		<Popover open={open} onOpenChange={handlePopoverOpenChange}>
 			{children}
 			<PopoverContent
 				className="w-[calc(100vw-32px)] max-w-[450px] max-h-[80vh] overflow-y-auto p-0"
@@ -38,7 +50,15 @@ export const TabbedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({ childr
 				collisionPadding={16}
 				avoidCollisions={true}
 				container={portalContainer}>
-				<TabbedCodeIndexPopoverTabs indexingStatus={indexingStatus} onClose={() => setOpen(false)} />
+				<TabbedCodeIndexPopoverTabs
+					indexingStatus={indexingStatus}
+					setOpen={setOpen}
+					onRegisterCloseHandler={(handler) => {
+						// We use this pattern so the CodeIndexPopover can decide if it wants
+						// the popover to close based on if it has unsaved changes
+						closeHandlerRef.current = handler
+					}}
+				/>
 			</PopoverContent>
 		</Popover>
 	)
@@ -46,10 +66,12 @@ export const TabbedCodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({ childr
 
 export const TabbedCodeIndexPopoverTabs = ({
 	indexingStatus,
-	onClose,
+	setOpen,
+	onRegisterCloseHandler,
 }: {
 	indexingStatus: IndexingStatus
-	onClose: () => void
+	setOpen: (open: boolean) => void
+	onRegisterCloseHandler: (handler: () => void) => void
 }) => {
 	const { t } = useAppTranslation()
 	const [activeTab, setActiveTab] = useState("managed")
@@ -87,7 +109,8 @@ export const TabbedCodeIndexPopoverTabs = ({
 						contentOnly
 						indexingStatus={indexingStatus}
 						open={activeTab === "local"}
-						onOpenChange={onClose}>
+						onOpenChange={setOpen}
+						onRegisterCloseHandler={onRegisterCloseHandler}>
 						<></>
 					</CodeIndexPopover>
 				</TabsContent>

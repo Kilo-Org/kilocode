@@ -55,6 +55,7 @@ interface CodeIndexPopoverProps {
 	contentOnly?: boolean
 	open?: boolean
 	onOpenChange?: (open: boolean) => void
+	onRegisterCloseHandler?: (handler: () => void) => void
 	// kilocode_change end - Support showing contentOnly and allow external open state control
 	indexingStatus: IndexingStatus
 }
@@ -180,6 +181,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	contentOnly,
 	open: externalOpen,
 	onOpenChange: externalOnOpenChange,
+	onRegisterCloseHandler,
 	// kilocode_change end - Support contentOnly and external state control
 	indexingStatus: externalIndexingStatus,
 }) => {
@@ -191,7 +193,6 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	// const [open, setOpen] = useState(false) // kilocode_change
 	const [internalOpen, setInternalOpen] = useState(false)
 	const open = externalOpen ?? internalOpen
-	const setOpen = externalOnOpenChange ?? setInternalOpen
 	// kilocode_change end - Controlled/uncontrolled pattern for open state
 	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
 	const [isSetupSettingsOpen, setIsSetupSettingsOpen] = useState(false)
@@ -513,6 +514,37 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		},
 		[initialSettings],
 	)
+
+	// kilocode_change start - Register close handler for parent popover control
+	const handleRequestClose = useCallback(() => {
+		// Handler that checks unsaved changes before allowing close
+		checkUnsavedChanges(() => {
+			if (externalOnOpenChange) {
+				externalOnOpenChange(false)
+			} else {
+				setInternalOpen(false)
+			}
+		})
+	}, [checkUnsavedChanges, externalOnOpenChange])
+
+	useEffect(() => {
+		onRegisterCloseHandler?.(handleRequestClose)
+	}, [onRegisterCloseHandler, handleRequestClose])
+
+	// For direct onOpenChange calls (non-contentOnly mode), wrap to check unsaved changes
+	const wrappedOnOpenChange = useCallback(
+		(newOpen: boolean) => {
+			if (!newOpen) {
+				handleRequestClose()
+			} else {
+				externalOnOpenChange?.(true)
+				setInternalOpen(true)
+			}
+		},
+		[handleRequestClose, externalOnOpenChange],
+	)
+	const setOpen = externalOnOpenChange ? wrappedOnOpenChange : setInternalOpen
+	// kilocode_change end - Register close handler for parent popover control
 
 	// Handle popover close with unsaved changes check
 	const handlePopoverClose = useCallback(() => {
