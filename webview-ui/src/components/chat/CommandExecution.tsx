@@ -55,8 +55,18 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 	// Extract command patterns from the actual command that was executed
 	const commandPatterns = useMemo<CommandPattern[]>(() => {
-		// First get all individual commands (including subshell commands) using parseCommand
+		// Check if this is a true multiline command (contains newlines not within quotes)
+		// We can detect this by checking if the original command contains newlines
+		// and if parseCommand splits it into multiple commands
+		const hasActualNewlines = /\r\n|\r|\n/.test(command)
 		const allCommands = parseCommand(command)
+		const isMultilineCommand = hasActualNewlines && allCommands.length > 1
+
+		// For multiline commands, don't show pattern options as they would be confusing
+		// Users shouldn't auto-approve multiline commands as individual patterns
+		if (isMultilineCommand) {
+			return []
+		}
 
 		// Then extract patterns from each command using the existing pattern extraction logic
 		const allPatterns = new Set<string>()

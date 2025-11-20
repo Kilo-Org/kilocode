@@ -62,6 +62,11 @@ export const CommandPatternSelector: React.FC<CommandPatternSelectorProps> = ({
 		}))
 	}
 
+	// Don't render anything if there are no patterns (e.g., for multiline commands)
+	if (allPatterns.length === 0) {
+		return null
+	}
+
 	return (
 		<div className="border-t border-vscode-panel-border/50 bg-vscode-sideBar-background/30">
 			<button
