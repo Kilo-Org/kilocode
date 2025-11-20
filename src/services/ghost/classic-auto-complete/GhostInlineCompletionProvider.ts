@@ -344,8 +344,12 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return []
 		}
 
+		if (!document?.uri?.fsPath) {
+			return []
+		}
+
 		// Check if file is ignored (for manual trigger via codeSuggestion)
-		if (!document.isUntitled && this.ignoreController) {
+		if (this.ignoreController) {
 			try {
 				// Try to get the controller with a short timeout
 				const controller = await Promise.race([
