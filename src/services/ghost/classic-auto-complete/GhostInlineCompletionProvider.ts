@@ -348,44 +348,51 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 			return []
 		}
 
-		// Check if file is ignored (for manual trigger via codeSuggestion)
-		if (this.ignoreController) {
-			try {
-				// Try to get the controller with a short timeout
-				const controller = await Promise.race([
-					this.ignoreController,
-					new Promise<null>((resolve) => setTimeout(() => resolve(null), 50)),
-				])
+		try {
+			// Check if file is ignored (for manual trigger via codeSuggestion)
+			if (this.ignoreController) {
+				try {
+					// Try to get the controller with a short timeout
+					const controller = await Promise.race([
+						this.ignoreController,
+						new Promise<null>((resolve) => setTimeout(() => resolve(null), 50)),
+					])
 
-				if (!controller) {
-					// If promise hasn't resolved yet, assume file is ignored
+					if (!controller) {
+						// If promise hasn't resolved yet, assume file is ignored
+						return []
+					}
+
+					const isAccessible = controller.validateAccess(document.fileName)
+					if (!isAccessible) {
+						return []
+					}
+				} catch (error) {
+					console.error("[GhostInlineCompletionProvider] Error checking file access:", error)
+					// On error, assume file is ignored
 					return []
 				}
-
-				const isAccessible = controller.validateAccess(document.fileName)
-				if (!isAccessible) {
-					return []
-				}
-			} catch (error) {
-				console.error("[GhostInlineCompletionProvider] Error checking file access:", error)
-				// On error, assume file is ignored
-				return []
 			}
+
+			const { prefix, suffix } = extractPrefixSuffix(document, position)
+
+			const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+
+			if (matchingText !== null) {
+				return stringToInlineCompletions(matchingText, position)
+			}
+
+			const prompt = await this.getPrompt(document, position)
+			await this.debouncedFetchAndCacheSuggestion(prompt)
+
+			const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
+			return stringToInlineCompletions(cachedText ?? "", position)
+		} catch (error) {
+			// only big catch at the top of the call-chain, if anything goes wrong at a lower level
+			// do not catch, just let the error cascade
+			console.error("[GhostInlineCompletionProvider] Error providing inline completion:", error)
+			return []
 		}
-
-		const { prefix, suffix } = extractPrefixSuffix(document, position)
-
-		const matchingText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
-
-		if (matchingText !== null) {
-			return stringToInlineCompletions(matchingText, position)
-		}
-
-		const prompt = await this.getPrompt(document, position)
-		await this.debouncedFetchAndCacheSuggestion(prompt)
-
-		const cachedText = findMatchingSuggestion(prefix, suffix, this.suggestionsHistory)
-		return stringToInlineCompletions(cachedText ?? "", position)
 	}
 
 	private debouncedFetchAndCacheSuggestion(prompt: GhostPrompt): Promise<void> {

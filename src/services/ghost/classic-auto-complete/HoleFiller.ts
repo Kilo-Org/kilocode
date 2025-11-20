@@ -167,18 +167,14 @@ Provide a subtle, non-intrusive completion after a typing pause.
 		let prunedPrefix = prefix
 		let prunedSuffix = suffix
 
-		try {
-			const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
-				autocompleteInput,
-				autocompleteInput.filepath,
-			)
-			formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
-			// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
-			prunedPrefix = helper.prunedPrefix
-			prunedSuffix = helper.prunedSuffix
-		} catch (error) {
-			console.warn("Failed to get formatted context:", error)
-		}
+		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
+			autocompleteInput,
+			autocompleteInput.filepath,
+		)
+		formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
+		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
+		prunedPrefix = helper.prunedPrefix
+		prunedSuffix = helper.prunedSuffix
 
 		prompt += `<QUERY>
 ${formattedContext}${formattedContext ? "\n" : ""}${prunedPrefix}{{FILL_HERE}}${prunedSuffix}
