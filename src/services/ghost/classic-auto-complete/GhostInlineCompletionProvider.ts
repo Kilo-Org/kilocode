@@ -196,7 +196,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		const { systemPrompt, userPrompt, prefix, suffix, autocompleteInput } = prompt
 
 		if (model.supportsFim()) {
-			return this.getFromFIM(prefix, suffix, model, autocompleteInput)
+			return this.getFromFIM(model, autocompleteInput)
 		}
 
 		let response = ""
@@ -230,12 +230,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		}
 	}
 
-	private async getFromFIM(
-		prefix: string,
-		suffix: string,
-		model: GhostModel,
-		autocompleteInput: AutocompleteInput,
-	): Promise<LLMRetrievalResult> {
+	private async getFromFIM(model: GhostModel, autocompleteInput: AutocompleteInput): Promise<LLMRetrievalResult> {
 		let perflog = ""
 		const logtime = (() => {
 			let timestamp = performance.now()
@@ -286,6 +281,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		logtime("fim network")
 		console.log("[FIM] response:", response)
 
+		const prefix = helper.fullPrefix
+		const suffix = helper.fullSuffix
 		const fillInAtCursorSuggestion = this.processSuggestion(response, prefix, suffix, model)
 
 		if (fillInAtCursorSuggestion.text) {
@@ -345,7 +342,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 		try {
 			// Check if file is ignored (for manual trigger via codeSuggestion)
-			if (this.ignoreController) {
+			// Skip ignore check for untitled documents
+			if (this.ignoreController && !document.isUntitled) {
 				try {
 					// Try to get the controller with a short timeout
 					const controller = await Promise.race([
