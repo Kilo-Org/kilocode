@@ -281,9 +281,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 		logtime("fim network")
 		console.log("[FIM] response:", response)
 
-		const prefix = helper.fullPrefix
-		const suffix = helper.fullSuffix
-		const fillInAtCursorSuggestion = this.processSuggestion(response, prefix, suffix, model)
+		const fillInAtCursorSuggestion = this.processSuggestion(response, helper.fullPrefix, helper.fullSuffix, model)
 
 		if (fillInAtCursorSuggestion.text) {
 			console.info("Final FIM suggestion:", fillInAtCursorSuggestion)
