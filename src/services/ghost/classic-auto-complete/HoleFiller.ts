@@ -8,8 +8,52 @@ export interface FillInAtCursorSuggestion {
 	suffix: string
 }
 
-export function getBaseSystemInstructions(): string {
-	return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
+/**
+ * Parse the response - only handles responses with <COMPLETION> tags
+ * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
+ */
+export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+	let fimText: string = ""
+
+	// Match content strictly between <COMPLETION> and </COMPLETION> tags
+	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
+
+	if (completionMatch) {
+		// Extract the captured group (content between tags)
+		fimText = completionMatch[1] || ""
+	}
+	// Remove any accidentally captured tag remnants
+	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
+
+	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
+	return {
+		text: fimText,
+		prefix,
+		suffix,
+	}
+}
+
+export class HoleFiller {
+	constructor(private contextProvider?: GhostContextProvider) {}
+
+	async getPrompts(
+		autocompleteInput: AutocompleteInput,
+		prefix: string,
+		suffix: string,
+		languageId: string,
+	): Promise<{
+		systemPrompt: string
+		userPrompt: string
+	}> {
+		const userPrompt = await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId)
+		return {
+			systemPrompt: this.getSystemInstructions(),
+			userPrompt,
+		}
+	}
+
+	getSystemInstructions(): string {
+		return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
 
 ## CRITICAL RULES
 - NEVER repeat or duplicate content that appears immediately before {{FILL_HERE}}
@@ -103,61 +147,10 @@ function hypothenuse(a, b) {
 
 <COMPLETION>a ** 2 + </COMPLETION>
 
-`
-}
-
-/**
- * Parse the response - only handles responses with <COMPLETION> tags
- * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
- */
-export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
-	let fimText: string = ""
-
-	// Match content strictly between <COMPLETION> and </COMPLETION> tags
-	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
-
-	if (completionMatch) {
-		// Extract the captured group (content between tags)
-		fimText = completionMatch[1] || ""
-	}
-	// Remove any accidentally captured tag remnants
-	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
-
-	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
-	return {
-		text: fimText,
-		prefix,
-		suffix,
-	}
-}
-
-export class HoleFiller {
-	constructor(private contextProvider?: GhostContextProvider) {}
-
-	async getPrompts(
-		autocompleteInput: AutocompleteInput,
-		prefix: string,
-		suffix: string,
-		languageId: string,
-	): Promise<{
-		systemPrompt: string
-		userPrompt: string
-	}> {
-		const userPrompt = await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId)
-		return {
-			systemPrompt: this.getSystemInstructions(),
-			userPrompt,
-		}
-	}
-
-	getSystemInstructions(): string {
-		return (
-			getBaseSystemInstructions() +
-			`Task: Auto-Completion
+Task: Auto-Completion
 Provide a subtle, non-intrusive completion after a typing pause.
 
 `
-		)
 	}
 
 	/**
