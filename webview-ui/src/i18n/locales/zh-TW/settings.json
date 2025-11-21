@@ -363,6 +363,7 @@
 		"awsSessionToken": "AWS 工作階段權杖",
 		"awsRegion": "AWS 區域",
 		"awsCrossRegion": "使用跨區域推論",
+		"awsGlobalInference": "使用全域推論 (自動選取最佳 AWS 區域)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "使用自訂 VPC 端點",
 			"vpcEndpointUrlPlaceholder": "輸入 VPC 端點 URL（選填）",
@@ -485,7 +486,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "錯誤和重複限制",
-			"description": "在顯示「Kilo Code 遇到問題」對話方塊前允許的連續錯誤或重複操作次數",
+			"description": "在顯示「Kilo 遇到問題」對話方塊前允許的連續錯誤或重複操作次數。設定為 0 可停用此安全機制（永不觸發）。",
 			"unlimitedDescription": "已啟用無限重試（自動繼續）。對話方塊將永遠不會出現。",
 			"warning": "⚠️ 設定為 0 允許無限重試，這可能會消耗大量 API 使用量"
 		},

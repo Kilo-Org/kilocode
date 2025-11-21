@@ -1,9 +1,18 @@
-import { VSCodeButton, VSCodeCheckbox, VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
+import { VSCodeCheckbox, VSCodeTextField, VSCodeLink } from "@vscode/webview-ui-toolkit/react"
 import { SquareMousePointer } from "lucide-react"
 import { HTMLAttributes, useEffect, useMemo, useState } from "react"
 import { Trans } from "react-i18next"
 
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Slider } from "@/components/ui"
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Slider,
+	Button,
+} from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
 import { vscode } from "@/utils/vscode"
 import { buildDocLink } from "@src/utils/docLinks"
@@ -198,11 +207,11 @@ export const BrowserSettings = ({
 										placeholder={t("settings:browser.remote.urlPlaceholder")}
 										style={{ flexGrow: 1 }}
 									/>
-									<VSCodeButton disabled={testingConnection} onClick={testConnection}>
+									<Button disabled={testingConnection} onClick={testConnection}>
 										{testingConnection || discovering
 											? t("settings:browser.remote.testingButton")
 											: t("settings:browser.remote.testButton")}
-									</VSCodeButton>
+									</Button>
 								</div>
 								{testResult && (
 									<div

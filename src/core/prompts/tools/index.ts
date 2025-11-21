@@ -1,7 +1,7 @@
 import type {
 	ToolName,
 	ModeConfig,
-	ToolUseStyle, // kilocode_change
+	ToolProtocol, // kilocode_change
 } from "@roo-code/types"
 
 import { TOOL_GROUPS, ALWAYS_AVAILABLE_TOOLS, DiffStrategy } from "../../../shared/tools"
@@ -174,10 +174,12 @@ export function getToolDescriptionsForMode(
 			return undefined
 		}
 
-		return descriptionFn({
+		const description = descriptionFn({
 			...args,
 			toolOptions: undefined, // No tool options in group-based approach
 		})
+
+		return description
 	})
 
 	return `# Tools\n\n${descriptions.filter(Boolean).join("\n\n")}`
@@ -205,3 +207,6 @@ export {
 	getRunSlashCommandDescription,
 	getGenerateImageDescription,
 }
+
+// Export native tool definitions (JSON schema format for OpenAI-compatible APIs)
+export { nativeTools } from "./native-tools"

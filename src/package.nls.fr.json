@@ -47,6 +47,7 @@
 	"settings.apiRequestTimeout.description": "Temps maximum en secondes d'attente pour les réponses de l'API (0 = pas de timeout, 1-86400s, par défaut : 600s). Des valeurs plus élevées sont recommandées pour les fournisseurs locaux comme LM Studio et Ollama qui peuvent nécessiter plus de temps de traitement.",
 	"settings.newTaskRequireTodos.description": "Exiger le paramètre todos lors de la création de nouvelles tâches avec l'outil new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "La taille du lot pour les opérations d'embedding lors de l'indexation du code. Ajustez ceci selon les limites de votre fournisseur d'API. Par défaut, c'est 60.",
+	"settings.toolProtocol.description": "Protocole d'outil à utiliser pour les interactions AI. XML est le protocole par défaut et recommandé. Natif est expérimental et peut ne pas fonctionner avec tous les fournisseurs.",
 	"ghost.input.title": "Écrivain fantôme Kilo Code",
 	"ghost.input.placeholder": "Décrivez ce que vous voulez coder...",
 	"ghost.commands.generateSuggestions": "Kilo Code : Générer des Modifications Suggérées",

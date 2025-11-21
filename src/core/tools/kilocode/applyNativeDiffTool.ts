@@ -13,7 +13,7 @@ import { fileExistsAtPath } from "../../../utils/fs"
 import { RecordSource } from "../../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../../shared/experiments"
-import { DiffOperation, OperationResult } from "../multiApplyDiffTool"
+import { DiffOperation, OperationResult } from "../MultiApplyDiffTool"
 
 // Native tool format types for JSON-based tool calls
 interface NativeFileDiff {

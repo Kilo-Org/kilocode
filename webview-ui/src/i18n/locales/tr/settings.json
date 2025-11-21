@@ -363,6 +363,7 @@
 		"awsSessionToken": "AWS Oturum Belirteci",
 		"awsRegion": "AWS Bölgesi",
 		"awsCrossRegion": "Bölgeler arası çıkarım kullan",
+		"awsGlobalInference": "Genel çıkarımı kullan (en uygun AWS Bölgesini otomatik seç)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Özel VPC uç noktası kullan",
 			"vpcEndpointUrlPlaceholder": "VPC uç noktası URL'sini girin (isteğe bağlı)",
@@ -485,7 +486,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Hata ve Tekrar Limiti",
-			"description": "'Kilo Code sorun yaşıyor' iletişim kutusunu göstermeden önceki ardışık hata veya tekrarlanan eylem sayısı",
+			"description": "'Kilo sorun yaşıyor' iletişim kutusunu göstermeden önceki ardışık hata veya tekrarlanan eylem sayısı. Bu güvenlik mekanizmasını devre dışı bırakmak için 0 olarak ayarlayın (asla tetiklenmez).",
 			"unlimitedDescription": "Sınırsız yeniden deneme etkin (otomatik devam et). Diyalog asla görünmeyecek.",
 			"warning": "⚠️ 0'a ayarlamak, önemli API kullanımına neden olabilecek sınırsız yeniden denemeye izin verir"
 		},

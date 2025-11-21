@@ -9,7 +9,7 @@ import {
 	type QwenCodeModelId,
 	qwenCodeModels,
 	qwenCodeDefaultModelId,
-	getActiveToolUseStyle, // kilocode_change
+	getActiveToolUseStyle, // kilocode_change (returns ToolProtocol)
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"

@@ -47,6 +47,7 @@
 	"settings.apiRequestTimeout.description": "Maksymalny czas w sekundach oczekiwania na odpowiedzi API (0 = brak limitu czasu, 1-86400s, domyślnie: 600s). Wyższe wartości są zalecane dla lokalnych dostawców, takich jak LM Studio i Ollama, którzy mogą potrzebować więcej czasu na przetwarzanie.",
 	"settings.newTaskRequireTodos.description": "Wymagaj parametru todos podczas tworzenia nowych zadań za pomocą narzędzia new_task",
 	"settings.codeIndex.embeddingBatchSize.description": "Rozmiar partii dla operacji osadzania podczas indeksowania kodu. Dostosuj to w oparciu o limity twojego dostawcy API. Domyślnie to 60.",
+	"settings.toolProtocol.description": "Protokół narzędzi do użycia w interakcjach z AI. XML jest domyślnym i zalecanym protokołem. Natywny jest eksperymentalny i może nie działać ze wszystkimi dostawcami.",
 	"ghost.input.title": "Naciśnij 'Enter' aby potwierdzić lub 'Escape' aby anulować",
 	"ghost.input.placeholder": "Opisz co chcesz zrobić...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Generuj Sugestie Edycji",

@@ -2,7 +2,9 @@ import type { Metadata } from "next"
 
 import { SEO } from "@/lib/seo"
 import { ogImageUrl } from "@/lib/og"
-import { PrFixerContent } from "./PrFixerContent"
+import { AgentLandingContent } from "@/app/shared/AgentLandingContent"
+import { getContentVariant } from "@/app/shared/getContentVariant"
+import { content as contentA } from "./content-a"
 
 const TITLE = "PR Fixer"
 const DESCRIPTION =
@@ -55,6 +57,11 @@ export const metadata: Metadata = {
 	],
 }
 
-export default function AgentPrFixerPage() {
-	return <PrFixerContent />
+export default async function AgentPrFixerPage({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
+	const params = await searchParams
+	const content = getContentVariant(params, {
+		A: contentA,
+	})
+
+	return <AgentLandingContent content={content} />
 }

@@ -29,6 +29,6 @@
 	"upsell": {
 		"autoApprovePowerUser": "Roo에게 약간의 독립성을 부여하시겠습니까? Roo Code Cloud로 어디서든 제어하세요. <learnMoreLink>더 알아보기</learnMoreLink>.",
 		"longRunningTask": "시간이 좀 걸릴 수 있습니다. Cloud로 어디서든 계속하세요.",
-		"taskList": "Roo Code Cloud가 여기 있습니다: 어디서든 작업을 추적하고 제어하세요. <learnMoreLink>더 알아보기</learnMoreLink>."
+		"taskList": "Roo를 즐기고 계신가요? Roo Code Cloud를 확인해보세요: 어디서든 작업을 추적하고 제어하며, 자율적인 클라우드 에이전트를 실행하고, 사용 통계를 얻는 등 다양한 기능을 제공합니다. <learnMoreLink>더 알아보기</learnMoreLink>."
 	}
 }

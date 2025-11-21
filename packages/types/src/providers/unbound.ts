@@ -1,6 +1,6 @@
 import type { ModelInfo } from "../model.js"
 
-export const unboundDefaultModelId = "anthropic/claude-3-7-sonnet-20250219"
+export const unboundDefaultModelId = "anthropic/claude-sonnet-4-5"
 
 export const unboundDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,

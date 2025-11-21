@@ -44,7 +44,7 @@ describe("ClaudeCodeHandler", () => {
 		const handlerWithInvalidModel = new ClaudeCodeHandler(options)
 		const model = handlerWithInvalidModel.getModel()
 
-		expect(model.id).toBe("claude-sonnet-4-20250514") // default model
+		expect(model.id).toBe("claude-sonnet-4-5") // default model
 	})
 
 	test("should override maxTokens when claudeCodeMaxOutputTokens is provided", () => {
@@ -69,7 +69,7 @@ describe("ClaudeCodeHandler", () => {
 		const handlerWithMaxTokens = new ClaudeCodeHandler(options)
 		const model = handlerWithMaxTokens.getModel()
 
-		expect(model.id).toBe("claude-sonnet-4-20250514") // default model
+		expect(model.id).toBe("claude-sonnet-4-5") // default model
 		expect(model.info.maxTokens).toBe(16384) // Should use the configured value
 	})
 

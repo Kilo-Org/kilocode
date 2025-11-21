@@ -2,10 +2,12 @@ import { memo, useMemo } from "react"
 import { VSCodeProgressRing } from "@vscode/webview-ui-toolkit/react"
 import { type ToolProgressStatus } from "@roo-code/types"
 import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
-import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
+import { formatPathTooltip } from "@src/utils/formatPathTooltip"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "./ToolUseBlock"
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
+import { PathTooltip } from "../ui/PathTooltip"
+import DiffView from "./DiffView"
 
 interface CodeAccordianProps {
 	path?: string
@@ -18,6 +20,8 @@ interface CodeAccordianProps {
 	onToggleExpand: () => void
 	header?: string
 	onJumpToFile?: () => void
+	// New props for diff stats
+	diffStats?: { added: number; removed: number }
 }
 
 const CodeAccordian = ({
@@ -31,10 +35,19 @@ const CodeAccordian = ({
 	onToggleExpand,
 	header,
 	onJumpToFile,
+	diffStats,
 }: CodeAccordianProps) => {
 	const inferredLanguage = useMemo(() => language ?? (path ? getLanguageFromPath(path) : "txt"), [path, language])
 	const source = useMemo(() => String(code).trim() /*kilocode_change: coerce to string*/, [code])
 	const hasHeader = Boolean(path || isFeedback || header)
+
+	// Use provided diff stats only (render-only)
+	const derivedStats = useMemo(() => {
+		if (diffStats && (diffStats.added > 0 || diffStats.removed > 0)) return diffStats
+		return null
+	}, [diffStats])
+
+	const hasValidStats = Boolean(derivedStats && (derivedStats.added > 0 || derivedStats.removed > 0))
 
 	return (
 		<ToolUseBlock>
@@ -44,7 +57,9 @@ const CodeAccordian = ({
 					{header ? (
 						<div className="flex items-center">
 							<span className="codicon codicon-server mr-1.5"></span>
-							<span className="whitespace-nowrap overflow-hidden text-ellipsis mr-2">{header}</span>
+							<PathTooltip content={header}>
+								<span className="whitespace-nowrap overflow-hidden text-ellipsis mr-2">{header}</span>
+							</PathTooltip>
 						</div>
 					) : isFeedback ? (
 						<div className="flex items-center">
@@ -56,19 +71,32 @@ const CodeAccordian = ({
 					) : (
 						<>
 							{path?.startsWith(".") && <span>.</span>}
-							<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
-								{removeLeadingNonAlphanumeric(path ?? "") + "\u200E"}
-							</span>
+							<PathTooltip content={formatPathTooltip(path)}>
+								<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+									{formatPathTooltip(path)}
+								</span>
+							</PathTooltip>
 						</>
 					)}
 					<div className="flex-grow-1" />
-					{progressStatus && progressStatus.text && (
-						<>
-							{progressStatus.icon && <span className={`codicon codicon-${progressStatus.icon} mr-1`} />}
-							<span className="mr-1 ml-auto text-vscode-descriptionForeground">
-								{progressStatus.text}
-							</span>
-						</>
+					{/* Prefer diff stats over generic progress indicator if available */}
+					{hasValidStats ? (
+						<div className="flex items-center gap-2 mr-1">
+							<span className="text-xs font-medium text-vscode-charts-green">+{derivedStats!.added}</span>
+							<span className="text-xs font-medium text-vscode-charts-red">-{derivedStats!.removed}</span>
+						</div>
+					) : (
+						progressStatus &&
+						progressStatus.text && (
+							<>
+								{progressStatus.icon && (
+									<span className={`codicon codicon-${progressStatus.icon} mr-1`} />
+								)}
+								<span className="mr-1 ml-auto text-vscode-descriptionForeground">
+									{progressStatus.text}
+								</span>
+							</>
+						)
 					)}
 					{onJumpToFile && path && (
 						<span
@@ -88,8 +116,12 @@ const CodeAccordian = ({
 				</ToolUseBlockHeader>
 			)}
 			{(!hasHeader || isExpanded) && (
-				<div className="overflow-x-auto overflow-y-hidden max-w-full">
-					<CodeBlock source={source} language={inferredLanguage} />
+				<div className="overflow-x-auto overflow-y-auto max-h-[300px] max-w-full">
+					{inferredLanguage === "diff" ? (
+						<DiffView source={source} filePath={path} />
+					) : (
+						<CodeBlock source={source} language={inferredLanguage} />
+					)}
 				</div>
 			)}
 		</ToolUseBlock>

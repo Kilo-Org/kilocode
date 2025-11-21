@@ -1,15 +1,11 @@
 import * as vscode from "vscode"
 
 import type { ModeConfig } from "@roo-code/types"
-import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
 
 import { getAllModesWithPrompts } from "../../../shared/modes"
 import { ensureSettingsDirectoryExists } from "../../../utils/globalContext"
 
-export async function getModesSection(
-	context: vscode.ExtensionContext,
-	toolUseStyle?: ToolUseStyle, // kilocode_change
-): Promise<string> {
+export async function getModesSection(context: vscode.ExtensionContext): Promise<string> {
 	// Make sure path gets created
 	await ensureSettingsDirectoryExists(context)
 
@@ -35,9 +31,12 @@ ${allModes
 	})
 	.join("\n")}`
 
-	// kilocode_change: toolUseStyle
 	modesContent += `
-If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool${toolUseStyle !== "json" ? ", like this:\n<fetch_instructions>\n<task>create_mode</task>\n</fetch_instructions>" : "."}`
+If the user asks you to create or edit a new mode for this project, you should read the instructions by using the fetch_instructions tool, like this:
+<fetch_instructions>
+<task>create_mode</task>
+</fetch_instructions>
+`
 
 	return modesContent
 }

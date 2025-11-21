@@ -129,7 +129,7 @@ export function MarketplaceView({ stateManager, onDone, targetTab, hideHeader = 
 						<h3 className="font-bold m-0">{t("marketplace:title")}</h3>
 						<div className="flex gap-2 items-center">
 							<Button
-								variant="default"
+								variant="primary"
 								onClick={() => {
 									onDone?.()
 								}}>

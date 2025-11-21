@@ -1,13 +1,14 @@
 import type { ModelInfo } from "../model.js"
 
 // https://openrouter.ai/models?order=newest&supported_parameters=tools
-export const openRouterDefaultModelId = "anthropic/claude-sonnet-4"
+export const openRouterDefaultModelId = "anthropic/claude-sonnet-4.5"
 
 export const openRouterDefaultModelInfo: ModelInfo = {
 	maxTokens: 8192,
 	contextWindow: 200_000,
 	supportsImages: true,
 	supportsPromptCache: true,
+	supportsNativeTools: true,
 	inputPrice: 3.0,
 	outputPrice: 15.0,
 	cacheWritesPrice: 3.75,

@@ -136,6 +136,13 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			const delta = chunk.choices?.[0]?.delta
 
 			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const chunkAny = chunk as any
+			if (chunkAny.base_resp?.status_code && chunkAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${chunkAny.base_resp.status_code}): ${chunkAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
 
 			if (delta?.content) {
 				for (const processedChunk of matcher.update(delta.content)) {
@@ -174,7 +181,15 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 				messages: [{ role: "user", content: prompt }],
 			})
 
-			return response.choices[0]?.message.content || ""
+			// Check for provider-specific error responses (e.g., MiniMax base_resp)
+			const responseAny = response as any
+			if (responseAny.base_resp?.status_code && responseAny.base_resp.status_code !== 0) {
+				throw new Error(
+					`${this.providerName} API Error (${responseAny.base_resp.status_code}): ${responseAny.base_resp.status_msg || "Unknown error"}`,
+				)
+			}
+
+			return response.choices?.[0]?.message.content || ""
 		} catch (error) {
 			throw handleOpenAIError(error, this.providerName)
 		}

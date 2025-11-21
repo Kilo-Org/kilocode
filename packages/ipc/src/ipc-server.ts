@@ -83,7 +83,11 @@ export class IpcServer extends EventEmitter<IpcServerEvents> implements RooCodeI
 		const result = ipcMessageSchema.safeParse(data)
 
 		if (!result.success) {
-			this.log("[server#onMessage] invalid payload", result.error.format(), data)
+			this.log(
+				"[server#onMessage] invalid paylooooad",
+				JSON.stringify(result.error.format()),
+				JSON.stringify(data),
+			)
 			return
 		}
 

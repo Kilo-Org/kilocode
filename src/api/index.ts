@@ -1,7 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
-import OpenAI from "openai" // kilocode_change
+import OpenAI from "openai"
 
-import type { ProviderSettings, ModelInfo } from "@roo-code/types"
+import type { ProviderSettings, ModelInfo, ToolProtocol } from "@roo-code/types"
 
 import { ApiStream } from "./transform/stream"
 
@@ -61,14 +61,20 @@ export interface SingleCompletionHandler {
 }
 
 export interface ApiHandlerCreateMessageMetadata {
-	mode?: string
-	taskId: string
-	previousResponseId?: string
 	/**
-	 * When true, the provider must NOT fall back to internal continuity state
-	 * (e.g., lastResponseId) if previousResponseId is absent.
-	 * Used to enforce "skip once" after a condense operation.
+	 * Task ID used for tracking and provider-specific features:
+	 * - DeepInfra: Used as prompt_cache_key for caching
+	 * - Roo: Sent as X-Roo-Task-ID header
+	 * - Requesty: Sent as trace_id
+	 * - Unbound: Sent in unbound_metadata
 	 */
+	taskId: string
+	/**
+	 * Current mode slug for provider-specific tracking:
+	 * - Requesty: Sent in extra metadata
+	 * - Unbound: Sent in unbound_metadata
+	 */
+	mode?: string
 	suppressPreviousResponseId?: boolean
 	/**
 	 * Controls whether the response should be stored for 30 days in OpenAI's Responses API.
@@ -91,6 +97,21 @@ export interface ApiHandlerCreateMessageMetadata {
 	 */
 	projectId?: string
 	// kilocode_change end
+	/**
+	 * Optional array of tool definitions to pass to the model.
+	 * For OpenAI-compatible providers, these are ChatCompletionTool definitions.
+	 */
+	tools?: OpenAI.Chat.ChatCompletionTool[]
+	/**
+	 * Controls which (if any) tool is called by the model.
+	 * Can be "none", "auto", "required", or a specific tool choice.
+	 */
+	tool_choice?: OpenAI.Chat.ChatCompletionCreateParams["tool_choice"]
+	/**
+	 * The tool protocol being used (XML or Native).
+	 * Used by providers to determine whether to include native tool definitions.
+	 */
+	toolProtocol?: ToolProtocol
 }
 
 export interface ApiHandler {

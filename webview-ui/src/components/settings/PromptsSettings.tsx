@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react"
+import { useState, useEffect, FormEvent } from "react"
 import { VSCodeTextArea, VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
+import { MessageSquare } from "lucide-react"
 
 import { supportPrompt, SupportPromptType } from "@roo/support-prompt"
 
@@ -15,10 +16,10 @@ import {
 	SelectValue,
 	StandardTooltip,
 } from "@src/components/ui"
+
 import { SectionHeader } from "./SectionHeader"
 import { Section } from "./Section"
-import { MessageSquare } from "lucide-react"
-import CommitMessagePromptSettings from "./CommitMessagePromptSettings"
+import CommitMessagePromptSettings from "./CommitMessagePromptSettings" // kilocode_change
 
 interface PromptsSettingsProps {
 	customSupportPrompts: Record<string, string | undefined>
@@ -216,8 +217,8 @@ const PromptsSettings = ({
 										} else {
 											setCondensingApiConfigId(newConfigId)
 											vscode.postMessage({
-												type: "condensingApiConfigId",
-												text: newConfigId,
+												type: "updateSettings",
+												updatedSettings: { condensingApiConfigId: newConfigId },
 											})
 										}
 									}}>
@@ -258,12 +259,20 @@ const PromptsSettings = ({
 									<div>
 										<VSCodeCheckbox
 											checked={includeTaskHistoryInEnhance}
-											onChange={(e: any) => {
-												const value = e.target.checked
-												setIncludeTaskHistoryInEnhance(value)
+											onChange={(e: Event | FormEvent<HTMLElement>) => {
+												const target = (
+													"target" in e ? e.target : null
+												) as HTMLInputElement | null
+
+												if (!target) {
+													return
+												}
+
+												setIncludeTaskHistoryInEnhance(target.checked)
+
 												vscode.postMessage({
-													type: "includeTaskHistoryInEnhance",
-													bool: value,
+													type: "updateSettings",
+													updatedSettings: { includeTaskHistoryInEnhance: target.checked },
 												})
 											}}>
 											<span className="font-medium">
@@ -290,7 +299,7 @@ const PromptsSettings = ({
 										/>
 										<div className="mt-2 flex justify-start items-center gap-2">
 											<Button
-												variant="default"
+												variant="primary"
 												onClick={handleTestEnhancement}
 												disabled={isEnhancing}>
 												{t("prompts:supportPrompts.enhance.previewButton")}

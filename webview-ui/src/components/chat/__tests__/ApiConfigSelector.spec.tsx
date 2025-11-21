@@ -435,4 +435,104 @@ describe("ApiConfigSelector", () => {
 		// Search value should be maintained
 		expect(searchInput.value).toBe("Config")
 	})
+
+	test("pinned configs remain fixed at top while unpinned configs scroll", () => {
+		// Create a list with many configs to test scrolling
+		const manyConfigs = Array.from({ length: 15 }, (_, i) => ({
+			id: `config${i + 1}`,
+			name: `Config ${i + 1}`,
+			modelId: `model-${i + 1}`,
+		}))
+
+		const props = {
+			...defaultProps,
+			listApiConfigMeta: manyConfigs,
+			pinnedApiConfigs: {
+				config1: true,
+				config2: true,
+				config3: true,
+			},
+		}
+
+		render(<ApiConfigSelector {...props} />)
+
+		const trigger = screen.getByTestId("dropdown-trigger")
+		fireEvent.click(trigger)
+
+		const popoverContent = screen.getByTestId("popover-content")
+
+		// Should have a single scroll container with max-h-[300px] and overflow-y-auto
+		const scrollContainer = popoverContent.querySelector(".max-h-\\[300px\\].overflow-y-auto")
+		expect(scrollContainer).toBeInTheDocument()
+
+		// Check for pinned configs sticky header
+		const pinnedStickyHeader = scrollContainer?.querySelector(".sticky.top-0.z-10.bg-vscode-dropdown-background")
+		expect(pinnedStickyHeader).toBeInTheDocument()
+		expect(pinnedStickyHeader).toHaveAttribute("aria-label", "Pinned configurations")
+
+		// Check for Config 1, 2, 3 being visible in the sticky header (pinned)
+		expect(screen.getAllByText("Config 1").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Config 2").length).toBeGreaterThan(0)
+		expect(screen.getAllByText("Config 3").length).toBeGreaterThan(0)
+
+		// Verify pinned container contains the pinned configs
+		if (pinnedStickyHeader) {
+			const elements = pinnedStickyHeader.querySelectorAll(".flex-shrink-0")
+			const pinnedConfigTexts = Array.from(elements)
+				.map((el) => (el as Element).textContent)
+				.filter((text) => text?.startsWith("Config"))
+
+			expect(pinnedConfigTexts).toContain("Config 1")
+			expect(pinnedConfigTexts).toContain("Config 2")
+			expect(pinnedConfigTexts).toContain("Config 3")
+		}
+
+		// Check for unpinned configs section
+		const unpinnedSection = scrollContainer?.querySelector('[aria-label="All configurations"]')
+		expect(unpinnedSection).toBeInTheDocument()
+
+		// Verify separator exists as border on pinned section when unpinned configs exist
+		expect(pinnedStickyHeader).toHaveClass("border-b")
+	})
+
+	test("displays all configs in scrollable container when no configs are pinned", () => {
+		const manyConfigs = Array.from({ length: 10 }, (_, i) => ({
+			id: `config${i + 1}`,
+			name: `Config ${i + 1}`,
+			modelId: `model-${i + 1}`,
+		}))
+
+		const props = {
+			...defaultProps,
+			listApiConfigMeta: manyConfigs,
+			pinnedApiConfigs: {}, // No pinned configs
+		}
+
+		render(<ApiConfigSelector {...props} />)
+
+		const trigger = screen.getByTestId("dropdown-trigger")
+		fireEvent.click(trigger)
+
+		const popoverContent = screen.getByTestId("popover-content")
+
+		// Should have a single scroll container with max-h-[300px] and overflow-y-auto
+		const scrollContainer = popoverContent.querySelector(".max-h-\\[300px\\].overflow-y-auto")
+		expect(scrollContainer).toBeInTheDocument()
+
+		// No pinned section should exist when no configs are pinned
+		const pinnedSection = scrollContainer?.querySelector(".sticky.top-0")
+		expect(pinnedSection).not.toBeInTheDocument()
+
+		// Should have unpinned configs section with all configs
+		const unpinnedSection = scrollContainer?.querySelector('[aria-label="All configurations"]')
+		expect(unpinnedSection).toBeInTheDocument()
+
+		// All configs should be in the unpinned section
+		const allConfigRows = unpinnedSection?.querySelectorAll(".group")
+		expect(allConfigRows?.length).toBe(10)
+
+		// No separator should exist when no pinned configs (no sticky header exists)
+		const stickyHeader = scrollContainer?.querySelector(".sticky.top-0")
+		expect(stickyHeader).not.toBeInTheDocument()
+	})
 })

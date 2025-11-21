@@ -77,18 +77,39 @@ export interface ModelInfo {
 	supportsImages?: boolean
 	supportsComputerUse?: boolean
 	supportsPromptCache: boolean
+	promptCacheRetention?: "in_memory" | "24h"
 	supportsVerbosity?: boolean
 	supportsReasoningBudget?: boolean
+	supportsReasoningBinary?: boolean
 	supportsTemperature?: boolean
+	defaultTemperature?: number
 	requiredReasoningBudget?: boolean
-	supportsReasoningEffort?: boolean
+	supportsReasoningEffort?: boolean | ("disable" | "none" | "minimal" | "low" | "medium" | "high")[]
+	requiredReasoningEffort?: boolean
+	preserveReasoning?: boolean
+	supportedParameters?: ("max_tokens" | "temperature" | "reasoning" | "include_reasoning")[]
 	inputPrice?: number
 	outputPrice?: number
 	cacheWritesPrice?: number
 	cacheReadsPrice?: number
 	description?: string
+	reasoningEffort?: "none" | "minimal" | "low" | "medium" | "high"
+	minTokensPerCachePoint?: number
+	maxCachePoints?: number
+	cachableFields?: string[]
 	displayName?: string | null
 	preferredIndex?: number | null
+	deprecated?: boolean
+	isFree?: boolean
+	supportsNativeTools?: boolean
+	tiers?: Array<{
+		name?: "default" | "flex" | "priority"
+		contextWindow: number
+		inputPrice?: number
+		outputPrice?: number
+		cacheWritesPrice?: number
+		cacheReadsPrice?: number
+	}>
 }
 
 export type ModelRecord = Record<string, ModelInfo>

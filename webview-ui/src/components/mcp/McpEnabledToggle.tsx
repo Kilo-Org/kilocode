@@ -10,9 +10,13 @@ const McpEnabledToggle = () => {
 
 	const handleChange = (e: Event | FormEvent<HTMLElement>) => {
 		const target = ("target" in e ? e.target : null) as HTMLInputElement | null
-		if (!target) return
+
+		if (!target) {
+			return
+		}
+
 		setMcpEnabled(target.checked)
-		vscode.postMessage({ type: "mcpEnabled", bool: target.checked })
+		vscode.postMessage({ type: "updateSettings", updatedSettings: { mcpEnabled: target.checked } })
 	}
 
 	return (

@@ -80,7 +80,7 @@ To change Browser / Computer Use settings in Kilo:
 
 1. Open Settings by clicking the gear icon <Codicon name="gear" /> → Browser / Computer Use
 
-    <img src="/docs/img/browser-use/browser-use.png" alt="Browser settings menu" width="600" />
+ <img src="/docs/img/browser-use/browser-use.png" alt="Browser settings menu" width="600" />
 
 ### Enable/Disable Browser Use
 
@@ -90,7 +90,7 @@ To change this setting:
 
 1. Check or uncheck the "Enable browser tool" checkbox within your Browser / Computer Use settings
 
-    <img src="/docs/img/browser-use/browser-use-2.png" alt="Enable browser tool setting" width="300" />
+ <img src="/docs/img/browser-use/browser-use-2.png" alt="Enable browser tool setting" width="300" />
 
 ### Viewport Size
 
@@ -108,7 +108,7 @@ To change this setting:
     - Mobile (360x640)
 3. Select your desired resolution.
 
-    <img src="/docs/img/browser-use/browser-use-3.png" alt="Viewport size setting" width="600" />
+ <img src="/docs/img/browser-use/browser-use-3.png" alt="Viewport size setting" width="600" />
 
 ### Screenshot Quality
 
@@ -146,7 +146,7 @@ To enable this feature:
 1. Check the "Use remote browser connection" box in Browser / Computer Use settings
 2. Click "Test Connection" to verify
 
-    <img src="/docs/img/browser-use/browser-use-5.png" alt="Remote browser connection setting" width="600" />
+ <img src="/docs/img/browser-use/browser-use-5.png" alt="Remote browser connection setting" width="600" />
 
 #### Common Use Cases
 

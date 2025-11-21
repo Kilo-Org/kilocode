@@ -362,6 +362,7 @@
 		"awsSessionToken": "AWS-sessietoken",
 		"awsRegion": "AWS-regio",
 		"awsCrossRegion": "Gebruik cross-region inference",
+		"awsGlobalInference": "Gebruik wereldwijde inferentie (automatische selectie van optimale AWS-regio)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Aangepast VPC-eindpunt gebruiken",
 			"vpcEndpointUrlPlaceholder": "Voer VPC-eindpunt URL in (optioneel)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Fout- & Herhalingslimiet",
-			"description": "Aantal opeenvolgende fouten of herhaalde acties voordat het dialoogvenster 'Kilo Code ondervindt problemen' wordt weergegeven",
+			"description": "Aantal opeenvolgende fouten of herhaalde acties voordat het dialoogvenster 'Kilo ondervindt problemen' wordt weergegeven. Zet op 0 om dit veiligheidsmechanisme uit te schakelen (wordt nooit geactiveerd).",
 			"unlimitedDescription": "Onbeperkt aantal nieuwe pogingen ingeschakeld (automatisch doorgaan). Het dialoogvenster zal nooit verschijnen.",
 			"warning": "⚠️ Instellen op 0 staat onbeperkte nieuwe pogingen toe, wat aanzienlijk API-gebruik kan verbruiken"
 		},

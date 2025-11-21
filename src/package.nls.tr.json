@@ -47,6 +47,7 @@
 	"settings.apiRequestTimeout.description": "API yanıtları için beklenecek maksimum süre (saniye cinsinden) (0 = zaman aşımı yok, 1-86400s, varsayılan: 600s). LM Studio ve Ollama gibi daha fazla işlem süresi gerektirebilecek yerel sağlayıcılar için daha yüksek değerler önerilir.",
 	"settings.codeIndex.embeddingBatchSize.description": "Kod indeksleme sırasında gömme işlemleri için toplu iş boyutu. Bunu API sağlayıcınızın sınırlarına göre ayarlayın. Varsayılan 60'tır.",
 	"settings.newTaskRequireTodos.description": "new_task aracıyla yeni görevler oluştururken todos parametresini gerekli kıl",
+	"settings.toolProtocol.description": "Yapay zeka etkileşimleri için kullanılacak araç protokolü. XML, varsayılan ve önerilen protokoldür. Yerel deneyseldir ve tüm sağlayıcılarla çalışmayabilir.",
 	"ghost.input.title": "Onaylamak için 'Enter'a, iptal etmek için 'Escape'e basın",
 	"ghost.input.placeholder": "Ne yapmak istediğinizi açıklayın...",
 	"ghost.commands.generateSuggestions": "Kilo Code: Düzenleme Önerileri Oluştur",

@@ -115,6 +115,21 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 }))
 
 vi.mock("@src/components/ui", () => ({
+	Button: ({
+		children,
+		onClick,
+		disabled,
+		...props
+	}: {
+		children: React.ReactNode
+		onClick?: () => void
+		disabled?: boolean
+		[key: string]: any
+	}) => (
+		<button onClick={onClick} disabled={disabled} {...props}>
+			{children}
+		</button>
+	),
 	Popover: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 	PopoverTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 	PopoverContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

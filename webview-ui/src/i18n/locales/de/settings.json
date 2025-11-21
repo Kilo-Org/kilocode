@@ -362,6 +362,7 @@
 		"awsSessionToken": "AWS Sitzungstoken",
 		"awsRegion": "AWS Region",
 		"awsCrossRegion": "Regionsübergreifende Inferenz verwenden",
+		"awsGlobalInference": "Globale Inferenz verwenden (optimale AWS-Region automatisch auswählen)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Benutzerdefinierten VPC-Endpunkt verwenden",
 			"vpcEndpointUrlPlaceholder": "VPC-Endpunkt-URL eingeben (optional)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Fehler- & Wiederholungslimit",
-			"description": "Anzahl aufeinanderfolgender Fehler oder wiederholter Aktionen, bevor der Dialog 'Kilo Code hat Probleme' angezeigt wird",
+			"description": "Anzahl aufeinanderfolgender Fehler oder wiederholter Aktionen, bevor der Dialog 'Kilo hat Probleme' angezeigt wird. Auf 0 setzen, um diesen Sicherheitsmechanismus zu deaktivieren (er wird niemals ausgelöst).",
 			"unlimitedDescription": "Unbegrenzte Wiederholungen aktiviert (automatisches Fortfahren). Der Dialog wird niemals angezeigt.",
 			"warning": "⚠️ Das Setzen auf 0 erlaubt unbegrenzte Wiederholungen, was zu erheblichem API-Verbrauch führen kann"
 		},

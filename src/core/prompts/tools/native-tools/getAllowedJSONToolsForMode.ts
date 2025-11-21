@@ -167,7 +167,7 @@ export async function getAllowedJSONToolsForMode(
 	if (isApplyDiffToolAllowedForMode && diffEnabled) {
 		if (providerState?.experiments.multiFileApplyDiff) {
 			allowedTools.push(apply_diff_multi_file)
-		} else if (shouldUseSearchAndReplaceInsteadOfApplyDiff("json", model?.id ?? "")) {
+		} else if (shouldUseSearchAndReplaceInsteadOfApplyDiff("native", model?.id ?? "")) {
 			allowedTools.push(search_and_replace)
 		} else {
 			allowedTools.push(apply_diff_single_file)

@@ -1,6 +1,14 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 
-import type { ClineAsk, ToolProgressStatus, ToolGroup, ToolName } from "@roo-code/types"
+import type {
+	ClineAsk,
+	ToolProgressStatus,
+	ToolGroup,
+	ToolName,
+	FileEntry,
+	BrowserActionParams,
+	GenerateImageParams,
+} from "@roo-code/types"
 
 export type ToolResponse = string | Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>
 
@@ -74,106 +82,140 @@ export const toolParamNames = [
 	"todos",
 	"prompt",
 	"image",
+	"files", // Native protocol parameter for read_file
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
 
-export interface ToolUse {
+export type ToolProtocol = "xml" | "native"
+
+/**
+ * Type map defining the native (typed) argument structure for each tool.
+ * Tools not listed here will fall back to `any` for backward compatibility.
+ */
+export type NativeToolArgs = {
+	read_file: { files: FileEntry[] }
+	attempt_completion: { result: string }
+	execute_command: { command: string; cwd?: string }
+	insert_content: { path: string; line: number; content: string }
+	apply_diff: { path: string; diff: string }
+	ask_followup_question: {
+		question: string
+		follow_up: Array<{ text: string; mode?: string }>
+	}
+	browser_action: BrowserActionParams
+	codebase_search: { query: string; path?: string }
+	fetch_instructions: { task: string }
+	generate_image: GenerateImageParams
+	list_code_definition_names: { path: string }
+	run_slash_command: { command: string; args?: string }
+	search_files: { path: string; regex: string; file_pattern?: string | null }
+	switch_mode: { mode_slug: string; reason: string }
+	update_todo_list: { todos: string }
+	use_mcp_tool: { server_name: string; tool_name: string; arguments?: Record<string, unknown> }
+	write_to_file: { path: string; content: string; line_count: number }
+	// Add more tools as they are migrated to native protocol
+}
+
+/**
+ * Generic ToolUse interface that provides proper typing for both protocols.
+ *
+ * @template TName - The specific tool name, which determines the nativeArgs type
+ */
+export interface ToolUse<TName extends ToolName = ToolName> {
 	type: "tool_use"
-	name: ToolName
+	id?: string // Optional ID to track tool calls
+	name: TName
 	// params is a partial record, allowing only some or none of the possible parameters to be used
 	params: Partial<Record<ToolParamName, string>>
 	partial: boolean
 	toolUseId?: string // kilocode_change
+	// nativeArgs is properly typed based on TName if it's in NativeToolArgs, otherwise never
+	nativeArgs?: TName extends keyof NativeToolArgs ? NativeToolArgs[TName] : never
 }
 
-export interface ExecuteCommandToolUse extends ToolUse {
+export interface ExecuteCommandToolUse extends ToolUse<"execute_command"> {
 	name: "execute_command"
 	// Pick<Record<ToolParamName, string>, "command"> makes "command" required, but Partial<> makes it optional
 	params: Partial<Pick<Record<ToolParamName, string>, "command" | "cwd">>
 }
 
-export interface ReadFileToolUse extends ToolUse {
+export interface ReadFileToolUse extends ToolUse<"read_file"> {
 	name: "read_file"
-	params: Partial<Pick<Record<ToolParamName, string>, "args" | "path" | "start_line" | "end_line">>
+	params: Partial<Pick<Record<ToolParamName, string>, "args" | "path" | "start_line" | "end_line" | "files">>
 }
 
-export interface FetchInstructionsToolUse extends ToolUse {
+export interface FetchInstructionsToolUse extends ToolUse<"fetch_instructions"> {
 	name: "fetch_instructions"
 	params: Partial<Pick<Record<ToolParamName, string>, "task">>
 }
 
-export interface WriteToFileToolUse extends ToolUse {
+export interface WriteToFileToolUse extends ToolUse<"write_to_file"> {
 	name: "write_to_file"
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "content" | "line_count">>
 }
 
-export interface InsertCodeBlockToolUse extends ToolUse {
+export interface InsertCodeBlockToolUse extends ToolUse<"insert_content"> {
 	name: "insert_content"
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "line" | "content">>
 }
 
-export interface CodebaseSearchToolUse extends ToolUse {
+export interface CodebaseSearchToolUse extends ToolUse<"codebase_search"> {
 	name: "codebase_search"
 	params: Partial<Pick<Record<ToolParamName, string>, "query" | "path">>
 }
 
-export interface SearchFilesToolUse extends ToolUse {
+export interface SearchFilesToolUse extends ToolUse<"search_files"> {
 	name: "search_files"
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "regex" | "file_pattern">>
 }
 
-export interface ListFilesToolUse extends ToolUse {
+export interface ListFilesToolUse extends ToolUse<"list_files"> {
 	name: "list_files"
 	params: Partial<Pick<Record<ToolParamName, string>, "path" | "recursive">>
 }
 
-export interface ListCodeDefinitionNamesToolUse extends ToolUse {
+export interface ListCodeDefinitionNamesToolUse extends ToolUse<"list_code_definition_names"> {
 	name: "list_code_definition_names"
 	params: Partial<Pick<Record<ToolParamName, string>, "path">>
 }
 
-export interface BrowserActionToolUse extends ToolUse {
+export interface BrowserActionToolUse extends ToolUse<"browser_action"> {
 	name: "browser_action"
 	params: Partial<Pick<Record<ToolParamName, string>, "action" | "url" | "coordinate" | "text" | "size">>
 }
 
-export interface UseMcpToolToolUse extends ToolUse {
+export interface UseMcpToolToolUse extends ToolUse<"use_mcp_tool"> {
 	name: "use_mcp_tool"
 	params: Partial<Pick<Record<ToolParamName, string>, "server_name" | "tool_name" | "arguments">>
 }
 
-export interface AccessMcpResourceToolUse extends ToolUse {
+export interface AccessMcpResourceToolUse extends ToolUse<"access_mcp_resource"> {
 	name: "access_mcp_resource"
 	params: Partial<Pick<Record<ToolParamName, string>, "server_name" | "uri">>
 }
 
-export interface AskFollowupQuestionToolUse extends ToolUse {
+export interface AskFollowupQuestionToolUse extends ToolUse<"ask_followup_question"> {
 	name: "ask_followup_question"
 	params: Partial<Pick<Record<ToolParamName, string>, "question" | "follow_up">>
 }
 
-export interface AttemptCompletionToolUse extends ToolUse {
+export interface AttemptCompletionToolUse extends ToolUse<"attempt_completion"> {
 	name: "attempt_completion"
 	params: Partial<Pick<Record<ToolParamName, string>, "result">>
 }
 
-export interface SwitchModeToolUse extends ToolUse {
+export interface SwitchModeToolUse extends ToolUse<"switch_mode"> {
 	name: "switch_mode"
 	params: Partial<Pick<Record<ToolParamName, string>, "mode_slug" | "reason">>
 }
 
-export interface NewTaskToolUse extends ToolUse {
+export interface NewTaskToolUse extends ToolUse<"new_task"> {
 	name: "new_task"
 	params: Partial<Pick<Record<ToolParamName, string>, "mode" | "message" | "todos">>
 }
 
-export interface ReportBugToolUse extends ToolUse {
-	name: "report_bug"
-	params: Partial<Pick<Record<ToolParamName, string>, "title" | "description">>
-}
-
-export interface RunSlashCommandToolUse extends ToolUse {
+export interface RunSlashCommandToolUse extends ToolUse<"run_slash_command"> {
 	name: "run_slash_command"
 	params: Partial<Pick<Record<ToolParamName, string>, "command" | "args">>
 }
@@ -185,7 +227,7 @@ export interface EditFileToolUse extends ToolUse {
 }
 // kilocode_change end
 
-export interface GenerateImageToolUse extends ToolUse {
+export interface GenerateImageToolUse extends ToolUse<"generate_image"> {
 	name: "generate_image"
 	params: Partial<Pick<Record<ToolParamName, string>, "prompt" | "path" | "image">>
 }

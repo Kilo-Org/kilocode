@@ -2,7 +2,7 @@ import {
 	type ModelInfo,
 	type ProviderSettings,
 	type VerbosityLevel,
-	type ReasoningEffortWithMinimal,
+	type ReasoningEffortExtended,
 	ANTHROPIC_DEFAULT_MAX_TOKENS,
 } from "@roo-code/types"
 
@@ -39,7 +39,7 @@ type GetModelParamsOptions<T extends Format> = {
 type BaseModelParams = {
 	maxTokens: number | undefined
 	temperature: number | undefined
-	reasoningEffort: ReasoningEffortWithMinimal | undefined
+	reasoningEffort: ReasoningEffortExtended | undefined
 	reasoningBudget: number | undefined
 	verbosity: VerbosityLevel | undefined
 }
@@ -129,8 +129,17 @@ export function getModelParams({
 		temperature = 1.0
 	} else if (shouldUseReasoningEffort({ model, settings })) {
 		// "Traditional" reasoning models use the `reasoningEffort` parameter.
-		const effort = customReasoningEffort ?? model.reasoningEffort
-		reasoningEffort = effort as ReasoningEffortWithMinimal
+		const effort = (customReasoningEffort ?? model.reasoningEffort) as any
+		// Do not propagate "disable" into model params; treat as omission
+		if (effort && effort !== "disable") {
+			if (model.supportsReasoningEffort === true) {
+				// Boolean capability: accept extended efforts; UI still exposes low/medium/high by default
+				reasoningEffort = effort as ReasoningEffortExtended
+			} else {
+				// Array capability: honor exactly what's defined by the model
+				reasoningEffort = effort as ReasoningEffortExtended
+			}
+		}
 	}
 
 	const params: BaseModelParams = { maxTokens, temperature, reasoningEffort, reasoningBudget, verbosity }
@@ -182,7 +191,7 @@ export function getModelParams({
 }
 
 // kilocode_change start
-function shouldDisableReasoning(modelId: string, reasoningEffort: ReasoningEffortWithMinimal | undefined) {
+function shouldDisableReasoning(modelId: string, reasoningEffort: ReasoningEffortExtended | undefined) {
 	const supportsReasoningToggle =
 		modelId.startsWith("deepseek/deepseek-v3.1") ||
 		modelId.startsWith("deepseek/deepseek-chat-v3.1") ||

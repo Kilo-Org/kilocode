@@ -3,7 +3,7 @@
 
 import * as vscode from "vscode"
 import * as fs from "fs/promises"
-import { executeCommand, executeCommandTool, ExecuteCommandOptions } from "../executeCommandTool"
+import { executeCommandInTerminal, executeCommandTool, ExecuteCommandOptions } from "../ExecuteCommandTool"
 import { Task } from "../../task/Task"
 import { TerminalRegistry } from "../../../integrations/terminal/TerminalRegistry"
 
@@ -90,7 +90,7 @@ describe("Command Execution Timeout Integration", () => {
 		const quickProcess = Promise.resolve()
 		mockTerminal.runCommand.mockReturnValue(quickProcess)
 
-		await executeCommand(mockTask as Task, options)
+		await executeCommandInTerminal(mockTask as Task, options)
 
 		// Verify that the terminal was called with the command
 		expect(mockTerminal.runCommand).toHaveBeenCalledWith("echo test", expect.any(Object))
@@ -115,7 +115,7 @@ describe("Command Execution Timeout Integration", () => {
 		mockTerminal.runCommand.mockReturnValue(longRunningProcess)
 
 		// Execute with timeout
-		const result = await executeCommand(mockTask as Task, options)
+		const result = await executeCommandInTerminal(mockTask as Task, options)
 
 		// Should return timeout error
 		expect(result[0]).toBe(false) // Not rejected by user
@@ -140,7 +140,7 @@ describe("Command Execution Timeout Integration", () => {
 
 		mockTerminal.runCommand.mockReturnValue(neverResolvingPromise)
 
-		await executeCommand(mockTask as Task, options)
+		await executeCommandInTerminal(mockTask as Task, options)
 
 		// Verify abort was called
 		expect(abortSpy).toHaveBeenCalled()
@@ -157,7 +157,7 @@ describe("Command Execution Timeout Integration", () => {
 		const quickProcess = Promise.resolve()
 		mockTerminal.runCommand.mockReturnValue(quickProcess)
 
-		const result = await executeCommand(mockTask as Task, options)
+		const result = await executeCommandInTerminal(mockTask as Task, options)
 
 		// Should complete successfully without timeout
 		expect(result[0]).toBe(false) // Not rejected
@@ -174,7 +174,7 @@ describe("Command Execution Timeout Integration", () => {
 		const quickProcess = Promise.resolve()
 		mockTerminal.runCommand.mockReturnValue(quickProcess)
 
-		await executeCommand(mockTask as Task, options)
+		await executeCommandInTerminal(mockTask as Task, options)
 
 		// Should complete without issues using default (no timeout)
 		expect(mockTerminal.runCommand).toHaveBeenCalled()
@@ -194,7 +194,7 @@ describe("Command Execution Timeout Integration", () => {
 
 		mockTerminal.runCommand.mockReturnValue(longRunningProcess)
 
-		const result = await executeCommand(mockTask as Task, options)
+		const result = await executeCommandInTerminal(mockTask as Task, options)
 
 		// Should complete successfully without timeout
 		expect(result[0]).toBe(false) // Not rejected
@@ -273,14 +273,12 @@ describe("Command Execution Timeout Integration", () => {
 			})
 			mockTerminal.runCommand.mockReturnValue(longRunningProcess)
 
-			await executeCommandTool(
-				mockTask as Task,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await executeCommandTool.handle(mockTask as Task, mockBlock, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			// Should complete successfully without timeout because "npm" is in allowlist
 			expect(mockPushToolResult).toHaveBeenCalled()
@@ -306,14 +304,12 @@ describe("Command Execution Timeout Integration", () => {
 			;(neverResolvingProcess as any).abort = vitest.fn()
 			mockTerminal.runCommand.mockReturnValue(neverResolvingProcess)
 
-			await executeCommandTool(
-				mockTask as Task,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await executeCommandTool.handle(mockTask as Task, mockBlock, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			// Should timeout because "sleep" is not in allowlist
 			expect(mockPushToolResult).toHaveBeenCalled()
@@ -339,14 +335,12 @@ describe("Command Execution Timeout Integration", () => {
 			;(neverResolvingProcess as any).abort = vitest.fn()
 			mockTerminal.runCommand.mockReturnValue(neverResolvingProcess)
 
-			await executeCommandTool(
-				mockTask as Task,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await executeCommandTool.handle(mockTask as Task, mockBlock, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			// Should timeout because allowlist is empty
 			expect(mockPushToolResult).toHaveBeenCalled()
@@ -375,14 +369,12 @@ describe("Command Execution Timeout Integration", () => {
 			mockBlock.params.command = "git log --oneline"
 			mockTerminal.runCommand.mockReturnValueOnce(longRunningProcess)
 
-			await executeCommandTool(
-				mockTask as Task,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await executeCommandTool.handle(mockTask as Task, mockBlock, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockPushToolResult).toHaveBeenCalled()
 			const result1 = mockPushToolResult.mock.calls[0][0]
@@ -395,14 +387,12 @@ describe("Command Execution Timeout Integration", () => {
 			mockBlock.params.command = "git status" // "git" alone is not in allowlist, only "git log"
 			mockTerminal.runCommand.mockReturnValueOnce(neverResolvingProcess)
 
-			await executeCommandTool(
-				mockTask as Task,
-				mockBlock,
-				mockAskApproval,
-				mockHandleError,
-				mockPushToolResult,
-				mockRemoveClosingTag,
-			)
+			await executeCommandTool.handle(mockTask as Task, mockBlock, {
+				askApproval: mockAskApproval,
+				handleError: mockHandleError,
+				pushToolResult: mockPushToolResult,
+				removeClosingTag: mockRemoveClosingTag,
+			})
 
 			expect(mockPushToolResult).toHaveBeenCalled()
 			const result2 = mockPushToolResult.mock.calls[0][0]

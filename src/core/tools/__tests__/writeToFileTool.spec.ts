@@ -9,7 +9,7 @@ import { getReadablePath } from "../../../utils/path"
 import { unescapeHtmlEntities } from "../../../utils/text-normalization"
 import { everyLineHasLineNumbers, stripLineNumbers } from "../../../integrations/misc/extract-text"
 import { ToolUse, ToolResponse } from "../../../shared/tools"
-import { writeToFileTool } from "../writeToFileTool"
+import { writeToFileTool } from "../WriteToFileTool"
 
 vi.mock("path", async () => {
 	const originalPath = await vi.importActual("path")
@@ -228,16 +228,16 @@ describe("writeToFileTool", () => {
 			partial: isPartial,
 		}
 
-		await writeToFileTool(
-			mockCline,
-			toolUse,
-			mockAskApproval,
-			mockHandleError,
-			(result: ToolResponse) => {
-				toolResult = result
-			},
-			mockRemoveClosingTag,
-		)
+		mockPushToolResult = vi.fn((result: ToolResponse) => {
+			toolResult = result
+		})
+
+		await writeToFileTool.handle(mockCline, toolUse as ToolUse<"write_to_file">, {
+			askApproval: mockAskApproval,
+			handleError: mockHandleError,
+			pushToolResult: mockPushToolResult,
+			removeClosingTag: mockRemoveClosingTag,
+		})
 
 		return toolResult
 	}
@@ -412,8 +412,7 @@ describe("writeToFileTool", () => {
 
 			await executeWriteFileTool({}, { isPartial: true })
 
-			expect(mockHandleError).toHaveBeenCalledWith("writing file", expect.any(Error))
-			expect(mockCline.diffViewProvider.reset).toHaveBeenCalled()
+			expect(mockHandleError).toHaveBeenCalledWith("handling partial write_to_file", expect.any(Error))
 		})
 	})
 })

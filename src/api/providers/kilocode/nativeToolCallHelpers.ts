@@ -72,7 +72,7 @@
 import OpenAI from "openai"
 import type { ApiHandlerCreateMessageMetadata } from "../../index"
 import type { ApiStreamNativeToolCallsChunk } from "../../transform/kilocode/api-stream-native-tool-calls-chunk"
-import { getActiveToolUseStyle, ProviderSettings, ToolUseStyle } from "@roo-code/types"
+import { getActiveToolUseStyle, ProviderSettings, ToolProtocol } from "@roo-code/types"
 import Anthropic from "@anthropic-ai/sdk"
 
 /**
@@ -88,8 +88,8 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
 	options: ProviderSettings,
 	metadata?: ApiHandlerCreateMessageMetadata,
 ): T {
-	// When toolStyle is "json" and allowedTools exist, add them to params
-	if (getActiveToolUseStyle(options) === "json" && metadata?.allowedTools) {
+	// When toolStyle is "native" and allowedTools exist, add them to params
+	if (getActiveToolUseStyle(options) === "native" && metadata?.allowedTools) {
 		params.tools = metadata.allowedTools
 		//optimally we'd have tool_choice as 'required', but many providers, especially
 		// those using SGlang dont properly handle that setting and barf with a 400.
@@ -109,12 +109,12 @@ export function addNativeToolCallsToParams<T extends OpenAI.Chat.ChatCompletionC
  */
 export function* processNativeToolCallsFromDelta(
 	delta: OpenAI.Chat.Completions.ChatCompletionChunk.Choice.Delta | undefined,
-	toolStyle: ToolUseStyle | undefined,
+	toolStyle: ToolProtocol | undefined,
 ): Generator<ApiStreamNativeToolCallsChunk, void, undefined> {
 	// Check if delta contains tool calls
 	if (delta && delta.tool_calls && delta.tool_calls.length > 0) {
-		// Only process tool calls when toolStyle is "json"
-		if (toolStyle === "json") {
+		// Only process tool calls when toolStyle is "native"
+		if (toolStyle === "native") {
 			// Filter tool calls to keep only those with function data
 			// Map to the ApiStreamNativeToolCallsChunk format
 			const validToolCalls = delta.tool_calls

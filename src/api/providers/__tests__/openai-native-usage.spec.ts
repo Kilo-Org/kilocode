@@ -344,6 +344,51 @@ describe("OpenAiNativeHandler - normalizeUsage", () => {
 		})
 	})
 
+	describe("OpenAiNativeHandler - prompt cache retention", () => {
+		let handler: OpenAiNativeHandler
+
+		beforeEach(() => {
+			handler = new OpenAiNativeHandler({
+				openAiNativeApiKey: "test-key",
+			})
+		})
+
+		const buildRequestBodyForModel = (modelId: string) => {
+			// Force the handler to use the requested model ID
+			;(handler as any).options.apiModelId = modelId
+			const model = handler.getModel()
+			// Minimal formatted input/systemPrompt/verbosity/metadata for building the body
+			return (handler as any).buildRequestBody(model, [], "", model.verbosity, undefined, undefined)
+		}
+
+		it("should set prompt_cache_retention=24h for gpt-5.1 models that support prompt caching", () => {
+			const body = buildRequestBodyForModel("gpt-5.1")
+			expect(body.prompt_cache_retention).toBe("24h")
+
+			const codexBody = buildRequestBodyForModel("gpt-5.1-codex")
+			expect(codexBody.prompt_cache_retention).toBe("24h")
+
+			const codexMiniBody = buildRequestBodyForModel("gpt-5.1-codex-mini")
+			expect(codexMiniBody.prompt_cache_retention).toBe("24h")
+		})
+
+		it("should not set prompt_cache_retention for non-gpt-5.1 models even if they support prompt caching", () => {
+			const body = buildRequestBodyForModel("gpt-5")
+			expect(body.prompt_cache_retention).toBeUndefined()
+
+			const fourOBody = buildRequestBodyForModel("gpt-4o")
+			expect(fourOBody.prompt_cache_retention).toBeUndefined()
+		})
+
+		it("should not set prompt_cache_retention when the model does not support prompt caching", () => {
+			const modelId = "codex-mini-latest"
+			expect(openAiNativeModels[modelId as keyof typeof openAiNativeModels].supportsPromptCache).toBe(false)
+
+			const body = buildRequestBodyForModel(modelId)
+			expect(body.prompt_cache_retention).toBeUndefined()
+		})
+	})
+
 	describe("cost calculation", () => {
 		it("should pass total input tokens to calculateApiCostOpenAI", () => {
 			const usage = {

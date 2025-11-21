@@ -68,6 +68,7 @@ describe("getRooModels", () => {
 				supportsImages: true,
 				supportsReasoningEffort: true,
 				requiredReasoningEffort: false,
+				supportsNativeTools: false,
 				supportsPromptCache: true,
 				inputPrice: 100, // 0.0001 * 1_000_000
 				outputPrice: 200, // 0.0002 * 1_000_000
@@ -116,6 +117,7 @@ describe("getRooModels", () => {
 			supportsImages: false,
 			supportsReasoningEffort: true,
 			requiredReasoningEffort: true,
+			supportsNativeTools: false,
 			supportsPromptCache: false,
 			inputPrice: 100, // 0.0001 * 1_000_000
 			outputPrice: 200, // 0.0002 * 1_000_000
@@ -162,6 +164,7 @@ describe("getRooModels", () => {
 			supportsImages: false,
 			supportsReasoningEffort: false,
 			requiredReasoningEffort: false,
+			supportsNativeTools: false,
 			supportsPromptCache: false,
 			inputPrice: 100, // 0.0001 * 1_000_000
 			outputPrice: 200, // 0.0002 * 1_000_000

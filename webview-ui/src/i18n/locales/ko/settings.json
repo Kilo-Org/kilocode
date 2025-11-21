@@ -362,6 +362,7 @@
 		"awsSessionToken": "AWS 세션 토큰",
 		"awsRegion": "AWS 리전",
 		"awsCrossRegion": "교차 리전 추론 사용",
+		"awsGlobalInference": "글로벌 추론 사용(최적의 AWS 리전 자동 선택)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "사용자 지정 VPC 엔드포인트 사용",
 			"vpcEndpointUrlPlaceholder": "VPC 엔드포인트 URL 입력 (선택사항)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "오류 및 반복 제한",
-			"description": "'Kilo Code에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수",
+			"description": "'Kilo에 문제가 발생했습니다' 대화 상자를 표시하기 전의 연속 오류 또는 반복 작업 수. 이 안전 메커니즘을 비활성화하려면 0으로 설정하세요(절대 트리거되지 않음).",
 			"unlimitedDescription": "무제한 재시도 활성화 (자동 진행). 대화 상자가 나타나지 않습니다.",
 			"warning": "⚠️ 0으로 설정하면 무제한 재시도가 허용되어 상당한 API 사용량이 발생할 수 있습니다"
 		},

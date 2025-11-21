@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { parseMarkdownChecklist } from "../updateTodoListTool"
+import { parseMarkdownChecklist } from "../UpdateTodoListTool"
 import { TodoItem } from "@roo-code/types"
 
 describe("parseMarkdownChecklist", () => {

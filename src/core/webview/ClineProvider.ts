@@ -43,6 +43,7 @@ import {
 	DEFAULT_MODES,
 	getActiveToolUseStyle, // kilocode_change
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
+	getModelId,
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { CloudService, BridgeOrchestrator, getRooCodeApiUrl } from "@roo-code/cloud"
@@ -158,6 +159,10 @@ export class ClineProvider
 	private recentTasksCache?: string[]
 	private pendingOperations: Map<string, PendingEditOperation> = new Map()
 	private static readonly PENDING_OPERATION_TIMEOUT_MS = 30000 // 30 seconds
+
+	private cloudOrganizationsCache: CloudOrganizationMembership[] | null = null
+	private cloudOrganizationsCacheTimestamp: number | null = null
+	private static readonly CLOUD_ORGANIZATIONS_CACHE_DURATION_MS = 5 * 1000 // 5 seconds
 
 	public isViewLaunched = false
 	public settingsImportedAt?: number
@@ -894,7 +899,7 @@ ${prompt}
 		webviewView.webview.html =
 			this.contextProxy.extensionMode === vscode.ExtensionMode.Development
 				? await this.getHMRHtmlContent(webviewView.webview)
-				: this.getHtmlContent(webviewView.webview)
+				: await this.getHtmlContent(webviewView.webview)
 
 		// Sets up an event listener to listen for messages passed from the webview view context
 		// and executes code based on the message that is received.
@@ -966,7 +971,13 @@ ${prompt}
 	}
 
 	public async createTaskWithHistoryItem(historyItem: HistoryItem & { rootTask?: Task; parentTask?: Task }) {
-		await this.removeClineFromStack()
+		// Check if we're rehydrating the current task to avoid flicker
+		const currentTask = this.getCurrentTask()
+		const isRehydratingCurrentTask = currentTask && currentTask.taskId === historyItem.id
+
+		if (!isRehydratingCurrentTask) {
+			await this.removeClineFromStack()
+		}
 
 		// If the history item has a saved mode, restore it and its associated API configuration.
 		if (historyItem.mode) {
@@ -1041,11 +1052,46 @@ ${prompt}
 			enableBridge: BridgeOrchestrator.isEnabled(cloudUserInfo, taskSyncEnabled),
 		})
 
-		await this.addClineToStack(task)
+		if (isRehydratingCurrentTask) {
+			// Replace the current task in-place to avoid UI flicker
+			const stackIndex = this.clineStack.length - 1
 
-		this.log(
-			`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
-		)
+			// Properly dispose of the old task to ensure garbage collection
+			const oldTask = this.clineStack[stackIndex]
+
+			// Abort the old task to stop running processes and mark as abandoned
+			try {
+				await oldTask.abortTask(true)
+			} catch (e) {
+				this.log(
+					`[createTaskWithHistoryItem] abortTask() failed for old task ${oldTask.taskId}.${oldTask.instanceId}: ${e.message}`,
+				)
+			}
+
+			// Remove event listeners from the old task
+			const cleanupFunctions = this.taskEventListeners.get(oldTask)
+			if (cleanupFunctions) {
+				cleanupFunctions.forEach((cleanup) => cleanup())
+				this.taskEventListeners.delete(oldTask)
+			}
+
+			// Replace the task in the stack
+			this.clineStack[stackIndex] = task
+			task.emit(RooCodeEventName.TaskFocused)
+
+			// Perform preparation tasks and set up event listeners
+			await this.performPreparationTasks(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] rehydrated task ${task.taskId}.${task.instanceId} in-place (flicker-free)`,
+			)
+		} else {
+			await this.addClineToStack(task)
+
+			this.log(
+				`[createTaskWithHistoryItem] ${task.parentTask ? "child" : "parent"} task ${task.taskId}.${task.instanceId} instantiated`,
+			)
+		}
 
 		// Check if there's a pending edit after checkpoint restoration
 		const operationId = `task-${task.taskId}`
@@ -1129,6 +1175,12 @@ ${prompt}
 
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		const stylesUri = getUri(webview, this.contextProxy.extensionUri, [
 			"webview-ui",
 			"build",
@@ -1166,7 +1218,7 @@ ${prompt}
 			`img-src ${webview.cspSource} https://storage.googleapis.com https://img.clerk.com data: https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com`, // kilocode_change: add https://*.googleusercontent.com and https://*.googleapis.com and https://*.githubusercontent.com
 			`media-src ${webview.cspSource}`,
 			`script-src 'unsafe-eval' ${webview.cspSource} https://* https://*.posthog.com http://${localServerUrl} http://0.0.0.0:${localPort} 'nonce-${nonce}'`,
-			`connect-src ${webview.cspSource} https://* http://localhost:3000 https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`, // kilocode_change: add http://localhost:3000
+			`connect-src ${webview.cspSource} ${openRouterDomain} https://* http://localhost:3000 https://*.posthog.com ws://${localServerUrl} ws://0.0.0.0:${localPort} http://${localServerUrl} http://0.0.0.0:${localPort}`, // kilocode_change: add http://localhost:3000
 		]
 
 		return /*html*/ `
@@ -1206,7 +1258,7 @@ ${prompt}
 	 * @returns A template string literal containing the HTML that should be
 	 * rendered within the webview panel
 	 */
-	private getHtmlContent(webview: vscode.Webview): string {
+	private async getHtmlContent(webview: vscode.Webview): Promise<string> {
 		// Get the local path to main script run in the webview,
 		// then convert it to a uri we can use in the webview.
 
@@ -1242,6 +1294,12 @@ ${prompt}
 		*/
 		const nonce = getNonce()
 
+		// Get the OpenRouter base URL from configuration
+		const { apiConfiguration } = await this.getState()
+		const openRouterBaseUrl = apiConfiguration.openRouterBaseUrl || "https://openrouter.ai"
+		// Extract the domain for CSP
+		const openRouterDomain = openRouterBaseUrl.match(/^(https?:\/\/[^\/]+)/)?.[1] || "https://openrouter.ai"
+
 		// Tip: Install the es6-string-html VS Code extension to enable code highlighting below
 		return /*html*/ `
         <!DOCTYPE html>
@@ -1251,7 +1309,7 @@ ${prompt}
             <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
             <meta name="theme-color" content="#000000">
 			<!-- kilocode_change: add https://*.googleusercontent.com https://*.googleapis.com https://*.githubusercontent.com to img-src, https://*, http://localhost:3000 to connect-src -->
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://openrouter.ai https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src ${webview.cspSource} data:; style-src ${webview.cspSource} 'unsafe-inline'; img-src ${webview.cspSource} https://*.googleusercontent.com https://storage.googleapis.com https://*.githubusercontent.com https://img.clerk.com data: https://*.googleapis.com; media-src ${webview.cspSource}; script-src ${webview.cspSource} 'wasm-unsafe-eval' 'nonce-${nonce}' ${openRouterDomain} https://us-assets.i.posthog.com 'strict-dynamic'; connect-src ${webview.cspSource} https://* http://localhost:3000 https://api.requesty.ai https://us.i.posthog.com https://us-assets.i.posthog.com;">
             <link rel="stylesheet" type="text/css" href="${stylesUri}">
 			<link href="${codiconsUri}" rel="stylesheet" />
 			<script nonce="${nonce}">
@@ -1371,6 +1429,40 @@ ${prompt}
 
 	// Provider Profile Management
 
+	/**
+	 * Updates the current task's API handler.
+	 * Rebuilds when:
+	 * - provider or model changes, OR
+	 * - explicitly forced (e.g., user-initiated profile switch/save to apply changed settings like headers/baseUrl/tier).
+	 * Always synchronizes task.apiConfiguration with latest provider settings.
+	 * @param providerSettings The new provider settings to apply
+	 * @param options.forceRebuild Force rebuilding the API handler regardless of provider/model equality
+	 */
+	private updateTaskApiHandlerIfNeeded(
+		providerSettings: ProviderSettings,
+		options: { forceRebuild?: boolean } = {},
+	): void {
+		const task = this.getCurrentTask()
+		if (!task) return
+
+		const { forceRebuild = false } = options
+
+		// Determine if we need to rebuild using the previous configuration snapshot
+		const prevConfig = task.apiConfiguration
+		const prevProvider = prevConfig?.apiProvider
+		const prevModelId = prevConfig ? getModelId(prevConfig) : undefined
+		const newProvider = providerSettings.apiProvider
+		const newModelId = getModelId(providerSettings)
+
+		if (forceRebuild || prevProvider !== newProvider || prevModelId !== newModelId) {
+			task.api = buildApiHandler(providerSettings)
+		}
+
+		// Always sync the task's apiConfiguration with the latest provider settings.
+		// Note: Task.apiConfiguration is declared readonly in types, so we cast to any for runtime update.
+		;(task as any).apiConfiguration = providerSettings
+	}
+
 	getProviderProfileEntries(): ProviderSettingsEntry[] {
 		return this.contextProxy.getValues().listApiConfigMeta || []
 	}
@@ -1426,6 +1518,8 @@ ${prompt}
 
 				await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
 				await updateCodeIndexWithKiloProps(this) // kilocode_change
+
+				this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
 			} else {
 				await this.updateGlobalState("listApiConfigMeta", await this.providerSettingsManager.listConfig())
 			}
@@ -1480,13 +1574,8 @@ ${prompt}
 		if (id) {
 			await this.providerSettingsManager.setModeConfig(mode, id)
 		}
-
 		// Change the provider for the current task.
-		const task = this.getCurrentTask()
-
-		if (task) {
-			task.api = buildApiHandler(providerSettings)
-		}
+		this.updateTaskApiHandlerIfNeeded(providerSettings, { forceRebuild: true })
 
 		await this.postStateToWebview()
 		await TelemetryService.instance.updateIdentity(providerSettings.kilocodeToken ?? "") // kilocode_change
@@ -2053,7 +2142,19 @@ ${prompt}
 
 		try {
 			if (!CloudService.instance.isCloudAgent) {
-				cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+				const now = Date.now()
+
+				if (
+					this.cloudOrganizationsCache !== null &&
+					this.cloudOrganizationsCacheTimestamp !== null &&
+					now - this.cloudOrganizationsCacheTimestamp < ClineProvider.CLOUD_ORGANIZATIONS_CACHE_DURATION_MS
+				) {
+					cloudOrganizations = this.cloudOrganizationsCache!
+				} else {
+					cloudOrganizations = await CloudService.instance.getOrganizationMemberships()
+					this.cloudOrganizationsCache = cloudOrganizations
+					this.cloudOrganizationsCacheTimestamp = now
+				}
 			}
 		} catch (error) {
 			// Ignore this error.
@@ -2407,6 +2508,7 @@ ${prompt}
 			language: stateValues.language ?? formatLanguage(vscode.env.language),
 			mcpEnabled: true, // kilocode_change: always true
 			enableMcpServerCreation: stateValues.enableMcpServerCreation ?? true,
+			mcpServers: this.mcpHub?.getAllServers() ?? [],
 			alwaysApproveResubmit: stateValues.alwaysApproveResubmit ?? false,
 			requestDelaySeconds: Math.max(5, stateValues.requestDelaySeconds ?? 10),
 			currentApiConfigName: stateValues.currentApiConfigName ?? "default",

@@ -135,7 +135,7 @@ export const CheckpointMenu = ({ ts, commitHash, checkpoint, onOpenChange }: Che
 							) : (
 								<>
 									<Button
-										variant="default"
+										variant="primary"
 										onClick={onRestore}
 										className="grow"
 										data-testid="confirm-restore-btn">

@@ -34,6 +34,7 @@ A string containing one or more search/replace blocks defining the changes. The 
 	},
 } satisfies OpenAI.Chat.ChatCompletionTool
 
+// kilocode_change start
 //@ts-ignore Preparing for when we enable multi-file diffs
 export const apply_diff_multi_file = {
 	type: "function",
@@ -65,7 +66,7 @@ export const apply_diff_multi_file = {
 										content: {
 											type: "string",
 											description: `
-The search/replace block defining the changes. The SEARCH block must exactly match the content to be replaced. Format: 
+The search/replace block defining the changes. The SEARCH block must exactly match the content to be replaced. Format:
 '<<<<<<< SEARCH
 [content_to_find]
 =======
@@ -91,3 +92,4 @@ The search/replace block defining the changes. The SEARCH block must exactly mat
 		},
 	},
 } satisfies OpenAI.Chat.ChatCompletionTool
+// kilocode_change end

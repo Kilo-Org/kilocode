@@ -362,6 +362,7 @@
 		"awsSessionToken": "Token phiên AWS",
 		"awsRegion": "Vùng AWS",
 		"awsCrossRegion": "Sử dụng suy luận liên vùng",
+		"awsGlobalInference": "Sử dụng suy luận toàn cầu (tự động chọn Khu vực AWS tối ưu)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Sử dụng điểm cuối VPC tùy chỉnh",
 			"vpcEndpointUrlPlaceholder": "Nhập URL điểm cuối VPC (tùy chọn)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Giới hạn lỗi và lặp lại",
-			"description": "Số lỗi liên tiếp hoặc hành động lặp lại trước khi hiển thị hộp thoại 'Kilo Code đang gặp sự cố'",
+			"description": "Số lỗi liên tiếp hoặc hành động lặp lại trước khi hiển thị hộp thoại 'Kilo đang gặp sự cố'. Đặt thành 0 để tắt cơ chế an toàn này (nó sẽ không bao giờ kích hoạt).",
 			"unlimitedDescription": "Đã bật thử lại không giới hạn (tự động tiếp tục). Hộp thoại sẽ không bao giờ xuất hiện.",
 			"warning": "⚠️ Đặt thành 0 cho phép thử lại không giới hạn, điều này có thể tiêu tốn mức sử dụng API đáng kể"
 		},

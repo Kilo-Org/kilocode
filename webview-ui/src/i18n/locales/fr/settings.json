@@ -362,6 +362,7 @@
 		"awsSessionToken": "Jeton de session AWS",
 		"awsRegion": "Région AWS",
 		"awsCrossRegion": "Utiliser l'inférence inter-régions",
+		"awsGlobalInference": "Utiliser l'inférence globale (sélection automatique de la région AWS optimale)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utiliser un point de terminaison VPC personnalisé",
 			"vpcEndpointUrlPlaceholder": "Entrer l'URL du point de terminaison VPC (optionnel)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limite d'erreurs et de répétitions",
-			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo Code a des difficultés'",
+			"description": "Nombre d'erreurs consécutives ou d'actions répétées avant d'afficher la boîte de dialogue 'Kilo a des difficultés'. Mettre à 0 pour désactiver ce mécanisme de sécurité (il ne se déclenchera jamais).",
 			"unlimitedDescription": "Réessais illimités activés (poursuite automatique). La boîte de dialogue n'apparaîtra jamais.",
 			"warning": "⚠️ Mettre à 0 autorise des réessais illimités, ce qui peut consommer une utilisation importante de l'API"
 		},

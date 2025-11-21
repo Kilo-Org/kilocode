@@ -2,7 +2,10 @@ import type { Metadata } from "next"
 
 import { SEO } from "@/lib/seo"
 import { ogImageUrl } from "@/lib/og"
-import { ReviewerContent } from "./ReviewerContent"
+import { AgentLandingContent } from "@/app/shared/AgentLandingContent"
+import { getContentVariant } from "@/app/shared/getContentVariant"
+import { content as contentA } from "./content"
+import { content as contentB } from "./content-b"
 
 const TITLE = "PR Reviewer"
 const DESCRIPTION =
@@ -56,6 +59,12 @@ export const metadata: Metadata = {
 	],
 }
 
-export default function AgentReviewerPage() {
-	return <ReviewerContent />
+export default async function AgentReviewerPage({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
+	const params = await searchParams
+	const content = getContentVariant(params, {
+		A: contentA,
+		B: contentB,
+	})
+
+	return <AgentLandingContent content={content} />
 }

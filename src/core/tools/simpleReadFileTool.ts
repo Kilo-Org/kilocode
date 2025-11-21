@@ -73,11 +73,6 @@ export async function simpleReadFileTool(
 	const relPath = filePath
 	const fullPath = path.resolve(cline.cwd, relPath)
 
-	// kilocode_change start: yolo mode
-	const state = await cline.providerRef.deref()?.getState()
-	const isYoloMode = state?.yoloMode ?? false
-	// kilocode_change end
-
 	try {
 		// Check RooIgnore validation
 		const accessAllowed = cline.rooIgnoreController?.validateAccess(relPath)
@@ -108,11 +103,7 @@ export async function simpleReadFileTool(
 			reason: lineSnippet,
 		} satisfies ClineSayTool)
 
-		// kilocode_change start: yolo mode
-		const { response, text, images } = isYoloMode
-			? { response: "yesButtonClicked" }
-			: await cline.ask("tool", completeMessage, false)
-		// kilocode_change end
+		const { response, text, images } = await cline.ask("tool", completeMessage, false)
 
 		if (response !== "yesButtonClicked") {
 			// Handle denial

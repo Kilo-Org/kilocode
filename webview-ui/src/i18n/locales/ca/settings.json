@@ -362,6 +362,7 @@
 		"awsSessionToken": "Token de sessió d'AWS",
 		"awsRegion": "Regió d'AWS",
 		"awsCrossRegion": "Utilitzar inferència entre regions",
+		"awsGlobalInference": "Utilitzar la inferència global (selecció automàtica de la regió òptima d'AWS)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Utilitzar punt final VPC personalitzat",
 			"vpcEndpointUrlPlaceholder": "Introduïu l'URL del punt final VPC (opcional)",
@@ -484,7 +485,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Límit d'errors i repeticions",
-			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo Code està tenint problemes'",
+			"description": "Nombre d'errors consecutius o accions repetides abans de mostrar el diàleg 'En Kilo està tenint problemes'. Estableix a 0 per desactivar aquest mecanisme de seguretat (no s'activarà mai).",
 			"unlimitedDescription": "Reintents il·limitats habilitats (procediment automàtic). El diàleg no apareixerà mai.",
 			"warning": "⚠️ Establir a 0 permet reintents il·limitats que poden consumir un ús significatiu de l'API"
 		},

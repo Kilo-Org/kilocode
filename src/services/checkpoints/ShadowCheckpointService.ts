@@ -4,7 +4,7 @@ import * as path from "path"
 import crypto from "crypto"
 import EventEmitter from "events"
 
-import simpleGit, { SimpleGit } from "simple-git"
+import simpleGit, { SimpleGit, SimpleGitOptions } from "simple-git"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
 
@@ -34,6 +34,64 @@ function showWarning(message: string) {
 	}
 }
 // kilocode_change end
+/**
+ * Creates a SimpleGit instance with sanitized environment variables to prevent
+ * interference from inherited git environment variables like GIT_DIR and GIT_WORK_TREE.
+ * This ensures checkpoint operations always target the intended shadow repository.
+ *
+ * @param baseDir - The directory where git operations should be executed
+ * @returns A SimpleGit instance with sanitized environment
+ */
+function createSanitizedGit(baseDir: string): SimpleGit {
+	// Create a clean environment by explicitly unsetting git-related environment variables
+	// that could interfere with checkpoint operations
+	const sanitizedEnv: Record<string, string> = {}
+	const removedVars: string[] = []
+
+	// Copy all environment variables except git-specific ones
+	for (const [key, value] of Object.entries(process.env)) {
+		// Skip git environment variables that would override repository location
+		if (
+			key === "GIT_DIR" ||
+			key === "GIT_WORK_TREE" ||
+			key === "GIT_INDEX_FILE" ||
+			key === "GIT_OBJECT_DIRECTORY" ||
+			key === "GIT_ALTERNATE_OBJECT_DIRECTORIES" ||
+			key === "GIT_CEILING_DIRECTORIES"
+		) {
+			removedVars.push(`${key}=${value}`)
+			continue
+		}
+
+		// Only include defined values
+		if (value !== undefined) {
+			sanitizedEnv[key] = value
+		}
+	}
+
+	// Log which git env vars were removed (helps with debugging Dev Container issues)
+	if (removedVars.length > 0) {
+		console.log(
+			`[createSanitizedGit] Removed git environment variables for checkpoint isolation: ${removedVars.join(", ")}`,
+		)
+	}
+
+	const options: Partial<SimpleGitOptions> = {
+		baseDir,
+		config: [],
+	}
+
+	// Create git instance and set the sanitized environment
+	const git = simpleGit(options)
+
+	// Use the .env() method to set the complete sanitized environment
+	// This replaces the inherited environment with our sanitized version
+	git.env(sanitizedEnv)
+
+	console.log(`[createSanitizedGit] Created git instance for baseDir: ${baseDir}`)
+
+	return git
+}
 
 export abstract class ShadowCheckpointService extends EventEmitter {
 	public readonly taskId: string
@@ -106,7 +164,7 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 		}
 
 		await fs.mkdir(this.checkpointsDir, { recursive: true })
-		const git = simpleGit(this.checkpointsDir)
+		const git = createSanitizedGit(this.checkpointsDir)
 		const gitVersion = await git.version()
 		this.log(`[${this.constructor.name}#create] git = ${gitVersion}`)
 
@@ -424,7 +482,7 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 	}) {
 		const workspaceRepoDir = this.workspaceRepoDir({ globalStorageDir, workspaceDir })
 		const branchName = `roo-${taskId}`
-		const git = simpleGit(workspaceRepoDir)
+		const git = createSanitizedGit(workspaceRepoDir)
 		const success = await this.deleteBranch(git, branchName)
 
 		if (success) {

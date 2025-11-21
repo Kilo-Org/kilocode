@@ -9,6 +9,7 @@ import {
 	type IpcMessage,
 	IpcOrigin,
 	IpcMessageType,
+	TaskCommandName,
 	ipcMessageSchema,
 } from "@roo-code/types"
 
@@ -96,6 +97,13 @@ export class IpcClient extends EventEmitter<IpcClientEvents> {
 		}
 
 		this.sendMessage(message)
+	}
+
+	public sendTaskMessage(text?: string, images?: string[]) {
+		this.sendCommand({
+			commandName: TaskCommandName.SendMessage,
+			data: { text, images },
+		})
 	}
 
 	public sendMessage(message: IpcMessage) {

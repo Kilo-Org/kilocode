@@ -363,6 +363,7 @@
 		"awsSessionToken": "Token di sessione AWS",
 		"awsRegion": "Regione AWS",
 		"awsCrossRegion": "Usa inferenza cross-regione",
+		"awsGlobalInference": "Usa l'inferenza globale (selezione automatica della regione AWS ottimale)",
 		"awsBedrockVpc": {
 			"useCustomVpcEndpoint": "Usa endpoint VPC personalizzato",
 			"vpcEndpointUrlPlaceholder": "Inserisci URL endpoint VPC (opzionale)",
@@ -485,7 +486,7 @@
 		},
 		"consecutiveMistakeLimit": {
 			"label": "Limite di errori e ripetizioni",
-			"description": "Numero di errori consecutivi o azioni ripetute prima di mostrare la finestra di dialogo 'Kilo Code sta riscontrando problemi'",
+			"description": "Numero di errori consecutivi o azioni ripetute prima di mostrare la finestra di dialogo 'Kilo sta riscontrando problemi'. Imposta a 0 per disabilitare questo meccanismo di sicurezza (non si attiverà mai).",
 			"unlimitedDescription": "Tentativi illimitati abilitati (procedi automaticamente). La finestra di dialogo non verrà mai visualizzata.",
 			"warning": "⚠️ L'impostazione a 0 consente tentativi illimitati che possono consumare un notevole utilizzo dell'API"
 		},

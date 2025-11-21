@@ -114,7 +114,7 @@ describe("HistoryPreview", () => {
 		const { container } = render(<HistoryPreview taskHistoryVersion={mockKiloCodeTaskHistoryVersion} />)
 
 		// Should render the container but no task items
-		expect(container.firstChild).toHaveClass("flex", "flex-col", "gap-3")
+		expect(container.firstChild).toHaveClass("flex", "flex-col", "gap-1")
 		expect(screen.queryByTestId(/task-item-/)).not.toBeInTheDocument()
 	})
 
@@ -137,7 +137,7 @@ describe("HistoryPreview", () => {
 		expect(screen.getByTestId("task-item-task-1")).toBeInTheDocument()
 		expect(screen.getByTestId("task-item-task-2")).toBeInTheDocument()
 		expect(screen.getByTestId("task-item-task-3")).toBeInTheDocument()
-		expect(screen.queryByTestId("task-item-task-4")).not.toBeInTheDocument()
+		expect(screen.getByTestId("task-item-task-4")).toBeInTheDocument()
 		expect(screen.queryByTestId("task-item-task-5")).not.toBeInTheDocument()
 		expect(screen.queryByTestId("task-item-task-6")).not.toBeInTheDocument()
 	})
@@ -240,6 +240,6 @@ describe("HistoryPreview", () => {
 
 		const { container } = render(<HistoryPreview taskHistoryVersion={mockKiloCodeTaskHistoryVersion} />)
 
-		expect(container.firstChild).toHaveClass("flex", "flex-col", "gap-3")
+		expect(container.firstChild).toHaveClass("flex", "flex-col", "gap-1")
 	})
 })
