@@ -17,6 +17,7 @@ export interface AppOptions {
 	parallel?: boolean
 	worktreeBranch?: string | undefined
 	noSplash?: boolean
+	onWorkspaceChange?: ((newWorkspace: string) => void | Promise<void>) | undefined
 }
 
 export interface AppProps {
@@ -29,7 +30,7 @@ export const App: React.FC<AppProps> = ({ store, options, onExit }) => {
 	return (
 		<JotaiProvider store={store}>
 			<KeyboardProvider>
-				<UI options={options} onExit={onExit} />
+				<UI options={{ ...options, onWorkspaceChange: options.onWorkspaceChange }} onExit={onExit} />
 			</KeyboardProvider>
 		</JotaiProvider>
 	)

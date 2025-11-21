@@ -59,6 +59,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const resetHistoryNavigation = useSetAtom(resetHistoryNavigationAtom)
 	const exitHistoryMode = useSetAtom(exitHistoryModeAtom)
 	const setIsParallelMode = useSetAtom(isParallelModeAtom)
+	const getWorkspacePath = useAtomValue(workspacePathAtom)
 	const setWorkspacePath = useSetAtom(workspacePathAtom)
 
 	// Use specialized hooks for command and message handling
@@ -118,6 +119,30 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 			setWorkspacePath(options.workspace)
 		}
 	}, [options.workspace, setWorkspacePath])
+
+	// Monitor workspace changes from shell mode
+	useEffect(() => {
+		if (!options.onWorkspaceChange) return
+
+		// For now, we'll trigger the workspace change callback when applyShellWorkspaceAtom is called
+		// This is a bit hacky but works for our use case
+		let lastWorkspace = options.workspace || process.cwd()
+
+		const checkWorkspaceChange = () => {
+			const currentWorkspace = getWorkspacePath || process.cwd()
+			if (currentWorkspace !== lastWorkspace) {
+				lastWorkspace = currentWorkspace
+				options.onWorkspaceChange!(currentWorkspace)
+			}
+		}
+
+		// Check for workspace changes periodically
+		const interval = setInterval(checkWorkspaceChange, 100)
+
+		return () => {
+			clearInterval(interval)
+		}
+	}, [options.onWorkspaceChange, options.workspace])
 
 	// Handle CI mode exit
 	useEffect(() => {
