@@ -2024,6 +2024,7 @@ ${prompt}
 			dismissedNotificationIds, // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel, // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider, // kilocode_change: Fast Apply model api base url
 			alwaysAllowFollowupQuestions,
 			followupAutoApproveTimeoutMs,
 			includeDiagnosticMessages,
@@ -2214,6 +2215,7 @@ ${prompt}
 			dismissedNotificationIds: dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey, // kilocode_change
 			fastApplyModel: fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider: fastApplyApiProvider ?? "-", // kilocode_change: Fast Apply model api base url
 			alwaysAllowFollowupQuestions: alwaysAllowFollowupQuestions ?? false,
 			followupAutoApproveTimeoutMs: followupAutoApproveTimeoutMs ?? 60000,
 			includeDiagnosticMessages: includeDiagnosticMessages ?? true,
@@ -2452,6 +2454,7 @@ ${prompt}
 			dismissedNotificationIds: stateValues.dismissedNotificationIds ?? [], // kilocode_change
 			morphApiKey: stateValues.morphApiKey, // kilocode_change
 			fastApplyModel: stateValues.fastApplyModel ?? "auto", // kilocode_change: Fast Apply model selection
+			fastApplyApiProvider: stateValues.fastApplyApiProvider ?? "-", // kilocode_change: Fast Apply model api config id
 			historyPreviewCollapsed: stateValues.historyPreviewCollapsed ?? false,
 			reasoningBlockCollapsed: stateValues.reasoningBlockCollapsed ?? true,
 			cloudUserInfo,
@@ -3178,6 +3181,7 @@ ${prompt}
 						morphFastApply: Boolean(experiments.morphFastApply),
 						morphApiKey: Boolean(this.contextProxy.getValue("morphApiKey")),
 						selectedModel: this.contextProxy.getValue("fastApplyModel") || "auto",
+						fastApplyApiProvider: this.contextProxy.getValue("fastApplyApiProvider") || "-",
 					},
 				}
 			} catch (error) {
