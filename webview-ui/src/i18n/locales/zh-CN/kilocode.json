@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新功能：通过创建组织来共享模式"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "查看发布说明",
+		"noReleases": "没有可用的发布说明",
+		"modalTitle": "Kilo Code 的新特性",
+		"latestBadge": "最新",
+		"byAuthor": "由",
+		"loading": "加载发行说明..."
 	}
 }

@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Mới: Chia sẻ chế độ bằng cách tạo một tổ chức"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Xem Ghi Chú Phát Hành",
+		"modalTitle": "Có gì mới trong Kilo Code",
+		"latestBadge": "Mới nhất",
+		"loading": "Đang tải ghi chú phát hành...",
+		"noReleases": "Không có ghi chú phát hành",
+		"byAuthor": "bởi"
 	}
 }

@@ -280,5 +280,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "جديد: مشاركة الأوضاع عن طريق إنشاء منظمة"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "عرض ملاحظات الإصدار",
+		"noReleases": "لا تتوفر ملاحظات الإصدار",
+		"loading": "جاري تحميل ملاحظات الإصدار...",
+		"latestBadge": "الأحدث",
+		"modalTitle": "ما الجديد في كيلو كود",
+		"byAuthor": "بواسطة"
 	}
 }

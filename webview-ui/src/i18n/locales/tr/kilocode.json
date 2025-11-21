@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Yeni: Bir organizasyon oluşturarak modları paylaşın"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Sürüm Notlarını Görüntüle",
+		"modalTitle": "Kilo Code'da Yeni Neler Var",
+		"noReleases": "Hiçbir sürüm notu bulunmuyor",
+		"loading": "Sürüm notları yükleniyor...",
+		"byAuthor": "tarafından",
+		"latestBadge": "En Son"
 	}
 }

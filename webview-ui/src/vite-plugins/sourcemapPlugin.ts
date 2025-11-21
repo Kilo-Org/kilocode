@@ -1,6 +1,8 @@
 import { Plugin } from "vite"
 import fs from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
+import { dirname } from "path"
 
 /**
  * Custom Vite plugin to ensure source maps are properly included in the build
@@ -17,14 +19,19 @@ export function sourcemapPlugin(): Plugin {
 			handler: async () => {
 				console.log("Ensuring source maps are included in build...")
 
+				// Get the plugin file's directory for consistent path resolution
+				const pluginDir = dirname(fileURLToPath(import.meta.url))
+				// Get webview-ui directory (parent of src/vite-plugins)
+				const webviewUiDir = path.resolve(pluginDir, "../..")
+
 				// Determine the correct output directory based on the build mode
 				const mode = process.env.NODE_ENV
 				let outDir
 
 				if (mode === "nightly") {
-					outDir = path.resolve("../apps/vscode-nightly/build/webview-ui/build")
+					outDir = path.resolve(webviewUiDir, "../apps/vscode-nightly/build/webview-ui/build")
 				} else {
-					outDir = path.resolve("../src/webview-ui/build")
+					outDir = path.resolve(webviewUiDir, "../src/webview-ui/build")
 				}
 
 				const assetsDir = path.join(outDir, "assets")

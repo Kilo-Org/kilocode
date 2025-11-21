@@ -50,3 +50,17 @@ Object.defineProperty(window, "matchMedia", {
 
 // Mock scrollIntoView which is not available in jsdom
 Element.prototype.scrollIntoView = vi.fn()
+
+// Mock changelog loader for tests
+vi.mock("@src/utils/changelogLoader", async () => {
+	const fs = await import("fs")
+	const path = await import("path")
+	const mockChangelogPath = path.resolve(__dirname, "./src/__mocks__/changelog.md")
+	const mockContent = fs.existsSync(mockChangelogPath)
+		? fs.readFileSync(mockChangelogPath, "utf-8")
+		: "## [v0.0.0]\n\n- Initial mock release notes."
+
+	return {
+		loadChangelog: vi.fn(() => Promise.resolve(mockContent)),
+	}
+})

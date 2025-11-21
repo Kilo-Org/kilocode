@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Baru: Bagikan mode dengan membuat organisasi"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Lihat Catatan Rilis",
+		"modalTitle": "Apa yang Baru di Kilo Code",
+		"loading": "Memuat catatan rilis...",
+		"noReleases": "Tidak ada catatan rilis yang tersedia",
+		"byAuthor": "oleh",
+		"latestBadge": "Terbaru"
 	}
 }
