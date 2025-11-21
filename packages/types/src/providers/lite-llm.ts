@@ -12,4 +12,8 @@ export const litellmDefaultModelInfo: ModelInfo = {
 	outputPrice: 15.0,
 	cacheWritesPrice: 3.75,
 	cacheReadsPrice: 0.3,
+	supportsTemperature: true,
 }
+
+export const litellmDefaultMaxTokens: number = 8192
+export const litellmDefaultTemperature: number = 1.0

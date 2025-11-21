@@ -152,6 +152,46 @@ export const LiteLLM = ({
 				organizationAllowList={organizationAllowList}
 				errorMessage={modelValidationError}
 			/>
+			{(() => {
+				const selectedModelId = apiConfiguration.litellmModelId || litellmDefaultModelId
+				const selectedModel = routerModels?.litellm?.[selectedModelId]
+				const selectedModelMaxTokens = selectedModel?.maxTokens
+
+				return (
+					<div>
+						<VSCodeTextField
+							value={(apiConfiguration.litellmMaxTokens || selectedModelMaxTokens || 8192).toString()}
+							type="text"
+							style={{
+								borderColor: (() => {
+									const value = selectedModelMaxTokens
+
+									if (!value) {
+										return "var(--vscode-input-border)"
+									}
+
+									return value > 0 ? "var(--vscode-charts-green)" : "var(--vscode-errorForeground)"
+								})(),
+							}}
+							onChange={(e: any) => {
+								let value = parseInt((e.target as HTMLInputElement).value)
+								if (isNaN(value)) {
+									value = 8192
+								}
+								setApiConfigurationField("litellmMaxTokens", value)
+							}}
+							placeholder={t("settings:placeholders.numbers.maxTokens")}
+							className="w-full">
+							<label className="block font-medium mb-1">
+								{t("settings:providers.customModel.maxTokens.label")}
+							</label>
+						</VSCodeTextField>
+						<div className="text-sm text-vscode-descriptionForeground">
+							{t("settings:providers.customModel.maxTokens.description")}
+						</div>
+					</div>
+				)
+			})()}
 
 			{/* Show prompt caching option if the selected model supports it */}
 			{(() => {
