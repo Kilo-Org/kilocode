@@ -16,6 +16,14 @@ const meta = {
 			control: "boolean",
 			description: "Render as child element instead of wrapper span",
 		},
+		foregroundColor: {
+			control: "color",
+			description: "Custom foreground/base color for the shimmer",
+		},
+		highlightColor: {
+			control: "color",
+			description: "Custom highlight color for the shimmer effect",
+		},
 	},
 	args: {
 		children: "API Request...",
@@ -57,6 +65,32 @@ export const Examples: Story = {
 			<ShimmerText>
 				<span className="codicon codicon-sparkle" style={{ fontSize: "64px" }} />
 			</ShimmerText>
+
+			<div style={{ marginTop: "8px" }}>
+				<strong style={{ color: "var(--vscode-foreground)" }}>Custom colors via props:</strong>
+			</div>
+			<ShimmerText foregroundColor="#3b82f6" style={{ fontSize: "18px" }}>
+				Blue (foreground only, highlight auto-generated)
+			</ShimmerText>
+			<ShimmerText foregroundColor="#6366f1" highlightColor="#c4b5fd" style={{ fontSize: "18px" }}>
+				Purple with custom highlight
+			</ShimmerText>
+
+			<div style={{ marginTop: "8px" }}>
+				<strong style={{ color: "var(--vscode-foreground)" }}>CSS variables from parent:</strong>
+			</div>
+			<div
+				style={
+					{
+						"--shimmer-foreground": "#059669",
+						"--shimmer-highlight-color": "#a7f3d0",
+						padding: "12px",
+						border: "1px solid var(--vscode-panel-border)",
+						borderRadius: "4px",
+					} as React.CSSProperties
+				}>
+				<ShimmerText style={{ fontSize: "18px" }}>Inherits green from parent container</ShimmerText>
+			</div>
 		</div>
 	),
 }

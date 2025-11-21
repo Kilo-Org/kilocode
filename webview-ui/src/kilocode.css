@@ -72,8 +72,9 @@
 }
 
 .shimmer-text {
-	--shimmer-base: color-mix(in srgb, var(--vscode-descriptionForeground) 80%, black);
-	--shimmer-highlight: color-mix(in srgb, var(--shimmer-base) 70%, white);
+	/* Allow custom colors via CSS variables, with fallback to VSCode theme colors */
+	--shimmer-base: var(--shimmer-foreground, color-mix(in srgb, var(--vscode-descriptionForeground) 80%, black));
+	--shimmer-highlight: var(--shimmer-highlight-color, color-mix(in srgb, var(--shimmer-base) 70%, white));
 
 	color: var(--shimmer-base);
 	background: linear-gradient(
