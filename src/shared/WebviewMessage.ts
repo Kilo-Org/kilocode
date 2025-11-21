@@ -402,6 +402,8 @@ export interface WebviewMessage {
 		codebaseIndexOpenAiCompatibleBaseUrl?: string
 		codebaseIndexSearchMaxResults?: number
 		codebaseIndexSearchMinScore?: number
+		codebaseIndexEmbeddingBatchSize?: number
+		codebaseIndexScannerMaxBatchRetries?: number
 
 		// Secret settings
 		codeIndexOpenAiKey?: string

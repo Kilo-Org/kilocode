@@ -70,6 +70,8 @@ interface LocalCodeIndexSettings {
 	codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers
 	codebaseIndexSearchMaxResults?: number
 	codebaseIndexSearchMinScore?: number
+	codebaseIndexEmbeddingBatchSize?: number
+	codebaseIndexScannerMaxBatchRetries?: number
 
 	// Secret settings (start empty, will be loaded separately)
 	codeIndexOpenAiKey?: string
@@ -219,6 +221,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		codebaseIndexEmbedderModelDimension: undefined,
 		codebaseIndexSearchMaxResults: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 		codebaseIndexSearchMinScore: CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+		codebaseIndexEmbeddingBatchSize: CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+		codebaseIndexScannerMaxBatchRetries: CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
 		codeIndexOpenAiKey: "",
 		codeIndexQdrantApiKey: "",
 		codebaseIndexOpenAiCompatibleBaseUrl: "",
@@ -255,6 +259,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					codebaseIndexConfig.codebaseIndexSearchMaxResults ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
 				codebaseIndexSearchMinScore:
 					codebaseIndexConfig.codebaseIndexSearchMinScore ?? CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_MIN_SCORE,
+				codebaseIndexEmbeddingBatchSize:
+					codebaseIndexConfig.codebaseIndexEmbeddingBatchSize ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+				codebaseIndexScannerMaxBatchRetries:
+					codebaseIndexConfig.codebaseIndexScannerMaxBatchRetries ??
+					CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
 				codeIndexOpenAiKey: "",
 				codeIndexQdrantApiKey: "",
 				codebaseIndexOpenAiCompatibleBaseUrl: codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl || "",
@@ -1441,6 +1451,94 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 													updateSetting(
 														"codebaseIndexSearchMaxResults",
 														CODEBASE_INDEX_DEFAULTS.DEFAULT_SEARCH_RESULTS,
+													)
+												}>
+												<span className="codicon codicon-discard" />
+											</VSCodeButton>
+										</div>
+									</div>
+
+									{/* Embedding Batch Size Slider */}
+									<div className="space-y-2">
+										<div className="flex items-center gap-2">
+											<label className="text-sm font-medium">
+												{t("settings:codeIndex.embeddingBatchSizeLabel")}
+											</label>
+											<StandardTooltip
+												content={t("settings:codeIndex.embeddingBatchSizeDescription")}>
+												<span className="codicon codicon-info text-xs text-vscode-descriptionForeground cursor-help" />
+											</StandardTooltip>
+										</div>
+										<div className="flex items-center gap-2">
+											<Slider
+												min={CODEBASE_INDEX_DEFAULTS.MIN_EMBEDDING_BATCH_SIZE}
+												max={CODEBASE_INDEX_DEFAULTS.MAX_EMBEDDING_BATCH_SIZE}
+												step={CODEBASE_INDEX_DEFAULTS.EMBEDDING_BATCH_SIZE_STEP}
+												value={[
+													currentSettings.codebaseIndexEmbeddingBatchSize ??
+														CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+												]}
+												onValueChange={(values) =>
+													updateSetting("codebaseIndexEmbeddingBatchSize", values[0])
+												}
+												className="flex-1"
+												data-testid="embedding-batch-size-slider"
+											/>
+											<span className="w-12 text-center">
+												{currentSettings.codebaseIndexEmbeddingBatchSize ??
+													CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE}
+											</span>
+											<VSCodeButton
+												appearance="icon"
+												title={t("settings:codeIndex.resetToDefault")}
+												onClick={() =>
+													updateSetting(
+														"codebaseIndexEmbeddingBatchSize",
+														CODEBASE_INDEX_DEFAULTS.DEFAULT_EMBEDDING_BATCH_SIZE,
+													)
+												}>
+												<span className="codicon codicon-discard" />
+											</VSCodeButton>
+										</div>
+									</div>
+
+									{/* Scanner Max Batch Retries Slider */}
+									<div className="space-y-2">
+										<div className="flex items-center gap-2">
+											<label className="text-sm font-medium">
+												{t("settings:codeIndex.scannerMaxBatchRetriesLabel")}
+											</label>
+											<StandardTooltip
+												content={t("settings:codeIndex.scannerMaxBatchRetriesDescription")}>
+												<span className="codicon codicon-info text-xs text-vscode-descriptionForeground cursor-help" />
+											</StandardTooltip>
+										</div>
+										<div className="flex items-center gap-2">
+											<Slider
+												min={CODEBASE_INDEX_DEFAULTS.MIN_SCANNER_MAX_BATCH_RETRIES}
+												max={CODEBASE_INDEX_DEFAULTS.MAX_SCANNER_MAX_BATCH_RETRIES}
+												step={CODEBASE_INDEX_DEFAULTS.SCANNER_MAX_BATCH_RETRIES_STEP}
+												value={[
+													currentSettings.codebaseIndexScannerMaxBatchRetries ??
+														CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
+												]}
+												onValueChange={(values) =>
+													updateSetting("codebaseIndexScannerMaxBatchRetries", values[0])
+												}
+												className="flex-1"
+												data-testid="scanner-max-batch-retries-slider"
+											/>
+											<span className="w-12 text-center">
+												{currentSettings.codebaseIndexScannerMaxBatchRetries ??
+													CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES}
+											</span>
+											<VSCodeButton
+												appearance="icon"
+												title={t("settings:codeIndex.resetToDefault")}
+												onClick={() =>
+													updateSetting(
+														"codebaseIndexScannerMaxBatchRetries",
+														CODEBASE_INDEX_DEFAULTS.DEFAULT_SCANNER_MAX_BATCH_RETRIES,
 													)
 												}>
 												<span className="codicon codicon-discard" />

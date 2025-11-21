@@ -44,6 +44,12 @@ export interface IDirectoryScanner {
 		}
 		totalBlockCount: number
 	}>
+
+	/**
+	 * Updates the batch segment threshold
+	 * @param newThreshold New batch segment threshold value
+	 */
+	updateBatchSegmentThreshold(newThreshold: number): void
 }
 
 /**
@@ -54,6 +60,12 @@ export interface IFileWatcher extends vscode.Disposable {
 	 * Initializes the file watcher
 	 */
 	initialize(): Promise<void>
+
+	/**
+	 * Updates the batch segment threshold
+	 * @param newThreshold New batch segment threshold value
+	 */
+	updateBatchSegmentThreshold(newThreshold: number): void
 
 	/**
 	 * Event emitted when a batch of files begins processing.
