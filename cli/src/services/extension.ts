@@ -161,6 +161,7 @@ export class ExtensionService extends EventEmitter {
 		})
 
 		// Setup proper message routing to avoid IPC timeouts
+		// This is the ONLY handler for TUI messages - removed duplicate tuiRequest handler
 		this.messageBridge.getTUIChannel().on("message", async (ipcMessage) => {
 			if (ipcMessage.type === "request") {
 				try {
@@ -177,6 +178,7 @@ export class ExtensionService extends EventEmitter {
 
 	/**
 	 * Handle TUI messages and return response
+	 * This is the single point of entry for all TUI->Extension messages
 	 */
 	private async handleTUIMessage(data: unknown): Promise<unknown> {
 		try {
