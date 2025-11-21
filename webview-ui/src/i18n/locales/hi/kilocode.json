@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "नया: एक संगठन बनाकर मोड साझा करें"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "रिलीज़ नोट्स देखें",
+		"loading": "रिलीज़ नोट्स लोड हो रहे हैं...",
+		"modalTitle": "किलो कोड में नया क्या है",
+		"latestBadge": "नवीनतम",
+		"noReleases": "कोई रिलीज़ नोट्स उपलब्ध नहीं",
+		"byAuthor": "द्वारा"
 	}
 }

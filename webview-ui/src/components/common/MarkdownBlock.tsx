@@ -16,6 +16,8 @@ interface MarkdownBlockProps {
 }
 
 const StyledMarkdown = styled.div`
+	color: var(--vscode-editor-foreground);
+
 	* {
 		font-weight: 400;
 	}

@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Нове: Діліться режимами, створивши організацію"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Переглянути примітки до випуску",
+		"loading": "Завантаження приміток до випуску...",
+		"modalTitle": "Що нового у Kilo Code",
+		"latestBadge": "Останні",
+		"noReleases": "Примітки до випуску відсутні",
+		"byAuthor": "від"
 	}
 }

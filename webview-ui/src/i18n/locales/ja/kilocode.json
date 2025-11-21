@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "新機能: 組織を作成してモードを共有"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "リリースノートを表示",
+		"modalTitle": "Kilo Codeの新機能",
+		"loading": "リリースノートを読み込んでいます...",
+		"latestBadge": "最新",
+		"noReleases": "リリースノートはありません",
+		"byAuthor": "によって"
 	}
 }
