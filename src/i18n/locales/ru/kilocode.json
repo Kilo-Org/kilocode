@@ -103,7 +103,9 @@
 				"lastCompletion": "Последнее предложение:",
 				"sessionTotal": "Общая стоимость сессии:",
 				"provider": "Провайдер:",
-				"model": "Модель:"
+				"model": "Модель:",
+				"profile": "Профиль: ",
+				"defaultProfile": "По умолчанию"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -532,6 +532,15 @@
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Qwen-service en vereist geen API-sleutels.",
 			"instructions": "Volg de officiële documentatie om het autorisatiebestand te verkrijgen en plaats het in het opgegeven pad.",
 			"setupLink": "Qwen Officiële Documentatie"
+		},
+		"profileName": "Profielnaam",
+		"profileType": "Profieltype",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatisch aanvullen",
+		"profileTypeDescription": "Chatprofielen worden gebruikt voor gesprekken. Er is slechts één automatisch aanvullen profiel toegestaan.",
+		"autocompleteLabel": "(Automatisch aanvullen)",
+		"autocomplete": {
+			"onlyOneAllowed": "Er is slechts één automatisch aanvullen profiel toegestaan. Profiel \"{{existingName}}\" is al geconfigureerd voor automatisch aanvullen. Wijzig eerst het type of verwijder het."
 		}
 	},
 	"browser": {

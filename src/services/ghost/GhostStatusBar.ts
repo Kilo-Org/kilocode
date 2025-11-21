@@ -5,6 +5,7 @@ interface GhostStatusBarStateProps {
 	enabled?: boolean
 	model?: string
 	provider?: string
+	profileName?: string | null
 	hasValidToken?: boolean
 	totalSessionCost?: number
 	lastCompletionCost?: number
@@ -15,6 +16,7 @@ export class GhostStatusBar {
 	enabled: boolean
 	model: string
 	provider: string
+	profileName: string | null
 	hasValidToken: boolean
 	totalSessionCost?: number
 	lastCompletionCost?: number
@@ -24,6 +26,7 @@ export class GhostStatusBar {
 		this.enabled = params.enabled || false
 		this.model = params.model || "default"
 		this.provider = params.provider || "default"
+		this.profileName = params.profileName || null
 		this.hasValidToken = params.hasValidToken || false
 		this.totalSessionCost = params.totalSessionCost
 		this.lastCompletionCost = params.lastCompletionCost
@@ -59,6 +62,7 @@ export class GhostStatusBar {
 		this.enabled = params.enabled !== undefined ? params.enabled : this.enabled
 		this.model = params.model !== undefined ? params.model : this.model
 		this.provider = params.provider !== undefined ? params.provider : this.provider
+		this.profileName = params.profileName !== undefined ? params.profileName : this.profileName
 		this.hasValidToken = params.hasValidToken !== undefined ? params.hasValidToken : this.hasValidToken
 		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
 		this.lastCompletionCost =
@@ -81,6 +85,7 @@ export class GhostStatusBar {
 ${t("kilocode:ghost.statusBar.tooltip.basic")}
 • ${t("kilocode:ghost.statusBar.tooltip.lastCompletion")} $${lastCompletionCostFormatted}
 • ${t("kilocode:ghost.statusBar.tooltip.sessionTotal")} ${totalCostFormatted}
+• ${t("kilocode:ghost.statusBar.tooltip.profile")}${this.profileName}
 • ${t("kilocode:ghost.statusBar.tooltip.provider")} ${this.provider}
 • ${t("kilocode:ghost.statusBar.tooltip.model")} ${this.model}\
 `

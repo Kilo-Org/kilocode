@@ -108,7 +108,9 @@
 				"lastCompletion": "Saran terakhir:",
 				"sessionTotal": "Total biaya sesi:",
 				"provider": "Penyedia:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Default"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -532,6 +532,15 @@
 			"description": "Provider ini menggunakan autentikasi OAuth dari layanan Qwen dan tidak memerlukan kunci API.",
 			"instructions": "Silakan ikuti dokumentasi resmi untuk mendapatkan file otorisasi dan tempatkan di jalur yang ditentukan.",
 			"setupLink": "Dokumentasi Resmi Qwen"
+		},
+		"profileName": "Nama Profil",
+		"profileType": "Jenis Profil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Pelengkapan Otomatis",
+		"profileTypeDescription": "Profil chat digunakan untuk percakapan. Hanya satu profil pelengkapan otomatis yang diizinkan.",
+		"autocompleteLabel": "(Pelengkapan Otomatis)",
+		"autocomplete": {
+			"onlyOneAllowed": "Hanya satu profil pelengkapan otomatis yang diizinkan. Profil \"{{existingName}}\" sudah dikonfigurasi untuk pelengkapan otomatis. Silakan ubah jenisnya terlebih dahulu atau hapus."
 		}
 	},
 	"browser": {

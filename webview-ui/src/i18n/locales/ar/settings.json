@@ -568,6 +568,15 @@
 		"roo": {
 			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
 			"connectButton": "اتصل بـ Roo Code Cloud"
+		},
+		"profileName": "اسم الملف الشخصي",
+		"profileType": "نوع الملف الشخصي",
+		"profileTypeChat": "محادثة",
+		"profileTypeAutocomplete": "الإكمال التلقائي",
+		"profileTypeDescription": "تُستخدم ملفات المحادثة للمحادثات. يُسمح بملف إكمال تلقائي واحد فقط.",
+		"autocompleteLabel": "(الإكمال التلقائي)",
+		"autocomplete": {
+			"onlyOneAllowed": "يُسمح بملف إكمال تلقائي واحد فقط. الملف الشخصي \"{{existingName}}\" مُكوّن بالفعل للإكمال التلقائي. يرجى تغيير نوعه أولاً أو حذفه."
 		}
 	},
 	"contextWindow": {

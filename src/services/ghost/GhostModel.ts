@@ -1,4 +1,4 @@
-import { modelIdKeysByProvider, ProviderSettingsEntry } from "@roo-code/types"
+import { modelIdKeysByProvider } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
@@ -9,6 +9,8 @@ import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrout
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
+	public profileName: string | null = null
+	public profileType: string | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -19,6 +21,8 @@ export class GhostModel {
 	}
 	private cleanup(): void {
 		this.apiHandler = null
+		this.profileName = null
+		this.profileType = null
 		this.loaded = false
 	}
 
@@ -27,9 +31,16 @@ export class GhostModel {
 
 		this.cleanup()
 
-		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		const selectedProfile = profiles.find((x) => x.profileType === "autocomplete")
+		if (selectedProfile) {
+			await useProfile(this, await providerSettingsManager.getProfile({ id: selectedProfile.id }))
+			return true
+		}
+
 		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
-			const selectedProfile = profiles.find((x) => x?.apiProvider === provider)
+			const selectedProfile = profiles.find(
+				(x) => x?.apiProvider === provider && !(x.profileType === "autocomplete"),
+			)
 			if (!selectedProfile) continue
 			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
 
@@ -38,18 +49,21 @@ export class GhostModel {
 				if (!profile.kilocodeToken) continue
 				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
 			}
-
-			this.apiHandler = buildApiHandler({ ...profile, [modelIdKeysByProvider[provider]]: model })
-
-			if (this.apiHandler instanceof OpenRouterHandler) {
-				await this.apiHandler.fetchModel()
-			}
-			this.loaded = true
+			await useProfile(this, { ...profile, [modelIdKeysByProvider[provider]]: model })
 			return true
 		}
 
 		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
 		return false
+
+		type ProfileWithIdAndName = Awaited<ReturnType<typeof providerSettingsManager.getProfile>>
+		async function useProfile(self: GhostModel, profile: ProfileWithIdAndName) {
+			self.profileName = profile.name || null
+			self.profileType = profile.profileType || null
+			self.apiHandler = buildApiHandler(profile)
+			if (self.apiHandler instanceof OpenRouterHandler) await self.apiHandler.fetchModel()
+			self.loaded = true
+		}
 	}
 
 	public supportsFim(): boolean {

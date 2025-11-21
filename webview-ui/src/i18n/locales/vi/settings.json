@@ -532,6 +532,15 @@
 			"description": "Nhà cung cấp này sử dụng xác thực OAuth từ dịch vụ Qwen và không yêu cầu khóa API.",
 			"instructions": "Vui lòng làm theo tài liệu chính thức để lấy tệp ủy quyền và đặt nó trong đường dẫn được chỉ định.",
 			"setupLink": "Tài liệu chính thức Qwen"
+		},
+		"profileName": "Tên hồ sơ",
+		"profileType": "Loại hồ sơ",
+		"profileTypeChat": "Trò chuyện",
+		"profileTypeAutocomplete": "Tự động hoàn thành",
+		"profileTypeDescription": "Hồ sơ trò chuyện được sử dụng cho các cuộc hội thoại. Chỉ cho phép một hồ sơ tự động hoàn thành.",
+		"autocompleteLabel": "(Tự động hoàn thành)",
+		"autocomplete": {
+			"onlyOneAllowed": "Chỉ cho phép một hồ sơ tự động hoàn thành. Hồ sơ \"{{existingName}}\" đã được cấu hình cho tự động hoàn thành. Vui lòng thay đổi loại của nó trước hoặc xóa nó."
 		}
 	},
 	"browser": {

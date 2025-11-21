@@ -533,6 +533,15 @@
 			"description": "此供應商使用 Qwen 服務的 OAuth 身份驗證，不需要 API 金鑰。",
 			"instructions": "請依照官方文件取得授權檔案並放置在指定路徑。",
 			"setupLink": "Qwen 官方文件"
+		},
+		"profileName": "設定檔名稱",
+		"profileType": "設定檔類型",
+		"profileTypeChat": "對話",
+		"profileTypeAutocomplete": "自動完成",
+		"profileTypeDescription": "對話設定檔用於交談。只允許一個自動完成設定檔。",
+		"autocompleteLabel": "(自動完成)",
+		"autocomplete": {
+			"onlyOneAllowed": "只允許一個自動完成設定檔。設定檔「{{existingName}}」已設定為自動完成。請先變更其類型或刪除它。"
 		}
 	},
 	"browser": {

@@ -108,7 +108,9 @@
 				"lastCompletion": "Gợi ý cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"provider": "Nhà cung cấp:",
-				"model": "Mô hình:"
+				"model": "Mô hình:",
+				"profile": "Hồ sơ: ",
+				"defaultProfile": "Mặc định"
 			},
 			"cost": {
 				"zero": "$0.00",

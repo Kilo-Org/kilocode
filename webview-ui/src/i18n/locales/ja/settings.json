@@ -533,6 +533,15 @@
 			"description": "このプロバイダーはQwenサービスからのOAuth認証を使用し、APIキーは必要ありません。",
 			"instructions": "認証ファイルを取得して指定されたパスに配置するには、公式ドキュメントに従ってください。",
 			"setupLink": "Qwen公式ドキュメント"
+		},
+		"profileName": "プロファイル名",
+		"profileType": "プロファイルタイプ",
+		"profileTypeChat": "チャット",
+		"profileTypeAutocomplete": "オートコンプリート",
+		"profileTypeDescription": "チャットプロファイルは会話に使用されます。オートコンプリートプロファイルは1つのみ許可されます。",
+		"autocompleteLabel": "(オートコンプリート)",
+		"autocomplete": {
+			"onlyOneAllowed": "オートコンプリートプロファイルは1つのみ許可されます。プロファイル「{{existingName}}」は既にオートコンプリート用に設定されています。まずそのタイプを変更するか、削除してください。"
 		}
 	},
 	"browser": {

@@ -252,6 +252,15 @@
 		"searchProviderPlaceholder": "Rechercher des fournisseurs",
 		"noProviderMatchFound": "Aucun fournisseur trouvé",
 		"noMatchFound": "Aucun profil correspondant trouvé",
+		"profileName": "Nom du profil",
+		"profileType": "Type de profil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocomplétion",
+		"profileTypeDescription": "Les profils de chat sont utilisés pour les conversations. Un seul profil d'autocomplétion est autorisé.",
+		"autocompleteLabel": "(Autocomplétion)",
+		"autocomplete": {
+			"onlyOneAllowed": "Un seul profil d'autocomplétion est autorisé. Le profil \"{{existingName}}\" est déjà configuré pour l'autocomplétion. Veuillez d'abord changer son type ou le supprimer."
+		},
 		"vscodeLmDescription": "L'API du modèle de langage VS Code vous permet d'exécuter des modèles fournis par d'autres extensions VS Code (y compris, mais sans s'y limiter, GitHub Copilot). Le moyen le plus simple de commencer est d'installer les extensions Copilot et Copilot Chat depuis le VS Code Marketplace.",
 		"vscodeLmUnavailable": "La prise en charge des modèles linguistiques de VS Code est disponible uniquement dans Visual Studio Code. Des forks comme VSCodium et d'autres peuvent ne pas fonctionner. De plus, cette fonctionnalité n'est pas disponible dans les outils JetBrains.",
 		"vscodeLmUnavailableInstructions": "Assurez-vous d'utiliser un outil pris en charge et que VS Code Chat est installé et activé",

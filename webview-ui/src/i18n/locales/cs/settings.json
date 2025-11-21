@@ -568,6 +568,15 @@
 			"description": "Tento poskytovatel používá OAuth autentizaci ze služby Qwen a nevyžaduje klíče API.",
 			"instructions": "Postupujte prosím podle oficiální dokumentace pro získání autorizačního souboru a umístěte jej do zadané cesty.",
 			"setupLink": "Oficiální dokumentace Qwen"
+		},
+		"profileName": "Název profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatické dokončování",
+		"profileTypeDescription": "Profily chatu se používají pro konverzace. Je povolen pouze jeden profil automatického dokončování.",
+		"autocompleteLabel": "(Automatické dokončování)",
+		"autocomplete": {
+			"onlyOneAllowed": "Je povolen pouze jeden profil automatického dokončování. Profil \"{{existingName}}\" je již nakonfigurován pro automatické dokončování. Nejprve změň jeho typ nebo ho smaž."
 		}
 	},
 	"contextWindow": {

@@ -108,7 +108,9 @@
 				"lastCompletion": "最後の提案:",
 				"sessionTotal": "セッション合計コスト:",
 				"provider": "プロバイダー:",
-				"model": "モデル:"
+				"model": "モデル:",
+				"profile": "プロファイル: ",
+				"defaultProfile": "デフォルト"
 			},
 			"cost": {
 				"zero": "$0.00",

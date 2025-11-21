@@ -108,7 +108,9 @@
 				"lastCompletion": "Ultimo suggerimento:",
 				"sessionTotal": "Costo totale della sessione:",
 				"provider": "Provider:",
-				"model": "Modello:"
+				"model": "Modello:",
+				"profile": "Profilo: ",
+				"defaultProfile": "Predefinito"
 			},
 			"cost": {
 				"zero": "$0.00",

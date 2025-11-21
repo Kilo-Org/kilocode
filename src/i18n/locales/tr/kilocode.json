@@ -108,7 +108,9 @@
 				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Varsayılan"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -532,6 +532,15 @@
 			"description": "Este provedor usa autenticação OAuth do serviço Qwen e não requer chaves de API.",
 			"instructions": "Siga a documentação oficial para obter o arquivo de autorização e colocá-lo no caminho especificado.",
 			"setupLink": "Documentação Oficial do Qwen"
+		},
+		"profileName": "Nome do perfil",
+		"profileType": "Tipo de perfil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocompletar",
+		"profileTypeDescription": "Perfis de chat são usados para conversas. Apenas um perfil de autocompletar é permitido.",
+		"autocompleteLabel": "(Autocompletar)",
+		"autocomplete": {
+			"onlyOneAllowed": "Apenas um perfil de autocompletar é permitido. O perfil \"{{existingName}}\" já está configurado para autocompletar. Por favor, mude seu tipo primeiro ou delete-o."
 		}
 	},
 	"browser": {

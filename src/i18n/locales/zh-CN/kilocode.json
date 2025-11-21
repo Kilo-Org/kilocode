@@ -114,7 +114,9 @@
 				"lastCompletion": "最后建议:",
 				"sessionTotal": "会话总费用:",
 				"provider": "提供商:",
-				"model": "模型:"
+				"model": "模型:",
+				"profile": "配置: ",
+				"defaultProfile": "默认"
 			},
 			"cost": {
 				"zero": "$0.00",

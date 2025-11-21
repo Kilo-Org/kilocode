@@ -2213,6 +2213,9 @@ export const webviewMessageHandler = async (
 				if (organizationChanged) {
 					await provider.postStateToWebview()
 				}
+
+				// kilocode_change: Reload ghost model when API provider settings change
+				vscode.commands.executeCommand("kilo-code.ghost.reload")
 			}
 			// kilocode_change end: check for kilocodeToken change to remove organizationId and fetch organization modes
 			break
@@ -2237,6 +2240,9 @@ export const webviewMessageHandler = async (
 					// Re-activate to update the global settings related to the
 					// currently activated provider profile.
 					await provider.activateProviderProfile({ name: newName })
+
+					// kilocode_change: Reload ghost model when API provider settings change
+					vscode.commands.executeCommand("kilo-code.ghost.reload")
 				} catch (error) {
 					provider.log(
 						`Error rename api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
@@ -2311,6 +2317,9 @@ export const webviewMessageHandler = async (
 				try {
 					await provider.providerSettingsManager.deleteConfig(oldName)
 					await provider.activateProviderProfile({ name: newName })
+
+					// kilocode_change: Reload ghost model when API provider settings change
+					vscode.commands.executeCommand("kilo-code.ghost.reload")
 				} catch (error) {
 					provider.log(
 						`Error delete api configuration: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,

@@ -114,7 +114,9 @@
 				"lastCompletion": "Poslední návrh:",
 				"sessionTotal": "Celkové náklady relace:",
 				"provider": "Poskytovatel:",
-				"model": "Model:"
+				"model": "Model:",
+				"profile": "Profil: ",
+				"defaultProfile": "Výchozí"
 			},
 			"cost": {
 				"zero": "$0.00",
