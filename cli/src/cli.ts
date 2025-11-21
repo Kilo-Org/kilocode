@@ -24,6 +24,8 @@ import type { CLIOptions } from "./types/cli.js"
 import type { CLIConfig, ProviderConfig } from "./config/types.js"
 import { getModelIdKey } from "./constants/providers/models.js"
 import type { ProviderName } from "./types/messages.js"
+import { TrpcClient } from "./services/trpcClient.js"
+import { SessionService } from "./services/session.js"
 
 /**
  * Main application class that orchestrates the CLI lifecycle
@@ -121,6 +123,25 @@ export class CLI {
 
 			// Track successful extension initialization
 			telemetryService.trackExtensionInitialized(true)
+
+			// Initialize services and restore session if kiloToken is available
+			// This must happen AFTER ExtensionService initialization to allow webview messages
+			if (config.kiloToken) {
+				TrpcClient.init(config.kiloToken)
+				logs.debug("TrpcClient initialized with kiloToken", "CLI")
+
+				const sessionService = SessionService.init(this.service, this.store)
+				logs.debug("SessionService initialized with ExtensionService", "CLI")
+
+				// Set workspace directory for git operations (important for parallel mode/worktrees)
+				const workspace = this.options.workspace || process.cwd()
+				sessionService.setWorkspaceDirectory(workspace)
+				logs.debug("SessionService workspace directory set", "CLI", { workspace })
+
+				if (this.options.session) {
+					await sessionService.restoreSession(this.options.session)
+				}
+			}
 
 			// Load command history
 			await this.store.set(loadHistoryAtom)

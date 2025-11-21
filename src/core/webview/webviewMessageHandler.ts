@@ -3996,5 +3996,14 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
+		// kilocode_change start
+		case "addTaskToHistory": {
+			if (message.historyItem) {
+				await provider.updateTaskHistory(message.historyItem)
+				await provider.postStateToWebview()
+			}
+			break
+		}
+		// kilocode_change end
 	}
 }

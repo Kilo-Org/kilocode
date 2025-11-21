@@ -170,6 +170,9 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
+		| "apiMessagesSaved" // kilocode_change: File save event for API messages
+		| "taskMessagesSaved" // kilocode_change: File save event for task messages
+		| "taskMetadataSaved" // kilocode_change: File save event for task metadata
 	text?: string
 	// kilocode_change start
 	payload?:
@@ -177,6 +180,7 @@ export interface ExtensionMessage {
 		| BalanceDataResponsePayload
 		| TasksByIdResponsePayload
 		| TaskHistoryResponsePayload
+		| [string, string] // For file save events [taskId, filePath]
 	// kilocode_change end
 	// Checkpoint warning message
 	checkpointWarning?: {

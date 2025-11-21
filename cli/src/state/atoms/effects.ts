@@ -26,6 +26,7 @@ import {
 	resolveTaskHistoryRequestAtom,
 } from "./taskHistory.js"
 import { logs } from "../../services/logs.js"
+import { SessionService } from "src/services/session.js"
 
 /**
  * Message buffer to handle race conditions during initialization
@@ -249,6 +250,44 @@ export const messageHandlerEffectAtom = atom(null, (get, set, message: Extension
 			case "indexingStatusUpdate": {
 				// this message fires rapidly as the scanner is progressing and we don't have a UI for it in the
 				// CLI at this point, so just quietly ignore it. Eventually we can add more CLI info about indexing.
+				break
+			}
+
+			case "apiMessagesSaved": {
+				const payload = message.payload as [string, string] | undefined
+
+				if (payload && Array.isArray(payload) && payload.length === 2) {
+					const [, filePath] = payload
+
+					SessionService.init().setPath("apiConversationHistoryPath", filePath)
+				} else {
+					logs.warn(`[DEBUG] Invalid apiMessagesSaved payload`, "effects", { payload })
+				}
+				break
+			}
+
+			case "taskMessagesSaved": {
+				const payload = message.payload as [string, string] | undefined
+
+				if (payload && Array.isArray(payload) && payload.length === 2) {
+					const [, filePath] = payload
+
+					SessionService.init().setPath("uiMessagesPath", filePath)
+				} else {
+					logs.warn(`[DEBUG] Invalid taskMessagesSaved payload`, "effects", { payload })
+				}
+				break
+			}
+
+			case "taskMetadataSaved": {
+				const payload = message.payload as [string, string] | undefined
+				if (payload && Array.isArray(payload) && payload.length === 2) {
+					const [, filePath] = payload
+
+					SessionService.init().setPath("taskMetadataPath", filePath)
+				} else {
+					logs.warn(`[DEBUG] Invalid taskMetadataSaved payload`, "effects", { payload })
+				}
 				break
 			}
 

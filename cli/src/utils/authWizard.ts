@@ -124,7 +124,7 @@ export default async function authWizard() {
 		}
 	}
 
-	const newConfig = {
+	const newConfig: CLIConfig = {
 		...config.config,
 		providers: [
 			{
@@ -133,6 +133,11 @@ export default async function authWizard() {
 				...providerSpecificConfig,
 			},
 		],
+	}
+
+	// TODO: if the user isn't using our provider, we still need a valid token for backend auth
+	if (provider === "kilocode") {
+		newConfig.kiloToken = providerSpecificConfig.kilocodeToken || ""
 	}
 
 	await saveConfig(newConfig as CLIConfig)

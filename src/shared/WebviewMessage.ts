@@ -318,6 +318,7 @@ export interface WebviewMessage {
 		| "editQueuedMessage"
 		| "dismissUpsell"
 		| "getDismissedUpsells"
+		| "addTaskToHistory" // kilocode_change
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
@@ -384,6 +385,7 @@ export interface WebviewMessage {
 	upsellId?: string // For dismissUpsell
 	list?: string[] // For dismissedUpsells response
 	organizationId?: string | null // For organization switching
+	historyItem?: HistoryItem // kilocode_change For addTaskToHistory
 	codeIndexSettings?: {
 		// Global state settings
 		codebaseIndexEnabled: boolean

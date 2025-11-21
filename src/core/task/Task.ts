@@ -104,6 +104,7 @@ import {
 	saveTaskMessages,
 	taskMetadata,
 } from "../task-persistence"
+import { getTaskDirectoryPath } from "../../utils/storage"
 import { getEnvironmentDetails } from "../environment/getEnvironmentDetails"
 import { checkContextWindowExceededError } from "../context/context-management/context-error-handling"
 import {
@@ -668,6 +669,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				taskId: this.taskId,
 				globalStoragePath: this.globalStoragePath,
 			})
+
+			// kilocode_change start
+			// Post directly to webview for CLI to react to file save
+			const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
+			const filePath = path.join(taskDir, GlobalFileNames.apiConversationHistory)
+			const provider = this.providerRef.deref()
+			if (provider) {
+				await provider.postMessageToWebview({
+					type: "apiMessagesSaved",
+					payload: [this.taskId, filePath],
+				})
+			}
+			// kilocode_change end
 		} catch (error) {
 			// In the off chance this fails, we don't want to stop the task.
 			console.error("Failed to save API conversation history:", error)
@@ -741,6 +755,19 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 				taskId: this.taskId,
 				globalStoragePath: this.globalStoragePath,
 			})
+
+			// kilocode_change start
+			// Post directly to webview for CLI to react to file save
+			const taskDir = await getTaskDirectoryPath(this.globalStoragePath, this.taskId)
+			const filePath = path.join(taskDir, GlobalFileNames.uiMessages)
+			const provider = this.providerRef.deref()
+			if (provider) {
+				await provider.postMessageToWebview({
+					type: "taskMessagesSaved",
+					payload: [this.taskId, filePath],
+				})
+			}
+			// kilocode_change end
 
 			const { historyItem, tokenUsage } = await taskMetadata({
 				taskId: this.taskId,

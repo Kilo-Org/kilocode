@@ -209,4 +209,151 @@ describe("Config Persistence", () => {
 			expect(exists).toBe(true)
 		})
 	})
+
+	describe("kiloToken fallback", () => {
+		it("should use kilocodeToken from provider as kiloToken fallback when kiloToken is missing and provider is kilocode", async () => {
+			const configWithoutKiloToken = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeToken: "provider-token-1234567890",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			}
+
+			// Write config without kiloToken
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, JSON.stringify(configWithoutKiloToken, null, 2))
+
+			// Load config - should apply fallback
+			const result = await loadConfig()
+
+			// Verify kiloToken was set from provider's kilocodeToken
+			expect(result.config.kiloToken).toBe("provider-token-1234567890")
+			expect(result.validation.valid).toBe(true)
+		})
+
+		it("should not use fallback when kiloToken already exists", async () => {
+			const configWithKiloToken: CLIConfig = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				kiloToken: "existing-kilo-token-1234567890",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeToken: "provider-token-1234567890",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+				customThemes: {},
+			}
+
+			await saveConfig(configWithKiloToken)
+			const result = await loadConfig()
+
+			// Verify kiloToken was not overwritten by fallback
+			expect(result.config.kiloToken).toBe("existing-kilo-token-1234567890")
+			expect(result.validation.valid).toBe(true)
+		})
+
+		it("should not use fallback when provider is not kilocode", async () => {
+			const configWithAnthropicProvider = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "anthropic-provider",
+				providers: [
+					{
+						id: "anthropic-provider",
+						provider: "anthropic",
+						apiKey: "anthropic-key-1234567890",
+						apiModelId: "claude-3-5-sonnet-20241022",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			}
+
+			// Write config without kiloToken and with non-kilocode provider
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, JSON.stringify(configWithAnthropicProvider, null, 2))
+
+			// Load config
+			const result = await loadConfig()
+
+			// Verify kiloToken was not set (no fallback for non-kilocode providers)
+			expect(result.config.kiloToken).toBeUndefined()
+		})
+
+		it("should not use fallback when provider is kilocode but kilocodeToken doesn't exist", async () => {
+			const configWithoutTokens = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+						// No kilocodeToken field
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			}
+
+			// Write config without any tokens
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, JSON.stringify(configWithoutTokens, null, 2))
+
+			// Load config
+			const result = await loadConfig()
+
+			// Verify kiloToken was not set (no token to fallback to)
+			expect(result.config.kiloToken).toBeUndefined()
+		})
+
+		it("should apply fallback even when provider has empty kilocodeToken string", async () => {
+			const configWithEmptyKilocodeToken = {
+				version: "1.0.0",
+				mode: "code",
+				telemetry: true,
+				provider: "default",
+				providers: [
+					{
+						id: "default",
+						provider: "kilocode",
+						kilocodeToken: "", // Empty string
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+				autoApproval: DEFAULT_CONFIG.autoApproval,
+				theme: "dark",
+			}
+
+			// Write config with empty kilocodeToken
+			await ensureConfigDir()
+			await fs.writeFile(TEST_CONFIG_FILE, JSON.stringify(configWithEmptyKilocodeToken, null, 2))
+
+			// Load config
+			const result = await loadConfig()
+
+			// Verify kiloToken was not set (empty string is falsy so no fallback)
+			expect(result.config.kiloToken).toBeUndefined()
+		})
+	})
 })

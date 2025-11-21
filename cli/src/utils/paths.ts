@@ -40,6 +40,13 @@ export class KiloCodePaths {
 	}
 
 	/**
+	 * Get tasks base directory
+	 */
+	static getTasksDir(): string {
+		return path.join(this.getGlobalStorageDir(), "tasks")
+	}
+
+	/**
 	 * Get workspaces base directory
 	 */
 	static getWorkspacesDir(): string {

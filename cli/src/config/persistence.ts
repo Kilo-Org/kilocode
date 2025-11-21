@@ -96,6 +96,17 @@ function mergeWithDefaults(loadedConfig: Partial<CLIConfig>): CLIConfig {
 		merged.autoApproval = DEFAULT_AUTO_APPROVAL
 	}
 
+	// CLI-specific: Apply kiloToken fallback from provider configuration
+	// If config.kiloToken is not set, but there is a kilocode provider,
+	// use the kilocodeToken from the provider configuration as fallback
+	if (!merged.kiloToken) {
+		const kiloProvider = merged.providers.find((p) => p.provider === "kilocode")
+		if (kiloProvider && "kilocodeToken" in kiloProvider) {
+			merged.kiloToken = kiloProvider.kilocodeToken
+			logs.debug("Using kilocodeToken from provider configuration as kiloToken fallback", "ConfigPersistence")
+		}
+	}
+
 	// Special handling for providers array to merge each provider with defaults
 	if (loadedConfig.providers && Array.isArray(loadedConfig.providers)) {
 		merged.providers = loadedConfig.providers.map((loadedProvider) => {

@@ -41,6 +41,7 @@ program
 	.option("-eb, --existing-branch <branch>", "(Parallel mode only) Instructs the agent to work on an existing branch")
 	.option("-pv, --provider <id>", "Select provider by ID (e.g., 'kilocode-1')")
 	.option("-mo, --model <model>", "Override model for the selected provider")
+	.option("--session <sessionId>", "Restore a session by ID")
 	.option("--nosplash", "Disable the welcome message and update notifications", false)
 	.argument("[prompt]", "The prompt or command to execute")
 	.action(async (prompt, options) => {
@@ -202,6 +203,7 @@ program
 			continue: options.continue,
 			provider: options.provider,
 			model: options.model,
+			session: options.session,
 			noSplash: options.nosplash,
 		})
 		await cli.start()

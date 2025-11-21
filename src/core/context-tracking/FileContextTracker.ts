@@ -132,6 +132,17 @@ export class FileContextTracker {
 			const taskDir = await getTaskDirectoryPath(globalStoragePath, taskId)
 			const filePath = path.join(taskDir, GlobalFileNames.taskMetadata)
 			await safeWriteJson(filePath, metadata)
+
+			// kilocode_change start
+			// Post directly to webview for CLI to react to file save
+			const provider = this.providerRef.deref()
+			if (provider) {
+				await provider.postMessageToWebview({
+					type: "taskMetadataSaved",
+					payload: [taskId, filePath],
+				})
+			}
+			// kilocode_change end
 		} catch (error) {
 			console.error("Failed to save task metadata:", error)
 		}
