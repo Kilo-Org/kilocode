@@ -45,6 +45,7 @@ import { initializeI18n } from "./i18n"
 import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
+import { checkAnthropicApiKeyConflict } from "./utils/anthropicApiKeyWarning"
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
 import { updateCodeIndexWithKiloProps } from "./services/code-index/managed/webview" // kilocode_change
 
@@ -317,6 +318,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		outputChannel.appendLine(
 			`[AutoImport] Error during auto-import: ${error instanceof Error ? error.message : String(error)}`,
 		)
+	}
+
+	// Check for env var conflicts that might confuse users
+	try {
+		checkAnthropicApiKeyConflict()
+	} catch (error) {
+		outputChannel.appendLine(`Failed to check API key conflicts: ${error}`)
 	}
 
 	registerCommands({ context, outputChannel, provider })
