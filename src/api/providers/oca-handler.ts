@@ -57,6 +57,16 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 		})
 	}
 
+	private decorateErrorWithOpcRequestId(error: any, processedError: any) {
+		const opcRequestId =
+			typeof error?.headers?.get === "function" ? (error.headers.get("opc-request-id") as string | null) : null
+
+		if (opcRequestId && processedError && typeof processedError === "object" && "message" in processedError) {
+			;(processedError as any).message = `${(processedError as any).message} opc-request-id: ${opcRequestId}`
+		}
+		return processedError
+	}
+
 	override async *createMessage(
 		systemPrompt: string,
 		messages: any[],
@@ -76,7 +86,7 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 		try {
 			stream = await client.chat.completions.create(request)
 		} catch (err: any) {
-			throw handleOpenAIError(err, "Oracle Code Assist")
+			throw this.decorateErrorWithOpcRequestId(err, handleOpenAIError(err, "Oracle Code Assist"))
 		}
 
 		for await (const chunk of stream) {
@@ -107,7 +117,7 @@ export class OcaHandler extends BaseProvider implements SingleCompletionHandler 
 			} as any)
 			return (resp as any).choices?.[0]?.message?.content || ""
 		} catch (err: any) {
-			throw handleOpenAIError(err, "Oracle Code Assist")
+			throw this.decorateErrorWithOpcRequestId(err, handleOpenAIError(err, "Oracle Code Assist"))
 		}
 	}
 

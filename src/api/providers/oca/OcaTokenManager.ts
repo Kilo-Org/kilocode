@@ -19,6 +19,8 @@ import {
 	type TokenEndpointResponse,
 } from "openid-client"
 
+type OidcDiscoveryConfig = Awaited<ReturnType<typeof discovery>>
+
 type TokenRecord = {
 	access_token?: string
 	refresh_token?: string
@@ -50,7 +52,6 @@ export class OcaTokenManager {
 
 	private static async load(): Promise<TokenRecord | null> {
 		try {
-			// First try to read from VS Code Secret Storage
 			const json = await ContextProxy.instance.rawContext.secrets.get(SECRET_STORAGE_KEY)
 			if (json) {
 				return JSON.parse(json) as TokenRecord
@@ -62,6 +63,40 @@ export class OcaTokenManager {
 		}
 	}
 
+	private static async discoveryWithRetry(
+		discoveryUrl: URL,
+		{
+			retries = 3,
+			baseDelayMs = 500,
+			maxDelayMs = 2000,
+		}: { retries?: number; baseDelayMs?: number; maxDelayMs?: number } = {},
+	): Promise<OidcDiscoveryConfig> {
+		let lastErr: unknown = null
+		for (let attempt = 0; attempt <= retries; attempt++) {
+			try {
+				return await discovery(discoveryUrl, DEFAULT_INTERNAL_IDCS_CLIENT_ID)
+			} catch (err) {
+				if (attempt === retries) {
+					lastErr = err
+					break
+				}
+				lastErr = err
+				const backoff = Math.min(maxDelayMs, baseDelayMs * Math.pow(2, attempt))
+				const jitter = 0.5 + Math.random() // 0.5x .. 1.5x
+				const delay = Math.round(backoff * jitter)
+				await this.sleep(delay)
+			}
+		}
+		console.error("OCA: OIDC discovery failed:", lastErr)
+		throw new Error(
+			"Only environment variable based proxy settings is supported. PAC/WPAD files (Ex: http://wpad/wpad.dat) are not supported in kilocode. Remove if any WPAD/PAC reference from your IDE proxy settings, restart the IDE, and try again. (Refer OCA Kilo troubleshooting guide.)",
+		)
+	}
+
+	private static async sleep(ms: number) {
+		return new Promise((resolve) => setTimeout(resolve, ms))
+	}
+
 	private static isValid(t: TokenRecord) {
 		const now = Math.floor(Date.now() / 1000)
 		return !!t.expires_at && now < t.expires_at - RENEW_TOKEN_BUFFER_SEC
@@ -70,7 +105,7 @@ export class OcaTokenManager {
 	private static async tryRefresh(token: TokenRecord): Promise<TokenRecord | null> {
 		try {
 			const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
-			const config = await discovery(discoveryUrl, DEFAULT_INTERNAL_IDCS_CLIENT_ID)
+			const config = await this.discoveryWithRetry(discoveryUrl)
 			const res = await refreshTokenGrant(config, token.refresh_token!)
 			const nowSec = Math.floor(Date.now() / 1000)
 			const next: TokenRecord = {
@@ -110,21 +145,13 @@ export class OcaTokenManager {
 		return null
 	}
 
-	/**
-	 * Interactive login that posts the auth URL to webview and also auto-opens the system browser.
-	 * Uses an in-flight guard and persistent cache so the browser opens only once until tokens expire.
-	 */
 	public static async loginWithoutAutoOpen(postAuthUrl: (url: string) => void): Promise<TokenRecord> {
-		// First, try to reuse a valid token (memory or disk)
 		const existing = await this.getValid()
 		if (existing) return existing
 
-		// If a login is already in progress, await that same flow to prevent multiple browser openings
 		if (this.inflightLogin) return this.inflightLogin
 
-		// Start a single login flow and share it with concurrent callers
 		this.inflightLogin = this.runInteractiveLogin(postAuthUrl).finally(() => {
-			// Clear the in-flight marker once the flow completes
 			this.inflightLogin = null
 		})
 
@@ -135,8 +162,11 @@ export class OcaTokenManager {
 		let config
 		try {
 			const discoveryUrl = new URL(`${IDCS_URL}/.well-known/openid-configuration`)
-			config = await discovery(discoveryUrl, DEFAULT_INTERNAL_IDCS_CLIENT_ID)
-		} catch (e) {
+			config = await this.discoveryWithRetry(discoveryUrl)
+		} catch (e: any) {
+			if (e instanceof Error) {
+				throw e
+			}
 			throw new Error(formatOcaError(e))
 		}
 
@@ -152,7 +182,6 @@ export class OcaTokenManager {
 			return new Promise<TokenEndpointResponse>((resolve, reject) => {
 				const redirectUri = REDIRECT_URI_TEMPLATE(port)
 
-				// Build authorization URL for this port
 				const authUrl = buildAuthorizationUrl(config, {
 					redirect_uri: redirectUri,
 					scope: DEFAULT_INTERNAL_IDCS_SCOPES,
@@ -203,7 +232,6 @@ export class OcaTokenManager {
 				})
 
 				server.listen(port, "localhost", () => {
-					// Open only once per flow after the server is listening
 					try {
 						postAuthUrl(authUrl.href)
 					} catch (e) {
@@ -226,7 +254,6 @@ export class OcaTokenManager {
 				break
 			} catch (err: any) {
 				lastError = err
-				// Keep trying other ports if the current port is in use
 				if (err?.code === "EADDRINUSE") {
 					continue
 				}
@@ -239,7 +266,6 @@ export class OcaTokenManager {
 			)
 		}
 
-		// Compute expires_at for local validity checks and persist
 		const nowSec = Math.floor(Date.now() / 1000)
 		const tokenSet: TokenRecord = {
 			access_token: tokens.access_token,

@@ -59,12 +59,13 @@ export function OCA({
 		activatedRef.current = activated
 	}, [activated])
 
+	const loginInProgressRef = React.useRef(false)
+
 	const requestOcaModelsRef = React.useRef(requestOcaModels)
 	React.useEffect(() => {
 		requestOcaModelsRef.current = requestOcaModels
 	}, [requestOcaModels])
 
-	// Listen for routerModels responses and extract OCA models locally (similar to OpenAICompatible pattern)
 	React.useEffect(() => {
 		const onRouterModels = (ev: MessageEvent) => {
 			const m = ev.data as any
@@ -73,10 +74,10 @@ export function OCA({
 				setOcaModels(oca)
 				setModelsLoading(false)
 			} else if (m?.type === "singleRouterModelFetchResponse" && m?.values?.provider === "oca") {
-				// Stop spinner even if the fetch failed for OCA
 				setModelsLoading(false)
 				ocaErrorJustReceived.current = true
 				setError(m.error ?? "Failed to fetch models")
+				setStatus("error")
 			}
 		}
 		window.addEventListener("message", onRouterModels)
@@ -95,11 +96,13 @@ export function OCA({
 					setError(null)
 					setActivated(true)
 					setStatus("done")
+					loginInProgressRef.current = false
 					requestOcaModelsRef.current?.()
 					break
 				case OCA_MSG.LOGIN_ERROR:
 					setStatus("error")
 					setError(m.error ?? "Login failed")
+					loginInProgressRef.current = false
 					break
 				case OCA_MSG.LOGOUT_SUCCESS:
 					setStatus("idle")
@@ -108,9 +111,10 @@ export function OCA({
 					setActivated(false)
 					try {
 						OCAModelService.clearOcaSelection()
-					} catch {
-						// best-effort
+					} catch (e) {
+						console.debug("OCA: clearOcaSelection failed:", e)
 					}
+					loginInProgressRef.current = false
 					break
 				case OCA_MSG.STATUS:
 					if (m.authenticated) {
@@ -119,7 +123,9 @@ export function OCA({
 						requestOcaModelsRef.current?.()
 					} else {
 						setActivated(false)
-						setStatus("idle")
+						if (!loginInProgressRef.current) {
+							setStatus("idle")
+						}
 					}
 					break
 			}
@@ -148,8 +154,8 @@ export function OCA({
 
 		try {
 			OCAModelService.setOcaModels(ocaModels as any)
-		} catch {
-			// best-effort
+		} catch (e) {
+			console.debug("OCA:  setOcaModels failed:", e)
 		}
 
 		const saved = OCAModelService.getOcaSelectedModelId()
@@ -163,8 +169,8 @@ export function OCA({
 
 		try {
 			OCAModelService.setOcaSelectedModelId(target)
-		} catch {
-			// best-effort
+		} catch (e) {
+			console.debug("OCA: setOcaSelectedModelId failed for target:", target, e)
 		}
 	}, [activated, status, ocaModels, apiConfiguration.apiModelId, setApiConfigurationField])
 
@@ -189,8 +195,8 @@ export function OCA({
 			if (field === "apiModelId" && typeof value === "string") {
 				try {
 					OCAModelService.setOcaSelectedModelId(value as string)
-				} catch {
-					// best-effort
+				} catch (e) {
+					console.debug("OCA: setOcaSelectedModelId failed for value:", value, e)
 				}
 			}
 		},
@@ -202,8 +208,8 @@ export function OCA({
 			setApiConfigurationField("apiModelId", pendingModelId as any, true)
 			try {
 				OCAModelService.setOcaSelectedModelId(pendingModelId)
-			} catch {
-				// best-effort
+			} catch (e) {
+				console.debug("OCA: setOcaSelectedModelId failed for pendingModelId:", pendingModelId, e)
 			}
 		}
 		setAckOpen(false)
@@ -213,6 +219,14 @@ export function OCA({
 	const handleCancelAck = React.useCallback(() => {
 		setAckOpen(false)
 		setPendingModelId(null)
+	}, [])
+
+	const handleLogin = React.useCallback(() => {
+		setError(null)
+		setStatus("waiting")
+		setAuthUrl(null)
+		loginInProgressRef.current = true
+		ocaLogin()
 	}, [])
 
 	return (
@@ -228,12 +242,18 @@ export function OCA({
 			{status === "idle" && !activated && (
 				<>
 					<p className="mb-2">Sign in to access Oracle internal models.</p>
-					<VSCodeButton appearance="primary" onClick={ocaLogin}>
+					<VSCodeButton appearance="primary" onClick={handleLogin}>
 						Login with Oracle SSO
 					</VSCodeButton>
 				</>
 			)}
 
+			{status === "waiting" && !authUrl && (
+				<div className="text-sm text-vscode-descriptionForeground flex items-center gap-2 mt-2">
+					<span className="codicon codicon-loading codicon-modifier-spin" />
+					<span>Preparing sign-in…</span>
+				</div>
+			)}
 			{status === "waiting" && authUrl && (
 				<>
 					<p>Click to sign in (opens in your browser):</p>
@@ -250,8 +270,9 @@ export function OCA({
 				</div>
 			)}
 			{status === "done" && activated && Object.keys(ocaModels).length > 0 && (
-				<div className="mt-3 oca-model-picker">
-					<div className="flex items-center gap-2 flex-nowrap overflow-x-auto">
+				<div className="mt-3">
+					<label className="block font-medium text-sm mb-1">Model</label>
+					<div className="flex items-center gap-2 flex-nowrap overflow-x-auto oca-model-picker">
 						<div>
 							<ModelPicker
 								apiConfiguration={apiConfiguration}
@@ -265,8 +286,12 @@ export function OCA({
 								errorMessage={modelValidationError}
 							/>
 						</div>
-						<VSCodeButton onClick={requestOcaModels} className="h-9 whitespace-nowrap">
-							Refresh models
+						<VSCodeButton
+							onClick={requestOcaModels}
+							className="h-9 whitespace-nowrap"
+							aria-label="Refresh models"
+							title="Refresh models">
+							<span className="codicon codicon-refresh" />
 						</VSCodeButton>
 					</div>
 				</div>

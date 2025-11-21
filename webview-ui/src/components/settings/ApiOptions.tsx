@@ -412,7 +412,7 @@ const ApiOptions = ({
 
 		// kilocode_change start
 		// Providers that don't have documentation pages yet
-		const excludedProviders = ["gemini-cli", "moonshot", "chutes", "cerebras", "litellm", "zai", "qwen-code"]
+		const excludedProviders = ["gemini-cli", "moonshot", "chutes", "cerebras", "litellm", "zai", "qwen-code", "oca"]
 
 		// Skip documentation link when the provider is excluded because documentation is not available
 		if (excludedProviders.includes(selectedProvider)) {
