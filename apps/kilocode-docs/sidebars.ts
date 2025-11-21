@@ -53,28 +53,31 @@ const sidebars: SidebarsConfig = {
 							items: [
 								"providers/anthropic",
 								"providers/bedrock",
+								"providers/cerebras", // kilocode_change
 								"providers/chutes-ai",
 								"providers/claude-code",
 								"providers/deepseek",
 								"providers/fireworks",
-								"providers/synthetic", // kilocode_change
-								"providers/vertex",
-								"providers/glama",
 								"providers/gemini",
+								"providers/glama",
 								"providers/groq",
 								"providers/human-relay",
+								"providers/inception", // kilocode_change
 								"providers/lmstudio",
-								"providers/minimax",
+								"providers/minimax", // kilocode_change (M2 model update)
 								"providers/mistral",
+								"providers/moonshot", // kilocode_change
 								"providers/ollama",
 								"providers/openai",
 								"providers/openai-compatible",
 								"providers/openrouter",
 								"providers/ovhcloud", // kilocode_change
 								"providers/requesty",
+								"providers/synthetic", // kilocode_change
 								"providers/unbound",
 								"providers/v0",
 								"providers/vercel-ai-gateway",
+								"providers/vertex",
 								"providers/virtual-quota-fallback",
 								"providers/vscode-lm",
 								"providers/xai",
