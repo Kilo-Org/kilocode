@@ -17,6 +17,7 @@ import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import { CommandPatternSelector } from "./CommandPatternSelector"
 import { parseCommand } from "../../utils/command-validation"
 import { extractPatternsFromCommand } from "../../utils/command-parser"
+import { NEWLINE_PLACEHOLDER, CARRIAGE_RETURN_PLACEHOLDER } from "../../utils/command-validation-quote-protection"
 import { t } from "i18next"
 
 interface CommandPattern {
@@ -40,7 +41,14 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		setDeniedCommands,
 	} = useExtensionState()
 
-	const { command, output: parsedOutput } = useMemo(() => parseCommandAndOutput(text), [text])
+	const { command, output: parsedOutput } = useMemo(() => {
+		const parsed = parseCommandAndOutput(text)
+		// Restore newlines that were protected during parsing for display purposes
+		const displayCommand = parsed.command
+			.replace(new RegExp(NEWLINE_PLACEHOLDER, "g"), "\n")
+			.replace(new RegExp(CARRIAGE_RETURN_PLACEHOLDER, "g"), "\r")
+		return { command: displayCommand, output: parsed.output }
+	}, [text])
 
 	// If we aren't opening the VSCode terminal for this command then we default
 	// to expanding the command execution output.
@@ -61,17 +69,24 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 		// Then extract patterns from each command using the existing pattern extraction logic
 		const allPatterns = new Set<string>()
 
-		// Add all individual commands first
+		// Add all individual commands first, but filter out commands with newlines
+		// (these are typically multi-line strings that shouldn't be shown as patterns)
 		allCommands.forEach((cmd) => {
-			if (cmd.trim()) {
-				allPatterns.add(cmd.trim())
+			const trimmed = cmd.trim()
+			if (trimmed && !trimmed.includes("\n") && !trimmed.includes("\r")) {
+				allPatterns.add(trimmed)
 			}
 		})
 
 		// Then add extracted patterns for each command
 		allCommands.forEach((cmd) => {
 			const patterns = extractPatternsFromCommand(cmd)
-			patterns.forEach((pattern) => allPatterns.add(pattern))
+			patterns.forEach((pattern) => {
+				// Also filter out patterns with newlines
+				if (!pattern.includes("\n") && !pattern.includes("\r")) {
+					allPatterns.add(pattern)
+				}
+			})
 		})
 
 		return Array.from(allPatterns).map((pattern) => ({
