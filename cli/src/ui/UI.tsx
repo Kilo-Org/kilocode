@@ -80,7 +80,7 @@ export const UI: React.FC<UIAppProps> = ({ options, onExit }) => {
 	const { fetchTaskHistory } = useTaskHistory()
 
 	// This clears the terminal and forces re-render of static components
-	useTerminal()
+	useTerminal((options.json && options.ci) || !process.stdout.isTTY)
 
 	// CI mode hook for automatic exit
 	const { shouldExit, exitReason } = useCIMode({
