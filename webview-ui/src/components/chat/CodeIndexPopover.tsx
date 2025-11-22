@@ -241,7 +241,13 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	}, [externalIndexingStatus])
 
 	// Initialize settings from global state
+	// Don't update settings if we just saved (prevents race condition with state updates)
 	useEffect(() => {
+		// Skip update if we're currently saving or just saved
+		if (saveStatus === "saving" || saveStatus === "saved") {
+			return
+		}
+
 		if (codebaseIndexConfig) {
 			const settings = {
 				codebaseIndexEnabled: codebaseIndexConfig.codebaseIndexEnabled ?? true,
@@ -270,7 +276,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 			// Request secret status to check if secrets exist
 			vscode.postMessage({ type: "requestCodeIndexSecretStatus" })
 		}
-	}, [codebaseIndexConfig])
+	}, [codebaseIndexConfig, saveStatus])
 
 	// Request initial indexing status
 	useEffect(() => {
@@ -447,6 +453,13 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 	// Validation function
 	const validateSettings = (): boolean => {
+		// If codebase indexing is disabled, skip validation of configuration fields
+		// User should be able to disable the feature without having all fields filled in
+		if (!currentSettings.codebaseIndexEnabled) {
+			setFormErrors({})
+			return true
+		}
+
 		const schema = createValidationSchema(currentSettings.codebaseIndexEmbedderProvider, t)
 
 		// Prepare data for validation
@@ -484,6 +497,12 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					}
 				})
 				setFormErrors(errors)
+
+				// Auto-expand Setup section if there are validation errors
+				// (so users can see what needs to be configured)
+				if (Object.keys(errors).length > 0) {
+					setIsSetupSettingsOpen(true)
+				}
 			}
 			return false
 		}
