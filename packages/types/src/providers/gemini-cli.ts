@@ -108,7 +108,7 @@ export const geminiCliModels = {
 		supportsReasoningBudget: true,
 		requiredReasoningBudget: true,
 	},
-    "gemini-3.0-pro-preview": {
+    "gemini-3-pro-preview": {
         maxTokens: 64_000,
         contextWindow: 1_048_576,
         supportsImages: true,
