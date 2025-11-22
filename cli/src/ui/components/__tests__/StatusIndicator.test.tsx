@@ -4,7 +4,7 @@
 
 import React from "react"
 import { render } from "ink-testing-library"
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
@@ -20,11 +20,20 @@ vi.mock("../../../state/hooks/useWebviewMessage.js", () => ({
 	}),
 }))
 
+// Mock timers for ThinkingSpinner animation
+vi.useFakeTimers()
+
 describe("StatusIndicator", () => {
 	let store: ReturnType<typeof createStore>
 
 	beforeEach(() => {
 		store = createStore()
+		// Reset animation frame for each test
+		vi.clearAllTimers()
+	})
+
+	afterEach(() => {
+		vi.clearAllTimers()
 	})
 
 	it("should not render when disabled", () => {
@@ -55,6 +64,7 @@ describe("StatusIndicator", () => {
 		)
 
 		const output = lastFrame()
+		// ThinkingSpinner contains animated frame plus "Thinking..." text
 		expect(output).toContain("Thinking...")
 		expect(output).toContain("to cancel")
 		// Should show either Ctrl+X or Cmd+X depending on platform
