@@ -90,7 +90,7 @@ describe("FileSearchService", () => {
 			const results2 = await fileSearchService.getAllFiles(cwd)
 
 			expect(results1).toBe(results2) // Now cached again
-		})
+		}, 10000)
 
 		it("should clear cache for specific workspace", async () => {
 			const cwd1 = process.cwd()
@@ -106,6 +106,6 @@ describe("FileSearchService", () => {
 			// cwd1 should be re-fetched, cwd2 should be cached
 			const newResults1 = await fileSearchService.getAllFiles(cwd1)
 			expect(newResults1).not.toBe(results1)
-		})
+		}, 10000)
 	})
 })

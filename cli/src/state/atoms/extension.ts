@@ -153,6 +153,13 @@ export const hasActiveTaskAtom = atom<boolean>((get) => {
 export const taskResumedViaContinueAtom = atom<boolean>(false)
 
 /**
+ * Atom to track the timestamp of the last API stream activity
+ * Updated whenever a chunk arrives from the API stream (text, reasoning, usage, etc.)
+ * Used to detect if the model has stopped sending tokens
+ */
+export const lastActivityTimestampAtom = atom<number>(0)
+
+/**
  * Derived atom to check if there's a resume_task ask pending
  * This checks if the last message is a resume_task or resume_completed_task
  * But doesn't show the message if the task was already resumed via --continue
@@ -243,6 +250,9 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		set(customModesAtom, state.customModes || [])
 		set(mcpServersAtom, state.mcpServers || [])
 		set(cwdAtom, state.cwd || null)
+		if (state.lastActivityTimestamp) {
+			set(lastActivityTimestampAtom, state.lastActivityTimestamp)
+		}
 	} else {
 		// Clear all derived atoms
 		set(chatMessagesAtom, [])
@@ -457,6 +467,14 @@ export const clearExtensionStateAtom = atom(null, (get, set) => {
 	// Clear version tracking
 	set(messageVersionMapAtom, new Map<number, number>())
 	set(streamingMessagesSetAtom, new Set<number>())
+})
+
+/**
+ * Action atom to update the last API stream activity timestamp
+ * Called whenever a chunk arrives from the API stream
+ */
+export const updateLastActivityTimestampAtom = atom(null, (_get, set) => {
+	set(lastActivityTimestampAtom, Date.now())
 })
 
 /**

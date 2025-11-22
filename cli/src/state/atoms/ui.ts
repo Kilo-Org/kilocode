@@ -13,7 +13,7 @@ import type {
 	FileMentionSuggestion,
 	FileMentionContext,
 } from "../../services/autocomplete.js"
-import { chatMessagesAtom } from "./extension.js"
+import { chatMessagesAtom, lastActivityTimestampAtom } from "./extension.js"
 import { splitMessages } from "../../ui/messages/utils/messageCompletion.js"
 import { textBufferStringAtom, textBufferCursorAtom, setTextAtom, clearTextAtom } from "./textBuffer.js"
 import { commitCompletionTimeout } from "../../parallel/parallel.js"
@@ -67,20 +67,30 @@ export const isCommittingParallelModeAtom = atom<boolean>(false)
 export const commitCountdownSecondsAtom = atomWithReset<number>(commitCompletionTimeout / 1000)
 
 /**
+ * Timeout (in ms) to consider the stream inactive if no chunks received
+ * This detects when the model has stopped sending tokens
+ */
+const STREAMING_ACTIVITY_TIMEOUT_MS = 3000 // 3 seconds
+
+/**
  * Derived atom to check if the extension is currently streaming/processing
- * This mimics the webview's isStreaming logic from ChatView.tsx (lines 550-592)
+ * Uses real API activity tracking instead of state inference
  *
  * Returns true when:
- * - The last message is partial (still being streamed)
- * - There's an active API request that hasn't finished yet (no cost field)
+ * - Chunks are actively arriving from the API stream (within STREAMING_ACTIVITY_TIMEOUT_MS)
+ * - This is determined by lastActivityTimestamp being recent
  *
  * Returns false when:
+ * - No API activity for more than STREAMING_ACTIVITY_TIMEOUT_MS
  * - There's a tool currently asking for approval (waiting for user input)
  * - No messages exist
- * - All messages are complete
+ *
+ * This provides accurate detection of actual model activity rather than inferring
+ * from partial messages and api_req_started status.
  */
 export const isStreamingAtom = atom<boolean>((get) => {
 	const messages = get(chatMessagesAtom)
+	const lastActivityTimestamp = get(lastActivityTimestampAtom)
 
 	if (messages.length === 0) {
 		return false
@@ -100,32 +110,10 @@ export const isStreamingAtom = atom<boolean>((get) => {
 		return false
 	}
 
-	// Check if the last message is partial (still streaming)
-	if (lastMessage.partial === true) {
-		return true
-	}
-
-	// Check if there's an active API request without a cost (not finished)
-	// Find the last api_req_started message
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const msg = messages[i]
-		if (msg?.say === "api_req_started") {
-			try {
-				const data = JSON.parse(msg.text || "{}")
-				// If cost is undefined, the API request hasn't finished yet
-				if (data.cost === undefined) {
-					return true
-				}
-			} catch {
-				// If we can't parse, assume not streaming
-				return false
-			}
-			// Found an api_req_started with cost, so it's finished
-			break
-		}
-	}
-
-	return false
+	// Check if there's recent API activity
+	// If we've received a chunk within the timeout period, we're streaming
+	const timeSinceLastActivity = Date.now() - lastActivityTimestamp
+	return timeSinceLastActivity < STREAMING_ACTIVITY_TIMEOUT_MS
 })
 
 // ============================================================================
