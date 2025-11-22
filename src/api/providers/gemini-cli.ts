@@ -183,7 +183,7 @@ export class GeminiCliHandler extends BaseProvider implements SingleCompletionHa
 			return this.projectId
 		}
 
-		const initialProjectId = process.env.GOOGLE_CLOUD_PROJECT ?? "default"
+		const initialProjectId = process.env.GOOGLE_CLOUD_PROJECT ?? ""
 
 		// Prepare client metadata
 		const clientMetadata = {
