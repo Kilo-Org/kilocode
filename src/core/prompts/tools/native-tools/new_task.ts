@@ -4,8 +4,11 @@ export default {
 	type: "function",
 	function: {
 		name: "new_task",
-		description:
-			"Create a new task instance in a specified mode, supplying the initial instructions and optionally a starting todo list when required by settings.",
+		description: `This will let you create a new task instance in the chosen mode using your provided message.
+Parameters:
+- mode: (required) The slug of the mode to start the new task in (e.g., "code", "debug", "architect").
+- message: (required) The initial user message or instructions for this new task.
+- todos: (optional) The initial todo list in markdown checklist format for the new task.`,
 		strict: true,
 		parameters: {
 			type: "object",

@@ -3153,6 +3153,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 					provider,
 					this.diffEnabled,
 					this.api?.getModel(),
+					this.cwd,
 				)
 			} catch (error) {
 				console.error("[Task] Error getting allowed tools for mode:", error)

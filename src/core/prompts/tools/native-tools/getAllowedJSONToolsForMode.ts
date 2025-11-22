@@ -5,7 +5,7 @@ import { ClineProviderState } from "../../../webview/ClineProvider"
 import OpenAI from "openai"
 import { ALWAYS_AVAILABLE_TOOLS, TOOL_GROUPS } from "../../../../shared/tools"
 import { isFastApplyAvailable } from "../../../tools/editFileTool"
-import { nativeTools } from "."
+import getNativeTools from "."
 import { apply_diff_multi_file, apply_diff_single_file } from "./apply_diff"
 import pWaitFor from "p-wait-for"
 import { McpHub } from "../../../../services/mcp/McpHub"
@@ -22,7 +22,10 @@ export async function getAllowedJSONToolsForMode(
 	provider: ClineProvider | undefined,
 	diffEnabled: boolean = false,
 	model: { id: string; info: ModelInfo } | undefined,
+	cwd: string,
 ): Promise<OpenAI.Chat.ChatCompletionTool[]> {
+	const nativeTools = getNativeTools(cwd)
+
 	const providerState: ClineProviderState | undefined = await provider?.getState()
 	const config = getModeConfig(mode, providerState?.customModes)
 	const context = ContextProxy.instance.rawContext
@@ -90,12 +93,7 @@ export async function getAllowedJSONToolsForMode(
 	if (
 		!codeIndexManager ||
 		// kilcode_change start
-		!(
-			codeIndexManager.isFeatureEnabled &&
-			codeIndexManager.isFeatureConfigured &&
-			codeIndexManager.isInitialized &&
-			codeIndexManager.isManagedIndexingAvailable
-		)
+		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 		// kilcode_change end
 	) {
 		tools.delete("codebase_search")
@@ -133,14 +131,14 @@ export async function getAllowedJSONToolsForMode(
 	// Create a map of tool names to native tool definitions for quick lookup
 	const nativeToolsMap = new Map<string, OpenAI.Chat.ChatCompletionTool>()
 	nativeTools.forEach((tool) => {
-		nativeToolsMap.set(tool.function.name, tool)
+		nativeToolsMap.set((tool as OpenAI.Chat.ChatCompletionFunctionTool).function.name, tool)
 	})
 	let allowedTools: OpenAI.Chat.ChatCompletionTool[] = []
 
 	let isReadFileToolAllowedForMode = false
 	let isApplyDiffToolAllowedForMode = false
 	for (const nativeTool of nativeTools) {
-		const toolName = nativeTool.function.name
+		const toolName = (nativeTool as OpenAI.Chat.ChatCompletionFunctionTool).function.name
 
 		// If the tool is in the allowed set, add it.
 		if (tools.has(toolName)) {
@@ -156,9 +154,9 @@ export async function getAllowedJSONToolsForMode(
 
 	if (isReadFileToolAllowedForMode) {
 		if (model?.id && shouldUseSingleFileRead(model?.id)) {
-			allowedTools.push(read_file_single)
+			allowedTools.push(read_file_single(cwd))
 		} else {
-			allowedTools.push(read_file_multi)
+			allowedTools.push(read_file_multi(cwd))
 		}
 	}
 
@@ -182,6 +180,5 @@ export async function getAllowedJSONToolsForMode(
 			allowedTools.push(...mcpTools)
 		}
 	}
-
 	return allowedTools
 }

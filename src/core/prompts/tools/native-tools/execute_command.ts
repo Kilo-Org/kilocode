@@ -1,26 +1,28 @@
 import type OpenAI from "openai"
 
-export default {
-	type: "function",
-	function: {
-		name: "execute_command",
-		description:
-			"Run a CLI command on the user's system. Tailor the command to the environment, explain what it does, and prefer relative paths or shell-appropriate chaining. Use the cwd parameter only when directed to run in a different directory.",
-		strict: true,
-		parameters: {
-			type: "object",
-			properties: {
-				command: {
-					type: "string",
-					description: "Shell command to execute",
+export default function execute_command(cwd: string): OpenAI.Chat.ChatCompletionTool {
+	return {
+		type: "function",
+		function: {
+			name: "execute_command",
+			description:
+				"Request to execute a CLI command on the system. Use this when you need to perform system operations or run specific commands to accomplish any step in the user's task. You must tailor your command to the user's system and provide a clear explanation of what the command does. For command chaining, use the appropriate chaining syntax for the user's shell. Prefer to execute complex CLI commands over creating executable scripts, as they are more flexible and easier to run. Prefer relative commands and paths that avoid location sensitivity for terminal consistency, e.g: \`touch ./testdata/example.file\`, \`dir ./examples/model1/data/yaml\`, or \`go test ./cmd/front --config ./cmd/front/config.yml\`. If directed by the user, you may open a terminal in a different directory by using the \`cwd\` parameter.",
+			strict: true,
+			parameters: {
+				type: "object",
+				properties: {
+					command: {
+						type: "string",
+						description: "Shell command to execute",
+					},
+					cwd: {
+						type: ["string", "null"],
+						description: `The working directory to execute the command in (default: ${cwd})`,
+					},
 				},
-				cwd: {
-					type: ["string", "null"],
-					description: "Optional working directory for the command, relative or absolute",
-				},
+				required: ["command", "cwd"],
+				additionalProperties: false,
 			},
-			required: ["command", "cwd"],
-			additionalProperties: false,
 		},
-	},
-} satisfies OpenAI.Chat.ChatCompletionTool
+	}
+}
