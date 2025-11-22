@@ -94,7 +94,6 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			}) ?? undefined
 
 		const temperature = this.options.modelTemperature ?? this.defaultTemperature
-
 		const params: OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
 			model,
 			max_tokens,
@@ -102,6 +101,10 @@ export abstract class BaseOpenAiCompatibleProvider<ModelName extends string>
 			messages: [{ role: "system", content: systemPrompt }, ...convertToOpenAiMessages(messages)],
 			stream: true,
 			stream_options: { include_usage: true },
+		}
+		// Add thinking parameter if reasoning is enabled and model supports it
+		if (this.options.enableReasoningEffort && info.supportsReasoningBinary) {
+			;(params as any).thinking = { type: "enabled" }
 		}
 
 		try {

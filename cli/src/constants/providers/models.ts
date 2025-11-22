@@ -33,8 +33,8 @@ import {
 	cerebrasDefaultModelId,
 	sambaNovaModels,
 	sambaNovaDefaultModelId,
-	internationalZAiModels,
-	internationalZAiDefaultModelId,
+	zaiCodingModels,
+	zaiCodingDefaultModelId,
 	fireworksModels,
 	fireworksDefaultModelId,
 	featherlessModels,
@@ -252,7 +252,7 @@ export const DEFAULT_MODEL_IDS: Partial<Record<ProviderName, string>> = {
 	featherless: featherlessDefaultModelId,
 	deepinfra: "deepseek-ai/DeepSeek-R1-0528",
 	minimax: "MiniMax-M2",
-	zai: internationalZAiDefaultModelId,
+	zai: zaiCodingDefaultModelId,
 	roo: rooDefaultModelId,
 	"gemini-cli": geminiCliDefaultModelId,
 	ovhcloud: ovhCloudAiEndpointsDefaultModelId,
@@ -363,8 +363,8 @@ export function getModelsByProvider(params: {
 			}
 		case "zai":
 			return {
-				models: internationalZAiModels as ModelRecord,
-				defaultModel: internationalZAiDefaultModelId,
+				models: zaiCodingModels as ModelRecord,
+				defaultModel: zaiCodingDefaultModelId,
 			}
 		case "fireworks":
 			return {

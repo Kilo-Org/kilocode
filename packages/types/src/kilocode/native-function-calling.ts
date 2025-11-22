@@ -25,6 +25,7 @@ export const nativeFunctionCallingProviders = [
 	"minimax",
 	"anthropic",
 	"moonshot",
+	"zai",
 ] satisfies ProviderName[] as ProviderName[]
 
 const modelsDefaultingToJsonKeywords = [

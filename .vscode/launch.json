@@ -33,6 +33,21 @@
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}/src",
 				"--disable-extensions",
+				"--disable-sync",
+				"--disable-telemetry",
+				"--disable-updates",
+				"--disable-crash-reporter",
+				"--disable-backup",
+				"--disable-settings-sync",
+				"--disable-account-consent",
+				"--disable-release-notes",
+				"--disable-welcome",
+				"--disable-tour",
+				"--disable-dev-tools",
+				"--disable-cloud-extensions",
+				"--user-data-dir=${workspaceFolder}/.vscode-isolated",
+				"--extensions-dir=${workspaceFolder}/.vscode-isolated-extensions",
+				"--locale=en-US",
 				"${input:extensionLaunchDir}"
 			],
 			"sourceMaps": true,
@@ -40,7 +55,8 @@
 			"preLaunchTask": "${defaultBuildTask}",
 			"env": {
 				"NODE_ENV": "development",
-				"VSCODE_DEBUG_MODE": "true"
+				"VSCODE_DEBUG_MODE": "true",
+				"NODE_TLS_REJECT_UNAUTHORIZED": "0"
 			},
 			"resolveSourceMapLocations": ["${workspaceFolder}/**", "!**/node_modules/**"],
 			"presentation": { "hidden": false, "group": "tasks", "order": 1 }
