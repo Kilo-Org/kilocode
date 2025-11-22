@@ -147,6 +147,8 @@ export class CodeIndexConfigManager {
 			this.embedderProvider = "vercel-ai-gateway"
 		} else if (codebaseIndexEmbedderProvider === "openrouter") {
 			this.embedderProvider = "openrouter"
+		} else if (codebaseIndexEmbedderProvider === "kilocode") {
+			this.embedderProvider = "kilocode"
 		} else {
 			this.embedderProvider = "openai"
 		}
@@ -288,6 +290,10 @@ export class CodeIndexConfigManager {
 			const apiKey = this.openRouterOptions?.apiKey
 			const qdrantUrl = this.qdrantUrl
 			const isConfigured = !!(apiKey && qdrantUrl)
+			return isConfigured
+		} else if (this.embedderProvider === "kilocode") {
+			const qdrantUrl = this.qdrantUrl
+			const isConfigured = !!qdrantUrl
 			return isConfigured
 		}
 		return false // Should not happen if embedderProvider is always set correctly

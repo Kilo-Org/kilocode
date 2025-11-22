@@ -72,6 +72,7 @@
 		"vercelAiGatewayApiKeyLabel": "API Key",
 		"vercelAiGatewayApiKeyPlaceholder": "Enter your Vercel AI Gateway API key",
 		"openRouterProvider": "OpenRouter",
+		"kiloCodeProvider": "Kilo Code",
 		"openRouterApiKeyLabel": "OpenRouter API Key",
 		"openRouterApiKeyPlaceholder": "Enter your OpenRouter API key",
 		"openaiCompatibleProvider": "OpenAI Compatible",

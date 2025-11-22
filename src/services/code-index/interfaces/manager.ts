@@ -78,6 +78,7 @@ export type EmbedderProvider =
 	| "mistral"
 	| "vercel-ai-gateway"
 	| "openrouter"
+	| "kilocode"
 
 export interface IndexProgressUpdate {
 	systemStatus: IndexingState

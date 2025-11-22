@@ -9,17 +9,20 @@ import {
 import { getDefaultModelId, getModelQueryPrefix } from "../../../shared/embeddingModels"
 import { t } from "../../../i18n"
 import { withValidationErrorHandling, HttpError, formatEmbeddingError } from "../shared/validation-helpers"
-import { TelemetryEventName } from "@roo-code/types"
+import { TelemetryEventName, getKiloUrlFromToken, type ProviderSettingsEntry } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { Mutex } from "async-mutex"
 import { handleOpenAIError } from "../../../api/providers/utils/openai-error-handler"
+import { ClineProvider } from "../../../core/webview/ClineProvider"
+import { ContextProxy } from "../../../core/config/ContextProxy"
+import { ProviderSettingsManager } from "../../../core/config/ProviderSettingsManager"
 
 interface EmbeddingItem {
 	embedding: string | number[]
 	[key: string]: any
 }
 
-interface OpenRouterEmbeddingResponse {
+interface KiloCodeEmbeddingResponse {
 	data: EmbeddingItem[]
 	usage?: {
 		prompt_tokens?: number
@@ -28,16 +31,17 @@ interface OpenRouterEmbeddingResponse {
 }
 
 /**
- * OpenRouter implementation of the embedder interface with batching and rate limiting.
- * OpenRouter provides an OpenAI-compatible API that gives access to hundreds of models
+ * Kilo Code Gatewayimplementation of the embedder interface with batching and rate limiting.
+ * Kilocode provides an OpenAI-compatible API that gives access to hundreds of models
  * through a single endpoint, automatically handling fallbacks and cost optimization.
  */
-export class OpenRouterEmbedder implements IEmbedder {
-	private embeddingsClient: OpenAI
+export class KiloCodeEmbedder implements IEmbedder {
+	private embeddingsClient: OpenAI | undefined
 	private readonly defaultModelId: string
-	private readonly apiKey: string
+	private apiKey: string | undefined
 	private readonly maxItemTokens: number
-	private readonly baseUrl: string = "https://openrouter.ai/api/v1"
+	private baseUrl: string | undefined
+	private isInitialized: boolean = false
 
 	// Global rate limiting state shared across all instances
 	private static globalRateLimitState = {
@@ -55,18 +59,41 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * @param modelId Optional model identifier (defaults to "openai/text-embedding-3-large")
 	 * @param maxItemTokens Optional maximum tokens per item (defaults to MAX_ITEM_TOKENS)
 	 */
-	constructor(apiKey: string, modelId?: string, maxItemTokens?: number) {
-		if (!apiKey) {
-			throw new Error(t("embeddings:validation.apiKeyRequired"))
+	constructor(modelId?: string, maxItemTokens?: number) {
+		this.defaultModelId = modelId || getDefaultModelId("kilocode")
+		this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
+	}
+
+	async initialize(): Promise<void> {
+		if (!this.isInitialized) {
+			try {
+				await this.initKiloCodeEmbedder()
+				this.isInitialized = true
+			} catch (error) {
+				console.error("Failed to initialize Kilo Code Embedder:", error)
+				throw error
+			}
 		}
+	}
 
-		this.apiKey = apiKey
-
+	async initKiloCodeEmbedder(): Promise<void> {
 		// Wrap OpenAI client creation to handle invalid API key characters
 		try {
+			const provider: ClineProvider | undefined = ClineProvider.getVisibleInstance()
+			const profiles: ProviderSettingsEntry[] | undefined = provider?.getProviderProfileEntries()
+			const kilocodeProfile: ProviderSettingsEntry | undefined = profiles?.find(
+				(profile) => profile.apiProvider === "kilocode",
+			)
+			const settingsManager = new ProviderSettingsManager(ContextProxy.instance.rawContext)
+			const profileSettings = await settingsManager.getProfile({ id: kilocodeProfile?.id || "" })
+			const kilocodeToken = profileSettings.kilocodeToken
+			this.apiKey = kilocodeToken || ""
+			const kilobaseURL = getKiloUrlFromToken("https://api.kilocode.ai/api", this.apiKey)
+			this.baseUrl = `${kilobaseURL}/openrouter`
+
 			this.embeddingsClient = new OpenAI({
 				baseURL: this.baseUrl,
-				apiKey: apiKey,
+				apiKey: this.apiKey,
 				defaultHeaders: {
 					"HTTP-Referer": "https://kilocode.ai", //kilocode_change
 					"X-Title": "Kilo Code", //kilocode_change
@@ -74,11 +101,8 @@ export class OpenRouterEmbedder implements IEmbedder {
 			})
 		} catch (error) {
 			// Use the error handler to transform ByteString conversion errors
-			throw handleOpenAIError(error, "OpenRouter")
+			throw handleOpenAIError(error, "Kilo Code Embedder")
 		}
-
-		this.defaultModelId = modelId || getDefaultModelId("openrouter")
-		this.maxItemTokens = maxItemTokens || MAX_ITEM_TOKENS
 	}
 
 	/**
@@ -88,10 +112,11 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * @returns Promise resolving to embedding response
 	 */
 	async createEmbeddings(texts: string[], model?: string): Promise<EmbeddingResponse> {
+		this.initialize()
 		const modelToUse = model || this.defaultModelId
 
 		// Apply model-specific query prefix if required
-		const queryPrefix = getModelQueryPrefix("openrouter", modelToUse)
+		const queryPrefix = getModelQueryPrefix("kilocode", modelToUse)
 		const processedTexts = queryPrefix
 			? texts.map((text, index) => {
 					// Prevent double-prefixing
@@ -180,14 +205,14 @@ export class OpenRouterEmbedder implements IEmbedder {
 			await this.waitForGlobalRateLimit()
 
 			try {
-				const response = (await this.embeddingsClient.embeddings.create({
+				const response = (await this.embeddingsClient?.embeddings.create({
 					input: batchTexts,
 					model: model,
 					// OpenAI package (as of v4.78.1) has a parsing issue that truncates embedding dimensions to 256
 					// when processing numeric arrays, which breaks compatibility with models using larger dimensions.
 					// By requesting base64 encoding, we bypass the package's parser and handle decoding ourselves.
 					encoding_format: "base64",
-				})) as OpenRouterEmbeddingResponse
+				})) as KiloCodeEmbeddingResponse
 
 				// Convert base64 embeddings to float32 arrays
 				const processedEmbeddings = response.data.map((item: EmbeddingItem) => {
@@ -222,7 +247,7 @@ export class OpenRouterEmbedder implements IEmbedder {
 				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 					error: error instanceof Error ? error.message : String(error),
 					stack: error instanceof Error ? error.stack : undefined,
-					location: "OpenRouterEmbedder:_embedBatchWithRetries",
+					location: "KiloCodeEmbedder:_embedBatchWithRetries",
 					attempt: attempts + 1,
 				})
 
@@ -253,7 +278,7 @@ export class OpenRouterEmbedder implements IEmbedder {
 				}
 
 				// Log the error for debugging
-				console.error(`OpenRouter embedder error (attempt ${attempts + 1}/${MAX_RETRIES}):`, error)
+				console.error(`Kilo Code embedder error (attempt ${attempts + 1}/${MAX_RETRIES}):`, error)
 
 				// Format and throw the error
 				throw formatEmbeddingError(error, MAX_RETRIES)
@@ -268,17 +293,18 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * @returns Promise resolving to validation result with success status and optional error message
 	 */
 	async validateConfiguration(): Promise<{ valid: boolean; error?: string }> {
+		await this.initialize()
 		return withValidationErrorHandling(async () => {
 			try {
 				// Test with a minimal embedding request
 				const testTexts = ["test"]
 				const modelToUse = this.defaultModelId
 
-				const response = (await this.embeddingsClient.embeddings.create({
+				const response = (await this.embeddingsClient?.embeddings.create({
 					input: testTexts,
 					model: modelToUse,
 					encoding_format: "base64",
-				})) as OpenRouterEmbeddingResponse
+				})) as KiloCodeEmbeddingResponse
 
 				// Check if we got a valid response
 				if (!response?.data || response.data.length === 0) {
@@ -294,11 +320,11 @@ export class OpenRouterEmbedder implements IEmbedder {
 				TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
 					error: error instanceof Error ? error.message : String(error),
 					stack: error instanceof Error ? error.stack : undefined,
-					location: "OpenRouterEmbedder:validateConfiguration",
+					location: "KiloCodeEmbedder:validateConfiguration",
 				})
 				throw error
 			}
-		}, "openrouter")
+		}, "kilocode")
 	}
 
 	/**
@@ -306,7 +332,7 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 */
 	get embedderInfo(): EmbedderInfo {
 		return {
-			name: "openrouter",
+			name: "kilocode",
 		}
 	}
 
@@ -314,11 +340,11 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * Waits if there's an active global rate limit
 	 */
 	private async waitForGlobalRateLimit(): Promise<void> {
-		const release = await OpenRouterEmbedder.globalRateLimitState.mutex.acquire()
+		const release = await KiloCodeEmbedder.globalRateLimitState.mutex.acquire()
 		let mutexReleased = false
 
 		try {
-			const state = OpenRouterEmbedder.globalRateLimitState
+			const state = KiloCodeEmbedder.globalRateLimitState
 
 			if (state.isRateLimited && state.rateLimitResetTime > Date.now()) {
 				const waitTime = state.rateLimitResetTime - Date.now()
@@ -346,9 +372,9 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * Updates global rate limit state when a 429 error occurs
 	 */
 	private async updateGlobalRateLimitState(error: HttpError): Promise<void> {
-		const release = await OpenRouterEmbedder.globalRateLimitState.mutex.acquire()
+		const release = await KiloCodeEmbedder.globalRateLimitState.mutex.acquire()
 		try {
-			const state = OpenRouterEmbedder.globalRateLimitState
+			const state = KiloCodeEmbedder.globalRateLimitState
 			const now = Date.now()
 
 			// Increment consecutive rate limit errors
@@ -380,9 +406,9 @@ export class OpenRouterEmbedder implements IEmbedder {
 	 * Gets the current global rate limit delay
 	 */
 	private async getGlobalRateLimitDelay(): Promise<number> {
-		const release = await OpenRouterEmbedder.globalRateLimitState.mutex.acquire()
+		const release = await KiloCodeEmbedder.globalRateLimitState.mutex.acquire()
 		try {
-			const state = OpenRouterEmbedder.globalRateLimitState
+			const state = KiloCodeEmbedder.globalRateLimitState
 
 			if (state.isRateLimited && state.rateLimitResetTime > Date.now()) {
 				return state.rateLimitResetTime - Date.now()

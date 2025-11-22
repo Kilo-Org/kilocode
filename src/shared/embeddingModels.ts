@@ -10,6 +10,7 @@ export type EmbedderProvider =
 	| "mistral"
 	| "vercel-ai-gateway"
 	| "openrouter" // Add other providers as needed
+	| "kilocode" //kilocode_change
 
 export interface EmbeddingModelProfile {
 	dimension: number
@@ -90,6 +91,21 @@ export const EMBEDDING_MODEL_PROFILES: EmbeddingModelProfiles = {
 		// Qwen models via OpenRouter
 		"qwen/qwen3-embedding-8b": { dimension: 4096, scoreThreshold: 0.4 },
 	},
+	//kilocode_change start
+	kilocode: {
+		// OpenAI models via OpenRouter
+		"openai/text-embedding-3-small": { dimension: 1536, scoreThreshold: 0.4 },
+		"openai/text-embedding-3-large": { dimension: 3072, scoreThreshold: 0.4 },
+		"openai/text-embedding-ada-002": { dimension: 1536, scoreThreshold: 0.4 },
+		// Google models via OpenRouter
+		"google/gemini-embedding-001": { dimension: 3072, scoreThreshold: 0.4 },
+		// Mistral models via OpenRouter
+		"mistralai/mistral-embed-2312": { dimension: 1024, scoreThreshold: 0.4 },
+		"mistralai/codestral-embed-2505": { dimension: 3072, scoreThreshold: 0.4 },
+		// Qwen models via OpenRouter
+		"qwen/qwen3-embedding-8b": { dimension: 4096, scoreThreshold: 0.4 },
+	},
+	//kilocode_change end
 }
 
 /**
@@ -185,7 +201,10 @@ export function getDefaultModelId(provider: EmbedderProvider): string {
 
 		case "openrouter":
 			return "openai/text-embedding-3-large"
-
+		//kilocode_change start
+		case "kilocode":
+			return "qwen/qwen3-embedding-8b"
+		//kilocode_change end
 		default:
 			// Fallback for unknown providers
 			console.warn(`Unknown provider for default model ID: ${provider}. Falling back to OpenAI default.`)

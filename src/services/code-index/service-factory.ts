@@ -6,6 +6,7 @@ import { GeminiEmbedder } from "./embedders/gemini"
 import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
+import { KiloCodeEmbedder } from "./embedders/kilocode"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
@@ -85,6 +86,11 @@ export class CodeIndexServiceFactory {
 				throw new Error(t("embeddings:serviceFactory.openRouterConfigMissing"))
 			}
 			return new OpenRouterEmbedder(config.openRouterOptions.apiKey, config.modelId)
+		} else if (provider === "kilocode") {
+			if (!config.openRouterOptions?.apiKey) {
+				throw new Error(t("embeddings:serviceFactory.kiloCodeConfigMissing"))
+			}
+			return new KiloCodeEmbedder(config.modelId)
 		}
 
 		throw new Error(
