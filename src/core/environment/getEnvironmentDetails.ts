@@ -28,6 +28,13 @@ import { t } from "../../i18n"
 import { NativeOllamaHandler } from "../../api/providers/native-ollama"
 // kilocode_change end
 
+/**
+ * Multiplier for fetching extra files when filtering is enabled.
+ * Ensures we have enough non-ignored files after filtering out ignored ones.
+ * Only applied when showRooIgnoredFiles is false.
+ */
+const FILE_LIST_OVER_FETCH_MULTIPLIER = 3
+
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
 	let details = ""
 
@@ -282,16 +289,36 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			if (maxFiles === 0) {
 				details += "(Workspace files context disabled. Use list_files to explore if needed.)"
 			} else {
-				const [files, didHitLimit] = await listFiles(cline.cwd, true, maxFiles)
 				const { showRooIgnoredFiles = false } = state ?? {}
 
-				const result = formatResponse.formatFilesList(
+				// Only apply 3x multiplier when filtering will remove files (showRooIgnoredFiles = false)
+				// When showRooIgnoredFiles = true, ignored files are just marked with lock symbol, not removed
+				const fetchLimit = showRooIgnoredFiles ? maxFiles : maxFiles * FILE_LIST_OVER_FETCH_MULTIPLIER
+				const [files, didHitLimit] = await listFiles(cline.cwd, true, fetchLimit)
+
+				let result = formatResponse.formatFilesList(
 					cline.cwd,
 					files,
 					didHitLimit,
 					cline.rooIgnoreController,
 					showRooIgnoredFiles,
 				)
+
+				// Only trim when we over-fetched (i.e., when showRooIgnoredFiles = false)
+				// This ensures we show the correct number of non-ignored files
+				if (!showRooIgnoredFiles) {
+					const lines = result.split("\n")
+					const truncationMsg =
+						"(File list truncated. Use list_files on specific subdirectories if you need to explore further.)"
+
+					// Find lines that are actual file entries (not truncation message or empty)
+					const fileLines = lines.filter((line) => line.trim() && !line.includes("File list truncated"))
+
+					if (fileLines.length > maxFiles) {
+						// Take only maxFiles entries and add truncation message
+						result = fileLines.slice(0, maxFiles).join("\n") + "\n\n" + truncationMsg
+					}
+				}
 
 				details += result
 			}
