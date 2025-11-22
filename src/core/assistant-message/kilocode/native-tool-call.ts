@@ -18,9 +18,9 @@ const NATIVE_MCP_TOOL_PREFIX = "use_mcp_tool___"
 const NATIVE_MCP_TOOL_SEPARATOR = "___"
 
 /**
- * Check if a tool name is a dynamic MCP tool (starts with "use_mcp_tool_")
+ * Check if a tool name is a dynamic MCP tool (starts with "use_mcp_tool___")
  */
-function isDynamicMcpTool(toolName: string): boolean {
+export function isDynamicMcpTool(toolName: string): boolean {
 	return toolName.startsWith(NATIVE_MCP_TOOL_PREFIX)
 }
 
@@ -30,8 +30,17 @@ function isDynamicMcpTool(toolName: string): boolean {
  * Uses triple underscores as separator to allow underscores in tool names.
  * Returns null if the format is invalid.
  */
-export function extractMcpToolInfo(toolName: string): { serverName: string; toolName: string } | null {
+export function extractMcpToolInfo(
+	toolName: string,
+	normalizedParams: Record<string, any>,
+): { serverName: string; toolName: string } | null {
+	if (normalizedParams.server_name && normalizedParams.tool_name) {
+		// We already have what we need, no need to do goofy string parsing.
+		return { serverName: normalizedParams.server_name, toolName: normalizedParams.tool_name }
+	}
+
 	if (!isDynamicMcpTool(toolName)) {
+		// Well, now we do.   If it doesn't even have the right name, answr null
 		return null
 	}
 

@@ -1308,6 +1308,12 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 	}
 
+	// kilocode_change start
+	async sayAndCreateInvalidToolError(toolName: ToolName, toolCallError?: string) {
+		await this.say("error", `The model tried to use an invalid tool: ${toolName}. Retrying...`)
+		return formatResponse.toolError(formatResponse.badMcpTool(toolName))
+	}
+	// kilocode_change end
 	async sayAndCreateMissingParamError(toolName: ToolName, paramName: string, relPath?: string) {
 		const kilocodeExtraText = (() => {
 			switch (toolName) {

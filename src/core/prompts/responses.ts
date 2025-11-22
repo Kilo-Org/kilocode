@@ -28,6 +28,10 @@ export const formatResponse = {
 	rooIgnoreError: (path: string) =>
 		`Access to ${path} is blocked by the .kilocodeignore file settings. You must try to continue in the task without using this file, or ask the user to update the .kilocodeignore file.`,
 
+	// kilocode_change start
+	badMcpTool: (toolName: string) =>
+		`[ERROR] You specified an invalid and nonexistent tool: ${toolName}.  ${toolName} is not a valid tool name.  You must retry using an name in the format given of use_mcp_tool___server___tool.`,
+	// kilocode_change end
 	noToolsUsed: (toolUseStyle_kilocode: ToolUseStyle) =>
 		`[ERROR] You did not use a tool in your previous response! Please retry with a tool use.
 

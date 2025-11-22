@@ -297,10 +297,10 @@ export async function presentAssistantMessage(cline: Task) {
 				break
 			}
 
-			const pushToolResult = (content: ToolResponse) => {
+			const pushToolResult = (content: ToolResponse, toolName?: string) => {
 				// kilocode_change start
 				const items = new Array<Anthropic.TextBlockParam | Anthropic.ImageBlockParam>()
-				items.push({ type: "text", text: `${toolDescription()} Result:` })
+				items.push({ type: "text", text: `${toolName ? toolName : toolDescription()} Result:` })
 
 				if (typeof content === "string") {
 					items.push({ type: "text", text: content || "(tool did not return anything)" })

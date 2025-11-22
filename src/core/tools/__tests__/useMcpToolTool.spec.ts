@@ -242,7 +242,7 @@ describe("useMcpToolTool", () => {
 			expect(mockAskApproval).toHaveBeenCalled()
 			expect(mockTask.say).toHaveBeenCalledWith("mcp_server_request_started")
 			expect(mockTask.say).toHaveBeenCalledWith("mcp_server_response", "Tool executed successfully")
-			expect(mockPushToolResult).toHaveBeenCalledWith("Tool result: Tool executed successfully")
+			expect(mockPushToolResult).toHaveBeenCalledWith("Tool result: Tool executed successfully", "test_tool") // kilocode_change
 		})
 
 		it("should handle user rejection", async () => {

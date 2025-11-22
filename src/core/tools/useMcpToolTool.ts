@@ -1,5 +1,12 @@
 import { Task } from "../task/Task"
-import { ToolUse, AskApproval, HandleError, PushToolResult, RemoveClosingTag } from "../../shared/tools"
+import {
+	ToolUse,
+	AskApproval,
+	HandleError,
+	PushToolResult,
+	RemoveClosingTag,
+	UseMcpToolToolUse,
+} from "../../shared/tools" // kilocode_change
 import { formatResponse } from "../prompts/responses"
 import { ClineAskUseMcpServer } from "../../shared/ExtensionMessage"
 import { McpExecutionStatus } from "@roo-code/types"
@@ -39,9 +46,10 @@ async function handlePartialRequest(
 
 async function validateParams(
 	cline: Task,
-	params: McpToolParams,
+	block: ToolUse | UseMcpToolToolUse, // kilocode_change
 	pushToolResult: PushToolResult,
 ): Promise<ValidationResult> {
+	let params = block.params // kilocode_change
 	if (!params.server_name) {
 		cline.consecutiveMistakeCount++
 		cline.recordToolError("use_mcp_tool")
@@ -55,6 +63,15 @@ async function validateParams(
 		pushToolResult(await cline.sayAndCreateMissingParamError("use_mcp_tool", "tool_name"))
 		return { isValid: false }
 	}
+
+	// kilocode_change start
+	if ("error" in block && block.error) {
+		cline.consecutiveMistakeCount++
+		cline.recordToolError("use_mcp_tool")
+		pushToolResult(await cline.sayAndCreateInvalidToolError("use_mcp_tool", block.error))
+		return { isValid: false }
+	}
+	// kilocode_change end
 
 	let parsedArguments: Record<string, unknown> | undefined
 
@@ -310,7 +327,7 @@ async function executeToolAndProcessResult(
 	}
 
 	await cline.say("mcp_server_response", toolResultPretty)
-	pushToolResult(formatResponse.toolResult(toolResultPretty))
+	pushToolResult(formatResponse.toolResult(toolResultPretty), toolName)
 }
 
 export async function useMcpToolTool(
@@ -335,7 +352,7 @@ export async function useMcpToolTool(
 		}
 
 		// Validate parameters
-		const validation = await validateParams(cline, params, pushToolResult)
+		const validation = await validateParams(cline, block, pushToolResult) // kilocode_change
 		if (!validation.isValid) {
 			return
 		}

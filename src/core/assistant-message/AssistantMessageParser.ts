@@ -1,7 +1,7 @@
 import { type ToolName, toolNames } from "@roo-code/types"
-import { TextContent, ToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
+import { TextContent, ToolUse, UseMcpToolToolUse, ToolParamName, toolParamNames } from "../../shared/tools"
 import { AssistantMessageContent } from "./parseAssistantMessage"
-import { extractMcpToolInfo, NativeToolCall } from "./kilocode/native-tool-call"
+import { extractMcpToolInfo, isDynamicMcpTool, NativeToolCall } from "./kilocode/native-tool-call"
 import Anthropic from "@anthropic-ai/sdk" // kilocode_change
 
 /**
@@ -119,15 +119,6 @@ export class AssistantMessageParser {
 			if (toolCall.function?.name) {
 				const toolName = toolCall.function.name
 
-				// Check if it's a dynamic MCP tool or a recognized static tool name
-				const mcpToolInfo = extractMcpToolInfo(toolName)
-				const isValidTool = mcpToolInfo !== null || toolNames.includes(toolName as ToolName)
-
-				if (!isValidTool) {
-					console.warn("[AssistantMessageParser] Unknown tool name in native call:", toolName)
-					continue
-				}
-
 				if (!accumulatedCall) {
 					accumulatedCall = {
 						id: toolCall.id,
@@ -174,7 +165,7 @@ export class AssistantMessageParser {
 
 			// Tool call is complete - convert it to ToolUse format
 			if (isComplete) {
-				const toolName = accumulatedCall.function!.name
+				let toolName = accumulatedCall.function!.name
 
 				// Finalize any current text content before adding tool use
 				if (this.currentTextContent) {
@@ -184,56 +175,64 @@ export class AssistantMessageParser {
 
 				// Normalize dynamic MCP tool names to "use_mcp_tool"
 				// Dynamic tools have format: use_mcp_tool_{serverName}_{toolName}
-				const mcpToolInfo = extractMcpToolInfo(toolName)
-				let normalizedToolName: ToolName
 				let normalizedParams = parsedArgs
 
-				if (mcpToolInfo) {
-					// Dynamic MCP tool - normalize to "use_mcp_tool"
-					// Tool name format: use_mcp_tool___{serverName}___{toolName}
-					normalizedToolName = "use_mcp_tool"
+				if (toolName === "use_mcp_tool" || isDynamicMcpTool(toolName)) {
+					let mcpToolUse: UseMcpToolToolUse = {
+						type: "tool_use",
+						name: "use_mcp_tool",
+						params: normalizedParams,
+						partial: false, // Now complete after accumulation
+						toolUseId: accumulatedCall.id,
+					}
 
-					// Extract toolInputProps and convert to JSON string for the arguments parameter
-					// The model provides: { server_name, tool_name, toolInputProps: {...actual args...} }
-					// We need: { server_name, tool_name, arguments: "{...actual args as JSON string...}" }
-					const toolInputProps = (parsedArgs as any).toolInputProps || {}
-					const argumentsJson = JSON.stringify(toolInputProps)
+					const mcpToolInfo = extractMcpToolInfo(toolName, normalizedParams)
+					if (mcpToolInfo) {
+						// Add server_name, tool_name, and arguments to params
 
-					// Add server_name, tool_name, and arguments to params
-					normalizedParams = {
-						server_name: parsedArgs.server_name || mcpToolInfo.serverName,
-						tool_name: parsedArgs.tool_name || mcpToolInfo.toolName,
-						arguments: argumentsJson,
+						mcpToolUse.params.server_name = mcpToolInfo.serverName
+						mcpToolUse.params.tool_name = mcpToolInfo.toolName
+
+						const toolInputProps = (parsedArgs as any).toolInputProps || {}
+						const argumentsJson = JSON.stringify(toolInputProps)
+						mcpToolUse.params.arguments = argumentsJson
+
+						yield this.completeToolUseProcess(mcpToolUse, toolCallId)
+					} else {
+						// No good tool info now matter how we do it
+
+						mcpToolUse.error = "Model failed to call MCP tool correctly."
+						yield this.completeToolUseProcess(mcpToolUse, toolCallId)
 					}
 				} else {
-					// Standard tool
-					normalizedToolName = toolName as ToolName
-				}
+					// Standard tool call
+					// Create a ToolUse block from the native tool call
+					const validtoolUse: ToolUse = {
+						type: "tool_use",
+						name: toolName as ToolName,
+						params: normalizedParams,
+						partial: false, // Now complete after accumulation
+						toolUseId: accumulatedCall.id,
+					}
 
-				// Create a ToolUse block from the native tool call
-				const toolUse: ToolUse = {
-					type: "tool_use",
-					name: normalizedToolName,
-					params: normalizedParams,
-					partial: false, // Now complete after accumulation
-					toolUseId: accumulatedCall.id,
-				}
-
-				// Add the tool use to content blocks
-				this.contentBlocks.push(toolUse)
-
-				// Mark this tool call as processed
-				this.processedNativeToolCallIds.add(toolCallId)
-				this.nativeToolCallsAccumulator.delete(toolCallId)
-
-				yield {
-					type: "tool_use",
-					name: toolUse.name,
-					id: toolUse.toolUseId ?? "",
-					input: toolUse.params,
+					const returnBlock = this.completeToolUseProcess(validtoolUse, toolCallId)
+					console.error("EMITTING BLOCK:", validtoolUse)
+					yield returnBlock
 				}
 			}
 		}
+	}
+
+	private completeToolUseProcess(toolUse: ToolUse, toolCallId: string): Anthropic.ToolUseBlockParam {
+		this.contentBlocks.push(toolUse)
+		this.processedNativeToolCallIds.add(toolCallId)
+		this.nativeToolCallsAccumulator.delete(toolCallId)
+		return {
+			type: "tool_use",
+			name: toolUse.name,
+			id: toolUse.toolUseId ?? "",
+			input: toolUse.params,
+		} as Anthropic.ToolUseBlockParam
 	}
 
 	// kilocode_change end

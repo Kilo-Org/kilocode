@@ -13,7 +13,7 @@ export type AskApproval = (
 
 export type HandleError = (action: string, error: Error) => Promise<void>
 
-export type PushToolResult = (content: ToolResponse) => void
+export type PushToolResult = (content: ToolResponse, toolName?: string) => void
 
 export type RemoveClosingTag = (tag: ToolParamName, content?: string) => string
 
@@ -141,6 +141,7 @@ export interface BrowserActionToolUse extends ToolUse {
 export interface UseMcpToolToolUse extends ToolUse {
 	name: "use_mcp_tool"
 	params: Partial<Pick<Record<ToolParamName, string>, "server_name" | "tool_name" | "arguments">>
+	error?: string // kilocode_change
 }
 
 export interface AccessMcpResourceToolUse extends ToolUse {
