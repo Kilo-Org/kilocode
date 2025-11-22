@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Novinka: Sdílejte režimy vytvořením organizace"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Zobrazit poznámky k vydání",
+		"loading": "Načítání poznámek k vydání...",
+		"noReleases": "Poznámky k vydání nejsou k dispozici",
+		"latestBadge": "Nejnovější",
+		"modalTitle": "Co je nového v Kilo Code",
+		"byAuthor": "od"
 	}
 }

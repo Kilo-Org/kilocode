@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "신규: 조직을 생성하여 모드 공유하기"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "릴리스 노트 보기",
+		"loading": "릴리스 노트 로딩 중...",
+		"noReleases": "릴리스 노트 없음",
+		"modalTitle": "Kilo Code의 새로운 기능",
+		"latestBadge": "최신",
+		"byAuthor": "작성자:"
 	}
 }

@@ -281,5 +281,13 @@
 	},
 	"modes": {
 		"shareModesNewBanner": "Nuevo: Comparte modos creando una organización"
+	},
+	"releaseNotes": {
+		"viewReleaseNotes": "Ver notas de la versión",
+		"modalTitle": "Novedades en Kilo Code",
+		"loading": "Cargando notas de la versión...",
+		"noReleases": "No hay notas de lanzamiento disponibles",
+		"byAuthor": "por",
+		"latestBadge": "Último"
 	}
 }
