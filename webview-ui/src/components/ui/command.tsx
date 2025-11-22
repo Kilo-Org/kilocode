@@ -14,7 +14,7 @@ const Command = React.forwardRef<
 	<CommandPrimitive
 		ref={ref}
 		className={cn(
-			"flex h-full w-full flex-col overflow-hidden rounded-xs bg-popover text-popover-foreground",
+			"flex h-full w-full flex-col overflow-hidden rounded-sm bg-popover text-popover-foreground",
 			className,
 		)}
 		{...props}

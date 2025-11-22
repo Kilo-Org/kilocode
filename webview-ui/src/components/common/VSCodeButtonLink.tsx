@@ -1,10 +1,10 @@
-import React from "react"
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
+import React from "react";
+import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 
 interface VSCodeButtonLinkProps {
-	href: string
-	children: React.ReactNode
-	[key: string]: any
+	href: string;
+	children: React.ReactNode;
+	[key: string]: any;
 }
 
 export const VSCodeButtonLink = ({ href, children, ...props }: VSCodeButtonLinkProps) => (
@@ -13,7 +13,17 @@ export const VSCodeButtonLink = ({ href, children, ...props }: VSCodeButtonLinkP
 		style={{
 			textDecoration: "none",
 			color: "inherit",
-		}}>
-		<VSCodeButton {...props}>{children}</VSCodeButton>
+		}}
+	>
+		<div
+			style={{
+				borderRadius: 6,
+				overflow: "hidden",     // clip corners
+				display: "inline-block", // shrink wrapper correctly
+				lineHeight: 0,           // CRUCIAL → makes clipping work
+			}}
+		>
+			<VSCodeButton {...props}>{children}</VSCodeButton>
+		</div>
 	</a>
-)
+);
