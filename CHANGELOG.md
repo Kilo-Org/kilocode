@@ -1,5 +1,11 @@
 # kilo-code
 
+## 4.121.3
+
+### Patch Changes
+
+- [#3925](https://github.com/Kilo-Org/kilocode/pull/3925) [`02abc84`](https://github.com/Kilo-Org/kilocode/commit/02abc84c41e4a12dd45ff15d003ce8fbb4a6bfed) Thanks [@jrf0110](https://github.com/jrf0110)! - Improve organization/managed indexing performance
+
 ## 4.121.2
 
 ### Patch Changes
