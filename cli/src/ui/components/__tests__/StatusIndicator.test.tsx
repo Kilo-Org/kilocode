@@ -9,7 +9,7 @@ import { Provider as JotaiProvider } from "jotai"
 import { createStore } from "jotai"
 import { StatusIndicator } from "../StatusIndicator.js"
 import { showFollowupSuggestionsAtom } from "../../../state/atoms/ui.js"
-import { chatMessagesAtom } from "../../../state/atoms/extension.js"
+import { chatMessagesAtom, lastActivityTimestampAtom } from "../../../state/atoms/extension.js"
 import type { ExtensionChatMessage } from "../../../types/messages.js"
 
 // Mock the hooks
@@ -28,6 +28,8 @@ describe("StatusIndicator", () => {
 
 	beforeEach(() => {
 		store = createStore()
+		// Default: no activity (timestamp = 0) so tests must explicitly set recent activity if needed
+		store.set(lastActivityTimestampAtom, 0)
 		// Reset animation frame for each test
 		vi.clearAllTimers()
 	})
@@ -47,6 +49,8 @@ describe("StatusIndicator", () => {
 	})
 
 	it("should show Thinking status and cancel hotkey when streaming", () => {
+		// Set recent activity for streaming detection
+		store.set(lastActivityTimestampAtom, Date.now())
 		// Set up a partial message to trigger streaming state
 		const partialMessage: ExtensionChatMessage = {
 			type: "say",

@@ -2243,6 +2243,7 @@ ${prompt}
 			openRouterUseMiddleOutTransform,
 			featureRoomoteControlEnabled,
 			virtualQuotaActiveModel, // kilocode_change: Include virtual quota active model in state
+			lastActivityTimestamp: this.getCurrentTask()?.lastStreamActivityTimestamp,
 		}
 	}
 
