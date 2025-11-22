@@ -3,7 +3,7 @@ import { createExtensionHost, ExtensionHost, ExtensionAPI, type ExtensionHostOpt
 import { createMessageBridge, MessageBridge } from "../communication/ipc.js"
 import { logs } from "./logs.js"
 import { resolveExtensionPaths } from "../utils/extension-paths.js"
-import type { ExtensionMessage, WebviewMessage, ExtensionState } from "../types/messages.js"
+import type { ExtensionMessage, WebviewMessage, ExtensionState, ModeConfig } from "../types/messages.js"
 import type { IdentityInfo } from "../host/VSCode.js"
 
 /**
@@ -14,6 +14,8 @@ export interface ExtensionServiceOptions {
 	workspace?: string
 	/** Initial mode to start with */
 	mode?: string
+	/** Custom modes configuration */
+	customModes?: ModeConfig[]
 	/** Custom extension bundle path (for testing) */
 	extensionBundlePath?: string
 	/** Custom extension root path (for testing) */
@@ -71,7 +73,10 @@ export interface ExtensionServiceEvents {
 export class ExtensionService extends EventEmitter {
 	private extensionHost: ExtensionHost
 	private messageBridge: MessageBridge
-	private options: Required<Omit<ExtensionServiceOptions, "identity">> & { identity?: IdentityInfo }
+	private options: Required<Omit<ExtensionServiceOptions, "identity" | "customModes">> & {
+		identity?: IdentityInfo
+		customModes?: ModeConfig[]
+	}
 	private isInitialized = false
 	private isDisposed = false
 	private isActivated = false
@@ -89,6 +94,7 @@ export class ExtensionService extends EventEmitter {
 			extensionBundlePath: options.extensionBundlePath || extensionPaths.extensionBundlePath,
 			extensionRootPath: options.extensionRootPath || extensionPaths.extensionRootPath,
 			...(options.identity && { identity: options.identity }),
+			...(options.customModes && { customModes: options.customModes }),
 		}
 
 		// Create extension host
@@ -99,6 +105,9 @@ export class ExtensionService extends EventEmitter {
 		}
 		if (this.options.identity) {
 			hostOptions.identity = this.options.identity
+		}
+		if (this.options.customModes) {
+			hostOptions.customModes = this.options.customModes
 		}
 		this.extensionHost = createExtensionHost(hostOptions)
 

@@ -54,6 +54,7 @@ export function createMockContext(overrides: Partial<CommandContext> = {}): Comm
 		balanceData: null,
 		profileLoading: false,
 		balanceLoading: false,
+		customModes: [],
 		refreshTerminal: vi.fn().mockResolvedValue(undefined),
 		taskHistoryData: null,
 		taskHistoryFilters: {

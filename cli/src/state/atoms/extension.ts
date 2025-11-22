@@ -11,6 +11,7 @@ import type {
 	RouterModels,
 	ProviderSettings,
 	McpServer,
+	ModeConfig,
 } from "../../types/messages.js"
 
 /**
@@ -65,7 +66,7 @@ export const extensionModeAtom = atom<string>("code")
 /**
  * Atom to hold custom modes
  */
-export const customModesAtom = atom<unknown[]>([])
+export const customModesAtom = atom<ModeConfig[]>([])
 
 /**
  * Atom to hold MCP servers configuration

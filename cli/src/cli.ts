@@ -102,6 +102,10 @@ export class CLI {
 				}
 			}
 
+			if (this.options.customModes) {
+				serviceOptions.customModes = this.options.customModes
+			}
+
 			this.service = createExtensionService(serviceOptions)
 			logs.debug("ExtensionService created with identity", "CLI", {
 				hasIdentity: !!identity,

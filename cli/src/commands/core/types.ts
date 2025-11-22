@@ -2,7 +2,7 @@
  * Command system type definitions
  */
 
-import type { ExtensionMessage, RouterModels, WebviewMessage } from "../../types/messages.js"
+import type { ExtensionMessage, RouterModels, WebviewMessage, ModeConfig } from "../../types/messages.js"
 import type { CliMessage } from "../../types/cli.js"
 import type { CLIConfig, ProviderConfig } from "../../config/types.js"
 import type { ProfileData, BalanceData } from "../../state/atoms/profile.js"
@@ -61,6 +61,8 @@ export interface CommandContext {
 	balanceData: BalanceData | null
 	profileLoading: boolean
 	balanceLoading: boolean
+	// Custom modes context
+	customModes: ModeConfig[]
 	// Task history context
 	taskHistoryData: TaskHistoryData | null
 	taskHistoryFilters: TaskHistoryFilters

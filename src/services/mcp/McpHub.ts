@@ -1434,8 +1434,8 @@ export class McpHub {
 						await this.deleteConnection(serverName, serverSource)
 						// Re-add as a disabled connection
 						// Re-read config from file to get updated disabled state
-					const updatedConfig = await this.readServerConfigFromFile(serverName, serverSource)
-					await this.connectToServer(serverName, updatedConfig, serverSource)
+						const updatedConfig = await this.readServerConfigFromFile(serverName, serverSource)
+						await this.connectToServer(serverName, updatedConfig, serverSource)
 					} else if (!disabled && connection.server.status === "disconnected") {
 						// If enabling a disabled server, connect it
 						// Re-read config from file to get updated disabled state
