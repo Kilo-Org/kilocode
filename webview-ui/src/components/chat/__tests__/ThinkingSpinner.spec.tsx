@@ -19,7 +19,7 @@ describe("ThinkingSpinner", () => {
 		expect(element.textContent).toContain("⠋ Thinking...")
 	})
 
-	it("animates through frames", () => {
+	it("animates through frames", async () => {
 		render(<ThinkingSpinner />)
 		const element = screen.getByText(/Thinking/i)
 
@@ -27,15 +27,15 @@ describe("ThinkingSpinner", () => {
 		expect(element.textContent).toBe("⠋ Thinking...")
 
 		// Advance by one animation interval (80ms)
-		vi.advanceTimersByTime(80)
+		await vi.advanceTimersByTimeAsync(80)
 		expect(element.textContent).toBe("⠙ Thinking...")
 
 		// Advance by another interval
-		vi.advanceTimersByTime(80)
+		await vi.advanceTimersByTimeAsync(80)
 		expect(element.textContent).toBe("⠹ Thinking...")
 	})
 
-	it("cycles through all frames", () => {
+	it("cycles through all frames", async () => {
 		render(<ThinkingSpinner />)
 		const element = screen.getByText(/Thinking/i)
 		const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
@@ -44,12 +44,12 @@ describe("ThinkingSpinner", () => {
 		for (let i = 0; i < SPINNER_FRAMES.length; i++) {
 			expect(element.textContent).toContain(SPINNER_FRAMES[i])
 			if (i < SPINNER_FRAMES.length - 1) {
-				vi.advanceTimersByTime(80)
+				await vi.advanceTimersByTimeAsync(80)
 			}
 		}
 
 		// Advance one more time to wrap around
-		vi.advanceTimersByTime(80)
+		await vi.advanceTimersByTimeAsync(80)
 		expect(element.textContent).toContain(SPINNER_FRAMES[0])
 	})
 
