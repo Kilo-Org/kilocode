@@ -4,6 +4,7 @@ import openConfigFile from "../config/openConfig"
 import wait from "../utils/wait"
 import { getKilocodeDefaultModel } from "./getKilocodeDefaultModel.js"
 import { getKilocodeProfile, INVALID_TOKEN_ERROR, type KilocodeProfileData } from "./getKilocodeProfile.js"
+import { getProviderDefaultModel } from "../constants/providers/settings.js"
 
 export default async function authWizard() {
 	const config = await loadConfig()
@@ -103,14 +104,35 @@ export default async function authWizard() {
 			break
 		}
 		case "zai": {
-			const { zaiApiKey } = await inquirer.prompt<{ zaiApiKey: string }>([
+			const { zaiApiKey, zaiApiLine } = await inquirer.prompt<{
+				zaiApiKey: string
+				zaiApiLine: "international_coding" | "china_coding"
+			}>([
 				{
 					type: "password",
 					name: "zaiApiKey",
 					message: "Please enter your zAI token:",
 				},
+				{
+					type: "list",
+					name: "zaiApiLine",
+					message: "Select your zAI API line:",
+					choices: [
+						{ name: "International Coding", value: "international_coding" },
+						{ name: "China Coding", value: "china_coding" },
+					],
+					default: "international_coding",
+				},
 			])
-			providerSpecificConfig = { zaiApiKey }
+
+			// Get the default model for zai provider
+			const defaultModel = getProviderDefaultModel("zai")
+
+			providerSpecificConfig = {
+				zaiApiKey,
+				zaiApiLine,
+				apiModelId: defaultModel,
+			}
 			break
 		}
 		case "other": {
