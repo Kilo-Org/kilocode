@@ -2,18 +2,14 @@ package ai.kilocode.jetbrains.git
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
-import com.intellij.openapi.progress.util.BackgroundTaskUtil
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.vcs.VcsDataKeys
 import com.intellij.openapi.vcs.CheckinProjectPanel
 import com.intellij.openapi.vcs.changes.Change
 import com.intellij.openapi.vcs.changes.ChangeListManager
-import com.intellij.vcs.commit.CommitMessageUi
 import com.intellij.openapi.vcs.ui.Refreshable
 import com.intellij.openapi.wm.ToolWindowManager
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit
 
 /**
  * Service for discovering files to include in commit messages
@@ -25,53 +21,114 @@ class FileDiscoveryService {
      * Discover files from the given data context using multiple strategies
      */
     fun discoverFiles(project: Project, dataContext: DataContext): List<String> {
-        logger.debug("Attempting to discover files from DataContext")
+        logger.info("Starting file discovery for commit message generation")
         
         // Try different strategies in order of preference
-        return tryCommitMessageControl(project, dataContext)
-            ?: tryCommitToolWindow(project)
+        // 1. VcsDataKeys (contextual selection) - most specific
+        // 2. CheckinProjectPanel (from commit dialog)
+        // 3. ChangeListManager (fallback to all uncommitted changes)
+        
+        val result = tryVcsDataKeys(dataContext)
+            ?: tryCheckinProjectPanel(dataContext)
             ?: tryChangeListManager(project)
             ?: emptyList()
+        
+        logger.info("File discovery completed: found ${result.size} files")
+        return result
     }
 
-    private fun tryCommitMessageControl(project: Project, dataContext: DataContext): List<String>? {
+    private fun tryVcsDataKeys(dataContext: DataContext): List<String>? {
         return try {
-            val commitControl = VcsDataKeys.COMMIT_MESSAGE_CONTROL.getData(dataContext)
-            if (commitControl is CommitMessageUi) {
-                // Fallback to change list manager when we have a commit control
-                val changeListManager = ChangeListManager.getInstance(project)
-                val changes = changeListManager.defaultChangeList.changes
-                changes.mapNotNull { it.virtualFile?.path }
-            } else null
+            logger.debug("[DIAGNOSTIC] Trying VcsDataKeys discovery...")
+            
+            // Try SELECTED_CHANGES first (user selection)
+            val selectedChanges = VcsDataKeys.SELECTED_CHANGES.getData(dataContext)
+            logger.debug("VcsDataKeys.SELECTED_CHANGES.getData() returned: ${selectedChanges?.size ?: "null"} changes")
+            if (!selectedChanges.isNullOrEmpty()) {
+                val files = selectedChanges.mapNotNull { it.virtualFile?.path }
+                logger.debug("Mapped SELECTED_CHANGES to ${files.size} files")
+                if (files.isNotEmpty()) {
+                    return files
+                }
+            }
+
+            // Try CHANGES (context changes)
+            val changes = VcsDataKeys.CHANGES.getData(dataContext)
+            logger.debug("VcsDataKeys.CHANGES.getData() returned: ${changes?.size ?: "null"} changes")
+            if (!changes.isNullOrEmpty()) {
+                val files = changes.mapNotNull { it.virtualFile?.path }
+                logger.debug("Mapped CHANGES to ${files.size} files")
+                if (files.isNotEmpty()) {
+                    return files
+                }
+            }
+            
+            logger.debug("[DIAGNOSTIC] VcsDataKeys: no changes found from either SELECTED_CHANGES or CHANGES")
+            null
         } catch (e: Exception) {
-            logger.debug("CommitMessage control context failed: ${e.message}")
+            logger.warn("[DIAGNOSTIC] VcsDataKeys discovery failed with exception: ${e.message}", e)
             null
         }
     }
 
-    private fun tryCommitToolWindow(project: Project): List<String>? {
+    private fun tryCheckinProjectPanel(dataContext: DataContext): List<String>? {
         return try {
-            val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Commit")
-                ?: ToolWindowManager.getInstance(project).getToolWindow("Version Control")
-                ?: return null
-
-            // Fallback to change list manager
-            val changeListManager = ChangeListManager.getInstance(project)
-            val changes = changeListManager.defaultChangeList.changes
-            changes.mapNotNull { it.virtualFile?.path }
+            logger.debug("[DIAGNOSTIC] Trying CheckinProjectPanel discovery...")
+            
+            // Try to get the panel from DataContext
+            val panel = Refreshable.PANEL_KEY.getData(dataContext) as? CheckinProjectPanel
+            logger.debug("Refreshable.PANEL_KEY.getData() returned: ${panel?.let { it::class.java.simpleName } ?: "null"}")
+            if (panel != null) {
+                logger.debug("[DIAGNOSTIC] Found CheckinProjectPanel")
+                
+                // Try to get selected changes
+                val selectedChanges = try {
+                    panel.selectedChanges
+                } catch (e: Exception) {
+                    logger.warn("[DIAGNOSTIC] Failed to get selectedChanges from CheckinProjectPanel with exception: ${e.message}", e)
+                    null
+                }
+                logger.debug("CheckinProjectPanel.selectedChanges returned: ${selectedChanges?.size ?: "null"} changes")
+                
+                if (!selectedChanges.isNullOrEmpty()) {
+                    val files = selectedChanges.mapNotNull { it.virtualFile?.path }
+                    logger.debug("Mapped CheckinProjectPanel.selectedChanges to ${files.size} files")
+                    if (files.isNotEmpty()) {
+                        return files
+                    }
+                }
+                
+                logger.debug("[DIAGNOSTIC] CheckinProjectPanel exists but no selected changes found")
+            } else {
+                logger.debug("[DIAGNOSTIC] No CheckinProjectPanel in DataContext")
+            }
+            null
         } catch (e: Exception) {
-            logger.debug("CommitToolWindow failed: ${e.message}")
+            logger.warn("[DIAGNOSTIC] CheckinProjectPanel discovery failed with exception: ${e.message}", e)
             null
         }
     }
 
     private fun tryChangeListManager(project: Project): List<String>? {
         return try {
+            logger.debug("[DIAGNOSTIC] Trying ChangeListManager discovery (fallback)...")
+            
             val changeListManager = ChangeListManager.getInstance(project)
-            val changes = changeListManager.defaultChangeList.changes
-            changes.mapNotNull { it.virtualFile?.path }
+            logger.debug("Retrieved ChangeListManager instance")
+            
+            // Get all changes from all changelists
+            val allChanges = changeListManager.allChanges
+            logger.debug("ChangeListManager.allChanges returned: ${allChanges.size} changes")
+            if (allChanges.isNotEmpty()) {
+                val files = allChanges.mapNotNull { it.virtualFile?.path }
+                logger.debug("Mapped ChangeListManager.allChanges to ${files.size} files")
+                return files
+            }
+            
+            logger.warn("[DIAGNOSTIC] ChangeListManager: no changes found in any changelist")
+            null
         } catch (e: Exception) {
-            logger.debug("ChangeListManager failed: ${e.message}")
+            logger.error("[DIAGNOSTIC] ChangeListManager discovery failed with exception: ${e.message}", e)
             null
         }
     }
@@ -93,10 +150,13 @@ class FileDiscoveryService {
             val files = discoverFiles(project, dataContext)
             when {
                 files.isNotEmpty() -> FileDiscoveryResult.Success(files)
-                else -> FileDiscoveryResult.NoFiles
+                else -> {
+                    logger.warn("No files discovered from any source")
+                    FileDiscoveryResult.NoFiles
+                }
             }
         } catch (e: Exception) {
-            logger.warn("File discovery failed", e)
+            logger.error("File discovery failed with exception", e)
             FileDiscoveryResult.Error("Failed to discover files: ${e.message}")
         }
     }
