@@ -12,7 +12,8 @@ import { getTelemetryService } from "./services/telemetry/index.js"
 import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
 import authWizard from "./utils/authWizard.js"
-import { configExists } from "./config/persistence.js"
+import { configExists, setConfigPaths } from "./config/persistence.js"
+import path from "path"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
 import { getParallelModeParams } from "./parallel/parallel.js"
 import { DEBUG_MODES, DEBUG_FUNCTIONS } from "./debug/index.js"
@@ -23,6 +24,13 @@ let cli: CLI | null = null
 
 // Get list of valid mode slugs
 const validModes = DEFAULT_MODES.map((mode) => mode.slug)
+
+// Allow overriding the default config directory
+if (process.env.KILO_CONFIG_DIR) {
+	const configDir = process.env.KILO_CONFIG_DIR
+	const configFile = path.join(configDir, "config.json")
+	setConfigPaths(configDir, configFile)
+}
 
 program
 	.name("kilocode")
