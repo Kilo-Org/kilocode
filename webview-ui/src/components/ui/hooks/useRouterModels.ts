@@ -63,6 +63,7 @@ type RouterModelsQueryKey = {
 	geminiApiKey?: string
 	googleGeminiBaseUrl?: string
 	chutesApiKey?: string
+	syntheticApiKey?: string
 	// Requesty, Unbound, etc should perhaps also be here, but they already have their own hacks for reloading
 }
 // kilocode_change end

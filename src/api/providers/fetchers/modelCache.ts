@@ -27,6 +27,7 @@ import { getIOIntelligenceModels } from "./io-intelligence"
 import { getOvhCloudAiEndpointsModels } from "./ovhcloud"
 import { getGeminiModels } from "./gemini"
 import { getInceptionModels } from "./inception"
+import { getSyntheticModels } from "./synthetic"
 // kilocode_change end
 
 import { getDeepInfraModels } from "./deepinfra"
@@ -107,6 +108,12 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				})
 				break
 			}
+			case "chutes":
+				models = await getChutesModels(options.apiKey)
+				break
+			case "synthetic":
+				models = await getSyntheticModels(options.apiKey)
+				break
 			case "gemini":
 				models = await getGeminiModels({
 					apiKey: options.apiKey,
@@ -147,9 +154,6 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 				models = await getRooModels(rooBaseUrl, options.apiKey)
 				break
 			}
-			case "chutes":
-				models = await getChutesModels(options.apiKey)
-				break
 			default: {
 				// Ensures router is exhaustively checked if RouterName is a strict union.
 				const exhaustiveCheck: never = provider

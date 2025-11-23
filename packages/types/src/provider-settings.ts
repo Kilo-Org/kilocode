@@ -59,6 +59,7 @@ export const dynamicProviders = [
 	"requesty",
 	"unbound",
 	"glama",
+	"synthetic",
 	"roo",
 	"chutes",
 ] as const

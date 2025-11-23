@@ -169,6 +169,7 @@ const dynamicProviderExtras = {
 	lmstudio: {} as {}, // eslint-disable-line @typescript-eslint/no-empty-object-type
 	ovhcloud: {} as { apiKey?: string }, // kilocode_change
 	inception: {} as { apiKey?: string; baseUrl?: string }, // kilocode_change
+	synthetic: {} as { apiKey?: string }, // kilocode_change
 	roo: {} as { apiKey?: string; baseUrl?: string },
 	chutes: {} as { apiKey?: string },
 } as const satisfies Record<RouterName, object>

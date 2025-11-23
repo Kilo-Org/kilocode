@@ -269,6 +269,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				synthetic: mockModels,
 				unbound: mockModels,
 				litellm: mockModels,
 				kilocode: mockModels,
@@ -371,10 +372,11 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				openrouter: mockModels,
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
+				chutes: mockModels,
 				glama: mockModels,
+				synthetic: mockModels,
 				unbound: mockModels,
 				roo: mockModels,
-				chutes: mockModels,
 				litellm: {},
 				kilocode: mockModels,
 				ollama: mockModels, // kilocode_change
@@ -400,27 +402,29 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		}
 
 		// Mock some providers to succeed and others to fail
+		// Order matches the candidates array in webviewMessageHandler.ts
 		mockGetModels
-			.mockResolvedValueOnce(mockModels) // openrouter
-			.mockResolvedValueOnce(mockModels) // kilocode_change: gemini
-			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
-			.mockResolvedValueOnce(mockModels) // glama
-			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce(mockModels) // kilocode-openrouter
-			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
-			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway
-			.mockResolvedValueOnce(mockModels) // deepinfra
-			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change
-			.mockResolvedValueOnce(mockModels) // roo
-			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
-			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
+			.mockResolvedValueOnce(mockModels) // 1. openrouter
+			.mockResolvedValueOnce(mockModels) // 2. gemini
+			.mockRejectedValueOnce(new Error("Requesty API error")) // 3. requesty
+			.mockResolvedValueOnce(mockModels) // 4. glama
+			.mockRejectedValueOnce(new Error("Unbound API error")) // 5. unbound
+			.mockRejectedValueOnce(new Error("Kilocode API error")) // 6. kilocode
+			.mockRejectedValueOnce(new Error("Ollama API error")) // 7. ollama
+			.mockResolvedValueOnce(mockModels) // 8. vercel-ai-gateway
+			.mockResolvedValueOnce(mockModels) // 9. deepinfra
+			.mockResolvedValueOnce(mockModels) // 10. ovhcloud
+			.mockRejectedValueOnce(new Error("Inception API error")) // 11. inception
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // 12. synthetic
+			.mockResolvedValueOnce(mockModels) // 13. roo
+			.mockRejectedValueOnce(new Error("Chutes API error")) // 14. chutes
+			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // 15. litellm (conditional)
 
 		await webviewMessageHandler(mockClineProvider, {
 			type: "requestRouterModels",
 		})
 
-		// Verify error messages were sent for failed providers (these come first)
+		// Verify error messages were sent for failed providers
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
@@ -435,14 +439,33 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			values: { provider: "unbound" },
 		})
 
-		// kilocode_change start
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Kilocode API error",
+			values: { provider: "kilocode" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Ollama API error",
+			values: { provider: "ollama" },
+		})
+
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
 			success: false,
 			error: "Inception API error",
 			values: { provider: "inception" },
 		})
-		// kilocode_change end
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Synthetic API error",
+			values: { provider: "synthetic" },
+		})
 
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "singleRouterModelFetchResponse",
@@ -462,25 +485,24 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
 			type: "routerModels",
 			routerModels: {
-				deepinfra: mockModels,
 				openrouter: mockModels,
+				gemini: mockModels,
 				requesty: {},
 				glama: mockModels,
 				unbound: {},
+				kilocode: {},
+				ollama: {},
+				"vercel-ai-gateway": mockModels,
+				deepinfra: mockModels,
+				ovhcloud: mockModels,
+				inception: {},
+				synthetic: {},
 				roo: mockModels,
 				chutes: {},
 				litellm: {},
-				ollama: {},
 				lmstudio: {},
-				"vercel-ai-gateway": mockModels,
 				huggingface: {},
 				"io-intelligence": {},
-				// kilocode_change start
-				kilocode: mockModels,
-				inception: {},
-				gemini: mockModels,
-				ovhcloud: mockModels,
-				// kilocode_change end
 			},
 			values: undefined,
 		})
@@ -488,18 +510,20 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 
 	it("handles Error objects and string errors correctly", async () => {
 		// Mock providers to fail with different error types
+		// Order must match the candidates array in webviewMessageHandler.ts
 		mockGetModels
 			.mockRejectedValueOnce(new Error("Structured error message")) // openrouter
-			.mockRejectedValueOnce(new Error("Gemini API error")) // // kilocode_change: gemini
+			.mockRejectedValueOnce(new Error("Gemini API error")) // gemini
 			.mockRejectedValueOnce(new Error("Requesty API error")) // requesty
 			.mockRejectedValueOnce(new Error("Glama API error")) // glama
 			.mockRejectedValueOnce(new Error("Unbound API error")) // unbound
-			.mockResolvedValueOnce({}) // kilocode-openrouter - Success
+			.mockResolvedValueOnce({}) // kilocode - Success
 			.mockRejectedValueOnce(new Error("Ollama API error")) // ollama
 			.mockRejectedValueOnce(new Error("Vercel AI Gateway error")) // vercel-ai-gateway
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
-			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
-			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change inception
+			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud
+			.mockRejectedValueOnce(new Error("Inception API error")) // inception
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
