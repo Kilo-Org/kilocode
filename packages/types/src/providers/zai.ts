@@ -95,17 +95,6 @@ export const internationalZAiModels = {
 		description:
 			"GLM-4.6 is Zhipu's newest model with an extended context window of up to 200k tokens, providing enhanced capabilities for processing longer documents and conversations.",
 	},
-	"glm-4-32b-0414-128k": {
-		maxTokens: 98_304,
-		contextWindow: 131_072,
-		supportsImages: false,
-		supportsPromptCache: false,
-		inputPrice: 0.1,
-		outputPrice: 0.1,
-		cacheWritesPrice: 0,
-		cacheReadsPrice: 0,
-		description: "GLM-4-32B is a 32 billion parameter model with 128k context length, optimized for efficiency.",
-	},
 } as const satisfies Record<string, ModelInfo>
 
 export type MainlandZAiModelId = keyof typeof mainlandZAiModels
