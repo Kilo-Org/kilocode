@@ -22,6 +22,7 @@ import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
 import CodeAccordian from "../common/CodeAccordian"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
+import { BrailleSpinner } from "./BrailleSpinner"
 import Thumbnails from "../common/Thumbnails"
 import ImageBlock from "../common/ImageBlock"
 import ErrorRow from "./ErrorRow"
@@ -352,7 +353,9 @@ export const ChatRowContent = ({
 					apiRequestFailedMessage ? (
 						<span style={{ color: errorColor }}>{t("chat:apiRequest.failed")}</span>
 					) : (
-						<span style={{ color: normalColor }}>{t("chat:apiRequest.streaming")}</span>
+						<span style={{ color: normalColor }}>
+							<BrailleSpinner /> {t("chat:apiRequest.streaming")}
+						</span>
 					),
 				]
 			case "followup":
