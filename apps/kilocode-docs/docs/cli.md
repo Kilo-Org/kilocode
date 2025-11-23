@@ -10,7 +10,7 @@ The Kilo Code CLI uses the same underlying technology that powers the IDE extens
 
 Change directory to where you want to work and run kilocode:
 
-```
+```bash
 # Start interactive chat session
 kilocode
 
@@ -19,6 +19,9 @@ kilocode --mode architect
 
 # Start with a specific workspace
 kilocode --workspace /path/to/project
+
+# Resume last conversation from current workspace
+kilocode --continue
 ```
 
 to start the CLI and begin a new task with your preferred model and relevant mode.
@@ -34,20 +37,146 @@ to start the CLI and begin a new task with your preferred model and relevant mod
 
 ### CLI commands
 
-| Command         | Description                                                      | Example                     |
-| --------------- | ---------------------------------------------------------------- | --------------------------- |
-| `kilocode`      | Start interactive                                                |                             |
-| `/mode`         | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`        |
-| `/model`        | Learn about available models and switch between them             |                             |
-| `/model list`   | List available models                                            |                             |
-| `/model info`   | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v` |
-| `/model select` | Select and switch to a new model                                 |                             |
-| `/teams`        | List all organizations you can switch into                       |                             |
-| `/teams select` | Switch to a different organization                               |                             |
-| `/config`       | Open configuration editor (same as `kilocode config`)            |                             |
-| `/new`          | Start a new task with the agent with a clean slate               |                             |
-| `/help`         | List available commands and how to use them                      |                             |
-| `/exit`         | Exit the CLI                                                     |                             |
+| Command               | Description                                                      | Example                        |
+| --------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| `kilocode`            | Start interactive                                                |                                |
+| `/mode`               | Switch between modes (architect, code, debug, ask, orchestrator) | `/mode orchestrator`           |
+| `/model`              | Learn about available models and switch between them             |                                |
+| `/model list`         | List available models                                            |                                |
+| `/model info`         | Prints description for a specific model by name                  | `/model info z-ai/glm-4.5v`    |
+| `/model select`       | Select and switch to a new model                                 |                                |
+| `/checkpoint list`    | List all available checkpoints                                   |                                |
+| `/checkpoint restore` | Revert to a specific checkpoint (destructive action)             | `/checkpoint restore 41db173a` |
+| `/tasks`              | View task history                                                |                                |
+| `/tasks search`       | Search tasks by query                                            | `/tasks search bug fix`        |
+| `/tasks select`       | Switch to a specific task                                        | `/tasks select abc123`         |
+| `/tasks page`         | Go to a specific page                                            | `/tasks page 2`                |
+| `/tasks next`         | Go to next page of task history                                  |                                |
+| `/tasks prev`         | Go to previous page of task history                              |                                |
+| `/tasks sort`         | Change sort order                                                | `/tasks sort most-expensive`   |
+| `/tasks filter`       | Filter tasks                                                     | `/tasks filter favorites`      |
+| `/teams`              | List all organizations you can switch into                       |                                |
+| `/teams select`       | Switch to a different organization                               |                                |
+| `/config`             | Open configuration editor (same as `kilocode config`)            |                                |
+| `/new`                | Start a new task with the agent with a clean slate               |                                |
+| `/help`               | List available commands and how to use them                      |                                |
+| `/exit`               | Exit the CLI                                                     |                                |
+
+## Checkpoint Management
+
+Kilo Code automatically creates checkpoints as you work, allowing you to revert to previous states in your project's history.
+
+### Viewing Checkpoints
+
+List all available checkpoints with `/checkpoint list`:
+
+```bash
+/checkpoint list
+```
+
+This displays:
+
+- Full 40-character git commit hash
+- Relative timestamp (e.g., "5 minutes ago", "2 hours ago")
+- Auto-saved checkpoints are marked with `[auto-saved]`
+
+### Restoring Checkpoints
+
+Revert to a specific checkpoint using the full git hash:
+
+```bash
+/checkpoint restore 00d185d5020969752bc9ae40823b9d6a723696e2
+```
+
+:::danger Warning
+Checkpoint restoration is a **destructive action**:
+
+- Performs a git hard reset (all uncommitted changes will be lost)
+- Removes all messages from the conversation after the checkpoint
+- Cannot be undone
+
+Make sure you've committed or backed up any work you want to keep before restoring.
+:::
+
+**Aliases:** `/cp` can be used as a shorthand for `/checkpoint`
+
+## Task History
+
+View, search, and navigate through your task history directly from the CLI.
+
+### Viewing Task History
+
+Display your task history with `/tasks`:
+
+```bash
+/tasks
+```
+
+This shows:
+
+- Task number and description
+- Task ID (for selecting)
+- Relative timestamp
+- Cost in dollars
+- Token usage
+- Favorite indicator (⭐) for favorited tasks
+- Pagination (10 tasks per page)
+
+### Searching Tasks
+
+Search for specific tasks by keyword:
+
+```bash
+/tasks search bug fix
+/tasks search implement feature
+```
+
+Search automatically sorts results by relevance.
+
+### Selecting a Task
+
+Switch to a specific task using its ID:
+
+```bash
+/tasks select abc123
+```
+
+This loads the selected task and its full conversation history.
+
+### Pagination
+
+Navigate through pages of task history:
+
+```bash
+/tasks page 2      # Go to page 2
+/tasks next        # Go to next page
+/tasks prev        # Go to previous page
+```
+
+### Sorting Tasks
+
+Sort tasks by different criteria:
+
+```bash
+/tasks sort newest          # Most recent first (default)
+/tasks sort oldest          # Oldest first
+/tasks sort most-expensive  # Highest cost first
+/tasks sort most-tokens     # Most tokens used first
+/tasks sort most-relevant   # Most relevant (used with search)
+```
+
+### Filtering Tasks
+
+Filter tasks by workspace or favorites:
+
+```bash
+/tasks filter current    # Show only tasks from current workspace
+/tasks filter all        # Show tasks from all workspaces
+/tasks filter favorites  # Show only favorited tasks
+/tasks filter all-tasks  # Show all tasks (remove filters)
+```
+
+**Aliases:** `/t` and `/history` can be used as shorthand for `/tasks`
 
 ## Config reference for providers
 
@@ -96,6 +225,9 @@ echo "Fix the bug in app.ts" | kilocode --auto
 
 # Run in autonomous mode with timeout (in seconds)
 kilocode --auto "Run tests" --timeout 300
+
+# Run in autonomous mode with JSON output for structured parsing
+kilocode --auto --json "Implement feature X"
 ```
 
 ### Autonomous Mode Behavior
@@ -106,6 +238,27 @@ When running in Autonomous mode (`--auto` flag):
 2. **Auto-Approval/Rejection**: Operations are approved or rejected based on your auto-approval settings
 3. **Follow-up Questions**: Automatically responded with a message instructing the AI to make autonomous decisions
 4. **Automatic Exit**: The CLI exits automatically when the task completes or times out
+
+### JSON Output Mode
+
+Use the `--json` flag with `--auto` to get structured JSON output instead of the default terminal UI. This is useful for programmatic integration and parsing of Kilo Code responses.
+
+```bash
+# Standard autonomous mode with terminal UI
+kilocode --auto "Fix the bug"
+
+# Autonomous mode with JSON output
+kilocode --auto --json "Fix the bug"
+
+# With piped input
+echo "Implement feature X" | kilocode --auto --json
+```
+
+**Requirements:**
+
+- The `--json` flag requires `--auto` mode to be enabled
+- Output is sent to stdout as structured JSON for easy parsing
+- Ideal for CI/CD pipelines and automated workflows
 
 ### Auto-Approval Configuration
 
@@ -243,6 +396,44 @@ This instructs the AI to proceed without user input.
   run: |
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```
+
+## Session Continuation
+
+Resume your last conversation from the current workspace using the `--continue` (or `-c`) flag:
+
+```bash
+# Resume the most recent task from this workspace
+kilocode --continue
+kilocode -c
+```
+
+This feature:
+
+- Automatically finds the most recent task from the current workspace
+- Loads the full conversation history
+- Allows you to continue where you left off
+- Cannot be used with `--auto` mode or with a prompt argument
+- Exits with an error if no previous tasks are found
+
+**Example workflow:**
+
+```bash
+# Start a task
+kilocode
+# > "Create a REST API"
+# ... work on the task ...
+# Exit with /exit
+
+# Later, resume the same task
+kilocode --continue
+# Conversation history is restored, ready to continue
+```
+
+**Limitations:**
+
+- Cannot be combined with `--auto` mode
+- Cannot be used with a prompt argument
+- Only works when there's at least one previous task in the workspace
 
 ## Environment Variable Overrides
 
