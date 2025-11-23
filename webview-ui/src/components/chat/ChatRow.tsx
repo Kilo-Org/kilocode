@@ -568,6 +568,27 @@ export const ChatRowContent = ({
 						</div>
 					</>
 				)
+			// kilocode_change start
+			case "deleteFile":
+				return (
+					<>
+						<div style={headerStyle}>
+							<Trash2 className="w-4 shrink-0" aria-label="Delete file icon" />
+							<span style={{ fontWeight: "bold" }}>{t("chat:fileOperations.wantsToDelete")}</span>
+						</div>
+						<div className="pl-6">
+							<ToolUseBlock>
+								<ToolUseBlockHeader className="group">
+									{tool.path?.startsWith(".") && <span>.</span>}
+									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
+									</span>
+								</ToolUseBlockHeader>
+							</ToolUseBlock>
+						</div>
+					</>
+				)
+			// kilocode_change end
 			case "readFile":
 				// Check if this is a batch file permission request
 				const isBatchRequest = message.type === "ask" && tool.batchFiles && Array.isArray(tool.batchFiles)

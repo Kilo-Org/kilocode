@@ -16,7 +16,7 @@ Describe what you want to accomplish in natural language, and Kilo Code will:
 | Category | Purpose                                    | Tool Names                                                               |
 | :------- | :----------------------------------------- | :----------------------------------------------------------------------- |
 | Read     | Access file content and code structure     | `read_file`, `search_files`, `list_files`, `list_code_definition_names`  |
-| Edit     | Create or modify files and code            | `write_to_file`, `apply_diff`                                            |
+| Edit     | Create or modify files and code            | `apply_diff`, `delete_file`, `write_to_file`                             |
 | Execute  | Run commands and perform system operations | `execute_command`                                                        |
 | Browser  | Interact with web content                  | `browser_action`                                                         |
 | Workflow | Manage task flow and context               | `ask_followup_question`, `attempt_completion`, `switch_mode`, `new_task` |
@@ -71,6 +71,7 @@ This safety mechanism ensures you maintain control over which files are modified
 | `list_code_definition_names` | Lists code definitions like classes and functions   | Read     |
 | `write_to_file`              | Creates new files or overwrites existing ones       | Edit     |
 | `apply_diff`                 | Makes precise changes to specific parts of a file   | Edit     |
+| `delete_file`                | Removes files from the workspace                    | Edit     |
 | `execute_command`            | Runs commands in the VS Code terminal               | Execute  |
 | `browser_action`             | Performs actions in a headless browser              | Browser  |
 | `ask_followup_question`      | Asks you a clarifying question                      | Workflow |

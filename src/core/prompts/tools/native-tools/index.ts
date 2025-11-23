@@ -3,6 +3,7 @@ import askFollowupQuestion from "./ask_followup_question"
 import attemptCompletion from "./attempt_completion"
 import browserAction from "./browser_action"
 import codebaseSearch from "./codebase_search"
+import deleteFile from "./delete_file"
 import editFile from "./edit_file"
 import executeCommand from "./execute_command"
 import fetchInstructions from "./fetch_instructions"
@@ -26,6 +27,7 @@ export const nativeTools = [
 	attemptCompletion,
 	browserAction,
 	codebaseSearch,
+	deleteFile,
 	editFile,
 	executeCommand,
 	fetchInstructions,

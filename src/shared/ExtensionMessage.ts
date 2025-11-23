@@ -517,6 +517,7 @@ export interface ClineSayTool {
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
+		| "deleteFile" // kilocode_change
 	path?: string
 	diff?: string
 	content?: string
