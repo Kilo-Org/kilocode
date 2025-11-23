@@ -267,7 +267,7 @@ export const ChatRowContent = ({
 			case "command":
 				return [
 					isCommandExecuting ? (
-						<ProgressIndicator />
+						<ProgressIndicator useSpinner={isStreaming} />
 					) : (
 						<TerminalSquare className="size-4" aria-label="Terminal icon" />
 					),
@@ -282,7 +282,7 @@ export const ChatRowContent = ({
 				}
 				return [
 					isMcpServerResponding ? (
-						<ProgressIndicator />
+						<ProgressIndicator useSpinner={isStreaming} />
 					) : (
 						<span
 							className="codicon codicon-server"
@@ -331,7 +331,7 @@ export const ChatRowContent = ({
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
-						<ProgressIndicator />
+						<ProgressIndicator useSpinner={isStreaming} />
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (

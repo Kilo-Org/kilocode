@@ -235,10 +235,16 @@ const BrowserSessionRow = memo((props: BrowserSessionRowProps) => {
 		? latestClickPosition || displayState.mousePosition
 		: displayState.mousePosition || defaultMousePosition
 
+	const { isStreaming } = props
+
 	const [browserSessionRow, { height: rowHeight }] = useSize(
 		<div style={{ padding: "10px 6px 10px 15px", marginBottom: -10 }}>
 			<div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
-				{isBrowsing ? <ProgressIndicator /> : <Pointer className="w-4" aria-label="Browser action indicator" />}
+				{isBrowsing ? (
+					<ProgressIndicator useSpinner={isStreaming} />
+				) : (
+					<Pointer className="w-4" aria-label="Browser action indicator" />
+				)}
 				<span style={{ fontWeight: "bold" }}>
 					<>{t("chat:browser.rooWantsToUse")}</>
 				</span>
