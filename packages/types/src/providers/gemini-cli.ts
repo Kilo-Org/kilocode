@@ -108,4 +108,27 @@ export const geminiCliModels = {
 		supportsReasoningBudget: true,
 		requiredReasoningBudget: true,
 	},
+	"gemini-3-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		reasoningEffort: "low",
+		supportsTemperature: true,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+			},
+		],
+	},
 } as const satisfies Record<string, ModelInfo>
