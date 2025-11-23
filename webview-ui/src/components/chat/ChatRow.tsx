@@ -373,6 +373,7 @@ export const ChatRowContent = ({
 		apiRequestFailedMessage,
 		t,
 		inferenceProvider, // kilocode_change
+		isStreaming,
 	])
 
 	const headerStyle: React.CSSProperties = {
