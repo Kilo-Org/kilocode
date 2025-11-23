@@ -136,7 +136,7 @@ export const CommandInput: React.FC<CommandInputProps> = ({
 		: isShellMode
 			? "Type shell command..."
 			: isApprovalPending
-				? "Awaiting approval..."
+				? "Actions available:"
 				: placeholder
 
 	return (

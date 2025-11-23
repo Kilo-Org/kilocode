@@ -8,6 +8,7 @@ import {
 	AskToolMessage,
 	AskMistakeLimitMessage,
 	AskCommandMessage,
+	AskCommandOutputMessage,
 	AskUseMcpServerMessage,
 	AskFollowupMessage,
 	AskCondenseMessage,
@@ -52,7 +53,7 @@ export const AskMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 			return <AskCommandMessage message={message} />
 
 		case "command_output":
-			return null
+			return <AskCommandOutputMessage message={message} />
 
 		case "browser_action_launch":
 			return <AskBrowserActionLaunchMessage message={message} />

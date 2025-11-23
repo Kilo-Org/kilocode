@@ -334,6 +334,11 @@ export function getApprovalDecision(
 		case "command":
 			return getCommandApprovalDecision(message, config, isCIMode)
 
+		case "command_output":
+			// Command output always requires manual approval
+			// User must choose to continue (proceed with conversation) or abort (kill command)
+			return { action: "manual" }
+
 		case "followup":
 			return getFollowupApprovalDecision(message, config, isCIMode)
 

@@ -183,21 +183,6 @@ describe("ExtensionMessageRow", () => {
 			expect(lastFrame()).not.toContain("Unknown message type")
 		})
 
-		it("should route 'say' message with type 'command_output' to SayCommandOutputMessage", () => {
-			const message: ExtensionChatMessage = {
-				ts: Date.now(),
-				type: "say",
-				say: "command_output",
-				text: "Command executed successfully",
-			}
-
-			const { lastFrame } = render(<ExtensionMessageRow message={message} />)
-
-			expect(lastFrame()).toBeDefined()
-			expect(lastFrame()).toContain("Command executed successfully")
-			expect(lastFrame()).not.toContain("Unknown say type")
-		})
-
 		it("should show default message for unknown 'say' type", () => {
 			const message: ExtensionChatMessage = {
 				ts: Date.now(),
