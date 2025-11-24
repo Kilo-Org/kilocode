@@ -6,83 +6,10 @@
  * backend API for managed indexing operations (upsert, search, delete, manifest).
  */
 
-import { ManagedCodeChunk, SearchRequest, SearchResult, ServerManifest } from "./types"
+import { SearchRequest, SearchResult, ServerManifest } from "./types"
 import { logger } from "../../../utils/logging"
 import { getKiloBaseUriFromToken } from "../../../../packages/types/src/kilocode/kilocode"
 import { fetchWithRetries } from "../../../shared/http"
-
-/**
- * Upserts code chunks to the server using the new envelope format
- *
- * @param chunks Array of chunks to upsert (must all be from same org/project/branch)
- * @param kilocodeToken Authentication token
- * @param signal Optional AbortSignal to cancel the request
- * @throws Error if the request fails or chunks are from different contexts
- */
-export async function upsertChunks(
-	chunks: ManagedCodeChunk[],
-	kilocodeToken: string,
-	signal?: AbortSignal,
-): Promise<void> {
-	if (chunks.length === 0) {
-		return
-	}
-
-	// Validate all chunks are from same context
-	const firstChunk = chunks[0]
-	const allSameContext = chunks.every(
-		(c) =>
-			c.organizationId === firstChunk.organizationId &&
-			c.projectId === firstChunk.projectId &&
-			c.gitBranch === firstChunk.gitBranch &&
-			c.isBaseBranch === firstChunk.isBaseBranch,
-	)
-
-	if (!allSameContext) {
-		throw new Error("All chunks must be from the same organization, project, and branch")
-	}
-
-	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
-
-	// Transform to new envelope format
-	const requestBody = {
-		organizationId: firstChunk.organizationId,
-		projectId: firstChunk.projectId,
-		gitBranch: firstChunk.gitBranch,
-		isBaseBranch: firstChunk.isBaseBranch,
-		chunks: chunks.map((chunk) => ({
-			id: chunk.id,
-			codeChunk: chunk.codeChunk,
-			filePath: chunk.filePath,
-			startLine: chunk.startLine,
-			endLine: chunk.endLine,
-			chunkHash: chunk.chunkHash,
-		})),
-	}
-
-	try {
-		const response = await fetchWithRetries({
-			url: `${baseUrl}/api/code-indexing/upsert`,
-			method: "PUT",
-			headers: {
-				Authorization: `Bearer ${kilocodeToken}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(requestBody),
-			signal,
-		})
-
-		if (!response.ok) {
-			throw new Error(`Failed to upsert chunks: ${response.statusText}`)
-		}
-
-		logger.info(`Successfully upserted ${chunks.length} chunks`)
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		logger.error(`Failed to upsert chunks: ${errorMessage}`)
-		throw error
-	}
-}
 
 /**
  * Searches code in the managed index with branch preferences
@@ -122,60 +49,6 @@ export async function searchCode(
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		logger.error(`Search failed: ${errorMessage}`)
-		throw error
-	}
-}
-
-/**
- * Deletes chunks for specific files on a specific branch
- *
- * @param filePaths Array of file paths to delete
- * @param gitBranch Git branch to delete from
- * @param organizationId Organization ID
- * @param projectId Project ID
- * @param kilocodeToken Authentication token
- * @param signal Optional AbortSignal to cancel the request
- * @throws Error if the request fails
- */
-export async function deleteFiles(
-	filePaths: string[],
-	gitBranch: string,
-	organizationId: string,
-	projectId: string,
-	kilocodeToken: string,
-	signal?: AbortSignal,
-): Promise<void> {
-	if (filePaths.length === 0) {
-		return
-	}
-
-	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
-
-	try {
-		const response = await fetchWithRetries({
-			url: `${baseUrl}/api/code-indexing/delete`,
-			method: "PUT",
-			headers: {
-				Authorization: `Bearer ${kilocodeToken}`,
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				organizationId,
-				projectId,
-				gitBranch,
-				filePaths,
-			}),
-			signal,
-		})
-
-		if (!response.ok) {
-			throw new Error(`Failed to delete files: ${response.statusText}`)
-		}
-
-		logger.info(`Successfully deleted ${filePaths.length} files from branch ${gitBranch}`)
-	} catch (error) {
-		const errorMessage = error instanceof Error ? error.message : String(error)
-		logger.error(`Failed to delete files: ${errorMessage}`)
 		throw error
 	}
 }

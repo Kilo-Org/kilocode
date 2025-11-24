@@ -47,8 +47,6 @@ import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // 
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
 import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
-import { updateCodeIndexWithKiloProps } from "./services/code-index/managed/webview" // kilocode_change
-import { getCommand } from "./utils/commands"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit

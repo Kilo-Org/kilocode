@@ -8,9 +8,8 @@ export function useManagedCodeIndexingEnabled() {
 		// TODO Just hook this into apiconfiguration
 		// Poll the managed indexer so we get updates on enablement
 		const interval = setInterval(() => {
-			console.log("[useManagedCodeIndexingEnabled] requesting managed indexer state")
 			vscode.postMessage({ type: "requestManagedIndexerEnabled" as any })
-		}, 500)
+		}, 1000)
 
 		const handleMessage = (event: MessageEvent<any>) => {
 			console.log("[useManagedCodeIndexingEnabled] received event", event)

@@ -95,7 +95,6 @@ export const webviewMessageHandler = async (
 	message: MaybeTypedWebviewMessage, // kilocode_change switch to MaybeTypedWebviewMessage for better type-safety
 	marketplaceManager?: MarketplaceManager,
 ) => {
-	console.log("[webviewMessageHandler]", message)
 	// Utility functions provided for concise get/update of global state via contextProxy API.
 	const getGlobalState = <K extends keyof GlobalState>(key: K) => provider.contextProxy.getValue(key)
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
@@ -4024,7 +4023,7 @@ export const webviewMessageHandler = async (
 		// probably. So casting as any as to not define a more permanent type
 		case "requestManagedIndexerEnabled" as any: {
 			try {
-				const managedIndexerEnabled = (await ManagedIndexer.getInstance()?.isEnabled()) || false
+				const managedIndexerEnabled = ManagedIndexer.getInstance()?.isEnabled() || false
 				await provider.postMessageToWebview({
 					type: "managedIndexerEnabled",
 					managedIndexerEnabled,

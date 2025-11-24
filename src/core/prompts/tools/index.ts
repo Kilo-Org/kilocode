@@ -37,6 +37,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { isFastApplyAvailable } from "../../tools/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
+import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
 // kilocode_change end
 
 // Map of tool names to their description functions
@@ -138,7 +139,7 @@ export function getToolDescriptionsForMode(
 		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 	) {
 		// kilocode_change start
-		if (!codeIndexManager?.isManagedIndexingAvailable) {
+		if (!ManagedIndexer.getInstance()?.isEnabled()) {
 			tools.delete("codebase_search")
 		}
 		// kilocode_change end
