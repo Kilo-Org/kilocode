@@ -1,5 +1,5 @@
 {
-	"name": "Kilo Code Development",
+	"name": "Coppy Code Development",
 	"dockerFile": "Dockerfile",
 	"context": "..",
 
@@ -49,7 +49,7 @@
 	},
 
 	"postCreateCommand": "bash .devcontainer/setup.sh",
-	"postStartCommand": "echo '🚀 Kilo Code devcontainer is ready!'",
+	"postStartCommand": "echo '🚀 Coppy Code devcontainer is ready!'",
 
 	"remoteUser": "root",
 	"containerUser": "root",

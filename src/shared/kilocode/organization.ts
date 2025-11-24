@@ -2,7 +2,7 @@
 import { z } from "zod"
 
 /**
- * Kilo Code Organization Settings Schema
+ * Coppy Code Organization Settings Schema
  * These settings control organization-level features and configurations
  */
 export const KiloOrganizationSettingsSchema = z.object({
@@ -18,7 +18,7 @@ export const KiloOrganizationSettingsSchema = z.object({
 export type KiloOrganizationSettings = z.infer<typeof KiloOrganizationSettingsSchema>
 
 /**
- * Kilo Code Organization Schema
+ * Coppy Code Organization Schema
  * Represents the full organization object returned from the API
  */
 export const KiloOrganizationSchema = z.object({

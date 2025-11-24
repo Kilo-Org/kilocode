@@ -2,7 +2,7 @@
 sidebar_label: Fireworks AI
 ---
 
-# 在 Kilo Code 中使用 Fireworks AI
+# 在 Coppy Code 中使用 Fireworks AI
 
 Fireworks AI 是一个高性能的 AI 模型运行平台，可以快速访问各种开源和专有语言模型。它专为速度和可靠性而构建，提供无服务器和专用部署选项，并兼容 OpenAI API。
 
@@ -14,14 +14,14 @@ Fireworks AI 是一个高性能的 AI 模型运行平台，可以快速访问各
 
 1. **注册/登录：** 前往 [Fireworks AI](https://fireworks.ai/) 创建账户或登录。
 2. **导航到 API 密钥：** 登录后，在账户设置中进入 [API Keys 页面](https://app.fireworks.ai/settings/users/api-keys)。
-3. **创建密钥：** 点击 "Create API key" 并为您的密钥输入一个描述性名称（例如 "Kilo Code"）。
+3. **创建密钥：** 点击 "Create API key" 并为您的密钥输入一个描述性名称（例如 "Coppy Code"）。
 4. **复制密钥：** *立即* 复制 API 密钥并安全存储。您将无法再次查看它。
 
 ---
 
 ## 支持的模型
 
-Kilo Code 支持以下 Fireworks AI 模型：
+Coppy Code 支持以下 Fireworks AI 模型：
 
 * `accounts/fireworks/models/kimi-k2-instruct` - Kimi K2 指令调优模型
 * `accounts/fireworks/models/qwen3-235b-a22b-instruct-2507` - Qwen 3 235B 指令调优模型  
@@ -31,9 +31,9 @@ Kilo Code 支持以下 Fireworks AI 模型：
 
 ---
 
-## 在 Kilo Code 中配置
+## 在 Coppy Code 中配置
 
-1. **打开 Kilo Code 设置：** 在 Kilo Code 面板中点击齿轮图标 (<Codicon name="gear" />)。
+1. **打开 Coppy Code 设置：** 在 Coppy Code 面板中点击齿轮图标 (<Codicon name="gear" />)。
 2. **选择提供商：** 从 "API Provider" 下拉菜单中选择 "Fireworks AI"。
 3. **输入 API 密钥：** 将您的 Fireworks AI API 密钥粘贴到 "Fireworks AI API Key" 字段中。
 4. **选择模型：** 从 "Model" 下拉菜单中选择您想要的模型。

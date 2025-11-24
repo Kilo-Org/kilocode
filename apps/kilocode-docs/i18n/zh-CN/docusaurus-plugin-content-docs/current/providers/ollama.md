@@ -2,9 +2,9 @@
 侧边栏标签: Ollama
 ---
 
-# 在Kilo Code中使用Ollama
+# 在Coppy Code中使用Ollama
 
-Kilo Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护、离线访问能力，并可能降低成本，但需要更多设置且依赖高性能计算机。
+Coppy Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护、离线访问能力，并可能降低成本，但需要更多设置且依赖高性能计算机。
 
 **官方网站：** [https://ollama.com/](https://ollama.com/)
 
@@ -28,13 +28,13 @@ Kilo Code 支持通过 Ollama 在本地运行模型。这提供了隐私保护�
 Ollama 支持许多不同的模型。
 你可以在 [Ollama 网站](https://ollama.com/library) 上找到可用模型的列表。
 
-对于 Kilo Code 代理，当前推荐使用 `qwen3-coder:30b`。`qwen3-coder:30b` 有时无法正确调用工具（相比完整版 `qwen3-coder:480b` 模型，这个问题更常见）。作为一个混合专家模型，这可能是因为它激活了错误的专家。每当发生这种情况时，尝试更改你的提示词或使用“增强提示”按钮。
+对于 Coppy Code 代理，当前推荐使用 `qwen3-coder:30b`。`qwen3-coder:30b` 有时无法正确调用工具（相比完整版 `qwen3-coder:480b` 模型，这个问题更常见）。作为一个混合专家模型，这可能是因为它激活了错误的专家。每当发生这种情况时，尝试更改你的提示词或使用“增强提示”按钮。
 
-`qwen3-coder:30b` 的替代方案是 `devstral:24b`。对于 Kilo Code 的其他功能，如增强提示或提交信息生成，较小的模型可能就足够了。
+`qwen3-coder:30b` 的替代方案是 `devstral:24b`。对于 Coppy Code 的其他功能，如增强提示或提交信息生成，较小的模型可能就足够了。
 
 ## 设置 Ollama
 
-要设置 Ollama 以与 Kilo Code 一起使用，请按照以下说明操作。
+要设置 Ollama 以与 Coppy Code 一起使用，请按照以下说明操作。
 
 ### 下载并安装 Ollama
 
@@ -86,9 +86,9 @@ ollama run qwen3-coder:30b
 你也可以设置 `OLLAMA_CONTEXT_LENGTH` 环境变量，
 但不推荐这样做，因为它会改变所有模型的上下文，而且该环境变量需要对 Ollama 服务器和 IDE 都可见。
 
-### 配置 Kilo Code
+### 配置 Coppy Code
 
-- 打开 Kilo Code 侧边栏（<img src="/docs/img/kilo-v1.svg" width="12" /> 图标）。
+- 打开 Coppy Code 侧边栏（<img src="/docs/img/kilo-v1.svg" width="12" /> 图标）。
 - 点击设置齿轮图标（<Codicon name="gear" />）。
 - 选择 "Ollama" 作为 API 提供商。
 - 选择在上一步中配置的模型。

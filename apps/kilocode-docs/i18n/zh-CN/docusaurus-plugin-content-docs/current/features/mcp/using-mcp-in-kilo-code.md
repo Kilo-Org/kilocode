@@ -1,15 +1,15 @@
 ---
-title: 在Kilo Code中使用MCP
-sidebar_label: 在Kilo Code中使用MCP
+title: 在Coppy Code中使用MCP
+sidebar_label: 在Coppy Code中使用MCP
 ---
 
-# 在Kilo Code中使用MCP
+# 在Coppy Code中使用MCP
 
-模型上下文协议（MCP）通过连接外部工具和服务扩展了Kilo Code的功能。本指南涵盖了在Kilo Code中使用MCP所需了解的所有内容。
+模型上下文协议（MCP）通过连接外部工具和服务扩展了Coppy Code的功能。本指南涵盖了在Coppy Code中使用MCP所需了解的所有内容。
 
 <YouTubeEmbed
   url="https://youtu.be/6O9RQoQRX8A"
-  caption="演示Kilo Code中的MCP安装"
+  caption="演示Coppy Code中的MCP安装"
 />
 
 ## 配置MCP服务器
@@ -17,20 +17,20 @@ sidebar_label: 在Kilo Code中使用MCP
 MCP服务器配置可以在两个级别进行管理：
 
 1. **全局配置**：存储在`mcp_settings.json`文件中，可通过VS Code设置访问（见下文）。这些设置适用于所有工作区，除非被项目级配置覆盖。
-2. **项目级配置**：在项目根目录的`.kilocode/mcp.json`文件中定义。这允许你设置项目特定的服务器，并通过将文件提交到版本控制与团队共享配置。如果存在，Kilo Code会自动检测并加载此文件。
+2. **项目级配置**：在项目根目录的`.kilocode/mcp.json`文件中定义。这允许你设置项目特定的服务器，并通过将文件提交到版本控制与团队共享配置。如果存在，Coppy Code会自动检测并加载此文件。
 
 **优先级**：如果服务器名称同时存在于全局和项目配置中，则**项目级配置优先**。
 
 ### 编辑MCP设置文件
 
-你可以直接从Kilo Code MCP设置视图编辑全局和项目级MCP配置文件：
+你可以直接从Coppy Code MCP设置视图编辑全局和项目级MCP配置文件：
 
-1.  单击 Kilo Code 窗格顶部导航栏中的 <Codicon name="gear" /> 图标以打开 `Settings`。
+1.  单击 Coppy Code 窗格顶部导航栏中的 <Codicon name="gear" /> 图标以打开 `Settings`。
 2.  单击左侧的 `MCP Servers` 选项卡
 3.  选择 `Installed` 服务器
 3.  单击相应的按钮：
     *   **`Edit Global MCP`**：打开全局 `mcp_settings.json` 文件。
-    *   **`Edit Project MCP`**：打开项目特定的 `.kilocode/mcp.json` 文件。如果此文件不存在，Kilo Code 将为您创建它。
+    *   **`Edit Project MCP`**：打开项目特定的 `.kilocode/mcp.json` 文件。如果此文件不存在，Coppy Code 将为您创建它。
 
   <img src="/docs/img/using-mcp-in-kilo-code/mcp-installed-config.png" alt="编辑全局 MCP 和编辑项目 MCP 按钮" width="600" />
 
@@ -50,7 +50,7 @@ MCP服务器配置可以在两个级别进行管理：
     }
   }
 ```
-*Kilo Code中的MCP服务器配置示例（STDIO传输）*
+*Coppy Code中的MCP服务器配置示例（STDIO传输）*
 
 ### 理解传输类型
 
@@ -147,24 +147,24 @@ MCP工具自动批准按工具进行，默认禁用。要配置自动批准：
 
 <img src="/docs/img/using-mcp-in-kilo-code/using-mcp-in-kilo-code-7.png" alt="MCP工具的始终允许复选框" width="120" />
 
-启用后，Kilo Code将自动批准此特定工具而无需提示。请注意，全局"使用MCP服务器"设置优先 - 如果它被禁用，则不会自动批准任何MCP工具。
+启用后，Coppy Code将自动批准此特定工具而无需提示。请注意，全局"使用MCP服务器"设置优先 - 如果它被禁用，则不会自动批准任何MCP工具。
 
 ## 查找和安装MCP服务器
 
-Kilo Code不附带任何预安装的MCP服务器。你需要单独查找并安装它们。
+Coppy Code不附带任何预安装的MCP服务器。你需要单独查找并安装它们。
 
 * **社区仓库**：在GitHub上查看社区维护的MCP服务器列表
-* **询问Kilo Code**：你可以请Kilo Code帮助你查找甚至创建MCP服务器（当"[启用MCP服务器创建](#enabling-or-disabling-mcp-server-creation)"启用时）
-* **自行构建**：使用SDK创建自定义MCP服务器，使用你自己的工具扩展Kilo Code
+* **询问Coppy Code**：你可以请Coppy Code帮助你查找甚至创建MCP服务器（当"[启用MCP服务器创建](#enabling-or-disabling-mcp-server-creation)"启用时）
+* **自行构建**：使用SDK创建自定义MCP服务器，使用你自己的工具扩展Coppy Code
 
 有关完整的SDK文档，请访问[MCP GitHub仓库](https://github.com/modelcontextprotocol/)。
 
 ## 在工作流中使用MCP工具
 
-配置MCP服务器后，Kilo Code将自动检测可用的工具和资源。要使用它们：
+配置MCP服务器后，Coppy Code将自动检测可用的工具和资源。要使用它们：
 
-1. 在Kilo Code聊天界面中输入你的请求
-2. Kilo Code将识别何时MCP工具可以帮助完成任务
+1. 在Coppy Code聊天界面中输入你的请求
+2. Coppy Code将识别何时MCP工具可以帮助完成任务
 3. 在提示时批准工具使用（或使用自动批准）
 
 示例："分析我的API性能"可能会使用一个测试API端点的MCP工具。

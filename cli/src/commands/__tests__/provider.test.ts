@@ -152,7 +152,7 @@ describe("provider command", () => {
 			const message = addMessageMock.mock.calls[0][0]
 			expect(message.content).toContain("Type: Anthropic")
 			expect(message.content).toContain("Type: OpenAI")
-			expect(message.content).toContain("Type: Kilo Code")
+			expect(message.content).toContain("Type: Coppy Code")
 		})
 
 		it("should show model information when available", async () => {

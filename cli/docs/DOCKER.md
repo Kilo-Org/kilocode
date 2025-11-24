@@ -1,6 +1,6 @@
-# Kilo Code CLI - Docker Guide
+# Coppy Code CLI - Docker Guide
 
-A containerized version of the Kilo Code CLI with full browser automation support.
+A containerized version of the Coppy Code CLI with full browser automation support.
 
 ## Quick Start Examples
 
@@ -57,7 +57,7 @@ docker run --rm -v $(pwd):/workspace kilocode/cli --auto "Run tests and fix any 
 
 ### 4. With Local Configuration
 
-Mount your existing Kilo Code configuration to avoid setup prompts:
+Mount your existing Coppy Code configuration to avoid setup prompts:
 
 ```bash
 docker run -it --rm \

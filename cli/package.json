@@ -1,7 +1,7 @@
 {
 	"name": "@kilocode/cli",
 	"version": "0.5.0",
-	"description": "Terminal User Interface for Kilo Code",
+	"description": "Terminal User Interface for Coppy Code",
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {

@@ -6,7 +6,7 @@ import YouTubeEmbed from '@site/src/components/YouTubeEmbed';
 
 # Orchestrator Mode: Coordinate Complex Workflows
 
-Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down complex projects into smaller, manageable pieces. Think of it like delegating parts of your work to specialized assistants. Each subtask runs in its own context, often using a different Kilo Code mode tailored for that specific job (like [`code`](/basic-usage/using-modes#code-mode-default), [`architect`](/basic-usage/using-modes#architect-mode), or [`debug`](/basic-usage/using-modes#debug-mode)).
+Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down complex projects into smaller, manageable pieces. Think of it like delegating parts of your work to specialized assistants. Each subtask runs in its own context, often using a different Coppy Code mode tailored for that specific job (like [`code`](/basic-usage/using-modes#code-mode-default), [`architect`](/basic-usage/using-modes#architect-mode), or [`debug`](/basic-usage/using-modes#debug-mode)).
 
 <YouTubeEmbed
   url="https://www.youtube.com/watch?v=20MmJNeOODo"
@@ -36,7 +36,7 @@ Orchestrator Mode (formerly known as Boomerang Tasks) allows you to break down c
     *   **Up:** Via the final summary provided when the subtask finishes. Be mindful that only this summary returns to the parent.
 -   **Navigation:** Kilo's interface helps you see the hierarchy of tasks (which task is the parent, which are children). You can typically navigate between active and paused tasks.
 
-Orchestrator Mode provides a powerful way to manage complex development workflows directly within Kilo Code, leveraging specialized modes for maximum efficiency.
+Orchestrator Mode provides a powerful way to manage complex development workflows directly within Coppy Code, leveraging specialized modes for maximum efficiency.
 
 :::tip Keep Tasks Focused
 Use subtasks to maintain clarity. If a request significantly shifts focus or requires a different expertise (mode), consider creating a subtask rather than overloading the current one.

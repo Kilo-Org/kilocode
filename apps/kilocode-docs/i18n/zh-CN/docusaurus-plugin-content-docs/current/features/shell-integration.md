@@ -1,10 +1,10 @@
 # 终端 Shell 集成
 
-终端 Shell 集成是一项关键功能，它使 Kilo Code 能够在您的终端中执行命令并智能地处理其输出。AI 与您的开发环境之间的这种双向通信解锁了强大的自动化功能。
+终端 Shell 集成是一项关键功能，它使 Coppy Code 能够在您的终端中执行命令并智能地处理其输出。AI 与您的开发环境之间的这种双向通信解锁了强大的自动化功能。
 
 ## 什么是 Shell 集成？
 
-Shell 集成在 Kilo Code 中自动启用，并直接连接到您的终端命令执行生命周期，无需您进行任何设置。此内置功能允许 Kilo Code：
+Shell 集成在 Coppy Code 中自动启用，并直接连接到您的终端命令执行生命周期，无需您进行任何设置。此内置功能允许 Coppy Code：
 
 - 通过 [`execute_command`](/features/tools/execute-command) 工具代表您执行命令
 - 实时读取命令输出，无需手动复制粘贴
@@ -13,11 +13,11 @@ Shell 集成在 Kilo Code 中自动启用，并直接连接到您的终端命令
 - 在您导航项目时跟踪工作目录更改
 - 无需用户干预即可智能地响应终端输出
 
-当 Kilo Code 需要执行安装依赖项、启动开发服务器或分析构建错误等任务时，shell 集成会在后台工作，使这些交互顺畅有效。
+当 Coppy Code 需要执行安装依赖项、启动开发服务器或分析构建错误等任务时，shell 集成会在后台工作，使这些交互顺畅有效。
 
 ## Shell 集成入门
 
-Shell 集成内置于 Kilo Code 中，在大多数情况下会自动工作。如果您看到“Shell 集成不可用”消息或遇到命令执行问题，请尝试以下解决方案：
+Shell 集成内置于 Coppy Code 中，在大多数情况下会自动工作。如果您看到“Shell 集成不可用”消息或遇到命令执行问题，请尝试以下解决方案：
 
 1.  **将 VSCode/Cursor 更新**到最新版本（需要 VSCode 1.93+）
 2.  **确保选择了兼容的 shell**：命令面板（`Ctrl+Shift+P` 或 `Cmd+Shift+P`）→ “终端：选择默认配置文件”→ 选择 bash、zsh、PowerShell 或 fish
@@ -26,7 +26,7 @@ Shell 集成内置于 Kilo Code 中，在大多数情况下会自动工作。如
 
 ## 终端集成设置
 
-Kilo Code 提供了几个设置来微调 shell 集成。在 Kilo Code 侧边栏的“设置”→“终端”下访问这些设置。
+Coppy Code 提供了几个设置来微调 shell 集成。在 Coppy Code 侧边栏的“设置”→“终端”下访问这些设置。
 
 ### 基本设置
 
@@ -43,7 +43,7 @@ Kilo Code 提供了几个设置来微调 shell 集成。在 Kilo Code 侧边栏�
 #### 终端命令延迟
 <img src="/docs/img/shell-integration/terminal-command-delay.png" alt="终端命令延迟滑块设置为 0 毫秒" width="500" />
 
-在运行命令后添加一个短暂的暂停，以帮助 Kilo Code 正确捕获所有输出。由于 VSCode 在不同操作系统和 shell 配置中实现终端集成的方式，此设置可能会显著影响 shell 集成的可靠性：
+在运行命令后添加一个短暂的暂停，以帮助 Coppy Code 正确捕获所有输出。由于 VSCode 在不同操作系统和 shell 配置中实现终端集成的方式，此设置可能会显著影响 shell 集成的可靠性：
 
 - **默认**：0 毫秒
 - **常见值**：
@@ -71,27 +71,27 @@ Kilo Code 提供了几个设置来微调 shell 集成。在 Kilo Code 侧边栏�
 #### PowerShell 计数器解决方法
 <img src="/docs/img/shell-integration/power-shell-workaround.png" alt="PowerShell 计数器解决方法复选框" width="600" />
 
-帮助 PowerShell 连续多次运行相同的命令。如果您发现 Kilo Code 无法在 PowerShell 中连续运行相同的命令，请启用此功能。
+帮助 PowerShell 连续多次运行相同的命令。如果您发现 Coppy Code 无法在 PowerShell 中连续运行相同的命令，请启用此功能。
 
 #### 清除 ZSH EOL 标记
 <img src="/docs/img/shell-integration/clear-zsh-eol-mark.png" alt="清除 ZSH EOL 标记复选框" width="600" />
 
-防止 ZSH 在输出行末尾添加特殊字符，这些字符在 Kilo Code 读取终端结果时可能会造成混淆。
+防止 ZSH 在输出行末尾添加特殊字符，这些字符在 Coppy Code 读取终端结果时可能会造成混淆。
 
 #### Oh My Zsh 集成
 <img src="/docs/img/shell-integration/oh-my-zsh.png" alt="启用 Oh My Zsh 集成复选框" width="600" />
 
-使 Kilo Code 更好地与流行的 [Oh My Zsh](https://ohmyz.sh/) shell 自定义框架配合使用。如果您使用 Oh My Zsh 并遇到终端问题，请打开此功能。
+使 Coppy Code 更好地与流行的 [Oh My Zsh](https://ohmyz.sh/) shell 自定义框架配合使用。如果您使用 Oh My Zsh 并遇到终端问题，请打开此功能。
 
 #### Powerlevel10k 集成
 <img src="/docs/img/shell-integration/power10k.png" alt="启用 Powerlevel10k 集成复选框" width="600" />
 
-如果您使用 ZSH 的 Powerlevel10k 主题，则可提高兼容性。如果您的花哨终端提示导致 Kilo Code 出现问题，请打开此功能。
+如果您使用 ZSH 的 Powerlevel10k 主题，则可提高兼容性。如果您的花哨终端提示导致 Coppy Code 出现问题，请打开此功能。
 
 #### ZDOTDIR 处理
 <img src="/docs/img/shell-integration/zdotdir.png" alt="启用 ZDOTDIR 处理复选框" width="600" />
 
-帮助 Kilo Code 与自定义 ZSH 配置配合使用，而不会干扰您的个人 shell 设置和自定义。
+帮助 Coppy Code 与自定义 ZSH 配置配合使用，而不会干扰您的个人 shell 设置和自定义。
 
 ## Shell 集成故障排除
 
@@ -143,7 +143,7 @@ string match -q "$TERM_PROGRAM" "vscode"; and . (code --locate-shell-integration
 typeset -g POWERLEVEL9K_TERM_SHELL_INTEGRATION=true
 ```
 
-**替代方案**：在 Kilo Code 设置中启用 Powerlevel10k 集成设置。
+**替代方案**：在 Coppy Code 设置中启用 Powerlevel10k 集成设置。
 
 ### 验证 Shell 集成状态
 
@@ -294,7 +294,7 @@ functions fish_prompt | grep -i vsc
 
 **解决方案**：
 1. **设置终端命令延迟**：
-    - 在 Kilo Code 设置中将“终端命令延迟”设置为 50 毫秒。
+    - 在 Coppy Code 设置中将“终端命令延迟”设置为 50 毫秒。
     - 更改此设置后，重启所有终端。
     - 这与旧版的默认行为匹配，可能解决问题，但有用户报告称设置为 0 毫秒效果更好。这是针对上游 VSCode 问题的解决方法。
 
@@ -307,26 +307,26 @@ functions fish_prompt | grep -i vsc
     - 如果使用 WSL，请确保您是从 WSL 内部通过 `code .` 命令启动 VSCode。
 
 4. **ZSH 用户**：
-    - 尝试在 Kilo Code 设置中启用部分或全部 ZSH 相关的解决方法。
+    - 尝试在 Coppy Code 设置中启用部分或全部 ZSH 相关的解决方法。
     - 无论您的操作系统是什么，这些设置都可能有所帮助。
 
 ## 已知问题及解决方法
 
 ### Ctrl+C 的行为
 
-**问题**：当 Kilo Code 尝试运行命令时，如果终端中已经输入了文本，Kilo Code 会先按 Ctrl+C 来清空当前行，这可能会中断正在运行的进程。
+**问题**：当 Coppy Code 尝试运行命令时，如果终端中已经输入了文本，Coppy Code 会先按 Ctrl+C 来清空当前行，这可能会中断正在运行的进程。
 
-**解决方法**：在要求 Kilo Code 执行终端命令之前，请确保您的终端提示符是空的（没有输入任何部分命令）。
+**解决方法**：在要求 Coppy Code 执行终端命令之前，请确保您的终端提示符是空的（没有输入任何部分命令）。
 
 ### 多行命令问题
 
-**问题**：跨多行的命令可能会让 Kilo Code 混淆，并可能将先前命令的输出与当前输出混合在一起。
+**问题**：跨多行的命令可能会让 Coppy Code 混淆，并可能将先前命令的输出与当前输出混合在一起。
 
 **解决方法**：不要使用多行命令，而是使用 `&&` 进行命令链接，将所有内容保持在一行（例如，使用 `echo a && echo b`，而不是分行输入每个命令）。
 
 ### PowerShell 特定问题
 
-1.  **过早完成**：PowerShell 有时会在所有输出显示完毕前就通知 Kilo Code 命令已完成。
+1.  **过早完成**：PowerShell 有时会在所有输出显示完毕前就通知 Coppy Code 命令已完成。
 2.  **重复命令**：PowerShell 可能会拒绝连续两次运行相同的命令。
 
 **解决方法**：启用“PowerShell 计数器解决方法”设置，并在设置中将终端命令延迟设置为 150 毫秒，以便为命令留出更多完成时间。
@@ -376,7 +376,7 @@ functions fish_prompt | grep -i vsc
 
 如果您已遵循上述步骤但仍遇到问题，请：
 
-1.  查看 [Kilo Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) 页面，看是否有人报告了类似的问题。
+1.  查看 [Coppy Code GitHub Issues](https://github.com/Kilo-Org/kilocode/issues) 页面，看是否有人报告了类似的问题。
 2.  如果没有，请创建一个新 issue，并提供有关您的操作系统、VSCode/Cursor 版本以及您已尝试过的步骤的详细信息。
 
 如需更多帮助，请加入我们的 [Discord](https://kilocode.ai/discord)。如需其他帮助，请加入我们的 [Discord](https://kilocode.ai/discord)。

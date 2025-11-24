@@ -19,7 +19,7 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Using Kilo Code",
+			label: "Using Coppy Code",
 			items: [
 				"basic-usage/the-chat-interface",
 				"basic-usage/model-selection-guide",
@@ -123,7 +123,7 @@ const sidebars: SidebarsConfig = {
 				"advanced-usage/prompt-engineering",
 				{
 					type: "category",
-					label: "Customizing Kilo Code",
+					label: "Customizing Coppy Code",
 					items: [
 						"advanced-usage/custom-rules",
 						"advanced-usage/custom-instructions",
@@ -162,7 +162,7 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: "category",
-			label: "Extending Kilo Code",
+			label: "Extending Coppy Code",
 			items: [
 				"advanced-usage/local-models",
 				{

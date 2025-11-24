@@ -1,4 +1,4 @@
-# Kilo Code Development Container
+# Coppy Code Development Container
 # Based on flake.nix dependencies for standardized development environment
 
 # Use official Node.js image matching .nvmrc version

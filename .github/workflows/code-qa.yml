@@ -1,4 +1,4 @@
-name: Code QA Kilo Code
+name: Code QA Coppy Code
 
 on:
     workflow_dispatch:

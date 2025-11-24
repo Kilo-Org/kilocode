@@ -10,7 +10,7 @@ Owners have full administrative oversight including billing, seat allocation, an
 
 Only Owners can conduct team management activities.
 
-Members can use the Kilo Code extension and see data on the team's usage in the [usage dashboard](/plans/analytics).
+Members can use the Coppy Code extension and see data on the team's usage in the [usage dashboard](/plans/analytics).
 
 ## Adding Team Members
 

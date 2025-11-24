@@ -3,7 +3,7 @@ import { Package } from "../../shared/package"
 
 export const DEFAULT_HEADERS = {
 	"HTTP-Referer": "https://kilocode.ai",
-	"X-Title": "Kilo Code",
+	"X-Title": "Coppy Code",
 	[X_KILOCODE_VERSION]: Package.version,
 	"User-Agent": `Kilo-Code/${Package.version}`,
 }

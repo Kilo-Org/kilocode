@@ -1,6 +1,6 @@
 # Documentation Tasks
 
-This file documents common repetitive tasks and workflows for maintaining the Kilo Code documentation site.
+This file documents common repetitive tasks and workflows for maintaining the Coppy Code documentation site.
 
 ## Add New Provider Documentation
 
@@ -16,7 +16,7 @@ This file documents common repetitive tasks and workflows for maintaining the Ki
    - Introduction and website link
    - Getting an API Key section
    - Supported Models section
-   - Configuration in Kilo Code section
+   - Configuration in Coppy Code section
    - Tips and Notes section
 3. Add provider to the Model Providers section in `sidebars.ts`
 4. Update constants file if new URLs are needed
@@ -29,7 +29,7 @@ This file documents common repetitive tasks and workflows for maintaining the Ki
 sidebar_label: Provider Name
 ---
 
-# Using [Provider Name] With Kilo Code
+# Using [Provider Name] With Coppy Code
 
 Brief description of the provider and their strengths.
 
@@ -41,7 +41,7 @@ Brief description of the provider and their strengths.
 ## Supported Models
 [List of supported models]
 
-## Configuration in Kilo Code
+## Configuration in Coppy Code
 [Setup instructions]
 
 ## Tips and Notes

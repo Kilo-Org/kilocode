@@ -1,7 +1,7 @@
 {
 	"name": "@kilocode/cli",
 	"version": "0.5.0",
-	"description": "Terminal User Interface for Kilo Code",
+	"description": "Terminal User Interface for Coppy Code",
 	"type": "module",
 	"main": "index.js",
 	"bin": {
@@ -130,7 +130,7 @@
 	},
 	"keywords": ["cli", "tui", "terminal", "ai", "assistant", "kilocode", "kilo", "ink"],
 	"author": {
-		"name": "Kilo Code"
+		"name": "Coppy Code"
 	},
 	"homepage": "https://kilocode.ai/cli",
 	"bugs": {

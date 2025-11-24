@@ -2,15 +2,15 @@
 sidebar_label: 免费和预算模型
 ---
 
-# 免费和低成本使用 Kilo Code
+# 免费和低成本使用 Coppy Code
 
-**为什么这很重要：** 在开发过程中，AI 模型成本可能会迅速累积。本指南展示了如何通过免费模型、经济实惠的替代方案和智能使用策略，在最小化或消除成本的同时有效使用 Kilo Code。
+**为什么这很重要：** 在开发过程中，AI 模型成本可能会迅速累积。本指南展示了如何通过免费模型、经济实惠的替代方案和智能使用策略，在最小化或消除成本的同时有效使用 Coppy Code。
 
 ## 完全免费的选项
 
 ### Grok Code Fast 1
 
-这款前沿 AI 模型在 Kilo Code 中限时 100% 免费。[查看博客文章了解更多信息](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free)。
+这款前沿 AI 模型在 Coppy Code 中限时 100% 免费。[查看博客文章了解更多信息](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free)。
 
 ### OpenRouter 免费层级模型
 
@@ -20,7 +20,7 @@ OpenRouter 免费提供了几种具有慷慨额度的模型。**注意：** 你�
 
 1. 创建一个免费的 [OpenRouter 账户](https://openrouter.ai)
 2. 从仪表板获取你的 API 密钥
-3. 使用 OpenRouter 供应商配置 Kilo Code
+3. 使用 OpenRouter 供应商配置 Coppy Code
 
 **可用的免费模型：**
 
@@ -241,7 +241,7 @@ OpenRouter 免费提供了几种具有慷慨额度的模型。**注意：** 你�
 ### 快速设置指南
 
 1. **创建 OpenRouter 账户** 以获取免费模型
-2. **在 Kilo Code 中配置多个提供商**
+2. **在 Coppy Code 中配置多个提供商**
 3. **设置 API 配置档案** 以便轻松切换
 4. **在需要时升级到预算模型**
 5. **为复杂工作预留高级模型**

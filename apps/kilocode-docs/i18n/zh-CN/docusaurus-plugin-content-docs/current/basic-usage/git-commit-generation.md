@@ -1,6 +1,6 @@
 # 生成提交消息
 
-根据您暂存的 git 更改自动生成描述性提交消息。Kilo Code 会分析您暂存的文件并创建遵循最佳实践的约定式提交消息。
+根据您暂存的 git 更改自动生成描述性提交消息。Coppy Code 会分析您暂存的文件并创建遵循最佳实践的约定式提交消息。
 
 :::info
 此功能仅分析**暂存的更改**。在生成提交消息之前，请务必使用 `git add` 或通过 `VS Code` 界面暂存您的文件。
@@ -18,7 +18,7 @@ git 提交消息生成器：
 ### 生成提交消息
 
 1.  使用 `git add` 或 VS Code git 界面暂存您的更改
-2.  在 VS Code 源代码管理面板中，查找提交消息字段旁边的 `Kilo Code` 徽标)
+2.  在 VS Code 源代码管理面板中，查找提交消息字段旁边的 `Coppy Code` 徽标)
 3.  单击徽标以生成提交消息
 
 
@@ -143,4 +143,4 @@ git add .
 ## 相关功能
 
 - [API 配置配置文件](/features/api-configuration-profiles) - 使用不同的模型进行提交生成
-- [设置管理](/features/settings-management) - 管理您的所有 Kilo Code 首选项
+- [设置管理](/features/settings-management) - 管理您的所有 Coppy Code 首选项

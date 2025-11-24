@@ -13,20 +13,20 @@ virtual quota fallback提供商是一个强大的元提供商，允许你配置�
 virtual quota fallback提供商不直接连接到 LLM 服务。相反，它充当你其他已配置提供商档案的管理者。
 
 - **优先级列表：** 你创建一个现有提供商档案的优先级列表。列表顶部的提供商将首先被使用。
-- **使用跟踪：** 你可以根据每分钟、每小时或每天的令牌数或请求数为每个提供商设置自定义限制。Kilo Code 会根据这些限制跟踪每个提供商的使用情况。
+- **使用跟踪：** 你可以根据每分钟、每小时或每天的令牌数或请求数为每个提供商设置自定义限制。Coppy Code 会根据这些限制跟踪每个提供商的使用情况。
 - **自动回退：** 当当前活动的提供商超过其定义的限制之一或返回 API 错误时，系统会自动暂时停用它，并切换到列表中的下一个可用提供商。
 - **通知：** 每当发生自动切换时，你将在 VS Code 中收到一条信息消息，告知你当前活动的提供商。
 
 ## 先决条件
 
-在配置此提供商之前，你必须已经在 Kilo Code 中配置了至少一个其他 API 提供商作为单独的档案。只有在有其他档案可供管理时，此提供商才有用。
+在配置此提供商之前，你必须已经在 Coppy Code 中配置了至少一个其他 API 提供商作为单独的档案。只有在有其他档案可供管理时，此提供商才有用。
 
-## 在 Kilo Code 中配置
+## 在 Coppy Code 中配置
 
-1.  **打开 Kilo Code 设置：** 点击 Kilo Code 面板中的齿轮图标 (<Codicon name="gear" />)。
+1.  **打开 Coppy Code 设置：** 点击 Coppy Code 面板中的齿轮图标 (<Codicon name="gear" />)。
 2.  **选择提供商：** 从 "API 提供商" 下拉菜单中选择 "virtual quota fallback"。这将打开其专用配置面板。
 
-<img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="Kilo Code 设置中的virtual quota fallback下拉选择" width="600" />
+<img src="/docs/img/providers/virtualQuotaSelectDropdown.png" alt="Coppy Code 设置中的virtual quota fallback下拉选择" width="600" />
 
 3.  **添加提供商档案：**
 
@@ -46,7 +46,7 @@ virtual quota fallback提供商不直接连接到 LLM 服务。相反，它充�
 
 6.  **添加更多提供商：** 重复步骤 3-5 来构建你的完整回退链。你可以添加任意数量的已配置档案。
 
-<img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="Kilo Code 设置中的virtual quota fallback配置" width="600" />
+<img src="/docs/img/providers/virtualQuotaFullConfig.png" alt="Coppy Code 设置中的virtual quota fallback配置" width="600" />
 
 ## 使用监控
 
@@ -69,7 +69,7 @@ virtual quota fallback提供商不直接连接到 LLM 服务。相反，它充�
 - 将 "OpenAI 付费" 放在列表的第二位，不定义任何限制。
 
 **结果：**
-Kilo Code 将把所有请求发送到 Chutes AI。一旦你在一小时内使用的令牌数超过 5,000 个，它将自动切换到你的 OpenAI 账户。当配额窗口在下一小时重置时，系统将切换回 Chutes AI。
+Coppy Code 将把所有请求发送到 Chutes AI。一旦你在一小时内使用的令牌数超过 5,000 个，它将自动切换到你的 OpenAI 账户。当配额窗口在下一小时重置时，系统将切换回 Chutes AI。
 
 ## 提示和注意事项
 

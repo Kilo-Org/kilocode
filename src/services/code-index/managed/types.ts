@@ -65,7 +65,7 @@ export interface ManagedIndexingConfig {
 	organizationId: string
 	/** Project ID */
 	projectId: string
-	/** Kilo Code authentication token */
+	/** Coppy Code authentication token */
 	kilocodeToken: string
 	/** Workspace root path */
 	workspacePath: string

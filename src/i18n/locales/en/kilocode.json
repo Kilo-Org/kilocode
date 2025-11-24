@@ -51,7 +51,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Kilo Code commit message generator activated",
+		"activated": "Coppy Code commit message generator activated",
 		"gitNotFound": "⚠️ Git repository not found or git not available",
 		"gitInitError": "⚠️ Git initialization error: {{error}}",
 		"generating": "Kilo: Generating commit message...",
@@ -62,7 +62,7 @@
 		"activationFailed": "Kilo: Failed to activate message generator: {{error}}",
 		"providerRegistered": "Kilo: Commit message provider registered",
 		"errors": {
-			"connectionFailed": "Failed to connect to Kilo Code extension",
+			"connectionFailed": "Failed to connect to Coppy Code extension",
 			"timeout": "Request timed out after 30 seconds",
 			"invalidResponse": "Invalid response format received from extension",
 			"missingMessage": "No commit message received from extension",
@@ -88,7 +88,7 @@
 		"progress": {
 			"title": "Generating Commit Message",
 			"analyzing": "Analyzing changes...",
-			"connecting": "Connecting to Kilo Code...",
+			"connecting": "Connecting to Coppy Code...",
 			"generating": "Generating commit message..."
 		},
 		"ui": {
@@ -98,12 +98,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(sparkle) Coppy Code Autocomplete",
+			"disabled": "$(circle-slash) Coppy Code Autocomplete",
+			"warning": "$(warning) Coppy Code Autocomplete",
 			"tooltip": {
-				"basic": "Kilo Code Autocomplete",
-				"disabled": "Kilo Code Autocomplete (disabled)",
+				"basic": "Coppy Code Autocomplete",
+				"disabled": "Coppy Code Autocomplete (disabled)",
 				"tokenError": "A valid token must be set to use Autocomplete",
 				"lastCompletion": "Last suggestion:",
 				"sessionTotal": "Session total cost:",
@@ -115,36 +115,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Kilo Code Autocomplete {{status}}",
+		"toggleMessage": "Coppy Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Kilo Code",
+			"title": "Coppy Code",
 			"analyzing": "Analyzing your code...",
 			"generating": "Generating suggested edits...",
 			"processing": "Processing suggested edits...",
 			"showing": "Displaying suggested edits..."
 		},
 		"input": {
-			"title": "Kilo Code: Quick Task",
+			"title": "Coppy Code: Quick Task",
 			"placeholder": "e.g., 'refactor this function to be more efficient'"
 		},
 		"commands": {
-			"generateSuggestions": "Kilo Code: Generate Suggested Edits",
+			"generateSuggestions": "Coppy Code: Generate Suggested Edits",
 			"displaySuggestions": "Display Suggested Edits",
 			"cancelSuggestions": "Cancel Suggested Edits",
 			"applyCurrentSuggestion": "Apply Current Suggested Edit",
 			"applyAllSuggestions": "Apply All Suggested Edits",
-			"category": "Kilo Code"
+			"category": "Coppy Code"
 		},
 		"codeAction": {
-			"title": "Kilo Code: Suggested Edits"
+			"title": "Coppy Code: Suggested Edits"
 		},
 		"chatParticipant": {
-			"fullName": "Kilo Code Agent",
+			"fullName": "Coppy Code Agent",
 			"name": "Agent",
 			"description": "I can help you with quick tasks and suggested edits."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "The Kilo Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
+			"message": "The Coppy Code Autocomplete is being blocked by a conflict with GitHub Copilot. To fix this, you must disable Copilot's inline suggestions.",
 			"disableCopilot": "Disable Copilot",
 			"disableInlineAssist": "Disable Autocomplete"
 		}

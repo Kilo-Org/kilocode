@@ -1,8 +1,8 @@
 # Product Overview
 
-## What Kilo Code Is
+## What Coppy Code Is
 
-Kilo Code is an open source AI agent VS Code extension that transforms how developers write code by providing intelligent, context-aware assistance directly within the VS Code editor. It serves as a persistent development partner that can understand projects, generate code, automate tasks, and provide suggestions.
+Coppy Code is an open source AI agent VS Code extension that transforms how developers write code by providing intelligent, context-aware assistance directly within the VS Code editor. It serves as a persistent development partner that can understand projects, generate code, automate tasks, and provide suggestions.
 
 ## Problems It Solves
 
@@ -18,10 +18,10 @@ Kilo Code is an open source AI agent VS Code extension that transforms how devel
 - **Inefficient Context Gathering**: Without memory, AI must re-analyze entire codebases repeatedly, which is slow and expensive
 - **Inconsistent Understanding**: Lack of persistent context leads to inconsistent suggestions and solutions
 
-## How Kilo Code Works
+## How Coppy Code Works
 
 ### Core Interaction Model
-Users interact with Kilo Code through a chat interface within VS Code, using natural language to describe what they want to accomplish. Kilo Code then uses specialized modes and tools to fulfill requests.
+Users interact with Coppy Code through a chat interface within VS Code, using natural language to describe what they want to accomplish. Coppy Code then uses specialized modes and tools to fulfill requests.
 
 ### Mode System
 - **Code Mode**: General-purpose coding tasks, file editing, project creation
@@ -31,7 +31,7 @@ Users interact with Kilo Code through a chat interface within VS Code, using nat
 - **Custom Modes**: Unlimited specialized personas for specific workflows
 
 ### Tool Ecosystem
-Kilo Code uses a sophisticated tool system organized into groups:
+Coppy Code uses a sophisticated tool system organized into groups:
 - **Read Tools**: File exploration, code analysis, project understanding
 - **Edit Tools**: Code modification, file creation, precise surgical edits
 - **Browser Tools**: Web automation and testing

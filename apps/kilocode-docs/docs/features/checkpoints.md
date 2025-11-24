@@ -1,6 +1,6 @@
 # Checkpoints
 
-Checkpoints automatically version your workspace files during Kilo Code tasks, enabling non-destructive exploration of AI suggestions and easy recovery from unwanted changes.
+Checkpoints automatically version your workspace files during Coppy Code tasks, enabling non-destructive exploration of AI suggestions and easy recovery from unwanted changes.
 
 Checkpoints let you:
 - Safely experiment with AI-suggested changes
@@ -18,16 +18,16 @@ Checkpoints let you:
 
 ## Configuration Options
 
-Access checkpoint settings in Kilo Code settings under the "Checkpoints" section:
+Access checkpoint settings in Coppy Code settings under the "Checkpoints" section:
 
 1. Open Settings by clicking the gear icon <Codicon name="gear" /> → Checkpoints
 2. Check or uncheck the "Enable automatic checkpoints" checkbox
 
-   <img src="/docs/img/checkpoints/checkpoints.png" alt="Checkpoint settings in Kilo Code configuration" width="500" />
+   <img src="/docs/img/checkpoints/checkpoints.png" alt="Checkpoint settings in Coppy Code configuration" width="500" />
 
 ## How Checkpoints Work
 
-Kilo Code captures snapshots of your project's state using a shadow Git repository, separate from your main version control system. These snapshots, called checkpoints, automatically record changes throughout your AI-assisted workflow—whenever tasks begin, files change, or commands run.
+Coppy Code captures snapshots of your project's state using a shadow Git repository, separate from your main version control system. These snapshots, called checkpoints, automatically record changes throughout your AI-assisted workflow—whenever tasks begin, files change, or commands run.
 
 Checkpoints are stored as Git commits in the shadow repository, capturing:
 
@@ -88,7 +88,7 @@ To restore a project to a previous checkpoint state:
 
 ### Limitations and Considerations
 
-- **Scope**: Checkpoints only capture changes made during active Kilo Code tasks
+- **Scope**: Checkpoints only capture changes made during active Coppy Code tasks
 - **External changes**: Modifications made outside of tasks (manual edits, other tools) aren't included
 - **Large files**: Very large binary files may impact performance
 - **Unsaved work**: Restoration will overwrite any unsaved changes in your workspace
@@ -111,7 +111,7 @@ The checkpoint system consists of:
 
 ### Restoration Process
 
-When restoration executes, Kilo Code:
+When restoration executes, Coppy Code:
 - Performs a hard reset to the specified checkpoint commit
 - Copies all files from the shadow repository to your workspace
 - Updates internal checkpoint tracking state

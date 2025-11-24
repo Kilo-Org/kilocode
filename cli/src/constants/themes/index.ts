@@ -1,5 +1,5 @@
 /**
- * Unified Theme System for Kilo Code CLI
+ * Unified Theme System for Coppy Code CLI
  *
  * This module provides a centralized theme structure that consolidates
  * color usage across all UI components into semantic categories.

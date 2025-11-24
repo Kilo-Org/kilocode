@@ -2,9 +2,9 @@
 sidebar_label: VS Code Language Model API
 ---
 
-# Using VS Code Language Model API With Kilo Code
+# Using VS Code Language Model API With Coppy Code
 
-Kilo Code includes *experimental* support for the [VS Code Language Model API](https://code.visualstudio.com/api/language-extensions/language-model-access). This API allows extensions to provide access to language models directly within VS Code.  This means you can potentially use models from:
+Coppy Code includes *experimental* support for the [VS Code Language Model API](https://code.visualstudio.com/api/language-extensions/language-model-access). This API allows extensions to provide access to language models directly within VS Code.  This means you can potentially use models from:
 
 *   **GitHub Copilot:** If you have a Copilot subscription and the extension installed.
 *   **Other VS Code Extensions:** Any extension that implements the Language Model API.
@@ -20,7 +20,7 @@ Kilo Code includes *experimental* support for the [VS Code Language Model API](h
 
 ## Configuration
 
-1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
+1.  **Open Coppy Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Coppy Code panel.
 2.  **Select Provider:** Choose "VS Code LM API" from the "API Provider" dropdown.
 3.  **Select Model:**  The "Language Model" dropdown will (eventually) list available models. The format is `vendor/family`. For example, if you have Copilot, you might see options like:
     *   `copilot - claude-3.5-sonnet`
@@ -31,10 +31,10 @@ Kilo Code includes *experimental* support for the [VS Code Language Model API](h
 ## Limitations
 
 *   **Experimental API:**  The VS Code Language Model API is still under development.  Expect changes and potential instability.
-*   **Extension Dependent:**  This feature relies entirely on other extensions providing models.  Kilo Code cannot directly control which models are available.
+*   **Extension Dependent:**  This feature relies entirely on other extensions providing models.  Coppy Code cannot directly control which models are available.
 *   **Limited Functionality:**  The VS Code Language Model API may not support all the features of other API providers (e.g., image input, streaming, detailed usage information).
-*   **No Direct Cost Control:**  You are subject to the pricing and terms of the extension providing the model.  Kilo Code cannot directly track or limit costs.
-*   **GitHub Copilot Rate Limits:** When using the VS Code LM API with GitHub Copilot, be aware that GitHub may impose rate limits on Copilot usage. These limits are controlled by GitHub, not Kilo Code.
+*   **No Direct Cost Control:**  You are subject to the pricing and terms of the extension providing the model.  Coppy Code cannot directly track or limit costs.
+*   **GitHub Copilot Rate Limits:** When using the VS Code LM API with GitHub Copilot, be aware that GitHub may impose rate limits on Copilot usage. These limits are controlled by GitHub, not Coppy Code.
 
 
 ## Troubleshooting

@@ -146,7 +146,7 @@ describe("URL functions", () => {
 			// Use a token that looks like JWT but has invalid JSON payload
 			const result = getKiloUrlFromToken("https://api.kilocode.ai/api/test", "header.invalid-json.signature")
 			expect(result).toBe("https://api.kilocode.ai/api/test")
-			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Kilo Code token")
+			expect(consoleSpy).toHaveBeenCalledWith("Failed to get base URL from Coppy Code token")
 			consoleSpy.mockRestore()
 		})
 	})

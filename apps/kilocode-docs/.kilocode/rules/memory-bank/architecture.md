@@ -2,7 +2,7 @@
 
 ## System Architecture
 
-The Kilo Code documentation site is built using Docusaurus 3.8.1, a modern static site generator optimized for documentation websites. The architecture follows a standard Docusaurus pattern with custom enhancements for the Kilo Code brand and functionality.
+The Coppy Code documentation site is built using Docusaurus 3.8.1, a modern static site generator optimized for documentation websites. The architecture follows a standard Docusaurus pattern with custom enhancements for the Coppy Code brand and functionality.
 
 ## Project Structure
 

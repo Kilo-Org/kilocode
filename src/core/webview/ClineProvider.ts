@@ -1184,7 +1184,7 @@ ${prompt}
 						window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 						window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 					</script>
-					<title>Kilo Code</title>
+					<title>Coppy Code</title>
 				</head>
 				<body>
 					<div id="root"></div>
@@ -1260,7 +1260,7 @@ ${prompt}
 				window.MATERIAL_ICONS_BASE_URI = "${materialIconsUri}"
 				window.KILOCODE_BACKEND_BASE_URL = "${process.env.KILOCODE_BACKEND_BASE_URL ?? ""}"
 			</script>
-            <title>Kilo Code</title>
+            <title>Coppy Code</title>
           </head>
           <body>
             <noscript>You need to enable JavaScript to run this app.</noscript>
@@ -1638,7 +1638,7 @@ ${prompt}
 			kilocodeToken: token,
 		})
 
-		vscode.window.showInformationMessage("Kilo Code successfully configured!")
+		vscode.window.showInformationMessage("Coppy Code successfully configured!")
 
 		if (this.getCurrentTask()) {
 			this.getCurrentTask()!.api = buildApiHandler({
@@ -2572,7 +2572,7 @@ ${prompt}
 			return
 		}
 
-		// Logout from Kilo Code provider before resetting (same approach as ProfileView logout)
+		// Logout from Coppy Code provider before resetting (same approach as ProfileView logout)
 		const { apiConfiguration, currentApiConfigName = "default" } = await this.getState()
 		if (apiConfiguration.kilocodeToken) {
 			await this.upsertProviderProfile(currentApiConfigName, {

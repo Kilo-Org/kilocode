@@ -24,7 +24,7 @@ describe("TerminalProcess", () => {
 			shellIntegration: {
 				executeCommand: vi.fn(),
 			},
-			name: "Kilo Code",
+			name: "Coppy Code",
 			processId: Promise.resolve(123),
 			creationOptions: {},
 			exitStatus: undefined,

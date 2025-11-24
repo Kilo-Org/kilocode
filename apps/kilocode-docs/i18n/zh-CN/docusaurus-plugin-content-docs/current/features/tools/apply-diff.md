@@ -17,7 +17,7 @@
 
 ## 使用场景
 
-- 当Kilo Code需要对现有代码进行精确更改而不重写整个文件时。
+- 当Coppy Code需要对现有代码进行精确更改而不重写整个文件时。
 - 在重构代码的特定部分同时保持周围上下文时。
 - 以手术般的精度修复现有代码中的错误时。
 - 实现仅修改文件某些部分的功能增强时。
@@ -61,7 +61,7 @@
 
 ## Diff策略
 
-Kilo Code使用以下策略来应用diff：
+Coppy Code使用以下策略来应用diff：
 
 ### MultiSearchReplaceDiffStrategy
 

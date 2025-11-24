@@ -1,8 +1,8 @@
-# Kilo Code CLI
+# Coppy Code CLI
 
 Orchestrate agents from your terminal. Plan, debug, and code fast with keyboard-first navigation on the command line.
 
-The Kilo Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
+The Coppy Code CLI uses the same underlying technology that powers the IDE extensions, so you can expect the same workflow to handle agentic coding tasks from start to finish.
 
 ## Install
 
@@ -23,7 +23,7 @@ kilocode --workspace /path/to/project
 
 to start the CLI and begin a new task with your preferred model and relevant mode.
 
-## What you can do with Kilo Code CLI
+## What you can do with Coppy Code CLI
 
 - **Plan and execute code changes without leaving your terminal.** Use your command line to make edits to your project without opening your IDE.
 - **Switch between hundreds of LLMs without constraints.** Other CLI tools only work with one model or curate opinionated lists. With Kilo, you can switch models without booting up another tool.
@@ -65,7 +65,7 @@ You can also use the `/config` slash command during an interactive session, whic
 
 ## Parallel mode
 
-Parallel mode allows multiple Kilo Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Kilo Code instances as you need! Once finished, changes will be available on a separate git branch.
+Parallel mode allows multiple Coppy Code instances to work in parallel on the same directory, without conflicts. You can spawn as many Coppy Code instances as you need! Once finished, changes will be available on a separate git branch.
 
 ```bash
 # Prerequisite: must be within a valid git repository
@@ -85,7 +85,7 @@ kilocode --parallel --auto "improve abc"
 
 ## Autonomous mode (Non-Interactive)
 
-Autonomous mode allows Kilo Code to run in automated environments like CI/CD pipelines without requiring user interaction.
+Autonomous mode allows Coppy Code to run in automated environments like CI/CD pipelines without requiring user interaction.
 
 ```bash
 # Run in autonomous mode with a prompt
@@ -239,7 +239,7 @@ This instructs the AI to proceed without user input.
 
 ```yaml
 # GitHub Actions example
-- name: Run Kilo Code
+- name: Run Coppy Code
   run: |
       echo "Implement the new feature" | kilocode --auto --timeout 600
 ```

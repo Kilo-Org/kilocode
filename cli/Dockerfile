@@ -1,4 +1,4 @@
-# Kilo Code CLI Docker Image
+# Coppy Code CLI Docker Image
 FROM node:20.19.2-bookworm-slim
 
 # Build arguments for metadata (all optional with defaults)
@@ -10,9 +10,9 @@ ARG VERSION="latest"
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 LABEL org.opencontainers.image.revision="${VCS_REF}"
 LABEL org.opencontainers.image.version="${VERSION}"
-LABEL org.opencontainers.image.title="Kilo Code CLI"
-LABEL org.opencontainers.image.description="Docker image for Kilo Code CLI with Chromium support"
-LABEL org.opencontainers.image.vendor="Kilo Code"
+LABEL org.opencontainers.image.title="Coppy Code CLI"
+LABEL org.opencontainers.image.description="Docker image for Coppy Code CLI with Chromium support"
+LABEL org.opencontainers.image.vendor="Coppy Code"
 LABEL org.opencontainers.image.url="https://kilocode.ai/docs/cli"
 LABEL org.opencontainers.image.documentation="https://kilocode.ai/docs/cli"
 LABEL org.opencontainers.image.source="https://github.com/Kilo-Org/kilocode"

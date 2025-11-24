@@ -5,13 +5,13 @@ sidebar_label: MCP Overview
 
 # Model Context Protocol (MCP)
 
-The Model Context Protocol (MCP) is a standard for extending Kilo Code's capabilities by connecting to external tools and services. MCP servers provide additional tools and resources that help Kilo Code accomplish tasks beyond its built-in capabilities, such as accessing databases, custom APIs, and specialized functionality.
+The Model Context Protocol (MCP) is a standard for extending Coppy Code's capabilities by connecting to external tools and services. MCP servers provide additional tools and resources that help Coppy Code accomplish tasks beyond its built-in capabilities, such as accessing databases, custom APIs, and specialized functionality.
 
 ## MCP Documentation
 
 This documentation is organized into several sections:
 
-* [**Using MCP in Kilo Code**](/features/mcp/using-mcp-in-kilo-code) - Comprehensive guide to configuring, enabling, and managing MCP servers with Kilo Code. Includes server settings, tool approval, and troubleshooting.
+* [**Using MCP in Coppy Code**](/features/mcp/using-mcp-in-kilo-code) - Comprehensive guide to configuring, enabling, and managing MCP servers with Coppy Code. Includes server settings, tool approval, and troubleshooting.
 
 * [**What is MCP?**](/features/mcp/what-is-mcp) - Clear explanation of the Model Context Protocol, its client-server architecture, and how it enables AI systems to interact with external tools.
 

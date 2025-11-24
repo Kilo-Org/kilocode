@@ -2,7 +2,7 @@
 
 ## Context
 
-Historically, Kilo Code has relied on XML-style function and tool definitions embedded in the system prompt to inform the model about tools available to accomplish tasks. The model was given instructions and examples about how to use these tools:
+Historically, Coppy Code has relied on XML-style function and tool definitions embedded in the system prompt to inform the model about tools available to accomplish tasks. The model was given instructions and examples about how to use these tools:
 
 ```xml
 <attempt_completion>
@@ -18,7 +18,7 @@ However, it also suffers from numerous downsides. Its effective replacement is J
 
 ## What
 
-Kilo Code recently implemented _experimental_ support for native function calling in 4.106.0.
+Coppy Code recently implemented _experimental_ support for native function calling in 4.106.0.
 
 ## Why?
 
@@ -41,10 +41,10 @@ Because of these risks and considerations, this capability is experiment, and of
 
 To enable and use native function calling, consider and perform the following:
 
-1. Ensure you are using a provider that has been enabled in Kilo Code for this experiment. As of Oct 21, 2025, they include:
+1. Ensure you are using a provider that has been enabled in Coppy Code for this experiment. As of Oct 21, 2025, they include:
 
 - OpenRouter
-- Kilo Code
+- Coppy Code
 - LM Studio
 - OpenAI Compatible
 - Z.ai

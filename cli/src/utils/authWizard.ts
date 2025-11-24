@@ -10,7 +10,7 @@ export default async function authWizard() {
 	let providerSpecificConfig: Record<string, string> = {}
 
 	const providerOptions = [
-		{ name: "Kilo Code", value: "kilocode" },
+		{ name: "Coppy Code", value: "kilocode" },
 		{ name: "zAI", value: "zai" },
 		{ name: "Other", value: "other" },
 	] as const

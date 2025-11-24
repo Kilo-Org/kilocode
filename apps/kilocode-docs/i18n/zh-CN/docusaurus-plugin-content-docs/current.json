@@ -7,9 +7,9 @@
     "message": "入门",
     "description": "The label for category Getting Started in sidebar tutorialSidebar"
   },
-  "sidebar.tutorialSidebar.category.Using Kilo Code": {
-    "message": "使用 Kilo Code",
-    "description": "The label for category Using Kilo Code in sidebar tutorialSidebar"
+  "sidebar.tutorialSidebar.category.Using Coppy Code": {
+    "message": "使用 Coppy Code",
+    "description": "The label for category Using Coppy Code in sidebar tutorialSidebar"
   },
   "sidebar.tutorialSidebar.category.Basic Features": {
     "message": "基本功能",
@@ -23,9 +23,9 @@
     "message": "高级用法",
     "description": "The label for category Advanced Usage in sidebar tutorialSidebar"
   },
-  "sidebar.tutorialSidebar.category.Customizing Kilo Code": {
-    "message": "自定义 Kilo Code",
-    "description": "The label for category Customizing Kilo Code in sidebar tutorialSidebar"
+  "sidebar.tutorialSidebar.category.Customizing Coppy Code": {
+    "message": "自定义 Coppy Code",
+    "description": "The label for category Customizing Coppy Code in sidebar tutorialSidebar"
   },
   "sidebar.tutorialSidebar.category.Advanced Context Features": {
     "message": "高级上下文功能",
@@ -39,9 +39,9 @@
     "message": "自定义",
     "description": "The label for category Customization in sidebar tutorialSidebar"
   },
-  "sidebar.tutorialSidebar.category.Extending Kilo Code": {
-    "message": "扩展 Kilo Code",
-    "description": "The label for category Extending Kilo Code in sidebar tutorialSidebar"
+  "sidebar.tutorialSidebar.category.Extending Coppy Code": {
+    "message": "扩展 Coppy Code",
+    "description": "The label for category Extending Coppy Code in sidebar tutorialSidebar"
   },
   "sidebar.tutorialSidebar.category.Model Providers": {
     "message": "模型供应商",

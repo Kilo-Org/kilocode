@@ -79,16 +79,16 @@ Consider a task requiring multiple services: "Check recent commits, create a JIR
 - Maintains context across the entire workflow
 - New tools can be swapped in without code changes
 
-## Why Kilo Code Uses MCP
+## Why Coppy Code Uses MCP
 
-Kilo Code leverages MCP to provide:
+Coppy Code leverages MCP to provide:
 
 1. **Extensibility**: Add unlimited custom tools without waiting for official integration
 2. **Contextual awareness**: Tools can access conversation history and project context
 3. **Simplified integration**: One standard protocol rather than numerous API patterns
 4. **Runtime flexibility**: Discover and use new capabilities on-the-fly
 
-MCP creates a universal connector between Kilo Code and external services, with REST APIs often powering those services behind the scenes.
+MCP creates a universal connector between Coppy Code and external services, with REST APIs often powering those services behind the scenes.
 
 ## Conclusion: Complementary, Not Competing Technologies
 

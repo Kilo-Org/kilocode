@@ -1,9 +1,9 @@
 # Using Local Models
 
-Kilo Code supports running language models locally on your own machine using [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/).  This offers several advantages:
+Coppy Code supports running language models locally on your own machine using [Ollama](https://ollama.com/) and [LM Studio](https://lmstudio.ai/).  This offers several advantages:
 
 *   **Privacy:** Your code and data never leave your computer.
-*   **Offline Access:**  You can use Kilo Code even without an internet connection.
+*   **Offline Access:**  You can use Coppy Code even without an internet connection.
 *   **Cost Savings:**  Avoid API usage fees associated with cloud-based models.
 *   **Customization:**  Experiment with different models and configurations.
 
@@ -16,7 +16,7 @@ Kilo Code supports running language models locally on your own machine using [Ol
 
 ## Supported Local Model Providers
 
-Kilo Code currently supports two main local model providers:
+Coppy Code currently supports two main local model providers:
 
 1.  **Ollama:**  A popular open-source tool for running large language models locally.  It supports a wide range of models.
 2.  **LM Studio:**  A user-friendly desktop application that simplifies the process of downloading, configuring, and running local models.  It also provides a local server that emulates the OpenAI API.
@@ -31,7 +31,7 @@ Both providers offer similar capabilities but with different user interfaces and
 
 ## Troubleshooting
 
-*   **"No connection could be made because the target machine actively refused it":**  This usually means that the Ollama or LM Studio server isn't running, or is running on a different port/address than Kilo Code is configured to use.  Double-check the Base URL setting.
+*   **"No connection could be made because the target machine actively refused it":**  This usually means that the Ollama or LM Studio server isn't running, or is running on a different port/address than Coppy Code is configured to use.  Double-check the Base URL setting.
 
 *   **Slow Response Times:** Local models can be slower than cloud-based models, especially on less powerful hardware.  If performance is an issue, try using a smaller model.
 

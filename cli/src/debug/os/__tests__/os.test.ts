@@ -23,7 +23,7 @@ describe("debugOS", () => {
 		await debugOS()
 
 		expect(consoleLogSpy).toHaveBeenCalled()
-		expect(consoleLogSpy).toHaveBeenCalledWith("Kilo Code - OS Debug Tool") // kilocode_change
+		expect(consoleLogSpy).toHaveBeenCalledWith("Coppy Code - OS Debug Tool") // kilocode_change
 
 		// Check that various sections are logged
 		const allLogs = consoleLogSpy.mock.calls.map((call) => call[0]).join("\n")
