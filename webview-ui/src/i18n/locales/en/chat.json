@@ -202,7 +202,9 @@
 		"wantsToCreate": "Kilo Code wants to create a new file",
 		"wantsToInsert": "Kilo Code wants to insert content into this file",
 		"wantsToInsertWithLineNumber": "Kilo Code wants to insert content into this file at line {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file"
+		"wantsToInsertAtEnd": "Kilo Code wants to append content to the end of this file",
+		"wantsToDelete": "Kilo Code wants to delete this file",
+		"wantsToDeleteDirectory": "Kilo Code wants to delete this directory"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wants to view the top level files in this directory",

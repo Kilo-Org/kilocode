@@ -201,7 +201,9 @@
 		"didSearchReplace": "Kilo Code melakukan pencarian dan penggantian pada file ini",
 		"wantsToInsert": "Kilo Code ingin menyisipkan konten ke file ini",
 		"wantsToInsertWithLineNumber": "Kilo Code ingin menyisipkan konten ke file ini di baris {{lineNumber}}",
-		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini"
+		"wantsToInsertAtEnd": "Kilo Code ingin menambahkan konten ke akhir file ini",
+		"wantsToDelete": "Kilo Code ingin menghapus file ini",
+		"wantsToDeleteDirectory": "Kilo Code ingin menghapus direktori ini"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code ingin melihat file tingkat atas di direktori ini",

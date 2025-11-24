@@ -200,7 +200,9 @@
 		"didSearchReplace": "Kilo Code provedl hledání a nahrazení v tomto souboru:",
 		"wantsToInsert": "Kilo Code chce vložit obsah do tohoto souboru:",
 		"wantsToInsertWithLineNumber": "Kilo Code chce vložit obsah do tohoto souboru na řádek {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code chce přidat obsah na konec tohoto souboru:"
+		"wantsToInsertAtEnd": "Kilo Code chce přidat obsah na konec tohoto souboru:",
+		"wantsToDelete": "Kilo Code chce smazat tento soubor:",
+		"wantsToDeleteDirectory": "Kilo Code chce smazat tento adresář:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code chce zobrazit soubory nejvyšší úrovně v tomto adresáři:",

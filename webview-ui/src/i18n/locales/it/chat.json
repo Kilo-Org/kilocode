@@ -192,7 +192,9 @@
 		"wantsToGenerateImage": "Kilo Code vuole generare un'immagine",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vuole generare un'immagine fuori dall'area di lavoro",
 		"wantsToGenerateImageProtected": "Kilo Code vuole generare un'immagine in una posizione protetta",
-		"didGenerateImage": "Kilo Code ha generato un'immagine"
+		"didGenerateImage": "Kilo Code ha generato un'immagine",
+		"wantsToDelete": "Kilo Code vuole eliminare questo file",
+		"wantsToDeleteDirectory": "Kilo Code vuole eliminare questa directory"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code vuole visualizzare i file di primo livello in questa directory",
