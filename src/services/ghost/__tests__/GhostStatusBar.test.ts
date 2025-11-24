@@ -67,30 +67,30 @@ describe("GhostStatusBar", () => {
 		expect(statusBar.statusBar.text).toContain("(5)")
 	})
 
-	it("should format session duration correctly", () => {
-		statusBar.render()
-		const tooltip = statusBar.statusBar.tooltip as string
-		expect(tooltip).toContain("1m 5s")
-	})
-
 	it("should show completion count in tooltip", () => {
 		statusBar.render()
 		const tooltip = statusBar.statusBar.tooltip as string
-		expect(tooltip).toContain("Completions: 5")
+		expect(tooltip).toContain("Performed 5 completions")
 	})
 
-	it("should show session start time in tooltip", () => {
+	it("should show time range in tooltip", () => {
 		statusBar.render()
 		const tooltip = statusBar.statusBar.tooltip as string
-		expect(tooltip).toContain("Session started at:")
-		// Should contain a time string (format varies by locale)
-		expect(tooltip).toMatch(/Session started at: \d{1,2}:\d{2}/)
+		expect(tooltip).toMatch(/between \d{1,2}:\d{2}/)
+		expect(tooltip).toMatch(/and \d{1,2}:\d{2}/)
 	})
 
 	it("should show session total cost in tooltip", () => {
 		statusBar.render()
 		const tooltip = statusBar.statusBar.tooltip as string
 		expect(tooltip).toContain("$0.05")
+	})
+
+	it("should show provider and model in tooltip", () => {
+		statusBar.render()
+		const tooltip = statusBar.statusBar.tooltip as string
+		expect(tooltip).toContain("test-model")
+		expect(tooltip).toContain("test-provider")
 	})
 
 	it("should update completion count", () => {
@@ -105,12 +105,12 @@ describe("GhostStatusBar", () => {
 		expect(statusBar.statusBar.text).toContain("(0)")
 	})
 
-	it("should format duration in seconds when less than a minute", () => {
+	it("should show time range format", () => {
 		statusBar.update({ sessionStartTime: Date.now() - 30000 }) // 30 seconds ago
 		statusBar.render()
 		const tooltip = statusBar.statusBar.tooltip as string
-		expect(tooltip).toContain("Session duration: 30s")
-		expect(tooltip).not.toContain("0m")
+		expect(tooltip).toMatch(/Performed \d+ completions between/)
+		expect(tooltip).toContain("for a total cost of")
 	})
 
 	it("should show token error when hasValidToken is false", () => {
