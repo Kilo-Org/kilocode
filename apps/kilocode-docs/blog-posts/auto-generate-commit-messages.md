@@ -93,7 +93,7 @@ Better commit messages also mean better code reviews. When your teammates can qu
 
 The feature is available in Kilo Code since `v4.35` and became customizable in `v4.38`. Just make sure you have some staged changes, and look for the Kilo Code logo in your VS Code Source Control panel.
 
-Pro tip: Consider setting up a dedicated [API configuration profile](https://kilocode.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilocode.ai/p/2x-faster-prompt-enhancement-in-kilo)!
+Pro tip: Consider setting up a dedicated [API configuration profile](https://kilocode.ai/docs/features/api-configuration-profiles/) with a faster, cheaper model specifically for commit message generation. You don't need the most powerful model for this task, and it'll save you some API costs and time - yes, it's exactly what we did in [2x Faster, 30x Cheaper Prompt Enhancement](https://blog.kilo.ai/p/2x-faster-prompt-enhancement-in-kilo)!
 
 ## One More Thing
 

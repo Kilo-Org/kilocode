@@ -230,6 +230,7 @@ const ApiOptions = ({
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
 		chutesApiKey: apiConfiguration?.chutesApiKey,
+		syntheticApiKey: apiConfiguration?.syntheticApiKey,
 	})
 
 	//const { data: openRouterModelProviders } = useOpenRouterModelProviders(
@@ -282,6 +283,7 @@ const ApiOptions = ({
 				selectedProvider === "litellm" ||
 				selectedProvider === "deepinfra" ||
 				selectedProvider === "chutes" || // kilocode_change
+				selectedProvider === "synthetic" || // kilocode_change
 				selectedProvider === "roo"
 			) {
 				vscode.postMessage({ type: "requestRouterModels" })
@@ -795,12 +797,15 @@ const ApiOptions = ({
 			{selectedProvider === "fireworks" && (
 				<Fireworks apiConfiguration={apiConfiguration} setApiConfigurationField={setApiConfigurationField} />
 			)}
+
 			{
-				// kilocode_change start
 				selectedProvider === "synthetic" && (
 					<Synthetic
 						apiConfiguration={apiConfiguration}
 						setApiConfigurationField={setApiConfigurationField}
+						routerModels={routerModels}
+						organizationAllowList={organizationAllowList}
+						modelValidationError={modelValidationError}
 					/>
 				)
 				// kilocode_change end

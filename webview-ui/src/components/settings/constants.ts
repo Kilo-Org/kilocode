@@ -10,7 +10,6 @@ import {
 	// kilocode_change start
 	// geminiModels,
 	geminiCliModels,
-	syntheticModels,
 	// kilocode_change end
 	mistralModels,
 	openAiNativeModels,
@@ -38,7 +37,6 @@ export const MODELS_BY_PROVIDER: Partial<Record<ProviderName, Record<string, Mod
 	// kilocode_change start
 	// gemini: geminiModels,
 	"gemini-cli": geminiCliModels,
-	synthetic: syntheticModels,
 	// kilocode_change end
 	mistral: mistralModels,
 	"openai-native": openAiNativeModels,

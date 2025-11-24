@@ -269,6 +269,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
 				litellm: mockModels,
 				kilocode: mockModels,
@@ -372,6 +373,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
@@ -412,6 +414,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockResolvedValueOnce(mockModels) // deepinfra
 			.mockResolvedValueOnce(mockModels) // kilocode_change ovhcloud
 			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm
@@ -441,6 +444,13 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			success: false,
 			error: "Inception API error",
 			values: { provider: "inception" },
+		})
+
+		expect(mockClineProvider.postMessageToWebview).toHaveBeenCalledWith({
+			type: "singleRouterModelFetchResponse",
+			success: false,
+			error: "Synthetic API error",
+			values: { provider: "synthetic" },
 		})
 		// kilocode_change end
 
@@ -478,6 +488,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				// kilocode_change start
 				kilocode: mockModels,
 				inception: {},
+				synthetic: {},
 				gemini: mockModels,
 				ovhcloud: mockModels,
 				// kilocode_change end
@@ -500,6 +511,7 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 			.mockRejectedValueOnce(new Error("DeepInfra API error")) // deepinfra
 			.mockRejectedValueOnce(new Error("OVHcloud AI Endpoints error")) // ovhcloud // kilocode_change
 			.mockRejectedValueOnce(new Error("Inception API error")) // kilocode_change inception
+			.mockRejectedValueOnce(new Error("Synthetic API error")) // kilocode_change synthetic
 			.mockRejectedValueOnce(new Error("Roo API error")) // roo
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm

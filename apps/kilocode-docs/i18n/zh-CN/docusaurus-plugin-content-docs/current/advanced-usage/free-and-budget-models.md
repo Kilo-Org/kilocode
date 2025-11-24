@@ -10,7 +10,7 @@ sidebar_label: 免费和预算模型
 
 ### Grok Code Fast 1
 
-这款前沿 AI 模型在 Kilo Code 中限时 100% 免费。[查看博客文章了解更多信息](https://blog.kilocode.ai/p/grok-code-fast-get-this-frontier-ai-model-free)。
+这款前沿 AI 模型在 Kilo Code 中限时 100% 免费。[查看博客文章了解更多信息](https://blog.kilo.ai/p/grok-code-fast-get-this-frontier-ai-model-free)。
 
 ### OpenRouter 免费层级模型
 
