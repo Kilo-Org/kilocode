@@ -96,7 +96,7 @@ jobs:
                     # Extract changelog for current version
                     echo "Extracting changelog for version ${current_package_version}"
                     # Match version headers: ## [vX.X.X], ## [X.X.X], ## X.X.X (brackets and v are optional)
-                    changelog_content=$(sed -E -n "/## \\[?v?${current_package_version}\\]?/,/## /p" CHANGELOG.md | sed '$d')
+                    changelog_content=$(sed -E -n "/^## \\[?v?${current_package_version}\\]?/,/^## /p" CHANGELOG.md | sed '$d')
 
                     # If changelog extraction failed, use a default message
                     if [ -z "$changelog_content" ]; then
