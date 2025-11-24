@@ -3704,7 +3704,40 @@ export const webviewMessageHandler = async (
 				await provider.postMessageToWebview({ type: "keybindingsResponse", keybindings: {} })
 			}
 			break
+		} // kilocode_change start: Chat text area FIM autocomplete
+		case "requestChatCompletion": {
+			try {
+				const userText = message.text || ""
+				const requestId = message.requestId || ""
+
+				const { VisibleCodeTracker } = await import("../../services/ghost/context/VisibleCodeTracker")
+				const tracker = new VisibleCodeTracker(getCurrentCwd())
+				const visibleContext = await tracker.captureVisibleCode()
+
+				const { ChatTextAreaAutocomplete } = await import(
+					"../../services/ghost/chat-autocomplete/ChatTextAreaAutocomplete"
+				)
+				const autocomplete = new ChatTextAreaAutocomplete(provider.providerSettingsManager)
+				const { suggestion } = await autocomplete.getCompletion(userText, visibleContext)
+
+				await provider.postMessageToWebview({
+					type: "chatCompletionResult",
+					text: suggestion,
+					requestId,
+				})
+			} catch (error) {
+				provider.log(
+					`Error getting chat completion: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+				await provider.postMessageToWebview({
+					type: "chatCompletionResult",
+					text: "",
+					requestId: message.requestId || "",
+				})
+			}
+			break
 		}
+		// kilocode_change end: Chat text area FIM autocomplete
 		case "openCommandFile": {
 			try {
 				if (message.text) {

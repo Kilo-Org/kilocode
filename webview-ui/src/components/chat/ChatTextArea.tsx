@@ -19,6 +19,7 @@ import {
 	SearchResult,
 } from "@src/utils/context-mentions"
 import { convertToMentionPath } from "@/utils/path-mentions"
+import { escapeHtml } from "@/utils/highlight"
 import { DropdownOptionType, Button, StandardTooltip } from "@/components/ui" // kilocode_change
 
 import Thumbnails from "../common/Thumbnails"
@@ -221,6 +222,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 							}
 						}, 0)
 					}
+					// kilocode_change: FIM autocomplete ghost text result handler
+				} else if (message.type === "chatCompletionResult") {
+					// Only update if this is the response to our latest request
+					if (message.requestId === completionRequestIdRef.current) {
+						setGhostText(message.text || "")
+					}
 				}
 				// kilocode_change end
 			}
@@ -251,6 +258,12 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 		const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false)
 		const [isFocused, setIsFocused] = useState(false)
 		const [imageWarning, setImageWarning] = useState<string | null>(null) // kilocode_change
+		// kilocode_change start: FIM autocomplete ghost text
+		const [ghostText, setGhostText] = useState<string>("")
+		const completionDebounceRef = useRef<NodeJS.Timeout | null>(null)
+		const completionRequestIdRef = useRef<string>("")
+		const skipNextCompletionRef = useRef<boolean>(false) // Skip completion after accepting suggestion
+		// kilocode_change end: FIM autocomplete ghost text
 
 		// Use custom hook for prompt history navigation
 		const { handleHistoryNavigation, resetHistoryNavigation, resetOnInputChange } = usePromptHistory({
@@ -478,6 +491,34 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 		const handleKeyDown = useCallback(
 			(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+				// kilocode_change start: FIM autocomplete - Tab to accept ghost text
+				if (event.key === "Tab" && ghostText && !event.shiftKey) {
+					event.preventDefault()
+					// Skip the next completion request since we just accepted a suggestion
+					skipNextCompletionRef.current = true
+					try {
+						// Use execCommand to insert text while preserving undo history
+						if (document.execCommand && textAreaRef.current) {
+							const textarea = textAreaRef.current
+							// Move cursor to end and insert the ghost text
+							textarea.setSelectionRange(textarea.value.length, textarea.value.length)
+							document.execCommand("insertText", false, ghostText)
+						} else {
+							setInputValue(inputValue + ghostText)
+						}
+					} catch {
+						setInputValue(inputValue + ghostText)
+					}
+					setGhostText("")
+					return
+				}
+				// Clear ghost text on Escape
+				if (event.key === "Escape" && ghostText) {
+					setGhostText("")
+					// Don't return - let other handlers process Escape too
+				}
+				// kilocode_change end: FIM autocomplete
+
 				// kilocode_change start: pull slash commands from Cline
 				if (showSlashCommandsMenu) {
 					if (event.key === "Escape") {
@@ -660,6 +701,7 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				handleSlashCommandsSelect,
 				selectedSlashCommandsIndex,
 				slashCommandsQuery,
+				ghostText, // kilocode_change: FIM autocomplete
 				// kilocode_change end
 				onSend,
 				showContextMenu,
@@ -697,6 +739,33 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 
 				// Reset history navigation when user types
 				resetOnInputChange()
+
+				// kilocode_change start: FIM autocomplete - debounce completion requests
+				// Clear any existing ghost text when typing
+				setGhostText("")
+
+				// Clear any pending completion request
+				if (completionDebounceRef.current) {
+					clearTimeout(completionDebounceRef.current)
+				}
+
+				// Skip completion request if we just accepted a suggestion (Tab) or undid
+				if (skipNextCompletionRef.current) {
+					skipNextCompletionRef.current = false
+					// Don't request a new completion - wait for user to type more
+				} else if (newValue.length >= 5 && !newValue.startsWith("/") && !newValue.includes("@")) {
+					// Request new completion after debounce
+					completionDebounceRef.current = setTimeout(() => {
+						const requestId = Math.random().toString(36).substring(2, 9)
+						completionRequestIdRef.current = requestId
+						vscode.postMessage({
+							type: "requestChatCompletion",
+							text: newValue,
+							requestId,
+						})
+					}, 300) // 300ms debounce
+				}
+				// kilocode_change end: FIM autocomplete
 
 				const newCursorPosition = e.target.selectionStart
 				setCursorPosition(newCursorPosition)
@@ -933,10 +1002,16 @@ export const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			}
 			// kilocode_change end
 
+			// kilocode_change start: FIM autocomplete ghost text display
+			if (ghostText) {
+				processedText += `<span class="chat-ghost-text">${escapeHtml(ghostText)}</span>`
+			}
+			// kilocode_change end: FIM autocomplete ghost text display
+
 			highlightLayerRef.current.innerHTML = processedText
 			highlightLayerRef.current.scrollTop = textAreaRef.current.scrollTop
 			highlightLayerRef.current.scrollLeft = textAreaRef.current.scrollLeft
-		}, [customModes])
+		}, [customModes, ghostText])
 
 		useLayoutEffect(() => {
 			updateHighlights()

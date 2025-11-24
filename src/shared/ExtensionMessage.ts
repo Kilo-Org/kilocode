@@ -171,6 +171,7 @@ export interface ExtensionMessage {
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
 		| "managedIndexerState" // kilocode_change
+		| "chatCompletionResult" // kilocode_change: FIM completion result for chat text area
 	text?: string
 	// kilocode_change start
 	payload?:

@@ -138,6 +138,85 @@ export interface PromptResult {
 }
 
 // ============================================================================
+// Visible Code Context Types
+// ============================================================================
+
+/**
+ * Visible range in an editor viewport
+ */
+export interface VisibleRange {
+	startLine: number
+	endLine: number
+	content: string
+}
+
+/**
+ * Diff metadata for git-backed editors
+ */
+export interface DiffInfo {
+	/** The URI scheme (e.g., "git", "gitfs") */
+	scheme: string
+	/** Whether this is the "old" (left) or "new" (right) side of a diff */
+	side: "old" | "new"
+	/** Git reference if available (e.g., "HEAD", "HEAD~1", commit hash) */
+	gitRef?: string
+	/** The actual file path being compared */
+	originalPath: string
+}
+
+/**
+ * Information about a visible editor
+ */
+export interface VisibleEditorInfo {
+	/** Absolute file path */
+	filePath: string
+	/** Path relative to workspace */
+	relativePath: string
+	/** Language identifier (e.g., "typescript", "python") */
+	languageId: string
+	/** Whether this is the active editor */
+	isActive: boolean
+	/** The visible line ranges in the editor viewport */
+	visibleRanges: VisibleRange[]
+	/** Current cursor position, or null if no cursor */
+	cursorPosition: Position | null
+	/** All selections in the editor */
+	selections: Range[]
+	/** Diff information if this editor is part of a diff view */
+	diffInfo?: DiffInfo
+}
+
+/**
+ * Context of all visible code in editors
+ */
+export interface VisibleCodeContext {
+	/** Timestamp when the context was captured */
+	timestamp: number
+	/** Information about all visible editors */
+	editors: VisibleEditorInfo[]
+}
+
+// ============================================================================
+// Chat Autocomplete Types
+// ============================================================================
+
+/**
+ * Request for chat text area completion
+ */
+export interface ChatCompletionRequest {
+	text: string
+	visibleCodeContext?: string
+}
+
+/**
+ * Result of chat text area completion
+ */
+export interface ChatCompletionResult {
+	suggestion: string
+	requestId: string
+}
+
+// ============================================================================
 // Conversion Utilities
 // ============================================================================
 

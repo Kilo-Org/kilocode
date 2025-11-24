@@ -319,6 +319,7 @@ export interface WebviewMessage {
 		| "dismissUpsell"
 		| "getDismissedUpsells"
 		| "requestManagedIndexerState" // kilocode_change
+		| "requestChatCompletion" // kilocode_change: Request FIM completion for chat text area
 	text?: string
 	editedMessageContent?: string
 	tab?: "settings" | "history" | "mcp" | "modes" | "chat" | "marketplace" | "cloud"
