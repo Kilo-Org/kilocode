@@ -247,12 +247,16 @@ program
 process.on("SIGINT", async () => {
 	if (cli) {
 		await cli.dispose("SIGINT")
+	} else {
+		process.exit(130)
 	}
 })
 
 process.on("SIGTERM", async () => {
 	if (cli) {
 		await cli.dispose("SIGTERM")
+	} else {
+		process.exit(143)
 	}
 })
 
