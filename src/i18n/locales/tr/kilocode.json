@@ -105,7 +105,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (devre dışı)",
 				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
-				"lastCompletion": "Son öneri:",
+				"completionCount": "Tamamlamalar:",
+				"sessionStartTime": "Oturum başlangıç saati:",
+				"sessionDuration": "Oturum süresi:",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
 				"model": "Model:"

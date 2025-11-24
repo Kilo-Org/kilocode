@@ -105,7 +105,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (deaktiviert)",
 				"tokenError": "Ein gültiger Token muss gesetzt werden, um Autocomplete zu verwenden",
-				"lastCompletion": "Letzter Vorschlag:",
+				"completionCount": "Vervollständigungen:",
+				"sessionStartTime": "Sitzung gestartet um:",
+				"sessionDuration": "Sitzungsdauer:",
 				"sessionTotal": "Sitzungsgesamtkosten:",
 				"provider": "Anbieter:",
 				"model": "Modell:"

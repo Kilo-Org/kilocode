@@ -109,7 +109,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (معطل)",
 				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
-				"lastCompletion": "آخر اقتراح:",
+				"completionCount": "عدد الإكمالات:",
+				"sessionStartTime": "بدأت الجلسة في:",
+				"sessionDuration": "مدة الجلسة:",
 				"sessionTotal": "إجمالي تكلفة الجلسة:",
 				"provider": "المزود:",
 				"model": "النموذج:"

@@ -105,7 +105,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (uitgeschakeld)",
 				"tokenError": "Een geldig token moet worden ingesteld om Autocomplete te gebruiken",
-				"lastCompletion": "Laatste suggestie:",
+				"completionCount": "Voltooiingen:",
+				"sessionStartTime": "Sessie gestart om:",
+				"sessionDuration": "Sessieduur:",
 				"sessionTotal": "Totale sessiekosten:",
 				"provider": "Provider:",
 				"model": "Model:"

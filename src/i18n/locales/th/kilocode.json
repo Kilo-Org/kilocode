@@ -111,7 +111,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
 				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
-				"lastCompletion": "คำแนะนำล่าสุด:",
+				"completionCount": "จำนวนการเติมเต็ม:",
+				"sessionStartTime": "เซสชันเริ่มเมื่อ:",
+				"sessionDuration": "ระยะเวลาเซสชัน:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:"

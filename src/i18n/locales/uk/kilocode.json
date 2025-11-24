@@ -105,7 +105,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (вимкнено)",
 				"tokenError": "Для використання Autocomplete потрібно встановити дійсний токен",
-				"lastCompletion": "Остання пропозиція:",
+				"completionCount": "Завершення:",
+				"sessionStartTime": "Сесія розпочата о:",
+				"sessionDuration": "Тривалість сесії:",
 				"sessionTotal": "Загальна вартість сесії:",
 				"provider": "Провайдер:",
 				"model": "Модель:"

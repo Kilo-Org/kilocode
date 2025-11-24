@@ -105,7 +105,9 @@
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desactivat)",
 				"tokenError": "S'ha d'establir un token vàlid per utilitzar Autocomplete",
-				"lastCompletion": "Últim suggeriment:",
+				"completionCount": "Completacions:",
+				"sessionStartTime": "Sessió iniciada a les:",
+				"sessionDuration": "Durada de la sessió:",
 				"sessionTotal": "Cost total de la sessió:",
 				"provider": "Proveïdor:",
 				"model": "Model:"
