@@ -333,7 +333,7 @@ export const ChatRowContent = ({
 					) : apiRequestFailedMessage ? (
 						getIconSpan("error", errorColor)
 					) : (
-						<ProgressIndicator />
+						<BrailleSpinner />
 					),
 					apiReqCancelReason !== null && apiReqCancelReason !== undefined ? (
 						apiReqCancelReason === "user_cancelled" ? (
@@ -354,9 +354,7 @@ export const ChatRowContent = ({
 					apiRequestFailedMessage ? (
 						<span style={{ color: errorColor }}>{t("chat:apiRequest.failed")}</span>
 					) : (
-						<span style={{ color: normalColor }}>
-							<BrailleSpinner /> {t("chat:apiRequest.streaming")}
-						</span>
+						<span style={{ color: normalColor }}>{t("chat:apiRequest.streaming")}</span>
 					),
 				]
 			case "followup":
