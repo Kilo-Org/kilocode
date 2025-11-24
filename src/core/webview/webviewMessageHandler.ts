@@ -4,19 +4,8 @@ import * as os from "os"
 import * as fs from "fs/promises"
 import pWaitFor from "p-wait-for"
 import * as vscode from "vscode"
-// kilocode_change start
-import axios from "axios"
-import { getKiloUrlFromToken, isGlobalStateKey } from "@roo-code/types"
-import { getAppUrl } from "@roo-code/types"
-import {
-	MaybeTypedWebviewMessage,
-	ProfileData,
-	SeeNewChangesPayload,
-	TaskHistoryRequestPayload,
-	TasksByIdRequestPayload,
-	UpdateGlobalStateMessage,
-} from "../../shared/WebviewMessage"
-// kilocode_change end
+import { getAppUrl, isGlobalStateKey } from "@roo-code/types"
+import { MaybeTypedWebviewMessage, UpdateGlobalStateMessage } from "../../shared/WebviewMessage"
 
 import {
 	type Language,
@@ -24,10 +13,7 @@ import {
 	type ClineMessage,
 	type TelemetrySetting,
 	TelemetryEventName,
-	// kilocode_change start
-	ghostServiceSettingsSchema,
-	fastApplyModelSchema,
-	// kilocode_change end
+	ghostServiceSettingsSchema, // kilocode_change
 	UserSettingsConfig,
 	DEFAULT_CHECKPOINT_TIMEOUT_SECONDS,
 } from "@roo-code/types"
@@ -59,11 +45,10 @@ import { openImage, saveImage } from "../../integrations/misc/image-handler"
 import { selectImages } from "../../integrations/misc/process-images"
 import { getTheme } from "../../integrations/theme/getTheme"
 import { discoverChromeHostUrl, tryChromeHostUrl } from "../../services/browser/browserDiscovery"
+import { kilocodeWebviewMessageHandler } from "../kilocode/webview/kilocodeWebviewMessageHandler" // kilocode_change
 import { searchWorkspaceFiles } from "../../services/search/file-search"
 import { fileExistsAtPath } from "../../utils/fs"
 import { playTts, setTtsEnabled, setTtsSpeed, stopTts } from "../../utils/tts"
-import { showSystemNotification } from "../../integrations/notifications" // kilocode_change
-import { singleCompletionHandler } from "../../utils/single-completion-handler" // kilocode_change
 import { searchCommits } from "../../utils/git"
 import { exportSettings, importSettingsWithFeedback } from "../config/importExport"
 import { getOpenAiModels } from "../../api/providers/openai"
@@ -75,17 +60,11 @@ import { getModels, flushModels } from "../../api/providers/fetchers/modelCache"
 import { GetModelsOptions } from "../../shared/api"
 import { generateSystemPrompt } from "./generateSystemPrompt"
 import { getCommand } from "../../utils/commands"
-import { toggleWorkflow, toggleRule, createRuleFile, deleteRuleFile } from "./kilorules"
-import { mermaidFixPrompt } from "../prompts/utilities/mermaid" // kilocode_change
-import { editMessageHandler, fetchKilocodeNotificationsHandler } from "../kilocode/webview/webviewMessageHandlerUtils" // kilocode_change
 
 const ALLOWED_VSCODE_SETTINGS = new Set(["terminal.integrated.inheritEnv"])
 
 import { MarketplaceManager, MarketplaceItemType } from "../../services/marketplace"
 import { setPendingTodoList } from "../tools/updateTodoListTool"
-import { UsageTracker } from "../../utils/usage-tracker"
-import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocode_change
-import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
 import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
 import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
@@ -100,6 +79,13 @@ export const webviewMessageHandler = async (
 	const getGlobalState = <K extends keyof GlobalState>(key: K) => provider.contextProxy.getValue(key)
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
 		await provider.contextProxy.setValue(key, value)
+
+	// kilocode_change start - all kilocode-specific event handling has been moved into kilocodeWebviewMessageHandler
+	const kilocodeResult = await kilocodeWebviewMessageHandler(provider, message, getGlobalState, updateGlobalState)
+	if (kilocodeResult.handled) {
+		return
+	}
+	// kilocode_change end - all kilocode-specific event handling has been moved into kilocodeWebviewMessageHandler
 
 	const getCurrentCwd = () => {
 		return provider.getCurrentTask()?.cwd || provider.cwd
@@ -564,11 +550,6 @@ export const webviewMessageHandler = async (
 				)
 			}
 			break
-		// kilocode_change start
-		case "condense":
-			provider.getCurrentTask()?.handleWebviewAskResponse("yesButtonClicked")
-			break
-		// kilocode_change end
 		case "customInstructions":
 			await provider.updateCustomInstructions(message.text)
 			break
@@ -1125,36 +1106,6 @@ export const webviewMessageHandler = async (
 			}
 
 			break
-		// kilocode_change start
-		case "seeNewChanges":
-			const task = provider.getCurrentTask()
-			if (task && message.payload && message.payload) {
-				await seeNewChanges(task, (message.payload as SeeNewChangesPayload).commitRange)
-			}
-			break
-		case "tasksByIdRequest": {
-			const request = message.payload as TasksByIdRequestPayload
-			await provider.postMessageToWebview({
-				type: "tasksByIdResponse",
-				payload: {
-					requestId: request.requestId,
-					tasks: provider.getTaskHistory().filter((task) => request.taskIds.includes(task.id)),
-				},
-			})
-			break
-		}
-		case "taskHistoryRequest": {
-			await provider.postMessageToWebview({
-				type: "taskHistoryResponse",
-				payload: getTaskHistory(
-					provider.getTaskHistory(),
-					provider.cwd,
-					message.payload as TaskHistoryRequestPayload,
-				),
-			})
-			break
-		}
-		// kilocode_change end
 		case "requestCheckpointRestoreApproval": {
 			const result = requestCheckpointRestoreApprovalPayloadSchema.safeParse(message.payload)
 
@@ -1388,30 +1339,6 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("enableMcpServerCreation", message.bool ?? true)
 			await provider.postStateToWebview()
 			break
-		// kilocode_change begin
-		case "openGlobalKeybindings":
-			vscode.commands.executeCommand("workbench.action.openGlobalKeybindings", message.text ?? "kilo-code.")
-			break
-		case "showSystemNotification":
-			const isSystemNotificationsEnabled = getGlobalState("systemNotificationsEnabled") ?? true
-			if (!isSystemNotificationsEnabled && !message.alwaysAllow) {
-				break
-			}
-			if (message.notificationOptions) {
-				showSystemNotification(message.notificationOptions)
-			}
-			break
-		case "systemNotificationsEnabled":
-			const systemNotificationsEnabled = message.bool ?? true
-			await updateGlobalState("systemNotificationsEnabled", systemNotificationsEnabled)
-			await provider.postStateToWebview()
-			break
-		case "openInBrowser":
-			if (message.url) {
-				vscode.env.openExternal(vscode.Uri.parse(message.url))
-			}
-			break
-		// kilocode_change end
 		case "remoteControlEnabled":
 			try {
 				await CloudService.instance.updateUserSettings({ extensionBridgeEnabled: message.bool ?? false })
@@ -1553,18 +1480,6 @@ export const webviewMessageHandler = async (
 			await updateGlobalState("fuzzyMatchThreshold", message.value)
 			await provider.postStateToWebview()
 			break
-		// kilocode_change start
-		case "morphApiKey":
-			await updateGlobalState("morphApiKey", message.text)
-			await provider.postStateToWebview()
-			break
-		case "fastApplyModel": {
-			const nextModel = fastApplyModelSchema.safeParse(message.text).data ?? "auto"
-			await updateGlobalState("fastApplyModel", nextModel)
-			await provider.postStateToWebview()
-			break
-		}
-		// kilocode_change end
 		case "updateVSCodeSetting": {
 			const { setting, value } = message
 
@@ -2706,191 +2621,6 @@ export const webviewMessageHandler = async (
 				})
 			}
 			break
-
-		// kilocode_change_start
-		case "fetchProfileDataRequest":
-			try {
-				const { apiConfiguration, currentApiConfigName } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
-
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state.")
-					provider.postMessageToWebview({
-						type: "profileDataResponse",
-						payload: { success: false, error: "KiloCode API token not configured." },
-					})
-					break
-				}
-
-				// Changed to /api/profile
-				const headers: Record<string, string> = {
-					Authorization: `Bearer ${kilocodeToken}`,
-					"Content-Type": "application/json",
-				}
-
-				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-				if (
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-				) {
-					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-				}
-
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile", kilocodeToken)
-				const response = await axios.get<Omit<ProfileData, "kilocodeToken">>(url, { headers })
-
-				// Go back to Personal when no longer part of the current set organization
-				const organizationExists = (response.data.organizations ?? []).some(
-					({ id }) => id === apiConfiguration?.kilocodeOrganizationId,
-				)
-				if (apiConfiguration?.kilocodeOrganizationId && !organizationExists) {
-					provider.upsertProviderProfile(currentApiConfigName ?? "default", {
-						...apiConfiguration,
-						kilocodeOrganizationId: undefined,
-					})
-				}
-
-				try {
-					const shouldAutoSwitch =
-						response.data.organizations &&
-						response.data.organizations.length > 0 &&
-						!apiConfiguration.kilocodeOrganizationId &&
-						!getGlobalState("hasPerformedOrganizationAutoSwitch")
-
-					if (shouldAutoSwitch) {
-						const firstOrg = response.data.organizations![0]
-						provider.log(
-							`[Auto-switch] Performing automatic organization switch to: ${firstOrg.name} (${firstOrg.id})`,
-						)
-
-						const upsertMessage: WebviewMessage = {
-							type: "upsertApiConfiguration",
-							text: currentApiConfigName ?? "default",
-							apiConfiguration: {
-								...apiConfiguration,
-								kilocodeOrganizationId: firstOrg.id,
-							},
-						}
-
-						await webviewMessageHandler(provider, upsertMessage)
-						await updateGlobalState("hasPerformedOrganizationAutoSwitch", true)
-
-						vscode.window.showInformationMessage(`Automatically switched to organization: ${firstOrg.name}`)
-
-						provider.log(`[Auto-switch] Successfully switched to organization: ${firstOrg.name}`)
-					}
-				} catch (error) {
-					provider.log(
-						`[Auto-switch] Error during automatic organization switch: ${error instanceof Error ? error.message : String(error)}`,
-					)
-				}
-
-				provider.postMessageToWebview({
-					type: "profileDataResponse",
-					payload: { success: true, data: { kilocodeToken, ...response.data } },
-				})
-			} catch (error: any) {
-				const errorMessage =
-					error.response?.data?.message ||
-					error.message ||
-					"Failed to fetch general profile data from backend."
-				provider.log(`Error fetching general profile data: ${errorMessage}`)
-				provider.postMessageToWebview({
-					type: "profileDataResponse",
-					payload: { success: false, error: errorMessage },
-				})
-			}
-			break
-		case "fetchBalanceDataRequest": // New handler
-			try {
-				const { apiConfiguration } = await provider.getState()
-				const { kilocodeToken, kilocodeOrganizationId } = apiConfiguration ?? {}
-
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state for balance data.")
-					provider.postMessageToWebview({
-						type: "balanceDataResponse", // New response type
-						payload: { success: false, error: "KiloCode API token not configured." },
-					})
-					break
-				}
-
-				const headers: Record<string, string> = {
-					Authorization: `Bearer ${kilocodeToken}`,
-					"Content-Type": "application/json",
-				}
-
-				if (kilocodeOrganizationId) {
-					headers["X-KiloCode-OrganizationId"] = kilocodeOrganizationId
-				}
-
-				// Add X-KILOCODE-TESTER: SUPPRESS header if the setting is enabled
-				if (
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil &&
-					apiConfiguration.kilocodeTesterWarningsDisabledUntil > Date.now()
-				) {
-					headers["X-KILOCODE-TESTER"] = "SUPPRESS"
-				}
-
-				const url = getKiloUrlFromToken("https://api.kilocode.ai/api/profile/balance", kilocodeToken)
-				const response = await axios.get(url, { headers })
-				provider.postMessageToWebview({
-					type: "balanceDataResponse", // New response type
-					payload: { success: true, data: response.data },
-				})
-			} catch (error: any) {
-				const errorMessage =
-					error.response?.data?.message || error.message || "Failed to fetch balance data from backend."
-				provider.log(`Error fetching balance data: ${errorMessage}`)
-				provider.postMessageToWebview({
-					type: "balanceDataResponse", // New response type
-					payload: { success: false, error: errorMessage },
-				})
-			}
-			break
-		case "shopBuyCredits": // New handler
-			try {
-				const { apiConfiguration } = await provider.getState()
-				const kilocodeToken = apiConfiguration?.kilocodeToken
-				if (!kilocodeToken) {
-					provider.log("KiloCode token not found in extension state for buy credits.")
-					break
-				}
-				const credits = message.values?.credits || 50
-				const uriScheme = message.values?.uriScheme || "vscode"
-				const uiKind = message.values?.uiKind || "Desktop"
-				const source = uiKind === "Web" ? "web" : uriScheme
-
-				const url = getKiloUrlFromToken(
-					`https://api.kilocode.ai/payments/topup?origin=extension&source=${source}&amount=${credits}`,
-					kilocodeToken,
-				)
-				const response = await axios.post(
-					url,
-					{},
-					{
-						headers: {
-							Authorization: `Bearer ${kilocodeToken}`,
-							"Content-Type": "application/json",
-						},
-						maxRedirects: 0, // Prevent axios from following redirects automatically
-						validateStatus: (status) => status < 400, // Accept 3xx status codes
-					},
-				)
-				if (response.status !== 303 || !response.headers.location) {
-					return
-				}
-				await vscode.env.openExternal(vscode.Uri.parse(response.headers.location))
-			} catch (error: any) {
-				const errorMessage = error?.message || "Unknown error"
-				const errorStack = error?.stack ? ` Stack: ${error.stack}` : ""
-				provider.log(`Error redirecting to payment page: ${errorMessage}.${errorStack}`)
-				provider.postMessageToWebview({
-					type: "updateProfileData",
-				})
-			}
-			break
-
 		case "fetchMcpMarketplace": {
 			await provider.fetchMcpMarketplace(message.bool)
 			break
@@ -2908,73 +2638,11 @@ export const webviewMessageHandler = async (
 			break
 		}
 
-		case "toggleWorkflow": {
-			if (message.workflowPath && typeof message.enabled === "boolean" && typeof message.isGlobal === "boolean") {
-				await toggleWorkflow(
-					message.workflowPath,
-					message.enabled,
-					message.isGlobal,
-					provider.contextProxy,
-					provider.context,
-				)
-				await provider.postRulesDataToWebview()
-			}
-			break
-		}
-
 		case "refreshRules": {
 			await provider.postRulesDataToWebview()
 			break
 		}
 
-		case "toggleRule": {
-			if (message.rulePath && typeof message.enabled === "boolean" && typeof message.isGlobal === "boolean") {
-				await toggleRule(
-					message.rulePath,
-					message.enabled,
-					message.isGlobal,
-					provider.contextProxy,
-					provider.context,
-				)
-				await provider.postRulesDataToWebview()
-			}
-			break
-		}
-
-		case "createRuleFile": {
-			if (
-				message.filename &&
-				typeof message.isGlobal === "boolean" &&
-				(message.ruleType === "rule" || message.ruleType === "workflow")
-			) {
-				try {
-					await createRuleFile(message.filename, message.isGlobal, message.ruleType)
-				} catch (error) {
-					console.error("Error creating rule file:", error)
-					vscode.window.showErrorMessage(t("kilocode:rules.errors.failedToCreateRuleFile"))
-				}
-				await provider.postRulesDataToWebview()
-			}
-			break
-		}
-
-		case "deleteRuleFile": {
-			if (message.rulePath) {
-				try {
-					await deleteRuleFile(message.rulePath)
-				} catch (error) {
-					console.error("Error deleting rule file:", error)
-					vscode.window.showErrorMessage(t("kilocode:rules.errors.failedToDeleteRuleFile"))
-				}
-				await provider.postRulesDataToWebview()
-			}
-			break
-		}
-
-		case "reportBug":
-			provider.getCurrentTask()?.handleWebviewAskResponse("yesButtonClicked")
-			break
-		// end kilocode_change
 		case "telemetrySetting": {
 			const telemetrySetting = message.text as TelemetrySetting
 			await updateGlobalState("telemetrySetting", telemetrySetting)
@@ -3364,38 +3032,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		// kilocode_change start
-		case "cancelIndexing": {
-			try {
-				const manager = provider.getCurrentWorkspaceCodeIndexManager()
-				if (!manager) {
-					provider.postMessageToWebview({
-						type: "indexingStatusUpdate",
-						values: {
-							systemStatus: "Error",
-							message: t("embeddings:orchestrator.indexingRequiresWorkspace"),
-							processedItems: 0,
-							totalItems: 0,
-							currentItemUnit: "items",
-						},
-					})
-					provider.log("Cannot cancel indexing: No workspace folder open")
-					return
-				}
-				if (manager.isFeatureEnabled && manager.isFeatureConfigured) {
-					manager.cancelIndexing()
-					// Immediately reflect updated status to UI
-					provider.postMessageToWebview({
-						type: "indexingStatusUpdate",
-						values: manager.getCurrentStatus(),
-					})
-				}
-			} catch (error) {
-				provider.log(`Error canceling indexing: ${error instanceof Error ? error.message : String(error)}`)
-			}
-			break
-		}
-		// kilocode_change end
 		case "clearIndexData": {
 			try {
 				const manager = provider.getCurrentWorkspaceCodeIndexManager()
@@ -3424,74 +3060,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		// kilocode_change start - add clearUsageData
-		case "clearUsageData": {
-			try {
-				const usageTracker = UsageTracker.getInstance()
-				await usageTracker.clearAllUsageData()
-				vscode.window.showInformationMessage("Usage data has been successfully cleared.")
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error)
-				provider.log(`Error clearing usage data: ${errorMessage}`)
-				vscode.window.showErrorMessage(`Failed to clear usage data: ${errorMessage}`)
-			}
-			break
-		}
-		// kilocode_change start - add getUsageData
-		case "getUsageData": {
-			if (message.text) {
-				try {
-					const usageTracker = UsageTracker.getInstance()
-					const usageData = usageTracker.getAllUsage(message.text)
-					await provider.postMessageToWebview({
-						type: "usageDataResponse",
-						text: message.text,
-						values: usageData,
-					})
-				} catch (error) {
-					const errorMessage = error instanceof Error ? error.message : String(error)
-					provider.log(`Error getting usage data: ${errorMessage}`)
-				}
-			}
-			break
-		}
-		// kilocode_change end - add getUsageData
-		// kilocode_change start - add toggleTaskFavorite
-		case "toggleTaskFavorite":
-			if (message.text) {
-				await provider.toggleTaskFavorite(message.text)
-			}
-			break
-		// kilocode_change start - add fixMermaidSyntax
-		case "fixMermaidSyntax":
-			if (message.text && message.requestId) {
-				try {
-					const { apiConfiguration } = await provider.getState()
-
-					const prompt = mermaidFixPrompt(message.values?.error || "Unknown syntax error", message.text)
-
-					const fixedCode = await singleCompletionHandler(apiConfiguration, prompt)
-
-					provider.postMessageToWebview({
-						type: "mermaidFixResponse",
-						requestId: message.requestId,
-						success: true,
-						fixedCode: fixedCode?.trim() || null,
-					})
-				} catch (error) {
-					const errorMessage = error instanceof Error ? error.message : "Failed to fix Mermaid syntax"
-					provider.log(`Error fixing Mermaid syntax: ${errorMessage}`)
-
-					provider.postMessageToWebview({
-						type: "mermaidFixResponse",
-						requestId: message.requestId,
-						success: false,
-						error: errorMessage,
-					})
-				}
-			}
-			break
-		// kilocode_change end
 		case "focusPanelRequest": {
 			// Execute the focusPanel command to focus the WebView
 			await vscode.commands.executeCommand(getCommand("focusPanel"))
@@ -3633,27 +3201,6 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
-		// kilocode_change start
-		case "editMessage": {
-			await editMessageHandler(provider, message)
-			break
-		}
-		case "fetchKilocodeNotifications": {
-			await fetchKilocodeNotificationsHandler(provider)
-			break
-		}
-		case "dismissNotificationId": {
-			if (!message.notificationId) {
-				break
-			}
-
-			const dismissedNotificationIds = getGlobalState("dismissedNotificationIds") || []
-
-			await updateGlobalState("dismissedNotificationIds", [...dismissedNotificationIds, message.notificationId])
-			await provider.postStateToWebview()
-			break
-		}
-		// kilocode_change end
 		// kilocode_change start: Type-safe global state handler
 		case "updateGlobalState": {
 			const { stateKey, stateValue } = message as UpdateGlobalStateMessage
