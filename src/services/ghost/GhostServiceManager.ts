@@ -26,7 +26,8 @@ export class GhostServiceManager {
 	// Status bar integration
 	private statusBar: GhostStatusBar | null = null
 	private sessionCost: number = 0
-	private lastCompletionCost: number = 0
+	private completionCount: number = 0
+	private sessionStartTime: number = Date.now()
 
 	// VSCode Providers
 	public readonly codeActionProvider: GhostCodeActionProvider
@@ -241,7 +242,8 @@ export class GhostServiceManager {
 			provider: "loading...",
 			hasValidToken: false,
 			totalSessionCost: 0,
-			lastCompletionCost: 0,
+			completionCount: 0,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 
@@ -270,7 +272,7 @@ export class GhostServiceManager {
 		cacheWriteTokens: number,
 		cacheReadTokens: number,
 	): void {
-		this.lastCompletionCost = cost
+		this.completionCount++
 		this.sessionCost += cost
 		this.updateStatusBar()
 
@@ -297,7 +299,8 @@ export class GhostServiceManager {
 			provider: this.getCurrentProviderName(),
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
-			lastCompletionCost: this.lastCompletionCost,
+			completionCount: this.completionCount,
+			sessionStartTime: this.sessionStartTime,
 		})
 	}
 

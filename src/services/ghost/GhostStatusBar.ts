@@ -7,7 +7,8 @@ interface GhostStatusBarStateProps {
 	provider?: string
 	hasValidToken?: boolean
 	totalSessionCost?: number
-	lastCompletionCost?: number
+	completionCount?: number
+	sessionStartTime?: number
 }
 
 export class GhostStatusBar {
@@ -17,7 +18,8 @@ export class GhostStatusBar {
 	provider: string
 	hasValidToken: boolean
 	totalSessionCost?: number
-	lastCompletionCost?: number
+	completionCount?: number
+	sessionStartTime?: number
 
 	constructor(params: GhostStatusBarStateProps) {
 		this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
@@ -26,7 +28,8 @@ export class GhostStatusBar {
 		this.provider = params.provider || "default"
 		this.hasValidToken = params.hasValidToken || false
 		this.totalSessionCost = params.totalSessionCost
-		this.lastCompletionCost = params.lastCompletionCost
+		this.completionCount = params.completionCount
+		this.sessionStartTime = params.sessionStartTime
 
 		this.init()
 	}
@@ -61,8 +64,8 @@ export class GhostStatusBar {
 		this.provider = params.provider !== undefined ? params.provider : this.provider
 		this.hasValidToken = params.hasValidToken !== undefined ? params.hasValidToken : this.hasValidToken
 		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
-		this.lastCompletionCost =
-			params.lastCompletionCost !== undefined ? params.lastCompletionCost : this.lastCompletionCost
+		this.completionCount = params.completionCount !== undefined ? params.completionCount : this.completionCount
+		this.sessionStartTime = params.sessionStartTime !== undefined ? params.sessionStartTime : this.sessionStartTime
 
 		this.updateVisible(this.enabled)
 		if (this.enabled) this.render()
@@ -73,13 +76,36 @@ export class GhostStatusBar {
 		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.tokenError")
 	}
 
+	private formatSessionDuration(): string {
+		if (!this.sessionStartTime) return "N/A"
+		const durationMs = Date.now() - this.sessionStartTime
+		const durationMinutes = Math.floor(durationMs / 60000)
+		const durationSeconds = Math.floor((durationMs % 60000) / 1000)
+
+		if (durationMinutes > 0) {
+			return `${durationMinutes}m ${durationSeconds}s`
+		}
+		return `${durationSeconds}s`
+	}
+
+	private formatSessionStartTime(): string {
+		if (!this.sessionStartTime) return "N/A"
+		const date = new Date(this.sessionStartTime)
+		return date.toLocaleTimeString()
+	}
+
 	private renderDefault() {
 		const totalCostFormatted = this.humanFormatCost(this.totalSessionCost || 0)
-		const lastCompletionCostFormatted = this.lastCompletionCost?.toFixed(5) || 0
-		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${totalCostFormatted})`
+		const completionCount = this.completionCount || 0
+		const sessionDuration = this.formatSessionDuration()
+		const sessionStartTime = this.formatSessionStartTime()
+
+		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${completionCount})`
 		this.statusBar.tooltip = `\
 ${t("kilocode:ghost.statusBar.tooltip.basic")}
-• ${t("kilocode:ghost.statusBar.tooltip.lastCompletion")} $${lastCompletionCostFormatted}
+• ${t("kilocode:ghost.statusBar.tooltip.completionCount")} ${completionCount}
+• ${t("kilocode:ghost.statusBar.tooltip.sessionStartTime")} ${sessionStartTime}
+• ${t("kilocode:ghost.statusBar.tooltip.sessionDuration")} ${sessionDuration}
 • ${t("kilocode:ghost.statusBar.tooltip.sessionTotal")} ${totalCostFormatted}
 • ${t("kilocode:ghost.statusBar.tooltip.provider")} ${this.provider}
 • ${t("kilocode:ghost.statusBar.tooltip.model")} ${this.model}\
