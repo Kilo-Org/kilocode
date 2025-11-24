@@ -12,7 +12,6 @@ export function useManagedCodeIndexingEnabled() {
 		}, 1000)
 
 		const handleMessage = (event: MessageEvent<any>) => {
-			console.log("[useManagedCodeIndexingEnabled] received event", event)
 			if (event.data.type === "managedIndexerEnabled") {
 				setEnabled(event.data.managedIndexerEnabled === true)
 			}

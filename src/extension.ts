@@ -131,10 +131,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	const contextProxy = await ContextProxy.getInstance(context)
-	// kilocode_change start: Initialize ManagedIndexer
-	const managedIndexer = new ManagedIndexer(contextProxy)
-	context.subscriptions.push(managedIndexer)
-	// kilocode_change end
 
 	// Initialize code index managers for all workspace folders.
 	const codeIndexManagers: CodeIndexManager[] = []
@@ -434,13 +430,16 @@ export async function activate(context: vscode.ExtensionContext) {
 		})
 	}
 
-	await checkAndRunAutoLaunchingTask(context) // kilocode_change
-	// await initManagedCodeIndexing // kilocode_change
+	// kilocode_change start: Initialize ManagedIndexer
+	await checkAndRunAutoLaunchingTask(context)
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
 	void managedIndexer.start().catch((error) => {
 		outputChannel.appendLine(
 			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
 		)
 	})
+	// kilocode_change end
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }
