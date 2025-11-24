@@ -98,13 +98,13 @@ jobs:
                     # Match version headers: ## [vX.X.X], ## [X.X.X], ## X.X.X (brackets and v are optional)
                     changelog_content=$(sed -E -n "/^## \\[?v?${current_package_version}\\]?/,/^## /p" CHANGELOG.md | sed '$d')
 
-                    # If changelog extraction failed, use a default message
                     if [ -z "$changelog_content" ]; then
-                      echo "Warning: No changelog section found for version ${current_package_version}"
-                      changelog_content="Release v${current_package_version}"
-                    else
-                      echo "Found changelog section for version ${current_package_version}"
+                      echo "Error: No changelog section found for version ${current_package_version}"
+                      echo "Please add a changelog entry in CHANGELOG.md for version ${current_package_version}"
+                      exit 1
                     fi
+                    
+                    echo "Found changelog section for version ${current_package_version}"
 
                     # Create release with changelog content
                     gh release create "v${current_package_version}" \
