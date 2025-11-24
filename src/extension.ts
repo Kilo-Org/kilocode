@@ -46,7 +46,9 @@ import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
+import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 import { updateCodeIndexWithKiloProps } from "./services/code-index/managed/webview" // kilocode_change
+import { getCommand } from "./utils/commands"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -131,6 +133,10 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	const contextProxy = await ContextProxy.getInstance(context)
+	// kilocode_change start: Initialize ManagedIndexer
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
+	// kilocode_change end
 
 	// Initialize code index managers for all workspace folders.
 	const codeIndexManagers: CodeIndexManager[] = []
@@ -157,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize the provider *before* the Roo Code Cloud service.
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
-	const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
+	// const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
 
 	// Initialize Roo Code Cloud service.
 	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
@@ -431,7 +437,12 @@ export async function activate(context: vscode.ExtensionContext) {
 	}
 
 	await checkAndRunAutoLaunchingTask(context) // kilocode_change
-	await initManagedCodeIndexing // kilocode_change
+	// await initManagedCodeIndexing // kilocode_change
+	void managedIndexer.start().catch((error) => {
+		outputChannel.appendLine(
+			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	})
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }

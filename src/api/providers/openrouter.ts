@@ -528,7 +528,12 @@ function makeOpenRouterErrorReadable(error: any) {
 
 	if (error?.code !== 429 && error?.code !== 418) {
 		const errorMessage =
-			rawError?.error?.message ?? rawError?.error ?? rawError?.detail ?? rawError?.message ?? error?.message
+			rawError?.error?.message ??
+			rawError?.error ??
+			rawError?.detail ??
+			rawError?.message ??
+			metadata?.raw ??
+			error?.message
 		throw new Error(`${metadata?.provider_name ?? "Provider"} error: ${errorMessage ?? "unknown error"}`)
 	}
 

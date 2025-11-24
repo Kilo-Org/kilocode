@@ -51,6 +51,12 @@ const DEFAULT_OLLAMA_URL = "http://localhost:11434"
 
 interface CodeIndexPopoverProps {
 	children: React.ReactNode
+	// kilocode_change start - Support showing contentOnly and allow external open state control
+	contentOnly?: boolean
+	open?: boolean
+	onOpenChange?: (open: boolean) => void
+	onRegisterCloseHandler?: (handler: () => void) => void
+	// kilocode_change end - Support showing contentOnly and allow external open state control
 	indexingStatus: IndexingStatus
 }
 
@@ -165,14 +171,29 @@ const createValidationSchema = (provider: EmbedderProvider, t: any) => {
 	}
 }
 
+// kilcode_change start - Allow rendering just the content of CodeIndexPopover
+const NoOpWrapper: React.FC<Record<string, any> & { children?: React.ReactNode }> = ({ children }) => <>{children}</>
+// kilcode_change end - Allow rendering just the content of CodeIndexPopover
+
 export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 	children,
+	// kilocode_change start - Support contentOnly and external state control
+	contentOnly,
+	open: externalOpen,
+	onOpenChange: externalOnOpenChange,
+	onRegisterCloseHandler,
+	// kilocode_change end - Support contentOnly and external state control
 	indexingStatus: externalIndexingStatus,
 }) => {
 	const SECRET_PLACEHOLDER = "••••••••••••••••"
 	const { t } = useAppTranslation()
 	const { codebaseIndexConfig, codebaseIndexModels, cwd } = useExtensionState()
-	const [open, setOpen] = useState(false)
+
+	// kilocode_change start - Controlled/uncontrolled pattern for open state
+	// const [open, setOpen] = useState(false) // kilocode_change
+	const [internalOpen, setInternalOpen] = useState(false)
+	const open = externalOpen ?? internalOpen
+	// kilocode_change end - Controlled/uncontrolled pattern for open state
 	const [isAdvancedSettingsOpen, setIsAdvancedSettingsOpen] = useState(false)
 	const [isSetupSettingsOpen, setIsSetupSettingsOpen] = useState(false)
 
@@ -494,12 +515,43 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 		[initialSettings],
 	)
 
+	// kilocode_change start - Register close handler for parent popover control
+	const handleRequestClose = useCallback(() => {
+		// Handler that checks unsaved changes before allowing close
+		checkUnsavedChanges(() => {
+			if (externalOnOpenChange) {
+				externalOnOpenChange(false)
+			} else {
+				setInternalOpen(false)
+			}
+		})
+	}, [checkUnsavedChanges, externalOnOpenChange])
+
+	useEffect(() => {
+		onRegisterCloseHandler?.(handleRequestClose)
+	}, [onRegisterCloseHandler, handleRequestClose])
+
+	// For direct onOpenChange calls (non-contentOnly mode), wrap to check unsaved changes
+	const wrappedOnOpenChange = useCallback(
+		(newOpen: boolean) => {
+			if (!newOpen) {
+				handleRequestClose()
+			} else {
+				externalOnOpenChange?.(true)
+				setInternalOpen(true)
+			}
+		},
+		[handleRequestClose, externalOnOpenChange],
+	)
+	const setOpen = externalOnOpenChange ? wrappedOnOpenChange : setInternalOpen
+	// kilocode_change end - Register close handler for parent popover control
+
 	// Handle popover close with unsaved changes check
 	const handlePopoverClose = useCallback(() => {
 		checkUnsavedChanges(() => {
 			setOpen(false)
 		})
-	}, [checkUnsavedChanges])
+	}, [checkUnsavedChanges, setOpen]) // kilocode_change
 
 	// Use the shared ESC key handler hook - respects unsaved changes logic
 	useEscapeKey(open, handlePopoverClose)
@@ -570,9 +622,15 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 
 	const portalContainer = useRooPortal("roo-portal")
 
+	// kilcode_change start - Allow rendering just the content of CodeIndexPopover
+	const MaybePopover = !contentOnly ? Popover : NoOpWrapper
+	const MaybePopoverContent = !contentOnly ? PopoverContent : NoOpWrapper
+	// kilcode_change end - Allow rendering just the content of CodeIndexPopover
+
 	return (
 		<>
-			<Popover
+			{/* kilocode_change - Popover -> MaybePopover */}
+			<MaybePopover
 				open={open}
 				onOpenChange={(newOpen) => {
 					if (!newOpen) {
@@ -583,7 +641,8 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 					}
 				}}>
 				{children}
-				<PopoverContent
+				{/* kilocode_change - PopoverContent -> MaybePopoverContent */}
+				<MaybePopoverContent
 					className="w-[calc(100vw-32px)] max-w-[450px] max-h-[80vh] overflow-y-auto p-0"
 					align="end"
 					alignOffset={0}
@@ -1465,8 +1524,10 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 							</div>
 						)}
 					</div>
-				</PopoverContent>
-			</Popover>
+					{/* kilocode_change - PopoverContent -> MaybePopoverContent */}
+				</MaybePopoverContent>
+				{/* kilocode_change - Popover -> MaybePopover */}
+			</MaybePopover>
 
 			{/* Discard Changes Dialog */}
 			<AlertDialog open={isDiscardDialogShow} onOpenChange={setDiscardDialogShow}>

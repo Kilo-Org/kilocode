@@ -137,6 +137,7 @@ export interface ExtensionMessage {
 		| "profileDataResponse" // kilocode_change
 		| "balanceDataResponse" // kilocode_change
 		| "updateProfileData" // kilocode_change
+		| "profileConfigurationForEditing" // kilocode_change: Response with profile config for editing
 		| "authenticatedUser"
 		| "condenseTaskContextResponse"
 		| "singleRouterModelFetchResponse"
@@ -169,6 +170,7 @@ export interface ExtensionMessage {
 		| "dismissedUpsells"
 		| "showTimestamps" // kilocode_change
 		| "organizationSwitchResult"
+		| "managedIndexerState" // kilocode_change
 	text?: string
 	// kilocode_change start
 	payload?:
@@ -231,6 +233,7 @@ export interface ExtensionMessage {
 	mcpServers?: McpServer[]
 	commits?: GitCommit[]
 	listApiConfig?: ProviderSettingsEntry[]
+	apiConfiguration?: ProviderSettings // kilocode_change: For profileConfigurationForEditing response
 	mode?: Mode
 	customMode?: ModeConfig
 	slug?: string
@@ -287,6 +290,26 @@ export interface ExtensionMessage {
 	queuedMessages?: QueuedMessage[]
 	list?: string[] // For dismissedUpsells
 	organizationId?: string | null // For organizationSwitchResult
+	managedIndexerState?: Array<{
+		workspaceFolderPath: string
+		workspaceFolderName: string
+		gitBranch: string | null
+		projectId: string | null
+		isIndexing: boolean
+		hasManifest: boolean
+		manifestFileCount: number
+		hasWatcher: boolean
+		error?: {
+			type: string
+			message: string
+			timestamp: string
+			context?: {
+				filePath?: string
+				branch?: string
+				operation?: string
+			}
+		}
+	}> // kilocode_change
 }
 
 export type ExtensionState = Pick<
@@ -494,6 +517,7 @@ export interface ClineSayTool {
 		| "generateImage"
 		| "imageGenerated"
 		| "runSlashCommand"
+		| "deleteFile" // kilocode_change: Handles both files and directories
 	path?: string
 	diff?: string
 	content?: string
@@ -506,6 +530,14 @@ export interface ClineSayTool {
 	additionalFileCount?: number // Number of additional files in the same read_file request
 	lineNumber?: number
 	query?: string
+	// kilocode_change start: Directory stats - only present when deleting directories
+	stats?: {
+		files: number
+		directories: number
+		size: number
+		isComplete: boolean
+	}
+	// kilocode_change end
 	batchFiles?: Array<{
 		path: string
 		lineSnippet: string

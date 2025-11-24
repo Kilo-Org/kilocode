@@ -118,6 +118,16 @@ __setMockImplementation(
 	},
 )
 
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockResolvedValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 // Mock vscode language
 vi.mock("vscode", () => ({
 	env: {

@@ -58,6 +58,16 @@ export interface GitDiff {
 }
 
 /**
+ * A single file change from git diff
+ */
+export interface GitDiffFile {
+	/** Type of change */
+	type: "added" | "modified" | "deleted"
+	/** File path relative to workspace root */
+	filePath: string
+}
+
+/**
  * Configuration for managed indexing
  */
 export interface ManagedIndexingConfig {
@@ -113,8 +123,8 @@ export interface ScanResult {
 export interface ManifestFileEntry {
 	/** Relative file path */
 	filePath: string
-	/** Array of chunk hashes for this file (for accurate change detection) */
-	chunkHashes: string[]
+	/** Hash of the entire file content (for accurate change detection) */
+	fileHash: string
 	/** Number of chunks for this file */
 	chunkCount: number
 	/** When this file was last indexed */
@@ -133,8 +143,10 @@ export interface ServerManifest {
 	projectId: string
 	/** Git branch */
 	gitBranch: string
-	/** List of indexed files */
-	files: ManifestFileEntry[]
+	/** Map of indexed files by fileHash to filePath */
+	files: {
+		[fileHash: string]: string
+	}
 	/** Total number of files in manifest */
 	totalFiles: number
 	/** Total number of chunks across all files */

@@ -551,6 +551,7 @@ export interface TabAutocompleteOptions {
 	modelTimeout: number
 	maxSuffixPercentage: number
 	prefixPercentage: number
+	maxSnippetPercentage: number
 	transform?: boolean
 	multilineCompletions: "always" | "never" | "auto"
 	slidingWindowPrefixPercentage: number

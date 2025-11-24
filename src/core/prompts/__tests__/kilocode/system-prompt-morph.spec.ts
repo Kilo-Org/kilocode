@@ -1,6 +1,16 @@
 // kilocode_change: file added
 // npx vitest core/prompts/__tests__/system-prompt.spec.ts
 
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockResolvedValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 vi.mock("os", () => ({
 	default: {
 		homedir: () => "/home/user",

@@ -57,7 +57,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 **Step 2: Kilo Setup**
 
 1. **Create organization** at [app.kilocode.com](https://app.kilocode.com)
-2. **Subscribe to Teams ($15/month)** or **Enterprise ($299/month)**
+2. **Subscribe to Teams ($15/month)** or **Enterprise ($150/month)**
 3. **Configure team settings** and usage policies
 4. **Purchase initial AI credits** based on usage estimates
 
@@ -186,6 +186,21 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - [ ] Cancel previous AI coding tool subscriptions
 - [ ] Document new workflows and best practices
 
+## Technical Migration: Rules and Configurations
+
+Kilo Code uses a compatible rules system that supports Cursor and Windsurf patterns. Migrating your custom rules and configurations is straightforward and typically takes 5-10 minutes per project.
+
+**Quick Overview:**
+
+- **Project rules**: `.cursor/rules/*.mdc` → `.kilocode/rules/*.md` (remove YAML frontmatter, keep Markdown content)
+- **Legacy rules**: `.cursorrules` → `.kilocode/rules/legacy-rules.md`
+- **AGENTS.md**: Works identically in Kilo Code (no conversion needed)
+- **Global rules**: Recreate in `~/.kilocode/rules/*.md` directory
+
+Kilo Code also supports mode-specific rules (`.kilocode/rules-{mode}/`), which Cursor and Windsurf don't have. This allows different rules for different workflows (e.g., Code mode vs Debug mode).
+
+**👉 For detailed step-by-step instructions, format conversion examples, troubleshooting, and advanced migration scenarios, see our [Technical Migration Guide](/advanced-usage/migrating-from-cursor-windsurf).**
+
 ## Cost Comparison Analysis
 
 ### Hidden Costs in Other Tools
@@ -290,6 +305,12 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - **Solution:** Document and recreate important settings
 - **Prevention:** Settings audit before migration
 
+**Rules and Configuration Migration**
+
+- **Issue:** Custom rules and configurations not migrating automatically
+- **Solution:** Follow the [technical migration guide](/advanced-usage/migrating-from-cursor-windsurf) to manually migrate rules
+- **Prevention:** Audit rules before migration, use version control for rules
+
 ### Organizational Challenges
 
 **Change Resistance**
@@ -322,6 +343,7 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 ### Self-Service Resources
 
 - **Migration guides** for specific tools
+- **[Technical migration guide](/advanced-usage/migrating-from-cursor-windsurf)** for rules and configurations (Cursor/Windsurf)
 - **Video tutorials** for common migration scenarios
 - **Community support** through Discord and forums
 - **Documentation** and best practices
@@ -331,7 +353,9 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - **Email:** migrations@kilocode.ai
 - **Discord:** Join our migration support channel
 - **Consultation:** Schedule free migration planning call
-- **Documentation:** Comprehensive migration guides
+- **Documentation:**
+    - [Business migration guide](/plans/migration) (this page)
+    - [Technical migration guide](/advanced-usage/migrating-from-cursor-windsurf) (rules and configurations)
 
 ## Success Stories
 
@@ -361,5 +385,6 @@ Switch to **Kilo Teams** or **Kilo Enterprise** from other AI coding tools and e
 - [Get started with your team](/plans/getting-started)
 - [Explore team management features](/plans/team-management)
 - [Understand billing and pricing](/plans/billing)
+- [Migrate your rules and configurations](/advanced-usage/migrating-from-cursor-windsurf) (technical guide)
 
 Ready to make the switch? Contact our migration team at migrations@kilocode.ai to plan your transition to transparent AI coding.

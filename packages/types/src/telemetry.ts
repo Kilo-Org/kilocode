@@ -39,6 +39,7 @@ export enum TelemetryEventName {
 	AUTO_PURGE_COMPLETED = "Auto Purge Completed",
 	AUTO_PURGE_FAILED = "Auto Purge Failed",
 	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
+	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",
@@ -206,6 +207,7 @@ export const rooCodeTelemetryEventSchema = z.discriminatedUnion("type", [
 			TelemetryEventName.AUTO_PURGE_COMPLETED, // kilocode_change
 			TelemetryEventName.AUTO_PURGE_FAILED, // kilocode_change
 			TelemetryEventName.MANUAL_PURGE_TRIGGERED, // kilocode_change
+			TelemetryEventName.GHOST_SERVICE_DISABLED, // kilocode_change
 			// kilocode_change end
 
 			TelemetryEventName.TASK_CREATED,

@@ -137,6 +137,8 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			: "providers",
 	)
 
+	const [editingApiConfigName, setEditingApiConfigName] = useState<string>(currentApiConfigName || "default") // kilocode_change: Track which profile is being edited separately from the active profile
+
 	const scrollPositions = useRef<Record<SectionName, number>>(
 		Object.fromEntries(sectionNames.map((s) => [s, 0])) as Record<SectionName, number>,
 	)
@@ -259,9 +261,30 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		setCachedState((prevCachedState) => ({ ...prevCachedState, ...extensionState }))
 		prevApiConfigName.current = currentApiConfigName
 		setChangeDetected(false)
+		setEditingApiConfigName(currentApiConfigName || "default") // kilocode_change: Sync editing profile when active profile changes
 	}, [currentApiConfigName, extensionState])
 
 	// kilocode_change start
+	const isLoadingProfileForEditing = useRef(false)
+
+	useEffect(() => {
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data
+			if (message.type === "profileConfigurationForEditing" && message.text === editingApiConfigName) {
+				// Update cached state with the editing profile's configuration
+				setCachedState((prevState) => ({
+					...prevState,
+					apiConfiguration: message.apiConfiguration,
+				}))
+				setChangeDetected(false)
+				isLoadingProfileForEditing.current = false
+			}
+		}
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	}, [editingApiConfigName])
+
 	// Temporary way of making sure that the Settings view updates its local state properly when receiving
 	// api keys from providers that support url callbacks. This whole Settings View needs proper with this local state thing later
 	const { kilocodeToken, openRouterApiKey, glamaApiKey, requestyApiKey } = extensionState.apiConfiguration ?? {}
@@ -283,10 +306,24 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 	useEffect(() => {
 		// Only update if we're not already detecting changes
 		// This prevents overwriting user changes that haven't been saved yet
-		if (!isChangeDetected) {
-			setCachedState(extensionState)
+		// Also skip if we're loading a profile for editing
+		if (!isChangeDetected && !isLoadingProfileForEditing.current) {
+			// When editing a different profile than the active one,
+			// don't overwrite apiConfiguration from extensionState since it contains
+			// the active profile's config, not the editing profile's config
+			if (editingApiConfigName !== currentApiConfigName) {
+				// Sync everything except apiConfiguration
+				const { apiConfiguration: _, ...restOfExtensionState } = extensionState
+				setCachedState((prevState) => ({
+					...prevState,
+					...restOfExtensionState,
+				}))
+			} else {
+				// When editing the active profile, sync everything including apiConfiguration
+				setCachedState(extensionState)
+			}
 		}
-	}, [extensionState, isChangeDetected])
+	}, [extensionState, isChangeDetected, editingApiConfigName, currentApiConfigName])
 	// kilocode_change end
 
 	// Bust the cache when settings are imported.
@@ -509,7 +546,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 			vscode.postMessage({ type: "setReasoningBlockCollapsed", bool: reasoningBlockCollapsed ?? true })
 			vscode.postMessage({ type: "includeCurrentTime", bool: includeCurrentTime ?? true })
 			vscode.postMessage({ type: "includeCurrentCost", bool: includeCurrentCost ?? true })
-			vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
+			vscode.postMessage({ type: "upsertApiConfiguration", text: editingApiConfigName, apiConfiguration }) // kilocode_change: Save to editing profile instead of current active profile
 			vscode.postMessage({ type: "telemetrySetting", text: telemetrySetting })
 			vscode.postMessage({ type: "profileThresholds", values: profileThresholds })
 			vscode.postMessage({ type: "systemNotificationsEnabled", bool: systemNotificationsEnabled }) // kilocode_change
@@ -537,9 +574,20 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 				type: "autoPurgeIncompleteTaskRetentionDays",
 				value: autoPurgeIncompleteTaskRetentionDays,
 			})
-			// kilocode_change end
 			// Update cachedState to match the current state to prevent isChangeDetected from being set back to true
-			setCachedState((prevState) => ({ ...prevState, ...extensionState }))
+			// kilocode_change: When editing a different profile, don't overwrite apiConfiguration
+			if (editingApiConfigName !== currentApiConfigName) {
+				// Only sync non-apiConfiguration fields from extensionState
+				const { apiConfiguration: _, ...restOfExtensionState } = extensionState
+				setCachedState((prevState) => ({
+					...prevState,
+					...restOfExtensionState,
+				}))
+			} else {
+				// When editing the active profile, sync everything
+				setCachedState((prevState) => ({ ...prevState, ...extensionState }))
+			}
+			// kilocode_change end
 			setChangeDetected(false)
 		}
 	}
@@ -811,33 +859,64 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 							</SectionHeader>
 
 							<Section>
+								{/* kilocode_change start changes to allow for editting a non-active profile */}
 								<ApiConfigManager
-									currentApiConfigName={currentApiConfigName}
+									currentApiConfigName={editingApiConfigName}
+									activeApiConfigName={currentApiConfigName}
 									listApiConfigMeta={listApiConfigMeta}
-									onSelectConfig={(configName: string) =>
-										checkUnsaveChanges(() =>
-											vscode.postMessage({ type: "loadApiConfiguration", text: configName }),
-										)
-									}
-									onDeleteConfig={(configName: string) =>
+									onSelectConfig={(configName: string) => {
+										checkUnsaveChanges(() => {
+											setEditingApiConfigName(configName)
+											// Set flag to prevent extensionState sync while loading
+											isLoadingProfileForEditing.current = true
+											// Request the profile's configuration for editing
+											vscode.postMessage({
+												type: "getProfileConfigurationForEditing",
+												text: configName,
+											})
+										})
+									}}
+									onActivateConfig={(configName: string) => {
+										vscode.postMessage({ type: "loadApiConfiguration", text: configName })
+									}}
+									onDeleteConfig={(configName: string) => {
+										const isEditingProfile = configName === editingApiConfigName
+
 										vscode.postMessage({ type: "deleteApiConfiguration", text: configName })
-									}
+
+										// If deleting the editing profile, switch to another for editing
+										if (isEditingProfile && listApiConfigMeta && listApiConfigMeta.length > 1) {
+											const nextProfile = listApiConfigMeta.find((p) => p.name !== configName)
+											if (nextProfile) {
+												setEditingApiConfigName(nextProfile.name)
+											}
+										}
+									}}
 									onRenameConfig={(oldName: string, newName: string) => {
 										vscode.postMessage({
 											type: "renameApiConfiguration",
 											values: { oldName, newName },
 											apiConfiguration,
 										})
-										prevApiConfigName.current = newName
+										if (oldName === editingApiConfigName) {
+											setEditingApiConfigName(newName)
+										}
+										// Update prevApiConfigName if renaming the active profile
+										if (oldName === currentApiConfigName) {
+											prevApiConfigName.current = newName
+										}
 									}}
-									onUpsertConfig={(configName: string) =>
+									onUpsertConfig={(configName: string) => {
 										vscode.postMessage({
 											type: "upsertApiConfiguration",
 											text: configName,
 											apiConfiguration,
 										})
-									}
+										setEditingApiConfigName(configName)
+									}}
 								/>
+								{/* kilocode_change end changes to allow for editting a non-active profile */}
+
 								<ApiOptions
 									uriScheme={uriScheme}
 									apiConfiguration={apiConfiguration}

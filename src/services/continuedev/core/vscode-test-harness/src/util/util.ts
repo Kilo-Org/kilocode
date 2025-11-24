@@ -39,7 +39,7 @@ export function isUnsupportedPlatform(): {
 	if (platform === "windows" && arch === "arm64") {
 		return {
 			isUnsupported: true,
-			reason: "Windows ARM64 is not currently supported due to missing native dependencies (sqlite3, onnxruntime). Please use the extension on Windows x64, macOS, or Linux instead.",
+			reason: "Windows ARM64 is not currently supported due to missing native dependencies (onnxruntime). Please use the extension on Windows x64, macOS, or Linux instead.",
 		}
 	}
 

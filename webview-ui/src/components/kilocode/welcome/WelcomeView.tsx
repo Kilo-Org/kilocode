@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useState, useEffect, useRef } from "react"
 import { useExtensionState } from "../../../context/ExtensionStateContext"
 import { validateApiConfiguration } from "../../../utils/validate"
 import { vscode } from "../../../utils/vscode"
@@ -22,6 +22,24 @@ const WelcomeView = () => {
 	const [errorMessage, setErrorMessage] = useState<string | undefined>()
 	const [manualConfig, setManualConfig] = useState(false)
 	const { t } = useAppTranslation()
+	const pendingActivation = useRef<string | null | undefined>(null)
+
+	// Listen for state updates to activate profile after save completes
+	useEffect(() => {
+		const handleMessage = (event: MessageEvent) => {
+			const message = event.data
+			// When we receive a state update and have a pending activation, activate the profile
+			if (message.type === "state" && pendingActivation.current) {
+				const profileToActivate = pendingActivation.current
+				pendingActivation.current = null
+				// Activate the profile now that it's been saved
+				vscode.postMessage({ type: "loadApiConfiguration", text: profileToActivate })
+			}
+		}
+
+		window.addEventListener("message", handleMessage)
+		return () => window.removeEventListener("message", handleMessage)
+	}, [])
 
 	const handleSubmit = useCallback(() => {
 		const error = apiConfiguration ? validateApiConfiguration(apiConfiguration) : undefined
@@ -32,6 +50,9 @@ const WelcomeView = () => {
 		}
 
 		setErrorMessage(undefined)
+		// Mark that we want to activate this profile after save completes
+		pendingActivation.current = currentApiConfigName
+		// Save the configuration - activation will happen when state update is received
 		vscode.postMessage({ type: "upsertApiConfiguration", text: currentApiConfigName, apiConfiguration })
 	}, [apiConfiguration, currentApiConfigName])
 

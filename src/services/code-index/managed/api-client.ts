@@ -6,19 +6,24 @@
  * backend API for managed indexing operations (upsert, search, delete, manifest).
  */
 
-import axios from "axios"
 import { ManagedCodeChunk, SearchRequest, SearchResult, ServerManifest } from "./types"
 import { logger } from "../../../utils/logging"
 import { getKiloBaseUriFromToken } from "../../../../packages/types/src/kilocode/kilocode"
+import { fetchWithRetries } from "../../../shared/http"
 
 /**
  * Upserts code chunks to the server using the new envelope format
  *
  * @param chunks Array of chunks to upsert (must all be from same org/project/branch)
  * @param kilocodeToken Authentication token
+ * @param signal Optional AbortSignal to cancel the request
  * @throws Error if the request fails or chunks are from different contexts
  */
-export async function upsertChunks(chunks: ManagedCodeChunk[], kilocodeToken: string): Promise<void> {
+export async function upsertChunks(
+	chunks: ManagedCodeChunk[],
+	kilocodeToken: string,
+	signal?: AbortSignal,
+): Promise<void> {
 	if (chunks.length === 0) {
 		return
 	}
@@ -56,17 +61,18 @@ export async function upsertChunks(chunks: ManagedCodeChunk[], kilocodeToken: st
 	}
 
 	try {
-		const response = await axios({
-			method: "PUT",
+		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/upsert`,
-			data: requestBody,
+			method: "PUT",
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
 			},
+			body: JSON.stringify(requestBody),
+			signal,
 		})
 
-		if (response.status !== 200) {
+		if (!response.ok) {
 			throw new Error(`Failed to upsert chunks: ${response.statusText}`)
 		}
 
@@ -83,28 +89,34 @@ export async function upsertChunks(chunks: ManagedCodeChunk[], kilocodeToken: st
  *
  * @param request Search request with preferences
  * @param kilocodeToken Authentication token
+ * @param signal Optional AbortSignal to cancel the request
  * @returns Array of search results sorted by relevance
  * @throws Error if the request fails
  */
-export async function searchCode(request: SearchRequest, kilocodeToken: string): Promise<SearchResult[]> {
+export async function searchCode(
+	request: SearchRequest,
+	kilocodeToken: string,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 
 	try {
-		const response = await axios({
-			method: "POST",
+		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/search`,
-			data: request,
+			method: "POST",
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
 			},
+			body: JSON.stringify(request),
+			signal,
 		})
 
-		if (response.status !== 200) {
+		if (!response.ok) {
 			throw new Error(`Search failed: ${response.statusText}`)
 		}
 
-		const results: SearchResult[] = response.data || []
+		const results: SearchResult[] = (await response.json()) || []
 		logger.info(`Search returned ${results.length} results`)
 		return results
 	} catch (error) {
@@ -122,6 +134,7 @@ export async function searchCode(request: SearchRequest, kilocodeToken: string):
  * @param organizationId Organization ID
  * @param projectId Project ID
  * @param kilocodeToken Authentication token
+ * @param signal Optional AbortSignal to cancel the request
  * @throws Error if the request fails
  */
 export async function deleteFiles(
@@ -130,6 +143,7 @@ export async function deleteFiles(
 	organizationId: string,
 	projectId: string,
 	kilocodeToken: string,
+	signal?: AbortSignal,
 ): Promise<void> {
 	if (filePaths.length === 0) {
 		return
@@ -138,22 +152,23 @@ export async function deleteFiles(
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 
 	try {
-		const response = await axios({
-			method: "PUT",
+		const response = await fetchWithRetries({
 			url: `${baseUrl}/api/code-indexing/delete`,
-			data: {
-				organizationId,
-				projectId,
-				gitBranch,
-				filePaths,
-			},
+			method: "PUT",
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
 			},
+			body: JSON.stringify({
+				organizationId,
+				projectId,
+				gitBranch,
+				filePaths,
+			}),
+			signal,
 		})
 
-		if (response.status !== 200) {
+		if (!response.ok) {
 			throw new Error(`Failed to delete files: ${response.statusText}`)
 		}
 
@@ -161,6 +176,85 @@ export async function deleteFiles(
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		logger.error(`Failed to delete files: ${errorMessage}`)
+		throw error
+	}
+}
+
+/**
+ * Parameters for upserting a file to the server
+ */
+export interface UpsertFileParams {
+	/** The file content as a Buffer */
+	fileBuffer: Buffer
+	/** Organization ID (must be a valid UUID) */
+	organizationId: string
+	/** Project ID */
+	projectId: string
+	/** Relative file path from workspace root */
+	filePath: string
+	/** Hash of the file content */
+	fileHash: string
+	/** Git branch name (defaults to 'main') */
+	gitBranch?: string
+	/** Whether this is from a base branch (defaults to true) */
+	isBaseBranch?: boolean
+	/** Authentication token */
+	kilocodeToken: string
+}
+
+/**
+ * Upserts a file to the server using multipart file upload
+ *
+ * @param params Parameters for the file upload
+ * @param signal Optional AbortSignal to cancel the request
+ * @throws Error if the request fails
+ */
+export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal): Promise<void> {
+	const {
+		fileBuffer,
+		organizationId,
+		projectId,
+		filePath,
+		fileHash,
+		gitBranch = "main",
+		isBaseBranch = true,
+		kilocodeToken,
+	} = params
+
+	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
+
+	try {
+		// Create FormData for multipart upload
+		const formData = new FormData()
+
+		// Append the file with metadata
+		const filename = filePath.split("/").pop() || "file"
+		formData.append("file", new Blob([fileBuffer as any]), filename)
+		formData.append("organizationId", organizationId)
+		formData.append("projectId", projectId)
+		formData.append("filePath", filePath)
+		formData.append("fileHash", fileHash)
+		formData.append("gitBranch", gitBranch)
+		formData.append("isBaseBranch", String(isBaseBranch))
+
+		const response = await fetchWithRetries({
+			url: `${baseUrl}/api/code-indexing/upsert-by-file`,
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${kilocodeToken}`,
+			},
+			body: formData,
+			signal,
+		})
+
+		if (!response.ok) {
+			throw new Error(`Failed to upsert file: ${response.statusText}`)
+		}
+
+		logger.info(`Successfully upserted file: ${filePath}`)
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error)
+		logger.error(`Failed to upsert file ${filePath}: ${errorMessage}`)
 		throw error
 	}
 }
@@ -175,6 +269,7 @@ export async function deleteFiles(
  * @param projectId Project ID
  * @param gitBranch Git branch name
  * @param kilocodeToken Authentication token
+ * @param signal Optional AbortSignal to cancel the request
  * @returns Server manifest with file metadata
  * @throws Error if the request fails
  */
@@ -183,29 +278,32 @@ export async function getServerManifest(
 	projectId: string,
 	gitBranch: string,
 	kilocodeToken: string,
+	signal?: AbortSignal,
 ): Promise<ServerManifest> {
 	const baseUrl = getKiloBaseUriFromToken(kilocodeToken)
 
 	try {
-		const response = await axios({
+		const params = new URLSearchParams({
+			organizationId,
+			projectId,
+			gitBranch,
+		})
+
+		const response = await fetchWithRetries({
+			url: `${baseUrl}/api/code-indexing/manifest?${params.toString()}`,
 			method: "GET",
-			url: `${baseUrl}/api/code-indexing/manifest`,
-			params: {
-				organizationId,
-				projectId,
-				gitBranch,
-			},
 			headers: {
 				Authorization: `Bearer ${kilocodeToken}`,
 				"Content-Type": "application/json",
 			},
+			signal,
 		})
 
-		if (response.status !== 200) {
+		if (!response.ok) {
 			throw new Error(`Failed to get manifest: ${response.statusText}`)
 		}
 
-		const manifest: ServerManifest = response.data
+		const manifest: ServerManifest = await response.json()
 		logger.info(`Retrieved manifest for ${gitBranch}: ${manifest.totalFiles} files, ${manifest.totalChunks} chunks`)
 		return manifest
 	} catch (error) {

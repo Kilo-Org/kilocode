@@ -488,6 +488,11 @@ function handleFollowupKeys(get: Getter, set: Setter, key: Key): void {
 			break
 	}
 
+	if (isKeyModifyBuffer(key)) {
+		// If modifying buffer, unselect any suggestion
+		set(selectedIndexAtom, -1)
+	}
+
 	// Fall through to normal text handling
 	handleTextInputKeys(get, set, key)
 }
@@ -889,3 +894,18 @@ export const setupKeyboardAtom = atom(null, (get, set) => {
 
 	return unsubscribe
 })
+
+/**
+ * Utility Keys Functions
+ */
+
+const isKeyModifyBuffer = (key: Key): boolean => {
+	return (
+		!key.ctrl &&
+		!key.meta &&
+		!key.paste &&
+		key.name !== "return" &&
+		key.name !== "escape" &&
+		key.sequence.length === 1
+	)
+}

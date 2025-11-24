@@ -17,6 +17,7 @@ import { TelemetryEventName } from "@roo-code/types"
 // kilocode_change start: Managed indexing (new standalone system)
 import { startIndexing as startManagedIndexing, search as searchManaged, createManagedIndexingConfig } from "./managed"
 import type { IndexerState as ManagedIndexerState } from "./managed"
+import { ManagedIndexer } from "./managed/ManagedIndexer"
 // kilocode_change end
 
 export class CodeIndexManager {
@@ -32,6 +33,7 @@ export class CodeIndexManager {
 	private _cacheManager: CacheManager | undefined
 
 	// kilocode_change start: Managed indexing (new standalone system)
+	public managedIndexer = ManagedIndexer.getInstance()
 	private _managedIndexerDisposable: vscode.Disposable | undefined
 	private _managedIndexerState: ManagedIndexerState | undefined
 	// kilocode_change end
@@ -102,11 +104,11 @@ export class CodeIndexManager {
 	}
 
 	public get isFeatureEnabled(): boolean {
-		return this._configManager?.isFeatureEnabled ?? false
+		return (this._configManager?.isFeatureEnabled || !!this.managedIndexer.organization) ?? false
 	}
 
 	public get isFeatureConfigured(): boolean {
-		return this._configManager?.isFeatureConfigured ?? false
+		return (this._configManager?.isFeatureConfigured || !!this.managedIndexer.organization) ?? false
 	}
 
 	public get isInitialized(): boolean {
@@ -321,6 +323,12 @@ export class CodeIndexManager {
 	}
 
 	public async searchIndex(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
+		// kilocode_change start - proxy out to managed indexing if available
+		if (await this.managedIndexer.isEnabled()) {
+			return await this.managedIndexer.search(query, directoryPrefix)
+		}
+		// kilocode_change start - proxy out to managed indexing if available
+
 		// kilocode_change start: Route to managed indexing if available
 		if (this.isManagedIndexingAvailable) {
 			return this.searchManagedIndex(query, directoryPrefix)
@@ -531,57 +539,7 @@ export class CodeIndexManager {
 	 * Starts the managed indexer (for organization users)
 	 * This is the new standalone indexing system that uses delta-based indexing
 	 */
-	public async startManagedIndexing(): Promise<void> {
-		console.info("[CodeIndexManager] Starting managed indexing due to Kilo org props set")
-		if (!this._kiloOrgCodeIndexProps) {
-			throw new Error("Managed indexing requires organization credentials")
-		}
-
-		try {
-			this.stopManagedIndexing()
-
-			// Create configuration
-			const config = createManagedIndexingConfig(
-				this._kiloOrgCodeIndexProps.organizationId,
-				this._kiloOrgCodeIndexProps.projectId,
-				this._kiloOrgCodeIndexProps.kilocodeToken,
-				this.workspacePath,
-			)
-
-			// Start indexing
-			this._managedIndexerDisposable = await startManagedIndexing(config, (state) => {
-				this._managedIndexerState = state
-				// Emit state change event through state manager
-				// Map managed indexer states to system states:
-				// - "error" → "Error"
-				// - "scanning" → "Indexing"
-				// - "watching" → "Indexed" (has data and watching for changes)
-				// - "idle" → "Standby" (no data or needs re-scan)
-				let systemState: "Standby" | "Indexing" | "Indexed" | "Error"
-				if (state.status === "error") {
-					systemState = "Error"
-				} else if (state.status === "scanning") {
-					systemState = "Indexing"
-				} else if (state.status === "watching") {
-					systemState = "Indexed"
-				} else {
-					// "idle" or any other status
-					systemState = "Standby"
-				}
-
-				this._stateManager.setSystemState(systemState, state.message, state.manifest, state.gitBranch)
-			})
-		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error)
-			console.error("[CodeIndexManager] Failed to start managed indexing:", error)
-			TelemetryService.instance.captureEvent(TelemetryEventName.CODE_INDEX_ERROR, {
-				error: errorMessage,
-				stack: error instanceof Error ? error.stack : undefined,
-				location: "startManagedIndexing",
-			})
-			throw error
-		}
-	}
+	public async startManagedIndexing(): Promise<void> {}
 
 	/**
 	 * Stops the managed indexer

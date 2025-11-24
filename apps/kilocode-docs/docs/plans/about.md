@@ -38,4 +38,4 @@ No credits are included with a Teams or Enterprise plan purchase.
 - **SLA commitments** for support issues
 - **Dedicated support channels** for private, direct communication
 
-**Cost:** $299 per user per month
+**Cost:** $150 per user per month

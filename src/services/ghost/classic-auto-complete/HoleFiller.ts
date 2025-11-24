@@ -1,5 +1,15 @@
 import { AutocompleteInput } from "../types"
 import { GhostContextProvider } from "./GhostContextProvider"
+import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
+import { GhostModel } from "../GhostModel"
+import { ApiStreamChunk } from "../../../api/transform/stream"
+
+export interface HoleFillerGhostPrompt {
+	strategy: "hole_filler"
+	autocompleteInput: AutocompleteInput
+	systemPrompt: string
+	userPrompt: string
+}
 
 export interface FillInAtCursorSuggestion {
 	text: string
@@ -7,8 +17,54 @@ export interface FillInAtCursorSuggestion {
 	suffix: string
 }
 
-export function getBaseSystemInstructions(): string {
-	return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
+export interface ChatCompletionResult {
+	suggestion: FillInAtCursorSuggestion
+	cost: number
+	inputTokens: number
+	outputTokens: number
+	cacheWriteTokens: number
+	cacheReadTokens: number
+}
+
+/**
+ * Parse the response - only handles responses with <COMPLETION> tags
+ * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
+ */
+export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
+	let fimText: string = ""
+
+	// Match content strictly between <COMPLETION> and </COMPLETION> tags
+	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
+
+	if (completionMatch) {
+		// Extract the captured group (content between tags)
+		fimText = completionMatch[1] || ""
+	}
+	// Remove any accidentally captured tag remnants
+	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
+
+	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
+	return {
+		text: fimText,
+		prefix,
+		suffix,
+	}
+}
+
+export class HoleFiller {
+	constructor(private contextProvider: GhostContextProvider) {}
+
+	async getPrompts(autocompleteInput: AutocompleteInput, languageId: string): Promise<HoleFillerGhostPrompt> {
+		return {
+			strategy: "hole_filler",
+			systemPrompt: this.getSystemInstructions(),
+			userPrompt: await this.getUserPrompt(autocompleteInput, languageId),
+			autocompleteInput,
+		}
+	}
+
+	getSystemInstructions(): string {
+		return `You are a HOLE FILLER. You are provided with a file containing holes, formatted as '{{FILL_HERE}}'. Your TASK is to complete with a string to replace this hole with, inside a <COMPLETION/> XML tag, including context-aware indentation, if needed. All completions MUST be truthful, accurate, well-written and correct.
 
 ## CRITICAL RULES
 - NEVER repeat or duplicate content that appears immediately before {{FILL_HERE}}
@@ -102,93 +158,73 @@ function hypothenuse(a, b) {
 
 <COMPLETION>a ** 2 + </COMPLETION>
 
-`
-}
-
-/**
- * Parse the response - only handles responses with <COMPLETION> tags
- * Returns a FillInAtCursorSuggestion with the extracted text, or an empty string if nothing found
- */
-export function parseGhostResponse(fullResponse: string, prefix: string, suffix: string): FillInAtCursorSuggestion {
-	let fimText: string = ""
-
-	// Match content strictly between <COMPLETION> and </COMPLETION> tags
-	const completionMatch = fullResponse.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
-
-	if (completionMatch) {
-		// Extract the captured group (content between tags)
-		fimText = completionMatch[1] || ""
-	}
-	// Remove any accidentally captured tag remnants
-	fimText = fimText.replace(/<\/?COMPLETION>/gi, "")
-
-	// Return FillInAtCursorSuggestion with the text (empty string if nothing found)
-	return {
-		text: fimText,
-		prefix,
-		suffix,
-	}
-}
-
-export class HoleFiller {
-	constructor(private contextProvider?: GhostContextProvider) {}
-
-	async getPrompts(
-		autocompleteInput: AutocompleteInput,
-		prefix: string,
-		suffix: string,
-		languageId: string,
-	): Promise<{
-		systemPrompt: string
-		userPrompt: string
-	}> {
-		const userPrompt = await this.getUserPrompt(autocompleteInput, prefix, suffix, languageId)
-		return {
-			systemPrompt: this.getSystemInstructions(),
-			userPrompt,
-		}
-	}
-
-	getSystemInstructions(): string {
-		return (
-			getBaseSystemInstructions() +
-			`Task: Auto-Completion
+Task: Auto-Completion
 Provide a subtle, non-intrusive completion after a typing pause.
 
 `
-		)
 	}
 
 	/**
 	 * Build minimal prompt for auto-trigger with optional context
 	 */
-	async getUserPrompt(
-		autocompleteInput: AutocompleteInput,
-		prefix: string,
-		suffix: string,
-		languageId: string,
-	): Promise<string> {
-		let prompt = `<LANGUAGE>${languageId}</LANGUAGE>\n\n`
-
-		let formattedContext = ""
-		if (this.contextProvider && autocompleteInput.filepath) {
-			try {
-				formattedContext = await this.contextProvider.getFormattedContext(
-					autocompleteInput,
-					autocompleteInput.filepath,
-				)
-			} catch (error) {
-				console.warn("Failed to get formatted context:", error)
-			}
-		}
-
-		prompt += `<QUERY>
-${formattedContext}${prefix}{{FILL_HERE}}${suffix}
+	async getUserPrompt(autocompleteInput: AutocompleteInput, languageId: string): Promise<string> {
+		const { helper, snippetsWithUris, workspaceDirs } = await this.contextProvider.getProcessedSnippets(
+			autocompleteInput,
+			autocompleteInput.filepath,
+		)
+		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
+		// Use pruned prefix/suffix from HelperVars (token-limited based on DEFAULT_AUTOCOMPLETE_OPTS)
+		return (
+			`<LANGUAGE>${languageId}</LANGUAGE>\n\n` +
+			`<QUERY>
+${formattedContext}${formattedContext ? "\n" : ""}${helper.prunedPrefix}{{FILL_HERE}}${helper.prunedSuffix}
 </QUERY>
 
 TASK: Fill the {{FILL_HERE}} hole. Answer only with the CORRECT completion, and NOTHING ELSE. Do it now.
 Return the COMPLETION tags`
+		)
+	}
 
-		return prompt
+	/**
+	 * Execute chat-based completion using the model
+	 */
+	async getFromChat(
+		model: GhostModel,
+		prompt: HoleFillerGhostPrompt,
+		processSuggestion: (text: string) => FillInAtCursorSuggestion,
+	): Promise<ChatCompletionResult> {
+		const { systemPrompt, userPrompt } = prompt
+		let response = ""
+
+		const onChunk = (chunk: ApiStreamChunk) => {
+			if (chunk.type === "text") {
+				response += chunk.text
+			}
+		}
+
+		console.log("[HoleFiller] userPrompt:", userPrompt)
+
+		const usageInfo = await model.generateResponse(systemPrompt, userPrompt, onChunk)
+
+		console.log("response", response)
+
+		// Extract just the text from the response - prefix/suffix are handled by the caller
+		const completionMatch = response.match(/<COMPLETION>([\s\S]*?)<\/COMPLETION>/i)
+		const suggestionText = completionMatch ? (completionMatch[1] || "").replace(/<\/?COMPLETION>/gi, "") : ""
+
+		const fillInAtCursorSuggestion = processSuggestion(suggestionText)
+
+		if (fillInAtCursorSuggestion.text) {
+			console.info("Final suggestion:", fillInAtCursorSuggestion)
+		}
+
+		return {
+			suggestion: fillInAtCursorSuggestion,
+			cost: usageInfo.cost,
+			inputTokens: usageInfo.inputTokens,
+			outputTokens: usageInfo.outputTokens,
+			cacheWriteTokens: usageInfo.cacheWriteTokens,
+			cacheReadTokens: usageInfo.cacheReadTokens,
+		}
 	}
 }

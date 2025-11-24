@@ -76,12 +76,22 @@ export class GhostServiceManager {
 	}
 
 	public async load() {
+		await this.cline.providerSettingsManager.initialize() // avoid race condition with settings migrations
+		await this.model.reload(this.cline.providerSettingsManager)
+
 		this.settings = ContextProxy.instance.getGlobalState("ghostServiceSettings") ?? {
 			enableQuickInlineTaskKeybinding: true,
 			enableSmartInlineTaskKeybinding: true,
 		}
-		await this.cline.providerSettingsManager.initialize() // avoid race condition with settings migrations
-		await this.model.reload(this.cline.providerSettingsManager)
+		// 1% rollout: auto-enable autocomplete for a small subset of logged-in KiloCode users
+		// who have never explicitly toggled enableAutoTrigger.
+		if (this.settings.enableAutoTrigger == undefined) {
+			const rolloutHash = this.model.getRolloutHash_IfLoggedInToKilo()
+			if (rolloutHash != undefined && rolloutHash % 100 < 10) {
+				this.settings.enableAutoTrigger = true
+			}
+		}
+
 		await this.updateGlobalContext()
 		this.updateStatusBar()
 		await this.updateInlineCompletionProviderRegistration()
@@ -135,6 +145,8 @@ export class GhostServiceManager {
 				enableQuickInlineTaskKeybinding: false,
 			},
 		})
+
+		TelemetryService.instance.captureEvent(TelemetryEventName.GHOST_SERVICE_DISABLED)
 
 		await this.load()
 	}

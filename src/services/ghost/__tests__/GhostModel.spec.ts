@@ -92,13 +92,13 @@ describe("GhostModel", () => {
 
 		it("returns true when profile found", async () => {
 			const supportedProviders = [...AUTOCOMPLETE_PROVIDER_MODELS.keys()]
-			const profiles = [{ id: "1", name: "profile1", apiProvider: supportedProviders[0] }] as any
+			const profiles = [{ id: "1", name: "mistral-profile", apiProvider: "mistral" }] as any
 
 			vi.mocked(mockProviderSettingsManager.listConfig).mockResolvedValue(profiles)
 			vi.mocked(mockProviderSettingsManager.getProfile).mockResolvedValue({
 				id: "1",
-				name: "profile1",
-				apiProvider: supportedProviders[0],
+				name: "mistral-profile",
+				apiProvider: "mistral",
 				mistralApiKey: "test-key",
 			} as any)
 
@@ -317,8 +317,8 @@ describe("GhostModel", () => {
 
 			// Mock buildApiHandler to return a handler with providerName
 			const mockApiHandler = {
-				providerName: "Test Provider",
-				getModel: vi.fn().mockReturnValue({ id: "test-model", info: {} }),
+				providerName: "Mistral",
+				getModel: vi.fn().mockReturnValue({ id: "mistral-model", info: {} }),
 				createMessage: vi.fn(),
 				countTokens: vi.fn(),
 			}
@@ -330,7 +330,7 @@ describe("GhostModel", () => {
 			const providerName = model.getProviderDisplayName()
 			expect(providerName).toBeTruthy()
 			expect(typeof providerName).toBe("string")
-			expect(providerName).toBe("Test Provider")
+			expect(providerName).toBe("Mistral")
 
 			// Restore the spy
 			vi.restoreAllMocks()

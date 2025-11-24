@@ -3,10 +3,33 @@ import type { ModelInfo } from "../model.js"
 // https://ai.google.dev/gemini-api/docs/models/gemini
 export type GeminiModelId = keyof typeof geminiModels
 
-export const geminiDefaultModelId: GeminiModelId = "gemini-2.0-flash-001"
+export const geminiDefaultModelId: GeminiModelId = "gemini-3-pro-preview" // kilocode_change
 
 export const geminiModels = {
 	// Latest models (pointing to the most recent stable versions)
+	"gemini-3-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		reasoningEffort: "low",
+		supportsTemperature: true,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+			},
+		],
+	},
 	"gemini-flash-latest": {
 		maxTokens: 65_536,
 		contextWindow: 1_048_576,

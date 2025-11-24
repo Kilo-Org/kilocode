@@ -13,6 +13,7 @@ import { TelemetryEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 import { Mutex } from "async-mutex"
 import { handleOpenAIError } from "../../../api/providers/utils/openai-error-handler"
+import { DEFAULT_HEADERS } from "../../../api/providers/constants" // kilocode_change
 
 interface EmbeddingItem {
 	embedding: string | number[]
@@ -67,10 +68,7 @@ export class OpenRouterEmbedder implements IEmbedder {
 			this.embeddingsClient = new OpenAI({
 				baseURL: this.baseUrl,
 				apiKey: apiKey,
-				defaultHeaders: {
-					"HTTP-Referer": "https://github.com/RooCodeInc/Roo-Code",
-					"X-Title": "Roo Code",
-				},
+				defaultHeaders: DEFAULT_HEADERS, // kilocode_change
 			})
 		} catch (error) {
 			// Use the error handler to transform ByteString conversion errors

@@ -7,7 +7,6 @@ import { getAllSnippetsWithoutRace } from "../../continuedev/core/autocomplete/s
 import { getDefinitionsFromLsp } from "../../continuedev/core/vscode-test-harness/src/autocomplete/lsp"
 import { DEFAULT_AUTOCOMPLETE_OPTS } from "../../continuedev/core/util/parameters"
 import { getSnippets } from "../../continuedev/core/autocomplete/templating/filtering"
-import { formatSnippets } from "../../continuedev/core/autocomplete/templating/formatting"
 import { GhostModel } from "../GhostModel"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 import { AutocompleteSnippet, AutocompleteSnippetType } from "../../continuedev/core/autocomplete/snippets/types"
@@ -82,11 +81,15 @@ export class GhostContextProvider {
 		}
 	}
 
-	/**
-	 * Get context snippets for the current autocomplete request
-	 * Returns comment-based formatted context that can be added to prompts
-	 */
-	async getFormattedContext(autocompleteInput: AutocompleteInput, filepath: string): Promise<string> {
+	public async getProcessedSnippets(
+		autocompleteInput: AutocompleteInput,
+		filepath: string,
+	): Promise<{
+		filepathUri: string
+		helper: any
+		snippetsWithUris: AutocompleteSnippet[]
+		workspaceDirs: string[]
+	}> {
 		// Convert filepath to URI if it's not already one
 		const filepathUri = filepath.startsWith("file://") ? filepath : vscode.Uri.file(filepath).toString()
 
@@ -126,10 +129,7 @@ export class GhostContextProvider {
 		}))
 
 		const workspaceDirs = await this.ide.getWorkspaceDirs()
-		const formattedContext = formatSnippets(helper, snippetsWithUris, workspaceDirs)
 
-		console.log("[GhostContextProvider] - formattedContext:", formattedContext)
-
-		return formattedContext
+		return { filepathUri, helper, snippetsWithUris, workspaceDirs }
 	}
 }

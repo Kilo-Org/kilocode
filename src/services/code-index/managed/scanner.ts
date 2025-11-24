@@ -31,17 +31,6 @@ import { TelemetryEventName } from "@roo-code/types"
 import { logger } from "../../../utils/logging"
 
 /**
- * Helper function to compare two arrays for equality
- */
-function arraysEqual<T>(a: T[], b: T[]): boolean {
-	if (a.length !== b.length) return false
-	for (let i = 0; i < a.length; i++) {
-		if (a[i] !== b[i]) return false
-	}
-	return true
-}
-
-/**
  * Scans a directory and indexes files based on branch strategy
  *
  * - Main branch: Scans all files
@@ -257,14 +246,11 @@ async function processFiles(
 					config: config.chunker,
 				})
 
-				// Extract chunk hashes for comparison
-				const currentChunkHashes = chunks.map((c) => c.chunkHash)
-
-				// Check if file is already indexed on server with matching chunk hashes
+				// Check if file is already indexed on server with matching file hash
 				if (manifest) {
-					const manifestEntry = manifest.files.find((f) => f.filePath === relativeFilePath)
-					if (manifestEntry && arraysEqual(currentChunkHashes, manifestEntry.chunkHashes)) {
-						// File already indexed on server with same chunks - skip
+					// Check if the fileHash exists in the map and points to this filePath
+					if (manifest.files[fileHash] === relativeFilePath) {
+						// File already indexed on server with same content - skip
 						filesSkipped++
 						logger.info(`[Scanner] Skipping ${relativeFilePath} - already indexed on server`)
 						return

@@ -7,6 +7,7 @@ import { CodeIndexManager } from "../../../../../services/code-index/manager"
 import { McpServerManager } from "../../../../../services/mcp/McpServerManager"
 import { ContextProxy } from "../../../../config/ContextProxy"
 import * as vscode from "vscode"
+import search_and_replace from "../search_and_replace"
 
 vi.mock("vscode")
 vi.mock("../../../../../services/code-index/manager")
@@ -75,7 +76,7 @@ describe("getAllowedJSONToolsForMode", () => {
 
 			const applyDiffTool = tools.find((tool) => "function" in tool && tool.function.name === "apply_diff")
 			expect(applyDiffTool).toBeDefined()
-			expect(applyDiffTool).toEqual(apply_diff_single_file)
+			expect(applyDiffTool).toEqual(search_and_replace)
 			expect(applyDiffTool).not.toEqual(apply_diff_multi_file)
 		})
 
@@ -98,7 +99,7 @@ describe("getAllowedJSONToolsForMode", () => {
 			const applyDiffTool = tools.find((tool) => "function" in tool && tool.function.name === "apply_diff")
 			expect(applyDiffTool).toBeDefined()
 			expect(applyDiffTool).toEqual(apply_diff_multi_file)
-			expect(applyDiffTool).not.toEqual(apply_diff_single_file)
+			expect(applyDiffTool).not.toEqual(search_and_replace)
 		})
 
 		it("should not include apply_diff when diffEnabled is false", async () => {

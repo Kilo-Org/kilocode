@@ -88,12 +88,14 @@ import { seeNewChanges } from "../checkpoints/kilocode/seeNewChanges" // kilocod
 import { getTaskHistory } from "../../shared/kilocode/getTaskHistory" // kilocode_change
 import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } from "./kiloWebviewMessgeHandlerHelpers"
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
+import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
 	message: MaybeTypedWebviewMessage, // kilocode_change switch to MaybeTypedWebviewMessage for better type-safety
 	marketplaceManager?: MarketplaceManager,
 ) => {
+	console.log("[webviewMessageHandler]", message)
 	// Utility functions provided for concise get/update of global state via contextProxy API.
 	const getGlobalState = <K extends keyof GlobalState>(key: K) => provider.contextProxy.getValue(key)
 	const updateGlobalState = async <K extends keyof GlobalState>(key: K, value: GlobalState[K]) =>
@@ -2202,8 +2204,12 @@ export const webviewMessageHandler = async (
 					// Config might not exist yet, that's fine
 				}
 
-				await provider.upsertProviderProfile(message.text, configToSave)
-				vscode.commands.executeCommand("kilo-code.ghost.reload") // kilocode_change: Reload ghost model when API provider settings change
+				// kilocode_change start: If we're updating the active profile, we need to activate it to ensure it's persisted
+				const currentApiConfigName = getGlobalState("currentApiConfigName")
+				const isActiveProfile = message.text === currentApiConfigName
+				await provider.upsertProviderProfile(message.text, configToSave, isActiveProfile) // Activate if it's the current active profile
+				vscode.commands.executeCommand("kilo-code.ghost.reload")
+				// kilocode_change end
 
 				// Ensure state is posted to webview after profile update to reflect organization mode changes
 				if (organizationChanged) {
@@ -2266,6 +2272,21 @@ export const webviewMessageHandler = async (
 				}
 			}
 			break
+		// kilocode_change start: Load profile configuration for editing without activating
+		case "getProfileConfigurationForEditing":
+			if (message.text) {
+				const { name: _, ...profileConfig } = await provider.providerSettingsManager.getProfile({
+					name: message.text,
+				})
+				// Send the configuration back to the webview without activating it
+				await provider.postMessageToWebview({
+					type: "profileConfigurationForEditing",
+					text: message.text,
+					apiConfiguration: profileConfig,
+				})
+			}
+			break
+		// kilocode_change end
 		case "deleteApiConfiguration":
 			if (message.text) {
 				const answer = await vscode.window.showInformationMessage(
@@ -3977,5 +3998,41 @@ export const webviewMessageHandler = async (
 			})
 			break
 		}
+		// kilocode_change start - ManagedIndexer state
+		case "requestManagedIndexerState": {
+			try {
+				const state = ManagedIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
+				await provider.postMessageToWebview({
+					type: "managedIndexerState",
+					managedIndexerState: state,
+				})
+			} catch (error) {
+				provider.log(
+					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
+				)
+				await provider.postMessageToWebview({
+					type: "managedIndexerState",
+					managedIndexerState: [],
+				})
+			}
+			break
+		}
+
+		// we're going to delete this message at some point and use apiConfiguration
+		// probably. So casting as any as to not define a more permanent type
+		case "requestManagedIndexerEnabled" as any: {
+			try {
+				const managedIndexerEnabled = (await ManagedIndexer.getInstance()?.isEnabled()) || false
+				await provider.postMessageToWebview({
+					type: "managedIndexerEnabled",
+					managedIndexerEnabled,
+				} as any)
+			} catch (error) {
+				provider.log(
+					`Error getting managed indexer state: ${error instanceof Error ? error.message : String(error)}`,
+				)
+			}
+		}
+		// kilocode_change end
 	}
 }

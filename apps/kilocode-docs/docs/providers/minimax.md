@@ -21,9 +21,9 @@ Kilo Code supports the following MiniMax models:
 
 ### MiniMax Models
 
-* `MiniMax-M2` (currently free) – MiniMax’s latest model with strong coding, tool use, long-context reasoning, and high inference speed
-* `MiniMax-01` – General-purpose MiniMax model
-* `MiniMax-M1` – Earlier MiniMax model with broad multimodal capabilities
+- `MiniMax-M2` (currently free) – MiniMax’s latest model with strong coding, tool use, long-context reasoning, and high inference speed
+- `MiniMax-01` – General-purpose MiniMax model
+- `MiniMax-M1` – Earlier MiniMax model with broad multimodal capabilities
 
 ## Configuration in Kilo Code
 
@@ -34,7 +34,7 @@ Kilo Code supports the following MiniMax models:
 
 ## Tips and Notes
 
-* **Performance:** MiniMax M2 emphasizes fast inference, strong coding ability, and exceptional tool-calling performance.
-* **Context Window:** MiniMax models support ultra-long context windows suitable for large codebases and agent workflows.
-* **Pricing:** Pricing varies by model, with input costs ranging from $0.20 to $0.40 per million tokens and output costs from $1.10 to $2.20 per million tokens. Refer to the MiniMax documentation for the most current pricing information.
-  * **MiniMax M2** is designed for a strong balance of speed, price, and performance, and is currently **free to use for a limited time**. 
+- **Performance:** MiniMax M2 emphasizes fast inference, strong coding ability, and exceptional tool-calling performance.
+- **Context Window:** MiniMax models support ultra-long context windows suitable for large codebases and agent workflows.
+- **Pricing:** Pricing varies by model, with input costs ranging from $0.20 to $0.40 per million tokens and output costs from $1.10 to $2.20 per million tokens. Refer to the MiniMax documentation for the most current pricing information.
+    - **MiniMax M2** is designed for a strong balance of speed, price, and performance, and is currently **free to use for a limited time**.
