@@ -246,16 +246,14 @@ program
 // Handle process termination signals
 process.on("SIGINT", async () => {
 	if (cli) {
-		await cli.dispose()
+		await cli.dispose("SIGINT")
 	}
-	process.exit(0)
 })
 
 process.on("SIGTERM", async () => {
 	if (cli) {
-		await cli.dispose()
+		await cli.dispose("SIGTERM")
 	}
-	process.exit(0)
 })
 
 // Parse command line arguments
