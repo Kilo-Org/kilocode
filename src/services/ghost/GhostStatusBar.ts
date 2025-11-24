@@ -80,41 +80,19 @@ export class GhostStatusBar {
 		this.statusBar.tooltip = t("kilocode:ghost.statusBar.tooltip.tokenError")
 	}
 
-	private formatSessionDuration(): string {
-		if (!this.sessionStartTime) return "N/A"
-		const durationMs = Date.now() - this.sessionStartTime
-		const durationMinutes = Math.floor(durationMs / 60000)
-		const durationSeconds = Math.floor((durationMs % 60000) / 1000)
-
-		if (durationMinutes > 0) {
-			return `${durationMinutes}m ${durationSeconds}s`
-		}
-		return `${durationSeconds}s`
-	}
-
-	private formatSessionStartTime(): string {
-		if (!this.sessionStartTime) return "N/A"
-		const date = new Date(this.sessionStartTime)
+	private formatTime(timestamp: number): string {
+		const date = new Date(timestamp)
 		return date.toLocaleTimeString()
 	}
 
 	private renderDefault() {
 		const totalCostFormatted = this.humanFormatCost(this.totalSessionCost || 0)
 		const completionCount = this.completionCount || 0
-		const sessionDuration = this.formatSessionDuration()
-		const sessionStartTime = this.formatSessionStartTime()
+		const sessionStartTime = this.sessionStartTime ? this.formatTime(this.sessionStartTime) : "N/A"
+		const now = this.formatTime(Date.now())
 
 		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${completionCount})`
-		this.statusBar.tooltip = `\
-${t("kilocode:ghost.statusBar.tooltip.basic")}
-• ${t("kilocode:ghost.statusBar.tooltip.completionCount")} ${completionCount}
-• ${t("kilocode:ghost.statusBar.tooltip.sessionStartTime")} ${sessionStartTime}
-• ${t("kilocode:ghost.statusBar.tooltip.sessionDuration")} ${sessionDuration}
-• ${t("kilocode:ghost.statusBar.tooltip.sessionTotal")} ${totalCostFormatted}
-• ${t("kilocode:ghost.statusBar.tooltip.profile")}${this.profileName}
-• ${t("kilocode:ghost.statusBar.tooltip.provider")} ${this.provider}
-• ${t("kilocode:ghost.statusBar.tooltip.model")} ${this.model}\
-`
+		this.statusBar.tooltip = `Performed ${completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.\n\nAutocompletions provided by ${this.model} via ${this.provider}.`
 	}
 
 	public render() {

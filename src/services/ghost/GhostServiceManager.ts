@@ -269,11 +269,15 @@ export class GhostServiceManager {
 		cacheWriteTokens: number,
 		cacheReadTokens: number,
 	): void {
+		if (inputTokens === 0 && outputTokens === 0) {
+			// Only count completions that actually hit the LLM (not cached)
+			// A cached completion will have 0 input and output tokens
+			return
+		}
 		this.completionCount++
 		this.sessionCost += cost
 		this.updateStatusBar()
 
-		// Send telemetry
 		TelemetryService.instance.captureEvent(TelemetryEventName.LLM_COMPLETION, {
 			taskId: this.taskId,
 			inputTokens,
