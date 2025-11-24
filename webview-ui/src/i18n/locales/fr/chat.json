@@ -189,7 +189,9 @@
 		"wantsToGenerateImage": "Kilo Code veut générer une image",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code veut générer une image en dehors de l'espace de travail",
 		"wantsToGenerateImageProtected": "Kilo Code veut générer une image dans un emplacement protégé",
-		"didGenerateImage": "Kilo Code a généré une image"
+		"didGenerateImage": "Kilo Code a généré une image",
+		"wantsToDelete": "Kilo Code veut supprimer ce fichier",
+		"wantsToDeleteDirectory": "Kilo Code veut supprimer ce répertoire"
 	},
 	"instructions": {
 		"wantsToFetch": "Kilo Code veut récupérer des instructions détaillées pour aider à la tâche actuelle"

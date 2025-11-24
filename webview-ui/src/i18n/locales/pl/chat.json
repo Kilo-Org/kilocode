@@ -181,6 +181,8 @@
 		"wantsToEditOutsideWorkspace": "Kilo Code chce edytować ten plik poza obszarem roboczym",
 		"wantsToEditProtected": "Kilo Code chce edytować chroniony plik konfiguracyjny",
 		"wantsToCreate": "Kilo Code chce utworzyć nowy plik",
+		"wantsToDelete": "Kilo Code chce usunąć ten plik",
+		"wantsToDeleteDirectory": "Kilo Code chce usunąć ten katalog",
 		"wantsToSearchReplace": "Kilo Code chce wykonać wyszukiwanie i zamianę w tym pliku",
 		"didSearchReplace": "Kilo Code wykonał wyszukiwanie i zamianę w tym pliku",
 		"wantsToInsert": "Kilo Code chce wstawić zawartość do tego pliku",

@@ -250,8 +250,6 @@ export async function upsertFile(params: UpsertFileParams, signal?: AbortSignal)
 		if (!response.ok) {
 			throw new Error(`Failed to upsert file: ${response.statusText}`)
 		}
-
-		logger.info(`Successfully upserted file: ${filePath}`)
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error)
 		logger.error(`Failed to upsert file ${filePath}: ${errorMessage}`)

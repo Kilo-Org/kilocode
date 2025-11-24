@@ -396,7 +396,6 @@ export class ManagedIndexer implements vscode.Disposable {
 					throw new Error("Missing required configuration for manifest fetch")
 				}
 
-				console.info(`[ManagedIndexer] Fetching manifest for branch ${branch}`)
 				const manifest = await getServerManifest(
 					this.config.kilocodeOrganizationId,
 					state.projectId,
@@ -441,8 +440,6 @@ export class ManagedIndexer implements vscode.Disposable {
 	}
 
 	async onEvent(event: GitWatcherEvent): Promise<void> {
-		console.log("[ManagedIndexer] event", event.type, event.branch)
-
 		if (!this.isActive) {
 			return
 		}
@@ -541,6 +538,11 @@ export class ManagedIndexer implements vscode.Disposable {
 				return
 			}
 
+			if (!this.config?.kilocodeToken || !this.config?.kilocodeOrganizationId || !state.projectId) {
+				console.warn("[ManagedIndexer] Missing token, organization ID, or project ID, skipping file upsert")
+				return
+			}
+
 			await pMap(
 				event.files,
 				async (file) => {
@@ -550,7 +552,6 @@ export class ManagedIndexer implements vscode.Disposable {
 					}
 
 					if (file.type === "file-deleted") {
-						console.info(`[ManagedIndexer] File deleted: ${file.filePath} on branch ${event.branch}`)
 						// TODO: Implement file deletion handling if needed
 						return
 					}
@@ -576,14 +577,12 @@ export class ManagedIndexer implements vscode.Disposable {
 
 						try {
 							// Ensure we have the necessary configuration
+							// check again inside loop as this can change mid-flight
 							if (
 								!this.config?.kilocodeToken ||
 								!this.config?.kilocodeOrganizationId ||
 								!state.projectId
 							) {
-								console.warn(
-									"[ManagedIndexer] Missing token, organization ID, or project ID, skipping file upsert",
-								)
 								return
 							}
 							const projectId = state.projectId
@@ -597,9 +596,6 @@ export class ManagedIndexer implements vscode.Disposable {
 							// TODO: (bmc) - do not upsert files larger than 1 megabyte
 
 							// Call the upsertFile API with abort signal
-							console.log(
-								`[ManagedIndexer] Upserting file: ${relativeFilePath} (branch: ${event.branch})`,
-							)
 							await upsertFile(
 								{
 									fileBuffer,
@@ -612,10 +608,6 @@ export class ManagedIndexer implements vscode.Disposable {
 									kilocodeToken: this.config.kilocodeToken,
 								},
 								signal,
-							)
-
-							console.info(
-								`[ManagedIndexer] Successfully upserted file: ${relativeFilePath} (branch: ${event.branch})`,
 							)
 
 							// Clear any previous file-upsert errors on success

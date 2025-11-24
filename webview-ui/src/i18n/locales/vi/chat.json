@@ -192,7 +192,9 @@
 		"wantsToGenerateImage": "Kilo Code muốn tạo một hình ảnh",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code muốn tạo hình ảnh bên ngoài không gian làm việc",
 		"wantsToGenerateImageProtected": "Kilo Code muốn tạo hình ảnh ở vị trí được bảo vệ",
-		"didGenerateImage": "Kilo Code đã tạo một hình ảnh"
+		"didGenerateImage": "Kilo Code đã tạo một hình ảnh",
+		"wantsToDelete": "Kilo Code muốn xóa tệp này",
+		"wantsToDeleteDirectory": "Kilo Code muốn xóa thư mục này"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code muốn xem các tệp cấp cao nhất trong thư mục này",

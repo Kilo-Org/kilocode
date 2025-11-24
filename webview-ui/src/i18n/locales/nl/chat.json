@@ -187,7 +187,9 @@
 		"wantsToGenerateImage": "Kilo Code wil een afbeelding genereren",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code wil een afbeelding genereren buiten de werkruimte",
 		"wantsToGenerateImageProtected": "Kilo Code wil een afbeelding genereren op een beschermde locatie",
-		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd"
+		"didGenerateImage": "Kilo Code heeft een afbeelding gegenereerd",
+		"wantsToDelete": "Kilo Code wil dit bestand verwijderen",
+		"wantsToDeleteDirectory": "Kilo Code wil deze map verwijderen"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code wil de bovenliggende bestanden in deze map bekijken",

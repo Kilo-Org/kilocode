@@ -194,6 +194,7 @@ const sidebars: SidebarsConfig = {
 				"features/tools/ask-followup-question",
 				"features/tools/attempt-completion",
 				"features/tools/browser-action",
+				"features/tools/delete-file",
 				"features/tools/execute-command",
 				"features/tools/list-code-definition-names",
 				"features/tools/list-files",
