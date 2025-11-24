@@ -4,7 +4,7 @@
 vi.mock("../../../services/code-index/managed/ManagedIndexer", () => ({
 	ManagedIndexer: {
 		getInstance: vi.fn().mockReturnValue({
-			isEnabled: vi.fn().mockResolvedValue(false),
+			isEnabled: vi.fn().mockReturnValue(false),
 			organization: null,
 		}),
 	},
