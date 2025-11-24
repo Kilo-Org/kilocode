@@ -16,8 +16,8 @@ This tool writes content to a specified file, either creating a new file if it d
 
 ## When is it used?
 
-- When Coppy Code needs to create a new file from scratch
-- When Coppy Code needs to completely rewrite an existing file
+- When Kilo Code needs to create a new file from scratch
+- When Kilo Code needs to completely rewrite an existing file
 - When creating multiple files for a new project
 - When generating configuration files, documentation, or source code
 - When you need to review changes before they're applied
@@ -85,10 +85,10 @@ When the `write_to_file` tool is invoked, it follows this process:
 
 ## Examples When Used
 
-- When creating a new project, Coppy Code generates multiple files but lets you review each before committing changes.
-- When setting up configuration files, Coppy Code shows the proposed configuration in a diff view for approval.
-- When generating documentation, Coppy Code creates markdown files but lets you make final adjustments in the diff view.
-- When developing a prototype, Coppy Code shows complete source files in a diff view where you can fine-tune before saving.
+- When creating a new project, Kilo Code generates multiple files but lets you review each before committing changes.
+- When setting up configuration files, Kilo Code shows the proposed configuration in a diff view for approval.
+- When generating documentation, Kilo Code creates markdown files but lets you make final adjustments in the diff view.
+- When developing a prototype, Kilo Code shows complete source files in a diff view where you can fine-tune before saving.
 
 ## Usage Examples
 

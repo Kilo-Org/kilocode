@@ -1,5 +1,5 @@
 /**
- * ANSI Light theme for Coppy Code CLI
+ * ANSI Light theme for Kilo Code CLI
  *
  * Based on the ANSI Light color scheme using standard terminal colors
  */

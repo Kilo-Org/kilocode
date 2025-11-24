@@ -1,5 +1,5 @@
 /**
- * Shades of Purple theme for Coppy Code CLI
+ * Shades of Purple theme for Kilo Code CLI
  *
  * Based on the Shades of Purple color scheme
  */

@@ -73,7 +73,7 @@ export const PROVIDERS = [
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
-	//{ value: "kilocode", label: "Kilo Gateway" },
+	{ value: "kilocode", label: "Kilo Gateway" },
 	{ value: "moonshot", label: "Moonshot" },
 	{ value: "openai-native", label: "OpenAI" },
 	{ value: "openai", label: "OpenAI Compatible" },

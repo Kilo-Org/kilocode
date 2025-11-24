@@ -2,9 +2,9 @@
 sidebar_label: GCP Vertex AI
 ---
 
-# Using GCP Vertex AI With Coppy Code
+# Using GCP Vertex AI With Kilo Code
 
-Coppy Code supports accessing models through Google Cloud Platform's Vertex AI, a managed machine learning platform that provides access to various foundation models, including Anthropic's Claude family.
+Kilo Code supports accessing models through Google Cloud Platform's Vertex AI, a managed machine learning platform that provides access to various foundation models, including Anthropic's Claude family.
 
 **Website:** [https://cloud.google.com/vertex-ai](https://cloud.google.com/vertex-ai)
 
@@ -13,14 +13,14 @@ Coppy Code supports accessing models through Google Cloud Platform's Vertex AI, 
 *   **Google Cloud Account:** You need an active Google Cloud Platform (GCP) account.
 *   **Project:** You need a GCP project with the Vertex AI API enabled.
 *   **Model Access:** You must request and be granted access to the specific Claude models on Vertex AI you want to use. See the [Google Cloud documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/partner-models/use-claude#before_you_begin) for instructions.
-*   **Application Default Credentials (ADC):**  Coppy Code uses Application Default Credentials to authenticate with Vertex AI. The easiest way to set this up is to:
+*   **Application Default Credentials (ADC):**  Kilo Code uses Application Default Credentials to authenticate with Vertex AI. The easiest way to set this up is to:
     1.  Install the Google Cloud CLI: [https://cloud.google.com/sdk/docs/install](https://cloud.google.com/sdk/docs/install)
     2.  Authenticate using: `gcloud auth application-default login`
 *   **Service Account Key (Alternative):** Alternatively, you can authenticate using a Google Cloud Service Account key file. You'll need to generate this key in your GCP project. See the [Google Cloud documentation on creating service account keys](https://cloud.google.com/iam/docs/creating-managing-service-account-keys).
 
 ## Supported Models
 
-Coppy Code supports the following models through Vertex AI (based on source code):
+Kilo Code supports the following models through Vertex AI (based on source code):
 
 *   **Google Gemini Models:**
     *   `gemini-2.5-flash-preview-05-20`
@@ -46,9 +46,9 @@ Coppy Code supports the following models through Vertex AI (based on source code
 
 Refer to the [Google Cloud documentation on Vertex AI Models](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/models) for the most up-to-date list of available models and their IDs.
 
-## Configuration in Coppy Code
+## Configuration in Kilo Code
 
-1.  **Open Coppy Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Coppy Code panel.
+1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2.  **Select Provider:** Choose "GCP Vertex AI" from the "API Provider" dropdown.
 3.  **Configure Authentication:**
     *   **If using Application Default Credentials (ADC):** No further action is needed here. ADC will be used automatically if configured correctly (see Prerequisites).

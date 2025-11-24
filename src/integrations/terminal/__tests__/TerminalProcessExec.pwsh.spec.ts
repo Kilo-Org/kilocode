@@ -84,7 +84,7 @@ async function testPowerShellCommand(
 			executeCommand: vi.fn(),
 			cwd: vscode.Uri.file("/test/path"),
 		},
-		name: "Coppy Code",
+		name: "Kilo Code",
 		processId: Promise.resolve(123),
 		creationOptions: {},
 		exitStatus: undefined,

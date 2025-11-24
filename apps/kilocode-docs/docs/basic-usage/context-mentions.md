@@ -1,6 +1,6 @@
 # Context Mentions
 
-Context mentions are a powerful way to provide Coppy Code with specific information about your project, allowing it to perform tasks more accurately and efficiently. You can use mentions to refer to files, folders, problems, and Git commits. Context mentions start with the `@` symbol.
+Context mentions are a powerful way to provide Kilo Code with specific information about your project, allowing it to perform tasks more accurately and efficiently. You can use mentions to refer to files, folders, problems, and Git commits. Context mentions start with the `@` symbol.
 
 <img src="/docs/img/context-mentions/context-mentions.png" alt="Context Mentions Overview - showing the @ symbol dropdown menu in the chat interface" width="600" />
 
@@ -62,7 +62,7 @@ Context mentions are a powerful way to provide Coppy Code with specific informat
 | **Best for** | Fixing errors without manual copying |
 
 ### Terminal Mention
-<img src="/docs/img/context-mentions/context-mentions-4.png" alt="Terminal mention example showing terminal output being included in Coppy Code's context" width="600" />
+<img src="/docs/img/context-mentions/context-mentions-4.png" alt="Terminal mention example showing terminal output being included in Kilo Code's context" width="600" />
 
 *Terminal mentions capture recent command output for debugging and analysis.*
 
@@ -76,7 +76,7 @@ Context mentions are a powerful way to provide Coppy Code with specific informat
 
 ### Git Mentions
 
-<img src="/docs/img/context-mentions/context-mentions-5.png" alt="Git commit mention example showing commit details being analyzed by Coppy Code" width="600" />
+<img src="/docs/img/context-mentions/context-mentions-5.png" alt="Git commit mention example showing commit details being analyzed by Kilo Code" width="600" />
 
 *Git mentions provide commit details and diffs for context-aware version analysis.*
 | Type | Format | Provides | Limitations |

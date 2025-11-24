@@ -1,6 +1,6 @@
 # 使用模式
 
-Coppy Code 中的模式是专门设计的角色，可以根据当前任务调整助手的行为。每种模式都提供不同的能力、专业知识和访问权限，帮助你完成特定目标。
+Kilo Code 中的模式是专门设计的角色，可以根据当前任务调整助手的行为。每种模式都提供不同的能力、专业知识和访问权限，帮助你完成特定目标。
 
 ## 为什么使用不同的模式？
 
@@ -11,7 +11,7 @@ Coppy Code 中的模式是专门设计的角色，可以根据当前任务调整
 
 <YouTubeEmbed
   url="https://youtu.be/cS4vQfX528w"
-  caption="解释 Coppy Code 中的不同模式"
+  caption="解释 Kilo Code 中的不同模式"
 />
 
 ## 切换模式
@@ -34,9 +34,9 @@ Coppy Code 中的模式是专门设计的角色，可以根据当前任务调整
     | Windows | Ctrl + . |
     | Linux | Ctrl + . |
 
-4. **接受建议**：在适当时点击 Coppy Code 提供的模式切换建议
+4. **接受建议**：在适当时点击 Kilo Code 提供的模式切换建议
     
-    <img src="/docs/img/modes/modes-2.png" alt="接受 Coppy Code 提供的模式切换建议" width="400" />
+    <img src="/docs/img/modes/modes-2.png" alt="接受 Kilo Code 提供的模式切换建议" width="400" />
 
 ## 内置模式
 

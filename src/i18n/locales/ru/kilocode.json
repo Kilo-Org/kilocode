@@ -46,7 +46,7 @@
 		}
 	},
 	"commitMessage": {
-		"activated": "Генератор сообщений коммитов Coppy Code активирован",
+		"activated": "Генератор сообщений коммитов Kilo Code активирован",
 		"gitNotFound": "⚠️ Репозиторий Git не найден или git недоступен",
 		"gitInitError": "⚠️ Ошибка инициализации Git: {{error}}",
 		"generating": "Kilo: Генерация сообщения коммита...",
@@ -59,7 +59,7 @@
 		"errors": {
 			"noProject": "Нет доступных проектов",
 			"invalidResponse": "Получен неверный формат ответа от расширения",
-			"connectionFailed": "Не удалось подключиться к расширению Coppy Code",
+			"connectionFailed": "Не удалось подключиться к расширению Kilo Code",
 			"timeout": "Время запроса истекло после 30 секунд",
 			"missingMessage": "Не получено сообщение о коммите от расширения",
 			"noChanges": "Изменений для фиксации не найдено",
@@ -82,7 +82,7 @@
 		},
 		"progress": {
 			"title": "Генерация Сообщения Коммита",
-			"connecting": "Подключение к Coppy Code...",
+			"connecting": "Подключение к Kilo Code...",
 			"analyzing": "Анализируем изменения...",
 			"generating": "Генерация сообщения коммита..."
 		},
@@ -93,12 +93,12 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Coppy Code Autocomplete",
-			"disabled": "$(circle-slash) Coppy Code Autocomplete",
-			"warning": "$(warning) Coppy Code Autocomplete",
+			"enabled": "$(sparkle) Kilo Code Autocomplete",
+			"disabled": "$(circle-slash) Kilo Code Autocomplete",
+			"warning": "$(warning) Kilo Code Autocomplete",
 			"tooltip": {
-				"basic": "Coppy Code Autocomplete",
-				"disabled": "Coppy Code Autocomplete (отключено)",
+				"basic": "Kilo Code Autocomplete",
+				"disabled": "Kilo Code Autocomplete (отключено)",
 				"tokenError": "Для использования Autocomplete необходимо установить действительный токен",
 				"lastCompletion": "Последнее предложение:",
 				"sessionTotal": "Общая стоимость сессии:",
@@ -110,36 +110,36 @@
 				"lessThanCent": "<$0.01"
 			}
 		},
-		"toggleMessage": "Coppy Code Autocomplete {{status}}",
+		"toggleMessage": "Kilo Code Autocomplete {{status}}",
 		"progress": {
-			"title": "Coppy Code",
+			"title": "Kilo Code",
 			"analyzing": "Анализирую твой код...",
 			"generating": "Генерирую предлагаемые правки...",
 			"processing": "Обрабатываю предлагаемые правки...",
 			"showing": "Показываю предлагаемые правки..."
 		},
 		"input": {
-			"title": "Coppy Code: Быстрая Задача",
+			"title": "Kilo Code: Быстрая Задача",
 			"placeholder": "напр., 'рефактори эту функцию для большей эффективности'"
 		},
 		"commands": {
-			"generateSuggestions": "Coppy Code: Генерировать Предлагаемые Правки",
+			"generateSuggestions": "Kilo Code: Генерировать Предлагаемые Правки",
 			"displaySuggestions": "Показать Предлагаемые Правки",
 			"cancelSuggestions": "Отменить Предлагаемые Правки",
 			"applyCurrentSuggestion": "Применить Текущую Предлагаемую Правку",
 			"applyAllSuggestions": "Применить Все Предлагаемые Правки",
-			"category": "Coppy Code"
+			"category": "Kilo Code"
 		},
 		"codeAction": {
-			"title": "Coppy Code: Предлагаемые Правки"
+			"title": "Kilo Code: Предлагаемые Правки"
 		},
 		"chatParticipant": {
-			"fullName": "Coppy Code Agent",
+			"fullName": "Kilo Code Agent",
 			"name": "Agent",
 			"description": "Я могу помочь тебе с быстрыми задачами и предлагаемыми правками."
 		},
 		"incompatibilityExtensionPopup": {
-			"message": "Coppy Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
+			"message": "Kilo Code Autocomplete блокируется конфликтом с GitHub Copilot. Чтобы исправить это, ты должен отключить встроенные предложения Copilot.",
 			"disableCopilot": "Отключить Copilot",
 			"disableInlineAssist": "Отключить Autocomplete"
 		}

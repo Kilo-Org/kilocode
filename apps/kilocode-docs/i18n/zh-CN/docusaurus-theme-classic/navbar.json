@@ -1,10 +1,10 @@
 {
   "title": {
-    "message": "Coppy Code",
+    "message": "Kilo Code",
     "description": "The title in the navbar"
   },
   "logo.alt": {
-    "message": "Coppy Code Logo",
+    "message": "Kilo Code Logo",
     "description": "The alt text of navbar logo"
   },
   "item.label.GitHub": {

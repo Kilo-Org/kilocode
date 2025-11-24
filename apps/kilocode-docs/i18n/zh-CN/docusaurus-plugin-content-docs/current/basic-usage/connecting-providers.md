@@ -4,9 +4,9 @@ sidebar_label: Overview
 
 # API 提供商概述
 
-**总结**：Coppy Code，像任何代理 AI 编码工具一样，需要 AI 模型提供商才能运行。您可以使用我们的[内置提供商](/providers/kilocode)（最简单）或连接来自 **30 多个提供商**的您自己的 API 密钥。
+**总结**：Kilo Code，像任何代理 AI 编码工具一样，需要 AI 模型提供商才能运行。您可以使用我们的[内置提供商](/providers/kilocode)（最简单）或连接来自 **30 多个提供商**的您自己的 API 密钥。
 
-## Coppy Code 扩展与 API 提供商
+## Kilo Code 扩展与 API 提供商
 
 ### 扩展
 
@@ -15,7 +15,7 @@ sidebar_label: Overview
 - [开源](https://github.com/Kilo-Org/kilocode)
 - 连接到任何 AI 提供商
 
-### Coppy Code API 提供商
+### Kilo Code API 提供商
 
 - **内置选项**，随扩展一起提供
 - 包含免费积分的 Google 登录
@@ -44,7 +44,7 @@ sidebar_label: Overview
 
 1. 从 30 多个受支持的提供商中选择
 2. 从您的提供商处获取 API 密钥
-3. 在 Coppy Code 设置中配置
+3. 在 Kilo Code 设置中配置
 
 ## 为什么要使用多个提供商？
 

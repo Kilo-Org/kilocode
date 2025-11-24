@@ -1,5 +1,5 @@
 {
-	"greeting": "Добро пожаловать в Coppy Code",
+	"greeting": "Добро пожаловать в Kilo Code",
 	"task": {
 		"title": "Задача",
 		"expand": "Развернуть задачу",
@@ -21,7 +21,7 @@
 		"sharePublicly": "Поделиться публично",
 		"sharePubliclyDescription": "Любой, у кого есть ссылка, может получить доступ",
 		"connectToCloud": "Подключиться к облаку",
-		"connectToCloudDescription": "Войди в Coppy Code Cloud, чтобы делиться задачами",
+		"connectToCloudDescription": "Войди в Kilo Code Cloud, чтобы делиться задачами",
 		"sharingDisabledByOrganization": "Обмен отключен организацией",
 		"shareSuccessOrganization": "Ссылка организации скопирована в буфер обмена",
 		"shareSuccessPublic": "Публичная ссылка скопирована в буфер обмена",
@@ -110,7 +110,7 @@
 			"description": "Специализированные персонажи с собственным поведением и назначенными моделями"
 		}
 	},
-	"onboarding": "<strong>Ваш список задач в этом рабочем пространстве пуст.</strong> Начните с ввода задачи ниже. Не знаете, с чего начать? Подробнее о возможностях Coppy Code читайте в <DocsLink>документации</DocsLink>.",
+	"onboarding": "<strong>Ваш список задач в этом рабочем пространстве пуст.</strong> Начните с ввода задачи ниже. Не знаете, с чего начать? Подробнее о возможностях Kilo Code читайте в <DocsLink>документации</DocsLink>.",
 	"selectMode": "Выберите режим взаимодействия",
 	"selectApiConfig": "Выберите конфигурацию API",
 	"selectModelConfig": "Выберите модель",
@@ -166,46 +166,46 @@
 		"current": "Текущая"
 	},
 	"instructions": {
-		"wantsToFetch": "Coppy Code хочет получить подробные инструкции для помощи с текущей задачей"
+		"wantsToFetch": "Kilo Code хочет получить подробные инструкции для помощи с текущей задачей"
 	},
 	"fileOperations": {
-		"wantsToRead": "Coppy Code хочет прочитать этот файл",
-		"wantsToReadOutsideWorkspace": "Coppy Code хочет прочитать этот файл вне рабочей области",
-		"didRead": "Coppy Code прочитал этот файл",
-		"wantsToEdit": "Coppy Code хочет отредактировать этот файл",
-		"wantsToEditOutsideWorkspace": "Coppy Code хочет отредактировать этот файл вне рабочей области",
-		"wantsToEditProtected": "Coppy Code хочет отредактировать защищённый файл конфигурации",
-		"wantsToCreate": "Coppy Code хочет создать новый файл",
-		"wantsToSearchReplace": "Coppy Code хочет выполнить поиск и замену в этом файле",
-		"didSearchReplace": "Coppy Code выполнил поиск и замену в этом файле",
-		"wantsToInsert": "Coppy Code хочет вставить содержимое в этот файл",
-		"wantsToInsertWithLineNumber": "Coppy Code хочет вставить содержимое в этот файл на строку {{lineNumber}}",
-		"wantsToInsertAtEnd": "Coppy Code хочет добавить содержимое в конец этого файла",
-		"wantsToReadAndXMore": "Coppy Code хочет прочитать этот файл и еще {{count}}",
-		"wantsToReadMultiple": "Coppy Code хочет прочитать несколько файлов",
-		"wantsToApplyBatchChanges": "Coppy Code хочет применить изменения к нескольким файлам",
-		"wantsToGenerateImage": "Coppy Code хочет сгенерировать изображение",
-		"wantsToGenerateImageOutsideWorkspace": "Coppy Code хочет сгенерировать изображение вне рабочего пространства",
-		"wantsToGenerateImageProtected": "Coppy Code хочет сгенерировать изображение в защищённом месте",
-		"didGenerateImage": "Coppy Code сгенерировал изображение"
+		"wantsToRead": "Kilo Code хочет прочитать этот файл",
+		"wantsToReadOutsideWorkspace": "Kilo Code хочет прочитать этот файл вне рабочей области",
+		"didRead": "Kilo Code прочитал этот файл",
+		"wantsToEdit": "Kilo Code хочет отредактировать этот файл",
+		"wantsToEditOutsideWorkspace": "Kilo Code хочет отредактировать этот файл вне рабочей области",
+		"wantsToEditProtected": "Kilo Code хочет отредактировать защищённый файл конфигурации",
+		"wantsToCreate": "Kilo Code хочет создать новый файл",
+		"wantsToSearchReplace": "Kilo Code хочет выполнить поиск и замену в этом файле",
+		"didSearchReplace": "Kilo Code выполнил поиск и замену в этом файле",
+		"wantsToInsert": "Kilo Code хочет вставить содержимое в этот файл",
+		"wantsToInsertWithLineNumber": "Kilo Code хочет вставить содержимое в этот файл на строку {{lineNumber}}",
+		"wantsToInsertAtEnd": "Kilo Code хочет добавить содержимое в конец этого файла",
+		"wantsToReadAndXMore": "Kilo Code хочет прочитать этот файл и еще {{count}}",
+		"wantsToReadMultiple": "Kilo Code хочет прочитать несколько файлов",
+		"wantsToApplyBatchChanges": "Kilo Code хочет применить изменения к нескольким файлам",
+		"wantsToGenerateImage": "Kilo Code хочет сгенерировать изображение",
+		"wantsToGenerateImageOutsideWorkspace": "Kilo Code хочет сгенерировать изображение вне рабочего пространства",
+		"wantsToGenerateImageProtected": "Kilo Code хочет сгенерировать изображение в защищённом месте",
+		"didGenerateImage": "Kilo Code сгенерировал изображение"
 	},
 	"directoryOperations": {
-		"wantsToViewTopLevel": "Coppy Code хочет просмотреть файлы верхнего уровня в этой директории",
-		"didViewTopLevel": "Coppy Code просмотрел файлы верхнего уровня в этой директории",
-		"wantsToViewRecursive": "Coppy Code хочет рекурсивно просмотреть все файлы в этой директории",
-		"didViewRecursive": "Coppy Code рекурсивно просмотрел все файлы в этой директории",
-		"wantsToViewDefinitions": "Coppy Code хочет просмотреть имена определений исходного кода в этой директории",
-		"didViewDefinitions": "Coppy Code просмотрел имена определений исходного кода в этой директории",
-		"wantsToSearch": "Coppy Code хочет выполнить поиск в этой директории по <code>{{regex}}</code>",
-		"didSearch": "Coppy Code выполнил поиск в этой директории по <code>{{regex}}</code>",
-		"wantsToSearchOutsideWorkspace": "Coppy Code хочет выполнить поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
-		"didSearchOutsideWorkspace": "Coppy Code выполнил поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
-		"wantsToViewTopLevelOutsideWorkspace": "Coppy Code хочет просмотреть файлы верхнего уровня в этой директории (вне рабочего пространства)",
-		"didViewTopLevelOutsideWorkspace": "Coppy Code просмотрел файлы верхнего уровня в этой директории (вне рабочего пространства)",
-		"wantsToViewRecursiveOutsideWorkspace": "Coppy Code хочет рекурсивно просмотреть все файлы в этой директории (вне рабочего пространства)",
-		"didViewRecursiveOutsideWorkspace": "Coppy Code рекурсивно просмотрел все файлы в этой директории (вне рабочего пространства)",
-		"wantsToViewDefinitionsOutsideWorkspace": "Coppy Code хочет просмотреть имена определений исходного кода в этой директории (вне рабочего пространства)",
-		"didViewDefinitionsOutsideWorkspace": "Coppy Code просмотрел имена определений исходного кода в этой директории (вне рабочего пространства)"
+		"wantsToViewTopLevel": "Kilo Code хочет просмотреть файлы верхнего уровня в этой директории",
+		"didViewTopLevel": "Kilo Code просмотрел файлы верхнего уровня в этой директории",
+		"wantsToViewRecursive": "Kilo Code хочет рекурсивно просмотреть все файлы в этой директории",
+		"didViewRecursive": "Kilo Code рекурсивно просмотрел все файлы в этой директории",
+		"wantsToViewDefinitions": "Kilo Code хочет просмотреть имена определений исходного кода в этой директории",
+		"didViewDefinitions": "Kilo Code просмотрел имена определений исходного кода в этой директории",
+		"wantsToSearch": "Kilo Code хочет выполнить поиск в этой директории по <code>{{regex}}</code>",
+		"didSearch": "Kilo Code выполнил поиск в этой директории по <code>{{regex}}</code>",
+		"wantsToSearchOutsideWorkspace": "Kilo Code хочет выполнить поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
+		"didSearchOutsideWorkspace": "Kilo Code выполнил поиск в этой директории (вне рабочего пространства) по <code>{{regex}}</code>",
+		"wantsToViewTopLevelOutsideWorkspace": "Kilo Code хочет просмотреть файлы верхнего уровня в этой директории (вне рабочего пространства)",
+		"didViewTopLevelOutsideWorkspace": "Kilo Code просмотрел файлы верхнего уровня в этой директории (вне рабочего пространства)",
+		"wantsToViewRecursiveOutsideWorkspace": "Kilo Code хочет рекурсивно просмотреть все файлы в этой директории (вне рабочего пространства)",
+		"didViewRecursiveOutsideWorkspace": "Kilo Code рекурсивно просмотрел все файлы в этой директории (вне рабочего пространства)",
+		"wantsToViewDefinitionsOutsideWorkspace": "Kilo Code хочет просмотреть имена определений исходного кода в этой директории (вне рабочего пространства)",
+		"didViewDefinitionsOutsideWorkspace": "Kilo Code просмотрел имена определений исходного кода в этой директории (вне рабочего пространства)"
 	},
 	"commandOutput": "Вывод команды",
 	"commandExecution": {
@@ -234,18 +234,18 @@
 		"youSaid": "Вы сказали"
 	},
 	"mcp": {
-		"wantsToUseTool": "Coppy Code хочет использовать инструмент на сервере MCP {{serverName}}",
-		"wantsToAccessResource": "Coppy Code хочет получить доступ к ресурсу на сервере MCP {{serverName}}"
+		"wantsToUseTool": "Kilo Code хочет использовать инструмент на сервере MCP {{serverName}}",
+		"wantsToAccessResource": "Kilo Code хочет получить доступ к ресурсу на сервере MCP {{serverName}}"
 	},
 	"modes": {
-		"wantsToSwitch": "Coppy Code хочет переключиться в режим {{mode}}",
-		"wantsToSwitchWithReason": "Coppy Code хочет переключиться в режим {{mode}}, потому что: {{reason}}",
-		"didSwitch": "Coppy Code переключился в режим {{mode}}",
-		"didSwitchWithReason": "Coppy Code переключился в режим {{mode}}, потому что: {{reason}}"
+		"wantsToSwitch": "Kilo Code хочет переключиться в режим {{mode}}",
+		"wantsToSwitchWithReason": "Kilo Code хочет переключиться в режим {{mode}}, потому что: {{reason}}",
+		"didSwitch": "Kilo Code переключился в режим {{mode}}",
+		"didSwitchWithReason": "Kilo Code переключился в режим {{mode}}, потому что: {{reason}}"
 	},
 	"subtasks": {
-		"wantsToCreate": "Coppy Code хочет создать новую подзадачу в режиме {{mode}}",
-		"wantsToFinish": "Coppy Code хочет завершить эту подзадачу",
+		"wantsToCreate": "Kilo Code хочет создать новую подзадачу в режиме {{mode}}",
+		"wantsToFinish": "Kilo Code хочет завершить эту подзадачу",
 		"newTaskContent": "Инструкции по подзадаче",
 		"completionContent": "Подзадача завершена",
 		"resultContent": "Результаты подзадачи",
@@ -253,14 +253,14 @@
 		"completionInstructions": "Подзадача завершена! Вы можете просмотреть результаты и предложить исправления или следующие шаги. Если всё в порядке, подтвердите для возврата результата в родительскую задачу."
 	},
 	"questions": {
-		"hasQuestion": "У Coppy Code есть вопрос"
+		"hasQuestion": "У Kilo Code есть вопрос"
 	},
 	"taskCompleted": "Задача завершена",
 	"error": "Ошибка",
 	"diffError": {
 		"title": "Не удалось выполнить редактирование"
 	},
-	"troubleMessage": "У Coppy Code возникли проблемы...",
+	"troubleMessage": "У Kilo Code возникли проблемы...",
 	"powershell": {
 		"issues": "Похоже, у вас проблемы с Windows PowerShell, пожалуйста, ознакомьтесь с этим"
 	},
@@ -322,7 +322,7 @@
 		"countdownDisplay": "{{count}}с"
 	},
 	"browser": {
-		"rooWantsToUse": "Coppy Code хочет использовать браузер",
+		"rooWantsToUse": "Kilo Code хочет использовать браузер",
 		"consoleLogs": "Логи консоли",
 		"noNewLogs": "(Новых логов нет)",
 		"screenshot": "Скриншот браузера",
@@ -356,13 +356,13 @@
 	"profileViolationWarning": "Текущий профиль несовместим с настройками вашей организации",
 	"shellIntegration": {
 		"title": "Предупреждение о выполнении команды",
-		"description": "Ваша команда выполняется без интеграции оболочки терминала VSCode. Чтобы скрыть это предупреждение, вы можете отключить интеграцию оболочки в разделе <strong>Terminal</strong> в <settingsLink>настройках Coppy Code</settingsLink> или устранить проблемы с интеграцией терминала VSCode, используя ссылку ниже.",
+		"description": "Ваша команда выполняется без интеграции оболочки терминала VSCode. Чтобы скрыть это предупреждение, вы можете отключить интеграцию оболочки в разделе <strong>Terminal</strong> в <settingsLink>настройках Kilo Code</settingsLink> или устранить проблемы с интеграцией терминала VSCode, используя ссылку ниже.",
 		"troubleshooting": "Нажмите здесь для просмотра документации по интеграции оболочки."
 	},
 	"ask": {
 		"autoApprovedRequestLimitReached": {
 			"title": "Достигнут лимит автоматически одобренных запросов",
-			"description": "Coppy Code достиг автоматически одобренного лимита в {{count}} API-запрос(ов). Хотите сбросить счетчик и продолжить задачу?",
+			"description": "Kilo Code достиг автоматически одобренного лимита в {{count}} API-запрос(ов). Хотите сбросить счетчик и продолжить задачу?",
 			"button": "Сбросить и продолжить"
 		},
 		"autoApprovedCostLimitReached": {
@@ -372,8 +372,8 @@
 		}
 	},
 	"codebaseSearch": {
-		"wantsToSearch": "Coppy Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code>",
-		"wantsToSearchWithPath": "Coppy Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code> в <code>{{path}}</code>",
+		"wantsToSearch": "Kilo Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code>",
+		"wantsToSearchWithPath": "Kilo Code хочет выполнить поиск в кодовой базе по <code>{{query}}</code> в <code>{{path}}</code>",
 		"didSearch_one": "Найден 1 результат",
 		"didSearch_other": "Найдено {{count}} результатов",
 		"resultTooltip": "Оценка схожести: {{score}} (нажмите, чтобы открыть файл)"
@@ -438,7 +438,7 @@
 		"clickToEdit": "Нажмите, чтобы редактировать сообщение"
 	},
 	"slashCommand": {
-		"wantsToRun": "Coppy Code хочет выполнить слеш-команду",
-		"didRun": "Coppy Code выполнил слеш-команду"
+		"wantsToRun": "Kilo Code хочет выполнить слеш-команду",
+		"didRun": "Kilo Code выполнил слеш-команду"
 	}
 }

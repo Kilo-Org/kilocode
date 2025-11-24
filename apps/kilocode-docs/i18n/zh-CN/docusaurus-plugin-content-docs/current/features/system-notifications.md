@@ -7,7 +7,7 @@
 - 你的屏幕被锁定（取决于操作系统设置）
 - 你离开电脑
 
-Coppy Code 使用系统通知来告知你：
+Kilo Code 使用系统通知来告知你：
 
 - 任务完成状态
 - 重要错误或警告
@@ -16,7 +16,7 @@ Coppy Code 使用系统通知来告知你：
 
 ## 支持的操作系统
 
-Coppy Code 的系统通知可在所有主要操作系统上运行，但底层技术不同：
+Kilo Code 的系统通知可在所有主要操作系统上运行，但底层技术不同：
 
 | 操作系统    | 技术                            | 要求                    |
 | ----------- | ------------------------------- | ----------------------- |
@@ -32,7 +32,7 @@ macOS 对系统通知具有最佳的内置支持，有两种可用方法：
 
 #### 方法 1：内置 AppleScript（备用）
 
-无需额外设置。Coppy Code 使用 macOS 的内置命令来显示通知。
+无需额外设置。Kilo Code 使用 macOS 的内置命令来显示通知。
 
 #### 方法 2：使用 terminal-notifier 增强（推荐）
 
@@ -46,7 +46,7 @@ brew install terminal-notifier
 npm install -g terminal-notifier
 ```
 
-**工作原理：** Coppy Code 首先尝试使用 `terminal-notifier`，如果未安装则自动回退到 AppleScript。
+**工作原理：** Kilo Code 首先尝试使用 `terminal-notifier`，如果未安装则自动回退到 AppleScript。
 
 ### Windows 设置
 

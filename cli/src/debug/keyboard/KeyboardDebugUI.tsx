@@ -231,7 +231,7 @@ export const KeyboardDebugUI: React.FC<KeyboardDebugUIProps> = ({ onExit }) => {
 		<Box flexDirection="column" padding={1}>
 			<Box borderStyle="double" borderColor="cyan" paddingX={1} marginBottom={1}>
 				<Text bold color="cyan">
-					Coppy Code - Keyboard Debug Tool
+					Kilo Code - Keyboard Debug Tool
 				</Text>
 				<Text dimColor> - Press any key to see events | ESC or Ctrl+C to exit</Text>
 			</Box>

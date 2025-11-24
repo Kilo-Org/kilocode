@@ -1,10 +1,10 @@
-# Contributing to Coppy Code
+# Contributing to Kilo Code
 
-Coppy Code is an open-source project that welcomes contributions from developers of all skill levels. This guide will help you get started with contributing to Coppy Code, whether you're fixing bugs, adding features, improving documentation, or sharing custom modes.
+Kilo Code is an open-source project that welcomes contributions from developers of all skill levels. This guide will help you get started with contributing to Kilo Code, whether you're fixing bugs, adding features, improving documentation, or sharing custom modes.
 
 ## Ways to Contribute
 
-There are many ways to contribute to Coppy Code:
+There are many ways to contribute to Kilo Code:
 
 1. **Code Contributions**: Implement new features or fix bugs
 2. **Documentation**: Improve existing docs or create new guides
@@ -56,7 +56,7 @@ git checkout -b your-branch-name
    git push origin your-branch-name
    ```
 
-2. Go to the [Coppy Code repository](https://github.com/Kilo-Org/kilocode)
+2. Go to the [Kilo Code repository](https://github.com/Kilo-Org/kilocode)
 
 3. Click "New Pull Request" and select "compare across forks"
 
@@ -70,7 +70,7 @@ git checkout -b your-branch-name
 
 ## Creating Custom Modes
 
-Custom modes are a powerful way to extend Coppy Code's capabilities. To create and share a custom mode:
+Custom modes are a powerful way to extend Kilo Code's capabilities. To create and share a custom mode:
 
 1. Follow the [Custom Modes documentation](/features/custom-modes) to create your mode
 
@@ -99,7 +99,7 @@ Documentation improvements are highly valued contributions:
 
 ## Community Guidelines
 
-When participating in the Coppy Code community:
+When participating in the Kilo Code community:
 
 - Be respectful and inclusive
 - Provide constructive feedback
@@ -116,10 +116,10 @@ If you need help with your contribution:
 
 ## Recognition
 
-All contributors are valued members of the Coppy Code community. Contributors are recognized in:
+All contributors are valued members of the Kilo Code community. Contributors are recognized in:
 
 - Release notes
 - The project's README
 - The contributors list on GitHub
 
-Thank you for contributing to Coppy Code and helping make AI-powered coding assistance better for everyone!
+Thank you for contributing to Kilo Code and helping make AI-powered coding assistance better for everyone!

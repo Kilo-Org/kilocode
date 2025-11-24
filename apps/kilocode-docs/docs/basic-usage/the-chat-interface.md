@@ -1,24 +1,24 @@
 import Image from '@site/src/components/Image';
 
-# Chatting with Coppy Code
+# Chatting with Kilo Code
 
 :::tip
 
-**Bottom line:** Coppy Code is an AI coding assistant that lives in VS Code. You chat with it in plain English, and it writes, edits, and explains code for you.
+**Bottom line:** Kilo Code is an AI coding assistant that lives in VS Code. You chat with it in plain English, and it writes, edits, and explains code for you.
 
 :::
 
 ## Quick Setup
 
-Find the Coppy Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
+Find the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in VS Code's Primary Side Bar. Click it to open the chat panel.
 
-**Lost the panel?** Go to View > Open View... and search for "Coppy Code"
+**Lost the panel?** Go to View > Open View... and search for "Kilo Code"
 
-## How to Talk to Coppy Code
+## How to Talk to Kilo Code
 
 **The key insight:** Just type what you want in normal English. No special commands needed.
 
-<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="Example of typing a request in Coppy Code" width="600" />
+<Image src="/docs/img/typing-your-requests/typing-your-requests.png" alt="Example of typing a request in Kilo Code" width="600" />
 
 **Good requests:**
 
@@ -78,6 +78,6 @@ find all instances of the variable oldValue in @/src/App.js and replace them wit
 | Multiple unrelated tasks | Submit one focused request at a time |
 | Technical jargon overload | Clear, straightforward language works best |
 
-**Why it matters:** Coppy Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
+**Why it matters:** Kilo Code works best when you communicate like you're talking to a smart teammate who needs clear direction.
 
 Ready to start coding? Open the chat panel and describe what you want to build!

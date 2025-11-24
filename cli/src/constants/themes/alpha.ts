@@ -1,5 +1,5 @@
 /**
- * Dark theme for Coppy Code CLI
+ * Dark theme for Kilo Code CLI
  *
  * The default dark theme using standard terminal colors for maximum compatibility.
  */
@@ -16,7 +16,7 @@ export const alphaTheme: Theme = {
 	type: "dark",
 
 	brand: {
-		primary: "#faf74f", // Coppy Code yellow
+		primary: "#faf74f", // Kilo Code yellow
 		secondary: "cyan",
 	},
 

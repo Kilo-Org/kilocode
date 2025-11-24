@@ -1,6 +1,6 @@
 # Using Modes
 
-Modes in Coppy Code are specialized personas that tailor the assistant's behavior to your current task. Each mode offers different capabilities, expertise, and access levels to help you accomplish specific goals.
+Modes in Kilo Code are specialized personas that tailor the assistant's behavior to your current task. Each mode offers different capabilities, expertise, and access levels to help you accomplish specific goals.
 
 ## Why Use Different Modes?
 
@@ -11,7 +11,7 @@ Modes in Coppy Code are specialized personas that tailor the assistant's behavio
 
 <YouTubeEmbed
   url="https://youtu.be/cS4vQfX528w"
-  caption="Explaining the different modes in Coppy Code"
+  caption="Explaining the different modes in Kilo Code"
 />
 
 ## Switching Between Modes
@@ -34,9 +34,9 @@ Four ways to switch modes:
     | Windows | Ctrl + . |
     | Linux | Ctrl + . |
 
-4. **Accept suggestions:** Click on mode switch suggestions that Coppy Code offers when appropriate
+4. **Accept suggestions:** Click on mode switch suggestions that Kilo Code offers when appropriate
    
-    <img src="/docs/img/modes/modes-2.png" alt="Accepting a mode switch suggestion from Coppy Code" width="400" />
+    <img src="/docs/img/modes/modes-2.png" alt="Accepting a mode switch suggestion from Kilo Code" width="400" />
 
 ## Built-in Modes
 

@@ -8,11 +8,11 @@ import { CompactLogger } from "../../utils/logging/CompactLogger"
 const logger = new CompactLogger()
 
 /**
- * Service for fetching and managing Coppy Code organization settings
+ * Service for fetching and managing Kilo Code organization settings
  */
 export class OrganizationService {
 	/**
-	 * Fetches organization details from the Coppy Code API
+	 * Fetches organization details from the Kilo Code API
 	 * @param kilocodeToken - The authentication token
 	 * @param organizationId - The organization ID
 	 * @param kilocodeTesterWarningsDisabledUntil - Timestamp for suppressing tester warnings

@@ -1,5 +1,5 @@
 /**
- * Light theme for Coppy Code CLI
+ * Light theme for Kilo Code CLI
  *
  * Colors matched to VSCode extension's light theme for consistency.
  */

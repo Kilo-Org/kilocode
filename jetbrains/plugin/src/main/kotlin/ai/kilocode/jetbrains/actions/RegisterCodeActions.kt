@@ -170,7 +170,7 @@ fun registerCodeAction(
                 userInput = Messages.showInputDialog(
                     project,
                     inputPrompt,
-                    "Coppy Code",
+                    "Kilo Code",
                     null,
                     inputPlaceholder,
                     null,

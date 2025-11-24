@@ -17,7 +17,7 @@ This tool applies targeted changes to existing files using sophisticated strateg
 
 ## When is it used?
 
-- When Coppy Code needs to make precise changes to existing code without rewriting entire files.
+- When Kilo Code needs to make precise changes to existing code without rewriting entire files.
 - When refactoring specific sections of code while maintaining surrounding context.
 - When fixing bugs in existing code with surgical precision.
 - When implementing feature enhancements that modify only certain parts of a file.
@@ -61,7 +61,7 @@ When the `apply_diff` tool is invoked, it follows this process:
 
 ## Diff Strategy
 
-Coppy Code uses this strategy for applying diffs:
+Kilo Code uses this strategy for applying diffs:
 
 ### MultiSearchReplaceDiffStrategy
 

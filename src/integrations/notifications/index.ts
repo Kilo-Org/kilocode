@@ -22,7 +22,7 @@ async function showMacOSNotification(options: NotificationOptions): Promise<void
 		}
 		args.push("-sound", "Tink")
 
-		// Add Coppy Code logo
+		// Add Kilo Code logo
 		const extensionUri = vscode.extensions.getExtension(`kilocode.kilo-code`)!.extensionUri
 		const iconPath = vscode.Uri.joinPath(extensionUri, "assets", "icons", "kilo.png").fsPath
 		args.push("-appIcon", iconPath)
@@ -65,7 +65,7 @@ async function showWindowsNotification(options: NotificationOptions): Promise<vo
     $xml = New-Object Windows.Data.Xml.Dom.XmlDocument
     $xml.LoadXml($template)
     $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
-    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Coppy Code").Show($toast)
+    [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("Kilo Code").Show($toast)
     `
 
 	try {
@@ -90,7 +90,7 @@ async function showLinuxNotification(options: NotificationOptions): Promise<void
 
 export async function showSystemNotification(options: NotificationOptions): Promise<void> {
 	try {
-		const { title = "Coppy Code", message } = options
+		const { title = "Kilo Code", message } = options
 
 		if (!message) {
 			throw new Error("Message is required")

@@ -2,9 +2,9 @@
 sidebar_label: Google Gemini
 ---
 
-# Using Google Gemini With Coppy Code
+# Using Google Gemini With Kilo Code
 
-Coppy Code supports Google's Gemini family of models through the Google AI Gemini API.
+Kilo Code supports Google's Gemini family of models through the Google AI Gemini API.
 
 **Website:** [https://ai.google.dev/](https://ai.google.dev/)
 
@@ -17,7 +17,7 @@ Coppy Code supports Google's Gemini family of models through the Google AI Gemin
 
 ## Supported Models
 
-Coppy Code supports the following Gemini models:
+Kilo Code supports the following Gemini models:
 
 ### Chat Models
 
@@ -41,9 +41,9 @@ Coppy Code supports the following Gemini models:
 
 Refer to the [Gemini documentation](https://ai.google.dev/models/gemini) for more details on each model.
 
-## Configuration in Coppy Code
+## Configuration in Kilo Code
 
-1.  **Open Coppy Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Coppy Code panel.
+1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2.  **Select Provider:** Choose "Google Gemini" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your Gemini API key into the "Gemini API Key" field.
 4.  **Select Model:** Choose your desired Gemini model from the "Model" dropdown.

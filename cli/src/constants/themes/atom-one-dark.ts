@@ -1,5 +1,5 @@
 /**
- * Atom One Dark theme for Coppy Code CLI
+ * Atom One Dark theme for Kilo Code CLI
  *
  * Based on the Atom One Dark color scheme
  */

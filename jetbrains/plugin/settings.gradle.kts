@@ -2,4 +2,4 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-rootProject.name = "Coppy Code"
+rootProject.name = "Kilo Code"

@@ -1,16 +1,16 @@
 # Human Relay Provider
 
-The Human Relay provider allows you to use Coppy Code with web-based AI models like ChatGPT or Claude without needing an API key. Instead, it relies on you to manually relay messages between Coppy Code and the AI's web interface.
+The Human Relay provider allows you to use Kilo Code with web-based AI models like ChatGPT or Claude without needing an API key. Instead, it relies on you to manually relay messages between Kilo Code and the AI's web interface.
 
 ## How it Works
 
-1.  **Select Human Relay**: Choose "Human Relay" as your API provider in Coppy Code's settings. No API key is required.
-2.  **Initiate a Request**: Start a chat or task with Coppy Code as usual.
+1.  **Select Human Relay**: Choose "Human Relay" as your API provider in Kilo Code's settings. No API key is required.
+2.  **Initiate a Request**: Start a chat or task with Kilo Code as usual.
 3.  **Dialog Prompt**: A dialog box will appear in VS Code. Your message to the AI is automatically copied to your clipboard.
 4.  **Paste to Web AI**: Go to the web interface of your chosen AI (e.g., chat.openai.com, claude.ai) and paste the message from your clipboard into the chat input.
 5.  **Copy AI Response**: Once the AI responds, copy its complete response text.
-6.  **Paste Back to Coppy Code**: Return to the dialog box in VS Code, paste the AI's response into the designated field, and click "Confirm".
-7.  **Continue**: Coppy Code will process the response as if it came directly from an API.
+6.  **Paste Back to Kilo Code**: Return to the dialog box in VS Code, paste the AI's response into the designated field, and click "Confirm".
+7.  **Continue**: Kilo Code will process the response as if it came directly from an API.
 
 ## Use Cases
 

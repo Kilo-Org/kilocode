@@ -1,4 +1,4 @@
-# Coppy Code Community Code of Conduct
+# Kilo Code Community Code of Conduct
 
 ## Our Pledge
 

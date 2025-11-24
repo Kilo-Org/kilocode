@@ -5,7 +5,7 @@ import { RooCodeEventName } from "@roo-code/types"
 import { waitUntilCompleted } from "./utils"
 import { setDefaultSuiteTimeout } from "./test-utils"
 
-suite("Coppy Code Modes", function () {
+suite("Kilo Code Modes", function () {
 	setDefaultSuiteTimeout(this)
 
 	test("Should handle switching modes correctly", async () => {

@@ -119,7 +119,7 @@ export const ImageGenerationSettings = ({
 								}}
 								className="w-full">
 								<VSCodeOption className="py-2 px-3" value="kilocode">
-									Coppy Code
+									Kilo Code
 								</VSCodeOption>
 								<VSCodeOption className="py-2 px-3" value="openrouter">
 									OpenRouter

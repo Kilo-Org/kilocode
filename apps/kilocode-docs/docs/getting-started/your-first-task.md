@@ -2,27 +2,27 @@
 sidebar_label: Your First Task
 ---
 
-# Starting Your First Task with Coppy Code
+# Starting Your First Task with Kilo Code
 
 <YouTubeEmbed
   url="https://www.youtube.com/watch?v=pO7zRLQS-p0"
 />
 
-This quick tour shows how Coppy Code handles a simple request from start to finish.
+This quick tour shows how Kilo Code handles a simple request from start to finish.
 
-After you [set up Coppy Code](/getting-started/setting-up), follow these steps:
+After you [set up Kilo Code](/getting-started/setting-up), follow these steps:
 
-## Step 1: Open the Coppy Code Panel
+## Step 1: Open the Kilo Code Panel
 
-Click the Coppy Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in the VS Code Primary Side Bar (vertical bar on the side of the window) to open the chat interface. If you don't see the icon, verify the extension is [installed](/getting-started/installing) and enabled.
+Click the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in the VS Code Primary Side Bar (vertical bar on the side of the window) to open the chat interface. If you don't see the icon, verify the extension is [installed](/getting-started/installing) and enabled.
 
-<img src="/docs/img/your-first-task/your-first-task.png" alt="Coppy Code icon in VS Code Primary Side Bar" width="800" />
+<img src="/docs/img/your-first-task/your-first-task.png" alt="Kilo Code icon in VS Code Primary Side Bar" width="800" />
 
-*The Coppy Code icon in the Primary Side Bar opens the chat interface.*
+*The Kilo Code icon in the Primary Side Bar opens the chat interface.*
 
 ## Step 2: Type Your Task
 
-Type a clear, concise description of what you want Coppy Code to do in the chat box at the bottom of the panel. Examples of effective tasks:
+Type a clear, concise description of what you want Kilo Code to do in the chat box at the bottom of the panel. Examples of effective tasks:
 
 * "Create a file named `hello.txt` containing 'Hello, world!'."
 * "Write a Python function that adds two numbers."
@@ -30,7 +30,7 @@ Type a clear, concise description of what you want Coppy Code to do in the chat 
 
 No special commands or syntax needed—just use plain English.
 
-<img src="/docs/img/your-first-task/your-first-task-6.png" alt="Typing a task in the Coppy Code chat interface" width="500" />
+<img src="/docs/img/your-first-task/your-first-task-6.png" alt="Typing a task in the Kilo Code chat interface" width="500" />
 *Enter your task in natural language - no special syntax required.*
 
 ## Step 3: Send Your Task
@@ -39,7 +39,7 @@ Press Enter or click the Send icon (<Codicon name="send" />) to the right of the
 
 ## Step 4: Review and Approve Actions
 
-Coppy Code analyzes your request and proposes specific actions. These may include:
+Kilo Code analyzes your request and proposes specific actions. These may include:
 
 * **Reading files:** Shows file contents it needs to access
 * **Writing to files:** Displays a diff with proposed changes (added lines in green, removed in red)
@@ -48,10 +48,10 @@ Coppy Code analyzes your request and proposes specific actions. These may includ
 * **Asking questions:** Requests clarification when needed to proceed
 
 <img src="/docs/img/your-first-task/your-first-task-7.png" alt="Reviewing a proposed file creation action" width="400" />
-*Coppy Code shows exactly what action it wants to perform and waits for your approval.*
+*Kilo Code shows exactly what action it wants to perform and waits for your approval.*
 
 * In **Code** mode, writing capabilities are on by default.
-* In **Architect** and **Ask** modes, Coppy Code won't write code.
+* In **Architect** and **Ask** modes, Kilo Code won't write code.
 
 :::tip
 
@@ -63,16 +63,16 @@ You can learn more about [using modes](/basic-usage/using-modes) and [auto-appro
 
 ## Step 5: Iterate
 
-Coppy Code works iteratively. After each action, it waits for your feedback before proposing the next step. Continue this review-approve cycle until your task is complete.
+Kilo Code works iteratively. After each action, it waits for your feedback before proposing the next step. Continue this review-approve cycle until your task is complete.
 
 <img src="/docs/img/your-first-task/your-first-task-8.png" alt="Final result of a completed task showing the iteration process" width="500" />
-*After completing the task, Coppy Code shows the final result and awaits your next instruction.*
+*After completing the task, Kilo Code shows the final result and awaits your next instruction.*
 
 ## Conclusion
 
 You've completed your first task. Along the way you learned:
 
-* How to interact with Coppy Code using natural language
+* How to interact with Kilo Code using natural language
 * Why approval keeps you in control
 * How iteration lets the AI refine its work
 

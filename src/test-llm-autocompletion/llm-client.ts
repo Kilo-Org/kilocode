@@ -20,7 +20,7 @@ function getKiloBaseUriFromToken(kilocodeToken?: string): string {
 			// Note: this is UNTRUSTED, so we need to make sure we're OK with this being manipulated by an attacker
 			if (payload.env === "development") return "http://localhost:3000"
 		} catch (_error) {
-			console.warn("Failed to get base URL from Coppy Code token")
+			console.warn("Failed to get base URL from Kilo Code token")
 		}
 	}
 	return "https://api.kilocode.ai"

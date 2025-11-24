@@ -2,7 +2,7 @@
 
 ## Project Status
 
-The Coppy Code documentation site is a mature, production-ready Docusaurus project that serves as the comprehensive documentation hub for the Coppy Code VS Code extension. The site is hosted at https://kilocode.ai/docs and provides extensive documentation covering installation, usage, features, and extension capabilities.
+The Kilo Code documentation site is a mature, production-ready Docusaurus project that serves as the comprehensive documentation hub for the Kilo Code VS Code extension. The site is hosted at https://kilocode.ai/docs and provides extensive documentation covering installation, usage, features, and extension capabilities.
 
 ## Current Work Focus
 
@@ -20,13 +20,13 @@ The documentation is organized into several major sections:
 
 ### Core User Journey
 - **Getting Started**: Installation, setup, and first task completion
-- **Using Coppy Code**: Chat interface, modes, context mentions, and basic features
+- **Using Kilo Code**: Chat interface, modes, context mentions, and basic features
 - **Core Concepts**: Auto-approving actions, suggested responses, tool usage, and checkpoints
 
 ### Advanced Features
 - **Advanced Usage**: Prompt engineering, customization options, memory bank, and large project handling
 - **Customization**: Settings management, custom modes, API configuration profiles
-- **Extending Coppy Code**: Model providers (18+ supported), local models, MCP integration, shell integration
+- **Extending Kilo Code**: Model providers (18+ supported), local models, MCP integration, shell integration
 
 ### Reference Materials
 - **Tools Reference**: Comprehensive documentation of all 15+ available tools

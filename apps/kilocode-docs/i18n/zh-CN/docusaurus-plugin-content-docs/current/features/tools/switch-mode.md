@@ -1,6 +1,6 @@
 # switch_mode
 
-`switch_mode` 工具使 Coppy Code 能够在不同操作模式之间切换，每种模式都具有针对特定任务类型的专业能力。当当前任务需要不同的专业知识时，可以无缝切换到 Code、Architect、Ask 或 Debug 模式。
+`switch_mode` 工具使 Kilo Code 能够在不同操作模式之间切换，每种模式都具有针对特定任务类型的专业能力。当当前任务需要不同的专业知识时，可以无缝切换到 Code、Architect、Ask 或 Debug 模式。
 
 ## 参数
 
@@ -11,7 +11,7 @@
 
 ## 功能
 
-该工具在当当前任务更适合由其他模式处理时请求模式切换。它在切换过程中保持上下文，同时调整 Coppy Code 的焦点和可用工具集，以匹配新任务阶段的需求。
+该工具在当当前任务更适合由其他模式处理时请求模式切换。它在切换过程中保持上下文，同时调整 Kilo Code 的焦点和可用工具集，以匹配新任务阶段的需求。
 
 ## 使用场景
 
@@ -112,9 +112,9 @@
 
 ## 使用示例
 
-- 讨论新功能时，Coppy Code 从 Ask 模式切换到 Architect 模式以帮助设计系统结构。
-- 在 Architect 模式中完成架构规划后，Coppy Code 切换到 Code 模式以实现设计的功能。
-- 在开发过程中遇到错误时，Coppy Code 从 Code 模式切换到 Debug 模式进行系统问题排查。
+- 讨论新功能时，Kilo Code 从 Ask 模式切换到 Architect 模式以帮助设计系统结构。
+- 在 Architect 模式中完成架构规划后，Kilo Code 切换到 Code 模式以实现设计的功能。
+- 在开发过程中遇到错误时，Kilo Code 从 Code 模式切换到 Debug 模式进行系统问题排查。
 
 ## 使用示例
 

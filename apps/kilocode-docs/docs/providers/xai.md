@@ -2,7 +2,7 @@
 sidebar_label: xAI (Grok)
 ---
 
-# Using xAI (Grok) With Coppy Code
+# Using xAI (Grok) With Kilo Code
 
 xAI is the company behind Grok, a large language model known for its conversational abilities and large context window. Grok models are designed to provide helpful, informative, and contextually relevant responses.
 
@@ -12,12 +12,12 @@ xAI is the company behind Grok, a large language model known for its conversatio
 
 1.  **Sign Up/Sign In:** Go to the [xAI Console](https://console.x.ai/). Create an account or sign in.
 2.  **Navigate to API Keys:** Go to the API keys section in your dashboard.
-3.  **Create a Key:** Click to create a new API key. Give your key a descriptive name (e.g., "Coppy Code").
+3.  **Create a Key:** Click to create a new API key. Give your key a descriptive name (e.g., "Kilo Code").
 4.  **Copy the Key:** **Important:** Copy the API key *immediately*. You will not be able to see it again. Store it securely.
 
 ## Supported Models
 
-Coppy Code supports the following xAI Grok models:
+Kilo Code supports the following xAI Grok models:
 
 ### Grok-3 Models
 * `grok-3-beta` (Default) - xAI's Grok-3 beta model with 131K context window
@@ -39,9 +39,9 @@ Coppy Code supports the following xAI Grok models:
 ### Legacy Models
 * `grok-beta` - xAI's Grok Beta model (legacy) with 131K context window
 
-## Configuration in Coppy Code
+## Configuration in Kilo Code
 
-1.  **Open Coppy Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Coppy Code panel.
+1.  **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2.  **Select Provider:** Choose "xAI" from the "API Provider" dropdown.
 3.  **Enter API Key:** Paste your xAI API key into the "xAI API Key" field.
 4.  **Select Model:** Choose your desired Grok model from the "Model" dropdown.

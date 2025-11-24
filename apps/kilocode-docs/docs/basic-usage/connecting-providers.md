@@ -4,9 +4,9 @@ sidebar_label: Overview
 
 # API Providers Overview
 
-**Bottom line**: Coppy Code, like any agentic AI coding tool, needs AI model providers to function. You can use our [built-in provider](/providers/kilocode) (easiest) or connect your own API keys from **30+ providers**.
+**Bottom line**: Kilo Code, like any agentic AI coding tool, needs AI model providers to function. You can use our [built-in provider](/providers/kilocode) (easiest) or connect your own API keys from **30+ providers**.
 
-## Coppy Code Extension vs. API Provider
+## Kilo Code Extension vs. API Provider
 
 ### The Extension
 
@@ -44,7 +44,7 @@ sidebar_label: Overview
 
 1. Choose from 30+ supported providers
 2. Get API key from your provider
-3. Configure in Coppy Code settings
+3. Configure in Kilo Code settings
 
 ## Why Use Multiple Providers?
 

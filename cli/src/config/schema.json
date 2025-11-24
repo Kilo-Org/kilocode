@@ -1,7 +1,7 @@
 {
 	"$schema": "http://json-schema.org/draft-07/schema#",
-	"title": "Coppy Code CLI Configuration",
-	"description": "Configuration file for Coppy Code CLI",
+	"title": "Kilo Code CLI Configuration",
+	"description": "Configuration file for Kilo Code CLI",
 	"type": "object",
 	"required": ["version", "mode", "telemetry", "provider", "providers"],
 	"properties": {

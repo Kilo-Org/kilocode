@@ -10,7 +10,7 @@ import { DISCORD_URL } from '@site/src/constants.ts'
 
 ## 透明的定价
 
-在 Coppy Code，我们相信完全透明的定价：
+在 Kilo Code，我们相信完全透明的定价：
 
 - 我们的定价与模型提供商的 API 费率完全一致
 - 我们不收取任何佣金或加价，无论是按 token 还是按充值
@@ -18,7 +18,7 @@ import { DISCORD_URL } from '@site/src/constants.ts'
 
 ## 未来计划
 
-我们正在不断改进 Coppy Code 并扩展我们的服务：
+我们正在不断改进 Kilo Code 并扩展我们的服务：
 
 - 未来将添加更多 LLM 提供商
 - 更多支付选项和其他计划正在开发中

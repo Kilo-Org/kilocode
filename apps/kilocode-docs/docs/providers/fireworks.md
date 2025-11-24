@@ -2,7 +2,7 @@
 sidebar_label: Fireworks AI
 ---
 
-# Using Fireworks AI With Coppy Code
+# Using Fireworks AI With Kilo Code
 
 Fireworks AI is a high-performance platform for running AI models that offers fast access to a wide range of open-source and proprietary language models. Built for speed and reliability, Fireworks AI provides both serverless and dedicated deployment options with OpenAI-compatible APIs.
 
@@ -14,14 +14,14 @@ Fireworks AI is a high-performance platform for running AI models that offers fa
 
 1. **Sign Up/Sign In:** Go to [Fireworks AI](https://fireworks.ai/) and create an account or sign in.
 2. **Navigate to API Keys:** After logging in, go to the [API Keys page](https://app.fireworks.ai/settings/users/api-keys) in the account settings.
-3. **Create a Key:** Click "Create API key" and give your key a descriptive name (e.g., "Coppy Code").
+3. **Create a Key:** Click "Create API key" and give your key a descriptive name (e.g., "Kilo Code").
 4. **Copy the Key:** Copy the API key *immediately* and store it securely. You will not be able to see it again.
 
 ---
 
 ## Supported Models
 
-Coppy Code supports the following Fireworks AI models:
+Kilo Code supports the following Fireworks AI models:
 
 * `accounts/fireworks/models/kimi-k2-instruct` - Kimi K2 instruction-tuned model
 * `accounts/fireworks/models/qwen3-235b-a22b-instruct-2507` - Qwen 3 235B instruction-tuned model  
@@ -31,9 +31,9 @@ Coppy Code supports the following Fireworks AI models:
 
 ---
 
-## Configuration in Coppy Code
+## Configuration in Kilo Code
 
-1. **Open Coppy Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Coppy Code panel.
+1. **Open Kilo Code Settings:** Click the gear icon (<Codicon name="gear" />) in the Kilo Code panel.
 2. **Select Provider:** Choose "Fireworks AI" from the "API Provider" dropdown.
 3. **Enter API Key:** Paste your Fireworks AI API key into the "Fireworks AI API Key" field.
 4. **Select Model:** Choose your desired model from the "Model" dropdown.

@@ -3,7 +3,7 @@ import * as vscode from "vscode"
 
 import { setDefaultSuiteTimeout } from "./test-utils"
 
-suite("Coppy Code Extension", function () {
+suite("Kilo Code Extension", function () {
 	setDefaultSuiteTimeout(this)
 
 	test("Commands should be registered", async () => {

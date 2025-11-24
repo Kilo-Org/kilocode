@@ -42,7 +42,7 @@ function makeRequest(url) {
 // Function to generate Markdown contributor list
 function generateContributorMarkdown(contributors) {
 	let markdown = "## Contributors\n\n"
-	markdown += "Thanks to all the contributors who help make Coppy Code better!\n\n"
+	markdown += "Thanks to all the contributors who help make Kilo Code better!\n\n"
 
 	// Map the kilocode.ai format to expected format
 	const validContributors = contributors.map((contributor) => {

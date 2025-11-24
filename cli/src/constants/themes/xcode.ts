@@ -1,5 +1,5 @@
 /**
- * Xcode theme for Coppy Code CLI
+ * Xcode theme for Kilo Code CLI
  *
  * Based on the Xcode color scheme
  */

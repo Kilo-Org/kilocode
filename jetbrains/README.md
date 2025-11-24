@@ -1,6 +1,6 @@
 # JetBrains Plugin Development Setup
 
-This directory contains the JetBrains plugin implementation for Coppy Code, including both the IntelliJ plugin (Kotlin) and the Extension Host (Node.js/TypeScript).
+This directory contains the JetBrains plugin implementation for Kilo Code, including both the IntelliJ plugin (Kotlin) and the Extension Host (Node.js/TypeScript).
 
 ## Prerequisites
 

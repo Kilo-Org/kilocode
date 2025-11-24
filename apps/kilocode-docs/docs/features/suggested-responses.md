@@ -6,18 +6,18 @@ import Codicon from '@site/src/components/Codicon';
 
 # Suggested Responses
 
-When Coppy Code needs more information to complete a task, it uses the [`ask_followup_question` tool](/features/tools/ask-followup-question). To make responding easier and faster, Coppy Code often provides suggested answers alongside the question.
+When Kilo Code needs more information to complete a task, it uses the [`ask_followup_question` tool](/features/tools/ask-followup-question). To make responding easier and faster, Kilo Code often provides suggested answers alongside the question.
 
 ## Overview
 
-Suggested Responses appear as clickable buttons directly below Coppy Code's question in the chat interface. They offer pre-formulated answers relevant to the question, helping you provide input quickly.
+Suggested Responses appear as clickable buttons directly below Kilo Code's question in the chat interface. They offer pre-formulated answers relevant to the question, helping you provide input quickly.
 
-<img src="/docs/img/suggested-responses/suggested-responses.png" alt="Example of Coppy Code asking a question with suggested response buttons below it" width="500" />
+<img src="/docs/img/suggested-responses/suggested-responses.png" alt="Example of Kilo Code asking a question with suggested response buttons below it" width="500" />
 
 ## How It Works
 
-1.  **Question Appears**: Coppy Code asks a question using the `ask_followup_question` tool.
-2.  **Suggestions Displayed**: If suggestions are provided by Coppy Code, they appear as buttons below the question.
+1.  **Question Appears**: Kilo Code asks a question using the `ask_followup_question` tool.
+2.  **Suggestions Displayed**: If suggestions are provided by Kilo Code, they appear as buttons below the question.
 3.  **Interaction**: You can interact with these suggestions in two ways.
 
 ## Interacting with Suggestions
@@ -26,7 +26,7 @@ You have two options for using suggested responses:
 
 1.  **Direct Selection**:
     *   **Action**: Simply click the button containing the answer you want to provide.
-    *   **Result**: The selected answer is immediately sent back to Coppy Code as your response. This is the quickest way to reply if one of the suggestions perfectly matches your intent.
+    *   **Result**: The selected answer is immediately sent back to Kilo Code as your response. This is the quickest way to reply if one of the suggestions perfectly matches your intent.
 
 2.  **Edit Before Sending**:
     *   **Action**:
@@ -39,7 +39,7 @@ You have two options for using suggested responses:
 ## Benefits
 
 *   **Speed**: Quickly respond without typing full answers.
-*   **Clarity**: Suggestions often clarify the type of information Coppy Code needs.
+*   **Clarity**: Suggestions often clarify the type of information Kilo Code needs.
 *   **Flexibility**: Edit suggestions to provide precise, customized answers when needed.
 
-This feature streamlines the interaction when Coppy Code requires clarification, allowing you to guide the task effectively with minimal effort.
+This feature streamlines the interaction when Kilo Code requires clarification, allowing you to guide the task effectively with minimal effort.

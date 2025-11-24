@@ -258,7 +258,7 @@ describe("/teams command", () => {
 				organizations: [
 					{
 						id: "org-456",
-						name: "Coppy Code",
+						name: "Kilo Code",
 						role: "admin",
 					},
 				],
@@ -277,7 +277,7 @@ describe("/teams command", () => {
 			expect(successMessage).toBeDefined()
 			if (successMessage) {
 				const msg = successMessage[0] as { content: string }
-				expect(msg.content).toContain("Coppy Code")
+				expect(msg.content).toContain("Kilo Code")
 			}
 		})
 

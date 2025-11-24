@@ -1,6 +1,6 @@
 # Docker Environment Variable Example
 
-This document demonstrates how to run Coppy Code CLI in a Docker container using only environment variables, without requiring a config.json file.
+This document demonstrates how to run Kilo Code CLI in a Docker container using only environment variables, without requiring a config.json file.
 
 ## Dockerfile Example
 
@@ -10,7 +10,7 @@ FROM node:20-alpine
 # Install dependencies
 RUN apk add --no-cache git
 
-# Install Coppy Code CLI globally
+# Install Kilo Code CLI globally
 RUN npm install -g @kilocode/cli
 
 # Set working directory
@@ -135,7 +135,7 @@ spec:
 ### GitHub Actions
 
 ```yaml
-name: Coppy Code CI
+name: Kilo Code CI
 
 on: [push]
 
@@ -150,10 +150,10 @@ jobs:
               with:
                   node-version: "20"
 
-            - name: Install Coppy Code CLI
+            - name: Install Kilo Code CLI
               run: npm install -g @kilocode/cli
 
-            - name: Run Coppy Code
+            - name: Run Kilo Code
               env:
                   KILO_PROVIDER_TYPE: kilocode
                   KILOCODE_TOKEN: ${{ secrets.KILOCODE_TOKEN }}
@@ -317,4 +317,4 @@ docker run -it --rm \
   kilocode --auto "Create a simple Node.js hello world app"
 ```
 
-This will run Coppy Code CLI in a completely ephemeral environment without any persistent configuration files.
+This will run Kilo Code CLI in a completely ephemeral environment without any persistent configuration files.

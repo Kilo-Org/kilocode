@@ -1,5 +1,5 @@
 /**
- * GitHub Light theme for Coppy Code CLI
+ * GitHub Light theme for Kilo Code CLI
  *
  * Based on the GitHub Light color scheme
  */

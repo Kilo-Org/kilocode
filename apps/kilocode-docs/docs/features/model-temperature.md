@@ -17,15 +17,15 @@ Temperature controls output randomness, not code quality or accuracy directly. K
 *   **Temperature 0.0:** Useful for consistency, but limits exploration needed for complex problems.
 :::
 
-## Default Values in Coppy Code
+## Default Values in Kilo Code
 
-Coppy Code uses a default temperature of 0.0 for most models, optimizing for maximum determinism and precision in code generation. This applies to OpenAI models, Anthropic models (non-thinking variants), LM Studio models, and most other providers.
+Kilo Code uses a default temperature of 0.0 for most models, optimizing for maximum determinism and precision in code generation. This applies to OpenAI models, Anthropic models (non-thinking variants), LM Studio models, and most other providers.
 
 Some models use higher default temperatures - DeepSeek R1 models and certain reasoning-focused models default to 0.6, providing a balance between determinism and creative exploration.
 
 Models with thinking capabilities (where the AI shows its reasoning process) require a fixed temperature of 1.0 which cannot be changed, as this setting ensures optimal performance of the thinking mechanism. This applies to any model with the ":thinking" flag enabled.
 
-Some specialized models don't support temperature adjustments at all, in which case Coppy Code respects these limitations automatically.
+Some specialized models don't support temperature adjustments at all, in which case Kilo Code respects these limitations automatically.
 
 ## When to Adjust Temperature
 
@@ -40,14 +40,14 @@ These are starting points – it's important to [experiment with different setti
 
 ## How to Adjust Temperature
 
-1.  **Open the Coppy Code Panel:** Click the Coppy Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in the VS Code Side Bar
+1.  **Open the Kilo Code Panel:** Click the Kilo Code icon (<img src="/docs/img/kilo-v1.svg" width="12" />) in the VS Code Side Bar
 2.  **Open Settings:** Click the <Codicon name="gear" /> icon in the top right corner
 3.  **Find Temperature Control:** Navigate to the Providers section
 4.  **Enable Custom Temperature:** Check the "Use custom temperature" box
 5.  **Set Your Value:** Adjust the slider to your preferred value
 
-    <img src="/docs/img/model-temperature/model-temperature.png" alt="Temperature setting in Coppy Code settings panel" width="550" />
-    *Temperature slider in Coppy Code settings panel*
+    <img src="/docs/img/model-temperature/model-temperature.png" alt="Temperature setting in Kilo Code settings panel" width="550" />
+    *Temperature slider in Kilo Code settings panel*
 
 ## Using API Configuration Profiles for Temperature
 
@@ -64,7 +64,7 @@ This approach optimizes model behavior for specific tasks without manual adjustm
 
 ## Technical Implementation
 
-Coppy Code implements temperature handling with these considerations:
+Kilo Code implements temperature handling with these considerations:
 
 *   User-defined settings take priority over defaults
 *   Provider-specific behaviors are respected
@@ -78,7 +78,7 @@ Experimenting with different temperature settings is the most effective way to d
 
 ### Effective Temperature Testing
 
-1. **Start with defaults** - Begin with Coppy Code's preset values (0.0 for most tasks) as your baseline
+1. **Start with defaults** - Begin with Kilo Code's preset values (0.0 for most tasks) as your baseline
 2. **Make incremental adjustments** - Change values in small steps (±0.1) to observe subtle differences
 3. **Test consistently** - Use the same prompt across different temperature settings for valid comparisons
 4. **Document results** - Note which values produce the best outcomes for specific types of tasks
@@ -88,6 +88,6 @@ Remember that different models may respond differently to the same temperature v
 
 ## Related Features
 
-- Works with all [API providers](/providers/openai) supported by Coppy Code
+- Works with all [API providers](/providers/openai) supported by Kilo Code
 - Complements [custom instructions](/advanced-usage/custom-instructions) for fine-tuning responses
 - Works alongside [custom modes](/features/custom-modes) you create

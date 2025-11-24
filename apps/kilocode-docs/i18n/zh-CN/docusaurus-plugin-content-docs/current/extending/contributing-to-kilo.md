@@ -1,10 +1,10 @@
-# 为 Coppy Code 做贡献
+# 为 Kilo Code 做贡献
 
-Coppy Code 是一个开源项目，欢迎所有技能水平的开发者贡献代码。本指南将帮助你开始为 Coppy Code 做出贡献，无论是修复错误、添加功能、改进文档还是分享自定义模式。
+Kilo Code 是一个开源项目，欢迎所有技能水平的开发者贡献代码。本指南将帮助你开始为 Kilo Code 做出贡献，无论是修复错误、添加功能、改进文档还是分享自定义模式。
 
 ## 贡献方式
 
-有多种方式可以为 Coppy Code 做出贡献：
+有多种方式可以为 Kilo Code 做出贡献：
 
 1. **代码贡献**：实现新功能或修复错误
 2. **文档**：改进现有文档或创建新指南
@@ -56,7 +56,7 @@ git checkout -b your-branch-name
    git push origin your-branch-name
    ```
 
-2. 前往 [Coppy Code 仓库](https://github.com/Kilo-Org/kilocode)
+2. 前往 [Kilo Code 仓库](https://github.com/Kilo-Org/kilocode)
 
 3. 点击 "New Pull Request" 并选择 "compare across forks"
 
@@ -70,7 +70,7 @@ git checkout -b your-branch-name
 
 ## 创建自定义模式
 
-自定义模式是扩展 Coppy Code 功能的强大方式。要创建并分享自定义模式：
+自定义模式是扩展 Kilo Code 功能的强大方式。要创建并分享自定义模式：
 
 1. 按照 [自定义模式文档](/features/custom-modes) 创建你的模式
 
@@ -99,7 +99,7 @@ git checkout -b your-branch-name
 
 ## 社区准则
 
-参与 Coppy Code 社区时：
+参与 Kilo Code 社区时：
 
 - 保持尊重和包容
 - 提供建设性的反馈
@@ -116,10 +116,10 @@ git checkout -b your-branch-name
 
 ## 致谢
 
-所有贡献者都是 Coppy Code 社区的重要成员。贡献者将在以下地方获得认可：
+所有贡献者都是 Kilo Code 社区的重要成员。贡献者将在以下地方获得认可：
 
 - 发布说明
 - 项目的 README
 - GitHub 上的贡献者列表
 
-感谢你为 Coppy Code 做出贡献，帮助让 AI 驱动的编码辅助对每个人更好！
+感谢你为 Kilo Code 做出贡献，帮助让 AI 驱动的编码辅助对每个人更好！

@@ -52,13 +52,13 @@ export class CLI {
 		}
 
 		try {
-			logs.info("Initializing Coppy Code CLI...", "CLI")
+			logs.info("Initializing Kilo Code CLI...", "CLI")
 			logs.info(`Version: ${Package.version}`, "CLI")
 
 			// Set terminal title - use process.cwd() in parallel mode to show original directory
 			const titleWorkspace = this.options.parallel ? process.cwd() : this.options.workspace || process.cwd()
 			const folderName = `${basename(titleWorkspace)}${(await isGitWorktree(this.options.workspace || "")) ? " (git worktree)" : ""}`
-			process.stdout.write(`\x1b]0;Coppy Code - ${folderName}\x07`)
+			process.stdout.write(`\x1b]0;Kilo Code - ${folderName}\x07`)
 
 			// Create Jotai store
 			this.store = createStore()
@@ -150,7 +150,7 @@ export class CLI {
 			}
 
 			this.isInitialized = true
-			logs.info("Coppy Code CLI initialized successfully", "CLI")
+			logs.info("Kilo Code CLI initialized successfully", "CLI")
 		} catch (error) {
 			logs.error("Failed to initialize CLI", "CLI", { error })
 			throw error
@@ -267,7 +267,7 @@ export class CLI {
 		let beforeExit = () => {}
 
 		try {
-			logs.info("Disposing Coppy Code CLI...", "CLI")
+			logs.info("Disposing Kilo Code CLI...", "CLI")
 
 			if (this.options.ci && this.store) {
 				// Check exit reason from CI atoms
@@ -315,7 +315,7 @@ export class CLI {
 			this.store = null
 
 			this.isInitialized = false
-			logs.info("Coppy Code CLI disposed", "CLI")
+			logs.info("Kilo Code CLI disposed", "CLI")
 		} catch (error) {
 			logs.error("Error disposing CLI", "CLI", { error })
 

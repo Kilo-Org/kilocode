@@ -1,6 +1,6 @@
 # 上下文提及
 
-上下文提及是一种强大的方式，可以为 Coppy Code 提供项目的具体信息，使其能够更准确高效地执行任务。你可以使用提及来引用文件、文件夹、问题和 Git 提交。上下文提及以 `@` 符号开头。
+上下文提及是一种强大的方式，可以为 Kilo Code 提供项目的具体信息，使其能够更准确高效地执行任务。你可以使用提及来引用文件、文件夹、问题和 Git 提交。上下文提及以 `@` 符号开头。
 
 <img src="/docs/img/context-mentions/context-mentions.png" alt="上下文提及概览 - 显示聊天界面中的 @ 符号下拉菜单" width="600" />
 
@@ -65,7 +65,7 @@
 | **最佳用途** | 修复错误而无需手动复制 |
 
 ### 终端提及
-<img src="/docs/img/context-mentions/context-mentions-4.png" alt="终端提及示例，显示终端输出被包含在 Coppy Code 的上下文中" width="600" />
+<img src="/docs/img/context-mentions/context-mentions-4.png" alt="终端提及示例，显示终端输出被包含在 Kilo Code 的上下文中" width="600" />
 
 *终端提及捕获最近的命令输出以便调试和分析。*
 
@@ -79,7 +79,7 @@
 
 ### Git 提及
 
-<img src="/docs/img/context-mentions/context-mentions-5.png" alt="Git 提交提及示例，显示提交详情被 Coppy Code 分析" width="600" />
+<img src="/docs/img/context-mentions/context-mentions-5.png" alt="Git 提交提及示例，显示提交详情被 Kilo Code 分析" width="600" />
 
 *Git 提及提供提交详情和差异，以便进行上下文感知的版本分析。*
 

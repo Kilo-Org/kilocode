@@ -1,6 +1,6 @@
 # 自定义规则
 
-自定义规则提供了一种强大的方式来定义项目特定的行为和约束，以确保 Coppy Code AI 代理的一致性。通过自定义规则，你可以确保格式一致、限制对敏感文件的访问、强制执行编码标准，并根据你的项目需求自定义 AI 的行为。
+自定义规则提供了一种强大的方式来定义项目特定的行为和约束，以确保 Kilo Code AI 代理的一致性。通过自定义规则，你可以确保格式一致、限制对敏感文件的访问、强制执行编码标准，并根据你的项目需求自定义 AI 的行为。
 
 ## 概述
 
@@ -16,7 +16,7 @@
 
 ## 规则类型
 
-Coppy Code 支持两种类型的自定义规则：
+Kilo Code 支持两种类型的自定义规则：
 
 - **项目规则**：仅适用于当前项目工作区
 - **全局规则**：适用于所有项目和工作区
@@ -56,7 +56,7 @@ project/
 
 ## 通过 UI 管理规则
 
-Coppy Code 提供了一个内置界面，用于管理您的自定义规则，而无需手动编辑 `.kilocode/rules/` 目录中的文件。要访问 UI，请单击 Coppy Code 窗口**右下角**的 <Codicon name="law" /> 图标。
+Kilo Code 提供了一个内置界面，用于管理您的自定义规则，而无需手动编辑 `.kilocode/rules/` 目录中的文件。要访问 UI，请单击 Kilo Code 窗口**右下角**的 <Codicon name="law" /> 图标。
 
 您可以访问规则管理 UI 来：
 
@@ -98,11 +98,11 @@ Coppy Code 提供了一个内置界面，用于管理您的自定义规则，而
 
 ### 使用 UI 界面
 
-<img src="/docs/img/custom-rules/rules-ui.png" alt="Coppy Code 中的规则选项卡" width="400" />
+<img src="/docs/img/custom-rules/rules-ui.png" alt="Kilo Code 中的规则选项卡" width="400" />
 
 创建和管理规则的最简单方法是通过内置 UI：
 
-1.  从 Coppy Code 面板访问规则管理界面
+1.  从 Kilo Code 面板访问规则管理界面
 2.  选择创建项目特定规则或全局规则
 3.  使用界面创建、编辑或切换规则
 4.  规则会自动保存并立即应用
@@ -125,7 +125,7 @@ Coppy Code 提供了一个内置界面，用于管理您的自定义规则，而
 3.  使用 Markdown 格式编写您的规则
 4.  保存文件
 
-该规则将自动应用于你项目中所有未来的 Coppy Code 交互。任何新更改都会立即生效。
+该规则将自动应用于你项目中所有未来的 Kilo Code 交互。任何新更改都会立即生效。
 
 ## 规则示例
 
@@ -153,7 +153,7 @@ Coppy Code 提供了一个内置界面，用于管理您的自定义规则，而
 
 此规则防止 AI 读取或访问敏感文件，即使明确要求这样做。
 
-<img src="/docs/img/custom-rules/custom-rules.png" alt="Coppy Code 忽略读取敏感文件的请求" width="600" />
+<img src="/docs/img/custom-rules/custom-rules.png" alt="Kilo Code 忽略读取敏感文件的请求" width="600" />
 
 ## 使用场景
 

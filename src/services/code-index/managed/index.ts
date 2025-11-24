@@ -2,7 +2,7 @@
 /**
  * Managed Codebase Indexing
  *
- * This module provides a complete, standalone indexing system for Coppy Code
+ * This module provides a complete, standalone indexing system for Kilo Code
  * organization users. It is completely separate from the local indexing system
  * and uses a simpler, more efficient approach:
  *

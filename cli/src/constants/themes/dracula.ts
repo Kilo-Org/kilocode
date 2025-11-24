@@ -1,5 +1,5 @@
 /**
- * Dracula theme for Coppy Code CLI
+ * Dracula theme for Kilo Code CLI
  *
  * Based on the popular Dracula color scheme
  */

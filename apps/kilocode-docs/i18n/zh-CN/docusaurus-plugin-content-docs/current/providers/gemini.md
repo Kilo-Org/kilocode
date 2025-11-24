@@ -2,9 +2,9 @@
 sidebar_label: Google Gemini
 ---
 
-# 在Coppy Code中使用Google Gemini
+# 在Kilo Code中使用Google Gemini
 
-Coppy Code通过Google AI Gemini API支持Google的Gemini系列模型。
+Kilo Code通过Google AI Gemini API支持Google的Gemini系列模型。
 
 **官网:** [https://ai.google.dev/](https://ai.google.dev/)
 
@@ -17,7 +17,7 @@ Coppy Code通过Google AI Gemini API支持Google的Gemini系列模型。
 
 ## 支持的模型
 
-Coppy Code支持以下Gemini模型：
+Kilo Code支持以下Gemini模型：
 
 ### 聊天模型
 
@@ -41,9 +41,9 @@ Coppy Code支持以下Gemini模型：
 
 有关每个模型的更多详细信息，请参阅 [Gemini 文档](https://ai.google.dev/models/gemini)。
 
-## 在Coppy Code中的配置
+## 在Kilo Code中的配置
 
-1. **打开Coppy Code设置:** 点击Coppy Code面板中的齿轮图标(<Codicon name="gear" />)
+1. **打开Kilo Code设置:** 点击Kilo Code面板中的齿轮图标(<Codicon name="gear" />)
 2. **选择提供商:** 在"API Provider"下拉菜单中选择"Google Gemini"
 3. **输入API密钥:** 将Gemini API密钥粘贴到"Gemini API Key"字段
 4. **选择模型:** 从"Model"下拉菜单中选择所需的Gemini模型

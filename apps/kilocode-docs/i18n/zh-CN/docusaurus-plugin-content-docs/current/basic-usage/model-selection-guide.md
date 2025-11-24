@@ -2,13 +2,13 @@
 sidebar_label: "模型选择指南"
 ---
 
-# Coppy Code 模型选择指南
+# Kilo Code 模型选择指南
 
 最后更新：2025年9月3日。
 
-AI 模型领域发展迅速，因此本指南重点介绍目前在 Coppy Code 中表现优异的模型。我们会定期更新，以反映新模型的出现和性能变化。
+AI 模型领域发展迅速，因此本指南重点介绍目前在 Kilo Code 中表现优异的模型。我们会定期更新，以反映新模型的出现和性能变化。
 
-## Coppy Code 表现最佳者
+## Kilo Code 表现最佳者
 
 | 模型                 | 上下文窗口  | SWE-Bench 验证 | 人工评估 | LiveCodeBench | 输入价格\* | 输出价格\* | 最佳用途                 |
 | -------------------- | ----------- | -------------- | -------- | ------------- | ---------- | ---------- | ------------------------ |
@@ -81,4 +81,4 @@ Token 生成速率影响大型代码库的处理：
 
 ## 社区选择
 
-AI 模型领域变化迅速，要保持更新，请查看 [**👉 Coppy Code 在 OpenRouter 上的社区最爱**](https://openrouter.ai/apps?url=https%3A%2F%2Fkilocode.ai%2F)
+AI 模型领域变化迅速，要保持更新，请查看 [**👉 Kilo Code 在 OpenRouter 上的社区最爱**](https://openrouter.ai/apps?url=https%3A%2F%2Fkilocode.ai%2F)

@@ -1,6 +1,6 @@
 # list_files
 
-The `list_files` tool displays the files and directories within a specified location. It helps Coppy Code understand your project structure and navigate your codebase effectively.
+The `list_files` tool displays the files and directories within a specified location. It helps Kilo Code understand your project structure and navigate your codebase effectively.
 
 ## Parameters
 
@@ -15,11 +15,11 @@ This tool lists all files and directories in a specified location, providing a c
 
 ## When is it used?
 
-- When Coppy Code needs to understand your project structure
-- When Coppy Code explores what files are available before reading specific ones
-- When Coppy Code maps a codebase to better understand its organization
+- When Kilo Code needs to understand your project structure
+- When Kilo Code explores what files are available before reading specific ones
+- When Kilo Code maps a codebase to better understand its organization
 - Before using more targeted tools like `read_file` or `search_files`
-- When Coppy Code needs to check for specific file types (like configuration files) across a project
+- When Kilo Code needs to check for specific file types (like configuration files) across a project
 
 ## Key Features
 
@@ -101,10 +101,10 @@ src/index.ts
 
 ## Examples When Used
 
-- When starting a new task, Coppy Code may list the project files to understand its structure before diving into specific code.
-- When asked to find specific types of files (like all JavaScript files), Coppy Code first lists directories to know where to look.
-- When providing recommendations for code organization, Coppy Code examines the current project structure first.
-- When setting up a new feature, Coppy Code lists related directories to understand the project conventions.
+- When starting a new task, Kilo Code may list the project files to understand its structure before diving into specific code.
+- When asked to find specific types of files (like all JavaScript files), Kilo Code first lists directories to know where to look.
+- When providing recommendations for code organization, Kilo Code examines the current project structure first.
+- When setting up a new feature, Kilo Code lists related directories to understand the project conventions.
 
 ## Usage Examples
 

@@ -4,7 +4,7 @@
 
 **Why it matters**: Complex workflows have lots of moving parts. Without structure, it's easy to miss steps, duplicate work, or forget what comes next.
 
-<img src="/docs/img/task-todo-list/task-todo-list-1.png" alt="Task Todo List overview showing interactive checklist in Coppy Code" width="500" />
+<img src="/docs/img/task-todo-list/task-todo-list-1.png" alt="Task Todo List overview showing interactive checklist in Kilo Code" width="500" />
 
 ## How to trigger todo lists
 

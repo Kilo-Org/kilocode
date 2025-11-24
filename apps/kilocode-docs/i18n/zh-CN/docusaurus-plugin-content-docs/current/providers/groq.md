@@ -2,19 +2,19 @@
 sidebar_label: Groq
 ---
 
-# 在 Coppy Code 中使用 Groq
+# 在 Kilo Code 中使用 Groq
 
-Groq 通过其高性能基础设施为各种 AI 模型提供超快速推理。Coppy Code 支持通过 Groq API 访问模型。
+Groq 通过其高性能基础设施为各种 AI 模型提供超快速推理。Kilo Code 支持通过 Groq API 访问模型。
 
 **网站：** [https://groq.com/](https://groq.com/)
 
 ## 获取 API 密钥
 
-要将 Groq 与 Coppy Code 一起使用，您需要从 [GroqCloud 控制台](https://console.groq.com/)获取 API 密钥。注册或登录后，导航到仪表板的 API 密钥部分以创建和复制您的密钥。
+要将 Groq 与 Kilo Code 一起使用，您需要从 [GroqCloud 控制台](https://console.groq.com/)获取 API 密钥。注册或登录后，导航到仪表板的 API 密钥部分以创建和复制您的密钥。
 
 ## 支持的模型
 
-Coppy Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常可用的模型包括：
+Kilo Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常可用的模型包括：
 
 *   `llama3-8b-8192`
 *   `llama3-70b-8192`
@@ -24,9 +24,9 @@ Coppy Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常�
 
 **注意：** 模型可用性和规格可能会发生变化。请参阅 [Groq 文档](https://console.groq.com/docs/models)以获取最新支持的模型列表及其功能。
 
-## Coppy Code 中的配置
+## Kilo Code 中的配置
 
-1.  **打开 Coppy Code 设置：** 单击 Coppy Code 面板中的齿轮图标（<Codicon name="gear" />）。
+1.  **打开 Kilo Code 设置：** 单击 Kilo Code 面板中的齿轮图标（<Codicon name="gear" />）。
 2.  **选择提供商：** 从“API 提供商”下拉菜单中选择“Groq”。
 3.  **输入 API 密钥：** 将您的 Groq API 密钥粘贴到“Groq API 密钥”字段中。
 4.  **选择模型：** 从“模型”下拉菜单中选择您想要的模型。
@@ -34,13 +34,13 @@ Coppy Code 将尝试从 Groq API 获取可用模型列表。通过 Groq 通常�
 ## 提示和注意事项
 
 *   **高速推理：** Groq 的 LPU 提供异常快速的响应时间，使其成为交互式开发工作流的理想选择。
-*   **Token 限制：** 某些模型具有特定的 `max_tokens` 限制，Coppy Code 会自动处理（例如，`moonshotai/kimi-k2-instruct` 模型）。
+*   **Token 限制：** 某些模型具有特定的 `max_tokens` 限制，Kilo Code 会自动处理（例如，`moonshotai/kimi-k2-instruct` 模型）。
 *   **成本效益：** 高性能推理具有竞争力的定价。
 *   **模型选择：** 根据您的特定需求选择模型 - 对于复杂推理任务，选择 `llama3-70b-8192` 等大型模型，或者对于更快、更简单的操作，选择 `llama3-8b-8192` 等小型模型。
 
 ## 支持的模型
 
-Coppy Code 通过 Groq 支持以下模型：
+Kilo Code 通过 Groq 支持以下模型：
 
 | Model ID | Provider | Context Window | Notes |
 |----------|----------|----------------|-------|
@@ -52,9 +52,9 @@ Coppy Code 通过 Groq 支持以下模型：
 
 **注意：** 模型可用性可能会发生变化。请参阅 [Groq 文档](https://console.groq.com/docs/models)以获取最新的模型列表和规格。
 
-## Coppy Code 中的配置
+## Kilo Code 中的配置
 
-1.  **打开 Coppy Code 设置：** 单击 Coppy Code 面板中的齿轮图标（<Codicon name="gear" />）。
+1.  **打开 Kilo Code 设置：** 单击 Kilo Code 面板中的齿轮图标（<Codicon name="gear" />）。
 2.  **选择提供商：** 从“API 提供商”下拉菜单中选择“Groq”。
 3.  **输入 API 密钥：** 将您的 Groq API 密钥粘贴到“Groq API 密钥”字段中。
 4.  **选择模型：** 从“模型”下拉菜单中选择您想要的模型。

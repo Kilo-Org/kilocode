@@ -1,6 +1,6 @@
 # access_mcp_resource
 
-`access_mcp_resource` 工具用于从连接的 Model Context Protocol (MCP) 服务器中检索资源数据。它允许 Coppy Code 访问文件、API 响应、文档或系统信息，为任务提供额外的上下文。
+`access_mcp_resource` 工具用于从连接的 Model Context Protocol (MCP) 服务器中检索资源数据。它允许 Kilo Code 访问文件、API 响应、文档或系统信息，为任务提供额外的上下文。
 
 ## 参数
 
@@ -15,10 +15,10 @@
 
 ## 使用场景
 
-- 当 Coppy Code 需要从外部系统获取额外上下文时
-- 当 Coppy Code 需要从专门的 MCP 服务器访问领域特定数据时
-- 当 Coppy Code 需要检索由 MCP 服务器托管的参考文档时
-- 当 Coppy Code 需要通过 MCP 从外部 API 集成实时数据时
+- 当 Kilo Code 需要从外部系统获取额外上下文时
+- 当 Kilo Code 需要从专门的 MCP 服务器访问领域特定数据时
+- 当 Kilo Code 需要检索由 MCP 服务器托管的参考文档时
+- 当 Kilo Code 需要通过 MCP 从外部 API 集成实时数据时
 
 ## 主要特性
 
@@ -66,7 +66,7 @@
    - 接收带有元数据和内容数组的结构化响应
    - 处理文本内容以供用户显示
    - 特殊处理图像数据以适当显示
-   - 将处理后的资源数据返回给 Coppy Code 以用于当前任务
+   - 将处理后的资源数据返回给 Kilo Code 以用于当前任务
 
 ## 资源类型
 
@@ -86,10 +86,10 @@ MCP 服务器可以提供两种主要类型的资源：
 
 ## 使用示例
 
-- 在帮助开发 API 时，Coppy Code 从 MCP 资源中检索端点规范以确保正确实现。
-- 在协助数据可视化时，Coppy Code 从连接的 MCP 服务器访问当前数据样本。
-- 在特定领域工作时，Coppy Code 检索技术文档以提供准确的指导。
-- 在生成行业特定代码时，Coppy Code 参考文档中的合规要求。
+- 在帮助开发 API 时，Kilo Code 从 MCP 资源中检索端点规范以确保正确实现。
+- 在协助数据可视化时，Kilo Code 从连接的 MCP 服务器访问当前数据样本。
+- 在特定领域工作时，Kilo Code 检索技术文档以提供准确的指导。
+- 在生成行业特定代码时，Kilo Code 参考文档中的合规要求。
 
 ## 使用示例
 

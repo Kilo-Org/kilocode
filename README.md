@@ -6,7 +6,7 @@
   <a href="https://www.reddit.com/r/kilocode/"><img src="https://img.shields.io/reddit/subreddit-subscribers/kilocode?style=flat&logo=reddit&logoColor=white" alt="Reddit"></a>
 </p>
 
-# 🚀 Coppy Code
+# 🚀 Kilo Code
 
 > Kilo is an open-source VS Code AI agent. We frequently merge features from open-source projects while building our own vision.
 
@@ -33,11 +33,11 @@
 - **MCP Server Marketplace**: Kilo can easily find, and use MCP servers to extend the agent capabilities.
 - **Multi Mode**: Plan with Architect, Code with Coder, and Debug with Debugger, and make your own custom modes.
 
-## How to get started with Coppy Code
+## How to get started with Kilo Code
 
-1. Install the Coppy Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
+1. Install the Kilo Code extension from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=kilocode.Kilo-Code).
 2. Create your account to access 400+ cutting-edge AI models including Gemini 2.5 Pro, Claude 4 Sonnet & Opus, and GPT-5 – with transparent pricing that matches provider rates exactly.
-3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Coppy Code in action:
+3. Start coding with AI that adapts to your workflow. Watch our quick-start guide to see Kilo Code in action:
 
 [![Watch the video](https://img.youtube.com/vi/pqGfYXgrhig/maxresdefault.jpg)](https://youtu.be/pqGfYXgrhig)
 
@@ -47,7 +47,7 @@ For details on building and developing the extension, see [DEVELOPMENT.md](/DEVE
 
 ## Contributors to Kilo
 
-Thanks to all the contributors who help make Coppy Code better!
+Thanks to all the contributors who help make Kilo Code better!
 
 <table>
   <tr>

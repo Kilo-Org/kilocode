@@ -1,7 +1,7 @@
 {
 	"welcome": {
-		"greeting": "Welcome to Coppy Code!",
-		"introText1": "Coppy Code is a free, open source AI coding agent.",
+		"greeting": "Welcome to Kilo Code!",
+		"introText1": "Kilo Code is a free, open source AI coding agent.",
 		"introText2": "It works with the latest AI models like Claude Sonnet 4.5, Gemini 2.5 Pro, GPT-5, and 450+ more.",
 		"introText3": "Create a free account and get $20 in bonus credits when you top-up for the first time.",
 		"ctaButton": "Get Started",
@@ -11,7 +11,7 @@
 	},
 	"lowCreditWarning": {
 		"addCredit": "Add Credit",
-		"lowBalance": "Your Coppy Code balance is low",
+		"lowBalance": "Your Kilo Code balance is low",
 		"newOrganization": "Using Kilo for work?"
 	},
 	"memoryWarning": {
@@ -49,10 +49,10 @@
 			"mcp": "MCP Servers"
 		},
 		"provider": {
-			"account": "Coppy Code Account",
-			"apiKey": "Coppy Code API Key",
-			"login": "Log in at Coppy Code",
-			"logout": "Log out from Coppy Code",
+			"account": "Kilo Code Account",
+			"apiKey": "Kilo Code API Key",
+			"login": "Log in at Kilo Code",
+			"logout": "Log out from Kilo Code",
 			"providerRouting": {
 				"title": "Provider Routing",
 				"managedByOrganization": "Manage Organization-level Provider Routing",
@@ -71,12 +71,12 @@
 					"zdr": "Zero data retention"
 				}
 			},
-			"automaticFetch": "The latest models are automatically available in Coppy Code. If you're unsure which model to choose, Coppy Code works best with the recommended models listed at the top in <strong>bold face</strong>."
+			"automaticFetch": "The latest models are automatically available in Kilo Code. If you're unsure which model to choose, Kilo Code works best with the recommended models listed at the top in <strong>bold face</strong>."
 		},
 		"modelInfo": {
 			"contextWindow": "Context window",
 			"providerBreakdown": "Provider Price and Capability Breakdown",
-			"averageKiloCodeCost": "This is the average actual spent for Coppy Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
+			"averageKiloCodeCost": "This is the average actual spent for Kilo Code using this model over the last week. It may be lower than the listed price due to prompt cache utilization.",
 			"table": {
 				"provider": "Provider",
 				"context": "The endpoint can process this number of tokens (input + output).",
@@ -89,15 +89,15 @@
 		"contextManagement": {
 			"allowVeryLargeReads": {
 				"label": "Allow very large file reads",
-				"description": "When enabled, Coppy Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
+				"description": "When enabled, Kilo Code will perform very large file or MCP output reads even if there is a high chance of overflowing the context window (content size >80% of context window)."
 			}
 		},
 		"systemNotifications": {
 			"label": "Enable System Notifications",
-			"description": "When enabled, Coppy Code will send system notifications for important events like task completion or errors.",
+			"description": "When enabled, Kilo Code will send system notifications for important events like task completion or errors.",
 			"testButton": "Test Notification",
-			"testTitle": "Coppy Code",
-			"testMessage": "This is a test notification from Coppy Code."
+			"testTitle": "Kilo Code",
+			"testMessage": "This is a test notification from Kilo Code."
 		},
 		"terminal": {
 			"commandGenerator": {
@@ -112,7 +112,7 @@
 	},
 	"chat": {
 		"condense": {
-			"wantsToCondense": "Coppy Code wants to condense your conversation",
+			"wantsToCondense": "Kilo Code wants to condense your conversation",
 			"condenseConversation": "Condense Conversation"
 		},
 		"seeNewChanges": "See New Changes",
@@ -143,15 +143,15 @@
 	},
 	"docs": "Docs",
 	"rules": {
-		"tooltip": "Manage Coppy Code Rules & Workflows",
-		"ariaLabel": "Coppy Code Rules",
+		"tooltip": "Manage Kilo Code Rules & Workflows",
+		"ariaLabel": "Kilo Code Rules",
 		"tabs": {
 			"rules": "Rules",
 			"workflows": "Workflows"
 		},
 		"description": {
-			"rules": "Rules allow you to provide Coppy Code with instructions it should follow in all modes and for all prompts. They are a persistent way to include context and preferences for all conversations in your workspace or globally.",
-			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Coppy Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
+			"rules": "Rules allow you to provide Kilo Code with instructions it should follow in all modes and for all prompts. They are a persistent way to include context and preferences for all conversations in your workspace or globally.",
+			"workflows": "Workflows are a prepared template for a conversation. Workflows can allow you to define prompts you use frequently, and can include a series of steps to guide Kilo Code through repetitive tasks, such as deploying a service or submitting a PR. To invoke a workflow, type",
 			"workflowsInChat": "in the chat."
 		},
 		"sections": {
@@ -229,11 +229,11 @@
 			"provider": "Provider",
 			"enableAutoTrigger": {
 				"label": "Pause to Complete",
-				"description": "When enabled, Coppy Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
+				"description": "When enabled, Kilo Code will automatically trigger Autocomplete when you pause typing. This can be useful for quick fixes and suggestions."
 			},
 			"autoTriggerDelay": {
 				"label": "Auto Trigger Delay",
-				"description": "The delay in seconds before Coppy Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
+				"description": "The delay in seconds before Kilo Code triggers Autocomplete after you pause typing. A shorter delay means quicker suggestions, but may be more resource-intensive."
 			},
 			"enableQuickInlineTaskKeybinding": {
 				"label": "Quick Task ({{keybinding}})",

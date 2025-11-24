@@ -2,9 +2,9 @@
 sidebar_label: OpenAI 兼容
 ---
 
-# 使用 OpenAI 兼容的提供商与 Coppy Code
+# 使用 OpenAI 兼容的提供商与 Kilo Code
 
-Coppy Code 支持多种提供 OpenAI API 标准兼容的 AI 模型提供商。这意味着你可以使用 *除了* OpenAI 之外的其他提供商的模型，同时仍然使用熟悉的 API 接口。这包括以下提供商：
+Kilo Code 支持多种提供 OpenAI API 标准兼容的 AI 模型提供商。这意味着你可以使用 *除了* OpenAI 之外的其他提供商的模型，同时仍然使用熟悉的 API 接口。这包括以下提供商：
 
 *   **本地模型** 通过 Ollama 和 LM Studio 等工具运行（在单独的部分中介绍）。
 *   **云提供商** 如 Perplexity、Together AI、Anyscale 等。
@@ -20,7 +20,7 @@ Coppy Code 支持多种提供 OpenAI API 标准兼容的 AI 模型提供商。�
 2.  **API 密钥:** 这是你从提供商处获取的密钥。
 3.  **模型 ID:** 这是特定模型的名称。
 
-你可以在 Coppy Code 设置面板中找到这些设置（点击 <Codicon name="gear" /> 图标）：
+你可以在 Kilo Code 设置面板中找到这些设置（点击 <Codicon name="gear" /> 图标）：
 
 *   **API 提供商:** 选择 "OpenAI 兼容"。
 *   **基础 URL:** 输入你选择的提供商提供的基础 URL。**这非常关键。**
@@ -36,7 +36,7 @@ Coppy Code 支持多种提供 OpenAI API 标准兼容的 AI 模型提供商。�
 
 ### 完整端点 URL 支持
 
-Coppy Code 支持在基本 URL 字段中输入完整端点 URL，为提供商配置提供更大的灵活性：
+Kilo Code 支持在基本 URL 字段中输入完整端点 URL，为提供商配置提供更大的灵活性：
 
 **标准基本 URL 格式：**
 ```
@@ -59,7 +59,7 @@ https://custom-endpoint.provider.com/api/v2/models/chat
 
 ## 支持的模型（适用于 OpenAI 原生端点）
 
-虽然此提供商类型允许连接到各种端点，但如果你直接连接到官方 OpenAI API（或完全镜像它的端点），Coppy Code 会根据其源代码中的 `openAiNativeModels` 定义识别以下模型 ID：
+虽然此提供商类型允许连接到各种端点，但如果你直接连接到官方 OpenAI API（或完全镜像它的端点），Kilo Code 会根据其源代码中的 `openAiNativeModels` 定义识别以下模型 ID：
 
 *   `o3-mini`
 *   `o3-mini-high`
@@ -80,4 +80,4 @@ https://custom-endpoint.provider.com/api/v2/models/chat
 *   **连接错误:** 验证基础 URL 是否正确，以及你的提供商 API 是否可访问。
 *   **意外结果:** 如果你得到意外的结果，请尝试使用不同的模型。
 
-通过使用 OpenAI 兼容的提供商，你可以利用 Coppy Code 的灵活性与更广泛的 AI 模型。请始终参考你提供商的文档以获取最准确和最新的信息。
+通过使用 OpenAI 兼容的提供商，你可以利用 Kilo Code 的灵活性与更广泛的 AI 模型。请始终参考你提供商的文档以获取最准确和最新的信息。

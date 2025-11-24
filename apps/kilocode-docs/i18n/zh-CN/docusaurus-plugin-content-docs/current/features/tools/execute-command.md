@@ -1,6 +1,6 @@
 # execute_command
 
-`execute_command`工具用于在用户系统上执行CLI命令。它允许Coppy Code执行系统操作、安装依赖、构建项目、启动服务器以及执行其他基于终端的任务，以实现用户目标。
+`execute_command`工具用于在用户系统上执行CLI命令。它允许Kilo Code执行系统操作、安装依赖、构建项目、启动服务器以及执行其他基于终端的任务，以实现用户目标。
 
 ## 参数
 
@@ -107,12 +107,12 @@
 
 ## 使用示例
 
-- 设置新项目时，Coppy Code运行初始化命令，如`npm init -y`，然后安装依赖。
-- 构建Web应用时，Coppy Code执行构建命令，如`npm run build`以编译资源。
-- 部署代码时，Coppy Code运行git命令以提交和推送更改到仓库。
-- 故障排除时，Coppy Code执行诊断命令以收集系统信息。
-- 启动开发服务器时，Coppy Code运行适当的服务器命令（如`npm start`）。
-- 运行测试时，Coppy Code执行项目测试框架的测试运行命令。
+- 设置新项目时，Kilo Code运行初始化命令，如`npm init -y`，然后安装依赖。
+- 构建Web应用时，Kilo Code执行构建命令，如`npm run build`以编译资源。
+- 部署代码时，Kilo Code运行git命令以提交和推送更改到仓库。
+- 故障排除时，Kilo Code执行诊断命令以收集系统信息。
+- 启动开发服务器时，Kilo Code运行适当的服务器命令（如`npm start`）。
+- 运行测试时，Kilo Code执行项目测试框架的测试运行命令。
 
 ## 用法示例
 

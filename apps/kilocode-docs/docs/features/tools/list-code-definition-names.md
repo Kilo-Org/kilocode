@@ -1,6 +1,6 @@
 # list_code_definition_names
 
-The `list_code_definition_names` tool provides a structural overview of your codebase by listing code definitions from source files at the top level of a specified directory. It helps Coppy Code understand code architecture by displaying line numbers and definition snippets.
+The `list_code_definition_names` tool provides a structural overview of your codebase by listing code definitions from source files at the top level of a specified directory. It helps Kilo Code understand code architecture by displaying line numbers and definition snippets.
 
 ## Parameters
 
@@ -14,8 +14,8 @@ This tool scans source code files at the top level of a specified directory and 
 
 ## When is it used?
 
-- When Coppy Code needs to understand your codebase architecture quickly
-- When Coppy Code needs to locate important code constructs across multiple files
+- When Kilo Code needs to understand your codebase architecture quickly
+- When Kilo Code needs to locate important code constructs across multiple files
 - When planning refactoring or extensions to existing code
 - Before diving into implementation details with other tools
 - When identifying relationships between different parts of your codebase
@@ -85,12 +85,12 @@ This output format helps you quickly see both where definitions are located in t
 
 ## Examples When Used
 
-- When starting a new task, Coppy Code first lists key code definitions to understand the overall structure of your project.
-- When planning refactoring work, Coppy Code uses this tool to identify classes and functions that might be affected.
-- When exploring unfamiliar codebases, Coppy Code maps the important code constructs before diving into implementation details.
-- When adding new features, Coppy Code identifies existing patterns and relevant code definitions to maintain consistency.
-- When troubleshooting bugs, Coppy Code maps the codebase structure to locate potential sources of the issue.
-- When planning architecture changes, Coppy Code identifies all affected components across files.
+- When starting a new task, Kilo Code first lists key code definitions to understand the overall structure of your project.
+- When planning refactoring work, Kilo Code uses this tool to identify classes and functions that might be affected.
+- When exploring unfamiliar codebases, Kilo Code maps the important code constructs before diving into implementation details.
+- When adding new features, Kilo Code identifies existing patterns and relevant code definitions to maintain consistency.
+- When troubleshooting bugs, Kilo Code maps the codebase structure to locate potential sources of the issue.
+- When planning architecture changes, Kilo Code identifies all affected components across files.
 
 ## Usage Examples
 

@@ -100,7 +100,7 @@ class RooToolWindowFactory : ToolWindowFactory {
 
             return buildString {
                 append("<html><body style='width: 300px; padding: 8px;'>")
-                append("<p>Coppy Code is initializing...")
+                append("<p>Kilo Code is initializing...")
                 append("<h3>System Information</h3>")
                 append("<table>")
                 append("<tr><td><b>CPU Architecture:</b></td><td>$osArch</td></tr>")

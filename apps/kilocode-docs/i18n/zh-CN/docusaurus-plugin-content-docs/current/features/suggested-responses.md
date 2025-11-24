@@ -6,18 +6,18 @@ import Codicon from '@site/src/components/Codicon';
 
 # 建议回复
 
-当 Coppy Code 需要更多信息来完成任务时，它会使用 [`ask_followup_question` 工具](/features/tools/ask-followup-question)。为了使回复更轻松、更快捷，Coppy Code 通常会在问题旁边提供建议答案。
+当 Kilo Code 需要更多信息来完成任务时，它会使用 [`ask_followup_question` 工具](/features/tools/ask-followup-question)。为了使回复更轻松、更快捷，Kilo Code 通常会在问题旁边提供建议答案。
 
 ## 概述
 
-建议回复以可点击按钮的形式直接显示在 Coppy Code 问题下方，位于聊天界面中。它们提供与问题相关的预设答案，帮助您快速提供输入。
+建议回复以可点击按钮的形式直接显示在 Kilo Code 问题下方，位于聊天界面中。它们提供与问题相关的预设答案，帮助您快速提供输入。
 
-<img src="/docs/img/suggested-responses/suggested-responses.png" alt="Coppy Code 提问并显示建议回复按钮的示例" width="500" />
+<img src="/docs/img/suggested-responses/suggested-responses.png" alt="Kilo Code 提问并显示建议回复按钮的示例" width="500" />
 
 ## 工作原理
 
-1.  **问题出现**：Coppy Code 使用 `ask_followup_question` 工具提问。
-2.  **显示建议**：如果 Coppy Code 提供了建议，它们将作为按钮显示在问题下方。
+1.  **问题出现**：Kilo Code 使用 `ask_followup_question` 工具提问。
+2.  **显示建议**：如果 Kilo Code 提供了建议，它们将作为按钮显示在问题下方。
 3.  **交互**：您可以通过两种方式与这些建议进行交互。
 
 ## 与建议交互
@@ -26,7 +26,7 @@ import Codicon from '@site/src/components/Codicon';
 
 1.  **直接选择**：
     *   **操作**：只需单击包含您要提供的答案的按钮。
-    *   **结果**：选定的答案会立即作为您的回复发送回 Coppy Code。如果其中一个建议完全符合您的意图，这是最快的回复方式。
+    *   **结果**：选定的答案会立即作为您的回复发送回 Kilo Code。如果其中一个建议完全符合您的意图，这是最快的回复方式。
 
 2.  **发送前编辑**：
     *   **操作**：
@@ -39,7 +39,7 @@ import Codicon from '@site/src/components/Codicon';
 ## 优点
 
 *   **速度**：无需输入完整答案即可快速回复。
-*   **清晰度**：建议通常会阐明 Coppy Code 需要的信息类型。
+*   **清晰度**：建议通常会阐明 Kilo Code 需要的信息类型。
 *   **灵活性**：根据需要编辑建议以提供精确、自定义的答案。
 
-此功能简化了 Coppy Code 需要澄清时的交互，让您能够以最少的精力有效指导任务。
+此功能简化了 Kilo Code 需要澄清时的交互，让您能够以最少的精力有效指导任务。

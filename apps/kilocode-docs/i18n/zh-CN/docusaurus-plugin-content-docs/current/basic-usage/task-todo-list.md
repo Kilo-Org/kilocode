@@ -4,7 +4,7 @@
 
 **为什么重要**：复杂的工作流程有很多移动部件。如果没有结构，很容易遗漏步骤、重复工作或忘记下一步是什么。
 
-<img src="/docs/img/task-todo-list/task-todo-list-1.png" alt="任务待办事项列表概述，显示 Coppy Code 中的交互式清单" width="500" />
+<img src="/docs/img/task-todo-list/task-todo-list-1.png" alt="任务待办事项列表概述，显示 Kilo Code 中的交互式清单" width="500" />
 
 ## 如何触发待办事项列表
 

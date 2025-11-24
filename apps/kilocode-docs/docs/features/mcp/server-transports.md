@@ -5,7 +5,7 @@ sidebar_label: STDIO & SSE Transports
 
 # MCP Server Transports: STDIO & SSE
 
-Model Context Protocol (MCP) supports two primary transport mechanisms for communication between Coppy Code and MCP servers: Standard Input/Output (STDIO) and Server-Sent Events (SSE). Each has distinct characteristics, advantages, and use cases.
+Model Context Protocol (MCP) supports two primary transport mechanisms for communication between Kilo Code and MCP servers: Standard Input/Output (STDIO) and Server-Sent Events (SSE). Each has distinct characteristics, advantages, and use cases.
 
 ## STDIO Transport
 
@@ -13,7 +13,7 @@ STDIO transport runs locally on your machine and communicates via standard input
 
 ### How STDIO Transport Works
 
-1. The client (Coppy Code) spawns an MCP server as a child process
+1. The client (Kilo Code) spawns an MCP server as a child process
 2. Communication happens through process streams: client writes to server's STDIN, server responds to STDOUT
 3. Each message is delimited by a newline character
 4. Messages are formatted as JSON-RPC 2.0
@@ -29,7 +29,7 @@ Client                    Server
 
 ### STDIO Characteristics
 
-* **Locality**: Runs on the same machine as Coppy Code
+* **Locality**: Runs on the same machine as Kilo Code
 * **Performance**: Very low latency and overhead (no network stack involved)
 * **Simplicity**: Direct process communication without network configuration
 * **Relationship**: One-to-one relationship between client and server
@@ -42,7 +42,7 @@ STDIO transport is ideal for:
 * Local integrations and tools running on the same machine
 * Security-sensitive operations
 * Low-latency requirements
-* Single-client scenarios (one Coppy Code instance per server)
+* Single-client scenarios (one Kilo Code instance per server)
 * Command-line tools or IDE extensions
 
 ### STDIO Implementation Example
@@ -65,7 +65,7 @@ Server-Sent Events (SSE) transport runs on a remote server and communicates over
 
 ### How SSE Transport Works
 
-1. The client (Coppy Code) connects to the server's SSE endpoint via HTTP GET request
+1. The client (Kilo Code) connects to the server's SSE endpoint via HTTP GET request
 2. This establishes a persistent connection where the server can push events to the client
 3. For client-to-server communication, the client makes HTTP POST requests to a separate endpoint
 4. Communication happens over two channels:
@@ -85,7 +85,7 @@ Client                             Server
 
 ### SSE Characteristics
 
-* **Remote Access**: Can be hosted on a different machine from Coppy Code
+* **Remote Access**: Can be hosted on a different machine from Kilo Code
 * **Scalability**: Can handle multiple client connections concurrently
 * **Protocol**: Works over standard HTTP (no special protocols needed)
 * **Persistence**: Maintains a persistent connection for server-to-client messages
@@ -125,7 +125,7 @@ The choice between STDIO and SSE transports directly impacts how you'll deploy a
 
 ### STDIO: Local Deployment Model
 
-STDIO servers run locally on the same machine as Coppy Code, which has several important implications:
+STDIO servers run locally on the same machine as Kilo Code, which has several important implications:
 
 * **Installation**: The server executable must be installed on each user's machine
 * **Distribution**: You need to provide installation packages for different operating systems
@@ -133,7 +133,7 @@ STDIO servers run locally on the same machine as Coppy Code, which has several i
 * **Resources**: Uses the local machine's CPU, memory, and disk
 * **Access Control**: Relies on the local machine's filesystem permissions
 * **Integration**: Easy integration with local system resources (files, processes)
-* **Execution**: Starts and stops with Coppy Code (child process lifecycle)
+* **Execution**: Starts and stops with Kilo Code (child process lifecycle)
 * **Dependencies**: Any dependencies must be installed on the user's machine
 
 #### Practical Example
@@ -141,9 +141,9 @@ STDIO servers run locally on the same machine as Coppy Code, which has several i
 A local file search tool using STDIO would:
 * Run on the user's machine
 * Have direct access to the local filesystem
-* Start when needed by Coppy Code
+* Start when needed by Kilo Code
 * Not require network configuration
-* Need to be installed alongside Coppy Code or via a package manager
+* Need to be installed alongside Kilo Code or via a package manager
 
 ### SSE: Hosted Deployment Model
 
@@ -191,6 +191,6 @@ Some scenarios benefit from a hybrid approach:
 | **Resource Usage** | Uses client resources | Uses server resources |
 | **Dependencies** | Client-side dependencies | Server-side dependencies |
 
-## Configuring Transports in Coppy Code
+## Configuring Transports in Kilo Code
 
-For detailed information on configuring STDIO and SSE transports in Coppy Code, including example configurations, see the [Understanding Transport Types](/features/mcp/using-mcp-in-kilo-code#understanding-transport-types) section in the Using MCP in Coppy Code guide.
+For detailed information on configuring STDIO and SSE transports in Kilo Code, including example configurations, see the [Understanding Transport Types](/features/mcp/using-mcp-in-kilo-code#understanding-transport-types) section in the Using MCP in Kilo Code guide.
