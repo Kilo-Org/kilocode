@@ -1,5 +1,17 @@
 # kilo-code
 
+## 4.122.0
+
+### Minor Changes
+
+- [#3609](https://github.com/Kilo-Org/kilocode/pull/3609) [`65191fd`](https://github.com/Kilo-Org/kilocode/commit/65191fd671e3b4b376efe572b4e605dbf9d3a5d2) Thanks [@mcowger](https://github.com/mcowger)! - Synthetic provider to use updated models endpoint and dynamic fetcher
+
+- [#3674](https://github.com/Kilo-Org/kilocode/pull/3674) [`cdd439a`](https://github.com/Kilo-Org/kilocode/commit/cdd439a098f0b1ccb75f8b8cad53a35494e6ab29) Thanks [@mental-lab](https://github.com/mental-lab)! - Kilo Code can now delete files and directories without using command line tools.
+
+### Patch Changes
+
+- [#3925](https://github.com/Kilo-Org/kilocode/pull/3925) [`02abc84`](https://github.com/Kilo-Org/kilocode/commit/02abc84c41e4a12dd45ff15d003ce8fbb4a6bfed) Thanks [@jrf0110](https://github.com/jrf0110)! - Improve organization/managed indexing performance
+
 ## 4.121.2
 
 ### Patch Changes
