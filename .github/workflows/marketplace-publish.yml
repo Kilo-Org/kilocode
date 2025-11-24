@@ -89,13 +89,11 @@ jobs:
               run: |
                   current_package_version=$(node -p "require('./src/package.json').version")
 
-                  # Check if release already exists
                   if gh release view "v${current_package_version}" >/dev/null 2>&1; then
                     echo "Release v${current_package_version} already exists, skipping release creation"
                     exit 0
                   fi
                   
-                  # Extract changelog for current version
                   echo "Extracting changelog for version ${current_package_version}"
                   # Match version headers: ## [vX.X.X], ## [X.X.X], ## X.X.X (brackets and v are optional)
                   changelog_content=$(sed -E -n "/^## \\[?v?${current_package_version}\\]?/,/^## /p" CHANGELOG.md | sed '$d')
