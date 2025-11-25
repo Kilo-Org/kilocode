@@ -532,6 +532,15 @@
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Qwen-service en vereist geen API-sleutels.",
 			"instructions": "Volg de officiële documentatie om het autorisatiebestand te verkrijgen en plaats het in het opgegeven pad.",
 			"setupLink": "Qwen Officiële Documentatie"
+		},
+		"profileName": "Profielnaam",
+		"profileType": "Profieltype",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatisch aanvullen",
+		"profileTypeDescription": "Chatprofielen worden gebruikt voor gesprekken. Er is slechts één automatisch aanvullen profiel toegestaan.",
+		"autocompleteLabel": "(Automatisch aanvullen)",
+		"autocomplete": {
+			"onlyOneAllowed": "Er is slechts één automatisch aanvullen profiel toegestaan. Profiel \"{{existingName}}\" is al geconfigureerd voor automatisch aanvullen. Wijzig eerst het type of verwijder het."
 		}
 	},
 	"browser": {
@@ -825,8 +834,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
-			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"apiProvider": "API-provider",
+			"apiProviderList": {
+				"current": "Huidig"
+			},
+			"apiKey": "API-sleutel (optioneel)",
+			"placeholder": "Voer je API-sleutel in (optioneel)",
 			"modelLabel": "Modelselectie",
 			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
 			"models": {

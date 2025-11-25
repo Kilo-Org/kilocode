@@ -112,7 +112,9 @@
 				"lastCompletion": "آخر اقتراح:",
 				"sessionTotal": "إجمالي تكلفة الجلسة:",
 				"provider": "المزود:",
-				"model": "النموذج:"
+				"model": "النموذج:",
+				"profile": "الملف الشخصي: ",
+				"defaultProfile": "افتراضي"
 			},
 			"cost": {
 				"zero": "$0.00",

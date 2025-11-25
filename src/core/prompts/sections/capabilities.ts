@@ -5,6 +5,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 // kilocode_change start
 import { ClineProviderState } from "../../webview/ClineProvider"
 import { isFastApplyAvailable } from "../../tools/editFileTool"
+import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
 // kilocode_change end
 
 export function getCapabilitiesSection(
@@ -25,7 +26,7 @@ CAPABILITIES
 	}, read and write files, and ask follow-up questions. These tools help you effectively accomplish a wide range of tasks, such as writing code, making edits or improvements to existing files, understanding the current state of a project, performing system operations, and much more.
 - When the user initially gives you a task, a recursive list of all filepaths in the current workspace directory ('${cwd}') will be included in environment_details. This provides an overview of the project's file structure, offering key insights into the project from directory/file names (how developers conceptualize and organize their code) and file extensions (the language used). This can also guide decision-making on which files to explore further. If you need to further explore directories such as outside the current workspace directory, you can use the list_files tool. If you pass 'true' for the recursive parameter, it will list files recursively. Otherwise, it will list files at the top level, which is better suited for generic directories where you don't necessarily need the nested structure, like the Desktop.${
 		// kilocode_change start
-		codeIndexManager?.isManagedIndexingAvailable ||
+		ManagedIndexer.getInstance().isEnabled() ||
 		(codeIndexManager &&
 			codeIndexManager.isFeatureEnabled &&
 			codeIndexManager.isFeatureConfigured &&

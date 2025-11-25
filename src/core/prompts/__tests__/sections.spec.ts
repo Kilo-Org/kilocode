@@ -1,3 +1,13 @@
+// Mock ManagedIndexer before importing anything that uses it
+vi.mock("../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 import { addCustomInstructions } from "../sections/custom-instructions"
 import { getCapabilitiesSection } from "../sections/capabilities"
 import type { DiffStrategy, DiffResult, DiffItem } from "../../../shared/tools"

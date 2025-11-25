@@ -252,6 +252,15 @@
 		"searchProviderPlaceholder": "Suchanbieter durchsuchen",
 		"noProviderMatchFound": "Keine Anbieter gefunden",
 		"noMatchFound": "Keine passenden Profile gefunden",
+		"profileName": "Profilname",
+		"profileType": "Profiltyp",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autovervollständigung",
+		"profileTypeDescription": "Chat-Profile werden für Unterhaltungen verwendet. Es ist nur ein Autovervollständigungsprofil erlaubt.",
+		"autocompleteLabel": "(Autovervollständigung)",
+		"autocomplete": {
+			"onlyOneAllowed": "Es ist nur ein Autovervollständigungsprofil erlaubt. Das Profil \"{{existingName}}\" ist bereits für Autovervollständigung konfiguriert. Bitte ändere zuerst seinen Typ oder lösche es."
+		},
 		"vscodeLmDescription": "Die VS Code Language Model API ermöglicht das Ausführen von Modellen, die von anderen VS Code-Erweiterungen bereitgestellt werden (einschließlich, aber nicht beschränkt auf GitHub Copilot). Der einfachste Weg, um zu starten, besteht darin, die Erweiterungen Copilot und Copilot Chat aus dem VS Code Marketplace zu installieren.",
 		"vscodeLmUnavailable": "Die Unterstützung von VS Code Language Models ist nur in Visual Studio Code verfügbar. Forks wie VSCodium und andere funktionieren möglicherweise nicht. Außerdem ist diese Funktion in JetBrains-Tools nicht verfügbar.",
 		"vscodeLmUnavailableInstructions": "Stellen Sie sicher, dass Sie ein unterstütztes Tool verwenden und dass VS Code Chat installiert und aktiviert ist",
@@ -824,8 +833,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply aktivieren",
 			"description": "Wenn aktiviert, kann Kilo Code Dateien mit Fast Apply unter Verwendung spezialisierter Modelle bearbeiten, die für Code-Modifikationen optimiert sind. Erfordert den Kilo Gateway Provider, OpenRouter oder einen Morph API-Schlüssel.",
-			"apiKey": "Morph API-Schlüssel (optional)",
-			"placeholder": "Gib deinen Morph API-Schlüssel ein (optional)",
+			"apiProvider": "API-Anbieter",
+			"apiProviderList": {
+				"current": "Aktuell"
+			},
+			"apiKey": "API-Schlüssel (optional)",
+			"placeholder": "Gib deinen API-Schlüssel ein (optional)",
 			"modelLabel": "Modellauswahl",
 			"modelDescription": "Wähle, welches Fast Apply-Modell für Dateibearbeitungen verwendet werden soll",
 			"models": {

@@ -11,9 +11,9 @@ Cloud Agents let you run Kilo Code in the cloud from any device, without relying
 
 ## What Cloud Agents Enable
 
-- Run Kilo Code remotely from a browser  
-- Auto-create branches and push work continuously  
-- Use env vars + startup commands to shape the workspace  
+- Run Kilo Code remotely from a browser
+- Auto-create branches and push work continuously
+- Use env vars + startup commands to shape the workspace
 - Work from anywhere while keeping your repo in sync
 
 ---
@@ -30,18 +30,18 @@ Before using Cloud Agents:
 ## Cost
 
 - **Compute is free during limited beta**
-  - Please provide any feedback in our Cloud Agents beta Discord channel:
-    - [Kilo Discord](https://discord.gg/D2ExdEcq)
+    - Please provide any feedback in our Cloud Agents beta Discord channel:
+        - [Kilo Discord](https://discord.gg/D2ExdEcq)
 - **Kilo Code credits are still used** when the agent performs work (model usage, operations, etc.).
 
 ---
 
 ## How to Use
 
-1. **Connect your GitHub account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.  
-2. **Select a repository** to use as your workspace.  
-3. **Add environment variables** (secrets supported) and set optional startup commands.  
-4. **Start chatting with Kilo Code.**   
+1. **Connect your GitHub account** in the [Integrations](https://app.kilo.ai/integrations) tab of your personal or organization dashboard.
+2. **Select a repository** to use as your workspace.
+3. **Add environment variables** (secrets supported) and set optional startup commands.
+4. **Start chatting with Kilo Code.**
 
 Your work is always pushed to GitHub, ensuring nothing is lost.
 
@@ -52,20 +52,22 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 - Each user receives an **isolated Linux container** with common dev tools preinstalled (Python, Node.js, git, etc.).
 - All Cloud Agent chats share a **single container instance**, while each session gets its own workspace directory.
 - When a session begins:
-  1. Your repo is cloned  
-  2. A unique branch is created  
-  3. Your startup commands run  
-  4. Env vars are injected  
+
+    1. Your repo is cloned
+    2. A unique branch is created
+    3. Your startup commands run
+    4. Env vars are injected
 
 - After every message, the agent:
-  - Looks for file changes  
-  - Commits them  
-  - Pushes to the session’s branch  
+
+    - Looks for file changes
+    - Commits them
+    - Pushes to the session’s branch
 
 - Containers are **ephemeral**:
-  - Spindown occurs after inactivity  
-  - Expect slightly longer setup after idle periods  
-  - Inactive sessions are deleted after **7 days** during the beta
+    - Spindown occurs after inactivity
+    - Expect slightly longer setup after idle periods
+    - Inactive sessions are deleted after **7 days** during the beta
 
 ---
 
@@ -74,16 +76,18 @@ Your work is always pushed to GitHub, ensuring nothing is lost.
 You can customize each Cloud Agent session by defining:
 
 ### Environment Variables
-- Add key/value pairs or secrets  
-- Injected into the container before the session starts  
+
+- Add key/value pairs or secrets
+- Injected into the container before the session starts
 - Useful for API keys or config flags
 
 ### Startup Commands
-- Commands run immediately after cloning the repo and checking out the session branch  
+
+- Commands run immediately after cloning the repo and checking out the session branch
 - Great for:
-  - Installing dependencies  
-  - Bootstrapping tooling  
-  - Running setup scripts  
+    - Installing dependencies
+    - Bootstrapping tooling
+    - Running setup scripts
 
 ---
 
@@ -91,11 +95,11 @@ You can customize each Cloud Agent session by defining:
 
 Cloud Agents are great for:
 
-- **Remote debugging** using Kilo Code debug mode  
-- **Exploration of unfamiliar codebases** without touching your local machine  
-- **Architect-mode brainstorming** while on the go  
-- **Automated refactors or tech debt cleanup** driven by Kilo Code  
-- **Offloading CI-like tasks**, experiments, or batch updates  
+- **Remote debugging** using Kilo Code debug mode
+- **Exploration of unfamiliar codebases** without touching your local machine
+- **Architect-mode brainstorming** while on the go
+- **Automated refactors or tech debt cleanup** driven by Kilo Code
+- **Offloading CI-like tasks**, experiments, or batch updates
 
 ---
 
@@ -108,5 +112,4 @@ Cloud Agents are great for:
 - **Auto/YOLO mode is always on.**  
   The agent will modify code without prompting for confirmation.
 - **Saved sessions** in the sidebar are not yet shared between logins or restorable locally.
-- **MCP support is coming**, but **Docker-based MCP servers will *not* be supported**.
-
+- **MCP support is coming**, but **Docker-based MCP servers will _not_ be supported**.

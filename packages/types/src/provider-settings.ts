@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { modelInfoSchema, reasoningEffortWithMinimalSchema, verbosityLevelsSchema, serviceTierSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
+import { profileTypeSchema } from "./profile-type.js" // kilocode_change
 import {
 	anthropicModels,
 	bedrockModels,
@@ -177,6 +178,7 @@ export const providerSettingsEntrySchema = z.object({
 	name: z.string(),
 	apiProvider: providerNamesSchema.optional(),
 	modelId: z.string().optional(),
+	profileType: profileTypeSchema.optional(), // kilocode_change - autocomplete profile type system
 })
 
 export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
@@ -186,6 +188,7 @@ export type ProviderSettingsEntry = z.infer<typeof providerSettingsEntrySchema>
  */
 
 const baseProviderSettingsSchema = z.object({
+	profileType: profileTypeSchema.optional(), // kilocode_change - autocomplete profile type system
 	includeMaxTokens: z.boolean().optional(),
 	diffEnabled: z.boolean().optional(),
 	todoListEnabled: z.boolean().optional(),

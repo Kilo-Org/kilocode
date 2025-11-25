@@ -2,20 +2,30 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 import * as vscode from "vscode"
 import { ManagedIndexer } from "../ManagedIndexer"
-import { ContextProxy } from "../../../../core/config/ContextProxy"
 import { GitWatcher, GitWatcherEvent, GitWatcherFile } from "../../../../shared/GitWatcher"
 import { OrganizationService } from "../../../kilocode/OrganizationService"
 import * as gitUtils from "../git-utils"
 import * as kiloConfigFile from "../../../../utils/kilo-config-file"
 import * as git from "../../../../utils/git"
 import * as apiClient from "../api-client"
-import { logger } from "../../../../utils/logging"
 
 // Mock vscode
 vi.mock("vscode", () => ({
 	workspace: {
 		workspaceFolders: [],
 		onDidChangeWorkspaceFolders: vi.fn(),
+	},
+	window: {
+		createTextEditorDecorationType: vi.fn(() => ({
+			dispose: vi.fn(),
+		})),
+		showInformationMessage: vi.fn(),
+		showErrorMessage: vi.fn(),
+		showWarningMessage: vi.fn(),
+	},
+	commands: {
+		executeCommand: vi.fn().mockResolvedValue(undefined),
+		registerCommand: vi.fn(),
 	},
 	Uri: {
 		file: (path: string) => ({ fsPath: path }),
@@ -40,7 +50,15 @@ vi.mock("../../../../utils/logging", () => ({
 vi.mock("fs", () => ({
 	promises: {
 		readFile: vi.fn(),
+		stat: vi.fn(),
 	},
+}))
+vi.mock("../../../../core/ignore/RooIgnoreController", () => ({
+	RooIgnoreController: vi.fn().mockImplementation(() => ({
+		initialize: vi.fn().mockResolvedValue(undefined),
+		validateAccess: vi.fn().mockReturnValue(true),
+		dispose: vi.fn(),
+	})),
 }))
 
 describe("ManagedIndexer", () => {
@@ -95,18 +113,22 @@ describe("ManagedIndexer", () => {
 		} as any)
 		vi.mocked(OrganizationService.isCodeIndexingEnabled).mockReturnValue(true)
 
-		// Mock GitWatcher
+		// Mock GitWatcher - store instances for later verification
+		const mockWatcherInstances: any[] = []
 		vi.mocked(GitWatcher).mockImplementation(() => {
 			const mockWatcher = {
 				config: { cwd: "/test/workspace" },
-				onEvent: vi.fn(),
+				onEvent: vi.fn().mockReturnValue(undefined),
 				start: vi.fn().mockResolvedValue(undefined),
 				dispose: vi.fn(),
 			}
+			mockWatcherInstances.push(mockWatcher)
 			return mockWatcher as any
 		})
 
 		indexer = new ManagedIndexer(mockContextProxy)
+		// Store mock instances on indexer for test access
+		;(indexer as any).mockWatcherInstances = mockWatcherInstances
 	})
 
 	afterEach(() => {
@@ -215,7 +237,10 @@ describe("ManagedIndexer", () => {
 
 	describe("isEnabled", () => {
 		it("should return true when organization exists and feature is enabled", async () => {
-			const enabled = await indexer.isEnabled()
+			// Must fetch organization first to populate indexer.organization
+			await indexer.fetchOrganization()
+
+			const enabled = indexer.isEnabled()
 
 			expect(enabled).toBe(true)
 		})
@@ -223,7 +248,10 @@ describe("ManagedIndexer", () => {
 		it("should return false when organization does not exist", async () => {
 			vi.mocked(OrganizationService.fetchOrganization).mockResolvedValue(null)
 
-			const enabled = await indexer.isEnabled()
+			// Must fetch organization first
+			await indexer.fetchOrganization()
+
+			const enabled = indexer.isEnabled()
 
 			expect(enabled).toBe(false)
 		})
@@ -231,7 +259,10 @@ describe("ManagedIndexer", () => {
 		it("should return false when code indexing is not enabled", async () => {
 			vi.mocked(OrganizationService.isCodeIndexingEnabled).mockReturnValue(false)
 
-			const enabled = await indexer.isEnabled()
+			// Must fetch organization first
+			await indexer.fetchOrganization()
+
+			const enabled = indexer.isEnabled()
 
 			expect(enabled).toBe(false)
 		})
@@ -319,7 +350,7 @@ describe("ManagedIndexer", () => {
 
 			const mockWatcher = indexer.workspaceFolderState[0].watcher
 			expect(mockWatcher).toBeDefined()
-			expect(mockWatcher!.onEvent).toHaveBeenCalled()
+			expect(mockWatcher!.onEvent).toHaveBeenCalledWith(expect.any(Function))
 		})
 
 		it("should start each watcher", async () => {
@@ -543,6 +574,8 @@ describe("ManagedIndexer", () => {
 			it("should fetch new manifest and process files", async () => {
 				const fs = await import("fs")
 				vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+				vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
+				vi.mocked(apiClient.upsertFile).mockResolvedValue(undefined)
 
 				const newManifest = {
 					files: {},
@@ -579,7 +612,7 @@ describe("ManagedIndexer", () => {
 				expect(state.gitBranch).toBe("feature/test")
 
 				// Wait for async file processing
-				await new Promise((resolve) => setTimeout(resolve, 10))
+				await new Promise((resolve) => setTimeout(resolve, 50))
 
 				expect(apiClient.upsertFile).toHaveBeenCalled()
 			})
@@ -660,6 +693,8 @@ describe("ManagedIndexer", () => {
 			it("should process files from commit", async () => {
 				const fs = await import("fs")
 				vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+				vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
+				vi.mocked(apiClient.upsertFile).mockResolvedValue(undefined)
 
 				state.manifest = { files: {} }
 
@@ -679,7 +714,7 @@ describe("ManagedIndexer", () => {
 
 				await indexer.onEvent(event)
 
-				await new Promise((resolve) => setTimeout(resolve, 10))
+				await new Promise((resolve) => setTimeout(resolve, 50))
 
 				expect(apiClient.upsertFile).toHaveBeenCalledWith(
 					expect.objectContaining({
@@ -785,6 +820,8 @@ describe("ManagedIndexer", () => {
 
 			const fs = await import("fs")
 			vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+			vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
+			vi.mocked(apiClient.upsertFile).mockResolvedValue(undefined)
 
 			const mockFiles = async function* (): AsyncIterable<GitWatcherFile> {
 				yield { type: "file", filePath: "test.ts", fileHash: "abc123" }
@@ -803,7 +840,7 @@ describe("ManagedIndexer", () => {
 			await indexer.onEvent(event)
 
 			// Wait for async processing
-			await new Promise((resolve) => setTimeout(resolve, 10))
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			// Verify upsertFile was called with signal as second argument
 			expect(apiClient.upsertFile).toHaveBeenCalledWith(
@@ -824,6 +861,7 @@ describe("ManagedIndexer", () => {
 
 			const fs = await import("fs")
 			vi.mocked(fs.promises.readFile).mockResolvedValue(Buffer.from("file content"))
+			vi.mocked(fs.promises.stat).mockResolvedValue({ size: 1000 } as any)
 
 			// Make upsertFile throw an AbortError
 			const abortError = new Error("AbortError")
@@ -848,7 +886,7 @@ describe("ManagedIndexer", () => {
 			await expect(indexer.onEvent(event)).resolves.not.toThrow()
 
 			// Wait for async processing
-			await new Promise((resolve) => setTimeout(resolve, 10))
+			await new Promise((resolve) => setTimeout(resolve, 50))
 
 			// Should not set error state for abort errors
 			expect(state.error).toBeUndefined()

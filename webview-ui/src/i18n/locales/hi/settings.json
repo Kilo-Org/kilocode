@@ -532,6 +532,15 @@
 			"description": "यह प्रदाता Qwen सेवा से OAuth प्रमाणीकरण का उपयोग करता है और API कुंजियों की आवश्यकता नहीं है।",
 			"instructions": "कृपया प्राधिकरण फ़ाइल प्राप्त करने और इसे निर्दिष्ट पथ में रखने के लिए आधिकारिक दस्तावेज़ीकरण का पालन करें।",
 			"setupLink": "Qwen आधिकारिक दस्तावेज़ीकरण"
+		},
+		"profileName": "प्रोफ़ाइल नाम",
+		"profileType": "प्रोफ़ाइल प्रकार",
+		"profileTypeChat": "चैट",
+		"profileTypeAutocomplete": "ऑटोकम्पलीट",
+		"profileTypeDescription": "चैट प्रोफ़ाइल बातचीत के लिए उपयोग की जाती हैं। केवल एक ऑटोकम्पलीट प्रोफ़ाइल की अनुमति है।",
+		"autocompleteLabel": "(ऑटोकम्पलीट)",
+		"autocomplete": {
+			"onlyOneAllowed": "केवल एक ऑटोकम्पलीट प्रोफ़ाइल की अनुमति है। प्रोफ़ाइल \"{{existingName}}\" पहले से ही ऑटोकम्पलीट के लिए कॉन्फ़िगर है। कृपया पहले इसका प्रकार बदलें या इसे हटाएं।"
 		}
 	},
 	"browser": {
@@ -825,8 +834,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply सक्षम करें",
 			"description": "जब सक्षम होता है, तो Kilo Code कोड संशोधनों के लिए अनुकूलित विशेष मॉडल के साथ Fast Apply का उपयोग करके फ़ाइलें संपादित कर सकता है। Kilo Gateway Provider, OpenRouter, या Morph API कुंजी की आवश्यकता है।",
-			"apiKey": "Morph API कुंजी (वैकल्पिक)",
-			"placeholder": "अपनी Morph API कुंजी दर्ज करें (वैकल्पिक)",
+			"apiProvider": "API प्रदाता",
+			"apiProviderList": {
+				"current": "वर्तमान"
+			},
+			"apiKey": "API कुंजी (वैकल्पिक)",
+			"placeholder": "अपनी API कुंजी दर्ज करें (वैकल्पिक)",
 			"modelLabel": "मॉडल चयन",
 			"modelDescription": "फ़ाइल संपादन के लिए किस Fast Apply मॉडल का उपयोग करना है चुनें",
 			"models": {

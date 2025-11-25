@@ -568,6 +568,15 @@
 		"roo": {
 			"authenticatedMessage": "تم التوثيق بأمان عبر حساب Roo Code Cloud.",
 			"connectButton": "اتصل بـ Roo Code Cloud"
+		},
+		"profileName": "اسم الملف الشخصي",
+		"profileType": "نوع الملف الشخصي",
+		"profileTypeChat": "محادثة",
+		"profileTypeAutocomplete": "الإكمال التلقائي",
+		"profileTypeDescription": "تُستخدم ملفات المحادثة للمحادثات. يُسمح بملف إكمال تلقائي واحد فقط.",
+		"autocompleteLabel": "(الإكمال التلقائي)",
+		"autocomplete": {
+			"onlyOneAllowed": "يُسمح بملف إكمال تلقائي واحد فقط. الملف الشخصي \"{{existingName}}\" مُكوّن بالفعل للإكمال التلقائي. يرجى تغيير نوعه أولاً أو حذفه."
 		}
 	},
 	"contextWindow": {
@@ -899,8 +908,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "تفعيل Fast Apply",
 			"description": "عند التفعيل، يستطيع Kilo Code تعديل الملفات باستخدام Fast Apply مع نماذج متخصصة محسّنة لتعديلات الكود. يتطلب Kilo Gateway Provider أو OpenRouter أو مفتاح Morph API.",
-			"apiKey": "مفتاح Morph API (اختياري)",
-			"placeholder": "أدخل مفتاح Morph API (اختياري)",
+			"apiProvider": "مزود API",
+			"apiProviderList": {
+				"current": "الحالي"
+			},
+			"apiKey": "مفتاح API (اختياري)",
+			"placeholder": "أدخل مفتاح API (اختياري)",
 			"modelLabel": "اختيار النموذج",
 			"modelDescription": "اختر نموذج التطبيق السريع لتعديل الملفات",
 			"models": {

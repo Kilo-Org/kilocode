@@ -27,6 +27,7 @@ import {
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
 	nativeFunctionCallingProviders,
+	MODEL_SELECTION_ENABLED,
 	// kilocode_change end
 	mistralDefaultModelId,
 	xaiDefaultModelId,
@@ -495,6 +496,28 @@ const ApiOptions = ({
 
 	return (
 		<div className="flex flex-col gap-3">
+			{/* kilocode_change start - autocomplete profile type system */}
+			{/* Profile Type Display (read-only for existing profiles) */}
+			{MODEL_SELECTION_ENABLED && (
+				<div className="flex flex-col gap-1">
+					<label className="block font-medium mb-1">{t("settings:providers.profileType")}</label>
+					<div className="px-3 py-2 bg-vscode-input-background border border-vscode-input-border rounded text-vscode-input-foreground">
+						{apiConfiguration.profileType === "autocomplete"
+							? t("settings:providers.profileTypeAutocomplete")
+							: t("settings:providers.profileTypeChat")}
+						{apiConfiguration.profileType === "autocomplete" && (
+							<span className="ml-2 text-vscode-descriptionForeground">
+								{t("settings:providers.autocompleteLabel")}
+							</span>
+						)}
+					</div>
+					<div className="text-vscode-descriptionForeground text-sm mt-1">
+						{t("settings:providers.profileTypeDescription")}
+					</div>
+				</div>
+			)}
+			{/* kilocode_change end */}
+
 			<div className="flex flex-col gap-1 relative">
 				<div className="flex justify-between items-center">
 					<label className="block font-medium mb-1">{t("settings:providers.apiProvider")}</label>

@@ -237,6 +237,7 @@
 			},
 			"keybindingNotFound": "nenalezeno",
 			"noModelConfigured": "Nebyl nalezen žádný vhodný model pro automatické dokončování. Nakonfiguruj prosím poskytovatele v nastavení API.",
+			"configureAutocompleteProfile": "Použij libovolný model tak, že přejdeš do profilů a nakonfiguruješ Profil typu Automatické dokončování.",
 			"model": "Model",
 			"provider": "Poskytovatel"
 		}

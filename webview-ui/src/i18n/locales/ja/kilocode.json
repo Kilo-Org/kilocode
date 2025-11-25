@@ -237,6 +237,7 @@
 			},
 			"keybindingNotFound": "見つかりません",
 			"noModelConfigured": "適切なオートコンプリートモデルが見つかりませんでした。API設定でプロバイダーを設定してください。",
+			"configureAutocompleteProfile": "プロファイルに移動し、プロファイルタイプがオートコンプリートのプロファイルを設定することで、任意のモデルを使用できます。",
 			"model": "モデル",
 			"provider": "プロバイダー"
 		}

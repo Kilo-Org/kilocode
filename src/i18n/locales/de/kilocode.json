@@ -108,7 +108,9 @@
 				"lastCompletion": "Letzter Vorschlag:",
 				"sessionTotal": "Sitzungsgesamtkosten:",
 				"provider": "Anbieter:",
-				"model": "Modell:"
+				"model": "Modell:",
+				"profile": "Profil: ",
+				"defaultProfile": "Standard"
 			},
 			"cost": {
 				"zero": "$0.00",
