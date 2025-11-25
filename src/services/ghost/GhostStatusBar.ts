@@ -14,25 +14,11 @@ interface GhostStatusBarStateProps {
 
 export class GhostStatusBar {
 	statusBar: vscode.StatusBarItem
-	enabled: boolean
-	model: string
-	provider: string
-	profileName: string | null
-	hasValidToken: boolean
-	totalSessionCost?: number
-	completionCount?: number
-	sessionStartTime?: number
+	private props: GhostStatusBarStateProps
 
 	constructor(params: GhostStatusBarStateProps) {
 		this.statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100)
-		this.enabled = params.enabled || false
-		this.model = params.model || "default"
-		this.provider = params.provider || "default"
-		this.profileName = params.profileName || null
-		this.hasValidToken = params.hasValidToken || false
-		this.totalSessionCost = params.totalSessionCost
-		this.completionCount = params.completionCount
-		this.sessionStartTime = params.sessionStartTime
+		this.props = params
 
 		this.init()
 	}
@@ -62,17 +48,11 @@ export class GhostStatusBar {
 	}
 
 	public update(params: GhostStatusBarStateProps) {
-		this.enabled = params.enabled !== undefined ? params.enabled : this.enabled
-		this.model = params.model !== undefined ? params.model : this.model
-		this.provider = params.provider !== undefined ? params.provider : this.provider
-		this.profileName = params.profileName !== undefined ? params.profileName : this.profileName
-		this.hasValidToken = params.hasValidToken !== undefined ? params.hasValidToken : this.hasValidToken
-		this.totalSessionCost = params.totalSessionCost !== undefined ? params.totalSessionCost : this.totalSessionCost
-		this.completionCount = params.completionCount !== undefined ? params.completionCount : this.completionCount
-		this.sessionStartTime = params.sessionStartTime !== undefined ? params.sessionStartTime : this.sessionStartTime
+		this.props = { ...this.props, ...params }
 
-		this.updateVisible(this.enabled)
-		if (this.enabled) this.render()
+		const enabled = this.props.enabled ?? false
+		this.updateVisible(enabled)
+		if (enabled) this.render()
 	}
 
 	private renderTokenError() {
@@ -86,17 +66,21 @@ export class GhostStatusBar {
 	}
 
 	private renderDefault() {
-		const totalCostFormatted = this.humanFormatCost(this.totalSessionCost || 0)
-		const completionCount = this.completionCount || 0
-		const sessionStartTime = this.sessionStartTime ? this.formatTime(this.sessionStartTime) : "N/A"
+		const totalSessionCost = this.props.totalSessionCost ?? 0
+		const completionCount = this.props.completionCount ?? 0
+		const model = this.props.model ?? "default"
+		const provider = this.props.provider ?? "default"
+		const totalCostFormatted = this.humanFormatCost(totalSessionCost)
+		const sessionStartTime = this.props.sessionStartTime ? this.formatTime(this.props.sessionStartTime) : "N/A"
 		const now = this.formatTime(Date.now())
 
 		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${completionCount})`
-		this.statusBar.tooltip = `Performed ${completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.\n\nAutocompletions provided by ${this.model} via ${this.provider}.`
+		this.statusBar.tooltip = `Performed ${completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.\n\nAutocompletions provided by ${model} via ${provider}.`
 	}
 
 	public render() {
-		if (!this.hasValidToken) {
+		const hasValidToken = this.props.hasValidToken ?? false
+		if (!hasValidToken) {
 			return this.renderTokenError()
 		}
 		return this.renderDefault()

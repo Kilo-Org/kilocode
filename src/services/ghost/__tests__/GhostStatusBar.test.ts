@@ -54,12 +54,13 @@ describe("GhostStatusBar", () => {
 	})
 
 	it("should initialize with correct properties", () => {
-		expect(statusBar.enabled).toBe(true)
-		expect(statusBar.model).toBe("test-model")
-		expect(statusBar.provider).toBe("test-provider")
-		expect(statusBar.hasValidToken).toBe(true)
-		expect(statusBar.totalSessionCost).toBe(0.05)
-		expect(statusBar.completionCount).toBe(5)
+		// Verify initialization through rendered output
+		statusBar.render()
+		expect(statusBar.statusBar.text).toContain("(5)")
+		const tooltip = statusBar.statusBar.tooltip as string
+		expect(tooltip).toContain("test-model")
+		expect(tooltip).toContain("test-provider")
+		expect(tooltip).toContain("$0.05")
 	})
 
 	it("should display completion count in status bar text", () => {
