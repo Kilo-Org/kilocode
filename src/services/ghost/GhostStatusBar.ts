@@ -70,13 +70,16 @@ export class GhostStatusBar {
 		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		let tooltip = `Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${this.humanFormatSessionCost()}.`
-		if (this.props.model && this.props.provider) {
-			tooltip += `\n\nAutocompletions provided by ${this.props.model} via ${this.props.provider}.`
-		}
-
 		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})`
-		this.statusBar.tooltip = tooltip
+
+		this.statusBar.tooltip = [
+			`Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${this.humanFormatSessionCost()}.`,
+			this.props.model && this.props.provider
+				? `Autocompletions provided by ${this.props.model} via ${this.props.provider}.`
+				: undefined,
+		]
+			.filter(Boolean)
+			.join("\n\n")
 	}
 
 	public render() {
