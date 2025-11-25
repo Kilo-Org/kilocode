@@ -41,7 +41,8 @@ export class GhostStatusBar {
 		this.statusBar.dispose()
 	}
 
-	private humanFormatCost(cost: number): string {
+	private humanFormatSessionCost(): string {
+		const cost = this.props.totalSessionCost
 		if (cost === 0) return t("kilocode:ghost.statusBar.cost.zero")
 		if (cost > 0 && cost < 0.01) return t("kilocode:ghost.statusBar.cost.lessThanCent") // Less than one cent
 		return `$${cost.toFixed(2)}`
@@ -66,11 +67,10 @@ export class GhostStatusBar {
 	}
 
 	private renderDefault() {
-		const totalCostFormatted = this.humanFormatCost(this.props.totalSessionCost)
 		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		let tooltip = `Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.`
+		let tooltip = `Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${this.humanFormatSessionCost()}.`
 		if (this.props.model && this.props.provider) {
 			tooltip += `\n\nAutocompletions provided by ${this.props.model} via ${this.props.provider}.`
 		}
