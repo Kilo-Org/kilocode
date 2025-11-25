@@ -6,6 +6,7 @@ import { getFastApplyEditingInstructions } from "../tools/edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
 import { getFastApplyModelType, isFastApplyAvailable } from "../../tools/editFileTool"
 import { ToolUseStyle } from "../../../../packages/types/src/kilocode/native-function-calling"
+import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
 // kilocode_change end
 
 function getEditingInstructions(diffStrategy?: DiffStrategy): string {
@@ -57,7 +58,7 @@ export function getRulesSection(
 ): string {
 	const isCodebaseSearchAvailable =
 		// kilocode_change start
-		codeIndexManager?.isManagedIndexingAvailable ||
+		ManagedIndexer.getInstance().isEnabled() ||
 		(codeIndexManager &&
 			codeIndexManager.isFeatureEnabled &&
 			codeIndexManager.isFeatureConfigured &&

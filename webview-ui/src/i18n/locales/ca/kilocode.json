@@ -223,6 +223,7 @@
 			},
 			"keybindingNotFound": "no trobat",
 			"noModelConfigured": "No s'ha trobat cap model d'autocompletat adequat. Configura un proveïdor a la configuració de l'API.",
+			"configureAutocompleteProfile": "Utilitza qualsevol model anant a perfils i configurant un Perfil del Tipus de Perfil Autocompletat.",
 			"model": "Model",
 			"provider": "Proveïdor"
 		}

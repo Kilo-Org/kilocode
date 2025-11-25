@@ -126,34 +126,6 @@ interface GitStateSnapshot {
 	isDetached: boolean
 }
 
-/**
- * GitWatcher - Monitors git repository and emits events
- *
- * Usage:
- * ```typescript
- * const watcher = new GitWatcher({ cwd: '/path/to/repo' })
- * watcher.onEvent((event) => {
- *   switch (event.type) {
- *     case 'scan-start':
- *       console.log(`Scan started on branch ${event.branch}`)
- *       break
- *     case 'file-changed':
- *       console.log(`File: ${event.filePath}, Hash: ${event.fileHash}`)
- *       break
- *     case 'file-deleted':
- *       console.log(`File deleted: ${event.filePath}`)
- *       break
- *     case 'scan-end':
- *       console.log(`Scan completed on branch ${event.branch}`)
- *       break
- *     case 'branch-changed':
- *       console.log(`Branch changed from ${event.previousBranch} to ${event.newBranch}`)
- *       break
- *   }
- * })
- * await watcher.scan()
- * ```
- */
 export class GitWatcher implements vscode.Disposable {
 	private readonly emitter: EventEmitter
 	private readonly disposables: vscode.Disposable[] = []

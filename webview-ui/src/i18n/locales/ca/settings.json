@@ -532,6 +532,15 @@
 			"description": "Aquest proveïdor utilitza l'autenticació OAuth del servei Qwen i no requereix claus d'API.",
 			"instructions": "Si us plau, seguiu la documentació oficial per obtenir el fitxer d'autorització i col·locar-lo a la ruta especificada.",
 			"setupLink": "Documentació oficial de Qwen"
+		},
+		"profileName": "Nom del perfil",
+		"profileType": "Tipus de perfil",
+		"profileTypeChat": "Xat",
+		"profileTypeAutocomplete": "Autocompletat",
+		"profileTypeDescription": "Els perfils de xat s'utilitzen per a converses. Només es permet un perfil d'autocompletat.",
+		"autocompleteLabel": "(Autocompletat)",
+		"autocomplete": {
+			"onlyOneAllowed": "Només es permet un perfil d'autocompletat. El perfil \"{{existingName}}\" ja està configurat per a autocompletat. Si us plau, canvia el seu tipus primer o elimina'l."
 		}
 	},
 	"browser": {
@@ -855,8 +864,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Quan està habilitat, Kilo Code pot editar fitxers utilitzant Fast Apply amb models especialitzats optimitzats per a modificacions de codi. Requereix Kilo Gateway Provider, OpenRouter o una clau API de Morph.",
-			"apiKey": "Clau API de Morph (opcional)",
-			"placeholder": "Introduïu la vostra clau d'API de Morph (opcional)",
+			"apiProvider": "Proveïdor d'API",
+			"apiProviderList": {
+				"current": "Actual"
+			},
+			"apiKey": "Clau API (opcional)",
+			"placeholder": "Introduïu la vostra clau API (opcional)",
 			"modelLabel": "Selecció de model",
 			"modelDescription": "Trieu quin model de Fast Apply utilitzar per a edicions de fitxers",
 			"models": {

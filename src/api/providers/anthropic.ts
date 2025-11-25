@@ -44,7 +44,14 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 	): ApiStream {
 		let stream: AnthropicStream<Anthropic.Messages.RawMessageStreamEvent>
 		const cacheControl: CacheControlEphemeral = { type: "ephemeral" }
-		let { id: modelId, betas = [], maxTokens, temperature, reasoning: thinking } = this.getModel()
+		let {
+			id: modelId,
+			betas = [],
+			maxTokens,
+			temperature,
+			reasoning: thinking,
+			verbosity, // kilocode_change
+		} = this.getModel()
 
 		// Add 1M context beta flag if enabled for Claude Sonnet 4 and 4.5
 		if (
@@ -55,6 +62,9 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		}
 
 		// kilocode_change start
+		if (verbosity) {
+			betas.push("effort-2025-11-24")
+		}
 		const tools =
 			(metadata?.allowedTools ?? []).length > 0
 				? convertOpenAIToolsToAnthropic(metadata?.allowedTools)
@@ -66,6 +76,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 			case "claude-sonnet-4-5":
 			case "claude-sonnet-4-20250514":
 			case "claude-opus-4-1-20250805":
+			case "claude-opus-4-5-20251101": // kilocode_change
 			case "claude-opus-4-20250514":
 			case "claude-3-7-sonnet-20250219":
 			case "claude-3-5-sonnet-20241022":
@@ -119,6 +130,13 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 						// kilocode_change start
 						tools,
 						tool_choice,
+						...(verbosity
+							? {
+									output_config: {
+										effort: verbosity,
+									},
+								}
+							: {}),
 						// kilocode_change end
 					},
 					(() => {
@@ -131,6 +149,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 							case "claude-sonnet-4-5":
 							case "claude-sonnet-4-20250514":
 							case "claude-opus-4-1-20250805":
+							case "claude-opus-4-5-20251101": // kilocode_change
 							case "claude-opus-4-20250514":
 							case "claude-3-7-sonnet-20250219":
 							case "claude-3-5-sonnet-20241022":

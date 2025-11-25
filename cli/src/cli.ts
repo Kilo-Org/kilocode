@@ -102,6 +102,10 @@ export class CLI {
 				}
 			}
 
+			if (this.options.customModes) {
+				serviceOptions.customModes = this.options.customModes
+			}
+
 			this.service = createExtensionService(serviceOptions)
 			logs.debug("ExtensionService created with identity", "CLI", {
 				hasIdentity: !!identity,
@@ -252,7 +256,7 @@ export class CLI {
 	 * - Disposes service
 	 * - Cleans up store
 	 */
-	async dispose(): Promise<void> {
+	async dispose(signal?: string): Promise<void> {
 		if (this.isDisposing) {
 			logs.info("Already disposing, ignoring duplicate dispose call", "CLI")
 
@@ -261,7 +265,7 @@ export class CLI {
 
 		this.isDisposing = true
 
-		// Determine exit code based on CI mode and exit reason
+		// Determine exit code based on signal type and CI mode
 		let exitCode = 0
 
 		let beforeExit = () => {}
@@ -269,8 +273,15 @@ export class CLI {
 		try {
 			logs.info("Disposing Kilo Code CLI...", "CLI")
 
-			if (this.options.ci && this.store) {
-				// Check exit reason from CI atoms
+			// Signal codes take precedence over CI logic
+			if (signal === "SIGINT") {
+				exitCode = 130
+				logs.info("Exiting with SIGINT code (130)", "CLI")
+			} else if (signal === "SIGTERM") {
+				exitCode = 143
+				logs.info("Exiting with SIGTERM code (143)", "CLI")
+			} else if (this.options.ci && this.store) {
+				// CI mode logic only when not interrupted by signal
 				const exitReason = this.store.get(ciExitReasonAtom)
 
 				// Set exit code based on the actual exit reason

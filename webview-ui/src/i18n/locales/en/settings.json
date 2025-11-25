@@ -257,6 +257,15 @@
 		"searchProviderPlaceholder": "Search providers",
 		"noProviderMatchFound": "No providers found",
 		"noMatchFound": "No matching profiles found",
+		"profileName": "Profile Name",
+		"profileType": "Profile Type",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocomplete",
+		"profileTypeDescription": "Chat profiles are used for conversations. Only one autocomplete profile is allowed.",
+		"autocompleteLabel": "(Autocomplete)",
+		"autocomplete": {
+			"onlyOneAllowed": "Only one autocomplete profile is allowed. Profile \"{{existingName}}\" is already configured for autocomplete. Please change its type first or delete it."
+		},
 		"vscodeLmDescription": " The VS Code Language Model API allows you to run models provided by other VS Code extensions (including but not limited to GitHub Copilot). The easiest way to get started is to install the Copilot and Copilot Chat extensions from the VS Code Marketplace.",
 		"vscodeLmUnavailable": "VS Code Language Model support is only available on Visual Studio Code. Forks such as VSCodium and others may not work. Further, this capability is not available in JetBrains tools.",
 		"vscodeLmUnavailableInstructions": "Ensure you are using a supported tool and that VS Code Chat is installed and enabled",
@@ -858,8 +867,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Enable Fast Apply",
 			"description": "When enabled, Kilo Code can edit files using Fast Apply with specialized models optimized for code modifications. Requires the Kilo Gateway Provider, OpenRouter, or a Morph API key.",
-			"apiKey": "Morph API key (optional)",
-			"placeholder": "Enter your Morph API key (optional)",
+			"apiProvider": "API Provider",
+			"apiProviderList": {
+				"current": "Current"
+			},
+			"apiKey": "API key (optional)",
+			"placeholder": "Enter your API key (optional)",
 			"modelLabel": "Model Selection",
 			"modelDescription": "Choose which Fast Apply model to use for file edits",
 			"models": {

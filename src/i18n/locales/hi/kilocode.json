@@ -114,7 +114,9 @@
 				"lastCompletion": "अंतिम सुझाव:",
 				"sessionTotal": "सत्र की कुल लागत:",
 				"provider": "प्रदाता:",
-				"model": "मॉडल:"
+				"model": "मॉडल:",
+				"profile": "प्रोफ़ाइल: ",
+				"defaultProfile": "डिफ़ॉल्ट"
 			},
 			"cost": {
 				"zero": "$0.00",

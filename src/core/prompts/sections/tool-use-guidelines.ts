@@ -1,3 +1,4 @@
+import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer" // kilocode_change
 import { CodeIndexManager } from "../../../services/code-index/manager"
 import type { ToolUseStyle } from "@roo-code/types" // kilocode_change
 
@@ -7,7 +8,7 @@ export function getToolUseGuidelinesSection(
 ): string {
 	const isCodebaseSearchAvailable =
 		// kilocode_change start
-		codeIndexManager?.isManagedIndexingAvailable ||
+		ManagedIndexer.getInstance().isEnabled() ||
 		(codeIndexManager &&
 			codeIndexManager.isFeatureEnabled &&
 			codeIndexManager.isFeatureConfigured &&
