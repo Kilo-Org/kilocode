@@ -9,6 +9,8 @@ import { RecentlyEditedTracker } from "../../continuedev/core/vscode-test-harnes
 import type { GhostServiceSettings } from "@roo-code/types"
 import { postprocessGhostSuggestion } from "./uselessSuggestionFilter"
 import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
+import { RequestDebouncer } from "./RequestDebouncer"
+import { RequestDeduplicator, type PendingRequest } from "./RequestDeduplicator"
 
 const MAX_SUGGESTIONS_HISTORY = 20
 const DEBOUNCE_DELAY_MS = 300
@@ -95,8 +97,9 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	private getSettings: () => GhostServiceSettings | null
 	private recentlyVisitedRangesService: RecentlyVisitedRangesService
 	private recentlyEditedTracker: RecentlyEditedTracker
-	private debounceTimer: NodeJS.Timeout | null = null
 	private ignoreController?: Promise<RooIgnoreController>
+	private debouncer: RequestDebouncer = new RequestDebouncer()
+	private deduplicator: RequestDeduplicator = new RequestDeduplicator()
 
 	constructor(
 		model: GhostModel,
@@ -192,10 +195,8 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	public dispose(): void {
-		if (this.debounceTimer !== null) {
-			clearTimeout(this.debounceTimer)
-			this.debounceTimer = null
-		}
+		this.debouncer.clear()
+		this.deduplicator.clear()
 		this.recentlyVisitedRangesService.dispose()
 		this.recentlyEditedTracker.dispose()
 	}
@@ -280,28 +281,117 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 	}
 
 	private debouncedFetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
-		if (this.debounceTimer !== null) {
-			clearTimeout(this.debounceTimer)
+		return this.debouncer.debounce(() => this.fetchAndCacheSuggestion(prompt, prefix, suffix), DEBOUNCE_DELAY_MS)
+	}
+
+	/**
+	 * Adjust a suggestion when user has typed ahead
+	 */
+	private adjustSuggestion(suggestion: string, originalPrefix: string, currentPrefix: string): string | null {
+		if (!currentPrefix.startsWith(originalPrefix)) {
+			return null // Can't adjust
 		}
 
-		return new Promise<void>((resolve) => {
-			this.debounceTimer = setTimeout(async () => {
-				this.debounceTimer = null
-				await this.fetchAndCacheSuggestion(prompt, prefix, suffix)
-				resolve()
-			}, DEBOUNCE_DELAY_MS)
-		})
+		const typedAhead = currentPrefix.slice(originalPrefix.length)
+		if (!suggestion.startsWith(typedAhead)) {
+			return null // Suggestion doesn't match
+		}
+
+		return suggestion.slice(typedAhead.length)
+	}
+
+	/**
+	 * Handle errors from aborted requests
+	 */
+	private isAbortError(error: unknown): boolean {
+		return error instanceof Error && (error.name === "AbortError" || error.message.includes("aborted"))
 	}
 
 	private async fetchAndCacheSuggestion(prompt: GhostPrompt, prefix: string, suffix: string): Promise<void> {
+		// Check if we can reuse an existing pending request
+		const reusable = this.deduplicator.findReusable(prefix, suffix)
+		if (reusable) {
+			try {
+				const result = await reusable.promise
+
+				// Check if request was aborted while waiting
+				if (reusable.abortController.signal.aborted) {
+					return
+				}
+
+				// If user typed ahead, adjust the suggestion
+				if (prefix !== reusable.prefix) {
+					const adjusted = this.adjustSuggestion(result.suggestion.text, reusable.prefix, prefix)
+					if (adjusted !== null) {
+						this.updateSuggestions({ text: adjusted, prefix, suffix })
+						return
+					}
+				}
+
+				// Use the result as-is if no adjustment needed
+				this.updateSuggestions(result.suggestion)
+				return
+			} catch (error) {
+				if (this.isAbortError(error)) {
+					return
+				}
+				console.warn("Reused request failed, creating new request:", error)
+			}
+		}
+
+		// Cancel any pending requests that are now obsolete
+		this.deduplicator.cancelObsolete(prefix, suffix)
+
+		// Create new request
+		const abortController = new AbortController()
+		const promise = this.executeRequest(prompt, prefix, suffix, abortController)
+
+		// Store the pending request
+		const request: PendingRequest = {
+			prefix,
+			suffix,
+			promise,
+			abortController,
+		}
+		this.deduplicator.add(prefix, suffix, request)
+
 		try {
-			// Curry processSuggestion with prefix, suffix, and model - only text needs to be provided
+			await promise
+		} catch (error) {
+			if (this.isAbortError(error)) {
+				return
+			}
+			console.error("Error getting inline completion from LLM:", error)
+		}
+	}
+
+	/**
+	 * Execute the actual LLM request
+	 */
+	private async executeRequest(
+		prompt: GhostPrompt,
+		prefix: string,
+		suffix: string,
+		abortController: AbortController,
+	): Promise<LLMRetrievalResult> {
+		try {
+			// Check if already aborted before starting
+			if (abortController.signal.aborted) {
+				throw new Error("Request aborted before starting")
+			}
+
+			// Curry processSuggestion with prefix, suffix, and model
 			const curriedProcessSuggestion = (text: string) => this.processSuggestion(text, prefix, suffix, this.model)
 
 			const result =
 				prompt.strategy === "fim"
 					? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
 					: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
+
+			// Check if aborted after completion
+			if (abortController.signal.aborted) {
+				throw new Error("Request aborted after completion")
+			}
 
 			if (this.costTrackingCallback && result.cost > 0) {
 				this.costTrackingCallback(
@@ -315,8 +405,11 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 
 			// Always update suggestions, even if text is empty (for caching)
 			this.updateSuggestions(result.suggestion)
-		} catch (error) {
-			console.error("Error getting inline completion from LLM:", error)
+
+			return result
+		} finally {
+			// Clean up from pending requests map
+			this.deduplicator.remove(prefix, suffix)
 		}
 	}
 }
