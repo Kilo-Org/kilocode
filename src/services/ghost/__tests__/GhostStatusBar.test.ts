@@ -21,9 +21,9 @@ vi.mock("vscode", () => ({
 vi.mock("../../../i18n", () => ({
 	t: (key: string) => {
 		const translations: Record<string, string> = {
-			"kilocode:ghost.statusBar.enabled": "$(sparkle) Kilo Code Autocomplete",
-			"kilocode:ghost.statusBar.warning": "$(warning) Kilo Code Autocomplete",
-			"kilocode:ghost.statusBar.tooltip.basic": "Kilo Code Autocomplete",
+			"kilocode:ghost.statusBar.enabled": "$(kilo-logo) Autocomplete",
+			"kilocode:ghost.statusBar.warning": "$(warning) Autocomplete",
+			"kilocode:ghost.statusBar.tooltip.basic": "Autocomplete",
 			"kilocode:ghost.statusBar.tooltip.tokenError": "A valid token must be set to use Autocomplete",
 			"kilocode:ghost.statusBar.tooltip.completionCount": "Completions:",
 			"kilocode:ghost.statusBar.tooltip.sessionStartTime": "Session started at:",
