@@ -19,7 +19,7 @@ vi.mock("vscode", () => ({
 
 // Mock i18n
 vi.mock("../../../i18n", () => ({
-	t: (key: string) => {
+	t: (key: string, params?: Record<string, string | number>) => {
 		const translations: Record<string, string> = {
 			"kilocode:ghost.statusBar.enabled": "$(kilo-logo) Autocomplete",
 			"kilocode:ghost.statusBar.warning": "$(warning) Autocomplete",
@@ -31,10 +31,19 @@ vi.mock("../../../i18n", () => ({
 			"kilocode:ghost.statusBar.tooltip.sessionTotal": "Session total cost:",
 			"kilocode:ghost.statusBar.tooltip.provider": "Provider:",
 			"kilocode:ghost.statusBar.tooltip.model": "Model:",
+			"kilocode:ghost.statusBar.tooltip.completionSummary":
+				"Performed {{count}} completions between {{startTime}} and {{endTime}}, for a total cost of {{cost}}.",
+			"kilocode:ghost.statusBar.tooltip.providerInfo": "Autocompletions provided by {{model}} via {{provider}}.",
 			"kilocode:ghost.statusBar.cost.zero": "$0.00",
 			"kilocode:ghost.statusBar.cost.lessThanCent": "<$0.01",
 		}
-		return translations[key] || key
+		let result = translations[key] || key
+		if (params) {
+			Object.entries(params).forEach(([paramKey, value]) => {
+				result = result.replace(new RegExp(`{{${paramKey}}}`, "g"), String(value))
+			})
+		}
+		return result
 	},
 }))
 
@@ -140,17 +149,5 @@ describe("GhostStatusBar", () => {
 		expect(statusBar.statusBar.text).toContain("$(warning)")
 		const tooltip = statusBar.statusBar.tooltip as string
 		expect(tooltip).toContain("A valid token must be set")
-	})
-
-	it("should hide status bar when disabled", () => {
-		const hideSpy = vi.spyOn(statusBar.statusBar, "hide")
-		statusBar.updateVisible(false)
-		expect(hideSpy).toHaveBeenCalled()
-	})
-
-	it("should show status bar when enabled", () => {
-		const showSpy = vi.spyOn(statusBar.statusBar, "show")
-		statusBar.updateVisible(true)
-		expect(showSpy).toHaveBeenCalled()
 	})
 })

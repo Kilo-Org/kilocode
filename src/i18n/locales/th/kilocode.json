@@ -118,7 +118,9 @@
 				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:",
 				"profile": "โปรไฟล์: ",
-				"defaultProfile": "ค่าเริ่มต้น"
+				"defaultProfile": "ค่าเริ่มต้น",
+				"completionSummary": "ดำเนินการเติมเต็ม {{count}} ครั้งระหว่าง {{startTime}} ถึง {{endTime}} ด้วยค่าใช้จ่ายรวม {{cost}}",
+				"providerInfo": "การเติมเต็มอัตโนมัติให้บริการโดย {{model}} ผ่าน {{provider}}"
 			},
 			"cost": {
 				"zero": "$0.00",

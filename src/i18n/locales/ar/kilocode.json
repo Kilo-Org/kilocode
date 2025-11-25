@@ -116,7 +116,9 @@
 				"provider": "المزود:",
 				"model": "النموذج:",
 				"profile": "الملف الشخصي: ",
-				"defaultProfile": "افتراضي"
+				"defaultProfile": "افتراضي",
+				"completionSummary": "تم إجراء {{count}} إكمال بين {{startTime}} و {{endTime}}، بتكلفة إجمالية {{cost}}.",
+				"providerInfo": "يتم توفير الإكمال التلقائي بواسطة {{model}} عبر {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

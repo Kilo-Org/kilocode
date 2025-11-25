@@ -118,7 +118,9 @@
 				"provider": "Poskytovatel:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Výchozí"
+				"defaultProfile": "Výchozí",
+				"completionSummary": "Provedeno {{count}} dokončení mezi {{startTime}} a {{endTime}}, s celkovými náklady {{cost}}.",
+				"providerInfo": "Automatické dokončování poskytuje {{model}} přes {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -118,7 +118,9 @@
 				"provider": "提供商:",
 				"model": "模型:",
 				"profile": "配置: ",
-				"defaultProfile": "默认"
+				"defaultProfile": "默认",
+				"completionSummary": "在{{startTime}}至{{endTime}}期间执行了{{count}}次补全，总费用为{{cost}}。",
+				"providerInfo": "自动补全由{{model}}通过{{provider}}提供。"
 			},
 			"cost": {
 				"zero": "$0.00",

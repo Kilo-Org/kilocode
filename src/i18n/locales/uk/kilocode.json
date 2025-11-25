@@ -112,7 +112,9 @@
 				"provider": "Провайдер:",
 				"model": "Модель:",
 				"profile": "Профіль: ",
-				"defaultProfile": "За замовчуванням"
+				"defaultProfile": "За замовчуванням",
+				"completionSummary": "Виконано {{count}} автодоповнень між {{startTime}} та {{endTime}}, загальна вартість {{cost}}.",
+				"providerInfo": "Автодоповнення надається {{model}} через {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

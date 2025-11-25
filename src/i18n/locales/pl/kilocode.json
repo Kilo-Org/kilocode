@@ -118,7 +118,9 @@
 				"provider": "Dostawca:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Domyślny"
+				"defaultProfile": "Domyślny",
+				"completionSummary": "Wykonano {{count}} uzupełnień między {{startTime}} a {{endTime}}, za łączny koszt {{cost}}.",
+				"providerInfo": "Autouzupełnianie zapewniane przez {{model}} za pośrednictwem {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

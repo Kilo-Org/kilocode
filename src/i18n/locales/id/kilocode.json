@@ -112,7 +112,9 @@
 				"provider": "Penyedia:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Default"
+				"defaultProfile": "Default",
+				"completionSummary": "Melakukan {{count}} penyelesaian antara {{startTime}} dan {{endTime}}, dengan total biaya {{cost}}.",
+				"providerInfo": "Pelengkapan otomatis disediakan oleh {{model}} melalui {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

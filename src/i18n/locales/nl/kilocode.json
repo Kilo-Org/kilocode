@@ -112,7 +112,9 @@
 				"provider": "Provider:",
 				"model": "Model:",
 				"profile": "Profiel: ",
-				"defaultProfile": "Standaard"
+				"defaultProfile": "Standaard",
+				"completionSummary": "{{count}} voltooiingen uitgevoerd tussen {{startTime}} en {{endTime}}, voor een totale kostprijs van {{cost}}.",
+				"providerInfo": "Automatische aanvullingen geleverd door {{model}} via {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

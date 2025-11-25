@@ -112,7 +112,9 @@
 				"provider": "Sağlayıcı:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Varsayılan"
+				"defaultProfile": "Varsayılan",
+				"completionSummary": "{{startTime}} ile {{endTime}} arasında {{count}} tamamlama gerçekleştirildi, toplam maliyet {{cost}}.",
+				"providerInfo": "Otomatik tamamlamalar {{provider}} üzerinden {{model}} tarafından sağlanmaktadır."
 			},
 			"cost": {
 				"zero": "$0.00",

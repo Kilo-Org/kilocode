@@ -112,7 +112,9 @@
 				"provider": "Proveïdor:",
 				"model": "Model:",
 				"profile": "Perfil: ",
-				"defaultProfile": "Per defecte"
+				"defaultProfile": "Per defecte",
+				"completionSummary": "S'han realitzat {{count}} completacions entre {{startTime}} i {{endTime}}, amb un cost total de {{cost}}.",
+				"providerInfo": "Les completacions automàtiques són proporcionades per {{model}} via {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

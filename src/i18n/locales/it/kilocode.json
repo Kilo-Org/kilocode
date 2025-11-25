@@ -112,7 +112,9 @@
 				"provider": "Provider:",
 				"model": "Modello:",
 				"profile": "Profilo: ",
-				"defaultProfile": "Predefinito"
+				"defaultProfile": "Predefinito",
+				"completionSummary": "Eseguiti {{count}} completamenti tra {{startTime}} e {{endTime}}, per un costo totale di {{cost}}.",
+				"providerInfo": "Autocompletamenti forniti da {{model}} tramite {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

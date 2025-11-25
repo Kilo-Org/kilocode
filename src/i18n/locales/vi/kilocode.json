@@ -112,7 +112,9 @@
 				"provider": "Nhà cung cấp:",
 				"model": "Mô hình:",
 				"profile": "Hồ sơ: ",
-				"defaultProfile": "Mặc định"
+				"defaultProfile": "Mặc định",
+				"completionSummary": "Đã thực hiện {{count}} lần hoàn thành từ {{startTime}} đến {{endTime}}, với tổng chi phí {{cost}}.",
+				"providerInfo": "Tự động hoàn thành được cung cấp bởi {{model}} thông qua {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

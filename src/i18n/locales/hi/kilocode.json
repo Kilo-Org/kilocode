@@ -118,7 +118,9 @@
 				"provider": "प्रदाता:",
 				"model": "मॉडल:",
 				"profile": "प्रोफ़ाइल: ",
-				"defaultProfile": "डिफ़ॉल्ट"
+				"defaultProfile": "डिफ़ॉल्ट",
+				"completionSummary": "{{startTime}} और {{endTime}} के बीच {{count}} पूर्णताएं की गईं, कुल लागत {{cost}}।",
+				"providerInfo": "स्वत: पूर्णता {{provider}} के माध्यम से {{model}} द्वारा प्रदान की जाती है।"
 			},
 			"cost": {
 				"zero": "$0.00",

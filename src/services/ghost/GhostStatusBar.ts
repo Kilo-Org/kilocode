@@ -29,8 +29,8 @@ export class GhostStatusBar {
 		this.statusBar.show()
 	}
 
-	public updateVisible(enabled: boolean) {
-		if (enabled) {
+	private updateVisible() {
+		if (this.props.enabled) {
 			this.statusBar.show()
 		} else {
 			this.statusBar.hide()
@@ -51,9 +51,8 @@ export class GhostStatusBar {
 	public update(params: Partial<GhostStatusBarStateProps>) {
 		this.props = { ...this.props, ...params }
 
-		const enabled = this.props.enabled ?? false
-		this.updateVisible(enabled)
-		if (enabled) this.render()
+		this.updateVisible()
+		if (this.props.enabled) this.render()
 	}
 
 	private renderTokenError() {
@@ -73,9 +72,17 @@ export class GhostStatusBar {
 		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})`
 
 		this.statusBar.tooltip = [
-			`Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${this.humanFormatSessionCost()}.`,
+			t("kilocode:ghost.statusBar.tooltip.completionSummary", {
+				count: this.props.completionCount,
+				startTime: sessionStartTime,
+				endTime: now,
+				cost: this.humanFormatSessionCost(),
+			}),
 			this.props.model && this.props.provider
-				? `Autocompletions provided by ${this.props.model} via ${this.props.provider}.`
+				? t("kilocode:ghost.statusBar.tooltip.providerInfo", {
+						model: this.props.model,
+						provider: this.props.provider,
+					})
 				: undefined,
 		]
 			.filter(Boolean)

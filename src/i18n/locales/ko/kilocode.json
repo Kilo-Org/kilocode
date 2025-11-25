@@ -112,7 +112,9 @@
 				"provider": "제공업체:",
 				"model": "모델:",
 				"profile": "프로필: ",
-				"defaultProfile": "기본값"
+				"defaultProfile": "기본값",
+				"completionSummary": "{{startTime}}부터 {{endTime}}까지 {{count}}회 완성을 수행했으며, 총 비용은 {{cost}}입니다.",
+				"providerInfo": "자동완성은 {{provider}}를 통해 {{model}}에서 제공됩니다."
 			},
 			"cost": {
 				"zero": "$0.00",

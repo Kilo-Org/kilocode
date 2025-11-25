@@ -112,7 +112,9 @@
 				"provider": "Anbieter:",
 				"model": "Modell:",
 				"profile": "Profil: ",
-				"defaultProfile": "Standard"
+				"defaultProfile": "Standard",
+				"completionSummary": "{{count}} Vervollständigungen zwischen {{startTime}} und {{endTime}} durchgeführt, für Gesamtkosten von {{cost}}.",
+				"providerInfo": "Autovervollständigungen bereitgestellt von {{model}} über {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

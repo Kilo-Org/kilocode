@@ -107,7 +107,9 @@
 				"provider": "Провайдер:",
 				"model": "Модель:",
 				"profile": "Профиль: ",
-				"defaultProfile": "По умолчанию"
+				"defaultProfile": "По умолчанию",
+				"completionSummary": "Выполнено {{count}} автодополнений между {{startTime}} и {{endTime}}, общая стоимость {{cost}}.",
+				"providerInfo": "Автодополнение предоставляется {{model}} через {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",
