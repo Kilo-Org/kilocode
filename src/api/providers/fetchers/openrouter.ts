@@ -239,6 +239,7 @@ export const parseOpenRouterModel = ({
 		// kilocode_change start
 		displayName,
 		preferredIndex: model.preferredIndex,
+		supportsVerbosity: !!supportedParameters?.includes("verbosity") || undefined,
 		// kilocode_change end
 	}
 

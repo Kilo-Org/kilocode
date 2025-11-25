@@ -36,7 +36,6 @@ import {
 	doubaoDefaultModelId,
 	fireworksModels,
 	fireworksDefaultModelId,
-	syntheticModels,
 	syntheticDefaultModelId,
 	ioIntelligenceDefaultModelId,
 	moonshotModels,
@@ -243,7 +242,7 @@ export const getModelsByProvider = ({
 		// kilocode_change start
 		case "synthetic": {
 			return {
-				models: syntheticModels,
+				models: routerModels.synthetic,
 				defaultModel: syntheticDefaultModelId,
 			}
 		}
@@ -316,6 +315,7 @@ export const useProviderModels = (apiConfiguration?: ProviderSettings) => {
 		chutesApiKey: apiConfiguration?.chutesApiKey,
 		geminiApiKey: apiConfiguration?.geminiApiKey,
 		googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+		syntheticApiKey: apiConfiguration?.syntheticApiKey, // kilocode_change
 	})
 
 	const { models, defaultModel } =

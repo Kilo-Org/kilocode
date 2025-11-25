@@ -12,6 +12,7 @@ import type {
 	ProviderSettings,
 	McpServer,
 } from "../../types/messages.js"
+import { pendingOutputUpdatesAtom } from "./effects.js"
 
 /**
  * Atom to hold the complete ExtensionState
@@ -201,6 +202,7 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 	const currentMessages = get(chatMessagesAtom)
 	const versionMap = get(messageVersionMapAtom)
 	const streamingSet = get(streamingMessagesSetAtom)
+	const pendingUpdates = get(pendingOutputUpdatesAtom)
 
 	set(extensionStateAtom, state)
 
@@ -209,7 +211,14 @@ export const updateExtensionStateAtom = atom(null, (get, set, state: ExtensionSt
 		const incomingMessages = state.clineMessages || state.chatMessages || []
 
 		// Reconcile with current messages to preserve streaming state
-		let reconciledMessages = reconcileMessages(currentMessages, incomingMessages, versionMap, streamingSet)
+		// Pass pending updates to apply them to new command_output asks
+		let reconciledMessages = reconcileMessages(
+			currentMessages,
+			incomingMessages,
+			versionMap,
+			streamingSet,
+			pendingUpdates,
+		)
 
 		// Auto-complete orphaned partial ask messages (CLI-only workaround for extension bug)
 		reconciledMessages = autoCompleteOrphanedPartialAsks(reconciledMessages)
@@ -528,12 +537,14 @@ function autoCompleteOrphanedPartialAsks(messages: ExtensionChatMessage[]): Exte
  * - State is the source of truth for WHICH messages exist (count/list)
  * - Real-time updates are the source of truth for CONTENT of partial messages
  * - Only preserve content of actively streaming messages if they have more data
+ * - Merge duplicate command_output asks with the same executionId
  */
 function reconcileMessages(
 	current: ExtensionChatMessage[],
 	incoming: ExtensionChatMessage[],
 	versionMap: Map<number, number>,
 	streamingSet: Set<number>,
+	pendingUpdates?: Map<string, { output: string; command?: string; completed?: boolean }>,
 ): ExtensionChatMessage[] {
 	// Create lookup map for current messages
 	const currentMap = new Map<number, ExtensionChatMessage>()
@@ -541,8 +552,33 @@ function reconcileMessages(
 		currentMap.set(msg.ts, msg)
 	})
 
+	// Identify synthetic command_output asks (CLI-created, not from extension)
+	// These have executionId in their text and don't exist in incoming messages
+	const syntheticAsks: ExtensionChatMessage[] = []
+	current.forEach((msg) => {
+		if (msg.type === "ask" && msg.ask === "command_output" && msg.text) {
+			try {
+				const data = JSON.parse(msg.text)
+				if (data.executionId) {
+					// Check if this message exists in incoming
+					const existsInIncoming = incoming.some((incomingMsg) => incomingMsg.ts === msg.ts)
+					if (!existsInIncoming) {
+						// This is a synthetic ask created by CLI
+						syntheticAsks.push(msg)
+					}
+				}
+			} catch {
+				// Ignore parse errors
+			}
+		}
+	})
+
+	// First, deduplicate command_output asks
+	// Since extension creates asks with empty text, we keep only the first unanswered one
+	const deduplicatedIncoming = deduplicateCommandOutputAsks(incoming, pendingUpdates)
+
 	// Process ALL incoming messages - state determines which messages exist
-	const resultMessages: ExtensionChatMessage[] = incoming.map((incomingMsg) => {
+	const resultMessages: ExtensionChatMessage[] = deduplicatedIncoming.map((incomingMsg) => {
 		const existingMsg = currentMap.get(incomingMsg.ts)
 
 		// PRIORITY 1: Prevent completed messages from being overwritten by stale partial updates
@@ -586,6 +622,91 @@ function reconcileMessages(
 		return incomingMsg
 	})
 
+	// Add synthetic asks back to the result
+	// These are CLI-created asks that the extension doesn't know about
+	const finalMessages = [...resultMessages, ...syntheticAsks]
+
 	// Return sorted array by timestamp
-	return resultMessages.sort((a, b) => a.ts - b.ts)
+	return finalMessages.sort((a, b) => a.ts - b.ts)
+}
+
+/**
+ * Deduplicate command_output asks
+ * Since the extension creates asks with empty text (no executionId), we can't match by executionId
+ * Instead, keep only the MOST RECENT unanswered command_output ask and discard older ones
+ * This allows multiple sequential commands to work correctly
+ * The component will read from pendingOutputUpdatesAtom for real-time output
+ */
+function deduplicateCommandOutputAsks(
+	messages: ExtensionChatMessage[],
+	pendingUpdates?: Map<string, { output: string; command?: string; completed?: boolean }>,
+): ExtensionChatMessage[] {
+	const result: ExtensionChatMessage[] = []
+	let mostRecentUnansweredAsk: ExtensionChatMessage | null = null
+	let mostRecentUnansweredAskIndex = -1
+
+	// First pass: find the most recent unanswered command_output ask
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i]
+		if (msg && msg.type === "ask" && msg.ask === "command_output" && !msg.isAnswered) {
+			if (!mostRecentUnansweredAsk || msg.ts > mostRecentUnansweredAsk.ts) {
+				mostRecentUnansweredAsk = msg
+				mostRecentUnansweredAskIndex = i
+			}
+		}
+	}
+
+	// Second pass: build result, keeping only the most recent unanswered ask
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i]
+
+		if (msg && msg.type === "ask" && msg.ask === "command_output" && !msg.isAnswered) {
+			if (i === mostRecentUnansweredAskIndex) {
+				// This is the most recent unanswered ask - keep it with pending updates
+				let processedMsg = msg
+
+				// If we have pending updates, find the one that's NOT completed (the active command)
+				if (pendingUpdates && pendingUpdates.size > 0) {
+					// Find the active (non-completed) pending update
+					let activeExecutionId: string | null = null
+					let activeUpdate: { output: string; command?: string; completed?: boolean } | null = null
+
+					for (const [execId, update] of pendingUpdates.entries()) {
+						if (!update.completed) {
+							activeExecutionId = execId
+							activeUpdate = update
+							break
+						}
+					}
+
+					// If no active update found, use the most recent one (fallback)
+					if (!activeExecutionId && pendingUpdates.size > 0) {
+						const entries = Array.from(pendingUpdates.entries())
+						;[activeExecutionId, activeUpdate] = entries[entries.length - 1]!
+					}
+
+					if (activeExecutionId && activeUpdate) {
+						processedMsg = {
+							...msg,
+							text: JSON.stringify({
+								executionId: activeExecutionId,
+								command: activeUpdate.command || "",
+								output: activeUpdate.output || "",
+							}),
+							partial: !activeUpdate.completed,
+							isAnswered: activeUpdate.completed || false,
+						}
+					}
+				}
+
+				result.push(processedMsg)
+			}
+			// Discard older unanswered command_output asks (no logging needed)
+		} else if (msg) {
+			// Not an unanswered command_output ask, keep as-is
+			result.push(msg)
+		}
+	}
+
+	return result
 }

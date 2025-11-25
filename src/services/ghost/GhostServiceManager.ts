@@ -86,10 +86,7 @@ export class GhostServiceManager {
 		// 1% rollout: auto-enable autocomplete for a small subset of logged-in KiloCode users
 		// who have never explicitly toggled enableAutoTrigger.
 		if (this.settings.enableAutoTrigger == undefined) {
-			const rolloutHash = this.model.getRolloutHash_IfLoggedInToKilo()
-			if (rolloutHash != undefined && rolloutHash % 100 < 10) {
-				this.settings.enableAutoTrigger = true
-			}
+			this.settings.enableAutoTrigger = true
 		}
 
 		await this.updateGlobalContext()
@@ -295,6 +292,7 @@ export class GhostServiceManager {
 			enabled: this.settings?.enableAutoTrigger,
 			model: this.getCurrentModelName(),
 			provider: this.getCurrentProviderName(),
+			profileName: this.model.profileName,
 			hasValidToken: this.hasValidApiToken(),
 			totalSessionCost: this.sessionCost,
 			lastCompletionCost: this.lastCompletionCost,

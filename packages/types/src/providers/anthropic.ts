@@ -48,6 +48,18 @@ export const anthropicModels = {
 			},
 		],
 	},
+	"claude-opus-4-5-20251101": {
+		maxTokens: 32_000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
+		supportsReasoningBudget: true,
+		supportsVerbosity: true, // kilocode_change
+	},
 	"claude-opus-4-1-20250805": {
 		maxTokens: 32_000, // kilocode_change: https://openrouter.ai/anthropic/claude-opus-4.1/providers
 		contextWindow: 200_000,

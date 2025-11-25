@@ -9,6 +9,16 @@ import { ContextProxy } from "../../../../config/ContextProxy"
 import * as vscode from "vscode"
 import search_and_replace from "../search_and_replace"
 
+// Mock ManagedIndexer before other mocks
+vi.mock("../../../../../services/code-index/managed/ManagedIndexer", () => ({
+	ManagedIndexer: {
+		getInstance: vi.fn().mockReturnValue({
+			isEnabled: vi.fn().mockReturnValue(false),
+			organization: null,
+		}),
+	},
+}))
+
 vi.mock("vscode")
 vi.mock("../../../../../services/code-index/manager")
 vi.mock("../../../../../services/mcp/McpServerManager")

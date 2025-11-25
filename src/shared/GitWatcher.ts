@@ -126,34 +126,6 @@ interface GitStateSnapshot {
 	isDetached: boolean
 }
 
-/**
- * GitWatcher - Monitors git repository and emits events
- *
- * Usage:
- * ```typescript
- * const watcher = new GitWatcher({ cwd: '/path/to/repo' })
- * watcher.onEvent((event) => {
- *   switch (event.type) {
- *     case 'scan-start':
- *       console.log(`Scan started on branch ${event.branch}`)
- *       break
- *     case 'file-changed':
- *       console.log(`File: ${event.filePath}, Hash: ${event.fileHash}`)
- *       break
- *     case 'file-deleted':
- *       console.log(`File deleted: ${event.filePath}`)
- *       break
- *     case 'scan-end':
- *       console.log(`Scan completed on branch ${event.branch}`)
- *       break
- *     case 'branch-changed':
- *       console.log(`Branch changed from ${event.previousBranch} to ${event.newBranch}`)
- *       break
- *   }
- * })
- * await watcher.scan()
- * ```
- */
 export class GitWatcher implements vscode.Disposable {
 	private readonly emitter: EventEmitter
 	private readonly disposables: vscode.Disposable[] = []
@@ -162,10 +134,6 @@ export class GitWatcher implements vscode.Disposable {
 	private defaultBranch: string | null = null
 
 	constructor(public config: GitWatcherConfig) {
-		console.log("[GitWatcher] Constructor called", {
-			cwd: config.cwd,
-			defaultBranchOverride: config.defaultBranchOverride,
-		})
 		this.config = config
 		this.emitter = new EventEmitter()
 	}
@@ -175,7 +143,6 @@ export class GitWatcher implements vscode.Disposable {
 	 * @param handler Callback function that receives event data
 	 */
 	public onEvent(handler: (data: GitWatcherEvent) => void): void {
-		console.log("[GitWatcher] Event handler registered")
 		this.emitter.on("event", handler)
 	}
 
@@ -187,19 +154,15 @@ export class GitWatcher implements vscode.Disposable {
 	 * - On feature branch: Yields only files that differ from default branch
 	 */
 	public async *getFiles(branch: string, isBaseBranch: boolean): AsyncIterable<GitWatcherFile> {
-		console.log("[GitWatcher] getFiles called", { branch, isBaseBranch })
 		try {
 			if (isBaseBranch) {
-				console.log("[GitWatcher] Getting all tracked files (base branch)")
 				// On default branch: yield all tracked files
 				yield* this.getAllFiles()
 			} else {
 				// On feature branch: yield only diff files
 				const defaultBranch = await this.getDefaultBranch()
-				console.log("[GitWatcher] Getting diff files", { branch, defaultBranch })
 				yield* this.getDiffFiles(branch, defaultBranch)
 			}
-			console.log("[GitWatcher] getFiles completed", { branch, isBaseBranch })
 		} catch (error) {
 			console.error("[GitWatcher] Error getting files:", error)
 			throw error
@@ -226,11 +189,9 @@ export class GitWatcher implements vscode.Disposable {
 	 * Must be called after construction to begin watching for git changes
 	 */
 	public async start(): Promise<void> {
-		console.log("[GitWatcher] Starting watcher", { cwd: this.config.cwd })
 		try {
 			// Get initial git state
 			const isDetached = await isDetachedHead(this.config.cwd)
-			console.log("[GitWatcher] Checked detached HEAD status", { isDetached })
 
 			if (!isDetached) {
 				const [branch, commit] = await Promise.all([
@@ -238,12 +199,6 @@ export class GitWatcher implements vscode.Disposable {
 					getCurrentCommitSha(this.config.cwd),
 				])
 				this.currentState = { branch, commit, isDetached: false }
-				console.log("[GitWatcher] Initial git state captured", {
-					branch,
-					commit: commit.substring(0, 8),
-				})
-			} else {
-				console.log("[GitWatcher] Repository is in detached HEAD state, skipping initial state")
 			}
 
 			// Set up file system watchers for git state changes
@@ -260,7 +215,6 @@ export class GitWatcher implements vscode.Disposable {
 				watcher: this,
 				files: this.getFiles(this.currentState.branch, isBaseBranch),
 			})
-			console.log("[GitWatcher] Watcher started successfully")
 		} catch (error) {
 			console.error("[GitWatcher] Failed to initialize watcher:", error)
 		}
@@ -272,38 +226,27 @@ export class GitWatcher implements vscode.Disposable {
 	 * during branch switches, which causes fs.watch to stop working
 	 */
 	private async setupGitWatchers(): Promise<void> {
-		console.log("[GitWatcher] Setting up git watchers")
 		try {
 			const gitHeadPath = await getGitHeadPath(this.config.cwd)
 			const absoluteGitHeadPath = path.isAbsolute(gitHeadPath)
 				? gitHeadPath
 				: path.join(this.config.cwd, gitHeadPath)
-			console.log("[GitWatcher] Git HEAD path resolved", { absoluteGitHeadPath })
 
 			// Watch .git/HEAD for branch switches and commits
 			// Use fs.watchFile (polling) because git replaces the file during branch switches
 			// which causes fs.watch to stop working after the first event
 			try {
-				console.log("[GitWatcher] Setting up HEAD watcher", { path: absoluteGitHeadPath })
 				fs.watchFile(absoluteGitHeadPath, { interval: 100 }, (curr, prev) => {
 					// Only trigger if the file actually changed (mtime or size)
 					if (curr.mtime.getTime() !== prev.mtime.getTime() || curr.size !== prev.size) {
-						console.log("[GitWatcher] HEAD file changed", {
-							prevMtime: prev.mtime.toISOString(),
-							currMtime: curr.mtime.toISOString(),
-							prevSize: prev.size,
-							currSize: curr.size,
-						})
 						this.handleGitChange("head")
 					}
 				})
 				this.disposables.push(
 					new vscode.Disposable(() => {
-						console.log("[GitWatcher] Unwatching HEAD file")
 						fs.unwatchFile(absoluteGitHeadPath)
 					}),
 				)
-				console.log("[GitWatcher] HEAD watcher set up successfully")
 			} catch (error) {
 				console.warn("[GitWatcher] Could not watch HEAD:", error)
 			}
@@ -315,9 +258,7 @@ export class GitWatcher implements vscode.Disposable {
 				const refsHeadsPath = path.join(gitDir, "refs", "heads")
 
 				if (fs.existsSync(refsHeadsPath)) {
-					console.log("[GitWatcher] Setting up refs watcher", { path: refsHeadsPath })
 					const refsWatcher = fs.watch(refsHeadsPath, { recursive: true }, (eventType, filename) => {
-						console.log("[GitWatcher] Refs directory changed", { eventType, filename })
 						this.handleGitChange("ref")
 					})
 					this.disposables.push(
@@ -326,9 +267,6 @@ export class GitWatcher implements vscode.Disposable {
 							refsWatcher.close()
 						}),
 					)
-					console.log("[GitWatcher] Refs watcher set up successfully")
-				} else {
-					console.log("[GitWatcher] Refs directory does not exist, skipping", { path: refsHeadsPath })
 				}
 			} catch (error) {
 				console.warn("[GitWatcher] Could not watch branch refs:", error)
@@ -341,30 +279,20 @@ export class GitWatcher implements vscode.Disposable {
 				const packedRefsPath = path.join(gitDir, "packed-refs")
 
 				if (fs.existsSync(packedRefsPath)) {
-					console.log("[GitWatcher] Setting up packed-refs watcher", { path: packedRefsPath })
 					fs.watchFile(packedRefsPath, { interval: 1000 }, (curr, prev) => {
 						if (curr.mtime.getTime() !== prev.mtime.getTime() || curr.size !== prev.size) {
-							console.log("[GitWatcher] Packed-refs file changed", {
-								prevMtime: prev.mtime.toISOString(),
-								currMtime: curr.mtime.toISOString(),
-							})
 							this.handleGitChange("packed-refs")
 						}
 					})
 					this.disposables.push(
 						new vscode.Disposable(() => {
-							console.log("[GitWatcher] Unwatching packed-refs file")
 							fs.unwatchFile(packedRefsPath)
 						}),
 					)
-					console.log("[GitWatcher] Packed-refs watcher set up successfully")
-				} else {
-					console.log("[GitWatcher] Packed-refs file does not exist, skipping", { path: packedRefsPath })
 				}
 			} catch (error) {
 				console.warn("[GitWatcher] Could not watch packed-refs:", error)
 			}
-			console.log("[GitWatcher] All git watchers set up successfully")
 		} catch (error) {
 			console.error("[GitWatcher] Failed to setup git watchers:", error)
 		}
@@ -374,8 +302,6 @@ export class GitWatcher implements vscode.Disposable {
 	 * Handle git state changes
 	 */
 	private async handleGitChange(change?: string): Promise<void> {
-		console.log("[GitWatcher] handleGitChange", change)
-
 		// Prevent concurrent execution - fs.watch can fire multiple times for one git operation
 		if (this.isProcessing) {
 			return

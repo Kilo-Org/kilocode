@@ -11,12 +11,14 @@ import {
 	DEFAULT_CONSECUTIVE_MISTAKE_LIMIT,
 	getModelId,
 	type ProviderName,
+	type ProfileType, // kilocode_change - autocomplete profile type system
 } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { Mode, modes } from "../../shared/modes"
 import { migrateMorphApiKey } from "./kilocode/migrateMorphApiKey"
 import { buildApiHandler } from "../../api"
+import { t } from "../../i18n" // kilocode_change - autocomplete profile type system
 
 // Type-safe model migrations mapping
 type ModelMigrations = {
@@ -382,12 +384,37 @@ export class ProviderSettingsManager {
 					id: apiConfig.id || "",
 					apiProvider: apiConfig.apiProvider,
 					modelId: this.cleanModelId(getModelId(apiConfig)),
+					profileType: apiConfig.profileType, // kilocode_change - autocomplete profile type system
 				}))
 			})
 		} catch (error) {
 			throw new Error(`Failed to list configs: ${error}`)
 		}
 	}
+
+	// kilocode_change start - autocomplete profile type system
+	/**
+	 * Validate that only one autocomplete profile exists
+	 */
+	private async validateAutocompleteConstraint(
+		profiles: ProviderProfiles,
+		newProfileName: string,
+		newProfileType?: ProfileType,
+	): Promise<void> {
+		if (newProfileType !== "autocomplete") {
+			return // No constraint for non-autocomplete profiles
+		}
+
+		const autocompleteProfiles = Object.entries(profiles.apiConfigs).filter(
+			([name, config]) => config.profileType === "autocomplete" && name !== newProfileName,
+		)
+
+		if (autocompleteProfiles.length > 0) {
+			const existingName = autocompleteProfiles[0][0]
+			throw new Error(t("settings:providers.autocomplete.onlyOneAllowed", { existingName }))
+		}
+	}
+	// kilocode_change end
 
 	/**
 	 * Save a config with the given name.
@@ -398,6 +425,10 @@ export class ProviderSettingsManager {
 		try {
 			return await this.lock(async () => {
 				const providerProfiles = await this.load()
+
+				// kilocode_change - autocomplete profile type system
+				await this.validateAutocompleteConstraint(providerProfiles, name, config.profileType)
+
 				// Preserve the existing ID if this is an update to an existing config.
 				const existingId = providerProfiles.apiConfigs[name]?.id
 				const id = config.id || existingId || this.generateId()
