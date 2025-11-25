@@ -95,19 +95,34 @@ describe("GhostStatusBar", () => {
 	})
 
 	it("should update completion count", () => {
-		statusBar.update({ completionCount: 10 })
+		statusBar.update({
+			completionCount: 10,
+			hasValidToken: true,
+			totalSessionCost: 0.05,
+			sessionStartTime: Date.now(),
+		})
 		statusBar.render()
 		expect(statusBar.statusBar.text).toContain("(10)")
 	})
 
 	it("should handle zero completions", () => {
-		statusBar.update({ completionCount: 0 })
+		statusBar.update({
+			completionCount: 0,
+			hasValidToken: true,
+			totalSessionCost: 0.05,
+			sessionStartTime: Date.now(),
+		})
 		statusBar.render()
 		expect(statusBar.statusBar.text).toContain("(0)")
 	})
 
 	it("should show time range format", () => {
-		statusBar.update({ sessionStartTime: Date.now() - 30000 }) // 30 seconds ago
+		statusBar.update({
+			sessionStartTime: Date.now() - 30000,
+			hasValidToken: true,
+			totalSessionCost: 0.05,
+			completionCount: 5,
+		}) // 30 seconds ago
 		statusBar.render()
 		const tooltip = statusBar.statusBar.tooltip as string
 		expect(tooltip).toMatch(/Performed \d+ completions between/)
@@ -115,7 +130,12 @@ describe("GhostStatusBar", () => {
 	})
 
 	it("should show token error when hasValidToken is false", () => {
-		statusBar.update({ hasValidToken: false })
+		statusBar.update({
+			hasValidToken: false,
+			totalSessionCost: 0.05,
+			completionCount: 5,
+			sessionStartTime: Date.now(),
+		})
 		statusBar.render()
 		expect(statusBar.statusBar.text).toContain("$(warning)")
 		const tooltip = statusBar.statusBar.tooltip as string

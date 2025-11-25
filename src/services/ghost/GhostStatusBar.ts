@@ -6,10 +6,10 @@ interface GhostStatusBarStateProps {
 	model?: string
 	provider?: string
 	profileName?: string | null
-	hasValidToken?: boolean
-	totalSessionCost?: number
-	completionCount?: number
-	sessionStartTime?: number
+	hasValidToken: boolean
+	totalSessionCost: number
+	completionCount: number
+	sessionStartTime: number
 }
 
 export class GhostStatusBar {
@@ -47,7 +47,7 @@ export class GhostStatusBar {
 		return `$${cost.toFixed(2)}`
 	}
 
-	public update(params: GhostStatusBarStateProps) {
+	public update(params: Partial<GhostStatusBarStateProps>) {
 		this.props = { ...this.props, ...params }
 
 		const enabled = this.props.enabled ?? false
@@ -66,21 +66,18 @@ export class GhostStatusBar {
 	}
 
 	private renderDefault() {
-		const totalSessionCost = this.props.totalSessionCost ?? 0
-		const completionCount = this.props.completionCount ?? 0
 		const model = this.props.model ?? "default"
 		const provider = this.props.provider ?? "default"
-		const totalCostFormatted = this.humanFormatCost(totalSessionCost)
-		const sessionStartTime = this.props.sessionStartTime ? this.formatTime(this.props.sessionStartTime) : "N/A"
+		const totalCostFormatted = this.humanFormatCost(this.props.totalSessionCost)
+		const sessionStartTime = this.formatTime(this.props.sessionStartTime)
 		const now = this.formatTime(Date.now())
 
-		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${completionCount})`
-		this.statusBar.tooltip = `Performed ${completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.\n\nAutocompletions provided by ${model} via ${provider}.`
+		this.statusBar.text = `${t("kilocode:ghost.statusBar.enabled")} (${this.props.completionCount})`
+		this.statusBar.tooltip = `Performed ${this.props.completionCount} completions between ${sessionStartTime} and ${now}, for a total cost of ${totalCostFormatted}.\n\nAutocompletions provided by ${model} via ${provider}.`
 	}
 
 	public render() {
-		const hasValidToken = this.props.hasValidToken ?? false
-		if (!hasValidToken) {
+		if (!this.props.hasValidToken) {
 			return this.renderTokenError()
 		}
 		return this.renderDefault()
