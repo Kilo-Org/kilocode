@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已停用）",
 				"tokenError": "必須設定有效 Token 才能使用 Autocomplete",
-				"lastCompletion": "最後建議:",
 				"sessionTotal": "工作階段總費用:",
 				"provider": "提供者:",
 				"model": "模型:",
 				"profile": "設定檔: ",
-				"defaultProfile": "預設"
+				"defaultProfile": "預設",
+				"completionSummary": "在 {{startTime}} 至 {{endTime}} 之間執行了 {{count}} 次自動完成，總費用為 {{cost}}。",
+				"providerInfo": "自動完成由 {{provider}} 的 {{model}} 提供。"
 			},
 			"cost": {
 				"zero": "$0.00",

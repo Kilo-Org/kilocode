@@ -3131,6 +3131,10 @@ export const webviewMessageHandler = async (
 					codebaseIndexEnabled: settings.codebaseIndexEnabled,
 					codebaseIndexQdrantUrl: settings.codebaseIndexQdrantUrl,
 					codebaseIndexEmbedderProvider: settings.codebaseIndexEmbedderProvider,
+					// kilocode_change start
+					codebaseIndexVectorStoreProvider: settings.codebaseIndexVectorStoreProvider,
+					codebaseIndexLancedbVectorStoreDirectory: settings.codebaseIndexLancedbVectorStoreDirectory,
+					// kilocode_change end
 					codebaseIndexEmbedderBaseUrl: settings.codebaseIndexEmbedderBaseUrl,
 					codebaseIndexEmbedderModelId: settings.codebaseIndexEmbedderModelId,
 					codebaseIndexEmbedderModelDimension: settings.codebaseIndexEmbedderModelDimension, // Generic dimension

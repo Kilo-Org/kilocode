@@ -104,19 +104,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（已禁用）",
 				"tokenError": "必须设置有效 Token 才能使用 Autocomplete",
-				"lastCompletion": "最后建议:",
 				"sessionTotal": "会话总费用:",
 				"provider": "提供商:",
 				"model": "模型:",
 				"profile": "配置: ",
-				"defaultProfile": "默认"
+				"defaultProfile": "默认",
+				"completionSummary": "在{{startTime}}至{{endTime}}期间执行了{{count}}次补全，总费用为{{cost}}。",
+				"providerInfo": "自动补全由{{model}}通过{{provider}}提供。"
 			},
 			"cost": {
 				"zero": "$0.00",

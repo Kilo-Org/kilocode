@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (desactivat)",
 				"tokenError": "S'ha d'establir un token vàlid per utilitzar Autocomplete",
-				"lastCompletion": "Últim suggeriment:",
 				"sessionTotal": "Cost total de la sessió:",
 				"provider": "Proveïdor:",
 				"model": "Model:",
 				"profile": "Perfil: ",
-				"defaultProfile": "Per defecte"
+				"defaultProfile": "Per defecte",
+				"completionSummary": "S'han realitzat {{count}} completacions entre {{startTime}} i {{endTime}}, amb un cost total de {{cost}}.",
+				"providerInfo": "Les completacions automàtiques són proporcionades per {{model}} via {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

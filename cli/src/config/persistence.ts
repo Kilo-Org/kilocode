@@ -145,11 +145,10 @@ export async function loadConfig(): Promise<ConfigLoadResult> {
 				}
 			}
 
-			// No env config available, create default config file
-			// File doesn't exist, write default config directly without validation
-			// (DEFAULT_CONFIG may have empty credentials which is ok for initial setup)
-			await fs.writeFile(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2))
-			logs.debug("Created default config file", "ConfigPersistence")
+			// No env config available, return default config IN MEMORY
+			// DO NOT create the file yet - it will be created when saveConfig() is called
+			// This prevents creating an empty config file if the user interrupts the auth wizard
+			logs.debug("No config file found, returning default config in memory", "ConfigPersistence")
 
 			// Validate the default config
 			const validation = await validateConfig(DEFAULT_CONFIG)

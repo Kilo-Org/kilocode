@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { getKilocodeDefaultModel } from "../getKilocodeDefaultModel.js"
+import { getKilocodeDefaultModel } from "../../auth/providers/kilocode/shared.js"
 import { openRouterDefaultModelId } from "@roo-code/types"
 
 // Mock the logs module

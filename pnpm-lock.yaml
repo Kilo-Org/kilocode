@@ -1675,6 +1675,9 @@ importers:
       '@google/genai':
         specifier: ^1.0.0
         version: 1.3.0(@modelcontextprotocol/sdk@1.13.3)(encoding@0.1.13)
+      '@lancedb/lancedb':
+        specifier: ^0.21.2
+        version: 0.21.3(apache-arrow@18.1.0)
       '@lmstudio/sdk':
         specifier: ^1.1.1
         version: 1.2.0
@@ -4719,6 +4722,61 @@ packages:
   '@kwsites/promise-deferred@1.1.1':
     resolution: {integrity: sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw==}
 
+  '@lancedb/lancedb-darwin-arm64@0.21.3':
+    resolution: {integrity: sha512-8cq0t64iC2qk3MO2bRLsNPWgwli71KkJJNR47nNdDLoXHWhhkrVZbrEE1BiEkMWAO2sSp98zIyUTDdFvKvjrug==}
+    engines: {node: '>= 18'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@lancedb/lancedb-darwin-x64@0.21.3':
+    resolution: {integrity: sha512-Er4PMooeMTA+8LvH0H/x6Fk7rggCuYZy8UsJ+v4i6JqEFBUF+t5fkMXRk58BC5Xw7Dd0LEs2ZTJry9N7qSr1Ww==}
+    engines: {node: '>= 18'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@lancedb/lancedb-linux-arm64-gnu@0.21.3':
+    resolution: {integrity: sha512-zeKzfXZBjXW8gsIYVw48aVU4dCQ7ZKuwF0uJHvW+I0+X15rnS21XYgXiOHKSmv6aiFYm0aIowJCLMKBIuwV0IA==}
+    engines: {node: '>= 18'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lancedb/lancedb-linux-arm64-musl@0.21.3':
+    resolution: {integrity: sha512-apE9VIW/AoAKfBFjhiS3bn2Sl7asDKasDzsAt0Ms7rNKYaADfdr2nF8Bi5fOFsajxEQRJrXHCss1eHHxI02zZw==}
+    engines: {node: '>= 18'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@lancedb/lancedb-linux-x64-gnu@0.21.3':
+    resolution: {integrity: sha512-ybZTqtYq8tdQLfWFbmUO6EwMz+sFu5zmO5J/H31NpxrtvLTrwG2I6zkq2knJrVI4ZqTcoVb/Gi2bq0pll7PJTg==}
+    engines: {node: '>= 18'}
+    cpu: [x64]
+    os: [linux]
+
+  '@lancedb/lancedb-linux-x64-musl@0.21.3':
+    resolution: {integrity: sha512-6GGNMUZ3y7qm8SNO9VJw/G8JUCkekgJG4iiiKsEbpiAxtbMLgB1x/KrqdLklv5fgHfT4Wr9fJB+TqMpG0c8kmg==}
+    engines: {node: '>= 18'}
+    cpu: [x64]
+    os: [linux]
+
+  '@lancedb/lancedb-win32-arm64-msvc@0.21.3':
+    resolution: {integrity: sha512-dEeiIEnoIoLxx81qbzrhjiGJwg4sEE/3o4kKUm4jGw0B5d7GRj624fVQD3p7/C35Bt23yzEKkJ1mSPEjLRowyg==}
+    engines: {node: '>= 18'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@lancedb/lancedb-win32-x64-msvc@0.21.3':
+    resolution: {integrity: sha512-V4rieshQ0VQs+T7X8xBdCL1SDjrU111ahZFPiXs24gfegGMrKi5wLt89aY0B7Zn/QVJWZiHKz8HkKYWNeCoEAw==}
+    engines: {node: '>= 18'}
+    cpu: [x64]
+    os: [win32]
+
+  '@lancedb/lancedb@0.21.3':
+    resolution: {integrity: sha512-hfzp498BfcCJ730fV1YGGoXVxRgE+W1n0D0KwanKlbt8bBPSQ6E6Tf8mPXc8rKdAXIRR3o5mTzMG3z3Fda+m3Q==}
+    engines: {node: '>= 18'}
+    os: [darwin, linux, win32]
+    peerDependencies:
+      apache-arrow: '>=15.0.0 <=18.1.0'
+
   '@leichtgewicht/ip-codec@2.0.5':
     resolution: {integrity: sha512-Vo+PSpZG2/fmgmiNzYK9qWRh8h/CHrwD0mo1h1DzL4yzHNSfWYujGTYsWGreD000gcgmZ7K4Ys6Tx9TxtsKdDw==}
 
@@ -7333,6 +7391,12 @@ packages:
   '@types/clone-deep@4.0.4':
     resolution: {integrity: sha512-vXh6JuuaAha6sqEbJueYdh5zNBPPgG1OYumuz2UvLvriN6ABHDSW8ludREGWJb1MLIzbwZn4q4zUbUCerJTJfA==}
 
+  '@types/command-line-args@5.2.3':
+    resolution: {integrity: sha512-uv0aG6R0Y8WHZLTamZwtfsDLVRnOa+n+n5rEvFWL5Na5gZ8V2Teab/duDPFzIIIhs9qizDpcavCusCLJZu62Kw==}
+
+  '@types/command-line-usage@5.0.4':
+    resolution: {integrity: sha512-BwR5KP3Es/CSht0xqBcUXS3qCAUVXwpRKsV2+arxeb65atasuXG9LykC9Ab10Cw3s2raH92ZqOeILaQbsB2ACg==}
+
   '@types/connect-history-api-fallback@1.5.4':
     resolution: {integrity: sha512-n6Cr2xS1h4uAulPRdlw6Jl6s1oG8KrVilPN2yUITEs+K48EzMJJ3W1xy8K5eWuFvjp3R74AOIGSmp2UfBJ8HFw==}
 
@@ -8446,6 +8510,10 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
+  apache-arrow@18.1.0:
+    resolution: {integrity: sha512-v/ShMp57iBnBp4lDgV8Jx3d3Q5/Hac25FWmQ98eMahUiHPXcvwIMKJD0hBIgclm/FCG+LwPkAKtkRO1O/W0YGg==}
+    hasBin: true
+
   append-buffer@1.0.2:
     resolution: {integrity: sha512-WLbYiXzD3y/ATLZFufV/rZvWdZOs+Z/+5v1rBZ463Jn398pa6kcde27cvozYnBoxXblGZTFfoPpsaEw0orU5BA==}
     engines: {node: '>=0.10.0'}
@@ -8518,6 +8586,10 @@ packages:
   arr-union@3.1.0:
     resolution: {integrity: sha512-sKpyeERZ02v1FeCZT8lrfJq5u6goHCtpTAzPwJYe7c8SPFOboNjNg1vz2L4VTn9T4PQxEx13TbXLmYUcS6Ug7Q==}
     engines: {node: '>=0.10.0'}
+
+  array-back@3.1.0:
+    resolution: {integrity: sha512-TkuxA4UCOvxuDK6NZYXCalszEzj+TLszyASooky+i742l9TqsOdYCMJJupxRic61hwquNtppB3hgcuq9SVSH1Q==}
+    engines: {node: '>=6'}
 
   array-back@6.2.2:
     resolution: {integrity: sha512-gUAZ7HPyb4SJczXAMUXMGAvI976JoK3qEx9v1FTmeYuJj0IBiaKttG1ydtGKdkfqWkIkouke7nG8ufGy77+Cvw==}
@@ -9066,6 +9138,10 @@ packages:
     resolution: {integrity: sha512-mCuXncKXk5iCLhfhwTc0izo0gtEmpz5CtG2y8GiOINBlMVS6v8TMRc5TaLWKS6692m9+dVVfzgeVxR5UxWHTYw==}
     engines: {node: '>=12'}
 
+  chalk-template@0.4.0:
+    resolution: {integrity: sha512-/ghrgmhfY8RaSdeo43hNXxpoHAtxdbskUHjPpfqUWGttFgycUhYPGx3YZBCnUCvOa7Doivn1IZec3DEGFoMgLg==}
+    engines: {node: '>=12'}
+
   chalk@1.1.3:
     resolution: {integrity: sha512-U3lRVLMSlsCfjqYPbLyVv11M9CPW4I728d6TCKMAOJueEeB9/8o+eSsMnxPJD+Q+K909sdESg7C+tIkoH6on1A==}
     engines: {node: '>=0.10.0'}
@@ -9434,6 +9510,10 @@ packages:
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
+  command-line-args@5.2.1:
+    resolution: {integrity: sha512-H4UfQhZyakIjC74I9d34fGYDwk3XpSr17QhEd0Q3I9Xq1CETHo4Hcuo87WyWHpAF1aSLjLRf5lD9ZGX2qStUvg==}
+    engines: {node: '>=4.0.0'}
+
   command-line-args@6.0.1:
     resolution: {integrity: sha512-Jr3eByUjqyK0qd8W0SGFW1nZwqCaNCtbXjRo2cRJC1OYxWl3MZ5t1US3jq+cO4sPavqgw4l9BMGX0CBe+trepg==}
     engines: {node: '>=12.20'}
@@ -9442,6 +9522,10 @@ packages:
     peerDependenciesMeta:
       '@75lb/nature':
         optional: true
+
+  command-line-usage@7.0.3:
+    resolution: {integrity: sha512-PqMLy5+YGwhMh1wS04mVG44oqDsgyLRSKJBdOo1bnYhMKBW65gZF1dRp2OZRhiTjgUHljy99qkO7bsctLaw35Q==}
+    engines: {node: '>=12.20.0'}
 
   commander@10.0.1:
     resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
@@ -11293,6 +11377,10 @@ packages:
     resolution: {integrity: sha512-mAOh9gGk9WZ4ip5UjV0o6Vb4SrfnAmtsFNzkMRH9HQiFXVQnDyQFrSHTK5UoG6E+KV+s+cIznbtwpfN41l2nFA==}
     hasBin: true
 
+  find-replace@3.0.0:
+    resolution: {integrity: sha512-6Tb2myMioCAgv5kfvP5/PkZZ/ntTpVK39fHY7WkWBgvbeE+VHd/tZuZ4mrC+bxh4cfOZeYKVPaJIZtZXV7GNCQ==}
+    engines: {node: '>=4.0.0'}
+
   find-replace@5.0.2:
     resolution: {integrity: sha512-Y45BAiE3mz2QsrN2fb5QEtO4qb44NcS7en/0y9PEVsg351HsLeVclP8QPMH79Le9sH3rs5RSwJu99W0WPZO43Q==}
     engines: {node: '>=14'}
@@ -11355,6 +11443,9 @@ packages:
   flat@5.0.2:
     resolution: {integrity: sha512-b6suED+5/3rTpUBdG1gupIl8MPFCAMA0QXwmljLhvCUKcUvdE4gWky9zpuGCcXHOsz4J9wPGNWq6OKpmIzz3hQ==}
     hasBin: true
+
+  flatbuffers@24.12.23:
+    resolution: {integrity: sha512-dLVCAISd5mhls514keQzmEG6QHmUUsNuWsb4tFafIUwvvgDjXhtfAYSKOzt5SWOy+qByV5pbsDZ+Vb7HUOBEdA==}
 
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
@@ -13215,6 +13306,10 @@ packages:
 
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
+
+  json-bignum@0.0.3:
+    resolution: {integrity: sha512-2WHyXj3OfHSgNyuzDbSxI1w2jgw5gkWSWhS7Qg4bWXx1nLk3jnbwfUeS0PSba3IzpTUWdHxBieELUzXRjQB2zg==}
+    engines: {node: '>=0.8'}
 
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
@@ -16521,6 +16616,9 @@ packages:
     resolution: {integrity: sha512-x7vpciikEY7nptGzQrE5I+/pvwFZJDadPk/uEoyGSg/pZ2m/CX2n5EhSgUh+S5T7Gz3uKM6YzWcXEu3ioAsdFQ==}
     engines: {node: '>= 18'}
 
+  reflect-metadata@0.2.2:
+    resolution: {integrity: sha512-urBwgfrvVP/eAyXx4hluJivBKzuEbSQs9rKWCrCkbSxNv8mxPcUZKeuoF3Uy4mJl3Lwprp6yy5/39VWigZ4K6Q==}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -17717,6 +17815,10 @@ packages:
   tabbable@5.3.3:
     resolution: {integrity: sha512-QD9qKY3StfbZqWOPLp0++pOrAVb/HbUi5xCc8cUo4XjP19808oaMiDzn0leBY5mCespIBM0CIZePzZjgzR83kA==}
 
+  table-layout@4.1.1:
+    resolution: {integrity: sha512-iK5/YhZxq5GO5z8wb0bY1317uDF3Zjpha0QFFLA8/trAoiLbQD0HUbMesEaxyzUgDxi2QlcbM8IvqOlEjgoXBA==}
+    engines: {node: '>=12.17'}
+
   tailwind-merge@2.6.0:
     resolution: {integrity: sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA==}
 
@@ -18228,6 +18330,10 @@ packages:
     resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
     engines: {node: '>=14.17'}
     hasBin: true
+
+  typical@4.0.0:
+    resolution: {integrity: sha512-VAH4IvQ7BDFYglMd7BPRDfLgxZZX4O4TFcRDA6EN5X7erNJJq+McIEp8np9aVtxrCJ6qx4GTYVfOWNjcqwZgRw==}
+    engines: {node: '>=8'}
 
   typical@7.3.0:
     resolution: {integrity: sha512-ya4mg/30vm+DOWfBg4YK3j2WD6TWtRkCbasOJr40CseYENzCUby/7rIvXA99JGsQHeNxLbnXdyLLxKSv3tauFw==}
@@ -19061,6 +19167,10 @@ packages:
 
   wordwrap@1.0.0:
     resolution: {integrity: sha512-gvVzJFlPycKc5dZN4yPkP8w7Dc37BtP1yczEneOb4uq34pXZcvrtRTmWV8W+Ume+XCxKgbjM+nevkyFPMybd4Q==}
+
+  wordwrapjs@5.1.1:
+    resolution: {integrity: sha512-0yweIbkINJodk27gX9LBGMzyQdBDan3s/dEAiwBOj+Mf0PPyWL6/rikalkv8EeD0E8jm4o5RXEOrFTP3NXbhJg==}
+    engines: {node: '>=12.17'}
 
   workerpool@6.5.1:
     resolution: {integrity: sha512-Fs4dNYcsdpYSAfVxhnl1L5zTksjvOJxtC5hzMNl+1t9B8hTJTdKDyZ5ju7ztgPy+ft9tBFXoOlDNiOT9WUXZlA==}
@@ -23261,6 +23371,44 @@ snapshots:
 
   '@kwsites/promise-deferred@1.1.1': {}
 
+  '@lancedb/lancedb-darwin-arm64@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-darwin-x64@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-linux-arm64-gnu@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-linux-arm64-musl@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-linux-x64-gnu@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-linux-x64-musl@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-win32-arm64-msvc@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb-win32-x64-msvc@0.21.3':
+    optional: true
+
+  '@lancedb/lancedb@0.21.3(apache-arrow@18.1.0)':
+    dependencies:
+      apache-arrow: 18.1.0
+      reflect-metadata: 0.2.2
+    optionalDependencies:
+      '@lancedb/lancedb-darwin-arm64': 0.21.3
+      '@lancedb/lancedb-darwin-x64': 0.21.3
+      '@lancedb/lancedb-linux-arm64-gnu': 0.21.3
+      '@lancedb/lancedb-linux-arm64-musl': 0.21.3
+      '@lancedb/lancedb-linux-x64-gnu': 0.21.3
+      '@lancedb/lancedb-linux-x64-musl': 0.21.3
+      '@lancedb/lancedb-win32-arm64-msvc': 0.21.3
+      '@lancedb/lancedb-win32-x64-msvc': 0.21.3
+
   '@leichtgewicht/ip-codec@2.0.5': {}
 
   '@libsql/client@0.15.8':
@@ -26158,6 +26306,10 @@ snapshots:
 
   '@types/clone-deep@4.0.4': {}
 
+  '@types/command-line-args@5.2.3': {}
+
+  '@types/command-line-usage@5.0.4': {}
+
   '@types/connect-history-api-fallback@1.5.4':
     dependencies:
       '@types/express-serve-static-core': 5.0.7
@@ -27610,6 +27762,18 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.1
 
+  apache-arrow@18.1.0:
+    dependencies:
+      '@swc/helpers': 0.5.15
+      '@types/command-line-args': 5.2.3
+      '@types/command-line-usage': 5.0.4
+      '@types/node': 20.17.57
+      command-line-args: 5.2.1
+      command-line-usage: 7.0.3
+      flatbuffers: 24.12.23
+      json-bignum: 0.0.3
+      tslib: 2.8.1
+
   append-buffer@1.0.2:
     dependencies:
       buffer-equal: 1.0.1
@@ -27672,6 +27836,8 @@ snapshots:
   arr-union@2.1.0: {}
 
   arr-union@3.1.0: {}
+
+  array-back@3.1.0: {}
 
   array-back@6.2.2: {}
 
@@ -28371,6 +28537,10 @@ snapshots:
       loupe: 3.1.3
       pathval: 2.0.0
 
+  chalk-template@0.4.0:
+    dependencies:
+      chalk: 4.1.2
+
   chalk@1.1.3:
     dependencies:
       ansi-styles: 2.2.1
@@ -28759,11 +28929,25 @@ snapshots:
 
   comma-separated-tokens@2.0.3: {}
 
+  command-line-args@5.2.1:
+    dependencies:
+      array-back: 3.1.0
+      find-replace: 3.0.0
+      lodash.camelcase: 4.3.0
+      typical: 4.0.0
+
   command-line-args@6.0.1:
     dependencies:
       array-back: 6.2.2
       find-replace: 5.0.2
       lodash.camelcase: 4.3.0
+      typical: 7.3.0
+
+  command-line-usage@7.0.3:
+    dependencies:
+      array-back: 6.2.2
+      chalk-template: 0.4.0
+      table-layout: 4.1.1
       typical: 7.3.0
 
   commander@10.0.1: {}
@@ -30906,6 +31090,10 @@ snapshots:
       commander: 12.1.0
       loglevel: 1.9.2
 
+  find-replace@3.0.0:
+    dependencies:
+      array-back: 3.1.0
+
   find-replace@5.0.2: {}
 
   find-up@1.1.2:
@@ -30982,6 +31170,8 @@ snapshots:
       keyv: 4.5.4
 
   flat@5.0.2: {}
+
+  flatbuffers@24.12.23: {}
 
   flatted@3.3.3: {}
 
@@ -33406,6 +33596,8 @@ snapshots:
   json-bigint@1.0.0:
     dependencies:
       bignumber.js: 9.3.0
+
+  json-bignum@0.0.3: {}
 
   json-buffer@3.0.1: {}
 
@@ -37453,6 +37645,8 @@ snapshots:
       '@redis/search': 5.5.5(@redis/client@5.5.5)
       '@redis/time-series': 5.5.5(@redis/client@5.5.5)
 
+  reflect-metadata@0.2.2: {}
+
   reflect.getprototypeof@1.0.10:
     dependencies:
       call-bind: 1.0.8
@@ -38960,6 +39154,11 @@ snapshots:
 
   tabbable@5.3.3: {}
 
+  table-layout@4.1.1:
+    dependencies:
+      array-back: 6.2.2
+      wordwrapjs: 5.1.1
+
   tailwind-merge@2.6.0: {}
 
   tailwind-merge@3.3.0: {}
@@ -39552,6 +39751,8 @@ snapshots:
   typescript@5.6.3: {}
 
   typescript@5.8.3: {}
+
+  typical@4.0.0: {}
 
   typical@7.3.0: {}
 
@@ -40756,6 +40957,8 @@ snapshots:
   word@0.3.0: {}
 
   wordwrap@1.0.0: {}
+
+  wordwrapjs@5.1.1: {}
 
   workerpool@6.5.1: {}
 

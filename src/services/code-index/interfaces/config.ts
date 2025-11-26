@@ -7,6 +7,10 @@ import { EmbedderProvider } from "./manager"
 export interface CodeIndexConfig {
 	isConfigured: boolean
 	embedderProvider: EmbedderProvider
+	// kilocode_change start
+	vectorStoreProvider?: "lancedb" | "qdrant"
+	lancedbVectorStoreDirectoryPlaceholder?: string
+	// kilocode_change end
 	modelId?: string
 	modelDimension?: number // Generic dimension property for all providers
 	openAiOptions?: ApiHandlerOptions
@@ -29,6 +33,10 @@ export type PreviousConfigSnapshot = {
 	enabled: boolean
 	configured: boolean
 	embedderProvider: EmbedderProvider
+	// kilocode_change start
+	vectorStoreProvider?: "lancedb" | "qdrant"
+	lancedbVectorStoreDirectory?: string
+	// kilocode_change end
 	modelId?: string
 	modelDimension?: number // Generic dimension property
 	openAiKey?: string

@@ -44,6 +44,7 @@ import { experiments, EXPERIMENT_IDS } from "../../shared/experiments"
 import { applyDiffToolLegacy } from "../tools/applyDiffTool"
 import { yieldPromise } from "../kilocode"
 import Anthropic from "@anthropic-ai/sdk" // kilocode_change
+import { captureAskApproval } from "./kilocode/captureAskApprovalEvent"
 
 /**
  * Processes and presents assistant message content to the user interface.
@@ -334,8 +335,10 @@ export async function presentAssistantMessage(cline: Task) {
 						// Gatekeeper denied the action
 						pushToolResult(formatResponse.toolDenied())
 						cline.didRejectTool = true
+						captureAskApproval(block.name, false)
 						return false
 					}
+					captureAskApproval(block.name, true)
 					return true
 				}
 				// kilocode_change end
@@ -357,6 +360,7 @@ export async function presentAssistantMessage(cline: Task) {
 						pushToolResult(formatResponse.toolDenied())
 					}
 					cline.didRejectTool = true
+					captureAskApproval(block.name, false) // kilocode_change
 					return false
 				}
 
@@ -366,6 +370,7 @@ export async function presentAssistantMessage(cline: Task) {
 					pushToolResult(formatResponse.toolResult(formatResponse.toolApprovedWithFeedback(text), images))
 				}
 
+				captureAskApproval(block.name, true) // kilocode_change
 				return true
 			}
 

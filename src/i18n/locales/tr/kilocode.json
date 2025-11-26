@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (devre dışı)",
 				"tokenError": "Autocomplete kullanmak için geçerli bir token ayarlanmalı",
-				"lastCompletion": "Son öneri:",
 				"sessionTotal": "Oturum toplam maliyeti:",
 				"provider": "Sağlayıcı:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Varsayılan"
+				"defaultProfile": "Varsayılan",
+				"completionSummary": "{{startTime}} ile {{endTime}} arasında {{count}} tamamlama gerçekleştirildi, toplam maliyet {{cost}}.",
+				"providerInfo": "Otomatik tamamlamalar {{provider}} üzerinden {{model}} tarafından sağlanmaktadır."
 			},
 			"cost": {
 				"zero": "$0.00",

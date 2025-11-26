@@ -104,19 +104,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (zakázáno)",
 				"tokenError": "Pro použití Autocomplete musí být nastaven platný token",
-				"lastCompletion": "Poslední návrh:",
 				"sessionTotal": "Celkové náklady relace:",
 				"provider": "Poskytovatel:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Výchozí"
+				"defaultProfile": "Výchozí",
+				"completionSummary": "Provedeno {{count}} dokončení mezi {{startTime}} a {{endTime}}, s celkovými náklady {{cost}}.",
+				"providerInfo": "Automatické dokončování poskytuje {{model}} přes {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

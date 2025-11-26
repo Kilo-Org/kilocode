@@ -93,19 +93,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (отключено)",
 				"tokenError": "Для использования Autocomplete необходимо установить действительный токен",
-				"lastCompletion": "Последнее предложение:",
 				"sessionTotal": "Общая стоимость сессии:",
 				"provider": "Провайдер:",
 				"model": "Модель:",
 				"profile": "Профиль: ",
-				"defaultProfile": "По умолчанию"
+				"defaultProfile": "По умолчанию",
+				"completionSummary": "Выполнено {{count}} автодополнений между {{startTime}} и {{endTime}}, общая стоимость {{cost}}.",
+				"providerInfo": "Автодополнение предоставляется {{model}} через {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -9,25 +9,28 @@ Before you begin, choose one of the following development environment options:
 ### Option 1: Native Development (Recommended for MacOS/Linux/Windows Subsystem for Linux)
 
 1. **Git** - For version control
-2. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
-3. **pnpm** - Package manager (https://pnpm.io/)
-4. **Visual Studio Code** - Our recommended IDE for development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Node.js** (version [v20.19.2](https://github.com/Kilo-Org/kilocode/blob/main/.nvmrc) recommended)
+4. **pnpm** - Package manager (https://pnpm.io/)
+5. **Visual Studio Code** - Our recommended IDE for development
 
 ### Option 2: Devcontainer (Recommended for Windows)
 
 1. **Git** - For version control
-2. **Docker Desktop** - For running the development container
-3. **Visual Studio Code** - Our recommended IDE for development
-4. **Dev Containers extension** - VSCode extension for container development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Docker Desktop** - For running the development container
+4. **Visual Studio Code** - Our recommended IDE for development
+5. **Dev Containers extension** - VSCode extension for container development
 
 > **Note for Windows Contributors**: If you're having issues with WSL or want a standardized development environment, we recommend using the devcontainer option. It provides the exact same environment as our Nix flake configuration but works seamlessly on Windows without WSL.
 
 ### Option 3: Nix Flake (Recommended for NixOS/Nix users)
 
 1. **Git** - For version control
-2. **Nix** - The Nix package manager with flakes enabled
-3. **direnv** - For automatic environment loading
-4. **Visual Studio Code** - Our recommended IDE for development
+2. **Git LFS** - For large file storage (https://git-lfs.com/) - Required for handling GIF, MP4, and other binary assets
+3. **Nix** - The Nix package manager with flakes enabled
+4. **direnv** - For automatic environment loading
+5. **Visual Studio Code** - Our recommended IDE for development
 
 ## Getting Started
 
@@ -47,7 +50,16 @@ Before you begin, choose one of the following development environment options:
         ```
         Replace `[YOUR-USERNAME]` with your actual GitHub username.
 
-2. **Install dependencies**:
+2. **Setup Git LFS**:
+
+    ```bash
+    git lfs install
+    git lfs pull
+    ```
+
+    This ensures all large files (GIFs, MP4s, etc.) are properly downloaded.
+
+3. **Install dependencies**:
 
     ```bash
     pnpm install
@@ -55,7 +67,7 @@ Before you begin, choose one of the following development environment options:
 
     This command will install dependencies for the main extension, webview UI, and e2e tests.
 
-3. **Install VSCode Extensions**:
+4. **Install VSCode Extensions**:
     - **Required**: [ESBuild Problem Matchers](https://marketplace.visualstudio.com/items?itemName=connor4312.esbuild-problem-matchers) - Helps display build errors correctly.
 
 While not strictly necessary for running the extension, these extensions are recommended for development:

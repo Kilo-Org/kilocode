@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (вимкнено)",
 				"tokenError": "Для використання Autocomplete потрібно встановити дійсний токен",
-				"lastCompletion": "Остання пропозиція:",
 				"sessionTotal": "Загальна вартість сесії:",
 				"provider": "Провайдер:",
 				"model": "Модель:",
 				"profile": "Профіль: ",
-				"defaultProfile": "За замовчуванням"
+				"defaultProfile": "За замовчуванням",
+				"completionSummary": "Виконано {{count}} автодоповнень між {{startTime}} та {{endTime}}, загальна вартість {{cost}}.",
+				"providerInfo": "Автодоповнення надається {{model}} через {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

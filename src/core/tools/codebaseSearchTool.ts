@@ -35,6 +35,13 @@ export async function codebaseSearchTool(
 	if (directoryPrefix) {
 		directoryPrefix = removeClosingTag("path", directoryPrefix)
 		directoryPrefix = path.normalize(directoryPrefix)
+
+		// kilocode_change start
+		// we don't always get relative path here
+		if (path.isAbsolute(directoryPrefix)) {
+			directoryPrefix = path.relative(workspacePath, directoryPrefix)
+		}
+		// kilocode_change end
 	}
 
 	const sharedMessageProps = {

@@ -390,6 +390,32 @@ export class ExtensionHost extends EventEmitter {
 			info: console.info,
 		}
 
+		// Set up global.__interceptedConsole FIRST, before any module loading
+		// This ensures it's available when the module compilation hook runs
+		// and all extension modules can use the intercepted console
+		;(global as unknown as { __interceptedConsole: Console }).__interceptedConsole = {
+			log: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.info(message, "Extension")
+			},
+			error: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.error(message, "Extension")
+			},
+			warn: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.warn(message, "Extension")
+			},
+			debug: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.debug(message, "Extension")
+			},
+			info: (...args: unknown[]) => {
+				const message = argsToMessage(args)
+				logs.info(message, "Extension")
+			},
+		} as Console
+
 		// Override console methods to forward to LogsService ONLY (no console output)
 		// IMPORTANT: Use safe serialization to avoid circular reference errors
 		console.log = (...args: unknown[]) => {
@@ -498,31 +524,6 @@ export class ExtensionHost extends EventEmitter {
 				exports: this.vscodeAPI,
 				paths: [],
 			} as unknown as NodeModule
-
-			// Store the intercepted console in global for module injection
-			// Use safe serialization to avoid circular reference errors
-			;(global as unknown as { __interceptedConsole: Console }).__interceptedConsole = {
-				log: (...args: unknown[]) => {
-					const message = argsToMessage(args)
-					logs.info(message, "Extension")
-				},
-				error: (...args: unknown[]) => {
-					const message = argsToMessage(args)
-					logs.error(message, "Extension")
-				},
-				warn: (...args: unknown[]) => {
-					const message = argsToMessage(args)
-					logs.warn(message, "Extension")
-				},
-				debug: (...args: unknown[]) => {
-					const message = argsToMessage(args)
-					logs.debug(message, "Extension")
-				},
-				info: (...args: unknown[]) => {
-					const message = argsToMessage(args)
-					logs.info(message, "Extension")
-				},
-			} as Console
 
 			// Clear extension require cache to ensure fresh load
 			if (require.cache[extensionPath]) {

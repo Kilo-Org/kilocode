@@ -40,6 +40,7 @@ export enum TelemetryEventName {
 	AUTO_PURGE_FAILED = "Auto Purge Failed",
 	MANUAL_PURGE_TRIGGERED = "Manual Purge Triggered",
 	GHOST_SERVICE_DISABLED = "Ghost Service Disabled",
+	ASK_APPROVAL = "Ask Approval",
 	// kilocode_change end
 
 	TASK_CREATED = "Task Created",

@@ -1,5 +1,15 @@
 # @kilocode/cli
 
+## 0.8.0
+
+### Minor Changes
+
+- [#3305](https://github.com/Kilo-Org/kilocode/pull/3305) [`df83fc7`](https://github.com/Kilo-Org/kilocode/commit/df83fc71c9dcf4f8aaad0d55a0fd17732d493ff5) Thanks [@benzntech](https://github.com/benzntech)! - Custom modes support
+
+### Patch Changes
+
+- [#4027](https://github.com/Kilo-Org/kilocode/pull/4027) [`2841b10`](https://github.com/Kilo-Org/kilocode/commit/2841b10e9e86f2c74a5797ca9ec10bc93d87c17a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Thinking animation
+
 ## 0.7.0
 
 ### Minor Changes

@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Qdrant vektör veritabanına bağlanılamadı. Qdrant'ın çalıştığından ve {{qdrantUrl}} adresinde erişilebilir olduğundan emin olun. Hata: {{errorMessage}}",
-		"vectorDimensionMismatch": "Yeni model için vektör dizini güncellenemedi. Lütfen dizini temizleyip yeniden başlatmayı deneyin. Detaylar: {{errorMessage}}"
+		"vectorDimensionMismatch": "Yeni model için vektör dizini güncellenemedi. Lütfen dizini temizleyip yeniden başlatmayı deneyin. Detaylar: {{errorMessage}}",
+		"lancedbStoreInitFailed": "LanceDB vektör deposu başlatılamadı: {{errorMessage}}",
+		"lancedbLoadFailed": "LanceDB modülü yüklenemedi: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Kimlik doğrulama başarısız oldu. Lütfen ayarlardan API anahtarınızı kontrol edin.",

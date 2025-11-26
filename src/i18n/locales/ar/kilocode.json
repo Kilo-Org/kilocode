@@ -102,19 +102,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (معطل)",
 				"tokenError": "يجب تعيين رمز صالح لاستخدام الإكمال التلقائي",
-				"lastCompletion": "آخر اقتراح:",
 				"sessionTotal": "إجمالي تكلفة الجلسة:",
 				"provider": "المزود:",
 				"model": "النموذج:",
 				"profile": "الملف الشخصي: ",
-				"defaultProfile": "افتراضي"
+				"defaultProfile": "افتراضي",
+				"completionSummary": "تم إجراء {{count}} إكمال بين {{startTime}} و {{endTime}}، بتكلفة إجمالية {{cost}}.",
+				"providerInfo": "يتم توفير الإكمال التلقائي بواسطة {{model}} عبر {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",
