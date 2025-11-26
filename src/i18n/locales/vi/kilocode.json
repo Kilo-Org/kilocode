@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (đã tắt)",
 				"tokenError": "Phải đặt token hợp lệ để sử dụng Autocomplete",
-				"lastCompletion": "Gợi ý cuối cùng:",
 				"sessionTotal": "Tổng chi phí phiên:",
 				"provider": "Nhà cung cấp:",
 				"model": "Mô hình:",
 				"profile": "Hồ sơ: ",
-				"defaultProfile": "Mặc định"
+				"defaultProfile": "Mặc định",
+				"completionSummary": "Đã thực hiện {{count}} lần hoàn thành từ {{startTime}} đến {{endTime}}, với tổng chi phí {{cost}}.",
+				"providerInfo": "Tự động hoàn thành được cung cấp bởi {{model}} thông qua {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

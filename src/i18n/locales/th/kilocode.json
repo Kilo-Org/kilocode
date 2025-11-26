@@ -104,19 +104,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (ปิดใช้งาน)",
 				"tokenError": "ต้องตั้งค่าโทเค็นที่ถูกต้องเพื่อใช้ Autocomplete",
-				"lastCompletion": "คำแนะนำล่าสุด:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
 				"model": "โมเดล:",
 				"profile": "โปรไฟล์: ",
-				"defaultProfile": "ค่าเริ่มต้น"
+				"defaultProfile": "ค่าเริ่มต้น",
+				"completionSummary": "ดำเนินการเติมเต็ม {{count}} ครั้งระหว่าง {{startTime}} ถึง {{endTime}} ด้วยค่าใช้จ่ายรวม {{cost}}",
+				"providerInfo": "การเติมเต็มอัตโนมัติให้บริการโดย {{model}} ผ่าน {{provider}}"
 			},
 			"cost": {
 				"zero": "$0.00",

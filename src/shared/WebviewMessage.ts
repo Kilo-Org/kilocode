@@ -398,6 +398,8 @@ export interface WebviewMessage {
 			| "mistral"
 			| "vercel-ai-gateway"
 			| "openrouter"
+		codebaseIndexVectorStoreProvider?: "lancedb" | "qdrant" // kilocode_change
+		codebaseIndexLancedbVectorStoreDirectory?: string // kilocode_change
 		codebaseIndexEmbedderBaseUrl?: string
 		codebaseIndexEmbedderModelId: string
 		codebaseIndexEmbedderModelDimension?: number // Generic dimension for all providers

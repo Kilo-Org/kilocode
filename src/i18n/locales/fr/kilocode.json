@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (désactivé)",
 				"tokenError": "Un token valide doit être défini pour utiliser Autocomplete",
-				"lastCompletion": "Dernière suggestion :",
 				"sessionTotal": "Coût total de la session :",
 				"provider": "Fournisseur:",
 				"model": "Modèle :",
 				"profile": "Profil : ",
-				"defaultProfile": "Par défaut"
+				"defaultProfile": "Par défaut",
+				"completionSummary": "{{count}} complétions effectuées entre {{startTime}} et {{endTime}}, pour un coût total de {{cost}}.",
+				"providerInfo": "Auto-complétions fournies par {{model}} via {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

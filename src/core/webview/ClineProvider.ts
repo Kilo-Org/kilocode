@@ -2194,6 +2194,10 @@ ${prompt}
 			codebaseIndexConfig: {
 				codebaseIndexEnabled: codebaseIndexConfig?.codebaseIndexEnabled ?? true,
 				codebaseIndexQdrantUrl: codebaseIndexConfig?.codebaseIndexQdrantUrl ?? "http://localhost:6333",
+				// kilocode_change start
+				codebaseIndexVectorStoreProvider: codebaseIndexConfig?.codebaseIndexVectorStoreProvider ?? "qdrant",
+				codebaseIndexLancedbVectorStoreDirectory: codebaseIndexConfig?.codebaseIndexLancedbVectorStoreDirectory,
+				// kilocode_change end
 				codebaseIndexEmbedderProvider: codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
 				codebaseIndexEmbedderBaseUrl: codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
@@ -2469,6 +2473,12 @@ ${prompt}
 					stateValues.codebaseIndexConfig?.codebaseIndexQdrantUrl ?? "http://localhost:6333",
 				codebaseIndexEmbedderProvider:
 					stateValues.codebaseIndexConfig?.codebaseIndexEmbedderProvider ?? "openai",
+				// kilocode_change start
+				codebaseIndexVectorStoreProvider:
+					stateValues.codebaseIndexConfig?.codebaseIndexVectorStoreProvider ?? "qdrant",
+				codebaseIndexLancedbVectorStoreDirectory:
+					stateValues.codebaseIndexConfig?.codebaseIndexLancedbVectorStoreDirectory,
+				// kilocode_change end
 				codebaseIndexEmbedderBaseUrl: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderBaseUrl ?? "",
 				codebaseIndexEmbedderModelId: stateValues.codebaseIndexConfig?.codebaseIndexEmbedderModelId ?? "",
 				codebaseIndexEmbedderModelDimension:
@@ -3128,7 +3138,8 @@ ${prompt}
 
 	public async getTelemetryProperties(): Promise<TelemetryProperties> {
 		// kilocode_change start
-		const { apiConfiguration, experiments } = await this.getState()
+		const state = await this.getState()
+		const { apiConfiguration, experiments } = state
 		const task = this.getCurrentTask()
 
 		async function getModelId() {
@@ -3187,6 +3198,34 @@ ${prompt}
 				}
 			}
 		}
+
+		const getAutoApproveSettings = () => {
+			try {
+				return {
+					autoApprove: {
+						autoApprovalEnabled: !!state.autoApprovalEnabled,
+						alwaysAllowBrowser: !!state.alwaysAllowBrowser,
+						alwaysAllowExecute: !!state.alwaysAllowExecute,
+						alwaysAllowFollowupQuestions: !!state.alwaysAllowFollowupQuestions,
+						alwaysAllowMcp: !!state.alwaysAllowMcp,
+						alwaysAllowModeSwitch: !!state.alwaysAllowModeSwitch,
+						alwaysAllowReadOnly: !!state.alwaysAllowReadOnly,
+						alwaysAllowReadOnlyOutsideWorkspace: !!state.alwaysAllowReadOnlyOutsideWorkspace,
+						alwaysAllowSubtasks: !!state.alwaysAllowSubtasks,
+						alwaysAllowUpdateTodoList: !!state.alwaysAllowUpdateTodoList,
+						alwaysAllowWrite: !!state.alwaysAllowWrite,
+						alwaysAllowWriteOutsideWorkspace: !!state.alwaysAllowWriteOutsideWorkspace,
+						alwaysAllowWriteProtected: !!state.alwaysAllowWriteProtected,
+						alwaysApproveResubmit: !!state.alwaysApproveResubmit,
+						yoloModel: !!state.yoloMode,
+					},
+				}
+			} catch (error) {
+				return {
+					autoApproveException: stringifyError(error),
+				}
+			}
+		}
 		// kilocode_change end
 
 		return {
@@ -3197,6 +3236,7 @@ ${prompt}
 			...getMemory(),
 			...getFastApply(),
 			...getOpenRouter(),
+			...getAutoApproveSettings(),
 			// kilocode_change end
 			...(await this.getTaskProperties()),
 			...(await this.getGitProperties()),

@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (비활성화됨)",
 				"tokenError": "Autocomplete를 사용하려면 유효한 토큰을 설정해야 합니다",
-				"lastCompletion": "마지막 제안:",
 				"sessionTotal": "세션 총 비용:",
 				"provider": "제공업체:",
 				"model": "모델:",
 				"profile": "프로필: ",
-				"defaultProfile": "기본값"
+				"defaultProfile": "기본값",
+				"completionSummary": "{{startTime}}부터 {{endTime}}까지 {{count}}회 완성을 수행했으며, 총 비용은 {{cost}}입니다.",
+				"providerInfo": "자동완성은 {{provider}}를 통해 {{model}}에서 제공됩니다."
 			},
 			"cost": {
 				"zero": "$0.00",

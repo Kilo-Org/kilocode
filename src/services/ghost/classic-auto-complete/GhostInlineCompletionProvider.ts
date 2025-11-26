@@ -303,7 +303,7 @@ export class GhostInlineCompletionProvider implements vscode.InlineCompletionIte
 					? await this.fimPromptBuilder.getFromFIM(this.model, prompt, curriedProcessSuggestion)
 					: await this.holeFiller.getFromChat(this.model, prompt, curriedProcessSuggestion)
 
-			if (this.costTrackingCallback && result.cost > 0) {
+			if (this.costTrackingCallback) {
 				this.costTrackingCallback(
 					result.cost,
 					result.inputTokens,
