@@ -90,10 +90,14 @@
 		"selectModelPlaceholder": "Vyberte model",
 		"ollamaUrlLabel": "URL Ollama:",
 		"ollamaBaseUrlLabel": "Základní URL Ollama",
+		"vectorStoreProviderLabel": "Poskytovatel úložiště vektorů",
 		"qdrantUrlLabel": "URL Qdrant",
 		"qdrantKeyLabel": "Klíč Qdrant:",
 		"qdrantApiKeyLabel": "Klíč API Qdrant",
 		"qdrantApiKeyPlaceholder": "Zadejte svůj klíč API Qdrant (volitelné)",
+		"lancedbVectorStoreDirectoryLabel": "Cesta k LanceDB úložišti vektorů",
+		"lancedbVectorStoreDirectoryPlaceholder": "Zadejte vlastní cestu k úložišti vektorů (volitelné)",
+		"lancedbVectorStoreDirectoryDescription": "Cesta pro uložení LanceDB databáze vektorů. Pokud je prázdná, použije se výchozí umístění v globalStorageUri/vector.",
 		"setupConfigLabel": "Nastavení",
 		"advancedConfigLabel": "Pokročilá konfigurace",
 		"searchMinScoreLabel": "Prahová hodnota skóre vyhledávání",
@@ -242,6 +246,8 @@
 		"providerDocumentation": "Dokumentace {{provider}}",
 		"configProfile": "Konfigurační profil",
 		"description": "Uložte si různé konfigurace API pro rychlé přepínání mezi poskytovateli a nastaveními.",
+		"makeActiveProfile": "Nastavit jako aktivní profil",
+		"makeActiveTooltip": "Aktivuj tento profil pro použití v API požadavcích",
 		"apiProvider": "Poskytovatel API",
 		"model": "Model",
 		"nameEmpty": "Jméno nemůže být prázdné",
@@ -329,6 +335,14 @@
 		"getMiniMaxApiKey": "Získat klíč API MiniMax",
 		"minimaxBaseUrl": "Vstupní bod MiniMax",
 		"geminiApiKey": "Klíč API Gemini",
+		"nanoGptApiKey": "Klíč API Nano-GPT",
+		"getNanoGptApiKey": "Získat klíč API Nano-GPT",
+		"nanoGptModelList": "Seznam modelů",
+		"nanoGptModelListOptions": {
+			"all": "Všechny modely",
+			"personalized": "Personalizované modely",
+			"subscription": "Modely předplatného"
+		},
 		"getGroqApiKey": "Získat klíč API Groq",
 		"groqApiKey": "Klíč API Groq",
 		"getSambaNovaApiKey": "Získat klíč API SambaNova",
@@ -566,6 +580,15 @@
 			"description": "Tento poskytovatel používá OAuth autentizaci ze služby Qwen a nevyžaduje klíče API.",
 			"instructions": "Postupujte prosím podle oficiální dokumentace pro získání autorizačního souboru a umístěte jej do zadané cesty.",
 			"setupLink": "Oficiální dokumentace Qwen"
+		},
+		"profileName": "Název profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatické dokončování",
+		"profileTypeDescription": "Profily chatu se používají pro konverzace. Je povolen pouze jeden profil automatického dokončování.",
+		"autocompleteLabel": "(Automatické dokončování)",
+		"autocomplete": {
+			"onlyOneAllowed": "Je povolen pouze jeden profil automatického dokončování. Profil \"{{existingName}}\" je již nakonfigurován pro automatické dokončování. Nejprve změň jeho typ nebo ho smaž."
 		}
 	},
 	"contextWindow": {
@@ -884,8 +907,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Povolit Fast Apply",
 			"description": "Pokud je povoleno, Kilo Code může upravovat soubory pomocí Fast Apply se specializovanými modely optimalizovanými pro úpravy kódu. Vyžaduje Kilo Gateway Provider, OpenRouter nebo klíč API Morph.",
-			"apiKey": "Klíč API Morph (volitelné)",
-			"placeholder": "Zadejte svůj klíč API Morph (volitelné)",
+			"apiProvider": "Poskytovatel API",
+			"apiProviderList": {
+				"current": "Aktuální"
+			},
+			"apiKey": "Klíč API (volitelné)",
+			"placeholder": "Zadejte svůj klíč API (volitelné)",
 			"modelLabel": "Výběr modelu",
 			"modelDescription": "Vyberte, který model rychlého aplikování použít pro úpravy souborů",
 			"models": {

@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Не вдалося підключитися до векторної бази даних Qdrant. Будь ласка, переконайся, що Qdrant працює і доступний за адресою {{qdrantUrl}}. Помилка: {{errorMessage}}",
-		"vectorDimensionMismatch": "Не вдалося оновити векторний індекс для нової моделі. Будь ласка, спробуй очистити індекс і почати знову. Деталі: {{errorMessage}}"
+		"vectorDimensionMismatch": "Не вдалося оновити векторний індекс для нової моделі. Будь ласка, спробуй очистити індекс і почати знову. Деталі: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Не вдалося ініціалізувати сховище векторів LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "Не вдалося завантажити модуль LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Автентифікація не вдалася. Будь ласка, перевір свій API ключ в налаштуваннях.",

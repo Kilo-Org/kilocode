@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Voer modelnaam in",
 		"selectModel": "Selecteer een model",
 		"ollamaBaseUrlLabel": "Ollama Basis-URL",
+		"vectorStoreProviderLabel": "Vectoropslag Provider",
 		"qdrantApiKeyLabel": "Qdrant API-sleutel",
 		"qdrantApiKeyPlaceholder": "Voer je Qdrant API-sleutel in (optioneel)",
+		"lancedbVectorStoreDirectoryLabel": "Pad LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Voer een aangepast vectoropslag pad in (optioneel)",
+		"lancedbVectorStoreDirectoryDescription": "Pad om de LanceDB vectordatabase op te slaan. Als leeg, wordt de standaardlocatie in globalStorageUri/vector gebruikt.",
 		"setupConfigLabel": "Instellen",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -233,6 +237,8 @@
 		"providerDocumentation": "{{provider}} documentatie",
 		"configProfile": "Configuratieprofiel",
 		"description": "Sla verschillende API-configuraties op om snel te wisselen tussen providers en instellingen.",
+		"makeActiveProfile": "Maak actief profiel",
+		"makeActiveTooltip": "Activeer dit profiel om het te gebruiken voor API-verzoeken",
 		"apiProvider": "API-provider",
 		"model": "Model",
 		"nameEmpty": "Naam mag niet leeg zijn",
@@ -309,6 +315,14 @@
 		"moonshotApiKey": "Moonshot API-sleutel",
 		"getMoonshotApiKey": "Moonshot API-sleutel ophalen",
 		"moonshotBaseUrl": "Moonshot-ingangspunt",
+		"nanoGptApiKey": "Nano-GPT API-sleutel",
+		"getNanoGptApiKey": "Nano-GPT API-sleutel ophalen",
+		"nanoGptModelList": "Modellenlijst",
+		"nanoGptModelListOptions": {
+			"all": "Alle modellen",
+			"personalized": "Gepersonaliseerde modellen",
+			"subscription": "Abonnementsmodellen"
+		},
 		"zaiApiKey": "Z AI API-sleutel",
 		"getZaiApiKey": "Z AI API-sleutel ophalen",
 		"zaiEntrypoint": "Z AI-ingangspunt",
@@ -530,6 +544,15 @@
 			"description": "Deze provider gebruikt OAuth-authenticatie van de Qwen-service en vereist geen API-sleutels.",
 			"instructions": "Volg de officiële documentatie om het autorisatiebestand te verkrijgen en plaats het in het opgegeven pad.",
 			"setupLink": "Qwen Officiële Documentatie"
+		},
+		"profileName": "Profielnaam",
+		"profileType": "Profieltype",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Automatisch aanvullen",
+		"profileTypeDescription": "Chatprofielen worden gebruikt voor gesprekken. Er is slechts één automatisch aanvullen profiel toegestaan.",
+		"autocompleteLabel": "(Automatisch aanvullen)",
+		"autocomplete": {
+			"onlyOneAllowed": "Er is slechts één automatisch aanvullen profiel toegestaan. Profiel \"{{existingName}}\" is al geconfigureerd voor automatisch aanvullen. Wijzig eerst het type of verwijder het."
 		}
 	},
 	"browser": {
@@ -823,8 +846,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply inschakelen",
 			"description": "Wanneer ingeschakeld, kan Kilo Code bestanden bewerken met Fast Apply met gespecialiseerde modellen geoptimaliseerd voor codewijzigingen. Vereist de Kilo Gateway Provider, OpenRouter, of een Morph API-sleutel.",
-			"apiKey": "Morph API-sleutel (optioneel)",
-			"placeholder": "Voer je Morph API-sleutel in (optioneel)",
+			"apiProvider": "API-provider",
+			"apiProviderList": {
+				"current": "Huidig"
+			},
+			"apiKey": "API-sleutel (optioneel)",
+			"placeholder": "Voer je API-sleutel in (optioneel)",
 			"modelLabel": "Modelselectie",
 			"modelDescription": "Kies welk Fast Apply-model te gebruiken voor bestandsbewerkingen",
 			"models": {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { getKilocodeProfile, type KilocodeProfileData } from "../getKilocodeProfile.js"
+import { getKilocodeProfile } from "../../auth/providers/kilocode/shared.js"
+import type { KilocodeProfileData } from "../../auth/types.js"
 
 // Mock fetch globally
 const mockFetch = vi.fn()

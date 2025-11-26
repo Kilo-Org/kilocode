@@ -108,7 +108,7 @@
 		"description": "Kies hoe tool calls worden geformatteerd in de systeemprompt. JSON is momenteel experimenteel en voornamelijk bedoeld voor gebruikers die geïnteresseerd zijn in het bijdragen aan de ontwikkeling ervan.",
 		"automatic": "Laat Kilo beslissen",
 		"xml": "XML",
-		"json": "JSON (experimenteel)"
+		"json": "JSON"
 	},
 	"chat": {
 		"condense": {
@@ -237,6 +237,7 @@
 			},
 			"keybindingNotFound": "niet gevonden",
 			"noModelConfigured": "Geen geschikt autocomplete-model gevonden. Configureer een provider in de API-instellingen.",
+			"configureAutocompleteProfile": "Gebruik elk model door naar profielen te gaan en een Profiel van het Profieltype Autocomplete te configureren.",
 			"model": "Model",
 			"provider": "Provider"
 		}

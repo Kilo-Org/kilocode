@@ -21,6 +21,7 @@ export const PROVIDER_REQUIRED_FIELDS: Record<ProviderName, string[]> = {
 	openai: ["openAiApiKey"],
 	cerebras: ["cerebrasApiKey", "apiModelId"],
 	glama: ["glamaApiKey", "glamaModelId"],
+	"nano-gpt": ["nanoGptApiKey", "nanoGptModelId"],
 	huggingface: ["huggingFaceApiKey", "huggingFaceModelId", "huggingFaceInferenceProvider"],
 	litellm: ["litellmBaseUrl", "litellmApiKey", "litellmModelId"],
 	moonshot: ["moonshotBaseUrl", "moonshotApiKey", "apiModelId"],

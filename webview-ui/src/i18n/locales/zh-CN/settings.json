@@ -85,10 +85,14 @@
 		"selectModelPlaceholder": "选择模型",
 		"ollamaUrlLabel": "Ollama URL：",
 		"ollamaBaseUrlLabel": "Ollama 基础 URL",
+		"vectorStoreProviderLabel": "向量存储提供商",
 		"qdrantUrlLabel": "Qdrant URL",
 		"qdrantKeyLabel": "Qdrant 密钥：",
 		"qdrantApiKeyLabel": "Qdrant API 密钥",
 		"qdrantApiKeyPlaceholder": "输入你的 Qdrant API 密钥（可选）",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store 路径",
+		"lancedbVectorStoreDirectoryPlaceholder": "输入自定义向量存储路径（可选）",
+		"lancedbVectorStoreDirectoryDescription": "存储 LanceDB 向量数据库的路径。如果为空，将使用 globalStorageUri/vector 的默认位置。",
 		"setupConfigLabel": "设置",
 		"startIndexingButton": "开始",
 		"clearIndexDataButton": "清除索引",
@@ -234,6 +238,8 @@
 		"providerDocumentation": "{{provider}} 文档",
 		"configProfile": "配置文件",
 		"description": "保存多组API配置便于快速切换",
+		"makeActiveProfile": "设为活动配置",
+		"makeActiveTooltip": "激活此配置用于 API 请求",
 		"apiProvider": "API提供商",
 		"model": "模型",
 		"nameEmpty": "名称不能为空",
@@ -272,6 +278,14 @@
 		"headerValue": "标头值",
 		"noCustomHeaders": "暂无自定义标头。点击 + 按钮添加。",
 		"requestyApiKey": "Requesty API 密钥",
+		"nanoGptApiKey": "Nano-GPT API 密钥",
+		"getNanoGptApiKey": "获取 Nano-GPT API 密钥",
+		"nanoGptModelList": "模型列表",
+		"nanoGptModelListOptions": {
+			"all": "所有模型",
+			"personalized": "个性化模型",
+			"subscription": "订阅模型"
+		},
 		"refreshModels": {
 			"label": "刷新模型",
 			"hint": "请重新打开设置以查看最新模型。",
@@ -534,6 +548,15 @@
 			"description": "此提供商使用 Qwen 服务的 OAuth 身份验证，不需要 API 密钥。",
 			"instructions": "请按照官方文档获取授权文件并将其放置在指定路径中。",
 			"setupLink": "Qwen 官方文档"
+		},
+		"profileName": "配置名称",
+		"profileType": "配置类型",
+		"profileTypeChat": "对话",
+		"profileTypeAutocomplete": "自动补全",
+		"profileTypeDescription": "对话配置用于会话。只允许一个自动补全配置。",
+		"autocompleteLabel": "(自动补全)",
+		"autocomplete": {
+			"onlyOneAllowed": "只允许一个自动补全配置。配置「{{existingName}}」已配置为自动补全。请先更改其类型或删除它。"
 		}
 	},
 	"browser": {
@@ -862,8 +885,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "启用 Fast Apply",
 			"description": "启用后 Kilo Code 可使用专门优化的代码修改模型进行 Fast Apply 编辑文件。需要 Kilo Gateway Provider、OpenRouter 或 Morph API 密钥。",
-			"apiKey": "Morph API 密钥（可选）",
-			"placeholder": "输入您的 Morph API 密钥（可选）",
+			"apiProvider": "API 提供商",
+			"apiProviderList": {
+				"current": "当前"
+			},
+			"apiKey": "API 密钥（可选）",
+			"placeholder": "输入您的 API 密钥（可选）",
 			"modelLabel": "模型选择",
 			"modelDescription": "选择用于文件编辑的快速应用模型",
 			"models": {

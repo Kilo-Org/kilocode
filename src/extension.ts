@@ -46,7 +46,7 @@ import { registerGhostProvider } from "./services/ghost" // kilocode_change
 import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // kilocode_change
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
-import { updateCodeIndexWithKiloProps } from "./services/code-index/managed/webview" // kilocode_change
+import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -157,7 +157,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// Initialize the provider *before* the Roo Code Cloud service.
 	const provider = new ClineProvider(context, outputChannel, "sidebar", contextProxy, mdmService)
-	const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
+	// const initManagedCodeIndexing = updateCodeIndexWithKiloProps(provider) // kilocode_change
 
 	// Initialize Roo Code Cloud service.
 	const postStateListener = () => ClineProvider.getVisibleInstance()?.postStateToWebview()
@@ -430,8 +430,16 @@ export async function activate(context: vscode.ExtensionContext) {
 		})
 	}
 
-	await checkAndRunAutoLaunchingTask(context) // kilocode_change
-	await initManagedCodeIndexing // kilocode_change
+	// kilocode_change start: Initialize ManagedIndexer
+	await checkAndRunAutoLaunchingTask(context)
+	const managedIndexer = new ManagedIndexer(contextProxy)
+	context.subscriptions.push(managedIndexer)
+	void managedIndexer.start().catch((error) => {
+		outputChannel.appendLine(
+			`Failed to start ManagedIndexer: ${error instanceof Error ? error.message : String(error)}`,
+		)
+	})
+	// kilocode_change end
 
 	return new API(outputChannel, provider, socketPath, enableLogging)
 }

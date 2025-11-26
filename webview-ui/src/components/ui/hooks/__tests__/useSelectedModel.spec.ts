@@ -455,6 +455,107 @@ describe("useSelectedModel", () => {
 		})
 	})
 
+	// kilocode_change start
+	describe("litellm provider", () => {
+		beforeEach(() => {
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {},
+					unbound: {},
+					litellm: {},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			mockUseOpenRouterModelProviders.mockReturnValue({
+				data: {},
+				isLoading: false,
+				isError: false,
+			} as any)
+		})
+
+		it("should not crash when litellmDefaultModelId is not found in routerModels.litellm", () => {
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "litellm",
+				litellmModelId: "claude-3-7-sonnet-20250219", // This model doesn't exist in routerModels.litellm
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			// Should not crash and should return the model ID with undefined info
+			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
+			expect(result.current.info).toBeUndefined()
+		})
+
+		it("should return model info when litellm model exists in routerModels.litellm", () => {
+			const modelInfo: ModelInfo = {
+				maxTokens: 4096,
+				contextWindow: 8192,
+				supportsImages: false,
+				supportsPromptCache: false,
+			}
+
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {},
+					unbound: {},
+					litellm: {
+						"claude-3-7-sonnet-20250219": modelInfo,
+					},
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "litellm",
+				litellmModelId: "claude-3-7-sonnet-20250219",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			expect(result.current.id).toBe("claude-3-7-sonnet-20250219")
+			expect(result.current.info).toEqual(modelInfo)
+		})
+
+		it("should handle missing routerModels.litellm property gracefully", () => {
+			mockUseRouterModels.mockReturnValue({
+				data: {
+					openrouter: {},
+					requesty: {},
+					glama: {},
+					unbound: {},
+					// litellm property is missing entirely
+					"io-intelligence": {},
+				},
+				isLoading: false,
+				isError: false,
+			} as any)
+
+			const apiConfiguration: ProviderSettings = {
+				apiProvider: "litellm",
+				litellmModelId: "any-model-id",
+			}
+
+			const wrapper = createWrapper()
+			const { result } = renderHook(() => useSelectedModel(apiConfiguration), { wrapper })
+
+			// Should not crash and should return the model ID with undefined info
+			expect(result.current.id).toBe("any-model-id")
+			expect(result.current.info).toBeUndefined()
+		})
+	})
+	// kilocode_change end
+
 	describe("bedrock provider with 1M context", () => {
 		beforeEach(() => {
 			mockUseRouterModels.mockReturnValue({

@@ -13,6 +13,7 @@ export { IOIntelligence } from "./IOIntelligence"
 export { LMStudio } from "./LMStudio"
 export { Mistral } from "./Mistral"
 export { Moonshot } from "./Moonshot"
+export { NanoGpt } from "./NanoGpt" // kilocode_change
 export { Ollama } from "./Ollama"
 export { OpenAI } from "./OpenAI"
 export { OpenAICompatible } from "./OpenAICompatible"

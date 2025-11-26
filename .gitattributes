@@ -1,8 +1,11 @@
-demo.gif filter=lfs diff=lfs merge=lfs -text
-assets/docs/demo.gif filter=lfs diff=lfs merge=lfs -text
-src/assets/docs/demo.gif filter=lfs diff=lfs merge=lfs -text
+# Track large binary files with Git LFS
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+jetbrains/plugin/platform.zip filter=lfs diff=lfs merge=lfs -text
+
 # Test snapshot files - mark as linguist-generated to exclude from GitHub language statistics
 *.snap linguist-generated=true
+
 # Non-English translation files - mark as linguist-generated to exclude from GitHub language statistics
 # Package NLS files - mark non-English ones as generated
 src/package.nls.*.json linguist-generated=true
@@ -18,4 +21,3 @@ webview-ui/src/i18n/locales/** linguist-generated=true
 src/i18n/locales/en/** linguist-generated=false
 webview-ui/src/i18n/locales/en/** linguist-generated=false
 # This approach uses gitattributes' last-match-wins rule to exclude English while including all other locales
-jetbrains/plugin/platform.zip filter=lfs diff=lfs merge=lfs -text

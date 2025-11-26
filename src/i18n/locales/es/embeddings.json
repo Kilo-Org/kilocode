@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Error al conectar con la base de datos vectorial Qdrant. Asegúrate de que Qdrant esté funcionando y sea accesible en {{qdrantUrl}}. Error: {{errorMessage}}",
-		"vectorDimensionMismatch": "No se pudo actualizar el índice de vectores para el nuevo modelo. Intenta borrar el índice y empezar de nuevo. Detalles: {{errorMessage}}"
+		"vectorDimensionMismatch": "No se pudo actualizar el índice de vectores para el nuevo modelo. Intenta borrar el índice y empezar de nuevo. Detalles: {{errorMessage}}",
+		"lancedbStoreInitFailed": "No se pudo inicializar el almacén vectorial LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "No se pudo cargar el módulo LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Error de autenticación. Comprueba tu clave de API en los ajustes.",

@@ -96,8 +96,12 @@
 		"modelPlaceholder": "Model adını girin",
 		"selectModel": "Bir model seçin",
 		"ollamaBaseUrlLabel": "Ollama Temel URL",
+		"vectorStoreProviderLabel": "Vektör Depolama Sağlayıcısı",
 		"qdrantApiKeyLabel": "Qdrant API Anahtarı",
 		"qdrantApiKeyPlaceholder": "Qdrant API anahtarınızı girin (isteğe bağlı)",
+		"lancedbVectorStoreDirectoryLabel": "LanceDB Vector Store Yolu",
+		"lancedbVectorStoreDirectoryPlaceholder": "Özel vektör depolama yolu girin (isteğe bağlı)",
+		"lancedbVectorStoreDirectoryDescription": "LanceDB vektör veritabanının depolanacağı yol. Boşsa, globalStorageUri/vector konumunu kullanır.",
 		"setupConfigLabel": "Kurulum",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -234,6 +238,8 @@
 		"providerDocumentation": "{{provider}} Dokümantasyonu",
 		"configProfile": "Yapılandırma Profili",
 		"description": "Sağlayıcılar ve ayarlar arasında hızlıca geçiş yapmak için farklı API yapılandırmalarını kaydedin.",
+		"makeActiveProfile": "Aktif profil yap",
+		"makeActiveTooltip": "API istekleri için bu profili etkinleştir",
 		"apiProvider": "API Sağlayıcı",
 		"model": "Model",
 		"nameEmpty": "İsim boş olamaz",
@@ -416,9 +422,17 @@
 		"getUnboundApiKey": "Unbound API Anahtarı Al",
 		"unboundRefreshModelsSuccess": "Model listesi güncellendi! Artık en son modeller arasından seçim yapabilirsiniz.",
 		"unboundInvalidApiKey": "Geçersiz API anahtarı. Lütfen API anahtarınızı kontrol edin ve tekrar deneyin.",
+		"nanoGptApiKey": "Nano-GPT API Anahtarı",
+		"getNanoGptApiKey": "Nano-GPT API Anahtarı Al",
+		"nanoGptModelList": "Model Listesi",
 		"humanRelay": {
 			"description": "API anahtarı gerekmez, ancak kullanıcının bilgileri web sohbet yapay zekasına kopyalayıp yapıştırması gerekir.",
 			"instructions": "Kullanım sırasında bir iletişim kutusu açılacak ve mevcut mesaj otomatik olarak panoya kopyalanacaktır. Bunları web yapay zekalarına (ChatGPT veya Claude gibi) yapıştırmanız, ardından yapay zekanın yanıtını iletişim kutusuna kopyalayıp onay düğmesine tıklamanız gerekir."
+		},
+		"nanoGptModelListOptions": {
+			"all": "Tüm Modeller",
+			"personalized": "Kişiselleştirilmiş Modeller",
+			"subscription": "Abonelik Modelleri"
 		},
 		"roo": {
 			"authenticatedMessage": "Roo Code Cloud hesabın üzerinden güvenli bir şekilde kimlik doğrulandı.",
@@ -531,6 +545,15 @@
 			"description": "Bu sağlayıcı Qwen hizmetinden OAuth kimlik doğrulaması kullanır ve API anahtarları gerektirmez.",
 			"instructions": "Yetkilendirme dosyasını almak ve belirtilen yola yerleştirmek için lütfen resmi belgeleri takip edin.",
 			"setupLink": "Qwen Resmi Belgeleri"
+		},
+		"profileName": "Profil Adı",
+		"profileType": "Profil Türü",
+		"profileTypeChat": "Sohbet",
+		"profileTypeAutocomplete": "Otomatik Tamamlama",
+		"profileTypeDescription": "Sohbet profilleri konuşmalar için kullanılır. Yalnızca bir otomatik tamamlama profiline izin verilir.",
+		"autocompleteLabel": "(Otomatik Tamamlama)",
+		"autocomplete": {
+			"onlyOneAllowed": "Yalnızca bir otomatik tamamlama profiline izin verilir. \"{{existingName}}\" profili zaten otomatik tamamlama için yapılandırılmış. Lütfen önce türünü değiştir veya sil."
 		}
 	},
 	"browser": {
@@ -824,8 +847,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Apply'ı etkinleştir",
 			"description": "Etkinleştirildiğinde, Kilo Code dosyaları kod değişiklikleri için optimize edilmiş özel modellerle Fast Apply kullanarak düzenleyebilir. Kilo Gateway Provider, OpenRouter veya bir Morph API anahtarı gerektirir.",
-			"apiKey": "Morph API anahtarı (isteğe bağlı)",
-			"placeholder": "Morph API anahtarınızı girin (isteğe bağlı)",
+			"apiProvider": "API Sağlayıcı",
+			"apiProviderList": {
+				"current": "Mevcut"
+			},
+			"apiKey": "API anahtarı (isteğe bağlı)",
+			"placeholder": "API anahtarınızı girin (isteğe bağlı)",
 			"modelLabel": "Model Seçimi",
 			"modelDescription": "Dosya düzenlemeleri için hangi Hızlı Uygulama modelinin kullanılacağını seçin",
 			"models": {

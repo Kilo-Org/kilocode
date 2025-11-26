@@ -27,10 +27,18 @@ export const nativeFunctionCallingProviders = [
 	"moonshot",
 ] satisfies ProviderName[] as ProviderName[]
 
-const modelsDefaultingToJsonKeywords = ["claude-haiku-4.5", "claude-haiku-4-5", "minimax-m2"]
+const modelsDefaultingToJsonKeywords = [
+	"claude-haiku-4.5",
+	"claude-haiku-4-5",
+	"gpt-5-codex",
+	"gpt-5.1-codex",
+	"minimax-m2",
+]
+
 //Specific providers that default to JSON tool use, regardless of model.
 const providersDefaultingToJsonKeywords = [
 	"synthetic", //All synthetic models support JSON tools, and their pricing model strongly encourages their use
+	"inception",
 ]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {

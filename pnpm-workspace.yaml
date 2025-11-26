@@ -11,9 +11,7 @@ onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - '@vscode/vsce-sign'
   - '@vscode/sqlite3'
-  - better-sqlite3
   - core-js
   - esbuild
   - keytar
   - puppeteer-chromium-resolver
-  - sqlite3

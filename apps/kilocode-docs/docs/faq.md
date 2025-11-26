@@ -19,7 +19,7 @@ Kilo Code is an open-source AI agent extension for Visual Studio Code. It helps 
 
 Kilo Code uses large language models (LLMs) to understand your requests and translate them into actions. It can:
 
-- Read and write files in your project.
+- Read, write, and delete files in your project.
 - Execute commands in your VS Code terminal.
 - Perform web browsing (if enabled).
 - Use external tools via the Model Context Protocol (MCP).

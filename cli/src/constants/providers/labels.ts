@@ -23,6 +23,7 @@ export const PROVIDER_LABELS: Record<ProviderName, string> = {
 	"vscode-lm": "VS Code LM API",
 	openai: "OpenAI Compatible",
 	glama: "Glama",
+	"nano-gpt": "Nano-GPT",
 	huggingface: "Hugging Face",
 	litellm: "LiteLLM",
 	moonshot: "Moonshot",

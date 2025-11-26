@@ -123,13 +123,13 @@ import { ensureLocalKilorulesDirExists } from "../context/instructions/kilo-rule
 import { getMessagesSinceLastSummary, summarizeConversation } from "../condense"
 import { Gpt5Metadata, ClineMessageWithMetadata } from "./types"
 import { MessageQueueService } from "../message-queue/MessageQueueService"
-import { findPartialAskMessage, findPartialSayMessage, MessageInsertionGuard } from "../kilocode/task/message-utils" // kilocode_change
 
 import { AutoApprovalHandler } from "./AutoApprovalHandler"
 import { isAnyRecognizedKiloCodeError, isPaymentRequiredError } from "../../shared/kilocode/errorUtils"
 import { getAppUrl } from "@roo-code/types"
 import { maybeRemoveReasoningDetails_kilocode, ReasoningDetail } from "../../api/transform/kilocode/reasoning-details"
 import { mergeApiMessages } from "./kilocode"
+import { mergeEnvironmentDetailsIntoUserContent } from "../environment/kilocode/mergeEnvironmentDetailsIntoUserContent"
 
 const MAX_EXPONENTIAL_BACKOFF_SECONDS = 600 // 10 minutes
 const DEFAULT_USAGE_COLLECTION_TIMEOUT_MS = 5000 // 5 seconds
@@ -227,10 +227,6 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 	providerRef: WeakRef<ClineProvider>
 	private readonly globalStoragePath: string
 	abort: boolean = false
-
-	// kilocode_change start: Message insertion guard to prevent race conditions with checkpoint messages
-	private readonly messageInsertionGuard = new MessageInsertionGuard()
-	// kilocode_change end
 
 	// TaskStatus
 	idleAsk?: ClineMessage
@@ -684,32 +680,24 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		return readTaskMessages({ taskId: this.taskId, globalStoragePath: this.globalStoragePath })
 	}
 
-	// kilocode_change start: Guard against concurrent message insertions to prevent
 	private async addToClineMessages(message: ClineMessage) {
-		await this.messageInsertionGuard.waitForClearance()
-		this.messageInsertionGuard.acquire()
+		this.clineMessages.push(message)
+		const provider = this.providerRef.deref()
+		await provider?.postStateToWebview()
+		this.emit(RooCodeEventName.Message, { action: "created", message })
+		await this.saveClineMessages()
 
-		try {
-			this.clineMessages.push(message)
-			const provider = this.providerRef.deref()
-			await provider?.postStateToWebview()
-			this.emit(RooCodeEventName.Message, { action: "created", message })
-			await this.saveClineMessages()
+		// kilocode_change start: no cloud service
+		// const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
 
-			// kilocode_change start: no cloud service
-			// const shouldCaptureMessage = message.partial !== true && CloudService.isEnabled()
-			// if (shouldCaptureMessage) {
-			// 	CloudService.instance.captureEvent({
-			// 		event: TelemetryEventName.TASK_MESSAGE,
-			// 		properties: { taskId: this.taskId, message },
-			// 	})
-			// }
-			// kilocode_change end
-		} finally {
-			this.messageInsertionGuard.release()
-		}
+		// if (shouldCaptureMessage) {
+		// 	CloudService.instance.captureEvent({
+		// 		event: TelemetryEventName.TASK_MESSAGE,
+		// 		properties: { taskId: this.taskId, message },
+		// 	})
+		// }
+		// kilocode_change end
 	}
-	// kilocode_change end
 
 	public async overwriteClineMessages(newMessages: ClineMessage[]) {
 		this.clineMessages = newMessages
@@ -822,13 +810,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		let askTs: number
 
 		if (partial !== undefined) {
-			// kilocode_change start: Fix orphaned partial asks by searching backwards
-			// Search for the most recent partial ask of this type, handling cases where
-			// non-interactive messages (like checkpoint_saved) are inserted during streaming
-			const partialResult = findPartialAskMessage(this.clineMessages, type)
-			const lastMessage = partialResult?.message
-			const isUpdatingPreviousPartial = lastMessage !== undefined
-			// kilocode_change end
+			const lastMessage = this.clineMessages.at(-1)
+
+			const isUpdatingPreviousPartial =
+				lastMessage && lastMessage.partial && lastMessage.type === "ask" && lastMessage.ask === type
 
 			if (partial) {
 				if (isUpdatingPreviousPartial) {
@@ -1220,12 +1205,10 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 		}
 
 		if (partial !== undefined) {
-			// kilocode_change start: Fix orphaned partial says by searching backwards
-			// Search for the most recent partial say of this type
-			const partialResult = findPartialSayMessage(this.clineMessages, type)
-			const lastMessage = partialResult?.message
-			const isUpdatingPreviousPartial = lastMessage !== undefined
-			// kilocode_change end
+			const lastMessage = this.clineMessages.at(-1)
+
+			const isUpdatingPreviousPartial =
+				lastMessage && lastMessage.partial && lastMessage.type === "say" && lastMessage.say === type
 
 			if (partial) {
 				if (isUpdatingPreviousPartial) {
@@ -2008,8 +1991,7 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 			// Add environment details as its own text block, separate from tool
 			// results.
-			const finalUserContent = [...parsedUserContent, { type: "text" as const, text: environmentDetails }]
-
+			const finalUserContent = mergeEnvironmentDetailsIntoUserContent(parsedUserContent, environmentDetails) // kilocode_change: support interleaved thinking for environment details
 			await this.addToApiConversationHistory({ role: "user", content: finalUserContent })
 			TelemetryService.instance.captureConversationMessage(this.taskId, "user")
 

@@ -19,7 +19,6 @@ import {
 	// kilocode_change start
 	geminiCliDefaultModelId,
 	geminiCliModels,
-	syntheticModels,
 	syntheticDefaultModelId,
 	ovhCloudAiEndpointsDefaultModelId,
 	inceptionDefaultModelId,
@@ -110,6 +109,7 @@ export const useSelectedModel = (apiConfiguration?: ProviderSettings) => {
 			kilocodeOrganizationId: apiConfiguration?.kilocodeOrganizationId,
 			geminiApiKey: apiConfiguration?.geminiApiKey,
 			googleGeminiBaseUrl: apiConfiguration?.googleGeminiBaseUrl,
+			syntheticApiKey: apiConfiguration?.syntheticApiKey,
 		},
 		// kilocode_change end
 		{
@@ -221,7 +221,7 @@ function getSelectedModel({
 		}
 		case "litellm": {
 			const id = apiConfiguration.litellmModelId ?? litellmDefaultModelId
-			const info = routerModels.litellm[id]
+			const info = routerModels.litellm?.[id]
 			return { id, info }
 		}
 		case "deepinfra": {
@@ -445,7 +445,7 @@ function getSelectedModel({
 		// kilocode_change start
 		case "synthetic": {
 			const id = apiConfiguration.apiModelId ?? syntheticDefaultModelId
-			const info = syntheticModels[id as keyof typeof syntheticModels]
+			const info = routerModels.synthetic[id]
 			return { id, info }
 		}
 		// kilocode_change end
@@ -476,7 +476,12 @@ function getSelectedModel({
 			const info = routerModels["vercel-ai-gateway"]?.[id]
 			return { id, info }
 		}
-		// kilocode_change start
+		//kilocode_change start
+		case "nano-gpt": {
+			const id = apiConfiguration.nanoGptModelId ?? "chatgpt-4o-latest"
+			const info = routerModels["nano-gpt"]?.[id]
+			return { id, info }
+		}
 		case "ovhcloud": {
 			const id = apiConfiguration.ovhCloudAiEndpointsModelId ?? ovhCloudAiEndpointsDefaultModelId
 			const info = routerModels.ovhcloud[id]

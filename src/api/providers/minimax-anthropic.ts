@@ -32,6 +32,7 @@ export class MiniMaxAnthropicHandler extends BaseProvider implements SingleCompl
 		this.client = new Anthropic({
 			baseURL: this.options.minimaxBaseUrl || "https://api.minimax.io/anthropic",
 			apiKey: this.options.minimaxApiKey,
+			authToken: null,
 		})
 	}
 
@@ -201,13 +202,14 @@ export class MiniMaxAnthropicHandler extends BaseProvider implements SingleCompl
 				type: "usage",
 				inputTokens: 0,
 				outputTokens: 0,
-				totalCost: calculateApiCostAnthropic(
-					this.getModel().info,
-					inputTokens,
-					outputTokens,
-					cacheWriteTokens,
-					cacheReadTokens,
-				).totalCost || undefined,
+				totalCost:
+					calculateApiCostAnthropic(
+						this.getModel().info,
+						inputTokens,
+						outputTokens,
+						cacheWriteTokens,
+						cacheReadTokens,
+					).totalCost || undefined,
 			}
 		}
 	}

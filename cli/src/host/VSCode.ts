@@ -1258,6 +1258,41 @@ export class WorkspaceAPI {
 		this.fs = new FileSystemAPI()
 	}
 
+	asRelativePath(pathOrUri: string | Uri, includeWorkspaceFolder?: boolean): string {
+		const fsPath = typeof pathOrUri === "string" ? pathOrUri : pathOrUri.fsPath
+
+		// If no workspace folders, return the original path
+		if (!this.workspaceFolders || this.workspaceFolders.length === 0) {
+			return fsPath
+		}
+
+		// Try to find a workspace folder that contains this path
+		for (const folder of this.workspaceFolders) {
+			const workspacePath = folder.uri.fsPath
+
+			// Normalize paths for comparison (handle different path separators)
+			const normalizedFsPath = path.normalize(fsPath)
+			const normalizedWorkspacePath = path.normalize(workspacePath)
+
+			// Check if the path is within this workspace folder
+			if (normalizedFsPath.startsWith(normalizedWorkspacePath)) {
+				// Get the relative path
+				let relativePath = path.relative(normalizedWorkspacePath, normalizedFsPath)
+
+				// If includeWorkspaceFolder is true and there are multiple workspace folders,
+				// prepend the workspace folder name
+				if (includeWorkspaceFolder && this.workspaceFolders.length > 1) {
+					relativePath = path.join(folder.name, relativePath)
+				}
+
+				return relativePath
+			}
+		}
+
+		// If not within any workspace folder, return the original path
+		return fsPath
+	}
+
 	onDidChangeWorkspaceFolders(listener: (event: WorkspaceFoldersChangeEvent) => void): Disposable {
 		return this._onDidChangeWorkspaceFolders.event(listener)
 	}

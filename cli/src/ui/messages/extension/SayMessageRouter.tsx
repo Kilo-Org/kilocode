@@ -24,7 +24,6 @@ import {
 	SayMcpServerResponseMessage,
 	SayApiReqFinishedMessage,
 	SayApiReqRetryDelayedMessage,
-	SayCommandOutputMessage,
 } from "./say/index.js"
 
 /**
@@ -108,7 +107,7 @@ export const SayMessageRouter: React.FC<MessageComponentProps> = ({ message }) =
 			return <SayApiReqRetryDelayedMessage message={message} />
 
 		case "command_output":
-			return <SayCommandOutputMessage message={message} />
+			return null // Handled in AskMessageRouter
 
 		default:
 			return <DefaultSayMessage message={message} />

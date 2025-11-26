@@ -83,8 +83,15 @@ export async function* execGetLines({
 
 	const exit = onChildProcessExit(proc, context)
 
-	for await (const line of chunksToLinesAsync(proc.stdout)) {
-		yield line
+	try {
+		for await (const line of chunksToLinesAsync(proc.stdout)) {
+			yield line
+		}
+	} finally {
+		// CRITICAL: Kill the process if the loop breaks, returns, or throws.
+		if (!proc.killed) {
+			proc.kill()
+		}
 	}
 
 	await exit
@@ -114,9 +121,16 @@ export async function* execGetLinesStdoutStderr({
 	const stderr = withIOType("stderr", chunksToLinesAsync(proc.stderr))
 	const exit = onChildProcessExit(proc, context)
 
-	// Yield each line object from the combined iterable from stdout/stderr
-	for await (const line of combine(stdout, stderr)) {
-		yield line
+	try {
+		// Yield each line object from the combined iterable from stdout/stderr
+		for await (const line of combine(stdout, stderr)) {
+			yield line
+		}
+	} finally {
+		// CRITICAL: Kill the process if the loop breaks, returns, or throws.
+		if (!proc.killed) {
+			proc.kill()
+		}
 	}
 
 	await exit

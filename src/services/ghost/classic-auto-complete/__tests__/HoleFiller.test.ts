@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest"
 import { HoleFiller, parseGhostResponse } from "../HoleFiller"
 import { AutocompleteInput } from "../../types"
 import crypto from "crypto"
+import { AutocompleteSnippetType } from "../../../continuedev/core/autocomplete/snippets/types"
 
 function createAutocompleteInput(
 	filepath: string = "/test.ts",
@@ -22,15 +23,27 @@ describe("HoleFiller", () => {
 	let holeFiller: HoleFiller
 
 	beforeEach(() => {
-		holeFiller = new HoleFiller()
+		// Create a minimal mock context provider for basic tests
+		const mockContextProvider = {
+			getProcessedSnippets: async () => ({
+				filepathUri: "file:///test.ts",
+				helper: {
+					filepath: "file:///test.ts",
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "const x = 1;\n",
+					prunedSuffix: "",
+				},
+				snippetsWithUris: [],
+				workspaceDirs: [],
+			}),
+		} as any
+		holeFiller = new HoleFiller(mockContextProvider)
 	})
 
 	describe("getPrompts", () => {
 		it("should generate prompts with QUERY/FILL_HERE format", async () => {
 			const { systemPrompt, userPrompt } = await holeFiller.getPrompts(
 				createAutocompleteInput("/test.ts", 0, 13),
-				"const x = 1;\n",
-				"",
 				"typescript",
 			)
 
@@ -41,6 +54,8 @@ describe("HoleFiller", () => {
 			const expected = `<LANGUAGE>typescript</LANGUAGE>
 
 <QUERY>
+
+// test.ts
 const x = 1;
 {{FILL_HERE}}
 </QUERY>
@@ -53,22 +68,28 @@ Return the COMPLETION tags`
 
 		it("should include comment-wrapped context when provider is set", async () => {
 			const mockContextProvider = {
-				getFormattedContext: async () => {
-					// Simulate comment-wrapped format
-					return `// Path: utils.ts
-// export function sum(a: number, b: number) {
-//   return a + b
-// }
-// Path: app.ts
-`
-				},
+				getProcessedSnippets: async () => ({
+					filepathUri: "file:///app.ts",
+					helper: {
+						filepath: "file:///app.ts",
+						lang: { name: "typescript", singleLineComment: "//" },
+						prunedPrefix: "function calculate() {\n  ",
+						prunedSuffix: "\n}",
+					},
+					snippetsWithUris: [
+						{
+							filepath: "file:///utils.ts",
+							content: "export function sum(a: number, b: number) {\n  return a + b\n}",
+							type: AutocompleteSnippetType.Code,
+						},
+					],
+					workspaceDirs: ["file:///workspace"],
+				}),
 			} as any
 
 			const holeFillerWithContext = new HoleFiller(mockContextProvider)
 			const { userPrompt } = await holeFillerWithContext.getPrompts(
 				createAutocompleteInput("/app.ts", 5, 0),
-				"function calculate() {\n  ",
-				"\n}",
 				"typescript",
 			)
 
@@ -79,7 +100,7 @@ Return the COMPLETION tags`
 // export function sum(a: number, b: number) {
 //   return a + b
 // }
-// Path: app.ts
+// app.ts
 function calculate() {
   {{FILL_HERE}}
 }

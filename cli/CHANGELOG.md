@@ -1,5 +1,41 @@
 # @kilocode/cli
 
+## 0.9.0
+
+### Minor Changes
+
+- [#4003](https://github.com/Kilo-Org/kilocode/pull/4003) [`0bb5dfe`](https://github.com/Kilo-Org/kilocode/commit/0bb5dfeb4bb5a5cd07bb852a929acac28e02e78c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Kilo Gateway one click authorization
+
+## 0.8.0
+
+### Minor Changes
+
+- [#3305](https://github.com/Kilo-Org/kilocode/pull/3305) [`df83fc7`](https://github.com/Kilo-Org/kilocode/commit/df83fc71c9dcf4f8aaad0d55a0fd17732d493ff5) Thanks [@benzntech](https://github.com/benzntech)! - Custom modes support
+
+### Patch Changes
+
+- [#4027](https://github.com/Kilo-Org/kilocode/pull/4027) [`2841b10`](https://github.com/Kilo-Org/kilocode/commit/2841b10e9e86f2c74a5797ca9ec10bc93d87c17a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Thinking animation
+
+## 0.7.0
+
+### Minor Changes
+
+- [#3949](https://github.com/Kilo-Org/kilocode/pull/3949) [`5bc6c66`](https://github.com/Kilo-Org/kilocode/commit/5bc6c66b647ebede503c71a42512eef418dbd11a) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Continue and abort commands
+
+- [#4001](https://github.com/Kilo-Org/kilocode/pull/4001) [`fb12c27`](https://github.com/Kilo-Org/kilocode/commit/fb12c27d169da8d06eb3598160628081731b0b98) Thanks [@pandemicsyn](https://github.com/pandemicsyn)! - Support emitting Unix exit codes for signal interruption (SIGINT/SIGTERM).
+
+## 0.6.0
+
+### Minor Changes
+
+- [#3886](https://github.com/Kilo-Org/kilocode/pull/3886) [`00e6fb5`](https://github.com/Kilo-Org/kilocode/commit/00e6fb59a42dcf827f7cfe72516052c561723cd0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update Dependencies
+
+## 0.5.1
+
+### Patch Changes
+
+- [#3826](https://github.com/Kilo-Org/kilocode/pull/3826) [`70b956f`](https://github.com/Kilo-Org/kilocode/commit/70b956f79b9878e32f36c827faa490bcdcb889e7) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Allow the user to type any custom follow up suggestion
+
 ## 0.5.0
 
 ### Minor Changes
@@ -12,7 +48,7 @@
 
 ### Patch Changes
 
-- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@RSO](https://github.com/RSO)! - Support installing CLI with bun
+- [#3776](https://github.com/Kilo-Org/kilocode/pull/3776) [`81afb3f`](https://github.com/Kilo-Org/kilocode/commit/81afb3f88a719de403cc0fc4f97e66773201f528) Thanks [@Eldevia](https://github.com/Eldevia)! - Support installing CLI with bun
 
 - [#3769](https://github.com/Kilo-Org/kilocode/pull/3769) [`eff6f2b`](https://github.com/Kilo-Org/kilocode/commit/eff6f2b9e8161f4016a378a28cd0b9a4df9d5ee0) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Update providers configurations
 

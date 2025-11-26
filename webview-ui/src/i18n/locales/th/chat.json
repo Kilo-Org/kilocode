@@ -205,7 +205,9 @@
 		"didSearchReplace": "Kilo Code ทำการค้นหาและแทนที่ในไฟล์นี้:",
 		"wantsToInsert": "Kilo Code ต้องการแทรกเนื้อหาลงในไฟล์นี้:",
 		"wantsToInsertWithLineNumber": "Kilo Code ต้องการแทรกเนื้อหาลงในไฟล์นี้ที่บรรทัด {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code ต้องการเพิ่มเนื้อหาที่ท้ายไฟล์นี้:"
+		"wantsToInsertAtEnd": "Kilo Code ต้องการเพิ่มเนื้อหาที่ท้ายไฟล์นี้:",
+		"wantsToDelete": "Kilo Code ต้องการลบไฟล์นี้:",
+		"wantsToDeleteDirectory": "Kilo Code ต้องการลบไดเรกทอรีนี้:"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code ต้องการดูไฟล์ระดับบนสุดในไดเรกทอรีนี้:",

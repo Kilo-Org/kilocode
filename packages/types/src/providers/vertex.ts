@@ -6,6 +6,29 @@ export type VertexModelId = keyof typeof vertexModels
 export const vertexDefaultModelId: VertexModelId = "claude-sonnet-4-5@20250929"
 
 export const vertexModels = {
+	"gemini-3-pro-preview": {
+		maxTokens: 65_536,
+		contextWindow: 1_048_576,
+		supportsImages: true,
+		supportsPromptCache: true,
+		supportsReasoningEffort: true,
+		reasoningEffort: "low",
+		supportsTemperature: true,
+		inputPrice: 4.0,
+		outputPrice: 18.0,
+		tiers: [
+			{
+				contextWindow: 200_000,
+				inputPrice: 2.0,
+				outputPrice: 12.0,
+			},
+			{
+				contextWindow: Infinity,
+				inputPrice: 4.0,
+				outputPrice: 18.0,
+			},
+		],
+	},
 	"gemini-2.5-flash-preview-05-20:thinking": {
 		maxTokens: 65_535,
 		contextWindow: 1_048_576,
@@ -194,6 +217,17 @@ export const vertexModels = {
 		outputPrice: 5.0,
 		cacheWritesPrice: 1.25,
 		cacheReadsPrice: 0.1,
+		supportsReasoningBudget: true,
+	},
+	"claude-opus-4-5@20251101": {
+		maxTokens: 64000,
+		contextWindow: 200_000,
+		supportsImages: true,
+		supportsPromptCache: true,
+		inputPrice: 5.0,
+		outputPrice: 25.0,
+		cacheWritesPrice: 6.25,
+		cacheReadsPrice: 0.5,
 		supportsReasoningBudget: true,
 	},
 	"claude-opus-4-1@20250805": {

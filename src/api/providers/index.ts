@@ -18,6 +18,7 @@ export { LiteLLMHandler } from "./lite-llm"
 export { LmStudioHandler } from "./lm-studio"
 export { MistralHandler } from "./mistral"
 export { OllamaHandler } from "./ollama"
+export { NanoGptHandler } from "./nano-gpt" // kilocode_change
 export { OpenAiNativeHandler } from "./openai-native"
 export { OpenAiHandler } from "./openai"
 export { OpenRouterHandler } from "./openrouter"

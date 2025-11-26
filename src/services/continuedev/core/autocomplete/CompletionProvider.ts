@@ -18,9 +18,6 @@ import { AutocompleteLruCacheInMem } from "./util/AutocompleteLruCacheInMem.js"
 import { HelperVars } from "./util/HelperVars.js"
 import { AutocompleteInput, AutocompleteOutcome } from "./util/types.js"
 
-// Sqlite AutoCompleteLruCache also has constant initialization
-// const autocompleteCache = AutoCompleteLruCache.get()
-
 // Errors that can be expected on occasion even during normal functioning should not be shown.
 // Not worth disrupting the user to tell them that a single autocomplete request didn't go through
 const ERRORS_TO_IGNORE = [

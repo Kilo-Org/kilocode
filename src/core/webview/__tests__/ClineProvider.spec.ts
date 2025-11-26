@@ -1189,6 +1189,13 @@ describe("ClineProvider", () => {
 			listConfig: vi.fn().mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
 			saveConfig: vi.fn().mockResolvedValue("test-id"),
 			setModeConfig: vi.fn(),
+			// kilocode_change start
+			getProfile: vi.fn().mockResolvedValue({
+				name: "test-config",
+				apiProvider: "anthropic",
+				id: "test-id",
+			}),
+			//kilocode_change end
 		} as any
 
 		// Update API configuration
@@ -1198,8 +1205,10 @@ describe("ClineProvider", () => {
 			apiConfiguration: { apiProvider: "anthropic" },
 		})
 
-		// Should save config as default for current mode
-		expect(provider.providerSettingsManager.setModeConfig).toHaveBeenCalledWith("code", "test-id")
+		// kilocode_change start
+		// upsertApiConfiguration now passes activate=false, so setModeConfig should NOT be called
+		expect(provider.providerSettingsManager.setModeConfig).not.toHaveBeenCalled()
+		// kilocode_change end
 	})
 
 	test("file content includes line numbers", async () => {
@@ -2070,6 +2079,14 @@ describe("ClineProvider", () => {
 				listConfig: vi
 					.fn()
 					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
+				// kilocode_change start
+				getProfile: vi.fn().mockResolvedValue({
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					id: "test-id",
+				}),
+				// kilocode_change end
 			} as any
 
 			const testApiConfig = {
@@ -2091,7 +2108,11 @@ describe("ClineProvider", () => {
 			expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
 				{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
 			])
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+
+			// kilocode_change start
+			// currentApiConfigName should NOT be updated when activate=false
+			expect(mockContext.globalState.update).not.toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change end
 
 			// Verify state was posted to webview
 			expect(mockPostMessage).toHaveBeenCalledWith(expect.objectContaining({ type: "state" }))
@@ -2101,19 +2122,22 @@ describe("ClineProvider", () => {
 			await provider.resolveWebviewView(mockWebviewView)
 			const messageHandler = (mockWebviewView.webview.onDidReceiveMessage as any).mock.calls[0][0]
 
-			// Mock buildApiHandler to throw an error
-			const { buildApiHandler } = await import("../../../api")
-
-			;(buildApiHandler as any).mockImplementationOnce(() => {
-				throw new Error("API handler error")
-			})
+			// kilocode_change start
+			// Mock saveConfig to throw an error to test error handling
 			;(provider as any).providerSettingsManager = {
 				setModeConfig: vi.fn(),
-				saveConfig: vi.fn().mockResolvedValue(undefined),
+				saveConfig: vi.fn().mockRejectedValue(new Error("Failed to save config")),
 				listConfig: vi
 					.fn()
 					.mockResolvedValue([{ name: "test-config", id: "test-id", apiProvider: "anthropic" }]),
+				getProfile: vi.fn().mockResolvedValue({
+					name: "test-config",
+					apiProvider: "anthropic",
+					apiKey: "test-key",
+					id: "test-id",
+				}),
 			} as any
+			// kilocode_change end
 
 			// Setup Task instance with auto-mock from the top of the file
 			const mockCline = new Task(defaultTaskOptions) // Create a new mocked instance
@@ -2137,11 +2161,13 @@ describe("ClineProvider", () => {
 			)
 			expect(vscode.window.showErrorMessage).toHaveBeenCalledWith("errors.create_api_config")
 
-			// Verify state was still updated
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
-				{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
-			])
-			expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change start
+			// // Verify state was still updated
+			// expect(mockContext.globalState.update).toHaveBeenCalledWith("listApiConfigMeta", [
+			// 	{ name: "test-config", id: "test-id", apiProvider: "anthropic" },
+			// ])
+			// expect(mockContext.globalState.update).toHaveBeenCalledWith("currentApiConfigName", "test-config")
+			// kilocode_change end
 		})
 
 		test("handles successful saveApiConfiguration", async () => {
@@ -2707,6 +2733,7 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
+				nanoGptApiKey: "nano-gpt-key",
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				inceptionLabsApiKey: "inception-key",
 				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
@@ -2776,11 +2803,13 @@ describe("ClineProvider - Router Models", () => {
 				gemini: mockModels, // kilocode_change
 				requesty: mockModels,
 				glama: mockModels,
+				synthetic: mockModels, // kilocode_change
 				unbound: mockModels,
 				roo: mockModels,
 				chutes: mockModels,
 				litellm: mockModels,
 				kilocode: mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
@@ -2809,9 +2838,11 @@ describe("ClineProvider - Router Models", () => {
 				chutesApiKey: "chutes-key",
 				geminiApiKey: "gemini-key",
 				googleGeminiBaseUrl: "https://gemini.example.com",
+				nanoGptApiKey: "nano-gpt-key", // kilocode_change
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				inceptionLabsApiKey: "inception-key",
 				inceptionLabsBaseUrl: "https://api.inceptionlabs.ai/v1/",
+				syntheticApiKey: "synthetic-key",
 				// kilocode_change end
 			},
 		} as any)
@@ -2832,8 +2863,10 @@ describe("ClineProvider - Router Models", () => {
 			.mockRejectedValueOnce(new Error("Ollama API error")) // kilocode_change
 			.mockResolvedValueOnce(mockModels) // vercel-ai-gateway success
 			.mockResolvedValueOnce(mockModels) // deepinfra success
+			.mockResolvedValueOnce(mockModels) // nano-gpt success // kilocode_change
 			.mockResolvedValueOnce(mockModels) // kilocode_change: ovhcloud
 			.mockResolvedValueOnce(mockModels) // kilocode_change: inception success
+			.mockResolvedValueOnce(mockModels) // kilocode_change: synthetic success
 			.mockResolvedValueOnce(mockModels) // roo success
 			.mockRejectedValueOnce(new Error("Chutes API error")) // chutes fail
 			.mockRejectedValueOnce(new Error("LiteLLM connection failed")) // litellm fail
@@ -2856,9 +2889,11 @@ describe("ClineProvider - Router Models", () => {
 				lmstudio: {},
 				litellm: {},
 				kilocode: {},
+				"nano-gpt": mockModels, // kilocode_change
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
 				inception: mockModels, // kilocode_change
+				synthetic: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},
@@ -2972,6 +3007,7 @@ describe("ClineProvider - Router Models", () => {
 				// kilocode_change start
 				ovhCloudAiEndpointsApiKey: "ovhcloud-key",
 				chutesApiKey: "chutes-key",
+				nanoGptApiKey: "nano-gpt-key",
 				// kilocode_change end
 				// No litellm config
 			},
@@ -3006,11 +3042,13 @@ describe("ClineProvider - Router Models", () => {
 				chutes: mockModels,
 				litellm: {},
 				kilocode: mockModels,
+				"nano-gpt": mockModels, // kilocode_change
 				ollama: mockModels, // kilocode_change
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
 				ovhcloud: mockModels, // kilocode_change
 				inception: mockModels, // kilocode_change
+				synthetic: mockModels, // kilocode_change
 				huggingface: {},
 				"io-intelligence": {},
 			},

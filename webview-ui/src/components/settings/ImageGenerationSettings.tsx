@@ -20,6 +20,7 @@ interface ImageGenerationSettingsProps {
 // Hardcoded list of image generation models
 const IMAGE_GENERATION_MODELS = [
 	{ value: "google/gemini-2.5-flash-image", label: "Gemini 2.5 Flash Image" },
+	{ value: "google/gemini-3-pro-image-preview", label: "Gemini 3 Pro Image Preview" }, // kilocode_change
 	{ value: "openai/gpt-5-image", label: "GPT-5 Image" },
 	{ value: "openai/gpt-5-image-mini", label: "GPT-5 Image Mini" },
 	// Add more models as they become available

@@ -1,3 +1,4 @@
+import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer" // kilocode_change
 import { CodeIndexManager } from "../../../services/code-index/manager"
 
 export function getObjectiveSection(
@@ -6,7 +7,7 @@ export function getObjectiveSection(
 ): string {
 	const isCodebaseSearchAvailable =
 		// kilocode_change start
-		codeIndexManager?.isManagedIndexingAvailable ||
+		ManagedIndexer.getInstance().isEnabled() ||
 		(codeIndexManager &&
 			codeIndexManager.isFeatureEnabled &&
 			codeIndexManager.isFeatureConfigured &&

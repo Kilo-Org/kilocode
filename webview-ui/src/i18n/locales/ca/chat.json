@@ -192,7 +192,9 @@
 		"wantsToGenerateImage": "Kilo Code vol generar una imatge",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code vol generar una imatge fora de l'espai de treball",
 		"wantsToGenerateImageProtected": "Kilo Code vol generar una imatge en una ubicació protegida",
-		"didGenerateImage": "Kilo Code ha generat una imatge"
+		"didGenerateImage": "Kilo Code ha generat una imatge",
+		"wantsToDelete": "Kilo Code vol eliminar aquest fitxer",
+		"wantsToDeleteDirectory": "Kilo Code vol eliminar aquest directori"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code vol veure els fitxers de nivell superior en aquest directori",

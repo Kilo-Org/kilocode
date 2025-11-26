@@ -169,7 +169,7 @@ describe("CustomModesManager - Organization Modes", () => {
 			const modes = await manager.fetchOrganizationModes("test-token", "org-123")
 
 			expect(axios.get).toHaveBeenCalledWith(
-				"https://api.kilocode.ai/api/organizations/org-123/modes",
+				"https://api.kilo.ai/api/organizations/org-123/modes",
 				expect.objectContaining({
 					headers: expect.objectContaining({
 						Authorization: "Bearer test-token",

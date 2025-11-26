@@ -205,7 +205,9 @@
 		"didSearchReplace": "Kilo Code أجرى بحثًا واستبدالًا في هذا الملف:",
 		"wantsToInsert": "Kilo Code يريد إدراج محتوى في هذا الملف:",
 		"wantsToInsertWithLineNumber": "Kilo Code يريد إدراج محتوى في هذا الملف عند السطر {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code يريد إضافة محتوى في نهاية هذا الملف:"
+		"wantsToInsertAtEnd": "Kilo Code يريد إضافة محتوى في نهاية هذا الملف:",
+		"wantsToDelete": "Kilo Code يريد حذف هذا الملف",
+		"wantsToDeleteDirectory": "Kilo Code يريد حذف هذا المجلد"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code يريد عرض الملفات العلوية في هذا المجلد:",

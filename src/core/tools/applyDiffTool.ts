@@ -2,7 +2,11 @@ import path from "path"
 import fs from "fs/promises"
 
 import { TelemetryService } from "@roo-code/telemetry"
-import { DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
+import {
+	DEFAULT_WRITE_DELAY_MS,
+	getActiveToolUseStyle,
+	getModelId, // kilocode_change
+} from "@roo-code/types"
 
 import { ClineSayTool } from "../../shared/ExtensionMessage"
 import { getReadablePath } from "../../utils/path"
@@ -14,6 +18,11 @@ import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
 import { unescapeHtmlEntities } from "../../utils/text-normalization"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 
+// kilocode_change start
+import { shouldUseSearchAndReplaceInsteadOfApplyDiff } from "../prompts/tools/native-tools/search_and_replace"
+import { searchAndReplaceTool } from "./kilocode/searchAndReplaceTool"
+// kilocode_change end
+
 export async function applyDiffToolLegacy(
 	cline: Task,
 	block: ToolUse,
@@ -22,6 +31,18 @@ export async function applyDiffToolLegacy(
 	pushToolResult: PushToolResult,
 	removeClosingTag: RemoveClosingTag,
 ) {
+	// kilocode_change start
+	if (
+		shouldUseSearchAndReplaceInsteadOfApplyDiff(
+			getActiveToolUseStyle(cline.apiConfiguration),
+			getModelId(cline.apiConfiguration) ?? "",
+		)
+	) {
+		await searchAndReplaceTool(cline, block, askApproval, handleError, pushToolResult)
+		return
+	}
+	// kilocode_change end
+
 	const relPath: string | undefined = block.params.path
 	let diffContent: string | undefined = block.params.diff
 

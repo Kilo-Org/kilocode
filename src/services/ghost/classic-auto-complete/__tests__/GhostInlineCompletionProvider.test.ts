@@ -369,7 +369,17 @@ describe("GhostInlineCompletionProvider", () => {
 		// Create mock context provider with IDE
 		mockContextProvider = {
 			getIde: vi.fn().mockReturnValue(mockIde),
-			getFormattedContext: vi.fn().mockResolvedValue(""),
+			getProcessedSnippets: vi.fn().mockResolvedValue({
+				filepathUri: "file:///test.ts",
+				helper: {
+					filepath: "file:///test.ts",
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "const x = 1",
+					prunedSuffix: "\nconst y = 2",
+				},
+				snippetsWithUris: [],
+				workspaceDirs: [],
+			}),
 		}
 
 		// Create mock dependencies
@@ -382,6 +392,7 @@ describe("GhostInlineCompletionProvider", () => {
 				cacheReadTokens: 0,
 			}),
 			getModelName: vi.fn().mockReturnValue("test-model"),
+			supportsFim: vi.fn().mockReturnValue(false), // Default to false for non-FIM tests
 		} as unknown as GhostModel
 		mockCostTrackingCallback = vi.fn() as CostTrackingCallback
 

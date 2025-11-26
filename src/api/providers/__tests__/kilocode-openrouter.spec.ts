@@ -50,6 +50,17 @@ describe("KilocodeOpenrouterHandler", () => {
 
 	beforeEach(() => vitest.clearAllMocks())
 
+	it("getRolloutHash returns a deterministic hash based on token", () => {
+		const handler = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: undefined })
+		expect(handler.getRolloutHash()).toBeUndefined()
+
+		const handlerA = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: "token-A" })
+		expect(handlerA.getRolloutHash()).toEqual(4000417282)
+
+		const handlerB = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: "token-B" })
+		expect(handlerB.getRolloutHash()).toEqual(398635706)
+	})
+
 	describe("customRequestOptions", () => {
 		it("includes taskId header when provided in metadata", () => {
 			const handler = new KilocodeOpenrouterHandler(mockOptions)
@@ -252,6 +263,13 @@ describe("KilocodeOpenrouterHandler", () => {
 			;(streamSse as any).mockImplementation(async function* () {
 				yield { choices: [{ delta: { content: "chunk1" } }] }
 				yield { choices: [{ delta: { content: "chunk2" } }] }
+				yield {
+					usage: {
+						prompt_tokens: 10,
+						completion_tokens: 5,
+						total_tokens: 15,
+					},
+				}
 			})
 
 			const mockResponse = {
@@ -263,11 +281,20 @@ describe("KilocodeOpenrouterHandler", () => {
 			global.fetch = vitest.fn().mockResolvedValue(mockResponse)
 
 			const chunks: string[] = []
-			for await (const chunk of handler.streamFim("prefix", "suffix")) {
+			let receivedUsage: any = null
+
+			for await (const chunk of handler.streamFim("prefix", "suffix", undefined, (usage) => {
+				receivedUsage = usage
+			})) {
 				chunks.push(chunk)
 			}
 
 			expect(chunks).toEqual(["chunk1", "chunk2"])
+			expect(receivedUsage).toEqual({
+				prompt_tokens: 10,
+				completion_tokens: 5,
+				total_tokens: 15,
+			})
 			expect(streamSse).toHaveBeenCalledWith(mockResponse)
 		})
 

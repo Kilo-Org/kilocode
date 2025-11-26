@@ -1,4 +1,4 @@
-import { getKiloUrlFromToken } from "@roo-code/types"
+import { getApiUrl } from "@roo-code/types"
 import { logs } from "../services/logs.js"
 import type { KilocodeNotification } from "../state/atoms/notifications.js"
 import type { ProviderConfig } from "../config/types.js"
@@ -33,7 +33,7 @@ export async function fetchKilocodeNotifications({
 		return []
 	}
 
-	const url = getKiloUrlFromToken("https://api.kilocode.ai/api/users/notifications", kilocodeToken)
+	const url = getApiUrl("/api/users/notifications")
 
 	logs.debug("Fetching Kilocode notifications", "NotificationsUtil", { url })
 

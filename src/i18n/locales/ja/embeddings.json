@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Qdrantベクターデータベースへの接続に失敗しました。Qdrantが実行中で{{qdrantUrl}}でアクセス可能であることを確認してください。エラー：{{errorMessage}}",
-		"vectorDimensionMismatch": "新しいモデルのベクトルインデックスの更新に失敗しました。インデックスをクリアして再試行してください。詳細：{{errorMessage}}"
+		"vectorDimensionMismatch": "新しいモデルのベクトルインデックスの更新に失敗しました。インデックスをクリアして再試行してください。詳細：{{errorMessage}}",
+		"lancedbStoreInitFailed": "LanceDBベクトルストアの初期化に失敗しました: {{errorMessage}}",
+		"lancedbLoadFailed": "LanceDBモジュールの読み込みに失敗しました: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "認証に失敗しました。設定でAPIキーを確認してください。",

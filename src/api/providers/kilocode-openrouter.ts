@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
@@ -41,6 +42,11 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		super(options)
 
 		this.apiFIMBase = baseApiUrl
+	}
+
+	public getRolloutHash(): number | undefined {
+		const token = this.options.kilocodeToken
+		return !token ? undefined : crypto.createHash("sha256").update(token).digest().readUInt32BE(0)
 	}
 
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {
@@ -144,7 +150,12 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		return result
 	}
 
-	async *streamFim(prefix: string, suffix: string, taskId?: string): AsyncGenerator<string> {
+	async *streamFim(
+		prefix: string,
+		suffix: string,
+		taskId?: string,
+		onUsage?: (usage: CompletionUsage) => void,
+	): AsyncGenerator<string> {
 		const model = await this.fetchModel()
 		const endpoint = new URL("fim/completions", this.apiFIMBase)
 
@@ -157,15 +168,19 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			Authorization: `Bearer ${this.options.kilocodeToken}`,
 			...this.customRequestOptions(taskId ? { taskId, mode: "code" } : undefined)?.headers,
 		}
-		const max_max_tokens = 1000
+
+		// temperature: 0.2 is mentioned as a sane example in mistral's docs and is what continue uses.
+		const temperature = 0.2
+		const maxTokens = 256
+
 		const response = await fetch(endpoint, {
 			method: "POST",
 			body: JSON.stringify({
 				model: model.id,
 				prompt: prefix,
 				suffix,
-				max_tokens: Math.min(max_max_tokens, model.maxTokens ?? max_max_tokens),
-				temperature: model.temperature,
+				max_tokens: Math.min(maxTokens, model.maxTokens ?? maxTokens),
+				temperature,
 				top_p: model.topP,
 				stream: true,
 			}),
@@ -181,6 +196,11 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 			const content = data.choices?.[0]?.delta?.content
 			if (content) {
 				yield content
+			}
+
+			// Call usage callback when available
+			if (data.usage && onUsage) {
+				onUsage(data.usage)
 			}
 		}
 	}

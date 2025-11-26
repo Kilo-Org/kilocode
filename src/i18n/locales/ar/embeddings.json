@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "فشل الاتصال بقاعدة بيانات المتجهات Qdrant. تأكد أن Qdrant شغّال ومتوفّر على {{qdrantUrl}}. الخطأ: {{errorMessage}}",
-		"vectorDimensionMismatch": "فشل في تحديث فهرس المتجهات للنموذج الجديد. يرجى محاولة مسح الفهرس والبدء من جديد. التفاصيل: {{errorMessage}}"
+		"vectorDimensionMismatch": "فشل في تحديث فهرس المتجهات للنموذج الجديد. يرجى محاولة مسح الفهرس والبدء من جديد. التفاصيل: {{errorMessage}}",
+		"lancedbStoreInitFailed": "فشل في تهيئة متجر متجهات LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "فشل في تحميل وحدة LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "فشل التحقق من الهوية. يرجى التحقق من مفتاح الـ API في الإعدادات.",

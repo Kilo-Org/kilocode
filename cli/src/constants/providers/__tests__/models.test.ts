@@ -114,7 +114,7 @@ describe("Static Provider Models", () => {
 				})
 
 				expect(result.models).toBeDefined()
-				expect(result.defaultModel).toBe("gemini-2.0-flash-001")
+				expect(result.defaultModel).toBe("gemini-3-pro-preview") // kilocode_change
 				expect(result.models[result.defaultModel]).toBeDefined()
 			})
 

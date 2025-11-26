@@ -186,6 +186,8 @@
 		"wantsToInsert": "需要在此文件中插入内容",
 		"wantsToInsertWithLineNumber": "需要在第 {{lineNumber}} 行插入内容",
 		"wantsToInsertAtEnd": "需要在文件末尾添加内容",
+		"wantsToDelete": "需要删除文件",
+		"wantsToDeleteDirectory": "Kilo Code 想要删除此目录",
 		"wantsToReadAndXMore": "Kilo Code 想读取此文件以及另外 {{count}} 个文件",
 		"wantsToReadMultiple": "Kilo Code 想要读取多个文件",
 		"wantsToApplyBatchChanges": "Kilo Code 想要对多个文件应用更改",

@@ -205,7 +205,9 @@
 		"didSearchReplace": "Kilo Code виконав пошук і заміну в цьому файлі:",
 		"wantsToInsert": "Kilo Code хоче вставити вміст у цей файл:",
 		"wantsToInsertWithLineNumber": "Kilo Code хоче вставити вміст у цей файл на рядку {{lineNumber}}:",
-		"wantsToInsertAtEnd": "Kilo Code хоче додати вміст в кінець цього файлу:"
+		"wantsToInsertAtEnd": "Kilo Code хоче додати вміст в кінець цього файлу:",
+		"wantsToDelete": "Kilo Code хоче видалити цей файл",
+		"wantsToDeleteDirectory": "Kilo Code хоче видалити цю директорію"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code хоче переглянути файли верхнього рівня в цій директорії:",

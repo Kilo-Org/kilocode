@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
 import { ZodError } from "zod"
+import { EventEmitter } from "events"
 
 import {
 	PROVIDER_SETTINGS_KEYS,
@@ -19,6 +20,14 @@ import {
 import { TelemetryService } from "@roo-code/telemetry"
 
 import { logger } from "../../utils/logging"
+
+// kilocode_change start: Configuration change event types
+export interface ManagedIndexerConfig {
+	kilocodeToken: string | null
+	kilocodeOrganizationId: string | null
+	kilocodeTesterWarningsDisabledUntil: number | null
+}
+// kilocode_change end
 
 type GlobalStateKey = keyof GlobalState
 type SecretStateKey = keyof SecretState
@@ -40,6 +49,9 @@ export class ContextProxy {
 	private stateCache: GlobalState
 	private secretCache: SecretState
 	private _isInitialized = false
+	// kilocode_change start: Event emitter for configuration changes
+	private readonly configEmitter = new EventEmitter()
+	// kilocode_change end
 
 	constructor(context: vscode.ExtensionContext) {
 		this.originalContext = context
@@ -295,6 +307,12 @@ export class ContextProxy {
 	}
 
 	public async setProviderSettings(values: ProviderSettings) {
+		// kilocode_change start: Capture old values for change detection
+		const oldToken = this.secretCache.kilocodeToken
+		const oldOrgId = this.stateCache.kilocodeOrganizationId
+		const oldTesterWarnings = this.stateCache.kilocodeTesterWarningsDisabledUntil
+		// kilocode_change end
+
 		// Explicitly clear out any old API configuration values before that
 		// might not be present in the new configuration.
 		// If a value is not present in the new configuration, then it is assumed
@@ -316,6 +334,20 @@ export class ContextProxy {
 				.reduce((acc, key) => ({ ...acc, [key]: undefined }), {} as ProviderSettings),
 			...values,
 		})
+
+		// kilocode_change start: Emit event if managed indexer config changed
+		const newToken = this.secretCache.kilocodeToken
+		const newOrgId = this.stateCache.kilocodeOrganizationId
+		const newTesterWarnings = this.stateCache.kilocodeTesterWarningsDisabledUntil
+
+		if (oldToken !== newToken || oldOrgId !== newOrgId || oldTesterWarnings !== newTesterWarnings) {
+			this.configEmitter.emit("managed-indexer-config-changed", {
+				kilocodeToken: newToken ?? null,
+				kilocodeOrganizationId: newOrgId ?? null,
+				kilocodeTesterWarningsDisabledUntil: newTesterWarnings ?? null,
+			} as ManagedIndexerConfig)
+		}
+		// kilocode_change end
 	}
 
 	/**
@@ -386,6 +418,20 @@ export class ContextProxy {
 
 		await this.initialize()
 	}
+
+	// kilocode_change start: Public API for managed indexer configuration changes
+	/**
+	 * Subscribe to managed indexer configuration changes
+	 * @param listener Callback function that receives the new configuration
+	 * @returns Disposable to unsubscribe from the event
+	 */
+	public onManagedIndexerConfigChange(listener: (config: ManagedIndexerConfig) => void): vscode.Disposable {
+		this.configEmitter.on("managed-indexer-config-changed", listener)
+		return {
+			dispose: () => this.configEmitter.off("managed-indexer-config-changed", listener),
+		}
+	}
+	// kilocode_change end
 
 	private static _instance: ContextProxy | null = null
 
