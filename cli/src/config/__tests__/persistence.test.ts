@@ -86,12 +86,50 @@ describe("Config Persistence", () => {
 	})
 
 	describe("loadConfig", () => {
-		it("should create default config if file doesn't exist", async () => {
+		it("should return default config in memory without creating file if file doesn't exist", async () => {
 			const result = await loadConfig()
 			expect(result.config).toEqual(DEFAULT_CONFIG)
 			// Default config has empty credentials, so validation should fail
 			expect(result.validation.valid).toBe(false)
 			expect(result.validation.errors).toBeDefined()
+
+			// Verify that the config file was NOT created
+			const exists = await configExists()
+			expect(exists).toBe(false)
+		})
+
+		it("should create config file when saveConfig is called after loadConfig", async () => {
+			// Load config (should not create file)
+			const result = await loadConfig()
+			expect(result.config).toEqual(DEFAULT_CONFIG)
+
+			// Verify file doesn't exist yet
+			let exists = await configExists()
+			expect(exists).toBe(false)
+
+			// Now save a valid config
+			const validConfig: CLIConfig = {
+				...DEFAULT_CONFIG,
+				provider: "test-provider",
+				providers: [
+					{
+						id: "test-provider",
+						provider: "kilocode",
+						kilocodeToken: "test-token-1234567890",
+						kilocodeModel: "anthropic/claude-sonnet-4.5",
+					},
+				],
+			}
+			await saveConfig(validConfig)
+
+			// Now file should exist
+			exists = await configExists()
+			expect(exists).toBe(true)
+
+			// And we should be able to load it
+			const loadedResult = await loadConfig()
+			expect(loadedResult.config).toEqual(validConfig)
+			expect(loadedResult.validation.valid).toBe(true)
 		})
 
 		it("should load existing config from file", async () => {

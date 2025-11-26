@@ -21,7 +21,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.kilocode.ai/api/profile/balance",
+			"https://api.kilo.ai/api/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,
@@ -59,7 +59,7 @@ describe("checkKilocodeBalance", () => {
 		const result = await checkKilocodeBalance(mockToken, mockOrgId)
 		expect(result).toBe(true)
 		expect(global.fetch).toHaveBeenCalledWith(
-			"https://api.kilocode.ai/api/profile/balance",
+			"https://api.kilo.ai/api/profile/balance",
 			expect.objectContaining({
 				headers: expect.objectContaining({
 					Authorization: `Bearer ${mockToken}`,

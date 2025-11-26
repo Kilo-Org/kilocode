@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete（無効）",
 				"tokenError": "Autocompleteを使用するには有効なトークンを設定する必要があります",
-				"lastCompletion": "最後の提案:",
 				"sessionTotal": "セッション合計コスト:",
 				"provider": "プロバイダー:",
 				"model": "モデル:",
 				"profile": "プロファイル: ",
-				"defaultProfile": "デフォルト"
+				"defaultProfile": "デフォルト",
+				"completionSummary": "{{startTime}}から{{endTime}}の間に{{count}}回の補完を実行し、合計コストは{{cost}}です。",
+				"providerInfo": "オートコンプリートは{{provider}}経由で{{model}}によって提供されています。"
 			},
 			"cost": {
 				"zero": "$0.00",

@@ -98,19 +98,19 @@
 	},
 	"ghost": {
 		"statusBar": {
-			"enabled": "$(sparkle) Kilo Code Autocomplete",
-			"disabled": "$(circle-slash) Kilo Code Autocomplete",
-			"warning": "$(warning) Kilo Code Autocomplete",
+			"enabled": "$(kilo-logo) Autocomplete",
+			"warning": "$(warning) Autocomplete",
 			"tooltip": {
 				"basic": "Kilo Code Autocomplete",
 				"disabled": "Kilo Code Autocomplete (dinonaktifkan)",
 				"tokenError": "Token yang valid harus diatur untuk menggunakan Autocomplete",
-				"lastCompletion": "Saran terakhir:",
 				"sessionTotal": "Total biaya sesi:",
 				"provider": "Penyedia:",
 				"model": "Model:",
 				"profile": "Profil: ",
-				"defaultProfile": "Default"
+				"defaultProfile": "Default",
+				"completionSummary": "Melakukan {{count}} penyelesaian antara {{startTime}} dan {{endTime}}, dengan total biaya {{cost}}.",
+				"providerInfo": "Pelengkapan otomatis disediakan oleh {{model}} melalui {{provider}}."
 			},
 			"cost": {
 				"zero": "$0.00",

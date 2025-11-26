@@ -11,7 +11,7 @@ import { DEFAULT_MODES, getAllModes } from "./constants/modes/defaults.js"
 import { getTelemetryService } from "./services/telemetry/index.js"
 import { Package } from "./constants/package.js"
 import openConfigFile from "./config/openConfig.js"
-import authWizard from "./utils/authWizard.js"
+import authWizard from "./auth/index.js"
 import { configExists } from "./config/persistence.js"
 import { loadCustomModes } from "./config/customModes.js"
 import { envConfigExists, getMissingEnvVars } from "./config/env-config.js"
@@ -228,7 +228,12 @@ program
 	.command("config")
 	.description("Open the configuration file in your default editor")
 	.action(async () => {
-		await openConfigFile()
+		try {
+			await openConfigFile()
+		} catch (_error) {
+			// Error already logged by openConfigFile
+			process.exit(1)
+		}
 	})
 
 // Debug command - checks hardware and OS compatibility
