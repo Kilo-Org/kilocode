@@ -605,7 +605,7 @@
 			"kilo-logo": {
 				"description": "Kilo Code logo",
 				"default": {
-					"fontPath": "assets/icons/kilo-icon-font.woff",
+					"fontPath": "assets/icons/kilo-icon-font.woff2",
 					"fontCharacter": "\\F101"
 				}
 			}
