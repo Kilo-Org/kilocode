@@ -2,6 +2,7 @@
 import esbuild from "esbuild"
 import { chmodSync, mkdirSync, copyFileSync } from "fs"
 import { rimrafSync } from "rimraf"
+import reactCompiler from "./esbuild-plugin-react-compiler.js";
 
 // Function to copy post-build files
 function copyPostBuildFiles() {
@@ -170,7 +171,10 @@ const __dirname = __dirname__(__filename);
 	minify: false,
 	treeShaking: true,
 	logLevel: "info",
-	plugins: [afterBuildPlugin],
+	plugins: [
+		reactCompiler(), 
+		afterBuildPlugin
+	],
 }
 
 if (process.argv.includes("--watch")) {
