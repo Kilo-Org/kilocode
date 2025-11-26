@@ -204,7 +204,9 @@
 		"didSearchReplace": "Kilo Code 已在此檔案執行搜尋和取代",
 		"wantsToInsert": "Kilo Code 想要在此檔案中插入內容",
 		"wantsToInsertWithLineNumber": "Kilo Code 想要在此檔案第 {{lineNumber}} 行插入內容",
-		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案尾端新增內容"
+		"wantsToInsertAtEnd": "Kilo Code 想要在此檔案尾端新增內容",
+		"wantsToDelete": "Kilo Code 想要刪除此檔案",
+		"wantsToDeleteDirectory": "Kilo Code 想要刪除此目錄"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code 想要檢視此目錄中最上層的檔案",

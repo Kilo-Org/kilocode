@@ -186,6 +186,8 @@
 		"wantsToInsert": "Kilo Code bu dosyaya içerik eklemek istiyor",
 		"wantsToInsertWithLineNumber": "Kilo Code bu dosyanın {{lineNumber}}. satırına içerik eklemek istiyor",
 		"wantsToInsertAtEnd": "Kilo Code bu dosyanın sonuna içerik eklemek istiyor",
+		"wantsToDelete": "Kilo Code bu dosyayı silmek istiyor",
+		"wantsToDeleteDirectory": "Kilo Code bu dizini silmek istiyor",
 		"wantsToReadAndXMore": "Kilo Code bu dosyayı ve {{count}} tane daha okumak istiyor",
 		"wantsToReadMultiple": "Kilo Code birden fazla dosya okumak istiyor",
 		"wantsToApplyBatchChanges": "Kilo Code birden fazla dosyaya değişiklik uygulamak istiyor",

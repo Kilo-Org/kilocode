@@ -230,6 +230,7 @@
 			},
 			"keybindingNotFound": "không tìm thấy",
 			"noModelConfigured": "Không tìm thấy mô hình tự động hoàn thành phù hợp. Vui lòng cấu hình nhà cung cấp trong cài đặt API.",
+			"configureAutocompleteProfile": "Sử dụng bất kỳ mô hình nào bằng cách vào hồ sơ và cấu hình Hồ sơ có Loại Hồ sơ là Tự động hoàn thành.",
 			"model": "Mô hình",
 			"provider": "Nhà cung cấp"
 		}

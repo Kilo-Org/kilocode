@@ -114,7 +114,9 @@
 				"lastCompletion": "คำแนะนำล่าสุด:",
 				"sessionTotal": "ค่าใช้จ่ายรวมของเซสชัน:",
 				"provider": "ผู้ให้บริการ:",
-				"model": "โมเดล:"
+				"model": "โมเดล:",
+				"profile": "โปรไฟล์: ",
+				"defaultProfile": "ค่าเริ่มต้น"
 			},
 			"cost": {
 				"zero": "$0.00",

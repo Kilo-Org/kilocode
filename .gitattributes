@@ -8,7 +8,6 @@ src/assets/docs/demo.gif filter=lfs diff=lfs merge=lfs -text
 src/package.nls.*.json linguist-generated=true
 # Exclude the base English file from being marked as generated
 src/package.nls.json linguist-generated=false
-
 # Root locales directory (contains only non-English translations)
 locales/** linguist-generated=true
 # Mark all locale directories as generated first
@@ -19,3 +18,4 @@ src/i18n/locales/en/** linguist-generated=false
 webview-ui/src/i18n/locales/en/** linguist-generated=false
 # This approach uses gitattributes' last-match-wins rule to exclude English while including all other locales
 jetbrains/plugin/platform.zip filter=lfs diff=lfs merge=lfs -text
+kilo.gif filter=lfs diff=lfs merge=lfs -text

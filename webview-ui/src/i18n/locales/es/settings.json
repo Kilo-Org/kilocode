@@ -252,6 +252,15 @@
 		"searchProviderPlaceholder": "Buscar proveedores",
 		"noProviderMatchFound": "No se encontraron proveedores",
 		"noMatchFound": "No se encontraron perfiles coincidentes",
+		"profileName": "Nombre del perfil",
+		"profileType": "Tipo de perfil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocompletado",
+		"profileTypeDescription": "Los perfiles de chat se usan para conversaciones. Solo se permite un perfil de autocompletado.",
+		"autocompleteLabel": "(Autocompletado)",
+		"autocomplete": {
+			"onlyOneAllowed": "Solo se permite un perfil de autocompletado. El perfil \"{{existingName}}\" ya está configurado para autocompletado. Por favor, cambia su tipo primero o elimínalo."
+		},
 		"vscodeLmDescription": "La API del Modelo de Lenguaje de VS Code le permite ejecutar modelos proporcionados por otras extensiones de VS Code (incluido, entre otros, GitHub Copilot). La forma más sencilla de empezar es instalar las extensiones Copilot y Copilot Chat desde el VS Code Marketplace.",
 		"vscodeLmUnavailable": "El soporte de Modelos de Lenguaje de VS Code solo está disponible en Visual Studio Code. Forks como VSCodium y otros pueden no funcionar. Además, esta capacidad no está disponible en las herramientas de JetBrains.",
 		"vscodeLmUnavailableInstructions": "Asegúrese de usar una herramienta compatible y de que VS Code Chat esté instalado y habilitado",
@@ -824,8 +833,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Cuando está habilitado, Kilo Code puede editar archivos usando Fast Apply con modelos especializados optimizados para modificaciones de código. Requiere Kilo Gateway Provider, OpenRouter o una clave API de Morph.",
-			"apiKey": "Clave API de Morph (opcional)",
-			"placeholder": "Introduce tu clave API de Morph (opcional)",
+			"apiProvider": "Proveedor de API",
+			"apiProviderList": {
+				"current": "Actual"
+			},
+			"apiKey": "Clave API (opcional)",
+			"placeholder": "Introduce tu clave API (opcional)",
 			"modelLabel": "Selección de modelo",
 			"modelDescription": "Elige qué modelo de Fast Apply usar para ediciones de archivos",
 			"models": {

@@ -192,7 +192,9 @@
 		"wantsToGenerateImage": "Kilo Code एक छवि बनाना चाहता है",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code कार्यक्षेत्र के बाहर एक छवि बनाना चाहता है",
 		"wantsToGenerateImageProtected": "Kilo Code एक संरक्षित स्थान पर छवि बनाना चाहता है",
-		"didGenerateImage": "Kilo Code ने एक छवि बनाई"
+		"didGenerateImage": "Kilo Code ने एक छवि बनाई",
+		"wantsToDelete": "Kilo Code इस फ़ाइल को हटाना चाहता है",
+		"wantsToDeleteDirectory": "Kilo Code इस निर्देशिका को हटाना चाहता है"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code इस निर्देशिका में शीर्ष स्तर की फ़ाइलें देखना चाहता है",

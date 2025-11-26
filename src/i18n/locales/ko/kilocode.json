@@ -108,7 +108,9 @@
 				"lastCompletion": "마지막 제안:",
 				"sessionTotal": "세션 총 비용:",
 				"provider": "제공업체:",
-				"model": "모델:"
+				"model": "모델:",
+				"profile": "프로필: ",
+				"defaultProfile": "기본값"
 			},
 			"cost": {
 				"zero": "$0.00",

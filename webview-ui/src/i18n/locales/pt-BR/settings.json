@@ -532,6 +532,15 @@
 			"description": "Este provedor usa autenticação OAuth do serviço Qwen e não requer chaves de API.",
 			"instructions": "Siga a documentação oficial para obter o arquivo de autorização e colocá-lo no caminho especificado.",
 			"setupLink": "Documentação Oficial do Qwen"
+		},
+		"profileName": "Nome do perfil",
+		"profileType": "Tipo de perfil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Autocompletar",
+		"profileTypeDescription": "Perfis de chat são usados para conversas. Apenas um perfil de autocompletar é permitido.",
+		"autocompleteLabel": "(Autocompletar)",
+		"autocomplete": {
+			"onlyOneAllowed": "Apenas um perfil de autocompletar é permitido. O perfil \"{{existingName}}\" já está configurado para autocompletar. Por favor, mude seu tipo primeiro ou delete-o."
 		}
 	},
 	"browser": {
@@ -825,8 +834,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Habilitar Fast Apply",
 			"description": "Quando habilitado, o Kilo Code pode editar arquivos usando Fast Apply com modelos especializados otimizados para modificações de código. Requer o Kilo Gateway Provider, OpenRouter ou uma chave de API Morph.",
-			"apiKey": "Chave de API Morph (opcional)",
-			"placeholder": "Digite sua chave de API Morph (opcional)",
+			"apiProvider": "Provedor de API",
+			"apiProviderList": {
+				"current": "Atual"
+			},
+			"apiKey": "Chave de API (opcional)",
+			"placeholder": "Digite sua chave de API (opcional)",
 			"modelLabel": "Seleção de Modelo",
 			"modelDescription": "Escolha qual modelo Fast Apply usar para edições de arquivos",
 			"models": {

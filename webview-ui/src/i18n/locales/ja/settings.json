@@ -533,6 +533,15 @@
 			"description": "このプロバイダーはQwenサービスからのOAuth認証を使用し、APIキーは必要ありません。",
 			"instructions": "認証ファイルを取得して指定されたパスに配置するには、公式ドキュメントに従ってください。",
 			"setupLink": "Qwen公式ドキュメント"
+		},
+		"profileName": "プロファイル名",
+		"profileType": "プロファイルタイプ",
+		"profileTypeChat": "チャット",
+		"profileTypeAutocomplete": "オートコンプリート",
+		"profileTypeDescription": "チャットプロファイルは会話に使用されます。オートコンプリートプロファイルは1つのみ許可されます。",
+		"autocompleteLabel": "(オートコンプリート)",
+		"autocomplete": {
+			"onlyOneAllowed": "オートコンプリートプロファイルは1つのみ許可されます。プロファイル「{{existingName}}」は既にオートコンプリート用に設定されています。まずそのタイプを変更するか、削除してください。"
 		}
 	},
 	"browser": {
@@ -857,8 +866,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Fast Applyを有効化",
 			"description": "有効にすると、Kilo Codeはコード変更に最適化された専用モデルを使用してFast Applyでファイルを編集できます。Kilo Gateway Provider、OpenRouter、またはMorph APIキーが必要です。",
-			"apiKey": "Morph APIキー（オプション）",
-			"placeholder": "Morph APIキーを入力してください（オプション）",
+			"apiProvider": "APIプロバイダー",
+			"apiProviderList": {
+				"current": "現在"
+			},
+			"apiKey": "APIキー（オプション）",
+			"placeholder": "APIキーを入力してください（オプション）",
 			"modelLabel": "モデル選択",
 			"modelDescription": "ファイル編集に使用するFast Applyモデルを選択",
 			"models": {

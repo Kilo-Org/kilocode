@@ -230,6 +230,7 @@
 			},
 			"keybindingNotFound": "bulunamadı",
 			"noModelConfigured": "Uygun otomatik tamamlama modeli bulunamadı. Lütfen API ayarlarında bir sağlayıcı yapılandır.",
+			"configureAutocompleteProfile": "Profillere giderek ve Otomatik Tamamlama Profil Türünde bir Profil yapılandırarak herhangi bir model kullan.",
 			"model": "Model",
 			"provider": "Sağlayıcı"
 		}

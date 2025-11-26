@@ -553,6 +553,15 @@
 		"roo": {
 			"authenticatedMessage": "ยืนยันตัวตนอย่างปลอดภัยผ่านบัญชี Roo Code Cloud ของคุณ",
 			"connectButton": "เชื่อมต่อกับ Roo Code Cloud"
+		},
+		"profileName": "ชื่อโปรไฟล์",
+		"profileType": "ประเภทโปรไฟล์",
+		"profileTypeChat": "แชท",
+		"profileTypeAutocomplete": "เติมข้อความอัตโนมัติ",
+		"profileTypeDescription": "โปรไฟล์แชทใช้สำหรับการสนทนา อนุญาตให้มีโปรไฟล์เติมข้อความอัตโนมัติเพียงหนึ่งโปรไฟล์เท่านั้น",
+		"autocompleteLabel": "(เติมข้อความอัตโนมัติ)",
+		"autocomplete": {
+			"onlyOneAllowed": "อนุญาตให้มีโปรไฟล์เติมข้อความอัตโนมัติเพียงหนึ่งโปรไฟล์เท่านั้น โปรไฟล์ \"{{existingName}}\" ถูกกำหนดค่าสำหรับเติมข้อความอัตโนมัติแล้ว กรุณาเปลี่ยนประเภทก่อนหรือลบออก"
 		}
 	},
 	"contextWindow": {
@@ -915,8 +924,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "เปิดใช้งาน Fast Apply",
 			"description": "เมื่อเปิดใช้งาน Kilo Code สามารถแก้ไขไฟล์โดยใช้ Fast Apply กับโมเดลเฉพาะทางที่ปรับแต่งสำหรับการแก้ไขโค้ด ต้องใช้ Kilo Gateway Provider, OpenRouter หรือ Morph API key",
-			"apiKey": "Morph API key (ไม่บังคับ)",
-			"placeholder": "ป้อน Morph API key ของคุณ (ไม่บังคับ)",
+			"apiProvider": "ผู้ให้บริการ API",
+			"apiProviderList": {
+				"current": "ปัจจุบัน"
+			},
+			"apiKey": "คีย์ API (ไม่บังคับ)",
+			"placeholder": "ป้อนคีย์ API ของคุณ (ไม่บังคับ)",
 			"modelLabel": "การเลือกโมเดล",
 			"modelDescription": "เลือกโมเดล Fast Apply ที่จะใช้สำหรับการแก้ไขไฟล์",
 			"models": {

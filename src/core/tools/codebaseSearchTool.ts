@@ -211,7 +211,7 @@ async function tryManagedSearch(
 ): Promise<boolean> {
 	try {
 		const managed = ManagedIndexer.getInstance()
-		if (!(await managed.isEnabled())) {
+		if (!managed.isEnabled()) {
 			return false
 		}
 		const searchResults = await managed.search(query, directoryPrefix)

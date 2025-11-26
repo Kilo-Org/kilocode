@@ -13,11 +13,12 @@ import { getCurrentBranch, isGitRepository, getCurrentCommitSha, getBaseBranch }
 import { getKilocodeConfig } from "../../../utils/kilo-config-file"
 import { getGitRepositoryInfo } from "../../../utils/git"
 import { getServerManifest, searchCode, upsertFile } from "./api-client"
-import { logger } from "../../../utils/logging"
 import { MANAGED_MAX_CONCURRENT_FILES } from "../constants"
 import { ServerManifest } from "./types"
 import { scannerExtensions } from "../shared/supported-extensions"
 import { VectorStoreSearchResult } from "../interfaces/vector-store"
+import { ClineProvider } from "../../../core/webview/ClineProvider"
+import { RooIgnoreController } from "../../../core/ignore/RooIgnoreController"
 
 interface ManagedIndexerConfig {
 	kilocodeToken: string | null
@@ -58,6 +59,7 @@ interface ManagedIndexerWorkspaceFolderState {
 	manifestFetchPromise: Promise<ServerManifest> | null
 	/** AbortController for the current indexing operation */
 	currentAbortController?: AbortController
+	ignoreController: RooIgnoreController | null
 }
 
 export class ManagedIndexer implements vscode.Disposable {
@@ -87,7 +89,6 @@ export class ManagedIndexer implements vscode.Disposable {
 	private readonly fileUpsertLimit = pLimit(MANAGED_MAX_CONCURRENT_FILES)
 
 	constructor(public contextProxy: ContextProxy) {
-		console.log("[ManagedIndexer] Constructor called")
 		ManagedIndexer.prevInstance = this
 	}
 
@@ -107,7 +108,6 @@ export class ManagedIndexer implements vscode.Disposable {
 	// on proper memoization/invalidation techniques
 
 	async fetchConfig(): Promise<ManagedIndexerConfig> {
-		console.log("[ManagedIndexer] Fetching configuration from ContextProxy")
 		// kilocode_change: Read directly from ContextProxy instead of ClineProvider
 		const kilocodeToken = this.contextProxy.getSecret("kilocodeToken")
 		const kilocodeOrganizationId = this.contextProxy.getValue("kilocodeOrganizationId")
@@ -119,103 +119,85 @@ export class ManagedIndexer implements vscode.Disposable {
 			kilocodeTesterWarningsDisabledUntil: kilocodeTesterWarningsDisabledUntil ?? null,
 		}
 
-		console.log("[ManagedIndexer] Configuration fetched", {
-			hasToken: !!kilocodeToken,
-			hasOrgId: !!kilocodeOrganizationId,
-			testerWarningsDisabled: kilocodeTesterWarningsDisabledUntil,
-		})
-
 		return this.config
 	}
 
 	async fetchOrganization(): Promise<KiloOrganization | null> {
-		console.log("[ManagedIndexer] Fetching organization")
 		const config = await this.fetchConfig()
 
 		if (config.kilocodeToken && config.kilocodeOrganizationId) {
-			console.log("[ManagedIndexer] Fetching organization from service", {
-				orgId: config.kilocodeOrganizationId,
-			})
 			this.organization = await OrganizationService.fetchOrganization(
 				config.kilocodeToken,
 				config.kilocodeOrganizationId,
 				config.kilocodeTesterWarningsDisabledUntil ?? undefined,
 			)
 
-			console.log("[ManagedIndexer] Organization fetched", {
-				hasOrganization: !!this.organization,
-				orgName: this.organization?.name,
-			})
-
 			return this.organization
 		}
 
-		console.log("[ManagedIndexer] No token or organization ID, skipping organization fetch")
 		this.organization = null
 
 		return this.organization
 	}
 
-	async isEnabled(): Promise<boolean> {
-		console.log("[ManagedIndexer] Checking if managed indexing is enabled")
-		const organization = this.organization ?? (await this.fetchOrganization())
+	isEnabled(): boolean {
+		const organization = this.organization
 
 		if (!organization) {
-			console.log("[ManagedIndexer] No organization found, managed indexing disabled")
 			return false
 		}
 
 		const isEnabled = OrganizationService.isCodeIndexingEnabled(organization)
-		console.log("[ManagedIndexer] Code indexing enabled status", { isEnabled })
 
 		if (!isEnabled) {
-			console.log("[ManagedIndexer] Code indexing not enabled for organization")
 			return false
 		}
 
-		console.log("[ManagedIndexer] Managed indexing is enabled")
 		return true
+	}
+
+	sendEnabledStateToWebview() {
+		const isEnabled = this.isEnabled()
+		ClineProvider.getInstance().then((provider) => {
+			if (provider) {
+				provider.postMessageToWebview({
+					type: "managedIndexerEnabled",
+					managedIndexerEnabled: isEnabled,
+				})
+			}
+		})
 	}
 
 	async start() {
 		console.log("[ManagedIndexer] Starting ManagedIndexer")
 
-		console.log("[ManagedIndexer] Registering configuration change listener")
 		this.configChangeListener = this.contextProxy.onManagedIndexerConfigChange(
 			this.onConfigurationChange.bind(this),
 		)
 
-		console.log("[ManagedIndexer] Registering workspace folders change listener")
 		vscode.workspace.onDidChangeWorkspaceFolders(this.onDidChangeWorkspaceFolders.bind(this))
 
 		const workspaceFolderCount = vscode.workspace.workspaceFolders?.length ?? 0
-		console.log("[ManagedIndexer] Workspace folders count", { count: workspaceFolderCount })
 
 		if (!workspaceFolderCount) {
-			console.log("[ManagedIndexer] No workspace folders found, skipping managed indexing")
 			return
 		}
 
-		console.log("[ManagedIndexer] Checking if managed indexing is enabled")
-		if (!(await this.isEnabled())) {
-			console.log("[ManagedIndexer] Managed indexing is not enabled, stopping")
+		this.organization = await this.fetchOrganization()
+
+		const isEnabled = this.isEnabled()
+		this.sendEnabledStateToWebview()
+		if (!isEnabled) {
 			return
 		}
 
 		// TODO: Plumb kilocodeTesterWarningsDisabledUntil through
 		const { kilocodeOrganizationId, kilocodeToken } = this.config ?? {}
 
-		console.log("[ManagedIndexer] Validating configuration", {
-			hasOrgId: !!kilocodeOrganizationId,
-			hasToken: !!kilocodeToken,
-		})
-
 		if (!kilocodeOrganizationId || !kilocodeToken) {
-			console.log("[ManagedIndexer] No organization ID or token found, skipping managed indexing")
 			return
 		}
 
-		console.log("[ManagedIndexer] Setting active state to true")
 		this.isActive = true
 
 		if (!vscode.workspace.workspaceFolders) {
@@ -237,6 +219,7 @@ export class ManagedIndexer implements vscode.Disposable {
 					watcher: null,
 					repositoryUrl: undefined,
 					manifestFetchPromise: null,
+					ignoreController: null,
 				}
 
 				// Check if it's a git repository
@@ -292,6 +275,9 @@ export class ManagedIndexer implements vscode.Disposable {
 					try {
 						const watcher = new GitWatcher({ cwd })
 						state.watcher = watcher
+						const ignoreController = new RooIgnoreController(cwd)
+						await ignoreController.initialize()
+						state.ignoreController = ignoreController
 
 						// Register event handler
 						watcher.onEvent(this.onEvent.bind(this))
@@ -348,7 +334,10 @@ export class ManagedIndexer implements vscode.Disposable {
 		this.workspaceFoldersListener = null
 
 		// Dispose all watchers from workspaceFolderState
-		this.workspaceFolderState.forEach((state) => state.watcher?.dispose())
+		this.workspaceFolderState.forEach((state) => {
+			state.watcher?.dispose()
+			state.ignoreController?.dispose()
+		})
 		this.workspaceFolderState = []
 
 		this.isActive = false
@@ -396,7 +385,6 @@ export class ManagedIndexer implements vscode.Disposable {
 					throw new Error("Missing required configuration for manifest fetch")
 				}
 
-				console.info(`[ManagedIndexer] Fetching manifest for branch ${branch}`)
 				const manifest = await getServerManifest(
 					this.config.kilocodeOrganizationId,
 					state.projectId,
@@ -441,8 +429,6 @@ export class ManagedIndexer implements vscode.Disposable {
 	}
 
 	async onEvent(event: GitWatcherEvent): Promise<void> {
-		console.log("[ManagedIndexer] event", event.type, event.branch)
-
 		if (!this.isActive) {
 			return
 		}
@@ -541,6 +527,11 @@ export class ManagedIndexer implements vscode.Disposable {
 				return
 			}
 
+			if (!this.config?.kilocodeToken || !this.config?.kilocodeOrganizationId || !state.projectId) {
+				console.warn("[ManagedIndexer] Missing token, organization ID, or project ID, skipping file upsert")
+				return
+			}
+
 			await pMap(
 				event.files,
 				async (file) => {
@@ -550,7 +541,6 @@ export class ManagedIndexer implements vscode.Disposable {
 					}
 
 					if (file.type === "file-deleted") {
-						console.info(`[ManagedIndexer] File deleted: ${file.filePath} on branch ${event.branch}`)
 						// TODO: Implement file deletion handling if needed
 						return
 					}
@@ -576,14 +566,12 @@ export class ManagedIndexer implements vscode.Disposable {
 
 						try {
 							// Ensure we have the necessary configuration
+							// check again inside loop as this can change mid-flight
 							if (
 								!this.config?.kilocodeToken ||
 								!this.config?.kilocodeOrganizationId ||
 								!state.projectId
 							) {
-								console.warn(
-									"[ManagedIndexer] Missing token, organization ID, or project ID, skipping file upsert",
-								)
 								return
 							}
 							const projectId = state.projectId
@@ -591,15 +579,22 @@ export class ManagedIndexer implements vscode.Disposable {
 							const absoluteFilePath = path.isAbsolute(filePath)
 								? filePath
 								: path.join(event.watcher.config.cwd, filePath)
+
+							// if file is larger than 1 megabyte, skip it
+							const stats = await fs.stat(absoluteFilePath)
+							if (stats.size > 1 * 1024 * 1024) {
+								return
+							}
+
 							const fileBuffer = await fs.readFile(absoluteFilePath)
 							const relativeFilePath = path.relative(event.watcher.config.cwd, absoluteFilePath)
 
-							// TODO: (bmc) - do not upsert files larger than 1 megabyte
+							const ignore = state.ignoreController
+							if (ignore && !ignore.validateAccess(relativeFilePath)) {
+								return
+							}
 
 							// Call the upsertFile API with abort signal
-							console.log(
-								`[ManagedIndexer] Upserting file: ${relativeFilePath} (branch: ${event.branch})`,
-							)
 							await upsertFile(
 								{
 									fileBuffer,
@@ -612,10 +607,6 @@ export class ManagedIndexer implements vscode.Disposable {
 									kilocodeToken: this.config.kilocodeToken,
 								},
 								signal,
-							)
-
-							console.info(
-								`[ManagedIndexer] Successfully upserted file: ${relativeFilePath} (branch: ${event.branch})`,
 							)
 
 							// Clear any previous file-upsert errors on success

@@ -1,6 +1,7 @@
 export { AskToolMessage } from "./AskToolMessage.js"
 export { AskMistakeLimitMessage } from "./AskMistakeLimitMessage.js"
 export { AskCommandMessage } from "./AskCommandMessage.js"
+export { AskCommandOutputMessage } from "./AskCommandOutputMessage.js"
 export { AskUseMcpServerMessage } from "./AskUseMcpServerMessage.js"
 export { AskFollowupMessage } from "./AskFollowupMessage.js"
 export { AskCondenseMessage } from "./AskCondenseMessage.js"

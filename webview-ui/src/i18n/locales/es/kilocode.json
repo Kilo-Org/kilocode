@@ -230,6 +230,7 @@
 			},
 			"keybindingNotFound": "no encontrado",
 			"noModelConfigured": "No se encontró ningún modelo de autocompletado adecuado. Por favor, configura un proveedor en la configuración de API.",
+			"configureAutocompleteProfile": "Usa cualquier modelo yendo a perfiles y configurando un Perfil del Tipo de Perfil Autocompletado.",
 			"model": "Modelo",
 			"provider": "Proveedor"
 		}

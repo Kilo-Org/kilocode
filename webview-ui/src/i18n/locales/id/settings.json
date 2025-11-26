@@ -532,6 +532,15 @@
 			"description": "Provider ini menggunakan autentikasi OAuth dari layanan Qwen dan tidak memerlukan kunci API.",
 			"instructions": "Silakan ikuti dokumentasi resmi untuk mendapatkan file otorisasi dan tempatkan di jalur yang ditentukan.",
 			"setupLink": "Dokumentasi Resmi Qwen"
+		},
+		"profileName": "Nama Profil",
+		"profileType": "Jenis Profil",
+		"profileTypeChat": "Chat",
+		"profileTypeAutocomplete": "Pelengkapan Otomatis",
+		"profileTypeDescription": "Profil chat digunakan untuk percakapan. Hanya satu profil pelengkapan otomatis yang diizinkan.",
+		"autocompleteLabel": "(Pelengkapan Otomatis)",
+		"autocomplete": {
+			"onlyOneAllowed": "Hanya satu profil pelengkapan otomatis yang diizinkan. Profil \"{{existingName}}\" sudah dikonfigurasi untuk pelengkapan otomatis. Silakan ubah jenisnya terlebih dahulu atau hapus."
 		}
 	},
 	"browser": {
@@ -846,8 +855,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Aktifkan Fast Apply",
 			"description": "Ketika diaktifkan, Kilo Code dapat mengedit file menggunakan Fast Apply dengan model khusus yang dioptimalkan untuk modifikasi kode. Memerlukan Kilo Gateway Provider, OpenRouter, atau kunci API Morph.",
-			"apiKey": "Kunci API Morph (opsional)",
-			"placeholder": "Masukkan kunci API Morph kamu (opsional)",
+			"apiProvider": "Penyedia API",
+			"apiProviderList": {
+				"current": "Saat ini"
+			},
+			"apiKey": "Kunci API (opsional)",
+			"placeholder": "Masukkan kunci API Anda (opsional)",
 			"modelLabel": "Pemilihan Model",
 			"modelDescription": "Pilih model Fast Apply mana yang akan digunakan untuk edit file",
 			"models": {

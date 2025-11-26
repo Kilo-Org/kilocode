@@ -237,6 +237,7 @@
 			},
 			"keybindingNotFound": "未找到",
 			"noModelConfigured": "未找到合适的自动补全模型。请在 API 设置中配置提供商。",
+			"configureAutocompleteProfile": "前往配置文件并配置自动补全类型的配置文件即可使用任意模型。",
 			"model": "模型",
 			"provider": "提供商"
 		}
