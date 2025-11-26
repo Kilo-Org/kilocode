@@ -224,6 +224,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
+			verbosity: model.verbosity, // kilocode_change
 		}
 
 		// kilocode_change start: Add native tool call support when toolStyle is "json"
@@ -360,7 +361,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	}
 
 	async completePrompt(prompt: string) {
-		let { id: modelId, maxTokens, temperature, reasoning } = await this.fetchModel()
+		let {
+			id: modelId,
+			maxTokens,
+			temperature,
+			reasoning,
+			verbosity, // kilocode_change
+		} = await this.fetchModel()
 
 		const completionParams: OpenRouterChatCompletionParams = {
 			model: modelId,
@@ -370,6 +377,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			stream: false,
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
 			...(reasoning && { reasoning }),
+			verbosity, // kilocode_change
 		}
 
 		let response

@@ -95,8 +95,12 @@
 		"modelPlaceholder": "Wprowadź nazwę modelu",
 		"selectModel": "Wybierz model",
 		"ollamaBaseUrlLabel": "Bazowy URL Ollama",
+		"vectorStoreProviderLabel": "Dostawca magazynu wektorów",
 		"qdrantApiKeyLabel": "Klucz API Qdrant",
 		"qdrantApiKeyPlaceholder": "Wprowadź swój klucz API Qdrant (opcjonalnie)",
+		"lancedbVectorStoreDirectoryLabel": "Ścieżka LanceDB Vector Store",
+		"lancedbVectorStoreDirectoryPlaceholder": "Wprowadź niestandardową ścieżkę magazynu wektorów (opcjonalnie)",
+		"lancedbVectorStoreDirectoryDescription": "Ścieżka do przechowywania bazy danych LanceDB. Jeśli pusta, używa domyślnej lokalizacji w globalStorageUri/vector.",
 		"setupConfigLabel": "Konfiguracja",
 		"ollamaUrlPlaceholder": "http://localhost:11434",
 		"openAiCompatibleBaseUrlPlaceholder": "https://api.example.com",
@@ -532,6 +536,15 @@
 			"description": "Ten dostawca używa uwierzytelniania OAuth z usługi Qwen i nie wymaga kluczy API.",
 			"instructions": "Postępuj zgodnie z oficjalną dokumentacją, aby uzyskać plik autoryzacji i umieścić go w określonej ścieżce.",
 			"setupLink": "Oficjalna dokumentacja Qwen"
+		},
+		"profileName": "Nazwa profilu",
+		"profileType": "Typ profilu",
+		"profileTypeChat": "Czat",
+		"profileTypeAutocomplete": "Autouzupełnianie",
+		"profileTypeDescription": "Profile czatu są używane do rozmów. Dozwolony jest tylko jeden profil autouzupełniania.",
+		"autocompleteLabel": "(Autouzupełnianie)",
+		"autocomplete": {
+			"onlyOneAllowed": "Dozwolony jest tylko jeden profil autouzupełniania. Profil \"{{existingName}}\" jest już skonfigurowany do autouzupełniania. Najpierw zmień jego typ lub usuń go."
 		}
 	},
 	"browser": {
@@ -825,8 +838,12 @@
 		"MORPH_FAST_APPLY": {
 			"name": "Włącz Fast Apply",
 			"description": "Gdy włączone, Kilo Code może edytować pliki za pomocą Fast Apply ze specjalizowanymi modelami zoptymalizowanymi do modyfikacji kodu. Wymaga Kilo Gateway Provider, OpenRouter lub klucza API Morph.",
-			"apiKey": "Klucz API Morph (opcjonalnie)",
-			"placeholder": "Wprowadź swój klucz API Morph (opcjonalnie)",
+			"apiProvider": "Dostawca API",
+			"apiProviderList": {
+				"current": "Aktualny"
+			},
+			"apiKey": "Klucz API (opcjonalnie)",
+			"placeholder": "Wprowadź swój klucz API (opcjonalnie)",
 			"modelLabel": "Wybór modelu",
 			"modelDescription": "Wybierz, który model szybkiego stosowania użyć do edycji plików",
 			"models": {

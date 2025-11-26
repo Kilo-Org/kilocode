@@ -96,6 +96,7 @@ export function useCommandContext(): UseCommandContextReturn {
 	const currentProvider = useAtomValue(providerAtom)
 	const extensionState = useAtomValue(extensionStateAtom)
 	const kilocodeDefaultModel = (extensionState?.kilocodeDefaultModel as string) || ""
+	const customModes = extensionState?.customModes || []
 	const isParallelMode = useAtomValue(isParallelModeAtom)
 	const config = useAtomValue(configAtom)
 	const chatMessages = useAtomValue(chatMessagesAtom)
@@ -201,6 +202,8 @@ export function useCommandContext(): UseCommandContextReturn {
 				balanceData,
 				profileLoading,
 				balanceLoading,
+				// Custom modes context
+				customModes,
 				// Task history context
 				taskHistoryData,
 				taskHistoryFilters,
@@ -238,6 +241,7 @@ export function useCommandContext(): UseCommandContextReturn {
 			balanceLoading,
 			setCommittingParallelMode,
 			isParallelMode,
+			customModes,
 			taskHistoryData,
 			taskHistoryFilters,
 			taskHistoryLoading,

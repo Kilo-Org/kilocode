@@ -70,7 +70,7 @@ describe("URL functions", () => {
 
 	describe("getAppUrl", () => {
 		it("should handle production URLs correctly", () => {
-			expect(getAppUrl()).toBe("https://kilocode.ai")
+			expect(getAppUrl()).toBe("https://kilocode.ai/")
 			expect(getAppUrl("/profile")).toBe("https://kilocode.ai/profile")
 			expect(getAppUrl("/support")).toBe("https://kilocode.ai/support")
 			expect(getAppUrl("/sign-in-to-editor")).toBe("https://kilocode.ai/sign-in-to-editor")
@@ -82,7 +82,7 @@ describe("URL functions", () => {
 		it("should handle development environment", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "http://localhost:3000"
 
-			expect(getAppUrl()).toBe("http://localhost:3000")
+			expect(getAppUrl()).toBe("http://localhost:3000/")
 			expect(getAppUrl("/profile")).toBe("http://localhost:3000/profile")
 			expect(getAppUrl("/support")).toBe("http://localhost:3000/support")
 		})
@@ -93,8 +93,8 @@ describe("URL functions", () => {
 		})
 
 		it("should handle empty and root paths", () => {
-			expect(getAppUrl("")).toBe("https://kilocode.ai")
-			expect(getAppUrl("/")).toBe("https://kilocode.ai")
+			expect(getAppUrl("")).toBe("https://kilocode.ai/")
+			expect(getAppUrl("/")).toBe("https://kilocode.ai/")
 		})
 	})
 
@@ -197,7 +197,7 @@ describe("URL functions", () => {
 		it("should handle custom backend URLs", () => {
 			process.env.KILOCODE_BACKEND_BASE_URL = "https://staging.example.com"
 
-			expect(getAppUrl()).toBe("https://staging.example.com")
+			expect(getAppUrl()).toBe("https://staging.example.com/")
 			expect(getAppUrl("/api/test")).toBe("https://staging.example.com/api/test")
 			expect(getAppUrl("/dashboard")).toBe("https://staging.example.com/dashboard")
 		})

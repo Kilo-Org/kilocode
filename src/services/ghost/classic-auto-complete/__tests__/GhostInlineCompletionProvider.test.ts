@@ -369,8 +369,17 @@ describe("GhostInlineCompletionProvider", () => {
 		// Create mock context provider with IDE
 		mockContextProvider = {
 			getIde: vi.fn().mockReturnValue(mockIde),
-			getFormattedContext: vi.fn().mockResolvedValue(""),
-			getFimFormattedContext: vi.fn().mockResolvedValue({ prefix: "" }),
+			getProcessedSnippets: vi.fn().mockResolvedValue({
+				filepathUri: "file:///test.ts",
+				helper: {
+					filepath: "file:///test.ts",
+					lang: { name: "typescript", singleLineComment: "//" },
+					prunedPrefix: "const x = 1",
+					prunedSuffix: "\nconst y = 2",
+				},
+				snippetsWithUris: [],
+				workspaceDirs: [],
+			}),
 		}
 
 		// Create mock dependencies

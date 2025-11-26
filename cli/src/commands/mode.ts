@@ -2,17 +2,8 @@
  * /mode command - Switch between different modes
  */
 
-import type { Command, ArgumentValue } from "./core/types.js"
-import { DEFAULT_MODES } from "../constants/modes/defaults.js"
-
-// Convert modes to ArgumentValue format
-const MODE_VALUES: ArgumentValue[] = DEFAULT_MODES.map((mode) => ({
-	value: mode.slug,
-	...(mode.description && { description: mode.description }),
-}))
-
-// Extract mode slugs for validation
-const AVAILABLE_MODE_SLUGS = DEFAULT_MODES.map((mode) => mode.slug)
+import type { Command } from "./core/types.js"
+import { getAllModes } from "../constants/modes/defaults.js"
 
 export const modeCommand: Command = {
 	name: "mode",
@@ -27,32 +18,30 @@ export const modeCommand: Command = {
 			name: "mode-name",
 			description: "The mode to switch to",
 			required: true,
-			values: MODE_VALUES,
+			// Values will be populated dynamically from context
 			placeholder: "Select a mode",
-			validate: (value) => {
-				const isValid = AVAILABLE_MODE_SLUGS.includes(value.toLowerCase())
-				return {
-					valid: isValid,
-					...(isValid ? {} : { error: `Invalid mode. Available: ${AVAILABLE_MODE_SLUGS.join(", ")}` }),
-				}
-			},
 		},
 	],
 	handler: async (context) => {
-		const { args, addMessage, setMode } = context
+		const { args, addMessage, setMode, customModes } = context
+
+		// Get all available modes (default + custom)
+		const allModes = getAllModes(customModes)
+		const availableSlugs = allModes.map((mode) => mode.slug)
 
 		if (args.length === 0 || !args[0]) {
 			// Show current mode and available modes
+			const modesList = allModes.map((mode) => {
+				// Treat undefined source as "global" (for built-in modes from @roo-code/types)
+				const source =
+					mode.source === "project" ? " (project)" : mode.source === "global" || !mode.source ? " (global)" : ""
+				return `  - **${mode.name}** (${mode.slug})${source}: ${mode.description || "No description"}`
+			})
+
 			addMessage({
 				id: Date.now().toString(),
 				type: "system",
-				content: [
-					"**Available Modes:**",
-					"",
-					...DEFAULT_MODES.map((mode) => `  - **${mode.name}** (${mode.slug}): ${mode.description}`),
-					"",
-					"Usage: /mode <mode-name>",
-				].join("\n"),
+				content: ["**Available Modes:**", "", ...modesList, "", "Usage: /mode <mode-name>"].join("\n"),
 				ts: Date.now(),
 			})
 			return
@@ -60,18 +49,18 @@ export const modeCommand: Command = {
 
 		const requestedMode = args[0].toLowerCase()
 
-		if (!AVAILABLE_MODE_SLUGS.includes(requestedMode)) {
+		if (!availableSlugs.includes(requestedMode)) {
 			addMessage({
 				id: Date.now().toString(),
 				type: "error",
-				content: `Invalid mode "${requestedMode}". Available modes: ${AVAILABLE_MODE_SLUGS.join(", ")}`,
+				content: `Invalid mode "${requestedMode}". Available modes: ${availableSlugs.join(", ")}`,
 				ts: Date.now(),
 			})
 			return
 		}
 
 		// Find the mode to get its display name
-		const mode = DEFAULT_MODES.find((m) => m.slug === requestedMode)
+		const mode = allModes.find((m) => m.slug === requestedMode)
 		const modeName = mode?.name || requestedMode
 
 		setMode(requestedMode)

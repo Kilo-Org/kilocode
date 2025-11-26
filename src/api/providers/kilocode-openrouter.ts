@@ -1,3 +1,4 @@
+import crypto from "crypto"
 import { ApiHandlerOptions, ModelRecord } from "../../shared/api"
 import { CompletionUsage, OpenRouterHandler } from "./openrouter"
 import { getModelParams } from "../transform/model-params"
@@ -41,6 +42,11 @@ export class KilocodeOpenrouterHandler extends OpenRouterHandler {
 		super(options)
 
 		this.apiFIMBase = baseApiUrl
+	}
+
+	public getRolloutHash(): number | undefined {
+		const token = this.options.kilocodeToken
+		return !token ? undefined : crypto.createHash("sha256").update(token).digest().readUInt32BE(0)
 	}
 
 	override customRequestOptions(metadata?: ApiHandlerCreateMessageMetadata) {

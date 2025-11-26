@@ -141,10 +141,11 @@ describe("Fzf - Word Boundary Matching", () => {
 			const fzf = new Fzf(items, { selector: (item) => item.name })
 			const results = fzf.find("test")
 
-			// Should match "test" and "testing" at word start, and "the test" at word boundary
-			expect(results).toHaveLength(2)
+			// Should match all three: "test" and "testing" at word start, and "the test" at word boundary
+			expect(results).toHaveLength(3)
 			expect(results[0].item.id).toBe(1)
 			expect(results[1].item.id).toBe(2)
+			expect(results[2].item.id).toBe(3)
 		})
 
 		it("should preserve original order", () => {
@@ -204,6 +205,49 @@ describe("Fzf - Word Boundary Matching", () => {
 			const results = fzf.find("cod")
 			expect(results).toHaveLength(1)
 			expect(results[0].item.value).toBe("code")
+		})
+
+		it("should find model names with hyphens when query contains hyphen", () => {
+			const items = [
+				{ id: 1, name: "OpenAI: gpt-5 mini" },
+				{ id: 2, name: "OpenAI: gpt-4" },
+				{ id: 3, name: "Anthropic: claude-3" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gpt-5")
+			// Should match "OpenAI: gpt-5 mini"
+			expect(results).toHaveLength(1)
+			expect(results[0].item.id).toBe(1)
+		})
+
+		it("should find model names with hyphens when query omits hyphen", () => {
+			const items = [
+				{ id: 1, name: "OpenAI: gpt-5 mini" },
+				{ id: 2, name: "OpenAI: gpt-4" },
+				{ id: 3, name: "Anthropic: claude-3" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gpt5")
+			// Should match "OpenAI: gpt-5 mini" (gpt + 5)
+			expect(results).toHaveLength(1)
+			expect(results[0].item.id).toBe(1)
+		})
+
+		it("should find model names when query has trailing hyphen", () => {
+			const items = [
+				{ id: 1, name: "OpenAI: gpt-5 mini" },
+				{ id: 2, name: "OpenAI: gpt-4" },
+				{ id: 3, name: "Anthropic: claude-3" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gpt-")
+			// Should match all gpt models
+			expect(results).toHaveLength(2)
+			expect(results.map((r) => r.item.id)).toContain(1)
+			expect(results.map((r) => r.item.id)).toContain(2)
 		})
 
 		it("should work with file paths", () => {
@@ -296,6 +340,108 @@ describe("Fzf - Word Boundary Matching", () => {
 		})
 	})
 
+	describe("Trimming and space handling", () => {
+		it("should trim leading and trailing spaces from query", () => {
+			const items = [
+				{ id: 1, name: "foo bar" },
+				{ id: 2, name: "foo" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			// Query with leading space should match same as without
+			const resultsWithSpace = fzf.find(" foo")
+			const resultsWithoutSpace = fzf.find("foo")
+
+			expect(resultsWithSpace).toHaveLength(2)
+			expect(resultsWithoutSpace).toHaveLength(2)
+			expect(resultsWithSpace.map((r) => r.item.id)).toEqual(resultsWithoutSpace.map((r) => r.item.id))
+		})
+
+		it("should trim trailing spaces from query", () => {
+			const items = [
+				{ id: 1, name: "foo bar" },
+				{ id: 2, name: "foo" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			// Query with trailing space should match same as without
+			const resultsWithSpace = fzf.find("foo ")
+			const resultsWithoutSpace = fzf.find("foo")
+
+			expect(resultsWithSpace).toHaveLength(2)
+			expect(resultsWithoutSpace).toHaveLength(2)
+			expect(resultsWithSpace.map((r) => r.item.id)).toEqual(resultsWithoutSpace.map((r) => r.item.id))
+		})
+
+		it("should handle query with spaces on both sides", () => {
+			const items = [{ id: 1, name: "foo bar" }]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("  foo  ")
+			expect(results).toHaveLength(1)
+			expect(results[0].item.id).toBe(1)
+		})
+	})
+
+	describe("Backtracking for word matches (recursive)", () => {
+		it("should match word that appears later in text", () => {
+			const items = [
+				{ id: 1, name: "google gemini" },
+				{ id: 2, name: "gemini pro" },
+				{ id: 3, name: "google em emini" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gemini")
+			// Should match both items
+			expect(results).toHaveLength(3)
+			expect(results.map((r) => r.item.id)).toContain(1)
+			expect(results.map((r) => r.item.id)).toContain(2)
+			expect(results.map((r) => r.item.id)).toContain(3)
+		})
+
+		it("should match partial word that appears later", () => {
+			const items = [
+				{ id: 1, name: "Microsoft Copilot" },
+				{ id: 2, name: "GitHub Copilot" },
+				{ id: 3, name: "Copilot Pro" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("copilot")
+			// Should match all three items
+			expect(results).toHaveLength(3)
+		})
+
+		it("should match when query word is not the first word", () => {
+			const items = [
+				{ id: 1, name: "The Quick Brown Fox" },
+				{ id: 2, name: "Brown Bear" },
+				{ id: 3, name: "Quick Start Guide" },
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("brown")
+			// Should match items 1 and 2
+			expect(results).toHaveLength(2)
+			expect(results.map((r) => r.item.id)).toContain(1)
+			expect(results.map((r) => r.item.id)).toContain(2)
+		})
+
+		it("should still respect word boundaries with backtracking", () => {
+			const items = [
+				{ id: 1, name: "google gemini" },
+				{ id: 2, name: "googlegemini" }, // no space, not a word boundary
+			]
+			const fzf = new Fzf(items, { selector: (item) => item.name })
+
+			const results = fzf.find("gemini")
+			// Should only match item 1 where gemini is a separate word
+			expect(results).toHaveLength(1)
+			expect(results[0].item.id).toBe(1)
+		})
+	})
+
 	describe("Edge cases", () => {
 		it("should handle empty items array", () => {
 			const fzf = new Fzf([], { selector: (item: any) => item.name })
@@ -330,15 +476,6 @@ describe("Fzf - Word Boundary Matching", () => {
 
 			expect(results[0]).toHaveProperty("item")
 			expect(results[0].item).toEqual({ id: 1, name: "foo" })
-		})
-
-		it("should return results with positions property", () => {
-			const items = [{ id: 1, name: "foo" }]
-			const fzf = new Fzf(items, { selector: (item) => item.name })
-			const results = fzf.find("foo")
-
-			expect(results[0]).toHaveProperty("positions")
-			expect(results[0].positions).toBeInstanceOf(Set)
 		})
 	})
 })

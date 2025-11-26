@@ -50,6 +50,17 @@ describe("KilocodeOpenrouterHandler", () => {
 
 	beforeEach(() => vitest.clearAllMocks())
 
+	it("getRolloutHash returns a deterministic hash based on token", () => {
+		const handler = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: undefined })
+		expect(handler.getRolloutHash()).toBeUndefined()
+
+		const handlerA = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: "token-A" })
+		expect(handlerA.getRolloutHash()).toEqual(4000417282)
+
+		const handlerB = new KilocodeOpenrouterHandler({ ...mockOptions, kilocodeToken: "token-B" })
+		expect(handlerB.getRolloutHash()).toEqual(398635706)
+	})
+
 	describe("customRequestOptions", () => {
 		it("includes taskId header when provided in metadata", () => {
 			const handler = new KilocodeOpenrouterHandler(mockOptions)

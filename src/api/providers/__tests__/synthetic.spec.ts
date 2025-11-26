@@ -22,11 +22,21 @@ vi.mock("openai", () => ({
 	})),
 }))
 
+// Mock model cache
+vi.mock("../fetchers/modelCache", () => ({
+	getModels: vi.fn(),
+}))
+
+// Import the mocked function after mock setup
+const { getModels: mockGetModels } = await import("../fetchers/modelCache")
+
 describe("SyntheticHandler", () => {
 	let handler: SyntheticHandler
 
 	beforeEach(() => {
 		vi.clearAllMocks()
+		// Mock getModels to return the static models
+		vi.mocked(mockGetModels).mockResolvedValue(syntheticModels)
 		// Set up default mock implementation
 		mockCreate.mockImplementation(async () => ({
 			[Symbol.asyncIterator]: async function* () {
@@ -83,7 +93,7 @@ describe("SyntheticHandler", () => {
 	})
 
 	it("should return specified model when valid model is provided", () => {
-		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.5"
+		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 		const handlerWithModel = new SyntheticHandler({
 			apiModelId: testModelId,
 			syntheticApiKey: "test-synthetic-api-key",
@@ -93,8 +103,8 @@ describe("SyntheticHandler", () => {
 		expect(model.info).toEqual(expect.objectContaining(syntheticModels[testModelId]))
 	})
 
-	it("should return GLM Instruct model with correct configuration", () => {
-		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.5"
+	it("should return GLM model with correct configuration", () => {
+		const testModelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 		const handlerWithModel = new SyntheticHandler({
 			apiModelId: testModelId,
 			syntheticApiKey: "test-synthetic-api-key",
@@ -175,7 +185,7 @@ describe("SyntheticHandler", () => {
 	})
 
 	it("createMessage should pass correct parameters to synthetic client", async () => {
-		const modelId: SyntheticModelId = "hf:zai-org/GLM-4.5"
+		const modelId: SyntheticModelId = "hf:zai-org/GLM-4.6"
 		const modelInfo = syntheticModels[modelId]
 		const handlerWithModel = new SyntheticHandler({
 			apiModelId: modelId,
@@ -201,7 +211,6 @@ describe("SyntheticHandler", () => {
 		expect(mockCreate).toHaveBeenCalledWith(
 			expect.objectContaining({
 				model: modelId,
-				max_tokens: 0.2 * modelInfo.maxTokens,
 				temperature: 0.5,
 				messages: expect.arrayContaining([{ role: "system", content: systemPrompt }]),
 				stream: true,

@@ -42,6 +42,10 @@ export const fastApplyModelSchema = z.enum([
 
 export type FastApplyModel = z.infer<typeof fastApplyModelSchema>
 
+export const fastApplyApiProviderSchema = z.enum(["current", "morph", "kilocode", "openrouter"])
+
+export type FastApplyApiProvider = z.infer<typeof fastApplyApiProviderSchema>
+
 export const DEFAULT_KILOCODE_BACKEND_URL = "https://kilocode.ai"
 
 export function getKiloBaseUriFromToken(kilocodeToken?: string) {

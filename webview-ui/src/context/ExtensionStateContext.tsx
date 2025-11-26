@@ -325,6 +325,10 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			codebaseIndexEnabled: true,
 			codebaseIndexQdrantUrl: "http://localhost:6333",
 			codebaseIndexEmbedderProvider: "openai",
+			// kilocode_change start
+			codebaseIndexVectorStoreProvider: "qdrant",
+			codebaseIndexLancedbVectorStoreDirectory: undefined,
+			// kilocode_change end
 			codebaseIndexEmbedderBaseUrl: "",
 			codebaseIndexEmbedderModelId: "",
 			codebaseIndexSearchMaxResults: undefined,

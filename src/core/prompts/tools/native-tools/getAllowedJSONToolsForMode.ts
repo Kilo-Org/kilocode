@@ -12,6 +12,7 @@ import { McpHub } from "../../../../services/mcp/McpHub"
 import { McpServerManager } from "../../../../services/mcp/McpServerManager"
 import { getMcpServerTools } from "./mcp_server"
 import { ClineProvider } from "../../../webview/ClineProvider"
+import { ManagedIndexer } from "../../../../services/code-index/managed/ManagedIndexer" // kilocode_change
 import { ContextProxy } from "../../../config/ContextProxy"
 import * as vscode from "vscode"
 import { read_file_multi, read_file_single } from "./read_file"
@@ -89,16 +90,13 @@ export async function getAllowedJSONToolsForMode(
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	if (
 		!codeIndexManager ||
-		// kilcode_change start
-		!(
-			codeIndexManager.isFeatureEnabled &&
-			codeIndexManager.isFeatureConfigured &&
-			codeIndexManager.isInitialized &&
-			codeIndexManager.isManagedIndexingAvailable
-		)
-		// kilcode_change end
+		!(codeIndexManager.isFeatureEnabled && codeIndexManager.isFeatureConfigured && codeIndexManager.isInitialized)
 	) {
-		tools.delete("codebase_search")
+		// kilocode_change start
+		if (!ManagedIndexer.getInstance()?.isEnabled()) {
+			tools.delete("codebase_search")
+		}
+		// kilocode_change end
 	}
 
 	if (isFastApplyAvailable(providerState)) {
@@ -165,10 +163,10 @@ export async function getAllowedJSONToolsForMode(
 	// Handle the "apply_diff" logic separately because the same tool has different
 	// implementations depending on whether multi-file diffs are enabled, but the same name is used.
 	if (isApplyDiffToolAllowedForMode && diffEnabled) {
-		if (shouldUseSearchAndReplaceInsteadOfApplyDiff("json", model?.id ?? "")) {
-			allowedTools.push(search_and_replace)
-		} else if (providerState?.experiments.multiFileApplyDiff) {
+		if (providerState?.experiments.multiFileApplyDiff) {
 			allowedTools.push(apply_diff_multi_file)
+		} else if (shouldUseSearchAndReplaceInsteadOfApplyDiff("json", model?.id ?? "")) {
+			allowedTools.push(search_and_replace)
 		} else {
 			allowedTools.push(apply_diff_single_file)
 		}

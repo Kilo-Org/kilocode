@@ -1375,19 +1375,21 @@ const ChatViewComponent: React.ForwardRefRenderFunction<ChatViewRef, ChatViewPro
 				}
 
 				if (isBrowserSessionMessage(message)) {
-					currentGroup.push(message)
-
 					// kilocode_change start: upstream pr https://github.com/RooCodeInc/Roo-Code/pull/5452
+					// Check if this is a browser_action_result for a close action
 					if (message.say === "browser_action_result") {
-						// Check if the previous browser_action was a close action
 						const lastBrowserAction = [...currentGroup].reverse().find((m) => m.say === "browser_action")
 						if (lastBrowserAction) {
 							const browserAction = JSON.parse(lastBrowserAction.text || "{}") as ClineSayBrowserAction
 							if (browserAction.action === "close") {
+								// Don't add the browser_action_result for close action to the group
+								// End the session immediately
 								endBrowserSession()
+								return
 							}
 						}
 					}
+					currentGroup.push(message)
 					// kilocode_change end
 				} else {
 					// complete existing browser session if any

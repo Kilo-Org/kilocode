@@ -1,16 +1,16 @@
-import ExcelJS from "exceljs"
+// kilocode_change start - use SheetJS to extract text from XLSX files with improved cell handling
+import * as XLSX from "xlsx"
 import { extractTextFromXLSX } from "../extract-text-from-xlsx"
 
 describe("extractTextFromXLSX", () => {
 	describe("basic functionality", () => {
 		it("should extract text with proper formatting", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
-
-			worksheet.getCell("A1").value = "Hello"
-			worksheet.getCell("B1").value = "World"
-			worksheet.getCell("A2").value = "Test"
-			worksheet.getCell("B2").value = 123
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([
+				["Hello", "World"],
+				["Test", 123],
+			])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -20,12 +20,13 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should skip rows with no content", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
-
-			worksheet.getCell("A1").value = "Row 1"
-			// Row 2 is completely empty
-			worksheet.getCell("A3").value = "Row 3"
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([
+				["Row 1"],
+				[], // Empty row
+				["Row 3"],
+			])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -38,13 +39,13 @@ describe("extractTextFromXLSX", () => {
 
 	describe("sheet handling", () => {
 		it("should process multiple sheets", async () => {
-			const workbook = new ExcelJS.Workbook()
+			const workbook = XLSX.utils.book_new()
 
-			const sheet1 = workbook.addWorksheet("First Sheet")
-			sheet1.getCell("A1").value = "Sheet 1 Data"
+			const sheet1 = XLSX.utils.aoa_to_sheet([["Sheet 1 Data"]])
+			XLSX.utils.book_append_sheet(workbook, sheet1, "First Sheet")
 
-			const sheet2 = workbook.addWorksheet("Second Sheet")
-			sheet2.getCell("A1").value = "Sheet 2 Data"
+			const sheet2 = XLSX.utils.aoa_to_sheet([["Sheet 2 Data"]])
+			XLSX.utils.book_append_sheet(workbook, sheet2, "Second Sheet")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -55,14 +56,19 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should skip hidden sheets", async () => {
-			const workbook = new ExcelJS.Workbook()
+			const workbook = XLSX.utils.book_new()
 
-			const visibleSheet = workbook.addWorksheet("Visible Sheet")
-			visibleSheet.getCell("A1").value = "Visible Data"
+			const visibleSheet = XLSX.utils.aoa_to_sheet([["Visible Data"]])
+			XLSX.utils.book_append_sheet(workbook, visibleSheet, "Visible Sheet")
 
-			const hiddenSheet = workbook.addWorksheet("Hidden Sheet")
-			hiddenSheet.getCell("A1").value = "Hidden Data"
-			hiddenSheet.state = "hidden"
+			const hiddenSheet = XLSX.utils.aoa_to_sheet([["Hidden Data"]])
+			XLSX.utils.book_append_sheet(workbook, hiddenSheet, "Hidden Sheet")
+
+			// Mark the second sheet as hidden
+			if (!workbook.Workbook) workbook.Workbook = {}
+			if (!workbook.Workbook.Sheets) workbook.Workbook.Sheets = []
+			workbook.Workbook.Sheets[0] = { Hidden: 0 } // Visible
+			workbook.Workbook.Sheets[1] = { Hidden: 1 } // Hidden
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -73,14 +79,19 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should skip very hidden sheets", async () => {
-			const workbook = new ExcelJS.Workbook()
+			const workbook = XLSX.utils.book_new()
 
-			const visibleSheet = workbook.addWorksheet("Visible Sheet")
-			visibleSheet.getCell("A1").value = "Visible Data"
+			const visibleSheet = XLSX.utils.aoa_to_sheet([["Visible Data"]])
+			XLSX.utils.book_append_sheet(workbook, visibleSheet, "Visible Sheet")
 
-			const veryHiddenSheet = workbook.addWorksheet("Very Hidden Sheet")
-			veryHiddenSheet.getCell("A1").value = "Very Hidden Data"
-			veryHiddenSheet.state = "veryHidden"
+			const veryHiddenSheet = XLSX.utils.aoa_to_sheet([["Very Hidden Data"]])
+			XLSX.utils.book_append_sheet(workbook, veryHiddenSheet, "Very Hidden Sheet")
+
+			// Mark the second sheet as very hidden
+			if (!workbook.Workbook) workbook.Workbook = {}
+			if (!workbook.Workbook.Sheets) workbook.Workbook.Sheets = []
+			workbook.Workbook.Sheets[0] = { Hidden: 0 } // Visible
+			workbook.Workbook.Sheets[1] = { Hidden: 2 } // Very Hidden
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -93,13 +104,9 @@ describe("extractTextFromXLSX", () => {
 
 	describe("formatCellValue logic", () => {
 		it("should handle null and undefined values", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
-
-			worksheet.getCell("A1").value = "Before"
-			worksheet.getCell("A2").value = null
-			worksheet.getCell("A3").value = undefined
-			worksheet.getCell("A4").value = "After"
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([["Before"], [null], [undefined], ["After"]])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -112,11 +119,19 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should format dates correctly", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
+			const workbook = XLSX.utils.book_new()
+			const worksheet: XLSX.WorkSheet = {}
 
+			// Create a date cell manually
 			const testDate = new Date("2023-12-25")
-			worksheet.getCell("A1").value = testDate
+			worksheet["A1"] = {
+				t: "d",
+				v: testDate,
+				w: testDate.toISOString(),
+			}
+			worksheet["!ref"] = "A1"
+
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -124,10 +139,18 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should handle error values", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
+			const workbook = XLSX.utils.book_new()
+			const worksheet: XLSX.WorkSheet = {}
 
-			worksheet.getCell("A1").value = { error: "#DIV/0!" }
+			// Create an error cell
+			worksheet["A1"] = {
+				t: "e",
+				v: 0x07, // #DIV/0! error code
+				w: "#DIV/0!",
+			}
+			worksheet["!ref"] = "A1"
+
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -135,12 +158,18 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should handle rich text", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
+			const workbook = XLSX.utils.book_new()
+			const worksheet: XLSX.WorkSheet = {}
 
-			worksheet.getCell("A1").value = {
-				richText: [{ text: "Hello " }, { text: "World", font: { bold: true } }],
+			// Create a rich text cell
+			worksheet["A1"] = {
+				t: "s",
+				v: "Hello World",
+				r: [{ t: "Hello " }, { t: "World" }],
 			}
+			worksheet["!ref"] = "A1"
+
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -148,13 +177,19 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should handle hyperlinks", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
+			const workbook = XLSX.utils.book_new()
+			const worksheet: XLSX.WorkSheet = {}
 
-			worksheet.getCell("A1").value = {
-				text: "Roo Code",
-				hyperlink: "https://roocode.com/",
+			// Create a hyperlink cell
+			worksheet["A1"] = {
+				t: "s",
+				v: "Roo Code",
+				w: "Roo Code",
+				l: { Target: "https://roocode.com/" },
 			}
+			worksheet["!ref"] = "A1"
+
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -162,11 +197,25 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should handle formulas with and without results", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
+			const workbook = XLSX.utils.book_new()
+			const worksheet: XLSX.WorkSheet = {}
 
-			worksheet.getCell("A1").value = { formula: "A2+A3", result: 30 }
-			worksheet.getCell("A2").value = { formula: "SUM(B1:B10)" }
+			// Formula with result
+			worksheet["A1"] = {
+				t: "n",
+				v: 30,
+				w: "30",
+				f: "A2+A3",
+			}
+
+			// Formula without result (no v or w property)
+			worksheet["A2"] = {
+				f: "SUM(B1:B10)",
+			}
+
+			worksheet["!ref"] = "A1:A2"
+
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -177,8 +226,9 @@ describe("extractTextFromXLSX", () => {
 
 	describe("edge cases", () => {
 		it("should handle empty workbook", async () => {
-			const workbook = new ExcelJS.Workbook()
-			workbook.addWorksheet("Empty Sheet")
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([[]])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Empty Sheet")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -187,12 +237,9 @@ describe("extractTextFromXLSX", () => {
 		})
 
 		it("should handle workbook with only empty cells", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Sheet1")
-
-			// Set cells but leave them empty
-			worksheet.getCell("A1").value = ""
-			worksheet.getCell("B1").value = ""
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([["", ""]])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -205,9 +252,9 @@ describe("extractTextFromXLSX", () => {
 
 	describe("function overloads", () => {
 		it("should work with workbook objects", async () => {
-			const workbook = new ExcelJS.Workbook()
-			const worksheet = workbook.addWorksheet("Test")
-			worksheet.getCell("A1").value = "Test Data"
+			const workbook = XLSX.utils.book_new()
+			const worksheet = XLSX.utils.aoa_to_sheet([["Test Data"]])
+			XLSX.utils.book_append_sheet(workbook, worksheet, "Test")
 
 			const result = await extractTextFromXLSX(workbook)
 
@@ -219,3 +266,4 @@ describe("extractTextFromXLSX", () => {
 		})
 	})
 })
+// kilocode_change end - use SheetJS to extract text from XLSX files with improved cell handling

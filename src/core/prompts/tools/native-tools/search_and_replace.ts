@@ -3,7 +3,7 @@ import type OpenAI from "openai"
 import z from "zod/v4"
 
 export function shouldUseSearchAndReplaceInsteadOfApplyDiff(toolStyle: ToolUseStyle, modelId: string) {
-	return toolStyle === "json" && modelId.toLowerCase().includes("minimax-m2")
+	return toolStyle === "json" && !modelId.toLowerCase().includes("claude")
 }
 
 export const SearchAndReplaceParametersSchema = z.object({

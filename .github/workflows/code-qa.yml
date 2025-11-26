@@ -100,7 +100,16 @@ jobs:
             - name: Build (to build and copy WASM files)
               run: pnpm run vsix
               shell: bash
-            - name: Run unit tests
+            - name: Run packages/types tests
+              working-directory: packages/types
+              run: pnpm test
+            - name: Run packages/cloud tests
+              working-directory: packages/cloud
+              run: pnpm test
+            - name: Run packages/telemetry tests
+              working-directory: packages/telemetry
+              run: pnpm test
+            - name: Run extension unit tests
               working-directory: src
               run: pnpm test
 

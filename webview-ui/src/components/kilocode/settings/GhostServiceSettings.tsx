@@ -6,7 +6,7 @@ import { Bot, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SectionHeader } from "../../settings/SectionHeader"
 import { Section } from "../../settings/Section"
-import { GhostServiceSettings } from "@roo-code/types"
+import { GhostServiceSettings, MODEL_SELECTION_ENABLED } from "@roo-code/types"
 import { vscode } from "@/utils/vscode"
 import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
 import { useKeybindings } from "@/hooks/useKeybindings"
@@ -145,7 +145,7 @@ export const GhostServiceSettingsView = ({
 						</div>
 					</div>
 
-					{process.env.NODE_ENV === "development" && (
+					{MODEL_SELECTION_ENABLED && (
 						<div className="flex flex-col gap-1">
 							<VSCodeCheckbox checked={useNewAutocomplete || false} onChange={onUseNewAutocompleteChange}>
 								<span className="font-medium">[DEV ONLY] Use Experimental New Autocomplete</span>
@@ -180,6 +180,11 @@ export const GhostServiceSettingsView = ({
 							) : (
 								<div className="text-vscode-errorForeground">
 									{t("kilocode:ghost.settings.noModelConfigured")}
+								</div>
+							)}
+							{MODEL_SELECTION_ENABLED && (
+								<div className="text-vscode-descriptionForeground mt-2">
+									{t("kilocode:ghost.settings.configureAutocompleteProfile")}
 								</div>
 							)}
 						</div>

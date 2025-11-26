@@ -187,7 +187,9 @@
 		"wantsToGenerateImage": "Kilo Code хочет сгенерировать изображение",
 		"wantsToGenerateImageOutsideWorkspace": "Kilo Code хочет сгенерировать изображение вне рабочего пространства",
 		"wantsToGenerateImageProtected": "Kilo Code хочет сгенерировать изображение в защищённом месте",
-		"didGenerateImage": "Kilo Code сгенерировал изображение"
+		"didGenerateImage": "Kilo Code сгенерировал изображение",
+		"wantsToDelete": "Kilo Code хочет удалить этот файл",
+		"wantsToDeleteDirectory": "Kilo Code хочет удалить эту директорию"
 	},
 	"directoryOperations": {
 		"wantsToViewTopLevel": "Kilo Code хочет просмотреть файлы верхнего уровня в этой директории",

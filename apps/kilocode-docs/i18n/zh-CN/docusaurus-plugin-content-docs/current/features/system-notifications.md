@@ -1,17 +1,17 @@
 # 系统通知
 
-系统通知是原生操作系统通知，会出现在系统的通知中心或托盘中。与仅在编辑器内显示的 VSCode 内置通知不同，系统通知在以下情况下仍然可见：
+系统通知是原生操作系统通知，会出现在系统的通知中心或系统托盘中。与仅在编辑器内显示的 VSCode 内置通知不同，系统通知在以下情况下仍然可见：
 
-- VSCode 最小化或处于后台
-- 你正在其他应用程序中工作
+- VSCode 处于最小化状态或在后台运行
+- 您正在使用其他应用程序时
 - 你的屏幕被锁定（取决于操作系统设置）
-- 你离开电脑
+- 您离开电脑时
 
-Kilo Code 使用系统通知来告知你：
+Kilo Code 使用系统通知向您告知以下信息：
 
 - 任务完成状态
-- 重要错误或警告
-- 长时间运行操作的更新
+- 重要错误或警告信息
+- 长时间运行操作的进度更新
 - 关键系统事件
 
 ## 支持的操作系统
@@ -28,7 +28,7 @@ Kilo Code 的系统通知可在所有主要操作系统上运行，但底层技�
 
 ### macOS 设置
 
-macOS 对系统通知具有最佳的内置支持，有两种可用方法：
+macOS 有最佳的系统通知内置支持，提供以下两种可用方法：
 
 #### 方法 1：内置 AppleScript（备用）
 
@@ -46,7 +46,7 @@ brew install terminal-notifier
 npm install -g terminal-notifier
 ```
 
-**工作原理：** Kilo Code 首先尝试使用 `terminal-notifier`，如果未安装则自动回退到 AppleScript。
+**工作原理：** Kilo Code 会首先尝试使用 `terminal-notifier`，如果未安装则自动回退到 AppleScript。
 
 ### Windows 设置
 
@@ -66,7 +66,7 @@ Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 #### 步骤 2：验证 Windows Runtime 访问权限
 
-Windows 通知通过 PowerShell 使用 `Windows.UI.Notifications` API。此功能在以下版本中可用：
+Windows 通知通过 PowerShell 使用 `Windows.UI.Notifications` API。此功能在以下系统版本中可用：
 
 - ✅ Windows 10（所有版本）
 - ✅ Windows 11（所有版本）
@@ -75,12 +75,12 @@ Windows 通知通过 PowerShell 使用 `Windows.UI.Notifications` API。此功�
 
 #### 执行策略选项
 
-| 策略           | 描述                               | 安全级别 | 推荐        |
+| 策略           | 描述                               | 安全级别 | 推荐程度    |
 | -------------- | ---------------------------------- | -------- | ----------- |
 | `Restricted`   | 不允许运行脚本（默认）             | 最高     | ❌ 阻止通知 |
 | `RemoteSigned` | 本地脚本可运行，下载的脚本需要签名 | 高       | ✅ **推荐** |
 | `Unrestricted` | 所有脚本运行但会显示警告           | 中等     | ⚠️ 谨慎使用 |
-| `AllSigned`    | 所有脚本必须签名                   | 最高     | ❌ 过于严格 |
+| `AllSigned`    | 所有脚本都必须经过签名             | 最高     | ❌ 过于严格 |
 
 ### Linux 设置
 
@@ -89,11 +89,11 @@ Linux 通知需要 `libnotify` 包和 `notify-send` 命令。
 #### Ubuntu/Debian 安装
 
 ```bash
-# 安装 libnotify
+# 安装 libnotify 包
 sudo apt update
 sudo apt install libnotify-bin
 
-# 验证安装
+# 验证安装是否成功
 which notify-send
 ```
 
@@ -113,10 +113,10 @@ which notify-send
 #### Arch Linux 安装
 
 ```bash
-# 安装 libnotify
+# 安装 libnotify 包
 sudo pacman -S libnotify
 
-# 验证安装
+# 验证安装是否成功
 which notify-send
 ```
 
@@ -135,23 +135,23 @@ which notify-send
 
 #### 通知守护进程设置（高级）
 
-对于极简窗口管理器，你可能需要启动通知守护进程：
+对于轻量级窗口管理器，您可能需要启动通知守护进程：
 
 ```bash
 # 安装并启动 dunst（轻量级通知守护进程）
 sudo apt install dunst  # Ubuntu/Debian
 sudo pacman -S dunst    # Arch Linux
 
-# 手动启动 dunst
+# 手动启动 dunst 服务
 dunst &
 
-# 或添加到窗口管理器启动脚本
+# 或添加到窗口管理器的启动脚本中
 echo "dunst &" >> ~/.xinitrc
 ```
 
 ## 验证系统通知
 
-### 各平台测试命令
+### 各平台的测试命令
 
 #### macOS 测试
 
@@ -192,7 +192,7 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($xml)
 # 测试 notify-send
 notify-send "测试标题" "测试消息"
 
-# 带图标测试（可选）
+# 带图标的测试（可选）
 notify-send -i dialog-information "测试标题" "测试消息"
 ```
 
@@ -207,19 +207,16 @@ notify-send -i dialog-information "测试标题" "测试消息"
 - **解决方案 1：** 检查系统偏好设置 → 通知 → 终端（或 VSCode）→ 允许通知
 - **解决方案 2：** 确认勿扰模式已禁用
 - **解决方案 3：** 使用上述手动命令测试
-
-**问题：** 通知未出现
-
-- **解决方案：** 确保 terminal-notifier 已正确安装：`brew install terminal-notifier`
+- **解决方案 4：** 确保 terminal-notifier 已正确安装：`brew install terminal-notifier`
 
 #### Windows 问题
 
-**问题：** "脚本执行被禁用" 错误
+**问题：** “Execution of scripts is disabled” 错误
 
 - **解决方案：** 按照设置说明配置 PowerShell 执行策略
 - **命令：** `Set-ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-**问题：** Windows 11 中通知未出现
+**问题：** Windows 11 中通知不显示
 
 - **解决方案 1：** 检查设置 → 系统 → 通知 → 允许通知
 - **解决方案 2：** 确保专注助手未阻止通知
@@ -239,13 +236,13 @@ notify-send -i dialog-information "测试标题" "测试消息"
 - **RHEL/CentOS：** `sudo yum install libnotify`
 - **Arch：** `sudo pacman -S libnotify`
 
-**问题：** 在极简窗口管理器中通知未出现
+**问题：** 在轻量级窗口管理器中通知不显示
 
-- **解决方案：** 安装并配置通知守护进程，如 dunst
+- **解决方案：** 安装并配置通知守护程序，如 dunst
 - **安装：** `sudo apt install dunst`（Ubuntu/Debian）
-- **启动：** `dunst &`
+- **启动服务：** `dunst &`
 
-**问题：** 权限被拒绝错误
+**问题：** 出现权限被拒绝错误
 
 - **解决方案：** 确保你的用户有权访问显示服务器
-- **检查：** `echo $DISPLAY` 应返回类似 `:0` 的结果
+- **检查命令：** `echo $DISPLAY` 应返回类似 `:0` 的结果

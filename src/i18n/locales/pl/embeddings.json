@@ -24,7 +24,9 @@
 	},
 	"vectorStore": {
 		"qdrantConnectionFailed": "Nie udało się połączyć z bazą danych wektorowych Qdrant. Upewnij się, że Qdrant jest uruchomiony i dostępny pod adresem {{qdrantUrl}}. Błąd: {{errorMessage}}",
-		"vectorDimensionMismatch": "Nie udało się zaktualizować indeksu wektorowego dla nowego modelu. Spróbuj wyczyścić indeks i zacząć od nowa. Szczegóły: {{errorMessage}}"
+		"vectorDimensionMismatch": "Nie udało się zaktualizować indeksu wektorowego dla nowego modelu. Spróbuj wyczyścić indeks i zacząć od nowa. Szczegóły: {{errorMessage}}",
+		"lancedbStoreInitFailed": "Nie udało się zainicjować magazynu wektorowego LanceDB: {{errorMessage}}",
+		"lancedbLoadFailed": "Nie udało się załadować modułu LanceDB: {{errorMessage}}"
 	},
 	"validation": {
 		"authenticationFailed": "Uwierzytelnianie nie powiodło się. Sprawdź swój klucz API w ustawieniach.",

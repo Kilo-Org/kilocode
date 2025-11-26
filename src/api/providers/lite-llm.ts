@@ -2,9 +2,9 @@ import OpenAI from "openai"
 import { Anthropic } from "@anthropic-ai/sdk" // Keep for type usage only
 
 import {
-	 litellmDefaultModelId,
-	 litellmDefaultModelInfo,
-	 getActiveToolUseStyle, // kilocode_change
+	litellmDefaultModelId,
+	litellmDefaultModelInfo,
+	getActiveToolUseStyle, // kilocode_change
 } from "@roo-code/types"
 
 import { calculateApiCostOpenAI } from "../../shared/cost"

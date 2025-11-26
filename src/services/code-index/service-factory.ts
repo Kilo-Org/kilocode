@@ -8,6 +8,7 @@ import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
+import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
@@ -19,6 +20,8 @@ import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
 import { Package } from "../../shared/package"
 import { BATCH_SEGMENT_THRESHOLD } from "./constants"
+import { getLancedbVectorStoreDirectoryPath } from "../../utils/storage"
+import { LanceDBManager } from "../../utils/lancedb-manager"
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -147,6 +150,23 @@ export class CodeIndexServiceFactory {
 			}
 		}
 
+		// kilocode_change - start
+		// Use LanceDB
+		if (config.vectorStoreProvider === "lancedb") {
+			const { workspacePath } = this
+			const globalStorageUri = this.configManager.getContextProxy().globalStorageUri.fsPath
+			const lancedbVectorStoreDirectoryPlaceholder =
+				config.lancedbVectorStoreDirectoryPlaceholder || getLancedbVectorStoreDirectoryPath(globalStorageUri)
+			return new LanceDBVectorStore(
+				workspacePath,
+				vectorSize,
+				lancedbVectorStoreDirectoryPlaceholder,
+				new LanceDBManager(globalStorageUri),
+			)
+		}
+		// kilocode_change - end
+
+		// Use Qdrant
 		if (!config.qdrantUrl) {
 			throw new Error(t("embeddings:serviceFactory.qdrantUrlMissing"))
 		}

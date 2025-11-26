@@ -26,6 +26,30 @@ import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { TelemetryService } from "@roo-code/telemetry"
 import { t } from "../../i18n"
 import { NativeOllamaHandler } from "../../api/providers/native-ollama"
+
+// Multiplier for fetching extra files when filtering is enabled to ensure enough non-ignored files; only applied when showRooIgnoredFiles is false.
+const FILE_LIST_OVER_FETCH_MULTIPLIER = 3
+
+function trimFileList(fileListStr: string, maxFiles: number) {
+	let lines = fileListStr.split("\n")
+	if (lines.length <= maxFiles) {
+		return fileListStr
+	}
+
+	const lastLine = lines[lines.length - 1]
+	if (lastLine.startsWith("(File list truncated.")) {
+		// Remove last 3 items from lines (two empty lines and truncation message)
+		lines = lines.slice(0, -3)
+	}
+
+	// Truncate lines to maxFiles
+	lines = lines.slice(0, maxFiles)
+
+	const truncationMsg =
+		"(File list truncated. Use list_files on specific subdirectories if you need to explore further.)"
+
+	return lines.join("\n") + "\n\n" + truncationMsg
+}
 // kilocode_change end
 
 export async function getEnvironmentDetails(cline: Task, includeFileDetails: boolean = false) {
@@ -282,8 +306,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 			if (maxFiles === 0) {
 				details += "(Workspace files context disabled. Use list_files to explore if needed.)"
 			} else {
-				const [files, didHitLimit] = await listFiles(cline.cwd, true, maxFiles)
 				const { showRooIgnoredFiles = false } = state ?? {}
+
+				// kilocode_change start
+				// Only apply multiplier when filtering will remove files (showRooIgnoredFiles = false)
+				// When showRooIgnoredFiles = true, ignored files are just marked with lock symbol, not removed
+				const fetchLimit = showRooIgnoredFiles ? maxFiles : maxFiles * FILE_LIST_OVER_FETCH_MULTIPLIER
+				const [files, didHitLimit] = await listFiles(cline.cwd, true, fetchLimit)
+				// kilocode_change end
 
 				const result = formatResponse.formatFilesList(
 					cline.cwd,
@@ -293,7 +323,14 @@ export async function getEnvironmentDetails(cline: Task, includeFileDetails: boo
 					showRooIgnoredFiles,
 				)
 
-				details += result
+				// kilocode_change start
+				if (!showRooIgnoredFiles) {
+					// Trim because we over-fetched
+					details += trimFileList(result, maxFiles)
+				} else {
+					details += result
+				}
+				// kilocode_change end
 			}
 		}
 	}

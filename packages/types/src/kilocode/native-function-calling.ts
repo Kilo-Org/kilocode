@@ -38,6 +38,7 @@ const modelsDefaultingToJsonKeywords = [
 //Specific providers that default to JSON tool use, regardless of model.
 const providersDefaultingToJsonKeywords = [
 	"synthetic", //All synthetic models support JSON tools, and their pricing model strongly encourages their use
+	"inception",
 ]
 
 export function getActiveToolUseStyle(settings: ProviderSettings | undefined): ToolUseStyle {

@@ -19,7 +19,7 @@ The git commit message generator:
 ### Generating a Commit Message
 
 1. Stage your changes using `git add` or the VS Code git interface
-2. In the VS Code Source Control panel, look for the `Kilo Code` logo next to the commit message field)
+2. In the VS Code Source Control panel, look for the `Kilo Code` logo next to the commit message field
 3. Click the logo to generate a commit message
 
 The generated message will appear in the commit message field, ready for you to review and modify if needed.

@@ -19,6 +19,10 @@ export const openAiNativeModels = {
 		description:
 			"GPT-5.1 is our flagship model for coding and agentic tasks with configurable reasoning and non-reasoning effort.",
 		supportsVerbosity: true,
+		tiers: [
+			{ name: "flex", contextWindow: 400000, inputPrice: 0.625, outputPrice: 5.0, cacheReadsPrice: 0.0625 },
+			{ name: "priority", contextWindow: 400000, inputPrice: 2.5, outputPrice: 20.0, cacheReadsPrice: 0.25 },
+		],
 	},
 	"gpt-5.1-codex": {
 		maxTokens: 128000,

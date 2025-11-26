@@ -1,4 +1,4 @@
-import { modelIdKeysByProvider, ProviderSettingsEntry } from "@roo-code/types"
+import { modelIdKeysByProvider, ProviderName } from "@roo-code/types"
 import { ApiHandler, buildApiHandler } from "../../api"
 import { ProviderSettingsManager } from "../../core/config/ProviderSettingsManager"
 import { OpenRouterHandler } from "../../api/providers"
@@ -6,9 +6,19 @@ import { CompletionUsage } from "../../api/providers/openrouter"
 import { ApiStreamChunk } from "../../api/transform/stream"
 import { AUTOCOMPLETE_PROVIDER_MODELS, checkKilocodeBalance } from "./utils/kilocode-utils"
 import { KilocodeOpenrouterHandler } from "../../api/providers/kilocode-openrouter"
+import { PROVIDERS } from "../../../webview-ui/src/components/settings/constants"
+
+// Convert PROVIDERS array to a lookup map for display names
+const PROVIDER_DISPLAY_NAMES = Object.fromEntries(PROVIDERS.map(({ value, label }) => [value, label])) as Record<
+	ProviderName,
+	string
+>
 
 export class GhostModel {
 	private apiHandler: ApiHandler | null = null
+	public profileName: string | null = null
+	public profileType: string | null = null
+	private currentProvider: ProviderName | null = null
 	public loaded = false
 
 	constructor(apiHandler: ApiHandler | null = null) {
@@ -19,6 +29,9 @@ export class GhostModel {
 	}
 	private cleanup(): void {
 		this.apiHandler = null
+		this.profileName = null
+		this.profileType = null
+		this.currentProvider = null
 		this.loaded = false
 	}
 
@@ -27,9 +40,19 @@ export class GhostModel {
 
 		this.cleanup()
 
-		// Check providers in order, but skip unusable ones (e.g., kilocode with zero balance)
+		const selectedProfile = profiles.find((x) => x.profileType === "autocomplete")
+		if (selectedProfile) {
+			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
+			if (profile.apiProvider) {
+				await useProfile(this, profile, profile.apiProvider)
+				return true
+			}
+		}
+
 		for (const [provider, model] of AUTOCOMPLETE_PROVIDER_MODELS) {
-			const selectedProfile = profiles.find((x) => x?.apiProvider === provider)
+			const selectedProfile = profiles.find(
+				(x) => x?.apiProvider === provider && !(x.profileType === "autocomplete"),
+			)
 			if (!selectedProfile) continue
 			const profile = await providerSettingsManager.getProfile({ id: selectedProfile.id })
 
@@ -38,18 +61,22 @@ export class GhostModel {
 				if (!profile.kilocodeToken) continue
 				if (!(await checkKilocodeBalance(profile.kilocodeToken, profile.kilocodeOrganizationId))) continue
 			}
-
-			this.apiHandler = buildApiHandler({ ...profile, [modelIdKeysByProvider[provider]]: model })
-
-			if (this.apiHandler instanceof OpenRouterHandler) {
-				await this.apiHandler.fetchModel()
-			}
-			this.loaded = true
+			await useProfile(this, { ...profile, [modelIdKeysByProvider[provider]]: model }, provider)
 			return true
 		}
 
 		this.loaded = true // we loaded, and found nothing, but we do not wish to reload
 		return false
+
+		type ProfileWithIdAndName = Awaited<ReturnType<typeof providerSettingsManager.getProfile>>
+		async function useProfile(self: GhostModel, profile: ProfileWithIdAndName, provider: ProviderName) {
+			self.profileName = profile.name || null
+			self.profileType = profile.profileType || null
+			self.currentProvider = provider
+			self.apiHandler = buildApiHandler(profile)
+			if (self.apiHandler instanceof OpenRouterHandler) await self.apiHandler.fetchModel()
+			self.loaded = true
+		}
 	}
 
 	public supportsFim(): boolean {
@@ -182,14 +209,12 @@ export class GhostModel {
 	}
 
 	public getProviderDisplayName(): string | undefined {
-		if (!this.apiHandler) return undefined
+		if (!this.currentProvider) return undefined
+		return PROVIDER_DISPLAY_NAMES[this.currentProvider]
+	}
 
-		const handler = this.apiHandler as any
-		if (handler.providerName && typeof handler.providerName === "string") {
-			return handler.providerName
-		} else {
-			return undefined
-		}
+	public getRolloutHash_IfLoggedInToKilo(): number | undefined {
+		return this.apiHandler instanceof KilocodeOpenrouterHandler ? this.apiHandler.getRolloutHash() : undefined
 	}
 
 	public hasValidCredentials(): boolean {

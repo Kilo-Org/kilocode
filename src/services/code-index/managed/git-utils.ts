@@ -7,7 +7,7 @@
  */
 
 import { execGetLines } from "../../../shared/utils/exec"
-import { GitDiff } from "./types"
+import { GitDiff, GitDiffFile } from "./types"
 
 /**
  * Helper function to collect all lines from execGetLines into a single string
