@@ -38,7 +38,7 @@ Axon Code delivers frontier models performance for coding and support all the ma
     </tr>
     <tr>
       <td style="padding: 12px 16px; background: #f8fafc;">Codebase Indexing</td>
-      <td style="padding: 12px 16px; background: #f8fafc;">Coming Soon</td>
+      <td style="padding: 12px 16px; background: #f8fafc;">✅</td>
     </tr>
     <tr>
       <td style="padding: 12px 16px; background: #eef2ff; border-bottom-left-radius: 14px;">Tab Auto-Complete</td>
