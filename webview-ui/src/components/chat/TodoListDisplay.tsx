@@ -47,7 +47,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 						width: 8,
 						height: 8,
 						borderRadius: "50%",
-						background: "var(--vscode-charts-green)",
+						background: "var(--color-matterai-green)",
 						marginRight: 8,
 						marginLeft: 2,
 						flexShrink: 0,
@@ -79,7 +79,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 						width: 8,
 						height: 8,
 						borderRadius: "50%",
-						background: "var(--vscode-charts-green)",
+						background: "var(--color-matterai-green)",
 						marginRight: 8,
 						marginLeft: 2,
 						flexShrink: 0,
@@ -127,8 +127,10 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 		<div
 			className="border border-t-0 rounded-b-xs relative"
 			style={{
-				margin: "0",
+				margin: "0px 0px 0px 8px",
 				padding: "6px 10px",
+				width: "96%",
+				borderRadius: "0px 0px 6px 6px",
 				background: "var(--vscode-editor-background,transparent)",
 				borderColor: "var(--vscode-panel-border)",
 			}}>
@@ -147,7 +149,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 					style={{
 						fontWeight: 500,
 						color: allCompleted
-							? "var(--vscode-charts-green)"
+							? "var(--color-matterai-green)"
 							: mostImportantTodo?.status === "in_progress"
 								? "var(--vscode-charts-yellow)"
 								: "var(--vscode-foreground)",
@@ -278,7 +280,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 												width: 8,
 												height: 8,
 												borderRadius: "50%",
-												background: "var(--vscode-charts-green)",
+												background: "var(--color-matterai-green)",
 												marginRight: 8,
 												marginTop: 7,
 												flexShrink: 0,
@@ -334,7 +336,7 @@ export function TodoListDisplay({ todos }: { todos: any[] }) {
 												fontWeight: 500,
 												color:
 													todo.status === "completed"
-														? "var(--vscode-charts-green)"
+														? "var(--color-matterai-green)"
 														: todo.status === "in_progress"
 															? "var(--vscode-charts-yellow)"
 															: "var(--vscode-foreground)",

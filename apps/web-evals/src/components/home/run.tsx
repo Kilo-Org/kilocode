@@ -136,7 +136,7 @@ export function Run({ run, taskMetrics }: RunProps) {
 						<AlertDialogTitle>Are you sure?</AlertDialogTitle>
 						<AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
+					<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 						<AlertDialogCancel>Cancel</AlertDialogCancel>
 						<AlertDialogAction ref={continueRef} onClick={onConfirmDelete}>
 							Continue

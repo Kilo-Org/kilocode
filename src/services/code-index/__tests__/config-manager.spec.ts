@@ -1309,13 +1309,6 @@ describe("CodeIndexConfigManager", () => {
 			expect(configManager.currentEmbedderProvider).toBe("openai")
 		})
 
-		it("should return correct Qdrant configuration", () => {
-			expect(configManager.qdrantConfig).toEqual({
-				url: "http://qdrant.local",
-				apiKey: "test-qdrant-key",
-			})
-		})
-
 		it("should return correct model ID", () => {
 			expect(configManager.currentModelId).toBe("text-embedding-3-large")
 		})

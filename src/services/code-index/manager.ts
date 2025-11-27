@@ -81,7 +81,14 @@ export class CodeIndexManager {
 
 	private assertInitialized() {
 		if (!this._configManager || !this._orchestrator || !this._searchService || !this._cacheManager) {
-			throw new Error("CodeIndexManager not initialized. Call initialize() first.")
+			const missing = []
+			if (!this._configManager) missing.push("_configManager")
+			if (!this._orchestrator) missing.push("_orchestrator")
+			if (!this._searchService) missing.push("_searchService")
+			if (!this._cacheManager) missing.push("_cacheManager")
+
+			const errorMsg = `CodeIndexManager not initialized. Missing: ${missing.join(", ")}. Call initialize() first.`
+			throw new Error(errorMsg)
 		}
 	}
 
@@ -116,53 +123,58 @@ export class CodeIndexManager {
 	 * @returns Object indicating if a restart is needed
 	 */
 	public async initialize(contextProxy: ContextProxy): Promise<{ requiresRestart: boolean }> {
-		// 1. ConfigManager Initialization and Configuration Loading
-		if (!this._configManager) {
-			this._configManager = new CodeIndexConfigManager(contextProxy)
-		}
-		// Load configuration once to get current state and restart requirements
-		const { requiresRestart } = await this._configManager.loadConfiguration()
-
-		// 2. Check if feature is enabled
-		if (!this.isFeatureEnabled) {
-			if (this._orchestrator) {
-				this._orchestrator.stopWatcher()
+		try {
+			// 1. ConfigManager Initialization and Configuration Loading
+			if (!this._configManager) {
+				this._configManager = new CodeIndexConfigManager(contextProxy)
 			}
+			// Load configuration once to get current state and restart requirements
+			const { requiresRestart } = await this._configManager.loadConfiguration()
+
+			// 2. Check if feature is enabled
+			const featureEnabled = this.isFeatureEnabled
+
+			if (!featureEnabled) {
+				if (this._orchestrator) {
+					this._orchestrator.stopWatcher()
+				}
+				return { requiresRestart }
+			}
+
+			// 3. Check if workspace is available
+			const workspacePath = this.workspacePath
+			if (!workspacePath) {
+				this._stateManager.setSystemState("Standby", "No workspace folder open")
+				return { requiresRestart }
+			}
+
+			// 4. CacheManager Initialization
+			if (!this._cacheManager) {
+				this._cacheManager = new CacheManager(this.context, this.workspacePath)
+				await this._cacheManager.initialize()
+			}
+
+			// 5. Determine if Core Services Need Recreation
+			const needsServiceRecreation = !this._serviceFactory || requiresRestart
+
+			if (needsServiceRecreation) {
+				await this._recreateServices()
+			}
+
+			// 6. Handle Indexing Start/Restart
+			const shouldStartOrRestartIndexing =
+				requiresRestart ||
+				(needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
+
+			if (shouldStartOrRestartIndexing) {
+				this._orchestrator?.startIndexing() // This method is async, but we don't await it here
+			}
+
 			return { requiresRestart }
+		} catch (error) {
+			this._stateManager.setSystemState("Error", error instanceof Error ? error.message : String(error))
+			throw error
 		}
-
-		// 3. Check if workspace is available
-		const workspacePath = this.workspacePath
-		if (!workspacePath) {
-			this._stateManager.setSystemState("Standby", "No workspace folder open")
-			return { requiresRestart }
-		}
-
-		// 4. CacheManager Initialization
-		if (!this._cacheManager) {
-			this._cacheManager = new CacheManager(this.context, this.workspacePath)
-			await this._cacheManager.initialize()
-		}
-
-		// 4. Determine if Core Services Need Recreation
-		const needsServiceRecreation = !this._serviceFactory || requiresRestart
-
-		if (needsServiceRecreation) {
-			await this._recreateServices()
-		}
-
-		// 5. Handle Indexing Start/Restart
-		// The enhanced vectorStore.initialize() in startIndexing() now handles dimension changes automatically
-		// by detecting incompatible collections and recreating them, so we rely on that for dimension changes
-		const shouldStartOrRestartIndexing =
-			requiresRestart ||
-			(needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
-
-		if (shouldStartOrRestartIndexing) {
-			this._orchestrator?.startIndexing() // This method is async, but we don't await it here
-		}
-
-		return { requiresRestart }
 	}
 
 	/**
@@ -245,9 +257,8 @@ export class CodeIndexManager {
 			// Log error but continue with recovery - clearing service instances is more important
 			console.error("Failed to clear error state during recovery:", error)
 		} finally {
-			// Force re-initialization by clearing service instances
-			// This ensures a clean slate even if state update failed
-			this._configManager = undefined
+			// Force re-initialization by clearing runtime service instances only
+			// Preserve configManager and cacheManager as they contain important state
 			this._serviceFactory = undefined
 			this._orchestrator = undefined
 			this._searchService = undefined

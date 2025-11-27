@@ -1,9 +1,7 @@
-import { OpenAICompatibleEmbedder } from "./openai-compatible"
-import { IEmbedder, EmbeddingResponse, EmbedderInfo } from "../interfaces/embedder"
-import { GEMINI_MAX_ITEM_TOKENS, MAX_ITEM_TOKENS } from "../constants"
-import { t } from "../../../i18n"
-import { TelemetryEventName } from "@roo-code/types"
 import { TelemetryService } from "@roo-code/telemetry"
+import { TelemetryEventName } from "@roo-code/types"
+import { EmbedderInfo, EmbeddingResponse, IEmbedder } from "../interfaces/embedder"
+import { OpenAICompatibleEmbedder } from "./openai-compatible"
 
 /**
  * MatterAI embedder implementation that wraps the OpenAI Compatible embedder
@@ -14,7 +12,7 @@ import { TelemetryService } from "@roo-code/telemetry"
  */
 export class MatterAiEmbedder implements IEmbedder {
 	private readonly openAICompatibleEmbedder: OpenAICompatibleEmbedder
-	private static readonly MATTERAI_BASE_URL = "https://api.matterai.so/v1/embed"
+	private static readonly MATTERAI_BASE_URL = "https://api.matterai.so/v1/embeddings"
 	private static readonly DEFAULT_MODEL = "matterai-embedding-large"
 	private readonly modelId: string
 
@@ -52,7 +50,6 @@ export class MatterAiEmbedder implements IEmbedder {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "MatterAiEmbedder:createEmbeddings",
 			})
-			console.error("MatterAI embedder error in createEmbeddings:", error) // kilocode_change
 			throw error
 		}
 	}
@@ -72,7 +69,6 @@ export class MatterAiEmbedder implements IEmbedder {
 				stack: error instanceof Error ? error.stack : undefined,
 				location: "MatterAiEmbedder:validateConfiguration",
 			})
-			console.error("MatterAI embedder error in validateConfiguration:", error) // kilocode_change
 			throw error
 		}
 	}

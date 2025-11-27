@@ -243,7 +243,7 @@ export const SlashCommandsSettings: React.FC = () => {
 							{t("chat:slashCommands.deleteDialog.description", { name: commandToDelete?.name })}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
+					<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 						<AlertDialogCancel onClick={handleDeleteCancel}>
 							{t("chat:slashCommands.deleteDialog.cancel")}
 						</AlertDialogCancel>

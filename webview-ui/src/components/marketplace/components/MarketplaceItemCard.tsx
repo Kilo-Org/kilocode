@@ -228,7 +228,7 @@ export const MarketplaceItemCard: React.FC<MarketplaceItemCardProps> = ({ item, 
 							)}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
+					<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 						<AlertDialogCancel>{t("marketplace:removeConfirm.cancel")}</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={() => {

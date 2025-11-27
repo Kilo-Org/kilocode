@@ -289,15 +289,15 @@ export class GhostServiceManager {
 	}
 
 	private async updateGlobalContext() {
-		await vscode.commands.executeCommand("setContext", "kilocode.ghost.isProcessing", this.isProcessing)
+		await vscode.commands.executeCommand("setContext", "axoncode.ghost.isProcessing", this.isProcessing)
 		await vscode.commands.executeCommand(
 			"setContext",
-			"kilocode.ghost.enableQuickInlineTaskKeybinding",
+			"axoncode.ghost.enableQuickInlineTaskKeybinding",
 			this.settings?.enableQuickInlineTaskKeybinding || false,
 		)
 		await vscode.commands.executeCommand(
 			"setContext",
-			"kilocode.ghost.enableSmartInlineTaskKeybinding",
+			"axoncode.ghost.enableSmartInlineTaskKeybinding",
 			this.settings?.enableSmartInlineTaskKeybinding || false,
 		)
 	}

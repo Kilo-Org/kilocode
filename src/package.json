@@ -3,7 +3,7 @@
 	"displayName": "%extension.displayName%",
 	"description": "%extension.description%",
 	"publisher": "matterai",
-	"version": "4.119.0",
+	"version": "4.120.0",
 	"icon": "assets/icons/matterai-ic.png",
 	"galleryBanner": {
 		"color": "#FFFFFF",
@@ -90,7 +90,7 @@
 		"viewsContainers": {
 			"activitybar": [
 				{
-					"id": "kilo-code-ActivityBar",
+					"id": "axon-code-ActivityBar",
 					"title": "%views.activitybar.title%",
 					"icon": "assets/icons/matterai-ic.png",
 					"darkIcon": "assets/icons/matterai-ic.png"
@@ -98,7 +98,7 @@
 			]
 		},
 		"views": {
-			"kilo-code-ActivityBar": [
+			"axon-code-ActivityBar": [
 				{
 					"type": "webview",
 					"id": "axon-code.SidebarProvider",
@@ -239,8 +239,8 @@
 				"command": "axon-code.vsc.generateCommitMessage",
 				"title": "%command.generateCommitMessage.title%",
 				"icon": {
-					"light": "assets/icons/kilo-light.svg",
-					"dark": "assets/icons/kilo-dark.svg"
+					"light": "assets/icons/matterai-ic.svg",
+					"dark": "assets/icons/matterai-ic.svg"
 				},
 				"category": "%configuration.title%"
 			},
@@ -418,24 +418,24 @@
 			{
 				"command": "axon-code.ghost.cancelRequest",
 				"key": "escape",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.isProcessing"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && axoncode.ghost.isProcessing"
 			},
 			{
 				"command": "axon-code.ghost.cancelSuggestions",
 				"key": "escape",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.hasSuggestions"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && axoncode.ghost.hasSuggestions"
 			},
 			{
 				"command": "axon-code.ghost.generateSuggestions",
 				"key": "ctrl+l",
 				"mac": "cmd+l",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && axoncode.ghost.enableSmartInlineTaskKeybinding && !github.copilot.completions.enabled"
 			},
 			{
 				"command": "axon-code.ghost.showIncompatibilityExtensionPopup",
 				"key": "ctrl+l",
 				"mac": "cmd+l",
-				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && kilocode.ghost.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
+				"when": "editorTextFocus && !editorTabMovesFocus && !inSnippetMode && axoncode.ghost.enableSmartInlineTaskKeybinding && github.copilot.completions.enabled"
 			},
 			{
 				"command": "axon-code.generateTerminalCommand",
@@ -456,13 +456,13 @@
 				"mac": "cmd+i",
 				"win": "ctrl+i",
 				"linux": "ctrl+i",
-				"when": "editorTextFocus && !github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
+				"when": "editorTextFocus && !github.copilot.completions.enabled && axoncode.ghost.enableQuickInlineTaskKeybinding"
 			},
 			{
 				"command": "axon-code.ghost.showIncompatibilityExtensionPopup",
 				"key": "ctrl+i",
 				"mac": "cmd+i",
-				"when": "editorTextFocus && github.copilot.completions.enabled && kilocode.ghost.enableQuickInlineTaskKeybinding"
+				"when": "editorTextFocus && github.copilot.completions.enabled && axoncode.ghost.enableQuickInlineTaskKeybinding"
 			},
 			{
 				"command": "axon-code.toggleAutoApprove",

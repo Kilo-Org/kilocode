@@ -1,9 +1,8 @@
-import { ApiHandlerOptions } from "../../shared/api"
 import { ContextProxy } from "../../core/config/ContextProxy"
-import { EmbedderProvider } from "./interfaces/manager"
-import { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
-import { DEFAULT_SEARCH_MIN_SCORE, DEFAULT_MAX_SEARCH_RESULTS } from "./constants"
 import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "../../shared/embeddingModels"
+import { DEFAULT_MAX_SEARCH_RESULTS, DEFAULT_SEARCH_MIN_SCORE } from "./constants"
+import { CodeIndexConfig, PreviousConfigSnapshot } from "./interfaces/config"
+import { EmbedderProvider } from "./interfaces/manager"
 
 /**
  * Manages configuration state and validation for the code indexing feature.
@@ -11,18 +10,10 @@ import { getDefaultModelId, getModelDimension, getModelScoreThreshold } from "..
  */
 export class CodeIndexConfigManager {
 	private codebaseIndexEnabled: boolean = true
-	private embedderProvider: EmbedderProvider = "openai"
-	private modelId?: string
+	private embedderProvider: EmbedderProvider = "matterai"
+	private modelId: string = "matterai-embedding-large"
 	private modelDimension?: number
-	private openAiOptions?: ApiHandlerOptions
-	private ollamaOptions?: ApiHandlerOptions
-	private openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
-	private geminiOptions?: { apiKey: string }
-	private mistralOptions?: { apiKey: string }
-	private vercelAiGatewayOptions?: { apiKey: string }
 	private openRouterApiKey?: string
-	private qdrantUrl?: string = "http://localhost:6333"
-	private qdrantApiKey?: string
 	private searchMinScore?: number
 	private searchMaxResults?: number
 	private matterAiOptions?: { apiKey: string }
@@ -47,45 +38,31 @@ export class CodeIndexConfigManager {
 		// Load configuration from storage
 		const codebaseIndexConfig = this.contextProxy?.getGlobalState("codebaseIndexConfig") ?? {
 			codebaseIndexEnabled: true,
-			codebaseIndexQdrantUrl: "http://localhost:6333",
-			codebaseIndexEmbedderProvider: "openai",
-			codebaseIndexEmbedderBaseUrl: "",
-			codebaseIndexEmbedderModelId: "",
+			codebaseIndexEmbedderProvider: "matterai",
+			codebaseIndexEmbedderModelId: "matterai-embedding-large",
 			codebaseIndexSearchMinScore: undefined,
 			codebaseIndexSearchMaxResults: undefined,
 		}
 
 		const {
 			codebaseIndexEnabled,
-			codebaseIndexQdrantUrl,
-			codebaseIndexEmbedderProvider,
-			codebaseIndexEmbedderBaseUrl,
 			codebaseIndexEmbedderModelId,
 			codebaseIndexSearchMinScore,
 			codebaseIndexSearchMaxResults,
 		} = codebaseIndexConfig
 
-		const openAiKey = this.contextProxy?.getSecret("codeIndexOpenAiKey") ?? ""
-		const qdrantApiKey = this.contextProxy?.getSecret("codeIndexQdrantApiKey") ?? ""
-		// Get openRouterApiKey from main API configuration, not as separate secret
-		const openRouterApiKey = this.contextProxy?.getSecret("openRouterApiKey") ?? ""
-		// Fix: Read OpenAI Compatible settings from the correct location within codebaseIndexConfig
-		const openAiCompatibleBaseUrl = codebaseIndexConfig.codebaseIndexOpenAiCompatibleBaseUrl ?? ""
-		const openAiCompatibleApiKey = this.contextProxy?.getSecret("codebaseIndexOpenAiCompatibleApiKey") ?? ""
-		const geminiApiKey = this.contextProxy?.getSecret("codebaseIndexGeminiApiKey") ?? ""
-		const mistralApiKey = this.contextProxy?.getSecret("codebaseIndexMistralApiKey") ?? ""
-		const vercelAiGatewayApiKey = this.contextProxy?.getSecret("codebaseIndexVercelAiGatewayApiKey") ?? ""
+		// Get openRouterApiKey from the current API configuration instead of secrets storage
+		const apiConfiguration = this.contextProxy?.getProviderSettings()
+		const openRouterApiKey = apiConfiguration?.kilocodeToken ?? ""
 
 		// Update instance variables with configuration
 		this.codebaseIndexEnabled = codebaseIndexEnabled ?? true
-		this.qdrantUrl = codebaseIndexQdrantUrl
-		this.qdrantApiKey = qdrantApiKey ?? ""
 		this.openRouterApiKey = openRouterApiKey
 		this.searchMinScore = codebaseIndexSearchMinScore
 		this.searchMaxResults = codebaseIndexSearchMaxResults
 
 		// Validate and set model dimension
-		const rawDimension = codebaseIndexConfig.codebaseIndexEmbedderModelDimension
+		const rawDimension = 3072
 		if (rawDimension !== undefined && rawDimension !== null) {
 			const dimension = Number(rawDimension)
 			if (!isNaN(dimension) && dimension > 0) {
@@ -100,40 +77,7 @@ export class CodeIndexConfigManager {
 			this.modelDimension = undefined
 		}
 
-		this.openAiOptions = { openAiNativeApiKey: openAiKey }
-
-		// Set embedder provider with support for openai-compatible
-		if (codebaseIndexEmbedderProvider === "ollama") {
-			this.embedderProvider = "ollama"
-		} else if (codebaseIndexEmbedderProvider === "openai-compatible") {
-			this.embedderProvider = "openai-compatible"
-		} else if (codebaseIndexEmbedderProvider === "gemini") {
-			this.embedderProvider = "gemini"
-		} else if (codebaseIndexEmbedderProvider === "mistral") {
-			this.embedderProvider = "mistral"
-		} else if (codebaseIndexEmbedderProvider === "vercel-ai-gateway") {
-			this.embedderProvider = "vercel-ai-gateway"
-		} else {
-			this.embedderProvider = "openai"
-		}
-
-		this.modelId = codebaseIndexEmbedderModelId || undefined
-
-		this.ollamaOptions = {
-			ollamaBaseUrl: codebaseIndexEmbedderBaseUrl,
-		}
-
-		this.openAiCompatibleOptions =
-			openAiCompatibleBaseUrl && openAiCompatibleApiKey
-				? {
-						baseUrl: openAiCompatibleBaseUrl,
-						apiKey: openAiCompatibleApiKey,
-					}
-				: undefined
-
-		this.geminiOptions = geminiApiKey ? { apiKey: geminiApiKey } : undefined
-		this.mistralOptions = mistralApiKey ? { apiKey: mistralApiKey } : undefined
-		this.vercelAiGatewayOptions = vercelAiGatewayApiKey ? { apiKey: vercelAiGatewayApiKey } : undefined
+		this.embedderProvider = "matterai"
 	}
 
 	/**
@@ -146,14 +90,6 @@ export class CodeIndexConfigManager {
 			embedderProvider: EmbedderProvider
 			modelId?: string
 			modelDimension?: number
-			openAiOptions?: ApiHandlerOptions
-			ollamaOptions?: ApiHandlerOptions
-			openAiCompatibleOptions?: { baseUrl: string; apiKey: string }
-			geminiOptions?: { apiKey: string }
-			mistralOptions?: { apiKey: string }
-			vercelAiGatewayOptions?: { apiKey: string }
-			qdrantUrl?: string
-			qdrantApiKey?: string
 			searchMinScore?: number
 		}
 		requiresRestart: boolean
@@ -165,15 +101,6 @@ export class CodeIndexConfigManager {
 			embedderProvider: this.embedderProvider,
 			modelId: this.modelId,
 			modelDimension: this.modelDimension,
-			openAiKey: this.openAiOptions?.openAiNativeApiKey ?? "",
-			ollamaBaseUrl: this.ollamaOptions?.ollamaBaseUrl ?? "",
-			openAiCompatibleBaseUrl: this.openAiCompatibleOptions?.baseUrl ?? "",
-			openAiCompatibleApiKey: this.openAiCompatibleOptions?.apiKey ?? "",
-			geminiApiKey: this.geminiOptions?.apiKey ?? "",
-			mistralApiKey: this.mistralOptions?.apiKey ?? "",
-			vercelAiGatewayApiKey: this.vercelAiGatewayOptions?.apiKey ?? "",
-			qdrantUrl: this.qdrantUrl ?? "",
-			qdrantApiKey: this.qdrantApiKey ?? "",
 		}
 
 		// Refresh secrets from VSCode storage to ensure we have the latest values
@@ -191,14 +118,6 @@ export class CodeIndexConfigManager {
 				embedderProvider: this.embedderProvider,
 				modelId: this.modelId,
 				modelDimension: this.modelDimension,
-				openAiOptions: this.openAiOptions,
-				ollamaOptions: this.ollamaOptions,
-				openAiCompatibleOptions: this.openAiCompatibleOptions,
-				geminiOptions: this.geminiOptions,
-				mistralOptions: this.mistralOptions,
-				vercelAiGatewayOptions: this.vercelAiGatewayOptions,
-				qdrantUrl: this.qdrantUrl,
-				qdrantApiKey: this.qdrantApiKey,
 				searchMinScore: this.currentSearchMinScore,
 			},
 			requiresRestart,
@@ -209,74 +128,22 @@ export class CodeIndexConfigManager {
 	 * Checks if the service is properly configured based on the embedder type.
 	 */
 	public isConfigured(): boolean {
-		if (this.embedderProvider === "openai") {
-			const openAiKey = this.openAiOptions?.openAiNativeApiKey
-			const qdrantUrl = this.qdrantUrl
-			return !!(openAiKey && qdrantUrl)
-		} else if (this.embedderProvider === "ollama") {
-			// Ollama model ID has a default, so only base URL is strictly required for config
-			const ollamaBaseUrl = this.ollamaOptions?.ollamaBaseUrl
-			const qdrantUrl = this.qdrantUrl
-			return !!(ollamaBaseUrl && qdrantUrl)
-		} else if (this.embedderProvider === "openai-compatible") {
-			const baseUrl = this.openAiCompatibleOptions?.baseUrl
-			const apiKey = this.openAiCompatibleOptions?.apiKey
-			const qdrantUrl = this.qdrantUrl
-			const isConfigured = !!(baseUrl && apiKey && qdrantUrl)
-			return isConfigured
-		} else if (this.embedderProvider === "gemini") {
-			const apiKey = this.geminiOptions?.apiKey
-			const qdrantUrl = this.qdrantUrl
-			const isConfigured = !!(apiKey && qdrantUrl)
-			return isConfigured
-		} else if (this.embedderProvider === "mistral") {
-			const apiKey = this.mistralOptions?.apiKey
-			const qdrantUrl = this.qdrantUrl
-			const isConfigured = !!(apiKey && qdrantUrl)
-			return isConfigured
-		} else if (this.embedderProvider === "vercel-ai-gateway") {
-			const apiKey = this.vercelAiGatewayOptions?.apiKey
-			const qdrantUrl = this.qdrantUrl
-			const isConfigured = !!(apiKey && qdrantUrl)
-			return isConfigured
+		if (this.embedderProvider === "matterai") {
+			const apiConfiguration = this.contextProxy?.getProviderSettings()
+			const openRouterApiKey = apiConfiguration?.kilocodeToken ?? ""
+			return !!openRouterApiKey
 		}
-		return false // Should not happen if embedderProvider is always set correctly
+		return false
 	}
 
-	/**
-	 * Determines if a configuration change requires restarting the indexing process.
-	 * Simplified logic: only restart for critical changes that affect service functionality.
-	 *
-	 * CRITICAL CHANGES (require restart):
-	 * - Provider changes (openai -> ollama, etc.)
-	 * - Authentication changes (API keys, base URLs)
-	 * - Vector dimension changes (model changes that affect embedding size)
-	 * - Qdrant connection changes (URL, API key)
-	 * - Feature enable/disable transitions
-	 *
-	 * MINOR CHANGES (no restart needed):
-	 * - Search minimum score adjustments
-	 * - UI-only settings
-	 * - Non-functional configuration tweaks
-	 */
 	doesConfigChangeRequireRestart(prev: PreviousConfigSnapshot): boolean {
 		const nowConfigured = this.isConfigured()
 
 		// Handle null/undefined values safely
 		const prevEnabled = prev?.enabled ?? false
 		const prevConfigured = prev?.configured ?? false
-		const prevProvider = prev?.embedderProvider ?? "openai"
-		const prevOpenAiKey = prev?.openAiKey ?? ""
-		const prevOllamaBaseUrl = prev?.ollamaBaseUrl ?? ""
-		const prevOpenAiCompatibleBaseUrl = prev?.openAiCompatibleBaseUrl ?? ""
-		const prevOpenAiCompatibleApiKey = prev?.openAiCompatibleApiKey ?? ""
+		const prevProvider = prev?.embedderProvider ?? "matterai"
 		const prevModelDimension = prev?.modelDimension
-		const prevGeminiApiKey = prev?.geminiApiKey ?? ""
-		const prevMistralApiKey = prev?.mistralApiKey ?? ""
-		const prevVercelAiGatewayApiKey = prev?.vercelAiGatewayApiKey ?? ""
-		const prevQdrantUrl = prev?.qdrantUrl ?? ""
-		const prevQdrantApiKey = prev?.qdrantApiKey ?? ""
-
 		// 1. Transition from disabled/unconfigured to enabled/configured
 		if ((!prevEnabled || !prevConfigured) && this.codebaseIndexEnabled && nowConfigured) {
 			return true
@@ -303,51 +170,10 @@ export class CodeIndexConfigManager {
 			return true
 		}
 
-		// Authentication changes (API keys)
-		const currentOpenAiKey = this.openAiOptions?.openAiNativeApiKey ?? ""
-		const currentOllamaBaseUrl = this.ollamaOptions?.ollamaBaseUrl ?? ""
-		const currentOpenAiCompatibleBaseUrl = this.openAiCompatibleOptions?.baseUrl ?? ""
-		const currentOpenAiCompatibleApiKey = this.openAiCompatibleOptions?.apiKey ?? ""
 		const currentModelDimension = this.modelDimension
-		const currentGeminiApiKey = this.geminiOptions?.apiKey ?? ""
-		const currentMistralApiKey = this.mistralOptions?.apiKey ?? ""
-		const currentVercelAiGatewayApiKey = this.vercelAiGatewayOptions?.apiKey ?? ""
-		const currentQdrantUrl = this.qdrantUrl ?? ""
-		const currentQdrantApiKey = this.qdrantApiKey ?? ""
-
-		if (prevOpenAiKey !== currentOpenAiKey) {
-			return true
-		}
-
-		if (prevOllamaBaseUrl !== currentOllamaBaseUrl) {
-			return true
-		}
-
-		if (
-			prevOpenAiCompatibleBaseUrl !== currentOpenAiCompatibleBaseUrl ||
-			prevOpenAiCompatibleApiKey !== currentOpenAiCompatibleApiKey
-		) {
-			return true
-		}
-
-		if (prevGeminiApiKey !== currentGeminiApiKey) {
-			return true
-		}
-
-		if (prevMistralApiKey !== currentMistralApiKey) {
-			return true
-		}
-
-		if (prevVercelAiGatewayApiKey !== currentVercelAiGatewayApiKey) {
-			return true
-		}
 
 		// Check for model dimension changes (generic for all providers)
 		if (prevModelDimension !== currentModelDimension) {
-			return true
-		}
-
-		if (prevQdrantUrl !== currentQdrantUrl || prevQdrantApiKey !== currentQdrantApiKey) {
 			return true
 		}
 
@@ -394,15 +220,7 @@ export class CodeIndexConfigManager {
 			embedderProvider: this.embedderProvider,
 			modelId: this.modelId,
 			modelDimension: this.modelDimension,
-			openAiOptions: this.openAiOptions,
-			ollamaOptions: this.ollamaOptions,
-			openAiCompatibleOptions: this.openAiCompatibleOptions,
-			geminiOptions: this.geminiOptions,
-			mistralOptions: this.mistralOptions,
-			vercelAiGatewayOptions: this.vercelAiGatewayOptions,
 			openRouterApiKey: this.openRouterApiKey,
-			qdrantUrl: this.qdrantUrl,
-			qdrantApiKey: this.qdrantApiKey,
 			searchMinScore: this.searchMinScore,
 			searchMaxResults: this.searchMaxResults,
 			matterAiOptions: this.matterAiOptions,
@@ -428,16 +246,6 @@ export class CodeIndexConfigManager {
 	 */
 	public get currentEmbedderProvider(): EmbedderProvider {
 		return this.embedderProvider
-	}
-
-	/**
-	 * Gets the current Qdrant configuration
-	 */
-	public get qdrantConfig(): { url?: string; apiKey?: string } {
-		return {
-			url: this.qdrantUrl,
-			apiKey: this.qdrantApiKey,
-		}
 	}
 
 	/**

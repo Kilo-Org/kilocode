@@ -46,7 +46,7 @@ export const DeleteModeDialog: React.FC<DeleteModeDialogProps> = ({ open, onOpen
 						)}
 					</AlertDialogDescription>
 				</AlertDialogHeader>
-				<AlertDialogFooter>
+				<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 					<AlertDialogCancel>{t("prompts:deleteMode.cancel")}</AlertDialogCancel>
 					<AlertDialogAction onClick={onConfirm}>{t("prompts:deleteMode.confirm")}</AlertDialogAction>
 				</AlertDialogFooter>

@@ -6,7 +6,7 @@ import { GeminiEmbedder } from "./embedders/gemini"
 import { MistralEmbedder } from "./embedders/mistral"
 import { VercelAiGatewayEmbedder } from "./embedders/vercel-ai-gateway"
 import { EmbedderProvider, getDefaultModelId, getModelDimension } from "../../shared/embeddingModels"
-import { QdrantVectorStore } from "./vector-store/qdrant-client"
+import { HttpVectorStore } from "./vector-store/http-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import { CodeIndexConfigManager } from "./config-manager"
@@ -39,6 +39,7 @@ export class CodeIndexServiceFactory {
 		const provider = config.embedderProvider as EmbedderProvider
 		if (provider === "matterai") {
 			// Use the same API key source as OpenRouter provider
+
 			const openRouterApiKey = config.openRouterApiKey
 			if (!openRouterApiKey) {
 				throw new Error(t("embeddings:serviceFactory.matteraiConfigMissing"))
@@ -105,12 +106,10 @@ export class CodeIndexServiceFactory {
 			}
 		}
 
-		if (!config.qdrantUrl) {
-			throw new Error(t("embeddings:serviceFactory.qdrantUrlMissing"))
-		}
-
-		// Assuming constructor is updated: new QdrantVectorStore(workspacePath, url, vectorSize, apiKey?)
-		return new QdrantVectorStore(this.workspacePath, config.qdrantUrl, vectorSize, config.qdrantApiKey)
+		// Use the HTTP vector store with the backend API
+		const baseUrl = "https://api.matterai.so/api/v1"
+		const openRouterApiKey = config.openRouterApiKey || ""
+		return new HttpVectorStore(this.workspacePath, baseUrl, vectorSize, openRouterApiKey)
 	}
 
 	/**

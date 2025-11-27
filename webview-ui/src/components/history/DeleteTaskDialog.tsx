@@ -58,7 +58,7 @@ export const DeleteTaskDialog = ({ taskId, ...props }: DeleteTaskDialogProps) =>
 					</AlertDialogDescription>
 					{/* kilocode_change end */}
 				</AlertDialogHeader>
-				<AlertDialogFooter>
+				<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 					<AlertDialogCancel asChild>
 						<Button variant="secondary">{t("history:cancel")}</Button>
 					</AlertDialogCancel>

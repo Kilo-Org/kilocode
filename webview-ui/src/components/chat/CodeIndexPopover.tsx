@@ -659,7 +659,7 @@ export const CodeIndexPopover: React.FC<CodeIndexPopoverProps> = ({
 														{t("settings:codeIndex.clearDataDialog.description")}
 													</AlertDialogDescription>
 												</AlertDialogHeader>
-												<AlertDialogFooter>
+												<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 													<AlertDialogCancel>
 														{t("settings:codeIndex.clearDataDialog.cancelButton")}
 													</AlertDialogCancel>

@@ -182,7 +182,7 @@ export const VirtualQuotaFallbackProviderPresentation = ({
 							</Trans>
 						</AlertDialogDescription>
 					</AlertDialogHeader>
-					<AlertDialogFooter>
+					<AlertDialogFooter className="flex-col gap-2 items-center justify-center">
 						<AlertDialogCancel>
 							<Trans i18nKey="common:cancel">Cancel</Trans>
 						</AlertDialogCancel>
