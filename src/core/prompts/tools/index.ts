@@ -33,7 +33,7 @@ import { CodeIndexManager } from "../../../services/code-index/manager"
 import { isFastApplyAvailable } from "../../tools/kilocode/editFileTool"
 import { getEditFileDescription } from "./edit-file"
 import { type ClineProviderState } from "../../webview/ClineProvider"
-import { ManagedIndexer } from "../../../services/code-index/managed/ManagedIndexer"
+import { ManagedGptByIndexer } from "../../../services/code-index/gptchatby-managed/ManagedGptByIndexer"
 // kilocode_change end
 
 // Map of tool names to their description functions
@@ -132,7 +132,7 @@ export function getToolDescriptionsForMode(
 	// Conditionally exclude codebase_search if feature is disabled or not configured
 	// kilocode_change start
 	const isCodebaseSearchAvailable =
-		ManagedIndexer.getInstance().isEnabled() ||
+		ManagedGptByIndexer.getInstance().isEnabled() ||
 		(codeIndexManager &&
 			codeIndexManager.isFeatureEnabled &&
 			codeIndexManager.isFeatureConfigured &&

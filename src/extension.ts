@@ -47,7 +47,7 @@ import { registerMainThreadForwardingLogger } from "./utils/fowardingLogger" // 
 import { getKiloCodeWrapperProperties } from "./core/kilocode/wrapper" // kilocode_change
 import { SettingsSyncService } from "./services/settings-sync/SettingsSyncService" // kilocode_change
 import { flushModels, getModels } from "./api/providers/fetchers/modelCache"
-import { ManagedIndexer } from "./services/code-index/managed/ManagedIndexer" // kilocode_change
+import { ManagedGptByIndexer } from "./services/code-index/gptchatby-managed/ManagedGptByIndexer"
 
 /**
  * Built using https://github.com/microsoft/vscode-webview-ui-toolkit
@@ -144,12 +144,12 @@ export async function activate(context: vscode.ExtensionContext) {
 				codeIndexManagers.push(manager)
 
 				// Initialize in background; do not block extension activation
-				void manager.initialize(contextProxy).catch((error) => {
+		/*		void manager.initialize(contextProxy).catch((error) => {
 					const message = error instanceof Error ? error.message : String(error)
 					outputChannel.appendLine(
 						`[CodeIndexManager] Error during background CodeIndexManager configuration/indexing for ${folder.uri.fsPath}: ${message}`,
 					)
-				})
+				})*/
 
 				context.subscriptions.push(manager)
 			}
@@ -460,7 +460,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// kilocode_change start: Initialize ManagedIndexer
 	await checkAndRunAutoLaunchingTask(context)
-	const managedIndexer = new ManagedIndexer(contextProxy)
+	const managedIndexer = new ManagedGptByIndexer(context)
 	context.subscriptions.push(managedIndexer)
 	void managedIndexer.start().catch((error) => {
 		outputChannel.appendLine(

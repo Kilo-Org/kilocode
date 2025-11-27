@@ -92,7 +92,7 @@ import { fetchAndRefreshOrganizationModesOnStartup, refreshOrganizationModes } f
 import { getSapAiCoreDeployments } from "../../api/providers/fetchers/sap-ai-core" // kilocode_change
 import { AutoPurgeScheduler } from "../../services/auto-purge" // kilocode_change
 import { setPendingTodoList } from "../tools/UpdateTodoListTool"
-import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer"
+import { ManagedGptByIndexer } from "../../services/code-index/gptchatby-managed/ManagedGptByIndexer"
 
 export const webviewMessageHandler = async (
 	provider: ClineProvider,
@@ -3835,7 +3835,7 @@ export const webviewMessageHandler = async (
 		// kilocode_change start - ManagedIndexer state
 		case "requestManagedIndexerState": {
 			try {
-				const state = ManagedIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
+				const state = ManagedGptByIndexer.getInstance()?.getWorkspaceFolderStateSnapshot() || []
 				await provider.postMessageToWebview({
 					type: "managedIndexerState",
 					managedIndexerState: state,
@@ -3855,7 +3855,7 @@ export const webviewMessageHandler = async (
 		// we're going to delete this message at some point and use apiConfiguration
 		// probably. So casting as any as to not define a more permanent type
 		case "requestManagedIndexerEnabled" as any: {
-			ManagedIndexer.getInstance()?.sendEnabledStateToWebview()
+			ManagedGptByIndexer.getInstance()?.sendEnabledStateToWebview()
 			break
 		}
 		// kilocode_change end

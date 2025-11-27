@@ -11,7 +11,7 @@ import type {
 	PushToolResult, // kilocode_change
 	ToolUse,
 } from "../../shared/tools"
-import { ManagedIndexer } from "../../services/code-index/managed/ManagedIndexer" // kilocode_change
+import { ManagedGptByIndexer } from "../../services/code-index/gptchatby-managed/ManagedGptByIndexer"
 
 interface CodebaseSearchParams {
 	query: string
@@ -235,7 +235,7 @@ async function tryManagedSearch(
 	directoryPrefix?: string,
 ): Promise<boolean> {
 	try {
-		const managed = ManagedIndexer.getInstance()
+		const managed = ManagedGptByIndexer.getInstance()
 		if (!managed.isEnabled()) {
 			return false
 		}
