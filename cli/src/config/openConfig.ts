@@ -51,49 +51,53 @@ export default async function openConfigFile() {
 		// Track if we should try nano fallback on Linux
 		const shouldTryNanoFallback = !editor && platform() === "linux" && editorCommand === "xdg-open"
 
-		// Spawn the editor process
-		const editorProcess = spawn(editorCommand, editorArgs, {
-			stdio: "inherit",
-		})
+		// Spawn the editor process and wait for it to complete
+		await new Promise<void>((resolve, reject) => {
+			const editorProcess = spawn(editorCommand, editorArgs, {
+				stdio: "inherit",
+			})
 
-		editorProcess.on("error", (error) => {
-			// On Linux, if xdg-open fails and no EDITOR is set, try nano as fallback
-			if (shouldTryNanoFallback) {
-				console.log(`xdg-open failed, trying nano as fallback...`)
-				const nanoProcess = spawn("nano", [configPath], {
-					stdio: "inherit",
-				})
+			editorProcess.on("error", (error) => {
+				// On Linux, if xdg-open fails and no EDITOR is set, try nano as fallback
+				if (shouldTryNanoFallback) {
+					console.log(`xdg-open failed, trying nano as fallback...`)
+					const nanoProcess = spawn("nano", [configPath], {
+						stdio: "inherit",
+					})
 
-				nanoProcess.on("error", (nanoError) => {
+					nanoProcess.on("error", (nanoError) => {
+						console.error(`Failed to open editor: ${error.message}`)
+						console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
+						console.error(`Nano fallback also failed: ${nanoError.message}`)
+						console.error(`\nYou can manually edit the config file at: ${configPath}`)
+						reject(nanoError)
+					})
+
+					nanoProcess.on("exit", (code) => {
+						if (code !== 0 && code !== null) {
+							console.error(`Nano exited with code ${code}`)
+							console.error(`Config file location: ${configPath}`)
+						}
+						resolve()
+					})
+				} else {
 					console.error(`Failed to open editor: ${error.message}`)
 					console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
-					console.error(`Nano fallback also failed: ${nanoError.message}`)
 					console.error(`\nYou can manually edit the config file at: ${configPath}`)
-					process.exit(1)
-				})
+					reject(error)
+				}
+			})
 
-				nanoProcess.on("exit", (code) => {
-					if (code !== 0 && code !== null) {
-						console.error(`Nano exited with code ${code}`)
-						console.error(`Config file location: ${configPath}`)
-					}
-				})
-			} else {
-				console.error(`Failed to open editor: ${error.message}`)
-				console.error(`Tried to run: ${editorCommand} ${editorArgs.join(" ")}`)
-				console.error(`\nYou can manually edit the config file at: ${configPath}`)
-				process.exit(1)
-			}
-		})
-
-		editorProcess.on("exit", (code) => {
-			if (code !== 0 && code !== null) {
-				console.error(`Editor exited with code ${code}`)
-				console.error(`Config file location: ${configPath}`)
-			}
+			editorProcess.on("exit", (code) => {
+				if (code !== 0 && code !== null) {
+					console.error(`Editor exited with code ${code}`)
+					console.error(`Config file location: ${configPath}`)
+				}
+				resolve()
+			})
 		})
 	} catch (error) {
 		console.error("Error managing config file:", error instanceof Error ? error.message : String(error))
-		process.exit(1)
+		throw error
 	}
 }

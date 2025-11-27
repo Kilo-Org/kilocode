@@ -52,6 +52,7 @@ describe("Model Validation Functions", () => {
 				outputPrice: 15.0,
 			},
 		},
+		"nano-gpt": {}, //kilocode_change
 		requesty: {},
 		unbound: {},
 		litellm: {},
@@ -66,6 +67,7 @@ describe("Model Validation Functions", () => {
 		gemini: {},
 		inception: {},
 		synthetic: {},
+		"sap-ai-core": {},
 		// kilocode_change end
 		roo: {},
 		chutes: {},

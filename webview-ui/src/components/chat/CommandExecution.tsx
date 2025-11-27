@@ -1,5 +1,6 @@
 import { useCallback, useState, memo, useMemo } from "react"
 import { useEvent } from "react-use"
+import { t } from "i18next"
 import { ChevronDown, OctagonX } from "lucide-react"
 
 import { CommandExecutionStatus, commandExecutionStatusSchema } from "@roo-code/types"
@@ -8,16 +9,16 @@ import { ExtensionMessage } from "@roo/ExtensionMessage"
 import { safeJsonParse } from "@roo/safeJsonParse"
 
 import { COMMAND_OUTPUT_STRING } from "@roo/combineCommandSequences"
+import { parseCommand } from "@roo/parse-command"
 
 import { vscode } from "@src/utils/vscode"
+import { extractPatternsFromCommand } from "@src/utils/command-parser"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { cn } from "@src/lib/utils"
+
 import { Button, StandardTooltip } from "@src/components/ui"
 import CodeBlock from "../kilocode/common/CodeBlock" // kilocode_change
 import { CommandPatternSelector } from "./CommandPatternSelector"
-import { parseCommand } from "../../utils/command-validation"
-import { extractPatternsFromCommand } from "../../utils/command-parser"
-import { t } from "i18next"
 
 interface CommandPattern {
 	pattern: string
@@ -87,8 +88,11 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 		setAllowedCommands(newAllowed)
 		setDeniedCommands(newDenied)
-		vscode.postMessage({ type: "allowedCommands", commands: newAllowed })
-		vscode.postMessage({ type: "deniedCommands", commands: newDenied })
+
+		vscode.postMessage({
+			type: "updateSettings",
+			updatedSettings: { allowedCommands: newAllowed, deniedCommands: newDenied },
+		})
 	}
 
 	const handleDenyPatternChange = (pattern: string) => {
@@ -98,8 +102,11 @@ export const CommandExecution = ({ executionId, text, icon, title }: CommandExec
 
 		setAllowedCommands(newAllowed)
 		setDeniedCommands(newDenied)
-		vscode.postMessage({ type: "allowedCommands", commands: newAllowed })
-		vscode.postMessage({ type: "deniedCommands", commands: newDenied })
+
+		vscode.postMessage({
+			type: "updateSettings",
+			updatedSettings: { allowedCommands: newAllowed, deniedCommands: newDenied },
+		})
 	}
 
 	const onMessage = useCallback(

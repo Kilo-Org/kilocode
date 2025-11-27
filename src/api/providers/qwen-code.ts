@@ -4,13 +4,7 @@ import OpenAI from "openai"
 import * as os from "os"
 import * as path from "path"
 
-import {
-	type ModelInfo,
-	type QwenCodeModelId,
-	qwenCodeModels,
-	qwenCodeDefaultModelId,
-	getActiveToolUseStyle, // kilocode_change
-} from "@roo-code/types"
+import { type ModelInfo, type QwenCodeModelId, qwenCodeModels, qwenCodeDefaultModelId } from "@roo-code/types"
 
 import type { ApiHandlerOptions } from "../../shared/api"
 
@@ -22,7 +16,7 @@ import type {
 	ApiHandlerCreateMessageMetadata, // kilocode_change
 	SingleCompletionHandler,
 } from "../index"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
+import { addNativeToolCallsToParams, ToolCallAccumulator } from "./kilocode/nativeToolCallHelpers"
 
 const QWEN_OAUTH_BASE_URL = "https://chat.qwen.ai"
 const QWEN_OAUTH_TOKEN_ENDPOINT = `${QWEN_OAUTH_BASE_URL}/api/v1/oauth2/token`
@@ -241,6 +235,7 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 		const stream = await this.callApiWithRetry(() => client.chat.completions.create(requestOptions))
 
 		let fullContent = ""
+		const toolCallAccumulator = new ToolCallAccumulator() // kilocode_change
 
 		for await (const apiChunk of stream) {
 			const delta = apiChunk.choices[0]?.delta ?? {}
@@ -290,7 +285,7 @@ export class QwenCodeHandler extends BaseProvider implements SingleCompletionHan
 				}
 			}
 
-			yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options)) // kilocode_change
+			yield* toolCallAccumulator.processChunk(apiChunk) // kilocode_change
 
 			if (apiChunk.usage) {
 				yield {

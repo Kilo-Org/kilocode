@@ -1,5 +1,11 @@
 # @kilocode/cli
 
+## 0.9.0
+
+### Minor Changes
+
+- [#4003](https://github.com/Kilo-Org/kilocode/pull/4003) [`0bb5dfe`](https://github.com/Kilo-Org/kilocode/commit/0bb5dfeb4bb5a5cd07bb852a929acac28e02e78c) Thanks [@catrielmuller](https://github.com/catrielmuller)! - Kilo Gateway one click authorization
+
 ## 0.8.0
 
 ### Minor Changes

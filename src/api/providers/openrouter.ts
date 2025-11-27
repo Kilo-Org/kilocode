@@ -7,7 +7,6 @@ import {
 	OPENROUTER_DEFAULT_PROVIDER_NAME,
 	OPEN_ROUTER_PROMPT_CACHING_MODELS,
 	DEEP_SEEK_DEFAULT_TEMPERATURE,
-	getActiveToolUseStyle,
 } from "@roo-code/types"
 
 import type { ApiHandlerOptions, ModelRecord } from "../../shared/api"
@@ -25,12 +24,7 @@ import { getModelEndpoints } from "./fetchers/modelEndpointCache"
 
 import { DEFAULT_HEADERS } from "./constants"
 import { BaseProvider } from "./base-provider"
-import type {
-	ApiHandlerCreateMessageMetadata, // kilocode_change
-	SingleCompletionHandler,
-} from "../index"
 import { verifyFinishReason } from "./kilocode/verifyFinishReason"
-import { addNativeToolCallsToParams, processNativeToolCallsFromDelta } from "./kilocode/nativeToolCallHelpers"
 
 // kilocode_change start
 type OpenRouterProviderParams = {
@@ -47,6 +41,7 @@ import { isAnyRecognizedKiloCodeError } from "../../shared/kilocode/errorUtils"
 import { ReasoningDetail } from "../transform/kilocode/reasoning-details"
 // kilocode_change end
 
+import type { ApiHandlerCreateMessageMetadata, SingleCompletionHandler } from "../index"
 import { handleOpenAIError } from "./utils/openai-error-handler"
 
 // Image generation types
@@ -126,6 +121,32 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 		const apiKey = this.options.openRouterApiKey ?? "not-provided"
 
 		this.client = new OpenAI({ baseURL, apiKey, defaultHeaders: DEFAULT_HEADERS })
+
+		// Load models asynchronously to populate cache before getModel() is called
+		this.loadDynamicModels().catch((error) => {
+			console.error("[OpenRouterHandler] Failed to load dynamic models:", error)
+		})
+	}
+
+	private async loadDynamicModels(): Promise<void> {
+		try {
+			const [models, endpoints] = await Promise.all([
+				getModels({ provider: "openrouter" }),
+				getModelEndpoints({
+					router: "openrouter",
+					modelId: this.options.openRouterModelId,
+					endpoint: this.options.openRouterSpecificProvider,
+				}),
+			])
+
+			this.models = models
+			this.endpoints = endpoints
+		} catch (error) {
+			console.error("[OpenRouterHandler] Error loading dynamic models:", {
+				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+			})
+		}
 	}
 
 	// kilocode_change start
@@ -173,7 +194,7 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
-		metadata?: ApiHandlerCreateMessageMetadata, // kilocode_change
+		metadata?: ApiHandlerCreateMessageMetadata,
 	): AsyncGenerator<ApiStreamChunk> {
 		const model = await this.fetchModel()
 
@@ -222,14 +243,13 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 			stream: true,
 			stream_options: { include_usage: true },
 			...this.getProviderParams(), // kilocode_change: original expression was moved into function
+			parallel_tool_calls: false, // Ensure only one tool call at a time
 			...(transforms && { transforms }),
 			...(reasoning && { reasoning }),
+			...(metadata?.tools && { tools: metadata.tools }),
+			...(metadata?.tool_choice && { tool_choice: metadata.tool_choice }),
 			verbosity: model.verbosity, // kilocode_change
 		}
-
-		// kilocode_change start: Add native tool call support when toolStyle is "json"
-		addNativeToolCallsToParams(completionParams, this.options, metadata)
-		// kilocode_change end
 
 		let stream
 		try {
@@ -248,31 +268,28 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 
 		let lastUsage: CompletionUsage | undefined = undefined
 		let inferenceProvider: string | undefined // kilocode_change
+		const toolCallAccumulator = new Map<number, { id: string; name: string; arguments: string }>()
 
-		try {
-			for await (const chunk of stream) {
-				// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
-				if ("error" in chunk) {
-					const error = chunk.error as { message?: string; code?: number }
-					console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
-					throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
-				}
+		for await (const chunk of stream) {
+			// OpenRouter returns an error object instead of the OpenAI SDK throwing an error.
+			if ("error" in chunk) {
+				const error = chunk.error as { message?: string; code?: number }
+				console.error(`OpenRouter API Error: ${error?.code} - ${error?.message}`)
+				throw new Error(`OpenRouter API Error ${error?.code}: ${error?.message}`)
+			}
 
-				// kilocode_change start
-				if ("provider" in chunk && typeof chunk.provider === "string") {
-					inferenceProvider = chunk.provider
-				}
-				// kilocode_change end
+			// kilocode_change start
+			if ("provider" in chunk && typeof chunk.provider === "string") {
+				inferenceProvider = chunk.provider
+			}
+			// kilocode_change end
 
-				verifyFinishReason(chunk.choices[0]) // kilocode_change
-				const delta = chunk.choices[0]?.delta
+			verifyFinishReason(chunk.choices[0]) // kilocode_change
+			const delta = chunk.choices[0]?.delta
+			const finishReason = chunk.choices[0]?.finish_reason
 
-				if (
-					delta /* kilocode_change */ &&
-					"reasoning" in delta &&
-					delta.reasoning &&
-					typeof delta.reasoning === "string"
-				) {
+			if (delta) {
+				if ("reasoning" in delta && delta.reasoning && typeof delta.reasoning === "string") {
 					yield { type: "reasoning", text: delta.reasoning }
 				}
 
@@ -289,22 +306,52 @@ export class OpenRouterHandler extends BaseProvider implements SingleCompletionH
 				if (delta && "reasoning_content" in delta && typeof delta.reasoning_content === "string") {
 					yield { type: "reasoning", text: delta.reasoning_content }
 				}
-
-				// Handle native tool calls when toolStyle is "json"
-				yield* processNativeToolCallsFromDelta(delta, getActiveToolUseStyle(this.options))
 				// kilocode_change end
 
-				if (delta?.content) {
-					yield { type: "text", text: delta.content }
+				// Check for tool calls in delta
+				if ("tool_calls" in delta && Array.isArray(delta.tool_calls)) {
+					for (const toolCall of delta.tool_calls) {
+						const index = toolCall.index
+						const existing = toolCallAccumulator.get(index)
+
+						if (existing) {
+							// Accumulate arguments for existing tool call
+							if (toolCall.function?.arguments) {
+								existing.arguments += toolCall.function.arguments
+							}
+						} else {
+							// Start new tool call accumulation
+							toolCallAccumulator.set(index, {
+								id: toolCall.id || "",
+								name: toolCall.function?.name || "",
+								arguments: toolCall.function?.arguments || "",
+							})
+						}
+					}
 				}
 
-				if (chunk.usage) {
-					lastUsage = chunk.usage
+				if (delta.content) {
+					yield { type: "text", text: delta.content }
 				}
 			}
-		} catch (error) {
-			let errorMessage = makeOpenRouterErrorReadable(error)
-			throw new Error(errorMessage)
+
+			// When finish_reason is 'tool_calls', yield all accumulated tool calls
+			if (finishReason === "tool_calls" && toolCallAccumulator.size > 0) {
+				for (const toolCall of toolCallAccumulator.values()) {
+					yield {
+						type: "tool_call",
+						id: toolCall.id,
+						name: toolCall.name,
+						arguments: toolCall.arguments,
+					}
+				}
+				// Clear accumulator after yielding
+				toolCallAccumulator.clear()
+			}
+
+			if (chunk.usage) {
+				lastUsage = chunk.usage
+			}
 		}
 
 		if (lastUsage) {

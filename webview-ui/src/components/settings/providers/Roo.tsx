@@ -1,11 +1,10 @@
-import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
-
 import { type ProviderSettings, type OrganizationAllowList, rooDefaultModelId } from "@roo-code/types"
 
 import type { RouterModels } from "@roo/api"
 
 import { useAppTranslation } from "@src/i18n/TranslationContext"
 import { vscode } from "@src/utils/vscode"
+import { Button } from "@src/components/ui"
 
 import { ModelPicker } from "../ModelPicker"
 
@@ -36,12 +35,12 @@ export const Roo = ({
 				</div>
 			) : (
 				<div className="flex flex-col gap-2">
-					<VSCodeButton
-						appearance="primary"
+					<Button
+						variant="primary"
 						onClick={() => vscode.postMessage({ type: "rooCloudSignIn" })}
 						className="w-fit">
 						{t("settings:providers.roo.connectButton")}
-					</VSCodeButton>
+					</Button>
 				</div>
 			)}
 			<ModelPicker

@@ -1,7 +1,6 @@
 import React, { useState } from "react"
 import { Trans } from "react-i18next"
 import {
-	VSCodeButton,
 	VSCodeCheckbox,
 	VSCodeLink,
 	VSCodePanels,
@@ -540,15 +539,15 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 										</React.Fragment>
 									))}
 							</div>
-							<VSCodeButton
-								appearance="secondary"
+							<Button
+								variant="secondary"
 								onClick={handleRestart}
 								disabled={server.status === "connecting"}
 								style={{ width: "calc(100% - 20px)", margin: "0 10px 10px 10px" }}>
 								{server.status === "connecting"
 									? t("mcp:serverStatus.retrying")
 									: t("mcp:serverStatus.retryConnection")}
-							</VSCodeButton>
+							</Button>
 						</div>
 					)}
 
@@ -565,7 +564,7 @@ const ServerRow = ({ server, alwaysAllowMcp }: { server: McpServer; alwaysAllowM
 						<Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
 							{t("mcp:deleteDialog.cancel")}
 						</Button>
-						<Button variant="default" onClick={handleDelete}>
+						<Button variant="primary" onClick={handleDelete}>
 							{t("mcp:deleteDialog.delete")}
 						</Button>
 					</DialogFooter>

@@ -14,11 +14,11 @@ import { safeJsonParse } from "@roo/safeJsonParse"
 import { useExtensionState } from "@src/context/ExtensionStateContext"
 import { findMatchingResourceOrTemplate } from "@src/utils/mcp"
 import { vscode } from "@src/utils/vscode"
-import { removeLeadingNonAlphanumeric } from "@src/utils/removeLeadingNonAlphanumeric"
-import { getLanguageFromPath } from "@src/utils/getLanguageFromPath"
+import { formatPathTooltip } from "@src/utils/formatPathTooltip"
 
 import { ToolUseBlock, ToolUseBlockHeader } from "../common/ToolUseBlock"
 import UpdateTodoListToolBlock from "./UpdateTodoListToolBlock"
+import { TodoChangeDisplay } from "./TodoChangeDisplay"
 import CodeAccordian from "../common/CodeAccordian"
 import MarkdownBlock from "../common/MarkdownBlock"
 import { ReasoningBlock } from "./ReasoningBlock"
@@ -31,7 +31,6 @@ import McpResourceRow from "../mcp/McpResourceRow"
 import { Mention } from "./Mention"
 import { CheckpointSaved } from "./checkpoints/CheckpointSaved"
 import { FollowUpSuggest } from "./FollowUpSuggest"
-import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning" // kilocode_change
 import { BatchFilePermission } from "./BatchFilePermission"
 import { BatchDiffApproval } from "./BatchDiffApproval"
 import { ProgressIndicator } from "./ProgressIndicator"
@@ -40,18 +39,13 @@ import { CommandExecution } from "./CommandExecution"
 import { CommandExecutionError } from "./CommandExecutionError"
 import ReportBugPreview from "./ReportBugPreview"
 
-import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview" // kilocode_change
-import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar" // kilocode_change
 import { AutoApprovedRequestLimitWarning } from "./AutoApprovedRequestLimitWarning"
 import { CondenseContextErrorRow, CondensingContextRow, ContextCondenseRow } from "./ContextCondenseRow"
 import CodebaseSearchResultsDisplay from "./CodebaseSearchResultsDisplay"
-import { StandardTooltip } from "../ui" // kilocode_change
-import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay" // kilocode_change
 import { appendImages } from "@src/utils/imageUtils"
 import { McpExecution } from "./McpExecution"
 import { ChatTextArea } from "./ChatTextArea"
 import { MAX_IMAGES_PER_MESSAGE } from "./ChatView"
-import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning" // kilocode_change
 import { useSelectedModel } from "../ui/hooks/useSelectedModel"
 import {
 	Eye,
@@ -69,9 +63,53 @@ import {
 	MessageCircle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { formatFileSize } from "@/lib/formatting-utils" // kilocode_change
 import { SeeNewChangesButtons } from "./kilocode/SeeNewChangesButtons"
-import ChatTimestamps from "./ChatTimestamps" // kilocode_change
+import { PathTooltip } from "../ui/PathTooltip"
+
+// kilocode_change start
+import { LowCreditWarning } from "../kilocode/chat/LowCreditWarning"
+import { NewTaskPreview } from "../kilocode/chat/NewTaskPreview"
+import { KiloChatRowGutterBar } from "../kilocode/chat/KiloChatRowGutterBar"
+import { StandardTooltip } from "../ui"
+import { FastApplyChatDisplay } from "./kilocode/FastApplyChatDisplay"
+import { InvalidModelWarning } from "../kilocode/chat/InvalidModelWarning"
+import { formatFileSize } from "@/lib/formatting-utils"
+import ChatTimestamps from "./ChatTimestamps"
+import { removeLeadingNonAlphanumeric } from "@/utils/removeLeadingNonAlphanumeric"
+// kilocode_change end
+
+// Helper function to get previous todos before a specific message
+function getPreviousTodos(messages: ClineMessage[], currentMessageTs: number): any[] {
+	// Find the previous updateTodoList message before the current one
+	const previousUpdateIndex = messages
+		.slice()
+		.reverse()
+		.findIndex((msg) => {
+			if (msg.ts >= currentMessageTs) return false
+			if (msg.type === "ask" && msg.ask === "tool") {
+				try {
+					const tool = JSON.parse(msg.text || "{}")
+					return tool.tool === "updateTodoList"
+				} catch {
+					return false
+				}
+			}
+			return false
+		})
+
+	if (previousUpdateIndex !== -1) {
+		const previousMessage = messages.slice().reverse()[previousUpdateIndex]
+		try {
+			const tool = JSON.parse(previousMessage.text || "{}")
+			return tool.todos || []
+		} catch {
+			return []
+		}
+	}
+
+	// If no previous updateTodoList message, return empty array
+	return []
+}
 
 interface ChatRowProps {
 	message: ClineMessage
@@ -148,12 +186,11 @@ export const ChatRowContent = ({
 	onBatchFileResponse,
 	enableCheckpoints, // kilocode_change
 	isFollowUpAnswered,
-	editable,
 }: ChatRowContentProps) => {
 	const { t } = useTranslation()
 
 	// kilocode_change: add showTimestamps
-	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, showTimestamps } =
+	const { mcpServers, alwaysAllowMcp, currentCheckpoint, mode, apiConfiguration, clineMessages, showTimestamps } =
 		useExtensionState()
 	const { info: model } = useSelectedModel(apiConfiguration)
 	const [isEditing, setIsEditing] = useState(false)
@@ -389,6 +426,12 @@ export const ChatRowContent = ({
 		[message.ask, message.text],
 	)
 
+	// Unified diff content (provided by backend when relevant)
+	const unifiedDiff = useMemo(() => {
+		if (!tool) return undefined
+		return (tool.content ?? tool.diff) as string | undefined
+	}, [tool])
+
 	const followUpData = useMemo(() => {
 		if (message.type === "ask" && message.ask === "followup" && !message.partial) {
 			return safeJsonParse<FollowUpData>(message.text)
@@ -403,7 +446,7 @@ export const ChatRowContent = ({
 				style={{ color: "var(--vscode-foreground)", marginBottom: "-1.5px" }}></span>
 		)
 
-		switch (tool.tool) {
+		switch (tool.tool as string) {
 			case "editedExistingFile":
 			case "appliedDiff":
 				// Check if this is a batch diff request
@@ -444,12 +487,13 @@ export const ChatRowContent = ({
 						<div className="pl-6">
 							<CodeAccordian
 								path={tool.path}
-								code={tool.content ?? tool.diff}
+								code={unifiedDiff ?? tool.content ?? tool.diff}
 								language="diff"
 								progressStatus={message.progressStatus}
 								isLoading={message.partial}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
+								diffStats={tool.diffStats}
 							/>
 							{
 								// kilocode_change start
@@ -486,12 +530,47 @@ export const ChatRowContent = ({
 						<div className="pl-6">
 							<CodeAccordian
 								path={tool.path}
-								code={tool.diff}
+								code={unifiedDiff ?? tool.diff}
 								language="diff"
 								progressStatus={message.progressStatus}
 								isLoading={message.partial}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
+								diffStats={tool.diffStats}
+							/>
+						</div>
+					</>
+				)
+			case "searchAndReplace":
+				return (
+					<>
+						<div style={headerStyle}>
+							{tool.isProtected ? (
+								<span
+									className="codicon codicon-lock"
+									style={{ color: "var(--vscode-editorWarning-foreground)", marginBottom: "-1.5px" }}
+								/>
+							) : (
+								toolIcon("replace")
+							)}
+							<span style={{ fontWeight: "bold" }}>
+								{tool.isProtected && message.type === "ask"
+									? t("chat:fileOperations.wantsToEditProtected")
+									: message.type === "ask"
+										? t("chat:fileOperations.wantsToSearchReplace")
+										: t("chat:fileOperations.didSearchReplace")}
+							</span>
+						</div>
+						<div className="pl-6">
+							<CodeAccordian
+								path={tool.path}
+								code={unifiedDiff ?? tool.diff}
+								language="diff"
+								progressStatus={message.progressStatus}
+								isLoading={message.partial}
+								isExpanded={isExpanded}
+								onToggleExpand={handleToggleExpand}
+								diffStats={tool.diffStats}
 							/>
 						</div>
 					</>
@@ -520,18 +599,11 @@ export const ChatRowContent = ({
 			}
 			case "updateTodoList" as any: {
 				const todos = (tool as any).todos || []
-				return (
-					<UpdateTodoListToolBlock
-						todos={todos}
-						content={(tool as any).content}
-						onChange={(updatedTodos) => {
-							if (typeof vscode !== "undefined" && vscode?.postMessage) {
-								vscode.postMessage({ type: "updateTodoList", payload: { todos: updatedTodos } })
-							}
-						}}
-						editable={editable && isLast}
-					/>
-				)
+
+				// Get previous todos from the latest todos in the task context
+				const previousTodos = getPreviousTodos(clineMessages, message.ts)
+
+				return <TodoChangeDisplay previousTodos={previousTodos} newTodos={todos} />
 			}
 			case "newFileCreated":
 				return (
@@ -554,12 +626,13 @@ export const ChatRowContent = ({
 						<div className="pl-6">
 							<CodeAccordian
 								path={tool.path}
-								code={tool.content}
-								language={getLanguageFromPath(tool.path || "") || "log"}
+								code={unifiedDiff ?? ""}
+								language="diff"
 								isLoading={message.partial}
 								isExpanded={isExpanded}
 								onToggleExpand={handleToggleExpand}
 								onJumpToFile={() => vscode.postMessage({ type: "openFile", text: "./" + tool.path })}
+								diffStats={tool.diffStats}
 							/>
 							{
 								// kilocode_change start
@@ -663,10 +736,11 @@ export const ChatRowContent = ({
 									className="group"
 									onClick={() => vscode.postMessage({ type: "openFile", text: tool.content })}>
 									{tool.path?.startsWith(".") && <span>.</span>}
-									<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
-										{removeLeadingNonAlphanumeric(tool.path ?? "") + "\u200E"}
-										{tool.reason}
-									</span>
+									<PathTooltip content={formatPathTooltip(tool.path, tool.reason)}>
+										<span className="whitespace-nowrap overflow-hidden text-ellipsis text-left mr-2 rtl">
+											{formatPathTooltip(tool.path, tool.reason)}
+										</span>
+									</PathTooltip>
 									<div style={{ flexGrow: 1 }}></div>
 									<SquareArrowOutUpRight
 										className="w-4 shrink-0 codicon codicon-link-external opacity-0 group-hover:opacity-100 transition-opacity"
@@ -1103,7 +1177,6 @@ export const ChatRowContent = ({
 							ts={message.ts}
 							isStreaming={isStreaming}
 							isLast={isLast}
-							metadata={message.metadata as any}
 						/>
 					)
 				case "api_req_started":

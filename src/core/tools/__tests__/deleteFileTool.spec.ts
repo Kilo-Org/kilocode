@@ -5,7 +5,7 @@ import type { MockedFunction } from "vitest"
 import fs from "fs/promises"
 import * as path from "path"
 
-import { deleteFileTool } from "../deleteFileTool"
+import { deleteFileTool } from "../kilocode/deleteFileTool"
 import { Task } from "../../task/Task"
 import { ToolUse, ToolResponse } from "../../../shared/tools"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"

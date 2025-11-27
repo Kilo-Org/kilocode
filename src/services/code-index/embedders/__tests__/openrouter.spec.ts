@@ -263,6 +263,8 @@ describe("OpenRouterEmbedder", () => {
 				"google/gemini-embedding-001",
 				"mistralai/mistral-embed-2312",
 				"mistralai/codestral-embed-2505",
+				"qwen/qwen3-embedding-0.6b",
+				"qwen/qwen3-embedding-4b",
 				"qwen/qwen3-embedding-8b",
 			]
 

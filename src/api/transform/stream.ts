@@ -1,11 +1,9 @@
-import { ApiStreamNativeToolCallsChunk } from "./kilocode/api-stream-native-tool-calls-chunk"
 import { ReasoningDetail } from "./kilocode/reasoning-details"
 
 export type ApiStream = AsyncGenerator<ApiStreamChunk>
 
 export type ApiStreamChunk =
 	// kilocode_change start
-	| ApiStreamNativeToolCallsChunk
 	| ApiStreamReasoningDetailsChunk
 	| ApiStreamAnthropicThinkingChunk
 	| ApiStreamAnthropicRedactedThinkingChunk
@@ -14,6 +12,7 @@ export type ApiStreamChunk =
 	| ApiStreamUsageChunk
 	| ApiStreamReasoningChunk
 	| ApiStreamGroundingChunk
+	| ApiStreamToolCallChunk
 	| ApiStreamError
 
 export interface ApiStreamError {
@@ -64,6 +63,13 @@ export interface ApiStreamUsageChunk {
 export interface ApiStreamGroundingChunk {
 	type: "grounding"
 	sources: GroundingSource[]
+}
+
+export interface ApiStreamToolCallChunk {
+	type: "tool_call"
+	id: string
+	name: string
+	arguments: string
 }
 
 export interface GroundingSource {

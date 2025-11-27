@@ -19,7 +19,7 @@
 - 💡 **Get $20 in bonus credits when you top-up for the first time** Credits can be used with 400+ models like Gemini 3 Pro, Claude 4 Sonnet & Opus, and GPT-5
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Kilo-Org/kilocode/refs/heads/main/kilo.gif" width="100%" />
+  <img src="https://media.githubusercontent.com/media/Kilo-Org/kilocode/main/kilo.gif" width="100%" />
 </p>
 
 - [VS Code Marketplace](https://kilocode.ai/vscode-marketplace?utm_source=Readme) (download)

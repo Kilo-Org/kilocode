@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next"
-import { vscode } from "@/utils/vscode"
-import { useCallback } from "react"
+
 import { FormattedTextField, unlimitedIntegerFormatter } from "../common/FormattedTextField"
 
 interface MaxRequestsInputProps {
@@ -11,14 +10,6 @@ interface MaxRequestsInputProps {
 export function MaxRequestsInput({ allowedMaxRequests, onValueChange }: MaxRequestsInputProps) {
 	const { t } = useTranslation()
 
-	const handleValueChange = useCallback(
-		(value: number | undefined) => {
-			onValueChange(value)
-			vscode.postMessage({ type: "allowedMaxRequests", value })
-		},
-		[onValueChange],
-	)
-
 	return (
 		<>
 			<label className="flex items-center gap-2 text-sm font-medium whitespace-nowrap">
@@ -27,7 +18,7 @@ export function MaxRequestsInput({ allowedMaxRequests, onValueChange }: MaxReque
 			</label>
 			<FormattedTextField
 				value={allowedMaxRequests}
-				onValueChange={handleValueChange}
+				onValueChange={onValueChange}
 				formatter={unlimitedIntegerFormatter}
 				placeholder={t("settings:autoApprove.apiRequestLimit.unlimited")}
 				style={{ maxWidth: "200px" }}

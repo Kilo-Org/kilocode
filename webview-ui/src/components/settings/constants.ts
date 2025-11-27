@@ -69,6 +69,7 @@ export const PROVIDERS = [
 	{ value: "virtual-quota-fallback", label: "Virtual Quota Fallback" },
 	{ value: "synthetic", label: "Synthetic" },
 	{ value: "ovhcloud", label: "OVHcloud AI Endpoints" },
+	{ value: "sap-ai-core", label: "SAP AI Core" },
 	// kilocode_change end
 	{ value: "deepseek", label: "DeepSeek" },
 	{ value: "kilocode", label: "Kilo Gateway" },
@@ -79,6 +80,7 @@ export const PROVIDERS = [
 	{ value: "vertex", label: "GCP Vertex AI" },
 	{ value: "bedrock", label: "Amazon Bedrock" },
 	{ value: "glama", label: "Glama" },
+	{ value: "nano-gpt", label: "Nano-GPT" }, //kilocode_change
 	{ value: "vscode-lm", label: "VS Code LM API" },
 	{ value: "mistral", label: "Mistral" },
 	{ value: "lmstudio", label: "LM Studio" },

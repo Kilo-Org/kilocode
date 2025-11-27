@@ -18,7 +18,7 @@ import { getModelParams } from "../transform/model-params"
 import { BaseProvider } from "./base-provider"
 import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from "../index"
 import { calculateApiCostAnthropic } from "../../shared/cost"
-import { convertOpenAIToolsToAnthropic } from "./kilocode/nativeToolCallHelpers"
+import { convertOpenAIToolsToAnthropic, ToolCallAccumulatorAnthropic } from "./kilocode/nativeToolCallHelpers"
 
 export class AnthropicHandler extends BaseProvider implements SingleCompletionHandler {
 	private options: ApiHandlerOptions
@@ -65,10 +65,7 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		if (verbosity) {
 			betas.push("effort-2025-11-24")
 		}
-		const tools =
-			(metadata?.allowedTools ?? []).length > 0
-				? convertOpenAIToolsToAnthropic(metadata?.allowedTools)
-				: undefined
+		const tools = (metadata?.tools ?? []).length > 0 ? convertOpenAIToolsToAnthropic(metadata?.tools) : undefined
 		const tool_choice = (tools ?? []).length > 0 ? { type: "auto" as const } : undefined
 		// kilocode_change end
 
@@ -192,10 +189,12 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 		let thinkingDeltaAccumulator = ""
 		let thinkText = ""
 		let thinkSignature = ""
-		const lastStartedToolCall = { id: "", name: "", arguments: "" }
+		const toolCallAccumulator = new ToolCallAccumulatorAnthropic()
 		// kilocode_change end
 
 		for await (const chunk of stream) {
+			yield* toolCallAccumulator.processChunk(chunk) // kilocode_change
+
 			switch (chunk.type) {
 				case "message_start": {
 					// Tells us cache reads/writes/input/output.
@@ -270,13 +269,6 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 								data: chunk.content_block.data,
 							}
 							break
-						case "tool_use":
-							if (chunk.content_block.id && chunk.content_block.name) {
-								lastStartedToolCall.id = chunk.content_block.id
-								lastStartedToolCall.name = chunk.content_block.name
-								lastStartedToolCall.arguments = ""
-							}
-							break
 						// kilocode_change end
 
 						case "text":
@@ -304,22 +296,6 @@ export class AnthropicHandler extends BaseProvider implements SingleCompletionHa
 									type: "ant_thinking",
 									thinking: thinkingDeltaAccumulator,
 									signature: chunk.delta.signature,
-								}
-							}
-							break
-						case "input_json_delta":
-							if (lastStartedToolCall.id && lastStartedToolCall.name && chunk.delta.partial_json) {
-								yield {
-									type: "native_tool_calls",
-									toolCalls: [
-										{
-											id: lastStartedToolCall?.id,
-											function: {
-												name: lastStartedToolCall?.name,
-												arguments: chunk.delta.partial_json,
-											},
-										},
-									],
 								}
 							}
 							break

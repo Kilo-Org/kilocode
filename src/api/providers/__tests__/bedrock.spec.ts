@@ -114,8 +114,14 @@ describe("AwsBedrockHandler", () => {
 			it("should return correct prefix for APAC regions", () => {
 				const getPrefixForRegion = (AwsBedrockHandler as any).getPrefixForRegion
 
+				// Australia regions (Sydney and Melbourne) get au. prefix
+				expect(getPrefixForRegion("ap-southeast-2")).toBe("au.")
+				expect(getPrefixForRegion("ap-southeast-4")).toBe("au.")
+				// Japan regions (Tokyo and Osaka) get jp. prefix
+				expect(getPrefixForRegion("ap-northeast-1")).toBe("jp.")
+				expect(getPrefixForRegion("ap-northeast-3")).toBe("jp.")
+				// Other APAC regions get apac. prefix
 				expect(getPrefixForRegion("ap-southeast-1")).toBe("apac.")
-				expect(getPrefixForRegion("ap-northeast-1")).toBe("apac.")
 				expect(getPrefixForRegion("ap-south-1")).toBe("apac.")
 			})
 

@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { modelInfoSchema, reasoningEffortWithMinimalSchema, verbosityLevelsSchema, serviceTierSchema } from "./model.js"
+import { modelInfoSchema, reasoningEffortSettingSchema, verbosityLevelsSchema, serviceTierSchema } from "./model.js"
 import { codebaseIndexProviderSchema } from "./codebase-index.js"
 import { profileTypeSchema } from "./profile-type.js" // kilocode_change
 import {
@@ -30,7 +30,6 @@ import {
 	internationalZAiModels,
 	minimaxModels,
 } from "./providers/index.js"
-import { toolUseStylesSchema } from "./kilocode/native-function-calling.js"
 
 /**
  * constants
@@ -52,10 +51,10 @@ export const dynamicProviders = [
 	// kilocode_change start
 	"kilocode",
 	"ovhcloud",
-	"chutes",
 	"gemini",
 	"inception",
 	"synthetic",
+	"sap-ai-core",
 	// kilocode_change end
 	"deepinfra",
 	"io-intelligence",
@@ -64,6 +63,7 @@ export const dynamicProviders = [
 	"glama",
 	"roo",
 	"chutes",
+	"nano-gpt", //kilocode_change
 ] as const
 
 export type DynamicProvider = (typeof dynamicProviders)[number]
@@ -202,18 +202,14 @@ const baseProviderSettingsSchema = z.object({
 
 	// Model reasoning.
 	enableReasoningEffort: z.boolean().optional(),
-	reasoningEffort: reasoningEffortWithMinimalSchema.optional(),
+	reasoningEffort: reasoningEffortSettingSchema.optional(),
 	modelMaxTokens: z.number().optional(),
 	modelMaxThinkingTokens: z.number().optional(),
 
 	// Model verbosity.
 	verbosity: verbosityLevelsSchema.optional(),
 
-	// kilocode_change start
-	// Tool style - xml (legacy) or json (modern).
-	// Default to XML for anywhere not specified.
-	toolStyle: toolUseStylesSchema.optional(),
-	// kilocode_change end
+	toolStyle: z.enum(["xml", "json"]).optional(), // kilocode_change
 })
 
 // Several of the providers share common model config properties.
@@ -239,6 +235,14 @@ const glamaSchema = baseProviderSettingsSchema.extend({
 })
 
 // kilocode_change start
+export const nanoGptModelListSchema = z.enum(["all", "personalized", "subscription"])
+
+const nanoGptSchema = baseProviderSettingsSchema.extend({
+	nanoGptApiKey: z.string().optional(),
+	nanoGptModelId: z.string().optional(),
+	nanoGptModelList: nanoGptModelListSchema.optional(),
+})
+
 export const openRouterProviderDataCollectionSchema = z.enum(["allow", "deny"])
 export const openRouterProviderSortSchema = z.enum(["price", "throughput", "latency"])
 // kilocode_change end
@@ -262,6 +266,7 @@ const bedrockSchema = apiModelIdProviderModelSchema.extend({
 	awsSessionToken: z.string().optional(),
 	awsRegion: z.string().optional(),
 	awsUseCrossRegionInference: z.boolean().optional(),
+	awsUseGlobalInference: z.boolean().optional(), // Enable Global Inference profile routing when supported
 	awsUsePromptCache: z.boolean().optional(),
 	awsProfile: z.string().optional(),
 	awsUseProfile: z.boolean().optional(),
@@ -518,6 +523,17 @@ const vercelAiGatewaySchema = baseProviderSettingsSchema.extend({
 	vercelAiGatewayModelId: z.string().optional(),
 })
 
+// kilocode_change start
+const sapAiCoreSchema = baseProviderSettingsSchema.extend({
+	sapAiCoreServiceKey: z.string().optional(),
+	sapAiCoreResourceGroup: z.string().optional(),
+	sapAiCoreUseOrchestration: z.boolean().optional(),
+	sapAiCoreModelId: z.string().optional(),
+	sapAiCoreDeploymentId: z.string().optional(),
+	sapAiCoreCustomModelInfo: modelInfoSchema.nullish(),
+})
+// kilocode_change end
+
 const defaultSchema = z.object({
 	apiProvider: z.undefined(),
 })
@@ -526,6 +542,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	anthropicSchema.merge(z.object({ apiProvider: z.literal("anthropic") })),
 	claudeCodeSchema.merge(z.object({ apiProvider: z.literal("claude-code") })),
 	glamaSchema.merge(z.object({ apiProvider: z.literal("glama") })),
+	nanoGptSchema.merge(z.object({ apiProvider: z.literal("nano-gpt") })), // kilocode_change
 	openRouterSchema.merge(z.object({ apiProvider: z.literal("openrouter") })),
 	bedrockSchema.merge(z.object({ apiProvider: z.literal("bedrock") })),
 	vertexSchema.merge(z.object({ apiProvider: z.literal("vertex") })),
@@ -568,6 +585,7 @@ export const providerSettingsSchemaDiscriminated = z.discriminatedUnion("apiProv
 	qwenCodeSchema.merge(z.object({ apiProvider: z.literal("qwen-code") })),
 	rooSchema.merge(z.object({ apiProvider: z.literal("roo") })),
 	vercelAiGatewaySchema.merge(z.object({ apiProvider: z.literal("vercel-ai-gateway") })),
+	sapAiCoreSchema.merge(z.object({ apiProvider: z.literal("sap-ai-core") })), // kilocode_change
 	defaultSchema,
 ])
 
@@ -576,6 +594,7 @@ export const providerSettingsSchema = z.object({
 	...anthropicSchema.shape,
 	...claudeCodeSchema.shape,
 	...glamaSchema.shape,
+	...nanoGptSchema.shape, // kilocode_change
 	...openRouterSchema.shape,
 	...bedrockSchema.shape,
 	...vertexSchema.shape,
@@ -618,6 +637,7 @@ export const providerSettingsSchema = z.object({
 	...qwenCodeSchema.shape,
 	...rooSchema.shape,
 	...vercelAiGatewaySchema.shape,
+	...sapAiCoreSchema.shape, // kilocode_change
 	...codebaseIndexProviderSchema.shape,
 })
 
@@ -640,6 +660,7 @@ export const PROVIDER_SETTINGS_KEYS = providerSettingsSchema.keyof().options
 export const modelIdKeys = [
 	"apiModelId",
 	"glamaModelId",
+	"nanoGptModelId", // kilocode_change
 	"openRouterModelId",
 	"openAiModelId",
 	"ollamaModelId",
@@ -655,6 +676,7 @@ export const modelIdKeys = [
 	"kilocodeModel",
 	"ovhCloudAiEndpointsModelId", // kilocode_change
 	"inceptionLabsModelId", // kilocode_change
+	"sapAiCoreModelId", // kilocode_change
 ] as const satisfies readonly (keyof ProviderSettings)[]
 
 export type ModelIdKey = (typeof modelIdKeys)[number]
@@ -677,6 +699,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	anthropic: "apiModelId",
 	"claude-code": "apiModelId",
 	glama: "glamaModelId",
+	"nano-gpt": "nanoGptModelId", // kilocode_change
 	openrouter: "openRouterModelId",
 	kilocode: "kilocodeModel",
 	bedrock: "apiModelId",
@@ -701,6 +724,7 @@ export const modelIdKeysByProvider: Record<TypicalProvider, ModelIdKey> = {
 	synthetic: "apiModelId",
 	ovhcloud: "ovhCloudAiEndpointsModelId",
 	inception: "inceptionLabsModelId",
+	"sap-ai-core": "sapAiCoreModelId",
 	// kilocode_change end
 	groq: "apiModelId",
 	chutes: "apiModelId",
@@ -851,11 +875,13 @@ export const MODELS_BY_PROVIDER: Record<
 
 	// Dynamic providers; models pulled from remote APIs.
 	glama: { id: "glama", label: "Glama", models: [] },
+	"nano-gpt": { id: "nano-gpt", label: "Nano-GPT", models: [] }, // kilocode_change
 	huggingface: { id: "huggingface", label: "Hugging Face", models: [] },
 	litellm: { id: "litellm", label: "LiteLLM", models: [] },
 	openrouter: { id: "openrouter", label: "OpenRouter", models: [] },
 	requesty: { id: "requesty", label: "Requesty", models: [] },
 	unbound: { id: "unbound", label: "Unbound", models: [] },
+	"sap-ai-core": { id: "sap-ai-core", label: "SAP AI Core", models: [] }, // kilocode_change
 
 	// kilocode_change start
 	ovhcloud: { id: "ovhcloud", label: "OVHcloud AI Endpoints", models: [] },

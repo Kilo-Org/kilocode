@@ -36,74 +36,47 @@ export async function parseKiloSlashCommands(
 	}
 
 	// this currently allows matching prepended whitespace prior to /slash-command
-	const tagPatterns = [
-		{ tag: "task", regex: /<task>(\s*\/([a-zA-Z0-9_.-]+))(\s+.+?)?\s*<\/task>/is },
-		{ tag: "feedback", regex: /<feedback>(\s*\/([a-zA-Z0-9_.-]+))(\s+.+?)?\s*<\/feedback>/is },
-		{ tag: "answer", regex: /<answer>(\s*\/([a-zA-Z0-9_.-]+))(\s+.+?)?\s*<\/answer>/is },
-		{ tag: "user_message", regex: /<user_message>(\s*\/([a-zA-Z0-9_.-]+))(\s+.+?)?\s*<\/user_message>/is },
-	]
+	const tagPattern = /<(task|feedback|answer|user_message)>(\s*\/([a-zA-Z0-9_.-]+))(\s+.+?)?\s*<\/\1>/is
 
-	// if we find a valid match, we will return inside that block
-	for (const { regex } of tagPatterns) {
-		const regexObj = new RegExp(regex.source, regex.flags)
-		const match = regexObj.exec(text)
+	const match = tagPattern.exec(text)
 
-		if (match) {
-			// match[1] is the command with any leading whitespace (e.g. " /newtask")
-			// match[2] is just the command name (e.g. "newtask")
+	if (match) {
+		const [fullMatch, _tagName, commandWithWhitespace, commandName] = match
+		const fullMatchStartIndex = match.index
+		const command = commandReplacements[commandName]
 
-			const commandName = match[2] // casing matters
-			const command = commandReplacements[commandName]
+		// find position of slash command within the full match
+		const relativeStartIndex = fullMatch.indexOf(commandWithWhitespace)
 
-			if (command) {
-				const fullMatchStartIndex = match.index
+		// calculate absolute indices in the original string
+		const slashCommandStartIndex = fullMatchStartIndex + relativeStartIndex
+		const slashCommandEndIndex = slashCommandStartIndex + commandWithWhitespace.length
 
-				// find position of slash command within the full match
-				const fullMatch = match[0]
-				const relativeStartIndex = fullMatch.indexOf(match[1])
+		// remove the slash command and add custom instructions at the top of this message
+		const textWithoutSlashCommand = text.substring(0, slashCommandStartIndex) + text.substring(slashCommandEndIndex)
 
-				// calculate absolute indices in the original string
-				const slashCommandStartIndex = fullMatchStartIndex + relativeStartIndex
-				const slashCommandEndIndex = slashCommandStartIndex + match[1].length
+		if (command) {
+			const processedText = command(textWithoutSlashCommand)
+			return { processedText, needsRulesFileCheck: commandName === "newrule" }
+		}
 
-				// remove the slash command and add custom instructions at the top of this message
-				const textWithoutSlashCommand =
-					text.substring(0, slashCommandStartIndex) + text.substring(slashCommandEndIndex)
-				const processedText = command(textWithoutSlashCommand)
+		const matchingWorkflow = [
+			...enabledWorkflowToggles(localWorkflowToggles),
+			...enabledWorkflowToggles(globalWorkflowToggles),
+		].find((workflow) => workflow.fileName === commandName)
 
-				return { processedText, needsRulesFileCheck: commandName === "newrule" }
-			}
+		if (matchingWorkflow) {
+			try {
+				// Read workflow file content from the full path
+				const workflowContent = (await fs.readFile(matchingWorkflow.fullPath, "utf8")).trim()
 
-			const matchingWorkflow = [
-				...enabledWorkflowToggles(localWorkflowToggles),
-				...enabledWorkflowToggles(globalWorkflowToggles),
-			].find((workflow) => workflow.fileName === commandName)
+				const processedText =
+					`<explicit_instructions type="${matchingWorkflow.fileName}">\n${workflowContent}\n</explicit_instructions>\n` +
+					textWithoutSlashCommand
 
-			if (matchingWorkflow) {
-				try {
-					// Read workflow file content from the full path
-					const workflowContent = (await fs.readFile(matchingWorkflow.fullPath, "utf8")).trim()
-
-					// find position of slash command within the full match
-					const fullMatchStartIndex = match.index
-					const fullMatch = match[0]
-					const relativeStartIndex = fullMatch.indexOf(match[1])
-
-					// calculate absolute indices in the original string
-					const slashCommandStartIndex = fullMatchStartIndex + relativeStartIndex
-					const slashCommandEndIndex = slashCommandStartIndex + match[1].length
-
-					// remove the slash command and add custom instructions at the top of this message
-					const textWithoutSlashCommand =
-						text.substring(0, slashCommandStartIndex) + text.substring(slashCommandEndIndex)
-					const processedText =
-						`<explicit_instructions type="${matchingWorkflow.fileName}">\n${workflowContent}\n</explicit_instructions>\n` +
-						textWithoutSlashCommand
-
-					return { processedText, needsRulesFileCheck: false }
-				} catch (error) {
-					console.error(`Error reading workflow file ${matchingWorkflow.fullPath}: ${error}`)
-				}
+				return { processedText, needsRulesFileCheck: false }
+			} catch (error) {
+				console.error(`Error reading workflow file ${matchingWorkflow.fullPath}: ${error}`)
 			}
 		}
 	}

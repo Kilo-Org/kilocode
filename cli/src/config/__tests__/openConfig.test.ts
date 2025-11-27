@@ -129,11 +129,11 @@ describe("openConfigFile", () => {
 			const nanoError = new Error("nano: command not found")
 			nanoProcess.emit("error", nanoError)
 
-			await promise
+			await expect(promise).rejects.toThrow()
 
 			expect(consoleErrorSpy).toHaveBeenCalledWith(`Failed to open editor: ${xdgError.message}`)
 			expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining("Nano fallback also failed"))
-			expect(processExitSpy).toHaveBeenCalledWith(1)
+			expect(processExitSpy).not.toHaveBeenCalled()
 		})
 
 		it("should not fallback to nano when EDITOR is set", async () => {
@@ -155,12 +155,12 @@ describe("openConfigFile", () => {
 			const error = new Error("vim: command not found")
 			mockProcess.emit("error", error)
 
-			await promise
+			await expect(promise).rejects.toThrow()
 
 			expect(spawn).toHaveBeenCalledTimes(1)
 			expect(consoleErrorSpy).toHaveBeenCalledWith(`Failed to open editor: ${error.message}`)
 			expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining("Nano fallback"))
-			expect(processExitSpy).toHaveBeenCalledWith(1)
+			expect(processExitSpy).not.toHaveBeenCalled()
 		})
 	})
 
@@ -200,11 +200,11 @@ describe("openConfigFile", () => {
 			const error = new Error("open: command not found")
 			mockProcess.emit("error", error)
 
-			await promise
+			await expect(promise).rejects.toThrow()
 
 			expect(spawn).toHaveBeenCalledTimes(1)
 			expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nano"))
-			expect(processExitSpy).toHaveBeenCalledWith(1)
+			expect(processExitSpy).not.toHaveBeenCalled()
 		})
 	})
 
@@ -244,11 +244,11 @@ describe("openConfigFile", () => {
 			const error = new Error("cmd: command not found")
 			mockProcess.emit("error", error)
 
-			await promise
+			await expect(promise).rejects.toThrow()
 
 			expect(spawn).toHaveBeenCalledTimes(1)
 			expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining("nano"))
-			expect(processExitSpy).toHaveBeenCalledWith(1)
+			expect(processExitSpy).not.toHaveBeenCalled()
 		})
 	})
 
