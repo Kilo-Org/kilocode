@@ -117,6 +117,7 @@ export class NativeToolCallParser {
 				case "new_rule":
 				case "report_bug":
 				case "apply_diff":
+				case "terminal_kill":
 					nativeArgs = args
 					break
 				// kilocode_change end

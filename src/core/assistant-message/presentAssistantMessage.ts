@@ -42,7 +42,7 @@ import * as vscode from "vscode"
 import { ToolProtocol, isNativeProtocol } from "@roo-code/types"
 
 import { yieldPromise } from "../kilocode"
-import { terminalKillTool } from "../tools/terminalKillTool" // kilocode_change
+import { terminalKillTool } from "../tools/TerminalKillTool" // kilocode_change
 import { evaluateGatekeeperApproval } from "./kilocode/gatekeeper"
 import { editFileTool } from "../tools/kilocode/editFileTool"
 import { deleteFileTool } from "../tools/kilocode/deleteFileTool"
@@ -276,16 +276,6 @@ export async function presentAssistantMessage(cline: Task) {
 					default:
 						return `[${block.name}]`
 					// kilocode_change end: Add default case for new tools
-				}
-			}
-
-			const pushToolResult_withToolUseId_kilocode = (
-				...items: (Anthropic.TextBlockParam | Anthropic.ImageBlockParam)[]
-			) => {
-				if (block.toolUseId) {
-					cline.userMessageContent.push({ type: "tool_result", tool_use_id: block.toolUseId, content: items })
-				} else {
-					cline.userMessageContent.push(...items)
 				}
 			}
 
@@ -791,7 +781,12 @@ export async function presentAssistantMessage(cline: Task) {
 					await condenseTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
 					break
 				case "terminal_kill":
-					await terminalKillTool(cline, block, askApproval, handleError, pushToolResult, removeClosingTag)
+					await terminalKillTool.handle(cline, block as ToolUse<"terminal_kill">, {
+						askApproval,
+						handleError,
+						pushToolResult,
+						removeClosingTag,
+					})
 					break
 				// kilocode_change end: Add new tool case executions
 				case "run_slash_command":
