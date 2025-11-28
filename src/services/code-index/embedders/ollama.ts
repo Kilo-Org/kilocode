@@ -6,10 +6,7 @@ import { t } from "../../../i18n"
 import { withValidationErrorHandling, sanitizeErrorMessage } from "../shared/validation-helpers"
 import { TelemetryService } from "@roo-code/telemetry"
 import { TelemetryEventName } from "@roo-code/types"
-
-// Timeout constants for Ollama API requests
-const OLLAMA_EMBEDDING_TIMEOUT_MS = 60000 // 60 seconds for embedding requests
-const OLLAMA_VALIDATION_TIMEOUT_MS = 30000 // 30 seconds for validation requests
+import { getApiRequestTimeout } from "../../../api/providers/utils/timeout-config"
 
 /**
  * Implements the IEmbedder interface using a local Ollama instance.
@@ -70,7 +67,8 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 			// Add timeout to prevent indefinite hanging
 			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), OLLAMA_EMBEDDING_TIMEOUT_MS)
+			const timeoutMs = getApiRequestTimeout()
+			const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined
 
 			const response = await fetch(url, {
 				method: "POST",
@@ -83,7 +81,9 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 				}),
 				signal: controller.signal,
 			})
-			clearTimeout(timeoutId)
+			if (timeoutId) {
+				clearTimeout(timeoutId)
+			}
 
 			if (!response.ok) {
 				let errorBody = t("embeddings:ollama.couldNotReadErrorBody")
@@ -149,7 +149,8 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 				// Add timeout to prevent indefinite hanging
 				const controller = new AbortController()
-				const timeoutId = setTimeout(() => controller.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
+				const timeoutMs = getApiRequestTimeout()
+				const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : undefined
 
 				const modelsResponse = await fetch(modelsUrl, {
 					method: "GET",
@@ -158,7 +159,9 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 					},
 					signal: controller.signal,
 				})
-				clearTimeout(timeoutId)
+				if (timeoutId) {
+					clearTimeout(timeoutId)
+				}
 
 				if (!modelsResponse.ok) {
 					if (modelsResponse.status === 404) {
@@ -206,7 +209,7 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 
 				// Add timeout for test request too
 				const testController = new AbortController()
-				const testTimeoutId = setTimeout(() => testController.abort(), OLLAMA_VALIDATION_TIMEOUT_MS)
+				const testTimeoutId = timeoutMs > 0 ? setTimeout(() => testController.abort(), timeoutMs) : undefined
 
 				const testResponse = await fetch(testUrl, {
 					method: "POST",
@@ -219,7 +222,9 @@ export class CodeIndexOllamaEmbedder implements IEmbedder {
 					}),
 					signal: testController.signal,
 				})
-				clearTimeout(testTimeoutId)
+				if (testTimeoutId) {
+					clearTimeout(testTimeoutId)
+				}
 
 				if (!testResponse.ok) {
 					return {
