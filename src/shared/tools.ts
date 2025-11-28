@@ -99,7 +99,7 @@ export type ToolProtocol = "xml" | "native"
 export type NativeToolArgs = {
 	read_file: { files: FileEntry[] }
 	attempt_completion: { result: string }
-	execute_command: { command: string; cwd?: string }
+	execute_command: { command: string; cwd?: string; run_in_background?: boolean } // kilocode_change: add run_in_background
 	insert_content: { path: string; line: number; content: string }
 	apply_diff: { path: string; diff: string }
 	ask_followup_question: {
@@ -266,7 +266,7 @@ export const TOOL_DISPLAY_NAMES: Record<ToolName, string> = {
 	delete_file: "delete files",
 	report_bug: "report bug",
 	condense: "condense the current context window",
-	// kilocode_change start
+	// kilocode_change end
 	search_files: "search files",
 	list_files: "list files",
 	list_code_definition_names: "list definitions",
